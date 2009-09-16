@@ -196,7 +196,16 @@ sub date_completed {
 
 sub calculate_estimated_kb_usage {
     my $self = shift;
-    return;
+
+    # Default of 500 MiB in case a subclass fails to
+    # override this method.  At least this way there
+    # will be an allocation, which will likely be
+    # wildly inaccurate, but if the build fails to fail,
+    # when it finishes, it will reallocate down to the
+    # actual size.  Whereas the previous behaviour 
+    # (return undef) caused *no* allocation to be made.
+    # Which it has been decided is a bigger problem.
+    return 524288000;
 }
 
 sub resolve_data_directory {

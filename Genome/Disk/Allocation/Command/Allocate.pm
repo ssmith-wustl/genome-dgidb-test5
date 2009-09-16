@@ -136,17 +136,26 @@ sub execute {
 
     $self->status_message('Confirming allocate PSE id: '. $self->allocator_id);
 
-    my $old_dbi_trace_level = DBI->trace();
-    
-    my $trace_fh = File::Temp->new(
-                                   'TEMPLATE' => 'allocation_pse_wrapper_XXXXXXXXXX',
-                                   'DIR'      => '/gsc/var/log/genome/allocation_debugging',
-                                   'SUFFIX'   => '.tmp',
-                                  );
+    my $user_name = (getpwuid($<))[0];
+
+    my $old_dbi_trace_level;
+    my $trace_fh;
+
+    if ($user_name eq 'apipe') {
+       
+        $old_dbi_trace_level = DBI->trace();
+        
+        $trace_fh = File::Temp->new(
+                                    'TEMPLATE' => 'allocation_pse_wrapper_XXXXXXXXXX',
+                                    'DIR'      => '/gsc/var/log/genome/allocation_debugging',
+                                    'SUFFIX'   => '.tmp',
+                                   );
                                    
-    $trace_fh->autoflush(1);
+        $trace_fh->autoflush(1);
     
-    DBI->trace(4, $trace_fh);
+        DBI->trace(4, $trace_fh);
+    
+    }
     
     my $rv;
     if ($self->local_confirm) {
@@ -160,7 +169,13 @@ sub execute {
     # mount below when we start check / create the directory. 
     UR::Context->commit();
 
-    DBI->trace($old_dbi_trace_level, undef);
+    if (defined($old_dbi_trace_level)) {
+        DBI->trace($old_dbi_trace_level, undef);
+    }
+   
+    if (defined($trace_fh)) {
+        $trace_fh->close();
+    }
     
     unless ($rv) {
         $self->error_message('Failed to confirm pse '. $self->allocator_id);
