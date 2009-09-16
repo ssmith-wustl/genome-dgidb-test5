@@ -501,7 +501,7 @@ sub _remove_dependency_for_classes {
                                      event_status => 'Scheduled',
                                      model_id => $self->model_id,
                                      build_id => $self->build_id,
-                                     user_name => $ENV{'USER'},
+                                     user_name => ($ENV{'USER'} eq 'apipe') ? 'apipe-run' : $ENV{'USER'}; 
                                  );
             for my $event (@events) {
                 my $dependency_expression = $event->lsf_dependency_condition;
@@ -840,6 +840,7 @@ sub report_class_for_build_success {
     return 'Genome::Model::Report::BuildSuccess';
 }
 
+## Does anything actually invoke this?
 sub email_build_start_report {
     my $self = shift;
 
