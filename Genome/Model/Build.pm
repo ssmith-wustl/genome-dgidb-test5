@@ -392,7 +392,7 @@ sub generate_send_and_save_report {
     
     my $email_confirmation = Genome::Report::Email->send_report(
         report => $report,
-        to => $self->build_event->user_name.'@genome.wustl.edu',
+        to => $to,
         from => 'apipe@genome.wustl.edu',
         replyto => 'noreply@genome.wustl.edu',
         # maybe not the best/correct place for this information but....
