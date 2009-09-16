@@ -62,6 +62,10 @@ class Genome::Model {
                                                     return;
                                                     die "not sure how to handle sample type $subject_type";
                                                 }
+                                                elsif ($subject_type eq 'flow_cell_id') {
+                                                    return;
+                                                    die "not sure how to handle sample type $subject_type";
+                                                }
                                                 else {
                                                     die "unknown sample type $subject_type!";
                                                 }
