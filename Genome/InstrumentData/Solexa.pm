@@ -352,6 +352,7 @@ sub resolve_quality_converter {
                                      'GAPipeline-1.3.4-unique1' => 'sol2phred',
                                      'GAPipeline-1.4.0-unique1' => 'sol2phred',
 				     'GAPipeline-1.4.0b2-unique1' => 'sol2phred',
+				     'GAPipeline-1.5.0' 	=> 'sol2phred',
                                  );
     my $analysis_software_version = $self->analysis_software_version;
     unless ($analysis_software_version) {
