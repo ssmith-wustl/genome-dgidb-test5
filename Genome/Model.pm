@@ -29,12 +29,11 @@ class Genome::Model {
         name                    => { is => 'Text', len => 255 },
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         subject_name            => { is => 'Text', len => 255 },
-        subject_type            => { is => 'Text', len => 255, 
-                                     valid_values => [keys %SUBJECT_TYPES] },
+        subject_type            => { is => 'Text', len => 255, valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
         subject                 => { calculate_from => [ 'subject_name', 'subject_type' ],
-                         calculate => q( 
+                                     calculate => q( 
                                                 if (not defined $subject_type) {
                                                     # this should not happen
                                                     return;
@@ -73,17 +72,13 @@ class Genome::Model {
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name               => { via => 'processing_profile' },
-        events                  => { is => 'Genome::Model::Event', reverse_id_by => 'model', is_many => 1, 
-                                        doc => 'all events which have occurred for this model' },
+        events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1, 
+                                     doc => 'all events which have occurred for this model' },
         subject_class_name      => { is => 'VARCHAR2', len => 500, is_optional => 1 },
         subject_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
-        # Reports
-        reports => {
-            via => 'last_succeeded_build'
-        },
-        reports_directory => {
-            via => 'last_succeeded_build'
-        },
+        reports                 => { via => 'last_succeeded_build' },
+        reports_directory       => { via => 'last_succeeded_build' },
+        is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
     ],
     has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
@@ -93,53 +88,44 @@ class Genome::Model {
         build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
         gold_snp_path                    => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'gold_snp_path', entity_class_name => 'Genome::Model' ] },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
-                         calculate => q($instrument_data_class_name->_dw_class), 
-                         doc => 'the class of instrument_data assignable to this model in the dw' },
+                                              calculate => q($instrument_data_class_name->_dw_class), 
+                                              doc => 'the class of instrument_data assignable to this model in the dw' },
         instrument_data_class_name       => { calculate_from => 'sequencing_platform',
-                         calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
-                         doc => 'the class of instrument data assignable to this model' },
+                                              calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
+                                              doc => 'the class of instrument data assignable to this model' },
         test                             => { is => 'Boolean', is_transient => 1, 
-                         doc => 'testing flag' },
+                                              doc => 'testing flag' },
         _printable_property_names_ref    => { is => 'array_ref', is_transient => 1 },
         comparable_normal_model_id       => { is => 'Number', len => 10 },
         sample_name                      => { is => 'Text', len => 255 },
         sequencing_platform              => { via => 'processing_profile' },
-        last_complete_build_directory    => { is_calculated => 1, calculate => q|$b = $self->last_complete_build; return unless $b; return $b->data_directory| },
+        last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
     ],
     has_many_optional => [
-        ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_id_by => 'model' },
-        project_assignments               => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
+        ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },
+        project_assignments               => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
         projects                          => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
         project_names                     => { is => 'Text', via => 'projects', to => 'name' },
-        attributes                        => { is => 'Genome::MiscAttribute', reverse_id_by => '_model', where => [ entity_class_name => 'Genome::Model' ] },
+        attributes                        => { is => 'Genome::MiscAttribute', reverse_as => '_model', where => [ entity_class_name => 'Genome::Model' ] },
         instrument_data                   => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments' },
         assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
-        instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_id_by => 'model' },
+        instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
         built_instrument_data             => { calculate => q( 
-            return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
+                                                           return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
             ) },
         unbuilt_instrument_data           => { calculate => q( 
-            return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
+                                                           return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
             ) },
-        instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_id_by => 'model', 
-                         doc => 'Each case of an instrument data being assigned to the model' },
-
-        from_model_links                  => { is => 'Genome::Model::Link',
-                                               reverse_id_by => 'to_model',
-                                               doc => 'bridge table entries where this is the "to" model(used to retrieve models this model is "from")'
-                                           },
-        from_models                       => { is => 'Genome::Model',
-                                               via => 'from_model_links', to => 'from_model',
-                                               doc => 'Genome models that contribute "to" this model',
-                                           },
-        to_model_links                    => { is => 'Genome::Model::Link',
-                                               reverse_id_by => 'from_model',
-                                               doc => 'bridge entries where this is the "from" model(used to retrieve models models this model is "to")'
-                                           },
-        to_models                         => { is => 'Genome::Model',
-                                               via => 'to_model_links', to => 'to_model',
-                                               doc => 'Genome models this model contributes "to"',
-                                           },
+        instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_as => 'model', 
+                                               doc => 'Each case of an instrument data being assigned to the model' },
+        from_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', 
+                                               doc => 'bridge table entries where this is the \"to\" model(used to retrieve models this model is \"from\")' },
+        from_models                       => { is => 'Genome::Model', via => 'from_model_links', to => 'from_model', 
+                                               doc => 'Genome models that contribute \"to\" this model' },
+        to_model_links                    => { is => 'Genome::Model::Link', reverse_as => 'from_model', 
+                                               doc => 'bridge entries where this is the \"from\" model(used to retrieve models models this model is \"to\")' },
+        to_models                         => { is => 'Genome::Model', via => 'to_model_links', to => 'to_model', 
+                                               doc => 'Genome models this model contributes \"to\"' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
