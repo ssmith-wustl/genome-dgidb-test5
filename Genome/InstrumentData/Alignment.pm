@@ -160,16 +160,22 @@ sub create {
     return $self;
 }
 
-sub create_allocation {
+sub estimated_kb_usage {
     my $self = shift;
     my $instrument_data = $self->instrument_data;
-    unless ($instrument_data->calculate_alignment_estimated_kb_usage) {
+    return $instrument_data->calculate_alignment_estimated_kb_usage;
+}
+
+sub create_allocation {
+    my $self = shift;
+    unless ($self->estimated_kb_usage) {
         return;
     }
+    my $instrument_data = $self->instrument_data;
     my %params = (
                   disk_group_name => 'info_alignments',
                   allocation_path => $self->resolve_alignment_subdirectory,
-                  kilobytes_requested => $instrument_data->calculate_alignment_estimated_kb_usage,
+                  kilobytes_requested => $self->estimated_kb_usage,
                   owner_class_name => $instrument_data->class,
                   owner_id => $instrument_data->id,
               );
