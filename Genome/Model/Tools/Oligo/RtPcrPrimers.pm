@@ -8,14 +8,16 @@ use IPC::Run;
 class Genome::Model::Tools::Oligo::RtPcrPrimers {
     is => 'Command',                    
     has => [ # specify the command's properties (parameters) <--- 
-
+	     
 	     chromosome => {
 		 type  =>  'String',
 		 doc   =>  "chromosome ie {1,2,...,22,X,Y}",
+		 is_optional  => 1,
 	     },
 	     target_pos => {
 		 type  =>  'Number',
 		 doc   =>  "build 36 coordinate of the target to design primers around",
+		 is_optional  => 1,
 	     },
 	     transcript => {
 		 type  =>   'String',
@@ -38,7 +40,21 @@ class Genome::Model::Tools::Oligo::RtPcrPrimers {
 		 doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
 		 is_optional  => 1,
 	     },
-
+	     pcr_primer_options => {
+		 type  =>  'String',
+		 doc   =>  "provide a quoted string of options you'd like to set when running oligo pcr-primers",
+		 is_optional  => 1,
+	     },
+	     include_exon => {
+		 is  =>   'Boolean',
+		 doc   =>  "if your target_pos falls in an exon, by default that exon will be ommitted from the primer design sequence. Use this flag if you would rather include that exon in the design sequence",
+		 is_optional  => 1,
+	     },
+	     variant_transcript_annotation => {
+		 type  =>  'String',
+		 doc   =>  "provide the annotation file from \"gmt annotate variant-transcript\" if this option is used, these options should be omitted chromosome target_pos transcript all_transcripts and version",
+		 is_optional  => 1,
+	     },
 	],
     
 };
@@ -73,6 +89,10 @@ you can enter multiple transcripts however, each should be on the same chromosom
 
 If the coordinate provide by target-pos falls in an exon, that exon will be omitted from the rt-pcr design sequence. 
 
+if the -pcr-primer-options option is used, place the options you select in a quoted string in the same fashion as you would when running pcr-primer eg;
+\"-primer-perimeter 125 -product-range 300-500 -gc-clamp 2\"
+
+
 EOS
 }
 
@@ -82,11 +102,17 @@ sub execute {
     my $self = shift;
     
     my $chromosome = $self->chromosome;
-    unless ($chromosome) {$self->error_message("please provide the chromosome"); return 0;}
+    #unless ($chromosome) {$self->error_message("please provide the chromosome"); return 0;}
     my $target_pos = $self->target_pos;
-    unless ($target_pos =~ /^[\d]+$/) {$self->error_message("please provide the Build 36 target_pos coordinate"); return 0; }
-    my $organism = $self->organism;
+    #unless ($target_pos =~ /^[\d]+$/) {$self->error_message("please provide the Build 36 target_pos coordinate"); return 0; }
 
+    my $variant_transcript_annotation  = $self->variant_transcript_annotation;
+    unless (($chromosome && $target_pos) || ($variant_transcript_annotation && -e $variant_transcript_annotation)) {
+	$self->error_message("please provide the chromosome and target-pos or the variant-transcript-annotation file"); 
+	return 0;
+    }
+
+    my $organism = $self->organism;
     my $transcripts = $self->transcript;
     my @transcripts;
 
@@ -94,8 +120,25 @@ sub execute {
     unless ($version) { if ($organism eq "mouse") { $version = "54_37g"; } else { $version = "54_36p"; } }
     my $references_transcripts = "NCBI-$organism.combined-annotation/$version";
 
+    my $annotation_info;
     if ($transcripts) {
 	@transcripts = split(/\,/,$transcripts);
+
+	for my $transcript (@transcripts) {
+	    $annotation_info->{$transcript}->{$target_pos}->{transcript}=$transcript;
+	    $annotation_info->{$transcript}->{$target_pos}->{target_pos}=$target_pos;
+	    $annotation_info->{$transcript}->{$target_pos}->{chromosome}=$chromosome;
+	    $annotation_info->{$transcript}->{$target_pos}->{transcript_species}=$organism;
+	    $annotation_info->{$transcript}->{$target_pos}->{output_name} = "$transcript.$chromosome.$target_pos";
+	}
+
+    } elsif ($variant_transcript_annotation) {
+
+	($annotation_info) = &parse_annotation($variant_transcript_annotation);
+	foreach my $transcripts (sort keys %{$annotation_info}) {
+	    push(@transcripts,$transcripts);
+	}
+	
     } else {
 	my $name = "$organism.$chromosome.$target_pos";
 	my $ref_base = &get_ref_base($target_pos,$target_pos,$chromosome,$organism);
@@ -118,8 +161,7 @@ sub execute {
 
 	&ipc_run(@command);
 
-	my ($annotation_info) = &parse_annotation($annotation_file);
-	
+	($annotation_info) = &parse_annotation($annotation_file);
 	foreach my $transcripts (sort keys %{$annotation_info}) {
 	    push(@transcripts,$transcripts);
 	    #$annotation_info->{$transcript}->{gene}=$gene;
@@ -131,67 +173,85 @@ sub execute {
 
     unless (@transcripts) { die "no transcripts were identified\n"; }
 
-    for my $transcript (@transcripts) {
-	
-	my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version");
-	my $transcript_info = $info->{result};
-	my $strand = $transcript_info->{$transcript}->{-1}->{strand};
-	#my ($chromosome) = $transcript_info->{$transcript}->{-1}->{source_line} =~ /Chromosome ([\S]+)\,/;
-	my ($transcript_seq,$target) = &get_transcript_seq($strand,$transcript,$transcript_info,$organism,$chromosome);
-	
-	print qq(\n\n$transcript_info->{$transcript}->{-1}->{source_line}\n);
-	
-	print qq(\n\n\n);
-	
-	my $exclude_exon = 0;
-	
-	my $side = "P5";
-	my $design_seq;
-	my $nn=0;
-	
-	my $target_depth;
-	
-	foreach my $n (sort {$a<=>$b} keys %{$transcript_seq}) {
+    #for my $transcript (@transcripts) {
+    foreach my $transcript (sort keys %{$annotation_info}) {
+	foreach my $trans_pos (sort {$a<=>$b} keys %{$annotation_info->{$transcript}}) {
+	    $target_pos=$trans_pos;
 	    
-	    my $tp_region = $target->{tp_regoin};
+	    my $output_name = $annotation_info->{$transcript}->{$trans_pos}->{output_name};
+	    unless ($chromosome) {$chromosome = $annotation_info->{$transcript}->{$trans_pos}->{chromosome};}
+	    unless ($output_name) {$output_name = $annotation_info->{$transcript}->{$trans_pos}->{output_name};}
+	
+	
+	
+	    my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version");
+	    my $transcript_info = $info->{result};
+	    my $strand = $transcript_info->{$transcript}->{-1}->{strand};
+	    #my ($chromosome) = $transcript_info->{$transcript}->{-1}->{source_line} =~ /Chromosome ([\S]+)\,/;
+	    my ($transcript_seq,$target) = &get_transcript_seq($strand,$transcript,$transcript_info,$organism,$chromosome,$trans_pos);
 	    
-	    if ($tp_region =~ /exon/) {
-		$exclude_exon=$target->{exon};
+	    print qq(\n\n$transcript_info->{$transcript}->{-1}->{source_line}\n);
+
+	    print qq(\n\n\n);
+	    
+	    my $excluded_exon = 0;
+	    
+	    my $side = "P5";
+	    my $design_seq;
+	    my $nn=0;
+	    
+	    my $target_depth=0;
+	    
+	    foreach my $n (sort {$a<=>$b} keys %{$transcript_seq}) {
+		
+		my $tp_region = $target->{tp_regoin};
+		
+		my ($exon,$region) = split(/\,/,$transcript_seq->{$n}->{exon});
+
+		if ($tp_region =~ /exon/) {
+		    unless ($self->include_exon || $exon eq "1" || $target->{last_exon} eq $target->{exon}) { #need to make this $target->{last_exon}
+			$excluded_exon=$target->{exon};
+		    }
+		}
+		
+		if ($transcript_seq->{$n}->{trans_pos}) {
+		    $target_depth = $nn;
+		    print qq(\n\ntrans_pos $transcript_seq->{$n}->{trans_pos}\n\n);
+		}
+		if ($transcript_seq->{$n-1}->{trans_pos}) {
+		    print qq(\n\ntrans_pos $transcript_seq->{$n-1}->{trans_pos}\n\n);
+		}
+		
+		if ($tp_region =~ /exon/ && $excluded_exon == $exon) {
+		    print qq($exon);
+		} else {
+		    $nn++;
+		    $design_seq->{$nn}->{base}=$transcript_seq->{$n}->{base};
+		    
+		    print qq($transcript_seq->{$n}->{base});
+		    
+		}
 	    }
-	    my ($exon,$region) = split(/\,/,$transcript_seq->{$n}->{exon});
-	    
-	    if ($transcript_seq->{$n}->{trans_pos}) {
-		$target_depth = $nn;
-		print qq(\n\ntrans_pos $transcript_seq->{$n}->{trans_pos}\n\n);
+	    print qq(\n\n\n);
+
+	    my $fasta = "$output_name.rtpcr.designseq.fasta";
+	    open(FA,">$fasta") || die "couldn't open a fasta file to write to\n";
+	    print FA qq(\>$output_name.rtpcr.designseq\n);
+	    foreach my $n (sort {$a<=>$b} keys %{$design_seq}) {
+		my $base = $design_seq->{$n}->{base};
+		print FA qq($base);
 	    }
-	    if ($transcript_seq->{$n-1}->{trans_pos}) {
-		print qq(\n\ntrans_pos $transcript_seq->{$n-1}->{trans_pos}\n\n);
-	    }
+	    print FA qq(\n);
+	    close (FA);
 	    
-	    if ($tp_region =~ /exon/ && $exclude_exon == $exon) {
-		print qq($exon);
+	    my $hspsepSmax = $target->{seq_stop} - $target->{seq_start} + 51;
+	    my $pcr_primer_options =  $self->pcr_primer_options;
+	    if ($pcr_primer_options) {
+		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism $pcr_primer_options);
 	    } else {
-		$nn++;
-		$design_seq->{$nn}->{base}=$transcript_seq->{$n}->{base};
-		
-		print qq($transcript_seq->{$n}->{base});
-		
+		system qq(gmt oligo pcr-primers -output-name $output_name  -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism);
 	    }
 	}
-	print qq(\n\n\n);
-
-	my $fasta = "$transcript.rtpcr.designseq.fasta";
-	open(FA,">$fasta") || die "couldn't open a fasta file to write to\n";
-	print FA qq(\>$transcript.rtpcr.designseq\n);
-	foreach my $n (sort {$a<=>$b} keys %{$design_seq}) {
-	    my $base = $design_seq->{$n}->{base};
-	    print FA qq($base);
-	}
-	print FA qq(\n);
-	close (FA);
-
-	my $hspsepSmax = $target->{seq_stop} - $target->{seq_start} + 51;
-	system qq(gmt oligo get-pcr-primers -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism);
     }
 }
 
@@ -204,9 +264,8 @@ sub get_transcript_seq {
     my ($transcript_seq,$target);
 
     my ($pause,$resume,$base_count);
-    my ($strand,$transcript,$transcript_info,$organism,$chromosome) = @_;
+    my ($strand,$transcript,$transcript_info,$organism,$chromosome,$target_position) = @_;
     
-
     my (@positions);
 
     if ($strand eq "+1") {
@@ -217,7 +276,7 @@ sub get_transcript_seq {
 		$target->{seq_stop}=$pos;
 	    }
 	}
-    } else {
+    } elsif ($strand eq "-1") {
 	foreach my $pos (sort {$b<=>$a} keys %{$transcript_info->{$transcript}}) {
 	    unless ($pos == -1) {
 		push(@positions,$pos);
@@ -225,15 +284,21 @@ sub get_transcript_seq {
 		$target->{seq_start}=$pos;
 	    }
 	}
+    } else {
+	die "strand not define for transcript $transcript\n";
     }
     
     for my $pos (@positions) {
 
 	my ($exon,$region) = split(/\,/,$transcript_info->{$transcript}->{$pos}->{exon});
+
+	$target->{last_exon} = $exon;
+
 	my $frame = $transcript_info->{$transcript}->{$pos}->{frame};
 	my $aa_n = $transcript_info->{$transcript}->{$pos}->{aa_n};
 	my $base = $transcript_info->{$transcript}->{$pos}->{base};
-	my ($trans_pos) = $transcript_info->{$transcript}->{$pos}->{trans_pos};
+
+	my $trans_pos = $transcript_info->{$transcript}->{$pos}->{trans_pos};
 
 	my $range = $transcript_info->{$transcript}->{$pos}->{range};
 	my ($r_start,$r_stop) = split(/\-/,$range);
@@ -250,13 +315,23 @@ sub get_transcript_seq {
 
 	$nb++;
 	if ($trans_pos) {
-	    my ($tp_region) = $trans_pos =~ /\S+\,(\S+)/;
-	    $transcript_seq->{$base_count}->{trans_pos}="$exon,$region,$pos,$base_count,$tp_region";
-	    $target->{tp_regoin}=$tp_region;
-	    $target->{exon}=$exon;
-	    $target->{base_count}=$base_count;
+	    my ($tp_position,$tp_region) = $trans_pos =~ /(\S+)\,(\S+)/;
+	    if ($tp_position eq $target_position) {
+		
+		$transcript_seq->{$base_count}->{trans_pos}="$exon,$region,$pos,$base_count,$tp_region,$target_position";
+		$target->{tp_regoin}=$tp_region;
+		$target->{exon}=$exon;
+		$target->{base_count}=$base_count;
+		
+	    }
 	}
     }
+    unless ($target->{exon}) {
+	print qq(couldn't find the target position in the transcript\n);
+	$target->{exon}=0;
+    }
+    unless ($target->{base_count}){$target->{base_count}=0;}
+    unless ($target->{tp_regoin}){$target->{tp_regoin}=0;}
     return($transcript_seq,$target);
 }
 
@@ -338,10 +413,15 @@ sub parse_annotation {
 	    my $chr = "chr$chromosome";
 	    
 	    if ($transcript =~ /\d+/) {
-		$annotation_info->{$transcript}->{gene}=$gene;
-		$annotation_info->{$transcript}->{transcript}=$transcript;
-		$annotation_info->{$transcript}->{strand}=$strand;
-		$annotation_info->{$transcript}->{trv_type}=$trv_type;
+		$annotation_info->{$transcript}->{$start}->{gene}=$gene;
+		$annotation_info->{$transcript}->{$start}->{transcript}=$transcript;
+		$annotation_info->{$transcript}->{$start}->{strand}=$strand;
+		$annotation_info->{$transcript}->{$start}->{trv_type}=$trv_type;
+		$annotation_info->{$transcript}->{$start}->{trans_pos}=$start;
+		$annotation_info->{$transcript}->{$start}->{stop}=$stop;
+		$annotation_info->{$transcript}->{$start}->{chromosome}=$chromosome;
+		$annotation_info->{$transcript}->{$start}->{transcript_species}=$transcript_species;
+		$annotation_info->{$transcript}->{$start}->{output_name} = "$gene.$transcript.$chromosome.$start";
 	    }
 	}
     } close (ANNO);
