@@ -148,9 +148,6 @@ sub verify_successful_completion {
 
     my $report_dir = $build->resolve_reports_directory;
     
-    my $gt = $build->model->genotyper_name;
-    delete $REPORT_TYPES{Mapcheck} unless $gt =~ /maq/i;
-
     my $gold_snp_path = $self->build->gold_snp_path;
     delete $REPORT_TYPES{GoldSnpConcordance} unless $gold_snp_path and -s $gold_snp_path;
 
