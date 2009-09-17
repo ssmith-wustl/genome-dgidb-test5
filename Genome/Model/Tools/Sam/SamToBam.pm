@@ -31,6 +31,11 @@ class Genome::Model::Tools::Sam::SamToBam {
             doc => 'flag to index bam file, default yes',
             default => 1,
         },
+        is_sorted => {
+            is  => 'Boolean',
+            doc => 'flag bam file is sorted, default yes',
+            default => 1,
+        },
         fix_mate    => {
             is  => 'Boolean',
             doc => 'fix mate info problem in sam/bam, default no',
@@ -110,8 +115,36 @@ sub execute {
     }
 
     if ($self->index_bam) {
-        $rv = system "$samtools index $bam_file";
-        $self->error_message('Indexing bam_file failed') and return if $rv;
+        unless ($self->is_sorted) {
+            #This may not work for large genome BAM files
+            my $tmp_bam = Genome::Utility::FileSystem->create_temp_file_path();
+            unless (Genome::Model::Tools::Sam::SortBam->execute(
+                file_name => $bam_file,
+                output_file => $tmp_bam,
+                use_version => $self->use_version,
+                use_picard_version => $self->use_picard_version,
+            )) {
+                $self->error_message('Failed to sort bam file '. $bam_file);
+                die($self->error_message);
+            }
+            $tmp_bam .= '.bam';
+            unless (unlink($bam_file)) {
+                $self->error_message('Failed to remove unsorted bam file '. $bam_file .":  $!");
+                die($self->error_message);
+            }
+            unless (move($tmp_bam,$bam_file)) {
+                $self->error_message('Failed to move the sorted bam file from '. $tmp_bam .' to '. $bam_file .":  $!");
+                die($self->error_message);
+            }
+        }
+        unless (Genome::Model::Tools::Sam::IndexBam->execute(
+            bam_file => $bam_file,
+            use_version => $self->use_version,
+            use_picard_version => $self->use_picard_version,
+        )) {
+            $self->error_message('Failed to index BAM file '. $bam_file);
+            die($self->error_message);
+        }
     }
 
     unlink $sam_file unless $self->keep_sam;
