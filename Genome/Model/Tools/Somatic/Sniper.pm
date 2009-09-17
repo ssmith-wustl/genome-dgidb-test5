@@ -78,28 +78,6 @@ sub resolve_software_version{
     return 'test';
 }
 
-sub error_message {
-    my $self=shift;
-    my $line =shift;
-    unless($error_fh) {
-        $error_fh = IO::File->new("/gscmnt/sata820/info/medseq/somatic_pipeline/Sniper_error.out",">");
-    }
-    $error_fh->print($line);
-    $self->SUPER::error_message($line);
-}
-
-sub status_message {
-    my $self=shift;
-    my $line =shift;
-    unless($error_fh) {
-        $error_fh = IO::File->new("/gscmnt/sata820/info/medseq/somatic_pipeline/Sniper_error.out",">");
-    }
-    $error_fh->print($line);
-    $self->SUPER::status_message($line);
-}
-
-
-
 sub execute {
     my $self = shift;
     $DB::single = 1;
@@ -112,6 +90,7 @@ sub execute {
 
     $self->status_message("beginning execute");
     
+    # Validate files
     unless ( Genome::Utility::FileSystem->validate_file_for_reading($self->tumor_bam_file) ) {
         $self->error_message("Could not validate tumor file:  ".$self->tumor_bam_file );
         die;
@@ -122,48 +101,11 @@ sub execute {
         die;
     } 
 
-    #check for result
-    $DB::single=1;
-    
-    my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params('Genome::Model::Tools::Somatic::Sniper',tumor_bam_file => $self->tumor_bam_file, normal_bam_file => $self->normal_bam_file, output_snp_file => $self->output_snp_file, output_indel_file => $self->output_indel_file,reference_file => $self->reference_file );  #TODO, I don't really think output file should be a part of these params here, up for debate though
-    
-
-# Skip this for now until we figure out how we want to do this
-=cut
-    my $software_result = Genome::SoftwareResult->get(inputs_bx => $inputs_bx);
-
-    if ($software_result){
-        $self->status_message("Found previous execution of sniper with these params, skipping!");
-        system('touch /gscuser/adukes/svn/perl_modules/Genome/Model/Tools/Somatic/result_found');
-        return $software_result->output;
-    }
-=cut
-
-    $DB::single=1;
+    # Run sniper C program
     my $cmd = "bam-somaticsniper -Q " . $self->quality_filter. " -f ".$self->reference_file." ".$self->tumor_bam_file." ".$self->normal_bam_file ." " . $self->output_snp_file . " " . $self->output_indel_file; 
     my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->tumor_bam_file,$self->normal_bam_file], output_files=>[$self->output_snp_file,$self->output_indel_file], skip_if_output_is_present=>0 );
 
-# Skip this for now until we figure out how we want to do this
-=cut
-    if ($result == 1){
-        my $software_result = Genome::SoftwareResult->create(
-            software => $self,
-            software_version => 'test',
-            result_class_name => 'Genome::SoftwareResult',
-            inputs_bx => $inputs_bx,
-            output => $self->output_file,
-        );
-        if ($software_result){
-            $self->status_message("created software result successfully");
-            system('touch /gscuser/adukes/svn/perl_modules/Genome/Model/Tools/Somatic/created_result');
-        }else{
-            $self->error_message("failed to create software result");
-        }
-    }
-=cut
-
     $self->status_message("ending execute");
-    $DB::single=1;
     return $result; 
 }
 
