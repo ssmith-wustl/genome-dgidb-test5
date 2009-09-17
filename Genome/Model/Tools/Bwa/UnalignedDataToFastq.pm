@@ -114,7 +114,7 @@ sub _chunk_sam_into_fastq {
         $read_name .= "/" . $strand;
     }
     
-    return "\@$read_name\n$sequence\n\+\n$read_quality\n";
+    return "\@$read_name\n$sequence\n\+$read_name\n$read_quality\n";
 }
 
 1;
