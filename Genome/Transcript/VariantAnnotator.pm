@@ -972,6 +972,9 @@ sub _transcript_annotation_for_cds_exon
         else {$trv_type="frame_shift_"; }
         $trv_type.= lc ($variant->{type});
         my $hash_pro= $self->compare_protein_seq($trv_type,$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);
+        unless ($hash_pro){
+            return;
+        }
         $pro_str="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{type}.$hash_pro->{new};
     }
     else {
@@ -984,6 +987,9 @@ sub _transcript_annotation_for_cds_exon
             return ;
         }
         my $hash_pro= $self->compare_protein_seq($variant->{type},$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);
+        unless ($hash_pro){
+            return;
+        }
         $trv_type = lc $hash_pro->{type};
         $pro_str="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{new};
     }
@@ -1087,6 +1093,9 @@ sub compare_protein_seq   {
         else{
             for(my $k=0;$k<$size&&$k<length($seq_new);$k++){
 
+
+                #TODO substr boundary checks
+
                 my $po=substr($seq_ori,$k,1);
                 my $pn=substr($seq_new,$k,1);
 
@@ -1107,6 +1116,11 @@ sub compare_protein_seq   {
     }
     elsif($type=~/del|ins/i){
         ($seq_ori,$seq_new) = ($seq_new,$seq_ori) if($type=~/del/i);
+
+        if (($pro_start>=length $seq_ori) or ($pro_start>=length $seq_new)){
+            $self->error_message("Mutation occurs past end of translated protein, skipping");
+            return;
+        }
 
         $pro_ori=substr($seq_ori,$pro_start);
         $pro_new=substr($seq_new,$pro_start); 
