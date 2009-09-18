@@ -70,6 +70,8 @@ sub execute {
        }
        else { #CONSNPTION FIT!
             my ($chr, $start, $ref_base, $variant_base, $somatic_score, $consensus_quality, $snp_quality, $max_map_q, $depth_tumor, $depth_normal) = split("\t", $line);
+            $chr =~ s/chr//;
+            $chr =~ s/M[^T]?/MT/;
             $output_fh->print("$chr\t$start\t$start\t$ref_base\t$variant_base\tSNP\t$somatic_score\t$consensus_quality\t$snp_quality\t$max_map_q\t$depth_tumor\t$depth_normal\n");
         }
     }
@@ -89,6 +91,7 @@ sub parse_indel_line {
         $star, 
         $somatic_score,
     );
+    $chr =~ s/chr//;
     my @rest_of_fields;
     ($chr,
         $start_pos,
