@@ -77,8 +77,8 @@ sub pre_execute {
         $self->indelpe_data_directory($self->data_directory);
     }
     # Default ref seq
-    unless ($self->indelpe_ref_seq_file) {
-        $self->indelpe_ref_seq_file("/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa");
+    unless ($self->reference_fasta) {
+        $self->reference_fasta("/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa");
     }
 
     if ($error_count) {
@@ -132,10 +132,10 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Somatic Sniper" toProperty="tumor_bam_file" />
   <link fromOperation="input connector" fromProperty="sniper_snp_output" toOperation="Somatic Sniper" toProperty="output_snp_file" />
   <link fromOperation="input connector" fromProperty="sniper_indel_output" toOperation="Somatic Sniper" toProperty="output_indel_file" />
-
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Somatic Sniper" toProperty="reference_file" />
 
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Indelpe Runner" toProperty="tumor_bam_file" />
-  <link fromOperation="input connector" fromProperty="indelpe_ref_seq_file" toOperation="Indelpe Runner" toProperty="ref_seq_file" />
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Indelpe Runner" toProperty="ref_seq_file" />
   <link fromOperation="input connector" fromProperty="indelpe_data_directory" toOperation="Indelpe Runner" toProperty="output_dir" />
   <link fromOperation="input connector" fromProperty="tumor_snp_file" toOperation="Indelpe Runner" toProperty="filtered_snp_file" />
 
@@ -272,6 +272,8 @@ __DATA__
     <inputproperty>normal_bam_file</inputproperty>
     <inputproperty>tumor_bam_file</inputproperty>
     <inputproperty isOptional="Y">tumor_snp_file</inputproperty>
+    <inputproperty isOptional="Y">reference_fasta</inputproperty>
+
 
     <inputproperty isOptional="Y">only_tier_1</inputproperty>
     <inputproperty isOptional="Y">only_tier_1_indel</inputproperty>
@@ -282,7 +284,6 @@ __DATA__
     <inputproperty isOptional="Y">sniper_indel_output</inputproperty>
 
     <inputproperty isOptional="Y">indelpe_data_directory</inputproperty>
-    <inputproperty isOptional="Y">indelpe_ref_seq_file</inputproperty>
 
     <inputproperty isOptional="Y">snp_filter_output</inputproperty>
 
