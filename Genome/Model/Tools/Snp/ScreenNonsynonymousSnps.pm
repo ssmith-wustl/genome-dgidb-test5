@@ -19,7 +19,18 @@ class Genome::Model::Tools::Snp::ScreenNonsynonymousSnps {
 	    is  =>  'String',
 	    doc   =>  "provide the transcript id",
 	},
-	
+	organism => {
+	    type  =>  'String',
+	    doc   =>  "provide the organism either mouse or human; default is human",
+	    is_optional  => 1,
+	    default => 'human',
+	},
+	version => {
+	    type  =>  'String',
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    is_optional  => 1,
+	    default => '54_36p',
+	},
 	]
 	    
 };
@@ -56,6 +67,11 @@ sub execute {
     
     my $transcript = $self->transcript;
     my $list = $self->list;
+
+    my $organism = $self->organism;
+    my $version = $self->version;
+    if ($organism eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
+
     
 ########################### prep NS input list for sift and polyphen
     my $sortedlist;
@@ -89,10 +105,25 @@ sub execute {
     }
 ########################### get the protein sequence
     
-    my $build = Genome::Model::ImportedAnnotation->get(name => 'NCBI-human.combined-annotation')->build_by_version(0);
-    my $build_id =$build->build_id;
+ 
+    my $eianame = "NCBI-" . $organism . ".ensembl";
+    my $gianame = "NCBI-" . $organism . ".genbank";
+
+    my $ensembl_build = Genome::Model::ImportedAnnotation->get(name => $eianame)->build_by_version($version);
+    my $ensembl_data_directory = $ensembl_build->annotation_data_directory;
+
+    my $genbank_build = Genome::Model::ImportedAnnotation->get(name => $gianame)->build_by_version($version);
+    my $genbank_data_directory = $genbank_build->annotation_data_directory;
+
+    my $t;
+    if ($transcript =~/^ENS/){ #ENST for Human ENSMUST
+	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $ensembl_data_directory);
+    }else{
+	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $genbank_data_directory)
+    }
+    unless ($t) {print qq(\nCould not find a transcript object for $transcript from the $organism data warehouse\nWill exit the program now\n\n);exit(1);}
     
-    my $t = Genome::Transcript->get( transcript_name => $transcript, build_id => $build_id );
+
     my $tseq = $t->cds_full_nucleotide_sequence;
     
     unless ($tseq) {
