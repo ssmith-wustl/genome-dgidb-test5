@@ -13,6 +13,7 @@ class Genome::InstrumentData::Solexa {
         (
             select to_char(s_rev.seq_id) id,
                    s_rev.research_project project_name,
+                   s_rev.target_region_set_name,
                    s_rev.sample_id,
                    s_rev.library_id, --library.dna_id library_id,
                    s_rev.run_name,
@@ -77,6 +78,7 @@ EOS
         rev_filt_error_rate_avg         => { },
         fwd_filt_aligned_clusters_pct   => { },
         rev_filt_aligned_clusters_pct   => { },
+        target_region_set_name          => { },
         short_name => {
             doc => 'The essential portion of the run name which identifies the run.  The rest is redundent information about the instrument, date, etc.',
             is => 'Text', 
@@ -98,16 +100,6 @@ EOS
             is => "Genome::Project",
             calculate => q|Genome::Project->get(name => $self->research_project_name)| 
         },
-        target_region_set_name => {
-                                   via   => 'attributes',
-                                   to    => 'value',
-                                   where => [
-                                             entity_class_name => 'Genome::InstrumentData::Solexa',
-                                             property_name     => 'target_region_set_name',
-                                         ],
-                                   is_optional => 1,
-                                   is_mutable  => 1,
-                               },
         _run_lane_solexa => {
             doc => 'Solexa Lane Summary from LIMS.',
             is => 'GSC::RunLaneSolexa',
@@ -132,6 +124,11 @@ EOS
         # since we sometimes don't know the source, it also tracks taxon directly
         taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
         species_name        => { via => 'taxon' },
+        target_set         => {
+            is => 'Genome::Capture::Set',
+            calculate_from => 'target_region_set_name',
+            calculate => q|Genome::Capture::Set->get(name => $target_region_set_name)|,
+        },
     ],
 };
 
