@@ -25,6 +25,7 @@ my @SUB_COMMANDS = qw/
     tools
     disk
     report
+    capture
 /;
 
 our %SUB_COMMAND_CLASSES = 
