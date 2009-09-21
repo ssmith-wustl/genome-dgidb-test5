@@ -809,7 +809,9 @@ sub RetireAllArchivesFromStorageLoc {
 	}
     }
 
-    $self -> UpdateFreezerStatus($bars_in->[0], 1);
+    #LSF: Comment out this because it empty out everything even though the above code failed to retire
+    #     the slots.
+    #$self -> UpdateFreezerStatus($bars_in->[0], 1);
 
     return $pses;
 } #RetireAllArchivesFromStorageLoc
