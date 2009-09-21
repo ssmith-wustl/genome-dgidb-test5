@@ -2,8 +2,10 @@
 
 use strict;
 use warnings;
+use lib '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-live';
+use lib '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-run';
 
-use Test::More tests => 19;
+use Test::More tests => 23;
 
 use Bio::SeqIO;
 
@@ -12,6 +14,7 @@ BEGIN {
     use_ok('GAP::JobSource::tRNAscan');
     use_ok('GAP::JobSource::RfamScan');
     use_ok('GAP::JobSource::RNAmmer');
+    use_ok('GAP::JobSource::MetaRna');
    
 }
 
@@ -43,15 +46,24 @@ my $rnammer_job_source  = GAP::JobSource::RNAmmer->new(
                                                        'bacteria',
                                                    );
 
+my $metarna_job_source  = GAP::JobSource::MetaRna->new(
+                                                       Bio::SeqIO->new(
+                                                                       -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                                                       -format => 'Fasta',
+                                                                   ),
+                                                       'bacteria',
+                                                   );
 
 isa_ok($trnascan_job_source, 'GAP::JobSource::tRNAscan');
 isa_ok($rfamscan_job_source, 'GAP::JobSource::RfamScan');
 isa_ok($rnammer_job_source,  'GAP::JobSource::RNAmmer');
+isa_ok($metarna_job_source,  'GAP::JobSource::MetaRna');
 
 my $job_source = GAP::JobSource::Composite->new(
                                                 $trnascan_job_source,
                                                 $rfamscan_job_source,
                                                 $rnammer_job_source,
+                                                $metarna_job_source,
                                             );
 
 

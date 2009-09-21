@@ -2,8 +2,10 @@
 
 use strict;
 use warnings;
+use lib '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-live';
+use lib '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-run';
 
-use Test::More tests => 30;
+use Test::More tests => 40;
 
 use Bio::SeqIO;
 
@@ -12,6 +14,7 @@ BEGIN {
     use_ok('GAP::Job::tRNAscan');
     use_ok('GAP::Job::RfamScan');
     use_ok('GAP::Job::RNAmmer');
+    use_ok('GAP::Job::MetaRna');
    
 }
 
@@ -38,6 +41,12 @@ my @jobs = ( );
                                     );
     
     push @jobs, GAP::Job::RNAmmer->new(
+                                       $seq,
+                                       'bacteria',
+                                       2112,
+                                   );
+
+    push @jobs, GAP::Job::MetaRna->new(
                                        $seq,
                                        'bacteria',
                                        2112,
