@@ -122,7 +122,7 @@ The mutation type will be inferred based upon start, stop, reference, and varian
 Any number of additional columns may be in the input following these columns, but they will be disregarded.
 
 OUTPUT COLUMNS (COMMMA SEPARATED)
-chromosome_name start stop reference variant type gene_name transcript_name transcript_source trnascript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain
+chromosome_name start stop reference variant type gene_name transcript_name transcript_species transcript_source trnascript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains
 EOS
 }
 
