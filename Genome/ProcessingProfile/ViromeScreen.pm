@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 my %PROPERTIES = (
     sequencing_platform => {
@@ -27,7 +28,7 @@ class Genome::ProcessingProfile::ViromeScreen {
 		    ),
 			is_mutable => 1,
 			doc => (
-			    ( exists $PROPERTIES{$_}->{valid_valiues} )
+			    ( exists $PROPERTIES{$_}->{valid_values} )
 			    ? sprintf('%s Valid values: %s.', $PROPERTIES{$_}->{doc}, join(', ', @{$PROPERTIES{$_}->{valid_values}}))
 			    : $PROPERTIES{$_}->{doc}
 			),
@@ -38,10 +39,30 @@ class Genome::ProcessingProfile::ViromeScreen {
 
 sub create {
     my $class = shift;
+
     my $self = $class->SUPER::create(@_);
     return unless $self;
+
     my $class_object = $self->get_class_object;
-    
+
+    for my $property_name ( keys %PROPERTIES ) {
+        next if $class_object->{has}->{$property_name}->{is_optional} && !$self->$property_name;
+        next unless exists $PROPERTIES{$property_name}->{valid_values};
+        unless ( $self->$property_name &&
+                 (grep { $self->$property_name eq $_ } @{$PROPERTIES{$property_name}->{valid_values}}) ) {
+            $self->error_message(
+                sprintf(
+                        'Invalid value (%s) for %s.  Valid values: %s',
+                        $self->$property_name || '',
+                        $property_name,
+                        join(', ', @{$PROPERTIES{$property_name}->{valid_values}}),
+                )
+	    );
+            $self->delete;
+            return;
+        }
+    }
+
     return $self;
 }
 
