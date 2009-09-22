@@ -21,13 +21,13 @@ my $psl_path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subjects/t
 
 SKIP: {
     skip 'only remove file if it exists with size', 1 unless -s $psl_path;
-    ok(unlink $psl_path,'remove '. $psl_path);
+    ok(unlink ($psl_path), 'remove '. $psl_path);
 }
 my $blat_output_path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subjects/test_tmp.out';
 
 SKIP: {
     skip 'only remove file if it exists with size', 1 unless -s $blat_output_path;
-    ok(unlink $blat_output_path,'remove '. $blat_output_path);
+    ok(unlink ($blat_output_path),'remove '. $blat_output_path);
 }
 my $blat_params = '-mask=lower -out=pslx -noHead';
 my $ref_seq_dir = '/gscmnt/839/info/medseq/reference_sequences/refseq-for-test';
@@ -50,10 +50,10 @@ ok($blat->execute,'execute '. $blat->command_name);
 ok(!compare($psl_path,$expected_psl),'psl files are the same');
 SKIP: {
     skip 'only remove file if it exists with size', 1 unless -s $psl_path;
-    ok(unlink $psl_path,'remove '. $psl_path);
+    ok(unlink ($psl_path), 'remove '. $psl_path);
 }
 SKIP: {
     skip 'only remove file if it exists with size', 1 unless -s $blat_output_path;
-    ok(unlink $blat_output_path,'remove '. $blat_output_path);
+    ok(unlink ($blat_output_path), 'remove '. $blat_output_path);
 }
 exit;
