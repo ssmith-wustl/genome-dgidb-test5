@@ -7,7 +7,20 @@ use Genome;
 
 class Genome::Model::Build::ViromeScreen {
     is => 'Genome::Model::Build',
-#   has => [ ],
+    has => [
+	barcode_file => {
+	    via => 'attributes',
+	    to => 'value',
+	    where => [property_name => 'barcode_file'],
+	    is_mutable => 1,
+	},
+	log_file => {
+	    via => 'attributes',
+	    to => 'value',
+	    where => [property_name => 'log_file'],
+	    is_mutable => 1,
+	},
+    ]
 };
 
 sub create {
@@ -21,12 +34,22 @@ sub create {
 	return;
     }
 
-    #SOME VERIFICATION OF DATA DATA DIRECTORY
-#    unless ($self->model->data_directory) {
-#	$self->error_message("Data directory for model does not exist");
-#	return;
-#    }
     return $self;
+}
+
+sub screen_directory {
+    my $self = shift;
+    return $self->data_directory.'/virome_screen';
+}
+
+sub get_barcode_file {
+    my $self = shift;
+    return $self->barcode_file;
+}
+
+sub get_log_file {
+    my $self = shift;
+    return $self->log_file;
 }
 
 1;
