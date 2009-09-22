@@ -27,8 +27,6 @@ sub execute {
 	return;
     }
 
-    print $self->build->log_file."LogFile\n";
-
     my $run = Genome::Model::Tools::ViromeScreening->create (
 	fasta_file   => $screen_dir.'/'.$fasta_name,
 	barcode_file => $self->build->barcode_file,
@@ -41,9 +39,6 @@ sub execute {
 	return;
     }
 
-    print Dumper $run;
-    return 1;
-
     unless ($run->execute) {
 	$self->error_message("Failed virome screen run");
 	return 1;
@@ -53,3 +48,6 @@ sub execute {
 }
 
 1;
+
+#$HeadURL$
+#$Id$
