@@ -23,7 +23,7 @@ sub execute {
     my $screen_dir = $self->build->data_directory.'/virome_screen';
 
     unless (-s $screen_dir.'/'.$fasta_name) {
-	$self->error_message("Error: Can not find file: $fasta_file");
+	$self->error_message("Error: Can not find file: fasta_file");
 	return;
     }
 
