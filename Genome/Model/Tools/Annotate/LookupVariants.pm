@@ -112,6 +112,7 @@ sub execute {
     }
 
     close($in);
+    $fh->close;
 
     return 1;
 }
@@ -177,7 +178,7 @@ sub print_db_snp_lines_without_filters {
     }
 
     my $group_by_position = $self->group_by_position();
-    if ( $report_mode eq 'known_only' ) {
+    if ( $report_mode eq 'known-only' ) {
 
         if ($group_by_position) {
             # novel-only is automatically group by position, yeah?
