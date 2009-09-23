@@ -30,6 +30,13 @@ class Genome::ProcessingProfile::GenotypeMicroarray {
         ],
 };
 
+# Currently all processing profiles must implement the stages() method.
+# This is sad.  We have a workflowless simple build which want to do less.
+# I believe Eric Clark is fixing this.
+sub stages {
+    return ();
+}
+
 sub properties_hash {
     my %properties = (
         input_format => {
