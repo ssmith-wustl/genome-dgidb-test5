@@ -67,13 +67,14 @@ sub execute
         if ($name =~ /TBXNTFiltered_TBLASTX_ViralGenome$/) 
         { # tblastx directory
             $matches++;
-            $self->log_event("$name matches");
 	    my $full_path = $dir."/".$name;
-	    opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
+            $self->log_event("$name matches, opening $full_path");
+	    opendir(SubDH, $full_path) or ($self->log_event("can not open dir $full_path!") and die "can not open dir $full_path!\n");
 	    foreach my $file (readdir SubDH) 
             { 
 	        if ($file =~ /\.tblastx_ViralGenome\.out$/) 
                 {
+                    $self->log_event("have .out file $file");
 		    $have_tblastx_out = 1;
 		    my $have_blast_parsed = 0;
 		    my $finished = 0;
@@ -83,6 +84,7 @@ sub execute
 		    my $blast_parsed_file = $full_path."/".$temp_name.".tblastx_ViralGenome.parsed";
 		    if (-s $blast_parsed_file) 
                     {
+                        $self->log_event("have $blast_parsed_file");
 		        $have_blast_parsed = 1;
 		        $finished = $self->check_tblastxParsed_output($blast_parsed_file);
 		    }
@@ -131,7 +133,7 @@ sub execute
 
 sub check_tblastxParsed_output {
 	my ($self, $in_file ) = @_;
-
+        $self->log_event("in check_tblastxParsed_output for $in_file");
 	my $have_summary_line = 0;
 	my $line_count = 0;
 	my $total_seq = 0;

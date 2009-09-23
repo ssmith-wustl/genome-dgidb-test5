@@ -67,11 +67,12 @@ sub execute
 		    my $blast_out_file = $full_path."/".$temp.".tblastx_ViralGenome.out";
 		    if (!(-e $blast_out_file)) 
                     {
+                        $self->log_event("$blast_out_file does not exist, preparing resubmit");
 		        $resubmit = 1;
 		    }
 		    else 
                     { # has the output, check whether finished
-                        $self->log_event("have $blast_out_file");
+                        $self->log_event("$blast_out_file exists");
 		        my $com = "tail -20 $blast_out_file";
 		        my $output = qx/$com/; 
 		        if (!($output =~ /Matrix:/)) 
@@ -82,7 +83,7 @@ sub execute
 		
 		    if ($resubmit) 
                     {
-		        $self->log_event($blast_out_file, " does not exist or finish! resubmitted\n");
+		        $self->log_event("resubmitting $blast_out_file");
 		    
 		        my $temp = substr($file, 0, -3);
 		        my $str = $full_path."/".$temp;

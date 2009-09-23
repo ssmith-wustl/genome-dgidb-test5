@@ -84,7 +84,7 @@ sub execute
 		        $self->log_event($blast_out_file, " does not exist or finish! resubmitted");
 		    
 		        my $temp = substr($file, 0, -3);
-                        my $str = $temp;	
+                        my $str = $full_path."/".$temp;	
 
 		        my $blast_param = '-d /gscmnt/sata835/info/medseq/virome/blast_db/nt/2009_07_09.nt';
 		        my $com = 'blastall -p tblastx  -i '.$str.'.fa -o '.$str.'.tblastx.out -e 1e-2 -I T '.$blast_param;

@@ -50,7 +50,7 @@ sub execute
 
     my @temp_dir_arr = split("/", $dir);
     my $lib_name = $temp_dir_arr[$#temp_dir_arr];
-    $self->log_event("Outer BlastX Viral centered for $lib_name");
+    $self->log_event("Outer BlastX Viral entered for $lib_name");
 
     my $allFinished = 1;
     my $have_input_file = 0;
@@ -66,11 +66,14 @@ sub execute
             { 
 	        if ($file =~ /\.TBXNTFiltered\.fa_file\d+\.fa$/) 
                 { # masked unique sequences in splited files
-                    push(@files_for_blast, $file);
+		    my $inF_path = $full_path."/".$file;
+                    $self->log_event("pushing $file in files for blastx viral");
+                    push(@files_for_blast, $inF_path);
                 }
 	    }
         }
     }
+    $self->files_for_blast(\@files_for_blast);
 
     $self->log_event("Outer BlastX Viral completed for $lib_name");
     return 1;

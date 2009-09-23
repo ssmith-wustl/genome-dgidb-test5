@@ -45,7 +45,7 @@ sub execute
     my @temp_dir_arr = split("/", $dir);
     my $lib_name = $temp_dir_arr[$#temp_dir_arr];
     my $directory_job_file = $dir."/".$lib_name.".job";
-    $self->log_event("Blast X NT check output entered for $lib_name");
+    $self->log_event("Outer Blast X NT check output entered for $lib_name");
 
     my @files_for_blast;
     opendir(DH, $dir) or die "Can not open dir $dir!\n";
@@ -61,6 +61,7 @@ sub execute
 	        if ($file =~ /\.BNFiltered\.fa_file\d+\.fa$/) 
                 { # tblastx input file
 		    my $inF_path = $full_path."/".$file;
+                    $self->log_event("pushing $file in files for blastx nt");
                     push(@files_for_blast, $inF_path);
 	        }
 	    }
@@ -68,7 +69,7 @@ sub execute
     }
     $self->files_for_blast(\@files_for_blast);
 
-    $self->log_event("Blast X NT check output completed for $lib_name");
+    $self->log_event("Outer Blast X NT check output completed for $lib_name");
     return 1;
 }
 
