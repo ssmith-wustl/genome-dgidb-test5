@@ -79,7 +79,7 @@ sub generate_report {
     # Data
     my $data;
     unless ( $data = $self->_generate_data ) {
-        $self->error_message("Could not generate report data");
+        $self->status_message("No report data was generated.  This may be ok.  Errors, if any, would appear above.");
         return;
     }
 
