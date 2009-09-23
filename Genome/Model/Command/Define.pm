@@ -100,14 +100,15 @@ for my $target ( glob("$pp_path/*pm") ) {
     #print Dumper({mod=>$module, path=>$pp_path, target=>$target, target_class=>$target_class,subclass=>$subclass});
 
     # Do not autogenerate this if it is an exception (things with actual modules for define)
-    my @targets_to_skip = ("Somatic");
-    next if (grep {$target eq $_} @targets_to_skip);
-    
-    no strict 'refs';
-    class {$subclass} {
-        is => __PACKAGE__,
-        sub_classification_method_name => 'class',
-    };
+    my @targets_to_skip = ("Somatic","GenotypeMicroarray");
+    unless (grep {$target eq $_} @targets_to_skip) {
+        no strict 'refs';
+        class {$subclass} {
+            is => __PACKAGE__,
+            sub_classification_method_name => 'class',
+        };
+    }
+
     push @SUB_COMMAND_CLASSES, $subclass;
 }
 
@@ -125,8 +126,9 @@ sub sub_command_classes {
 
 sub help_brief {
     my $model_type = $_[0]->_model_type;
-    my $msg = ($model_type ? "$model_type data model" : "data model");
-    $msg = "define a new $msg, representing knowledge about the genome of some subject with a specific processing profile"; 
+    $model_type =~ s/genome model command define //;
+    my $msg = ($model_type ? "$model_type genome model" : "genome model");
+    $msg = "define a new $msg"; 
     return $msg;
 }
 

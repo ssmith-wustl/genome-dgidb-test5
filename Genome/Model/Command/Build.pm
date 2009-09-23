@@ -10,26 +10,26 @@ class Genome::Model::Command::Build {
     is => [ 'Genome::Model::Event' ],
     doc => "Build the model with currently assigned instrument data according to the processing profile.",
     has => [
-    data_directory => { via => 'build' },
-    auto_execute   => {
-        is => 'Boolean',
-        default_value => 1,
-        is_transient => 1,
-        is_optional => 1,
-        doc => 'The build will execute genome model build run-jobs(default_value=1)',
-    },
-    force_new_build => {
-        is => 'Boolean',
-        default_value => 0,
-        doc => 'Force a new build when existing builds are running',
-        is_optional => 1,
-    },
-    bsub_queue  => {
-        is => 'String', 
-        is_optional => 1, 
-        default_value => 'apipe',
-        doc => 'lsf jobs should be put into this queue',
-    },
+        data_directory => { via => 'build' },
+        auto_execute   => {
+            is => 'Boolean',
+            default_value => 1,
+            is_transient => 1,
+            is_optional => 1,
+            doc => 'The build will execute genome model build run-jobs(default_value=1)',
+        },
+        force_new_build => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => 'Force a new build when existing builds are running',
+            is_optional => 1,
+        },
+        bsub_queue  => {
+            is => 'String', 
+            is_optional => 1, 
+            default_value => 'apipe',
+            doc => 'lsf jobs should be put into this queue',
+        },
     ],
 };
 
@@ -176,34 +176,36 @@ sub execute {
         }
     }
 
-    my $w = $self->_merge_stage_workflows(@stage_wf);
+    if (@stage_wf) {
+        my $w = $self->_merge_stage_workflows(@stage_wf);
 
-    $w->save_to_xml(OutputFile => $self->build->data_directory . '/build.xml');
+        $w->save_to_xml(OutputFile => $self->build->data_directory . '/build.xml');
 
-    if ($self->auto_execute) {
-        my $cmdline = 'bsub -N -H -q ' . $self->bsub_queue . ' -m blades -u ' . $ENV{USER} . '@genome.wustl.edu' .
-            $self->_resolve_log_resource($self) . ' ' . 
-            'genome model build run --model-id ' . $self->model->id . ' --build-id ' . $self->build->id;
+        if ($self->auto_execute) {
+            my $cmdline = 'bsub -N -H -q ' . $self->bsub_queue . ' -m blades -u ' . $ENV{USER} . '@genome.wustl.edu' .
+                $self->_resolve_log_resource($self) . ' ' . 
+                'genome model build run --model-id ' . $self->model->id . ' --build-id ' . $self->build->id;
 
-        my $bsub_output = `$cmdline`;
-        my $retval = $? >> 8;
+            my $bsub_output = `$cmdline`;
+            my $retval = $? >> 8;
 
-        if ($retval) {
-            $self->error_message("bsub returned a non-zero exit code ($retval), bailing out");
-            return;
+            if ($retval) {
+                $self->error_message("bsub returned a non-zero exit code ($retval), bailing out");
+                return;
+            }
+            my $bsub_job_id;
+            if ($bsub_output =~ m/Job <(\d+)>/) {
+                $bsub_job_id = $1;
+            } else {
+                $self->error_message('Unable to parse bsub output, bailing out');
+                $self->error_message("The output was: $bsub_output");
+                return;
+            }
+            $self->lsf_job_id($bsub_job_id);
+            #$self->build->start;# FIXME return here on failure?
+            my $resume = sub { `bresume $bsub_job_id`};
+            UR::Context->create_subscription(method => 'commit', callback => $resume);
         }
-        my $bsub_job_id;
-        if ($bsub_output =~ m/Job <(\d+)>/) {
-            $bsub_job_id = $1;
-        } else {
-            $self->error_message('Unable to parse bsub output, bailing out');
-            $self->error_message("The output was: $bsub_output");
-            return;
-        }
-        $self->lsf_job_id($bsub_job_id);
-        #$self->build->start;# FIXME return here on failure?
-        my $resume = sub { `bresume $bsub_job_id`};
-        UR::Context->create_subscription(method => 'commit', callback => $resume);
     }
 
     return 1;
