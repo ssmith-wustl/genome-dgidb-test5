@@ -18,7 +18,6 @@
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>fasta file</inputproperty>
     <inputproperty>gram stain</inputproperty>
-    <inputproperty>report save dir</inputproperty>
     <outputproperty>bio seq features</outputproperty>
     <outputproperty>result</outputproperty>
   </operationtype>
