@@ -63,4 +63,11 @@ sub create {
     return $self;
 }
 
+sub calculate_estimated_kb_usage {
+    my $self = shift;
+
+    # 1.5 gig... overestimating by 50% or so...
+    return 1572864000;
+}
+
 1;
