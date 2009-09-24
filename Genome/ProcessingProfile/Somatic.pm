@@ -14,6 +14,21 @@ class Genome::ProcessingProfile::Somatic{
             to          => 'value',
             where       => [name => 'only_tier_1'],
             is_mutable  => 1,
+            doc => "If set to true, the pipeline will skip ucsc annotation and produce only tier 1 snps",
+        },
+        min_mapping_quality => {
+            via         => 'params',
+            to          => 'value',
+            where       => [name => 'min_mapping_quality'],
+            is_mutable  => 1,
+            doc => "minimum average mapping quality threshold for high confidence call",
+        },
+        min_somatic_quality => {
+            via         => 'params',
+            to          => 'value',
+            where       => [name => 'min_mapping_quality'],
+            is_mutable  => 1,
+            doc => "minimum somatic quality threshold for high confidence call",
         },
     ],
 };
