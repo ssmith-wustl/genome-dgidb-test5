@@ -246,6 +246,12 @@ my %TYPE_NAME_PARAMS = (
         assembler_params => '-hash_length 27 ',
         prepare_instrument_data_params => '-reads_cutoff 10000',
     },
+    'virome screen' => {
+	class => 'Genome::ProcessingProfile::ViromeScreen',
+	name => 'Virome Screen Test',
+	type_name => 'virome screen',
+	sequencing_platform => '454',
+    },
 );
 sub valid_params_for_type_name {
     my ($self, $type_name) = @_;
@@ -277,7 +283,10 @@ sub _add_mock_methods_to_de_novo_assembly {
 
 #sub _add_mock_methods_to_tester { }
 #sub _add_mock_methods_to_reference_alignement { }
-    
+
+# NO ADDITIONAL METHODS TO MOCK FOR VIROME SCREEN
+#sub _add_mock_methods_to_virome_screen { }
+
 #######################
 # Type Name Test Base #
 #######################
