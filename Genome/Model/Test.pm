@@ -444,6 +444,31 @@ sub create_mock_solexa_instrument_data {
     return @id;
 }
 
+sub create_mock_454_instrument_data {
+    my ($self, $cnt) = @_;
+    $cnt ||=1;
+    my $dir = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-454';
+    my @id;
+    for my $i (1..$cnt) {
+	my $full_path = $dir;
+	my $id = $self->create_mock_object (
+	    class => 'Genome::InstrumentData::454',
+	    library_name => 'Pooled_DNA-2009-03-09_23-lib1',
+	    is_paired_end => '0',
+	    id => '2772719977',
+	    run_name => 'R_2009_03_16_15_08_37_FLX08080419_Administrator_96199846',
+	    sample_name => 'self->mock_sample_name',
+	    seq_id => '2772719977',
+	    sequencing_platform => '454',
+	) or confess "Unable to create mock 454 id #$cnt";
+	$id->mock('resolve_full_path', sub {return $full_path;});
+	$id->mock('dump_to_file_system', sub {return 1;});
+	push @id, $id;
+    }
+
+    return @id;
+}
+
 #< Additional Methods for Mock Models Type Names >#
 # amplicon assembly
 sub _add_mock_methods_to_amplicon_assembly_build { 
@@ -471,6 +496,16 @@ sub _add_mock_methods_to_de_novo_assembly_build {
         (qw/ velvet_fastq_file /),
     );
 
+    return 1;
+}
+
+# virome screening
+sub _add_mock_methods_to_virome_screen_build {
+    my ($self, $build) = @_;
+    $self->mock_methods (
+	$build,
+	(qw/ barcode_file log_file /),
+    );
     return 1;
 }
 
