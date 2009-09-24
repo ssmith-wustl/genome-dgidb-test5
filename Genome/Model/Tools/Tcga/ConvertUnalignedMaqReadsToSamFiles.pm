@@ -99,6 +99,7 @@ sub execute {
     my $frag = "\t4";
 
     my $rg_tag = "\tRG:Z:";
+    my $pg_tag = "\tPG:Z:";
 
     my @idas = $model->instrument_data_assignments;
     my $alignment_count = scalar(@idas);
@@ -197,7 +198,7 @@ sub execute {
        
         my $rg_string = "\@RG\tID:$seq_id\tPL:illumina\tPU:$platform_unit_field\tLB:$library\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_field\tSM:$sample_name_field\tCN:WUGSC\n";
 
-    #program group
+        #program group
         my $pg_string ="\@PG\tID:$seq_id\tVN:$aligner_version\tCL:$cmdline\n";
 
         my $rg_file = "$header_dir/$seq_id.rg";
@@ -227,8 +228,8 @@ sub execute {
                 my $readName2 = $1;
                 my $readData2 = $2;
 
-                print $ua_fh $readName1.$pair1.$filler.$readData1.$rg_tag.$seq_id."\n";
-                print $ua_fh $readName2.$pair2.$filler.$readData2.$rg_tag.$seq_id."\n";
+                print $ua_fh $readName1.$pair1.$filler.$readData1.$rg_tag.$seq_id.$pg_tag.$seq_id."\n";
+                print $ua_fh $readName2.$pair2.$filler.$readData2.$rg_tag.$seq_id.$pg_tag.$seq_id."\n";
 
                 $count++;
             }
