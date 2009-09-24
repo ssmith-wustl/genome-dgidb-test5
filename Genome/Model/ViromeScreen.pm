@@ -4,6 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
+require Genome::ProcessingProfile::ViromeScreen;
 
 class Genome::Model::ViromeScreen {
     is => 'Genome::Model',
@@ -17,8 +19,13 @@ class Genome::Model::ViromeScreen {
     ],
 };
 
-sub build_subclass_name {
-    return 'virome-screen';
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+
+    return $self;
 }
 
 1;
