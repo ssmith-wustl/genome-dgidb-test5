@@ -25,9 +25,9 @@ class Genome::Capture::Set {
         status => { },
     },
     has_many_optional => {
-        capture_set_targets => {
-            is => 'Genome::Capture::SetTarget',
-            reverse_id_by => 'capture_set',
+        set_oligos => {
+            is => 'Genome::Capture::SetOligo',
+            reverse_as => 'set',
         }
     },
     doc         => '',
