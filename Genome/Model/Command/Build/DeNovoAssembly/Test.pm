@@ -175,6 +175,8 @@ use Test::More;
 sub test_01_use : Test(1) {
     my $self = shift;
 
+    print $self->test_class."\n";
+
     use_ok($self->test_class);
 
     return 1;
