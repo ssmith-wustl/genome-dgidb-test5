@@ -14,17 +14,17 @@ class Genome::Model::Tools::Consed::TracesToConsed {
 	     chromosome       => {
 		 type         => 'String',
 		 doc          => "give the chromosome ie[1,2...22,X,Y",
+		 is_optional  => 1,
 	     },
 	     start            => {
 		 type         => 'Number',
 		 doc          => "give the start coordinate",
+		 is_optional  => 1,
 	     },
 	     trace_dir       => {
 		 type         => 'String',
 		 doc          => "give the full path to the traces you want to use in the assembly",
 	     },
-
-
 	     base_dir         => {
 		 type         => 'String',
 		 doc          => "give the full path to where you would like your new project to be built; unless given, your new assembly will be built in your current dir",
@@ -72,15 +72,25 @@ class Genome::Model::Tools::Consed::TracesToConsed {
 	     },
 	     project          => {
 		 type         => 'string',
-		 doc          => "provide a project name or use the default chromosome_start; No "." allowed in project the assembly will fail to produce a phd file with the expected name for the refseq",
+		 doc          => "provide a project name or use the default chromosome_start; _'s ok but in general avoid any other characters aside from letters and numbers the assembly may fail to produce a phd file with the expected name for the refseq",
 		 is_optional  => 1,
 	     },
-	     organism  => {
+	     organism         => {
 		 type         => 'string',
 		 doc          => "use this option if you want to build an ace file for mouse build 37.",
 		 is_optional  => 1,
 		 default      => 'human',
 	     },
+	     ref_dir           => {
+		 type         => 'string',
+		 doc          => "use this option if you want to provide your own genomic reference to excise the reference sequence fasta file from.",
+		 is_optional  => 1,
+	     },   
+	     ref_fasta        => {
+		 type         => 'string',
+		 doc          => "use this option if you want to provide your own reference sequence fasta file to directly assemble under.",
+		 is_optional  => 1,
+	     },   
 	     
 	     ],
     
@@ -90,7 +100,17 @@ class Genome::Model::Tools::Consed::TracesToConsed {
 
 
 sub help_brief {                            # keep this to just a few words <---
-    "This tool will make a consed ace file from a minimun of a directory of traces a chromosome and a chromosomal start coordinate for either NCBI Human build 36 or NCBI Mouse build 37"                 
+    return <<EOS
+
+    This tool will make a consed ace file from a minimun of a directory of traces a chromosome and a chromosomal start coordinate for either NCBI Human build 36 or NCBI Mouse build 37 or a project name and ref_fasta
+
+gt consed traces-to-consed --chromosome --start --trace_dir
+
+or 
+
+gt consed traces-to-consed --project --ref_fasta
+ 
+EOS
 }
 
 sub help_synopsis {                         # replace the text below with real examples <---
@@ -103,6 +123,12 @@ gt consed traces-to-consed --chromosome 10 --start 126009345 --stop 126009576 --
 
 will produce the project 10_126009345 
 
+
+Alternatively, you can provide your own reference fasta and a name for the project
+
+gt consed traces-to-consed --project --ref_fasta
+ 
+
 EOS
 }
 
@@ -111,19 +137,22 @@ sub help_detail {                           # this is what the user will see wit
 
 
 regardless of your intent for the assemblies, you may need to due some setup before running this script
+==================================================================================================
 
+--ref-dir option will allow to assemble the reads in your ace file under the reference of your choice. By using this option, you will envoke Bio::DB::Fasta which will write an index of sequences in the directory you put after refdir. Any .fa or .fasta file in the directory will then be used to search for sequence based on the chromosome and coordinates you stipulate. The organism option should be used with this option
+   
 ==================================================================================================
 --trace-dir is a mandatory parameter. 
-All the traces you want to have assembled will need to be dumped and preferably zipped 	and placed in a	single location here after known as the traces dir. The traces dir canbe a mix of traces for several assemblies.
+All the traces you want to have assembled will need to be dumped and preferably zipped and placed in a single location here after known as the trace dir. The trace dir can be a mix of traces for several assemblies.
 
 --link-traces will write a link in your projects chromat dir from the traces dir rather than following the default action; to copy the traces to the chromat dir
 ==================================================================================================
-There are two options for selecting traces to be assembled into a project from the traces dir 
+There are two options for guiding the selection of traces from the trace dir that are to be assembled into a project
 
 --assembly-traces is a user supplied traces.fof. If the trace name is in both the traces dir and this optional file, an attempt will be made to assemble it into the project your making.
 --amplicon list the amplicon portion of the read name for the reads you want to assemble, if reads from more than one amplicon are to be assembled, list all the amplicons in a quoted string with a space between each amplicon ie "H_10_00fXo H_10_00fXa H_10_00fXb"
 
-if neither of these two traces selection options are used, an attempt will be made to assemble all the traces in the traces dir in the project.
+if neither of these two traces selection options are used, an attempt will be made to assemble all the traces from the trace dir in the project.
 ==================================================================================================
 You have two options to help consed guide the addnewreads for you assembly
 
@@ -143,7 +172,7 @@ if neither of these two options are used consed will follow it order of preciden
 
 ==================================================================================================
 
-*Here are 4 examples of how this script was intened to be used. 
+*Here are 6 examples of how this script was intened to be used. 
 
 
 building Human NCBI Build36 assemblies to be used by ==>  gt manual-review review-variants 
@@ -178,14 +207,34 @@ With regard to the limitations of this script, it is restricted to the use of UC
 
 
 
-==================================================================================================
+                ======================================================
 
+
+To build an ace file for some thing other than Human Build 36 or Mouse. Streptococcus pneumoniae for example
+
+gt consed traces-to-consed -chromosome PNI0373FNL_Contig0.1 -start 1 -stop 1000 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ -ref-dir /gscmnt/238/medseq/human_misc/TEST/REF/ -organism Streptococcus_pneumoniae --project-details "Streptococcus pneumoniae ref based on model build" 
+
+                            -project is also recommended 
+                ======================================================
+
+
+To Build an ace file with your own ref-fasta. For example to assembled RT-PCR sequence under the transcript sequence as the reference 
+
+gt consed traces-to-consed -project project_name -ref-fasta /gscmnt/238/medseq/human_misc/TEST/REF/testref.refseq.fasta -trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/
+-base-dir /gscmnt/238/medseq/human_misc/TEST
+
+==================================================================================================
 EOS
 }
 
 
 sub execute {                               # replace with real execution logic.
     my $self = shift;
+
+    unless ($self->chromosome && $self->start || $self->ref_fasta && $self->project) {
+	print qq(In addition to the trace-dir, either chromosome and start or ref-fasta and project are required inputs. Please see gmt consed traces-to-consed -help for more options.\n);
+	return (0);
+    }
 
     my $trace_dir = $self->trace_dir;
     unless (-e $trace_dir && -d $trace_dir) { die "check $trace_dir\n"; }
@@ -196,6 +245,8 @@ sub execute {                               # replace with real execution logic.
     } else {
 	$base_dir = `pwd`;
     }
+
+
     chdir ($base_dir);
 
     my $assembly_traces_fof = $self->assembly_traces;
@@ -224,27 +275,39 @@ sub execute {                               # replace with real execution logic.
 	}
     }
 
-    my $chromosome = $self->chromosome;
-    my $start = $self->start;
-    my $stop = $self->stop;
-    unless ($stop) { $stop = $start; }
-
-    my $project = $self->project;
-    unless ($project) {$project = "$chromosome\_$start";}
-
-    my $extend_ref = $self->extend_ref;
-    if ($start eq $stop) {unless ($extend_ref) {$extend_ref=1000;}}
-    unless ($extend_ref) {$extend_ref=0;}
 
     my ($ref_start,$ref_stop,);
-    if ($start < $stop) {
-	$ref_start= $start - $extend_ref;
-	$ref_stop= $stop + $extend_ref;
-    } else {
-	$ref_start= $stop - $extend_ref;
-	$ref_stop= $start + $extend_ref;
+    my $project = $self->project;
+    my $project_details = $self->project_details;
+    my $chromosome;
+    unless ($self->ref_fasta) {
+	
+	$chromosome = $self->chromosome;
+	my $start = $self->start;
+	
+	my $stop = $self->stop;
+	unless ($stop) { $stop = $start; }
+	
+	unless ($project) {$project = "$chromosome\_$start";}
+	$project =~ s/\./\_/gi;
+	
+	my $extend_ref = $self->extend_ref;
+	if ($start eq $stop) {unless ($extend_ref) {$extend_ref=1000;}}
+	unless ($extend_ref) {$extend_ref=0;}
+	
+	if ($start < $stop) {
+	    $ref_start= $start - $extend_ref;
+	    $ref_stop= $stop + $extend_ref;
+	} else {
+	    $ref_start= $stop - $extend_ref;
+	    $ref_stop= $start + $extend_ref;
+	}
+
+	unless ($project_details) { $project_details = "$chromosome\:$start\_$stop"; }
+
     }
-    
+
+
     my $project_dir = "$base_dir/$project";
     my $chromat_dir = "$project_dir/chromat_dir";
     my $phd_dir = "$project_dir/phd_dir";
@@ -260,27 +323,35 @@ sub execute {                               # replace with real execution logic.
     mkdir ($poly_dir,0775) if (! -d $poly_dir);
     mkdir ($edit_dir,0775) if (! -d $edit_dir);
     
-    my $project_details = $self->project_details;
-
-    unless ($project_details) { $project_details = "$chromosome\:$start\_$stop"; }
-
-
     my $organism = $self->organism;
 
-    open(REF,">$edit_dir/$project.c1.refseq.fasta");
-    if ($organism eq "human") {
-	print qq(Your reference sequence will be based on NCBI Human Build 36\n);
-	print REF qq(>$project.c1.refseq.fasta $project_details NCBI Human Build 36, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
-	my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop,$organism);
-	print REF qq($sequence\n);
+    if ($self->ref_fasta) {
+	my $ref = $self->ref_fasta;
+	system qq(cp $ref $edit_dir/$project.c1.refseq.fasta);
     } else {
-	print qq(Your reference sequence will be based on NCBI Mouse Build 37\n);
-	print REF qq(>$project.c1.refseq.fasta $project_details NCBI Mouse Build 37, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
-	my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop,$organism);
-	print REF qq($sequence\n);
-    } 
-    close(REF);
-    
+	open(REF,">$edit_dir/$project.c1.refseq.fasta");
+	if ($self->ref_dir) {
+	    print qq(Your reference sequence will be based on $organism\n);
+	    print REF qq(>$project.c1.refseq.fasta $project_details $organism, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
+	    my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop,$organism,$self);
+	    print REF qq($sequence\n);
+	} elsif ($organism eq "human") {
+	    print qq(Your reference sequence will be based on NCBI Human Build 36\n);
+	    print REF qq(>$project.c1.refseq.fasta $project_details NCBI Human Build 36, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
+	    my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop,$organism,$self);
+	    print REF qq($sequence\n);
+	} elsif ($organism eq "mouse") {
+	    print qq(Your reference sequence will be based on NCBI Mouse Build 37\n);
+	    print REF qq(>$project.c1.refseq.fasta $project_details NCBI Mouse Build 37, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
+	    my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop,$organism,$self);
+	    print REF qq($sequence\n);
+	} else {
+	    
+	    die "unless you provide the refdir $organism needs to be the default human or mouse\n";
+	    
+	}
+	close(REF);
+    }
     chdir($edit_dir);
     
     unless ("$project.c1.refseq.fasta" && -e "$project.c1.refseq.fasta") { die "no refseq file\n"; }
@@ -296,6 +367,7 @@ sub execute {                               # replace with real execution logic.
 
     my @command = ["/gsc/scripts/bin/fasta2phd" , "$project.c1.refseq.fasta" , "30"]; &ipc_run(@command);
     
+    print qq($project.c1.phd.1\n);
     unless ("$project.c1.phd.1" && -e "$project.c1.phd.1") { die "no phd file\n"; }
 
     @command = ["cp" , "$project.c1.phd.1" , "$phd_dir"]; &ipc_run(@command);
@@ -535,22 +607,27 @@ sub ipc_run {
 sub get_ref_base {
 
 #used to generate the refseqs;
-    my ($chr_name,$chr_start,$chr_stop,$organism) = @_;
+    my ($chr_name,$chr_start,$chr_stop,$organism,$self) = @_;
 
     use Bio::DB::Fasta;
-    my $RefDir;
-    if ($organism eq "human"){
-	$RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
-    } else {
-	$RefDir = "/gscmnt/sata147/info/medseq/rmeyer/resources/MouseB37/";
-    }
+    my $RefDir = $self->ref_dir;
 
+    unless ($RefDir) {
+	if ($organism eq "human") {
+	    $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+	} elsif ($organism eq "mouse") {
+	    $RefDir = "/gscmnt/sata147/info/medseq/rmeyer/resources/MouseB37/";
+	} else {
+	    die "couldn't find a refdir\n";
+	}
+    }
+    
     my $refdb = Bio::DB::Fasta->new($RefDir);
     my $seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
     $seq =~ s/([\S]+)/\U$1/;
-
+    
     if ($seq =~ /N/) {warn "your sequence has N in it\n";}
-
+    
     return $seq;
     
 }
