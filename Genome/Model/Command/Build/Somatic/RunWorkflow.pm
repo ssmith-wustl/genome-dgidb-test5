@@ -40,7 +40,7 @@ sub execute {
         return;
     }
 
-    # Get the processing profile and the params we care about (right now, the only real option is only_tier_1)
+    # Get the processing profile and the params we care about
     my $processing_profile = $model->processing_profile;
     unless ($processing_profile) {
         $self->error_message("Failed to get a processing_profile object!");
@@ -50,6 +50,9 @@ sub execute {
     # Default to 0
     my $only_tier_1_flag = $processing_profile->only_tier_1;
     $only_tier_1_flag ||= 0;
+
+    my $min_mapping_quality = $processing_profile->min_mapping_quality;
+    my $min_somatic_quality = $processing_profile->min_somatic_quality;
 
     # Get the associated tumor and normal models
     my $tumor_model = $model->tumor_model;
@@ -105,7 +108,9 @@ sub execute {
         tumor_bam_file => $tumor_bam,
         tumor_snp_file => $tumor_snp_file,
         data_directory => $data_directory,
-        only_tier_1 => $only_tier_1_flag
+        only_tier_1 => $only_tier_1_flag,
+        min_mapping_quality => $min_mapping_quality,
+        min_somatic_quality => $min_somatic_quality,
     );
 
     unless ($workflow) {
