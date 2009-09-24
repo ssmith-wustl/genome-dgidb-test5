@@ -32,12 +32,14 @@ class Genome::Model::Tools::Somatic::HighConfidence {
             type => 'String',
             default => '70',
             is_optional => 1,
+            is_input => 1,
             doc => 'minimum average mapping quality threshold for high confidence call',
        },
        'min_somatic_quality' => {
             type => 'String',
             default => '40',
             is_optional => 1,
+            is_input => 1,
             doc => 'minimum somatic quality threshold for high confidence call',
        },
        # Make workflow choose 64 bit blades
