@@ -450,19 +450,21 @@ sub create_mock_454_instrument_data {
     my $dir = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-454';
     my @id;
     for my $i (1..$cnt) {
-	my $full_path = $dir;
+	my $fasta_file = $dir.'/Titanium17_2009_05_05_set0.fna';
+	my $barcode_file = $dir .'454_Sequencing_log_Titanium_test.txt';
 	my $id = $self->create_mock_object (
 	    class => 'Genome::InstrumentData::454',
 	    library_name => 'Pooled_DNA-2009-03-09_23-lib1',
 	    is_paired_end => '0',
 	    id => '2772719977',
 	    run_name => 'R_2009_03_16_15_08_37_FLX08080419_Administrator_96199846',
-	    sample_name => 'self->mock_sample_name',
+	    sample_name => 'Pooled_DNA-2009-03-09_23',
 	    seq_id => '2772719977',
 	    sequencing_platform => '454',
 	) or confess "Unable to create mock 454 id #$cnt";
-	$id->mock('resolve_full_path', sub {return $full_path;});
-	$id->mock('dump_to_file_system', sub {return 1;});
+	$id->mock('fasta_file', sub {return $fasta_file;});
+	$id->mock('log_file', sub {return 'mock_test_log';});
+	$id->mock('barcode_file', sub {return $barcode_file;});
 	push @id, $id;
     }
 
@@ -502,6 +504,7 @@ sub _add_mock_methods_to_de_novo_assembly_build {
 # virome screening
 sub _add_mock_methods_to_virome_screen_build {
     my ($self, $build) = @_;
+
     $self->mock_methods (
 	$build,
 	(qw/ barcode_file log_file /),
