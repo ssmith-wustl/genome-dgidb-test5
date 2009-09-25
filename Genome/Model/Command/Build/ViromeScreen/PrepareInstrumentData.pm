@@ -63,6 +63,11 @@ sub _prepare_454_data {
 	return;
     }
 
+    unless (-s $fasta_file) {
+	$self->error_message("Error: Input file does not exist: $fasta_file");
+	return;
+    }
+
     return 1;
 }
 
