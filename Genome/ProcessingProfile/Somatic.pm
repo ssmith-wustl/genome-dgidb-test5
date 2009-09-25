@@ -26,7 +26,7 @@ class Genome::ProcessingProfile::Somatic{
         min_somatic_quality => {
             via         => 'params',
             to          => 'value',
-            where       => [name => 'min_mapping_quality'],
+            where       => [name => 'min_somatic_quality'],
             is_mutable  => 1,
             doc => "minimum somatic quality threshold for high confidence call",
         },
