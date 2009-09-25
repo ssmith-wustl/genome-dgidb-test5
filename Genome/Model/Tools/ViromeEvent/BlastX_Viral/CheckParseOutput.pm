@@ -59,11 +59,12 @@ sub execute
     my $have_tblastx_out = 0;
     my $matches = 0;
 
-    $self->log_event("Blast X viral check parse output entered for $lib_name");
+    $self->log_event("Blast X viral check parse output entered for $lib_name and dir $dir");
 
     opendir(DH, $dir) or die "Can not open dir $dir!\n";
     foreach my $name (readdir DH) 
     {
+        $self->log_event("trying $name");
         if ($name =~ /TBXNTFiltered_TBLASTX_ViralGenome$/) 
         { # tblastx directory
             $matches++;
@@ -109,12 +110,17 @@ sub execute
 	        }
 	    }
         }
+        else
+        {
+            $self->log_event("$name does not match 'TBXNTFiltered_TBLASTX_ViralGenome'");
+        }
     }
 
 #close BigJobFile;
 
     if ($have_tblastx_out) 
     {
+        $self->log_event("$dir has input file, success!");
         if ($allFinished ) 
         {
     	    $self->log_event("Parsing tblastx all finished!\n");
@@ -125,6 +131,7 @@ sub execute
     }
     else 
     {
+    	$self->log_event("$dir does not have input file, dying");
         die("$dir does not have input file!\n");
     }
     $self->log_event("Blast  X viral check parse output completed for $lib_name");

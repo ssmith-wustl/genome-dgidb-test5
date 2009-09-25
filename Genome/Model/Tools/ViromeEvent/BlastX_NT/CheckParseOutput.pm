@@ -112,7 +112,7 @@ sub execute
     }
     else 
     {
-	print "$dir does not have input file!\n";
+	$self->log_event("$dir does not have input file!");
     }
 
     $self->log_event("Blast X NT check parse output completed for $lib_name");
@@ -342,22 +342,18 @@ sub run_parser
     $file = $dir."/".$file.".fa";
     my %seq = $self->read_FASTA_data($file);
 
-    my $fh = IO::File->new(">> /gscmnt/sata835/info/medseq/virome/workflow/logfile.txt");#DEBUGGING
-    print $fh localtime(time) . "\t BEGINNIG BlastX parse output\n"; #DEBUGGING
     $outFile = $blastout;
     $outFile =~ s/tblastx\.out/TBXNTfiltered.fa/;
     $outFile = $dir."/".$outFile;
     open (OUT2, ">$outFile") or die "can not open file $outFile!\n";
-    foreach my $seq_name (@unassigned) {
-        print $fh localtime(time) . "\t printing $seq_name to $outFile\n"; #DEBUGGING
+    $self->log_event("$outFile opened");
+    foreach my $seq_name (@unassigned) 
+    {
+        $self->log_event("printing $seq_name to $outFile");
         print OUT2 ">$seq_name\n";
         print OUT2 $seq{$seq_name}, "\n";
     }
     close OUT2;
-
-    $fh->close();#DEBUGGING
-
-
 
     $dbh_sqlite->disconnect();
 }

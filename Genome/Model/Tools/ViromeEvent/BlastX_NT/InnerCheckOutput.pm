@@ -64,7 +64,8 @@ sub execute
 		    my $resubmit = 0;
     		    my $temp = substr($file, 0, -3);
 		    my $job_file=$full_path."/".$temp.".job";
-		    my $blast_out_file = $full_path."/".$temp.".tblastx.out";
+#		    my $blast_out_file = $full_path."/".$temp.".tblastx.out";
+		    my $blast_out_file = $temp.".tblastx.out";
 		    if (!(-s $blast_out_file)) 
                     {
 		        $resubmit = 1;
@@ -81,10 +82,11 @@ sub execute
 		
 		    if ($resubmit) 
                     {
-		        $self->log_event($blast_out_file, " does not exist or finish! resubmitted");
+		        $self->log_event($blast_out_file . " does not exist or finish! resubmitted");
 		    
 		        my $temp = substr($file, 0, -3);
-                        my $str = $full_path."/".$temp;	
+                        #my $str = $full_path."/".$temp;	
+                        my $str = $temp;
 
 		        my $blast_param = '-d /gscmnt/sata835/info/medseq/virome/blast_db/nt/2009_07_09.nt';
 		        my $com = 'blastall -p tblastx  -i '.$str.'.fa -o '.$str.'.tblastx.out -e 1e-2 -I T '.$blast_param;

@@ -64,7 +64,8 @@ sub execute
 		    my $resubmit = 0;
 		    my $temp = substr($file, 0, -3);
 		    my $job_file=$full_path."/".$temp.".job";
-		    my $blast_out_file = $full_path."/".$temp.".tblastx_ViralGenome.out";
+#		    my $blast_out_file = $full_path."/".$temp.".tblastx_ViralGenome.out";
+		    my $blast_out_file = $temp.".tblastx_ViralGenome.out";
 		    if (!(-e $blast_out_file)) 
                     {
                         $self->log_event("$blast_out_file does not exist, preparing resubmit");
@@ -86,7 +87,8 @@ sub execute
 		        $self->log_event("resubmitting $blast_out_file");
 		    
 		        my $temp = substr($file, 0, -3);
-		        my $str = $full_path."/".$temp;
+#		        my $str = $full_path."/".$temp;
+		        my $str = $temp;
 		        my $blast_param = '-d /gscmnt/sata835/info/medseq/virome/blast_db/viral/2009_07_09.viral.genomic.fna';
 		    
 		        my $com = 'blastall -p tblastx  -i '.$str.'.fa -o '.$str.'.tblastx_ViralGenome.out -e 0.1 -I T '.$blast_param;

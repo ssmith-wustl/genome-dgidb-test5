@@ -120,7 +120,7 @@ sub pool_BXNTfiltered_sequence {
 
 sub splitGivenNumberSequence {
 	my ($self, $inFile_dir, $inFile_name, $outDir ) = @_;
-$self->log_event("spliting sequence for $inFile_name");				
+        $self->log_event("spliting sequence for $inFile_name");				
         my $numSeq = 400; # number of sequences in each file
 	# read in sequences
 	my $inFile = $inFile_dir."/".$inFile_name;
@@ -149,6 +149,7 @@ $self->log_event("spliting sequence for $inFile_name");
 	my $fileCount = 0;
 	my $outFile = $outDir."/".$inFile_name."_file".$fileCount.".fa";
 	open (OUT, ">$outFile") or die "can not open file $outFile!\n";
+        $self->log_event("$outFile created");
 	foreach my $read (keys %seq) {
 		print OUT ">$read\n";
 		print OUT $seq{$read}, "\n";

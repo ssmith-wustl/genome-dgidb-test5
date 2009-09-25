@@ -59,7 +59,8 @@ sub execute
     		    my $resubmit = 0;
 		    my $temp = substr($file, 0, -3);
 		
-		    my $blast_out_file = $full_path."/".$temp.".blastn.out";
+#		    my $blast_out_file = $full_path."/".$temp.".blastn.out";
+		    my $blast_out_file = $temp.".blastn.out";
 		    if (!(-s $blast_out_file)) 
                     {
                         $self->log_event("\t no size for $blast_out_file");
