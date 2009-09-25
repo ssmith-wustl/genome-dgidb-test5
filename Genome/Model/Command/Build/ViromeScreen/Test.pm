@@ -62,6 +62,7 @@ sub test02_create : Test(5) {
         model_id => $model->id,
         auto_execute => 0,
     );
+
     ok($build_event, 'Create build');
     isa_ok($build_event, 'Genome::Model::Command::Build');
 
@@ -178,6 +179,12 @@ use strict;
 use warnings;
 
 use base 'Genome::Model::Command::Build::ViromeScreen::TestBase';
+
+#sub test_01_verify : Test(2) {
+#    my $self = shift;
+#    ok (-s $self->build->barcode_file, "Barcode file exists");
+#    ok ($self->build->log_file, "Can specify og file name");
+#}
 
 sub test_class {
     return 'Genome::Model::Command::Build::ViromeScreen::Screen';
