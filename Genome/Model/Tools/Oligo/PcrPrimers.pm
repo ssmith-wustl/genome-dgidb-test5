@@ -17,6 +17,12 @@ class Genome::Model::Tools::Oligo::PcrPrimers {
 		 doc   =>  "provide a root name for output files. Default set to chr:target_depth",
 		 is_optional  => 1,
 	     },
+	     output_dir => {
+	         type  =>  'String',
+		 doc   =>  "provide the full path to where you want your output files. Default set to ./",
+		 is_optional  => 1,
+		 default => './',
+	     },
 	     target_depth => {
  	         type  =>  'String',
 		 doc   =>  "bases to the target. Default will put the target in the center of the sequence",
@@ -155,6 +161,21 @@ class Genome::Model::Tools::Oligo::PcrPrimers {
 		 is_optional  => 1,
 		 default => 'human',
 	     },
+	     display_blast => {
+		 is => 'Boolean',
+		 doc   =>  "use this option if you'd like to see the alignment hsps with their primer coverage and percent identity and in the ordered out file",
+		 is_optional  => 1,
+	     },
+	     note => {
+		 type  =>  'String',
+		 doc   =>  "add a note to your ordered output file",
+		 is_optional  => 1,
+	     },
+	     header => {
+		 is => 'Boolean',
+		 doc   =>  "use this option if you'd like a header in your ordered primers file",
+		 is_optional  => 1,
+	     },
 
 	],
  
@@ -204,6 +225,10 @@ sub execute {
     
     my $bp_id = $self->bp_id;
     my $output_name = $self->output_name;
+
+    my $output_dir = $self->output_dir;
+    unless ($output_dir && -d $output_dir) {print qq(couldn't find the output directory\n); return 0;}
+
     my $primers;
 
 
@@ -226,22 +251,33 @@ sub execute {
     my $chr = $fasta->{chr};
     my $seq = $fasta->{seq};
 
-    my $target_depth = $self->target_depth;
-    my $length = length($seq);
+    #my $target_depth = $self->target_depth;
+    #my $length = length($seq);
 
-    unless ($target_depth) {$target_depth = sprintf("%d",($length/2));}
-    unless ($bp_id) { my $pos = $target_depth + $start; $bp_id = "$chr:$pos-$pos";}
+    #unless ($target_depth) {$target_depth = sprintf("%d",($length/2));}
+    #unless ($bp_id) { my $pos = $target_depth + $start; $bp_id = "$chr:$pos-$pos";}
 
-    my ($span_primer_results,$primer_quality,$targets) = &get_span_primers($chr,$start,$stop,$seq,$self,$fasta);
+    my ($span_primer_results,$primer_quality,$targets,$primer_name) = &get_span_primers($chr,$start,$stop,$seq,$self,$fasta);
     if ($span_primer_results) {
-	print qq(for $bp_id See the spanning primmers picked in $span_primer_results\n);
+	print qq(for $primer_name See the picked primmers in $span_primer_results\n);
     } else {
 	print qq(no primers were identified\n);
 	return 0;
     }
     
-    open(PPO,">$bp_id.ordered_primer_pairs.txt");
+    open(PPO,">$output_dir/$primer_name.ordered_primer_pairs.txt");
 
+    if ($self->header) {
+	if ($self->note) {
+	    print PPO qq(note\t);
+	}
+	print PPO qq(primer_name\tproduct_size\ttm_left\tleft_seq\tleft_primer_coords\ttm_right\tright_seq\tright_primer_coords\toriginalmatch\tnearperfectmatch\tclohom\tprimer_pair_quality);
+	if ($self->display_blast) {
+	    print PPO qq(\talignment\n);
+	} else {
+	    print PPO qq(\n);
+	}
+    }
     foreach my $primer_pair_quality (sort {$a<=>$b} keys %{$primer_quality}) {
 	foreach my $paired_primers (sort keys %{$primer_quality->{$primer_pair_quality}}) {
 	    my $originalmatch = $targets->{$paired_primers}->{originalmatch}; unless ($originalmatch) {$originalmatch=0;}
@@ -249,20 +285,34 @@ sub execute {
 	    my $clohom = $targets->{$paired_primers}->{clohom}; unless ($clohom) {$clohom=0;}
 	    my $other = $targets->{$paired_primers}->{other}; unless ($other) {$other=0;}
 	    my $hsp_count = $targets->{$paired_primers}->{HITCOUNT};
-	    
+	    my $tm_r = $targets->{$paired_primers}->{RIGHT_TM};
+	    my $tm_l = $targets->{$paired_primers}->{LEFT_TM};
+	    my $hsps = $targets->{$paired_primers}->{hsps};
 	    my ($left_seq,$right_seq) = split(/\:/,$paired_primers);
-	    
+
+	    my $alignment = $targets->{$paired_primers}->{hsps};
 	    unless ($primer_seq->{$left_seq} || $primer_seq->{$right_seq}) {
 		my ($ls,$le,$rs,$re) = &get_primer_coords ($start,$stop,$seq,$left_seq,$right_seq);
 		my $lpr = "$ls-$le";
 		my $rpr = "$rs-$re";
 		
-		my $produuct_size = ($re - $ls) + 1;
-		print PPO qq($bp_id\t$produuct_size\t$left_seq\t$lpr\t$right_seq\t$rpr\t$originalmatch\t$nearperfectmatch\t$clohom\t$primer_pair_quality\n);
+		my $product_size = ($re - $ls) + 1;
+		my $note = $self->note;
+
+		if ($note) {$note = "$note\t$primer_name";
+		} else { 
+		    $note = $primer_name;
+		}
+		print PPO qq($note\t$product_size\t$tm_l\t$left_seq\t$lpr\t$tm_r\t$right_seq\t$rpr\t$originalmatch\t$nearperfectmatch\t$clohom\t$primer_pair_quality);
+		if ($alignment) {
+		    print PPO qq(\t$alignment\n);
+		} else {
+		    print PPO qq(\n);
+		}
 	    }
 	}
     }
-    print qq(see the scored primer pairs in $bp_id.ordered_primer_pairs.txt\n);
+    print qq(see the scored primer pairs in $output_dir/$primer_name.ordered_primer_pairs.txt\n);
 }
 
 
@@ -277,15 +327,15 @@ sub get_span_primers {
     
     my $bp_id = $self->bp_id;
     unless ($bp_id) { my $pos = $target_depth + $start; $bp_id = "chr$chr:$pos";}
-    my $primer_name = "$bp_id.span.$target_depth";
+    my $primer_name = "$bp_id.$target_depth";
     if ($output_name) {$primer_name = $output_name;}
     
-    print qq(\nspanning primers will be picked from a sequence that is $length bp in length\n\n);
+    print qq(\nprimers will be picked from a sequence that is $length bp in length\n\n);
     my $pick;
     ($pick,$primer_quality,$targets) = &pick_primer($primer_name,$self,$primer_quality,$targets,$fasta);
     unless ($pick) {$pick = 0;}
     
-    return ($pick,$primer_quality,$targets);
+    return ($pick,$primer_quality,$targets,$primer_name);
 }
 
 sub pick_primer {
@@ -461,11 +511,13 @@ sub blastprimer3result {
 
     my ($primer_name,$pd_result,$self,$primer_quality,$targets) = @_;
 
+    my $output_dir = $self->output_dir;
+
     my $hspsepSmax = $self->hspsepSmax;
     my $organism = $self->organism;
     
     open(RESULT,"$pd_result");
-    my $out = "$primer_name.primer3.result.txt";
+    my $out = "$output_dir/$primer_name.primer3.result.txt";
     open(OUT,">$out");
 
     my $primers_were_pricked;
@@ -473,12 +525,21 @@ sub blastprimer3result {
     my $left_primer;
     my $pair_count;
     my $pp_q;
-
+    my $paired_primers;
     while (<RESULT>) {
 	chomp;
 	my $line = $_;
+
+	if ($line =~ /PRIMER_LEFT[\S]+TM\=(\S+)/) {
+	    $targets->{$paired_primers}->{LEFT_TM} = $1;
+	}
+	if ($line =~ /PRIMER_RIGHT[\S]+TM\=(\S+)/) {
+	    $targets->{$paired_primers}->{RIGHT_TM} = $1;
+	}
+
 	if ($line =~ /PRIMER_PAIR_QUALIT[\S]+=(\S+)/) {
 	    $pp_q = $1;
+	    undef($paired_primers);
 	}
 	if ($line =~ /(PRIMER\_\S+\_SEQUENCE)\=(\S+)/) {
 	    my $pid = $1;
@@ -491,33 +552,42 @@ sub blastprimer3result {
 		$right_primer=$p_seq;
 		
 		my $rev_right_primer = &reverse_complement_allele($right_primer);
-		open(PF,">$primer_name.$pid.fasta");
-		print PF qq(>$pid.fasta\n$left_primer$rev_right_primer\n);
+
+		my $blast_fasta = "$output_dir/$primer_name.$left_primer\_$right_primer.fasta";
+		open(PF,">$blast_fasta");
+		print PF qq(>$left_primer$rev_right_primer.fasta\n$left_primer$rev_right_primer\n);
+		close (PF);
+
+		my $blast_result = "$output_dir/$primer_name.$left_primer\_$right_primer.blastresult.txt";
+
 		my $s = length($p_seq);
 		my $n = $s + $s;
 
 		#system qq(blastn /gscmnt/200/medseq/analysis/software/resources/B36/HS36.fa $pid.fasta -nogap -M=1 -N=-$n -S2=$s -S=$s | blast2gll -s > $pid.out);
 		if ($organism eq "mouse") {
-		    system qq(blastn /gscmnt/200/medseq/analysis/software/resources/MouseB37/MS37.fa $primer_name.$pid.fasta M=1 N=-3 Q=3 R=3 hspsepSmax=$hspsepSmax topcomboN=3 B=3 V=3 | blast2gll -s > $primer_name.$pid.out);
+		    system qq(blastn /gscmnt/200/medseq/analysis/software/resources/MouseB37/MS37.fa $blast_fasta M=1 N=-3 Q=3 R=3 hspsepSmax=$hspsepSmax topcomboN=3 B=3 V=3 | blast2gll -s > $blast_result);
 		} else {
-		    system qq(blastn /gscmnt/200/medseq/analysis/software/resources/B36/HS36.fa $primer_name.$pid.fasta M=1 N=-3 Q=3 R=3 hspsepSmax=$hspsepSmax topcomboN=3 B=3 V=3 | blast2gll -s > $primer_name.$pid.out);
+		    system qq(blastn /gscmnt/200/medseq/analysis/software/resources/B36/HS36.fa $blast_fasta M=1 N=-3 Q=3 R=3 hspsepSmax=$hspsepSmax topcomboN=3 B=3 V=3 | blast2gll -s > $blast_result);
 		}
 		
-		my $file = "$primer_name.$pid.out";
-		my $paired_primers = "$left_primer:$right_primer";
+		#my $file = "$output_dir/$primer_name.$pid.out";
+		#my $paired_primers = "$left_primer:$right_primer";
+		$paired_primers = "$left_primer:$right_primer";
 
 		$targets->{$paired_primers}->{LEFT} = $left_primer;
 		$targets->{$paired_primers}->{RIGHT} = $right_primer;
 		$primer_quality->{$pp_q}->{$paired_primers}=1;
 
-		my ($hit_count,$loc,$targets) = &count_blast_hits($file,$paired_primers,$targets);
-		
-		system qq(rm $primer_name.$pid.fasta);
+		my ($hit_count,$loc,$targets) = &count_blast_hits($blast_result,$paired_primers,$targets);
+		if ($self->display_blast) {$targets->{$paired_primers}->{hsps}=$loc;}
+
+		system qq(rm $blast_result);
+		system qq(rm $blast_fasta);
 
 		if ($pair_count) {
-		    print OUT qq(PRIMER_PAIR_BLAST_HIT_COUNT_$pair_count=$hit_count\n);
+		    print OUT qq(PRIMER_PAIR_BLAST_HIT_COUNT_$pair_count=$hit_count\t$loc\n);
 		} else {
-		    print OUT qq(PRIMER_PAIR_BLAST_HIT_COUNT=$hit_count\n);
+		    print OUT qq(PRIMER_PAIR_BLAST_HIT_COUNT=$hit_count\t$loc\n);
 		}$pair_count++;
 
 		undef($right_primer);
@@ -542,7 +612,7 @@ sub blastprimer3result {
 }
 
 sub count_blast_hits {
-
+    my $HSPS;
     my ($blastout,$paired_primers,$targets) = @_;
     open(IN,$blastout);
     my $blast_hit_counts=0;
@@ -575,18 +645,23 @@ sub count_blast_hits {
 	    my $loc1 = $location;
 	    my ($loc) = $HSPs =~ /(\S+)\:/;
 	    $location = "$loc1\:\:$subject_id($loc)";
+	    my $hsp1 = $HSPS;
+	    $HSPS = "$hsp1\:\:$query_cov,$percent_identity,$subject_id($HSPs)";
 	} else {
 	    my ($loc) = $HSPs =~ /(\S+)\:/;
 	    $location = "$subject_id($loc)";
+	    $HSPS = "$query_cov,$percent_identity,$subject_id($HSPs)";
 	}
 	
 	for my $n (@sub_line) {
-	    
+
+	    my $base_hsp = $HSPS;
+
 	    my ($hit) = $n =~ /\((\S+)\)/;
 	    $n =~ s/\s//gi;
 	    if ($n =~ /^\d/) {
 		unless ($location =~ /$n/) {
-
+		    $HSPS = "$base_hsp\;$n";
 		    my $n1 = $location;
 		    my ($loc) = $n =~ /(\S+)\:/;
 		    $location = "$n1\:\:$subject_id($loc)";
@@ -600,8 +675,8 @@ sub count_blast_hits {
 	}
     }
     close (IN);
-    system qq(rm $blastout);
-    return ($blast_hit_counts,$location,$targets);
+    #system qq(rm $blastout);
+    return ($blast_hit_counts,$HSPS,$targets);
 }
 
 
