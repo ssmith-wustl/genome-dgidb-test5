@@ -111,12 +111,40 @@ sub execute {
 
     if (!-s $conversion_output_file) {
 
-        my $convert_cmd = "/gsc/pkg/bio/samtools/samtools-0.1.6/misc/maq2sam-long $mapmerge_output_file $seq_id > $conversion_output_file"; 
+       # my $convert_cmd = "/gsc/pkg/bio/samtools/samtools-0.1.6/misc/maq2sam-long $mapmerge_output_file $seq_id > $conversion_output_file"; 
+       my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
+                    map_file    => $mapmerge_output_file,
+                    lib_tag     => $seq_id,
+                    index_bam   => 0,
+                    sam_only    => 1,
+       );
 
-        print $log_fh "\nExecuting map to sam conversion: $convert_cmd";
-        my $rv = Genome::Utility::FileSystem->shellcmd( cmd=>$convert_cmd, input_files=>[$mapmerge_output_file], output_files=>[$conversion_output_file] );
-        print $log_fh "\nResult from map2sam conversion: $rv";
+        print $log_fh "\nExecuting map to sam conversion: ";
+        print $log_fh "\ninput file: $mapmerge_output_file";
+        print $log_fh "\nlib tag: $seq_id";
 
+        #my $rv = Genome::Utility::FileSystem->shellcmd( cmd=>$convert_cmd, input_files=>[$mapmerge_output_file], output_files=>[$conversion_output_file] );
+        print $log_fh "\nResult from map2sam conversion: $map_to_bam";
+        if ( $map_to_bam ne 1 ) {
+            print $log_fh "\nError from map2sam conversion.";
+            return;
+        } else {
+            print $log_fh "\nMap2sam conversion succeeded.";
+        } 
+
+        my $mapmerge_output_file =~ s/\.map$/\.sam/;
+        #mv the file to the correct place
+        my $mv_cmd = "mv $mapmerge_output_file $conversion_output_file"; 
+        print $log_fh "\nRunning mv command: $mv_cmd";
+        my $mv_rv = Genome::Utility::FileSystem->shellcmd( cmd=>$mv_cmd, input_files=>[$mapmerge_output_file], output_files=>[$conversion_output_file] );
+
+        if ( $mv_rv ne 1 ) {
+            print $log_fh "\nError while moving $mapmerge_output_file to $conversion_output_file"; 
+            return;
+        } else {
+            print $log_fh "\nMove succeeded.";
+        }
+ 
     } else {
         print $log_fh "\n$conversion_output_file already exists.  Skipping generation of this file.\n";
     } 
