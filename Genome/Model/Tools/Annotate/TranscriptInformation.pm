@@ -34,6 +34,11 @@ class Genome::Model::Tools::Annotate::TranscriptInformation {
 	    is_optional  => 1,
 	    default => 0,
 	},
+	   output => {
+	    type  =>  'String',
+	    doc   =>  "provide a file name to write you transcript information to .txt will be appended to it. Defualt is to print to stdout.",
+	    is_optional  => 1,
+	},
 
     ], 
 };
@@ -73,13 +78,17 @@ my ($transcript_info,$strand,$trans_pos_number_line,$chromosome,$post_pos_bases)
 sub execute {
 
     my $self = shift;
-
+    my $output = $self->output;
     my $trans_poss = $self->trans_pos;
     #my $transcript = $self->transcript;
     my $transcripts = $self->transcript;
 
     my @trans = split(/\,/,$transcripts);
     my $n = 0;
+
+    if ($output) {
+	open(OUT,">$output.txt");
+    }
     
     for my $transcript (@trans) {
 
@@ -97,19 +106,21 @@ sub execute {
 	
 	if ($self->trans_pos) {
 	    if ($trans_pos_number_line) {
-		print qq(\n$trans_pos_number_line. There are $post_pos_bases coding bases left in $transcript after $trans_pos\n);
-		
-		
-		$transcript_info->{$transcript}->{-1}->{post_pos_bases}=$post_pos_bases;
+		my $line = qq(\n$trans_pos_number_line. There are $post_pos_bases coding bases left in $transcript after $trans_pos\n);	       
+		print qq($line);
+		if ($self->output) {print OUT qq($line);}
 		
 		
 	    } else {
 		$transcript_info->{$transcript}->{-1}->{trans_posid}="not_ided";
-		print qq(\n$trans_pos was not located\n);
+		my $line = qq(\n$trans_pos was not located\n);
+		print qq($line);
+		if ($self->output) {print OUT qq($line);}
+
 	    }
 	}
     }
-
+    close (OUT);
     return($transcript_info);
 }
 
@@ -205,19 +216,28 @@ sub get_transcript {
 	if ($pos == $r_stop) {
 	    if ($region =~ /utr/) {
 		if ($coding_start) {
-		    print qq($exon $region $range $p3\n);
+		    my $line = qq($exon $region $range $p3\n);
+	print qq($line);
+	if ($self->output) {print OUT qq($line);}
+
 		    $p3=0;
-		    if ($utr_seq) { &print_utr_seq($r_start,$r_stop,$organism); }
+		    if ($utr_seq) { &print_utr_seq($r_start,$r_stop,$organism,$self,$transcript); }
 		} else {
-		    print qq($exon $region $range $p5\n);
+		    my $line = qq($exon $region $range $p5\n);
+	print qq($line);
+	if ($self->output) {print OUT qq($line);}
+
 		    $p5=0;
-		    if ($utr_seq) { &print_utr_seq($r_start,$r_stop,$organism); }
+		    if ($utr_seq) { &print_utr_seq($r_start,$r_stop,$organism,$self); }
 		}
 	    }
 	    if ($region =~ /cds/) {
 		my $cds = join '' , @seq;
 		my $length = length($cds);
-		print qq($exon $region $range $length\n$cds\n\n);
+		my $line = qq($exon $region $range $length\n$cds\n\n);
+	print qq($line);
+	if ($self->output) {print OUT qq($line);}
+
 		push(@fullseq,$cds);
 		undef(@seq);
 	    }
@@ -231,20 +251,30 @@ sub get_transcript {
     $transcript_info->{$transcript}->{-1}->{protien_seq} = $protien_seq;
     $transcript_info->{$transcript}->{-1}->{sequence} = $sequence;
 
-    print qq(\n\>$transcript.dna.fasta\n$sequence\n\n\>$transcript.protien.fasta\n$protien_seq\n);
+    my $line = qq(\n\>$transcript.dna.fasta\n$sequence\n\n\>$transcript.protien.fasta\n$protien_seq\n);
+    print qq($line);
+    if ($self->output) {print OUT qq($line);}
+    $transcript_info->{$transcript}->{-1}->{post_pos_bases}=$post_pos_bases;
+
 
 }
 
 sub print_utr_seq {
     
-    my ($r_start,$r_stop,$organism) = @_;
+    my ($r_start,$r_stop,$organism,$self) = @_;
     if ($strand eq "-1") {
 	my $seq = &get_ref_base($r_stop,$r_start,$chromosome,$organism);
 	my $rev = &reverse_complement_allele($seq);
-	print qq($rev\n\n);
+	my $line = qq($rev\n\n);
+	print qq($line);
+	if ($self->output) {print OUT qq($line);}
+
     } else {
 	my $seq = &get_ref_base($r_start,$r_stop,$chromosome,$organism);
-	print qq($seq\n\n);
+	my $line = qq($seq\n\n);
+	print qq($line);
+	if ($self->output) {print OUT qq($line);}
+
     }
 }
 
@@ -303,10 +333,13 @@ sub get_transcript_info {
     my $hugo_gene_name = $gene->hugo_gene_name;
     unless ($hugo_gene_name) {$hugo_gene_name = "unlisted";}
 
-    print qq(Hugo gene name $hugo_gene_name, Gene Id $gene_id, Transcript name $transcript, Chromosome $chromosome, Strand $strand, Transcript status $transcript_status, Transcript source $source $build_source\n\n\n);
+    my $line = qq(Hugo gene name $hugo_gene_name, Gene Id $gene_id, Transcript name $transcript, Chromosome $chromosome, Strand $strand, Transcript status $transcript_status, Transcript source $source $build_source\n\n\n);
+	print qq($line);
+	if ($self->output) {print OUT qq($line);}
 
     $transcript_info->{$transcript}->{-1}->{source_line} = qq(Hugo gene name $hugo_gene_name, Gene Id $gene_id, Transcript name $transcript, Chromosome $chromosome, Strand $strand, Transcript status $transcript_status, Transcript source $source $build_source);
-
+    $transcript_info->{$transcript}->{-1}->{hugo_gene_name} = $hugo_gene_name;
+    $transcript_info->{$transcript}->{-1}->{gene_id} = $gene_id;
     if (@substructures) {
 	#print qq($transcript $total_substructures  $strand  $chr $trans_pos\n);
 
@@ -346,7 +379,9 @@ sub get_transcript_info {
 	    }
 	}
     } else {
-	print qq(\nCould not find substructures in the transcript object for $transcript from the $organism data warehouse\nWill exit the program now\n\n);
+	my $line = qq(\nCould not find substructures in the transcript object for $transcript from the $organism data warehouse\nWill exit the program now\n\n);
+	print qq($line);
+	if ($self->output) {print OUT qq($line);}
 	exit 1;	
     }
     
