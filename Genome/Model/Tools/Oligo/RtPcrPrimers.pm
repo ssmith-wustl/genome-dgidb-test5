@@ -125,11 +125,36 @@ sub execute {
 	@transcripts = split(/\,/,$transcripts);
 
 	for my $transcript (@transcripts) {
+	    
+	    my ($ncbi_reference) = $version =~ /\_([\d]+)/;
+	    
+	    my $eianame = "NCBI-" . $organism . ".ensembl";
+	    my $gianame = "NCBI-" . $organism . ".genbank";
+	    my $build_source = "$organism build $ncbi_reference version $version";
+	    
+	    my $ensembl_build = Genome::Model::ImportedAnnotation->get(name => $eianame)->build_by_version($version);
+	    my $ensembl_data_directory = $ensembl_build->annotation_data_directory;
+	    my $genbank_build = Genome::Model::ImportedAnnotation->get(name => $gianame)->build_by_version($version);
+	    my $genbank_data_directory = $genbank_build->annotation_data_directory;
+	    
+	    my $t;
+	    if ($transcript =~/^ENS/){ #ENST for Human ENSMUST
+		($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $ensembl_data_directory);
+	    }else{
+		($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $genbank_data_directory)
+	    }
+	    
+	    unless ($t) {print qq(\nCould not find a the gene name for $transcript\n);}
+	    
+	    my $gene = $t->gene;
+	    my $hugo_gene_name = $gene->hugo_gene_name;
+	    
+
 	    $annotation_info->{$transcript}->{$target_pos}->{transcript}=$transcript;
 	    $annotation_info->{$transcript}->{$target_pos}->{target_pos}=$target_pos;
 	    $annotation_info->{$transcript}->{$target_pos}->{chromosome}=$chromosome;
 	    $annotation_info->{$transcript}->{$target_pos}->{transcript_species}=$organism;
-	    $annotation_info->{$transcript}->{$target_pos}->{output_name} = "$transcript.$chromosome.$target_pos";
+	    $annotation_info->{$transcript}->{$target_pos}->{output_name} = "$hugo_gene_name.$transcript.$chromosome.$target_pos";
 	}
 
     } elsif ($variant_transcript_annotation) {
@@ -180,13 +205,13 @@ sub execute {
 	    
 	    my $output_name = $annotation_info->{$transcript}->{$trans_pos}->{output_name};
 	    unless ($chromosome) {$chromosome = $annotation_info->{$transcript}->{$trans_pos}->{chromosome};}
-	    unless ($output_name) {$output_name = $annotation_info->{$transcript}->{$trans_pos}->{output_name};}
 	
-	
-	
-	    my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version");
+	    my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name");
+	    #my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version");
 	    my $transcript_info = $info->{result};
 	    my $strand = $transcript_info->{$transcript}->{-1}->{strand};
+	    my $gene = $transcript_info->{$transcript}->{-1}->{hugo_gene_name};
+	    my $gene_id = $transcript_info->{$transcript}->{-1}->{gene_id};
 	    #my ($chromosome) = $transcript_info->{$transcript}->{-1}->{source_line} =~ /Chromosome ([\S]+)\,/;
 	    my ($transcript_seq,$target) = &get_transcript_seq($strand,$transcript,$transcript_info,$organism,$chromosome,$trans_pos);
 	    
@@ -201,7 +226,9 @@ sub execute {
 	    my $nn=0;
 	    
 	    my $target_depth=0;
-	    
+	    open(OUT,">>$output_name.txt");
+	    print OUT qq(\n\n\n);
+
 	    foreach my $n (sort {$a<=>$b} keys %{$transcript_seq}) {
 		
 		my $tp_region = $target->{tp_regoin};
@@ -217,22 +244,26 @@ sub execute {
 		if ($transcript_seq->{$n}->{trans_pos}) {
 		    $target_depth = $nn;
 		    print qq(\n\ntrans_pos $transcript_seq->{$n}->{trans_pos}\n\n);
+		    print OUT qq(\n\ntrans_pos $transcript_seq->{$n}->{trans_pos}\n\n);
 		}
 		if ($transcript_seq->{$n-1}->{trans_pos}) {
 		    print qq(\n\ntrans_pos $transcript_seq->{$n-1}->{trans_pos}\n\n);
+		    print OUT qq(\n\ntrans_pos $transcript_seq->{$n-1}->{trans_pos}\n\n);
 		}
 		
 		if ($tp_region =~ /exon/ && $excluded_exon == $exon) {
 		    print qq($exon);
+		    print OUT qq($exon);
 		} else {
 		    $nn++;
 		    $design_seq->{$nn}->{base}=$transcript_seq->{$n}->{base};
 		    
 		    print qq($transcript_seq->{$n}->{base});
-		    
+		    print OUT qq($transcript_seq->{$n}->{base});
 		}
 	    }
 	    print qq(\n\n\n);
+	    print OUT qq(\n\n\n);
 
 	    my $fasta = "$output_name.rtpcr.designseq.fasta";
 	    open(FA,">$fasta") || die "couldn't open a fasta file to write to\n";
@@ -243,13 +274,13 @@ sub execute {
 	    }
 	    print FA qq(\n);
 	    close (FA);
-	    
+	    my $note = "$gene\t$gene_id\t$strand\t$transcript\t$chromosome\t$trans_pos";
 	    my $hspsepSmax = $target->{seq_stop} - $target->{seq_start} + 51;
 	    my $pcr_primer_options =  $self->pcr_primer_options;
 	    if ($pcr_primer_options) {
-		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism $pcr_primer_options);
+		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism $pcr_primer_options -display-blast -note "$note");
 	    } else {
-		system qq(gmt oligo pcr-primers -output-name $output_name  -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism);
+		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism -display-blast -note "$note"\n);
 	    }
 	}
     }
