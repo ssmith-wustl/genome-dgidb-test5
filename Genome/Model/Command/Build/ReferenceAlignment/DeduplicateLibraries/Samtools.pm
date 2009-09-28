@@ -8,6 +8,8 @@ use Command;
 use File::Basename;
 use File::Copy;
 use IO::File;
+use File::stat;
+use Data::Dumper;
 
 class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Samtools {
     is => ['Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries'],
@@ -36,22 +38,13 @@ sub execute {
   
     $self->status_message("Starting DeduplicateLibraries::Samtools");
     
-    my $alignments_dir = $self->build->accumulated_alignments_directory;
+    my $alignments_dir = $self->resolve_accumulated_alignments_path;
 
     $self->status_message("Accumulated alignments directory: ".$alignments_dir);
    
     unless (-e $alignments_dir) { 
-        unless ($self->create_directory($alignments_dir)) {
-            #doesn't exist can't create it...quit
-            $self->error_message("Failed to create directory '$alignments_dir':  $!");
-            return;
-        }
-        chmod 02775, $alignments_dir;
-    } else {
-        unless (-d $alignments_dir) {
-            $self->error_message("File already exists for directory '$alignments_dir':  $!");
-            return;
-        }
+       $self->error_message("Alignments dir didn't get allocated/created, can't continue '$alignments_dir':  $!");
+       return;
     }
 
     #my $bam_merged_output_file = $alignments_dir."/".$self->model->subject_name."_merged_rmdup.bam";
@@ -144,7 +137,14 @@ sub execute {
                        die "Workflow had an error while rmdup'ing library: ". $result_libraries->[$i];
                 }
        }
-  } 
+  }
+   
+   #remove original library input files
+   my @original_to_remove_files = grep {$_ !~ m/rmdup/ }<$alignments_dir/*.bam>;
+   for (@original_to_remove_files) {
+    $self->status_message("Removing intermediate library file $_");
+    unlink($_);
+   }
  
    #merge those Bam files...BAM!!!
    $now = UR::Time->now;
@@ -222,6 +222,37 @@ sub verify_successful_completion {
     } 
 
     return $return_value;
+
+}
+
+sub calculate_required_disk_allocation_kb {
+    my $self = shift;
+
+    $self->status_message("calculating how many bam files will get incorporated...");
+
+    my @idas = $self->build->instrument_data_assignments;
+    my @build_bams;
+    for my $ida (@idas) {
+        my @alignments = $ida->alignments;
+        for my $alignment (@alignments) {
+            my @aln_bams = $alignment->alignment_bam_file_paths;
+            push @build_bams, @aln_bams;
+        }
+    }
+    my $total_size;
+    
+    for (@build_bams) {
+        $total_size += stat($_)->size;
+    }
+
+    #take the total size plus a 10% safety margin
+    # 3x total size; individual/deduped per-lib bams, full build deduped bam
+    $total_size = sprintf("%.0f", ($total_size/1024)*1.1); 
+
+    $total_size = ($total_size * 2);
+
+    return $total_size;
+
 
 }
 

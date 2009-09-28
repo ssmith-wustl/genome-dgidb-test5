@@ -33,21 +33,20 @@ sub execute {
     my $self = shift;
     my $build = $self->build;
 
-    my $allocation = $build->disk_allocation;
-
+    my $allocation = $build->accumulated_alignments_disk_allocation;
+    
     unless ($allocation) {
         $self->status_message("No allocation found, nothing to reallocate.  Shortcutting out.");
         return 1; 
     }
 
-    my $actual_allocated_space = $allocation->get_actual_disk_usage;
-    my $new_reallocation_request = $actual_allocated_space + 30000000;
-
-    $self->status_message("Now reallocating down to $new_reallocation_request kb");
-    unless ($allocation->reallocate(kilobytes_requested => $new_reallocation_request)) {
+    $self->status_message("Now reallocating the deduplicated library allocation down to actual usage...");
+    $self->status_message("Current allocation (KB): " . $allocation->kilobytes_requested);
+    unless ($allocation->reallocate()) {
         $self->error_message("Reallocation request failed!  Exiting");
         return 0;
     }
+    $self->status_message("New allocation (KB): " . $allocation->kilobytes_requested);
     
     return 1;
 }

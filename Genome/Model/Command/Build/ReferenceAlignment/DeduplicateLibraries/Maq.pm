@@ -8,6 +8,8 @@ use Command;
 use File::Basename;
 use File::Copy;
 use IO::File;
+use Data::Dumper;
+use File::stat;
 
 class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Maq {
     is => ['Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries'],
@@ -35,24 +37,14 @@ sub execute {
     my $now = UR::Time->now;
   
     $self->status_message("Starting DeduplicateLibraries::Maq");
-    
-    my $alignments_dir = $self->build->accumulated_alignments_directory;
+
+    my $alignments_dir = $self->resolve_accumulated_alignments_path;
 
     $self->status_message("Accumulated alignments directory: ".$alignments_dir);
    
     unless (-e $alignments_dir) { 
-        unless ($self->create_directory($alignments_dir)) {
-            #doesn't exist can't create it...quit
-            $self->error_message("Failed to create directory '$alignments_dir':  $!");
-            return;
-        }
-        chmod 02775, $alignments_dir;
-    } 
-    else {
-        unless (-d $alignments_dir) {
-            $self->error_message("File already exists for directory '$alignments_dir':  $!");
-            return;
-        }
+       $self->error_message("Alignments dir didn't get allocated/created, can't continue '$alignments_dir':  $!");
+       return;
     }
 
     #get the instrument data assignments
@@ -299,6 +291,49 @@ sub verify_successful_completion {
     } 
     return $return_value;
 
+}
+
+sub calculate_required_disk_allocation_kb {
+    my $self = shift;
+
+    $self->status_message("calculating how many map files will get incorporated");
+
+    my @idas = $self->build->instrument_data_assignments;
+    my @build_maps;
+    for my $ida (@idas) {
+        my @alignments = $ida->alignments;
+        for my $alignment (@alignments) {
+            my @aln_maps = $alignment->alignment_file_paths;
+            push @build_maps, @aln_maps;
+        }
+    }
+    my $total_size;
+    
+    print Dumper(\@build_maps);
+
+    for (@build_maps) {
+        $total_size += stat($_)->size;
+    }
+
+    #take the total size plus a 5 gb safety margin
+    # the total size accounts for 4x the map size, including all intermediary files
+    ###stage 1
+    # - deduped per library map files 1x
+    # - map -> sam conversion (allow 5x map size for uncompressed sam file) 5x
+    # - sam -> bam conversion (allow 1.25 map size for bam) 1.25x
+    ## total burst: 7.25x initial map
+    ## remaining:
+    # - deduped per library map files 1x
+    # - per library map -> bam conversion (1.25 map size) 1.25x
+    ## remaining: 2.25x
+    
+    # stage 2
+    # merge all map files:
+    # adds 1x total bam size
+    ## remaining: 3.25x
+    
+    $total_size = sprintf("%.0f", ($total_size/1024) * 7.25); 
+    return $total_size;
 }
 
 
