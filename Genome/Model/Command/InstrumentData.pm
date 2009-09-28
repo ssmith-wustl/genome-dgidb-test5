@@ -8,7 +8,7 @@ use Genome;
 class Genome::Model::Command::InstrumentData {
     is => 'Genome::Model::Command',
     is_abstract => 1,
-    doc => "assign instrument data to a model, or work with assigned data",
+    doc => "assign, list, dump instrument data related to a model",
 };
 
 sub sub_command_sort_position { 6 }

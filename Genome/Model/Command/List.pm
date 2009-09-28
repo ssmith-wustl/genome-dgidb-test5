@@ -14,22 +14,14 @@ class Genome::Model::Command::List {
             is_constant => 1, 
             value => 'Genome::Model' 
         },
-        show => { default_value => 'id,name,subject_name,processing_profile_name' }
+        show => { default_value => 'id,name,subject_name,processing_profile_name' },
     ],
+    doc => 'list genome models',
 };
 
 sub sub_command_sort_position { 3 }
 
-sub help_brief {
-    return 'List models';
-}
-
-# TODO: provide customized, detailed help
-# sub help_detail {
-#     return help_brief();
-#}
-
-sub is_subcommand_delegator { 1 }
+sub Xhelp_brief { shift->__meta__->doc }
 
 1;
 

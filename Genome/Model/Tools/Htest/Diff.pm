@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Htest::Diff;
+package Genome::Model::Tools::Htest::Diff;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use warnings;
 use Genome;
 use Command; 
 
-class Genome::Model::Command::Htest::Diff {
+class Genome::Model::Tools::Htest::Diff {
     is => 'Command',
 };
 

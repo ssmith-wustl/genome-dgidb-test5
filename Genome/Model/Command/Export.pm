@@ -16,7 +16,7 @@ class Genome::Model::Command::Export {
 };
 
 sub help_brief {
-    "generate reports for a given model"
+    "export data about a model into an external format"
 }
 
 sub sub_command_sort_position { 97 }

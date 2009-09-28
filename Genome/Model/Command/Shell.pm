@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 class Genome::Model::Command::Shell {
     is => 'Command',
-    doc => 'Start a shell interface for genome model commands',
+    doc => 'start a shell interface for genome model commands',
 };
 
 use Term::ReadLine;

@@ -1,4 +1,4 @@
-package Genome::Model::Command::Htest::Diff::Define::Lst;
+package Genome::Model::Tools::Htest::Diff::Define::Lst;
 
 use strict;
 use warnings;
@@ -9,8 +9,8 @@ use Genome::Model;
 
 use IO::File;
 
-class Genome::Model::Command::Htest::Diff::Define::Lst {
-    is => 'Genome::Model::Command::Htest::Diff::Define',
+class Genome::Model::Tools::Htest::Diff::Define::Lst {
+    is => 'Genome::Model::Tools::Htest::Diff::Define',
 };
 
 sub help_brief {

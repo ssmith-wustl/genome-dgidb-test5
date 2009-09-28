@@ -10,39 +10,39 @@ require Carp;
 class Genome::Model::Command::Report {
     is => 'Command',
     has => [ 
-    # report
-    report_name => { 
-        is => 'Text', 
-        doc => 'Report name',
-    },
-    report => {
-        is => 'Genome::Report',
-        calculate_from => [qw/ report_name build /],
-        calculate => q|
-            return $build->get_report($report_name);
-        |,
-        doc => 'The report from the build with report name',
-    },
-    # build and derivatives
-    model => { 
-        is => 'Genome::Model', 
-        via => 'build',
-        to => 'model',
-    },
-    build => { 
-        is => 'Genome::Model::Build', 
-        id_by => 'build_id',
-        doc => 'Build',
-    },
-    build_id => {
-        doc => 'Build id',
-    },
+        # report
+        report_name => { 
+            is => 'Text', 
+            doc => 'Report name',
+        },
+        report => {
+            is => 'Genome::Report',
+            calculate_from => [qw/ report_name build /],
+            calculate => q|
+                return $build->get_report($report_name);
+            |,
+            doc => 'The report from the build with report name',
+        },
+        # build and derivatives
+        model => { 
+            is => 'Genome::Model', 
+            via => 'build',
+            to => 'model',
+        },
+        build => { 
+            is => 'Genome::Model::Build', 
+            id_by => 'build_id',
+            doc => 'Build',
+        },
+        build_id => {
+            doc => 'Build id',
+        },
     ],
 };
 
 #< Helps >#
 sub help_brief {
-    return "Operate on a build's reports"
+    return "run, list, view and emailreports"
 }
 
 sub sub_command_sort_position { 9 }

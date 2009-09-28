@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name to match the filename <---
-package Genome::Model::Command::Write::Ace::Sxog;
+package Genome::Model::Command::Export::Ace::Sxog;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use warnings;
 use Genome;
 use Command;
 
-use Genome::Model::Command::Write::Ace;
+use Genome::Model::Command::Export::Ace;
 use File::Path;
 use File::Basename;
 use File::Temp;
@@ -83,11 +83,11 @@ sub execute {                               # Replace with real execution logic.
 	$endpad ||= 33;
 	
 	my $refseq =
-		Genome::Model::Command::Write::Ace::RefSeq(
+		Genome::Model::Command::Export::Ace::RefSeq(
 																							 $self->refseq, $self->ace, $self->phds,
 																							 $self->chromosome,$self->start,$self->end,$endpad);
 	my ($ace_body_rd, $ace_body_qa, $num_reads) =	$self->SXOG_Ace();
-	Genome::Model::Command::Write::Ace::WriteAce($self->ace,
+	Genome::Model::Command::Export::Ace::WriteAce($self->ace,
 																							 $refseq, $ace_body_rd, $ace_body_qa, $num_reads);
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
@@ -134,7 +134,7 @@ sub SXOG_Ace {
     my $read_start = ($position - $start_pos) + 1;
     my $now_string = localtime; # e.g. "Thu Oct 13 04:54:34 1994"
     
-    Genome::Model::Command::Write::Ace::WritePhd(rd=>
+    Genome::Model::Command::Export::Ace::WritePhd(rd=>
 	      {
 	       seq=>$qry_sequence,
 	       qryseq=>$qry_sequence,
@@ -156,7 +156,7 @@ sub SXOG_Ace {
     printf $ace_body_rd_fh "AF %s %s %d\n",$rdname,$orientation,$read_start;
     my $padded_rdlen=length($qry_sequence);
     printf $ace_body_qa_fh "RD %s %d 0 0\n",$rdname,$padded_rdlen;
-    Genome::Model::Command::Write::Ace::printSeq(fh=>$ace_body_qa_fh, seq=>$qry_sequence,size=>50);
+    Genome::Model::Command::Export::Ace::printSeq(fh=>$ace_body_qa_fh, seq=>$qry_sequence,size=>50);
     printf $ace_body_qa_fh "\nQA 1 %d 1 %d\n",$padded_rdlen,$padded_rdlen;
     printf $ace_body_qa_fh "DS CHROMAT_FILE: %s PHD_FILE: %s.phd.1 TIME: %s\n\n",$rdname,$rdname, $now_string;
   }

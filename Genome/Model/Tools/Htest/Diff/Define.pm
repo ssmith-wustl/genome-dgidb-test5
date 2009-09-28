@@ -1,4 +1,4 @@
-package Genome::Model::Command::Htest::Diff::Define;
+package Genome::Model::Tools::Htest::Diff::Define;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use Genome::Model;
 
 use Bio::SeqIO;
 
-class Genome::Model::Command::Htest::Diff::Define {
+class Genome::Model::Tools::Htest::Diff::Define {
     is => 'Command',
     has => [
 	from_path => { is => 'String', is_optional => 0, doc => 'Path to the original fasta refseq' },

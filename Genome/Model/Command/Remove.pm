@@ -25,7 +25,7 @@ class Genome::Model::Command::Remove {
                              doc => 'A boolean flag to force model delete.(default_value=0)',
                          },
         ],
-    doc => "remove a genome-model",
+    doc => "delete a genome model, all of its builds, and logs",
 };
 
 sub sub_command_sort_position { 4 }

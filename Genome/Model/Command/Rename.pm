@@ -8,24 +8,17 @@ use Genome;
 class Genome::Model::Command::Rename {
     is => 'Genome::Model::Command',
     has => [
-    new_name => {
-        is => 'Text',
-        doc => 'The new name',
-    },
+        new_name => {
+            is => 'Text',
+            doc => 'The new name',
+        },
     ],
+    doc => "change the name of a model",
 };
 
 ########################################
 
 sub sub_command_sort_position { 5 }
-
-sub help_brief {
-    return 'Rename a model';
-}
-
-sub help_detail {
-    return 'Rename a model';
-}
 
 sub help_synopsis {
     return <<"EOS"

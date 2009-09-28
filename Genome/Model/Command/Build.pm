@@ -8,7 +8,7 @@ use Data::Dumper;
 
 class Genome::Model::Command::Build {
     is => [ 'Genome::Model::Event' ],
-    doc => "Build the model with currently assigned instrument data according to the processing profile.",
+    doc => "build a defined model with currently assigned inputs",
     has => [
         data_directory => { via => 'build' },
         auto_execute   => {

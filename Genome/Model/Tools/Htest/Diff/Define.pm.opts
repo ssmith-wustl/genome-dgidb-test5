@@ -1,0 +1,4 @@
+$Genome::Model::Tools::Htest::Diff::Define::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

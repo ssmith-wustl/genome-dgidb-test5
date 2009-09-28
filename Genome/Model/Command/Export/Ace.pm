@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Write::Ace;
+package Genome::Model::Command::Export::Ace;
 
 use strict;
 use warnings;

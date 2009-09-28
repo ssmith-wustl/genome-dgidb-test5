@@ -41,7 +41,7 @@ sub sub_command_sort_position { 2 }
 
 sub help_brief {
     return <<"EOS"
-Creates a new genome model using the parameters and instrument data assignments of an existing model.  Allows for individual parameters to be overriden.
+create a new genome model based on an existing one
 EOS
 }
 
