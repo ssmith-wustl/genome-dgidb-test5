@@ -16,7 +16,6 @@ sub execute {
 
     my $classify = Genome::Model::Tools::AmpliconAssembly::Classify->create(
         directory => $self->build->data_directory,
-        sequencing_center => $self->model->sequencing_center,
     )
         or return;
     $classify->execute
