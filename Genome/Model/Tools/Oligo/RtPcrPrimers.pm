@@ -55,6 +55,12 @@ class Genome::Model::Tools::Oligo::RtPcrPrimers {
 		 doc   =>  "provide the annotation file from \"gmt annotate variant-transcript\" if this option is used, these options should be omitted chromosome target_pos transcript all_transcripts and version",
 		 is_optional  => 1,
 	     },
+	     masked => {
+		 is => 'Boolean',
+		 doc   =>  "use this option to mask_snps_and_repeats",
+		 is_optional  => 1,
+	     },
+
 	],
     
 };
@@ -206,7 +212,13 @@ sub execute {
 	    my $output_name = $annotation_info->{$transcript}->{$trans_pos}->{output_name};
 	    unless ($chromosome) {$chromosome = $annotation_info->{$transcript}->{$trans_pos}->{chromosome};}
 	
-	    my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name");
+	    #my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name");
+	    my $info;
+	    if ($self->masked) {
+		($info) = Genome::Model::Tools::Annotate::TranscriptSequence->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name", masked => "1");
+	    } else {
+		($info) = Genome::Model::Tools::Annotate::TranscriptSequence->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name");
+	    }
 	    #my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version");
 	    my $transcript_info = $info->{result};
 	    my $strand = $transcript_info->{$transcript}->{-1}->{strand};
@@ -283,12 +295,22 @@ sub execute {
 	    my $fasta = "$output_name.rtpcr.designseq.fasta";
 	    open(FA,">$fasta") || die "couldn't open a fasta file to write to\n";
 	    print FA qq(\>$output_name.rtpcr.designseq\n);
+
+	    my $fasta_masked;
+	    if ($self->masked) {
+		$fasta_masked = "$output_name.masked.rtpcr.designseq.fasta";
+		open(MFA,">$fasta_masked") || die "couldn't open a fasta file to write to\n";
+		print MFA qq(\>$output_name.masked.rtpcr.designseq\n);
+	    }
 	    foreach my $n (sort {$a<=>$b} keys %{$design_seq}) {
 		my $base = $design_seq->{$n}->{base};
 		print FA qq($base);
+		if ($self->masked) {my $masked_base = $transcript_seq->{$n}->{masked_base};print MFA qq($masked_base);}
 	    }
 	    print FA qq(\n);
 	    close (FA);
+	    if ($self->masked) { print MFA qq(\n); close (MFA); }
+
 	    my $note = "$gene\t$strand\t$transcript\t$chromosome\t$trans_pos\t$tp_region\t$tp_exon";
 	    my $header = "gene\tstrand\ttranscript\tchromosome\ttarget_position\ttarget_position_region\ttarget_position_tp_exon";
 	    my $hspsepSmax = $target->{seq_stop} - $target->{seq_start} + 51;
@@ -297,8 +319,14 @@ sub execute {
 
 	    if ($pcr_primer_options) {
 		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism $pcr_primer_options -display-blast -note "$note" -header "$header");
+		if ($self->masked) {
+		    system qq(gmt oligo pcr-primers -output-name $output_name.masked -fasta $fasta_masked -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism $pcr_primer_options -display-blast -note "$note" -header "$header");
+		}
 	    } else {
 		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism -display-blast -note "$note" -header "$header");
+		if ($self->masked) {
+		    system qq(gmt oligo pcr-primers -output-name $output_name.masked -fasta $fasta_masked -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism -display-blast -note "$note" -header "$header");
+		}
 	    }
 	}
     }
@@ -346,7 +374,7 @@ sub get_transcript_seq {
 	my $frame = $transcript_info->{$transcript}->{$pos}->{frame};
 	my $aa_n = $transcript_info->{$transcript}->{$pos}->{aa_n};
 	my $base = $transcript_info->{$transcript}->{$pos}->{base};
-
+	my $masked_base = $transcript_info->{$transcript}->{$pos}->{masked_base};
 	my $trans_pos = $transcript_info->{$transcript}->{$pos}->{trans_pos};
 
 	my $range = $transcript_info->{$transcript}->{$pos}->{range};
@@ -361,6 +389,9 @@ sub get_transcript_seq {
 	$transcript_seq->{$base_count}->{base}=$base;
 	$transcript_seq->{$base_count}->{transcript}=$transcript;
 	$transcript_seq->{$base_count}->{exon}="$exon,$region";
+	if ($masked_base) {
+	    $transcript_seq->{$base_count}->{masked_base}=$masked_base;
+	}
 
 	$nb++;
 	if ($trans_pos) {
