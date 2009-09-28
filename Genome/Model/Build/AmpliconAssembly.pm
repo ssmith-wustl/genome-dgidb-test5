@@ -32,11 +32,11 @@ sub create {
         return;
     }
 
-    mkdir $self->data_directory unless -d $self->data_directory;
-    
-    $self->create_directory_structure
-        or return;
+    mkdir $self->data_directory unless -e $self->data_directory;
 
+    $self->amplicon_assembly
+        or return;
+    
     return $self;
 }
 
@@ -45,13 +45,35 @@ sub amplicon_assembly {
     my $self = shift;
 
     unless ( $self->{_amplicon_assembly} ) {
-        $self->{_amplicon_assembly} = Genome::AmpliconAssembly->create(
+        # get
+        my $amplicon_assembly = Genome::AmpliconAssembly->get(
             directory => $self->data_directory,
-            sequencing_center => $self->model->sequencing_center,
-            sequencing_platform => $self->model->sequencing_platform,
-            assembler => $self->model->assembler,
-            subject_name => $self->model->subject_name,
-        );
+        ); 
+        # create
+        unless ( $amplicon_assembly ) {
+            $amplicon_assembly = Genome::AmpliconAssembly->create(
+                directory => $self->data_directory,
+                description => sprintf(
+                    'Model Name: %s Id: %s Build Id: %s', 
+                    $self->model->name,
+                    $self->model->id,
+                    $self->id,
+                ),
+                (
+                    map { $_ => $self->model->$_ } (qw/ 
+                        assembly_size sequencing_center sequencing_platform subject_name 
+                        /),
+                ),
+                #exclude_contaminated_amplicons => 0,
+                #only_use_latest_iteration_of_reads => 0,
+            );
+        }
+        # validate
+        unless ( $amplicon_assembly ) {
+            $self->error_message("Can't get/create amplicon assembly.");
+            return;
+        }
+        $self->{_amplicon_assembly} = $amplicon_assembly;
     }
 
     return $self->{_amplicon_assembly};
