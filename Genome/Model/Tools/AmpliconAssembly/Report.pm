@@ -7,15 +7,25 @@ use Carp 'confess';
 use Data::Dumper 'Dumper';
 
 my %REPORT_INFO = (
-    stats => { param_names => [qw/ assembly_size /], },
+    stats => { param_names => [qw/ /], },
+    compare => { param_names => [qw/ /], },
     #composition => { param_names => [qw/ /], },
 );
 class Genome::Model::Tools::AmpliconAssembly::Report {
-    is => 'Genome::Model::Tools::AmpliconAssembly',
+    is => 'Command',
+    #is => 'Genome::Model::Tools::AmpliconAssembly',
     has => [
+    directories => {
+        is => 'ARRAY',
+        doc => 'Directories of existing amplicon assemblies. Separate by commas.',
+    },
     report => {
         is => 'Text',
         doc => 'The report to generate: '.join(',', valid_reports()),
+    },
+    _amplicon_assemblies => {
+        is => 'ARRAY',
+        doc => 'Amplicon assemblies retrieved from the directories.'
     },
     ],
     has_optional => [
@@ -73,7 +83,7 @@ sub report_generator_class {
     return 'Genome::AmpliconAssembly::Report::'.ucfirst($_[0]->report);
 }
 
-#< helps >#
+#< Functions >#
 sub functions {
     return (qw/ print_report print_dataset save_report save_datasets /);
 }
@@ -96,10 +106,26 @@ sub help_synopsis {
 
 #< Command >#
 sub create {
-    my $class = shift;
+    my ($class, %params) = @_;
 
-    my $self = $class->SUPER::create(@_)
+    unless ( $params{directories} ) {
+        $class->error_message("No directories given to get amplicon assemblies to generate report.");
+        return;
+    }
+
+    unless ( ref $params{directories} ) {
+        $params{directories} = [ split(',', $params{directories}) ];
+    }
+
+    my $self = $class->SUPER::create(%params)
         or return;
+
+    my @amplicon_assemblies;
+    for my $directory ( @{$self->directories} ) {
+        push @amplicon_assemblies, Genome::AmpliconAssembly->create(directory => $directory)
+            or return;
+    }
+    $self->_amplicon_assemblies(\@amplicon_assemblies);
 
     # If no functions, print report
     unless ( grep { $self->$_ } functions() ) {
@@ -174,7 +200,7 @@ sub _create_report_generator {
 
     my $class = $self->report_generator_class;
     my $generator = $class->create(
-        amplicon_assemblies => [ $self->amplicon_assembly ],
+        amplicon_assemblies => $self->_amplicon_assemblies,
         $self->_params_for_genertor,
     );
     unless ( $generator ) {
