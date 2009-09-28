@@ -27,13 +27,17 @@ UR::Object::Type->define(
             dir     => {
                            doc => 'directory of inputs',
                            is => 'String',
-                           is_input => 1,
+		is_optional => 1,
+		default => ".",
+#                           is_input => 1,
 
                         },
             logfile => {
                             doc => 'output file for monitoring progress of pipeline',
                             is => 'String',
-                            is_input => 1,
+		is_optional => 1,
+#                            is_input => 1,
+                            default => "logfile.txt",
                         },
     ]
 );
@@ -70,6 +74,18 @@ sub execute
                               'dir'         => $dir,
                               'logfile'     => $logfile,
                           );
+    my $mail_dest = $ENV{USER}.'@genome.wustl.edu';
+    my $sender = Mail::Sender->new({
+        smtp => 'gscsmtp.wustl.edu',
+        from => 'virome-screen@genome.wustl.edu',
+        replyto => 'virome-screen@genome.wustl.edu',
+    });
+    $sender->MailMsg({
+        to => $mail_dest,
+        subject => "Virome Screen completed",
+        msg     => "Virome Screen completed for gmt virome-screening\n" .
+                   "\t--barcode-file=" . $self->barcode_file . " --fasta-file=" . $self->fasta_file . " --dir=" . $self->dir . " --logfile=" . $self->logfile,
+    });
     return 1;
 }
 

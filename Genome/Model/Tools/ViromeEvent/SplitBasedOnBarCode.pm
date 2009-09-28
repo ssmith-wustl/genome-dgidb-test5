@@ -83,7 +83,8 @@ sub execute
     # get directory path
     my @fields = split(/\//, $input_file);
     pop @fields;
-    my $output_dir = join("/", @fields);
+#    my $output_dir = join("/", @fields);
+    my $output_dir = $self->dir;
     
     my $lib_name = $fields[$#fields];
     $self->log_event("lib is $lib_name");
