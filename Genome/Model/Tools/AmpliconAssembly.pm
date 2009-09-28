@@ -9,7 +9,10 @@ class Genome::Model::Tools::AmpliconAssembly {
     is => 'Command',
     is_abstract => 1,
     has => [
-    Genome::AmpliconAssembly->attributes, 
+    directory => {
+        is => 'Text',
+        doc => 'Base directory for the amplicon assembly.  It is required that the amplicon assembly have been previously created, saving it\'s properties.  See the "create" command.',
+    },
     map( { $_ => { via => 'amplicon_assembly' } } Genome::AmpliconAssembly->helpful_methods ),
     ],
 };
@@ -30,7 +33,7 @@ sub create {
         or return;
 
     unless ( $self->amplicon_assembly ) {
-        $self->error_message("Can't get amplicon assembly with given parameters. See above error.");
+        $self->error_message("Can't get amplicon assembly with given parameters. There maybe an error, or it might just needs to be created first.");
         return;
     }
 
@@ -42,15 +45,10 @@ sub amplicon_assembly {
     my $self = shift;
 
     unless ( $self->{_amplicon_assembly} ) {
-        my $amplicon_assembly = Genome::AmpliconAssembly->create(
+        #$self->{_amplicon_assembly} = Genome::AmpliconAssembly->create(
+        $self->{_amplicon_assembly} = Genome::AmpliconAssembly->get(
             directory => $self->directory,
-            sequencing_center => $self->sequencing_center,
-            sequencing_platform => $self->sequencing_platform,
-            subject_name => $self->subject_name,
-        ) or return;
-        $amplicon_assembly->create_directory_structure
-            or return;
-        $self->{_amplicon_assembly} = $amplicon_assembly;
+        );
     }
 
     return $self->{_amplicon_assembly};
