@@ -14,7 +14,13 @@ require Genome::AmpliconAssembly::Amplicon;
 my %ATTRIBUTES = (
     directory => {
         is => 'Text',
-        doc => 'Base directory',
+        is_optional => 1,
+        doc => 'Base directory for the amplicon assembly.',
+    },
+    description => {
+        is => 'Text',
+        is_optional => 1,
+        doc => 'A brief description of the amplicon assembly. Helps identify in messaging. Default is the directory.',
     },
     sequencing_center => {
         is => 'Text',
@@ -28,15 +34,10 @@ my %ATTRIBUTES = (
         default_value => __PACKAGE__->default_sequencing_platform,
         doc => 'Platform upon whence the amplicons were sequenced. Currently supported platforms: '.join(', ', __PACKAGE__->valid_sequencing_platforms).' (default: '.__PACKAGE__->default_sequencing_platform.').',
     },
-    assembler => {
-        is => 'Text',
-        is_optional => 1,
-        default_value => __PACKAGE__->default_assembler,
-        doc => 'The assembler to use. Currently supported assemblers: '.join(', ', valid_assemblers()).' (default: '.__PACKAGE__->default_assembler.').',
-    },
     assembly_size => { # amplicon_size
         is => 'Integer',
         is_optional => 1,
+        default_value => 1364,
         doc => 'Expected assembly size for an assembled amplicon.',
     },
     subject_name => {
@@ -61,21 +62,103 @@ my %ATTRIBUTES = (
 #< UR >#
 class Genome::AmpliconAssembly {
     is => 'UR::Object',
-    has => [ %ATTRIBUTES ],
+    id_by => 'directory',
+    has => [
+    %ATTRIBUTES,
+    _additional_properties => {
+        is => 'HASH',
+        default_value => {},
+        doc => 'Properties added from operations performed on an amplicon assembly.',
+    },
+    ],
 };
 
-sub create {
-    my $class = shift;
+sub get { 
+    my ($class, %params) = @_;
 
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unless ( Genome::Utility::FileSystem->validate_existing_directory( $self->directory ) ) {
-        $self->delete;
+    # Do not support getting with any other params...
+    my $directory = delete $params{directory};
+    if ( %params ) { 
+        $class->error_message('Can\'t get with additional parameters, only directory.');
+        return;
+    }
+    
+    # Validate directory
+    unless ( Genome::Utility::FileSystem->validate_existing_directory($directory) ) {
+        $class->error_message("Can't validate amplicon assembly directory. See above error.");
         return;
     }
 
-    for my $attribute (qw/ sequencing_platform sequencing_center assembler /) {
+    # UR Cache
+    my ($self) = $class->SUPER::get(directory => $directory);
+    return $self if $self;
+    
+    # Properties file
+    return $class->_create_from_saved_properties($directory);
+}
+
+sub create {
+    my ($class, %params) = @_;
+
+    unless ( Genome::Utility::FileSystem->validate_existing_directory($params{directory}) ) {
+        $class->error_message("Can't validate amplicon assembly directory. See above error.");
+        return;
+    }
+
+    # Get UR cache/properties file
+    #my ($self) = $class->get(directory => $params{directory});
+    #return $self if $self;
+
+    my $self = $class->SUPER::create(%params)
+        or return;
+    
+    unless ( $self->description ) {
+        $self->description( $self->directory );
+    }
+
+    $self->_validate_properties
+        or return;
+
+    $self->create_directory_structure
+        or return;
+    
+    $self->_save_properties
+        or return;
+
+    return $self;
+}
+
+#< Properties >#
+sub _properties_file {
+    my ($self, $directory) = @_;
+
+    if ( not $directory and ref $self ) {
+        $directory = $self->directory;
+    }
+
+    confess "No directory given to get properties file." unless $directory;
+
+    return $directory.'/properties.stor';
+}
+
+sub _create_from_saved_properties {
+    my ($class, $directory) = @_;
+
+    my $properties_file = $class->_properties_file($directory);
+    return unless -e $properties_file;
+    
+    my $properties = Storable::retrieve($properties_file);
+    unless ( $properties ) {
+        confess "No properties in amplicon assembly properties file.";
+    }
+
+    return $class->SUPER::create(%$properties)
+}
+
+sub _validate_properties {
+    my $self = shift;
+
+    for my $attribute (qw/ sequencing_platform sequencing_center /) {
         unless ( $self->validate_attribute_value($attribute) ) {
             $self->delete;
             return;
@@ -96,10 +179,42 @@ sub create {
         }
     }
 
-    $self->create_directory_structure
-        or return;
+    return 1;
+}
 
-    return $self;
+sub _save_properties {
+    my $self = shift;
+
+    my %properties;
+    for my $attr ( $self->attribute_names ) {
+        $properties{$attr} = $self->$attr;
+    }
+
+    $properties{_additional_properties} = $self->_additional_properties;
+
+    my $properties_file = $self->_properties_file;
+    unlink $properties_file if -e $properties_file;
+    eval {
+        Storable::store(\%properties, $properties_file);
+    };
+    
+    if ( $@ ) {
+        confess "Can't save properties to file ($properties_file): $@";
+    }
+    
+    return 1;
+}
+
+sub update_additional_properties {
+    my ($self, %properties) = @_;
+
+    confess "No properties given to update additional properties." unless %properties;
+
+    for my $property ( keys %properties ) {
+        $self->_additional_properties->{$property} = $properties{$property};
+    }
+    
+    return $self->_save_properties;
 }
 
 #< Atributes >#
@@ -109,6 +224,18 @@ sub attributes {
 
 sub attribute_names {
     return keys %ATTRIBUTES;
+}
+
+sub attributes_without_default_values {
+    my $class = shift;
+
+    my %attributes;
+    for my $name ( attribute_names() ) {
+        $attributes{$name} = $class->get_attribute_for_name($name);
+        delete $attributes{$name}->{default_value};
+    }
+
+    return %attributes;
 }
 
 sub get_attribute_for_name {
@@ -175,19 +302,13 @@ sub default_sequencing_platform {
     return (valid_sequencing_platforms)[0];
 }
 
-# Assemblers
-sub valid_assemblers {
-    return (qw/ phredphrap /);
-}
-
-sub default_assembler {
-    return (valid_assemblers)[0];
-}
-
 # GSC Only Attributes
 sub gsc_only_attributes {
     return (qw/ only_use_latest_iteration_of_reads exclude_contaminated_amplicons /);
 }
+
+#< DEPRACATED FIXME #>
+sub assembler { return 'phredphrap' };
 
 #< DIRS >#
 sub consed_directory {
