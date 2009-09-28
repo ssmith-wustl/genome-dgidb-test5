@@ -504,7 +504,7 @@ sub parse_annotation {
 		$annotation_info->{$transcript}->{$start}->{output_name} = "$gene.$transcript.$chromosome.$start";
 	    }
 	}
-    } close (ANNO);
+    } close (ANO);
     return($annotation_info);
 }
 
