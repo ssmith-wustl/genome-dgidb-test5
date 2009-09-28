@@ -73,8 +73,8 @@ sub execute {
     printf(
         "Renamed model (<Id> %s) from %s to %s\n",
         $self->model_id, 
-        $self->model_name,
         $old_name,
+        $self->model_name,
     );
 
     return 1;
