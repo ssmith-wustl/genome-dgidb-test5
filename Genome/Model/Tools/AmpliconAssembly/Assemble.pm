@@ -10,6 +10,12 @@ use Data::Dumper 'Dumper';
 class Genome::Model::Tools::AmpliconAssembly::Assemble{
     is => 'Genome::Model::Tools::AmpliconAssembly',
     has_optional => [ 
+    assembler => {
+        is => 'Text',
+        is_optional => 1,
+        default_value => __PACKAGE__->default_assembler,
+        doc => 'The assembler to use. Currently supported assemblers: '.join(', ', valid_assemblers()).' (default: '.__PACKAGE__->default_assembler.').',
+    },
     assembler_params => {
         is => 'Text',
         doc => 'String of parameters for the assembler',
@@ -34,6 +40,19 @@ sub help_synopsis {
     );
 }
 
+#< Assemblers #>
+sub valid_assemblers {
+    return (qw/ phredphrap /);
+}
+
+sub default_assembler {
+    return (valid_assemblers)[0];
+}
+
+sub valid_assemblers_as_string {
+    return join(', ', valid_assemblers());
+}
+
 #< Command >#
 sub create {
     my $class = shift;
@@ -41,6 +60,18 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
+    unless ( grep { $self->assembler eq $_ } valid_assemblers() ) {
+        $self->error_message(
+            sprintf(
+                'Invalid assembler (%s)', 
+                $self->assembler,
+                $self->valid_assemblers_as_string,
+            )
+        );
+        $self->delete;
+        return;
+    }
+    
     unless ( $self->_get_hashified_assembler_params ) {
         # this may not be necessary for all assemblers, but handle that later
         $self->delete;
