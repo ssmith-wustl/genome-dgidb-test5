@@ -51,12 +51,6 @@ class Genome::Model::Command::Define::Somatic {
    ],
 };
 
-sub help_brief {
-    return <<"EOS"
-    Create a new somatic model, which is the combination of a normal and tumor model and associate analysis
-EOS
-}
-
 sub help_synopsis {
     return <<"EOS"
 genome model define 

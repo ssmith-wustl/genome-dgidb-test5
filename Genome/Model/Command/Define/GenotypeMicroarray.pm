@@ -16,10 +16,6 @@ class Genome::Model::Command::Define::GenotypeMicroarray {
     ],
 };
 
-sub help_brief {
-    "import a file of genotype microarray data into the system"
-}
-
 sub help_synopsis {
     return <<"EOS"
 genome model define genotype-microarray 

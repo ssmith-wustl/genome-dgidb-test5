@@ -7,9 +7,7 @@ use Genome;
       
 class Genome::Report::Command {
     is => 'Command',
-    #is_abstract => 1,
-    #english_name => 'genome report command',
-    doc => 'Work with reports.',
+    doc => 'work with reports',
 };
 
 ############################################
