@@ -16,9 +16,6 @@ sub execute {
 
     my $collate = Genome::Model::Tools::AmpliconAssembly::Collate->create(
         directory => $self->build->data_directory,
-        sequencing_center => $self->model->sequencing_center,
-        sequencing_platform => $self->model->sequencing_platform,
-        subject_name => $self->model->subject_name,
     )
         or return;
     $collate->execute
