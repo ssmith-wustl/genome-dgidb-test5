@@ -15,6 +15,10 @@ class Genome::Model::Tools::AmpliconAssembly::Create {
     ],
 };
 #< Helps >#
+sub help_brief {
+    return 'Create an amplicon assembly';
+}
+
 sub help_detail {
     return <<EOS;
 Create an amplicon assembly, it's directory structure and saves the properties.  This allows the other commands to be run smoothly by using the amplicon assembly's stored properties.
@@ -25,6 +29,8 @@ sub help_synopsis {
 }
 
 #< Command >#
+sub sub_command_sort_position { 11; }
+
 sub execute {
     my $self = shift;
 
