@@ -87,16 +87,20 @@ sub test03_verify : Tests {
 
     my $build_event = $self->_main_event;
     my $model = $self->_mock_model;
-    my @events = sort { $b->genome_model_event_id <=> $a->genome_model_event_id } Genome::Model::Event->get(
+    my @events = sort { 
+        $b->genome_model_event_id <=> $a->genome_model_event_id 
+    } Genome::Model::Event->get(
         model_id => $model->id,
         build_id => $build_event->build_id,
         event_status => 'Scheduled',
+        event_type => { operator => 'like', value => 'genome model build %' },
     );
-    my $expected_event_count = 11;
+    my $expected_event_count = 10;
     is(@events, $expected_event_count, "Scheduled $expected_event_count events");
     #print Dumper([map{$_->event_type}@events]);
 
-    # The execution of these events are tested via the unit tests...but you may wanna make sure it works and see the results
+    # The execution of these events are tested via the unit tests...
+    # but you may wanna make sure it works and see the results
     #  of the system running together
     if ( 0 ) {  
         for my $event ( @events ) {
@@ -160,6 +164,12 @@ sub _pre_execute { 1 }
 sub test_01_execute : Tests {
     my $self = shift;
 
+    # aa
+    my $amplicon_assembly = Genome::AmpliconAssembly->create(
+        directory => $self->_mock_build->data_directory,
+    );
+    ok($amplicon_assembly, 'Created amplicon assembly');
+    
     # traces
     if ( $self->should_copy_traces ) {
         ok( 
