@@ -39,6 +39,8 @@ sub help_synopsis {
 }
 
 #< Command >#
+sub sub_command_sort_position { 20; }
+
 sub create {
     my $class = shift;
 
@@ -77,6 +79,11 @@ sub execute {
         $self->$trim_and_screen_method($amplicon)
             or return;
     }
+    
+    $self->amplicon_assembly->update_additional_properties(
+        trimmer_and_screener => $self->trimmer_and_screener,
+        trimmer_and_screener_params => $self->trimmer_and_screener_params,
+    ) or return;
 
     return 1;
 }
