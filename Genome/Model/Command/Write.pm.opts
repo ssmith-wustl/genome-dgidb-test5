@@ -1,8 +1,0 @@
-$Genome::Model::Command::Write::OPTS_SPEC = [
-  '>ace',
-  \'Genome::Model::Command::Write::Ace',
-  '>genotype-submission',
-  \'Genome::Model::Command::Write::GenotypeSubmission',
-  'help!',
-  undef
-];
