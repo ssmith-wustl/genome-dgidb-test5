@@ -163,7 +163,12 @@ class Genome::Model::Tools::Oligo::PcrPrimers {
 	     },
 	     display_blast => {
 		 is => 'Boolean',
-		 doc   =>  "use this option if you'd like to see the alignment hsps with their primer coverage and percent identity and in the ordered out file",
+		 doc   =>  "use this option if you'd like to see the alignment hsps; they will be printed in this format primer_pair_coverage,primer_pair_percent_identity,chromosome(coordinates)",
+		 is_optional  => 1,
+	     },
+	     blast_db => {
+		 type  =>  'String',
+		 doc   =>  "provide a blastable database to check your primer match against; A transcriptome for rt-pcr)",
 		 is_optional  => 1,
 	     },
 	     note => {
@@ -172,8 +177,8 @@ class Genome::Model::Tools::Oligo::PcrPrimers {
 		 is_optional  => 1,
 	     },
 	     header => {
-		 is => 'Boolean',
-		 doc   =>  "use this option if you'd like a header in your ordered primers file",
+		 type  =>  'String',
+		 doc   =>  "provide a header for your note string if no note enter 1",
 		 is_optional  => 1,
 	     },
 
@@ -267,17 +272,24 @@ sub execute {
     
     open(PPO,">$output_dir/$primer_name.ordered_primer_pairs.txt");
 
-    if ($self->header) {
-	if ($self->note) {
-	    print PPO qq(note\t);
+    my $note = $self->note;
+    my $header = $self->header;
+
+
+    if ($header) {
+	if ($note) {
+	    print PPO qq($header\tprimer_name\tproduct_size\ttm_left\tleft_seq\tleft_primer_coords\ttm_right\tright_seq\tright_primer_coords\tcov100id100\tcov90id100\tcov75id90\tprimer_pair_quality);
+	} else {
+	    print PPO qq(primer_name\tproduct_size\ttm_left\tleft_seq\tleft_primer_coords\ttm_right\tright_seq\tright_primer_coords\toriginalmatch\tnearperfectmatch\tclohom\tprimer_pair_quality);
 	}
-	print PPO qq(primer_name\tproduct_size\ttm_left\tleft_seq\tleft_primer_coords\ttm_right\tright_seq\tright_primer_coords\toriginalmatch\tnearperfectmatch\tclohom\tprimer_pair_quality);
 	if ($self->display_blast) {
 	    print PPO qq(\talignment\n);
 	} else {
 	    print PPO qq(\n);
 	}
     }
+    if ($note) {$note = "$note\t$primer_name";} else {$note = $primer_name;}
+
     foreach my $primer_pair_quality (sort {$a<=>$b} keys %{$primer_quality}) {
 	foreach my $paired_primers (sort keys %{$primer_quality->{$primer_pair_quality}}) {
 	    my $originalmatch = $targets->{$paired_primers}->{originalmatch}; unless ($originalmatch) {$originalmatch=0;}
@@ -297,12 +309,7 @@ sub execute {
 		my $rpr = "$rs-$re";
 		
 		my $product_size = ($re - $ls) + 1;
-		my $note = $self->note;
-
-		if ($note) {$note = "$note\t$primer_name";
-		} else { 
-		    $note = $primer_name;
-		}
+		
 		print PPO qq($note\t$product_size\t$tm_l\t$left_seq\t$lpr\t$tm_r\t$right_seq\t$rpr\t$originalmatch\t$nearperfectmatch\t$clohom\t$primer_pair_quality);
 		if ($alignment) {
 		    print PPO qq(\t$alignment\n);
@@ -564,7 +571,11 @@ sub blastprimer3result {
 		my $n = $s + $s;
 
 		#system qq(blastn /gscmnt/200/medseq/analysis/software/resources/B36/HS36.fa $pid.fasta -nogap -M=1 -N=-$n -S2=$s -S=$s | blast2gll -s > $pid.out);
-		if ($organism eq "mouse") {
+
+		my $blast_db = $self->blast_db;
+		if ($blast_db) {
+		    system qq(blastn $blast_db $blast_fasta M=1 N=-3 Q=3 R=3 hspsepSmax=$hspsepSmax topcomboN=3 B=3 V=3 | blast2gll -s > $blast_result);
+		} elsif ($organism eq "mouse") {
 		    system qq(blastn /gscmnt/200/medseq/analysis/software/resources/MouseB37/MS37.fa $blast_fasta M=1 N=-3 Q=3 R=3 hspsepSmax=$hspsepSmax topcomboN=3 B=3 V=3 | blast2gll -s > $blast_result);
 		} else {
 		    system qq(blastn /gscmnt/200/medseq/analysis/software/resources/B36/HS36.fa $blast_fasta M=1 N=-3 Q=3 R=3 hspsepSmax=$hspsepSmax topcomboN=3 B=3 V=3 | blast2gll -s > $blast_result);
