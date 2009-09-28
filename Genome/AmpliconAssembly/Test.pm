@@ -5,10 +5,11 @@ package Genome::AmpliconAssembly::Test;
 use strict;
 use warnings;
 
-use base 'Genome::Utility::TestBase';
+use base 'Test::Class';
 
 use Data::Dumper 'Dumper';
 use Test::More;
+require File::Temp;
 require File::Path;
 
 use Data::Dumper 'Dumper';
@@ -18,29 +19,89 @@ sub test_class {
 }
 
 sub amplicon_assembly {
-    return $_[0]->{_object};
+    return $_[0]->{_amplicon_assembly};
 }
 
-sub params_for_test_class {
+sub base_test_dir {
+    return '/gsc/var/cache/testsuite/data';
+}
+
+sub tmp_dir {
     my $self = shift;
-    return (
-        directory => $self->base_test_dir.'/Genome-Model-AmpliconAssembly/build-10000',
-    );
+
+    unless ( $self->{_tmp_dir} ) {
+        $self->{_tmp_dir} = File::Temp::tempdir(CLEANUP => 1);
+    }
+    
+    return $self->{_tmp_dir};
 }
 
-sub invalid_params_for_test_class {
-    return (
+sub test00_use : Test(1) {
+    my $self = shift;
+
+    use_ok( $self->test_class )
+        or die;
+
+    return 1;
+}
+
+sub test01_get : Tests(1) {
+    my $self = shift;
+
+    # amplicon assembly for tests below
+    $self->{_amplicon_assembly} = $self->test_class->get(
+        directory => $self->base_test_dir.'/Genome-Model/AmpliconAssembly/build',
+    );
+    ok(
+        $self->{_amplicon_assembly},
+        'get',
+    );
+
+    return 1;
+}
+
+sub test02_create : Tests(1) {
+    my $self = shift;
+
+    my $amplicon_assembly = $self->test_class->create(
+        directory => $self->tmp_dir,
+    );
+    ok(
+        $amplicon_assembly,
+        'create',
+    );
+
+    # Remove properties file and object from UR
+    unlink $amplicon_assembly->_properties_file;
+    $amplicon_assembly->delete;
+
+    return 1;
+}
+
+sub test03_invalid_create : Tests() {
+    my $self = shift;
+
+    my %invalid_params = (
         sequencing_center => 'washu',
         sequencing_platform => '373',
-        assembler => 'consed',
     );
-}
+    for my $invalid_attr ( keys %invalid_params ) {
+        ok(!$self->test_class->create(
+                directory => $self->tmp_dir,
+                $invalid_attr => $invalid_params{$invalid_attr},
+            ),
+            "failed as expected - create w/ $invalid_attr\: ".$invalid_params{$invalid_attr},
+        );
+    }
 
-sub test01_invalid_creates : Tests(1) {
-    my $self = shift;
+    ok(
+        !$self->test_class->create(
+            directory => $self->tmp_dir,
+            sequencing_center => 'broad',
+            exclude_contaminated_amplicons => 1,
+        ), 'Failed as expected - create w/ unsupported attrs for broad',
+    );
 
-    ok(!$self->test_class->create(sequencing_center => 'broad', exclude_contaminated_amplicons => 1), 'Failed as expected - create w/ unsupported attrs for broad');
-    
     return 1;
 }
 
@@ -49,6 +110,7 @@ sub test02_amplicons_gsc_sanger : Tests() {
     
     # amplicons
     my $amplicon_assembly = $self->amplicon_assembly;
+    #print $amplicon_assembly->directory."\n";<STDIN>;
     my $amplicons = $amplicon_assembly->get_amplicons;
     is_deeply(
         [ map { $_->name } @$amplicons ],
@@ -384,9 +446,21 @@ use Test::More;
 
 sub params_for_test_class {
     return (
-        directory => $_[0]->tmp_dir,
+        directory => $_[0]->amplicon_assembly->directory, # this creates the aa
         $_[0]->_params_for_test_class,
     );
+}
+
+sub amplicon_assembly {
+    my $self = shift;
+
+    unless ( $self->{_amplicon_assembly} ) {
+        $self->{_amplicon_assembly} = Genome::AmpliconAssembly->create(
+            directory => $self->tmp_dir,
+        );
+    }
+
+    return $self->{_amplicon_assembly};
 }
 
 sub amplicons {
@@ -409,7 +483,7 @@ sub test01_copy_data : Tests {
         ok( 
             Genome::Model::Test->copy_test_dir(
                 $self->_build_dir.'/chromat_dir',
-                $self->{_object}->chromat_dir,
+                $self->tmp_dir.'/chromat_dir',
             ),
             "Copy traces"
         ) or die;
@@ -419,7 +493,7 @@ sub test01_copy_data : Tests {
         ok(
             Genome::Model::Test->copy_test_dir(
                 $self->_build_dir.'/edit_dir',
-                $self->{_object}->edit_dir,
+                $self->tmp_dir.'/edit_dir',
             ),
             "Copy edit_dir"
         ) or die;
@@ -624,6 +698,102 @@ sub test03_verify : Test(2) {
 
 ###########################################################################
 
+package Genome::Model::Tools::AmpliconAssembly::CopyFromBuild::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Tools::AmpliconAssembly::TestBase';
+
+use Genome::Model::Test;
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Tools::AmpliconAssembly::CopyFromBuild';
+}
+
+sub params_for_test_class {
+    return (
+        directory => $_[0]->tmp_dir,
+        build_id => $_[0]->_model->last_complete_build_id,
+        exclude_contaminated_amplicons => 1,
+        copy_reads_only => 1,
+    );
+}
+
+sub _model {
+    my $self = shift;
+
+    unless ( $self->{_model} ) {
+        $self->{_model} = Genome::Model::Test->create_mock_model(
+            type_name => 'amplicon assembly',
+            use_mock_dir => 1,
+        )
+            or die "Can't create mock aa model";
+    }
+
+    return $self->{_model};
+}
+
+sub should_copy_traces { 0 }
+sub should_copy_edit_dir { 0 }
+
+sub test03_verify : Test(4) {
+    my $self = shift;
+
+    my $amplicon_assembly = Genome::AmpliconAssembly->get(directory => $self->tmp_dir);
+    ok($amplicon_assembly, 'Created amplicon assembly');
+    ok($amplicon_assembly->exclude_contaminated_amplicons, 'Excluding contaminated amplicons');
+    ok(scalar(glob($amplicon_assembly->chromat_dir.'/*')), 'Copied reads');
+    ok(!scalar(glob($amplicon_assembly->edit_dir.'/*')), 'Did not copy edit dir');
+    
+    return 1;
+}
+
+###########################################################################
+
+package Genome::Model::Tools::AmpliconAssembly::Create::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Tools::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Tools::AmpliconAssembly::Create';
+}
+
+sub params_for_test_class {
+    return (
+        directory => $_[0]->tmp_dir,
+    );
+}
+
+sub should_copy_traces { 0 }
+sub should_copy_edit_dir { 0 }
+
+sub _pre_execute { 
+    my $self = shift;
+
+    die if -e $self->tmp_dir.'/properties.stor';
+    
+    return 1;
+}
+
+sub test03_verify : Test(1) {
+    my $self = shift;
+
+    ok(-e $self->tmp_dir.'/properties.stor', 'Created amplicon assembly');
+
+    return 1;
+}
+
+###########################################################################
+
 package Genome::Model::Tools::AmpliconAssembly::OrientTest;
 
 use strict;
@@ -784,10 +954,11 @@ sub test_class {
     return 'Genome::Model::Tools::AmpliconAssembly::Report';
 }
 
-sub _params_for_test_class {
+sub params_for_test_class {
     return (
+        directories => [ $_[0]->tmp_dir ],
         report => 'stats',
-        report_params => '-assembly_size 1400',
+        #report_params => '-assembly_size 1400',
         report_directory => $_[0]->tmp_dir,
         save_report => 1,
         save_datasets => 1,
@@ -828,6 +999,10 @@ use base 'Genome::Utility::TestBase';
 use Data::Dumper 'Dumper';
 require Genome::Model::Test;
 use Test::More;
+
+sub required_params_for_class {
+    return;
+}
 
 sub generator {
     return $_[0]->{_object};
@@ -870,10 +1045,49 @@ sub test01_generate_report : Test(2) {
 
     can_ok($self->generator, '_generate_data');
 
+    use Carp;
+    $SIG{__DIE__} = sub{ confess(@_); };
+    
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
     #print Dumper([map{$report->$_} (qw/ name description date generator /)]);
+    print Dumper($report->xml_string);
     $report->save('/gscuser/ebelter/Desktop', 1);
+
+    return 1;
+}
+
+######################################################################
+
+package Genome::AmpliconAssembly::Report::Compare::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::AmpliconAssembly::Report::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    'Genome::AmpliconAssembly::Report::Compare';
+}
+
+sub params_for_test_class {
+    return (
+        amplicon_assemblies => [ $_[0]->mock_model->last_succeeded_build->amplicon_assembly,
+        $_[0]->mock_model->last_succeeded_build->amplicon_assembly,
+        ],
+    );
+}
+
+sub invalid_params_for_test_class {
+    return (
+    );
+}
+
+sub test01_ {# : Tests(2) {
+    my $self = shift;
 
     return 1;
 }
@@ -896,13 +1110,11 @@ sub test_class {
 
 sub _params_for_test_class {
     return (
-        assembly_size => 1400,
     );
 }
 
 sub invalid_params_for_test_class {
     return (
-        assembly_size => -1400,
     );
 }
 
@@ -925,8 +1137,8 @@ sub test03_assembly_stats : Tests(1) {
     #print Dumper($assembly_stats);
     is_deeply(
         $assembly_stats, {
-            headers => [qw/ assembled assemblies-with-3-reads assemblies-with-5-reads assemblies-with-6-reads assembly-success attempted length-average length-maximum length-median length-minimum quality-base-average quality-less-than-20-bases-per-assembly reads reads-assembled reads-assembled-average reads-assembled-maximum reads-assembled-median reads-assembled-minimum reads-assembled-success /],
-            stats => [qw/ 5 3 1 1 100.00 5 1399 1413 1396 1385 62.75 1349.80 30 20 4.00 6 3 3 66.67 /],
+            headers => [qw/ assembled assemblies-with-3-reads assemblies-with-5-reads assemblies-with-6-reads assemblies-with-zeros assembly-success attempted length-average length-maximum length-median length-minimum quality-base-average quality-less-than-20-bases-per-assembly reads reads-assembled reads-assembled-average reads-assembled-maximum reads-assembled-median reads-assembled-minimum reads-assembled-success /],
+            stats => [qw/ 5 3 1 1 2 100.00 5 1399 1413 1396 1385 62.75 1349.80 30 20 4.00 6 3 3 66.67 /],
         },
         'Assembly stats',
     );
