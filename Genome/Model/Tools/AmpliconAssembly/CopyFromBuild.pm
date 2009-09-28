@@ -37,6 +37,10 @@ class Genome::Model::Tools::AmpliconAssembly::CopyFromBuild {
     ],
 };
 #< Helps >#
+sub help_brief {
+    return 'Copy a build to a new directory';
+}
+
 sub help_detail {
     return <<EOS;
 Copy an amplicon assembly from a build.  Indicate the build by id, or use a model's ( by id or name) last complete build.  The model's properties will also be copied, and saved.  To override a property, indicate those on the command line as well.
@@ -47,6 +51,8 @@ sub help_synopsis {
 }
 
 #< Command >#
+sub sub_command_sort_position { 12; }
+
 sub execute {
     my $self = shift;
 
