@@ -36,13 +36,13 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
-    unless ( $self->name ) {
+    unless (1){#$self->name ) {
         $self->error_message('No name for generator to give report');
         $self->delete;
         return;
     }
 
-    unless ( $self->description ) {
+    unless (1){# $self->description ) {
         $self->error_message('No description for generator to give report');
         $self->delete;
         return;
@@ -103,6 +103,18 @@ sub generate_report {
 sub _add_report_meta_data {
     my $self = shift;
 
+    unless ( $self->name ) {
+        $self->error_message('No name for generator to give report');
+        $self->delete;
+        return;
+    }
+
+    unless ( $self->description ) {
+        $self->error_message('No description for generator to give report');
+        $self->delete;
+        return;
+    }
+ 
     # Basics
     for my $attr (qw/ name description date generator /) {
         $self->_meta_node->addChild( $self->_xml->createElement($attr) )->appendTextNode($self->$attr);
