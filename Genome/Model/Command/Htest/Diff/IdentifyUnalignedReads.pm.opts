@@ -1,4 +1,0 @@
-$Genome::Model::Command::Htest::Diff::IdentifyUnalignedReads::OPTS_SPEC = [
-          'help!',
-          undef
-        ];
