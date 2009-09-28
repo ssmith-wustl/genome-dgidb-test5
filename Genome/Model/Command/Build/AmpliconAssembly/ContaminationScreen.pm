@@ -16,7 +16,6 @@ sub execute {
 
     my $classify = Genome::Model::Tools::AmpliconAssembly::ContaminationScreen->create(
         directory => $self->build->data_directory,
-        sequencing_center => $self->model->sequencing_center,
         database => '/gsc/var/lib/reference/set/2809160070/blastdb/blast',
         remove_contaminants => 0, # just run
     )
