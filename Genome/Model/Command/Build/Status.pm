@@ -68,7 +68,7 @@ class Genome::Model::Command::Build::Status {
 
 
    ],
-    
+    doc => "show the status of a new/running/complete build",    
 };
 
 sub execute  {
