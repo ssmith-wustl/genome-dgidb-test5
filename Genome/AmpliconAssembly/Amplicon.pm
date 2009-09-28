@@ -53,6 +53,14 @@ sub create {
     return $self;
 }
 
+sub DESTROY {
+    my $self = shift;
+
+    $self->{_ace_factory}->disconnect if $self->{_ace_factory};
+    
+    return $self->SUPER::DESTROY;
+}
+
 sub _fatal_msg {
     my ($self, $msg) = @_;
 
@@ -402,15 +410,21 @@ sub _get_bioseq_info_from_oriented_fasta {
 sub get_ace_factory {
     my $self = shift;
 
-    my $acefile = $self->ace_file;
-    return unless -s $acefile; # ok
+    unless ( $self->{_ace_factory} ) {
+        my $acefile = $self->ace_file;
+        return unless -s $acefile; # ok
+        $self->{_ace_factory} = Finishing::Assembly::Factory->connect('ace', $acefile);
+    }
 
-    return Finishing::Assembly::Factory->connect('ace', $acefile);
+    return $self->{_ace_factory};
 }
 
 sub get_successfully_assembled_contig_from_assembly {
-    my ($self, $assembly) = @_;
+    my $self = shift;
 
+    my $ace = $self->get_ace_factory
+        or return;
+    my $assembly = $ace->get_assembly;
     my $contigs = $assembly->contigs;
     my $contig;
     while ( $contig = $contigs->next ) {
@@ -422,17 +436,28 @@ sub get_successfully_assembled_contig_from_assembly {
     return $contig;
 }
 
+sub get_reads_from_successfully_assembled_contig {
+    my $self = shift;
+
+    my $ace = $self->get_ace_factory
+        or return;
+    my $assembly = $ace->get_assembly;
+    my $contigs = $assembly->contigs;
+    my $contig;
+    while ( $contig = $contigs->next ) {
+        next unless $contig->unpadded_length >= $self->successfully_assembled_length;
+        next unless $contig->reads->count > 1;
+        last;
+    }
+ 
+    return $contig->reads;
+}
+
 sub _get_bioseq_info_from_assembly { # was _get_bioseq_info_from_longest_contig
     my $self = shift;
 
-    my $factory = $self->get_ace_factory
+    my $contig = $self->get_successfully_assembled_contig_from_assembly
         or return;
-    my $contig = $self->get_successfully_assembled_contig_from_assembly($factory->get_assembly);
-    unless ( $contig ) {
-        $factory->disconnect;
-        #print $self->get_name,"\n";
-        return;
-    }
 
     # Reads
     my $reads = $contig->reads;
@@ -447,8 +472,6 @@ sub _get_bioseq_info_from_assembly { # was _get_bioseq_info_from_longest_contig
         '-seq' => $contig->unpadded_base_string,
         '-qual' => join(' ', @{$contig->qualities}),
     );
-
-    $factory->disconnect;
 
     $self->_validate_fasta_and_qual_bioseq($bioseq, $bioseq)
         or return;
