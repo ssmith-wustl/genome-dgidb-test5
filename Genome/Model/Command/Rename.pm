@@ -17,6 +17,8 @@ class Genome::Model::Command::Rename {
 
 ########################################
 
+sub sub_command_sort_position { 5 }
+
 sub help_brief {
     return 'Rename a model';
 }

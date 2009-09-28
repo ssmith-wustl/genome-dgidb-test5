@@ -12,7 +12,7 @@ class Genome::Model::Command::Htest {
     doc => "experimenta tools for hypothesis testing",
 };
 
-sub sub_command_sort_position { 105 }
+sub sub_command_sort_position { 95 }
 
 1;
 

@@ -22,7 +22,7 @@ class Genome::Model::Command::ReLaunch {
     ],
 };
 
-sub sub_command_sort_position { 5 }
+sub sub_command_sort_position { 10 }
 
 sub help_brief {
     "re-launch all of the steps (stage 2) for a given model"

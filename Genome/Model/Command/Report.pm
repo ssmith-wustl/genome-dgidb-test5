@@ -45,7 +45,7 @@ sub help_brief {
     return "Operate on a build's reports"
 }
 
-sub sub_command_sort_position { 12 }
+sub sub_command_sort_position { 9 }
 
 #< Command >#
 sub create {

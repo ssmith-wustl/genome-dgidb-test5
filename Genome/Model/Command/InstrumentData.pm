@@ -11,7 +11,7 @@ class Genome::Model::Command::InstrumentData {
     doc => "assign instrument data to a model, or work with assigned data",
 };
 
-sub sub_command_sort_position { 2 }
+sub sub_command_sort_position { 6 }
 
 1;
 

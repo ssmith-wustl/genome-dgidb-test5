@@ -13,7 +13,7 @@ class Genome::Model::Command::Copy {
     is => 'Command',
     
     has => [
-        genome_model_id => {
+        from_model_id => {
             is => 'Integer',
             is_optional => 0,
             is_input => 1,
@@ -37,7 +37,8 @@ class Genome::Model::Command::Copy {
   schema_name => 'Main',
 };
 
-sub sub_command_sort_position { 1 }
+sub sub_command_sort_position { 2 }
+
 sub help_brief {
     return <<"EOS"
 Creates a new genome model using the parameters and instrument data assignments of an existing model.  Allows for individual parameters to be overriden.
@@ -46,8 +47,8 @@ EOS
 
 sub help_synopsis {
     return <<"EOS"
-genome model define
-  --model-id 123456789
+genome model copy
+  --from-model-id 123456789
   --new-model-name copy_of_my_model
   processing_profile_name="use this processing profile instead"
   ...
@@ -79,9 +80,9 @@ sub execute {
     
     my $self = shift;
     
-    my $src_model = Genome::Model->get($self->genome_model_id);
+    my $src_model = Genome::Model->get($self->from_model_id);
     unless ($src_model) {
-        $self->error_message("Source model by id " . $self->genome_model_id . " couldn't be fetched");
+        $self->error_message("Source model by id " . $self->from_model_id . " couldn't be fetched");
         return;
     }
     

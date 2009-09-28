@@ -21,7 +21,7 @@ class Genome::Model::Command::AddSampleGenotypeData {
     ],
 };
 
-sub sub_command_sort_position { 1000 }
+sub sub_command_sort_position { 94 }
 
 sub help_brief {
     "adds data to or creates models for samplegenotype and its children"

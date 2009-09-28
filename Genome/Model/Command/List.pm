@@ -18,6 +18,8 @@ class Genome::Model::Command::List {
     ],
 };
 
+sub sub_command_sort_position { 3 }
+
 sub help_brief {
     return 'List models';
 }

@@ -44,6 +44,8 @@ class Genome::Model::Command::Status {
     ],
 };
 
+sub sub_command_sort_position { 8 }
+
 sub execute  {
     my $self = shift;
     my $return_value = 1;

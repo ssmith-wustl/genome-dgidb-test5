@@ -10,6 +10,8 @@ class Genome::Model::Command::Shell {
 
 use Term::ReadLine;
 
+sub sub_command_sort_position { 99 }
+
 sub execute {
     my $self = shift; 
 

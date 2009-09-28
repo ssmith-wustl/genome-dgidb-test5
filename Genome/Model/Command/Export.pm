@@ -19,7 +19,7 @@ sub help_brief {
     "generate reports for a given model"
 }
 
-sub sub_command_sort_position { 12 }
+sub sub_command_sort_position { 97 }
 
 sub generate_report_brief {
     die "Implement me in the subclass, owangutang";

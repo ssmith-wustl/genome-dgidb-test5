@@ -15,7 +15,7 @@ sub help_brief {
     "services intended to be run out of cron or other task scheduler"
 }
 
-sub sub_command_sort_position { 11 }
+sub sub_command_sort_position { 98 }
 
 1;
 
