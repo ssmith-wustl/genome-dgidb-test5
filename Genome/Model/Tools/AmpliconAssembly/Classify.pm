@@ -24,6 +24,8 @@ sub help_synopsis {
 }
 
 #< Command >#
+sub sub_command_sort_position { 41; }
+
 sub execute {
     my $self = shift;
 
