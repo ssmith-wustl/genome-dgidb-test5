@@ -5,62 +5,34 @@ use warnings;
 
 use Genome;
 
+use Carp 'confess';
 use Data::Dumper 'Dumper';
 use Regexp::Common;
 
 class Genome::AmpliconAssembly::Report::Stats {
-    is => 'Genome::Report::Generator',
+    is => 'Genome::AmpliconAssembly::Report',
     has => [
     name => {
         default_value => 'Stats',
     },
     description => {
-        is => 'Text',
         default_value => 'Assembly and Quality Stats for an Amplicon Assembly',
     },
-    assembly_size => {
+    _amplicon_size => {
         is => 'Integer',
-        is_optional => 1,
-        doc => 'Expected assembly size for an assembled amplicon.',
-    },
-    amplicon_assemblies => {
-        is => 'ARRAY',
-        doc => 'Amplicon assemblies to generate stats.',
+        doc => 'Expected amplicon size.',
     },
     ],
 };
 
 #< Generator >#
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unless ( $self->amplicon_assemblies ) {
-        $self->error_message('No amplicon assemblies given to generate stats');
-        $self->delete;
-        return;
-    }
-
-    unless ( $self->assembly_size ) {
-        $self->error_message('No assembly size given to generate stats');
-        $self->delete;
-        return;
-    }
-
-    unless ( $self->assembly_size =~ /^$RE{num}{int}$/ and $self->assembly_size > 0 ) {
-        $self->error_message('Invalid assembly size '.($self->assembly_size).' given to generate stats');
-        return;
-    }
-
-    $self->_create_metrics;
-
-    return $self;
-}
-
 sub _generate_data {
     my $self = shift;
+
+    $self->_validate_amplicon_size 
+        or return;
+
+    $self->_create_metrics;
 
     # Add AAs 
     for my $amplicon_assembly ( @{$self->amplicon_assemblies} ) {
@@ -92,7 +64,7 @@ sub _generate_data {
         $self->_add_dataset(
             name => 'qualities',
             label => 'read-count-'.$read_count,
-            'length' => $self->assembly_size,
+            'length' => $self->_amplicon_size,
             row_name => 'quality',
             headers => $position_quality_stats->{headers},
             rows => $position_quality_stats->{position_qualities}->{$read_count},
@@ -101,6 +73,28 @@ sub _generate_data {
 
     return 1;
 }
+
+#< Amplicon Size >#
+sub _validate_amplicon_size {
+    my $self = shift;
+
+    my $amplicon_size = $self->amplicon_assemblies->[0]->assembly_size;
+    unless ( $amplicon_size ) {
+        $self->error_message("No assembly size found for amplicon assembly: ".$self->amplicon_assemblies->[0]->directory);
+        $self->delete;
+        return;
+    }
+    
+    for my $amplicon_assembly ( @{$self->amplicon_assemblies} ) {
+        next if $amplicon_assembly->assembly_size eq $amplicon_size;
+        $self->error_message("Amplicon assemblies assembly sizes are not equal.");
+        $self->delete;
+        return;
+    }
+
+    return $self->_amplicon_size($amplicon_size);
+}
+
 
 #< Metrics, etc >#
 sub _create_metrics {
@@ -115,6 +109,8 @@ sub _create_metrics {
         qual_gt_20 => 0,
         reads => [],
         reads_assembled => [],
+        zeros => 0,
+        #read_seq_not_in_consensus => [],
         # qual
         qual_by_pos => {},
     };
@@ -131,12 +127,25 @@ sub _add_amplicon {
 
     $self->{_metrix}->{assembled}++;
 
-    # Length
     my $bioseq = $amplicon->get_bioseq;
     unless( $bioseq ) { # very bad
         $self->error_message('Amplicon '.$amplicon->get_name.' was assembled succeszsfully, but counld not get bioseq.');
         return;
     }
+
+    $self->_add_stats_for_consensus($amplicon, $bioseq)
+        or return;
+
+    $self->_add_stats_for_reads($amplicon, $bioseq)
+        or return;
+
+    return 1;
+}
+
+sub _add_stats_for_consensus {
+    my ($self, $amplicon, $bioseq) = @_;
+
+    # Length
     push @{$self->{_metrix}->{lengths}}, $bioseq->length;
 
     # Get quals
@@ -145,7 +154,17 @@ sub _add_amplicon {
         $self->{_metrix}->{qual_gt_20}++ if $qual >= 20;
     }
 
-    # Reads
+    # Zeros
+    if ( $bioseq->qual_text =~ /^0 / or $bioseq->qual_text =~ / 0$/ ) {
+        $self->{_metrix}->{zeros}++;
+    }
+
+    return 1;
+}
+
+sub _add_stats_for_reads {
+    my ($self, $amplicon, $bioseq) = @_;
+
     push @{ $self->{_metrix}->{reads} }, $amplicon->get_read_count;
     my $read_count = $amplicon->get_assembled_read_count;
     push @{ $self->{_metrix}->{reads_assembled} }, $read_count;
@@ -154,8 +173,8 @@ sub _add_amplicon {
     
     my $i = 1;
     my $last_qual_pos = @{$bioseq->qual} - 1;
-    if ( $last_qual_pos < $self->assembly_size ) { # not enough quals, need to move start
-        $i = $self->assembly_size - $last_qual_pos - 1;
+    if ( $last_qual_pos < $self->_amplicon_size ) { # not enough quals, need to move start
+        $i = $self->_amplicon_size - $last_qual_pos - 1;
     }
 
     my $qual_total = 0;
@@ -167,6 +186,45 @@ sub _add_amplicon {
         $self->{_metrix}->{qual_by_pos}->{$read_count}->[$i++] += $qual;
     }
 
+=pod This tries to make sure that the read sequence is in the consensus.  Not sure if it works...
+    my %reads = (
+        left => [],
+        right => [],
+    );
+    my $reads = $amplicon->get_reads_from_successfully_assembled_contig;
+    my %read_bioseqs = map { $_->id => $_ } $amplicon->get_bioseqs_for_processed_reads;
+    my $length = $bioseq->length;
+    while ( my $read = $reads->next ) {
+        if ( $read->start <= 1 and $read->stop >= 100 ) {
+            push @{$reads{left}}, $read;
+        }
+        elsif ( $read->start <= $length - 101 and $read->stop >= $length ) {
+            push @{$reads{right}}, $read;
+        }
+    }
+
+    return 1 unless @{$reads{left}} or @{$reads{right}};
+
+    my %consensus_qual_strings = (
+        left => join(' ', @{$bioseq->subqual(1, 100)}),
+        right => join(' ', @{$bioseq->subqual($length - 101, $length)}),
+    );
+
+    for my $side (qw/ left right /) {
+        my $consensus_qual_string = $consensus_qual_strings{$side};
+        for my $read ( @{$reads{$side}} ) {
+            my $read_name = $read->name;
+            confess "No qual for read ($read_name)" unless $read_bioseqs{$read_name};
+            my $read_qual_string = ( $read->complemented )
+            ? join(' ', reverse @{$read_bioseqs{$read_name}->qual})
+            : join(' ', @{$read_bioseqs{$read_name}->qual});
+
+            unless ( $read_qual_string =~ /$consensus_qual_string/ ) { 
+                push @{$self->{_metrix}->{read_seq_not_in_consensus}}, $amplicon->name;
+            }
+        }
+    }
+=cut
     return 1;
 }
 
@@ -211,6 +269,8 @@ sub get_assembly_stats {
             '%.2f', 
             100 * $assembled / $attempted,
         ),
+        'assemblies-with-zeros' => $self->{_metrix}->{zeros},
+        #assemblies_where_read_seq_does_not_match_consensus => scalar(@{$self->{_metrix}->{read_seq_not_in_consensus}}),
         'length-minimum' => $lengths[0],
         'length-maximum' => $lengths[$#lengths],
         'length-median' => $lengths[( $#lengths / 2 )],
