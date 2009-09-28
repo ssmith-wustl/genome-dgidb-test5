@@ -54,6 +54,8 @@ sub valid_assemblers_as_string {
 }
 
 #< Command >#
+sub sub_command_sort_position { 30; }
+
 sub create {
     my $class = shift;
 
@@ -101,6 +103,11 @@ sub execute {
         )
     );
 
+    $self->amplicon_assembly->update_additional_properties(
+        assembler => $self->assembler,
+        assembler_params => $self->assembler_params,
+    ) or return;
+    
     return 1;
 }
 
