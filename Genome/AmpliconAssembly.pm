@@ -524,7 +524,7 @@ sub _remove_contaminated_amplicons {
 }
 
 sub _get_gsc_sequence_read { # in sub to overload on test
-    return GSC::Sequence::Read->get(trace_name => $_[0]);
+    return GSC::Sequence::Read->get(trace_name => $_[1]);
 }
 
 #< Amplicon Reads >#
