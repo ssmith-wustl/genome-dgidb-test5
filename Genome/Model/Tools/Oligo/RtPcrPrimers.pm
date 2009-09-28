@@ -217,6 +217,20 @@ sub execute {
 	    
 	    print qq(\n\n$transcript_info->{$transcript}->{-1}->{source_line}\n);
 
+
+	    #$transcript_info->{$transcript}->{-1}->{trans_pos_n}=$trans_pos_n;
+	    #$transcript_info->{$transcript}->{-1}->{trans_pos_r}=$trans_pos_r;
+	    my $tp_region = $transcript_info->{$transcript}->{-1}->{region};
+	    my $tp_exon = $transcript_info->{$transcript}->{-1}->{exon};
+	    #$transcript_info->{$transcript}->{-1}->{frame}=$frame;
+	    #$transcript_info->{$transcript}->{-1}->{base}=$base;
+	    #$transcript_info->{$transcript}->{-1}->{aa_n}=$aa_n;
+	    #$transcript_info->{$transcript}->{-1}->{trans_pos_in_5utr}=$trans_pos_in_5utr;
+	    #$transcript_info->{$transcript}->{-1}->{trans_pos_in}=$trans_pos_in;
+	    #$transcript_info->{$transcript}->{-1}->{trans_pos_in_3utr}=$trans_pos_in_3utr;
+	    #$transcript_info->{$transcript}->{-1}->{trans_posid}=$trans_posid;
+
+
 	    print qq(\n\n\n);
 	    
 	    my $excluded_exon = 0;
@@ -264,6 +278,7 @@ sub execute {
 	    }
 	    print qq(\n\n\n);
 	    print OUT qq(\n\n\n);
+	    close (OUT);
 
 	    my $fasta = "$output_name.rtpcr.designseq.fasta";
 	    open(FA,">$fasta") || die "couldn't open a fasta file to write to\n";
@@ -274,13 +289,16 @@ sub execute {
 	    }
 	    print FA qq(\n);
 	    close (FA);
-	    my $note = "$gene\t$gene_id\t$strand\t$transcript\t$chromosome\t$trans_pos";
+	    my $note = "$gene\t$strand\t$transcript\t$chromosome\t$trans_pos\t$tp_region\t$tp_exon";
+	    my $header = "gene\tstrand\ttranscript\tchromosome\ttarget_position\ttarget_position_region\ttarget_position_tp_exon";
 	    my $hspsepSmax = $target->{seq_stop} - $target->{seq_start} + 51;
 	    my $pcr_primer_options =  $self->pcr_primer_options;
+	    #my $blast_db = "/gscmnt/sata147/info/medseq/rmeyer/resources/HS36Transcriptome/new_masked_ccds_ensembl_genbank_utr_nosv_all_transcriptome_quickfix.fa";
+
 	    if ($pcr_primer_options) {
-		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism $pcr_primer_options -display-blast -note "$note");
+		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism $pcr_primer_options -display-blast -note "$note" -header "$header");
 	    } else {
-		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism -display-blast -note "$note"\n);
+		system qq(gmt oligo pcr-primers -output-name $output_name -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism -display-blast -note "$note" -header "$header");
 	    }
 	}
     }
