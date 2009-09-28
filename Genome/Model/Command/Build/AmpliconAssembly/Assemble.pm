@@ -16,8 +16,6 @@ sub execute {
 
     my $assemble = Genome::Model::Tools::AmpliconAssembly::Assemble->create(
         directory => $self->build->data_directory,
-        sequencing_center => $self->model->sequencing_center,
-        sequencing_platform => $self->model->sequencing_platform,
         assembler => $self->model->assembler,
         assembler_params => '-vector_bound 0 -trim_qual 0',
         #assembler_params => $self->model->assembler_params,
