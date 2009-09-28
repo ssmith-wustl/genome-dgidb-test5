@@ -46,6 +46,8 @@ sub help_synopsis {
 }
 
 #< Command >#
+sub sub_command_sort_position { 21; }
+
 sub create {
     my $class = shift;
     
