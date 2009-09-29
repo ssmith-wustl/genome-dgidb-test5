@@ -128,6 +128,7 @@ sub execute {
 	}
     }
 
+    close (OUT);
     return($transcript_info);
 }
 
