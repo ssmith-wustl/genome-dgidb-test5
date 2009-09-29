@@ -18,8 +18,11 @@ class Genome::Model::Command::Build::Remove {
                         id_by => 'build_id',
                         is_optional => 1,
                     },
-        ],
+    ],
+    doc => 'delete a build and all of its data from the system'
 };
+
+sub sub_command_sort_position { 7 }
 
 sub help_detail {
     "This command will remove the build and all events that make up the build";

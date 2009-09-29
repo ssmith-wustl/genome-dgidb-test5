@@ -71,6 +71,8 @@ class Genome::Model::Command::Build::Status {
     doc => "show the status of a new/running/complete build",    
 };
 
+sub sub_command_sort_position { 1 }
+
 sub execute  {
     my $self = shift;
     my $return_value = 1;

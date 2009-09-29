@@ -34,6 +34,8 @@ sub help_detail {
     "This command will allow a build to proceed without waiting for one of the events to complete";
 }
 
+sub sub_command_sort_position { 4 }
+
 sub execute {
     my $self = shift;
     my $model = $self->model;

@@ -8,13 +8,16 @@ use Genome;
 class Genome::Model::Command::Build::VerifySuccessfulCompletion {
     is => ['Genome::Model::Event'],
     has_optional => [
-                     force_abandon => {
-                                       is => 'Boolean',
-                                       default_value => 0,
-                                       doc => 'A flag to force abandon of failed events(default=0)',
-                                   },
-                 ],
+        force_abandon => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => 'A flag to force abandon of failed events(default=0)',
+        },
+    ],
+    doc => 'verify that a given build has completed successfully',
 };
+
+sub sub_command_sort_position { 6 }
 
 sub help_detail {
     "This module will update the status of a current running build";

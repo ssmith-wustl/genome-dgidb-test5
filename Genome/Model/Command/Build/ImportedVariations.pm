@@ -16,14 +16,11 @@ class Genome::Model::Command::Build::ImportedVariations {
             is => 'String',
             doc => 'Version number of the annotation db, for ensembl, genbank, and esembl/genbank combined this take the form of <ensembl_version_number>_<human_build_version><Ensembl_iteration_letter> ie. 53_36n',
         },
-    ]
+    ],
+    doc => "custom launcher for imported variation builds"
 };
 
-sub sub_command_sort_position { 41 }
-
-sub help_brief {
-    "Build for imported annotation db (not implemented yet => no op)"
-}
+sub sub_command_sort_position { 98 }
 
 sub help_synopsis {
     return <<"EOS"

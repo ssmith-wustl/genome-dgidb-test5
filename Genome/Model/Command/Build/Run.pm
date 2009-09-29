@@ -27,16 +27,16 @@ class Genome::Model::Command::Build::Run{
                 doc => 'Restart a new Workflow Instance. Overrides the default behavior of resuming an existing workflow.' 
             }
     ],
+    doc => 'launch all jobs for a build (new)'
 };
 
-sub help_brief {
-    'Launch all jobs for a build using the workflow framework.  This command is a replacement for the old run-jobs'
-}
+sub sub_command_sort_position { 2 }
 
 sub help_detail {
     return <<EOS 
 EOS
 }
+
 sub create {
     my $class = shift;
 

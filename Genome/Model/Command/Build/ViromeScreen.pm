@@ -8,18 +8,21 @@ use Genome;
 class Genome::Model::Command::Build::ViromeScreen {
     is => 'Genome::Model::Command::Build',
     has => [
-	barcode_file => {
-	    doc => 'Barcode file that contains sequences to filter reads by',
-	    is => 'String',
-	    is_optional => 1,
-	},
-	log_file => {
-	    doc => 'Log file to keep track of virome screen run ',
-	    is => 'String',
-	    is_optional => 1,
-	},
-    ]
+        barcode_file => {
+            doc => 'Barcode file that contains sequences to filter reads by',
+            is => 'String',
+            is_optional => 1,
+        },
+        log_file => {
+            doc => 'Log file to keep track of virome screen run ',
+            is => 'String',
+            is_optional => 1,
+        },
+    ],
+    doc => "custom launcher for virome screening builds (454)"
 };
+
+sub sub_command_sort_position { 99 }
 
 sub create {
     my $class = shift;
@@ -38,19 +41,18 @@ sub create {
     return $self;
 }
 
-sub help_brief {
-    "Run virome screening on a 454 run"
-}
 
 sub help_synopsis {
     return <<"EOS"
-genome-model build mymodel
+genome-model build virome-screen --model-id 12345 --barcode-file /my/file --log-file /my/bad/idea
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
-One build of a given assembly model.
+Normally to build a genome model, you just run "genome model build".  The virome screening pipeline requires custom parameters to be supplied at execution time, so it has a special build command.
+
+When this is fixed, this command will go away.
 EOS
 }
 

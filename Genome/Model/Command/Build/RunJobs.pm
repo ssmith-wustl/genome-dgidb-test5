@@ -30,12 +30,11 @@ class Genome::Model::Command::Build::RunJobs {
                           doc => 'run-jobs will execute the workflow(default_value=1)',
                       },
             bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
-        ],
+    ],
+    doc => 'launch all jobs for a build (old)',
 };
 
-sub help_brief {
-    'Launch all jobs for a build using the workflow framework.'
-}
+sub sub_command_sort_position { 3 }
 
 sub help_detail {
     return <<EOS 

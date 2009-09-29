@@ -21,6 +21,8 @@ class Genome::Model::Command::Build::Abandon {
         ],
 };
 
+sub sub_command_sort_position { 5 }
+
 sub help_detail {
     "This command will abandon the build and all events that make up the build";
 }
