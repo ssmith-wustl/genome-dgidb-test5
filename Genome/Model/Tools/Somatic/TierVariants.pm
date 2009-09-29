@@ -137,63 +137,17 @@ sub execute {
 
     while(my $line = $variant_fh->getline) {
         chomp $line;
-        # DETERMINE TYPE HERE TODO
         my $type = $self->infer_variant_type_from_line ($line);
+        my ($chr, $start, $stop, $reference, $genotype) = split /\t/, $line;
 
         if ($type =~ /del|ins/i) {
-            my %indel1;
-            my %indel2;
-            my ($chr,
-                $start_pos,
-                $star, 
-                $somatic_score,
-            );
-            ($chr,
-                $start_pos,
-                $star, 
-                $somatic_score,
-                $indel1{'sequence'},
-                $indel2{'sequence'}, 
-                $indel1{'length'},
-                $indel2{'length'},
-            ) = split /\s+/, $line; 
-            my @indels;
-            push(@indels, \%indel1);
-            push(@indels, \%indel2);
-            for my $indel(@indels) {
-
-                if ($indel->{'sequence'} eq '*') { next; }
-                my $hash;
-                my $stop_pos;
-                my $start;
-                if($indel->{'length'} < 0) {
-                    #it's a deletion!
-                    $hash->{variation_type}='DEL';
-                    $start= $start_pos+1;
-                    $stop_pos = $start_pos + abs($indel->{'length'});
-                    $hash->{reference}=$indel->{'sequence'};
-                    $hash->{variant}=0;
-                }
-                else {
-                    #it's an insertion
-                    $hash->{variation_type}='INS';
-                    $start=$start_pos;
-                    $stop_pos = $start_pos+1;
-                    $hash->{reference}=0;
-                    $hash->{variant}=$indel->{'sequence'};
-
-                }
-                if(exists($exonic_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}})) {
-                    print $tier1 $line,"\n";
-                    next;
-                }
-                $variant_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}} = $line;
+            if(exists($exonic_at{$chr}{$start}{$stop}{$reference}{$genotype})) {
+                print $tier1 $line,"\n";
+                next;
             }
+            $variant_at{$chr}{$start}{$stop}{$reference}{$genotype} = $line;
         } elsif ($type =~ /snp/i) {
-            my ($chr, $start, $reference, $genotype) = split /\t/, $line;
-            $DB::single=1;
             my @variant_alleles = Genome::Info::IUB::variant_alleles_for_iub($reference, $genotype);
-            my $stop = $start;
             my $assigned_position_to_tier = 0;
             foreach my $variant (@variant_alleles) {
                 if(exists($exonic_at{$chr}{$start}{$stop}{$reference}{$variant})) {
@@ -354,22 +308,19 @@ sub infer_variant_type_from_line {
     my $self = shift;
     my $line = shift;
 
-    # FIXME ... totally need a better method here but indels have stars in the lines
-    if ($line =~ m/\*/) {
-        my @columns = split "\t", $line;
+    my ($chromosome, $start, $stop, $reference, $genotype) = split("\t", $line);
 
-        my ($reference, $variant) = @columns[6,7];
-
-        if (($reference eq '-')||($reference eq '0')) {
-            return 'INS';
-        } elsif (($variant eq '-')||($variant eq '0')) {
-            return 'DEL';
-        } else {
-            $self->error_message("Could not determine variant type from variant:");
-            $self->error_message(Dumper($variant));
-            die;
-        }
-    } else {
+    # If the start and stop are the same, and ref and variation are defined its a SNP
+    if (($stop == $start)&&
+        ($reference ne '-')&&($reference ne '0')&&
+        ($genotype ne '-')&&($genotype ne '0')) {
         return 'SNP';
+    } elsif (($reference eq '-')||($reference eq '0')) {
+        return 'INS';
+    } elsif (($genotype eq '-')||($genotype eq '0')) {
+        return 'DEL';
+    } else {
+        $self->error_message("Could not determine variant type for variant: $chromosome $start $stop $reference $genotype");
+        die;
     }
 }

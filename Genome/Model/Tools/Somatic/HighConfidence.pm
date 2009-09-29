@@ -75,6 +75,7 @@ EOS
 
 sub execute {
     my $self = shift;
+    $DB::single=1;
 
     if ($self->skip) {
         $self->status_message("Skip flag set. Skipping execution.");
@@ -129,10 +130,10 @@ sub execute {
     my @sniper_lines;
     while(my $line = $fh->getline) {
         chomp $line;
-        my ($chr, $pos, $ref, $iub, $somatic_score) = split /\t/, $line;
+        my ($chr, $start, $stop, $ref, $iub, $type, $somatic_score, @annotation_columns) = split /\t/, $line;
         next if $ref eq "*";
         if($somatic_score >= $somatic_threshold) {
-            print $tfh "$chr\t$pos\t$pos\n";
+            print $tfh "$chr\t$start\t$stop\n";
             push @sniper_lines, $line
         }
     }
@@ -143,7 +144,7 @@ sub execute {
     my $current_variant = shift @sniper_lines;
     #this will be used in the loop below to evaluate readcount output with input
     return 1 unless $current_variant;
-    my ($vchr, $vpos, $vref, $viub) = split /\t/, $current_variant;
+    my ($vchr, $vstart, $vstop, $vref, $viub) = split /\t/, $current_variant;
 
     my $readcount_command = sprintf("%s -q 1 -l %s %s |",$self->readcount_program, $temp_path, $self->tumor_bam_file);
     $self->status_message("Running: $readcount_command");
@@ -160,12 +161,12 @@ sub execute {
             $bases{$base} = $avg_mq;
         }
         #it should be possible that readcount program does not return a line, but not that the readcount program receives a variant not in our array
-        while($vchr ne $chr && $vpos != $pos && @sniper_lines) {
+        while($vchr ne $chr && $vstart != $pos && @sniper_lines) {
             $current_variant = shift @sniper_lines;
             #this will be used in the loop below to evaluate readcount output with input
             $self->status_message("Skipped $current_variant");
             last unless $current_variant;
-            ($vchr, $vpos, $vref, $viub) = split /\t/, $current_variant;
+            ($vchr, $vstart, $vstop, $vref, $viub) = split /\t/, $current_variant;
         }
             #then we have the site
             my @vars = Genome::Info::IUB->variant_alleles_for_iub($vref,$viub);
@@ -178,7 +179,7 @@ sub execute {
             #Skip this variant assuming it wasn't reported by the C prog
             $current_variant = shift @sniper_lines;
             last unless $current_variant;
-            ($vchr, $vpos, $vref, $viub) = split /\t/, $current_variant;
+            ($vchr, $vstart, $vstop, $vref, $viub) = split /\t/, $current_variant;
     }
     unless($readcounts->close()) {
         $self->error_message("Error running " . $self->readcount_program);
