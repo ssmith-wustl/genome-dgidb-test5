@@ -141,7 +141,7 @@ sub execute {
     my $old_dbi_trace_level;
     my $trace_fh;
 
-    if ($user_name eq 'apipe') {
+    if ($user_name eq 'mjohnson') {
        
         $old_dbi_trace_level = DBI->trace();
         
