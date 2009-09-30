@@ -218,8 +218,11 @@ sub execute {
 		($info) = Genome::Model::Tools::Annotate::TranscriptSequence->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name", masked => "1");
 	    } else {
 		($info) = Genome::Model::Tools::Annotate::TranscriptSequence->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name");
+
+		#my @command = ["gmt" , "annotate" , "transcript-sequence" , "-transcript" , "$transcript" , "-trans-pos" , "$target_pos" , "-utr-seq" , "-organism" , "$organism" , "-version" , "$version" , "-output" , "$output_name"];
+		#($info) = &ipc_run(@command);
+
 	    }
-	    #my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version");
 	    my $transcript_info = $info->{result};
 	    my $strand = $transcript_info->{$transcript}->{-1}->{strand};
 	    my $gene = $transcript_info->{$transcript}->{-1}->{hugo_gene_name};
@@ -252,17 +255,19 @@ sub execute {
 	    my $nn=0;
 	    
 	    my $target_depth=0;
+
 	    open(OUT,">>$output_name.txt");
 	    print OUT qq(\n\n\n);
-
+	    if ($self->masked) {open(TEMP,">Temp.masked.designseq.info.txt");}
+	    
 	    foreach my $n (sort {$a<=>$b} keys %{$transcript_seq}) {
 		
 		my $tp_region = $target->{tp_regoin};
 		
 		my ($exon,$region) = split(/\,/,$transcript_seq->{$n}->{exon});
-
+		
 		if ($tp_region =~ /exon/) {
-		    unless ($self->include_exon || $exon eq "1" || $target->{last_exon} eq $target->{exon}) { #need to make this $target->{last_exon}
+		    unless ($self->include_exon || $exon eq "1" || $target->{last_exon} eq $target->{exon}) {
 			$excluded_exon=$target->{exon};
 		    }
 		}
@@ -271,27 +276,39 @@ sub execute {
 		    $target_depth = $nn;
 		    print qq(\n\ntrans_pos $transcript_seq->{$n}->{trans_pos}\n\n);
 		    print OUT qq(\n\ntrans_pos $transcript_seq->{$n}->{trans_pos}\n\n);
+		    if ($self->masked) {print TEMP qq(\n\ntrans_pos $transcript_seq->{$n}->{trans_pos}\n\n);}
 		}
 		if ($transcript_seq->{$n-1}->{trans_pos}) {
 		    print qq(\n\ntrans_pos $transcript_seq->{$n-1}->{trans_pos}\n\n);
 		    print OUT qq(\n\ntrans_pos $transcript_seq->{$n-1}->{trans_pos}\n\n);
+		    if ($self->masked) {print TEMP qq(\n\ntrans_pos $transcript_seq->{$n-1}->{trans_pos}\n\n);}
 		}
 		
 		if ($tp_region =~ /exon/ && $excluded_exon == $exon) {
 		    print qq($exon);
 		    print OUT qq($exon);
+		    if ($self->masked) {print TEMP qq($exon);}
 		} else {
 		    $nn++;
 		    $design_seq->{$nn}->{base}=$transcript_seq->{$n}->{base};
 		    
 		    print qq($transcript_seq->{$n}->{base});
 		    print OUT qq($transcript_seq->{$n}->{base});
+		    
+		    if ($self->masked) {print TEMP qq($transcript_seq->{$n}->{masked_base});}
+		    
 		}
 	    }
 	    print qq(\n\n\n);
 	    print OUT qq(\n\n\n);
 	    close (OUT);
-
+	    close (TEMP);
+	    if ($self->masked) {
+		system qq(cat Temp.masked.designseq.info.txt);
+		system qq(cat Temp.masked.designseq.info.txt >> $output_name.txt);
+		system qq(rm Temp.masked.designseq.info.txt);
+	    }
+	    
 	    my $fasta = "$output_name.rtpcr.designseq.fasta";
 	    open(FA,">$fasta") || die "couldn't open a fasta file to write to\n";
 	    print FA qq(\>$output_name.rtpcr.designseq\n);
@@ -328,6 +345,7 @@ sub execute {
 		    system qq(gmt oligo pcr-primers -output-name $output_name.masked -fasta $fasta_masked -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism -display-blast -note "$note" -header "$header");
 		}
 	    }
+	    print qq(see your transcript information in $output_name.txt\n);
 	}
     }
 }
@@ -474,9 +492,10 @@ sub ipc_run {
 #	print qq($err\n);
     }
     if ($out) {
-	return ($out);
+	#return ($out);
 	#print qq($out\n);
     }
+    return ($obj);
 }
 
 sub parse_annotation {
