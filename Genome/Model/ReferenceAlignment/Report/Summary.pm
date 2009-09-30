@@ -149,6 +149,9 @@ $DB::single = 1;
         my $mapcheck_contents = get_contents($fh);
         if ( ($mapcheck_contents =~ m/Average depth across all non-gap regions: (\S+)/g ) || ($mapcheck_contents =~ m/\nAverage Coverage:(\S+)/g ) ) {
             $haploid_coverage=$1 if defined($1);
+            if ($haploid_coverage) {
+                $build->set_metric( 'haploid_coverage', $haploid_coverage );
+            }
         }
         $fh->close();
     } else {
