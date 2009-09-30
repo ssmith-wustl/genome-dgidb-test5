@@ -8,6 +8,7 @@ use Genome;
 use Workflow;
 use Data::Dumper;
 use IO::File;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -83,10 +84,9 @@ sub execute
     # get directory path
     my @fields = split(/\//, $input_file);
     pop @fields;
-#    my $output_dir = join("/", @fields);
     my $output_dir = $self->dir;
     
-    my $lib_name = $fields[$#fields];
+    my $lib_name = basename($output_dir);
     $self->log_event("lib is $lib_name");
     my $out = $output_dir."/"."Analysis_ReadStatistics_".$lib_name;
 

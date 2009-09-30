@@ -27,16 +27,14 @@ UR::Object::Type->define(
             dir     => {
                            doc => 'directory of inputs',
                            is => 'String',
-		is_optional => 1,
-		default => ".",
-#                           is_input => 1,
+		           is_optional => 1,
+		           default => $ENV{"PWD"},
 
                         },
             logfile => {
                             doc => 'output file for monitoring progress of pipeline',
                             is => 'String',
-		is_optional => 1,
-#                            is_input => 1,
+		            is_optional => 1,
                             default => "logfile.txt",
                         },
     ]
