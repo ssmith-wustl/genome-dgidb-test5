@@ -25,6 +25,7 @@ ok($model->processing_profile, 'Model has a Processing profile');
 is($model->processing_profile_id, $model->processing_profile->id, 'processing profile id');
 is($model->type_name, $model->processing_profile->type_name, 'type name');
 is($model->sequencing_platform, $model->processing_profile->sequencing_platform, 'sequencing_platform');
+is($model->dna_source, $model->processing_profile->dna_source, 'dna_source');
 
 # Subject
 ok($model->processing_profile, 'Model has a subject');

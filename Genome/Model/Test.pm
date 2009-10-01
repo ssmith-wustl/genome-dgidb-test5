@@ -16,6 +16,9 @@ use Test::More;
 #< Tester Type Name >#
 class Genome::Model::Tester { # 'real' model for testing
     is => 'Genome::Model',
+    has => [
+    map { $_ => { via => 'processing_profile' } } Genome::ProcessingProfile::Tester->params_for_class
+    ],
 };
 class Genome::Model::Build::Tester { # 'real' model for testing
     is => 'Genome::Model::Build',
