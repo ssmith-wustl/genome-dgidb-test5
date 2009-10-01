@@ -45,7 +45,7 @@ my $fake_allocation = Genome::Disk::Allocation->__define__(
                                                        disk_group_name => 'info_alignments',
                                                        group_subdirectory => 'info',
                                                        mount_path => '/gscmnt/sata828',
-                                                       allocation_path => 'alignment_data/maq0_6_8/refseq-for-test/test_run_name/4_-123456',
+                                                       allocation_path => 'alignment_data/maq0_7_1/refseq-for-test/test_run_name/4_-123456',
                                                        allocator_id => '-123457',
                                                        kilobytes_requested => 100000,
                                                        kilobutes_used => 0,
@@ -58,7 +58,7 @@ $instrument_data->set_list('allocations',$fake_allocation);
 my $alignment = Genome::InstrumentData::Alignment::Maq->create(
                                                           instrument_data_id => $instrument_data->id,
                                                           aligner_name => 'maq',
-                                                          aligner_version => '0.6.8',
+                                                          aligner_version => '0.7.1',
                                                           reference_name => 'refseq-for-test',
                                                       );
 
@@ -95,7 +95,7 @@ my $tmp_allocation = Genome::Disk::Allocation->create_mock(
                                                            disk_group_name => 'info_alignments',
                                                            group_subdirectory => 'test',
                                                            mount_path => '/tmp/mount_path',
-                                                           allocation_path => 'alignment_data/maq0_6_8/refseq-for-test/test_run_name/4_-123458',
+                                                           allocation_path => 'alignment_data/maq0_7_1/refseq-for-test/test_run_name/4_-123458',
                                                            allocator_id => '-123459',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
@@ -115,7 +115,7 @@ $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'maq',
-                                                       aligner_version => '0.6.8',
+                                                       aligner_version => '0.7.1',
                                                        reference_name => 'refseq-for-test',
                                                    );
 
@@ -129,13 +129,13 @@ ok(! -e $dir2, 'alignment directory does not exist');
 
 
 #Run paired end as fragment
-$tmp_allocation->allocation_path('alignment_data/maq0_6_8/refseq-for-test/test_run_name/fragment/4_-123458');
+$tmp_allocation->allocation_path('alignment_data/maq0_7_1/refseq-for-test/test_run_name/fragment/4_-123458');
 $tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 $instrument_data->set_list('fastq_filenames',$fastq_files[0]);
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'maq',
-                                                       aligner_version => '0.6.8',
+                                                       aligner_version => '0.7.1',
                                                        reference_name => 'refseq-for-test',
                                                        force_fragment => 1,
                                                    );
