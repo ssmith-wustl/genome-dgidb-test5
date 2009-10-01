@@ -9,6 +9,11 @@ use Carp 'confess';
 use Data::Dumper;
 use Test::More;
 
+sub test002_create { #: Test(1) {
+# overload this for now. move to PP:Test, don't create cuz only one options 
+    return 1;
+}
+
 sub test_class {
     'Genome::ProcessingProfile::ViromeScreen';
 }

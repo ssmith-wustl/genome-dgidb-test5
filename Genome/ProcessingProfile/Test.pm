@@ -19,12 +19,11 @@ class Genome::ProcessingProfile::Tester {
         is => 'Text',
         doc => 'The sequencing_platform of this profile',
     },
-    # Methods
-    params_for_class => {
-        calculate => q| return (qw/ sequencing_platform /); |,
-        is_many => 1,
-        is_constant => 1,
+    dna_source => {
+        is => 'Text',
+        doc => 'The dna source of this profile',
     },
+    # Methods
     stages => {
         calculate => q| return 'assemble'; |,
         is_constant => 1,
@@ -38,6 +37,9 @@ class Genome::ProcessingProfile::Tester {
         is_constant => 1,
     },
     ],
+};
+*Genome::ProcessingProfile::Tester::params_for_class = sub{
+    return (qw/ sequencing_platform dna_source  /);
 };
 
 sub test_class {
@@ -71,55 +73,88 @@ sub test_startup : Test(startup => 2) {
     return;
 }
     
-sub test01_methods : Tests(5) {
-    my $self = shift;
-
-    is(Genome::ProcessingProfile->_resolve_type_name_for_class, undef, '_resolve_type_for_subclass_name is undef for base PP');
-    ok(do {
-            my $trapped_warning = 0;
-            local $SIG{__WARN__} = sub {
-                if ($_[0] =~ /params_for_class not implemented/) {
-                    $trapped_warning=1;
-                }
-            };
-
-            Genome::ProcessingProfile->params_for_class; # should be private
-
-            $trapped_warning;
-        },'trigger warning for params_for_class');
-    
-    #< GOOD >#
-    my $pp = $self->{_object};
-    is($pp->type_name, 'tester', 'Checking type_name (test)');
-    is_deeply([ $pp->params_for_class ], [qw/ sequencing_platform /], 'params_for_class');
-    is($pp->sequencing_platform, 'solexa', 'sequencing_platform (solexa)');
-
-    return 1;
-}
-
-sub test02_create_wo_type_name : Tests(2) {
+sub test01_creates : Tests(4) {
     my $self = shift;
 
     my %params = $self->params_for_test_class;
-    $params{name} = 'Test Suite II';
+    my $name = delete $params{name};
+
+    # CREATE W/ DNA SOURCE UNDEF AND SEQ_PLAT IS THE SAME
+    my $dna_source = delete $params{dna_source};
+    my $pp_w_undef_dna_source = $self->test_class->create(
+        name => 'Dna Source is undef', 
+        %params,
+    );
+    ok(
+        $pp_w_undef_dna_source,
+        'Create w/ dna_source undef',
+    );
+    #$pp_w_undef_dna_source->delete;
+    $params{dna_source} = $dna_source;
+
+    # DUPLICATES
+    # name
+    ok(
+        !$self->test_class->create(
+            name => $name, 
+            %params
+        ),
+        'Create failed - duplicate named pp not allowed'
+    );
+    # params - diff name
+    ok(
+        !$self->test_class->create(
+            name => 'Diff Name',
+            %params
+        ),
+        'Create failed - duplicate param pp not allowed',
+    );
+    
+    my $type_name = delete $params{type_name};
+
+    # TYPE NAME UNRESOLVABLE
     delete $params{type_name};
-    my $pp = $self->create_valid_object(%params);
-    ok($pp,'Create with out type_name');
-    ok($pp->delete, 'Delete processing profile');
+    eval { # this should die
+        $self->test_class->create(
+            name => 'Diff Name',
+            %params,
+        );
+    };
+    ok($@, 'Create failed - can\'t resolve type_name');
 
     return 1;
 }
 
-sub test03_create_fails : Tests(1) {
+sub test02_resolvers : Tests(3) {
     my $self = shift;
 
-    eval { # this should die
-        Genome::ProcessingProfile->create(
-            name => 'no type name'
-        );
-    };
-    ok($@, 'Failed as expected: create with no way to resolve type name');
-    #diag($@);
+    is(
+        Genome::ProcessingProfile::Tester->_resolve_type_name_for_class,
+        'tester',
+        '_resolve_type_for_subclass_name Genome::ProcessingProfile::Tester => tester',
+    );
+    is(
+        Genome::ProcessingProfile->_resolve_type_name_for_class,
+        undef, 
+        '_resolve_type_for_subclass_name Genome::ProcessingProfile => undef ',
+    );
+    is(
+        Genome::ProcessingProfile->_resolve_subclass_name_for_type_name('tester'),
+        'Genome::ProcessingProfile::Tester',
+        '_resolve_subclass_name_for_type_name tester => Genome::ProcessingProfile::Tester'
+    );
+
+    return 1;
+}
+
+sub test03_methods : Tests(4) {
+    my $self = shift;
+
+    my $pp = $self->{_object};
+    is($pp->type_name, 'tester', 'Checking type_name (tester)');
+    is_deeply([ $pp->params_for_class ], [qw/ sequencing_platform dna_source /], 'params_for_class');
+    is($pp->sequencing_platform, 'solexa', 'sequencing_platform (solexa)');
+    is($pp->dna_source, 'genomic', 'dna_source (genomic)');
 
     return 1;
 }
@@ -180,11 +215,12 @@ my %TYPE_NAME_PARAMS = (
         type_name => 'tester',
         name => 'Tester for Testing',
         sequencing_platform => 'solexa',
+        dna_source => 'genomic',
     }, 
     'amplicon assembly' => {
         class => 'Genome::ProcessingProfile::AmpliconAssembly',
         type_name => 'amplicon assembly',
-        name => '16S Composition 27F to 1492R (907R)',
+        name => '16S Test 27F to 1492R (907R)',
         assembler => 'phredphrap',
         assembly_size => 1465,
         primer_amp_forward => '18SEUKF:ACCTGGTTGATCCTGCCAG',
@@ -196,6 +232,16 @@ my %TYPE_NAME_PARAMS = (
         sequencing_center => 'gsc',
         sequencing_platform => 'sanger',
     }, 
+    'micro array affymetrix' => {
+        class => 'Genome::ProcessingProfile::MicroArrayAffymetrix',
+        type_name => 'micro array affymetrix',
+        name => 'MAA Test',
+    },
+    'micro array illumina' => {
+        class => 'Genome::ProcessingProfile::MicroArrayIllumina',
+        type_name => 'micro array illumina',
+        name => 'MAL Test',
+    },
     'reference alignment solexa' => {
         class => 'Genome::ProcessingProfile::ReferenceAlignment::Solexa',
         type_name => 'reference alignment',
@@ -331,9 +377,18 @@ sub full_type_name {
 }
 
 sub params_for_test_class {
-    my %params = Genome::ProcessingProfile::Test->valid_params_for_type_name( $_[0]->full_type_name );
-    delete $params{class};
-    return %params;
+    my $self = shift;
+
+    unless ( $self->{_params_for_class} ){
+        my %params = Genome::ProcessingProfile::Test->valid_params_for_type_name( $self->full_type_name );
+        delete $params{class};
+        for my $key ( keys %params ) {
+            delete $params{$key} unless defined $params{$key};
+        }
+        $self->{_params_for_class} = \%params;
+    }
+
+    return %{$self->{_params_for_class}};
 }
 
 # TODO test params?
@@ -358,6 +413,28 @@ sub invalid_params_for_test_class {
         purpose => 'because',
     );
 }
+
+######################
+# MicroArrayIllumina #
+######################
+
+package Genome::ProcessingProfile::MicroArrayIllumina::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::ProcessingProfile::TestBase';
+
+########################
+# MicroArrayAffymetrix #
+########################
+
+package Genome::ProcessingProfile::MicroArrayAffymetrix::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::ProcessingProfile::TestBase';
 
 #######################
 # Reference Alignment #
