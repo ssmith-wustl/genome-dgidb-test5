@@ -5,8 +5,9 @@ use warnings;
 
 use Genome;
 
-require Carp;
-use Data::Dumper;
+use Carp 'confess';
+use Data::Dumper 'Dumper';
+require Genome::Utility::Text;
 
 class Genome::ProcessingProfile {
     type_name => 'processing profile',
@@ -28,42 +29,144 @@ class Genome::ProcessingProfile {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub params_for_class {
-    my $class = shift;
-    warn("params_for_class not implemented for class '$class':  $!");
-    return;
-}
-
+#< UR >#
 sub create {
     my ($class, %params) = @_;
 
-    if ( defined $params{type_name} ) {
-        my $type_name = $class->_resolve_type_name_for_class;
-        if ( defined $type_name and $type_name ne $params{type_name} ) {
-            Carp::confess(
-                "Resolved type_name ($type_name) does not match given type_name ($params{type_name}) in params to create $class"
-            );
-            return;
+    # Name
+    $class->_validate_name($params{name})
+        or return;
+
+    # Type name - confesses
+    my $subclass;
+    if ( $params{type_name} ) {
+        $subclass = $class->_resolve_subclass_name_for_type_name($params{type_name});
+        unless ( $subclass ) {
+            confess "Can't resolve subclass for type name ($params{type_name})";
         }
     }
     else {
-        Carp::confess(
-            __PACKAGE__." is a abstract base class, and no type name was provided to resolve to the appropriate subclass"
-        ) if $class eq __PACKAGE__;
+        confess __PACKAGE__." is a abstract base class, and no type name was provided to resolve to the appropriate subclass" if $class eq __PACKAGE__;
+        $subclass = $class;
         $params{type_name} = $class->_resolve_type_name_for_class;
     }
 
-    my $self = $class->SUPER::create(%params)
+    # Make sure subclass is a real class
+    unless ( $subclass->can('get_class_object') ) {
+        confess "Can't find meta for class ($class). Is type name ($params{type_name}) valid?";
+    }
+
+    # Identical PPs
+    $subclass->_validate_no_existing_processing_profiles_with_idential_params(%params)
         or return;
 
-    unless ( $self->name ) {
+    # Create
+    return $class->SUPER::create(%params);
+}
+
+sub _validate_name {
+    my ($class, $name) = @_;
+
+    # defined? 
+    unless ( $name ) {
         # TODO resolve??
-        $self->error_message("No name provided for processing profile");
-        $self->delete;
+        $class->error_message("No name provided for processing profile");
         return;
     }
 
-    return $self;
+    # Is name unique?
+    my ($existing_name_pp) = $class->get(name => $name);
+    if ( $existing_name_pp ) {
+        my $describer = Genome::ProcessingProfile::Command::Describe->create(
+            processing_profile_id => $existing_name_pp->id,
+        ) or confess "Can't create describe command to show existing processing profile";
+        $describer->execute;
+        $class->error_message("Processing profile (above) with same name ($name) already exists.");
+        return;
+    }
+
+    return 1;
+}
+
+sub _validate_no_existing_processing_profiles_with_idential_params {
+    my ($subclass, %params) = @_;
+    $DB::single =1;
+    # If no params, no need to check
+    return 1 unless $subclass->params_for_class;
+
+    # Get existing pp that have the same params
+    delete $params{name};
+    my @existing_pps = $subclass->get(%params);
+    # none ok
+    return 1 unless @existing_pps;
+
+    # Collect the undef params.  This new pp may have one of these params undef'd
+    my @undef_properties;
+    for my $param ( $subclass->params_for_class ) {
+        next if defined $params{$param};
+        push @undef_properties, $param;
+    }
+
+    # Check the undef params.  If one is found return immediatly.
+    for my $pp ( @existing_pps ) {
+        next if grep { defined $pp->$_ } @undef_properties;
+        my $describer = Genome::ProcessingProfile::Command::Describe->create(
+            processing_profile_id => $pp->id,
+        ) or confess "Can't create describe command to show existing processing profile";
+        $describer->execute;
+        $subclass->error_message("Found a processing profile with the same params as the one requested to create, but with a different name.  Please use this profile, or change a param.");
+        return;
+    }
+
+    return 1;
+}
+
+sub delete {
+    my $self = shift;
+    
+    # Check if there are models connected with this pp
+    if ( Genome::Model->get(processing_profile_id => $self->id) ) {
+        $self->error_message(
+            sprintf(
+                'Processing profile (%s <ID: %s>) has existing models and cannot be removed. Delete the models first, then remove this processing profile',
+                $self->name,
+                $self->id,
+            )
+        );
+        return;
+    }
+ 
+
+    # Delete params
+    for my $param ( $self->params ) {
+        unless ( $param->delete ) {
+            $self->error_message(
+                sprintf(
+                    'Can\'t delete param (%s: %s) for processing profile (%s <ID: %s>), ',
+                    $param->name,
+                    $param->value,
+                    $self->name,
+                    $self->id,
+                )
+            );
+            for my $param ( $self->params ) {
+                $param->resurrect if $param->isa('UR::DeletedRef');
+            }
+            return;
+        }
+    }   
+
+    $self->SUPER::delete
+        or return;
+
+    return 1;
+}
+#<>#
+
+#< Params >#
+sub params_for_class {
+    #warn("params_for_class not implemented for class '$_[0]':  $!");
+    return;
 }
 
 sub param_summary {
@@ -105,46 +208,7 @@ sub param_summary {
     return $summary;
 }
 
-sub delete {
-    my $self = shift;
-    
-    # Check if there are models connected with this pp
-    if ( Genome::Model->get(processing_profile_id => $self->id) ) {
-        $self->error_message(
-            sprintf(
-                'Processing profile (%s <ID: %s>) has existing models and cannot be removed.  Delete the models first, then remove this processing profile',
-                $self->name,
-                $self->id,
-            )
-        );
-        return;
-    }
- 
-    # Delete params
-    for my $param ( $self->params ) {
-        unless ( $param->delete ) {
-            $self->error_message(
-                sprintf(
-                    'Can\'t delete param (%s: %s) for processing profile (%s <ID: %s>), ',
-                    $param->name,
-                    $param->value,
-                    $self->name,
-                    $self->id,
-                )
-            );
-            for my $param ( $self->params ) {
-                $param->resurrect if $param->isa('UR::DeletedRef');
-            }
-            return;
-        }
-    }   
-
-    $self->SUPER::delete
-        or return;
-
-    return 1;
-}
-
+#< Building >#
 sub stages {
     my $class = shift;
     $class = ref($class) if ref($class);
@@ -185,7 +249,6 @@ sub verify_successful_completion_objects {
 }
 
 #< SUBCLASSING >#
-#
 # This is called by the infrastructure to appropriately classify abstract processing profiles
 # according to their type name because of the "sub_classification_method_name" setting
 # in the class definiton...
@@ -225,25 +288,15 @@ sub _resolve_subclass_name {
 
 sub _resolve_subclass_name_for_type_name {
     my ($class,$type_name) = @_;
-    my @type_parts = split(' ',$type_name);
-	
-    my @sub_parts = map { ucfirst } @type_parts;
-    my $subclass = join('',@sub_parts);
-	
-    my $class_name = join('::', 'Genome::ProcessingProfile' , $subclass);
-    return $class_name;
+    confess "No type name givent to resolve subclass name" unless $type_name;
+    return 'Genome::ProcessingProfile::'.Genome::Utility::Text::string_to_camel_case($type_name);
 }
 
 sub _resolve_type_name_for_class {
     my $class = shift;
-
     my ($subclass) = $class =~ /^Genome::ProcessingProfile::([\w\d]+)$/;
     return unless $subclass;
-
-    return lc join(" ", ($subclass =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx));
-    
-    my @words = $subclass =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx;
-    return lc(join(" ", @words));
+    return Genome::Utility::Text::camel_case_to_string($subclass);
 }
 
 1;
