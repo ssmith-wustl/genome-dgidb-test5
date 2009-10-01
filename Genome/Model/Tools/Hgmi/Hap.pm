@@ -15,6 +15,8 @@ use Genome::Model::Tools::Hgmi::Finish;
 use Genome::Model::Tools::Hgmi::SendToPap;
 
 use Carp;
+use English;
+use Cwd;
 use File::Path qw(mkpath);
 use File::Spec;
 use YAML qw( LoadFile DumpFile );
@@ -34,7 +36,11 @@ UR::Object::Type->define(
                                                      is_optional => 1},
                                  'dev'          => { is => 'Boolean',
 						     doc => "development flag for testing",
-						     is_optional => 1}
+						     is_optional => 1},
+                             'skip-core-check' => { is => 'Boolean',
+                                                    doc => "skips core genes check",
+                                                    is_optional => 1,
+                                                    default => 0, },
 
                                 ]
                         );
@@ -269,6 +275,7 @@ sub execute
 
     chdir($next_dir);
 
+    # have a skip-core-gene flag here that skips this check.
     my $coregene = Genome::Model::Tools::Hgmi::CoreGenes->create(
         cell_type => $config->{cell_type},
         sequence_set_id => $ssid,
@@ -396,6 +403,76 @@ sub execute
         croak "can't set up workflow pap step... Hap.pm\n\n";
     }
 
+    # jcvi product naming goes here.
+    # need tochdir
+    # $path/Acedb/$acedb_version/ace_files/$locus_tag/$pipe_version
+    my $acedb_version = $self->acedb_version_lookup($config->{acedb_version});
+
+    $next_dir = $config->{path}."/Acedb/".$acedb_version.
+                "/ace_files/".$config->{locus_tag}.
+                "/".$config->{pipe_version} ;
+
+    warn qq{\n\nACEDB_Dir: $acedb_version\n\n};
+
+    unless (-d $next_dir) {
+	croak qq{\n\nThe directory : '$next_dir', does not exit, from Hap.pm: $OS_ERROR\n\n}
+}
+    my $cwd = getcwd();
+    unless ($cwd eq $next_dir) {
+    chdir($next_dir) or croak "Failed to change to '$next_dir', from Hap.pm: $OS_ERROR\n\n";
+}
+    #run /gsc/scripts/gsc/annotation/biosql2ace <locus_tag>
+    # make sure files are not blank. croak if they are
+
+    my @biosql2ace = ('/gsc/scripts/gsc/annotation/biosql2ace',
+                      '--locus-id', $config->{locus_tag},
+                      );
+    if($self->dev)
+    {
+        push(@biosql2ace, '--dev');
+    }
+    my ($b2a_out,$b2a_err);
+    IPC::Run::run(\@biosql2ace,
+                  '>',
+                  \$b2a_out,
+                  '2>',
+                  \$b2a_err ) or croak "cant dump biosql to ace\n\n";
+    
+    # check that output files are not empty
+    foreach my $outputfile (qw(briefID.fof.ace merged.raw.sorted.ace merged.raw.sorted.ipr.ace REPORT-top_new.ks.ace))
+    {
+        my $size = -s $outputfile;
+        if($size == 0)
+        {
+            croak "file from biosql2ace dump, $outputfile , is empty...from Hap.pm\n\n";
+        }
+
+    }
+
+    my $ber_config = undef;
+
+    my $jcvi = Genome::Model::Tools::Ber::AmgapBerProtName->create(
+        sequence_set_id => $ssid,
+        config => $self->config(),
+        );
+
+    if($self->dev)
+    {
+        $jcvi->dev(1);
+    }
+
+    if($jcvi)
+    {
+        $jcvi->execute() or croak "can't run protein product naming step...from Hap.pm\n\n";
+    }
+    else
+    {
+        croak "can't set up product naming step...from Hap.pm\n\n";
+    }
+
+
+
+
     return 1;
 }
 
@@ -458,6 +535,28 @@ sub build_empty_config
                   };
     DumpFile($dumpfile, $config); # check return?
     return 1;
+}
+
+sub acedb_version_lookup
+{
+    my $self         = shift;
+    my $v            = shift;
+    my $acedb_lookup = undef;
+
+    my %acedb_version_lookup = ( 
+		       'V1' => 'Version_1.0', 'V2' => 'Version_2.0',
+		       'V3' => 'Version_3.0', 'V4' => 'Version_4.0',
+		       'V5' => 'Version_5.0', 'V6' => 'Version_6.0',
+		       'V7' => 'Version_7.0', 'V8' => 'Version_8.0',
+		       'V9' => 'Version_9.0', 'V10' => 'Version_10.0',
+		       );
+
+    if(exists($acedb_version_lookup{$v}))
+    {
+        $acedb_lookup = $acedb_version_lookup{$v};
+    }
+
+    return $acedb_lookup;
 }
 
 
