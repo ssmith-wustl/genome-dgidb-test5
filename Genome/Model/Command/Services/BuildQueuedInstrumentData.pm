@@ -265,16 +265,17 @@ sub execute {
                   
               }
               
-              foreach my $model (@models) {
+              MODEL_IDA: foreach my $model (@models) {
                   
                   my @existing_instrument_data = Genome::Model::InstrumentDataAssignment->get(
                       instrument_data_id => $instrument_data_id,
                       model_id => $model->id,
                   );
-                  
+                 
+                  # Previous processing could have had problems, in which case the instrument data
+                  # might already be assigned.  This is not something worth complaining about.
                   if (@existing_instrument_data) {
-                      $self->status_message('Existing instrument_data found for model '. $model->id .' and instrument_data_id '. $instrument_data_id);
-                      next;
+                      next MODEL_IDA;
                   }
                   
                   unless ($model->isa('Genome::Model::PolyphredPolyscan') || $model->isa('Genome::Model::CombineVariants')){
