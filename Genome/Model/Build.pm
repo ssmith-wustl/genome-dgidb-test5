@@ -609,11 +609,28 @@ sub delete {
         $_->delete;
     }
 
-    #idas = instrument data assignments
-    my @idas = $self->instrument_data_assignments;
-    for my $ida (@idas) {
-        $ida->first_build_id(undef);
+    # Re-point instrument data assigned first on this build to the next build.
+    my ($next_build,@subsequent_builds) = Genome::Model::Build->get(
+        model_id => $self->model_id,
+        id => {
+            operator => '>',
+            value => $self->build_id,
+        },  
+    );
+    my $next_build_id = ($next_build ? $next_build->id : undef);
+    my @idas_fix = Genome::Model::InstrumentDataAssignment->get(
+        model_id => $self->model_id,
+        first_build_id => $self->build_id
+    );
+    for my $idas (@idas_fix) {
+        @idas_fix->first_build_id($next_build_id);
     }
+                                                                                            
+    #my @idas = $self->instrument_data_assignments;
+    #for my $ida (@idas) {
+    #    $ida->first_build_id(undef);
+    #}
+    #
     if ($self->data_directory && -e $self->data_directory) {
         unless (rmtree $self->data_directory) {
             $self->warning_message('Failed to rmtree build data directory '. $self->data_directory);
