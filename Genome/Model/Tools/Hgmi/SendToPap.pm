@@ -33,7 +33,7 @@ UR::Object::Type->define(
             is  => 'Integer',
             doc => "Sequence set id in MGAP database",
         },
-	'sequence_name' = {
+	'sequence_name' => {
 	    is  => 'String',
 	    doc => "assembly name in MGAP database",
 	},
