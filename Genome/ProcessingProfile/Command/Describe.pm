@@ -23,7 +23,7 @@ sub execute {
 
     # Base processing profile attrs
     printf(
-        "%s %s <ID: %s>\ntype: %s\n", 
+        "%s %s <ID: %s>\ntype_name: %s\n", 
         Term::ANSIColor::colored('Processing Profile:', 'bold'),
         Term::ANSIColor::colored($pp->name, 'red'),
         Term::ANSIColor::colored($pp->id, 'red'),
@@ -31,11 +31,11 @@ sub execute {
     );
 
     # Params
-    for my $param ( sort { $a->name cmp $b->name } $pp->params ) {
-        my $value = $param->value;
+    for my $param ( sort { $a cmp $b } $pp->params_for_class ) {
+        my $value = $pp->$param;
         printf(
             "%s: %s\n",
-            $param->name,
+            $param,
             Term::ANSIColor::colored(( defined $value ? $value : '<NULL>'), 'red'),
         );
     }
