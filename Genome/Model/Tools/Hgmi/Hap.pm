@@ -371,7 +371,9 @@ sub execute
     
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
                                                              'locus_tag'            => $config->{locus_tag},
-                                                             'sequence_set_id'      => $ssid, 
+                                                             'sequence_set_id'      => $ssid,
+							     'sequence_name'        => $config->{assembly_name},
+							     'organism_name'        => $config->{organism_name},
                                                              'workflow_xml'         => $config->{workflowxml},
                                                              'gram_stain'           => $config->{gram_stain},
                                                              'blastp_archive_dir'   => $blastp_archive_dir,

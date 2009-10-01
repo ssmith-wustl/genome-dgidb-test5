@@ -33,6 +33,14 @@ UR::Object::Type->define(
             is  => 'Integer',
             doc => "Sequence set id in MGAP database",
         },
+	'sequence_name' = {
+	    is  => 'String',
+	    doc => "assembly name in MGAP database",
+	},
+	'organism_name' => {
+	    is  => 'String',
+	    doc => 'organism name in MGAP database',
+	},
         'taxon_id' => {
             is  => 'Integer',
             doc => "NCBI Taxonomy id",
@@ -401,19 +409,24 @@ sub activity_log
 {
     my $self = shift;
     my ($run_time, $locus_tag) = @_;
+    my $sequence_id   = self->sequence_set_id();
+    my $organism_name = self->organism_name();
+    my $sequence_name = self->sequence_name();
+
     if($self->dev)
     {
         return 1;
 
     }
-    use BAP::DB::Organism;
-    my ($organism) = BAP::DB::Organism->search({locus => $locus_tag});
-    my $organism_name;
-    if($organism)
-    {
-        $organism_name = $organism->organism_name;
-    }
-    else
+    #use BAP::DB::Organism;
+    #my ($organism) = BAP::DB::Organism->search({locus => $locus_tag});
+    #my $organism_name;
+    #if($organism)
+    #{
+    #    $organism_name = $organism->organism_name;
+    #}
+    #else
+    unless ($organism_name)
     {
         carp "Couldn't get organism name for activity logging, will continue logging with locus tag, instead ... from SendToPap.pm\n";
         $organism_name = $locus_tag;
@@ -471,7 +484,7 @@ SQL
     {
 
         $dbh->do($sql, {},
-                 'protein annotation', undef, 'coding sequences',
+                 'protein annotation',$sequence_id,$sequence_name,
                  $organism_name,
                  $host, $user);
 

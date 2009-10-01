@@ -16,6 +16,8 @@ BEGIN {
 my $s = Genome::Model::Tools::Hgmi::SendToPap->create(
           'locus_tag' => "ROSINTL182DFT_test",
           'sequence_set_id' => 71,
+	  'sequence_name'   => "Roseburia_intestinalis_ROSINTL182DFT_test_1.0.1.newb",
+	  'organism_name'   => "Roseburia_intestinalis",
           'taxon_id' => 166486,
           'dev' => 1,
 );
@@ -28,6 +30,8 @@ ok($s->get_gene_peps(), 'run get_gene_peps()');
 my $s1 = Genome::Model::Tools::Hgmi::SendToPap->create(
           'locus_tag' => "ROSINTL182DFT_test",
           'sequence_set_id' => 71,
+	  'sequence_name'   => "Roseburia_intestinalis_ROSINTL182DFT_test_1.0.1.newb",
+	  'organism_name'   => "Roseburia_intestinalis",
           'taxon_id' => 166486,
           'dev' => 1,
           'keep_pep' => 1,
