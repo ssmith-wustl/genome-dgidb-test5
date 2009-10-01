@@ -124,31 +124,13 @@ sub execute {
     my $self = shift;
 
     my $target_class = $self->_target_class;
-
-    # Ensure name is unique
-    if ( my $existing_pp = $target_class->get(name => $self->name) ) {
-        $self->_describe_processing_profile($existing_pp);
-        $self->error_message('Processing profile (above) with same name already exists');
-        return;
-    }
-
-    # Get params to create.  Make sure we're not duplicating the same params
-    my %params = $self->_get_target_class_params;
-    if ( %params 
-            and my @existing_pp = $self->_get_processing_profiles_with_identical_params(\%params) ) {
-        $self->_describe_processing_profile(@existing_pp);
-        $self->error_message('Existing processing profile(s) (above) with identical params, but different names already exist');
-        return;
-    }
-
-    # Create processing profile
     my $processing_profile = $target_class->create(
         name => $self->name,
-        %params
+        $self->_get_target_class_params,
     );
 
     unless ( $processing_profile ) {
-        $self->error_message("Failed to create processing profile");
+        $self->error_message("Failed to create processing profile.");
         return;
     }
 
@@ -161,58 +143,12 @@ sub execute {
     }
 
     $self->status_message('Created processing profile:');
+    my $describer = Genome::ProcessingProfile::Command::Describe->create(
+        processing_profile_id => $processing_profile->id,
+    );
+    $describer->execute;
 
-    return $self->_describe_processing_profile($processing_profile);
-}
-
-#<>#
-sub _get_processing_profiles_with_identical_params {
-    my ($self, $params) = @_;
-
-    my $target_class = $self->_target_class;
-    my $target_meta = $target_class->get_class_object;
-    unless ( $target_meta ) {
-        $self->error_message("Can't get class meta object for class ($target_class)");
-        return;
-    }
-
-    my (%properties, @has_many_properties);
-    for my $property ( $target_meta->direct_property_metas ) {
-        next unless exists $params->{ $property->property_name };
-        if ( $property->is_many ) {
-            push @has_many_properties, $property->property_name;
-        }
-        else {
-            $properties{ $property->property_name } = $params->{ $property->property_name };
-        }
-    };
-
-    #print Dumper({class=>$target_class, params=>$params, props=>\%properties,has_many=>\@has_many_properties});
-    
-    my @existing_pp = $target_class->get(%properties)
-        or return;
-
-    return @existing_pp unless @has_many_properties; # don't have any has many props to check, return what we got from the has props
-    
-    my @identical_pp;
-    EXISTING_PP: for my $pp ( @existing_pp ) {
-        for my $prop ( @has_many_properties ) {
-            next EXISTING_PP unless exists $params->{$prop}; # no values in params
-            my @pp_values = sort { $a cmp $b } $pp->$prop # no values for property
-                or next EXISTING_PP; 
-            my @param_values = ( ref $params->{$prop} ) # TODO chack if this is an array ref?  if we do this we need a way to tell the caller that there's a problem with the structrue of params and and not that there is no existing pp
-            ? sort { $a cmp $b } @{$params->{$prop}} 
-            : $params->{$prop};
-            next EXISTING_PP unless @pp_values == @param_values; # Different number of values
-            for ( my $i = 0; $i < $#pp_values; $i++) { 
-                next EXISTING_PP unless $pp_values[$i] eq $param_values[$i]; # if one of these doesn't match, we're good
-            }
-        }
-        # If we get here, it's a match
-        push @identical_pp, $pp;
-    }
-    
-    return @identical_pp;
+    return 1;
 }
 
 #< Target class methods >#
@@ -250,9 +186,12 @@ sub _properties_for_class {
     }
 
     my %properties;
-    for my $property ( $class_meta->all_property_metas ) {
-        next unless $property->class_name->isa('Genome::ProcessingProfile') 
-            and not $property->class_name eq 'Genome::ProcessingProfile';
+    for my $param ( $class->params_for_class ) {
+        my $property = $class_meta->property_meta_for_name($param);
+        unless ( $property ){
+            $self->error_message("Can't get property for processing profile param ($param)");
+            return;
+        }
         $properties{ $property->property_name } = {
             is => 'Text',
             is_optional => $property->is_optional,
@@ -283,24 +222,6 @@ sub _get_target_class_params {
     }
 
     return %params;
-}
-
-#< Describe >#
-sub _describe_processing_profile {
-    my ($self, @pp) = @_;
-
-    unless ( @pp ) { # Dying here cuz this should never be called w/o pps
-        Carp::confess( $self->error_message("No processing profile to describe") );
-    }
-
-    for my $pp ( @pp ) {
-        my $describer = Genome::ProcessingProfile::Command::Describe->create(
-            processing_profile_id => $pp->id,
-        );
-        $describer->execute;
-    }
-
-    return 1;
 }
 
 1;
