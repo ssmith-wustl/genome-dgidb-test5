@@ -114,7 +114,9 @@ sub filenames_to_generate {
             annotate_output_snp
             ucsc_output
             ucsc_unannotated_output
-            indel_lib_filter_output
+            indel_lib_filter_preferred_output
+            indel_lib_filter_single_output
+            indel_lib_filter_multi_output
             adaptor_output_indel
             annotate_output_indel
             tier_1_snp_file
@@ -210,11 +212,13 @@ __DATA__
   <link fromOperation="High Confidence Snp Tier 3" fromProperty="output_file" toOperation="output connector" toProperty="tier_3_snp_high_confidence" />
   <link fromOperation="High Confidence Snp Tier 4" fromProperty="output_file" toOperation="output connector" toProperty="tier_4_snp_high_confidence" />
 
-  <link fromOperation="input connector" fromProperty="indel_lib_filter_output" toOperation="Library Support Filter" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="indel_lib_filter_preferred_output" toOperation="Library Support Filter" toProperty="preferred_output_file" />
+  <link fromOperation="input connector" fromProperty="indel_lib_filter_single_output" toOperation="Library Support Filter" toProperty="single_lib_output_file" />
+  <link fromOperation="input connector" fromProperty="indel_lib_filter_multi_output" toOperation="Library Support Filter" toProperty="multi_lib_output_file" />
   <link fromOperation="Somatic Sniper" fromProperty="output_indel_file" toOperation="Library Support Filter" toProperty="indel_file" />
 
   <link fromOperation="input connector" fromProperty="adaptor_output_indel" toOperation="Sniper Adaptor Indel" toProperty="output_file" />
-  <link fromOperation="Library Support Filter" fromProperty="output_file" toOperation="Sniper Adaptor Indel" toProperty="somatic_file" />
+  <link fromOperation="Library Support Filter" fromProperty="preferred_output_file" toOperation="Sniper Adaptor Indel" toProperty="somatic_file" />
 
   <link fromOperation="Sniper Adaptor Indel" fromProperty="output_file" toOperation="Annotate Transcript Variants Indel" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_indel" toOperation="Annotate Transcript Variants Indel" toProperty="output_file" />
@@ -332,7 +336,9 @@ __DATA__
     <outputproperty>tier_3_snp_high_confidence</outputproperty>
     <outputproperty>tier_4_snp_high_confidence</outputproperty>
 
-    <inputproperty isOptional="Y">indel_lib_filter_output</inputproperty>
+    <inputproperty isOptional="Y">indel_lib_filter_preferred_output</inputproperty>
+    <inputproperty isOptional="Y">indel_lib_filter_single_output</inputproperty>
+    <inputproperty isOptional="Y">indel_lib_filter_multi_output</inputproperty>
     <inputproperty isOptional="Y">adaptor_output_indel</inputproperty>
     <inputproperty isOptional="Y">annotate_output_indel</inputproperty>
 
