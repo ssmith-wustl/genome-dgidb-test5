@@ -132,7 +132,7 @@ sub execute {
                 $self->status_message("Line 2: $line2");
                 $self->status_message("previous chromosome1: $prev_chrom1 previous chromosome2: $prev_chrom2");
                 $self->error_message("NO NO! YOU GIVE ME FILES SORTED BY CHROMOSOME, POSITION!");
-                last;
+                die;
             }
         }
     }
