@@ -232,16 +232,6 @@ my %TYPE_NAME_PARAMS = (
         sequencing_center => 'gsc',
         sequencing_platform => 'sanger',
     }, 
-    'micro array affymetrix' => {
-        class => 'Genome::ProcessingProfile::MicroArrayAffymetrix',
-        type_name => 'micro array affymetrix',
-        name => 'MAA Test',
-    },
-    'micro array illumina' => {
-        class => 'Genome::ProcessingProfile::MicroArrayIllumina',
-        type_name => 'micro array illumina',
-        name => 'MAL Test',
-    },
     'reference alignment solexa' => {
         class => 'Genome::ProcessingProfile::ReferenceAlignment::Solexa',
         type_name => 'reference alignment',
@@ -413,28 +403,6 @@ sub invalid_params_for_test_class {
         purpose => 'because',
     );
 }
-
-######################
-# MicroArrayIllumina #
-######################
-
-package Genome::ProcessingProfile::MicroArrayIllumina::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::ProcessingProfile::TestBase';
-
-########################
-# MicroArrayAffymetrix #
-########################
-
-package Genome::ProcessingProfile::MicroArrayAffymetrix::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::ProcessingProfile::TestBase';
 
 #######################
 # Reference Alignment #
