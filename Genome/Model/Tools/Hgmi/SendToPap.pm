@@ -409,9 +409,9 @@ sub activity_log
 {
     my $self = shift;
     my ($run_time, $locus_tag) = @_;
-    my $sequence_id   = self->sequence_set_id();
-    my $organism_name = self->organism_name();
-    my $sequence_name = self->sequence_name();
+    my $sequence_id   = $self->sequence_set_id;
+    my $organism_name = $self->organism_name;
+    my $sequence_name = $self->sequence_name;
 
     if($self->dev)
     {
