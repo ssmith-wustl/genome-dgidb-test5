@@ -647,20 +647,21 @@ sub _resolve_type_name_for_subclass_name {
 sub get_all_objects {
     my $self = shift;
 
-    my @idas = $self->instrument_data_assignments;
-    if ($idas[0] && $idas[0]->id =~ /^\-/) {
-        @idas = sort {$b->id cmp $a->id} @idas;
-    } else {
-        @idas = sort {$a->id cmp $b->id} @idas;
-    }
+    my $sorter = sub { # not sure why we sort, but I put it in a anon sub for convenience
+        return unless @_;
+        if ( $_[0]->id =~ /^\-/) {
+            return sort {$b->id cmp $a->id} @_;
+        } 
+        else {
+            return sort {$a->id cmp $b->id} @_;
+        }
+    };
 
-    my @builds = $self->builds;
-    if ($builds[0] && $builds[0]->id =~ /^\-/) {
-        @builds = sort {$b->id cmp $a->id} @builds;
-    } else {
-        @builds = sort {$a->id cmp $b->id} @builds;
-    }
-    return ( @idas, @builds );
+    my @idas = $sorter->($self->instrument_data_assignments);
+    my @builds = $sorter->($self->builds);
+    my @project_assignments = $sorter->($self->project_assignments);
+    
+    return ( @idas, @builds, @project_assignments );
 }
 
 sub yaml_string {
