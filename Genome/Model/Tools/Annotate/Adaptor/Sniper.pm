@@ -91,7 +91,6 @@ sub parse_indel_line {
         $star, 
         $somatic_score,
     );
-    $chr =~ s/chr//;
     my @rest_of_fields;
     ($chr,
         $start_pos,
@@ -103,6 +102,7 @@ sub parse_indel_line {
         $indel2{'length'},
         @rest_of_fields
     ) = split /\s+/, $line; 
+    $chr =~ s/chr//;
     my @indels;
     push(@indels, \%indel1);
     push(@indels, \%indel2);
