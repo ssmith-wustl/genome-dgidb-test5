@@ -103,6 +103,7 @@ sub parse_indel_line {
         @rest_of_fields
     ) = split /\s+/, $line; 
     $chr =~ s/chr//;
+    $chr =~ s/M[^T]?$/MT/;
     my @indels;
     push(@indels, \%indel1);
     push(@indels, \%indel2);
