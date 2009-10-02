@@ -1,6 +1,0 @@
-$Genome::Model::Command::Build::MicroArrayAffymetrix::OPTS_SPEC = [
-          '>run',
-          \'Genome::Model::Command::Build::MicroArrayAffymetrix::Run',
-          'help!',
-          undef
-        ];
