@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use GSCApp;
 
 class Genome::Model::Build::ReferenceAlignment::Solexa {
     is => 'Genome::Model::Build::ReferenceAlignment',
@@ -363,6 +364,22 @@ sub _files_for_pattern_and_optional_ref_seq_id {
     return @files;
 }
 
+sub log_directory {
+    my $self = shift;
+    return $self->data_directory."/logs/";
+}
+
+sub rmdup_metrics_file {
+    my $self = shift;
+    return $self->log_directory."/mark_duplicates.metrics";
+}
+
+sub rmdup_log_file {
+    my $self = shift;
+    return $self->log_directory."/mark_duplicates.log";
+} 
+
+
 sub whole_map_file {
     my $self = shift;
     return $self->accumulated_alignments_directory .'/whole.map';
@@ -381,6 +398,27 @@ sub whole_rmdup_bam_file {
     return $self->accumulated_alignments_directory .'/'.$resolved_file;
 }
 
+sub generate_tcga_file_name {
+
+   my $self = shift;
+   my $model = $self->model;
+   my $dna_id  = $model->subject_id;
+
+   my $ex_species_name = GSC::DNAExternalName->get( dna_id => $dna_id, name_type => 'biospecimen id',);
+   if ( !defined($ex_species_name) ) {
+        $self->error_message("The external species name via the name type of 'biospecimen id' is not defined for this model.  Cannot generate a TCGA file name.");
+        return;
+   }
+   
+   my $ex_plate_name = GSC::DNAExternalName->get( dna_id => $dna_id, name_type => 'plate id',);
+   if ( !defined($ex_plate_name) ) {
+        $self->error_message("The external plate name via the name type of 'palate id' is not defined for this model.  Cannot generate a TCGA file name.");
+        return;
+   }
+
+   return $ex_species_name->name."-".$ex_plate_name->name."-09"; 
+
+}
 
 sub reference_coverage_directory {
     my $self = shift;
