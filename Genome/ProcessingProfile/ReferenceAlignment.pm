@@ -74,6 +74,18 @@ sub properties_hash {
                                                    doc => '',
                                                    is_optional => 1,
                                                },
+                  merge_software => {
+                                        doc => 'picard or samtools for merging',
+                                        is_optional => 1,
+                                    },
+                  picard_version => {
+                                        doc => 'picard version for MarkDuplicates, MergeSamfiles, CreateSequenceDictionary...',
+                                        is_optional => 1,
+                  },
+                  samtools_version => {
+                                        doc => 'samtools version for SamToBam, samtools merge, etc...',
+                                        is_optional => 1,
+                  },
                   rmdup_name => {
                                         doc => 'rmdup tool used for this model',
                                         is_optional => 1,
