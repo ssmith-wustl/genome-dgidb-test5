@@ -77,6 +77,9 @@ sub merge_command {
 sub execute {
     my $self = shift;
 
+    $self->dump_status_messages(1);
+    $self->dump_error_messages(1);
+
     my @files = @{$self->files_to_merge};
     my $file_type = $self->file_type;  
     my $result = $self->merged_file; 
