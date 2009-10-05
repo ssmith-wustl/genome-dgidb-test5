@@ -383,7 +383,7 @@ sub get_transcript_info {
     
     $strand = $t->strand;
     $chromosome = $t->chrom_name;
-
+    $transcript_info->{$transcript}->{-1}->{chromosome}=$chromosome;
     my $info;
     $info->{$transcript}->{strand}=$strand;
 
@@ -419,6 +419,11 @@ sub get_transcript_info {
 	    #print qq($structure_type $range\n);
 
 	    if ($t_region->{structure_type} =~ /exon/) {
+		unless ($transcript_info->{$transcript}->{-1}->{first_base}) {
+		    $transcript_info->{$transcript}->{-1}->{first_base}=$tr_start;
+		}
+		$transcript_info->{$transcript}->{-1}->{last_base}=$tr_stop;
+
 		my $trv_type = $t_region->{structure_type};
 		my @nucleotide_array = split(//,$t_region->nucleotide_seq);
 		
@@ -534,7 +539,6 @@ sub get_transcript_info {
     }
     return($transcript_info,$chromosome,$strand);
 }
-
 
 sub reverse_complement_allele {
     my ($allele_in) = @_;
