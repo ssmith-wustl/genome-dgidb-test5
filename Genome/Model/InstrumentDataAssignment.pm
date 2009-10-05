@@ -125,6 +125,12 @@ sub alignment {
         if ($model->force_fragment) {
             $params{'force_fragment'} = $model->force_fragment;
         }
+        if ($model->picard_version) {
+            $params{'picard_version'} = $model->picard_version;
+        }
+        if ($model->samtools_version) {
+            $params{'samtools_version'} = $model->samtools_version;
+        }
         my $alignment = Genome::InstrumentData::Alignment->create(%params);
         unless ($alignment) {
             $self->error_message('Failed to create an alignment object');
