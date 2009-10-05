@@ -17,8 +17,11 @@ class Genome::Model::ReferenceAlignment {
     has => [
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
+        merge_software               => { via => 'processing_profile'},
         rmdup_name                   => { via => 'processing_profile'},
         rmdup_version                => { via => 'processing_profile'},
+        picard_version               => { via => 'processing_profile'},
+        samtools_version             => { via => 'processing_profile'},
         genotyper_name               => { via => 'processing_profile'},
         genotyper_version            => { via => 'processing_profile'},
         genotyper_params             => { via => 'processing_profile'},
