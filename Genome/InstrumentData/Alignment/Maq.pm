@@ -157,6 +157,7 @@ sub alignment_file_paths {
             glob($self->alignment_directory .'/*.map*');
 }
 
+
 sub alignment_bam_file_paths {
     my $self = shift;
     return unless $self->alignment_directory;
@@ -195,15 +196,14 @@ sub alignment_bam_file_paths {
                 
                 $self->status_message("Aligner version: ".$self->aligner_version);
 
-                my $lib_name = $self->instrument_data->library_name;
-                my $lib_tag  = defined $lib_name ? $lib_name : '';
+                my $read_group_name = $self->instrument_data->seq_id;
                 
-                $self->status_message("library name/tag: $lib_tag");
+                $self->status_message("Read Group name/tag: $read_group_name");
                 
                 my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
                     map_file    => $map_file,
                     use_version => $self->aligner_version,
-                    lib_tag     => $lib_tag,
+                    lib_tag     => $read_group_name,
                     ref_list    => $ref_list,
                     index_bam   => 0,
                 );
@@ -356,6 +356,7 @@ sub verify_alignment_data {
         return;
     }
 
+    
     my $reference_build = $self->reference_build;
     my ($alignment_file) = $self->alignment_file_paths_for_subsequence_name('all_sequences');
     my $errors = 0;
@@ -437,22 +438,96 @@ sub verify_alignment_data {
     return 1;
 }
 
+sub validate_header {
+
+    my $self = shift;
+    
+    #check the headers to see if they are ok.
+    my $vh = Genome::Model::Tools::Sam::ValidateHeader->create(
+        input_file  => $self->alignment_file,
+        use_version => $self->samtools_version,
+    );
+
+    unless ($vh->execute) {
+        $self->status_message("Could not validate alignment file: ".$self->alignment_file);
+        return;
+    }
+
+    return 1
+
+}
+
 sub find_or_generate_alignment_data {
     my $self = shift;
 
+    $self->status_message("Checking alignment directory for alignments: ".$self->alignment_directory);
+    
+    unless ($self->samtools_version) {
+        $self->warning_message('samtools version is not defined, the default version will be used');
+        $self->samtools_version(Genome::Model::Tools::Sam->default_samtools_version);
+    }
+    unless ($self->picard_version) {
+        $self->status_message('Picard version is not defined, the default version will be used');
+        $self->picard_version(Genome::Model::Tools::Sam->default_picard_version);
+    }
+
+    $self->status_message('Samtools version: '.$self->samtools_version);
+    $self->status_message('Picard version: '.$self->picard_version);
+
     unless ($self->verify_alignment_data) {
+        $self->remove_alignment_directory_contents;
         $self->_run_aligner();
     } else {
         $self->status_message("Existing alignment data is available and deemed correct.");
+        my $alignment_bam_file = $self->alignment_file;
+        
+        my $map_file = $self->alignment_directory .'/all_sequences.map';
+        my $maq_cmd = Genome::Model::Tools::Maq->path_for_maq_version($self->aligner_version) ." map (Parameters not available for previous alignment.)";
+                
+        if (!-e $alignment_bam_file) {
+            $self->status_message('No all_sequences.bam found in alignment directory. Regenerating.');
+            $self->remove_alignment_file;
+            $self->create_combined_bam_file(cmd=>$maq_cmd, alignment_file=>$map_file);
+        } else {
+            #if the header is invalid, delete the old bams and regenerate 
+            unless ($self->validate_header) {   
+               $self->status_message("Alignment file " . $self->alignment_file . " does not have a valid header.  Removing bad bam and regenerating.");
+               $self->remove_alignment_file;
+               $self->create_combined_bam_file(cmd=>$maq_cmd, alignment_file=>$map_file);
+           }
+        } 
+
+        if ($self->validate_header) {
+           $self->status_message("Alignment file " . $self->alignment_file . " has been validated and is complete.");
+        } else {
+           $self->error_message("Alignment file " . $self->alignment_file . " does not have a valid header after regeneration.");
+           return;
+        }
+
     }
 
     return 1;
 }
 
+sub remove_alignment_file {
+    my $self = shift;
+    unless (unlink($self->alignment_file) ) {
+        $self->status_message("Warning:  Could not unlink $self->alignment_file.");
+    }
+    return 1;
+}    
+
+sub alignment_file {
+    my $self = shift;
+    return $self->alignment_directory .'/all_sequences.bam';
+}
+
+
+
 sub _run_aligner {
     my $self = shift;
-
     my $lock;
+    
     unless ($self->_resource_lock) {
         $lock = $self->lock_alignment_resource;
     } else {
@@ -607,12 +682,17 @@ sub _run_aligner {
         $self->die_and_clean_up($self->error_message);
     }
 
-    $self->status_message('Converting map to bam after alignment.');
-    my @bam_files = $self->alignment_bam_file_paths;
-    unless (@bam_files) {
-        $self->error_message('Could not convert MAP files to BAM files in directory '. $self->alignment_directory);
-        $self->die_and_clean_up($self->error_message);
-    }
+
+    $self->create_combined_bam_file( cmd => $cmdline,
+                                     alignment_file => $alignment_file ); 
+
+
+    #$self->status_message('Converting map to bam after alignment.');
+    #my @bam_files = $self->alignment_bam_file_paths;
+    #unless (@bam_files) {
+    #    $self->error_message('Could not convert MAP files to BAM files in directory '. $self->alignment_directory);
+    #    $self->die_and_clean_up($self->error_message);
+    #}
     
     unless ($self->verify_alignment_data) {
         $self->error_message('Failed to verify existing alignment data in directory '. $self->alignment_directory);
@@ -627,12 +707,228 @@ sub _run_aligner {
             $self->die_and_clean_up($self->error_message);
         }
     }
+    
 
     unless ($self->unlock_alignment_resource) {
         $self->error_message('Failed to unlock alignment resource '. $lock);
         return;
     }
     return 1;
+}
+
+sub create_combined_bam_file {
+
+    my ($self,%params) = @_;
+    my $cmdline = $params{cmd};
+    my $alignment_file = $params{alignment_file};
+
+    $self->status_message("Creating combined bam file for $alignment_file");
+
+    #constants for the unaligned reads conversion
+    my $filler= "\t*\t0\t0\t*\t*\t0\t0\t";
+    my $pair1 = "\t69";
+    my $pair2 = "\t133";
+    my $frag =  "\t4";
+    
+    my $rg_tag = "\tRG:Z:";
+    my $pg_tag = "\tPG:Z:";
+
+    my $instrument_data = $self->instrument_data;
+    $self->status_message("\nInstrument data id ".$instrument_data->id."\n");
+
+    my $seq_id = $self->instrument_data->seq_id;
+    $self->status_message("\nSeq id ".$seq_id."\n");
+    
+    #collect all the parameters and header info
+    my $insert_size_for_header;
+    if ($self->instrument_data->median_insert_size) {
+        $insert_size_for_header= $self->instrument_data->median_insert_size;
+    } else {
+             $insert_size_for_header = 0;
+    }
+    
+    my $description_for_header;
+    if ($self->instrument_data->is_paired_end) {
+        $description_for_header = 'paired end';
+    } else {
+        $description_for_header = 'fragment';
+    }
+   
+    my $date_run_field = $self->instrument_data->run_start_date_formatted();
+    my $sample_name_field = $self->instrument_data->sample_name;
+    my $library = $self->instrument_data->library_name;
+    my $platform_unit_field = sprintf("%s.%s",$self->instrument_data->flow_cell_id,$self->instrument_data->lane);
+  
+    my $aligner_version = $self->aligner_version;
+
+    #generate header info 
+    #read group line 
+    my $rg_string = "\@RG\tID:$seq_id\tPL:illumina\tPU:$platform_unit_field\tLB:$library\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_field\tSM:$sample_name_field\tCN:WUGSC\n";
+    #program group
+    #Because the temp directories used in the cmdline string will break the consistency check at the end of Solex_maq.t 
+    #we will set the value of the command line string on the @pg line to a constant value. 
+    my $instrument_data_id = $self->instrument_data->id;
+    if ($instrument_data_id < 0) {
+        $cmdline = "maq map (parameters not available for test)";
+    }
+    my $pg_string ="\@PG\tID:$seq_id\tVN:$aligner_version\tCL:$cmdline\n";
+
+    $self->status_message("Collected header information.");
+    $self->status_message("Read group line:".$rg_string);
+    $self->status_message("Program group line.".$pg_string);
+    
+    
+    my $groups_file = $self->alignment_directory."/groups.txt";
+    
+    $self->status_message("Writing group info to:".$groups_file);
+    
+    my $group_fh = Genome::Utility::FileSystem->open_file_for_writing($groups_file);
+    print $group_fh $rg_string;
+    print $group_fh $pg_string; 
+    $group_fh->close;
+  
+    $self->status_message("Converting unaligned reads to Sam format.");
+    #convert the unaligned read file to sam format 
+    #input file
+    my $unaligned_file = $self->unaligned_reads_list_path; 
+    #output file
+    my $unaligned_sam_file =  $self->alignment_directory."/unaligned.sam";
+    
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading("$unaligned_file");
+    my $ua_fh = Genome::Utility::FileSystem->open_file_for_writing($unaligned_sam_file);
+    $self->status_message("Opened file for reading: $unaligned_file");
+    $self->status_message("Opened file for writing: $unaligned_sam_file");
+    my $count = 0;
+        if ($self->instrument_data->is_paired_end) {
+            while (my $line1 = $fh->getline) {
+                my $line2 = $fh->getline; 
+                #$line1 =~ m/(^\S.*)#.*\t99\t(.*$)/;
+                $line1 =~ m/(^\S.*)\t99\t(.*$)/;
+                my $readName1 = $1;
+                my $readData1 = $2;
+                #$line2 =~ m/(^\S.*)#.*\t99\t(.*$)/;
+                $line2 =~ m/(^\S.*)\t99\t(.*$)/;
+                my $readName2 = $1;
+                my $readData2 = $2;
+
+                print $ua_fh $readName1.$pair1.$filler.$readData1.$rg_tag.$seq_id.$pg_tag.$seq_id."\n";
+                print $ua_fh $readName2.$pair2.$filler.$readData2.$rg_tag.$seq_id.$pg_tag.$seq_id."\n";
+
+                $count++;
+            }
+        } else {
+            while (my $line1 = $fh->getline) {
+                $line1 =~ /^(\S+)\s+99\s+(.*$)/;
+                my $readName1 = $1;
+                my $readData1 = $2;
+                print $ua_fh $readName1.$frag.$filler.$readData1.$rg_tag.$seq_id."\n";
+                $count++;
+            }
+        }
+
+    $ua_fh->close;
+ 
+    $self->status_message("Done converting unaligned reads to Sam format. $count reads processed.");
+    #convert the map2sam 
+    my $ref_build = $self->reference_build;
+    my $ref_list  = $ref_build->full_consensus_sam_index_path;
+    unless ($ref_list) {
+           $self->error_message("Failed to get ref list: $ref_list");
+           return;
+    }
+
+    my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
+                    map_file    => $alignment_file,
+                    use_version => $self->aligner_version,
+                    lib_tag     => $seq_id,
+                    ref_list    => $ref_list,
+                    index_bam   => 0,
+                    sam_only    => 1,
+                );
+    my $aligned_sam_file = $map_to_bam->sam_file_path;
+    my $rv = $map_to_bam->execute;
+    if ($rv == 1) {
+        $self->status_message("Conversion succeeded.");
+    } else {
+        $self->error_message("Conversion failed.");
+        return
+    }         
+        
+    #seq dict
+    my $species;
+    if ($instrument_data->id > 0) {
+        $self->status_message("Sample id: ".$self->instrument_data->sample_id);
+        my $sample = Genome::Sample->get($self->instrument_data->sample_id);
+        $species =  $sample->species_name;
+    }
+    else {
+        $species = 'Homo sapiens'; #to deal with solexa.t
+
+    }
+    $self->status_message("Species from alignment: ".$species);
+
+    my $seq_dict = $ref_build->get_sequence_dictionary("sam",$species,$self->picard_version);
+ 
+    #cat everything together
+    $self->status_message("Begining creation of combined sam file.");
+    $self->status_message("seq dict: $seq_dict");
+    $self->status_message("group_file: $groups_file");
+    $self->status_message("aligned sam: $aligned_sam_file");
+    $self->status_message("unaligned sam: $unaligned_sam_file");
+    
+    my @input_list = ();
+    for my $file ($seq_dict, $groups_file, $aligned_sam_file, $unaligned_sam_file) {
+        if (-z $file) {
+            $self->warning_message("$file is empty, will not be used to cat");
+            next;
+        }
+        push @input_list, $file;
+    }
+
+    my $combined_sam_file = $self->alignment_directory."/all_sequences_combined.sam";
+    my $combined_bam_file = $self->alignment_directory."/all_sequences.bam";
+ 
+    my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@input_list, output_file=>$combined_sam_file);     
+    
+    if ($cat_rv ne 1) { 
+        $self->error_message("Could not cat sam files.");
+        return;
+    }
+
+    $self->status_message("Cat of sam files complete.  File at: $combined_sam_file");
+    #convert sam to bam  
+
+    my $sam2bam = Genome::Model::Tools::Sam::SamToBam->create(
+             sam_file  => $combined_sam_file,
+             bam_file  => $combined_bam_file,
+             ref_list  => $ref_list,
+             fix_mate  => 1,
+             keep_sam  => 0,
+             index_bam => 0,
+             use_version => $self->samtools_version,
+    );
+
+    my $sam2bam_rv = $sam2bam->execute;
+    $self->error_message("SamToBam failed for $combined_sam_file") and return unless $sam2bam_rv ==1;
+   
+    #clean up junk
+    my $ul1_rv = unlink($groups_file);
+    my $ul2_rv = unlink($unaligned_sam_file);
+    my $ul3_rv = unlink($aligned_sam_file);
+
+    unless ($ul1_rv) {
+        $self->error_message('Failed to unlink '. $groups_file);
+    }
+    unless ($ul2_rv) {
+        $self->error_message('Failed to unlink '. $unaligned_sam_file);
+    }
+    unless ($ul3_rv) {
+        $self->error_message('Failed to unlink '. $aligned_sam_file);
+    }
+
+    $self->status_message("Alignment conversion complete.  File at: $combined_bam_file");
+    return 1; 
+
 }
 
 sub process_low_quality_alignments {

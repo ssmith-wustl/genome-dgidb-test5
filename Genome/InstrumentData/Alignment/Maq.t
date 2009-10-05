@@ -10,7 +10,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 19;
+        plan tests => 25;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -20,46 +20,65 @@ BEGIN {
     use_ok('Genome::InstrumentData::Command::Align::Maq');
 }
 
+my $samtools_version = Genome::Model::Tools::Sam->default_samtools_version;
+my $picard_version = Genome::Model::Tools::Sam->default_picard_version;
 
 my $gerald_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
 
-# Existing
+#Begin Test Case #1 ######################################################
+#This test tests the case where the alignments are ok, but the header is bad.
+#First it copies a bam file with the bad header to the correct  test directory and then will regenerate the bam file:
+print ">>>Begin Test Case #1\n";
+my $cp_cmd = "cp /gscmnt/sata828/info/alignment_data/maq0_7_1/refseq-for-test/test_run_name/4_-123456/all_sequences.bam /gscmnt/sata828/info/alignment_data/maq0_7_1/refseq-for-test/test_run_name/4_-123457/all_sequences.bam";
+my $cp_rv = system($cp_cmd);
+
 my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
-                                                                  id => '-123456',
+                                                                  id => '-123457',
                                                                   sequencing_platform => 'solexa',
                                                                   sample_name => 'test_sample_name',
+                                                                  library_name => 'test_sample_name-lib1',
                                                                   run_name => 'test_run_name',
                                                                   subset_name => 4,
                                                                   run_type => 'Paired End Read 2',
                                                                   gerald_directory => $gerald_directory,
+                                                                  seq_id => '-923458',
+                                                                  flow_cell_id => '33G',
+                                                                  lane => '4',
+                                                               
                                                               );
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
 $instrument_data->set_always('sample_type','dna');
 $instrument_data->set_always('resolve_quality_converter','sol2sanger');
+$instrument_data->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
+$instrument_data->set_always('sample_id','2791246676');
 $instrument_data->set_always('is_paired_end',1);
 ok($instrument_data->is_paired_end,'instrument data is paired end');
-
-
 
 my $fake_allocation = Genome::Disk::Allocation->__define__(
                                                        disk_group_name => 'info_alignments',
                                                        group_subdirectory => 'info',
                                                        mount_path => '/gscmnt/sata828',
-                                                       allocation_path => 'alignment_data/maq0_7_1/refseq-for-test/test_run_name/4_-123456',
+                                                       #allocation_path => 'alignment_data/maq0_6_8/refseq-for-test/test_run_name/4_-123456',
+                                                       allocation_path => 'alignment_data/maq0_7_1/refseq-for-test/test_run_name/4_-123457',
                                                        allocator_id => '-123457',
                                                        kilobytes_requested => 100000,
-                                                       kilobutes_used => 0,
+                                                       kilobytes_used => 0,
                                                        owner_id => $instrument_data->id,
                                                        owner_class_name => 'Genome::InstrumentData::Solexa',
                                                    );
+
+
 isa_ok($fake_allocation,'Genome::Disk::Allocation');
 $instrument_data->set_list('allocations',$fake_allocation);
 
 my $alignment = Genome::InstrumentData::Alignment::Maq->create(
                                                           instrument_data_id => $instrument_data->id,
                                                           aligner_name => 'maq',
+                                                          #aligner_version => '0.6.8',
                                                           aligner_version => '0.7.1',
                                                           reference_name => 'refseq-for-test',
+                                                          samtools_version => $samtools_version,
+                                                          picard_version => $picard_version,
                                                       );
 
 # TODO: create mock event or use some fake event for logging
@@ -71,23 +90,88 @@ my $dir = $alignment->alignment_directory;
 ok($dir, "alignments found/generated");
 ok(-d $dir, "result is a real directory");
 
-#No need to commit because we short cut
+
+print "<<<End Test Case #1\n";
+#####End Test Case #1#############################################################
+
+#Begin Test Case #2 ##############################################################
+#In this case, the alignments in the directory are ok and it should shortcut
+#This test uses the data generated by Test Case #1
+
+print ">>>Begin Test Case #2\n";
+my $instrument_data2 = Genome::InstrumentData::Solexa->create_mock(
+                                                                  id => '-123457',
+                                                                  sequencing_platform => 'solexa',
+                                                                  sample_name => 'test_sample_name',
+                                                                  library_name => 'test_sample_name-lib1',
+                                                                  run_name => 'test_run_name',
+                                                                  subset_name => 4,
+                                                                  run_type => 'Paired End Read 2',
+                                                                  gerald_directory => $gerald_directory,
+                                                                  seq_id => '-923458',
+                                                                  flow_cell_id => '33G',
+                                                                  lane => '4',
+                                                               
+                                                              );
+isa_ok($instrument_data2,'Genome::InstrumentData::Solexa');
+$instrument_data2->set_always('sample_type','dna');
+$instrument_data2->set_always('resolve_quality_converter','sol2sanger');
+$instrument_data2->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
+$instrument_data2->set_always('sample_id','2791246676');
+$instrument_data2->set_always('is_paired_end',1);
+ok($instrument_data2->is_paired_end,'instrument data is paired end');
+
+isa_ok($fake_allocation,'Genome::Disk::Allocation');
+$instrument_data2->set_list('allocations',$fake_allocation);
+
+my $alignment2 = Genome::InstrumentData::Alignment::Maq->create(
+                                                          instrument_data_id => $instrument_data2->id,
+                                                          aligner_name => 'maq',
+                                                          #aligner_version => '0.6.8',
+                                                          aligner_version => '0.7.1',
+                                                          reference_name => 'refseq-for-test',
+                                                          samtools_version => $samtools_version,
+                                                          picard_version => $picard_version,
+                                                      );
+
+# TODO: create mock event or use some fake event for logging
+
+# once to find old data
+ok($alignment2->find_or_generate_alignment_data,'found old alignment data');
+
+my $dir2 = $alignment2->alignment_directory;
+ok($dir2, "alignments found/generated");
+ok(-d $dir2, "result is a real directory");
+
+print "<<<End Test Case #2\n";
+#end Test Case #2  ################################################################
 
 
-$instrument_data = Genome::InstrumentData::Solexa->create_mock(
+#Begin Test Case #3 ##############################################################
+# This test case will generate new alignments
+
+print ">>>Begin Test Case #3\n";
+my $instrument_data3 = Genome::InstrumentData::Solexa->create_mock(
                                                                id => '-123458',
+                                                               seq_id => '-923458',
+                                                               flow_cell_id => '33G',
+                                                               lane => '4',
+                                                               median_insert_size => '313',
                                                                sequencing_platform => 'solexa',
+                                                               library_name => 'test_sample_name-lib1',
                                                                sample_name => 'test_sample_name',
                                                                run_name => 'test_run_name',
                                                                subset_name => 4,
                                                                run_type => 'Paired End Read 2',
                                                                gerald_directory => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name',
                                                            );
-my @fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
-$instrument_data->set_always('sample_type','dna');
-$instrument_data->set_always('is_paired_end',1);
-$instrument_data->set_always('resolve_quality_converter','sol2phred');
-$instrument_data->set_always('class','Genome::InstrumentData::Solexa');
+my @fastq_files = glob($instrument_data3->gerald_directory.'/*.txt');
+$instrument_data3->set_always('sample_type','dna');
+$instrument_data3->set_always('is_paired_end',1);
+$instrument_data3->set_always('sample_id','2791246676');
+$instrument_data3->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
+$instrument_data3->set_always('resolve_quality_converter','sol2phred');
+$instrument_data3->set_always('class','Genome::InstrumentData::Solexa');
 
 my $tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $tmp_allocation = Genome::Disk::Allocation->create_mock(
@@ -95,11 +179,12 @@ my $tmp_allocation = Genome::Disk::Allocation->create_mock(
                                                            disk_group_name => 'info_alignments',
                                                            group_subdirectory => 'test',
                                                            mount_path => '/tmp/mount_path',
+                                                           #allocation_path => 'alignment_data/maq0_6_8/refseq-for-test/test_run_name/4_-123458',
                                                            allocation_path => 'alignment_data/maq0_7_1/refseq-for-test/test_run_name/4_-123458',
                                                            allocator_id => '-123459',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
-                                                           owner_id => $instrument_data->id,
+                                                           owner_id => $instrument_data3->id,
                                                            owner_class_name => 'Genome::InstrumentData::Solexa',
                                                        );
 $tmp_allocation->mock('absolute_path',
@@ -108,42 +193,56 @@ $tmp_allocation->mock('absolute_path',
 $tmp_allocation->set_always('reallocate',1);
 $tmp_allocation->set_always('deallocate',1);
 isa_ok($tmp_allocation,'Genome::Disk::Allocation');
-$instrument_data->set_list('allocations',$tmp_allocation);
-$instrument_data->set_list('fastq_filenames',@fastq_files);
-$instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
+$instrument_data3->set_list('allocations',$tmp_allocation);
+$instrument_data3->set_list('fastq_filenames',@fastq_files);
+$instrument_data3->set_always('calculate_alignment_estimated_kb_usage',10000);
+$instrument_data3->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
+$instrument_data3->set_always('sample_id','2791246676');
 
-$alignment = Genome::InstrumentData::Alignment->create(
-                                                       instrument_data_id => $instrument_data->id,
-                                                       aligner_name => 'maq',
+my $alignment3 = Genome::InstrumentData::Alignment->create(
+                                                       instrument_data_id => $instrument_data3->id,
+                                                       aligner_name => 'maq',  
+                                                       #aligner_version => '0.6.8',
                                                        aligner_version => '0.7.1',
                                                        reference_name => 'refseq-for-test',
+                                                       samtools_version => $samtools_version,
+                                                       picard_version => $picard_version,
                                                    );
 
 # once to make new data
-ok($alignment->find_or_generate_alignment_data,'generated new alignment data for paired end data');
-my $dir2 = $alignment->alignment_directory;
-ok($dir2, "alignments found/generated");
-ok(-d $dir2, "result is a real directory");
-ok($alignment->remove_alignment_directory,'removed alignment directory '. $dir2);
-ok(! -e $dir2, 'alignment directory does not exist');
+ok($alignment3->find_or_generate_alignment_data,'generated new alignment data for paired end data');
+my $dir3 = $alignment3->alignment_directory;
+ok($dir3, "alignments found/generated");
+ok(-d $dir3, "result is a real directory");
+ok($alignment3->remove_alignment_directory,'removed alignment directory '. $dir3);
+ok(! -e $dir3, 'alignment directory does not exist');
 
+print "<<<End Test Case #3\n";
+#######End Test #3
 
+#######Begin Test #4
 #Run paired end as fragment
+
+print ">>>Begin Test Case 4\n";
 $tmp_allocation->allocation_path('alignment_data/maq0_7_1/refseq-for-test/test_run_name/fragment/4_-123458');
 $tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-$instrument_data->set_list('fastq_filenames',$fastq_files[0]);
-$alignment = Genome::InstrumentData::Alignment->create(
-                                                       instrument_data_id => $instrument_data->id,
+$instrument_data3->set_list('fastq_filenames',$fastq_files[0]);
+$instrument_data3->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
+$instrument_data3->set_always('sample_id','2791246676');
+my $alignment4 = Genome::InstrumentData::Alignment->create(
+                                                       instrument_data_id => $instrument_data3->id,
                                                        aligner_name => 'maq',
                                                        aligner_version => '0.7.1',
+                                                       samtools_version => $samtools_version,
+                                                       picard_version => $picard_version,
                                                        reference_name => 'refseq-for-test',
                                                        force_fragment => 1,
                                                    );
-ok($alignment->find_or_generate_alignment_data,'generated new alignment data for paired end data as fragment alignment');
-my $dir3 = $alignment->alignment_directory;
-ok($dir3, "alignments found/generated");
-ok(-d $dir3, "result is a real directory");
-ok($alignment->remove_alignment_directory,'removed alignment directory '. $dir3);
-ok(! -e $dir3, 'alignment directory does not exist');
+ok($alignment4->find_or_generate_alignment_data,'generated new alignment data for paired end data as fragment alignment');
+my $dir4 = $alignment4->alignment_directory;
+ok($dir4, "alignments found/generated");
+ok(-d $dir4, "result is a real directory");
+ok($alignment4->remove_alignment_directory,'removed alignment directory '. $dir4);
+ok(! -e $dir4, 'alignment directory does not exist');
 
 exit;

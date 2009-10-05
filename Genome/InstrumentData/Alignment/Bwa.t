@@ -23,11 +23,14 @@ BEGIN {
 
 #TODO: Modify version info and make tool to get path for bwa version
 
+
+my $samtools_version = Genome::Model::Tools::Sam->default_samtools_version;
+my $picard_version = Genome::Model::Tools::Sam->default_picard_version;
+
 my $bwa_version = Genome::Model::Tools::Bwa->default_bwa_version;
 my $bwa_label   = 'bwa'.$bwa_version;
 $bwa_label =~ s/\./\_/g;
 
-print "\nBwa version tested is $bwa_version\n";
 
 my $gerald_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
 
@@ -47,12 +50,12 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   gerald_directory => $gerald_directory,
                                                               );
 
-print ("id: ".$instrument_data->seq_id."\n\n");
 
 my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
 $instrument_data->set_list('fastq_filenames',@in_fastq_files);
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
 $instrument_data->set_always('sample_type','dna');
+$instrument_data->set_always('sample_id','2791246676');
 $instrument_data->set_always('is_paired_end',1);
 ok($instrument_data->is_paired_end,'instrument data is paired end');
 $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
@@ -68,25 +71,31 @@ my $fake_allocation = Genome::Disk::Allocation->__define__(
                                                        allocation_path => 'alignment_data/'.$bwa_label.'/refseq-for-test/test_run_name/4_-123456',
                                                        allocator_id => '-123457',
                                                        kilobytes_requested => 100000,
-                                                       kilobutes_used => 0,
+                                                       kilobytes_used => 0,
                                                        owner_id => $instrument_data->id,
                                                        owner_class_name => 'Genome::InstrumentData::Solexa',
                                                    );
+
 isa_ok($fake_allocation,'Genome::Disk::Allocation');
 $instrument_data->set_list('allocations',$fake_allocation);
+
 
 my $alignment = Genome::InstrumentData::Alignment::Bwa->create(
                                                           instrument_data_id => $instrument_data->id,
                                                           aligner_name => 'bwa',
                                                           aligner_version => $bwa_version,
+                                                          samtools_version => $samtools_version,
+                                                          picard_version => $picard_version,
                                                           reference_name => 'refseq-for-test',
                                                       );
 
 # TODO: create mock event or use some fake event for logging
 
 # once to find old data
-ok($alignment->find_or_generate_alignment_data,'found old alignment data');
+my $adir = $alignment->alignment_directory;
+my @list = <$adir/*>;
 
+ok($alignment->find_or_generate_alignment_data,'found old alignment data');
 my $dir = $alignment->alignment_directory;
 ok($dir, "alignments found/generated");
 ok(-d $dir, "result is a real directory");
@@ -114,6 +123,7 @@ $instrument_data->set_always('is_paired_end',1);
 $instrument_data->set_always('class','Genome::InstrumentData::Solexa');
 $instrument_data->set_always('resolve_quality_converter','sol2sanger');
 $instrument_data->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
+$instrument_data->set_always('sample_id','2791246676');
 
 my $tmp_dir = File::Temp::tempdir('Align-Bwa-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $tmp_allocation = Genome::Disk::Allocation->create_mock(
@@ -142,6 +152,8 @@ $instrument_data->set_always('resolve_quality_converter','sol2sanger');
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'bwa',
+                                                       samtools_version => $samtools_version,
+                                                       picard_version => $picard_version,
                                                        aligner_version => $bwa_version,
                                                        reference_name => 'refseq-for-test',
                                                    );
@@ -151,7 +163,6 @@ ok($alignment->find_or_generate_alignment_data,'generated new alignment data for
 my $dir2 = $alignment->alignment_directory;
 ok($dir2, "alignments found/generated");
 ok(-d $dir2, "result is a real directory");
-print "\n ****************** $dir2 \n";
 
 ok($alignment->remove_alignment_directory,'removed alignment directory '. $dir2);
 ok(! -e $dir2, 'alignment directory does not exist');
@@ -164,6 +175,8 @@ $instrument_data->set_list('fastq_filenames',$fastq_files[0]);
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'bwa',
+                                                       samtools_version => $samtools_version,
+                                                       picard_version => $picard_version,
                                                        aligner_version => $bwa_version,
                                                        reference_name => 'refseq-for-test',
                                                        force_fragment => 1,
