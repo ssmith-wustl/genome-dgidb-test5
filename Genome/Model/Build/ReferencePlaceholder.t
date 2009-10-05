@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 my $BASE = Genome::Config->root_directory;
 
@@ -42,6 +42,13 @@ my $lims_ref_seq_path = $lims_model->data_directory;
 is($lims_model->data_directory,'/gsc/var/lib/reference/set/2774911462/maq_binary_fasta','got expected lims data directory for reference model');
 is($lims_model->full_consensus_path,'/gsc/var/lib/reference/set/2774911462/maq_binary_fasta/ALL.bfa','got expected lims full consensus path');
 
+###
+
+$model->delete;
+$model = Genome::Model::Build::ReferencePlaceholder->create(name => 'NCBI-mouse-build37');
+my $seq_dict_file = $model->get_sequence_dictionary("sam","mouse","r104");
+my $result = "/gscmnt/839/info/medseq/reference_sequences/NCBI-mouse-build37/seqdict/seqdict.sam";
+is($seq_dict_file, $result, 'got correct sequence dictionary.');
 
 exit;
 
@@ -60,3 +67,5 @@ is(scalar($get_subreference_paths[23]),'/gscmnt/839/info/medseq/reference_sequen
 
 @get_subreference_names = sort $model->subreference_names();
 is($get_subreference_names[23],'Y','got get_subreference_names');
+
+
