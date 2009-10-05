@@ -65,11 +65,12 @@ my $subject_type = 'sample_name';
 my $align_params = '-t4::';
 my $sam_version  = Genome::Model::Tools::Sam->default_samtools_version;
 my $bwa_version = Genome::Model::Tools::Bwa->default_bwa_version;
+my $picard_version = Genome::Model::Tools::Sam->default_picard_version;
 my $bwa_label = 'bwa'.$bwa_version;
 
 $bwa_label =~ s/\./\_/g;
 
-print "\nThis test is on bwa version: $bwa_version and samtools version: $sam_version\n";
+print "\nThis test is on bwa version: $bwa_version, samtools version: $sam_version, picard version: $picard_version\n\n";
 
 my @instrument_data = setup_test_data($subject_name);
 
@@ -85,7 +86,7 @@ my $build_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
 );
 isa_ok($build_test,'Genome::Model::Command::Build::ReferenceAlignment::Test');
 
-#out samtools verion number so always test default version
+#intentionally remove samtools verion number so always test default version
 
 $build_test->create_test_pp(
     sequencing_platform => 'solexa',
@@ -98,15 +99,18 @@ $build_test->create_test_pp(
     read_aligner_name => 'bwa',
     read_aligner_version => $bwa_version,
     read_aligner_params => $align_params,
-    rmdup_name => 'samtools',
-    rmdup_version => $sam_version,
+    rmdup_name => 'picard',
+    rmdup_version => $picard_version,
+    samtools_version => $sam_version,
+    picard_version   => $picard_version,
+    merge_software   => 'picard',
     reference_sequence_name => 'refseq-for-test',
 );
 $build_test->runtests;
 
 my $comparison_dir = '/gsc/var/cache/testsuite/data/'
         . 'Genome-Model-Command-Build-ReferenceAlignment-Solexa/'
-        . 'alignment-root-expected-v10';
+        . 'alignment-root-expected-v11';
 
 my @diff = `diff -r --brief $tmp_dir $comparison_dir`; 
 my @bad;
@@ -168,6 +172,7 @@ sub setup_test_data {
                                                                               is_external => 0,
                                                                               read_length => $read_length,
                 							                                  library_name => $library,
+                                                                              seq_id => 'test_seq_id',
                                                                           );
             my $allocation_path = sprintf('alignment_data/%s/%s/%s/%s_%s',
                                           $bwa_label,
