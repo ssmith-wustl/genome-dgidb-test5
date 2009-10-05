@@ -79,39 +79,6 @@ test_model_from_params(
     },
 );
 
-# test create for a genome model micro array illumina
-
-# FIXME - this model seems to already exist in the DB and
-# mimics the model created by the test.  The test then fails because
-# a get() inside returns 2 models when it only expected 1.  This model
-# is not deletable at the moment because there's a genome model research
-# project whose foreign key constraint won't allow the model to be 
-# removed permanently from the DB.
-my $mmmm = Genome::Model->get(2688181605);
-$mmmm->delete();
-
-test_model_from_params(
-    model_params => {
-        subject_name => $default_subject_name,
-        subject_type => $default_subject_type,
-        processing_profile_name   => 'micro-array-illumina',
-    },
-);
-
-# test create for a genome model micro array affymetrix
-
-# FIXME - same thing with this model
-$mmmm = Genome::Model->get(2688183791);
-$mmmm->delete();
-
-test_model_from_params(
-    model_params => {
-        subject_name => $default_subject_name,
-        subject_type => $default_subject_type,
-        processing_profile_name   => 'micro-array-affymetrix',
-    },
-);
-
 # test create for a genome model assembly
 test_model_from_params(
     model_params => {
