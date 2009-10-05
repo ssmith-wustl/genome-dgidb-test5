@@ -207,7 +207,7 @@ sub parse_somatic_variants
 	my $p_value_threshold = 1.0E-06;
 	$p_value_threshold = $self->p_value if($self->p_value);
 	
-	print "Infile: $infile\nOutfile: $outfile P-value $p_value_threshold\n";
+	print "Infile: $infile\nOutfile: $outfile \nP-value $p_value_threshold\n";
 
 	my $num_somatic = 0;
 	
@@ -226,6 +226,7 @@ sub parse_somatic_variants
 		{
 			my @lineContents = split(/\t/, $line);
 			my $chrom = $lineContents[0];
+			$chrom =~ s/[^0-9XYMT]//g;
 			my $position = $lineContents[1];
 			my $allele1 = $lineContents[2];
 			my $allele2 = $lineContents[3];
@@ -286,6 +287,7 @@ sub parse_loh_variants
 		{
 			my @lineContents = split(/\t/, $line);
 			my $chrom = $lineContents[0];
+			$chrom =~ s/[^0-9XYMT]//g;
 			my $position = $lineContents[1];
 			my $allele1 = $lineContents[2];
 			my $allele2 = $lineContents[3];
