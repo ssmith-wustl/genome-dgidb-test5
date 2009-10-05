@@ -68,6 +68,14 @@ class Genome::InstrumentData::Alignment {
                                 is => 'Boolean',
                                 default_value => 0,
                             },
+         picard_version     => {
+                                is => 'String',
+                                doc => 'The version of Picard to use for merging files, etc',
+                            },
+         samtools_version     => {
+                                is => 'String',
+                                doc => 'The version of Samtools to use for sam-to-bam, etc',
+                            },
          _fragment_seq_id => { is => 'Number' },
          _resource_lock   => {  is => 'Text'},
     ],
@@ -105,6 +113,7 @@ sub _resolve_aligner_name_for_subclass_name {
     return unless ($ext);
     my @words = $ext =~ /[a-z]+|[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
     my $aligner_name = lc(join(" ", @words));
+    print "\n**********************************$aligner_name*******************\n";
     return $aligner_name;
 }
 
@@ -139,10 +148,19 @@ sub create {
         }
         my $ref_build = Genome::Model::Build::ReferencePlaceholder->get($self->reference_name);
         unless ($ref_build) {
-            $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
+            my $sample_type = $self->instrument_data->sample_type;
+            if ( defined($sample_type) ) {
+                $self->status_message("Creating ReferencePlaceholder with sample type: $sample_type");
+                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
                                                                             name => $self->reference_name,
                                                                             sample_type => $self->instrument_data->sample_type,
                                                                         );
+            } else {
+                $self->status_message("No sample type is defined.  Creating ReferencePlaceholder without a sample type parameter.");
+                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
+                                                                            name => $self->reference_name,
+                                                                        );
+            }
         }
         $self->reference_build($ref_build);
     }
@@ -404,6 +422,29 @@ sub unlock_alignment_resource {
     }
     return 1;
 }
+
+sub remove_alignment_directory_contents {
+
+    my $self = shift;
+    my $alignment_dir = $self->alignment_directory;
+    $self->status_message("Attempting to remove files in alignment directory $alignment_dir");  
+    my @files = <$alignment_dir/*>;
+    for my $file (@files) {
+        my $rv = unlink($file);
+        unless ($rv) {
+            $self->status_message("Warning:  Could not unlink file $file in $alignment_dir.");  
+        }
+    }
+
+    if (scalar(@files) > 0) {
+        $self->status_message("Done removing files."); 
+    } else {
+        $self->status_message("No files found to remove."); 
+    } 
+
+    return 1; 
+} 
+
 
 #Cleanly die and unlock the resource
 
