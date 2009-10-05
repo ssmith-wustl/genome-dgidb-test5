@@ -59,7 +59,6 @@ my %SAMTOOLS_VERSIONS = (
 );
 
 my %PICARD_VERSIONS = (
-    #I'm using -wu0 to signify that no changes have been made to the Broad release.
     r104 => '/gsc/scripts/lib/java/samtools/picard-tools-1.04/',
     r103wu0 => '/gsc/scripts/lib/java/samtools/picard-tools-1.03/',
 );
@@ -84,6 +83,11 @@ sub path_for_picard_version {
 sub default_samtools_version {
     die "default samtools version: $DEFAULT is not valid" unless $SAMTOOLS_VERSIONS{$DEFAULT};
     return $DEFAULT;
+}
+ 
+sub default_picard_version {
+    die "default picard version: $PICARD_DEFAULT is not valid" unless $PICARD_VERSIONS{$PICARD_DEFAULT};
+    return $PICARD_DEFAULT;
 }
         
     

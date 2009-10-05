@@ -26,7 +26,7 @@ my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-MapToBam';
 my $tmp_dir  = File::Temp::tempdir(
     "MapToBAMDir_XXXXXX", 
     DIR     => $root_dir,
-    CLEANUP => 1,
+    CLEANUP => 0,
 );
 
 copy "$root_dir/test.map", $tmp_dir;
@@ -60,7 +60,6 @@ my $to_bam_fixmate = Genome::Model::Tools::Maq::MapToBam->create(
 
 ok($to_bam_fixmate->execute,'bam fixmate executed ok');
 is(compare($bam_file, "$root_dir/test_short.fix.bam"), 0, 'Bam file with mate fixed was created ok');
-
 
 exit;
 
