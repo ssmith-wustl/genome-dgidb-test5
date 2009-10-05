@@ -60,6 +60,11 @@ class Genome::Model::Tools::Oligo::RtPcrPrimers {
 		 doc   =>  "use this option to mask_snps_and_repeats",
 		 is_optional  => 1,
 	     },
+	     screen_snp_list => {
+		 is => 'String',
+		 doc   =>  "use this option by providing a list of snp to mask your sequence; format file, 1st column chromosome second column coordinate separated by space",
+		 is_optional  => 1,
+	     },
 
 	],
     
@@ -228,7 +233,7 @@ sub execute {
 	    my $gene = $transcript_info->{$transcript}->{-1}->{hugo_gene_name};
 	    my $gene_id = $transcript_info->{$transcript}->{-1}->{gene_id};
 	    #my ($chromosome) = $transcript_info->{$transcript}->{-1}->{source_line} =~ /Chromosome ([\S]+)\,/;
-	    my ($transcript_seq,$target) = &get_transcript_seq($strand,$transcript,$transcript_info,$organism,$chromosome,$trans_pos);
+	    my ($transcript_seq,$target) = &get_transcript_seq($strand,$transcript,$transcript_info,$organism,$chromosome,$trans_pos,$self);
 	    
 	    print qq(\n\n$transcript_info->{$transcript}->{-1}->{source_line}\n);
 
@@ -359,7 +364,13 @@ sub get_transcript_seq {
     my ($transcript_seq,$target);
 
     my ($pause,$resume,$base_count);
-    my ($strand,$transcript,$transcript_info,$organism,$chromosome,$target_position) = @_;
+    my ($strand,$transcript,$transcript_info,$organism,$chromosome,$target_position,$self) = @_;
+
+    my $screen;
+    if ($self->screen_snp_list) {
+	($screen) = get_screen_snp_list ($transcript,$transcript_info,$self);
+    }
+
     
     my (@positions);
 
@@ -404,13 +415,17 @@ sub get_transcript_seq {
 	}
 
 	$base_count++;
+
+	if ($screen->{$transcript}->{$pos}) {$base = "N";}
+
 	$transcript_seq->{$base_count}->{base}=$base;
 	$transcript_seq->{$base_count}->{transcript}=$transcript;
 	$transcript_seq->{$base_count}->{exon}="$exon,$region";
 	if ($masked_base) {
+	    if ($screen->{$transcript}->{$pos}) {$masked_base = "N";}
 	    $transcript_seq->{$base_count}->{masked_base}=$masked_base;
 	}
-
+	
 	$nb++;
 	if ($trans_pos) {
 	    my ($tp_position,$tp_region) = $trans_pos =~ /(\S+)\,(\S+)/;
@@ -525,6 +540,30 @@ sub parse_annotation {
 	}
     } close (ANO);
     return($annotation_info);
+}
+
+sub get_screen_snp_list {
+
+    my ($transcript,$transcript_info,$self) = @_;
+    my $chr = $transcript_info->{$transcript}->{-1}->{chromosome};
+    my $start = $transcript_info->{$transcript}->{-1}->{first_base};
+    my $stop = $transcript_info->{$transcript}->{-1}->{last_base};
+    
+    my $screen_file = $self->screen_snp_list;
+    my $screen;
+    
+    open(SCREEN,$screen_file) || die ("couldn't open the screen file\n\n");
+    while (<SCREEN>) {
+	chomp;
+	my $line = $_;
+	my ($chrom,$pos) = (split(/[\s]+/,$line))[0,1];
+	if ($chr eq $chrom) {
+	    if ($pos >= $start && $pos <= $stop) {
+		$screen->{$transcript}->{$pos}=1;
+	    }
+	}
+    } close (SCREEN);
+    return($screen);
 }
 
 1;
