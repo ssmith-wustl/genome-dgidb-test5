@@ -12,15 +12,19 @@ use File::Basename;
 
 class Genome::Model::Build::ReferencePlaceholder {
     id_by => [
-        name            => { is => 'Text' },
+        name            => {    is => 'Text' },
     ],
     has => [
         sample_type     => {
-                            is => 'Text',
-                            is_optional => 1,
-                            default_value => 'dna'
-                        },
-        data_directory  => { is => 'Text' },
+                                is => 'Text',
+                                is_optional => 1,
+                                default_value => 'dna'
+        },
+        data_directory  => {    is => 'Text' },
+        external_url    => {    is => 'Text',
+                                is_optional => 1,
+                                default_value => 'ftp://genome.wustl.edu/pub/reference/',
+        },
     ],
     doc => 'Temporary object representing the reference used in reference alignment models.  To be replaced with a real model build.',
 };
@@ -56,7 +60,11 @@ sub create {
 
     my $path = sprintf('%s/reference_sequences/%s','/gscmnt/839/info/medseq',$self->name);
     my $dna_type = $self->sample_type;
-    $dna_type =~ tr/ /_/;
+    #if $dna_type contains spaces, replace them with underscores
+    if ( $dna_type =~ m/\s/ ) {
+        $dna_type =~ tr/ /_/;
+    }
+    
     my $dna_path = $path .'.'. $dna_type;
     if (-d $dna_path || -l $dna_path) {
         $path = $dna_path;
@@ -164,11 +172,56 @@ sub get_sequence_dictionary {
 
     my $self = shift;
     my $file_type = shift;
-    my $path = $self->data_directory.'/seqdict/seqdict.'.$file_type;
+    my $species = shift;
+    my $picard_version = shift;
+
+    my $picard_path = Genome::Model::Tools::Sam->path_for_picard_version($picard_version); 
+
+    my $seqdict_dir_path = $self->data_directory.'/seqdict';
+    my $path = "$seqdict_dir_path/seqdict.$file_type";
     if (-s $path) {
        return $path; 
     } else {
-       $self->error_message("Failed to find sequence dictionary file at $path.  You may need to generate it manually with the Picard CreateSequenceDictionary tool.");
+
+        #lock seqdict dir here
+        my $lock = Genome::Utility::FileSystem->lock_resource(
+            resource_lock => $seqdict_dir_path."/lock_for_seqdict-$file_type",
+            max_try       => 2,
+        );
+
+        unless ($lock) {
+            $self->error_message("Failed to lock resource: $seqdict_dir_path");
+            return;
+        }
+
+        $self->status_message("Failed to find sequence dictionary file at $path.  Generating one now...");
+        my $seqdict_dir = $self->data_directory."/seqdict/";
+        my $cd_rv =  Genome::Utility::FileSystem->create_directory($seqdict_dir);
+        if ($cd_rv ne $seqdict_dir) {
+            $self->error_message("Failed to to create sequence dictionary directory for $path. Quiting");
+            return;
+        }
+        #my $picard_path = "/gsc/scripts/lib/java/samtools/picard-tools-1.04/";
+        my $uri = $self->external_url."/".$self->name."/all_sequences.bam";
+        my $ref_seq = $self->full_consensus_path("fasta"); 
+        my $name = $self->name;
+        
+        my $create_seq_dict_cmd = "java -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R=$ref_seq O=$path URI=$uri species=$species genome_assembly=$name TRUNCATE_NAMES_AT_WHITESPACE=true";        
+
+        my $csd_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$create_seq_dict_cmd);
+
+        unless (Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)) {
+            $self->error_message("Failed to unlock resource: $lock");
+            return;
+        }
+
+        if ($csd_rv ne 1) {
+            $self->error_message("Failed to to create sequence dictionary for $path. Quiting");
+            return;
+        } 
+        
+        return $path;    
+
     }
 
     return;
