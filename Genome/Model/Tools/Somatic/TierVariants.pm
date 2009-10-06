@@ -130,7 +130,7 @@ sub execute {
         my @columns = split "\t", $line;
         my ($chr, $start, $stop, $allele1, $allele2, $variation_type, $gene, $transcript, $species, $transcript_source, $transcript_version, $strand, $transcript_status, $type, $aa_string) = @columns;
         $type = lc($type);
-        if(defined($type) && ($type eq 'silent' || $type eq 'splice_site_del' || $type eq 'splice_site_ins' || $type eq 'in_frame_del' || $type eq 'frame_shift_del' || $type eq 'rna' || $type eq 'frame_shift_ins' || $type eq 'in_frame_ins'|| $type eq 'missense'|| $type eq 'nonsense'|| $type eq 'nonstop'|| $type eq 'splice_site')) {
+        if(defined($type) && ($type eq 'silent' || $type eq 'in_frame_del' || $type eq 'frame_shift_del' || $type eq 'rna' || $type eq 'frame_shift_ins' || $type eq 'in_frame_ins'|| $type eq 'missense'|| $type eq 'nonsense'|| $type eq 'nonstop'|| $type eq 'splice_site')) {
             $exonic_at{$chr}{$start}{$stop}{$allele1}{$allele2} = $type;
         }
     }
