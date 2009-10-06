@@ -964,6 +964,7 @@ sub params_for_test_class {
         save_datasets => 1,
         #print_report => 1,
         print_dataset => 'stats',
+        #print_datasets => 1,
     );
 }
 
