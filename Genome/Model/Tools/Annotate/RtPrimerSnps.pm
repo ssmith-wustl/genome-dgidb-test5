@@ -135,15 +135,17 @@ sub execute {
         @substructures = reverse @substructures; #put in transcript order. I'm not trusting the ordinals here as some are wonky (probably only in introns though)  
     }
     my $current_transcript_position = 1;
-
+    my $tseq = "";
     for my $structure (@substructures) {
         if($t->strand == -1) {
             #store starts as appropriate
             $transcript_coords{$current_transcript_position} = $structure->{structure_stop};
+            $tseq .= $structure->nucleotide_seq;
         }
         else {
             #must be on + strand
             $transcript_coords{$current_transcript_position} = $structure->{structure_start};
+            $tseq .= $structure->nucleotide_seq;
         }
         #reset the offset into the transcript for the next structure start
         #This should be correct for instance with a 1 bp first exon the next start should be 2
@@ -152,7 +154,7 @@ sub execute {
 
     #at this point the offsets should all be stored
     #now find the primer sequence within the transcript
-    my $tseq = $t->cds_full_nucleotide_sequence;
+#    my $tseq = $t->cds_full_nucleotide_sequence;
     my $primer_seq = $self->primer_sequence;
     unless($primer_seq =~ /[ACTG]/i) {
         $self->error_message("Primer Sequence can only contain ACTG. Passed $primer_seq");
