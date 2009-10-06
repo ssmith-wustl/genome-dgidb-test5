@@ -46,7 +46,7 @@ sub properties_hash {
         },
         instrument_type => {
             doc => 'the type of microarray instrument',
-            valid_values => ['illumina','affymetrix'],
+            valid_values => ['illumina','affymetrix','unknown'],
         },
     );
     return %properties;
