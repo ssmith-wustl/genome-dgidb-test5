@@ -43,6 +43,11 @@ class Genome::Model::Tools::AmpliconAssembly::Report {
         default_value => 0,
         doc => 'Print this particular dataset to the screen.',
     },
+    print_datasets => {
+        is => 'Text',
+        default_value => 0,
+        doc => 'Print all datasets to the screen.',
+    },
     print_report => {
         is => 'Boolean',
         default_value => 0,
@@ -85,7 +90,7 @@ sub report_generator_class {
 
 #< Functions >#
 sub functions {
-    return (qw/ print_report print_dataset save_report save_datasets /);
+    return (qw/ print_report print_dataset print_datasets save_report save_datasets /);
 }
 
 #< Helps >#
@@ -247,6 +252,26 @@ sub _print_dataset {
         or return;
     
     return print $csv;
+}
+
+sub _print_datasets {
+    my ($self, $report) = @_;
+
+    my $directory = $self->report_directory.'/'.$report->name_to_subdirectory($report->name);
+
+    my @dataset_names = $report->get_dataset_names;
+    unless ( @dataset_names ) {
+        $self->error_message("No datasets found in report");
+        return;
+    }
+
+    for my  $name ( @dataset_names ) {
+        my $csv = $self->_get_csv_for_dataset($report, $name)
+            or return;
+        print "Dataset: $name\n$csv\n";
+    }
+
+    return 1;
 }
 
 sub _save_report {
