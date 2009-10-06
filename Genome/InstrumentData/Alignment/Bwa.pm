@@ -290,6 +290,9 @@ sub _run_aligner {
 	$self->error_message("Alignment reference index path $reference_fasta_index_path does not exist. Use 'samtools faidx' to create this");
 	$self->die_and_clean_up($self->error_message);
     }
+    
+    # db disconnect prior to alignment
+    Genome::DataSource::GMSchema->disconnect_default_dbh; 
 
     ### STEP 1: Use "bwa aln" to generate the alignment coordinate file for the input reads (.sai file)
     ### Must be run once for each of the input files

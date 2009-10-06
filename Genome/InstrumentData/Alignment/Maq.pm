@@ -200,6 +200,9 @@ sub alignment_bam_file_paths {
                 
                 $self->status_message("Read Group name/tag: $read_group_name");
                 
+                # db disconnect prior to long operation
+                Genome::DataSource::GMSchema->disconnect_default_dbh; 
+
                 my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
                     map_file    => $map_file,
                     use_version => $self->aligner_version,
@@ -635,6 +638,10 @@ sub _run_aligner {
         push @input_files, $adaptor_file;
     }
     my @output_files = ($alignment_file, $self->unaligned_reads_list_path, $self->aligner_output_file_path);
+    
+    # db disconnect prior to long operation
+    Genome::DataSource::GMSchema->disconnect_default_dbh; 
+    
     Genome::Utility::FileSystem->shellcmd(
                                           cmd                         => $cmdline,
                                           input_files                 => \@input_files,

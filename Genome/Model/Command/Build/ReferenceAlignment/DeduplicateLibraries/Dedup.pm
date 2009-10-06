@@ -149,6 +149,9 @@ sub execute {
             }
             print $log_fh "Library $library has $cnt map files"."\n";
             $maplist_fh->close;
+	    
+	    # db disconnect prior to map merge
+	    Genome::DataSource::GMSchema->disconnect_default_dbh; 
 
             $now = UR::Time->now;
             print $log_fh ">>> Starting make_real_rmdupped_map_file() at $now for library: $library ."."\n";

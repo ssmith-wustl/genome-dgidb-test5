@@ -94,12 +94,15 @@ sub execute {
             print $log_fh "\n";
             
             my $merged_file =  $self->accumulated_alignments_dir."/".$library.".bam";
+	    # db disconnect prior to sam merge
+	    Genome::DataSource::GMSchema->disconnect_default_dbh; 
             if (-e $merged_file) {
                 print $log_fh "A merged library file already exists at: $merged_file \n";
                 print $log_fh "Please remove this file if you wish to regenerate. Skipping to rmdup phase.\n";
                 $now = UR::Time->now;
                 print $log_fh "<<< Skipped bam merge at $now for library: $library ."."\n";
             } else {
+		Genome::DataSource::GMSchema->disconnect_default_dbh; 
                 my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(
                     files_to_merge => \@library_maps,
                     merged_file => $merged_file,
