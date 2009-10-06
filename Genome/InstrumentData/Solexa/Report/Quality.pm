@@ -70,8 +70,28 @@ sub _generate_quality_stats {
     }
     my @headers;
     my @rows;
-    for my $lane (keys %stats_files) {
-        my $stats_filename = $stats_files{$lane};
+    my $quality_stats_node = $self->_xml->createElement('quality-stats')
+        or return;
+    $self->_datasets_node->addChild($quality_stats_node)
+        or return;
+    my %params = (
+        title => 'Instrument Data Quality Summary',
+        'display-type' => 'candlestick',
+        'x-axis-title' => 'Cycle/Column',
+        'y-axis-title' => 'Quality',
+    );
+    for my $attr (keys %params) {
+        $quality_stats_node->addChild( $self->_xml->createAttribute($attr, $params{$attr}) )
+            or return;
+    }
+    for my $read_set (keys %stats_files) {
+        my $read_set_node = $self->_xml->createElement('read-set')
+            or return;
+        $read_set_node->addChild( $self->_xml->createAttribute('read-set-name', $read_set) )
+            or return;
+        $quality_stats_node->addChild($read_set_node)
+            or return;
+        my $stats_filename = $stats_files{$read_set};
         my $parser = Genome::Utility::IO::SeparatedValueReader->create(
             input => $stats_filename,
             separator => "\t",
@@ -84,28 +104,16 @@ sub _generate_quality_stats {
             @headers = @{$parser->headers};
         }
         while (my $stats = $parser->next) {
-            my @row;
+            my $cycle_node = $read_set_node->addChild( $self->_xml->createElement('cycle') );
             for my $header (@headers) {
-                push @row, $stats->{$header};
+                my $header_field = $header;
+                $header_field =~ s/\_/-/g;
+                my $element = $cycle_node->addChild( $self->_xml->createElement($header_field) )
+                    or return;
+                $element->appendTextNode($stats->{$header});
             }
-            push @row, $lane;
-            push @rows, \@row;
         }
         $parser->input->close;
-    }
-    map { s/\_/-/g } @headers;
-    push @headers, 'fastq-file';
-    unless ($self->_add_dataset(
-        name => 'quality-stats',
-        title => 'Instrument Data Quality Summary',
-        #TODO: define display-type
-        #'display-type' => 'table',
-        row_name => 'cycle',
-        headers => \@headers,
-        rows => \@rows,
-    )) {
-        $self->error_message('Failed to add dataset.');
-        return;
     }
     return 1;
 }
