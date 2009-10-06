@@ -104,6 +104,10 @@ sub execute {
 
     $op->parallel_by('library_alignments');
 
+
+    # db disconnect prior to long operation
+    Genome::DataSource::GMSchema->disconnect_default_dbh;
+    
     my $output = Workflow::Simple::run_workflow_lsf(
         $op,
         'ref_list'  => $self->model->reference_build->full_consensus_sam_index_path,
