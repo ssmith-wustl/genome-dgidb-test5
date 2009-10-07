@@ -116,7 +116,7 @@ sub revert {
             if ($obj->parent_event_id eq $self->id) {
                 # Remove foreign keys
                 $obj->parent_event_id(undef);
-                UR::Context->_sync_databases;
+                #UR::Context->_sync_databases;
             }
         }
         $self->warning_message('deleting '. $obj->class .' with id '. $obj->id);
@@ -156,7 +156,8 @@ sub delete {
     my @next_events = $self->next_events;
     for my $next_event (@next_events) {
         $next_event->prior_event_id(undef);
-        UR::Context->_sync_databases;
+        #UR::Context->_sync_databases;
+        print Data::Dumper::Dumper($next_event);
         $self->warning_message('Setting event '.$next_event->id.' to undef to remove prior_event_id constraint.');
     }
     
