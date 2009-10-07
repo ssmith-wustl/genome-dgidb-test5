@@ -1,10 +1,10 @@
-package Genome::Model::Build::Variant;
+package Genome::Model::BuildVariant;
 
 use strict;
 use warnings;
 
 use Genome;
-class Genome::Model::Build::Variant {
+class Genome::Model::BuildVariant {
     type_name => 'genome model build variant',
     table_name => 'GENOME_MODEL_BUILD_VARIANT',
     er_role => 'bridge',
