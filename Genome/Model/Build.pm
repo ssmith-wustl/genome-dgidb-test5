@@ -95,14 +95,15 @@ sub create {
 sub instrument_data_assignments {
     my $self = shift;
 
-    my @idas = Genome::Model::InstrumentDataAssignment->get(
-        model_id => $self->model_id,
-        first_build_id => {
-            operator => '<=',
-            value => $self->build_id,
-        },
-    );
-    return @idas;
+    my $model = $self->model;
+    my @model_idas = $model->instrument_data_assignments;
+    #When a build was deleted the first_build_id was set to null, this bug has been corrected however...
+    my @null_idas = grep { (!defined($_->first_build_id)) } @model_idas;
+    if (@null_idas) {
+        $self->warning_message('There are undefined first_build_ids for build '. $self->build_id .'! YOU SHOULD START A NEW BUILD.');
+    }
+    my @build_idas = grep { (!defined($_->first_build_id)) || ($_->first_build_id <= $self->build_id) } @model_idas;
+    return @build_idas;
 }
 
 sub events {
@@ -623,7 +624,7 @@ sub delete {
         first_build_id => $self->build_id
     );
     for my $idas (@idas_fix) {
-        @idas_fix->first_build_id($next_build_id);
+        $idas->first_build_id($next_build_id);
     }
                                                                                             
     #my @idas = $self->instrument_data_assignments;
