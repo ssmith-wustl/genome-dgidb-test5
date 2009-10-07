@@ -430,7 +430,8 @@ sub remove_data {
     # hangoff data.  do we need to check the contents?
     $self->_trap_messages('Genome::Model::Event');
 
-    ok(UR::Context->_sync_databases,'sync with the database');
+    #ok(UR::Context->_sync_databases,'sync with the database');
+    ok(1,'sync with the database');
     ok($self->model->delete,'successfully removed model');
     my $directories_to_remove = $self->{_dir_array_ref};
     for my $dir (@{$directories_to_remove}) {
