@@ -188,8 +188,9 @@ sub create_basic_mock_model {
 
     # Methods in base Genome::Model
     $self->mock_methods(
-        $model,
+        $model, # added inst data until it gets back into the class def
         (qw/
+            instrument_data
             running_builds current_running_build current_running_build_id
             completed_builds last_complete_build last_complete_build_id
             succeeded_builds last_succeeded_build last_succeeded_build_id
