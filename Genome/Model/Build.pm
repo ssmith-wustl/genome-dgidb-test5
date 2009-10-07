@@ -47,25 +47,36 @@ class Genome::Model::Build {
                                                     # which could update, and result in a new build
     ],
     has_many_optional => [
-        
-        from_build_links                  => { is => 'Genome::Model::Build::Link',
-                                                   reverse_id_by => 'to_build',
-                                                   doc => 'bridge table entries where this is the "to" build(used to retrieve builds this build is "from")'
-                                               },
-        from_builds                       => { is => 'Genome::Model::Build',
-                                                   via => 'from_build_links', to => 'from_build',
-                                                   doc => 'Genome builds that contribute "to" this build',
-                                               },
-        to_build_links                    => { is => 'Genome::Model::Build::Link',
-                                                   reverse_id_by => 'from_build',
-                                                   doc => 'bridge entries where this is the "from" build(used to retrieve builds builds this build is "to")'
-                                               },
-        to_builds                       => { is => 'Genome::Model::Build',
-                                                   via => 'to_build_links', to => 'to_build',
-                                                   doc => 'Genome builds this build contributes "to"',
-                                               },
-        attributes                        => { is => 'Genome::MiscAttribute', reverse_id_by => '_build', where => [ entity_class_name => 'Genome::Model::Build' ] },
-        metrics                           => { is => 'Genome::Model::Metric', reverse_id_by => 'build', doc => "Build metrics"},
+    # Inputs
+    inputs => {
+        is => 'Genome::Model::Build::Input',
+        reverse_as => 'build',
+        doc => 'Inputs that were assigned to a model when built.'
+    },
+    instrument_data => {
+        via => 'inputs',
+        where => [ name => 'instrument_data' ],
+        doc => 'Instrument data that were assigned to a model when built.'
+    },
+    #
+    from_build_links                  => { is => 'Genome::Model::Build::Link',
+        reverse_id_by => 'to_build',
+        doc => 'bridge table entries where this is the "to" build(used to retrieve builds this build is "from")'
+    },
+    from_builds                       => { is => 'Genome::Model::Build',
+        via => 'from_build_links', to => 'from_build',
+        doc => 'Genome builds that contribute "to" this build',
+    },
+    to_build_links                    => { is => 'Genome::Model::Build::Link',
+        reverse_id_by => 'from_build',
+        doc => 'bridge entries where this is the "from" build(used to retrieve builds builds this build is "to")'
+    },
+    to_builds                       => { is => 'Genome::Model::Build',
+        via => 'to_build_links', to => 'to_build',
+        doc => 'Genome builds this build contributes "to"',
+    },
+    attributes                        => { is => 'Genome::MiscAttribute', reverse_id_by => '_build', where => [ entity_class_name => 'Genome::Model::Build' ] },
+    metrics                           => { is => 'Genome::Model::Metric', reverse_id_by => 'build', doc => "Build metrics"},
     ], 
 
     schema_name => 'GMSchema',
@@ -90,6 +101,16 @@ sub create {
         $self->data_directory($dir);
     }
     return $self;
+}
+
+#< Instrument Data >#
+sub instument_data {
+    my $self = shift;
+
+    my @id;
+    
+
+    return @id;
 }
 
 sub instrument_data_assignments {
