@@ -244,6 +244,31 @@ sub alignment_bam_file_paths {
     }
 }
 
+sub alignment_map_file {
+    my $self = shift;
+    
+    my $merged_map_file = $self->alignment_directory."/all_sequences.map";
+    if (!-s $merged_map_file) { 
+        $self->status_message("File not found: $merged_map_file.  Generating.");
+        my @maps = $self->alignment_file_paths;
+        my $mm = Genome::Model::Tools::Maq::Mapmerge->create(use_version=>$self->aligner_version,
+                                                        input_map_files=>\@maps,
+                                                        output_map_file=>$merged_map_file,
+                                                        );
+       if  ( $mm->execute ) {
+            $self->status_message("Map files merged successfully.  Created: $merged_map_file");
+       } else {
+            $self->error_message("Could not merge files: ".join("\n",@maps));
+            $self->error_message("To target: $merged_map_file");
+            return;
+       }
+    
+    }
+    
+    return $merged_map_file;
+
+}
+
 #a glob for subsequence alignment files
 sub alignment_file_paths_for_subsequence_name {
     my $self = shift;
@@ -483,8 +508,8 @@ sub find_or_generate_alignment_data {
     } else {
         $self->status_message("Existing alignment data is available and deemed correct.");
         my $alignment_bam_file = $self->alignment_file;
-        
-        my $map_file = $self->alignment_directory .'/all_sequences.map';
+       
+        my $map_file = $self->alignment_map_file;
         my $maq_cmd = Genome::Model::Tools::Maq->path_for_maq_version($self->aligner_version) ." map (Parameters not available for previous alignment.)";
                 
         if (!-e $alignment_bam_file) {
@@ -788,7 +813,10 @@ sub create_combined_bam_file {
     my $groups_file = $self->alignment_directory."/groups.txt";
     
     $self->status_message("Writing group info to:".$groups_file);
-    
+   
+    #get rid of any old groups file laying around
+    unlink($groups_file) if (-e $groups_file); 
+   
     my $group_fh = Genome::Utility::FileSystem->open_file_for_writing($groups_file);
     print $group_fh $rg_string;
     print $group_fh $pg_string; 
@@ -800,7 +828,8 @@ sub create_combined_bam_file {
     my $unaligned_file = $self->unaligned_reads_list_path; 
     #output file
     my $unaligned_sam_file =  $self->alignment_directory."/unaligned.sam";
-    
+    unlink($unaligned_sam_file) if (-e $unaligned_sam_file);
+ 
     my $fh = Genome::Utility::FileSystem->open_file_for_reading("$unaligned_file");
     my $ua_fh = Genome::Utility::FileSystem->open_file_for_writing($unaligned_sam_file);
     $self->status_message("Opened file for reading: $unaligned_file");
