@@ -33,54 +33,54 @@ class Genome::Model {
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
         subject                 => { calculate_from => [ 'subject_name', 'subject_type' ],
-                                     calculate => q( 
-                                                if (not defined $subject_type) {
-                                                    # this should not happen
-                                                    return;
-                                                }
-                                                elsif ($subject_type eq 'dna_resource_item_name') {
-                                                    # wtf is this?
-                                                    return GSC::DNAResourceItem->get(dna_name => $subject_name);
-                                                }
-                                                elsif ($subject_type eq 'genomic_dna') {
-                                                    # 454 issue with 
-                                                    return;
-                                                    die "not sure how to handle sample type $subject_type";
-                                                }
-                                                elsif ($subject_type eq 'sample_name') {
-                                                    return Genome::Sample->get(name => $subject_name);
-                                                }
-                                                elsif ($subject_type eq 'species_name') {
-                                                    return Genome::Taxon->get(species_name => $subject_name); 
-                                                }
-                                                elsif ($subject_type eq 'sample_group') {
-                                                    return;
-                                                    die "not sure how to handle sample type $subject_type";
-                                                }
-                                                elsif ($subject_type eq 'library_name') {
-                                                    return;
-                                                    die "not sure how to handle sample type $subject_type";
-                                                }
-                                                elsif ($subject_type eq 'flow_cell_id') {
-                                                    return;
-                                                    die "not sure how to handle sample type $subject_type";
-                                                }
-                                                else {
-                                                    die "unknown sample type $subject_type!";
-                                                }
-                                            ) },
+            calculate => q( 
+            if (not defined $subject_type) {
+            # this should not happen
+            return;
+            }
+            elsif ($subject_type eq 'dna_resource_item_name') {
+            # wtf is this?
+            return GSC::DNAResourceItem->get(dna_name => $subject_name);
+            }
+            elsif ($subject_type eq 'genomic_dna') {
+            # 454 issue with 
+            return;
+            die "not sure how to handle sample type $subject_type";
+            }
+            elsif ($subject_type eq 'sample_name') {
+            return Genome::Sample->get(name => $subject_name);
+            }
+            elsif ($subject_type eq 'species_name') {
+            return Genome::Taxon->get(species_name => $subject_name); 
+            }
+            elsif ($subject_type eq 'sample_group') {
+            return;
+            die "not sure how to handle sample type $subject_type";
+            }
+            elsif ($subject_type eq 'library_name') {
+            return;
+            die "not sure how to handle sample type $subject_type";
+            }
+            elsif ($subject_type eq 'flow_cell_id') {
+            return;
+            die "not sure how to handle sample type $subject_type";
+            }
+            else {
+            die "unknown sample type $subject_type!";
+            }
+            ) },
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name               => { via => 'processing_profile' },
         events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1, 
-                                     doc => 'all events which have occurred for this model' },
+            doc => 'all events which have occurred for this model' },
         subject_class_name      => { is => 'VARCHAR2', len => 500, is_optional => 1 },
         subject_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
         reports                 => { via => 'last_succeeded_build' },
         reports_directory       => { via => 'last_succeeded_build' },
         is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
-    ],
-    has_optional => [
+        ],
+        has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
         creation_date                    => { is => 'TIMESTAMP', len => 6 },
         builds                           => { is => 'Genome::Model::Build', reverse_as => 'model', is_many => 1 },
@@ -88,36 +88,49 @@ class Genome::Model {
         build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
         gold_snp_path                    => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'gold_snp_path', entity_class_name => 'Genome::Model' ] },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
-                                              calculate => q($instrument_data_class_name->_dw_class), 
-                                              doc => 'the class of instrument_data assignable to this model in the dw' },
+            calculate => q($instrument_data_class_name->_dw_class), 
+            doc => 'the class of instrument_data assignable to this model in the dw' },
         instrument_data_class_name       => { calculate_from => 'sequencing_platform',
-                                              calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
-                                              doc => 'the class of instrument data assignable to this model' },
+            calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
+            doc => 'the class of instrument data assignable to this model' },
         test                             => { is => 'Boolean', is_transient => 1, 
-                                              doc => 'testing flag' },
+            doc => 'testing flag' },
         _printable_property_names_ref    => { is => 'array_ref', is_transient => 1 },
         comparable_normal_model_id       => { is => 'Number', len => 10 },
         sample_name                      => { is => 'Text', len => 255 },
         sequencing_platform              => { via => 'processing_profile' },
         last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
-    ],
-    has_many_optional => [
+        ],
+        has_many_optional => [
         ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },
         project_assignments               => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
         projects                          => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
         project_names                     => { is => 'Text', via => 'projects', to => 'name' },
         attributes                        => { is => 'Genome::MiscAttribute', reverse_as => '_model', where => [ entity_class_name => 'Genome::Model' ] },
-        instrument_data                   => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments' },
+        #< Inputs >#
+        inputs => {
+            is => 'Genome::Model::Input',
+            reverse_as => 'model',
+            doc => 'Inputs that were assigned to a model when built.'
+        },
+        # Instrument Data
+        #This will be the new instrument data properties, the rest of these props will go away
+        #instrument_data => {
+        #    via => 'inputs',
+        #    where => [ name => 'instrument_data' ],
+        #    doc => 'Instrument data that were assigned to a model when built.'
+        #},
         assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
         instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
         built_instrument_data             => { calculate => q( 
-                                                           return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
+            return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
             ) },
         unbuilt_instrument_data           => { calculate => q( 
-                                                           return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
+            return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
             ) },
         instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_as => 'model', 
-                                               doc => 'Each case of an instrument data being assigned to the model' },
+            doc => 'Each case of an instrument data being assigned to the model' },
+        #<>#
         from_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', 
                                                doc => 'bridge table entries where this is the \"to\" model(used to retrieve models this model is \"from\")' },
         from_models                       => { is => 'Genome::Model', via => 'from_model_links', to => 'from_model', 
@@ -339,7 +352,15 @@ sub get_all_possible_sample_names { #
 }
 
 #< Instrument Data >#
-#TODO move to class def, if possible
+sub instrument_data { 
+    my $self = shift;
+
+    my @id = map { $_->instrument_data } $self->instrument_data_assignments;
+    push @id, $self->inputs(name => 'instrument_data');
+
+    return @id;
+}
+
 sub compatible_instrument_data {
     my $self = shift;
     my %params;
