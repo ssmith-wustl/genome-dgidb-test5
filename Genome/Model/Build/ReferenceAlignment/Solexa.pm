@@ -53,7 +53,7 @@ sub calculate_estimated_kb_usage {
     my $processing_profile_name = $model->processing_profile_name;
 
     if ($processing_profile_name =~ /alignments only/i) {
-        $temporary_value = 102400; #10 MB
+        $temporary_value = 10240; #10 MiB
     }
     
     return $temporary_value; 
