@@ -253,6 +253,7 @@ die "Could not open mutation project file '$mut_file' for reading";
 }
 $parse_args{'version'} = $mutversion;
 print "Parsing mutation file...\n";
+$DB::single = 1;
 my $mutation = $parser->Parse ($fh, $mut_file, %parse_args);
 #  $parser->Write(*STDOUT);
 $fh->close;
