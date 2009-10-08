@@ -3,6 +3,7 @@ package Genome::InstrumentData::Alignment::Maq;
 use strict;
 use warnings;
 
+use File::Basename;
 use Genome;
 
 class Genome::InstrumentData::Alignment::Maq {
@@ -416,7 +417,9 @@ sub verify_alignment_data {
             }
         }
     }
-    unless ($verified_no_reads) {
+
+
+    unless ($verified_no_reads && $errors==0) {
         my $validate = Genome::Model::Tools::Maq::Mapvalidate->execute(
             map_file => $alignment_file,
             output_file => '/dev/null',
@@ -502,7 +505,7 @@ sub find_or_generate_alignment_data {
     $self->status_message('Samtools version: '.$self->samtools_version);
     $self->status_message('Picard version: '.$self->picard_version);
 
-    unless ($self->verify_alignment_data) {
+    if ($self->verify_alignment_data != 1) {
         $self->remove_alignment_directory_contents;
         $self->_run_aligner();
     } else {
@@ -816,7 +819,6 @@ sub create_combined_bam_file {
    
     #get rid of any old groups file laying around
     unlink($groups_file) if (-e $groups_file); 
-   
     my $group_fh = Genome::Utility::FileSystem->open_file_for_writing($groups_file);
     print $group_fh $rg_string;
     print $group_fh $pg_string; 
@@ -873,6 +875,14 @@ sub create_combined_bam_file {
            return;
     }
 
+    #MapToBam is clever and renames the output file for you.  Thanks MapToBam.
+    #Make sure that it doesn't exist prior, and if it does, erase it.
+    #Change MapToBam to allow for passing in a target output file
+    my ($base, $dir) = fileparse($alignment_file);
+    my ($root) = $base =~ /^(\S+)\.map/;
+    my $output_sam_file = $dir.$root.'.sam';
+    unlink ($output_sam_file) if (-e $output_sam_file); 
+
     my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
                     map_file    => $alignment_file,
                     use_version => $self->aligner_version,
@@ -881,6 +891,7 @@ sub create_combined_bam_file {
                     index_bam   => 0,
                     sam_only    => 1,
                 );
+
     my $aligned_sam_file = $map_to_bam->sam_file_path;
     my $rv = $map_to_bam->execute;
     if ($rv == 1) {
