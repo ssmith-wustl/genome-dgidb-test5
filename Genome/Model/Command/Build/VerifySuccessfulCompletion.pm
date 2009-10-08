@@ -77,16 +77,6 @@ sub execute {
     return 1;
 }
 
-sub fake_end {
-    my $self = shift;
-    
-    $self->date_completed(UR::Time->now);
-    my $handle_build_evisceration = sub {
-        $self->eviscerate_old_builds_for_this_model();
-    };
-    $self->create_subscription(method => 'commit', callback => $handle_build_evisceration);
-}
-
 sub eviscerate_old_builds_for_this_model {
     my $self = shift;
     my $subscription = shift;
