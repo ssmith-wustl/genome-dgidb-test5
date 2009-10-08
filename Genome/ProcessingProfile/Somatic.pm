@@ -35,7 +35,7 @@ class Genome::ProcessingProfile::Somatic{
 
 sub params_for_class{
     my $self = shift;
-    return qw//;
+    return qw/only_tier_1 min_mapping_quality min_somatic_quality/;
 }
 
 sub stages {
