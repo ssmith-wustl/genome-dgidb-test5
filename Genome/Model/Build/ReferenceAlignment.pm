@@ -55,14 +55,23 @@ sub delete {
 sub eviscerate {
     my $self = shift;
     
+    $self->status_message('Entering eviscerate for build:' . $self->id);
+    
     my $alignment_alloc = $self->accumulated_alignments_disk_allocation;
     my $alignment_path = ($alignment_alloc ? $alignment_alloc->absolute_path :  $self->accumulated_alignments_directory);
+    
+    if (!-d $alignment_path && !-l $self->accumulated_alignments_directory) {
+        $self->status_message("Nothing to do, alignment path doesn't exist and this build has no alignments symlink.  Skipping out.");
+        return;
+    }
 
     $self->status_message("Removing tree $alignment_path");
-    rmtree($alignment_path);
     if (-d $alignment_path) {
-        $self->error_message("alignment path $alignment_path still exists after evisceration attempt, something went wrong.");
-        return;
+        rmtree($alignment_path);
+        if (-d $alignment_path) {
+            $self->error_message("alignment path $alignment_path still exists after evisceration attempt, something went wrong.");
+            return;
+        }
     }
     
     if ($alignment_alloc) {

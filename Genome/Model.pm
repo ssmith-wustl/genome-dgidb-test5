@@ -87,6 +87,7 @@ class Genome::Model {
         build_statuses                   => { via => 'builds', to => 'master_event_status', is_many => 1 },
         build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
         gold_snp_path                    => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'gold_snp_path', entity_class_name => 'Genome::Model' ] },
+	keep_n_most_recent_builds	 => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
             calculate => q($instrument_data_class_name->_dw_class), 
             doc => 'the class of instrument_data assignable to this model in the dw' },
