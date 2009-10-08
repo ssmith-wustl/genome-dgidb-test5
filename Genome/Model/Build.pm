@@ -234,7 +234,7 @@ sub calculate_estimated_kb_usage {
     # actual size.  Whereas the previous behaviour 
     # (return undef) caused *no* allocation to be made.
     # Which it has been decided is a bigger problem.
-    return 524288000;
+    return 512000;
 }
 
 sub resolve_data_directory {
