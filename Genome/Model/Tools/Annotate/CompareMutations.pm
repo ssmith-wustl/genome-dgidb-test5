@@ -272,7 +272,7 @@ my $summary_file = $basename;
 unless (open(SUMMARY,">$summary_file")) {
 die "Could not open output file '$summary_file' for writing";
 }
-print SUMMARY "Hugo_Gene_Name\tTranscript\tChromosome\tStart_Position\tEnd_Position\tReference_Allele\tVariant_Allele\tAmino_Acid_Change\tVariant_Type\tCosmic_Results\tOMIM_Results\tWarning: Input file must input all transcript names for each gene or else COSMIC and OMIM results may be invalid\n";
+print SUMMARY "Hugo_Gene_Name\tTranscript\tChromosome\tStart_Position\tEnd_Position\tReference_Allele\tVariant_Allele\tAmino_Acid_Change\tVariant_Type\tCosmic_Results (AA listed as residue1, res_start, residue2)\tOMIM_Results\tWarning: Input file must input all transcript names for each gene or else COSMIC and OMIM results may be invalid\n";
 
 foreach my $hugo (keys %{$mutation}) {
 foreach my $sample (keys %{$mutation->{$hugo}}) {
@@ -376,12 +376,13 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 	   }
 
 #retrieve COSMIC match
-	   my $cosmic_find_type;
-	   if (exists($cosmic->{$cosmic_hugo})) {
-		   $cosmic_find_type = FindCosmic($cosmic,$cosmic_hugo,
-				   $res_start,$res_stop,
-				   $residue1,$residue2);
-	   }
+           my $cosmic_find_type;
+           my @aa_holder;
+           if (exists($cosmic->{$cosmic_hugo})) {
+               ($cosmic_find_type, @aa_holder) = FindCosmic($cosmic,$cosmic_hugo,
+                   $res_start,$res_stop,
+                   $residue1,$residue2);
+           }
 
 	   my $matched = 0;
 #Add COSMIC result to the results hash
@@ -394,11 +395,10 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 			   $results_hash{AA}{POSITION}{COSMIC}{$transcript}=": Amino Acid";
 		   } 
 		   else {
-			   $results_hash{AA}{NOVEL}{COSMIC}{$transcript}=": Amino Acid";
+			   $results_hash{AA}{NOVEL}{COSMIC}{$transcript}=": Amino Acid -> Known AA = @aa_holder";
 		   }
 	   } 
 	   else {
-#ex dir /gscuser/dlarson/code/database/cosmic/COSMIC/cosmic//ENSG00000214665.csv/
 		   if (-e "$cosmic_dir/$hugo\.csv") {
 			   $results_hash{AA}{NOVEL}{COSMIC}{$transcript}=": No Cosmic Amino Acid";
 		   } else {
@@ -497,7 +497,16 @@ sub FindCosmic {
 		print "1";
 		return $return_value;
 	}
+	my $aa_novel;
 	foreach my $sample (keys %{$cosmic->{$hugo}}) {
+		if (defined $cosmic->{$hugo}->{$sample}->{res_start}){
+			if ($cosmic->{$hugo}->{$sample}->{res_start} == $cosmic->{$hugo}->{$sample}->{res_stop}){
+			$aa_novel = $aa_novel." || ".$cosmic->{$hugo}->{$sample}->{residue1}.$cosmic->{$hugo}->{$sample}->{res_start}.$cosmic->{$hugo}->{$sample}->{residue2};
+			}
+			else {
+			$aa_novel = $aa_novel." || ".$cosmic->{$hugo}->{$sample}->{residue1}.$cosmic->{$hugo}->{$sample}->{res_start}."-".$cosmic->{$hugo}->{$sample}->{res_stop}.$cosmic->{$hugo}->{$sample}->{residue2};
+			}
+		}
 		if (exists($cosmic->{$hugo}->{$sample}->{res_start}) &&
 				exists($cosmic->{$hugo}->{$sample}->{res_stop}) &&
 				defined($cosmic->{$hugo}->{$sample}->{res_start}) &&
@@ -517,7 +526,7 @@ sub FindCosmic {
 			}
 		}
 	}
-	return $return_value;
+	return ($return_value,$aa_novel);
 }
 
 sub FindCosmicGenomic {
