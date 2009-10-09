@@ -1,0 +1,6 @@
+$Genome::Model::Tools::PooledBac::AddOverlappingReads::OPTS_SPEC = [
+          'project-dir=s',
+          undef,
+          'help!',
+          undef
+        ];
