@@ -111,9 +111,9 @@ sub execute {
             if($normal_reads_indel1 > 0) {
                 next;
             }
-            if($indel1_size == 1 || $indel1_size == -1) {
+            if($indel1_size <= 2 && $indel1_size >= -2) {
                 if($tumor_reads_indel2> 0) {
-                    if($tumor_reads_indel1/$tumor_reads_indel2 < .1) {
+                    if($tumor_reads_indel1/$tumor_reads_indel2 < (.2/(abs $indel1_size))) {
                         next;
                     }
                 }
@@ -129,9 +129,9 @@ sub execute {
             if($normal_reads_indel2 > 0) {
                 next;
             }
-            if($indel2_size == 1 || $indel2_size == -1) {
+            if($indel2_size <= 2 && $indel2_size >= -2) {
                 if($tumor_reads_indel1 > 0) {
-                    if($tumor_reads_indel2/$tumor_reads_indel1 < .1) {
+                    if($tumor_reads_indel2/$tumor_reads_indel1 < (.2 / (abs $indel2_size))) {
                         next;
                     }
                 }
