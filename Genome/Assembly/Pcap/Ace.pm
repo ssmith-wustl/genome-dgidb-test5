@@ -322,6 +322,13 @@ sub _build_index
 			foreach(my $i=1;$i<$old_contig->{read_count};$i++)
 			{
 				my $line = <$fh>;
+                my $first_three = substr($line, 0,3);
+                 if($first_three ne 'AF ')
+                 {
+                    print "Expected an AF but instead got $line";
+                    $fh->seek(- length $line,1);
+                    last;
+                 }
 				my @tokens = split(/[ {]/,$line);
             	my $end = (tell $fh);			
 				my $offset = $end - length $line;            
@@ -432,6 +439,11 @@ sub _build_index
 		elsif(substr($line,0,3) eq "QA ")
 		{
         	my $offset = (tell $fh) - length $line;
+            if(!defined $offset|| !defined $old_hash->{offset})
+            {
+                print $old_hash->{name},"\n";
+                print $line,"\n";
+            }            
         	$old_hash->{qa}{offset} = $offset;
         	$old_hash->{sequence}{length} = ($offset - 1) - $old_hash->{sequence}{offset};
 		    $old_hash->{length} = (tell $fh) - $old_hash->{offset};
@@ -878,7 +890,12 @@ sub get_contig
             print $self->sth_get->errstr."\n";
             $self->_sleep;
         }
-        if(my $temp = $self->sth_get->fetchrow_arrayref->[0] )
+        my $ref = $self->sth_get->fetchrow_arrayref;
+        if(!defined $ref)
+        {
+            die "Failed to fetch contig $contig_name\n";
+        }
+        if(my $temp = $ref->[0] )
         {
 			$contig_index = Storable::thaw($temp, );
             $contig_found = 1;
