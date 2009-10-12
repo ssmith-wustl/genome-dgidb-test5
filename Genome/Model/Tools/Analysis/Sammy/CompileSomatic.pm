@@ -318,7 +318,7 @@ sub parse_loh_variants
 
 sub call_sammy
 {
-	my $classpath = "/gscuser/dkoboldt/Software/Sammy2";
+	my $classpath = "/gscuser/dkoboldt/Software/Sammy3";
 	my $cmd = "java -Xms2000m -Xmx2000m -classpath $classpath Sammy ";
 	return($cmd);
 }

@@ -176,8 +176,8 @@ sub execute {                               # replace with real execution logic.
 
 sub call_sammy
 {
-	my $classpath = "/gscuser/dkoboldt/Software/Sammy2";
-	my $cmd = "java -Xms2000m -Xmx2000m -classpath $classpath Sammy ";
+	my $classpath = "/gscuser/dkoboldt/Software/Sammy3";
+	my $cmd = "java -Xms3000m -Xmx3000m -classpath $classpath Sammy ";
 	return($cmd);
 }
 
