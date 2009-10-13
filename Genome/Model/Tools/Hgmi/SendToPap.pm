@@ -95,6 +95,13 @@ UR::Object::Type->define(
                               doc => 'resume (crashed) workflow from previous invocation',
 			      is_optional => 1,
                              },
+        'no_load_biosql' => {
+                             is => 'Boolean',
+                             doc => 'Skip loading biosql',
+                             is_optional => 1,
+                             default => 0,
+                            },
+
     ]
 );
 
@@ -308,16 +315,19 @@ sub mgap_to_biosql
         return 1;
     }
 
-    IPC::Run::run(
-        \@command,
-        \undef,
-        '>',
-        \$cmd_out,
-        '2>',
-        \$cmd_err,
-    ) or croak "can't load biosql from mgap!!!\n$cmd_err SendToPap.pm";
+    if(! $self->no_load_biosql)
+    {
+        IPC::Run::run(
+            \@command,
+            \undef,
+            '>',
+            \$cmd_out,
+            '2>',
+            \$cmd_err,
+        ) or croak "can't load biosql from mgap!!!\n$cmd_err SendToPap.pm";
 
-    print STDERR $cmd_err,"\n";
+        print STDERR $cmd_err,"\n";
+    }
     return 1;
 
 }
@@ -358,18 +368,35 @@ sub do_pap_workflow
     }
 
     else {
-    
-        $output = run_workflow_lsf(
-                                   $xml_file,
-                                   'fasta file'           => $fasta_file,
-                                   'chunk size'           => 10,
-                                   'dev flag'             => $workflow_dev_flag,
-                                   'biosql namespace'     => 'MGAP',
-                                   'gram stain'           => $self->gram_stain(),
-                                   'blastp archive dir'   => $self->blastp_archive_dir(),
-                                   'interpro archive dir' => $self->interpro_archive_dir(),
-                                   'keggscan archive dir' => $self->keggscan_archive_dir(),
-                                  );
+        if($xml_file =~ /noblastp/)
+        {
+            print STDERR "skipping blastp in PAP.\n";
+            $output = run_workflow_lsf(
+                                       $xml_file,
+                                       'fasta file'           => $fasta_file,
+                                       'chunk size'           => 10,
+                                       'dev flag'             => $workflow_dev_flag,
+                                       'biosql namespace'     => 'MGAP',
+                                       'gram stain'           => $self->gram_stain(),
+                                       'interpro archive dir' => $self->interpro_archive_dir(),
+                                       'keggscan archive dir' => $self->keggscan_archive_dir(),
+                                      );
+
+        }
+        else
+        { 
+            $output = run_workflow_lsf(
+                                       $xml_file,
+                                       'fasta file'           => $fasta_file,
+                                       'chunk size'           => 10,
+                                       'dev flag'             => $workflow_dev_flag,
+                                       'biosql namespace'     => 'MGAP',
+                                       'gram stain'           => $self->gram_stain(),
+                                       'blastp archive dir'   => $self->blastp_archive_dir(),
+                                       'interpro archive dir' => $self->interpro_archive_dir(),
+                                       'keggscan archive dir' => $self->keggscan_archive_dir(),
+                                      );
+        }
 
     }
 
