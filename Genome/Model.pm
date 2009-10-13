@@ -79,6 +79,17 @@ class Genome::Model {
         reports                 => { via => 'last_succeeded_build' },
         reports_directory       => { via => 'last_succeeded_build' },
         is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
+        model_bridges           => {
+                                    is         => 'Genome::ModelGroupBridge',
+                                    reverse_as => 'model',
+                                    is_many    => 1
+                                   },
+        model_groups            => { 
+                                    is      => 'Genome::ModelGroup', 
+                                    via     => 'model_bridges',
+                                    to      => 'model_group',
+                                    is_many => 1,
+                                   }
         ],
         has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
