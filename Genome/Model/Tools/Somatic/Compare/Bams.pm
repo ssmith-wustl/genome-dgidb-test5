@@ -43,24 +43,28 @@ sub pre_execute {
     }
 
     # Set (hardcoded) defaults for tools that have defaults that do not agree with somatic pipeline
-    unless ($self->lookup_variants_report_mode) {
+    unless (defined $self->lookup_variants_report_mode) {
         $self->lookup_variants_report_mode("novel-only");
     }
     # Submitters to exclude from somatic pipeline as per dlarson. These guys submit cancer samples to dbsnp, or somesuch
-    unless ($self->lookup_variants_filter_out_submitters) {
+    unless (defined $self->lookup_variants_filter_out_submitters) {
         $self->lookup_variants_filter_out_submitters("SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG");
     }
-    unless ($self->annotate_no_headers) {
+    unless (defined $self->annotate_no_headers) {
         $self->annotate_no_headers(1);
     }
-    unless ($self->transcript_annotation_filter) {
+    unless (defined $self->transcript_annotation_filter) {
         $self->transcript_annotation_filter("top");
     }
-    unless ($self->only_tier_1) {
+    unless (defined $self->only_tier_1) {
         $self->only_tier_1(0);
     }
-    unless ($self->only_tier_1_indel) {
+    unless (defined $self->only_tier_1_indel) {
         $self->only_tier_1_indel(1);
+    }
+
+    unless (defined $self->skip_sv) {
+        $self->skip_sv(1);
     }
 
     # Verify all of the params that should have been provided or generated
@@ -73,11 +77,11 @@ sub pre_execute {
     }
 
     # The output files of indel pe step should go into the workflow directory
-    unless ($self->indelpe_data_directory) {
+    unless (defined $self->indelpe_data_directory) {
         $self->indelpe_data_directory($self->data_directory);
     }
     # Default ref seq
-    unless ($self->reference_fasta) {
+    unless (defined $self->reference_fasta) {
         $self->reference_fasta("/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa");
     }
 
@@ -108,6 +112,8 @@ sub filenames_to_generate {
     return qw(ucsc_file 
             sniper_snp_output
             sniper_indel_output
+            breakdancer_output_file
+            breakdancer_config_file
             snp_filter_output
             adaptor_output_snp
             dbsnp_output
@@ -143,6 +149,12 @@ __DATA__
   <link fromOperation="input connector" fromProperty="sniper_snp_output" toOperation="Somatic Sniper" toProperty="output_snp_file" />
   <link fromOperation="input connector" fromProperty="sniper_indel_output" toOperation="Somatic Sniper" toProperty="output_indel_file" />
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Somatic Sniper" toProperty="reference_file" />
+
+  <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Breakdancer" toProperty="normal_bam_file" />
+  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Breakdancer" toProperty="tumor_bam_file" />
+  <link fromOperation="input connector" fromProperty="breakdancer_output_file" toOperation="Breakdancer" toProperty="breakdancer_output" />
+  <link fromOperation="input connector" fromProperty="breakdancer_config_file" toOperation="Breakdancer" toProperty="config_output" />
+  <link fromOperation="input connector" fromProperty="skip_sv" toOperation="Breakdancer" toProperty="skip" />
 
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Indelpe Runner" toProperty="tumor_bam_file" />
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Indelpe Runner" toProperty="ref_seq_file" />
@@ -232,8 +244,14 @@ __DATA__
 
   <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_indel_output" />
 
+  <link fromOperation="Breakdancer" fromProperty="breakdancer_output" toOperation="output connector" toProperty="breakdancer_output" />
+
   <operation name="Somatic Sniper">
     <operationtype commandClass="Genome::Model::Tools::Somatic::Sniper" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Breakdancer">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::Breakdancer" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Indelpe Runner">
@@ -290,14 +308,17 @@ __DATA__
     <inputproperty isOptional="Y">tumor_snp_file</inputproperty>
     <inputproperty isOptional="Y">reference_fasta</inputproperty>
 
-
     <inputproperty isOptional="Y">only_tier_1</inputproperty>
     <inputproperty isOptional="Y">only_tier_1_indel</inputproperty>
+    <inputproperty isOptional="Y">skip_sv</inputproperty>
 
     <inputproperty isOptional="Y">data_directory</inputproperty>
     <inputproperty isOptional="Y">ucsc_file</inputproperty>
     <inputproperty isOptional="Y">sniper_snp_output</inputproperty>
     <inputproperty isOptional="Y">sniper_indel_output</inputproperty>
+
+    <inputproperty isOptional="Y">breakdancer_config_file</inputproperty>
+    <inputproperty isOptional="Y">breakdancer_output_file</inputproperty>
 
     <inputproperty isOptional="Y">indelpe_data_directory</inputproperty>
 
@@ -343,6 +364,8 @@ __DATA__
     <inputproperty isOptional="Y">annotate_output_indel</inputproperty>
 
     <outputproperty>tier_1_indel_output</outputproperty>
+
+    <outputproperty>breakdancer_output</outputproperty>
   </operationtype>
 
 </workflow>
