@@ -224,7 +224,7 @@ sub execute {                               # replace with real execution logic.
 	}
 
 #	my $compared_snps_status = $self->output_dir . "/" . $self->sample_name . ".snps.compared.status";
-	my $compared_snps_status = $self->output_dir . "/" . $self->sample_name . ".snps.compared.status.filtered";	
+	my $compared_snps_status = $self->output_dir . "/" . $self->sample_name . ".snps.compared.status";	
 
 	if(!(-e $compared_snps_status))
 	{
@@ -247,7 +247,7 @@ sub execute {                               # replace with real execution logic.
 		
 		my $somatic_file = $self->output_dir . "/" . $self->sample_name . ".snps.somatic";
 		
-		(my $num_somatic, my $num_somatic_dbSNP) = parse_variants_by_status($compared_snps_status, "Somatic", $somatic_file);
+		(my $num_somatic, my $num_somatic_dbSNP) = parse_variants_by_status("$compared_snps_status.filtered", "Somatic", $somatic_file);
 		print "$num_somatic Somatic variants ($num_somatic_dbSNP dbSNP)\n";
 
 		if($num_somatic)
@@ -260,7 +260,7 @@ sub execute {                               # replace with real execution logic.
 
 		my $loh_file = $self->output_dir . "/" . $self->sample_name . ".snps.loh";
 
-		(my $num_loh, my $num_loh_dbSNP) = parse_variants_by_status($compared_snps_status, "LOH", $loh_file);
+		(my $num_loh, my $num_loh_dbSNP) = parse_variants_by_status("$compared_snps_status.filtered", "LOH", $loh_file);
 		print "$num_loh LOH variants ($num_loh_dbSNP dbSNP)\n";
 
 		if($num_loh)
@@ -271,14 +271,135 @@ sub execute {                               # replace with real execution logic.
 		## GERMLINE ##
 
 		my $germline_file = $self->output_dir . "/" . $self->sample_name . ".snps.germline";
-		(my $num_germline, my $num_germline_dbSNP) = parse_variants_by_status($compared_snps_status, "Germline", $germline_file);
+		(my $num_germline, my $num_germline_dbSNP) = parse_variants_by_status("$compared_snps_status.filtered", "Germline", $germline_file);
 		print "$num_germline Germline variants ($num_germline_dbSNP dbSNP)\n";
 
 	}
 	else
 	{
-		die "No file of compared SNPs ($compared_snps) was generated!\n";
+		die "No file of compared SNPs ($compared_snps_status) was generated!\n";
 	}
+	
+	
+	##### INDEL PROCESSING ######
+
+
+	## Verify NORMAL INDEL ##
+
+	if(-e "$normal_pileup.indel")
+	{
+		$normal_indel = "$normal_pileup.indel";
+	}
+	else
+	{
+		$normal_indel = $self->output_dir . "/" . $self->sample_name . ".normal.indel";
+		
+		if(!(-e $normal_indel))
+		{
+			print "Calling INDELs in Normal...\n"; 
+			my $cmd = call_sammy() . "pileup2indel " . $normal_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$normal_indel";
+			system($cmd);
+		}
+	}
+
+
+	## Verify Tumor INDEL ##
+
+	if(-e "$tumor_pileup.indel")
+	{
+		$tumor_indel = "$tumor_pileup.indel";
+	}
+	else
+	{
+		$tumor_indel = $self->output_dir . "/" . $self->sample_name . ".tumor.indel";
+		
+		if(!(-e $tumor_indel))
+		{
+			print "Calling INDELs in Tumor...\n"; 
+			my $cmd = call_sammy() . "pileup2indel " . $tumor_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$tumor_indel";
+			system($cmd);
+		}
+	}
+
+
+	## Compare INDELs between normal and tumor ##
+	
+	my $compared_indels = $self->output_dir . "/" . $self->sample_name . ".indels.compared";
+
+	if(-e $normal_indel && -e $tumor_indel)
+	{
+		if(!(-e $compared_indels))
+		{
+			## Compare the INDELs ##
+			
+			my $cmd = call_sammy() . "compare " . $normal_indel . " " . $tumor_indel . " " . $compared_indels;
+	
+			print "Comparing INDELs between Normal and Tumor...\n";
+			system($cmd);
+		}
+	}
+	else
+	{
+		die "Missing Normal or Tumor INDEL file ($normal_indel or $tumor_indel)\n";
+	}
+
+#	my $compared_indels_status = $self->output_dir . "/" . $self->sample_name . ".indels.compared.status";
+	my $compared_indels_status = $self->output_dir . "/" . $self->sample_name . ".indels.compared.status";	
+
+	if(!(-e $compared_indels_status))
+	{
+		print "Calling variants as Germline or Somatic...\n";
+		my $cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_indels . " " . $compared_indels_status;		
+		system($cmd);
+	}
+
+
+	## Load dbindels ##
+	
+#	%dbsnp_variants = load_dbsnp($dbsnp_file);
+
+
+	## Proceed with comparison using UNFILTERED variant calls ##
+	
+	if(-e $compared_indels_status)
+	{
+		## SOMATIC ##
+		
+		my $somatic_file = $self->output_dir . "/" . $self->sample_name . ".indels.somatic";
+		
+		(my $num_somatic, my $num_somatic_dbSNP) = parse_variants_by_status("$compared_indels_status", "Somatic", $somatic_file);
+		print "$num_somatic Somatic INDEL variants ($num_somatic_dbSNP dbSNP)\n";
+
+		if($num_somatic)
+		{
+			run_annotation($somatic_file);
+		}
+
+		
+		## LOH ##
+
+		my $loh_file = $self->output_dir . "/" . $self->sample_name . ".indels.loh";
+
+		(my $num_loh, my $num_loh_dbSNP) = parse_variants_by_status("$compared_indels_status", "LOH", $loh_file);
+		print "$num_loh LOH variants ($num_loh_dbSNP dbSNP) (skipping annotation)\n";
+
+#		if($num_loh)
+#		{
+#			run_annotation($loh_file);
+#		}
+		
+		## GERMLINE ##
+
+		my $germline_file = $self->output_dir . "/" . $self->sample_name . ".indels.germline";
+		(my $num_germline, my $num_germline_dbSNP) = parse_variants_by_status("$compared_indels_status", "Germline", $germline_file);
+		print "$num_germline Germline variants ($num_germline_dbSNP dbSNP)\n";
+
+	}
+	else
+	{
+		die "No file of compared INDELs ($compared_indels) was generated!\n";
+	}	
+	
 }
 
 
@@ -321,7 +442,7 @@ sub parse_variants_by_status
 				my $status = $lineContents[12];
 				my $p_value = $lineContents[13];
 	
-				if($status && $status eq $desired_status && $p_value <= $min_p_value)
+				if($status && $status eq $desired_status)# && $p_value <= $min_p_value)
 				{
 					my $key = "$chrom\t$position";
 					
@@ -371,6 +492,22 @@ sub run_annotation
 	## Format SNPs for annotation ##
 
 	system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/format_snps_for_annotation.pl $variants_file $formatted_file");			
+
+	## Get lengths of files ##
+	
+	my $num_formatted = `cat $formatted_file | wc -l`;
+	chomp($num_formatted);
+	
+	if(-e $annotated_file)
+	{
+		my $num_annotated = `cat $annotated_file | wc -l`;
+		chomp($num_annotated);
+		
+		if($num_annotated < $num_formatted)
+		{
+			system("rm -rf $annotated_file");
+		}
+	}
 
 	if(!(-e $annotated_file))
 	{
