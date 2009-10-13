@@ -68,7 +68,7 @@ EOS
 sub execute { 
     my $self = shift;
     $DB::single = 1;
-    
+    print "Mapping Contigs to Assembly...\n";
     my $ref_sequence = $self->ref_sequence;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
@@ -90,7 +90,7 @@ sub execute {
     chdir($project_dir);
     Genome::Model::Tools::WuBlast::Xdformat::Create->execute(
         database => 'bac_region_db', 
-        fasta_files => [$self->project_dir.'/ref_seq.fasta'],
+        fasta_files => [$self->project_dir.'/ref_seq.fasta'],        
     ); 
     #build query file
     my $query_fasta_file = $self->project_dir.'/pooled_contigs.fasta';
@@ -132,7 +132,7 @@ sub parse_ref_seq_coords_file
         next unless length($line);
         next if($line=~/^\#/);
         next if($line=~/^\s*$/);
-        my ($token, $data) = $line =~ /(.*)\:\s*(.*)/;print $line,"\n";
+        my ($token, $data) = $line =~ /(.*)\:\s*(.*)/;
         $ref_seq_coords{$token} = $data;
         
     }

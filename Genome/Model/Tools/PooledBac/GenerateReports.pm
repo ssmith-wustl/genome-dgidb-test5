@@ -217,6 +217,7 @@ sub print_orphan_contigs_report
 ############################################################
 sub execute { 
     my $self = shift;
+    print "Generating Reports...\n";
     $DB::single = 1;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;

@@ -123,6 +123,7 @@ sub get_orphan_contig_names
 sub execute { 
     my $self = shift;
     $DB::single = 1;
+    print "Adding Linking Contigs...\n";
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
     my $phd_dir_or_ball = $self->phd_file_name_or_dir;
@@ -175,6 +176,7 @@ sub import_contigs_with_links
     {
         #find links based on contig name to start
         my ($sc_num, $ct_num) = $orphan =~ /Contig(\d+)\.(\d+)/;
+        next unless (defined $sc_num && defined $ct_num);        
         my $pre_ctg = "Contig$sc_num.".($ct_num -1);
         my $aft_ctg = "Contig$sc_num.".($ct_num+1);
         if(exists $match_list_hash{$pre_ctg} && 

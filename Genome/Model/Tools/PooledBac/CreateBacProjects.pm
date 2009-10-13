@@ -100,6 +100,7 @@ sub add_3730_reads
 ############################################################
 sub execute { 
     my ($self) = @_;
+    print "Creating Bac Projects...\n";
     my $project_dir = $self->project_dir;
     $DB::single = 1;
     chdir($project_dir);

@@ -38,6 +38,7 @@ EOS
 ############################################################
 sub execute { 
     my ($self) = @_;
+    print "Updating Seqmgr Projects...\n";
     my $project_dir = $self->project_dir;
     $DB::single = 1;
     chdir($project_dir);

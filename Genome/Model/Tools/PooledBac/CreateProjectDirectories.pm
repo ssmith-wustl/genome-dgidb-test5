@@ -52,9 +52,52 @@ sub help_detail {
 EOS
 }
 
+sub comp_hits
+{
+    return $a->{HSP_LENGTH} <=> $b->{HSP_LENGTH} if($a->{HSP_LENGTH} != $b->{HSP_LENGTH});
+    return $a->{_frac_identical}->{total} <=> $b->{_frac_identical}->{total};
+}
+
+sub comp_hit_lists
+{
+    my $c = $a->[0];
+    my $d = $b->[0];
+    return $c->{HSP_LENGTH} <=> $d->{HSP_LENGTH} if($c->{HSP_LENGTH} != $d->{HSP_LENGTH});
+    return $c->{_frac_identical}->{total} <=> $d->{_frac_identical}->{total};
+    
+}
+
+sub get_matching_contigs_list
+{
+    my ($self, $out) = @_;
+    #top sorted list of all contigs meeting cutoffs
+    #sort by length, then percent identity
+    #print contig name, bac name, length of match, percent identity
+    #QUERY_NAME, HIT_NAME, HSP_LENGTH, _frac_identical->total
+    my %match_contigs_list;
+    #group by contig name
+    foreach my $result (@{$out})
+    {
+        my @keys =  ('QUERY_NAME','HIT_NAME','HSP_LENGTH','_frac_identical');
+        my %hash;
+        %hash = map { $_ => $result->{$_} } @keys; 
+        push @{$match_contigs_list{$result->{QUERY_NAME}}}, \%hash;    
+    }
+    #for each contig name sort multiple hits by length, percent identity
+    foreach my $key (keys %match_contigs_list)
+    {
+        @{$match_contigs_list{$key}} = reverse sort comp_hits @{$match_contigs_list{$key}} if (@{$match_contigs_list{$key}} > 1);
+    }
+    #sort all contig group by length and percent identity of best matching hit for each contig
+    my @list = reverse sort comp_hit_lists values %match_contigs_list;
+    return \@list;
+}
+
+
 ############################################################
 sub execute { 
     my $self = shift;
+    print "Creating Project Directories...\n";
     $DB::single = 1;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
@@ -79,19 +122,20 @@ sub execute {
         $po = Genome::Assembly::Pcap::Phd->new(input_file => $phd_dir_or_ball,using_db => 1);
     }
     $self->error_message("Failed to open phd object") unless defined $po;
+    
+    my $list = $self->get_matching_contigs_list($out->{result});$out=undef;
     my %bac_contigs;
-    foreach my $result (@{$out->{result}})
+    foreach my $item (@{$list})
     {
-        my $hit_name = $result->{HIT_NAME};
-        my $query_name = $result->{QUERY_NAME}; 
-        $bac_contigs{$hit_name}->{$query_name} = 1;
+        my $hit_name = $item->[0]{HIT_NAME};
+        my $query_name = $item->[0]{QUERY_NAME}; 
+        push @{$bac_contigs{$hit_name}},$query_name;
     }
-
-    foreach my $hit_name(keys %bac_contigs)
+    
+    foreach my $hit_name (keys %bac_contigs)
     {
         my $bac_dir = $project_dir."/$hit_name/";
-        my @contig_names = keys %{$bac_contigs{$hit_name}};
-        #system("mkdir -p $bac_dir");
+        my @contig_names = @{$bac_contigs{$hit_name}};
         $self->error_message("Error creating directory $bac_dir") unless Genome::Utility::FileSystem->create_directory($bac_dir);
         my $old_dir = `pwd`;
         chdir($bac_dir);

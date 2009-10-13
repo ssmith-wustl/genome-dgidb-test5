@@ -39,6 +39,7 @@ EOS
 ############################################################
 sub execute { 
     my $self = shift;
+    print "Adding Overlapping Reads...\n";
     $DB::single = 1;
     my $project_dir = $self->project_dir;
     chdir($self->project_dir);
