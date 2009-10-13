@@ -84,7 +84,7 @@ sub _generate_quality_stats {
         $quality_stats_node->addChild( $self->_xml->createAttribute($attr, $params{$attr}) )
             or return;
     }
-    for my $read_set (keys %stats_files) {
+    for my $read_set (sort keys %stats_files) {
         my $read_set_node = $self->_xml->createElement('read-set')
             or return;
         $read_set_node->addChild( $self->_xml->createAttribute('read-set-name', $read_set) )
