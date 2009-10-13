@@ -82,25 +82,27 @@ sub HListConfigMini {
 					   );
     
     my $hlist = $hframe -> Scrolled('HList',
+                                    -scrollbars => 'oe',
 				    -header => 1, 
-				    -columns => $column+1,
+				    -columns => scalar(@headers),
 				    -selectmode => 'extended',
 				    -itemtype => 'text',
 				    -selectbackground => 'yellow',
 				    -relief => 'sunken',
-				    -borderwidth =>  4, 
+				    -borderwidth =>  2, 
 				    -font => '-*-times-medium-r-*-*-14-*-*-*-*-*-*-*',
-				    -scrollbars => 'osoe',
-				    -width => $width,
+				    #-width => $width / 8,
 				    -height => $height,
 				    ) -> pack(-expand=>'yes',
-					      #-fill=>'x'
+					      -fill=>'both'
 					      );
 
     
     for my $col (0 .. $column) {
-	
 	$hlist -> header('create',$col, -text => $headers[$col]);
+    }
+    if (scalar(@headers) == 1) {
+        $hlist->columnWidth(0, -char => ($width / 7.75));
     }
 
     return $hlist;
