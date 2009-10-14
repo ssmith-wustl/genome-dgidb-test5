@@ -191,6 +191,7 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG'
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_GROUP','MODEL_ID',2);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_GROUP','ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','NAME',4);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','ID',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -241,6 +242,7 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','TABLE','entity','2009-10-12 16:02:52','2009-10-13 11:26:25',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_GROUP','TABLE','bridge','2009-10-07 11:53:49','2009-10-07 14:16:31',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MODEL_GROUP','TABLE','entity','2009-10-07 11:53:01','2009-10-07 14:16:35',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','TABLE','entity','2009-10-14 09:51:43','2009-10-14 11:48:33',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -487,6 +489,18 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','FILTER_DESC','VARCHAR2','100','Y','2009-10-13 11:26:25',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','NAME','VARCHAR2','255','N','2009-10-13 11:26:25',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_INPUT','NAME','VARCHAR2','255','N','2009-10-13 11:26:19',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','USER_NAME','VARCHAR2','256','N','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','ID','NUMBER','11','N','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','SEQUENCING_PLATFORM','VARCHAR2','64','Y','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','READ_COUNT','NUMBER','20','Y','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','ORIGINAL_DATA_PATH','VARCHAR2','256','N','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','DESCRIPTION','VARCHAR2','512','Y','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','IMPORT_FORMAT','VARCHAR2','64','Y','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','IMPORT_SOURCE_NAME','VARCHAR2','64','Y','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','BASE_COUNT','NUMBER','20','Y','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','SAMPLE_NAME','VARCHAR2','64','Y','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','IMPORT_DATE','DATE','19','N','2009-10-14 11:48:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','SAMPLE_ID','NUMBER','20','N','2009-10-14 11:48:33',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

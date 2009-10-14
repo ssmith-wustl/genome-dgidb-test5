@@ -1,4 +1,4 @@
-package Genome::Model::Command::InstrumentData::Assign;
+package Genome::Model::Command::InstrumentData::Unassign;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Command::InstrumentData::Assign {
+class Genome::Model::Command::InstrumentData::Unassign {
     is => 'Genome::Model::Event',
     has => [
         model_id => {
@@ -27,7 +27,7 @@ class Genome::Model::Command::InstrumentData::Assign {
         all => {
             is => 'Boolean',
             default => 0,
-            doc => 'Assign all available unassigned instrument data to the model.'
+            doc => 'Unassign all available unassigned instrument data to the model.'
         },
         capture => {
             is => 'Boolean',
@@ -38,18 +38,12 @@ class Genome::Model::Command::InstrumentData::Assign {
             is => 'String',
             doc => 'Only assign capture data with the specified target (implies --capture)',
         },
-        filter => {
-            is => 'Text',
-            valid_values => ['forward-only','reverse-only'],
-        },
     ],
+    doc => "unassign instrument data to a model",
 };
 
 #########################################################
 
-sub help_brief {
-    return "Assign instrument data to a model";
-}
 
 sub help_detail {
     return help_brief();
@@ -104,9 +98,11 @@ sub execute {
     return $self->_list_compatible_instrument_data; # list compatable
 }
 
-#< Assign Instrument Data >#
-sub _assign_instrument_data {
+#< Unassign Instrument Data >#
+sub _unassign_instrument_data {
     my ($self, $instrument_data) = @_;
+
+    $DB::single = 1;
 
     # Check if already assigned
     my $existing_ida = Genome::Model::InstrumentDataAssignment->get(
@@ -117,7 +113,7 @@ sub _assign_instrument_data {
     if ( $existing_ida ) {
         $self->status_message(
             sprintf(
-                'Instrument data (id<%s> name<%s>) has already been assigned to model (id<%s> name<%s>)%s.',
+                'Found instrument data (id<%s> name<%s>) assigned to model (id<%s> name<%s>)%s.',
                 $existing_ida->instrument_data_id,
                 $existing_ida->run_name,
                 $self->model->id,
@@ -129,20 +125,29 @@ sub _assign_instrument_data {
                 )
             )
         );
+        if (my $first_build = $existing_ida->first_build) {
+            my @subsequent_builds = Genome::Model::Build->get(
+                model_id => $first_build->model_id,
+                "id >" => $first_build->id, 
+            );
+            for my $build ($first_build, @subsequent_builds) {
+                sprintf(
+                    'Abandoning build %d for model %s (%d)\n',
+                    $build->id,
+                    $build->model->name,
+                    $build->model->id
+                );
+                # Throws exceptions, which will prevent db commit if there are errors
+                $build->abandon;
+            }   
+        }
+        $existing_ida->delete;
         return 1;
     }
-
-    my $ida = Genome::Model::InstrumentDataAssignment->create(
-        model_id => $self->model->id,
-        instrument_data_id => $instrument_data->id,
-        filter_desc => $self->filter,
-        #first_build_id  => undef,  # set when we run the first build with this instrument data
-    );
-
-    unless ( $ida ) { 
+    else {
         $self->error_message(
             sprintf(
-                'Failed to add instrument data (id<%s> name<%s>) to model (id<%s> name<%s>).',
+                'Failed to find instrument data (id<%s> name<%s>) assigned to model (id<%s> name<%s>).',
                 $instrument_data->id,
                 $instrument_data->run_name,
                 $self->model->id,
@@ -152,20 +157,6 @@ sub _assign_instrument_data {
         return;
     }
 
-    $self->status_message(
-        sprintf(
-            'Instrument data (id<%s> name<%s>) assigned to model (id<%s> name<%s>)%s.',
-            $instrument_data->id,
-            $instrument_data->run_name,
-            $self->model->id,
-            $self->model->name,
-            (
-                $ida->filter_desc 
-                        ? (' with filter ' . $ida->filter_desc)
-                        : ''
-            )
-        )
-    );
 
     return 1;
 }
@@ -191,8 +182,8 @@ sub _assign_by_instrument_data_id {
     # Get it 
     my $instrument_data = $self->_get_instrument_data_for_id( $self->instrument_data_id );
 
-    # Assign it
-    return $self->_assign_instrument_data($instrument_data)
+    # Unassign it
+    return $self->_unassign_instrument_data($instrument_data)
 }
 
 sub _assign_by_instrument_data_ids {
@@ -216,9 +207,9 @@ sub _assign_by_instrument_data_ids {
         }
     }
 
-    # Assign 'em
+    # Unassign 'em
     for my $instrument_data ( @instrument_data ) {
-        $self->_assign_instrument_data($instrument_data)
+        $self->_unassign_instrument_data($instrument_data)
             or return;
     }
 
@@ -228,7 +219,7 @@ sub _assign_by_instrument_data_ids {
 sub _assign_all_instrument_data {
     my $self = shift;
 
-    # Assign all unassigned if requested 
+    # Unassign all unassigned if requested 
     $self->status_message("Attempting to assign all available instrument data");
     
     my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
@@ -270,7 +261,7 @@ sub _assign_all_instrument_data {
             
         }
         
-        $self->_assign_instrument_data($id)
+        $self->_unassign_instrument_data($id)
             or return;
     }
 
@@ -309,5 +300,5 @@ sub _list_compatible_instrument_data {
 
 1;
 
-#$HeadURL$
-#$Id$
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Command/InstrumentData/Unassign.pm $
+#$Id: Unassign.pm 48952 2009-07-16 02:12:44Z mjohnson $
