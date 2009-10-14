@@ -83,23 +83,24 @@ $module =~ s/::/\//g;
 $module .= '.pm';
 my $pp_path = $INC{$module};
 $pp_path =~ s/$module//;
-$pp_path .= 'Genome/Model';
-for my $target ( glob("$pp_path/*pm") ) {
-    $target =~ s#$pp_path/##;
+my $base_path = $pp_path;
+$pp_path .= 'Genome/ProcessingProfile';
+for my $target ( glob("$base_path/Genome/ProcessingProfile/*pm") ) {
+    $target =~ s#$base_path\/Genome\/ProcessingProfile/##;
     $target =~ s/\.pm//;
-    my $target_class = 'Genome::Model::' . $target;
-    next unless $target_class->isa('Genome::Model');
+    my $target_class = 'Genome::ProcessingProfile::' . $target;
+    next unless $target_class->isa('Genome::ProcessingProfile');
     my $target_meta = $target_class->get_class_object;
     unless ( $target_meta ) {
         eval("use $target_class;");
         die "$@\n" if $@;
         $target_meta = $target_class->get_class_object;
     }
-    next if $target_class->get_class_object->is_abstract;
+    #next if $target_class->get_class_object->is_abstract;
     my $subclass = 'Genome::Model::Command::Define::' . $target;
 
     # Do not autogenerate this if it has a module defined 
-    if (-e $pp_path . '/Command/Define/' . $target . '.pm') {
+    if (-e $base_path . 'Genome/Model/Command/Define/' . $target . '.pm') {
         #print "skipping generating class for $target since a module is under $pp_path/Command/Define/\n";
     }
     else {
