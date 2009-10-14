@@ -330,7 +330,12 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 	   my %results_hash;
 #parse the amino acid string
 	   my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = MG::Validate::AminoAcidChange::Check($aa_change);
-	   next if(!$residue2 || $residue2 eq ' '); #skip silent mutations
+	   if(!$residue2 || $residue2 eq ' '){
+		print "Skipping Silent Mutation";
+		my $createspreadsheet = "$hugo\t$transcript\t$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$Variant_Type\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
+		print SUMMARY "$createspreadsheet\n";
+		next; #skip silent mutations
+	   }
 		   my $cosmic_hugo = CosmicHugo($cosmic,$hugo);
 	   if (!defined($aa_change) || $aa_change eq 'NULL') {
 ##try with genomic
@@ -468,25 +473,6 @@ sub CosmicHugo {
 	return '';
 }
 
-#sub CosmicHugo {
-#    my ($cosmic, $hugo) = @_;
-#    foreach my $key (keys %{$cosmic}) {
-#    	if ($key eq $hugo) {
-#		return $hugo;
-#   	}
-#    	my $uc_hugo = uc($hugo);
-#	if ($key eq $uc_hugo) {
-#		return $uc_hugo;
-#	}
-#	my $uc_key = uc($key);
-#	if ($uc_key) eq $uc_hugo) {
-#		return $key;
-#	}
-#	
-#    }
-#}
-
-
 sub FindCosmic {
 	my ($cosmic, $hugo,
 			$res_start, $res_stop, $residue1, $residue2) = @_;
@@ -498,34 +484,49 @@ sub FindCosmic {
 		return $return_value;
 	}
 	my $aa_novel;
+	my $aa_novel2;
 	foreach my $sample (keys %{$cosmic->{$hugo}}) {
 		if (defined $cosmic->{$hugo}->{$sample}->{res_start}){
 			if ($cosmic->{$hugo}->{$sample}->{res_start} == $cosmic->{$hugo}->{$sample}->{res_stop}){
-			$aa_novel = $aa_novel." || ".$cosmic->{$hugo}->{$sample}->{residue1}.$cosmic->{$hugo}->{$sample}->{res_start}.$cosmic->{$hugo}->{$sample}->{residue2};
+			$aa_novel2 = $aa_novel2." || ".$cosmic->{$hugo}->{$sample}->{residue1}.$cosmic->{$hugo}->{$sample}->{res_start}.$cosmic->{$hugo}->{$sample}->{residue2};
 			}
 			else {
-			$aa_novel = $aa_novel." || ".$cosmic->{$hugo}->{$sample}->{residue1}.$cosmic->{$hugo}->{$sample}->{res_start}."-".$cosmic->{$hugo}->{$sample}->{res_stop}.$cosmic->{$hugo}->{$sample}->{residue2};
+			$aa_novel2 = $aa_novel2." || ".$cosmic->{$hugo}->{$sample}->{residue1}.$cosmic->{$hugo}->{$sample}->{res_start}."-".$cosmic->{$hugo}->{$sample}->{res_stop}.$cosmic->{$hugo}->{$sample}->{residue2};
+			}
+
+			my @aa_novel = ( split (/ \|+ /, $aa_novel2));
+			my %counts = ();
+			my @countfinal;
+			for (@aa_novel) {
+			   $counts{$_}++;
+			}
+			foreach my $keys (keys %counts) {
+			   @countfinal = (@countfinal,"$keys ($counts{$keys})");
+			   $aa_novel = join(" || ",@countfinal);
 			}
 		}
+		# Test that it at least matches position
 		if (exists($cosmic->{$hugo}->{$sample}->{res_start}) &&
 				exists($cosmic->{$hugo}->{$sample}->{res_stop}) &&
 				defined($cosmic->{$hugo}->{$sample}->{res_start}) &&
 				defined($cosmic->{$hugo}->{$sample}->{res_stop}) &&
 				$cosmic->{$hugo}->{$sample}->{res_start} == $res_start &&
 				$cosmic->{$hugo}->{$sample}->{res_stop} == $res_stop) {
-# It at least matches position
 			$return_value = 'position';
+			# Test that it matches both
 			if (exists($cosmic->{$hugo}->{$sample}->{residue1}) &&
 					exists($cosmic->{$hugo}->{$sample}->{residue2}) &&
 					defined($cosmic->{$hugo}->{$sample}->{residue1}) &&
 					defined($cosmic->{$hugo}->{$sample}->{residue2}) &&
 					uc($cosmic->{$hugo}->{$sample}->{residue1}) eq uc($residue1) &&
 					uc($cosmic->{$hugo}->{$sample}->{residue2}) eq uc($residue2)) {
-# It matches both
 				return 'position_aminoacid';
 			}
 		}
 	}
+	$aa_novel =~ s/^\s+//;
+	$aa_novel =~ s/^\(1\)\s\|+//g;
+	$aa_novel =~ s/^\s+//;
 	return ($return_value,$aa_novel);
 }
 
@@ -539,20 +540,19 @@ sub FindCosmicGenomic {
 		return $return_value;
 	}
 	foreach my $sample (keys %{$cosmic->{$hugo}}) {
+		# Test that it at least matches position
 		if (exists($cosmic->{$hugo}->{$sample}->{genome_start}) &&
 				exists($cosmic->{$hugo}->{$sample}->{genome_stop}) &&
 				defined($cosmic->{$hugo}->{$sample}->{genome_start}) &&
 				defined($cosmic->{$hugo}->{$sample}->{genome_stop}) &&
 				$cosmic->{$hugo}->{$sample}->{genome_start} == $genomic_start &&
 				$cosmic->{$hugo}->{$sample}->{genome_stop} == $genomic_stop) {
-# It at least matches position
 			$return_value = 'position';
+			# Test that it matches both
 			if (exists($cosmic->{$hugo}->{$sample}->{nucleotide}) &&
 					defined($cosmic->{$hugo}->{$sample}->{nucleotide})) {
-
 				my ($start,$stop,$type_length,$type,$reference,$mutant) = parse_nucleotide($cosmic->{$hugo}->{$sample}->{nucleotide});
 				if($reference eq $nt1 && $mutant eq $nt2) {
-# It matches both
 					return 'position_nucleotide';
 				}
 			}
@@ -562,8 +562,7 @@ sub FindCosmicGenomic {
 }
 
 sub FindOMIM {
-	my ($omim, $hugo,
-			$res_start, $res_stop, $residue1, $residue2) = @_;
+	my ($omim, $hugo,$res_start, $res_stop, $residue1, $residue2) = @_;
 
 	my $return_value = 'no_match';
 	unless (exists($omim->{$hugo})) {
@@ -571,16 +570,16 @@ sub FindOMIM {
 		return $return_value;
 	}
 	foreach my $sample (keys %{$omim->{$hugo}}) {
+		# Test that it at least matches position
 		if (exists($omim->{$hugo}{$sample}{$res_start})) {
-# It at least matches position
 			$return_value = 'position';
+			# Test that it matches both
 			if (exists($omim->{$hugo}{$sample}{$res_start}{residue1}) &&
 					exists($omim->{$hugo}{$sample}{$res_start}{residue2}) &&
 					defined($omim->{$hugo}{$sample}{$res_start}{residue1}) &&
 					defined($omim->{$hugo}{$sample}{$res_start}{residue2}) &&
 					uc($omim->{$hugo}{$sample}{$res_start}{residue1}) eq uc($residue1) &&
 					uc($omim->{$hugo}{$sample}{$res_start}{residue2}) eq uc($residue2)) {
-# It matches both
 				return 'position_aminoacid';
 			}
 		}
