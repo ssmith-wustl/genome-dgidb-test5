@@ -128,30 +128,24 @@ sub parse_ref_seq_coords_file
     while ($line = $fh->getline)
     {
         chomp $line;
-        last if($line =~ /^\>/);
+        last if($line eq 'REF_SEQ_COORDINATES');
         next unless length($line);
         next if($line=~/^\#/);
         next if($line=~/^\s*$/);
         my ($token, $data) = $line =~ /(.*)\:\s*(.*)/;
         $ref_seq_coords{$token} = $data;
         
-    }
-    
+    }    
     my $bac_name;
-    do
+    while ($line = $fh->getline)
     {
-        if(!($line =~ /^\>/))
-        {
-            chomp $line;
-            my %hash;@hash{ 'chromosome','start','end'} = split /\s+/, $line;
-            $ref_seq_coords{$bac_name} = \%hash;
-        }
-        else
-        {
-            chomp $line;
-            ($bac_name) = $line =~ /\>\s*(.*)/;
-        }    
-    } while ($line = $fh->getline);
+        chomp $line;
+        my @tokens = split/\s+/,$line;
+        $bac_name = $tokens[0];
+        my %hash;
+        @hash{ 'chromosome','start','end'} = @tokens[1..3];
+        $ref_seq_coords{$bac_name} = \%hash;        
+    } 
     
     return \%ref_seq_coords;
 }
