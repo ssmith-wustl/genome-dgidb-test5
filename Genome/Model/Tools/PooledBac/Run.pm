@@ -42,7 +42,25 @@ class Genome::Model::Tools::PooledBac::Run {
             is_optional => 1,
             doc => "location of the finished pooled BAC projects"        
         },
-         
+        sff_files =>
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "location of sff_files used in the original 454 assembly",
+        },
+        queue_type =>        
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "can be either short, big_mem, or long, default is long",     
+            valid_values => ['long','bigmem','short']   
+        },
+        retry_count =>
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "This is the number of retries for a failed job.  The default is 1.",        
+        },
     ]
 };
 
@@ -68,6 +86,9 @@ $DB::single =1;
     my $ace_file_name = $self->ace_file_name || 'Pcap.454Contigs.ace.1';
     my $ref_seq_coords_file = $self->ref_seq_file;
     my $phd_ball = $self->phd_ball_name;
+    my $sff_files = $self->sff_files;
+    my $queue_type = $self->queue_type;
+    my $retry_count = $self->retry_count;
 
     $self->error_message("Error running map-contigs-to-assembly") unless
     Genome::Model::Tools::PooledBac::MapContigsToAssembly->execute(ref_sequence=>$ref_seq_coords_file,pooled_bac_dir=>$pooled_bac_dir,pooled_bac_ace_file => $ace_file_name, project_dir => $project_dir);
@@ -87,7 +108,7 @@ $DB::single =1;
 
 # change to assemble bac projects
     $self->error_message("Error assembling bac projects") unless
-    Genome::Model::Tools::PooledBac::CreateBacProjects->execute(project_dir => $project_dir);
+    Genome::Model::Tools::PooledBac::CreateBacProjects->execute(project_dir => $project_dir, sff_files => $sff_files, queue_type => $queue_type, retry_count => $retry_count);
 
 #    $self->error_message("Error updating seqmgr") unless
 #    Genome::Model::Tools::PooledBac::UpdateSeqMgr->execute(project_dir => $project_dir);
