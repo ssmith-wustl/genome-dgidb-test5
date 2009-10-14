@@ -361,6 +361,20 @@ sub success {
 
 }
 
+sub abandon {
+    my ($self, @errors) = @_;
+
+    my $build_event = $self->build_event;
+    unless ($build_event) {
+        die $self->error_message('No build event found for build '. $self->id);
+    }
+    unless ($build_event->abandon) {
+        die $self->error_message('Failed to abandon build '. $self->id);
+    }
+
+    return 1;
+}
+
 #< Reports >#
 sub reports {
     my $self = shift;

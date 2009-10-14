@@ -38,15 +38,16 @@ sub execute {
         $self->error_message('Build not found for model id '. $self->model_id .' and build id '. $self->build_id);
         return;
     }
-    my $build_event = $build->build_event;
-    unless ($build_event) {
-        $self->error_message('No build event found for build '. $self->build_id);
+    my $rv = eval { $build->abandon; };
+    unless ($rv and not $@) {
+        $self->error_message(
+            'Failed to abandon build '
+            . $self->build_id 
+            . ($@ ? " ERRORS: $@" : "")
+        );
         return;
     }
-    unless ($build_event->abandon) {
-        $self->error_message('Failed to abandon build '. $self->build_id);
-        return;
-    }
+     
     return 1;
 }
 
