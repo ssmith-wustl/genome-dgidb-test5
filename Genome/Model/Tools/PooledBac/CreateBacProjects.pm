@@ -127,8 +127,8 @@ sub execute {
     chdir($project_dir);
     #my @sff_files = ('/gscmnt/232/finishing/projects/Fosmid_two_pooled_Combined/Fosmid_two_pooled70_combined_trim-1.0_090417.newb/Fosmid_two_pooled70_combined_Data/input_output_data/FSP3MSF01.sff',
     #                 '/gscmnt/232/finishing/projects/Fosmid_two_pooled_Combined/Fosmid_two_pooled70_combined_trim-1.0_090417.newb/Fosmid_two_pooled70_combined_Data/input_output_data/FSP3MSF02.sff');
-    my $sff_string = $self->sff_files;
-    $sff_string =~ tr/,/ / if defined $sff_string;
+    my $sff_string = $self->sff_files if(defined $self->sff_files && length $self->sff_files);
+    $sff_string =~ tr/,/ / if (defined $sff_string);
     print "sff string is $sff_string\n" if defined $sff_string;
 
     my $seqio = Bio::SeqIO->new(-format => 'fasta', -file => 'ref_seq.fasta');
@@ -155,7 +155,8 @@ sub execute {
         else
         {
             $run_newbler = "mapasm runAssembly -o newbler_assembly -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna reference_reads.fasta pooledreads.fasta";
-        }        
+            $self->warning_message("No sff files are provided...\nAre you sure you want to run newbler without providing sff files?\n");
+        }
         my $command_fh = IO::File->new(">command.sh");
         $self->error_message("Failed to create file handle for $project_dir/$name/command.sh\n") unless defined $command_fh;
         print $command_fh "$run_newbler\n";
