@@ -49,9 +49,7 @@ class Genome::Model::Tools::Somatic::Breakdancer{
 };
 
 my %BREAKDANCER_VERSIONS = (
-    # FIXME FIXME FIXME
-	'0.0.1r59' => '/gscuser/boberkfe/breakdancer',
-    # FIXME FIXME FIXME
+	'0.0.1r59' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-0.0.1r59',
 );
 
 sub help_brief {
