@@ -97,11 +97,12 @@ for my $target ( glob("$pp_path/*pm") ) {
     }
     next if $target_class->get_class_object->is_abstract;
     my $subclass = 'Genome::Model::Command::Define::' . $target;
-    #print Dumper({mod=>$module, path=>$pp_path, target=>$target, target_class=>$target_class,subclass=>$subclass});
 
-    # Do not autogenerate this if it is an exception (things with actual modules for define)
-    my @targets_to_skip = ("Somatic","GenotypeMicroarray");
-    unless (grep {$target eq $_} @targets_to_skip) {
+    # Do not autogenerate this if it has a module defined 
+    if (-e $pp_path . '/Command/Define/' . $target . '.pm') {
+        #print "skipping generating class for $target since a module is under $pp_path/Command/Define/\n";
+    }
+    else {
         no strict 'refs';
         class {$subclass} {
             is => __PACKAGE__,
