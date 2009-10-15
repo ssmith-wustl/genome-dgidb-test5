@@ -335,7 +335,7 @@ sub get_instrument_data_node {
 
     my $self = shift;
     my $object = shift;
-    $DB::single = 1;
+
     #print Dumper($object);
 
     my $id = $self->anode("instrument_data","id",$object->id);
@@ -462,18 +462,24 @@ sub get_event_node {
     $event_node->addChild( $self->tnode("error_log_file",$err_log_file));
 
 	 #
-	 # get alignment director[y|ies]
+	 # get alignment director[y|ies] and filter description
 	 #
 	 # get list of instrument data assignments
 	 my @idas = $event->model->instrument_data_assignments;
 
 	 if (scalar @idas > 0) {
-		# iterate through and find the one that has the instrument_data_id we're looking for
+		# find the events with matching instrument_data_ids
 		my @adirs;
 		for my $ida (@idas) {
+		  $DB::single = 1;
 		  my $alignment = $ida->alignment;
 		  if ($alignment->instrument_data_id == $event->instrument_data_id) {
 			 push(@adirs, $alignment->alignment_directory);
+
+			 # look for a filter description
+			 if ($ida->filter_desc) {
+				$event_node->addChild( $self->tnode("filter_desc", $ida->filter_desc));
+			 }
 		  }
 		}
 
@@ -485,8 +491,9 @@ sub get_event_node {
 			 $i++;
 		  }
 		} else {
-		  $event_node->addChild( $self->tnode("alignment_directory", @adirs[0]));
+		  $event_node->addChild( $self->tnode("alignment_directory", $adirs[0]));
 		}
+
 	 }
     return $event_node;
 }
