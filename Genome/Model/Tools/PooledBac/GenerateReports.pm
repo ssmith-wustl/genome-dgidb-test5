@@ -99,7 +99,7 @@ sub print_matching_contigs_report
     my ($self, $list, $report_name) = @_;
     #print list
     my $fh = IO::File->new('>'.$report_name);
-    $self->error_message("Failed to open $report_name for writing.") unless defined $fh;
+    $self->error_message("Failed to open $report_name for writing.") and die unless defined $fh;
     foreach my $result (@$list)
     {
         foreach my $res (@{$result})
@@ -114,7 +114,7 @@ sub print_multiple_hits_report
     my ($self, $list, $report_name) = @_;
     #print list
     my $fh = IO::File->new('>'.$report_name);
-    $self->error_message("Failed to open $report_name for writing.") unless defined $fh;
+    $self->error_message("Failed to open $report_name for writing.")  and die unless defined $fh;
     foreach my $result (@$list)
     {
         next unless (@{$result} > 1);
@@ -144,7 +144,7 @@ sub print_close_match_report
     my $l_pcutoff = 0.05;#length percent difference cutoff, if there is a 5% or less diff in length
     my $m_pcutoff = 0.05;#matching percent difference cutoff, if there is a 5% or less diff in identitiy
     my $fh = IO::File->new('>'.$report_name);
-    $self->error_message("Failed to open $report_name for writing.") unless defined $fh;
+    $self->error_message("Failed to open $report_name for writing.")  and die unless defined $fh;
     foreach my $result (@$list)
     {
         next unless (@{$result} > 1);
@@ -206,7 +206,7 @@ sub print_orphan_contigs_report
 {
     my ($self, $orphan_contigs, $report_name) = @_;
     my $fh = IO::File->new('>'.$report_name);
-    $self->error_message("Failed to open $report_name for writing.") unless defined $fh;
+    $self->error_message("Failed to open $report_name for writing.")  and die unless defined $fh;
     foreach my $name (@{$orphan_contigs})
     {
         $fh->print ($name,"\n");
@@ -225,15 +225,15 @@ sub execute {
     $phd_dir_or_ball = $pooled_bac_dir.'/consed/phdball_dir/phd.ball.1' unless $phd_dir_or_ball;
     my $blastfile = $project_dir."/bac_region_db.blast";
     my $reports_dir = $project_dir."/reports/";
-    $self->error_message("Failed to create directory $reports_dir") unless Genome::Utility::FileSystem->create_directory($reports_dir);
+    $self->error_message("Failed to create directory $reports_dir")  and die unless Genome::Utility::FileSystem->create_directory($reports_dir);
     #`mkdir -p $reports_dir`;
     my $out = Genome::Model::Tools::WuBlast::Parse->execute(blast_outfile => $blastfile, parse_outfile => $reports_dir."blast_report");
-   $self->error_message("Failed to parse $blastfile") unless defined $out; 
+   $self->error_message("Failed to parse $blastfile")  and die unless defined $out; 
 
     my $ace_file = $pooled_bac_dir.'/consed/edit_dir/'.$self->ace_file_name;
-    $self->error_message("Ace file $ace_file does not exist") unless (-e $ace_file);
+    $self->error_message("Ace file $ace_file does not exist")  and die unless (-e $ace_file);
     my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
-    $self->error_message("Failed to open ace file") unless defined $ao;
+    $self->error_message("Failed to open ace file")  and die unless defined $ao;
     my $po;
     if(-d $phd_dir_or_ball)
     {
@@ -243,7 +243,7 @@ sub execute {
     {
         $po = Genome::Assembly::Pcap::Phd->new(input_file => $phd_dir_or_ball,using_db => 1);
     }
-    $self->error_message("Failed to open phd object") unless defined $po;
+    $self->error_message("Failed to open phd object")  and die unless defined $po;
     my $list = $self->get_matching_contigs_list($out->{result});$out=undef;
     $self->print_matching_contigs_report($list, $reports_dir."matching_contigs");
     $self->print_close_match_report($list,$reports_dir."ambiguous_matching_contigs");

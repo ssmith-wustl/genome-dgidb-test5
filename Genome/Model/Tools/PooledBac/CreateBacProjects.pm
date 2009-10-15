@@ -57,9 +57,9 @@ sub dump_sff_read_names
 {
     my ($self, $input_fasta) = @_;
     my $input_fasta_fh = IO::File->new("$input_fasta");
-    $self->error_message("Failed to open $input_fasta") unless defined $input_fasta_fh;
+    $self->error_message("Failed to open $input_fasta") and die unless defined $input_fasta_fh;
     my $read_names_fh = IO::File->new(">read_names");
-    $self->error_message("Filed to open read_name for writing") unless defined $read_names_fh;
+    $self->error_message("Filed to open read_name for writing") and die unless defined $read_names_fh;
     while(<$input_fasta_fh>) {
         next unless />/;
         chomp;
@@ -132,7 +132,7 @@ sub execute {
     print "sff string is $sff_string\n" if defined $sff_string;
 
     my $seqio = Bio::SeqIO->new(-format => 'fasta', -file => 'ref_seq.fasta');
-    $self->error_message("Failed to open $project_dir/ref_seq.fasta") unless defined $seqio;
+    $self->error_message("Failed to open $project_dir/ref_seq.fasta") and die unless defined $seqio;
     my @jobs;
     while (my $seq = $seqio->next_seq)
     {    
@@ -158,7 +158,7 @@ sub execute {
             $self->warning_message("No sff files are provided...\nAre you sure you want to run newbler without providing sff files?\n");
         }
         my $command_fh = IO::File->new(">command.sh");
-        $self->error_message("Failed to create file handle for $project_dir/$name/command.sh\n") unless defined $command_fh;
+        $self->error_message("Failed to create file handle for $project_dir/$name/command.sh\n") and die unless defined $command_fh;
         print $command_fh "$run_newbler\n";
         system ("chmod 755 ./command.sh");
         my %job_params = (

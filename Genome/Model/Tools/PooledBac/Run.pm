@@ -90,24 +90,24 @@ $DB::single =1;
     my $queue_type = $self->queue_type;
     my $retry_count = $self->retry_count;
 
-    $self->error_message("Error running map-contigs-to-assembly") unless
+    $self->error_message("Error running map-contigs-to-assembly")  and die unless
     Genome::Model::Tools::PooledBac::MapContigsToAssembly->execute(ref_sequence=>$ref_seq_coords_file,pooled_bac_dir=>$pooled_bac_dir,pooled_bac_ace_file => $ace_file_name, project_dir => $project_dir);
     
-    $self->error_message("Error creating project directories") unless
+    $self->error_message("Error creating project directories")  and die unless
     Genome::Model::Tools::PooledBac::CreateProjectDirectories->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name,phd_file_name_or_dir => $phd_ball, project_dir => $project_dir);
 
-   $self->error_message("Error generating reports") unless
+   $self->error_message("Error generating reports")  and die unless
     Genome::Model::Tools::PooledBac::GenerateReports->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name,phd_file_name_or_dir => $phd_ball, project_dir => $project_dir);
 
-    $self->error_message("Error running add-linking-contigs") unless
+    $self->error_message("Error running add-linking-contigs")  and die unless
     Genome::Model::Tools::PooledBac::AddLinkingContigs->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name,phd_file_name_or_dir => $phd_ball, project_dir => $project_dir);
 
 ## change to add reference reads
-    $self->error_message("Error running add-overlapping-reads") unless
+    $self->error_message("Error running add-overlapping-reads")  and die unless
     Genome::Model::Tools::PooledBac::AddOverlappingReads->execute(project_dir => $project_dir);
 
 # change to assemble bac projects
-    $self->error_message("Error assembling bac projects") unless
+    $self->error_message("Error assembling bac projects")  and die unless
     Genome::Model::Tools::PooledBac::CreateBacProjects->execute(project_dir => $project_dir, sff_files => $sff_files, queue_type => $queue_type, retry_count => $retry_count);
 
 #    $self->error_message("Error updating seqmgr") unless

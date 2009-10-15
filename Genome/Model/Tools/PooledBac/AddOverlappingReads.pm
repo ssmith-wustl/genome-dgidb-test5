@@ -45,9 +45,9 @@ sub execute {
     chdir($self->project_dir);
     
     my $seqio = Bio::SeqIO->new(-format => 'fasta', -file => 'ref_seq.fasta');
-    $self->error_message("Failed to open fasta file ref_seq.fasta") unless defined $seqio;
+    $self->error_message("Failed to open fasta file ref_seq.fasta") and die unless defined $seqio;
     my $qualio = Bio::SeqIO->new(-format => 'qual', -file => 'ref_seq.fasta.qual');
-    $self->error_message("Failed to open qual file ref_seq.fasta.qual") unless defined $qualio;
+    $self->error_message("Failed to open qual file ref_seq.fasta.qual") and die unless defined $qualio;
     my $old_dir = getcwd;
     while (my $seq = $seqio->next_seq)
     {
@@ -60,9 +60,9 @@ sub execute {
         my $qual_frags = create_qual_frags($qual,1000,800);
         
         my $fasta_fh  = IO::File->new(">reference_reads.fasta");
-        $self->error_message("Failed to open file $project_dir/$name/reference_reads.fasta") unless defined $fasta_fh;
+        $self->error_message("Failed to open file $project_dir/$name/reference_reads.fasta") and die unless defined $fasta_fh;
         my $qual_fh = IO::File->new(">reference_reads.fasta.qual");
-        $self->error_message("Failed to open file $project_dir/$name/reference_reads.fasta.qual") unless defined $qual_fh;
+        $self->error_message("Failed to open file $project_dir/$name/reference_reads.fasta.qual") and die unless defined $qual_fh;
         for(my $i = 0;$i<@{$base_frags};$i++)
         {
             my $base_frag = $base_frags->[$i];

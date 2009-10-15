@@ -43,13 +43,13 @@ sub execute {
     $DB::single = 1;
     chdir($project_dir);
     my $seqio = Bio::SeqIO->new(-format => 'fasta', -file => 'ref_seq.fasta');
-    $self->error_message("Erroring opening ref_seq_fasta") unless defined $seqio;
+    $self->error_message("Erroring opening ref_seq_fasta") and die unless defined $seqio;
     App->init;
     while (my $seq = $seqio->next_seq)
     {    
         my $clone_name = $seq->display_id;
         my $p=GSC::Project->get(name => $clone_name);
-        $self->error_message("Error retrieving project for $clone_name") unless defined $p;
+        $self->error_message("Error retrieving project for $clone_name")  and die unless defined $p;
     
         unless ((-e "$project_dir/$clone_name") && (-d "$project_dir/$clone_name"))
         {

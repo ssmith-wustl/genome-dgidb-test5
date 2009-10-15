@@ -131,13 +131,13 @@ sub execute {
     my $blastfile = $project_dir."/bac_region_db.blast";
     my $reports_dir = $project_dir."/reports/";
     my $orphan_dir = $project_dir."/orphan_project/";
-    $self->error_message("Failed to create directory $reports_dir\n") unless Genome::Utility::FileSystem->create_directory($reports_dir);
+    $self->error_message("Failed to create directory $reports_dir\n") and die unless Genome::Utility::FileSystem->create_directory($reports_dir);
     my $out = Genome::Model::Tools::WuBlast::Parse->execute(blast_outfile => $blastfile, parse_outfile => $reports_dir."blast_report");
     
 
     my $ace_file = $pooled_bac_dir.'/consed/edit_dir/'.$self->ace_file_name;
     my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
-    $self->error_message("Failed to create ace object.\n") unless defined $ao;
+    $self->error_message("Failed to create ace object.\n") and die unless defined $ao;
     my $po;
     if(-d $phd_dir_or_ball)
     {
@@ -147,7 +147,7 @@ sub execute {
     {
         $po = Genome::Assembly::Pcap::Phd->new(input_file => $phd_dir_or_ball,using_db => 1);
     }
-    $self->error_message("Failed to create phd object.\n") unless defined $po;
+    $self->error_message("Failed to create phd object.\n") and die unless defined $po;
     my $list = $self->get_matching_contigs_list($out->{result});$out=undef;
     my $all_contig_names = $ao->get_contig_names;
     my $matching_contig_names = $self->get_matching_contig_names($list);
@@ -166,7 +166,7 @@ sub import_contigs_with_links
     if(-e $orphans_without_links)
     {
         my $temp_ao= Genome::Assembly::Pcap::Ace->new(input_file => $orphans_without_links);
-        $self->error_message("Failed to open orphan ace file $orphans_without_links") unless defined $temp_ao;
+        $self->error_message("Failed to open orphan ace file $orphans_without_links") and die unless defined $temp_ao;
         $orphan_list = $temp_ao->get_contig_names;        
     }
     my %orphan_list = map { $_,1; } @{$orphan_list};
@@ -196,7 +196,7 @@ sub import_contigs_with_links
         }    
     }
     my $out_ao = Genome::Assembly::Pcap::Ace->new;
-    $self->error_message("Failed to create ace object.") unless defined $out_ao;
+    $self->error_message("Failed to create ace object.") and die unless defined $out_ao;
     foreach my $orphan (keys %orphan_list)
     {
         $out_ao->add_contig($ao->get_contig($orphan));
@@ -207,11 +207,11 @@ sub import_contigs_with_links
 sub create_orphan_dir
 {
     my ($self, $ao, $po, $orphan_list, $orphan_dir) = @_;
-    $self->error_message("Failed to create $orphan_dir") unless Genome::Utility::FileSystem->create_directory($orphan_dir);
+    $self->error_message("Failed to create $orphan_dir") and die unless Genome::Utility::FileSystem->create_directory($orphan_dir);
     #`mkdir -p $orphan_dir`;
     my $ace_file_name = $orphan_dir."orphan_contigs.ace.1";
     my $orphan_ao = Genome::Assembly::Pcap::Ace->new;
-    $self->error_message("Failed to create ace object") unless defined $orphan_ao;
+    $self->error_message("Failed to create ace object") and die unless defined $orphan_ao;
     foreach my $contig_name (@$orphan_list)
     {
         my $contig = $ao->get_contig($contig_name);
@@ -226,9 +226,9 @@ sub write_fasta_from_contig_names
     my ($self, $ao, $fasta_fn, $qual_fn, $po, $contig_names) = @_;
 
     my $fasta_fh = IO::File->new(">>$fasta_fn");
-    $self->error_message("File $fasta_fn failed to open for writing.") unless $fasta_fh;
+    $self->error_message("File $fasta_fn failed to open for writing.") and die unless $fasta_fh;
     my $qual_fh = IO::File->new(">>$qual_fn");
-    $self->error_message("File $qual_fn failed to open for writing.") unless $qual_fh;
+    $self->error_message("File $qual_fn failed to open for writing.") and die unless $qual_fh;
          
     foreach my $contig_name (@{$contig_names})
     {

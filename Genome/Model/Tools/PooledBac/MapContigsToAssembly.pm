@@ -72,7 +72,7 @@ sub execute {
     my $ref_sequence = $self->ref_sequence;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
-    $self->error_message("Error creating directory $project_dir") unless Genome::Utility::FileSystem->create_directory($project_dir);
+    $self->error_message("Error creating directory $project_dir") and die unless Genome::Utility::FileSystem->create_directory($project_dir);
     
     my $ace_file = ''; 
     my $fasta_file = '';
@@ -82,7 +82,7 @@ sub execute {
     $ace_file = $self->pooled_bac_dir.'/consed/edit_dir/'.$self->pooled_bac_ace_file if($self->pooled_bac_ace_file); 
     #if a pooled bac fasta file is provided, we use it instead of creating fasta from the ace file above
     $fasta_file = $self->project_dir.'/'.$self->pooled_bac_fasta_file if($self->pooled_bac_fasta_file); 
-    $self->error_message("Need either an ace file or pooled bac fasta file to be specified.\n") unless (-e $ace_file || -e $fasta_file);
+    $self->error_message("Need either an ace file or pooled bac fasta file to be specified.\n") and die unless (-e $ace_file || -e $fasta_file);
     my $ref_fasta_file =$self->project_dir.'/ref_seq.fasta';
     #build fasta containing reference sequence regions to be blasted against
     $self->build_fasta_file($self->ref_sequence) if(!(-e $ref_fasta_file&&-e "$ref_fasta_file.qual"));
@@ -118,9 +118,9 @@ sub parse_ref_seq_coords_file
 {
     my ($self) = @_;
     my $ref_coords_file = $self->ref_sequence;
-    $self->error_message("$ref_coords_file does not exist") unless -e $ref_coords_file;
+    $self->error_message("$ref_coords_file does not exist") and die unless -e $ref_coords_file;
     my $fh = IO::File->new($ref_coords_file);
-    $self->error_message("Error opening $ref_coords_file.") unless defined $fh;
+    $self->error_message("Error opening $ref_coords_file.") and die unless defined $fh;
     
     my %ref_seq_coords;
     my $name;
@@ -141,6 +141,7 @@ sub parse_ref_seq_coords_file
     {
         chomp $line;
         my @tokens = split/\s+/,$line;
+        next unless ((scalar @tokens) == 4);
         $bac_name = $tokens[0];
         my %hash;
         @hash{ 'chromosome','start','end'} = @tokens[1..3];
@@ -155,11 +156,11 @@ sub ace2fasta
     my ($self,$infile, $outfile) = @_;
 
     my $infh = IO::File->new($infile);
-    $self->error_message("Error opening $infile.") unless defined $infile;
+    $self->error_message("Error opening $infile.") and die unless defined $infile;
     my $outfh = IO::File->new(">$outfile");
-    $self->error_message("Error opening $outfile.") unless defined $outfh;
+    $self->error_message("Error opening $outfile.") and die unless defined $outfh;
     my $reader = GSC::IO::Assembly::Ace::Reader->new($infh);
-    $self->error_message("Error creating ace reader for $infile.") unless defined $reader;
+    $self->error_message("Error creating ace reader for $infile.") and die unless defined $reader;
     while(my $line = $infh->getline)
     {
         if($line =~ /^CO/)
@@ -183,7 +184,7 @@ sub get_seq
     my ($self, $ref_seq_dir,$bac_name, $chromosome, $ref_start, $ref_stop) = @_;
     my $ref_seq_fasta = $ref_seq_dir."/$chromosome.fasta";
     my $fh = IO::File->new($ref_seq_fasta);
-    $self->error_message("Error opening $ref_seq_fasta") unless defined $fh;
+    $self->error_message("Error opening $ref_seq_fasta") and die unless defined $fh;
     my $line = <$fh>;
     my $seq_string;
     while(my $line = <$fh>)
@@ -218,9 +219,9 @@ sub build_fasta_file
     my $ref_seq_dir = delete $data->{REFERENCE_ASSEMBLY};
     
     my $fh = IO::File->new(">$ref_seq_fasta");
-    $self->error_message("Failed to open $ref_seq_fasta for writing.") unless defined $fh;
+    $self->error_message("Failed to open $ref_seq_fasta for writing.") and die unless defined $fh;
     my $qfh = IO::File->new(">$ref_seq_fasta.qual");
-    $self->error_message("Failed to open $ref_seq_fasta.qual for writing.") unless defined $qfh;
+    $self->error_message("Failed to open $ref_seq_fasta.qual for writing.") and die unless defined $qfh;
     
     foreach my $bac_name (keys %{$data})
     {

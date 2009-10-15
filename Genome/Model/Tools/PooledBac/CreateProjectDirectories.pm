@@ -104,14 +104,14 @@ sub execute {
     my $phd_dir_or_ball = $self->phd_file_name_or_dir;
     $phd_dir_or_ball = $pooled_bac_dir.'/consed/phdball_dir/phd.ball.1' unless $phd_dir_or_ball;
     my $blastfile = $project_dir."/bac_region_db.blast";
-    $self->error_message("$blastfile does not exist") unless (-e $blastfile);
+    $self->error_message("$blastfile does not exist") and die unless (-e $blastfile);
     my $out = Genome::Model::Tools::WuBlast::Parse->execute(blast_outfile => $blastfile);   
-    $self->error_message("Failed to parse $blastfile") unless defined $out;
+    $self->error_message("Failed to parse $blastfile") and die unless defined $out;
 
     my $ace_file = $pooled_bac_dir.'/consed/edit_dir/'.$self->ace_file_name;
-    $self->error_message("Ace file $ace_file does not exist") unless (-e $ace_file);
+    $self->error_message("Ace file $ace_file does not exist") and die unless (-e $ace_file);
     my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
-    $self->error_message("Failed to open ace file") unless defined $ao;
+    $self->error_message("Failed to open ace file") and die unless defined $ao;
     my $po;
     if(-d $phd_dir_or_ball)
     {
@@ -136,7 +136,7 @@ sub execute {
     {
         my $bac_dir = $project_dir."/$hit_name/";
         my @contig_names = @{$bac_contigs{$hit_name}};
-        $self->error_message("Error creating directory $bac_dir") unless Genome::Utility::FileSystem->create_directory($bac_dir);
+        $self->error_message("Error creating directory $bac_dir") and die unless Genome::Utility::FileSystem->create_directory($bac_dir);
         my $old_dir = `pwd`;
         chdir($bac_dir);
         $self->write_fasta_from_contig_names($ao,$bac_dir."/pooledreads.fasta",$bac_dir."/pooledreads.fasta.qual",$po, \@contig_names);    
@@ -149,9 +149,9 @@ sub write_fasta_from_contig_names
     my ($self, $ao, $fasta_fn, $qual_fn, $po, $contig_names) = @_;
 
     my $fasta_fh = IO::File->new(">$fasta_fn");
-    $self->error_message("File $fasta_fn failed to open for writing.") unless defined $fasta_fh;
+    $self->error_message("File $fasta_fn failed to open for writing.") and die unless defined $fasta_fh;
     my $qual_fh = IO::File->new(">$qual_fn");
-    $self->error_message("File $qual_fn failed to open for writing.") unless defined $qual_fh;     
+    $self->error_message("File $qual_fn failed to open for writing.") and die unless defined $qual_fh;     
     foreach my $contig_name (@{$contig_names})
     {
         write_reads_to_fasta($ao, $fasta_fh, $qual_fh, $po, $contig_name);
