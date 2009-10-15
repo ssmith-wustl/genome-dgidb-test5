@@ -22,7 +22,7 @@ sub column_order {
 }
 
 sub sort_order {
-    return ['gene_id'];
+    return ['gene_id', 'source'];
 }
 
 sub skip_first_line {
