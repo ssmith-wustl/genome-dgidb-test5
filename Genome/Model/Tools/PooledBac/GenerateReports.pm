@@ -56,7 +56,7 @@ EOS
 sub comp_hits
 {
     return $a->{HSP_LENGTH} <=> $b->{HSP_LENGTH} if($a->{HSP_LENGTH} != $b->{HSP_LENGTH});
-    return $a->{_frac_identical}->{total} <=> $b->{_frac_identical}->{total};
+    return ($a->{IDENTICAL}/$a->{HSP_LENGTH} )<=> ($b->{IDENTICAL}/$b->{HSP_LENGTH});
 }
 
 sub comp_hit_lists
@@ -64,7 +64,7 @@ sub comp_hit_lists
     my $c = $a->[0];
     my $d = $b->[0];
     return $c->{HSP_LENGTH} <=> $d->{HSP_LENGTH} if($c->{HSP_LENGTH} != $d->{HSP_LENGTH});
-    return $c->{_frac_identical}->{total} <=> $d->{_frac_identical}->{total};
+    return ($c->{IDENTICAL}/$c->{HSP_LENGTH} )<=> ($d->{IDENTICAL}/$d->{HSP_LENGTH});
     
 }
 
@@ -74,12 +74,12 @@ sub get_matching_contigs_list
     #top sorted list of all contigs meeting cutoffs
     #sort by length, then percent identity
     #print contig name, bac name, length of match, percent identity
-    #QUERY_NAME, HIT_NAME, HSP_LENGTH, _frac_identical->total
+    #QUERY_NAME, HIT_NAME, HSP_LENGTH, IDENTICAL
     my %match_contigs_list;
     #group by contig name
     foreach my $result (@{$out})
     {
-        my @keys =  ('QUERY_NAME','HIT_NAME','HSP_LENGTH','_frac_identical');
+        my @keys =  ('QUERY_NAME','HIT_NAME','HSP_LENGTH','IDENTICAL');
         my %hash;
         %hash = map { $_ => $result->{$_} } @keys; 
         push @{$match_contigs_list{$result->{QUERY_NAME}}}, \%hash;    
@@ -104,7 +104,7 @@ sub print_matching_contigs_report
     {
         foreach my $res (@{$result})
         {
-            $fh->print ($res->{QUERY_NAME}, ' ',$res->{HIT_NAME},' ',$res->{HSP_LENGTH},' ',$res->{_frac_identical}->{total},"\n");        
+            $fh->print ($res->{QUERY_NAME}, ' ',$res->{HIT_NAME},' ',$res->{HSP_LENGTH},' ',$res->{IDENTICAL}/$res->{HSP_LENGTH},"\n");        
         }    
     }
 }
@@ -132,7 +132,7 @@ sub print_multiple_hits_report
                 $name =~ s/./ /g;
                 $fh->print ($name);
             }
-            $fh->print ("\t",$res->{HIT_NAME},' ',$res->{HSP_LENGTH},' ',$res->{_frac_identical}->{total},"\n");
+            $fh->print ("\t",$res->{HIT_NAME},' ',$res->{HSP_LENGTH},' ',$res->{IDENTICAL}/$res->{HSP_LENGTH},"\n");
         }    
     }
 }
@@ -152,8 +152,8 @@ sub print_close_match_report
         my $res1 = $result->[1];
         my $max_length = max($res0->{HSP_LENGTH},$res1->{HSP_LENGTH});
         my $l_pdiff = abs (($res0->{HSP_LENGTH}-$res1->{HSP_LENGTH})/$max_length);
-        my $pid0 = $res0->{_frac_identical}->{total};
-        my $pid1 = $res1->{_frac_identical}->{total};
+        my $pid0 = $res0->{IDENTICAL}/$res0->{HSP_LENGTH};
+        my $pid1 = $res1->{IDENTICAL}/$res1->{HSP_LENGTH};
         my $max_id = max($pid0,$pid1);
         my $m_pdiff = abs(($pid0-$pid1)/$max_id);
         next unless (($l_pdiff < $l_pcutoff) && ($m_pdiff < $m_pcutoff));
@@ -170,7 +170,7 @@ sub print_close_match_report
                 $name =~ s/./ /g;
                 $fh->print ($name);
             }
-            $fh->print ("\t",$res->{HIT_NAME},' ',$res->{HSP_LENGTH},' ',$res->{_frac_identical}->{total},"\n");
+            $fh->print ("\t",$res->{HIT_NAME},' ',$res->{HSP_LENGTH},' ',$res->{IDENTICAL}/$res->{HSP_LENGTH},"\n");
         }    
     }
 }

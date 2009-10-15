@@ -160,6 +160,7 @@ sub execute {
         my $command_fh = IO::File->new(">command.sh");
         $self->error_message("Failed to create file handle for $project_dir/$name/command.sh\n") and die unless defined $command_fh;
         print $command_fh "$run_newbler\n";
+        print $command_fh "/bin/mv $project_dir/$name/newbler_assembly/consed/edit_dir/454Contigs.ace.1 $project_dir/$name/newbler_assembly/consed/edit_dir/$name.ace.1\n";
         system ("chmod 755 ./command.sh");
         my %job_params = (
             pp_type => 'lsf',
