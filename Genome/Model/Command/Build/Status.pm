@@ -9,9 +9,9 @@ use XML::LibXSLT;
 
 class Genome::Model::Command::Build::Status {
     is => ['Command'],
-    has => [ 
-            build_id => { 
-                is => 'String', 
+    has => [
+            build_id => {
+                is => 'String',
                 doc => 'Required id of build to report status on.',
             },
             build   => {
@@ -31,28 +31,28 @@ class Genome::Model::Command::Build::Status {
             },
             section => {
                 is => 'String',
-                doc => "NOT IMPLEMENTED YET.  The sub-section of the document to return.  Options are 'all', 'events', etc.", 
-            }, 
+                doc => "NOT IMPLEMENTED YET.  The sub-section of the document to return.  Options are 'all', 'events', etc.",
+            },
             display_output => {
                 is => 'Integer',
                 default_value => 1,
-                doc => "A flag which lets the user supress the display of XML output to the screen.", 
-            }, 
+                doc => "A flag which lets the user supress the display of XML output to the screen.",
+            },
             output_format => {
                 is => 'Text',
                 default_value => 'xml',
-                doc => "Parameter which allows the user to specify HTML as an output option.",  
+                doc => "Parameter which allows the user to specify HTML as an output option.",
             },
             xsl_file => {
                 is => 'Text',
-                doc => "Parameter which allows the user to specify the XSL file to transform the output by.",  
+                doc => "Parameter which allows the user to specify the XSL file to transform the output by.",
             },
 
             use_lsf_file => {
                 is => 'Integer',
                 default_value => 0,
-                doc => "A flag which lets the user retrieve LSF status from a temporary file rather than using a bjobs command to retrieve the values.", 
-            }, 
+                doc => "A flag which lets the user retrieve LSF status from a temporary file rather than using a bjobs command to retrieve the values.",
+            },
             _doc => {
                   is => 'XML::LibXML::Document',
                   doc => "The XML tool used to create all nodes of the output XML tree.",
@@ -68,7 +68,7 @@ class Genome::Model::Command::Build::Status {
 
 
    ],
-    doc => "show the status of a new/running/complete build",    
+    doc => "show the status of a new/running/complete build",
 };
 
 sub sub_command_sort_position { 1 }
@@ -82,18 +82,18 @@ sub execute  {
         my %job_status_hash = $self->load_lsf_job_status();
         $self->_job_to_status(\%job_status_hash);
     }
-   
-    #create the XML doc and add it to the object 
+
+    #create the XML doc and add it to the object
     my $doc = XML::LibXML->createDocument();
     $self->_doc($doc);
 
     #create the xml nodes and fill them up with data
     #root node
     my $build_status_node = $doc->createElement("build-status");
-    my $time = UR::Time->now(); 
+    my $time = UR::Time->now();
     $build_status_node->addChild( $doc->createAttribute("generated-at",$time) );
-  
-    #build node 
+
+    #build node
     my $buildnode = $self->get_build_node;
     $build_status_node->addChild($buildnode);
 
@@ -108,10 +108,10 @@ sub execute  {
             $self->instance($ops[0]);
         }
     }
-    
+
     if ($self->instance) {
         # silly UR tricks to get everything i'm interested in loaded into the cache in 2 queries
-        
+
 #        my @exec_ids = map {
 #            $_->current_execution_id
 #        } (Workflow::Store::Db::Operation::Instance->get(
@@ -131,19 +131,19 @@ sub execute  {
         my @ex = Workflow::Store::Db::Operation::InstanceExecution->get(
             instance_id => { operator => '[]', value=>\@exec_ids }
         );
-    
+
         $buildnode->addChild( $self->get_workflow_node );
     }
-   
-    #processing profile 
+
+    #processing profile
     $buildnode->addChild ( $self->get_processing_profile_node() );
-    
+
     #TODO:  add method to build for logs, reports
     #$buildnode->addChild ( $self->tnode("logs","") );
     $buildnode->addChild ( $self->get_reports_node );
 
     #set the build status node to be the root
-    $doc->setDocumentElement($build_status_node); 
+    $doc->setDocumentElement($build_status_node);
 
     #generate the XML string
     $self->_xml($doc->toString(1) );
@@ -151,11 +151,11 @@ sub execute  {
     #print to the screen if desired
     if ( $self->display_output ) {
        if ( lc $self->output_format eq 'html' ) {
-            print $self->to_html($self->_xml);  
-       } else { 
+            print $self->to_html($self->_xml);
+       } else {
             print $self->_xml;
        }
-    } 
+    }
 
     return $return_value;
 }
@@ -180,7 +180,7 @@ sub get_reports_node {
     for my $each_report (@report_list) {
         my $report_node = $self->anode("report","name", $each_report->name );
         $self->add_attribute($report_node, "subdirectory", $each_report->name_to_subdirectory($each_report->name) );
-        $reports_node->addChild($report_node); 
+        $reports_node->addChild($report_node);
     }
 
     return $reports_node;
@@ -204,9 +204,10 @@ sub get_events_node {
 }
 
 sub get_build_node {
+
     my $self = shift;
     my $doc = $self->_doc;
-    
+
     my $buildnode = $doc->createElement("build");
 
     my $model = $self->build->model;
@@ -219,7 +220,7 @@ sub get_build_node {
     $buildnode->addChild( $doc->createAttribute("lsf-job-id", $self->build->build_event->lsf_job_id));
 
     my $event = $self->build->build_event;
-    
+
     my $out_log_file = $event->resolve_log_directory . "/" . $event->id . ".out";
     my $err_log_file = $event->resolve_log_directory . "/" . $event->id . ".err";
 
@@ -229,8 +230,8 @@ sub get_build_node {
     if (-e $err_log_file) {
         $buildnode->addChild( $doc->createAttribute("error-log",$err_log_file));
     }
-    
-    return $buildnode; 
+
+    return $buildnode;
 }
 
 sub get_workflow_node {
@@ -268,39 +269,39 @@ sub get_processing_profile_node {
 
     my $pp = $model->processing_profile;
     my $pp_name = $pp->name;
-    
+
     my $stages_node = $self->anode("stages","processing_profile",$pp_name);
-    
+
     for my $stage_name ($pp->stages) {
         my $stage_node = $self->anode("stage","value",$stage_name);
-        my $commands_node = $doc->createElement("command_classes"); 
-        my $operating_on_node = $doc->createElement("operating_on"); 
-        
+        my $commands_node = $doc->createElement("command_classes");
+        my $operating_on_node = $doc->createElement("operating_on");
+
         my @objects = $pp->objects_for_stage($stage_name,$model);
         foreach my $object (@objects) {
-    
+
             my $object_node;
- 
-            #if we have a full blown object (REF), get the object data 
+
+            #if we have a full blown object (REF), get the object data
             if ( ref(\$object) eq "REF" ) {
                 if ( $object->class eq "Genome::InstrumentData::Solexa" ) {
-                    my $id_node = $self->get_instrument_data_node($object); 
+                    my $id_node = $self->get_instrument_data_node($object);
                     $object_node = $self->anode("object","value","instrument_data");
-                    $object_node->addChild($id_node); 
+                    $object_node->addChild($id_node);
                 }
             } else {
-                 $object_node = $self->anode("object","value",$object);          
+                 $object_node = $self->anode("object","value",$object);
             }
-            
-            $operating_on_node->addChild($object_node); 
-        } 
+
+            $operating_on_node->addChild($object_node);
+        }
 
         my @command_classes = $pp->classes_for_stage($stage_name);
         foreach my $classes (@command_classes) {
             #$commands_node->addChild( $self->anode("command_class","value",$classes ) );
             my $command_node =  $self->anode("command_class","value",$classes );
             #get the events for each command class
-            $command_node->addChild($self->get_events_for_class_node($classes));  
+            $command_node->addChild($self->get_events_for_class_node($classes));
             $commands_node->addChild( $command_node );
         }
         $stage_node->addChild($commands_node);
@@ -331,15 +332,15 @@ sub get_events_for_class_node {
 
 
 sub get_instrument_data_node {
-  
+
     my $self = shift;
-    my $object = shift; 
+    my $object = shift;
     $DB::single = 1;
     #print Dumper($object);
 
     my $id = $self->anode("instrument_data","id",$object->id);
-    $id->addChild( $self->tnode("project_name",$object->project_name)); 
-    $id->addChild( $self->tnode("sample_name",$object->sample_name)); 
+    $id->addChild( $self->tnode("project_name",$object->project_name));
+    $id->addChild( $self->tnode("sample_name",$object->sample_name));
     $id->addChild( $self->tnode("run_name",$object->run_name) );
     $id->addChild( $self->tnode("flow_cell_id",$object->flow_cell_id) );
     $id->addChild( $self->tnode("read_length",$object->read_length) );
@@ -350,7 +351,7 @@ sub get_instrument_data_node {
     $id->addChild( $self->tnode("seq_id",$object->seq_id));
     $id->addChild( $self->tnode("run_type",$object->run_type));
     $id->addChild( $self->tnode("gerald_directory",$object->gerald_directory));
-                    
+
     return $id;
 
 }
@@ -360,24 +361,24 @@ sub get_lsf_job_status {
     my $lsf_job_id = shift;
 
     my $result;
- 
-    if ( defined($lsf_job_id) ) { 
+
+    if ( defined($lsf_job_id) ) {
 
         #check the user specified flag to determine how to retrieve lsf status
         if ($self->use_lsf_file) {
             #get the data from the preloaded hash of lsf info (from file)
-            my %job_to_status = %{$self->_job_to_status}; 
+            my %job_to_status = %{$self->_job_to_status};
             $result = $job_to_status {$lsf_job_id};
             if (!defined($result) ) {
                 $result = "UNAVAILABLE";
-            } 
-        } else { 
-            #get the data directly from lsf via bjobs command 
-            my @lines = `bjobs $lsf_job_id`; 
+            }
+        } else {
+            #get the data directly from lsf via bjobs command
+            my @lines = `bjobs $lsf_job_id`;
             #parse the bjobs output.  get the 3rd field of the 2nd line.
-            if ( (scalar(@lines)) > 1) { 
-                my $line = $lines[1]; 
-                my @fields = split(" ",$line); 
+            if ( (scalar(@lines)) > 1) {
+                my $line = $lines[1];
+                my @fields = split(" ",$line);
                 $result = $fields[2];
             } else {
                 #if there are no results from bjobs, lsf forgot about the job already.
@@ -396,14 +397,14 @@ sub get_lsf_job_status {
 }
 
 sub get_event_node {
-    
-    my $self = shift; 
+
+    my $self = shift;
     my $event = shift;
     my $doc = $self->_doc;
 
     $DB::single = 1;
     my $event_node = $self->anode("event","id",$event->id);
-    $event_node->addChild( $doc->createAttribute("command_class",$event->class)); 
+    $event_node->addChild( $doc->createAttribute("command_class",$event->class));
     $event_node->addChild( $self->tnode("event_status",$event->event_status));
 
     my $lsf_job_id = $event->lsf_job_id;
@@ -440,7 +441,7 @@ sub get_event_node {
                     if (!$lsf_job_id) {
                          $lsf_job_id = $current->dispatch_identifier;
                     }
-                    
+
                     last;
                 }
             }
@@ -448,7 +449,7 @@ sub get_event_node {
     }
 
     my $lsf_job_status = $self->get_lsf_job_status($lsf_job_id);
-    
+
     $event_node->addChild( $self->tnode("lsf_job_id",$lsf_job_id));
     $event_node->addChild( $self->tnode("lsf_job_status",$lsf_job_status));
     $event_node->addChild( $self->tnode("date_scheduled",$event->date_scheduled));
@@ -460,53 +461,79 @@ sub get_event_node {
     $event_node->addChild( $self->tnode("output_log_file",$out_log_file));
     $event_node->addChild( $self->tnode("error_log_file",$err_log_file));
 
-    return $event_node;
+	 #
+	 # get alignment director[y|ies]
+	 #
+	 # get list of instrument data assignments
+	 my @idas = $event->model->instrument_data_assignments;
 
+	 if (scalar @idas > 0) {
+		# iterate through and find the one that has the instrument_data_id we're looking for
+		my @adirs;
+		for my $ida (@idas) {
+		  my $alignment = $ida->alignment;
+		  if ($alignment->instrument_data_id == $event->instrument_data_id) {
+			 push(@adirs, $alignment->alignment_directory);
+		  }
+		}
+
+		# handle multiple alignment directories
+		if (scalar @adirs > 1) {
+		  my $i = 1;
+		  for my $adir (@adirs) {
+			 $event_node->addChild( $self->tnode("alignment_directory_" . $i, $adir));
+			 $i++;
+		  }
+		} else {
+		  $event_node->addChild( $self->tnode("alignment_directory", @adirs[0]));
+		}
+	 }
+    return $event_node;
 }
 
  sub create_node_with_attribute {
-   
+
     my $self = shift;
     my $node_name = shift;
     my $attr_name = shift;
     my $attr_value = shift;
 
     my $doc = $self->_doc;
-    
+
     my $node = $doc->createElement($node_name);
     $node->addChild($doc->createAttribute($attr_name,$attr_value));
     return $node;
 
-} 
+}
 
-#helper methods.  just pass through to the more descriptive names 
+#helper methods.  just pass through to the more descriptive names
 #anode = attribute node
 sub anode {
     my $self = shift;
     return $self->create_node_with_attribute(@_);
 }
- 
+
 #tnode = text node
 sub tnode {
-    my $self = shift; 
+    my $self = shift;
     return $self->create_node_with_text(@_);
 }
- 
+
 sub create_node_with_text {
- 
+
     my $self = shift;
     my $node_name = shift;
     my $node_value = shift;
 
     my $doc = $self->_doc;
-    
+
     my $node = $doc->createElement($node_name);
     if ( defined($node_value) ) {
         $node->addChild($doc->createTextNode($node_value));
-    } 
+    }
     return $node;
 
-} 
+}
 
 sub add_attribute {
     my $self = shift;
@@ -553,8 +580,8 @@ sub calculate_elapsed_time {
     } else {
         $formatted_time = sprintf("%02d:%02d",$minutes,$seconds);
     }
-    
-    return $formatted_time;    
+
+    return $formatted_time;
 
 }
 
@@ -573,12 +600,12 @@ sub to_html {
         while (my $line = $fh->getline()) {
             push @template_lines,$line;
         }
-        $fh->close(); 
-    } else { 
+        $fh->close();
+    } else {
         @template_lines = <DATA>;
     }
-    $template = join("",@template_lines); 
-  
+    $template = join("",@template_lines);
+
     my $source = $parser->parse_string($result);
     my $style_doc = $parser->parse_string($template);
     my $stylesheet = $xslt->parse_stylesheet($style_doc);
