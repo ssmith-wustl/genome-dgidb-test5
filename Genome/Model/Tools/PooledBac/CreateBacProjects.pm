@@ -119,11 +119,16 @@ sub add_3730_reads
 ############################################################
 sub execute { 
     my ($self) = @_;
+    $DB::single = 1;
+    unless (`uname -m` =~ /64/) {
+        $self->error_message('create-bac-projects must be run from a 64-bit architecture');
+        return;
+    }
     print "Creating Bac Projects...\n";
     my $project_dir = $self->project_dir;
     my $retry_count = $self->retry_count || 3;
         
-    $DB::single = 1;
+
     chdir($project_dir);
     #my @sff_files = ('/gscmnt/232/finishing/projects/Fosmid_two_pooled_Combined/Fosmid_two_pooled70_combined_trim-1.0_090417.newb/Fosmid_two_pooled70_combined_Data/input_output_data/FSP3MSF01.sff',
     #                 '/gscmnt/232/finishing/projects/Fosmid_two_pooled_Combined/Fosmid_two_pooled70_combined_trim-1.0_090417.newb/Fosmid_two_pooled70_combined_Data/input_output_data/FSP3MSF02.sff');

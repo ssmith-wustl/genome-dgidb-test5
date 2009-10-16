@@ -81,6 +81,10 @@ EOS
 sub execute { 
     my ($self) = @_;
 $DB::single =1;
+    unless (`uname -m` =~ /64/) {
+        $self->error_message('Pooled bac pipeline must be run from a 64-bit architecture');
+        return;
+    }
     my $project_dir = $self->project_dir;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $ace_file_name = $self->ace_file_name || 'Pcap.454Contigs.ace.1';
