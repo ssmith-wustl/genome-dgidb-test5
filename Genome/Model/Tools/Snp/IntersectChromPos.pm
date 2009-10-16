@@ -112,7 +112,8 @@ sub execute {
                 $prev_chrom1=$chr1;
                 ($chr1, $pos1) = split ($self->delimiter1, $line1);
             }
-            elsif($chr1 =~ m/NT_/ && $chr2 =~ m/NT_/) {
+            # If both current chromosomes are NT, or if either previous chromosome is NT, the else will make us die (and shouldnt), so just do a cmp
+            elsif(($chr1 =~ m/NT_/ && $chr2 =~ m/NT_/)||($prev_chrom1 =~ m/NT_/)||($prev_chrom1 =~ m/NT_/)) {
                 if (($chr1 cmp $chr2) < 0) {
                     $f1_only_fh->print($line1);
                     $line1 = $file1_fh->getline;
