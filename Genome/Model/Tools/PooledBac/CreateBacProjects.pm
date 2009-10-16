@@ -36,7 +36,25 @@ class Genome::Model::Tools::PooledBac::CreateBacProjects {
             type => 'String',
             is_optional => 1,
             doc => "This is the location of the pooled bac Sff Files",        
-        }             
+        },
+        no_reference_sequence =>
+        {
+            type => 'Boolean',
+            is_optional => 1,
+            doc => "Use this option to determine whether fake reads generated from reference sequence are included in the assembly",
+        },
+        rerun => 
+        {
+            type => 'Boolean',
+            is_optional => 1,
+            doc => "This forces all of the newbler assemblies to be re-run from scratch, deleting any assemblies that have previously finished. This can be useful when changing options such as no-reference-sequence"        
+        },
+        #assembly_output_dir =>
+        #{
+        #    type => 'String',
+        #    is_optional => 1,
+        #    doc => "This is the output directory for each project's assembly.  It defaults to newbler_assembly."   
+        #}
     ]
 };
 
@@ -127,7 +145,7 @@ sub execute {
     print "Creating Bac Projects...\n";
     my $project_dir = $self->project_dir;
     my $retry_count = $self->retry_count || 3;
-        
+    my $assembly_output_dir = 'newbler_assembly';#$self->assembly_output_dir || 'newbler_assembly';    
 
     chdir($project_dir);
     #my @sff_files = ('/gscmnt/232/finishing/projects/Fosmid_two_pooled_Combined/Fosmid_two_pooled70_combined_trim-1.0_090417.newb/Fosmid_two_pooled70_combined_Data/input_output_data/FSP3MSF01.sff',
@@ -142,12 +160,13 @@ sub execute {
     while (my $seq = $seqio->next_seq)
     {    
         my $name = $seq->display_id;
+        `/bin/rm -rf $project_dir/$name/$assembly_output_dir` if($self->rerun && -d "$project_dir/$name/$assembly_output_dir");
         next unless ((-e "$project_dir/$name") && (-d "$project_dir/$name"));
-        next unless (-e "$project_dir/$name/core"||!(-e "$project_dir/$name/newbler_assembly/consed"));
+        next unless (-e "$project_dir/$name/core"||!(-e "$project_dir/$name/$assembly_output_dir/consed"));
         
         chdir($project_dir."/$name");        
         `/bin/rm core*` if -e 'core';
-        print "submitting job for clone ",$project_dir."/$name","\n";
+        print "submitting job for clone ",$project_dir."$name","\n";
         my $run_newbler;
         if(defined $sff_string)
         {
@@ -155,17 +174,18 @@ sub execute {
             $self->dump_sff_read_names("pooledreads.fasta"); 
             `sfffile -o pooledreads.sff -i read_names $sff_string`;
             $self->add_3730_reads;
-            $run_newbler = "mapasm runAssembly -o newbler_assembly -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna reference_reads.fasta 3730_reads.fasta pooledreads.sff";
+            $run_newbler = "mapasm runAssembly -o $assembly_output_dir -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna 3730_reads.fasta pooledreads.sff";
         }
         else
         {
-            $run_newbler = "mapasm runAssembly -o newbler_assembly -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna reference_reads.fasta pooledreads.fasta";
+            $run_newbler = "mapasm runAssembly -o $assembly_output_dir -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna pooledreads.fasta";
             $self->warning_message("No sff files are provided...\nAre you sure you want to run newbler without providing sff files?\n");
         }
+        $run_newbler .= " reference_reads.fasta" unless($self->no_reference_sequence);
         my $command_fh = IO::File->new(">command.sh");
         $self->error_message("Failed to create file handle for $project_dir/$name/command.sh\n") and die unless defined $command_fh;
         print $command_fh "$run_newbler\n";
-        print $command_fh "/bin/mv $project_dir/$name/newbler_assembly/consed/edit_dir/454Contigs.ace.1 $project_dir/$name/newbler_assembly/consed/edit_dir/$name.ace.1\n";
+        print $command_fh "/bin/mv $project_dir/$name/$assembly_output_dir/consed/edit_dir/454Contigs.ace.1 $project_dir/$name/$assembly_output_dir/consed/edit_dir/$name.ace.1\n";
         system ("chmod 755 ./command.sh");
         my %job_params = (
             pp_type => 'lsf',
