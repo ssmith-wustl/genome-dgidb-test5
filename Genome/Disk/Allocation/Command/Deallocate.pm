@@ -64,18 +64,57 @@ sub create {
 
 sub execute {
     my $self = shift;
+    
     my $deallocator = $self->deallocator;
+    
     $self->status_message('Deallocate PSE id: '. $deallocator->pse_id);
+    
+    my $user_name = (getpwuid($<))[0];
+    
+    my $old_dbi_trace_level;
+    my $trace_fh;
+    
+    if ($user_name eq 'mjohnson') {
+        
+        $old_dbi_trace_level = DBI->trace();
+        
+        $trace_fh = File::Temp->new(
+                                    'TEMPLATE' => 'allocation_pse_wrapper_XXXXXXXXXX',
+                                    'DIR'      => '/gsc/var/log/genome/allocation_debugging',
+                                    'SUFFIX'   => '.tmp',
+                                );
+        
+        $trace_fh->autoflush(1);
+        
+        DBI->trace(4, $trace_fh);
+        
+    }
+    
     my $rv;
+
     if ($self->local_confirm) {
         $rv = $self->confirm_scheduled_pse($deallocator);
     } else {
         $rv = $self->wait_for_pse_to_confirm(pse => $deallocator);
     }
+    
+    # Commit here to free up a DB lock we'll be holding if we executed the 
+    # deallocation PSE via confirm_scheduled_pse().  
+    UR::Context->commit();
+    
+    if (defined($old_dbi_trace_level)) {
+        DBI->trace($old_dbi_trace_level, undef);
+    }
+   
+    if (defined($trace_fh)) {
+        $trace_fh->close();
+    }
+    
     unless ($rv) {
         $self->error_message('Failed to confirm pse '. $self->deallocator_id);
         return;
     }
+    
     return 1;
 }
 
