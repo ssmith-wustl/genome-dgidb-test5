@@ -16,7 +16,7 @@ class Genome::Library::Command::List {
     ],
 };
 
-sub sub_command_sort_position { 4 }
+sub sub_command_sort_position { 1 }
 
 1;
 
