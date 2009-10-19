@@ -48,7 +48,7 @@ sub properties_hash {
                                        },
 		      assembler_version => {
 			                     doc => 'Version of assembler to use',
-					     valid_values => ['2.0.00.20-1', '2.0.00.20-64', '2.0.00.17-64', '2.0.00.12-64', '1.1.03.24.7-64', '1.1.03.24-64', '03092009', '01212009', '10282008', '07252008', '01252008'],
+					     valid_values => ['2.0.01.12', '2.0.00.20-1', '2.0.00.20-64', '2.0.00.17-64', '2.0.00.12-64', '1.1.03.24.7-64', '1.1.03.24-64', '03092009', '01212009', '10282008', '07252008', '01252008'],
 					 },
 		      version_subdirectory => {
 			                   doc => '454 version subdirectory name',
@@ -139,6 +139,7 @@ sub assemble_job_classes {
 sub setup_project_objects {
     my $self = shift;
     my $model = shift;
+#    return ($model->unbuilt_instrument_data, $model->built_instrument_data);
     return $model->unbuilt_instrument_data;
 }
 

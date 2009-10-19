@@ -38,12 +38,13 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
+    my $build = $self->build;
 
     my $params = $model->assembler_params || '';
 
     my %run_project_params = (
 			      params => $params,
-			      dir => $model->data_directory,
+			      dir => $build->data_directory,
 			      version => $model->assembler_version,
 			      version_subdirectory => $model->version_subdirectory,
 			      );

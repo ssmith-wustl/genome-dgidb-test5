@@ -126,7 +126,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     for my $key (keys %pp_params) {
         is($pp->$key,$pp_params{$key},"$key accessor");
     }
-    my $data_directory = File::Temp::tempdir(CLEANUP => 1);
+    my $data_directory = File::Temp::tempdir(CLEANUP => 0);
     my $model_define = Genome::Model::Command::Define::Assembly->create(
                                                                         processing_profile_name => $pp->name,
                                                                         model_name => $model_name,
@@ -134,7 +134,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
                                                                         subject_type => $subject_type,
                                                                         data_directory => $data_directory,
                                                                     );
-
+ 
     isa_ok($model_define,'Genome::Model::Command::Define::Assembly');
     &_trap_messages($model_define);
     ok($model_define->execute,'execute '. $model_define->command_name);
@@ -238,12 +238,15 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
             is(scalar(@error_messages), 0, 'event execution produced no error messages');
         }
     }
-    is($model->assembly_project_xml_file,
-       $model->data_directory .'/assembly/454AssemblyProject.xml',
-       'expected path to assembly project xml file');
-    ok(-s $model->assembly_project_xml_file, '454AssemblyProject.xml file exists with size');
 
-    my $xml_asm_version = Genome::Model::Tools::454::Newbler->get_newbler_version_from_xml_file($model->assembly_project_xml_file) .'-64';
+    my $build = Genome::Model::Build->get(build_id => $build_event->build_id);
+
+    is($build->assembly_project_xml_file,
+       $build->data_directory .'/assembly/454AssemblyProject.xml',
+       'expected path to assembly project xml file');
+    ok(-s $build->assembly_project_xml_file, '454AssemblyProject.xml file exists with size');
+
+    my $xml_asm_version = Genome::Model::Tools::454::Newbler->get_newbler_version_from_xml_file($build->assembly_project_xml_file) .'-64';
 
     #skipping this test for mapasm_source runs since xml file for these runs will point to
     #original compelete offInstrumentsApp versions

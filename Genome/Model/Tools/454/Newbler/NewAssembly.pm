@@ -21,7 +21,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-
+This runs the "createProject" newbler command to make a new assembly.
 EOS
 }
 

@@ -42,7 +42,7 @@ sub help_brief {
     "tools to work with 454 reads"
 }
 
-sub help_detail {                           # This is what the user will see with --help <---
+sub help_detail {  
     return <<EOS
 
 EOS
