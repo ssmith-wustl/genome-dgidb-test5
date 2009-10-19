@@ -10,6 +10,10 @@ sub user_email {
     return $user . '@genome.wustl.edu';
 }
 
+sub current_user_id {
+    return $ENV{USER} . '@genome.wustl.edu';
+}
+
 # operating directories
 
 sub root_directory {
