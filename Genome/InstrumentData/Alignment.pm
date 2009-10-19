@@ -23,15 +23,20 @@ class Genome::InstrumentData::Alignment {
                                             is => 'Text', default_value => 'maq',
                                             doc => 'the name of the aligner to use, maq, blat, newbler etc.'
                                         },
-            arch_os => {
-                        calculate => q|
-                            my $arch_os = `uname -m`;
-                            chomp($arch_os);
-                            return $arch_os;
-                        |
-                    },
+        arch_os                         => {
+                                            calculate => q|
+                                                my $arch_os = `uname -m`;
+                                                chomp($arch_os);
+                                                return $arch_os;
+                                            |
+                                        },
     ],
     has_optional => [
+         filter_name        => {
+                                is => 'Text',
+                                valid_values => ['forward-only','reverse-only', undef],
+                                doc => 'apply a standard filter to the instrument data',
+                            },
          trimmer_name       => {
                                 is => 'Text',
                                 doc => 'the name of the trimmer to use: fastx_clipper, etc.'
@@ -244,6 +249,10 @@ sub resolve_alignment_subdirectory {
         die ($instrument_data->class .'('. $instrument_data->id .') is missing the subset_name or lane!');
     }
     my $directory;
+    
+    # TODO: there should be no conditional logic here, because the aligner_label should
+    # encapsulate all of the variation in a single text string.
+
     if ($instrument_data->is_external) {
         $directory = sprintf('alignment_data/%s/%s/%s/%s_%s',
                              $self->aligner_label,
@@ -300,6 +309,9 @@ sub resolve_alignment_subdirectory {
 sub aligner_label {
     my $self = shift;
 
+    # alignerV_V_V
+    # alignerV_V_V/md5
+
     my $aligner_name    = $self->aligner_name;
     my $aligner_version = $self->aligner_version;
     my $aligner_params  = $self->aligner_params;
@@ -309,10 +321,24 @@ sub aligner_label {
         $aligner_version =~ s/\./_/g;
         $aligner_label .= $aligner_version;
     }
+    
+    if ($self->filter_name) {
+        $aligner_label .= '.filter_name~' . $self->filter_name;
+        # EX: bwa1_2_3.filter_name~forward-only
+    }
+    
+    # TODO: make this NOT an MD5 since that is not reversible,
+    # A heuristic which, by default, makes '-a 1 -b foo -c 2 -d bar' into '-a1-bfoo-c2-dbar'?
+    # This DOESNT have to be complex b/c each aligner could subclass this method for its case.
+    # Maybe: bwa1_2_3.filter_name~forward-only.-t4
+
+    # Also, stop using a sub-directory since it makes the directory 
+    # tree have an uneven structure.    
     if ($aligner_params and $aligner_params ne '') {
         my $params_md5 = md5_hex($aligner_params);
         $aligner_label .= '/'. $params_md5;
     }
+
     return $aligner_label;
 }
 
@@ -480,13 +506,37 @@ sub sanger_fastq_filenames {
         }
     } else {
         my %params;
+        
+        # This was a hack to support fragment alignment by allowing the LIMS id 
+        # for the half of the lane in question to stand in as the instrument data id.
+        # Remove this later in favor of the filter logic below.
         if ($self->force_fragment) {
             if ($self->instrument_data_id eq $self->_fragment_seq_id) {
+                # reverse reads only
                 $params{paired_end_as_fragment} = 2;
             } else {
+                # forward reads only
                 $params{paired_end_as_fragment} = 1;
             }
         }
+
+        if ($self->filter_name eq 'forward-only') {
+            # forward reads only
+            $self->status_message('forward-only filter applied for this assignment');
+            $params{paired_end_as_fragment} = 1;
+        }
+        elsif ($self->filter_name eq 'reverse-only') {
+            # reverse reads only
+            $self->status_message('reverse-only filter applied for this assignment');
+            $params{paired_end_as_fragment} = 2;
+        }
+        elsif ($self->filter_name eq undef) {
+            $self->status_message('No special filter for this assignment');
+        } 
+        else {
+            die 'Unsupported filter: "' . $self->filter_name . '"!';
+        }
+
         my @illumina_fastq_pathnames = $instrument_data->fastq_filenames(%params);
         my $counter = 0;
         for my $illumina_fastq_pathname (@illumina_fastq_pathnames) {

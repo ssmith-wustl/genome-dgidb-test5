@@ -2,8 +2,8 @@ package Genome::Model::InstrumentDataAssignment;
 
 use strict;
 use warnings;
-
 use Genome;
+
 class Genome::Model::InstrumentDataAssignment {
     table_name => 'MODEL_INSTRUMENT_DATA_ASSGNMNT',
     id_by => [
@@ -18,19 +18,21 @@ class Genome::Model::InstrumentDataAssignment {
     ],
     has => [
         first_build_id => { is => 'NUMBER', len => 10, is_optional => 1 },
-
+        
         filter_desc         => { is => 'Text', is_optional => 1, 
                                 valid_values => ['forward-only','reverse-only',undef],
                                 doc => 'limit the reads to use from this instrument data set' },
-
-        first_build => { is => 'Genome::Model::Build', id_by => 'first_build_id', is_optional => 1 },
+        
+        first_build         => { is => 'Genome::Model::Build', id_by => 'first_build_id', is_optional => 1 },
+        
         #< Attributes from the instrument data >#
-        run_name => { via => 'instrument_data'},
-
+        run_name            => { via => 'instrument_data'},
+        
         #< Left over from Genome::Model::ReadSet >#
         # PICK ONE AND FIX EVERYTHING THAT USES THIS
         subset_name         => { via => 'instrument_data'},
         run_subset_name     => { via => 'instrument_data', to => 'subset_name'},
+        
         # PICK ONE AND FIX EVERYTHING THAT USES THIS
         short_name          => { via => 'instrument_data' },
         run_short_name      => { via => 'instrument_data', to => 'short_name' },
@@ -39,30 +41,28 @@ class Genome::Model::InstrumentDataAssignment {
         sequencing_platform => { via => 'instrument_data' },
         full_path           => { via => 'instrument_data' },
         full_name           => { via => 'instrument_data' },
-        _calculate_total_read_count => { via => 'instrument_data' },
+        _calculate_total_read_count     => { via => 'instrument_data' },
         unique_reads_across_library     => { via => 'instrument_data' },
         duplicate_reads_across_library  => { via => 'instrument_data' },
-        median_insert_size => {via => 'instrument_data'},
-        sd_above_insert_size => {via => 'instrument_data'},
-        is_paired_end => {via => 'instrument_data' },
+        median_insert_size              => { via => 'instrument_data'},
+        sd_above_insert_size            => { via => 'instrument_data'},
+        is_paired_end                   => { via => 'instrument_data' },
     ],
-    has_optional => [
-                     _alignment => {
-                                    is => 'Genome::InstrumentData::Alignment',
-                                    is_transient => 1,
-                                },
-                     _alignments => {
-                         is => 'Genome::InstrumentData::Alignment',
-                         is_many => 1,
-                         is_transient => 1,
-                     },
-                 ],
+    has_optional_transient => [
+        _alignment => {
+            is => 'Genome::InstrumentData::Alignment',
+        },
+        _alignments => {
+            is => 'Genome::InstrumentData::Alignment',
+            is_many => 1,
+        },
+    ],
     has_many_optional => [
-                          events => {
-                                     is => 'Genome::Model::Event',
-                                     reverse_id_by => 'instrument_data_assignment',
-                                 },
-                          ],
+        events => {
+            is => 'Genome::Model::Event',
+            reverse_id_by => 'instrument_data_assignment',
+        },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
@@ -91,7 +91,6 @@ sub __errors__ {
 
 sub alignment_directory {
     my $self = shift;
-
     my $alignment = $self->alignment;
     return unless $alignment;
     return $alignment->alignment_directory;
@@ -112,12 +111,22 @@ sub alignment {
                       aligner_name => $model->read_aligner_name,
                       reference_name => $model->reference_sequence_name,
                   );
+
+        # These are tracked in the alignment identity 
         if ($model->read_aligner_version) {
             $params{'aligner_version'} = $model->read_aligner_version;
         }
         if ($model->read_aligner_params) {
             $params{'aligner_params'} = $model->read_aligner_params;
         }
+
+        # This is tracked in the alignment identity, but has special code.
+        # TODO: merge this with the filter.
+        if ($model->force_fragment) {
+            $params{'force_fragment'} = $model->force_fragment;
+        }
+
+        # These are possibly not tracked, and as such could be breaking things.
         if ($model->read_trimmer_name) {
             $params{'trimmer_name'} = $model->read_trimmer_name;
         }
@@ -127,20 +136,28 @@ sub alignment {
         if ($model->read_trimmer_params) {
             $params{'trimmer_params'} = $model->read_trimmer_params;
         }
-        if ($model->force_fragment) {
-            $params{'force_fragment'} = $model->force_fragment;
-        }
+
+        # These should be given generic names, or merged into the aligner parameters.
         if ($model->picard_version) {
             $params{'picard_version'} = $model->picard_version;
         }
         if ($model->samtools_version) {
             $params{'samtools_version'} = $model->samtools_version;
         }
+
+        # New.  This will probably eventually composite any filters on the processing profile
+        # with explicit, per-data filters.  The former are preferred, but the later are needed
+        # for people to do experiments.
+        if ($self->filter_desc) {
+            $params{'filter_name'} = $self->filter_desc;
+        }
+
         my $alignment = Genome::InstrumentData::Alignment->create(%params);
         unless ($alignment) {
             $self->error_message('Failed to create an alignment object');
             return;
         }
+
         #$self->_alignment($alignment);
         push @alignments, $alignment;
         #Now create 'Paired End Read 1' fwd alignment

@@ -8,7 +8,7 @@ use Genome;
 class Genome::InstrumentData::Alignment::Bwa {
     is => ['Genome::InstrumentData::Alignment'],
     has_constant => [
-                     aligner_name => { value => 'bwa' },
+        aligner_name => { value => 'bwa' },
     ],
 };
 
@@ -267,7 +267,6 @@ sub _run_aligner {
     my @input_pathnames = $self->sanger_fastq_filenames;
     $self->status_message("INPUT PATH(S): @input_pathnames\n");
     
-    
     # establish ourselves a scratch dir
     my $tmp_dir = File::Temp::tempdir( CLEANUP => 1 );
     
@@ -282,13 +281,13 @@ sub _run_aligner {
     # make sure we have the necessary input files, and die off right away if not
     
     unless(-e $reference_fasta_path) {
-	$self->error_message("Alignment reference path $reference_fasta_path does not exist");
-	$self->die_and_clean_up($self->error_message);
+        $self->error_message("Alignment reference path $reference_fasta_path does not exist");
+        $self->die_and_clean_up($self->error_message);
     }
     
     unless(-e $reference_fasta_index_path) {
-	$self->error_message("Alignment reference index path $reference_fasta_index_path does not exist. Use 'samtools faidx' to create this");
-	$self->die_and_clean_up($self->error_message);
+        $self->error_message("Alignment reference index path $reference_fasta_index_path does not exist. Use 'samtools faidx' to create this");
+        $self->die_and_clean_up($self->error_message);
     }
     
     # db disconnect prior to alignment
@@ -303,34 +302,32 @@ sub _run_aligner {
     my $bwa_aln_params = (defined $aligner_params{'bwa_aln_params'} ? $aligner_params{'bwa_aln_params'} : "");
     
     foreach my $input (@input_pathnames) {
-
-
+    
         my $tmp_sai_file = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".sai" );
-	my $tmp_log_file = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".bwa.aln.log");
-
-	
+        my $tmp_log_file = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".bwa.aln.log");
+        
         my $cmdline = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
-	    . sprintf( ' aln %s %s %s 1> ',
-		       $bwa_aln_params, $reference_fasta_path, $input )
-	    . $tmp_sai_file->filename . ' 2>>'
-	    . $tmp_log_file->filename;
-	
-	
+            . sprintf( ' aln %s %s %s 1> ',
+                $bwa_aln_params, $reference_fasta_path, $input )
+            . $tmp_sai_file->filename . ' 2>>'
+            . $tmp_log_file->filename;
+
+        
         push @sai_intermediate_files, $tmp_sai_file;
-	push @aln_log_files, $tmp_log_file;
-	
+        push @aln_log_files, $tmp_log_file;
+        
         # run the aligner
         Genome::Utility::FileSystem->shellcmd(
             cmd          => $cmdline,
             input_files  => [ $reference_fasta_path, $input ],
             output_files => [ $tmp_sai_file->filename, $tmp_log_file->filename ],
             skip_if_output_is_present => 0,
-	    );
+        );
         unless ($self->_verify_bwa_aln_did_happen(sai_file => $tmp_sai_file->filename,
-						  log_file => $tmp_log_file->filename)) {
-	    $self->error_message("bwa aln did not seem to successfully take place for " . $reference_fasta_path);
-	    $self->die_and_clean_up($self->error_message);
-	}
+                        log_file => $tmp_log_file->filename)) {
+            $self->error_message("bwa aln did not seem to successfully take place for " . $reference_fasta_path);
+            $self->die_and_clean_up($self->error_message);
+        }
     }
     
     #### STEP 2: Use "bwa samse" or "bwa sampe" to perform single-ended or paired alignments, respectively.
@@ -343,7 +340,12 @@ sub _run_aligner {
 
     my $is_paired_end;
     my $upper_bound_on_insert_size;
-    if ($instrument_data->is_paired_end && !$self->force_fragment) {
+    if (
+        $instrument_data->is_paired_end 
+        && !$self->force_fragment 
+        && !$self->filter_name eq 'forward-only'
+        && !$self->filter_name eq 'reverse-only'
+    ) {
         my $sd_above = $instrument_data->sd_above_insert_size;
         my $median_insert = $instrument_data->median_insert_size;
         $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
@@ -351,13 +353,11 @@ sub _run_aligner {
             $self->status_message("Unable to calculate a valid insert size to run maq with. Using 600 (hax)");
             $upper_bound_on_insert_size= 600;
         }
-
-	if ($bwa_sampe_params =~ m/\-a (\d+)/) {
-	    $self->status_message("Aligner params specify a -a parameter ($1) as upper bound on insert size.  Using that instead");
-	    $upper_bound_on_insert_size=$1;	    
-	}
-	
-	$bwa_sampe_params .= " -a $upper_bound_on_insert_size";
+        if ($bwa_sampe_params =~ m/\-a (\d+)/) {
+            $self->status_message("Aligner params specify a -a parameter ($1) as upper bound on insert size.  Using that instead");
+            $upper_bound_on_insert_size=$1;	    
+        }
+        $bwa_sampe_params .= " -a $upper_bound_on_insert_size";
 
         $is_paired_end = 1;
     }
