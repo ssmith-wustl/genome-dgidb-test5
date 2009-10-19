@@ -246,6 +246,8 @@ sub execute {
                 for my $reference (keys %{$variant_at{$chr}{$start}{$stop}}) {
                     for my $variant(keys %{$variant_at{$chr}{$start}{$stop}{$reference}}) {
                         print $tier2 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
+                        # Dont duplicate prints as long as we are printing IUBs...
+                        last;
                     }
                 }
             }
@@ -254,6 +256,8 @@ sub execute {
                 for my $reference (keys %{$variant_at{$chr}{$start}{$stop}}) {
                     for my $variant(keys %{$variant_at{$chr}{$start}{$stop}{$reference}}) {
                         print $tier4 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
+                        # Dont duplicate prints as long as we are printing IUBs...
+                        last;
                     }
                 }
             }
@@ -283,6 +287,8 @@ sub execute {
                 for my $reference (keys %{$variant_at{$chr}{$start}{$stop}}) {
                     for my $variant(keys %{$variant_at{$chr}{$start}{$stop}{$reference}}) {
                         print $tier2 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
+                        # Dont duplicate prints as long as we are printing IUBs...
+                        last;
                     }
                 }
 
@@ -292,6 +298,8 @@ sub execute {
                 for my $reference (keys %{$variant_at{$chr}{$start}{$stop}}) {
                     for my $variant(keys %{$variant_at{$chr}{$start}{$stop}{$reference}}) {
                         print $tier3 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
+                        # Dont duplicate prints as long as we are printing IUBs...
+                        last;
                     }
                 }
             }

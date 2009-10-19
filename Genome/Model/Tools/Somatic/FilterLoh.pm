@@ -14,12 +14,24 @@ class Genome::Model::Tools::Somatic::FilterLoh{
         tumor_snp_file => {
             is  => 'String',
             is_input  => 1,
-            doc => 'File of tumor SNPs in maq-like format',
+            doc => 'File of tumor SNPs in adapted (start + stop pos) maq-like format... often the filtered snp file from the somatic pipeline',
         },
         normal_snp_file => {
             is  => 'String',
             is_input  => 1,
-            doc => 'The list of normal SNPs in maq-like format',
+            doc => 'The list of normal SNPs in (non-adapted) maq-like format...often the normal build filtered_snp_file',
+        },
+        output_file => {
+            is => 'Text',
+            is_input => 1,
+            is_output => 1,
+            doc => "Variants that have successfully passed the LOH filter (are not LOH events)"
+        },
+        loh_output_file => {
+            is => 'Text',
+            is_input => 1,
+            is_optional => 1,
+            doc => "Variants that have failed the LOH filter (are LOH events). (optional) If this is not provided, no output will be given for variants failing the filter."
         },
     ],
 };
@@ -47,12 +59,27 @@ sub execute {
 
     unless(-f $self->tumor_snp_file) {
         $self->error_message($self->tumor_snp_file . " is not a file");
-        return;
+        die;
     }
 
     unless(-f $self->normal_snp_file) {
         $self->error_message($self->normal_snp_file . " is not a file");
-        return;
+        die;
+    }
+
+    my $out_fh = IO::File->new(">".$self->output_file);
+    unless($out_fh) {
+        $self->error_message("Unable to open " . $self->output_file . " for writing");
+        die;
+    }
+
+    my $loh_fh;
+    if (defined $self->loh_output_file) {
+        $loh_fh = IO::File->new(">".$self->loh_output_file);
+        unless($loh_fh) {
+            $self->error_message("Unable to open " . $self->loh_output_file . " for writing");
+            die;
+        }
     }
 
     #MAKE A HASH OF NORMAL SNPS!!!!!!!!!!!!!
@@ -61,7 +88,7 @@ sub execute {
     my $normal_snp_fh = IO::File->new($self->normal_snp_file,"r");
     unless($normal_snp_fh) {
         $self->error_message("Unable to open " . $self->normal_snp_file);
-        return;
+        die;
     }
 
     my %normal_variants;
@@ -79,24 +106,28 @@ sub execute {
     my $tumor_snp_fh = IO::File->new($self->tumor_snp_file,"r");
     unless($tumor_snp_fh) {
         $self->error_message("Unable to open " . $self->tumor_snp_file);
-        return;
+        die;
     }
 
     while(my $line = $tumor_snp_fh->getline) {
         chomp $line;
 
-        my ($chr, $pos, $ref, $var_iub) = split /\t/, $line;
+        # Getting adapted intput here so 
+        my ($chr, $pos, $pos2, $ref, $var_iub) = split /\t/, $line;
         if($var_iub =~ /[ACTG]/ && exists($normal_variants{$chr}{$pos})) {
             #only consider homozygous sites
             if(index($normal_variants{$chr}{$pos},$var_iub) > -1) {
                 #then they share this allele and it is LOH
+                if (defined $loh_fh) {
+                    $loh_fh->print("$line\n");
+                }
             }
             else {
-                print $line, "\n";
+                $out_fh->print("$line\n");
             }
         }
         else {
-            print $line, "\n";
+            $out_fh->print("$line\n");
         }
     }
 

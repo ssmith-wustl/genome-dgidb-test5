@@ -12,9 +12,9 @@ use List::Util qw( max );
 
 class Genome::Model::Tools::Somatic::IndelpeRunner {
 
-    is  => ['Command'],
+    is  => ['Command', 'Genome::Utility::FileSystem'],
     has => [
-       tumor_bam_file => {
+       bam_file => {
             is       => 'String',
             is_input => '1',
             doc      => 'The bam file for tumor.',
@@ -64,20 +64,19 @@ class Genome::Model::Tools::Somatic::IndelpeRunner {
 };
 
 sub help_brief {
-    return "Gets intersection of SNPs from somatic sniper and maq";
+    return "Runs the equivilant of 'find variations' from the reference alignment pipeline to produce snp and indel files";
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    gmt somatic snpfilter --sniper_snp_file=[pathname] --output_file=[pathname]
+    gmt somatic indelpe-runner --bam-file=[pathname] --ref-seq-file=[pathname] --output-dir=[pathname]
 EOS
 }
 
 sub help_detail {                           
     return <<EOS 
-    Calls `gmt snp intersect` on the tumor snp file from the last maq build and the snp file from somatic sniper.
-    (Outputs lines from the somatic sniper file.)
+Runs the equivilant of 'find variations' from the reference alignment pipeline to produce snp and indel files"
 EOS
 }
 
@@ -85,9 +84,9 @@ sub execute {
     my ($self) = @_;
     $DB::single=1;
 
-    my $tumor_bam_file = $self->tumor_bam_file();
-    if ( ! Genome::Utility::FileSystem->validate_file_for_reading($tumor_bam_file) ) {
-        die 'cant read from: ' . $tumor_bam_file;
+    my $bam_file = $self->bam_file();
+    if ( ! Genome::Utility::FileSystem->validate_file_for_reading($bam_file) ) {
+        die 'cant read from: ' . $bam_file;
     }
 
    
@@ -107,8 +106,8 @@ sub execute {
     }
 
 
-     $rv = $self->check_for_existence($tumor_bam_file);
-    return unless $self->_check_rv("Bam output file $tumor_bam_file was not found.", $rv);
+     $rv = $self->check_for_existence($bam_file);
+    return unless $self->_check_rv("Bam output file $bam_file was not found.", $rv);
 
     # Generate files not provided from data directory
     unless (defined $self->snp_output_file) {
@@ -147,9 +146,9 @@ sub execute {
 
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
-    #$rv = system "$samtools_cmd -S $tumor_bam_file > $snp_output_file"; 
+    #$rv = system "$samtools_cmd -S $bam_file > $snp_output_file"; 
 
-    my $snp_cmd = "$samtools_cmd -v $tumor_bam_file > $snp_output_file";
+    my $snp_cmd = "$samtools_cmd -v $bam_file > $snp_output_file";
     # Skip if we already have the output
     unless (-s $snp_output_file) {
         $rv = system $snp_cmd;  
@@ -160,7 +159,7 @@ sub execute {
     $rv = $snp_sanitizer->execute;
     return unless $self->_check_rv("Running samtools snp-sanitizer failed with exit code $rv", $rv, 1);
     
-    my $indel_cmd = "$samtools_cmd -i $tumor_bam_file > $indel_output_file";
+    my $indel_cmd = "$samtools_cmd -i $bam_file > $indel_output_file";
     # Skip if we already have the output
     unless (-s $indel_output_file) {
         $rv = system $indel_cmd;
@@ -173,7 +172,7 @@ sub execute {
 
     if ($filter_type =~ /^VarFilter$/i) {
         my %params = (
-            bam_file     => $tumor_bam_file,
+            bam_file     => $bam_file,
             ref_seq_file => $ref_seq_file,
             filtered_snp_out_file   => $filtered_snp_file,
             filtered_indel_out_file => $filtered_indel_file,

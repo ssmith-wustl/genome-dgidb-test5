@@ -96,10 +96,15 @@ sub execute {
         return;
     }
 
-    # Get the snp file from the tumor model
+    # Get the snp file from the tumor and normal models
     my $tumor_snp_file = $tumor_build->filtered_snp_file;
     unless (-e $tumor_snp_file) {
         $self->error_message("Tumor snp file $tumor_snp_file does not exist!");
+        return;
+    }
+    my $normal_snp_file = $normal_build->filtered_snp_file;
+    unless (-e $normal_snp_file) {
+        $self->error_message("Normal snp file $normal_snp_file does not exist!");
         return;
     }
     
@@ -107,6 +112,7 @@ sub execute {
         normal_bam_file => $normal_bam,
         tumor_bam_file => $tumor_bam,
         tumor_snp_file => $tumor_snp_file,
+        normal_snp_file => $normal_snp_file,
         data_directory => $data_directory,
         only_tier_1 => $only_tier_1_flag,
         min_mapping_quality => $min_mapping_quality,
