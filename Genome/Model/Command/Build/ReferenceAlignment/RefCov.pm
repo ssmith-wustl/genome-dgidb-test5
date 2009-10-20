@@ -261,7 +261,7 @@ sub execute {
     my $fh = Genome::Utility::FileSystem->open_file_for_writing( $report_file );
     $fh->print( $xslt->{content} );
     $fh->close;
-    my $mail_dest = 'jwalker@genome.wustl.edu';
+    my $mail_dest = 'jwalker@genome.wustl.edu,twylie@genome.wustl.edu';
     my $link = 'https://gscweb.gsc.wustl.edu'. $report_file;
     my $sender = Mail::Sender->new({
         smtp => 'gscsmtp.wustl.edu',
