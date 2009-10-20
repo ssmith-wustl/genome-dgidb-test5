@@ -48,8 +48,26 @@ class Genome::Model::Tools::Sv::Yenta {
     },
     yenta_program => {
         type => "String",
-        default => "/gscuser/dlarson/yenta/trunk/src/yenta.long",
+        default => "/gscuser/dlarson/yenta/trunk/yenta",
         doc => "executable of yenta to use", 
+        is_optional => 1,
+    },
+    exon_bam => {
+        type => "String",
+        default => "/gscmnt/sata831/info/medseq/dlarson/annotation_sam_files/new_annotation_sorted.bam",
+        doc => "bam file of exons to use for displaying gene models", 
+        is_optional => 1,
+    },
+    buffer_size => {
+        type => "Integer",
+        default => 500,
+        doc => "number of bases to include on either side of the predicted breakpoint(s)",
+        is_optional => 1,
+    },
+    yenta_options => {
+        type => "String",
+        default => "",
+        doc => "option string to pass through to yenta for experimental options etc",
         is_optional => 1,
     },
 
@@ -61,6 +79,13 @@ sub execute {
     my $self=shift;
     $DB::single = 1; 
 
+    #test architecture to make sure we can run yenta program
+    #copied from G::M::T::Maq""Align.t 
+    unless (`uname -a` =~ /x86_64/) {
+        $self->error_message(`uname -a`); #FIXME remove
+       $self->error_message("Must run on a 64 bit machine");
+       die;
+    }
     #Not allowed to store hash in UR?
     
     my @types = map { uc $_ } split /,/, $self->types;
@@ -85,11 +110,40 @@ sub execute {
         return;
     }
 
+    #TODO These should all get checked somehow
     my $tumor_bam = $self->tumor_bam;
+    unless(-e $tumor_bam) {
+        $self->error_message("$tumor_bam does not exist");
+        return;
+    }
+
     my $normal_bam = $self->normal_bam;
+    unless(-e $normal_bam) {
+        $self->error_message("$normal_bam does not exist");
+        return;
+    }
+
     my $output_dir = $self->output_dir;
+    unless(-d $output_dir) {
+        $self->error_message("$output_dir does not exist");
+        return;
+    }
 
     my $grapher = $self->yenta_program;
+    unless(-e $grapher && -x $grapher) {
+        $self->error_message("$grapher does not exists or is not an executable");
+        return;
+    }
+
+    my $exon_file = $self->exon_bam;
+    unless(-e $exon_file) {
+        $self->error_message("$exon_file does not exist");
+        return;
+
+    }
+    my $buffer = $self->buffer_size;
+    my $additional_opts = $self->yenta_options;
+
     my $count = 0;
     #assuming we are reasonably sorted
     while ( my $line = $indel_fh->getline) {
@@ -107,48 +161,27 @@ sub execute {
         if(exists($types{$type})) {
             $count++;
             #then we should graph it
-            #submit the job
             #Doing this based on chromosomes in case types ever change
             if($chr1 eq $chr2) {
                 my $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
-                system("$grapher -B -q 1 -b 500 -o $name $tumor_bam $chr1 $chr1_pos $chr2_pos");
+                system("$grapher -g $exon_file -q 1 -b $buffer -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
-                system("$grapher -B -q 1 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr2_pos");
+                system("$grapher -g $exon_file -q 1 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
-                system("$grapher -B -q 0 -b 500  -o $name $tumor_bam $chr1 $chr1_pos $chr2_pos");
+                system("$grapher -g $exon_file -q 0 -b $buffer  -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
-                system("$grapher -B -q 0 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr2_pos");
-                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 1 -b 500 -o $name $tumor_bam $chr1 $chr1_pos $chr2_pos'");
-                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
-                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 1 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr2_pos'");
-                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
-                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 0 -b 500  -o $name $tumor_bam $chr1 $chr1_pos $chr2_pos'");
-                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
-                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 0 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr2_pos'");
+                system("$grapher -g $exon_file -q 0 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr2_pos");
             }
             else {
                 my $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
-                system("$grapher -B -q 1 -b 500 -o $name $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos");
+                system("$grapher -g $exon_file -q 1 -b $buffer -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
-                system("$grapher -B -q 1 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos");
+                system("$grapher -g $exon_file -q 1 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
-                system("$grapher -B -q 0 -b 500  -o $name $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos");
+                system("$grapher -g $exon_file -q 0 -b $buffer  -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
-                system("$grapher -B -q 0 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos");
-                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 1 -b 500 -o $name $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos'");
-                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
-                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 1 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos'");
-                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
-                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 0 -b 500  -o $name $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos'");
-                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
-                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 0 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos'");
-
-
+                system("$grapher -g $exon_file -q 0 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos");
             }
-            #if($count % 50 == 0) {
-            #    sleep(600); #delay by 10 minutes before rolling out the next 50
-            #}
-
         }
             
     }
