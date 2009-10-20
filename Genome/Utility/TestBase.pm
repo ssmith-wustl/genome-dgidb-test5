@@ -138,6 +138,7 @@ sub create_mock_object {
         $obj,
         (qw/
             context_return
+            __meta__
             __changes__
             _delete_object
             error_message warning_message
@@ -175,6 +176,19 @@ sub create_mock_object {
             $obj->set_always($property_name, $id);
             next;
         }
+
+        # Handle 'is_many' additional methods add and remove
+        if ( $property->is_many ) {
+            for my $prefix (qw/ add remove /) {
+                my $method = $prefix.'_'.$property->singular_name;
+                unless ( $class->can($method) ) {
+                    #warn "** $class with is_many property ($property_name) can't $method **";
+                    next;
+                }
+                $self->mock_methods($obj, $method);
+            }
+        }
+
 
         # Let UR do it's thing for these.
         if ( grep { $property->$_ } (qw/ is_calculated reverse_as is_delegated /) ) { 
