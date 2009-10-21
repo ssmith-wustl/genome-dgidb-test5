@@ -118,6 +118,7 @@ sub filenames_to_generate {
             breakdancer_output_file
             breakdancer_config_file
             snp_filter_output
+            filter_ceu_yri_output
             adaptor_output_snp
             dbsnp_output
             loh_output_file
@@ -175,8 +176,11 @@ __DATA__
   <link fromOperation="input connector" fromProperty="snp_filter_output" toOperation="Snp Filter" toProperty="output_file" />
   <link fromOperation="Somatic Sniper" fromProperty="output_snp_file" toOperation="Snp Filter" toProperty="sniper_snp_file" />
 
+  <link fromOperation="input connector" fromProperty="filter_ceu_yri_output" toOperation="Filter CEU YRI" toProperty="output_file" />
+  <link fromOperation="Snp Filter" fromProperty="output_file" toOperation="Filter CEU YRI" toProperty="variant_file" />
+
   <link fromOperation="input connector" fromProperty="adaptor_output_snp" toOperation="Sniper Adaptor Snp" toProperty="output_file" />
-  <link fromOperation="Snp Filter" fromProperty="output_file" toOperation="Sniper Adaptor Snp" toProperty="somatic_file" />
+  <link fromOperation="Filter CEU YRI" fromProperty="output_file" toOperation="Sniper Adaptor Snp" toProperty="somatic_file" />
 
   <link fromOperation="input connector" fromProperty="dbsnp_output" toOperation="Lookup Variants" toProperty="output_file" />
   <link fromOperation="Sniper Adaptor Snp" fromProperty="output_file" toOperation="Lookup Variants" toProperty="variant_file" />
@@ -280,6 +284,9 @@ __DATA__
   <operation name="Snp Filter">
     <operationtype commandClass="Genome::Model::Tools::Somatic::SnpFilter" typeClass="Workflow::OperationType::Command" />
   </operation>
+  <operation name="Filter CEU YRI">
+      <operationtype commandClass="Genome::Model::Tools::Somatic::FilterCeuYri" typeClass="Workflow::OperationType::Command" />
+  </operation>   
   <operation name="Sniper Adaptor Snp">
     <operationtype commandClass="Genome::Model::Tools::Annotate::Adaptor::Sniper" typeClass="Workflow::OperationType::Command" />
   </operation>
@@ -347,7 +354,9 @@ __DATA__
     <inputproperty isOptional="Y">tumor_indelpe_data_directory</inputproperty>
 
     <inputproperty isOptional="Y">snp_filter_output</inputproperty>
-
+    
+    <inputproperty isOptional="Y">filter_ceu_yri_output</inputproperty>
+            
     <inputproperty isOptional="Y">adaptor_output_snp</inputproperty>
 
     <inputproperty isOptional="Y">dbsnp_output</inputproperty>
