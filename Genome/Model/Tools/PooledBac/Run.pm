@@ -114,12 +114,12 @@ $DB::single =1;
     Genome::Model::Tools::PooledBac::AddLinkingContigs->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name,phd_file_name_or_dir => $phd_ball, project_dir => $project_dir);
 
 ## change to add reference reads
-    $self->error_message("Error running add-overlapping-reads")  and die unless
-    Genome::Model::Tools::PooledBac::AddOverlappingReads->execute(project_dir => $project_dir);
+    $self->error_message("Error running add-reference-reads")  and die unless
+    Genome::Model::Tools::PooledBac::AddReferenceReads->execute(project_dir => $project_dir);
 
 # change to assemble bac projects
     $self->error_message("Error assembling bac projects")  and die unless
-    Genome::Model::Tools::PooledBac::CreateBacProjects->execute(project_dir => $project_dir, sff_files => $sff_files, queue_type => $queue_type, retry_count => $retry_count, no_reference_sequence => $no_reference_sequence);
+    Genome::Model::Tools::PooledBac::AssembleBacProjects->execute(project_dir => $project_dir, sff_files => $sff_files, queue_type => $queue_type, retry_count => $retry_count, no_reference_sequence => $no_reference_sequence);
 
 #    $self->error_message("Error updating seqmgr") unless
 #    Genome::Model::Tools::PooledBac::UpdateSeqMgr->execute(project_dir => $project_dir);

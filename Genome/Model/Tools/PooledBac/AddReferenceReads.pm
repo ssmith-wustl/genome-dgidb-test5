@@ -1,4 +1,4 @@
-package Genome::Model::Tools::PooledBac::AddOverlappingReads;
+package Genome::Model::Tools::PooledBac::AddReferenceReads;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Bio::SeqIO;
 use Data::Dumper;
 use Cwd;
 
-class Genome::Model::Tools::PooledBac::AddOverlappingReads {
+class Genome::Model::Tools::PooledBac::AddReferenceReads {
     is => 'Command',
     has => 
     [ 

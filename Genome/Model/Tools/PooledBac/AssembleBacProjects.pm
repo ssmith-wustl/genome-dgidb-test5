@@ -1,4 +1,4 @@
-package Genome::Model::Tools::PooledBac::CreateBacProjects;
+package Genome::Model::Tools::PooledBac::AssembleBacProjects;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome::Model::Tools::Pcap::Assemble;
 use Bio::SeqIO;
 use PP::LSF;
 use Data::Dumper;
-class Genome::Model::Tools::PooledBac::CreateBacProjects {
+class Genome::Model::Tools::PooledBac::AssembleBacProjects {
     is => 'Command',
     has => 
     [        
@@ -139,7 +139,7 @@ sub execute {
     my ($self) = @_;
     $DB::single = 1;
     unless (`uname -m` =~ /64/) {
-        $self->error_message('create-bac-projects must be run from a 64-bit architecture');
+        $self->error_message('assemble-bac-projects must be run from a 64-bit architecture');
         return;
     }
     print "Creating Bac Projects...\n";
