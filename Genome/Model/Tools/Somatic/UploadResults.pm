@@ -79,10 +79,15 @@ sub execute {
     # Go through each line in the variant file and get each annotation line that matches from the annotation file
     # For each line, print it to the output file and upload it to the database
     while (my $line = $variant_fh->getline) {
-        my ($chr, $start, $reference, $variant) = split "\t", $line;
-        my $stop=$start;
-        # Get each possible variant from IUB code
-        my @variant_alleles = Genome::Info::IUB->variant_alleles_for_iub($reference, $variant);
+        my ($chr, $start, $stop, $reference, $variant) = split "\t", $line;
+        
+        # Get each possible variant from IUB code unless the variant is an indel
+        my @variant_alleles;
+        if($reference eq "0" || $variant eq "0") {
+            @variant_alleles = ($variant);
+        }else {
+            @variant_alleles = Genome::Info::IUB->variant_alleles_for_iub($reference, $variant);
+        }
 
         for my $variant_allele (@variant_alleles) {
             # There should be annotation for each variant line, or something went wrong in the pipeline
@@ -94,42 +99,66 @@ sub execute {
             # This should hold the entire annotation line from the transcript annotation file
             for my $annotation (@{$annotation{$chr}{$start}{$stop}{$reference}{$variant_allele}}) {
                 $ofh->print("$annotation");
-                my ($chr, $start, $stop, $reference, $variant, $variation_type, $gene, $transcript, $species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain) = split("\t", $annotation);
-                my $accession_domains = $self->make_domain_into_ids($domain, $accession_lookup);
-                $DB::single=1;
-                my $new_variant = Genome::Model::Variant->create(
-                    chromosome         => $chr,
-                    start_pos          => $start,
-                    stop_pos           => $stop,
-                    reference_allele   => $reference,
-                    variant_allele     => $variant,
-                    gene_name          => $gene,
-                    transcript_name    => $transcript,
-                    transcript_source  => $transcript_source,
-                    transcript_version => $transcript_version,
-                    strand             => $strand,
-                    transcript_status  => $transcript_status,
-                    trv_type           => $trv_type,
-                    c_position         => $c_position,
-                    amino_acid_change  => $amino_acid_change,
-                    ucsc_cons          => $ucsc_cons,
-                    domain             => $accession_domains,
-                    validation_status  => 'P', #FIXME chris says this column should be removed since we arent storing model id in this table... we will just have a final answer in the bridge table
+                my ($chr, $start, $stop, $reference, $variant, $variation_type, $gene, $transcript, $species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains) = split("\t", $annotation);
+                if (length($amino_acid_change) > 255) {
+                    $amino_acid_change = substr($amino_acid_change,0,240)."...truncated";
+                }
+                my $accession_domains = $self->make_domain_into_ids($all_domains, $accession_lookup);
+                my $new_variant;
+                my $variant_already_exists = Genome::Model::Variant->get(
+                    chromosome      => $chr,
+                    start_pos       => $start,
+                    stop_pos        => $stop,
+                    reference_allele=>$reference,
+                    variant_allele=>$variant
                 );
-
-                my $new_build_variant = Genome::Model::BuildVariant->create(
+                if($variant_already_exists) {
+                    $new_variant = $variant_already_exists;
+                }
+                else{
+                    $new_variant = Genome::Model::Variant->create(
+                        chromosome         => $chr,
+                        start_pos          => $start,
+                        stop_pos           => $stop,
+                        reference_allele   => $reference,
+                        variant_allele     => $variant,
+                        gene_name          => $gene,
+                        transcript_name    => $transcript,
+                        transcript_source  => $transcript_source,
+                        transcript_version => $transcript_version,
+                        strand             => $strand,
+                        transcript_status  => $transcript_status,
+                        trv_type           => $trv_type,
+                        c_position         => $c_position,
+                        amino_acid_change  => $amino_acid_change,
+                        ucsc_cons          => $ucsc_cons,
+                        domain             => $accession_domains,
+                        validation_status  => 'P', #FIXME chris says this column should be removed since we arent storing model id in this table... we will just have a final answer in the bridge table
+                    );
+                }
+                unless($new_variant) {
+                    $self->error_message("UR was unable to instantiate a variant object for this line:");
+                    $self->error_message($annotation);
+                    die;
+                }
+                
+                my $new_build_variant = Genome::Model::BuildVariant->get_or_create(
                     variant => $new_variant,
                     build_id => $self->build_id,
                 );
                 my $build=Genome::Model::Build->get($self->build_id);
                 my $model = $build->model;
-                my $new_variant_validation = Genome::Model::VariantValidation->create(
+                my $new_variant_validation = Genome::Model::VariantValidation->get_or_create(
                     variant=>$new_variant,
                     validation_type=>'Official',
                     validation_result=>'P',
                     model_id =>$model->id,
                 );
-
+                unless($new_build_variant && $new_variant_validation) {
+                    $self->error_message("Unable to create Build-Variant Link OR VariantValidation Status");
+                    $self->error_message("Problem line: $annotation");
+                    die;
+                }
             }
         }
     }
@@ -138,12 +167,19 @@ sub execute {
 
 }
 sub make_domain_into_ids {
-    my ($self, $domain, $accession_list) = @_;
+    my ($self, $all_domains, $accession_list) = @_;
     my $new_list;
-    my @domains = split /,/, $domain;
+    my @domains = split /,/, $all_domains;
     for my $key (@domains) {
-    $DB::single=1 if ($key ne '-');
         my $new_domain = $accession_list->{$key};
+        if (!defined($new_domain)) {
+            my $new_key = "HMMPfam_".$key;
+            $new_domain = $accession_list->{$new_key};
+        }
+        if (!defined($new_domain)) {
+            my $new_key = "superfamily_".$key;
+            $new_domain = $accession_list->{$new_key};
+        }
         $new_list .= "$new_domain ";
     }
     
@@ -161,6 +197,7 @@ sub make_hash_lookup {
         $hash_lookup{$human_readable}=$access;
     }
     $hash_lookup{"-"}="-";
+    $hash_lookup{"NULL"}="NULL";
     return \%hash_lookup;
 }
 
@@ -204,7 +241,7 @@ PF07714	HMMPfam_Pkinase_Tyr
 PF09027	HMMPfam_GTPase_binding
 PF00794	HMMPfam_PI3K_rbd
 PF00613	HMMPfam_PI3Ka
-PF00787	HMMPfam_PX
+HMMPfam_PF00787	HMMPfam_PX
 PF00792	HMMPfam_PI3K_C2
 PF00621	HMMPfam_RhoGEF
 PF00307	HMMPfam_CH
