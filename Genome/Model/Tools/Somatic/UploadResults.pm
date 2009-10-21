@@ -99,11 +99,11 @@ sub execute {
             # This should hold the entire annotation line from the transcript annotation file
             for my $annotation (@{$annotation{$chr}{$start}{$stop}{$reference}{$variant_allele}}) {
                 $ofh->print("$annotation");
-                my ($chr, $start, $stop, $reference, $variant, $variation_type, $gene, $transcript, $species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains) = split("\t", $annotation);
+                my ($chr, $start, $stop, $reference, $variant, $variation_type, $gene, $transcript, $species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain) = split("\t", $annotation);
                 if (length($amino_acid_change) > 255) {
                     $amino_acid_change = substr($amino_acid_change,0,240)."...truncated";
                 }
-                my $accession_domains = $self->make_domain_into_ids($all_domains, $accession_lookup);
+                my $accession_domains = $self->make_domain_into_ids($domain, $accession_lookup);
                 my $new_variant;
                 my $variant_already_exists = Genome::Model::Variant->get(
                     chromosome      => $chr,
@@ -141,7 +141,7 @@ sub execute {
                     $self->error_message($annotation);
                     die;
                 }
-                
+
                 my $new_build_variant = Genome::Model::BuildVariant->get_or_create(
                     variant => $new_variant,
                     build_id => $self->build_id,
@@ -167,9 +167,9 @@ sub execute {
 
 }
 sub make_domain_into_ids {
-    my ($self, $all_domains, $accession_list) = @_;
+    my ($self, $domain, $accession_list) = @_;
     my $new_list;
-    my @domains = split /,/, $all_domains;
+    my @domains = split /,/, $domain;
     for my $key (@domains) {
         my $new_domain = $accession_list->{$key};
         if (!defined($new_domain)) {
