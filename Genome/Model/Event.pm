@@ -341,14 +341,14 @@ sub __errors__ {
                                         );
         }
     }
-
-    if ($self->instrument_data_id && !Genome::InstrumentData->get($self->instrument_data_id)) {
-        push @tags, UR::Object::Tag->create(
-                                            type => 'invalid',
-                                            properties => ['instrument_data_id'],
-                                            desc => "There is no instrument data with instrument_data_id ". $self->instrument_data_id,
-                                        );
-    }
+    # Once expunged instrument data events are abandoned, this will cause the DB commit to fail
+    #if ($self->instrument_data_id && !Genome::InstrumentData->get($self->instrument_data_id)) {
+    #    push @tags, UR::Object::Tag->create(
+    #                                        type => 'invalid',
+    #                                        properties => ['instrument_data_id'],
+    #                                        desc => "There is no instrument data with instrument_data_id ". $self->instrument_data_id,
+    #                                    );
+    #}
     return @tags;
 }
 
@@ -476,11 +476,11 @@ sub abandon {
     for my $next_event ($self->next_events) {
         $next_event->abandon;
     }
-    unless ($self->user_name eq $ENV{USER}) {
-        $self->error_message('Attempted to abandon event '. $self->id .' owned by '. $self->user_name);
-        die;
-    }
     if ($self->event_status =~ /Scheduled|Running/) {
+        unless ($self->user_name eq $ENV{USER}) {
+            $self->error_message('Attempted to abandon '. $self->event_status .' event '. $self->id .' owned by '. $self->user_name);
+            die($self->error_message);
+        }
         my $lsf_job_id = $self->lsf_job_id;
         if ($lsf_job_id) {
             my $cmd = 'bkill '. $lsf_job_id . ' > /dev/null 2>&1';
