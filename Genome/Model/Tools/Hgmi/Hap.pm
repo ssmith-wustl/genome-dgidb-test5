@@ -439,7 +439,18 @@ sub execute
                   \$b2a_err ) or croak "cant dump biosql to ace\n\n";
     
     # check that output files are not empty
-    foreach my $outputfile (qw(briefID.fof.ace merged.raw.sorted.ace merged.raw.sorted.ipr.ace REPORT-top_new.ks.ace))
+    # gotta be a better way to do this...
+    my @outputfiles;
+    if($config->{workflowxml} =~ /noblastp/)
+    {
+        @outputfiles = qw(merged.raw.sorted.ace merged.raw.sorted.ipr.ace REPORT-top_new.ks.ace);
+    }
+    else
+    {
+        @outputfiles = qw(briefID.fof.ace merged.raw.sorted.ace merged.raw.sorted.ipr.ace REPORT-top_new.ks.ace);
+    }
+
+    foreach my $outputfile (@outputfiles)
     {
         my $size = -s $outputfile;
         if($size == 0)
