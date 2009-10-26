@@ -1,4 +1,4 @@
-$Genome::Model::Tools::PooledBac::MapContigsToAssembly::OPTS_SPEC = [
+$Genome::Model::Tools::PooledBac::RunBlast::OPTS_SPEC = [
           'pooled-bac-dir=s',
           undef,
           'project-dir=s',

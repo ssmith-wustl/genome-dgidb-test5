@@ -87,6 +87,25 @@ sub dump_sff_read_names
     } 
 }
 
+sub convert_454_reads_to_consed_reads
+{
+    my @dirs = `/bin/ls -aF -1`;
+    chomp @dirs;
+    @dirs = grep { /^H_\//; } @dirs;
+    chop @dirs;#get rid of trailing /
+    foreach (@dirs)
+    {
+        #print "fixing $_,\n";
+        #print "Couldn't find $_/newbler_assembly, skipping...\n" and 
+        next unless -d "$_/newbler_assembly";
+        system "cat $_/newbler_assembly/consed/edit_dir/$_.ace.1 | perl -e 'foreach (<>) { s/_left/\.b1/g; s/_right/\.g1/g; print;}' > out";
+        system "/bin/mv out $_/newbler_assembly/consed/edit_dir/$_.ace.1";
+        system "cat $_/newbler_assembly/consed/phdball_dir/phd.ball.1 | perl -e 'foreach (<>) { s/_left/\.b1/g; s/_right/\.g1/g; print;}' > out";
+        system "/bin/mv out $_/newbler_assembly/consed/phdball_dir/phd.ball.1";    
+    }
+}
+
+
 sub get_3730_read_names
 {
     my @lines = `sffinfo -s pooledreads.sff | grep '>'`; 
@@ -246,6 +265,8 @@ SLEEP:
         print ".";    
         sleep 30;
     }
+    chdir($project_dir);
+    convert_454_reads_to_consed_reads();
     print "\nJobs finished\n";
     system "chmod 777 -R $project_dir";
     return 1;

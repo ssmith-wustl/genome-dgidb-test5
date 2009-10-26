@@ -19,7 +19,9 @@ class Genome::Model::Tools::PooledBac::AddReferenceReads {
             type => 'String',
             is_optional => 0,
             doc => "Directory containing pooled BAC fasta",
-        },            
+        },
+        #fake_read_length =>
+        #overlap_length =>        
     ]    
 };
 

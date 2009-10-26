@@ -6,37 +6,26 @@ use warnings;
 use Genome;
 use Genome::Assembly::Pcap::Ace;
 use Genome::Assembly::Pcap::Phd;
-use List::Util qw(max min);
+use Genome::Model::Tools::PooledBac::Utils;
 use Genome::Utility::FileSystem;
+use List::Util qw(max min);
 
 class Genome::Model::Tools::PooledBac::GenerateReports {
     is => 'Command',
     has => 
     [        
-        pooled_bac_dir =>
-        {
-            type => 'String',
-            is_optional => 0,
-            doc => "Pooled BAC Assembly Directory",    
-        },
-        ace_file_name =>
-        {
-            type => 'String',
-            is_optional => 0,
-            doc => "Ace file containing pooled bac contigs"
-        },
-        phd_file_name_or_dir =>
-        {
-            type => 'Sring',
-            is_optional => 1,
-            doc => "Phd file or dir containing read bases and quals"       
-        },
         project_dir =>
         {
             type => 'String',
             is_optional => 0,
             doc => "output dir for separate pooled bac projects"        
-        } 
+        },
+        contig_map_file =>
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "this file contains a list of contigs and where they map to",
+        }
     ]
 };
 
@@ -51,47 +40,6 @@ sub help_detail {
     return <<EOS 
     Move Pooled BAC Assembly into separate projects
 EOS
-}
-
-sub comp_hits
-{
-    return $a->{HSP_LENGTH} <=> $b->{HSP_LENGTH} if($a->{HSP_LENGTH} != $b->{HSP_LENGTH});
-    return ($a->{IDENTICAL}/$a->{HSP_LENGTH} )<=> ($b->{IDENTICAL}/$b->{HSP_LENGTH});
-}
-
-sub comp_hit_lists
-{
-    my $c = $a->[0];
-    my $d = $b->[0];
-    return $c->{HSP_LENGTH} <=> $d->{HSP_LENGTH} if($c->{HSP_LENGTH} != $d->{HSP_LENGTH});
-    return ($c->{IDENTICAL}/$c->{HSP_LENGTH} )<=> ($d->{IDENTICAL}/$d->{HSP_LENGTH});
-    
-}
-
-sub get_matching_contigs_list
-{
-    my ($self, $out) = @_;
-    #top sorted list of all contigs meeting cutoffs
-    #sort by length, then percent identity
-    #print contig name, bac name, length of match, percent identity
-    #QUERY_NAME, HIT_NAME, HSP_LENGTH, IDENTICAL
-    my %match_contigs_list;
-    #group by contig name
-    foreach my $result (@{$out})
-    {
-        my @keys =  ('QUERY_NAME','HIT_NAME','HSP_LENGTH','IDENTICAL');
-        my %hash;
-        %hash = map { $_ => $result->{$_} } @keys; 
-        push @{$match_contigs_list{$result->{QUERY_NAME}}}, \%hash;    
-    }
-    #for each contig name sort multiple hits by length, percent identity
-    foreach my $key (keys %match_contigs_list)
-    {
-        @{$match_contigs_list{$key}} = reverse sort comp_hits @{$match_contigs_list{$key}} if (@{$match_contigs_list{$key}} > 1);
-    }
-    #sort all contig group by length and percent identity of best matching hit for each contig
-    my @list = reverse sort comp_hit_lists values %match_contigs_list;
-    return \@list;
 }
 
 sub print_matching_contigs_report
@@ -175,33 +123,6 @@ sub print_close_match_report
     }
 }
 
-
-sub get_matching_contig_names
-{
-    my ($self, $list) = @_;
-    my @matching_contigs;
-    foreach my $result (@{$list})
-    {
-        push @matching_contigs, $result->[0]{QUERY_NAME};    
-    }
-    return \@matching_contigs;
-}
-
-sub get_orphan_contig_names
-{
-    my($self,$all_contigs, $matching_contigs) = @_;
-    my %orphan_list;
-    %orphan_list = map { $_, 1; } @{$all_contigs};
-    foreach my $match_contig (@{$matching_contigs})
-    {
-        if(exists $orphan_list{$match_contig})
-        {
-            delete $orphan_list{$match_contig};
-        }
-    }
-    return [keys %orphan_list];
-}
-
 sub print_orphan_contigs_report
 {
     my ($self, $orphan_contigs, $report_name) = @_;
@@ -213,46 +134,50 @@ sub print_orphan_contigs_report
     } 
 }
 
+sub print_used_contigs_report
+{
+    my ($self, $contig_map, $report_name) = @_;
+    my $fh = IO::File->new('>'.$report_name);
+    $self->error_message("Failed to open $report_name for writing.") and die unless defined $fh;
+    foreach my $contig_name (keys %{$contig_map})
+    {
+        my $hash_ref = $contig_map->{$contig_name};
+        print $fh "$contig_name $hash_ref->{maps_to}\n";    
+    }  
+}
+
 
 ############################################################
 sub execute { 
     my $self = shift;
     print "Generating Reports...\n";
     $DB::single = 1;
-    my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
-    my $phd_dir_or_ball = $self->phd_file_name_or_dir;
-    $phd_dir_or_ball = $pooled_bac_dir.'/consed/phdball_dir/phd.ball.1' unless $phd_dir_or_ball;
     my $blastfile = $project_dir."/bac_region_db.blast";
     my $reports_dir = $project_dir."/reports/";
     $self->error_message("Failed to create directory $reports_dir")  and die unless Genome::Utility::FileSystem->create_directory($reports_dir);
     #`mkdir -p $reports_dir`;
     my $out = Genome::Model::Tools::WuBlast::Parse->execute(blast_outfile => $blastfile, parse_outfile => $reports_dir."blast_report");
-   $self->error_message("Failed to parse $blastfile")  and die unless defined $out; 
+    $self->error_message("Failed to parse $blastfile")  and die unless defined $out; 
 
-    my $ace_file = $pooled_bac_dir.'/consed/edit_dir/'.$self->ace_file_name;
-    $self->error_message("Ace file $ace_file does not exist")  and die unless (-e $ace_file);
-    my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
-    $self->error_message("Failed to open ace file")  and die unless defined $ao;
-    my $po;
-    if(-d $phd_dir_or_ball)
-    {
-        $po = Genome::Assembly::Pcap::Phd->new(input_directory => $phd_dir_or_ball);
-    }
-    elsif(-e $phd_dir_or_ball)
-    {
-        $po = Genome::Assembly::Pcap::Phd->new(input_file => $phd_dir_or_ball,using_db => 1);
-    }
-    $self->error_message("Failed to open phd object")  and die unless defined $po;
-    my $list = $self->get_matching_contigs_list($out->{result});$out=undef;
+    my $ut = Genome::Model::Tools::PooledBac::Utils->create;
+    $self->error_message("Genome::Model::Tools::PooledBac::Utils->create failed.\n") unless defined $ut;
+
+    my $list = $ut->get_matching_contigs_list($out->{result});$out=undef;
     $self->print_matching_contigs_report($list, $reports_dir."matching_contigs");
     $self->print_close_match_report($list,$reports_dir."ambiguous_matching_contigs");
     $self->print_multiple_hits_report($list,$reports_dir."contigs_with_multiple_hits");
-    my $all_contig_names = $ao->get_contig_names;
-    my $matching_contig_names = $self->get_matching_contig_names($list);
     
-    my $orphan_contig_names = $self->get_orphan_contig_names($all_contig_names, $matching_contig_names);
+    
+
+    my $contig_map_file = $self->contig_map_file || "CONTIG_MAP";
+    $contig_map_file = $project_dir.'/'.$contig_map_file;    
+    my $contig_map = $ut->open_contig_map($contig_map_file);
+    
+    my ($match_list, $orphan_list) = $ut->create_match_and_orphan_lists($contig_map);
+    my $orphan_contig_names = [keys %{$orphan_list}];
     $self->print_orphan_contigs_report($orphan_contig_names, $reports_dir."orphan_contigs");
+    $self->print_used_contigs_report($match_list, $reports_dir."complete_contig_list");
     return 1;
 }
 
