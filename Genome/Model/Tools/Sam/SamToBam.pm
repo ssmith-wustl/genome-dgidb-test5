@@ -98,14 +98,15 @@ sub execute {
     #watch out disk space, for now hard code maxMemory 2000000000
     if ($self->fix_mate) {
         my $tmp_file = $bam_file.'.sort';
-        $rv = system "$samtools sort -n -m 2000000000 $bam_file $tmp_file";
+        #402653184 bytes = 3 Gb 
+        $rv = system "$samtools sort -n -m 402653184 $bam_file $tmp_file";
         $self->error_message("Sort by name failed") and return if $rv or !-s $tmp_file.'.bam';
 
         $rv = system "$samtools fixmate $tmp_file.bam $tmp_file.fixmate";
         $self->error_message("fixmate failed") and return if $rv or !-s $tmp_file.'.fixmate';
         unlink "$tmp_file.bam";
 
-        $rv = system "$samtools sort -m 2000000000 $tmp_file.fixmate $tmp_file.fix";
+        $rv = system "$samtools sort -m 402653184 $tmp_file.fixmate $tmp_file.fix";
         $self->error_message("Sort by position failed") and return if $rv or !-s $tmp_file.'.fix.bam';
         
         unlink "$tmp_file.fixmate";
