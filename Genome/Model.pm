@@ -318,7 +318,10 @@ sub get_subjects {
 sub gold_snp_path
 {
     my $self = shift;
-    my $gold_model = Genome::Model::GenotypeMicroarray->get(subject_name => $self->subject_name);
+    # should only be one of these...
+    # pop the last one just in case there are multiple.
+    my @genotype_models = Genome::Model::GenotypeMicroarray->get(subject_name => $self->subject_name);
+    my $gold_model = pop(@genotype_models);
     if(!defined($gold_model))
     {
         $self->error_message("no genotype microarray model defined for ".$self->subject_name);
