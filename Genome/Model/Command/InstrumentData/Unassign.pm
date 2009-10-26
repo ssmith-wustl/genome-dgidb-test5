@@ -8,7 +8,7 @@ use Genome;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Command::InstrumentData::Unassign {
-    is => 'Genome::Model::Event',
+    is => 'Genome::Model::Command',
     has => [
         model_id => {
             is => 'Integer', 
@@ -45,13 +45,9 @@ class Genome::Model::Command::InstrumentData::Unassign {
 #########################################################
 
 
-sub help_detail {
-    return help_brief();
-}
-
 #########################################################
 
-sub create { 
+sub create {
     my ($class, %params) = @_;
 
     my $self = $class->SUPER::create(%params)
@@ -86,36 +82,33 @@ sub execute {
     my $self = shift;
 
     if ( $self->instrument_data_id ) { # assign this
-        return $self->_assign_by_instrument_data_id;
+        return $self->_unassign_by_instrument_data_id($self->instrument_data_id);
     }
     elsif ( $self->instrument_data_ids ) { # assign these
-        return $self->_assign_by_instrument_data_ids;
+        return $self->_unassign_by_instrument_data_ids;
     }
     elsif ( $self->all ) { # assign all
-        return $self->_assign_all_instrument_data;
+        return $self->_unassign_all_instrument_data;
     }
 
     return $self->_list_compatible_instrument_data; # list compatable
 }
 
-#< Unassign Instrument Data >#
-sub _unassign_instrument_data {
-    my ($self, $instrument_data) = @_;
-
-    $DB::single = 1;
+#< Unassign Instrument Data Id>#
+sub _unassign_by_instrument_data_id {
+    my ($self, $instrument_data_id) = @_;
 
     # Check if already assigned
     my $existing_ida = Genome::Model::InstrumentDataAssignment->get(
         model_id => $self->model->id,
-        instrument_data_id => $instrument_data->id
+        instrument_data_id => $instrument_data_id
     );
 
     if ( $existing_ida ) {
         $self->status_message(
             sprintf(
-                'Found instrument data (id<%s> name<%s>) assigned to model (id<%s> name<%s>)%s.',
+                'Found instrument data (id<%s>) assigned to model (id<%s> name<%s>)%s.',
                 $existing_ida->instrument_data_id,
-                $existing_ida->run_name,
                 $self->model->id,
                 $self->model->name,
                 (
@@ -131,15 +124,17 @@ sub _unassign_instrument_data {
                 "id >" => $first_build->id, 
             );
             for my $build ($first_build, @subsequent_builds) {
-                sprintf(
-                    'Abandoning build %d for model %s (%d)\n',
-                    $build->id,
-                    $build->model->name,
-                    $build->model->id
+                $self->status_message(
+                    sprintf(
+                        'Abandoning build %d for model %s (%d)\n',
+                        $build->id,
+                        $build->model->name,
+                        $build->model->id
+                    )
                 );
                 # Throws exceptions, which will prevent db commit if there are errors
                 $build->abandon;
-            }   
+            }
         }
         $existing_ida->delete;
         return 1;
@@ -147,9 +142,8 @@ sub _unassign_instrument_data {
     else {
         $self->error_message(
             sprintf(
-                'Failed to find instrument data (id<%s> name<%s>) assigned to model (id<%s> name<%s>).',
-                $instrument_data->id,
-                $instrument_data->run_name,
+                'Failed to find instrument data (id<%s>) assigned to model (id<%s> name<%s>).',
+                $instrument_data_id,
                 $self->model->id,
                 $self->model->name,
             )
@@ -161,80 +155,41 @@ sub _unassign_instrument_data {
     return 1;
 }
 
-sub _get_instrument_data_for_id {
-    my ($self, $id) = @_;
-
-    my $instrument_data = Genome::InstrumentData->get($id);
-    unless ( $instrument_data ) {
-        $self->error_message( 
-            sprintf('Failed to find specified instrument data for id (%s)', $id) 
-        );
-        return;
-    }
-
-    return $instrument_data;
-}
-
-#< Methods Run Based on Inputs >#
-sub _assign_by_instrument_data_id {
-    my $self = shift;
-
-    # Get it 
-    my $instrument_data = $self->_get_instrument_data_for_id( $self->instrument_data_id );
-
-    # Unassign it
-    return $self->_unassign_instrument_data($instrument_data)
-}
-
-sub _assign_by_instrument_data_ids {
+sub _unassign_by_instrument_data_ids {
     my $self = shift;
 
     # Get the ids
     my @ids = split(/\s+/, $self->instrument_data_ids);
     unless ( @ids ) {
-        $self->error_message("No instrument data ids found in instrument_data_id input: ".$self->instrument_data_id);
+        $self->error_message("No instrument data ids found in instrument_data_id input: ". $self->instrument_data_ids);
         return;
     }
 
-    # Get the instrument data
-    my @instrument_data;
     for my $id ( @ids ) {
-        unless ( push @instrument_data, Genome::InstrumentData->get($id) ) {
-            $self->error_message( 
-                sprintf('Failed to find specified instrument data for id (%s)', $id) 
-            );
-            return;
-        }
-    }
-
-    # Unassign 'em
-    for my $instrument_data ( @instrument_data ) {
-        $self->_unassign_instrument_data($instrument_data)
+        $self->_unassign_by_instrument_data_id($id)
             or return;
     }
 
     return 1;
 }
 
-sub _assign_all_instrument_data {
+sub _unassign_all_instrument_data {
     my $self = shift;
 
     # Unassign all unassigned if requested 
-    $self->status_message("Attempting to assign all available instrument data");
-    
-    my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
-    
-    unless ( @unassigned_instrument_data ){
-        $self->error_message("Attempted to assign all instrument data that was unassigned for model, but found none");
+    $self->status_message("Attempting to unassign all available instrument data");
+
+    my @assigned_instrument_data = $self->model->assigned_instrument_data;
+
+    unless ( @assigned_instrument_data ){
+        $self->error_message("Attempted to unassign all instrument data that was assigned for model, but found none");
         return;
     }
 
     my $requested_capture_target = $self->capture_target();
-    
-  ID: for my $id ( @unassigned_instrument_data ) {
+  ID: for my $id ( @assigned_instrument_data ) {
 
         my $id_capture_target;
-        
         if ($id->can('target_region_set_name')) {
             $id_capture_target = $id->target_region_set_name();
         }
@@ -252,15 +207,12 @@ sub _assign_all_instrument_data {
             }
 
         }
-        
         else {
 
             if (defined($id_capture_target)) {
                 next ID;
             }
-            
         }
-        
         $self->_unassign_instrument_data($id)
             or return;
     }
