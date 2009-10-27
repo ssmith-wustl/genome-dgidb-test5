@@ -24,7 +24,7 @@ BEGIN {
 my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-SamToBam';
 
 my $tmp_dir  = File::Temp::tempdir(
-    CLEANUP => 1,
+    CLEANUP => 0,
 );
 
 copy "$root_dir/source-1.sam", $tmp_dir;
@@ -33,7 +33,7 @@ my $sam_file = "$tmp_dir/source-1.sam";
 my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(
     sam_file => $sam_file,                                                      
     keep_sam => 1,
-    fix_mate => 0,
+    fix_mate => 1,
     ref_list => "$root_dir/read_index.fai"
 );
 
@@ -41,7 +41,7 @@ isa_ok($to_bam,'Genome::Model::Tools::Sam::SamToBam');
 ok($to_bam->execute,'bam executed ok');
 
 $DB::single = 1;
-is(compare("$tmp_dir/source-1.bam", "$root_dir/expected-1.bam"), 0, 'Bam file was created ok');
+is(compare("$tmp_dir/source-1.bam", "$root_dir/expected-1-update.bam"), 0, 'Bam file was created ok');
 
 
 exit;
