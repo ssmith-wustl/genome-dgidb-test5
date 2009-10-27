@@ -64,7 +64,7 @@ EOS
 sub execute {
 
     my $self = shift;
-
+    $DB::single = 1;
     my $screen_file = $self->screen_file;
     unless ($screen_file && -e $screen_file) { exit "couldn't see a snp file check your list\n"; }
 
@@ -86,6 +86,13 @@ sub execute {
 	    unless($line =~ /Coord/) {
 		$Chrom =~ s/([\S]+)/\U$1/;
 		
+                unless ($Chrom) {
+                    die "mp_grande file is missing chromosome information, perhaps you need to click 'load extra info'?";
+                }
+                unless ($Primer_1_Seq && $Primer_2_seq && $L_Primer_Coord && $R_Primer_Coord) {
+                    die "mp_grande file format is incorrect";
+                }
+
 		$Primer_1_Seq =~ s/TGTAAAACGACGGCCAGT//;
 		$Primer_2_seq =~ s/CAGGAAACAGCTATGACC//;
 		my $p1l = length($Primer_1_Seq);
