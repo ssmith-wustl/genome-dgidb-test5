@@ -54,7 +54,19 @@ class Genome::Model::Tools::PooledBac::AssembleBacProjects {
         #    type => 'String',
         #    is_optional => 1,
         #    doc => "This is the output directory for each project's assembly.  It defaults to newbler_assembly."   
-        #}
+        #},
+        newbler_params =>
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "This is an optional param string to feed to newbler, this will over-ride the default param string.",
+        },
+        bsub_mem_usage =>
+        {
+            type => 'Integer',
+            is_optional => 1,
+            doc => "This designates the amount of RAM in Gigabytes that is used per newbler job.  The default is 16",
+        }
     ]
 };
 
@@ -186,18 +198,18 @@ sub execute {
         chdir($project_dir."/$name");        
         `/bin/rm core*` if -e 'core';
         print "submitting job for clone ",$project_dir."$name","\n";
-        my $run_newbler;
+        my $run_newbler = $self->newbler_params || "mapasm runAssembly -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna";
         if(defined $sff_string)
         {
             print "sff string is $sff_string\n";
             $self->dump_sff_read_names("pooledreads.fasta"); 
             `sfffile -o pooledreads.sff -i read_names $sff_string`;
             $self->add_3730_reads;
-            $run_newbler = "mapasm runAssembly -o $assembly_output_dir -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna 3730_reads.fasta pooledreads.sff";
+            $run_newbler .= " -o $assembly_output_dir  3730_reads.fasta pooledreads.sff";
         }
         else
         {
-            $run_newbler = "mapasm runAssembly -o $assembly_output_dir -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna pooledreads.fasta";
+            $run_newbler .= " -o $assembly_output_dir pooledreads.fasta";
             $self->warning_message("No sff files are provided...\nAre you sure you want to run newbler without providing sff files?\n");
         }
         $run_newbler .= " reference_reads.fasta" unless($self->no_reference_sequence);
@@ -206,14 +218,15 @@ sub execute {
         print $command_fh "$run_newbler\n";
         print $command_fh "/bin/mv $project_dir/$name/$assembly_output_dir/consed/edit_dir/454Contigs.ace.1 $project_dir/$name/$assembly_output_dir/consed/edit_dir/$name.ace.1\n";
         system ("chmod 755 ./command.sh");
+        my $gigs_of_ram = $self->bsub_mem_usage || 16;
         my %job_params = (
             pp_type => 'lsf',
             q => 'long',
             command => './command.sh',
             o => "newbler_bsub.log",
-            M => 16000000,
-            rusage => ['mem=16000'],
-            select => ['type==LINUX64','mem>16000']
+            M => $gigs_of_ram.'000000',
+            rusage => ["mem=$gigs_of_ram".'000'],
+            select => ['type==LINUX64',"mem>$gigs_of_ram".'000']
         );
         my $job = {params => \%job_params, job => PP::LSF->create(%job_params), try => 0, dir => "$project_dir/$name"};
         $self->error_message("Can't create job: $!")

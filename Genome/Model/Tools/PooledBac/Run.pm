@@ -72,7 +72,19 @@ class Genome::Model::Tools::PooledBac::Run {
             type => 'String',
             is_optional => 1,
             doc => "This is the quality value that is used when creating reference .qual files, the default is 37",        
-        }
+        },
+        percent_overlap => 
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "this is the percent overlap, default is 50%",
+        },
+        percent_identity =>
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "this is the percent identity, default is 85%",
+        },
     ]
 };
 
@@ -108,12 +120,14 @@ $DB::single =1;
     #my $contig_map = $self->contig_map_file;
     my $no_reference_sequence = $self->no_reference_sequence;
     my $ref_qual_value = $self->ref_qual_value;
+    my $percent_overlap = $self->percent_overlap;
+    my $percent_identity = $self->percent_identity;
     
     $self->error_message("Error running run-blast")  and die unless
     Genome::Model::Tools::PooledBac::RunBlast->execute(ref_sequence=>$ref_seq_coords_file, ref_qual_value => $ref_qual_value, pooled_bac_dir=>$pooled_bac_dir,pooled_bac_ace_file => $ace_file_name, project_dir => $project_dir);
 
     $self->error_message("Error running map-contigs-to-assembly")  and die unless
-    Genome::Model::Tools::PooledBac::MapContigsToAssembly->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name, project_dir => $project_dir);
+    Genome::Model::Tools::PooledBac::MapContigsToAssembly->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name, project_dir => $project_dir, percent_overlap => $percent_overlap, percent_identity => $percent_identity);
 
     $self->error_message("Error running add-linking-contigs")  and die unless
     Genome::Model::Tools::PooledBac::AddLinkingContigs->execute( project_dir => $project_dir);

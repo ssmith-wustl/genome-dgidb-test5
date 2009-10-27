@@ -93,7 +93,7 @@ sub get_matching_contigs_list
     #group by contig name
     foreach my $result (@{$out})
     {
-        my @keys =  ('QUERY_NAME','HIT_NAME','HSP_LENGTH','IDENTICAL');
+        my @keys =  ('QUERY_NAME','HIT_NAME','HSP_LENGTH','IDENTICAL','QUERY_LENGTH');
         my %hash;
         %hash = map { $_ => $result->{$_} } @keys; 
         push @{$match_contigs_list{$result->{QUERY_NAME}}}, \%hash;    

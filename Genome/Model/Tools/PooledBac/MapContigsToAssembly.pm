@@ -35,7 +35,19 @@ class Genome::Model::Tools::PooledBac::MapContigsToAssembly {
             type => 'String',
             is_optional => 1,
             doc => "this file contains a list of contigs and where they map to",
-        }
+        },
+        percent_overlap => 
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "this is the percent overlap, default is 50%",
+        },
+        percent_identity =>
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "this is the percent identity, default is 85%",
+        },
     ]
 };
 
@@ -63,6 +75,8 @@ sub execute {
     $self->error_message("$blastfile does not exist") and die unless (-e $blastfile);
     my $out = Genome::Model::Tools::WuBlast::Parse->execute(blast_outfile => $blastfile);   
     $self->error_message("Failed to parse $blastfile") and die unless defined $out;
+    my $percent_overlap = $self->percent_overlap || 0;
+    my $percent_identity = $self->percent_identity || 0;
 
     my $ace_file = $pooled_bac_dir.'/consed/edit_dir/'.$self->ace_file_name;
     $self->error_message("Ace file $ace_file does not exist") and die unless (-e $ace_file);    
@@ -84,7 +98,20 @@ sub execute {
     {
         my $bac_name = $item->[0]{HIT_NAME};
         my $contig_name = $item->[0]{QUERY_NAME}; 
-        $contig_map{$contig_name}->{maps_to} = $bac_name;
+        my $hsp_length = $item->[0]{HSP_LENGTH};
+        my $contig_length = $item->[0]{QUERY_LENGTH};
+        my $hsp_identical = $item->[0]{IDENTICAL};
+        my $perc_identity = ($hsp_identical/$hsp_length)*100.00;
+        my $perc_overlap = ($hsp_length/$contig_length)*100.00;
+        if(($perc_identity >= $percent_identity) &&
+           ($perc_overlap >= $percent_overlap))
+        {
+            $contig_map{$contig_name}->{maps_to} = $bac_name;
+        }
+        #else
+        #{
+        #    print "rejected $contig_name, with $contig_length, $hsp_identical, $hsp_length, $perc_identity, $perc_overlap\n";
+        #}
     }
     $ut->write_contig_map(\%contig_map, $contig_map_file);
     return 1;
