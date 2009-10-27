@@ -75,8 +75,8 @@ sub execute {
     $self->error_message("$blastfile does not exist") and die unless (-e $blastfile);
     my $out = Genome::Model::Tools::WuBlast::Parse->execute(blast_outfile => $blastfile);   
     $self->error_message("Failed to parse $blastfile") and die unless defined $out;
-    my $percent_overlap = $self->percent_overlap || 0;
-    my $percent_identity = $self->percent_identity || 0;
+    my $percent_overlap = $self->percent_overlap || 50;
+    my $percent_identity = $self->percent_identity || 85;
 
     my $ace_file = $pooled_bac_dir.'/consed/edit_dir/'.$self->ace_file_name;
     $self->error_message("Ace file $ace_file does not exist") and die unless (-e $ace_file);    
