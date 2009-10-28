@@ -98,7 +98,7 @@ sub execute {
 
             # This should hold the entire annotation line from the transcript annotation file
             for my $annotation (@{$annotation{$chr}{$start}{$stop}{$reference}{$variant_allele}}) {
-                $ofh->print("$annotation");
+                $ofh->print("$annotation\n");
                 my ($chr, $start, $stop, $reference, $variant, $variation_type, $gene, $transcript, $species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain) = split("\t", $annotation);
                 if (length($amino_acid_change) > 255) {
                     $amino_acid_change = substr($amino_acid_change,0,240)."...truncated";
