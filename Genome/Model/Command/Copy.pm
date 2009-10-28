@@ -151,16 +151,6 @@ sub execute {
         }
     }
 
-    if ($src_model->gold_snp_path) {
-        my $gold_snp_path_cmd = Genome::Model::Command::AddGoldSnp->create(model_id=>$new_model->id,
-                                                                           file_name=>$src_model->gold_snp_path);
-
-        unless ($gold_snp_path_cmd->execute) {
-                $self->error_message("Couldn't assign gold snp path from source model - " . $src_model->gold_snp_path);
-                return;
-        }
-    }
-    
     return 1;
 }
 
