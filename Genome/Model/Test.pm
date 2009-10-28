@@ -17,7 +17,32 @@ use Test::More;
 class Genome::Model::Tester { # 'real' model for testing
     is => 'Genome::Model',
     has => [
-    map { $_ => { via => 'processing_profile' } } Genome::ProcessingProfile::Tester->params_for_class
+    ( map { $_ => { via => 'processing_profile' } } Genome::ProcessingProfile::Tester->params_for_class ),
+    coolness => {
+        via => 'inputs',
+        is_mutable => 1,
+        where => [ name => 'coolness', value_class_name => 'UR::Value' ],
+        to => 'value_id',
+        doc => 'The level of coolness of this model.',
+    },
+    inst_data => {
+        is => 'Genome::InstrumentData',
+        via => 'inputs',
+        is_mutable => 1,
+        is_many => 1,
+        where => [ name => 'instrument_data' ],
+        to => 'value',
+        doc => 'Instrument data',
+    },
+    friends => {
+        is => 'Text',
+        via => 'inputs',
+        is_mutable => 1,
+        is_many => 1,
+        where => [ name => 'friends', value_class_name => 'UR::Value', ],
+        to => 'value_id',
+        doc => 'Friends of the model.',
+    },
     ],
 };
 class Genome::Model::Build::Tester { # 'real' model for testing
@@ -147,6 +172,26 @@ sub test02_instrument_data : Tests() {
     my @unbuilt_id = $model->unbuilt_instrument_data; # should by id[1]
     is_deeply(\@unbuilt_id, [ $instrument_data[1] ], "unbuilt_instrument_data");
 
+    return 1;
+}
+
+sub test03_inputs : Tests() {
+    my $self = shift;
+
+    my $model = $self->_model;
+    # Coolness tests setting a primitive.  Could not get this to work thru UR
+    my $coolness = 'high';
+    ok($model->coolness($coolness), 'set input coolness'); 
+    is($model->coolness($coolness), $coolness, 'got input coolness'); 
+    
+    # Intr data - this will be how instr data will be defined in the future
+    my $inst_data = Genome::InstrumentData::Sanger->get('2sep09.934pmaa1');
+    ok($inst_data, 'Got sanger instrument data');
+    ok($model->add_inst_data($inst_data), 'add_inst_data');
+    is_deeply([$model->inst_data], [$inst_data], 'inst_data');
+    ok($model->remove_inst_data($inst_data), 'remove_inst_data');
+    ok(!$model->inst_data, 'removed instrument data');
+    
     return 1;
 }
 
