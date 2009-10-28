@@ -108,12 +108,12 @@ sub test002_valid_param_sets : Tests() {
         diag("$@\n") if $@;
         ok($obj, 'Created') or confess;
         isa_ok($obj, $self->test_class) or confess;
-        $self->_pre_execute or confess "Failed pre execute";
+        $self->_pre_execute($obj) or confess "Failed pre execute";
         my $execute_rv;
         eval { $execute_rv = $obj->execute; };
         diag("$@\n") if $@;
         ok($execute_rv, "Execute") or confess;
-        $self->_post_execute or confess "Failed post execute";
+        $self->_post_execute($obj) or confess "Failed post execute";
     }
 
     return 1;
@@ -121,8 +121,6 @@ sub test002_valid_param_sets : Tests() {
 
 sub test003_required_params : Tests {
     my $self = shift;
-
-    note($self->test_class." required properties");
 
     # Check if we have vlaues in valid param set #1
     my $params = ($self->valid_param_sets)[0];
@@ -132,6 +130,7 @@ sub test003_required_params : Tests {
     return ok(1, 'No need to test required properties - they are none') unless @required_property_names;
     
     for my $property_name ( @required_property_names ) {
+        note($self->test_class." required property => $property_name");
         # remove value
         my $val = delete $params->{$property_name};
         # create and execute - contiue thru rest of req properties even if one fails
@@ -184,8 +183,6 @@ sub _create_and_execute_expected_to_fail {
         return 1;
     }
 
-    $self->_pre_execute or confess "Failed pre execute";
-
     # execute
     my $rv;
     eval { $rv = $obj->execute; };
@@ -195,8 +192,6 @@ sub _create_and_execute_expected_to_fail {
         ok(1, "Failed as expected on execute");
         return 1;
     }
-
-    $self->_post_execute or confess "Failed post execute";
 
     # bad - did not fail creat of execute
     ok(0, "DID NOT fail as expected during create or execute");
