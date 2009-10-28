@@ -10,6 +10,12 @@ class Genome::Model::Tools::Snp::ScreenSeqBySnpList {
 	screen_file => {
 	    is =>  'string',
 	    doc   =>  "coordinates for screening list; 1st column chromosome second column coordinate",
+	    is_optional  => 1,
+	},
+	screen_file_fof => {
+	    is =>  'string',
+	    doc   =>  "provide an fof of screen files; each line of this file should include the full path of a screen file",
+	    is_optional  => 1,
 	},
 	
 	fasta => {
@@ -66,7 +72,9 @@ sub execute {
     my $self = shift;
     $DB::single = 1;
     my $screen_file = $self->screen_file;
-    unless ($screen_file && -e $screen_file) { exit "couldn't see a snp file check your list\n"; }
+    my $screen_file_fof = $self->screen_file_fof;
+
+    unless (($screen_file && -e $screen_file) || ($screen_file_fof && -e $screen_file_fof)) { print "Either a screen file or a screen files fof is required see gmt snp screen-seq-by-snp-list --help for more options\n"; exit;}
 
     my $fasta = $self->fasta;
     my $mp_grande = $self->mp_grande;
@@ -102,47 +110,33 @@ sub execute {
 		my $rps = ($R_Primer_Coord - $p2l) + 1;
 		
 #	print qq($Chrom  ($L_Primer_Coord + $p1l = $lpe) $L_Amp_Coord $R_Amp_Coord  ($rps = | $p2l - $R_Primer_Coord |)\n);
+
 		$all_lines->{$line}=1;
 		for my $pos ($L_Primer_Coord..$lpe) {
 		    $lines->{$Chrom}->{$pos}->{$line}=1;
-		    $screen->{$Chrom}->{$pos}=1;
+		    $screen->{$Chrom}->{$pos}="screen";
+		    #print qq(L $Chrom $pos\n);
 		}
 		for my $pos ($rps..$R_Primer_Coord) {
 		    $lines->{$Chrom}->{$pos}->{$line}=1;
-		    $screen->{$Chrom}->{$pos}=1;
+		    $screen->{$Chrom}->{$pos}="screen";
+		    #print qq(R $Chrom $pos\n);
 		}
 	    }
 	}
 	close (CSV);
-	my $snps_in_primer;
-	
-	my $fh = IO::File->new($screen_file,"r");
-	
-	unless($fh) {
-	    die "Unable to open snp file";
-	}
-	
-#my $test = $self->is_within_primer($t->chrom_name, @primer_genomic_alignments);
-	while(my $line = $fh->getline) {
-	    my ($chr, $pos) = split /\t/, $line;
-	    
-	    my $primer_line = $screen->{$chr}->{$pos};
-	    if ($primer_line) {
-		#print qq($primer_line\n);
-		
-#	print qq($chr, $pos\n);
-		
-		#$snps_in_primer->{$primer_line}++;
-		$snps_in_primer->{$chr}->{$pos}=1;
-	    }
-	}
+
+	($screen)=&get_screen($self,$screen);
+
 	open(OUT,">$mp_grande.snps_in_primers");
 	open(OUT2,">$mp_grande.good_primers");
 	my $snp_lines;
 	foreach my $chr (sort keys %{$lines}) {
 	    foreach my $pos (sort keys %{$lines->{$chr}}) {
-		my $snp_pos = $snps_in_primer->{$chr}->{$pos};
-		if ($snp_pos) {
+
+		my $snp_pos = $screen->{$chr}->{$pos};
+
+		if ($snp_pos eq "SNP") {
 		    foreach my $line (sort keys %{$lines->{$chr}->{$pos}}) {
 			$snp_lines->{$line}=1;
 		    }
@@ -190,17 +184,22 @@ sub execute {
 	}
 	close (FASTA);
 
-	($screen)=&get_screen($chr,$start,$stop,$screen_file,$screen);
+	for my $screen_pos ($start..$stop) {
+	    $screen->{$chr}->{$screen_pos}="screen";
+	}
+
+	($screen)=&get_screen($self,$screen);
+
 	my $n = 1;
 	for my $base (@seq) {
 	    if ($ori eq "-") {$start = $stop;}
-	    my $screened = $screen->{$start};
+	    my $screened = $screen->{$chr}->{$start};
 	    if ($ori eq "-") {
 		$start--;
 	    } else {
 		$start++;
 	    }
-	    if ($screened) {
+	    if ($screened eq "SNP") {
 		$base = "N";
 	    }
 	    print OUT qq($base);
@@ -219,23 +218,44 @@ sub execute {
 
 sub get_screen {
     
-    my ($chr,$start,$stop,$screen_file,$screen) = @_;
+    my ($self,$screen) = @_;
+    my $screen_file = $self->screen_file;
+    my $screen_file_fof = $self->screen_file_fof;
+
+    if ($screen_file && -e $screen_file) {
+	($screen) = &parse_screen_file($screen_file,$screen);
+    }
+    if ($screen_file_fof && -e $screen_file_fof) {
+	open(FOF,$screen_file_fof);
+	while (<FOF>) {
+	    chomp;
+	    my $screen_file = $_;
+	    if ($screen_file && -e $screen_file) {
+		($screen) = &parse_screen_file($screen_file,$screen);
+	    } else {
+		print qq($screen_file form your fof of screen files was not found and so was disregaurded\n);
+	    }
+	}
+    }
+    return ($screen);
+}
+
+sub parse_screen_file {
+
+    my ($screen_file,$screen) = @_;
     open(SCREEN,$screen_file) || die ("couldn't open the screen file\n\n");
     while (<SCREEN>) {
 	chomp;
 	my $line = $_;
 	my ($chrom,$pos) = (split(/[\s]+/,$line))[0,1];
-	if ($chr eq $chrom) {
-	    if ($pos >= $start && $pos <= $stop) {
-		$screen->{$pos}=1;
-	    }
+	
+	my $screen_pos = $screen->{$chrom}->{$pos};
+	if ($screen_pos) {
+	    $screen->{$chrom}->{$pos}="SNP";
 	}
+	
     } close (SCREEN);
     return($screen);
 }
 
-
-
-
-
-
+1;
