@@ -51,6 +51,8 @@ package Genome::Utility::TestCommandBase::Tester::Test;
 
 use base 'Genome::Utility::TestCommandBase';
 
+use Test::More;
+
 sub test_class {
     return 'Genome::Utility::TestCommandBase::Tester';
 }
@@ -76,6 +78,22 @@ sub invalid_param_sets {
             is_hairy => 1,
         },
     );
+}
+
+sub _pre_execute { 
+    my ($self, $obj) = @_;
+
+    ok($obj, 'Got object in _pre_execute');
+    
+    return 1;
+}
+
+sub _post_execute { 
+    my ($self, $obj) = @_;
+
+    ok($obj, 'Got object in _post_execute');
+    
+    return 1;
 }
 
 sub test01_dirs : Test(4) {
