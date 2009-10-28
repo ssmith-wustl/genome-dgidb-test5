@@ -56,7 +56,7 @@ sub get_generic_report_classes {
 }
 
 sub get_report_classes_for_type_name {
-    print Dumper(\@_);
+    #print Dumper(\@_);
     my $type_name = shift;
     
     unless ( $type_name ) {

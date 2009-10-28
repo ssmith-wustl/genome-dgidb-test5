@@ -5,9 +5,6 @@ use warnings;
 
 use Genome;
 
-my %DIR_TO_REMOVE;
-$SIG{'INT'} = \&INT_cleanup;
-
 class Genome::InstrumentData::Solexa::Report::Quality {
     is => 'Genome::InstrumentData::Report',
     has => [
@@ -41,18 +38,10 @@ sub _generate_data {
 sub _generate_quality_stats {
     my $self = shift;
 
-
-    my @stats_filenames;
     my @fastq_suffix = qw/fastq fq txt/;
-    #TODO: For some reason fastx has a problem running on fastq files in tmp
-    #my @fastq_filenames = $self->instrument_data->resolve_fastq_filenames;
-    #TODO: Can not use tmp directory so dump to this scratch area, there has to be a better solution though
-    my $template = '/gscmnt/sata132/techd/solexa/jwalker/fastq_scratch/instrument-data-quality-stats-XXXXX';
-    my $tmp_directory = File::Temp::tempdir($template, CLEANUP => 1 );
-    $DIR_TO_REMOVE{$tmp_directory} = 1;
-    Genome::Utility::FileSystem->create_directory($tmp_directory);
-    my $fastq_directory = $self->instrument_data->dump_illumina_fastq_archive($tmp_directory);
-    my @fastq_filenames = glob($fastq_directory.'/*.txt');
+    my @fastq_filenames = $self->instrument_data->resolve_fastq_filenames;
+    my $tmp_directory = File::Temp::tempdir( CLEANUP => 1 );
+
     my %stats_files;
     for my $fastq_filename (@fastq_filenames) {
         my ($basename,$dirname,$suffix) = File::Basename::fileparse($fastq_filename,@fastq_suffix);
@@ -116,25 +105,6 @@ sub _generate_quality_stats {
         $parser->input->close;
     }
     return 1;
-}
-
-END {
-    for my $dir_to_remove (keys %DIR_TO_REMOVE) {
-        if (-e $dir_to_remove) {
-            warn("Removing temporary fastq directory: '$dir_to_remove'");
-            File::Path::rmtree($dir_to_remove);
-        }
-    }
-};
-
-sub INT_cleanup {
-    for my $dir_to_remove (keys %DIR_TO_REMOVE) {
-        if (-e $dir_to_remove) {
-            warn("Removing temporary fastq directory: '$dir_to_remove'");
-            File::Path::rmtree($dir_to_remove);
-        }
-    }
-    die;
 }
 
 1;

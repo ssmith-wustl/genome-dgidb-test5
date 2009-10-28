@@ -43,7 +43,8 @@ sub execute {
         $self->error_message('Failed to validate stats file for write access '. $self->stats_file .":  $!");
         die($self->error_message);
     }
-    my $cmd = $self->fastx_tool_path .' -i '. $self->fastq_file .' -o '. $self->stats_file;
+    #fastx_quality_stats (as of 0.0.7) won't process from tmp with -i and -o
+    my $cmd = $self->fastx_tool_path .' < '. $self->fastq_file .' > '. $self->stats_file;
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
         input_files => [$self->fastq_file],
