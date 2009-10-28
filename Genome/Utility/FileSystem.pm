@@ -432,11 +432,16 @@ sub create_symlink {
         return;
     }
 
-    if ( -e $link ) { 
-        $self->error_message("Requested link ($link) for target ($target) already exists");
+    if ( -e $link ) { # the link exists and points to spmething
+        $self->error_message("Link ($link) for target ($target) already exists.");
         return;
     }
-    
+
+    if ( -l $link ) { # the link exists, but does not point to something
+        $self->error_message("Link ($link) for target ($target) is already a link.");
+        return;
+    }
+
     unless ( symlink($target, $link) ) {
         $self->error_message("Can't create link ($link) to $target\: $!");
         return;
