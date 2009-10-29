@@ -273,7 +273,7 @@ sub recalculate_consensus_qualities_and_change
 
 	recalculate_consensus_qualities_no_change( $nConsPosLeft, $nConsPosRight, \@aNewQualities, $rReadArray, $rContig );
 
-	my @qualities = @{$rContig->sequence->padded_base_quality};
+	my @qualities = @{$rContig->padded_base_quality};
 	for ( my $nConsPos = $nConsPosLeft ; $nConsPos <= $nConsPosRight ; $nConsPos++ )
 	{
 		my $qualNew = $aNewQualities[ $nConsPos - $nConsPosLeft ];
@@ -282,7 +282,7 @@ sub recalculate_consensus_qualities_and_change
 		assert( $qualNew <= QUALITY_MAX );
 		$qualities[$nConsPos - 1 ] = $qualNew;
 	}
-	$rContig->sequence->padded_base_quality(\@qualities);
+	$rContig->padded_base_quality(\@qualities);
 }
 
 sub check_contiguous
@@ -552,7 +552,7 @@ sub recalculate_consensus_qualities_no_change
 			my $nConsPos3;
 			for ( $nConsPos3 = $nConsPos - 1 ; $nConsPos3 >= 0 ; $nConsPos3-- )
 			{
-				if ( !( substr( $rContig->sequence->padded_base_string, $nConsPos3 - 1, 1 ) eq '*' ) )    #if base at position $nConsPos3 is a pad then...
+				if ( !( substr( $rContig->padded_base_string, $nConsPos3 - 1, 1 ) eq '*' ) )    #if base at position $nConsPos3 is a pad then...
 				{
 					$nNonpads++;
 					if ( $nNonpads == 2 )
@@ -566,7 +566,7 @@ sub recalculate_consensus_qualities_no_change
 			$nNonpads = 0;
 			for ( $nConsPos3 = $nConsPos + 1 ; $nConsPos3 < $rContig->base_count ; $nConsPos3++ )
 			{
-				if ( !( substr( $rContig->sequence->padded_base_string, $nConsPos3 - 1, 1 ) eq '*' ) )    #if base at position $nConsPos3 is a pad then...
+				if ( !( substr( $rContig->padded_base_string, $nConsPos3 - 1, 1 ) eq '*' ) )    #if base at position $nConsPos3 is a pad then...
 				{
 					$nNonpads++;
 					if ( $nNonpads == 2 )
@@ -619,8 +619,8 @@ sub recalculate_consensus_qualities_no_change
 				for ( my $nConsPos2 = $nWindowLeft ; $nConsPos2 <= $nWindowRight && $bAgreeSoFar ; $nConsPos2++ )
 				{
 					if (
-						lc( substr( $rRead->sequence->padded_base_string, ( $rRead->get_child_position_from_parent_position( $nConsPos2 - 1 ) ), 1 ) ) ne
-						lc( substr( $rContig->sequence->padded_base_string, ( $nConsPos2 - 1 ), 1 ) ) )
+						lc( substr( $rRead->padded_base_string, ( $rRead->get_child_position_from_parent_position( $nConsPos2 - 1 ) ), 1 ) ) ne
+						lc( substr( $rContig->padded_base_string, ( $nConsPos2 - 1 ), 1 ) ) )
 					{
 						$bAgreeSoFar = 0;
 					}
@@ -635,7 +635,7 @@ sub recalculate_consensus_qualities_no_change
 					}
 					push( @{ $aAgreeingReads[$nStrandAndChemistry] }, $rRead );
 
-					my $nQual = $rRead->sequence->padded_base_quality->[ $rRead->get_child_position_from_parent_position( $nConsPos - 1 ) ];
+					my $nQual = $rRead->padded_base_quality->[ $rRead->get_child_position_from_parent_position( $nConsPos - 1 ) ];
 
 					if ( !defined($rBestAgreeingRead)
 						|| $nQual > $nQualBestAgreeingRead )
@@ -700,8 +700,8 @@ sub recalculate_consensus_qualities_no_change
 							# templates
 
 							my $nQual =
-							  $rReadStrandChem1->sequence->padded_base_quality->[ $rReadStrandChem1->get_child_position_from_parent_position( $nConsPos - 1 ) ] +
-							  $rReadStrandChem2->sequence->padded_base_quality->[ $rReadStrandChem2->get_child_position_from_parent_position( $nConsPos - 1 ) ];
+							  $rReadStrandChem1->padded_base_quality->[ $rReadStrandChem1->get_child_position_from_parent_position( $nConsPos - 1 ) ] +
+							  $rReadStrandChem2->padded_base_quality->[ $rReadStrandChem2->get_child_position_from_parent_position( $nConsPos - 1 ) ];
 
 							if ( $nQual > $nQualBest )
 							{

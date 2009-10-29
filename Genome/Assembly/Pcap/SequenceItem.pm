@@ -29,6 +29,18 @@ sub new {
     return $self;
 }
 
+sub get_base_at_position
+{
+    my ($self, $position) = @_;
+
+    $self->fatal_msg("You must supply a base position to get that base") unless
+	$position =~ /^\d+$/;
+
+    my $bases = $self->padded_base_string;
+    
+    return substr($bases, $position,1);
+}
+
 sub length #no setter for length, since it doesn't make sense to allow someone to set the length for an item that
 #already has a length (i.e.  if you have a string ACTG, it doesn't make sense to set the length to anything other
 #than 4, which is already implied
@@ -72,20 +84,20 @@ sub freeze
 {
 	my ($self) = @_;
 	$self->SUPER::freeze;
-	if($self->already_loaded("sequence"))
-	{
-		$self->freeze;
-	}
+	#if($self->already_loaded("sequence"))
+	#{
+	#	$self->freeze;
+	#}
 }
 
 sub thaw
 {
 	my ($self, $obj,$file_name, $fh) = @_;
 	$self->SUPER::thaw($obj,$file_name, $fh);
-	if($self->already_loaded("sequence"))
-	{
-		$self->thaw($obj,$file_name, $fh);
-	}
+	#if($self->already_loaded("sequence"))
+	#{
+	#	$self->thaw($obj,$file_name, $fh);
+	#}
 }
 
 # sequence methods
