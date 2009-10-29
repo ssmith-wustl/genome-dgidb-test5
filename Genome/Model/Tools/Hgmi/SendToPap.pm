@@ -374,7 +374,7 @@ sub do_pap_workflow
             $output = run_workflow_lsf(
                                        $xml_file,
                                        'fasta file'           => $fasta_file,
-                                       'chunk size'           => 10,
+                                       'chunk size'           => 1000,
                                        'dev flag'             => $workflow_dev_flag,
                                        'biosql namespace'     => 'MGAP',
                                        'gram stain'           => $self->gram_stain(),

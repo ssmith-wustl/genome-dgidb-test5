@@ -104,7 +104,7 @@ sub execute
 
     my @predict_command = $self->gather_details();
 
-    IPC::Run::run( @predict_command ) || croak "can't run Predict.pm : $OS_ERROR";
+    IPC::Run::run( @predict_command ) || croak "can't run Predict.pm : $CHILD_ERROR";
 
     if($@)
     {
