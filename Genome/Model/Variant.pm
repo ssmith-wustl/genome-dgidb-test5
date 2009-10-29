@@ -16,7 +16,6 @@ class Genome::Model::Variant {
         stop_pos           => { is => 'NUMBER', len => 12 },
         reference_allele   => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         variant_allele     => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        
         amino_acid_change  => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         c_position         => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         domain             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
@@ -29,6 +28,9 @@ class Genome::Model::Variant {
         trv_type           => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         ucsc_cons          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         validation_status  => { is => 'VARCHAR2', len => 5, is_optional => 1 },
+    ],
+    unique_constraints => [
+        { properties => [qw/chromosome reference_allele start_pos stop_pos variant_allele/], sql => 'GMV_UK' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
