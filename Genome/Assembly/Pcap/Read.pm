@@ -287,7 +287,8 @@ sub template {
     elsif (!exists $self->{template} or !defined $self->{template}) { 
         # determine template from read name
         my ($template)=($self->name=~/^(.*?)\./);
-        if ($template=~/((_\d+)|(_\w\d*)|(_\w\d+\w\d+))$/) {
+        #$DB::single = 1;
+        if (defined $template && $template=~/((_\d+)|(_\w\d*)|(_\w\d+\w\d+))$/) {
             my $extra=$1;
             $template=~s/$extra//;
         }

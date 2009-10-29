@@ -1339,7 +1339,8 @@ sub _write_contig_from_object
 	
     my $reader = $self->_reader;
 	$contig->thaw($self, $self->_input_file, $self->_input);
-	if(!defined $input||($input_file ne $contig->{callbacks}{file_name}))
+    $DB::single = 1;
+	if(!defined $input||(exists $contig->{callbacks}{file_name}&&($input_file ne $contig->{callbacks}{file_name})))
 	{
 		$input = $contig->{callbacks}{fh};
 	}

@@ -8,6 +8,7 @@ use Carp;
 use Genome::Assembly::Pcap::Tag;
 use List::Util qw(min max);
 use Storable;
+use Genome::Assembly::Pcap::Utility;
 use base (qw(Genome::Assembly::Pcap::SequenceItem));
 
 =pod
@@ -483,6 +484,10 @@ use constant QUALITY_HIGH_EDITED       => 99;
 sub nNormalQualityFrom9899Quality
 {
 	my ($nQuality) = @_;
+    if($nQuality =~ /\D+/)
+    {
+        $nQuality = 0;
+    }
 	if ( $nQuality == QUALITY_LOW_EDITED )
 	{
 		$nQuality = QUALITY_MIN;

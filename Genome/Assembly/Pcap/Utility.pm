@@ -1,6 +1,6 @@
 #The Contig Merging and Splitting Utility Library has several classes.
 #The first class is a general
-package Utility;
+package Genome::Assembly::Pcap::Utility;
 
 use Exporter;
 use Compress::Zlib;
