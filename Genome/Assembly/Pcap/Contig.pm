@@ -103,9 +103,9 @@ sub ace_contig
 
     if(@_ > 1)
     {
-        $self->sequence->padded_base_string( $ace_contig->{consensus} );
+        $self->padded_base_string( $ace_contig->{consensus} );
 		$self->complemented($ace_contig->{u_or_c} =~ /c/i or 0);
-        $self->sequence->unpadded_base_quality ( $ace_contig->{base_qualities}); 
+        $self->unpadded_base_quality ( $ace_contig->{base_qualities}); 
         $self->name ($ace_contig->{name});
         $self->{type} = "contig";   
     }
@@ -115,8 +115,8 @@ sub ace_contig
              read_count => scalar (keys %{$self->reads}),
              base_seg_count => scalar (@{$self->base_segments}),
              u_or_c => ( $self->complemented ? "C" : "U" ),
-             consensus => $self->sequence->padded_base_string,
-             base_qualities => $self->sequence->unpadded_base_quality
+             consensus => $self->padded_base_string,
+             base_qualities => $self->unpadded_base_quality
            };             
 }
 
@@ -201,9 +201,9 @@ This returns the number of unpadded bases.
 sub base_count
 {
 	my ($self, $value) = @_;
-    if(defined $self->{sequence}&&$self->sequence->already_loaded("padded_base_string"))
+    if($self->already_loaded("padded_base_string"))
     {
-	   return length $self->sequence->padded_base_string;
+	   return length $self->padded_base_string;
     }
     my ($name) = (caller(0))[3] =~ /.+::(.+)/;
     if(@_>1)
@@ -289,7 +289,7 @@ sub is_bs_array_structure_ok
 		{
 			print "base segment from padded cons pos ", $nConsPosStart, " to ", $nConsPosEnd, " is not within read ", $rRead->{name},
 			  " which lies within padded cons pos ", $rRead->align_start, " to ", $rRead->align_end, "\n";
-			print "$rRead->sequence->padded_base_string() $rRead->base_count()\n";
+			print "$rRead->padded_base_string() $rRead->base_count()\n";
 			print "$self->name()\n";
 			return 0;
 		}
@@ -310,7 +310,7 @@ sub is_bs_array_structure_ok
 
 				print "base from ", $nConsPosStart, " to ", $nConsPosEnd, "\n";
 
-				print substr( $self->sequence->padded_base_string, $nConsPosStart - 1, ( $nConsPosEnd - $nConsPosStart + 1 ) ), "\n";
+				print substr( $self->padded_base_string, $nConsPosStart - 1, ( $nConsPosEnd - $nConsPosStart + 1 ) ), "\n";
 
 				return 0;
 			}
@@ -426,7 +426,7 @@ sub calculate_consensus
 	for ( my $pos = $start_pos; $pos <= $end_pos; $pos++ )
 	{
 		my $read = $best_quality_reads->[$pos];
-		$consensus .= substr( $read->sequence->padded_base_string, $read->get_child_position_from_parent_position($pos-1), 1 ); 
+		$consensus .= substr( $read->padded_base_string, $read->get_child_position_from_parent_position($pos-1), 1 ); 
 		$quality[$pos-1] = $best_quality->[$pos];
 		#extend align region for reads, I'm not sure if this belongs here or not
 		if ( $pos < $read->get_parent_position_from_child_position($read->align_clip_start))
@@ -438,8 +438,8 @@ sub calculate_consensus
 			$read->align_clip_end($read->get_child_position_from_parent_position( $pos ));
 		}
 	}
-	$self->sequence->padded_base_string($consensus);
-	$self->sequence->padded_base_quality(\@quality);
+	$self->padded_base_string($consensus);
+	$self->padded_base_quality(\@quality);
 	return ($best_quality_reads, $best_quality);
 }
 
@@ -447,9 +447,9 @@ sub calculate_consensus
 sub recalculate_consensus
 {
 	my ($self, $start_pos, $end_pos,$overlap_reads) = @_;
-	my $consensus = $self->sequence->padded_base_string;
+	my $consensus = $self->padded_base_string;
 	my @quality;
-	eval { @quality = @{$self->sequence->padded_base_quality}; };
+	eval { @quality = @{$self->padded_base_quality}; };
 	if(@quality == 0)
 	{
 		for(my $i=0;$i<$self->length;$i++){$quality[$i]=0;}
@@ -459,7 +459,7 @@ sub recalculate_consensus
 	for ( my $pos = $start_pos; $pos <= $end_pos; $pos++ )
 	{
 		my $read = $best_quality_reads->[$pos];
-		substr($consensus, $pos-1, 1) = substr( $read->sequence->padded_base_string, $read->get_child_position_from_parent_position($pos-1), 1 ); 
+		substr($consensus, $pos-1, 1) = substr( $read->padded_base_string, $read->get_child_position_from_parent_position($pos-1), 1 ); 
 		$quality[$pos-1] = $best_quality->[$pos];
 		#extend align region for reads, I'm not sure if this belongs here or not
 		if ( $pos < $read->get_parent_position_from_child_position($read->align_clip_start))
@@ -471,8 +471,8 @@ sub recalculate_consensus
 			$read->align_clip_end($read->get_child_position_from_parent_position( $pos ));
 		}
 	}
-	$self->sequence->padded_base_string($consensus);
-	$self->sequence->padded_base_quality(\@quality);
+	$self->padded_base_string($consensus);
+	$self->padded_base_quality(\@quality);
 	return ($best_quality_reads, $best_quality);
 }
 
@@ -539,7 +539,7 @@ sub get_best_quality_reads
 			{
 				$aBestQualityRead[$nConsPos] = $read;
 
-				if ( lc(substr( $read->sequence->padded_base_string, $read->get_child_position_from_parent_position( $nConsPos-1), 1 )) eq 'x' )
+				if ( lc(substr( $read->padded_base_string, $read->get_child_position_from_parent_position( $nConsPos-1), 1 )) eq 'x' )
 				{
 					$aBestQuality[$nConsPos] = 0;
 				}
@@ -548,14 +548,14 @@ sub get_best_quality_reads
 					$aBestQuality[$nConsPos] =
 					
 					nNormalQualityFrom9899Quality(
-						$read->sequence->padded_base_quality->
+						$read->padded_base_quality->
 						[ $read->get_child_position_from_parent_position( $nConsPos-1 ) ] );
 				}
 			}
 			else
 			{
 				my $q;
-				if ( lc(substr( $read->sequence->padded_base_string, $read->get_child_position_from_parent_position( $nConsPos-1), 1 )) eq 'x' )
+				if ( lc(substr( $read->padded_base_string, $read->get_child_position_from_parent_position( $nConsPos-1), 1 )) eq 'x' )
 				{
 					$q = 0;
 				}
@@ -563,7 +563,7 @@ sub get_best_quality_reads
 				{					
 					$q =
 					nNormalQualityFrom9899Quality(
-						$read->sequence->padded_base_quality->
+						$read->padded_base_quality->
 						[ $read->get_child_position_from_parent_position( $nConsPos-1 ) ] );
 				}
 
@@ -762,10 +762,10 @@ sub extend
 		foreach my $read (@reads)		
 		{
 			my $phd =$po->get_phd($read->phd_file);
-			my @quality = @{$phd->sequence->unpadded_base_quality};
+			my @quality = @{$phd->unpadded_base_quality};
 			@quality = reverse @quality if ($read->complemented);
-			$read->sequence->unpadded_base_quality( \@quality);
-			my $qual_array = $read->sequence->padded_base_quality;
+			$read->unpadded_base_quality( \@quality);
+			my $qual_array = $read->padded_base_quality;
 			my $start_cons_in_read = $read->get_child_position_from_parent_position(1);
 			my $sum = 0;
 			for(my $i = 1;$i<$start_cons_in_read;$i++)
@@ -779,7 +779,7 @@ sub extend
 		my $extend_read = pop @reads;
 		foreach my $read (@reads)
 		{
-			$read->sequence->padded_base_quality([]);
+			$read->padded_base_quality([]);
 		}		
 		
 		$extend_read->qual_clip_start(1);
@@ -798,12 +798,12 @@ sub extend
 		}
 		unshift @bs, $newbs;
 		$self->base_segments(\@bs);
-		my $consensus = substr($extend_read->sequence->padded_base_string,0,$length).$self->sequence->padded_base_string;
-		my @temp_quality = @{$extend_read->sequence->padded_base_quality};
+		my $consensus = substr($extend_read->padded_base_string,0,$length).$self->padded_base_string;
+		my @temp_quality = @{$extend_read->padded_base_quality};
 		@temp_quality = splice(@temp_quality,0,$length);
-		push @temp_quality,@{$self->sequence->padded_base_quality};
-		$self->sequence->padded_base_string($consensus);
-		$self->sequence->padded_base_quality(\@temp_quality);
+		push @temp_quality,@{$self->padded_base_quality};
+		$self->padded_base_string($consensus);
+		$self->padded_base_quality(\@temp_quality);
 		
 		foreach my $read (values %reads)
 		{
@@ -829,10 +829,10 @@ sub extend
 		foreach my $read (@reads)		
 		{
 			my $phd =$po->get_phd($read->phd_file);
-			my @quality = @{$phd->sequence->unpadded_base_quality};
+			my @quality = @{$phd->unpadded_base_quality};
 			@quality = reverse @quality if ($read->complemented);
-			$read->sequence->unpadded_base_quality( \@quality);
-			my $qual_array = $read->sequence->padded_base_quality;
+			$read->unpadded_base_quality( \@quality);
+			my $qual_array = $read->padded_base_quality;
 			my $end_cons_in_read = $read->get_child_position_from_parent_position($self->length);
 			my $sum = 0;
 			for(my $i = $end_cons_in_read;$i<$read->length;$i++)
@@ -846,7 +846,7 @@ sub extend
 		my $extend_read = pop @reads;
 		foreach my $read (@reads)
 		{
-			$read->sequence->padded_base_quality([]);
+			$read->padded_base_quality([]);
 		}		
 		
 		my $newbs = { type => 'base_segment', 
@@ -860,12 +860,12 @@ sub extend
 		$extend_read->qual_clip_end($extend_read->length);
 		my $length = $extend_read->align_end - $self->length;
 		my $read_offset = $extend_read->length - $length;
-		my $consensus = $self->sequence->padded_base_string.substr($extend_read->sequence->padded_base_string,$read_offset,$length);
-		my @temp_quality = @{$extend_read->sequence->padded_base_quality};
+		my $consensus = $self->padded_base_string.substr($extend_read->padded_base_string,$read_offset,$length);
+		my @temp_quality = @{$extend_read->padded_base_quality};
 		@temp_quality = splice(@temp_quality,$read_offset,$length);
-		unshift @temp_quality,@{$self->sequence->padded_base_quality};
-		$self->sequence->padded_base_string($consensus);
-		$self->sequence->padded_base_quality(\@temp_quality);			
+		unshift @temp_quality,@{$self->padded_base_quality};
+		$self->padded_base_string($consensus);
+		$self->padded_base_quality(\@temp_quality);			
 	}
 
 }

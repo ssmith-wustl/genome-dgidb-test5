@@ -324,7 +324,7 @@ sub ace_read
     my ($self, $ace_read) = @_;
     if(@_>1)
     {
-        $self->sequence->padded_base_string( $ace_read->{sequence});
+        $self->padded_base_string( $ace_read->{sequence});
         $self->name ( $ace_read->{name});
         $self->align_clip_start ($ace_read->{align_clip_start});
         $self->align_clip_end ($ace_read->{align_clip_end});
@@ -343,7 +343,7 @@ sub ace_read
              padded_base_count => $self->length,
              info_count => $self->info_count,
              tag_count => scalar(@{$self->tags}),
-             sequence => $self->sequence->padded_base_string,
+             sequence => $self->padded_base_string,
              qual_clip_start => $self->qual_clip_start,
              qual_clip_end => $self->qual_clip_end,
              align_clip_start => $self->align_clip_start,
@@ -396,7 +396,7 @@ sub base_count
 {
     my ($self) = @_;
 
-    return length $self->sequence->unpadded_base_string;
+    return length $self->unpadded_base_string;
 }
 
 =pod
