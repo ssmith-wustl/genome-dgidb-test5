@@ -87,7 +87,7 @@ sub execute {
 
     ##FIXME:  This should not be hardcoded.  At least not here.  
     my @keggscan_command = (
-                            '/gsc/scripts/gsc/annotation/KEGGscan_KO.new.070125',
+                            '/gsc/scripts/gsc/annotation/KEGGscan_KO.v50',
                            );
     
     my ($kegg_stdout, $kegg_stderr);
@@ -172,7 +172,7 @@ sub write_config_file {
     my $species = undef;
 
     ##FIXME:  Hardcoded path.
-    my $subjectpath = "/gscmnt/233/analysis/sequence_analysis/species_independant/jmartin/hgm.website/KEGG/KEGG_release_41/genes.v41.faa";
+    my $subjectpath = "/gscmnt/temp212/info/annotation/KEGG/Version_50/genes.v50.faa";
     
     my $query_fasta = $self->fasta_file();
     my $working_dir = $self->working_directory();
