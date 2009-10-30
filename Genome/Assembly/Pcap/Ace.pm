@@ -26,7 +26,7 @@ $Storable::Deparse = 1;
 $Storable::Eval = 1;
 #$Storable::forgive_me = 1;
 
-Genome::Assembly::Pcap::Ace->mk_accessors(qw(_reader _writer _input _output _input_file _output_file dbh sth_create sth_rem sth_set sth_get sth_getcount db_type _init_db _keep_changes _db_dsn _assembly_name config));
+Genome::Assembly::Pcap::Ace->mk_accessors(qw(_reader _writer _input _output _input_file _output_file dbh sth_create sth_rem sth_set sth_get sth_getcount db_type _init_db _keep_changes _db_dsn _assembly_name _db_file config));
 
 
 
@@ -45,6 +45,7 @@ sub new {
 	$self->_output(delete $params{output});
     $self->_output_file(delete $params{output_file});
 	$self->_output(IO::File->new(">".$self->_output_file)) if(defined $self->_output_file);
+    $self->_db_file($params{db_file});
 		
 	$self->_init_db(delete $params{init_db});
 	$self->_keep_changes(delete $params{keep_changes});	
@@ -158,12 +159,17 @@ sub _process_params
 	
 	if($self->{db_type} eq "SQLite")
 	{
-		if(defined $self->_input_file)
+        if(defined $self->_db_file )
+        {
+            $self->_db_dsn("dbi:SQLite:".$self->_db_file);        
+        }
+		elsif(defined $self->_input_file )
 		{
 			$self->_db_dsn("dbi:SQLite:".$self->_input_file.".db");
 		}
 		else
 		{
+            warn "You probably don't want to use the default sqlite DSN, $self->{sqlite_def_dsn}.\n  if there are issues try deleting assembly.db\n";
 			$self->_db_dsn( $self->{sqlite_def_dsn});
 		}	
 	}
