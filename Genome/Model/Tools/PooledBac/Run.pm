@@ -85,6 +85,12 @@ class Genome::Model::Tools::PooledBac::Run {
             is_optional => 1,
             doc => "this is the percent identity, default is 85%",
         },
+        blast_params =>
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "Use this option to override the default blast params, the default param string is:\n M=1 N=-3 R=3 Q=3 W=30 wordmask=seg lcmask hspsepsmax=1000 golmax=0 B=1 V=1 topcomboN=1 -errors -notes -warnings -cpus 4 2>/dev/null",        
+        },  
     ]
 };
 
@@ -122,9 +128,10 @@ $DB::single =1;
     my $ref_qual_value = $self->ref_qual_value;
     my $percent_overlap = $self->percent_overlap;
     my $percent_identity = $self->percent_identity;
+    my $blast_params = $self->blast_params;
     
     $self->error_message("Error running run-blast")  and die unless
-    Genome::Model::Tools::PooledBac::RunBlast->execute(ref_sequence=>$ref_seq_coords_file, ref_qual_value => $ref_qual_value, pooled_bac_dir=>$pooled_bac_dir,pooled_bac_ace_file => $ace_file_name, project_dir => $project_dir);
+    Genome::Model::Tools::PooledBac::RunBlast->execute(ref_sequence=>$ref_seq_coords_file, ref_qual_value => $ref_qual_value, pooled_bac_dir=>$pooled_bac_dir,pooled_bac_ace_file => $ace_file_name, project_dir => $project_dir, blast_params => $blast_params);
 
     $self->error_message("Error running map-contigs-to-assembly")  and die unless
     Genome::Model::Tools::PooledBac::MapContigsToAssembly->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name, project_dir => $project_dir, percent_overlap => $percent_overlap, percent_identity => $percent_identity);
