@@ -29,7 +29,7 @@ sub file_resolver {
     my( $composite_id, $data_directory) = @_;
 
     my $meta = Genome::Transcript->__meta__;
-    my ($transcript_id) = $meta->resolve_ordered_values_from_composite_id($composite_id);
+    my ($chrom, $start, $stop, $species, $source, $version, $transcript_id) = $meta->resolve_ordered_values_from_composite_id($composite_id);
 
     my $thousand = int($transcript_id / 1000);
     $thousand .= '000';
