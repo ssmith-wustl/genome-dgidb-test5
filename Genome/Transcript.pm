@@ -9,9 +9,6 @@ class Genome::Transcript {
     type_name => 'genome transcript',
     table_name => 'TRANSCRIPT',
     id_by => [
-        transcript_id => { 
-            is => 'NUMBER', 
-        },
         chrom_name => { 
             is => 'Text', 
         },
@@ -31,6 +28,9 @@ class Genome::Transcript {
         },
         version => { is => 'VARCHAR',
             is_optional => 1,
+        },
+        transcript_id => { 
+            is => 'NUMBER', 
         },
     ],
     has => [
