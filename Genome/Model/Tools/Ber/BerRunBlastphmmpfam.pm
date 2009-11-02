@@ -141,6 +141,13 @@ sub execute
 		    if ( $size > 550 ){
 			push (@storagehmm, $hmmname);
 		    }
+
+            # need to check if there is an error here, then try to resubmit or something???
+            my $chkcmd = "grep -H \"Exited with exit code\" $hmmnamecheck";
+            my $rc = system($chkcmd);
+            if($rc == 0) {
+                warn "errors in $hmmnamecheck - this portion may need to be rerun";
+            }
 		}
 	    }
 	}
