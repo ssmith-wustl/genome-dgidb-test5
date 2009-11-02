@@ -234,7 +234,7 @@ sub execute {
     my ($ctx_circos_fh, $ctx_temp_file) = Genome::Utility::FileSystem->create_temp_file();
     $self->_ctx_circos_file($ctx_temp_file);
     
-    $self->convert_breakdancer_file($ctx_fh, $ctx_circos_fh);
+    $self->convert_breakdancer_file($ctx_fh, $ctx_circos_fh, "dgreen");
     $ctx_fh->close if $ctx_fh;
     $ctx_circos_fh->close;
 
@@ -249,7 +249,7 @@ sub execute {
     my ($itx_circos_fh, $itx_temp_file) = Genome::Utility::FileSystem->create_temp_file();
     $self->_itx_circos_file($itx_temp_file);
     
-    $self->convert_breakdancer_file($itx_fh, $itx_circos_fh);
+    $self->convert_breakdancer_file($itx_fh, $itx_circos_fh, "lgreen");
     $itx_fh->close if $itx_fh;
     $itx_circos_fh->close;
     
@@ -264,7 +264,7 @@ sub execute {
     my ($ins_circos_fh, $ins_temp_file) = Genome::Utility::FileSystem->create_temp_file();
     $self->_ins_circos_file($ins_temp_file);
     
-    $self->convert_breakdancer_file($ins_fh, $ins_circos_fh);
+    $self->convert_breakdancer_file($ins_fh, $ins_circos_fh, "orange");
     $ins_fh->close if $ins_fh;
     $ins_circos_fh->close;
     
@@ -279,7 +279,7 @@ sub execute {
     my ($inv_circos_fh, $inv_temp_file) = Genome::Utility::FileSystem->create_temp_file();
     $self->_inv_circos_file($inv_temp_file);
     
-    $self->convert_breakdancer_file($inv_fh, $inv_circos_fh);
+    $self->convert_breakdancer_file($inv_fh, $inv_circos_fh, "purple");
     $inv_fh->close if $inv_fh;
     $inv_circos_fh->close;
 
@@ -294,10 +294,12 @@ sub execute {
     my ($del_circos_fh, $del_temp_file) = Genome::Utility::FileSystem->create_temp_file();
     $self->_del_circos_file($del_temp_file);
     
-    $self->convert_breakdancer_file($del_fh, $del_circos_fh);
+    $self->convert_breakdancer_file($del_fh, $del_circos_fh, 'dblue');
     $del_fh->close if $del_fh;
     $del_circos_fh->close;
-
+    
+    ####ADDED FOR BRC1 ONLY####
+    
     #write out config files etc 
     my ($ideogram_fh, $ideogram_path) = Genome::Utility::FileSystem->create_temp_file($self->ideogram_file_name);
     print $ideogram_fh $self->ideogram_file_contents;
@@ -309,9 +311,13 @@ sub execute {
     $config_fh->close;
 
     `circos -conf $config_path`;
-    
-    
-    
+   
+    my $circos_output= $self->output_file;
+    my $circos_smallest = $self->output_file . "920x920.png";
+    my $circos_small = $self->output_file . "3000x3000.png";
+    `convert $circos_output -resize 3000x3000 -interpolate bicubic -quality 100 $circos_small`;
+    `convert $circos_small -resize 3000x3000 -interpolate bicubic -quality 100 $circos_smallest`;
+     
     #Then graph. Done!
     return 1;
 }
@@ -347,10 +353,11 @@ sub convert_anno_file {
         while(my $line = $sniper_fh->getline) {
             $label++;
             chomp $line;
-            my ($chr,$start, $stop, $ref, $var, $mut, $gene, $transcript, $organism, $source, $version, $strand, $dunno, $type, $c_position, $amino_acid_change, @rest) = split /\t/, $line;
+            my ($chr,$start, $stop, $ref, $var, $mut, $gene, $transcript, $source, $version, $strand, $dunno, $type, $c_position, $amino_acid_change, @rest) = split /\t/, $line;
             $DB::single=1;
             my $label = '';
-            $label = "$gene\_$amino_acid_change" if $gene;
+            $amino_acid_change =~ s/p\.//;
+            $label = "$gene\[$amino_acid_change\]" if $gene;
             print $output_fh "hs$chr $start $start $label\n";
         }
     }
@@ -360,19 +367,25 @@ sub convert_anno_file {
 
 
 sub convert_breakdancer_file {
-    my ($self, $breakdancer_fh, $output_fh) = @_;
+    my ($self, $breakdancer_fh, $output_fh, $color) = @_;
     if($breakdancer_fh) { 
         unless($breakdancer_fh->opened && $output_fh->opened) {
             return;
         }
-
+        my $color_label;
         my $label = 0; #this will give each SV a unique label
         while(my $line = $breakdancer_fh->getline) {
             $label++;
             chomp $line;
-            my ($chr1,$breakpoint1,$orientation1,$chr2,$breakpoint2,$orientation2,$type,) = split /\t/, $line;
-            print $output_fh "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\n";
-            print $output_fh "$type$label\ths$chr2\t$breakpoint2\t$breakpoint2\n";
+            my ($chr1,$breakpoint1,$orientation1,$chr2,$breakpoint2,$orientation2,$type,$size, $score,) = split /\t/, $line;
+            if($score == 99) {
+                $color_label=$color;
+            }
+            else {
+                $color_label = $color . "_N$score";
+            }
+            print $output_fh "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color_label\n";
+            print $output_fh "$type$label\ths$chr2\t$breakpoint2\t$breakpoint2\tcolor=$color_label\n";
         }
     }
     return 1;
@@ -506,6 +519,8 @@ background = white
 dir = $dir 
 file  = $file 
 24bit = yes
+auto_alpha_colors = yes
+auto_alpha_steps  = 98 
 png = yes
 #svg = yes
 # radius of inscribed circle in image
@@ -606,8 +621,8 @@ rpadding = 12p
  fill_color = black
  stroke_color = black
  stroke_thickness = 1
- min   = -4
- max   = 4
+ min   = -4 
+ max   = 4 
  r0    = 0.74r
  r1    = .94r
  
