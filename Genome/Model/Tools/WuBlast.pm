@@ -51,6 +51,11 @@ class Genome::Model::Tools::WuBlast {
             is_input => 1,
             doc      => 'Query files (comma separated from the command line)',
         },
+        output_directory => {
+            type     => 'String',
+            is_input => 1,
+            doc      => 'The directory to store blast output',
+        }
     ],
     has_optional => [
         params => {
@@ -58,15 +63,21 @@ class Genome::Model::Tools::WuBlast {
             is_input => 1,
             doc      => 'the flexible parameter string, considering the huge choice of blast parameters',
         },
+        output_directory => {
+            type     => 'String',
+            is_input => 1,
+            doc      => 'The directory to store blastx output, necessary when running parallel command.  default is directory of query',
+        },
         output_file => {
             type     => 'String',
             is_input => 1,
-            doc      => 'File name for the output.  Default is the database with an appended ".blast" extension',
+            doc      => 'File name for the blastn output.  Default is the database with an appended ".blast" extension',
         },
         map(
             {
                 $_ => {
                     type => 'String',
+                    is_input => 1,
                     doc  => $BASE_BLAST_PARAMS{$_},
                 }
             } keys %BASE_BLAST_PARAMS,
@@ -91,7 +102,7 @@ sub create {
     # Verify DB
     Genome::Model::Tools::WuBlast::Xdformat::Verify->execute(
         database => $self->database,
-        db_type  => $self->_blast_type,
+        db_type  => $self->_blast_db_type,
     )
         or return;
 
@@ -100,10 +111,6 @@ sub create {
         $self->error_message( sprintf('Query file (%s) does not exist.', $self->query_file) );
         return;
     }
-    
-    # Set output TODO move to class def and use calculate
-    $self->output_file( $self->database.'.blast') unless defined $self->output_file;
-    unlink $self->output_file if -e $self->output_file;
 
     return $self;
 }
@@ -148,6 +155,17 @@ sub _blast_command {
         or return;
 
     return lc($sub_class);
+}
+
+sub _blast_db_type {
+    my $self = shift;
+
+    my $blast_type = $self->_blast_type
+        or return;
+    if ($blast_type eq 'x') {
+        return 'p'
+    }
+    return $blast_type;
 }
 
 sub _blast_type {
