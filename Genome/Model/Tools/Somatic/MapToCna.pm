@@ -1,4 +1,4 @@
-package Genome::Model::Tools::MapToCna;
+package Genome::Model::Tools::Somatic::MapToCna;
 
 ## This script analyzes a pair of tumor and normal map files
 ##  in a configuration file (similar to BreakDancer)
@@ -11,7 +11,7 @@ use Statistics::Descriptive;
 use Statistics::R;
 require Genome::Utility::FileSystem;
 
-class Genome::Model::Tools::MapToCna {
+class Genome::Model::Tools::Somatic::MapToCna {
     is => 'Command',
     has => [
     tumor_bam_file => {
