@@ -21,6 +21,14 @@ class Genome::Model::Tools::RepeatMasker::TableI {
             is => 'Integer',
             is_optional => 1,
         },
+        _aligned => {
+            is => 'Integer',
+            is_optional => 1,
+        },
+        _repeat_aligned => {
+            is => 'Integer',
+            is_optional => 1,
+        },
     ],
 };
 
@@ -55,6 +63,12 @@ sub print_table_from_hash_ref {
     }
     print $table_fh "sequences:\t". $self->_total_count ."\n";
     print $table_fh "total length:\t". $self->_total_bp ."\n";
+    if ($self->_aligned) {
+       print $table_fh "aligned:\t". $self->_aligned ."\n";
+    }
+    if ($self->_repeat_aligned) {
+        print $table_fh "repeat aligned:\t". $self->_repeat_aligned ."\n";
+    }
     print $table_fh "masked:\t". $masked_bp ." bp ( ". sprintf("%02f",(($masked_bp / $self->_total_bp ) * 100)) ." %) \n";
     print $table_fh $string ."\n";
     $table_fh->close;
@@ -71,6 +85,8 @@ sub print_samples_summary_from_hash_ref {
         'sequences' => 1,
         'base_pair' => 1,
         'masked' => 1,
+        'aligned' => 1,
+        'repeat_aligned' => 1,
     );
 
     my %families;
@@ -89,6 +105,8 @@ sub print_samples_summary_from_hash_ref {
         push @{$data{'sequences'}}, delete($samples{$sample}{'sequences'});
         push @{$data{'base_pair'}}, delete($samples{$sample}{'base_pair'});
         push @{$data{'masked'}}, delete($samples{$sample}{'masked'});
+        push @{$data{'aligned'}}, delete($samples{$sample}{'aligned'}) if $samples{$sample}{'aligned'};
+        push @{$data{'repeat_aligned'}}, delete($samples{$sample}{'repeat_aligned'}) if $samples{$sample}{'repeat_aligned'};
         for my $family (keys %families) {
             if ($samples{$sample}{$family}) {
                 push @{$data{$family}{base_pair}}, delete($samples{$sample}{$family}{base_pair});
@@ -112,6 +130,12 @@ sub print_samples_summary_from_hash_ref {
     }
     print $table_fh "samples:\t". join("\t",@{$data{'samples'}}) ."\n";
     print $table_fh "sequences:\t". join("\t",@{$data{'sequences'}}) ."\n";
+    if ($data{'aligned'}) {
+        print $table_fh "aligned:\t". join("\t",@{$data{'aligned'}}) ."\n";
+    }
+    if ($data{'repeat_aligned'}) {
+        print $table_fh "repeat aligned:\t". join("\t",@{$data{'repeat_aligned'}}) ."\n";
+    }
     my @base_pair = @{$data{'base_pair'}};
     print $table_fh "total length:\t". join("\t",@base_pair) ."\n";
 
