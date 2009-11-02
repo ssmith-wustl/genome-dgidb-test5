@@ -10,8 +10,8 @@ class Genome::Model::BuildInput {
     subclassify_by => 'input_class_name',
     id_by => [
         build_id         => { is => 'NUMBER', len => 11 },
-        input_class_name => { is => 'VARCHAR2', len => 255 },
-        input_id         => { is => 'VARCHAR2', len => 1000 },
+        value_class_name => { is => 'VARCHAR2', len => 255 },
+        value_id         => { is => 'VARCHAR2', len => 1000 },
         name             => { is => 'VARCHAR2', len => 255, },
     ],
     has => [
