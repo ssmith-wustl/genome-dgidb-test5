@@ -9,9 +9,9 @@ class Genome::Model::Input {
     type_name => 'genome model input',
     table_name => 'GENOME_MODEL_INPUT',
     id_by => [
-    value_class_name => { is => 'VARCHAR2', len => 255, column_name => 'INPUT_CLASS_NAME', },
-    value_id         => { is => 'VARCHAR2', len => 1000, column_name => 'INPUT_ID' },
-    model_id         => { is => 'NUMBER', len => 11 },
+    value_class_name => { is => 'VARCHAR2', len => 255, },
+    value_id         => { is => 'VARCHAR2', len => 1000, },
+    model_id         => { is => 'NUMBER', len => 11, },
     name             => { is => 'VARCHAR2', len => 255, },
     ],
     has => [
