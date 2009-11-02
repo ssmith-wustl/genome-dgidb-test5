@@ -159,7 +159,7 @@ sub create_data_directory_and_link {
         or return;
     
     my $link = $self->data_link;
-    unlink $link if -e $link;
+    unlink $link if -l $link;
     Genome::Utility::FileSystem->create_symlink($data_path, $link)
         or return;
 
