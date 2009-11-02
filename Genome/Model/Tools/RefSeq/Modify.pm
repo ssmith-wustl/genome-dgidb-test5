@@ -142,6 +142,9 @@ sub read_mutation_list{
         }  
         my $type = $self->infer_variant_type($mut);
         $mut->{type}=$type;
+        if($type eq 'INS') {
+            $mut->{start} += 1;
+        }
 #    print STDERR "$_\n";
 push @muts,$mut;
 }
