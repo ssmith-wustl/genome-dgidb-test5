@@ -9,16 +9,32 @@ class Genome::Model::Tools::Fasta::Split {
     is => 'Command',
     has => [
         fasta_file => { is => 'Text', },
-        kb_sequence => {
-            is => 'Number',
-            doc => 'The number of kb sequence to include in each instance. default_value=10000',
-            default_value => 10000,
-        },
-        fasta_files => {
-            is_optional => 1,
-        },
     ],
+    has_optional => {
+        _split_fasta_files => { },
+        min_sequence => {
+            is => 'Number',
+            doc => 'The minimum number of base pair sequence to include in each file.',
+        },
+        number_of_files => {
+            is => 'Number',
+            doc => 'The number of files to return.',
+        },
+        output_directory => {
+            is => 'Text',
+            doc => 'The directory to output the split fasta files',
+        }
+    }
 };
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    unless ($self->min_sequence || $self->number_of_files) {
+        die('Must provide min_sequence or number_of_files');
+    }
+    return $self;
+}
 
 sub execute {
     my $self = shift;
@@ -31,9 +47,11 @@ sub execute {
         $self->error_message('Failed to validate directory '. $fasta_dirname ." for read/write access:  $!");
         die($self->error_message);
     }
-    my $output_file = $fasta_dirname .'/'. $fasta_basename .'_'. $file_counter;
+    unless ($self->output_directory) {
+        $self->output_directory($fasta_dirname);
+    }
+    my $output_file = $self->output_directory .'/'. $fasta_basename .'_'. $file_counter;
 
-    #Divide fasta files by kb_sequence
     my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file '. $output_file);
@@ -46,6 +64,20 @@ sub execute {
         die($self->error_message);
     }
     local $/ = "\n>";
+    if ($self->number_of_files) {
+        my $seq_len;
+        while (<$fasta_reader>) {
+            if ($_) {
+                chomp;
+                if ($_ =~ /^>/) { $_ =~ s/\>//g }
+                my $myFASTA = FASTAParse->new();
+                $myFASTA->load_FASTA( fasta => '>' . $_ );
+                $seq_len += length( $myFASTA->sequence() );
+            }
+        }
+        $fasta_reader->seek(0,0);
+        $self->min_sequence( int( ( $seq_len / $self->number_of_files ) ) );
+    }
     my $total_seq = 0;
     while (<$fasta_reader>) {
         if ($_) {
@@ -55,10 +87,10 @@ sub execute {
             $myFASTA->load_FASTA( fasta => '>' . $_ );
             my $seqlen = length( $myFASTA->sequence() );
             $total_seq += $seqlen;
-            if ($total_seq >= ($self->kb_sequence * 1000)) {
+            if ($total_seq >= ($self->min_sequence)) {
                 $file_counter++;
                 $output_fh->close;
-                $output_file = $fasta_dirname .'/'. $fasta_basename .'_'. $file_counter;
+                $output_file = $self->output_directory .'/'. $fasta_basename .'_'. $file_counter;
                 $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
                 unless ($output_fh) {
                     $self->error_message('Failed to open fasta output file '. $output_file);
@@ -72,7 +104,11 @@ sub execute {
     }
     $fasta_reader->close;
     $output_fh->close;
-    $self->fasta_files(\@fasta_files);
+
+    if ($self->number_of_files && $self->number_of_files != scalar(@fasta_files)) {
+        $self->warning_message('Expected to return '. $self->number_of_files .' but returning '. scalar(@fasta_files) .' fasta files.');
+    }
+    $self->_split_fasta_files(\@fasta_files);
     return 1;
 }
 
