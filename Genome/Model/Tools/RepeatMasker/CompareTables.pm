@@ -36,6 +36,10 @@ sub execute {
                     $samples{$sample_name}{sequences} = $entry[1];
                 } elsif ($entry[0] eq 'total length:') {
                     $samples{$sample_name}{'base_pair'} = $entry[1];
+                } elsif ($entry[0] eq 'aligned:') {
+                    $samples{$sample_name}{'aligned'} = $entry[1];
+                } elsif ($entry[0] eq 'repeat aligned:') {
+                    $samples{$sample_name}{'repeat_aligned'} = $entry[1];
                 }
                 # new repeat family
             } elsif (scalar(@entry) == 4) {
