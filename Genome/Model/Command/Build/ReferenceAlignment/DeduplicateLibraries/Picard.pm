@@ -33,7 +33,7 @@ EOS
 
 sub execute {
     my $self = shift;
-    my $now = UR::Time->now;
+    my $now  = UR::Time->now;
  
     $self->dump_status_messages(1);
     $self->status_message("Starting DeduplicateLibraries::Picard");
@@ -66,16 +66,27 @@ sub execute {
     } 
     $self->status_message("Collected files for merge and dedup: ".join("\n",@bam_files));
 
+    if (scalar @bam_files == 1 and $self->model->read_aligner_name =~ /^Imported$/i) {
+        $self->status_message('Get 1 imported bam '.$bam_files[0]);
+        
+        unless (Genome::Utility::FileSystem->create_symlink($bam_files[0], $bam_merged_output_file)) {
+            $self->error_message("Failed to symlink $bam_files[0] to $bam_merged_output_file");
+            return;
+        }
+        return $self->verify_successful_completion();
+    }
+
     # Picard fails when merging BAMs aligned against the transcriptome
-    my $merge_software = $self->model->merge_software;
-    my $rmdup_version = $self->model->rmdup_version;
+    my $merge_software   = $self->model->merge_software;
+    my $rmdup_version    = $self->model->rmdup_version;
     my $samtools_version = $self->model->samtools_version;
-    my $rmdup_name = $self->model->rmdup_name;
-    unless (defined($merge_software) ) {
+    my $rmdup_name       = $self->model->rmdup_name;
+    
+    unless (defined $merge_software) {
         $self->error_message("Merge software not defined for dedup module. Returning.");
         return;
     }
-    unless (defined($rmdup_version) ) {
+    unless (defined $rmdup_version ) {
         $self->error_message("Rmdup version not defined for dedup module. Returning.");
         return;
     }
@@ -96,13 +107,13 @@ sub execute {
     my $merged_file = $merged_fh->filename;
 
     my $merge_cmd = Genome::Model::Tools::Sam::Merge->create(
-                    files_to_merge => \@bam_files,
-                    merged_file => $merged_file,
-                    is_sorted => 1,
-                    software => $merge_software,
-                    use_version => $samtools_version,
-                    use_picard_version => $rmdup_version,
-                    ); 
+        files_to_merge => \@bam_files,
+        merged_file => $merged_file,
+        is_sorted => 1,
+        software => $merge_software,
+        use_version => $samtools_version,
+        use_picard_version => $rmdup_version,
+    ); 
 
     my $merge_rv = $merge_cmd->execute();
 
@@ -115,7 +126,8 @@ sub execute {
         $self->error_message("Version: ".$rmdup_version);
         $self->error_message("You may want to check permissions on the files you are trying to merge.");
         return;
-    } else {
+    } 
+    else {
         $self->status_message("Merge of aligned bam files successful.");
     }
    
@@ -124,9 +136,11 @@ sub execute {
     my $metrics_file = $self->build->rmdup_metrics_file;
     my $markdup_log_file = $self->build->rmdup_log_file; 
 
-    my $tmp_dir = File::Temp->newdir( "tmp_XXXXX",
-                                  DIR => $alignments_dir, 
-                                  CLEANUP => 1 );
+    my $tmp_dir = File::Temp->newdir( 
+        "tmp_XXXXX",
+        DIR     => $alignments_dir, 
+        CLEANUP => 1,
+    );
 
     my $mark_dup_cmd = Genome::Model::Tools::Sam::MarkDuplicates->create(
        file_to_mark => $merged_file,
@@ -135,57 +149,56 @@ sub execute {
        remove_duplicates => 0,
        tmp_dir => $tmp_dir->dirname,
        log_file => $markdup_log_file, 
-   ); 
+    ); 
 
-   my $mark_dup_rv = $mark_dup_cmd->execute;
+    my $mark_dup_rv = $mark_dup_cmd->execute;
 
-   if ($mark_dup_rv ne 1)  {
+    if ($mark_dup_rv ne 1)  {
         $self->error_message("Error Marking Duplicates!");
         $self->error_message("Return value: ".$mark_dup_rv);
         $self->error_message("Check parameters and permissions in the RUN command above.");
         return;
-   }
+    }
    
-   #rename the index file to match the final markdup file name
-   my @index_names = <$alignments_dir/*.bai>;
+    #rename the index file to match the final markdup file name
+    my @index_names = <$alignments_dir/*.bai>;
   
-   if (scalar(@index_names) eq 1) { 
+    if (scalar(@index_names) eq 1) { 
         my $index_name = $index_names[0];
         my $new_index_name = $bam_merged_output_file.".bai";
         my $rename_rv = rename($index_name,$new_index_name);
         if ($rename_rv eq 1) {
             $self->status_message("Rename of index from $index_name to $new_index_name is successful");
-        } else {
+        } 
+        else {
             $self->error_message("Rename of index from $index_name to $new_index_name has failed.");
             #not failing here because this is not a critical error.  this can be renamed manually if needed.
         } 
-   } else {
-            $self->error_message("Could not find an appropriate index file to rename.  Doing nothing.");
-            #not failing here because this is not a critical error.  this can be regenerated manually if needed.
-   }
+    } 
+    else {
+        $self->error_message("Could not find an appropriate index file to rename.  Doing nothing.");
+        #not failing here because this is not a critical error.  this can be regenerated manually if needed.
+    }
 
-   $now = UR::Time->now;
-   $self->status_message("<<< Completing MarkDuplicates at $now.");
-   $self->status_message("*** All processes completed. ***");
+    $now = UR::Time->now;
+    $self->status_message("<<< Completing MarkDuplicates at $now.");
+    $self->status_message("*** All processes completed. ***");
 
-   return $self->verify_successful_completion();
+    return $self->verify_successful_completion();
 }
 
 
 sub verify_successful_completion {
-
-    my $self = shift;
+    my $self  = shift;
     my $build = $self->build;
             
     unless (-s $build->whole_rmdup_bam_file) {
-	$self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_bam_file." does not exist!");	  	
-	return;
+	    $self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_bam_file." does not exist!");	  	
+	    return;
     }
 
     #look at the markdups metric file
-
     return 1;
-
 }
 
 sub calculate_required_disk_allocation_kb {

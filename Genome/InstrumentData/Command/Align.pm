@@ -41,19 +41,28 @@ class Genome::InstrumentData::Command::Align {
         trimmer_name                    => {
                                             is => 'Text',
                                             doc => 'the read trimming algorithm to use',
-        },
+                                        },
         trimmer_version                 => {
                                             is => 'Text',
                                             doc => 'the verstion of the read trimming algorithm to use',
-        },
+                                        },
         trimmer_params                  => {
                                             is => 'Text',
                                             doc => 'the params to pass to the read trimming algorithm',
-        },
+                                        },
         force_fragment                  => {
                                             is => 'Boolean', default_value => 0,
                                             doc => 'force paired end instrument data to align as fragment',
-                                        }
+                                        },
+        picard_version                  => {
+                                            is => 'Text',
+                                            doc => 'The version of Picard to use for merging files, etc',
+                                        },
+        samtools_version                => {
+                                            is => 'Text',
+                                            doc => 'The version of Samtools to use for sam-to-bam, etc',
+                                        },
+
     ],
     doc => 'align instrument data using one of the available aligners',
 };
@@ -86,11 +95,13 @@ sub execute {
     my $alignment;
     my %alignment_params = (
         instrument_data_id => $self->instrument_data_id,
-        reference_name => $self->reference_name,
-        aligner_name => $self->aligner_name,
-        aligner_version => $self->version,
-        aligner_params => $self->params,
-        force_fragment => $self->force_fragment,
+        reference_name     => $self->reference_name,
+        aligner_name       => $self->aligner_name,
+        aligner_version    => $self->version,
+        aligner_params     => $self->params,
+        force_fragment     => $self->force_fragment,
+        samtools_verion    => $self->samtools_version,
+        picard_version     => $self->picard_version,
     );
     if ($self->trimmer_name) {
         $alignment_params{trimmer_name} = $self->trimmer_name;

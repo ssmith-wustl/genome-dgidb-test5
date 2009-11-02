@@ -7,45 +7,48 @@ use Genome;
 
 class Genome::InstrumentData::Sanger {
     is  => 'Genome::InstrumentData',
+    has_constant => [
+        sequencing_platform => { value => 'sanger' },
+    ],
     has => [
-    #< Run from OLTP Attrs >#
-    _gsc_run => {
-                 doc => 'GSC Run from LIMS',
-                 is => 'GSC::Run',
-                 calculate_from => [qw/ id /],
-                 calculate => q| GSC::Run->get($id); |,
-    },
-    sample_name => {
-                    via   => 'attributes',
-                    to    => 'value',
-                    where => [
-                              entity_class_name => 'Genome::InstrumentData::Sanger',
-                              property_name     => 'sample_name',
-                          ],
-                    is_optional => 1,
-                    is_mutable  => 1,
-                },     
-    library_name => {
-                     via   => 'attributes',
-                     to    => 'value',
-                     where => [
-                               entity_class_name => 'Genome::InstrumentData::Sanger',
-                               property_name     => 'library_name',
-                           ],
-                     is_optional => 1,
-                     is_mutable  => 1,
-                 },
-    research_project => {
+        #< Run from OLTP Attrs >#
+        _gsc_run => {
+                     doc => 'GSC Run from LIMS',
+                     is => 'GSC::Run',
+                     calculate_from => [qw/ id /],
+                     calculate => q| GSC::Run->get($id); |,
+        },
+        sample_name => {
+                        via   => 'attributes',
+                        to    => 'value',
+                        where => [
+                                  entity_class_name => 'Genome::InstrumentData::Sanger',
+                                  property_name     => 'sample_name',
+                              ],
+                        is_optional => 1,
+                        is_mutable  => 1,
+                    },     
+        library_name => {
                          via   => 'attributes',
                          to    => 'value',
                          where => [
                                    entity_class_name => 'Genome::InstrumentData::Sanger',
-                                   property_name     => 'research_project',
+                                   property_name     => 'library_name',
                                ],
                          is_optional => 1,
                          is_mutable  => 1,
-                         default_value => 'unknown',
                      },
+        research_project => {
+                 via   => 'attributes',
+                 to    => 'value',
+                 where => [
+                       entity_class_name => 'Genome::InstrumentData::Sanger',
+                       property_name     => 'research_project',
+                   ],
+             is_optional => 1,
+             is_mutable  => 1,
+             default_value => 'unknown',
+        },
     ],
 };
 

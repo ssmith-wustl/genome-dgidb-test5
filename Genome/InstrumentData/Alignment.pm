@@ -241,9 +241,12 @@ sub get_allocation {
 
 sub resolve_alignment_subdirectory {
     my $self = shift;
+    
     my $reference_sequence_name = $self->reference_name;
+    my $instrument_data         = $self->instrument_data;
 
-    my $instrument_data = $self->instrument_data;
+    return sprintf('alignment_data/imported/%s/%s',$reference_sequence_name,$instrument_data->id)
+        if $self->aligner_name =~ /^Imported$/i;
 
     unless ($instrument_data->subset_name) {
         die ($instrument_data->class .'('. $instrument_data->id .') is missing the subset_name or lane!');
@@ -261,7 +264,8 @@ sub resolve_alignment_subdirectory {
                              $instrument_data->subset_name,
                              $instrument_data->id
                          );
-    } elsif ($self->force_fragment) {
+    } 
+    elsif ($self->force_fragment) {
         if ($self->trimmer_name) {
             $directory = sprintf('alignment_data/%s/%s/%s/fragment/%s/%s_%s',
                                  $self->aligner_label,
@@ -271,7 +275,8 @@ sub resolve_alignment_subdirectory {
                                  $instrument_data->subset_name,
                                  $self->_fragment_seq_id,
                              );
-        } else {
+        } 
+        else {
             $directory = sprintf('alignment_data/%s/%s/%s/fragment/%s_%s',
                                  $self->aligner_label,
                                  $reference_sequence_name,
@@ -280,7 +285,8 @@ sub resolve_alignment_subdirectory {
                                  $self->_fragment_seq_id,
                              );
         }
-    } else {
+    } 
+    else {
         unless ($instrument_data->run_name) {
             die ($instrument_data->class .'('. $instrument_data->id .') is missing the run_name!');
         }
@@ -293,7 +299,8 @@ sub resolve_alignment_subdirectory {
                                  $instrument_data->subset_name,
                                  $instrument_data->id
                              );
-        } else {
+        } 
+        else {
             $directory = sprintf('alignment_data/%s/%s/%s/%s_%s',
                                  $self->aligner_label,
                                  $reference_sequence_name,

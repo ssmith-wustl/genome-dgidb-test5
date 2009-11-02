@@ -187,8 +187,13 @@ sub other_snp_related_metric_directory {
 }
 
 sub _snp_caller_type {
-    my $type = shift->processing_profile->name =~ /samtools/i ? 'sam' : 'maq';
-    return $type;
+    my $self = shift;
+    if ($self->indel_finder_name) {
+        return substr($self->indel_finder_name, 0, 3);
+    }
+    else {
+        return $self->processing_profile->name =~ /samtools/i ? 'sam' : 'maq';
+    }
 }
 
 sub snp_related_metric_directory {

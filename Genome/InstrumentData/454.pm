@@ -11,6 +11,7 @@ class Genome::InstrumentData::454 {
         (
             select 
                 to_char(region_id) id,
+                '454' sequencing_platform,
                 region_id genome_model_run_id, --legacy
                 region_number limit_regions, --legacy
                 r.* 
@@ -18,6 +19,9 @@ class Genome::InstrumentData::454 {
         ) x454_detail
 EOS
     ,
+    has_constant => [
+        sequencing_platform => { value => '454' },
+    ],    
     has_optional => [
         _sff_file => {
                       is => 'String',

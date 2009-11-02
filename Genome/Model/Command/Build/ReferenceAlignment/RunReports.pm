@@ -48,6 +48,11 @@ sub execute {
     #    delete $REPORT_TYPES{Mapcheck};
     #}
 
+    if ($model->read_aligner_name =~ /^Imported$/i) {
+        $self->status_message("This build uses Imported as alinger so skip InputBaseCounts");
+        delete $REPORT_TYPES{InputBaseCounts};
+    }
+
     my $gold_snp_path = $build->gold_snp_path;
     unless ($gold_snp_path and -s $gold_snp_path) {
         $self->status_message("No gold_snp_path provided for the build, skip its report");
@@ -150,6 +155,8 @@ sub verify_successful_completion {
     
     my $gold_snp_path = $self->build->gold_snp_path;
     delete $REPORT_TYPES{GoldSnpConcordance} unless $gold_snp_path and -s $gold_snp_path;
+
+    delete $REPORT_TYPES{InputBaseCounts} if $model->read_aligner_name =~ /^Imported$/i;
 
     unless ( ($model->dna_type eq 'cdna' || $model->dna_type eq 'rna') && $model->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo' ) {
         delete $REPORT_TYPES{ReferenceCoverage};

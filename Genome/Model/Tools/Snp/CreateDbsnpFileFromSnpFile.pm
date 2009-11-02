@@ -90,7 +90,9 @@ sub execute {
         
         if($chr ne $cur_chr) {
             # switch to a new chromosome, and open its file
-            $path = $build->data_directory . "/annotation/dbsnp-variations/$chr.dat";
+            my $alter_chr = $chr;
+            ($alter_chr) = $chr =~ /^chr(\S+)$/ if $chr =~ /^chr/;
+            $path = $build->data_directory . "/annotation/dbsnp-variations/$alter_chr.dat";
             $dbsnp_fh = IO::File->new($path);
             
             ###jpeck added if/then after per chromosome to whole genome pipeline conversion in April 2009

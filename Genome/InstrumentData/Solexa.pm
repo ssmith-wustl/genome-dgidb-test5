@@ -12,6 +12,7 @@ class Genome::InstrumentData::Solexa {
     table_name => <<EOS
         (
             select to_char(s_rev.seq_id) id,
+                   'solexa' sequencing_platform,
                    s_rev.research_project project_name,
                    s_rev.target_region_set_name,
                    s_rev.sample_id,
@@ -54,6 +55,9 @@ class Genome::InstrumentData::Solexa {
         solexa_detail
 EOS
     ,
+    has_constant => [
+        sequencing_platform => { value => 'solexa' },
+    ],    
     has_optional => [
         flow_cell_id                    => { }, # = short name
         lane                            => { }, # = subset_name

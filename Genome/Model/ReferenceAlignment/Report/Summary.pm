@@ -276,15 +276,18 @@ $DB::single = 1;
     my $total_gigabases = sprintf("%.03f", $total_bases/1000000000);
     
     # summarize the instrument data
-    my %library_lanes;
-    for my $i (@inst_data) {
-        my $library_name = $i->library_name;
-        my $a = $library_lanes{$library_name} ||= [];
-        push @$a, $i->run_name . "/" . $i->subset_name
-    }
     my %library_lane_counts;
-    for my $library_name (keys %library_lanes) {
-        $library_lane_counts{$library_name} = scalar(@{ $library_lanes{$library_name} })
+
+    unless ($model->read_aligner_name =~ /Imported$/i) {
+        my %library_lanes;
+        for my $i (@inst_data) {
+            my $library_name = $i->library_name;
+            my $a = $library_lanes{$library_name} ||= [];
+            push @$a, $i->run_name . "/" . $i->subset_name
+        }
+        for my $library_name (keys %library_lanes) {
+            $library_lane_counts{$library_name} = scalar(@{ $library_lanes{$library_name} })
+        }
     }
 
     # sample variables

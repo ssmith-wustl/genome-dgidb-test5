@@ -15,6 +15,7 @@ class Genome::InstrumentData {
         SELECT run_name id,
                sanger.run_name,
                'sanger' sequencing_platform,
+               'Genome::InstrumentData::Sanger' subclass_name,
                sanger.run_name seq_id,
                NVL(sample.value, 'unknown') sample_name,
                1 subset_name,
@@ -32,6 +33,7 @@ class Genome::InstrumentData {
         SELECT to_char(seq_id) id,
                solexa.run_name,
                'solexa' sequencing_platform,
+               'Genome::InstrumentData::Solexa' subclass_name,
                to_char(solexa.seq_id) seq_id, 
                solexa.sample_name sample_name,
                solexa.lane subset_name,
@@ -42,18 +44,31 @@ class Genome::InstrumentData {
         SELECT to_char(x454.region_id) id,
                x454.run_name,
                '454' sequencing_platform,
+               'Genome::InstrumentData::454' subclass_name,
                to_char(x454.region_id) seq_id, 
                nvl(x454.sample_name, x454.incoming_dna_name) sample_name, 
                x454.region_number subset_name,
                x454.library_name library_name
           FROM run_region_454\@dw x454
+     UNION ALL
+        SELECT to_char(imported.id) id,
+               'unknown' run_name,
+               sequencing_platform,
+               'Genome::InstrumentData::Imported' subclass_name,
+               to_char(imported.id) seq_id,
+               NVL(imported.sample_name, 'unknown') sample_name,
+               1 subset_name,
+               'unknown' library_name
+          FROM imported_instrument_data imported
     ) idata
 EOS
     ,
     is_abstract => 1,
-    sub_classification_method_name => '_resolve_subclass_name',
+    subclassify_by => 'subclass_name',
+    #sub_classification_method_name => '_resolve_subclass_name',
     has => [
         sequencing_platform => { is => 'VARCHAR2', len => 255 },
+        subclass_name       => { is => 'VARCHAR2', len => 255 },
         run_name            => { is => 'VARCHAR2', len => 500, is_optional => 1 },
         subset_name         => { is => 'VARCHAR2', len => 32, is_optional => 1, },
         sample_name         => { is => 'VARCHAR2', len => 255 },
@@ -104,10 +119,10 @@ sub _resolve_subclass_name {
 	my $class = shift;
 
 	if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-		my $sequencing_platform = $_[0]->sequencing_platform;
+		my $sequencing_platform = $_[0]->subclass_name;
 		return $class->_resolve_subclass_name_for_sequencing_platform($sequencing_platform);
 	}
-    elsif (my $sequencing_platform = $class->get_rule_for_params(@_)->specified_value_for_property_name('sequencing_platform')) {
+    elsif (my $sequencing_platform = $class->get_rule_for_params(@_)->specified_value_for_property_name('subclass_name')) {
         return $class->_resolve_subclass_name_for_sequencing_platform($sequencing_platform);
     }
 	else {
@@ -230,6 +245,12 @@ sub old_name {
     }
     return $name;
 }
+
+sub create_mock {
+    my $class = shift;
+    return $class->SUPER::create_mock(subclass_name => 'Genome::InstrumentData', @_);
+}
+
 
 1;
 

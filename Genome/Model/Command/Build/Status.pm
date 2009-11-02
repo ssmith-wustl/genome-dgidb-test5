@@ -284,10 +284,13 @@ sub get_processing_profile_node {
 
             #if we have a full blown object (REF), get the object data
             if ( ref(\$object) eq "REF" ) {
-                if ( $object->class eq "Genome::InstrumentData::Solexa" ) {
+                if ($object->class eq 'Genome::InstrumentData::Solexa' or $object->class eq 'Genome::InstrumentData::Imported') {
                     my $id_node = $self->get_instrument_data_node($object);
                     $object_node = $self->anode("object","value","instrument_data");
                     $object_node->addChild($id_node);
+                }
+                else {
+                    $object_node = $self->anode("object","value",$object);
                 }
             } else {
                  $object_node = $self->anode("object","value",$object);
@@ -337,20 +340,33 @@ sub get_instrument_data_node {
     my $object = shift;
 
     #print Dumper($object);
+    my $test = $object->class eq 'Genome::InstrumentData::Imported' ? 0 : 1;
 
-    my $id = $self->anode("instrument_data","id",$object->id);
-    $id->addChild( $self->tnode("project_name",$object->project_name));
-    $id->addChild( $self->tnode("sample_name",$object->sample_name));
-    $id->addChild( $self->tnode("run_name",$object->run_name) );
-    $id->addChild( $self->tnode("flow_cell_id",$object->flow_cell_id) );
-    $id->addChild( $self->tnode("read_length",$object->read_length) );
-    $id->addChild( $self->tnode("library_name",$object->library_name) );
-    $id->addChild( $self->tnode("library_id",$object->library_id) );
-    $id->addChild( $self->tnode("lane",$object->lane));
-    $id->addChild( $self->tnode("subset_name",$object->subset_name));
-    $id->addChild( $self->tnode("seq_id",$object->seq_id));
-    $id->addChild( $self->tnode("run_type",$object->run_type));
-    $id->addChild( $self->tnode("gerald_directory",$object->gerald_directory));
+    my $project_name = $test ? $object->project_name : 'N/A';
+    my $run_name     = $test ? $object->run_name : 'N/A';
+    my $flow_cell_id = $test ? $object->flow_cell_id : 'N/A';
+    my $read_length  = $test ? $object->read_length : 'N/A';
+    my $library_name = $test ? $object->library_name : 'N/A';
+    my $library_id   = $test ? $object->library_id : 'N/A';
+    my $lane         = $test ? $object->lane : 'N/A';
+    my $subset_name  = $test ? $object->subset_name : 'N/A';
+    my $run_type     = $test ? $object->run_type : 'N/A';
+    my $gerald_dir   = $test ? $object->gerald_directory : 'N/A';
+    my $seq_id       = $test ? $object->seq_id : 'N/A';
+    
+    my $id = $self->anode("instrument_data","id", $object->id);
+    $id->addChild( $self->tnode("project_name", $project_name) );
+    $id->addChild( $self->tnode("sample_name", $object->sample_name) );
+    $id->addChild( $self->tnode("run_name", $run_name) );
+    $id->addChild( $self->tnode("flow_cell_id", $flow_cell_id) );
+    $id->addChild( $self->tnode("read_length", $read_length) );
+    $id->addChild( $self->tnode("library_name", $library_name) );
+    $id->addChild( $self->tnode("library_id", $library_id) );
+    $id->addChild( $self->tnode("lane", $lane) );
+    $id->addChild( $self->tnode("subset_name", $subset_name) );
+    $id->addChild( $self->tnode("seq_id", $seq_id) );
+    $id->addChild( $self->tnode("run_type", $run_type) );
+    $id->addChild( $self->tnode("gerald_directory", $gerald_dir) );
 
     return $id;
 

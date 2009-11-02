@@ -84,7 +84,11 @@ sub alignment_objects {
 
     my @instrument_data_ids = map { $_->instrument_data_id() } @assignments;
     my @solexa_instrument_data = Genome::InstrumentData::Solexa->get( \@instrument_data_ids );
-
+    unless (@solexa_instrument_data) {
+        $self->warning_message('Failed to find instrument data for model: '.$model->id.'. Now try imported data');
+        @solexa_instrument_data = Genome::InstrumentData::Imported->get( \@instrument_data_ids );
+        $self->warning_message('Failed to find imported data for model: '.$model->id.' either') unless @solexa_instrument_data;
+    }
     return @solexa_instrument_data;
 }
 
