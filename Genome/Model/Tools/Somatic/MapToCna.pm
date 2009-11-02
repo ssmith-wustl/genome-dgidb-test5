@@ -79,29 +79,21 @@ EOS
 }
 
 sub execute {
-
     my $self = shift;
+
     my $version="Map2CNA-0.0.2r1";
     my @maps = ($self->tumor_bam_file,$self->normal_bam_file);
     my @samples = ("tumor","normal");
     my @downratios = ($self->tumor_downsample_percentage,$self->normal_downsample_percentage);
     my $outfile = $self->output_file;
     
-    #test to make sure full path of output file is given
-    #if ($outfile =~ /\//) {
-    #    $self->error_message("Please make sure the full path of the output file is specified (or the plotting function will fail!).");
-    #    die;
-    #}
-    
     #test architecture to make sure bam-window program can run (req. 64-bit)
     unless (`uname -a` =~ /x86_64/) {
-        $self->error_message(`uname -a`); #FIXME remove
         $self->error_message("Must run on a 64 bit machine");
         die;
     }
                                       
     ####################### Compute read counts in sliding windows ########################
-
     my %data;
     my @statistics;
 
@@ -124,7 +116,7 @@ sub execute {
 
     my @chrs;
     unless($self->chromosome_list) {
-        @chrs=(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X');
+        @chrs=(1..22,'X');
     }
     else {
         @chrs = split /,/, $self->chromosome_list;
@@ -136,13 +128,13 @@ sub execute {
         my $median=Statistics::Descriptive::Full->new();
         foreach my $chr(@chrs){
             next unless (defined $data{$if}{$chr});
-            my $md=&Get_Median($data{$if}{$chr});
+            my $md = $self->get_median($data{$if}{$chr});
             $median->add_data($md);
         }
         push @medians,$median->median();
     }
 
-    @chrs=(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X');
+    @chrs = (1..22,'X');
     my %num_CN_neutral_pos;
     my %NReads_CN_neutral;
     foreach my $chr(@chrs){
@@ -183,7 +175,7 @@ sub execute {
     }
     print OUT "CHR\tPOS\tTUMOR\tNORMAL\tDIFF\n";
 
-    foreach my $chr(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X'){
+    for my $chr(1..22,'X'){
         next unless (defined $data{0}{$chr} && $data{1}{$chr});
         my $cov_ratio=$NReads_CN_neutral{$chr}{0}/$NReads_CN_neutral{$chr}{1};
         my $Nwi=($#{$data{0}{$chr}}<$#{$data{0}{$chr}})?$#{$data{0}{$chr}}:$#{$data{0}{$chr}};
@@ -197,13 +189,13 @@ sub execute {
         }
     }
     close(OUT);
-    Plot_Output($outfile);
+    $self->plot_output($outfile);
 
     return 1;
 }
 
-
-sub Get_Median {
+sub get_median {
+    my $self = shift;
     my $rpole = shift;
     my @pole = @$rpole;
     my $ret;
@@ -217,7 +209,8 @@ sub Get_Median {
     return $ret;
 }
 
-sub Plot_Output {
+sub plot_output {
+    my $self = shift;
     my $datafile = shift;
     my $Routfile = $datafile.".png";
     my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
@@ -230,7 +223,6 @@ sub Plot_Output {
         for (i in c(1:22,'X')) { y=subset(x,CHR==i); plot( y\$POS, y\$DIFF, main=paste('chr.',i), xlab='mb', ylab='cn', type='p', col=rgb(0,0,0), pch='.', ylim=c(-4,4) ) };
         dev.off();
     });
-    printR();
     $R->stopR();
 }
 
