@@ -315,8 +315,8 @@ sub execute {
     my $circos_output= $self->output_file;
     my $circos_smallest = $self->output_file . "920x920.png";
     my $circos_small = $self->output_file . "3000x3000.png";
-    `convert $circos_output -resize 3000x3000 -interpolate bicubic -quality 100 $circos_small`;
-    `convert $circos_small -resize 3000x3000 -interpolate bicubic -quality 100 $circos_smallest`;
+    `convert $circos_output -resize 3000x3000 -interpolate bicubic -quality 1000 $circos_small`;
+    `convert $circos_small -resize 920x920 -interpolate bicubic -quality 1000 $circos_smallest`;
      
     #Then graph. Done!
     return 1;
