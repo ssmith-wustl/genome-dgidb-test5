@@ -14,6 +14,14 @@ class Genome::Model::Tools::WuBlast::Blastn {
     },
     ],
 };
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    # Set output TODO move to class def and use calculate
+    $self->output_file( $self->database.'.blast') unless defined $self->output_file;
+    unlink $self->output_file if -e $self->output_file;
+    return $self;
+}
 
 sub _additional_blast_params {
     return (qw/ N /);
