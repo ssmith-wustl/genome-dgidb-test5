@@ -17,10 +17,10 @@ class Genome::Model::Tools::RepeatMasker::Parallel {
         return $run;
     },
     has => [
-            kb_sequence => {
+            jobs => {
                 is => 'Number',
-                doc => 'The number of kb sequence to include in each instance. default_value=10000',
-                default_value => 10000,
+                doc => 'The number of jobs to run in parallel',
+                default_value => 100,
             },
             _fasta_file => { is_optional => 1, },
         ],
@@ -30,19 +30,18 @@ sub pre_execute {
     my $self = shift;
 
     $self->_fasta_file($self->fasta_file);
-
-    my $split = Genome::Model::Tools::Fasta::Split->create(
-        kb_sequence => $self->kb_sequence,
+     my $split = Genome::Model::Tools::Fasta::Split->create(
+        number_of_files => $self->jobs,
         fasta_file => $self->fasta_file,
+        output_directory => $self->output_directory,
     );
-
     unless ($split) {
         die('Failed to create fasta split command');
     }
     unless ($split->execute) {
         die('Failed to execute fasta split command');
     }
-    my $fasta_files = $split->fasta_files;
+    my $fasta_files = $split->_split_fasta_files;
     $self->fasta_file($fasta_files);
     return 1;
 }
@@ -60,6 +59,9 @@ sub post_execute {
         my $file_counter = $2;
         $output_basename = $1;
         my $file = $self->output_directory .'/'. $fasta_basename .'.out';
+        unless (-e $file) {
+            `touch $file`;
+        }
         $files{$file_counter} =  $file;
     }
     my @output_files;
