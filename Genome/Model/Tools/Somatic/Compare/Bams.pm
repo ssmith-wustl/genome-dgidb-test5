@@ -117,6 +117,7 @@ sub filenames_to_generate {
             sniper_indel_output
             breakdancer_output_file
             breakdancer_config_file
+            copy_number_output
             snp_filter_output
             filter_ceu_yri_output
             adaptor_output_snp
@@ -161,6 +162,10 @@ __DATA__
   <link fromOperation="input connector" fromProperty="breakdancer_output_file" toOperation="Breakdancer" toProperty="breakdancer_output" />
   <link fromOperation="input connector" fromProperty="breakdancer_config_file" toOperation="Breakdancer" toProperty="config_output" />
   <link fromOperation="input connector" fromProperty="skip_sv" toOperation="Breakdancer" toProperty="skip" />
+
+  <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Copy Number Alteration" toProperty="normal_bam_file" />
+  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Copy Number Alteration" toProperty="tumor_bam_file" />
+  <link fromOperation="input connector" fromProperty="copy_number_output" toOperation="Copy Number Alteration" toProperty="output_file" />
 
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Indelpe Runner Tumor" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Indelpe Runner Tumor" toProperty="ref_seq_file" />
@@ -265,12 +270,18 @@ __DATA__
 
   <link fromOperation="Breakdancer" fromProperty="breakdancer_output" toOperation="output connector" toProperty="breakdancer_output" />
 
+  <link fromOperation="Copy Number Alteration" fromProperty="output_file" toOperation="output connector" toProperty="copy_number_output_file" />
+
   <operation name="Somatic Sniper">
     <operationtype commandClass="Genome::Model::Tools::Somatic::Sniper" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Breakdancer">
     <operationtype commandClass="Genome::Model::Tools::Somatic::Breakdancer" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Copy Number Alteration">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::MapToCna" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Indelpe Runner Tumor">
@@ -349,6 +360,8 @@ __DATA__
 
     <inputproperty isOptional="Y">breakdancer_config_file</inputproperty>
     <inputproperty isOptional="Y">breakdancer_output_file</inputproperty>
+    
+    <inputproperty isOptional="Y">copy_number_output</inputproperty>
 
     <inputproperty isOptional="Y">normal_indelpe_data_directory</inputproperty>
     <inputproperty isOptional="Y">tumor_indelpe_data_directory</inputproperty>
@@ -402,6 +415,8 @@ __DATA__
     <outputproperty>tier_1_indel_output</outputproperty>
 
     <outputproperty>breakdancer_output</outputproperty>
+
+    <outputproperty>copy_number_output_file</outputproperty>
   </operationtype>
 
 </workflow>

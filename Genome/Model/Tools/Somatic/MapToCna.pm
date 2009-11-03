@@ -16,16 +16,20 @@ class Genome::Model::Tools::Somatic::MapToCna {
     has => [
     tumor_bam_file => {
         type => 'String',
+        is_input => 1,
         is_optional => 0,
         doc => 'Location of tumor bam file.'
     },
     normal_bam_file => {
         type => 'String',
+        is_input => 1,
         is_optional => 0,
         doc => 'Location of normal bam file.'
     },
     output_file => {
         type => 'String',
+        is_input => 1,
+        is_output => 1,
         is_optional => 0,
         doc => 'Copy number analysis output file (full path).'
     },
