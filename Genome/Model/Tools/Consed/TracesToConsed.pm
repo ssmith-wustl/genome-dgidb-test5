@@ -91,7 +91,16 @@ class Genome::Model::Tools::Consed::TracesToConsed {
 		 doc          => "use this option if you want to provide your own reference sequence fasta file to directly assemble under.",
 		 is_optional  => 1,
 	     },   
-	     
+	     genomic_consensus_numbering => {
+		 type         => 'Boolean',
+		 doc          => 'use this option if you want see genomic coordinates in consed rather than the default reference sequence coordinates; if you\'re using the -ref-fasta option, you\'ll also need to use the -consensus-start-pos option',
+		 is_optional  => 1,
+	     },
+             consensus_start_pos => {
+		 type         => 'Number',
+		 doc          => 'use this option if you\'re using -genomic-consensus-numbering and -ref-fasta, this is the number you\'re reference will start from',
+		 is_optional  => 1,
+	     },
 	     ],
     
     
@@ -581,7 +590,54 @@ sub execute {                               # replace with real execution logic.
 	#system("consed_old  -ace $project.ace -addNewReads ../traces.fof -newAceFilename $project.ace.1");
     }
     
-    if (-f "$project.ace.1") { print qq($project.ace.1 successfully built\n); } else { print qq($project.ace.1 failed\n); }
+    if (-f "$project.ace.1") {
+	print qq($project.ace.1 successfully built\n);
+
+	if ($self->genomic_consensus_numbering) {
+
+	    my $consensus_start_pos;
+	    if ($self->ref_fasta) {
+		$consensus_start_pos = $self->gconsensus_start_pos;
+	    } else {
+		$consensus_start_pos = $ref_start;
+	    }
+	    my $ace = "$project.ace.1";
+	    my $ao = GSC::IO::Assembly::Ace->new(input_file => "$ace");
+	    my $contig_name;
+	    
+	    foreach my $name (@{ $ao->get_contig_names }) {
+		my $contig = $ao->get_contig($name);
+		
+		if (grep { /\.c1$/ } keys %{ $contig->reads }) {
+		    $contig_name=$name;
+		}
+	    }
+	    
+	    my $date_time = `date +%y%m%d:%H%M%S`;
+	    chomp $date_time;
+	    print "$date_time\n";
+
+	    open (TAG, ">genomic_start_pos_tag");
+	    print TAG "\n";
+
+my $tag = <<ETAG;
+CT{
+$contig_name startNumberingConsensus consed 1 1 $date_time
+$consensus_start_pos
+}
+ETAG
+    
+    print TAG qq($tag\n);
+	    
+	    system ("cat genomic_start_pos_tag >> $ace");
+	    system ("rm genomic_start_pos_tag");
+	    
+	}
+
+
+    } else {
+	print qq($project.ace.1 failed\n);
+    }
     
     if ($consedrc || $restrict_contigs) {system qq(rm $edit_dir/.consedrc);}
     if ($move) {system ("mv $project_dir/edit_dir/.consedrc.orig $project_dir/edit_dir/.consedrc");}
