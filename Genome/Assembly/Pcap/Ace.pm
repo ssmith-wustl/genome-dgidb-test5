@@ -26,7 +26,7 @@ $Storable::Deparse = 1;
 $Storable::Eval = 1;
 #$Storable::forgive_me = 1;
 
-Genome::Assembly::Pcap::Ace->mk_accessors(qw(_reader _writer _input _output _input_file _output_file dbh sth_create sth_rem sth_set sth_get sth_getcount db_type _init_db _keep_changes _db_dsn _assembly_name _db_file config));
+Genome::Assembly::Pcap::Ace->mk_accessors(qw(_reader _writer _input _output _input_file _output_file dbh sth_create sth_rem sth_set sth_get sth_getcount db_type _init_db _keep_changes _db_dsn _assembly_name _db_file config _show_progress));
 
 
 
@@ -49,8 +49,8 @@ sub new {
 		
 	$self->_init_db(delete $params{init_db});
 	$self->_keep_changes(delete $params{keep_changes});	
-    $self->_process_params(%params);
-	
+    $self->_show_progress(delete $params{show_progress});
+    $self->_process_params(%params);	
 	
 	
 	my $contig_group_name;
@@ -368,6 +368,7 @@ sub _build_index
 		elsif($first_three eq "CO ")
 		{
 			my @tokens = split(/[ {]/,$line);
+            print "Indexing $tokens[1]...\n" if ($self->_show_progress);
 			my $offset = (tell $fh) - length $line;			
             $old_contig->{contig_length} = $offset - $old_contig->{offset} if (defined $old_contig);
             $old_contig->{rd_end} = $offset if (defined $old_contig);
