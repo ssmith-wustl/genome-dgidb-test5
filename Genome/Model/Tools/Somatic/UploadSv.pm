@@ -15,6 +15,11 @@ class Genome::Model::Tools::Somatic::UploadSv {
         is => 'Number',
         doc => 'The build id that should be linked to the variant. This is manual for now and required.',
     },
+    no_header => {
+        type => 'Boolean',
+        default => 0,
+        doc => 'If there is no header line in the file pass in a 1 and the first line will not be skipped.',
+    },
     ],
 };
 
@@ -42,6 +47,11 @@ sub execute {
     unless ($variant_fh) {
         $self->error_message("Could not open variant file: " . $self->breakdancer_file . " for reading. $!");
         die;
+    }
+
+    # Toss the header if it is present
+    unless ($self->no_header) {
+        my $header = $variant_fh->getline;
     }
 
     # For each SV in the file, make a new SV object if one does not already exist. If one already exists it should be exactly the same so we will just make a new / updated build link to it later
