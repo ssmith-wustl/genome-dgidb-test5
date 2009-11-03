@@ -49,19 +49,20 @@ sub print_assembly_size_report
     $self->error_message("Failed to open $report_name for writing.")  and die unless defined $fh;
     foreach my $name (@{$project_names})
     {
-        my $size = 0;
+        my $size = 0;        
         if (-e "$name/newbler_assembly/consed/edit_dir/$name.ace.1")
         {
             my $ace_fh = IO::File->new("$name/newbler_assembly/consed/edit_dir/$name.ace.1");
-            my $line = <$ace_fh>;
-            if(defined $line && length($line)>2)
+            while(my $line = <$ace_fh>)
             {
                 chomp $line;
-                ($size) = $line =~ /AS\s+\d+\s+(\d+)/;
+                next unless $line =~ /^CO/;
+                my ($contig_name, $contig_size) = $line =~ /^CO\s+(\S+)\s+(\d+).+/;
+                $size += $contig_size;
             }
         }
         $fh->print ("$name $size\n");
-    } 
+    }
 }
 
 sub print_contig_size_report
