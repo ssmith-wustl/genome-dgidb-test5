@@ -484,6 +484,25 @@ sub replace_chromat_pads
 	return $padded_chromat_positions;
 }
 
+sub padded_base_string_xn_positions
+{
+    my $self = shift;
+
+    my @tmp = split ('', $self->padded_base_string);
+    my @xn_pos;
+    my $count = 0;
+
+    foreach my $base (@tmp)
+    {
+	    $count++;
+	    if ($base =~ /^[xn]$/i)
+	    {
+	        push @xn_pos, $count;
+	    }
+    }
+    return \@xn_pos;
+}
+
 sub copy
 {
     my ($self,$item) = @_;
