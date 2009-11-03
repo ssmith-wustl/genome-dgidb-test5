@@ -37,6 +37,7 @@ class Genome::Model::Tools::Somatic::IndelpeRunner {
         filtered_snp_file => {
             is       => 'String',
             is_optional => '1',
+            is_input => 1,
             is_output => '1',
             doc      => 'The filtered snp file produced in sam snpfilter... generated with the output dir if none is provided',
         },

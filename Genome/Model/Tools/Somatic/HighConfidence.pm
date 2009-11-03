@@ -26,6 +26,7 @@ class Genome::Model::Tools::Somatic::HighConfidence {
        'tumor_bam_file' => {
             type => 'String',
             doc => 'Tumor bam file in which to examine reads',
+            is_input => 1,
             is_optional => 1,
        },
        'min_mapping_quality' => {
