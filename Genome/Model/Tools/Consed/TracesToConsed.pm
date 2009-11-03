@@ -289,8 +289,23 @@ sub execute {                               # replace with real execution logic.
     my $project = $self->project;
     my $project_details = $self->project_details;
     my $chromosome;
-    unless ($self->ref_fasta) {
+    if ($self->ref_fasta) {
 	
+	my $file = $self->ref_fasta;
+	my @array =  split(/\//,$file);
+	my $name = pop(@array);
+	$name =~ s/\.fasta//;
+	$name =~ s/\.refseq//;
+	$name =~ s/\.c1//;
+	unless ($project) {$project = $name;}
+	$project =~ s/\./\_/gi;
+	unless ($project_details) { $project_details = ''; }
+	
+	my $extend_ref = $self->extend_ref;
+	if ($extend_ref) {print qq(because you provided the ref-fasta, the reference can not be extended\n);}
+	
+
+    } else {
 	$chromosome = $self->chromosome;
 	my $start = $self->start;
 	
@@ -597,27 +612,29 @@ sub execute {                               # replace with real execution logic.
 
 	    my $consensus_start_pos;
 	    if ($self->ref_fasta) {
-		$consensus_start_pos = $self->gconsensus_start_pos;
+		$consensus_start_pos = $self->consensus_start_pos;
 	    } else {
 		$consensus_start_pos = $ref_start;
 	    }
-	    my $ace = "$project.ace.1";
-	    my $ao = GSC::IO::Assembly::Ace->new(input_file => "$ace");
-	    my $contig_name;
-	    
-	    foreach my $name (@{ $ao->get_contig_names }) {
-		my $contig = $ao->get_contig($name);
+	    if ($consensus_start_pos) {
 		
-		if (grep { /\.c1$/ } keys %{ $contig->reads }) {
-		    $contig_name=$name;
+		my $ace = "$project.ace.1";
+		my $ao = GSC::IO::Assembly::Ace->new(input_file => "$ace");
+		my $contig_name;
+		
+		foreach my $name (@{ $ao->get_contig_names }) {
+		    my $contig = $ao->get_contig($name);
+		    
+		    if (grep { /\.c1$/ } keys %{ $contig->reads }) {
+			$contig_name=$name;
+		    }
 		}
-	    }
-	    
-	    my $date_time = `date +%y%m%d:%H%M%S`;
-	    chomp $date_time;
-	    print "$date_time\n";
-
-	    open (TAG, ">genomic_start_pos_tag");
+		
+		my $date_time = `date +%y%m%d:%H%M%S`;
+		chomp $date_time;
+		print "$date_time\n";
+		
+		open (TAG, ">genomic_start_pos_tag");
 	    print TAG "\n";
 
 my $tag = <<ETAG;
@@ -628,10 +645,12 @@ $consensus_start_pos
 ETAG
     
     print TAG qq($tag\n);
-	    
-	    system ("cat genomic_start_pos_tag >> $ace");
-	    system ("rm genomic_start_pos_tag");
-	    
+		
+		system ("cat genomic_start_pos_tag >> $ace");
+		system ("rm genomic_start_pos_tag");
+	    } else {
+		print qq(the consensus_start_pos was not identified if ref_fasta was provided also use the consensus_start_pos option numbering will start at one\n);
+	    }
 	}
 
 
