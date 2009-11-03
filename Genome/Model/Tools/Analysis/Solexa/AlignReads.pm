@@ -14,10 +14,10 @@ package Genome::Model::Tools::Analysis::Solexa::AlignReads;     # rename this wh
 #####################################################################################################################################
 
 my $bowtie_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bowtie";
-my $bowtie_params = "-m 1 --best --strata -p 4";
+my $bowtie_params = "-m 1 --best --strata -p 4";	# --trim3 25";
 
 my $path_to_novoalign = "/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.07/novocraft/novoalign";
-my $novoalign_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.03.01";
+my $novoalign_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.05.13";
 my $novoalign_params = "-a -l 36 -t 240";	# -o SAM
 
 use strict;
@@ -119,6 +119,12 @@ sub execute {                               # replace with real execution logic.
 				{
 					my $fastq_file1 = "$fastq_dir/s_" . $lane . "_sequence.fastq";
 
+					## Get the read length ##
+					
+					my $seq = `head -2 $fastq_file1 | tail -1`;
+					chomp($seq);
+					my $read_len = length($seq);
+
 					## Run the alignment ##
 					
 					if($aligner eq "bowtie")
@@ -128,8 +134,24 @@ sub execute {                               # replace with real execution logic.
 						## Launch SE ##
 						print "$fastq_file1\tbowtie SE\n";
 						my $alignment_outfile1 = $alignment_dir . "/s_" . $lane . "_sequence.$aligner";			# span[hosts=1]  -n 4
-						system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile1.log bowtie $bowtie_params --unfq $alignment_outfile1.unmapped.fastq --maxfq $alignment_outfile1.multiple.fastq $reference $fastq_file1 $alignment_outfile1");
+						system("bsub -q bigmem -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile1.log bowtie $bowtie_params --unfq $alignment_outfile1.unmapped.fastq --maxfq $alignment_outfile1.multiple.fastq $reference $fastq_file1 $alignment_outfile1");
 					}
+					elsif($aligner eq "novoalign")
+					{
+						## Adjust for shorter reads ##
+						$novoalign_params = "-a" if($read_len <= 36);
+						## Think about setting -l 50 for 75 bp reads
+						## Launch SE ##
+						my $reference = $novoalign_reference;
+						#$novoalign_params = "-a -l 50 -t 240" if($read_length >= 70);	
+
+						## Novoalign SE ##
+
+						print "$fastq_file1 \t$read_len bp\tnovoalign SE\n";
+						my $alignment_outfile = $alignment_dir . "/s_" . $lane . "_sequence.$aligner";
+
+						system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile.log \"$path_to_novoalign $novoalign_params -d $reference -f $fastq_file1 >$alignment_outfile\"");
+					}					
 
 				}
 				
@@ -139,7 +161,12 @@ sub execute {                               # replace with real execution logic.
 				{
 					my $fastq_file1 = "$fastq_dir/s_" . $lane . "_1_sequence.fastq";
 					my $fastq_file2 = "$fastq_dir/s_" . $lane . "_2_sequence.fastq";
+
+					## Get the read length ##
 					
+					my $seq = `head -2 $fastq_file1 | tail -1`;
+					chomp($seq);
+					my $read_len = length($seq);
 					## Run the alignment ##
 					
 					if($aligner eq "bowtie")
@@ -157,20 +184,27 @@ sub execute {                               # replace with real execution logic.
 					}
 					elsif($aligner eq "novoalign")
 					{
+						## Adjust for shorter reads ##
+						$novoalign_params = "-a" if($read_len <= 36);
 						## Think about setting -l 50 for 75 bp reads
 						## Launch SE ##
 						my $reference = $novoalign_reference;
 						#$novoalign_params = "-a -l 50 -t 240" if($read_length >= 70);	
 
-						print "$fastq_file1\tnovoalign SE\n";
-						my $alignment_outfile1 = $alignment_dir . "/s_" . $lane . "_1_sequence.$aligner";
+#						print "$fastq_file1\tnovoalign SE\n";
+#						my $alignment_outfile1 = $alignment_dir . "/s_" . $lane . "_1_sequence.$aligner";
+#						system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile1.log \"$path_to_novoalign $novoalign_params -d $reference -f $fastq_file1 >$alignment_outfile1\"");
 
-						system("bsub -q long -R\"select[type==LINUX64 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile1.log \"$path_to_novoalign $novoalign_params -d $reference -f $fastq_file1 >$alignment_outfile1 2>$alignment_outfile1.err\"");
+#						print "$fastq_file2\tnovoalign SE\n";
+#						my $alignment_outfile2 = $alignment_dir . "/s_" . $lane . "_2_sequence.$aligner";
+#						system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile2.log \"$path_to_novoalign $novoalign_params -d $reference -f $fastq_file2 >$alignment_outfile2\"");
 
-						print "$fastq_file2\tnovoalign SE\n";
-						my $alignment_outfile2 = $alignment_dir . "/s_" . $lane . "_2_sequence.$aligner";
+						## Novoalign PE ##
 
-						system("bsub -q long -R\"select[type==LINUX64 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile2.log \"$path_to_novoalign $novoalign_params -d $reference -f $fastq_file2 >$alignment_outfile2 2>$alignment_outfile2.err\"");
+						print "$fastq_file1 $fastq_file2\t$read_len bp\tnovoalign PE\n";
+						my $alignment_outfile = $alignment_dir . "/s_" . $lane . "_sequence.$aligner";
+
+						system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile.log \"$path_to_novoalign $novoalign_params -d $reference -f $fastq_file1 $fastq_file2 >$alignment_outfile\"");
 					}
 				}
 			}

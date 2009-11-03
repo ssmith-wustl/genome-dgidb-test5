@@ -72,29 +72,29 @@ sub execute {                               # replace with real execution logic.
 
 	if($flowcell_id)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where flow_cell_id = '$flowcell_id' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;
+		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where flow_cell_id = '$flowcell_id' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;
 	}
 
 	if($sample_name)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' ORDER BY lane" --instance warehouse --parse`;
+		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' ORDER BY lane" --instance warehouse --parse`;
 	}
 
 	if($library_name)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where library_name = '$library_name' ORDER BY lane" --instance warehouse --parse`;
+		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where library_name = '$library_name' ORDER BY lane" --instance warehouse --parse`;
 	}
 	
 	if($project_name)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where research_project = '$project_name' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;		
+		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where research_project = '$project_name' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;		
 	}
 
 	if($sqlrun)
 	{
 #		print "$sqlrun\n"; exit(0);
 		
-		print "fcell\tlane\tlibrary_type\tfilt_reads\taln%\tsample_name\tlibrary_name\tseq_id\tstatus\n";
+		print "fcell\tlane\tlibrary_type\tfilt_reads\terr\taln%\tsample_name\tlibrary_name\tseq_id\tstatus\n";
 		
 		my @lines = split(/\n/, $sqlrun);
 		my %lane_pairs = ();
@@ -112,7 +112,7 @@ sub execute {                               # replace with real execution logic.
 			}
 			elsif($line)
 			{
-				(my $flowcell, my $lane, my $sample, my $library, my $read_length, my $filt_clusters, my $seq_id, my $gerald_dir, my $insert_size, my $align_pct) = split(/\t/, $line);
+				(my $flowcell, my $lane, my $sample, my $library, my $read_length, my $filt_clusters, my $seq_id, my $gerald_dir, my $insert_size, my $align_pct, my $error_rate) = split(/\t/, $line);
 
 				## Get num reads ##
 				
@@ -172,8 +172,10 @@ sub execute {                               # replace with real execution logic.
 					}
 				}
 				
+				$error_rate = sprintf("%.2f", $error_rate);
+				
 				## Print result ##
-				print "$flowcell \t$lane_name \t$read_length bp $end_type\t$num_reads \t$align_pct \t$sample \t$library \t$seq_id \t$status\n";
+				print "$flowcell \t$lane_name \t$read_length bp $end_type\t$num_reads \t$error_rate \t$align_pct \t$sample \t$library \t$seq_id \t$status\n";
 
 				## Print location ##
 				if($print_location && $location)

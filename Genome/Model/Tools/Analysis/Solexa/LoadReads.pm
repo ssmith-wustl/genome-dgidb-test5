@@ -7,7 +7,7 @@ package Genome::Model::Tools::Analysis::Solexa::LoadReads;     # rename this whe
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
 #	CREATED:	04/01/2009 by D.K.
-#	MODIFIED:	04/01/2009 by D.K.
+#	MODIFIED:	11/03/2009 by D.K.
 #
 #	NOTES:	
 #			
@@ -235,6 +235,12 @@ sub execute {                               # replace with real execution logic.
 								$this_output_file =~ s/\.txt/\.fastq/;
 								$cmd = "maq sol2sanger $location fastq_dir/$this_output_file";
 								print "$cmd\n";
+
+								## Run command, delete .txt if successful ##
+								if(!system($cmd))
+								{
+									system("rm -rf $this_output_file");
+								}
 							}
 							
 							## Move back to directory ##
