@@ -1978,7 +1978,7 @@ sub replace_xns
 
     my $xn_positions = $contig->padded_base_string_xn_positions;
 
-    print "No x/ns found in contig: " . $contig->name . "\n" and return $contig
+    print "No x/ns found in contig: " . $contig->name . "\n" and return undef
     unless scalar @{$xn_positions} > 0;
 
     #GET THE ACTUAL BASE AT THAT POSITION FROM EACH READ

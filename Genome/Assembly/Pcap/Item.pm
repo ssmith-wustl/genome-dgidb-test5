@@ -195,10 +195,11 @@ sub start_position
 	my ($self, $value) = @_;
 	my ($name) = (caller(0))[3] =~ /.+::(.+)/;
     if(@_>1)
-    {   
-       return $self->check_and_load_data($name, $value);
+    {
+        warn "This method will be read only in the future, please use the position method to set the start position\n";
+       return $self->check_and_load_data('position', $value);
     }
-    return $self->check_and_load_data($name);
+    return $self->check_and_load_data('position');
 }
 =pod
 
