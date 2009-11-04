@@ -52,7 +52,7 @@ sub help_detail {
 
 sub execute {
     my $self=shift;
-    my $fasta = $self->fasta_file;
+    my $fasta = $self->fasta_dir;
     my $db=Bio::DB::Fasta->new($fasta);
 
     unless (-s $self->mutation_list) {
