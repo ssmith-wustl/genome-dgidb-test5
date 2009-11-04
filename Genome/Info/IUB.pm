@@ -139,7 +139,7 @@ Genome::Info::IUB contains methods for working with IUB codes
 
 =head1 Usage
 
-my $iub = Genome::Info::IUB::iub_for_alleles("AT"); #returns 'W'
+my $iub = Genome::Info::IUB::iub_for_alleles("A","T"); #returns 'W'
 
 my @alleles = Genome::Info::IUB::iub_to_alleles("A"); #returns ('A','A')
 
