@@ -96,7 +96,7 @@ sub unpadded_base_quality
     return 1 unless (@_ > 1);
     my $fh = $self->{fh};
     my $index = $self->{index};
-    $fh->seek($index->{bq_offset},0);       
+    $fh->seek($index->{base_qualities}{offset},0);       
     while (my $line = <$fh>) 
     {
         if ($line =~ /^BQ/) 
