@@ -85,6 +85,7 @@ sub full_consensus_path {
     if ( -e $file){
         return $file;
     }
+    $self->error_message("Failed to find all_sequences.$format");
     return;
 }
 
@@ -203,7 +204,7 @@ sub get_sequence_dictionary {
         }
         #my $picard_path = "/gsc/scripts/lib/java/samtools/picard-tools-1.04/";
         my $uri = $self->external_url."/".$self->name."/all_sequences.bam";
-        my $ref_seq = $self->full_consensus_path("fasta"); 
+        my $ref_seq = $self->full_consensus_path('fa'); 
         my $name = $self->name;
         
         my $create_seq_dict_cmd = "java -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R=$ref_seq O=$path URI=$uri species=$species genome_assembly=$name TRUNCATE_NAMES_AT_WHITESPACE=true";        
