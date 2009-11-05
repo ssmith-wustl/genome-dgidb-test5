@@ -252,6 +252,7 @@ sub gather_details
      
       my @hmmpfcmd = (
 	             'hmmpfam',
+                 '--cpu', '1',
 		     $hmmdatabase,
 		     $file,
 		     );
