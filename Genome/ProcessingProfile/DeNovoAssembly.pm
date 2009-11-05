@@ -8,20 +8,23 @@ use Genome;
 use Data::Dumper;
 
 my %PROPERTIES = (
+                  #SHARED PARAMS
 		  sequencing_platform => {
 		      doc => 'The sequencing platform used to produce the read sets to be assembled',
 		      valid_values => [qw/ 454 solexa sanger /],
 		  },
 		  assembler_name => {
 		      doc => 'The name of the assembler to use when assembling read sets',
-		      valid_values => [qw/ velvet /],
-		  },
-		  assembler_params => {
-		      doc => 'A string of parameters to pass to the assembler',
-		      is_optional => 1,
+		      valid_values => [qw/ velvet newbler /],
 		  },
 		  assembler_version => {
 		      doc => 'Version of assembler to use',
+		      is_optional => 1,
+#		      valid_values => [qw//], #LONG LIST OF VALID VALUES FOR NEWBLER
+		  },
+                  #SHARED PROCESSING PARAMS
+		  assembler_params => {
+		      doc => 'A string of parameters to pass to the assembler',
 		      is_optional => 1,
 		  },
                   prepare_instrument_data_params => {
@@ -31,6 +34,28 @@ my %PROPERTIES = (
                   assembly_preprocess_params => {
 		      doc => 'A string of parameters to pass to assembly preprocess step',
 		      is_optional => 1,
+                  },
+                  #NEWBLER SPECIFIC PARAMS
+                  version_subdirectory => {
+		      doc => '454 version subdirectory name',
+		      valid_values => ['offInstrumentApps','mapasm454_source'],
+		      is_optional => 1,
+                  },
+                  read_trimmer_name => {
+		      doc => 'The name of the software to use when trimming read sets',
+		      is_optional => 1,
+                  },
+                  read_trimmer_params => {
+		      doc => 'A string of parameters to pass to the read_trimmer',
+		      is_optional => 1,
+                  },
+                  read_filter_name => {
+		      doc => 'The name of the software to use when filtering read sets',
+		      is_optional => 1,
+                  },
+                  read_filter_params => {
+		     doc => 'A string of parameters to pass to the read_filter',
+		     is_optional => 1,
                   },
 );
 
