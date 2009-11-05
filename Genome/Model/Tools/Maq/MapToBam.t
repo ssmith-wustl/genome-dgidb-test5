@@ -30,13 +30,15 @@ my $tmp_dir  = File::Temp::tempdir(
 );
 
 copy "$root_dir/test.map", $tmp_dir;
+my $ref_list = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai';
 my $map_file = "$tmp_dir/test.map";
 my $bam_file = "$tmp_dir/test.bam";
 my $sam_file = $bam_file;
 $sam_file =~ s/\.bam$/\.sam/;
 
 my $to_bam = Genome::Model::Tools::Maq::MapToBam->create(
-    map_file => $map_file,                                                      
+    map_file => $map_file,  
+    ref_list => $ref_list,
     keep_sam => 1,
     fix_mate => 0,
     use_version => '0.7.1',
@@ -52,7 +54,8 @@ is(compare($sam_file, "$root_dir/test_short.sam"), 0, 'Sam file was created ok')
 cmp_ok(compare($bam_file, "$root_dir/test_short.bam"), '==', 0, 'Bam file was created ok');
 
 my $to_bam_fixmate = Genome::Model::Tools::Maq::MapToBam->create(
-    map_file => $map_file,                                                      
+    map_file => $map_file,    
+    ref_list => $ref_list,
     keep_sam => 1,
     fix_mate => 1,
     use_version => '0.7.1',

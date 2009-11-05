@@ -25,6 +25,13 @@ class Genome::Model::Tools::Tcga::MergePerLaneSamFilesWorker {
             is_input => 1,
             doc => 'The sequence dictionary for the reference.',
         },
+        ref_list => {
+            is => 'String',
+            is_input => 1,
+            doc => 'The ref_list used for SamToBam.',
+            default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai',
+            is_optional => 1,
+        },
     ],
     has_param => [
            lsf_resource => {
@@ -106,6 +113,7 @@ sub execute {
         my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(
             bam_file => $per_lane_bam_file, 
             sam_file => $per_lane_sam_file,                                                      
+            ref_list => $self->ref_list,
             keep_sam => 1,
             fix_mate => 1,
             index_bam => 0,

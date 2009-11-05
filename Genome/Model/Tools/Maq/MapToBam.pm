@@ -15,19 +15,18 @@ class Genome::Model::Tools::Maq::MapToBam {
         map_file    => { 
             is  => 'String',      
             doc => 'name of map file',
-        }
+        },
+        ref_list    => {
+            is  => 'String',
+            doc => 'ref list contains ref name and its length',
+        },
     ],
     has_optional => [
         lib_tag     => {
             is  => 'String',
             doc => 'library name used in sam/bam file to identify read group',
         },
-        ref_list    => {
-            is  => 'String',
-            doc => 'ref list contains ref name and its length, default is NCBI-human-build36/ref_list_for_bam',
-            default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/ref_list_for_bam',
-        },
-        index_bam   => {
+                index_bam   => {
             is  => 'Boolean',
             doc => 'flag to index bam file, default yes',
             default => 1,

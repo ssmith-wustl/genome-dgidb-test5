@@ -20,6 +20,13 @@ class Genome::Model::Tools::Tcga::ConvertAlignedMapsToSamFilesWorker {
             is_input => 1,
             doc => 'The working directory of the tool.',
         },
+        ref_list => {
+            is => 'String',
+            is_input => 1,
+            doc => 'The ref_list used for SamToBam.',
+            default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai',
+            is_optional => 1,
+        },
     ],
     has_param => [
            lsf_resource => {
@@ -115,6 +122,7 @@ sub execute {
        my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
                     map_file    => $mapmerge_output_file,
                     lib_tag     => $seq_id,
+                    ref_list    => $self->ref_list,
                     index_bam   => 0,
                     sam_only    => 1,
        );
