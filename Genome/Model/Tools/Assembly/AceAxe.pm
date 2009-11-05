@@ -31,13 +31,13 @@ class Genome::Model::Tools::Assembly::AceAxe {
         #},
         no_pcap =>
         {
-            type => 'String',
+            type => 'Boolean',
             is_optional => 1,
             doc => "Use this flag to determine whether or not ace axe renames the contig when it moves it to a new ace file",    
         },    
         keep_name => 
         {
-            type => 'String',
+            type => 'Boolean',
             is_optional => 1,
             doc => "Use this flag to determine whether or not ace axe renames the contig when it moves it to a new ace file"
         },                       
