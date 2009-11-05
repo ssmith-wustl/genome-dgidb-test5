@@ -84,7 +84,7 @@ sub execute{
 #  MAIN PROCESSING  #
 #####################
 
-#__CONNECT TO PRODUCTION DATABASE
+#__CONNECT TO PROpDUCTION DATABASE
    MPSampleData::DBI::myinit ("dbi:Oracle:dwrac","mguser_prd");
 
 #__READ IN EXCLUSION TAGS IF AN EXCLUSION FILE IS SPECIFIED
@@ -247,7 +247,7 @@ die "Unable to load Cosmic data\n";
 #__NEW MUTATION DATA (.annotated) FILE PARSER OBJECT
 my $parser = MG::Transform::Process::MutationCSV->new();
 my $fh = new FileHandle;
-# open "file.annoteted"
+# open "file.annotated"
 unless ($fh->open (qq{$mut_file})) {
 die "Could not open mutation project file '$mut_file' for reading";
 }
@@ -635,9 +635,11 @@ sub LoadCosmicFiles {
 		unless ($cosmic_fh->open (qq{$cosmic_file})) {
 			die "Could not open transcript file '$cosmic_file' for reading";
 		}
-		my %parse_args = (check => 1, all => 1, no_process =>1);
+		my %parse_args = (check => 0, all => 1, no_process =>1);
+	print "1";
 		$cosmic = $cosmic_parser->Parse($cosmic_fh,$cosmic_file,%parse_args);
 #__CLOSE INPUT FILE
+	print "2";
 		$cosmic_fh->close;
 		$done += 1;
 		$percent_done = 100 * $done / scalar(@cosmic_files);
