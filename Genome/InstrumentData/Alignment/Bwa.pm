@@ -541,12 +541,19 @@ sub _run_aligner {
 
     #STEP 4.85: Convert perl lane sam to Bam 
 
+    my $ref_list  = $reference_build->full_consensus_sam_index_path;
+    unless ($ref_list) {
+        $self->error_message("Failed to get MapToBam ref list: $ref_list");
+        return;
+    }
+
     my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(
             bam_file => $per_lane_bam_file, 
             sam_file => $per_lane_sam_file_rg,                                                      
             keep_sam => 0,
             fix_mate => 1,
             index_bam => 0,
+            ref_list => $ref_list,
             use_version => $self->samtools_version,
     );
     my $rv_to_bam = $to_bam->execute();

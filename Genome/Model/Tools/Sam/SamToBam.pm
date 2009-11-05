@@ -14,17 +14,16 @@ class Genome::Model::Tools::Sam::SamToBam {
         sam_file    => { 
             is  => 'String',      
             doc => 'name of sam file',
-        }
+        },
+        ref_list    => {
+            is  => 'String',
+            doc => 'ref list contains ref name and its length',
+        },
     ],
     has_optional => [
         bam_file    => {
             is  => 'String',
             doc => 'Name of output bam file (default: use base name of input sam file -- e.g. foo.sam -> foo.bam)'
-        },
-        ref_list    => {
-            is  => 'String',
-            doc => 'ref list contains ref name and its length, default is NCBI-human-build36/ref_list_for_bam',
-            default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/ref_list_for_bam',
         },
         index_bam   => {
             is  => 'Boolean',
@@ -68,7 +67,7 @@ sub create {
 
     $self->error_message('Sam file not existing') and return unless -e $self->sam_file;
     $self->error_message('Ref list not existing') and return unless -s $self->ref_list;
-      
+
     return $self;
 }
 
