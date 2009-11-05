@@ -543,7 +543,7 @@ sub find_or_generate_alignment_data {
 sub remove_alignment_file {
     my $self = shift;
     unless (unlink($self->alignment_file) ) {
-        $self->status_message("Warning:  Could not unlink $self->alignment_file.");
+        $self->status_message("Warning:  Could not unlink ".$self->alignment_file);
     }
     return 1;
 }    
@@ -902,16 +902,20 @@ sub create_combined_bam_file {
     }         
         
     #seq dict
-    my $species;
+    my $species = "unknown";
     if ($instrument_data->id > 0) {
         $self->status_message("Sample id: ".$self->instrument_data->sample_id);
         my $sample = Genome::Sample->get($self->instrument_data->sample_id);
-        $species =  $sample->species_name;
-    }
-    else {
+        if (defined($sample) ) {
+            $species =  $sample->species_name;
+            if ( $species eq "" || $species eq undef ) {
+                $species = "unknown";
+            }
+        }
+    } else {
         $species = 'Homo sapiens'; #to deal with solexa.t
-
     }
+
     $self->status_message("Species from alignment: ".$species);
 
     my $seq_dict = $ref_build->get_sequence_dictionary("sam",$species,$self->picard_version);
