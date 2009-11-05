@@ -3,6 +3,7 @@ package Genome::Model::Tools::PooledBac::Run;
 use strict;
 use warnings;
 
+use DateTime;
 use Genome;
 use Genome::Model::Tools::Pcap::Assemble;
 use Bio::SeqIO;
@@ -90,7 +91,14 @@ class Genome::Model::Tools::PooledBac::Run {
             type => 'String',
             is_optional => 1,
             doc => "Use this option to override the default blast params, the default param string is:\n M=1 N=-3 R=3 Q=3 W=30 wordmask=seg lcmask hspsepsmax=1000 golmax=0 B=1 V=1 topcomboN=1 -errors -notes -warnings -cpus 4 2>/dev/null",        
-        },  
+        }, 
+        params_file => 
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "Use this option toe specify the path to a params file, a file containing preset options to run the pipeline with",
+        }, 
+
     ]
 };
 
@@ -107,29 +115,69 @@ sub help_detail {
 EOS
 }
 
+sub save_params
+{
+    my ($self, $file_name) = @_;
+    my %params = 
+    ( 
+        project_dir => $self->project_dir,
+        pooled_bac_dir => $self->pooled_bac_dir,
+        ace_file_name => $self->ace_file_name,
+        ref_seq_coords_file => $self->ref_seq_file,
+        phd_ball => $self->phd_ball_name,
+        sff_files => $self->sff_files,
+        queue_type => $self->queue_type,
+        retry_count => $self->retry_count,
+        no_reference_sequence => $self->no_reference_sequence,
+        ref_qual_value => $self->ref_qual_value,
+        percent_overlap => $self->percent_overlap,
+        percent_identity => $self->percent_identity,
+        blast_params => $self->blast_params,
+    );
+
+    my $fh = IO::File->new(">$file_name");
+    print $fh Dumper(\%params);
+
+    return;
+}
+
+sub get_params
+{
+    #my $params = eval `cat $project_dir/params`;
+    
+    
+    
+}
 ############################################################
 sub execute { 
     my ($self) = @_;
 $DB::single =1;
-#    unless (`uname -m` =~ /64/) {
-#        $self->error_message('Pooled bac pipeline must be run from a 64-bit architecture');
-#        return;
-#    }
-    my $project_dir = $self->project_dir;
-    my $pooled_bac_dir = $self->pooled_bac_dir;
-    my $ace_file_name = $self->ace_file_name || 'Pcap.454Contigs.ace.1';
-    my $ref_seq_coords_file = $self->ref_seq_file;
-    my $phd_ball = $self->phd_ball_name;
-    my $sff_files = $self->sff_files;
-    my $queue_type = $self->queue_type;
-    my $retry_count = $self->retry_count;
-    #my $contig_map = $self->contig_map_file;
-    my $no_reference_sequence = $self->no_reference_sequence;
-    my $ref_qual_value = $self->ref_qual_value;
-    my $percent_overlap = $self->percent_overlap;
-    my $percent_identity = $self->percent_identity;
-    my $blast_params = $self->blast_params;
+    unless (`uname -m` =~ /64/) {
+        $self->error_message('Pooled bac pipeline must be run from a 64-bit architecture');
+        return;
+    }
     
+    my $params = {};
+    $params = $self->get_params($self->params_file) if(defined $self->params_file &&    -e $self->params_file);
+    my $project_dir = $self->project_dir || $params->{project_dir};
+    my $pooled_bac_dir = $self->pooled_bac_dir || $params->{pooled_bac_dir};
+    my $ace_file_name = $self->ace_file_name || $params->{ace_file_name} ||'Pcap.454Contigs.ace.1';
+    my $ref_seq_coords_file = $self->ref_seq_file || $params->{ref_seq_coords};
+    my $phd_ball = $self->phd_ball_name || $params->{phd_ball};
+    my $sff_files = $self->sff_files || $params->{sff_files};
+    my $queue_type = $self->queue_type || $params->{queue_type};
+    my $retry_count = $self->retry_count || $params->{retry_count};
+    #my $contig_map = $self->contig_map_file;
+    my $no_reference_sequence = $self->no_reference_sequence || $params->{no_reference_sequence};
+    my $ref_qual_value = $self->ref_qual_value || $params->{ref_qual_value};
+    my $percent_overlap = $self->percent_overlap || $params->{percent_overlap};
+    my $percent_identity = $self->percent_identity || $params->{percent_identity};
+    my $blast_params = $self->blast_params || $params->{blast_params};
+    $self->error_message("Error creating directory $project_dir") and die unless Genome::Utility::FileSystem->create_directory($project_dir);
+    my $dt = DateTime->now(time_zone => "America/Chicago");
+    $self->save_params("$project_dir/params.".$dt->strftime("%y%m%d.%I%M\n"));
+
+
     $self->error_message("Error running run-blast")  and die unless
     Genome::Model::Tools::PooledBac::RunBlast->execute(ref_sequence=>$ref_seq_coords_file, ref_qual_value => $ref_qual_value, pooled_bac_dir=>$pooled_bac_dir,pooled_bac_ace_file => $ace_file_name, project_dir => $project_dir, blast_params => $blast_params);
 
@@ -158,7 +206,6 @@ $DB::single =1;
 #    Genome::Model::Tools::PooledBac::UpdateSeqMgr->execute(project_dir => $project_dir);
     return 1;
 }
-
 
 
 1;
