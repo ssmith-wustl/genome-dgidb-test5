@@ -33,6 +33,13 @@ class Genome::Model::Tools::Somatic::FilterLoh{
             is_optional => 1,
             doc => "Variants that have failed the LOH filter (are LOH events). (optional) If this is not provided, no output will be given for variants failing the filter."
         },
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
     ],
 };
 
@@ -65,6 +72,11 @@ sub execute {
     unless(-f $self->normal_snp_file) {
         $self->error_message($self->normal_snp_file . " is not a file");
         die;
+    }
+
+    if (($self->skip_if_output_present)&&(-s $self->output_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        return 1;
     }
 
     my $out_fh = IO::File->new(">".$self->output_file);

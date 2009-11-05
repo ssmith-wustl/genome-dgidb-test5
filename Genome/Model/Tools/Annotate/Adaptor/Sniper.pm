@@ -19,6 +19,13 @@ class Genome::Model::Tools::Annotate::Adaptor::Sniper {
             is_output => 1,
             doc => "Store output in the specified file instead of sending it to STDOUT."
         },
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_input => 1,
+            is_optional => 1,
+            default => 0,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
     ],
 };
 
@@ -44,9 +51,15 @@ sub execute {
     my $self = shift;
 
     unless (-s $self->somatic_file) {
-        $self->error_message("blahhhhhhhhhhh YOU SUPPLY A FILE PLEASE");
+        $self->error_message("somatic_file: " . $self->somatic_file . " does not exist or has no size");
         die;
     }
+    
+    if (($self->skip_if_output_present)&&(-s $self->output_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        return 1;
+    }
+
     my $somatic_fh = IO::File->new($self->somatic_file);
 
     # establish the output handle for the transcript variants

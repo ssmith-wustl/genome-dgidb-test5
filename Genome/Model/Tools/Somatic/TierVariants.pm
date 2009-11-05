@@ -63,6 +63,13 @@ class Genome::Model::Tools::Somatic::TierVariants{
             is_output => 1,
             is_optional => 1,
         },
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
     ],
 };
 
@@ -86,6 +93,11 @@ EOS
 sub execute {
     my $self = shift;
     $DB::single=1;
+
+    if (($self->skip_if_output_present)&&(-s $self->tier1_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        return 1;
+    }
 
     my $ucsc_file = $self->ucsc_file;
     my $transcript_annotation_file = $self->transcript_annotation_file;

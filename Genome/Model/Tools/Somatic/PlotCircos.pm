@@ -20,7 +20,6 @@ class Genome::Model::Tools::Somatic::PlotCircos{
         },
         tier1_lc_file => {
             is  => 'String',
-            is_input  => 1,
             doc => 'The list of tier1 variants',
         },
         tier1_hc_file => {
@@ -30,44 +29,55 @@ class Genome::Model::Tools::Somatic::PlotCircos{
         },
          tier1_hclabel_file => {
             is  => 'String',
-            is_input  => 1,
             doc => 'The list of tier1 variants in ANNOTATION format if you want them labelled. somatic format BAD',
         },
         tier1_rchclabel_file => {
             is  => 'String',
-            is_input  => 1,
             doc => 'The list of tier1 recurrent variants in ANNOTATION format if you want them labelled. somatic format BAD',
+        },
+        sv_file => {
+            is  => 'String',
+            is_input  => 1,
+            doc => 'The list of sv in BREAKDANCER output format... define this OR all of ctx, itx, del, ins, inv files... but not both',
         },
         ctx_file => {
             is  => 'String',
-            is_input  => 1,
-            doc => 'The list of tier3 variants',
+            doc => 'The file containing sv - trans-chromosomal translocations',
         },
         itx_file => {
             is  => 'String',
-            is_input  => 1,
-            doc => 'The list of tier3 variants',
+            doc => 'The file containing sv - intra-chromosomal translocations',
         },
         del_file => {
             is  => 'String',
-            is_input  => 1,
-            doc => 'The list of tier3 variants',
+            doc => 'The file containing sv - deletions, specify this OR sv_file but not both',
         },
         ins_file => {
             is  => 'String',
-            is_input  => 1,
-            doc => 'The list of tier3 variants',
+            doc => 'The file containing sv - insertions, specify this OR sv_file but not both',
         },
         inv_file => {
             is  => 'String',
-            is_input  => 1,
-            doc => 'The list of tier3 variants',
+            doc => 'The file containing sv - inversions, specify this OR sv_file but not both',
         },
         output_file => {
             is => 'String',
             is_input => 1,
             is_output => 1,
-            doc=> 'The output png.',
+            doc=> 'The output png. Provide a base file name, .png will be appended',
+        },
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
+        minimum_score_graphed => {
+            is => 'Integer',
+            is_optional => 1,
+            default => 45,
+            doc => 'Minimum score to graph... all below this score are ignored. Default is 45.',
         },
         config_file => {
             is => 'String',
@@ -117,6 +127,14 @@ class Genome::Model::Tools::Somatic::PlotCircos{
         _del_circos_file => {
             is  => 'String',
         },
+        lsf_resource => {
+            is_param => 1,
+            default_value => 'rusage[mem=8000] select[type==LINUX64 & mem > 8000] span[hosts=1] -M 8000000',
+        }, 
+        lsf_queue => {
+            is_param => 1,
+            default_value => 'long'
+        },
     ],
 };
 
@@ -142,6 +160,26 @@ sub execute {
     $DB::single=1;
         
     #test files 
+
+    # Check/setup and split the 1 sv_file into multiple sv files by category if necessary
+    unless ( (defined $self->sv_file) xor 
+            (defined $self->ctx_file) && (defined $self->itx_file) && (defined $self->ins_file) && (defined $self->del_file) && (defined $self->inv_file)) {
+        $self->error_message("Either only sv_file OR ALL OF (ctx_file, itx_file, ins_file, del_file, inv_file) must be provided... but not both");
+        die;
+    }
+
+    # Append .png to the output name... grab the base first
+    my $circos_output_base = $self->output_file;
+    $self->output_file($self->output_file . ".png");
+
+    if (($self->skip_if_output_present)&&($self->output_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        return 1;
+    }
+    if (defined $self->sv_file) {
+        $self->split_sv_input;
+    }
+    
     my $cna_fh;
     
     if($self->cna_file) {
@@ -313,21 +351,19 @@ sub execute {
     $color_fh->close;
     $self->_colors_file($color_path);
 
-
     my ($config_fh, $config_path) = Genome::Utility::FileSystem->create_temp_file($self->config_file_name);
     print $config_fh $self->config_file_contents;
     $config_fh->close;
 
-
     
     print `circos -conf $config_path`;
    
-    my $circos_output= $self->output_file;
-    my $circos_smallest = $self->output_file . ".920x920.png";
-    my $circos_small = $self->output_file . ".3000x3000.png";
-    `convert $circos_output -resize 3000x3000 -interpolate bicubic -quality 1000 $circos_small`;
+    my $circos_big = $self->output_file;
+    my $circos_smallest = "$circos_output_base.920x920.png";
+    my $circos_small = "$circos_output_base.3000x3000.png";
+    `convert $circos_big -resize 3000x3000 -interpolate bicubic -quality 1000 $circos_small`;
     `convert $circos_small -resize 920x920 -interpolate bicubic -quality 1000 $circos_smallest`;
-     
+    
     #Then graph. Done!
     return 1;
 }
@@ -375,6 +411,54 @@ sub convert_anno_file {
 }
 #--------------------------------------------------
 
+#================== gabriel sanderson added this (why are we marking things like this?) =================
+sub split_sv_input {
+    my $self = shift;
+
+    my $sv_fh = IO::File->new($self->sv_file,"r");
+    unless($sv_fh) {
+        $self->error_message("Couldn't open " . $self->sv_file);
+        return;
+    }
+
+    # For each of the 5 SV types calculate a name for that file and assign it to the object level accessor... 
+    # Also make filehandles for each so we can split input into each of these files (saves us from doing all this 5 times)
+    my %fh_by_type;
+    for my $type ('ctx', 'itx', 'ins', 'del', 'inv') {
+        my $property_name = $type . "_file";
+        my $file = $self->sv_file . ".$type";
+        $self->$property_name($file);
+        my $fh = IO::File->new($self->$property_name,"w");
+        unless($fh) {
+            $self->error_message("Couldn't open $file");
+            return;
+        }
+        $fh_by_type{$type} = $fh;
+    }
+
+    while (my $line = $sv_fh->getline) {
+        # Filter out the top 3 "comments" / headers in breakdancer files which have # at the beginning
+        next if $line =~ m/^#/;
+        my ($chr1, $pos1, $orientation1, $chr2, $pos2, $orientation2, $type, $size, $score, $num_reads, $num_reads_lib, $allele_frequency, $version, $run_param) = split("\t", $line);
+
+        my $fh = $fh_by_type{lc($type)};
+        unless (defined $fh) {
+            $self->error_message("Error in split_sv_input: SV type $type is unrecognized... should be CTX, ITX, INS, DEL, INS");
+            die;
+        }
+
+        $fh->print($line);
+    }
+
+    $sv_fh->close;
+    for my $type ('ctx', 'itx', 'ins', 'del', 'inv') {
+        my $fh = $fh_by_type{$type};
+        $fh->close;
+    }
+    
+    return 1;
+}
+#--------------------------------------------------
 
 sub convert_breakdancer_file {
     my ($self, $breakdancer_fh, $output_fh, $color) = @_;
@@ -388,7 +472,12 @@ sub convert_breakdancer_file {
             $label++;
             chomp $line;
             my ($chr1,$breakpoint1,$orientation1,$chr2,$breakpoint2,$orientation2,$type,$size, $score,) = split /\t/, $line;
-            my $bin=10 - int($score/10 +.99); 
+            unless($score > $self->minimum_score_graphed) {
+                next;
+            }
+            # (score range - cutoff) / 100 = divisor
+            my $divisor = (100 - $self->minimum_score_graphed) / 100;
+            my $bin = 10 - int($score / $divisor +.99); 
             if($bin == 0) {
                 $color_label = $color ;
             }

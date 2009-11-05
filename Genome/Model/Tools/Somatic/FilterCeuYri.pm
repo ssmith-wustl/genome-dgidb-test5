@@ -25,6 +25,13 @@ class Genome::Model::Tools::Somatic::FilterCeuYri {
             default => '/gscuser/gsanders/CEU_YRI_all.snps.snpfilter.s',
             doc => "File of source variation to filter out... this defaults to the current CEU and YRI file (combined)"
         },
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
     ],
 };
 
@@ -47,6 +54,11 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    if (($self->skip_if_output_present)&&(-s $self->output_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        return 1;
+    }
 
     my @intersect_files = ($self->variant_file, $self->datasource_file);
     my $command = Genome::Model::Tools::Snp::Intersect->create(

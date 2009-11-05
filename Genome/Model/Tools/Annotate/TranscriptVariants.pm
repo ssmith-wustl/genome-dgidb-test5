@@ -90,7 +90,13 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             default => 0,
             doc => 'enable this flag to skip variants on a chromosome where no annotation information exists, as oppeosed to crashing',
         },
-        
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
     ], 
 };
 
@@ -131,6 +137,11 @@ EOS
 sub execute { 
     my $self = shift;
     $DB::single=1;
+
+    if (($self->skip_if_output_present)&&(-s $self->output_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        return 1;
+    }
 
     # generate an iterator for the input list of variants
     my $variant_file = $self->variant_file;

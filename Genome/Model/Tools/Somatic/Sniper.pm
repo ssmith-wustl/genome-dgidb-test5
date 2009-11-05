@@ -57,7 +57,14 @@ class Genome::Model::Tools::Somatic::Sniper {
         lsf_queue => {
             is_param => 1,
             default_value => 'long'
-        } 
+        }, 
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 1,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
     ],
 };
 
@@ -90,8 +97,8 @@ sub execute {
     $DB::single = 1;
 
     # Skip if both output files exist... not sure if this should be here or not
-    if ((-s $self->output_snp_file)&&(-s $self->output_indel_file)) {
-        $self->status_message("Both output files are already present... skip sniping");
+    if (($self->skip_if_output_present)&&(-s $self->output_snp_file)&&(-s $self->output_indel_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
         return 1;
     }
 

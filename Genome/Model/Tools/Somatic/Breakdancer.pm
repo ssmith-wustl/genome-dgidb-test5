@@ -45,6 +45,13 @@ class Genome::Model::Tools::Somatic::Breakdancer{
             is_optional => 1,
             doc => "If set to true... this will do nothing! Fairly useless, except this is necessary for workflow.",
         },
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
     ],
 };
 
@@ -73,7 +80,11 @@ sub execute {
     my $self = shift;
 
     if ($self->skip) {
-        $self->status_message("Skip flag is set... bypassing operation");
+        $self->status_message("Skipping execution: Skip flag set");
+        return 1;
+    }
+    if (($self->skip_if_output_present)&&(-s $self->breakdancer_output)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
         return 1;
     }
 

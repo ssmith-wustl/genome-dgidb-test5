@@ -67,6 +67,13 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             default  => 0,
             doc      => 'print matching dbSNP line isntead of input',
         },
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
     ],
 };
 
@@ -87,8 +94,8 @@ sub execute {
 
     my ($self) = @_;
 
-    if (-s $self->output_file) {
-        $self->status_message("Previous output detected, shortcutting");
+    if (($self->skip_if_output_present)&&(-s $self->output_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
         return 1;
     }
 

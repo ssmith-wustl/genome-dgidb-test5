@@ -68,7 +68,14 @@ class Genome::Model::Tools::Somatic::MapToCna {
         is_optional => 1,
         default => 1,
         doc => 'Percent of reads (value x 100%) to use in calculations (max,default = 1).'
-    }
+    },
+    skip_if_output_present => {
+        is => 'Boolean',
+        is_optional => 1,
+        is_input => 1,
+        default => 0,
+        doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+    },
     ]
 };
 
@@ -90,6 +97,11 @@ sub execute {
     my @samples = ("tumor","normal");
     my @downratios = ($self->tumor_downsample_percentage,$self->normal_downsample_percentage);
     my $outfile = $self->output_file;
+
+    if (($self->skip_if_output_present)&&(-s $self->output_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        return 1;
+    }
     
     #test architecture to make sure bam-window program can run (req. 64-bit)
     unless (`uname -a` =~ /x86_64/) {

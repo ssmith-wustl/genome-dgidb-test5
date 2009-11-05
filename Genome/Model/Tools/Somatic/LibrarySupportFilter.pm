@@ -34,6 +34,13 @@ class Genome::Model::Tools::Somatic::LibrarySupportFilter {
         is_input => '1',
         doc       => 'Output filecontaining indels with multiple library support. Same columns as indel_file with two new columns: number of libraries that contained the indel, and indel score',
     },
+    skip_if_output_present => {
+        is => 'Boolean',
+        is_optional => 1,
+        is_input => 1,
+        default => 0,
+        doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+    },
     ],
 };
 
@@ -69,9 +76,14 @@ sub execute {
     || die "cant read: " . $self->indel_file();
 
     # Skip this step if output exists 
-    # FIXME this will not work, fix or toss out
-    if (-e $self->preferred_output_file) {
-        $self->status_message("Output file detected, skipping this step");
+    if (($self->skip_if_output_present)&&(-e $self->multi_lib_output_file)&&(-e $self->single_lib_output_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        # Decide whether to use the single or multi lib output file
+        if (-s $self->multi_lib_output_file) {
+            $self->preferred_output_file($self->multi_lib_output_file);
+        } else {
+            $self->preferred_output_file($self->single_lib_output_file);
+        }
         return 1;
     }
 

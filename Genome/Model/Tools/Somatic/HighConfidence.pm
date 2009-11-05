@@ -59,6 +59,13 @@ class Genome::Model::Tools::Somatic::HighConfidence {
            is_optional => 1,
            doc => "If set to true... this will do nothing! Fairly useless, except this is necessary for workflow.",
        },
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+        },
     ]
 };
 
@@ -84,9 +91,15 @@ sub execute {
     $DB::single=1;
 
     if ($self->skip) {
-        $self->status_message("Skip flag set. Skipping execution.");
+        $self->status_message("Skipping execution: Skip flag set");
         return 1;
     }
+    
+    if (($self->skip_if_output_present)&&(-s $self->output_file)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        return 1;
+    }
+
     #test architecture to make sure we can run read count program
     #copied from G::M::T::Maq""Align.t 
     unless (`uname -a` =~ /x86_64/) {
