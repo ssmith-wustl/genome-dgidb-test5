@@ -344,7 +344,7 @@ return (
     transcript_source => $source,
     transcript_species=> $transcript->species,
     transcript_version => $transcript->version,
-    gene_name  => $gene->name($source),
+    gene_name  => $gene->name(),
     ucsc_cons => $conservation
 )
 }
@@ -888,10 +888,6 @@ sub _transcript_annotation_for_cds_exon
     {
         $self->error_message
         (
-# From Chapter 8 codon2aa
-            #
-# A subroutine to translate a DNA 3-character codon to an amino acid
-#   Version 3, using hash lookup
 
 
             sprintf
@@ -904,10 +900,6 @@ sub _transcript_annotation_for_cds_exon
                 $transcript->transcript_id,
                 $variant->{start},
             )
-# From Chapter 8 codon2aa
-            #
-# A subroutine to translate a DNA 3-character codon to an amino acid
-#   Version 3, using hash lookup
 
 
         );
@@ -964,6 +956,12 @@ sub _transcript_annotation_for_cds_exon
         $mutated_seq=substr($original_seq,0,$c_position-1).$var.substr($original_seq,$c_position-1+$size2);
     }
     $mutated_seq_translated = $self->translate($variant->{chromosome_name}, $mutated_seq);
+    my $full_protein_anno;
+    $full_protein_anno = "Variant: ".join("\t", ($variant->{chromosome_name}, $variant->{start}, $variant->{stop}, $variant->{reference}, $variant->{variant}))."\n";
+    $full_protein_anno .= "Transcript: ".$transcript->transcript_name."\n";
+    $full_protein_anno .= "exon coords: $structure_start $structure_stop\n";
+    $full_protein_anno .= "Original seq: $original_seq_translated\n";
+    $full_protein_anno .= "Mutated seq:  $mutated_seq_translated\n";
 
 
     my $pro_str = 'NULL';
@@ -1020,7 +1018,8 @@ sub _transcript_annotation_for_cds_exon
         amino_acid_length => length($amino_acid_seq),
         ucsc_cons => $conservation,
         domain => $pdom,
-        all_domains => $alldomains
+        all_domains => $alldomains,
+        #full_protein_anno=> $full_protein_anno,
     );
 }
 
