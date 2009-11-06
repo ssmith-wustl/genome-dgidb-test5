@@ -172,7 +172,7 @@ sub execute {
     my $circos_output_base = $self->output_file;
     $self->output_file($self->output_file . ".png");
 
-    if (($self->skip_if_output_present)&&($self->output_file)) {
+    if (($self->skip_if_output_present)&&(-s $self->output_file)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
         return 1;
     }
