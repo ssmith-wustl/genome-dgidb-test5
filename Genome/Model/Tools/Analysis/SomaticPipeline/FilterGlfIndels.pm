@@ -24,13 +24,17 @@ class Genome::Model::Tools::Analysis::SomaticPipeline::FilterGlfIndels {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		variants_file	=> { is => 'Text', doc => "File of variants in indel format", is_optional => 0 },
 		output_file     => { is => 'Text', doc => "Output file to receive filtered indels", is_optional => 0 },
+		min_coverage     => { is => 'Text', doc => "Minimum coverage to allow indel [8]", is_optional => 1 },
+		min_reads2     => { is => 'Text', doc => "Minimum read support to allow indel [2]", is_optional => 1 },
+		min_var_freq     => { is => 'Text', doc => "Minimum allele frequency to allow indel [0.10]", is_optional => 1 },
+		min_somatic_score     => { is => 'Text', doc => "Minimum somatic score to allow indel [1]", is_optional => 1 },
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Merges indels with their annotations"                 
+    "Filters glfSomatic indel calls"                 
 }
 
 sub help_synopsis {
@@ -59,8 +63,17 @@ sub execute {                               # replace with real execution logic.
 	my $variants_file = $self->variants_file;
 	my $output_file = $self->output_file;
 	my $min_coverage = 8;
+	$min_coverage = $self->min_coverage if($self->min_coverage);
+
 	my $min_reads2 = 2;
+	$min_reads2 = $self->min_reads2 if($self->min_reads2);
+
 	my $min_var_freq = 0.10;
+	$min_var_freq = $self->min_var_freq if($self->min_var_freq);
+
+	my $min_somatic_score = 1;
+	$min_somatic_score = $self->min_somatic_score if($self->min_somatic_score);
+
 	my %stats = ();
 	$stats{'num_indels'} = $stats{'num_pass_filter'} = 0;
 	
@@ -107,9 +120,11 @@ sub execute {                               # replace with real execution logic.
 		my $normal_reads2 = $fields[27]; # number of reads that support indel 2 in normal 
 
 		my $tumor_coverage = $tumor_reads1 + $tumor_reads2;
+		my $normal_coverage = $normal_reads1 + $normal_reads2;		
+
 		$stats{'num_indels'}++;
 
-		if($tumor_coverage >= $min_coverage && $tumor_reads2 >= $min_reads2)
+		if($tumor_coverage >= $min_coverage && $normal_coverage >= $min_coverage && $tumor_reads2 >= $min_reads2 && $somatic_score >= $min_somatic_score)
 		{
 			my $tumor_freq = ($tumor_reads2) / ($tumor_reads1 + $tumor_reads2);
 
