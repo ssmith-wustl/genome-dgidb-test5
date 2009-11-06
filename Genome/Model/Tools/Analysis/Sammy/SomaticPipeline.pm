@@ -372,7 +372,7 @@ sub execute {                               # replace with real execution logic.
 
 		if($num_somatic)
 		{
-			run_annotation($somatic_file);
+			run_annotation($somatic_file, 1);
 		}
 
 		
@@ -480,7 +480,8 @@ sub parse_variants_by_status
 
 sub run_annotation
 {
-	(my $variants_file) = @_;
+	(my $variants_file, my $indel_flag) = @_;
+	$indel_flag = 0 if(!$indel_flag);
 	
 	my $formatted_file = $variants_file . ".formatted";
 	my $annotated_file = $variants_file . ".formatted.annotations";
@@ -490,9 +491,16 @@ sub run_annotation
 	print "Annotating variants in $variants_file...\n";	
 
 	## Format SNPs for annotation ##
-
-	system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/format_snps_for_annotation.pl $variants_file $formatted_file");			
-
+	if($indel_flag || $variants_file =~ 'indel')
+	{
+		system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/new_format_indels_for_annotation.pl $variants_file $formatted_file");					
+		print "Formatting as indels...\n";
+		system("rm -rf $annotated_file");
+	}
+	else
+	{
+		system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/format_snps_for_annotation.pl $variants_file $formatted_file");			
+	}
 	## Get lengths of files ##
 	
 	my $num_formatted = `cat $formatted_file | wc -l`;
@@ -511,10 +519,10 @@ sub run_annotation
 
 	if(!(-e $annotated_file))
 	{
-		system("gt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file 1>/dev/null 2>/dev/null");
+		system("gt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file"); #1>/dev/null 2>/dev/null
 	}
 	
-	print "Merging annotations with SNP calls...\n";
+	print "Merging annotations with variant calls...\n";
 
 	system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/format_snps_with_annotation.pl $variants_file $annotated_file $merged_file");
 }
