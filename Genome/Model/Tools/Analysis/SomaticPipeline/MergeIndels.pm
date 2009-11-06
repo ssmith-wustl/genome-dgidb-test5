@@ -98,7 +98,20 @@ sub execute {                               # replace with real execution logic.
 		## Filter the indel file ##
 		
 		my $filtered_file = $output_dir . "/" . $tumor_sample . ".glfsomatic.indels.filter";		
-		system("gt analysis somatic-pipeline filter-glf-indels --variants-file $tier1_file --output-file $filtered_file");
+		system("gt analysis somatic-pipeline filter-glf-indels --variants-file $tier1_file --output-file $filtered_file --min-var-freq 0.25 --min-reads2 4 --min-coverage 20"); #--min-var-freq 0.25
+	
+		## Get number of indels passing filter ##
+		
+#		my $num_pass_filter = `cat $filtered_file | wc -l`;
+#		chomp($num_pass_filter);
+#		my $min_freq = 0.25;
+#		while($num_pass_filter > 4)
+#		{
+#			$min_freq += 0.05;
+#			system("gt analysis somatic-pipeline filter-glf-indels --variants-file $tier1_file --output-file $filtered_file --min-var-freq $min_freq --min-reads2 4 --min-coverage 20"); #--min-var-freq 0.25
+#			$num_pass_filter = `cat $filtered_file | wc -l`;
+#			chomp($num_pass_filter);			
+#		}
 	
 		my $merged_file = $output_dir . "/" . $tumor_sample . ".glfsomatic.indels.filter.annotation.merged";
 		
@@ -265,7 +278,14 @@ sub compile_variants
 
 		$tier1_variants{$key} = $newline;
 
-		$glf_variants{$key} = 1;		
+		if($lineContents[11] || $lineContents[12] || $lineContents[13])
+		{
+			$glf_variants{$key} = "$lineContents[11]\t$lineContents[12]\t$lineContents[13]"
+		}
+		else
+		{		
+			$glf_variants{$key} = 1;
+		}
 	}
 	
 	close($input);
@@ -298,6 +318,7 @@ sub compile_variants
 		$dbSNP = $known_dbsnps{$key} if($known_dbsnps{$key});
 
 		$compiled_variants .= "$normal_sample\t$tumor_sample\t" . $tier1_variants{$key} . "\t" . $method . "\t" . $dbSNP;
+		$compiled_variants .= "\t" . $glf_variants{$key} if($glf_variants{$key} && length($glf_variants{$key}) > 1);
 		$compiled_variants .= "\t" . $consensus_calls{$key} if($consensus_calls{$key});
 		$compiled_variants .= "\n";
 	}
