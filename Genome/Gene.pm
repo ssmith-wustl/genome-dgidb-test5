@@ -57,24 +57,22 @@ sub name
 {
     my ($self, $source) = @_;
 
-    my $name = $self->hugo_gene_name;
-
-    return $name if $name;
-
     my @egis;
-    unless ( $source )
+    
+    if ( $source )
     {
-        @egis = $self->external_ids;
-    }
-    elsif ( $source eq "genbank")
-    {
-        #$egis = $self->external_ids->search({ id_type => 'entrez' });
-        @egis = $self->external_ids(id_type => 'entrez');
+        if ( $source eq "genbank")
+        {
+            $source = 'entrez';
+        }
+        @egis = grep { $_->id_type() eq $source } $self->external_ids();
     }
     else
     {
-        #$egis = $self->external_ids->search({ id_type => $source });
-        @egis = $self->external_ids(id_type => $source);
+        my $name = $self->hugo_gene_name;
+
+        return $name if $name;
+        @egis = $self->external_ids;
     }
 
     unless ($egis[0]) {
