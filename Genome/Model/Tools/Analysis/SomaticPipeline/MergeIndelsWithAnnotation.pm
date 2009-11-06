@@ -126,6 +126,14 @@ sub execute {                               # replace with real execution logic.
 		my $chr_stop = $lineContents[2];
 		my $reference = $lineContents[3];
 		my $variant = $lineContents[4];
+		my $somatic_score = $lineContents[6];
+		my $tumor_reads1 = $lineContents[12];
+		my $tumor_reads2 = $lineContents[13];
+		my $normal_reads1 = $lineContents[26]; # number of reads that support indel 1 in normal
+		my $normal_reads2 = $lineContents[27]; # number of reads that support indel 2 in normal 
+		my $tumor_coverage = $tumor_reads1 + $tumor_reads2;
+		my $tumor_freq = ($tumor_reads2) / ($tumor_reads1 + $tumor_reads2);
+		
 		#my $coverage = $lineContents[11];
 #		my $reads1 = $lineContents[12];
 #		my $reads2 = $lineContents[13];
@@ -150,7 +158,7 @@ sub execute {                               # replace with real execution logic.
 		if($annotations{$variant_key})
 		{
 			my $annotation = $annotations{$variant_key};
-			print OUTFILE "$chrom\t$chr_start\t$chr_stop\t$reference\t$variant\t$annotation\n";
+			print OUTFILE "$chrom\t$chr_start\t$chr_stop\t$reference\t$variant\t$annotation\t$somatic_score\t$tumor_coverage\t$tumor_freq\n";
 		}
 		
 #		print OUTFILE $chrom . "\t" . $chr_start . "\t" . $allele1 . "\t" . $allele2 . "\t" . $indel_type . "\t" . $annotation . "\n";
