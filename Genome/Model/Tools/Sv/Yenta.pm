@@ -82,7 +82,7 @@ sub execute {
     #test architecture to make sure we can run yenta program
     #copied from G::M::T::Maq""Align.t 
     unless (`uname -a` =~ /x86_64/) {
-        $self->error_message(`uname -a`); #FIXME remove
+       $self->error_message(`uname -a`); #FIXME remove
        $self->error_message("Must run on a 64 bit machine");
        die;
     }
@@ -135,20 +135,22 @@ sub execute {
         return;
     }
 
-    my $exon_file = $self->exon_bam;
-    unless(-e $exon_file) {
-        $self->error_message("$exon_file does not exist");
-        return;
-
-    }
-    my $buffer = $self->buffer_size;
     my $additional_opts = $self->yenta_options;
+    my $exon_file = $self->exon_bam;
+    if($exon_file) {
+        unless(-e $exon_file) {
+            $self->error_message("$exon_file does not exist");
+            return;
+        }
+        $additional_opts = $additional_opts ? $additional_opts . " -g $exon_file" : "-g $exon_file";
+    }
+    $self->status_message("Using option string $additional_opts");
+    my $buffer = $self->buffer_size;
 
     my $count = 0;
     #assuming we are reasonably sorted
     while ( my $line = $indel_fh->getline) {
         chomp $line;
-        #$self->status_message("(SEARCHING FOR: $line)");
         my ($chr1,
             $chr1_pos,
             $orientation1,
@@ -164,23 +166,39 @@ sub execute {
             #Doing this based on chromosomes in case types ever change
             if($chr1 eq $chr2) {
                 my $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
-                system("$grapher -g $exon_file -q 1 -b $buffer -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr2_pos");
+                my $cmd = "$grapher -q 1 -b $buffer -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr2_pos";
+                $self->error_message("Running: $cmd");
+                system($cmd);
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
-                system("$grapher -g $exon_file -q 1 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr2_pos");
+                $cmd = "$grapher -q 1 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr2_pos";
+                $self->error_message("Running: $cmd");
+                system($cmd);
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
-                system("$grapher -g $exon_file -q 0 -b $buffer  -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr2_pos");
+                $cmd = "$grapher -q 0 -b $buffer  -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr2_pos";
+                $self->error_message("Running: $cmd");
+                system($cmd);
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
-                system("$grapher -g $exon_file -q 0 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr2_pos");
+                $cmd = "$grapher -q 0 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr2_pos";
+                $self->error_message("Running: $cmd");
+                system($cmd);
             }
             else {
                 my $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
-                system("$grapher -g $exon_file -q 1 -b $buffer -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos");
+                my $cmd = "$grapher -q 1 -b $buffer -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos";
+                $self->error_message("Running: $cmd");
+                system($cmd);
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
-                system("$grapher -g $exon_file -q 1 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos");
+                $cmd = "$grapher -q 1 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos";
+                $self->error_message("Running: $cmd");
+                system($cmd);
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
-                system("$grapher -g $exon_file -q 0 -b $buffer  -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos");
+                $cmd = "$grapher -q 0 -b $buffer  -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos";
+                $self->error_message("Running: $cmd");
+                system($cmd);
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
-                system("$grapher -g $exon_file -q 0 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos");
+                $cmd = "$grapher -q 0 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos";
+                $self->error_message("Running: $cmd");
+                system($cmd);
             }
         }
             
