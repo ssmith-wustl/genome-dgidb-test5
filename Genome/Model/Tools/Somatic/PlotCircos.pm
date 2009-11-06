@@ -477,7 +477,8 @@ sub convert_breakdancer_file {
             }
             # (score range - cutoff) / 100 = divisor
             my $divisor = (100 - $self->minimum_score_graphed) / 10;
-            my $bin = 10 - int($score / $divisor +.99); 
+            my $modified_score = $score - $self->minimum_score_graphed;
+            my $bin = 10 - int($modified_score / $divisor +.99); 
             if($bin == 0) {
                 $color_label = $color ;
             }
