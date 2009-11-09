@@ -16,7 +16,14 @@ class Genome::Model::Tools::Somatic::UploadVariantValidation{
         is => 'Number',
         doc => 'The model id that should be linked to the variant validation. This is manual for now and required.',
     },
-    
+    validation_type => {
+        is  => 'String',
+        doc => 'The type of validation used for the input file. I.E. "Solexa"',
+    },
+    output_file => {
+        is  => 'String',
+        doc => 'The output file to contain all of the variants successfully uploaded (will not include variants that could not be uploaded due to lack of matching Genome::Model::Variant)',
+    },
     ],
 };
 
@@ -46,6 +53,12 @@ sub execute {
         die;
     }
 
+    my $ofh = IO::File->new($self->output_file, "w");
+    unless($ofh) {
+        $self->error_message("Unable to open " . $self->output_file . " for writing. $!");
+        die;
+    }
+
     my $model = Genome::Model->get($self->model_id);
     unless ($model) {
         $self->error_message("Model does not exist for " . $self->model_id . " please use a valid model.");
@@ -66,8 +79,8 @@ sub execute {
             variant_allele   => $variant
         );
         unless ($variant_already_exists) {
-            $self->error_message("Variant does not exist for $chr $start $stop $reference $variant... variants should be already uploaded for validation data.");
-            die;
+            $self->warning_message("Genome::Model::Variant could not be found. Skipping validation upload for line: $line");
+            next;
         }
 
         # Get the existing "Official" call and change it to the result we have from this validation type
@@ -75,7 +88,7 @@ sub execute {
         my $overall_validation = Genome::Model::VariantValidation->get_or_create(
             variant           => $variant_already_exists,
             validation_type   => 'Official',
-            model_id          => $model,
+            model_id          => $model->id,
         );
         $overall_validation->validation_result($result);
 
@@ -83,17 +96,22 @@ sub execute {
         my $type_validation = Genome::Model::VariantValidation->get_or_create(
             variant           => $variant_already_exists,
             validation_type   => $self->validation_type,
-            model_id          => $model,
+            model_id          => $model->id,
         );
         $type_validation->validation_result($result);
 
         unless($overall_validation && $type_validation) {
             $self->error_message("Unable to create overall validation OR type validation");
             $self->error_message("Problem line: $line");
+            $ofh->close;
+            unlink($self->output_file);
             die;
         }
+
+        $ofh->print($line);
     }
 
+    $ofh->close;
     return 1;
-
 }
+
