@@ -16,19 +16,19 @@ class Genome::Model::Tools::PooledBac::Run {
         project_dir =>
         {
             type => 'String',
-            is_optional => 0,
+            is_optional => 1,
             doc => "location of the finished pooled BAC projects"        
         },
         pooled_bac_dir =>
         {
             type => 'String',
-            is_optional => 0,
+            is_optional => 1,
             doc => "location of the input pooled BAC assembly"        
         },
         ref_seq_file =>
         {
             type => 'String',
-            is_optional => 0,
+            is_optional => 1,
             doc => "location of the reference sequence"        
         },
         ace_file_name =>
@@ -118,12 +118,24 @@ EOS
 sub save_params
 {
     my ($self, $file_name) = @_;
-    my %params = 
-    ( 
+    my $params = $self->create_params_hash;    
+
+    my $fh = IO::File->new(">$file_name");
+    
+    print $fh Dumper($params);
+
+    return;
+}
+
+sub create_params_hash
+{
+    my ($self, $file_name) = @_;
+    my $params = 
+    { 
         project_dir => $self->project_dir,
         pooled_bac_dir => $self->pooled_bac_dir,
         ace_file_name => $self->ace_file_name,
-        ref_seq_coords_file => $self->ref_seq_file,
+        ref_seq_file => $self->ref_seq_file,
         phd_ball => $self->phd_ball_name,
         sff_files => $self->sff_files,
         queue_type => $self->queue_type,
@@ -133,20 +145,28 @@ sub save_params
         percent_overlap => $self->percent_overlap,
         percent_identity => $self->percent_identity,
         blast_params => $self->blast_params,
-    );
+    };
 
-    my $fh = IO::File->new(">$file_name");
-    print $fh Dumper(\%params);
+    return $params;
+}
 
-    return;
+sub params_are_equal
+{
+    my ($self,$params1, $params2) = @_;
+    foreach my $key (keys %{$params1})
+    {
+        return 0 if (defined $params1->{$key} && defined $params2->{$key} &&($params1->{$key} ne $params2->{$key}));
+    }
+
+    return 1;
 }
 
 sub get_params
 {
-    #my $params = eval `cat $project_dir/params`;
-    
-    
-    
+    my ($self,$param_file) = @_;
+    my $VAR1;
+    my $params = eval `cat $param_file`;
+    return $params;    
 }
 ############################################################
 sub execute { 
@@ -159,24 +179,36 @@ $DB::single =1;
     
     my $params = {};
     $params = $self->get_params($self->params_file) if(defined $self->params_file &&    -e $self->params_file);
-    my $project_dir = $self->project_dir || $params->{project_dir};
-    my $pooled_bac_dir = $self->pooled_bac_dir || $params->{pooled_bac_dir};
-    my $ace_file_name = $self->ace_file_name || $params->{ace_file_name} ||'Pcap.454Contigs.ace.1';
-    my $ref_seq_coords_file = $self->ref_seq_file || $params->{ref_seq_coords};
-    my $phd_ball = $self->phd_ball_name || $params->{phd_ball};
-    my $sff_files = $self->sff_files || $params->{sff_files};
-    my $queue_type = $self->queue_type || $params->{queue_type};
-    my $retry_count = $self->retry_count || $params->{retry_count};
+    my $project_dir = $self->project_dir || $self->project_dir($params->{project_dir});
+    my $pooled_bac_dir = $self->pooled_bac_dir || $self->pooled_bac_dir($params->{pooled_bac_dir});
+    my $ace_file_name = $self->ace_file_name || $self->ace_file_name($params->{ace_file_name} ||'Pcap.454Contigs.ace.1');
+    my $ref_seq_coords_file = $self->ref_seq_file || $self->ref_seq_file($params->{ref_seq_file});
+    my $phd_ball = $self->phd_ball_name || $self->phd_ball_name($params->{phd_ball});
+    my $sff_files = $self->sff_files || $self->sff_files($params->{sff_files});
+    my $queue_type = $self->queue_type || $self->queue_type($params->{queue_type});
+    my $retry_count = $self->retry_count || $self->retry_count($params->{retry_count});
     #my $contig_map = $self->contig_map_file;
-    my $no_reference_sequence = $self->no_reference_sequence || $params->{no_reference_sequence};
-    my $ref_qual_value = $self->ref_qual_value || $params->{ref_qual_value};
-    my $percent_overlap = $self->percent_overlap || $params->{percent_overlap};
-    my $percent_identity = $self->percent_identity || $params->{percent_identity};
-    my $blast_params = $self->blast_params || $params->{blast_params};
+    my $no_reference_sequence = $self->no_reference_sequence || $self->no_reference_sequence($params->{no_reference_sequence});
+    my $ref_qual_value = $self->ref_qual_value || $self->ref_qual_value($params->{ref_qual_value});
+    my $percent_overlap = $self->percent_overlap || $self->percent_overlap($params->{percent_overlap});
+    my $percent_identity = $self->percent_identity || $self->percent_identity($params->{percent_identity});
+    my $blast_params = $self->blast_params || $self->blast_params($params->{blast_params});
+
+    $self->error_message("The pipeline needs for the project_dir to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $project_dir);
+    $self->error_message("The pipeline needs for the pooled_bac_dir to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $pooled_bac_dir);
+    $self->error_message("The pipeline needs for the ref_seq_file to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $ref_seq_coords_file);
+        
     $self->error_message("Error creating directory $project_dir") and die unless Genome::Utility::FileSystem->create_directory($project_dir);
     my $dt = DateTime->now(time_zone => "America/Chicago");
-    $self->save_params("$project_dir/params.".$dt->strftime("%y%m%d.%I%M\n"));
-
+    if($self->params_file && -e $self->params_file)
+    {
+        my $current_params = $self->create_params_hash;
+        $self->save_params("$project_dir/params.".$dt->strftime("%y%m%d.%I%M\n")) unless ($self->params_are_equal($params,$current_params));
+    }
+    else
+    {
+        $self->save_params("$project_dir/params.".$dt->strftime("%y%m%d.%I%M\n"));
+    }
 
     $self->error_message("Error running run-blast")  and die unless
     Genome::Model::Tools::PooledBac::RunBlast->execute(ref_sequence=>$ref_seq_coords_file, ref_qual_value => $ref_qual_value, pooled_bac_dir=>$pooled_bac_dir,pooled_bac_ace_file => $ace_file_name, project_dir => $project_dir, blast_params => $blast_params);
