@@ -423,14 +423,21 @@ sub run_start_date_formatted {
 
 sub total_bases_read {
     my $self = shift;
-
-    my $total_bases;
+    my $filter = shift; # optional?
+    if(!defined($filter))
+    {
+        $filter = 'both';
+    }
+    my $total_bases; # unused?
         
 
     my $count;
     if ($self->is_paired_end) {
-        $count += ($self->fwd_read_length * $self->fwd_clusters);
-        $count += ($self->rev_read_length  * $self->rev_clusters);
+        # this changed in case we only want the fwd or rev counts...
+        #$count += ($self->fwd_read_length * $self->fwd_clusters); # unless $filter eq 'reverse-only'
+        #$count += ($self->rev_read_length  * $self->rev_clusters); # unless $filter eq 'forward-only'
+        $count += ($self->fwd_read_length * $self->fwd_clusters)  unless $filter eq 'reverse-only';
+        $count += ($self->rev_read_length  * $self->rev_clusters) unless $filter eq 'forward-only';
     } else {
         $count += ($self->read_length  * $self->clusters);
     }
