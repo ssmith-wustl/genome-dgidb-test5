@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 19;
+use Test::More 'no_plan';
 require Genome::Model::Test;
 
 BEGIN {
@@ -15,8 +15,20 @@ BEGIN {
 }
 
 #< Mock Model >#
-my $model = Genome::Model::Test->create_basic_mock_model(type_name => 'tester');
+my $model = Genome::Model::Test->create_basic_mock_model(
+    type_name => 'tester',
+);
 ok($model, 'Create mock model');
+my $inst_data = Genome::InstrumentData->get('2sep09.934pmaa1');
+ok( # create ida like this, so it doesn't go thru creat of the ida class, which copies it as an input.  Now we can see if previously assigned inst data will be copied into a builds inputs
+    Genome::Model::Test->create_mock_instrument_data_assignments($model, $inst_data),
+    'Create mock inst data assn',
+);
+my @model_inst_data = $model->instrument_data;
+ok(@model_inst_data, 'Added instrument data to model');
+$model->coolness('moderate'); 
+my @model_inputs = $model->inputs;
+is(scalar(@model_inputs), 1, 'Correct number of model inputs'); # should be 2, one for coolness, one for the inst data creatd in assignment
 
 #< Real create >#
 my $build = Genome::Model::Build->create(
@@ -25,7 +37,15 @@ my $build = Genome::Model::Build->create(
 ok($build, 'Created build');
 isa_ok($build, 'Genome::Model::Build');
 is($build->data_directory,$model->data_directory.'/build'. $build->id, 'build directory resolved');
-is($build->model->id,$model->id, 'indirect model accessor');
+is($build->model->id, $model->id, 'indirect model accessor');
+
+#< Inputs - Inst Data and Coolness >#
+my @build_inputs = $build->inputs;
+is(scalar(@build_inputs), 2, 'Correct number of build inputs');
+my @build_inst_data = $build->instrument_data;
+is_deeply(\@build_inst_data, [ $inst_data ], 'Build instrument data');
+is($build->coolness, 'moderate', 'Got coolness'); 
+#print Data::Dumper::Dumper({bin=>\@build_inputs,bid=>\@build_inst_data,min=>\@model_inputs,mid=>\@model_inst_data,});
 
 #< Initialize, Fail, Success >#
 # event
@@ -68,7 +88,7 @@ is(
 is(
     $build->_get_to_addressees_for_report_generator_class('Genome::Model::Report::BuildFailed'),
     'apipe-bulk@genome.wustl.edu', 
-    'apipe\'s reports go to apipe-bulk',
+    'apipe\'s failed reports go to apipe-bulk',
 );
 
 exit;
