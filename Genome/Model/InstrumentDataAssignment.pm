@@ -67,6 +67,40 @@ class Genome::Model::InstrumentDataAssignment {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+# FIXME temporary - copy model instrument data as inputs, when all 
+#  inst_data is an input, this (the whole create) can be removed
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    if ( not $self->model_id or not $self->model ) {
+        $self->error_message("No model id or model.");
+        #$self->delete;
+        return $self;
+    }
+    
+    if ( not $self->instrument_data_id or not $self->instrument_data ) {
+        $self->error_message("No instrument data id or instrument data.");
+        #$self->delete;
+        return $self;
+    }
+
+    # Adding as input cuz of mock inst data
+    unless ( $self->model->add_input(
+            name => 'instrument_data',
+            value_class_name => $self->instrument_data->class,
+            value_id => $self->instrument_data->id,
+        ) ) {
+        $self->error_message("Can't add instrument data (".$self->instrument_data_id.") as an input to mode.");
+        $self->delete;
+        return;
+    }
+
+    return $self;
+}
+
 sub __errors__ {
     my ($self) = shift;
 
