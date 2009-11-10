@@ -123,7 +123,15 @@ $DB::single = 1;
 
     for (@idas) {
         my $instrument_data = Genome::InstrumentData->get($_->instrument_data_id);
-        my $lane_kb = sprintf("%d",$instrument_data->total_bases_read/1000);
+        my $lane_kb;
+        if($_->filter_desc)
+        {
+           $lane_kb = sprintf("%d",$instrument_data->total_bases_read($_->filter_desc)/1000);
+        }
+        else
+        {
+           $lane_kb = sprintf("%d",$instrument_data->total_bases_read()/1000);
+        }
         $total_kb += $lane_kb;
         push @lane_data, [$instrument_data->flow_cell_id, $instrument_data->lane, commify($lane_kb), $instrument_data->read_length];
     }
