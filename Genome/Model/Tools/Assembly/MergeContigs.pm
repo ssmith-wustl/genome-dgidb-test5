@@ -2,7 +2,6 @@ package Genome::Model::Tools::Assembly::MergeContigs;
 
 #usage cmt.pl infile.ace ContigName ContigName2
 
-use above 'Genome';
 use strict;
 use warnings;
 use Genome::Assembly::Pcap::ContigTools;

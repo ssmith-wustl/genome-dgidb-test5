@@ -1420,9 +1420,9 @@ sub _transfer_consensus_tags
             $right_tag->parent($right_tag->parent . 'b');
 
             printf("had to split tag of type %s into two:  one from %d to %d in contig %s and the other from %d to %d in contig %s",
-                $tag->type,                 $left_tag->start_pos,
-                $left_tag->end_pos,    $left_contig->name,
-                $right_tag->start_pos, $right_tag->end_pos,
+                $tag->type,                 $left_tag->start,
+                $left_tag->stop,    $left_contig->name,
+                $right_tag->start, $right_tag->stop,
                 $right_contig->name
             );
         }
