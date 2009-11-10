@@ -6,8 +6,9 @@ use warnings;
 use Genome;
 
 use Carp;
-use Workflow;
 use File::Path;
+use Regexp::Common;
+use Workflow;
 use YAML;
 
 class Genome::Model::Build {
@@ -47,18 +48,22 @@ class Genome::Model::Build {
                                                     # which could update, and result in a new build
     ],
     has_many_optional => [
-    # Inputs
+    #< Inputs >#
     inputs => {
         is => 'Genome::Model::Build::Input',
         reverse_as => 'build',
-        doc => 'Inputs that were assigned to a model when built.'
+        doc => 'Inputs assigned to the model when the build was created.'
     },
     instrument_data => {
+        is => 'Genome::InstrumentData',
         via => 'inputs',
+        is_mutable => 1,
+        is_many => 1,
         where => [ name => 'instrument_data' ],
-        doc => 'Instrument data that were assigned to a model when built.'
+        to => 'value',
+        doc => 'Instrument data assigned to the model when the build was created.'
     },
-    #
+    #<>#
     from_build_links                  => { is => 'Genome::Model::Build::Link',
         reverse_id_by => 'to_build',
         doc => 'bridge table entries where this is the "to" build(used to retrieve builds this build is "from")'
@@ -84,11 +89,26 @@ class Genome::Model::Build {
 };
 
 sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    unless ($self) {
+    my ($class, %params) = @_;
+
+    # model
+    unless ( $class->_validate_model_id($params{model_id}) ) {
+        $class->delete;
         return;
     }
+
+    # create
+    my $self = $class->SUPER::create(%params)
+        or return;
+
+
+    # inputs
+    unless ( $self->_copy_model_inputs ) {
+        $self->delete;
+        return;
+    }
+
+    # data directory
     unless ($self->data_directory) {
         my $dir;
         eval {
@@ -100,19 +120,76 @@ sub create {
         }
         $self->data_directory($dir);
     }
+
     return $self;
 }
 
-#< Instrument Data >#
-sub instument_data {
-    my $self = shift;
+sub _validate_model_id {
+    my ($class, $model_id) = @_;
 
-    my @id;
+    unless ( defined $model_id ) {
+        $class->error_message("No model id given to get model of build.");
+        return;
+    }
+
+    unless ( $model_id =~ /^$RE{num}{int}$/ ) {
+        $class->error_message("Model id ($model_id) is not an integer.");
+        return;
+    }
+
+    unless ( Genome::Model->get($model_id) ) {
+        $class->error_message("Can't get model for id ($model_id).");
+        return;
+    }
     
-
-    return @id;
+    return 1;
 }
 
+sub _copy_model_inputs {
+    my $self = shift;
+
+    # Create gets called twice, calling this method twice, so
+    #  gotta check if we added the inputs already (and crashes). 
+    #  I tried to figure out how to stop create being called twice, but could not.
+    my @inputs = $self->inputs;
+    return 1 if @inputs;
+
+    $DB::single = 1;
+    for my $input ( $self->model->inputs ) {
+        my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
+        unless ( $self->add_input(%params) ) {
+            $self->error_message("Can't copy model input to build: ".Data::Dumper::Dumper(\%params));
+            return;
+        }
+    }
+
+    # FIXME temporary - copy model instrument data as inputs, when all 
+    #  inst_data is an input, this can be removed
+    $DB::single = 1;
+    my @existing_inst_data = $self->instrument_data;
+    my @model_inst_data = $self->model->instrument_data;
+    for my $inst_data ( @model_inst_data ) {
+        # We may have added the inst data when adding the inputs
+        # Adding as input cuz of mock inst data
+        #print Data::Dumper::Dumper($inst_data);
+        next if grep { $inst_data->id eq $_->id } @existing_inst_data;
+        my %params = (
+            name => 'instrument_data',
+            value_class_name => $inst_data->class,
+            value_id => $inst_data->id,
+        );
+        unless ( $self->add_input(%params) ) {
+            $self->error_message("Can't add instrument data (".$inst_data->id.") to build.");
+            return;
+        }
+    }
+
+    return 1;
+
+}
+#<>#
+
+#< Inputs >#
 sub instrument_data_assignments {
     my $self = shift;
     my @idas = Genome::Model::InstrumentDataAssignment->get(
@@ -547,13 +624,17 @@ sub _resolve_type_name_for_class {
 sub get_all_objects {
     my $self = shift;
 
-    my @events = $self->events;
-    if ($events[0] && $events[0]->id =~ /^\-/) {
-        @events = sort {$a->id cmp $b->id} @events;
-    } else {
-        @events = sort {$b->id cmp $a->id} @events;
-    }
-    return @events;
+    my $sorter = sub { # not sure why we sort, but I put it in a anon sub for convenience
+        return unless @_;
+        if ( $_[0]->id =~ /^\-/) {
+            return sort {$b->id cmp $a->id} @_;
+        } 
+        else {
+            return sort {$a->id cmp $b->id} @_;
+        }
+    };
+
+    return map { $sorter->( $self->$_ ) } (qw/ events inputs metrics /);
 }
 
 sub yaml_string {
@@ -637,19 +718,14 @@ sub add_from_build{
     return $bridge;
 }
 
-
-
+#< Delete >#
 sub delete {
     my $self = shift;
 
+    # Delete all associated objects
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
         $object->delete;
-    }
-
-    my @metrics = $self->metrics;
-    for (@metrics) {
-        $_->delete;
     }
 
     # Re-point instrument data assigned first on this build to the next build.
