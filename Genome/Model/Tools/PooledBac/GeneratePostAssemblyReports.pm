@@ -52,14 +52,15 @@ sub print_assembly_size_report
         my $size = 0;        
         if (-e "$name/newbler_assembly/consed/edit_dir/$name.ace.1")
         {
-            my $ace_fh = IO::File->new("$name/newbler_assembly/consed/edit_dir/$name.ace.1");
-            while(my $line = <$ace_fh>)
+            my $ao = Genome::Assembly::Pcap::Ace->new(input_file => "$name/newbler_assembly/consed/edit_dir/$name.ace.1", using_db => 1);
+            my $contig_names = $ao->get_contig_names;
+            
+            foreach my $contig_name (@{$contig_names})
             {
-                chomp $line;
-                next unless $line =~ /^CO/;
-                my ($contig_name, $contig_size) = $line =~ /^CO\s+(\S+)\s+(\d+).+/;
-                $size += $contig_size;
-            }
+                my $contig = $ao->get_contig($contig_name);
+                my $length = length ($contig->unpadded_base_string);
+                $size += $length;            
+            }            
         }
         $fh->print ("$name $size\n");
     }
@@ -76,13 +77,14 @@ sub print_contig_size_report
         $fh->print ("$name:\n");
         if (-e "$name/newbler_assembly/consed/edit_dir/$name.ace.1")
         {
-            my $ace_fh = IO::File->new("$name/newbler_assembly/consed/edit_dir/$name.ace.1");
-            while(my $line = <$ace_fh>)
+            my $ao = Genome::Assembly::Pcap::Ace->new(input_file => "$name/newbler_assembly/consed/edit_dir/$name.ace.1", using_db => 1);
+            my $contig_names = $ao->get_contig_names;
+            
+            foreach my $contig_name (@{$contig_names})
             {
-                chomp $line;
-                next unless $line =~ /^CO/;
-                my ($contig_name, $size) = $line =~ /^CO\s+(\S+)\s+(\d+).+/;
-                $fh->print("$contig_name $size\n");
+                my $contig = $ao->get_contig($contig_name);
+                my $size = length ($contig->unpadded_base_string);
+                $fh->print("$contig_name $size\n");            
             }
         }
         else
