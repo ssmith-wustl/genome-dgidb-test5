@@ -159,6 +159,8 @@ sub setup_test_data {
                 							                                  library_name => $library,
                                                                               seq_id => 'test_seq_id',
                                                                           );
+            $instrument_data->set_always('class', 'Genome::InstrumentData::Solexa');
+            $instrument_data->mock('__meta__', \&Genome::InstrumentData::Solexa::__meta__);
             my $allocation_path = sprintf('alignment_data/%s/%s/%s/%s_%s',
                                           'maq0_7_1',
                                           'refseq-for-test',

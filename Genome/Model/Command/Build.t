@@ -47,6 +47,11 @@ my $model_wo_instrument_data = Genome::Model::ReferenceAlignment->create_mock(
                                                            processing_profile => $pp
                                                        );
 isa_ok($model_wo_instrument_data,'Genome::Model');
+$model_wo_instrument_data->mock('builds', \&Genome::Model::builds);
+$model_wo_instrument_data->mock('running_builds', \&Genome::Model::running_builds);
+$model_wo_instrument_data->mock('instrument_data_assignments', \&Genome::Model::instrument_data_assignments);
+$model_wo_instrument_data->mock('instrument_data', \&Genome::Model::instrument_data);
+$model_wo_instrument_data->mock('inputs', \&Genome::Model::inputs);
 
 # The call to Solexa->create() below is expected to fail.
 my $build_wo_reads = Genome::Model::Command::Build::ReferenceAlignment::Solexa->create(model => $model_wo_instrument_data);
@@ -86,6 +91,12 @@ my $mock_model = Genome::Model->create_mock(
                                             processing_profile => $mock_pp,
                                         );
 isa_ok($mock_model,'Genome::Model');
+$mock_model->mock('builds', \&Genome::Model::builds);
+$mock_model->mock('running_builds', \&Genome::Model::running_builds);
+$mock_model->mock('instrument_data_assignments', \&Genome::Model::instrument_data_assignments);
+$mock_model->mock('instrument_data', \&Genome::Model::instrument_data);
+$mock_model->mock('inputs', \&Genome::Model::inputs);
+
 my @instrument_data;
 for (1 .. 10) {
     my $instrument_data = Genome::InstrumentData->create_mock(
@@ -94,6 +105,7 @@ for (1 .. 10) {
                                                         sample_name => 'test_sample_name',
                                                         sequencing_platform => 'test_sequence_platform',
                                                     );
+    $instrument_data->set_always('class', 'Genome::InstrumentData');
     push @instrument_data, $instrument_data;
 }
 $mock_model->set_list('instrument_data',@instrument_data);

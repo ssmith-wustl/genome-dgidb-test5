@@ -107,6 +107,8 @@ sub setup_test_data {
                                                                            run_name => $rr454->run_name,
                                                                            subset_name => $rr454->region_number,
                                                                        );
+            $instrument_data->set_always('class', 'Genome::InstrumentData::454');
+            $instrument_data->mock('__meta__', \&Genome::InstrumentData::454::__meta__);
             unless ($instrument_data) {
                 die ('Failed to create instrument data object for '. $rr454->run_name);
             }
