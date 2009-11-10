@@ -123,15 +123,23 @@ class Genome::Model {
         inputs => {
             is => 'Genome::Model::Input',
             reverse_as => 'model',
-            doc => 'Inputs that were assigned to a model when built.'
+            doc => 'Inputs currently assigned to the model.'
         },
         # Instrument Data
         #This will be the new instrument data properties, the rest of these props will go away
-        #instrument_data => {
-        #    via => 'inputs',
-        #    where => [ name => 'instrument_data' ],
-        #    doc => 'Instrument data that were assigned to a model when built.'
-        #},
+        inst_data => {#instrument_data => {
+            is => 'Genome::InstrumentData',
+            via => 'inputs',
+            is_mutable => 1,
+            is_many => 1,
+            where => [ name => 'instrument_data' ],
+            to => 'value',
+            doc => 'Instrument data currently asseigned to the model.',
+        },
+        instrument_data => {
+            via => 'instrument_data_assignments',
+            to => 'instrument_data',
+        },
         assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
         instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
         built_instrument_data             => { calculate => q( 
@@ -387,15 +395,6 @@ sub get_all_possible_sample_names { #
 }
 
 #< Instrument Data >#
-sub instrument_data { 
-    my $self = shift;
-
-    my @id = map { $_->instrument_data } $self->instrument_data_assignments;
-    push @id, $self->inputs(name => 'instrument_data');
-
-    return @id;
-}
-
 sub compatible_instrument_data {
     my $self = shift;
     my %params;
@@ -713,11 +712,7 @@ sub get_all_objects {
         }
     };
 
-    my @idas = $sorter->($self->instrument_data_assignments);
-    my @builds = $sorter->($self->builds);
-    my @project_assignments = $sorter->($self->project_assignments);
-    
-    return ( @idas, @builds, @project_assignments );
+    return map { $sorter->( $self->$_ ) } (qw/ instrument_data_assignments inputs builds project_assignments /);
 }
 
 sub yaml_string {
