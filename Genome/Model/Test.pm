@@ -47,6 +47,14 @@ class Genome::Model::Tester { # 'real' model for testing
 };
 class Genome::Model::Build::Tester { # 'real' model for testing
     is => 'Genome::Model::Build',
+    has => [
+    coolness => {
+        via => 'inputs',
+        where => [ name => 'coolness', value_class_name => 'UR::Value' ],
+        to => 'value_id',
+        doc => 'The level of coolness of the model when built.',
+    },
+    ],
 };
 
 sub test_class {
