@@ -190,9 +190,14 @@ sub get_sequence_dictionary {
             max_try       => 2,
         );
 
+        # if it couldn't get the lock after 2 tries, pop a message and keep trying as much as it takes
         unless ($lock) {
-            $self->error_message("Failed to lock resource: $seqdict_dir_path");
-            return;
+            $self->status_message("Couldn't get a lock after 2 tries, waiting some more...");
+            $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $seqdict_dir_path."/lock_for_seqdict-$file_type");
+            unless($lock) {
+                $self->error_message("Failed to lock resource: $seqdict_dir_path");
+                return;
+            }
         }
 
         $self->status_message("Failed to find sequence dictionary file at $path.  Generating one now...");
