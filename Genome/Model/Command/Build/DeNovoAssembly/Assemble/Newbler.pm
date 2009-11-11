@@ -72,6 +72,10 @@ sub valid_params {
 	    is  => 'String',
 	    doc => 'Screening file for .. ',#TODO - NOT SURE WHAT THIS IS SCREENING
 	},
+	rip => {
+	    is => 'Boolean',
+	    doc => 'Option to prevent duplication of reads',
+	},
     };
 }
 
