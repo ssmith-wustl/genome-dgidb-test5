@@ -7,7 +7,7 @@ use Genome;
 use File::Basename;
 
 my $DEFAULT = 'r453';
-my $PICARD_DEFAULT = 'r104';
+my $PICARD_DEFAULT = 'r107';
 
 class Genome::Model::Tools::Sam {
     is  => 'Command',
@@ -59,6 +59,7 @@ my %SAMTOOLS_VERSIONS = (
 );
 
 my %PICARD_VERSIONS = (
+    r107 => '/gsc/scripts/lib/java/samtools/picard-tools-1.07/',
     r104 => '/gsc/scripts/lib/java/samtools/picard-tools-1.04/',
     r103wu0 => '/gsc/scripts/lib/java/samtools/picard-tools-1.03/',
 );
