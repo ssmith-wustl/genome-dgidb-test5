@@ -45,20 +45,32 @@ sub _model {
     my $self = shift;
 
     unless ( $self->{_model} ) {
-        $self->{_model} = Genome::Model::Test->create_basic_mock_model(type_name => 'tester')
+        $self->{_model} = Genome::Model::Test->create_mock_model(
+            type_name => 'tester',
+            instrument_data_count => 0,
+        )
             or confess "Can't create mock tester model.";
     }
 
     return $self->{_model};
 }
 
-sub startup : Tests(startup => 1) {
+sub _build {
+    my $self = shift;
+
+    return ($self->_model->builds)[0];
+}
+
+
+
+sub startup : Tests(startup => no_plan) {
     my $self = shift;
     
-    no warnings 'once';
+    no warnings;
     *Genome::Model::Command::get_model_type_names = sub{ 
         return (qw/ tester /); 
     };
+    use warnings;
     is_deeply(
         [ Genome::Model::Command->get_model_type_names ],
         [qw/ tester /],
@@ -71,23 +83,6 @@ sub startup : Tests(startup => 1) {
 }
 
 sub _startup {
-    return 1;
-}
-
-# 
-sub __pre_execute {
-    my $self = shift;
-
-    print Dumper([$self->_model->inputs]);
-    
-    return 1;
-}
-
-sub __post_execute {
-    my $self = shift;
-
-    print Dumper([$self->_model->inputs]);
-    
     return 1;
 }
 
@@ -111,11 +106,11 @@ sub _valid_param_sets {
     return (
         { # add multiple 'value_ids' 
             name => 'friends',
-            values => 'Watson,Crick',
+            ids => 'Watson,Crick',
         },
         { # add single 'value'
             name => 'inst_data',
-            values => '2sep09.934pmaa1',
+            ids => '2sep09.934pmaa1',
         },
     );
 }
@@ -124,15 +119,15 @@ sub invalid_param_sets {
     return (
         {# try to add a not 'is_many' input
             name => 'coolness', 
-            values => 'none',
+            ids => 'none',
         },
         { # try to add Crick again
             name => 'friends',
-            values => 'Crick',
+            ids => 'Crick',
         },
         { # try to add id that don't exist
             name => 'inst_data',
-            values => '2sep09.934noexist',
+            ids => '2sep09.934noexist',
         },
     );
 }
@@ -141,8 +136,8 @@ sub _pre_execute {
     my ($self, $obj) = @_;
 
     my $name = $obj->name;
-    my @values = $self->_model->$name;
-    ok(!@values, "No $name found in model.");
+    my @ids = $self->_model->$name;
+    ok(!@ids, "No $name found in model.");
     
     return 1;
 }
@@ -151,8 +146,8 @@ sub _post_execute {
     my ($self, $obj) = @_;
 
     my $name = $obj->name;
-    my @values = $self->_model->$name;
-    ok(@values, "Added $name in model.");
+    my @ids = $self->_model->$name;
+    ok(@ids, "Added $name in model.");
     
     return 1;
 }
@@ -168,6 +163,7 @@ use base 'Genome::Model::Command::Input::TestBase';
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
+use Genome::Utility::TestBase;
 use Test::More;
 
 sub test_class {
@@ -178,11 +174,12 @@ sub _valid_param_sets {
     return (
         { # remove multiple 'value_ids' 
             name => 'friends',
-            values => 'Watson,Crick',
+            ids => 'Watson,Crick',
         },
         { # remove single 'value'
             name => 'inst_data',
-            values => '2sep09.934pmaa1',
+            ids => '2sep09.934pmaa1',
+            abandon_builds => 1,
         },
     );
 }
@@ -191,11 +188,11 @@ sub invalid_param_sets {
     return (
         {# try to remove a not 'is_many' input
             name => 'coolness', 
-            values => 'none',
+            ids => 'none',
         },
         { # try to remove input that is not linked to the model anymore
             name => 'inst_data',
-            values => '2sep09.934pmaa1',
+            ids => '2sep09.934pmaa1',
         },
     );
 }
@@ -222,6 +219,15 @@ sub _startup {
     $model->add_inst_data($id);
     my @inst_data = $model->inst_data;
     is_deeply(\@inst_data, [ $id ], 'Added instr_data to remove');
+    
+    my $build = $self->_build;
+    my $build_input = Genome::Utility::TestBase->create_mock_object(
+        class => 'Genome::Model::Build::Input',
+        name => 'instrument_data',
+        value_id => '2sep09.934pmaa1',
+        build_id => $build->id,
+    );
+    $build->mock('abandon', sub{ return $build->build_event->event_status('Abandoned'); });
 
     return 1;
 }
@@ -230,10 +236,13 @@ sub _post_execute {
     my ($self, $obj) = @_;
 
     my $name = $obj->name;
-    my @values = $self->_model->$name;
-    #print Dumper(\@values);
-    ok(!@values, "Removed $name from model.");
-    
+    my @ids = $self->_model->$name;
+    #print Dumper(\@ids);
+    ok(!@ids, "Removed $name from model.");
+    if ( $obj->abandon_builds ) {
+        is($self->_build->build_status, 'Abandoned', 'Successfully abandoned build');
+    }
+
     return 1;
 }
 
