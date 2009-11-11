@@ -61,7 +61,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
         reference_transcripts => {
             is => 'String',
             is_optional => 1, 
-            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both)'
+            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both). See full help output for a list of available reference transcripts.'
         },
         data_directory => {
             is => 'String',
@@ -110,6 +110,18 @@ EOS
 }
 
 sub help_detail {
+    #Generate the currently available annotation models on the fly
+    my @currently_available_models = Genome::Model->get(type_name => "imported annotation");
+    my $currently_available_builds; 
+    foreach my $model (@currently_available_models) {
+        next unless $model;
+        foreach my $build ($model->builds) {
+            if($build) {  #probably implicit in the loops, but in case we get undefs in our list
+                 $currently_available_builds .= "\t" . $model->name . "/" . $build->version . "\n" if $build->version !~ /old/ and $model->name and $build->version;
+            }
+        }
+    }
+
     return <<EOS 
 This launches the variant annotator.  It takes genome sequence variants and outputs transcript variants, 
 with details on the gravity of the change to the transcript.
@@ -129,6 +141,9 @@ Any number of additional columns may be in the input following these columns, bu
 
 OUTPUT COLUMNS (COMMMA SEPARATED)
 chromosome_name start stop reference variant type gene_name transcript_name transcript_species transcript_source trnascript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains
+
+CURRENTLY AVAILABLE REFERENCE TRANSCRIPTS WITH VERSIONS
+$currently_available_builds
 EOS
 }
 
