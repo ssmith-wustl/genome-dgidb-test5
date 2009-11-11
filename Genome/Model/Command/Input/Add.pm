@@ -16,9 +16,9 @@ class Genome::Model::Command::Input::Add {
         is => 'Text',
         doc => 'The name of the input to add. Use the plural property name - friends to add a friend',
     },
-    'values' => {
+    ids => {
         is => 'Text',
-        doc => 'The value(s) for the input. Separate multiple values by commas.'
+        doc => 'The id(s) for the input. Separate multiple ids by commas.'
     },
     ],
 };
@@ -27,9 +27,9 @@ class Genome::Model::Command::Input::Add {
 
 sub help_detail {
     return <<EOS;
-    This command will add inputs from a model. The input must be an 'is_many' property, meaning there must be more than one input allowed (eg: instrument_data). If the property only has one value, use the 'update' command.
+    This command will add inputs from a model. The input must be an 'is_many' property, meaning there must be more than one input allowed (eg: instrument_data). If the property is singular, use the 'update' command.
     
-    Use the plural name of the property. To add multiple values, separate them by a comma.
+    Use the plural name of the property. To add multiple ids, separate them by a comma.
 EOS
 }
 
@@ -46,22 +46,22 @@ sub execute {
     my $property = $self->_get_is_many_input_property_for_name( $self->name )
         or return;
 
-    unless ( defined $self->values ) {
-        $self->error_message('No input values given to add to model.');
+    unless ( defined $self->ids ) {
+        $self->error_message('No input ids given to add to model.');
         $self->delete;
         return;
     }
 
-    my @values = split(',', $self->values);
-    unless ( @values ) {
-        $self->error_message("No values found in split of ".$self->values);
+    my @ids = split(',', $self->ids);
+    unless ( @ids ) {
+        $self->error_message("No ids found in split of ".$self->ids);
         return;
     }
     
     my $sub = $self->_get_add_sub_for_property($property)
         or return;
 
-    for my $value ( @values ) {
+    for my $value ( @ids ) {
         unless ( $sub->($value) ) {
             $self->error_message("Can't add input '".$self->name." ($value) to model.");
             return;
@@ -70,8 +70,8 @@ sub execute {
 
     printf(
         "Added %s (%s) to model.\n",
-        ( @values > 1 ? $property->property_name : $property->singular_name ),
-        join(', ', @values),
+        ( @ids > 1 ? $property->property_name : $property->singular_name ),
+        join(', ', @ids),
     );
 
     return 1; 
