@@ -81,7 +81,7 @@ sub execute {                               # replace with real execution logic.
 	$reference_file = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa" if(!$self->reference);
 
 	my $dbsnp_file = $self->dbsnp_file;
-	$dbsnp_file = "/gscuser/dkoboldt/SNPseek/SNPseek2/ucsc/snp130.variants.txt" if(!$dbsnp_file);
+#	$dbsnp_file = "/gscuser/dkoboldt/SNPseek/SNPseek2/ucsc/snp130.variants.txt" if(!$dbsnp_file);
 
 	## Create output directory ##
 	mkdir($self->output_dir) if(!(-d $self->output_dir));
@@ -97,7 +97,8 @@ sub execute {                               # replace with real execution logic.
 
 
 	## Verify NORMAL Pileup ##
-
+	print "Verifying Normal pileup...\n";
+	
 	if($self->normal_pileup)
 	{
 		$normal_pileup = $self->normal_pileup;
@@ -130,6 +131,7 @@ sub execute {                               # replace with real execution logic.
 
 
 	## Verify TUMOR Pileup ##
+	print "Verifying Tumor pileup...\n";
 
 	if($self->tumor_pileup)
 	{
@@ -165,6 +167,7 @@ sub execute {                               # replace with real execution logic.
 
 
 	## Verify NORMAL SNP ##
+	print "Verifying Normal SNP...\n";
 
 	if(-e "$normal_pileup.snp")
 	{
@@ -174,17 +177,18 @@ sub execute {                               # replace with real execution logic.
 	{
 		$normal_snp = $self->output_dir . "/" . $self->sample_name . ".normal.snp";
 		
-		if(!(-e $normal_snp))
-		{
+#		if(!(-e $normal_snp))
+#		{
 			print "Calling SNPs in Normal...\n"; 
 			my $cmd = call_sammy() . "pileup2snp " . $normal_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$normal_snp";
 			system($cmd);
-		}
+#		}
 	}
 
 
 	## Verify Tumor SNP ##
-
+	print "Verifying Tumor SNP...\n";
+	
 	if(-e "$tumor_pileup.snp")
 	{
 		$tumor_snp = "$tumor_pileup.snp";
@@ -193,30 +197,28 @@ sub execute {                               # replace with real execution logic.
 	{
 		$tumor_snp = $self->output_dir . "/" . $self->sample_name . ".tumor.snp";
 		
-		if(!(-e $tumor_snp))
-		{
+#		if(!(-e $tumor_snp))
+#		{
 			print "Calling SNPs in Tumor...\n"; 
 			my $cmd = call_sammy() . "pileup2snp " . $tumor_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$tumor_snp";
 			system($cmd);
-		}
+#		}
 	}
 
 
 	## Compare SNPs between normal and tumor ##
-	
+	print "Comparing Tumor-Normal SNP Calls...\n";	
 	my $compared_snps = $self->output_dir . "/" . $self->sample_name . ".snps.compared";
 
 	if(-e $normal_snp && -e $tumor_snp)
 	{
-		if(!(-e $compared_snps))
-		{
+#		if(!(-e $compared_snps))
+#		{
 			## Compare the SNPs ##
 			
 			my $cmd = call_sammy() . "compare " . $normal_snp . " " . $tumor_snp . " " . $compared_snps;
-	
-			print "Comparing SNPs between Normal and Tumor...\n";
 			system($cmd);
-		}
+#		}
 	}
 	else
 	{
@@ -226,28 +228,30 @@ sub execute {                               # replace with real execution logic.
 #	my $compared_snps_status = $self->output_dir . "/" . $self->sample_name . ".snps.compared.status";
 	my $compared_snps_status = $self->output_dir . "/" . $self->sample_name . ".snps.compared.status";	
 
-	if(!(-e $compared_snps_status))
-	{
-		print "Calling variants as Germline or Somatic...\n";
+	print "Calling variants as Germline or Somatic...\n";
+
+#	if(!(-e $compared_snps_status))
+#	{
 		my $cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_snps . " " . $compared_snps_status;		
 		system($cmd);
-	}
+#	}
 
 
 	## Load dbsnps ##
-	
+	print "Loading dbSNPs...\n";
 	%dbsnp_variants = load_dbsnp($dbsnp_file);
 
 
 	## Proceed with comparison ##
+	print "Isolating SNPs by Somatic Status...\n";
 	
 	if(-e $compared_snps_status)
 	{
 		## SOMATIC ##
-		
+		print "Normal...\n";
 		my $somatic_file = $self->output_dir . "/" . $self->sample_name . ".snps.somatic";
 		
-		(my $num_somatic, my $num_somatic_dbSNP) = parse_variants_by_status("$compared_snps_status.filtered", "Somatic", $somatic_file);
+		(my $num_somatic, my $num_somatic_dbSNP) = parse_variants_by_status("$compared_snps_status", "Somatic", $somatic_file);
 		print "$num_somatic Somatic variants ($num_somatic_dbSNP dbSNP)\n";
 
 		if($num_somatic)
@@ -257,10 +261,10 @@ sub execute {                               # replace with real execution logic.
 
 		
 		## LOH ##
-
+		print "LOH...\n";
 		my $loh_file = $self->output_dir . "/" . $self->sample_name . ".snps.loh";
 
-		(my $num_loh, my $num_loh_dbSNP) = parse_variants_by_status("$compared_snps_status.filtered", "LOH", $loh_file);
+		(my $num_loh, my $num_loh_dbSNP) = parse_variants_by_status("$compared_snps_status", "LOH", $loh_file);
 		print "$num_loh LOH variants ($num_loh_dbSNP dbSNP)\n";
 
 		if($num_loh)
@@ -269,9 +273,9 @@ sub execute {                               # replace with real execution logic.
 		}
 		
 		## GERMLINE ##
-
+		print "Germline...\n";
 		my $germline_file = $self->output_dir . "/" . $self->sample_name . ".snps.germline";
-		(my $num_germline, my $num_germline_dbSNP) = parse_variants_by_status("$compared_snps_status.filtered", "Germline", $germline_file);
+		(my $num_germline, my $num_germline_dbSNP) = parse_variants_by_status("$compared_snps_status", "Germline", $germline_file);
 		print "$num_germline Germline variants ($num_germline_dbSNP dbSNP)\n";
 
 	}
@@ -283,8 +287,10 @@ sub execute {                               # replace with real execution logic.
 	
 	##### INDEL PROCESSING ######
 
+	print "INDEL PROCESSING...\n";
 
 	## Verify NORMAL INDEL ##
+	print "Verifying Normal indel...\n";
 
 	if(-e "$normal_pileup.indel")
 	{
@@ -304,6 +310,7 @@ sub execute {                               # replace with real execution logic.
 
 
 	## Verify Tumor INDEL ##
+	print "Verifying Tumor indel...\n";
 
 	if(-e "$tumor_pileup.indel")
 	{
@@ -323,35 +330,35 @@ sub execute {                               # replace with real execution logic.
 
 
 	## Compare INDELs between normal and tumor ##
+	print "Comparing Tumor-Normal indels...\n";
 	
 	my $compared_indels = $self->output_dir . "/" . $self->sample_name . ".indels.compared";
 
 	if(-e $normal_indel && -e $tumor_indel)
 	{
-		if(!(-e $compared_indels))
-		{
+#		if(!(-e $compared_indels))
+#		{
 			## Compare the INDELs ##
 			
 			my $cmd = call_sammy() . "compare " . $normal_indel . " " . $tumor_indel . " " . $compared_indels;
 	
 			print "Comparing INDELs between Normal and Tumor...\n";
 			system($cmd);
-		}
+#		}
 	}
 	else
 	{
 		die "Missing Normal or Tumor INDEL file ($normal_indel or $tumor_indel)\n";
 	}
 
-#	my $compared_indels_status = $self->output_dir . "/" . $self->sample_name . ".indels.compared.status";
 	my $compared_indels_status = $self->output_dir . "/" . $self->sample_name . ".indels.compared.status";	
 
-	if(!(-e $compared_indels_status))
-	{
+#	if(!(-e $compared_indels_status))
+#	{
 		print "Calling variants as Germline or Somatic...\n";
 		my $cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_indels . " " . $compared_indels_status;		
 		system($cmd);
-	}
+#	}
 
 
 	## Load dbindels ##
@@ -360,6 +367,7 @@ sub execute {                               # replace with real execution logic.
 
 
 	## Proceed with comparison using UNFILTERED variant calls ##
+	print "Isolating Indels by Somatic Status...\n";
 	
 	if(-e $compared_indels_status)
 	{
@@ -439,10 +447,12 @@ sub parse_variants_by_status
 				my $position = $lineContents[1];
 				my $allele1 = $lineContents[2];
 				my $allele2 = $lineContents[3];
+				my $normal_freq = $lineContents[6];
+				$normal_freq =~ s/\%//;
 				my $status = $lineContents[12];
 				my $p_value = $lineContents[13];
 	
-				if($status && $status eq $desired_status)# && $p_value <= $min_p_value)
+				if($status && $status eq $desired_status && ($p_value <= $min_p_value || $normal_freq < 1))
 				{
 					my $key = "$chrom\t$position";
 					
