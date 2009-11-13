@@ -20,6 +20,14 @@ class Genome::ProcessingProfile {
     has => [
         name      => { is => 'VARCHAR2', is_optional => 1, len => 255, doc => 'Human readable name', },
         type_name => { is => 'VARCHAR2', is_optional => 1, len => 255, is_optional => 1, doc => 'The type of processing profile' },
+        supersedes => {
+                       via => 'params',
+                       to => 'value',
+                       where => [ name => 'supersedes' ],
+                       is_optional => 1,
+                       is_mutable => 1,
+                       doc => "The processing profile replaces the one named here.",
+                   },
     ],
     has_many_optional => [
         params => { is => 'Genome::ProcessingProfile::Param', reverse_id_by => 'processing_profile' },
@@ -32,6 +40,8 @@ class Genome::ProcessingProfile {
 #< UR >#
 sub create {
     my ($class, %params) = @_;
+
+    
 
     # Name
     $class->_validate_name($params{name})
@@ -61,6 +71,7 @@ sub create {
         or return;
 
     # Create
+    print Dumper(\%params);
     return $class->SUPER::create(%params);
 }
 
@@ -96,6 +107,8 @@ sub _validate_no_existing_processing_profiles_with_idential_params {
 
     # Get existing pp that have the same params
     delete $params{name};
+    delete $params{supersedes};
+    
     my @existing_pps = $subclass->get(%params);
     # none ok
     return 1 unless @existing_pps;

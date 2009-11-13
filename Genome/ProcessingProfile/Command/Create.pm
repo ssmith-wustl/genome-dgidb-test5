@@ -24,6 +24,12 @@ class Genome::ProcessingProfile::Command::Create {
             doc => 'The (optional) name or ID of another profile which is used to specify default values for this new one.',
             is_optional => 1,
         },
+        supersedes => {
+            is => 'Text',
+            len => '255',
+            doc => 'The processing profile name that this replaces',
+            is_optional => 1,
+        },
     ],
 };
 
@@ -126,6 +132,7 @@ sub execute {
     my $target_class = $self->_target_class;
     my $processing_profile = $target_class->create(
         name => $self->name,
+        supersedes => $self->supersedes,
         $self->_get_target_class_params,
     );
 
