@@ -8,9 +8,17 @@ use Genome;
 class Genome::Model::ImportedVariations{
     is => 'Genome::Model',
     has =>[
-        processing_profile => {
-            is => 'Genome::ProcessingProfile::ImportedVariations',
-            id_by => 'processing_profile_id',
+            version => { 
+            via => 'inputs', 
+            to => 'value_id', 
+            where => [ name => 'version' ], 
+            is_mutable => 1 
+        },
+        variation_data_directory => {
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'variation_data_directory' ],
+            is_mutable => 1 
         },
     ],
 };
