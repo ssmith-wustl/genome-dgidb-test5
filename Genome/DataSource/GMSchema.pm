@@ -41,6 +41,9 @@ sub _get_sequence_name_for_table_and_column {
     elsif ($column_name eq 'ID') {
         return $table_name . '_SEQ';
     }
+    elsif($table_name =~ /GSC./) {
+        return 'IMPORTED_INSTRUMENT_DATA_SEQ';
+    }
     else {
         $self->SUPER::_get_sequence_name_for_table_and_column($table_name, $column_name);
     }

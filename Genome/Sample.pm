@@ -12,7 +12,8 @@ package Genome::Sample;
 use strict;
 use warnings;
 
-class Genome::Sample {
+=pod
+
     table_name => q|
         (
             select
@@ -41,26 +42,41 @@ class Genome::Sample {
             from organism_sample@dw s
         ) sample
     |,
+
+=cut
+
+class Genome::Sample {
+    is => 'Genome::Measurable',
+    table_name => 'GSC.ORGANISM_SAMPLE',
     id_by => [
         id                          => { is => 'Number',
-                                        doc => 'the numeric ID for the specimen in both the LIMS and the analysis system' },
+                                        doc => 'the numeric ID for the specimen in both the LIMS and the analysis system', 
+                                        column_name => 'ORGANISM_SAMPLE_ID',
+                                    },
     ],
     has => [
         name                        => { is => 'Text',     len => 64, 
-                                        doc => 'the fully qualified name for the sample (the "DNA NAME" in LIMS for both DNA and RNA)' },
+                                        doc => 'the fully qualified name for the sample (the "DNA NAME" in LIMS for both DNA and RNA)', 
+                                        column_name => 'FULL_NAME',
+                                    },
     ],
     has_optional => [	
         common_name                 => { is => 'Text', 
-                                        doc => 'a name like "tumor1" for a given sample' },
+                                        doc => 'a name like "tumor1" for a given sample',                                        
+                                    },
 
         extraction_label            => { is => 'Text', 
-                                        doc => 'identifies the specimen sent from the laboratory which extracted DNA/RNA' },
+                                        doc => 'identifies the specimen sent from the laboratory which extracted DNA/RNA',
+                                        column_name => 'SAMPLE_NAME',
+                                    },
                 
         extraction_type             => { is => 'Text', 
-                                        doc => 'either "genomic dna" or "rna" in most cases' },
+                                        doc => 'either "genomic dna" or "rna" in most cases', column_name => 'SAMPLE_TYPE' },
                 
         extraction_desc             => { is => 'Text', 
-                                        doc => 'notes specified when the specimen entered this site' },
+                                        doc => 'notes specified when the specimen entered this site', 
+                                        column_name => 'DESCRIPTION'
+                                    },
                 
         cell_type                   => { is => 'Text', len => 100,
                                         doc => 'typically "primary"' },
@@ -69,7 +85,7 @@ class Genome::Sample {
                                         doc => 'identifies/labels the original tissue sample from which this extraction was made' },
         								
         tissue_desc                 => { is => 'Text', len => 64, 
-                                        doc => 'describes the original tissue sample' },
+                                        doc => 'describes the original tissue sample', column_name => 'TISSUE_NAME' },
         
         organ_name                  => { is => 'Text', len => 64, 
                                         doc => 'the name of the organ from which the sample was taken' }, 
