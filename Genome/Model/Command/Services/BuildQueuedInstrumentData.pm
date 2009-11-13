@@ -107,7 +107,7 @@ sub execute {
               my @bwa_pp_1 = grep { $_ eq 'bwa0.4.9 28 seed -R 2 4 threads samtools r320wu1' } @processing_profile_names;
 
               unless (@bwa_pp_1 > 0) {
-                  push @processing_profile_names, 'bwa0.4.9 and samtools r320wu1'; 
+                  push @processing_profile_names, 'bwa0.5.5 and samtools r453 and picard r107'; 
               }
 
               my @maq_pp = grep { $_ eq 'maq 0.7.1' } @processing_profile_names;
@@ -253,6 +253,43 @@ sub execute {
                       push @process_errors, $self->error_message;
                       next PP;
                   }
+		  
+		  # does this processing profile replace another one? check to see if we need to pull in 
+		  if ($pp->supersedes) {
+		    my $obsolete_pp = Genome::ProcessingProfile->get(name=>$pp->supersedes);
+		    
+		    
+		    my @obsolete_models = Genome::Model->get(subject_name=>$model->subject_name,
+					 		    subject_type=>$model->subject_type,
+							    processing_profile_id=>$obsolete_pp->id,
+							    auto_assign_inst_data => 1);
+		    if (@obsolete_models > 0) {
+			# grab just the first one in the off case there's multiple auto-assigned models.
+			my $obsolete_model = shift @obsolete_models;
+			
+			if (@obsolete_models > 0) {
+			    $self->warning_message(sprintf("There are multiple obsolete models for (%s/%s) with PP %s.  Using the first one I got back, %s!",
+							   $model->subject_name,
+							   $model->subject_type,
+							   $obsolete_pp->name,
+							   $obsolete_model->id));
+			}
+			
+			my @original_idas = $obsolete_model->instrument_data_assignments;
+			for my $ida (@original_idas) {
+			    my $assign = Genome::Model::Command::InstrumentData::Assign->create(
+				instrument_data_id => $instrument_data_id,
+				model_id => $model->id,
+			    );
+			    
+			    unless ($assign->execute) {
+				$self->error_message('Failed to execute instrument-data assign for model '. $model->id .' and instrument data '. $instrument_data_id);
+				push @process_errors, $self->error_message;
+				next PP;
+			    }
+			}
+		    }
+		  }
                   
                   my $subject_obj = $model->subject();
                  
@@ -266,6 +303,7 @@ sub execute {
               }
               
               MODEL_IDA: foreach my $model (@models) {
+		  
                   
                   my @existing_instrument_data = Genome::Model::InstrumentDataAssignment->get(
                       instrument_data_id => $instrument_data_id,
