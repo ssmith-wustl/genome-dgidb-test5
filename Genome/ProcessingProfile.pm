@@ -71,7 +71,6 @@ sub create {
         or return;
 
     # Create
-    print Dumper(\%params);
     return $class->SUPER::create(%params);
 }
 
