@@ -8,20 +8,28 @@ use Genome;
 class Genome::Model::ImportedAnnotation{
     is => 'Genome::Model',
     has =>[
-        processing_profile => {
-            is => 'Genome::ProcessingProfile::ImportedAnnotation',
-            id_by => 'processing_profile_id',
-        },
         annotation_source => {
             is => 'String',
             via => 'processing_profile',
         },
+        annotation_data_source_directory => {
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'annotation_data_source_directory'],
+            is_mutable => 1 
+        },
         species_name => {
-            is => 'String',
-            via => 'attributes',
-            to => 'value',
-            where => [property_name => 'species_name'],
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'species_name' ],
             is_mutable => 1,
+        },
+        version => { 
+            via => 'inputs', 
+            to => 'value_id', 
+            where => [ name => 'version'], 
+            is_mutable => 1 
         },
     ],
 };
