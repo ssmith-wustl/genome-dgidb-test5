@@ -9,20 +9,23 @@ class Genome::Model::Build::ImportedAnnotation {
     is => 'Genome::Model::Build',
     has => [
         version => { 
-            via => 'attributes', 
-            to => 'value', 
-            where => [ property_name => 'version'], 
+            via => 'inputs', 
+            to => 'value_id', 
+            where => [ name => 'version'], 
             is_mutable => 1 
         },
         annotation_data_source_directory => {
-            via => 'attributes',
-            to => 'value',
-            where => [ property_name => 'annotation_data_source_directory'],
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'annotation_data_source_directory' ],
             is_mutable => 1 
         },
         species_name => {
-            via => 'model',
-            to => 'species_name',
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'species_name' ],
+            is_mutable => 1,
         },
     ],
 };
