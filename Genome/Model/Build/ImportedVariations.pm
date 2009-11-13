@@ -9,15 +9,15 @@ class Genome::Model::Build::ImportedVariations {
     is => 'Genome::Model::Build',
     has => [
         version => { 
-            via => 'attributes', 
-            to => 'value', 
-            where => [ property_name => 'version'], 
+            via => 'inputs', 
+            to => 'value_id', 
+            where => [ name => 'version' ], 
             is_mutable => 1 
         },
         variation_data_directory => {
-            via => 'attributes',
-            to => 'value',
-            where => [ property_name => 'variation_data_directory'],
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'variation_data_directory' ],
             is_mutable => 1 
         },
     ],
