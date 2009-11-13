@@ -90,33 +90,35 @@ sub dump_sff_read_names
     $self->error_message("Failed to open $input_fasta") and die unless defined $input_fasta_fh;
     my $read_names_fh = IO::File->new(">read_names");
     $self->error_message("Filed to open read_name for writing") and die unless defined $read_names_fh;
+    
+    my %names;
     while(<$input_fasta_fh>) {
         next unless />/;
         chomp;
         last if /\.c1/;
         my ($name) = />(.+)/;
-        print  $read_names_fh  "$name\n";
-    } 
-}
-
-sub convert_454_reads_to_consed_reads
-{
-    my @dirs = `/bin/ls -aF -1`;
-    chomp @dirs;
-    @dirs = grep { /^H_\//; } @dirs;
-    chop @dirs;#get rid of trailing /
-    foreach (@dirs)
+        #push @names, $name;
+        $names{$name} = 1;
+        #print  $read_names_fh  "$name\n";
+    }
+    foreach my $name (keys %names)
     {
-        #print "fixing $_,\n";
-        #print "Couldn't find $_/newbler_assembly, skipping...\n" and 
-        next unless -d "$_/newbler_assembly";
-        system "cat $_/newbler_assembly/consed/edit_dir/$_.ace.1 | perl -e 'foreach (<>) { s/_left/\.b1/g; s/_right/\.g1/g; print;}' > out";
-        system "/bin/mv out $_/newbler_assembly/consed/edit_dir/$_.ace.1";
-        system "cat $_/newbler_assembly/consed/phdball_dir/phd.ball.1 | perl -e 'foreach (<>) { s/_left/\.b1/g; s/_right/\.g1/g; print;}' > out";
-        system "/bin/mv out $_/newbler_assembly/consed/phdball_dir/phd.ball.1";    
+        if($name =~ /.*_left/)
+        {
+            my ($root) = $name =~ /(.*)_left/;
+            if(exists $names{$root.'_right'})
+            {
+                delete $names{$root.'_left'};
+                delete $names{$root.'_right'};
+                $names{$root} = 1;            
+            }
+        }    
+    }
+    foreach my $name (keys %names)
+    {
+        print $read_names_fh "$name\n";    
     }
 }
-
 
 sub get_3730_read_names
 {
@@ -279,7 +281,6 @@ SLEEP:
         sleep 30;
     }
     chdir($project_dir);
-    convert_454_reads_to_consed_reads();
     print "\nJobs finished\n";
     system "chmod 777 -R $project_dir";
     return 1;
