@@ -112,6 +112,7 @@ class Genome::Model {
         sample_name                      => { is => 'Text', len => 255 },
         sequencing_platform              => { via => 'processing_profile' },
         last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
+        last_succeeded_build_directory    => { calculate => q($b = $self->last_succeeded_build; return unless $b; return $b->data_directory) },
         ],
         has_many_optional => [
         ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },
