@@ -1,3 +1,7 @@
+# FIXME ebelter
+# Long: remove all define modules to just have one to rule them all.
+# Short: There are 2 if blocks that should have errors in them? This module builds? It shouldn't.
+#
 package Genome::Model::Command::Define::GenotypeMicroarray;
 
 use strict;

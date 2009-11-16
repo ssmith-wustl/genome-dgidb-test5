@@ -1,4 +1,5 @@
-
+# FIXME ebelter
+#  Long: remove this and all define modeuls to have just one that can handle model inputs
 package Genome::Model::Command::Define::Somatic;
 
 use strict;

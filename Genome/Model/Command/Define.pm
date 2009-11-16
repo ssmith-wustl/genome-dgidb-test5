@@ -1,3 +1,6 @@
+#FIXME ebelter
+# Long: Stop sub classing, handle iniput defining
+#
 package Genome::Model::Command::Define;
 
 use strict;
