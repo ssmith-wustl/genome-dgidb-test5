@@ -24,6 +24,7 @@ class Genome::Model::Tools::Consed::TracesToConsed {
 	     trace_dir       => {
 		 type         => 'String',
 		 doc          => "give the full path to the traces you want to use in the assembly",
+		 is_optional  => 1,
 	     },
 	     base_dir         => {
 		 type         => 'String',
@@ -101,6 +102,12 @@ class Genome::Model::Tools::Consed::TracesToConsed {
 		 doc          => 'use this option if you\'re using -genomic-consensus-numbering and -ref-fasta, this is the number you\'re reference will start from',
 		 is_optional  => 1,
 	     },
+	     details_examples => {
+		 type         => 'Boolean',
+		 doc          => 'use this option if you want see a discusion of some options and some detailed examples',
+		 is_optional  => 1,
+	     },
+
 	     ],
     
     
@@ -144,109 +151,30 @@ EOS
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
     return <<EOS 
 
+for more details and examples run
+   gmt consed traces-to-consed -details-examples
 
-regardless of your intent for the assemblies, you may need to due some setup before running this script
-==================================================================================================
-
---ref-dir option will allow to assemble the reads in your ace file under the reference of your choice. By using this option, you will envoke Bio::DB::Fasta which will write an index of sequences in the directory you put after refdir. Any .fa or .fasta file in the directory will then be used to search for sequence based on the chromosome and coordinates you stipulate. The organism option should be used with this option
-   
-==================================================================================================
---trace-dir is a mandatory parameter. 
-All the traces you want to have assembled will need to be dumped and preferably zipped and placed in a single location here after known as the trace dir. The trace dir can be a mix of traces for several assemblies.
-
---link-traces will write a link in your projects chromat dir from the traces dir rather than following the default action; to copy the traces to the chromat dir
-==================================================================================================
-There are two options for guiding the selection of traces from the trace dir that are to be assembled into a project
-
---assembly-traces is a user supplied traces.fof. If the trace name is in both the traces dir and this optional file, an attempt will be made to assemble it into the project your making.
---amplicon list the amplicon portion of the read name for the reads you want to assemble, if reads from more than one amplicon are to be assembled, list all the amplicons in a quoted string with a space between each amplicon ie "H_10_00fXo H_10_00fXa H_10_00fXb"
-
-if neither of these two traces selection options are used, an attempt will be made to assemble all the traces from the trace dir in the project.
-==================================================================================================
-You have two options to help consed guide the addnewreads for you assembly
-
---consedrc you supply the full path to a .consedrc file you would like have in the edit_dir while making the assembly
---restrict-contigs this script will write a .consedrc file to the edit dir prior to and removing upon completion of the assembly that will limit the consed file to the one contig the reads are targeting 
-
-if neither of these two options are used consed will follow it order of precidence to find a consedrc file
-==================================================================================================
-
---base-dir if this option is not used the project your building will be built in you current location 
-
---extend-ref this option allows you to input the amout you want to subtract from the start position and to add to the stop position. If the --stop option is not used, the stop position will be the same as the start position and the ref will be extended out 1000bp in both directions unless --extend-ref is used. If a stop position is used then the refseq will go from start to stop unless --extend-ref is used.
-
---project-details is an option that allows you to put a relivent comment or info in the refseq header (ie, snp indel size bases ...)
-
---project default project name is chromosome_start this option would allow you to change that to anything "you'd" like (ie chromosome_start_stop); This will end up being the name tagged on the project directory, ace file, and refseq.
-
-==================================================================================================
-
-*Here are 6 examples of how this script was intened to be used. 
-
-
-building Human NCBI Build36 assemblies to be used by ==>  gt manual-review review-variants 
-
-  if your reviewing snps, you could get by with the minimume requirements base dir was added for this example
- 
-       gt consed traces-to-consed --chromosome 10 --start 126009345 --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --base-dir /gscmnt/238/medseq/human_misc/TEST
-
-  if your reviewing indels your minimum input would be 
-
-       gt consed traces-to-consed --chromosome 10 --start 126009344 --stop 126009576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --extend-ref 1000
-
-
-                ======================================================
-
-
-building Human NCBI Build36 assemblies to be used by detect-sequence-variation
-
-       gt consed traces-to-consed --chromosome 10 --start 126008345 --stop 126010576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --restrict-contigs --link-traces --project 10_126008345_126010576 --assembly-traces /gscmnt/238/medseq/human_misc/TEST/10_126008345_126010576.traces.fof
-
-
-                ======================================================
-
-
-building Human NCBI Build36 assemblies to be used in the abbreviated Legacy pipeline
-
-       gt consed traces-to-consed --chromosome 10 --start 126000345 --stop 126020576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --project Collaborator_project_test_assembly --assembly-traces /gscmnt/238/medseq/human_misc/TEST/10_126008345_126010576.traces.fof
-
-
-
-With regard to the limitations of this script, it is restricted to the use of UCSC/NCBI Human Build 36 and/or NCBI/Mouse Build 37
-
-
-
-                ======================================================
-
-
-To build an ace file for some thing other than Human Build 36 or Mouse. Streptococcus pneumoniae for example
-
-gt consed traces-to-consed -chromosome PNI0373FNL_Contig0.1 -start 1 -stop 1000 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ -ref-dir /gscmnt/238/medseq/human_misc/TEST/REF/ -organism Streptococcus_pneumoniae --project-details "Streptococcus pneumoniae ref based on model build" 
-
-                            -project is also recommended 
-                ======================================================
-
-
-To Build an ace file with your own ref-fasta. For example to assembled RT-PCR sequence under the transcript sequence as the reference 
-
-gt consed traces-to-consed -project project_name -ref-fasta /gscmnt/238/medseq/human_misc/TEST/REF/testref.refseq.fasta -trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/
--base-dir /gscmnt/238/medseq/human_misc/TEST
-
-==================================================================================================
 EOS
 }
 
 
 sub execute {                               # replace with real execution logic.
     my $self = shift;
+    my $details_examples = $self->details_examples;
+    if ($details_examples) {
+	`gmt consed traces-to-consed --help`;
+	&examples;
+	exit;
+    }
 
     unless ($self->chromosome && $self->start || $self->ref_fasta && $self->project) {
+	`gmt consed traces-to-consed --help`;
 	print qq(In addition to the trace-dir, either chromosome and start or ref-fasta and project are required inputs. Please see gmt consed traces-to-consed -help for more options.\n);
 	return (0);
     }
 
     my $trace_dir = $self->trace_dir;
-    unless (-e $trace_dir && -d $trace_dir) { die "check $trace_dir\n"; }
+    unless (-e $trace_dir && -d $trace_dir) { `gmt consed traces-to-consed --help`; die "check $trace_dir\n"; }
 
     my $base_dir = $self->base_dir;
     if ($base_dir) {
@@ -1036,5 +964,96 @@ sub get_oltp(@) {
     return %seqid;        
 }
 
+
+sub examples {                           # this is what the user will see with the longer version of help. <---
+
+print qq(
+regardless of your intent for the assemblies, you may need to due some setup before running this script
+==================================================================================================
+
+--ref-dir option will allow assembly of reads in your ace file under the reference of your choice. By using this option, you will envoke Bio::DB::Fasta which will write an index of sequences in the directory you put after refdir. Any .fa or .fasta file in the directory will then be used to search for sequence based on the chromosome and coordinates you stipulate. The organism option should be used with this option
+   
+==================================================================================================
+--trace-dir is a mandatory parameter. 
+All the traces you want to have assembled will need to be dumped and preferably zipped and placed in a single location here after known as the trace dir. The trace dir can be a mix of traces for several assemblies.
+
+--link-traces will write a link in your projects chromat dir from the traces dir rather than following the default action; to copy the traces to the chromat dir
+==================================================================================================
+There are two options for guiding the selection of traces from the trace dir that are to be assembled into a project
+
+--assembly-traces is a user supplied traces.fof. If the trace name is in both the traces dir and this optional file, an attempt will be made to assemble it into the project your making.
+--amplicon list the amplicon portion of the read name for the reads you want to assemble, if reads from more than one amplicon are to be assembled, list all the amplicons in a quoted string with a space between each amplicon ie "H_10_00fXo H_10_00fXa H_10_00fXb"
+
+if neither of these two traces selection options are used, an attempt will be made to assemble all the traces from the trace dir in the project.
+==================================================================================================
+You have two options to help consed guide the addnewreads for you assembly
+
+--consedrc you supply the full path to a .consedrc file you would like have in the edit_dir while making the assembly
+--restrict-contigs this script will write a .consedrc file to the edit dir prior to and removing upon completion of the assembly that will limit the consed file to the one contig the reads are targeting 
+
+if neither of these two options are used consed will follow it order of precidence to find a consedrc file
+==================================================================================================
+
+--base-dir if this option is not used the project your building will be built in you current location 
+
+--extend-ref this option allows you to input the amout you want to subtract from the start position and to add to the stop position. If the --stop option is not used, the stop position will be the same as the start position and the ref will be extended out 1000bp in both directions unless --extend-ref is used. If a stop position is used then the refseq will go from start to stop unless --extend-ref is used.
+
+--project-details is an option that allows you to put a relivent comment or info in the refseq header (ie, snp indel size bases ...)
+
+--project default project name is chromosome_start this option would allow you to change that to anything "you'd" like (ie chromosome_start_stop); This will end up being the name tagged on the project directory, ace file, and refseq.
+
+==================================================================================================
+
+*Here are 6 examples of how this script was intened to be used. 
+
+
+building Human NCBI Build36 assemblies to be used by ==>  gt manual-review review-variants 
+
+  if your reviewing snps, you could get by with the minimume requirements base dir was added for this example
+ 
+       gmt consed traces-to-consed --chromosome 10 --start 126009345 --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --base-dir /gscmnt/238/medseq/human_misc/TEST
+
+  if your reviewing indels your minimum input would be 
+
+       gmt consed traces-to-consed --chromosome 10 --start 126009344 --stop 126009576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --extend-ref 1000
+
+
+                ======================================================
+
+
+Assemblies to be used by detect-sequence-variation
+
+       gmt consed traces-to-consed --chromosome 10 --start 126008345 --stop 126010576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --restrict-contigs --link-traces --project 10_126008345_126010576 --assembly-traces /gscmnt/238/medseq/human_misc/TEST/10_126008345_126010576.traces.fof
+
+
+                ======================================================
+
+
+Assemblies to be used in the abbreviated Legacy pipeline
+
+       gmt consed traces-to-consed --chromosome 10 --start 126000345 --stop 126020576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --project Collaborator_project_test_assembly --assembly-traces /gscmnt/238/medseq/human_misc/TEST/10_126008345_126010576.traces.fof
+
+
+With regard to the limitations of this script, it defaults to to the use of UCSC/NCBI Human Build 36  or with the organism set to mouse to NCBI/Mouse Build 37
+
+
+                ======================================================
+
+
+To build an ace file for some thing other than Human Build 36 or Mouse. Streptococcus pneumoniae for example
+
+gmt consed traces-to-consed -chromosome PNI0373FNL_Contig0.1 -start 1 -stop 1000 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ -ref-dir /gscmnt/238/medseq/human_misc/TEST/REF/ -organism Streptococcus_pneumoniae --project-details "Streptococcus pneumoniae ref based on model build" --project PNI0373FNL_1_1000
+
+                ======================================================
+
+
+To Build an ace file with your own ref-fasta. For example to assemble RT-PCR traces data under the transcript sequence as the reference 
+
+gmt consed traces-to-consed -project project_name -ref-fasta /gscmnt/238/medseq/human_misc/TEST/REF/testref.refseq.fasta -trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/
+-base-dir /gscmnt/238/medseq/human_misc/TEST
+
+==================================================================================================
+)
+}
 
 1;
