@@ -1,3 +1,9 @@
+# FIXME ebelter
+# convert to G:U:IO:Reader to remove G:U:Parser
+# used by 
+# ./Model/Tools/Blat/Cat.pm
+# ./Model/Tools/Blat/PslToLayers.pm
+#
 package Genome::Utility::PSL::Reader;
 
 use strict;

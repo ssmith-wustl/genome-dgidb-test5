@@ -1,3 +1,9 @@
+# FIXME ebelter
+# convert to G:U:IO:Writer to remove G:U:Parser
+# used by 
+# ./Model/Tools/454/SffTrimWithSeqcleanReport.pm
+# ./Model/Tools/454/IsolatePrimerTag.pm:
+#
 package Genome::Utility::454TrimFile::Writer;
 
 use strict;

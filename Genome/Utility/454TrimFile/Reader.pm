@@ -1,3 +1,7 @@
+# FIXME ebelter
+# Needed?? nothig in Genome uses this.
+# If needed: convert to G:U:IO:Reader
+#
 package Genome::Utility::454TrimFile::Reader;
 
 use strict;

@@ -1,3 +1,6 @@
+#FIXME ebelter
+# remove - redundant w/ G:U:IO:Reader
+#
 package Genome::Utility::Parser;
 
 use strict;
