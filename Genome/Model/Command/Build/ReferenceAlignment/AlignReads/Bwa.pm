@@ -1,3 +1,6 @@
+#:boberkfe seems like parts of execute and verify successful completion could be
+#:boberkfe pulled up to the superlass, those get duplicated here
+
 package Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Bwa;
 
 use strict;

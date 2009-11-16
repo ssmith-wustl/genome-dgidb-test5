@@ -1,3 +1,6 @@
+#:boberkfe seems like execute and verify successful completion could be
+#:boberkfe pulled up to the superlass
+
 package Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat;
 
 use strict;
