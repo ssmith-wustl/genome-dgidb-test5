@@ -1,5 +1,9 @@
 package Genome::ProcessingProfile::ManualReview;
 
+#:eclark 11/16/2009 Code review.
+
+# Seems like there should better way to define a build that only does one thing.  Aside from that, this module has no problems (because it does nothing.)
+
 use strict;
 use warnings;
 

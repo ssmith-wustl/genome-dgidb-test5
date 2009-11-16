@@ -1,6 +1,10 @@
 
 package Genome::ProcessingProfile::MicroArray;
 
+#:eclark 11/16/2009 Code review.
+
+# Short Term: What is the point of this params_for_class implementation?  Needs to be removed.
+
 use strict;
 use warnings;
 
