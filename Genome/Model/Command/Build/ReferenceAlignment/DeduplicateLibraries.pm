@@ -1,3 +1,8 @@
+#:boberkfe maybe it's not the totally best place that this event holds the
+#:boberkfe disk allocation for the accumulated alignments path.
+#:boberkfe but until this becomes a software result it seems like it's the
+#:boberkfe best place i could come up with
+
 package Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries;
 
 use strict;
