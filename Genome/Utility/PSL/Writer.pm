@@ -1,3 +1,7 @@
+# FIXME ebelter
+# Needed?? nothig in Genome uses this.
+# If needed: convert to G:U:IO:Writer
+#
 package Genome::Utility::PSL::Writer;
 
 use strict;
