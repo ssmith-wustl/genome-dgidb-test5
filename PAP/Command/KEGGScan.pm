@@ -87,7 +87,7 @@ sub execute {
 
     ##FIXME:  This should not be hardcoded.  At least not here.  
     my @keggscan_command = (
-                            '/gsc/scripts/gsc/annotation/KEGGscan_KO.v50',
+                            '/gsc/scripts/gsc/annotation/KEGGscan_KO.v52',
                            );
     
     my ($kegg_stdout, $kegg_stderr);
