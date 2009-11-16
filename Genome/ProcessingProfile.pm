@@ -1,5 +1,16 @@
 package Genome::ProcessingProfile;
 
+#:eclark 11/16/2009 Code review.
+
+# Short term:
+# Move (stages, classes_for_stage, objects_for_stage, verify_successful_completion_job_classes,
+#  verify_successful_completion_objects) to a subclass.
+
+# Long term:
+# Should this class even be abstract?  Perhaps there should be no subclasses of this, and the
+# description of how a build should be created for a processing profile should be data in the
+# database, not code.
+
 use strict;
 use warnings;
 
