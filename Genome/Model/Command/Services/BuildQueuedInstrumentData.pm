@@ -1,3 +1,6 @@
+#:boberkfe this  probably ought to be broken up so the build logic is moved out of the
+#:boberkfe finding/create code
+
 package Genome::Model::Command::Services::BuildQueuedInstrumentData;
 
 use strict;
