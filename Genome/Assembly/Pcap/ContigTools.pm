@@ -1779,32 +1779,33 @@ sub remove_reads
 
     my $start_pos = 1;
     my $end_pos = $region->{length};
-    my @db_read_names;
-    my @read_names = keys %reads;
-    foreach my $read_name (@read_names)
-    {
-        my ($version) = ($reads{$read_name}->phd_file =~ /\.(\d+)$/); 
-        $read_name .= "-$version";
-    }	
-    my @reads = GSC::Sequence::Item->get(sequence_item_name => \@read_names);
-    foreach my $read ( @reads)
-    {
-        my @quality = @{$read->sequence_quality_arrayref};
-        die "Couldln't load $read->sequence_item_name quality.\n" if ((scalar @quality) == 0);
-        my ($read_name) = $read->sequence_item_name =~ /(.+)-\d+/;
-        die "Couldn't resolve read name\n" if ! exists $reads{$read_name}; 
-        @quality = reverse @quality if ($reads{$read_name}->complemented);#print $read_name."\n";		
-        $reads{$read_name}->unpadded_base_quality( \@quality);				
-    }
-    print "Done loading read quality for ".$contig->name."\n";
-    #foreach( values %reads)
+    #my @db_read_names;
+    #my @read_names = keys %reads;
+    #foreach my $read_name (@read_names)
     #{
-    #	my $phd = $phd_object->get_phd($_->phd_file);
-    #	my @quality = @{$phd->unpadded_base_quality};
-    #	@quality = reverse @quality if ($_->complemented);
-    #	$_->unpadded_base_quality( \@quality);				
+    #    my ($version) = ($reads{$read_name}->phd_file =~ /\.(\d+)$/); 
+    #    $read_name .= "-$version";
+    #}	
+    #my @reads = GSC::Sequence::Item->get(sequence_item_name => \@read_names);
+    #foreach my $read ( @reads)
+    #{
+    #    my @quality = @{$read->sequence_quality_arrayref};
+    #    die "Couldln't load $read->sequence_item_name quality.\n" if ((scalar @quality) == 0);
+    #    my ($read_name) = $read->sequence_item_name =~ /(.+)-\d+/;
+    #    die "Couldn't resolve read name\n" if ! exists $reads{$read_name}; 
+    #    @quality = reverse @quality if ($reads{$read_name}->complemented);#print $read_name."\n";		
+    #    $reads{$read_name}->unpadded_base_quality( \@quality);				
     #}
 
+    foreach( values %reads)
+    {
+    	my $phd = $phd_object->get_phd($_->phd_file);
+    	my @quality = @{$phd->unpadded_base_quality};
+        @quality = reverse @quality if ($_->complemented);
+    	$_->unpadded_base_quality( \@quality);
+    }
+
+    print "Done loading read quality for ".$contig->name."\n";
     exit if ( !check_contiguous( [values %reads], $start_pos, $end_pos ) );	
 
     # point of no return
