@@ -1,5 +1,10 @@
 package Genome::ProcessingProfile::ViromeScreen;
 
+#:eclark 11/16/2009 Code review.
+
+# Short term: There should be a better way to define the class than %HAS.  Also this processing profile exists to wrap a workflow, a more direct reference would be better.
+# Long term: See Genome::ProcessingProfile notes.
+
 use strict;
 use warnings;
 

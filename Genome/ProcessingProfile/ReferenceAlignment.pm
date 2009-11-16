@@ -1,5 +1,10 @@
 package Genome::ProcessingProfile::ReferenceAlignment;
 
+#:eclark 11/16/2009 Code review.
+
+# Short term: There should be a better way to define the class than %HAS.
+# Long term: See Genome::ProcessingProfile notes.
+
 use strict;
 use warnings;
 
