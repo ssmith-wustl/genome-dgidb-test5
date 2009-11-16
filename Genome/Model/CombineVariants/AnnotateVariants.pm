@@ -1,4 +1,5 @@
 package Genome::Model::CombineVariants::AnnotateVariants;
+#:adukes short term, nothing. long term - use the annotator genome tool after evalutating the rest of the CombineVariants env
 
 use strict;
 use warnings;

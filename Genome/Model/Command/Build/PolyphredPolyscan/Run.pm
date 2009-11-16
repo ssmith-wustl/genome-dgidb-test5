@@ -1,5 +1,7 @@
 package Genome::Model::Command::Build::PolyphredPolyscan::Run;
 
+#:adukes this looks pretty out of date, I think it should be scrapped if when PolyphredPolyscan is resurrected
+
 use strict;
 use warnings;
 

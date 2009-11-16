@@ -1,5 +1,7 @@
 package Genome::Model::Command::Build::CombineVariants::AssignFromBuilds;
 
+#:adukes short term leave as is, but if CombineVariants ever comes back, this needs to be updated to use Model inputs
+
 class Genome::Model::Command::Build::CombineVariants::AssignFromBuilds {
     is => 'Genome::Model::Event',
 };

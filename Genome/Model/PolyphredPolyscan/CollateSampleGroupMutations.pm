@@ -1,4 +1,5 @@
 package Genome::Model::PolyphredPolyscan::CollateSampleGroupMutations;
+#:adukes this is pretty ugly/hacked for an emergency, CombineVariants/PolyphredPolyscan and the supporting infrastructure should go through a serious reevaluation before it is attempted to be updated or rerun.
 
 use strict;
 use warnings;

@@ -1,4 +1,5 @@
 package Genome::Model::CombineVariants;
+#:adukes short-term remove composite model references, long-term this was part of a messy project, reevaluate what is being accomplished here and decide if we still want to support it.
 
 use strict;
 use warnings;

@@ -1,5 +1,7 @@
 package Genome::Model::Command::Build::CombineVariants::CombineAndAnnotate;
 
+#:adukes Like the rest of the modules under G:M:C:Build, should be moved to its appropriate G:M:Build namespace
+
 class Genome::Model::Command::Build::CombineVariants::CombineAndAnnotate {
     is => 'Genome::Model::Event',
 };
