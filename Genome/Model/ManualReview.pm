@@ -1,4 +1,5 @@
 package Genome::Model::ManualReview;
+#:adukes this was a stubbed in module that was never expanded upon, dump
 
 use strict;
 use warnings;
@@ -14,6 +15,7 @@ sub create {
 
     return $self;
 }
+
 
 # Fill this out to determine what is a valid child model... or just return 1 for now if you like.
 # This is called by add_child_model which is a method in Genome::Model::Composite used to add child models to this composite model

@@ -1,4 +1,5 @@
 package Genome::Model::Link;
+#:adukes related code in G:Model
 
 use strict;
 use warnings;

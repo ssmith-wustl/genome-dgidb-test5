@@ -1,5 +1,5 @@
 package Genome::Model::Build::ImportedReferenceSequence;
-
+#:adukes This module is used solely for importing annotation and generating sequence for genbank exons.  It needs to be expanded/combined with other reference sequence logic ( refalign models )
 use strict;
 use warnings;
 

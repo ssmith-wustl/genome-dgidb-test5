@@ -1,4 +1,5 @@
 package Genome::Model::Composite;
+#:adukes G:M:Composite and CompositeMember have been replaced by Model and Build Links, this should be dumped. CombineVariants/Polyphred Polyscan still reference these incorrectuly but existing models have been updated to use model and build links
 
 use strict;
 use warnings;

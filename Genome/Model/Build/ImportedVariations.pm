@@ -1,3 +1,5 @@
+#:adukes This model/build was intended to be used for imported DBsnp data, but that is currently being handled with a custom solution by jlolofie and gsanders, I recommend dumping this in favor of that solution and abstracting on next DBSNP release
+
 package Genome::Model::Build::ImportedVariations;
 
 use strict;

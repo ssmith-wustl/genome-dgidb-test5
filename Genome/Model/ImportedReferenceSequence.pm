@@ -1,5 +1,5 @@
-
 package Genome::Model::ImportedReferenceSequence;
+#:adukes see G:M:B:ImportedReferenceSequence, this needs to be expanded beyond use for ImportedAnnotation tasks only
 
 use strict;
 use warnings;

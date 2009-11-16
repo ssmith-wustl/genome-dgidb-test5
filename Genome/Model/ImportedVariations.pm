@@ -1,4 +1,5 @@
 package Genome::Model::ImportedVariations;
+#:adukes not used, meant for dbsnp 130, currently handled by something else.  Dump this until the other solution needs to be abstracted
 
 use strict;
 use warnings;

@@ -1,5 +1,5 @@
-
 package Genome::Model::ImportedVariants;
+#:adukes this is the base class for G:M:MicroArray, which has one pp and no models in the db, don't think this is being used, dump
 
 use strict;
 use warnings;

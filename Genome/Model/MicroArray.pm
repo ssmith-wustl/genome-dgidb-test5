@@ -1,5 +1,5 @@
-
 package Genome::Model::MicroArray;
+#:adukes one processing profile in the database, no models, dump this
 
 use strict;
 use warnings;
