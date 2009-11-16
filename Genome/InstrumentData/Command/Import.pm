@@ -87,19 +87,19 @@ sub execute {
     #TODO put logic to set sample_name and library_name
     
     my $sample_name     = $self->sample_name;
-    my $organism_sample = GSC::Organism::Sample->get(full_name => $sample_name);
+    my $genome_sample = Genome::Sample->get(name => $sample_name);
 
-    if ($organism_sample) {
-        $self->status_message("Sample with full_name: $sample_name stored in datawarehouse organism_sample");
+    if ($genome_sample) {
+        $self->status_message("Sample with full_name: $sample_name is found in database");
     }
     else {
-        $organism_sample = GSC::Organism::Sample->get(sample_name => $sample_name);
-        $self->status_message("Sample with sample_name: $sample_name stored in datawarehouse organism_sample")
-            if $organism_sample;
+        $genome_sample = Genome::Sample->get(extraction_label => $sample_name);
+        $self->status_message("Sample with sample_name: $sample_name is found in database")
+            if $genome_sample;
     }
 
-    unless ($organism_sample) {
-        $self->status_message("Sample $sample_name is not stored in datawarehouse organism_sample, now try to store it");
+    unless ($genome_sample) {
+        $self->status_message("Sample $sample_name is not found in database, now try to store it");
         
         my $species_name = $self->species_name;
         my $taxon;
@@ -122,41 +122,27 @@ sub execute {
         }
         else {
             $full_name = undef;
+            #maybe it should die here.
         }
 
         my %create_params = (
-            full_name    => $full_name,      # internal/LIMS DNA_NAME
-            sample_name  => $sample_name,    # external name (biospecimen or TCGA-*)
-            cell_type    => 'primary',
-            taxon_id     => $taxon->taxon_id,
-            pse_id       => 1, #for now, 
+            name             => $full_name,      # internal/LIMS DNA_NAME
+            extraction_label => $sample_name,    # external name (biospecimen or TCGA-*)
+            cell_type        => 'primary',
+            taxon_id         => $taxon->taxon_id,
         );
        
-        $organism_sample = GSC::Organism::Sample->create(%create_params);
+        $genome_sample = Genome::Sample->create(%create_params);
        
-        unless ($organism_sample){
-            $self->error_message('Failed to create the organism sample : '.GSC::Organism::Sample->error_message);
+        unless ($genome_sample){
+            $self->error_message('Failed to create the genome sample : '.Genome::Sample->error_message);
             die $self->error_message;
         }
-        
-        $self->status_message("Succeed to create organism sample for $sample_name");
-        
-=cut
-        # all samples, individuals, and population groups should have a phenotype measurable entry
-        unless (GSC::Phenotype::Measurable->get_or_create(
-            subject_id   => $organism_sample->organism_sample_id,
-            subject_type => 'organism sample'
-        )){
-           $self->error_message('Failed to create the phenotype for the organism sample : '.
-               GSC::Phenotype::Measurable->error_message);
-           $organism_sample->delete;
-           die $self->error_message;
-        }
-=cut
+        $self->status_message("Succeed to create genome sample for $sample_name");
     }
     
-    my $sample_id = $organism_sample->organism_sample_id;
-    $self->status_message("Sample $sample_name has sample_id: $sample_id");
+    my $sample_id = $genome_sample->id;
+    $self->status_message("genome sample $sample_name has id: $sample_id");
     $params{sample_id} = $sample_id;
     
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
