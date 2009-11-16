@@ -1,5 +1,9 @@
 package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::Maq;
 
+#REVIEW fdu
+# Fix out-of-date help_brief/synopsis/detail
+
+
 use strict;
 use warnings;
 

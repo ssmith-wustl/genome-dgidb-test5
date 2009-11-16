@@ -1,5 +1,11 @@
 package Genome::Model::Build::ReferenceAlignment;
 
+#REVIEW fdu
+#Looks ok to me except for two ideas:
+#1. can accumulated_alignment be renamed to dedup ?
+#2. can eviscerate method be pulled out to base class G::M::Build so other types of builds besides ref-align can use it too ?
+
+
 use strict;
 use warnings;
 

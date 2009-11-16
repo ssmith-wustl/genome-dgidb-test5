@@ -1,5 +1,10 @@
 package Genome::Model::Build::ReferencePlaceholder;
 
+#REVIEW fdu
+#short: Obsolete subreference-related methods can be removed. 
+#Long: It will be replaced with a real model once we have one in place for all reference sequences used. Also see comments below
+
+
 use strict;
 use warnings;
 

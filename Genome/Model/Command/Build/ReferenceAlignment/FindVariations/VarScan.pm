@@ -1,5 +1,10 @@
 package Genome::Model::Command::Build::ReferenceAlignment::FindVariations::VarScan;
 
+#REVIEW fdu
+#1. Fix wrong help_brief/synopsis/detail
+#2. Is this actively used in pipeline ? Remove if not
+
+
 use strict;
 use warnings;
 

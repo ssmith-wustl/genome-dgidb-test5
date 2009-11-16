@@ -1,5 +1,11 @@
 package Genome::Model::Command::Build::ReferenceAlignment::FindVariations::BreakPointRead;
 
+
+#REVIEW fdu
+#1. Fix wrong help_brief/synopsis/detail
+#2. Convert bprStandalone to genome model tool
+
+
 use strict;
 use warnings;
 

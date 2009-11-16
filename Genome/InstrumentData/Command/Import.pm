@@ -1,5 +1,9 @@
 package Genome::InstrumentData::Command::Import;
 
+#REVIEW fdu
+#Long: need more specific external bam info like patient source, and add
+#methods to calculate read/base count
+
 use strict;
 use warnings;
 

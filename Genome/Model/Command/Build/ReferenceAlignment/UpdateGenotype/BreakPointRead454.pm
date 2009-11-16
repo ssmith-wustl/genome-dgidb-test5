@@ -1,5 +1,12 @@
 package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::BreakPointRead454;
 
+#REVIEW fdu
+#1. Fix outdated help_brief/synopsis/detail
+#2. Convert
+#~jwalker/svn/perl_modules/breakPointRead/breakPointRead454.pl to
+#genome model tool 
+
+
 use strict;
 use warnings;
 

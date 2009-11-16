@@ -1,5 +1,22 @@
 package Genome::Model::Build::ReferenceAlignment::Solexa;
 
+#REVIEW fdu
+#Short:
+#1. An indelpe filter should be added to _unsorted_indel_file to filter out output with 3rd column - and . after maq indelpe run to
+#reduce the size of indel file that will be fed to gt snp sort. Sometimes gt snp sort will fail because of memory issue caused by too
+#many lines of indel
+#2. Current maq-maq pipeline generates filtered.indelpe.snps by _snv_file_filtered method during run_reports stage, which make no sense.
+#That bunch of codes: maq SNPFilter -F <> under _snv_file_filtered really should be moved to G::M::C::B::ReferenceAlignment::Maq along with 
+#method _indel_file and _unsorted_indel_file
+#
+#Long:
+#1. Many maq-specific methods exist and there is need to make this module more generic to handle other aligners/variant-callers. 
+#2. Some obsolete methods should be removed especially with maq dying out, like map_list_file_paths.
+#3. Some methods can be shrunk by removing maq-related logic.
+#4. Some methods (like those variant-related ones) in this module that are duplicates with those in G::M::ReferenceAlignment should be removed 
+#or moved up to G::M::RefAlign. Just ask model for the methods when needed.
+
+
 use strict;
 use warnings;
 

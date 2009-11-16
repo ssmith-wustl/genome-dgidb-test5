@@ -1,3 +1,16 @@
+#REVIEW fdu
+#Short: 
+#1. remove Genome::Utility::FileSystem from base class list
+#2. alignment_params should be better set to handle unprovided (empty) parameters
+#by if block testing
+#Long:
+#1. what is the purpose for these align commands to exist ? Do users really use those 
+#as standalone commands for per lane alignment outside of genome model build ? Or codes
+#can be moved to Genome::Model::Tools::Align tree
+#2. Duplicate parameters/attributes with G::I::Alignment
+#3. If the existence of this module validates, implementing multiple
+#instrument_data_ids is useful.
+
 
 package Genome::InstrumentData::Command::Align;
 

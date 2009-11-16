@@ -1,5 +1,16 @@
 package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::Samtools;
 
+
+#REVIEW fdu
+#Currently this module doesn't have any process inside. It's
+#originally created to generate disk-space consuming samtools
+#pileup file, but turned off later on. We need either ask MG to throw
+#some useful process here or remove this (also skip this
+#UpdateGenotype step in variant_detection stage for bwa-sam
+#based build)
+
+
+
 use strict;
 use warnings;
 

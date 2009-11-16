@@ -1,5 +1,10 @@
 package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype;
 
+
+#REVIEW fdu
+#Fix out-of-date help_brief, help_synopsis, and help_detail
+
+
 use strict;
 use warnings;
 

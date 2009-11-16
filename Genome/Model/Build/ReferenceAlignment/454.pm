@@ -1,5 +1,12 @@
 package Genome::Model::Build::ReferenceAlignment::454;
 
+
+#REVIEW fdu
+#Looks ok to me except for a little duplication samell of accumulated_alignments_directory.
+#This can be refactored with less codes, like setting a generic method
+#merge_file to return $self->accumulated_alignments_directory .'/'. $self->model->id . $file_suffix.
+
+
 use strict;
 use warnings;
 

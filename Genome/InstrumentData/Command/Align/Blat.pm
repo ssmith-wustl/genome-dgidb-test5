@@ -1,5 +1,8 @@
 package Genome::InstrumentData::Command::Align::Blat;
 
+#REVIEW fdu
+#limited use, removable, see REVIEW in base class Align.pm
+
 use strict;
 use warnings;
 
