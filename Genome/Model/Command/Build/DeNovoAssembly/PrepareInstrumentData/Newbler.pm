@@ -16,6 +16,7 @@ sub execute {
 
     my $model = $self->model;
     my $build = $self->build;
+
     my @instrument_data = $self->model->instrument_data;
 
     unless (@instrument_data) {
@@ -23,8 +24,14 @@ sub execute {
 	return;
     }
 
-    #FILTER READ SET - RUN SEQREPORT
     foreach my $data (@instrument_data) {
+
+	unless ($data->isa('Genome::InstrumentData::454')) {
+	    $self->error_message("Found none instrument data object where only instrument data should be:\n".
+		                  Data::Dumper::Dumper($data));
+	    return;
+	}
+
 	unless (-e $data->fasta_file .'.cln') {
 	    my $seq_clean =  Genome::Model::Tools::454::Seqclean->create(
 	                                                                 in_fasta_file => $data->fasta_file,
@@ -45,10 +52,9 @@ sub execute {
 	#TRIM READ SETS
 	unless (-e $data->trimmed_sff_file) {
 	    my %trimmer_params = (
-#	                          seqclean_report => $self->seqclean_report,
 	                          seqclean_report => $seq_clean_report,
 			          in_sff_file => $data->sff_file,
-			          out_sff_file => $data->trimmed_sff_file,
+			          out_sff_file => $data->trimmed_sff_file, #MOVE TO BUILD
 			          version => $model->assembler_version,
 			          version_subdirectory => $model->version_subdirectory,
                                  );
