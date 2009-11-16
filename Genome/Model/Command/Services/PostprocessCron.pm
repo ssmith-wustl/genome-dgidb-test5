@@ -1,3 +1,6 @@
+#:boberkfe this needs to go away altogether?  i can't imagine where this would get
+#:boberkfe used anymore.
+
 package Genome::Model::Command::Services::PostprocessCron;
 
 use strict;
