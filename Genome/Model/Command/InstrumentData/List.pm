@@ -1,3 +1,6 @@
+# FIXME ebelter
+#  Long: Remove or update to use inputs as appropriate.
+#
 package Genome::Model::Command::InstrumentData::List;
 
 use strict;
