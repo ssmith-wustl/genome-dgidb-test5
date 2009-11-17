@@ -1,3 +1,7 @@
+# boberkfe: seems like the bam merge logic here could be folded in w/ DedupSam
+# boberkfe: to eliminate some duplicated code
+#
+
 package Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Maq;
 
 use strict;
