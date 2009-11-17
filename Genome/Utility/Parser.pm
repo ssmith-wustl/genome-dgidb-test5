@@ -3,6 +3,10 @@
 #
 package Genome::Utility::Parser;
 
+#:eclark 11/17/2009 Code review.
+
+# Shouldn't inherit from UR::Object, unless this has a side effect that I'm not aware of.
+
 use strict;
 use warnings;
 
