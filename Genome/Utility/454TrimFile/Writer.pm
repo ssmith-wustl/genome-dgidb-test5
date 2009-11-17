@@ -6,6 +6,10 @@
 #
 package Genome::Utility::454TrimFile::Writer;
 
+#:eclark 11/17/2009 Code review.
+
+# If this is needed it should have a consistant naming convention and interface along with all the other reader/writer classes.
+
 use strict;
 use warnings;
 
