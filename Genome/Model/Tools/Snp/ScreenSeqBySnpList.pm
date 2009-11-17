@@ -238,7 +238,6 @@ sub get_screen {
 	    chomp;
 	    my $screen_file = $_;
 	    if ($screen_file && -e $screen_file) {
-		print qq(parse_screen_file $screen_file\n);
 		($screen) = &parse_screen_file($screen_file,$screen);
 	    } else {
 		print qq($screen_file form your fof of screen files was not found and so was disregaurded\n);
