@@ -1,5 +1,11 @@
 package Genome::Utility::FileSystem;
 
+#:eclark 11/17/2009 Code review.
+
+# Short Term: shellcmd() should probably be rewritten, it does not correctly use $! after the system call.  Would also be nice if
+# it could support IO wrapping of command being executed.  shellcmd() might be better off in its own module, since its not strictly
+# a filesystem function.
+
 use strict;
 use warnings;
 
