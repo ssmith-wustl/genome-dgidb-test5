@@ -6,10 +6,13 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
+
+
 class Genome::Model::Command::Build::DeNovoAssembly::PrepareInstrumentData::Newbler {
     is => 'Genome::Model::Command::Build::DeNovoAssembly::PrepareInstrumentData',
     has => [],
 };
+
 
 sub execute {
     my $self = shift;
@@ -27,7 +30,7 @@ sub execute {
     foreach my $data (@instrument_data) {
 
 	unless ($data->isa('Genome::InstrumentData::454')) {
-	    $self->error_message("Found none instrument data object where only instrument data should be:\n".
+	    $self->error_message("Found non-instrument data where only instrument data should be:\n".
 		                  Data::Dumper::Dumper($data));
 	    return;
 	}
