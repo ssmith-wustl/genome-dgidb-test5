@@ -471,20 +471,33 @@ sub convert_breakdancer_file {
         while(my $line = $breakdancer_fh->getline) {
             $label++;
             chomp $line;
-            my ($chr1,$breakpoint1,$orientation1,$chr2,$breakpoint2,$orientation2,$type,$size, $score,) = split /\t/, $line;
+            my ($chr1,$breakpoint1,$orientation1,$chr2,$breakpoint2,$orientation2,$type,$size, $score, $reads,)= split /\t/, $line;
             unless($score > $self->minimum_score_graphed) {
                 next;
             }
             # (score range - cutoff) / 100 = divisor
-            my $divisor = (100 - $self->minimum_score_graphed) / 10;
-            my $modified_score = $score - $self->minimum_score_graphed;
-            my $bin = 10 - int($modified_score / $divisor +.99); 
-            if($bin == 0) {
-                $color_label = $color ;
+            my $bin;
+            if($type ne "CTX") {
+                my $divisor = (100 - $self->minimum_score_graphed) / 10;
+                my $modified_score = $score - $self->minimum_score_graphed;
+                $bin = 10 - int($modified_score / $divisor +.99); 
+                if($bin == 0) {
+                    $color_label = $color ;
+                }
+                else {
+                    $color_label= $color . "_a$bin";
+                }
             }
             else {
-                $color_label= $color . "_a$bin";
+                $bin = 10 - int($reads / 10 +.99);
+                if($bin < 1) { 
+                    $color_label=$color;
+                }
+                else{
+                    $color_label="$color\_a$bin";
+                }
             }
+
             print  "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color_label\t$score\n";
 
             print $output_fh "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color_label\n";
