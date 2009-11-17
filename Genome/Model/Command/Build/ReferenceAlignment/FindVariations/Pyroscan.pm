@@ -1,5 +1,8 @@
 package Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Pyroscan;
 
+#REVIEW fdu
+#Fix help info and align the parameter pairs to be more readable
+
 use strict;
 use warnings;
 

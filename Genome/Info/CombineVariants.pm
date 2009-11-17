@@ -1,5 +1,10 @@
 package Genome::Info::CombineVariants;
 
+#REVIEW fdu
+#Couldn't find any other module using this under Genome tree.
+#Removable unless some other modules/scripts outside of Genome 
+#tree use this
+
 use strict;
 use warnings;
 

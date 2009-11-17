@@ -1,5 +1,10 @@
 package Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Samtools;
 
+#REVIEW fdu
+#No need to list analysis_base_path, snp_output_file ... as properties
+#and do calculation there. They should be moved to the body of execute and 
+#resolved their values there.
+
 use strict;
 use warnings;
 

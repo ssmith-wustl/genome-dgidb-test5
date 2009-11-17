@@ -1,5 +1,9 @@
 package Genome::Info::CodonToAminoAcid;
 
+#REVIEW fdu
+#1. No need to pull hash table outside. Just return the hash inside the subroutine.
+#2. Couldn't find any other module using this under Genome tree
+
 use strict;
 use warnings;
 

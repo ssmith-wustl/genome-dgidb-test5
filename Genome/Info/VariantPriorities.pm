@@ -1,5 +1,8 @@
 package Genome::Info::VariantPriorities;
 
+#REVIEW fdu
+#ok
+
 use strict;
 use warnings;
 

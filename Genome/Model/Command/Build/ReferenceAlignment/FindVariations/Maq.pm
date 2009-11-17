@@ -1,5 +1,22 @@
 package Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq;
 
+#REVIEW fdu
+#short:
+#1. Fix help_synopsis
+#2. replace lookup_iub_code with calling class method in Genome::Indo::IUB
+#3. replace generate_genotype_detail_file subroutine with G::M::T::Snp::GenotypeDetail
+#4. No need to list analysis_base_path, snp_output_file ... as properties
+#and do calculation there. They should be moved down to the body of execute and 
+#resolved their values there.
+#
+#Long:
+#1. Currently, the snp and indel ouputs generated from this are not
+#much useful to MG. The key file "filtered.indelpe.snps" is produced
+#during the step of RunReports via calling '_snv_file_filtered' method
+#od G::M::B::RefAlign::Solexa (check my review there), which makes no sense. That 
+#chunk of codes should be moved from there to here and replace current varaint calling process.
+
+
 use strict;
 use warnings;
 
