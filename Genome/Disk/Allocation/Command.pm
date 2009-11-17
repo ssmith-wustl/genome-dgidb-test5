@@ -1,3 +1,9 @@
+
+# review jlolofie:
+# notes: -lock file is hardcoded
+#        -properties instead of methods?
+
+
 package Genome::Disk::Allocation::Command;
 
 use strict;

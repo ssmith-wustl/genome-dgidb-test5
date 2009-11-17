@@ -1,3 +1,14 @@
+
+# review jlolofie:
+#  verify_not_parent_allocation() was put it to place to avoid
+#  allocating space for a directory that is withing an already existing allocation.
+#  this logic should be moved down to the allocation logic in the PSE
+#
+#  also, verify_not_parent_allocation() prevents from same subdir to be used-
+#  even on different volumes which makes copying difficult; I have a change
+#  in my checkout; need to ask around if its what people want
+#
+
 package Genome::Disk::Allocation::Command::Allocate;
 
 use strict;
