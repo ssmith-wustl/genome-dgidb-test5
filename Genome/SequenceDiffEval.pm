@@ -1,5 +1,10 @@
 package Genome::SequenceDiffEval;
 
+#:eclark 11/17/2009 Code review.
+
+# No rows in the database, no code refers to this module.
+
+
 use strict;
 use warnings;
 

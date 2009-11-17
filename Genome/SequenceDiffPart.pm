@@ -1,5 +1,10 @@
 package Genome::SequenceDiffPart;
 
+#:eclark 11/17/2009 Code review.
+
+# 44 Rows in the database
+# Used by Genome/Model/Tools/Htest/Diff/Define.pm and Define/Lst.pm
+
 use strict;
 use warnings;
 

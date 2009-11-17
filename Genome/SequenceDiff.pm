@@ -1,5 +1,10 @@
 package Genome::SequenceDiff;
 
+#:eclark 11/17/2009 Code review.
+
+# 1 row in the database
+# Only used by Genome/Model/Tools/Htest/Diff/Define/Lst.pm
+
 use strict;
 use warnings;
 
