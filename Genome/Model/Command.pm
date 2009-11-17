@@ -1,5 +1,11 @@
 package Genome::Model::Command;
 
+#:eclark 11/17/2009 Code review.
+
+# Should not inherit from Genome::Utility::FileSystem.
+# get_model_class* methods at the bottom should be in Genome::Model, not here.
+# create_directory and bsub_rusage probably don't even belong in this class
+
 use strict;
 use warnings;
 
