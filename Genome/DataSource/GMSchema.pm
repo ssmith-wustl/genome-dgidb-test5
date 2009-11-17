@@ -1,3 +1,5 @@
+#eclark: Ignore table list should be reviewed.  I've seen classes for at few of them.
+
 use strict;
 use warnings;
 
