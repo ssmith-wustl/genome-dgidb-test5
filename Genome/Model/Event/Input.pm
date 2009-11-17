@@ -1,5 +1,9 @@
 package Genome::Model::Event::Input;
 
+#:eclark 11/17/2009 Code review.
+
+# This input tracking class should become part of either SoftwareResult or the Workflow system.
+
 use strict;
 use warnings;
 

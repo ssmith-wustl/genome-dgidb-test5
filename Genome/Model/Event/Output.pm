@@ -1,5 +1,9 @@
 package Genome::Model::Event::Output;
 
+#:eclark 11/17/2009 Code review.
+
+# This output tracking class should become part of either SoftwareResult or the Workflow system.
+
 use strict;
 use warnings;
 
