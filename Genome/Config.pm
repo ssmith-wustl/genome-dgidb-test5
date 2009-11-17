@@ -1,5 +1,5 @@
 #boberkfe: code should actually use some paths here rather than hardcoding stuff everywhere!
-
+#eclark: Probably shouldn't contain complicated methods here either.  Just configuration (or configuration reading) logic.
 
 package Genome::Config;
 
