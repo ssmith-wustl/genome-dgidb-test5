@@ -1,3 +1,6 @@
+#:boberkfe this needs to be abstracted away from the LIMS schema
+
+
 package Genome::InstrumentData;
 
 use strict;
