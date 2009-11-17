@@ -104,7 +104,7 @@ sub execute
     }
     else
     {
-        $typeflag = '-archea';
+        $typeflag = '-archaea';
         $percent_id  = 50;
         $coverage = 0.7;
     }
