@@ -1,3 +1,12 @@
+
+# review jlolofie
+#
+# it is very inefficent to use this in large data sets, but
+# we think the slowness is in the underlying UR code that is
+# making/destroying objects while while the window is scrolling 
+# around.
+
+
 package Genome::Utility::Window;
 
 use strict;
