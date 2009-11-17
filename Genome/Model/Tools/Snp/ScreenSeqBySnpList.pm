@@ -90,7 +90,11 @@ sub execute {
 	while (<CSV>) {
 	    chomp;
 	    my $line = $_;
-	    my ($Row,$Amplicon_Name,$PCR_Status,$Conf,$Prod_Size,$L_Primer_Coord,$R_Primer_Coord,$Amp_Size,$L_Amp_Coord,$R_Amp_Coord,$Enzyme,$Primer_1,$Primer_1_Seq,$Tail_1_Name,$Primer_2,$Primer_2_seq,$Tail_2_Name,$Amplicon_Sequence,$Project,$ROI_Name,$ROI_List,$Target_Name,$Target_Start,$Target_Stop,$Target_Region_Type,$Hugo_Name,$EntrezGene_Id,$Chrom,$Amplicon_Ref_ID,$SNP_in_primer,$Manually_Designed) = split(/\,/,$line);
+
+	    #my ($Row,$Amplicon_Name,$PCR_Status,$Conf,$Prod_Size,$L_Primer_Coord,$R_Primer_Coord,$Amp_Size,$L_Amp_Coord,$R_Amp_Coord,$Enzyme,$Primer_1,$Primer_1_Seq,$Tail_1_Name,$Primer_2,$Primer_2_seq,$Tail_2_Name,$Amplicon_Sequence,$Project,$ROI_Name,$ROI_List,$Target_Name,$Target_Start,$Target_Stop,$Target_Region_Type,$Hugo_Name,$EntrezGene_Id,$Chrom,$Amplicon_Ref_ID,$SNP_in_primer,$Manually_Designed)
+
+	    my ($Row,$Amplicon_Name,$PCR_Status,$Conf,$Prod_Size,$L_Primer_Coord,$R_Primer_Coord,$Amp_Size,$L_Amp_Coord,$R_Amp_Coord,$Enzyme,$Tails,$Primer_1_Seq,$Primer_2_seq,$Amplicon_Sequence,$Project,$ROI_List,$ROI_Name,$Target_Name,$Target_Start,$Target_Stop,$Target_Region_Type,$Hugo_Name,$Entrez_ID,$Chrom,$Amplicon_Ref_ID,$Manually_Designed,$Selected_by_SAFT,$SAFT_Message,$Tilepath_Score,$SNP_Screening) = split(/\,/,$line);
+	    
 	    unless($line =~ /Coord/) {
 		$Chrom =~ s/([\S]+)/\U$1/;
 		
@@ -101,6 +105,9 @@ sub execute {
                     die "mp_grande file format is incorrect";
                 }
 
+
+		unless ($Primer_1_Seq =~ /TGTAAAACGACGGCCAGT/ && $Primer_2_seq =~ /CAGGAAACAGCTATGACC/) { print qq(\nNo tail sequence was detected in your primer sequence. If tails are present, your results may be in correct\n); }
+
 		$Primer_1_Seq =~ s/TGTAAAACGACGGCCAGT//;
 		$Primer_2_seq =~ s/CAGGAAACAGCTATGACC//;
 		my $p1l = length($Primer_1_Seq);
@@ -109,7 +116,7 @@ sub execute {
 		my $lpe = ($L_Primer_Coord + $p1l) - 1;
 		my $rps = ($R_Primer_Coord - $p2l) + 1;
 		
-#	print qq($Chrom  ($L_Primer_Coord + $p1l = $lpe) $L_Amp_Coord $R_Amp_Coord  ($rps = | $p2l - $R_Primer_Coord |)\n);
+	#print qq($Chrom  ($L_Primer_Coord + $p1l = $lpe) $L_Amp_Coord $R_Amp_Coord  ($rps = | $p2l - $R_Primer_Coord |)\n);
 
 		$all_lines->{$line}=1;
 		for my $pos ($L_Primer_Coord..$lpe) {
@@ -211,7 +218,7 @@ sub execute {
 	}
 	print OUT qq(\n);
 	close (OUT);
-	print qq(\nsee you're screened fasta in the file $fasta.snp_screened\n\n);
+	print qq(\nsee your screened fasta in the file $fasta.snp_screened\n\n);
     }
 }
 
@@ -231,6 +238,7 @@ sub get_screen {
 	    chomp;
 	    my $screen_file = $_;
 	    if ($screen_file && -e $screen_file) {
+		print qq(parse_screen_file $screen_file\n);
 		($screen) = &parse_screen_file($screen_file,$screen);
 	    } else {
 		print qq($screen_file form your fof of screen files was not found and so was disregaurded\n);
@@ -241,17 +249,22 @@ sub get_screen {
 }
 
 sub parse_screen_file {
-
+    my $n = 0;
     my ($screen_file,$screen) = @_;
     open(SCREEN,$screen_file) || die ("couldn't open the screen file\n\n");
     while (<SCREEN>) {
 	chomp;
 	my $line = $_;
+	$n++;
 	my ($chrom,$pos) = (split(/[\s]+/,$line))[0,1];
-	
+
+	#if ($n == 1000) {print qq($chrom,$pos\n);$n=0;}
+
 	my $screen_pos = $screen->{$chrom}->{$pos};
+
 	if ($screen_pos) {
 	    $screen->{$chrom}->{$pos}="SNP";
+
 	}
 	
     } close (SCREEN);
@@ -259,3 +272,10 @@ sub parse_screen_file {
 }
 
 1;
+
+#($Row,$Amplicon_Name,$PCR_Status,$Conf,$Prod_Size,$L_Primer_Coord,$R_Primer_Coord,$Amp_Size,$L_Amp_Coord,$R_Amp_Coord,$Enzyme,$Primer_1,$Primer_1_Seq,$Tail_1_Name,$Primer_2,$Primer_2_seq,$Tail_2_Name,$Amplicon_Sequence,$Project,$ROI_Name,$ROI_List,$Target_Name,$Target_Start,$Target_Stop,$Target_Region_Type,$Hugo_Name,$EntrezGene_Id,$Chrom,$Amplicon_Ref_ID,$SNP_in_primer,$Manually_Designed)
+
+#($Row,$Amplicon_Name,$PCR_Status,$Conf,$Prod_Size,$L_Primer_Coord,$R_Primer_Coord,$Amp_Size,$L_Amp_Coord,$R_Amp_Coord,$Enzyme,$Tails,$Primer_1_Seq,$Primer_2_seq,$Amplicon_Sequence,$Project,$ROI_List,$ROI_Name,$Target_Name,$Target_Start,$Target_Stop,$Target_Region_Type,$Hugo_Name,$Entrez_ID,$Chrom,$Amplicon_Ref_ID,$Manually_Designed,$Selected_by_SAFT,$SAFT_Message,$Tilepath_Score,$SNP_Screening)
+
+
+
