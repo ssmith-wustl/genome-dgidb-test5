@@ -1,4 +1,11 @@
 
+# review jlolofie
+#
+# 1. it was claimed that this tool doesnt correctly handle the case when
+#    chromsomes are out of order; as a result, a new tool was created:
+#    G:M:T:Snp:IntersectChromPos; Ideally we'd only have one tool that
+#    does this stuff; Both are used elsewhere in the codebase
+
 package Genome::Model::Tools::Snp::Intersect;
 
 use IO::File;

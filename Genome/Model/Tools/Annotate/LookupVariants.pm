@@ -1,4 +1,9 @@
 
+# review jlolofie
+# 1. last matching line should be the new min everytime (for each chromosome file)
+# 2. this should be benchmarked against another intersect tool to figure out which is faster-
+#    depends on the density of the data
+
 package Genome::Model::Tools::Annotate::LookupVariants;
 
 use strict;

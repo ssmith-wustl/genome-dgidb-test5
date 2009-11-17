@@ -1,3 +1,8 @@
+
+# review jlolofie
+# I dont think this is used anymore- we should remove it
+
+
 package Genome::Model::Tools::Annotate::NovelVariations;
 
 use strict;
