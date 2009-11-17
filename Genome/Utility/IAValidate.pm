@@ -1,5 +1,9 @@
 package Genome::Utility::IAValidate;
 
+#:eclark 11/17/2009 Code review.
+
+# What is an IA and how do these functions validate it.  The code should be more self-documenting, or have some documentation attached
+
 use strict;
 use warnings;
 use Text::CSV_XS;

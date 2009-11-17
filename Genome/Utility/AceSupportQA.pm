@@ -1,5 +1,12 @@
 package Genome::Utility::AceSupportQA;
 
+#:eclark 11/17/2009 Code review.
+
+# Shouldn't inherit from UR::Object.  Also shouldn't implement help_brief or help_detail.  This isn't a command object.
+# Overrides create() for no reason
+# Hard coded path $RefDir
+# sync_phd_time_stamps() does filesystem calls on a parameter without validating its format or checking to see if its defined
+
 use strict;
 use warnings;
 use DBI;

@@ -1,5 +1,10 @@
 package Genome::Utility::IO::SeparatedValueReader;
 
+#:eclark 11/17/2009 Code review.
+
+# Some of these underscore methods could be better implemented as calculated properties.
+# use statements should be cleaned up, Genome and Data::Dumper are not used in here.
+
 use strict;
 use warnings;
 

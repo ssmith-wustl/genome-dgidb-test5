@@ -1,5 +1,10 @@
 package Genome::Utility::IO::Writer;
 
+#:eclark 11/17/2009 Code review.
+
+# Shouldn't inherit from UR::Object.  Implementing new() is inconsistant with other UR based classes.
+# This class should probably be the base for all file writers.
+
 use strict;
 use warnings;
 
