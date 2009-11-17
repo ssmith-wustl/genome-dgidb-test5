@@ -222,7 +222,7 @@ sub calculate_required_disk_allocation_kb {
     }
 
     #take the total size plus a 10% safety margin
-    # 3x total size; individual/deduped per-lib bams, full build deduped bam
+    # 2x total size; full build merged bam, full build deduped bam
     $total_size = sprintf("%.0f", ($total_size/1024)*1.1); 
 
     $total_size = ($total_size * 2);
