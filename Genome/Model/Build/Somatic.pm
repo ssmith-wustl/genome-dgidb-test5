@@ -1,3 +1,7 @@
+
+# review gsanders jlolofie
+# note: maybe calculate usage estmate instead of hardcoded value
+
 package Genome::Model::Build::Somatic;
 
 use strict;
