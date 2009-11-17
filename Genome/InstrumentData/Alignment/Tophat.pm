@@ -1,5 +1,9 @@
 package Genome::InstrumentData::Alignment::Tophat;
 
+#REVIEW fdu 11/17/2009
+#Implement the method "get_alignment_statistics". Currently it returns
+#nothing and contains only nonsense codes
+
 use strict;
 use warnings;
 

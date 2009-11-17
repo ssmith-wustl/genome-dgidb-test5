@@ -1,5 +1,9 @@
 package Genome::InstrumentData::Alignment::Novocraft;
 
+#REVIEW fdu 11/17/2009
+#This subclass of G::I::A looks ok. The genome model based on novocraft aligner 
+#is probably being rarely used. 
+
 use strict;
 use warnings;
 

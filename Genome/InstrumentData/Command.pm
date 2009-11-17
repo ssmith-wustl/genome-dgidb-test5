@@ -1,5 +1,8 @@
 package Genome::InstrumentData::Command;
 
+#REVIEW fdu 11/17/2009
+#OK
+
 use strict;
 use warnings;
 

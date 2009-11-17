@@ -1,5 +1,9 @@
 package Genome::InstrumentData::Imported;
 
+#REVIEW fdu 11/17/2009
+#More methods could be implemented for calculating metrics and
+#resolving file path with Imported-based models soon in use
+
 use strict;
 use warnings;
 

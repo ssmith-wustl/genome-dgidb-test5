@@ -1,5 +1,8 @@
 package Genome::InstrumentData::Command::Dump;
 
+#REVIEW fdu 11/17/2009
+#Dumpping sequence files from other platforms like 454 and Sanger reads should be implemented too.
+
 use strict;
 use warnings;
 

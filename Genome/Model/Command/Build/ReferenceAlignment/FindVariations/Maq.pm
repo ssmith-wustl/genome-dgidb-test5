@@ -5,7 +5,8 @@ package Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq;
 #1. Fix help_synopsis
 #2. replace lookup_iub_code with calling class method in Genome::Indo::IUB
 #3. replace generate_genotype_detail_file subroutine with G::M::T::Snp::GenotypeDetail
-#4. No need to list analysis_base_path, snp_output_file ... as properties
+#4. Change to get ref_seq_file via reference_build->full_consensus_path('bfa')
+#5. No need to list analysis_base_path, snp_output_file ... as properties
 #and do calculation there. They should be moved down to the body of execute and 
 #resolved their values there.
 #

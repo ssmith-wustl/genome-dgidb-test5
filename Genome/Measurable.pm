@@ -1,3 +1,5 @@
+#REVIEW fdu 11/17/2009
+#Need documentation
 
 package Genome::Measurable; 
 
