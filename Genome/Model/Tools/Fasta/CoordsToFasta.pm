@@ -67,9 +67,15 @@ class Genome::Model::Tools::Fasta::CoordsToFasta {
 	     },
 	     ref_dir           => {
 		 type         => 'string',
-		 doc          => "use this option if you want to provide your own genomic reference to excise the reference sequence fasta file from. Masking will not work with this option however.",
+		 doc          => "use this option if you want to provide your own genomic reference to excise the reference sequence fasta file from. Masking will not work with this option.",
 		 is_optional  => 1,
-	     },   
+	     },
+             HS37  => {
+		 type  =>  'Boolean',
+		 doc   =>  "Default human sequence falls on Build 36. Use this option if you want sequence from Human Build 37.",
+		 is_optional  => 1,
+	     },
+
 	
     	     ],
 
@@ -168,15 +174,30 @@ sub execute {
     my $self = shift;
     my $organism = $self->organism;
 
+    my $build;
+    if ($organism eq "human") {
+	$build = 36;
+	if ($self->HS37) {
+	    $build = 37;
+	}
+    } elsif ($organism eq "mouse") {
+	$build = 37;
+    } else {
+	$build = "UNK";
+    }
+
     my $genome;
     if ($self->masked) {
 	if ($organism eq "human") {
 	    $genome = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build36');
-	} else {
+	    if ($self->HS37) {
+		$genome = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build37');
+	    }
+	} elsif ($organism eq "mouse") {
 	    $genome = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-mouse-buildC57BL6J');
 	}
     }
-
+    
     my $ori = "+";
     if ($self->reverse_complement) {
 	$ori = "-";
@@ -204,38 +225,38 @@ sub execute {
 	    unless($name) {$name = "$chr\:$start\:$stop";}
 	    $chr =~ s/chr([\S]+)/\U$1/;
 
-	    if ($chr =~ /M/ || $chr =~ /m/) { $chr = "MT"; }
+	    if ($chr =~ /M/ || $chr =~ /m/) { $chr = "M"; }
 
 	    if ($self->format_header) {
+		if ($organism eq "human") {
+		    if ($out) {
+			$name = "$out NCBI Human Build $build, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		    } else {
+			$name = "$chr\:$start\:$stop NCBI Human Build $build, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		    }
+		} else {
+		    if ($out) {
+			$name = "$out NCBI Mouse Build $build, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		    } else {
+			$name = "$chr\:$start\:$stop NCBI Mouse Build $build, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		    }
+		}
 		if ($self->ref_dir) {
 		    if ($out) {
 			$name = "$out $organism, Chr:$chr, Coords $start-$stop, Ori ($ori)";
 		    } else {
 			$name = "$chr\:$start\:$stop $organism, Chr:$chr, Coords $start-$stop, Ori ($ori)";
 		    }
-		} elsif ($organism eq "human") {
-		    if ($out) {
-			$name = "$out NCBI Human Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";
-		    } else {
-			$name = "$chr\:$start\:$stop NCBI Human Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";
-		    }
-		} else {
-		    if ($out) {
-			$name = "$out NCBI Human Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";
-		    } else {
-			$name = "$chr\:$start\:$stop NCBI Mouse Build 37, Chr:$chr, Coords $start-$stop, Ori ($ori)";
-		    }
 		}
 	    }
-	    
 	    my $seq = &get_ref_base($chr,$start,$stop,$self);
 	    
 	    unless ($seq) {$self->error_message("the sequence was not found from the info $line. This line will be skipped"); next;}
 
 	    $chr =~ s/chr//;
 
-	    if ($self->masked) {
-		unless ($chr eq "MT" || $self->ref_dir) {
+	    if ($self->masked && $genome) {
+		unless ($chr eq "M") {
 		    my $chromosome = $genome->get_chromosome($chr);
 		    my $masked_seq = $chromosome->mask_snps_and_repeats(begin_position       => $start, 
 									end_position         => $stop,
@@ -262,15 +283,16 @@ sub execute {
 	unless ($start =~ /^[\d]+$/) {$self->error_message("please provide the start coordinate"); return 0; }
 	unless ($stop =~ /^[\d]+$/) {$self->error_message("please provide the stop coordinate"); return 0; }
 
-	if ($chr =~ /M/ || $chr =~ /m/) { $chr = "MT"; }
+	if ($chr =~ /M/ || $chr =~ /m/) { $chr = "M"; }
 
 	my $seq = &get_ref_base($chr,$start,$stop,$self);
 
 	$chr =~ s/chr//;
 
-
-	if ($self->masked) {
-	    unless ($chr eq "MT" || $self->ref_dir) {
+	
+	if ($self->masked && $genome) {
+#	    unless ($chr eq "M" || $self->ref_dir) {
+	    unless ($chr eq "M") {
 		
 #if($chr eq M || MT there isn't any masked mit chr here so step around
 		
@@ -282,28 +304,29 @@ sub execute {
 	    } 
 	}
 	if ($self->reverse_complement) { my $rev_seq = &reverse_complement_allele($seq); $seq = $rev_seq;}
-
+	
 	my $name = $self->name;
 	unless ($name) { $name = "chr$chr:$start:$stop"; }
 
 	if ($self->format_header) {
+	    if ($organism eq "human") {
+		if ($out) {
+		    $name = "$out NCBI Human Build $build, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		} else {
+		    $name = "$chr\:$start\:$stop NCBI Human Build $build, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		}
+	    } else {
+		if ($out) {
+		    $name = "$out NCBI Mouse Build $build, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		} else {
+		    $name = "$chr\:$start\:$stop NCBI Mouse Build $build, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		}
+	    }
 	    if ($self->ref_dir) {
 		if ($out) {
 		    $name = "$out $organism, Chr:$chr, Coords $start-$stop, Ori ($ori)";
 		} else {
 		    $name = "$chr\:$start\:$stop $organism, Chr:$chr, Coords $start-$stop, Ori ($ori)";
-		}
-	    } elsif ($organism eq "human") {
-		if ($out) {
-		    $name = "$out NCBI Human Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";
-		} else {
-		    $name = "$chr\:$start\:$stop NCBI Human Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";
-		}
-	    } else {
-		if ($out) {
-		    $name = "$out NCBI Human Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";
-		} else {
-		    $name = "$chr\:$start\:$stop NCBI Mouse Build 37, Chr:$chr, Coords $start-$stop, Ori ($ori)";
 		}
 	    }
 	}
@@ -318,9 +341,6 @@ sub execute {
 }
 
 ###########################
-    
-
-
 
 sub reverse_complement_allele {
     my ($allele_in) = @_;
@@ -330,41 +350,44 @@ sub reverse_complement_allele {
     return $rev1;
 }
 
-
 sub get_ref_base {
     my ($chr_name,$chr_start,$chr_stop,$self) = @_;
 
     my $organism = $self->organism;
 
-    use Bio::DB::Fasta;
-    my $RefDir = $self->ref_dir;
-    unless ($RefDir) {
-	if ($organism eq "human"){
-	    $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
-	} else {
-	    $RefDir = "/gscmnt/sata147/info/medseq/rmeyer/resources/MouseB37/";
-	}
-    }
-    my $refdb = Bio::DB::Fasta->new($RefDir);
-
     my $chr = $chr_name;
 
-    unless ($chr_name =~ /chr/) {$chr = "chr$chr_name";}
+    $chr =~ s/([\S]+)/\U$1/;
+    $chr =~ s/CHR/chr/;
+    unless ($chr =~ /chr/) {$chr = "chr$chr";}
 
-    $chr =~ s/chr([\S]+)/\U$1/;
+    use Bio::DB::Fasta;
+    my $RefDir = $self->ref_dir;
 
-    my $seq = $refdb->seq($chr, $chr_start => $chr_stop);
-
+    my $seq;
+    if ($RefDir) {
+	my $refdb = Bio::DB::Fasta->new($RefDir);
+	$seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
+    } else {
+	if ($self->HS37) {
+	    $RefDir = "/gscmnt/200/medseq/analysis/software/resources/HS37";
+	} elsif ($organism eq "human"){
+	    $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+	} else {
+	    $RefDir = "/gscmnt/200/medseq/analysis/software/resources/MouseB37/";
+	}
+	my $refdb = Bio::DB::Fasta->new($RefDir);
+	$seq = $refdb->seq($chr, $chr_start => $chr_stop);
+    }
     unless ($seq) {return(0);}
-
+    
     if ($self->unmasked) {
 	$seq =~ s/([\S]+)/\U$1/;
     }
     
     if ($seq =~ /N/) {warn "your sequence has N in it\n";}
-
-    return $seq;
     
+    return $seq;
 }
 
 1;
