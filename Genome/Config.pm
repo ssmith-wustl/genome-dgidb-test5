@@ -1,3 +1,6 @@
+#boberkfe: code should actually use some paths here rather than hardcoding stuff everywhere!
+
+
 package Genome::Config;
 
 use strict;
