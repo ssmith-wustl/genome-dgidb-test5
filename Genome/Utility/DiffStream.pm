@@ -1,5 +1,9 @@
 package Genome::Utility::DiffStream;
 
+#:eclark 11/17/2009 Code review.
+
+# One of many reader/writer classes in Genome/Utility.  Need a consistant naming convention and interface for all of them.
+
 use strict;
 use warnings;
 use Data::Dumper;
