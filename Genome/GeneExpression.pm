@@ -1,3 +1,5 @@
+# Review gsanders: This can be removed and has not been used for some time
+
 package Genome::GeneExpression;
 
 use strict;
