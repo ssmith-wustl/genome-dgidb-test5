@@ -18,6 +18,7 @@ class Genome::AmpliconAssembly::Report {
     ],
 };
 
+#:jpeck I am not in love with Report/Generator design.  It seems like there is some unnecessary indirection. 
 #< Generator >#
 sub create {
     my $class = shift;

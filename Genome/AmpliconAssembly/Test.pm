@@ -158,6 +158,7 @@ sub test02_amplicons_gsc_sanger : Tests() {
     return 1;
 }
 
+#:jpeck Maybe move the data in the _create_mock_gsc_sequence_reads into a file?
 sub _create_mock_gsc_sequence_reads {
     my $self = shift;
 

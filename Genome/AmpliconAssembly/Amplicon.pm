@@ -32,6 +32,8 @@ class Genome::AmpliconAssembly::Amplicon {
     ],
 };
 
+#:jpeck The code looks clean.  
+
 sub create {
     my $class = shift;
 
