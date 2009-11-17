@@ -1,3 +1,15 @@
+
+# review jlolofie:
+# 1. calculate_alignment_estimated_kb_usage() could estimate usage instead of harcoded value
+# 2. resolve_full_path - remove return that comments say is not needed?
+# 3. add comments to resolve_full_path- why it is trying to find a collection of paths and die if multiple- do the other
+#    file types still get used?
+# 4. dump_to_filesystem() ?
+# 5. resolve_fastq_filenames- funny Temp/ hack not needed anymore
+# 6. resolve_adapter_file - make properties out of paths
+
+
+
 package Genome::InstrumentData::Solexa;
 
 use strict;
