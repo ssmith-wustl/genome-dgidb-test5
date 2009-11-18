@@ -220,6 +220,7 @@ sub get_build_node {
 
     $buildnode->addChild( $doc->createAttribute("model-name",$model->name) );
     $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
+    $buildnode->addChild( $doc->createAttribute("common-name",$model->subject->source->common_name) );
     $buildnode->addChild( $doc->createAttribute("build-id",$self->build_id) );
     $buildnode->addChild( $doc->createAttribute("status",$self->build->build_status) );
     $buildnode->addChild( $doc->createAttribute("kilobytes-requested",$self->build->disk_allocation->kilobytes_requested) );

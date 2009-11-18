@@ -97,12 +97,15 @@ sub get_model_node {
 
     my $model = $self->model;
 
+	$DB::single = 1;
+
     $modelnode->addChild( $doc->createAttribute("model-id",$model->id) );
     $modelnode->addChild( $doc->createAttribute("model-name",$model->name) );
     $modelnode->addChild( $doc->createAttribute("user-name",$model->user_name) );
     $modelnode->addChild( $doc->createAttribute("creation-date",$model->creation_date) );
     $modelnode->addChild( $doc->createAttribute("processing-profile-name", $model->processing_profile->name) );
-    $modelnode->addChild( $doc->createAttribute("sample-name",$model->subject_name) );
+	$modelnode->addChild( $doc->createAttribute("sample-name",$model->subject_name) );
+	$modelnode->addChild( $doc->createAttribute("common-name",$model->subject->source->common_name) );
     $modelnode->addChild( $doc->createAttribute("subject-id",$model->subject_id) );
     $modelnode->addChild( $doc->createAttribute("subject-name",$model->subject_name) );
     $modelnode->addChild( $doc->createAttribute("subject-type",$model->subject_type) );
