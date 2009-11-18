@@ -8,9 +8,9 @@ use XML::LibXML;
 
 class Genome::Model::Command::Status {
     is => ['Command'],
-    has => [ 
-        genome_model_id => { 
-            is => 'String', 
+    has => [
+        genome_model_id => {
+            is => 'String',
             doc => 'Required genome model id upon which the report is run.',
         },
         model   => {
@@ -22,13 +22,13 @@ class Genome::Model::Command::Status {
     has_optional => [
         section => {
             is => 'String',
-            doc => "NOT IMPLEMENTED YET.  The sub-section of the document to return.  Options are 'all', 'events', etc.", 
-        }, 
+            doc => "NOT IMPLEMENTED YET.  The sub-section of the document to return.  Options are 'all', 'events', etc.",
+        },
         display_output => {
             is => 'Integer',
             default_value => 1,
-            doc => "A flag which lets the user supress the display of XML output to the screen.", 
-        }, 
+            doc => "A flag which lets the user supress the display of XML output to the screen.",
+        },
         _doc => {
             is => 'XML::LibXML::Document',
             doc => "The XML tool used to create all nodes of the output XML tree.",
@@ -50,33 +50,33 @@ sub sub_command_sort_position { 8 }
 sub execute  {
     my $self = shift;
     my $return_value = 1;
-   
-    #create the XML doc and add it to the object 
+
+    #create the XML doc and add it to the object
     my $doc = XML::LibXML->createDocument();
     $self->_doc($doc);
 
     #create the xml nodes and fill them up with data
     #root node
     my $model_status_node = $doc->createElement("model-status");
-    my $time = UR::Time->now(); 
+    my $time = UR::Time->now();
     $model_status_node->addChild( $doc->createAttribute("generated-at",$time) );
-  
-    # model node 
+
+    # model node
     my $modelnode = $self->get_model_node;
     $model_status_node->addChild($modelnode);
 
     #builds
     $modelnode->addChild( $self->get_builds_node() );
-    
-    #processing profile 
+
+    #processing profile
     #$modelnode->addChild ( $self->get_processing_profile_node() );
-    
+
     #TODO:  add method to build for logs, reports
     #$modelnode->addChild ( $self->tnode("logs","") );
     #$modelnode->addChild ( $self->get_reports_node );
 
     #set the build status node to be the root
-    $doc->setDocumentElement($model_status_node); 
+    $doc->setDocumentElement($model_status_node);
 
     #generate the XML string
     $self->_xml($doc->toString(1) );
@@ -84,7 +84,7 @@ sub execute  {
     #print to the screen if desired
     if ( $self->display_output ) {
         print $self->_xml;
-    } 
+    }
 
     return $return_value;
 }
@@ -92,23 +92,23 @@ sub execute  {
 sub get_model_node {
     my $self = shift;
     my $doc = $self->_doc;
-    
+
     my $modelnode = $doc->createElement("model");
 
     my $model = $self->model;
 
     $modelnode->addChild( $doc->createAttribute("model-id",$model->id) );
     $modelnode->addChild( $doc->createAttribute("model-name",$model->name) );
-    $modelnode->addChild( $doc->createAttribute("user_name",$model->user_name) );
-    $modelnode->addChild( $doc->createAttribute("creation_date",$model->creation_date) );
-    $modelnode->addChild( $doc->createAttribute("processing_profile_name", $model->processing_profile->name) );
-    $modelnode->addChild( $doc->createAttribute("sample_name",$model->subject_name) );
-    $modelnode->addChild( $doc->createAttribute("subject_id",$model->subject_id) );
-    $modelnode->addChild( $doc->createAttribute("subject_name",$model->subject_name) );
-    $modelnode->addChild( $doc->createAttribute("subject_type",$model->subject_type) );
-    $modelnode->addChild( $doc->createAttribute("subject_class_name",$model->subject_class_name) );    
-    $modelnode->addChild( $doc->createAttribute("data_directory",$model->data_directory) );
-    return $modelnode; 
+    $modelnode->addChild( $doc->createAttribute("user-name",$model->user_name) );
+    $modelnode->addChild( $doc->createAttribute("creation-date",$model->creation_date) );
+    $modelnode->addChild( $doc->createAttribute("processing-profile-name", $model->processing_profile->name) );
+    $modelnode->addChild( $doc->createAttribute("sample-name",$model->subject_name) );
+    $modelnode->addChild( $doc->createAttribute("subject-id",$model->subject_id) );
+    $modelnode->addChild( $doc->createAttribute("subject-name",$model->subject_name) );
+    $modelnode->addChild( $doc->createAttribute("subject-type",$model->subject_type) );
+    $modelnode->addChild( $doc->createAttribute("subject-class-name",$model->subject_class_name) );
+    $modelnode->addChild( $doc->createAttribute("data-directory",$model->data_directory) );
+    return $modelnode;
 }
 
 sub get_reports_node {
@@ -120,7 +120,7 @@ sub get_reports_node {
     for my $each_report (@report_list) {
         my $report_node = $self->anode("report","name", $each_report->name );
         $self->add_attribute($report_node, "subdirectory", $each_report->name_to_subdirectory($each_report->name) );
-        $reports_node->addChild($report_node); 
+        $reports_node->addChild($report_node);
     }
 
     return $reports_node;
@@ -143,16 +143,17 @@ sub get_builds_node {
 }
 
 sub get_build_node {
-    
-    my $self = shift; 
+
+    my $self = shift;
     my $build = shift;
     my $doc = $self->_doc;
 
     my $build_node = $self->anode("build","id",$build->id);
-    $build_node->addChild( $self->tnode("date_scheduled",$build->date_scheduled));
-    $build_node->addChild( $self->tnode("date_completed",$build->date_completed));
-    $build_node->addChild( $self->tnode("build_status",$build->build_status));    
-    $build_node->addChild( $self->tnode("elapsed_time", $self->calculate_elapsed_time($build->date_scheduled,$build->date_completed) ));
+    $build_node->addChild( $self->tnode("date-scheduled",$build->date_scheduled));
+    $build_node->addChild( $self->tnode("date-completed",$build->date_completed));
+    $build_node->addChild( $self->tnode("build-status",$build->build_status));
+    $build_node->addChild( $self->tnode("kb-requested",$build->disk_allocation->kilobytes_requested));
+    $build_node->addChild( $self->tnode("elapsed-time", $self->calculate_elapsed_time($build->date_scheduled,$build->date_completed) ));
     return $build_node;
 
 }
@@ -174,15 +175,15 @@ sub get_events_node {
 }
 
 sub get_event_node {
-    
-    my $self = shift; 
+
+    my $self = shift;
     my $event = shift;
     my $doc = $self->_doc;
 
     my $lsf_job_status = $self->get_lsf_job_status($event->lsf_job_id);
 
     my $event_node = $self->anode("event","id",$event->id);
-    $event_node->addChild( $doc->createAttribute("command_class",$event->class)); 
+    $event_node->addChild( $doc->createAttribute("command_class",$event->class));
         $event_node->addChild( $self->tnode("event_status",$event->event_status));
         $event_node->addChild( $self->tnode("lsf_job_id",$event->lsf_job_id));
         $event_node->addChild( $self->tnode("lsf_job_status",$lsf_job_status));
@@ -197,47 +198,47 @@ sub get_event_node {
 }
 
 sub create_node_with_attribute {
-    
+
     my $self = shift;
     my $node_name = shift;
     my $attr_name = shift;
     my $attr_value = shift;
 
     my $doc = $self->_doc;
-    
+
     my $node = $doc->createElement($node_name);
     $node->addChild($doc->createAttribute($attr_name,$attr_value));
     return $node;
-} 
+}
 
-#helper methods.  just pass through to the more descriptive names 
+#helper methods.  just pass through to the more descriptive names
 #anode = attribute node
 sub anode {
     my $self = shift;
     return $self->create_node_with_attribute(@_);
 }
- 
+
 #tnode = text node
 sub tnode {
-    my $self = shift; 
+    my $self = shift;
     return $self->create_node_with_text(@_);
 }
- 
+
 sub create_node_with_text {
- 
+
     my $self = shift;
     my $node_name = shift;
     my $node_value = shift;
 
     my $doc = $self->_doc;
-    
+
     my $node = $doc->createElement($node_name);
     if ( defined($node_value) ) {
         $node->addChild($doc->createTextNode($node_value));
-    } 
+    }
     return $node;
 
-} 
+}
 
 sub add_attribute {
     my $self = shift;

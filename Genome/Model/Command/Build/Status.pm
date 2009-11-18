@@ -216,10 +216,13 @@ sub get_build_node {
 
     my $model = $self->build->model;
 
+	$DB::single = 1;
+
     $buildnode->addChild( $doc->createAttribute("model-name",$model->name) );
     $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
     $buildnode->addChild( $doc->createAttribute("build-id",$self->build_id) );
     $buildnode->addChild( $doc->createAttribute("status",$self->build->build_status) );
+    $buildnode->addChild( $doc->createAttribute("kilobytes-requested",$self->build->disk_allocation->kilobytes_requested) );
     $buildnode->addChild( $doc->createAttribute("data-directory",$self->build->data_directory) );
     $buildnode->addChild( $doc->createAttribute("lsf-job-id", $self->build->build_event->lsf_job_id));
 
@@ -357,7 +360,7 @@ sub get_instrument_data_node {
     my $run_type     = $test ? $object->run_type : 'N/A';
     my $gerald_dir   = $test ? $object->gerald_directory : 'N/A';
     my $seq_id       = $test ? $object->seq_id : 'N/A';
-    
+
     my $id = $self->anode("instrument_data","id", $object->id);
     $id->addChild( $self->tnode("project_name", $project_name) );
     $id->addChild( $self->tnode("sample_name", $object->sample_name) );
@@ -491,7 +494,7 @@ sub get_event_node {
 		# find the events with matching instrument_data_ids
 		my @adirs;
 		for my $ida (@idas) {
-		  $DB::single = 1;
+
 		  my $alignment = $ida->alignment;
           if (defined($alignment)) {
 		    if ($alignment->instrument_data_id == $event->instrument_data_id) {
