@@ -1,3 +1,10 @@
+# review gsanders jlolofie
+# Talked to charris... it seems there are ~100 rows in this table. This is old validation data. What needs to happen is that this data
+# should be imported into the new Genome::Model::Variant, Genome::Model::BuildVariant, Genome::Model::VariantValidation schema.
+# This will take a little manual work as we do not have the full annotation for these variants handy so we need to re-annotate these lines 
+# and format them to be uploaded into the new table set. This will take some manual munging but nothing too bad
+# Once this is done we can drop this table and this class.
+
 package Genome::VariantOccurrence;
 
 use strict;
