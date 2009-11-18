@@ -41,11 +41,7 @@ class Genome::Model::Build {
                                     return $disk_allocation;
                                 |,
         },
-        
         software_revision   => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
-        
-        gold_snp_path       => { via => 'model' },  # this should be updated to have an underlying merged microarray model
-                                                    # which could update, and result in a new build
     ],
     has_many_optional => [
     #< Inputs >#
