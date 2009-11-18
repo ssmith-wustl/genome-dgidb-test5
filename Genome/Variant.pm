@@ -1,3 +1,7 @@
+
+# review jlolofie
+# cant find this being used anywhere... delete?
+
 package Genome::Variant;
 
 use strict;
