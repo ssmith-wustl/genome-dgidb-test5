@@ -16,7 +16,12 @@ class Genome::Model::Build::ReferenceAlignment {
     is => 'Genome::Model::Build',
     is_abstract => 1,
     sub_classification_method_name => '_resolve_subclass_name',
-    has => [],
+    has => [
+        gold_snp_path => {
+            # this should be updated to have an underlying merged microarray model, which could update, and result in a new build
+            via => 'model',
+        }, 
+    ],
 };
 
 sub accumulated_alignments_directory {
