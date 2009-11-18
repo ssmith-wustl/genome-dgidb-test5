@@ -1,5 +1,6 @@
 
 # review jlolofie:
+# 0. "project" property in class definition- cant find research_project_name():  $self->research_project_name
 # 1. calculate_alignment_estimated_kb_usage() could estimate usage instead of harcoded value
 # 2. resolve_full_path - remove return that comments say is not needed?
 # 3. add comments to resolve_full_path- why it is trying to find a collection of paths and die if multiple- do the other
