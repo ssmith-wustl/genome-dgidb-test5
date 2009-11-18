@@ -1,15 +1,17 @@
 
-# review jlolofie
+# review jlolofie gsanders
 # 1. subject calculate can be cleaned up: 
 #    - need comments describing what subject means
 #    - why return instead of die?
 #    - multiple cases (genomic_dna, flow_cell_id, etc) seem the same as the else
 #    - genome_dna case same as else
-# 2. remove stuff that is not generic to models (goldsnp path, )
+# 2. remove stuff that is not generic to models (goldsnp path... should be in model/ReferenceAlignment? )
 #
-# 3. get rid of this stuff? (Sat, 30 Aug 2008) # TODO: a dba ticket is in place to make this a database-tracked item
+# 3. sub comparable_normal_model... this is a hack left over from AML1 to match the tumor 98 and tumor 34 models to the skin model... lets get rid of this.
+#    (Sat, 30 Aug 2008) # TODO: a dba ticket is in place to make this a database-tracked item
 #    (need to think about / work on "star" models)
-#
+# 4.  Genome::Config calls... 4 methods below with : TODO: remove these since they're not supposed to vary on a per-model basis.... 
+#    what needs to be done with these?
 
 
 package Genome::Model;
