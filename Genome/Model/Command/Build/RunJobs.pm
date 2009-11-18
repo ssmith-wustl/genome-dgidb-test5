@@ -1,3 +1,6 @@
+# FIXME ebelter
+#  can be removed
+#
 package Genome::Model::Command::Build::RunJobs;
 
 use strict;
