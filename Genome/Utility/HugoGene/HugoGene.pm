@@ -1,3 +1,8 @@
+# review gsanders
+# This and HugoGene.pm could probably use some work...
+# These are currently only used for Genome:Model:Tools:Somatic::UcscAnnotator.pm.
+# Previously there were just home-directory modules. We could trim these down to just the necessary code for ucsc...
+
 package Genome::Utility::HugoGene::HugoGene;
 
 use strict;
