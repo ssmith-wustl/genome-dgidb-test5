@@ -61,38 +61,62 @@ sub valid_param_sets {
     return (
         {
             name => 'Fredbird',
+            before_execute => '_before_execute',
+            after_execute => sub{ 
+                my ($self, $obj, $param_set) = @_;
+                note('after execute via anon sub');
+                isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
+                ok($obj, 'Got object in before execute');
+                ok($param_set, 'Got param set in before execute');
+                return 1;
+            },
         },
         {
             name => 'Louie',
             is_hairy => 1,
+            before_execute => sub{ 
+                my ($self, $obj, $param_set) = @_;
+                note('before execute via anon sub');
+                isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
+                ok($obj, 'Got object in before execute');
+                ok($param_set, 'Got param set in before execute');
+                return 1;
+            },
+            after_execute => '_after_execute',
         },
     );
 }
 
 sub invalid_param_sets {
     return (
-        {
+        { # blank name
             name => '',
         },
         { # the name for this parm set should be from valid param set 1
             is_hairy => 1,
+            # the before/after executes will work cuz this params set will 
+            #  create ok, thyen fail in execute
+            before_execute => '_before_execute',
+            after_execute => '_after_execute',
         },
     );
 }
 
-sub _pre_execute { 
-    my ($self, $obj) = @_;
-
-    ok($obj, 'Got object in _pre_execute');
-    
+sub _before_execute { 
+    my ($self, $obj, $param_set) = @_;
+    note('before execute via method');
+    isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
+    ok($obj, 'Got object in before execute');
+    ok($param_set, 'Got param set in before execute');
     return 1;
 }
 
-sub _post_execute { 
-    my ($self, $obj) = @_;
-
+sub _after_execute { 
+    my ($self, $obj, $param_set) = @_;
+    note('after execute via method');
+    isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
     ok($obj, 'Got object in _post_execute');
-    
+    ok($param_set, 'Got param set in before execute');
     return 1;
 }
 

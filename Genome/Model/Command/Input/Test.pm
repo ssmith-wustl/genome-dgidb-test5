@@ -107,17 +107,21 @@ sub _valid_param_sets {
         { # add multiple 'value_ids' 
             name => 'friends',
             ids => 'Watson,Crick',
+            before_execute => '_before_execute',
+            after_execute => '_after_execute',
         },
         { # add single 'value'
             name => 'inst_data',
             ids => '2sep09.934pmaa1',
+            before_execute => '_before_execute',
+            after_execute => '_after_execute',
         },
     );
 }
 
 sub invalid_param_sets {
     return (
-        {# try to add a not 'is_many' input
+        { # try to add a not 'is_many' input
             name => 'coolness', 
             ids => 'none',
         },
@@ -132,22 +136,22 @@ sub invalid_param_sets {
     );
 }
 
-sub _pre_execute {
-    my ($self, $obj) = @_;
+sub _before_execute {
+    my ($self, $obj, $param_set) = @_;
 
     my $name = $obj->name;
     my @ids = $self->_model->$name;
-    ok(!@ids, "No $name found in model.");
+    ok(!@ids, "No $name found for model.");
     
     return 1;
 }
 
-sub _post_execute {
-    my ($self, $obj) = @_;
+sub _after_execute {
+    my ($self, $obj, $param_set) = @_;
 
     my $name = $obj->name;
     my @ids = $self->_model->$name;
-    ok(@ids, "Added $name in model.");
+    ok(@ids, "Added $name to model.");
     
     return 1;
 }
