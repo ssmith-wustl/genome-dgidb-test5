@@ -1,3 +1,6 @@
+# FIXME ebelter
+#  rename?
+#  may not really work - ask eclark
 package Genome::Model::Command::Build::Detach;
 
 use strict;
