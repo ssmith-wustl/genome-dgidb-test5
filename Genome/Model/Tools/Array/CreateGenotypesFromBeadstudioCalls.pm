@@ -44,11 +44,12 @@ sub execute {
 
     #TODO Some basic file checks
     $DB::single = 1;
+    $| = 1;
     my $call_href = $self->create_call_file_hash;
     #my $probe_href = $self->create_probe_hash;
-
+    $self->status_message("Finished creating call file hash");
     #Store the header information for creating filenames later
-    my @filehandles = @{$call_href->{ID}};
+    my @filehandles = split /\t/, $call_href->{ID};
 
     $call_href = $self->convert_to_genotype($call_href);#, $probe_href);
 
@@ -67,8 +68,9 @@ sub execute {
     for my $chromosome (nsort keys %$call_href) {
         for my $position (sort {$a <=> $b} keys %{$call_href->{$chromosome}}) {
             my $i;
-            for($i = 0; $i < scalar(@{$call_href->{$chromosome}{$position}}); $i++) {
-                print {$filehandles[$i]} "$chromosome\t$position\t",${$call_href->{$chromosome}{$position}}[$i],"\n";
+            my @calls = split /\t/, $call_href->{$chromosome}{$position};
+            for($i = 0; $i < scalar(@calls); $i++) {
+                print {$filehandles[$i]} "$chromosome\t$position\t",$calls[$i],"\n";
             }
         }
     }
@@ -112,7 +114,8 @@ sub create_call_file_hash {
             $expected_calls = scalar(@calls);
         }
         $ID = $ID eq q{} ? 'ID' : $ID;  #make sure that on first line there is an actual label
-        $call_hash{$ID} = \@calls; 
+        my $call_string = join "\t", @calls; #doing this because arrays in perl apparently utilize an obscene amount of mem. ~38 bytes per element in this case. Which means for this program which has about ~1million entries. We will be using almost 3.5 G of ram just to store eveything in an array when addining into the hash, the overhead is much greater. In contrast to store the whole thing as a string, though computationally a bit expensive, results in much less overhead.
+        $call_hash{$ID} = $call_string; 
     }
     return \%call_hash;
 }
@@ -207,16 +210,14 @@ sub convert_to_genotype {
             if($self->is_dbsnp($snp_id)) {
                 #ucsc only retrieves things from dbSNP. THey don't alter anything else
                 unless($self->contains_expected_alleles($observed_alleles, $calls->{$snp_id})) {
-                    my @alleles = @{$calls->{$snp_id}};                                
-                    $self->error_message("Unexpected alleles for probe $snp_id. Expected $observed_alleles. Got @alleles");
+                    my $alleles = $calls->{$snp_id};                                
+                    $self->error_message("Unexpected alleles for probe $snp_id. Expected $observed_alleles. Got $alleles");
                     next;
                 }
                 if($strand eq '-' ) {
                     #adjust stranding to +/- instead of forward/reverse
                     #it's on the - strand in our file
-                    foreach my $call (@{$calls->{$snp_id}}) {
-                        $call =~ tr/ACTGactg/TGACtgac/;
-                    }
+                    $calls->{$snp_id} =~ tr/ACTGactg/TGACtgac/;
                 }
             }
             $new_calls{$chr}{$pos} = $calls->{$snp_id};
@@ -233,12 +234,12 @@ sub convert_to_genotype {
 }
 
 sub contains_expected_alleles {
-    my ($self, $expected_alleles, $reported_calls_ref) = @_;
+    my ($self, $expected_alleles, $reported_calls_string) = @_;
 
     my %expected_alleles = map { uc($_) => 1 } split /\//, $expected_alleles;
-    my @reported_alleles = map { split // } @$reported_calls_ref;
+    my @reported_alleles = grep {$_ !~ /\s+/ } map { split // } $reported_calls_string;
     foreach my $allele (@reported_alleles) {
-        unless(exists($expected_alleles{uc($allele)})) {
+        unless(exists($expected_alleles{uc($allele)}) || $allele eq '-') {
             return;
         }
     }
