@@ -1,6 +1,15 @@
 
 package Genome::Model::ReferenceAlignment;
 
+#:eclark 11/18/2009 Code review.
+
+# I'm not sure that we need to have all these via properties.  Does it really gain us that much code clarity?
+# Some of the other properties seem generic enough to be part of Genome::Model, not this subclass.
+# The entire set of _calculcute* methods could be refactored away.
+# Several deprecated/todo comments scattered in the code below that should either be removed or implemented.
+# Most of the methods at the bottom are for reading/writing of a gold_snp_file, this should be implemented as
+# part of Genome/Utility/IO
+
 use strict;
 use warnings;
 
