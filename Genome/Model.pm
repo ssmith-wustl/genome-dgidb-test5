@@ -113,7 +113,6 @@ class Genome::Model {
         builds                           => { is => 'Genome::Model::Build', reverse_as => 'model', is_many => 1 },
         build_statuses                   => { via => 'builds', to => 'master_event_status', is_many => 1 },
         build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
-        #gold_snp_path                    => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'gold_snp_path', entity_class_name => 'Genome::Model' ] },
 	keep_n_most_recent_builds	 => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
             calculate => q($instrument_data_class_name->_dw_class), 
@@ -339,27 +338,6 @@ sub get_subjects {
     );
 }
 
-
-sub gold_snp_path
-{
-    my $self = shift;
-    # should only be one of these...
-    # pop the last one just in case there are multiple.
-    my @genotype_models = Genome::Model::GenotypeMicroarray->get(subject_name => $self->subject_name);
-    my $gold_model = pop(@genotype_models);
-    if(!defined($gold_model))
-    {
-        $self->error_message("no genotype microarray model defined for ".$self->subject_name);
-        return;
-    }
-    my @builds = $gold_model->builds;
-    if(@builds > 1)
-    {
-        $self->error_message("WTF!?!? multiple genotype files for ".$self->subject_name);
-    } 
-    my $build = shift @builds;
-    return $build->formatted_genotype_file_path;
-}
 
 sub _verify_subjects {
     my $self = shift;
