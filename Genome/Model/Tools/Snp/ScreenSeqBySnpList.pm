@@ -94,7 +94,7 @@ sub execute {
 	    #my ($Row,$Amplicon_Name,$PCR_Status,$Conf,$Prod_Size,$L_Primer_Coord,$R_Primer_Coord,$Amp_Size,$L_Amp_Coord,$R_Amp_Coord,$Enzyme,$Primer_1,$Primer_1_Seq,$Tail_1_Name,$Primer_2,$Primer_2_seq,$Tail_2_Name,$Amplicon_Sequence,$Project,$ROI_Name,$ROI_List,$Target_Name,$Target_Start,$Target_Stop,$Target_Region_Type,$Hugo_Name,$EntrezGene_Id,$Chrom,$Amplicon_Ref_ID,$SNP_in_primer,$Manually_Designed)
 
 	    my ($Row,$Amplicon_Name,$PCR_Status,$Conf,$Prod_Size,$L_Primer_Coord,$R_Primer_Coord,$Amp_Size,$L_Amp_Coord,$R_Amp_Coord,$Enzyme,$Tails,$Primer_1_Seq,$Primer_2_seq,$Amplicon_Sequence,$Project,$ROI_List,$ROI_Name,$Target_Name,$Target_Start,$Target_Stop,$Target_Region_Type,$Hugo_Name,$Entrez_ID,$Chrom,$Amplicon_Ref_ID,$Manually_Designed,$Selected_by_SAFT,$SAFT_Message,$Tilepath_Score,$SNP_Screening) = split(/\,/,$line);
-	    
+
 	    unless($line =~ /Coord/) {
 		$Chrom =~ s/([\S]+)/\U$1/;
 		
