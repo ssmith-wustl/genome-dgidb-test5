@@ -103,17 +103,7 @@ sub test002_valid_param_sets : Tests() {
         $cnt++;
         note( sprintf("%s VALID param set %s", $self->test_class, $cnt) );
         is(ref($param_set), "HASH", "Valid param set ($cnt) isa HASH ref") or confess;
-        my $obj;
-        eval { $obj = $self->test_class->create(%$param_set); };
-        diag("$@\n") if $@;
-        ok($obj, 'Created') or confess;
-        isa_ok($obj, $self->test_class) or confess;
-        $self->_pre_execute($obj) or confess "Failed pre execute";
-        my $execute_rv;
-        eval { $execute_rv = $obj->execute; };
-        diag("$@\n") if $@;
-        ok($execute_rv, "Execute") or confess;
-        $self->_post_execute($obj) or confess "Failed post execute";
+        $self->_create_and_execute_expected_success(%$param_set);
     }
 
     return 1;
@@ -124,6 +114,9 @@ sub test003_required_params : Tests {
 
     # Check if we have vlaues in valid param set #1
     my $params = ($self->valid_param_sets)[0];
+    # Not running the before/after for required params
+    delete $params->{before_execute};
+    delete $params->{after_execute};
     return ok(1, 'No need to test required properties - no values in valid param set') unless %$params;
     
     my @required_property_names = $self->required_property_names;
@@ -134,14 +127,13 @@ sub test003_required_params : Tests {
         # remove value
         my $val = delete $params->{$property_name};
         # create and execute - contiue thru rest of req properties even if one fails
-        $self->_create_and_execute_expected_to_fail(%$params);
+        $self->_create_and_execute_expected_fail(%$params);
         # reset the value
         $params->{$property_name} = $val;
     }
 
     return 1;
 }
-
 
 sub test004_invalid_param_sets : Tests() {
     # These param sets are invalid for one reason or another and should fail create or execute.
@@ -152,11 +144,15 @@ sub test004_invalid_param_sets : Tests() {
     my @param_sets = $self->invalid_param_sets
         or return 1;
     my $valid_params = ($self->valid_param_sets)[0];
+    # Only run these if given in the invalid param set
+    delete $valid_params->{before_execute};
+    delete $valid_params->{after_execute};
     my $cnt = 0;
     for my $params ( @param_sets ) {
         $cnt++;
         note( sprintf("%s INVALID param set %s", $self->test_class, $cnt) );
         is(ref($params), "HASH", "Invalid param set ($cnt) isa HASH ref") or confess;
+
         # copy the valid params
         my %invalid_params = %$valid_params;
         # replace w/ the invalid params
@@ -164,15 +160,50 @@ sub test004_invalid_param_sets : Tests() {
             $invalid_params{$param} = $params->{$param};
         }
         # create and execute - contiue thru rest of invalid params even if one fails
-        $self->_create_and_execute_expected_to_fail(%invalid_params);
+        $self->_create_and_execute_expected_fail(%invalid_params);
     }
 
     return 1;
 }
 
 # helpers
-sub _create_and_execute_expected_to_fail {
+sub _create_and_execute_expected_success {
     my ($self, %params) = @_;
+
+    my $before_execute = delete $params{before_execute};
+    my $after_execute = delete $params{after_execute};
+
+    # create
+    my $obj;
+    eval { $obj = $self->test_class->create(%params); };
+    diag("$@\n") if $@;
+    ok($obj, 'Created') or confess;
+    isa_ok($obj, $self->test_class) or confess;
+
+    # before
+    if ( $before_execute ) { 
+        $self->_run_sub_or_method('before', $before_execute, $obj, \%params) or confess;
+    }
+
+    # execute
+    my $execute_rv;
+    eval { $execute_rv = $obj->execute; };
+    diag("$@\n") if $@;
+    ok($execute_rv, "Execute") or confess;
+
+    # after
+    if ( $after_execute ) { 
+        $self->_run_sub_or_method('after', $after_execute, $obj, \%params) or confess;
+    }
+
+    return 1;
+}
+
+sub _create_and_execute_expected_fail {
+    my ($self, %params) = @_;
+
+    my $before_execute = delete $params{before_execute};
+    my $after_execute = delete $params{after_execute};
 
     # create
     my $obj;
@@ -183,11 +214,22 @@ sub _create_and_execute_expected_to_fail {
         return 1;
     }
 
+    # before
+    if ( $before_execute ) { # if given, this should not fail
+        $self->_run_sub_or_method('before', $before_execute, $obj, \%params);
+    }
+
     # execute
     my $rv;
     eval { $rv = $obj->execute; };
-    
-    if ( not $rv or $@ ) { # good - check return value or eval error
+    my $eval_error = $@; 
+
+    # after
+    if ( $after_execute ) { # if given, this should not fail
+        $self->_run_sub_or_method('after', $after_execute, $obj, \%params);
+    }
+
+    if ( not $rv or $eval_error ) { # good - check return value or eval error
         diag("$@\n") if $@;
         ok(1, "Failed as expected on execute");
         return 1;
@@ -195,8 +237,24 @@ sub _create_and_execute_expected_to_fail {
 
     # bad - did not fail creat of execute
     ok(0, "DID NOT fail as expected during create or execute");
-
     return;
+}
+
+sub _run_sub_or_method { # the method/sub given should always work!
+    my ($self, $type, $sub_or_method, $obj, $param_set) = @_;
+
+    if ( my $ref = ref($sub_or_method) ) { 
+        confess 'Tried to run '.ucfirst($type).' execute in param set is not a method name or CODE ref: '.Dumper($sub_or_method) unless $ref eq 'CODE';
+        $sub_or_method->($self, $obj, $param_set)
+            or confess "Failed $type execute.";
+    }
+    else {
+        confess "Tried to run method '$sub_or_method' prior to command execute, but cannot find it in ".ref($self) unless $self->can($sub_or_method);
+        $self->$sub_or_method($obj, $param_set)
+            or confess "Failed $type execute.";
+    }
+
+    return 1;
 }
 
 1;
