@@ -891,6 +891,27 @@ sub hq_snp_numbers_name {
     return $self->hq_snp_base_name . '_numbers.csv';
 }
 
+# moved from base model
+sub gold_snp_path {
+    my $self = shift;
+    # should only be one of these...
+    # pop the last one just in case there are multiple.
+    my @genotype_models = Genome::Model::GenotypeMicroarray->get(subject_name => $self->subject_name);
+    my $gold_model = pop(@genotype_models);
+    if(!defined($gold_model))
+    {
+        $self->error_message("no genotype microarray model defined for ".$self->subject_name);
+        return;
+    }
+    my @builds = $gold_model->builds;
+    if(@builds > 1)
+    {
+        $self->error_message("WTF!?!? multiple genotype files for ".$self->subject_name);
+    } 
+    my $build = shift @builds;
+    return $build->formatted_genotype_file_path;
+}
+
 # Returns the name of the gold snp file
 # This file is just the intersection of all micro array data on the same sample
 sub gold_snp_file {
