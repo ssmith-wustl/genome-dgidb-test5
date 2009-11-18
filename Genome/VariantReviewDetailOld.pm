@@ -1,3 +1,7 @@
+# review gsanders
+# accordding to charris and dlarson this table was a hack for dlarson to see old data when jschindl was putting in new variant review stuff
+# this can me removed and the table dropped IF AND ONLY IF we can show that the new variant review tables have inherited the information in this old table
+
 package Genome::VariantReviewDetailOld;
 
 use strict;
