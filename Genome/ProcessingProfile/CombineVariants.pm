@@ -1,5 +1,9 @@
 package Genome::ProcessingProfile::CombineVariants;
 
+#:eclark 11/18/2009 Code review.
+
+# verify_successful_completion before combine_variants?
+
 use strict;
 use warnings;
 
