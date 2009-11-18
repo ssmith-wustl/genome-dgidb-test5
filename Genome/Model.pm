@@ -1,3 +1,17 @@
+
+# review jlolofie
+# 1. subject calculate can be cleaned up: 
+#    - need comments describing what subject means
+#    - why return instead of die?
+#    - multiple cases (genomic_dna, flow_cell_id, etc) seem the same as the else
+#    - genome_dna case same as else
+# 2. remove stuff that is not generic to models (goldsnp path, )
+#
+# 3. get rid of this stuff? (Sat, 30 Aug 2008) # TODO: a dba ticket is in place to make this a database-tracked item
+#    (need to think about / work on "star" models)
+#
+
+
 package Genome::Model;
 
 use strict;
