@@ -1,5 +1,9 @@
 package Genome::Model::Command::Build::ReferenceAlignment::RunReports;
 
+#REVIEW fdu 11/18/2009
+#Missing ReferenceCoverage report for cDNA or RNA. Either ask jwalker
+#to implement it or drop those codes.
+
 use strict;
 use warnings;
 

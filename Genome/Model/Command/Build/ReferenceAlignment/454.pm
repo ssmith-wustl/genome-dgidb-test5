@@ -1,5 +1,8 @@
 package Genome::Model::Command::Build::ReferenceAlignment::454;
 
+#REVIEW fdu 11/18/2009
+#Remove this useless module
+
 use strict;
 use warnings;
 

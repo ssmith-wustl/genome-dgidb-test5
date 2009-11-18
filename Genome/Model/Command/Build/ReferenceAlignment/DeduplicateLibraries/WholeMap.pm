@@ -1,5 +1,10 @@
 package Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap;
 
+#REVIEW fdu 11/18/2009
+#This is an obsolete module that is not used by G::M::C::B::R::D::Maq
+#anymore. Remove it soon. And also this module should have been placed 
+#as genome model tool when firstly implemented.
+
 use strict;
 use warnings;
 

@@ -1,5 +1,13 @@
 package Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Samtools;
 
+#REVIEW fdu 11/18/2009
+#This module reflects old way to do dedup, which is running "samtools
+#rmdup" on each merged per library bam by workflow, and then merging them 
+#together to a final merged_rmdup.bam. The new way (see Picard.pm) is
+#to run picard Markduplicate on the whole bam mixed with all libraries. 
+#Once the new way is proved ok by quite a few of model builds, this
+#module along with DedupSam.pm will soon become obsolete and be removable.
+
 use strict;
 use warnings;
 
