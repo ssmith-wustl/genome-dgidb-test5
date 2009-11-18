@@ -28,6 +28,11 @@ class Genome::Model::Variant {
         trv_type           => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         ucsc_cons          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         validation_status  => { is => 'VARCHAR2', len => 5, is_optional => 1 },
+        validation_links => {
+             is => "Genome::Model::VariantValidation",
+             reverse_id_by => 'variant',
+             is_many => '1',
+        },
     ],
     unique_constraints => [
         { properties => [qw/chromosome reference_allele start_pos stop_pos variant_allele/], sql => 'GMV_UK' },
@@ -35,5 +40,44 @@ class Genome::Model::Variant {
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+# This method uses the build id passed in to get the "official" validation for this variant on the model id to which the build belongs
+sub get_official_validation_for_build {
+    my $self = shift;
+    my $build_id = shift;
+
+    my $build = Genome::Model::Build->get($build_id);
+    unless($build) {
+        $self->error_message("Could not get a build for build id: " . $self->build_id . ". Please use a valid build id.");
+        return;
+    }
+    my $model = $build->model;
+    unless($model) {
+        $self->error_message("Could not get a model for model id: " . $build->model_id . ". Please use a build with a valid model id.");
+        return;
+    }
+
+    my @validations = $self->validation_links;
+    my $official_validation;
+    for my $validation (@validations) {
+        if (($validation->model_id == $model->genome_model_id)&&($validation->validation_type eq 'Official')) {
+            # There should only be one official validation
+            if ($official_validation) {
+                $DB::single = 1;
+                $self->error_message("More than one 'Official' validation found for model_id " . $build->model_id);
+                return;
+            } else {
+                $official_validation = $validation;
+            }
+        }
+    }
+
+    unless ($official_validation) {
+        $self->warning_message("No 'Official' validation found for model_id " . $build->model_id);
+        return;
+    }
+
+    return $official_validation;
+}
 
 1;
