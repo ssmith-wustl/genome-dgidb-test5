@@ -1,3 +1,7 @@
+# FIXME ebelter
+#  remove Assembly command
+#  move or remove assembly models to de novo assembly
+#
 package Genome::Model::Command::Build::Assembly;
 
 use strict;
