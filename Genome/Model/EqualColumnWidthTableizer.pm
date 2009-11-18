@@ -1,3 +1,5 @@
+#FIXME ebelter
+# Remove not used
 
 package Genome::Model::EqualColumnWidthTableizer;
 
