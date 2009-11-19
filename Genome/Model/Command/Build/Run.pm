@@ -3,6 +3,7 @@ package Genome::Model::Command::Build::Run;
 use strict;
 use warnings;
 
+use Carp;
 use Genome;
 use Workflow;
 
@@ -113,32 +114,150 @@ sub execute {
         }
     }
 
-
     $self->build->initialize;
     UR::Context->commit;
 
     $w = $build->newest_workflow_instance;
     
-    my $output;
-    
+    my $success;
     if ($w && !$self->restart) {
-        $output = Workflow::Simple::resume_lsf($w->id);
-    } else {
-
-        $output = Workflow::Simple::run_workflow_lsf(
+        $success = Workflow::Simple::resume_lsf($w->id);
+    } 
+    else {
+        $success = Workflow::Simple::run_workflow_lsf(
             $xmlfile,
             prior_result => 1
         );
     }
 
-    if ( $output ) { # Success
-        $build->success;
+    # Failed a stage/step - send report
+    unless ( $success ) {
+        unless ( @Workflow::Simple::ERROR ) {
+            return $self->_post_build_failure("Workflow failed, but no errors given");
+        }
+        my @errors = Genome::Model::Build::Error->create_from_workflow_errors(
+            @Workflow::Simple::ERROR 
+        );
+        unless ( @errors ) {
+            return $self->_post_build_failure("Can't covert workflow errors to build errors");
+        }
+        unless ( $build->fail(@errors) ) {
+            return $self->_failed_build_fail(@errors);
+        }
+        return 1;
     }
-    else { # Fail
-        $build->fail( @Workflow::Simple::ERROR );
+
+    # VSC - i think we will be able to remove this
+    unless ( $build->build_event->verify_successful_completion(0) ) {
+        my $msg = sprintf(
+            'Failed verify successful completion: %s',
+            $build->build_event->error_text || 'no error given',
+        );
+        return $self->_post_build_failure($msg);
+    }
+    
+    # shall we clean up old builds?
+    if ( defined $build->model->keep_n_most_recent_builds ) {
+        my $handle_build_evisceration = sub {
+            $self->_eviscerate_old_builds_for_this_model;
+        };
+        $self->create_subscription(method => 'commit', callback => $handle_build_evisceration);
+    }
+
+    # Success - realloc and send report
+    unless ( $build->success ) {
+        my $msg = sprintf(
+            'Failed to set build to success: %s',
+            $build->error_text || 'no error given',
+        );
+        return $self->_post_build_failure($msg);
     }
 
     return 1;
 }
 
-1;
+sub _post_build_failure { 
+    my ($self, $msg) = @_;
+    
+    $self->error_message($msg);
+
+    my $build_event = $self->build->build_event;
+    my $error = Genome::Model::Build::Error->create(
+        build_event_id => $build_event->id,
+        stage_event_id => $build_event->id,
+        stage => 'all stages',
+        step_event_id => $build_event->id,
+        step => 'main',
+        error => $msg,
+    );
+    
+    unless ( $self->build->fail($error) ) {
+        return $self->_failed_build_fail($error);
+    }
+
+    return 1;
+}
+
+sub _failed_build_fail {
+    my ($self, @errors) = @_;
+
+    my $msg = sprintf(
+        "Failed to fail build because: %s\nOriginal errors:\n%s",
+        ( $self->build->error_text || 'No error given' ),
+        join("\n", map { $_->error } @errors),
+    );
+
+    $self->error_message($msg);
+
+    return 1;
+}
+
+sub _eviscerate_old_builds_for_this_model {
+    # NOT TESTED!
+    my $self = shift;
+    my $subscription = shift;
+    my $model = $self->build->model;
+    my $this_build = $self->build;
+
+    # a couple guards here, to make sure we don't run by accident
+    # don't run on failed builds or models that ask to be eviscerated!
+    return if ($self->event_status ne 'Succeeded');
+
+    unless (defined $model->keep_n_most_recent_builds) {
+        return;
+    }
+
+    my $recent_keep_count = $model->keep_n_most_recent_builds;
+
+    # The calling build will not have been marked as succeeded yet, so allow an "or" here to catch our own build
+    my @builds = sort {$a->build_id <=> $b->build_id}
+    grep {$_->can('eviscerate')}
+    grep {$_->build_status eq "Succeeded" || $_->id == $self->build->id} 
+    $model->builds;
+
+    my @builds_to_eviscerate = splice @builds, 0, scalar @builds - $recent_keep_count;
+
+    for my $doomed_build (@builds_to_eviscerate) {
+        next if (!$doomed_build->can('eviscerate'));
+        my $resource_lock_name = $doomed_build->accumulated_alignments_directory . '.eviscerate';
+        my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
+        print Dumper($lock);
+        unless ($lock) {
+            $self->status_message("This build is locked by another eviscerate process");
+            $lock = $self->lock_resource(resource_lock => $resource_lock_name);
+            unless ($lock) {
+                $self->error_message("Failed to get a build lock to eviscerate!  Skipping this build.");
+                next;
+                }
+            }
+
+            $doomed_build->eviscerate;        
+
+            Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
+        }
+    }
+
+    1;
+
+#$HeadURL$
+#$Id$
