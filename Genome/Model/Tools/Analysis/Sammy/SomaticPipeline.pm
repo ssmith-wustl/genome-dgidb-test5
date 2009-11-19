@@ -23,6 +23,7 @@ use Genome;                                 # using the namespace authorizes Cla
 
 my $min_coverage = 8;
 my $min_reads2 = 2;
+my $min_strands2 = 1;
 my $min_var_freq = 0.10;
 my $min_p_value = 1.0E-06;
 my %dbsnp_variants = ();
@@ -41,6 +42,8 @@ class Genome::Model::Tools::Analysis::Sammy::SomaticPipeline {
 		reference	=> { is => 'Text', doc => "Reference file for alignments" , is_optional => 1},
 		dbsnp_file	=> { is => 'Text', doc => "Tab-delimited file containing known dbSNPs", is_optional => 1 },
 		min_p_value	        => { is => 'Text', doc => "P-value threshold for somatic variants [1.0E-06]", is_optional => 1 },
+		min_coverage	        => { is => 'Text', doc => "Minimum coverage depth for calling variants [10]", is_optional => 1 },
+		validation	        => { is => 'Text', doc => "If specified, makes calls at all cns sites []", is_optional => 1 },
 	],
 };
 
@@ -169,42 +172,52 @@ sub execute {                               # replace with real execution logic.
 	## Verify NORMAL SNP ##
 	print "Verifying Normal SNP...\n";
 
-	if(-e "$normal_pileup.snp")
+	if(-e "$normal_pileup.snp" && !$self->validation)
 	{
 		$normal_snp = "$normal_pileup.snp";
 	}
 	else
 	{
-		$normal_snp = $self->output_dir . "/" . $self->sample_name . ".normal.snp";
-		
-#		if(!(-e $normal_snp))
-#		{
-			print "Calling SNPs in Normal...\n"; 
+		if($self->validation)
+		{
+			## Call all consensus bases if validating ##
+			$normal_snp = $self->output_dir . "/" . $self->sample_name . ".normal.cns";						
+			my $cmd = call_sammy() . "pileup2cns " . $normal_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$normal_snp" if($self->validation);
+			system($cmd);			
+		}
+		else
+		{
+
+			print "Calling SNPs in Normal...\n"; 		
 			my $cmd = call_sammy() . "pileup2snp " . $normal_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$normal_snp";
-			system($cmd);
-#		}
+			system($cmd);			
+		}
+
 	}
 
 
 	## Verify Tumor SNP ##
 	print "Verifying Tumor SNP...\n";
 	
-	if(-e "$tumor_pileup.snp")
+	if(-e "$tumor_pileup.snp" && !$self->validation)
 	{
 		$tumor_snp = "$tumor_pileup.snp";
 	}
 	else
 	{
-		$tumor_snp = $self->output_dir . "/" . $self->sample_name . ".tumor.snp";
-		
-#		if(!(-e $tumor_snp))
-#		{
+		if($self->validation)
+		{
+			$tumor_snp = $self->output_dir . "/" . $self->sample_name . ".tumor.cns";
+			my $cmd = call_sammy() . "pileup2cns " . $tumor_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$tumor_snp" if($self->validation);
+			system($cmd);			
+		}
+		else
+		{
+			$tumor_snp = $self->output_dir . "/" . $self->sample_name . ".tumor.snp";
 			print "Calling SNPs in Tumor...\n"; 
-			my $cmd = call_sammy() . "pileup2snp " . $tumor_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$tumor_snp";
-			system($cmd);
-#		}
+			my $cmd = call_sammy() . "pileup2snp " . $tumor_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$tumor_snp";			
+		}
 	}
-
 
 	## Compare SNPs between normal and tumor ##
 	print "Comparing Tumor-Normal SNP Calls...\n";	
@@ -356,7 +369,8 @@ sub execute {                               # replace with real execution logic.
 #	if(!(-e $compared_indels_status))
 #	{
 		print "Calling variants as Germline or Somatic...\n";
-		my $cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_indels . " " . $compared_indels_status;		
+		my $params = "--min-coverage $min_coverage --min-reads2 $min_reads2 --min-strands2 $min_strands2";
+		my $cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_indels . " " . $compared_indels_status . " " . $params;		
 		system($cmd);
 #	}
 
