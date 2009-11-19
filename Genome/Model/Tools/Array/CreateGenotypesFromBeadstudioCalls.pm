@@ -63,7 +63,7 @@ sub execute {
     for my $file (@filehandles) {
         my $filehandle = new IO::File "$out_dir/$file.genotype", "w";
         unless(defined($filehandle)) {
-            $self->error_message("Couldn't open filehandle for file: $file");
+            $self->error_message("Couldn't open filehandle for file: $out_dir/$file.genotype");
             return;
         }   
         $file = $filehandle;
