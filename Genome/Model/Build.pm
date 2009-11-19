@@ -349,6 +349,32 @@ sub resolve_data_directory {
     return $data_directory . $build_subdirectory;
 }
 
+#< Disk Allocation >#
+sub allocate {
+}
+
+sub reallocate {
+    my $self = shift;
+
+    my $disk_allocation = $self->disk_allocation
+        or return 1; # ok - may not have an allocation
+
+    my $reallocate = Genome::Disk::Allocation::Command::Reallocate->execute(
+        allocator_id => $disk_allocation->allocator_id
+    );
+    unless ($reallocate) {
+        $self->warning_message('Failed to reallocate disk space.');
+    }
+
+    return 1;
+}
+
+
+#< Log >#
+sub log_directory { 
+    return  $_[0]->data_directory . '/logs/';
+}
+
 #< Reports >#
 sub reports_directory { 
     return  $_[0]->data_directory . '/reports/';
@@ -424,11 +450,11 @@ sub fail {
 sub success {
     my $self = shift;
 
-    $self->build_event->event_status('Succeeded');
-    $self->build_event->date_completed( UR::Time->now );
-
     $self->generate_send_and_save_report( $self->report_generator_class_for_success )
         or return;
+    $self->reallocate;
+    $self->build_event->event_status('Succeeded');
+    $self->build_event->date_completed( UR::Time->now );
 
     return 1;
 
