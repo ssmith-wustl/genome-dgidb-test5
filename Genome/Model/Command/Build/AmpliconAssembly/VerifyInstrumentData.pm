@@ -66,22 +66,20 @@ sub _link_instrument_data {
 sub _dump_unbuilt_instrument_data {
     my ($self, $ida) = @_;
 
-    unless ( $ida->first_build_id ) {
-        unless ( $ida->instrument_data->dump_to_file_system ) {
-            $self->error_message(
-                sprintf(
-                    'Error dumping instrument data (%s <Id> %s) assigned to model (%s <Id> %s)',
-                    $ida->instrument_data->run_name,
-                    $ida->instrument_data->id,
-                    $self->model->name,
-                    $self->model->id,
-                )
-            );
-            return;
-        }
-        $ida->first_build_id( $self->build_id );
+    unless ( $ida->instrument_data->dump_to_file_system ) {
+        $self->error_message(
+            sprintf(
+                'Error dumping instrument data (%s <Id> %s) assigned to model (%s <Id> %s)',
+                $ida->instrument_data->run_name,
+                $ida->instrument_data->id,
+                $self->model->name,
+                $self->model->id,
+            )
+        );
+        return;
     }
-    
+    $ida->first_build_id( $self->build_id );
+
     return 1;
 }
 
