@@ -176,7 +176,9 @@ sub shellcmd {
     return Genome::Utility::FileSystem->shellcmd(@_);
 }
 
-sub resolve_log_directory {
+#< Logging >#
+sub resolve_log_directory { return log_directory(@_); }
+sub log_directory {
     my $self = shift;
     my $log_directory = sprintf('%s/logs/',
                                 $self->build_directory,
@@ -189,6 +191,31 @@ sub resolve_log_directory {
     }
     return $log_directory
 }
+
+sub _log_file {
+    my ($self, $ext) = @_;
+
+    unless ( $self->build ) {
+        $self->error_message("Can't get log file because there is no build.");
+        return;
+    }
+
+    return sprintf(
+        '%s/%s.%s',
+        $self->build->log_directory,
+        $self->genome_model_event_id,
+        $ext,
+    );
+}
+
+sub error_log_file {
+    return _log_file(@_, 'err');
+}
+
+sub output_log_file {
+    return _log_file(@_, 'out');
+}
+#<>#
 
 sub check_for_existence {
     my ($self,$path,$attempts) = @_;
@@ -408,8 +435,8 @@ sub execute_with_bsub {
     unless (-d $log_dir) {
         $self->create_directory($log_dir);
     }
-    my $err_log_file = sprintf("%s/%s.err", $log_dir, $event_id);
-    my $out_log_file = sprintf("%s/%s.out", $log_dir, $event_id);
+    my $err_log_file = $self->error_log_file;
+    my $out_log_file = $self->output_log_file;
     $bsub_args .= ' -o ' . $out_log_file . ' -e ' . $err_log_file;
 
     my $cmdline;
