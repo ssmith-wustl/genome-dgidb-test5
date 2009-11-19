@@ -141,7 +141,9 @@ sub create_mock_object {
             __meta__
             __changes__
             _delete_object
-            error_message warning_message
+            message_object
+            error_message error_text
+            warning_message
             /),
     );
     $obj->mock('__signal_change__', sub{ 1; });
