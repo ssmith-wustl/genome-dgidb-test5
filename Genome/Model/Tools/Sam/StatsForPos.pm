@@ -50,10 +50,30 @@ sub create {
 
 sub execute {
     my $self = shift;
-    unless (-s $self->bam_file && -s $self->bam_file . ".bai") {
+    
+    unless (-s $self->bam_file) {
         $self->error_message('Map file '. $self->map_file .' not found or has zero size.');
         return;
     }
+    my $bam_file = $self->bam_file;
+    my $bai_file = $bam_file .'.bai';
+    if (-e $bai_file) {
+        my $bam_mtime = (stat($bam_file))[9];
+        my $bai_mtime = (stat($bai_file))[9];
+        if ($bam_mtime > $bai_mtime) {
+            unless (unlink $bai_file) {
+                die('Failed to remove old bai file'. $bai_file); 
+            }
+        }
+    }
+    unless (-e $bai_file) {
+        my $index_cmd = "/gsc/var/tmp/samtools/samtools-0.1.6-64/samtools index $bam_file";
+        my $index_rv = system($index_cmd);
+        unless ($index_rv == 0) {
+            die('non-zero return value '. $index_rv .' from command: '. $index_cmd .":  $!");
+        }
+    }
+
     unless ($self->position1) {
         $self->error_message('SUPPLY A POSITION!');
         return;
