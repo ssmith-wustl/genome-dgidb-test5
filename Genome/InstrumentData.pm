@@ -184,6 +184,7 @@ sub _data_base_path {
 sub resolve_full_path{
     my $self = shift;
 
+    #FIXME ALLOCATE 
     return $self->full_path if $self->full_path;
 
     return $self->full_path( $self->_default_full_path );
