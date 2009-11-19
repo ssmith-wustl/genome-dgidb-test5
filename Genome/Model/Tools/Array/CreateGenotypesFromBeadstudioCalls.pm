@@ -46,6 +46,10 @@ sub execute {
     $DB::single = 1;
     $| = 1;
     my $call_href = $self->create_call_file_hash;
+    unless($call_href) {
+        $self->error_message("Unable to parse genotype file and create call file hash");
+        return;
+    }
     #my $probe_href = $self->create_probe_hash;
     $self->status_message("Finished creating call file hash");
     #Store the header information for creating filenames later
@@ -88,6 +92,7 @@ sub create_call_file_hash {
 
     my $fh = new IO::File "$file", "r";
     unless(defined($fh)) {
+        $self->error_message("Unable to open $file for reading");
         return;
     }
     #Skip through the header lines
