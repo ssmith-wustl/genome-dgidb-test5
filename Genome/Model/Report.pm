@@ -8,6 +8,7 @@ use Genome;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Report {
+    #:adukes remove double inheritance, G:U:FileSystem is a pox, jpeck concurs
     is => ['Genome::Report::Generator','Genome::Utility::FileSystem'],
     has => [
         build => {

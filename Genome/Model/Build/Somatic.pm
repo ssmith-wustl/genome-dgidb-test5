@@ -3,6 +3,7 @@
 # note: maybe calculate usage estmate instead of hardcoded value
 
 package Genome::Model::Build::Somatic;
+#:adukes this looks fine, there may be some updates required for changes to model inputs and new build protocol, ebelter will be a better judge
 
 use strict;
 use warnings;
