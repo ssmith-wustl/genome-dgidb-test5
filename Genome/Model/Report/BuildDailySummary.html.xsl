@@ -65,7 +65,7 @@
 												</tr>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Model Id: 
+                            Model Id:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
                            <xsl:value-of select="model-id"/><xsl:text> </xsl:text><a><xsl:attribute name="href">https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?genome-model-id=<xsl:value-of select="model-id"/></xsl:attribute><xsl:attribute name="style"><xsl:text>text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;</xsl:text></xsl:attribute>view model -&gt;</a>
@@ -73,7 +73,7 @@
 												</tr>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Model Name: 
+                            Model Name:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
                            <xsl:value-of select="model-name"/>
@@ -81,7 +81,7 @@
 												</tr>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Subject Name: 
+                            Subject Name:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
                             <xsl:value-of select="subject-name"/>
@@ -89,7 +89,7 @@
 												</tr>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Run Count: 
+                            Run Count:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
                             <xsl:value-of select="run-count"/>
@@ -105,7 +105,7 @@
           </xsl:for-each>
 					<tr>
 						<td align="right" style="background-color: #f2f2f1;">
-							<img src="cid:footerimg" width="106" height="50" alt="The Genome Center at Washington University" style="margin: 10px;" />
+							<img src="http://genome.wustl.edu/images/uploads/genome_center_logo.png" width="106" height="50" alt="The Genome Center at Washington University" style="margin: 10px;" />
 						</td>
 					</tr>
 				</tbody>

@@ -80,7 +80,7 @@
 												</tr>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Model Id: 
+                            Model Id:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
                            <xsl:value-of select="//model-info/id"/><xsl:text> </xsl:text><a><xsl:attribute name="href">https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?genome-model-id=<xsl:value-of select="//model-info/id"/></xsl:attribute><xsl:attribute name="style"><xsl:text>text-decoration:none;font-size:90%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;</xsl:text></xsl:attribute>view model -&gt;</a>
@@ -88,7 +88,7 @@
 												</tr>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Model Name: 
+                            Model Name:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
                            <xsl:value-of select="//model-info/name"/>
@@ -96,7 +96,7 @@
 												</tr>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Processing Profile Name: 
+                            Processing Profile Name:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
                             <xsl:value-of select="//model-info/processing-profile-name"/>
@@ -104,7 +104,7 @@
 												</tr>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Subject Name: 
+                            Subject Name:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
                             <xsl:value-of select="//model-info/subject-name"/>
@@ -112,7 +112,7 @@
 												</tr>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Subject Type: 
+                            Subject Type:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
                             <xsl:value-of select="//model-info/subject-type"/>
@@ -181,7 +181,7 @@
           </xsl:for-each>
 					<tr>
 						<td align="right" style="background-color: #f2f2f1;">
-							<img src="cid:footerimg" width="106" height="50" alt="The Genome Center at Washington University" style="margin: 10px;" />
+							<img src="http://genome.wustl.edu/images/uploads/genome_center_logo.png" width="106" height="50" alt="The Genome Center at Washington University" style="margin: 10px;" />
 						</td>
 					</tr>
 				</tbody>
