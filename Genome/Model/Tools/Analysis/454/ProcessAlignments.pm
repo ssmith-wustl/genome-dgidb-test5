@@ -141,7 +141,7 @@ sub execute {                               # replace with real execution logic.
 				
 				print "\t$blatFiles BLAT files\n";
 				
-				if($blatFiles == 24 && $blatFiles <= 30)
+				if($blatFiles >= 24 && $blatFiles <= 30)
 				{
 					## Compile the blat output for this sample ##
 					print SAMPLESCRIPT qq{echo "Compiling BLAT PSLX files..."\n};

@@ -32,13 +32,13 @@ class Genome::Model::Tools::Analysis::454::LoadReads {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Align reads to a reference genome using Bowtie"                 
+    "Load 454 reads from samples.tsv and run BLAT alignment"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command retrieves the locations of unplaced reads for a given genome model
-EXAMPLE:	gt bowtie --query-file s_1_sequence.fastq --output-file s_1_sequence.Hs36.bowtie
+This command loads 454 data from a samples.tsv file and launches BLAT alignments
+EXAMPLE:	gt analysis 454 load-reads --samples-file data/samples.tsv --output-dir data
 EOS
 }
 
