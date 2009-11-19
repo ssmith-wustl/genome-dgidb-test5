@@ -98,6 +98,18 @@ class Genome::Model::Tools::PooledBac::Run {
             is_optional => 1,
             doc => "Use this option toe specify the path to a params file, a file containing preset options to run the pipeline with",
         }, 
+        newbler_params =>
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "This is an optional param string to feed to newbler, this will over-ride the default param string.",
+        },
+        bsub_mem_usage =>
+        {
+            type => 'Integer',
+            is_optional => 1,
+            doc => "This designates the amount of RAM in Gigabytes that is used per newbler job.  The default is 16",
+        }
 
     ]
 };
@@ -145,6 +157,8 @@ sub create_params_hash
         percent_overlap => $self->percent_overlap,
         percent_identity => $self->percent_identity,
         blast_params => $self->blast_params,
+        newbler_params => $self->newbler_params,
+        bsub_mem_usage => $self->bsub_mem_usage,
     };
 
     return $params;
@@ -193,6 +207,8 @@ $DB::single =1;
     my $percent_overlap = $self->percent_overlap || $self->percent_overlap($params->{percent_overlap});
     my $percent_identity = $self->percent_identity || $self->percent_identity($params->{percent_identity});
     my $blast_params = $self->blast_params || $self->blast_params($params->{blast_params});
+    my $newbler_params = $self->newbler_params || $self->newbler_params($params->{newbler_params});
+    my $bsub_mem_usage = $self->bsub_mem_usage || $self->bsub_mem_usage($params->{bsub_mem_usage});
 
     $self->error_message("The pipeline needs for the project_dir to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $project_dir);
     $self->error_message("The pipeline needs for the pooled_bac_dir to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $pooled_bac_dir);
@@ -229,7 +245,7 @@ $DB::single =1;
     Genome::Model::Tools::PooledBac::AddReferenceReads->execute(project_dir => $project_dir);
 
     $self->error_message("Error assembling bac projects")  and die unless
-    Genome::Model::Tools::PooledBac::AssembleBacProjects->execute(project_dir => $project_dir, sff_files => $sff_files, queue_type => $queue_type, retry_count => $retry_count, no_reference_sequence => $no_reference_sequence);
+    Genome::Model::Tools::PooledBac::AssembleBacProjects->execute(project_dir => $project_dir, sff_files => $sff_files, queue_type => $queue_type, retry_count => $retry_count, no_reference_sequence => $no_reference_sequence, newbler_params => $newbler_params, bsub_mem_usage => $bsub_mem_usage);
 
     $self->error_message("Error generating post assembly reports")  and die unless
     Genome::Model::Tools::PooledBac::GeneratePostAssemblyReports->execute( project_dir => $project_dir);
