@@ -188,7 +188,8 @@ sub execute {                               # replace with real execution logic.
 		else
 		{
 
-			print "Calling SNPs in Normal...\n"; 		
+			print "Calling SNPs in Normal...\n";
+			$normal_snp = $self->output_dir . "/" . $self->sample_name . ".normal.snp";	
 			my $cmd = call_sammy() . "pileup2snp " . $normal_pileup . " --min-coverage $min_coverage --min-reads2 $min_reads2 --min-var-freq $min_var_freq --p-value $min_p_value >$normal_snp";
 			system($cmd);			
 		}
