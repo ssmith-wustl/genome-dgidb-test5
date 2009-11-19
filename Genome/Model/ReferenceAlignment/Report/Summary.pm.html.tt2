@@ -1,5 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html lang="en">
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -14,7 +13,7 @@
 					<tr>
 						<td>
 							<h1 style="font-family:Helvetica,Arial,sans-serif;font-size:105%;line-height:45px;font-weight:bold;color:#FFF;margin:0;padding:0 15px;background-color: #5f604c;border-bottom:5px solid #8dc643">
-								Build Summary for Model [% model_id %] ("<em>[% model_name %]</em>") 
+								Build Summary for Model [% model_id %] ("<em>[% model_name %]</em>")
 							</h1>
 						</td>
 					</tr>
@@ -203,7 +202,7 @@
 													</td>
 												</tr>
 											</table>
-											
+
 											<!-- report subsection-->
 											<table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:20px 0 0 0;padding:0;" summary="report subsection header">
 												<tr>
@@ -293,7 +292,7 @@
 												</tr>
 											</table>
 
-											
+
 											<!-- report subsection-->
 											<table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:20px 0 0 0;padding:0;" summary="report subsection header">
 												<tr>
@@ -334,8 +333,8 @@
 												</tr>
 											</table>
 
-										
-										
+
+
 										</td>
 									</tr>
 								</tbody>
@@ -344,7 +343,7 @@
 					</tr>
 					<tr>
 						<td align="right" style="background-color: #f2f2f1;">
-							<img src="cid:img1" width="106" height="50" alt="The Genome Center at Washington University" style="margin: 10px;">
+							<img src="http://genome.wustl.edu/images/uploads/genome_center_logo.png" width="106" height="50" alt="The Genome Center at Washington University" style="margin: 10px;"/>
 						</td>
 					</tr>
 				</tbody>
