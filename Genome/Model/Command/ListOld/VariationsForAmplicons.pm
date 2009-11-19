@@ -1,3 +1,6 @@
+# FIXME ebelter
+#  remove
+#
 package Genome::Model::Command::List::VariationsForAmplicons;
 
 use strict;
