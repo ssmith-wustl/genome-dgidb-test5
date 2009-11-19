@@ -52,6 +52,7 @@ class Genome::InstrumentData::Sanger {
     ],
 };
 
+    #FIXME ALLOCATE 
 sub _data_base_path {
     return '/gscmnt/402/core/16S/info/instrument_data/';
 }
@@ -60,6 +61,7 @@ sub _data_base_path {
 sub dump_to_file_system {
     my $self = shift;
 
+    #FIXME ALLOCATE 
     my $data_dir = $self->create_data_directory_and_link 
         or return;
         
@@ -71,6 +73,7 @@ sub dump_to_file_system {
         $read_cnt++;
         my $scf_name = $read->default_file_name('scf');
         my $scf_file = sprintf('%s/%s.gz', $data_dir, $scf_name);
+        # FIXME Actually verify scf
         next if -s $scf_file;
         unlink $scf_file if -e $scf_file; # remove empty file
         my $scf_fh = IO::File->new($scf_file, 'w');
