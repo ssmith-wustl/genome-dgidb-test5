@@ -25,6 +25,11 @@ sub help_detail {
 }
 
 sub execute {
+    return 1;
+}
+
+sub _execute_old {
+    # moved to run...will go away soon
     my $self = shift;
     my $model = $self->model;
     unless ($self->build_id) {
