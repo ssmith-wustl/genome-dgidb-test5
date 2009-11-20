@@ -9,6 +9,9 @@ use Workflow;
 #to execute: 
 #gt hmp-shotgun pipeline --model-id=1000 --reads-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/testdata/reads.fna --reference-sequence-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/refseq_test1/all_sequences.fa --working-directory=/gscmnt/temp206/info/seqana/species_independant/jpeck/build2 --regions-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/refseq_test1/ref_cov_file.txt --workflow-log-directory=/gscmnt/temp206/info/seqana/species_independant/jpeck/wf_logs/
 
+#with blast params
+#gt hmp-shotgun pipeline --model-id=1000 --reads-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/testdata/s_2_1.fasta --reference-sequence-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/refseq_test1/all_sequences.fa --working-directory=/gscmnt/temp206/info/seqana/species_independant/jpeck/build3 --regions-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/refseq_test1/ref_cov_file.txt --workflow-log-directory=/gscmnt/temp206/info/seqana/species_independant/jpeck/wf_logs/ --blastx-database=/gscmnt/temp206/info/seqana/species_independant/sabubuck/KEGG/KEGG-52/genesV52.KO.faa --blastx-jobs=20
+
 class Genome::Model::Tools::HmpShotgun::Pipeline {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); },
@@ -49,7 +52,7 @@ sub pre_execute {
 
     Genome::Utility::FileSystem->create_directory("$working_dir");
     Genome::Utility::FileSystem->create_directory("$working_dir/alignments");
-    Genome::Utility::FileSystem->create_directory("$working_dir/metabalome");
+    Genome::Utility::FileSystem->create_directory("$working_dir/metabolome");
     Genome::Utility::FileSystem->create_directory("$working_dir/pfam");
     Genome::Utility::FileSystem->create_directory("$working_dir/logs");
     Genome::Utility::FileSystem->create_directory("$working_dir/tmp");
@@ -99,6 +102,9 @@ __DATA__
   <link fromOperation="Metabolome"      fromProperty="final_file"                   toOperation="Report" toProperty="metabolome_final_file" />
   
   <link fromOperation="input connector" fromProperty="model_id"                     toOperation="Blastx" toProperty="model_id" />
+  <link fromOperation="input connector" fromProperty="reads_file"		            toOperation="Blastx" toProperty="query_file" />
+  <link fromOperation="input connector" fromProperty="blastx_database"              toOperation="Blastx" toProperty="blastx_database" />
+  <link fromOperation="input connector" fromProperty="blastx_jobs"                  toOperation="Blastx" toProperty="blastx_jobs" />
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="Blastx" toProperty="working_directory" />
   <link fromOperation="Blastx"         	fromProperty="final_file"                   toOperation="Report" toProperty="blastx_final_file" />
   
@@ -140,6 +146,8 @@ __DATA__
     <inputproperty>model_id</inputproperty>
     <inputproperty>working_directory</inputproperty>
     <inputproperty>reference_sequence_file</inputproperty>
+    <inputproperty>blastx_jobs</inputproperty>
+    <inputproperty>blastx_database</inputproperty>
     <inputproperty>reads_file</inputproperty>
     <inputproperty>regions_file</inputproperty>
     <outputproperty>final_file</outputproperty>

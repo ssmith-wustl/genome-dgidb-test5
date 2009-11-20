@@ -69,21 +69,23 @@ sub execute {
     my $aligner_output_file = $working_directory."/aligner_output.txt";
     my $unaligned_reads_file = $working_directory."/unaligned.txt";
     my $alignment_file = $working_directory."/alignment_file.bam";
-    my $alignment_file_index = $alignment_file.".bai";
+ 
     
     $self->aligned_file($alignment_file);
     
     #check to see if those files exist
-    my @expected_output_files = ( $aligner_output_file, $unaligned_reads_file, $alignment_file, $alignment_file_index );
+    my @expected_output_files = ( $aligner_output_file, $unaligned_reads_file, $alignment_file );
     my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
     
-    if ($rv_check == 1) {
-    	#shortcut this step, all the required files exist.  Quit.
-    	$self->status_message("Skipping this step.  If you would like to regenerate these files, remove them and rerun.");
-   	    $self->status_message("<<<Completed alignment at ".UR::Time->now);
-   	    return 1;
-    }
-    
+    if (defined($rv_check)) {
+	    if ($rv_check == 1) {
+	    	#shortcut this step, all the required files exist.  Quit.
+	    	$self->status_message("Skipping this step.  If you would like to regenerate these files, remove them and rerun.");
+	   	    $self->status_message("<<<Completed alignment at ".UR::Time->now);
+	   	    return 1;
+	    }
+	}
+     
     my $aligner = Genome::Model::Tools::Bwa::AlignReads->create(dna_type=>'dna', 
     															align_options=>' -t 4 ', 
     															ref_seq_file=>$self->reference_sequence_file,
@@ -96,9 +98,32 @@ sub execute {
     $self->status_message("Aligning at ".UR::Time->now);
     my $rv_aligner = $aligner->execute;
    
-    if ($rv_aligner == 1) {
-    	Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    if ($rv_aligner != 1) {
+    	$self->error_message("Aligner failed.  Return value: $rv_aligner");
+    	return;
     }
+    
+        	
+    #sort the alignment file
+    my $sorted_file = "alignment_file.sorted.bam";
+    my $sorter = Genome::Model::Tools::Sam::SortBam->create(file_name=>$alignment_file,
+    														name_sort=>0,
+    														output_file=>$sorted_file);
+    														
+   	my $rv_sort = $sorter->execute;
+   	if ($rv_sort != 1) {
+   		$self->error_message("Sort failed.  Return value: $rv_sort");
+    	return;
+   	}
+   	
+   	my $mv_cmd = "mv $sorted_file $alignment_file";
+   	my $rv_mv = Genome::Utility::FileSystem->shellcmd(cmd=>$mv_cmd);
+   	if ($rv_mv != 1) {
+   		$self->error_message("Move of sorted file failed.  Return value: $rv_sort");
+    	return;	
+   	}
+    	
+    Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
     
     $self->status_message("<<<Completed alignment at ".UR::Time->now);
     
