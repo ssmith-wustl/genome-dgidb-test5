@@ -1,5 +1,8 @@
 package Genome::Model::Command::AddGoldSnp;
 
+#:eclark This just copys a file into the model directory and sets an attribute linking to it?
+# Can strip all the functions after execute and should change it to use Genome::Utility::Filesystem calls instead of system cp
+
 use strict;
 use warnings;
 
