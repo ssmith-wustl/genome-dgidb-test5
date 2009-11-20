@@ -1,3 +1,7 @@
+# review gsanders
+# I do not know much about this but it seems like fasta file either needs to work for multiple instrument data 
+# or at least broadcast a warning if there are multiple , so it just doesnt silently select one
+
 package Genome::Model::Build::DeNovoAssembly;
 
 use strict;
