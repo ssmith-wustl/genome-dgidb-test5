@@ -23,7 +23,7 @@ class Genome::Model::Tools::Somatic::ReadCounts {
        },
        sites_file => {
            is => 'String',
-           doc =>'the goddam sites in annotation format. Refer to something else to figure out what that is.'
+           doc =>'the sites of interest in annotation format. Refer to something else to figure out what that is.'
        },
        reference_sequence => {
            is => 'String',
@@ -33,7 +33,7 @@ class Genome::Model::Tools::Somatic::ReadCounts {
        },
        out => {
            is => 'String',
-           doc =>'where the shit ends up',
+           doc =>'where the output goes',
        },
         ],
     };
