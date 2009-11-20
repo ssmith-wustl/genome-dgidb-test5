@@ -152,11 +152,14 @@ sub get_build_node {
     my $build = shift;
     my $doc = $self->_doc;
 
+	my $kb_requested = eval{$build->disk_allocation->kilobytes_requested};
+	warn "Could not get kilobytes requested: $@" if $@;
+
     my $build_node = $self->anode("build","id",$build->id);
     $build_node->addChild( $self->tnode("date-scheduled",$build->date_scheduled));
     $build_node->addChild( $self->tnode("date-completed",$build->date_completed));
     $build_node->addChild( $self->tnode("build-status",$build->build_status));
-    $build_node->addChild( $self->tnode("kb-requested",$build->disk_allocation->kilobytes_requested));
+    if ($kb_requested) { $build_node->addChild( $self->tnode("kb-requested",$kb_requested)); }
     $build_node->addChild( $self->tnode("elapsed-time", $self->calculate_elapsed_time($build->date_scheduled,$build->date_completed) ));
     return $build_node;
 
@@ -266,9 +269,11 @@ sub calculate_elapsed_time {
 
     if ($date_completed) {
         $diff = UR::Time->datetime_to_time($date_completed) - UR::Time->datetime_to_time($date_scheduled);
-    } else {
+    } elsif ($date_scheduled) {
         $diff = time - UR::Time->datetime_to_time( $date_scheduled);
-    }
+    } else {
+		$diff = -1;
+	}
 
     # convert seconds to days, hours, minutes
     my $seconds = $diff;

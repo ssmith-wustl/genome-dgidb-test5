@@ -221,12 +221,15 @@ sub get_build_node {
 	my $source = eval{$model->subject->source;};
 	warn "Model has no source: $@" if $@;
 
+	my $kb_requested = eval{$self->build->disk_allocation->kilobytes_requested};
+	warn "Could not get kilobytes requested: $@" if $@;
+
     $buildnode->addChild( $doc->createAttribute("model-name",$model->name) );
     $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
     if ($source) { $buildnode->addChild( $doc->createAttribute("common-name", $source->common_name ));}
     $buildnode->addChild( $doc->createAttribute("build-id",$self->build_id) );
     $buildnode->addChild( $doc->createAttribute("status",$self->build->build_status) );
-    $buildnode->addChild( $doc->createAttribute("kilobytes-requested",$self->build->disk_allocation->kilobytes_requested) );
+    if ($kb_requested) { $buildnode->addChild( $doc->createAttribute("kilobytes-requested",$kb_requested) ); }
     $buildnode->addChild( $doc->createAttribute("data-directory",$self->build->data_directory) );
     $buildnode->addChild( $doc->createAttribute("lsf-job-id", $self->build->build_event->lsf_job_id));
 
