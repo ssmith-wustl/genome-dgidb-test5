@@ -1,3 +1,6 @@
+#:boberkfe this ought to use the template toolkit template for formatting too
+#:boberkfe not html inside here
+
 package Genome::Model::ReferenceAlignment::Report::InputBaseCounts;
 
 use strict;

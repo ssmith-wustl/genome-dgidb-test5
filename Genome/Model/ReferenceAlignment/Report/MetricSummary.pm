@@ -1,3 +1,5 @@
+#:boberkfe i think this should be dumped?
+
 package Genome::Model::ReferenceAlignment::Report::MetricSummary;
 
 use strict;

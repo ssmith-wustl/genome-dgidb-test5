@@ -1,3 +1,6 @@
+#:boberkfe the generate report detail method here is way too long, this should
+#:boberkfe be broken up to divide out the work between collecting data and making graphs, etc
+
 package Genome::Model::ReferenceAlignment::Report::DbSnpConcordance;
 
 use strict;

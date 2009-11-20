@@ -1,3 +1,6 @@
+#:boberkfe it would be nice if the other reports stored summary data as build metrics so that this
+#:boberkfe could generate without having to parse out the individual files in the report paths.
+
 package Genome::Model::ReferenceAlignment::Report::Summary;
 
 use strict;

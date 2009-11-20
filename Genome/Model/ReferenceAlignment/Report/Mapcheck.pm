@@ -1,3 +1,5 @@
+#:boberkfe this probably should use a templating engine rather than html mixed in
+
 package Genome::Model::ReferenceAlignment::Report::Mapcheck;
 
 use strict;

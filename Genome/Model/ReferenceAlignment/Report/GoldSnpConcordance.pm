@@ -1,3 +1,6 @@
+#:boberkfe shouldn't this use the template toolkit to format the report, and not
+#:boberkfe html within this module? 
+
 package Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance;
 
 use strict;
