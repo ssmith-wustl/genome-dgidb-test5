@@ -1,3 +1,6 @@
+# Review: gsanders - We probably need to add somatic_score and mapping_score to this table. 
+# It nice to have a simple bridge table but we need these build specific stats at some point unless there is a better way
+
 package Genome::Model::BuildVariant;
 
 use strict;

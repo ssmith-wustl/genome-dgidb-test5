@@ -1,3 +1,5 @@
+# Review: gsanders - Validation status needs to be removed... this is all tracked (including the "official" call) in variantvalidation
+
 package Genome::Model::Variant;
 
 use strict;

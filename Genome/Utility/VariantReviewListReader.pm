@@ -1,3 +1,8 @@
+# review gsanders
+# This seems to be dated... it still uses finfo::SVR instead of Genome::Utility::IO::SVR so at the least update that.
+# This seems to, in general, unnecessarily wrap the separated value reader. 
+# This module is still used in manual review stuff but perhaps can be dumped in favor of using G:U:IO:SVR directly
+
 package Genome::Utility::VariantReviewListReader;
 
 use strict;

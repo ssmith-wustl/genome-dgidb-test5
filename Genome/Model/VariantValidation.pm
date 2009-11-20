@@ -1,3 +1,7 @@
+# Review: gsanders - Some sort of enforcement needs to be made on validation_type and validation_result
+# The current practice is to use "Solexa" and "Official" for validation_type and "S" "WT" "P" etc for validation_result.
+# Also we have run into problems recently with "S " (with a space or a newline) being uploaded to db. Implement valid_values probably.
+
 package Genome::Model::VariantValidation;
 
 use strict;

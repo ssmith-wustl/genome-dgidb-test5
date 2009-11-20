@@ -1,3 +1,6 @@
+# Review: gsanders - It sucks having extra columns in the bridge table but there seems no better way to store build specific information in a structured way
+# This deserves some thought. The only reason BuildVariant and BuildSV are separate is this build specific information.
+
 package Genome::Model::BuildSV;
 
 use strict;
