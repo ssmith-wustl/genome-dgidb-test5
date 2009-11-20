@@ -1,3 +1,7 @@
+# review gsanders 
+# I know not much about this subject but I do not understand why this is so similar to VRListMember.pm...
+# Are these redundant or am I missing the relationship?
+
 package Genome::VariantReviewListMember;
 
 use strict;
