@@ -1,5 +1,8 @@
 package Genome::InstrumentData::Report;
 
+#REVIEW fdu 11/20/2009
+#Remove Genome::Utility::FileSystem from base class list
+
 use strict;
 use warnings;
 

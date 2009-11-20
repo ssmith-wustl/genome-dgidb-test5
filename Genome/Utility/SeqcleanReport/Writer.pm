@@ -1,5 +1,9 @@
 package Genome::Utility::SeqcleanReport::Writer;
 
+#REVIEW fdu 11/20/2009
+#This can be changed to use G::U::IO::Writer as base class
+#and place it under new namespace G::U::IO::SeqcleanReport::Writer
+
 use strict;
 use warnings;
 

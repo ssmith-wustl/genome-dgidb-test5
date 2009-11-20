@@ -1,5 +1,10 @@
 package Genome::Utility::SeqcleanReport::Reader;
 
+#REVIEW fdu 11/20/2009
+#This can be part of the refactoring that uses G::U::IO::Reader to
+#replace G::U::Parser, and place all current XXXX/Reader.pm under
+#new namespace G::U::IO::XXXX::Reader
+
 use strict;
 use warnings;
 
