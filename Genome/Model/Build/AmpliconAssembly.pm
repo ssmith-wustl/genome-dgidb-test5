@@ -1,3 +1,8 @@
+# review - gsanders 
+# sub amplicons_and_headers says it is old but we do not want to remove yet... how about now? This module hasnt been updated in 2 months so maybe?
+# Also, this method is not very clear on what it is doing and probably deserves some comments if it is going to stay. 
+# Some hardcoded logic on ocean samples but why is it doing what it is?
+
 package Genome::Model::Build::AmpliconAssembly;
 
 use strict;
