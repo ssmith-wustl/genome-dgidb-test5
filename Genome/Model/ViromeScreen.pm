@@ -1,3 +1,5 @@
+#:eclark Shouldn't use Data::Dumper (since it doesnt actually use it) and there's 
+# no reason to overload create, since we're not doing anything with it here.
 package Genome::Model::ViromeScreen;
 
 use strict;
