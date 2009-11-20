@@ -1,3 +1,6 @@
+# review gsanders
+# Is there a reason this is not using the UR framework for standard stuff like accessors/mutators and the like?
+
 package Genome::Utility::MetagenomicClassifier::ChimeraClassifier;
 
 use strict;
