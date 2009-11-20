@@ -1,4 +1,5 @@
 package Genome::Transcript::VariantAnnotator;
+#:adukes all annotation methods could be cleaned and documented for better clarity, see cds_exon_modified for an improvement over the current method.  Consider differentiating more between annotating snps/dnps and indeals as opposed to have case statements sprinkled liberally throughought, unit testing for every method needs to happen but doesn't
 
 use strict;
 use warnings;

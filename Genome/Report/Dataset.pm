@@ -1,4 +1,5 @@
 package Genome::Report::Dataset;
+#:adukes is this general enough to live outside Report namespace?
 
 use strict;
 use warnings;

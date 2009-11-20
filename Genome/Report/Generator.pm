@@ -1,4 +1,5 @@
 package Genome::Report::Generator;
+#:adukes eddie showed off the report system to peck and I.  I think everything looks pretty good except for the _generate_data method to be overridden in the subclass could use a better name
 
 use strict;
 use warnings;
@@ -78,6 +79,7 @@ sub generate_report {
 
     # Data
     my $data;
+    #:adukes _generate_data should should be renamed to add_data_to_report_xml, or something similar since the method is now only expected to return true
     unless ( $data = $self->_generate_data ) {
         $self->status_message("No report data was generated.  This may be ok.  Errors, if any, would appear above.");
         return;

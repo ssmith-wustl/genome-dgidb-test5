@@ -1,4 +1,5 @@
 package Genome::Report;
+#:adukes per eddie's suggestion, this could use a method to modify and resave report data
 
 use strict;
 use warnings;
