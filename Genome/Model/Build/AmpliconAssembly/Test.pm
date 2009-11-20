@@ -1,6 +1,7 @@
 ######################################################################
 
 package Genome::Model::Build::AmpliconAssembly::AmpliconTest;
+#:adukes check
 
 use strict;
 use warnings;

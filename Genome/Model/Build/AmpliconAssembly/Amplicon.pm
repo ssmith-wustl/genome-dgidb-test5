@@ -1,4 +1,5 @@
 package Genome::Model::Build::AmpliconAssembly::Amplicon;
+#:adukes could maybe make a UR::Object out of this and convert all the accessor methods to calculated properties
 
 use strict;
 use warnings;

@@ -4,6 +4,7 @@
 # Some hardcoded logic on ocean samples but why is it doing what it is?
 
 package Genome::Model::Build::AmpliconAssembly;
+#:adukes check
 
 use strict;
 use warnings;
