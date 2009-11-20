@@ -1,5 +1,7 @@
 package Genome::Model::Command::Build::ViromeScreen::PrepareInstrumentData;
 
+# uses modules at the top that arent actually used.  as the comment in _prepare_454_data suggests it should symlink its input fasta instead of copy
+
 use strict;
 use warnings;
 
