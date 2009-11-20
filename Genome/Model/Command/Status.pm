@@ -97,7 +97,8 @@ sub get_model_node {
 
     my $model = $self->model;
 
-	$DB::single = 1;
+	my $source = eval{$model->subject->source;};
+	warn "Model has no source: $@" if $@;
 
     $modelnode->addChild( $doc->createAttribute("model-id",$model->id) );
     $modelnode->addChild( $doc->createAttribute("model-name",$model->name) );
@@ -105,7 +106,7 @@ sub get_model_node {
     $modelnode->addChild( $doc->createAttribute("creation-date",$model->creation_date) );
     $modelnode->addChild( $doc->createAttribute("processing-profile-name", $model->processing_profile->name) );
 	$modelnode->addChild( $doc->createAttribute("sample-name",$model->subject_name) );
-	$modelnode->addChild( $doc->createAttribute("common-name",$model->subject->source->common_name) );
+	if ($source) { $modelnode->addChild( $doc->createAttribute("common-name",$source->common_name) );}
     $modelnode->addChild( $doc->createAttribute("subject-id",$model->subject_id) );
     $modelnode->addChild( $doc->createAttribute("subject-name",$model->subject_name) );
     $modelnode->addChild( $doc->createAttribute("subject-type",$model->subject_type) );

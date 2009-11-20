@@ -218,11 +218,12 @@ sub get_build_node {
 
 	$DB::single = 1;
 
-    my $source = $model->subject->source();
+	my $source = eval{$model->subject->source;};
+	warn "Model has no source: $@" if $@;
 
     $buildnode->addChild( $doc->createAttribute("model-name",$model->name) );
     $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
-    $buildnode->addChild( $doc->createAttribute("common-name", $source ? $source->common_name : '-' ));
+    if ($source) { $buildnode->addChild( $doc->createAttribute("common-name", $source->common_name ));}
     $buildnode->addChild( $doc->createAttribute("build-id",$self->build_id) );
     $buildnode->addChild( $doc->createAttribute("status",$self->build->build_status) );
     $buildnode->addChild( $doc->createAttribute("kilobytes-requested",$self->build->disk_allocation->kilobytes_requested) );
