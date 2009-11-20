@@ -1,5 +1,8 @@
 package Genome::InstrumentData::Command::List;
 
+#REVIEW fdu 11/20/2009
+#Remove two 'Xcommand_name' 
+
 use strict;
 use warnings;
 

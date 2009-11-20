@@ -1,5 +1,10 @@
 package Genome::Model::Command::Build::ReferenceAlignment::PostDedupReallocate;
 
+#REVIEW fdu 11/19/2009
+#Can this step be moved to G::M::C::B::R::DeduplicateLibraries as a
+#method and make each dedup subclass calling this method at the end of
+#dedup process ?
+
 use strict;
 use warnings;
 

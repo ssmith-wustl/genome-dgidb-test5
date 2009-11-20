@@ -1,5 +1,8 @@
 package Genome::InstrumentData::Command::List::Sanger;
 
+#REVIEW fdu 11/20/2009
+#OK
+
 use strict;
 use warnings;
 

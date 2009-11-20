@@ -1,5 +1,10 @@
 package Genome::Model::Command::Build::ReferenceAlignment::Layers;
 
+#REVIEW fdu 11/19/2009
+#This module once was implemented as one step of stage reference
+#coverage. But jwalker removed this from that stage on 08/05/2009 
+#(see svn revision r49591). Remove soon.
+
 use strict;
 use warnings;
 

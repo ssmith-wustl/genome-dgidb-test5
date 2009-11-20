@@ -1,5 +1,8 @@
 package Genome::InstrumentData::Command::Summary1;
 
+#REVIEW fdu 11/20/2009
+#What does Summary1 stand for ?
+
 use strict;
 use warnings;
 

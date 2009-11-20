@@ -1,5 +1,8 @@
 package Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments;
 
+#REVIEW fdu 11/19/2009
+#Fix help info
+
 use strict;
 use warnings;
 

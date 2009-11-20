@@ -1,5 +1,9 @@
 package Genome::Model::Command::Build::ReferenceAlignment::Test;
 
+#REVIEW fdu 11/19/2009
+#Is there a better namespace to hold this test module that has nothing to
+#do with build command module ?
+
 use strict;
 use warnings;
 use Carp;

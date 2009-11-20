@@ -1,5 +1,11 @@
 package Genome::InstrumentData::Command::RemoveAlignmentDirectory;
 
+#REVIEW fdu 11/20/2009
+#1. Duplicate codes to get/set reference_build. Just pass
+#reference_name to G::I::Alignment->create and let it to handle
+#2. It is missing trimmer_name/version/params properties to handle
+#trimmer options
+
 use strict;
 use warnings;
 

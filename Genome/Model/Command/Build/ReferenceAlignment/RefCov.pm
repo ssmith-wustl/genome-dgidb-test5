@@ -1,5 +1,9 @@
 package Genome::Model::Command::Build::ReferenceAlignment::RefCov;
 
+#REVIEW fdu 11/19/2009
+#1. Fix help_detail
+#2. Convert /gscuser/jwalker/svn/TechD/RefCov/bin/breakdown-64.pl to genome model tool 
+
 use strict;
 use warnings;
 

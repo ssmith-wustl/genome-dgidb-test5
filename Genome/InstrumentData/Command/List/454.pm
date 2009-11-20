@@ -1,5 +1,9 @@
 package Genome::InstrumentData::Command::List::454;
 
+#REVIEW fdu 11/20/2009
+#If the list gets too long, filter and/or show property should be
+#forced to use.
+
 use strict;
 use warnings;
 

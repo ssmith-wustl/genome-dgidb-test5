@@ -1,5 +1,9 @@
 package Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Blat;
 
+#REVIEW fdu 11/19/2009
+#Move codes of if block dealing with BreakPointRead to
+#G::M::C::B::R::F::BreakPointRead
+
 use strict;
 use warnings;
 
