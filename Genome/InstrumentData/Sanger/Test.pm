@@ -2,6 +2,8 @@ package Genome::InstrumentData::Sanger::Test;
 use strict;
 use warnings;
 
+#:adukes not much here, could be expanded
+
 use base 'Test::Class';
 
 use Test::More;

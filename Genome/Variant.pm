@@ -1,6 +1,6 @@
-
 # review jlolofie
 # cant find this being used anywhere... delete?
+#:adukes I wrote this with the idea of providing a non-list based entry point to the annotator, specifically for providing an object interface to the annotator for small sets of variants.  This hasn't happened, and I doubt it will anytime soon, so feel free to get rid of it
 
 package Genome::Variant;
 
