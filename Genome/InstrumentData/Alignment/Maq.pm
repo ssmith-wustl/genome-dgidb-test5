@@ -466,6 +466,9 @@ sub verify_alignment_data {
         $self->error_message('Failed to unlock alignment resource '. $lock);
         return;
     }
+    
+    return 2 if $verified_no_reads;
+    
     return 1;
 }
 
@@ -505,16 +508,23 @@ sub find_or_generate_alignment_data {
     $self->status_message('Samtools version: '.$self->samtools_version);
     $self->status_message('Picard version: '.$self->picard_version);
 
-    if ($self->verify_alignment_data != 1) {
+
+    my $alignment_data_verified = $self->verify_alignment_data;
+    if($alignment_data_verified == 2) {
+        #Aligner found no reasonable reads--no way to build all_sequences.map and all_sequences.bam
+        $self->status_message("Existing alignment data is available and deemed correct.");
+        $self->status_message("Skipping MAP and BAM file check due to no reasonable reads.");
+
+    } elsif ($alignment_data_verified != 1) {
         $self->remove_alignment_directory_contents;
         $self->_run_aligner();
     } else {
         $self->status_message("Existing alignment data is available and deemed correct.");
         my $alignment_bam_file = $self->alignment_file;
-       
+
         my $map_file = $self->alignment_map_file;
         my $maq_cmd = Genome::Model::Tools::Maq->path_for_maq_version($self->aligner_version) ." map (Parameters not available for previous alignment.)";
-                
+
         if (!-e $alignment_bam_file) {
             $self->status_message('No all_sequences.bam found in alignment directory. Regenerating.');
             $self->remove_alignment_file;
