@@ -1,3 +1,5 @@
+#:eclark Code should be ported out of the old MG namespace into this file if it is still used.
+
 package Genome::Model::ReferenceAlignment::Report::MutationDiagram;
 
 use strict;
@@ -10,7 +12,7 @@ class Genome::Model::ReferenceAlignment::Report::MutationDiagram {
     is => 'Command',
     has => [
         maf     => { type => 'String',  doc => "MAF file"},
-	genes   => { type => 'String',  doc => "comma separated list of (hugo) gene names (uppercase)--default is ALL", is_optional => 1},
+        genes   => { type => 'String',  doc => "comma separated list of (hugo) gene names (uppercase)--default is ALL", is_optional => 1},
     ],
 };
 

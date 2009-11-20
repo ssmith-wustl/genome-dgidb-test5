@@ -1,3 +1,5 @@
+#:eclark This report has a lot of business logic that could be refactorered for readability, the biggest immediately concern is the hardcoded path to human build36 
+
 package Genome::Model::ReferenceAlignment::Report::HqPos;
 
 use strict;

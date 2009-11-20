@@ -1,3 +1,7 @@
+#:eclark Has hardcoded path to iprscan, huge chunks of commented out code thats not clear what 
+# it was doing or what its still there for.  A simple line by line refactor of the module would 
+# make it a lot more clear.
+
 package Genome::Model::ReferenceAlignment::Report::Pfam;
 
 use strict;
