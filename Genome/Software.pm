@@ -1,3 +1,6 @@
+# review gsanders
+# sub resolve_software_version has some valid todo's already but no idea if this will be used anytime soon
+
 package Genome::Software;
 
 use strict;
@@ -68,7 +71,7 @@ sub resolve_software_version {
     my $base_dir = $self->base_dir;
     my $path = $base_dir .'.pm';
     unless (-f $path) {
-        die('Failed to find expected perl module '. $path);
+        DIE('Failed to find expected perl module '. $path);
     }
     my $svn_info_hash_ref = $self->svn_info($path);
     if (defined $$svn_info_hash_ref{'Revision'}) {
