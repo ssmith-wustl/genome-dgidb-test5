@@ -1,5 +1,10 @@
 package Genome::ProcessingProfile::Command::Remove;
 
+#REVIEW fdu 11/20/2009
+#1. Remove 'use Data::Dumper'
+#2. Need add codes to check which models are using the
+#processing-profile to be deleted and print out the list as warning
+
 use strict;
 use warnings;
 

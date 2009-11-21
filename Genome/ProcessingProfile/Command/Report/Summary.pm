@@ -1,5 +1,11 @@
 package Genome::ProcessingProfile::Command::Report::Summary;
 
+#REVIEW fdu 11/20/2009
+#1. Remove 'use Data::Dumper' and clean up # codes
+#2. Add help info
+#3. Either use G::P::C::R as base class or pull this up to G::P::C and
+#drop G::P::C::Report
+
 use strict;
 use warnings;
 

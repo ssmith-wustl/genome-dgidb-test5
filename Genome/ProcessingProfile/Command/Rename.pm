@@ -1,5 +1,10 @@
 package Genome::ProcessingProfile::Command::Rename;
 
+#REVIEW fdu 11/20/2009
+#1. Need check if new pp name already exists in pp table 
+#2. Need print out the warning list of all the models using current pp name
+#3. Remove the part of pod
+
 use strict;
 use warnings;
 

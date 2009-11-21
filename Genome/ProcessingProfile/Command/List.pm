@@ -1,5 +1,8 @@
 package Genome::ProcessingProfile::Command::List;
 
+#REVIEW fdu 11/20/1009
+#Remove 'use Command' and 'use Data::Dumper'
+
 use strict;
 use warnings;
 

@@ -1,5 +1,9 @@
 package Genome::ProcessingProfile::Command::Describe;
 
+#REVIEW fdu 11/20/1009
+#1. Remove 'use Command' and 'use Data::Dumper';
+#2. Remove 'sub _print_processing_profiles_values_for_property'
+
 use strict;
 use warnings;
 
