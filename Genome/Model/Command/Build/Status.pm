@@ -224,6 +224,15 @@ sub get_build_node {
 	my $kb_requested = eval{$self->build->disk_allocation->kilobytes_requested};
 	warn "Could not get kilobytes requested: $@" if $@;
 
+        # grab any build-event allocations as well to include into total allocation held
+        my @events = $self->build->events;
+        my @event_allocations = Genome::Disk::Allocation->get(owner_id=>[map {$_->id} @events]);
+    
+        for (@event_allocations) {
+            $kb_requested += $_->kilobytes_requested;
+        }
+        
+
     $buildnode->addChild( $doc->createAttribute("model-name",$model->name) );
     $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
     if ($source) { $buildnode->addChild( $doc->createAttribute("common-name", $source->common_name ));}
