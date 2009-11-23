@@ -90,7 +90,7 @@ sub execute {
     $self->iprscan_output($tmp_fh);
     
     my @iprscan_command = (
-                           '/gscmnt/974/analysis/iprscan16.1/iprscan/bin/iprscan.hacked',
+                           '/gsc/scripts/bin/iprscan',
                            '-cli',
                            '-goterms',
                            '-verbose',
