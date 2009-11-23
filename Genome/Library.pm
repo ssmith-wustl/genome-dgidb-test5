@@ -13,37 +13,21 @@ use strict;
 use warnings;
 
 class Genome::Library {
-    table_name => "(
-            select a.*, l.dna_id library_id, s.dna_id sample_id, o.taxon_id
-            from (
-                    select library_name, sample_name
-                    from solexa_lane_summary\@dw
-                    union
-                    select library_name, sample_name
-                    from run_region_454\@dw
-            ) a
-            join dna\@oltp l on l.dna_name = a.library_name
-            join dna\@oltp s on s.dna_name = a.sample_name
-            left join (
-                    dna_resource\@oltp dr 
-                    join entity_attribute_value\@oltp eav		
-                            on eav.entity_id = dr.dr_id
-                            and eav.type_name = 'dna'
-                            and eav.attribute_name = 'org id'	
-                    join organism_taxon\@dw o 
-                            on o.legacy_org_id = eav.value
-            ) on dr.dna_resource_prefix = substr(l.dna_name,0,4)	
-        ) library ",
+    type_name => 'genome library',
+    table_name => 'GSC.LIBRARY_SUMMARY',
     id_by => [
-        id                  => { is => 'Number', column_name => 'LIBRARY_ID' },
+        library_id          => { is => 'Number', len => 20 },
     ],
     has => [
-        name                => { is => 'Text',     len => 64, column_name => 'LIBRARY_NAME' },
+        name                => { is => 'Text',     len => 64, column_name => 'FULL_NAME' },
     ],
     has_optional => [
+        sample_id           => { is => 'Number', len => 20 },
         sample              => { is => 'Genome::Sample', id_by => 'sample_id' },
+        sample_name         => { is => 'Text', via => 'sample', to => 'sample_name' },
+        taxon_id            => { is => 'Number', via => 'sample', to => 'taxon_id' },
         taxon               => { is => 'Genome::Taxon', id_by => 'taxon_id' },
-        species_name        => { via => 'taxon' },
+        species_name        => { via => 'taxon', to => 'species_name' },
     ],
     has_many => [
         #solexa_lanes        => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'library' },
@@ -53,4 +37,3 @@ class Genome::Library {
 };
 
 1;
-
