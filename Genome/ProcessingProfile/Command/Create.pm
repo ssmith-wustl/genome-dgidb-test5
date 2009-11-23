@@ -1,5 +1,10 @@
 package Genome::ProcessingProfile::Command::Create;
 
+#REVIEW fdu 11/23/2009
+#1. Remove "use Genome::ProcessingProfile;" and "use Genome::ProcessingProfile::Command::Describe;"
+#2. Add a new property "describe" (default_value => 1) to turn off "pp describe" after create if user likes
+#3. List all the models using supersedse pp name if supersedse option given
+
 use strict;
 use warnings;
 
