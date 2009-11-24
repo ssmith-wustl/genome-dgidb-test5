@@ -75,7 +75,7 @@ sub help_synopsis {
 genome instrument-data summary1 %6888%
 
 # everything for a given year
-genome instrument-data -d 2009-%%-%%
+genome instrument-data summary1 -d 2009-%%-%%
 EOS
 }
 
