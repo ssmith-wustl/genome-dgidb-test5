@@ -1,5 +1,5 @@
 #:boberkfe shouldn't this use the template toolkit to format the report, and not
-#:boberkfe html within this module? 
+#:boberkfe html within this module?
 
 package Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance;
 
@@ -13,7 +13,7 @@ use CGI;
 use IO::String;
 use Data::Dumper;
 use Template;
-use POSIX; 
+use POSIX;
 use XML::Simple;
 
 my $base_template_path = __PACKAGE__->_base_path_for_templates;
@@ -25,7 +25,7 @@ class Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance {
         variant_list_files          => { via => 'build', to => '_snv_file_unfiltered' },
         variant_filtered_list_files => { via => 'build', to => '_snv_file_filtered' },
         gold_snp_path               => { via => 'build' },
-        
+
         # the name is essentially constant
         name                        => { default_value => 'Gold_SNP_Concordance' },
         description => {
@@ -47,7 +47,7 @@ class Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance {
     ]
 };
 
-sub _base_path_for_templates 
+sub _base_path_for_templates
 {
     my $module = __PACKAGE__;
     $module =~ s/::/\//g;
@@ -59,7 +59,7 @@ sub _base_path_for_templates
     return $module_path;
 }
 
-sub _generate_data 
+sub _generate_data
 {
     my $self = shift;
 #    return {
@@ -76,7 +76,7 @@ sub _generate_data
 
     #my $data = { description => $self->generate_report_brief };
     my $data = {};
-    
+
     for my $template (@templates) {
         my $content = $self->generate_report_detail($template);
         my ($format,$key);
@@ -86,7 +86,7 @@ sub _generate_data
         }
 #        else {
 #            $format = 'text';
-#            $key = 'txt'; 
+#            $key = 'txt';
 #        }
         if (exists $data->{$key}) {
             die "Multiple templates return content in $format format. This is not supported, sadly."
@@ -98,14 +98,14 @@ sub _generate_data
 # end of additions
 }
 
-sub generate_report_brief 
+sub generate_report_brief
 {
     my $self=shift;
 #    my $build = $self->build;
     return "<div>Gold Snp coverage for " . $self->model_name . " (build " . $self->build_id . ") as of " . UR::Time->now.'</div>';
 }
 
-sub generate_report_detail 
+sub generate_report_detail
 {
     my $self = shift;
     my $template = shift;
@@ -115,18 +115,18 @@ sub generate_report_detail
 
     my $build = $self->build;
     my $model = $build->model;
-    
+
     my $genotyper_name = $model->genotyper_name;
     my $gold_snp_path  = $self->gold_snp_path;
 
     my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/GoldSnpConcordance.pm"};
     die 'failed to find module path!' unless $module_path;
-   
+
 $DB::single = 1;
 
     my $r = new CGI;
     my $style = $self->get_css();
-#    my $body = IO::String->new();  
+#    my $body = IO::String->new();
 #    die $! unless $body;
 #    $body->print( $r->start_html(-title=> 'Gold SNP Concordance Report for Model' . $self->model_id . ', build ' .$build->id) );
 
@@ -147,8 +147,8 @@ $DB::single = 1;
         my $snp_file = $self->create_temp_file_path($list);
         my @files = $self->$list;
         system "cat @files > $snp_file";
-        
-        my %intersect_params = ('gold_snp_file' => $gold_snp_path,    
+
+        my %intersect_params = ('gold_snp_file' => $gold_snp_path,
                                 'snp_file' => $snp_file);
 
         if ($genotyper_name =~ m/samtools/) {
@@ -161,32 +161,32 @@ $DB::single = 1;
             $self->error_message("failed at getting a gold snp intersection command.");
             return;
         }
-    
+
         unless ($cmd->execute) {
             $self->error_message("gold snp intersection command failed to execute!");
             return;
         }
 
-=cut                      
+=cut
         my $cmd = "gt snp gold-snp-intersection " .
             "--gold-snp-file $gold_snp_path " .
             "--snp-file $snp_file";
         $cmd .= ' --snp-format sam' if $genotyper_name =~ /samtools/;
-    
+
         $DB::single = 1;
 
         $self->status_message("GoldSnp command: ".$cmd);
-        
-        my $gold_rpt = `$cmd`; 
-        #my $output_file = $self->report_detail_output_filename;   
-        
-        #my $body = IO::File->new(">$output_file");  
+
+        my $gold_rpt = `$cmd`;
+        #my $output_file = $self->report_detail_output_filename;
+
+        #my $body = IO::File->new(">$output_file");
 =cut
 
         my $gold_rpt = $cmd->_report_txt;
         my $gold_rpt_xml = $cmd->_report_xml;
 
-        my $filter_flavor; 
+        my $filter_flavor;
         my $label;
         if ($list eq 'variant_list_files') {
             $label = 'Gold Concordance for Unfiltered SNVs';
@@ -201,11 +201,11 @@ $DB::single = 1;
         }
 
         push @gold_xml_reports, {filter_flavor=>$filter_flavor, xml=>$gold_rpt_xml};
-       
+
         my $formatted_gold_rpt = $self->format_report($gold_rpt, $label);
 #        $body->print("$formatted_gold_rpt");
         $report_content = $report_content . $formatted_gold_rpt;
-        
+
     }
 
 
@@ -239,11 +239,11 @@ $DB::single = 1;
         $self->store_report_metrics($_->{xml}, $_->{filter_flavor});
     }
 
-    my $body = IO::String->new();  
+    my $body = IO::String->new();
     die $! unless $body;
     $body->print($content);
     $body->seek(0, 0);
-    return join('', $body->getlines);        
+    return join('', $body->getlines);
 
 }
 
@@ -264,7 +264,7 @@ sub format_report
         $content=~s/\t/<\/td><td>/g;
         $content=~s/(\n)(There were .+)/<\/td><\/tr>\n<tr><td class=\"gold_class\">$2/g;
         $content=~s/(There were )(\d+)(\s)(.+)(<\/td><\/tr>)/$4<\/td><td class=\"gold_class\">$2<\/td><td colspan=\"2\" class=\"gold_class\">&nbsp;$5/g;
-        $content=~s/(<td colspan=\"2\" class=\"gold_class\">&nbsp;<\/td><\/tr>\n)/$1<tr><th>&nbsp;<\/th><th>reads<\/th><th>\%<\/th><th>depth<\/th><\/tr>\n/g;
+        $content=~s/(<td colspan=\"2\" class=\"gold_class\">&nbsp;<\/td><\/tr>\n)/$1<tr><th>&nbsp;<\/th><th>SNVs<\/th><th>\%<\/th><th>depth<\/th><\/tr>\n/g;
         $content=~s/calls \(could/calls<br \/>(could/g;
         $content = "<div class=\"section_content\">\n<h2 class=\"section_title\">$label</h2>\n" .
                    "<table class=\"snp\">\n" .
@@ -278,12 +278,12 @@ sub get_css
 {
     my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/GoldSnpConcordance.pm"};
     die 'failed to find module path!' unless $module_path;
-    
+
     ## get CSS resources
     my $css_file = "$module_path.html.css";
     my $css_fh = IO::File->new($css_file);
     unless ($css_fh) {
-        die "failed to open file $css_file!"; 
+        die "failed to open file $css_file!";
     }
     my $page_css = join('',$css_fh->getlines);
 
@@ -291,7 +291,7 @@ sub get_css
 
 sub get_snp_file
 {
-   #concatenate variant files 
+   #concatenate variant files
     my $self = shift;
     my $model = $self->model;
     my $last_complete_build = $model->last_complete_build;
@@ -332,7 +332,7 @@ sub store_report_metrics {
 
                 my $metric_name = "$block $match_type $t $filter_flavor";
                 my $metric_value = $_->{intersection};
-        
+
                 $self->build->set_metric($metric_name, $metric_value);
             }
         }
