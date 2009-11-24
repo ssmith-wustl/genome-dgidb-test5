@@ -11,6 +11,7 @@ class Genome::Model::Command::Status {
     has => [
         genome_model_id => {
             is => 'String',
+            shell_args_position => 1,
             doc => 'Required genome model id upon which the report is run.',
         },
         model   => {
@@ -106,7 +107,9 @@ sub get_model_node {
     $modelnode->addChild( $doc->createAttribute("creation-date",$model->creation_date) );
     $modelnode->addChild( $doc->createAttribute("processing-profile-name", $model->processing_profile->name) );
 	$modelnode->addChild( $doc->createAttribute("sample-name",$model->subject_name) );
-	if ($source) { $modelnode->addChild( $doc->createAttribute("common-name",$source->common_name) );}
+	if ($source) { 
+        $modelnode->addChild( $doc->createAttribute("common-name",$source->common_name || 'UNSPECIFIED') );
+    }
     $modelnode->addChild( $doc->createAttribute("subject-id",$model->subject_id) );
     $modelnode->addChild( $doc->createAttribute("subject-name",$model->subject_name) );
     $modelnode->addChild( $doc->createAttribute("subject-type",$model->subject_type) );
@@ -152,8 +155,8 @@ sub get_build_node {
     my $build = shift;
     my $doc = $self->_doc;
 
-	my $kb_requested = eval{$build->disk_allocation->kilobytes_requested};
-	warn "Could not get kilobytes requested: $@" if $@;
+    my $allocation = $build->disk_allocation;
+    my $kb_requested = ($allocation ? $allocation->kilobytes_requested : 0);
 
     my $build_node = $self->anode("build","id",$build->id);
     $build_node->addChild( $self->tnode("date-scheduled",$build->date_scheduled));
