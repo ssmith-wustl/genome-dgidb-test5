@@ -135,11 +135,17 @@ sub execute {
     my $self = shift;
 
     my $target_class = $self->_target_class;
-    my $processing_profile = $target_class->create(
+    my %target_params = (
         name => $self->name,
-        supersedes => $self->supersedes,
         $self->_get_target_class_params,
     );
+    if ($self->supersedes) {
+        $target_params{'supersedes'} = $self->supersedes;
+    }
+    my $processing_profile = $target_class->create(
+        %target_params
+    );
+    
 
     unless ( $processing_profile ) {
         $self->error_message("Failed to create processing profile.");
