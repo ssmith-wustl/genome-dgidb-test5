@@ -60,7 +60,9 @@ sub execute {
     my @return;   
     while (my $line=$pileup_fh->getline) {
         chomp $line;
-        if($line =~ m/\*/) {
+        my @fields = split("\t", $line);
+        
+        if($fields[2] eq '*') {
             #INDELOL!!!
             @return = $self->parse_indel_line($line);
             for my $ret (@return) {
@@ -68,7 +70,7 @@ sub execute {
             }
         }
         else { #SNP or Reference. We only care about SNPs
-            my ($chr, $start, $ref_base, $variant_iub, $consensus_quality, $snp_quality, $max_map_q, $depth_tumor, $depth_normal) = split("\t", $line);
+            my ($chr, $start, $ref_base, $variant_iub, $consensus_quality, $snp_quality, $max_map_q, $depth_tumor, $depth_normal) = @fields;
             if($ref_base ne $variant_iub) {
                 #It's a SNP
                 $output_fh->print("$chr\t$start\t$start\t$ref_base\t$variant_iub\tSNP\t$consensus_quality\t$snp_quality\t$max_map_q\t$depth_tumor\t$depth_normal\n");
