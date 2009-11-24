@@ -1,4 +1,5 @@
 package Genome::Model::Command::Report;
+#:adukes check, one comment on where responsibility for determining a model's report types should belong
 
 use strict;
 use warnings;
@@ -108,6 +109,8 @@ sub _validate_report_name_for_build {
     }
     
     my $type_name = $build->model->type_name;
+    
+    #:adukes I can't decide if this logic should be in Genome::Model::Report, which dictates that all reports for a model belong in a certain directory structure, or in the Genome::Model::ModelType code, where you could have more flexible report type return, and perhaps a default implementation in Genome::Model base class that looks at the dir structure.  Thoughts?
     my @report_names = Genome::Model::Report::get_report_names_for_type_name($type_name);
 
     unless ( @report_names ) {
