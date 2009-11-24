@@ -126,6 +126,7 @@ sub qual_file {
             $self->error_message('Failed to find sff_file: '. $self->sff_file);
             die($self->error_message);
         }
+        #FIXME ALLOCATE 
         unless (Genome::Model::Tools::454::Sffinfo->execute(
                                                             sff_file => $self->sff_file,
                                                             output_file => $self->_qual_file,
@@ -149,6 +150,7 @@ sub fasta_file {
             $self->error_message('Failed to find sff_file: '. $self->sff_file);
             die($self->error_message);
         }
+        #FIXME ALLOCATE 
         unless (Genome::Model::Tools::454::Sffinfo->execute(
                                                             sff_file => $self->sff_file,
                                                             output_file => $self->_fasta_file,
@@ -161,6 +163,7 @@ sub fasta_file {
     return $self->_fasta_file;
 }
 
+#FIXME MOVE TO BUILD 
 sub trimmed_sff_file {
     my $self = shift;
     my $full_path = $self->resolve_full_path;
@@ -193,6 +196,7 @@ sub dump_to_file_system {
     my $self = shift;
 
     unless ( -e $self->_sff_file ) {
+        #FIXME ALLOCATE 
         unless ($self->create_data_directory_and_link) {
             $self->error_message('Failed to create directory and link');
             return;
