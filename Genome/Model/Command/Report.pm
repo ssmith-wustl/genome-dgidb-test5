@@ -95,6 +95,8 @@ sub _validate_build_id {
     return 1;
 }
 
+
+#:I commented in this method, but it doesn't look like it's ever called in the Genome::Model::Report namespace, should probably be deleted
 sub _validate_report_name_for_build {
     my ($self, $build, $report_name) = @_;
 
