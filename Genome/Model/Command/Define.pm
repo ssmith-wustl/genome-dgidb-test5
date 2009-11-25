@@ -126,7 +126,7 @@ sub sub_command_dirs {
 
 sub sub_command_classes {
     my $class = ref($_[0]) || $_[0];
-    return ( $class eq __PACKAGE__ ? @SUB_COMMAND_CLASSES : 0 );
+    return ( $class eq __PACKAGE__ ? @SUB_COMMAND_CLASSES : () );
 }
 
 sub help_brief {
