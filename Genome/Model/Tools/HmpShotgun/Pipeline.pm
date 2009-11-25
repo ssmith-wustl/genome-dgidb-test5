@@ -12,6 +12,13 @@ use Workflow;
 #with blast params
 #gt hmp-shotgun pipeline --model-id=1000 --reads-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/testdata/s_2_1.fasta --reference-sequence-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/refseq_test1/all_sequences.fa --working-directory=/gscmnt/temp206/info/seqana/species_independant/jpeck/build3 --regions-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/refseq_test1/ref_cov_file.txt --workflow-log-directory=/gscmnt/temp206/info/seqana/species_independant/jpeck/wf_logs/ --blastx-database=/gscmnt/temp206/info/seqana/species_independant/sabubuck/KEGG/KEGG-52/genesV52.KO.faa --blastx-jobs=20
 
+#human ref
+#/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa                                                    
+
+#big boy, multiple read files
+#gt hmp-shotgun pipeline --model-id=1000 --reads-file=/gscmnt/233/analysis/sequence_analysis/ancylostoma_caninum/NEW_ASSEMBLY_ANALYSIS_091027/SCREENING_ACAN_ILLUMINA_3_NEW_LANES/REDUNDANCY_REMOVAL/lane6_both_ends.fna.non_redundant,/gscmnt/233/analysis/sequence_analysis/ancylostoma_caninum/NEW_ASSEMBLY_ANALYSIS_091027/SCREENING_ACAN_ILLUMINA_3_NEW_LANES/REDUNDANCY_REMOVAL/lane7_both_ends.fna.non_redundant,/gscmnt/233/analysis/sequence_analysis/ancylostoma_caninum/NEW_ASSEMBLY_ANALYSIS_091027/SCREENING_ACAN_ILLUMINA_3_NEW_LANES/REDUNDANCY_REMOVAL/lane8_both_ends.fna.non_redundant,/gscmnt/233/analysis/sequence_analysis/ancylostoma_caninum/NEW_ASSEMBLY_ANALYSIS_091027/SCREENING_ACAN_ILLUMINA/REDUNDANCY/Acaninum.illumina.75mer.PE.091028.fna.non_redundant --reference-sequence-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/refseq_test2/all_sequences.fa --working-directory=/gscmnt/temp206/info/seqana/species_independant/jpeck/build6 --regions-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/refseq_test2/ref_cov_file.txt --workflow-log-directory=/gscmnt/temp206/info/seqana/species_independant/jpeck/wf_logs/ --blastx-database=/gscmnt/temp206/info/seqana/species_independant/sabubuck/KEGG/KEGG-52/genesV52.KO.faa --blastx-jobs=20
+
+
 class Genome::Model::Tools::HmpShotgun::Pipeline {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); },
@@ -48,8 +55,15 @@ sub pre_execute {
     $self->status_message("Using working directory:".$working_dir);
     $self->status_message("Workflow log directory:".$self->workflow_log_directory);
     $self->status_message("Delete intermediate files on completion: ".$self->cleanup);
+    
+    $self->status_message("Reads file string: ".$self->reads_file);
+    my @reads_files = split(/,/ , $self->reads_file);
+    my $list_string = join("\n",@reads_files);
+    $self->status_message("Reads files: \n".$list_string); 
     $self->status_message("Creating required directories.");
-
+    $self->reads_file(\@reads_files);
+	
+	
     Genome::Utility::FileSystem->create_directory("$working_dir");
     Genome::Utility::FileSystem->create_directory("$working_dir/alignments");
     Genome::Utility::FileSystem->create_directory("$working_dir/metabolome");
@@ -91,8 +105,11 @@ __DATA__
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="Align" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="reference_sequence_file"      toOperation="Align" toProperty="reference_sequence_file" />
   <link fromOperation="input connector" fromProperty="reads_file"				    toOperation="Align" toProperty="reads_file" />
-  <link fromOperation="Align"           fromProperty="aligned_file"                 toOperation="RefCov" toProperty="aligned_bam_file" />
+  <link fromOperation="Align"           fromProperty="aligned_file"                 toOperation="MergeAlignments" toProperty="alignment_files" />
   
+  <link fromOperation="input connector" fromProperty="working_directory"            toOperation="MergeAlignments" toProperty="working_directory" /> 
+  <link fromOperation="MergeAlignments"	fromProperty="aligned_file"      			toOperation="RefCov" toProperty="aligned_bam_file" />
+   
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="RefCov" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="regions_file"                 toOperation="RefCov" toProperty="regions_file" /> 
   <link fromOperation="RefCov"          fromProperty="stats_file"                   toOperation="Report" toProperty="align_final_file" /> 
@@ -120,9 +137,15 @@ __DATA__
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="Report" toProperty="working_directory" />
   <link fromOperation="Report"       	fromProperty="final_file"                   toOperation="output connector" toProperty="final_file" />
 
-<operation name="Align">
-    <operationtype commandClass="Genome::Model::Tools::HmpShotgun::AlignMetagenomes" typeClass="Workflow::OperationType::Command" />
+<operation name="Align" parallelBy="reads_file">
+    <operationtype commandClass="Genome::Model::Tools::HmpShotgun::AlignMetagenomes" typeClass="Workflow::OperationType::Command">
+    </operationtype>
 </operation>
+
+<operation name="MergeAlignments">
+    <operationtype commandClass="Genome::Model::Tools::HmpShotgun::MergeAlignments" typeClass="Workflow::OperationType::Command" />
+</operation>
+
 <operation name="RefCov">
     <operationtype commandClass="Genome::Model::Tools::HmpShotgun::RefCov" typeClass="Workflow::OperationType::Command" />
 </operation>
