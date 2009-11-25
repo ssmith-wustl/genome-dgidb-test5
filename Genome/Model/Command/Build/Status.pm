@@ -218,24 +218,35 @@ sub get_build_node {
 
 	$DB::single = 1;
 
-	my $source = eval{$model->subject->source;};
-	warn "Model has no source: $@" if $@;
+    my $subject = $model->subject;
+    my $source;
+    if ($subject->can("source")) {
+	    $source = $subject->source;
+    }
+	
+    my $disk_allocation = $self->build->disk_allocation;
+    my $kb_requested = ($disk_allocation ? $disk_allocation->kilobytes_requested : 0);
+        
+    # grab any build-event allocations as well to include into total allocation held
+    my @events = $self->build->events;
+    my @event_allocations = Genome::Disk::Allocation->get(owner_id=>[map {$_->id} @events]);
 
-	my $kb_requested = eval{$self->build->disk_allocation->kilobytes_requested};
-	warn "Could not get kilobytes requested: $@" if $@;
+    for (@event_allocations) {
+        $kb_requested += $_->kilobytes_requested;
+    }
 
-        # grab any build-event allocations as well to include into total allocation held
-        my @events = $self->build->events;
-        my @event_allocations = Genome::Disk::Allocation->get(owner_id=>[map {$_->id} @events]);
-    
-        for (@event_allocations) {
-            $kb_requested += $_->kilobytes_requested;
-        }
+    if (not defined $disk_allocation) {
+        $kb_requested .= ' (incomplete)';
+    }
         
 
     $buildnode->addChild( $doc->createAttribute("model-name",$model->name) );
     $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
-    if ($source) { $buildnode->addChild( $doc->createAttribute("common-name", $source->common_name ));}
+    if ($source) { 
+        $buildnode->addChild(
+            $doc->createAttribute("common-name", $source->common_name || 'UNSPECIFIED!')
+        );
+    }
     $buildnode->addChild( $doc->createAttribute("build-id",$self->build_id) );
     $buildnode->addChild( $doc->createAttribute("status",$self->build->build_status) );
     if ($kb_requested) { $buildnode->addChild( $doc->createAttribute("kilobytes-requested",$kb_requested) ); }
