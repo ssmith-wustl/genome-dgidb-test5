@@ -59,10 +59,18 @@ sub execute {
     $self->status_message("Ref seq: ".$self->reference_sequence_file);
     $self->status_message("Reads: ".$self->reads_file);
     
-    my $working_directory = $self->working_directory."/alignments/";
+    my $align_basename = File::Basename::basename($self->reads_file);
+    
+    my $working_directory = $self->working_directory."/alignments/".$align_basename."/";
     unless (-e $working_directory) {
     	Genome::Utility::FileSystem->create_directory("$working_directory");
     }
+    
+    $self->status_message("Working directory: ".$working_directory);
+    #my $alignment_file = $working_directory."/alignment_file.bam";
+    #$self->aligned_file($alignment_file);
+    #$self->status_message("<<<Completed AlignMetagenomes for testing at at ".UR::Time->now);
+    #return 1;
     
     #expected output files
     #Move these to resolver methods in a build object or something similar
@@ -70,7 +78,6 @@ sub execute {
     my $unaligned_reads_file = $working_directory."/unaligned.txt";
     my $alignment_file = $working_directory."/alignment_file.bam";
  
-    
     $self->aligned_file($alignment_file);
     
     #check to see if those files exist
@@ -97,15 +104,15 @@ sub execute {
     															
     $self->status_message("Aligning at ".UR::Time->now);
     my $rv_aligner = $aligner->execute;
+    
    
     if ($rv_aligner != 1) {
     	$self->error_message("Aligner failed.  Return value: $rv_aligner");
     	return;
     }
-    
-        	
+           	
     #sort the alignment file
-    my $sorted_file = "alignment_file.sorted.bam";
+    my $sorted_file = $working_directory."/alignment_file.sorted.bam";
     my $sorter = Genome::Model::Tools::Sam::SortBam->create(file_name=>$alignment_file,
     														name_sort=>0,
     														output_file=>$sorted_file);

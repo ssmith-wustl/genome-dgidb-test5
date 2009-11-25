@@ -86,6 +86,11 @@ sub execute {
 
     my $now = UR::Time->now;
     $self->status_message(">>>Starting SpeciesBlastX execute() at $now"); 
+    $self->status_message("Bailing for alignment testing...");
+    $self->final_file("species_blastx_final_file_path");
+    $self->status_message("<<<Completed SpeciesBlastX at ".UR::Time->now);
+    return 1;
+    
     
     #my $fail_file = $self->working_directory."/blastx/FAIL";
     #if (-e $fail_file) {

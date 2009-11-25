@@ -59,6 +59,9 @@ sub execute {
     $self->status_message("Aligned Bam File: ".$self->aligned_bam_file);
     $self->status_message("Regions file: ".$self->regions_file);
     
+    #$self->status_message("<<<Completed HMP RefCov for testing at ".UR::Time->now);
+    #return 1;
+    
     my $stats_file = $self->working_directory."/reports/refcov_stats.txt";
     $self->stats_file($stats_file);
     my @expected_output_files = ($stats_file);
