@@ -154,14 +154,12 @@ sub test03_other_get_and_create_fails : Tests {
 
 #######################################################################
 
-package Genome::Report::GeneratorTest;
-
-# FIXME does not fully test the generator!
+package Genome::Report::Generator::Test;
 
 use strict;
 use warnings;
 
-use base 'Test::Class';
+use base 'Genome::Utility::TestCommandBase';
 
 use Data::Dumper 'Dumper';
 use Test::More;
@@ -170,11 +168,35 @@ sub test_class {
     return 'Genome::Report::Generator';
 }
 
-sub test01_generate_report : Test(1) {
+sub method_for_execution {
+    return 'generate_report';
+}
+
+sub valid_param_sets {
+    return (
+        { # name test
+            before_execute => 'test_report_attributes',
+        },
+    );
+}
+
+sub startup : Tests(startup) {
     my $self = shift;
 
-    can_ok($self->test_class, 'generate_report');
+    no warnings 'redefine';
+    *Genome::Report::Generator::_add_to_report_xml = sub{ return 1; };
+    *Genome::Report::Generator::description = sub{ return 'Test report generator'; };
+    
+    return 1;
+}
 
+sub test_report_attributes {
+    my ($self, $generator) = @_;
+    
+    is($generator->name, 'Generator', 'name');
+    is($generator->generator, 'Genome::Report::Generator', 'generator');
+    ok($generator->date, 'date');
+    
     return 1;
 }
 
@@ -412,7 +434,7 @@ sub required_attrs {
 sub test_01_generate_report : Test(2) {
     my $self = shift;
 
-    can_ok($self->generator, '_generate_data');
+    can_ok($self->generator, '_add_to_report_xml');
 
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
