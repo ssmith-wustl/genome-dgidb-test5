@@ -220,13 +220,13 @@ sub get_build_node {
 
     my $subject = $model->subject;
     my $source;
-    if ($subject->can("source")) {
+    if ($subject && $subject->can("source")) {
 	    $source = $subject->source;
     }
-	
+
     my $disk_allocation = $self->build->disk_allocation;
     my $kb_requested = ($disk_allocation ? $disk_allocation->kilobytes_requested : 0);
-        
+
     # grab any build-event allocations as well to include into total allocation held
     my @events = $self->build->events;
     my @event_allocations = Genome::Disk::Allocation->get(owner_id=>[map {$_->id} @events]);
@@ -238,11 +238,11 @@ sub get_build_node {
     if (not defined $disk_allocation) {
         $kb_requested .= ' (incomplete)';
     }
-        
+
 
     $buildnode->addChild( $doc->createAttribute("model-name",$model->name) );
     $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
-    if ($source) { 
+    if ($source) {
         $buildnode->addChild(
             $doc->createAttribute("common-name", $source->common_name || 'UNSPECIFIED!')
         );
