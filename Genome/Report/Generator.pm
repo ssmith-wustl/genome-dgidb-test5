@@ -1,5 +1,4 @@
 package Genome::Report::Generator;
-#:adukes eddie showed off the report system to peck and I.  I think everything looks pretty good except for the _generate_data method to be overridden in the subclass could use a better name
 
 use strict;
 use warnings;
@@ -14,40 +13,18 @@ use XML::LibXML;
 
 class Genome::Report::Generator {
     is => 'UR::Object',
-    has => [
-    name => {
-        is => 'Text',
-        doc => 'Name to give the report.  Will usually have a default/calculated value',
-    },
-    description => {
-        is => 'Text',
-        doc => 'Description to give the report.  Will usually have a default/calculated value',
-    },
-    ]
 };
 
 #< Create >#
 sub create {
     my $class = shift;
 
-    unless ( $class->can('_generate_data') ) {
-        confess "This report generator class does not implement '_generate_data' method.  Please correct.";
+    unless ( $class->can('_add_to_report_xml') ) {
+        confess "This report generator class does not implement '_add_to_report_xml' method.  Please correct.";
     }
 
     my $self = $class->SUPER::create(@_)
         or return;
-
-    unless (1){#$self->name ) {
-        $self->error_message('No name for generator to give report');
-        $self->delete;
-        return;
-    }
-
-    unless (1){# $self->description ) {
-        $self->error_message('No description for generator to give report');
-        $self->delete;
-        return;
-    }
     
     # XML doc
     $self->{_xml} = XML::LibXML->createDocument;
@@ -77,10 +54,9 @@ sub create {
 sub generate_report {
     my $self = shift;
 
-    # Data
+    # Subclass adds to report xml
     my $data;
-    #:adukes _generate_data should should be renamed to add_data_to_report_xml, or something similar since the method is now only expected to return true
-    unless ( $data = $self->_generate_data ) {
+    unless ( $data = $self->_add_to_report_xml ) {
         $self->status_message("No report data was generated.  This may be ok.  Errors, if any, would appear above.");
         return;
     }
@@ -105,20 +81,13 @@ sub generate_report {
 sub _add_report_meta_data {
     my $self = shift;
 
-    unless ( $self->name ) {
-        $self->error_message('No name for generator to give report');
-        $self->delete;
-        return;
-    }
-
-    unless ( $self->description ) {
-        $self->error_message('No description for generator to give report');
-        $self->delete;
-        return;
-    }
- 
     # Basics
     for my $attr (qw/ name description date generator /) {
+        my $value = $self->$attr;
+        unless ( defined $value ) {
+            $self->error_message("Report meta data attribute ($attr) is not defined.");
+            return;
+        }
         $self->_meta_node->addChild( $self->_xml->createElement($attr) )->appendTextNode($self->$attr);
     }
 
@@ -139,11 +108,21 @@ sub _add_report_meta_data {
     return $self->_meta_node;
 }
 
-sub generator { # lets this be overwritten
+sub name {
+    my ($subclass) = $_[0]->class =~ m#:?([\w\d]+)$#;
+    confess "Can't get subclass from class: ".$_[0]->class unless $subclass;
+    return Genome::Utility::Text::camel_case_to_capitalized_words($subclass);
+}
+
+sub description {
+    return;
+}
+
+sub generator { 
     return $_[0]->class;
 }
 
-sub date { # lets this be overwritten
+sub date { 
     return UR::Time->now; 
 }
 
