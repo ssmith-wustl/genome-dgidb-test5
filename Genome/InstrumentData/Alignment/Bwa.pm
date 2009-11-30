@@ -442,135 +442,13 @@ sub _run_aligner {
     
         $DB::single = 1;
 
-    my $insert_size_for_header;
-    if ($self->instrument_data->median_insert_size) {
-        $insert_size_for_header= $self->instrument_data->median_insert_size;
-    } else {
-        $insert_size_for_header = 0;
+    unless ($self->generate_tcga_bam_file(sam_file => $sam_map_output_fh->filename,
+					  unaligned_sam_file=> $self->unaligned_reads_list_path,
+					  aligner_params=>$self->aligner_params_for_sam_header) ) {
+	my $error = $self->error_message;
+	$self->error_message("Error creating BAM file from SAM file; error message was $error");
+	return;
     }
-
-    my $description_for_header;
-    if ($self->instrument_data->is_paired_end) {
-        $description_for_header = 'paired end';
-    } else {
-        $description_for_header = 'fragment';
-    }
-
-    #### Beginning changes for TCGA compliance
- 
-    my $output_sam_tmp_file = File::Temp->new(SUFFIX=>'.sam', DIR=>$self->alignment_directory);
-    unless ($output_sam_tmp_file) {
-        $self->error_message("Couldn't open an output file in " . $self->alignment_directory . " to put our all_sequences.bam.  Check disk space and permissions!");
-        return;
-    }
-
-    my $id_tag = $self->instrument_data->seq_id;
-    my $pu_tag = sprintf("%s.%s",$self->instrument_data->flow_cell_id,$self->instrument_data->lane);
-    my $lib_tag = $self->instrument_data->library_name;
-    my $date_run_tag = $self->instrument_data->run_start_date_formatted;
-    my $sample_tag = $self->instrument_data->sample_name;
-    my $aligner_version_tag = $self->aligner_version;
-    my $aligner_cmd =  sprintf("bwa aln %s", $bwa_aln_params);
-
-                 #@RG     ID:2723755796   PL:illumina     PU:30945.1      LB:H_GP-0124n-lib1      PI:0    DS:paired end   DT:2008-10-03   SM:H_GP-0124n   CN:WUGSC
-                 #@PG     ID:0    VN:0.4.9        CL:bwa aln -t4
-    my $rg_tag = "\@RG\tID:$id_tag\tPL:illumina\tPU:$pu_tag\tLB:$lib_tag\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_tag\tSM:$sample_tag\tCN:WUGSC\n";
-    my $pg_tag = "\@PG\tID:$id_tag\tVN:$aligner_version_tag\tCL:$aligner_cmd\n";
-
-    $self->status_message("RG: $rg_tag");
-    $self->status_message("PG: $pg_tag");
-    my $header_groups_fh = File::Temp->new(SUFFIX=>'.groups', DIR=>$self->alignment_directory);
-    print $header_groups_fh $rg_tag;
-    print $header_groups_fh $pg_tag;
-    $header_groups_fh->close;
-
-    #STEP 4.75:  Cat all together
-
-    my $species = "unknown";
-    if ($instrument_data->id > 0) {
-        $self->status_message("Sample id: ".$self->instrument_data->sample_id);
-        my $sample = Genome::Sample->get($self->instrument_data->sample_id);
-        if ( defined($sample) ) {
-            $species =  $sample->species_name;
-            if ( $species eq "" || $species eq undef ) {
-                $species = "unknown";
-            }
-        }
-    } else {
-        $species = 'Homo sapiens'; #to deal with solexa.t
-    }
-
-    $self->status_message("Species from alignment: ".$species);
-
-    my $ref_build = $self->reference_build;
-    my $seq_dict = $ref_build->get_sequence_dictionary("sam",$species,$self->picard_version);
-    
-    my $per_lane_sam_file = $self->alignment_directory."/tcga_compliant.sam";
-    my $per_lane_bam_file = $self->alignment_directory."/tcga_compliant.bam";
-    
-    my @files_to_merge = ();
-    for my $file ($seq_dict, $header_groups_fh->filename, $sam_map_output_fh->filename, $self->unaligned_reads_list_path) {
-        if (-z $file) {
-            $self->warning_message("$file is empty, will not be used to cat");
-            next;
-        }
-        push @files_to_merge, $file;
-    }
-
-    $self->status_message("Cat-ing together: ".join("\n",@files_to_merge). "\n to output file ".$per_lane_sam_file);
-    my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@files_to_merge,output_file=>$per_lane_sam_file);
-    if ($cat_rv ne 1) {
-        $self->error_message("Error during cat of alignment sam files! Return value $cat_rv");
-        die "Error cat-ing all alignment sam files together.  Return value: $cat_rv";
-    } else {
-        $self->status_message("Cat of sam files successful.");
-    }
-
-    my $per_lane_sam_file_rg = $self->alignment_directory."/tcga_compliant_rg.sam";
-    
-    my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(input_file=>$per_lane_sam_file,
-                                                              output_file=>$per_lane_sam_file_rg,
-                                                              read_group_tag=>$id_tag,
-                                                            );
-
-    my $add_rg_cmd_rv = $add_rg_cmd->execute;
-    
-    if ($add_rg_cmd_rv ne 1) {
-        $self->error_message("Adding read group to sam file failed! Return code: $add_rg_cmd_rv");
-    } else {
-        $self->status_message("Read group add completed.");
-    }
-
-    unlink($per_lane_sam_file);
-
-    #STEP 4.85: Convert perl lane sam to Bam 
-
-    my $ref_list  = $reference_build->full_consensus_sam_index_path;
-    unless ($ref_list) {
-        $self->error_message("Failed to get MapToBam ref list: $ref_list");
-        return;
-    }
-
-    my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(
-            bam_file => $per_lane_bam_file, 
-            sam_file => $per_lane_sam_file_rg,                                                      
-            keep_sam => 0,
-            fix_mate => 1,
-            index_bam => 0,
-            ref_list => $ref_list,
-            use_version => $self->samtools_version,
-    );
-    my $rv_to_bam = $to_bam->execute();
-    if ($rv_to_bam ne 1) { 
-        $self->error_message("There was an error converting the Sam file $per_lane_sam_file to $per_lane_bam_file.  Return value was: $rv_to_bam");
-        die "There was an error converting the Sam file $per_lane_sam_file to $per_lane_bam_file.  Return value was: $rv_to_bam";
-    } else {
-        $self->status_message("Conversion successful.");
-    }
- 
-    #### if it got to here then we've got ourselves a good alignment, let's keep it!
-    chmod 0644,$per_lane_bam_file;
-    rename($per_lane_bam_file, $self->alignment_file);
 
     unless (-e $self->alignment_file && -s $self->alignment_file) {
 	$self->error_message("Alignment output " . $self->alignment_file . " not found or zero length.  Something went wrong");
@@ -753,4 +631,13 @@ sub _inspect_log_file {
     return;
 }
 
+sub aligner_params_for_sam_header {
+    my $self = shift;
+    
+    my %aligner_params = $self->formatted_aligner_params;
+    my $bwa_aln_params = (defined $aligner_params{'bwa_aln_params'} ? "bwa aln " . $aligner_params{'bwa_aln_params'} : "");
+    
+    
+    return $bwa_aln_params;
+}
 

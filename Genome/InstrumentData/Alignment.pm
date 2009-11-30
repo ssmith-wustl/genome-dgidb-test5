@@ -616,6 +616,178 @@ sub sanger_fastq_filenames {
     return @sanger_fastq_pathnames;
 }
 
+sub generate_tcga_bam_file {
+    my $self = shift;
+
+    my %params = @_;
+
+    my $sam_map_output_filename = $params{sam_file}; 
+    my $aligner_command_line = $params{aligner_params};
+    my $unaligned_sam_file = $params{unaligned_sam_file};
+
+    my $groups_file_fh = $self->construct_groups_file($aligner_command_line);
+    my $groups_file_name = $groups_file_fh->filename;
+    
+    my $seq_dict = $self->get_or_create_sequence_dictionary();
+
+    my $per_lane_sam_file = $self->alignment_directory."/tcga_compliant.sam";
+    my $per_lane_bam_file = $self->alignment_directory."/tcga_compliant.bam";
+
+    my $output_sam_tmp_file = File::Temp->new(SUFFIX=>'.sam', DIR=>$self->alignment_directory);
+    unless ($output_sam_tmp_file) {
+        $self->error_message("Couldn't open an output file in " . $self->alignment_directory . " to put our all_sequences.bam.  Check disk space and permissions!");
+        return;
+    }
+    
+    my @files_to_merge = ();
+    
+    for my $file ($seq_dict, $groups_file_name, $sam_map_output_filename, $unaligned_sam_file) {
+        if (-z $file) {
+            $self->warning_message("$file is empty, will not be used to cat");
+            next;
+        }
+        push @files_to_merge, $file;
+    }
+
+    $self->status_message("Cat-ing together: ".join("\n",@files_to_merge). "\n to output file ".$per_lane_sam_file);
+
+    $DB::single = 1;
+    
+    my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@files_to_merge,output_file=>$per_lane_sam_file);
+    if ($cat_rv ne 1) {
+        $self->error_message("Error during cat of alignment sam files! Return value $cat_rv");
+        die "Error cat-ing all alignment sam files together.  Return value: $cat_rv";
+    } else {
+        $self->status_message("Cat of sam files successful.");
+    }
+
+    my $per_lane_sam_file_rg = $self->alignment_directory."/tcga_compliant_rg.sam";
+
+    if ($params{skip_read_group}) {
+        $per_lane_sam_file_rg = $per_lane_sam_file;
+    } else {
+    
+      my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(input_file=>$per_lane_sam_file,
+                                                               output_file=>$per_lane_sam_file_rg,
+                                                               read_group_tag=>$self->instrument_data->seq_id,
+                                                            );
+
+      my $add_rg_cmd_rv = $add_rg_cmd->execute;
+    
+      if ($add_rg_cmd_rv ne 1) {
+          $self->error_message("Adding read group to sam file failed! Return code: $add_rg_cmd_rv");
+          die "Error adding read group to sam file, return code $add_rg_cmd_rv";
+      } else {
+          $self->status_message("Read group add completed.");
+      }
+
+      unlink($per_lane_sam_file);
+    } 
+
+    #STEP 4.85: Convert perl lane sam to Bam 
+
+    my $ref_list  = $self->reference_build->full_consensus_sam_index_path;
+    unless ($ref_list) {
+        $self->error_message("Failed to get MapToBam ref list: $ref_list");
+        return;
+    }
+
+    my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(
+            bam_file => $per_lane_bam_file, 
+            sam_file => $per_lane_sam_file_rg,                                                      
+            keep_sam => 0,
+            fix_mate => 1,
+            index_bam => 0,
+            ref_list => $ref_list,
+            use_version => $self->samtools_version,
+    );
+    my $rv_to_bam = $to_bam->execute();
+    if ($rv_to_bam ne 1) { 
+        $self->error_message("There was an error converting the Sam file $per_lane_sam_file to $per_lane_bam_file.  Return value was: $rv_to_bam");
+        return;
+    } else {
+        $self->status_message("Conversion successful.");
+    }
+ 
+    #### if it got to here then we've got ourselves a good alignment, let's keep it!
+    chmod 0644,$per_lane_bam_file;
+    rename($per_lane_bam_file, $self->alignment_file);
+
+
+    return $self->alignment_file;
+}
+
+
+
+sub construct_groups_file {
+
+    my $self = shift;
+    my $aligner_command_line = shift;
+
+     my $insert_size_for_header;
+    if ($self->instrument_data->median_insert_size) {
+        $insert_size_for_header= $self->instrument_data->median_insert_size;
+    } else {
+        $insert_size_for_header = 0;
+    }
+
+    my $description_for_header;
+    if ($self->instrument_data->is_paired_end) {
+        $description_for_header = 'paired end';
+    } else {
+        $description_for_header = 'fragment';
+    }
+
+   
+    # build the header 
+    my $id_tag = $self->instrument_data->seq_id;
+    my $pu_tag = sprintf("%s.%s",$self->instrument_data->flow_cell_id,$self->instrument_data->lane);
+    my $lib_tag = $self->instrument_data->library_name;
+    my $date_run_tag = $self->instrument_data->run_start_date_formatted;
+    my $sample_tag = $self->instrument_data->sample_name;
+    my $aligner_version_tag = $self->aligner_version;
+    my $aligner_cmd =  $aligner_command_line;
+
+                 #@RG     ID:2723755796   PL:illumina     PU:30945.1      LB:H_GP-0124n-lib1      PI:0    DS:paired end   DT:2008-10-03   SM:H_GP-0124n   CN:WUGSC
+                 #@PG     ID:0    VN:0.4.9        CL:bwa aln -t4
+    my $rg_tag = "\@RG\tID:$id_tag\tPL:illumina\tPU:$pu_tag\tLB:$lib_tag\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_tag\tSM:$sample_tag\tCN:WUGSC\n";
+    my $pg_tag = "\@PG\tID:$id_tag\tVN:$aligner_version_tag\tCL:$aligner_cmd\n";
+
+    $self->status_message("RG: $rg_tag");
+    $self->status_message("PG: $pg_tag");
+    my $header_groups_fh = File::Temp->new(SUFFIX=>'.groups', DIR=>$self->alignment_directory);
+    print $header_groups_fh $rg_tag;
+    print $header_groups_fh $pg_tag;
+    $header_groups_fh->close;
+
+    return $header_groups_fh;
+}
+
+sub get_or_create_sequence_dictionary {
+    my $self = shift;
+
+    my $species = "unknown";
+    if ($self->instrument_data->id > 0) {
+        $self->status_message("Sample id: ".$self->instrument_data->sample_id);
+        my $sample = Genome::Sample->get($self->instrument_data->sample_id);
+        if ( defined($sample) ) {
+            $species =  $sample->species_name;
+            if ( $species eq "" || $species eq undef ) {
+                $species = "unknown";
+            }
+        }
+    } else {
+        $species = 'Homo sapiens'; #to deal with solexa.t
+    }
+
+    $self->status_message("Species from alignment: ".$species);
+
+    my $ref_build = $self->reference_build;
+    my $seq_dict = $ref_build->get_sequence_dictionary("sam",$species,$self->picard_version);
+
+    return $seq_dict;
+}
+
 
 
 

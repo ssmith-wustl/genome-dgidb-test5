@@ -782,59 +782,7 @@ sub create_combined_bam_file {
     $self->status_message("\nInstrument data id ".$instrument_data->id."\n");
 
     my $seq_id = $self->instrument_data->seq_id;
-    $self->status_message("\nSeq id ".$seq_id."\n");
-    
-    #collect all the parameters and header info
-    my $insert_size_for_header;
-    if ($self->instrument_data->median_insert_size) {
-        $insert_size_for_header= $self->instrument_data->median_insert_size;
-    } else {
-             $insert_size_for_header = 0;
-    }
-    
-    my $description_for_header;
-    if ($self->instrument_data->is_paired_end) {
-        $description_for_header = 'paired end';
-    } else {
-        $description_for_header = 'fragment';
-    }
-   
-    my $date_run_field = $self->instrument_data->run_start_date_formatted();
-    my $sample_name_field = $self->instrument_data->sample_name;
-    my $library = $self->instrument_data->library_name;
-    my $platform_unit_field = sprintf("%s.%s",$self->instrument_data->flow_cell_id,$self->instrument_data->lane);
-  
-    my $aligner_version = $self->aligner_version;
-
-    #generate header info 
-    #read group line 
-    my $rg_string = "\@RG\tID:$seq_id\tPL:illumina\tPU:$platform_unit_field\tLB:$library\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_field\tSM:$sample_name_field\tCN:WUGSC\n";
-    #program group
-    #Because the temp directories used in the cmdline string will break the consistency check at the end of Solex_maq.t 
-    #we will set the value of the command line string on the @pg line to a constant value. 
-    my $instrument_data_id = $self->instrument_data->id;
-    if ($instrument_data_id < 0) {
-        $cmdline = "maq map (parameters not available for test)";
-    }
-    my $pg_string ="\@PG\tID:$seq_id\tVN:$aligner_version\tCL:$cmdline\n";
-
-    $self->status_message("Collected header information.");
-    $self->status_message("Read group line:".$rg_string);
-    $self->status_message("Program group line.".$pg_string);
-    
-    
-    my $groups_file = $self->alignment_directory."/groups.txt";
-    
-    $self->status_message("Writing group info to:".$groups_file);
-   
-    #get rid of any old groups file laying around
-    unlink($groups_file) if (-e $groups_file); 
-    my $group_fh = Genome::Utility::FileSystem->open_file_for_writing($groups_file);
-    print $group_fh $rg_string;
-    print $group_fh $pg_string; 
-    $group_fh->close;
-  
-    $self->status_message("Converting unaligned reads to Sam format.");
+    $self->status_message("\nSeq id ".$seq_id."\n");    $self->status_message("Converting unaligned reads to Sam format.");
     #convert the unaligned read file to sam format 
     #input file
     my $unaligned_file = $self->unaligned_reads_list_path; 
@@ -875,8 +823,10 @@ sub create_combined_bam_file {
         }
 
     $ua_fh->close;
- 
+
     $self->status_message("Done converting unaligned reads to Sam format. $count reads processed.");
+    
+
     #convert the map2sam 
     my $ref_build = $self->reference_build;
     my $ref_list  = $ref_build->full_consensus_sam_index_path;
@@ -910,82 +860,37 @@ sub create_combined_bam_file {
         $self->error_message("Conversion failed.");
         return
     }         
-        
-    #seq dict
-    my $species = "unknown";
-    if ($instrument_data->id > 0) {
-        $self->status_message("Sample id: ".$self->instrument_data->sample_id);
-        my $sample = Genome::Sample->get($self->instrument_data->sample_id);
-        if (defined($sample) ) {
-            $species =  $sample->species_name;
-            if ( $species eq "" || $species eq undef ) {
-                $species = "unknown";
-            }
-        }
-    } else {
-        $species = 'Homo sapiens'; #to deal with solexa.t
-    }
 
-    $self->status_message("Species from alignment: ".$species);
-
-    my $seq_dict = $ref_build->get_sequence_dictionary("sam",$species,$self->picard_version);
- 
-    #cat everything together
-    $self->status_message("Begining creation of combined sam file.");
-    $self->status_message("seq dict: $seq_dict");
-    $self->status_message("group_file: $groups_file");
-    $self->status_message("aligned sam: $aligned_sam_file");
-    $self->status_message("unaligned sam: $unaligned_sam_file");
+    my $combined_bam_file;
     
-    my @input_list = ();
-    for my $file ($seq_dict, $groups_file, $aligned_sam_file, $unaligned_sam_file) {
-        if (-z $file) {
-            $self->warning_message("$file is empty, will not be used to cat");
-            next;
-        }
-        push @input_list, $file;
+    #Because the temp directories used in the cmdline string will break the consistency check at the end of Solex_maq.t 
+    #we will set the value of the command line string on the @pg line to a constant value. 
+    my $instrument_data_id = $self->instrument_data->id;
+    if ($instrument_data_id < 0) {
+        $cmdline = "maq map (parameters not available for test)";
     }
-
-    my $combined_sam_file = $self->alignment_directory."/all_sequences_combined.sam";
-    my $combined_bam_file = $self->alignment_directory."/all_sequences.bam";
- 
-    my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@input_list, output_file=>$combined_sam_file);     
     
-    if ($cat_rv ne 1) { 
-        $self->error_message("Could not cat sam files.");
-        return;
+    #skip adding a read group because we do this on our own with the map->bam conversion
+    unless ($combined_bam_file = $self->generate_tcga_bam_file(sam_file=>$aligned_sam_file,
+                                                               unaligned_sam_file=>$unaligned_sam_file,
+                                                            aligner_params=>$cmdline,
+                                                            skip_read_group=>1)) {
+	my $error = $self->error_message;
+	$self->error_message("Error creating BAM file from SAM file; error message was $error");
+	return;
     }
 
-    $self->status_message("Cat of sam files complete.  File at: $combined_sam_file");
-    #convert sam to bam  
-
-    my $sam2bam = Genome::Model::Tools::Sam::SamToBam->create(
-             sam_file  => $combined_sam_file,
-             bam_file  => $combined_bam_file,
-             ref_list  => $ref_list,
-             fix_mate  => 1,
-             keep_sam  => 0,
-             index_bam => 0,
-             use_version => $self->samtools_version,
-    );
-
-    my $sam2bam_rv = $sam2bam->execute;
-    $self->error_message("SamToBam failed for $combined_sam_file") and return unless $sam2bam_rv ==1;
-   
     #clean up junk
-    my $ul1_rv = unlink($groups_file);
-    my $ul2_rv = unlink($unaligned_sam_file);
-    my $ul3_rv = unlink($aligned_sam_file);
+    my $ul1_rv = unlink($unaligned_sam_file);
+    my $ul2_rv = unlink($aligned_sam_file);
 
     unless ($ul1_rv) {
-        $self->error_message('Failed to unlink '. $groups_file);
-    }
-    unless ($ul2_rv) {
         $self->error_message('Failed to unlink '. $unaligned_sam_file);
     }
-    unless ($ul3_rv) {
+    unless ($ul2_rv) {
         $self->error_message('Failed to unlink '. $aligned_sam_file);
     }
+
 
     $self->status_message("Alignment conversion complete.  File at: $combined_bam_file");
     return 1; 
