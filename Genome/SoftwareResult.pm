@@ -29,7 +29,7 @@ class Genome::SoftwareResult {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub get_by_inputs_id {
+sub get_by_inputs_id { #TODO, this needs to use inputs and params
     my $class = shift;
     my $inputs_id = shift;
 
@@ -77,7 +77,7 @@ sub params {
     my $bx;
     if (@_) {
         $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($self->class_name,@_); 
-        $self->_params_id($bx->id);
+        $self->params_id($bx->id);
     }
     else {
         $bx = $self->_params_bx;
