@@ -34,6 +34,13 @@ class Genome::ProcessingProfile::Somatic{
             is_mutable  => 1,
             doc => "minimum somatic quality threshold for high confidence call",
         },
+        skip_sv => {
+            via         => 'params',
+            to          => 'value',
+            where       => [name => 'skip_sv'],
+            is_mutable  => 1,
+            doc => "If set to true, the pipeline will skip structural variation detection",
+        }
     ],
 };
 

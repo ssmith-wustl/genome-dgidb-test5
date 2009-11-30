@@ -55,7 +55,14 @@ sub execute {
 
     # Default to 0
     my $only_tier_1_flag = $processing_profile->only_tier_1;
-    $only_tier_1_flag ||= 0;
+    unless(defined $only_tier_1_flag) {
+        $only_tier_1_flag = 0;
+    }
+
+    my $skip_sv_flag = $processing_profile->skip_sv;
+    unless(defined $skip_sv_flag) {
+        $skip_sv_flag = 0;
+    }
 
     my $min_mapping_quality = $processing_profile->min_mapping_quality;
     my $min_somatic_quality = $processing_profile->min_somatic_quality;
@@ -121,6 +128,7 @@ sub execute {
         normal_snp_file => $normal_snp_file,
         data_directory => $data_directory,
         only_tier_1 => $only_tier_1_flag,
+        skip_sv => $skip_sv_flag,
         min_mapping_quality => $min_mapping_quality,
         min_somatic_quality => $min_somatic_quality,
     );
