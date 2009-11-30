@@ -90,7 +90,7 @@ sub create {
     return $self;
 }
 
-sub _generate_data {
+sub _add_to_report_xml {
     my $self = shift;
 
     $self->_load_yesterdays_completed_builds
