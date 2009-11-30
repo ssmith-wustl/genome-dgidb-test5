@@ -46,7 +46,7 @@ sub mock_model {
 sub test_01_generate_report : Test(2) {
     my $self = shift;
 
-    can_ok($self->generator, '_generate_data');
+    can_ok($self->generator, '_add_to_report_xml');
 
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
