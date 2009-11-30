@@ -27,13 +27,13 @@ class Genome::Model::Tools::Somatic::Sniper {
             is  => 'String',
             is_input => '1',
             is_output => '1',
-            doc => 'The somatic sniper output file.',
+            doc => 'The somatic sniper SNP output file.',
         },
         output_indel_file => {
             is  => 'String',
             is_input => '1',
             is_output => '1',
-            doc => 'The somatic sniper output file.',
+            doc => 'The somatic sniper indel output file.',
         },
         quality_filter => {
             is => 'Integer',
