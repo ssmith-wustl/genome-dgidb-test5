@@ -10,6 +10,16 @@ use Storable;
 
 class Genome::Report::FromLegacy {
     is => 'Genome::Report::Generator',
+    has => [
+    name => {
+        is => 'Text',
+        doc => 'Name to give the report.  Will usually have a default/calculated value',
+    },
+    description => {
+        is => 'Text',
+        doc => 'Description to give the report.  Will usually have a default/calculated value',
+    },
+    ],
 };
 
 sub create {
@@ -47,7 +57,7 @@ sub create {
     return $self;
 }
     
-sub _generate_data { 
+sub _add_to_report_xml { 
     return 1; 
 }
 
