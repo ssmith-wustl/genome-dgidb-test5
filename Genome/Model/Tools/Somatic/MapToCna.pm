@@ -226,8 +226,10 @@ sub get_median {
 }
 
 sub plot_output {
+    use Cwd 'abs_path';
     my $self = shift;
     my $datafile = shift;
+    $datafile = abs_path($datafile);
     my $Routfile = $datafile.".png";
     my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
     my $R = Statistics::R->new(tmp_dir => $tempdir);
