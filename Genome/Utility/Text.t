@@ -10,15 +10,18 @@ use Test::More 'no_plan';
 use_ok('Genome::Utility::Text');
 
 # camel case
-my $string = 'genome model reference alignment 454';
-my $camel_case = 'GenomeModelReferenceAlignment454';
+my $string                  = 'genome model reference alignment 454';
+my $capitalized_string      = 'Genome Model Reference Alignment 454';
+my $camel_case              = 'GenomeModelReferenceAlignment454';
 is(Genome::Utility::Text::string_to_camel_case($string), $camel_case, 'string_to_camel_case');
 ok(!Genome::Utility::Text::string_to_camel_case(undef), 'string_to_camel_case failed w/o string');
 is(Genome::Utility::Text::camel_case_to_string($camel_case), $string, 'camel_case_to_string');
 ok(!Genome::Utility::Text::camel_case_to_string(undef), 'camel_case_to_string failed w/o camel case');
+is(Genome::Utility::Text::camel_case_to_capitalized_words($camel_case), $capitalized_string, 'camel_case_to_capitalized_words');
+ok(!Genome::Utility::Text::camel_case_to_capitalized_words(undef), 'camel_case_to_capitalized_words failed w/o camel case');
 
 # class/module
-my $class = 'Genome::Model::DeNovoAssembly';
+my $class  = 'Genome::Model::DeNovoAssembly';
 my $module = 'Genome/Model/DeNovoAssembly.pm';
 is(Genome::Utility::Text::class_to_module($class), $module, 'class_to_module');
 ok(!Genome::Utility::Text::class_to_module(undef), 'class_to_module failed w/o class');
@@ -38,10 +41,16 @@ for my $invalid_string ( undef, 'a' ) {
 }
 
 # san file sys
-my $fs_string = 'new!@sample%for^^new(#|)model_assembly';
+my $fs_string  = 'new!@sample%for^^new(#|)model_assembly';
 my $san_string = 'new__sample_for__new____model_assembly';
 is(Genome::Utility::Text::sanitize_string_for_filesystem($fs_string), $san_string, 'sanitize string for filesystem');
 ok(!Genome::Utility::Text::sanitize_string_for_filesystem(undef), 'failed as expected - sanitize string for filesystem w/o string');
+
+# capitalize words
+my $uncap_string = 'goOd Morning vietnam!';
+my $cap_string   = 'GoOd Morning Vietnam!';
+is(Genome::Utility::Text::capitalize_words($uncap_string), $cap_string, 'capitalize words');
+ok(!Genome::Utility::Text::capitalize_words(undef), 'failed as expected - capitalize w/o string words');
 
 exit;
 

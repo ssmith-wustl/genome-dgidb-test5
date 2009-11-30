@@ -7,7 +7,7 @@ use above "Genome";
 
 use Genome::Report::Test;
 
-Genome::Report::GeneratorTest->runtests;
+Genome::Report::Generator::Test->runtests;
 
 exit;
 

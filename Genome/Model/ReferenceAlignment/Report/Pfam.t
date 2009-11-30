@@ -24,7 +24,6 @@ my $model_id = 2733662090; #2661729970;
 my $p = Genome::Model::ReferenceAlignment::Report::Pfam->create(
                                             build_id => $build_id,
                                             #model_id => $model_id,
-                                            name     => 'Pfam',
                                             test_no_load => 1
                                            );
 
