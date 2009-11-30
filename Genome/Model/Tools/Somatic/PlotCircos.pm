@@ -162,9 +162,9 @@ sub execute {
     #test files 
 
     # Check/setup and split the 1 sv_file into multiple sv files by category if necessary
-    unless ( (defined $self->sv_file) xor 
-            (defined $self->ctx_file) && (defined $self->itx_file) && (defined $self->ins_file) && (defined $self->del_file) && (defined $self->inv_file)) {
-        $self->error_message("Either only sv_file OR ALL OF (ctx_file, itx_file, ins_file, del_file, inv_file) must be provided... but not both");
+    if( (defined $self->sv_file) &&
+           ( (defined $self->ctx_file) || (defined $self->itx_file) || (defined $self->ins_file) || (defined $self->del_file) || (defined $self->inv_file) ) ) {
+        $self->error_message("Either only sv_file OR some/all of (ctx_file, itx_file, ins_file, del_file, inv_file) must be provided... but not both");
         die;
     }
 
