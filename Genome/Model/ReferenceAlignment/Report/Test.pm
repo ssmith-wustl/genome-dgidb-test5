@@ -44,7 +44,7 @@ sub test01_generate_report : Tests {
 
     if ( $self->skip_generate ) {
         # Skipping generate...too many methods and data to mock.  This was not tested before
-        can_ok($self->test_class, '_generate_data');
+        can_ok($self->test_class, '_add_to_report_xml');
     }
     else {
         my $report = $self->generator->generate_report;
