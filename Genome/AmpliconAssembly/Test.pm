@@ -1045,7 +1045,7 @@ sub mock_model {
 sub test01_generate_report : Test(2) {
     my $self = shift;
 
-    can_ok($self->generator, '_generate_data');
+    can_ok($self->generator, '_add_to_report_xml');
 
     use Carp;
     $SIG{__DIE__} = sub{ confess(@_); };
@@ -1053,7 +1053,7 @@ sub test01_generate_report : Test(2) {
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
     #print Dumper([map{$report->$_} (qw/ name description date generator /)]);
-    print Dumper($report->xml_string);
+    #print Dumper($report->xml_string);
     #$report->save('/gscuser/ebelter/Desktop', 1);
 
     return 1;
