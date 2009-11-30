@@ -25,7 +25,7 @@ class Genome::InstrumentData::Solexa::Report::Quality {
         ],
 };
 
-sub _generate_data {
+sub _add_to_report_xml {
     my $self = shift;
 
     unless ($self->_generate_quality_stats) {
