@@ -1,4 +1,5 @@
 package Genome::Report::FromSeparatedValueFile;
+#:adukes check
 
 use strict;
 use warnings;

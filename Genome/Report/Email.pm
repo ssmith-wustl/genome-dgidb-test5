@@ -1,4 +1,5 @@
 package Genome::Report::Email;
+#:adukes xsl and xls are both used here, needs to be fixed, but just a simple typo
 
 use strict;
 use warnings;

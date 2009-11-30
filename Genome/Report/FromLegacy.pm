@@ -1,4 +1,5 @@
 package Genome::Report::FromLegacy;
+#:adukes check
 
 use strict;
 use warnings;

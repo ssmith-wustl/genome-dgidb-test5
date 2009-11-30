@@ -1,4 +1,5 @@
 package Genome::Report::Command::Xslt;
+#:adukes check
 
 use strict;
 use warnings;
