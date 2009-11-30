@@ -20,7 +20,7 @@ class Genome::Model::ReferenceAlignment::Report::SolexaStageTwo {
 my %div_hash;
 my %job_to_status;
 
-sub _generate_data {
+sub _add_to_report_xml {
     # FIXME ajax file needs to go somewhere see detail...
     my $self = shift;
 
