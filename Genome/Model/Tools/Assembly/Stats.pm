@@ -151,7 +151,7 @@ sub assembler {
 sub get_input_qual_files {
     my ($self) = @_;
     my $all_files = $self->get_edit_dir_file_names();
-    #CHECK FOR INPUT FASTA OR CLIP THEN CORRISPONDING FASTA.QUAL OR CLIP.QUAL
+    #CHECK FOR INPUT FASTA OR CLIP THEN CORRESPONDING FASTA.QUAL OR CLIP.QUAL
     my @input_quals;
     my @input_fastas = grep (/(fasta|clip)\.gz$/, @$all_files);
     foreach my $fasta (@input_fastas) {
