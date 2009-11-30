@@ -31,7 +31,7 @@ class Genome::Model::Report::ContactOverview {
     ],
 };
 
-sub _generate_data {
+sub _add_to_report_xml {
     my $self = shift;
     my $template = shift;
 
@@ -40,7 +40,7 @@ sub _generate_data {
         die "No report templates assigned! Cannot generate any content."
     }
 
-    print "running _generate_data\n";
+    print "running _add_to_report_xml\n";
 
     my $style = $self->get_css();
     my $data = { description => $self->generate_report_brief };
@@ -77,7 +77,7 @@ sub _base_path_for_templates {
     return $module_path;
 }
 
-# all of these below are only called if _generate_data tries to do so? 
+# all of these below are only called if _add_to_report_xml tries to do so? 
 
 
 sub generate_report_brief {
