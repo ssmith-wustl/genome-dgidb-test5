@@ -9,11 +9,6 @@ use Data::Dumper 'Dumper';
 
 class Genome::AmpliconAssembly::Report::Compare {
     is => 'Genome::AmpliconAssembly::Report',
-    has => [
-    name => { 
-        default_value => 'Comparison',
-    },
-    ],
 };
 
 #< Generator >#
@@ -31,18 +26,19 @@ sub create {
         return;
     }
 
-    $self->description(
-        sprintf(
-            'Camparison Report for Amplicon Assemblies %s and %s',
-            $amplicon_assemblies->[0]->description,
-            $amplicon_assemblies->[1]->description,
-        )
-    );
-
     return $self;
 }
 
-sub _generate_data {
+sub description {
+    my $amplicon_assemblies = $_[0]->amplicon_assemblies;
+    return sprintf(
+        'Camparison Report for Amplicon Assemblies %s and %s',
+        $amplicon_assemblies->[0]->description,
+        $amplicon_assemblies->[1]->description,
+    );
+}
+
+sub _add_to_report_xml {
     my $self = shift;
 
     # Info, Amplicons, Stats, etc
