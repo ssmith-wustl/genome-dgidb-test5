@@ -1,4 +1,5 @@
 package Genome::Model::Command::Report::Generate;
+#:adukes check, further comments on where Report/Generator types for Model classes go
 
 use strict;
 use warnings;
