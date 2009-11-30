@@ -34,6 +34,19 @@ sub camel_case_to_string {
     return join($join, map { lc } @words);
 }
 
+sub camel_case_to_capitalized_words {
+    my $camel_case = shift;
+    unless ( $camel_case ) {
+        Carp::cluck('No camel case to convert to string');
+        return;
+    }
+    my $join = ( @_ )
+    ? $_[0]
+    : ' '; 
+    my @words = $camel_case =~ /([A-Z\d](?:[A-Z\d]*(?=$|[A-Z][a-z])|[a-z]*))/g;
+    return join($join, map { ucfirst } @words);
+}
+
 #< Module to/from Class >#
 sub class_to_module {
     my $class = shift;
@@ -90,12 +103,24 @@ sub param_string_to_hash {
 sub sanitize_string_for_filesystem {
     my $string = shift;
     unless ( $string ) {
-        Carp::cluck('No string to sanitize for filesystem');
+        Carp::cluck('No string to sanitize for filesystem.');
         return;
     }
     my $OK_CHARS = '-a-zA-Z0-9_./';
     $string =~ s/[^$OK_CHARS]/_/go;
     return $string;
+}
+
+#< Capitalize >#
+sub capitalize_words {
+    my $string = shift;
+    
+    unless ( $string ) {
+        Carp::cluck('No string to capitalize words.');
+        return;
+    }
+
+    return join(' ', map { ucfirst } split(' ', $string));
 }
 
 1;
