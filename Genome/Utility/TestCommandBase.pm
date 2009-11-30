@@ -12,8 +12,7 @@ use Test::More;
 
 #< CLASS >#
 sub test_class { return; }
-sub _pre_execute { return 1; }
-sub _post_execute { return 1; }
+sub method_for_execution { return 'execute'; }
 
 #< Params and Properties >#
 sub valid_param_sets { 
@@ -86,8 +85,10 @@ sub test001_test_class : Tests() {
     }
     ok($test_class->__meta__, 'Got class meta.') or confess;
 
-    # execute
-    can_ok($test_class, 'execute') or confess;
+    # execute or overriden method
+    my $method = $self->method_for_execution;
+    ok($method, "Got method for execution ($method).") or confess;
+    can_ok($test_class, $method) or confess;
 
     return 1;
 }
@@ -186,10 +187,11 @@ sub _create_and_execute_expected_success {
     }
 
     # execute
-    my $execute_rv;
-    eval { $execute_rv = $obj->execute; };
+    my $method = $self->method_for_execution;
+    my $rv;
+    eval { $rv = $obj->$method; };
     diag("$@\n") if $@;
-    ok($execute_rv, "Execute") or confess;
+    ok($rv, "Execute") or confess;
 
     # after
     if ( $after_execute ) { 
@@ -220,8 +222,9 @@ sub _create_and_execute_expected_fail {
     }
 
     # execute
+    my $method = $self->method_for_execution;
     my $rv;
-    eval { $rv = $obj->execute; };
+    eval { $rv = $obj->$method; };
     my $eval_error = $@; 
 
     # after
@@ -231,12 +234,12 @@ sub _create_and_execute_expected_fail {
 
     if ( not $rv or $eval_error ) { # good - check return value or eval error
         diag("$@\n") if $@;
-        ok(1, "Failed as expected on execute");
+        ok(1, "Failed as expected on $method");
         return 1;
     }
 
     # bad - did not fail creat of execute
-    ok(0, "DID NOT fail as expected during create or execute");
+    ok(0, "DID NOT fail as expected during create or $method");
     return;
 }
 
