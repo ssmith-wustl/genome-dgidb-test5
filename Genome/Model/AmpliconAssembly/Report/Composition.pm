@@ -11,9 +11,6 @@ require Genome::Utility::MetagenomicClassifier::PopulationComposition;
 class Genome::Model::AmpliconAssembly::Report::Composition {
     is => 'Genome::Model::Report',
     has => [
-    name => {
-        default_value => 'Composition',
-    },
     description => {
         calculate => q| 
         return sprintf(
@@ -31,7 +28,7 @@ class Genome::Model::AmpliconAssembly::Report::Composition {
     ],
 };
 
-sub _generate_data {
+sub _add_to_report_xml {
     my $self = shift;
 
     my $population_composition = Genome::Utility::MetagenomicClassifier::PopulationComposition->new(
