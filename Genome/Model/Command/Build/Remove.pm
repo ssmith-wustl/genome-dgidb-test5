@@ -34,6 +34,7 @@ sub execute {
     unless ($self->build_id) {
         $self->build_id($model->current_running_build_id);
     }
+
     my $build = $self->build;
     unless ($build) {
         $self->error_message('Build not found for model id '. $self->model_id .' and build id '. $self->build_id);
@@ -58,6 +59,10 @@ sub execute {
             last;
         }
     }
+
+    my @build_links = $build->to_build_links();  # The links that I'm the from_build
+    $_->delete foreach @build_links;
+
     unless ($build->delete) {
         $self->error_message('Failed to remove build '. $self->build_id);
         return;
