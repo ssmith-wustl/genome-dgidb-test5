@@ -54,7 +54,7 @@ $model_wo_instrument_data->mock('instrument_data', \&Genome::Model::instrument_d
 $model_wo_instrument_data->mock('inputs', \&Genome::Model::inputs);
 
 # The call to Solexa->create() below is expected to fail.
-my $build_wo_reads = Genome::Model::Command::Build::ReferenceAlignment::Solexa->create(model => $model_wo_instrument_data);
+my $build_wo_reads = Genome::Model::Command::Build::ReferenceAlignment->create(model => $model_wo_instrument_data);
 ok(!$build_wo_reads,'build should fail create with no read sets');
 
 my $mock_pp = Genome::ProcessingProfile->create_mock(
