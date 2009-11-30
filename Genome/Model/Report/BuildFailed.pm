@@ -37,7 +37,7 @@ sub create {
     return $self;
 }
 
-sub _generate_data {
+sub _add_to_report_xml {
     my $self = shift;
 
     $self->_add_build_event_dataset
