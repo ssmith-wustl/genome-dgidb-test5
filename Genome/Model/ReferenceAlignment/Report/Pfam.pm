@@ -28,7 +28,7 @@ class Genome::Model::ReferenceAlignment::Report::Pfam{
            ],
 };
 
-sub _generate_data {
+sub _add_to_report_xml {
     my $self = shift;
 
     return {
