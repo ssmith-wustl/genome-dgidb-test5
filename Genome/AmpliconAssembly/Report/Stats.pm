@@ -12,12 +12,6 @@ use Regexp::Common;
 class Genome::AmpliconAssembly::Report::Stats {
     is => 'Genome::AmpliconAssembly::Report',
     has => [
-    name => {
-        default_value => 'Stats',
-    },
-    description => {
-        default_value => 'Assembly and Quality Stats for an Amplicon Assembly',
-    },
     _amplicon_size => {
         is => 'Integer',
         doc => 'Expected amplicon size.',
@@ -26,7 +20,11 @@ class Genome::AmpliconAssembly::Report::Stats {
 };
 
 #< Generator >#
-sub _generate_data {
+sub description {
+    return 'Assembly and Quality Stats for an Amplicon Assembly';
+}
+
+sub _add_to_report_xml {
     my $self = shift;
 
     $self->_validate_amplicon_size 
