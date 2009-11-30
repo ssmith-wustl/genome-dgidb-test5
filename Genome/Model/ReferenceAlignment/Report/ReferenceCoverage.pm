@@ -27,7 +27,7 @@ class Genome::Model::ReferenceAlignment::Report::ReferenceCoverage{
     ],
 };
 
-sub _generate_data {
+sub _add_to_report_xml {
     my $self = shift;
 
     #Currently no need for 44k nodes
