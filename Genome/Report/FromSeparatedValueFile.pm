@@ -10,6 +10,14 @@ use Data::Dumper 'Dumper';
 class Genome::Report::FromSeparatedValueFile {
     is => 'Genome::Report::Generator',
     has => [
+    name => {
+        is => 'Text',
+        doc => 'Name to give the report.  Will usually have a default/calculated value',
+    },
+    description => {
+        is => 'Text',
+        doc => 'Description to give the report.  Will usually have a default/calculated value',
+    },
     svr => {
         is => 'Genome::Utility::IO::SeparatedValueReader',
         doc => 'Separated value reader that file to import',
@@ -46,7 +54,7 @@ sub create {
 }
 
 #< Generate >#
-sub _generate_data {
+sub _add_to_report_xml {
     my $self = shift;
 
     my $svr = $self->svr;
