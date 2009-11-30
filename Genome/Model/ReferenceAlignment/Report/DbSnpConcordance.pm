@@ -75,7 +75,7 @@ sub _base_path_for_templates
     return $module_path;
 }
 
-# sub _generate_data {
+# sub _add_to_report_xml {
 #     my $self = shift;
 
 #     return {
@@ -84,7 +84,7 @@ sub _base_path_for_templates
 #     };
 # }
 
-sub _generate_data 
+sub _add_to_report_xml 
 {
     my $self = shift;
     my $template = shift;
