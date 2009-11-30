@@ -8,11 +8,6 @@ use Path::Class::Dir;
 
 class Genome::Model::Somatic::Report::Variant {
     is => 'Genome::Model::Report',
-    has => [ 
-        # the name is essentially constant
-        name => { default_value => 'Variant' },
-        description => { default_value => 'listing of variants and structural variants' }
-    ],
 };
 
 #variant types
@@ -25,34 +20,13 @@ use constant ITX => 'ITX'; #intra-chromosomal translocation
 
 use constant VALIDATION_TYPE => 'Official';
 
-#< Report Generation ># #TODO REMOVE once have real models
-sub generate_report {
-    my $self = shift;
-    my $extra_param = shift;
+sub description {
+    my $self = shift();
 
-    $self->_add_model_info
-        or return;
-
-    # Data
-    my $data;
-    unless ( $data = $self->_generate_data($extra_param) ) {
-        $self->status_message("No report data was generated.  This may be ok.  Errors, if any, would appear above.");
-        return;
-    }
-
-    # Meta data
-    $self->_add_report_meta_data
-        or return;
-
-    my $report = Genome::Report->create(
-        xml => $self->_xml,
-    );
-
-    return $report;
+    return 'listing of variants and structural variants';
 }
 
-
-sub _generate_data {
+sub _add_to_report_xml {
     my $self = shift();
 
     my $model = $self->model;
