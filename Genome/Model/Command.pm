@@ -38,6 +38,74 @@ sub command_name_brief {
     return 'model';
 }
 
+# TODO: this is an improvement of the version in Command.pm
+# Pull it up into that class if it works well.
+sub class_for_sub_command
+{
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my $sub_command = shift;
+
+    return if $sub_command =~ /^\-/;
+
+    my $ext = join("", map { ucfirst($_) } split(/-/, $sub_command));
+
+    # Foo::Bar::Command w/ "baz" will try Foo::Bar::Command::Baz
+    my $sub_class1 = $class . "::$ext";
+
+    # Foo::Bar::Command w/ "baz" will try Foo::Bar::Baz::Command
+    my $sub_class2;
+    if ($class =~ /::Command$/) {
+        $sub_class2 = $class;
+        $sub_class2 =~ s/::Command//;
+        $sub_class2 .= "::${ext}::Command";
+    }
+
+    for my $sub_class ($sub_class1, $sub_class2) {
+        next unless $sub_class;
+        my $meta = UR::Object::Type->get($sub_class); # allow in memory classes
+        unless ( $meta ) {
+            eval "use $sub_class;";
+            if ($@) {
+                if ($@ =~ /^Can't locate .*\.pm in \@INC/) {
+                    #die "Failed to find $sub_class! $class_for_sub_command.pm!\n$@";
+                    next;
+                }
+                else {
+                    my @msg = split("\n",$@);
+                    pop @msg;
+                    pop @msg;
+                    $self->error_message("$sub_class failed to compile!:\n@msg\n\n");
+                    next;
+                }
+            }
+        }
+        elsif (my $isa = $sub_class->isa("Command")) {
+            if (ref($isa)) {
+                # dumb modules (Test::Class) mess with the standard isa() API
+                if ($sub_class->SUPER::isa("Command")) {
+                    return $sub_class;
+                }
+                else {
+                    next;
+                }
+            }
+            return $sub_class;
+        }
+        else {
+            next;
+        }
+    }
+    return;
+}
+
+sub sub_command_classes {
+    my $self = shift;
+    my @sscc = $self->SUPER::sub_command_classes(@_);
+    push @sscc, 'Genome::Model::Metric::Command';
+    return @sscc;
+}
+
 sub create {
     my $class = shift;
 
