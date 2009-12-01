@@ -1,3 +1,6 @@
+#review tmooney
+#What is the system('cp...') for? (l. 142)
+
 package Genome::Model::Tools::Somatic::HighConfidence;
 
 use strict;
@@ -76,7 +79,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    genome model tools somatic high-confidence --sniper-file sniper,out --tumor-bam somefile.bam 
+    gmt somatic high-confidence --sniper-file sniper,out --tumor-bam somefile.bam 
 EOS
 }
 
@@ -103,7 +106,6 @@ sub execute {
     #test architecture to make sure we can run read count program
     #copied from G::M::T::Maq""Align.t 
     unless (`uname -a` =~ /x86_64/) {
-        $self->error_message(`uname -a`); #FIXME remove
        $self->error_message("Must run on a 64 bit machine");
        die;
     }
@@ -130,7 +132,6 @@ sub execute {
         $self->error_message("Unable to open " . $self->output_file . " for writing. $!");
         die;
     }
-    $self->status_message("Opened " . $self->output_file . " for writing"); #FIXME remove
 
     my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
     unless($tfh) {
@@ -138,10 +139,6 @@ sub execute {
         die;
     }
     $temp_path =~ s/\:/\\\:/g;
-    system("cp $temp_path output.txt");
-
-    print $temp_path, "\n";
-
    
     #read sniper and skip indels
     my $somatic_threshold = $self->min_somatic_quality;
@@ -209,8 +206,9 @@ sub execute {
     return 1;
 }
 
-1;
-
 sub readcount_program {
     return "bam-readcount";
 }
+
+1;
+

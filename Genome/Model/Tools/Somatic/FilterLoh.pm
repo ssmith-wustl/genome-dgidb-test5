@@ -50,7 +50,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools somatic filter-loh...    
+gmt somatic filter-loh...    
 EOS
 }
 
@@ -148,3 +148,4 @@ sub execute {
     return 1;
 }
 
+1;

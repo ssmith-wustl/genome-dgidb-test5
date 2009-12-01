@@ -30,7 +30,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    genome-model tools somatic upload-sv --breakdancer-file sv.out --build-id 12345 
+    gmt somatic upload-sv --breakdancer-file sv.out --build-id 12345 
 EOS
 }
 

@@ -1,3 +1,7 @@
+# review tmooney
+# This tool uses Genome::VariantOccurrence, but should either use Genome::Model::Variant or be removed.
+
+
 package Genome::Model::Tools::Somatic::AddVariants;
 
 use strict;
@@ -117,8 +121,4 @@ sub execute {
 
     }
 
-
-
-
-
-
+1;

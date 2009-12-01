@@ -30,19 +30,19 @@ class Genome::Model::Tools::Annotate::Adaptor::Sniper {
 };
 
 sub help_brief {
-    "Converts somatic sniper output into a gt annotate transcript-variants friendly input format",
+    "Converts somatic sniper output into a gmt annotate transcript-variants friendly input format",
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools annotate adaptor sniper ...    
+gmt annotate adaptor sniper ...    
 EOS
 }
 
 sub help_detail {                           
     return <<EOS 
-Converts somatic sniper output into a gt annotate transcript-variants friendly input format
+Converts somatic sniper output into a gmt annotate transcript-variants friendly input format
 EOS
 }
 

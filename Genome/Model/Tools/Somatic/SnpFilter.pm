@@ -94,7 +94,9 @@ sub execute {
         output_files => [ $sniper_snp_file_sorted ],
         skip_if_output_is_present => 0
     );
-    
+
+
+  ##TODO Change to command object->execute()    
     my $tumor_snp_file_sorted = "/tmp/tumors.sorted";
     #$sort_cmd = "sort -k1,1 -k2,2n $tumor_snp_file  > $tumor_snp_file_sorted";
     $sort_cmd = "gmt snp sort $tumor_snp_file | grep -v \"^chr.*_random\" > $tumor_snp_file_sorted";
@@ -110,7 +112,7 @@ sub execute {
         die 'cant write to: ' . $sniper_snp_file;
     }
     
-
+  ##TODO Change to command object->execute()
     # passing sniper snp file in first makes it the default output
     my $cmd = "gmt snp intersect-chrom-pos -file1=$sniper_snp_file_sorted -file2=$tumor_snp_file_sorted --intersect-output=$output_file --f1-only=/dev/null --f2-only=/dev/null";
     #my $cmd = "gmt snp intersect $sniper_snp_file_sorted $tumor_snp_file_sorted > $output_file";

@@ -1,3 +1,7 @@
+# review tmooney
+# _check_rv potentially makes sense for system calls, but why run module execute() return values through it instead of direct comparison?
+
+
 package Genome::Model::Tools::Somatic::IndelpeRunner;
 
 use warnings;

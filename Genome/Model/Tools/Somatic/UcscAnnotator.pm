@@ -1,3 +1,7 @@
+#review tmooney
+#Quite the mix of variable naming conventions and generally inscrutable activities
+
+
 package Genome::Model::Tools::Somatic::UcscAnnotator;
 
 use strict;
@@ -52,7 +56,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools somatic ucsc-annotator...    
+gmt somatic ucsc-annotator...    
 EOS
 }
 

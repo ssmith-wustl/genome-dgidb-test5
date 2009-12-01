@@ -34,7 +34,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    genome-model tools somatic upload-variant-validation --variant-file high_confidence_file.out --model-id 12345
+    gmt somatic upload-variant-validation --variant-file high_confidence_file.out --model-id 12345
 EOS
 }
 
@@ -115,3 +115,4 @@ sub execute {
     return 1;
 }
 
+1;

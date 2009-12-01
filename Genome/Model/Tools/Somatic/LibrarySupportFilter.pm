@@ -51,7 +51,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    genome model tools somatic library-support-filter [indel file from somatic sniper]
+    gmt somatic library-support-filter [indel file from somatic sniper]
 EOS
 }
 

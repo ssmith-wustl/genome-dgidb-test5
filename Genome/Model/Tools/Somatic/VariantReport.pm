@@ -7,10 +7,7 @@ use Genome;
 use Carp;
 use IO::File;
 use Genome::Utility::FileSystem;
-use Cwd qw( abs_path getcwd );
 use File::Basename;
-
-
 
 class Genome::Model::Tools::Somatic::VariantReport{
     is => 'Command',
@@ -56,11 +53,11 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools somatic variant-report...    
+gmt somatic variant-report -b 99433342 --report ~/example_variant_report.html
 EOS
 }
 
-sub help_detail {                           
+sub help_detail {
     return <<EOS 
 produces an HTML report listing the variants and structural variants 
 EOS

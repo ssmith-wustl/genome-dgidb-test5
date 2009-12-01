@@ -80,7 +80,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools tier-variants...    
+gmt somatic tier-variants...    
 EOS
 }
 
@@ -344,3 +344,5 @@ sub infer_variant_type_from_line {
         die;
     }
 }
+
+1;

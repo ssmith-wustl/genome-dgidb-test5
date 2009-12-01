@@ -1,3 +1,6 @@
+#review tmooney
+#What was added for BRC1 only?
+
 package Genome::Model::Tools::Somatic::PlotCircos;
 
 use warnings;
@@ -145,7 +148,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools somatic plot-circos...    
+gmt somatic plot-circos...    
 EOS
 }
 
@@ -617,7 +620,7 @@ sub config_file_contents {
 
     return <<CONF;
 ###
-### gt somatic plot-circos configuration file
+### gmt somatic plot-circos configuration file
 ###
 
 <colors>

@@ -85,7 +85,7 @@ class Genome::Model::Tools::Annotate::LookupVariants {
 
 sub help_synopsis { 
     return <<EOS
-gt annotate lookup-variants --variant-file snvs.csv --output-file novel_variants.csv
+gmt annotate lookup-variants --variant-file snvs.csv --output-file novel_variants.csv
 EOS
 }
 
@@ -444,7 +444,7 @@ By default, takes in a file of variants and filters out variants that are alread
 
 =head1 Usage
 
-    $ gt annotate lookup-variants --variant-file snvs.csv --output-file novel_variants.csv
+    $ gmt annotate lookup-variants --variant-file snvs.csv --output-file novel_variants.csv
  
 =cut
 
