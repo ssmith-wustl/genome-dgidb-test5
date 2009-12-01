@@ -13,30 +13,30 @@ class Genome::Model::Command::Input {
     is_abstract => 1,
     english_name => 'genome model input command',
     has => [
-    _model => { 
-        is => 'Genome::Model',
-        doc => 'model_id',
-    },
-    model_identifier => { 
-        is => 'Text',
-        doc => 'Model identifier.  Use model id or name.',
-    },
-    model_id => { 
-        via => 'model',
-        to => 'id',
-    },
-    model_name => { 
-        via => 'model',
-        to => 'name,'
-    },
+        _model => { 
+            is => 'Genome::Model',
+            doc => 'model_id',
+        },
+        model_identifier => { 
+            is => 'Text',
+            doc => 'Model identifier.  Use model id or name.',
+        },
+        model_id => { 
+            via => 'model',
+            to => 'id',
+        },
+        model_name => { 
+            via => 'model',
+            to => 'name,'
+        },
     ],
     has_optional => [
-    filter => {
-        is => 'Text',
-        doc => 'Filter description.',
-    },
+        filter => {
+            is => 'Text',
+            doc => 'Filter description.',
+        },
     ],
-    doc => 'Work with model inputs.',
+    doc => 'work with model inputs.',
 };
 
 ############################################
