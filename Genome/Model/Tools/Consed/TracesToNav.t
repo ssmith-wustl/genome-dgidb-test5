@@ -19,7 +19,7 @@ ok (-s $refseq);
 ok (-s $ace);
 ok (-s $list);
 
-my @command = ["gt" , "consed" , "traces-to-nav" , "--ace" , "$ace" , "--convert-coords" , "$refseq" , "--unpaired" , "--name-nav" , "test.traces.to.nav" , "--list" , "$list"];
+my @command = ["gmt" , "consed" , "traces-to-nav" , "--ace" , "$ace" , "--convert-coords" , "$refseq" , "--unpaired" , "--name-nav" , "test.traces.to.nav" , "--list" , "$list"];
 
 
 &ipc_run(@command);
