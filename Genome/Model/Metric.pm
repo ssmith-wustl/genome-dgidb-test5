@@ -13,6 +13,12 @@ class Genome::Model::Metric {
         value => { is => 'VARCHAR2', len => 1000, column_name => 'METRIC_VALUE' },
         name  => { is => 'VARCHAR2', len => 100, column_name => 'METRIC_NAME' },
     ],
+    has => [
+        model       => { is => 'Genome::Model', via => 'build', to => 'model' },
+        model_id    => { via => 'build', to => 'model_id' },
+        model_name  => { via => 'model', to => 'name' },
+        data_directory => { via => 'build', to => 'data_directory' }
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
