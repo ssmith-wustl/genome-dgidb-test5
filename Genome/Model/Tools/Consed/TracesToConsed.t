@@ -24,7 +24,12 @@ my $project = "$chromosome\_$start";
 my $project_dir = "$base_dir/$project";
 if (-s $project_dir) {system qq(rm -rf $project_dir);}
 
-system qq(gt consed traces-to-consed --chromosome $chromosome --start $start --stop $stop --base-dir $base_dir --trace-dir $trace_dir --project-details $project_details --extend-ref $extend_ref);
+#####my $ConsedTracesToConsed = Genome::Model::Tools::Consed::TracesToConsed->create(chromosome=>$chromosome,start=>$start,stop=>$stop,base_dir=>$base_dir,trace_dir=>$trace_dir,project_details=>$project_details,extend_ref=>"1");
+#####ok ($ConsedTracesToConsed);
+#####ok ($ConsedTracesToConsed->execute());
+
+system qq(gmt consed traces-to-consed --chromosome $chromosome --start $start --stop $stop --base-dir $base_dir --trace-dir $trace_dir --project-details $project_details --extend-ref $extend_ref);
+
 my $ace = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/$project/edit_dir/$project.ace.1";
 ok (-s $ace ,"$project.ace.1 successfully produced");
 
@@ -37,14 +42,24 @@ my $assembly_traces = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-T
 ok (-s $assembly_traces , "assembly-traces exists");
 
 #####Build an ace file for 
+$start = 126008345;
+$stop = 126010576;
 
-$project = "$chromosome\_126008345_126010576";
+$project = "$chromosome\_$start\_$stop";
+#$project = "NEWTEST";
+
 $project_dir = "$base_dir/$project";
 if (-s $project_dir) {system qq(rm -rf $project_dir);}
 
-system qq(gt consed traces-to-consed --chromosome $chromosome --start 126008345 --stop 126010576 --base-dir $base_dir --trace-dir $trace_dir --restrict-contigs --link-traces --project $project --assembly-traces $assembly_traces);
+system qq(gmt consed traces-to-consed --chromosome $chromosome --start $start --stop $stop --base-dir $base_dir --trace-dir $trace_dir --restrict-contigs --link-traces --project $project --assembly-traces $assembly_traces);
+#print qq(gmt consed traces-to-consed --chromosome $chromosome --start $start --stop $stop --base-dir $base_dir --trace-dir $trace_dir --restrict-contigs --link-traces --project $project --assembly-traces $assembly_traces);
 
+#####undef($ConsedTracesToConsed);
 
+##### $ConsedTracesToConsed = Genome::Model::Tools::Consed::TracesToConsed->create(chromosome=>$chromosome, start=>$start, stop=>$stop, base_dir=>$base_dir, trace_dir=>$trace_dir, project=> $project , restrict_contigs=>"1", link_traces=>"1", assembly_traces=>$assembly_traces);
+#####ok ($ConsedTracesToConsed, "ConsedTracesToConsed");
+#####$ConsedTracesToConsed->execute();
+   # exit;
 $ace = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/$project/edit_dir/$project.ace.1";
 ok (-s $ace ,"$project.ace.1 successfully produced");
 
