@@ -7,14 +7,11 @@ use Genome;
 class Genome::Model::Tools::Snp::GetDbsnps {
     is => 'Command',                    
     has => [ # specify the command's properties (parameters) <--- 
-	     
-
 	     out => {
 		 type  =>  'String',
 		 doc   =>  "provide a name for your output file or it will simply be printed as stdout",
 		 is_optional  => 1,
 	     },
-
 	     chromosome => {
 		 type  =>  'String',
 		 doc   =>  "chromosome ie {1,2,...,22,X,Y,M}",
@@ -40,7 +37,6 @@ class Genome::Model::Tools::Snp::GetDbsnps {
 		 doc   =>  "variant allele;",
 		 is_optional  => 1,
 	     },
-
 	     list => {
 		 type  =>  'string',
 		 doc   =>  "a list of positions with ref and variant alleles for match check",
@@ -51,23 +47,26 @@ class Genome::Model::Tools::Snp::GetDbsnps {
 		 doc   =>  "provide a name for the optional gff file of all dbsnps from your input coverage range",
 		 is_optional  => 1,
 	     },
-
+	     organism => {
+		 type  =>  'String',
+		 doc   =>  "provide the organism either mouse or human; default is human",
+		 is_optional  => 1,
+		 default => 'human',
+	     },
 	]
-	
-    
 };
 
 
 sub help_brief {
     return <<EOS
-  This tool was design to retrieve dbsnp\'s for an individual site/range or list of sites and will check for an allele match to your variant if provided or it will simply state which sites on your list/input coords coinside with a dbsnp.
+  This tool was design to retrieve dbsnp\'s for an individual site/range or list of sites and will check for an allele match to your variant if provided or it will simply state which sites on your list/input coords coinside with a dbsnp. It will work for either human build 36 or mouse build 37.
 EOS
 }
 
 sub help_synopsis {
     return <<EOS
 
-gt snp get-dbsnps --list
+gmt snp get-dbsnps --list
 
 the list is intended to be set up the same as with annotate transcript-variants
 
@@ -83,7 +82,7 @@ EOS
 sub help_detail {
     return <<EOS 
 
-gt snp get-dbsnps --list file
+gmt snp get-dbsnps --list file
 
 your list should be a tab/space delimited file with five columns
 chromosome   start   stop   ref_allele   variant_allele
@@ -91,13 +90,13 @@ chromosome   start   stop   ref_allele   variant_allele
 or
 
 running...
-gt snp get-dbsnps --chromosome 1 --start 202785447 --stop 202785447 --ref A --var T
+gmt snp get-dbsnps --chromosome 1 --start 202785447 --stop 202785447 --ref A --var T
 
  will produce
       1 202785447 202785447 A T rs4252743:snp:1:'A/T':dbsnp_match
 
 running...
-gt snp get-dbsnps --chromosome 1 --start 202785447 --stop 202785447 --ref A --var G
+gmt snp get-dbsnps --chromosome 1 --start 202785447 --stop 202785447 --ref A --var G
 
  will produce
       1 202785447 202785447 A G rs4252743:snp:1:'A/T':no_match
@@ -128,7 +127,7 @@ sub execute {
     my $list;
     if ($file) {
 
-	unless (-f $file) {system qq(gt snp get-dbsnps --help);print qq(Your list was not found.\t\n\tPlease check that your list is in place and try again.\n\n\n);return 0;}
+	unless (-f $file) {system qq(gmt snp get-dbsnps --help);print qq(Your list was not found.\t\n\tPlease check that your list is in place and try again.\n\n\n);return 0;}
 
 	open(LIST,"$file");
 	while (<LIST>) {
@@ -149,7 +148,7 @@ sub execute {
 	my $ref = $self->ref;
 	my $var = $self->var;
 
-	unless ($chr && $start && $stop) { system qq(gt snp get-dbsnps --help);return 0;}
+	unless ($chr && $start && $stop) { system qq(gmt snp get-dbsnps --help);return 0;}
 	unless ($ref) {$ref = "na";}
 	unless ($var) {$var = "na";}
 	$list->{$chr}->{$start}->{$stop}->{ref}=$ref;
@@ -183,9 +182,17 @@ sub getDBSNPS {
 
     my $gff = $self->gff;
     if ($gff) {open(GFF,">$gff");}
+    my $organism = $self->organism;
 
-    my $g = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build36');
-
+    my $g;
+    if ($organism eq "human") {
+	$g = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build36');
+    } elsif ($organism eq "mouse") {
+	$g = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-mouse-buildC57BL6J');
+    } else {
+	print qq(Organism choices are restricted to either the default human or mouse.\n);
+	exit (1);
+    }
     foreach my $chr (sort keys %{$list}) {
 	my $c = $g->get_chromosome($chr);
 	
