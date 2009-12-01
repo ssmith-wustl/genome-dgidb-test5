@@ -88,7 +88,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is => 'Boolean',
             is_optional => 1,
             default => 0,
-            doc => 'enable this flag to skip variants on a chromosome where no annotation information exists, as oppeosed to crashing',
+            doc => 'enable this flag to skip variants on a chromosome where no annotation information exists, as opposed to crashing',
         },
         skip_if_output_present => {
             is => 'Boolean',
@@ -105,7 +105,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
 
 sub help_synopsis { 
     return <<EOS
-gt annotate transcript-variants-simple --variant-file variants.csv --output-file transcript-changes.csv
+gmt annotate transcript-variants-simple --variant-file variants.csv --output-file transcript-changes.csv
 EOS
 }
 
