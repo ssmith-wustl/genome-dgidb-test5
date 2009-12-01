@@ -6,7 +6,7 @@ use warnings;
 use Genome; 
 use File::Basename;
 
-my $DEFAULT = 'r453';
+my $DEFAULT = 'r510';
 my $PICARD_DEFAULT = 'r107';
 
 class Genome::Model::Tools::Sam {
@@ -50,6 +50,7 @@ EOS
 
 
 my %SAMTOOLS_VERSIONS = (
+    r510    => '/gsc/pkg/bio/samtools/samtools-0.1.7a/samtools',
     r453    => '/gsc/pkg/bio/samtools/samtools-0.1.6/samtools',
     r449    => '/gsc/pkg/bio/samtools/samtools-0.1.5-32/samtools',
     r301wu1 => '/gscuser/dlarson/samtools/r301wu1/samtools',
