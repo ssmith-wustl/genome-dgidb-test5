@@ -86,7 +86,8 @@ sub execute {
     if ( ! Genome::Utility::FileSystem->validate_file_for_reading($sniper_snp_file) ) {
         die 'cant read from: ' . $sniper_snp_file;
     }
-    #my $sort_cmd = "sort -k1,1 -k2,2n $sniper_snp_file  > $sniper_snp_file_sorted";
+    
+    # Should use command object->execute(), but would clutter with the grep required for imported bams.
     my $sort_cmd = "gmt snp sort $sniper_snp_file | grep -v \"^chr.*_random\" > $sniper_snp_file_sorted";
     my $result = Genome::Utility::FileSystem->shellcmd(
         cmd          => $sort_cmd,
@@ -95,34 +96,41 @@ sub execute {
         skip_if_output_is_present => 0
     );
 
-
-  ##TODO Change to command object->execute()    
+    # Should use command object->execute(), but would clutter with the grep required for imported bams.
     my $tumor_snp_file_sorted = "/tmp/tumors.sorted";
-    #$sort_cmd = "sort -k1,1 -k2,2n $tumor_snp_file  > $tumor_snp_file_sorted";
     $sort_cmd = "gmt snp sort $tumor_snp_file | grep -v \"^chr.*_random\" > $tumor_snp_file_sorted";
+    
+    
     $result = Genome::Utility::FileSystem->shellcmd(
         cmd          => $sort_cmd,
         input_files  => [ $tumor_snp_file ],
         output_files => [ $tumor_snp_file_sorted ],
         skip_if_output_is_present => 0
     );
-    
+
     my $output_file = $self->output_file();
     if ( ! Genome::Utility::FileSystem->validate_file_for_writing_overwrite($output_file) ) {
-        die 'cant write to: ' . $sniper_snp_file;
+        die 'cant write to: ' . $output_file;
     }
-    
-  ##TODO Change to command object->execute()
-    # passing sniper snp file in first makes it the default output
-    my $cmd = "gmt snp intersect-chrom-pos -file1=$sniper_snp_file_sorted -file2=$tumor_snp_file_sorted --intersect-output=$output_file --f1-only=/dev/null --f2-only=/dev/null";
-    #my $cmd = "gmt snp intersect $sniper_snp_file_sorted $tumor_snp_file_sorted > $output_file";
-    $result = Genome::Utility::FileSystem->shellcmd(
-        cmd          => $cmd,
-        input_files  => [ $sniper_snp_file_sorted, $tumor_snp_file_sorted ],
-        output_files => [ $output_file ],
-        skip_if_output_is_present => 0
+
+    my $intersect_cmd = Genome::Model::Tools::Snp::IntersectChromPos->create(
+        file1 => $sniper_snp_file_sorted,
+        file2 => $tumor_snp_file_sorted,
+        intersect_output => $output_file,
+        f1_only_output => '/dev/null', #TODO IntersectChromPos claims this is optional, but dies without it
+        f2_only_output => '/dev/null', #TODO IntersectChromPos claims this is optional, but dies without it
     );
-    #system("grep ^MT $sniper_snp_file >> $output_file");
+
+    unless($intersect_cmd) {
+        die "Couldn't instantiate Genome::Model::Tools::Snp::IntersectChromPos";
+    }
+
+    $result = $intersect_cmd->execute;
+
+    unless($result) {
+        $self->error_message('Failed to execute Genome::Model::Tools::Snp::IntersectChromPos');
+    }
+
     unlink($sniper_snp_file_sorted);
     unlink($tumor_snp_file_sorted);
     return $result;
