@@ -28,13 +28,6 @@ class Genome::Model::Tools::Somatic::VariantReport{
         }
     ],
     has_optional => [
-        skip => {
-            is => 'Boolean',
-            default => '0',
-            is_input => 1,
-            is_optional => 1,
-            doc => "If set to true... this will do nothing! Fairly useless, except this is necessary for workflow.",
-        },
         skip_if_output_present => {
             is => 'Boolean',
             is_optional => 1,
@@ -67,10 +60,6 @@ sub execute {
     my $self = shift;
     $DB::single=1;
 
-    if ($self->skip) {
-        $self->status_message("Skipping execution: Skip flag set");
-        return 1;
-    }
     if (($self->skip_if_output_present)&&(-s $self->report_output)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
         return 1;
