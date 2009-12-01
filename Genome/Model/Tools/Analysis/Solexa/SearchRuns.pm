@@ -28,6 +28,8 @@ class Genome::Model::Tools::Analysis::Solexa::SearchRuns {
 		sample_name	=> { is => 'Text', doc => "Search by sample name", is_optional => 1 },
 		library_name	=> { is => 'Text', doc => "Search by library name" , is_optional => 1},
 		project_name	=> { is => 'Text', doc => "Search by research project name" , is_optional => 1},		
+		target_set	=> { is => 'Text', doc => "Search by target region set name" , is_optional => 1},
+		capture		=> { is => 'Text', doc => "If set to 1, returns lanes with target set names" , is_optional => 1},		
 		print_location	=> { is => 'Text', doc => "If set to 1, prints data location" , is_optional => 1},
 	],
 };
@@ -65,6 +67,7 @@ sub execute {                               # replace with real execution logic.
 	my $sample_name = $self->sample_name;
 	my $library_name = $self->library_name;
 	my $project_name = $self->project_name;
+	my $target_set = $self->target_set;
 	my $print_location;
 	$print_location = $self->print_location if($self->print_location);
 
@@ -72,22 +75,54 @@ sub execute {                               # replace with real execution logic.
 
 	if($flowcell_id)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where flow_cell_id = '$flowcell_id' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;
+		if($self->capture)
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, target_region_set_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where flow_cell_id = '$flowcell_id' AND target_region_set_name IS NOT NULL ORDER BY flow_cell_id, lane" --instance warehouse --parse`;			
+		}
+		else
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where flow_cell_id = '$flowcell_id' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;			
+		}
+
 	}
 
 	if($sample_name)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' ORDER BY lane" --instance warehouse --parse`;
+		if($self->capture)
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, target_region_set_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' AND target_region_set_name IS NOT NULL ORDER BY lane" --instance warehouse --parse`;
+		}
+		else
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' ORDER BY lane" --instance warehouse --parse`;			
+		}
+
 	}
 
 	if($library_name)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where library_name = '$library_name' ORDER BY lane" --instance warehouse --parse`;
+		if($self->capture)
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, target_region_set_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where library_name = '$library_name' AND target_region_set_name IS NOT NULL ORDER BY lane" --instance warehouse --parse`;			
+		}
+		else
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where library_name = '$library_name' ORDER BY lane" --instance warehouse --parse`;			
+		}
+
 	}
 	
 	if($project_name)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where research_project = '$project_name' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;		
+		if($self->capture)
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, target_region_set_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where research_project = '$project_name' AND target_region_set_name IS NOT NULL ORDER BY flow_cell_id, lane" --instance warehouse --parse`;					
+		}
+		else
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct, filt_error_rate_avg from solexa_lane_summary where research_project = '$project_name' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;					
+		}
+
 	}
 
 	if($sqlrun)
