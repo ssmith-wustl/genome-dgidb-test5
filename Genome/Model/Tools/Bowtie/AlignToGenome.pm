@@ -1,13 +1,13 @@
 
-package Genome::Model::Tools::Bowtie::AlignToGenome;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Novoalign::AlignToGenome;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# AlignToGenome.pm - 	Align reads to a reference genome using bowtie
+# AlignToGenome.pm - 	Align reads to a reference genome using Novoalign
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
-#	CREATED:	02/25/2009 by D.K.
-#	MODIFIED:	02/25/2009 by D.K.
+#	CREATED:	04/22/2009 by D.K.
+#	MODIFIED:	04/22/2009 by D.K.
 #
 #	NOTES:	
 #			
@@ -15,17 +15,28 @@ package Genome::Model::Tools::Bowtie::AlignToGenome;     # rename this when you 
 
 use strict;
 use warnings;
-
 use FileHandle;
-
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-class Genome::Model::Tools::Bowtie::AlignToGenome {
+## Novoalign Parameters ##
+my $batch_size = 1000000;
+my $num_cores = 1;
+my $lsf_queue = "long";
+
+my $novoalign_params = "-c $num_cores -a -l 36 -t 240 -k";	# -o SAM
+
+my $path_to_novoalign = "/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.13/novocraft/novoalign";
+my $novoalign_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.05.13";
+
+
+
+
+class Genome::Model::Tools::Novoalign::AlignToGenome {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		query_file	=> { is => 'Text', doc => "Illumina/Solexa reads in FASTQ format" },
-		output_file	=> { is => 'Text', doc => "Output file for Bowtie alignments" },
+		output_file	=> { is => 'Text', doc => "Output file for Novoalign alignments" },
                 reference	=> { is => 'Text', doc => "Path to bowtie-indexed reference [Defaults to Hs36]", is_optional => 1 },
 	],
 };
@@ -33,7 +44,7 @@ class Genome::Model::Tools::Bowtie::AlignToGenome {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Align reads to a reference genome using Bowtie"                 
+    "Align reads to a reference genome using Novoalign"                 
 }
 
 sub help_synopsis {
@@ -67,9 +78,9 @@ sub execute {                               # replace with real execution logic.
 		die "Error: Query file not found!\n";
 	}
 
-	## Define Bowtie Reference (default to Hs36)
+	## Define Novoalign Reference (default to Hs36)
 
-	my $reference = "/gscmnt/sata194/info/sralign/dkoboldt/human_refseq/Hs36_1c_dkoboldt.bowtie";
+	my $reference = $novoalign_reference;
 
         if(defined($self->reference))
 	{
@@ -83,8 +94,7 @@ sub execute {                               # replace with real execution logic.
 		}
 	}
 
-	print "Aligning $query_file to $reference\n";
-	system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -oo $output_file.log bowtie -m 1 $reference $query_file $output_file");
+	system("bsub -q $lsf_queue -R\"select[type==LINUX64 && model != Opteron250 && mem>12000] rusage[mem=12000] span[hosts=1]\" -n $num_cores -M 12000000 \"$path_to_novoalign $novoalign_params -d $reference -f $query_file >$output_file\"");
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
