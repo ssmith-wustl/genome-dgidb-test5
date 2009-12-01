@@ -54,11 +54,22 @@ sub execute {
 
     $self->warning_message("this tool assumes your files have chromosomes in the same order and the positions are ascending. it should detect any other condition and barf, though."); 
     #both files exist  
-
+    
+    my $header_lines_f1 = $self->headers1;
+    my $header_lines_f2 = $self->headers2;
+    
     my $line2 = $file2_fh->getline;
+    for my $skip (1..$header_lines_f2) { 
+        $line2 = $file2_fh->getline; 
+    }
     my ($chr2, $pos2, $ref1, $genotype1) = split ($self->delimiter2, $line2);
+    
     my $line1 = $file1_fh->getline;
+    for my $skip (1..$header_lines_f1) { 
+        $line1 = $file1_fh->getline; 
+    }
     my ($chr1, $pos1, $ref2, $genotype2) = split ($self->delimiter1, $line1);
+
     my ($prev_chrom1, $prev_chrom2); 
     $DB::single=1;
     while(defined $line1 && defined $line2) {
