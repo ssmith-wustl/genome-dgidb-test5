@@ -15,67 +15,67 @@ class Genome::Model::Tools::Somatic::ReadCounts {
     has => [
        tumor_bam => {
            is => 'String',
-           doc =>'is this not obvious?',
+           doc =>'Path to the tumor bam file',
        },
        normal_bam => {
            is => 'String',
-           doc =>'I don\'t mean to insult your intelligence...but really.',
+           doc =>'Path to the normal bam file',
        },
        sites_file => {
            is => 'String',
-           doc =>'the sites of interest in annotation format. Refer to something else to figure out what that is.'
+           doc =>'the sites of interest in annotation format.'
        },
        reference_sequence => {
            is => 'String',
-           doc =>'defaults to NCBI-human-build36....because this is good software',
+           doc =>'the reference sequence to use, defaults to NCBI-human-build36',
            is_optional=>1,
            default=> '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa',
        },
-       out => {
+       output_file => {
            is => 'String',
-           doc =>'where the output goes',
+           doc =>'path to output file',
        },
         ],
     };
     
     sub help_brief {
-        return "A great tool that everyone should be using";
+        return "generate read count statistics";
     }
 
     sub help_synopsis {
         my $self = shift;
         return <<"EOS"
-        this help is less brief than brief but less detailed than detailed. and Im not telling you how to run this
+        gmt somatic read-counts -t /path/to/tumor.bam -n /path/to/normal.bam -s /path/to/sites.file -o /path/to/output.out
 EOS
     }
 
     sub help_detail {                           
         return <<EOS 
-        I REFUSE TO GIVE YOU DETAILS ON THIS HELP
+        Produces a tab-delimited file of statistics from the 'bam-readcount' command.
 EOS
     }
 
     sub execute {
         my ($self) = @_;
-        my ($stupid_dave_fh, $stupid_dave_format_file)  =Genome::Utility::FileSystem->create_temp_file();
+        my ($readcount_regions_fh, $readcount_regions_file)  =Genome::Utility::FileSystem->create_temp_file();
         my $anno_fh = IO::File->new($self->sites_file);
-        my $output_fh = IO::File->new($self->out, ">");
+        my $output_fh = IO::File->new($self->output_file, ">");
         unless($output_fh) {
-            $self->error_message("Now is the winter of your discontent!!!");
+            $self->error_message("Couldn't open output file " . $self->output_file);
             return 0;
         }
         unless($anno_fh) {
-            $self->error_message("Unable to comply, building in progress.");
+            $self->error_message("Couldn't open sites file " . $self->sites_file);
             return 0;
         }
         while (my $line = $anno_fh->getline) {
             chomp $line;
             my ($chr, $pos,) = split /\t/, $line;
-            $stupid_dave_fh->print("$chr\t$pos\t$pos\n");
+            $readcount_regions_fh->print("$chr\t$pos\t$pos\n");
         }
-        $stupid_dave_fh->close;
-        my $normal_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $stupid_dave_format_file " . $self->normal_bam;
-        my $tumor_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $stupid_dave_format_file " . $self->tumor_bam;
+        $readcount_regions_fh->close;
+        my $normal_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->normal_bam;
+        my $tumor_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->tumor_bam;
         $DB::single=1;
         my @normal_lines = `$normal_bam_command`;
         my @tumor_lines  = `$tumor_bam_command`;
@@ -85,8 +85,6 @@ EOS
         $self->make_excel_friendly_output_sheet($output_fh, \%hash_of_arrays);
        return 1;
    }
-1;   
-
 
 sub make_excel_friendly_output_sheet {
     my ($self, $output_fh, $tumor_normal_hash_ref) = @_;
@@ -122,3 +120,4 @@ sub make_excel_friendly_output_sheet {
 
 }
 
+1;
