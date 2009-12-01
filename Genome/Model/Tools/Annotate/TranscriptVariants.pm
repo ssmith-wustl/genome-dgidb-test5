@@ -451,7 +451,7 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
  in the shell:
 
-     gt annotate transcript-variants --variant-file myinput.csv --output-file myoutput.csv
+     gmt annotate transcript-variants --variant-file myinput.csv --output-file myoutput.csv
 
  in Perl:
 
