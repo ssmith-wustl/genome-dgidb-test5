@@ -1,18 +1,9 @@
-# review tmooney
-# _check_rv potentially makes sense for system calls, but why run module execute() return values through it instead of direct comparison?
-
-
 package Genome::Model::Tools::Somatic::IndelpeRunner;
 
 use warnings;
 use strict;
 
 use Genome;
-use Workflow;
-use Carp;
-use FileHandle;
-use Data::Dumper;
-use List::Util qw( max );
 
 class Genome::Model::Tools::Somatic::IndelpeRunner {
 
@@ -69,7 +60,7 @@ class Genome::Model::Tools::Somatic::IndelpeRunner {
 };
 
 sub help_brief {
-    return "Runs the equivilant of 'find variations' from the reference alignment pipeline to produce snp and indel files";
+    return "Runs the equivalent of 'find variations' from the reference alignment pipeline to produce snp and indel files";
 }
 
 sub help_synopsis {
@@ -81,7 +72,7 @@ EOS
 
 sub help_detail {                           
     return <<EOS 
-Runs the equivilant of 'find variations' from the reference alignment pipeline to produce snp and indel files"
+Runs the equivalent of 'find variations' from the reference alignment pipeline to produce snp and indel files
 EOS
 }
 
@@ -94,7 +85,6 @@ sub execute {
         die 'cant read from: ' . $bam_file;
     }
 
-   
     #calling blank should return the $DEFAULT version in the G:M:T:Sam module
     my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version();
 
@@ -106,13 +96,17 @@ sub execute {
     my $analysis_base_path = $self->output_dir;
     unless (-d $analysis_base_path) {
         $rv = $self->create_directory($analysis_base_path);
-        return unless $self->_check_rv("Failed to create directory: $analysis_base_path", $rv);
+        unless($rv) {
+            $self->error_message("Failed to create directory: $analysis_base_path");
+            die;
+        }
         chmod 02775, $analysis_base_path;
     }
 
-
-     $rv = $self->check_for_existence($bam_file);
-    return unless $self->_check_rv("Bam output file $bam_file was not found.", $rv);
+    unless(-s $bam_file) {
+        $self->status_message("Bam output file $bam_file was not found or had no size.");
+        die;
+    }
 
     # Generate files not provided from data directory
     unless (defined $self->snp_output_file) {
@@ -139,36 +133,35 @@ sub execute {
         return 1;
     }
 
-
-
-     # Remove the result files from any previous run
-     #commented out the 'remove previous' from this standalone version
-     #    unlink($snp_output_file, $filtered_snp_file, $indel_output_file, $filtered_indel_file);
- 
-    my $indel_finder_params = ('');
-
-    my $samtools_cmd = "$sam_pathname pileup -c $indel_finder_params -f $ref_seq_file";
+    my $samtools_cmd = "$sam_pathname pileup -c -f $ref_seq_file";
 
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
-    #$rv = system "$samtools_cmd -S $bam_file > $snp_output_file"; 
-
     my $snp_cmd = "$samtools_cmd -v $bam_file > $snp_output_file";
     # Skip if we already have the output
     unless (-s $snp_output_file) {
-        $rv = system $snp_cmd;  
-        return unless $self->_check_rv("Running samtools SNP failed with exit code $rv\nCommand: $snp_cmd", $rv, 0);
+        $rv = system $snp_cmd;
+        unless($rv == 0) {
+            $self->error_message("Running samtools SNP failed with exit code $rv\nCommand: $snp_cmd");
+            die;
+        }
     }
 
     my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snp_output_file);
     $rv = $snp_sanitizer->execute;
-    return unless $self->_check_rv("Running samtools snp-sanitizer failed with exit code $rv", $rv, 1);
+    unless($rv) {
+        $self->error_message("Running samtools snp-sanitizer failed with exit code $rv");
+        die;
+    }
     
     my $indel_cmd = "$samtools_cmd -i $bam_file > $indel_output_file";
     # Skip if we already have the output
     unless (-s $indel_output_file) {
         $rv = system $indel_cmd;
-        return unless $self->_check_rv("Running samtools indel failed with exit code $rv\nCommand: $indel_cmd", $rv, 0);
+        unless($rv == 0) {
+            $self->error_message("Running samtools indel failed with exit code $rv\nCommand: $indel_cmd");
+            die;
+        }
     }
 
     #FIXME:8-25-09 i spoke to ben and varfilter is still too permissive to be trusted so just hardcode normal snpfilter
@@ -176,24 +169,27 @@ sub execute {
     my $filter_type =  'SnpFilter';
 
     if ($filter_type =~ /^VarFilter$/i) {
-        my %params = (
+        my $varfilter = Genome::Model::Tools::Sam::VarFilter->create(
             bam_file     => $bam_file,
             ref_seq_file => $ref_seq_file,
             filtered_snp_out_file   => $filtered_snp_file,
             filtered_indel_out_file => $filtered_indel_file,
         );
-        $params{pileup_params} = $indel_finder_params if $indel_finder_params;
-        
-        my $varfilter = Genome::Model::Tools::Sam::VarFilter->create(%params);
         $rv = $varfilter->execute;
-        return unless $self->_check_rv("Running samtools varFilter failed with exit code $rv", $rv, 1);
+        unless($rv) {
+            $self->error_message("Running sam indel-filter failed with exit code $rv");
+            die;
+        }
     }
     elsif ($filter_type =~ /^SnpFilter$/i) {
-        # Skip if we already have the output
+        # Skip if we already have the output (often this is produced by the ReferenceAlignment pipeline--don't want to overwrite)
         unless (-s $filtered_indel_file) {
             my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(indel_file => $indel_output_file, out_file => $filtered_indel_file);
             $rv = $indel_filter->execute;
-            return unless $self->_check_rv("Running sam indel-filter failed with exit code $rv", $rv, 1);
+            unless($rv) {
+                $self->error_message("Running sam indel-filter failed with exit code $rv");
+                die;
+            }
         }
    
         my $snp_filter = Genome::Model::Tools::Sam::SnpFilter->create(
@@ -203,51 +199,18 @@ sub execute {
         );
 
         $rv = $snp_filter->execute;
-        return unless $self->_check_rv("Running sam snp-filter failed with exit code $rv", $rv, 1);
+        unless($rv) {
+            $self->error_message("Running sam snp-filter failed with exit code $rv");
+            die;
+        }
         $self->filtered_snp_file($filtered_snp_file);
     }
     else {
         $self->error_message("Invalid variant filter type: $filter_type");
         die;
     }
-} 
- 
- sub _check_rv {
-    my ($self, $msg, $rv, $cmp) = @_;
-
-    if (defined $cmp) {
-        return 1 if $rv == $cmp;
-    }
-    else {
-        return $rv if $rv;
-    }
-
-    $self->error_message($msg);
-    die;
-}
     
-sub check_for_existence {
-    my ($self,$path,$attempts) = @_;
-
-    unless (defined $attempts) {
-        $attempts = 5;
-    }
-
-    my $try = 0;
-    my $found = 0;
-    while (!$found && $try < $attempts) {
-        $found = -e $path;
-        sleep(1);
-        $try++;
-        if ($found) {
-            $self->status_message("existence check passed: $path");
-            return $found;
-        }
-    }
-    die;
-}
-
-
-
+    return 1;
+} 
 
 1;
