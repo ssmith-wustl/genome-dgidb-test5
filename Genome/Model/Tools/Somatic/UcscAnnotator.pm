@@ -79,8 +79,8 @@ sub execute {
         return 1;
     }
 
-    my $InputFile = $self->input_file;
-    my $outfile = $self->output_file;
+    my $input_file = $self->input_file;
+    my $output_file = $self->output_file;
 
     # Default to the same name as output file with an extension if not specifically provided
     my $unannotated_file = $self->unannotated_file;
@@ -88,18 +88,18 @@ sub execute {
 
     open(UNANNOTATED, "> $unannotated_file") || die "Could not open '$unannotated_file': $!";
 
-    open(OUT, "> $outfile") || die "Could not open '$outfile': $!";
+    open(OUT, "> $output_file") || die "Could not open '$output_file': $!";
 
     # Make look-up hash for UCSC gene name to Hugo gene name
-    my $HugoGeneRef = Genome::Utility::HugoGene::HugoGeneMethods::makeHugoGeneObjects();
-    my %UcscToHugo;
-    foreach my $hugo ( keys %{$HugoGeneRef} ) {
-        my $ucscName = $$HugoGeneRef{$hugo}->ucsc();
-        if ( !defined $ucscName || $ucscName eq "" ) { next; }
-        if ( defined $UcscToHugo{$ucscName} ) {
-            print "WARNING: $ucscName => $hugo and $ucscName => $UcscToHugo{$ucscName} \n";
+    my $hugo_gene_ref = Genome::Utility::HugoGene::HugoGeneMethods::makeHugoGeneObjects();
+    my %ucsc_to_hugo;
+    foreach my $hugo ( keys %{$hugo_gene_ref} ) {
+        my $ucsc_name = $$hugo_gene_ref{$hugo}->ucsc();
+        if ( !defined $ucsc_name || $ucsc_name eq "" ) { next; }
+        if ( defined $ucsc_to_hugo{$ucsc_name} ) {
+            print "WARNING: $ucsc_name => $hugo and $ucsc_name => $ucsc_to_hugo{$ucsc_name} \n";
         }
-        $UcscToHugo{$ucscName} = $hugo;
+        $ucsc_to_hugo{$ucsc_name} = $hugo;
     }
 
 
@@ -116,103 +116,104 @@ sub execute {
     # knowGene, tfbsConsSites and recombRate tables are special cases.
 
     # use 'varType' for table 'dgv'  
-    my ( @tablesWithScores, @tablesWithNames, @tablesWithNeither, $geneTableQuery, @tablesWithvariationType,
-        %chrToRepeatmask, %queriesWithDescription, %queriesWithoutDescription,
-        $table, $repeatMaskQuery, $scoresTableQuery, $start, $stop, $description, $chrStart, $chrStop,
-        $namesTableQuery, $noScoreNameTableQuery, $exonCount, $exonStarts, $exonEnds, %chrToSelfChain);
+    
+    my ( @tables_with_scores, @tables_with_names, @tables_with_neither, $gene_table_query, @tables_with_variation_type,
+        %chr_to_repeatmask, %queries_with_description, %queries_without_description,
+        $table, $repeat_mask_query, $scores_table_query, $start, $stop, $description, $chr_start, $chr_stop,
+        $names_table_query, $no_score_name_table_query, $exon_count, $exon_starts, $exon_ends, %chr_to_self_chain);
 
 
-    my %tableWithNoBin = ( cnpSebat2 => 1, cpgIslandExt => 1, gad => 1, knownGene => 1, recombRate => 1);   #keep track of which tables we cannot use binning on to speed up queries
+    my %table_with_no_bin = ( cnpSebat2 => 1, cpgIslandExt => 1, gad => 1, knownGene => 1, recombRate => 1);   #keep track of which tables we cannot use binning on to speed up queries
 
-    @tablesWithScores = qw ( delConrad2  eponine firstEF genomicSuperDups phastConsElements17way phastConsElements28way polyaDb polyaPredict simpleRepeat switchDbTss targetScanS  vistaEnhancers wgEncodeGisChipPet wgEncodeGisChipPetHes3H3K4me3 wgEncodeGisChipPetMycP493 wgEncodeGisChipPetStat1Gif wgEncodeGisChipPetStat1NoGif);
+    @tables_with_scores = qw ( delConrad2  eponine firstEF genomicSuperDups phastConsElements17way phastConsElements28way polyaDb polyaPredict simpleRepeat switchDbTss targetScanS  vistaEnhancers wgEncodeGisChipPet wgEncodeGisChipPetHes3H3K4me3 wgEncodeGisChipPetMycP493 wgEncodeGisChipPetStat1Gif wgEncodeGisChipPetStat1NoGif);
 
-    @tablesWithvariationType = qw ( cnpLocke cnpSharp2 );  
+    @tables_with_variation_type = qw ( cnpLocke cnpSharp2 );  
 
-    @tablesWithNames = qw (  cnpSebat2   cpgIslandExt gad  microsat );
+    @tables_with_names = qw (  cnpSebat2   cpgIslandExt gad  microsat );
 
-    @tablesWithNeither = qw(cnpTuzun cnpRedon cnpIafrate2 encodeUViennaRnaz exaptedRepeats delHinds2 delMccarroll uppsalaChipH3acSignal uppsalaChipUsf1Signal uppsalaChipUsf2Signal wgEncodeUcsdNgTaf1Signal wgEncodeUcsdNgTaf1ValidH3K4me wgEncodeUcsdNgTaf1ValidH3ac wgEncodeUcsdNgTaf1ValidRnap wgEncodeUcsdNgTaf1ValidTaf oreganno regPotential7X laminB1 );
+    @tables_with_neither = qw(cnpTuzun cnpRedon cnpIafrate2 encodeUViennaRnaz exaptedRepeats delHinds2 delMccarroll uppsalaChipH3acSignal uppsalaChipUsf1Signal uppsalaChipUsf2Signal wgEncodeUcsdNgTaf1Signal wgEncodeUcsdNgTaf1ValidH3K4me wgEncodeUcsdNgTaf1ValidH3ac wgEncodeUcsdNgTaf1ValidRnap wgEncodeUcsdNgTaf1ValidTaf oreganno regPotential7X laminB1 );
 
 
     # Query for gene table.  Call with $chr, $start, $end
-    $geneTableQuery = "SELECT name, txStart, txEnd, exonCount, exonStarts, exonEnds
+    $gene_table_query = "SELECT name, txStart, txEnd, exonCount, exonStarts, exonEnds
     FROM knownGene
     WHERE chrom = ? && txEnd >= ? && txStart <= ?
     ORDER BY txStart";
-    my $geneStatement = $dbh->prepare($geneTableQuery) ||
-    die "Could not prepare statement '$geneTableQuery': $DBI::errstr \n";
+    my $gene_statement = $dbh->prepare($gene_table_query) ||
+    die "Could not prepare statement '$gene_table_query': $DBI::errstr \n";
     $DB::single =1 ;
     
     # Define available chromosomes for repeatmasker to use
     my @available_chromosomes = (1..22, "X","Y");
 
     #  Query for repeatmask tables.  Call with start, end of region to check
-    #  Call with $chrToRepeatmaskStatements{$chr}->execute($start, $stop)
+    #  Call with $chr_to_repeatmaskStatements{$chr}->execute($start, $stop)
     foreach my $chr (@available_chromosomes) {
         $table = "chr$chr"."_rmsk";
-        $repeatMaskQuery = "SELECT repFamily, genoStart, genoEnd 
+        $repeat_mask_query = "SELECT repFamily, genoStart, genoEnd 
         FROM $table
         WHERE genoEnd >= ? && genoStart <= ?   
         AND %s
         ORDER BY genoStart";
 
-        $chrToRepeatmask{$chr} = $repeatMaskQuery;
+        $chr_to_repeatmask{$chr} = $repeat_mask_query;
     }
     #   Query for selfChain tables
     foreach my $chr (@available_chromosomes) {
         my $table = "chr$chr"."_chainSelf";
-        my $selfChainQuery = "SELECT normScore, tStart, tEnd 
+        my $self_chain_query = "SELECT normScore, tStart, tEnd 
         FROM $table
         WHERE tEnd >= ? && tStart <= ?   
         AND %s
         ORDER BY tStart";
 
-        $chrToSelfChain{$chr} = $selfChainQuery;    
+        $chr_to_self_chain{$chr} = $self_chain_query;    
     }
     
     # Query with tables that have scores; Want to display the score in output
     # To handle binning we will not include it in the string
-    foreach $table (@tablesWithScores) {
+    foreach $table (@tables_with_scores) {
         # Query for tables that have score
-        $scoresTableQuery = "SELECT score, chromStart, chromEnd
+        $scores_table_query = "SELECT score, chromStart, chromEnd
         FROM $table
         WHERE chrom = ? && chromEnd >= ? && chromStart <= ? 
         AND %s
         ORDER BY chromStart";
 
-        $queriesWithDescription{$table} = $scoresTableQuery;
+        $queries_with_description{$table} = $scores_table_query;
     }
 
 
     # Query for tfbsConsSites table, which uses zScore rather than score
-    my $tfbsConsQuery = "SELECT zScore, chromStart, chromEnd
+    my $tfbs_cons_query = "SELECT zScore, chromStart, chromEnd
     FROM tfbsConsSites 
     WHERE chrom = ? && chromEnd >= ? && chromStart <= ? 
     AND %s
     ORDER BY chromStart";
-    $queriesWithDescription{"tfbsConsSites"} = $tfbsConsQuery;  
+    $queries_with_description{"tfbsConsSites"} = $tfbs_cons_query;  
 
 
     # Query for tables that do not have a score but have a 'name' field
     # Want to display the name instead of the score
-    foreach $table (@tablesWithNames) {
-        $namesTableQuery = "SELECT name, chromStart, chromEnd
+    foreach $table (@tables_with_names) {
+        $names_table_query = "SELECT name, chromStart, chromEnd
         FROM $table
         WHERE chrom = ? && chromEnd >= ? && chromStart <= ? 
         AND %s
         ORDER BY chromStart";
 
-        $queriesWithDescription{$table} = $namesTableQuery;
+        $queries_with_description{$table} = $names_table_query;
     }
 
     # These tables have a variation type which is displayed
-    foreach $table (@tablesWithvariationType) {
+    foreach $table (@tables_with_variation_type) {
         my $query = "SELECT variationType, chromStart, chromEnd
         FROM $table
         WHERE chrom = ? && chromEnd >= ? && chromStart <= ? 
         AND %s
         ORDER BY chromStart"; 
 
-        $queriesWithDescription{$table} = $query;
+        $queries_with_description{$table} = $query;
     }
 
     # The table 'dgv' has 'varType' as column name rather than variationType
@@ -221,20 +222,20 @@ sub execute {
     WHERE chrom = ? && chromEnd >= ? && chromStart <= ?
     AND %s
     ORDER BY chromStart"; 
-    $queriesWithDescription{"dgv"} = $query;
+    $queries_with_description{"dgv"} = $query;
 
 
     # The other tables do not have anything to display.  Just annotate with a '+'
     # if appropriate
-    foreach $table (@tablesWithNeither) {
+    foreach $table (@tables_with_neither) {
         #Query for tables that do not have score or name fields
-        $noScoreNameTableQuery = "SELECT chromStart, chromEnd
+        $no_score_name_table_query = "SELECT chromStart, chromEnd
         FROM $table
         WHERE chrom = ? && chromEnd >= ? && chromStart <= ? 
         AND %s
         ORDER BY chromStart";
 
-        $queriesWithoutDescription{$table} = $noScoreNameTableQuery;
+        $queries_without_description{$table} = $no_score_name_table_query;
     } 
 
 
@@ -243,28 +244,28 @@ sub execute {
     # Genethon).  Not all maps have a rate.  Ignore values of '0'
     #
     # This does not support bins. Leaving alonge
-    my $recombinationQuery = "SELECT decodeAvg, marshfieldAvg, genethonAvg
+    my $recombination_query = "SELECT decodeAvg, marshfieldAvg, genethonAvg
     FROM recombRate
     WHERE chrom = ? && chromEnd >= ? && chromStart <= ?";
-    my $recombinationStatement = $dbh->prepare($recombinationQuery) ||
-    die "Could not prepare statement '$recombinationQuery': $DBI::errstr \n";
+    my $recombination_statement = $dbh->prepare($recombination_query) ||
+    die "Could not prepare statement '$recombination_query': $DBI::errstr \n";
 
     # First print out the headers. This order MUST match the order in which the
     # statements are executed.
     print OUT "chr\tstart\tstop\tdecode,marshfield,genethon\trepeatMasker\tselfChain";
     #print OUT "chr\tstart\tstop\trepeatMasker";
-    foreach $table ( sort keys %queriesWithDescription ) { print OUT "\t$table"; }
-    foreach $table (sort keys %queriesWithoutDescription) { print OUT "\t$table"; }
+    foreach $table ( sort keys %queries_with_description ) { print OUT "\t$table"; }
+    foreach $table (sort keys %queries_without_description) { print OUT "\t$table"; }
     print OUT "\tknownGenes\tHUGO symbol\n";
 
 
-    open(IN, "< $InputFile") ||
-    die "Could not open '$InputFile': $!";
-    my @entireFile = <IN>;
+    open(IN, "< $input_file") ||
+    die "Could not open '$input_file': $!";
+    my @entire_file = <IN>;
     close IN;
-    my ($gotEntry, %descriptionList, );
+    my ($got_entry, %description_list, );
     
-    foreach my $line (@entireFile) {
+    foreach my $line (@entire_file) {
         $DB::single=1;
         chomp $line;
         my ($Chr, $start, $stop) = split /\s+/, $line;
@@ -279,88 +280,88 @@ sub execute {
         print OUT "$Chr\t$start\t$stop\t"; 
         $start = $start - 1; #change to 0 based
         $stop = $stop - 1; #change to 0 based
-        $gotEntry = 0; %descriptionList = ();
+        $got_entry = 0; %description_list = ();
 
 
         # Recombination query
-        $recombinationStatement->execute("chr$Chr", $start, $start) ||
+        $recombination_statement->execute("chr$Chr", $start, $start) ||
         die "Could not execute statement for repeat masker table with ($start, $stop): $DBI::errstr \n";
-        while ( my ($decode, $marsh, $genethon) = $recombinationStatement->fetchrow_array() ) {
+        while ( my ($decode, $marsh, $genethon) = $recombination_statement->fetchrow_array() ) {
             if ( $decode == 0 ) { $decode = "-"; }
             if ( $marsh == 0 ) { $marsh = "-"; }
             if ( $genethon == 0 ) { $genethon = "-"; }
             print OUT "$decode $marsh $genethon ";
-            $gotEntry = 1;
+            $got_entry = 1;
         }
-        if ( !$gotEntry ) { print OUT "- - -"; }
+        if ( !$got_entry ) { print OUT "- - -"; }
         print OUT "\t";
         my $bin_string = $self->bin_query_string($start,$stop);
 
-        $gotEntry = 0; 
+        $got_entry = 0; 
         # Repeatmasker query
-        my $repeatMaskQueryString = sprintf($chrToRepeatmask{$Chr},$bin_string); 
-        my $repeat_statement = $dbh->prepare_cached($repeatMaskQueryString) ||
-        die "Could not prepare statement '$repeatMaskQueryString': $DBI::errstr \n";
+        my $repeat_mask_query_string = sprintf($chr_to_repeatmask{$Chr},$bin_string); 
+        my $repeat_statement = $dbh->prepare_cached($repeat_mask_query_string) ||
+        die "Could not prepare statement '$repeat_mask_query_string': $DBI::errstr \n";
 
         $repeat_statement->execute($start,$stop);
        
 
 
-        #$chrToRepeatmaskStatements{$Chr}->execute($start, $stop) ||
+        #$chr_to_repeatmaskStatements{$Chr}->execute($start, $stop) ||
         #die("Could not execute statement for repeat masker table with ($start, $stop) for chromosome $Chr : $DBI::errstr \n");
-#        while ( ($description, $chrStart, $chrStop) =  $chrToRepeatmaskStatements{$Chr}->fetchrow_array() ) {
-        while ( ($description, $chrStart, $chrStop) =  $repeat_statement->fetchrow_array() ) {
+#        while ( ($description, $chr_start, $chr_stop) =  $chr_to_repeatmaskStatements{$Chr}->fetchrow_array() ) {
+        while ( ($description, $chr_start, $chr_stop) =  $repeat_statement->fetchrow_array() ) {
         
-            $descriptionList{$description} = 1;
-            $gotEntry = 1;
+            $description_list{$description} = 1;
+            $got_entry = 1;
         }
-        if ( $gotEntry ) { 
-            foreach (keys %descriptionList) { print OUT "$_ "; }
+        if ( $got_entry ) { 
+            foreach (keys %description_list) { print OUT "$_ "; }
         } else {
             print OUT  "-"; 
         }
         print OUT  "\t";
 
         # selfChain query
-        %descriptionList = ();
-        $gotEntry = 0;
+        %description_list = ();
+        $got_entry = 0;
 
         
-        my $selfChainQueryString = sprintf($chrToSelfChain{$Chr}, $bin_string); 
+        my $self_chain_query_string = sprintf($chr_to_self_chain{$Chr}, $bin_string); 
         
-        my $self_chain_statement = $dbh->prepare_cached($selfChainQueryString) ||
-        die "Could not prepare statement '$selfChainQueryString': $DBI::errstr \n";
+        my $self_chain_statement = $dbh->prepare_cached($self_chain_query_string) ||
+        die "Could not prepare statement '$self_chain_query_string': $DBI::errstr \n";
 
         $self_chain_statement->execute($start,$stop);
 
-        #$chrToSelfChainStatements{$Chr}->execute($start, $stop) || die "Could not execute statement for selfChain table with ($start, $stop): $DBI::errstr \n";
-        while ( ($description, $chrStart, $chrStop) =  $self_chain_statement->fetchrow_array() ) {
-            $descriptionList{$description} = 1;
-            $gotEntry = 1;
+        #$chr_to_self_chainStatements{$Chr}->execute($start, $stop) || die "Could not execute statement for selfChain table with ($start, $stop): $DBI::errstr \n";
+        while ( ($description, $chr_start, $chr_stop) =  $self_chain_statement->fetchrow_array() ) {
+            $description_list{$description} = 1;
+            $got_entry = 1;
         }
-        if ( $gotEntry ) { 
-            foreach (keys %descriptionList) { print OUT "$_ "; }
+        if ( $got_entry ) { 
+            foreach (keys %description_list) { print OUT "$_ "; }
         } else {
             print OUT  "-"; 
         }
         print OUT  "\t";
 
         # Tables that have a description or score
-        foreach $table (sort keys %queriesWithDescription) {
-            $gotEntry = 0; %descriptionList = ();
-            my $queryString = sprintf($queriesWithDescription{$table}, exists($tableWithNoBin{$table}) ? "1" : $bin_string);
-            my $statement = $dbh->prepare_cached($queryString) ||
-            die "Could not prepare statement '$queryString': $DBI::errstr \n";
+        foreach $table (sort keys %queries_with_description) {
+            $got_entry = 0; %description_list = ();
+            my $query_string = sprintf($queries_with_description{$table}, exists($table_with_no_bin{$table}) ? "1" : $bin_string);
+            my $statement = $dbh->prepare_cached($query_string) ||
+            die "Could not prepare statement '$query_string': $DBI::errstr \n";
 
             $statement->execute("chr$Chr", $start, $stop) ||
             die "Could not execute statement for table '$table' with ($Chr, $start, $stop): $DBI::errstr \n";
-            while ( ($description, $chrStart, $chrStop) =  $statement->fetchrow_array() ) {
+            while ( ($description, $chr_start, $chr_stop) =  $statement->fetchrow_array() ) {
                 if ( $description eq "" ) { next; }
-                $descriptionList{$description} = 1;
-                $gotEntry = 1;
+                $description_list{$description} = 1;
+                $got_entry = 1;
             }
-            if ( $gotEntry ) { 
-                foreach (keys %descriptionList) { print OUT "$_ "; }
+            if ( $got_entry ) { 
+                foreach (keys %description_list) { print OUT "$_ "; }
             } else {
                 print OUT "-"; 
             }
@@ -369,55 +370,57 @@ sub execute {
 
 
         # Tables that are annotated with either a '+' or '-'
-        foreach $table (sort keys %queriesWithoutDescription) {
-            $gotEntry = 0; 
-            my $queryString = sprintf($queriesWithoutDescription{$table}, exists($tableWithNoBin{$table}) ? "1" : $bin_string);
-            my $statement = $dbh->prepare_cached($queryString) ||
-            die "Could not prepare statement '$queryString': $DBI::errstr \n";
+        foreach $table (sort keys %queries_without_description) {
+            $got_entry = 0; 
+            my $query_string = sprintf($queries_without_description{$table}, exists($table_with_no_bin{$table}) ? "1" : $bin_string);
+            my $statement = $dbh->prepare_cached($query_string) ||
+            die "Could not prepare statement '$query_string': $DBI::errstr \n";
             $statement->execute("chr$Chr", $start, $stop) ||
             die "Could not execute statement for table '$table' with ($Chr, $start, $stop): $DBI::errstr \n";
-            while ( ($chrStart, $chrStop) =  $statement->fetchrow_array() ) {
+            while ( ($chr_start, $chr_stop) =  $statement->fetchrow_array() ) {
                 # Only print out one '+' even if there are several entries that overlap
-                if ( !$gotEntry ) { print OUT "+"; }
-                $gotEntry = 1;
+                if ( !$got_entry ) { print OUT "+"; }
+                $got_entry = 1;
             }
-            if ( !$gotEntry ) { print OUT  "-"; }
+            if ( !$got_entry ) { print OUT  "-"; }
             print OUT "\t";
         }   
 
         # Genes in regions
-        $gotEntry = 0;
-        my (@hugoNames, $exon);
-        $geneStatement->execute("chr$Chr", $start, $stop) ||
+        $got_entry = 0;
+        my (@hugo_names, $exon);
+        $gene_statement->execute("chr$Chr", $start, $stop) ||
         die "Could not execute statement for table '$table' with ($Chr, $start, $stop): $DBI::errstr \n";
-        while ( ($description, $chrStart, $chrStop, $exonCount, $exonStarts, $exonEnds) = $geneStatement->fetchrow_array() ) {
+        while ( ($description, $chr_start, $chr_stop, $exon_count, $exon_starts, $exon_ends) = $gene_statement->fetchrow_array() ) {
             print OUT "$description ";
-            if ( defined $UcscToHugo{$description} ) { push @hugoNames, $UcscToHugo{$description}; }
-            $gotEntry = 1;
-            $exon = $self->regionOverlapsExons($start, $stop, $exonCount, $exonStarts, $exonEnds);
+            if ( defined $ucsc_to_hugo{$description} ) { push @hugo_names, $ucsc_to_hugo{$description}; }
+            $got_entry = 1;
+            $exon = $self->regionOverlapsExons($start, $stop, $exon_count, $exon_starts, $exon_ends);
             if ( $exon ) { print OUT " $exon "
             }
         }
-        if ( !$gotEntry ) { print OUT "-\t-"; }
+        if ( !$got_entry ) { print OUT "-\t-"; }
         print OUT "\t";
-        if ( scalar(@hugoNames) >= 1 ) { print OUT "@hugoNames"; } else { print OUT "-"; }
+        if ( scalar(@hugo_names) >= 1 ) { print OUT "@hugo_names"; } else { print OUT "-"; }
         print OUT "\n";
 
     }
-
+    
     $dbh->disconnect();
+    close UNANNOTATED;
+    close OUT;
 }
 
 # Returns "exonNumber start stop"  if one of the region overlaps one of the exons
 # 0 if not
 sub regionOverlapsExons {
     my $self = shift;
-    my ($start, $end, $exonCount, $exonStarts, $exonEnds) = @_;
+    my ($start, $end, $exon_count, $exon_starts, $exon_ends) = @_;
 
     my ( @starts, @ends, );
-    @starts =  split /,/, $exonStarts;
-    @ends = split /,/, $exonEnds;
-    ( scalar(@starts) == $exonCount && scalar(@ends) == $exonCount ) ||
+    @starts =  split /,/, $exon_starts;
+    @ends = split /,/, $exon_ends;
+    ( scalar(@starts) == $exon_count && scalar(@ends) == $exon_count ) ||
     confess "Did not get expected number of exons";
     for ( my $i = 0; $i <= $#starts; $i++ ) {
         if ( $ends[$i] >= $start && $starts[$i] <= $end ) {
@@ -439,10 +442,10 @@ sub calculate_bin_from_range {
     # add one new level to get coverage past chrom sizes of 512 Mb
     #      effective limit is now the size of an integer since chrom start
     #      and end coordinates are always being used in int's == 2Gb-1
-    my @binOffsetsExtended = (4096+512+64+8+1, 512+64+8+1, 64+8+1, 8+1, 1, 0);
-    my $_binFirstShift =  17;       # How much to shift to get to finest bin.
-    my $_binNextShift = 3;          # How much to shift to get to next larger bin.
-    my $_binOffsetOldToExtended = 4681;
+    my @bin_offsets_extended = (4096+512+64+8+1, 512+64+8+1, 64+8+1, 8+1, 1, 0);
+    my $_bin_first_shift =  17;       # How much to shift to get to finest bin.
+    my $_bin_next_shift = 3;          # How much to shift to get to next larger bin.
+    my $_bin_offset_old_to_extended = 4681;
 
     # Given start,end in chromosome coordinates assign it
     # a bin.   There's a bin for each 128k segment, for each
@@ -452,14 +455,14 @@ sub calculate_bin_from_range {
     #      is up to 2Gb-1, and thus, only four result bins on the second
     #      level.
     # A range goes into the smallest bin it will fit in. */
-    my ($startBin, $endBin) = ($start, $end-1);
-    $startBin >>= $_binFirstShift;
-    $endBin >>= $_binFirstShift;
-    for (my $i = 0; $i < scalar(@binOffsetsExtended); $i++) {
-        if ($startBin == $endBin) {
-            return $_binOffsetOldToExtended + $binOffsetsExtended[$i] + $startBin;
-            $startBin >>= $_binNextShift;
-            $endBin >>= $_binNextShift;
+    my ($start_bin, $end_bin) = ($start, $end-1);
+    $start_bin >>= $_bin_first_shift;
+    $end_bin >>= $_bin_first_shift;
+    for (my $i = 0; $i < scalar(@bin_offsets_extended); $i++) {
+        if ($start_bin == $end_bin) {
+            return $_bin_offset_old_to_extended + $bin_offsets_extended[$i] + $start_bin;
+            $start_bin >>= $_bin_next_shift;
+            $end_bin >>= $_bin_next_shift;
         }
         $self->error_message(sprintf("start %d, end %d out of range in calculate_bin_from_range (max is 2Gb)", $start, $end));
         return 0;
@@ -470,11 +473,11 @@ sub bin_query_string {
     my ($self, $start, $end) = @_;  #start and end should probably be 0 based as UCSC is 0 based
     #This code taken from function in kent src tree of UCSC called static void hAddBinToQueryStandard(char *binField, int start, int end, struct dyString *query, boolean selfContained)
     #Found this online at http://code.google.com/p/genomancer/source/browse/trunk/poka/src/genomancer/ucsc/das2/BinRange.java?spec=svn66&r=66 and haven't bothered to look in the actual source
-    my ($bFirstShift, $bNextShift) = (17,3);
-    my $startBin = ($start>>$bFirstShift);
-    my $endBin = (($end)>>$bFirstShift);#TODO figure out if the -1 is necessary
+    my ($b_first_shift, $_b_next_shift) = (17,3);
+    my $start_bin = ($start>>$b_first_shift);
+    my $end_bin = (($end)>>$b_first_shift);#TODO figure out if the -1 is necessary
     my @binOffsets = ( 512+64+8+1, 64+8+1, 8+1, 1, 0); #Not using the extended binning scheme...
-    my $_binOffsetOldToExtended = 4681;
+    my $_bin_offset_old_to_extended = 4681;
 
     my $bin_query_string = "(";
     for (my $i = 0; $i < scalar(@binOffsets); ++$i) {
@@ -482,20 +485,19 @@ sub bin_query_string {
         if ($i != 0) {
             $bin_query_string .=  " or ";
         }
-        if ($startBin == $endBin) {
+        if ($start_bin == $end_bin) {
             #assuming the binField is actually bin in all cases (may not be true?)
-            $bin_query_string .= sprintf("%s=%u", "bin", $startBin + $offset);
+            $bin_query_string .= sprintf("%s=%u", "bin", $start_bin + $offset);
         }
         else {
-            $bin_query_string .= sprintf("( %s>=%u and %s<=%u )", "bin", $startBin + $offset, "bin", $endBin + $offset);
+            $bin_query_string .= sprintf("( %s>=%u and %s<=%u )", "bin", $start_bin + $offset, "bin", $end_bin + $offset);
         }
-        $startBin >>= $bNextShift;
-        $endBin >>= $bNextShift;
+        $start_bin >>= $_b_next_shift;
+        $end_bin >>= $_b_next_shift;
     }
-    $bin_query_string .= sprintf(" or %s=%u )", "bin", $_binOffsetOldToExtended);
+    $bin_query_string .= sprintf(" or %s=%u )", "bin", $_bin_offset_old_to_extended);
     return $bin_query_string;
 }
-
 
 
 1;
