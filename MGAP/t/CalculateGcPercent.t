@@ -39,4 +39,6 @@ isa_ok($command, 'MGAP::Command::CalculateGcPercent');
 
 ok($command->execute());
 
-is($command->gc_percent(), 28.6);
+# range is limited to 30-70 for now
+#is($command->gc_percent(), 28.6);
+is($command->gc_percent(), 30.0);

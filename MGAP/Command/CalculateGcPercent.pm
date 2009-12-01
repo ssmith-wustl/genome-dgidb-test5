@@ -75,6 +75,15 @@ sub execute {
 
     $self->gc_percent(sprintf("%.1f", (($gc_count / $seq_length) * 100)));
 
+    if($self->gc_percent < 30)
+    {
+        $self->gc_percent(30.0);
+    }
+    elsif($self->gc_percent > 70)
+    {
+        $self->gc_percent(70.0);
+    }
+
     return 1;
     
 }
