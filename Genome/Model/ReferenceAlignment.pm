@@ -15,7 +15,6 @@ use warnings;
 
 use Genome;
 use Term::ANSIColor;
-use Genome::Model::EqualColumnWidthTableizer;
 use File::Path;
 use File::Basename;
 use IO::File;
