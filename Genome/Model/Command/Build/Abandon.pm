@@ -10,7 +10,12 @@ class Genome::Model::Command::Build::Abandon {
     has => [
             build_id => {
                          is => 'Number',
-                         doc => 'The id of the build in which to update status',
+                         doc => 'The id of the build which should be abandoned.',
+                         is_optional => 1,
+                     },
+            model_id => {
+                         is => 'Number',
+                         doc => 'The id of the model whose current running build should be abandoned.',
                          is_optional => 1,
                      },
             build   => {
@@ -29,8 +34,8 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    my $model = $self->model;
     unless ($self->build_id) {
+        my $model = $self->model;
         $self->build_id($model->current_running_build_id);
     }
     my $build = $self->build;
