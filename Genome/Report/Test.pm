@@ -184,7 +184,7 @@ sub valid_param_sets {
 sub startup : Tests(startup) {
     my $self = shift;
 
-    no warnings 'redefine';
+    no warnings;
     *Genome::Report::Generator::_add_to_report_xml = sub{ return 1; };
     *Genome::Report::Generator::description = sub{ return 'Test report generator'; };
     
@@ -600,6 +600,47 @@ sub test01_use : Test(1) {
  
 #######################################################################
 
+package Genome::Report::Command::Email::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestCommandBase';
+
+require Cwd;
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Report::Command::Email';
+}
+
+sub xslt_dir {
+    return Genome::Report::XSLT::Test->dir;
+}
+
+sub valid_param_sets {
+    return (
+        {
+            report_directory => $_[0]->xslt_dir.'/Assembly_Stats',
+            xsl_files => Genome::Report::XSLT::Test->xsl_file,
+            to => $ENV{USER}.'@genome.wustl.edu',
+        },
+    );
+}
+
+sub startup : Tests(startup) {
+    my $self = shift;
+
+    # overload send_report to not do anything
+    no warnings;
+    *Genome::Report::Email::send_report = sub { return 1; };
+
+    return 1;
+}
+
+#######################################################################
+
 package Genome::Report::Command::Xslt::Test;
 
 use strict;
@@ -634,7 +675,7 @@ sub test01_execute : Test(3) {
     my $tmp_dir = $self->tmp_dir;
     chdir $tmp_dir;
 
-    no warnings 'once';
+    no warnings;
     local *Genome::Report::XSLT::transform_report = sub { # so we don't test this twice
         my $content = <<EOS;
             
