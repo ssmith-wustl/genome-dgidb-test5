@@ -80,13 +80,15 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt somatic tier-variants...    
+gmt somatic tier-variants --ucsc ucsc_annotations.in --transcript transcript_annotations.in -v variants.in --tier1 tier1.out --tier2 tier2.out --tier3 tier3.out --tier4 tier4.out
+gmt somatic tier-variants --only-tier-1 --transcript transcript_annotations.in -v variants.in --tier1 tier1.out
 EOS
 }
 
 sub help_detail {                           
     return <<EOS 
-tiers variants 
+This tools uses annotations to split a list of variants into separate files by tier (1-4). Optionally only tier 1 variants are returned,
+which is useful if UCSC annotations are unavailable.
 EOS
 }
 

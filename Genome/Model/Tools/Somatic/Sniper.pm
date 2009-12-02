@@ -75,7 +75,8 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    Produces a list of high confidence somatic snps.
+gmt somatic sniper -t tumor.bam -n normal.bam --output-snp-file snps.out --output-indel-file indels.out
+gmt somatic sniper -t tumor.bam -n normal.bam --output-snp-file snps.out --output-indel-file indels.out -q 10
 EOS
 }
 

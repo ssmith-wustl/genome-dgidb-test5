@@ -66,13 +66,15 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt breakdancer...    
+gmt somatic breakdancer -t tumor.bam -n normal.bam --config-output config.out --breakdancer-output breakdancer.out
+gmt somatic breakdancer -t tumor.bam -n normal.bam -c config.out -b breakdancer.out --use-version 0.0.1r59 --skip-if-output-present 
 EOS
 }
 
 sub help_detail {                           
     return <<EOS 
-discovers structural variation using breakdancer
+This tool discovers structural variation.  It generates an appropriate configuration based on
+the input BAM files and then uses that configuration to run breakdancer.
 EOS
 }
 
