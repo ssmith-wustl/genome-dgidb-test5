@@ -1,5 +1,6 @@
 package Genome::Report::Dataset;
 #:adukes is this general enough to live outside Report namespace?
+#:ebelter @adukes - prolly
 
 use strict;
 use warnings;
@@ -37,10 +38,6 @@ class Genome::Report::Dataset {
         default_value => [],
         doc => 'Rows of data.'
     },
-    _xml_element => {
-        is => 'XML::LibXML::Node',
-        doc => 'The XML node.',
-    },
     ],
 };
 
@@ -53,8 +50,6 @@ sub add_row {
         value => $row,
         method => 'add row',
     )or return;
-    
-    $self->_xml_element(undef); # undef xml element so we regen it, it'll have the new data
     
     return push @{$self->rows}, $row;
 }
@@ -77,8 +72,6 @@ sub set_attribute {
         method => 'set attribute',
     ) or return;
     
-    $self->_xml_element(undef); # undef xml element so we regen it, it'll have the new data
-
     return $self->attributes->{$name} = $value;
 }
 
@@ -87,7 +80,7 @@ sub get_row_values_for_header {
     my ($self, $header) = @_;
 
     unless ( @{$self->rows}) { 
-        $self->error_message("No rows to getvaalues from for header.");
+        $self->error_message("No rows to get row vaalues from for header.");
         return;
     }
 
@@ -198,7 +191,6 @@ sub create_from_xml_element {
         headers => $headers,
         rows => \@rows,
         attributes => \%attributes,
-        _xml_node => $element,
     );
 }
 
@@ -278,14 +270,12 @@ sub to_xml_string {
         return;
     }
 
-    return $node->toString;
+    return $node->toString(1);
 }
 
 sub to_xml_element {
     my $self = shift;
 
-    return $self->_xml_element if $self->_xml_element;
-    
     my $libxml = XML::LibXML->new();
     
     # Element
@@ -316,14 +306,15 @@ sub to_xml_element {
                 or return;
         }
     }
-    return $self->_xml_element($element);
+
+    return $element;
 }
 
 #< SVS >#
 sub to_separated_value_string {
     my $self = shift;
 
-    my $separator = ( @_ ) ? $_[0] : ',';
+    my $separator = ( $_[0] and $_[0] ne '' ) ? $_[0] : ',';
     my $svs = join($separator, @{$self->headers})."\n";
     for my $row ( @{$self->rows} ) {
         $svs .= join($separator, @$row)."\n";
@@ -342,39 +333,161 @@ Genome::Report::Dataset
 
 =head1 Synopsis
 
+This package is an interface to a set of data that has a name, attributes, headers and rows. Datasets give access to data creted directly or retreived from XML.  In a report generator, datasets can be created and added to a report via the 'add_dataset' method. It can also generate the xml string for the data, a separated value string of the data and added to an XML::LibXML doc. Reports can get their datasets, giving the same interface to the data.
+
 =head1 Usage
 
- use Genome;
- 
- # Get or generate a report...
- my $report = Genome::Report->create_report_from_directory(...);
- 
- # Grab a xslt file
- my $xslt_file = ...;
- 
- # Transform
- my $xslt = Genome::Report::XSLT->transform_report(
-    report => $report, # required
-    xslt_file => $xslt_file, #required
+ # Create (see properties below for explanations)
+ my $dataset = Genome::Report::Dataset->create(
+    name       => 'people',
+    row_name   => 'person',
+    headers    => [qw/ name age /],
+    rows       => [ [qw/ Watson 80 /], [qw/ Crick NA /] ],
+    attributes => { discovered => 'dna', },
  );
-
- print "Content: ".$xslt->{content}."\n";
-
- ...
  
-=head1 Public Methods
+ # Rows
+ $dataset->add_row([qw/ Franklin 75 /]); # Returns 1
+ $dataset->get_row_values_for_header('age'); # Retruns (80, 'NA')
+ 
+ # Attributes
+ $dataset->get_attribute('discovered'); # Returns 'dna'
+ $dataset->set_attribute('discovered', 'dna structure'); # Returns 'dna structure'
+ 
+ # Convert
+ $dataset->to_xml_element; # Returns an XML::LibXML::Element
+ 
+ $dataset->to_xml_string; 
+ # Returns the sting version of xml element above by calling toString(1) on it.
+ <people discovered="dna">
+  <person>
+    <name>Watson</name>
+    <age>80</age>
+  </person>
+  <person>
+    <name>Crick</name>
+    <age>NA</age>
+  </person>
+  <person>
+    <name>Franklin</name>
+    <age>70</age>
+  </person>
+ </people>
 
-=head2 transform_report
+ $dataset->to_separated_value_string;
+ # Returns:
+ name,age
+ Watson,80
+ Crick,NA
+ Franklin,75
 
- my $string = Genome::Report::XSLT->transform_report(report => $report, xslt_file => $xslt_file);
+=head1 Properties
+
+B<Required>
+
+=over 2
+
+=item B<name>       The name of the dataset
+
+=item B<row_name>   The name of the individual rows
+
+=item B<headers>    The column headers - arrayref
+ 
+=back
+
+B<Optional>
 
 =over
 
-=item I<Synopsis>   Takes a report and an xslt file (as a hash), and returns the transformed report as a string
+=item B<rows>       The rows of data - arrayref of arrayrefs
 
-=item I<Arguments>  report (Genome::Report), xslt_file (readable file)
+=item B<attributes> Meta data - hashref
 
-=item I<Returns>    hashref with content, media_type, and encoding keys.
+=back
+
+=head1 Public Methods
+
+=head2 add_row
+ 
+=over
+
+=item I<Synopsis>   Add a row to the other rows of data.  No check is made that the number of elements in the row match the number of elements in the heaeder.
+
+=item I<Arguments>  Arrayref.
+
+=item I<Returns>    1 for success, 0 for failure.
+
+=back
+
+=head2 get_attribute
+
+=over
+
+=item I<Synopsis>   Get an attribute for the dataset.
+
+=item I<Arguments>  Attribute's name.
+
+=item I<Returns>    Attribute's value, if exists.
+
+=back
+
+=head2 set_attribute
+
+=over
+
+=item I<Synopsis>   Set an attribute on the dataset.
+
+=item I<Arguments>  Attribute's name and value.
+
+=item I<Returns>    Attribute's value.
+
+=back
+
+=head2 get_row_values_for_header
+
+=over
+
+=item I<Synopsis>   Get all the values for a particular header.
+
+=item I<Arguments>  Header's name.
+
+=item I<Returns>    Array of the row values.
+
+=back
+
+=head2 to_xml_element
+
+=over
+
+=item I<Synopsis>   Creates an XML element object the represents the dataset.  This element can then be added to an XML::LibXML element.
+
+=item I<Arguments>  None.
+
+=item I<Returns>    XML element object (XML::LibXml::Element) suitable for framing.
+
+=back
+
+=head2 to_xml_string
+
+=over
+
+=item I<Synopsis>   Creates and XML element as above, and then converts it to a string.
+
+=item I<Arguments>  None.
+
+=item I<Returns>    XML string.
+
+=back
+
+=head2 to_separated_value_string
+
+=over
+
+=item I<Synopsis>   Creates a string from the headers and rows.  Values are separated by the indicated separtor and rows are separated by a newline.  Does not include the dataset name or attributes.
+
+=item I<Arguments>  Separator, defaults to comma (,). 
+
+=item I<Returns>    Separated value string.
 
 =back
 
