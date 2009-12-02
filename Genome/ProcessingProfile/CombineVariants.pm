@@ -10,23 +10,14 @@ use warnings;
 use Genome;
 
 class Genome::ProcessingProfile::CombineVariants {
-    is => 'Genome::ProcessingProfile',
-    has => [
+    is => 'Genome::ProcessingProfile::Staged',
+    has_param => [
         limit_genes_to => {
             doc => 'What genes the analysis should be limited to. Comma delimited, leave blank for no limitation.',
             is_optional => 1,
-            is_mutable  => 1,
-            via         => 'params',
-            to          => 'value',
-            where       => [name => 'limit_genes_to'],
         },
     ],
 };
-
-sub params_for_class{
-    my $self = shift;
-    return qw/limit_genes_to/;
-}
 
 sub stages {
     return (qw/

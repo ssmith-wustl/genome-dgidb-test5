@@ -12,64 +12,45 @@ use Genome;
 
 use Data::Dumper;
 
-my %HAS = (
-    sequencing_center => {
-        doc => 'Place from whence the reads have come.',
-        valid_values => [qw/ gsc broad baylor nisc /],
-    },
-    sequencing_platform => {
-        doc => 'Platform (machine) from whence the reads where created.',
-        valid_values => [qw/ sanger 454 solexa solid /],
-    },
-    assembler => {
-        doc => 'Assembler type for assembling said reads.',
-        valid_values => [qw/ maq newbler pcap phredphrap /],
-    },
-    assembly_size => {
-        doc => 'Estimated assembly size, used for metrics and such',
-    },
-    region_of_interest => {
-        doc => 'The name of the region being targeted',
-    },
-    purpose => { 
-        doc => 'Purpose of these amplicon assemblies.',
-        valid_values => [qw/ reference composition /],
-    },
-    primer_amp_forward => {
-        doc => 'Primer used for amplification in the forward (5\') direction.  Enter both the name and sequence of the primer, separated by a colon as "NAME:SEQUENCE".  This will be used for naming the profile as well as orientation of the assemblies.', 
-    },
-    primer_amp_reverse => {
-        doc => 'Primer used for amplification in the reverse (3\') direction.  Enter both the name and sequence of the primer, separated by a colon as "NAME:SEQUENCE".  This will be used for naming the profile as well as orientation of the assemblies.', 
-    },
-    primer_seq_forward => { 
-        doc => 'Primer used for *internal* sequencing in the forward (5\') direction.  Enter both the name and sequence of the primer, separated by a colon as "NAME:SEQUENCE".  This will be used for naming the profile as well as orientation of the assemblies.', 
-        is_optional => 1,
-    },
-    primer_seq_reverse => { 
-        is_optional => 1,
-        doc => 'Primer used for *internal* sequencing in the reverse (3\') direction.  Enter both the name and sequence of the primer, separated by a colon as "NAME:SEQUENCE".  This will be used for naming the profile as well as orientation of the assemblies.', 
-    },
-);
-
 class Genome::ProcessingProfile::AmpliconAssembly {
-    is => 'Genome::ProcessingProfile',
-    has => [
-    map(
-        { 
-            $_ => {
-                via => 'params',
-                to => 'value',
-                where => [ name => $_ ],
-                is_mutable => 1,
-                is_optional => ( exists $HAS{$_}->{is_optional} ? $HAS{$_}->{is_optional} : 0),
-                doc => (
-                    ( exists $HAS{$_}->{valid_values} )
-                    ? sprintf('%s. Valid values: %s.', $HAS{$_}->{doc}, join(', ', @{$HAS{$_}->{valid_values}}))
-                    : $HAS{$_}->{doc}
-                ),
-            },
-        } keys %HAS
-    ),
+    is => 'Genome::ProcessingProfile::Staged',
+    has_param => [
+        sequencing_center => {
+            doc => 'Place from whence the reads have come.',
+            valid_values => [qw/ gsc broad baylor nisc /],
+        },
+        sequencing_platform => {
+            doc => 'Platform (machine) from whence the reads where created.',
+            valid_values => [qw/ sanger 454 solexa solid /],
+        },
+        assembler => {
+            doc => 'Assembler type for assembling said reads.',
+            valid_values => [qw/ maq newbler pcap phredphrap /],
+        },
+        assembly_size => {
+            doc => 'Estimated assembly size, used for metrics and such',
+        },
+        region_of_interest => {
+            doc => 'The name of the region being targeted',
+        },
+        purpose => { 
+            doc => 'Purpose of these amplicon assemblies.',
+            valid_values => [qw/ reference composition /],
+        },
+        primer_amp_forward => {
+            doc => 'Primer used for amplification in the forward (5\') direction.  Enter both the name and sequence of the primer, separated by a colon as "NAME:SEQUENCE".  This will be used for naming the profile as well as orientation of the assemblies.', 
+        },
+        primer_amp_reverse => {
+            doc => 'Primer used for amplification in the reverse (3\') direction.  Enter both the name and sequence of the primer, separated by a colon as "NAME:SEQUENCE".  This will be used for naming the profile as well as orientation of the assemblies.', 
+        },
+        primer_seq_forward => { 
+            doc => 'Primer used for *internal* sequencing in the forward (5\') direction.  Enter both the name and sequence of the primer, separated by a colon as "NAME:SEQUENCE".  This will be used for naming the profile as well as orientation of the assemblies.', 
+            is_optional => 1,
+        },
+        primer_seq_reverse => { 
+            is_optional => 1,
+            doc => 'Primer used for *internal* sequencing in the reverse (3\') direction.  Enter both the name and sequence of the primer, separated by a colon as "NAME:SEQUENCE".  This will be used for naming the profile as well as orientation of the assemblies.', 
+        },
     ],
 };
 
@@ -79,31 +60,6 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
-    # Check valid values
-    for my $property ( keys %HAS ) {
-        my $value = $self->$property;
-        unless ( $self->param_is_optional($property) ) { 
-            unless ( defined $value ) {
-                $self->error_message("Property ($property) is required");
-                $self->delete;
-                return;
-            }
-        }
-        my $valid_values = $self->valid_values_for_param($property);
-        next unless $valid_values;
-        unless ( grep { $self->$property eq $_ } @$valid_values ) {
-            $self->error_message( 
-                sprintf(
-                    'Invalid value (%s) for %s.  Valid values: %s',
-                    $self->$property,
-                    $property,
-                    join(', ', @$valid_values),
-                ) 
-            );
-            $self->delete;
-            return;
-        }
-    }
 
     # Check primers, create sense fastas and create name
     for my $sense ( primer_senses() ) {
@@ -152,21 +108,6 @@ sub delete {
     }
 
     return $self->SUPER::delete;
-}
-
-#< Properties >#
-sub params_for_class { 
-    return keys %HAS;
-}
-
-sub param_is_optional {
-    die "Need param to test if optional\n" unless defined $_[1];
-    return $HAS{$_[1]}->{is_optional};
-}
-
-sub valid_values_for_param {
-    die "Need param to test if optional\n" unless defined $_[1];
-    return $HAS{$_[1]}->{valid_values};
 }
 
 #< BUILDING >#

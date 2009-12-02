@@ -11,7 +11,7 @@ use warnings;
 use Genome;
 
 class Genome::ProcessingProfile::ImportedReferenceSequence{
-    is => 'Genome::ProcessingProfile',
+    is => 'Genome::ProcessingProfile::Staged',
 };
 
 sub stages {

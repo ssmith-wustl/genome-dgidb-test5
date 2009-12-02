@@ -57,7 +57,7 @@ $model_wo_instrument_data->mock('inputs', \&Genome::Model::inputs);
 my $build_wo_reads = Genome::Model::Command::Build::ReferenceAlignment->create(model => $model_wo_instrument_data);
 ok(!$build_wo_reads,'build should fail create with no read sets');
 
-my $mock_pp = Genome::ProcessingProfile->create_mock(
+my $mock_pp = Genome::ProcessingProfile::Staged->create_mock(
                                                      id => --$bogus_id,
                                                      name => 'test_pp_name',
                                                      type_name => 'abstract base test',
@@ -73,8 +73,8 @@ $mock_pp->set_list('stage2_job_classes',
                    'Genome::Model::Command::Build::AbstractBaseTest::StageTwoJobOne',
                    'Genome::Model::Command::Build::AbstractBaseTest::StageTwoJobTwo',
                );
-$mock_pp->mock('classes_for_stage',\&Genome::ProcessingProfile::classes_for_stage);
-$mock_pp->mock('objects_for_stage',\&Genome::ProcessingProfile::objects_for_stage);
+$mock_pp->mock('classes_for_stage',\&Genome::ProcessingProfile::Staged::classes_for_stage);
+$mock_pp->mock('objects_for_stage',\&Genome::ProcessingProfile::Staged::objects_for_stage);
 $mock_pp->mock('verify_successful_completion_objects',\&Genome::ProcessingProfile::verify_successful_completion_objects);
 $mock_pp->mock('verify_successful_completion_job_classes',\&Genome::ProcessingProfile::verify_successful_completion_job_classes);
 

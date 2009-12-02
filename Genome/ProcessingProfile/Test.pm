@@ -12,8 +12,8 @@ use Test::More;
 
 # Class for testing
 class Genome::ProcessingProfile::Tester {
-    is => 'Genome::ProcessingProfile',
-    has => [
+    is => 'Genome::ProcessingProfile::Staged',
+    has_param => [
     # Attrs
     sequencing_platform => { 
         is => 'Text',
@@ -23,6 +23,8 @@ class Genome::ProcessingProfile::Tester {
         is => 'Text',
         doc => 'The dna source of this profile',
     },
+    ],
+    has => [
     # Methods
     stages => {
         calculate => q| return 'assemble'; |,
@@ -37,9 +39,6 @@ class Genome::ProcessingProfile::Tester {
         is_constant => 1,
     },
     ],
-};
-*Genome::ProcessingProfile::Tester::params_for_class = sub{
-    return (qw/ sequencing_platform dna_source  /);
 };
 
 sub test_class {

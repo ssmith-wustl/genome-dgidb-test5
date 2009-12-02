@@ -10,176 +10,127 @@ use warnings;
 
 use Genome;
 
-my %PROPERTIES = &properties_hash;
-
 class Genome::ProcessingProfile::ReferenceAlignment {
-    is => 'Genome::ProcessingProfile',
+    is => 'Genome::ProcessingProfile::Staged',
     sub_classification_method_name => '_resolve_subclass_name',
-    has => [
-            map {
-                $_ => {
-                       via => 'params',
-                       to => 'value',
-                       where => [ name => $_ ],
-                       is_optional => (
-                                       ( exists $PROPERTIES{$_}->{is_optional} )
-                                       ? $PROPERTIES{$_}->{is_optional}
-                                       : 0
-                                   ),
-                       is_mutable => 1,
-                       doc => (
-                               ( exists $PROPERTIES{$_}->{valid_valiues} )
-                               ? sprintf('%s Valid values: %s.', $PROPERTIES{$_}->{doc}, join(', ', @{$PROPERTIES{$_}->{valid_values}}))
-                               : $PROPERTIES{$_}->{doc}
-                           ),
-                   },
-               } keys %PROPERTIES
-        ],
-};
+    has_param => [
+        sequencing_platform => {
+                                doc => 'The sequencing platform from whence the model data was generated',
+                                valid_values => ['454', 'solexa', '3730'],
+                            },
+        dna_type => {
+                     doc => 'the type of dna used in the reads for this model',
+                     valid_values => ['genomic dna', 'cdna']
+                 },
+        genotyper_name => {
+                           doc => 'name of the genotyper for this model',
+                           is_optional => 1,
+                       },
+        genotyper_version => {
+                              doc => 'version of the genotyper for this model',
+                              is_optional => 1,
+                       },
+        genotyper_params => {
+                             doc => 'command line args used for the genotyper',
+                             is_optional => 1,
+                         },
+        indel_finder_name => {
+                              doc => 'name of the indel finder for this model',
+                              is_optional => 1,
+                          },
+        indel_finder_version => {
+                                 doc => 'version of the indel finder for this model',
+                                 is_optional => 1,
+                          },
+        indel_finder_params => {
+                                doc => 'command line args for the indel finder',
+                                is_optional => 1,
+                            },
+        variant_filter => {
+                           doc => 'variant filter type: VarFilter or SnpFilter',
+                           is_optional => 1,
+                          },
+        multi_read_fragment_strategy => {
+                                         doc => '',
+                                         is_optional => 1,
+                                     },
+        merge_software => {
+                              doc => 'picard or samtools for merging',
+                              is_optional => 1,
+                          },
+        picard_version => {
+                              doc => 'picard version for MarkDuplicates, MergeSamfiles, CreateSequenceDictionary...',
+                              is_optional => 1,
+        },
+        samtools_version => {
+                              doc => 'samtools version for SamToBam, samtools merge, etc...',
+                              is_optional => 1,
+        },
+        rmdup_name => {
+                              doc => 'rmdup tool used for this model',
+                              is_optional => 1,
+                          },
+        rmdup_version => {
+                              doc => 'rmdup tool version used for this model',
+                              is_optional => 1,
+                          },
+        read_aligner_name => {
+                              doc => 'alignment algorithm/software used for this model',
+                          },
 
-sub properties_hash {
-    my %properties = (
-                  sequencing_platform => {
-                                          doc => 'The sequencing platform from whence the model data was generated',
-                                          valid_values => ['454', 'solexa', '3730'],
-                                      },
-                  dna_type => {
-                               doc => 'the type of dna used in the reads for this model',
-                               valid_values => ['genomic dna', 'cdna']
-                           },
-                  genotyper_name => {
-                                     doc => 'name of the genotyper for this model',
-                                     is_optional => 1,
-                                 },
-                  genotyper_version => {
-                                        doc => 'version of the genotyper for this model',
-                                        is_optional => 1,
-                                 },
-                  genotyper_params => {
-                                       doc => 'command line args used for the genotyper',
-                                       is_optional => 1,
-                                   },
-                  indel_finder_name => {
-                                        doc => 'name of the indel finder for this model',
-                                        is_optional => 1,
-                                    },
-                  indel_finder_version => {
-                                           doc => 'version of the indel finder for this model',
-                                           is_optional => 1,
-                                    },
-                  indel_finder_params => {
-                                          doc => 'command line args for the indel finder',
-                                          is_optional => 1,
-                                      },
-                  variant_filter => {
-                                     doc => 'variant filter type: VarFilter or SnpFilter',
-                                     is_optional => 1,
-                                    },
-                  multi_read_fragment_strategy => {
-                                                   doc => '',
-                                                   is_optional => 1,
-                                               },
-                  merge_software => {
-                                        doc => 'picard or samtools for merging',
-                                        is_optional => 1,
-                                    },
-                  picard_version => {
-                                        doc => 'picard version for MarkDuplicates, MergeSamfiles, CreateSequenceDictionary...',
-                                        is_optional => 1,
-                  },
-                  samtools_version => {
-                                        doc => 'samtools version for SamToBam, samtools merge, etc...',
-                                        is_optional => 1,
-                  },
-                  rmdup_name => {
-                                        doc => 'rmdup tool used for this model',
-                                        is_optional => 1,
-                                    },
-                  rmdup_version => {
-                                        doc => 'rmdup tool version used for this model',
-                                        is_optional => 1,
-                                    },
-                  read_aligner_name => {
-                                        doc => 'alignment algorithm/software used for this model',
-                                    },
+        read_aligner_version => {
+                                 doc => 'the aligner version used for this model',
+                                 is_optional => 1,
+                             },
+        read_aligner_params => {
+                                doc => 'command line args for the aligner',
+                                is_optional => 1,
+                            },
+        force_fragment => {
+                           is => 'Integer',
+                           #This doesn't seem to work yet because of the create code, can't the valid values logic be removed from create???
+                           #default_value => '0',
+                           #valid_values => ['0', '1'],
+                           doc => 'force all alignments as fragment reads',
+                           is_optional => 1,
+        },
+        read_trimmer_name => {
+                              doc => 'trimmer algorithm/software used for this model',
+                              is_optional => 1,
+                          },
 
-                  read_aligner_version => {
-                                           doc => 'the aligner version used for this model',
-                                           is_optional => 1,
-                                       },
-                  read_aligner_params => {
-                                          doc => 'command line args for the aligner',
-                                          is_optional => 1,
-                                      },
-                  force_fragment => {
-                                     is => 'Integer',
-                                     #This doesn't seem to work yet because of the create code, can't the valid values logic be removed from create???
-                                     #default_value => '0',
-                                     #valid_values => ['0', '1'],
-                                     doc => 'force all alignments as fragment reads',
-                                     is_optional => 1,
-                  },
-                  read_trimmer_name => {
-                                        doc => 'trimmer algorithm/software used for this model',
-                                        is_optional => 1,
-                                    },
+        read_trimmer_version => {
+                                 doc => 'the trimmer version used for this model',
+                                 is_optional => 1,
+                             },
+        read_trimmer_params => {
+                                doc => 'command line args for the trimmer',
+                                is_optional => 1,
+                            },
 
-                  read_trimmer_version => {
-                                           doc => 'the trimmer version used for this model',
-                                           is_optional => 1,
-                                       },
-                  read_trimmer_params => {
-                                          doc => 'command line args for the trimmer',
-                                          is_optional => 1,
-                                      },
-                  
-                  read_calibrator_name => {
-                                           doc => '',
-                                           is_optional => 1,
-                                       },
-                  read_calibrator_params => {
-                                             doc => '',
-                                             is_optional => 1,
-                                         },
-                  prior_ref_seq => {
-                                    doc => '',
+        read_calibrator_name => {
+                                 doc => '',
+                                 is_optional => 1,
+                             },
+        read_calibrator_params => {
+                                   doc => '',
+                                   is_optional => 1,
+                               },
+        prior_ref_seq => {
+                          doc => '',
+                          is_optional => 1,
+                      },
+        reference_sequence_name => {
+                                    doc => 'identifies the reference sequence used in the model(required if no prior_ref_seq)',
                                     is_optional => 1,
                                 },
-                  reference_sequence_name => {
-                                              doc => 'identifies the reference sequence used in the model(required if no prior_ref_seq)',
-                                              is_optional => 1,
-                                          },
-                  align_dist_threshold => {
-                                           doc => '',
-                                           is_optional => 1,
-                                       },
-                            
-                  );
-    return %properties;
-}
+        align_dist_threshold => {
+                                 doc => '',
+                                 is_optional => 1,
+                             },
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    my $class_object = $self->get_class_object;
-    for my $property_name ( keys %PROPERTIES ) {
-        next if $class_object->{has}->{$property_name}->{is_optional} && !defined($self->$property_name);
-        next unless exists $PROPERTIES{$property_name}->{valid_values};
-        unless ( grep { $self->$property_name eq $_ } @{$PROPERTIES{$property_name}->{valid_values}} ) {
-            $self->error_message(
-                                 sprintf(
-                                         'Invalid value (%s) for %s.  Valid values: %s',
-                                         $self->$property_name,
-                                         $property_name,
-                                         join(', ', @{$PROPERTIES{$property_name}->{valid_values}}),
-                                     )
-                             );
-            $self->delete;
-            return;
-        }
-    }
-    return $self;
-}
+        ],
+};
 
 sub prior {
     my $self = shift;
@@ -188,13 +139,6 @@ sub prior {
         die("Method prior() is read-only since it's deprecated");
     }
     return $self->prior_ref_seq();
-}
-
-sub params_for_class {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    my %properties = &properties_hash;
-    return keys %properties;
 }
 
 sub filter_ruleset_name {

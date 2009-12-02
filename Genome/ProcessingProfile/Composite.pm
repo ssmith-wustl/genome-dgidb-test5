@@ -6,6 +6,6 @@ use warnings;
 use Genome;
 
 class Genome::ProcessingProfile::Composite {
-    is => 'Genome::ProcessingProfile',
+    is => 'Genome::ProcessingProfile::Staged',
 };
 1;

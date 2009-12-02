@@ -11,43 +11,22 @@ use warnings;
 use Genome;
 
 class Genome::ProcessingProfile::Somatic{
-    is => 'Genome::ProcessingProfile',
-    has => [
+    is => 'Genome::ProcessingProfile::Staged',
+    has_param => [
         only_tier_1 => {
-            via         => 'params',
-            to          => 'value',
-            where       => [name => 'only_tier_1'],
-            is_mutable  => 1,
             doc => "If set to true, the pipeline will skip ucsc annotation and produce only tier 1 snps",
         },
         min_mapping_quality => {
-            via         => 'params',
-            to          => 'value',
-            where       => [name => 'min_mapping_quality'],
-            is_mutable  => 1,
             doc => "minimum average mapping quality threshold for high confidence call",
         },
         min_somatic_quality => {
-            via         => 'params',
-            to          => 'value',
-            where       => [name => 'min_somatic_quality'],
-            is_mutable  => 1,
             doc => "minimum somatic quality threshold for high confidence call",
         },
         skip_sv => {
-            via         => 'params',
-            to          => 'value',
-            where       => [name => 'skip_sv'],
-            is_mutable  => 1,
             doc => "If set to true, the pipeline will skip structural variation detection",
         }
     ],
 };
-
-sub params_for_class{
-    my $self = shift;
-    return qw/only_tier_1 min_mapping_quality min_somatic_quality/;
-}
 
 sub stages {
     return (qw/

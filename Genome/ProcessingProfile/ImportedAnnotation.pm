@@ -11,15 +11,11 @@ use warnings;
 use Genome;
 
 class Genome::ProcessingProfile::ImportedAnnotation{
-    is => 'Genome::ProcessingProfile',
-    has => [
+    is => 'Genome::ProcessingProfile::Staged',
+    has_param => [
         annotation_source => {
-            doc => 'Where the annotation comes from (ensembl, genbank, etc.) This value is "combined-annotation" for a combined-annotation model',
             is_optional => 0,
-            is_mutable => 1,
-            via => 'params',
-            to => 'value',
-            where => [name => 'annotation_source'],
+            doc => 'Where the annotation comes from (ensembl, genbank, etc.) This value is "combined-annotation" for a combined-annotation model',
         }
     ],
     

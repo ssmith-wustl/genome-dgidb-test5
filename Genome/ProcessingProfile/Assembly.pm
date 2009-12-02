@@ -11,34 +11,9 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
-my %PROPERTIES = &properties_hash;
-
 class Genome::ProcessingProfile::Assembly{
-    is => 'Genome::ProcessingProfile',
-    has => [
-            map {
-                $_ => {
-                       via => 'params',
-                       to => 'value',
-                       where => [ name => $_ ],
-                       is_optional => (
-                                       ( exists $PROPERTIES{$_}->{is_optional} )
-                                       ? $PROPERTIES{$_}->{is_optional}
-                                       : 0
-				       ),
-                       is_mutable => 1,
-                       doc => (
-                               ( exists $PROPERTIES{$_}->{valid_valiues} )
-                               ? sprintf('%s Valid values: %s.', $PROPERTIES{$_}->{doc}, join(', ', @{$PROPERTIES{$_}->{valid_values}}))
-                               : $PROPERTIES{$_}->{doc}
-                           ),
-                   },
-               } keys %PROPERTIES
-        ],
-};
-
-sub properties_hash {
-    my %properties = (
+    is => 'Genome::ProcessingProfile::Staged',
+    has_param => [
                       sequencing_platform => {
                                               doc => 'The sequencing platform used to produce the read sets to be assembled',
                                               valid_values => ['454', 'solexa'],
@@ -75,45 +50,9 @@ sub properties_hash {
                                              doc => 'A string of parameters to pass to the read_filter',
                                              is_optional => 1,
                                          },
-		      );
-    return %properties
-}
 
-sub params_for_class {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-    my %properties = &properties_hash;
-    return keys %properties;
-}
-
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-    unless ($self) {
-        return;
-    }
-    my $class_object = $self->get_class_object;
-    for my $property_name ( keys %PROPERTIES ) {
-        next if $class_object->{has}->{$property_name}->{is_optional} && !$self->$property_name;
-        next unless exists $PROPERTIES{$property_name}->{valid_values};
-        unless ( $self->$property_name &&
-                 (grep { $self->$property_name eq $_ } @{$PROPERTIES{$property_name}->{valid_values}}) ) {
-            $self->error_message(
-                sprintf(
-                        'Invalid value (%s) for %s.  Valid values: %s',
-                        $self->$property_name || '',
-                        $property_name,
-                        join(', ', @{$PROPERTIES{$property_name}->{valid_values}}),
-                )
-            );
-            $self->delete;
-            return;
-        }
-    }
-
-    return $self;
-}
+    ],
+};
 
 sub stages {
     my @stages = qw/

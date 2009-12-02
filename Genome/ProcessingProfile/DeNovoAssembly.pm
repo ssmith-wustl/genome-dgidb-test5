@@ -12,7 +12,9 @@ use Genome;
 
 use Data::Dumper;
 
-my %PROPERTIES = (
+class Genome::ProcessingProfile::DeNovoAssembly{
+    is => 'Genome::ProcessingProfile::Staged',
+    has_param => [
                   #SHARED PARAMS
 		  sequencing_platform => {
 		      doc => 'The sequencing platform used to produce the read sets to be assembled',
@@ -41,7 +43,7 @@ my %PROPERTIES = (
 		      is_optional => 1,
                   },
                   #NEWBLER SPECIFIC PARAMS
-                  version_subdirectory => {
+            version_subdirectory => {
 		      doc => '454 version subdirectory name',
 		      valid_values => ['offInstrumentApps','mapasm454_source'],
 		      is_optional => 1,
@@ -62,35 +64,8 @@ my %PROPERTIES = (
 		     doc => 'A string of parameters to pass to the read_filter',
 		     is_optional => 1,
                   },
-);
-
-class Genome::ProcessingProfile::DeNovoAssembly{
-    is => 'Genome::ProcessingProfile',
-    has => [
-            map {
-                $_ => {
-                       via => 'params',
-                       to => 'value',
-                       where => [ name => $_ ],
-                       is_optional => (
-                                       ( exists $PROPERTIES{$_}->{is_optional} )
-                                       ? $PROPERTIES{$_}->{is_optional}
-                                       : 0
-				       ),
-                       is_mutable => 1,
-                       doc => (
-                               ( exists $PROPERTIES{$_}->{valid_valiues} )
-                               ? sprintf('%s Valid values: %s.', $PROPERTIES{$_}->{doc}, join(', ', @{$PROPERTIES{$_}->{valid_values}}))
-                               : $PROPERTIES{$_}->{doc}
-                           ),
-                   },
-               } keys %PROPERTIES
-        ],
+    ],
 };
-
-sub params_for_class {
-    return keys %PROPERTIES;
-}
 
 sub create {
     my $class = shift;
@@ -99,25 +74,6 @@ sub create {
 
     unless ($self) {
         return;
-    }
-
-    my $class_object = $self->get_class_object;
-    for my $property_name ( keys %PROPERTIES ) {
-        next if $class_object->{has}->{$property_name}->{is_optional} && !$self->$property_name;
-        next unless exists $PROPERTIES{$property_name}->{valid_values};
-        unless ( $self->$property_name &&
-                 (grep { $self->$property_name eq $_ } @{$PROPERTIES{$property_name}->{valid_values}}) ) {
-            $self->error_message(
-                sprintf(
-                        'Invalid value (%s) for %s.  Valid values: %s',
-                        $self->$property_name || '',
-                        $property_name,
-                        join(', ', @{$PROPERTIES{$property_name}->{valid_values}}),
-                )
-            );
-            $self->delete;
-            return;
-        }
     }
 
     #ADDITIONAL PARAMS FOR ASSEMBLER, PREPARE_INSTRUMENT_DATA AND ASSEMBLY_PREPROCESS PARAMS

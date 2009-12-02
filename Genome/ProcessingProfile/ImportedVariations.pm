@@ -10,7 +10,7 @@ use warnings;
 use Genome;
 
 class Genome::ProcessingProfile::ImportedVariations {
-    is => 'Genome::ProcessingProfile',
+    is => 'Genome::ProcessingProfile::Staged',
 };
 
 sub stages {

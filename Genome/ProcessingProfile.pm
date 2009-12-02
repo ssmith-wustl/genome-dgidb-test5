@@ -24,6 +24,9 @@ class Genome::ProcessingProfile {
     type_name => 'processing profile',
     table_name => 'PROCESSING_PROFILE',
     is_abstract => 1,
+    attributes_have => [
+        is_param => { is => 'Boolean', is_optional => 1 }
+    ],
     sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         id => { is => 'NUMBER', len => 11 },
@@ -46,13 +49,12 @@ class Genome::ProcessingProfile {
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
+    subclass_description_preprocessor => '_expand_param_properties'
 };
 
 #< UR >#
 sub create {
     my ($class, %params) = @_;
-
-    
 
     # Name
     $class->_validate_name($params{name})
@@ -82,7 +84,29 @@ sub create {
         or return;
 
     # Create
-    return $class->SUPER::create(%params);
+    my $self = $class->SUPER::create(%params);
+   
+    $DB::single=1; 
+    my $meta = $self->class->__meta__;
+    foreach my $property_name ($self->params_for_class) {
+        my $property_meta = $meta->property_meta_for_name($property_name);
+        next unless (defined $property_meta->valid_values); 
+        next if ($property_meta->is_optional && !defined $self->$property_name);
+        unless ( grep { $self->$property_name eq $_ } @{ $property_meta->valid_values } ) {
+            $self->error_message(
+                                 sprintf(
+                                         'Invalid value (%s) for %s.  Valid values: %s',
+                                         $self->$property_name,
+                                         $property_name,
+                                         join(', ', @{ $property_meta->valid_values }),
+                                     )
+                             );
+            $self->delete;
+            return;
+        }
+    }
+    
+    return $self;
 }
 
 sub _validate_name {
@@ -186,10 +210,28 @@ sub delete {
 }
 #<>#
 
+# This is called by Genome::Model::Command::Build and must return an object of type
+# Workflow::Operation.
+sub workflow {
+    my $self = shift;
+    my $build = shift;
+
+    die ('workflow method not implemented in >' . (ref($self) || $self) . '<');
+}
+
 #< Params >#
 sub params_for_class {
-    #warn("params_for_class not implemented for class '$_[0]':  $!");
-    return;
+    my $meta = shift->class->__meta__;
+    
+    my @param_names = map {
+        $_->property_name
+    } sort {
+        $a->{position_in_module_header} <=> $b->{position_in_module_header}
+    } grep {
+        defined $_->{is_param} && $_->{is_param}
+    } $meta->property_metas;
+    
+    return @param_names;
 }
 
 sub param_summary {
@@ -229,46 +271,6 @@ sub param_summary {
         }
     }
     return $summary;
-}
-
-#< Building >#
-sub stages {
-    my $class = shift;
-    $class = ref($class) if ref($class);
-    die("Please implement stages in class '$class'");
-}
-
-sub classes_for_stage {
-    my $self = shift;
-    my $stage_name = shift;
-    my $classes_method_name = $stage_name .'_job_classes';
-    #unless (defined $self->can('$classes_method_name')) {
-    #    die('Please implement '. $classes_method_name .' in class '. $self->class);
-    #}
-    return $self->$classes_method_name;
-}
-
-sub objects_for_stage {
-    my $self = shift;
-    my $stage_name = shift;
-    my $model = shift;
-    my $objects_method_name = $stage_name .'_objects';
-    #unless (defined $self->can('$objects_method_name')) {
-    #    die('Please implement '. $objects_method_name .' in class '. $self->class);
-    #}
-    return $self->$objects_method_name($model);
-}
-
-sub verify_successful_completion_job_classes {
-    my @sub_command_classes= qw/
-        Genome::Model::Command::Build::VerifySuccessfulCompletion
-    /;
-    return @sub_command_classes;
-}
-
-sub verify_successful_completion_objects {
-    my $self = shift;
-    return 1;
 }
 
 #< SUBCLASSING >#
@@ -320,6 +322,23 @@ sub _resolve_type_name_for_class {
     my ($subclass) = $class =~ /^Genome::ProcessingProfile::([\w\d]+)$/;
     return unless $subclass;
     return Genome::Utility::Text::camel_case_to_string($subclass);
+}
+
+sub _expand_param_properties {
+    my ($class, $desc) = @_;
+    
+    while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
+        if (exists $prop_desc->{'is_param'} and $prop_desc->{'is_param'}) {
+            $prop_desc->{'to'} = 'value';
+            $prop_desc->{'is_delegated'} = 1;
+            $prop_desc->{'where'} = [
+                'name' => $prop_name
+            ];
+            $prop_desc->{'via'} = 'params';
+        }
+    }
+
+    return $desc;
 }
 
 1;
