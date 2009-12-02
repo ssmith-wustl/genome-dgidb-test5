@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Metric::Command::List {
-    is => 'UR::Object::Command::List',
+    is => 'Genome::Model::Command::BuildRelatedList',
     has => [
         subject_class_name  => {
             is_constant => 1, 
