@@ -219,7 +219,7 @@ sub execute {
     $self->convert_sniper_file($hc_fh, $hc_circos_fh);
     $hc_fh->close if $hc_fh;
     $hc_circos_fh->close;
-    #chris harris added this to do labels 
+    
     my $hclabel_fh;
     if($self->tier1_hclabel_file) {
         $hclabel_fh = IO::File->new($self->tier1_hclabel_file,"r");
@@ -234,7 +234,7 @@ sub execute {
     $self->convert_anno_file($hclabel_fh, $hclabel_circos_fh);
     $hclabel_fh->close if $hclabel_fh;
     $hclabel_circos_fh->close;
-    #end chris harh;
+
     #for labeling recurrent Tier1s special!!
     my $rchclabel_fh;
     if($self->tier1_rchclabel_file) {
@@ -390,7 +390,6 @@ sub convert_sniper_file {
     return 1;
 }
 
-#==================chris harris added this===========
 sub convert_anno_file {
     my ($self,$sniper_fh, $output_fh) = @_;
     if($sniper_fh) { 
@@ -412,9 +411,7 @@ sub convert_anno_file {
     }
     return 1;
 }
-#--------------------------------------------------
 
-#================== gabriel sanderson added this (why are we marking things like this?) =================
 sub split_sv_input {
     my $self = shift;
 
@@ -461,7 +458,6 @@ sub split_sv_input {
     
     return 1;
 }
-#--------------------------------------------------
 
 sub convert_breakdancer_file {
     my ($self, $breakdancer_fh, $output_fh, $color) = @_;

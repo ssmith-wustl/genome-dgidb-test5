@@ -4,11 +4,6 @@ use warnings;
 use strict;
 
 use Genome;
-use Workflow;
-use Carp;
-use FileHandle;
-use Data::Dumper;
-use List::Util qw( max );
 
 class Genome::Model::Tools::Somatic::LibrarySupportFilter {
     is  => [ 'Command' ],
@@ -118,7 +113,6 @@ sub execute {
             next;
         }
 
-#        my $cigar_string;
         if($indel1 ne '*') {
             if($normal_reads_indel1 > 0) {
                 next;

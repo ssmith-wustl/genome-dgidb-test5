@@ -8,6 +8,10 @@ class Genome::Model::Tools::Somatic::Compare::Bams {
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
 };
 
+sub help_brief {
+    "Runs the somatic pipeline workflow."
+}
+
 sub help_synopsis{
     my $self = shift;
     return <<"EOS"
@@ -18,7 +22,8 @@ EOS
 sub help_detail {
     my $self = shift;
     return <<"EOS"
-gmt somatic compare bams --normal-bam-file normal.bam --tumor-bam-file tumor.bam --tumor-snp-file tumor.snp --data-directory /some/dir/for/data
+This tool runs the somatic pipeline to compare a tumor and a normal for variant detection, structural variation detection, etc.
+This tool is called automatically when running a build on a somatic model.  See also 'genome model build somatic'.
 EOS
 }
 
