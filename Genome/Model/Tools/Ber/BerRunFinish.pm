@@ -608,9 +608,9 @@ sub execute
     }
     print $rtfile_fh qq{Location of this file:\n};
     print $rtfile_fh qq{\n$rtfullname\n\n};
-    print $rtfile_fh qq{I am transferring ownership to Veena and/or Xu.\n\n};
+    print $rtfile_fh qq{I am transferring ownership to Xu.\n\n};
     print $rtfile_fh qq{Thanks,\n\n};
-    print $rtfile_fh qq{Bill and/or Sasi\n};
+    print $rtfile_fh qq{Sasi\n};
 
     send_mail( $ssid, $assembly_name, $rtfileloc, $rtfilename, $rtfullname );
 
@@ -654,11 +654,11 @@ sub send_mail
 
     my ( $ssid, $assembly_name, $rtfileloc, $rtfilename, $rtfullname ) = @ARG;
     my $from
-        = join( ', ', 'wnash@watson.wustl.edu', 'ssurulir@watson.wustl.edu',
+        = join( ', ', 'ssurulir@watson.wustl.edu',
         );
 
     my $to = join( ', ',
-        'wnash@watson.wustl.edu', 'ssurulir@watson.wustl.edu',
+        'ssurulir@watson.wustl.edu',
         'kpepin@genome.wustl.edu', );
 
     my $subject
