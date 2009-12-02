@@ -12,7 +12,7 @@ class Genome::Model::Metric::Command::List {
             is_constant => 1, 
             value => 'Genome::Model::Metric' 
         },
-        show => { default_value => 'model_id,model_name,build_id,name,value' },
+        show => { default_value => 'model_id,build_id,name,value' },
     ],
     doc => 'list genome model per-build metrics',
 };
