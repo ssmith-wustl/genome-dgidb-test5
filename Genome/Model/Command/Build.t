@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use File::Temp;
-use Test::More tests => 28;
+use Test::More tests => 25;
 
 use above 'Genome';
 
@@ -18,44 +18,6 @@ my $user_interactive_mode = 0;
 
 my $bogus_id = -10000;
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
-
-my $pp = Genome::ProcessingProfile::ReferenceAlignment->create_mock(
-                                                                    id => $bogus_id,
-                                                                    processing_profile_id => $bogus_id,
-                                                                    name => 'test',
-                                                                    dna_type => 'genomic dna',
-                                                                    read_aligner_name => 'maq0_6_8',
-                                                                    sequencing_platform => 'solexa',
-                                                                    reference_sequence_name => 'refseq-for_test',
-                                                                    type_name => 'reference alignment',
-                                                                );
-isa_ok($pp,'Genome::ProcessingProfile');
-$pp->set_list('stages',[]);
-$pp->set_list('objects_for_stage',[]);
-
-my $model_wo_instrument_data = Genome::Model::ReferenceAlignment->create_mock(
-                                                           id => --$bogus_id,
-                                                           genome_model_id => $bogus_id,
-                                                           subject_type => 'sample_name',
-                                                           subject_name => 'test_sample_name',
-                                                           processing_profile_id => $pp->id,
-                                                           name => 'test',
-                                                           data_directory => $tmp_dir,
-                                                           instrument_data => [],
-                                                           type_name => $pp->type_name,
-                                                           sequencing_platform => $pp->sequencing_platform,
-                                                           processing_profile => $pp
-                                                       );
-isa_ok($model_wo_instrument_data,'Genome::Model');
-$model_wo_instrument_data->mock('builds', \&Genome::Model::builds);
-$model_wo_instrument_data->mock('running_builds', \&Genome::Model::running_builds);
-$model_wo_instrument_data->mock('instrument_data_assignments', \&Genome::Model::instrument_data_assignments);
-$model_wo_instrument_data->mock('instrument_data', \&Genome::Model::instrument_data);
-$model_wo_instrument_data->mock('inputs', \&Genome::Model::inputs);
-
-# The call to Solexa->create() below is expected to fail.
-my $build_wo_reads = Genome::Model::Command::Build::ReferenceAlignment->create(model => $model_wo_instrument_data);
-ok(!$build_wo_reads,'build should fail create with no read sets');
 
 my $mock_pp = Genome::ProcessingProfile::Staged->create_mock(
                                                      id => --$bogus_id,
