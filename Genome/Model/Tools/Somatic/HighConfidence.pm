@@ -1,6 +1,3 @@
-#review tmooney
-#What is the system('cp...') for? (l. 142)
-
 package Genome::Model::Tools::Somatic::HighConfidence;
 
 use strict;
