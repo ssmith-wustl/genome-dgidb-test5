@@ -7,6 +7,7 @@ use Genome;
 
 class Genome::Model::Command::BuildRelatedList {
     is => 'UR::Object::Command::List',
+    is_abstract => 1,
     has => [
         build_spec => {
             is => 'Text',
