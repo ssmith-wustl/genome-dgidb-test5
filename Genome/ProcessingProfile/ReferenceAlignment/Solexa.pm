@@ -15,7 +15,6 @@ sub stages {
         reference_coverage
         variant_detection
         generate_reports
-        verify_successful_completion
     /;
     return @stages;
 }
@@ -68,14 +67,6 @@ sub generate_reports_job_classes {
     return;
 }
 
-
-sub verify_successful_completion_job_classes {
-    my @sub_command_classes= qw/
-        Genome::Model::Command::Build::VerifySuccessfulCompletion
-    /;
-    return @sub_command_classes;
-}
-
 sub alignment_objects {
 
     my ($self, $model) = @_;
@@ -117,10 +108,5 @@ sub generate_reports_objects {
     return 'all_sequences';
 }
 
-
-sub verify_successful_completion_objects {
-    my $self = shift;
-    return 1;
-}
 1;
 

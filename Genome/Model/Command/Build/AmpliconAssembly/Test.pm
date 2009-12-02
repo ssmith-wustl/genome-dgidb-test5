@@ -95,7 +95,7 @@ sub test03_verify : Tests {
         event_status => 'Scheduled',
         event_type => { operator => 'like', value => 'genome model build %' },
     );
-    my $expected_event_count = 10;
+    my $expected_event_count = 9;
     is(@events, $expected_event_count, "Scheduled $expected_event_count events");
     #print Dumper([map{$_->event_type}@events]);
 

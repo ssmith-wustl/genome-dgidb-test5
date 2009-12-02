@@ -20,7 +20,7 @@ BEGIN {
         plan skip_all => "Must run from 64-bit machine";
     }
 #    plan tests => 326;
-    plan tests => 314;
+    plan tests => 302;
     use_ok( 'Genome::InstrumentData::454');
     use_ok( 'Genome::Model::Assembly');
     use_ok( 'Genome::ProcessingProfile::Assembly');
@@ -262,15 +262,6 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
   SKIP: {
       skip "assemble takes a long time", $skip_assemble;
       ok($assemble->execute,'execute assemble project');
-  }
-    my @verify_events = Genome::Model::Command::Build::VerifySuccessfulCompletion->get(model_id => $model->id);
-
-    is(scalar(@verify_events),1,'one verify event for project');
-    my $verify = $verify_events[0];
-    isa_ok($verify,'Genome::Model::Command::Build::VerifySuccessfulCompletion');
-  SKIP: {
-      skip 'no reason to verify if we skipped assemble', $skip_assemble;
-      ok($verify->execute,'execute verify_succesful_completion on build');
   }
     rmtree($model->data_directory);
 }

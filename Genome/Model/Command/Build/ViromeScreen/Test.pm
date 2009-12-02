@@ -91,7 +91,7 @@ sub test03_verify : Tests {
         build_id => $build_event->build_id,
         event_status => 'Scheduled',
     );
-    my $expected_event_count = 4;
+    my $expected_event_count = 3;
     is(@events, $expected_event_count, "Scheduled $expected_event_count events");
 
     # The execution of these events are tested via the unit tests..

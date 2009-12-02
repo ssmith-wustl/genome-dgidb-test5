@@ -36,9 +36,12 @@ sub objects_for_stage {
 }
 
 sub verify_successful_completion_job_classes {
-    my @sub_command_classes= qw/
-        Genome::Model::Command::Build::VerifySuccessfulCompletion
-    /;
+    warn "VerifySuccessfulCompletion is deprecated\n";
+    my @sub_command_classes= ();
+    
+#   qw/
+#        Genome::Model::Command::Build::VerifySuccessfulCompletion
+#    /;
     return @sub_command_classes;
 }
 

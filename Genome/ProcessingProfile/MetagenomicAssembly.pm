@@ -1,15 +1,9 @@
 package Genome::ProcessingProfile::MetagenomicAssembly;
 
-#:eclark 11/16/2009 Code review.
-
-# Short term: There should be a better way to define the class than %HAS.
-# Long term: See Genome::ProcessingProfile notes.
-
 use strict;
 use warnings;
 
 use Genome;
-use Data::Dumper;
 
 class Genome::ProcessingProfile::MetagenomicAssembly{
     is => 'Genome::ProcessingProfile::Staged',
@@ -35,7 +29,6 @@ sub stages {
     my @stages = qw/
         contaminant_screen
         assemble
-        verify_successful_completion
     /;
     return @stages;
 }

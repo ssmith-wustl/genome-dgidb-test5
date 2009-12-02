@@ -31,7 +31,6 @@ class Genome::ProcessingProfile::Somatic{
 sub stages {
     return (qw/
             somatic
-            verify_successful_completion
             /);
 }
 

@@ -13,7 +13,6 @@ sub stages {
     my @stages = qw/
                 alignment
                 variant_detection
-                verify_successful_completion
     /;
     return @stages;
 }

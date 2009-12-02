@@ -10,8 +10,6 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper;
-
 class Genome::ProcessingProfile::DeNovoAssembly{
     is => 'Genome::ProcessingProfile::Staged',
     has_param => [
@@ -157,7 +155,6 @@ sub get_preprocess_params {
 sub stages {
     return (qw/
         assemble
-        verify_successful_completion
     /);
 }
 

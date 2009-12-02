@@ -1,14 +1,6 @@
 package Genome::ProcessingProfile::GenotypeMicroarray;
 
-#:eclark 11/16/2009 Code review.
-
-# Short term: There should be a better way to define the class than %HAS.
-# Long term: See Genome::ProcessingProfile notes.
-
 use Genome;
-
-# TODO: nearly all of this is boilerplate copied from ReferenceAlignment.
-# Pull the guts into the base class and improve the infrastructure so making new models types is easy.
 
 class Genome::ProcessingProfile::GenotypeMicroarray {
     is => 'Genome::ProcessingProfile',

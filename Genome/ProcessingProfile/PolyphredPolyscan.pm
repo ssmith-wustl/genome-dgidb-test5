@@ -2,7 +2,7 @@ package Genome::ProcessingProfile::PolyphredPolyscan;
 
 #:eclark 11/16/2009 Code review.
 
-# Seems like there should better way to define a build that only does one thing.  Implement params_for_class in the base class using introspection.
+# Seems like there should better way to define a build that only does one thing.
 
 use strict;
 use warnings;
@@ -21,7 +21,6 @@ class Genome::ProcessingProfile::PolyphredPolyscan{
 sub stages {
     return (qw/
             polyphred_polyscan
-            verify_successful_completion
             /);
 }
 

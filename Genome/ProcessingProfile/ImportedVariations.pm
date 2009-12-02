@@ -17,7 +17,6 @@ sub stages {
     return (
         qw/
             import_variations
-            verify_successful_completion
             /
     );
 }

@@ -17,7 +17,6 @@ class Genome::ProcessingProfile::ImportedReferenceSequence{
 sub stages {
     return (qw/
               imported_reference_sequence
-              verify_successful_completion
             /);
 }
 

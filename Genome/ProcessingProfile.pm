@@ -91,7 +91,17 @@ sub create {
     foreach my $property_name ($self->params_for_class) {
         my $property_meta = $meta->property_meta_for_name($property_name);
         next unless (defined $property_meta->valid_values); 
-        next if ($property_meta->is_optional && !defined $self->$property_name);
+        if (!defined $self->$property_name) {
+            if ($property_meta->is_optional) {
+                next;
+            } else {
+                $self->error_message(
+                    sprintf('Invalid value (undefined) for %s',$property_name)
+                );
+                $self->delete;
+                return;
+            }
+        }
         unless ( grep { $self->$property_name eq $_ } @{ $property_meta->valid_values } ) {
             $self->error_message(
                                  sprintf(

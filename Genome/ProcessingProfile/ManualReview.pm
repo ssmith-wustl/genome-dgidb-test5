@@ -16,7 +16,6 @@ class Genome::ProcessingProfile::ManualReview {
 sub stages {
     return (qw/
             manual_review
-            verify_successful_completion
             /);
 }
 

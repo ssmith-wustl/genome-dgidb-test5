@@ -67,7 +67,6 @@ sub create_mock_processing_profile {
         'Genome::ProcessingProfile',
         (qw/
             objects_for_stage classes_for_stage
-            verify_successful_completion_objects verify_successful_completion_job_classes
             /),
     );
     #Genome::ProcessingProfile::DeNovoAssembly

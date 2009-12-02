@@ -1,15 +1,9 @@
 package Genome::ProcessingProfile::Assembly;
 
-#:eclark 11/16/2009 Code review.
-
-# Short term: There should be a better way to define the class than %PROPERTIES.
-# Long term: See Genome::ProcessingProfile notes.
-
 use strict;
 use warnings;
 
 use Genome;
-use Data::Dumper;
 
 class Genome::ProcessingProfile::Assembly{
     is => 'Genome::ProcessingProfile::Staged',
@@ -58,7 +52,6 @@ sub stages {
     my @stages = qw/
         setup_project
         assemble
-        verify_successful_completion
     /;
     return @stages;
 }
