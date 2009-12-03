@@ -113,7 +113,7 @@ sub execute {
         aligner_version    => $self->version,
         aligner_params     => $self->params,
         force_fragment     => $self->force_fragment,
-        samtools_verion    => $self->samtools_version,
+        samtools_version    => $self->samtools_version,
         picard_version     => $self->picard_version,
     );
     if ($self->trimmer_name) {
