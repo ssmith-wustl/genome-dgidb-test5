@@ -157,7 +157,7 @@ sub path_for_breakdancer_version {
 }
 
 sub default_breakdancer_version {
-    die "default samtools version: $DEFAULT_VERSION is not valid" unless $BREAKDANCER_VERSIONS{$DEFAULT_VERSION};
+    die "default breakdancer version: $DEFAULT_VERSION is not valid" unless $BREAKDANCER_VERSIONS{$DEFAULT_VERSION};
     return $DEFAULT_VERSION;
 }
  
