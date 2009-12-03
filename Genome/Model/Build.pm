@@ -28,6 +28,7 @@ class Genome::Model::Build {
         subject_name        => { via => 'model' },
         processing_profile_name => { via => 'model' },
 
+        run_by              => { via => 'the_master_event', to => 'user_name' },
         the_events          => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1,  },
         the_events_statuses => { via => 'the_events', to => 'event_status' },
         the_master_event    => { via => 'the_events', to => '-filter', where => [event_type => 'genome model build'] },
