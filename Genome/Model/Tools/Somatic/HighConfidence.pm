@@ -101,7 +101,6 @@ sub execute {
     }
 
     #test architecture to make sure we can run read count program
-    #copied from G::M::T::Maq""Align.t 
     unless (`uname -a` =~ /x86_64/) {
        $self->error_message("Must run on a 64 bit machine");
        die;
@@ -151,21 +150,33 @@ sub execute {
         }
     }
     $tfh->close;
-
-    my $mapping_quality_threshold = $self->min_mapping_quality;
     
-    my $current_variant = shift @sniper_lines;
-    #this will be used in the loop below to evaluate readcount output with input
-    return 1 unless $current_variant;
-    my ($vchr, $vstart, $vstop, $vref, $viub) = split /\t/, $current_variant;
+    #Nothing to do if no lines were not "*"
+    return 1 unless scalar @sniper_lines;
 
+    #Run readcount program 
     my $readcount_command = sprintf("%s -q 1 -l %s %s |",$self->readcount_program, $temp_path, $self->tumor_bam_file);
     $self->status_message("Running: $readcount_command");
     my $readcounts = IO::File->new($readcount_command);
+
     while(my $count_line = $readcounts->getline) {
         chomp $count_line;
         my ($chr, $pos, $ref, $depth, @base_stats) = split /\t/, $count_line;
+        
+        my $current_variant = shift @sniper_lines;
+        last unless $current_variant;
+        my ($vchr, $vstart, $vstop, $vref, $viub) = split /\t/, $current_variant;
 
+        #check if the sniper line was present in the readcount output
+        while($vchr ne $chr && $vstart != $pos && @sniper_lines) {
+            $self->status_message("Skipped $current_variant");
+            
+            $current_variant = shift @sniper_lines;
+            last unless $current_variant;
+            ($vchr, $vstart, $vstop, $vref, $viub) = split /\t/, $current_variant;
+        }
+        last unless $current_variant;
+        
         my %bases;
         for my $base_stat (@base_stats) {
             my ($base,$reads,$avg_mq, $avg_bq) = split /:/, $base_stat;
@@ -173,32 +184,20 @@ sub execute {
             next if($base eq "=");
             $bases{$base} = $avg_mq;
         }
-        #it should be possible that readcount program does not return a line, but not that the readcount program receives a variant not in our array
-        while($vchr ne $chr && $vstart != $pos && @sniper_lines) {
-            $current_variant = shift @sniper_lines;
-            #this will be used in the loop below to evaluate readcount output with input
-            $self->status_message("Skipped $current_variant");
-            last unless $current_variant;
-            ($vchr, $vstart, $vstop, $vref, $viub) = split /\t/, $current_variant;
-        }
-            #then we have the site
-            my @vars = Genome::Info::IUB->variant_alleles_for_iub($vref,$viub);
-            foreach my $var (@vars) {
-                if(exists($bases{$var}) && $bases{$var} >= $mapping_quality_threshold) {
-                    print $ofh $current_variant, "\n";
-                    last;
-                }
+
+        my @vars = Genome::Info::IUB->variant_alleles_for_iub($vref,$viub);
+        foreach my $var (@vars) {
+            if(exists($bases{$var}) && $bases{$var} >= $self->min_mapping_quality) {
+                print $ofh $current_variant, "\n";
+                last;
             }
-            #Skip this variant assuming it wasn't reported by the C prog
-            $current_variant = shift @sniper_lines;
-            last unless $current_variant;
-            ($vchr, $vstart, $vstop, $vref, $viub) = split /\t/, $current_variant;
+        }
     }
+
     unless($readcounts->close()) {
         $self->error_message("Error running " . $self->readcount_program);
         die;
     }
-
     
     return 1;
 }
@@ -208,4 +207,3 @@ sub readcount_program {
 }
 
 1;
-
