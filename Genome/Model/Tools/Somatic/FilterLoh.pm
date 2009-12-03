@@ -109,6 +109,7 @@ sub execute {
     while(my $line = $normal_snp_fh->getline) {
         chomp $line;
         my ($chr, $pos, $ref, $var_iub) = split /\t/, $line;
+        #first find all heterozygous sites in normal
         next if($var_iub =~ /[ACTG]/);
         my @alleles = Genome::Info::IUB->iub_to_alleles($var_iub);
         $normal_variants{$chr}{$pos} = join '',@alleles;
@@ -127,8 +128,9 @@ sub execute {
 
         # Getting adapted intput here so 
         my ($chr, $pos, $pos2, $ref, $var_iub) = split /\t/, $line;
+        
+        #now compare to homozygous sites in the tumor
         if($var_iub =~ /[ACTG]/ && exists($normal_variants{$chr}{$pos})) {
-            #only consider homozygous sites
             if(index($normal_variants{$chr}{$pos},$var_iub) > -1) {
                 #then they share this allele and it is LOH
                 if (defined $loh_fh) {
