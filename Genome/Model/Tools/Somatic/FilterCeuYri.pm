@@ -1,3 +1,6 @@
+#review/notes
+#This file currently needs to exist because workflow can't pass bare_args.  Long-term solution is to refactor `gmt snp intersect` to not take bare_args.
+
 package Genome::Model::Tools::Somatic::FilterCeuYri;
 
 use warnings;
