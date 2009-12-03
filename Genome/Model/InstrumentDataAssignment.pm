@@ -123,14 +123,7 @@ sub __errors__ {
     return @tags;
 }
 
-sub alignment_directory {
-    my $self = shift;
-    my $alignment = $self->alignment;
-    return unless $alignment;
-    return $alignment->alignment_directory;
-}
-
-sub alignment {
+sub params_for_alignment {
     my $self = shift;
 
     my $model = $self->model;
@@ -138,8 +131,6 @@ sub alignment {
         $self->error_message('Can not create an alignment object for model type '. $model->type_name);
         return;
     }
-    my @alignments;
-    unless ($self->_alignments) {
         my %params = (
                       instrument_data_id => $self->instrument_data_id,
                       aligner_name => $model->read_aligner_name,
@@ -186,7 +177,38 @@ sub alignment {
             $params{'filter_name'} = $self->filter_desc;
         }
 
-        my $alignment = Genome::InstrumentData::Alignment->create(%params);
+    return %params;
+
+}
+
+sub alignment_directory {
+    my $self = shift;
+    my $alignment = $self->alignment;
+    return unless $alignment;
+    return $alignment->alignment_directory;
+}
+
+
+sub alignment_sets {
+    my $self = shift;
+    $self->alignment_set(@_);
+    return $self->_alignments;
+}
+
+sub alignment_set {
+    my $self = shift;
+
+    my $model = $self->model;
+
+    my %params = $self->params_for_alignment;
+    unless (%params) {
+        $self->error_message('Could not get alignment parameters for this instrument data assignment');
+        return;
+    }
+        
+    my @alignments;
+    unless ($self->_alignments) {
+        my $alignment = Genome::InstrumentData::Alignment->get(%params);
         unless ($alignment) {
             $self->error_message('Failed to create an alignment object');
             return;
@@ -198,7 +220,7 @@ sub alignment {
         if ($model->force_fragment && $self->instrument_data->is_paired_end) {
             my $instrument_data = $self->instrument_data;
             $params{instrument_data_id} = $instrument_data->fwd_seq_id;
-            my $alignment_fwd = Genome::InstrumentData::Alignment->create(%params);
+            my $alignment_fwd = Genome::InstrumentData::Alignment->get(%params);
             unless ($alignment_fwd) {
                 $self->error_message('Failed to create a fwd alignment object');
                 return;
@@ -211,11 +233,36 @@ sub alignment {
     return $return[0];
 }
 
+#### OBSOLETE  COMPATIBILITY #####
+sub alignment {
+    my $self = shift;
+    $self->warning_message("NOTICE: Using obsolete 'alignment' method...");
+    return $self->generate_alignment_set(@_);
+}
+
 sub alignments {
     my $self = shift;
-    $self->alignment(@_);
+    $self->warning_message("NOTICE: Using obsolete 'alignments' method...");
+    return $self->generate_alignment_sets(@_);
+}   
+#### END OBSOLETE ####
+
+sub generate_alignment_set {
+    my $self = shift;
+    $self->alignment_set(@_);
+    my @return = $self->alignments;
+    return $return[0]->prepare_for_generate;
+}
+
+sub generate_alignment_sets {
+    my $self = shift;
+    $self->alignment_set(@_);
+    for ($self->_alignments) {
+        $_->prepare_for_generate;
+    } 
     return $self->_alignments;
 }
+
 
 sub read_length {
     my $self = shift;

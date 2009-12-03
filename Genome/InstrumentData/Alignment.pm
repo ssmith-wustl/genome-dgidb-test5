@@ -57,6 +57,7 @@ class Genome::InstrumentData::Alignment {
                                 is => 'Text',
                                 doc => 'any additional params for the aligner in a single string'
                             },
+
          reference_build    => {
                                 is => 'Genome::Model::Build::ReferencePlaceholder',
                                 id_by => 'reference_name',
@@ -83,6 +84,7 @@ class Genome::InstrumentData::Alignment {
                             },
          _fragment_seq_id => { is => 'Number' },
          _resource_lock   => {  is => 'Text'},
+         _prepared        => {  is => 'Boolean', default_value=>0},
     ],
 
 };
@@ -122,7 +124,109 @@ sub _resolve_aligner_name_for_subclass_name {
     return $aligner_name;
 }
 
+sub get {
+    my $class = shift;
+    
+    my $self = $class->__define__(@_);
+    
+    return unless $self;
+
+
+    return $self;
+}
+
 sub create {
+    my $class = shift;
+    
+    my $self = $class->__define__(@_);
+    
+    return unless $self;
+
+    $self->prepare_for_generate;
+
+    return $self;
+}
+
+# turn a "get" alignmetn into a "created" one
+sub prepare_for_generate {
+    my $self = shift;
+    
+    unless ($self->_prepared) {
+        if (!$self->alignment_directory || !-d $self->alignment_directory) {
+             $self->prepare_alignment_directory;
+        }
+
+        $self->_prepared(1);
+    }
+
+    return $self;
+}
+
+sub __define__ {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+    return unless $self;
+
+    if ($self->instrument_data) {
+        if ($self->force_fragment && !defined($self->_fragment_seq_id)) {
+            $self->_fragment_seq_id($self->instrument_data_id);
+        }
+    } else {
+        unless ($self->force_fragment) {
+            $self->error_message('No instrument data found for instrument data id '. $self->instrument_data_id);
+            die($self->error_message);
+        }
+        my $reverse_instrument_data = Genome::InstrumentData::Solexa->get(fwd_seq_id => $self->instrument_data_id);
+        unless ($reverse_instrument_data) {
+            $self->error_message('Failed to find reverse instrument data by forward id: '. $self->instrument_data_id);
+            die($self->error_message);
+        }
+        $self->_fragment_seq_id($self->instrument_data_id);
+        $self->instrument_data_id($reverse_instrument_data->id);
+    }
+
+
+    $self->resolve_reference_build();
+    $self->resolve_alignment_directory();
+    
+    
+    return $self;
+}
+
+
+sub resolve_reference_build {
+
+    my $self = shift;
+
+    unless ($self->reference_build) {
+        unless ($self->reference_name) {
+            $self->error_message('No way to resolve reference build without reference_name or refrence_build');
+            die($self->error_message);
+        }
+        my $ref_build = Genome::Model::Build::ReferencePlaceholder->get($self->reference_name);
+        unless ($ref_build) {
+            my $sample_type = $self->instrument_data->sample_type;
+            if ( defined($sample_type) ) {
+                $self->status_message("Creating ReferencePlaceholder with sample type: $sample_type");
+                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
+                                                                            name => $self->reference_name,
+                                                                            sample_type => $self->instrument_data->sample_type,
+                                                                        );
+            } else {
+                $self->status_message("No sample type is defined.  Creating ReferencePlaceholder without a sample type parameter.");
+                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
+                                                                            name => $self->reference_name,
+                                                                        );
+            }
+        }
+        $self->reference_build($ref_build);
+    }
+
+    return $self->reference_build;
+}
+
+sub obsolete_create {
     my $class = shift;
 
     my $self = $class->SUPER::create(@_);
@@ -171,7 +275,7 @@ sub create {
     }
 
     unless ($self->alignment_directory) {
-        $self->resolve_alignment_directory;
+        $self->_obsolete_resolve_alignment_directory;
     }
     unless (-d $self->alignment_directory) {
         unless ($self->create_directory($self->alignment_directory)) {
@@ -187,6 +291,25 @@ sub estimated_kb_usage {
     my $self = shift;
     my $instrument_data = $self->instrument_data;
     return $instrument_data->calculate_alignment_estimated_kb_usage;
+}
+
+sub prepare_alignment_directory {
+    my $self = shift;
+
+    my $resolved_dir = $self->resolve_alignment_directory;
+
+    if (!$resolved_dir) {
+        my $allocation = $self->create_allocation;
+        $self->alignment_directory($allocation->absolute_path);
+    }
+
+    if ($resolved_dir && !-d $resolved_dir) {
+        unless ($self->create_directory($self->alignment_directory)) {
+            $self->error_message('Failed to create alignment directory '. $self->alignment_directory .":  $!");
+            die($self->error_message);
+        }
+    }
+
 }
 
 sub create_allocation {
@@ -373,6 +496,20 @@ sub resolve_alignment_directory {
     my $self = shift;
 
     unless ($self->alignment_directory) {
+        my $allocation = $self->get_allocation;
+        
+        if ($allocation) {
+            $self->alignment_directory($allocation->absolute_path);
+            return $self->alignment_directory;
+        }
+    }
+}
+
+
+sub _obsolete_resolve_alignment_directory {
+    my $self = shift;
+
+    unless ($self->alignment_directory) {
         my $allocation = $self->get_or_create_allocation;
         unless ($allocation) {
             $self->error_message('Failed to get or create alignment allocation.');
@@ -385,7 +522,7 @@ sub resolve_alignment_directory {
 
 sub remove_alignment_directory {
     my $self = shift;
-
+    
     my $allocation = $self->get_allocation;
     unless ($allocation) {
         die('No alignment allocation found for instrument data '. $self->instrument_data_id
