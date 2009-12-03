@@ -16,7 +16,7 @@ class Genome::Model::Command::Build {
             default_value => 1,
             is_transient => 1,
             is_optional => 1,
-            doc => 'The build will execute genome model build run-jobs(default_value=1)',
+            doc => 'The build will execute genome model services build run(default_value=1)',
         },
         force_new_build => {
             is => 'Boolean',
@@ -184,7 +184,7 @@ sub execute {
         if ($self->auto_execute) {
             my $cmdline = 'bsub -N -H -q ' . $self->bsub_queue . ' -m blades -u ' . $ENV{USER} . '@genome.wustl.edu' .
                 $self->_resolve_log_resource($self) . ' ' . 
-                'genome model build run --model-id ' . $self->model->id . ' --build-id ' . $self->build->id;
+                'genome model services build run --model-id ' . $self->model->id . ' --build-id ' . $self->build->id;
 
             my $bsub_output = `$cmdline`;
             my $retval = $? >> 8;

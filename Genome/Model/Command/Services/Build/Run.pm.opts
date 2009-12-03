@@ -1,4 +1,4 @@
-$Genome::Model::Command::Build::Run::OPTS_SPEC = [
+$Genome::Model::Command::Services::Build::Run::OPTS_SPEC = [
           'model-id=s',
           undef,
           'build-id=s',

@@ -1,4 +1,4 @@
-package Genome::Model::Command::Build::Run;
+package Genome::Model::Command::Services::Build::Run;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use Workflow;
 
 use Regexp::Common;
 
-class Genome::Model::Command::Build::Run{
+class Genome::Model::Command::Services::Build::Run{
     is => 'Genome::Model::Command',
     has => [
             build_id =>{

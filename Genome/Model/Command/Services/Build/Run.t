@@ -7,7 +7,7 @@ use above 'Genome';
 
 ######
 
-package Genome::Model::Command::Build::Run::Test;
+package Genome::Model::Command::Services::Build::Run::Test;
 
 use base 'Genome::Utility::TestCommandBase';
 
@@ -16,7 +16,7 @@ use Genome::Utility::TestBase;
 use Test::More;
 
 sub test_class {
-    return 'Genome::Model::Command::Build::Run';
+    return 'Genome::Model::Command::Services::Build::Run';
 }
 
 sub _model {
@@ -230,7 +230,7 @@ sub _create_mock_wf_error {
 
 package main;
 
-Genome::Model::Command::Build::Run::Test->runtests;
+Genome::Model::Command::Services::Build::Run::Test->runtests;
 
 exit;
 
