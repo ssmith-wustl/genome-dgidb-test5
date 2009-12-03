@@ -87,8 +87,7 @@ sub execute {
     my $single_lib_output = IO::File->new( $self->single_lib_output_file, '>' )
         || die "Could not open for writing " . $self->single_lib_output_file();
 
-# stuff below from chris "golden god" harris:
-# /gscmnt/sata146/info/medseq/charris/GBM/somatic_indel_finder.pl
+# stuff below from /gscmnt/sata146/info/medseq/charris/GBM/somatic_indel_finder.pl
 
     while ( my $line = $indel_file->getline() ) {
 

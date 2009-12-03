@@ -81,8 +81,15 @@ sub execute {
     $DB::single=1;
 
     my $bam_file = $self->bam_file();
+    
+    unless(-s $bam_file) {
+        $self->status_message("Bam output file $bam_file was not found or had no size.");
+        die;
+    }
+    
     if ( ! Genome::Utility::FileSystem->validate_file_for_reading($bam_file) ) {
-        die 'cant read from: ' . $bam_file;
+        $self->error_message('cant read from: ' . $bam_file);
+        die;
     }
 
     #calling blank should return the $DEFAULT version in the G:M:T:Sam module
@@ -101,11 +108,6 @@ sub execute {
             die;
         }
         chmod 02775, $analysis_base_path;
-    }
-
-    unless(-s $bam_file) {
-        $self->status_message("Bam output file $bam_file was not found or had no size.");
-        die;
     }
 
     # Generate files not provided from data directory
