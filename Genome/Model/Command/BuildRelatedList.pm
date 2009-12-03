@@ -44,12 +44,15 @@ sub create {
             }
         }
         unless ($filter_updated) {
-            my $model = Genome::Model->get(name => $build_spec);
-            unless ($model) {
-                $model = Genome::Model->get("name like" => $build_spec . '%');
+            my @models = Genome::Model->get(name => $build_spec);
+            unless (@models) {
+                @models = Genome::Model->get("name like" => $build_spec . '%');
             }
-            if ($model) {
-                $filter_updated = $filter_prefix . 'model_id=' . $model->id;
+            if (@models == 1) {
+                $filter_updated = $filter_prefix . 'model_id=' . $models[0]->id;
+            }
+            elsif (@models > 1) {
+                $filter_updated = $filter_prefix . 'model_name~' . $build_spec . '%';
             }
         }
         if ($filter_updated) {

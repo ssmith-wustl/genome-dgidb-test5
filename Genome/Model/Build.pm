@@ -25,6 +25,9 @@ class Genome::Model::Build {
         model_id            => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
         model_name          => { via => 'model', to => 'name' },
         type_name           => { via => 'model' },
+        subject_name        => { via => 'model' },
+        processing_profile_name => { via => 'model' },
+
         the_events          => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1,  },
         the_events_statuses => { via => 'the_events', to => 'event_status' },
         the_master_event    => { via => 'the_events', to => '-filter', where => [event_type => 'genome model build'] },
