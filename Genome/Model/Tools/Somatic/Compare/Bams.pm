@@ -1,3 +1,7 @@
+#review/notes
+#future plans: change defaults for file-naming
+#
+
 use strict;
 use warnings;
 
@@ -75,15 +79,6 @@ sub pre_execute {
         $self->skip_sv(0);
     }
 
-    # Verify all of the params that should have been provided or generated
-    my $error_count = 0;
-    for my $param ($self->filenames_to_generate) {
-        unless ($self->$param) {
-            $self->error_message("Parameter $param was not provided");
-            $error_count++;
-        }
-    }
-
     # The output files of indel pe step should go into the workflow directory
     unless (defined $self->normal_indelpe_data_directory) {
         $self->normal_indelpe_data_directory($self->data_directory . "/normal_indelpe_data");
@@ -102,16 +97,6 @@ sub pre_execute {
     }
     unless (defined $self->min_somatic_quality) {
         $self->min_somatic_quality(40);
-    }
-
-    if ($error_count) {
-        # Shouldnt really hit this error... we should only be missing params if the user failed to provide them if they didnt provide data directory
-        if ($self->data_directory) {
-            $self->error_message("$error_count params were not successfully set by pre-execute using data directory " . $self->data_directory);
-        } else {
-            $self->error_message("$error_count params were not provided. All params must be specified by hand if no data directory is specified for auto generation");
-        }
-        exit;
     }
 
     return 1;
