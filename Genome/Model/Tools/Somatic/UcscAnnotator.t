@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Data::Dumper;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -24,7 +24,7 @@ ok ($ucsc_annotator, "created ucsc_annotator");
 ok ($ucsc_annotator->execute(), "executed ucsc_annotator");
 
 
-#my $diff = `diff $output_file $expected_output`;  ##Some annotation is expected to change over time 
-#ok($diff eq '', "no differences");
+my $diff = `diff $output_file $expected_output`;  ##Some annotation is expected to change over time if this part of the test fails we'll need to look at the output_file
+ok($diff eq '', "no differences");
 
 
