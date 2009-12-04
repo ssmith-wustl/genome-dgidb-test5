@@ -86,9 +86,9 @@ sub execute {
     }
 
     # Get the bam files from the latest build directories from the tumor model
-    my $tumor_build = $tumor_model->last_complete_build;
+    my $tumor_build = $tumor_model->last_succeeded_build;
     unless ($tumor_build) {
-        $self->error_message("Failed to get a last_complete_build for the tumor model");
+        $self->error_message("Failed to get a last_succeeded_build for the tumor model");
         return;
     }
     my $tumor_bam = $tumor_build->whole_rmdup_bam_file;
@@ -98,9 +98,9 @@ sub execute {
     }
 
     # Get the bam files from the latest build directories from the normal model
-    my $normal_build = $normal_model->last_complete_build;
+    my $normal_build = $normal_model->last_succeeded_build;
     unless ($normal_build) {
-        $self->error_message("Failed to get a last_complete_build for the normal model");
+        $self->error_message("Failed to get a last_succeeded_build for the normal model");
         return;
     }
     my $normal_bam = $normal_build->whole_rmdup_bam_file;
