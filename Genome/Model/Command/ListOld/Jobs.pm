@@ -11,7 +11,6 @@ use GSC;
 use Command; 
 use Data::Dumper;
 use Term::ANSIColor;
-use Genome::Model::EqualColumnWidthTableizer;
 use IO::File;
 
 use Date::Manip;
