@@ -251,6 +251,7 @@ sub generate_alignment_set {
     my $self = shift;
     $self->alignment_set(@_);
     my @return = $self->_alignments;
+    return unless @return;
     return $return[0]->prepare_for_generate;
 }
 
