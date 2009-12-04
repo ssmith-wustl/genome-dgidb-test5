@@ -166,6 +166,7 @@ sub execute {
     return 1;
 
 }
+
 sub make_domain_into_ids {
     my ($self, $domain, $accession_list) = @_;
     my $new_list;
@@ -185,8 +186,6 @@ sub make_domain_into_ids {
     
     return $new_list;
 } 
-    
-
 
 sub make_hash_lookup {
     my $self=shift;
@@ -200,7 +199,6 @@ sub make_hash_lookup {
     $hash_lookup{"NULL"}="NULL";
     return \%hash_lookup;
 }
-
 
 sub accession_list {
     my $self=shift;
@@ -4437,6 +4435,5 @@ EOF
     my @return = split "\n", $accession_list;
 return \@return;
 }
-
     
 1;

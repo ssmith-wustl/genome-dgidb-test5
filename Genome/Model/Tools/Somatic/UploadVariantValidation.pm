@@ -70,7 +70,6 @@ sub execute {
     while (my $line = $variant_fh->getline) {
         my ($chr, $start, $stop, $reference, $variant, $result) = split "\t", $line;
         
-
         my $variant_already_exists = Genome::Model::Variant->get(
             chromosome       => $chr,
             start_pos        => $start,

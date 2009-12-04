@@ -144,8 +144,6 @@ sub execute {
             $indel_strength =  $tumor_reads_indel2/($tumor_reads_indel2 + $tumor_reads_indel1)  * $tumor_reads_indel2 * $normal_reads_indel1;
             $indel_size=$indel2_size;
 
-
-
             if(defined $fields[35]) {
                 $num_libs_match = $fields[35];
             }
@@ -211,8 +209,4 @@ sub find_read_support {
     return scalar(keys %library_hash);
 }
 
-
 1;
-
-
-
