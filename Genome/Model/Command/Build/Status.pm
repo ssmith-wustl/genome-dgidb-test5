@@ -522,7 +522,7 @@ sub get_event_node {
 		my @adirs;
 		for my $ida (@idas) {
 
-		  my $alignment = $ida->alignment;
+		  my $alignment = $ida->alignment_set;
           if (defined($alignment)) {
 		    if ($alignment->instrument_data_id == $event->instrument_data_id) {
 			  push(@adirs, $alignment->alignment_directory);
