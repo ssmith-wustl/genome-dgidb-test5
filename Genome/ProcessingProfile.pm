@@ -86,7 +86,6 @@ sub create {
     # Create
     my $self = $class->SUPER::create(%params);
    
-    $DB::single=1; 
     my $meta = $self->class->__meta__;
     foreach my $property_name ($self->params_for_class) {
         my $property_meta = $meta->property_meta_for_name($property_name);
@@ -145,7 +144,7 @@ sub _validate_name {
 
 sub _validate_no_existing_processing_profiles_with_idential_params {
     my ($subclass, %params) = @_;
-    $DB::single =1;
+
     # If no params, no need to check
     return 1 unless $subclass->params_for_class;
 

@@ -6,16 +6,15 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Build::Assembly::FilterReadSet::Seqclean {
-    is => 'Genome::Model::Command::Build::Assembly::FilterReadSet',
+    is  => 'Genome::Model::Command::Build::Assembly::FilterReadSet',
     has => [
-            seqclean_report => {
-                                is_output => 1,
-                                calculate_from => ['instrument_data'],
-                                calculate => q|
-                                     return $instrument_data->fasta_file .'.cln';
-                                 |
-                             },
-        ]
+        seqclean_report => {
+            calculate_from => ['instrument_data'],
+            calculate      => q|
+                return $instrument_data->fasta_file .'.cln';
+            |
+        },
+    ]
 };
 
 sub bsub_rusage {
@@ -25,7 +24,7 @@ sub bsub_rusage {
 sub sub_command_sort_position { 40 }
 
 sub help_brief {
-    "assemble a genome"
+    "assemble a genome";
 }
 
 sub help_synopsis {
@@ -45,27 +44,28 @@ sub execute {
 
     $DB::single = $DB::stopper;
 
-    my $model = $self->model;
+    my $model           = $self->model;
     my $instrument_data = $self->instrument_data;
 
-    unless (-e $self->seqclean_report) {
-        my $params = '-c 2';
+    unless ( -e $self->seqclean_report ) {
+        my $params    = '-c 2';
         my $seq_clean = Genome::Model::Tools::454::Seqclean->create(
-                                                                    in_fasta_file => $instrument_data->fasta_file,
-                                                                    seqclean_params => $params,
-                                                                );
-        unless ($seq_clean->execute) {
+            in_fasta_file   => $instrument_data->fasta_file,
+            seqclean_params => $params,
+        );
+        unless ( $seq_clean->execute ) {
             $self->error_message('Failed to run seq clean ');
             return;
         }
     }
 
-    unless (-e $self->seqclean_report) {
-        $self->error_message('Can not find seqclean report '. $self->seqclean_report .' or it is zero size');
+    unless ( -e $self->seqclean_report ) {
+        $self->error_message( 'Can not find seqclean report '
+              . $self->seqclean_report
+              . ' or it is zero size' );
         return;
     }
     return 1;
 }
-
 
 1;
