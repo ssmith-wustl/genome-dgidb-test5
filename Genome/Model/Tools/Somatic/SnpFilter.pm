@@ -56,7 +56,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    gmt somatic snpfilter --sniper_snp_file=[pathname] --output_file=[pathname]
+    gmt somatic snp-filter --sniper_snp_file=[pathname] --output_file=[pathname]
 EOS
 }
 
