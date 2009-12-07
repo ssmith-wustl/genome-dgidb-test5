@@ -140,13 +140,18 @@ sub execute {
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
     my $snp_cmd = "$samtools_cmd -v $bam_file > $snp_output_file";
-    # Skip if we already have the output
-    unless (-s $snp_output_file) {
-        $rv = system $snp_cmd;
-        unless($rv == 0) {
-            $self->error_message("Running samtools SNP failed with exit code $rv\nCommand: $snp_cmd");
-            die;
-        }
+    
+    eval {
+        $self->shellcmd(
+            cmd => $samtools_cmd,
+            input_files => [$bam_file],
+            output_files => [$snp_output_file],
+            skip_if_output_is_present => 1,
+        );
+    };
+    if($@) {
+        $self->error_message($@);
+        die;
     }
 
     my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snp_output_file);
@@ -157,13 +162,18 @@ sub execute {
     }
     
     my $indel_cmd = "$samtools_cmd -i $bam_file > $indel_output_file";
-    # Skip if we already have the output
-    unless (-s $indel_output_file) {
-        $rv = system $indel_cmd;
-        unless($rv == 0) {
-            $self->error_message("Running samtools indel failed with exit code $rv\nCommand: $indel_cmd");
-            die;
-        }
+    
+    eval {
+        $self->shellcmd(
+            cmd => $indel_cmd,
+            input_files => [$bam_file],
+            output_files => [$indel_output_file],
+            skip_if_output_is_present => 1,
+        );
+    };
+    if($@) {
+        $self->error_message($@);
+        die;
     }
 
     #FIXME:8-25-09 i spoke to ben and varfilter is still too permissive to be trusted so just hardcode normal snpfilter
