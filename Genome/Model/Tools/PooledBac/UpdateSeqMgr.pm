@@ -62,13 +62,13 @@ sub execute {
         
         my $seqmgr_link = $p->seqmgr_link;
         print "Updating $clone_name...\n";
-        print "/bin/cp -rf newbler_assembly/consed/edit_dir $seqmgr_link/.\n";
+        #print "/bin/cp -rf newbler_assembly/consed/edit_dir $seqmgr_link/.\n";
         system "/bin/cp -rf newbler_assembly/consed/edit_dir $seqmgr_link/.";
-        print "/bin/cp -rf newbler_assembly/consed/phd_dir $seqmgr_link/.\n";
+        #print "/bin/cp -rf newbler_assembly/consed/phd_dir $seqmgr_link/.\n";
         system "/bin/cp -rf newbler_assembly/consed/phd_dir $seqmgr_link/.";
-        print "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/.\n";
+        #print "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/.\n";
         system "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/.";
-        print "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.\n";
+        #print "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.\n";
         system "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.";
 
         #print $project_dir."/$clone_name","\n";
