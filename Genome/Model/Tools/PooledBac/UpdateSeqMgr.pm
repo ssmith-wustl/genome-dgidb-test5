@@ -61,15 +61,20 @@ sub execute {
         $p->set_project_status('pooled_bac_done'); 
         
         my $seqmgr_link = $p->seqmgr_link;
-        system "/bin/cp -rf newbler_assembly/consed/edit_dir $seqmgr_link/$clone_name/.";
-        system "/bin/cp -rf newbler_assembly/consed/phd_dir $seqmgr_link/$clone_name/.";
-        system "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/$clone_name/.";
-        system "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/$clone_name/.";
+        print "Updating $clone_name...\n";
+        print "/bin/cp -rf newbler_assembly/consed/edit_dir $seqmgr_link/.\n";
+        system "/bin/cp -rf newbler_assembly/consed/edit_dir $seqmgr_link/.";
+        print "/bin/cp -rf newbler_assembly/consed/phd_dir $seqmgr_link/.\n";
+        system "/bin/cp -rf newbler_assembly/consed/phd_dir $seqmgr_link/.";
+        print "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/.\n";
+        system "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/.";
+        print "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.\n";
+        system "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.";
 
-#        print $project_dir."/$clone_name","\n";
-#        print "project name is",$p->name,"\n";
-#        print $p->project_status,"\n";
-#        print $seqmgr_link,"\n";        
+        #print $project_dir."/$clone_name","\n";
+        #print "project name is ",$p->name,"\n";
+        #print $p->project_status,"\n";
+        #print $seqmgr_link,"\n";        exit;
     }
     return 1;
 }
