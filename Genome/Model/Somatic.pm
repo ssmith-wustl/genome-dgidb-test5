@@ -12,6 +12,7 @@ class Genome::Model::Somatic {
        only_tier_1 => { via => 'processing_profile'},
        min_mapping_quality => { via => 'processing_profile'},
        min_somatic_quality => { via => 'processing_profile'},
+       skip_sv => { via => 'processing_profile'},
     ],
     has_optional => [
          tumor_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', where => [ role => 'tumor'], is_many => 1,
