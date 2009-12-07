@@ -67,10 +67,10 @@ sub execute {
         }
     }
     unless (-e $bai_file) {
-        my $index_cmd = "/gsc/var/tmp/samtools/samtools-0.1.6-64/samtools index $bam_file";
-        my $index_rv = system($index_cmd);
-        unless ($index_rv == 0) {
-            die('non-zero return value '. $index_rv .' from command: '. $index_cmd .":  $!");
+        my $index_rv = Genome::Model::Tools::Sam::IndexBam->execute(bam_index_file => $bam_file);
+        unless ($index_rv) 
+        {
+            print "Failed to index $bam_file\n" and return;
         }
     }
 
