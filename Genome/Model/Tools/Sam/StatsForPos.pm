@@ -67,7 +67,7 @@ sub execute {
         }
     }
     unless (-e $bai_file) {
-        my $index_rv = Genome::Model::Tools::Sam::IndexBam->execute(bam_index_file => $bam_file);
+        my $index_rv = Genome::Model::Tools::Sam::IndexBam->execute(bam_file => $bam_file);
         unless ($index_rv) 
         {
             print "Failed to index $bam_file\n" and return;
