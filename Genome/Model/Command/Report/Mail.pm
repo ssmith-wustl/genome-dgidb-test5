@@ -8,13 +8,13 @@ use Genome;
 
 class Genome::Model::Command::Report::Mail {
     is => 'Genome::Model::Command',
-    has => [ 
-        report_name => { 
-            is => 'Text', 
+    has => [
+        report_name => {
+            is => 'Text',
             doc => "the name of the report to mail",
         },
-        build   => { 
-            is => 'Genome::Model::Build', 
+        build   => {
+            is => 'Genome::Model::Build',
             id_by => 'build_id',
             doc => "the specific build of a genome model to mail a report for",
         },
@@ -22,14 +22,14 @@ class Genome::Model::Command::Report::Mail {
             doc => 'the id for the build on which to report',
         },
         to => {
-            is => 'Text', 
+            is => 'Text',
             doc => 'the recipient list to mail the report to',
         },
 
     ],
     has_optional => [
         directory => {
-            is => 'Text', 
+            is => 'Text',
             doc => 'the path of report directory to mail (needed only if the report was saved to a non-default location)',
         }
     ],
@@ -43,7 +43,7 @@ sub help_synopsis {
     return <<EOS
 genome model report mail --build-id 12345 --report-name "Summary" --to dlarson\@genome.wustl.edu,charris\@genome.wustl.edu
 
-genome model report run -b 12345 -r "DbSnp" --to reseq\@genome.wustl.edu 
+genome model report run -b 12345 -r "DbSnp" --to reseq\@genome.wustl.edu
 
 genome model report run -b 12345 -r "GoldSnp" --to reseq\@genome.wustl.edu --directory /gscuser/jpeck/reports
 
@@ -75,7 +75,7 @@ $DB::single = 1;
                 . " which is " . $build->model->name
             );
             $self->delete;
-            return; 
+            return;
         }
     }
     elsif ($self->model_name) {
@@ -118,9 +118,9 @@ $DB::single = 1;
 
 sub execute {
     my $self = shift;
-    
+
 $DB::single = 1;
-    
+
     my $build = $self->build;
     my $model = $build->model;
     my $report_name = $self->report_name;
@@ -133,8 +133,8 @@ $DB::single = 1;
     unless (-d $report_path) {
         $self->error_message("Failed to find report directory $report_path!");
         return;
-    } 
- 
+    }
+
     my @mail_parts;
 
     my $report_subdir = $self->report_name;
@@ -147,34 +147,34 @@ $DB::single = 1;
             . "Found:\n\t" . join("\n\t",@others) . "\n"
         );
         return;
-    } 
+    }
 
-    my $html_file = $report_path."/".$report_subdir."/report.html"; 
-    my $txt_file = $report_path."/".$report_subdir."/report.txt"; 
+    my $html_file = $report_path."/".$report_subdir."/report.html";
+    my $txt_file = $report_path."/".$report_subdir."/report.txt";
 
     #Need at least one part to send!
     my $file_count = 0;
     if (-e $html_file) {
-       #print("\nFound html file.\n");	
-       $file_count++; 
+       #print("\nFound html file.\n");
+       $file_count++;
     }
     if (-e $txt_file) {
-       #print("\nFound txt file.\n");	
-   	$file_count++; 
+       #print("\nFound txt file.\n");
+   	$file_count++;
     }
 
     if ( $file_count == 0 ) {
         my @others = glob("$report_path/$report_subdir/*");
         $self->error_message(
             "Failed to find either text or html reports at the expected paths under $report_path/$report_subdir!"
-            . "\nFound:\n\t" . join("\n\t",@others) . "\n"            
+            . "\nFound:\n\t" . join("\n\t",@others) . "\n"
 	    . "Expected HTML report at: $html_file\n"
 	    . "Expected Text report at: $txt_file"
         );
         return;
     }
-    
-    $report_name =~ s/_/ /g; 
+
+    $report_name =~ s/_/ /g;
     my $subject = 'Genome Model '.$model->id.' "'.$model->name.'" '.$report_name.' Report for Build '.$build->id;
 
     $self->status_message("Sending email...");
@@ -188,7 +188,7 @@ $DB::single = 1;
 }
 
 sub send_mail {
-   
+
     my $self  = shift;
     my $subject = shift;
     my $msg_html = shift;
@@ -201,7 +201,7 @@ sub send_mail {
         my $sender = Mail::Sender->new(
                     {
                             smtp => 'gscsmtp.wustl.edu',
-                            to => $recipients, 
+                            to => $recipients,
                             from => 'apipe@genome.wustl.edu',
                             subject => $subject,
                             #debug => '/gscuser/ssmith/svn/pmr3/Genome/err.log',
@@ -215,25 +215,15 @@ sub send_mail {
         $sender->Part({ctype => 'multipart/alternative'});
 
         if (-e $msg_txt) {
-            my $msg_txt_contents = get_contents($msg_txt); 
+            my $msg_txt_contents = get_contents($msg_txt);
             $sender->Part({ctype => 'text/plain', disposition => 'NONE', msg => $msg_txt_contents})
         }
         if (-e $msg_html) {
             my $msg_html_contents = get_contents($msg_html);
             $sender->Part({ctype => 'text/html', disposition => 'NONE', msg => $msg_html_contents})
-        } 
+        }
 
         $sender->EndPart("multipart/alternative");
-
-        $sender->Attach(
-                    {
-                    description => 'gsc logo gif',
-                    ctype => 'image/jpeg',
-                    encoding => 'base64',
-                    disposition => "inline; filename=\"genome_center_logo.gif\";\r\nContent-ID: <img1>",
-                    file => '/gscmnt/839/info/medseq/images/genome_center_logo.gif'
-                    }
-        );
 
         $sender->Close;
     };
@@ -242,7 +232,7 @@ sub send_mail {
         $self->error_message("Error sending mail!: $@");
         return;
     }
-    
+
     return 1;
 }
 
@@ -261,18 +251,18 @@ sub get_contents {
 # TODO: move onto the build or report as a method
 sub _resolve_valid_report_class_for_build_and_name{
     my $self = shift;
-    
+
     my $build = shift;
     my $report_name = shift;
- 
-    my $report_class_suffix = 
+
+    my $report_class_suffix =
         join('',
-            map { ucfirst($_) } 
+            map { ucfirst($_) }
             split(" ",$report_name)
         );
 
     my @model_classes = (
-        grep { $_->isa('Genome::Model') and $_ ne 'Genome::Model' } 
+        grep { $_->isa('Genome::Model') and $_ ne 'Genome::Model' }
         map { $_, $_->inheritance }
         $build->model->get_class_object->class_name
     );
