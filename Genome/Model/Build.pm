@@ -652,12 +652,12 @@ sub get_all_objects {
 
     my $sorter = sub { # not sure why we sort, but I put it in a anon sub for convenience
         return unless @_;
-        if ( $_[0]->id =~ /^\-/) {
+        #if ( $_[0]->id =~ /^\-/) {
             return sort {$b->id cmp $a->id} @_;
-        } 
-        else {
-            return sort {$a->id cmp $b->id} @_;
-        }
+            #} 
+            #else {
+            #return sort {$a->id cmp $b->id} @_;
+            #}
     };
 
     return map { $sorter->( $self->$_ ) } (qw/ events inputs metrics /);
