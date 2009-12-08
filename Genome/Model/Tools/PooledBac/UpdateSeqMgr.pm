@@ -70,6 +70,8 @@ sub execute {
         system "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/.";
         #print "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.\n";
         system "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.";
+        #print "/bin/cp -rfL newbler_assembly/consed/sff_dir $seqmgr_link/.";
+        system "/bin/cp -rfL newbler_assembly/consed/sff_dir $seqmgr_link/.";
 
         #print $project_dir."/$clone_name","\n";
         #print "project name is ",$p->name,"\n";
