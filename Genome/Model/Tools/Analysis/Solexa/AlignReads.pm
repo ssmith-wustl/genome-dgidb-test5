@@ -49,9 +49,9 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command aligns reads to Hs36 (by default) after you've run load-reads
-EXAMPLE 1:	gt analysis solexa align-reads --flowcell_id 302RT --include-lanes 1,2,3,4 --output-dir output_dir --aligner bowtie
-EXAMPLE 2:	gt analysis solexa align-reads --sample-name H_GP-0365n --output-dir H_GP-0365n
-EXAMPLE 3:	gt analysis solexa align-reads --library-name H_GP-0365n-lib2 --output-dir H_GP-0365n
+EXAMPLE 1:	gmt analysis solexa align-reads --flowcell_id 302RT --include-lanes 1,2,3,4 --output-dir output_dir --aligner bowtie
+EXAMPLE 2:	gmt analysis solexa align-reads --sample-name H_GP-0365n --output-dir H_GP-0365n
+EXAMPLE 3:	gmt analysis solexa align-reads --library-name H_GP-0365n-lib2 --output-dir H_GP-0365n
 EOS
 }
 
@@ -164,9 +164,14 @@ sub execute {                               # replace with real execution logic.
 
 					## Get the read length ##
 					
-					my $seq = `head -2 $fastq_file1 | tail -1`;
-					chomp($seq);
-					my $read_len = length($seq);
+					my $seq1 = `head -2 $fastq_file1 | tail -1`;
+					chomp($seq1);
+					my $read_len1 = length($seq1);
+                         
+                         my $seq2 = `head -2 $fastq_file2 | tail -1`;
+                         chomp($seq2);
+                         my $read_len2 = length($seq2);
+					
 					## Run the alignment ##
 					
 					if($aligner eq "bowtie")
@@ -185,7 +190,7 @@ sub execute {                               # replace with real execution logic.
 					elsif($aligner eq "novoalign")
 					{
 						## Adjust for shorter reads ##
-						$novoalign_params = "-a" if($read_len <= 36);
+						$novoalign_params = "-a" if($read_len1 <= 36 && $read_len2 <= 36);
 						## Think about setting -l 50 for 75 bp reads
 						## Launch SE ##
 						my $reference = $novoalign_reference;
@@ -201,7 +206,7 @@ sub execute {                               # replace with real execution logic.
 
 						## Novoalign PE ##
 
-						print "$fastq_file1 $fastq_file2\t$read_len bp\tnovoalign PE\n";
+						print "$fastq_file1 $fastq_file2\t$read_len1 bp\tnovoalign PE\n";
 						my $alignment_outfile = $alignment_dir . "/s_" . $lane . "_sequence.$aligner";
 
 						system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile.log \"$path_to_novoalign $novoalign_params -d $reference -f $fastq_file1 $fastq_file2 >$alignment_outfile\"");
