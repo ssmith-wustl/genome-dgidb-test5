@@ -7,6 +7,9 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use File::Basename;
+use Bio::SeqIO;
+use Bio::SearchIO;
 
 class Genome::Model::Tools::ViromeEvent::BlastHumanGenome::ParseOutput{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -40,187 +43,102 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
+
     my $dir = $self->dir;
-    $self->log_event("Blast Human Genome parse output entered");
-    my @temp_dir_arr = split("/", $dir);
-    my $lib_name = $temp_dir_arr[$#temp_dir_arr];
+    my $sample_name = basename ($dir);
 
-    my $allFinished = 1;
-    my $have_input_file = 0;
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    foreach my $name (readdir DH) 
-    {
-        if ($name =~ /goodSeq_HGblast$/) 
-        { # Human Genome blast directory
-	    my $full_path = $dir."/".$name;
-            opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-            $self->log_event("opened $full_path, now checking for entries");
-	    foreach my $file (readdir SubDH) 
-            {
-                $self->log_event("checking $file");
-	        if ($file =~ /\.HGblast\.out$/) 
-                {
-		    $have_input_file = 1;
-		    my $have_blastn_parsed = 0;
-        	    my $finished = 0;
+    my $hg_blast_dir = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq_HGblast';
+    unless (-d $hg_blast_dir) {
+	$self->log_event("Failed to find HG blastN output dir for $sample_name");
+	return;
+    }
+    my @fa_files = glob("$hg_blast_dir/*fa");
+    foreach my $file (@fa_files) {
+	next if $file =~ /HGfiltered\.fa$/; #ALREADY RAN BLAST OUT FILES IF PRESENT
+	my $root = $file;
+	$root =~ s/\.fa$//;
+	my $blast_out = $root.'.HGblast.out';
+	my $blast_parse = $root.'.HGblast.parsed';
+	my $blast_filtered = $root.'.HGfiltered.fa';
+	my $blast_out_file_name = basename($blast_out);
 
-		    my $temp_name = $file;
-		    $temp_name =~ s/\.HGblast\.out//;
-		    my $blastn_parsed_file = $full_path."/".$temp_name.".HGblast.parsed";
-		    if (-s $blastn_parsed_file) 
-                    {
-		        $have_blastn_parsed = 1;
-		        open (TEMP, "<$blastn_parsed_file") or die "can not open file $blastn_parsed_file!\n";
-		        while (my $line = <TEMP>) 
-                        {
-			    if ($line =~ /# Summary/) 
-                            {
-			        $finished = 1;
-			    }
-		        }
-		    }
-		
-		    if ((!$have_blastn_parsed)||(!$finished)) 
-                    {
-		        $allFinished = 0;	
-                        $self->run_parser($full_path,$file);
-		    }
-	        }
+	unless (-s $blast_out) { #SHOULD HAVE BEEN CREATED IN PREVIOUS STEP
+	    $self->log_event("Failed to find HG blastN out file for $file");
+	    return;
+	}
+	if (-s $blast_parse && -s $blast_filtered){
+	    #PARSE BLAST OUT FILE ALREADY DONE
+	    my $out = `tail -n 3 $blast_parse`;
+	    if ($out =~ /\s+Summary:/) {
+		$self->log_event("Parsing $blast_out_file_name already done");
+		next;
 	    }
-        }
+	}
+
+	unlink $blast_parse if -s $blast_parse;
+	unlink $blast_filtered if -s $blast_filtered;
+
+	$self->log_event("Parsing $blast_out_file_name");
+
+	#GET READ NAMES THAT WILL NOT BE KEPT
+	my $filtered_reads = $self->parse_blast_file($blast_out);
+	unless (scalar @$filtered_reads > 0) {
+	    $self->log_event("Warning: No reads filtered for ".basename($blast_out));
+	    next;
+	}
+
+	my $out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$blast_filtered");
+	my $in_io = Bio::SeqIO->new(-format => 'fasta', -file => $file);
+
+	while (my $seq = $in_io->next_seq) {
+	    my $read_name = $seq->primary_id;
+	    unless (grep (/^$read_name$/, @$filtered_reads)) {
+		$out_io->write_seq($seq);
+	    }
+	}
+
+	unless (-s $blast_filtered) {
+	    $self->log_event("Failed to correctly parse $blast_out_file_name");
+	    return;
+	}
     }
 
-
-    if ($have_input_file) 
-    {
-        if ( $allFinished) 
-        {
-	   $self->log_event ("parsing blast Human Genome all finished ");
-        }
-    }
-    else 
-    {
-        $self->log_event ("$dir does not have input file!");
-    }
-
-    $self->log_event("Blast Human Genome parse output completed");
     return 1;
 }
 
-sub run_parser()
-{ 
-    my ($self, $dir, $blastout) = @_;
-
-    # cutoff value for having a good hit, 1e-10 is a value that gives reasonable confidence
-    my $E_cutoff = 1e-10;
-
-    # create ouput file
-    my $outFile = $blastout;
-    $outFile =~ s/HGblast\.out/HGblast.parsed/;
-    $outFile = $dir."/".$outFile;
-    open (OUT, ">$outFile") or die "can not open file $outFile!\n";
-
-    my @keep = (); # query should be kept for further analysis
-    my @known = (); # queries that are significantly similar to human sequences
-    my $total_records = 0;
-
-    $self->log_event("parsing blast output files for $blastout...");
-
-    my $input_file = $dir."/".$blastout;
-    my $report = new Bio::SearchIO(-format => 'blast', -file => $input_file, -report_type => 'blastn');
-
-    # Go through BLAST reports one by one        
-    while(my $result = $report->next_result) 
-    {# next query output
-	$total_records++;
-	my $haveHit = 0;
-	my $keep = 1;
-	while(my $hit = $result->next_hit) {
-		$haveHit = 1;
-		# check whether the hit should be kept for further analysis
-		if ($hit->significance <= $E_cutoff) {
-			$keep = 0;	
-			print OUT $result->query_name, "\t", $result->query_length, "\tHomo\tHomo\t".$hit->name."\t".$hit->significance,"\n";
-
-		}
-		last; # only look at the first hit
-	}
-
-	if ($haveHit) {
-		if ($keep) {
-			push @keep, $result->query_name;
-		}	
-		else {		
-			push @known, $result->query_name;
-		}
-	}
-	else { # does not have a hit
-		push @keep, $result->query_name;
-	}	
-
-   } 
-   print OUT "# Summary: ", scalar @keep, " out of $total_records ", scalar @keep/$total_records, " is saved for BLASTN analysis.\n";
-
-    close OUT;
-
-    # generate a fasta file that contains all the sequences that do not match
-    # to human sequences
-    # read in blastn input sequences
-    my $file = $blastout;
-    $file =~ s/\.HGblast\.out//;
-    $file = $dir."/".$file.".fa";
-    my %seq = $self->read_FASTA_data($file);
-
-    $outFile = $blastout;
-    $outFile =~ s/\.HGblast\.out//;
-    $outFile = $dir."/".$outFile.".HGfiltered.fa";
-    open (OUT2, ">$outFile") or die "can not open file $outFile!\n";
-    foreach my $seq_name (@keep) {
-	print OUT2 ">$seq_name\n";
-	print OUT2 $seq{$seq_name}, "\n";
+sub parse_blast_file {
+    my ($self, $blast_file) = @_;
+    my $parse_out_file = $blast_file;
+    $parse_out_file =~ s/out$/parsed/;
+    my $parse_out_fh = IO::File->new(">$parse_out_file") ||
+	die "Can not create file handle for parsing blast out file";
+    my $report = Bio::SearchIO->new(-format => 'blast', -report_type => 'blastn', -file => $blast_file);
+    unless ($report) {
+	$self->log_event("Failed create report IO for $blast_file");
+	return;
     }
-    close OUT2;
-}
+    my @filtered_reads; #READS THAT WILL NOT BE KEPT
+    my $e_cutoff = 1e-10;
+    my $read_count = 0;
+    while (my $result = $report->next_result) {
+	$read_count++;
+	while (my $hit = $result->next_hit) {
+	    if ($hit->significance <= $e_cutoff) {
+		$parse_out_fh->print ( $result->query_name."\t".
+				       $result->query_length."\tHomo\tHomo\t".
+				       $hit->name."\t".$hit->significance."\n" );
 
-sub read_FASTA_data () {
-    my ($self,$fastaFile) = @_;
-
-    #keep old read seperator and set new read seperator to ">"
-    my $oldseperator = $/;
-    $/ = ">";
-	 
-    my %fastaSeq;	 
-    open (fastaFile, $fastaFile) or die "Can't Open FASTA file: $fastaFile";
-
-    while (my $line = <fastaFile>){
-	# Discard blank lines
-        if ($line =~ /^\s*$/) {
-	    next;
-	}
-	# discard comment lines
-	elsif ($line =~ /^\s*#/) {
-	       next;
-	   }
-	# discard the first line which only has ">", keep the rest
-	elsif ($line ne ">") {
-	    chomp $line;
-	    my @rows = ();
-	    @rows = split (/\s/, $line);	
-	    my $contigName = shift @rows;
-	    my $contigSeq = join("", @rows);
-	    $contigSeq =~ s/\s//g; #remove white space
-	    $fastaSeq{$contigName} = $contigSeq;
+		push @filtered_reads, $result->query_name;
+		last; #ONLY LOOKING AT THE THE FIRST HIT
+	    }
 	}
     }
-
-    #reset the read seperator
-    $/ = $oldseperator;
-    
-    return %fastaSeq;
+    my $keep_reads = $read_count - scalar @filtered_reads;
+    $parse_out_fh->print('# Summary: '. $read_count - scalar @filtered_reads." out of $read_count is saved for BLASTN analysis\n");
+    $parse_out_fh->close;
+    return \@filtered_reads;
 }
 
 1;
-
