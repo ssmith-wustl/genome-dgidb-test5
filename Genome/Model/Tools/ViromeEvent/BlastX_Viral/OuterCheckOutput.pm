@@ -7,6 +7,7 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::BlastX_Viral::OuterCheckOutput{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -43,42 +44,44 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
+
     my $dir = $self->dir;
+    my $sample_name = basename($dir);
 
-    my @temp_dir_arr = split("/", $dir);
-    my $lib_name = $temp_dir_arr[$#temp_dir_arr];
-    $self->log_event("Outer BlastX Viral entered for $lib_name");
+    $self->log_event("Preparing to run Viral NT blastX for $sample_name");
 
-    my $allFinished = 1;
-    my $have_input_file = 0;
-    my @files_for_blast;
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    foreach my $name (readdir DH) 
-    {
-        if ($name =~ /TBXNTFiltered_TBLASTX_ViralGenome$/) 
-        { # directory for tblastx viral genome with splited files
-	    my $full_path = $dir."/".$name;
-    	    opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-	    foreach my $file (readdir SubDH) 
-            { 
-	        if ($file =~ /\.TBXNTFiltered\.fa_file\d+\.fa$/) 
-                { # masked unique sequences in splited files
-		    my $inF_path = $full_path."/".$file;
-                    $self->log_event("pushing $file in files for blastx viral");
-                    push(@files_for_blast, $inF_path);
-                }
-	    }
-        }
+    my $blast_dir = $dir.'/'.$sample_name.'.TBXNTFiltered_TBLASTX_ViralGenome';
+    unless (-d $blast_dir) {
+	$self->log_event("Failed to find Viral blastX directory for $sample_name");
+	return;
     }
+
+    my @fa_files = glob("$blast_dir/*fa");
+    unless (scalar @fa_files > 0) {
+	$self->log_event("No fasta files found to run Viral blastX for $sample_name");
+	return;
+    }
+
+    my @files_for_blast;
+
+    foreach my $fa (@fa_files) {
+	next unless $fa =~ /file\d+\.fa$/;
+	push @files_for_blast, $fa;
+    }
+
+    unless (scalar @files_for_blast > 0) {
+	$self->log_event("Failed to find or no data available to run Viral blastX for $sample_name");
+	return;
+    }
+
     $self->files_for_blast(\@files_for_blast);
 
-    $self->log_event("Outer BlastX Viral completed for $lib_name");
+    $self->log_event("Finished checking files to run Viral blastX for $sample_name");
+
     return 1;
 }
-
 
 1;
 
