@@ -46,48 +46,38 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    my $file = $self->file_to_run;
-    my $full_path = dirname($file);
-    my $file_name = basename($file);
-    my $com;
 
-    $self->log_event("inner check entered for $file_name");
+    my $input_file = $self->file_to_run;
+    my $input_file_name = basename($input_file);
 
-    		    my $resubmit = 0;
-		    my $temp = substr($file, 0, -3);
-		
-#		    my $blast_out_file = $full_path."/".$temp.".blastn.out";
-		    my $blast_out_file = $temp.".blastn.out";
-		    if (!(-s $blast_out_file)) 
-                    {
-                        $self->log_event("\t no size for $blast_out_file");
-		        $resubmit = 1;
-		    }
-		    else 
-                    {# has the output, check whether finished
-		        my $com = "tail -n 50 $blast_out_file";
-		        my $output = qx/$com/;
-		        if (!($output =~ /Matrix:/)) 
-                        {
-			    $resubmit = 1;
-		        }
-		    }
+    $self->log_event("Checking NT blastN run status for $input_file_name");
 
-		    if ($resubmit) 
-                    {
-                        my $str = $temp;	
-		        my $blast_param = '-d /gscmnt/sata835/info/medseq/virome/blast_db/nt/2009_07_09.nt';
-		        my $com = 'blastall -p blastn -e 1e-8 -I T -i '.$str.'.fa -o '.$str.'.blastn.out '.$blast_param;
-		        $self->log_event("resubmitting $com"); 
-                        system($com);
-		    }
-    $self->log_event("inner check completed for $file_name");
+    my $blast_out_file = $input_file;
+    $blast_out_file =~ s/fa$/blastn\.out/; #TODO - CAREFUL HERE
+    my $blast_out_file_name = basename($blast_out_file);
+
+    if (-s $blast_out_file) {
+	my $tail = `tail -n 50 $blast_out_file`;
+	if ($tail =~ /Matrix/) {
+	    $self->log_event("NT blastN already ran for $input_file_name");
+	    return 1;
+	}
+    }
+    $self->log_event("Running NT blastN for $input_file_name");
+
+    my $blast_db = '/gscmnt/sata835/info/medseq/virome/blast_db/nt/2009_07_09.nt';
+    my $cmd = 'blastall -p blastn -e 1e-8 -I T -i '.$input_file.' -o '.$blast_out_file.' -d '.$blast_db;
+
+    if (system ($cmd)) {
+	$self->log_event("NT blastN failed for $input_file_name");
+	return;
+    }
+
+    $self->log_event("NT blastN completed for $input_file_name");
+
     return 1;
 }
 
-
 1;
-
