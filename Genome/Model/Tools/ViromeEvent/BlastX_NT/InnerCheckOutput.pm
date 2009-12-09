@@ -51,53 +51,39 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    my $file = $self->file_to_run;
-    my $full_path = dirname($file);
-    my $file_name = basename($file);
-    my $com;
 
-    $self->log_event("inner check entered for $file_name");
+    my $input_file = $self->file_to_run;
+    my $input_file_name = basename($input_file);
 
-		    my $resubmit = 0;
-    		    my $temp = substr($file, 0, -3);
-		    my $job_file=$full_path."/".$temp.".job";
-#		    my $blast_out_file = $full_path."/".$temp.".tblastx.out";
-		    my $blast_out_file = $temp.".tblastx.out";
-		    if (!(-s $blast_out_file)) 
-                    {
-		        $resubmit = 1;
-		    }
-		    else 
-                    { # has the output, check whether finished
-		        my $com = "tail -n 50 $blast_out_file";
-		        my $output = qx/$com/;
-		        if (!($output =~ /Matrix:/)) 
-                        {
-			    $resubmit = 1;
-		        }
-		    }
-		
-		    if ($resubmit) 
-                    {
-		        $self->log_event($blast_out_file . " does not exist or finish! resubmitted");
-		    
-		        my $temp = substr($file, 0, -3);
-                        #my $str = $full_path."/".$temp;	
-                        my $str = $temp;
+    $self->log_event("Checking NT blastX run status for $input_file_name");
 
-		        my $blast_param = '-d /gscmnt/sata835/info/medseq/virome/blast_db/nt/2009_07_09.nt';
-		        my $com = 'blastall -p tblastx  -i '.$str.'.fa -o '.$str.'.tblastx.out -e 1e-2 -I T '.$blast_param;
-                        $self->log_event("calling $com");
-                        system($com);
-		    }
-       $self->log_event("inner check completed for $file_name");
+    my $blast_out_file = $input_file;
+    $blast_out_file =~ s/fa$/tblastx\.out/;
+    my $blast_out_file_name = basename($blast_out_file);
+
+    if (-s $blast_out_file) {
+	my $tail = `tail -n 50 $blast_out_file`;
+	if ($tail =~ /Matrix/) {
+	    $self->log_event("NT blastX already ran for $input_file_name");
+	    return 1;
+	}
+    }
+
+    $self->log_event("Running NT blastX for $input_file_name");
+
+    my $blast_db = '/gscmnt/sata835/info/medseq/virome/blast_db/nt/2009_07_09.nt';
+    my $cmd = 'blastall -p tblastx -e 1e-2 -I T -i '.$input_file.' -o '.$blast_out_file.' -d '.$blast_db;
+
+    if (system($cmd)) {
+	$self->log_event("NT blastX failed for $input_file_name");
+	return;
+    }
+
+    $self->log_event("NT blastX completed for $input_file_name");
     return 1;
-}
-
-
+};
 
 1;
 
