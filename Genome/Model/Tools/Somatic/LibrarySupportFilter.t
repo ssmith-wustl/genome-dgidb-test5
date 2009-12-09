@@ -18,6 +18,7 @@ BEGIN {
 my $indel_file = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-LibrarySupportFilter/sniper.indels.txt";
 
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-Somatic-LibrarySupportFilter-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+$test_output_dir .= '/';
 
 my $multi_lib_output_file = $test_output_dir . "multi_lib.output.txt";
 my $single_lib_output_file = $test_output_dir . "single_lib.output.txt";
