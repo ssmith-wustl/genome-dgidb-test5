@@ -75,8 +75,8 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt somatic sniper -tumor tumor.bam -normal normal.bam --output-snp-file snps.out --output-indel-file indels.out
-gmt somatic sniper -tumor tumor.bam -normal normal.bam --output-snp-file snps.out --output-indel-file indels.out -q 10
+gmt somatic sniper --tumor tumor.bam --normal normal.bam --output-snp-file snps.out --output-indel-file indels.out
+gmt somatic sniper --tumor tumor.bam --normal normal.bam --output-snp-file snps.out --output-indel-file indels.out -q 10
 EOS
 }
 
