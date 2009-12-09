@@ -7,7 +7,7 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
-
+use File::Basename;
 class Genome::Model::Tools::ViromeEvent::RepeatMasker::RemoveFile{
     is => 'Genome::Model::Tools::ViromeEvent',
 };
@@ -39,44 +39,37 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
+
     my $dir = $self->dir;
+    my $sample_name = basename ($dir);
 
-    $self->log_event("Repeat Masker remove file entered for $dir");
+    $self->log_event("Removing unnecessary files for sample: $sample_name");
 
-    my $allFinished = 1;
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    foreach my $name (readdir DH) {
-        if ($name =~ /.cdhit_out_RepeatMasker$/) { # RepeatMasker directory
-	    my $full_path = $dir."/".$name;
-        	opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-	        foreach my $file (readdir SubDH) {
-        	    if ($file =~ /\.cdhit_out_file\d+\.fa$/) {
-	        	my $have_masked = 0;
-		        my $have_other = 0;
-		
-        		my $tempfile = $full_path."/".$file.".tbl";
-        		if (-e $tempfile) {unlink $tempfile};
-    		
-        		$tempfile = $full_path."/".$file.".cat";
-        		if (-e $tempfile) {unlink $tempfile};
-		
-        		$tempfile = $full_path."/".$file.".out";
-        		if (-e $tempfile) {
-        		    unlink $tempfile;
-	        	};
-        	    }
-        	}
-            }
+    my $repeat_masker_dir = $dir.'/'.$sample_name.'.fa.cdhit_out_RepeatMasker';
+    unless (-d $repeat_masker_dir) {
+        $self->log_event("Failed to find repeat masker dir for sample: $sample_name");
+        return;
     }
 
-    $self->log_event("Repeat Masker remove file completed");
+    my @fastas = glob ("$repeat_masker_dir/$sample_name*.fa");
+    unless (scalar @fastas > 0) {
+        $self->log_event("No input fastas for repeat masker run found for sample: $sample_name");
+        return;
+    }
+ 
+    foreach my $file (@fastas) {
+	unlink $file.'.cat' if -e $file.'.cat';
+	unlink $file.'.tbl' if -e $file.'.tbl';
+	unlink $file.'.ref' if -e $file.'.ref';
+	unlink $file.'.out' if -e $file.'.out';
+    }
+
+    $self->log_event("Remove unnecessary file for $sample_name completed");
 
     return 1;
 }
-
 
 1;
 
