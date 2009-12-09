@@ -7,6 +7,8 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use File::Basename;
+use File::Copy;
 
 class Genome::Model::Tools::ViromeEvent::RepeatMasker::OuterCheckResult{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -46,72 +48,48 @@ sub execute
 {
     my $self = shift;
 
-    $self->log_event("Outer check result entered");
     my $dir = $self->dir;
+    my $sample_name = basename ($dir);
 
-    my @temp_dir_arr = split("/", $dir);
-    my $lib_name = $temp_dir_arr[$#temp_dir_arr];
-    my $directory_job_file = $dir."/".$lib_name.".job";
+    $self->log_event("Checking files to run repeat masker for sample: $sample_name");
 
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    my @files_to_run;
-    foreach my $name (readdir DH) 
-    {
-        if ($name =~ /.cdhit_out_RepeatMasker$/) 
-        { # RepeatMasker directory
-	    my $full_path = $dir."/".$name;
-	    opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-            $self->log_event("step 2 $name matches cdhit_out_RepeatMasker opening $full_path");
-	    foreach my $file (readdir SubDH) 
-            {
-	        if ($file =~ /\.cdhit_out_file\d+\.fa$/) 
-                {
-		    my $have_masked = 0;
-		    my $have_other = 0;
-
-		    my $tempfile = $full_path."/".$file.".out";
-		    if (-e $tempfile) 
-                    {
-		        $have_other = 1;
-		    }
-
-		    $tempfile = $full_path."/".$file.".masked";
-		    if (-e $tempfile) 
-                    {
-		        $have_masked = 1;
-		    }
-		
-		    if (!$have_masked) 
-                    {
-		        if (!$have_other) 
-                        {
-			    my $inF_path = $full_path."/".$file;
-                            $self->log_event("pushing $inF_path");
-                            push(@files_to_run, $inF_path);
-
-                            # sometimes repeatmasker do not find any repeat in 
-		            # input files, in these cases no .masked file will 
-			    # be generated.
-                        }
-		        else 
-                        { 
-                            $self->log_event("running original repeat masker on $file");
-			    my $original = $full_path."/".$file;
-			    my $target = $original.".masked";
-			    my $com = "cp $original $target \n";
-			    system ( $com );
-		        }
-		    }
-	        }
-	    }
-        }
+    my $repeat_masker_dir = $dir.'/'.$sample_name.'.fa.cdhit_out_RepeatMasker';
+    unless (-d $repeat_masker_dir) {
+	$self->log_event("Failed to find repeat masker dir for sample: $sample_name");
+	return;
     }
-    $self->log_event("files to run:  " . join("\n", @files_to_run)); 
-    $self->files_to_run(\@files_to_run);
 
-    $self->log_event("Outer check result completed");
+    my @fastas = glob ("$repeat_masker_dir/$sample_name*.fa");
+    unless (scalar @fastas > 0) {
+	$self->log_event("No input fastas for repeat masker run found for sample: $sample_name");
+	return;
+    }
+
+    my @files_to_run;
+    foreach my $file (@fastas) {
+	my $out_file = $file.'.out';
+	my $mask_file = $file.'.masked';
+	if (! -s $out_file && ! -s $mask_file) {
+	    #RUN REPEAT MASKER
+	    push @files_to_run, $file;
+	}
+	elsif (! -s $mask_file) {
+	    #REPEAT MASKER RAN WITH NO REPEATS
+	    #COPY THE ORIGINAL FASTA TO .MASKED
+	    copy $file, $mask_file;
+	}
+	else {
+	    #REPEAT MASKER RAN
+	    next;
+	}
+    }
+
+    $self->files_to_run(\@files_to_run);
+    $self->log_event("Completed check to run repeat masker for sample: $sample_name");
+
     return 1;
 }
 
-1;
+
+1
 
