@@ -7,6 +7,7 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::CDHIT::RemoveFile{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -38,25 +39,17 @@ sub create {
 
 }
 
-sub execute
-{
+#THIS COULD BE DONE IN CHECKRESULT MODULE
+#SUBMIT THIS TO SHORT QUEUE
+sub execute {
     my $self = shift;
     my $dir = $self->dir;
-
-    opendir(DH, $dir) or die "Cannot open dir $dir!\n";
-    foreach my $file (readdir DH) 
-    { 
-	if ($file =~ /\.bak\.clstr$/) 
-        {
-		my $tempfile = $dir."/".$file;
-		if (-s $tempfile) 
-                {
-		    print "Removing $tempfile from $dir\n";
-		}
-		unlink $tempfile;
-	}
+    my $sample_name = basename($dir);
+    foreach (glob ("$dir/*.bak.clstr")) {
+	unlink $_;
     }
-    $self->log_event("CDHIT Remove File complete for $dir");
+    
+    $self->log_event("Removed temp files for sample: $sample_name");
     return 1;
 }
 
