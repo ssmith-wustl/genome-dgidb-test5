@@ -24,7 +24,7 @@ use Genome;                                 # using the namespace authorizes Cla
 my $min_coverage = 8;
 my $min_reads2 = 2;
 my $min_strands2 = 1;
-my $min_var_freq = 0.10;
+my $min_var_freq = 0.02;#0.10;
 my $min_p_value = 1.0E-06;
 my %dbsnp_variants = ();
 
@@ -246,7 +246,8 @@ sub execute {                               # replace with real execution logic.
 
 #	if(!(-e $compared_snps_status))
 #	{
-		my $cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_snps . " " . $compared_snps_status;		
+		#my $cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_snps . " " . $compared_snps_status . " --min-var-freq " . $min_var_freq;		
+		my $cmd = call_sammy() . "newsomatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_snps_status . " --min-var-freq " . $min_var_freq;		
 		system($cmd);
 #	}
 
