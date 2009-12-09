@@ -5,6 +5,7 @@ use warnings;
 
 use above "Genome";
 use Test::More tests => 7;
+use File::Compare;
 
 BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -39,8 +40,7 @@ ok($filter_loh->execute(), 'executed FilterLOH object');
 ok(-s $output_file, 'generated output file');
 ok(-s $loh_output_file, 'generated LOH output file');
 
-my $output_diff = `diff $expected_out_file $output_file`;
-ok(!$output_diff, 'Output matched expected results');
+is(compare($expected_out_file, $output_file), 0, 'Output matched expected results');
 
 my $loh_diff = `diff $expected_loh_file $loh_output_file`;
-ok(!$loh_diff, 'LOH output matched expected results');
+is(compare($expected_loh_file, $loh_output_file), 0, 'LOH output matched expected results');
