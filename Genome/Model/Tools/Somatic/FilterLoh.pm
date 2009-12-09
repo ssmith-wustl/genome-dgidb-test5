@@ -50,8 +50,8 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt somatic filter-loh -t tumor.snp -n normal.snp -o non_loh.out
-gmt somatic filter-loh -t tumor.snp -n normal.snp --output non_loh.out --loh-output loh.out  
+gmt somatic filter-loh --tumor tumor.snp --normal normal.snp -o non_loh.out
+gmt somatic filter-loh --tumor tumor.snp --normal normal.snp --output non_loh.out --loh-output loh.out  
 EOS
 }
 
