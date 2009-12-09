@@ -16,9 +16,4 @@ my $co = Genome::Model::Tools::ViromeEvent::BlastN::OuterCheckOutput->create(
                                                             );
 isa_ok($co, 'Genome::Model::Tools::ViromeEvent::BlastN::OuterCheckOutput');
 $co->execute();
-my $arr = $co->files_for_blast;
-print @$arr;
-foreach my $file(@$arr)
-{
-   print "$file\n" ;
-}
+
