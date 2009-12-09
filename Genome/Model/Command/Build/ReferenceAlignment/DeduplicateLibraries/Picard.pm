@@ -110,6 +110,7 @@ sub execute {
         files_to_merge => \@bam_files,
         merged_file => $merged_file,
         is_sorted => 1,
+        bam_index => 0,
         software => $merge_software,
         use_version => $samtools_version,
         use_picard_version => $rmdup_version,
@@ -159,29 +160,20 @@ sub execute {
         $self->error_message("Check parameters and permissions in the RUN command above.");
         return;
     }
-   
-    #rename the index file to match the final markdup file name
-    my @index_names = <$alignments_dir/*.bai>;
-  
-    if (scalar(@index_names) eq 1) { 
-        my $index_name = $index_names[0];
-        my $new_index_name = $bam_merged_output_file.".bai";
-        my $rename_rv = rename($index_name,$new_index_name);
-        if ($rename_rv eq 1) {
-            $self->status_message("Rename of index from $index_name to $new_index_name is successful");
-        } 
-        else {
-            $self->error_message("Rename of index from $index_name to $new_index_name has failed.");
-            #not failing here because this is not a critical error.  this can be renamed manually if needed.
-        } 
-    } 
-    else {
-        $self->error_message("Could not find an appropriate index file to rename.  Doing nothing.");
-        #not failing here because this is not a critical error.  this can be regenerated manually if needed.
-    }
 
     $now = UR::Time->now;
     $self->status_message("<<< Completing MarkDuplicates at $now.");
+
+    #generate the bam index file
+    my $index_cmd = Genome::Model::Tools::Sam::IndexBam->create(
+        bam_file => $bam_merged_output_file
+    );
+    my $index_cmd_rv = $index_cmd->execute;
+    
+    $self->warning_message("Failed to create bam index for $bam_merged_output_file")
+        unless $index_cmd_rv == 1;
+    #not failing here because this is not a critical error.  this can be regenerated manually if needed.
+
     $self->status_message("*** All processes completed. ***");
 
     return $self->verify_successful_completion();

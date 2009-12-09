@@ -28,7 +28,7 @@ class Genome::Model::Tools::Sam::Merge {
             is  => 'Integer',
             doc => 'Denoting whether the input data is chrom position sorted (1/0)  Default 0',
             default_value => 0,
-	    is_optional => 1
+	        is_optional => 1
         },
         software => {
             is => 'Text',
@@ -36,6 +36,12 @@ class Genome::Model::Tools::Sam::Merge {
             valid_values => ['picard', 'samtools'],
             doc => 'the software tool to use for merging BAM files.  defualt_value=>picard',
         },
+        bam_index => {
+            is  => 'Boolean',
+            doc => 'flag to create bam index or not',
+            is_optional   => 1,
+            default_value => 1,
+        }
     ],
 };
 
@@ -103,15 +109,16 @@ sub execute {
     my $bam_index_tool = $sam_path.' index';
 
     if (scalar(@files) == 1) {
-       $self->status_message("Only one input file has been provided.  Simply sorting the input file (if necessary) and dropping it at the requested target location.");
- 	if ($self->is_sorted) {
+        $self->status_message("Only one input file has been provided.  Simply sorting the input file (if necessary) and dropping it at the requested target location.");
+ 	    if ($self->is_sorted) {
             my $cp_cmd = sprintf("cp %s %s", $files[0], $result);
             my $cp_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cp_cmd, input_files=>\@files, output_files=>[$result], skip_if_output_is_present=>0);
             if ($cp_rv != 1) {
                 $self->error_message("Bam copy error.  Return value: $cp_rv");
                 return;
             }
-	} else {
+	    } 
+        else {
             # samtools sort adds a ".bam" to the end so snap that off for the output file location passed into merge.
             my ($tgt_file) = $result =~ m/(.*?)\.bam$/;
             my $sam_sort_cmd = sprintf("%s sort %s %s", $self->samtools_path, $files[0],  $tgt_file);
@@ -120,65 +127,73 @@ sub execute {
                 $self->error_message("Bam sort error.  Return value $sam_sort_rv");
                 return;
             }
-	}
-    } else {
-	my @input_sorted_fhs;
-	my @input_files;
-	if (!$self->is_sorted) {
-	    foreach my $input_file (@files) {
-		my $dirname = dirname($input_file);
-		print "Using $dirname\n";
-	        my $tmpfile = File::Temp->new(DIR=>$dirname, SUFFIX => ".sort_tmp.bam" );
-	        my ($tgt_file) = $tmpfile->filename =~ m/(.*?)\.bam$/;
-	        my $sam_sort_cmd = sprintf("%s sort %s %s", $self->samtools_path, $input_file,  $tgt_file);
-	        my $sam_sort_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$sam_sort_cmd, input_files=>[$input_file], output_files=>[$tmpfile->filename], skip_if_output_is_present=>0);
-	        if ($sam_sort_rv != 1) {
-	           	$self->error_message("Bam sort error.  Return value $sam_sort_rv");
-	           	return;
-	        }
-	        push @input_sorted_fhs, $tmpfile;   
-	    }
-	    @input_files = map {$_->filename} @input_sorted_fhs;
-	} else {
-	    @input_files = @files;
-	}
+        }
+    } 
+    else {
+	    my @input_sorted_fhs;
+	    my @input_files;
+	    if (!$self->is_sorted) {
+	        foreach my $input_file (@files) {
+		        my $dirname = dirname($input_file);
+		        print "Using $dirname\n";
+	            my $tmpfile = File::Temp->new(DIR=>$dirname, SUFFIX => ".sort_tmp.bam" );
+	            my ($tgt_file) = $tmpfile->filename =~ m/(.*?)\.bam$/;
+	            my $sam_sort_cmd = sprintf("%s sort %s %s", $self->samtools_path, $input_file,  $tgt_file);
+	            my $sam_sort_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$sam_sort_cmd, input_files=>[$input_file], output_files=>[$tmpfile->filename], skip_if_output_is_present=>0);
+	            if ($sam_sort_rv != 1) {
+	           	    $self->error_message("Bam sort error.  Return value $sam_sort_rv");
+	           	    return;
+	            }
+	            push @input_sorted_fhs, $tmpfile;   
+            }
+	        @input_files = map {$_->filename} @input_sorted_fhs;
+        } 
+        else {
+	        @input_files = @files;
+        }
 
         my $bam_merge_cmd = $self->merge_command(@input_files);
-	$self->status_message("Bam merge command: $bam_merge_cmd");
+	    $self->status_message("Bam merge command: $bam_merge_cmd");
 
-	my $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_merge_cmd,
+	    my $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_merge_cmd,
 								 input_files=>\@input_files,
 								 output_files=>[$result],
 								 skip_if_output_is_present=>0
 								);
-	$self->status_message("Bam merge return value: $bam_merge_rv");
-	if ($bam_merge_rv != 1) {
-		$self->error_message("Bam merge error!  Return value: $bam_merge_rv");
-	} else {
+	    $self->status_message("Bam merge return value: $bam_merge_rv");
+	    if ($bam_merge_rv != 1) {
+		    $self->error_message("Bam merge error!  Return value: $bam_merge_rv");
+	    } 
+        else {
 		#merging success
-		$self->status_message("Success.  Files merged to: $result");
-	}
+		    $self->status_message("Success.  Files merged to: $result");
+	    }
     }
 
-    my $bam_index_rv;
-    if (defined $result) {
-        $self->status_message("Indexing file: $result");
-        my $bam_index_cmd = $bam_index_tool ." ". $result;
-        #$bam_index_rv = system($bam_index_cmd);
-        $bam_index_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_index_cmd,
-                                                              input_files=>[$result],
-                                                              output_files=>[$result.".bai"],
-							      skip_if_output_is_present=>0
-                                                             );
-        unless ($bam_index_rv == 1) {
+    if ($self->bam_index) {
+        my $bam_index_rv;
+        if (defined $result) {
+            $self->status_message("Indexing file: $result");
+            my $bam_index_cmd = $bam_index_tool ." ". $result;
+            #$bam_index_rv = system($bam_index_cmd);
+            $bam_index_rv = Genome::Utility::FileSystem->shellcmd(
+                cmd          => $bam_index_cmd,
+                input_files  => [$result],
+                output_files => [$result.".bai"],
+				skip_if_output_is_present => 0,
+            );
+            unless ($bam_index_rv == 1) {
                 $self->error_message("Bam index error!  Return value: $bam_index_rv");
-        } else {
+            } 
+            else {
                 #indexing success
                 $self->status_message("Bam indexed successfully.");
+            }
         }
-    }  else {
-        #no final file defined, something went wrong
-        $self->error_message("Can't create index.  No merged file defined.");
+        else {
+            #no final file defined, something went wrong
+            $self->error_message("Can't create index.  No merged file defined.");
+        }
     }
 
     $now = UR::Time->now;

@@ -79,20 +79,11 @@ sub calculate_estimated_kb_usage {
 sub consensus_directory {
     my $self = shift;
     return $self->data_directory .'/consensus';
-
 }
+
 sub _consensus_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/consensus/%s.cns',@_);
 }
-
-#sub bam_pileup_file {
-#    my $self = shift;
-#    my $ref_seq_id = shift;
-
-#    my ($pileup_file) = $self->_consensus_files($self->ref_seq_id);
-#    $pileup_file .= '.samtools_pileup';
-#    return $pileup_file;
-#}
 
 sub bam_pileup_file_path {
     my $self = shift; 
@@ -113,27 +104,28 @@ sub bam_pileup_file {
     my $bzip_file = $file.".bz2";
     if (-s $file) {
         return $file;
-    } elsif (-s $bzip_file) {
+    } 
+    elsif (-s $bzip_file) {
         #see if the bzip version exists
         my $pileup_file = Genome::Utility::FileSystem->bunzip($bzip_file);
         if (-s $pileup_file) {
             return $pileup_file;
-        } else {
+        } 
+        else {
             $self->error_message("Could not bunzip pileup file: $pileup_file.");
             die "Could not bunzip pileup file: $pileup_file.";
         }
-    } else {
+    } 
+    else {
         $self->error_message("No bam pileup file could be found at: $file.");
         die "No bam pileup file could be found at: $file."; 
     }
 
-return;
-
+    return;
 }
 
 # TODO: we should abstract the genotyper the way we do the aligner
 # for now these are hard-coded maq-ish values.
-
 
 sub _snv_file_unfiltered {
     my $self = shift;
@@ -149,7 +141,8 @@ sub _snv_file_unfiltered {
             die 'No variant snps files were found.';
         }
         return $unfiltered;
-    } else {
+    } 
+    else {
     #The 'old' per chromosome way
         $self->X_snv_file_unfiltered();
     }
@@ -181,69 +174,6 @@ sub X_snv_file_unfiltered {
     return $unfiltered;
 }
 
-sub _unsorted_indel_file {
-    my $self = shift;
-    my $map_snp_dir = $self->snp_related_metric_directory;
-    my $unsorted_indel_file = $map_snp_dir .'/indelpe.out';
-    unless (-e $unsorted_indel_file) {
-        my @unsorted_indel_files = grep {$_ !~ /sorted/} grep { -e $_ } glob("$map_snp_dir/indelpe*out");
-        unless (@unsorted_indel_files) {
-            my $model = $self->model;
-            my $aligner_path = $self->path_for_maq_version('genotyper_version');
-            my $ref_seq = $model->reference_build->full_consensus_path;
-
-            #my $accumulated_alignments_file = $self->accumulate_maps;
-            my $accumulated_alignments_file = $self->whole_rmdup_map_file;
-            
-            unless ($accumulated_alignments_file) {
-                $self->error_message('Failed to get accumulated map file');
-                return;
-            }
-            my $indelpe_cmd = "$aligner_path indelpe $ref_seq $accumulated_alignments_file > $unsorted_indel_file";
-            Genome::Utility::FileSystem->shellcmd(
-                                                  cmd => $indelpe_cmd,
-                                                  input_files => [$aligner_path, $ref_seq, $accumulated_alignments_file],
-                                                  allow_zero_size_output_files => 1,
-                                                  output_files => [$unsorted_indel_file],
-                                              );
-            #my $rm_cmd = "rm $accumulated_alignments_file";
-            #Genome::Utility::FileSystem->shellcmd(cmd => $rm_cmd);
-            return $unsorted_indel_file;
-        }
-        if (scalar(@unsorted_indel_files) > 1) {
-            $self->error_message('Found '. scalar(@unsorted_indel_files) .' unsorted indel files but only expecting one for build '. $self->id);
-            die($self->error_message);
-        }
-        return $unsorted_indel_files[0];
-    }
-    return $unsorted_indel_file;
-}
-
-sub _indel_file {
-    my $self = shift;
-
-    my $maq_snp_dir = $self->snp_related_metric_directory;
-    my $sorted_indelpe = $maq_snp_dir .'/indelpe.sorted.out';
-    unless (-e $sorted_indelpe) {
-        # lookup or make a sorted indelpe file
-        my $unsorted_indel_file = $self->_unsorted_indel_file;
-        if (-s $unsorted_indel_file) {
-            unless (Genome::Model::Tools::Snp::Sort->execute(
-                                                             snp_file => $unsorted_indel_file,
-                                                             output_file => $sorted_indelpe,
-                                                         )) {
-                $self->error_message('Failed to execute snp sort command for indelpe file '. $unsorted_indel_file);
-            }
-        } else {
-            my $fh = Genome::Utility::FileSystem->open_file_for_writing($sorted_indelpe);
-            unless ($fh) {
-                die "failed to open $sorted_indelpe!: $!";
-            }
-            $fh->close;
-        }
-    }
-    return $sorted_indelpe;
-}
 
 sub _snv_file_filtered {
     my $self = shift;
@@ -261,40 +191,22 @@ sub _snv_file_filtered {
     if ( $build_id < 0 || $build_id > 96763806 ) {
         $filtered = $self->filtered_snp_file();
         $self->status_message("********************Path for filtered indelpe file: $filtered");
-    } else {
+    } 
+    else {
     #'old', per chromosme
        $filtered = $unfiltered; 
        $filtered =~ s/all/filtered.indelpe/g;
     }
 
-    if (-e $unfiltered and not -e $filtered) {
-        # run SNPfilter w/ indelpe data
-        my $indelpe = $self->_indel_file;
-        my $bin = $self->path_for_maq_version('genotyper_version');
-        my $script = $bin . '.pl';
-
-        my $indelpe_param;
-	my @inputs = ($script, $unfiltered);
-        if (-s $indelpe) {
-            $indelpe_param = "-F '$indelpe'";
-	    push @inputs, $indelpe;
-        }
-        else {
-            warn "omitting indelpe data from the SNPfilter results because no indels were found...";
-            $indelpe_param = '';
-        }
-        Genome::Utility::FileSystem->shellcmd(
-            cmd => "$script SNPfilter $indelpe_param $unfiltered > $filtered",
-            input_files => \@inputs,
-            allow_zero_size_output_files => 1,
-            output_files => [$filtered],
-        );
+    unless (-e $filtered) {
+        $self->error_message("Failed to find valid snv_file_filtered: $filtered");
+        return;
     }
+    
     return $filtered;
 }
 
 sub filtered_snp_file {
-
     my ($self) = @_;
     return join('/', $self->snp_related_metric_directory(), '/filtered.indelpe.snps');
 }
@@ -416,25 +328,23 @@ sub whole_rmdup_bam_file {
 }
 
 sub generate_tcga_file_name {
+    my $self = shift;
+    my $model = $self->model;
+    my $dna_id  = $model->subject_id;
 
-   my $self = shift;
-   my $model = $self->model;
-   my $dna_id  = $model->subject_id;
-
-   my $ex_species_name = GSC::DNAExternalName->get( dna_id => $dna_id, name_type => 'biospecimen id',);
-   if ( !defined($ex_species_name) ) {
+    my $ex_species_name = GSC::DNAExternalName->get( dna_id => $dna_id, name_type => 'biospecimen id',);
+    if ( !defined($ex_species_name) ) {
         $self->error_message("The external species name via the name type of 'biospecimen id' is not defined for this model.  Cannot generate a TCGA file name.");
         return;
-   }
+    }
    
-   my $ex_plate_name = GSC::DNAExternalName->get( dna_id => $dna_id, name_type => 'plate id',);
-   if ( !defined($ex_plate_name) ) {
+    my $ex_plate_name = GSC::DNAExternalName->get( dna_id => $dna_id, name_type => 'plate id',);
+    if ( !defined($ex_plate_name) ) {
         $self->error_message("The external plate name via the name type of 'palate id' is not defined for this model.  Cannot generate a TCGA file name.");
         return;
-   }
+    }
 
-   return $ex_species_name->name."-".$ex_plate_name->name."-09"; 
-
+    return $ex_species_name->name."-".$ex_plate_name->name."-09"; 
 }
 
 sub reference_coverage_directory {
@@ -497,7 +407,7 @@ sub coverage_breadth_bin_file {
 }
 
 sub coverage_size_histogram_file {
- my $self = shift;
+    my $self = shift;
     return $self->_coverage_data_file('size_histos');
 }
 
@@ -516,7 +426,8 @@ sub maplist_file_paths {
 
     if (%p) {
         $ref_seq_id = $p{ref_seq_id};
-    } else {
+    } 
+    else {
         $ref_seq_id = 'all_sequences';
     }
     my @map_lists = grep { -e $_ } glob($self->accumulated_alignments_directory .'/*_'. $ref_seq_id .'.maplist');
@@ -542,7 +453,8 @@ sub accumulate_maps {
     #2761337261 is an old AML2 model with newer data
     if ($model->id < 0 || $model->id >= 2766822526 || $model->id == 2761337261) {
         $result_file = $self->resolve_accumulated_alignments_filename;
-    } else {
+    } 
+    else {
         my @all_map_lists;
         my @chromosomes = $model->reference_build->subreference_names;
         foreach my $c (@chromosomes) {
@@ -621,9 +533,11 @@ sub resolve_accumulated_alignments_filename {
 
     if ($library_name && $ref_seq_id) {
         return "$alignments_dir/$library_name/$ref_seq_id.map";
-    } elsif ($ref_seq_id) {
+    } 
+    elsif ($ref_seq_id) {
         return $alignments_dir . "/mixed_library_submaps/$ref_seq_id.map";
-    } else {
+    } 
+    else {
         my @files = glob("$alignments_dir/mixed_library_submaps/*.map");
         my $tmp_map_file = Genome::Utility::FileSystem->create_temp_file_path('ACCUMULATED_ALIGNMENTS-'. $self->model_id .'.map');
         if (-e $tmp_map_file) {
