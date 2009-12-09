@@ -7,6 +7,8 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use Bio::SeqIO;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::BlastN::PoolAndSplitSequence{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -46,180 +48,70 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    $self->log_event("Blast N Pool and Split Sequence entered");
+
     my $dir = $self->dir;
+    my $sample_name = basename($dir);
 
-    $self->poolSequence( $dir );
+    $self->log_event("Pooling data to run NT blastN for $sample_name");
 
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    my $matches = 0;
-    foreach my $file (readdir DH) 
-    {
-	if ($file =~ /\.HGfiltered\.fa$/) 
-        { 
-                $matches++;
-                $self->log_event("$file matches");
-		# directory for splited files
-		my $out_dir = $file;
-		$out_dir =~ s/\.HGfiltered\.fa/.HGfiltered_BLASTN/;
-		$out_dir = $dir."/".$out_dir;
-			
-		$self->splitGivenNumberSequence($dir, $file, $out_dir);
+    #FIND HG BLAST DATA DIR
+    my $hg_blast_dir = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq_HGblast';
+    unless (-d $hg_blast_dir) {
+	$self->log_event("Failed to find HG blast dir for $sample_name");
+	return;
+    }
+
+    #FIND FILES THAT CONTAIN HG BLAST FILTERED READS
+    my @filtered_reads = glob ("$hg_blast_dir/*HGfiltered.fa");
+    unless (scalar @filtered_reads > 0) {
+	$self->log_event("Failed to find any HG blast filtered data for $sample_name");
+	return;
+    }
+
+    #DEFINE AND POOL FILTERED READS TO A SINGLE FILE
+    my $pooled_file = $dir.'/'.$sample_name.'.HGfiltered.fa';
+    my $out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$pooled_file");
+    foreach (@filtered_reads) {
+	my $in = Bio::SeqIO->new(-format => 'fasta', -file => $_);
+	#TODO - JUST CAT >> INSTEAD??
+	while (my $seq = $in->next_seq) {
+	    $out_io->write_seq($seq);
 	}
     }
 
-    $self->log_event("Blast N Pool and Split Sequence completed with $matches matches");
+    #MAKE SURE POOLED FILTERED READS FILE EXISTS
+    unless (-s $pooled_file) {
+	$self->log_event("Failed to create pooled file of HG blast filtered reads");
+	return;
+    }
+
+    #SPLIT POOLED FILTERED READS FILE INTO SEPARATE DIRECTORY
+    my $nt_blast_dir = $dir.'/'.$sample_name.'.HGfiltered_BLASTN';
+    system("mkdir $nt_blast_dir");
+    unless (-d $nt_blast_dir) {
+	$self->log_event("Failed to create NT blast dir".basename($nt_blast_dir));
+	return;
+    }
+
+    my $c = 0; my $n = 0; my $limit = 500;
+    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $pooled_file);
+    my $split_file = $nt_blast_dir.'/'.$sample_name.'.HGfiltered.fa_file'.$n.'.fa';
+    my $split_out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$split_file");
+    while (my $seq = $in->next_seq) {
+	$c++;
+	$split_out_io->write_seq($seq);
+	if ($c == $limit) {
+	    $c = 0;
+	    $split_file = $nt_blast_dir.'/'.$sample_name.'.HGfiltered.fa_file'.++$n.'.fa';
+	    $split_out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$split_file");
+	}
+    }
+
+    $self->log_event("Pooling data to run NT blastN completed for $sample_name");
+
     return 1;
 }
 
-sub poolSequence 
-{
-	my ($self, $dir ) = @_;
-
-	opendir(DH, $dir) or die "Can not open dir $dir!\n";
-	foreach my $name (readdir DH) 
-        {
-		if ($name =~ /goodSeq_HGblast$/) 
-                {
-			my $temp = $name;
-			my @temp = split(/\./, $temp);
-			$temp = shift @temp;
-			my $full_path = $dir."/".$name;
-			my $out = $dir."/".$temp.".HGfiltered.fa";
-			if (-e $out) 
-                        {
-				return 0;
-			}
-			my @files = ();
-			opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-			foreach my $name2 (readdir SubDH) 
-                        { 
-				if ($name2 =~ /_file\d+\.HGfiltered\.fa$/) 
-                                {
-					push @files, $full_path."/".$name2;
-				}
-			}
-			closedir( SubDH );
-
-			my $com = "";
-			foreach my $file (@files) 
-                        {
-				$com = "cat $file >> $out ";
-				system( $com );
-			}
-		}
-	}
-
-	closedir( DH );
-}
-
-
-sub splitGivenNumberSequence {
-	my ($self, $inFile_dir, $inFile_name, $outDir ) = @_;
-
-        my $numSeq = 100; # number of sequences in each file
-				
-	# read in sequences
-	my $inFile = $inFile_dir."/".$inFile_name;
-	my %seq = $self->read_FASTA_data($inFile);
-	my $num_seq_total = keys %seq;
-	my $num_seq_left = $num_seq_total;
-					
-	# check there are sequences in the file
-	my $n = keys %seq;
-	if (!$n) 
-        {
-		$self->log_event($inFile_name, " does not have any sequences!");
-		return 0;
-	}
-
-	# make directory for splited files
-	if (-e $outDir) 
-        {
-                $self->log_event("$outDir exists");
-		return 0;
-	}
-	else {
-		my $com = "mkdir $outDir";
-                $self->log_event("creating $outDir");
-		system ($com);
-	}
-	
-	# start spliting
-	my $geneCount = 0;
-	my $fileCount = 0;
-	my $outFile = $outDir."/".$inFile_name."_file".$fileCount.".fa";
-        $self->log_event("writing to $outFile");
-	open (OUT, ">$outFile") or die "can not open file $outFile!\n";
-	foreach my $read (keys %seq) 
-        {
-		print OUT ">$read\n";
-		print OUT $seq{$read}, "\n";
-		$geneCount++;
-
-		if (!($geneCount%$numSeq)) 
-                {
-			close OUT;
-			$fileCount++;
-			$num_seq_left = $num_seq_total - $geneCount;
-			if ($num_seq_left) 
-                        {
-				$outFile = $outDir."/".$inFile_name."_file".$fileCount.".fa";
-				open (OUT, ">$outFile") or die "can not open file $outFile!\n";
-			}
-			else 
-                        {
-				return 0;
-			}
-		}
-	}
-	close OUT;
-}
-
-sub read_FASTA_data () {
-    my ($self,$fastaFile) = @_;
-
-    #keep old read seperator and set new read seperator to ">"
-    my $oldseperator = $/;
-    $/ = ">";
-	 
-    my %fastaSeq;	 
-    open (FastaFile, $fastaFile) or die "Can't Open FASTA file: $fastaFile";
-
-    while (my $line = <FastaFile>)
-    {
-		# Discard blank lines
-        if ($line =~ /^\s*$/) 
-        {
-		    next;
-		}	
-		# discard comment lines
-		elsif ($line =~ /^\s*#/) 
-                {
-	            next;
-		}
-		# discard the first line which only has ">", keep the rest
-		elsif ($line ne ">") 
-                {
-			chomp $line;
-			my @rows = ();
-			@rows = split (/\n/, $line);	
-			my $contigName = shift @rows;
-			my $contigSeq = join("", @rows);
-			$contigSeq =~ s/\s//g; #remove white space
-			$fastaSeq{$contigName} = $contigSeq;
-		}
-    }
-
-    #reset the read seperator
-    $/ = $oldseperator;
-   close FastaFile; 
-    return %fastaSeq;
-}
-
-
 1;
-
