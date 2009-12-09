@@ -7,6 +7,7 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::BlastN::OuterCheckOutput{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -40,40 +41,43 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    my $dir = $self->dir;
 
-    my @temp_dir_arr = split("/", $dir);
-    my $lib_name = $temp_dir_arr[$#temp_dir_arr];
-    $self->log_event("Outer Blast N check output entered for $lib_name");
+    my $dir = $self->dir;
+    my $sample_name = basename($dir);
+
+    $self->log_event("Checking files to run NT blastN for $sample_name");
+
+    my $nt_blast_dir = $dir.'/'.$sample_name.'.HGfiltered_BLASTN';
+    unless (-d $nt_blast_dir) {
+	$self->log_event("Failed to find NT blast directory for $sample_name");
+	return;
+    }
+
+    my @fa_files = glob("$nt_blast_dir/*fa");
+    unless (scalar @fa_files > 0) {
+	$self->log_event("No fasta files found to run NT blast for $sample_name");
+	return;
+    }
 
     my @files_for_blast;
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    foreach my $name (readdir DH) 
-    {
-        if ($name =~ /\.HGfiltered_BLASTN$/) 
-        { # directory for blastn with splited files
-	    my $full_path = $dir."/".$name;
-	    opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-            #$self->blast_path(\$full_path);
-	    foreach my $file (readdir SubDH) 
-            {
-	        if ($file =~ /\.HGfiltered\.fa_file\d+\.fa$/)
-                { 
-		    my $inF_path = $full_path."/".$file;
-                    push(@files_for_blast, $inF_path);
-                }
-            } 
-        }
+
+    foreach my $fa (@fa_files) {
+	next unless $fa =~/file\d+\.fa$/; #INPUT FILES IGNORING FILTERED FASTA FILES
+	push @files_for_blast, $fa;
     }
+
+    unless (scalar @files_for_blast > 0) {
+	$self->log_event("Failed to find or no data available to NT blastN for $sample_name");
+	return;
+    }
+
     $self->files_for_blast(\@files_for_blast);
     
-    $self->log_event("Outer Blast Human N check output completed for $lib_name");
+    $self->log_event("Finished checking files to run NT blastN for $sample_name");
     return 1;
 }
-
 
 1;
 
