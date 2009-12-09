@@ -44,48 +44,39 @@ sub create {
     return $self;
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    my $file = $self->file_to_run;
-    $self->log_event("inner check for $file");
-    my $full_path = dirname($file);
-    my $file_name = basename($file);
-    my $com;
 
-		    my $resubmit = 0;
-		    my $name = substr($file_name, 0, -3);
+    my $input_file = $self->file_to_run;
+    my $input_file_name = basename ($input_file);
+    $self->log_event("Checking HG blastN run status for $input_file_name");
 
-		    my $blast_out_file = $full_path."/".$name.".HGblast.out";
-		    if (!(-s $blast_out_file)) 
-                    {
-		        $resubmit = 1;
-		    }
-		    else 
-                    { # has the output, check whether finished
-		        $com = "tail -n 50 $blast_out_file";
-		        my $output = qx/$com/; 
-		        if (!($output =~ /Matrix:/)) 
-                        {
-			    $resubmit = 1;
-		        }
-		    }
-			
-		    if ($resubmit) 
-                    {
-		        my $str = $full_path."/".$name;
-		        # use -b 2 to print only alignments for two hits
+    my $blast_out_file = $input_file;
 
-		        my $blast_param = '-d /gscmnt/sata835/info/medseq/virome/blast_db/human_genomic/2009_07_09.humna_genomic';
-		        $com = 'blastall -p blastn -e 1e-8 -I T -b 2 -i '.$str.'.fa -o '.$str.'.HGblast.out '.$blast_param;
-                        $self->log_event("resubmitting $com");
-                        system($com);
-		    }
-    $self->log_event("inner check completed");
+    $blast_out_file =~ s/\.fa$/\.HGblast.out/;
+    my $blast_out_file_name = basename ($blast_out_file);
+
+    if (-s $blast_out_file) {
+	my $tail = `tail -n 50 $blast_out_file`;
+	if ($tail =~ /Matrix/) {
+	    $self->log_event("HG blastN already ran for $blast_out_file_name");
+	    return 1;
+	}
+    }
+    $self->log_event("Running HG blastN on $input_file_name");
+
+    my $blast_db = '/gscmnt/sata835/info/medseq/virome/blast_db/human_genomic/2009_07_09.humna_genomic'; #TYPO!
+    my $cmd = 'blastall -p blastn -e 1e-8 -I T -b 2 -i '.$input_file.' -o '.$blast_out_file.' -d '.$blast_db;
+
+    if (system ($cmd)) {
+	$self->log_event("HG blastN failed for $input_file_name");
+	return;
+    }
+
+    $self->log_event("HG blast N completed for $input_file_name");
+
     return 1;
 }
-
-
 
 1;
 
