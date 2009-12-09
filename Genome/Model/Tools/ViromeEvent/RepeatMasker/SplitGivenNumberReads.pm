@@ -7,6 +7,8 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use Bio::SeqIO;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::RepeatMasker::SplitGivenNumberReads{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -40,131 +42,61 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     return $self;
-
 }
 
 sub execute
 {
     my $self = shift;
     my $dir = $self->dir;
+    my $sample_name = basename ($dir);
 
-    $self->log_event ("split given number of reads executing for $dir");
+    $self->log_event("Split reads executing for $sample_name");
 
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    foreach my $file (readdir DH) 
-    {
-	if ($file =~ /\.fa\.cdhit_out$/) 
-        { 	
-            # directory for splited files
-	    my $out_dir = $file;
-	        $out_dir = $dir."/".$out_dir."_RepeatMasker";
-
-	    $self->splitGivenNumberSequence($dir, $file, $out_dir);
-	}	
+    #FIND CDHIT OUTPUT FILE
+    my $cd_hit_result_file = $dir.'/'.$sample_name.'.fa.cdhit_out';
+    unless (-s $cd_hit_result_file) {
+	$self->log_event("Failed to find cd-hit result file for sample: $sample_name");
+        #TODO - FAILUER HERE SHOULD CAUSE THE END OF SCREENING FOR THIS SAMPLE AND NOT RE-ATTEMPT
+	return 0;
     }
-    $self->log_event("Repeat Masker split given number reads complete");
+
+    #SPLIT INTO 500 READS PER FILE
+    my $output_dir = $dir.'/'.$sample_name.'.fa.cdhit_out_RepeatMasker';
+    system ("mkdir $output_dir");
+    unless (-d $output_dir) {
+	$self->log_event("Failed to make repeat masker dir for sample: $sample_name");
+	#TODO - FAILURE HERE SHOULD CAUSE THE END OF SCREENING FOR THIS SAMPLE AND NOT RE-ATTEMPT
+	return 0;
+    }
+
+    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $cd_hit_result_file);
+    unless ($in) {
+	$self->log_event("Can not create Bio SeqIO for fasta file");
+	#TODO - FAIURE HERE SHOULD CAUSE THE END OF SCREENING FOR THIS SAMPLE AND NOT RE-ATTEMPT
+	return 0;
+    }
+
+    my $c = 0; my $n = 0; my $max = 2000;
+
+    my $out_file = $output_dir.'/'.$sample_name.'.fa.cdhit_out_file'.$n.'.fa';
+
+    my $out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$out_file");
+    unless (defined $out_io) {
+	$self->log_event ("Can not create Bio SeqIO out for repeat masker splitting");
+	return 0;
+    }
+
+    while (my $seq = $in->next_seq) {
+	$c++;
+	$out_io->write_seq($seq);
+	if ($c == $max) { #REACHED MAX .. REDEFINE FILE NAME AND OUT IO HANDLE AND NOT RE-ATTEMPT
+	    $c = 0;
+	    $out_file = $output_dir.'/'.$sample_name.'.fa.cdhit_out_file'.++$n.'.fa';
+	    $out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$out_file");
+	}
+    }
+    $self->log_event("Split reads completed for sample: $sample_name");
     return 1;
 }
-
-sub splitGivenNumberSequence {
-	my ( $self, $inFile_dir, $inFile_name, $outDir ) = @_;
-        my $numSeq = 500;
-				
-    $self->log_event("Repeat Masker splitGivenNumberSequence entered with $inFile_dir, $inFile_name and $outDir");
-	# read in sequences
-	my $inFile = $inFile_dir."/".$inFile_name;
-	my %seq = $self->read_FASTA_data($inFile);
-	my $num_seq_total = keys %seq;
-	my $num_seq_left = $num_seq_total;
-					
-	# check there are sequences in the file
-	my $n = keys %seq;
-	if (!$n) {
-                $self->log_event("step 0 $inFile_name does not have any sequences");
-		print $inFile_name, " does not have any sequences!\n\n";
-		return 0;
-	}
-        $self->log_event("step 0 $inFile_name has sequences");
-
-	# make directory for splited files
-	if (-e $outDir) {
-                $self->log_event("step 1 $outDir exists");
-		return 0;
-	}
-	else {
-                $self->log_event("step 1 $outDir does not exist");
-		my $com = "mkdir $outDir";
-		system ($com);
-	}
-	
-	# start spliting
-	my $geneCount = 0;
-	my $fileCount = 0;
-	my $outFile = $outDir."/".$inFile_name."_file".$fileCount.".fa";
-	open (OUT, ">$outFile") or die "can not open file $outFile!\n";
-        $self->log_event("step 2 $outFile opened");
-	foreach my $read (keys %seq) {
-		print OUT ">$read\n";
-		print OUT $seq{$read}, "\n";
-		$geneCount++;
-
-		if (!($geneCount%$numSeq)) {
-			close OUT;
-			$fileCount++;
-			$num_seq_left = $num_seq_total - $geneCount;
-			if ($num_seq_left) {
-                                $self->log_event("step 4 opening $outFile");
-				$outFile = $outDir."/".$inFile_name."_file".$fileCount.".fa";
-				open (OUT, ">$outFile") or die "can not open file $outFile!\n";
-			}
-			else {
-				return 0;
-			}
-		}
-	}
-	close OUT;
-    $self->log_event("Repeat Masker splitGivenNumberSequence completed");
-    return 0;
-}
-
-sub read_FASTA_data () {
-    my ($self,$fastaFile) = @_;
-
-    $self->log_event("Repeat Masker read_FASTA_data entered with $fastaFile");
-    #keep old read seperator and set new read seperator to ">"
-    my $oldseperator = $/;
-    $/ = ">";
-	 
-    my %fastaSeq;	 
-    open (fastaFile, $fastaFile) or die "Can't Open FASTA file: $fastaFile";
-
-    while (my $line = <fastaFile>){
-		# Discard blank lines
-        if ($line =~ /^\s*$/) {
-	    next;
-	}	
-	# discard comment lines
-	elsif ($line =~ /^\s*#/) {
-	    next;
-	}
-	# discard the first line which only has ">", keep the rest
-	elsif ($line ne ">") {
-	    chomp $line;
-	    my @rows = ();
-	    @rows = split (/\n/, $line);	
-	    my $contigName = shift @rows;
-	    my $contigSeq = join("", @rows);
-	    $contigSeq =~ s/\s//g; #remove white space
-	    $fastaSeq{$contigName} = $contigSeq;
-	}
-    }
-    
-    #reset the read seperator
-    $/ = $oldseperator;
-    
-    $self->log_event("Repeat Masker read_FASTA_data completed");
-    return %fastaSeq;
-}
-
 
 1;
