@@ -7,6 +7,7 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::CDHIT::CheckResult{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -37,69 +38,46 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
     my $dir = $self->dir;
+    my $sample_name = basename ($dir);
 
-    $self->log_event("cdhit checkresult entered for $dir");
+    #$self->log_event("cdhit checkresult entered for $sample_name");
 
-    my $have_out = 0;
-    my $finished = 0;
-
-    use File::Basename;
-    my $base_name = basename ($dir);
-    my $faFile = $dir.'/'.$base_name.'.fa';
+    my $faFile = $dir.'/'.$sample_name.'.fa';
     my $cdhitReport = $faFile.'.cdhitReport';
 
-    if (-s $cdhitReport) 
-    { 
-        $have_out = 1;
+    if (-s $cdhitReport) {
         my $result = `grep completed $cdhitReport`;
-        if ($result =~ /program completed/) 
-        {
-	    $finished = 1;
+        if ($result =~ /program completed/) {
+	    $self->log_event("Already completed for sample: $sample_name");
+	    return;
         }
     }
 
-    if ($have_out && $finished) 
-    {
-	$self->log_event("CDHIT already run");
-        return 0;
+    #RUN CD-HIT
+    #DETERMINE WHETHER TO RUN 32 OR 64 BIT VERSIONS OF CD-HIT
+
+    my $archos = `uname -a`;
+    my $cd_hit_dir = ($archos =~ /64/) ? '/cd-hit-64/cd-hit-est' : '/cd-hit-32/cd-hit-est';    
+
+    my $com = '/gsc/var/tmp/virome/scripts'.$cd_hit_dir .
+	      ' -i ' . $faFile .
+	      ' -o ' . $faFile . '.cdhit_out' .
+	      ' -c 0.98 -n 8 -G 0 -aS 0.98 -g 1 -r 1 -M 4000 -d 0' .
+	      ' > ' . $cdhitReport;
+
+    $self->log_event("Executing for sample: $sample_name");
+
+    if (system($com)) { #RETURNS 0 WHEN SUCCESSFUL
+	$self->log_event("Failed for sample: $sample_name");
+	return;
     }
-    else 
-    {
-        # rerun cdhit
-
-        #DETERMINE WHETHER TO RUN 32 OR 64 BIT VERSIONS OF CD-HIT
-        my $cd_hit_dir = '/cd-hit-32/cd-hit-est';
-
-        my $archos = `uname -a`;
-        if ($archos =~ /64/) 
-        {
-	    $cd_hit_dir = '/cd-hit-64/cd-hit-est';
-        }
-
-        my $str = $faFile;
-
-        my $com = '/gsc/var/tmp/virome/scripts'.$cd_hit_dir.' -i '.$str.' -o '.$str.'.cdhit_out -c 0.98 -n 8 -G 0 -aS 0.98 -g 1 -r 1 -M 4000 -d 0'.' > '.$cdhitReport;
-
-        $self->log_event("CDHIT calling command: $com");
-
-        my $ec = system($com);
-        if ($ec) 
-        {
-	    $self->log_event("CDHIT Failed: re-run of cd-hit for $com");
-	    #cd-hit-est is a c++ code, return 0 when successful
-	    die("CDHIT Failed: re-run of cd-hit for $com");
-        }
-        else 
-        {
-	    $self->log_event("CDHIT check result Succeeded: re-run of cd-hit for $str");
-	    return 0;
-        }
+    else {
+	$self->log_event("Ran successfully for sample: $sample_name");
+	return 1;
     }
-    $self->log_event("cdhit check result completed");
 }
 
 1;
