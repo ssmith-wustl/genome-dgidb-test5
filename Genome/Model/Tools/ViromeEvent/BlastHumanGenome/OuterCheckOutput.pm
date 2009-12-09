@@ -7,6 +7,7 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::BlastHumanGenome::OuterCheckOutput{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -41,39 +42,42 @@ sub create {
     return $self;
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    $self->log_event("Outer Blast Human Genome check output entered");
-    my $dir = $self->dir;
 
-    my @temp_dir_arr = split("/", $dir);
-    my $com;
-    my $lib_name = $temp_dir_arr[$#temp_dir_arr];
- 
-    my @files_for_blast;
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    foreach my $name (readdir DH) 
-    {
-        if ($name =~ /\.goodSeq_HGblast$/) 
-        { # directory for blasting human genome with splited files
-	    my $full_path = $dir."/".$name;
-	    opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-	    foreach my $file (readdir SubDH) 
-            {
-	        if ($file =~ /\.goodSeq_file\d+\.fa$/) 
-                { 
-                    # masked unique sequences in splited files
-		    my $inF_path = $full_path."/".$file;
-                    push(@files_for_blast,$inF_path);
-	        }
-	    }
-        }
+    my $dir = $self->dir;
+    my $sample_name = basename ($dir);
+
+    $self->log_event("Checking files to run HG blast for $sample_name");
+
+    my $hg_blast_dir = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq_HGblast';
+    unless (-d $hg_blast_dir) {
+	$self->log_event("Failed to find HG blast directory for $sample_name");
+	return;
     }
-    $self->log_event("culled files:  " . join("\n", @files_for_blast));
+
+    my @fa_files = glob ("$hg_blast_dir/$sample_name*fa");
+    unless (scalar @fa_files > 0) {
+	$self->log_event("No fasta files found to run HG blast for $sample_name");
+	return;
+    }
+
+    my @files_for_blast;
+
+    foreach my $file (@fa_files) {
+	next if $file =~ /\.HGfiltered\.fa$/; #PRODUCT OF BLAST ALREADY RAN
+	push @files_for_blast, $file;
+    }
+
+    unless (scalar @files_for_blast > 0) {
+	$self->log_event("Failed to find or no more data available for HG blastN");
+	return;
+    }
+
     $self->files_for_blast(\@files_for_blast);
 
-    $self->log_event("Outer Blast Human Genome check output completed");
+    $self->log_event("Finished checking files to run HG blast for $sample_name");
+
     return 1;
 }
 
