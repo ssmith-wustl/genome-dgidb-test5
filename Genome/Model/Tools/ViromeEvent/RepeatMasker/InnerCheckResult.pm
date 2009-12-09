@@ -7,6 +7,7 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::RepeatMasker::InnerCheckResult{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -42,20 +43,22 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
+
     my $file = $self->file_to_run;
+    my $file_name = basename ($file);
 
-    $self->log_event("Inner check result entered for $file");
+    $self->log_event("Running repeat masker on $file_name");
 
-    # run RepeatMasker
-    my $com = "/gsc/var/tmp/virome/scripts/scripts2/RepeatMasker  " . $file . "\n"; #using gzhao's libraries for repeat masker
+    #RUN REPEAT MASKER USING GZHAO'S LIBRARY
+    my $com = "/gsc/var/tmp/virome/scripts/scripts2/RepeatMasker ".$file;
 
-    $self->log_event("re-running repeat masker:  '$com'");
-    system($com);
-
-    $self->log_event("Inner check result completed for $file");
+    if (system($com)) {
+	$self->log_event("Repeat masker failed for $file_name");
+	return;
+    }
+    $self->log_event("Finished running repeat masker on $file_name");
     return 1;
 }
 
