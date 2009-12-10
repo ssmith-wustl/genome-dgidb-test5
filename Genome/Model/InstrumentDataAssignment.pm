@@ -183,7 +183,7 @@ sub params_for_alignment {
 
 sub alignment_directory {
     my $self = shift;
-    my $alignment = $self->alignment;
+    my $alignment = $self->alignment_set;
     return unless $alignment;
     return $alignment->alignment_directory;
 }
