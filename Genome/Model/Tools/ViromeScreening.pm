@@ -40,37 +40,31 @@ UR::Object::Type->define(
     ]
 );
 
-sub help_brief
-{
+sub help_brief {
     "Runs virome screening workflow";
 }
 
-sub help_synopsis
-{
+sub help_synopsis {
     return <<"EOS"
     genome-model tools virome-screening ... 
 EOS
 }
 
-sub help_detail
-{
+sub help_detail {
     return <<"EOS"
     Runs the virome screening pipeline, using ViromeEvent modules.  Takes directory path, fasta, sample log, and logfile. 
 EOS
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    my ($fasta_file, $barcode_file, $dir, $logfile) = ($self->fasta_file, $self->barcode_file, $self->dir, $self->logfile);
-    unlink($logfile) if (-e $logfile); 
-
+    unlink($self->logfile) if (-e $self->logfile);
     my $output = run_workflow_lsf(
-                              '/gscmnt/sata835/info/medseq/virome/workflow/xml/virome-screening.xml',
-                              'fasta_file'  => $fasta_file,
-                              'barcode_file'=> $barcode_file,
-                              'dir'         => $dir,
-                              'logfile'     => $logfile,
+                              '/gscmnt/sata835/info/medseq/virome/workflow/xml/virome-screening2.xml',
+                              'fasta_file'  => $self->fasta_file,
+                              'barcode_file'=> $self->barcode_file,
+                              'dir'         => $self->dir,
+                              'logfile'     => $self->logfile,
                           );
     my $mail_dest = $ENV{USER}.'@genome.wustl.edu';
     my $sender = Mail::Sender->new({
