@@ -347,6 +347,7 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 		   if(exists($cosmic->{$cosmic_hugo})) {
 			   $find_type = FindCosmicGenomic($cosmic, $cosmic_hugo,
 					   $Start_position,$End_position,$Reference_Allele,$proper_allele);
+
 		   }
 		   if(defined($find_type)) {
 			   if ($find_type eq 'position_nucleotide') {
@@ -358,7 +359,6 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 			   else {
 				   $results_hash{NT}{NOVEL}{COSMIC}{$transcript}=": Nucleotide";
 			   }
-
 		   }
 		   else {
 			   if (-e "$cosmic_dir/$hugo\.csv") {
@@ -388,7 +388,6 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
                    $res_start,$res_stop,
                    $residue1,$residue2);
            }
-
 	   my $matched = 0;
 #Add COSMIC result to the results hash
 	   if(defined($cosmic_find_type)) {
@@ -427,9 +426,10 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 	   else {
 		   $results_hash{AA}{NOVEL}{OMIM}->{$transcript}=": Amino Acid - OMIM Gene Name Not Found";
 	   }
-	   if($matched) {
-		   last;
-	   }
+#dont output matched hits?
+#	   if($matched) {
+#		   last;
+#	   }
 
 #now check to see what the 'best' cosmic score was
 	   $cosmic_results{$line_num} = score_results(\%results_hash, "COSMIC");
@@ -480,7 +480,6 @@ sub FindCosmic {
 	my $return_value = 'no_match';
 	unless (exists($cosmic->{$hugo})) {
 		warn "No cosmic entry for: $hugo";
-		print "1";
 		return $return_value;
 	}
 	my $aa_novel;
@@ -636,10 +635,8 @@ sub LoadCosmicFiles {
 			die "Could not open transcript file '$cosmic_file' for reading";
 		}
 		my %parse_args = (check => 0, all => 1, no_process =>1);
-	print "1";
 		$cosmic = $cosmic_parser->Parse($cosmic_fh,$cosmic_file,%parse_args);
 #__CLOSE INPUT FILE
-	print "2";
 		$cosmic_fh->close;
 		$done += 1;
 		$percent_done = 100 * $done / scalar(@cosmic_files);
