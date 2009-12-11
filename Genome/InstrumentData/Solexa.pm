@@ -442,10 +442,10 @@ sub total_bases_read {
         # this changed in case we only want the fwd or rev counts...
         #$count += ($self->fwd_read_length * $self->fwd_clusters); # unless $filter eq 'reverse-only'
         #$count += ($self->rev_read_length  * $self->rev_clusters); # unless $filter eq 'forward-only'
-        $count += ($self->fwd_read_length * $self->fwd_clusters)  unless $filter eq 'reverse-only';
-        $count += ($self->rev_read_length  * $self->rev_clusters) unless $filter eq 'forward-only';
+        $count += (($self->fwd_read_length - 1) * $self->fwd_clusters)  unless $filter eq 'reverse-only';
+        $count += (($self->rev_read_length - 1)  * $self->rev_clusters) unless $filter eq 'forward-only';
     } else {
-        $count += ($self->read_length  * $self->clusters);
+        $count += (($self->read_length - 1)  * $self->clusters);
     }
 
     return $count;
