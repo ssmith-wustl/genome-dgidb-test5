@@ -26,14 +26,13 @@ ok($diff eq '', "output as expected");
 
 
 
-#exit 1;
-
-###foreach my $transcript (sort keys %{$regions->{transcript}}) {
-###    my $hugo_gene_name = $regions->{transcript}->{$transcript}->{hugo_gene_name};
+###foreach my $ordered_transcript_number (sort {$a<=>$b} keys %{$regions->{transcript}}) {
+###    my $hugo_gene_name = $regions->{transcript}->{$ordered_transcript_number}->{hugo_gene_name};
+###    my $transcript = $regions->{transcript}->{$ordered_transcript_number}->{transcript_name};
 ###    print qq($hugo_gene_name $transcript\n);
 ###    
-###    foreach my $n (sort {$a<=>$b} keys %{$regions->{transcript}->{$transcript}->{structure}}) {
-###	my ($structure_region,$tr_start,$tr_stop) = split(/\:/,$regions->{transcript}->{$transcript}->{structure}->{$n});
+###    foreach my $n (sort {$a<=>$b} keys %{$regions->{transcript}->{$ordered_transcript_number}->{structure}}) {
+###	my ($structure_region,$tr_start,$tr_stop) = split(/\:/,$regions->{transcript}->{$ordered_transcript_number}->{structure}->{$n});
 ###	print qq(\t$n\t$structure_region\t$tr_start\t$tr_stop\n);
 ###	
 ###    }
