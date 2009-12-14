@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 14;
+use Test::More tests => 13;
 use File::Compare;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -42,8 +42,6 @@ $DB::single = 1;
 ok($tier_variants_1, 'created TierVariants object for tier 1');
 ok($tier_variants_1->execute(), 'executed TierVariants for tier 1');
 
-
-ok(-e $tier1_file, 'We got something....');
 ok(-s $tier1_file, 'generated tier 1 file');
 ok(!-s $tier2_file, 'no unrequested output');
 
