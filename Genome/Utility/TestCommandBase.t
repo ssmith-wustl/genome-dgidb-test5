@@ -120,6 +120,15 @@ sub _after_execute {
     return 1;
 }
 
+#< Additional Tests >#
+sub startup : Tests(startup => no_plan) {
+    my $self = shift;
+
+    ok($self->_ur_no_commit_and_dummy_ids, 'UR no commit and dummy ids'); 
+    
+    return 1;
+}
+
 sub test01_dirs : Test(4) {
     my $self = shift;
     

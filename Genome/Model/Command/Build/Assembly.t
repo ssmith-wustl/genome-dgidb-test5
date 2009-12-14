@@ -20,7 +20,7 @@ BEGIN {
         plan skip_all => "Must run from 64-bit machine";
     }
 #    plan tests => 326;
-    plan tests => 302;
+    plan tests => 170;
     use_ok( 'Genome::InstrumentData::454');
     use_ok( 'Genome::Model::Assembly');
     use_ok( 'Genome::ProcessingProfile::Assembly');
@@ -170,49 +170,12 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     my @error_messages = $assign_command->error_messages();
     is(scalar(@error_messages), 0, 'execute generated no error messages');
 
-    my $build_event = Genome::Model::Command::Build->create(
-                                                            model_id => $model->id,
-                                                            auto_execute => 0,
-                                                        );
-
-    isa_ok($build_event,'Genome::Model::Command::Build');
-    &_trap_messages($build_event);
-
-    ok($build_event->execute,'execute assembly build_event');
-    @status_messages = $build_event->status_messages();
-
-    # Each execute generates a message per ReadSet, plus 4 more for the build's 4 sub-steps (5 total)
-    # so for 8 ReadSets = 8 * 5 = 40
-    # plus 2 more for scheduling reference sequence / Build::Assembly::Assemble
-    #is(scalar(@status_messages), 42, 'executing build_event generated 42 messages');
-    for(my $i = 0; $i < 4; $i++) {
-	my $index = 0;
-        if ($i == 0) {
-            like($status_messages[$index++], qr(^Created directory: .*/build.*), 'Found creating build directory status message');
-        }
-        like($status_messages[$index++], qr(^Scheduling jobs for Genome::InstrumentData::454 .*), 'Found scheduling InstrumentData messages');
-        if ($pp_params->{'read_filter_name'}) {
-            like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::FilterReadSet),
-                 'Found Scheduled...FilterReadSet messages');
-        }
-
-        if ($pp_params->{'read_trimmer_name'}) {
-            like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::TrimReadSet),
-                 'Found Scheduled...TrimReadSet messages');
-        }
-
-        like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::AddReadSetToProject),
-             'Found Scheduled...AddReadSetToProject messages');
-        splice(@status_messages, 0, $index);
-    }
-    is($status_messages[0],'Scheduling single_instance for stage assemble', 'Found single_instance message');
-    like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::Assemble),
-	 'Found Build Assembly message');
-
-    @warning_messages = $build_event->warning_messages;
-    is(scalar(@warning_messages), 0, 'executing build_event generated no warning messages');
-    @error_messages = $build_event->error_messages;
-    is(scalar(@error_messages), 0, 'executing build_event generated no error messages');
+    my $build = Genome::Model::Build->create(
+        model_id => $model->id,
+    );
+    ok($build, 'Created build');
+    my $stages = $build->schedule;
+    ok($stages, 'Scheduled build');
 
     for my $class ($pp->setup_project_job_classes) {
         my @events = $class->get(model_id => $model->id);
@@ -232,14 +195,8 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
                 &_enable_std_out_err($foo);
             }
             ok($rv,"execute $class event");
-            @warning_messages = $build_event->warning_messages;
-            is(scalar(@warning_messages), 0, 'event execution produced no warning messages');
-            @error_messages = $build_event->error_messages;
-            is(scalar(@error_messages), 0, 'event execution produced no error messages');
         }
     }
-
-    my $build = Genome::Model::Build->get(build_id => $build_event->build_id);
 
     is($build->assembly_project_xml_file,
        $build->data_directory .'/assembly/454AssemblyProject.xml',

@@ -202,7 +202,7 @@ sub _log_file {
 
     return sprintf(
         '%s/%s.%s',
-        $self->build->log_directory,
+        $self->log_directory,
         $self->genome_model_event_id,
         $ext,
     );

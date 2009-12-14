@@ -19,8 +19,17 @@ my %attrs_and_values = (
     type_name => [qw/ tester /],
     sequencing_platform => [qw/ solexa /],
     params_for_class => [qw/ sequencing_platform dna_source /],
-    stages => [qw/ assemble /],
-    assemble_job_classes => [qw/ Assemble /],
+    stages => [qw/ prepare assemble /],
+    prepare_objects => [qw/ 1 /],
+    prepare_job_classes => [qw/ 
+        Genome::ProcessingProfile::Tester::Prepare
+    /],
+    assemble_objects => [qw/ 1 /],
+    assemble_job_classes => [qw/ 
+        Genome::ProcessingProfile::Tester::PreAssemble
+        Genome::ProcessingProfile::Tester::Assemble
+        Genome::ProcessingProfile::Tester::PostAssemble
+    /],
 );
 for my $attr ( keys %attrs_and_values ) {
     is_deeply([$processing_profile->$attr], $attrs_and_values{$attr}, $attr);

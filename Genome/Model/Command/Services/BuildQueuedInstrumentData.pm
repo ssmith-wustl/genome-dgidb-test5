@@ -365,27 +365,14 @@ sub execute {
     
     #Execute all the builds for models with new data
   MODEL: foreach my $model_id (keys %model_ids) {
-       
-        
-        my $build = Genome::Model::Command::Build->create(
-            model_id        => $model_id,
-            force_new_build => 1,
-        );
-        
-        unless (defined($build)) { 
-            warn "failed to create a Genome::Model::Command::Build for model '$model_id'";
-            next MODEL;
-        }
-        
-        eval {
-            
-            unless ($build->execute) {
-                die 'Failed to execute build '. $build->id .' for model '. $model_id;
-            }
-            
+      
+        eval{
+            Genome::Model::Command::Build::Start->execute(
+                model_identifier => $model_id,
+            ) or die 'Failed to start a build for model '. $model_id;
         };
-        
-        if ($@) {
+
+        if ( $@ ) {
             warn $@;
             UR::Context->rollback();
             next MODEL;

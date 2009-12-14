@@ -11,5 +11,9 @@ class Genome::Model::Command::Build::List {
     is => 'Genome::Model::Build::Command::List'
 };
 
+sub sub_command_sort_position { 10 }
+
 1;
 
+#$HeadURL$
+#$Id$

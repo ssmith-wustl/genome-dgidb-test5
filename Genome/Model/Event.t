@@ -45,7 +45,7 @@ my $build = Genome::Model::Build->create_mock(
                                               model_id => $model->id,
                                               data_directory => $test_data_directory .'/build'. $bogus_id,
                                           );
-my $build_event = Genome::Model::Command::Build->create_mock(
+my $build_event = Genome::Model::Event->create_mock(
                                                          id => --$bogus_id,
                                                          genome_model_event_id => $bogus_id,
                                                          build_id => $build->id,

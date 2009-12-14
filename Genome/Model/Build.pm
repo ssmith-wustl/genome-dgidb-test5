@@ -26,6 +26,7 @@ class Genome::Model::Build {
         model_name          => { via => 'model', to => 'name' },
         type_name           => { via => 'model' },
         subject_name        => { via => 'model' },
+        processing_profile  => { via => 'model' },
         processing_profile_name => { via => 'model' },
         run_by              => { via => 'the_master_event', to => 'user_name' },
 
@@ -356,6 +357,7 @@ sub resolve_data_directory {
 
 #< Disk Allocation >#
 sub allocate {
+    # FIXME - move the logic above to here
 }
 
 sub reallocate {
@@ -425,7 +427,190 @@ sub add_report {
     }
 }
 
-#< Initialize, Fail and Success >#
+#< Build Events >#
+# schedule
+sub schedule {
+    my $self = shift;
+
+    if ( my $existing_build_event = $self->build_event ) {
+        $self->error_message(
+            "Can't schedule this build (".$self->id."), it a already has a main build event: ".
+            Data::Dumper::Dumper($existing_build_event)
+        );
+        return;
+    }
+    
+    Genome::Utility::FileSystem->create_directory( $self->data_directory )
+        or return;
+    Genome::Utility::FileSystem->create_directory( $self->log_directory )
+        or return;
+
+    my $build_event = Genome::Model::Command::Build->create(
+        model_id => $self->model->id,
+        build_id => $self->id,
+        event_type => 'genome model build',
+    );
+    unless ( $build_event ) {
+        $self->error_message( 
+            sprintf("Can't create build for model (%s %s)", $self->model->id, $self->model->name) 
+        );
+        $self->delete;
+        return;
+    }
+    $build_event->schedule; # in G:M:Event, sets status, times, etc.
+
+    my @stages; 
+    for my $stage_name ( $self->processing_profile->stages ) {
+        # FIXME why are we attempting to schedule stages that have no classes??
+        my @events = $self->_schedule_stage($stage_name);
+        unless ( @events ) {
+            $self->error_message('WARNING: Stage '. $stage_name .' for build ('. $self->build_id .") failed to schedule objects for classes:\n".
+                join("\n",$self->processing_profile->classes_for_stage($stage_name)));
+            next;
+        }
+        push @stages, { name => $stage_name, events => \@events };
+    }
+    
+    return \@stages;
+}
+
+sub _schedule_stage {
+    my ($self, $stage_name) = @_;
+
+    my $pp = $self->processing_profile;
+    my @objects = $pp->objects_for_stage($stage_name, $self->model);
+    my @events;
+    foreach my $object (@objects) {
+        my $object_class;
+        my $object_id; 
+        if (ref($object)) {
+            $object_class = ref($object);
+            $object_id = $object->id;
+        } elsif ($object eq '1') {
+            $object_class = 'single_instance';
+        } else {
+            $object_class = 'reference_sequence';
+            $object_id = $object;
+        }
+
+        # Putting status message on build event because some tests expect it.  
+        #  Prolly can (re)move this to somewhere...
+        if ($object_class->isa('Genome::InstrumentData')) {
+            $self->status_message('Scheduling jobs for '
+                . $object_class . ' '
+                . $object->full_name
+                . ' (' . $object->id . ')'
+            );
+        } elsif ($object_class eq 'reference_sequence') {
+            $self->status_message('Scheduling jobs for reference sequence ' . $object_id);
+        } elsif ($object_class eq 'single_instance') {
+            $self->status_message('Scheduling '. $object_class .' for stage '. $stage_name);
+        } else {
+            $self->status_message('Scheduling for '. $object_class .' with id '. $object_id);
+        }
+        my @command_classes = $pp->classes_for_stage($stage_name);
+        push @events, $self->_schedule_command_classes_for_object($object,\@command_classes);
+    }
+
+    return @events;
+}
+
+sub _schedule_command_classes_for_object {
+    my $self = shift;
+    my $object = shift;
+    my $command_classes = shift;
+    my $prior_event_id = shift;
+
+    my @scheduled_commands;
+    for my $command_class (@{$command_classes}) {
+        if (ref($command_class) eq 'ARRAY') {
+            push @scheduled_commands, $self->_schedule_command_classes_for_object($object,$command_class,$prior_event_id);
+        } else {
+            if ($command_class->can('command_subclassing_model_property')) {
+                my $subclassing_model_property = $command_class->command_subclassing_model_property;
+                unless ($self->model->$subclassing_model_property) {
+                    # TODO: move into the creation of the processing profile
+                    #$self->status_message("This processing profile doesNo value defined for $subclassing_model_property in the processing profile.  Skipping related processing...");
+                    next;
+                }
+            }
+            my $command;
+            if ($command_class =~ /MergeAlignments|UpdateGenotype|FindVariations/) {
+                if (ref($object)) {
+                    unless ($object->isa('Genome::Model::RefSeq')) {
+                        my $error_message = 'Expecting Genome::Model::RefSeq for EventWithRefSeq but got '. ref($object);
+                        $self->error_message($error_message);
+                        die;
+                    }
+                    $command = $command_class->create(
+                        model_id => $self->model_id,
+                        ref_seq_id => $object->ref_seq_id,
+                    );
+                } else {
+                    $command = $command_class->create(
+                        model_id => $self->model_id,
+                        ref_seq_id => $object,
+                    );
+                }
+            } elsif ($command_class =~ /AlignReads|TrimReadSet|AssignReadSetToModel|AddReadSetToProject|FilterReadSet/) {
+                if ($object->isa('Genome::InstrumentData')) {
+                    my $ida = Genome::Model::InstrumentDataAssignment->get(
+                        model_id => $self->model_id,
+                        instrument_data_id => $object->id,
+                    );
+                    unless ($ida) {
+                        #This seems like duplicate logic but works best for the mock models in test case
+                        my $model = $self->model;
+                        ($ida) = grep { $_->instrument_data_id == $object->id} $model->instrument_data_assignments;
+                        unless ($ida) {
+                            $self->error_message('Failed to find InstrumentDataAssignment for instrument data '. $object->id .' and model '. $self->model_id);
+                            die $self->error_message;
+                        }
+                    }
+                    unless ($ida->first_build_id) {
+                        $ida->first_build_id($self->build_id);
+                    }
+                    $command = $command_class->create(
+                        instrument_data_id => $object->id,
+                        model_id => $self->model_id,
+                    );
+                } else {
+                    my $error_message = 'Expecting Genome::InstrumentData object but got '. ref($object);
+                    $self->error_message($error_message);
+                    die;
+                }
+            } elsif ($command_class->isa('Genome::Model::Event')) {
+                $command = $command_class->create(
+                    model_id => $self->model_id,
+                );
+            }
+            unless ($command) {
+                my $error_message = 'Problem creating subcommand for class '
+                . ' for object class '. ref($object)
+                . ' model id '. $self->model_id
+                . ': '. $command_class->error_message();
+                $self->error_message($error_message);
+                die;
+            }
+            $command->build_id($self->build_id);
+            $command->prior_event_id($prior_event_id);
+            $command->schedule;
+            $prior_event_id = $command->id;
+            push @scheduled_commands, $command;
+            my $object_id;
+            if (ref($object)) {
+                $object_id = $object->id;
+            } else {
+                $object_id = $object;
+            }
+            $self->status_message('Scheduled '. $command_class .' for '. $object_id
+                .' event_id '. $command->genome_model_event_id ."\n");
+        }
+    }
+    return @scheduled_commands;
+}
+
+# initialize
 sub initialize {
     my $self = shift;
 
@@ -437,6 +622,7 @@ sub initialize {
     return 1;
 }
 
+# fail
 sub fail {
     my ($self, @errors) = @_;
 

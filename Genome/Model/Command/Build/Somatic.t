@@ -25,5 +25,3 @@ ok(my $model_id = $define->result_model_id, "Got result model id");
 ok(my $model = Genome::Model->get($model_id), "Got the model from result model id");
 isa_ok($model, "Genome::Model::Somatic");
 
-ok(my $build = Genome::Model::Command::Build->create(
-        model_id => $model->genome_model_id), "created build command");

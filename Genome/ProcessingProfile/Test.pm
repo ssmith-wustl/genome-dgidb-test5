@@ -10,7 +10,7 @@ use Data::Dumper 'Dumper';
 use Genome;
 use Test::More;
 
-# Class for testing
+#< Processing Profile and Commands for Testing >#
 class Genome::ProcessingProfile::Tester {
     is => 'Genome::ProcessingProfile::Staged',
     has_param => [
@@ -26,21 +26,47 @@ class Genome::ProcessingProfile::Tester {
     ],
     has => [
     # Methods
-    stages => {
-        calculate => q| return 'assemble'; |,
+    prepare_objects => {
+        calculate => q| return 1; |,
+        is_constant => 1,
+    },
+    prepare_job_classes => {
+        calculate => q| return (qw/ Genome::ProcessingProfile::Tester::Prepare /); |,
         is_constant => 1,
     },
     assemble_objects => {
-        calculate => q| return; |,
-        is_constant => 1,
-    },
-    assemble_job_classes => {
-        calculate => q| return (qw/ Assemble /); |,
+        calculate => q| return 1; |,
         is_constant => 1,
     },
     ],
 };
+sub Genome::ProcessingProfile::Tester::stages {
+     return (qw/ prepare assemble /);
+}
+sub Genome::ProcessingProfile::Tester::assemble_job_classes {
+     return (qw/ 
+         Genome::ProcessingProfile::Tester::PreAssemble 
+         Genome::ProcessingProfile::Tester::Assemble 
+         Genome::ProcessingProfile::Tester::PostAssemble 
+         /);
+}
 
+# Prepare
+class Genome::ProcessingProfile::Tester::Prepare {
+    is => 'Genome::Model::Event',
+};
+
+# Assemble
+class Genome::ProcessingProfile::Tester::PreAssemble {
+    is => 'Genome::Model::Event',
+};
+class Genome::ProcessingProfile::Tester::Assemble {
+    is => 'Genome::Model::Event',
+};
+class Genome::ProcessingProfile::Tester::PostAssemble {
+    is => 'Genome::Model::Event',
+};
+#<>#
 sub test_class {
     return 'Genome::ProcessingProfile';
 }

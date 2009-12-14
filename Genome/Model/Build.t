@@ -47,11 +47,33 @@ is_deeply(\@build_inst_data, [ $inst_data ], 'Build instrument data');
 is($build->coolness, 'moderate', 'Got coolness'); 
 #print Data::Dumper::Dumper({bin=>\@build_inputs,bid=>\@build_inst_data,min=>\@model_inputs,mid=>\@model_inst_data,});
 
-#< Initialize, Fail, Success >#
-# event
-my $event = Genome::Model::Test->add_mock_event_to_build($build);
-ok($event, 'Build event');
-$event->event_status('Scheduled');
+#< Schedule, Initialize, Fail, Success >#
+# schedule
+my $stages = $build->schedule;
+ok($stages, 'Scheduled build');
+is_deeply(
+    [ map { $_->{name} } @$stages ],
+    [qw/ prepare assemble /],
+    'Got scheduled stage names',
+);
+is_deeply(
+    [ map { scalar(@{$_->{events}}) } @$stages ],
+    [qw/ 1 3 /],
+    'Got scheduled stage events',
+);
+my $build_event = $build->build_event;
+ok($build_event, 'Got build event');
+is($build_event->event_status, 'Scheduled', 'Build status is Scheduled');
+is($build->build_status, 'Scheduled', 'Build status is Scheduled');
+my @events = Genome::Model::Event->get(
+    id => { operator => 'ne', value => $build_event->id },
+    model_id => $model->id,
+    build_id => $build->id,
+    event_status => 'Scheduled',
+);
+is(scalar(@events), 4, 'Scheduled 4 events');
+# try to schedule again - should fail
+ok(!$build->schedule, 'Failed to schedule build again');
 
 # do not send the report
 my $gss_report = *Genome::Model::Build::generate_send_and_save_report;
@@ -59,9 +81,12 @@ no warnings 'redefine';
 *Genome::Model::Build::generate_send_and_save_report = sub{ return 1; };
 use warnings;
 
+# init
 ok($build->initialize, 'Initialize');
 is($build->build_status, 'Running', 'Status is Running');
 is($model->current_running_build_id, $build->id, 'Current running build id set to build id in initialize');
+
+# fail
 ok($build->fail([]), 'Fail');
 is($build->build_status, 'Failed', 'Status is Failed');
 ok($build->success, 'Success');

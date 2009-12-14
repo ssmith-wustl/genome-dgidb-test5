@@ -25,7 +25,7 @@ if ($archos !~ /64/) {
 }
 
 #plan skip_all => 'this test is hanging presumambly from a workflow related issue';
-plan tests => 52;
+plan tests => 44;
 
 my $message_flag = 0;
 
