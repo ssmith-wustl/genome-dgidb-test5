@@ -50,7 +50,7 @@ EOS
 sub help_detail {
     return <<EOS 
 
-will provide the transcript substructures in your range of specified coordinates from both the ensembl and genbank annotation.
+will provide the transcript substructures in your range of specified coordinates from both the ensembl and then genbank annotation.
 
 EOS
 }
@@ -65,6 +65,8 @@ sub execute {
     my $stop = $self->stop;
     my $organism = $self->organism;
     my $version = $self->version;
+
+
 
     unless ($version) {	
 	if ($organism eq "mouse") {
@@ -84,8 +86,10 @@ sub execute {
     my $build_source = "$organism build $ncbi_reference version $version";
     
     my $ensembl_build = Genome::Model::ImportedAnnotation->get(name => $eianame)->build_by_version($version);
+    unless ($ensembl_build) { die qq(Couldn't get ensembl build info for $build_source\n);}
+
     my $ensembl_data_directory = $ensembl_build->annotation_data_directory;
-    
+
     my $genbank_build = Genome::Model::ImportedAnnotation->get(name => $gianame)->build_by_version($version);
     my $genbank_data_directory = $genbank_build->annotation_data_directory;
     
@@ -104,6 +108,9 @@ sub execute {
 	print qq(chromosome\ttranscript_start\ttranscript_stop\tsource\torganism\tversion\thugo_gene_name\tgene_id\tstrand\ttranscript_name\ttranscript_id\ttranscript_status\ttotal_substructures\n);
 	print qq(\tn\tstructure_type\tstructure_start\tstructure_stop\n);
     }
+
+
+    my $transcript_number = 0;
 
     for my $t (@join_array) {
 	
@@ -135,18 +142,20 @@ sub execute {
 	my @substructures = $t->ordered_sub_structures;
 	my $total_substructures = @substructures;
 	my $t_n = 0; #substructure counter
+	$transcript_number++;
 
-	$self->{transcript}->{$transcript_name}->{transcript_start}=$transcript_start;
-	$self->{transcript}->{$transcript_name}->{transcript_stop}=$transcript_stop;
-	$self->{transcript}->{$transcript_name}->{strand}=$strand;
-	$self->{transcript}->{$transcript_name}->{transcript_id}=$transcript_id;
-	$self->{transcript}->{$transcript_name}->{hugo_gene_name}=$hugo_gene_name;
-	$self->{transcript}->{$transcript_name}->{total_substructures}=$total_substructures;
-	$self->{transcript}->{$transcript_name}->{source}=$source;
-	$self->{transcript}->{$transcript_name}->{transcript_status}=$transcript_status;
+	$self->{transcript}->{$transcript_number}->{transcript_name}=$transcript_name;
+	$self->{transcript}->{$transcript_number}->{transcript_start}=$transcript_start;
+	$self->{transcript}->{$transcript_number}->{transcript_stop}=$transcript_stop;
+	$self->{transcript}->{$transcript_number}->{strand}=$strand;
+	$self->{transcript}->{$transcript_number}->{transcript_id}=$transcript_id;
+	$self->{transcript}->{$transcript_number}->{hugo_gene_name}=$hugo_gene_name;
+	$self->{transcript}->{$transcript_number}->{total_substructures}=$total_substructures;
+	$self->{transcript}->{$transcript_number}->{source}=$source;
+	$self->{transcript}->{$transcript_number}->{transcript_status}=$transcript_status;
 
 	my $n_ss = $total_substructures - 2; #subtracting out the flanking regions
-	$self->{transcript}->{$transcript_name}->{total_substructures}=$n_ss;
+	$self->{transcript}->{$transcript_number}->{total_substructures}=$n_ss;
 
 	if ($output) {
 	    print OUT qq($chromosome\t$transcript_start\t$transcript_stop\t$source\t$organism\t$version\t$hugo_gene_name\t$gene_id\t$strand\t$transcript_name\t$transcript_id\t$transcript_status\t$n_ss\n);
@@ -184,10 +193,34 @@ sub execute {
 			print qq(\t$n\t$structure_type\t$tr_start\t$tr_stop\n);
 		    }
 		    my $structure="$structure_type:$tr_start:$tr_stop";
-		    $self->{transcript}->{$transcript_name}->{structure}->{$n}=$structure;
+		    $self->{transcript}->{$transcript_number}->{structure}->{$n}=$structure;
 		}
 	    }
 	}
     }
     return($self);
 }
+
+1;
+
+=head1 TITLE
+
+TranscriptRegions
+
+=head1 DESCRIPTION
+
+This script will produce transcript info for defined regions
+
+=head1 Input Options:
+
+chrmosome start stop organism version output
+
+=head1 KNOWN BUGS
+
+Please report bugs to <rmeyer@genome.wustl.edu>
+
+=head1 AUTHOR
+
+Rick Meyer <rmeyer@genome.wustl.edu>
+
+=cut
