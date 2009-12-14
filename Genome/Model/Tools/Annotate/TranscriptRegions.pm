@@ -66,8 +66,15 @@ sub execute {
     my $organism = $self->organism;
     my $version = $self->version;
 
-    unless ($version) {	if ($organism eq "mouse") { $version = "54_37g" ; } elsif ($organism eq "human") { $version = "54_36p" ; } }
-    else { die "organism is restricted to mouse or human\n"; }
+    unless ($version) {	
+	if ($organism eq "mouse") {
+	    $version = "54_37g" ;
+	} elsif ($organism eq "human") { 
+	    $version = "54_36p" ;
+	} else { 
+	    die "organism is restricted to mouse or human\n";
+	}
+    }
 
     my $output = $self->output;
 
@@ -90,10 +97,14 @@ sub execute {
 
     if ($output) {
 	open(OUT,">$output") || die "couldn't open the output file $output\n";
-        print OUT qq(chromosome,tr_start,tr_stop,source,organism,version,hugo_gene_name,gene_id,strand,transcript_name,transcript_status,structure_type\n);
+        #print OUT qq(chromosome,transcript_start,transcript_stop,source,organism,version,hugo_gene_name,gene_id,strand,transcript_name,transcript_status\n);
+	print OUT qq(chromosome\ttranscript_start\ttranscript_stop\tsource\torganism\tversion\thugo_gene_name\tgene_id\tstrand\ttranscript_name\ttranscript_id\ttranscript_status\ttotal_substructures\n);
+	print OUT qq(\tn\tstructure_type\tstructure_start\tstructure_stop\n);
+    } else {
+	print qq(chromosome\ttranscript_start\ttranscript_stop\tsource\torganism\tversion\thugo_gene_name\tgene_id\tstrand\ttranscript_name\ttranscript_id\ttranscript_status\ttotal_substructures\n);
+	print qq(\tn\tstructure_type\tstructure_start\tstructure_stop\n);
     }
-    print qq(chromosome,tr_start,tr_stop,source,organism,version,hugo_gene_name,gene_id,strand,transcript_name,transcript_status,structure_type\n);
-    
+
     for my $t (@join_array) {
 	
 	my $chrom_name = $t->chrom_name;
@@ -108,7 +119,7 @@ sub execute {
 	my $transcript_status = $t->transcript_status;
 	my $strand = $t->strand;
 	my $transcript_name = $t->transcript_name;
-	my $transcrpt_id = $t->transcript_id;
+	my $transcript_id = $t->transcript_id;
 	my $transcript_start = $t->transcript_start;
 	my $transcript_stop = $t->transcript_stop;
 	
@@ -124,32 +135,59 @@ sub execute {
 	my @substructures = $t->ordered_sub_structures;
 	my $total_substructures = @substructures;
 	my $t_n = 0; #substructure counter
-	
+
+	$self->{transcript}->{$transcript_name}->{transcript_start}=$transcript_start;
+	$self->{transcript}->{$transcript_name}->{transcript_stop}=$transcript_stop;
+	$self->{transcript}->{$transcript_name}->{strand}=$strand;
+	$self->{transcript}->{$transcript_name}->{transcript_id}=$transcript_id;
+	$self->{transcript}->{$transcript_name}->{hugo_gene_name}=$hugo_gene_name;
+	$self->{transcript}->{$transcript_name}->{total_substructures}=$total_substructures;
+	$self->{transcript}->{$transcript_name}->{source}=$source;
+	$self->{transcript}->{$transcript_name}->{transcript_status}=$transcript_status;
+
+	my $n_ss = $total_substructures - 2; #subtracting out the flanking regions
+	$self->{transcript}->{$transcript_name}->{total_substructures}=$n_ss;
+
+	if ($output) {
+	    print OUT qq($chromosome\t$transcript_start\t$transcript_stop\t$source\t$organism\t$version\t$hugo_gene_name\t$gene_id\t$strand\t$transcript_name\t$transcript_id\t$transcript_status\t$n_ss\n);
+	} else {
+	    #print qq($chromosome,$transcript_start,$transcript_stop,$source,$organism,$version,$hugo_gene_name,$gene_id,$strand,$transcript_name,$transcript_status\n);
+	    print qq($chromosome\t$transcript_start\t$transcript_stop\t$source\t$organism\t$version\t$hugo_gene_name\t$gene_id\t$strand\t$transcript_name\t$transcript_id\t$transcript_status\t$n_ss\n);
+	}
+
+	my $n = 0;
 	if (@substructures) {
 	    
 	    while ($t_n < $total_substructures) {
 		my $t_region = $substructures[$t_n];
 		$t_n++;
-		
+
+		my $structure_type = $t_region->{structure_type};
+		unless ($structure_type eq "flank") {$n++;}
+
 		my $tr_start = $t_region->{structure_start};
 		my $tr_stop = $t_region->{structure_stop};
-		
-		
+				
 		next unless $tr_start >= $start && $tr_start <= $stop ||
 		    $tr_start <= $start && $tr_start >= $stop ||
 		    $tr_stop <= $start && $tr_stop >= $stop ||
 		    $tr_stop <= $start && $tr_stop >= $stop;
 		
-		my $range = "$tr_start\-$tr_stop";
-		my $structure_type = $t_region->{structure_type};
-		#unless ($structure_type eq "intron" || $structure_type eq "flank") {
 
-		if ($output) {
-		    print OUT qq($chromosome,$tr_start,$tr_stop,$source,$organism,$version,$hugo_gene_name,$gene_id,$strand,$transcript_name,$transcript_status,$structure_type\n);
+		#unless ($structure_type eq "intron" || $structure_type eq "flank") {
+		unless ($structure_type eq "flank") {
+		    if ($output) {
+			#print OUT qq($chromosome,$tr_start,$tr_stop,$source,$organism,$version,$hugo_gene_name,$gene_id,$strand,$transcript_name,$transcript_status,$structure_type\n);
+			print OUT qq(\t$n\t$structure_type\t$tr_start\t$tr_stop\n);
+		    } else {
+			#print qq($chromosome,$tr_start,$tr_stop,$source,$organism,$version,$hugo_gene_name,$gene_id,$strand,$transcript_name,$transcript_status,$structure_type\n);
+			print qq(\t$n\t$structure_type\t$tr_start\t$tr_stop\n);
+		    }
+		    my $structure="$structure_type:$tr_start:$tr_stop";
+		    $self->{transcript}->{$transcript_name}->{structure}->{$n}=$structure;
 		}
-		print qq($chromosome,$tr_start,$tr_stop,$source,$organism,$version,$hugo_gene_name,$gene_id,$strand,$transcript_name,$transcript_status,$structure_type\n);
-		
 	    }
 	}
     }
+    return($self);
 }
