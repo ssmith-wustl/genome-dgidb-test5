@@ -29,8 +29,6 @@ class Genome::ModelGroup {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-# { calculate => q( return map {$_->model} $self->model_bridges ) },
-# TODO: write method to expect array of models, set them to this group
 
 sub assign_models {
 
@@ -46,4 +44,64 @@ sub assign_models {
 
 }
 
+sub map_builds {
+
+    my ($self, $func) = @_;
+    my @result;
+
+    my @models = $self->models();
+
+    for my $model (@models) {
+
+        my $build = $model->last_complete_build();
+        my $value = $func->($model, $build); # even if $build is undef
+    
+        push @result,
+            {
+            'model'    => $model,
+            'model_id' => $model->id,
+            'build'    => $build,
+            'value'    => $value
+            };
+    }
+
+    return @result;
+}
+
+sub reduce_builds {
+
+    # apply $reduce function on results of $map or list 
+    # of builds for this model group
+    
+    my ($self, $reduce, $map) = @_;
+    my @b;
+
+    if ($map) {
+        @b = $self->map_builds($map);
+    } else {
+        @b = $self->builds();
+    }
+
+    my $result = $reduce->(@b);
+    return $result;
+}
+
+sub builds {
+
+    my ($self) = @_;
+    my @models = $self->models();
+    my @builds;
+
+    for my $model (@models) {
+        my $build = $model->last_complete_build();
+        next if !$build;
+        push @builds, $build;
+    }
+
+    return @builds;
+}
+
 1;
+
+
+
