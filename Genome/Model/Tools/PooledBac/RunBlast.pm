@@ -80,7 +80,7 @@ EOS
 sub execute { 
     my $self = shift;
     $DB::single = 1;
-    print "Mapping Contigs to Assembly...\n";
+    print "Running Blast...\n";
     my $ref_sequence = $self->ref_sequence;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
@@ -129,18 +129,21 @@ sub execute {
 sub parse_ref_seq_coords_file
 {
     my ($self) = @_;
+    
     my $ref_coords_file = $self->ref_sequence;
-    $self->error_message("$ref_coords_file does not exist") and die unless -e $ref_coords_file;
+    $self->error_message("$ref_coords_file does not exist\n") and die unless -e $ref_coords_file;
     my $fh = IO::File->new($ref_coords_file);
-    $self->error_message("Error opening $ref_coords_file.") and die unless defined $fh;
+    $self->error_message("Error opening $ref_coords_file.\n") and die unless defined $fh;
     
     my %ref_seq_coords;
     my $name;
     my $line;
+    my $lc = 0; #line count
     while ($line = $fh->getline)
     {
+        $lc++;
         chomp $line;
-        last if($line eq 'REF_SEQ_COORDINATES');
+        last if($line =~ /REF_SEQ_COORDINATES/);
         next unless length($line);
         next if($line=~/^\#/);
         next if($line=~/^\s*$/);
@@ -149,16 +152,30 @@ sub parse_ref_seq_coords_file
         
     }    
     my $bac_name;
-    while ($line = $fh->getline)
+    $self->error_message ("Could not find any coordinates, ref seq coordinates should be preceded by the heading 'REF_SEQ_COORDINATES', followed by a list of 1 or more ref seq coordinates.\n") and die unless ($line = $fh->getline);
+    do 
     {
+        $lc++;
         chomp $line;
+        next unless length($line);
+        next if($line=~/^\#/);
+        next if($line=~/^\s*$/);
         my @tokens = split/\s+/,$line;
-        next unless ((scalar @tokens) == 4);
+        unless ((scalar @tokens) == 4|| (scalar @tokens) == 0)
+        {
+            $self->error_message("Line number $lc appears to be formatted incorrectly.  Bac coordinate lines should use the following space-delimited format\nBAC_NAME CHROMOSONE_NAME START_POSITION END_POSITION\n") and die;
+        }
+        
         $bac_name = $tokens[0];
         my %hash;
         @hash{ 'chromosome','start','end'} = @tokens[1..3];
+        $self->error_message("line $lc: BAC name, $bac_name, appears to be invalid\n") and die unless ($bac_name=~/^\S+$/);        
+        $self->error_message("line $lc: Chromosome name, $tokens[1], appears to be invalid, valid names are 1-22, X, and Y.\n") and die unless ($tokens[1] =~ /^(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|X|Y)$/);
+        $self->error_message("line $lc: Start position, $tokens[2], is not numeric\n") and die unless ($tokens[2] =~/^\d+$/ );
+        $self->error_message("line $lc: End position, $tokens[3], is not numeric\n") and die unless ($tokens[3] =~/^\d+$/ );
         $ref_seq_coords{$bac_name} = \%hash;        
-    } 
+    }
+    while ($line = $fh->getline);
     
     return \%ref_seq_coords;
 }
