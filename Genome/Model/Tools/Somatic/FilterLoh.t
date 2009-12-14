@@ -42,5 +42,4 @@ ok(-s $loh_output_file, 'generated LOH output file');
 
 is(compare($expected_out_file, $output_file), 0, 'Output matched expected results');
 
-my $loh_diff = `diff $expected_loh_file $loh_output_file`;
 is(compare($expected_loh_file, $loh_output_file), 0, 'LOH output matched expected results');
