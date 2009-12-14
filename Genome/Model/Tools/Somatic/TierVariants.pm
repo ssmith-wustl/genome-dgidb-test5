@@ -324,6 +324,8 @@ sub execute {
     foreach my $col (keys %totals) {
         print STDOUT "$col: ",$totals{$col},"\n";
     }
+    
+    return 1;
 }
 
 sub infer_variant_type_from_line {
