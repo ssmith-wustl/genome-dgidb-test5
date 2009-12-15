@@ -35,14 +35,14 @@ sub stages {
 
 sub contaminant_screen_job_classes {
     my @classes = qw/
-            Genome::Model::Command::Build::MetagenomicAssembly::ContaminantScreen
+            Genome::Model::Event::Build::MetagenomicAssembly::ContaminantScreen
     /;
     return @classes;
 }
 
 sub assemble_job_classes {
     my @classes = qw/
-            Genome::Model::Command::Build::MetagenomicAssembly::Assemble
+            Genome::Model::Event::Build::MetagenomicAssembly::Assemble
     /;
     return @classes;
 }

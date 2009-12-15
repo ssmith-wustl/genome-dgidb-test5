@@ -36,7 +36,7 @@ sub stages {
 
 sub somatic_job_classes {
     return (qw/
-            Genome::Model::Command::Build::Somatic::RunWorkflow
+            Genome::Model::Event::Build::Somatic::RunWorkflow
         /);
 }
 

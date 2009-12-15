@@ -226,7 +226,7 @@ sub events {
 sub build_events {
     my $self = shift;
 
-    my @build_events = Genome::Model::Command::Build->get(
+    my @build_events = Genome::Model::Event::Build->get(
         model_id => $self->model_id,
         build_id => $self->build_id,
     );
@@ -445,7 +445,7 @@ sub schedule {
     Genome::Utility::FileSystem->create_directory( $self->log_directory )
         or return;
 
-    my $build_event = Genome::Model::Command::Build->create(
+    my $build_event = Genome::Model::Event::Build->create(
         model_id => $self->model->id,
         build_id => $self->id,
         event_type => 'genome model build',

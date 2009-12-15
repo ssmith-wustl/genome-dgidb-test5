@@ -21,7 +21,7 @@ sub stages {
 
 sub alignment_job_classes {
     my @sub_command_classes= qw/
-        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
+        Genome::Model::Event::Build::ReferenceAlignment::AlignReads
     /;
     return @sub_command_classes;
 }
@@ -31,7 +31,7 @@ sub reference_coverage_job_classes {
     if ($self->dna_type eq 'cdna' || $self->dna_type eq 'rna') {
         if ($self->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo') {
             my @steps = (
-                'Genome::Model::Command::Build::ReferenceAlignment::RefCov',
+                'Genome::Model::Event::Build::ReferenceAlignment::RefCov',
             );
             return @steps;
         }
@@ -42,16 +42,16 @@ sub reference_coverage_job_classes {
 
 sub variant_detection_job_classes {
     my @steps = (
-        'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
-        'Genome::Model::Command::Build::ReferenceAlignment::FindVariations'
+        'Genome::Model::Event::Build::ReferenceAlignment::UpdateGenotype',
+        'Genome::Model::Event::Build::ReferenceAlignment::FindVariations'
     );
     return @steps;
 }
 
 sub deduplication_job_classes {
     my @steps = ( 
-        'Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries',
-        'Genome::Model::Command::Build::ReferenceAlignment::PostDedupReallocate',
+        'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries',
+        'Genome::Model::Event::Build::ReferenceAlignment::PostDedupReallocate',
     );
     return @steps;
 }
@@ -60,7 +60,7 @@ sub generate_reports_job_classes {
     my $self = shift;
     if (defined($self->indel_finder_name)) {
         my @steps = (
-            'Genome::Model::Command::Build::ReferenceAlignment::RunReports'
+            'Genome::Model::Event::Build::ReferenceAlignment::RunReports'
         );
     return @steps;
     }

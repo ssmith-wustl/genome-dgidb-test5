@@ -32,7 +32,7 @@ sub accumulated_alignments_directory {
 sub accumulated_alignments_disk_allocation {
     my $self = shift;
 
-    my $dedup_event = Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries->get(model_id=>$self->model->id,
+    my $dedup_event = Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries->get(model_id=>$self->model->id,
                                                                                                    build_id=>$self->build_id);
 
     return if (!$dedup_event);

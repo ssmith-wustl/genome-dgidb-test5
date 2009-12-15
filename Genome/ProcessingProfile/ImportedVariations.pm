@@ -24,7 +24,7 @@ sub stages {
 sub import_variations_job_classes {
     return (
         qw/
-            Genome::Model::Command::Build::ImportedVariations::Run
+            Genome::Model::Event::Build::ImportedVariations::Run
             /
     );
 }

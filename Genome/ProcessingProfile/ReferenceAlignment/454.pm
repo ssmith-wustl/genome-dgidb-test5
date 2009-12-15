@@ -19,15 +19,15 @@ sub stages {
 
 sub alignment_job_classes {
     my @sub_command_classes= qw/
-        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
+        Genome::Model::Event::Build::ReferenceAlignment::AlignReads
     /;
     return @sub_command_classes;
 }
 
 sub variant_detection_job_classes {
     my @steps = qw/
-                 Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments
-                 Genome::Model::Command::Build::ReferenceAlignment::FindVariations
+                 Genome::Model::Event::Build::ReferenceAlignment::MergeAlignments
+                 Genome::Model::Event::Build::ReferenceAlignment::FindVariations
              /;
     return @steps;
 }

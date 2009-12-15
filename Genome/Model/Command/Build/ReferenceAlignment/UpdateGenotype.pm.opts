@@ -1,4 +1,0 @@
-$Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::OPTS_SPEC = [
-  'help!',
-  undef
-];

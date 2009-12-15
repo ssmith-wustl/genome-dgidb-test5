@@ -22,7 +22,7 @@ sub stages {
 
 sub imported_reference_sequence_job_classes {
     return (qw/
-            Genome::Model::Command::Build::ImportedReferenceSequence::Run
+            Genome::Model::Event::Build::ImportedReferenceSequence::Run
         /);
 }
 

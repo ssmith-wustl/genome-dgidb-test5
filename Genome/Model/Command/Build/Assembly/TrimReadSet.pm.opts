@@ -1,4 +1,0 @@
-$Genome::Model::Command::Build::Assembly::TrimReadSet::OPTS_SPEC = [
-  'help!',
-  undef
-];

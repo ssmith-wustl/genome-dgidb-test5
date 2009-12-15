@@ -872,7 +872,7 @@ __DATA__
                        <xsl:otherwise>
                                 <xsl:variable name="full_command_class" select="@command_class" />
                                 <!-- <xsl:value-of select="@command_class"/> -->
-                                <xsl:value-of select="substring-after($full_command_class,'Genome::Model::Command::Build::')"/>
+                                <xsl:value-of select="substring-after($full_command_class,'Genome::Model::Event::Build::')"/>
                         </xsl:otherwise>
                         </xsl:choose>
                     </td>

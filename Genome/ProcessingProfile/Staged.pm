@@ -40,7 +40,7 @@ sub verify_successful_completion_job_classes {
     my @sub_command_classes= ();
     
 #   qw/
-#        Genome::Model::Command::Build::VerifySuccessfulCompletion
+#        Genome::Model::Event::Build::VerifySuccessfulCompletion
 #    /;
     return @sub_command_classes;
 }

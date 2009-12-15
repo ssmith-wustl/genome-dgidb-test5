@@ -1,6 +1,0 @@
-$Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Bwa::OPTS_SPEC = [
-  'model-id=s',
-  undef,
-  'help!',
-  undef
-];

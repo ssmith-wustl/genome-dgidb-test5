@@ -21,7 +21,7 @@ sub stages {
 
 sub manual_review_job_classes {
     return (qw/
-            Genome::Model::Command::Build::ManualReview::Run
+            Genome::Model::Event::Build::ManualReview::Run
         /);
 }
 

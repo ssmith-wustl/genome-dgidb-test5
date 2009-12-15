@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Build::ViromeScreen {
-    is => 'Genome::Model::Command::Build',
+    is => 'Genome::Model::Command::Build::Start',
     has => [
         barcode_file => {
             doc => 'Barcode file that contains sequences to filter reads by',

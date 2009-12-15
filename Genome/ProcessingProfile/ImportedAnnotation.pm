@@ -24,7 +24,7 @@ sub stages {
 
 sub imported_annotation_job_classes {
     return (qw/
-        Genome::Model::Command::Build::ImportedAnnotation::Run
+        Genome::Model::Event::Build::ImportedAnnotation::Run
         /);
 }
 

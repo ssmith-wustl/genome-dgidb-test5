@@ -26,7 +26,7 @@ sub stages {
 
 sub polyphred_polyscan_job_classes {
     return (qw/
-            Genome::Model::Command::Build::PolyphredPolyscan::Run
+            Genome::Model::Event::Build::PolyphredPolyscan::Run
         /);
 }
 

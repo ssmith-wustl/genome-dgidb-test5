@@ -25,8 +25,8 @@ sub screen_objects {
 
 sub screen_job_classes {
     return (qw/
-               Genome::Model::Command::Build::ViromeScreen::PrepareInstrumentData
-               Genome::Model::Command::Build::ViromeScreen::Screen
+               Genome::Model::Event::Build::ViromeScreen::PrepareInstrumentData
+               Genome::Model::Event::Build::ViromeScreen::Screen
             /);
 }
 

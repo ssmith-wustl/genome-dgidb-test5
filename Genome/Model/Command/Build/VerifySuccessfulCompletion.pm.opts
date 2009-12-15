@@ -1,8 +1,0 @@
-$Genome::Model::Command::Build::VerifySuccessfulCompletion::OPTS_SPEC = [
-          'force-abandon!',
-          undef,
-          'model-id=s',
-          undef,
-          'help!',
-          undef
-        ];

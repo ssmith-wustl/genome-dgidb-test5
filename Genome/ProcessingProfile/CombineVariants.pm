@@ -23,23 +23,23 @@ sub stages {
 }
 
 #TODO I think these are all obsolete due to the clustered assembly changes, most of these should be removed
-#Genome::Model::Command::Build::CombineVariants::DeriveAssemblyNames
-#Genome::Model::Command::Build::CombineVariants::DumpAssemblies
-#Genome::Model::Command::Build::CombineVariants::VerifyAndFixAssembly
-#Genome::Model::Command::Build::CombineVariants::RunDetectEvaluate
-#Genome::Model::Command::Build::CombineVariants::ConfirmQueues
-#Genome::Model::Command::Build::CombineVariants::BuildChildren
+#Genome::Model::Event::Build::CombineVariants::DeriveAssemblyNames
+#Genome::Model::Event::Build::CombineVariants::DumpAssemblies
+#Genome::Model::Event::Build::CombineVariants::VerifyAndFixAssembly
+#Genome::Model::Event::Build::CombineVariants::RunDetectEvaluate
+#Genome::Model::Event::Build::CombineVariants::ConfirmQueues
+#Genome::Model::Event::Build::CombineVariants::BuildChildren
 # 
 
 sub combine_variants_job_classes {
     return (qw/
-            Genome::Model::Command::Build::CombineVariants::CombineAndAnnotate
+            Genome::Model::Event::Build::CombineVariants::CombineAndAnnotate
         /);
 }
 
 sub assign_from_builds_job_classes {
     return (qw/
-        Genome::Model::Command::Build::CombineVariants::AssignFromBuilds
+        Genome::Model::Event::Build::CombineVariants::AssignFromBuilds
         /);
 }
 

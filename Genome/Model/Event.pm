@@ -343,15 +343,29 @@ sub _resolve_subclass_name_for_event_type {
         $_ = join('',@sub_parts);
     }
 
-    my $class_name = join('::', 'Genome::Model::Command' , @command_parts);
+    my $class_name;
+    my $loaded_class = 0;
 
-    # TEMP
-    $class_name =~ s/AddReads::/Build::ReferenceAlignment::/;
+    foreach my $type ('Event','Command') {
+        $class_name = join('::', 'Genome::Model::' . $type, @command_parts);
+    
+        # TEMP
+        $class_name =~ s/AddReads::/Build::ReferenceAlignment::/;
 
-    unless (eval {$class_name->class()}) {
+        if (eval {$class_name->class()}) {
+            if ($class_name->isa('Genome::Model::Event')) {
+                $loaded_class = 1;
+                last;
+            }
+        }
+    }
+    
+    unless ($loaded_class) {
         $class_name = 'Genome::Model::Event::Generic';
     }
-
+    
+#    print "resolved $class_name\n";
+    
     return $class_name;
 }
 
@@ -822,8 +836,7 @@ sub lsf_state {
     return (\%jobinfo, \@events);
 }
 
-
 1;
 
-#$HeadURL$
-#$Id$
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Event.pm $
+#$Id: Event.pm 53231 2009-11-19 20:45:08Z ebelter $

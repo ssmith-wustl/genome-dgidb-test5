@@ -1,4 +1,0 @@
-$Genome::Model::Command::Build::DeNovoAssembly::PrepareInstrumentData::OPTS_SPEC = [
-  'help!',
-  undef
-];

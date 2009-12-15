@@ -1,6 +1,0 @@
-$Genome::Model::Command::Build::ImportedAnnotation::Run::OPTS_SPEC = [
-          'model-id=s',
-          undef,
-          'help!',
-          undef
-        ];

@@ -127,7 +127,7 @@ sub _validate_params_for_step {
     my ($self, $step, $params) = @_;
     #GET FooBar FROM  foo_bar
     my $step_name = join '', map {ucfirst $_} split '_', $step;
-    my $stage = 'Genome::Model::Command::Build::DeNovoAssembly';
+    my $stage = 'Genome::Model::Event::Build::DeNovoAssembly';
     unless ($stage->validate_params($step_name, $params, ucfirst $self->assembler_name) ) {
 	$self->error_message("Failed to validate params for $stage");
 	return;
@@ -160,9 +160,9 @@ sub stages {
 
 sub assemble_job_classes {
     return (qw/
-            Genome::Model::Command::Build::DeNovoAssembly::PrepareInstrumentData
-            Genome::Model::Command::Build::DeNovoAssembly::Preprocess
-            Genome::Model::Command::Build::DeNovoAssembly::Assemble
+            Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData
+            Genome::Model::Event::Build::DeNovoAssembly::Preprocess
+            Genome::Model::Event::Build::DeNovoAssembly::Assemble
 	    /);  
 }
 

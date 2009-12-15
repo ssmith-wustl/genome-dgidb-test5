@@ -1,6 +1,0 @@
-$Genome::Model::Command::Build::AmpliconAssembly::TrimAndScreen::OPTS_SPEC = [
-          'model-id=s',
-          undef,
-          'help!',
-          undef
-        ];

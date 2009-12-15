@@ -58,17 +58,17 @@ sub stages {
 
 sub setup_project_job_classes {
     my @classes = qw/
-            Genome::Model::Command::Build::Assembly::FilterReadSet
-            Genome::Model::Command::Build::Assembly::TrimReadSet
-            Genome::Model::Command::Build::Assembly::AddReadSetToProject
+            Genome::Model::Event::Build::Assembly::FilterReadSet
+            Genome::Model::Event::Build::Assembly::TrimReadSet
+            Genome::Model::Event::Build::Assembly::AddReadSetToProject
     /;
-    #Genome::Model::Command::Build::Assembly::AssignReadSetToModel
+    #Genome::Model::Event::Build::Assembly::AssignReadSetToModel
     return @classes;
 }
 
 sub assemble_job_classes {
     my @classes = qw/
-            Genome::Model::Command::Build::Assembly::Assemble
+            Genome::Model::Event::Build::Assembly::Assemble
     /;
     return @classes;
 }

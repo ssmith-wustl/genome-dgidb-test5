@@ -370,7 +370,7 @@ sub add_mock_event_to_build {
     confess "No build given to add mock event" unless $build;
 
     my $event = $self->create_mock_object(
-        class => 'Genome::Model::Command::Build',
+        class => 'Genome::Model::Event::Build',
         model_id => $build->model_id,
         build_id => $build->id,
         event_type => 'genome model build',

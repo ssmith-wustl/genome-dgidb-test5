@@ -1,6 +1,0 @@
-$Genome::Model::Command::Build::ReferenceAlignment::RunReports::OPTS_SPEC = [
-          'model-id=s',
-          undef,
-          'help!',
-          undef
-        ];

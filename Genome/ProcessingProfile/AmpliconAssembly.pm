@@ -112,15 +112,15 @@ sub stages {
 
 sub assemble_job_classes {
     return (qw/
-        Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData
-        Genome::Model::Command::Build::AmpliconAssembly::PrepareInstrumentData
-        Genome::Model::Command::Build::AmpliconAssembly::TrimAndScreen
-        Genome::Model::Command::Build::AmpliconAssembly::Assemble
-        Genome::Model::Command::Build::AmpliconAssembly::Classify
-        Genome::Model::Command::Build::AmpliconAssembly::Orient
-        Genome::Model::Command::Build::AmpliconAssembly::Collate
-        Genome::Model::Command::Build::AmpliconAssembly::CleanUp
-        Genome::Model::Command::Build::AmpliconAssembly::Reports
+        Genome::Model::Event::Build::AmpliconAssembly::VerifyInstrumentData
+        Genome::Model::Event::Build::AmpliconAssembly::PrepareInstrumentData
+        Genome::Model::Event::Build::AmpliconAssembly::TrimAndScreen
+        Genome::Model::Event::Build::AmpliconAssembly::Assemble
+        Genome::Model::Event::Build::AmpliconAssembly::Classify
+        Genome::Model::Event::Build::AmpliconAssembly::Orient
+        Genome::Model::Event::Build::AmpliconAssembly::Collate
+        Genome::Model::Event::Build::AmpliconAssembly::CleanUp
+        Genome::Model::Event::Build::AmpliconAssembly::Reports
         /);
 }
 
