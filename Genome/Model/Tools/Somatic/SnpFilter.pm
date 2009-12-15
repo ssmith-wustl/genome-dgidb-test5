@@ -56,7 +56,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    gmt somatic snp-filter --sniper_snp_file=[pathname] --output_file=[pathname]
+    gmt somatic snp-filter --sniper-snp-file=[pathname] --tumor-snp-file=[pathname] --output-file=[pathname]
 EOS
 }
 
@@ -82,7 +82,7 @@ sub execute {
     }
 
     my $sniper_snp_file = $self->sniper_snp_file();
-    my $sniper_snp_file_sorted = "/tmp/snipers.sorted";
+    my $sniper_snp_file_sorted = Genome::Utility::FileSystem->create_temp_file_path("snipers.sorted");
     if ( ! Genome::Utility::FileSystem->validate_file_for_reading($sniper_snp_file) ) {
         die 'cant read from: ' . $sniper_snp_file;
     }
@@ -97,7 +97,7 @@ sub execute {
     );
 
     # Should use command object->execute(), but would clutter with the grep required for imported bams.
-    my $tumor_snp_file_sorted = "/tmp/tumors.sorted";
+    my $tumor_snp_file_sorted = Genome::Utility::FileSystem->create_temp_file_path("tumors.sorted");
     $sort_cmd = "gmt snp sort $tumor_snp_file | grep -v \"^chr.*_random\" > $tumor_snp_file_sorted";
     
     
@@ -131,8 +131,6 @@ sub execute {
         $self->error_message('Failed to execute Genome::Model::Tools::Snp::IntersectChromPos');
     }
 
-    unlink($sniper_snp_file_sorted);
-    unlink($tumor_snp_file_sorted);
     return $result;
 }
 
