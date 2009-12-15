@@ -91,6 +91,12 @@ sub execute {
         $self->error_message('cant read from: ' . $bam_file);
         die;
     }
+    
+    #test architecture to make sure we can run samtools program
+    unless (`uname -a` =~ /x86_64/) {
+       $self->error_message("Must run on a 64 bit machine");
+       die;
+    }
 
     #calling blank should return the $DEFAULT version in the G:M:T:Sam module
     my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version();
@@ -143,7 +149,7 @@ sub execute {
     
     eval {
         $self->shellcmd(
-            cmd => $samtools_cmd,
+            cmd => $snp_cmd,
             input_files => [$bam_file],
             output_files => [$snp_output_file],
             skip_if_output_is_present => 1,
