@@ -3,6 +3,7 @@ package Genome::Model::Tools::Snp::GetDbsnps;
 use strict;
 use warnings;
 use Genome;
+use FileHandle;
 
 class Genome::Model::Tools::Snp::GetDbsnps {
     is => 'Command',                    
@@ -43,8 +44,13 @@ class Genome::Model::Tools::Snp::GetDbsnps {
 		 is_optional  => 1,
 	     },
 	     gff => {
-		 type  =>  'string',
-		 doc   =>  "provide a name for the optional gff file of all dbsnps from your input coverage range",
+		 type  =>  'Boolean',
+		 doc   =>  "optional gff file of all dbsnps from your input coverage range with genomic coordiante or if used with refseq-fasta option and you'll get a snp.gff based on the referance coordinate",
+		 is_optional  => 1,
+	     },
+	     refseq_fasta => {
+		 type => 'string',
+		 doc  => "intended to be used with the gff option to produce a snp.gff based on refseq coordinates output for this gff based on refseq name",
 		 is_optional  => 1,
 	     },
 	     organism => {
@@ -101,6 +107,11 @@ gmt snp get-dbsnps --chromosome 1 --start 202785447 --stop 202785447 --ref A --v
  will produce
       1 202785447 202785447 A G rs4252743:snp:1:'A/T':no_match
 
+running...
+gmt snp get-dbsnps  --gff --refseq-fasta 1_202785447_202795447.c1.refseq.fasta
+ will produce a gff file of all the variation sequence tag entries in the database from said range
+
+
 
 when detirmining the validation status of a dbsnp this tool assumes that if the snp was ever entered in the database as being validated that it is still validated.
 
@@ -112,24 +123,30 @@ use the gff option to get a gff like file of the dbsnps identified by your input
 EOS
 }
 
-my $list;
-my $dbsnp;
 
 sub execute {
 
     my $self = shift;
+    my $list;
+
+    my $refseq_fasta = $self->refseq_fasta;
+    my $gff = $self->gff;
+    my $ref_list;
+    if ($refseq_fasta && -e $refseq_fasta && $gff) {
+	$ref_list = &getDBSNPS_GFF($self);
+    }
 
     my $out = $self->out;
-    if ($out) {open(OUT,">$out");}
+    if ($out) {open(OUT,">$out") || die "\nCould not open $out file\n";}
 
     my $file = $self->list;
+    my $chr = $self->chromosome;
+    my $start = $self->start;
+    my $stop = $self->stop;
 
-    my $list;
     if ($file) {
-
 	unless (-f $file) {system qq(gmt snp get-dbsnps --help);print qq(Your list was not found.\t\n\tPlease check that your list is in place and try again.\n\n\n);return 0;}
-
-	open(LIST,"$file");
+	open(LIST,"$file") || die "\nCould not open $file\n";
 	while (<LIST>) {
 	    chomp;
 	    my $line = $_;
@@ -138,51 +155,126 @@ sub execute {
 	    unless ($var) {$var = "na";}
 	    $list->{$chr}->{$start}->{$stop}->{ref}=$ref;
 	    $list->{$chr}->{$start}->{$stop}->{var}=$var;
-	}
-	
-    } else {
-	
-	my $chr = $self->chromosome;
-	my $start = $self->start;
-	my $stop = $self->stop;
+	} close(LIST);
+	$list = &getDBSNPS($self,$list);
+    } elsif ($chr && $start && $stop) {
 	my $ref = $self->ref;
 	my $var = $self->var;
 
-	unless ($chr && $start && $stop) { system qq(gmt snp get-dbsnps --help);return 0;}
+	#unless ($chr && $start && $stop) { system qq(gmt snp get-dbsnps --help);return 0;}
+
 	unless ($ref) {$ref = "na";}
 	unless ($var) {$var = "na";}
 	$list->{$chr}->{$start}->{$stop}->{ref}=$ref;
 	$list->{$chr}->{$start}->{$stop}->{var}=$var;
-	
+	$list = &getDBSNPS($self,$list);
     }
-
-    $list = &getDBSNPS($list,$self);
     
-    foreach my $chr (sort keys %{$list}) {
-	foreach my $start (sort {$a<=>$b} keys %{$list->{$chr}}) {
-	    foreach my $stop (sort {$a<=>$b} keys %{$list->{$chr}->{$start}}) {
-		my $dbsnp_info = $list->{$chr}->{$start}->{$stop}->{dbsnp};
-		unless ($dbsnp_info) {$dbsnp_info = "no_dbsnp_hit";}
-		my $ref = $list->{$chr}->{$start}->{$stop}->{ref};
-		my $var = $list->{$chr}->{$start}->{$stop}->{var};
-		if ($out) {
-		    print OUT qq($chr $start $stop $ref $var $dbsnp_info\n);
-		} else {
-		    print qq($chr $start $stop $ref $var $dbsnp_info\n);
+    if ($list) {
+	foreach my $chr (sort keys %{$list}) {
+	    foreach my $start (sort {$a<=>$b} keys %{$list->{$chr}}) {
+		foreach my $stop (sort {$a<=>$b} keys %{$list->{$chr}->{$start}}) {
+		    my $dbsnp_info = $list->{$chr}->{$start}->{$stop}->{dbsnp};
+		    unless ($dbsnp_info) {$dbsnp_info = "no_dbsnp_hit";}
+		    my $ref = $list->{$chr}->{$start}->{$stop}->{ref};
+		    my $var = $list->{$chr}->{$start}->{$stop}->{var};
+		    if ($out) {
+			unless ($ref eq "na" && $var eq "na") {
+			    print OUT qq($chr $start $stop $ref $var $dbsnp_info\n);
+			}
+		    } else {
+			unless ($ref eq "na" && $var eq "na") {
+			    print qq($chr $start $stop $ref $var $dbsnp_info\n);
+			}
+		    }
 		}
 	    }
 	}
+	if ($out) {close(OUT);if(-f $out) {`rm $out`;}}
+        return ($list);
+
+    } elsif ($refseq_fasta && $ref_list) {
+	$list = $ref_list;
+        return ($list);
+    } else {
+	system qq(gmt snp get-dbsnps --help);return 0;
     }
-    return ($list);
+}
+
+sub getDBSNPS_GFF {
+    my ($self) = @_;
+    my $refseq_fasta = $self->refseq_fasta;
+
+    my ($chromosome,$start,$stop,$genomic_coord,$orientation,$ref_seq_length);
+
+    my $refseq_file = new FileHandle ($refseq_fasta);
+    while (<$refseq_file>) {
+	chomp;
+	my $line=$_;
+	if ($line =~ /\>/) {
+	    
+	    if ($line=~ /\s+Chr\:(\S+)\,\s+/) {
+		$chromosome=$1;
+	    }
+	    my ($fisrt_coord,$second_coord);
+	    if ($line=~ /Ori\s+\(\+\)/) {
+		($fisrt_coord,$second_coord)=$line =~ /Coords[\s]+(\d+)\S(\d+)/;
+		$orientation="plus";
+		$genomic_coord = $fisrt_coord - 1;
+	    } elsif ($line=~ /Ori\s+\(\-\)/) {
+		($fisrt_coord,$second_coord)=$line =~ /Coords[\s]+(\d+)\S(\d+)/;
+		$orientation="minus";
+		$genomic_coord = $second_coord + 1;
+	    }
+	    $ref_seq_length = $second_coord - $fisrt_coord + 1;
+	    $start = $fisrt_coord;
+	    $stop = $second_coord;
+	}
+    }
+
+
+    $self->{refseq_start} = $start;
+    $self->{refseq_stop} = $stop;
+    $self->{refseq_chr} = $chromosome;
+    $self->{refseq_orientation} = $orientation;
+    $self->{refseq_genomic_coord} = $genomic_coord;
+    $self->{ref_seq_length} = $ref_seq_length;
+    my $gff_out = $refseq_fasta;
+    $gff_out =~ s/\.c1.refseq.fasta$//;
+    $gff_out =~ s/\.refseq.fasta$//;
+    $gff_out =~ s/\fasta$//;
+    $gff_out = "$gff_out.dbsnp.gff";
+    $self->{gff_out}=$gff_out;
+
+    &getDBSNPS($self);
+
+    return $self;
+}
+
+sub ref_coord {
+    
+    #my ($pos,$orientation) = @_;
+    my ($self,$pos)  = @_;
+    my $orientation = $self->{refseq_orientation};
+    my $genomic_coord = $self->{refseq_genomic_coord};
+
+    my $ref_pos;
+    if ($orientation eq "plus") {
+	$ref_pos = $pos - $genomic_coord;
+    } elsif ($orientation eq "minus") {
+	$ref_pos = $genomic_coord - $pos;
+    }
+    return $ref_pos;
 }
 
 sub getDBSNPS {
 
-    my ($list,$self) = @_;   
+    my ($self,$list) = @_;   
+    my $dbsnp;
 
     my $gff = $self->gff;
-    if ($gff) {open(GFF,">$gff");}
     my $organism = $self->organism;
+    my $refseq_fasta = $self->refseq_fasta;
 
     my $g;
     if ($organism eq "human") {
@@ -193,35 +285,65 @@ sub getDBSNPS {
 	print qq(Organism choices are restricted to either the default human or mouse.\n);
 	exit (1);
     }
-    foreach my $chr (sort keys %{$list}) {
-	my $c = $g->get_chromosome($chr);
-	
-	foreach my $start (sort {$a<=>$b} keys %{$list->{$chr}}) {
-	    foreach my $stop (sort {$a<=>$b} keys %{$list->{$chr}->{$start}}) {
 
-		for my $pos ($start..$stop) {
-		    
-		    my @t = $c->get_tags( begin_position => {  operator => 'between', value => [$pos,$pos] },);
+    if ($list) {
+	my $dbsnp_out;
+	if ($gff) {
+	    unless ($self->refseq_fasta) {
+		my $out = $self->out;
+		if ($out) {
+		    $dbsnp_out = "$out.dbsnp.gff";
+		} else {
+		    my $file = $self->list;
+		    my $chr = $self->chromosome;
+		    my $start = $self->start;
+		    my $stop = $self->stop;
+		    if ($file) {
+			$dbsnp_out = "$file.dbsnp.gff";
+		    } elsif ($chr && $start && $stop) {
+			$dbsnp_out = "$chr:$start\_$stop.dbsnp.gff";
+		    } else {
+			$dbsnp_out = "genomic.dbsnp.gff";
+		    }
+		}
+		open(GFF,">$dbsnp_out") || die "\n couldn't open the output dbsnp.gff $dbsnp_out\n";
+	    }
+	}
+	foreach my $chr (sort keys %{$list}) {
+	    my $c = $g->get_chromosome($chr);
+	    foreach my $start (sort {$a<=>$b} keys %{$list->{$chr}}) {
+		foreach my $stop (sort {$a<=>$b} keys %{$list->{$chr}->{$start}}) {
+		    #for my $pos ($start..$stop) {
+		    my @t = $c->get_tags( begin_position => { operator => 'between', value => [$start,$stop] },);
+		    #my @t = $c->get_tags( begin_position => {  operator => 'between', value => [$pos,$pos] },);
 		    for my $t (@t) {
 			next unless $t->sequence_item_type eq 'variation sequence tag';
+			
+			my $t_start = $t->begin_position;
+			my $t_stop = $t->end_position;
+			my $pos = $t_start;
+			
 			my $variation_type = $t->variation_type;
 			my $ref_id = $t->ref_id;
 			my $allele_description = $t->allele_description;
+			$allele_description =~ s/\'//gi;
+
 			my $validated = $t->is_validated;
 			my $seq_length = $t->seq_length;
 			my $stag_id = $t->stag_id;
-
+			my $seq_id = $t->seq_id;
+			
 			my $unzipped_base_string = $t->unzipped_base_string;
-
+			
 			my $end = $pos + ($seq_length - 1);
-
+			
 			unless ($validated) { $validated = 0; }
-
+			
 			my ($vt,$v,$ad);
 			if ($dbsnp->{$chr}->{$pos}->{$ref_id}) {
 			    ($vt,$v,$ad) = split(/\:/,$dbsnp->{$chr}->{$pos}->{$ref_id});
 			}
-
+			
 			if ($validated == 1) {
 			    $dbsnp->{$chr}->{$pos}->{$ref_id}="$variation_type\:$validated\:$allele_description";
 			} elsif ($vt && $v && $ad) {
@@ -229,43 +351,114 @@ sub getDBSNPS {
 			} else {
 			    $dbsnp->{$chr}->{$pos}->{$ref_id}="$variation_type\:$validated\:$allele_description";
 			}
-
-
+			
+			
 			#$dbsnp->{$chr}->{$pos}->{$ref_id}="$variation_type\:$validated\:$allele_description";
-
+			
 			if ($self->gff) {
-			    print GFF qq(Chromosome$chr\tDB\t$variation_type\t$pos\t$end\t.\t+\t.\t$stag_id\t$ref_id \; Alleles $allele_description \; Validation $validated\n);
+			    unless ($self->refseq_fasta) {
+				
+				my @sources;
+				if ($seq_id) {
+				    my @seq_col = GSC::SequenceCollaborator->get(seq_id => $seq_id);
+				    if (@seq_col) {
+					for my $source (@seq_col) {
+					    my $r = $source->role_detail;
+					    my $c = $source->collaborator_name;
+					    my $e = "$c\_$r";
+						push @sources , $e unless grep (/$e/, @sources);
+					}
+				    }
+				}
+				my $source = join "::" , @sources;
+								
+				print GFF qq(Chromosome$chr\tDB\t$variation_type\t$t_start\t$t_stop\t.\t+\t.\t$ref_id \; Alleles \"$allele_description\" ; Validation_Status \"$validated\" ; seq_id \"$seq_id\" ; source \"$source\"\n);
+				
+				    #print GFF qq(Chromosome$chr\tDB\t$variation_type\t$pos\t$end\t.\t+\t.\t$stag_id\t$ref_id \; Alleles $allele_description \; Validation $validated\n);
+			    }
 			}
 		    }
-		}
 		
-		my $ref = $list->{$chr}->{$start}->{$stop}->{ref};
-		my $var = $list->{$chr}->{$start}->{$stop}->{var};
-
-		foreach my $ref_id (sort keys %{$dbsnp->{$chr}->{$start}}) {
-		    my ($variation_type,$validated,$allele_description) = split(/\:/,$dbsnp->{$chr}->{$start}->{$ref_id});
-		    my $match = &check_match($ref,$var,$allele_description);
-		    unless ($match) {$match="no_match";}
-		    my $snpfo = $list->{$chr}->{$start}->{$stop}->{dbsnp};
+		    my $ref = $list->{$chr}->{$start}->{$stop}->{ref};
+		    my $var = $list->{$chr}->{$start}->{$stop}->{var};
 		    
-		    if ($snpfo) {
-			unless ($snpfo =~ /$variation_type\:$validated\:$allele_description\:$match/) {
-			    $list->{$chr}->{$start}->{$stop}->{dbsnp}="$snpfo\:\:$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
+		    foreach my $ref_id (sort keys %{$dbsnp->{$chr}->{$start}}) {
+			my ($variation_type,$validated,$allele_description) = split(/\:/,$dbsnp->{$chr}->{$start}->{$ref_id});
+			my $class = "Genome::Model::Tools::Snp::GetDbsnps";
+			my $match = &check_match($ref,$var,$allele_description);
+			unless ($match) {$match="no_match";}
+			my $snpfo = $list->{$chr}->{$start}->{$stop}->{dbsnp};
+			
+			if ($snpfo) {
+			    unless ($snpfo =~ /$variation_type\:$validated\:$allele_description\:$match/) {
+				$list->{$chr}->{$start}->{$stop}->{dbsnp}="$snpfo\:\:$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
+			    }
+			} else {
+			    $list->{$chr}->{$start}->{$stop}->{dbsnp}="$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
 			}
-		    } else {
-			$list->{$chr}->{$start}->{$stop}->{dbsnp}="$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
 		    }
+		    my $snpfo = $list->{$chr}->{$start}->{$stop}->{dbsnp};
+		    unless ($snpfo) {$list->{$chr}->{$start}->{$stop}->{dbsnp} = "no_dbsnp_hit"};
 		}
-		my $snpfo = $list->{$chr}->{$start}->{$stop}->{dbsnp};
-		unless ($snpfo) {$list->{$chr}->{$start}->{$stop}->{dbsnp} = "no_dbsnp_hit"};
 	    }
 	}
-    }
-    return $list;
+	if ($self->gff) { unless ($self->refseq_fasta) { print qq(dbsnp.gff writen to => $dbsnp_out\n); close(GFF); }}
+	
+	return $list;
+
+    } elsif ($gff && $self->refseq_fasta) {
+	
+	my $start = $self->{refseq_start};
+	my $stop = $self->{refseq_stop};
+	my $chromosome = $self->{refseq_chr};
+	my $gff_out = $self->{gff_out};
+	my $root = $gff_out;
+	$root =~ s/\.snp\.gff//;
+	my @root = split(/\//,$root);
+	$root = pop(@root);
+
+	open(GFF,">$gff_out");
+	
+	my $c = $g->get_chromosome($chromosome);
+	my @t = $c->get_tags( begin_position => { operator => 'between', value => [$start,$stop] },);
+	for my $t (@t) {
+	    next unless $t->sequence_item_type eq 'variation sequence tag';
+	    my $ref_start = &ref_coord($self,$t->begin_position);# - $genomic_coord;
+	    my $ref_stop = &ref_coord($self,$t->end_position);# - $genomic_coord;
+	    
+	    my $variation_type = $t->variation_type;
+	    my $ref_id = $t->ref_id;
+	    my $allele_description = $t->allele_description;
+
+	    $allele_description =~ s/\'//gi;
+	    my $validation_status = $t->is_validated;
+	    unless ($validation_status) {$validation_status = 0;}
+	    my $seq_id = $t->seq_id;
+	    my @sources;
+	    if ($seq_id) {
+		my @seq_col = GSC::SequenceCollaborator->get(seq_id => $seq_id);
+		if (@seq_col) {
+		    for my $source (@seq_col) {
+			my $r = $source->role_detail;
+			my $c = $source->collaborator_name;
+			my $e = "$c\_$r";
+			push @sources , $e unless grep (/$e/, @sources);
+		    }
+		}
+	    }
+	    my $source = join "::" , @sources;
+
+	    
+	    print GFF qq($root\tDB\t$variation_type\t$ref_start\t$ref_stop\t.\t+\t.\t$ref_id \; Alleles \"$allele_description\" ; Validation_Status \"$validation_status\" ; seq_id \"$seq_id\" ; source \"$source\"\n);
+	}
+	close (GFF);
+	print qq(dbsnp.gff writen to => $gff_out\n);
+    } 
 }
 
 
 sub check_match {
+
     my ($ref,$var,$allele_description) = @_;
     
     $allele_description =~ s/\'//gi;
@@ -285,7 +478,9 @@ sub check_match {
 	}
     }
 
-    unless ($rm) {
+    unless ($rm && $vm) {
+	undef($rm);
+	undef($vm);
 	for my $n (1..$array_n) {
 	    my $m = $n - 1;
 	    my $dbsnp_allele = $dbsnp_allele_array[$m];
@@ -306,8 +501,6 @@ sub check_match {
     }
     return ($dbsnp_match);
 }	    
-
-
 
 
 sub reverse_complement_allele {
