@@ -173,6 +173,8 @@ sub parse_ref_seq_coords_file
         $self->error_message("line $lc: Chromosome name, $tokens[1], appears to be invalid, valid names are 1-22, X, and Y.\n") and die unless ($tokens[1] =~ /^(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|X|Y)$/);
         $self->error_message("line $lc: Start position, $tokens[2], is not numeric\n") and die unless ($tokens[2] =~/^\d+$/ );
         $self->error_message("line $lc: End position, $tokens[3], is not numeric\n") and die unless ($tokens[3] =~/^\d+$/ );
+        $self->error_message("line $lc: Start and end position need to be positive integers\n") and die unless($tokens[2] >0 && $tokens[3] >0);
+        $self->error_message("line $lc: Start position needs to be less than or equal to the end position\n") and die unless($tokens[2] <= $tokens[3]);
         $ref_seq_coords{$bac_name} = \%hash;        
     }
     while ($line = $fh->getline);
