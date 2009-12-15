@@ -83,7 +83,7 @@ sub execute {
     my $bam_file = $self->bam_file();
     
     unless(-s $bam_file) {
-        $self->status_message("Bam output file $bam_file was not found or had no size.");
+        $self->status_message("Input bam file $bam_file was not found or had no size.");
         die;
     }
     
