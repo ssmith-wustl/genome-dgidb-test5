@@ -289,12 +289,12 @@ sub execute {                               # replace with real execution logic.
 	    print REF qq($sequence\n);
 	} elsif ($organism eq "human") {
 	    print qq(Your reference sequence will be based on NCBI Human Build 36\n);
-	    print REF qq(>$project.c1.refseq.fasta $project_details NCBI Human Build 36, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
+	    print REF qq(>$project.c1.refseq.fasta $project_details Human NCBI Build 36, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
 	    my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop,$organism,$self);
 	    print REF qq($sequence\n);
 	} elsif ($organism eq "mouse") {
 	    print qq(Your reference sequence will be based on NCBI Mouse Build 37\n);
-	    print REF qq(>$project.c1.refseq.fasta $project_details NCBI Mouse Build 37, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
+	    print REF qq(>$project.c1.refseq.fasta $project_details Mouse NCBI Build 37, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
 	    my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop,$organism,$self);
 	    print REF qq($sequence\n);
 	} else {
@@ -323,6 +323,7 @@ sub execute {                               # replace with real execution logic.
     unless ("$project.c1.phd.1" && -e "$project.c1.phd.1") { die "no phd file\n"; }
 
     @command = ["cp" , "$project.c1.phd.1" , "$phd_dir"]; &ipc_run(@command);
+    print qq(running phd2Ace\n);
     @command = ["phd2Ace" , "$project.c1.phd.1"]; &ipc_run(@command);
 
     unless ("$project.c1.ace" && -e "$project.c1.ace") { die "no Ace file\n"; }
@@ -334,6 +335,7 @@ sub execute {                               # replace with real execution logic.
     mkdir ("../phd_dir",0775) if (! -d "../phd_dir");
     mkdir ("../chromat_dir",0775) if (! -d "../chromat_dir");
     my $chrln=<*.phd.1>;
+
     chomp($chrln);
     $chrln=~s/.phd.1//;
     system ("cat $chrln.phd.1|sed \'s/CHROMAT_FILE: none/CHROMAT_FILE: $chrln/\'>$chrln.phd.1.tmp");
@@ -346,6 +348,8 @@ sub execute {                               # replace with real execution logic.
     mkdir ("tmptrace.$$",0755);
     chdir ("tmptrace.$$");
     system ("\\cp ../$egdfasta .");
+
+    print qq(running consensus_raid\n);
     system ("consensus_raid -dir .. -piece-type c -fasta $egdfasta -quality-value 30 -root-name $egdfasta");
     
     system ("\\mv ../$chrln.phd.1 .");
@@ -374,6 +378,7 @@ sub execute {                               # replace with real execution logic.
 
     my $link_traces = $self->link_traces;
 
+    print qq(preparing traces\n);
     opendir(TRACES,"$trace_dir");
     open(FOF,">$traces_fof");
     while (my $trace = readdir(TRACES)) {
@@ -485,19 +490,20 @@ sub execute {                               # replace with real execution logic.
     
     close(FOF);
     
-    
+    print qq(Getting data from oltp\n);
 #--- Get data from oltp  ---
     my %seqid=&get_oltp(@amplist);
-    
+    print qq(Getting amplicon sequences from DW\n);
 #--- Get amplicon sequences from DW (write to __AMP__) ---
     &get_dw(%seqid);
-    
+    print qq(Creating fasta file from phd file for each amp for screening\n);
 #--- Create fasta file from phd file for each amp for screening ---
     &make_read_fasta(%ampread);
-    
+    print qq(screening fasta file\n);
 #--- screen fasta file ----
     &screen_mp(@amplist);
     
+    print qq(checking consedrc\n);
     my $consedrc = $self->consedrc;
     my $restrict_contigs = $self->restrict_contigs;
     my $move;
