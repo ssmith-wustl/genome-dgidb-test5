@@ -141,7 +141,10 @@ sub execute {
         return 1;
     }
 
-    my $samtools_cmd = "$sam_pathname pileup -c -f $ref_seq_file";
+    # use view to first filter out 0 quality alignments with -q 1 (min mapping quality = 1) ... -h include headers -u split out uncompressed -b spit out bam format instead of text
+    my $samtools_view_cmd = "$sam_pathname view -q 1 -hub $bam_file";
+    my $samtools_pileup_cmd = "$sam_pathname pileup -c -f $ref_seq_file";
+    my $samtools_cmd = "$samtools_view_cmd | $samtools_pileup_cmd -";
 
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
