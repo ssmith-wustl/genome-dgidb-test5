@@ -13,6 +13,8 @@ use Genome;
 use Data::Dumper;
 use IO::File;
 
+#            default  => '/gscmnt/sata835/info/medseq/imported_variations/dbSNP/130/',
+
 class Genome::Model::Tools::Annotate::LookupVariants {
     is  => 'Genome::Model::Tools::Annotate',
     has => [
@@ -46,7 +48,7 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         },
         dbSNP_path => {
             type     => 'Text',
-            default  => '/gscmnt/sata835/info/medseq/imported_variations/dbSNP/130/',
+            default  => '/gsc/var/lib/import/dbsnp/130/tmp/',
             doc      => "path to dbSNP files broken into chromosome",
         },
         report_mode => {
@@ -96,6 +98,8 @@ EOS
 }
 
 sub execute { 
+
+$DB::single = 1;
 
     my ($self) = @_;
 
@@ -204,15 +208,18 @@ sub print_db_snp_lines_without_filters {
 }
 
 sub filter_by_submitters {
-    
+
     my ($self, $line) = @_;
 
-    my ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop,
-        $ds_submitter )
-        = split( /\t/, $line );
+    # NOTE: submitters are 1 per line in dbsnp data source files,
+    # but are comma separated list on command line
+
+    my $snp = parse_dbsnp_line($line);    
+    my $ds_submitter = $snp->{'ds_submitter'};
 
     my $submitters_str = $self->filter_out_submitters();
     return $line if !$submitters_str;
+
 
     my @filter_submitters = split(/,/,$submitters_str);
     if (grep /^$ds_submitter$/, @filter_submitters) {
@@ -222,16 +229,16 @@ sub filter_by_submitters {
     return $line;
 }
 
+
 sub filter_by_type {
 
     my ($self, $line) = @_;
+    # returns $line if its a SNP
 
-    my ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop,
-        $ds_submitter )
-        = split( /\t/, $line );
+    my $snp = parse_dbsnp_line($line);
 
-    if ($ds_type eq 'SNP'
-        && $ds_start == $ds_stop) {
+    if ($snp->{'ds_type'} eq 'SNP'
+        && $snp->{'ds_start'} == $snp->{'ds_stop'}) {
         return $line;
     }
 
@@ -264,45 +271,45 @@ sub find_matches_around {
 
     my ($fh, $index) = $self->get_fh_for_chr($chr);
 
-    my ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop, $ds_submitter );
     my $cur = $pos;
-    my $line = $self->get_line($fh, $index, $cur);
-    ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop, $ds_submitter )
-        = split( /\t/, $line );
+    my $original_line = $self->get_line($fh, $index, $cur);
+
+    my $snp = parse_dbsnp_line($original_line);
+    my $ds_start = $snp->{'ds_start'};
     my $start = $ds_start;
 
-    push @forward, $line;
+    push @forward, $original_line;
    
     # go forward 
     while ($cur == $pos || $start == $ds_start) {
         $cur++;
         last if ($cur > $self->_last_data_line_number);
         
-        $line = $self->get_line($fh, $index, $cur);
-        last if !$line;
+        my $forward_line = $self->get_line($fh, $index, $cur);
+        last if !$forward_line;
 
-        ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop, $ds_submitter )
-            = split( /\t/, $line );
-
+        my $forward_snp = parse_dbsnp_line($forward_line);
+        $ds_start = $forward_snp->{'ds_start'};
         if ($start == $ds_start) {
-            push @forward, $line;
+            push @forward, $forward_line;
         }
     }
 
-    # go backwards
+    # reset and go backwards
+    $ds_start = $start;
     $cur = $pos; 
     while ($cur == $pos || $start == $ds_start) {
         $cur--;
         last if ($cur < 0);
 
-        $line = $self->get_line($fh, $index, $cur);
-        last if !$line;
+        my $reverse_line = $self->get_line($fh, $index, $cur);
+        last if !$reverse_line;
 
-        ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop, $ds_submitter )
-            = split( /\t/, $line );
+        my $reverse_snp = parse_dbsnp_line($reverse_line);
+        $ds_start = $reverse_snp->{'ds_start'};
 
         if ($start == $ds_start) {
-            push @backward, $line;
+            push @backward, $reverse_line;
         }
     } 
 
@@ -331,9 +338,8 @@ sub find_a_matching_pos {
         my $cur += $min + int(($max - $min) / 2);
 
         my $line = $self->get_line($fh, $index, $cur);
-
-        my ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop, $ds_submitter )
-            = split( /\t/, $line );
+        my $snp = parse_dbsnp_line($line);
+        my $ds_start = $snp->{'ds_start'};
 
         if ($start > $ds_start) {
             $min = $cur + 1;
@@ -407,11 +413,20 @@ sub group_variants_by_position {
 
     for my $v (@$v) {
 
-        my ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop, $ds_submitter )
-            = split( /\t/, $v );
-        my $line_without_submitter = join("\t", ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop ));
+        my $snp = parse_dbsnp_line($v);
+        my $ds_start = $snp->{'ds_start'};
+
+        my $line_without_submitter = join("\t", 
+            ( $snp->{'ds_id'}, 
+              $snp->{'ds_allele'}, 
+              $snp->{'ds_type'},
+              $snp->{'ds_chr'},
+              $snp->{'ds_start'},
+              $snp->{'ds_stop'} )
+        );
+
         $lines_without_submitter{$ds_start} = $line_without_submitter;
-        push @{$variant_groups{$ds_start}}, $ds_submitter;
+        push @{$variant_groups{$ds_start}}, $snp->{'ds_submitter'};
     }
   
     for my $ds_start (keys %variant_groups) {
@@ -422,6 +437,41 @@ sub group_variants_by_position {
     } 
 
     return @variants;
+}
+
+
+sub parse_dbsnp_line {
+
+    my ($line) = @_;
+
+    my $snp = {};
+    my @parts = split(/\t/,$line);
+
+    my @keys = qw(
+        ds_id
+        ds_allele 
+        ds_type
+        ds_chr
+        ds_start
+        ds_stop
+        ds_submitter
+        rs_id
+        strain
+        is_validated
+        is_validated_by_allele
+        is_validated_by_cluster
+        is_validated_by_frequency
+        is_validated_by_hap_map
+        is_validated_by_other_pop
+    );
+
+    my $i = 0;
+    for my $key (@keys) {
+        $snp->{$key} = $parts[$i];
+        $i++;
+    }
+
+    return $snp;
 }
 
 
