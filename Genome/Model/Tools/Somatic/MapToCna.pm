@@ -79,6 +79,15 @@ class Genome::Model::Tools::Somatic::MapToCna {
         default => 0,
         doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
     },
+    # Make workflow choose 64 bit blades
+    lsf_resource => {
+        is_param => 1,
+        default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
+    },
+    lsf_queue => {
+        is_param => 1,
+        default_value => 'long',
+    },
     ]
 };
 
