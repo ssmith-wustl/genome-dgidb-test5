@@ -160,8 +160,8 @@ sub _set_ranges
 
     $self->_start($start);
     $self->_stop($stop);
-    $self->_max( $start + $self->range );
-    $self->_min( $stop - $self->range );
+    $self->_min( $start + $self->range );
+    $self->_max( $stop - $self->range );
 
     return 1;
 }
