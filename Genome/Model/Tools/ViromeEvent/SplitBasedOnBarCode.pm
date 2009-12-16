@@ -10,6 +10,7 @@ use Data::Dumper;
 use IO::File;
 use File::Basename;
 use Bio::SeqIO;
+
 class Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode{
     is => 'Genome::Model::Tools::ViromeEvent',
     has =>
@@ -69,322 +70,406 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     return $self;
-
 }
 
 sub execute {
     my $self = shift;
-
-    my ($input_file, $barcode_seq_file) = ($self->fasta_file, $self->barcode_file);
-
-    $self->log_event("Splitting $input_file based on barcode...");
-    my $output_dir = $self->dir;
-    
-    my $lib_name = basename($output_dir);
-    $self->log_event("lib is $lib_name");
-    my $out = $output_dir."/"."Analysis_ReadStatistics_".$lib_name;
-
-    my $analysis_fh = IO::File->new("> $out") ||
-	die "Can not create file handle for $out";
-
-    # cutoffs for sample to be reamplify and resequencing TODO ???
-    my $percentage_cutoff = 15; # percentage of sequence less than 100 bp
-    my $numOfSeq_cutoff = 5000;	# total number of reads
-    my %resequencing = ();
-    my $C = "#######################################################\n";
-
-    my $count_decoded = 0;
-    my $count_have_noPB = 0;
-    my $count_have_5primePB = 0;
-    my $count_have_3primePB = 0;
-    my $count_have_PB_both_end = 0;
-    my $count_total = 0;
-    my $have_3primePB_decoded_by_3prime = 0;
-    my $have_PB_both_end_decoded_by_5prime = 0;
-    my $have_PB_both_end_decoded_by_3prime = 0;
-
-    my $total_length_run = 0; # total length of all sequences in the run
-    my @bin = ();
-    my $range = 50;
-    my $numBin = 8;
-    my @LengthOfSequences = (); # length of sequences
-
-    # Given one output file from 454 sequencing (assume one fasta file
-    # with a pool of sample libraries each with a unique tag).
-    # Split this one fasta file into different .fa files based on perfect 
-    # match to barcode sequence.
-
-    # read in barcode sequence used in the given run
-    my $PBseq ="GTTTCCCAGTCACGATA";
-    my $PB_ReverseComplement = $PBseq;
-    $PB_ReverseComplement = reverse $PB_ReverseComplement;
-    $PB_ReverseComplement =~ tr/ACGTacgt/TGCAtgca/;
-
-    my %barcode = (); # barcode_sequence => library name
-    my $barcode_length = 0;
-    my $total_sample = 0;
-    my $barcode_fh = IO::File->new("< $barcode_seq_file") ||
-	die "Can not create file handle for $barcode_seq_file";
-    while (my $line = $barcode_fh->getline) {
-	next if $line =~ /^\s+$/ || $line =~ /#/;
-	chomp $line;
-	my @temp = split(/\s+/, $line);
-	my $sample_number = $temp[0];
-	#?? $temp[1] ?? 
-	my $tag = $temp[2]; #BARCODE SEQUENCE
-        my $lib = $temp[3]; #LIBRARY NAME
-	$tag =~ s/$PBseq//;
-	next unless $tag; #SKIP IF TAG SEQ IS COMPOSED ENTIRELY OF PB SEQ
-	$lib =~ s/\W+/_/g;
-	my $samp_name = "S".$sample_number."_".$lib;
-	$self->log_event("tag = $tag, samp_name =$samp_name");
-	if (defined $barcode{$tag}) {
-		$analysis_fh->print("$tag => $barcode{$tag} is duplicated! $samp_name\n");
-	}
-	else {
-		$barcode{$tag} = $samp_name;
-		$total_sample++;
-	}
-	$barcode_length = length($tag);
+    $self->log_event("Spliting based on barcode ".basename($self->fasta_file));
+    #CREATE A HASH LINKING SAMPLE NAME TO BARCODE SEQUENCE
+    my $barcodes;
+    unless ($barcodes = $self->_parse_barcode_file()) {
+	$self->log_event("Failed to parse barcode file");
+	return;
     }
-    $barcode_fh->close;
-
-    my %barcoded_seq = (); # barcode => read_name => read_sequence
-
-    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $input_file);
-    while (my $seq = $io->next_seq) {
-	$count_total++;
-	my $read_name = $seq->primary_id;
-	my $read_seq = $seq->seq;
-
-	push @LengthOfSequences, length($read_seq);
-	$total_length_run += length($read_seq);
-	
-	my $found_5primePB = 0;
-	my $found_3primePB = 0;
-	my $final_seq = $read_seq; 
-	my $code = "";
-	my $decoded = 0;
-	my $before_5primePB = "";
-	if ($final_seq =~ /$PBseq/) {
-	    $found_5primePB = 1;
-	    $before_5primePB = "$`";
-	    $final_seq = "$'";
-	}
-
-	# find 3' primer B
-	my $after_3primePB = "";
-	if ($final_seq =~ /$PB_ReverseComplement/) {
-	    $found_3primePB = 1;
-	    $final_seq = "$`";
-	    $after_3primePB = "$'";
-	}
-
-	my $presumecode_5prime = substr($before_5primePB, -1*$barcode_length);
-	my $presumecode_3prime = substr($after_3primePB, 0, $barcode_length);
-	
-	if ($found_5primePB && $found_3primePB) {
-	    $count_have_PB_both_end++;
-	    if (defined $barcode{$presumecode_5prime}) {
-		$count_decoded++;
-		$decoded = 1;
-		$have_PB_both_end_decoded_by_5prime++;
-		$code = $presumecode_5prime;
-	    }
-	    else { # could not decode use 5' barcode, check 3' sequence
-		# calculate reverse complement of 3' presume code
-		my $RC = $presumecode_3prime;
-		$RC = reverse $RC;
-		$RC =~ tr/ACGTacgt/TGCAtgca/;
-		
-		if (defined $barcode{$RC}) {
-		    $decoded = 1;
-		    $count_decoded++;
-		    $have_PB_both_end_decoded_by_3prime++;
-		    $code = $RC;
-		}
-	    }
-	}
-	elsif ($found_5primePB) {
-	    $count_have_5primePB++;
-	    if (defined $barcode{$presumecode_5prime}) {
-		$count_decoded++;
-		$decoded = 1;
-		$code = $presumecode_5prime;
-	    }
-	}
-	elsif ($found_3primePB) {
-	    $count_have_3primePB++;
-	    # calculate reverse complement of 3' presume code
-	    my $RC = $presumecode_3prime;
-	    $RC = reverse $RC;
-	    $RC =~ tr/ACGTacgt/TGCAtgca/;
-	    if (defined $barcode{$RC}) {
-		$decoded = 1;
-		$count_decoded++;
-		$have_3primePB_decoded_by_3prime++;
-		$code = $RC;
-	    }
-	}
-	else {
-	    $count_have_noPB++;
-	}
-	
-	if ($decoded) {
-	    $barcoded_seq{$code}{$read_name} = $final_seq;
-	}
-	else { # could not find corresponding barcode
-	    $barcoded_seq{"undecodable"}{$read_name} = $final_seq;
-	}
+    #CREATE GENERAL METRICS, CLIP PB SEQ FROM FASTA
+    #FILTER FASTA BY BARCODE SEQUENCES
+    my ($metrics, $fasta);
+    unless (($metrics, $fasta) = $self->_filter_fasta_file($barcodes)) {
+	$self->log_event("Failed to filter fasta file");
+	return;
+    }
+    #SPARATE READS BASED ON BARCODE AND CREATE SAMPLES DIRS
+    #FOR REST OF PIPELINE
+    unless ($self->_create_run_samples($fasta, $barcodes)) {
+	$self->log_event("Failed to create run samples");
+	return;
+    }
+    #CREATE/PRINT GENERAL METRICS
+    unless ($self->_print_metrics($metrics)) {
+	$self->log_event("Failed to print metrics");
+	return;
+    }
+    unless ($self->_print_distribution_metrics($fasta, $barcodes)) {
+	$self->log_event("Failed to print dist metrics");
+	return;
     }
 
-    # foreach barcode, generate one output file which holds all sequences 
-    # that have that barcode. Each barcode represents one library.
-
-    foreach my $code_seq (keys %barcoded_seq) {
-	my $samp_name = ($code_seq eq 'undecodable') ? $lib_name.'_undecodable' : $barcode{$code_seq};
-	my $samp_dir = $output_dir.'/'.$samp_name;
-	unless (-d $samp_dir) {
-	    system("mkdir $samp_dir");
-	}
-	unless (-d $samp_dir) {
-	    $self->log_event("Failed to create sample directory for ".basename($samp_dir));
-	    return;
-	}
-	my $outFile = $output_dir.'/'.$samp_name.'/'.$samp_name.".fa";
-	my $fa_out = IO::File->new("> $outFile") ||
-	    die "Can not create file handle for $outFile";
-	foreach my $read_name (keys %{$barcoded_seq{$code_seq}}) {
-	    $fa_out->print(">$read_name\n");
-	    $fa_out->print("$barcoded_seq{$code_seq}{$read_name}\n");
-	}
-	$fa_out->close;
-    }
-    
-    $analysis_fh->print("\n$input_file\n".
-			"total number of samples: $total_sample\n".
-			"total number of sequences: $count_total\n");
-    $analysis_fh->printf("number of sequences have no PB: %d \( %5.1f%% \)\n", $count_have_noPB, $count_have_noPB*100/$count_total);
-    $analysis_fh->printf("number of sequences have 5 prime PB: %d \( %5.1f%% \)\n", $count_have_5primePB, $count_have_5primePB*100/$count_total);
-    
-    #TO AVOID DIVISION BY ZERO ERROR
-    my $have_3primePB_decoded = ($count_have_5primePB > 0) ? $have_3primePB_decoded_by_3prime*100/$count_have_3primePB : 0;
-	
-    $analysis_fh->printf("number of sequences have 3 prime PB: %d\( %5.1f%% \), number of seq decoded by 3' code %d, \( %5.1f%% \) \n", $count_have_3primePB, $count_have_3primePB*100/$count_total, $have_3primePB_decoded_by_3prime, $have_3primePB_decoded);
-
-    #TO AVOID DIVISION BY ZERO ERRORS
-    my $have_PB_both_end_decoded_by_5prime_ratio = ($count_have_PB_both_end) ? $have_PB_both_end_decoded_by_5prime*100/$count_have_PB_both_end : 0;
-    my $have_PB_both_end_decoded_by_3prime_ratio = ($count_have_PB_both_end) ? $have_PB_both_end_decoded_by_3prime*100/$count_have_PB_both_end : 0;
-
-    $analysis_fh->printf("number of seq have PB at both ends: %d \( %5.1f%% \), number of seq decoded by 5' code: %d \( %5.1f%% \), number of seq decoded by 3' code: %d \( %5.1f%% \)\n", $count_have_PB_both_end, $count_have_PB_both_end*100/$count_total, $have_PB_both_end_decoded_by_5prime, $have_PB_both_end_decoded_by_5prime_ratio, $have_PB_both_end_decoded_by_3prime, $have_PB_both_end_decoded_by_3prime_ratio);
-
-    $analysis_fh->printf("number of sequences decoded: %d\(%5.1f%%\)\n", $count_decoded, $count_decoded*100/$count_total);
-    $analysis_fh->printf("%s%d\n\n", "average length of sequence: ", $total_length_run/$count_total);
-
-    my @disRun = ();
-    &calculate_disbribution(\@LengthOfSequences, $range, $numBin, \@disRun);
-    $analysis_fh->print("$C"."distribution of sequence length in the run:\n");
-    $analysis_fh->printf("%6s%10s%10s", "barcode", "total#", "AveLen"); 
-    for (my $i = 0; $i <= $numBin; $i++) {
-        $analysis_fh->printf("%7d", $i*$range);
-    }
-    $analysis_fh->print(" sample\n");
-
-    $analysis_fh->printf("%6s%10d%10d", "total", $count_total, $total_length_run/$count_total);
-    for (my $i = 0; $i <= $numBin; $i++) {
-	$analysis_fh->printf("%7.1f", $disRun[$i]*100/$count_total);
-    }
-
-    # foreach barcode, calculate the statistics and output information 
-    # if a sample has less than $total_seq_cutoff total sequence, or has 
-    # less than $unique_seq_cu
-    my @bad_samples = ();
-    my %sequence_stat = (); # sample name => sequence statistics
-
-    foreach my $code_seq (sort {$a cmp $b} keys %barcoded_seq) {
-
-    next if $code_seq =~ /undecod/;
-
-    my $shortest_len = 10000;
-    my $longest_len = 0;
-    my $total_length_sample = 0;
-    my $numOfSeq = 0;
-    my @lengthSample = ();
-    
-    foreach my $read_name (keys %{$barcoded_seq{$code_seq}}) {
-	$numOfSeq++;
-	my $length = length($barcoded_seq{$code_seq}{$read_name});
-	$total_length_sample += $length;
-	push @lengthSample, $length;
-	if ($length < $shortest_len) {
-	    $shortest_len = $length;
-	}
-	if ($length > $longest_len) {
-	    $longest_len = $length;
-	}
-	
-    }
-	
-    # output information
-    my $ave_len = $total_length_sample/$numOfSeq;
-    my @dis_sample = ();
-    &calculate_disbribution(\@lengthSample, $range, $numBin, \@dis_sample);
-    my $info = sprintf ("%6s%10d%10d", $code_seq, $numOfSeq, $ave_len,);
-    my $lessThan100 = 0;
-    for (my $i = 0; $i <= $numBin; $i++) {
-	my $ptg = $dis_sample[$i]*100/$numOfSeq;
-	$info .= sprintf ("%7.1f", $ptg );
-	if ($i == 0 || $i == 1) {
-	    $lessThan100 += $ptg;
-	}
-    }
-    $info .= sprintf "  ";
-    $info .= sprintf $barcode{$code_seq}, "\n";
-    
-    if ($lessThan100 >= $percentage_cutoff) {
-	$resequencing{$barcode{$code_seq}} = 1;
-    }
-    if ($numOfSeq <= $numOfSeq_cutoff) {
-	$resequencing{$barcode{$code_seq}} = 1;
-    }
-    $sequence_stat{$barcode{$code_seq}} = $info;
-    }
-    
-    foreach my $sample (sort {$a cmp $b} keys %sequence_stat) {
-	$analysis_fh->print("\n".$sequence_stat{$sample}."\n");
-    }
-    $analysis_fh->print ("End of Distribution\n\n"."$C"."Sample needs to be reamplified:\n");
-    foreach my $spl (sort {$a cmp $b} keys %resequencing) {
-	$analysis_fh->print($spl, "\n");
-    }
-    $analysis_fh->print("End of sample list\n");
-    $analysis_fh->close;
-    $self->log_event("Split based on barcode completed"); #monitor
+    $self->log_event("Split based on barcode completed");
     return 1;
 }
 
-
-#####################################################################
-# This subroutine accepts an array of numbers and the range for a bin
-# and calculate the distribution of number at each range
-sub calculate_disbribution {
-    my ($data_arr, $range, $numBin, $dis_arr) = @_;
-    
-    for (my $i = 0; $i <= $numBin; $i++) {	
-        $dis_arr->[$i] = 0;
+sub _print_metrics {
+    my $self = shift;
+    my $metrics = shift;
+    my $analysis_out = $self->dir.'/Analysis_ReadStatistics_'.basename($self->dir);
+    my $out_fh = IO::File->new("> $analysis_out") ||
+	die "Can not create file handle for $analysis_out";
+    $out_fh->print($self->fasta_file."\n".
+		   "total number of samples: ".$metrics->{sample_count}."\n".
+		   "total number of sequences: ".$metrics->{read_count}."\n" );
+    #CONSIDER METRICS OF READS THAT HAVE PB SEQUENCES 3' VS 5' ENDS OR NEITHER
+    #ALSO METRICS OF WHETHER BARCODE SEQ WAS FOUND AT 3' OR 5' OR BOTH ENDS OR NOT FOUND
+    #NO PB
+    my $no_pb_read_count = 0;
+    my $no_pb_read_ratio = 0;
+    if (exists $metrics->{reads_with_no_pb}) {
+	$no_pb_read_count = $metrics->{reads_with_no_pb};
+	$no_pb_read_ratio = sprintf("%.1f", $no_pb_read_count * 100 / $metrics->{read_count});
     }
-    
-    foreach my $num (@{$data_arr}) {
-        my $bin = int($num/$range);
-      	if ($bin < $numBin) {
-	    $dis_arr->[$bin]++;
-	}	
-	else {
-	    $dis_arr->[$numBin]++;
+    $out_fh->print("number of sequences have no PB: $no_pb_read_count ( $no_pb_read_ratio% )\n");
+    #PB AT 5 END
+    my $five_prime_pb_read_count = 0;
+    my $five_prime_pb_read_ratio = 0;
+    if (exists $metrics->{reads_with_5prime_pb}) {
+	$five_prime_pb_read_count = $metrics->{reads_with_5prime_pb};
+	$five_prime_pb_read_ratio = sprintf("%.1f", $five_prime_pb_read_count * 100 / $metrics->{read_count});
+    }
+    $out_fh->print("number of sequences have 5 prime PB: $five_prime_pb_read_count ( $five_prime_pb_read_ratio% )\n");
+    #PB AT 3 END
+    my $three_prime_pb_read_count = 0;
+    my $three_prime_pb_read_ratio = 0;
+    if (exists $metrics->{reads_with_3prime_pb}) {
+	$three_prime_pb_read_count = $metrics->{reads_with_3prime_pb};
+	$three_prime_pb_read_ratio = sprintf("%.1f", $three_prime_pb_read_count * 100 / $metrics->{read_count});
+    }
+    $out_fh->print("number of sequences with 3 prime PB: $three_prime_pb_read_count ( $three_prime_pb_read_ratio% )\n");
+    #PB AT BOTH ENDS
+    my $both_end_pb_read_count = 0;
+    my $both_end_pb_read_ratio = 0;
+    #PB AT BOTH ENDS DECODED BY 5 PRIME
+    my $both_end_pb_decode_by_5pri_count = 0;
+    my $both_end_pb_decode_by_5pri_ratio = 0;
+    #PB AT BOTH ENDS DECODED BY 3 PRIME
+    my $both_end_pb_decode_by_3pri_count = 0;
+    my $both_end_pb_decode_by_3pri_ratio = 0;
+
+    if (exists $metrics->{reads_with_3and5prime_pb}) {
+	$both_end_pb_read_count = $metrics->{reads_with_3and5prime_pb};
+	$both_end_pb_read_ratio = sprintf("%.1f", $both_end_pb_read_count * 100 / $metrics->{read_count});
+	if (exists $metrics->{pb_at_both_ends_decoded_by_5prime}) {
+	    $both_end_pb_decode_by_5pri_count = $metrics->{pb_at_both_ends_decoded_by_5prime};
+	    $both_end_pb_decode_by_5pri_ratio = sprintf("%.1f", $both_end_pb_decode_by_5pri_count * 100 / $both_end_pb_read_count);
+	}
+	if (exists $metrics->{pb_at_both_ends_decoded_by_3prime}) {
+	    $both_end_pb_decode_by_3pri_count = $metrics->{pb_at_both_ends_decoded_by_3prime};
+	    $both_end_pb_decode_by_3pri_ratio = sprintf("%.1f", $both_end_pb_decode_by_3pri_count * 100 / $both_end_pb_read_count);
 	}
     }
+    $out_fh->print("number of seq have PB at both ends: $both_end_pb_read_count ( $both_end_pb_read_ratio% ) ".
+		   "number of seq decoded by 5' code: $both_end_pb_decode_by_5pri_count ( $both_end_pb_decode_by_5pri_ratio% ) ".
+		   "number of seq decoded by 3' code: $both_end_pb_decode_by_3pri_count ( $both_end_pb_decode_by_3pri_ratio% )\n");
+    #READS DECODED
+    my $reads_decoded_count = 0;
+    my $reads_decoded_ratio = 0;
+    if (exists $metrics->{reads_decoded}) {
+	$reads_decoded_count = $metrics->{reads_decoded};
+	$reads_decoded_ratio = sprintf("%.1f", $reads_decoded_count * 100 / $metrics->{read_count});
+    }
+    $out_fh->print("number of sequences decoded: $reads_decoded_count ( $reads_decoded_ratio% )\n");
+    #AVERAGE READ LENGTH
+    #my $average_length = sprintf ("%.1f", $metrics->{total_sequence_length} / $metrics->{read_count});
+    my $average_length = int ($metrics->{total_sequence_length} / $metrics->{read_count});
+    $out_fh->print("average length of sequences: $average_length\n\n");
+
+    $out_fh->close;
+    return 1;
+}
+
+sub _print_distribution_metrics {
+    my $self = shift;
+    my $fasta = shift;
+    my $barcodes = shift;
+    my $analysis_out = $self->dir.'/Analysis_ReadStatistics_'.basename($self->dir);
+    my $out_fh = (-s $analysis_out) ? IO::File->new(">> $analysis_out") : IO::File->new("> $analysis_out");
+    unless ($out_fh) {
+	die "Can not create file handle to append analysis file"
+    }
+    my $dist_increment = 50;
+    my $dist_number = 8;
+
+    #CALCUALTE DISTRIBUTION OF SEQUENCE LENGTHS IN INCREMENTS OF 50 BPS
+    $out_fh->print("#######################################################\n".
+                    "distribution of sequence lengths in the run:\n");
+    my $str = "barcode\ttotal#\tAvgLen\t";
+    #PRINT DISTRIBUTION SCALE
+    #BARCODE TOTAL#  AvgLen          0       50      100     150     200     250     300     350     400     sample
+    for (my $i = 0; $i <= $dist_number; $i++) {
+	$str .= sprintf("%7.0f", $i * $dist_increment);
+    }
+    $out_fh->print($str."\t\tsample\n");
+    my $dists = {};
+    foreach my $barcode (sort keys %$fasta) {
+	foreach my $read_name (keys %{$fasta->{$barcode}}) {
+	    my $seq_length = length $fasta->{$barcode}->{$read_name};
+	    my $dist_hit = int ($seq_length / $dist_increment);
+	    #DISTRIBUTION FOR INDIVIDUAL SAMPLES
+	    $dist_hit = ($dist_hit > $dist_number) ? $dist_number : $dist_hit;
+	    $dists->{$barcode}->{$dist_hit}++;
+	    $dists->{$barcode}->{'total_seq_lengths'} += $seq_length;
+	    $dists->{$barcode}->{'total_read_count'}++;
+	    $dists->{$barcode}->{'read_less_than_100bp'}++ if $seq_length <= 100;
+	    #DISTRIBUTIONS FOR ALL DATA
+	    $dists->{'total'}->{$dist_hit}++;
+	    $dists->{'total'}->{'total_seq_lengths'} += $seq_length;
+	    $dists->{'total'}->{'total_read_count'}++;
+	}
+    }
+    print Dumper $dists;
+    #PRINT TOTAL DIST STATS FIRST
+    my $string = "total\t".$dists->{'total'}->{'total_read_count'}."\t".
+	         sprintf ("%.1f", $dists->{'total'}->{'total_seq_lengths'} / $dists->{'total'}->{'total_read_count'})."\t";
+    for (my $i = 0; $i <= $dist_number; $i++) {
+	my $val = (exists $dists->{'total'}->{$i}) ?
+	    sprintf ("%.1f", $dists->{'total'}->{$i} * 100 / $dists->{'total'}->{'total_read_count'}) : '0.0';
+	$string .= sprintf ("%7.1f", $val);
+    }
+    $out_fh->print($string."\n");
+    #PRINT REST OF DIST STATS
+    foreach my $bc (sort keys %$dists) {
+	next if $bc eq 'total' || $bc eq 'undecodable';
+	$string = "$bc\t".$dists->{$bc}->{'total_read_count'}."\t".
+	          sprintf ("%.1f", $dists->{$bc}->{'total_seq_lengths'} / $dists->{$bc}->{'total_read_count'})."\t";
+	for (my $i = 0; $i <= $dist_number; $i++) {
+	    my $val = (exists $dists->{$bc}->{$i}) ?
+		sprintf ("%.1f", $dists->{$bc}->{$i} * 100 / $dists->{$bc}->{'total_read_count'}) : '0.0';
+	    $string .= sprintf ("%7.1f", $val);
+	}
+	$string .= "\t\t".$barcodes->{$bc} if exists $barcodes->{$bc};
+	$out_fh->print($string."\n");
+    }
+    $out_fh->print("End of Distribution\n\n".
+	           "#######################################################\n".
+	           "Sample needs to be reamplified:\n");
+    #SAMPLES FOR RE-SEQUENCING
+    foreach my $bc (sort keys %$dists) {
+	next if $bc eq 'total' || $bc eq 'undecodable';
+	if (exists $dists->{$bc}->{'read_less_than_100bp'}) {
+	    my $ratio = int ($dists->{$bc}->{'read_less_than_100bp'} * 100 / $dists->{$bc}->{'total_read_count'});
+	    #IF >= 15% OF READS ARE LESS THAN 100 BP PUT ON RESEQUENCE LIST
+	    $out_fh->print($barcodes->{$bc}."\n") if $ratio >= 15;
+	}
+    }
+    $out_fh->print("End of sample list\n");
+    $out_fh->close;
+    return 1;
+}
+
+sub _create_run_samples {
+    my $self = shift;
+    my $fasta = shift;
+    my $sample_names = shift;
+    my $undecod_sample_name = basename $self->dir;
+    $undecod_sample_name .= '_undecodable';
+    foreach my $barcode (keys %$fasta) {
+	my $sample_name = ($barcode eq 'undecodable') ? $undecod_sample_name : $sample_names->{$barcode};
+	unless ($sample_name) {
+	    $self->log_event("Can not get sample name for $barcode");
+	    return;
+	}
+	my $sample_dir = $self->dir.'/'.$sample_name;
+	unless (-d $sample_dir) {
+	    system("mkdir $sample_dir");
+	}
+	my $sample_fa = $sample_dir.'/'.$sample_name.'.fa';
+	if (-s $sample_fa) {
+	    #VERIFY ALL READS ARE THERE IF ALL READS ARE THERE
+	    if ($self->_verify_all_reads_present($sample_fa, $fasta->{$barcode})) {
+		next;
+	    }
+	    unlink $sample_fa;
+	    #ALSO REMOVE EVERYTHING ELSE THAT GETS CREATED AFTER THIS STEP
+	}
+	my $fa_out = Bio::SeqIO->new(-format => 'fasta', -file => ">$sample_fa");
+	foreach my $read_name (keys %{$fasta->{$barcode}}) {
+	    my $seq_obj = Bio::Seq->new(-display_id => $read_name, -seq => $fasta->{$barcode}->{$read_name});
+	    $fa_out->write_seq($seq_obj);
+	}
+    }
+    return 1;
+}
+
+sub _verify_all_reads_present {
+    my $self = shift;
+    my $fasta_file = shift;
+    my $fasta = shift;
+    my @existing_reads;
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $fasta_file);
+    while (my $seq = $io->next_seq) {
+	if (exists $fasta->{$seq->primary_id}) {
+	    push @existing_reads, $seq->primary_id;
+	}
+	else {
+	    $self->log_event("Failed to find ".$seq->primary_id." in existing fasta file");
+	    return;
+	}
+    }
+    unless (scalar (keys %$fasta) == scalar @existing_reads) {
+	$self->log_event("Number of reads did not agree");
+	return;
+    }
+    return 1;
+}
+
+sub _pb_seq {
+    my $self = shift;
+    return 'GTTTCCCAGTCACGATA';
+}
+
+sub _comp_pb_seq {
+    my $self = shift;
+    my $rev_pb_seq = reverse $self->_pb_seq();
+    $rev_pb_seq =~ tr/ACGTacgt/TGCAtgca/;
+    return $rev_pb_seq;
+}
+
+sub _get_barcode_lengths {
+    my $self = shift;
+    my $barcode = shift;
+    my $barcode_length = 0;
+    #BARCODE->{BARCODE} = SAMPLE_NAME
+    foreach my $barcode (keys %$barcode) {
+	#ALL BARCODES SHOULD BE THE SAME LENGTH
+	if ($barcode_length > 0) {
+	    unless ($barcode_length == length $barcode) {
+		$self->log_event("$barcode is not sample length as previous one");
+		return;
+	    }
+	}
+	$barcode_length = length $barcode;
+    }
+    return $barcode_length;
+}
+
+sub _filter_fasta_file {
+    my $self = shift;
+    my $barcodes = shift;
+    my $metrics = {}; my $fasta = {};
+    my $barcode_length = $self->_get_barcode_lengths($barcodes);
+    my $pb_seq = $self->_pb_seq;
+    my $comp_pb_seq = $self->_comp_pb_seq();
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->fasta_file);
+    while (my $seq = $io->next_seq) {
+	my $read_seq = $seq->seq; #WILL GET PROCESSED
+	my $found_5prime_pb; my $found_3prime_pb;
+	my $code_at_5end;    my $code_at_3end;
+	my $sequence_decoded = 0;
+	my $barcode; #BARCODE SEQ DERIVED FROM FASTA SEQ
+	if ($read_seq =~ /$pb_seq/) {
+	    $code_at_5end = substr("$`", -1*$barcode_length);
+	    $read_seq = "$'";
+	    $found_5prime_pb = 1;
+	}
+	if ($read_seq =~ /$comp_pb_seq/) {
+	    $code_at_3end = substr("$'", 0, $barcode_length);
+	    $read_seq = "$`";
+	    $found_3prime_pb = 1;
+	    #COMPLEMENT THE 3 END SEQ
+	    $code_at_3end = reverse $code_at_3end;
+	    $code_at_3end =~ tr/ACGTacgt/TGCAtgca/;
+	}
+	#IF 5' AND 3' MATCHES
+	if ($found_5prime_pb && $found_3prime_pb) {
+	    $metrics->{reads_with_3and5prime_pb}++;
+	    if (exists $barcodes->{$code_at_5end}) {
+		$sequence_decoded = 1;
+		$barcode = $code_at_5end;
+		$metrics->{pb_at_both_ends_decoded_by_5prime}++;
+	    }
+	    elsif (exists $barcodes->{$code_at_3end}) {
+		$sequence_decoded = 1;
+		$barcode = $code_at_3end;
+		$metrics->{pb_at_both_ends_decoded_by_3prime}++;
+	    }
+	    else {
+		#UNDECODED
+	    }
+	}
+	#IF 5' MATCH
+	elsif ($found_5prime_pb) {
+	    $metrics->{reads_with_5prime_pb}++;
+	    if (exists $barcodes->{$code_at_5end}) {
+		$sequence_decoded = 1;
+		$barcode = $code_at_5end;
+		$metrics->{pb_at_5end_decoded_by_5prime}++;
+	    }
+	}
+	#IF 3' MATCH
+	elsif ($found_3prime_pb) {
+	    $metrics->{reads_with_3prime_pb}++;
+	    if (exists $barcodes->{$code_at_3end}) {
+		$sequence_decoded = 1;
+		$barcode = $code_at_3end;
+		$metrics->{pb_at_3end_decoded_by_3prime}++;
+	    }
+	}
+	#NO MATCH
+	else {
+	    $metrics->{reads_with_no_pb}++;
+	}
+	#METRICS FOR LATER CALCULATIONS
+	$metrics->{read_count}++;
+	$metrics->{total_sequence_length} += length $seq->seq;
+	push @{$metrics->{lengths_of_seqs}}, length $seq->seq;
+	#CREATE A FASTA HASH THAT CAN BE LOOKED UP BY BARCODE
+	if ($sequence_decoded == 1) {
+	    $fasta->{$barcode}->{$seq->primary_id} = $read_seq;
+	    $metrics->{reads_decoded}++;
+	}
+	else {
+	    $fasta->{undecodable}->{$seq->primary_id} = $read_seq;
+	}
+    }
+    #GET A COUNT OF NUMBER OF SAMPLES
+    foreach my $barcode (keys %$fasta) {
+	next if $barcode eq 'undecodable';
+	$metrics->{sample_count}++;
+    }
+    return $metrics, $fasta;
+}
+
+sub _parse_barcode_file {
+    my $self = shift;
+    my %barcode;
+    unless (-s $self->barcode_file) {
+	$self->log_event("Can not fine barcode file ".basename($self->barcode_file));
+	return; #SHOULD EXIT .. BUT CAN'T IN WORK FLOW
+    }
+    my $pb_seq = $self->_pb_seq();
+    my $fh = IO::File->new("< ".$self->barcode_file) ||
+	die "Can not create file handle for barcode file";
+    while (my $line = $fh->getline) {
+	next if $line =~ /^\s+$/ || $line =~ /#/;
+	chomp $line;
+	my @tmp = split(/\s+/, $line);
+	my $sample_number = $tmp[0];
+	#$temp[1] ?? NOT SURE WHAT THIS IS 
+	my $tag = $tmp[2]; #BARCODE SEQUENCE
+        my $lib = $tmp[3]; #LIBRARY NAME
+	$tag =~ s/$pb_seq//;
+	next unless $tag; #SKIP IF TAG SEQ IS COMPOSED ENTIRELY OF PB SEQ
+	$lib =~ s/\W+/_/g;
+	my $sample_name = "S".$sample_number."_".$lib;
+	$self->log_event("tag = $tag, samp_name =$sample_name");
+	if (exists $barcode{$tag}) {
+	    $self->log_event("$tag is duplicated");
+	    return; #SHOULD EXIT
+	}
+	else {
+	    $barcode{$tag} = $sample_name;
+	}
+    }
+    $fh->close;
+    return \%barcode;
 }
 
 1;
-
-sub sub_command_sort_position { 7 }
