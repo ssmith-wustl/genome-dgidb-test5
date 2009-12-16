@@ -15,7 +15,12 @@ my $BREAKDANCER_COMMAND = 'BreakDancerMax.pl';
 class Genome::Model::Tools::Somatic::Breakdancer{
     is => 'Command',
     has => [
-        use_version => { is => 'Version', is_optional => 1, default_value => $DEFAULT_VERSION, doc => "Version of breakdancer to use, default is $DEFAULT_VERSION" },
+        use_version => {
+            is => 'Version',
+            is_optional => 1,
+            default_value => $DEFAULT_VERSION,
+            doc => "Version of breakdancer to use, default is $DEFAULT_VERSION"
+        },
         tumor_bam_file => {
             is => 'Text',
             is_input => 1,
