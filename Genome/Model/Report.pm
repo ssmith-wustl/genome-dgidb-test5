@@ -55,13 +55,6 @@ sub create {
 
 #< Report Classes >#
 sub get_generic_report_classes {
-    my $type_name = shift;
-
-    unless ( $type_name ) {
-        Carp::confess("No model sub type given\n"); 
-        return;
-    }
-
     return Genome::Utility::FileSystem::get_classes_in_subdirectory_that_isa(
         'Genome/Model/Report',
         'Genome::Report::Generator',
@@ -69,7 +62,6 @@ sub get_generic_report_classes {
 }
 
 sub get_report_classes_for_type_name {
-    print Dumper(\@_);
     my $type_name = shift;
     
     unless ( $type_name ) {
@@ -112,9 +104,7 @@ sub get_report_class_for_type_name_and_report_name {
 
 #< Report Subclasses >#
 sub get_generic_report_subclasses { 
-    my $type_name = shift;
-
-    my @classes = get_generic_report_classes($type_name)
+    my @classes = get_generic_report_classes
         or return;
 
     return map { $_ =~ m#::([\w\d]+)$# } @classes;
@@ -132,9 +122,7 @@ sub get_report_subclasses_for_type_name {
 
 #< Report Names >#
 sub get_generic_report_names { 
-    my $type_name = shift;
-
-    my @subclasses = get_generic_report_subclasses($type_name)
+    my @subclasses = get_generic_report_subclasses
         or return;
 
     return map { Genome::Utility::Text::camel_case_to_string($_, ' ') } @subclasses;
