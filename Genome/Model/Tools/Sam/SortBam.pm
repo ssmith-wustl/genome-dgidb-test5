@@ -59,6 +59,7 @@ sub execute {
     $self->status_message(sprintf("attempting to sort %s into file with prefix %s", $self->file_name, $real_output_file));
    
     my $sort_params = ($self->name_sort ? " -n " : "");
+    $sort_params .= ' -m '. $self->maximum_memory;
    
     my $sam_sort_cmd = sprintf("%s sort %s %s %s", $self->samtools_path, $sort_params, $self->file_name,  $real_output_file);
     my $sam_sort_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$sam_sort_cmd, input_files=>[$self->file_name], output_files=>[$real_output_file.".bam"], skip_if_output_is_present=>0);
