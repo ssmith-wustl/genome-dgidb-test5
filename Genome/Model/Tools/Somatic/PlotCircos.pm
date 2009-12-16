@@ -32,6 +32,7 @@ class Genome::Model::Tools::Somatic::PlotCircos{
         },
          tier1_hclabel_file => {
             is  => 'String',
+            is_input => 1,
             doc => 'The list of tier1 variants in ANNOTATION format if you want them labelled. somatic format BAD',
         },
         tier1_rchclabel_file => {
