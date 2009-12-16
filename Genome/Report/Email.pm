@@ -20,8 +20,8 @@ sub send_report {
         $class->error_message('No XSL files to transform report to email');
         return;
     }
-    for my $xls_file ( @{$params{xsl_files}} ) {
-        unless ( Genome::Utility::FileSystem->validate_file_for_reading($xls_file) ) {
+    for my $xsl_file ( @{$params{xsl_files}} ) {
+        unless ( Genome::Utility::FileSystem->validate_file_for_reading($xsl_file) ) {
             $class->error_message("Error with xls file.  See above");
             return;
         }
@@ -38,12 +38,12 @@ sub send_report {
     my $to = delete $params{to};
     $class->_validate_to_addressees($to)
         or return;
-    my $from = ( exists $params{from} ) 
+    my $from = ( defined $params{from} ) 
     ? delete $params{from}
     : $ENV{USER}.'@genome.wustl.edu';
     $class->_validate_email_address_string('from', $from)
         or return;
-    my $reply_to = ( exists $params{replyto} ) 
+    my $reply_to = ( defined $params{replyto} ) 
     ? delete $params{replyto}
     : $ENV{USER}.'@genome.wustl.edu';
     $class->_validate_email_address_string('reply to', $reply_to)
@@ -62,11 +62,11 @@ sub send_report {
 
         $sender->OpenMultipart;
 
-        for my $xls_file ( @{$params{xsl_files}} ) {
+        for my $xsl_file ( @{$params{xsl_files}} ) {
             my $xslt = Genome::Report::XSLT->transform_report(
                 report => $report,
-                xslt_file => $xls_file,
-            ) or  die $class->error_message("Can't tranform report with xsl file ($xls_file)");
+                xslt_file => $xsl_file,
+            ) or  die $class->error_message("Can't tranform report with xsl file ($xsl_file)");
             $sender->Part({ctype => 'multipart/alternative'});
             $sender->Part({
                     ctype => $xslt->{media_type},
