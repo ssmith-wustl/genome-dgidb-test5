@@ -1,5 +1,4 @@
 package Genome::Report::Command::Xslt;
-#:adukes check
 
 use strict;
 use warnings;
@@ -11,10 +10,6 @@ require Cwd;
 class Genome::Report::Command::Xslt {
     is => 'Genome::Report::Command',
     has => [ 
-    report_directory => { 
-        is => 'Text', 
-        doc => 'Report directory.',
-    },
     xsl_file => {
         is => 'Text',
         doc => 'Xslt file to use to transform the report.',
@@ -41,24 +36,11 @@ sub help_brief {
 sub help_detail {
     return $_[0]->help_brief;
 }
-
-#< Report >#
-sub report {
-    my $self = shift;
-
-    unless ( $self->{_report} ) { 
-        $self->{_report} = Genome::Report->create_report_from_directory($self->report_directory);
-    }
-
-    return $self->{_report};
-}
+#<>#
 
 #< Command >#
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
+sub execute {
+    my $self = shift;
 
     # Report
     unless ( $self->report ) {
@@ -74,12 +56,7 @@ sub create {
         return;
     }
         
-    return $self;
-}
-
-sub execute {
-    my $self = shift;
-
+    # Transform
     my $xslt = Genome::Report::XSLT->transform_report(
         report => $self->report,
         xslt_file => $self->xsl_file,
@@ -98,7 +75,7 @@ sub execute {
     unlink $self->output_file if $self->force and -e $self->output_file;
     my $fh = Genome::Utility::FileSystem->open_file_for_writing( $self->output_file );
     unless ( $fh ) {
-        $self->error_message("Can't opening output file.  See above error.");
+        $self->error_message("Can't open output file for writing.  See above error.  Maybe use --force option?");
         return;
     }
     $fh->print( $xslt->{content} );
@@ -108,6 +85,7 @@ sub execute {
     
     return 1;
 }
+#<>#
 
 1;
 

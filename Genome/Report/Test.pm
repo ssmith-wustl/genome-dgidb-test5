@@ -607,7 +607,6 @@ use warnings;
 
 use base 'Genome::Utility::TestCommandBase';
 
-require Cwd;
 use Data::Dumper 'Dumper';
 use Test::More;
 
@@ -615,14 +614,10 @@ sub test_class {
     return 'Genome::Report::Command::Email';
 }
 
-sub xslt_dir {
-    return Genome::Report::XSLT::Test->dir;
-}
-
 sub valid_param_sets {
     return (
         {
-            report_directory => $_[0]->xslt_dir.'/Assembly_Stats',
+            report_directory => Genome::Report::XSLT::Test->dir.'/Assembly_Stats',
             xsl_files => Genome::Report::XSLT::Test->xsl_file,
             to => $ENV{USER}.'@genome.wustl.edu',
         },
@@ -632,11 +627,59 @@ sub valid_param_sets {
 sub startup : Tests(startup) {
     my $self = shift;
 
-    # overload send_report to not do anything
+    # overload 'Close' to not send the mail, but to cancel it 
     no warnings;
-    *Genome::Report::Email::send_report = sub { return 1; };
+    *Mail::Sender::Close = sub{ my $sender = shift; $sender->Cancel; return 1; };
 
     return 1;
+}
+
+#######################################################################
+
+package Genome::Report::Command::GetDataset::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestCommandBase';
+
+use Data::Dumper 'Dumper';
+
+sub test_class {
+    return 'Genome::Report::Command::GetDataset';
+}
+
+sub valid_param_sets {
+    return map {
+        {
+            report_directory => Genome::Report::XSLT::Test->dir.'/Assembly_Stats',
+            dataset_name => 'stats',
+            output_type => $_,
+        }
+    } $_[0]->test_class->output_types;
+}
+
+#######################################################################
+
+package Genome::Report::Command::ListDatasets::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestCommandBase';
+
+use Data::Dumper 'Dumper';
+
+sub test_class {
+    return 'Genome::Report::Command::ListDatasets';
+}
+
+sub valid_param_sets {
+    return (
+        {
+            report_directory => Genome::Report::XSLT::Test->dir.'/Assembly_Stats',
+        },
+    );
 }
 
 #######################################################################
@@ -646,39 +689,38 @@ package Genome::Report::Command::Xslt::Test;
 use strict;
 use warnings;
 
-use base 'Genome::Utility::TestBase';
+use base 'Genome::Utility::TestCommandBase';
 
-require Cwd;
 use Data::Dumper 'Dumper';
+use File::Compare 'compare';
 use Test::More;
 
 sub test_class {
     return 'Genome::Report::Command::Xslt';
 }
 
-sub xslt_dir {
-    return Genome::Report::XSLT::Test->dir;
-}
-
-sub params_for_test_class {
+sub valid_param_sets {
     return (
-        report_directory => $_[0]->xslt_dir.'/Assembly_Stats',
-        xsl_file => Genome::Report::XSLT::Test->xsl_file,
+        {
+            report_directory => Genome::Report::XSLT::Test->dir.'/Assembly_Stats',
+            xsl_file => Genome::Report::XSLT::Test->xsl_file,
+            output_file => $_[0]->tmp_dir.'/Assembly_Stats.txt',
+            after_execute => sub{
+                my ($self, $xslt) = @_;
+                ok(-e $xslt->output_file, 'Output file exists');
+                return 1;
+            },
+        },
     );
 }
 
-sub test01_execute : Test(3) {
+sub startup : Test(startup => no_plan) {
     my $self = shift;
-
-    my $cwd = Cwd::getcwd();
-    my $dir = $self->xslt_dir;
-    my $tmp_dir = $self->tmp_dir;
-    chdir $tmp_dir;
 
     no warnings;
     local *Genome::Report::XSLT::transform_report = sub { # so we don't test this twice
         my $content = <<EOS;
-            
+
 Summary for Amplicon Assembly Model (Name:  Build Id:)
 
 ------------------------
@@ -712,25 +754,18 @@ http://
 
 EOS
         return { 
-            mediat_type => 'text/plain',
+            media_type => 'text/plain',
             output_type => 'txt',
             content => $content,
         };
     };
     
-    my $xslt = $self->{_object};
-    ok($xslt->execute, 'Execute');
-    ok(-e $xslt->output_file, 'Output file exists');
-    is($xslt->output_file, $tmp_dir.'/Assembly_Stats.txt', 'Correct output file name');
-    
-    chdir $cwd;
-
     return 1;
 }
 
 #######################################################################
 
-1;
+1;    
 
 =pod
 

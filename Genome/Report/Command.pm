@@ -9,10 +9,15 @@ use Genome;
 class Genome::Report::Command {
     is => 'Command',
     doc => 'Work with reports',
+    has => [ 
+    report_directory => { 
+        is => 'Text', 
+        doc => 'Report directory.',
+    },
+    ],
 };
 
-############################################
-
+#< Command >#
 sub help_brief {
     my $class = ref($_[0]) || $_[0];
     return $class->get_class_object->doc if not $class or $class eq __PACKAGE__;
@@ -35,8 +40,19 @@ sub command_name_brief {
     return $class->SUPER::command_name_brief unless $class eq __PACKAGE__;
     return 'report';
 }
+#<>#
 
-############################################
+#< Report >#
+sub report {
+    my $self = shift;
+
+    unless ( $self->{_report} ) { 
+        $self->{_report} = Genome::Report->create_report_from_directory($self->report_directory);
+    }
+
+    return $self->{_report};
+}
+#<>#
 
 1;
 
