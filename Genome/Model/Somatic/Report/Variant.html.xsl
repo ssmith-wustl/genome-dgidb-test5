@@ -731,6 +731,100 @@
                   } );
                 </script>
               </xsl:if>
+              
+              <br clear="all"/>
+
+              <h2 class="report_section" style="margin-bottom: 0;">Structural Variations (inversions)</h2>
+              <table id="sv_inversions" class="list display" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 0;">
+                
+                <xsl:choose>
+                  <xsl:when test="count(//structural-variants/inversions/inversion) > 0">
+                    <thead>
+                      <tr>
+                        <th>validation status</th>
+                        <th class="last">chromosome</th>
+                        <th class="last">start</th>
+                        <th class="last">stop</th>
+                        <th class="last">size</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    <xsl:for-each select="//structural-variants/inversions/inversion">
+                      <xsl:sort select="@validation-status" data-type="number" order="ascending"/>
+                      <xsl:sort select="start/@chromosome" data-type="number" order="ascending"/>
+                      <tr>
+                        <td class="validation_status">
+                          <!-- expand validation status codes -->
+                          <xsl:variable select="@validation-status" name="validation-status"/>
+                          <xsl:choose>
+                            <xsl:when test="$validation-status = 'G'">
+                              germline
+                            </xsl:when>
+                            <xsl:when test="$validation-status = 'WT'">
+                              wildtype
+                            </xsl:when>
+                            <xsl:when test="$validation-status = 'O'">
+                              other
+                            </xsl:when>
+                            <xsl:when test="$validation-status = 'LQ'">
+                              low quality
+                            </xsl:when>
+                            <xsl:when test="$validation-status = 'S'">
+                              somatic
+                            </xsl:when>
+                            <xsl:when test="$validation-status = 'V'">
+                              variant
+                            </xsl:when>
+                            <xsl:when test="$validation-status = 'A'">
+                              ambiguous
+                            </xsl:when>
+                            <xsl:when test="$validation-status = 'NC'">
+                              no coverage
+                            </xsl:when>
+                            <xsl:when test="$validation-status = 'P'">
+                              predicted
+                            </xsl:when>
+                            <xsl:otherwise>
+                              <xsl:value-of select="@validation-status"/>
+                            </xsl:otherwise>
+                          </xsl:choose>
+                        </td>
+                        <td class="last"><xsl:value-of select="start/@chromosome"/></td>
+                        <td class="last">
+                          <xsl:variable name="start_position" select="start/@position"/><xsl:value-of select="format-number($start_position, '#,##0')"/>
+                        </td>
+                        <td class="last">
+                          <xsl:variable name="stop_position" select="stop/@position"/><xsl:value-of select="format-number($stop_position, '#,##0')"/>
+                        </td>
+                        <td class="last">
+                          <xsl:variable name="size" select="@size"/><xsl:value-of select="format-number($size, '#,##0')"/>
+                        </td>
+                      </tr>
+                    </xsl:for-each>
+                    </tbody>
+                  </xsl:when>
+                  <xsl:otherwise>
+                    <tr><td><span class="note">None found.</span></td></tr>
+                  </xsl:otherwise>
+                </xsl:choose>
+              </table>
+              <xsl:if test="count(//structural-variants/inversions/inversion) > 0">
+                <script type="text/javascript" charset="utf-8">
+                  $(document).ready( function() {
+                      $('#sv_inversions').dataTable({
+                          "bAutoWidth": false,
+                          "bStateSave": true,
+                          "aoColumns": [
+                              null,
+                              null,
+                              { "sType": "formatted-num" },
+                              { "sType": "formatted-num" },
+                              { "sType": "formatted-num" },
+                          ]
+                      });
+                  } );
+                </script>
+              </xsl:if>
 
               <br clear="all" />
             </div>

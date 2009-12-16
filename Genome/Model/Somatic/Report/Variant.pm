@@ -120,7 +120,7 @@ sub _add_to_report_xml {
 
     my $sv_insertions_node = $structural_variants_node->addChild( $doc->createElement('insertions') );
     my $sv_deletions_node = $structural_variants_node->addChild( $doc->createElement('deletions') );
-    #my $sv_inversions_node = $structural_variants_node->addChild( $doc->createElement('inversions') );
+    my $sv_inversions_node = $structural_variants_node->addChild( $doc->createElement('inversions') );
     my $sv_translocations_node = $structural_variants_node->addChild( $doc->createElement('translocations'));
 
     my $samples_node = $individual_node->addChild( $doc->createElement('samples') );
@@ -144,11 +144,11 @@ sub _add_to_report_xml {
     #See if this is the build with the circos images
     my $data_dir = Path::Class::Dir->new($build->data_directory);
     my $circos_large = $data_dir->file('circos_output.out.3000x3000.png');
-    my $circos_thumb = $data_dir->file('circos_output.out.920x920.png');
+    my $circos_small = $data_dir->file('circos_output.out.920x920.png');
     my $circos_server = 'http://gscweb.gsc.wustl.edu/';
-    if(-e $circos_large and -e $circos_thumb) {
+    if(-e $circos_large and -e $circos_small) {
         $circos_node->addChild( $doc->createAttribute('large', $circos_server . $circos_large) );
-        $circos_node->addChild( $doc->createAttribute('small', $circos_server . $circos_thumb) );
+        $circos_node->addChild( $doc->createAttribute('small', $circos_server . $circos_small) );
     }
     
     my $tumor_model = $model->tumor_model;
@@ -259,6 +259,7 @@ sub _add_to_report_xml {
     my $sv_ins_validated_count = 0;
     my $sv_del_validated_count = 0;
     my $sv_translocation_validated_count = 0;
+    my $sv_inversion_validated_count;
 
     for my $build_variant_sv (@build_variant_svs) {
         my $structural_variant = Genome::Model::SV->get(variant_id => $build_variant_sv->variant_id);
@@ -283,7 +284,8 @@ sub _add_to_report_xml {
             $sv_node = $sv_translocations_node->addChild( $doc->createElement('translocation') );
             $sv_translocation_validated_count++ if $self->is_validated_status($validation_status);
         } elsif ($variant_type eq INV) {
-            next; #Not displayed on this report
+            $sv_node = $sv_inversions_node->addChild( $doc->createElement('inversion') );
+            $sv_inversion_validated_count++ if $self->is_validated_status($validation_status);
         } else {
             die("Unexpected SV event type: " . $variant_type);
         }
@@ -305,6 +307,7 @@ sub _add_to_report_xml {
 
     $sv_insertions_node->addChild( $doc->createAttribute('validated-count', $sv_ins_validated_count) );
     $sv_deletions_node->addChild( $doc->createAttribute('validated-count', $sv_del_validated_count) );
+    $sv_inversions_node->addChild( $doc->createAttribute('validated-count', $sv_inversion_validated_count) );
     $sv_translocations_node->addChild( $doc->createAttribute('validated-count', $sv_translocation_validated_count) );
 
 
