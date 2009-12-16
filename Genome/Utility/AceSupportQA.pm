@@ -44,13 +44,6 @@ class Genome::Utility::AceSupportQA {
 };
 
 
-sub help_brief {
-    "Check an ace file to see if it looks good";
-}
-sub help_detail {
-    return <<EOS 
-EOS
-}
 
 sub create {
     my $class = shift;
@@ -58,10 +51,6 @@ sub create {
         
     return $self;
 }
-
-#Generate a refseq;
-my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
-my $refdb = Bio::DB::Fasta->new($RefDir); #$refdb is the entire Hs_build36_mask1c 
 
 sub ace_support_qa {
     my $self = shift;
@@ -73,7 +62,7 @@ sub ace_support_qa {
     }
     
     #invalid_files will be a hash of trace names and file type that are broken.
-    my ($invalid_files,$project) = $self->parse_ace_file($ace_file); ##QA the read dump, phred and poly files
+    my ($invalid_files,$project,$polyfile_count) = $self->parse_ace_file($ace_file); ##QA the read dump, phred and poly files
 
 
     if ($self->ref_check) {
@@ -84,14 +73,49 @@ sub ace_support_qa {
 	}
     }
     if ($invalid_files) {
-        $self->error_message("There are invalid files for $project that should be fixed prior to analysis");
-        $self->error_message("Here is a list of reads for $project with either a broken chromat, phd, or poly file");
-        
-        foreach my $read (sort keys %{$invalid_files}) {
-            $self->error_message($read . join("\t", sort keys %{$invalid_files->{$read}}));
-        }
+	
+	my (@scf,@phd,@poly);
+	foreach my $read (sort keys %{$invalid_files}) {
+	    foreach my $type (sort keys %{$invalid_files->{$read}}) {
 
-        return 0;
+		if ($type eq "trace") {
+		    push(@scf,$read);
+		}
+		if ($type eq "poly") {
+		    push(@poly,$read);
+		}
+		if ($type eq "phd") {
+		    push(@phd,$read);
+		}
+	    }
+	}
+	my $total_invalid_files = @scf + @poly + @phd;
+
+	if (($polyfile_count->{bad} + $polyfile_count->{good}) == $total_invalid_files) {
+
+	    return 1;
+
+	} else {
+
+	    $self->error_message("There are invalid files for $project that should be fixed prior to analysis");
+	    $self->error_message("Here is a list of reads for $project with either a broken chromat, phd, or poly file");
+
+	    #push @sources , $e unless grep (/$e/, @sources);
+	    my @incomplete_traces;
+	    foreach my $read (sort keys %{$invalid_files}) {
+		my @badtypes;
+		unless ($polyfile_count->{good} == 0) {push@badtypes,"poly" if grep (/$read/, @poly);}
+		push@badtypes,"phd" if grep (/$read/, @phd);
+		push@badtypes,"scf" if grep (/$read/, @scf);
+
+		my $bt = join ' ' , @badtypes;
+		my $file = "file";
+		if (@badtypes > 1) { $file = "files";}
+		$self->error_message("$read had bad => $bt $file");
+	    }
+	    
+	    return 0;
+	}
     }
 
     return 1;
@@ -126,7 +150,7 @@ sub check_ref {
         $self->error_message("the assembly_length doesn\'t jive with the spread on the coordinates"); 
     }
 
-    my $sequence = $self->get_ref_base($chromosome,$start,$stop); ##this will come reverse complemented if the $strand eq "-"
+    my $sequence = $self->get_ref_base($chromosome,$start,$stop); ##this will come reverse complemented if $start > $stop 
     if ($strand eq "-") {
         my $revseq = $self->reverse_complement_sequence ($sequence); 
         $sequence = $revseq;
@@ -141,6 +165,11 @@ sub check_ref {
 
 sub get_ref_base {
     my $self = shift;
+
+    #Generate a refseq;
+    my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+    my $refdb = Bio::DB::Fasta->new($RefDir); #$refdb is the entire Hs_build36_mask1c 
+
     my ($chr_name,$chr_start,$chr_stop) = @_;
 
     my $seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
@@ -192,9 +221,9 @@ sub parse_ace_file {
 
     $self->contig_count($contig_count);
 
-    my ($invalid_files) = $self->check_traces_fof($edit_dir,$project_dir,$chromat_dir,$phd_dir,$poly_dir,$traces_fof,$ace_file);
+    my ($invalid_files,$polyfile_count) = $self->check_traces_fof($edit_dir,$project_dir,$chromat_dir,$phd_dir,$poly_dir,$traces_fof,$ace_file);
 
-    return ($invalid_files,$project);
+    return ($invalid_files,$project,$polyfile_count);
 }
 
 sub check_traces_fof {
@@ -203,7 +232,8 @@ sub check_traces_fof {
 
     my ($no_trace_file,$no_phd_file,$no_poly_file,$empty_trace_file,$empty_poly_file,$empty_phd_file,$ncntrl_reads,$read_count,$repaired_file);
     my ($trace_files_needed,$phd_files_needed,$poly_files_needed);
-
+    my $invalid_files;
+    my $polyfile_count;
     for my $read (sort keys %{$traces_fof}) {
         $read_count++;
 
@@ -213,28 +243,56 @@ sub check_traces_fof {
 
         unless (-s $trace) {
             if ($self->fix_invalid_files) {
+		$self->status_message("$read.gz is missing from the chromat_dir will run read_dump to recover it.");
                 system qq(read_dump -scf-gz $read --output-dir=$chromat_dir);
             }
             if (-s $trace) {
                 $repaired_file++;
+		if ($self->fix_invalid_files) {$self->status_message("$read.gz recovered");}
             } elsif (-e $trace) {
                 $empty_trace_file++;
                 $trace_files_needed->{$read}=1;
+		if ($self->fix_invalid_files) {$self->status_message("$read.gz is an empty file");}
+		$invalid_files->{$read}->{trace}=1;
             } else {
                 $no_trace_file++;
                 $trace_files_needed->{$read}=1;
+		if ($self->fix_invalid_files) {$self->status_message("read_dump failed for $read.gz");}
+		$invalid_files->{$read}->{trace}=1;
             }
         }
 
         my $poly = "$poly_dir/$read.poly";
-
-        unless (-s $poly) {
-            if (-e $poly) {
+	
+        if (-s $poly) {
+	    $polyfile_count->{good}++;
+	} else {
+            if ($self->fix_invalid_files) {
+		if (-s $trace) {
+		    $self->status_message("will run phred to recover $poly");
+		    system qq(phred -dd $poly_dir $chromat_dir/$read.gz);
+		} else {
+		    $invalid_files->{$read}->{poly}=1;
+		    $invalid_files->{$read}->{trace}=1;
+		    $self->status_messaage("no attempt made to produce a poly file for $read as the trace file is missing");
+		}
+	    }
+	    if (-s $poly) {
+		$repaired_file++;
+		if ($self->fix_invalid_files) {$self->status_message("$poly recovered");}
+		$polyfile_count->{good}++;
+            } elsif (-e $poly) {
                 $empty_poly_file++;
                 $poly_files_needed->{$read}=1;
+		if ($self->fix_invalid_files) {$self->status_message("$poly is an empty file");}
+		$invalid_files->{$read}->{poly}=1;
+		$polyfile_count->{bad}++;
             } else {
                 $no_poly_file++;
                 $poly_files_needed->{$read}=1;
+		if ($self->fix_invalid_files) {$self->status_message("phred failed to produce a poly file for $read.gz");}
+		$invalid_files->{$read}->{poly}=1;
+		$polyfile_count->{bad}++;
             }
         }
         
@@ -251,7 +309,7 @@ sub check_traces_fof {
         }
     }
 
-    my $invalid_files;
+    #my $invalid_files;
 
     unless ($read_count) { 
         die "There are no reads in the ace file to be analyzed\n"; 
@@ -267,52 +325,8 @@ sub check_traces_fof {
 
         my $n = $no_trace_file + $empty_trace_file;
         $self->error_message("nonviable trace files ==> $n");
-        foreach my $read (sort keys %{$trace_files_needed}) {
-            if ($self->fix_invalid_files) {
-                $self->error_message("attempted redump of $read failed");
-            }
-            $invalid_files->{$read}->{trace}=1;
-        }
-    }
 
-    if ($no_poly_file || $empty_poly_file) {
-        if ($no_poly_file eq $read_count) {
-            $self->status_message("There are no poly files, they can be created in analysis"); # is this logic correct? FIXME
-        } else {
-
-            $no_poly_file ||= 0;
-            $empty_poly_file ||= 0;
-
-            my $n = $no_poly_file + $empty_poly_file;
-            if ($self->fix_invalid_files) {
-                $self->status_message("will run phred to produce $n disfunctional poly files");
-            }
-            for my $read (sort keys %{$poly_files_needed}) {
-                if ($trace_files_needed->{$read}) {
-                    if ($self->fix_invalid_files) {
-                        $self->status_messaage("no attempt made to produce a poly file for $read as the trace file is missing");
-                    }
-                    $invalid_files->{$read}->{poly}=1;
-                } else {
-                    if ($self->fix_invalid_files) {
-                        system qq(phred -dd $poly_dir $chromat_dir/$read.gz);
-                    }
-                    my $poly = "$poly_dir/$read.poly";
-
-                    if (-s $poly) {
-                        $repaired_file++;
-                        $self->status_message("poly file for $read ok");
-                    }
-                    else {
-                        if ($self->fix_invalid_files) {
-                            $self->status_message("Failed to produce a poly file for $read");
-                        }
-                        $invalid_files->{$read}->{poly}=1;
-                    }
-                }
-            }
-        }
-    }
+    } 
 
     if ($no_phd_file || $empty_phd_file) {
 
@@ -359,7 +373,7 @@ sub check_traces_fof {
         $self->status_message("There were $ncntrl_reads n-cntrl reads");
     }
 
-    return ($invalid_files);
+    return ($invalid_files,$polyfile_count);
 }
 
 sub sync_phd_time_stamps {   ## this isn't being used and it doesn't appear to do what it should
