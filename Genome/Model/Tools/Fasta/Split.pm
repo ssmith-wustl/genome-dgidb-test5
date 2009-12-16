@@ -87,7 +87,7 @@ sub execute {
             $myFASTA->load_FASTA( fasta => '>' . $_ );
             my $seqlen = length( $myFASTA->sequence() );
             $total_seq += $seqlen;
-            if ($total_seq >= ($self->min_sequence)) {
+            if ($total_seq > ($self->min_sequence)) {
                 $file_counter++;
                 $output_fh->close;
                 $output_file = $self->output_directory .'/'. $fasta_basename .'_'. $file_counter;
