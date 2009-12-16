@@ -3,11 +3,53 @@
 use strict;
 use warnings;
 
+####################
+
+package Genome::Model::Command::Report::List::Test;
+
+use base 'Genome::Utility::TestCommandBase';
+
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Report::List';
+}
+
+sub valid_param_sets {
+    return (
+        {# defaults to all - tests generic and all type names
+        },
+        {# all type names
+            type_names => 1,
+        },
+        {# aa reports
+            type_name => 'amplicon assembly',
+        },
+        {# generic reports
+            generic => 1,
+        },
+    );
+}
+
+sub invalid_param_sets {
+    return (
+        {# invalid type name
+            type_name => 'no way this is a model',
+        },
+        {# more than one list method
+            all => 1,
+            type_name => 'amplicon assembly',
+        },
+    );
+}
+
+####################
+
+package main;
+
 use above 'Genome';
 
-use Test::More 'no_plan';
-
-use_ok('Genome::Model::Command::Report::List');
+Genome::Model::Command::Report::List::Test->runtests;
 
 exit;
 

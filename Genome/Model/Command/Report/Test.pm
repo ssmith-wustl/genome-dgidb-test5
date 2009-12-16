@@ -4,12 +4,10 @@ use strict;
 use warnings;
 
 use Carp 'confess';
-$SIG{__DIE__} = sub{ confess(@_) };
 
-use base 'Genome::Utility::TestBase';
+use base 'Genome::Utility::TestCommandBase';
 
 use Data::Dumper 'Dumper';
-use Genome;
 use Genome::Model::Test;
 use Test::More;
 
@@ -27,29 +25,23 @@ sub _model {
     return $self->{_model};
 }
 
-sub _build {
+sub _build_id {
     my $self = shift;
 
-    return $self->_model->last_complete_build;
+    return $self->_model->last_complete_build->build_id;
 }
 
-sub params_for_test_class {
+
+sub valid_param_sets {
+    my $self = shift;
+    my $build_id = $self->_build_id;
     return (
-        build_id => $_[0]->_build->build_id,
-        $_[0]->_params_for_test_class,
+        map { $_->{build_id} = $build_id; $_ } $self->_valid_param_sets,
     );
 }
 
-sub _params_for_test_class {
-    return;
-}
-
-sub test_01_execute : Tests {
-    my $self = shift;
-
-    ok($self->{_object}->execute, 'Execute');
-    
-    return 1;
+sub _valid_param_sets {
+    return ({});
 }
 
 ########################################################
@@ -67,12 +59,13 @@ sub test_class {
     return 'Genome::Model::Command::Report::Generate';
 }
 
-sub _params_for_test_class {
+sub _valid_param_sets {
     return (
-        report_name => 'Stats',
-        directory => $_[0]->tmp_dir,
-        #directory => '/gscuser/ebelter/Desktop',
-        force => 1,
+        {
+            report_name => 'Stats',
+            directory => $_[0]->tmp_dir,
+            force => 1,
+        },
     );
 }
 
@@ -91,14 +84,18 @@ sub test_class {
     return 'Genome::Model::Command::Report::GetDataset';
 }
 
-sub _params_for_test_class {
+sub _valid_param_sets {
     return (
-        report_name => 'Stats',
-        dataset_name => 'stats',
-        output_type => 'csv',
-        #output_type => 'xml',
+        {
+            report_name => 'Stats',
+            dataset_name => 'stats',
+            output_type => 'csv',
+            #output_type => 'xml',
+        },
     );
 }
+
+########################################################
 
 1;
 

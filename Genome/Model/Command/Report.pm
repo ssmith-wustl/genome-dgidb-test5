@@ -41,12 +41,24 @@ class Genome::Model::Command::Report {
     ],
 };
 
-#< Helps >#
+#< Command API >#
 sub help_brief {
     return "run, list, view and emailreports"
 }
 
 sub sub_command_sort_position { 9 }
+    
+sub sub_command_classes { 
+    my $self = shift;
+
+    my @sub_command_classes;
+    for my  $sub_command_class ( $self->SUPER::sub_command_classes ) {
+        next if grep { $sub_command_class eq "Genome::Model::Command::Report::$_" } (qw/ Mail Run /);
+        push @sub_command_classes, $sub_command_class;
+    }
+
+    return @sub_command_classes;
+}
 
 #< Command >#
 sub create {

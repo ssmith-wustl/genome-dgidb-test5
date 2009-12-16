@@ -9,25 +9,36 @@ use Carp 'confess';
 use Data::Dumper 'Dumper';
 require Term::ANSIColor;
 require Text::Wrap;
-require Genome::Model::Report;
+use Genome::Model::Report;
 
 class Genome::Model::Command::Report::List {
     is => 'Command',
     has_optional => [
+        all => {
+            is => 'Boolean',
+            doc => 'List generic and model type report names.  This is the default if no other options are indicated.',
+        },
+        type_names => {
+            is => 'Boolean',
+            doc => 'List report names for all model types.',
+        },
+        generic => {
+            is => 'Boolean',
+            doc => 'Reprot names that are generic and can be run on any model type.',
+        },
         type_name => {
             is => 'Text', 
             is_input => 1,
-            doc => 'List reports for this model sub type only' 
+            doc => 'Report names for this model type only.' 
         },
         build => { 
             is => 'Genome::Model::Build', 
             id_by => 'build_id',
-            doc => 'The build of a genome model to check reports',
         },
         build_id => {
             is => 'Integer',
             is_input => 1,
-            doc => 'The build id of a genome model to check reports',
+            doc => 'The build id of a genome model to check which reports have been run.',
         },
     ],
 };
@@ -61,66 +72,107 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my $method;
-    if ( $self->type_name ) {
-        $method = '_list_reports_for_type_name';
+    my @requested_listers = grep { $self->$_ } (qw/ all type_names generic type_name build_id /);
+    my $method = '_list_reports_for_';
+    unless ( @requested_listers ) {
+        $self->all(1);
+        $method .= 'all';
     }
-    elsif ( $self->build_id ) {
-        $method = '_list_reports_for_build';
+    elsif ( @requested_listers > 1 ) {
+        $self->error_message('Please indicate one listing method.');
+        return;
     }
     else {
-        $method = '_list_reports_for_all_type_names';
+        $method .= $requested_listers[0];
     }
     
     return $self->$method;
 }
 
-sub _list_reports_for_type_name {
-    my $self = shift;
-
-    $self->_print_header_for_type_names
-        or return;
-
-    return $self->_print_reports_for_type_name($self->type_name);
+#< Helpers >#
+sub _print_basic_header {
+    print Term::ANSIColor::colored('Report Names', 'bold')."\n";
 }
 
-sub _list_reports_for_all_type_names {
+sub _print_type_and_report_names {
+    my ($self, $type, @report_names) = @_;
+
+    @report_names = (qw/ none /) unless @report_names;
+    
+    return print Text::Wrap::wrap(
+        ' ',
+        '  ',
+        Term::ANSIColor::colored($type, 'red'), 
+        "\n",
+        join("\n", @report_names),
+    )."\n";
+}
+
+#< All >#
+sub _list_reports_for_all {
     my $self = shift;
 
-    my @type_names = Genome::Model::Command::get_model_type_names()
-        or return; # this errors if none found
-
-    $self->_print_header_for_type_names
-        or return;
-    
-    for my $type_name ( @type_names ) {
-        $self->_print_reports_for_type_name($type_name)
-            or return;
-    }
+    $self->_print_basic_header;
+    $self->_print_reports_for_generic;
+    $self->_print_reports_for_type_names;
 
     return 1;
 }
 
-sub _print_header_for_type_names {
+#< Generic >#
+sub _list_reports_for_generic {
     my $self = shift;
 
-    return print Term::ANSIColor::colored('Reports for Model Type Names', 'bold')."\n";
+    $self->_print_basic_header;
+    $self->_print_reports_for_generic;
+
+    return 1;
+}
+
+sub _print_reports_for_generic {
+    $_[0]->_print_type_and_report_names(generic => Genome::Model::Report::get_generic_report_names());
+}
+
+#< Type Names >#
+sub _list_reports_for_type_name {
+    my $self = shift;
+
+    my $type_name = $self->type_name;
+    unless ( grep { $type_name eq $_ } Genome::Model::Command::get_model_type_names() ) {
+        $self->error_message("Invalid type name ($type_name).");
+        return;
+    }
+    
+    $self->_print_basic_header;
+    $self->_print_reports_for_type_name($self->type_name);
+
+    return 1;
 }
 
 sub _print_reports_for_type_name {
-    my ($self, $type_name) = @_;
+    $_[0]->_print_type_and_report_names($_[1] => Genome::Model::Report::get_report_names_for_type_name($_[1]));
+}
 
-    my @report_names = Genome::Model::Report::get_report_names_for_type_name(
-        $type_name
-    );
+#< Type Names >#
+sub _list_reports_for_type_names {
+    my $self = shift;
 
-    return print Text::Wrap::wrap(
-        ' ',
-        '  ',
-        Term::ANSIColor::colored($type_name, 'red'), 
-        "\n",
-        ( @report_names ? join("\n", @report_names) : 'none' ),
-    )."\n";
+    $self->_print_basic_header;
+    $self->_print_reports_for_type_names;
+
+    return 1;
+}
+
+sub _print_reports_for_type_names {
+    my $self = shift;
+
+    for my $type_name ( Genome::Model::Command::get_model_type_names() ) {
+        $self->_print_type_and_report_names(
+            $type_name, Genome::Model::Report::get_report_names_for_type_name($type_name)
+        );
+    }
+
+    return 1;
 }
 
 #< Build's Reports >#
