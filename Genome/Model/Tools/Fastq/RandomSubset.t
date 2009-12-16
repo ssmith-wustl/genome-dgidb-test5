@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 7;
+use Test::More tests => 11;
 use File::Compare;
 
 use_ok('Genome::Model::Tools::Fastq::RandomSubset');
@@ -15,14 +15,15 @@ my $tmp_dir = File::Temp::tempdir('Fastq-RandomSubset-XXXXX', DIR => '/gsc/var/c
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq/RandomSubset';
 my $expected_50_file = $data_dir .'/50_seq.fastq';
 my $expected_10_file = $data_dir .'/10_seq.fastq';
+my $expected_100bp_file = $data_dir .'/100bp_seq.fastq';
 my $fastq_file = $data_dir .'/All.fastq';
 
 
 my $rs_50 = Genome::Model::Tools::Fastq::RandomSubset->create(
-        input_fastq_file => $fastq_file,
+        input_fastq_files => [$fastq_file],
         output_fastq_file => $tmp_dir .'/tmp-50.fastq',
         #output_fastq_file => $expected_50_file,
-        subset_size => 50,
+        reads => 50,
         seed_phrase => 'test_seed',
         );
 isa_ok($rs_50,'Genome::Model::Tools::Fastq::RandomSubset');
@@ -30,13 +31,25 @@ ok($rs_50->execute,'execute command '. $rs_50->command_name);
 ok(!compare($rs_50->output_fastq_file,$expected_50_file),'expected 50 file equal');
 
 my $rs_10 = Genome::Model::Tools::Fastq::RandomSubset->create(
-        input_fastq_file => $fastq_file,
+        input_fastq_files => [$fastq_file],
         output_fastq_file => $tmp_dir .'/tmp-10.fastq',
         #output_fastq_file => $expected_10_file,
-        subset_size => 10,
+        reads => 10,
         seed_phrase => 'test_seed',
         );
 isa_ok($rs_10,'Genome::Model::Tools::Fastq::RandomSubset');
 ok($rs_10->execute,'execute command '. $rs_10->command_name);
 ok(!compare($rs_10->output_fastq_file,$expected_10_file),'expected 10 file equal');
+is($rs_10->_shortest_seq,36,'36 base pair sequence length');
+
+my $rs_100bp = Genome::Model::Tools::Fastq::RandomSubset->create(
+        input_fastq_files => [$fastq_file],
+        output_fastq_file => $tmp_dir .'/tmp-100bp.fastq',
+        #output_fastq_file => $expected_100bp_file,
+        base_pair => 100,
+        seed_phrase => 'test_seed',
+        );
+isa_ok($rs_100bp,'Genome::Model::Tools::Fastq::RandomSubset');
+ok($rs_100bp->execute,'execute command '. $rs_100bp->command_name);
+ok(!compare($rs_100bp->output_fastq_file,$expected_100bp_file),'expected 100bp file equal');
 exit;
