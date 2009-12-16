@@ -342,6 +342,8 @@ sub _workflow_for_stage {
 sub _resolve_log_resource {
     my ($self, $event) = @_;
 
+    $event->create_log_directory; # dies upon failure
+    
     return ' -o '.$event->output_log_file.' -e '.$event->error_log_file;
 }
 #<>#

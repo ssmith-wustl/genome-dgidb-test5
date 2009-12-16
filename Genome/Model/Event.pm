@@ -192,6 +192,16 @@ sub log_directory {
     return $log_directory
 }
 
+sub create_log_directory {
+    my $self = shift;
+
+    my $log_dir = $self->log_directory;
+    Genome::Utility::FileSystem->create_directory($log_dir)
+        or die "Can't create log directory ($log_dir) for event: ".$self->id;
+
+    return 1
+}
+
 sub _log_file {
     my ($self, $ext) = @_;
 
@@ -838,5 +848,5 @@ sub lsf_state {
 
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Event.pm $
-#$Id: Event.pm 53231 2009-11-19 20:45:08Z ebelter $
+#$HeadURL$
+#$Id$
