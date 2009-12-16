@@ -8,6 +8,9 @@ use File::Basename;
 use File::Temp;
 use POSIX qw(mkfifo);
 
+my $DEFAULT_REFERENCE_INDEX = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai';
+my $DEFAULT_SIZE = '1000000';
+
 class Genome::Model::Tools::Sam::SplitBam {
     is => 'Genome::Model::Tools::Sam',
     has_input => [
@@ -19,13 +22,13 @@ class Genome::Model::Tools::Sam::SplitBam {
         },
         reference_index => {
             is => 'Text',
-            doc => 'The reference fasta index for creating sub-bams',
-            default_value => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai',
+            doc => 'The reference fasta index for creating sub-bams: default_value='. $DEFAULT_REFERENCE_INDEX,
+            default_value => $DEFAULT_REFERENCE_INDEX,
         },
         size => {
             is => 'Integer',
-            doc => 'The number of alignments to include in each bam file',
-            default_value => '1000000',
+            doc => 'The number of alignments to include in each bam file: default_value='. $DEFAULT_SIZE,
+            default_value => $DEFAULT_SIZE,
         },
     ],
     has_output => [
@@ -57,14 +60,24 @@ sub execute {
     my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->bam_file,@bam_suffix);
     $basename =~ s/\.$//;
 
+    #Create a name-sorted bam file
+    my $name_sorted_bam = $self->output_directory .'/'. $basename .'_name_sorted.bam';
+    unless (Genome::Model::Tools::Sam::SortBam->execute(
+        file_name => $self->bam_file,
+        output_file => $name_sorted_bam,
+        name_sort => 1,
+    )) {
+        die('Failed to name sort bam file '. $self->bam_file);
+    }
+
     # This should be a named pipe
     my $whole_tmp_sam = Genome::Utility::FileSystem->create_temp_file_path($basename .'.sam');
     mkfifo($whole_tmp_sam,02700) || die('Failed to make named pipe '. $whole_tmp_sam);
     while (!-e $whole_tmp_sam) {
         sleep 1;
     }
-    
-    my $sam_view_cmd = $self->samtools_path .' view -o '. $whole_tmp_sam .' '. $self->bam_file .' &' ;
+
+    my $sam_view_cmd = $self->samtools_path .' view -o '. $whole_tmp_sam .' '. $name_sorted_bam .' &' ;
     Genome::Utility::FileSystem->shellcmd(
         cmd => $sam_view_cmd,
     );
@@ -78,6 +91,7 @@ sub execute {
             if (my $sam = $whole_sam_fh->getline) {
                 $tmp_sam_fh->print($sam);
             } else {
+                #Throw away any remaining sequences??
                 $whole_sam_fh->close;
             }
         }
