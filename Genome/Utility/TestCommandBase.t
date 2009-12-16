@@ -16,7 +16,7 @@ class Genome::Utility::TestCommandBase::Tester {
     is_hairy => { is => 'Boolean', default_value => 0, },
     ],
 };
-*Genome::Utility::TestCommandBase::Tester::create = sub{ 
+sub Genome::Utility::TestCommandBase::Tester::create {
     my $self = UR::Object::create(@_)
         or return;
 
@@ -32,7 +32,7 @@ class Genome::Utility::TestCommandBase::Tester {
 
     return $self; 
 };
-*Genome::Utility::TestCommandBase::Tester::execute = sub{
+sub Genome::Utility::TestCommandBase::Tester::execute {
     my $self = shift;
 
     # birds aren't hairy - testing execute failure w/ invalid param set (#2)
@@ -51,23 +51,34 @@ package Genome::Utility::TestCommandBase::Tester::Test;
 
 use base 'Genome::Utility::TestCommandBase';
 
-use Test::More;
+use Test::More tests => 45;
 
 sub test_class {
     return 'Genome::Utility::TestCommandBase::Tester';
 }
 
+# Startup
+sub startup : Tests(startup => no_plan) {
+    my $self = shift;
+
+    ok($self->_ur_no_commit_and_dummy_ids, 'UR no commit and dummy ids'); 
+    
+    return 1;
+}
+
+# Invalid param sets
 sub valid_param_sets {
     return (
         {
             name => 'Fredbird',
-            before_execute => '_before_execute',
+            before_execute => '_before_execute_valid_param_set',
             after_execute => sub{ 
-                my ($self, $obj, $param_set) = @_;
+                my ($self, $obj, $param_set, $rv) = @_;
                 note('after execute via anon sub');
                 isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
-                ok($obj, 'Got object in before execute');
-                ok($param_set, 'Got param set in before execute');
+                ok($obj, 'Got object in anon sub _after_execute');
+                ok($param_set, 'Got param set in anon sub _after_execute');
+                ok(defined($rv), 'Got return value in anon sub _after_execute');
                 return 1;
             },
         },
@@ -78,15 +89,35 @@ sub valid_param_sets {
                 my ($self, $obj, $param_set) = @_;
                 note('before execute via anon sub');
                 isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
-                ok($obj, 'Got object in before execute');
-                ok($param_set, 'Got param set in before execute');
+                ok($obj, 'Got object in anon sub _before_execute');
+                ok($param_set, 'Got param set in anon sub _before_execute');
                 return 1;
             },
-            after_execute => '_after_execute',
+            after_execute => '_after_execute_valid_param_set',
         },
     );
 }
 
+sub _before_execute_valid_param_set { 
+    my ($self, $obj, $param_set) = @_;
+    note('before execute with valid param set via method');
+    isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
+    ok($obj, 'Got object in method _before_execute_valid_param_set');
+    ok($param_set, 'Got param set in method _before_execute_valid_param_set');
+    return 1;
+}
+
+sub _after_execute_valid_param_set { 
+    my ($self, $obj, $param_set, $rv) = @_;
+    note('after execute with valid param set via method');
+    isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
+    ok($obj, 'Got object in _after_execute');
+    ok($param_set, 'Got param set in method _after_execute_valid_param_set');
+    ok(defined($rv), 'Got return value in method _after_execute_valid_param_set');
+    return 1;
+}
+
+# Invalid param sets
 sub invalid_param_sets {
     return (
         { # blank name
@@ -96,39 +127,32 @@ sub invalid_param_sets {
             is_hairy => 1,
             # the before/after executes will work cuz this params set will 
             #  create ok, thyen fail in execute
-            before_execute => '_before_execute',
-            after_execute => '_after_execute',
+            before_execute => '_before_execute_invalid_param_set',
+            after_execute => '_after_execute_invalid_param_set',
         },
     );
 }
 
-sub _before_execute { 
+sub _before_execute_invalid_param_set { 
     my ($self, $obj, $param_set) = @_;
-    note('before execute via method');
+    note('before execute with invalid param set via method');
     isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
-    ok($obj, 'Got object in before execute');
-    ok($param_set, 'Got param set in before execute');
+    ok($obj, 'Got object in method _before_execute_invalid_param_set');
+    ok($param_set, 'Got param set in method _before_execute_invalid_param_set');
     return 1;
 }
 
-sub _after_execute { 
-    my ($self, $obj, $param_set) = @_;
-    note('after execute via method');
+sub _after_execute_invalid_param_set { 
+    my ($self, $obj, $param_set, $rv) = @_;
+    note('after execute with invalid param set via method');
     isa_ok($self, 'Genome::Utility::TestCommandBase::Tester::Test');
-    ok($obj, 'Got object in _post_execute');
-    ok($param_set, 'Got param set in before execute');
+    ok($obj, 'Got object in _after_execute_invalid_param_set');
+    ok($param_set, 'Got param set in method _after_execute_invalid_param_set');
+    ok(!defined($rv), 'Got undefined return value in method _after_execute_invalid_param_set');
     return 1;
 }
 
 #< Additional Tests >#
-sub startup : Tests(startup => no_plan) {
-    my $self = shift;
-
-    ok($self->_ur_no_commit_and_dummy_ids, 'UR no commit and dummy ids'); 
-    
-    return 1;
-}
-
 sub test01_dirs : Test(4) {
     my $self = shift;
     

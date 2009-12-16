@@ -207,7 +207,7 @@ sub _create_and_execute_expected_success {
 
     # after
     if ( $after_execute ) { 
-        $self->_run_sub_or_method('after', $after_execute, $obj, \%params) or confess;
+        $self->_run_sub_or_method('after', $after_execute, $obj, \%params, $rv) or confess;
     }
 
     return 1;
@@ -241,7 +241,7 @@ sub _create_and_execute_expected_fail {
 
     # after
     if ( $after_execute ) { # if given, this should not fail
-        $self->_run_sub_or_method('after', $after_execute, $obj, \%params);
+        $self->_run_sub_or_method('after', $after_execute, $obj, \%params, $rv);
     }
 
     if ( not $rv or $eval_error ) { # good - check return value or eval error
@@ -256,16 +256,16 @@ sub _create_and_execute_expected_fail {
 }
 
 sub _run_sub_or_method { # the method/sub given should always work!
-    my ($self, $type, $sub_or_method, $obj, $param_set) = @_;
+    my ($self, $type, $sub_or_method, $obj, $param_set, $rv) = @_;
 
     if ( my $ref = ref($sub_or_method) ) { 
         confess 'Tried to run '.ucfirst($type).' execute in param set is not a method name or CODE ref: '.Dumper($sub_or_method) unless $ref eq 'CODE';
-        $sub_or_method->($self, $obj, $param_set)
+        $sub_or_method->($self, $obj, $param_set, $rv)
             or confess "Failed $type execute.";
     }
     else {
         confess "Tried to run method '$sub_or_method' prior to command execute, but cannot find it in ".ref($self) unless $self->can($sub_or_method);
-        $self->$sub_or_method($obj, $param_set)
+        $self->$sub_or_method($obj, $param_set, $rv)
             or confess "Failed $type execute.";
     }
 
