@@ -64,16 +64,6 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             default  => 10,
             doc      => "look, dont change this, ok?"
         },
-        group_by_position => {
-            type     => 'Boolean',
-            default  => 0,
-            doc      => "only matters if report_mode is known-only"
-        },
-        print_dbsnp_lines => {
-            type     => 'Boolean',
-            default  => 0,
-            doc      => 'print matching dbSNP line isntead of input',
-        },
         skip_if_output_present => {
             is => 'Boolean',
             is_optional => 1,
@@ -81,6 +71,13 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             default => 0,
             doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
         },
+        append_rs_id => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'append rs_id from dbSNP at end of each matching row'
+        }
     ],
 };
 
@@ -115,16 +112,7 @@ $DB::single = 1;
     $self->_output_filehandle($fh);
 
     while (my $line = <$in>) {
-
-        if ($self->filter_out_submitters) {
-            $self->print_input_lines_with_filters($line);
-        } else {
-            if ($self->print_dbsnp_lines) {
-                $self->print_db_snp_lines_without_filters($line);
-            } else {
-                $self->print_input_lines_without_filters($line);
-            }
-        }
+        $self->print_matches($line);
     }
 
     close($in);
@@ -133,37 +121,37 @@ $DB::single = 1;
     return 1;
 }
 
-sub print_input_lines_with_filters {
+sub print_matches {
 
     my ($self, $line) = @_;
 
+    my @matches;
+
+    if ($self->filter_out_submitters()) {
+        @matches = $self->find_all_matches($line);
+        @matches = map { $self->filter_by_submitters($_) } @matches;
+        @matches = map { $self->filter_by_type($_) } @matches; 
+    } else {
+        @matches = $self->find_a_matching_pos($line);
+    }
+
     my $fh = $self->_output_filehandle() || die 'no output_filehandle';
     my $report_mode = $self->report_mode();
-    my @matches = $self->find_all_matches($line);
-
-    @matches = map { $self->filter_by_submitters($_) } @matches;
-    @matches = map { $self->filter_by_type($_) } @matches; 
-
     if (($report_mode eq 'known-only')&&(@matches)) {
+
+        if ($self->append_rs_id()) {
+
+            my ($chr, $start, $stop) = split(/\t/,$line);
+            my ($dbsnp_fh, $index) = $self->get_fh_for_chr($chr);
+            my $snp_line = $self->get_line($dbsnp_fh, $index, $matches[0]);
+            my $snp = parse_dbsnp_line($snp_line);
+            my $rs_id = $snp->{'rs_id'};
+            chomp($line);
+            $line = sprintf("%s\t%s\n",$line,$rs_id); 
+        }
+
         $fh->print($line);
     } elsif (($report_mode eq 'novel-only')&& (scalar @matches == 0)) {
-        $fh->print($line);
-    }
-}
-
-sub print_input_lines_without_filters {
-
-    my ($self, $line) = @_;
-
-    my $fh = $self->_output_filehandle() || die 'no output_filehandle';
-    my $pos = $self->find_a_matching_pos($line);
-    my $report_mode = $self->report_mode();
-
-    if ($report_mode eq 'novel-only' && !defined($pos)) {
-        $fh->print($line);
-    }
-    
-    if ($report_mode eq 'known-only' && defined($pos)) {
         $fh->print($line);
     }
 }
@@ -180,31 +168,6 @@ sub get_output_fh {
 
     my $fh = IO::File->new(">" . $output_file);
     return $fh;
-}
-
-sub print_db_snp_lines_without_filters {
-    my ($self, $line) = @_;
-
-    my $fh = $self->_output_filehandle() || die 'no output_filehandle';
-    my $report_mode = $self->report_mode();
-    my @matches = $self->find_all_matches($line);
-
-    if ( $report_mode eq 'novel-only' && !@matches ) {
-        $fh->print($line);
-    }
-
-    my $group_by_position = $self->group_by_position();
-    if ( $report_mode eq 'known-only' ) {
-
-        if ($group_by_position) {
-            # novel-only is automatically group by position, yeah?
-            @matches= $self->group_variants_by_position(\@matches);            
-        }
-
-        $fh->print($_) for @matches;
-    }
-
-    return 1;
 }
 
 sub filter_by_submitters {
@@ -246,6 +209,8 @@ sub filter_by_type {
 }
 
 sub find_all_matches {
+
+    # TODO: the problem is we only return position, not chromosome, etc
 
     my ($self, $line) = @_;
     my @matches;
@@ -402,41 +367,6 @@ sub get_fh_for_chr {
     die "no filehandle for $chr" if !$fh || !$index;
 
     return ($fh, $index);
-}
-
-sub group_variants_by_position {
-
-    my ($self, $v) = @_;
-    my %lines_without_submitter;
-    my %variant_groups;
-    my @variants;
-
-    for my $v (@$v) {
-
-        my $snp = parse_dbsnp_line($v);
-        my $ds_start = $snp->{'ds_start'};
-
-        my $line_without_submitter = join("\t", 
-            ( $snp->{'ds_id'}, 
-              $snp->{'ds_allele'}, 
-              $snp->{'ds_type'},
-              $snp->{'ds_chr'},
-              $snp->{'ds_start'},
-              $snp->{'ds_stop'} )
-        );
-
-        $lines_without_submitter{$ds_start} = $line_without_submitter;
-        push @{$variant_groups{$ds_start}}, $snp->{'ds_submitter'};
-    }
-  
-    for my $ds_start (keys %variant_groups) {
-        my $submitter_str = join(',', @{$variant_groups{$ds_start}});
-        my $new_line = join("\t", $lines_without_submitter{$ds_start}, $submitter_str);
-        $new_line .= "\n";
-        push @variants, $new_line;
-    } 
-
-    return @variants;
 }
 
 
