@@ -1,11 +1,7 @@
-#review/notes
-#future plans: change defaults for file-naming
-#
+package Genome::Model::Tools::Somatic::Compare::Bams;
 
 use strict;
 use warnings;
-
-package Genome::Model::Tools::Somatic::Compare::Bams;
 
 class Genome::Model::Tools::Somatic::Compare::Bams {
     is => ['Workflow::Operation::Command'],
@@ -41,10 +37,9 @@ sub pre_execute {
             return 0;
         }
         
-        for my $param ($self->filenames_to_generate) {
+        while(my ($param, $default_filename) =  each %{$self->default_filenames}) {
             # set a default param if one has not been specified
             unless ($self->$param) {
-                my $default_filename = $self->data_directory . "/$param.out";
                 $self->status_message("Param $param was not provided... generated $default_filename as a default");
                 $self->$param($default_filename);
             }
@@ -102,43 +97,43 @@ sub pre_execute {
     return 1;
 }
 
-# TODO: so filenames make more sense... lets just change this to a key (workflow property name) => value (name of file to use) hardcoded hash to use for each filename not provided
-sub filenames_to_generate {
+sub default_filenames{
     my $self = shift;
-
-    return qw(ucsc_file 
-            sniper_snp_output
-            sniper_indel_output
-            breakdancer_output_file
-            breakdancer_config_file
-            copy_number_output
-            snp_filter_output
-            filter_ceu_yri_output
-            adaptor_output_snp
-            dbsnp_output
-            loh_output_file
-            loh_fail_output_file
-            annotate_output_snp
-            ucsc_output
-            ucsc_unannotated_output
-            indel_lib_filter_preferred_output
-            indel_lib_filter_single_output
-            indel_lib_filter_multi_output
-            adaptor_output_indel
-            annotate_output_indel
-            tier_1_snp_file
-            tier_2_snp_file
-            tier_3_snp_file
-            tier_4_snp_file
-            tier_1_indel_file
-            tier_1_snp_high_confidence_file
-            tier_2_snp_high_confidence_file
-            tier_3_snp_high_confidence_file
-            tier_4_snp_high_confidence_file
-            tier_1_indel_high_confidence_file
-            circos_graph
-            ) ;
-} 
+    
+    return {
+        ucsc_file                           => 'ucsc_file.out',
+        sniper_snp_output                   => 'sniper_snp_output.out',
+        sniper_indel_output                 => 'sniper_indel_output.out',
+        breakdancer_output_file             => 'breakdancer_output_file.out',
+        breakdancer_config_file             => 'breakdancer_config_file.out',
+        copy_number_output                  => 'copy_number_output.out',
+        snp_filter_output                   => 'snp_filter_output.out',
+        filter_ceu_yri_output               => 'filter_ceu_yri_output.out',
+        adaptor_output_snp                  => 'adaptor_output_snp.out',
+        dbsnp_output                        => 'dbsnp_output.out',
+        loh_output_file                     => 'loh_output_file.out',
+        loh_fail_output_file                => 'loh_fail_output_file.out',
+        annotate_output_snp                 => 'annotate_output_snp.out',
+        ucsc_output                         => 'ucsc_output.out',
+        ucsc_unannotated_output             => 'ucsc_unannotated_output.out',
+        indel_lib_filter_preferred_output   => 'indel_lib_filter_preferred_output.out',
+        indel_lib_filter_single_output      => 'indel_lib_filter_single_output.out',
+        indel_lib_filter_multi_output       => 'indel_lib_filter_multi_output.out',
+        adaptor_output_indel                => 'adaptor_output_indel.out',
+        annotate_output_indel               => 'annotate_output_indel.out',
+        tier_1_snp_file                     => 'tier_1_snp_file.out',
+        tier_2_snp_file                     => 'tier_2_snp_file.out',
+        tier_3_snp_file                     => 'tier_3_snp_file.out',
+        tier_4_snp_file                     => 'tier_4_snp_file.out',
+        tier_1_indel_file                   => 'tier_1_indel_file.out',
+        tier_1_snp_high_confidence_file     => 'tier_1_snp_high_confidence_file.out',
+        tier_2_snp_high_confidence_file     => 'tier_2_snp_high_confidence_file.out',
+        tier_3_snp_high_confidence_file     => 'tier_3_snp_high_confidence_file.out',
+        tier_4_snp_high_confidence_file     => 'tier_4_snp_high_confidence_file.out',
+        tier_1_indel_high_confidence_file   => 'tier_1_indel_high_confidence_file.out',
+        circos_graph                        => 'circos_graph.out'
+    };
+}
 
 1;
 __DATA__
@@ -299,7 +294,7 @@ __DATA__
   </operation>
 
   <operation name="Copy Number Alteration">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::MapToCna" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="Genome::Model::Tools::Somatic::BamToCna" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Indelpe Runner Tumor">

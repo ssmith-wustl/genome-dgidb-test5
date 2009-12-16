@@ -1,10 +1,9 @@
 # review tmooney
 # @chrs is set to parameter value, but later overwritten by (1..22, 'X')?  Then later (1..22, 'X') hardcoded into loop.
 
-package Genome::Model::Tools::Somatic::MapToCna;
+package Genome::Model::Tools::Somatic::BamToCna;
 
-## This script analyzes a pair of tumor and normal map files
-##  in a configuration file (similar to BreakDancer)
+## This script analyzes a pair of tumor and normal bam files
 ## and outputs chromosomal based copy number alteration
 
 use strict;
@@ -14,9 +13,18 @@ use Statistics::Descriptive;
 use Statistics::R;
 require Genome::Utility::FileSystem;
 
-class Genome::Model::Tools::Somatic::MapToCna {
+my $DEFAULT_VERSION = '0.1';
+my $BAMWINDOW_COMMAND = 'bam-window';
+
+class Genome::Model::Tools::Somatic::BamToCna {
     is => 'Command',
     has => [
+    use_version => {
+        is => 'Version',
+        is_optional => 1,
+        default_value => $DEFAULT_VERSION,
+        doc => "Version of bam-window to use, default is $DEFAULT_VERSION"
+    },
     tumor_bam_file => {
         type => 'String',
         is_input => 1,
@@ -91,6 +99,10 @@ class Genome::Model::Tools::Somatic::MapToCna {
     ]
 };
 
+my %BAMWINDOW_VERSIONS = (
+     '0.1' => '/gsc/pkg/bio/bamwindow/bamwindow-v0.1/' . $BAMWINDOW_COMMAND,
+);
+
 sub help_brief {
     "This tool analyzes a tumor and normal bam file and outputs chromosomal-based copy number alteration."
 }
@@ -104,7 +116,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $version="Map2CNA-0.0.2r1";
     my @maps = ($self->tumor_bam_file,$self->normal_bam_file);
     my @samples = ("tumor","normal");
     my @downratios = ($self->tumor_downsample_percentage,$self->normal_downsample_percentage);
@@ -126,7 +137,7 @@ sub execute {
     my @statistics;
 
     for(my $if=0;$if<=1;$if++){
-        my $cmd = sprintf("/gscuser/dlarson/src/c-code/src/bamsey/window/trunk/bam-window -w %d -q %d -s -p -d %f %s |", $self->window_size, $self->maq_quality_cutoff, $downratios[$if], $maps[$if]);
+        my $cmd = sprintf("%s -w %d -q %d -s -p -d %f %s |", $self->bamwindow_path, $self->window_size, $self->maq_quality_cutoff, $downratios[$if], $maps[$if]);
         open(MAP,$cmd) || die "unable to open $maps[$if]\n";
         $statistics[$if] = Statistics::Descriptive::Sparse->new();
 
@@ -254,6 +265,31 @@ sub plot_output {
         dev.off();
     });
     $R->stopR();
+}
+
+sub bamwindow_path {
+    my $self = $_[0];
+    return $self->path_for_bamwindow_version($self->use_version);
+}
+
+sub available_bamwindow_versions {
+    my $self = shift;
+    return keys %BAMWINDOW_VERSIONS;
+}
+
+sub path_for_bamwindow_version {
+    my $class = shift;
+    my $version = shift;
+
+    if (defined $BAMWINDOW_VERSIONS{$version}) {
+        return $BAMWINDOW_VERSIONS{$version};
+    }
+    die('No path for bam-window version '. $version);
+}
+
+sub default_bamwindow_version {
+    die "default bam-window version: $DEFAULT_VERSION is not valid" unless $BAMWINDOW_VERSIONS{$DEFAULT_VERSION};
+    return $DEFAULT_VERSION;
 }
 
 1;
