@@ -8,6 +8,8 @@ use File::Basename;
 
 my $DEFAULT = 'r510';
 my $PICARD_DEFAULT = 'r107';
+#3Gb
+my $DEFAULT_MEMORY = 402653184;
 
 class Genome::Model::Tools::Sam {
     is  => 'Command',
@@ -23,6 +25,12 @@ class Genome::Model::Tools::Sam {
             doc => "picard version to be used, default is $PICARD_DEFAULT",
             is_optional   => 1, 
             default_value => $PICARD_DEFAULT,   
+        },
+        maximum_memory => {
+            is => 'Integer',
+            doc => "the maximum memory available, default is $DEFAULT_MEMORY",
+            is_optional => 1,
+            default_value => $DEFAULT_MEMORY,
         },
     ],
 };
