@@ -189,8 +189,15 @@ sub find_or_generate_alignment_data {
     $self->status_message('Picard version: '.$self->picard_version);
 
     unless ($self->verify_alignment_data) {
-        $self->error_message("Could not validate existing alignment data.  Cowardly refusing to proceed any further.");
-        return;
+        if ($self->alignment_directory_contents > 0) {
+            my @files = $self->alignment_directory_contents;
+            my $file_list = join "\n", @files;
+            $self->error_message("Could not validate existing alignment data.  Cowardly refusing to proceed any further.  Data contents:\n $file_list");
+            return;
+        } else {
+            $self->status_message("Running aligner.");
+            return $self->_run_aligner();
+        }
     } else {
         $self->status_message("Existing alignment data is available and deemed correct.");
         $self->status_message("Alignment directory: ".$self->alignment_directory);

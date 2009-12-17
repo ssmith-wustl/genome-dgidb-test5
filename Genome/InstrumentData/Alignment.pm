@@ -593,6 +593,14 @@ sub unlock_alignment_resource {
     return 1;
 }
 
+sub alignment_directory_contents {
+    my $self = shift;
+    my $alignment_dir = $self->alignment_directory;
+    my @files = <$alignment_dir/*>;
+
+    return @files;
+}
+
 sub remove_alignment_directory_contents {
 
     my $self = shift;
