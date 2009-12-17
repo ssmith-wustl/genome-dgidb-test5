@@ -4,6 +4,7 @@ use warnings;
 use strict;
 use File::stat;
 
+my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
 
 class Genome::Model::Tools::RefSeq::Prepare {
     is => 'Command',
@@ -22,7 +23,13 @@ class Genome::Model::Tools::RefSeq::Prepare {
                     type => 'String',
                     default_value=>'/gscmnt/839/info/medseq/reference_sequences',
                     doc => "Optional alternate base path for the reference.",
-            }
+            },
+            sam_version  => {
+                    type => 'String',
+                    default_value => $SAM_DEFAULT,
+                    doc  => "samtools version to be used, default is $SAM_DEFAULT",
+                    is_optional => 1,
+            },
     ],
 };
 
@@ -71,7 +78,7 @@ sub execute {
 
     print "Will index with bwa $bwa_idx_alg\n";
    
-    my $samtools_version = Genome::Model::Tools::Sam->path_for_samtools_version();
+    my $samtools_version = Genome::Model::Tools::Sam->path_for_samtools_version($self->sam_version);
     print "Using samtools version $samtools_version\n";
     my $bwa_version = Genome::Model::Tools::Bwa->create->bwa_path();
     print "Using bwa version $bwa_version\n";

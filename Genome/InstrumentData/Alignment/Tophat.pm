@@ -215,7 +215,7 @@ sub _run_aligner {
     my $sam_to_bam = Genome::Model::Tools::Sam::SamToBam->execute(
         sam_file    => $self->sam_file,
         bam_file    => $self->bam_file,
-        ref_list    => $reference_build->full_consensus_sam_index_path,
+        ref_list    => $reference_build->full_consensus_sam_index_path($self->samtools_version),
         is_sorted   => 0,
         index_bam   => 1,
         fix_mate    => 0,

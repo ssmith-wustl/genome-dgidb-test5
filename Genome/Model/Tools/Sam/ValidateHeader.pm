@@ -32,7 +32,7 @@ sub execute {
     my $self = shift;
 
     my $input_file = $self->input_file;
-    my $samtool = $self->path_for_samtools_version;
+    my $samtool = $self->samtools_path;
     my $get_header_cmd = "$samtool view -H $input_file";
     my @header_lines = `$get_header_cmd`;
     my @pg_result = grep (/\@PG/,@header_lines);

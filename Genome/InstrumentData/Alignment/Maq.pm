@@ -178,7 +178,7 @@ sub alignment_bam_file_paths {
             $self->status_message("map files:\n".join("\n",@map_files));
             
             my $ref_build = $self->reference_build;
-            my $ref_list  = $ref_build->full_consensus_sam_index_path;
+            my $ref_list  = $ref_build->full_consensus_sam_index_path($self->samtools_version);
             unless ($ref_list) {
                 $self->error_message("Failed to get MapToBam ref list: $ref_list");
                 return;
@@ -829,7 +829,7 @@ sub create_combined_bam_file {
 
     #convert the map2sam 
     my $ref_build = $self->reference_build;
-    my $ref_list  = $ref_build->full_consensus_sam_index_path;
+    my $ref_list  = $ref_build->full_consensus_sam_index_path($self->samtools_version);
     unless ($ref_list) {
            $self->error_message("Failed to get ref list: $ref_list");
            return;

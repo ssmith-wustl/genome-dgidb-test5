@@ -4,8 +4,18 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Genome::Model::Tools::Sam::Merge;
-use Test::More tests => 4;
+use Test::More;
+
+BEGIN {
+    if (`uname -a` =~ /x86_64/){
+        plan tests => 5;
+    }
+    else{
+        plan skip_all => 'Must run on a 64 bit machine';
+    }
+
+    use_ok('Genome::Model::Tools::Sam::ValidateHeader');
+}
 
 my $input = "/gsc/var/cache/testsuite/data/Genome-InstrumentData-Alignment/new.bam";
 my $input_bad = "/gsc/var/cache/testsuite/data/Genome-InstrumentData-Alignment/old.bam";

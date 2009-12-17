@@ -5,6 +5,8 @@ use strict;
 
 use Genome;
 
+my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
+
 class Genome::Model::Tools::Somatic::IndelpeRunner {
 
     is  => ['Command', 'Genome::Utility::FileSystem'],
@@ -46,7 +48,13 @@ class Genome::Model::Tools::Somatic::IndelpeRunner {
             is_optional => '1',
             doc      => 'The filtered indel file produced in sam snpfilter... generated with the output dir if none is provided',
         },
-
+        sam_version => {
+            is  => 'String',
+            doc => "samtools version to be used, default is $SAM_DEFAULT",
+            default_value => $SAM_DEFAULT,
+            is_optional => 1,
+        },
+        
        # Make workflow choose 64 bit blades
         lsf_resource => {
             is_param => 1,
@@ -99,7 +107,9 @@ sub execute {
     }
 
     #calling blank should return the $DEFAULT version in the G:M:T:Sam module
-    my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version();
+    #Directly using default samtools version is dangerous. Add sam_version option to 
+    #its property list
+    my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($self->sam_version);
 
     # ensure the reference sequence exists.
     my $ref_seq_file = $self->ref_seq_file;

@@ -97,14 +97,15 @@ sub full_consensus_path {
 #This is for samtools faidx output that can be used as ref_list for
 #SamToBam convertion
 sub full_consensus_sam_index_path {
-    my $self = shift;
+    my $self        = shift;
+    my $sam_version = shift;
 
     my $data_dir = $self->data_directory;
     my $fa_file  = $self->full_consensus_path('fa');
     my $idx_file = $fa_file.'.fai';
 
     unless (-e $idx_file) {
-        my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version;
+        my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version($sam_version);
         my $cmd      = $sam_path.' faidx '.$fa_file;
         
         my $lock = Genome::Utility::FileSystem->lock_resource(

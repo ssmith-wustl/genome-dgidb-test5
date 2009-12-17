@@ -96,7 +96,7 @@ sub execute {
     
     my $output = Workflow::Simple::run_workflow_lsf(
         $op,
-        'ref_list'  => $self->model->reference_build->full_consensus_sam_index_path,
+        'ref_list'  => $self->model->reference_build->full_consensus_sam_index_path($self->model->samtools_version),
         'accumulated_alignments_dir' => $alignments_dir, 
         'library_alignments' => \@list_of_library_alignments,
         'aligner_version' => $self->model->read_aligner_version,
@@ -124,7 +124,7 @@ sub execute {
    #merge those Bam files...BAM!!!
    $now = UR::Time->now;
    $self->status_message(">>> Beginning Bam merge at $now.");
-   my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version;
+   my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version($self->model->samtools_version);
    my $bam_merge_tool = $sam_path.' merge';
    my $bam_index_tool = $sam_path.' index';
    my $bam_merged_output_file = $self->build->whole_rmdup_bam_file; 

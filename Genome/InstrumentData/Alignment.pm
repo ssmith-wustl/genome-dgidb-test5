@@ -823,7 +823,7 @@ sub generate_tcga_bam_file {
 
     #STEP 4.85: Convert perl lane sam to Bam 
 
-    my $ref_list  = $self->reference_build->full_consensus_sam_index_path;
+    my $ref_list  = $self->reference_build->full_consensus_sam_index_path($self->samtools_version);
     unless ($ref_list) {
         $self->error_message("Failed to get MapToBam ref list: $ref_list");
         return;
