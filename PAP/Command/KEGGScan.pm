@@ -172,13 +172,13 @@ sub write_config_file {
     my $species = undef;
 
     ##FIXME:  Hardcoded path.
-    my $subjectpath = "/gscmnt/temp212/info/annotation/KEGG/Version_50/genes.v50.faa";
+    my $subjectpath = "/gscmnt/temp212/info/annotation/KEGG/Version_52/genes.v52.faa";
     
     my $query_fasta = $self->fasta_file();
     my $working_dir = $self->working_directory();
 
     my $bladeload  = 40;
-    my $keggrel    = "RELEASE-41";
+    my $keggrel    = "RELEASE-52";
 
     my @config = (
                   qq(SpeciesName\t"default"\n),
