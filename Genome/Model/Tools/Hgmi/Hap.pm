@@ -57,6 +57,12 @@ UR::Object::Type->define(
             is_optional => 1,
             default     => 0,
         },
+        'skip_protein_annotation' => {
+            is          => 'Boolean',
+            doc         => "skips running bap_finish, protein annotation and ber",
+            is_optional => 1,
+            default     => 0,
+        },
 
     ]
 );
@@ -222,6 +228,12 @@ sub execute
         $predict->dev(1);
     }
 
+    # to use new predictscript if changes get made.
+    if (exists($config->{predict_script}) && (-x $config->{predict_script}) )
+    {
+        $predict->script_location($config->{predict_script});
+    }
+
     if ($predict)
     {
         $predict->execute()
@@ -290,6 +302,26 @@ sub execute
     else
     {
         croak "can't set up finish step... Hap.pm\n\n";
+    }
+
+    if($self->skip_protein_annotation)
+    {
+        $self->status_message("run complete, skipping protein annotation");
+        my ($dump_out,$dump_err); 
+        #need to specify output path, and filename(s)
+        my $outputdir = $config->{path} . "/" . $config->{org_dirname} . "/"
+        . $config->{assembly_name} . "/"
+        . $config->{assembly_version} . "/" . "Sequence/Unmasked/";
+        my $acedb_version = acedb_version_lookup($config->{acedb_version});
+        my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
+        IPC::Run::run(['ace2seq-dump', $acedbpath, $config->{locus_tag}, '-n', '--output', $outputdir,
+                        '--seqfile', $config->{assembly_name}.".cds.fa" ],
+                      '>',
+                      \$dump_out,
+                      '2>',
+                      \$dump_err,) or croak "can't dump sequence from acedb: $CHILD_ERROR";
+        #dna dump here????
+        return 1;
     }
 
     # core genes and rrna screens
@@ -618,6 +650,8 @@ sub acedb_version_lookup
 
     return $acedb_lookup;
 }
+
+
 
 1;
 
