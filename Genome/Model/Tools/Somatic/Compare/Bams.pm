@@ -29,6 +29,7 @@ EOS
 
 sub pre_execute {
     my $self = shift;
+    $DB::single=1;
 
     # If data directory was provided... make sure it exists and set all of the file names
     if ($self->data_directory) {
@@ -37,11 +38,13 @@ sub pre_execute {
             return 0;
         }
         
-        while(my ($param, $default_filename) =  each %{$self->default_filenames}) {
+        my %default_filenames = $self->default_filenames;
+        for my $param (keys %default_filenames) {
             # set a default param if one has not been specified
+            my $default_filename = $default_filenames{$param};
             unless ($self->$param) {
                 $self->status_message("Param $param was not provided... generated $default_filename as a default");
-                $self->$param($default_filename);
+                $self->$param($self->data_directory . "/$default_filename");
             }
         }
     }
@@ -99,8 +102,8 @@ sub pre_execute {
 
 sub default_filenames{
     my $self = shift;
-    
-    return {
+   
+    my %default_filenames = (
         ucsc_file                           => 'ucsc_file.out',
         sniper_snp_output                   => 'sniper_snp_output.out',
         sniper_indel_output                 => 'sniper_indel_output.out',
@@ -131,8 +134,13 @@ sub default_filenames{
         tier_3_snp_high_confidence_file     => 'tier_3_snp_high_confidence_file.out',
         tier_4_snp_high_confidence_file     => 'tier_4_snp_high_confidence_file.out',
         tier_1_indel_high_confidence_file   => 'tier_1_indel_high_confidence_file.out',
+        upload_variants_snp_1_output        => 'upload_variants_snp_1_output.out',
+        upload_variants_snp_2_output        => 'upload_variants_snp_2_output.out',
+        upload_variants_indel_output        => 'upload_variants_indel_output.out',
         circos_graph                        => 'circos_graph.out'
-    };
+    );
+
+    return %default_filenames;
 }
 
 1;
@@ -248,8 +256,19 @@ __DATA__
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="High Confidence Snp Tier 4" toProperty="skip" /> 
   <link fromOperation="Tier Variants Snp" fromProperty="tier4_file" toOperation="High Confidence Snp Tier 4" toProperty="sniper_file" />
 
-  <link fromOperation="High Confidence Snp Tier 1" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_snp_high_confidence" />
-  <link fromOperation="High Confidence Snp Tier 2" fromProperty="output_file" toOperation="output connector" toProperty="tier_2_snp_high_confidence" />
+  <link fromOperation="High Confidence Snp Tier 1" fromProperty="output_file" toOperation="Upload Variants Snp Tier 1" toProperty="variant_file" />
+  <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Upload Variants Snp Tier 1" toProperty="annotation_file" />
+  <link fromOperation="input connector" fromProperty="upload_variants_snp_1_output" toOperation="Upload Variants Snp Tier 1" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Snp Tier 1" toProperty="build_id" />
+
+  <link fromOperation="High Confidence Snp Tier 2" fromProperty="output_file" toOperation="Upload Variants Snp Tier 2" toProperty="variant_file" />
+  <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Upload Variants Snp Tier 2" toProperty="annotation_file" />
+  <link fromOperation="input connector" fromProperty="upload_variants_snp_2_output" toOperation="Upload Variants Snp Tier 2" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Snp Tier 2" toProperty="build_id" />
+
+  <link fromOperation="Upload Variants Snp Tier 1" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_snp_high_confidence" />
+  <link fromOperation="Upload Variants Snp Tier 2" fromProperty="output_file" toOperation="output connector" toProperty="tier_2_snp_high_confidence" />
+
   <link fromOperation="High Confidence Snp Tier 3" fromProperty="output_file" toOperation="output connector" toProperty="tier_3_snp_high_confidence" />
   <link fromOperation="High Confidence Snp Tier 4" fromProperty="output_file" toOperation="output connector" toProperty="tier_4_snp_high_confidence" />
 
@@ -279,11 +298,16 @@ __DATA__
   <link fromOperation="input connector" fromProperty="circos_graph" toOperation="Plot Circos" toProperty="output_file" />
   <link fromOperation="Copy Number Alteration" fromProperty="output_file" toOperation="Plot Circos" toProperty="cna_file" />
   <link fromOperation="Breakdancer" fromProperty="breakdancer_output" toOperation="Plot Circos" toProperty="sv_file" />
-  <link fromOperation="High Confidence Snp Tier 1" fromProperty="output_file" toOperation="Plot Circos" toProperty="tier1_hc_file" />
+  <link fromOperation="Upload Variants Snp Tier 1" fromProperty="output_file" toOperation="Plot Circos" toProperty="tier1_hclabel_file" />
 
-  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_indel_output" />
+  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Upload Variants Indel" toProperty="variant_file" />
+  <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Upload Variants Indel" toProperty="annotation_file" />
+  <link fromOperation="input connector" fromProperty="upload_variants_indel_output" toOperation="Upload Variants Indel" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Indel" toProperty="build_id" />
 
   <link fromOperation="Plot Circos" fromProperty="output_file" toOperation="output connector" toProperty="circos_big_graph" />
+  <link fromOperation="Upload Variants Indel" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_indel_output" />
+  
 
   <operation name="Somatic Sniper">
     <operationtype commandClass="Genome::Model::Tools::Somatic::Sniper" typeClass="Workflow::OperationType::Command" />
@@ -341,6 +365,12 @@ __DATA__
   <operation name="High Confidence Snp Tier 4">
     <operationtype commandClass="Genome::Model::Tools::Somatic::HighConfidence" typeClass="Workflow::OperationType::Command" />
   </operation>
+  <operation name="Upload Variants Snp Tier 1">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::UploadVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Upload Variants Snp Tier 2">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::UploadVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
 
   <operation name="Library Support Filter">
     <operationtype commandClass="Genome::Model::Tools::Somatic::LibrarySupportFilter" typeClass="Workflow::OperationType::Command" />
@@ -354,6 +384,9 @@ __DATA__
   <operation name="Tier Variants Indel">
     <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
+  <operation name="Upload Variants Indel">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::UploadVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
 
   <operation name="Plot Circos">
     <operationtype commandClass="Genome::Model::Tools::Somatic::PlotCircos" typeClass="Workflow::OperationType::Command" />
@@ -362,6 +395,7 @@ __DATA__
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>normal_bam_file</inputproperty>
     <inputproperty>tumor_bam_file</inputproperty>
+    <inputproperty>build_id</inputproperty>
     <inputproperty isOptional="Y">skip_if_output_present</inputproperty>
     <inputproperty isOptional="Y">tumor_snp_file</inputproperty>
     <inputproperty isOptional="Y">normal_snp_file</inputproperty>
@@ -415,6 +449,10 @@ __DATA__
     <inputproperty isOptional="Y">tier_2_snp_high_confidence_file</inputproperty>
     <inputproperty isOptional="Y">tier_3_snp_high_confidence_file</inputproperty>
     <inputproperty isOptional="Y">tier_4_snp_high_confidence_file</inputproperty>
+
+    <inputproperty isOptional="Y">upload_variants_snp_1_output</inputproperty>
+    <inputproperty isOptional="Y">upload_variants_snp_2_output</inputproperty>
+    <inputproperty isOptional="Y">upload_variants_indel_output</inputproperty>
     
     <inputproperty isOptional="Y">tier_1_indel_file</inputproperty>
     <inputproperty isOptional="Y">tier_1_indel_high_confidence_file</inputproperty>

@@ -131,6 +131,7 @@ sub execute {
         skip_sv => $skip_sv_flag,
         min_mapping_quality => $min_mapping_quality,
         min_somatic_quality => $min_somatic_quality,
+        build_id => $build->id,
     );
 
     unless ($workflow) {

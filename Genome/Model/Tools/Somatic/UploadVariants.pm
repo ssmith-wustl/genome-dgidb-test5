@@ -1,27 +1,32 @@
-package Genome::Model::Tools::Somatic::UploadResults;
+package Genome::Model::Tools::Somatic::UploadVariants;
 
 use strict;
 use warnings;
 use Genome;
 use Genome::Info::IUB;
 
-class Genome::Model::Tools::Somatic::UploadResults {
+class Genome::Model::Tools::Somatic::UploadVariants{
     is => 'Command',
     has => [
     variant_file => {
         is  => 'String',
+        is_input => '1',
         doc => 'The file of somatic pipeline results to be uploaded. This will usually be a high confidence tier 1 or 2 snp file, or a tier 1 indel file from the somatic pipeline.',
     },
     annotation_file => {
         is  => 'String',
+        is_input => '1',
         doc => 'The file containing the annotation of all of the variants from the corresponding variant file. This will usually be the annotation output for snps or indels from the somatic pipeline.',
     },
     output_file => {
         is  => 'String',
+        is_input => '1',
+        is_output => '1',
         doc => 'The output file containing all of the annotation lines from the annotation_file for each of the variants from the variant_file',
     },
     build_id => {
         is => 'Number',
+        is_input => '1',
         doc => 'The build id that should be linked to the variant. This is manual for now and required.',
     },
     ],
