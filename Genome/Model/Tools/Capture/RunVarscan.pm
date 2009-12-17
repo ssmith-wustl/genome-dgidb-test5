@@ -77,7 +77,7 @@ sub execute {                               # replace with real execution logic.
 		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
 		
 		open(SCRIPT, ">$output.sh") or die "Can't open output file!\n";
-		print SCRIPT "#!/gsc/bin/sh\n";
+		print SCRIPT "#!/gsc/bin/bash\n";
 		## Run VarScan ##
 		if($self->heap_space)
 		{
@@ -90,7 +90,7 @@ sub execute {                               # replace with real execution logic.
 		}
 		close(SCRIPT);
 		system("chmod 755 $output.sh");
-
+		system("bash $output.sh");
 	}
 	else
 	{
