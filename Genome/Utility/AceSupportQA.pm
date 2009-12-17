@@ -23,12 +23,6 @@ class Genome::Utility::AceSupportQA {
             default => 0, 
             doc => 'Whether or not to check the reference sequence, to be used only with amplicon assemblies dumped from the database' 
         },
-        check_phd_time_stamps => { 
-            is => 'String', 
-            is_optional => 1,
-            default => 0, 
-            doc => 'Whether or not to check the phd time stamps, maybe not currently functional?' 
-        },
         fix_invalid_files => { 
             is => 'String', 
             is_optional => 1,
@@ -91,15 +85,18 @@ sub ace_support_qa {
 	}
 	my $total_invalid_files = @scf + @poly + @phd;
 
+	unless ($polyfile_count->{bad}) {$polyfile_count->{bad}=0;}
+	unless ($polyfile_count->{good}) {$polyfile_count->{good}=0;}
+
 	if (($polyfile_count->{bad} + $polyfile_count->{good}) == $total_invalid_files) {
-
+	    
 	    return 1;
-
+	    
 	} else {
-
+	    
 	    $self->error_message("There are invalid files for $project that should be fixed prior to analysis");
 	    $self->error_message("Here is a list of reads for $project with either a broken chromat, phd, or poly file");
-
+	    
 	    #push @sources , $e unless grep (/$e/, @sources);
 	    my @incomplete_traces;
 	    foreach my $read (sort keys %{$invalid_files}) {
@@ -107,7 +104,7 @@ sub ace_support_qa {
 		unless ($polyfile_count->{good} == 0) {push@badtypes,"poly" if grep (/$read/, @poly);}
 		push@badtypes,"phd" if grep (/$read/, @phd);
 		push@badtypes,"scf" if grep (/$read/, @scf);
-
+		
 		my $bt = join ' ' , @badtypes;
 		my $file = "file";
 		if (@badtypes > 1) { $file = "files";}
@@ -117,7 +114,7 @@ sub ace_support_qa {
 	    return 0;
 	}
     }
-
+    
     return 1;
 }
 
@@ -125,7 +122,7 @@ sub check_ref {
     my $self = shift;
     my $assembly_name = shift;
     my $amplicon_tag = GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name);
-
+    
     unless($amplicon_tag){
         $self->error_message("no amplicon tag from GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name)... can't check the reference sequence");
         return;
@@ -133,23 +130,23 @@ sub check_ref {
     
     my $amplicon = $amplicon_tag->ref_id;
     my ($chromosome) = $amplicon_tag->sequence_item_name =~ /chrom([\S]+)\./;
-
+    
     my $amplicon_sequence = $amplicon_tag->sequence_base_string;
     my $amplicon_offset = $amplicon_tag->begin_position;
-
+    
     my $amplicon_begin = $amplicon_tag->begin_position;
     my $amplicon_end = $amplicon_tag->end_position;
-
+    
     my $assembly_length = length($amplicon_sequence);
     my $strand = $amplicon_tag->strand;
-
+    
     my ($start,$stop) = sort ($amplicon_begin,$amplicon_end);
     my $length = $stop - $start + 1;
-
+    
     unless ($assembly_length == $length) { 
         $self->error_message("the assembly_length doesn\'t jive with the spread on the coordinates"); 
     }
-
+    
     my $sequence = $self->get_ref_base($chromosome,$start,$stop); ##this will come reverse complemented if $start > $stop 
     if ($strand eq "-") {
         my $revseq = $self->reverse_complement_sequence ($sequence); 
@@ -198,13 +195,27 @@ sub parse_ace_file {
 
     my $edit_dir = join'/',@da;
 
+
+
     pop(@da);
     my $project_dir = join'/',@da;
+
+    unless ($project_dir && -d $project_dir) {
+	$self->error_message("Could not find the project directory");
+	return 0;
+    }
+
     my $project = pop(@da);
 
     my $chromat_dir = "$project_dir/chromat_dir";
     my $phd_dir = "$project_dir/phd_dir";
     my $poly_dir = "$project_dir/poly_dir";
+    
+    if ($self->fix_invalid_files) {
+	mkdir ($chromat_dir,0775) if (! -d $chromat_dir);
+	mkdir ($phd_dir,0775) if (! -d $phd_dir);
+	mkdir ($poly_dir,0775) if (! -d $poly_dir);
+    }
 
     my $ao = GSC::IO::Assembly::Ace->new(input_file => $ace_file);
 
@@ -213,7 +224,7 @@ sub parse_ace_file {
         $contig_count++;
         my $contig = $ao->get_contig($name);
         foreach my $read_name (keys %{ $contig->reads }) {
-            unless ($read_name =~ /(\S+\.c1)$/) {
+            unless ($read_name =~ /(\S+\.c1)$/ || $read_name eq $contig->name) {
                 $traces_fof->{$read_name}=1;
             }
         }
@@ -240,8 +251,13 @@ sub check_traces_fof {
         if ($read =~ /^n\-cntrl/) {$ncntrl_reads++;}
 
         my $trace = "$chromat_dir/$read.gz";
+	if ("$chromat_dir/$read" && -s "$chromat_dir/$read") {  $trace =  "$chromat_dir/$read"; }
 
         unless (-s $trace) {
+	    #my ($consensus) = `grep "CO $read" $ace_file`;
+	    #if ($consensus) { $read_count--; }
+	    #next if $consensus;
+
             if ($self->fix_invalid_files) {
 		$self->status_message("$read.gz is missing from the chromat_dir will run read_dump to recover it.");
                 system qq(read_dump -scf-gz $read --output-dir=$chromat_dir);
@@ -274,7 +290,7 @@ sub check_traces_fof {
 		} else {
 		    $invalid_files->{$read}->{poly}=1;
 		    $invalid_files->{$read}->{trace}=1;
-		    $self->status_messaage("no attempt made to produce a poly file for $read as the trace file is missing");
+		    $self->status_message("no attempt made to produce a poly file for $read as the trace file is missing");
 		}
 	    }
 	    if (-s $poly) {
@@ -297,19 +313,50 @@ sub check_traces_fof {
         }
         
         my $phd = "$phd_dir/$read.phd.1";
-
+	my $phd_time_stamps;
         unless (-s $phd) {
-            if (-e $phd) {
+            if ($self->fix_invalid_files) {
+		if (-s $trace) {
+		    $self->status_message("will run phred to recover $phd");
+		    system qq(phred -pd $phd_dir $chromat_dir/$read.gz);
+		} else {
+		    $invalid_files->{$read}->{phd}=1;
+		    $invalid_files->{$read}->{trace}=1;
+		    $self->status_message("no attempt made to produce a phd file for $read as the trace file is missing");
+		}
+	    }
+	    if (-s $phd) {
+
+		if ($self->fix_invalid_files) {
+		    $repaired_file++;
+		    $self->status_message("$phd recovered");
+		    #($phd_time_stamps) = &get_phd_time_stamp($phd);
+		    $phd_time_stamps->{$read}->{phd}=$phd;
+		} else {
+		    $self->status_message("$phd errored initially");
+		}
+            } elsif (-e $phd) {
                 $empty_phd_file++;
                 $phd_files_needed->{$read}=1;
+		if ($self->fix_invalid_files) {$self->status_message("$phd is an empty file");}
+		$invalid_files->{$read}->{phd}=1;
             } else {
                 $no_phd_file++;
                 $phd_files_needed->{$read}=1;
+		if ($self->fix_invalid_files) {$self->status_message("phred failed to produce a phd file for $read.gz");}
+		$invalid_files->{$read}->{phd}=1;
             }
         }
+	
+	if ($self->fix_invalid_files && $phd_time_stamps) {
+	    ($phd_time_stamps) = &get_phd_time_stamp($self,$ace_file,$phd_time_stamps);
+	    foreach my $read (sort keys %{$phd_time_stamps}) {
+		print qq(read ==> $read\n);
+		my $fixed = $phd_time_stamps->{$read}->{fixed};
+		unless ($fixed) {$invalid_files->{$read}->{phd}=1;}
+	    }
+	}
     }
-
-    #my $invalid_files;
 
     unless ($read_count) { 
         die "There are no reads in the ace file to be analyzed\n"; 
@@ -317,132 +364,84 @@ sub check_traces_fof {
 
     $self->status_message("Reads for analysis ==> $read_count");
 
-
     if ($no_trace_file || $empty_trace_file) {
-
         $no_trace_file ||= 0;
         $empty_trace_file ||= 0;
-
         my $n = $no_trace_file + $empty_trace_file;
         $self->error_message("nonviable trace files ==> $n");
-
     } 
 
     if ($no_phd_file || $empty_phd_file) {
-
         unless($no_phd_file) {$no_phd_file=0;}
         unless($empty_phd_file) {$empty_phd_file=0;}
-
         my $n = $no_phd_file + $empty_phd_file;
-
         if ($self->fix_invalid_files) {
-            $self->status_message("will run phred to produce $n disfunctional phd files");
-        }
-        foreach my $read (sort keys %{$phd_files_needed}) {
-            if ($trace_files_needed->{$read}) {
-                if ($self->fix_invalid_files) {
-                    $self->status_message("no attempt made to produce a phd file for $read as the trace file is missing");
-                }
-                $invalid_files->{$read}->{phd}=1;
-            } else {
-                my $phd = "$phd_dir/$read.phd.1";
-
-                if (-s $phd) {
-                    $repaired_file++;
-                } else {
-                    $invalid_files->{$read}->{phd}=1;
-                }
-            }
+            $self->status_message("phred failed to produce $n disfunctional phd files");
         }
     }
-
-
-    ##sync_phd_time_stamps is not working correctly. It didn't change the time stamp in the ace file
-    if ($self->check_phd_time_stamps) {
-        if ($self->fix_invalid_files) {
-            $self->status_message("will attempt to sync the phd file time stamps with the ace file");
-            ($ace_file)=$self->sync_phd_time_stamps($ace_file);
-
-            unless (-s $ace_file) {
-                die "The synced ace file $ace_file doesnt exist or has zero size";
-            }
-        }
-    }
-
+    
     if ($ncntrl_reads) {
         $self->status_message("There were $ncntrl_reads n-cntrl reads");
     }
-
+    
     return ($invalid_files,$polyfile_count);
 }
 
-sub sync_phd_time_stamps {   ## this isn't being used and it doesn't appear to do what it should
-    my $self = shift;
-    my $ace = shift;
+sub get_phd_time_stamp {
+    
+    my ($self,$ace_file,$phd_time_stamps) = @_;
 
-    #addapted from ~kkyung/bin/fix_autojoin_DS_line.pl
+    open(ACE,"$ace_file") || $self->status_message("$ace_file failed to open can not update the time stamp");
+    while (<ACE>) {
+	chomp;
+	my $line = $_;
 
-    use IO::File;
-    use Data::Dumper;
-
-    system qq(cp $ace $ace.presync);
-    open(NEWACE,">$ace.synced");
-
-    my $fh = IO::File->new("<$ace") || die "Can not open $ace";
-
-    my $ds = {};
-
-    while (my $line = $fh->getline)
-    {
-        if ($line =~ /^DS\s/)
-        {
-            my ($version) = $line =~ /VERSION:\s+(\d+)/;
-            my ($chromat) = $line =~ /CHROMAT_FILE:\s+(\S+)/;
-            my ($phd_file) = $line =~ /PHD_FILE:\s+(\S+)/;
-            my ($time) = $line =~ /TIME:\s+(\w+\s+\w+\s+\d+\s+\d+\:\d+\:\d+\s+\d+)/;
-            my ($chem) = $line =~ /CHEM:\s+(\S+)/;
-            my ($dye) = $line =~ /DYE:\s+(\S+)/;
-            my ($template) = $line =~ /TEMPLATE:\s+(\S+)/;
-            my ($direction) = $line =~ /DIRECTION:\s+(\S+)/;
-
-            $ds->{chromat_file} = (defined $chromat) ? $chromat : 'unknown';
-            $ds->{version} = (defined $version) ? $version : 'unknown';
-            $ds->{phd_file} = (defined $phd_file) ? $phd_file : 'unknown';
-            $ds->{time} = (defined $time) ? $time : 'unknown';
-            $ds->{chem} = (defined $chem) ? $chem : 'unknown';
-            $ds->{dye} = (defined $dye) ? $dye : 'unknown';
-            $ds->{template} = (defined $template) ? $template : 'unknown';
-            $ds->{direction} = (defined $direction) ? $direction : 'unknown';
-            $ds->{is_454} = ($chromat =~ /\.sff\:/) ? 'yes' : 'no';
-
-            my $ds_line = 'DS ';
-            if ($chromat =~ /\.sff\:/)
-            {
-                $ds_line .= 'VERSION: '.$ds->{version}.' ' unless $ds->{version} eq 'unknown';
-            }
-            $ds_line .= 'CHROMAT_FILE: '.$ds->{chromat_file}.' ';
-            $ds_line .= 'PHD_FILE: '.$ds->{phd_file}.' ' unless $ds->{phd_file} eq 'unknown';
-            $ds_line .= 'TIME: '.$ds->{time}.' ';
-            $ds_line .= 'CHEM: '.$ds->{chem}.' ' unless $ds->{chem} eq 'unknown';
-            $ds_line .= 'DYE: '.$ds->{dye}.' ' unless $ds->{dye} eq 'unknown';
-            $ds_line .= 'TEMPLATE: '.$ds->{template}.' ' unless $ds->{template} eq 'unknown';
-            $ds_line .= 'DIRECTION: '.$ds->{direction}.' ' unless $ds->{direction} eq 'unknown';
-
-            $ds_line =~ s/\s+$//;
-
-            print NEWACE $ds_line."\n";
-
-        }
-        else
-        {
-            print NEWACE $line;
-        }
+	next unless $line =~ /DS CHROMAT_FILE: (\S+) PHD_FILE: (\S+) (TIME:[\S\s]+)$/;
+	
+	my $read = $1;
+	my $time = $3;
+	
+	next unless $phd_time_stamps->{$read};
+	
+	my $phd = $phd_time_stamps->{$read}->{phd};
+	if ($phd) {
+	    ($phd_time_stamps) = &sync_phd_time_stamps($self,$read,$phd,$time,$phd_time_stamps);
+	} 
     }
-    $fh->close;
-    close(NEWACE);
+    
+    close (ACE);
 
-    system qq(cp $ace.synced $ace);
-    return($ace);
+    return ($phd_time_stamps);
+}
+
+sub sync_phd_time_stamps {
+    my ($self,$read,$phd,$time,$phd_time_stamps) = @_;
+    
+    system qq(cp $phd $phd.presync);
+    my $presync = "$phd.presync";
+    unless ($presync && -e $presync) {$self->status_message("failed to cp $phd to $presync");}
+    
+    open(PHD,">$phd") || $self->status_message("$phd failed to open can not update the time stamp");;
+    open(PRESYNC,$presync) || $self->status_message("$presync failed to open can not update the time stamp");
+    while (<PRESYNC>) {
+	chomp;
+	my $line = $_;
+	###TIME: Thu Dec 17 12:12:35 2009
+	my $time_stamp;
+	if ($line =~ /^(TIME:[\S\s]+)$/) {
+	    print PHD qq($time\n);
+	} else {
+	    print PHD qq($line\n);
+	}
+    }
+    close PHD;
+    close PRESYNC;
+
+    my $fixed = `grep "$time" $phd`;
+    if ($fixed) {chomp $fixed; $phd_time_stamps->{$read}->{fixed}=1;$self->status_message("$phd synchronized")}
+
+    return ($phd_time_stamps);
+
 }
 
 1;
