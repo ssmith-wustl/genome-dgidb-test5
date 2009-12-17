@@ -76,15 +76,20 @@ sub execute {                               # replace with real execution logic.
 		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
 		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
 		
+		open(SCRIPT, ">$output.sh") or die "Can't open output file!\n";
+		print SCRIPT "#!/gsc/bin/sh\n";
 		## Run VarScan ##
 		if($self->heap_space)
 		{
-			system("java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");						
+#			system("java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");						
 		}
 		else
 		{
-			system("java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");			
+			print SCRIPT "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) $output $varscan_params\n";
+#			system("echo  \<\($normal_pileup\) \<\($tumor_pileup\) $output $varscan_params");
 		}
+		close(SCRIPT);
+		system("chmod 755 $output.sh");
 
 	}
 	else
