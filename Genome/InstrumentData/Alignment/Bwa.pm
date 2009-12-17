@@ -189,8 +189,8 @@ sub find_or_generate_alignment_data {
     $self->status_message('Picard version: '.$self->picard_version);
 
     unless ($self->verify_alignment_data) {
-        $self->status_message("Could not validate alignments.  Running aligner.");
-        return $self->_run_aligner();
+        $self->error_message("Could not validate existing alignment data.  Cowardly refusing to proceed any further.");
+        return;
     } else {
         $self->status_message("Existing alignment data is available and deemed correct.");
         $self->status_message("Alignment directory: ".$self->alignment_directory);
@@ -234,7 +234,7 @@ sub verify_alignment_data {
 
     unless ($self->unlock_alignment_resource) {
         $self->error_message('Failed to unlock alignment resource '. $lock);
-        return;
+        die $self->error_message;
     }
  
     return 1;
@@ -252,7 +252,8 @@ sub _run_aligner {
     }
 
     #delete everything in the alignment_dir
-    $self->remove_alignment_directory_contents;
+    #don't do this anymore, this is bad.  we should have some way to manually handle this (ben)
+    #$self->remove_alignment_directory_contents;
 
     my $instrument_data = $self->instrument_data;
     my $reference_build = $self->reference_build;
