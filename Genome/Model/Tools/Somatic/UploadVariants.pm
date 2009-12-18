@@ -151,7 +151,13 @@ sub execute {
                     variant => $new_variant,
                     build_id => $self->build_id,
                 );
-                my $build=Genome::Model::Build->get($self->build_id);
+                
+                my $build = Genome::Model::Build->get($self->build_id);
+                unless (defined $build) {
+                    $self->error_message("Could not get a build for build id " . $self->build_id . ". Please use a valid build id.");
+                    die;
+                }
+                
                 my $model = $build->model;
                 my $new_variant_validation = Genome::Model::VariantValidation->get_or_create(
                     variant=>$new_variant,

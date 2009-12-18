@@ -104,7 +104,6 @@ sub default_filenames{
     my $self = shift;
    
     my %default_filenames = (
-        ucsc_file                           => 'ucsc_file.out',
         sniper_snp_output                   => 'sniper_snp_output.out',
         sniper_indel_output                 => 'sniper_indel_output.out',
         breakdancer_output_file             => 'breakdancer_output_file.out',
@@ -406,7 +405,6 @@ __DATA__
     <inputproperty isOptional="Y">skip_sv</inputproperty>
 
     <inputproperty isOptional="Y">data_directory</inputproperty>
-    <inputproperty isOptional="Y">ucsc_file</inputproperty>
     <inputproperty isOptional="Y">sniper_snp_output</inputproperty>
     <inputproperty isOptional="Y">sniper_indel_output</inputproperty>
 
