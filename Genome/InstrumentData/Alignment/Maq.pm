@@ -364,7 +364,6 @@ sub unaligned_reads_fastq_file_name {
 
 sub verify_alignment_data {
     my $self = shift;
-
     my $alignment_dir = $self->alignment_directory;
     return unless $alignment_dir;
     return unless -d $alignment_dir;
@@ -464,7 +463,7 @@ sub verify_alignment_data {
 
     unless ($self->unlock_alignment_resource) {
         $self->error_message('Failed to unlock alignment resource '. $lock);
-        return;
+        die $self->error_message;
     }
     
     return 2 if $verified_no_reads;
@@ -509,15 +508,22 @@ sub find_or_generate_alignment_data {
     $self->status_message('Picard version: '.$self->picard_version);
 
 
-    my $alignment_data_verified = $self->verify_alignment_data;
+    my $alignment_data_verified = $self->verify_alignment_data; 
     if($alignment_data_verified == 2) {
         #Aligner found no reasonable reads--no way to build all_sequences.map and all_sequences.bam
         $self->status_message("Existing alignment data is available and deemed correct.");
         $self->status_message("Skipping MAP and BAM file check due to no reasonable reads.");
 
     } elsif ($alignment_data_verified != 1) {
-        $self->remove_alignment_directory_contents;
-        $self->_run_aligner();
+       if ($self->alignment_directory_contents > 0) {
+            my @files = $self->alignment_directory_contents;
+            my $file_list = join "\n", @files;
+            $self->error_message("Could not validate existing alignment data.  Cowardly refusing to proceed any further.  Data contents:\n $file_list");
+            return;
+        } else {
+            $self->status_message("Running aligner.");
+            return $self->_run_aligner();
+        }
     } else {
         $self->status_message("Existing alignment data is available and deemed correct.");
         my $alignment_bam_file = $self->alignment_file;
