@@ -15,7 +15,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     } else {
-        plan tests => 6;
+        plan tests => 11;
     }
 };
 
@@ -26,26 +26,45 @@ my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-
 my $tumor_bam_file  = $test_input_dir . 'tumor.sparse.bam';
 my $normal_bam_file = $test_input_dir . 'normal.sparse.bam';
 
-my $expected_output_file = $test_input_dir . 'cna.expected';
+my $expected_output_file_1 = $test_input_dir . 'cna.1.expected';
+my $expected_output_file_2 = $test_input_dir . 'cna.2.expected';
 
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-Somatic-BamToCna-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 $test_output_dir .= '/';
 
-my $output_file     = $test_output_dir . 'cna.out';
+my $output_file_1     = $test_output_dir . 'cna.1.out';
+my $output_file_2     = $test_output_dir . 'cna.2.out';
 
-#This window size and ratio are atypical, but allow the test to generate data given a sparse BAM file.
-my $bam_to_cna = Genome::Model::Tools::Somatic::BamToCna->create(
+#This window size and ratio are atypical, but allow the test to generate all data given a sparse BAM file.
+my $bam_to_cna_1 = Genome::Model::Tools::Somatic::BamToCna->create(
     tumor_bam_file  => $tumor_bam_file,
     normal_bam_file => $normal_bam_file,
-    output_file     => $output_file,
+    output_file     => $output_file_1,
     window_size     => 10000000,
-    ratio           => 4/1
+    ratio           => 4.0
 );
 
-ok($bam_to_cna, 'created BamToCna object');
-ok($bam_to_cna->execute(), 'executed BamToCna object');
+ok($bam_to_cna_1, 'created BamToCna object with ratio of 4.0');
+ok($bam_to_cna_1->execute(), 'executed BamToCna object with ratio of 4.0');
 
-ok(-s $output_file, 'generated output file');
-is(compare($output_file, $expected_output_file), 0, 'output matched expected results');
+ok(-s $output_file_1, 'generated output for ratio of 4.0');
+is(compare($output_file_1, $expected_output_file_1), 0, 'output for ratio of 4.0 matched expected results');
 
-ok(-s $output_file . ".png", 'generated copy number graphs');
+ok(-s $output_file_1 . ".png", 'generated copy number graphs for ratio of 4.0');
+
+#A more normal ratio should result in missing some chromosomes in the output.
+my $bam_to_cna_2 = Genome::Model::Tools::Somatic::BamToCna->create(
+    tumor_bam_file  => $tumor_bam_file,
+    normal_bam_file => $normal_bam_file,
+    output_file     => $output_file_2,
+    window_size     => 10000000,
+    ratio           => 0.25
+);
+
+ok($bam_to_cna_2, 'created BamToCna object with ratio of 0.25');
+ok($bam_to_cna_2->execute(), 'executed BamToCna object with ratio of 0.25');
+
+ok(-s $output_file_2, 'generated output for ratio of 0.25');
+is(compare($output_file_2, $expected_output_file_2), 0, 'output for ratio of 0.25 matched expected results');
+
+ok(-s $output_file_2 . ".png", 'generated copy number graphs for ratio of 0.25');
