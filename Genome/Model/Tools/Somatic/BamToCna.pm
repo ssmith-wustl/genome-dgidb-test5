@@ -116,9 +116,9 @@ EOS
 sub execute {
     my $self = shift;
 
-    my @maps = ($self->tumor_bam_file,$self->normal_bam_file);
+    my %maps = (tumor => $self->tumor_bam_file, normal => $self->normal_bam_file);
     my @samples = ("tumor","normal");
-    my @downratios = ($self->tumor_downsample_percentage,$self->normal_downsample_percentage);
+    my %downratios = (tumor => $self->tumor_downsample_percentage, normal => $self->normal_downsample_percentage);
     my $outfile = $self->output_file;
 
     if (($self->skip_if_output_present)&&(-s $self->output_file)) {
@@ -134,21 +134,21 @@ sub execute {
                                       
     ####################### Compute read counts in sliding windows ########################
     my %data;
-    my @statistics;
+    my %statistics;
 
-    for(my $if=0;$if<=1;$if++){
-        my $cmd = sprintf("%s -w %d -q %d -s -p -d %f %s |", $self->bamwindow_path, $self->window_size, $self->maq_quality_cutoff, $downratios[$if], $maps[$if]);
-        open(MAP,$cmd) || die "unable to open $maps[$if]\n";
-        $statistics[$if] = Statistics::Descriptive::Sparse->new();
+    for my $sample (@samples){
+        my $cmd = sprintf("%s -w %d -q %d -s -p -d %f %s |", $self->bamwindow_path, $self->window_size, $self->maq_quality_cutoff, $downratios{$sample}, $maps{$sample});
+        open(MAP,$cmd) || die "unable to open $maps{$sample}\n";
+        $statistics{$sample} = Statistics::Descriptive::Sparse->new();
 
         my ($pchr,$idx)=(0,0);
         while(<MAP>){
             chomp;
             my ($chr,$pos,$nread) = split /\t/;
             $idx = 0 if($chr ne $pchr);
-            ${$data{$if}{$chr}}[$idx++]=$nread;
+            $data{$sample}{$chr}[$idx++]=$nread;
             $pchr = $chr;
-            $statistics[$if]->add_data($nread);
+            $statistics{$sample}->add_data($nread);
         }
         close(MAP);
     }
@@ -162,36 +162,36 @@ sub execute {
     }
 
     #Estimate genome-wide tumor/normal 2X read count
-    my @medians;
-    for(my $if=0;$if<=1;$if++){
+    my %medians;
+    for my $sample (@samples){
         my $median=Statistics::Descriptive::Full->new();
         foreach my $chr(@chrs){
-            next unless (defined $data{$if}{$chr});
-            my $md = $self->get_median($data{$if}{$chr});
+            next unless (defined $data{$sample}{$chr});
+            my $md = $self->get_median($data{$sample}{$chr});
             $median->add_data($md);
         }
-        push @medians,$median->median();
+        $medians{$sample} = $median->median();
     }
 
     @chrs = (1..22,'X');
     my %num_CN_neutral_pos;
     my %NReads_CN_neutral;
     foreach my $chr(@chrs){
-        next unless (defined $data{0}{$chr} && $data{1}{$chr});
-        my $Nwi=($#{$data{0}{$chr}}<$#{$data{0}{$chr}})?$#{$data{0}{$chr}}:$#{$data{0}{$chr}};
+        next unless (defined $data{tumor}{$chr} && $data{normal}{$chr});
+        my $Nwi=($#{$data{tumor}{$chr}}<$#{$data{tumor}{$chr}})?$#{$data{tumor}{$chr}}:$#{$data{tumor}{$chr}};
 
-        for(my $i=0;$i<=$Nwi;$i++){
+        for my $i (0..$Nwi){
             my $f2x=1;
-            next unless (defined ${$data{0}{$chr}}[$i] && defined ${$data{1}{$chr}}[$i]);
-            for(my $if=0;$if<=1;$if++){
-                $f2x=0 if(${$data{$if}{$chr}}[$i]<$medians[$if]*(1-$self->ratio) || ${$data{$if}{$chr}}[$i]>$medians[$if]*(1+$self->ratio));
+            next unless (defined ${$data{tumor}{$chr}}[$i] && defined ${$data{normal}{$chr}}[$i]);
+            for my $sample (@samples){
+                $f2x=0 if(${$data{$sample}{$chr}}[$i]<$medians{$sample}*(1-$self->ratio) || ${$data{$sample}{$chr}}[$i]>$medians{$sample}*(1+$self->ratio));
             }
             next if(! $f2x);
             $num_CN_neutral_pos{$chr}++;
             $num_CN_neutral_pos{'allchr'}++;
-            for(my $if=0;$if<=1;$if++){
-                $NReads_CN_neutral{$chr}{$if}+=${$data{$if}{$chr}}[$i];
-                $NReads_CN_neutral{'allchr'}{$if}+=${$data{$if}{$chr}}[$i];
+            for my $sample (@samples){
+                $NReads_CN_neutral{$chr}{$sample}+=${$data{$sample}{$chr}}[$i];
+                $NReads_CN_neutral{'allchr'}{$sample}+=${$data{$sample}{$chr}}[$i];
             }
         }
     }
@@ -201,30 +201,30 @@ sub execute {
     my %depth2x;
     foreach my $chr(@chrs,'allchr'){
         printf OUT "#Chr%s median read count",$chr;
-        for(my $if=0;$if<=$#maps;$if++){
+        for my $sample (@samples){
             if($num_CN_neutral_pos{$chr}>10){
-                $depth2x{$chr}{$if}=$NReads_CN_neutral{$chr}{$if}/$num_CN_neutral_pos{$chr};
+                $depth2x{$chr}{$sample}=$NReads_CN_neutral{$chr}{$sample}/$num_CN_neutral_pos{$chr};
             }
             else{  # Sample < 10, backoff to genome-wide estimation
-                $depth2x{$chr}{$if}=$NReads_CN_neutral{'allchr'}{$if}/$num_CN_neutral_pos{'allchr'};
+                $depth2x{$chr}{$sample}=$NReads_CN_neutral{'allchr'}{$sample}/$num_CN_neutral_pos{'allchr'};
             }
-            printf OUT "\t%s\:%d",$samples[$if],$depth2x{$chr}{$if};
+            printf OUT "\t%s\:%d",$sample,$depth2x{$chr}{$sample};
         }
         print OUT "\n";
     }
     print OUT "CHR\tPOS\tTUMOR\tNORMAL\tDIFF\n";
 
     for my $chr(1..22,'X'){
-        next unless (defined $data{0}{$chr} && $data{1}{$chr});
-        my $cov_ratio=$NReads_CN_neutral{$chr}{0}/$NReads_CN_neutral{$chr}{1};
-        my $Nwi=($#{$data{0}{$chr}}<$#{$data{0}{$chr}})?$#{$data{0}{$chr}}:$#{$data{0}{$chr}};
+        next unless (defined $data{tumor}{$chr} && $data{normal}{$chr});
+        my $cov_ratio=$NReads_CN_neutral{$chr}{tumor}/$NReads_CN_neutral{$chr}{normal};
+        my $Nwi=($#{$data{tumor}{$chr}}<$#{$data{tumor}{$chr}})?$#{$data{tumor}{$chr}}:$#{$data{tumor}{$chr}};
 
-        for(my $i=0;$i<=$Nwi;$i++){
-            next unless (defined ${$data{0}{$chr}}[$i] && defined ${$data{1}{$chr}}[$i]);
-            my $cna_unadjusted=(${$data{0}{$chr}}[$i]-$cov_ratio*${$data{1}{$chr}}[$i])*2/$depth2x{$chr}{0};
+        for my $i (0..$Nwi){
+            next unless (defined ${$data{tumor}{$chr}}[$i] && defined ${$data{normal}{$chr}}[$i]);
+            my $cna_unadjusted=(${$data{tumor}{$chr}}[$i]-$cov_ratio*${$data{normal}{$chr}}[$i])*2/$depth2x{$chr}{tumor};
             my $poschr=$i*$self->window_size;
-            #printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{0}{$chr}}[$i]*2/$depth2x{$chr}{0},${$data{1}{$chr}}[$i]*2/$depth2x{$chr}{1},$diff_copy;
-            printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{0}{$chr}}[$i],${$data{1}{$chr}}[$i],$cna_unadjusted;
+            #printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{tumor}{$chr}}[$i]*2/$depth2x{$chr}{normal},${$data{normal}{$chr}}[$i]*2/$depth2x{$chr}{normal},$diff_copy;
+            printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{tumor}{$chr}}[$i],${$data{normal}{$chr}}[$i],$cna_unadjusted;
         }
     }
     close(OUT);
