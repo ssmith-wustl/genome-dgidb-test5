@@ -204,7 +204,7 @@ sub execute {
     foreach my $chr(@chrs,'allchr'){
         printf OUT "#Chr%s median read count",$chr;
         for my $sample (@samples){
-            if($num_CN_neutral_pos{$chr}>10){
+            if($num_CN_neutral_pos{$chr} && $num_CN_neutral_pos{$chr} > 10){
                 $depth2x{$chr}{$sample}=$NReads_CN_neutral{$chr}{$sample}/$num_CN_neutral_pos{$chr};
             }
             else{  # Sample < 10, backoff to genome-wide estimation
@@ -216,8 +216,15 @@ sub execute {
     }
     print OUT "CHR\tPOS\tTUMOR\tNORMAL\tDIFF\n";
 
+    my @included_chrs = ();
     for my $chr(1..22,'X'){
-        next unless (defined $data{tumor}{$chr} && $data{normal}{$chr});
+        next unless (defined $data{tumor}{$chr} && defined $data{normal}{$chr});
+        if($NReads_CN_neutral{$chr}{tumor} and $NReads_CN_neutral{$chr}{normal}) {
+            push @included_chrs, $chr;
+        } else {
+            $self->warning_message('No reads within specified ratio of median for chromosome ' . $chr . '. Skipping. ');
+            next;
+        }
         my $cov_ratio=$NReads_CN_neutral{$chr}{tumor}/$NReads_CN_neutral{$chr}{normal};
 
         my $tumor_window_count = $#{$data{tumor}{$chr}};
@@ -233,7 +240,8 @@ sub execute {
         }
     }
     close(OUT);
-    $self->plot_output($outfile);
+
+    $self->plot_output($outfile, \@included_chrs);
 
     return 1;
 }
@@ -257,9 +265,12 @@ sub plot_output {
     use Cwd qw(abs_path cwd);
     my $self = shift;
     my $datafile = shift;
+    my $chr_array = shift;
+    
     $datafile = abs_path($datafile);
     my $Routfile = $datafile.".png";
     my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
+    my $chr_list = join(',', map("'$_'", @$chr_array));
     
     #R automatically sets the working directory to its tmp_dir, which prevents Genome::Utility::FileSystem from cleaning it up...
     #So save the original beforehand and restore it after we're done
@@ -271,7 +282,7 @@ sub plot_output {
         bitmap('$Routfile', height = 8.5, width=11, res=200);
         par(mfrow=c(4,6));
         x=read.table('$datafile',comment.char='#',header=TRUE);
-        for (i in c(1:22,'X')) { y=subset(x,CHR==i); plot( y\$POS, y\$DIFF, main=paste('chr.',i), xlab='mb', ylab='cn', type='p', col=rgb(0,0,0), pch='.', ylim=c(-4,4) ) };
+        for (i in c($chr_list)) { y=subset(x,CHR==i); plot( y\$POS, y\$DIFF, main=paste('chr.',i), xlab='mb', ylab='cn', type='p', col=rgb(0,0,0), pch='.', ylim=c(-4,4) ) };
         dev.off();
     });
     $R->stopR();
