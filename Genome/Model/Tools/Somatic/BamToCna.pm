@@ -141,13 +141,13 @@ sub execute {
         open(MAP,$cmd) || die "unable to open $maps{$sample}\n";
         $statistics{$sample} = Statistics::Descriptive::Sparse->new();
 
-        my ($pchr,$idx)=(0,0);
+        my ($previous_chr,$window)=(0,0);
         while(<MAP>){
             chomp;
             my ($chr,$pos,$nread) = split /\t/;
-            $idx = 0 if($chr ne $pchr);
-            $data{$sample}{$chr}[$idx++]=$nread;
-            $pchr = $chr;
+            $window = 0 if($chr ne $previous_chr);
+            $data{$sample}{$chr}[$window++]=$nread;
+            $previous_chr = $chr;
             $statistics{$sample}->add_data($nread);
         }
         close(MAP);
@@ -184,16 +184,16 @@ sub execute {
 
         for my $window (0..$window_count){
             my $f2x=1;
-            next unless (defined ${$data{tumor}{$chr}}[$window] && defined ${$data{normal}{$chr}}[$window]);
+            next unless (defined $data{tumor}{$chr}[$window] && defined $data{normal}{$chr}[$window]);
             for my $sample (@samples){
-                $f2x=0 if(${$data{$sample}{$chr}}[$window]<$medians{$sample}*(1-$self->ratio) || ${$data{$sample}{$chr}}[$window]>$medians{$sample}*(1+$self->ratio));
+                $f2x=0 if($data{$sample}{$chr}[$window]<$medians{$sample}*(1-$self->ratio) || $data{$sample}{$chr}[$window]>$medians{$sample}*(1+$self->ratio));
             }
             next if(! $f2x);
             $num_CN_neutral_pos{$chr}++;
             $num_CN_neutral_pos{'allchr'}++;
             for my $sample (@samples){
-                $NReads_CN_neutral{$chr}{$sample}+=${$data{$sample}{$chr}}[$window];
-                $NReads_CN_neutral{'allchr'}{$sample}+=${$data{$sample}{$chr}}[$window];
+                $NReads_CN_neutral{$chr}{$sample}+=$data{$sample}{$chr}[$window];
+                $NReads_CN_neutral{'allchr'}{$sample}+=$data{$sample}{$chr}[$window];
             }
         }
     }
@@ -225,11 +225,11 @@ sub execute {
         my $window_count = ($tumor_window_count < $normal_window_count)? $tumor_window_count : $normal_window_count; #mininum
 
         for my $window (0..$window_count){
-            next unless (defined ${$data{tumor}{$chr}}[$window] && defined ${$data{normal}{$chr}}[$window]);
-            my $cna_unadjusted=(${$data{tumor}{$chr}}[$window]-$cov_ratio*${$data{normal}{$chr}}[$window])*2/$depth2x{$chr}{tumor};
+            next unless (defined $data{tumor}{$chr}[$window] && defined $data{normal}{$chr}[$window]);
+            my $cna_unadjusted=($data{tumor}{$chr}[$window]-$cov_ratio*$data{normal}{$chr}[$window])*2/$depth2x{$chr}{tumor};
             my $poschr=$window*$self->window_size;
             #printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{tumor}{$chr}}[$window]*2/$depth2x{$chr}{normal},${$data{normal}{$chr}}[$window]*2/$depth2x{$chr}{normal},$diff_copy;
-            printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{tumor}{$chr}}[$window],${$data{normal}{$chr}}[$window],$cna_unadjusted;
+            printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,$data{tumor}{$chr}[$window],$data{normal}{$chr}[$window],$cna_unadjusted;
         }
     }
     close(OUT);
