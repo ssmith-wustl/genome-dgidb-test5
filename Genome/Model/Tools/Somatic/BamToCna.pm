@@ -249,12 +249,17 @@ sub get_median {
 }
 
 sub plot_output {
-    use Cwd 'abs_path';
+    use Cwd qw(abs_path cwd);
     my $self = shift;
     my $datafile = shift;
     $datafile = abs_path($datafile);
     my $Routfile = $datafile.".png";
     my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
+    
+    #R automatically sets the working directory to its tmp_dir, which prevents Genome::Utility::FileSystem from cleaning it up...
+    #So save the original beforehand and restore it after we're done
+    my $cwd = cwd();
+    
     my $R = Statistics::R->new(tmp_dir => $tempdir);
     $R->startR();
     $R->send(qq{
@@ -265,6 +270,8 @@ sub plot_output {
         dev.off();
     });
     $R->stopR();
+    
+    chdir $cwd; 
 }
 
 sub bamwindow_path {
