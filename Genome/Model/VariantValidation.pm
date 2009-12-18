@@ -12,9 +12,9 @@ class Genome::Model::VariantValidation {
     type_name => 'genome model variantvalidation',
     table_name => 'GENOME_MODEL_VARIANTVALIDATION',
     id_by => [
-        model_id        => { is => 'NUMBER', len => 11 },
+        model_id        => { is => 'NUMBER', len => 11, implied_by => 'model' },
         validation_type => { is => 'VARCHAR2', len => 255 },
-        variant_id      => { is => 'NUMBER', len => 10 },
+        variant_id      => { is => 'NUMBER', len => 10, implied_by => 'variant' },
     ],
     has => [
         model   => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GMV_GM_FK' },

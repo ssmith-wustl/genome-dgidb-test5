@@ -11,8 +11,8 @@ class Genome::Model::BuildSV {
     type_name => 'genome model build sv',
     table_name => 'GENOME_MODEL_BUILD_SV',
     id_by => [
-        build_id   => { is => 'NUMBER', len => 10, implied_by => 'genome_model_build' },
-        variant_id => { is => 'NUMBER', len => 10, implied_by => 'genome_model_sv' },
+        build_id   => { is => 'NUMBER', len => 10, implied_by => 'build' },
+        variant_id => { is => 'NUMBER', len => 10, implied_by => 'sv' },
     ],
     has => [
         sv                 => { is => 'Genome::Model::SV', id_by => 'variant_id', constraint_name => 'GMBSV_GMSV_FK' },
