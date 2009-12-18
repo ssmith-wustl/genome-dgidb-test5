@@ -177,21 +177,23 @@ sub execute {
     my %num_CN_neutral_pos;
     my %NReads_CN_neutral;
     foreach my $chr(@chrs){
-        next unless (defined $data{tumor}{$chr} && $data{normal}{$chr});
-        my $Nwi=($#{$data{tumor}{$chr}}<$#{$data{tumor}{$chr}})?$#{$data{tumor}{$chr}}:$#{$data{tumor}{$chr}};
+        next unless (defined $data{tumor}{$chr} && defined $data{normal}{$chr});
+        my $tumor_window_count = $#{$data{tumor}{$chr}};
+        my $normal_window_count = $#{$data{normal}{$chr}};
+        my $window_count = ($tumor_window_count < $normal_window_count)? $tumor_window_count : $normal_window_count; #mininum
 
-        for my $i (0..$Nwi){
+        for my $window (0..$window_count){
             my $f2x=1;
-            next unless (defined ${$data{tumor}{$chr}}[$i] && defined ${$data{normal}{$chr}}[$i]);
+            next unless (defined ${$data{tumor}{$chr}}[$window] && defined ${$data{normal}{$chr}}[$window]);
             for my $sample (@samples){
-                $f2x=0 if(${$data{$sample}{$chr}}[$i]<$medians{$sample}*(1-$self->ratio) || ${$data{$sample}{$chr}}[$i]>$medians{$sample}*(1+$self->ratio));
+                $f2x=0 if(${$data{$sample}{$chr}}[$window]<$medians{$sample}*(1-$self->ratio) || ${$data{$sample}{$chr}}[$window]>$medians{$sample}*(1+$self->ratio));
             }
             next if(! $f2x);
             $num_CN_neutral_pos{$chr}++;
             $num_CN_neutral_pos{'allchr'}++;
             for my $sample (@samples){
-                $NReads_CN_neutral{$chr}{$sample}+=${$data{$sample}{$chr}}[$i];
-                $NReads_CN_neutral{'allchr'}{$sample}+=${$data{$sample}{$chr}}[$i];
+                $NReads_CN_neutral{$chr}{$sample}+=${$data{$sample}{$chr}}[$window];
+                $NReads_CN_neutral{'allchr'}{$sample}+=${$data{$sample}{$chr}}[$window];
             }
         }
     }
@@ -217,14 +219,17 @@ sub execute {
     for my $chr(1..22,'X'){
         next unless (defined $data{tumor}{$chr} && $data{normal}{$chr});
         my $cov_ratio=$NReads_CN_neutral{$chr}{tumor}/$NReads_CN_neutral{$chr}{normal};
-        my $Nwi=($#{$data{tumor}{$chr}}<$#{$data{tumor}{$chr}})?$#{$data{tumor}{$chr}}:$#{$data{tumor}{$chr}};
 
-        for my $i (0..$Nwi){
-            next unless (defined ${$data{tumor}{$chr}}[$i] && defined ${$data{normal}{$chr}}[$i]);
-            my $cna_unadjusted=(${$data{tumor}{$chr}}[$i]-$cov_ratio*${$data{normal}{$chr}}[$i])*2/$depth2x{$chr}{tumor};
-            my $poschr=$i*$self->window_size;
-            #printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{tumor}{$chr}}[$i]*2/$depth2x{$chr}{normal},${$data{normal}{$chr}}[$i]*2/$depth2x{$chr}{normal},$diff_copy;
-            printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{tumor}{$chr}}[$i],${$data{normal}{$chr}}[$i],$cna_unadjusted;
+        my $tumor_window_count = $#{$data{tumor}{$chr}};
+        my $normal_window_count = $#{$data{normal}{$chr}};
+        my $window_count = ($tumor_window_count < $normal_window_count)? $tumor_window_count : $normal_window_count; #mininum
+
+        for my $window (0..$window_count){
+            next unless (defined ${$data{tumor}{$chr}}[$window] && defined ${$data{normal}{$chr}}[$window]);
+            my $cna_unadjusted=(${$data{tumor}{$chr}}[$window]-$cov_ratio*${$data{normal}{$chr}}[$window])*2/$depth2x{$chr}{tumor};
+            my $poschr=$window*$self->window_size;
+            #printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{tumor}{$chr}}[$window]*2/$depth2x{$chr}{normal},${$data{normal}{$chr}}[$window]*2/$depth2x{$chr}{normal},$diff_copy;
+            printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{tumor}{$chr}}[$window],${$data{normal}{$chr}}[$window],$cna_unadjusted;
         }
     }
     close(OUT);
