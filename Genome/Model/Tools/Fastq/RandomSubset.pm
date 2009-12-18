@@ -8,69 +8,145 @@ use Math::Random;
 class Genome::Model::Tools::Fastq::RandomSubset {
     is => 'Command',
     has => [
-        input_fastq_files => {
+        input_read_1_fastq_files => {
             is => 'Text',
-            is_many => 1,
+            is_many => 1
         },
-        output_fastq_file => {
+        output_read_1_fastq_file => {
             is => 'Text',
+        },
+        limit_type => {
+            valid_values => ['reads','read_pairs','base_pair'],
+        },
+        limit_value => {
+            is => 'Integer',
+        },
+        seed_phrase => {
+            is => 'Text'
         },
     ],
     has_optional => [
-        seed_phrase => { is => 'Text' },
-        reads => {
-            is =>  'Integer',
+        input_read_2_fastq_files => {
+            is => 'Text',
+            is_many => 1,
         },
-        base_pair => {
-            is => 'Integer',
+        output_read_2_fastq_file => {
+            is => 'Text',
         },
         _index => { },
-        _fhs => { },
+        _read_1_fhs => { },
+        _read_2_fhs => { },
         _shortest_seq => { },
+        _max_read_per_end => { },
     ],
 };
 
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    unless ($self->reads || $self->base_pair) {
-        die('Failed to define either reads or base_pair');
-    }
-    if ($self->reads && $self->base_pair) {
-        die('Either reads or base_pair can be defined but not both');
-    }
-    return $self;
-}
-
 sub execute {
     my $self = shift;
-
-    if ($self->seed_phrase) {
-        random_set_seed_from_phrase($self->seed_phrase);
-    }
     $self->_create_index;
-    my $out = Genome::Utility::FileSystem->open_file_for_writing($self->output_fastq_file);
-    my @index = @{$self->_index};
-    my $n;
-    if ($self->reads){ 
-        if (scalar(@index) <= $self->reads) {
-            die('The number of fastq entries '. scalar(@index) .' is less than subset size '. $self->reads);
-            #$n = scalar(@index);
-        } else {
-            $n = $self->reads;
-        }
-    } elsif ($self->base_pair) {
-        $n = int($self->base_pair / $self->_shortest_seq);
-    }
-    my @fhs = @{$self->_fhs};
-    my $total_seq;
-    foreach my $i (random_uniform_integer($n, 0, scalar(@index))) {
-        my $index_array_ref = $index[$i];
+    $self->_set_limits;
+    $self->_generate_fastqs;
+    return 1;
+}
 
-        my $fh_id = $index_array_ref->[0];
-        my $seq_length = $index_array_ref->[1];
-        my $begin = $index_array_ref->[2];
+sub _create_index {
+    my $self = shift;
+    my @read_1_fastq_files = $self->input_read_1_fastq_files;
+    my @read_2_fastq_files = $self->input_read_2_fastq_files;
+    my @read_1_fhs;
+    my @read_2_fhs;
+    my @index;
+    for (my $file_id = 0; $file_id < scalar(@read_1_fastq_files); $file_id++) {
+        my $read_1_fastq_file = $read_1_fastq_files[$file_id];
+        my $read_1_fh = Genome::Utility::FileSystem->open_file_for_reading($read_1_fastq_file);
+        if (@read_2_fastq_files) {
+            my $read_2_fastq_file = $read_2_fastq_files[$file_id];
+            my $read_2_fh = Genome::Utility::FileSystem->open_file_for_reading($read_2_fastq_file);
+            push @read_2_fhs, $read_2_fh;
+        }
+        while (my $header = $read_1_fh->getline) {
+            if ($header =~ /^@/) {
+                # $begin is the position of the first character after the '@'
+                my $begin = tell($read_1_fh) - length( $header );
+                my $seq = $read_1_fh->getline;
+                chomp($seq);
+                my $seq_length = length($seq);
+                if (defined($self->_shortest_seq)) {
+                    if ($seq_length < $self->_shortest_seq) {
+                        $self->_shortest_seq($seq_length);
+                    }
+                } else { $self->_shortest_seq($seq_length); }
+                push @index, $file_id .':'. $begin;
+            }
+        }
+        push @read_1_fhs, $read_1_fh;
+    }
+    $self->_read_1_fhs(\@read_1_fhs);
+    if (@read_2_fhs) {
+        $self->_read_2_fhs(\@read_2_fhs);
+    }
+    $self->_index(\@index);
+    return 1;
+}
+
+sub _set_limits {
+    my $self = shift;
+    
+    my @index = @{$self->_index};
+    my $factor = 1;
+    if ($self->input_read_2_fastq_files) {
+        $factor = 2;
+    }
+    if ($self->limit_type eq 'reads') {
+        $self->_max_read_per_end(int($self->limit_value / $factor));
+        if (scalar(@index) < $self->_max_read_per_end) {
+            die('The number of fastq entries '. scalar(@index) .' is less than the number of reads required '. $self->_max_read_per_end);
+        }
+    } elsif ($self->limit_type eq 'read_pairs') {
+        $self->_max_read_per_end($self->limit_value);
+        if (scalar(@index) < $self->_max_read_per_end) {
+            die('The number of fastq entries '. scalar(@index) .' is less than the number of reads required '. $self->_max_read_per_end);
+        }
+    } elsif ($self->limit_type eq 'base_pair') {
+        my $per_file_limit = int($self->limit_value / $factor);
+        $self->limit_value($per_file_limit);
+        $self->_max_read_per_end(int( ($self->limit_value / $self->_shortest_seq)) + 1);
+    }
+    return 1;
+}
+
+
+sub _generate_fastqs {
+    my $self = shift;
+    $self->_generate_fastq_for_read_end(1);
+    if ($self->input_read_2_fastq_files) {
+        $self->_generate_fastq_for_read_end(2);
+    }
+    return 1;
+}
+
+sub _generate_fastq_for_read_end {
+    my $self = shift;
+    my $end = shift;
+    
+    unless ($end && ($end == 1 || $end == 2) ) {
+        die('Invalid end '. $end .' passed to method _generate_read_end_fastq');
+    }
+    
+    my $out_file_method = 'output_read_'. $end.'_fastq_file';
+    my $out_file = $self->$out_file_method;
+    my $out = Genome::Utility::FileSystem->open_file_for_writing($out_file);
+
+    my @index = @{$self->_index};
+
+    my $fhs_method = '_read_'. $end .'_fhs';
+    my @fhs = @{$self->$fhs_method};
+    
+    my $total_seq;
+    random_set_seed_from_phrase($self->seed_phrase);
+    foreach my $i (random_uniform_integer($self->_max_read_per_end, 0, scalar(@index) - 1)) {
+        my $index_string = $index[$i];
+        my ($fh_id,$begin) = split(":",$index_string);
 
         my $fh = $fhs[$fh_id];
         #set read pos
@@ -82,47 +158,20 @@ sub execute {
         for my $line (@fastq_lines) {
             print $out $line;
         }
-        $total_seq += $seq_length;
-        if ($self->base_pair && $total_seq >= $self->base_pair) {
-            last;
+        if ($self->limit_type eq 'base_pair') {
+            my $seq_length = length($fastq_lines[1]);
+            $total_seq += $seq_length;
+            if ($total_seq >= $self->limit_value) {
+                last;
+            }
         }
     }
     $out->close;
-    return 1;
-}
-
-
-sub _create_index {
-    my $self = shift;
-    my @fastq_files = $self->input_fastq_files;
-    my @fhs;
-    my @index;
-    for (my $file_id = 0; $file_id < scalar(@fastq_files); $file_id++) {
-        my $fastq_file = $fastq_files[$file_id];
-        my $fh = Genome::Utility::FileSystem->open_file_for_reading($fastq_file);
-        my $seq_length;
-        while (<$fh>) {
-            if (/^@/) {
-                # $begin is the position of the first character after the '@'
-                my $begin = tell($fh) - length( $_ );
-                # assumes equal sequence length within a fastq file
-                unless ($seq_length) {
-                    my $seq = $fh->getline;
-                    chomp($seq);
-                    $seq_length = length($seq);
-                    if (defined($self->_shortest_seq)) {
-                        if ($seq_length < $self->_shortest_seq) {
-                            $self->_shortest_seq($seq_length);
-                        }
-                    } else { $self->_shortest_seq($seq_length); }
-                }
-                push @index, [$file_id,$seq_length,$begin];
-            }
+    if ($self->limit_type eq 'base_pair') {
+        if ($total_seq < $self->limit_value) {
+            die('There was only '. $total_seq .' base pair per end but expecting '. $self->limit_value);
         }
-        push @fhs, $fh;
     }
-    $self->_fhs(\@fhs);
-    $self->_index(\@index);
     return 1;
-}
 
+}
