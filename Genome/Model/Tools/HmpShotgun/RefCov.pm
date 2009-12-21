@@ -25,6 +25,16 @@ class Genome::Model::Tools::HmpShotgun::RefCov {
                 is_input => '1',
                 doc => 'The reads to align.',
         },
+        read_count_file => {
+        	is  => 'String',
+                is_input => '1',
+                doc => 'The reads/contig summary.',
+        },
+        other_hits_file => {
+        	is  => 'String',
+                is_input => '1',
+                doc => 'The other_hits summary.',
+        },
         stats_file => {
         	    is  => 'String',
                 is_output => '1',
@@ -58,11 +68,14 @@ sub execute {
     #my $model_id = $self->model_id;
     $self->status_message("Aligned Bam File: ".$self->aligned_bam_file);
     $self->status_message("Regions file: ".$self->regions_file);
+    $self->status_message("Read count file: ".$self->read_count_file);
     
-    #$self->status_message("<<<Completed HMP RefCov for testing at ".UR::Time->now);
-    #return 1;
+    $self->status_message("<<<Completed HMP RefCov for testing at ".UR::Time->now);
+    return 1;
     
     my $stats_file = $self->working_directory."/reports/refcov_stats.txt";
+    my $readcount_file = $self->working_directory."/reports/reads_per_contig.txt";
+    
     $self->stats_file($stats_file);
     my @expected_output_files = ($stats_file);
     
@@ -84,9 +97,20 @@ sub execute {
     $self->status_message("Running report at ".UR::Time->now);
     my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
     
-    if ($rv == 1) {
-    	Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
-    }
+    #if ($rv == 1) {
+    #	Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    #}
+    
+    $self->status_message("RefCov file generated at ".UR::Time->now);
+    $self->status_message("Now counting reads per contig.");    
+    
+    my $cmd_count = "/gscuser/jwalker/svn/TechD/bio_db_sam/count_read_per_contig.pl ".$self->aligned_bam_file." > ".$readcount_file;
+    
+    my $rv_count = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_count);
+    
+    #if ($rv_count == 1) {
+    #	Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    #}
     
     $self->status_message("<<<Completed RefCov at ".UR::Time->now);
     
