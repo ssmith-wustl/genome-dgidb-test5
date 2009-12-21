@@ -68,6 +68,12 @@ sub execute {
         $self->error_message("Couldn't open sites file " . $self->sites_file);
         return 0;
     }
+    
+    unless (`uname -a` =~ /x86_64/) {
+        $self->error_message("Must run on a 64 bit machine");
+        return 0;
+    }
+    
     while (my $line = $anno_fh->getline) {
         chomp $line;
         my ($chr, $pos,) = split /\t/, $line;
