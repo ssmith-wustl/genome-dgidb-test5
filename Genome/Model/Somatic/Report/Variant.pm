@@ -192,7 +192,12 @@ sub _add_to_report_xml {
 
 ## Variants
 
-    my @build_variants = Genome::Model::BuildVariant->get( build_id => $tumor_build->id );
+    my @build_variants = Genome::Model::BuildVariant->get( build_id => $build->id );
+    
+    unless(@build_variants) {
+        #Some very early somatic models associated the variants with the tumor build instead
+        @build_variants = Genome::Model::BuildVariant->get( build_id => $tumor_build->id );
+    }
     
     my $snp_validated_count = 0;
     my $ins_validated_count = 0;
@@ -254,7 +259,11 @@ sub _add_to_report_xml {
 
 ## Structural Variants
 
-    my @build_variant_svs = Genome::Model::BuildSV->get( build_id => $tumor_build->id );
+    my @build_variant_svs = Genome::Model::BuildSV->get( build_id => $build->id );
+    unless(@build_variant_svs) {
+        #Some very early somatic models associated the structural variants with the tumor build instead
+        @build_variant_svs = Genome::Model::BuildSV->get( build_id => $tumor_build->id );
+    }
     
     my $sv_ins_validated_count = 0;
     my $sv_del_validated_count = 0;
