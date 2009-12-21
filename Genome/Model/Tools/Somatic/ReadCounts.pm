@@ -45,7 +45,7 @@ class Genome::Model::Tools::Somatic::ReadCounts {
     sub help_synopsis {
         my $self = shift;
         return <<"EOS"
-        gmt somatic read-counts -t /path/to/tumor.bam -n /path/to/normal.bam -s /path/to/sites.file -o /path/to/output.out
+        gmt somatic read-counts --tumor /path/to/tumor.bam --normal /path/to/normal.bam --sites /path/to/sites.file --output /path/to/output.out
 EOS
     }
 
