@@ -136,7 +136,7 @@ sub parse_blast_file {
 	}
     }
     my $keep_reads = $read_count - scalar @filtered_reads;
-    $parse_out_fh->print('# Summary: '. $read_count - scalar @filtered_reads." out of $read_count is saved for BLASTN analysis\n");
+    $parse_out_fh->print("# Summary: $keep_reads out of $read_count is saved for BLASTN analysis\n");
     $parse_out_fh->close;
     return \@filtered_reads;
 }
