@@ -522,18 +522,18 @@ sub get_event_node {
 		my @adirs;
 		for my $ida (@idas) {
 
-		  my $alignment = $ida->alignment_set;
-          if (defined($alignment)) {
-		    if ($alignment->instrument_data_id == $event->instrument_data_id) {
-			  push(@adirs, $alignment->alignment_directory);
+		  if ((defined $ida->instrument_data_id && $event->instrument_data_id) && $ida->instrument_data_id == $event->instrument_data_id) {
+        		  my $alignment = $ida->alignment_set;
+                          if (defined($alignment)) {
+	        		  push(@adirs, $alignment->alignment_directory);
 
-			  # look for a filter description
-			  if ($ida->filter_desc) {
-			    $event_node->addChild( $self->tnode("filter_desc", $ida->filter_desc));
-			  }
-		    }
-		  }
-        }
+	        		  # look for a filter description
+	        		  if ($ida->filter_desc) {
+	            		    $event_node->addChild( $self->tnode("filter_desc", $ida->filter_desc));
+		        	 } 
+		        } 
+		 } 
+               } 
 		# handle multiple alignment directories
 		if (scalar @adirs > 1) {
 		  my $i = 1;
