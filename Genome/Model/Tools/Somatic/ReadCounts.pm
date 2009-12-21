@@ -35,56 +35,56 @@ class Genome::Model::Tools::Somatic::ReadCounts {
            is => 'String',
            doc =>'path to output file',
        },
-        ],
-    };
+    ],
+};
     
-    sub help_brief {
-        return "generate read count statistics";
-    }
+sub help_brief {
+    return "generate read count statistics";
+}
 
-    sub help_synopsis {
-        my $self = shift;
-        return <<"EOS"
-        gmt somatic read-counts --tumor /path/to/tumor.bam --normal /path/to/normal.bam --sites /path/to/sites.file --output /path/to/output.out
+sub help_synopsis {
+    my $self = shift;
+    return <<"EOS"
+    gmt somatic read-counts --tumor /path/to/tumor.bam --normal /path/to/normal.bam --sites /path/to/sites.file --output /path/to/output.out
 EOS
-    }
+}
 
-    sub help_detail {                           
-        return <<EOS 
-        Produces a tab-delimited file of statistics from the 'bam-readcount' command.
+sub help_detail {                           
+    return <<EOS 
+    Produces a tab-delimited file of statistics from the 'bam-readcount' command.
 EOS
-    }
+}
 
-    sub execute {
-        my ($self) = @_;
-        my ($readcount_regions_fh, $readcount_regions_file)  =Genome::Utility::FileSystem->create_temp_file();
-        my $anno_fh = IO::File->new($self->sites_file);
-        my $output_fh = IO::File->new($self->output_file, ">");
-        unless($output_fh) {
-            $self->error_message("Couldn't open output file " . $self->output_file);
-            return 0;
-        }
-        unless($anno_fh) {
-            $self->error_message("Couldn't open sites file " . $self->sites_file);
-            return 0;
-        }
-        while (my $line = $anno_fh->getline) {
-            chomp $line;
-            my ($chr, $pos,) = split /\t/, $line;
-            $readcount_regions_fh->print("$chr\t$pos\t$pos\n");
-        }
-        $readcount_regions_fh->close;
-        my $normal_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->normal_bam;
-        my $tumor_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->tumor_bam;
-        $DB::single=1;
-        my @normal_lines = `$normal_bam_command`;
-        my @tumor_lines  = `$tumor_bam_command`;
-        my %hash_of_arrays;
-        $hash_of_arrays{'Normal'}=\@normal_lines;
-        $hash_of_arrays{'Tumor'}=\@tumor_lines;
-        $self->make_excel_friendly_output_sheet($output_fh, \%hash_of_arrays);
-       return 1;
-   }
+sub execute {
+    my ($self) = @_;
+    my ($readcount_regions_fh, $readcount_regions_file)  =Genome::Utility::FileSystem->create_temp_file();
+    my $anno_fh = IO::File->new($self->sites_file);
+    my $output_fh = IO::File->new($self->output_file, ">");
+    unless($output_fh) {
+        $self->error_message("Couldn't open output file " . $self->output_file);
+        return 0;
+    }
+    unless($anno_fh) {
+        $self->error_message("Couldn't open sites file " . $self->sites_file);
+        return 0;
+    }
+    while (my $line = $anno_fh->getline) {
+        chomp $line;
+        my ($chr, $pos,) = split /\t/, $line;
+        $readcount_regions_fh->print("$chr\t$pos\t$pos\n");
+    }
+    $readcount_regions_fh->close;
+    my $normal_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->normal_bam;
+    my $tumor_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->tumor_bam;
+    $DB::single=1;
+    my @normal_lines = `$normal_bam_command`;
+    my @tumor_lines  = `$tumor_bam_command`;
+    my %hash_of_arrays;
+    $hash_of_arrays{'Normal'}=\@normal_lines;
+    $hash_of_arrays{'Tumor'}=\@tumor_lines;
+    $self->make_excel_friendly_output_sheet($output_fh, \%hash_of_arrays);
+    return 1;
+}
 
 sub make_excel_friendly_output_sheet {
     my ($self, $output_fh, $tumor_normal_hash_ref) = @_;
@@ -115,9 +115,7 @@ sub make_excel_friendly_output_sheet {
             }
         }
         $output_fh->print("\n");
-     }
-
-
+    }
 }
 
 1;
