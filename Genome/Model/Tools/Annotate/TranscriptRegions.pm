@@ -130,11 +130,10 @@ sub execute {
 	my $transcript_start = $t->transcript_start;
 	my $transcript_stop = $t->transcript_stop;
 	
-	next unless $transcript_start >= $start && $transcript_start <= $stop ||
-	    $transcript_start <= $start && $transcript_start >= $stop ||
-	    $transcript_stop <= $start && $transcript_stop >= $stop ||
-	    $transcript_stop <= $start && $transcript_stop >= $stop;
-	
+	next unless $start >= $transcript_start && $start <= $transcript_stop ||
+	    $start <= $transcript_start && $start >= $transcript_stop ||
+	    $stop >= $transcript_start && $stop <= $transcript_stop ||
+	    $stop <= $transcript_start && $stop >= $transcript_stop;
 	
 	my $gene = $t->gene;
 	my $hugo_gene_name = $gene->hugo_gene_name;
@@ -177,11 +176,10 @@ sub execute {
 		my $tr_start = $t_region->{structure_start};
 		my $tr_stop = $t_region->{structure_stop};
 				
-		next unless $tr_start >= $start && $tr_start <= $stop ||
-		    $tr_start <= $start && $tr_start >= $stop ||
-		    $tr_stop <= $start && $tr_stop >= $stop ||
-		    $tr_stop <= $start && $tr_stop >= $stop;
-		
+		next unless $start >= $tr_start && $stop <= $tr_start ||
+		    $start <= $tr_start && $stop >= $tr_start ||
+		    $start >= $tr_stop && $stop <= $tr_stop ||
+		    $start <= $tr_stop && $stop >= $tr_stop;
 
 		#unless ($structure_type eq "intron" || $structure_type eq "flank") {
 		unless ($structure_type eq "flank") {
