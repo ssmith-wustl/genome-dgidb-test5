@@ -34,7 +34,7 @@ sub execute {
         $self->status_message("A merged and rmdup'd bam file has been found at: $bam_merged_output_file");
         $self->status_message("If you would like to regenerate this file, please delete it and rerun.");
         $now = UR::Time->now;
-        $self->status_message("Skipping the rest of DeduplicateLibraries::Samtools at $now");
+        $self->status_message("Skipping the rest of DeduplicateLibraries::Picard at $now");
         $self->status_message("*** All processes skipped. ***");
         return 1;
     } 
