@@ -29,7 +29,7 @@ class Genome::Model::Tools::Capture::RunVarscan {
 		output	=> { is => 'Text', doc => "Basename for output, eg. varscan_out/varscan.status" , is_optional => 0},
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1},
-		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 10 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 1.0e-02]" , is_optional => 1},
+		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 1.0e-02]" , is_optional => 1},
 	],
 };
 
@@ -67,7 +67,7 @@ sub execute {                               # replace with real execution logic.
 	my $output = $self->output;
 	my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
 	$reference = $self->reference if($self->reference);
-	my $varscan_params = "--min-coverage 10 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01 --verbose 1";
+	my $varscan_params = "--min-coverage 8 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01 --verbose 1";
 
 	if(-e $normal_bam && -e $tumor_bam)
 	{
