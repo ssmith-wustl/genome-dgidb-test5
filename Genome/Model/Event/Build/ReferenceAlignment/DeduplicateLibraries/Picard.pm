@@ -44,6 +44,14 @@ sub execute {
     my @idas = $self->build->instrument_data_assignments;
     for my $ida (@idas) {
         my @bam_file = $ida->alignment->alignment_bam_file_paths;
+        unless(scalar @bam_file) {
+            $self->error_message("Couldn't find bam for alignment of instrument data #" . $ida->instrument_data_id);
+            return;
+        }
+        if(scalar @bam_file > 1) {
+            $self->warning_message("Found multiple bam files for alignment of instrument data #" . $ida->instrument_data_id);
+        }
+        
         push(@bam_files, @bam_file);
     } 
     $self->status_message("Collected files for merge and dedup: ".join("\n",@bam_files));
