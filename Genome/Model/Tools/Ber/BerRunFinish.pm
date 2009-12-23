@@ -357,7 +357,7 @@ sub execute
     print $parse_script_fh "quit\n\n";
     print $parse_script_fh "EOF\n\n";
     print $parse_script_fh
-        "echo \"Parsing of HGMI_$locus_tag $pipe_version files, complete.\" | mailx -s \"HGMI_$locus_tag $pipe_version\" wnash\n";
+        "echo \"Parsing of HGMI_$locus_tag $pipe_version files, complete.\" | mailx -s \"HGMI_$locus_tag $pipe_version\" ssurulir\n";
 
     $parse_script_fh->close();
 
