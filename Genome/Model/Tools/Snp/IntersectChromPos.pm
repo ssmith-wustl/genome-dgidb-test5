@@ -70,7 +70,7 @@ sub execute {
     }
     my ($chr1, $pos1, $ref2, $genotype2) = split ($self->delimiter1, $line1);
 
-    my ($prev_chrom1, $prev_chrom2); 
+    my $prev_chrom1 = 1, my $prev_chrom2 = 1; 
     $DB::single=1;
     while(defined $line1 && defined $line2) {
         if($chr1 eq $chr2) {
@@ -109,14 +109,16 @@ sub execute {
             }
         }
         elsif($chr1 ne $chr2) {
-            if($chr2 eq $prev_chrom1) {
+            #Ensure that $chr1 and $chr2 did not decrease--then if $chr1 > $chr2 file 2 is lagging
+            if(chr_cmp($chr1,$prev_chrom1) > -1 and chr_cmp($chr2, $prev_chrom2) > -1 and chr_cmp($chr1, $chr2) == 1) {
                 #file 2 is lagging
                 $f2_only_fh->print($line2);
                 $line2 = $file2_fh->getline;
                 $prev_chrom2=$chr2;
                 ($chr2, $pos2) = split ($self->delimiter2, $line2);
             }
-            elsif($chr1 eq $prev_chrom2) {
+            #Ensure that $chr1 and $chr2 did not decrease--then if $chr1 < $chr2 file 1 is lagging
+            elsif(chr_cmp($chr1,$prev_chrom1) > -1 and chr_cmp($chr2, $prev_chrom2) > -1 and chr_cmp($chr1, $chr2) == -1) {
                 #file 1 is lagging
                 $f1_only_fh->print($line1);
                 $line1 = $file1_fh->getline;
@@ -140,9 +142,9 @@ sub execute {
             }
             else {
                 # the files are whacked out and not sorted the same?
-                $self->status_message("Line 1: $line1");
-                $self->status_message("Line 2: $line2");
-                $self->status_message("previous chromosome1: $prev_chrom1 previous chromosome2: $prev_chrom2");
+                $self->error_message("Line 1: $line1");
+                $self->error_message("Line 2: $line2");
+                $self->error_message("previous chromosome1: $prev_chrom1 previous chromosome2: $prev_chrom2");
                 $self->error_message("NO NO! YOU GIVE ME FILES SORTED BY CHROMOSOME, POSITION!");
                 die;
             }
