@@ -97,6 +97,103 @@ sub _valid_param_sets {
 
 ########################################################
 
+package Genome::Model::Command::Report::SummaryOfBuilds::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestCommandBase';
+
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Report::SummaryOfBuilds';
+}
+
+sub startup : Tests(startup => no_plan) {
+    my $self = shift;
+
+    #return 1; # uncomment this to see real data
+
+    no warnings 'redefine';
+    *Genome::Model::Command::Report::SummaryOfBuilds::_selectall_arrayref = sub{
+        return $self->_rows;
+    };
+
+    return 1;
+}
+
+sub valid_param_sets {
+    return (
+        {
+            after_execute => sub{
+                my ($self, $generator, $param_set, $report) = @_;
+                is($generator->were_builds_found, 5, 'Got all 5 builds for 2 models');
+                #$self->_mail_report(@_); # uncommant to see it
+                return 1;
+            },
+            processing_profile_id => 2067049, # WashU amplicon assembly
+            #save => $_[0]->tmp_dir,
+            #email => $ENV{USER}.'@genome.wustl.edu',
+        },
+        {
+            after_execute => sub{ 
+                my ($self, $generator, $param_set, $report) = @_;
+                is($generator->were_builds_found, 2, 'Got only latest builds for 2 models.'); 
+                #$self->_mail_report(@_); # uncommant to see it
+                return 1;
+            },
+            processing_profile_id => 2067049, # WashU amplicon assembly
+            most_recent_build_only => 1,
+            #email => $ENV{USER}.'@genome.wustl.edu',
+        },
+        {
+            type_name => 'amplicon assembly',
+        },
+        {
+            work_order_id => 2196657, 
+            most_recent_build_only => 1,
+            #email => $ENV{USER}.'@genome.wustl.edu',
+        },
+        {
+            subject_names => 'HMPZ-764083206-700024109,HMPZ-764083206-700037552',
+            #email => $ENV{USER}.'@genome.wustl.edu',
+        },
+        {
+            subject_names => 'HMPZ-764083206-700024109,HMPZ-764083206-700037552',
+            #email => $ENV{USER}.'@genome.wustl.edu',
+        },
+    );
+}
+
+sub invalid_param_sets {
+    return (
+        {
+            type_name => undef,
+            processing_profile_id => undef,
+        },
+        {
+            days => 'pp',
+        },
+    );
+}
+
+sub _required_params_for_class {
+    return; 
+}
+
+sub _rows {
+    return [
+        [qw| 2816929867 98421139 Succeeded 2009-08-27 |],
+        [qw| 2816929867 98421140 Succeeded 2009-08-28 |],
+        [qw| 2816929867 98421141 Succeeded 2009-12-29 |],
+        [qw| 2816929868 98421142 Succeeded 2009-08-27 |],
+        [qw| 2816929868 98421143 Abandoned 2009-08-30 |],
+    ];
+}
+
+#############################################################
+
 1;
 
 =pod

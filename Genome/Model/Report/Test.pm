@@ -5,7 +5,7 @@ package Genome::Model::Report::BuildReportsBase;
 use strict;
 use warnings;
 
-use base 'Genome::Utility::TestBase';
+use base 'Genome::Utility::TestCommandBase';
 
 use Data::Dumper 'Dumper';
 require Genome::Model::Test;
@@ -13,6 +13,22 @@ use Test::More;
 
 sub test_class {
     return 'Genome::Model::Report::'.$_[0]->report_subclass;
+}
+
+sub method_for_execution {
+    return 'generate_report';
+}
+
+sub valid_param_sets {
+    my $self = shift;
+    return map { 
+        $_->{build_id} = $self->_build_id;
+        $_;
+    } $self->_valid_param_sets;
+}
+
+sub _valid_param_sets {
+    return;
 }
 
 sub _model {
@@ -41,47 +57,18 @@ sub _build_id {
     return $self->_model->last_complete_build->id;
 }
 
-sub params_for_test_class {
-    return (
-        build_id => $_[0]->_build_id,
-        $_[0]->_additional_params_for_test_class,
-    );
-}
+sub _mail_report {
+    my ($self, $generator, $params, $report) = @_;
 
-sub _additional_params_for_test_class {
-    return;
-}
-
-sub _pre_generate {
-    return 1;
-}
-
-sub _post_generate {
-    return 1;
-}
-
-sub test01_generate_report : Tests() {
-    my $self = shift;
-
-    $self->_pre_generate or die "Can't run _pre_generate";
-    
-    my $generator = $self->{_object};
-    my $report = $generator->generate_report;
     ok($report, 'Generated report');
-
-    if ( 1 ) { # Email/save yourself the report if ya wanna
-        #$report->save('/gscuser/ebelter', 1);
-        my $email = Genome::Report::Email->send_report(
-            report => $report,
-            to => $ENV{USER}.'@genome.wustl.edu',
-            xsl_files => [ $generator->get_xsl_file_for_html ],
-            image_files => [ $generator->get_image_file_infos_for_html ],
-        );
-        print $report->xml_string."\n";
-        #<STDIN>;
-    }
-
-    $self->_post_generate or die "Can't run _post_generate";
+    #$report->save('/gscuser/ebelter', 1);
+    Genome::Report::Email->send_report(
+        report => $report,
+        to => $ENV{USER}.'@genome.wustl.edu',
+        xsl_files => [ $generator->get_xsl_file_for_html ],
+    ) or die "Can't send email!";
+    #print $report->xml_string."\n";
+    #<STDIN>;
 
     return 1;
 }
@@ -101,15 +88,32 @@ sub report_subclass {
     return 'BuildDailySummary';
 }
 
-sub params_for_test_class {
+sub valid_param_sets {
     return (
-        #type_name => 'amplicon assembly',
-        processing_profile_id => 2067049, # WashU amplicon assembly
-        #show_most_recent_build_only => 1,
+        {
+            before_execute => 'overload_selectall_arrayref',
+            after_execute => '_mail_report',
+            processing_profile_id => 2067049, # WashU amplicon assembly
+            #show_most_recent_build_only => 1,
+        },
+        {
+            before_execute => 'overload_selectall_arrayref',
+            #after_execute => '_mail_report',
+            type_name => 'amplicon assembly',
+        },
     );
 }
 
-sub _pre_generate {
+sub invalid_param_sets {
+    return (
+        {
+            type_name => undef,
+            processing_profile_id => undef,
+        },
+    );
+}
+
+sub overload_selectall_arrayref {
     #return 1; # uncomment this to see real data
     my $self = shift;
     no warnings 'redefine';
@@ -123,12 +127,48 @@ sub _pre_generate {
     return 1;
 }
 
-sub test02_create_failures : Tests() {
-    my $self = shift;
+#############################################################
 
-    ok(!$self->test_class->create(), 'Failed as expected - create w/o id or type name');
-    
-    return 1;
+package Genome::Model::Report::Table::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Report::BuildReportsBase';
+
+use Test::More;
+
+sub report_subclass {
+    return 'Table';
+}
+
+sub valid_param_sets {
+    return (
+        {
+            name => 'Table Test',
+            description => 'A testing of he table report generator',
+            properties => [qw/ model_id build_id status date /],
+            rows => [
+            [qw| 2816929867 98421139 Succeeded 2009-08-27 |],
+            [qw| 2816929867 98421140 Succeeded 2009-08-28 |],
+            [qw| 2816929867 98421141 Succeeded 2009-12-29 |],
+            [qw| 2816929868 98421142 Succeeded 2009-08-27 |],
+            [qw| 2816929868 98421143 Abandoned 2009-08-30 |],
+            ],
+            #after_execute => '_mail_report', # uncomment to see it
+        },
+    );
+}
+
+sub invalid_param_sets {
+    return (
+        {
+            properties => 'not array',
+        },
+        {
+            rows => 'not array',
+        },
+    );
 }
 
 #############################################################

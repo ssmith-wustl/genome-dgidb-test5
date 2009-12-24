@@ -363,7 +363,15 @@ sub test01_send_report : Test(5) {
         report => $report,
         to => [$ENV{USER}.'@genome.wustl.edu'], # can be string or aryref
         xsl_files => [ $report->generator->get_xsl_file_for_html ],
-        image_files => [ $report->generator->get_image_file_infos_for_html ],
+        attachments => [ # TODO test better??
+        {
+            description => 'GC Logo GIF',
+            ctype => 'image/jpeg',
+            encoding => 'base64',
+            disposition => "inline; filename=\"genome_center_logo.gif\";\r\nContent-ID: <footerimg>",
+            file => '/gscmnt/839/info/medseq/images/genome_center_logo.gif'
+        },
+        ],
     );
 
     #< Valid >#

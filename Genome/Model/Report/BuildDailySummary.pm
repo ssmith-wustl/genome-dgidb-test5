@@ -191,11 +191,6 @@ sub _additional_data_for_amplicon_assembly {
     #TODO
 }
 
-#< Images >#
-sub get_image_file_infos_for_html { 
-    return Genome::Model::Report->get_footer_image_info;
-}
-
 1;
 
 #$HeadURL$

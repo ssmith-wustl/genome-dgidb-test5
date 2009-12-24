@@ -167,7 +167,6 @@ sub _copy_model_inputs {
 
     # FIXME temporary - copy model instrument data as inputs, when all 
     #  inst_data is an input, this can be removed
-    $DB::single = 1;
     my @existing_inst_data = $self->instrument_data;
     my @model_inst_data = $self->model->instrument_data;
     for my $inst_data ( @model_inst_data ) {
@@ -213,6 +212,12 @@ sub instrument_data_assignments {
     #return @build_idas;
 }
 
+sub instrument_data_count { # FIXME for inputs
+    return scalar( $_[0]->instrument_data_assignments );
+}
+#<>#
+
+#< Events >#
 sub events {
     my $self = shift;
 
@@ -681,9 +686,11 @@ sub get_report {
         return;
     }
 
-    my $subdir = Genome::Report->name_to_subdirectory($report_name);
+    my $report_dir = $self->reports_directory.'/'.
+    Genome::Report->name_to_subdirectory($report_name);
+    return unless -d $report_dir;
 
-    return Genome::Report->create_report_from_directory($self->reports_directory.'/'.$subdir); 
+    return Genome::Report->create_report_from_directory($report_dir); 
 }
 
 sub available_reports {
@@ -730,7 +737,6 @@ sub generate_send_and_save_report {
         replyto => 'noreply@genome.wustl.edu',
         # maybe not the best/correct place for this information but....
         xsl_files => [ $generator->get_xsl_file_for_html ],
-        image_files => [  $generator->get_image_file_infos_for_html ],  
     );
     unless ( $email_confirmation ) {
         $self->error_message('Couldn\'t email build report ('.lc($report->name).')');

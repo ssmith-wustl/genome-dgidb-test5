@@ -174,21 +174,6 @@ sub _add_model_info {
     return 1;
 }
 
-#< Images >#
-sub get_image_file_infos_for_html { 
-    return $_[0]->get_footer_image_info;
-}
-
-sub get_footer_image_info {
-    return {
-        description => 'GC Logo GIF',
-        ctype => 'image/jpeg',
-        encoding => 'base64',
-        disposition => "inline; filename=\"genome_center_logo.gif\";\r\nContent-ID: <footerimg>",
-        file => '/gscmnt/839/info/medseq/images/genome_center_logo.gif'
-    };
-}
-
 1;
 
 #$HeadURL$

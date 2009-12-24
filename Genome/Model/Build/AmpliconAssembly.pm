@@ -11,6 +11,7 @@ use warnings;
 
 use Genome;
 
+use Carp 'confess';
 require Genome::Model::Build::AmpliconAssembly::Amplicon;
 
 class Genome::Model::Build::AmpliconAssembly {
@@ -126,14 +127,62 @@ sub get_stats_report {
 
     return $report if $report;
 
-    $report = $self->get_report('Assembly Stats'); #old name
+    return $self->get_report('Assembly Stats'); #old name
+}
 
-    unless ( $report ) {
-        $self->error_message("No stats report found for build: ".$self->id);
+sub get_stats_dataset_from_stats_report {
+    my $self = shift;
+
+    my $report = $self->get_stats_report;
+    return unless $report;
+    
+    my $dataset = $report->get_dataset('stats');
+    unless ( $dataset ) {
+        $self->error_message('No stats dataset found in stats report.');
         return;
     }
 
-    return $report;
+    return $dataset;
+}
+
+sub get_value_from_stats_report {
+    my ($self, $attr) = @_;
+
+    unless ( defined $attr ) {
+        confess "No attribute given to get from stats report.";
+    }
+    
+    my $dataset = $self->get_stats_dataset_from_stats_report;
+    return 'NA' unless $dataset;
+    
+    my ($value) = $dataset->get_row_values_for_header($attr);
+    unless ( defined $value ) {
+        $self->error_message("No value for attrbute ($attr) found in stats report.");
+        return;
+    }
+    
+    return $value;
+}
+
+sub amplicons_attempted {
+    return $_[0]->get_value_from_stats_report('attempted');
+}
+
+sub amplicons_assembled {
+    return $_[0]->get_value_from_stats_report('assembled');
+}
+
+sub percent_assembled {
+    return $_[0]->get_value_from_stats_report('assembly-success');
+}
+
+#< Files >#
+sub oriented_fasta {
+    return $_[0]->amplicon_assembly->fasta_file_for_type('oriented');
+}
+
+sub oriented_qual {
+    return $_[0]->amplicon_assembly->qual_file_for_type('oriented');
 }
 
 ############################################

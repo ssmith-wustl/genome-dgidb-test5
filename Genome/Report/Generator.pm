@@ -19,10 +19,6 @@ class Genome::Report::Generator {
 sub create {
     my $class = shift;
 
-    unless ( $class->can('_add_to_report_xml') ) {
-        confess "This report generator class does not implement '_add_to_report_xml' method.  Please correct.";
-    }
-
     my $self = $class->SUPER::create(@_)
         or return;
     
@@ -65,9 +61,14 @@ sub generate_report {
     $self->_add_report_meta_data
         or return;
 
+    # Create report
     my $report = Genome::Report->create(
         xml => $self->_xml,
     );
+    unless ( $report ) {
+        $self->error_message("Can't create report.");
+        return;
+    }
 
     # DATA - BACKWARD COMPATIBILITY - THIS WILL BE REMOVED!
     if ( ref($data) ) {
@@ -140,6 +141,7 @@ sub _get_params_for_generation {
         #print Dumper($property_name);
         my $key = $property_name;
         $key =~ s#_#\-#g;
+        next unless defined $self->$property_name;
         $params{$key} = [ $self->$property_name ];
     }
 

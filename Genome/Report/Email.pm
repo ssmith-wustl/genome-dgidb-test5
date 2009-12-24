@@ -22,7 +22,7 @@ sub send_report {
     }
     for my $xsl_file ( @{$params{xsl_files}} ) {
         unless ( Genome::Utility::FileSystem->validate_file_for_reading($xsl_file) ) {
-            $class->error_message("Error with xls file.  See above");
+            $class->error_message("Error with xsl file.  See above");
             return;
         }
     }
@@ -55,7 +55,7 @@ sub send_report {
                 to => $to, 
                 from => $from,
                 replyto => $reply_to,
-                subject => $report->description,
+                subject => Genome::Utility::Text::capitalize_words( $report->description ),
                 multipart => 'related',
                 on_errors => 'die',
             }) or die "Can't create Mail::Sender";
@@ -63,10 +63,16 @@ sub send_report {
         $sender->OpenMultipart;
 
         for my $xsl_file ( @{$params{xsl_files}} ) {
+            # Transform
             my $xslt = Genome::Report::XSLT->transform_report(
                 report => $report,
                 xslt_file => $xsl_file,
-            ) or  die $class->error_message("Can't tranform report with xsl file ($xsl_file)");
+            );
+            unless ( $xslt ) {
+                $sender->Cancel;
+                die $class->error_message("Can't tranform report with xsl file ($xsl_file)");
+            }
+            # Attach
             $sender->Part({ctype => 'multipart/alternative'});
             $sender->Part({
                     ctype => $xslt->{media_type},
@@ -77,9 +83,9 @@ sub send_report {
 
         $sender->EndPart("multipart/alternative");
 
-        if ( $params{image_files} ) {
-            for my $image_file ( @{$params{image_files}} ) {
-                $sender->Attach($image_file);
+        if ( $params{attachments} ) {
+            for my $attachment ( @{$params{attachments}} ) {
+                $sender->Attach($attachment);
             }
         }
 
@@ -165,7 +171,7 @@ Email a Genome::Report
     # Optional
     from => 'me@gmail.com', # optional; defaults to current user, separate by commas
     replyto => 'noreply', # optional; defaults to current user, separate by commas
-    image_files => [ # image files to attach
+    attachments => [ # images/files to attach
     { # Ex:
         description => 'GC Logo GIF',
         ctype => 'image/jpeg',
