@@ -53,10 +53,7 @@ class Genome::Model::Command::Report::SummaryOfBuilds {
             doc => 'Show these properties for each build, in addition to the defaults: build id, model id and . Separate values by commas.',
         },
         # As
-        as => {
-            is => 'Text',
-            doc => 'Use these headers for the properties to be shown for each build. Separate values by commas.',
-        },
+        #as => { is => 'Text', doc => 'Use these headers for the properties to be shown for each build. Separate values by commas.', },
         # private
         _description => {
             is => 'Text',
