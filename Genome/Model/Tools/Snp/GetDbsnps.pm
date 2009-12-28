@@ -320,6 +320,8 @@ sub getDBSNPS {
 		    #for my $pos ($start..$stop) {
 		    my @t = $c->get_tags( begin_position => { operator => 'between', value => [$start,$stop] },);
 		    #my @t = $c->get_tags( begin_position => {  operator => 'between', value => [$pos,$pos] },);
+
+		    my $refid_source;
 		    for my $t (@t) {
 			next unless $t->sequence_item_type eq 'variation sequence tag';
 			
@@ -352,6 +354,7 @@ sub getDBSNPS {
 				    my $c = $source->collaborator_name;
 				    my $e = "$c\_$r";
 				    push @sources , $e unless grep (/$e/, @sources);
+				    $refid_source->{$ref_id}->{$e}=1;
 				}
 			    }
 			}
@@ -381,15 +384,21 @@ sub getDBSNPS {
 		    foreach my $alleles (sort keys %{$list->{$chr}->{$start}->{$stop}}) {
 			my ($ref,$var) = split(/\,/,$alleles);
 			foreach my $ref_id (sort keys %{$dbsnp->{$chr}->{$start}}) {
+			    my @sources;
+			    foreach my $source (sort keys %{$refid_source->{$ref_id}}) {
+				push @sources , $source unless grep (/$source/, @sources);
+			    }
+			    my $combined_source = join "||" , @sources;
+
 			    my ($variation_type,$validated,$allele_description) = split(/\:/,$dbsnp->{$chr}->{$start}->{$ref_id});
 			    my $match = &check_match($ref,$var,$allele_description);
 			    unless ($match) {$match="no_match";}
 			    my $snpfo = $list->{$chr}->{$start}->{$stop}->{$alleles};
 			    if ($snpfo eq "1") {
-				$list->{$chr}->{$start}->{$stop}->{$alleles}="$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
+				$list->{$chr}->{$start}->{$stop}->{$alleles}="$ref_id\:$combined_source\:$variation_type\:$validated\:$allele_description\:$match";
 			    } else {
-				unless ($snpfo =~ /$variation_type\:$validated\:$allele_description\:$match/) {
-				    $list->{$chr}->{$start}->{$stop}->{$alleles}="$snpfo\:\:$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
+				unless ($snpfo =~ /$combined_source\:$variation_type\:$validated\:$allele_description\:$match/) {
+				    $list->{$chr}->{$start}->{$stop}->{$alleles}="$snpfo\:\:$ref_id\:$combined_source\:$variation_type\:$validated\:$allele_description\:$match";
 				}
 			    }
 			}
