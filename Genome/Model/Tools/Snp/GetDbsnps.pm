@@ -176,7 +176,7 @@ sub execute {
 			my ($ref,$var) = split(/\,/,$alleles);
 
 			my $dbsnp_info = $list->{$chr}->{$start}->{$stop}->{$alleles};
-			#unless ($dbsnp_info) {$dbsnp_info = "no_dbsnp_hit";}
+			if ($dbsnp_info eq "1") {$dbsnp_info = "no_dbsnp_hit";}
 			
 			if ($out) {
 			    unless ($ref eq "na" && $var eq "na") {
@@ -513,8 +513,7 @@ sub reverse_complement_allele {
     if ($allele_in =~ /[\-\+X]/) {
 	return $allele_in;
     } else {
-
-	if ($allele_in =~ /[ACGT]/) {
+	if ($allele_in =~ /^[ACGT]+$/) {
 	    my $seq_1 = new Bio::Seq(-seq => $allele_in);
 	    my $revseq_1 = $seq_1->revcom();
 	    my $rev1 = $revseq_1->seq;
