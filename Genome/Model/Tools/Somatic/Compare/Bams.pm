@@ -136,7 +136,8 @@ sub default_filenames{
         upload_variants_snp_1_output        => 'upload_variants_snp_1_output.out',
         upload_variants_snp_2_output        => 'upload_variants_snp_2_output.out',
         upload_variants_indel_output        => 'upload_variants_indel_output.out',
-        circos_graph                        => 'circos_graph.out'
+        circos_graph                        => 'circos_graph.out',
+        report_output                       => 'cancer_report.html',
     );
 
     return %default_filenames;
@@ -304,8 +305,18 @@ __DATA__
   <link fromOperation="input connector" fromProperty="upload_variants_indel_output" toOperation="Upload Variants Indel" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Indel" toProperty="build_id" />
 
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Wait for Database Upload" toProperty="build_id" />
+  <link fromOperation="Upload Variants Indel" fromProperty="result" toOperation="Wait for Database Upload" toProperty="upload indel result" />
+  <link fromOperation="Upload Variants Snp Tier 2" fromProperty="result" toOperation="Wait for Database Upload" toProperty="upload snp tier 2 result" />
+  <link fromOperation="Plot Circos" fromProperty="result" toOperation="Wait for Database Upload" toProperty="plot circos result" />
+
+  <link fromOperation="Wait for Database Upload" fromProperty="build_id" toOperation="Generate Report" toProperty="build_id" />
+  <link fromOperation="input connector" fromProperty="report_output" toOperation="Generate Report" toProperty="report_output" />
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Generate Report" toProperty="skip_if_output_present" />
+
   <link fromOperation="Plot Circos" fromProperty="output_file" toOperation="output connector" toProperty="circos_big_graph" />
   <link fromOperation="Upload Variants Indel" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_indel_output" />
+  <link fromOperation="Generate Report" fromProperty="report_output" toOperation="output connector" toProperty="final_report_output" />
   
 
   <operation name="Somatic Sniper">
@@ -391,6 +402,19 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Somatic::PlotCircos" typeClass="Workflow::OperationType::Command" />
   </operation>
 
+  <operation name="Wait for Database Upload">
+      <operationtype typeClass="Workflow::OperationType::Block">
+        <property>build_id</property>
+        <property>upload snp tier 2 result</property>
+        <property>upload indel result</property>
+        <property>plot circos result</property>
+    </operationtype>
+  </operation>
+
+  <operation name="Generate Report">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::VariantReport" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>normal_bam_file</inputproperty>
     <inputproperty>tumor_bam_file</inputproperty>
@@ -468,8 +492,11 @@ __DATA__
 
     <inputproperty isOptional="Y">circos_graph</inputproperty>
 
+    <inputproperty isOptional="Y">report_output</inputproperty>
+
     <outputproperty>tier_1_indel_output</outputproperty>
     <outputproperty>circos_big_graph</outputproperty>
+    <outputproperty>final_report_output</outputproperty>
   </operationtype>
 
 </workflow>

@@ -18,6 +18,7 @@ class Genome::Model::Tools::Somatic::VariantReport{
         },
         build_id => {
             is_optional => 1,
+            is_input => 1,
             doc => 'the build for which to generate the variant report, must use this or model_id',
         },
         report_output => {

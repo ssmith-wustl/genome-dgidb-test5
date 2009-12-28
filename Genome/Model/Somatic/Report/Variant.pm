@@ -214,7 +214,12 @@ sub _add_to_report_xml {
             grep($_ eq $trv_type, qw(silent splice_site_del splice_site_ins in_frame_del frame_shift_del rna frame_shift_ins in_frame_ins missense nonsense nonstop splice_site) );
 
 
-        my $validation = Genome::Model::VariantValidation->get( variant_id => $variant->variant_id, model_id => $tumor_model->id, validation_type => VALIDATION_TYPE  );
+        my $validation = Genome::Model::VariantValidation->get( variant_id => $variant->variant_id, model_id => $build_variant->build->model_id, validation_type => VALIDATION_TYPE  );
+        unless ($validation) {
+            $self->error_message("Data problems encountered -- Could not get validation information for variant id: " . $variant->variant_id . ". Exiting.");
+            die;
+        }
+        
         my $validation_status = $validation->validation_result;
         
         $validation_status =~ s/\n//g; #Remove extraneous newlines froms status
