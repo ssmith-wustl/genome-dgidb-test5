@@ -158,28 +158,5 @@ sub execute {
 }
 
 
-
-
-
-
-
-sub chr_cmp {
-    my ($a,$b) = @_;
-    no warnings;
-    if ($a == 0 and $b > 0) {
-        return 1;
-    }
-    elsif ($b == 0 and $a > 0) {
-        return -1;
-    }
-    elsif ($a == 0 and $b == 0) {
-        return ($a cmp $b) 
-    }
-    else {
-        return ($a <=> $b);
-    }
-}
-
-
 1;
 
