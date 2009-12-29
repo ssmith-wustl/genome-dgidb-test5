@@ -120,14 +120,18 @@ sub execute {
     $w = $build->newest_workflow_instance;
     
     my $success;
-    if ($w && !$self->restart) {
-        $success = Workflow::Simple::resume_lsf($w->id);
-    } 
-    else {
-        $success = Workflow::Simple::run_workflow_lsf(
-            $xmlfile,
-            prior_result => 1
-        );
+    {
+        local $ENV{WF_TRACE_UR} = 1;
+        local $ENV{WF_TRACE_HUB} = 1;
+        if ($w && !$self->restart) {
+            $success = Workflow::Simple::resume_lsf($w->id);
+        } 
+        else {
+            $success = Workflow::Simple::run_workflow_lsf(
+                $xmlfile,
+                prior_result => 1
+            );
+        }
     }
 
     # Failed a stage/step - send report
