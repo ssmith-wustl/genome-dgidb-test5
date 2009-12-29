@@ -71,6 +71,7 @@ EOS
 
 sub execute {
     my ($self) = @_;
+    my $orig_dir = cwd();
 
     #RETURNS CROSS_MATCH ALIGNMENTS, ACE OBJ AND CTG TOOL
     my ($cm_aligns, $ao, $ct, $scafs);
@@ -124,7 +125,7 @@ sub execute {
 	$self->error_message("Unable to clean up merged ace file");
 	return;
     }
-
+    chdir ("$orig_dir");
     return 1;
 }
 
