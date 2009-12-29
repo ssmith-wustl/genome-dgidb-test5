@@ -27,7 +27,7 @@ class Genome::Model::Tools::Somatic::UploadVariants{
     build_id => {
         is => 'Number',
         is_input => '1',
-        doc => 'The build id that should be linked to the variant. This is manual for now and required.',
+        doc => 'The build id that should be linked to the variant. Enter a number <= 0 to skip uploading (test mode).',
     },
     ],
 };
@@ -104,6 +104,10 @@ sub execute {
             # This should hold the entire annotation line from the transcript annotation file
             for my $annotation (@{$annotation{$chr}{$start}{$stop}{$reference}{$variant_allele}}) {
                 $ofh->print("$annotation\n");
+
+                # If the build id is <= 0 we are in test mode and are not uploading
+                next if ($self->build_id <= 0);
+                
                 my ($chr, $start, $stop, $reference, $variant, $variation_type, $gene, $transcript, $species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain) = split("\t", $annotation);
                 if (length($amino_acid_change) > 255) {
                     $amino_acid_change = substr($amino_acid_change,0,240)."...truncated";
@@ -115,7 +119,7 @@ sub execute {
                     start_pos       => $start,
                     stop_pos        => $stop,
                     reference_allele=>$reference,
-                    variant_allele=>$variant
+                    variant_allele  =>$variant
                 );
                 if($variant_already_exists) {
                     $new_variant = $variant_already_exists;
