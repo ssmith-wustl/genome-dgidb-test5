@@ -29,12 +29,7 @@ class Genome::Model::Variant {
         transcript_version => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         trv_type           => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         ucsc_cons          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        validation_status  => { is => 'VARCHAR2', len => 5, is_optional => 1 },
-        validation_links => {
-             is => "Genome::Model::VariantValidation",
-             reverse_id_by => 'variant',
-             is_many => '1',
-        },
+        validation_links   => { is => 'Genome::Model::VariantValidation', reverse_as => 'variant', is_many => 1 },
     ],
     unique_constraints => [
         { properties => [qw/chromosome reference_allele start_pos stop_pos variant_allele/], sql => 'GMV_UK' },

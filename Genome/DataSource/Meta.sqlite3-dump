@@ -463,7 +463,6 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','GENE_NAME','VARCHAR2','255','Y','2009-09-16 16:45:23',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','STOP_POS','NUMBER','12','N','2009-09-16 16:45:23',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','C_POSITION','VARCHAR2','255','Y','2009-09-16 16:45:23',NULL);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','VALIDATION_STATUS','VARCHAR2','5','Y','2009-09-16 16:45:23',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_VARIANT','VARIANT_ID','NUMBER','10','N','2009-09-16 16:45:14',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','TRANSCRIPT_SOURCE','VARCHAR2','255','Y','2009-09-16 16:45:23',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','TRV_TYPE','VARCHAR2','255','Y','2009-09-16 16:45:23',NULL);
