@@ -142,7 +142,6 @@ sub execute {
                         amino_acid_change  => $amino_acid_change,
                         ucsc_cons          => $ucsc_cons,
                         domain             => $accession_domains,
-                        validation_status  => 'P', #FIXME chris says this column should be removed since we arent storing model id in this table... we will just have a final answer in the bridge table
                     );
                 }
                 unless($new_variant) {
