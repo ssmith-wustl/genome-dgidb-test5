@@ -20,7 +20,7 @@ class Genome::Model::Tools::Annotate::GeneRegions {
 	},
 	   output => {
 	    type  =>  'String',
-	    doc   =>  "provide a file name to write you transcript information to .txt will be appended to it. Default is to print to stdout.",
+	    doc   =>  "provide a file name to write you transcript information to. Default is to print to stdout.",
 	    is_optional  => 1,
 	},
 	list => {
@@ -42,7 +42,7 @@ EOS
 sub help_detail {
     return <<EOS 
 
-will get find all genes and transripts along with region types that intersect your list
+	will find all genes and transcripts along with region types that coincides with the coordinates on your list
 EOS
 }
 
@@ -75,7 +75,7 @@ sub execute {
 	my ($chr,$start,$stop) = split(/[\s]+/,$line);
 
 	my $target = "$chr:$start:$stop";
-	$targets->{$target}->{id}=1;
+	$targets->{$target}->{id}=$line;
 
 	unless ($chr =~ /^(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|X|Y|M)$/ && $start =~ /^[\d]+$/ && $stop =~ /^[\d]+$/) {print qq($line does not represent valid coordinates\n);}
 	next unless $chr =~ /^(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|X|Y|M)$/ && $start =~ /^[\d]+$/ && $stop =~ /^[\d]+$/;
@@ -196,7 +196,7 @@ sub execute {
 	my $i1 = $targets->{$target}->{hugo_gene_name};
 	my $i2 = $targets->{$target}->{transcript_name};
 	my $i3 = $targets->{$target}->{structure_type};
-	
+	#my $line = $targets->{$target}->{id};
 	unless ($i1) {$i1 = "not_found";}
 	unless ($i2) {$i2 = "not_found";}
 	unless ($i3) {$i3 = "not_found";}
