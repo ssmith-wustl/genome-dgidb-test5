@@ -752,7 +752,7 @@ sub create_test_temp_dir
 	return;
     }
 
-    chdir ($dir);
+#   chdir ($dir);
     mkdir ("$dir/edit_dir");
 
     my $test_root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-AutoJoin';
