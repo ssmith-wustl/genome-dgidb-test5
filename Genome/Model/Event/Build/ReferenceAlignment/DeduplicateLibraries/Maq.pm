@@ -41,6 +41,11 @@ sub execute {
     #accumulate the maps per library
     for my $ida (@idas) {
         my $library = $ida->library_name;
+        #for RT#51519 library name contains white space, those white-space lib names should be fixed upstream when putting into DB.
+        if ($library =~ /\s+/) {
+            $self->warning_message("Library name: $library contains space. will replace with _. Note the lib_tag in bam file will be changed too");
+            $library =~ s/\s+/\_/g;
+        }
         my @alignments = $ida->alignments;
         for my $alignment (@alignments) {
             my @maps = $alignment->alignment_file_paths;
