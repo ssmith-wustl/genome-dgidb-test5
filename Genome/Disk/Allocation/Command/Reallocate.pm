@@ -77,6 +77,11 @@ sub execute {
     } else {
         $rv = $self->wait_for_pse_to_confirm(pse => $reallocator);
     }
+    
+    # Commit here to free up a DB lock we'll be holding if we executed the 
+    # reallocation PSE via confirm_scheduled_pse().
+    UR::Context->commit();
+    
     unless ($rv) {
         $self->error_message('Failed to confirm pse '. $self->reallocator_id);
         return;

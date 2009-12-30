@@ -159,8 +159,7 @@ sub abandon {
     }
     my $disk_allocation = $build->disk_allocation;
     if ($disk_allocation) {
-        my $reallocate = Genome::Disk::Allocation::Command::Reallocate->execute( allocator_id => $disk_allocation->allocator_id);
-        unless ($reallocate) {
+        unless ($disk_allocation->reallocate) {
             $self->warning_message('Failed to reallocate disk space.');
         }
     }

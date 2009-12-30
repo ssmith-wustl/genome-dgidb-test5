@@ -371,10 +371,7 @@ sub reallocate {
     my $disk_allocation = $self->disk_allocation
         or return 1; # ok - may not have an allocation
 
-    my $reallocate = Genome::Disk::Allocation::Command::Reallocate->execute(
-        allocator_id => $disk_allocation->allocator_id
-    );
-    unless ($reallocate) {
+    unless ($disk_allocation->reallocate) {
         $self->warning_message('Failed to reallocate disk space.');
     }
 
@@ -976,13 +973,8 @@ sub delete {
     }
     my $disk_allocation = $self->disk_allocation;
     if ($disk_allocation) {
-        my $allocator_id = $disk_allocation->allocator_id;
-        my $deallocate_cmd = Genome::Disk::Allocation::Command::Deallocate->create(allocator_id =>$allocator_id);
-        unless ($deallocate_cmd) {
-            $self->warning_message('Failed to create a deallocate command.');
-        }
-        unless ($deallocate_cmd->execute) {
-            $self->warning_message('Failed to deallocate disk space.');
+        unless ($disk_allocation->deallocate) {
+             $self->warning_message('Failed to deallocate disk space.');
         }
     }
     return $self->SUPER::delete;
