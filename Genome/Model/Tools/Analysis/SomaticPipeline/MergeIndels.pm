@@ -98,7 +98,7 @@ sub execute {                               # replace with real execution logic.
 		## Filter the indel file ##
 		
 		my $filtered_file = $output_dir . "/" . $tumor_sample . ".glfsomatic.indels.filter";		
-		system("gt analysis somatic-pipeline filter-glf-indels --variants-file $tier1_file --output-file $filtered_file --min-var-freq 0.25 --min-reads2 4 --min-coverage 20"); #--min-var-freq 0.25
+		system("gt analysis somatic-pipeline filter-glf-indels --variants-file $tier1_file --output-file $filtered_file --min-var-freq 0.30 --min-reads2 4 --min-coverage 10"); #--min-var-freq 0.25
 	
 		## Get number of indels passing filter ##
 		

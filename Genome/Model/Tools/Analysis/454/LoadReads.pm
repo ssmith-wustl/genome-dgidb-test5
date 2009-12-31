@@ -142,7 +142,7 @@ sub execute {                               # replace with real execution logic.
 		## Submit to the blades ##
 
 		print "$sample_name\t$sample_output_dir\n";
-		system(qq{bsub -q long -oo $ScriptFileOut -R "select[model=='Intel_Xeon360']" $ScriptFileName});		
+		system(qq{bsub -q bigmem -oo $ScriptFileOut -R "select[type==LINUX64 && model != Opteron250 && mem>2000] rusage[mem=2000]" $ScriptFileName});		
 	}
 	
 	close($input);

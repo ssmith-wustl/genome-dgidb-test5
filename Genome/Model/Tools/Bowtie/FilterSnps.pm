@@ -41,7 +41,7 @@ class Genome::Model::Tools::Bowtie::FilterSnps {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Parse output from the Bowtie aligner"                 
+    "Filter Bowtie SNP readcounts files by coverage, reads2, frequency, etc."                 
 }
 
 sub help_synopsis {

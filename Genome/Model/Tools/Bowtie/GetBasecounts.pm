@@ -36,7 +36,7 @@ class Genome::Model::Tools::Bowtie::GetBasecounts {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Parse output from Bowtie"                 
+    "Count the number of reads supporting every possible base at every position"                 
 }
 
 sub help_synopsis {

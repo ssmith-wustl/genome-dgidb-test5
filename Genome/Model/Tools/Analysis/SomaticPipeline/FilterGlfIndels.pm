@@ -116,8 +116,8 @@ sub execute {                               # replace with real execution logic.
 		#$my $tumor_coverage = $fields[12];
 		my $tumor_reads1 = $fields[12];
 		my $tumor_reads2 = $fields[13];
-		my $normal_reads1 = $fields[26]; # number of reads that support indel 1 in normal
-		my $normal_reads2 = $fields[27]; # number of reads that support indel 2 in normal 
+		my $normal_reads1 = $fields[25]; # number of reads that support indel 1 in normal
+		my $normal_reads2 = $fields[26]; # number of reads that support indel 2 in normal 
 
 		my $tumor_coverage = $tumor_reads1 + $tumor_reads2;
 		my $normal_coverage = $normal_reads1 + $normal_reads2;		
@@ -146,12 +146,16 @@ sub execute {                               # replace with real execution logic.
 
 				$tumor_freq = sprintf("%.2f", ($tumor_freq * 100));
 
-				print OUTFILE "$chrom\t$chr_start\t$chr_stop\t*\t$genotype\t$tumor_reads1\t$tumor_reads2\t$tumor_freq\%\n";	
+				print OUTFILE "$chrom\t$chr_start\t$chr_stop\t*\t$genotype\t$somatic_score\t$tumor_coverage\t$tumor_reads1\t$tumor_reads2\t$tumor_freq\%\t$normal_coverage\t$normal_reads1\t$normal_reads2\n";	
 #				print OUTFILE "$line\n" if($ARGV[1]);
 #				print "$chr\t$pos\t$indel1\t$indel2\t$tumor_reads1\t$tumor_reads2\t$tumor_freq\n";
 			}
 			
 #			print "$tumor_reads1\t$tumor_reads2\t$tumor_freq\n";
+		}
+		elsif($normal_coverage < $min_coverage)
+		{
+#			warn "Normal coverage only $normal_coverage ($normal_reads1 + $normal_reads2)\n";
 		}
 	}
 

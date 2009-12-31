@@ -36,7 +36,7 @@ class Genome::Model::Tools::Bowtie::GetReadcounts {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Parse output from Bowtie"                 
+    "Get read counts supporting each allele for Bowtie SNPs"                 
 }
 
 sub help_synopsis {

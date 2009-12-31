@@ -28,6 +28,7 @@ class Genome::Model::Tools::Blat::ParseAlignments {
 		min_identity	=> { is => 'Text', doc => "Minimum % identity to keep an alignment [0]", is_optional => 1},
 		output_psl	=> { is => 'Text', doc => "Output scored PSL for best alignments [0]", is_optional => 1},	
 		output_blocks	=> { is => 'Text', doc => "Output alignment blocks for best alignments [0]", is_optional => 1},		
+		find_secondary	=> { is => 'Text', doc => "Find secondary alignments for multi-hit reads [0]", is_optional => 1},	
 	],
 };
 
@@ -68,7 +69,7 @@ sub execute {                               # replace with real execution logic.
 	## Set defaults for optional parameters ##
 	
 	my $min_pct_identity = 0;
-	my $output_psl = my $output_blocks = 0;
+	my $output_psl = my $output_blocks = my $find_secondary = 0;
 	my $scoreM = 1;	# Match points for scoring alignments
 	my $scoreN = 2; # Mismatch penalty for scoring alignments
 	my $scoreQ = 3; # Gap penalty for scoring alignments
@@ -78,6 +79,7 @@ sub execute {                               # replace with real execution logic.
 	$min_pct_identity = $self->min_identity if($self->min_identity);
 	$output_psl = $self->output_psl if($self->output_psl);
 	$output_blocks = $self->output_blocks if($self->output_blocks);
+	$find_secondary = $self->find_secondary if($self->find_secondary);
 
 	## Verify that alignments file exists ##
 	
@@ -208,6 +210,12 @@ sub execute {                               # replace with real execution logic.
 		print BESTBLOCKS "ref_name\tref_start\tref_stop\talign_strand\tread_name\tread_start\tread_stop\tblock_no\n";
 	}
 
+	if($find_secondary)
+	{
+		open(SECONDARYALIGNS, ">$output_basename.secondary-alignments.txt") or die "Can't open outfile $output_basename.secondary-alignments.txt: $!\n";
+		print SECONDARYALIGNS "score\tread_name\tread_start\tread_stop\tref_name\tref_start\tref_stop\talign_strand\tidentity\tpct_read_aligned\n";		
+	}
+
 	## Process alignments on read basis ##
 	
 	foreach my $ReadName (keys %ReadAlignments)
@@ -305,8 +313,46 @@ sub execute {                               # replace with real execution logic.
 				print BESTBLOCKS $best_align_blocks if($best_align_blocks);			
 			}
 			
+			
+			
 			for(my $secondCounter = 1; $secondCounter < $numReadHSPs; $secondCounter++)
 			{
+				my @secondContents = split(/\t/, $ReadHSPs[$secondCounter]);
+				my $second_score = $secondContents[0];
+				
+				my $match_bases = $secondContents[1];
+				my $mismatch_bases = $secondContents[2];
+				my $rep_match_bases = $secondContents[3];
+				my $query_gaps = $secondContents[5];
+				my $subject_gaps = $secondContents[7];
+							
+				my $second_strand = $secondContents[9];
+				my $second_read_name = $secondContents[10];
+				my $second_read_length = $secondContents[11];			
+				my $second_read_start = $secondContents[12];
+				my $second_read_stop = $secondContents[13];
+				my $second_ref_name = $secondContents[14];
+				my $second_ref_start = $secondContents[16];
+				my $second_ref_stop = $secondContents[17];
+				
+				## Adjust to 1-based positions ##
+				$second_read_start++;
+				$second_read_stop++;
+				$second_ref_start++;
+				$second_ref_stop++;
+	
+				## Calculate read-proportional length of the alignment ##
+				
+				my $pct_read_aligned = ($second_read_stop - $second_read_start) / $second_read_length * 100;
+				$pct_read_aligned = sprintf("%.2f", $pct_read_aligned);
+				
+				## Calculate the sequence identity of the alignment ##
+				my $alignment_identity = 0;
+				$alignment_identity = ($match_bases + $rep_match_bases) / ($match_bases + $rep_match_bases + $mismatch_bases) * 100 if($match_bases || $rep_match_bases);
+				$alignment_identity = sprintf("%.2f", $alignment_identity);
+
+				print SECONDARYALIGNS "$second_score\t$second_read_name\t$second_read_start\t$second_read_stop\t$second_ref_name\t$second_ref_start\t$second_ref_stop\t$second_strand\t$alignment_identity\t$pct_read_aligned\n" if($find_secondary);
+
 #				print SECONDARY "$ReadHSPs[$secondCounter]\n";
 			}
 		}

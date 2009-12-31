@@ -29,13 +29,14 @@ class Genome::Model::Tools::Bowtie::LimitSnps {
 		output_file	=> { is => 'Text', doc => "Output file to receive limited SNPs", is_optional => 1 },
 		not_file	=> { is => 'Text', doc => "Output file to receive excluded SNPs", is_optional => 1 },
 		verbose	=> { is => 'Text', doc => "Print interim progress updates", is_optional => 1 },
+		match_alleles	=> { is => 'Text', doc => "If set to 1, requires alleles to match", is_optional => 1 },
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Parse output from the Bowtie aligner"                 
+    "Limit SNPs in a file to a set of chromosome positions given in another file"                 
 }
 
 sub help_synopsis {
@@ -66,6 +67,8 @@ sub execute {                               # replace with real execution logic.
 	my $notfile = $self->not_file if(defined($self->not_file));
 	my $outfile = $self->output_file if(defined($self->output_file));
 	my $verbose = 1 if(defined($self->verbose));
+	my $match_alleles = 0;
+	$match_alleles = $self->match_alleles if($self->match_alleles);
 
         if(!$positions_file || !(-e $positions_file))
         {
@@ -100,8 +103,18 @@ sub execute {                               # replace with real execution logic.
 			
 			if($lineCounter >= 1)# && $lineCounter < 50000)
 			{
-				(my $chrom, my $position) = split(/\t/, $line);
-				$roi_positions{$chrom . "\t" . $position} = 1;
+				if($match_alleles)
+				{
+					(my $chrom, my $position, my $allele1, my $allele2) = split(/\t/, $line);
+					$allele1 = uc($allele1);
+					$allele2 = uc($allele2);
+					$roi_positions{$chrom . "\t" . $position . "\t" . $allele1 . "\t" . $allele2} = 1;					
+				}
+				else
+				{
+					(my $chrom, my $position) = split(/\t/, $line);
+					$roi_positions{$chrom . "\t" . $position} = 1;
+				}
 			}
 		}
 		
@@ -132,24 +145,38 @@ sub execute {                               # replace with real execution logic.
 		my $line = $_;
 		$lineCounter++;
 		
-		if($lineCounter == 1)
+		if($lineCounter == 1 && ($line =~ 'chrom' || $line =~ 'ref_name'))
 		{
 			print OUTFILE "$line\n" if($outfile);
 			print NOTFILE "$line\n" if($notfile);
+#			print "$line\n";
 		}
-		if($lineCounter > 1)# && $lineCounter < 1000)
+		else
 		{
 			$stats{'total_snps'}++;
 #			(my $chrom, my $position, my $allele1, my $allele2, my $context, my $num_reads, my $reads) = split(/\t/, $line);			
-			(my $chrom, my $position) = split(/\t/, $line);
+			(my $chrom, my $position, my $allele1, my $allele2) = split(/\t/, $line);
 
 			my $included_flag = 0;
 			
-			if(!$positions_file || $roi_positions{$chrom . "\t" . $position})
+			if($match_alleles)
 			{
-				$stats{'limit_snps'}++;
-				print OUTFILE "$line\n" if($outfile);
-				$included_flag = 1;
+				if(!$positions_file || $roi_positions{$chrom . "\t" . $position . "\t" . $allele1 . "\t" . $allele2})
+				{
+					$stats{'limit_snps'}++;
+					print OUTFILE "$line\n" if($outfile);
+					$included_flag = 1;
+				}
+
+			}
+			else
+			{
+				if(!$positions_file || $roi_positions{$chrom . "\t" . $position})
+				{
+					$stats{'limit_snps'}++;
+					print OUTFILE "$line\n" if($outfile);
+					$included_flag = 1;
+				}				
 			}
 			
 			if(!$included_flag)
