@@ -9,6 +9,8 @@ use Workflow;
 use IO::File;
 use Switch;
 use Bio::SearchIO;
+use File::Basename;
+use Data::Dumper;
 
 class Genome::Model::Tools::ViromeEvent::Assignment::Report{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -36,7 +38,6 @@ that can not be assigned to any category.
 perl script <sample dir>
 <sample dir> = full path to the directory holding files for the given 
                library
-               e.g. .../S21_Rota_other
 EOS
 }
 
@@ -44,389 +45,254 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     return $self;
-
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    my $dir = $self->dir;
-
-    $self->log_event("Assignment Reporting begun on $dir");
-
-    # get all the viral read sequences
-    my %viral_reads_blastn = ();
-    my %viral_reads_tblastx_nt = ();
-    my %viral_reads_tblastx_VG = ();
-
-    my %best_e_blastn = (); # viral_read_ID => best_e value for this read in blastn
-    my %best_e_tblastx_nt = (); # viral_read_ID => best_e value for this read in tblastx nt
-    my %best_e_tblastx_VG = (); # viral_read_ID => best_e value for this read in tblastx viral genome
-
-    my @blast_files_blastn = (); # all blastn.out files
-    my @blast_files_tblastx_nt = (); # all tblastx.out files
-    my @blast_files_tblastx_VG = (); # all tblast_ViralGenome.out files
-
-    my @unassigned_reads = ();
-
-    # read in original sequences
-    my @temp = split("\/", $dir);
-    my $lib_name = pop @temp;
-    # print "lib is $lib_name\n";
-    my $fasta_file = $dir."/".$lib_name.".fa.cdhit_out.masked.goodSeq";
-    my %seq = $self->read_FASTA_data($fasta_file);
-
-    my $out1 = $dir."/".$lib_name.".AssignmentReport";
-    open (OUT1, ">$out1") or die "can not open file $out1!\n";
-    my $OUT2 = $dir."/".$lib_name.".ViralReads_all.fa";
-    open (OUT2, ">$OUT2") or die "can not open file $OUT2!\n";
-    my $OUT3 = $dir."/".$lib_name.".unassigned.fa";
-    open (OUT3, ">$OUT3") or die "can not open file $OUT3!\n";
-
-    # category => num of sequence assigned to this category by blastn
-    my %blastn = ("Homo" => 0,
-		"Mus" => 0,
-		"Bacteria" => 0,
-		"Viruses" => 0,
-		"Fungi" => 0,
-		"unassigned" => 0,
-		"other" => 0,
-		"Phage" => 0,
-		);
-
-    # category => num of sequence assigned to this category by tblastx_nt
-    my %tblastx_nt = ();
-    foreach my $key (keys %blastn) {
-        $tblastx_nt{$key} = 0;
-    }
-
-    # category => num of sequence assigned to this category by tblastx of viral genome
-    my %tblastx_VG = ();
-    foreach my $key (keys %blastn) {
-        $tblastx_VG{$key} = 0;
-    }
-
-    # category => num of sequence assigned to this category by blastn of human genome
-    my %blastn_HG = ();
-    foreach my $key (keys %blastn) {
-        $blastn_HG{$key} = 0;
-    }
-
-    # viral_lineage => number of reads assigned to this lineage in the library
-    my %num_reads = ();
-    my %blast_readinfo =();    # readID => information about this read
-    my %lineage_blastn = ();    # lineage => [read ID]
-    my %lineage_tblastx_nt = ();    # lineage => [read ID]
-    my %lineage_tblastx_VG = (); # lineage => [read ID]
-
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    foreach my $name (readdir DH) 
-    {
-        # name is either file name or directory for splited files
-        my $full_path = $dir."/".$name;
-    
-        # full_path= dir/goodSeq_HGblast
-        if ($name =~ /goodSeq_HGblast$/) 
-        { # human genome blast result
-	    # enter subdirectory where blastn results resides
-	    opendir (HGDIR, $full_path) or die "can not open dir $full_path!\n";
-	    foreach my $blast_file (readdir HGDIR) 
-            {
-	        if ($blast_file =~ /HGblast\.parsed$/) 
-                {
-		    my $parsed = $full_path."/".$blast_file;
-		    open (IN, $parsed) or die "can not open file $parsed!\n";
-		    while (<IN>) 
-                    {
-		        if ($_ =~ /#/) 
-                        { # skip comment line
-			    next;
-		        }
-		        chomp;
-		        my ($read_ID, $length, $category, $lineage, $hit_name, $e_value) = split("\t", $_);
-		        $blastn_HG{"Homo"}++; 
-		    }   	
-		    close IN;
-	        }
+    my $lib_name = basename($self->dir);
+    $self->log_event("Assignment Reporting starting for $lib_name");
+    #TABLE TO CONVERT TO CORRECT BLAST NAME AND
+    #CORRISPONDING FILE EXTENSIONS FOR EACH BLAST
+    my $blasts = $self->_blasts_and_file_exts();
+    #REPORT WHAT ORGANISMS WHERE HIT IN EACH BLAST RUNS
+    my $all_orgs_hit = {};
+    my $viral_lineage_hits = {};
+    my @unassigned_reads;
+    my @all_virus_lineages;
+    #BN_HG  = BlastN HumanGenomic    #BN     = BlastN NT
+    #TBX_nt = BlastX NT              #TBX_VG = BlastX Viral
+    foreach my $blast_type (qw/ BN_HG BN TBX_nt TBX_VG /) {
+	#$self->log_event("Checking ".$blasts->{$blast_type}->{'name'}." blast parse files");
+	my $blast_dir = $self->dir.'/'.$lib_name . $blasts->{$blast_type}->{'dir_ext'};
+	unless (-d $blast_dir) {
+	    $self->log_event("Failed to find blast dir: ".basename($blast_dir));
+	    return;
+	}
+	my @parse_files = glob("$blast_dir/*parsed");
+	unless (@parse_files) {
+	    $self->log_event("Failed to find any blast parse files in ".basename($blast_dir));
+	    return;
+	}
+	foreach my $file (@parse_files) {
+	    my $hits = $self->get_organisms_hit($file);
+	    #print Dumper $hits;
+	    foreach my $hit (keys %$hits) {
+		next if $hit eq 'virus_lineage';
+		next if $hit eq 'unassigned_reads';
+		$all_orgs_hit->{$blast_type}->{$hit} += $hits->{$hit};
+		$all_orgs_hit->{'total'}->{$hit} += $hits->{$hit};
 	    }
-	    closedir HGDIR;
-        } # finish .HGblast.parsed
-
-
-        # full_path= dir/HGfiltered_BLASTN
-        if ($name =~ /HGfiltered_BLASTN$/) 
-        {
-	    # enter subdirectory where blastn results resides
-	    opendir (BNDIR, $full_path) or die "can not open dir $full_path!\n";
-	    foreach my $blast_file (readdir BNDIR) 
-            {
-	        if ($blast_file =~ /blastn\.parsed$/) 
-                {
-		    my $blast_out = $blast_file;
-		    $blast_out =~ s/\.blastn\.parsed/\.blastn\.out/;
-		    $blast_out = $full_path."/".$blast_out;
-		    push @blast_files_blastn, $blast_out;
-		    my $parsed = $full_path."/".$blast_file;
-		    $self->collect_information($parsed, \%blastn, \%viral_reads_blastn, \%best_e_blastn, \%lineage_blastn, \%num_reads, \@unassigned_reads);
+	    #KEEP A LIST OF READS TYPED BY LINEAGE FOR EACH BLAST EVENT
+	    if (exists $hits->{'virus_lineage'}) {
+		foreach my $vl (keys %{$hits->{'virus_lineage'}}) {
+		    push @all_virus_lineages, $vl unless grep (/^$vl$/, @all_virus_lineages);
+		    foreach my $read_name (keys %{$hits->{'virus_lineage'}->{$vl}}) {
+			#READ_NAME => 'E-VALUE'
+			$viral_lineage_hits->{$blast_type}->{$vl}->{$read_name} = $hits->{'virus_lineage'}->{$vl}->{$read_name};
+		    }
+		}
+	    }
+	    if (exists $hits->{'unassigned_reads'}) {
+		push @unassigned_reads, map {$_} @{$hits->{'unassigned_reads'}};
 	    }
 	}
-	closedir BNDIR;
-    } # finish .blastn.parsed
-    
-    # full_path= dir/BNFiltered_TBLASTX_nt
-    if ($name =~ /BNFiltered_TBLASTX_nt$/) 
-    {
-	# enter subdirectory where tblastx nt results resides
-	opendir (TBLASTXDH, $full_path) or die "can not open dir $full_path!\n";
-	foreach my $tblastx_file (readdir TBLASTXDH) 
-        {
-	    if ($tblastx_file =~ /tblastx\.parsed$/) 
-            {
-		my $tblastx_out = $tblastx_file;
-		$tblastx_out =~ s/\.tblastx\.parsed/\.tblastx\.out/;
-		$tblastx_out = $full_path."/".$tblastx_out;
-		push @blast_files_tblastx_nt, $tblastx_out;
-		
-		my $parsed = $full_path."/".$tblastx_file;
-		$self->collect_information($parsed, \%tblastx_nt, \%viral_reads_tblastx_nt, \%best_e_tblastx_nt, \%lineage_tblastx_nt, \%num_reads, \@unassigned_reads);
+    }
+    #print Dumper $all_orgs_hit;
+    #print Dumper $viral_lineage_hits;
+    #print Dumper \@all_virus_lineages;
+    #PRINT REPORT
+    my $report_file = $self->dir.'/'.$lib_name.'.AssignmentReport';
+    my $report_fh = IO::File->new("> $report_file") ||
+	die "Can not create file handle for ".basename($report_file);
+    #PRINT TABLE .. COLUMN NAMES: TOTAL BN_HG BN TBX_NT TBX_VG
+    my $header;
+    foreach my $col (qw/ category total BN_HG BN TBX_nt TBX_VG /) {
+	$header .= sprintf "%12s", $col;
+    }
+    $report_fh->print($self->dir."\n".$header."\n");
+    my $string;
+    foreach my $org ($self->_valid_organism_category()) {
+	$string .= sprintf "%12s", $org; #ORGANISM NAMES
+	foreach my $bl (qw/ total BN_HG BN TBX_nt TBX_VG /) {
+	    my $hit = (exists $all_orgs_hit->{$bl}->{lc $org}) ? $all_orgs_hit->{$bl}->{lc $org} : 0;
+	    $string .= sprintf "%12s", $hit;
+	}
+	$report_fh->print("$string\n");
+	$string = '';
+    }
+    $report_fh->print("\n###########################################################\n\n");
+
+    my $detailed_read_info = {};
+    #PRINT VIRUS LINEAGE INFO .. HAVE TO GO THROUGH EACH BLAST FILE OF EACH BLAST TYPE
+    foreach my $bl (qw/ BN TBX_nt TBX_VG /) {
+	if (exists $viral_lineage_hits->{$bl}) {
+	    #GET A LIST OF BLAST FILES
+	    my $blast_dir = $self->dir.'/'.$lib_name . $blasts->{$bl}->{'dir_ext'};
+	    my @bl_out_files = glob("$blast_dir/*out");
+	    #THERE MUST BE OUT FILES .. 
+	    unless (@bl_out_files) {
+		$self->log_event("Failed to find any blast out file in ".basename($blast_dir));
+		return;
+	    }
+	    #RE-ARRANGE DATA .. MAKE SURE READ SET CORRISPONDS WITH BLAST OUT FILES
+	    my $reads = {};
+	    foreach my $lineage (keys %{$viral_lineage_hits->{$bl}}) {
+		foreach my $read (keys %{$viral_lineage_hits->{$bl}->{$lineage}}) {
+		    $reads->{$read} = $viral_lineage_hits->{$bl}->{$lineage}->{$read};# = evalue
+		}
+	    }
+	    my $type = $blasts->{$bl}->{'engine'};
+	    my $info = $self->_detailed_virus_info($reads, \@bl_out_files, $type);
+	    foreach my $read (keys %$info) {
+		$detailed_read_info->{$read} = $info->{$read}; #BAD
 	    }
 	}
-	closedir TBLASTXDH;
-    } # finish BNFiltered_TBLASTX subdirectory
-    
-    # full_path= dir/TBXNTFiltered_TBLASTX_ViralGenome
-    if ($name =~ /TBXNTFiltered_TBLASTX_ViralGenome$/) 
-    {
-	# enter subdirectory where tblastxi Viral Genome results resides
-	opendir (TBLASTXDHVG, $full_path) or die "can not open dir $full_path!\n";
-	foreach my $tblastx_file (readdir TBLASTXDHVG) 
-        {
-	    if ($tblastx_file =~ /tblastx_ViralGenome\.parsed$/) 
-            {
-		my $tblastx_out = $tblastx_file;
-		$tblastx_out =~ s/\.tblastx_ViralGenome\.parsed/\.tblastx_ViralGenome\.out/;
-		$tblastx_out = $full_path."/".$tblastx_out;
-		push @blast_files_tblastx_VG, $tblastx_out;
-		
-		my $parsed = $full_path."/".$tblastx_file;
-		$self->collect_information($parsed, \%tblastx_VG, \%viral_reads_tblastx_VG, \%best_e_tblastx_VG, \%lineage_tblastx_VG, \%num_reads, \@unassigned_reads);
-	    } # finish tblastx_ViralGenome.parsed
-	}
-	closedir TBLASTXDHVG;
     }
-  } 
-
-    close DH;
-
-    # get detailed information about each viral read
-    $self->get_viral_read_info( \@blast_files_blastn, "blastn", \%viral_reads_blastn, \%best_e_blastn, \%blast_readinfo);
-    $self->get_viral_read_info( \@blast_files_tblastx_nt, "tblastx", \%viral_reads_tblastx_nt, \%best_e_tblastx_nt, \%blast_readinfo);
-    $self->get_viral_read_info( \@blast_files_tblastx_VG, "tblastx", \%viral_reads_tblastx_VG, \%best_e_tblastx_VG, \%blast_readinfo);
-
-    # print out report for this library
-    print OUT1 $dir, "\n";
-    printf OUT1 "%12s\t%7s\t%7s\t%7s\t%7s\t%7s\n", "category", "total", "BN_HG", "BN", "TBX_nt", "TBX_VG";
-
-    foreach my $key (sort {$a cmp $b } keys %blastn) 
-    {
-	printf OUT1 "%12s\t%7d\t%7d\t%7d\t%7d\t%7d\n", $key, $blastn_HG{$key}+$blastn{$key}+$tblastx_nt{$key}+$tblastx_VG{$key}, $blastn_HG{$key}, $blastn{$key}, $tblastx_nt{$key}, $tblastx_VG{$key};
-    }
-
-    print OUT1 "\n###########################################################\n\n";
-
-    foreach my $lineage (sort {$num_reads{$a} <=> $num_reads{$b}} keys %num_reads) 
-    {
-        print OUT1 $lineage, "\ttotal number of reads: ", $num_reads{$lineage}, "\n\n";
-        print OUT1 "QueryName\tQuerylength\t         HitName       \tHitLen\t                             HitDesc                       \tAlnLen\t%ID\tHitStart\tHitEnd\te\n";
-    
-        if (defined $lineage_blastn{$lineage}) 
-        {
-	    if (scalar @{$lineage_blastn{$lineage}}) 
-            {
-	        print OUT1 "reads from blastn:\n";
-	        foreach my $read (@{$lineage_blastn{$lineage}}) 
-                {
-		    print OUT1 $blast_readinfo{$read};
-	        }
+    #print Dumper $detailed_read_info;
+    foreach my $lineage (@all_virus_lineages) {
+	my $read_count = 0;
+	#FIRST PASS TO GET NUMBER OF READS
+	foreach my $bl (sort keys %$viral_lineage_hits) {
+	    if (exists $viral_lineage_hits->{$bl}->{$lineage}) {
+		$read_count += scalar (keys %{$viral_lineage_hits->{$bl}->{$lineage}});
 	    }
-        }
-        if (defined $lineage_tblastx_nt{$lineage}) 
-        {
-	    if (scalar @{$lineage_tblastx_nt{$lineage}}) 
-            {
-	        print OUT1 "\nreads from tblastx:\n";
-	        foreach my $read (@{$lineage_tblastx_nt{$lineage}}) 
-                {
-		    print OUT1 $blast_readinfo{$read};
-	        }
-	    }	
-        }
-        if (defined $lineage_tblastx_VG{$lineage}) 
-        {
-	    if (scalar @{$lineage_tblastx_VG{$lineage}}) 
-            {
-	        print OUT1 "\nreads from tblastx of viral genome:\n";
-	        foreach my $read (@{$lineage_tblastx_VG{$lineage}}) 
-                {
-		    print OUT1 $blast_readinfo{$read};
-	        }
-	    }	
-        }
-    
-        print OUT1 "\n##################################################\n\n";
+	}
+	#SECOND PASS PRINT DATA
+	$report_fh->print("$lineage\ttotal number of reads $read_count\n\n".
+	                  "QueryName\tQuerylength\t\tHitName\t\tHitLen\t\t\tHitDesc\t\t\tAlnLen\t%ID\tHitStart\tHitEnd\te\n");
+	foreach my $bl (sort keys %$viral_lineage_hits) {
+	    if (exists $viral_lineage_hits->{$bl}->{$lineage}) {
+		$report_fh->print("reads from ".$blasts->{$bl}->{'engine'}.":\n");
+		foreach my $read_name (keys %{$viral_lineage_hits->{$bl}->{$lineage}}) {
+		    $self->log_event("Failed to find detailed info for $read_name") unless
+			exists $detailed_read_info->{$read_name};
+		    $report_fh->print(map {$_."\n"} @{$detailed_read_info->{$read_name}});
+		}
+	    }
+	}
+	$report_fh->print("\n###########################################################\n\n");
     }
-
-    # get all the viral reads and put into output file:
-    # ViralReads_blastn.fa, ViralReads_tblastx.fa, ViralReads_all.fa
-    foreach my $lineage (keys %num_reads) 
-    {
-        foreach my $read (@{$lineage_blastn{$lineage}}) 
-        {
-	    print OUT2 ">$read\n";
-	    print OUT2 $seq{$read}, "\n";
-        }
-        foreach my $read (@{$lineage_tblastx_nt{$lineage}}) 
-        {
-	    print OUT2 ">$read\n";
-	    print OUT2 $seq{$read}, "\n";
-        }
-        foreach my $read (@{$lineage_tblastx_VG{$lineage}}) 
-        {
-	    print OUT2 ">$read\n";
-	    print OUT2 $seq{$read}, "\n";
-        }
-    }   	
-
-    # get all unassigned reads
-    foreach my $read (@unassigned_reads) 
-    {
-        print OUT3 ">$read\n";
-        print OUT3 $seq{$read}, "\n";
-    }	
-
-    $self->log_event("Assignment Reporting completed on $dir");
-
+    $report_fh->close;
+    #CREATE VIRAL READS FASTA AND UNASSIGNED READS FASTA
+    my $fasta_file = $self->dir.'/'.$lib_name.'.fa.cdhit_out.masked.goodSeq';
+    unless (-s $fasta_file) {
+	$self->log_event("Can not find file".basename($fasta_file));
+	return;
+    }
+    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $fasta_file);
+    #VIRAL READS OUT FILE
+    my $viral_fasta_out = $self->dir.'/'.$lib_name.'.ViralReads_all.fa';
+    my $v_out = Bio::SeqIO->new(-format => 'fasta', -file => ">$viral_fasta_out");
+    #UNASSIGNED READS OUT FILE
+    my $unassigned_out = $self->dir.'/'.$lib_name.'.unassigned.fa';
+    my $unas_out = Bio::SeqIO->new(-format => 'fasta', -file => ">$unassigned_out");
+    while (my $seq = $in->next_seq) {
+	my $read_name = $seq->primary_id;
+	if (grep (/^$read_name$/, @unassigned_reads)) {
+	    $unas_out->write_seq($seq);
+	}
+	if (exists $detailed_read_info->{$read_name}) {
+	    $v_out->write_seq($seq);
+	}
+    }
+    unless (-s $viral_fasta_out) {
+	$self->log_event("No viral reads found for $lib_name")
+    }
+    unless (-s $unassigned_out) {
+	$self->log_event("No unassigned reads found for $lib_name");
+    }
+    $self->log_event("Assignment Reporting completed for $lib_name");
     return 1;
 }
 
-sub collect_information 
-{
-    my ($self,$infile, $category_hash_ref, $viral_reads_hash_ref, $best_e_hash_ref, $lineage_hash_ref, $num_reads_hash_ref, $unassigned_reads_arr_ref) = @_;
-    
-    open (IN, $infile) or die "can not open file $infile!\n";
-    while (<IN>) {
-	if ($_ =~ /#/) { # skip comment line
-	    next;
+sub get_organisms_hit {
+    my $self = shift;
+    my $parse_file = shift;
+    my $org_hits = {};
+    my @valid_orgs = $self->_valid_organism_category();
+    my $fh = IO::File->new("< $parse_file") ||
+	die "Can not create file handle for $parse_file";
+    while (my $line = $fh->getline) {
+	next if $line =~ /#/ || $line =~ /^\s+$/ || $line =~ /^QueryName/;
+	my @tmp = split (/\t+/, $line);
+	#$tmp[0] = read name
+	#$tmp[2] = category, ie, organism
+	#$tmp[3] = organism lineage
+	#$tmp[5] = e-value
+	unless (grep (/^$tmp[2]$/i, @valid_orgs)) {
+	    $self->log_event("Invalid organism category: $line");
+	    return;
 	}
-	chomp;
-	my ($read_ID, $length, $category, $lineage, $hit_name, $e_value) = split("\t", $_);
-	switch ($category ) {
-	    case "Homo" { $category_hash_ref->{"Homo"}++ }
-	    case "Mus" { $category_hash_ref->{"Mus"}++ }
-	    case "Bacteria" { $category_hash_ref->{"Bacteria"}++	}
-	    case "Viruses" { $category_hash_ref->{"Viruses"}++ }
-	    case "Fungi" { $category_hash_ref->{"Fungi"}++ }
-	    case "unassigned" {$category_hash_ref->{"unassigned"}++}
-	    case "other" {$category_hash_ref->{"other"}++ }
-	    case "Phage" {$category_hash_ref->{"Phage"}++ }
+	$org_hits->{lc $tmp[2]}++;
+	if ($tmp[2] =~ /viruses/i) {
+	    #TRACK VIRUS HITS BY LINEAGE $tmp[3]
+	    $org_hits->{'virus_lineage'}->{$tmp[3]}->{$tmp[0]} = $tmp[5];
 	}
-	
-	if ($category eq "Viruses") {
-	    $viral_reads_hash_ref->{$read_ID} = 1;
-	    $best_e_hash_ref->{$read_ID} = $e_value;
-	    if (!(defined $lineage_hash_ref->{$lineage})) {
-		$lineage_hash_ref->{$lineage} = [$read_ID];
-	    }
-	    else {
-		push @{$lineage_hash_ref->{$lineage}}, $read_ID;
-	    }
-	    
-	    if (defined $num_reads_hash_ref->{$lineage}) {
-		$num_reads_hash_ref->{$lineage}++;
-	    }
-	    else {
-		$num_reads_hash_ref->{$lineage} = 1;
-	    }
-	}			
-	elsif ($category eq "unassigned") {
-	    push @{$unassigned_reads_arr_ref}, $read_ID;
+	#ARRAY OF UNASSIGNED READS
+	if ($tmp[2] =~ /unassigned/i) {
+	    push @{$org_hits->{'unassigned_reads'}}, $tmp[0];
 	}
     }
-    close IN;
+    $fh->close;
+    return $org_hits;
 }
 
-sub read_FASTA_data () 
-{
-    my ($self,$fastaFile) = @_;
-
-    #keep old read seperator and set new read seperator to ">"
-    my $oldseperator = $/;
-    $/ = ">";
-	 
-    my %fastaSeq;	 
-    open (FAfile, $fastaFile) or die "Can't Open FASTA file: $fastaFile";
-    while (my $line = <FAfile>){
-	# Discard blank lines
-        if ($line =~ /^\s*$/) {
-	    next;
-		}
-		# discard comment lines
-		elsif ($line =~ /^\s*#/) {
-	       next;
-	   }
-		# discard the first line which only has ">", keep the rest
-		elsif ($line ne ">") {
-		    chomp $line;
-		    my @rows = ();
-		    @rows = split (/\n/, $line);	
-		    my $temp = shift @rows;
-			my @temp = split(/\s+/, $temp);
-			my $name = shift @temp;
-		    my $Seq = join("", @rows);
-		    $Seq =~ s/\s//g; #remove white space
-		    $fastaSeq{$name} = $Seq;
-		}
-    }
-
-    #reset the read seperator
-    $/ = $oldseperator;
-    close FAfile;
-
-    return %fastaSeq;
+sub _valid_organism_category {
+    return qw/ Bacteria Fungi Homo Mus Phage Viruses other unassigned /;
 }
 
-sub get_viral_read_info {
-    my ($self,$report_file_ref, $report_type, $viral_reads_hash_ref, $best_e_hash_ref, $blast_readinfo_hash_ref) = @_;
-    my $report; # blast report object
-    foreach my $file (@{$report_file_ref}) {
-	$report = new Bio::SearchIO(-format => 'blast', -file => $file, -report_type => $report_type);
-	# Go through BLAST reports one by one        
-	while(my $result = $report->next_result) {# next query output
-	    my $read_ID = $result->query_name;
-	    if (defined $viral_reads_hash_ref->{$read_ID}) {
-		my $desc = "";
-		while (my $hit = $result->next_hit()) {
-		    if ($hit->significance() == $best_e_hash_ref->{$read_ID}) {
-			$desc .= $result->query_name()."\t";
-			$desc .= $result->query_length()."\t";
-			$desc .= $hit->name()."\t";
-			$desc .= $hit->length()."\t";
-			$desc .= $hit->description(60)."\t";
-			while (my $hsp = $hit->next_hsp()) {
-			    $desc .= $hsp->length('hit')."\t";
-			    my $percent_id = sprintf("%4.1f", $hsp->percent_identity());
-			    $desc .= $percent_id."\%\t[";
-			    $desc .= $hsp->start('hit')."\t";
-			    $desc .= $hsp->end('hit')."]\t";
-			    $desc .= $hsp->evalue()."\n";
-			    last;
-			}
-		    }
+sub _blasts_and_file_exts {
+    return {
+	'BN_HG' => {
+	    'name'    => 'BlastHumanGenomic',
+	    'engine'  => 'blastn',
+	    'dir_ext' => '.fa.cdhit_out.masked.goodSeq_HGblast',
+	},
+	'BN' => {
+	    'name'    => 'NTBlastN',
+	    'engine'  => 'blastn',
+	    'dir_ext' => '.HGfiltered_BLASTN',
+	},
+	'TBX_nt' => {
+	    'name'    => 'NTBlastX',
+	    'engine'  => 'tblastx',
+	    'dir_ext' => '.BNFiltered_TBLASTX_nt',
+	},
+	'TBX_VG' => {
+	    'name'    => 'ViralBlastX',
+	    'engine'  => 'tblastx',
+	    'dir_ext' => '.TBXNTFiltered_TBLASTX_ViralGenome',
+	},
+    };
+}
+
+sub _detailed_virus_info {
+    my $self = shift;
+    my $reads = shift;
+    my $blast_files = shift;
+    my $report_type = shift;
+    my $info = {};
+    foreach my $file (@$blast_files) {
+	my $report = Bio::SearchIO->new(-format => 'blast', -file => $file, -report_type => $report_type);
+	while (my $result = $report->next_result) {
+	    if (exists $reads->{$result->query_name}) {
+		my $desc;
+		while (my $hit = $result->next_hit) {
+		    next unless $hit->significance == $reads->{$result->query_name};
+		    $desc = $result->query_name."\t".$result->query_length."\t".
+			    $hit->name."\t".$hit->length."\t".$hit->description."\t";
+		    my $hsp = $hit->next_hsp;
+		    $desc .= $hsp->length('hit')."\t";
+		    $desc .= sprintf("%4.1f", $hsp->percent_identity)."\t";
+		    $desc .= $hsp->start('hit')."\t".$hsp->end('hit')."\t".$hsp->evalue;
+		    push @{$info->{$result->query_name}}, $desc;
+
 		}
-		$blast_readinfo_hash_ref->{$read_ID} = $desc;
 	    }
 	}
     }
+    return $info;
 }
+
 1;
 
