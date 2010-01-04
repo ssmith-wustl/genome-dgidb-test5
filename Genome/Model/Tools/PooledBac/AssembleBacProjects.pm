@@ -8,6 +8,7 @@ use Genome::Model::Tools::Pcap::Assemble;
 use Bio::SeqIO;
 use PP::LSF;
 use Data::Dumper;
+use File::Basename;
 class Genome::Model::Tools::PooledBac::AssembleBacProjects {
     is => 'Command',
     has => 
@@ -122,11 +123,16 @@ sub dump_sff_read_names
 
 sub get_3730_read_names
 {
-    my @lines = `sffinfo -s pooledreads.sff | grep '>'`; 
+    my ($self,$sff_array) = @_;
     my %sff_names;
-    foreach (@lines) { 
-        my ($name) =$_=~ />(\S+)\s+/;
-        $sff_names{$name} = 1;
+    foreach my $sff_file (@{$sff_array})
+    {
+        my @lines = `sffinfo -s $sff_file | grep '>'`; 
+
+        foreach (@lines) { 
+            my ($name) =$_=~ />(\S+)\s+/;
+            $sff_names{$name} = 1;
+        }
     }
     my @all_read_names = `cat read_names`;
     chomp @all_read_names;
@@ -137,16 +143,16 @@ sub get_3730_read_names
         {
             push @read_names_3730, $name;
         }    
-    }
+    }    
     return @read_names_3730;    
 }
 
 sub add_3730_reads
 {
-    my ($self) = @_;
+    my ($self,$sff_array) = @_;
     my $fh = IO::File->new(">3730_reads.fasta");
     my $qfh = IO::File->new(">3730_reads.fasta.qual");
-    my @read_names = $self->get_3730_read_names;
+    my @read_names = $self->get_3730_read_names($sff_array);
     my %read_names = map {$_, 1} @read_names;
     my $seqio = Bio::SeqIO->new(-format => 'fasta', -file => 'pooledreads.fasta');
     my $qualio = Bio::SeqIO->new(-format => 'qual', -file => 'pooledreads.fasta.qual');
@@ -184,8 +190,9 @@ sub execute {
     #my @sff_files = ('/gscmnt/232/finishing/projects/Fosmid_two_pooled_Combined/Fosmid_two_pooled70_combined_trim-1.0_090417.newb/Fosmid_two_pooled70_combined_Data/input_output_data/FSP3MSF01.sff',
     #                 '/gscmnt/232/finishing/projects/Fosmid_two_pooled_Combined/Fosmid_two_pooled70_combined_trim-1.0_090417.newb/Fosmid_two_pooled70_combined_Data/input_output_data/FSP3MSF02.sff');
     my $sff_string = $self->sff_files if(defined $self->sff_files && length $self->sff_files);
-    $sff_string =~ tr/,/ / if (defined $sff_string);
-    print "sff string is $sff_string\n" if defined $sff_string;
+    #$sff_string =~ tr/,/ / if (defined $sff_string);
+    my @sff_array = split (/,/,$sff_string);
+    print "sff array is:\n".(join "\n",@sff_array,"\n") if defined $sff_string;
 
     my $seqio = Bio::SeqIO->new(-format => 'fasta', -file => 'ref_seq.fasta');
     $self->error_message("Failed to open $project_dir/ref_seq.fasta") and die unless defined $seqio;
@@ -201,13 +208,21 @@ sub execute {
         `/bin/rm core*` if -e 'core';
         print "submitting job for clone ",$project_dir."$name","\n";
         my $run_newbler = $self->newbler_params || "mapasm runAssembly -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna";
+        my @sff_base_names;
         if(defined $sff_string)
         {
-            print "sff string is $sff_string\n";
             $self->dump_sff_read_names("pooledreads.fasta"); 
-            `sfffile -o pooledreads.sff -i read_names $sff_string`;
-            $self->add_3730_reads;
-            $run_newbler .= " -o $assembly_output_dir  3730_reads.fasta pooledreads.sff";
+            
+            foreach my $sff_name (@sff_array)
+            {
+                my $sff_base_name = fileparse($sff_name);
+                print "sfffile -o $sff_base_name -i read_names $sff_name\n";
+                `sfffile -o $sff_base_name -i read_names $sff_name`;
+                push @sff_base_names, $sff_base_name;
+            
+            }
+            $self->add_3730_reads(\@sff_base_names);
+            $run_newbler .= " -o $assembly_output_dir  3730_reads.fasta ".join(' ',@sff_base_names);
         }
         else
         {
@@ -233,7 +248,7 @@ sub execute {
         my $job = {params => \%job_params, job => PP::LSF->create(%job_params), try => 0, dir => "$project_dir/$name"};
         $self->error_message("Can't create job: $!")
             and return unless $job->{job};
-        push @jobs, $job;            
+        push @jobs, $job;
         chdir($project_dir);
     }
     foreach(@jobs)
