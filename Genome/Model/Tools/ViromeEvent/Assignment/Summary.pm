@@ -6,7 +6,11 @@ use warnings;
 
 use Genome;
 use Workflow;
+use Bio::SeqIO;
 use IO::File;
+use File::Basename;
+use Data::Dumper;
+
 
 class Genome::Model::Tools::ViromeEvent::Assignment::Summary{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -44,378 +48,201 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     return $self;
-
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    my $dir = $self->dir;
+    my $lib_name = basename($self->dir);
+    $self->log_event("Assignment Summary starting on $lib_name");
+    #ASSIGNMENT SUMMARY FILE
+    my $assignment_sum_file = $self->dir.'/'.$lib_name.'.AssignmentSummary';
+    my $asum_fh = IO::File->new("> $assignment_sum_file") || die
+	"Can not create file handle for $assignment_sum_file";
+    #GET READ COUNTS FROM BLAST IN/OUT FA FILES
+    unless ($self->_print_seq_count_summary($asum_fh)) {
+	$self->log_event("Failed to print seq count summary");
+	return;
+    }
+    #GATHER LINEAGE AND RESULT METRICS FOR VIRAL HIT SEQS
+    my $read_infos;
+    unless ($read_infos = $self->_parse_assignment_report_file($asum_fh)) {
+	$self->log_event("Failed to parse assignment report file");
+	return;
+    }
+    $asum_fh->close;
+    #GET DETAILED INFO ABOUT INTERESTING READS (VIRAL HIT READS)
+    my $interesting_reads_file = $self->dir.'/'.$lib_name.'.InterestingReads';
+    my $orig_fasta_file = $self->dir.'/'.$lib_name.'.fa';
+    my $ir_fh = IO::File->new("> $interesting_reads_file") ||
+	die "Can not create file handle for $interesting_reads_file";
+    unless ($self->_parse_interesting_reads_file($ir_fh, $read_infos)) {
+	$self->log_event("Failed to parse interesting reads files");
+	return;
+    }
+    $ir_fh->close;
+    $self->log_event("Assignment Summary completed for $lib_name");
+    return 1;
+}
 
-    $self->log_event("Assignment Summary begun on $dir");
-
-    # cutoff for sequences to be interesting
-    my $percentID_cutoff = 100;
-
-    my @temp = split("\/", $dir);
-    my $lib_name = pop @temp;
-
-    my $out = $dir."/".$lib_name.".AssignmentSummary";
-    open (OUT, ">$out") or die "can not open file $out!\n";
-    my $out2 = $dir."/".$lib_name.".InterestingReads";
-    open (OUT2, ">$out2") or die "can not open file $out2!\n";
-
-    my $seq_file = $dir."/".$lib_name.".fa";
-    my %sequences = $self->read_FASTA_data($seq_file); # read_ID => sequence
-
-    my %ID_low = ();  # lineage => lowest percent identity to hits
-    my %ID_high = (); # lineage => highest percent identity to hits
-
-    my $C = "##############################################\n\n";
-
-    print OUT "$dir\n\n";
-    # get sequence statistics
-    my @nums = $self->get_SequenceInfo_OneSample($dir);
-    print OUT "#total\tuniq\t\%\tFiltered\ttotal\%\tgood\ttotal\%\tBNHG\ttotal\%\tBNNT\ttotal\%\tTBXNT\ttotal\%\tTBXVG\ttotal\%\n";
-
-    printf OUT ("%d\t%d\t%5.1f\t%d\t%5.1f\t%d\t%5.1f\t%d\t%5.1f\t%d\t%5.1f\t%d\t%5.1f\t%d\t%5.1f\n", $nums[0], $nums[1], $nums[1]*100/$nums[0], $nums[2], $nums[2]*100/$nums[0], $nums[3], $nums[3]*100/$nums[0], $nums[4], $nums[4]*100/$nums[0], $nums[5], $nums[5]*100/$nums[0], $nums[6], $nums[6]*100/$nums[0], $nums[7], $nums[7]*100/$nums[0]);
-    print OUT "\n\n";
-
-    my $oldSeperator = $/;
-    $/ = "###########\n";
-    my $AssignmentReport_file = $dir."/".$lib_name.".AssignmentReport";
-    if (-e $AssignmentReport_file) 
-    {
-        if (-s $AssignmentReport_file > 0) 
-        {
-	    open (IN, $AssignmentReport_file) or die "can not open file $AssignmentReport_file!\n";
-    	    my $line = <IN>;
-	    $line =~ s/#//g;
-	    my @temps = split("\n", $line);
-	    shift @temps;
-	    foreach my $temp (@temps) 
-            {
-	        print OUT $temp, "\n";
+sub _parse_interesting_reads_file {
+    my $self = shift;
+    my $fh = shift;
+    my $read_infos = shift;
+    my $lib_name = basename($self->dir);
+    my $percent_id_cutoff = 100; #SO REALLY PRINTING EVERYTHING
+    my $orig_fasta_file = $self->dir.'/'.$lib_name.'.fa';
+    foreach my $lineage (sort keys %$read_infos) {
+	my $reads = {};
+	$fh->print("$lineage\ttotal number of reads ".
+		      $read_infos->{$lineage}->{'read_count'}."\t".
+		      '['.$read_infos->{$lineage}->{'low_id'}.', '.
+		      $read_infos->{$lineage}->{'high_id'}.']%'."\n\n");
+	delete $read_infos->{$lineage}->{'read_count'};
+	delete $read_infos->{$lineage}->{'low_id'};
+	delete $read_infos->{$lineage}->{'high_id'};
+	foreach my $read_name (keys %{$read_infos->{$lineage}}) {
+	    $reads->{$read_name} = 1;
+	    foreach (@{$read_infos->{$lineage}->{$read_name}}) {
+		$fh->print($_."\n");
 	    }
-	    print OUT "\n\n";
-	
-	    while (<IN>) 
-            {
-	        if ($_ =~ /^\s*$/) 
-                { # skip blank line
-		    next;
-	        }
-	    
-	        my @lines = split("\n", $_);
-	        my $lineage = shift @lines;
-	        $lineage = shift @lines;
-	        my $high = 0;
-	        my $low = 100;
-	        my %readID_Identity = (); # readID => percent ID
-	        my %readID_desc = (); # readID => description of the read
-	        foreach my $l (@lines) 
-                {
-
-		    if ($l =~ /^\s*$/) { next; }
-		    elsif ($l =~ /QueryName/) { next; }
-		    elsif ($l =~ /reads from/) { next; }
-		    elsif ($l =~ /#+/) { next; }
-		    my ($read_ID, $Qlength, $hitName, $hitLen, $hitDesc, $alnLen, $ID, $hitS, $hitE, $e) = split("\t", $l);
-
-		    #TURNING ON WARNINGS CAUSES ERROR HERE .. COMPARING ##% TO ## BUT IT STILL DOES THE RIGHT THING
-
-		    #TO SHUT OFF SOME WORNINGS .. SHOULD BE OK TO DO THIS .. BUT
-		    my $ID_num = $ID;
-		    $ID_num =~ s/\%//;
-
-		    if($ID_num > $high) { $high = $ID_num;}
-		    if($ID_num < $low) { $low = $ID_num;}
- 		    if (defined ($readID_Identity{$read_ID})) {
-		        my $ID_2_num = $readID_Identity{$read_ID};
-		        $ID_2_num =~ s/\%//;
-		        if ($ID_num > $ID_2_num) {
- 			    $readID_Identity{$read_ID} = $ID;
- 			    $readID_desc{$read_ID} = $l;	
- 		        }
- 		    }
- 		    else 
-                    {
- 		        $readID_Identity{$read_ID} = $ID;	
- 		        $readID_desc{$read_ID} = $l;
- 		    }
-
-	        }
-	        $ID_low{$lineage} = $low;
-	        $ID_high{$lineage} = $high;
-
-	        # only print out things that looks interesting
-	        if ($low < $percentID_cutoff) 
-                { 
-		    print OUT2 $lineage, "\t[$low, $high]\n\n";
-		    foreach my $key (sort {$readID_Identity{$a} <=> $readID_Identity{$b}} keys %readID_Identity) 
-                    {
-		        print OUT2  $readID_desc{$key}, "\n";
-		    }
-		    print OUT2 "\n";
-		    foreach my $key (sort {$readID_Identity{$a} <=> $readID_Identity{$b}} keys %readID_Identity) 
-                    {
-		        print OUT2 ">$key\n";
-		        print OUT2 "$sequences{$key}\n\n";
-		    }
-	        }
+	}
+	$fh->print("\n");
+	my $io = Bio::SeqIO->new(-format => 'fasta', -file => $orig_fasta_file);
+	while (my $seq = $io->next_seq) {
+	    if (exists $reads->{$seq->primary_id}) {
+		$fh->print('>'.$seq->primary_id."\n".$seq->seq."\n\n");
 	    }
-	    close IN;
-        }
-        else 
-        {
-	    print OUT "$AssignmentReport_file does not have content!\n";
-	    exit;
-        }
+	}
     }
-    else 
-    {
-	print OUT  "$AssignmentReport_file does not exist!\n";
-	exit;
-    }
-
-    foreach my $key (sort {$ID_low{$a} <=> $ID_low{$b}} keys %ID_low) 
-    {
-	printf OUT  ("%s\t[%4.1f, %4.1f]%\n", $key, $ID_low{$key}, $ID_high{$key});
-    }
-    close OUT;
-    close OUT2;
-
-    # remove all .job files 
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    foreach my $file (readdir DH) 
-    { 
-	if ($file =~ /\.job$/) 
-        {
-		my $tempfile = $dir."/".$file;
-		my $com = "unlink $tempfile";
-		system ( $com );
-	}
-	# .job files in RepeatMasker directory
-	if ($file =~ /cdhit_out_RepeatMasker$/) {
-		my $tempDir = $dir."/".$file;
-		opendir(TDH, $tempDir) or die "Can not open dir $tempDir!\n";
-		foreach my $file2 (readdir TDH) {
-			if ($file2 =~ /\.job$/) {
-				my $tempfile = $tempDir."/".$file2;
-				my $com = "unlink $tempfile";
-				system ( $com );
-			}
-		}
-	}
-	closedir TDH;
-
-	# .job files in HGblast directory
-	if ($file =~ /goodSeq_HGblast$/) {
-		my $tempDir = $dir."/".$file;
-		opendir(TDH, $tempDir) or die "Can not open dir $tempDir!\n";
-		foreach my $file2 (readdir TDH) {
-			if ($file2 =~ /\.job$/) {
-				my $tempfile = $tempDir."/".$file2;
-				my $com = "unlink $tempfile";
-				system ( $com );
-			}
-		}
-	}
-	closedir TDH;
-
-	# .job files in BLASTN directory
-	if ($file =~ /HGfiltered_BLASTN$/) {
-		my $tempDir = $dir."/".$file;
-		opendir(TDH, $tempDir) or die "Can not open dir $tempDir!\n";
-		foreach my $file2 (readdir TDH) {
-			if ($file2 =~ /\.job$/) {
-				my $tempfile = $tempDir."/".$file2;
-				my $com = "unlink $tempfile";
-				system ( $com );
-			}
-		}
-	}
-	closedir TDH;
-
-	# .job files in TBLASTX directory
-	if ($file =~ /BNFiltered_TBLASTX_nt$/) {
-		my $tempDir = $dir."/".$file;
-		opendir(TDH, $tempDir) or die "Can not open dir $tempDir!\n";
-		foreach my $file2 (readdir TDH) {
-			if ($file2 =~ /\.job$/) {
-				my $tempfile = $tempDir."/".$file2;
-				my $com = "unlink $tempfile";
-				system ( $com );
-			}
-		}
-	}
-	closedir TDH;
-
-	# .job files in TBLASTX ViralGenome directory
-	if ($file =~ /TBXNTFiltered_TBLASTX_ViralGenome$/) {
-		my $tempDir = $dir."/".$file;
-		opendir(TDH, $tempDir) or die "Can not open dir $tempDir!\n";
-		foreach my $file2 (readdir TDH) {
-			if ($file2 =~ /\.job$/) {
-				my $tempfile = $tempDir."/".$file2;
-				my $com = "unlink $tempfile";
-				system ( $com );
-			}
-		}
-	}
-	closedir TDH;
-
-    }
-    closedir DH;
-
-    $self->log_event("Assignment Summary completed $dir");
 
     return 1;
 }
 
-sub read_FASTA_data () 
-{
-    my ($self,$fastaFile) = @_;
+sub _print_seq_count_summary {
+    my $self = shift;
+    my $fh = shift;
+    #PRINT HEADER FOR THE TABLE
+    $fh->print($self->dir."\n\n");
+    $fh->printf("%-9s", '#total');
+    foreach (qw/ uniq % Filtered total% good total% BNHG total% BNNT total% TBXNT total% TBXVG total% /) {
+	$fh->printf("%-9s", $_);
+    }
+    $fh->print("\n");
+    my @counts = $self->_get_read_counts_from_fastas();
 
-    #keep old read seperator and set new read seperator to ">"
-    my $oldseperator = $/;
-    $/ = ">";
-	 
-    my %fastaSeq;	 
-    open (FastaFile, $fastaFile) or die "Can't Open FASTA file: $fastaFile";
+    $fh->printf("%-9.0f", $counts[0]); #$counts[0] = total seq count
+    $fh->printf("%-9.0f", $counts[1]); #$counts[1] = cd-hit filtered seqs
+    $fh->printf("%-9.1f", $counts[1] * 100 / $counts[0]);
+    $fh->printf("%-9.0f", $counts[2]); #$counts[2] = cd-hit filtered bad seqs
+    $fh->printf("%-9.1f", $counts[2] * 100 / $counts[0]);
+    $fh->printf("%-9.0f", $counts[3]); #$counts[3] = cd-hit filtered good seqs
+    $fh->printf("%-9.1f", $counts[3] * 100 / $counts[0]);
+    $fh->printf("%-9.0f", $counts[3] - $counts[4]); #$counts[4] = HG filtered seqs
+    $fh->printf("%-9.1f", ($counts[3] - $counts[4]) * 100 / $counts[0]);
+    $fh->printf("%-9.0f", $counts[4] - $counts[5]); #$counts[5] = NT blastN filtered seqs
+    $fh->printf("%-9.1f", ($counts[4] - $counts[5]) * 100 / $counts[0]);
+    $fh->printf("%-9.0f", $counts[5] - $counts[6]); #$counts[6] = NT blastX filtered seqs
+    $fh->printf("%-9.1f", ($counts[5] - $counts[6]) * 100 / $counts[0]);
+    $fh->printf("%-9.0f", $counts[6] - $counts[7]); #$counts[7] = Viral blastX filtered seqs
+    $fh->printf("%-9.1f", ($counts[6] - $counts[7]) * 100 / $counts[0]);
+    $fh->print("\n\n\n");
 
-    while (my $line = <FastaFile>){
-		# Discard blank lines
-        if ($line =~ /^\s*$/) {
-			next;
-		}
-		# discard comment lines
-		elsif ($line =~ /^\s*#/) {
-	       next;
-		}
-		# discard the first line which only has ">", keep the rest
-		elsif ($line ne ">") {
-		    chomp $line;
-		    my @rows = ();
-		    @rows = split (/\n/m, $line);	
-		    my $temp = shift @rows;
-			my @temp_arr = split(/\s/, $temp);
-			my $contigName = shift @temp_arr;
-		    my $contigSeq = join("", @rows);
-		    $contigSeq =~ s/\s//g; #remove white space
-		    $fastaSeq{$contigName} = $contigSeq;
-		}
+    return 1;
+}
+
+sub _parse_assignment_report_file {
+    my $self = shift;
+    my $fh = shift;
+    my $lib_name = basename($self->dir);
+    my $assignment_report_file = $self->dir.'/'.$lib_name.'.AssignmentReport';
+    unless (-s $assignment_report_file) {
+	$self->log_event("Failed to find ".basename($assignment_report_file));
+	return;
+    }
+    my $report_fh = IO::File->new("< $assignment_report_file") ||
+	die "Can not create file handle for $assignment_report_file";
+    my @table_row_names = qw/ category Bacteria Fungi Homo Mus Phage Viruses other unassigned /;
+    my $read_infos = {};  my $lineage;
+    while (my $line = $report_fh->getline) {
+	#PRINT THE TABLE
+	if ($line =~ /^\s+(\S+)\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+$/) {
+	    if (grep (/^$1$/, @table_row_names)) {
+		$fh->print($line);
+	    }
+	}
+	#CREATE A HASH OF VIRUS LINEAGE INFO => [READ INFO LINES]
+	if ($line =~ /\s+total\s+number\s+of\s+reads\s+\d+$/) {
+	    chomp $line;
+	    $lineage = $line;
+	    $lineage =~ s/\s+total.*$//;
+	}
+	if ($line =~ /^\S+\s+\d+\s+(\S+)\s+\d+\s+/) {
+	    chomp $line;
+	    if ($1 =~ /^gi/) {
+		my ($read_name) = $line =~ /^(\S+)\s+/;
+		push @{$read_infos->{$lineage}->{$read_name}}, $line;
+	    }
+	}
+    }
+    $report_fh->close;
+    $fh->print("\n\n");
+
+    #FIGURING OUT THE LONGEST WORDED LINEAGE FOR PRINT ALIGNMENT PURPOSES
+    my $string_length = 0;
+    foreach my $lineage (keys %$read_infos) {
+	$string_length = (length $lineage > $string_length) ? length $lineage : $string_length;
+    }
+    #PRINT LINEAGE, NUMBER OF READS [LOW_ID, HIGH_ID]%
+    $fh->printf("%-".$string_length."s", '#LINEAGE_NAME'); #PRINT HEADER
+    $fh->print("\tREAD_COUNT\t\t\tID Low, High\n");
+    foreach my $lineage (sort keys %$read_infos) {
+	my $high_id = 0;  my $low_id = 101;  my $read_count = 0;
+	foreach my $read_name (keys %{$read_infos->{$lineage}}) {
+	    $read_count++;
+	    foreach my $read_info_line (@{$read_infos->{$lineage}->{$read_name}}) {
+		my @tmp = split (/\t+/, $read_info_line);
+		my $read_id = $tmp[0];    #READ NAME
+		my $percent_id = $tmp[6]; #PERCENT MATCH
+		$high_id = ($percent_id > $high_id) ? $percent_id : $high_id;
+		$low_id = ($percent_id < $low_id) ? $percent_id : $low_id;
+	    }
+	}
+	#print $read_count.' '.$low_id.' '.$high_id."\n";
+	$fh->printf("%-".$string_length."s", $lineage);
+	$fh->print("\ttotal number of reads: $read_count\t".'['.$low_id.', '.$high_id.']%'."\n");
+	$read_infos->{$lineage}->{'low_id'} = $low_id;
+	$read_infos->{$lineage}->{'high_id'} = $high_id;
+	$read_infos->{$lineage}->{'read_count'} = $read_count;
     }
 
-    #reset the read seperator
-    $/ = $oldseperator;
-    
-    return %fastaSeq;
+    return $read_infos;
 }
 
-sub get_SequenceInfo_OneSample 
-{
-	my ($self, $dir ) = @_;
-
-	my $total_seq = 0;
-	my $unique_seq = 0;
-	my $good_seq = 0;
-	my $filtered_seq = 0;	
-	my $blast_HG_assigned = 0;
-	my $blastn_assigned = 0;
-	my $tblastx_nt_assigned = 0;
-	my $tblastx_VG_assigned = 0;
-
-	# get directory path
-	my @fields = split(/\//, $dir);
-	my $libName = $fields[$#fields];
-
-	# get total number of sequences in the sample
-	my $tempF = $dir."/".$libName.".fa";
-	$total_seq = $self->count_num_of_seq($tempF);
-
-	# get number of unique sequence in the sample 
-	$tempF = $dir."/".$libName.".fa.cdhit_out";
-	if (-e $tempF) {
-		$unique_seq = $self->count_num_of_seq($tempF);
-	}		
-	
-	# get number of Filtered and good sequences 
-	$tempF = $dir."/".$libName.".fa.cdhit_out.masked.badSeq";
-	if (-e $tempF) {
-		open (IN, $tempF) or die "can not open file $tempF!\n";
-	}	
-	while (<IN>) {
-		if ($_ =~ /good seq = (\d+) % = (0\.\d+)/) {
-			$good_seq = $1;
-		}
-		if ($_ =~ /bad seq = (\d+) % = (0\.\d+)/) {
-			$filtered_seq = $1;
-		}
-	}
-
-	# get number of sequences assigned by BLAST HumanGenome  
-	my $HGfiltered = 0;
-	$tempF = $dir."/".$libName.".HGfiltered.fa";
-	if (-e $tempF) {
-		$HGfiltered = $self->count_num_of_seq($tempF);
+sub _get_read_counts_from_fastas {
+    my $self = shift;
+    my $lib_name = basename($self->dir);
+    my @read_counts;
+    #LIST OF FASTA FILE EXTENSIONS
+    my @file_extensions = qw/ fa fa.cdhit_out fa.cdhit_out.masked.badSeq fa.cdhit_out.masked.goodSeq
+                              HGfiltered.fa BNFiltered.fa TBXNTFiltered.fa unassigned.fa /;
+    foreach my $ext (@file_extensions) {
+	my $fasta_file = $self->dir.'/'.$lib_name.'.'.$ext;
+	my $read_count = 0;
+	if (-s $fasta_file) {
+	    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $fasta_file);
+	    while (my $seq = $io->next_seq) {
+		$read_count++;
+	    }
 	}
 	else {
-		$HGfiltered = 0;
+	    #NOT SURE IF ALL OF THESE FILES SHOULD BE THERE
+	    #SOME COULD BE ZERO IN SIZE
+	    $self->log_event("Can not open or file is zero size: ".basename($fasta_file));
 	}
-	$blast_HG_assigned = $good_seq - $HGfiltered;
-
-	# get number of sequences assigned by BLASTN  
-	my $BNFiltered = 0;
-	$tempF = $dir."/".$libName.".BNFiltered.fa";
-	if (-e $tempF) {
-		$BNFiltered = $self->count_num_of_seq($tempF);
-	}
-	else {
-		$BNFiltered = 0;
-	}
-
-	$blastn_assigned = $HGfiltered - $BNFiltered;
-
-	# get number of sequences assigned by TBLASTX nt  
-	my $TBXNTfiltered = 0;
-	$tempF = $dir."/".$libName.".TBXNTFiltered.fa";
-	if (-e $tempF) {
-		$TBXNTfiltered = $self->count_num_of_seq($tempF);
-	}
-	else {
-		$TBXNTfiltered = 0;
-	}
-	$tblastx_nt_assigned = $BNFiltered - $TBXNTfiltered;
-
-	# get number of sequences assigned by TBLASTX ViralGenome  
-	my $unassigned_num = 0;
-	$tempF = $dir."/".$libName.".unassigned.fa";
-	if (-e $tempF) {
-		$unassigned_num = $self->count_num_of_seq($tempF);
-	}
-	else {
-		$unassigned_num = 0;
-	}
-	$tblastx_VG_assigned = $TBXNTfiltered - $unassigned_num;
-
-
-	return ($total_seq, $unique_seq,  $filtered_seq, $good_seq, $blast_HG_assigned, $blastn_assigned, $tblastx_nt_assigned, $tblastx_VG_assigned);
+	push @read_counts, $read_count;
+    }
+    return @read_counts;
 }
 
-sub count_num_of_seq () {
-	my ($self,$fastaFile) = @_;
-	my $count = 0;
-	
-    open (FastaFile, $fastaFile) or die "Can't Open FASTA file: $fastaFile";
-    while (my $line = <FastaFile>){
-		if ($line =~ ">") {
-			$count++;
-		}
-	}
-	close FastaFile;
-
-	return $count;
-}
 1;
 
