@@ -18,19 +18,19 @@ use_ok('Genome::Model::Tools::BioSamtools');
 use_ok('Genome::Model::Tools::BioSamtools::RefCov');
 use_ok('Genome::Model::Tools::BioSamtools::ParallelRefCov');
 
-my $tmp_dir = File::Temp::tempdir('BioSamtools-RefCov-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('BioSamtools-RefCov-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 0);
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/RefCov';
 
 my $bam_file = $data_dir .'/test.bam';
-my $regions_file = $data_dir .'/test_regions.tsv';
-my $expected_stats_file = $data_dir .'/test_test_regions_STATS.tsv';
+my $bed_file = $data_dir .'/test_regions.bed';
+my $expected_stats_file = $data_dir .'/test_test_regions_STATS-2.tsv';
 
 my $ref_cov = Genome::Model::Tools::BioSamtools::ParallelRefCov->create(
     output_directory => $tmp_dir,
     bam_file => $bam_file,
-    regions_file => $regions_file,
-    regions => 100,
+    bed_file => $bed_file,
+    regions => 5,
 );
 isa_ok($ref_cov,'Genome::Model::Tools::BioSamtools::ParallelRefCov');
 ok($ref_cov->execute,'execute RefCov command '. $ref_cov->command_name);

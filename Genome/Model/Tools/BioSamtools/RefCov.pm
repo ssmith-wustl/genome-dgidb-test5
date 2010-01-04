@@ -9,7 +9,7 @@ class Genome::Model::Tools::BioSamtools::RefCov {
     is => ['Genome::Model::Tools::BioSamtools'],
     has_input => [
         bam_file => { },
-        regions_file => { },
+        bed_file => { },
         output_directory => { },
     ],
     has_output => [
@@ -36,17 +36,15 @@ sub execute {
         Genome::Utility::FileSystem->create_directory($self->output_directory);
     }
     unless ($self->stats_file) {
-        my ($bam_basename,$bam_dirname,$bam_suffix) = File::Basename::fileparse($self->bam_file,qw/bam/);
-        $bam_basename =~ s/\.$//;
+        my ($bam_basename,$bam_dirname,$bam_suffix) = File::Basename::fileparse($self->bam_file,qw/.bam/);
 
-        my ($regions_basename,$regions_dirname,$regions_suffix) = File::Basename::fileparse($self->regions_file,qw/tsv/);
-        $regions_basename =~ s/\.$//;
+        my ($regions_basename,$regions_dirname,$regions_suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
         $self->stats_file($self->output_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
     }
-    my $cmd = $self->execute_path .'/refcov-64.pl '. $self->bam_file .' '. $self->regions_file .' '. $self->stats_file;
+    my $cmd = $self->execute_path .'/bed_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file;
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
-        input_files => [$self->bam_file,$self->regions_file],
+        input_files => [$self->bam_file,$self->bed_file],
         output_files => [$self->stats_file],
     );
     return 1;
