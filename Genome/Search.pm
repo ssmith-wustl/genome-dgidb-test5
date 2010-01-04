@@ -72,6 +72,15 @@ sub delete {
     }
 }
 
+sub clear {
+    my $class = shift;
+    
+    my $self = $class->_singleton_object;
+    
+    $self->_solr_server->delete_by_query('*:*'); #Optimized by solr for fast index clearing
+    $self->_solr_server->optimize();
+}
+
 sub get_document {
     my $class = shift;
     
@@ -163,6 +172,10 @@ An alias for add. Solr's add method automatically overwrites any existing entry 
 =item delete
 
 Removes one or more objects from the Solr index.
+
+=item clear
+
+Removes all objects from the Solr index.
 
 =item is_indexable
 
