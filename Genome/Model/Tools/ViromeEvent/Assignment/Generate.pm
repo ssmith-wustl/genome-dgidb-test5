@@ -8,7 +8,10 @@ use Genome;
 use Workflow;
 use IO::File;
 use Switch;
+use IO::File;
+use File::Basename;
 use Bio::SearchIO;
+use Data::Dumper;
 
 class Genome::Model::Tools::ViromeEvent::Assignment::Generate{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -35,365 +38,249 @@ sub create {
 
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
-    my $dir = $self->dir;
-
-    $self->log_event("Assignment Generate begun on $dir");
-
-    my @temp = split("/", $dir);
-    my $run_name = pop @temp;
-    my $outFile = $dir."/Analysis_Report_".$run_name;
-    open (OUT, ">$outFile") or die "can not open file $outFile!\n";
-
-    my $c = "**********************************************************************************************";
-
-    print OUT "How to read this file:\n";
-    print OUT "For the summary section:\n";
-    print OUT "column 1: sample number and name\n";
-    print OUT "column 2: sample description\n";
-    print OUT "column 3: total number of sequences obtained for this sample\n\n";
-
-    print OUT "If there is any viral sequence identified in this sample, it will show up under the information \n";
-    print OUT "of this sample. There are 3 columns to describe the viral reads identified in this sample:\n";
-    print OUT "column 1: number of viral reads\n";
-    print OUT "column 2: range of percentage identity to blast hits. Some times one sequence can hit multiple \n";
-    print OUT "sequence in the nt database and gives a range of percent identity.\n";
-    print OUT "column 3: name of the virus\n\n";
- 
-    print OUT "For the sequence report section:\n";
-    print OUT "column 1: sample number and name\n";
-    print OUT "column 2: total number of reads obtained for this sample\n";
-    print OUT "column 3: number of unique reads after removing redundancy\n";
-    print OUT "column 4: percentage of unique reads (unique reads divided by total number of reads)\n";
-    print OUT "column 5: number of Filtered reads (after repeat masking, reads does not have at least 50bp \n";
-    print OUT "consecutive sequence without N)\n";
-    print OUT "column 6: percentage of Filtered reads (Filtered reads divided by total number of reads)\n";
-    print OUT "column 7: number of good reads\n";
-    print OUT "column 8: percentage of good reads\n";
-    print OUT "column 9: number of reads assigned by blastn (BNassign)\n";
-    print OUT "column 10: percentage of reads assigned by blastn\n";
-    print OUT "column 11: number of reads goes to TBLASTX\n";
-    print OUT "column 12: percentage of sequences goes to TBLASTX\n\n";
- 
-    print OUT "For the Assignment in each sample section:\n";
-    print OUT "Describes the number of sequences assigned to each category.\n\n";
-
-    print OUT "If there is a Interesting read section, following are the description of the fields:\n";
-    print OUT "Sample number and name\n";
-    print OUT "Viral lineage\n";
-    print OUT "Description of the reads and the top hit (the fields are: QueryName, Querylength, HitName, HitLen, \n";
-    print OUT "HitDesc, Alignment Length, percent Identity, HitStart, HitEnd, e value)\n";
-    print OUT "Sequence of the reads\n\n";
-
-    print OUT "*The criteria for a viral lineage to appear in the \"Interesting Read\" section is the lowest \n";
-    print OUT "percent identity is below 90% (Anellovirus is excluded).\n\n";
-    print OUT $c, "\n\n";
-
-    print OUT "Summary:\n\n";
-    $self->generate_SampleDescription( $dir );
-    print OUT "End of Summary\n\n";
-    print OUT $c ;
-
-    print OUT "\n\nSequence Report\n\n";
-    $self->generate_SequenceReport( $dir );
-    print OUT "End of Sequence Report\n\n";
-    print OUT $c ;
-
-    print OUT "\n\nAssignment in each sample:\n\n";
-    $self->generate_AssignmentSummary( $dir );
-    print OUT "End of Assignment\n\n";
-    print OUT $c ;
-
-    print OUT "\n\nInteresting Reads\n\n";
-    $self->generate_InterestingReads( $dir );
-    print OUT "End of Interesting Reads\n\n";
-
-    $self->log_event("Assignment Generate completed on $dir");
-
+    $self->log_event("Starting generate assignments");
+    my $report_file = $self->dir.'/Analysis_Report_'.basename($self->dir);
+    my $report_fh = IO::File->new("> $report_file") ||
+	die "Can not create file handle for $report_file";
+    my $sep = "***************************************************************************************\n\n";
+    unless ($self->_print_intro($report_fh)) {
+	$self->log_event("Failed to print introduction");
+	return;
+    }
+    $report_fh->print($sep);
+    unless ($self->_generate_sample_description($report_fh)) {
+	$self->log_event("Failed to generate simple description");
+	return;
+    }
+    $report_fh->print($sep);
+    unless ($self->_generate_sequence_report($report_fh)) {
+	$self->log_event("Failed generate sequence report");
+	return;
+    }
+    $report_fh->print($sep);
+    unless ($self->_generate_assignment_summary($report_fh)){
+	$self->log_event("Failed to generate assignment summary");
+	return;
+    }
+    $report_fh->print($sep);
+    unless ($self->_report_interesting_reads($report_fh)) {
+	$self->log_event("Failed to generate interesting reads report");
+	return;
+    }
+    $report_fh->close;
     return 1;
 }
 
-sub generate_SampleDescription {
-    my ($self,$dir) = @_;
-   
-    $self->log_event("generate_SampleDescription entered with $dir"); 
-    # sample name => num of total sequence in the sample
-    my %total_seq = ();
-
-    print OUT $dir,"\n";
-    printf OUT "%20s\t", " ";
-    printf OUT  "%5s\t%15s\t%40s\n", "ViralRead", "PercentIDrange", "IdentifiedVirus";
-
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    my @files = readdir DH;
-    foreach my $name (sort @files) {
-	# name is either file name or sample name (directory)
-	if (($name =~ /^S\d+/)||($name =~ "undecodable")) {
-
-	    my $full_path = $dir."/".$name;
-	    if (-d $full_path) { # is a directory, sample directory
-		my @t = split("_", $name);
-		my $s_number = $t[0];
-		$s_number =~ s/S//;
-
-		# enter sample directory
-		opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-		my @files_sampleDir = readdir SubDH;
-		
-		# get total number of sequences in the sample
-		my $tempF = $full_path."/".$name.".fa";
-		$total_seq{$name} = $self->count_num_of_seq($tempF);
-		
-		printf OUT "%30s\t%8d\n", $name,  $total_seq{$name};
-		
-		foreach my $file (@files_sampleDir) { 
-		    if ($file =~ /AssignmentSummary$/) {
-			my $file_name = $full_path."/".$file;
-			open (IN, $file_name) or die "can not open file $file_name!\n";
-			foreach (1..17) {
-			    <IN>;
-			}
-			while (<IN>) {
-			    if ($_ =~ /^\s*$/) { # empty line
-				next;
-			    }
-			    else {
-				my $number_reads = 0;
-				my $range = "";
-				my @temp = split(";", $_);
-				my $info = pop @temp;
-				my $virus = pop @temp;
-				if ($info =~ /\ttotal number of reads: (\d+)\t(.*)/) {
-				    $number_reads = $1;
-				    $range = $2;
-				}	
-				printf OUT "%20s\t", " ";
-				printf OUT "%5d\t%20s\t%40s\n", $number_reads, $range, $virus;
-			    }
-			}
-		    } # finish
-		}
-	    }
+sub _report_interesting_reads {
+    my $self = shift;
+    my $fh = shift;
+    $fh->print("Interesting Reads\n\n");
+    foreach my $dir_name($self->_get_sample_dir_names()) {
+	my $file = $self->dir.'/'.$dir_name.'/'.$dir_name.'.InterestingReads';
+	unless (-s $file) {
+	    $self->log_event("Missing or blank interesting reads file ".basename($file));
+	    next;
 	}
+	my $reads_fh = IO::File->new("< $file") ||
+	    die "Can not create file handle for $file";
+	$fh->print($dir_name."\n\n");
+	while (my $line = $reads_fh->getline) {
+	    $fh->print($line);
+	}
+	$fh->print("###############################################################\n\n");
+	$reads_fh->close;
     }
-    $self->log_event("generate_SampleDescription completed"); 
+    $fh->print("End of Interesting Reads");
+    return 1;
 }
 
-sub generate_AssignmentSummary {
-    my ($self, $dir ) = @_;
-    $self->log_event("generate_AssignmentSummary entered with $dir"); 
-    
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    my @files = readdir DH;
-    foreach my $name (sort {$a cmp $b} @files) {
-	# name is either file name or sample name (directory)
-	my $full_path = $dir."/".$name;
-	if (!($name =~ /\./)) {
-	    if (-d $full_path) { # is a directory
-		opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-		# enter sample directory
-		foreach my $file (readdir SubDH) { 
-		    if ($file =~ /\.AssignmentSummary/) {
-			my $file_name = $full_path."/".$file;
-			open (IN, $file_name) or die "can not open file $file_name!\n";
-			while (<IN>) {
-			    print OUT $_;
-			}
-		    } 
-		}		
-		print OUT "#########################################################################\n\n";
-	    }
+sub _generate_assignment_summary {
+    my $self = shift;
+    my $fh = shift;
+    $fh->print("Assignments in each sample:\n\n");
+    foreach my $dir_name ($self->_get_sample_dir_names()) {
+	my $summary_file = $self->dir.'/'.$dir_name.'/'.$dir_name.'.AssignmentSummary';
+	unless (-s $summary_file) {
+	    $self->log_event("Missing or blank summary file ".basename($summary_file));
+	    next;
 	}
-    }
-    $self->log_event("generate_AssignmentSummary completed"); 
-}
-sub generate_SequenceReport {
-    my ($self, $dir ) = @_;
-    $self->log_event("generating Sequence Report with $dir"); 
-    
-    # sample name => num of total sequence in the sample
-    my %total_seq = ();
-    
-    # sample name => num of unique sequence in the sample
-    my %unique_seq = ();
-    my %unique_seq_percent = ();
-    
-    # sample name => num of Filtered sequence in the libary
-    my %bad_seq = ();
-    
-    # sample name => percentage of Filtered seq in the lib
-    my %bad_percent = (); 
-    
-    # libary name => num of good sequenc in the sample
-    my %good_seq = (); 
-    
-    # sample name => percentage of Filtered seq in the lib
-    my %good_percent = ();
-    
-    # sample name => num of sequence assigned by BLASTN
-    my %blastn_assigned = ();
-    
-    # sample name => percentage of sequences assigned by blastn 
-    my %blastn_assigned_percent = ();
-    
-    # sample name => num of sequence to be TBLASTX
-    my %tblastx = ();
-    
-    # sample name => percentage of seq need TBLASTX
-    my %tblastx_percent = ();
-    
-    # sample name => number of sequence assigned by TBLASTX
-    
-    print OUT $dir,"\n";
-    printf OUT "%30s\t", "sampleName";
-    print OUT "total\tuniq\t\%\t Filtered\t\%\tgood\t\%\tBNassign\t\%\tTBLASTX\t\%\n";
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    my @files = readdir DH;
-    foreach my $name (sort {$a cmp $b} @files) {
-	# name is either file name or sample name (directory)
-	my $full_path = $dir."/".$name;
-	
-	if (($name =~ /^S\d+/)||($name =~ "undecodable")) {
-	    #next if $name =~ /undecodable/;
-	    if (-d $full_path) { # is a directory
-		# enter sample directory
-		opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-		my @files_sampleDir = readdir SubDH;
-		
-		# get total number of sequences in the sample
-		my $tempF = $full_path."/".$name.".fa";
-		$total_seq{$name} = $self->count_num_of_seq($tempF);
-		
-		# get number of unique sequence in the sample 
-		$tempF = $full_path."/".$name.".fa.cdhit_out";
-		$unique_seq{$name} = $self->count_num_of_seq($tempF);
-		$unique_seq_percent{$name} = $unique_seq{$name}*100/$total_seq{$name};
-		print "total # seq = ", $total_seq{$name}, " unique # seq: ", $unique_seq{$name}, "\n";
-
-			
-		# get number of Filtered and good sequences 
-		$tempF = $full_path."/".$name.".fa.cdhit_out.masked.badSeq";
-		open (IN, $tempF) or die "can not open file $tempF!\n";
-		while (<IN>) {
-		    if ($_ =~ /good seq = (\d+) % = (0\.\d+)/) {
-			$good_seq{$name} = $1;
-			$good_percent{$name} = $1*100/$total_seq{$name};
-		    }
-		    if ($_ =~ /bad seq = (\d+) % = (0\.\d+)/) {
-			$bad_seq{$name} = $1;
-			$bad_percent{$name} = $1*100/$total_seq{$name};
-		    }
-		}
-	
-		# get number of sequences assigned by BLASTN and number of sequences saved for TBLASTX 
-		my $total_saved = 0;
-		my $total_BNassigned = 0;
-		$tempF = $full_path."/".$name.".BNFiltered.fa";
-		if (-e $tempF) {
-		    my $BNFiltered = $self->count_num_of_seq($tempF);
-		    $blastn_assigned{$name} = $good_seq{$name} - $BNFiltered;
-		    $blastn_assigned_percent{$name} = $blastn_assigned{$name}*100/$total_seq{$name};
-		    $tblastx{$name} = $BNFiltered;
-		    $tblastx_percent{$name} = $BNFiltered*100/$total_seq{$name};
-		}
-		else {
-		    my $BNFiltered = 0;
-		    $blastn_assigned{$name} = $good_seq{$name} - $BNFiltered;
-		    $blastn_assigned_percent{$name} = $blastn_assigned{$name}*100/$total_seq{$name};
-		    $tblastx{$name} = $BNFiltered;
-		    $tblastx_percent{$name} = $BNFiltered*100/$total_seq{$name};
-		}
-
-		printf OUT "%30s\t%5d\t%5d\t%5.1f\t", $name, $total_seq{$name}, $unique_seq{$name}, $unique_seq_percent{$name};
-		printf OUT "%5d\t%5.1f\t%5d\t%5.1f\t", $bad_seq{$name}, $bad_percent{$name}, $good_seq{$name}, $good_percent{$name};
-		printf OUT "%5d\t%9.1f\t%5d\t%5.1f\n", $blastn_assigned{$name}, $blastn_assigned_percent{$name}, $tblastx{$name},  $tblastx_percent{$name};
-	    }
+	my $sum_fh = IO::File->new("< $summary_file") ||
+	    die "Can not open file: $summary_file";
+	while (my $line = $sum_fh->getline) {
+	    $fh->print($line);
 	}
+	$fh->print("###############################################################\n\n");
+	$sum_fh->close;
     }
-
-    my $total = 0;
-    my $unique = 0;
-    my $bad = 0;
-    my $good = 0;
-    my $BNassign = 0;
-    my $Tx = 0;
-    foreach my $key (keys %total_seq) {
-	$total += $total_seq{$key};
-	$unique += $unique_seq{$key};
-	$bad += $bad_seq{$key};
-	$good += $good_seq{$key};
-	$BNassign += $blastn_assigned{$key};
-	$Tx += $tblastx{$key};
-    }
-    $total_seq{"total"} = $total;
-    $unique_seq{"total"} = $unique;
-    $unique_seq_percent{"total"} = $unique*100/$total;
-    $bad_seq{"total"} = $bad;
-    $bad_percent{"total"} = $bad*100/$total;
-    $good_seq{"total"} = $good;
-    $good_percent{"total"} = $good*100/$total;
-    $blastn_assigned{"total"} = $BNassign;
-    $blastn_assigned_percent{"total"} = $BNassign*100/$total;
-    $tblastx{"total"} = $Tx;
-    $tblastx_percent{"total"} = $Tx*100/$total;
-    
-    # print out report for this sample
-    printf OUT "%30s\t%5d\t%5d\t%5.1f\t", "total", $total_seq{"total"}, $unique_seq{"total"}, $unique_seq_percent{"total"};
-    printf OUT "%5d\t%5.1f\t%5d\t%5.1f\t", $bad_seq{"total"}, $bad_percent{"total"}, $good_seq{"total"}, $good_percent{"total"};
-    printf OUT "%5d\t%9.1f\t%5d\t%5.1f\n", $blastn_assigned{"total"}, $blastn_assigned_percent{"total"}, $tblastx{"total"},  $tblastx_percent{"total"};
-    $self->log_event("generate_AssignmentSummary completed"); 
-    
+    $fh->print("End of Assignments\n\n");
+    return 1;
 }
 
-sub count_num_of_seq () {
-    my ($self,$fastaFile) = @_;
-    my $count = 0;
-    
-    open (FastaFile, $fastaFile) or die "Can't Open FASTA file: $fastaFile";
-    while (my $line = <FastaFile>){
-	if ($line =~ ">") {
-	    $count++;
+sub _get_sample_dir_names {
+    my $self = shift;
+    my @sample_dirs;
+    foreach (glob($self->dir."/*")) {
+	next unless -d $_;
+	my $lib_name = basename($_);
+	#DETERMINE WHETHER DIR IS SAMPLE DIR BY CHECKING FOR CERTAIN FILES
+	unless (-s $self->dir.'/'.$lib_name.'/'.$lib_name.'.fa') {
+	    next;
 	}
+	#TODO - MAY HAVE TO CHECK FOR ADDITIONAL FILES/DIRS
+	push @sample_dirs, $lib_name;
     }
-    close FastaFile;
-    
-    return $count;
+    return @sample_dirs;
 }
 
-sub generate_InterestingReads {
-    my ($self, $dir ) = @_;
-    $self->log_event("generate_InterestingReads entered with $dir"); 
-    opendir(DH, $dir) or die "Can not open dir $dir!\n";
-    my @files = readdir DH;
-    foreach my $name (sort {$a cmp $b} @files) {
-	# name is either file name or sample name (directory)
-	my $full_path = $dir."/".$name;
-	if (!($name =~ /\./)) {
-	    if (-d $full_path) { # is a directory
-		my $has_file = 0;
-		print OUT $name, "\n";
-		opendir(SubDH, $full_path) or die "can not open dir $full_path!\n";
-		# enter sample directory
-		foreach my $file (readdir SubDH) { 
-		    if ($file =~ /\.InterestingReads/) {
-			$has_file = 1;
-			my $file_name = $full_path."/".$file;
-			open (IN, $file_name) or die "can not open file $file_name!\n";
-			while (<IN>) {
-			    print OUT $_;
-			}
-		    } 
-		}
-		if (!$has_file) {
-		    print OUT "$name does not have .InteresingReads file!\n";
-		}		
-		print OUT "#########################################################################\n\n";
-	    }
+sub _generate_sequence_report {
+    my $self = shift;
+    my $fh = shift;
+    $fh->print("Sequence Report\n\n".$self->dir."\n\n");
+    $fh->printf("%25s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s\n",
+                 'sampleName','total','uniq','%','Filtered','%','good','%','BNassign','%','TBLASTX','%');
+    my $counts;
+    my $convert_table = $self->_convert_to_table_name();
+    my @sample_dirs = $self->_get_sample_dir_names();
+    foreach my $file_name ($self->_get_sample_dir_names()) {
+	foreach my $ext ($self->_fasta_file_exts()) {
+	    my $fa_file = $self->dir.'/'.$file_name.'/'.$file_name.'.'.$ext;
+	    my $convert_name = $convert_table->{$ext};
+	    my $seq_count = $self->_get_fasta_seq_count($fa_file);
+	    $counts->{$file_name}->{$convert_name} = $seq_count;
+	    $counts->{'total'}->{$convert_name}+= $seq_count;
 	}
     }
-    $self->log_event("generate_InterestingReads completed");
+    foreach my $lib_name (sort keys %$counts) {
+	my $total_count = $counts->{$lib_name}->{'input_fa'};
+	my $uniq_count = $counts->{$lib_name}->{'cd_hit'};
+	my $uniq_ratio = sprintf("%.1f", $uniq_count * 100 / $total_count);
+	my $filtered = $counts->{$lib_name}->{'cd_hit_bad'};
+	my $filtered_ratio = sprintf("%.1f", $filtered * 100 / $total_count);
+	my $good = $counts->{$lib_name}->{'cd_hit_good'};
+	my $good_ratio = sprintf("%.1f", $good * 100 / $total_count);
+	my $bn_assigned = $good - $counts->{$lib_name}->{'blastn'};
+	my $bn_assigned_ratio = sprintf("%.1f", $bn_assigned * 100 / $total_count);
+	#BLASTN FILTERED AND PASSED ONTO BLASTX
+	my $bx_assigned = $counts->{$lib_name}->{'blastn'};
+	my $bx_assigned_ratio = sprintf ("%.1f", $bx_assigned * 100 / $total_count);
+	$fh->printf("%25s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s\n",
+	    $lib_name, $total_count, $uniq_count, $uniq_ratio, $filtered, $filtered_ratio, $good, $good_ratio, $bn_assigned, $bn_assigned_ratio, $bx_assigned, $bx_assigned_ratio);
+
+    }
+    $fh->printf("\nEnd of Sequence Report\n\n");
+    #print Dumper $counts;
+    return 1;
 }
+
+sub _fasta_file_exts {
+    return qw/ fa fa.cdhit_out fa.cdhit_out.masked.badSeq fa.cdhit_out.masked.goodSeq BNFiltered.fa /;
+}
+
+sub _convert_to_table_name {
+    return {
+	'fa'                          => 'input_fa',
+	'fa.cdhit_out'                => 'cd_hit',
+	'fa.cdhit_out.masked.badSeq'  => 'cd_hit_bad',
+	'fa.cdhit_out.masked.goodSeq' => 'cd_hit_good',
+	'BNFiltered.fa'               => 'blastn',
+    };
+}
+
+sub _generate_sample_description {
+    my $self = shift;
+    my $fh = shift;
+    $fh->print("Summary:\n\n".$self->dir."\n");
+    $fh->printf("%25s%25s%40s\n", 'ViralRead', 'PercentIDrange', 'IdentifiedVirus');
+    foreach (glob($self->dir."/*")) {
+	next unless -d $_; #ONLY SAMPLE DIRS ARE DIRS
+	my $lib_name = basename($_);
+	my $input_fa = $self->dir.'/'.$lib_name."/$lib_name.fa";
+	unless (-s $input_fa) {
+	    $self->log_event("No or blank input fasta found for $lib_name");
+	    return;
+	}
+	my $seq_count = $self->_get_fasta_seq_count($input_fa);
+	$fh->printf("\t%-25s%-25s\n", $lib_name, $seq_count);
+	#PARSE ASSIGNMENT SUMMARY FILE
+	my $asum_file = $self->dir.'/'.$lib_name."/$lib_name.AssignmentSummary";
+	unless (-s $asum_file) {
+	    $self->log_event("No or blank file ".basename($asum_file));
+	    return;
+	}
+	my $asum_fh = IO::File->new("< $asum_file") ||
+	    die "Can not create file handle for $asum_file";
+	while (my $line = $asum_fh->getline) {
+	    next unless $line =~ /\s+number\s+of\s+reads/;
+	    chomp $line;
+	    my ($range) = $line =~ /number\s+of\s+reads:\s+\d+\s+(.*)$/; #GET ID RANGE
+	    my ($read_count) = $line =~ /number\s+of\s+reads:\s+(\d+)/;  #GET NUMBER OF READS
+	    my ($lineage) = $line =~ /^(.*)\s+total\s+number\s+of/;      #GET LINEAGE INFO
+	    $lineage =~ s/\s+$//;
+	    my @tmp = split (';', $lineage);
+	    #VIRUS NAME = $tmp[-1];
+	    $fh->printf("%25s%25s%40s\n", $read_count, $range, $tmp[-1]);
+
+	}
+	$asum_fh->close;
+    }
+    $fh->print("End of summary\n\n");
+    return 1;
+}
+
+sub _get_fasta_seq_count {
+    my $self = shift;
+    my $fa = shift;
+    my $seq_count = 0;
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $fa);
+    return unless $io;
+    while (my $seq = $io->next_seq) {
+	$seq_count++;
+    }
+    return $seq_count;
+}
+
+sub _print_intro {
+    my $self = shift;
+    my $fh = shift;
+    $fh->print ("How to read this file:\n".
+		"For the summary section:\n".
+		"column 1: sample number and name\n".
+		"column 2: sample description\n".
+		"column 3: total number of sequences obtained for this sample\n\n".
+		"If there is any viral sequence identified in this sample, it will show up under the information \n".
+		"of this sample. There are 3 columns to describe the viral reads identified in this sample:\n".
+		"column 1: number of viral reads\n".
+		"column 2: range of percentage identity to blast hits. Some times one sequence can hit multiple \n".
+		"sequence in the nt database and gives a range of percent identity.\n".
+		"column 3: name of the virus\n\n".
+		"For the sequence report section:\n".
+		"column 1: sample number and name\n".
+		"column 2: total number of reads obtained for this sample\n".
+		"column 3: number of unique reads after removing redundancy\n".
+		"column 4: percentage of unique reads (unique reads divided by total number of reads)\n".
+		"column 5: number of Filtered reads (after repeat masking, reads does not have at least 50bp \n".
+		"consecutive sequence without N)\n".
+		"column 6: percentage of Filtered reads (Filtered reads divided by total number of reads)\n".
+		"column 7: number of good reads\n".
+		"column 8: percentage of good reads\n".
+		"column 9: number of reads assigned by blastn (BNassign)\n".
+		"column 10: percentage of reads assigned by blastn\n".
+		"column 11: number of reads goes to TBLASTX\n".
+		"column 12: percentage of sequences goes to TBLASTX\n\n".
+		"For the Assignment in each sample section:\n".
+		"Describes the number of sequences assigned to each category.\n\n".
+		"If there is a Interesting read section, following are the description of the fields:\n".
+		"Sample number and name\n".
+		"Viral lineage\n".
+		"Description of the reads and the top hit (the fields are: QueryName, Querylength, HitName, HitLen, \n".
+		"HitDesc, Alignment Length, percent Identity, HitStart, HitEnd, e value)\n".
+		"Sequence of the reads\n\n".
+		"*The criteria for a viral lineage to appear in the \"Interesting Read\" section is the lowest \n".
+		"percent identity is below 90% (Anellovirus is excluded)\n\n");
+    return 1;
+}
+
 1;
 
