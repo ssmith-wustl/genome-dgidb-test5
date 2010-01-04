@@ -155,6 +155,8 @@ sub _commit_callback {
     my $class = shift;
     my $object = shift;
     
+    return if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
+    
     eval {
         if($class->is_indexable($object)) {
             $class->add($object);
@@ -170,6 +172,8 @@ sub _commit_callback {
 sub _delete_callback {
     my $class = shift;
     my $object = shift;
+    
+    return if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
     
     eval {
         if($class->is_indexable($object)) {
