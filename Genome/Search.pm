@@ -3,7 +3,6 @@ package Genome::Search;
 use strict;
 use warnings;
 
-use Genome;
 use WebService::Solr;
 
 class Genome::Search { 
@@ -35,11 +34,13 @@ sub add {
     
     my @docs = map($class->resolve_document_for_object($_), @objects);
     
-    if($self->_solr_server->add(\@docs)) {
-        $self->status_message('Sent ' . (scalar @docs) . ' documents to Solr');
-    } else {
-        $self->error_message('Failed to send ' . (scalar @docs) . ' documents to Solr');
+    unless($self->_solr_server->add(\@docs)) {
+        $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to Solr.');
+        return;
     }
+
+    $self->status_message('Sent ' . (scalar @docs) . ' document(s) to Solr.');
+    return 1;
 }
 
 sub update {
@@ -65,11 +66,14 @@ sub delete {
     
     my $deleted_count = scalar(@docs) - $error_count;
     if($deleted_count) {
-        $self->status_message('Removed ' . $deleted_count . ' documents from Solr.');
+        $self->status_message('Removed ' . $deleted_count . ' document(s) from Solr.');
     }
     if($error_count) {
-        $self->error_message('Failed to remove ' . $error_count . ' documents from Solr.');
+        $self->error_message('Failed to remove ' . $error_count . ' document(s) from Solr.');
+        return;
     }
+    
+    return $deleted_count || 1;
 }
 
 sub clear {
@@ -78,7 +82,11 @@ sub clear {
     my $self = $class->_singleton_object;
     
     $self->_solr_server->delete_by_query('*:*'); #Optimized by solr for fast index clearing
-    $self->_solr_server->optimize();
+    $self->_solr_server->optimize(); #Prevent former entries from influencing future index
+    
+    $self->status_message('Solr index cleared.');
+    
+    return 1;
 }
 
 sub get_document {
@@ -112,7 +120,10 @@ sub _resolve_subclass_for_object {
     return unless $type;
     
     my @type_parts = split('::', $type);
+    
     shift @type_parts if $type_parts[0] eq 'Genome'; #Avoid redundant folder in search tree
+    
+    return if $type_parts[-1] eq 'Ghost'; #Don't try to (de)index deleted references.
     
     my $subclass_base = 'Genome::Search';
     while(@type_parts) {
@@ -135,6 +146,57 @@ sub is_indexable {
     my $object = shift;
     
     return $class->_resolve_subclass_for_object($object) ? 1 : 0;
+}
+
+
+### Callbacks for automatically updating index
+
+sub _commit_callback {
+    my $class = shift;
+    my $object = shift;
+    
+    eval {
+        if($class->is_indexable($object)) {
+            $class->add($object);
+        }
+    };
+    
+    if($@) {
+        my $self = $class->_singleton_object;
+        $self->error_message('Error in commit callback: ' . $@);
+    }
+}
+
+sub _delete_callback {
+    my $class = shift;
+    my $object = shift;
+    
+    eval {
+        if($class->is_indexable($object)) {
+            $class->delete($object);
+        }
+    };
+    
+    if($@) {
+        my $self = $class->_singleton_object;
+        $self->error_message('Error in delete callback: ' . $@);
+    }
+}
+
+#This should be called from Genome.pm, so typically it won't need to be called elsewhere.
+sub register_callbacks {
+    my $class = shift;
+    my $module_to_observe = shift;
+    
+    $module_to_observe->create_subscription(
+        method => 'commit',
+        callback => sub { $class->_commit_callback(@_); },
+    );
+    
+    $module_to_observe->create_subscription(
+        method => 'delete',
+        callback => sub { $class->_delete_callback(@_); }
+    );
 }
 
 #OK!
@@ -210,7 +272,7 @@ A unique identifier for the object -- this is what Solr uses to distinguish item
 =item timestamp
 
 The time when the object was created in the format 'yyyy-mm-ddThh:mm:ssZ'.
-By convention, '1999-01-01T01:01:01Z' should be used when the creation date is unknown.
+By convention, '1999-01-01T01:01:01Z' is used when the creation date is unknown.
 
 =item content
 
