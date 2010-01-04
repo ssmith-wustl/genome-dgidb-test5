@@ -11,6 +11,7 @@ class Genome::Model::Tools::BioSamtools::RefCov {
         bam_file => { },
         bed_file => { },
         output_directory => { },
+        min_depth_filter => { default_value => 1 },
     ],
     has_output => [
         stats_file => {
@@ -41,7 +42,7 @@ sub execute {
         my ($regions_basename,$regions_dirname,$regions_suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
         $self->stats_file($self->output_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
     }
-    my $cmd = $self->execute_path .'/bed_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file;
+    my $cmd = $self->execute_path .'/bed_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $self->min_depth_filter;
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
         input_files => [$self->bam_file,$self->bed_file],
