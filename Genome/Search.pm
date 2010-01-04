@@ -105,18 +105,19 @@ sub _resolve_subclass_for_object {
     my @type_parts = split('::', $type);
     shift @type_parts if $type_parts[0] eq 'Genome'; #Avoid redundant folder in search tree
     
-    my $subclass = 'Genome::Search';
+    my $subclass_base = 'Genome::Search';
     while(@type_parts) {
-        #Try increasingly specific subtypes until we find an appropriate one
-        $subclass .= '::' . (shift @type_parts);
+        #Try increasingly general subtypes until we find an appropriate one
+        my $subclass .= join('::', $subclass_base, @type_parts);
         
         if($subclass->can('get_document')) {
             return $subclass;
         }
+        
+        pop @type_parts;
     }
     
     #No appropriate search module found
-    my $self = $class->_singleton_object;
     return;
 }
 
