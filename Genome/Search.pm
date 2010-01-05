@@ -155,7 +155,7 @@ sub _commit_callback {
     my $class = shift;
     my $object = shift;
     
-    return if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
+    return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
     
     eval {
         if($class->is_indexable($object)) {
@@ -166,14 +166,17 @@ sub _commit_callback {
     if($@) {
         my $self = $class->_singleton_object;
         $self->error_message('Error in commit callback: ' . $@);
+        return;
     }
+    
+    return 1;
 }
 
 sub _delete_callback {
     my $class = shift;
     my $object = shift;
     
-    return if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
+    return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
     
     eval {
         if($class->is_indexable($object)) {
@@ -184,7 +187,10 @@ sub _delete_callback {
     if($@) {
         my $self = $class->_singleton_object;
         $self->error_message('Error in delete callback: ' . $@);
+        return;
     }
+    
+    return 1;
 }
 
 #This should be called from Genome.pm, so typically it won't need to be called elsewhere.
