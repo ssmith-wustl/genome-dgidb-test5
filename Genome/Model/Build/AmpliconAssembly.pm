@@ -71,7 +71,7 @@ sub amplicon_assembly {
                         assembly_size sequencing_center sequencing_platform subject_name 
                         /),
                 ),
-                #exclude_contaminated_amplicons => 0,
+                exclude_contaminated_amplicons => 1,
                 #only_use_latest_iteration_of_reads => 0,
             );
         }
