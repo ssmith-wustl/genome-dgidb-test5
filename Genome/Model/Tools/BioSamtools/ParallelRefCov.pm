@@ -22,6 +22,15 @@ class Genome::Model::Tools::BioSamtools::ParallelRefCov {
     ],
 };
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    unless (defined($self->min_depth_filter)) {
+        $self->min_depth_filter(1);
+    }
+    return $self;
+}
+
 sub pre_execute {
     my $self = shift;
 
