@@ -535,7 +535,7 @@ sub reference_build
     unless ($self->{reference_build}){
         my $species = $self->species;
         my ($reference_build_version) = $self->version =~ /^\d+_(\d+)[a-z]$/; #currently only supports versions in familiar formats(54_36p, 54_37g) possible these will get more complicated later
-        my $build = Genome::Model->get(name => "NCBI-$species")->build_by_version($reference_build_version);
+        my $build = Genome::Model::ImportedReferenceSequence->get(name => "NCBI-$species")->build_by_version($reference_build_version);
         unless ($build){
             $self->error_message("Couldn't find reference sequence build version $reference_build_version for species $species");
             die;
