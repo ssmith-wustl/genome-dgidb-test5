@@ -121,7 +121,9 @@ sub _resolve_subclass_for_object {
     
     my @type_parts = split('::', $type);
     
-    shift @type_parts if $type_parts[0] eq 'Genome'; #Avoid redundant folder in search tree
+    my @module_prefix;
+    my $is_genome = shift @type_parts if $type_parts[0] eq 'Genome'; #Avoid redundant folder in search tree
+    push @module_prefix, 'Genome' if $is_genome; #but keep it around to do type-checking
     
     return if $type_parts[-1] eq 'Ghost'; #Don't try to (de)index deleted references.
     
@@ -130,7 +132,7 @@ sub _resolve_subclass_for_object {
         #Try increasingly general subtypes until we find an appropriate one
         my $subclass .= join('::', $subclass_base, @type_parts);
         
-        if($subclass->can('get_document')) {
+        if($subclass->can('get_document') and $object->isa(join('::', @module_prefix, @type_parts))) {
             return $subclass;
         }
         
