@@ -29,6 +29,13 @@ class Genome::Model::Tools::Somatic::UploadVariants{
         is_input => '1',
         doc => 'The build id that should be linked to the variant. Enter a number <= 0 to skip uploading (test mode).',
     },
+    _skip => {
+        is => 'Boolean',
+        default => '0',
+        is_input => 1,
+        is_optional => 1,
+        doc => "If set to true... this will do nothing! Fairly useless, except this is necessary for workflow.",
+    },
     ],
 };
 
@@ -51,6 +58,12 @@ EOS
 
 sub execute {
     my $self = shift;
+    
+    if ($self->_skip) {
+        $self->status_message("Skipping execution: Skip flag set");
+        return 1;
+    }
+    
     my @accession_list = @{$self->accession_list};
     my $accession_lookup = $self->make_hash_lookup(@accession_list);
       
