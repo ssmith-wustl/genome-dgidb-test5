@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Carp 'confess';
+use Cwd 'abs_path';
 use Data::Dumper 'Dumper';
 require File::Copy;
 require Genome::Consed::Directory;
@@ -84,6 +85,7 @@ sub get {
     }
     
     # Validate directory
+    $directory = Cwd::abs_path($directory);
     unless ( Genome::Utility::FileSystem->validate_existing_directory($directory) ) {
         $class->error_message("Can't validate amplicon assembly directory. See above error.");
         return;
@@ -100,6 +102,7 @@ sub get {
 sub create {
     my ($class, %params) = @_;
 
+    $params{directory} = Cwd::abs_path($params{directory});
     unless ( Genome::Utility::FileSystem->validate_existing_directory($params{directory}) ) {
         $class->error_message("Can't validate amplicon assembly directory. See above error.");
         return;
@@ -511,9 +514,9 @@ sub _remove_contaminated_amplicons {
     AMPLICON: for my $amplicon_name ( keys %$amplicons ) {
         for my $read_name ( @{$amplicons->{$amplicon_name}} ) {
             my $read = $self->_get_gsc_sequence_read($read_name);
-            confess "Can't get read for name ($read_name). This is required to remove contaminated amplicons" unless $read;
-            #print "$read_name : ".$read->contamination_status."\n";
-            if ( $read->contamination_status and $read->contamination_status eq 'FOUND' ) {
+            confess "Can't get read for name ($read_name). This is required to remove contaminated amplicons." unless $read;
+            my $screen_reads_stat = $read->get_screen_read_stat_hmp;
+            if ( $screen_reads_stat and $screen_reads_stat->is_contaminated ) {
                 delete $amplicons->{$amplicon_name};
                 next AMPLICON;
             }
