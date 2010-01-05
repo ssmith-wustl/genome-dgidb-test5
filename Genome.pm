@@ -33,6 +33,8 @@ if (App::DBI->no_commit || UR::DBI->no_commit) {
 
 App::Init->_restore_isa_can_hooks();
 
+Genome::Search->register_callbacks('UR::Object');
+
 # DB::single is set to this value in many places, creating a source-embedded break-point
 # set it to zero in the debugger to turn off the constant stopping...
 $DB::stopper = 1;

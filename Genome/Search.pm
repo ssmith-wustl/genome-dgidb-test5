@@ -39,7 +39,7 @@ sub add {
         return;
     }
 
-    $self->status_message('Sent ' . (scalar @docs) . ' document(s) to Solr.');
+    #$self->status_message('Sent ' . (scalar @docs) . ' document(s) to Solr.');
     return 1;
 }
 
@@ -65,9 +65,9 @@ sub delete {
     }
     
     my $deleted_count = scalar(@docs) - $error_count;
-    if($deleted_count) {
-        $self->status_message('Removed ' . $deleted_count . ' document(s) from Solr.');
-    }
+#    if($deleted_count) {
+#        $self->status_message('Removed ' . $deleted_count . ' document(s) from Solr.');
+#    }
     if($error_count) {
         $self->error_message('Failed to remove ' . $error_count . ' document(s) from Solr.');
         return;
@@ -84,7 +84,7 @@ sub clear {
     $self->_solr_server->delete_by_query('*:*'); #Optimized by solr for fast index clearing
     $self->_solr_server->optimize(); #Prevent former entries from influencing future index
     
-    $self->status_message('Solr index cleared.');
+    #$self->status_message('Solr index cleared.');
     
     return 1;
 }
