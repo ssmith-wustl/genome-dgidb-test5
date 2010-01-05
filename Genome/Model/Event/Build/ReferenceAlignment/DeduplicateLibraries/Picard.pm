@@ -119,6 +119,21 @@ sub execute {
         return;
     } 
     else {
+
+        $self->status_message("Checking that merged bam contains expected alignment count.");
+        my $individual_total = 0;
+        for my $bam_file (@bam_files) {
+            $individual_total += $self->_bam_flagstat_total($bam_file);
+        }
+        
+        my $merged_total = $self->_bam_flagstat_total($merged_file);
+        
+        unless($merged_total == $individual_total) {
+            $self->error_message("Alignment counts of individual bams and merged bam don't match!");
+            $self->error_message("(Individual sumtotal: " . $individual_total . ", Merged total: " . $merged_total);
+            return;
+        }
+        
         $self->status_message("Merge of aligned bam files successful.");
     }
    
@@ -167,6 +182,29 @@ sub execute {
     $self->status_message("*** All processes completed. ***");
 
     return $self->verify_successful_completion();
+}
+
+sub _bam_flagstat_total {
+    my $self = shift;
+    my $bam_file = shift;
+    
+    my $flagstat_command = 'samtools flagstat ' . $bam_file;
+    
+    my @lines = `$flagstat_command`;
+    
+    unless(@lines) {
+        $self->error_message('No output from samtools flagstat');
+        return;
+    }
+    
+    my ($total) = $lines[0] =~ m/(\d+) in total/;
+    
+    unless(defined $total) {
+        $self->error_message('Unexpected output from samtools flagstat: ' . $lines[0]);
+        return;
+    }
+    
+    return $total;
 }
 
 
