@@ -377,6 +377,8 @@ sub _filter_fasta_file {
 	    $code_at_3end = reverse $code_at_3end;
 	    $code_at_3end =~ tr/ACGTacgt/TGCAtgca/;
 	}
+	#IF THERE IS NO SEQUENCE TO BE DERIVED THEN NEXT
+	next unless defined $read_seq;
 	#IF 5' AND 3' MATCHES
 	if ($found_5prime_pb && $found_3prime_pb) {
 	    $metrics->{reads_with_3and5prime_pb}++;
