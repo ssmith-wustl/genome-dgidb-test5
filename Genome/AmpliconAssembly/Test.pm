@@ -167,161 +167,167 @@ sub _create_mock_gsc_sequence_reads {
         'HMPB-aad13a05.b1' => {
             'run_date' => '16-MAY-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13a05.b2' => {
             'run_date' => '17-MAY-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13a05.b3' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13a05.b4' => {
             'run_date' => '02-OCT-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13a05.g1' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-28RPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13a05.g2' => {
             'run_date' => '20-MAY-2008',
             'primer_code' => '-28RPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13e12.b1' => {
             'run_date' => '16-MAY-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13e12.b2' => {
             'run_date' => '17-MAY-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13e12.b3' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13e12.b4' => {
             'run_date' => '02-OCT-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13e12.g1' => {
             'run_date' => '20-MAY-2008',
             'primer_code' => '-28RPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad13e12.g2' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-28RPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad15e03.b1' => {
             'run_date' => '16-MAY-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad15e03.b2' => {
             'run_date' => '17-MAY-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad15e03.b3' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad15e03.b4' => {
             'run_date' => '02-OCT-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad15e03.g1' => {
             'run_date' => '20-MAY-2008',
             'primer_code' => '-28RPpOT',
             # CONTAMINATED READ #
-            'contamination_status' => 'FOUND',
+            'is_contaminated' => 1,
         },
         'HMPB-aad15e03.g2' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-28RPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16a01.b1' => {
             'run_date' => '16-MAY-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16a01.b2' => {
             'run_date' => '17-MAY-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16a01.b3' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16a01.b4' => {
             'run_date' => '02-OCT-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16a01.g1' => {
             'run_date' => '20-MAY-2008',
             'primer_code' => '-28RPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16a01.g2' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-28RPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16c10.b1' => {
             'run_date' => '16-MAY-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16c10.b2' => {
             'run_date' => '17-MAY-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16c10.b3' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-21UPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16c10.b4' => {
             'run_date' => '02-OCT-2008',
             'primer_code' => '907R',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16c10.g1' => {
             'run_date' => '20-MAY-2008',
             'primer_code' => '-28RPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
         'HMPB-aad16c10.g2' => {
             'run_date' => '01-OCT-2008',
             'primer_code' => '-28RPpOT',
-            'contamination_status' => 'NOT FOUND',
+            'is_contaminated' => 0,
         },
     );
     for my $read_name ( keys %read_params ) {
         $reads{$read_name} = Test::MockObject->new();
         $reads{$read_name}->set_always('trace_name', $read_name);
+        my $screen_reads_stat_hmp = Test::MockObject->new();
+        $screen_reads_stat_hmp->set_always(
+            'is_contaminated',
+            $read_params{$read_name}->{is_contaminated}
+        );
+        $reads{$read_name}->set_always('get_screen_read_stat_hmp', $screen_reads_stat_hmp);
         for my $attr ( keys %{$read_params{$read_name}} ) {
-        $reads{$read_name}->set_always($attr, $read_params{$read_name}->{$attr});
-    }
+            $reads{$read_name}->set_always($attr, $read_params{$read_name}->{$attr});
+        }
     }
 
     return %reads;
