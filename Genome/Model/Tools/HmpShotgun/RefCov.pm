@@ -35,7 +35,7 @@ class Genome::Model::Tools::HmpShotgun::RefCov {
                 is_input => '1',
                 doc => 'The other_hits summary.',
         },
-        stats_file => {
+        combined_file => {
         	    is  => 'String',
                 is_output => '1',
                 is_optional => '1',
@@ -64,53 +64,78 @@ sub execute {
     my $self = shift;
 
     $self->dump_status_messages(1);
+    
     $self->status_message(">>>Running HMP RefCov at ".UR::Time->now);
     #my $model_id = $self->model_id;
     $self->status_message("Aligned Bam File: ".$self->aligned_bam_file);
     $self->status_message("Regions file: ".$self->regions_file);
     $self->status_message("Read count file: ".$self->read_count_file);
     
-    $self->status_message("<<<Completed HMP RefCov for testing at ".UR::Time->now);
-    return 1;
+    #$self->status_message("<<<Completed HMP RefCov for testing at ".UR::Time->now);
+    #return 1;
     
+    #expected output files
     my $stats_file = $self->working_directory."/reports/refcov_stats.txt";
-    my $readcount_file = $self->working_directory."/reports/reads_per_contig.txt";
     
-    $self->stats_file($stats_file);
-    my @expected_output_files = ($stats_file);
+    my $readcount_file = $self->read_count_file;
+    my $combined_file = $self->working_directory."/reports/combined_refcov.txt";
+    
+    $self->combined_file($combined_file);
+    
+    
+    my @expected_refcov_output_files = ($stats_file);
     
     $self->status_message("Output stats file: ".$stats_file);
     
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_refcov_output_files);
     if ($rv_check) {
-    	$self->status_message("Expected output files exist.  Skipping processing.");
-    	$self->status_message("<<<Completed RefCov at ".UR::Time->now);
-    	return 1;
-    }
- 
-    unless (-e $self->working_directory) {
-    	Genome::Utility::FileSystem->create_directory($self->working_directory);
-    }
-   
-    my $cmd = "/gscuser/jwalker/svn/TechD/RefCov/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
+    	$self->status_message("Expected output files exist.  Skipping generation of ref cov stats file.");
+    } else {
+  
+    	my $cmd = "/gscuser/jwalker/svn/TechD/RefCov/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
      														
-    $self->status_message("Running report at ".UR::Time->now);
-    my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+    	$self->status_message("Running ref cov report at ".UR::Time->now);
+    	my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+    	if ($rv == 1) {
+    		Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_refcov_output_files);
+    	}
+    	$self->status_message("RefCov file generated at ".UR::Time->now);
+    }
+    	
+    	
+    my @expected_output_files = ($combined_file);
+    my $rv_output_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+    #The re-check of the ref cov check value (rv_check) is necessary because if the refcov stats file has been regenerated,
+    #then the subsequent report files should be regenerated.
+    if ($rv_output_check && $rv_check) {
+   		$self->status_message("Expected output files exist.  Skipping generation of the combined file.");
+   		$self->status_message("<<<Completed RefCov at ".UR::Time->now);
+   		return 1;
+    } else {
+    	$self->status_message("The previous ref cov stats file may have been regenerated.  Attempting to explicitly delete: $combined_file" );
+    	unlink($combined_file);
+    }
     
-    #if ($rv == 1) {
-    #	Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
-    #}
+    #$self->status_message("Now counting reads per contig.");    
+    #my $cmd_count = "/gscuser/jwalker/svn/TechD/bio_db_sam/count_read_per_contig.pl ".$self->aligned_bam_file." > ".$readcount_file;
+    #my $rv_count = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_count);
+    #$self->status_message("Done counting reads per contig.");
     
-    $self->status_message("RefCov file generated at ".UR::Time->now);
-    $self->status_message("Now counting reads per contig.");    
+    $self->status_message("Now combining ref cov stats at ".UR::Time->now);
     
-    my $cmd_count = "/gscuser/jwalker/svn/TechD/bio_db_sam/count_read_per_contig.pl ".$self->aligned_bam_file." > ".$readcount_file;
+    my $refcov_headers_file = "/gscmnt/sata409/research/mmitreva/databases/Bacterial_assemblies.Dec2009.headers_for_refcov.txt";
     
-    my $rv_count = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_count);
+    my $cmd_combine = "perl /gscmnt/sata409/research/mmitreva/sabubuck/HMP_CLINICAL_SAMPLES_JAN_2010/SCRIPTS/combine_refcov_results.pl ".
+    					"-refcov $stats_file -db_headers  $refcov_headers_file " .
+    					"-ref_counts $readcount_file  -output $combined_file ";
     
-    #if ($rv_count == 1) {
-    #	Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
-    #}
+    my $rv_combine = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_combine);
+    
+    $self->status_message("Done combining ref cov stats with read counts at ".UR::Time->now);
+    
+    if ($rv_combine) {
+    	Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    }
     
     $self->status_message("<<<Completed RefCov at ".UR::Time->now);
     
