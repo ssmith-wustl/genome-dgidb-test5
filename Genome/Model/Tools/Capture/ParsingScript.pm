@@ -36,6 +36,7 @@ class Genome::Model::Tools::Capture::ParsingScript {
 		glf_unique_indel	=> { is => 'Text', doc => "Unique Calls from glfSomatic", is_optional => 0 },
 		out_file	=> { is => 'Text', doc => "Output file with Merged Calls and Software Status" , is_optional => 0},
 	],
+};
 
 sub sub_command_sort_position { 12 }
 
@@ -98,11 +99,11 @@ unless (open(ANNOT_FILE_VARSCAN_INDEL,"<$varscan_unique_indel")) {
 my $header = 1;
 if ($header) {
    my $head = <ANNOT_FILE_MERGED_SNV>;
-#   my $head = <ANNOT_FILE_GLF_SNV>;
-   my $head = <ANNOT_FILE_VARSCAN_SNV>;
-   my $head = <ANNOT_FILE_MERGED_INDEL>;
-#   my $head = <ANNOT_FILE_GLF_INDEL>;
-   my $head = <ANNOT_FILE_VARSCAN_INDEL>;
+#  $head = <ANNOT_FILE_GLF_SNV>;
+   $head = <ANNOT_FILE_VARSCAN_SNV>;
+   $head = <ANNOT_FILE_MERGED_INDEL>;
+#  $head = <ANNOT_FILE_GLF_INDEL>;
+   $head = <ANNOT_FILE_VARSCAN_INDEL>;
 }
 
 my %columns_merged_snv;
@@ -122,7 +123,7 @@ close ANNOT_FILE_MERGED_SNV;
 my %columns_glf_snv;
 while( my $additions = <ANNOT_FILE_GLF_SNV> ) {
    my ($Chromosome,$position,$reference,$tumor_consensus_call,$somatic_score,$tumor_consensus_quality_score,$tumor_snp_quality_score,$Root_Mean_Square_mapping_quality,$Tumor_Reads,$Normal_reads) = split(/\t/, $additions);
-   my $Chromosome = $Chromosome;
+#   my $Chromosome = $Chromosome;
    my $Start_position = $position;
    my $End_position = $position;
    my $Reference_Allele = $reference;
@@ -243,32 +244,32 @@ foreach my $hugo (keys %{$annotation}) {
 		$annotation->{$hugo}->{$line_num}->{UCSC},
 		$annotation->{$hugo}->{$line_num}->{DOMAIN},
             );
-
+1,2,3,4,5,6,7,8,14,15,16,17,18,19 
 	my $merger = "$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1";
 
 	if ($columns_merged_snv{$merger}) {
 	    my $software = "VarScan,glfSomatic";
-	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$Variant_Type\t$source\t$genome\t$strand\t$trv_type\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns{$merger}\n");
+	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_merged_snv{$merger}\n");
 	}
 	elsif ($columns_glf_snv{$merger}) {
 	    my $software = "glfSomatic";
-	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$Variant_Type\t$source\t$genome\t$strand\t$trv_type\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns{$merger}\n");
+	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_glf_snv{$merger}\n");
 	}
 	elsif ($columns_varscan_snv{$merger}) {
 	    my $software = "VarScan";
-	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$Variant_Type\t$source\t$genome\t$strand\t$trv_type\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns{$merger}\n");
+	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_varscan_snv{$merger}\n");
 	}
 	elsif ($columns_merged_indel{$merger}) {
 	    my $software = "VarScan,glfSomatic";
-	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$Variant_Type\t$source\t$genome\t$strand\t$trv_type\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns{$merger}\n");
+	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_merged_indel{$merger}\n");
 	}
 	elsif ($columns_glf_indel{$merger}) {
 	    my $software = "glfSomatic";
-	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$Variant_Type\t$source\t$genome\t$strand\t$trv_type\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns{$merger}\n");
+	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_glf_indel{$merger}\n");
 	}
 	elsif ($columns_varscan_indel{$merger}) {
 	    my $software = "VarScan";
-	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$Variant_Type\t$source\t$genome\t$strand\t$trv_type\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns{$merger}\n");
+	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_varscan_indel{$merger}\n");
 	}
     }
 }
