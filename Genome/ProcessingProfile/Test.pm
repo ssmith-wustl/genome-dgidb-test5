@@ -15,33 +15,32 @@ class Genome::ProcessingProfile::Tester {
     is => 'Genome::ProcessingProfile::Staged',
     has_param => [
     # Attrs
-    sequencing_platform => { 
-        is => 'Text',
-        doc => 'The sequencing_platform of this profile',
-    },
-    dna_source => {
-        is => 'Text',
-        doc => 'The dna source of this profile',
-    },
-    ],
-    has => [
-    # Methods
-    prepare_objects => {
-        calculate => q| return 1; |,
-        is_constant => 1,
-    },
-    prepare_job_classes => {
-        calculate => q| return (qw/ Genome::ProcessingProfile::Tester::Prepare /); |,
-        is_constant => 1,
-    },
-    assemble_objects => {
-        calculate => q| return 1; |,
-        is_constant => 1,
-    },
+        sequencing_platform => { 
+            is => 'Text',
+            doc => 'The sequencing_platform of this profile',
+        },
+        dna_source => {
+            is => 'Text',
+            valid_values => [qw/ genomic metagenomic /],
+            doc => 'The dna source of this profile',
+        },
+        roi => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'This param may be undefined.',
+        },
     ],
 };
 sub Genome::ProcessingProfile::Tester::stages {
      return (qw/ prepare assemble /);
+}
+sub Genome::ProcessingProfile::Tester::prepare_job_classes {
+     return (qw/ 
+         Genome::ProcessingProfile::Tester::Prepare 
+         /);
+}
+sub Genome::ProcessingProfile::Tester::prepare_objects {
+    return 1;
 }
 sub Genome::ProcessingProfile::Tester::assemble_job_classes {
      return (qw/ 
@@ -49,6 +48,9 @@ sub Genome::ProcessingProfile::Tester::assemble_job_classes {
          Genome::ProcessingProfile::Tester::Assemble 
          Genome::ProcessingProfile::Tester::PostAssemble 
          /);
+}
+sub Genome::ProcessingProfile::Tester::assemble_objects {
+    return 1;
 }
 
 # Prepare
@@ -98,51 +100,87 @@ sub test_startup : Test(startup => 2) {
     return;
 }
     
-sub test01_creates : Tests(4) {
+sub test01_creates : Tests(6) {
     my $self = shift;
 
+    # Get params, put into separate varibales for clarity.
     my %params = $self->params_for_test_class;
-    my $name = delete $params{name};
+    my ($name, $type_name, $sequencing_platform, $dna_source, $roi) = 
+    @params{qw/
+        name type_name sequencing_platform dna_source roi
+        /}; 
 
-    # CREATE W/ DNA SOURCE UNDEF AND SEQ_PLAT IS THE SAME
-    my $dna_source = delete $params{dna_source};
-    my $pp_w_undef_dna_source = $self->test_class->create(
-        name => 'Dna Source is undef', 
-        %params,
-    );
-    ok(
-        $pp_w_undef_dna_source,
-        'Create w/ dna_source undef',
-    );
-    #$pp_w_undef_dna_source->delete;
-    $params{dna_source} = $dna_source;
+    #< VALID CREATES >#
+    ok( # roi is undef
+        $self->test_class->create(
+            name => 'No Region of Interest (ROI)',
+            type_name => $type_name,
+            sequencing_platform => $sequencing_platform,
+            dna_source => $dna_source,
+            roi => undef,
+        ),
+        'Create w/ roi undef',
+    ); # we now have 2 pp in memory, the one above and the original with all params defined 
 
-    # DUPLICATES
-    # name
-    ok(
+    #< INVALID CREATES >#
+    ok( # w/o sequencing platform (required)
+        !$self->test_class->create(
+            name => 'Dna Source is undef', # name must be different cuz it is checked first
+            type_name => $type_name,
+            dna_source => $dna_source,
+            roi => $roi,
+        ),
+        'Failed as expected - tried to create w/o dna_source',
+    );
+    ok( # w/ invalid dna source (valid values)
+        !$self->test_class->create(
+            name => 'Dna Source is invalid', # name must be different cuz it is checked first
+            type_name => $type_name,
+            sequencing_platform => $sequencing_platform,
+            dna_source => 'invalid dna source',
+            roi => $roi,
+        ),
+        'Failed as expected - tried to create w/ invalid dna_source',
+    );
+    ok( # duplicate name and params (name is checked first)
         !$self->test_class->create(
             name => $name, 
-            %params
+            type_name => $type_name,
+            sequencing_platform => $sequencing_platform,
+            dna_source => $dna_source,
+            roi => $roi,
         ),
-        'Create failed - duplicate named pp not allowed'
+        'Create failed as expected - pp with same name'
     );
-    # params - diff name
-    ok(
+    ok( # duplicate params w/ different name (name is checked first)
         !$self->test_class->create(
             name => 'Diff Name',
-            %params
+            type_name => $type_name,
+            sequencing_platform => $sequencing_platform,
+            dna_source => $dna_source,
+            roi => $roi,
         ),
-        'Create failed - duplicate param pp not allowed',
+        'Create failed as expected - pp with different name, but same params',
     );
-    
-    my $type_name = delete $params{type_name};
+    ok( # duplicate params w/ roi undef - checks undef params
+        !$self->test_class->create(
+            name => 'Yet Another No Region of Interest (ROI)',
+            type_name => $type_name,
+            sequencing_platform => $sequencing_platform,
+            dna_source => $dna_source,
+            roi => undef,
+        ),
+        'Failed as expected - create w/ identical params (roi undef)',
+    );
 
+    
     # TYPE NAME UNRESOLVABLE
-    delete $params{type_name};
     eval { # this should die
         $self->test_class->create(
             name => 'Diff Name',
-            %params,
+            sequencing_platform => $sequencing_platform,
+            dna_source => $dna_source,
+            roi => $roi,
         );
     };
     ok($@, 'Create failed - can\'t resolve type_name');
@@ -150,7 +188,7 @@ sub test01_creates : Tests(4) {
     return 1;
 }
 
-sub test02_resolvers : Tests(3) {
+sub test02_type_name_resolvers : Tests(3) {
     my $self = shift;
 
     is(
@@ -177,7 +215,7 @@ sub test03_methods : Tests(4) {
 
     my $pp = $self->{_object};
     is($pp->type_name, 'tester', 'Checking type_name (tester)');
-    is_deeply([ $pp->params_for_class ], [qw/ sequencing_platform dna_source /], 'params_for_class');
+    is_deeply([ $pp->params_for_class ], [qw/ sequencing_platform dna_source roi /], 'params_for_class');
     is($pp->sequencing_platform, 'solexa', 'sequencing_platform (solexa)');
     is($pp->dna_source, 'genomic', 'dna_source (genomic)');
 
@@ -241,6 +279,7 @@ my %TYPE_NAME_PARAMS = (
         name => 'Tester for Testing',
         sequencing_platform => 'solexa',
         dna_source => 'genomic',
+        roi => 'mouse',
     }, 
     'amplicon assembly' => {
         class => 'Genome::ProcessingProfile::AmpliconAssembly',
@@ -268,7 +307,7 @@ my %TYPE_NAME_PARAMS = (
         indel_finder_name => undef,
         indel_finder_params => undef,
         multi_read_fragment_strategy => undef,
-        read_aligner_name => undef,
+        read_aligner_name => 'bwa',
         read_aligner_version => undef,
         read_aligner_params => undef,
         read_calibrator_name => undef,
@@ -288,7 +327,7 @@ my %TYPE_NAME_PARAMS = (
         indel_finder_name => undef,
         indel_finder_params => undef,
         multi_read_fragment_strategy => undef,
-        read_aligner_name => undef,
+        read_aligner_name => 'maq',
         read_aligner_version => undef,
         read_aligner_params => undef,
         read_calibrator_name => undef,

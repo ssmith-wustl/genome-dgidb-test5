@@ -3,8 +3,9 @@ use strict;
 use warnings;
 
 use above "Genome";
+
 use File::Slurp;
-use Genome;
+use File::Temp;
 use Test::More tests => 6;
 
 # make a model like we do on the cmdline, but with Perl
@@ -21,10 +22,12 @@ BEGIN {
 };
 
 
-my $template = "genotype-microarray-test-". $ENV{USER} . "-XXXXXXX";
-my (undef, $temp_wugc) = File::Temp::tempfile($template,
-                                              DIR => '/tmp',
-                                              SUFFIX => '.wugc',);
+my $tempdir = File::Temp::tempdir(CLEANUP => 1);
+my $temp_wugc = $tempdir."/genotype-microarray-test.wugc";
+#my $template = "genotype-microarray-test-". $ENV{USER} . "-XXXXXXX";
+#my (undef, $temp_wugc) = File::Temp::tempfile($template,
+#                                              DIR => '/tmp',
+#                                              SUFFIX => '.wugc',);
 
 my $test_model_name = "genotype-ma-test-".$ENV{USER}."-".$$;
 $test_model_name ='H_KA-123172-S.3576';
@@ -36,10 +39,9 @@ my $gm = Genome::Model::Command::Define::GenotypeMicroarray->create(
     processing_profile_name => $ppname ,
     subject_name            => $test_model_name, 
     model_name              => $test_model_name .".test",
+    data_directory          => $tempdir,
     file                    => $temp_wugc ,
 );
-
-
 ok($gm->execute(),'define model');
 
 # check for the model with the name
