@@ -18,9 +18,11 @@ class Genome::ProcessingProfile::MetagenomicAssembly{
                        },
         contaminant_database => {
                            doc => 'The contaminant database to screen the reads against',
+                           is_optional => 1,
                        },
         contaminant_algorithm => {
                                   doc => 'The algorithm to use for screening reads against a contaminant database',
+                           is_optional => 1,
                               }
         ],
 };
