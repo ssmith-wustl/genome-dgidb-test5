@@ -57,7 +57,7 @@ sub create {
     my ($class, %params) = @_;
 
     # Name
-    $class->_validate_name($params{name})
+    $class->_validate_name_and_uniqueness($params{name})
         or return;
 
     # Type name - confesses
@@ -84,12 +84,12 @@ sub create {
         or return;
 
     # Create
-    my $self = $class->SUPER::create(%params);
+    my $self = $class->SUPER::create(%params)
+       or return;
    
     my $meta = $self->class->__meta__;
     foreach my $property_name ($self->params_for_class) {
         my $property_meta = $meta->property_meta_for_name($property_name);
-        next unless (defined $property_meta->valid_values); 
         if (!defined $self->$property_name) {
             if ($property_meta->is_optional) {
                 next;
@@ -101,10 +101,11 @@ sub create {
                 return;
             }
         }
+        next unless (defined $property_meta->valid_values); 
         unless ( grep { $self->$property_name eq $_ } @{ $property_meta->valid_values } ) {
             $self->error_message(
                                  sprintf(
-                                         'Invalid value (%s) for %s.  Valid values: %s',
+                                         'Invalid value (%s) for %s.  Valid values: %s.',
                                          $self->$property_name,
                                          $property_name,
                                          join(', ', @{ $property_meta->valid_values }),
@@ -118,7 +119,7 @@ sub create {
     return $self;
 }
 
-sub _validate_name {
+sub _validate_name_and_uniqueness {
     my ($class, $name) = @_;
 
     # defined? 
@@ -131,10 +132,9 @@ sub _validate_name {
     # Is name unique?
     my ($existing_name_pp) = $class->get(name => $name);
     if ( $existing_name_pp ) {
-        my $describer = Genome::ProcessingProfile::Command::Describe->create(
+        Genome::ProcessingProfile::Command::Describe->execute(
             processing_profile_id => $existing_name_pp->id,
         ) or confess "Can't create describe command to show existing processing profile";
-        $describer->execute;
         $class->error_message("Processing profile (above) with same name ($name) already exists.");
         return;
     }
@@ -146,34 +146,47 @@ sub _validate_no_existing_processing_profiles_with_idential_params {
     my ($subclass, %params) = @_;
 
     # If no params, no need to check
-    return 1 unless $subclass->params_for_class;
+    my @params_for_class = $subclass->params_for_class;
+    return 1 unless @params_for_class;
 
-    # Get existing pp that have the same params
+    # Remove these params.
+    my $type_name = delete $params{type_name};
     delete $params{name};
     delete $params{supersedes};
     
-    my @existing_pps = $subclass->get(%params);
-    # none ok
-    return 1 unless @existing_pps;
+    # Get all existing pps
+    my @existing_pps = $subclass->get(type_name => $type_name);
+    return 1 unless @existing_pps; # none ok
 
-    # Collect the undef params.  This new pp may have one of these params undef'd
-    my @undef_properties;
-    for my $param ( $subclass->params_for_class ) {
-        next if defined $params{$param};
-        push @undef_properties, $param;
-    }
+    # Go through each one, aking sure that the params don't match. Some params may be undef
+    #  in the existing one, then defined in the new one (and vioce versa)
+    EXISTING_PP: for my $existing_pp ( @existing_pps ) {
+        PARAM: for my $param ( @params_for_class ) {
+            my $existing_param_value = $existing_pp->$param;
+            if ( not defined $params{$param} ) {
+                next PARAM if not defined $existing_param_value; # both undef -> next PARAM
+                next EXISTING_PP; # new is def and existing is not -> next EXISTING_PP
+            }
 
-    # Check the undef params.  If one is found return immediatly.
-    for my $pp ( @existing_pps ) {
-        next if grep { defined $pp->$_ } @undef_properties;
-        my $describer = Genome::ProcessingProfile::Command::Describe->create(
-            processing_profile_id => $pp->id,
-        ) or confess "Can't create describe command to show existing processing profile";
-        $describer->execute;
+            if ( not defined $existing_param_value ) {
+                next EXISTING_PP; # new param is defined and existing is not -> next EXISTING_PP
+            }
+
+            if ( $params{$param} ne $existing_param_value ) { 
+                next EXISTING_PP; # different -> next EXISTING_PP
+            }
+            # both are the same -> automatically goes to next PARAM
+        }
+
+        # If we get here we have one that is identical, describe and return undef
+        Genome::ProcessingProfile::Command::Describe->execute(
+            processing_profile_id => $existing_pp->id,
+        ) or confess "Can't execute describe command to show existing processing profile";
         $subclass->error_message("Found a processing profile with the same params as the one requested to create, but with a different name.  Please use this profile, or change a param.");
         return;
     }
 
+    # No pps found with new params, yay!
     return 1;
 }
 
