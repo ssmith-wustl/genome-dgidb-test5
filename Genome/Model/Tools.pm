@@ -8,11 +8,11 @@ use Genome;
 
 class Genome::Model::Tools {
     is => ['Command'],
-    english_name => 'genome tools',
+    english_name => 'genome model tools',
 };
 
 sub command_name {
-    'gt' 
+    'gmt' 
 }
 
 sub help_brief {
