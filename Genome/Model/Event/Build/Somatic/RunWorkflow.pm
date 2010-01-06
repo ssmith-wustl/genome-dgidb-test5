@@ -3,19 +3,21 @@
 # Currently when a param is added to the workflow, I need to go add that as a class property to the processing profile,
 # and then add it to this module to pass it to the workflow.
 # Also should we check the workflow->execute return code at the end? I think we should. Lets talk to eclark about this.
+# Note dkoboldt
+# This RunWorkflow was copied from Genome/Model/Event/Build/Somatic/RunWorkFlow.pm to mimic and expand the somatic pipeline
 
-package Genome::Model::Event::Build::Somatic::RunWorkflow;
+package Genome::Model::Event::Build::SomaticCapture::RunWorkflow;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Model::Event::Build::Somatic::RunWorkflow {
+class Genome::Model::Event::Build::SomaticCapture::RunWorkflow {
     is => ['Genome::Model::Event'],
 };
 
 sub help_brief {
-    "Runs the somatic pipeline on the latest build of the normal and tumor models for this somatic model"
+    "Runs the somatic-capture pipeline on the latest build of the normal and tumor models for this somatic model"
 }
 
 sub help_synopsis {
@@ -26,7 +28,7 @@ EOS
 
 sub help_detail {
     return <<"EOS"
-One build of a given Somatic model.
+One build of a given SomaticCapture model.
 EOS
 }
 
@@ -121,7 +123,7 @@ sub execute {
         return;
     }
     
-    my $workflow = Genome::Model::Tools::Somatic::Compare::Bams->create(
+    my $workflow = Genome::Model::Tools::Somatic::Compare::CaptureBams->create(
         normal_bam_file => $normal_bam,
         tumor_bam_file => $tumor_bam,
         tumor_snp_file => $tumor_snp_file,
