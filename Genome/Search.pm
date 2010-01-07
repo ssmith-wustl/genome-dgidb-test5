@@ -34,6 +34,8 @@ sub add {
     
     my @docs = map($class->resolve_document_for_object($_), @objects);
     
+    return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
+    
     unless($self->_solr_server->add(\@docs)) {
         $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to Solr.');
         return;
@@ -57,6 +59,9 @@ sub delete {
     my $self = $class->_singleton_object;
     
     my @docs = map($class->resolve_document_for_object($_), @objects);
+    
+    return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
+    
     my $error_count = 0;
     for my $doc (@docs) {
         unless($self->_solr_server->delete_by_id($doc->value_for('id'))) {
@@ -80,6 +85,8 @@ sub clear {
     my $class = shift;
     
     my $self = $class->_singleton_object;
+    
+    return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
     
     $self->_solr_server->delete_by_query('*:*'); #Optimized by solr for fast index clearing
     $self->_solr_server->optimize(); #Prevent former entries from influencing future index
@@ -157,8 +164,6 @@ sub _commit_callback {
     my $class = shift;
     my $object = shift;
     
-    return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
-    
     eval {
         if($class->is_indexable($object)) {
             $class->add($object);
@@ -177,8 +182,6 @@ sub _commit_callback {
 sub _delete_callback {
     my $class = shift;
     my $object = shift;
-    
-    return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
     
     eval {
         if($class->is_indexable($object)) {
