@@ -146,24 +146,4 @@ sub verify_successful_completion_for_stage {
     return 1;
 }
 
-sub abandon {
-    my $self = shift;
-    my $build = $self->build;
-    my @events = sort { $a->genome_model_event_id <=> $b->genome_model_event_id }
-        grep { $_->genome_model_event_id ne $self->genome_model_event_id } $build->events;
-    for my $event (@events) {
-        unless ($event->abandon) {
-            $self->error_message('Failed to abandon event with id '. $event->id);
-            return;
-        }
-    }
-    my $disk_allocation = $build->disk_allocation;
-    if ($disk_allocation) {
-        unless ($disk_allocation->reallocate) {
-            $self->warning_message('Failed to reallocate disk space.');
-        }
-    }
-    return $self->SUPER::abandon;
-}
-
 1;
