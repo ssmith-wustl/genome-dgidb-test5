@@ -198,7 +198,6 @@ sub get_events_node {
     my @events = $self->build->events;
 
     for my $event (@events) {
-        $DB::single = 1;
         my $event_node = $self->get_event_node($event);
         $events_list->addChild($event_node);
     }
@@ -215,8 +214,6 @@ sub get_build_node {
     my $buildnode = $doc->createElement("build");
 
     my $model = $self->build->model;
-
-    $DB::single = 1;
 
     my $subject = $model->subject;
     my $source;
@@ -453,7 +450,6 @@ sub get_event_node {
     my $event = shift;
     my $doc = $self->_doc;
 
-    $DB::single = 1;
     my $event_node = $self->anode("event","id",$event->id);
     $event_node->addChild( $doc->createAttribute("command_class",$event->class));
     $event_node->addChild( $self->tnode("event_status",$event->event_status));
@@ -525,6 +521,12 @@ sub get_event_node {
             if ((defined $ida->instrument_data_id && $event->instrument_data_id) && $ida->instrument_data_id == $event->instrument_data_id) {
                 my $alignment;
                 eval{ $alignment = $ida->alignment_set };
+
+                if ($@) {
+                    chomp($@);
+                    push(@adirs, $@);
+                }
+
                 if (defined($alignment)) {
                     push(@adirs, $alignment->alignment_directory);
 
