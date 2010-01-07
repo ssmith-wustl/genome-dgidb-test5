@@ -77,6 +77,20 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             is_input => 1,
             default => 0,
             doc => 'append rs_id from dbSNP at end of each matching row'
+        },
+        append_allele=> {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'append allele from dbSNP to end of output'
+        },
+        require_allele_match => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'filter out SNPs where allele doesnt match'
         }
     ],
 };
@@ -96,7 +110,7 @@ EOS
 
 sub execute { 
 
-$DB::single = 1;
+    $DB::single = 1;
 
     my ($self) = @_;
 
@@ -124,30 +138,41 @@ $DB::single = 1;
 sub print_matches {
 
     my ($self, $line) = @_;
+    my ($chr, $start, $stop, $allele1, $allele2) = split(/\t/,$line);
 
-    my @matches;
+    my @matches = $self->find_all_matches($line);
+    @matches = map { $self->filter_by_type($_) } @matches; # SNPs only
 
     if ($self->filter_out_submitters()) {
-        @matches = $self->find_all_matches($line);
         @matches = map { $self->filter_by_submitters($_) } @matches;
-        @matches = map { $self->filter_by_type($_) } @matches; 
-    } else {
-        @matches = $self->find_a_matching_pos($line);
+    }
+
+    if ($self->require_allele_match()) {
+        @matches = map { $self->filter_by_allele($_, $allele1, $allele2) } @matches;
     }
 
     my $fh = $self->_output_filehandle() || die 'no output_filehandle';
     my $report_mode = $self->report_mode();
     if (($report_mode eq 'known-only')&&(@matches)) {
 
-        if ($self->append_rs_id()) {
+        if ($self->append_rs_id()
+            || $self->append_allele() ) {
 
-            my ($chr, $start, $stop) = split(/\t/,$line);
             my ($dbsnp_fh, $index) = $self->get_fh_for_chr($chr);
             my $snp_line = $self->get_line($dbsnp_fh, $index, $matches[0]);
             my $snp = parse_dbsnp_line($snp_line);
-            my $rs_id = $snp->{'rs_id'};
-            chomp($line);
-            $line = sprintf("%s\t%s\n",$line,$rs_id); 
+
+            if ($self->append_rs_id()) {
+                my $rs_id = $snp->{'rs_id'};
+                chomp($line);
+                $line = sprintf("%s\t%s\n",$line,$rs_id); 
+            }
+
+            if ($self->append_allele()) {
+                my $allele = $snp->{'ds_allele'};
+                chomp($line);
+                $line = sprintf("%s\t%s\n",$line,$allele); 
+            }
         }
 
         $fh->print($line);
@@ -168,6 +193,69 @@ sub get_output_fh {
 
     my $fh = IO::File->new(">" . $output_file);
     return $fh;
+}
+
+sub filter_by_allele {
+
+    my ($self, $line, $ref, $variant) = @_;
+
+    my $snp = parse_dbsnp_line($line);    
+    my $ds_allele = $snp->{'ds_allele'};
+    #my ($dbsnp_allele1,$dbsnp_allele2) = split(/\//,$ds_allele);
+    my @dbsnp_allele_array = split(/\//,$ds_allele);
+    my $array_n = @dbsnp_allele_array;
+
+    use Genome::Info::IUB;
+   
+    # if variant is not expanded, include ref in alpha order 
+    my ($a1, $a2) = Genome::Info::IUB->variant_alleles_for_iub($ref,$variant); ##if $variant eq "N" there would be an a3
+
+#TODO: finish work here
+
+    my @vars;
+    if ($a1) {push(@vars,$a1);}
+    if ($a2) {push(@vars,$a2);}
+
+    my ($rm,$vm);
+    for my $var (@vars) {
+	#my ($rm,$vm);
+	for my $n (1..$array_n) {
+	    my $m = $n - 1;
+	    my $dbsnp_allele = $dbsnp_allele_array[$m];
+	    if ($ref eq $dbsnp_allele) {
+		$rm = $dbsnp_allele;
+	    } elsif ($var eq $dbsnp_allele) {
+		$vm = $dbsnp_allele;
+	    }
+	}
+	unless ($rm && $vm) {
+	    undef($rm);
+	    undef($vm);
+	    for my $n (1..$array_n) {
+		my $m = $n - 1;
+		my $dbsnp_allele = $dbsnp_allele_array[$m];
+		my $rev_dbsnp_allele = &reverse_complement ($dbsnp_allele); 
+		if ($ref eq $rev_dbsnp_allele) {
+		    $rm = $rev_dbsnp_allele;
+		} elsif ($var eq $rev_dbsnp_allele) {
+		    $vm = $rev_dbsnp_allele;
+		}
+	    }
+	}
+    }
+
+    if ($rm && $vm) {
+	return 1;
+    } else {
+	return;
+    }
+}
+
+sub reverse_complement {
+    my ($sequence) = @_;
+    $sequence = reverse $sequence;
+    $sequence =~ tr/aAcCtTgG/tTgGaAcC/;
+    return $sequence;
 }
 
 sub filter_by_submitters {
