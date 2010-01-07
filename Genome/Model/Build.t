@@ -1,5 +1,9 @@
 #!/gsc/bin/perl
 
+# FIXME Tests to cover:
+# Allocation - all allocation in builds are not tested
+# Reports - limited report testing
+
 use strict;
 use warnings;
 
@@ -47,8 +51,13 @@ is_deeply(\@build_inst_data, [ $inst_data ], 'Build instrument data');
 is($build->coolness, 'moderate', 'Got coolness'); 
 #print Data::Dumper::Dumper({bin=>\@build_inputs,bid=>\@build_inst_data,min=>\@model_inputs,mid=>\@model_inst_data,});
 
-#< Schedule, Initialize, Fail, Success >#
-# schedule
+#< ACTIONS >#
+# SCHEDULE
+# try to init, succ and fail an unscheduled build
+ok(!$build->initialize, 'Failed to initialize an unscheduled build');
+ok(!$build->fail, 'Failed to fail an unscheduled build');
+ok(!$build->success, 'Failed to success an unscheduled build');
+# schedule - check events
 my $stages = $build->schedule;
 ok($stages, 'Scheduled build');
 is_deeply(
@@ -81,24 +90,36 @@ no warnings 'redefine';
 *Genome::Model::Build::generate_send_and_save_report = sub{ return 1; };
 use warnings;
 
-# init
+# INITIALIZE
 ok($build->initialize, 'Initialize');
 is($build->build_status, 'Running', 'Status is Running');
 is($model->current_running_build_id, $build->id, 'Current running build id set to build id in initialize');
 
-# fail
+# FAIL
 ok($build->fail([]), 'Fail');
 is($build->build_status, 'Failed', 'Status is Failed');
+
+# SUCCESS
 ok($build->success, 'Success');
 is($build->build_status, 'Succeeded', 'Status is Succeeded');
 ok(!$model->current_running_build_id, 'Current running build id set to undef in success');
 is($model->last_complete_build_id, $build->id, 'Last complete build id set to build id in success');
 
+# ABANDON
+ok($build->abandon, 'Abandon');
+is($build->build_status, 'Abandoned', 'Status is Abandoned');
+is(grep({$_->event_status eq 'Abandoned'} @events), 4, 'Abandoned all events');
+# try to init, fail and succeed a abandoned build
+ok(!$build->initialize, 'Failed to initialize an abandoned build');
+ok(!$build->fail, 'Failed to fail an abandoned build');
+ok(!$build->success, 'Failed to success an abandoned build');
+
 no warnings 'redefine';
 *Genome::Model::Build::generate_send_and_save_report = $gss_report;
 use warnings;
 
-# Report to addressees
+#< Reports >#
+# to addressees
 is(
     $build->_get_to_addressees_for_report_generator_class('Genome::Model::Report::BuildInitialized'),
     $ENV{USER}.'@genome.wustl.edu', 
