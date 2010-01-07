@@ -244,7 +244,7 @@ foreach my $hugo (keys %{$annotation}) {
 		$annotation->{$hugo}->{$line_num}->{UCSC},
 		$annotation->{$hugo}->{$line_num}->{DOMAIN},
             );
-1,2,3,4,5,6,7,8,14,15,16,17,18,19 
+#1,2,3,4,5,6,7,8,14,15,16,17,18,19 
 	my $merger = "$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1";
 
 	if ($columns_merged_snv{$merger}) {
