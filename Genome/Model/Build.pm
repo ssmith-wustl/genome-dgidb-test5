@@ -429,8 +429,7 @@ sub add_report {
     }
 }
 
-#< Build Events >#
-# schedule
+#< Build Actions >#
 sub schedule {
     my $self = shift;
 
@@ -612,24 +611,24 @@ sub _schedule_command_classes_for_object {
     return @scheduled_commands;
 }
 
-# initialize
 sub initialize {
     my $self = shift;
 
-    $self->build_event->event_status('Running');
-
+    $self->_verify_build_is_not_abandoned_and_set_status_to('Running')
+        or return;
+   
     $self->generate_send_and_save_report('Genome::Model::Report::BuildInitialized')
         or return;
 
     return 1;
 }
 
-# fail
 sub fail {
     my ($self, @errors) = @_;
 
-    $self->build_event->event_status('Failed');
-
+    $self->_verify_build_is_not_abandoned_and_set_status_to('Failed', 1)
+        or return;
+   
     $self->generate_send_and_save_report(
         'Genome::Model::Report::BuildFailed', {
             errors => \@errors,
@@ -643,26 +642,86 @@ sub fail {
 sub success {
     my $self = shift;
 
-    $self->generate_send_and_save_report( $self->report_generator_class_for_success )
+    # set status
+    $self->_verify_build_is_not_abandoned_and_set_status_to('Succeeded', 1)
         or return;
-    $self->reallocate;
-    $self->build_event->event_status('Succeeded');
-    $self->build_event->date_completed( UR::Time->now );
 
-    return 1;
+    # report - if this fails set status back to Running, then the workflow will fail it
+    unless ( $self->generate_send_and_save_report( $self->report_generator_class_for_success ) ) {
+        $self->_verify_build_is_not_abandoned_and_set_status_to('Running');
+        return;
+    }
 
+    # reallocate - always returns true (legacy behavior)
+    return $self->reallocate; 
+}
+
+sub _verify_build_is_not_abandoned_and_set_status_to {
+    my ($self, $status, $set_date_completed) = @_;
+
+    my $build_event = $self->build_event;
+    # Do we have a master event?
+    unless ( $build_event ) {
+        $self->error_message(
+            'Cannot set build ('.$self->id.") status to '$status' because it does not have a master event."
+        );
+        return;
+    }
+
+    # Is it abandoned?
+    if ( $build_event->event_status eq 'Abandoned' ) {
+        $self->error_message(
+            'Cannot set build ('.$self->id.") status to '$status' because the master event has been abandoned."
+        );
+        return;
+    }
+
+    # Set status and date completed
+    $build_event->event_status($status);
+    $build_event->date_completed( UR::Time->now ) if $set_date_completed;
+
+    return $build_event;
 }
 
 sub abandon {
-    my ($self, @errors) = @_;
+    my $self = shift;
 
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        die $self->error_message('No build event found for build '. $self->id);
+    # Get master event
+    my $master_event = $self->build_event;
+    unless ( $master_event ) { # FIXME really die here? (legacy behavior)
+        die $self->error_message('Cannot abandon build ('.$self->id.') because there is no master event for it.');
+        #return;
     }
-    unless ($build_event->abandon) {
-        die $self->error_message('Failed to abandon build '. $self->id);
+
+    # Abandon events, then master event
+    my @events = sort { $a->id <=> $b->id } grep { $_->id ne $self->id } $self->events;
+    for my $event ( @events ) {
+        unless ( $event->abandon ) {
+            $self->error_message(
+                sprintf(
+                    'Failed to abandon build (%s) because could not abandon event (%s).',
+                    $self->id,
+                    $event->id,
+                )
+            );
+            return;
+        }
     }
+
+    # Abandon master event
+    unless ( $master_event->abandon ) { # FIXME really die here? (legacy behavior)
+        die $self->error_message(
+            sprintf(
+                'Failed to abandon build (%s) because could not abandon master event (%s).',
+                $self->id,
+                $master_event->id,
+            )
+        );
+        #return;
+    }
+
+    # Reallocate - always returns true (legacy behavior)
+    $self->reallocate;
 
     return 1;
 }
