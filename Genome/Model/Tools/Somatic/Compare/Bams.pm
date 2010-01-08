@@ -96,6 +96,11 @@ sub pre_execute {
     unless (defined $self->min_somatic_quality) {
         $self->min_somatic_quality(40);
     }
+    
+    # Default dbSnp parameters
+    unless (defined $self->require_dbsnp_allele_match) {
+        $self->require_dbsnp_allele_match(1);
+    }
 
     return 1;
 }
@@ -183,9 +188,15 @@ __DATA__
   <link fromOperation="input connector" fromProperty="snp_filter_output" toOperation="Snp Filter" toProperty="output_file" />
   <link fromOperation="Somatic Sniper" fromProperty="output_snp_file" toOperation="Snp Filter" toProperty="sniper_snp_file" />
 
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Filter Loh" toProperty="skip_if_output_present" />
+  <link fromOperation="input connector" fromProperty="loh_output_file" toOperation="Filter Loh" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="loh_fail_output_file" toOperation="Filter Loh" toProperty="loh_output_file" />
+  <link fromOperation="Indelpe Runner Normal" fromProperty="filtered_snp_file" toOperation="Filter Loh" toProperty="normal_snp_file" />
+  <link fromOperation="Snp Filter" fromProperty="output_file" toOperation="Filter Loh" toProperty="tumor_snp_file" />
+
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Filter CEU YRI" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="filter_ceu_yri_output" toOperation="Filter CEU YRI" toProperty="output_file" />
-  <link fromOperation="Snp Filter" fromProperty="output_file" toOperation="Filter CEU YRI" toProperty="variant_file" />
+  <link fromOperation="Filter Loh" fromProperty="output_file" toOperation="Filter CEU YRI" toProperty="variant_file" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Sniper Adaptor Snp" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="adaptor_output_snp" toOperation="Sniper Adaptor Snp" toProperty="output_file" />
@@ -196,21 +207,16 @@ __DATA__
   <link fromOperation="Sniper Adaptor Snp" fromProperty="output_file" toOperation="Lookup Variants" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="lookup_variants_report_mode" toOperation="Lookup Variants" toProperty="report_mode" />
   <link fromOperation="input connector" fromProperty="lookup_variants_filter_out_submitters" toOperation="Lookup Variants" toProperty="filter_out_submitters" />
-
-  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Filter Loh" toProperty="skip_if_output_present" />
-  <link fromOperation="input connector" fromProperty="loh_output_file" toOperation="Filter Loh" toProperty="output_file" />
-  <link fromOperation="input connector" fromProperty="loh_fail_output_file" toOperation="Filter Loh" toProperty="loh_output_file" />
-  <link fromOperation="Indelpe Runner Normal" fromProperty="filtered_snp_file" toOperation="Filter Loh" toProperty="normal_snp_file" />
-  <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Filter Loh" toProperty="tumor_snp_file" />
+  <link fromOperation="input connector" fromProperty="require_dbsnp_allele_match" toOperation="Lookup Variants" toProperty="require_allele_match" />
   
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate Transcript Variants Snp" toProperty="skip_if_output_present" />
-  <link fromOperation="Filter Loh" fromProperty="output_file" toOperation="Annotate Transcript Variants Snp" toProperty="variant_file" />
+  <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Annotate Transcript Variants Snp" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_snp" toOperation="Annotate Transcript Variants Snp" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Snp" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Snp" toProperty="annotation_filter" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC" toProperty="skip_if_output_present" />
-  <link fromOperation="Filter Loh" fromProperty="output_file" toOperation="Annotate UCSC" toProperty="input_file" />
+  <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Annotate UCSC" toProperty="input_file" />
   <link fromOperation="input connector" fromProperty="ucsc_output" toOperation="Annotate UCSC" toProperty="output_file" /> 
   <link fromOperation="input connector" fromProperty="ucsc_unannotated_output" toOperation="Annotate UCSC" toProperty="unannotated_file" /> 
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Annotate UCSC" toProperty="skip" /> 
@@ -222,7 +228,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tier_4_snp_file" toOperation="Tier Variants Snp" toProperty="tier4_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Tier Variants Snp" toProperty="only_tier_1" />
   <link fromOperation="Annotate UCSC" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="ucsc_file" />
-  <link fromOperation="Filter Loh" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="variant_file" />
+  <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="transcript_annotation_file" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="High Confidence Snp Tier 1" toProperty="skip_if_output_present" />
@@ -450,6 +456,7 @@ __DATA__
     <inputproperty isOptional="Y">dbsnp_output</inputproperty>
     <inputproperty isOptional="Y">lookup_variants_report_mode</inputproperty>
     <inputproperty isOptional="Y">lookup_variants_filter_out_submitters</inputproperty>
+    <inputproperty isOptional="Y">require_dbsnp_allele_match</inputproperty>
 
     <inputproperty isOptional="Y">loh_output_file</inputproperty>
     <inputproperty isOptional="Y">loh_fail_output_file</inputproperty>

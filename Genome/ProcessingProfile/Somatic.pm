@@ -24,7 +24,10 @@ class Genome::ProcessingProfile::Somatic{
         },
         skip_sv => {
             doc => "If set to true, the pipeline will skip structural variation detection",
-        }
+        },
+        require_dbsnp_allele_match => {
+            doc => "If set to true, the pipeline will require the allele to match during Lookup Variants"  
+        },
     ],
 };
 

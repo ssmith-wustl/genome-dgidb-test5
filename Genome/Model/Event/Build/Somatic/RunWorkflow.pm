@@ -66,7 +66,12 @@ sub execute {
 
     my $min_mapping_quality = $processing_profile->min_mapping_quality;
     my $min_somatic_quality = $processing_profile->min_somatic_quality;
-
+    
+    my $require_dbsnp_allele_match = $processing_profile->require_dbsnp_allele_match;
+    unless(defined $require_dbsnp_allele_match) {
+        $require_dbsnp_allele_match = 1;
+    }
+    
     # Get the associated tumor and normal models
     my $tumor_model = $model->tumor_model;
     unless ($tumor_model) {
@@ -131,6 +136,7 @@ sub execute {
         skip_sv => $skip_sv_flag,
         min_mapping_quality => $min_mapping_quality,
         min_somatic_quality => $min_somatic_quality,
+        require_dbsnp_allele_match => $require_dbsnp_allele_match,
         build_id => $build->id,
     );
 

@@ -14,12 +14,12 @@ class Genome::Model::Tools::Somatic::FilterLoh{
         tumor_snp_file => {
             is  => 'String',
             is_input  => 1,
-            doc => 'File of tumor SNPs in adapted (start + stop pos) maq-like format... often the filtered snp file from the somatic pipeline',
+            doc => 'The list of tumor SNPs in maq-like format (chromosome position reference variant)... often the somatic sniper output from the somatic pipeline',
         },
         normal_snp_file => {
             is  => 'String',
             is_input  => 1,
-            doc => 'The list of normal SNPs in (non-adapted) maq-like format...often the normal build filtered_snp_file',
+            doc => 'The list of normal SNPs in maq-like format...often the normal build filtered_snp_file',
         },
         output_file => {
             is => 'Text',
@@ -127,7 +127,7 @@ sub execute {
         chomp $line;
 
         # Getting adapted intput here so 
-        my ($chr, $pos, $pos2, $ref, $var_iub) = split /\t/, $line;
+        my ($chr, $pos, $ref, $var_iub) = split /\t/, $line;
         
         #now compare to homozygous sites in the tumor
         if($var_iub =~ /[ACTG]/ && exists($normal_variants{$chr}{$pos})) {
