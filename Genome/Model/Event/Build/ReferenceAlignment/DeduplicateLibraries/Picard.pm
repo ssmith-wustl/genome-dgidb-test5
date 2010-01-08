@@ -147,6 +147,9 @@ sub execute {
         DIR     => $alignments_dir, 
         CLEANUP => 1,
     );
+   
+    # fix permissions on this temp dir so others can clean it up later if need be
+    chmod(0775,$tm_pdir);
 
     my $mark_dup_cmd = Genome::Model::Tools::Sam::MarkDuplicates->create(
        file_to_mark => $merged_file,
