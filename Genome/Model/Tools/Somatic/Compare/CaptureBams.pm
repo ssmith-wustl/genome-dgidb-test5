@@ -1,5 +1,22 @@
 package Genome::Model::Tools::Somatic::Compare::CaptureBams;
 
+########################################################################################################################
+# CaptureBams.pm - A module for comparing tumor-normal BAM files in capture data
+#
+#   TO-DO LIST
+#   -Call VarScan using Genome::Model::Tools::VarScan::Somatic
+#   -Process VarScan using Genome::Model::Tools::VarScan::ProcessSomatic
+#   -Merge somaticSniper and VarScan somatic calls
+#   -Merge somaticSniper and VarScan germline calls
+#   -Merge somaticSniper and VarScan LOH calls
+#   -Format merged files for annotation
+#   -Move CEU/YRI/dbSNP filters to AFTER annotation step
+#   -Generate new endpoint files in MAF-like format
+#   -Restrict endpoint variant calls to ROI ()
+#   -Run Sample QC checks (SNP and CNV)
+#   
+########################################################################################################################
+
 use strict;
 use warnings;
 
@@ -109,15 +126,15 @@ sub default_filenames{
         copy_number_output                  => 'copy_number.out',
 
         ## glfSomatic Output Files ##
-        sniper_snp_output                   => 'glfSomatic.output.snp',
-        snp_filter_output                   => 'glfSomatic.output.snp.filter',
-        sniper_indel_output                 => 'glfSomatic.output.indel',
-        indel_lib_filter_preferred_output   => 'glfSomatic.output.indel.filter.preferred',
-        indel_lib_filter_single_output      => 'glfSomatic.output.indel.filter.single',
-        indel_lib_filter_multi_output       => 'glfSomatic.output.indel.filter.multi',
-        indel_capture_filter_output         => 'glfSomatic.output.indel.filter.capture',
-        loh_output_file                     => 'glfSomatic.output.loh',
-        loh_fail_output_file                => 'glfSomatic.output.loh.fail',
+        sniper_snp_output                   => 'somaticSniper.output.snp',
+        snp_filter_output                   => 'somaticSniper.output.snp.filter',
+        sniper_indel_output                 => 'somaticSniper.output.indel',
+        indel_lib_filter_preferred_output   => 'somaticSniper.output.indel.filter.preferred',
+        indel_lib_filter_single_output      => 'somaticSniper.output.indel.filter.single',
+        indel_lib_filter_multi_output       => 'somaticSniper.output.indel.filter.multi',
+        indel_capture_filter_output         => 'somaticSniper.output.indel.filter.capture',
+        loh_output_file                     => 'somaticSniper.output.loh',
+        loh_fail_output_file                => 'somaticSniper.output.loh.fail',
 
         ## VarScan Output Files ##
         varscan_snp_output                  => 'varScan.output.snp',
@@ -130,30 +147,43 @@ sub default_filenames{
         varscan_indel_somatic               => 'varScan.output.indel.somatic',
         
         ## Combined glfSomatic+VarScan Output files ##
+        merged_snp_output                   => 'merged.somatic.snp',            ## Generated from merge-variants of somaticSniper and varScan
+        merged_snp_filter                   => 'merged.somatic.snp.filter',     ## Generated from somatic-snp-filter of merged_snp_output
+        merged_indel_output                 => 'merged.somatic.indel',          ## Generated from merge-variants of somaticSniper and varScan ##
+
+        merged_germline_snp                 => 'merged.germline.snp',           ## Generated from merge-variants of somaticSniper and varScan
+        merged_loh_snp                      => 'merged.loh.snp',                ## Generated from merge-variants of somaticSniper and varScan
+
+        ## Files formatted for annotation ##
+        adaptor_output_snp                  => 'merged.somatic.snp.formatted',
+        adaptor_output_indel                => 'merged.somatic.indel.formatted',
         
-        merged_snp_output                   => 'merged.somatic.snp',
-        merged_snp_filter                   => 'merged.somatic.snp.filter',
-        merged_indel_output                 => 'merged.somatic.indel',
-        
+        ## Annotation output files ##
+        annotate_output_snp                 => 'annotation.somatic.snp.transcript',
+        ucsc_output                         => 'annotation.somatic.snp.ucsc',
+        ucsc_unannotated_output             => 'annotation.somatic.snp.unannot-ucsc',
+        annotate_output_indel               => 'annotation.somatic.indel.transcript',
+
+        ## New annotation files for germline variants ##
+        annotate_output_germline_snp        => 'annotation.germline.snp.transcript',
+        annotate_output_germline_indel      => 'annotation.germline.indel.transcript',
+
+        ## Filtering files for 1000 Genomes CEU/YRI and dbSNP ##
         filter_ceu_yri_output               => 'filter.ceu_yri.out',
         dbsnp_output                        => 'filter.dbsnp.out',
-#        merged_snp_formatted                => 'merged.somatic.snp.formatted',
-#        merged_indel_formatted              => 'merged.somatic.indel.formatted',
 
-        adaptor_output_snp                  => 'merged.somatic.snp.formatted',
-        annotate_output_snp                 => 'merged.somatic.snp.formatted.annotations',
-        ucsc_output                         => 'merged.somatic.snp.formatted.ucsc',
-        ucsc_unannotated_output             => 'merged.somatic.snp.formatted.ucsc-un',
-
-        adaptor_output_indel                => 'merged.somatic.indel.formatted',
-        annotate_output_indel               => 'merged.somatic.indel.formatted.annotations',
-
+        ## Tiered SNP and indel files (all confidence) ##
         tier_1_snp_file                     => 'merged.somatic.snp.tier1.out',
         tier_2_snp_file                     => 'merged.somatic.snp.tier2.out',
         tier_3_snp_file                     => 'merged.somatic.snp.tier3.out',
         tier_4_snp_file                     => 'merged.somatic.snp.tier4.out',
         tier_1_indel_file                   => 'merged.somatic.indel.tier1.out',
 
+        ## New Germline Files ##
+        tier_1_germline_snp_file            => 'merged.germline.snp.tier1.out',
+        tier_1_germline_indel_file            => 'merged.germline.indel.tier1.out',
+
+        ## High-confidence tiered SNP and indel files ##
         tier_1_snp_high_confidence_file     => 'merged.somatic.high-confidence.snp.tier1.out',
         tier_2_snp_high_confidence_file     => 'merged.somatic.high-confidence.snp.tier2.out',
         tier_3_snp_high_confidence_file     => 'merged.somatic.high-confidence.snp.tier3.out',
@@ -162,9 +192,10 @@ sub default_filenames{
 
         ## Put in medium and low confidence placeholders ##
 
-        upload_variants_snp_1_output        => 'upload_variants_snp_1_output.out',
-        upload_variants_snp_2_output        => 'upload_variants_snp_2_output.out',
-        upload_variants_indel_output        => 'upload_variants_indel_output.out',
+        ## Other pipeline output files ##
+        upload_variants_snp_1_output        => 'upload-variants.snp_1.out',
+        upload_variants_snp_2_output        => 'upload-variants.snp_2.out',
+        upload_variants_indel_output        => 'upload-variants.indel.out',
         circos_graph                        => 'circos_graph.out',
         report_output                       => 'cancer_report.html',
     );
@@ -471,6 +502,24 @@ __DATA__
     <inputproperty isOptional="Y">tumor_indelpe_data_directory</inputproperty>
 
     <inputproperty isOptional="Y">snp_filter_output</inputproperty>
+
+    <inputproperty isOptional="Y">varscan_snp_output</inputproperty>
+    <inputproperty isOptional="Y">varscan_snp_germline</inputproperty>
+    <inputproperty isOptional="Y">varscan_snp_loh</inputproperty>
+    <inputproperty isOptional="Y">varscan_snp_somatic</inputproperty>
+    <inputproperty isOptional="Y">varscan_indel_output</inputproperty>
+    <inputproperty isOptional="Y">varscan_indel_germline</inputproperty>
+    <inputproperty isOptional="Y">varscan_indel_loh</inputproperty>
+    <inputproperty isOptional="Y">varscan_indel_somatic</inputproperty>
+    <inputproperty isOptional="Y">merged_snp_output</inputproperty>
+    <inputproperty isOptional="Y">merged_snp_filter</inputproperty>
+    <inputproperty isOptional="Y">merged_indel_output</inputproperty>
+    <inputproperty isOptional="Y">merged_germline_snp</inputproperty>
+    <inputproperty isOptional="Y">merged_loh_snp</inputproperty>
+    <inputproperty isOptional="Y">annotate_output_germline_snp</inputproperty>
+    <inputproperty isOptional="Y">annotate_output_germline_indel</inputproperty>
+    <inputproperty isOptional="Y">tier_1_germline_snp_file</inputproperty>
+    <inputproperty isOptional="Y">tier_1_germline_indel_file</inputproperty>
     
     <inputproperty isOptional="Y">filter_ceu_yri_output</inputproperty>
             
