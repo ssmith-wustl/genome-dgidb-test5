@@ -26,6 +26,11 @@ class Genome::Model::Command::Services::Build::Run{
                 is => 'Boolean',
                 is_optional => 1,
                 doc => 'Restart a new Workflow Instance. Overrides the default behavior of resuming an existing workflow.' 
+            },
+            inline => {
+                is => 'Boolean',
+                is_optional => 1,
+                doc => 'Run the entire build without bsubbing to other hosts (disables resource requirements and logs)'
             }
     ],
     doc => 'launch all jobs for a build (new)'
@@ -118,9 +123,68 @@ sub execute {
     UR::Context->commit;
 
     $w = $build->newest_workflow_instance;
-    
+
     my $success;
-    {
+    my $inline_error;
+
+    if ($self->inline) {
+        ## this is the most sensible representation of the event flow, since
+        #  the event table doesnt have anything to represent stages
+        
+        my $plan = Workflow::Operation->create_from_xml($xmlfile);
+
+        # inline provides minimal safety and no retries
+        # it only assures it will fail quickly and hard
+
+        my $flatten;
+        $flatten = sub {
+            $_[0]->can('operations') ? map { $flatten->($_) } $_[0]->operations_in_series : $_[0];
+        };
+
+        my @event_adaptors = map {
+            $_->operation_type
+        } grep { 
+            $_->operation_type->isa('Workflow::OperationType::Event')
+        } $flatten->($plan);
+        
+        $DB::single=1;
+        foreach my $event_adaptor (@event_adaptors) {
+            my $output;
+            eval {
+                $output = $event_adaptor->execute(prior_result => 1);
+            }; 
+            if ($@) {
+                $self->error_message('event ' . $event_adaptor->event_id . ' died');
+                $self->error_message($@);
+
+                my $event = Genome::Model::Event->get($event_adaptor->event_id);
+                $inline_error = Genome::Model::Build::Error->create(
+                    build_event_id => $build->build_event->id,
+                    stage_event_id => $build->build_event->id,
+                    stage => 'unknown',
+                    step => defined $event ? $event->command_name_brief : '',
+                    step_event_id => $event_adaptor->event_id,
+                    error => 'Event returned undef'
+                );
+                last;
+            } elsif (!defined $output) {
+                $self->error_message('event ' . $event_adaptor->event_id . ' returned undef');
+                
+                my $event = Genome::Model::Event->get($event_adaptor->event_id);
+                $inline_error = Genome::Model::Build::Error->create(
+                    build_event_id => $build->build_event->id,
+                    stage_event_id => $build->build_event->id,
+                    stage => 'unknown',
+                    step => defined $event ? $event->command_name_brief : '',
+                    step_event_id => $event_adaptor->event_id,
+                    error => 'Event returned undef'
+                );
+                last;
+            }
+        }
+        
+        $success = 1 unless defined $inline_error;
+    } else {
         local $ENV{WF_TRACE_UR} = 1;
         local $ENV{WF_TRACE_HUB} = 1;
         if ($w && !$self->restart) {
@@ -136,14 +200,22 @@ sub execute {
 
     # Failed a stage/step - send report
     unless ( $success ) {
-        unless ( @Workflow::Simple::ERROR ) {
-            return $self->_post_build_failure("Workflow failed, but no errors given");
+        my @errors;
+        if (defined $inline_error) {
+            @errors = ($inline_error);
+        } else {
+            unless ( @Workflow::Simple::ERROR ) {
+                return $self->_post_build_failure("Workflow failed, but no errors given");
+            }
+            @errors = Genome::Model::Build::Error->create_from_workflow_errors(
+                @Workflow::Simple::ERROR 
+            );
         }
-        my @errors = Genome::Model::Build::Error->create_from_workflow_errors(
-            @Workflow::Simple::ERROR 
-        );
+        
         unless ( @errors ) {
-            return $self->_post_build_failure("Can't covert workflow errors to build errors");
+            print STDERR "Can't convert workflow errors to build errors\n";
+            print STDERR Data::Dumper->new([\@Workflow::Simple::ERROR],['ERROR'])->Dump;
+            return $self->_post_build_failure("Can't convert workflow errors to build errors");
         }
         unless ( $build->fail(@errors) ) {
             return $self->_failed_build_fail(@errors);

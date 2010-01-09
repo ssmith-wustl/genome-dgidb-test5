@@ -74,7 +74,7 @@ sub execute {
         or return;
 
     # Schedule the stages and convert them to workflows
-    my $stages = $build->schedule # returns arrayref of stage names or undef on error
+    my $stages = $build->schedule
         or return;
     my @workflow_stages;
     foreach my $stage ( @$stages ) {
@@ -89,19 +89,31 @@ sub execute {
     my $w = $self->_merge_stage_workflows(@workflow_stages);
     $w->save_to_xml(OutputFile => $build->data_directory . '/build.xml');
 
+    my $resource = "-R 'select[type==LINUX86]'";
+    my $add_args = '';
+
+    if (scalar @$stages == 1 && scalar @{ $stages->[0]->{events} } == 1) {
+        my $one_event = $stages->[0]->{events}->[0];
+        
+        $resource = $one_event->bsub_rusage;
+        $add_args = ' --inline';
+    }
 
     # Bsub
     my $build_event = $build->build_event;
     my $lsf_command = sprintf(
-        'bsub -N -H -q %s -m blades -g /build/%s -u %s@genome.wustl.edu -o %s -e %s genome model services build run --model-id %s --build-id %s',
+        'bsub -N -H -q %s -m blades %s -g /build/%s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
         $self->lsf_queue,
+        $resource,
         $ENV{USER},
         $ENV{USER}, 
         $build_event->output_log_file,
         $build_event->error_log_file,
+        $add_args,
         $model->id,
         $build->id,
     );
+
     my $job_id = $self->_execute_bsub_command($lsf_command)
         or return;
     $build_event->lsf_job_id($job_id);
