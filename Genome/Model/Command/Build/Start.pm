@@ -93,8 +93,9 @@ sub execute {
     # Bsub
     my $build_event = $build->build_event;
     my $lsf_command = sprintf(
-        'bsub -N -H -q %s -m blades -u %s@genome.wustl.edu -o %s -e %s genome model services build run --model-id %s --build-id %s',
+        'bsub -N -H -q %s -m blades -g /build/%s -u %s@genome.wustl.edu -o %s -e %s genome model services build run --model-id %s --build-id %s',
         $self->lsf_queue,
+        $ENV{USER},
         $ENV{USER}, 
         $build_event->output_log_file,
         $build_event->error_log_file,
