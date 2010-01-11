@@ -88,16 +88,20 @@ sub execute {                               # replace with real execution logic.
 			my $ref = my $var = "";
 			my $indel_type = my $indel_size = "";
 
+			my $restColumn = 0;
+
 			if($lineContents[2] =~ /[0-9]/)
 			{
 				$chr_stop = $lineContents[2];
 				$ref = $lineContents[3];
 				$var = $lineContents[4];
+				$restColumn = 5;
 			}
 			else
 			{
 				$ref = $lineContents[2];
 				$var = $lineContents[3];
+				$restColumn = 4;
 			}
 
 			## Correct alleles ##
@@ -143,21 +147,36 @@ sub execute {                               # replace with real execution logic.
 			## If no chr stop, calculate it ##
 			if(!$chr_stop)
 			{
-				if($indel_type eq "INSERTION" || $indel_size == 1)
+				if($indel_type eq "INSERTION")# || $indel_size == 1
 				{
 					$chr_stop = $chr_start + 1;
 				}
 				else
 				{
-					$chr_stop = $chr_start + $indel_size;
+					$chr_stop = $chr_start + $indel_size - 1;
 				}
+			}
+
+			## If we have other information on line, output it ##
+			my $numContents = @lineContents;
+			my $rest_of_line = "";
+			if($restColumn && $restColumn > 0 && $restColumn < $numContents)
+			{
+				for(my $colCounter = $restColumn; $colCounter < $numContents; $colCounter++)
+				{
+					$rest_of_line .= "\t" if($rest_of_line);
+					$rest_of_line .= $lineContents[$colCounter];
+				}
+
 			}
 
 			## If we have the necessary information, output line ##
 			
 			if($chrom && $chr_start && $chr_stop && $allele1 && $allele2)
 			{
-				print OUTFILE "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2\n";
+				print OUTFILE "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2";
+				print OUTFILE "\t$rest_of_line" if($rest_of_line);
+				print OUTFILE "\n";
 			}
 
 		}

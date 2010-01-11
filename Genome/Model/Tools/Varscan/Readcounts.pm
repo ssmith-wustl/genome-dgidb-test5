@@ -72,17 +72,8 @@ sub execute {                               # replace with real execution logic.
 		## Prepare pileup commands ##
 		
 		my $pileup = "samtools pileup -f $reference $bam_file";
-		
-		open(SCRIPT, ">$output_file.sh") or die "Can't open output file!\n";
-		print SCRIPT "#!/gsc/bin/bash\n";
-		## Run VarScan ##
-		print SCRIPT "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan readcounts <\($pileup\) --variants-file $variants_file --output-file $output_file ";
-		print SCRIPT "--min-coverage " . $self->min_coverage . " " if($self->min_coverage);
-		print SCRIPT "--min-base-qual " . $self->min_base_qual . " " if($self->min_base_qual);		
-		print SCRIPT "\n";
-		close(SCRIPT);
-		system("chmod 755 $output_file.sh");
-		system("bash $output_file.sh");
+		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan readcounts <\($pileup\) --variants-file $variants_file --output-file $output_file\"";
+		system($cmd);
 	}
 	else
 	{
