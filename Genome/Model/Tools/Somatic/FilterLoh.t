@@ -14,8 +14,8 @@ BEGIN {
     use_ok('Genome::Model::Tools::Somatic::FilterLoh');    
 };
 
-my $test_input_dir      = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-FilterLoh/';
-my $tumor_snp_file      = $test_input_dir . 'tumor.snp';
+my $test_input_dir      = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-FilterLoh/54367/';
+my $tumor_snp_file      = $test_input_dir . 'tumor.snp'; #In SVN rev.54367, changed input format
 my $normal_snp_file     = $test_input_dir . 'normal.snp';
 
 my $test_output_dir     = File::Temp::tempdir('Genome-Model-Tools-Somatic-FilterLoh-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
