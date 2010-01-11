@@ -100,22 +100,25 @@ sub execute {                               # replace with real execution logic.
 		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
 		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
 		
-		open(SCRIPT, ">$output_snp.sh") or die "Can't open output file!\n";
-		print SCRIPT "#!/gsc/bin/bash\n";
+		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\"";
+#		my $cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params";
+#		open(SCRIPT, ">$output_snp.sh") or die "Can't open output file!\n";
+#		print SCRIPT "#!/gsc/bin/bash\n";
+#		print SCRIPT "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\n";
+#		close(SCRIPT);
+#		system("chmod 755 $output_snp.sh");
+#		system("bash $output_snp.sh");
+
 		## Run VarScan ##
 		if($self->heap_space)
 		{
 #			system("java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");						
 		}
-		else
-		{
-			print SCRIPT "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\n";
-#			system("echo  \<\($normal_pileup\) \<\($tumor_pileup\) $output $varscan_params");
-		}
-		close(SCRIPT);
-		system("chmod 755 $output.sh");
-#		system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" \"bash $output_snp.sh\"");
-		system("bash $output_snp.sh");
+
+		print "Running $cmd\n";
+		system($cmd);
+
+
 	}
 	else
 	{
