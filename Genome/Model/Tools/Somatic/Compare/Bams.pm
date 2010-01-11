@@ -58,7 +58,7 @@ sub pre_execute {
     }
     # Submitters to exclude from somatic pipeline as per dlarson. These guys submit cancer samples to dbsnp, or somesuch
     unless (defined $self->lookup_variants_filter_out_submitters) {
-        $self->lookup_variants_filter_out_submitters("SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG");
+        $self->lookup_variants_filter_out_submitters("SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG,DEVINE_LAB");
     }
     unless (defined $self->annotate_no_headers) {
         $self->annotate_no_headers(1);
