@@ -159,8 +159,7 @@ sub print_matches {
             || $self->append_allele() ) {
 
             my ($dbsnp_fh, $index) = $self->get_fh_for_chr($chr);
-            my $snp_line = $self->get_line($dbsnp_fh, $index, $matches[0]);
-            my $snp = parse_dbsnp_line($snp_line);
+            my $snp = parse_dbsnp_line($matches[0]);
 
             if ($self->append_rs_id()) {
                 my $rs_id = $snp->{'rs_id'};
@@ -245,7 +244,7 @@ sub filter_by_allele {
     }
 
     if ($rm && $vm) {
-	return 1;
+	return $line;
     } else {
 	return;
     }
