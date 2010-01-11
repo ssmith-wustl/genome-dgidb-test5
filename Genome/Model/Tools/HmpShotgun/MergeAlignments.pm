@@ -20,6 +20,11 @@ class Genome::Model::Tools::HmpShotgun::MergeAlignments {
             is_input => '1',
             doc => 'The reads to align.',
         },
+        unaligned_files => {
+        	is  => 'ARRAY',
+            is_input => '1',
+            doc => 'The unaligned files.',
+        },
         reference1_aligned_file => {
         	is  => 'String',
             is_output => '1',
@@ -66,6 +71,9 @@ sub execute {
     my $alignment_files_ref = $self->alignment_files;
     my @alignment_files = @$alignment_files_ref;
     
+    my $unaligned_files_ref = $self->unaligned_files;
+    my @unaligned_files = @$unaligned_files_ref;
+    
     #get parallelized inputs 
     #all of the alignment jobs are sending in the same working directory.  
     #pick the first one
@@ -76,7 +84,22 @@ sub execute {
     
     #my $working_directory = $self->working_directory."/alignments/";
     $self->status_message("Working directory: ".$working_directory);
-    my $merged_file = $working_directory."/final.bam";
+    
+    #first cat the unaligned reads
+    my $unaligned_combined = $working_directory."/unaligned_combined.sam";
+    my $rv_unaligned_check = Genome::Utility::FileSystem->is_file_ok($unaligned_combined);
+    if ($rv_unaligned_check) {
+    	$self->status_message("Output file exists.  Skipping the generation of the unaligned reads files.  If you would like to regenerate these files, remove them and rerun.");  	
+    } else {
+    	my $rv_cat = Genome::Utility::FileSystem->cat(input_files=>\@unaligned_files,output_file=>$unaligned_combined);
+    	if ($rv_cat) {
+    		Genome::Utility::FileSystem->mark_file_ok($unaligned_combined);
+    	} else {
+    		$self->status_message("There was a problem generating the combined unaligned file: $unaligned_combined");
+    		#may want to return here.
+    	}
+    }
+    
     
     #This is super hacky.  Need the name of where the bam came from 
     #probably pass this in from the workflow.

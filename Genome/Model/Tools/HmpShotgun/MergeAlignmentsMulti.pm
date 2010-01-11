@@ -69,8 +69,8 @@ sub execute {
     $self->status_message("Working directory: ".$working_directory);
     
     #grep the items based on the sequence name
-    my @pe1 = grep(/^.*s_\d_1_.*/,@concise_files);
-    my @pe2 = grep(/^.*s_\d_2_.*/,@concise_files);
+    my @pe1 = grep(/^.*s_\d_1.*/,@concise_files);
+    my @pe2 = grep(/^.*s_\d_2.*/,@concise_files);
    
 	my $pe1_output_file = $working_directory."/pe1_combined_concise_file.txt";
 	my $pe2_output_file = $working_directory."/pe2_combined_concise_file.txt";

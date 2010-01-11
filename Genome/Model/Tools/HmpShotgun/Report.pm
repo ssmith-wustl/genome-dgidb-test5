@@ -13,11 +13,6 @@ use XML::LibXML;
 class Genome::Model::Tools::HmpShotgun::Report {
     is  => ['Command'],
     has => [
-        model_id => {
-            is  => 'String',
-            is_input => '1',
-            doc => 'The model id to process.',
-        },
         working_directory => {
             is => 'String',
             is_input => '1',
@@ -30,26 +25,6 @@ class Genome::Model::Tools::HmpShotgun::Report {
             default=>0,
         },
         align_final_file => {
-            is => 'String',
-            is_input => 1,
-            doc => 'The working directory where results will be deposited.',
-        },
-        pfam_final_file => {
-            is => 'String',
-            is_input => 1,
-            doc => 'The working directory where results will be deposited.',
-        },
-        metabolome_final_file => {
-            is => 'String',
-            is_input => 1,
-            doc => 'The working directory where results will be deposited.',
-        },
-        unaligned_final_file => {
-            is => 'String',
-            is_input => 1,
-            doc => 'The working directory where results will be deposited.',
-        },
-        blastx_final_file => {
             is => 'String',
             is_input => 1,
             doc => 'The working directory where results will be deposited.',
@@ -104,5 +79,6 @@ sub execute {
     
     
     $self->status_message("<<<Ending Report execute() at ".UR::Time->now); 
+    return 1;
 }
 1;

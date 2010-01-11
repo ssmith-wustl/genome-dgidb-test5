@@ -124,6 +124,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="AlignTopHit" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="reads_and_references"	        toOperation="AlignTopHit" toProperty="reads_and_references" />
   <link fromOperation="AlignTopHit"     fromProperty="aligned_file"                 toOperation="MergeAlignments" toProperty="alignment_files" />
+  <link fromOperation="AlignTopHit"     fromProperty="unaligned_file"                 toOperation="MergeAlignments" toProperty="unaligned_files" />
   <link fromOperation="AlignTopHit"     fromProperty="working_directory"            toOperation="MergeAlignments" toProperty="working_directory" />
 
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="AlignMulti" toProperty="working_directory" /> 
@@ -138,6 +139,7 @@ __DATA__
   <link fromOperation="MergeAlignmentsMulti"	fromProperty="paired_end1_concise_file"      	toOperation="FilterResults" toProperty="paired_end1_concise_file" />
   <link fromOperation="MergeAlignmentsMulti"	fromProperty="paired_end2_concise_file"      	toOperation="FilterResults" toProperty="paired_end2_concise_file" />
    
+  <link fromOperation="input connector" fromProperty="sam_header"	        toOperation="FilterResults" toProperty="sam_header" />
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="FilterResults" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="taxonomy_file"                toOperation="FilterResults" toProperty="taxonomy_file" /> 
   <link fromOperation="FilterResults"   fromProperty="filtered_alignment_file"      toOperation="RefCov" toProperty="aligned_bam_file" /> 
@@ -146,7 +148,7 @@ __DATA__
 
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="RefCov" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="regions_file"                 toOperation="RefCov" toProperty="regions_file" /> 
-  <link fromOperation="RefCov"          fromProperty="stats_file"                   toOperation="Report" toProperty="align_final_file" /> 
+  <link fromOperation="RefCov"          fromProperty="combined_file"                toOperation="Report" toProperty="align_final_file" /> 
   
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="Report" toProperty="working_directory" />
   <link fromOperation="Report"       	fromProperty="final_file"                   toOperation="output connector" toProperty="final_file" />
@@ -190,6 +192,7 @@ __DATA__
     <inputproperty>reads_files</inputproperty>
     <inputproperty>taxonomy_file</inputproperty>
     <inputproperty>regions_file</inputproperty>
+    <inputproperty>sam_header</inputproperty>
     <outputproperty>final_file</outputproperty>
 </operationtype>
 

@@ -36,6 +36,12 @@ class Genome::Model::Tools::HmpShotgun::AlignMetagenomesMulti {
             is_optional => '1',
             doc => 'The resulting alignment.',
         },
+        unaligned_file => {
+            is  => 'String',
+            is_output => '1',
+            is_optional => '1',
+            doc => 'The resulting alignment.',
+        },
 	],
     has_param => [
            lsf_resource => {
@@ -120,7 +126,8 @@ sub execute {
     my $aligner_output_file = $working_directory."/aligner_output.txt";
     my $unaligned_reads_file = $working_directory."/unaligned.txt";
 
-
+    $self->unaligned_file($unaligned_reads_file);
+    
     #check to see if those files exist
     my @expected_output_files = ( $aligner_output_file, $alignment_file );
     my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
@@ -141,15 +148,16 @@ sub execute {
 
     if ($self->generate_concise) { 
     	$self->status_message("Aligning with Concise option at ".UR::Time->now);
+    	$self->status_message("Reads file: ".$reads_file);
     	$aligner = Genome::Model::Tools::Bwa::AlignReadsMulti->create(dna_type=>'dna', 
     									align_options=>$alignment_options, 
     									ref_seq_file=>$reference_sequence,
     									files_to_align_path=>$reads_file,
     									aligner_output_file=>$aligner_output_file,
-    	         						unaligned_reads_file=>$unaligned_reads_file,
+    	         						        unaligned_reads_file=>$unaligned_reads_file,
     									concise_file=>$alignment_file,
-                                        temp_directory=>$working_directory,
-                                        top_hits=>$top_hits,
+                                                                        temp_directory=>$working_directory,
+                                                                        top_hits=>$top_hits,
             							);
     } else {				
     	$self->status_message("Aligning with standard options at ".UR::Time->now);
