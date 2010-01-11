@@ -52,7 +52,7 @@ if ($override_testdir) {
     $tmp_dir = $override_testdir;
 }
 else {
-    $tmp_dir = File::Temp::tempdir('TestAlignmentDataXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
+    $tmp_dir = File::Temp::tempdir('TestAlignmentDataXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 }
 
 
