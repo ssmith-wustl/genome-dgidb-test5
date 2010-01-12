@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use WebService::Solr;
+use MRO::Compat;
 
 class Genome::Search { 
     is => 'UR::Singleton',
@@ -126,24 +127,20 @@ sub _resolve_subclass_for_object {
     my $type = ref $object;
     return unless $type;
     
-    my @type_parts = split('::', $type);
+    return if $type =~ /::Ghost$/;  #Don't try to (de)index deleted references.
     
-    my @module_prefix;
-    my $is_genome = shift @type_parts if $type_parts[0] eq 'Genome'; #Avoid redundant folder in search tree
-    push @module_prefix, 'Genome' if $is_genome; #but keep it around to do type-checking
+    my $classes_to_try = mro::get_linear_isa($type);
     
-    return if $type_parts[-1] eq 'Ghost'; #Don't try to (de)index deleted references.
+    #Try increasingly general subtypes until we find an appropriate one
+    for my $class_to_try (@$classes_to_try) {
+        my @type_parts = split('::', $class_to_try);
+        shift @type_parts if $type_parts[0] eq 'Genome'; #Avoid redundant folder in search tree
     
-    my $subclass_base = 'Genome::Search';
-    while(@type_parts) {
-        #Try increasingly general subtypes until we find an appropriate one
-        my $subclass .= join('::', $subclass_base, @type_parts);
+        my $subclass .= join('::', 'Genome::Search', @type_parts);
         
-        if($subclass->can('get_document') and $object->isa(join('::', @module_prefix, @type_parts))) {
+        if($subclass->can('get_document') and $object->isa($class_to_try)) {
             return $subclass;
         }
-        
-        pop @type_parts;
     }
     
     #No appropriate search module found
