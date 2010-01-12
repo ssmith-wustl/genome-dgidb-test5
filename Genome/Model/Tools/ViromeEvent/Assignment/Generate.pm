@@ -70,6 +70,30 @@ sub execute {
 	return;
     }
     $report_fh->close;
+    #GENERATE FASTA OF ALL UNASSIGNED READS
+    unless ($self->_create_main_unassigned_reads_file()) {
+	$self->log_event("Failed to create main unassigned reads file");
+	return;
+    }
+    $self->log_event("Completed virome screening for ".basename($self->dir));
+    return 1;
+}
+
+sub _create_main_unassigned_reads_file {
+    my $self = shift;
+    my $unassigned_reads = $self->dir.'/All_unassigned.fa';
+    my $out = Bio::SeqIO->new(-format => 'fasta', -file => ">$unassigned_reads");
+    foreach my $sample_name ($self->_get_sample_dir_names()) {
+	my $file = $self->dir.'/'.$sample_name.'/'.$sample_name.'.unassigned.fa';
+	unless (-s $file) {
+	    $self->log_event("Failed to find unassigned.fa file for $sample_name");
+	    next;
+	}
+	my $io = Bio::SeqIO->new(-format => 'fasta', -file => $file);
+	while (my $seq = $io->next_seq) {
+	    $out->write_seq($seq);
+	}
+    }
     return 1;
 }
 
