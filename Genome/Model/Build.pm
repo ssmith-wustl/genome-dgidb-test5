@@ -440,6 +440,8 @@ sub schedule {
         );
         return;
     }
+
+    $self->software_revision(UR::Util::used_libs_perl5lib_prefix());
     
     Genome::Utility::FileSystem->create_directory( $self->data_directory )
         or return;
