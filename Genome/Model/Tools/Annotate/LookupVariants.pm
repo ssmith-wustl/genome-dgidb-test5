@@ -57,7 +57,9 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             default  => 'novel-only',
             doc      =>
                 'novel-only (DEFAULT VALUE) prints lines from variant_file that are not found in dbSNP
-                    known-only prints lines from variant file that are found in dbSNP',
+                    known-only prints lines from variant file that are found in dbSNP
+                    full gives back each line from your variant file with matched lines from dbsnp
+                    gff gives back all the lines that match the range of coordinates in your variant file',
         },
         index_fixed_width => {
             type     => 'Int',
@@ -177,6 +179,70 @@ sub print_matches {
         $fh->print($line);
     } elsif (($report_mode eq 'novel-only')&& (scalar @matches == 0)) {
         $fh->print($line);
+
+    } elsif ($report_mode eq 'gff') {
+	
+	my @matches;
+	for my $n ($start..$stop) {
+	    my $new_line = qq($chr\t$n\t$n);
+	    @matches = $self->find_all_matches($new_line);
+	    for my $snp_line (@matches) {
+		
+		my (@rs_ids,@submitters,@matchs);
+		my $snp = parse_dbsnp_line($snp_line);
+		
+		my $rs_id = $snp->{'rs_id'};
+		my $allele = $snp->{'ds_allele'};
+		my $submitter = $snp->{'ds_submitter'};
+		
+		my $ds_type = $snp->{'ds_type'};
+		my $ds_start = $snp->{'ds_start'};
+		my $ds_stop = $snp->{'ds_stop'};
+		my $strain = $snp->{'strain'};
+		my $is_validated = $snp->{'is_validated'};
+		my $is_validated_by_allele = $snp->{'is_validated_by_allele'};
+		my $is_validated_by_cluster = $snp->{'is_validated_by_cluster'};
+		my $is_validated_by_frequency = $snp->{'is_validated_by_frequency'};
+		my $is_validated_by_hap_map = $snp->{'is_validated_by_hap_map'};
+		my $is_validated_by_other_pop = $snp->{'is_validated_by_other_pop'};
+		
+		my $gff_line = qq(Chromosome$chr\tdbsnp_130\t$ds_type\t$ds_start\t$ds_stop\t.\t$strain\t.\t$rs_id \; Alleles \"$allele\" ; is_validated \"$is_validated\" ; submitter \"$submitter\"\n);
+		$fh->print($gff_line);
+	    }
+	}
+	
+    } elsif ($report_mode eq 'full') {
+	my $report_line;
+	chomp($line);
+	if (@matches) {
+	    my (@rs_ids,@submitters,@matchs);
+	    for my $snp_line (@matches) {
+		my $snp = parse_dbsnp_line($snp_line);
+		my $rs_id = $snp->{'rs_id'};
+		my $allele = $snp->{'ds_allele'};
+		my $submitter = $snp->{'ds_submitter'};
+		
+		push(@rs_ids,$rs_id) unless grep (/$rs_id/ , @rs_ids);
+		push(@submitters,$submitter) unless grep (/$submitter/ , @submitters);
+		
+		my $match;
+		if ($allele1 && $allele2) {
+		    $match = $self->filter_by_allele($snp_line, $allele1, $allele2);
+		    if ($match) {$match = "$allele:allele_match";} else {$match = "$allele:no_match";}
+		} else {
+		    $match = $allele;
+		}
+		push(@matchs,$match) unless grep (/$match/ , @matchs);
+	    }
+	    my $rs_id = join ':' , @rs_ids;
+	    my $submitter = join ':' , @submitters;
+	    my $match = join ':' , @matchs;
+	    $report_line = sprintf("%s\t%s\n",$line,"$rs_id,$submitter,$match");
+	} else {
+	    my $match = "no_hit";
+	    $report_line = sprintf("%s\t%s\n",$line,$match); 
+	}
+	$fh->print($report_line);
     }
 }
 
@@ -217,7 +283,6 @@ sub filter_by_allele {
 
     my ($rm,$vm);
     for my $var (@vars) {
-	#my ($rm,$vm);
 	for my $n (1..$array_n) {
 	    my $m = $n - 1;
 	    my $dbsnp_allele = $dbsnp_allele_array[$m];
@@ -242,7 +307,7 @@ sub filter_by_allele {
 	    }
 	}
     }
-
+    
     if ($rm && $vm) {
 	return $line;
     } else {
