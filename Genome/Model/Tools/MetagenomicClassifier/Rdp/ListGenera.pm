@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Bio::SeqIO;
+require Genome::Utility::MetagenomicClassifier::Rdp;
 require Genome::Utility::MetagenomicClassifier::Rdp::TrainingSet;
 
 class Genome::Model::Tools::MetagenomicClassifier::Rdp::ListGenera {
