@@ -56,10 +56,10 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             is_input => 1,
             default  => 'novel-only',
             doc      =>
-                'novel-only (DEFAULT VALUE) prints lines from variant_file that are not found in dbSNP
-                    known-only prints lines from variant file that are found in dbSNP
-                    full gives back each line from your variant file with matched lines from dbsnp
-                    gff gives back all the lines that match the range of coordinates in your variant file',
+           '     - novel-only (DEFAULT VALUE) prints lines from variant_file that are not found in dbSNP
+     - known-only => prints lines from variant file that are found in dbSNP
+     - full => gives back each line from your variant file with matched lines from dbsnp
+     - gff => gives back all the lines that match the range of coordinates in your variant file',
         },
         index_fixed_width => {
             type     => 'Int',
@@ -150,6 +150,7 @@ sub print_matches {
     }
 
     if ($self->require_allele_match()) {
+	chomp($allele2);
         @matches = map { $self->filter_by_allele($_, $allele1, $allele2) } @matches;
     }
 
@@ -157,7 +158,7 @@ sub print_matches {
     my $report_mode = $self->report_mode();
     if (($report_mode eq 'known-only')&&(@matches)) {
 
-        if ($self->append_rs_id()
+	if ($self->append_rs_id()
             || $self->append_allele() ) {
 
             my ($dbsnp_fh, $index) = $self->get_fh_for_chr($chr);
@@ -214,6 +215,7 @@ sub print_matches {
     } elsif ($report_mode eq 'full') {
 	my $report_line;
 	chomp($line);
+
 	if (@matches) {
 	    my (@rs_ids,@submitters,@matchs);
 	    for my $snp_line (@matches) {
@@ -227,6 +229,7 @@ sub print_matches {
 		
 		my $match;
 		if ($allele1 && $allele2) {
+		    chomp($allele2);
 		    $match = $self->filter_by_allele($snp_line, $allele1, $allele2);
 		    if ($match) {$match = "$allele:allele_match";} else {$match = "$allele:no_match";}
 		} else {
