@@ -20,19 +20,21 @@ class Genome::Model::Build {
     ],
     has => [
         data_directory      => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
-        
+        #< Model and props via model >#
         model               => { is => 'Genome::Model', id_by => 'model_id' },
         model_id            => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
         model_name          => { via => 'model', to => 'name' },
         type_name           => { via => 'model' },
+        subject_id          => { via => 'model' },
         subject_name        => { via => 'model' },
         processing_profile  => { via => 'model' },
         processing_profile_name => { via => 'model' },
-        run_by              => { via => 'the_master_event', to => 'user_name' },
-
+        #<>#
+        #< Events >#
         the_events          => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1,  },
         the_events_statuses => { via => 'the_events', to => 'event_status' },
         the_master_event    => { via => 'the_events', to => '-filter', where => [event_type => 'genome model build'] },
+        run_by              => { via => 'the_master_event', to => 'user_name' },
         status              => { via => 'the_master_event', to => 'event_status' },
         master_event_status => { via => 'the_master_event', to => 'event_status' }, # this name is has an inside framing instead of outside
     ],
