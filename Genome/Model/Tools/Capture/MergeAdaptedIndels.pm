@@ -75,6 +75,9 @@ my %columns;
 my %columns_vs;
 while( my $additions = <$varscaninput> ) {
    my ($Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_Allele1,@other) = split(/\t/, $additions);
+   if ($Chromosome ne 'Chrom') {
+	next;
+   }
    my $string = join("\t", @other);
 #   $string =~ s/\\t0\\t/\\t-\\t/g;
    my $merger = "$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1";
