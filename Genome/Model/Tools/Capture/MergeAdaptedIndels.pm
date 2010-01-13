@@ -24,9 +24,9 @@ class Genome::Model::Tools::Capture::MergeAdaptedIndels {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		glfSomaticindels	=> { is => 'Text', doc => "Somatic Sniper Adapted Indel Input File", is_optional => 0, is_input => 1 },
-		varScanindels	=> { is => 'Text', doc => "VarScan Adapted Indel Input File", is_optional => 0, is_input => 1 },
-		out_file	=> { is => 'Text', doc => "Merged Indel Output File" , is_optional => 0, is_input => 1, is_output => 1},
+		glf_file	=> { is => 'Text', doc => "Somatic Sniper Adapted Indel Input File", is_optional => 0, is_input => 1 },
+		varscan_file	=> { is => 'Text', doc => "VarScan Adapted Indel Input File", is_optional => 0, is_input => 1 },
+		output_file	=> { is => 'Text', doc => "Merged Indel Output File" , is_optional => 0, is_input => 1, is_output => 1},
 	],
 };
 
@@ -60,9 +60,9 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
-	my $glfSomaticindels = $self->glfSomaticindels;
-	my $varScanindels = $self->varScanindels;
-	my $out_file = $self->out_file;
+	my $glfSomaticindels = $self->glf_file;
+	my $varScanindels = $self->varscan_file;
+	my $out_file = $self->output_file;
 
 	my $glfinput = new FileHandle ($glfSomaticindels);
 	my $varscaninput = new FileHandle ($varScanindels);
@@ -76,7 +76,7 @@ my %columns_vs;
 while( my $additions = <$varscaninput> ) {
    my ($Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_Allele1,@other) = split(/\t/, $additions);
    my $string = join("\t", @other);
-   $string =~ s/\t0\t/\t-\t/g;
+#   $string =~ s/\\t0\\t/\\t-\\t/g;
    my $merger = "$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1";
    $columns_vs{$merger} = "varscan\t$string";
 }
@@ -89,7 +89,7 @@ my %columns_glf;
 while( my $additions = <$glfinput> ) {
    my ($Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_Allele1,@other) = split(/\t/, $additions);
    my $string = join("\t", @other);
-   $string =~ s/\t0\t/\t-\t/g;
+#   $string =~ s/\\t0\\t/\\t-\\t/g;
    my $merger = "$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1";
    $columns_glf{$merger} = "SomaticSniper\t$string";
    if (exists($columns_vs{$merger})) {
