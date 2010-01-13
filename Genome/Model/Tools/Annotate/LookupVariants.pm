@@ -128,7 +128,10 @@ sub execute {
     $self->_output_filehandle($fh);
 
     while (my $line = <$in>) {
-        $self->print_matches($line);
+	if(substr($line, 0, 5) ne "chrom")
+	{
+            $self->print_matches($line);
+	}
     }
 
     close($in);
