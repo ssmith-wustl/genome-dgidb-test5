@@ -54,7 +54,7 @@ class Genome::Model::Command::Report::SummaryOfBuilds {
         },
         # As
         #as => { is => 'Text', doc => 'Use these headers for the properties to be shown for each build. Separate values by commas.', },
-        # private
+        # Private
         _description => {
             is => 'Text',
             doc => 'Report description.',
@@ -109,15 +109,13 @@ sub execute {
     print "Found ".scalar(@$data)." builds for ".$self->_description.".\n";
 
     # Generate report
-    my $report = $self->_generate_report(
+    my $report = $self->_generate_report_and_execute_functions(
         name => 'Summary of Builds',
         description => 'Summary of builds for '.$self->_description,
+        row_name => 'build',
+        headers => $properties,
         rows => $data,
-        properties => $properties,
     ) or return;
-
-    $self->_execute_functions($report)
-        or return;
 
     return $report;
 }
