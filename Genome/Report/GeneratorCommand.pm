@@ -6,30 +6,55 @@ use warnings;
 use Genome;
 
 use Data::Dumper 'Dumper';
+require File::Basename;
 require File::Temp;
 
 class Genome::Report::GeneratorCommand {
     is => 'Command',
-    is_abstract => 1,
     has_optional => [
+        print_xml => {
+            is => 'Boolean',
+            doc => 'Print the report XML to the screen (STDOUT).',
+        },
+        print_datasets => {
+            is => 'Boolean',
+            doc => 'Print the datasets as cvs to the screen (STDOUT). Default will be to print all datasets. Indicate specific datasets with the "datasets" option.',
+        },
+        datasets => {
+            is => 'Text',
+            doc => 'Datasets to print, save or email. Use with functions print_datasets, save or email.  Separate by commas.  To indicate all datasets, use optiona "all_datasets".',
+        },
+        all_datasets => {
+            is => 'Text',
+            doc => 'Print, save or email all datasets in the report. Use with functions print_datasets, save or email.',
+        },
         email => {
             is => 'Text',
             doc => 'Email the report to these recipients.  Separate by commas.',
         },
         save => {
             is => 'Text',
-            doc => 'Save report to the directory.',
+            doc => 'Save report to this directory.',
         },
         force_save => {
             is => 'Boolean',
-            default_value => 0,
-            doc => 'Force save the report.',
+            doc => 'Force save the report, if one already exists.',
+        },
+        # private
+        _dataset_names => {
+            is => 'Array',
+        },
+        _datasets_csv => {
+            is => 'Hash',
+        },
+        _datasets_files => {
+            is => 'Hash',
         },
     ],
 };
 
 #< Generate Report >#
-sub _generate_report {
+sub _generate_report_and_execute_functions {
     my ($self, %params) = @_;
 
     # Generate report
@@ -40,27 +65,100 @@ sub _generate_report {
         return;
     }
 
-    return $report;
-}
+    my @functions = (qw/ print_xml print_datasets email save /);
+    my @selected_functions = grep { $self->$_ } @functions;
+    unless ( @selected_functions ) {
+        $self->print_datasets(1);
+        @selected_functions = (qw/ print_datasets /);
+    }
 
-#< Functions >#
-sub _execute_functions {
-    my ($self, $report) = @_;
-
-    die "No report given to execute functions." unless $report;
+    $self->_resolve_dataset_names($report)
+        or return;
     
-    # Save/email report
-    for my $function (qw/ save email /) {
-        next unless defined $self->$function;
-        my $method = '_'.$function.'_report';
+    for my $function ( @selected_functions ) {
+        my $method = '_'.$function;
         $self->$method($report)
             or return;
     }
+
+    return $report;
+}
+
+sub _resolve_dataset_names {
+    my ($self, $report) = @_;
+
+    if ( $self->print_datasets and not $self->datasets ) {
+        $self->all_datasets(1);
+    }
+
+    if ( $self->all_datasets ) {
+        my @dataset_names = $report->get_dataset_names;
+        unless ( @dataset_names ) {
+            $self->error_message("Indicated to use all datasets (for print_xml, print_datasets, email save), but this report does not have any.");
+            return;
+        }
+        $self->_dataset_names(\@dataset_names);
+    }
+    elsif ( $self->datasets ) {
+        $self->_dataset_names([ split(',', $self->datasets) ]);
+    }
+
     return 1;
 }
 
+#< Print XML >#
+sub _print_xml {
+    my ($self, $report) = @_;
+
+    return print $report->xml_string;
+}
+
+#< Print Datasets (default) >#
+sub _print_datasets {
+    my ($self, $report) = @_;
+
+    my $datasets_csv = $self->_datasets_to_csv($report)
+        or return;
+
+    for my $csv ( values %$datasets_csv ) {
+        print $csv;
+    }
+
+    return 1;
+}
+
+sub _datasets_to_csv {
+    my ($self, $report) = @_;
+
+    return $self->_datasets_csv if $self->_datasets_csv;
+
+    my $dataset_names = $self->_dataset_names;
+    unless ( $dataset_names ) {
+        $self->_datasets_csv({});
+        return $self->_datasets_csv;
+    }
+    
+    my %datasets_csv;
+    for my $name ( @$dataset_names ) {
+        my $ds = $report->get_dataset($name);
+        unless ( $ds ) { # bad
+            $self->error_message("Could not get dataset ($name) from report.");
+            return;
+        }
+
+        my $csv = $ds->to_separated_value_string(',');
+        unless ( $csv ) {
+            $self->error_message("Can't get separated value string from build dataset");
+            return;
+        }
+        $datasets_csv{$name} = $csv;
+    }
+
+    return $self->_datasets_csv(\%datasets_csv);
+}
+
 #< Save >#
-sub _save_report {
+sub _save {
     my ($self, $report) = @_;
 
     my $dir = $self->save;
@@ -74,57 +172,60 @@ sub _save_report {
         return 1;
     }
 
-    $self->_save_builds_dataset($report)
+    $self->_save_datasets($report)
         or return;
-    
+
     print "Saved report to ".$self->save."\n";
 
     return 1;
 }
 
-sub _save_builds_dataset {
+sub _save_datasets {
     my ($self, $report) = @_;
 
-    return $self->{_sv_file} if $self->{_sv_file};
+    return $self->_datasets_files if $self->_datasets_files;
 
-    my $ds = $report->get_dataset('objects');
-    unless ( $ds ) { # should not happen
-        $self->error_message("Could not get builds datasets from report.");
-        return;
-    }
+    my $datasets_csv = $self->_datasets_to_csv($report)
+        or return;
 
     my $dir = ( $self->save ? $self->save : File::Temp::tempdir(CLEANUP => 1) );
-    my $file = $dir.'/builds.cvs';
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($file)
-        or return;
-    my $svs = $ds->to_separated_value_string(',');
-    unless ( $svs ) {
-        $self->error_message("Can't get separated value string from build dataset");
-        return;
+    my %datasets_files;
+    for my $name ( keys %$datasets_csv ) {
+        my $file = sprintf('%s/%s.csv', $dir, $name);
+        my $fh = Genome::Utility::FileSystem->open_file_for_writing($file)
+            or return;
+        $fh->print($datasets_csv->{$name});
+        $fh->close;
+        $datasets_files{$name} = $file;
     }
-    $fh->print($svs);
-    $fh->close;
-    
-    return $self->{_sv_file} = $file;
+
+    return $self->_datasets_files(\%datasets_files);
 }
 
 #< EMail >#
-sub _email_report {
+sub _email {
     my ($self, $report) = @_;
 
-    my $file = $self->_save_builds_dataset($report)
+    my $datasets_files = $self->_save_datasets($report)
         or return;
+
+    my @attachments;
+    for my $name ( keys %$datasets_files ) {
+        my $basename = File::Basename::basename($datasets_files->{$name});
+        push @attachments, {
+            description => $name,
+            disposition => "inline; filename=\"$basename\";\r\nContent-ID: <$name>",
+            file => $datasets_files->{$name},
+        };
+    }
 
     my $confirmation = Genome::Report::Email->send_report(
         report => $report,
         to => $self->email,
         xsl_files => [ $report->generator->get_xsl_file_for_html ],
-        attachments => [{
-            description => 'Summary of Builds',
-            disposition => "inline; filename=\"builds.csv\";\r\nContent-ID: <builds>",
-            file => $file,
-        }],
+        attachments => \@attachments,
     );
+
     unless ( $confirmation ) {
         $self->error_message("Can't email report.");
         return;
