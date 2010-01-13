@@ -5,6 +5,8 @@ use warnings;
 
 use above 'Genome';
 
+
+$Genome::Utility::Filesystem::IS_TESTING=1;
 use Test::Class;
 
 Test::Class->runtests(qw/ GenomeUtilityFileSystem::Test /);
@@ -21,6 +23,10 @@ use Data::Dumper;
 use File::Path;
 use File::Temp;
 use Test::More;
+
+use POSIX ":sys_wait_h";
+use File::Slurp;
+use Time::HiRes qw(gettimeofday);
 
 sub startup : Test(startup => 1) {
     my $self = shift;
@@ -287,11 +293,6 @@ sub test4_resource_locking : Test(20) {
                  lock_directory => $tmp_dir,
                  resource_id => $bogus_id,);
 
-    my $expected_lock_info = $tmp_dir .'/'. $bogus_id .'.lock/info';
-    ok(-f $expected_lock_info,'lock info file found '. $expected_lock_info);
-    ok(!Genome::Utility::FileSystem->create_directory($expected_lock_info),
-       'failed to create_directory '. $expected_lock_info);
-
     test_locking(successful => 0,
                  message => 'failed lock resource_id '. $bogus_id,
                  lock_directory => $tmp_dir,
@@ -303,41 +304,6 @@ sub test4_resource_locking : Test(20) {
                                                     lock_directory => $tmp_dir,
                                                     resource_id => $bogus_id,
                                                 ), 'unlock resource_id '. $bogus_id);
-    my $lock = test_locking(successful => 1,
-                            message => 'lock resource_id '. $bogus_id,
-                            lock_directory => $tmp_dir,
-                            resource_id => $bogus_id,);
-    my $file_to_break_unlocking = $lock .'/break_stuff';
-    my $file_to_break_unlocking_in_stale_dir = $lock . '.stale/break_stuff';
-
-    my $break_unlock_fh = Genome::Utility::FileSystem->open_file_for_writing($file_to_break_unlocking);
-    print $break_unlock_fh "This will break the unlock";
-    $break_unlock_fh->close;
-    ok(-s $file_to_break_unlocking,'file to break unlocking exists with size');
-    # The $file_to_break_unlocking should revent the lock.stale dir from getting removed, though
-    # the unlocking should succeed
-    ok(Genome::Utility::FileSystem->unlock_resource(
-                                                     lock_directory => $tmp_dir,
-                                                     resource_id => $bogus_id,
-                                                 ), 'unlocked resource even with junk file in the lock dir');
-    #ok(rename($file_to_break_unlocking,$lock.'/info'),'copy file breaking unlock to lock info file name');
-    #ok(Genome::Utility::FileSystem->unlock_resource(
-    #                                                 lock_directory => $tmp_dir,
-    #                                                 resource_id => $bogus_id,
-    #                                             ), 'unlock works after removing junk file');
-
-    ok(unlink ($file_to_break_unlocking_in_stale_dir), 'Unlinked junk file in stale lock dir');
-    $lock = test_locking(successful => 1,
-                         message => 'lock resource_id '.$bogus_id,
-                         lock_directory => $tmp_dir,
-                         resource_id => $bogus_id);
-    # The unlock will see that the .stale lock is still around, but since we've unlinked the 
-    # $file_to_break_unlocking file, it'l lbe able to remove the .stale this time
-    ok(Genome::Utility::FileSystem->unlock_resource(
-                                                     lock_directory => $tmp_dir,
-                                                     resource_id => $bogus_id,)
-                                                   ,'Unlock works the second time after removing the junk file');
-
     my $init_lsf_job_id = $ENV{'LSB_JOBID'};
     $ENV{'LSB_JOBID'} = 1;
     test_locking(successful => 1,
@@ -378,6 +344,115 @@ sub test4_resource_locking : Test(20) {
                                                       ), 'unlock resource_id '. $bogus_id);
       };
 }
+
+sub test_race_condition : Test(60) {
+    my $base_dir = File::Temp::tempdir("Genome-Utility-FileSystem-RaceCondition-XXXX", DIR=>"/gsc/var/cache/testsuite/running_testsuites/", CLEANUP=>1);
+    
+    my $resource = "/tmp/Genome-Utility-Filesystem.test.resource.$$";
+    
+    if (defined $ENV{'LSB_JOBID'} && $ENV{'LSB_JOBID'} eq "1") {
+        delete $ENV{'LSB_JOBID'}; 
+    }
+
+    my @pids;
+
+    my $children = 20;
+
+    for my $child (1...$children) {
+       my $pid;
+       if ($pid = fork()) {
+            push @pids, $pid;
+        } else {
+            do_race_lock($child,$resource,$base_dir);
+        }
+    }
+
+    for my $pid (@pids) {
+        my $status = waitpid $pid, 0;
+    }
+
+    my @event_log;
+
+    for my $child (1...$children) {
+        my $report_log = "$base_dir/$child";
+        ok (-e $report_log, "Expected to see a report for $report_log");
+        if (!-e $report_log) {
+            die "Expected output file did not exist";
+        } else {
+            my @lines = read_file($report_log);
+            for (@lines) {
+                my ($time, $event, $pid, $msg) = split /\t/;
+                my $report = {etime => $time, event=>$event, pid=>$pid, msg=>$msg};
+                push @event_log, $report;
+           } 
+       }
+    }
+    
+    ok(scalar @event_log  == 2*$children, "read in got 2 lock/unlock events for each child.");
+
+    @event_log = sort {$a->{etime} <=> $b->{etime}} @event_log;
+    my $last_event;
+    for (@event_log) {
+        if (defined $last_event) {
+            my $valid_next_event = ($last_event eq "UNLOCK_SUCCESS" ? "LOCK_SUCCESS" : "UNLOCK_SUCCESS");
+            ok($_->{event} eq $valid_next_event, sprintf("Last lock event was a %s so we expected a to see %s, got a %s", $last_event, $valid_next_event, $_->{event}));
+        }
+        $last_event = $_->{event};
+        printf("%s\t%s\t%s\n", $_->{etime}, $_->{pid}, $_->{event});
+    }
+}
+
+sub do_race_lock {
+    my $output_offset = shift;
+    my $resource = shift;
+    my $tempdir = shift;
+
+    my $output_file = $tempdir . "/" . $output_offset;
+    my $fh = new IO::File(">>$output_file");
+
+    my $lock = Genome::Utility::FileSystem->lock_resource(
+        resource_lock => $resource,
+        block_sleep   => 1
+    );
+    unless ($lock) {
+        print_event($fh, "LOCK_FAIL", "Failed to get a lock" );
+        $fh->close;
+        exit(1);
+    }
+    
+    #sleep for half a second before printing this, to let a prior process catch up with
+    #printing its "unlocked" message.  sometimes we get a lock (properly) in between the time
+    #someone else has given up the lock, but before it had a chance to report that it did.
+    select(undef, undef, undef, 0.50);
+    print_event($fh, "LOCK_SUCCESS", "Successfully got a lock" );
+    sleep 2;
+
+    unless (Genome::Utility::FileSystem->unlock_resource(resource_lock => $resource)) {
+        print_event($fh, "UNLOCK_FAIL", "Failed to release a lock" );
+        $fh->close;
+        exit(1);
+    }
+    print_event($fh, "UNLOCK_SUCCESS", "Successfully released my lock" );
+
+    $fh->close;
+    exit(0);
+}
+
+sub print_event {
+        my $fh = shift;
+        my $info = shift;
+        my $msg  = shift;
+
+        my ( $seconds, $ms ) = gettimeofday();
+        $ms = sprintf("%06d",$ms);
+        my $time = "$seconds.$ms";
+
+        my $tp = sprintf( "%s\t%s\t%s\t%s", $time, $info, $$, $msg );
+
+        print $fh $tp, "\n";
+        print $tp, "\n";
+}
+
 
 sub test_locking {
     my %params = @_;

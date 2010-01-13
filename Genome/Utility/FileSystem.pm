@@ -20,10 +20,14 @@ require File::Path;
 require File::Copy;
 require Genome::Utility::Text;
 
+require MIME::Lite;
+
 # this helps us clean-up locks
 
+
 $SIG{'INT'} = \&INT_cleanup;
-my %DIR_TO_REMOVE;
+$SIG{'TERM'} = \&INT_cleanup;
+my %SYMLINKS_TO_REMOVE;
 
 class Genome::Utility::FileSystem { };
 
@@ -572,10 +576,9 @@ sub lock_resource {
     my ($self,%args) = @_;
 
     my $resource_lock = delete $args{resource_lock};
-    my ($lock_directory,$resource_id);
+    my ($lock_directory,$resource_id,$parent_dir);
     if ($resource_lock) {
-        use File::Basename;
-        my $parent_dir = File::Basename::dirname($resource_lock);
+        $parent_dir = File::Basename::dirname($resource_lock);
         $self->create_directory($parent_dir);
         unless (-d $parent_dir) {
             die "failed to make parent directory $parent_dir for lock $resource_lock!: $!";
@@ -586,51 +589,100 @@ sub lock_resource {
         $self->create_directory($lock_directory);
         $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
         $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
+        $parent_dir = $lock_directory
     }
+    my $basename = File::Basename::basename($resource_lock);
     
     my $block_sleep = delete $args{block_sleep} || 60;
     my $max_try = delete $args{max_try} || 7200;
 
-    my $ret;
-    my $lock_info_pathname = $resource_lock . '/info';
-    while(!($ret = mkdir $resource_lock)) {
-        my $mkdir_error = $!;
-        return undef unless $max_try--;
-        my $info_fh = IO::File->new($lock_info_pathname);
-        my $info_content;
-        if ($info_fh) {
-            $info_content = join('',$info_fh->getlines);
-        }
-        else {
-            $info_content = "unable to open file: $!";
-        }
-        $self->status_message(
-                              "waiting on lock for resource '$resource_lock':  $mkdir_error\n"
-                              . "lock info is: $info_content"
-                          );
-        if ($info_content =~ /LSF_JOB_ID (\d+)/) {
-            my $waiting_on_lsf_job_id  = $1;
-            my ($job_info,$events) = Genome::Model::Event->lsf_state($waiting_on_lsf_job_id);
-            unless ($job_info) {
-                $self->warning_message("Invalid lock for resource $resource_lock\n"
-                                       ." lock info was:\n". $info_content ."\n"
-                                       ."Removing old resource lock $resource_lock\n");
-                $self->unlock_resource(resource_lock => $resource_lock);
-            }
-        }
-	$info_fh->close();
-        sleep $block_sleep;
-    }
+    my $my_host = (defined $ENV{'HOSTNAME'} ? $ENV{'HOSTNAME'} : $ENV{'HOST'});
+    my $job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
+    my $lock_dir_template = sprintf("lock-%s--%s_%s_%s_%s_XXXX",$basename,$my_host,$ENV{'USER'},$$,$job_id);
+    my $tempdir =  File::Temp::tempdir($lock_dir_template, DIR=>$parent_dir, CLEANUP=>1);
 
-    my $lock_info = IO::File->new(">$lock_info_pathname");
-    $lock_info->printf("HOST %s\nPID $$\nLSF_JOB_ID %s\nUSER %s\n",
-                       $ENV{'HOST'},
+    unless (-d $tempdir) {
+        die "Failed to create temp lock directory.";
+    }
+    
+    # drop an info file into here for compatibility's sake with old stuff.
+    # put a "NOKILL" here on LSF_JOB_ID so an old process doesn't try to snap off the job ID and kill me.
+    my $lock_info = IO::File->new(">$tempdir/info");
+    $lock_info->printf("HOST %s\nPID $$\nLSF_JOB_ID_NOKILL %s\nUSER %s\n",
+                       $my_host,
                        $ENV{'LSB_JOBID'},
                        $ENV{'USER'},
                      );
     $lock_info->close();
 
-    $DIR_TO_REMOVE{$resource_lock} = 1;
+
+    my $ret;
+    while(!($ret = symlink($tempdir,$resource_lock))) {
+        my $symlink_error = $!;
+        chomp $symlink_error;
+        return undef unless $max_try--;
+    
+        my $target = readlink($resource_lock);
+        if (!$target && -d $resource_lock) {
+            $self->warning_message("Looks like $resource_lock is locked by the old scheme (not a symlink, but a directory).  Sleeping rather than doing anything scary.");
+            sleep $block_sleep;
+            next;
+        }
+        elsif (!$target || !-e $target) {
+            $self->error_message("Lock target $target does not exist.  Dying off rather than doing anything scary.");
+            die $self->error_message;
+        } 
+        my $target_basename = File::Basename::basename($target);
+        
+        
+        $target_basename =~ s/lock-.*?--//;;
+        my ($host, $user, $pid, $lsf_id) = split /_/, $target_basename;
+        
+        my $info_content=sprintf("HOST %s\nPID %s\nLSF_JOB_ID %s\nUSER %s",$host,$pid,$lsf_id,$user);
+        $self->status_message("waiting on lock for resource '$resource_lock': $symlink_error\n. lock_info is $info_content");
+       
+        if ($lsf_id ne "NONE") { 
+            my ($job_info,$events) = Genome::Model::Event->lsf_state($lsf_id);
+                 unless ($job_info) {
+                     $self->warning_message("Invalid lock for resource $resource_lock\n"
+                                            ." lock info was:\n". $info_content ."\n"
+                                            ."Removing old resource lock $resource_lock\n");
+                     unless ($Genome::Utility::Filesystem::IS_TESTING) {
+                        my $message_content = <<END_CONTENT;
+Hey Apipe,
+
+This is a lock attempt on %s running as PID $$ LSF job %s and user %s.
+
+I'm about to remove a lock file held by a LSF job that I think is dead.  
+
+Here's info about the job that I think is gone.
+
+%s
+
+I'll remove the lock in an hour.  If you want to save the lock, kill me
+before I unlock the process!
+
+Your pal,
+Genome::Utility::Filesystem 
+
+END_CONTENT
+
+                        my $msg = MIME::Lite->new(From    => sprintf('"Genome::Utility::Filesystem" <%s@genome.wustl.edu>', $ENV{'USER'}),
+                                              To      => 'apipe@genome.wustl.edu',
+                                              Subject => 'Attempt to release a lock held by a dead process',
+                                              Data    => sprintf($message_content, $my_host, $ENV{'LSB_JOBID'}, $ENV{'USER'}, $info_content),
+                                            );
+                        $msg->send();
+                        sleep 60 * 60;
+                 }
+                     $self->unlock_resource(resource_lock => $resource_lock);
+                     #maybe warn here before stealing the lock...
+               } 
+           } 
+        sleep $block_sleep;
+       } 
+#    print "LOCKED $resource_lock PID $$\n";
+    $SYMLINKS_TO_REMOVE{$resource_lock} = 1;
     return $resource_lock;
 }
 
@@ -643,50 +695,47 @@ sub unlock_resource {
         $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
         $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
     }
-    
-    unless ( -e $resource_lock ) {
-        return 1;
+#    print "UNLOCK ATTEMPT $resource_lock PID $$\n";
+
+    unless ( -l $resource_lock ) {
+        $self->error_message("Tried to unlock something that's not locked -- $resource_lock.");
+        die $self->error_message;
     }
 
-    my $info_file = $resource_lock . '/info';
-    unless ($self->validate_file_for_reading($info_file)) {
-        $self->error_message("Resource lock info file '$info_file' not validated.");
-        return;
+    my $target = readlink($resource_lock);
+    unless (-d $target) {
+        $self->error_message("Lock symlink '$resource_lock' points to something that's not a directory - $target. ");
+        die $self->error_message;
     }
-    
-    my $moved_resource_lock = $resource_lock . '.stale';
-    my $moved_info_file = $moved_resource_lock . '/info';
-    
-    if (-d $moved_resource_lock) {
-            unless( rmdir $moved_resource_lock ) {
-                $self->error_message("Failed to remove stale lock directory $moved_resource_lock: $!");
-                return;
-        }
+    my $basename = File::Basename::basename($target);
+    $basename =~ s/lock-.*?--//;;
+    my ($thost, $tuser, $tpid, $tlsf_id) = split /_/, $basename;
+    my $my_host = (defined $ENV{'HOSTNAME'} ? $ENV{'HOSTNAME'} : $ENV{'HOST'});
+    my $my_job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
+
+    unless ($thost eq $my_host 
+            && $tuser eq $ENV{'USER'} 
+            && $tpid eq $$ 
+            && $tlsf_id eq $my_job_id) {
+        
+        $self->error_message("This lock does not look like it belongs to me.  $basename does not match $thost $tuser $tpid $tlsf_id.");
+        die $self->error_message;
+
     }
-    unless  (rename $resource_lock,$moved_resource_lock) {
-        $self->error_message("Failed move of $resource_lock to $moved_resource_lock");
-        return;
+
+    my $unlink_rv = unlink($resource_lock);
+    if (!$unlink_rv) {
+        $self->error_message("Failed to remove lock symlink '$resource_lock':  $!");
+        die $self->error_message;
     }
-    if (!unlink($moved_info_file)) {
-        $self->error_message("Failed to remove info file '$moved_info_file':  $!");
-        return;
-    }
-    #my $moved_resource_lock = $resource_lock . '.stale';
-    #my $mv_rv = File::Copy->copy($resource_lock,$moved_resource_lock);
-    my $rmdir_rv = rmdir($moved_resource_lock);
+
+    my $rmdir_rv = File::Path::rmtree($target);
     if (!$rmdir_rv) {
-        $self->warning_message("Failed to remove directory '$moved_resource_lock':  $!");
-        if ($self->validate_existing_directory($moved_resource_lock)) {
-            opendir(DIR,$moved_resource_lock);
-            my @files = map { $moved_resource_lock .'/'. $_ }  grep { $_ !~ /^\.{1,2}$/ } readdir(DIR);
-            closedir(DIR);
-            my $error_message;
-            for (@files) {
-                $error_message .= `ls -l $_`;
-            }
-            $self->warning_message($error_message);
-        }
+        $self->error_message("Failed to remove lock symlink target '$target', but we successfully unlocked.");
+        die $self->error_message;
     }
+
+    delete $SYMLINKS_TO_REMOVE{$resource_lock};
     return 1;
 }
 
@@ -712,23 +761,24 @@ sub check_for_path_existence {
 }
 
 END {
-    for my $dir_to_remove (keys %DIR_TO_REMOVE) {
-        if (-e $dir_to_remove) {
-            warn("Removing remaining resource lock: '$dir_to_remove'");
-            File::Path::rmtree($dir_to_remove);
-        }
-    }
+    exit_cleanup();
 };
 
 sub INT_cleanup {
-    for my $dir_to_remove (keys %DIR_TO_REMOVE) {
-        if (-e $dir_to_remove) {
-            warn("Removing remaining resource lock: '$dir_to_remove'");
-            File::Path::rmtree($dir_to_remove);
-        }
-    }
+    exit_cleanup();
     die;
 }
+
+sub exit_cleanup {
+#    print "EXIT CLEANUP ON PID $$\n";
+    for my $sym_to_remove (keys %SYMLINKS_TO_REMOVE) {
+        if (-l $sym_to_remove) {
+            warn("Removing remaining resource lock: '$sym_to_remove'");
+            unlink($sym_to_remove);
+        }
+    }
+}
+
 
 #< Inc Dir, Modules, Classes, etc >#
 sub get_inc_directory_for_class {
