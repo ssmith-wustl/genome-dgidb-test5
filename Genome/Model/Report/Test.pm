@@ -92,7 +92,7 @@ sub valid_param_sets {
     return (
         {
             before_execute => 'overload_selectall_arrayref',
-            after_execute => '_mail_report',
+            #after_execute => '_mail_report', # uncomment to see it
             processing_profile_id => 2067049, # WashU amplicon assembly
             #show_most_recent_build_only => 1,
         },
@@ -146,8 +146,9 @@ sub valid_param_sets {
     return (
         {
             name => 'Table Test',
-            description => 'A testing of he table report generator',
-            properties => [qw/ model_id build_id status date /],
+            description => 'A testing of the table report generator',
+            headers => [qw/ model_id build_id status date /],
+            row_name => 'build',
             rows => [
             [qw| 2816929867 98421139 Succeeded 2009-08-27 |],
             [qw| 2816929867 98421140 Succeeded 2009-08-28 |],
@@ -163,7 +164,7 @@ sub valid_param_sets {
 sub invalid_param_sets {
     return (
         {
-            properties => 'not array',
+            headers => 'not array',
         },
         {
             rows => 'not array',

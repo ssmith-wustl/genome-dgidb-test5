@@ -135,6 +135,7 @@ sub valid_param_sets {
             processing_profile_id => 2067049, # WashU amplicon assembly
             #save => $_[0]->tmp_dir,
             #email => $ENV{USER}.'@genome.wustl.edu',
+            #all_datasets => 1,
         },
         {
             after_execute => sub{ 

@@ -1,5 +1,4 @@
 package Genome::Report::Test;
-#:adukes looks fine
 
 use strict;
 use warnings;
@@ -198,6 +197,46 @@ sub test_report_attributes {
     is($generator->generator, 'Genome::Report::Generator', 'generator');
     ok($generator->date, 'date');
     
+    return 1;
+}
+
+#######################################################################
+
+package Genome::Report::GeneratorCommand::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Report::GeneratorCommand';
+}
+
+sub params_for_test_class {
+    return (
+        print_xml => 1,
+        #print_datasets => 1,
+        #datasets => 'rows',
+        #email => $ENV{USER}.'@genome.wustl.edu',
+    );
+}
+
+sub test01_generate_report_and_execute_functions : Tests(2) {
+    my $self = shift;
+
+    my $report = $self->{_object}->_generate_report_and_execute_functions(
+        name => 'Rows n Stuff',
+        description => 'Testing the generator command',
+        headers => [qw/ column1 column2 colum3 /],
+        rows => [ [qw/ row1.1 row1.2 row1.3 /], [qw/ row2.1 row2.2 row2.3 /] ],
+    );
+    ok($report, 'Generated report');
+    isa_ok($report, 'Genome::Report');
+
     return 1;
 }
 
