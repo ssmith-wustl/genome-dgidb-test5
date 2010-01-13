@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper 'Dumper';
+use Lingua::EN::Inflect 'PL';
 
 class Genome::Model::Report::Table {
     is => 'Genome::Report::Generator',
@@ -18,13 +19,19 @@ class Genome::Model::Report::Table {
             is => 'Text',
             doc => 'Report description.',
         },
-        properties => {
+        headers => {
             is => 'ARRAY',
-            doc => 'Objects to display in the table.',
+            doc => 'The headers (properties) of the data.',
         },
         rows => {
             is => 'ARRAY',
             doc => 'Rows of data to display.',
+        },
+    ],
+    has_optional => [
+        row_name => {
+            is => 'Text',
+            default_value => 'row',
         },
     ],
 };
@@ -42,7 +49,7 @@ sub create {
         }
     }
 
-    for my $property_name (qw/ properties rows /) {
+    for my $property_name (qw/ headers rows /) {
         my $value = $self->$property_name;
         unless ( $value ) {
             $self->error_message("Property ($property_name) is required.");
@@ -61,26 +68,24 @@ sub create {
 sub _add_to_report_xml {
     my $self = shift;
 
-    $self->_add_dataset(
-        name => 'headers',
-        row_name => 'header',
-        headers => [qw/ value /],
-        rows => [
-        map { [ 
-            Genome::Utility::Text::capitalize_words($_)
-            ] } map { 
-            local $_ = $_; # so we don't stomp on the dashed headers
-            s/\-/ /g; $_ 
-        } @{$self->properties} 
-        ], 
-    );
+    # Add headers
+    my $headers_node = $self->_xml->createElement('headers');
+    $self->_main_node->addChild($headers_node);
+    my @headers = @{$self->headers};
+    for my $header ( @headers ) {
+        my $node = $self->_xml->createElement('header');
+        $headers_node->addChild($node);
+        $header =~ s#\_#\ #g;
+        $node->appendTextNode(  Genome::Utility::Text::capitalize_words($header) );
+    }
 
+    # Rows
     $self->_add_dataset(
-        name => 'objects',
-        row_name => 'object',
-        headers => $self->properties,
+        name => PL($self->row_name),
+        row_name => $self->row_name,
+        headers => $self->headers,
         rows => $self->rows,
-    );
+    ) or return;
 
     return 1;
 }
