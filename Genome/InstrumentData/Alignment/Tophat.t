@@ -20,6 +20,11 @@ BEGIN {
     use_ok('Genome::InstrumentData::Command::Align::Tophat');
 }
 
+my $CLEANUP = 1;
+my $tophat_version = Genome::Model::Tools::Tophat->default_tophat_version;
+
+my $version_string = Genome::Model::Tools::Tophat->default_tophat_version;
+$version_string =~ s/\./\_/g;
 
 my $gerald_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
 
@@ -47,7 +52,7 @@ my $fake_allocation = Genome::Disk::Allocation->__define__(
                                                        disk_group_name => 'info_alignments',
                                                        group_subdirectory => 'info',
                                                        mount_path => '/gscmnt/sata828',
-                                                       allocation_path => 'alignment_data/tophat1_0_10/refseq-for-test/test_run_name/4_-123456',
+                                                       allocation_path => 'alignment_data/tophat'. $version_string .'/refseq-for-test/test_run_name/4_-123456',
                                                        allocator_id => '-123457',
                                                        kilobytes_requested => 100000,
                                                        kilobutes_used => 0,
@@ -59,7 +64,7 @@ $instrument_data->set_list('allocations',$fake_allocation);
 
 my $alignment = Genome::InstrumentData::Alignment::Tophat->create(
                                                           instrument_data_id => $instrument_data->id,
-                                                          aligner_version => '1.0.10',
+                                                          aligner_version => $tophat_version,
                                                           reference_name => 'refseq-for-test',
                                                       );
 
@@ -92,13 +97,13 @@ $instrument_data->set_always('median_insert_size',200);
 $instrument_data->set_always('resolve_quality_converter','sol2phred');
 $instrument_data->set_always('class','Genome::InstrumentData::Solexa');
 
-my $tmp_dir = File::Temp::tempdir('Align-Tophat-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
+my $tmp_dir = File::Temp::tempdir('Align-Tophat-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => $CLEANUP);
 my $tmp_allocation = Genome::Disk::Allocation->create_mock(
                                                            id => '-123459',
                                                            disk_group_name => 'info_alignments',
                                                            group_subdirectory => 'test',
                                                            mount_path => '/tmp/mount_path',
-                                                           allocation_path => 'alignment_data/tophat1_0_10/refseq-for-test/test_run_name/4_-123458',
+                                                           allocation_path => 'alignment_data/tophat'. $version_string .'/refseq-for-test/test_run_name/4_-123458',
                                                            allocator_id => '-123459',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
@@ -118,7 +123,7 @@ $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'tophat',
-                                                       aligner_version => '1.0.10',
+                                                       aligner_version => $tophat_version,
                                                        reference_name => 'refseq-for-test',
                                                    );
 
@@ -132,13 +137,13 @@ ok(! -e $dir2, 'alignment directory does not exist');
 
 
 #Run paired end as fragment
-$tmp_allocation->allocation_path('alignment_data/tophat1_0_10/refseq-for-test/test_run_name/fragment/4_-123458');
-$tmp_dir = File::Temp::tempdir('Align-Tophat-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+$tmp_allocation->allocation_path('alignment_data/tophat'. $version_string .'/refseq-for-test/test_run_name/fragment/4_-123458');
+$tmp_dir = File::Temp::tempdir('Align-Tophat-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => $CLEANUP);
 $instrument_data->set_list('fastq_filenames',$fastq_files[0]);
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'tophat',
-                                                       aligner_version => '1.0.10',
+                                                       aligner_version => $tophat_version,
                                                        reference_name => 'refseq-for-test',
                                                        force_fragment => 1,
                                                    );

@@ -139,106 +139,27 @@ sub _run_aligner {
     } else {
         $lock = $self->_resource_lock;
     }
+
     my $instrument_data = $self->instrument_data;
     my $reference_build = $self->reference_build;
     my $alignment_directory = $self->alignment_directory;
-    $self->status_message("OUTPUT PATH: $alignment_directory\n");
-
-
-    # we resolve these first, since we might just print the paths we work with then exit
-    my @input_pathnames = $self->sanger_fastq_filenames;
-    $self->status_message("INPUT PATH(S): @input_pathnames\n");
-
-    # prepare the refseq
-    my $ref_seq_file =  $reference_build->full_consensus_path('bowtie');
-    unless ($ref_seq_file) {
-        $self->error_message('Failed to find full consensus path for reference build '. $reference_build->name);
-        die($self->error_message);
-    }
-    #TODO:  A check for bowtie index files could be added to the reference placeholder...
-    my $ref_seq_index_file =  $ref_seq_file .'.1.ebwt';
-    unless (-e $ref_seq_index_file) {
-        $self->error_message("Reference build index path '$ref_seq_index_file' does not exist.");
-        die($self->error_message);
-    }
-    $self->status_message("REFSEQ PATH: $ref_seq_file\n");
-
-    my $is_paired_end;
-    my $insert_size;
-    my $insert_sd;
-    if ($instrument_data->is_paired_end && !$self->force_fragment) {
-        $insert_sd = $instrument_data->sd_above_insert_size;
-        $insert_size = $instrument_data->median_insert_size;
-        $is_paired_end = 1;
-    } else {
-        $is_paired_end = 0;
-    }
-
-    # these are general params not infered from the above
-    my $aligner_output_file = $self->aligner_output_file;
-    my $aligner_params = $self->aligner_params;
-
-    #if ($instrument_data->resolve_quality_converter eq 'sol2phred') {
-    #    $aligner_params .= ' --solexa1.3-quals';
-    #} elsif ($instrument_data->resolve_quality_converter eq 'sol2sanger') {
-    #    $aligner_params .= ' --solexa-quals';
-    #} else {
-    #    $self->error_message('Failed to resolve fastq quality coversion!');
-    #    die($self->error_message);
-    #}
-
-    # RESOLVE A STRING OF ALIGNMENT PARAMETERS
-    if ($is_paired_end && $insert_size && $insert_sd) {
-        #The standard deviation is the above instert size deviation, does below insert size stdev matter?
-        $aligner_params .= ' --mate-inner-dist '. $insert_size .' --mate-std-dev '. $insert_sd;
-    }
-
-    my $files_to_align = join(' ',@input_pathnames);
-
-    my $cmdline = Genome::Model::Tools::Tophat->path_for_tophat_version($self->aligner_version)
-    . sprintf(' --output-dir %s %s %s %s ',
-              $alignment_directory,
-              $aligner_params,
-              $ref_seq_file,
-              $files_to_align) .' > '. $aligner_output_file .' 2>&1';
-    my @input_files = ($ref_seq_file, @input_pathnames);
-
-    $self->status_message("COMMAND: $cmdline\n");
-    Genome::Utility::FileSystem->shellcmd(
-                                          cmd                         => $cmdline,
-                                          input_files                 => \@input_files,
-                                          output_files                => [$self->sam_file],
-                                          allow_zero_size_output_files => 1,
-                                          skip_if_output_is_present   => 1,
-                                      );
-
-    my $sam_to_bam = Genome::Model::Tools::Sam::SamToBam->execute(
-        sam_file    => $self->sam_file,
-        bam_file    => $self->bam_file,
-        ref_list    => $reference_build->full_consensus_sam_index_path($self->samtools_version),
-        is_sorted   => 0,
-        index_bam   => 1,
-        fix_mate    => 0,
-        keep_sam    => 0,
+    my @input_pathnames = $self->input_pathnames;
+    my %align_params = (
+        read_1_fastq_list => $input_pathnames[0],
+        reference_path => $reference_build->full_consensus_path('bowtie'),
+        use_version => $self->aligner_version,
+        alignment_directory => $alignment_directory,
     );
-    unless ($sam_to_bam) {
-        $self->error_message('Error converting SAM file: '. $self->sam_file .' to BAM file '. $self->bam_file);
-        die($self->error_message);
+    if (scalar(@input_pathnames) > 1) {
+        $align_params{'read_2_fastq_list'} = $input_pathnames[1];
+        $align_params{'insert_size'} = $instrument_data->median_insert_size;
+        $align_params{'insert_std_dev'} = $instrument_data->sd_above_insert_size;
     }
-    unless ($self->verify_aligner_successful_completion) {
-        $self->error_message('Failed to verify Tophat successful completion!');
-        die($self->error_message);
+    if ($self->aligner_params) {
+        $align_params{'aligner_params'} = $self->aligner_params;
     }
-    unless (rmtree($self->tmp_tophat_directory)) {
-        $self->error_message('Failed to remove tmp tophat directory '. $self->tmp_tophat_directory .":  $!");
-        die($self->error_message);
-    }
-    my @intermediate_files = glob($self->alignment_directory .'/*.fq*');
-    for my $intermediate_file (@intermediate_files) {
-        unless (unlink($intermediate_file)) {
-            $self->error_message('Failed to remove intermediate tophat file '. $intermediate_file .":  $!");
-            die($self->error_message);
-        }
+    unless (Genome::Model::Tools::Tophat::AlignReads->execute(%align_params)) {
+        $self->die_and_clean_up('Failed to run Tophat AlignReads with params: '. Data::Dumper::Dumper(%align_params));
     }
     return 1;
 }
