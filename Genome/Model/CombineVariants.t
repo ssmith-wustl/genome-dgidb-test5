@@ -254,8 +254,6 @@ ok (ref $out_obj, "got out obj");
 @variances = (@$snps, @$indels);
 ok(@variances, "collatted");
 
-
-Storable::lock_nstore \@variances, "/gscuser/sabbott/polyphred_read_grop.ser";
 #####################################
 #POLYSCAN EVALUATIVE s 1 25 
 ok(@detect_seq_var_pses == 4, "got four prior pses"); 
