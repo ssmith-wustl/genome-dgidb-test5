@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 3;
+use Test::More tests => 2;
 
 BEGIN {use_ok('Genome::Model::Tools::ContaminationScreen::454');}
 
@@ -14,8 +14,6 @@ $params{database} = '/gscmnt/sata156/research/mmitreva/databases/human_build36/H
 my $hcs_454 = Genome::Model::Tools::ContaminationScreen::454->create(%params);
 
 isa_ok($hcs_454, 'Genome::Model::Tools::ContaminationScreen::454');
-
-ok($hcs_454->execute,"454 executing");
 
 
 

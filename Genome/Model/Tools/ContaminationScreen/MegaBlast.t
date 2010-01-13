@@ -3,9 +3,8 @@
 use strict;
 use warnings;
 
-use lib '/gscuser/edemello/svn/fresh4/trunk/Genome/Model/Tools/';
 use above 'Genome';
-use Test::More tests => 3;
+use Test::More tests => 2;
 
 
 BEGIN {use_ok('Genome::Model::Tools::ContaminationScreen::MegaBlast');}
@@ -19,5 +18,3 @@ $params{header} = '/gsc/var/tmp/fasta/MegaBlast/nt.index.header';
 my $hcs_MegaBlast = Genome::Model::Tools::ContaminationScreen::MegaBlast->create(%params);
 
 isa_ok($hcs_MegaBlast, 'Genome::Model::Tools::ContaminationScreen::MegaBlast');
-
-ok($hcs_MegaBlast->execute, "MegaBlast executing");
