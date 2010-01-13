@@ -25,21 +25,21 @@
 					</tr>
           <tr>
 						<td style="padding:5px 5px;">
-              <table border="0" cellspacing="0" cellpadding="0" width="100%" summary="report section header">
+              <table border="0" cellspacing="0" cellpadding="0" width="100%">
 								  <tbody>
 									<tr>
 										<td style="padding:10px;" colspan="2">
                       <table border="1" cellspacing="0" cellpadding="0" width="100%" style="margin:5px 0 5px 5px;padding:0;" summary="report key value data table">
-                        <xsl:for-each select="//datasets/headers/header">
+                        <xsl:for-each select="//headers/*">
                         <th style="text-align:left;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 5px;">
-                          <xsl:value-of select="value"/>
+                          <xsl:value-of select="."/>
                         </th>
                         </xsl:for-each>
 												  <colgroup>
 													  <col/>
 													  <col width="100%"/>
 												  </colgroup>
-                        <xsl:for-each select="//datasets/objects/object">
+                        <xsl:for-each select="//datasets/*/*">
                         <tr>
                           <xsl:for-each select="./*">
                           <td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 5px;">
