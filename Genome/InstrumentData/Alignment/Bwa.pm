@@ -215,10 +215,12 @@ sub verify_alignment_data {
     my $alignment_dir = $self->alignment_directory;
     return unless $alignment_dir;
     return unless -d $alignment_dir;
-    
+   
+    my $already_had_lock = 0; 
     unless ($self->_resource_lock) {
 	    $lock = $self->lock_alignment_resource;
     } else {
+            $already_had_lock = 1;
 	    $lock = $self->_resource_lock;
     }
     
@@ -239,9 +241,12 @@ sub verify_alignment_data {
         return;
     }
 
-    unless ($self->unlock_alignment_resource) {
-        $self->error_message('Failed to unlock alignment resource '. $lock);
-        die $self->error_message;
+    # don't unlock if some caller lower on the stack had a lock
+    unless ($already_had_lock) {
+        unless ($self->unlock_alignment_resource) {
+             $self->error_message('Failed to unlock alignment resource '. $lock);
+             die $self->error_message;
+        }
     }
  
     return 1;
@@ -252,9 +257,11 @@ sub _run_aligner {
     
     my $lock;
 
+    my $already_had_lock = 0;
     unless ($self->_resource_lock) {
 	    $lock = $self->lock_alignment_resource;
     } else {
+            $already_had_lock = 1;
 	    $lock = $self->_resource_lock;
     }
 
@@ -495,12 +502,13 @@ sub _run_aligner {
         }
     }
     
-    unless ($self->unlock_alignment_resource) {
-        $self->error_message('Failed to unlock alignment resource '. $lock);
-        return;
+    # don't unlock if some caller lower on the stack had a lock
+    unless ($already_had_lock) {
+        unless ($self->unlock_alignment_resource) {
+             $self->error_message('Failed to unlock alignment resource '. $lock);
+             die $self->error_message;
+        }
     }
-
-    $DB::single = 1;
     
     return 1;
 }

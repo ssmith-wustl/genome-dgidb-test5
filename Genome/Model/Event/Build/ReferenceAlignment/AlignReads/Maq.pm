@@ -466,6 +466,7 @@ sub execute {
     my @errors;
     for my $alignment (@alignments) {
         # ensure the alignments are present
+        $alignment->lock_alignment_resource;
         unless ($alignment->find_or_generate_alignment_data) {
             $self->error_message("Error finding or generating alignments!:\n" .  join("\n",$alignment->error_message));
             push @errors, $self->error_message;
@@ -480,6 +481,10 @@ sub execute {
     unless ($self->verify_successful_completion) {
         $self->error_message("Error verifying completion!");
         return;
+    }
+
+    for my $alignment (@alignments) {
+        $alignment->unlock_alignment_resource;
     }
 
     return 1;
