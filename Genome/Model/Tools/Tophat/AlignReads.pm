@@ -5,10 +5,75 @@ use warnings;
 
 use Genome;
 use Genome::Utility::FileSystem;
+use File::Path;
 
 class Genome::Model::Tools::Tophat::AlignReads {
     is  => 'Genome::Model::Tools::Tophat',
-    has => [
+    has_input => [
+        reference_path => {
+            doc => 'The path to the bowtie indexed reference',
+        },
+        read_1_fastq_list => {
+            doc => 'A comma separated list of read 1 fastq files',
+        },
+        read_2_fastq_list => {
+            is_optional => 1,
+            doc => 'A comma separated list of read 2 fastq files when paired-end.(NOTICE: order must match read_1_fastq)',
+        },
+        insert_size => {
+            is_optional => 1,
+            doc => 'This is the expected (mean) inner distance between mate pairs. For, example, for paired end runs with fragments selected at 300bp, where each end is 50bp, you should set -r to be 200. There is no default, and this parameter is required for paired end runs'
+        },
+        insert_std_dev => {
+            is_optional => 1,
+            doc => 'The standard deviation for the distribution on inner distances between mate pairs. The default is 20bp.',
+            default_value => 20,
+        },
+        aligner_params => {
+            is_optional => 1,
+            doc => 'Additional params passed to the Tophat aligner',
+        },
+        alignment_directory => {
+            doc => 'The output directory where Tophat will write both temporary and final output files',
+        },
+    ],
+    has_output => [
+        aligner_output_file => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/tophat.aligner_output';
+            |,
+        },
+        sam_file => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/accepted_hits.sam';
+            |,
+        },
+        bam_file => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/accepted_hits.bam';
+            |,
+        },
+        coverage_file => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/coverage.wig';
+            |,
+        },
+        junctions_file => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/junctions.bed';
+            |,
+        },
+        tmp_tophat_directory => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/tmp';
+            |,
+        },
     ],
 };
 
@@ -55,15 +120,176 @@ sub create {
         $self->delete;
         die($msg);
     }
-
+    if ($self->read_2_fastq_list) {
+        unless ($self->insert_size) {
+            die('Failed to provide a insert size for paired-end mates');
+        }
+    }
     return $self;
 }
 
 
 sub execute {
     my $self = shift;
+
+    
+    my $alignment_directory = $self->alignment_directory;
+    $self->status_message("OUTPUT PATH: $alignment_directory\n");
+
+
+    # we resolve these first, since we might just print the paths we work with then exit
+    my $files_to_align = $self->read_1_fastq_list;
+    my $is_paired_end;
+    my $insert_size;
+    my $insert_sd;
+    if ($self->read_2_fastq_list) {
+        $files_to_align .= ' '. $self->read_2_fastq_list;
+        $insert_sd = $self->insert_std_dev;
+        $insert_size = $self->insert_size;
+        $is_paired_end = 1;
+    } else {
+        $is_paired_end = 0;
+    }
+    $self->status_message("INPUT PATH(S): $files_to_align\n");
+
+    # prepare the refseq
+    my $ref_seq_file =  $self->reference_path;
+    unless (-e $ref_seq_file) {
+        $self->error_message('Failed to find reference path '. $ref_seq_file);
+        die($self->error_message);
+    }
+    #TODO:  A check for bowtie index files could be added to the reference placeholder...
+    my $ref_seq_index_file =  $ref_seq_file .'.1.ebwt';
+    unless (-e $ref_seq_index_file) {
+        $self->error_message("Reference build index path '$ref_seq_index_file' does not exist.");
+        die($self->error_message);
+    }
+    $self->status_message("REFSEQ PATH: $ref_seq_file\n");
+
+    # these are general params not infered from the above
+    my $aligner_output_file = $self->aligner_output_file;
+    my $aligner_params = $self->aligner_params;
+
+    #if ($instrument_data->resolve_quality_converter eq 'sol2phred') {
+    #    $aligner_params .= ' --solexa1.3-quals';
+    #} elsif ($instrument_data->resolve_quality_converter eq 'sol2sanger') {
+    #    $aligner_params .= ' --solexa-quals';
+    #} else {
+    #    $self->error_message('Failed to resolve fastq quality coversion!');
+    #    die($self->error_message);
+    #}
+
+    # RESOLVE A STRING OF ALIGNMENT PARAMETERS
+    if ($is_paired_end && $insert_size && $insert_sd) {
+        #The standard deviation is the above instert size deviation, does below insert size stdev matter?
+        $aligner_params .= ' --mate-inner-dist '. $insert_size .' --mate-std-dev '. $insert_sd;
+    }
+
+    my $cmdline = $self->tophat_path
+    . sprintf(' --output-dir %s %s %s %s ',
+              $alignment_directory,
+              $aligner_params,
+              $ref_seq_file,
+              $files_to_align) .' > '. $aligner_output_file .' 2>&1';
+    my @input_files = map{ split(',', $_) }  split(' ',$files_to_align);
+
+    $self->status_message("COMMAND: $cmdline\n");
+    Genome::Utility::FileSystem->shellcmd(
+                                          cmd                         => $cmdline,
+                                          input_files                 => \@input_files,
+                                          output_files                => [$self->sam_file],
+                                          allow_zero_size_output_files => 1,
+                                          skip_if_output_is_present   => 1,
+                                      );
+
+    my $sam_to_bam = Genome::Model::Tools::Sam::SamToBam->execute(
+        sam_file    => $self->sam_file,
+        bam_file    => $self->bam_file,
+        ref_list    => $ref_seq_file .'.fai',
+        is_sorted   => 0,
+        index_bam   => 1,
+        fix_mate    => 1,
+        keep_sam    => 0,
+    );
+    unless ($sam_to_bam) {
+        $self->error_message('Error converting SAM file: '. $self->sam_file .' to BAM file '. $self->bam_file);
+        die($self->error_message);
+    }
+    unless ($self->verify_aligner_successful_completion) {
+        $self->error_message('Failed to verify Tophat successful completion!');
+        die($self->error_message);
+    }
+    unless ($self->use_version eq '1.0.12' || $self->use_version eq 'tophat') {
+        unless (rmtree($self->tmp_tophat_directory)) {
+            $self->error_message('Failed to remove tmp tophat directory '. $self->tmp_tophat_directory .":  $!");
+            die($self->error_message);
+        }
+    }
+    my @intermediate_files = glob($self->alignment_directory .'/*.fq*');
+    for my $intermediate_file (@intermediate_files) {
+        unless (unlink($intermediate_file)) {
+            $self->error_message('Failed to remove intermediate tophat file '. $intermediate_file .":  $!");
+            die($self->error_message);
+        }
+    }
     $self->error_message('No execute method implemeted in '. __PACKAGE__);
     return;
+}
+
+sub verify_aligner_successful_completion {
+    my $self = shift;
+
+    my @output_files = $self->output_files;
+    for my $output_file (@output_files) {
+        unless (-e $output_file) {
+            $self->error_message("Alignment output file '$output_file' not found.");
+            return;
+        }
+    }
+    #TODO: Find a line in the aligner output that
+    # 1.) denotes paired end alignment
+    #Otherwise the file existence check is already occuring in shellcmd
+    
+    #my $instrument_data = $self->instrument_data;
+    #if ($instrument_data->is_paired_end) {
+        #my $stats = $self->get_alignment_statistics($aligner_output_file);
+        #unless ($stats) {
+        #    return;
+        #}
+        #if ($self->force_fragment) {
+            #if (defined($$stats{'Paired Reads'})) {
+                #$self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as fragment data according to aligner output '. $aligner_output_file);
+                #return;
+            #}
+        #}  else {
+            #if (!defined($$stats{'Paired Reads'})) {
+                #$self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as paired end data according to aligner output '. $aligner_output_file);
+                #return;
+            #}
+        #}
+    #}
+    my $aligner_output_fh = Genome::Utility::FileSystem->open_file_for_reading($self->aligner_output_file);
+    unless ($aligner_output_fh) {
+        $self->error_message('Failed to open aligner output file '. $self->aligner_output_file .":  $!");
+        return;
+    }
+    while(<$aligner_output_fh>) {
+        if (m/^Run complete/) {
+            $aligner_output_fh->close();
+            return 1;
+        }
+    }
+    $aligner_output_fh->close();
+    return;
+}
+
+sub output_files {
+    my $self = shift;
+    my @output_files;
+    for my $method (qw/aligner_output_file bam_file coverage_file junctions_file/) {
+        push @output_files, $self->$method;
+    }
+    return @output_files;
 }
 
 1;
