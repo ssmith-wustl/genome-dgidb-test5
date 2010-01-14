@@ -46,12 +46,12 @@ class Genome::Model::Tools::Analysis::AutoMsa {
         },
 	cds => {
             type  =>  'String',
-            doc  => "optional; default attempts to find this file based on the refseq name; cds.gff file",
+            doc  => "obsolete in v_6 ;otherwise optional; default attempts to find this file based on the refseq name; cds.gff file",
    	    is_optional  => 1,
-       },
+	},
 	domain => {
             type  =>  'String',
-            doc  => "optional; default attempts to find this file based on the refseq name; domain.gff file",
+            doc  => "obsolete in v_6 ;otherwise optional; default attempts to find this file based on the refseq name; domain.gff file",
    	    is_optional  => 1,
         },
 	snp => {
@@ -61,7 +61,7 @@ class Genome::Model::Tools::Analysis::AutoMsa {
         },
 	amplicon => {
             type  =>  'String',
-            doc  => 'optional; default attempts to find this file based on the refseq name; amplicon.gff file',
+            doc  => 'obsolete in v_6 ;otherwise optional; default attempts to find this file based on the refseq name; amplicon.gff file',
    	    is_optional  => 1,
         },
 	poly_source_1 => {
@@ -72,48 +72,43 @@ class Genome::Model::Tools::Analysis::AutoMsa {
         },
 	poly_source_2 => {
             type  =>  'String',
-            doc  => 'optional; default is 10; poly-source-2 sets stop of grouping of traces within a sample to be evaluated',
+            doc  => 'optional; default is 20; poly-source-2 sets stop of grouping of traces within a sample to be evaluated',
     	    is_optional  => 1,
- 	    default => '10',
+ 	    default => '20',
 	},
 	poly_indel_source_1 => {
             type  =>  'String',
-            doc  => 'optional; default is 11; poly-indel-source-1 sets start of grouping of traces within a sample to be evaluated',
+            doc  => 'optional; default is 1; poly-indel-source-1 sets start of grouping of traces within a sample to be evaluated',
    	    is_optional  => 1,
- 	    default => '11',
-       },
+ 	    default => '1',
+	},
 	poly_indel_source_2 => {
             type  =>  'String',
-            doc  => 'optional; default is 13; poly-indel-source-2 sets stop of grouping of traces within a sample to be evaluated',
+            doc  => 'optional; default is 2; poly-indel-source-2 sets stop of grouping of traces within a sample to be evaluated',
     	    is_optional  => 1,
-	    default => '13',
-       },
+	    default => '2',
+	},
 	indelgroup => {
             type  =>  'String',
             doc  => 'indelgroup sets het indels within n bp will be jointly analyzed by indelBayes as used with polyscan; Default set at 50',
    	    is_optional  => 1,
  	    default => '50',
-       },
+	},
 	pretty_source_1 => {
             type  =>  'String',
             doc  => 'optional; default is 1; pretty-source-1 defines the start boundary of a sample name',
     	    is_optional  => 1,
  	    default => '1',
-      },
+	},
 	pretty_source_2 => {
             type  =>  'String',
-            doc  => 'optional; default is 10; pretty-source-2 defines the end boundary of a sample name',
+            doc  => 'optional; default is 20; pretty-source-2 defines the end boundary of a sample name',
     	    is_optional  => 1,
- 	    default => '10',
-      },
-	leave_temp_tutto => {
-	    type  =>  'Boolean',
-            doc  => 'optional; default deletes these temp files; use leave-temp-tutto option to not delete temp tutto files and enter yes',
-    	    is_optional  => 1,
-       },
+ 	    default => '20',
+	},
 	no_run_sift => {
             type  =>  'String',
-            doc  => 'optional; default runs runsift; use no-run-sift option and enter yes and runsift won\'t run',
+            doc  => 'optional; default runs runsift; use no-run-sift option and runsift won\'t run',
    	    is_optional  => 1,
         },
 	no_snp_detector => {
@@ -123,20 +118,20 @@ class Genome::Model::Tools::Analysis::AutoMsa {
         },
 	mail_me => {
 	    type  =>  'Boolean',
-            doc  => 'optional; default no mail; use mail-me option and enter yes to get mailed when the analysis is complete',
+            doc  => 'optional; default no mail; use mail-me option to get mailed when the analysis is complete',
     	    is_optional  => 1,
-       },
+	},
 	analysis_version => {
 	    type  =>  'String',
 	    doc  => 'optional; default runs msa_autoanalysis_v6.0; however, if you stipulate 5 with this option you will run /gscmnt/200/medseq/analysis/software/scripts/msa_autoanalysis_v5.0test.pl or 4 to run /gscmnt/200/medseq/analysis/software/scripts/msa_autoanalysis_v4.1test.pl',
    	    is_optional  => 1,
   	    default => '6',
-       },
+	},
 	no_force_genotyping => {
 	    type  =>  'Boolean',
-            doc  => "use no-force-genotyping option and enter no default action is to force genotype",  #tag-mps
+            doc  => "use no-force-genotyping option default action is to force genotype",  #tag-mps
     	    is_optional  => 1,
-       },
+	},
 	force_genotype_coords_file => {
             type  =>  'String',
             doc  => "optional provide a file of coordinates to force genotype; File format must be first column chromosome second column coordinate columns should be seperated by space or tab this option only works with the default msa_autoanalysis_v6.0 version",
@@ -158,9 +153,7 @@ class Genome::Model::Tools::Analysis::AutoMsa {
 
 
 sub help_brief {
-    return <<EOS
-	gmt analysis auto-msa -project-dir -ace-file
-EOS
+    "Analyze reads in a Consed Ace file"
 }
 
 sub help_synopsis {
@@ -190,6 +183,7 @@ sub execute {
     my $project_dir = $self->project_dir;
 
     my $mail_me = $self->mail_me;
+
     my $send_it;
     my ($handle) = getpwuid($<);
 
@@ -281,7 +275,6 @@ sub set_up_and_run {
     my $indelgroup = $self->indelgroup;
     my $pretty_source_1 = $self->pretty_source_1;
     my $pretty_source_2 = $self->pretty_source_2;
-    my $leave_temp_tutto = $self->leave_temp_tutto;
     my $no_run_sift = $self->no_run_sift;
     my $no_snp_detector = $self->no_snp_detector;
     my $mail_me = $self->mail_me;
@@ -490,10 +483,6 @@ sub set_up_and_run {
 	if ($amplicon) {
 	    push (@msa_auto_cmd, "--amplicon");
 	    push (@msa_auto_cmd, $amplicon);
-	}
-	if ($leave_temp_tutto) {
-	    push (@msa_auto_cmd, "--leave-temp-tutto");
-	    push (@msa_auto_cmd, $leave_temp_tutto);
 	}
 	if ($no_run_sift) {
 	    push (@msa_auto_cmd, "--no-run-sift");
