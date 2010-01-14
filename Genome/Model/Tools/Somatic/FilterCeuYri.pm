@@ -25,7 +25,7 @@ class Genome::Model::Tools::Somatic::FilterCeuYri {
         datasource_file => {
             is => 'Text',
             is_optional => 1,
-            default => '/gscuser/gsanders/CEU_YRI_all.snps.snpfilter.s',
+            default => '/gscmnt/834/info/medseq/imported_variants_data/CEU_YRI_all.snps.snpfilter.s',
             doc => "File of source variation to filter out... this defaults to the current CEU and YRI file (combined)"
         },
         skip_if_output_present => {
