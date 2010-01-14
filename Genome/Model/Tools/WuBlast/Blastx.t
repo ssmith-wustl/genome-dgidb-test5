@@ -13,7 +13,7 @@ BEGIN {
 }
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-WuBlast';
-my $tmp_dir = File::Temp::tempdir('BLASTX-XXXXX',DIR =>'/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
+my $tmp_dir = File::Temp::tempdir('BLASTX-XXXXX',DIR =>'/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my $blast1 = Genome::Model::Tools::WuBlast::Blastx->create(
     database   => $test_dir.'/protein.fa',

@@ -19,7 +19,7 @@ if ($archos !~ /64/) {
 my $tumor =  "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-Sniper/tumor.tiny.bam";
 my $normal = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-Sniper/normal.tiny.bam";
 
-my $tmpdir = File::Temp::tempdir('SomaticSniperXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 0);
+my $tmpdir = File::Temp::tempdir('SomaticSniperXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $tmpfile_snp = File::Temp->new( TEMPLATE=>'somatic_outputXXXXX', DIR=>$tmpdir, UNLINK=>0, SUFFIX=>'.txt'  );
 my $output_snp_file = $tmpfile_snp->filename;
 my $tmpfile_indel = File::Temp->new( TEMPLATE=>'somatic_outputXXXXX', DIR=>$tmpdir, UNLINK=>0, SUFFIX=>'.txt'  );

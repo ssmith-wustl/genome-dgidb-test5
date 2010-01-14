@@ -212,6 +212,44 @@ sub filtered_snp_file {
 }
 
 
+sub unfiltered_snp_file {
+    return shift->snp_related_metric_directory . '/snps_all_sequences';
+}
+
+
+sub filtered_indel_file {
+    my $self = shift;
+    
+    if ($self->_snp_caller_type eq 'sam') {
+        return $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
+    }
+    elsif ($self->_snp_caller_type eq 'maq') {
+        $self->warning_message('Maq tool was used for indel calling. indelpe.sorted.out is filtered sorted indelpe output');
+        return $self->snp_related_metric_directory . '/indelpe.sorted.out';
+    }
+    else {
+        $self->error_message('Unknown snp caller: '.$self->_snp_caller_type);
+        return;
+    }
+}
+
+
+sub unfiltered_indel_file {
+    my $self =shift;
+
+    if ($self->_snp_caller_type eq 'sam') {
+        return $self->snp_related_metric_directory . '/indels_all_sequences';
+    }
+    elsif ($self->_snp_caller_type eq 'maq') {
+        $self->warning_message('Maq tool was used for indel calling. indels_all_sequences is the output of indelsoa, not indelpe');
+        return $self->snp_related_metric_directory . '/indels_all_sequences';
+    }
+    else {
+        $self->error_message('Unknown snp caller: '.$self->_snp_caller_type);
+        return;
+    }
+}
+
 #clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
 sub _variant_list_files {
     return shift->_variant_files('snps', @_);
@@ -254,7 +292,7 @@ sub other_snp_related_metric_directory {
 
 sub snp_related_metric_directory {
     my $self = shift;
-    return $self->data_directory . '/' . $self->_snp_caller_type . '_snp_related_metrics/';
+    return $self->data_directory . '/' . $self->_snp_caller_type . '_snp_related_metrics';
 }
 
 sub _snp_caller_type {
@@ -323,6 +361,16 @@ sub whole_rmdup_bam_file {
     my $self = shift;
     my $model = $self->model;
     my $subject = $model->subject_name;
+    #If library_name/model subject_name contains white space, there
+    #will be problem on shell command. Quoting it will resolve but
+    #still troublesome for downstream analysis. Using library_id to
+    #resolve filename probably is a better solution. For now just
+    #replace white space with _ and match what is changed in Dedup
+    #event codes. (see RT#51519)
+    if ($subject =~ /\s+/) {
+        $self->warning_message("Model subject name: $subject contains white space, will replace with _");
+        $subject =~ s/\s+/\_/g;
+    }
     my $resolved_file = $subject . '_merged_rmdup.bam';
     return $self->accumulated_alignments_directory .'/'.$resolved_file;
 }
