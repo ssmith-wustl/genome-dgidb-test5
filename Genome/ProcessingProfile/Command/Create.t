@@ -19,10 +19,10 @@ ok(
     'Sub command classes',
 );
 
-# Create a in memory create command for tester
+# Create a in memory create command for testing
 class Genome::ProcessingProfile::Command::Create::Tester {
     is => 'Genome::ProcessingProfile::Command::Create',
-    has => [ sequencing_platform => {}, dna_source => {}, ],
+    has => [ sequencing_platform => {}, dna_source => {}, roi => {}, ],
 };
 my %params = Genome::ProcessingProfile::Test->params_for_test_class;
 delete $params{type_name};
