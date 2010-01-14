@@ -113,7 +113,7 @@ sub check_completed_parse {
     while (my $line = $fh->getline) {
 	$line_count++;
 	$undef_taxon++ if $line =~ /undefined\s+taxon/;
-	if ($line =~ /$\s+Summary:\s+(\d+)\s+out\s+of\s+(\d+)/) {
+	if ($line =~ /#\s+Summary:\s+(\d+)\s+out\s+of\s+(\d+)/) {
 	    $saved_seq = $1;
 	    $total_seq = $2;
 	    $parse_completed = 1; #PARSE COMPLETED RUNNING
