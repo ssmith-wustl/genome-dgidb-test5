@@ -140,9 +140,6 @@ sub execute {
             my $next = <STDIN>;
             chomp $next;
             if($next eq 'q') {
-                exit 0;
-            }
-            else {
                 last;
             }
         }
