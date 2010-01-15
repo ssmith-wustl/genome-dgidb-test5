@@ -346,7 +346,7 @@ sub add_mock_build_to_model {
             build_event build_events build_status
             date_completed date_scheduled
             add_report get_report reports 
-            initialize success fail 
+            schedule initialize success fail abandon delete
             /),
     ) or confess "Can't add methods to mock build";
 
