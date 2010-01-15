@@ -185,6 +185,9 @@ sub execute {
         
         $success = 1 unless defined $inline_error;
     } else {
+
+        Genome::DataSource::GMSchema->disconnect_default_dbh;
+
         local $ENV{WF_TRACE_UR} = 1;
         local $ENV{WF_TRACE_HUB} = 1;
         if ($w && !$self->restart) {

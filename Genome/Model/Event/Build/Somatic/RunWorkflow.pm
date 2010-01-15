@@ -125,7 +125,7 @@ sub execute {
         $self->error_message("Normal snp file $normal_snp_file does not exist!");
         return;
     }
-    
+
     my $workflow = Genome::Model::Tools::Somatic::Compare::Bams->create(
         normal_bam_file => $normal_bam,
         tumor_bam_file => $tumor_bam,
@@ -139,6 +139,8 @@ sub execute {
         require_dbsnp_allele_match => $require_dbsnp_allele_match,
         build_id => $build->id,
     );
+
+    Genome::DataSource::GMSchema->disconnect_default_dbh;
 
     unless ($workflow) {
         $self->error_message("Failed to create workflow!");
