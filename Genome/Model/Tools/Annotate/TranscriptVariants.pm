@@ -29,6 +29,11 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
     ],
     has_optional => [
         # IO Params
+        _is_parallel => {
+            is => 'Boolean',
+            is_input => 1,
+            default => 0,
+        },
         no_headers => {
             is => 'Boolean',
             is_optional => 1,
@@ -38,6 +43,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
         },
         extra_columns => {
             is => 'Text',
+            is_input => 1,
             is_optional => 1,
             doc => "A comma delimited list of any extra columns that exist after the expected 5 in the input. Use this option if it is desired to preserve additional columns from the input file, which will then appear in output.Preserved columns must be contiguous and in order as they appear in the infile after the mandatory input columns. Any desired naming or number of columns can be specified so long as it does not exceed the actual number of columns in the file."
         },
@@ -151,7 +157,10 @@ EOS
 
 sub execute { 
     my $self = shift;
-    $DB::single=1;
+
+    if ($self->_is_parallel) {
+        $self->output_file($self->variant_file . ".out");
+    }
 
     if (($self->skip_if_output_present)&&(-s $self->output_file)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
