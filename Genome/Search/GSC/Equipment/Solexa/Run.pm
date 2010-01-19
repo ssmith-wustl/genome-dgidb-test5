@@ -16,7 +16,30 @@ class Genome::Search::GSC::Equipment::Solexa::Run {
     ]
 };
 
-sub get_document {
+sub _add_details_result_xml {
+    my $class = shift;
+    my $doc = shift;
+    my $result_node = shift;
+    
+    my $xml_doc = $result_node->ownerDocument;
+    
+    my $title = $doc->value_for('title');
+    
+    my @run_lanes = GSC::RunLaneSolexa->get( flow_cell_id => $title );
+    my @all_instrument_data = Genome::InstrumentData::Solexa->get( id => [map($_->id, @run_lanes)] ) if @run_lanes;
+
+    my $in_analysis;
+    if(@all_instrument_data) {
+        $in_analysis = 1;
+    } else {
+        $in_analysis = 0;
+    }
+    $result_node->addChild( $xml_doc->createAttribute('in-analysis', $in_analysis));
+    
+    return $result_node;
+}
+
+sub generate_document {
     my $class = shift();
     my $solexa_run = shift();
     
@@ -40,7 +63,7 @@ sub get_document {
     push @fields, WebService::Solr::Field->new( type      => $self->type );
     push @fields, WebService::Solr::Field->new( id        => $solexa_run->er_id() );
     push @fields, WebService::Solr::Field->new( title     => $solexa_run->flow_cell_id() );
-    push @fields, WebService::Solr::Field->new( content   => join(',', @samples));
+    push @fields, WebService::Solr::Field->new( content   => join(', ', @samples));
     push @fields, WebService::Solr::Field->new( timestamp => $timestamp );
     
     my $doc = WebService::Solr::Document->new(@fields);

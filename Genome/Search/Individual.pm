@@ -16,7 +16,23 @@ class Genome::Search::Individual {
     ]
 };
 
-sub get_document {
+sub _add_details_result_xml {
+    my $class = shift;
+    my $doc = shift;
+    my $result_node = shift;
+    
+    my $xml_doc = $result_node->ownerDocument;
+
+    my $individual_id = $doc->value_for('id');
+    
+    my $individual_url = "/cgi-bin/dashboard/status.cgi?individual-id=$individual_id";
+    my $url_node = $result_node->addChild( $xml_doc->createElement("url") );
+    $url_node->addChild( $xml_doc->createTextNode($individual_url) );
+    
+    return $result_node;
+}
+
+sub generate_document {
     my $class = shift();
     my $individual = shift();
     

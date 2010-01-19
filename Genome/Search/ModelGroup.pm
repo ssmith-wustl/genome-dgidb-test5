@@ -16,7 +16,28 @@ class Genome::Search::ModelGroup {
     ]
 };
 
-sub get_document {
+sub _add_details_result_xml {
+    my $class = shift;
+    my $doc = shift;
+    my $result_node = shift;
+    
+    my $xml_doc = $result_node->ownerDocument;
+
+    my $content = $doc->value_for('content');
+    my $model_group_id = $doc->value_for('id');
+    
+    my $model_group_url = "/cgi-bin/dashboard/status.cgi?model-group-id=$model_group_id";
+    my $model_group_url_node = $result_node->addChild( $xml_doc->createElement("url") );
+    $model_group_url_node->addChild( $xml_doc->createTextNode($model_group_url) );
+
+    my $summary = $class->_model_group_summary($content);
+    my $summary_node = $result_node->addChild( $xml_doc->createElement('summary') );
+    $summary_node->addChild( $xml_doc->createTextNode( $summary) );
+    
+    return $result_node;
+}
+
+sub generate_document {
     my $class = shift();
     my $model_group = shift();
     
@@ -36,6 +57,24 @@ sub get_document {
 
     my $doc = WebService::Solr::Document->new(@fields);
     return $doc;
+}
+
+sub _model_group_summary {
+     my $class = shift();
+     my ($content) = @_;
+
+     $content =~ s/\d+\s/ /g;
+
+     my @content = split(/ /, $content);
+     my $end = '';
+     if(scalar @content > 3) {
+         $end = ' ...';
+     }
+
+     @content = splice(@content, 0, 3);
+     my $summary = join(' ', @content) . $end;
+
+     return $summary;
 }
 
 #OK!
