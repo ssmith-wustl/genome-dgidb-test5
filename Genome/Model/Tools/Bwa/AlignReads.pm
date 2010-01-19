@@ -4,11 +4,18 @@ use strict;
 use warnings;
 
 use Genome;
+use Workflow;
 use Genome::Utility::FileSystem;
 
 class Genome::Model::Tools::Bwa::AlignReads {
     is  => 'Genome::Model::Tools::Bwa',
-    has => [
+    has_param => [
+            lsf_resource => 
+            {
+                value => "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=10000]' -M 10000000",
+            },
+    ],
+    has_input => [
         #######################################################
         dna_type => {
             doc =>
@@ -21,6 +28,7 @@ class Genome::Model::Tools::Bwa::AlignReads {
 'The bwa aln parameters. These should be specified in a quoted string with single dashes, e.g. "-x -y -z"',
             is            => 'String',
             is_optional   => 1,
+            is_input    => 1,
             default_value => '',
         },
         upper_bound => {
@@ -57,26 +65,32 @@ class Genome::Model::Tools::Bwa::AlignReads {
             doc =>
 'Required input file name containing the reference sequence file.',
             is => 'String',
+            is_input    => 1,
         },
         files_to_align_path => {
             doc =>
 'Path to a directory or a file or a pipe separated list of files containing the reads to be aligned.  Must be in fastq format.',
             is => 'String',
+            is_input    => 1,
         },
         #####################################################
         #output files
         aligner_output_file => {
             doc => 'Optional output log file containing results of the run.',
             is  => 'String',
+            is_input    => 1,
         },
         alignment_file => {
             doc         => 'Output file containing the aligned map data.',
             is          => 'String',
             is_optional => 0,
+            is_input    => 1,
         },
         unaligned_reads_file => {
             doc => 'Output file containing unaligned data.',
             is  => 'String',
+            is_input    => 1,
+            is_output => 1,
         },
         duplicate_mismatch_file => {
             doc =>
@@ -273,6 +287,8 @@ sub execute {
       if defined( $self->use_version );
     $self->status_message("\n");
 
+    print "Align Reads begun with " . $self->unaligned_reads_file . "\n";
+
     my $tmp_dir;
 
     if ( defined( $self->temp_directory ) ) {
@@ -441,6 +457,7 @@ sub execute {
 	}
     }
 
+    print "Align Reads completed with " . $self->unaligned_reads_file . "\n";
     return 1;
 
 }

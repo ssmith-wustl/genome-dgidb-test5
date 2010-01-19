@@ -8,7 +8,7 @@ use Bio::SeqIO;
 
 class Genome::Model::Tools::Fastq {
     is => 'Command',
-    has => [
+    has_input => [
         fastq_file => {
             type        => 'Text',
             is_optional => 0,
