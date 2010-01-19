@@ -316,3 +316,32 @@ sub default_bamwindow_version {
 }
 
 1;
+
+
+=pod
+
+=head1 NAME
+
+Genome::Model::Tools::Somatic::BamToCna
+
+=head1 SYNOPSIS
+
+From the shell:
+  gmt somatic --tumor-bam-file tumor.bam --normal-bam-file normal.bam --output-file copy_number.out
+
+From Perl:
+  my $bam_to_cna = Genome::Model::Tools::Somatic::BamToCna->create(
+      tumor_bam_file => 'tumor.bam',
+      normal_bam_file => 'normal.bam',
+      output_file => 'copy_number.out',
+  );
+  $bam_to_cna->execute();
+  
+=head1 DESCRIPTION
+
+Analyzes a tumor and normal bam file and outputs chromosomal-based copy number alteration
+in the form of an output file which displays \"chromosome, position, tumor cn, normal cn, difference\".
+Also, the tool plots a grid of copy number graphs, one for each chromosome, on a single .png image the
+size of one full page using an embedded R script.
+
+=cut
