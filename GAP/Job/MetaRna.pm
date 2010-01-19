@@ -86,6 +86,8 @@ sub execute {
             $seq_fh->filename(),
             '-o',
             $temp_filename,
+            '-L',
+            '/gsc/pkg/bio/meta_rna/rRNA_hmm_fs/HMMs/',
         );
     eval {
         
