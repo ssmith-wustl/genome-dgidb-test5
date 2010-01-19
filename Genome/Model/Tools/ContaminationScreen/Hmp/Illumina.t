@@ -18,5 +18,3 @@ my $illumina = Genome::Model::Tools::ContaminationScreen::Hmp::Illumina->create(
 
 isa_ok($illumina, 'Genome::Model::Tools::ContaminationScreen::Hmp::Illumina');
 
-
-$illumina->execute();
