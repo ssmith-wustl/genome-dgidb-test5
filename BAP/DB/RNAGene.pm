@@ -28,4 +28,6 @@ __PACKAGE__->columns(
                     );
 __PACKAGE__->sequence('gene_id_seq');
 
+__PACKAGE__->has_many('gene_tags' => BAP::DB::GeneTag, 'gene_id');
+
 1;
