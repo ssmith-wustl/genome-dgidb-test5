@@ -103,6 +103,14 @@ my %BAMWINDOW_VERSIONS = (
      '0.1' => '/gsc/pkg/bio/bamwindow/bamwindow-v0.1/' . $BAMWINDOW_COMMAND,
 );
 
+sub help_synopsis {
+    my $self = shift;
+    return <<"EOS"
+gmt somatic bam-to-cna --tumor-bam-file tumor.bam --normal-bam-file normal.bam --output-file copy_number.out
+gmt somatic bam-to-cna --tumor-bam-file tumor.bam --normal-bam-file normal.bam --output-file copy_number.out --window-size 100000 --ratio 0.3 --maq-quality-cutoff 40 
+EOS
+}
+
 sub help_brief {
     "This tool analyzes a tumor and normal bam file and outputs chromosomal-based copy number alteration."
 }
