@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use File::Copy;
 use File::Basename;
+use File::Temp qw(tempdir tempfile);
 
 my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
 
@@ -92,14 +93,15 @@ sub execute {
 
     my $map_file = $self->map_file;
     my $bam_file = $self->bam_file_path;
-    my $sam_file = $bam_file;
+
+    my $temp_dir = tempdir('Genome-Model-Tools-Maq-Map2Bam-t-XXXX', CLEANUP=>1, DIR=>'/tmp');
     
-    $sam_file =~ s/\.bam$/\.sam/;
+    my $sam_file = $temp_dir . "/sam-to-bam.tmp.sam";
 
     #add in the RG and PG tags...
     #create an intermediate tmp file with the rg and pg tags then delete
     if ( defined($self->lib_tag) ) {
-        my $sam_file_tmp = $sam_file.".tmp.sam";
+        my $sam_file_tmp = $temp_dir."/map-to-sam.tmp.sam";
         my $cmd = sprintf('%s %s > %s', $tosam_path, $map_file, $sam_file_tmp);
         my $rv  = Genome::Utility::FileSystem->shellcmd(
             cmd => $cmd, 
