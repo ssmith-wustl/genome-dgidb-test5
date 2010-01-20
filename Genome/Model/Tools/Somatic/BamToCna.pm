@@ -346,4 +346,55 @@ in the form of an output file which displays "chromosome, position, tumor cn, no
 Also, the tool plots a grid of copy number graphs, one for each chromosome, on a single .png image the
 size of one full page using an embedded R script.
 
+=head1 PARAMETERS
+
+=over 4
+
+=item tumor_bam_file
+
+Location of the tumor BAM file
+
+=item normal_bam_file
+
+Location of the normal BAM file
+
+=item output_file
+
+Location where the output should be saved. The generated image will use this same
+parameter but with ".png" appended.
+
+=item use_version
+
+The version of `bam-window` to use
+
+=item window_size 
+
+The window size (in base pairs) for calculating copy number.
+
+=item maq_quality_cutoff
+
+Only consider reads with a MAQ mapping quality higher than this value.
+
+=item ratio
+
+The ratio diverged from median, used to find copy number neutral region.
+
+=item chromosome_list
+
+A specific list of chromosomes (comma separated) to use for calculation of median coverage.
+
+=item tumor_downsample_percentage 
+
+Fraction of reads (value x 100%) to use in calculations (max & default = 1).
+
+=item normal_downsample_percentage
+
+Percent of reads (value x 100%) to use in calculations (max,default = 1).
+
+=item skip_if_output_present
+
+If enabled, won't recalculate the copy number if the output_file is already present.
+
+=back
+
 =cut
