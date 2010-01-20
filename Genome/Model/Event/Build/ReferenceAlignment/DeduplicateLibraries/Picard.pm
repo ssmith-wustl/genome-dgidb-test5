@@ -110,6 +110,7 @@ sub execute {
 
     $self->status_message("Merge return value:".$merge_rv);
 
+    my $merged_flagstat_total; #keep this around for comparison after deduplication
     if ($merge_rv ne 1)  {
         $self->error_message("Error merging: ".join("\n", @bam_files));
         $self->error_message("Output target: $merged_file");
@@ -121,16 +122,16 @@ sub execute {
     else {
 
         $self->status_message("Checking that merged bam contains expected alignment count.");
-        my $individual_total = 0;
+        my $individual_flagstat_total = 0;
         for my $bam_file (@bam_files) {
-            $individual_total += $self->_bam_flagstat_total($bam_file);
+            $individual_flagstat_total += $self->_bam_flagstat_total($bam_file);
         }
         
-        my $merged_total = $self->_bam_flagstat_total($merged_file);
+        $merged_flagstat_total = $self->_bam_flagstat_total($merged_file);
         
-        unless($merged_total == $individual_total) {
+        unless($merged_flagstat_total == $individual_flagstat_total) {
             $self->error_message("Alignment counts of individual bams and merged bam don't match!");
-            $self->error_message("(Individual sumtotal: " . $individual_total . ", Merged total: " . $merged_total);
+            $self->error_message("(Individual sumtotal: " . $individual_flagstat_total . ", Merged total: " . $merged_flagstat_total);
             return;
         }
         
@@ -147,13 +148,22 @@ sub execute {
         DIR     => $alignments_dir, 
         CLEANUP => 1,
     );
+    
+    my $result_tmp_dir = File::Temp->newdir( 
+        "tmp_XXXXX",
+        DIR     => $alignments_dir, 
+        CLEANUP => 1,
+    );
    
     # fix permissions on this temp dir so others can clean it up later if need be
     chmod(0775,$tmp_dir);
+    chmod(0775,$result_tmp_dir);
+    
+    my $dedup_temp_file = $result_tmp_dir . '/dedup.bam';
 
     my $mark_dup_cmd = Genome::Model::Tools::Sam::MarkDuplicates->create(
        file_to_mark => $merged_file,
-       marked_file => $bam_merged_output_file,
+       marked_file => $dedup_temp_file,
        metrics_file => $metrics_file,
        remove_duplicates => 0,
        tmp_dir => $tmp_dir->dirname,
@@ -167,6 +177,21 @@ sub execute {
         $self->error_message("Return value: ".$mark_dup_rv);
         $self->error_message("Check parameters and permissions in the RUN command above.");
         return;
+    } else {
+        $self->status_message("Checking that deduplicated bam contains expected alignment count.");
+        
+        
+        my $dedup_flagstat_total = $self->_bam_flagstat_total($dedup_temp_file);
+        
+        unless($merged_flagstat_total == $dedup_flagstat_total) {
+            $self->error_message("Alignment counts of dedup bam and merged bam don't match!");
+            $self->error_message("(Dedup total: " . $dedup_flagstat_total . ", Merged total: " . $merged_flagstat_total);
+            return;
+        }
+        
+        $self->status_message("Deduplicated bam count verified.");
+        
+        rename($dedup_temp_file, $bam_merged_output_file);
     }
 
     $now = UR::Time->now;
