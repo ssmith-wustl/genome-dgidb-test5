@@ -5,8 +5,6 @@ use warnings;
 
 use Workflow;
 
-use BAP::Job::Genemark;
-
 use Bio::SeqIO;
 use Bio::Tools::Run::RepeatMasker;
 
@@ -71,14 +69,11 @@ sub execute {
 
     my $input_seq = $seqin->next_seq();
 
-    my $masker = Bio::Tools::Run::RepeatMasker->new(
-                                                    -file   => 'data/C_elegans.chrI.ws184.fasta',
-                                                    -format => 'fasta',
-                                                   );    
+    my $masker = Bio::Tools::Run::RepeatMasker->new();
     
     my $masked_seq = $masker->run($input_seq);
    
-    $seqout->write($masked_seq);
+    $seqout->write_seq($masked_seq);
    
     $output_fh->close();
 
