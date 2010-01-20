@@ -31,13 +31,13 @@ class Genome::Model::Tools::Analysis::AddAndBuild {
     add => {
         type => 'Boolean',
         is_optional => 1,
-        doc => "whether or not to add instrument data to the models or just report what the tool finds",
+        doc => "whether or not to add instrument data to the models or just report what the tool finds (--noadd). Adds by default.",
         default => 1,
     },
     build => {
         type => 'Boolean',
         is_optional => 1,
-        doc => "whether or not to build the models once instrument data is added. (implies --add) ",
+        doc => "whether or not to build the models once instrument data is added. (implies --add). Off by default.",
         default => 0,
     },
 
@@ -194,6 +194,6 @@ sub help_brief {
 
 sub help_detail {
     <<'HELP';
-This tool take either a list of model ids or a model-group and iterates over each one. Models on which the is_default attribute is set will be assumed to be in "data-freeze" and will not be touched. Adding unassigned instrument data and excluding lanes or parts of lanes that have GERALD calculated error rates above or equal to the set maximum. By default, the maximum error is set to 3. You may also use this tool to merely query out the unassigned instrument data for your model-group by using the --noadd option. Logging is pretty extensive. Prepare to be bombarded with information if you have a lot of models.  
+This tool take either a list of model ids or a model-group and iterates over each one. Models on which the is_default attribute is set will be assumed to be in "data-freeze" and will not be touched. Adding unassigned instrument data and excluding lanes or parts of lanes that have GERALD calculated error rates above or equal to the set maximum. By default, the maximum error is set to 3. You may also use this tool to merely query out the unassigned instrument data for your model-group by using the --noadd option. You can have it kickoff builds if it finds new data by specifying --build. Logging is pretty extensive. Prepare to be bombarded with information if you have a lot of models.  
 HELP
 }
