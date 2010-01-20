@@ -1,0 +1,55 @@
+<?xml version='1.0' standalone='yes'?>
+<workflow name="gene prediction pipeline" executor="Workflow::Executor::SerialDeferred">
+  <link fromOperation="input connector"          fromProperty="seq set id"       toOperation="get sequence fasta files" toProperty="seq_set_id" />
+  <link fromOperation="input connector"          fromProperty="seq set id"       toOperation="wait delete"              toProperty="seq_set_id" />
+  <link fromOperation="input connector"          fromProperty="seq set id"       toOperation="database upload"          toProperty="seq_set_id" />
+  <link fromOperation="input connector"          fromProperty="fgenesh model"    toOperation="contig predict genes"     toProperty="fgenesh model" />
+  <link fromOperation="input connector"          fromProperty="SNAP model"       toOperation="contig predict genes"     toProperty="SNAP model" />
+  <link fromOperation="get sequence fasta files" fromProperty="fasta_files"      toOperation="contig predict genes"     toProperty="fasta file" />
+  <link fromOperation="contig predict genes"     fromProperty="bio seq features" toOperation="database upload"          toProperty="bio_seq_features" />
+  <link fromOperation="database upload"          fromProperty="result"           toOperation="wait db upload"           toProperty="db upload result" />
+  <link fromOperation="get sequence fasta files" fromProperty="fasta_files"      toOperation="wait db upload"           toProperty="fasta_files" />
+  <link fromOperation="wait db upload"           fromProperty="fasta_files"      toOperation="cat files"                toProperty="fasta files" />
+  <link fromOperation="wait db upload"           fromProperty="db upload result" toOperation="wait delete"              toProperty="db upload result" />
+  <link fromOperation="cat files"                fromProperty="all files"        toOperation="delete files"             toProperty="files" />
+  <link fromOperation="delete files"             fromProperty="result"           toOperation="wait delete"              toProperty="delete result" />
+  <link fromOperation="wait delete"              fromProperty="delete result"    toOperation="output connector"         toProperty="result" />
+  <operation name="get sequence fasta files">
+    <operationtype commandClass="EGAP::Command::GetFastaFiles" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="contig predict genes" workflowFile="egap_contig.xml" />
+  <operation name="database upload">
+    <operationtype commandClass="EGAP::Command::UploadResult" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="wait db upload">
+    <operationtype typeClass="Workflow::OperationType::Block">
+      <property>fasta_files</property>
+      <property>db upload result</property>
+    </operationtype>
+  </operation>
+  <operation name="delete files">
+    <operationtype commandClass="EGAP::Command::DeleteFiles" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="wait delete">
+    <operationtype typeClass="Workflow::OperationType::Block">
+      <property>delete result</property>
+      <property>db upload result</property>
+      <property>seq_set_id</property>
+    </operationtype>
+  </operation>
+  <operation name = "cat files">
+    <operationtype typeClass="Workflow::OperationType::Converge">
+      <inputproperty>model file</inputproperty>
+      <inputproperty>pwm file</inputproperty>
+      <inputproperty>fasta files</inputproperty>
+      <outputproperty>all files</outputproperty>
+      <outputproperty>result</outputproperty>
+    </operationtype>
+  </operation>
+  <operationtype typeClass="Workflow::OperationType::Model">
+    <inputproperty>seq set id</inputproperty>
+    <inputproperty>fgenesh model</inputproperty>
+    <inputproperty>SNAP model</inputproperty>
+    <outputproperty>result</outputproperty>
+  </operationtype>
+</workflow>
