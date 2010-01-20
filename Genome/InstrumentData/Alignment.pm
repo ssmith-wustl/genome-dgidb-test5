@@ -6,6 +6,10 @@ use warnings;
 use Genome;
 use Digest::MD5 qw(md5_hex);
 
+use File::Copy;
+use File::Path qw(rmtree);
+
+
 class Genome::InstrumentData::Alignment {
     is => ['Genome::Utility::FileSystem'],
     is_abstract => 1,
@@ -775,12 +779,14 @@ sub generate_tcga_bam_file {
     
     my $seq_dict = $self->get_or_create_sequence_dictionary();
 
-    my $per_lane_sam_file = $self->alignment_directory."/tcga_compliant.sam";
-    my $per_lane_bam_file = $self->alignment_directory."/tcga_compliant.bam";
+    my $temp_dir = File::Temp::tempdir(CLEANUP=>1);
 
-    my $output_sam_tmp_file = File::Temp->new(SUFFIX=>'.sam', DIR=>$self->alignment_directory);
+    my $per_lane_sam_file = $temp_dir."/tcga_compliant.sam";
+    my $per_lane_bam_file = $temp_dir."/tcga_compliant.bam";
+
+    my $output_sam_tmp_file = File::Temp->new(SUFFIX=>'.sam', DIR=>$temp_dir);
     unless ($output_sam_tmp_file) {
-        $self->error_message("Couldn't open an output file in " . $self->alignment_directory . " to put our all_sequences.bam.  Check disk space and permissions!");
+        $self->error_message("Couldn't open an output file in " . $temp_dir . " to put our all_sequences.bam.  Check disk space and permissions!");
         return;
     }
     
@@ -806,7 +812,7 @@ sub generate_tcga_bam_file {
         $self->status_message("Cat of sam files successful.");
     }
 
-    my $per_lane_sam_file_rg = $self->alignment_directory."/tcga_compliant_rg.sam";
+    my $per_lane_sam_file_rg = $temp_dir."/tcga_compliant_rg.sam";
 
     if ($params{skip_read_group}) {
         $per_lane_sam_file_rg = $per_lane_sam_file;
@@ -856,9 +862,26 @@ sub generate_tcga_bam_file {
  
     #### if it got to here then we've got ourselves a good alignment, let's keep it!
     chmod 0644,$per_lane_bam_file;
-    rename($per_lane_bam_file, $self->alignment_file);
 
+    my $md5sum_of_original = Genome::Utility::FileSystem->md5sum($per_lane_bam_file);
+    print "Original MD5 sum: $md5sum_of_original\n";
 
+    unless(copy($per_lane_bam_file, $self->alignment_file)) {
+        $self->error_message("Failed copying completed alignment file.  Undoing...");
+        unlink($self->alignment_file);
+        return;
+    }
+    
+    my $md5sum_of_copy = Genome::Utility::FileSystem->md5sum($self->alignment_file);
+    print "Copied MD5 sum: $md5sum_of_original\n";
+
+    unless ($md5sum_of_original eq $md5sum_of_copy) {
+        $self->error_message("TCGA compliant BAM file failed to copy to alignment directory.  MD5 sum mismatch:  original was $md5sum_of_copy but copied was $md5sum_of_copy.  Deleting the copy.");
+        unlink($self->alignment_file);
+        return;
+    }
+
+    rmtree($temp_dir);
     return $self->alignment_file;
 }
 
