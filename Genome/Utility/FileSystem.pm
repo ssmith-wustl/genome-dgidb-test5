@@ -19,6 +19,7 @@ require File::Basename;
 require File::Path;
 require File::Copy;
 require Genome::Utility::Text;
+use Digest::MD5;
 
 require MIME::Lite;
 
@@ -647,13 +648,17 @@ sub lock_resource {
                      $self->warning_message("Invalid lock for resource $resource_lock\n"
                                             ." lock info was:\n". $info_content ."\n"
                                             ."Removing old resource lock $resource_lock\n");
-                     unless ($Genome::Utility::Filesystem::IS_TESTING) {
+                     unless ($Genome::Utility::FileSystem::IS_TESTING) {
                         my $message_content = <<END_CONTENT;
 Hey Apipe,
 
 This is a lock attempt on %s running as PID $$ LSF job %s and user %s.
 
 I'm about to remove a lock file held by a LSF job that I think is dead.  
+
+The resource is: 
+
+$resource_lock
 
 Here's info about the job that I think is gone.
 
@@ -670,7 +675,7 @@ END_CONTENT
                         my $msg = MIME::Lite->new(From    => sprintf('"Genome::Utility::Filesystem" <%s@genome.wustl.edu>', $ENV{'USER'}),
                                               To      => 'apipe@genome.wustl.edu',
                                               Subject => 'Attempt to release a lock held by a dead process',
-                                              Data    => sprintf($message_content, $my_host, $ENV{'LSB_JOBID'}, $ENV{'USER'}, $info_content),
+                                              Data    => sprintf($message_content, $my_host, $ENV{'LSB_JOBID'}, $ENV{'USER'}, $resource_lock, $info_content),
                                             );
                         $msg->send();
                         sleep 60 * 60;
@@ -836,6 +841,27 @@ sub get_classes_in_subdirectory_that_isa {
     }
 
     return @classes;
+}
+
+sub md5sum {
+    my ($self, $file) = @_;
+
+    my $digest;
+    eval {
+        open (IN, $file) || die "Can't open file to md5sum: $file  ($!)";
+        my $d = Digest::MD5->new;
+        $d->addfile(*IN);
+        $digest = $d->hexdigest;
+        close IN;
+    };
+    
+    if ($@) {
+        $self->error_message("Failure to MD5: $@");
+        return;
+    }
+    
+    return $digest;
+    
 }
 
 

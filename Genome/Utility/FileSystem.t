@@ -6,7 +6,7 @@ use warnings;
 use above 'Genome';
 
 
-$Genome::Utility::Filesystem::IS_TESTING=1;
+$Genome::Utility::FileSystem::IS_TESTING=1;
 use Test::Class;
 
 Test::Class->runtests(qw/ GenomeUtilityFileSystem::Test /);
@@ -469,6 +469,19 @@ sub test_locking {
         ok(!$lock,$message);
     }
     return;
+}
+
+sub test_md5sum : Test(1) {
+    my $dir = File::Temp->tempdir("Genome-Utility-Filesystem-t-md5sum-XXXX",CLEANUP=>1);
+   
+    open (F, ">$dir/md5test"); 
+    print F "ABCDEF\n";
+    close F;
+
+    my $expected_md5sum = "f6674e62795f798fe2b01b08580c3fdc";
+
+    is(Genome::Utility::FileSystem->md5sum("$dir/md5test"),$expected_md5sum, "md5sum: matches what we expected");
+
 }
 
 =pod
