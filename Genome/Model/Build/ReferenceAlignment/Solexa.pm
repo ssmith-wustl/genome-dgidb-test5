@@ -359,20 +359,19 @@ sub whole_rmdup_map_file {
 
 sub whole_rmdup_bam_file {
     my $self = shift;
-    my $model = $self->model;
-    my $subject = $model->subject_name;
-    #If library_name/model subject_name contains white space, there
-    #will be problem on shell command. Quoting it will resolve but
-    #still troublesome for downstream analysis. Using library_id to
-    #resolve filename probably is a better solution. For now just
-    #replace white space with _ and match what is changed in Dedup
-    #event codes. (see RT#51519)
-    if ($subject =~ /\s+/) {
-        $self->warning_message("Model subject name: $subject contains white space, will replace with _");
-        $subject =~ s/\s+/\_/g;
+
+    my @files = glob($self->accumulated_alignments_directory .'/*_merged_rmdup.bam');
+
+    if (@files == 0) {
+	return $self->accumulated_alignments_directory.'/'.$self->build_id.'_merged_rmdup.bam';
     }
-    my $resolved_file = $subject . '_merged_rmdup.bam';
-    return $self->accumulated_alignments_directory .'/'.$resolved_file;
+    elsif (@files == 1) {
+	return $files[0];
+    }
+    else {
+	$self->error_message("Multiple merged rmdup bam file found");
+	return;
+    }
 }
 
 sub generate_tcga_file_name {
