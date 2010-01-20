@@ -252,7 +252,7 @@ sub get_median {
     my @pole = @$rpole;
     my $ret;
 
-    @pole=sort(@pole);
+    @pole= sort {$a<=>$b} @pole;
     if( (@pole % 2) == 1 ) {
         $ret = $pole[((@pole+1) / 2)-1];
     } else {

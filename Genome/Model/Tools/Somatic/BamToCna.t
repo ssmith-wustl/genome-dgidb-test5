@@ -21,7 +21,7 @@ BEGIN {
 
 use_ok( 'Genome::Model::Tools::Somatic::BamToCna');
 
-my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-BamToCna/';
+my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-BamToCna/54616/'; #bug in 54616 was corrected
 
 my $tumor_bam_file  = $test_input_dir . 'tumor.sparse.bam';
 my $normal_bam_file = $test_input_dir . 'normal.sparse.bam';
