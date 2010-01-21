@@ -74,9 +74,15 @@ EOS
     has_optional => [
         flow_cell_id                    => { }, # = short name
         lane                            => { }, # = subset_name
-        read_length                     => { },
-        fwd_read_length                 => { },
-        rev_read_length                 => { },
+        #TODO These three columns will point to "read_length" or whatever name is decided
+        #(see also https://gscweb.gsc.wustl.edu/wiki/Software_Development:Illumina_Indexed_Runs_Warehouse_Schema)
+        read_length                     => { calculate => q| return $self->_sls_read_length - 1| },
+        fwd_read_length                 => { calculate => q| return $self->_sls_fwd_read_length - 1|},
+        rev_read_length                 => { calculate => q| return $self->_sls_rev_read_length - 1|},
+        _sls_read_length                => { column_name => 'read_length' },
+        _sls_fwd_read_length            => { column_name => 'fwd_read_length' },
+        _sls_rev_read_length            => { column_name => 'rev_read_length' },
+        cycles                          => { column_name => 'read_length' }, #TODO point to an actual "cycles" column
         run_type                        => { },
         fwd_run_type                    => { },
         rev_run_type                    => { },
@@ -440,12 +446,10 @@ sub total_bases_read {
     my $count;
     if ($self->is_paired_end) {
         # this changed in case we only want the fwd or rev counts...
-        #$count += ($self->fwd_read_length * $self->fwd_clusters); # unless $filter eq 'reverse-only'
-        #$count += ($self->rev_read_length  * $self->rev_clusters); # unless $filter eq 'forward-only'
-        $count += (($self->fwd_read_length - 1) * $self->fwd_clusters)  unless $filter eq 'reverse-only';
-        $count += (($self->rev_read_length - 1)  * $self->rev_clusters) unless $filter eq 'forward-only';
+        $count += ($self->fwd_read_length * $self->fwd_clusters)  unless $filter eq 'reverse-only';
+        $count += ($self->rev_read_length * $self->rev_clusters) unless $filter eq 'forward-only';
     } else {
-        $count += (($self->read_length - 1)  * $self->clusters);
+        $count += ($self->read_length * $self->clusters);
     }
 
     return $count;

@@ -127,9 +127,10 @@ sub execute {
         $fwd_gerald_alignment_rate |= '-';
         $rev_gerald_alignment_rate |= '-';
         
-        my $read_length = $ida->instrument_data->read_length;
+        my $bases_read = $ida->instrument_data->total_bases_read;
+        my $cycles = $ida->instrument_data->cycles;
         $stats_for{$library}{$hash->{isPE}}{total_clusters} += $gerald_clusters;
-        $stats_for{$library}{$hash->{isPE}}{total_gbp} += $gerald_clusters * ($read_length-1) / 1000000000;
+        $stats_for{$library}{$hash->{isPE}}{total_gbp} += $bases_read / 1_000_000_000;
         if($self->mapcheck_dir) {
             my $haploid_coverage_file = $self->mapcheck_dir . "/$lane_name/$lane_name.mapcheck";
             my $haploid_coverage = '-';
@@ -141,10 +142,10 @@ sub execute {
             }
             my ($line) = grep { $_ =~ /Average depth across all non-gap regions:/ } $fh->getlines;
             ($haploid_coverage) = $line =~ /([0-9\.]+)$/;
-            $readset_stats{$lane_name} = join "\t",($lane_name,$library, $hash->{mapped},$hash->{total},$hash->{isPE}, $hash->{paired},$median_insert_size,$sd_above_insert_size,$gerald_clusters, $read_length, $error1, $error2, $fwd_gerald_alignment_rate, $rev_gerald_alignment_rate, sprintf("%0.02f",$hash->{mapped}/$hash->{total}),),$haploid_coverage,"\n";
+            $readset_stats{$lane_name} = join "\t",($lane_name,$library, $hash->{mapped},$hash->{total},$hash->{isPE}, $hash->{paired},$median_insert_size,$sd_above_insert_size,$gerald_clusters, $cycles, $error1, $error2, $fwd_gerald_alignment_rate, $rev_gerald_alignment_rate, sprintf("%0.02f",$hash->{mapped}/$hash->{total}),),$haploid_coverage,"\n";
         }
         else {
-            $readset_stats{$lane_name} = join "\t",($lane_name,$library, $hash->{mapped},$hash->{total},$hash->{isPE}, $hash->{paired},$median_insert_size,$sd_above_insert_size,$gerald_clusters, $read_length, $error1, $error2, $fwd_gerald_alignment_rate, $rev_gerald_alignment_rate, sprintf("%0.02f",$hash->{mapped}/$hash->{total}),),"\n";
+            $readset_stats{$lane_name} = join "\t",($lane_name,$library, $hash->{mapped},$hash->{total},$hash->{isPE}, $hash->{paired},$median_insert_size,$sd_above_insert_size,$gerald_clusters, $cycles, $error1, $error2, $fwd_gerald_alignment_rate, $rev_gerald_alignment_rate, sprintf("%0.02f",$hash->{mapped}/$hash->{total}),),"\n";
         }
     }
     print("Flowcell_Lane\tLibrary\t#Reads_Mapped\t#Reads_Total\tMapped_as_PE\t#Mapped_as_Pairs\tMedian_Insert_Size\tSD_Above_Insert_Size\tFiltered_Clusters\tCycles(Read_Length+1)\tRead1_Avg_Error_Rate\tRead2_Avg_Error_Rate\tRead1_ELAND_Mapping_Rate\tRead2_ELAND_Mapping_Rate\tMaq_Mapping_Rate"); 
