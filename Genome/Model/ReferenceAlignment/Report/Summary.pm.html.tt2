@@ -78,7 +78,7 @@
 														extraction:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-														[% extraction_label %] ([% extraction_name %]) [% extraction_type %]
+														[% extraction_label %] ([% extraction_name %]) [% extraction_type %] ID:[% extraction_id %]
 													</td>
 												</tr>
 												<tr>
