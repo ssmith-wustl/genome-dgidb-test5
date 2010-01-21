@@ -36,11 +36,13 @@ class PAP::Command::PsortB {
     ],
 };
 
+# need to select only 32 bit hosts - psort-b calls pfscan
+# which is linked to 32bit libg2c... :\
 operation PAP::Command::PsortB {
     input        => [ 'fasta_file', 'gram_stain' ],
     output       => [ 'bio_seq_feature' ],
     lsf_queue    => 'short',
-    lsf_resource => 'rusage[tmp=100]'
+    lsf_resource => 'select[type==LINUX86] rusage[tmp=100]'
 };
 
 sub sub_command_sort_position { 10 }

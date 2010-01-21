@@ -116,6 +116,23 @@ sub execute {
                   \$iprscan_stderr, 
                  ) || die "iprscan failed: $CHILD_ERROR";
 
+
+    # FIXME:
+    # need to check thru the $iprscan_stdout and $iprscan_stderr for
+    # SUBMITTED iprscan-<YYYYMMDD>-<HHMMSSSS>
+    # and any other error values.
+    my $jobname = $iprscan_stderr;
+    $jobname =~ s/SUBMITTED (iprscan-\d{8}-\d{8}).+$/$1/; 
+    $jobname =~ /-(\d{8})-/;
+    my $date = $1;
+    
+    my $ipr_rundir = "/gsc/scripts/pkg/bio/iprscan/iprscan/tmp/".$date."/".$jobname;
+    if(-e $ipr_rundir."/".$jobname.".errors")
+    {
+        # we have an error condition here.
+        die "iprscan failed: check ".$ipr_rundir."/".$jobname.".errors";
+    }
+
     my ($sort_stderr);
    
     ## Replicate the way Prat sorted the InterProScan
