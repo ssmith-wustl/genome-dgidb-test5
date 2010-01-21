@@ -129,7 +129,7 @@ sub pre_execute {
 
             $splitFiles[-1]->print(join("\t", @newline)."\n");
         }
-        $fh->close;
+        $fh->close if $fh;
         $self->variant_file([map { $_->filename } @splitFiles]);
     }
     $self->_is_parallel(1);
