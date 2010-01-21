@@ -10,7 +10,8 @@ class Genome::Model::Command::Build::Restart {
     has => [
         lsf_queue => {
             default_value => 'apipe',
-            is_constant => 1,
+            is_optional => 1,
+            doc => 'Queue to restart the master job in (events stay in their original queue)'
         },
         restart => {
             is => 'Boolean',
@@ -23,7 +24,7 @@ class Genome::Model::Command::Build::Restart {
 sub sub_command_sort_position { 5 }
 
 sub help_detail {
-    "Abandon a build and it's events";
+    "Restart a builds master job on a blade";
 }
 
 sub execute {
