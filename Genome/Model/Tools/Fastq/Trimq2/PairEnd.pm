@@ -88,6 +88,9 @@ sub execute {
     my $p1_out_file = $self->pair1_out_file || $out_dir ."/$p1_base_name.trimq2.fastq";
     my $p2_out_file = $self->pair2_out_file || $out_dir ."/$p2_base_name.trimq2.fastq";
 
+    $self->pair1_out_file($p1_out_file);
+    $self->pair2_out_file($p2_out_file);
+
     my $p1_out_fh = Genome::Utility::FileSystem->open_file_for_writing($p1_out_file);
     unless ($p1_out_fh) {
         $self->error_message('Failed to open output file ' . $p1_out_file . ": $!");

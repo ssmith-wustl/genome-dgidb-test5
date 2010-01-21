@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 use File::Compare;
 
 use above 'Genome';
@@ -30,6 +30,8 @@ my $trimq2 = Genome::Model::Tools::Fastq::Trimq2::Fragment->create(
 isa_ok($trimq2,'Genome::Model::Tools::Fastq::Trimq2');
 
 ok($trimq2->execute,'execute command '. $trimq2->command_name);
+
+is($trimq2->out_file, "$tmp_dir/test_fragment.trimq2.fastq", 'output name is ok');
 
 for my $file qw(test_fragment.trimq2.fastq test_fragment.trimq2.filtered.fastq trimq2.report) {
     my $output_file = $tmp_dir."/$file";

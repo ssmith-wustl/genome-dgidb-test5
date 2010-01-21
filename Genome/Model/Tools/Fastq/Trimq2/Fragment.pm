@@ -51,6 +51,8 @@ sub execute {
     
     my $filter_file= $out_dir . "/$base_name.trimq2.filtered.fastq";
     my $out_file   = $self->out_file || $out_dir."/$base_name.trimq2.fastq";
+
+    $self->out_file($out_file);
     
     my $input_fh  = Genome::Utility::FileSystem->open_file_for_reading($fastq_file);
     unless ($input_fh) {
