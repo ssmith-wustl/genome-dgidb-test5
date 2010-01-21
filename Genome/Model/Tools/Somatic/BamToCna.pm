@@ -117,7 +117,7 @@ sub help_brief {
 
 sub help_detail {
     return<<EOS
-    This tool analyzes a tumor and normal bam file and outputs chromosomal-based copy number alteration in the form of an output file which displays \"chromosome, position, tumor cn, normal cn, difference\". Also, the tool plots a grid of copy number graphs, one for each chromosome, on a single .png image the size of one full page using an embedded R script.
+This tool analyzes a tumor and normal bam file and outputs chromosomal-based copy number alteration in the form of an output file which displays \"chromosome, position, tumor cn, normal cn, difference\". Also, the tool plots a grid of copy number graphs, one for each chromosome, on a single .png image the size of one full page using an embedded R script.
 EOS
 }
 

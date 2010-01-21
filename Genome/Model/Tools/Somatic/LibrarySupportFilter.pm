@@ -27,7 +27,7 @@ class Genome::Model::Tools::Somatic::LibrarySupportFilter {
     multi_lib_output_file => {
         is        => 'String',
         is_input => '1',
-        doc       => 'Output filecontaining indels with multiple library support. Same columns as indel_file with two new columns: number of libraries that contained the indel, and indel score',
+        doc       => 'Output file containing indels with multiple library support. Same columns as indel_file with two new columns: number of libraries that contained the indel, and indel score',
     },
     skip_if_output_present => {
         is => 'Boolean',
@@ -46,15 +46,18 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    gmt somatic library-support-filter [indel file from somatic sniper]
+    gmt somatic library-support-filter --indel-file sniper.indels --single-lib single_lib.indels --multi-lib multi_lib.indels --preferred ignored_but_required_value
 EOS
 }
 
 sub help_detail {                           
     return <<EOS 
     Outputs list of indels that have high library support. The output columns
-    are the same as the input indel_file with the addition of one new column containing
-    the number of libraries that contained the indel.
+    are the same as the input indel_file with the addition of two new columns:
+    the number of libraries containing the indel and a "score" for the indel.
+    The score is calculated as the product of "strength", size, and the number
+    of libraries where strength is a function of the number of reads supporting
+    the indel.
 EOS
 }
 
