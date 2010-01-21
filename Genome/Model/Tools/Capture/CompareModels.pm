@@ -1,8 +1,8 @@
 
-package Genome::Model::Tools::Capture::CoverageModels;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Capture::CompareModels;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# CoverageModels - Compare tumor versus normal models to find somatic events
+# CompareModels - Compare tumor versus normal models to find somatic events
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -24,15 +24,14 @@ use Genome;                                 # using the namespace authorizes Cla
 
 my %stats = ();
 
-class Genome::Model::Tools::Capture::CoverageModels {
+class Genome::Model::Tools::Capture::CompareModels {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		model_basename	=> { is => 'Text', doc => "Project string for model naming, e.g. \"TCGA-OV-6K-Capture-bwa\"", is_optional => 0 },
 		processing_profile	=> { is => 'Text', doc => "Processing profile to use, e.g. \"bwa0.5.5 and samtools r510 and picard r107\"", is_optional => 1 },
+		output_dir	=> { is => 'Text', doc => "Output directory for comparison files" , is_optional => 0},
 		sample_list	=> { is => 'Text', doc => "Text file normal-tumor sample pairs to include, one pair per line" , is_optional => 0},
-		output_dir	=> { is => 'Text', doc => "Output directory for the ref-cov reports" , is_optional => 0},
-		regions_file	=> { is => 'Text', doc => "Target regions in BED format" , is_optional => 0},
 		report_only	=> { is => 'Text', doc => "Flag to skip actual execution" , is_optional => 1},
 	],
 };
@@ -40,13 +39,13 @@ class Genome::Model::Tools::Capture::CoverageModels {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate RefCov reports for capture datasets"                 
+    "Compare normal/tumor genome models for capture datasets"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Generate RefCov reports for capture datasets
-EXAMPLE:	gt capture coverage-models ...
+Compare normal/tumor genome models for capture datasets
+EXAMPLE:	gt capture compare-models ...
 EOS
 }
 
@@ -70,9 +69,16 @@ sub execute {                               # replace with real execution logic.
 	$processing_profile = $self->processing_profile if($self->processing_profile);
 	my $model_basename = $self->model_basename;
 	my $sample_list = $self->sample_list;
+	my $output_dir = "./";
+	$output_dir = $self->output_dir if($self->output_dir);
+
+	if(!$self->report_only)
+	{
+		mkdir($output_dir . "/somatic_pipeline") if (!(-d "$output_dir/somatic_pipeline"));
+	}
 
 	## Reset statistics ##
-	$stats{'num_with_builds_completed'} = 0;
+	$stats{'num_with_builds_completed'} = $stats{'num_pipeline_output'} = 0;
 	$stats{'num_pairs'} = $stats{'num_pairs_with_bams'} = $stats{'num_pairs_one_bam'} = $stats{'num_pairs_no_bams'} = 0;
 
 	print "Retrieving existing genome models...\n";
@@ -97,54 +103,63 @@ sub execute {                               # replace with real execution logic.
 
 		## Reset model-related variables ##
 		
-		my $normal_model_id = my $normal_build_id = my $normal_model_status = my $normal_build_dir = my $normal_bam_file = "";
-		my $tumor_model_id = my $tumor_build_id = my $tumor_model_status = my $tumor_build_dir = my $tumor_bam_file = "";
+		my $normal_model_id = my $normal_build_id = my $normal_model_status = my $normal_build_dir = my $normal_bam_file = my $normal_snp_file = "";
+		my $tumor_model_id = my $tumor_build_id = my $tumor_model_status = my $tumor_build_dir = my $tumor_bam_file = my $tumor_snp_file = "";
 
 		## Get Normal and Tumor BAM files ##
 	
 		if($existing_models{$normal_sample})
 		{
 			$normal_bam_file = get_bam_file($existing_models{$normal_sample});
-		}	
+		}
 
 		if($existing_models{$tumor_sample})
 		{
 			$tumor_bam_file = get_bam_file($existing_models{$tumor_sample});
 		}	
 
-		## Process Normal coverage ##
-		
-		if($normal_bam_file)
-		{
-			## Run RefCov 1x ##
-			run_refcov($normal_sample, $normal_bam_file, $self->regions_file, $self->output_dir, 1);
-			## 8x ##
-			run_refcov($normal_sample, $normal_bam_file, $self->regions_file, $self->output_dir, 8);
-			## 10x ##
-			run_refcov($normal_sample, $normal_bam_file, $self->regions_file, $self->output_dir, 10);
-			## 20x ##
-			run_refcov($normal_sample, $normal_bam_file, $self->regions_file, $self->output_dir, 20);
-		}
-
-		## Process Tumor coverage ##
-		
-		if($tumor_bam_file)
-		{
-			## Run RefCov 1x ##
-			run_refcov($tumor_sample, $tumor_bam_file, $self->regions_file, $self->output_dir, 1);
-			## 8x ##
-			run_refcov($tumor_sample, $tumor_bam_file, $self->regions_file, $self->output_dir, 8);
-			## 10x ##
-			run_refcov($tumor_sample, $tumor_bam_file, $self->regions_file, $self->output_dir, 10);
-			## 20x ##
-			run_refcov($tumor_sample, $tumor_bam_file, $self->regions_file, $self->output_dir, 20);			
-		}
-
-		## Count up BAM files ##
-
 		if($normal_bam_file && $tumor_bam_file)
 		{
 			$stats{'num_pairs_with_bams'}++;
+			
+			## Get the build IDs ##
+			
+			$tumor_build_id = get_build_id($existing_models{$tumor_sample});
+			
+			## Get the SNP files ##
+			
+			$normal_snp_file = get_snp_file($existing_models{$normal_sample});
+			$tumor_snp_file = get_snp_file($existing_models{$tumor_sample});
+			
+			## Define a data directory ##
+			my $data_dir = $output_dir . "/somatic_pipeline/" . $tumor_sample;			
+
+			if(-e "$data_dir/varScan.output.snp")
+			{
+				$stats{'num_pipeline_output'}++;
+			}
+			elsif(!$self->report_only)
+			{
+				mkdir($data_dir) if(!(-d $data_dir));
+				
+				## Proceed if all components are available ##
+				if($tumor_build_id && -d $data_dir && -e $normal_bam_file && -e $tumor_bam_file && -e $normal_snp_file && -e $tumor_snp_file)
+				{
+					## Launch the pipeline ##
+					system("bsub -q long gmt somatic compare capture-bams --skip-sv 1 --only-tier-1 1 --normal-bam-file $normal_bam_file --tumor-bam-file $tumor_bam_file --normal-snp-file $normal_snp_file --tumor-snp-file $tumor_snp_file --build-id $tumor_build_id --data-directory $data_dir");
+				}
+			}
+			else
+			{
+#				print "$tumor_sample\n";
+#				print "Normal BAM: $normal_bam_file\n";
+#				print "Tumor BAM: $tumor_bam_file\n";
+#				print "Normal SNP: $normal_snp_file\n";
+#				print "Tumor SNP: $tumor_snp_file\n";
+#				print "Build ID: $tumor_build_id\n";
+#				print "Data Dir: $data_dir\n";
+#				exit(0);
+			}
 		}
 		elsif($normal_bam_file || $tumor_bam_file)
 		{
@@ -163,41 +178,14 @@ sub execute {                               # replace with real execution logic.
 	print $stats{'num_pairs'} . " tumor-normal pairs in file\n";
 	print $stats{'num_pairs_no_bams'} . " had no BAM files\n";
 	print $stats{'num_pairs_one_bam'} . " had one BAM file\n";
-	print $stats{'num_pairs_with_bams'} . " had both BAM files\n";	
+	print $stats{'num_pairs_with_bams'} . " had both BAM files\n";
+	print $stats{'num_pipeline_output'} . " have pipeline output already\n";
 	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
 
-#############################################################
-# ParseFile - takes input file and parses it
-#
-#############################################################
 
-sub run_refcov
-{
-	(my $sample_name, my $bam_file, my $bed_file, my $output_dir, my $coverage) = @_;
-	
-	## Determine STATS file name ##
-	my $stats_file = $output_dir . "/" . $sample_name . ".stats." . $coverage . "x.tsv";
-
-	my $cmd = 	"gt bio-samtools ref-cov --bam-file " . $bam_file .
-			" --bed-file " . $bed_file . 
-			" --min-depth-filter " . $coverage .
-			" --output-directory " . $output_dir .
-			" --stats-file " . $stats_file;
-
-	if(-e $stats_file)
-	{
-		print "Skipping coverage for $sample_name...\n";		
-	}
-	else
-	{
-	print "Running coverage for $sample_name...\n";
-	system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" $cmd");		
-	}
-
-}
 
 #############################################################
 # ParseFile - takes input file and parses it
@@ -304,11 +292,25 @@ sub get_model_status
 	my $model_id = shift(@_);
 	my $status_xml = `genome model status --genome-model-id $model_id 2>/dev/null`;
 	my $build_id = my $build_status = "";
-	
+	my $build_dir = "";
+
 	my @statusLines = split(/\n/, $status_xml);
 	
 	foreach my $line (@statusLines)
 	{
+		if($line =~ 'data-directory')
+		{
+			my @lineContents = split(/\"/, $line);
+			my $numContents = @lineContents;
+			for(my $colCounter = 0; $colCounter < $numContents; $colCounter++)
+			{
+				if($lineContents[$colCounter] && $lineContents[$colCounter] =~ 'data-directory')
+				{
+					$build_dir = $lineContents[$colCounter + 1];
+				}
+			}
+		}
+		
 		if($line =~ 'builds' && !$build_status)
 		{
 			$build_status = "Unbuilt";
@@ -325,9 +327,11 @@ sub get_model_status
 			my @lineContents = split(/[\<\>]/, $line);
 			$build_status = $lineContents[2];
 		}
+		
+
 	}
 	
-	return("$build_id\t$build_status");
+	return("$model_id\t$build_id\t$build_status\t$build_dir");
 }
 
 
@@ -350,13 +354,74 @@ sub get_bam_file
 		my $model_status = $modelContents[2];
 		my $build_dir = $modelContents[3];
 
-		if(-d $build_dir)
+		if($build_dir && -d $build_dir)
 		{
 			## Search for the BAM file ##
 			
 			my $bam_file = `ls $build_dir/alignments/*.bam`;
 			chomp($bam_file) if($bam_file);
 			return($bam_file) if($bam_file);
+		}
+	}
+
+	return("");
+}
+
+
+
+
+
+#############################################################
+# Get BAM file
+#
+#############################################################
+
+sub get_build_id
+{
+	my $existing_model = shift(@_);
+	my @modelContents = split(/\t/, $existing_model);
+	my $model_id = $modelContents[0];
+	
+	if($modelContents[1])
+	{
+		my $build_id = $modelContents[1];
+		my $model_status = $modelContents[2];
+		my $build_dir = $modelContents[3];
+		
+		if(-d $build_dir)
+		{
+			return($build_id);
+		}
+	}
+
+	return("");
+}
+
+
+#############################################################
+# Get BAM file
+#
+#############################################################
+
+sub get_snp_file
+{
+	my $existing_model = shift(@_);
+	my @modelContents = split(/\t/, $existing_model);
+	my $model_id = $modelContents[0];
+	
+	if($modelContents[1])
+	{
+		my $build_id = $modelContents[1];
+		my $model_status = $modelContents[2];
+		my $build_dir = $modelContents[3];
+
+		if(-d $build_dir)
+		{
+			## Search for the BAM file ##
+			
+			my $snp_file = `ls $build_dir/*snp_related_metrics/filtered.indelpe.snps`;
+			chomp($snp_file) if($snp_file);
+			return($snp_file) if($snp_file);
 		}
 	}
 

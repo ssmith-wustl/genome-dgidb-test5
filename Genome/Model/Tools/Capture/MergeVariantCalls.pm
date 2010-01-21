@@ -35,6 +35,10 @@ class Genome::Model::Tools::Capture::MergeVariantCalls {
 		output_unique2	=> { is => 'Text', doc => "Output file for files unique to 2" , is_optional => 1, is_input => 1, is_output => 1},
 		output_shared	=> { is => 'Text', doc => "Output file for shared" , is_optional => 1, is_input => 1, is_output => 1},
 	],
+	
+	has_param => [
+		lsf_resource => { default_value => 'select[model!=Opteron250 && type==LINUX64 && mem>6000] rusage[mem=6000]'},
+       ],	
 };
 
 sub sub_command_sort_position { 12 }
@@ -76,16 +80,20 @@ sub execute {                               # replace with real execution logic.
 
 	## Run the merge using VarScan ##
 	
-	my $cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file merge $output_file";
+	my $cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file merge $output_file";
+	system($cmd);	
+#	$cmd = "grep -v chrom $output_file >$output_file.temp";
+#	system($cmd);
+#	$cmd = "mv -f $output_file.temp $output_file";
+#	system($cmd);
+
+	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file intersect $output_file.shared";
 	system($cmd);	
 
-	$cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file intersect $output_file.shared";
-	system($cmd);	
-
-	$cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file unique1 $output_file.varscan-only";
+	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file unique1 $output_file.varscan-only";
 	system($cmd);
 	
-	$cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file unique2 $output_file.sniper-only";
+	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file unique2 $output_file.sniper-only";
 	system($cmd);		
 	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
