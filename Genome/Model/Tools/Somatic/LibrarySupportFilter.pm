@@ -57,7 +57,7 @@ sub help_detail {
     the number of libraries containing the indel and a "score" for the indel.
     The score is calculated as the product of "strength", size, and the number
     of libraries where strength is a function of the number of reads supporting
-    the indel.
+    the indel. (This sentence is for testing purposes and will be removed momentarily.)
 EOS
 }
 
