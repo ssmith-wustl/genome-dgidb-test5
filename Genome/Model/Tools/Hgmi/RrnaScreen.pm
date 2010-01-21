@@ -25,6 +25,11 @@ UR::Object::Type->define(
                     doc => "rrna database",
                     is_optional => 1,
             },
+            'script_location' => { is => 'String',
+                                   doc => "location of bap_rrna_screen",
+                                   is_optional => 1,
+                                   default => "/gsc/scripts/bin/bap_rrna_screen",
+                                 }
     ],
 );
 
@@ -63,8 +68,10 @@ sub execute
 {
     my $self = shift;
 
+    my $rrnascreen_script = $self->script_location();
     my @rrnascreen = (
-        '/gsc/scripts/bin/bap_rrna_screen',
+#        '/gsc/scripts/bin/bap_rrna_screen',
+        $rrnascreen_script,
         '--sequence-set-id',
         $self->sequence_set_id,
 

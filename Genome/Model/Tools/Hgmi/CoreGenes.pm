@@ -22,7 +22,7 @@ UR::Object::Type->define(
     is => 'Command',
         has => [
             'cell_type'  => { is => 'String',
-                                  doc => "Fasta file of contigs",
+                                  doc => "Type of genome to check; either ARCHEA or BACTERIA",
             },
             'sequence_set_id' => { is => 'String',
                     doc => "sequence set id of organism",
@@ -128,9 +128,12 @@ sub execute
     write_file('Coregene_results',$results);
     unless($results =~ /PASSED/)
     {
+        $self->error_message("core genes check fail:");
+        $self->error_message("$results");
         croak "\n\nWARNING: core genes did not pass:\n$results ... CoreGenes.pm\n\n";
     }
-    
+    $self->status_message("Core gene results passed");
+    $self->status_message($results);    
     return 1;
 }
 

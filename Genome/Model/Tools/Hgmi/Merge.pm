@@ -103,7 +103,7 @@ sub execute
     my @merge = $self->gather_details();
 
    
-    IPC::Run::run(@merge) || croak "can't run Merge.pm : $OS_ERROR";
+    IPC::Run::run(@merge) || croak "can't run Merge.pm : $CHILD_ERROR : ".$merge[$#merge];
 
     return 1;
     
