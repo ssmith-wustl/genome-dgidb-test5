@@ -17,7 +17,7 @@ chomp $pwd;
 ok($pwd eq $test_dir , "working in the test-dir");
 system qq(rm chr11:36287905-36288124*);
 
-system qq(gt breakpoint-pal --breakpoint-id chr11:36287905-36288124 --span);
+system qq(gmt breakpoint-pal --breakpoint-id chr11:36287905-36288124 --span);
 
 my $fasta1 = "$test_dir/chr11:36287905-36288124.BP1-2.fasta";
 my $fasta2 = "$test_dir/chr11:36287905-36288124.BP1.300.fasta";
