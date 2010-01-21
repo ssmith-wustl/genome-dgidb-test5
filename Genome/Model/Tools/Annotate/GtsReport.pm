@@ -147,18 +147,20 @@ sub execute {
 			    my $cons_score = $annotation->{$transcript}->{$pos}->{$variant_allele}->{cons_score};
 			    my $domain = $annotation->{$transcript}->{$pos}->{$variant_allele}->{domain};
 			    my $dbsnp_hit = $dbsnp->{$chr}->{$pos}->{$variant_allele};
-			    my ($rs_id,$dbsnp_submittor,$dbsnp_alleles,$dbsnp_allele_match);
 
+			    my ($rs_id,$dbsnp_submittor,$dbsnp_alleles,$dbsnp_allele_match);
 			    if ($dbsnp_hit) {
-				my $match;
-				($rs_id,$dbsnp_submittor,$match) = split(/\,/,$dbsnp_hit);
-				($dbsnp_alleles,$dbsnp_allele_match) = split(/\:/,$match);
+				if ($dbsnp_hit eq "no_hit") {
+				    $rs_id="-";$dbsnp_submittor="-";$dbsnp_alleles="-";$dbsnp_allele_match="-";
+				} else {
+				    my $match;
+				    ($rs_id,$dbsnp_submittor,$match) = split(/\,/,$dbsnp_hit);
+				    ($dbsnp_alleles,$dbsnp_allele_match) = split(/\:/,$match);
+				}
 			    } else {
 				$rs_id="-";$dbsnp_submittor="-";$dbsnp_alleles="-";$dbsnp_allele_match="-";
 			    }
-			    if ($dbsnp_hit eq "no_hit") {
-				$rs_id="-";$dbsnp_submittor="-";$dbsnp_alleles="-";$dbsnp_allele_match="-";
-			    }
+
 			    if ($chromosome && $stop && $ref && $variant_type && $gene && $source && $tv && $strand && $Traans_stat && $trv_type && $c_pos && $cons_score && $domain && $dbsnp_hit) {
 				if ($output) {
 				    print OUTFILE qq($organism\t$version\t$chromosome\t$pos\t$stop\t$ref\t$variant_allele\t$sample\t$variant_type\t$genotype\t$source\t$gene\t$transcript\t$strand\t$Traans_stat\t$trv_type\t$c_pos\t$aa\t$polyphen\t$sift\t$cons_score\t$domain\t$rs_id\t$dbsnp_submittor\t$dbsnp_alleles\t$dbsnp_allele_match\n);
