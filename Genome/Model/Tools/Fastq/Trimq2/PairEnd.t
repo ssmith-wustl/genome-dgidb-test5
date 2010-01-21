@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 11;
+use Test::More tests => 12;
 use File::Compare;
 
 use above 'Genome';
@@ -36,6 +36,7 @@ ok($sanger_trimq2->execute,'execute command '. $sanger_trimq2->command_name);
 
 is($sanger_trimq2->pair1_out_file, "$tmp_dir/test_pair_end_1.trimq2.fastq", 'pair_end 1 output name ok');
 is($sanger_trimq2->pair2_out_file, "$tmp_dir/test_pair_end_2.trimq2.fastq", 'pair_end 2 output name ok');
+is($sanger_trimq2->pair_as_frag_file, "$tmp_dir/trimq2.pair_as_fragment.fastq", 'pair as fragment output name ok');
 
 for my $file qw(trimq2.pair_as_fragment.fastq test_pair_end_1.trimq2.fastq test_pair_end_2.trimq2.fastq test_pair_end_1.trimq2.filtered.fastq test_pair_end_2.trimq2.filtered.fastq trimq2.report) {
     my $output_file = $tmp_dir."/$file";

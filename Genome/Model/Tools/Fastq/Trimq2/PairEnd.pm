@@ -10,23 +10,27 @@ use File::Basename;
 class Genome::Model::Tools::Fastq::Trimq2::PairEnd {
     is => 'Genome::Model::Tools::Fastq::Trimq2',
     has => [
-        pair1_fastq_file => {
+        pair1_fastq_file  => {
             is  => 'Text',
             doc => 'the pair end fastq file 1',
         },
-        pair2_fastq_file => {
+        pair2_fastq_file  => {
             is  => 'Text',
             doc => 'the pair end fastq file 2',
         },
     ],
     has_optional => [
-        pair1_out_file => {
+        pair1_out_file    => {
             is  => 'Text',
-            doc => 'the file name to use for the pair1 output file, default is xxx1.trimq2.fastq',
+            doc => 'the file path to use for the pair1 output file, default is xxx1.trimq2.fastq under same dir as pair1 fastq file',
         },
-        pair2_out_file => {
+        pair2_out_file    => {
             is  => 'Text',
-            doc => 'the file name to use for the pair2 output file, default is xxx2.trimq2.fastq',
+            doc => 'the file path to use for the pair2 output file, default is xxx2.trimq2.fastq under same dir as pair1 fastq file',
+        },
+        pair_as_frag_file => {
+            is  => 'Text',
+            doc => 'the file path to use for the pair as fragment fastq file, default is trimq2.pair_as_fragment.fastq under same dir as pair1 fastq file',
         },
     ],
 };
@@ -132,7 +136,9 @@ sub execute {
     }
     binmode $report_fh, ":utf8";
 
-    my $frag_fastq = $out_dir . '/trimq2.pair_as_fragment.fastq';
+    my $frag_fastq = $self->pair_as_frag_file || $out_dir . '/trimq2.pair_as_fragment.fastq';
+    $self->pair_as_frag_file($frag_fastq);
+
     if (-e $frag_fastq) {
         $self->warning_message("$frag_fastq already exist. Now remove it");
         unlink $frag_fastq;
