@@ -10,7 +10,7 @@ class Genome::Model::Tools::Annotate::GtsReport {
     has => [ 
 	gts => {
 	    type  =>  'String',
-	    doc   =>  "provide the genotype submission file Alleles assumed to be oriented or the positive strand and coordinates are on the genomic scale",
+	    doc   =>  "provide the genotype submission file, Alleles assumed to be oriented on the positive strand and coordinates are on the genomic scale",
 	},
 	organism => {
 	    type  =>  'String',
@@ -53,19 +53,19 @@ class Genome::Model::Tools::Annotate::GtsReport {
 
 sub help_brief {
     return <<EOS
-
+	gmt annotate gts-report -gts
 EOS
 }
 
 sub help_synopsis {
     return <<EOS
-
+	gmt annotate gts-report -gts
 EOS
 }
 
 sub help_detail { 
     return <<EOS 
-
+	This tool was design to read in a genotype submmision file, identify all the variants, annotate them, check for dbsnps and screen the nonsynonymous snps with sift and polyphen. However, it will work on any list of variants with this info chromosome,coordinate,sample,allele1,allele2. allele1 and allele2 may be substituted with ref_allele and variant allele but they should be in the positive orientation with respect to the reference. If the order of these variants is different from the default order based on the genotype submission file format then use the -order option also see the delimiter option if your file is not tab delimited. ref_id is not a manditory requirement. 
 EOS
 }
 
@@ -82,10 +82,9 @@ sub execute {
     my $organism = $self->organism;
 
     if ($output) {
-	print OUTFILE qq(organism\tversion\tchromosome\tpos\tstop\tref\tvariant_allele\tsample\tvariant_type\tgenotype\tsource\ttv\tstrand\tTraans_stat\ttrv_type\tc_pos\taa\tpolyphen\tsift\tcons_score\tdomain\tdbsnp_hit\n);
-
+	print OUTFILE qq(organism\tversion\tchromosome\tpos\tstop\tref\tvariant_allele\tsample\tvariant_type\tgenotype\tsource\tgene\ttranscript\tstrand\tTraans_stat\ttrv_type\tc_pos\taa\tpolyphen\tsift\tcons_score\tdomain\trs_id\tdbsnp_submittor\tdbsnp_alleles\tdbsnp_allele_match\n);
     } else {
-	print qq(organism\tversion\tchromosome\tpos\tstop\tref\tvariant_allele\tsample\tvariant_type\tgenotype\tsource\ttv\tstrand\tTraans_stat\ttrv_type\tc_pos\taa\tpolyphen\tsift\tcons_score\tdomain\tdbsnp_hit\n);
+	print qq(organism\tversion\tchromosome\tpos\tstop\tref\tvariant_allele\tsample\tvariant_type\tgenotype\tsource\tgene\ttranscript\tstrand\tTraans_stat\ttrv_type\tc_pos\taa\tpolyphen\tsift\tcons_score\tdomain\trs_id\tdbsnp_submittor\tdbsnp_alleles\tdbsnp_allele_match\n);
     }
     
     if ($organism eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
@@ -93,6 +92,8 @@ sub execute {
     my ($genotypes,$gt_counts) = &parse_gts($self);
     my ($annotation,$dbsnp,$SIFT_Prediction,$PPH_Prediction) = &annotate_variant_alleles($genotypes,$self);
     
+    print qq(preparing your output\n);
+
     foreach my $chr (sort keys %{$genotypes}) {
 	foreach my $pos (sort {$a<=>$b} keys %{$genotypes->{$chr}}) {
 	    
@@ -107,36 +108,24 @@ sub execute {
 		if ($v_allele) {
 		    my @vas = split(/\:/,$v_allele);
 
-		#if (@vas) {
 		    use List::MoreUtils qw/ uniq /;
 		    @vas = uniq @vas;
 		    for my $variant_allele (@vas) {
-			#if ($variant_allele) {
 			if ($variant_allele =~ /\+/ || $variant_allele =~ /\-/) {
 			    my ($end,$ref,$var) = &indel_alleles($variant_allele,$pos,$chr,$organism);
 			    $ref_base = $ref;
 			    $variant_allele = $var;
 			}
-
+			
 			foreach my $transcript (sort keys %{$annotation}) {
-			    #		print qq( Transcript => $transcript);
-			    #		foreach my $variant_allele (sort keys %{$annotation->{$transcript}->{$pos}}) {
 			    my $aa = $annotation->{$transcript}->{$pos}->{$variant_allele}->{aa};
 			    my ($polyphen,$sift);
 			    if ($aa) {
-				#			print qq( AA => $aa);
-				#			
 				my ($prot) = $aa =~ /p\.(\S+)/;
 				if ($prot) {
-				$polyphen = $PPH_Prediction->{$transcript}->{$prot};
-				#			    if ($polyphen) {
-				#				print qq( PPH => $polyphen);
-				#			    }
-				$sift = $SIFT_Prediction->{$transcript}->{$prot};
-				#			    if ($sift) {
-				#				print qq( SIFT => $sift);
-				#			    }
-							}
+				    $polyphen = $PPH_Prediction->{$transcript}->{$prot};
+				    $sift = $SIFT_Prediction->{$transcript}->{$prot};
+				}
 			    } else {
 				$aa ="-";
 			    }
@@ -155,41 +144,36 @@ sub execute {
 			    my $Traans_stat = $annotation->{$transcript}->{$pos}->{$variant_allele}->{Traans_stat};
 			    my $trv_type = $annotation->{$transcript}->{$pos}->{$variant_allele}->{trv_type};
 			    my $c_pos = $annotation->{$transcript}->{$pos}->{$variant_allele}->{c_pos};
-			    ###my $aa = $annotation->{$transcript}->{$pos}->{$variant_allele}->{aa};
 			    my $cons_score = $annotation->{$transcript}->{$pos}->{$variant_allele}->{cons_score};
 			    my $domain = $annotation->{$transcript}->{$pos}->{$variant_allele}->{domain};
 			    my $dbsnp_hit = $dbsnp->{$chr}->{$pos}->{$variant_allele};
-			    unless ($dbsnp_hit) {$dbsnp_hit="-";}
-			    
+			    my ($rs_id,$dbsnp_submittor,$dbsnp_alleles,$dbsnp_allele_match);
+
+			    if ($dbsnp_hit) {
+				my $match;
+				($rs_id,$dbsnp_submittor,$match) = split(/\,/,$dbsnp_hit);
+				($dbsnp_alleles,$dbsnp_allele_match) = split(/\:/,$match);
+			    } else {
+				$rs_id="-";$dbsnp_submittor="-";$dbsnp_alleles="-";$dbsnp_allele_match="-";
+			    }
+
 			    if ($chromosome && $stop && $ref && $variant_type && $gene && $source && $tv && $strand && $Traans_stat && $trv_type && $c_pos && $cons_score && $domain && $dbsnp_hit) {
-				#print qq($organism $version $chromosome $pos $stop $ref $variant_allele $sample $genotype $variant_type $genotype $source $tv $strand $Traans_stat $trv_type $c_pos $aa $polyphen $sift $cons_score $domain $dbsnp_hit\n);    
 				if ($output) {
-				    print OUTFILE qq($organism\t$version\t$chromosome\t$pos\t$stop\t$ref\t$variant_allele\t$sample\t$variant_type\t$genotype\t$source\t$tv\t$strand\t$Traans_stat\t$trv_type\t$c_pos\t$aa\t$polyphen\t$sift\t$cons_score\t$domain\t$dbsnp_hit\n);
+				    print OUTFILE qq($organism\t$version\t$chromosome\t$pos\t$stop\t$ref\t$variant_allele\t$sample\t$variant_type\t$genotype\t$source\t$gene\t$transcript\t$strand\t$Traans_stat\t$trv_type\t$c_pos\t$aa\t$polyphen\t$sift\t$cons_score\t$domain\t$rs_id\t$dbsnp_submittor\t$dbsnp_alleles\t$dbsnp_allele_match\n);
 				} else {
-				    print qq($organism\t$version\t$chromosome\t$pos\t$stop\t$ref\t$variant_allele\t$sample\t$variant_type\t$genotype\t$source\t$tv\t$strand\t$Traans_stat\t$trv_type\t$c_pos\t$aa\t$polyphen\t$sift\t$cons_score\t$domain\t$dbsnp_hit\n);
+				    print qq($organism\t$version\t$chromosome\t$pos\t$stop\t$ref\t$variant_allele\t$sample\t$variant_type\t$genotype\t$source\t$gene\t$transcript\t$strand\t$Traans_stat\t$trv_type\t$c_pos\t$aa\t$polyphen\t$sift\t$cons_score\t$domain\t$rs_id\t$dbsnp_submittor\t$dbsnp_alleles\t$dbsnp_allele_match\n);
 				}
 			    }
 			}
-		    }# else {
-			#  print qq($organism $version $chromosome $pos $stop $ref $genotype\n);
-		    #}
+		    }
 		}
-#	    my $ref_sample = $genotypes->{$chr}->{$pos}->{ref_sample};
-#	    unless ($ref_sample) {$ref_sample = "reference";$genotypes->{$chr}->{$pos}->{ref_sample}=$ref_sample;}
-#	    my $ref_base = $genotypes->{$chr}->{$pos}->{ref_base};
-	    
-#	    foreach my $sample (sort keys %{$genotypes->{$chr}->{$pos}->{variant_sample}}) {
-#		my $genotype = $genotypes->{$chr}->{$pos}->{GT}->{$sample};
-#		my $variant_allele = $genotypes->{$chr}->{$pos}->{variant_sample}->{$sample};
-#		
-#	    }
-#	    
-#	    foreach my $gt (sort keys %{$gt_counts}) {
-#		my $count = $gt_counts->{$gt}->{$chr}->{$pos};
-#	    }
 	    }
 	}
     }
+    if ($output) {
+	print qq(your results have been printed in $output\n);
+    }
+    
 }
 sub write_genomic_prettybase {
 
@@ -262,11 +246,12 @@ sub annotate_variant_alleles {
     my $annotated_list = "GTS.annotated.list";
     
     #print qq(retrieving annotation from the dw for the variant list\n);
-    print qq(running  annotate annotation transcript-variants\n);
+    print qq(running annotate transcript-variants\n);
     my @command = ["gmt" , "annotate" , "transcript-variants" , "--variant-file" , "$list" , "--output-file" , "$annotated_list" , "--reference-transcripts" , "NCBI-$organism.combined-annotation/$version"];
     &ipc_run(@command);
 
     my $dbsnp_out = "GTS.annotated.list.dbsnp";
+    print qq(running annotate lookup-variants\n);
     @command = ["gmt" , "annotate" , "lookup-variants" , "-variant-file" , "$list" , "--output-file" , "$dbsnp_out", "--report-mode" , "full"];
 
     #@command = ["gmt" , "snp" , "get-dbsnps" , "--list" , "$list" , "--out" , "$dbsnp_out"];
@@ -302,12 +287,13 @@ sub run_sift_and_poylphen {
 	}
 	close OUT;
 	
-	if (-f "$transcript.protein.time.error") {system qq(rm $transcript.protein.time.error);}
-	
-	my @command = ["gmt" , "snp" , "screen-nonsynonymous-snps" , "--list" , "$transcript.nonsynonymous.snps.list" , "--transcript" , "$transcript" , "--organism" , "$organism" , "--version" , "$version"];
+	my @command = ["rm" , "$transcript.protein.time.error"];
+	&ipc_run(@command);
+
+	@command = ["gmt" , "snp" , "screen-nonsynonymous-snps" , "--list" , "$transcript.nonsynonymous.snps.list" , "--transcript" , "$transcript" , "--organism" , "$organism" , "--version" , "$version"];
 	
 	print qq(will now screen nonsynonymous snps in $transcript\n);
-	
+
 	&ipc_run(@command);
 	
 	my $sift_resutls_file = "$transcript.protein.SIFTprediction";
@@ -315,7 +301,7 @@ sub run_sift_and_poylphen {
 	if (-f $sift_resutls_file) {
 	    open(SIFT,$sift_resutls_file);
 	    
-	    print qq(SIFT results are in $sift_resutls_file\n);
+	    #print qq(SIFT results are in $sift_resutls_file\n);
 	    while (<SIFT>) {
 		chomp;
 		my $line = $_;
@@ -331,7 +317,7 @@ sub run_sift_and_poylphen {
 	my $polyphen_results_file = "$transcript.protein.PPHprediction";
 	if (-f $polyphen_results_file) {
 	    
-	    print qq(polypheb results are in $polyphen_results_file\n);
+	    #print qq(polypheb results are in $polyphen_results_file\n);
 	    
 	    open(PPH,$polyphen_results_file);
 	    while (<PPH>) {
@@ -348,9 +334,12 @@ sub run_sift_and_poylphen {
 	#SIFT_Prediction "R132H DEoLETERIOUS 0.00 3.07 210 281"
 	#PPH_Prediction "R132H probably damaging ? "
 	
-	#system qq(/gscmnt/sata147/info/medseq/rmeyer/PROJECTS/MSA/getprotienseq.pl $chr $transcript $transcript.sift.out $transcript.polyphen.out\n);
+	@command = ["rm" , "$transcript.nonsynonymous.snps.list" , "$transcript.fasta" , "SIFT_$transcript.protein.fasta.out" , "$transcript.protein.PPHprediction" , "$transcript.protein.SIFTprediction" , "$transcript.protein.SIFTprediction.error" , "$transcript.protein.alignedfasta" , "$transcript.protein.clumped" , "$transcript.protein.clumped.consensuskey" , "$transcript.protein.clumped.error" , "$transcript.protein.fasta" , "$transcript.protein.fasta.out" , "$transcript.protein.fasta.query" , "$transcript.protein.fasta.query.globalX" , "$transcript.protein.fasta.query.globalX.error" , "$transcript.protein.fasta.query.out" , "$transcript.protein.fasta.query.selectedclumped" , "$transcript.protein.fasta.query.selectedclumped.error" , "$transcript.protein.fasta.query.selectedclumped.log" , "$transcript.protein.fasta.query.unfiltered" , "$transcript.protein.time.error"];
+	
+	&ipc_run(@command);
 	
     }
+    
     return($SIFT_Prediction,$PPH_Prediction);
 }
 
@@ -361,7 +350,7 @@ sub parse_annotation {
     my $dbsnp;
     
     if ($dbsnp_out && -e $dbsnp_out) {
-	print qq(reading the dbsnp hit results\n);
+	#print qq(reading the dbsnp hit results\n);
 	open(DBSNP,"$dbsnp_out") || die "couldn't open the dbsnp results";
 	while (<DBSNP>) {
 	    chomp;
@@ -432,11 +421,11 @@ sub ipc_run {
     my ($in, $out, $err);
     my ($obj) = IPC::Run::run(@command, \$in, \$out, \$err);
     if ($err) {
-	print qq($err\n);
+	#print qq($err\n);
     }
     if ($out) {
 	return ($out);
-#	print qq($out\n);
+	#print qq($out\n);
     }
 }
 
@@ -506,11 +495,7 @@ sub parse_gts {
 	    if ($allele2 =~ /[ACGTX\-\+]/) {
 		unless ($allele2 eq $ref_base) {
 		    if ($allele2 =~ /[ACGTX]/) {
-			#if (@variant) {
-			#push @variant, $allele2 unless grep (/^$allele2$/, @variant);
-			#} else {
-			    push (@variant,$allele2);
-			#}
+			push (@variant,$allele2);
 			$va2 = $allele2;
 		    }
 		}
@@ -580,3 +565,5 @@ sub get_ref_base {
 
     return $seq;
 }
+
+1;
