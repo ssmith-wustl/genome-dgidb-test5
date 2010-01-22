@@ -3,7 +3,7 @@ package Genome::Model::Build::ReferenceAlignment::Solexa;
 #REVIEW fdu
 #Short:
 #1. An indelpe filter should be added to _unsorted_indel_file to filter out output with 3rd column - and . after maq indelpe run to
-#reduce the size of indel file that will be fed to gt snp sort. Sometimes gt snp sort will fail because of memory issue caused by too
+#reduce the size of indel file that will be fed to gmt snp sort. Sometimes gmt snp sort will fail because of memory issue caused by too
 #many lines of indel
 #2. Current maq-maq pipeline generates filtered.indelpe.snps by _snv_file_filtered method during run_reports stage, which make no sense.
 #That bunch of codes: maq SNPFilter -F <> under _snv_file_filtered really should be moved to G::M::C::B::ReferenceAlignment::Maq along with 

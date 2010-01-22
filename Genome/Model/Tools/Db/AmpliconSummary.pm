@@ -29,7 +29,7 @@ sub help_brief {
 }
 
 sub help_synopsis {
-    'gt db amplicon-summary --sample-name'
+    'gmt db amplicon-summary --sample-name'
 }
 
 sub help_detail {

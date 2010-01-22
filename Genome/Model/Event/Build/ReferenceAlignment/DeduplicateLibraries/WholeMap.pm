@@ -53,7 +53,7 @@ sub make_whole_map_file {
     } else {
         my $tmp_file = '/tmp/whole.map';
         my $aligner_version = $self->aligner_version;
-        my $maq_cmd = "gt maq vmerge --version=$aligner_version --maplist $maplist --pipe $tmp_file &";
+        my $maq_cmd = "gmt maq vmerge --version=$aligner_version --maplist $maplist --pipe $tmp_file &";
         $self->status_message("Executing:  $maq_cmd");
         my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$maq_cmd);
         unless ($rv) {

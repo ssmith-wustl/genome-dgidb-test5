@@ -21,7 +21,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-gt db querry-dbsnp128 --chr=7 --coord=106311925
+gmt db querry-dbsnp128 --chr=7 --coord=106311925
 EOS
 }
 
@@ -29,7 +29,7 @@ sub help_detail {                           # this is what the user will see wit
     return <<EOS 
 
 	please provide the chromosome and NCBI Build 36 coordinate 
-	for examplegt db querry-dbsnp128 --chr=7 --coord=106311925
+	for example gmt db querry-dbsnp128 --chr=7 --coord=106311925
 	should result in rs2230460,'C/T',1 
 	where the dbsnp is rs2230460 its alleles are C/T and 1 means its validated 
 	0 inplace of 1 would indicate that it was not validated.

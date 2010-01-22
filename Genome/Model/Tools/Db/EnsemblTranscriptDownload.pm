@@ -23,7 +23,7 @@ sub help_brief {
 
 sub help_synopsis { 
     return <<EOS
-gt db ensembl-transcript-download
+gmt db ensembl-transcript-download
 EOS
 }
 

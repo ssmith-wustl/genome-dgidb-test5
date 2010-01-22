@@ -61,7 +61,7 @@ sub make_real_rmdupped_map_file {
         my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path($library.".map" );
         print $log_fh "Rmdup'd file DOES NOT exist: ".$final_file."\n";
         my $aligner_version = $self->aligner_version;
-        my $maq_cmd = "gt maq vmerge --version=$aligner_version --maplist $maplist --pipe $tmp_file &";
+        my $maq_cmd = "gmt maq vmerge --version=$aligner_version --maplist $maplist --pipe $tmp_file &";
         print $log_fh "Executing:  $maq_cmd"."\n";
         #system "$maq_cmd";
         Genome::Utility::FileSystem->shellcmd( cmd=>$maq_cmd );
