@@ -264,7 +264,7 @@ sub create {
                         if ($self->quality_converter eq 'sol2sanger') {
                             $quality_converter_cmd = $self->maq_path ." sol2sanger $solexa_output_path $fastq_pathname";
                         } elsif ($self->quality_converter eq 'sol2phred') {
-                            $quality_converter_cmd = "gt fastq sol2phred --fastq-file=$solexa_output_path --phred-fastq-file=$fastq_pathname";
+                            $quality_converter_cmd = "gmt fastq sol2phred --fastq-file=$solexa_output_path --phred-fastq-file=$fastq_pathname";
                         }
 			$self->status_message('quality converter cmd:'. $quality_converter_cmd);
 

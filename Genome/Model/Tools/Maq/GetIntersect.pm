@@ -36,7 +36,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt get-intersect --input=in.map --snpfile=snpfile --output=out.map
+gmt get-intersect --input=in.map --snpfile=snpfile --output=out.map
 EOS
 }
 

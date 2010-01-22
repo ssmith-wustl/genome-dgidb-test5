@@ -30,7 +30,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt remove-pcr-artifacts --input orig.map --keep nodups.map --remove dups.map --sequence-identity-length 26
+gmt remove-pcr-artifacts --input orig.map --keep nodups.map --remove dups.map --sequence-identity-length 26
 EOS
 }
 

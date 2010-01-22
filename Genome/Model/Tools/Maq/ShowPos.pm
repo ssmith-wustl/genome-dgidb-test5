@@ -32,7 +32,7 @@ sub help_brief { shift->get_class_object->doc };
 
 sub help_synopsis {
     return <<EOS;
-cat maq mapview | gt maq show-pos -r 15 -p 9522931
+cat maq mapview | gmt maq show-pos -r 15 -p 9522931
 
 EOS
 }
@@ -123,7 +123,7 @@ sub _show_pos {
         }
     }  
     # <$show_refseq.refbase >$show_refseq.ref"; 
-    #gt apply-diff-to-fasta --input /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/22.fasta --diff 22.pos --ref-flank-file 22.refbase
+    #gmt apply-diff-to-fasta --input /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/22.fasta --diff 22.pos --ref-flank-file 22.refbase
     #perl -e 'while ($h=<>) { chomp $h; ($r,$p) = ($h =~ /^\>(.*?)\|(\d+)/); $b = <>; print join("\t",$r,$p,$b) }' <22.refbase >22.r
     
     while (<$infh>) {

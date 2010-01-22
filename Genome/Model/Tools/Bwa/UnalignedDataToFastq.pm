@@ -26,9 +26,9 @@ class Genome::Model::Tools::Bwa::UnalignedDataToFastq {
 
 sub help_synopsis {
     return <<"EOS"
-    gt bwa unaligned-data-to-fastq in.bwa-unaligned out.fwd.fastq out.rev.fastq
+    gmt bwa unaligned-data-to-fastq in.bwa-unaligned out.fwd.fastq out.rev.fastq
     
-    gt bwa unaligned-data-to-fastq -i /path/to/inputpathname.unaligned -f /path/to/forward.fastq -r /path/to/reverse.fastq
+    gmt bwa unaligned-data-to-fastq -i /path/to/inputpathname.unaligned -f /path/to/forward.fastq -r /path/to/reverse.fastq
 EOS
 }
 

@@ -22,7 +22,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt import-allele-freq --dir download-dir --group euro
+gmt import-allele-freq --dir download-dir --group euro
 EOS
 }
 

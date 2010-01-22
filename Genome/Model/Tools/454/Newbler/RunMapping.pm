@@ -40,7 +40,7 @@ class Genome::Model::Tools::454::Newbler::RunMapping {
 
 
 sub help_brief {
-"gt 454 newbler run-mapping --dir=DIR --ref-seq=PATH";
+"gmt 454 newbler run-mapping --dir=DIR --ref-seq=PATH";
 }
 
 sub help_detail {

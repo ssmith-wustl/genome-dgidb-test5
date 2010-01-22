@@ -98,7 +98,7 @@ case $LSB_JOBINDEX in
 esac
 CHR_TRANSLATE
 
-$bash_script .= sprintf('gt maq create-experimental-metrics-file --ref-name ${CHROMOSOME} --location-file %s --output-file %s${CHROMOSOME}.csv --map-file %s${CHROMOSOME}.map --ref-bfa %s --snpfilter-file %s',$self->snp_file, $self->output_file_prefix, $self->map_file_prefix,$self->ref_bfa, $self->snpfilter_file ? $self->snpfilter_file : $self->snp_file);
+$bash_script .= sprintf('gmt maq create-experimental-metrics-file --ref-name ${CHROMOSOME} --location-file %s --output-file %s${CHROMOSOME}.csv --map-file %s${CHROMOSOME}.map --ref-bfa %s --snpfilter-file %s',$self->snp_file, $self->output_file_prefix, $self->map_file_prefix,$self->ref_bfa, $self->snpfilter_file ? $self->snpfilter_file : $self->snp_file);
 
 #now add optional parameters
 $bash_script .= sprintf " --minq %s", $self->minq if defined($self->minq);
@@ -122,6 +122,6 @@ sub help_brief {
 
 sub help_detail {
     <<'HELP';
-    This script submits a job array of gt create-experimental-metrics-file scripts. It expects the _prefix options to refer to directories and file prefixes for files of the form /path/to/submaps/prefixref-name.map. It will produce output files of conforming to this same pattern but with .csv extensions and using the output_file_prefix.
+    This script submits a job array of gmt create-experimental-metrics-file scripts. It expects the _prefix options to refer to directories and file prefixes for files of the form /path/to/submaps/prefixref-name.map. It will produce output files of conforming to this same pattern but with .csv extensions and using the output_file_prefix.
 HELP
 }

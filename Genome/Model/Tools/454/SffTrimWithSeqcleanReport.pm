@@ -34,7 +34,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt 454 sff-trim-with-seqclean-report   ...
+gmt 454 sff-trim-with-seqclean-report   ...
 EOS
 }
 

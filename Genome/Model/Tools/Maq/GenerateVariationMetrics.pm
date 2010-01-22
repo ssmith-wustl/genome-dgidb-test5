@@ -38,7 +38,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt remove-pcr-artifacts orig.map new_better.map removed_stuff.map --sequence-identity-length 26
+gmt remove-pcr-artifacts orig.map new_better.map removed_stuff.map --sequence-identity-length 26
 EOS
 }
 

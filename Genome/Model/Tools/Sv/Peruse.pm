@@ -21,7 +21,7 @@ class Genome::Model::Tools::Sv::Peruse {
     {
         type => 'String',
         is_optional => 0,
-        doc => "directory produced by gt sv yenta",
+        doc => "directory produced by gmt sv yenta",
     },
 #    results_file => {
 #        type => 'String',
@@ -153,7 +153,7 @@ sub execute {
 
 sub help_detail {
     my $value = <<HELP;
-This module reads through a breakdancer output file and opens up all the associated files produced through gt sv yenta for viewing. The default viewer is eog. Each viewer is opened as a background process. To proceed to the next SV just hit enter. To quit, type q.
+This module reads through a breakdancer output file and opens up all the associated files produced through gmt sv yenta for viewing. The default viewer is eog. Each viewer is opened as a background process. To proceed to the next SV just hit enter. To quit, type q.
 HELP
 
     return $value;
