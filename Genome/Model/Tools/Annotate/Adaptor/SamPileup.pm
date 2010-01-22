@@ -23,19 +23,19 @@ class Genome::Model::Tools::Annotate::Adaptor::SamPileup {
 };
 
 sub help_brief {
-    "Converts samtools pileup -c output into a gt annotate transcript-variants friendly input format",
+    "Converts samtools pileup -c output into a gmt annotate transcript-variants friendly input format",
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools annotate adaptor sam-pileup  ...    
+gmt annotate adaptor sam-pileup  ...    
 EOS
 }
 
 sub help_detail {                           
     return <<EOS 
-Converts samtools pileup -c output into a gt annotate transcript-variants friendly input format
+Converts samtools pileup -c output into a gmt annotate transcript-variants friendly input format
 EOS
 }
 

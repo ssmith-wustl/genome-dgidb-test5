@@ -59,7 +59,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command breaks Illumina PE FASTQ files into batches and launches novoalign jobs
-EXAMPLE:	gt novoalign batch-align --query-file1 s_1_1_sequence.fastq --query-file2 s_1_2_sequence.fastq --batch-dir novoalign_out --batch-name s_1_paired
+EXAMPLE:	gmt novoalign batch-align --query-file1 s_1_1_sequence.fastq --query-file2 s_1_2_sequence.fastq --batch-dir novoalign_out --batch-name s_1_paired
 EOS
 }
 

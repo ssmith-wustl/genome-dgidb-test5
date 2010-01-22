@@ -45,7 +45,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Call regions of LOH using VarScan somatic output
-EXAMPLE:	gt capture loh-regions ...
+EXAMPLE:	gmt capture loh-regions ...
 EOS
 }
 

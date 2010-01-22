@@ -43,7 +43,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Summarizes BAM flag statistics across multiple files
-EXAMPLE:	gt capture report-flagstat ...
+EXAMPLE:	gmt capture report-flagstat ...
 EOS
 }
 

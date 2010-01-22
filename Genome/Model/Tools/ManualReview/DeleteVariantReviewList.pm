@@ -26,7 +26,7 @@ sub help_brief{
 }
 
 sub help_synopsis{
-    return "gt manual-review delete-variant-review-list --db-list-name <list-name>";
+    return "gmt manual-review delete-variant-review-list --db-list-name <list-name>";
 }
 
 sub help_detail{

@@ -37,17 +37,17 @@ class Genome::Model::Tools::Annotate::TranslocationInformation {
 
 sub help_brief {   
     return <<EOS
-	gt annotation translocation-information 
+	gmt annotation translocation-information 
 EOS  
 }
 
 sub help_synopsis {
     return <<EOS
-	gt annotation translocation-information -breakdancer
+	gmt annotation translocation-information -breakdancer
 
 	or
 
-	gt annotation translocation-information -fasta
+	gmt annotation translocation-information -fasta
 EOS
 }
 

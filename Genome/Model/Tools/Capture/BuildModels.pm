@@ -47,7 +47,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Create and build genome models for capture datasets
-EXAMPLE:	gt capture build-models ...
+EXAMPLE:	gmt capture build-models ...
 EOS
 }
 

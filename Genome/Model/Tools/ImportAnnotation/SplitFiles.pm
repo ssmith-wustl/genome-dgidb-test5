@@ -32,7 +32,7 @@ sub help_brief
 sub help_synopsis
 {
     return <<EOS
-    gt import-annotation split-files --workdir <path to annotation dumps>
+    gmt import-annotation split-files --workdir <path to annotation dumps>
 EOS
 }
 

@@ -42,7 +42,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Runs VarScan from BAM files
-EXAMPLE:	gt capture run-varscan ...
+EXAMPLE:	gmt capture run-varscan ...
 EOS
 }
 

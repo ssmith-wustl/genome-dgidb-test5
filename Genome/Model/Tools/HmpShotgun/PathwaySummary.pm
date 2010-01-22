@@ -9,7 +9,7 @@ use IO::File;
 
 use Data::Dumper;
 
-#gt hmp-shotgun pathway-summary --ko-pathway-file=Genome/Model/Tools/HmpShotgun/sahar/pathway_ko_map.txt --read-ko-file=Genome/Model/Tools/HmpShotgun/sahar/ko_orig.out --pathway-tree-file=Genome/Model/Tools/HmpShotgun/sahar/pathways.txt --output-file=summary.out
+#gmt hmp-shotgun pathway-summary --ko-pathway-file=Genome/Model/Tools/HmpShotgun/sahar/pathway_ko_map.txt --read-ko-file=Genome/Model/Tools/HmpShotgun/sahar/ko_orig.out --pathway-tree-file=Genome/Model/Tools/HmpShotgun/sahar/pathways.txt --output-file=summary.out
 
 class Genome::Model::Tools::HmpShotgun::PathwaySummary {
     is  => ['Command'],

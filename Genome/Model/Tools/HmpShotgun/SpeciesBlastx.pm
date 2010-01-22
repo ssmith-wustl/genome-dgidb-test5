@@ -68,7 +68,7 @@ sub execute {
     $self->dump_error_messages(1);
     $self->dump_warning_messages(1);
 
-	#gt wu-blast blastx parallel 
+	#gmt wu-blast blastx parallel 
 	
 	#--database=/gscmnt/temp206/info/seqana/species_independant/sabubuck/KEGG/KEGG-52/genesV52.KO.faa 
 	#--query-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/testdata/s_2_1.small.fasta 
@@ -77,7 +77,7 @@ sub execute {
 	
 	#This one works!
 	#specify an output directory not an output file!
-	#gt wu-blast blastx parallel 
+	#gmt wu-blast blastx parallel 
 	#--database=/gscmnt/temp206/info/seqana/species_independant/sabubuck/KEGG/KEGG-52/genesV52.KO.faa 
 	#--query-file=/gscmnt/temp206/info/seqana/species_independant/jpeck/testdata/s_2_1.tiny.fasta 
 	#--jobs=2 

@@ -41,7 +41,7 @@ sub help_brief{
 }
 
 sub help_synopsis{
-    return "gt manual-review add-variants-to-list --list <list> --db_list_id <id>";
+    return "gmt manual-review add-variants-to-list --list <list> --db_list_id <id>";
 }
 
 sub help_detail{

@@ -768,7 +768,7 @@ $ compare_mutations --mutation test.annotated --omimaa /gscuser/dlarson/code/dat
 
 =head1 DESCRIPTION
 
-This script takes a gt .annotated file, the directory where COSMIC files are stored, the file containing amino acids in OMIM, and a basename. It compares all possible annotations for every mutation in the file and outputs the results into a 2-column results file called basename_results.csv.
+This script takes a gmt .annotated file, the directory where COSMIC files are stored, the file containing amino acids in OMIM, and a basename. It compares all possible annotations for every mutation in the file and outputs the results into a 2-column results file called basename_results.csv.
 
 As of September 2009, the headers in this file were up-to-date. This file will have to be modified any time these header names change as well as updating the parser.
 

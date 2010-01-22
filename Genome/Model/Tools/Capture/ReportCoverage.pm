@@ -43,7 +43,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Summarizes RefCov coverage across capture samples
-EXAMPLE:	gt capture report-coverage ...
+EXAMPLE:	gmt capture report-coverage ...
 EOS
 }
 

@@ -39,7 +39,7 @@ sub help_synopsis
 {
     return <<EOS
 change this
-gt import-annotation venter --files <file1,file2> \
+gmt import-annotation venter --files <file1,file2> \
  --outputdir <output directory>
 EOS
 }

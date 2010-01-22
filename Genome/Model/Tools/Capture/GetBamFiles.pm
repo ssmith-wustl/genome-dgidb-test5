@@ -43,7 +43,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Obtain BAM files from completed models for capture datasets
-EXAMPLE:	gt capture get-bam-files ...
+EXAMPLE:	gmt capture get-bam-files ...
 EOS
 }
 

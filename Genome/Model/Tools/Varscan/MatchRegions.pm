@@ -44,7 +44,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Identify gene regions that could be affected by LOH regions
-EXAMPLE:	gt capture match-regions ...
+EXAMPLE:	gmt capture match-regions ...
 EOS
 }
 

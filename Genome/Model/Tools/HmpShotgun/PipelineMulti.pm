@@ -7,7 +7,7 @@ use Genome;
 use Workflow;
 
 #run with
-#gt hmp-shotgun pipeline-multi --reads-files='/gscmnt/sata409/research/mmitreva/jpeck/testdata/t1.fna|/gscmnt/sata409/research/mmitreva/jpeck/testdata/t2.fna' --reference-sequences=/gscmnt/sata409/research/mmitreva/jpeck/refseq_metagenome1/all_sequences.fa,/gscmnt/sata409/research/mmitreva/jpeck/refseq_metagenome2/all_sequences.fa --working-directory=/gscmnt/sata409/research/mmitreva/jpeck/multi_build0 --workflow-log-directory=/gscmnt/sata409/research/mmitreva/jpeck/multi_build0/workflow_logs --regions-file=/gscmnt/sata409/research/mmitreva/jpeck/refseq_metagenome1/combined_ref_cov_regions.txt --reads-and-references=1 --generate-concise=1
+#gmt hmp-shotgun pipeline-multi --reads-files='/gscmnt/sata409/research/mmitreva/jpeck/testdata/t1.fna|/gscmnt/sata409/research/mmitreva/jpeck/testdata/t2.fna' --reference-sequences=/gscmnt/sata409/research/mmitreva/jpeck/refseq_metagenome1/all_sequences.fa,/gscmnt/sata409/research/mmitreva/jpeck/refseq_metagenome2/all_sequences.fa --working-directory=/gscmnt/sata409/research/mmitreva/jpeck/multi_build0 --workflow-log-directory=/gscmnt/sata409/research/mmitreva/jpeck/multi_build0/workflow_logs --regions-file=/gscmnt/sata409/research/mmitreva/jpeck/refseq_metagenome1/combined_ref_cov_regions.txt --reads-and-references=1 --generate-concise=1
 
 class Genome::Model::Tools::HmpShotgun::PipelineMulti {
     is => ['Workflow::Operation::Command'],

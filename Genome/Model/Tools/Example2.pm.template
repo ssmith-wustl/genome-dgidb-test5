@@ -22,7 +22,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-gt example2 IN OUT
+gmt example2 IN OUT
 EOS
 }
 

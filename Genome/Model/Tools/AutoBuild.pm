@@ -17,7 +17,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt auto-build ...
+gmt auto-build ...
 EOS
 }
 

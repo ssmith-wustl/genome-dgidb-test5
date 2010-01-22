@@ -49,7 +49,7 @@ sub help_brief{
 }
 
 sub help_synopsis{
-    return "gt manual-review create-variant-review-list --list <list> --name <list_name> --author <list_author> ";
+    return "gmt manual-review create-variant-review-list --list <list> --name <list_name> --author <list_author> ";
 }
 
 sub help_detail{

@@ -47,7 +47,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Take glfSomatic and VarScan outputs and merge with Annotator Output
-EXAMPLE:	gt capture build-models ...
+EXAMPLE:	gmt capture build-models ...
 EOS
 }
 

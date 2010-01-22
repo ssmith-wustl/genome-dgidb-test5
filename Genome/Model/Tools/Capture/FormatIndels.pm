@@ -36,7 +36,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command formats indels for the annotation pipeline
-EXAMPLE:	gt analysis somatic-pipeline format-indels-for-annotation --variants-file [file] --output-file [file]
+EXAMPLE:	gmt analysis somatic-pipeline format-indels-for-annotation --variants-file [file] --output-file [file]
 EOS
 }
 

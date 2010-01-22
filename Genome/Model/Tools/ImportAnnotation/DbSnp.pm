@@ -43,7 +43,7 @@ sub help_synopsis
 {
     return <<EOS
 change this
-gt import-annotation db-snp.....
+gmt import-annotation db-snp.....
 EOS
 }
 

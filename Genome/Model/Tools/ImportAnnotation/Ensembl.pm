@@ -36,7 +36,7 @@ sub help_synopsis
 {
     return <<EOS
 
-gt import-annotation ensembl --version <ensembl version string> --host <ensembl db hostname> --user <ensembl db user> [--pass <ensembl db password>] --output_directory <directory to dump annotation data>
+gmt import-annotation ensembl --version <ensembl version string> --host <ensembl db hostname> --user <ensembl db user> [--pass <ensembl db password>] --output_directory <directory to dump annotation data>
 EOS
 }
 

@@ -41,7 +41,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command matches genomic alignments to a list of target regions
-EXAMPLE:	gt bowtie match-to-regions --alignments myfile.bowtie --regions myregions.tsv --output-file myfile.regions.bowtie
+EXAMPLE:	gmt bowtie match-to-regions --alignments myfile.bowtie --regions myregions.tsv --output-file myfile.regions.bowtie
 EOS
 }
 

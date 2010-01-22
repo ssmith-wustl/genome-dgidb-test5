@@ -51,7 +51,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gt cross-match run --subject_file --query_file {--alignment_file, --cm_params]
+gmt cross-match run --subject_file --query_file {--alignment_file, --cm_params]
 EOS
 }
 

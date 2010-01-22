@@ -24,7 +24,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-gt annotation transition-transversion --referance-allele=A --variant-allele=C
+gmt annotation transition-transversion --referance-allele=A --variant-allele=C
 EOS
 }
 

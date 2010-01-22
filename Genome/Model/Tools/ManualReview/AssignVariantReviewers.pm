@@ -34,7 +34,7 @@ sub help_brief{
 }
 
 sub help_synopsis{
-    return "gt manual-review assign-variant-reviewers --finishers 'adukes, pminx, jweible' --review-type 'manual' --list_name 'AML_ROUND_6.list'";
+    return "gmt manual-review assign-variant-reviewers --finishers 'adukes, pminx, jweible' --review-type 'manual' --list_name 'AML_ROUND_6.list'";
 }
 
 sub help_detail{

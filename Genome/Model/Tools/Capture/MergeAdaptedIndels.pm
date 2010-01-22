@@ -40,7 +40,7 @@ sub help_synopsis {
     return <<EOS
 This file was created to merge Indel Calls from VarScan and Somatic Sniper.
 This requires inputs of ADAPTED files with chr pos pos ref var as first 5 columns.
-EXAMPLE:	gt capture merge-adapted-indels ...
+EXAMPLE:	gmt capture merge-adapted-indels ...
 EOS
 }
 

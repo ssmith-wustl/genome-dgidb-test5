@@ -46,7 +46,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Generate RefCov reports for capture datasets
-EXAMPLE:	gt capture coverage-models ...
+EXAMPLE:	gmt capture coverage-models ...
 EOS
 }
 
@@ -181,7 +181,7 @@ sub run_refcov
 	## Determine STATS file name ##
 	my $stats_file = $output_dir . "/" . $sample_name . ".stats." . $coverage . "x.tsv";
 
-	my $cmd = 	"gt bio-samtools ref-cov --bam-file " . $bam_file .
+	my $cmd = 	"gmt bio-samtools ref-cov --bam-file " . $bam_file .
 			" --bed-file " . $bed_file . 
 			" --min-depth-filter " . $coverage .
 			" --output-directory " . $output_dir .

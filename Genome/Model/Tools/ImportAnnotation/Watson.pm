@@ -37,7 +37,7 @@ sub help_synopsis
 {
     return <<EOS
 
-gt import-annotation watson --outputdir <directory to dump annotation data> --file <input file>
+gmt import-annotation watson --outputdir <directory to dump annotation data> --file <input file>
 EOS
 }
 

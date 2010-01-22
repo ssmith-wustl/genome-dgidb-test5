@@ -47,7 +47,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command parses alignments from Bowtie.
-EXAMPLE:	gt bowtie parse-alignments --alignments-file bowtie.txt
+EXAMPLE:	gmt bowtie parse-alignments --alignments-file bowtie.txt
 EOS
 }
 

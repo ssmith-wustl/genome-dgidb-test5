@@ -18,7 +18,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt blat ...
+gmt blat ...
 EOS
 }
 

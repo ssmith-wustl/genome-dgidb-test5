@@ -41,7 +41,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Processes output from VarScan somatic
-EXAMPLE:	gt varscan process-somatic ...
+EXAMPLE:	gmt varscan process-somatic ...
 EOS
 }
 

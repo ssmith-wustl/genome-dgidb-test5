@@ -42,7 +42,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command retrieves the locations of unplaced reads for a given genome model
-EXAMPLE:	gt bowtie parse-alignments --alignments-file bowtie.txt
+EXAMPLE:	gmt bowtie parse-alignments --alignments-file bowtie.txt
 EOS
 }
 
