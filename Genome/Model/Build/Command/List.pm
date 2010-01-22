@@ -12,7 +12,7 @@ class Genome::Model::Build::Command::List {
             is_constant => 1, 
             value => 'Genome::Model::Build' 
         },
-        show => { default_value => 'id,model_id,model_name,run_by,status,date_scheduled,date_completed,data_directory' },
+        show => { default_value => 'id,model_id,model_name,run_by,status,date_scheduled,date_completed,software_revision,data_directory' },
     ],
 };
 
