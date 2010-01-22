@@ -45,7 +45,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command builds reference and variant contigs for alignment purposes
-EXAMPLE:	gt analysis variant-contigs --variants-file test.snps
+EXAMPLE:	gmt analysis variant-contigs --variants-file test.snps
 EOS
 }
 

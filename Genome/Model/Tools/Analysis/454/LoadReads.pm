@@ -127,7 +127,7 @@ sub execute {                               # replace with real execution logic.
 		## Run BLAT alignments ##	
 		
 		print SAMPLESCRIPT qq{echo "Running initial BLAT alignments..."\n};
-		$cmd = "gt blat align-to-genome --query-file $fasta_dir/$sample_name.fasta --output-dir $blat_dir/pslx";
+		$cmd = "gmt blat align-to-genome --query-file $fasta_dir/$sample_name.fasta --output-dir $blat_dir/pslx";
 		print SAMPLESCRIPT "$cmd\n";			
 		
 		## Finish up and close the file ##

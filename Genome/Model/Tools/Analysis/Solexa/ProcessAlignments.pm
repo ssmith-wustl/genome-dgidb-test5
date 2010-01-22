@@ -51,9 +51,9 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command aligns reads to Hs36 (by default) after you've run load-reads
-EXAMPLE 1:	gt analysis solexa align-reads --flowcell_id 302RT --include-lanes 1,2,3,4 --output-dir output_dir --aligner bowtie
-EXAMPLE 2:	gt analysis solexa align-reads --sample-name H_GP-0365n --output-dir H_GP-0365n
-EXAMPLE 3:	gt analysis solexa align-reads --library-name H_GP-0365n-lib2 --output-dir H_GP-0365n
+EXAMPLE 1:	gmt analysis solexa align-reads --flowcell_id 302RT --include-lanes 1,2,3,4 --output-dir output_dir --aligner bowtie
+EXAMPLE 2:	gmt analysis solexa align-reads --sample-name H_GP-0365n --output-dir H_GP-0365n
+EXAMPLE 3:	gmt analysis solexa align-reads --library-name H_GP-0365n-lib2 --output-dir H_GP-0365n
 EOS
 }
 
@@ -287,7 +287,7 @@ sub execute {                               # replace with real execution logic.
 									$output_roi = $alignment_outfile . ".$output_name.roi";
 									$output_layers = $alignment_outfile . ".$output_name.layers";
 								}
-								$cmd = "gt bowtie match-to-regions --regions-file $match_to_regions --alignments-file $alignment_outfile --output-file $output_roi --output-layers $output_layers";
+								$cmd = "gmt bowtie match-to-regions --regions-file $match_to_regions --alignments-file $alignment_outfile --output-file $output_roi --output-layers $output_layers";
 								print "$cmd\n";
 								system("bsub -q short -oo $output_roi.out -R\"select[mem>2000] rusage[mem=2000]\" $cmd");
 							}

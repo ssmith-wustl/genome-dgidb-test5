@@ -41,7 +41,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command compiles germline variants from Sammy germline calls
-EXAMPLE:	gt analysis sammy
+EXAMPLE:	gmt analysis sammy
 EOS
 }
 
@@ -105,8 +105,12 @@ sub execute {                               # replace with real execution logic.
 		
 		my $germline_non_dbsnp = $self->output_dir . "/" . $self->sample_name . ".indels.germline.not-dbSNP";
 		
-		system("gt bowtie limit-snps --positions-file $dbsnp_file --variants-file $germline_snp_file --not-file $germline_non_dbsnp");
-
+        my $limit_snps_obj = Genome::Model::Tools::Bowtie::LimitSnps->create(
+            positions_file => $dbsnp_file,
+            variants_file => $germline_snp_file,
+            not_file => $germline_non_dbsnp,
+        );
+        $limit_snps_obj->execute;
 
 		## Format SNPs for annotation ##
 		my $formatted_file = $self->output_dir . "/" . $self->sample_name . ".indels.germline.not-dbSNP.formatted";
@@ -120,8 +124,12 @@ sub execute {                               # replace with real execution logic.
 		print "Running annotation...\n";
 		
 		my $annotated_file = $formatted_file . ".annotations";
-		system("gt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file");
-		
+		$variants_obj = Genome::Model::Tools::Annotate::TranscriptVariants->create(
+            variant_file => $formatted_file,
+            output_file => $annotated_file,
+        );
+        $variants_obj->execute;
+
 		print "Merging annotations with SNP calls...\n";
 		my $merged_file = $germline_non_dbsnp . ".annotated";
 		system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/format_snps_with_annotation.pl $germline_non_dbsnp $annotated_file $merged_file");

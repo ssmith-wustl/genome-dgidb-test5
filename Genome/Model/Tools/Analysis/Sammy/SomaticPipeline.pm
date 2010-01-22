@@ -56,7 +56,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command calls somatic variants from Normal and Tumor alignments files using Dan Koboldt's Sammy package
-EXAMPLE:	gt analysis sammy
+EXAMPLE:	gmt analysis sammy
 EOS
 }
 
@@ -545,8 +545,13 @@ sub run_annotation
 
 	if(!(-e $annotated_file))
 	{
-		system("gt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file"); #1>/dev/null 2>/dev/null
-	}
+        #system("gt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file"); #1>/dev/null 2>/dev/null
+	    my $variants_obj = Genome::Model::Tools::Annotate::TranscriptVariants->create(
+            variant_file => $formatted_file,
+            output_file => $annotated_file,
+        );
+        $variants_obj->execute;
+    }
 	
 	print "Merging annotations with variant calls...\n";
 

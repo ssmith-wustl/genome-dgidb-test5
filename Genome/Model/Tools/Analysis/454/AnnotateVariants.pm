@@ -39,7 +39,7 @@ sub help_synopsis {
     return <<EOS
 This command reformats VarScan variants and runs annotation on them
 	
-EXAMPLE: gt analysis 454 annotate-variants --variants-file snps.tsv --output-file snps.annotated.tsv
+EXAMPLE: gmt analysis 454 annotate-variants --variants-file snps.tsv --output-file snps.annotated.tsv
 EOS
 }
 
@@ -115,9 +115,11 @@ sub execute {                               # replace with real execution logic.
 
 	## Run the annotation ##
 	print "Running annotation...\n";
-	system("gt annotate transcript-variants --variant-file $variants_file.formatted --output-file $variants_file.formatted.annotated");
-
-
+    my $var_obj = Genome::Model::Tools::Annotate::TranscriptVariants->create(
+        variant_file => "$variants_file.formatted",
+        output_file => "$variants_file.formatted.annotated",
+    );
+    $var_obj->execute;
 
 	open(OUTFILE, ">$output_file") or die "Can't open outfile $!\n";
 

@@ -43,7 +43,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command aligns reads to Hs36 (by default) after you've run load-reads
-EXAMPLE 2:	gt analysis solexa split-reads --sample-name H_GP-0365n --output-dir H_GP-0365n --batch-size 1000000
+EXAMPLE 2:	gmt analysis solexa split-reads --sample-name H_GP-0365n --output-dir H_GP-0365n --batch-size 1000000
 EOS
 }
 

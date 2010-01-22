@@ -42,7 +42,7 @@ This command processes alignments for 454 datasets
 	2.) Parses out the best alignments and their alignment blocks
 	3.) Runs VarScan to detect SNPs and indels
 	
-EXAMPLE: gt analysis 454 process-alignments --samples-file samples.tsv --output-dir data
+EXAMPLE: gmt analysis 454 process-alignments --samples-file samples.tsv --output-dir data
 EOS
 }
 

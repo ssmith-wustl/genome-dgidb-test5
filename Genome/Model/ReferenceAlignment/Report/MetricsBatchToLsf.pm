@@ -225,7 +225,7 @@ sub _setup_job
         #R => "'hname!=$hostname && hname!=linuscs50'",#exclude linuscs50
         command => sprintf
         (
-            '`which gt` maq generate-variation-metrics --input "%s" --snpfile %s --qual-cutoff 1 --output %s',
+            '`which gmt` maq generate-variation-metrics --input "%s" --snpfile %s --qual-cutoff 1 --output %s',
             #'/bin/touch %s',
             $self->input,
             $snpfile,

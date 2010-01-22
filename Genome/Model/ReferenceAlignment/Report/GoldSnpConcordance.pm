@@ -168,7 +168,7 @@ $DB::single = 1;
         }
 
 =cut
-        my $cmd = "gt snp gold-snp-intersection " .
+        my $cmd = "gmt snp gold-snp-intersection " .
             "--gold-snp-file $gold_snp_path " .
             "--snp-file $snp_file";
         $cmd .= ' --snp-format sam' if $genotyper_name =~ /samtools/;

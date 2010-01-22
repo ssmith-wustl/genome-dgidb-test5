@@ -44,7 +44,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command calls somatic variants from Normal and Tumor alignments files using Dan Koboldt's Sammy package
-EXAMPLE:	gt analysis sammy
+EXAMPLE:	gmt analysis sammy
 EOS
 }
 

@@ -41,7 +41,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command compiles germline variants from Sammy germline calls
-EXAMPLE:	gt analysis sammy
+EXAMPLE:	gmt analysis sammy
 EOS
 }
 
@@ -106,8 +106,13 @@ sub execute {                               # replace with real execution logic.
 		
 		my $germline_non_dbsnp = $self->output_dir . "/" . $self->sample_name . ".germline.not-dbSNP";
 		
-		system("gt bowtie limit-snps --positions-file $dbsnp_file --variants-file $germline_snp_file --not-file $germline_non_dbsnp");
-
+        #system("gt bowtie limit-snps --positions-file $dbsnp_file --variants-file $germline_snp_file --not-file $germline_non_dbsnp");
+		my $limit_snps_obj = Genome::Model::Tools::Bowtie::LimitSnps->create(
+            positions_file => $dbsnp_file,
+            variants_file => $germline_snp_file,
+            not_file => $germline_non_dbsnp,
+        );
+        $limit_snps_obj->execute;
 
 		## Format SNPs for annotation ##
 		my $formatted_file = $self->output_dir . "/" . $self->sample_name . ".germline.not-dbSNP.formatted";
@@ -121,15 +126,19 @@ sub execute {                               # replace with real execution logic.
 		print "Running annotation...\n";
 		
 		my $annotated_file = $formatted_file . ".annotations";
-		system("gt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file");
-		
-		print "Merging annotations with SNP calls...\n";
-		my $merged_file = $germline_non_dbsnp . ".annotated";
-		system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/format_snps_with_annotation.pl $germline_non_dbsnp $annotated_file $merged_file");
+        my $variants_obj = Genome::Model::Tools::Annotate::TranscriptVariants->create(
+            variant_file => $formatted_file,
+            output_file => $annotated_file,
+        );
+        $variants_obj->execute;
 
-	}
-	
-	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+        print "Merging annotations with SNP calls...\n";
+        my $merged_file = $germline_non_dbsnp . ".annotated";
+        system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/format_snps_with_annotation.pl $germline_non_dbsnp $annotated_file $merged_file");
+
+    }
+
+    return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
 
@@ -141,55 +150,55 @@ sub execute {                               # replace with real execution logic.
 
 sub parse_germline_variants
 {
-	(my $self, my $infile, my $outfile) = @_;
+    (my $self, my $infile, my $outfile) = @_;
 
-	my $p_value_threshold = 1.0E-06;
-	$p_value_threshold = $self->p_value if($self->p_value);
-	
-	print "Infile: $infile\nOutfile: $outfile P-value $p_value_threshold\n";
+    my $p_value_threshold = 1.0E-06;
+    $p_value_threshold = $self->p_value if($self->p_value);
 
-	my $num_germline = 0;
-	
-	open(OUTFILE, ">$outfile") or die "Can't open outfile $outfile: $!\n";
-	
-	my $input = new FileHandle ($infile);
-	my $lineCounter = 0;
-	
-	while (<$input>)
-	{
-		chomp;
-		my $line = $_;
-		$lineCounter++;		
+    print "Infile: $infile\nOutfile: $outfile P-value $p_value_threshold\n";
 
-		if($line)
-		{
-			my @lineContents = split(/\t/, $line);
-			my $chrom = $lineContents[0];
-			my $position = $lineContents[1];
-			my $allele1 = $lineContents[2];
-			my $allele2 = $lineContents[3];
-			my $status = $lineContents[12];
-			my $p_value = $lineContents[13];
+    my $num_germline = 0;
 
-			if($status && $status eq "Germline" && $p_value <= $p_value_threshold)
-			{
-				print OUTFILE "$line\n";
-				print "$chrom\t$position\t$allele1\t$allele2\t$status\t$p_value\n";
-				
-				$num_germline++;
-			}
+    open(OUTFILE, ">$outfile") or die "Can't open outfile $outfile: $!\n";
 
-		}
-		
+    my $input = new FileHandle ($infile);
+    my $lineCounter = 0;
+
+    while (<$input>)
+    {
+        chomp;
+        my $line = $_;
+        $lineCounter++;		
+
+        if($line)
+        {
+            my @lineContents = split(/\t/, $line);
+            my $chrom = $lineContents[0];
+            my $position = $lineContents[1];
+            my $allele1 = $lineContents[2];
+            my $allele2 = $lineContents[3];
+            my $status = $lineContents[12];
+            my $p_value = $lineContents[13];
+
+            if($status && $status eq "Germline" && $p_value <= $p_value_threshold)
+            {
+                print OUTFILE "$line\n";
+                print "$chrom\t$position\t$allele1\t$allele2\t$status\t$p_value\n";
+
+                $num_germline++;
+            }
+
+        }
+
 #		return(0) if($lineCounter > 40);
-	}
+    }
 
-	
-	close($input);
-	
-	close(OUTFILE);
-	
-	return($num_germline);
+
+    close($input);
+
+    close(OUTFILE);
+
+    return($num_germline);
 }
 
 
@@ -197,18 +206,18 @@ sub parse_germline_variants
 
 sub call_sammy
 {
-	my $classpath = "/gscuser/dkoboldt/Software/Sammy2";
-	my $cmd = "java -Xms2000m -Xmx2000m -classpath $classpath Sammy ";
-	return($cmd);
+    my $classpath = "/gscuser/dkoboldt/Software/Sammy2";
+    my $cmd = "java -Xms2000m -Xmx2000m -classpath $classpath Sammy ";
+    return($cmd);
 }
 
 
 
 sub commify
 {
-	local($_) = shift;
-	1 while s/^(-?\d+)(\d{3})/$1,$2/;
-	return $_;
+    local($_) = shift;
+    1 while s/^(-?\d+)(\d{3})/$1,$2/;
+    return $_;
 }
 
 1;

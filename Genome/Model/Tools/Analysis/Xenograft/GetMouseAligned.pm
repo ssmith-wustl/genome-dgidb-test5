@@ -38,7 +38,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command gets a list of reads that aligned to the mouse genome
-EXAMPLE:	gt analysis Xenograft get-mouse-aligned --map-file my.map --output-file my.reads
+EXAMPLE:	gmt analysis Xenograft get-mouse-aligned --map-file my.map --output-file my.reads
 EOS
 }
 

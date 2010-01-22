@@ -40,7 +40,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command searches for Illumina/Solexa data using the database
-EXAMPLE:	gt analysis solexa search-runs --flowcell_id 302RT
+EXAMPLE:	gmt analysis solexa search-runs --flowcell_id 302RT
 EOS
 }
 

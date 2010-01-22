@@ -39,7 +39,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command searches for Illumina/Solexa data using the database
-EXAMPLE:	gt analysis solexa unmapped-from-bam --bam-file myBam.bam --output-dir unmapped --output-name myBam
+EXAMPLE:	gmt analysis solexa unmapped-from-bam --bam-file myBam.bam --output-dir unmapped --output-name myBam
 			==> unmapped/myBam_1_sequence.pe.unmapped
 			==> unmapped/myBam_2_sequence.pe.unmapped
 			==> unmapped/myBam_1_sequence.se.unmapped

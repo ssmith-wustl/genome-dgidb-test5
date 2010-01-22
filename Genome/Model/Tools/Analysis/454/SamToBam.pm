@@ -42,7 +42,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command converts SAM files to BAM files
-EXAMPLE:	gt analysis 454 align-reads --samples-file data/samples.tsv --output-dir data --aligner ssaha2
+EXAMPLE:	gmt analysis 454 align-reads --samples-file data/samples.tsv --output-dir data --aligner ssaha2
 EOS
 }
 

@@ -39,7 +39,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command determines concordance with dbSNP 129 indels
-EXAMPLE:	gt analysis indels dbsnp-concord --indels-file [myfile.tsv]
+EXAMPLE:	gmt analysis indels dbsnp-concord --indels-file [myfile.tsv]
 EOS
 }
 

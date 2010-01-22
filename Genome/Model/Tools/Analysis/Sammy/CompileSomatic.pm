@@ -43,7 +43,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command compiles somatic variants from Sammy somatic calls
-EXAMPLE:	gt analysis sammy
+EXAMPLE:	gmt analysis sammy
 EOS
 }
 
@@ -116,8 +116,13 @@ sub execute {                               # replace with real execution logic.
 		}
 		else
 		{
-			system("gt bowtie limit-snps --positions-file $dbsnp_file --variants-file $somatic_snp_file --not-file $somatic_non_dbsnp");
-		}
+		    my $limit_snps_obj = Genome::Model::Tools::Bowtie::LimitSnps->create(
+                positions_file => $dbsnp_file,
+                variants_file => $somatic_snp_file,
+                not_file => $somatic_non_dbsnp,
+            );
+            $limit_snps_obj->execute;
+        }
 
 		my $annotated_file = $formatted_file . ".annotations";
 		my $merged_file = $somatic_non_dbsnp . ".annotated";
@@ -132,9 +137,12 @@ sub execute {                               # replace with real execution logic.
 		print "$num_non_dbsnp Somatic non-dbSNP variants formatted for annotation\n";
 		print "Running annotation...\n";
 		
+		my $variants_obj = Genome::Model::Tools::Annotate::TranscriptVariants->create(
+            variant_file => $formatted_file,
+            output_file => $annotated_file,
+        );
+        $variants_obj->execute;
 
-		system("gt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file");
-		
 		print "Merging annotations with SNP calls...\n";
 
 		system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/format_snps_with_annotation.pl $somatic_non_dbsnp $annotated_file $merged_file");
@@ -163,8 +171,13 @@ sub execute {                               # replace with real execution logic.
 			}
 			else
 			{
-				system("gt bowtie limit-snps --positions-file $dbsnp_file --variants-file $loh_snp_file --not-file $loh_non_dbsnp");
-			}
+			    my $limit_snps_obj = Genome::Model::Tools::Bowtie::LimitSnps->create(
+                    positions_file => $dbsnp_file,
+                    variants_file => $loh_snp_file,
+                    not_file => $loh_non_dbsnp,
+                );
+                $limit_snps_obj->execute;
+            }
 	
 			my $annotated_file = $formatted_file . ".annotations";
 			my $merged_file = $loh_non_dbsnp . ".annotated";
@@ -179,9 +192,12 @@ sub execute {                               # replace with real execution logic.
 			print "$num_non_dbsnp Somatic non-dbSNP variants formatted for annotation\n";
 			print "Running annotation...\n";
 			
-	
-			system("gt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file");
-			
+			my $variants_obj = Genome::Model::Tools::Annotate::TranscriptVariants->create(
+                variant_file => $formatted_file,
+                output_file => $annotated_file,
+            );
+            $variants_obj->execute;
+
 			print "Merging annotations with SNP calls...\n";
 	
 			system("perl ~dkoboldt/src/mptrunk/trunk/Auto454/format_snps_with_annotation.pl $loh_non_dbsnp $annotated_file $merged_file");

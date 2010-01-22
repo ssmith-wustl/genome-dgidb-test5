@@ -41,7 +41,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command searches genome instrument-data and builds models for the results
-EXAMPLE:	gt analysis solexa build-models --filter=flow_cell_id=
+EXAMPLE:	gmt analysis solexa build-models --filter=flow_cell_id=
 EOS
 }
 

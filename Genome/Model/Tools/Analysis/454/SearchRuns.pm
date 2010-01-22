@@ -40,7 +40,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command searches for 454 data using the database
-EXAMPLE:	gt analysis 454 search-runs --region-id 2809629870
+EXAMPLE:	gmt analysis 454 search-runs --region-id 2809629870
 EOS
 }
 

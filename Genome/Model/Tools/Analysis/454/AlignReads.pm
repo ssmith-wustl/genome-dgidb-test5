@@ -39,7 +39,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command loads 454 data from a samples.tsv file and alignments
-EXAMPLE:	gt analysis 454 align-reads --samples-file data/samples.tsv --output-dir data --aligner ssaha2
+EXAMPLE:	gmt analysis 454 align-reads --samples-file data/samples.tsv --output-dir data --aligner ssaha2
 EOS
 }
 
@@ -96,8 +96,13 @@ sub execute {                               # replace with real execution logic.
 			if($aligner eq "ssaha2")
 			{
 				my $aligner_output_file = "$aligner_output_dir/$sample_name.$aligner.sam";
-				my $cmd = "gt ssaha align-to-genome --query-file $fasta_file --output-file $aligner_output_file";
-				system($cmd);
+                my $cmd_obj = Genome::Model::Tools::Ssaha::AlignToGenome->create(
+                    query_file => $fasta_file,
+                    output_file => $aligner_output_file,
+                );
+                $cmd_obj->execute;
+                #my $cmd = "gt ssaha align-to-genome --query-file $fasta_file --output-file $aligner_output_file";
+                #system($cmd);
 			}
 		}
 		else

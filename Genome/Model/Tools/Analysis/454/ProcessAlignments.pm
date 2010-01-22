@@ -43,7 +43,7 @@ This command processes alignments for 454 datasets
 	2.) Parses out the best alignments and their alignment blocks
 	3.) Runs VarScan to detect SNPs and indels
 	
-EXAMPLE: gt analysis 454 process-alignments --samples-file samples.tsv --output-dir data
+EXAMPLE: gmt analysis 454 process-alignments --samples-file samples.tsv --output-dir data
 EOS
 }
 
@@ -160,7 +160,7 @@ sub execute {                               # replace with real execution logic.
 				## Parse the alignments ##
 	
 				print SAMPLESCRIPT qq{echo "Parsing BLAT alignments..."\n};
-				$cmd = "gt blat parse-alignments --output-blocks 1 --alignments-file $blat_dir/$sample_name.psl";
+				$cmd = "gmt blat parse-alignments --output-blocks 1 --alignments-file $blat_dir/$sample_name.psl";
 				print SAMPLESCRIPT "$cmd\n";
 	
 				print SAMPLESCRIPT qq{echo "Running VarScan..."\n};

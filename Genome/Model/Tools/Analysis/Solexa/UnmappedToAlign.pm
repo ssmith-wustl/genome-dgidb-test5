@@ -48,7 +48,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command maps unmapped Illumina/Solexa reads
-EXAMPLE:	gt analysis solexa unmapped-to-align --output-dir unmapped --output-name myBam --aligner novoalign
+EXAMPLE:	gmt analysis solexa unmapped-to-align --output-dir unmapped --output-name myBam --aligner novoalign
 			==> unmapped/myBam_1_sequence.pe.unmapped
 			==> unmapped/myBam_2_sequence.pe.unmapped
 			==> unmapped/myBam_1_sequence.se.unmapped

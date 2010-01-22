@@ -44,9 +44,9 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command builds FASTQ files for Illumina/Solexa data using the database
-EXAMPLE 1:	gt analysis solexa load-reads --flowcell_id 302RT --include-lanes 1,2,3,4 --output-dir output_dir
-EXAMPLE 2:	gt analysis solexa load-reads --sample-name H_GP-0365n --output-dir H_GP-0365n
-EXAMPLE 3:	gt analysis solexa load-reads --library-name H_GP-0365n-lib2 --output-dir H_GP-0365n
+EXAMPLE 1:	gmt analysis solexa load-reads --flowcell_id 302RT --include-lanes 1,2,3,4 --output-dir output_dir
+EXAMPLE 2:	gmt analysis solexa load-reads --sample-name H_GP-0365n --output-dir H_GP-0365n
+EXAMPLE 3:	gmt analysis solexa load-reads --library-name H_GP-0365n-lib2 --output-dir H_GP-0365n
 EOS
 }
 
