@@ -73,7 +73,7 @@ sub execute {
         }
     } 
 
-    my $cmd = "gt snp intersect ";
+    my $cmd = "gmt snp intersect ";
      $cmd .= "--headers1=1 --f1-only-output=/tmp/tabbed_output";
      $cmd .= " " . $self->subject_metric_file . " " . $self->control_snp_file;
     my $rv = system($cmd . "> /dev/null");

@@ -518,7 +518,7 @@ sub compare_gold_to_call {
     }
 }
     
-#idea borrowed from ssmith's gt snp intersect
+#idea borrowed from ssmith's gmt snp intersect
 sub overlap {
 
     my ($self, $gold_alleles, $call) = @_;

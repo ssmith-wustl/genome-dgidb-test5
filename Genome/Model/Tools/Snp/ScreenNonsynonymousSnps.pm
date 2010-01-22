@@ -45,7 +45,7 @@ sub help_synopsis {
     return <<EOS
 
 
-gt snp screen-nonsynonymous-snps --transcript --list 
+gmt snp screen-nonsynonymous-snps --transcript --list 
 
 
 EOS
@@ -55,7 +55,7 @@ EOS
 sub help_detail {
     return <<EOS 
 
-gt snp screen-nonsynonymous-snps --transcript --list 
+gmt snp screen-nonsynonymous-snps --transcript --list 
 
 EOS
 }

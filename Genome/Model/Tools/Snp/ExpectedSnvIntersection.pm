@@ -518,7 +518,7 @@ sub compare_expected_to_call {
     }
 }
     
-#idea borrowed from ssmith's gt snv intersect
+#idea borrowed from ssmith's gmt snv intersect
 sub overlap {
 
     my ($self, $expected_alleles, $call) = @_;

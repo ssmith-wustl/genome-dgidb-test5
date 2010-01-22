@@ -43,11 +43,11 @@ EOS
 sub help_synopsis {
     return <<EOS
 
-gt snp screen-seq-by-snp-list -screen-file -fasta
+gmt snp screen-seq-by-snp-list -screen-file -fasta
 
 -or-
 
-gt snp screen-seq-by-snp-list -screen-file -mp-grande
+gmt snp screen-seq-by-snp-list -screen-file -mp-grande
 
 EOS
 }

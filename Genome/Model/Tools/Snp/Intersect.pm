@@ -37,11 +37,11 @@ class Genome::Model::Tools::Snp::Intersect {
 
 sub help_synopsis {
     my $self = shift;
-    return qq/gt snp intersect list1.snps list2.snps 
+    return qq/gmt snp intersect list1.snps list2.snps 
 
-gt snp intersect list1.snps list2.snps -i intersect.out -f1 f1.out -f2 f2.out
+gmt snp intersect list1.snps list2.snps -i intersect.out -f1 f1.out -f2 f2.out
 
-maq cns2view 1.cns | gt snp intersect mypositions  | less
+maq cns2view 1.cns | gmt snp intersect mypositions  | less
 /
 }
 
