@@ -185,15 +185,21 @@ sub execute {
         
         $success = 1 unless defined $inline_error;
     } else {
-
         Genome::DataSource::GMSchema->disconnect_default_dbh;
 
         local $ENV{WF_TRACE_UR} = 1;
         local $ENV{WF_TRACE_HUB} = 1;
         if ($w && !$self->restart) {
+
+            $self->set_not_running($w);
+            UR::Context->commit;
+            Workflow::DataSource::InstanceSchema->disconnect_default_dbh;
+
             $success = Workflow::Simple::resume_lsf($w->id);
         } 
         else {
+            Workflow::DataSource::InstanceSchema->disconnect_default_dbh;
+
             $success = Workflow::Simple::run_workflow_lsf(
                 $xmlfile,
                 prior_result => 1
@@ -254,6 +260,18 @@ sub execute {
 
     return 1;
 }
+
+sub set_not_running {
+ my ($self, $instance) = @_;
+
+ $instance->is_running(0);
+ if ($instance->can('child_instances')) {
+     for ($instance->child_instances) {
+         $self->set_not_running($_);
+     }
+ }
+}
+
 
 sub _post_build_failure { 
     my ($self, $msg) = @_;
