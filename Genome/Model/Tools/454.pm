@@ -105,6 +105,8 @@ sub create {
                         'Link to 454 tools was malformed: ' . $link_path );
                     return;
                 }
+                # REMOVE THIS WHEN WE ACTUALLY SUPPORT THE NEW DIRECTORY STRUCTURE
+                die "The DatanAnalysis* directory structure for newbler is not supported yet!  Contact Informatics." 
             }
             elsif ( $link_path =~ /^mapasm454_source/ ) {
                 unless ( $link_path =~ /(mapasm454_source)_(\d{8})/ ) {

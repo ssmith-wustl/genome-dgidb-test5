@@ -2,9 +2,9 @@
 
 use strict;
 use warnings;
-
 use above 'Genome';
 
+#use Test::More;
 use Test::More skip_all => "The new installed version of newbler has a new directory name/structure.  Update me to work with it!";
 
 BEGIN {
