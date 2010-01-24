@@ -51,6 +51,7 @@ EOS
 sub create {
     my $class = shift;
     my $self  = $class->SUPER::create(@_);
+    return unless $self;
 
     my $link;
 
@@ -94,6 +95,17 @@ sub create {
                 $self->version($2);
                 $self->version_subdirectory($1);
             }
+            elsif ( $link_path =~ /^DataAnalysis/ ) {
+                if ($link_path =~ /^(DataAnalysis-([\d\.]+))/) {
+                    $self->version_subdirectory($1);
+                    $self->version($2);
+                }
+                else {
+                    $self->error_message(
+                        'Link to 454 tools was malformed: ' . $link_path );
+                    return;
+                }
+            }
             elsif ( $link_path =~ /^mapasm454_source/ ) {
                 unless ( $link_path =~ /(mapasm454_source)_(\d{8})/ ) {
                     $self->error_message(
@@ -104,6 +116,7 @@ sub create {
                 $self->version_subdirectory($1);
             }
             else {
+                $self->error_message("Cannot resolve version!; Link path (from $base_path) does not match expected offInstrumentApps or mapasm454_source patterns!!: $link_path");
                 return;
             }
         }
@@ -146,7 +159,7 @@ sub bin_path {
           . $self->version . '/'
           . $self->resolve_app_bin_name;
     }
-    if ( $self->version_subdirectory eq 'mapasm454_source' ) {
+    elsif ( $self->version_subdirectory eq 'mapasm454_source' ) {
         $bin_path =
             $self->resolve_454_path
           . $self->version_subdirectory . '_'

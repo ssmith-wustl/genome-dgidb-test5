@@ -25,7 +25,8 @@ foreach my $link (@installed_links) {
     my $installed_link = $path . $link;
     my $installed_path = readlink($installed_link);
     my $tool_454 = Genome::Model::Tools::454->create( test_link => $link );
-    isa_ok( $tool_454, 'Genome::Model::Tools::454' );
+    isa_ok( $tool_454, 'Genome::Model::Tools::454' )
+        or diag(Genome::Model::Tools::454->error_message());
     is( $tool_454->arch_os, $arch_os, 'arch_os' );
     my $app_bin_name;
     if ( $link =~ /installed/ ) {
