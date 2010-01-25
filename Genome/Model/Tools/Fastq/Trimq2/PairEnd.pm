@@ -37,7 +37,7 @@ class Genome::Model::Tools::Fastq::Trimq2::PairEnd {
 
 sub help_synopsis {
     return <<EOS
-gt fastq trimq2 pair-end --pair1-fastq-file=lane1.fastq --pair1-out-file=lane1.trimmed.fastq
+gmt fastq trimq2 pair-end --pair1-fastq-file=lane1.fastq --pair1-out-file=lane1.trimmed.fastq
 
 EOS
 }

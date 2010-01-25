@@ -26,8 +26,8 @@ sub help_brief
 sub help_synopsis 
 {
     return <<"EOS"
-    gt blastn --database --input_file M=1 N=-3 R=3 Q=3 wordmask=seg lcmask topcomboN=1 hspsepsmax=10 golmax=0 B=1 V=1  >  --read_file 
-    gt --parse_script -input --read_file -output --parsed_file -percent -num_hits 1 -percent 95 -fol .75 > --output_file
+    gmt blastn --database --input_file M=1 N=-3 R=3 Q=3 wordmask=seg lcmask topcomboN=1 hspsepsmax=10 golmax=0 B=1 V=1  >  --read_file 
+    gmt --parse_script -input --read_file -output --parsed_file -percent -num_hits 1 -percent 95 -fol .75 > --output_file
 EOS
 }
 

@@ -25,7 +25,7 @@ sub help_brief {
 
 sub help_synopsis {
     my $self = shift;
-    return "gt " . $self->tool_name . " to-tsv f1 f2 f3 >my.tsv\n";
+    return "gmt " . $self->tool_name . " to-tsv f1 f2 f3 >my.tsv\n";
 }
 
 sub tool_name {

@@ -22,8 +22,8 @@ sub help_brief
 sub help_synopsis 
 {
     return <<"EOS"
-    gt cross_match.test --input_file --database -raw -tags -minmatch 14 -bandwidth 6 -penalty -1 -gap_init -1 -gap_ext -1 >  --read_file
-    gt --parse_script -input --read_file -output --parsed_file -percent 90 -length 50 > --output_file
+    gmt cross_match.test --input_file --database -raw -tags -minmatch 14 -bandwidth 6 -penalty -1 -gap_init -1 -gap_ext -1 >  --read_file
+    gmt --parse_script -input --read_file -output --parsed_file -percent 90 -length 50 > --output_file
 EOS
 }
 

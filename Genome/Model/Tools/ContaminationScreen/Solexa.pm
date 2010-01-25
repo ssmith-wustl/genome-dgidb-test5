@@ -34,7 +34,7 @@ sub help_brief
 sub help_synopsis 
 {
     return <<"EOS"
-    gt cross_match.test --input_file --database -raw -tags -minmatch 16 -minscore -bandwidth 3 -penalty -1 -gap_init -1 -gap_exp -1 >  --output_file 
+    gmt cross_match.test --input_file --database -raw -tags -minmatch 16 -minscore -bandwidth 3 -penalty -1 -gap_init -1 -gap_exp -1 >  --output_file 
 EOS
 }
 

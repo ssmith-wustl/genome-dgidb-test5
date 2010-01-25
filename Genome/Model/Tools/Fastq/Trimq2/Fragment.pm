@@ -23,7 +23,7 @@ class Genome::Model::Tools::Fastq::Trimq2::Fragment {
 
 sub help_synopsis {
     return <<EOS
-gt fastq trimq2 fragment --fastq-file=lane1.fastq --out-file=lane1.trimmed.fastq
+gmt fastq trimq2 fragment --fastq-file=lane1.fastq --out-file=lane1.trimmed.fastq
 EOS
 }
 

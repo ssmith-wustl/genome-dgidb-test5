@@ -174,7 +174,7 @@ sub execute {
 
     #TODO Fix this back to deployed vmerge once harris deploys it
     my $commands = <<"COMMANDS";
-perl -I ~/src/perl-modules/trunk `which gt` maq vmerge --maplist ${model_id}_\${LIBRARY}_readsets.fof --pipe /tmp/${model_id}_\${LIBRARY}.map --version $aligner & 
+perl -I ~/src/perl-modules/trunk `which gmt` maq vmerge --maplist ${model_id}_\${LIBRARY}_readsets.fof --pipe /tmp/${model_id}_\${LIBRARY}.map --version $aligner & 
 mkdir -p -m a+rw \${LIBRARY}
 sleep 5
 $maq rmdup \${LIBRARY}/\${LIBRARY}.rmdup.map /tmp/${model_id}_\${LIBRARY}.map

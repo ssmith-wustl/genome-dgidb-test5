@@ -46,7 +46,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gt velvet hash --file-name name [--directory dir --hash-length 21 --file-format fastq --read-type short]
+gmt velvet hash --file-name name [--directory dir --hash-length 21 --file-format fastq --read-type short]
 EOS
 }
 

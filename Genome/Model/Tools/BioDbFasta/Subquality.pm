@@ -52,7 +52,7 @@ For example, consider the following QUAL entry:
  15 15 20 28 28 29 31 31 28 28 24 22 19 14 7
 
 The following command would extract a sub-sequence of "read1":
- gt bio-db-fasta subquality --dir mypath/qual_dir/ --name read1 --start 6 --stop 10
+ gmt bio-db-fasta subquality --dir mypath/qual_dir/ --name read1 --start 6 --stop 10
  29 31 31 28 28
 EOS
 }
@@ -74,7 +74,7 @@ sub execute {                               # replace with real execution logic.
 	{
 		if(!(-e $dir . '/directory.index'))		
 		{
-			print "Input directory index not yet built (run gt bio-db-fasta build). Exiting...\n";
+			print "Input directory index not yet built (run gmt bio-db-fasta build). Exiting...\n";
 			return(0);		
 		}
 	}

@@ -92,11 +92,11 @@ sub help_synopsis {
 
 running with optional minimum input...
 
-gt fasta coords-to-fasta --list 
+gmt fasta coords-to-fasta --list 
  
 ...will provide you with a fasta file of sequence from you list of coordinates
 
-gt fasta coords-to-fasta --chromosome --start --stop
+gmt fasta coords-to-fasta --chromosome --start --stop
 ...will provide you with a sequence from your specified input
 
 EOS
@@ -107,7 +107,7 @@ sub help_detail {
 
 If you would like a fasta file for one genomic range you may find it simplest to get in this fashion
 
- gt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936
+ gmt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936
 
  your output will be printed to your screen like this
 
@@ -117,20 +117,20 @@ TGGGTGGTTAAGAAGCCCAGAAttttttttttttttgagacagagtctcactgtgtcgcccaggctggaatgcagtggtg
 
 as you can see this is the soft masked sequence by default use the --unmasked option if you want all caps in your sequence
 
- gt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936 --unmasked
+ gmt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936 --unmasked
 >chr3:103057567:103057936
 TGGGTGGTTAAGAAGCCCAGAATTTTTTTTTTTTTTGAGACAGAGTCTCACTGTGTCGCCCAGGCTGGAATGCAGTGGTGCGATCTTGGCTCACTGCAACCTCCGACTCCCTGGTTCAAGCGATTCTCCTGCCTCAGCCTGCCCAGTAGCTGGGACTACAGGTGCCTACCACCACACCCAGCTAATTTTTTGTATTTTTAGTAGAGACGGGGTTTCACCATGTTAGCCAGGATGGTCTCGATCTCCTGACCTCGTGATCTGCCCGCCTCGGCCTCCCGAAGTGCTGGGATTACAGGCGTGAGCCACCGCGCCCGGCCAAGAAGCCCAGATTTTAACAGATCATTTCATGTGTTTTCTTGATTTGCTTTAA
 
 use the masked option if you want masked sequence. The masked sequence comes from our database and will take longer to obtain than sequence from the other two option which come from an indexed sequence of NCBI Build36
 
- gt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936 --masked
+ gmt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936 --masked
 
 >chr3:103057567:103057936
 TGGGTGGTTAAGAAGCCCAGAANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNAAGAAGCCCANATTTTAACAGATCATTTCATGTGTTTTCTTGATTTGCTTTAA
 
 if you would like to write a more discriptive refseq header use the --name option
 
- gt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936 --name "chr3:103057567:103057936.refseq.fasta Chr:3, Coords 103057567-103057936, Ori (+), comment"
+ gmt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936 --name "chr3:103057567:103057936.refseq.fasta Chr:3, Coords 103057567-103057936, Ori (+), comment"
 
 
 >chr3:103057567:103057936.refseq.fasta Chr:3, Coords 103057567-103057936, Ori (+), comment
@@ -140,7 +140,7 @@ a refseq header of this sort will work in junction with some of the other tools 
 
 if you would like to write your output to a file use the --out option
 
- gt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936 --name "chr3:103057567:103057936.refseq.fasta Chr:3, Coords 103057567-103057936, Ori (+), comment" --out chr3:103057567:103057936.refseq.fasta
+ gmt fasta coords-to-fasta --chromosome chr3 --start 103057567 --stop 103057936 --name "chr3:103057567:103057936.refseq.fasta Chr:3, Coords 103057567-103057936, Ori (+), comment" --out chr3:103057567:103057936.refseq.fasta
 
 will produce the file chr3:103057567:103057936.refseq.fasta with the same content as the above example
 
@@ -157,7 +157,7 @@ If you would like to produce a fasta of fastas you can use the --list option
 
 	  see this list file for some acceptable/unacceptable list line configurations, and run this as an example 
 
-  gt fasta coords-to-fasta --list /gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-CoordsToFasta/CoordsToFasta.test.list
+  gmt fasta coords-to-fasta --list /gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-CoordsToFasta/CoordsToFasta.test.list
 
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -278,7 +278,7 @@ sub execute {
 	my $start = $self->start;
 	my $stop = $self->stop;
 
-	unless ($chr && $start && $stop) { system qq(gt fasta coords-to-fasta --help); return 0;}
+	unless ($chr && $start && $stop) { system qq(gmt fasta coords-to-fasta --help); return 0;}
 
 	unless ($start =~ /^[\d]+$/) {$self->error_message("please provide the start coordinate"); return 0; }
 	unless ($stop =~ /^[\d]+$/) {$self->error_message("please provide the stop coordinate"); return 0; }

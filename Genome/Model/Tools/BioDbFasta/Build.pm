@@ -43,10 +43,10 @@ EOS
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
     return <<EOS 
 EXAMPLE 1: Index all FASTA files in the directory mypath/fasta_dir/
- gt bio-db-fasta build --dir mypath/fasta_dir/
+ gmt bio-db-fasta build --dir mypath/fasta_dir/
 
 EXAMPLE 2: Force reindexing of the same directory
- gt bio-db-fasta build --dir mypath/fasta_dir/ --rebuild 1
+ gmt bio-db-fasta build --dir mypath/fasta_dir/ --rebuild 1
 EOS
 }
 

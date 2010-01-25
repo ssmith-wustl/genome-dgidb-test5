@@ -251,7 +251,7 @@ sub _run_query
 
 sub help_detail {                           # This is what the user will see with --help <---
     return <<EOS
-gt breakpoint-pal --breakpoint-id chr11:36287905-36288124
+gmt breakpoint-pal --breakpoint-id chr11:36287905-36288124
 
 
 EOS

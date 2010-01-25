@@ -120,29 +120,29 @@ sub help_brief {                            # keep this to just a few words <---
 
     This tool will make a consed ace file from a minimun of a directory of traces a chromosome and a chromosomal start coordinate for either NCBI Human build 36 or NCBI Mouse build 37 or a project name and ref_fasta
 
-gt consed traces-to-consed --chromosome --start --trace_dir
+gmt consed traces-to-consed --chromosome --start --trace_dir
 
 or 
 
-gt consed traces-to-consed --project --ref_fasta
+gmt consed traces-to-consed --project --ref_fasta
  
 EOS
 }
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-gt consed traces-to-consed --chromosome --start --trace_dir
+gmt consed traces-to-consed --chromosome --start --trace_dir
 
 running...
 
-gt consed traces-to-consed --chromosome 10 --start 126009345 --stop 126009576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --project-details 11+11-INS --extend-ref 1000
+gmt consed traces-to-consed --chromosome 10 --start 126009345 --stop 126009576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --project-details 11+11-INS --extend-ref 1000
 
 will produce the project 10_126009345 
 
 
 Alternatively, you can provide your own reference fasta and a name for the project
 
-gt consed traces-to-consed --project --ref_fasta
+gmt consed traces-to-consed --project --ref_fasta
  
 
 EOS
@@ -1013,7 +1013,7 @@ if neither of these two options are used consed will follow it order of preciden
 *Here are 6 examples of how this script was intened to be used. 
 
 
-building Human NCBI Build36 assemblies to be used by ==>  gt manual-review review-variants 
+building Human NCBI Build36 assemblies to be used by ==>  gmt manual-review review-variants 
 
   if your reviewing snps, you could get by with the minimume requirements base dir was added for this example
  

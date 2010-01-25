@@ -24,7 +24,7 @@ my $test_results = $pipe_path .'.virtual';
 
 ok(unlink($pipe_path),"delete existing temporary file $pipe_path");
 
-my $vmerge_cmd = "gt maq vmerge --maplist /gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Vmerge/all.maplist --pipe $pipe_path &";
+my $vmerge_cmd = "gmt maq vmerge --maplist /gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Vmerge/all.maplist --pipe $pipe_path &";
 my $vmerge_rv = system($vmerge_cmd);
 ok(!$vmerge_rv,"$vmerge_cmd executed successfully");
 

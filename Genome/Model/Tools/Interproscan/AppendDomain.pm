@@ -66,7 +66,7 @@ sub help_brief
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt append-domain --maf maf-file --output outfile \
+gmt append-domain --maf maf-file --output outfile \
     [--sepchar separator] [--tcol transcriptcolumn] \
     [--acol aminoacidchangecolumn] [--gcol genenamecolumn] \
     [--filter filterregex]

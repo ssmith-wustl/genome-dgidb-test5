@@ -144,7 +144,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gt velvet run --file-names <input file names>
+gmt velvet run --file-names <input file names>
 EOS
 }
 

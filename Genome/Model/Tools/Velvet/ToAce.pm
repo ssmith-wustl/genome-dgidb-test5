@@ -63,7 +63,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gt velvet to-ace --afg-file velvet_asm.afg [--out-acefile acefile_name]
+gmt velvet to-ace --afg-file velvet_asm.afg [--out-acefile acefile_name]
 EOS
 }
 

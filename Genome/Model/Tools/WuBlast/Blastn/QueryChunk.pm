@@ -58,7 +58,7 @@ sub execute {
 
     my $out_file = $self->output_file;
     my $out_dir  = dirname $out_file;
-    my $cmd = 'gt wu-blast blastn --database '.$self->database.' --params "'.$self->params.'"';
+    my $cmd = 'gmt wu-blast blastn --database '.$self->database.' --params "'.$self->params.'"';
     
     my @blast_outs;
     my %jobs;

@@ -39,7 +39,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command parses a PSL-format BLAT output file, scores each alignment, and reports the best alignment for uniquely placed reads.
-EXAMPLE:	gt blat parse-alignments myBlatOutput.psl
+EXAMPLE:	gmt blat parse-alignments myBlatOutput.psl
 Scored alignments for uniquely placed reads would be output to myBlatOutput.psl.best-alignments.txt
 EOS
 }

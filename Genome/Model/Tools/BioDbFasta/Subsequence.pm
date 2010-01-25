@@ -51,11 +51,11 @@ For example, consider the following FASTA entry:
  AAAAAAAGGGGGGGCCTTTTTTTTTTTAAAAAAAACCCCCCCCC
  
 The following command would extract a sub-sequence of "read1":
- gt bio-db-fasta subsequence --dir mypath/fasta_dir/ --name read1 --start 6 --stop 10
+ gmt bio-db-fasta subsequence --dir mypath/fasta_dir/ --name read1 --start 6 --stop 10
  AAGGG
 
 Note: To extract sequence from the human Hs36 refseq, use "hs36" as your directory:
- gt bio-db-fasta subsequence --dir hs36 --name chr2 --start 1704463 --stop 1704468
+ gmt bio-db-fasta subsequence --dir hs36 --name chr2 --start 1704463 --stop 1704468
 EOS
 }
 
@@ -83,7 +83,7 @@ sub execute {                               # replace with real execution logic.
 	{
 		if(!(-e $dir . '/directory.index'))		
 		{
-                    $self->error_message('Input directory index not yet built (run gt bio-db-fasta build). Exiting...');
+                    $self->error_message('Input directory index not yet built (run gmt bio-db-fasta build). Exiting...');
                     return;
 		}
 	}

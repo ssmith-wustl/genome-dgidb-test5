@@ -71,7 +71,7 @@ sub help_synopsis {
 
 running...
 
-gt breakpoint-pal --breakpoint-id chr11:36287905-36288124 --span
+gmt breakpoint-pal --breakpoint-id chr11:36287905-36288124 --span
  
 ...will give three fastas around the breakpoints and a pal with them as well as a a file of primer pair picks that span the breakpoints
 
@@ -82,11 +82,11 @@ sub help_detail {
     return <<EOS 
 
 running this breakpoint id with the default options
-gt breakpoint-pal --breakpoint-id chr11:36287905-36288124
+gmt breakpoint-pal --breakpoint-id chr11:36287905-36288124
 
 is the same as running
 
-gt breakpoint-pal --breakpoint-id chr11:36287905-36288124 --bp-flank 300 --pal-threshold 100
+gmt breakpoint-pal --breakpoint-id chr11:36287905-36288124 --bp-flank 300 --pal-threshold 100
 
 
 which will result in 3 fasta files
@@ -104,18 +104,18 @@ chr11:36287905-36288124.BP1-2.fasta.BP2.pal100.ghostview
 
 
 irx -- if this option is used you will need to state the read pair orientation/s at the breakpoints inorder for the pcr primer pairs to be selected 
-   ie running ...     gt break-point-pal --breakpoint-id chr11:36287905-36288124 --irx mp 
+   ie running ...     gmt break-point-pal --breakpoint-id chr11:36287905-36288124 --irx mp 
    would produce the additional file chr11:36287905-36288124.irx.300.mp.primer3.blast.result
 
 inv -- if this flag is used, 4 primer pair sets will be designed first for BP1 (gap1) then BP2 (gap2) and again for BP1-R (gap3) and BP2-R (gap4) where the R means the sequence between BP1 and BP2 was revercomplemented prior to selecting the primers for gaps 3 and 4
-   ie running ...     gt break-point-pal --breakpoint-id chr11:36287905-36288124 --inv 
+   ie running ...     gmt break-point-pal --breakpoint-id chr11:36287905-36288124 --inv 
    would produce 4 additional files chr11:36287905-36288124.inv.300.gap1.primer3.blast.result
                                     chr11:36287905-36288124.inv.300.gap2.primer3.blast.result
 				    chr11:36287905-36288124.inv.300.gap3.primer3.blast.result
 				    chr11:36287905-36288124.inv.300.gap4.primer3.blast.result
 
 span -- if this flag is used, a pcr primer pair will be selected that will encompass the sequence from BP1 to BP2. This option can be used in junction with any combination of options or by itself 
-   ie running ...     gt break-point-pal --breakpoint-id chr11:36287905-36288124 --span
+   ie running ...     gmt break-point-pal --breakpoint-id chr11:36287905-36288124 --span
    would produce the additional file chr11:36287905-36288124.span.300.primer3.blast.result
 
 EOS

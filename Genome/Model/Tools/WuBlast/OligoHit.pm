@@ -22,7 +22,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-gt wu-blast oligo-hit --fasta subject_fasta
+gmt wu-blast oligo-hit --fasta subject_fasta
 EOS
 }
 
@@ -30,7 +30,7 @@ sub help_detail {                           # this is what the user will see wit
     return <<EOS 
 
 	please provide the subject_fasta file in standard fasta format 
-	for example gt wu-blast oligo-hit --fasta /gscmnt/sata147/info/medseq/rmeyer/scratch/21_46356247_46356978.c1.refseq.fasta
+	for example gmt wu-blast oligo-hit --fasta /gscmnt/sata147/info/medseq/rmeyer/scratch/21_46356247_46356978.c1.refseq.fasta
 	should result in
 chr21   21_46356247_46356978.c1.refseq.fasta    0.0     100.0   100.0   1464.4  0.      46944323        732     732     46356247-46356978:1-732(100);
 	where the line breaks down like this

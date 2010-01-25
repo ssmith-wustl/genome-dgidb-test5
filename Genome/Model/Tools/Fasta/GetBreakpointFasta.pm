@@ -53,7 +53,7 @@ sub help_synopsis {
 
 running with optional minimum input...
 
-gt fasta get-breakpoint-fasta --bp-ids 
+gmt fasta get-breakpoint-fasta --bp-ids 
  
 ...will provide you with a fasta file of sequence from your breakpoint_ids
 
@@ -64,13 +64,13 @@ sub help_detail {
     return <<EOS 
 
 running...
-gt fasta get-breakpoint-fasta --bp-ids chr3:103057567-103057567
+gmt fasta get-breakpoint-fasta --bp-ids chr3:103057567-103057567
 
     will return the result as a file with the default name
        chr3:103057567-103057567.1.500.fasta
 
 running...
-gt fasta get-breakpoint-fasta --bp-ids chr3:103057567-103057567,chr3:103058567-103058567
+gmt fasta get-breakpoint-fasta --bp-ids chr3:103057567-103057567,chr3:103058567-103058567
     will return the result as a file with the default name
        chr3:103057567-103057567.2.500.fasta
 

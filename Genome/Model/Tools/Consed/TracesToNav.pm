@@ -46,11 +46,11 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-gt consed traces-to-nav --ace --list
+gmt consed traces-to-nav --ace --list
 
 running...
 
-gt consed traces-to-nav --ace /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.ace.1 --convert-coords /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.c1.refseq.fasta --unpaired --name-nav test.traces.to.nav --list /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/Nav.list
+gmt consed traces-to-nav --ace /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.ace.1 --convert-coords /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.c1.refseq.fasta --unpaired --name-nav test.traces.to.nav --list /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/Nav.list
 
 will produce a navigator ==> test.traces.to.nav.date.nav
 and a spreadsheet ==> test.traces.to.nav.date.csv

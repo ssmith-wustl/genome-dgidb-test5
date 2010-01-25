@@ -37,7 +37,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command retrieves the locations of unplaced reads for a given genome model
-EXAMPLE:	gt solexa get-unmapped-reads --model-id 1235834
+EXAMPLE:	gmt solexa get-unmapped-reads --model-id 1235834
 EOS
 }
 

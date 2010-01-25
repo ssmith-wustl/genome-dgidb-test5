@@ -63,14 +63,14 @@ sub help_brief
 sub help_synopsis
 {
     return <<EOS
-gt pcap run-stats
+gmt pcap run-stats
 EOS
 }
 
 sub help_detail
 {
     return <<EOS
-gt pcap run-stats --tier_1 <value> --tier_2 <value_2>
+gmt pcap run-stats --tier_1 <value> --tier_2 <value_2>
 If est genome size is 1,000,000 bases, tier_1 is 500,000, tier_2 700,000
 EOS
 }

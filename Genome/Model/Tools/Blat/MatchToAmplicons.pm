@@ -52,16 +52,16 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command matches reads to amplicon refseqs using read alignments and amplicon coordinates
-EXAMPLE 1:	gt blat match-to-amplicons --alignments-file myBlatOutput.psl.best-aligns.txt --headers-file amplicons.txt --sample-name mySample
+EXAMPLE 1:	gmt blat match-to-amplicons --alignments-file myBlatOutput.psl.best-aligns.txt --headers-file amplicons.txt --sample-name mySample
 	=> Generates amplicon subdirectories under amplicon_dir, builds amplicon refseqs and reads FOF files
 
-EXAMPLE 2:	gt blat match-to-amplicons --alignments-file myBlatOutput.psl.best-aligns.txt --headers-file amplicons.txt --sample-name mySample --sff-file mySample.sff
+EXAMPLE 2:	gmt blat match-to-amplicons --alignments-file myBlatOutput.psl.best-aligns.txt --headers-file amplicons.txt --sample-name mySample --sff-file mySample.sff
 	=> Generates amplicon subdirectories under amplicon_dir, builds amplicon refseqs and reads FOF/SFF/Fasta/Qual
 
-EXAMPLE 3:	gt blat match-to-amplicons --alignments-file myBlatOutput.psl.best-aligns.txt --headers-file amplicons.txt --sample-name mySample --run-crossmatch 1
+EXAMPLE 3:	gmt blat match-to-amplicons --alignments-file myBlatOutput.psl.best-aligns.txt --headers-file amplicons.txt --sample-name mySample --run-crossmatch 1
 	=> Same as example 1, but also launches cross_match alignments on the blades
 
-EXAMPLE 4:	gt blat match-to-amplicons --alignments-file myBlatOutput.psl.best-aligns.txt --headers-file amplicons.txt --sample-name mySample --run-pyroscan 1
+EXAMPLE 4:	gmt blat match-to-amplicons --alignments-file myBlatOutput.psl.best-aligns.txt --headers-file amplicons.txt --sample-name mySample --run-pyroscan 1
 	=> Same as example 1, but also runs Pyroscan on the cross_match output
 EOS
 }
@@ -389,22 +389,22 @@ sub execute {                               # replace with real execution logic.
 			{
 				if($pyroscan_params)
 				{
-#					system("bsub -q $lsf_queue -oo $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.out \"gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta $pyroscan_params >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan\"");
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta $pyroscan_params >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan");				
+#					system("bsub -q $lsf_queue -oo $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.out \"gmt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta $pyroscan_params >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan\"");
+					system("gmt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta $pyroscan_params >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan");				
 				}
 				else
 				{
-#					system("bsub -q $lsf_queue -oo $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.out \"gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan\"");
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan 2>/dev/null");				
+#					system("bsub -q $lsf_queue -oo $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.out \"gmt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan\"");
+					system("gmt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan 2>/dev/null");				
 				}
 				
-				#system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.genotype_submission.tsv --sample-name $sample_name");
+				#system("gmt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.genotype_submission.tsv --sample-name $sample_name");
 			}
 		}
 	
 		if($convert_pyroscan)
 		{
-			system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.genotype_submission.tsv --sample-name $sample_name");
+			system("gmt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.genotype_submission.tsv --sample-name $sample_name");
 		}
 	}
 	

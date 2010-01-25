@@ -51,7 +51,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gt blat subject --subject_file --query_file {--alignment_file, --blat_params]
+gmt blat subject --subject_file --query_file {--alignment_file, --blat_params]
 EOS
 }
 

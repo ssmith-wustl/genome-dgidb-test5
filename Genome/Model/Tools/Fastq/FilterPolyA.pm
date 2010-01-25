@@ -44,9 +44,9 @@ class Genome::Model::Tools::Fastq::FilterPolyA {
 
 sub help_synopsis {
     return <<EOS
-gt fastq filter-poly-a --input1=lane1.fastq --output1=lane1.filtered.fastq
+gmt fastq filter-poly-a --input1=lane1.fastq --output1=lane1.filtered.fastq
 
-gt fastq filter-poly-a --input1=lane1-fwd.fastq --input2=lane2-rev.fastq --output1=lane1-fwd.filtered.fastq --output2=lane1-rev.filtered.fastq
+gmt fastq filter-poly-a --input1=lane1-fwd.fastq --input2=lane2-rev.fastq --output1=lane1-fwd.filtered.fastq --output2=lane1-rev.filtered.fastq
 (not implemented)
 EOS
 }

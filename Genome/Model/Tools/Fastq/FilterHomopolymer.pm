@@ -39,7 +39,7 @@ class Genome::Model::Tools::Fastq::FilterHomopolymer {
 
 sub help_synopsis {
     return <<EOS
-gt fastq filter-homopolymer --input=lane1.fastq --output=lane1.filtered.fastq
+gmt fastq filter-homopolymer --input=lane1.fastq --output=lane1.filtered.fastq
 
 EOS
 }

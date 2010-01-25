@@ -27,7 +27,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gt assembly convert-to-pcap -contigs-fa-file <FILE>
+gmt assembly convert-to-pcap -contigs-fa-file <FILE>
 EOS
 }
 

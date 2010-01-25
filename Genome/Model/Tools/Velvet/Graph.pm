@@ -101,7 +101,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gt velvet graph 
+gmt velvet graph 
 EOS
 }
 

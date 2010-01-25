@@ -40,7 +40,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command retrieves the locations of unplaced reads for a given genome model
-EXAMPLE:	gt ssaha --query-file s_1_sequence.fastq --output-file s_1_sequence.Hs36.ssaha
+EXAMPLE:	gmt ssaha --query-file s_1_sequence.fastq --output-file s_1_sequence.Hs36.ssaha
 EOS
 }
 

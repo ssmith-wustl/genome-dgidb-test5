@@ -141,7 +141,7 @@ sub help_brief {
 
 sub help_synopsis {                         
     return <<EOS
-gt pcap run
+gmt pcap run
 EOS
 }
 

@@ -67,7 +67,7 @@ sub help_synopsis {
 
 running...
 
-gt design-transcript-sequence 
+gmt design-transcript-sequence 
  
 ...will provide you with masked "snp's and repeat's" and unmasked sequence for the said amount of bases on either side of your variation. Your information will be returned as stdout on your screen in this format
 
@@ -82,7 +82,7 @@ sub help_detail {
 
 running for a missense snp
 
-gt design-transcript-sequence --chromosome 1 --start 241429086 --transcript NM_014812 --variation-type coding_snp --number-of-flank-bases 20 --variant-allele G --reference-allele T
+gmt design-transcript-sequence --chromosome 1 --start 241429086 --transcript NM_014812 --variation-type coding_snp --number-of-flank-bases 20 --variant-allele G --reference-allele T
 
   will result in
 
@@ -91,7 +91,7 @@ gt design-transcript-sequence --chromosome 1 --start 241429086 --transcript NM_0
 
 running for a in_frame_ins
 
-gt design-transcript-sequence --chromosome 1 --start 241429086 --transcript NM_014812 --variant-allele ATA --variation-type coding_ins --number-of-flank-bases 20 --stop 241429087
+gmt design-transcript-sequence --chromosome 1 --start 241429086 --transcript NM_014812 --variant-allele ATA --variation-type coding_ins --number-of-flank-bases 20 --stop 241429087
 
   will result in
 
@@ -100,7 +100,7 @@ gt design-transcript-sequence --chromosome 1 --start 241429086 --transcript NM_0
 
 running for a frame_shift_del
 
-gt design-transcript-sequence --chromosome 1 --start 241429086 --transcript NM_014812 --variant-allele - --variation-type coding_del --number-of-flank-bases 20 --stop 241429087
+gmt design-transcript-sequence --chromosome 1 --start 241429086 --transcript NM_014812 --variant-allele - --variation-type coding_del --number-of-flank-bases 20 --stop 241429087
 
   will result in
 
@@ -109,7 +109,7 @@ gt design-transcript-sequence --chromosome 1 --start 241429086 --transcript NM_0
 
 running for a splice_site_snp
 
-gt design-transcript-sequence --chromosome 19 --start 17247609 --transcript NM_001033549 --variation-type splice_site_snp --number-of-flank-bases 20 --variant-allele T --reference-allele G
+gmt design-transcript-sequence --chromosome 19 --start 17247609 --transcript NM_001033549 --variation-type splice_site_snp --number-of-flank-bases 20 --variant-allele T --reference-allele G
 
   will result in
 

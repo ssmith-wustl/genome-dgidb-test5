@@ -33,7 +33,7 @@ class Genome::Model::Tools::Fastq::Trim5 {
 
 sub help_synopsis {
     return <<EOS
-gt fastq trim5 --input=lane1.fastq --output=lane1.trimmed.fastq
+gmt fastq trim5 --input=lane1.fastq --output=lane1.trimmed.fastq
 
 EOS
 }

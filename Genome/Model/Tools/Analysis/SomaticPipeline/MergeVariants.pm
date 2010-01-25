@@ -46,7 +46,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command merges somatic variant calls between glfSomatic and VarScan/Sammy
-EXAMPLE:	gt analysis sammy merge-variants --glf-snvs [file] --sammy-snvs [file] --regions-file [file] --dbsnp-file [file] --output-file [file]
+EXAMPLE:	gmt analysis sammy merge-variants --glf-snvs [file] --sammy-snvs [file] --regions-file [file] --dbsnp-file [file] --output-file [file]
 EOS
 }
 
@@ -117,7 +117,7 @@ sub execute {                               # replace with real execution logic.
 		
 		if(!(-e $merged_file))
 		{
-			system("gt analysis somatic-pipeline merge-snvs-with-annotation --variants-file $tier1_file --annotation-file $annotation_file --output-file $merged_file");
+			system("gmt analysis somatic-pipeline merge-snvs-with-annotation --variants-file $tier1_file --annotation-file $annotation_file --output-file $merged_file");
 		}
 
 		$glf_files{$tumor_sample} = $merged_file;

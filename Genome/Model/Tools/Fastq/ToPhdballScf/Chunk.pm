@@ -41,7 +41,7 @@ sub execute {
     my $ball_file = $self->ball_file;
     my $ball_dir  = dirname($self->ball_file);
     
-    my $cmd = 'gt fastq to-phdball-scf';
+    my $cmd = 'gmt fastq to-phdball-scf';
     
     for my $property (qw(time scf_dir base_fix solexa_fastq)) {
         if ($self->$property) {

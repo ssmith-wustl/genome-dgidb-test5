@@ -29,7 +29,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt velvet ...
+gmt velvet ...
 EOS
 }
 

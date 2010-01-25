@@ -54,7 +54,7 @@ EOS
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
     return <<EOS 
 This command would spawn BLAT alignments between myDeletions.fasta and each of the 24 human chrom refseqs:
- gt blat align-to-genome --reference-dir /gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/by_chromosome/ --search-string chr*.fa --query-file myDeletions.fasta --output-dir ./ 
+ gmt blat align-to-genome --reference-dir /gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/by_chromosome/ --search-string chr*.fa --query-file myDeletions.fasta --output-dir ./ 
 
 By default, each BLAT alignment will be launched in the LONG queue, and outputs will be in the ./ directory.
 

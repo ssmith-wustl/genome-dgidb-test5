@@ -42,7 +42,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command merges somatic variant calls between glfSomatic and VarScan/Sammy
-EXAMPLE:	gt analysis sammy merge-variants --glf-snvs [file] --sammy-snvs [file] --regions-file [file] --dbsnp-file [file] --output-file [file]
+EXAMPLE:	gmt analysis sammy merge-variants --glf-snvs [file] --sammy-snvs [file] --regions-file [file] --dbsnp-file [file] --output-file [file]
 EOS
 }
 
@@ -98,7 +98,7 @@ sub execute {                               # replace with real execution logic.
 		## Filter the indel file ##
 		
 		my $filtered_file = $output_dir . "/" . $tumor_sample . ".glfsomatic.indels.filter";		
-		system("gt analysis somatic-pipeline filter-glf-indels --variants-file $tier1_file --output-file $filtered_file --min-var-freq 0.30 --min-reads2 4 --min-coverage 10"); #--min-var-freq 0.25
+		system("gmt analysis somatic-pipeline filter-glf-indels --variants-file $tier1_file --output-file $filtered_file --min-var-freq 0.30 --min-reads2 4 --min-coverage 10"); #--min-var-freq 0.25
 	
 		## Get number of indels passing filter ##
 		
@@ -108,7 +108,7 @@ sub execute {                               # replace with real execution logic.
 #		while($num_pass_filter > 4)
 #		{
 #			$min_freq += 0.05;
-#			system("gt analysis somatic-pipeline filter-glf-indels --variants-file $tier1_file --output-file $filtered_file --min-var-freq $min_freq --min-reads2 4 --min-coverage 20"); #--min-var-freq 0.25
+#			system("gmt analysis somatic-pipeline filter-glf-indels --variants-file $tier1_file --output-file $filtered_file --min-var-freq $min_freq --min-reads2 4 --min-coverage 20"); #--min-var-freq 0.25
 #			$num_pass_filter = `cat $filtered_file | wc -l`;
 #			chomp($num_pass_filter);			
 #		}
@@ -117,7 +117,7 @@ sub execute {                               # replace with real execution logic.
 		
 #		if(!(-e $merged_file))
 #		{
-			system("gt analysis somatic-pipeline merge-indels-with-annotation --variants-file $filtered_file --annotation-file $annotation_file --output-file $merged_file");
+			system("gmt analysis somatic-pipeline merge-indels-with-annotation --variants-file $filtered_file --annotation-file $annotation_file --output-file $merged_file");
 #		}
 
 		$glf_files{$tumor_sample} = $merged_file;

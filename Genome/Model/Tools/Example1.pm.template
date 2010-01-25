@@ -27,11 +27,11 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-gt example1 --bar
-gt example1 --foo=hello
-gt example1 --foo=goodbye --bar
-gt example1 --foo=hello barearg1 barearg2 barearg3
-gt example1 --infiles=a,b,c --outfiles=d,e,f 
+gmt example1 --bar
+gmt example1 --foo=hello
+gmt example1 --foo=goodbye --bar
+gmt example1 --foo=hello barearg1 barearg2 barearg3
+gmt example1 --infiles=a,b,c --outfiles=d,e,f 
 
 EOS
 }
