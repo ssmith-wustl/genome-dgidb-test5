@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Carp;
+use Data::Dumper 'Dumper';
 use File::Path;
 use Regexp::Common;
 use Workflow;
@@ -687,18 +688,24 @@ sub _verify_build_is_not_abandoned_and_set_status_to {
     return $build_event;
 }
 
+# abandon
 sub abandon {
     my $self = shift;
 
-    # Get master event
-    my $master_event = $self->build_event;
-    unless ( $master_event ) { # FIXME really die here? (legacy behavior)
-        die $self->error_message('Cannot abandon build ('.$self->id.') because there is no master event for it.');
-        #return;
-    }
+    # Abandon events
+    $self->_abandon_events
+        or return;
 
-    # Abandon events, then master event
-    my @events = sort { $a->id <=> $b->id } grep { $_->id ne $self->id } $self->events;
+    # Reallocate - always returns true (legacy behavior)
+    $self->reallocate;
+
+    return 1;
+}
+
+sub _abandon_events { # does not realloc
+    my $self = shift;
+
+    my @events = sort { $b->id <=> $a->id } $self->events;
     for my $event ( @events ) {
         unless ( $event->abandon ) {
             $self->error_message(
@@ -711,21 +718,6 @@ sub abandon {
             return;
         }
     }
-
-    # Abandon master event
-    unless ( $master_event->abandon ) { # FIXME really die here? (legacy behavior)
-        die $self->error_message(
-            sprintf(
-                'Failed to abandon build (%s) because could not abandon master event (%s).',
-                $self->id,
-                $master_event->id,
-            )
-        );
-        #return;
-    }
-
-    # Reallocate - always returns true (legacy behavior)
-    $self->reallocate;
 
     return 1;
 }
@@ -1001,6 +993,14 @@ sub add_from_build{
 sub delete {
     my $self = shift;
 
+    # Abandon
+    unless ( $self->_abandon_events ) {
+        $self->error_message(
+            "Unable to delete build (".$self->id.") because the events could not be abandoned"
+        );
+        return;
+    }
+    
     # Delete all associated objects
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
