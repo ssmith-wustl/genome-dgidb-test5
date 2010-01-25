@@ -137,6 +137,11 @@ is(
     'apipe\'s failed reports go to apipe-bulk',
 );
 
+#< DELETE >#
+# set build events status to not abandoned
+for my $e ( @events ) { $e->event_status('Running'); }
+ok($build->delete, 'Deleted build');
+
 exit;
 
 #$HeadURL$

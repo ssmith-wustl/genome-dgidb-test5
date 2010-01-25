@@ -24,7 +24,7 @@ sub valid_param_sets {
     return (
         {
             model_identifier => $_[0]->_model_id,
-            build_method => 'last_succeeded',
+            method => 'last_succeeded',
         },
     );
 }

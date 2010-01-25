@@ -31,7 +31,7 @@ sub valid_param_sets {
     return (
         {
             model_identifier => $model->id,
-            build_method => 'last_succeeded',
+            method => 'last_succeeded',
         },
     );
 }
@@ -40,7 +40,7 @@ sub invalid_param_sets {
     my $model = $_[0]->_model;
     return (
         {
-            build_method => 'invalid',
+            method => 'invalid',
         },
         {
             model_identifier => 'Not a model name',
