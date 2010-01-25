@@ -124,7 +124,7 @@ sub execute {                               # replace with real execution logic.
 		print "Running annotation...\n";
 		
 		my $annotated_file = $formatted_file . ".annotations";
-		$variants_obj = Genome::Model::Tools::Annotate::TranscriptVariants->create(
+		my $variants_obj = Genome::Model::Tools::Annotate::TranscriptVariants->create(
             variant_file => $formatted_file,
             output_file => $annotated_file,
         );
