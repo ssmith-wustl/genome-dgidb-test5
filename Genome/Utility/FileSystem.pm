@@ -683,7 +683,7 @@ END_CONTENT
                         $msg->send();
                         sleep 60 * 60;
                  }
-                     $self->unlock_resource(resource_lock => $resource_lock);
+                     $self->unlock_resource(resource_lock => $resource_lock, force => 1);
                      #maybe warn here before stealing the lock...
                } 
            } 
@@ -697,6 +697,8 @@ END_CONTENT
 sub unlock_resource {
     my ($self,%args) = @_;
     my $resource_lock = delete $args{resource_lock};
+    my $force = delete $args{force};
+
     my ($lock_directory,$resource_id);
     unless ($resource_lock) {
         $lock_directory =  delete $args{lock_directory} || die('Must supply lock_directory to lock resource');
@@ -721,14 +723,15 @@ sub unlock_resource {
     my $my_host = (defined $ENV{'HOSTNAME'} ? $ENV{'HOSTNAME'} : $ENV{'HOST'});
     my $my_job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
 
-    unless ($thost eq $my_host 
-            && $tuser eq $ENV{'USER'} 
-            && $tpid eq $$ 
-            && $tlsf_id eq $my_job_id) {
+    unless ($force) {
+        unless ($thost eq $my_host 
+             && $tuser eq $ENV{'USER'} 
+             && $tpid eq $$ 
+             && $tlsf_id eq $my_job_id) {
         
-        $self->error_message("This lock does not look like it belongs to me.  $basename does not match $thost $tuser $tpid $tlsf_id.");
-        die $self->error_message;
-
+             $self->error_message("This lock does not look like it belongs to me.  $basename does not match $my_host $ENV{'USER'} $$ $my_job_id.");
+             die $self->error_message;
+        }
     }
 
     my $unlink_rv = unlink($resource_lock);
