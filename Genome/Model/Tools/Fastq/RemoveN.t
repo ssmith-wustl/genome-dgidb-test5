@@ -4,26 +4,30 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 2;
-use File::Path;
-use File::Basename;  
-use File::Temp qw/ tempfile /;   
+use Test::More tests => 3;
 use File::Compare;
    
-
-
-
 BEGIN
 {
     use_ok ('Genome::Model::Tools::Fastq::RemoveN');
 }
 
-my $path = "/gsc/var/tmp/fasta/Hmp/illumina/t";
-my $fastq_file      = "$path/contam.fastq";         #input data
-my ($fh, $n_removed_file) = tempfile(UNLINK=>1);    #temporary output file
-my $n_static = "$path/contam.N_REMOVED.static";     #static file for comparison
-my $n_remover = Genome::Model::Tools::Fastq::RemoveN->create(fastq_file     =>  $fastq_file,
-                                                             n_removed_file =>  $n_removed_file,);
+my $path = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-RemoveN/";
+my $fastq_file      = "$path/in.fastq";
+my $n_static        = "$path/expected-out.fastq";
+my $n_removed_file  = Genome::Utility::FileSystem->create_temp_file_path('actual-out.fastq');
 
-my $out = $n_remover->execute;
-ok (compare($n_removed_file,$n_static) == 0, "n remover runs ok");
+eval {
+    Genome::Model::Tools::Fastq::RemoveN->execute(
+        fastq_file     =>  $fastq_file,
+        n_removed_file =>  $n_removed_file
+    );
+};
+is($@, '', "executed without errors");
+
+is(compare($n_removed_file,$n_static),0, "file content from converting $fastq_file to $n_removed_file matches $n_static")
+    or do {
+        diag("diff $n_static $n_removed_file | head:\n" . `diff $n_static $n_removed_file | head`);
+    };
+
+
