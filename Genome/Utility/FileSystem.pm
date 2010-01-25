@@ -605,6 +605,9 @@ sub lock_resource {
     unless (-d $tempdir) {
         die "Failed to create temp lock directory.";
     }
+
+    # make this readable for everyone
+    chmod(0777, $tempdir);
     
     # drop an info file into here for compatibility's sake with old stuff.
     # put a "NOKILL" here on LSF_JOB_ID so an old process doesn't try to snap off the job ID and kill me.
