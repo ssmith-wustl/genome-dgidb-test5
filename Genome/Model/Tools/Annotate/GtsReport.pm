@@ -176,6 +176,7 @@ sub execute {
     }
     if ($output) {
 	print qq(your results have been printed in $output\n);
+	close OUTFILE;
     }
     
 }
@@ -209,6 +210,7 @@ sub write_genomic_prettybase {
 	    }
 	}
     }
+    close GPB;
 }
 
 
@@ -315,6 +317,7 @@ sub run_sift_and_poylphen {
 		
 		$SIFT_Prediction->{$transcript}->{$prot} = "$td $n1 $n2 $n3 $n4";
 	    }
+	    close SIFT;
 	} else {
 	    print qq(no SIFT results were found for $transcript\n);
 	}
@@ -333,6 +336,7 @@ sub run_sift_and_poylphen {
 		my $prot = "$aa1$position$aa2";
 		$PPH_Prediction->{$transcript}->{$prot} = "$prediction $score_delta";
 	    }
+	    close PPH;
 	} else {
 	    print qq(no polyphen results were found for $transcript\n);
 	}
