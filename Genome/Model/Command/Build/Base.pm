@@ -36,13 +36,13 @@ class Genome::Model::Command::Build::Base {
             via => 'model',
             to => 'name,'
         },
-        build_method => {
+        method => {
             is => 'Text',
             default_value => 'current_running',
             valid_values => [qw/ 
             current_running last_succeeded last_complete 
             /],
-            doc => 'If using model identifier, use this method to get the build.',
+            doc => 'If using model identifier, use this "method" to get the build.',
         },
     ],
 };
@@ -119,10 +119,10 @@ sub _resolve_build_for_model_identifier {
 
     $self->_model($model);
 
-    my $method = $self->build_method.'_build';
+    my $method = $self->method.'_build';
     my $build = $model->$method;
     unless ( $build ) {
-        $self->error_message("Got model for identifier ($model_identifier), but could not get a build for method (".$self->build_method.")");
+        $self->error_message("Got model for identifier ($model_identifier), but could not get a build for method (".$self->method.")");
         return;
     }
     
