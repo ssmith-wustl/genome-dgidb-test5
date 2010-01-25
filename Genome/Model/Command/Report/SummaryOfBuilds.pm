@@ -50,7 +50,7 @@ class Genome::Model::Command::Report::SummaryOfBuilds {
         },
         show_additional => {
             is => 'Text',
-            doc => 'Show these properties for each build, in addition to the defaults: build id, model id and . Separate values by commas.',
+            doc => 'Show these properties for each build, in addition to the defaults: model id build id, build status ands date completed. Separate values by commas.',
         },
         # As
         #as => { is => 'Text', doc => 'Use these headers for the properties to be shown for each build. Separate values by commas.', },
@@ -86,9 +86,11 @@ sub execute {
     #print "\n\n$query\n\n";
     
     # Execute the query - put in method to overload in test
-    my $rows = $self->_selectall_arrayref($query)
-        or return;
-    return 1 unless @$rows; # FIXME ok, but handle better??
+    my $rows = $self->_selectall_arrayref($query);
+    unless ( @$rows ) {
+        print 'No models found for '.$self->_descript1ion.".\n";
+        return 1;
+    }
 
     # Most recent build? Remove the older ones 
     if ( $self->most_recent_build_only ) {
