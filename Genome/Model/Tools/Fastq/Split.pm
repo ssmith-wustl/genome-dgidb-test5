@@ -39,12 +39,11 @@ EOS
 sub execute {
     my $self = shift;
 
-    my @suffix = qw(txt fastq);
+    my @suffix = qw/\.txt \.fastq/;
     my ($fastq_basename,$fastq_dirname,$fastq_suffix) = File::Basename::fileparse($self->fastq_file,@suffix);
     unless ($fastq_basename && $fastq_dirname && $fastq_suffix) {
         die('Failed to parse fastq file name '. $self->fastq_file);
     }
-    $fastq_basename =~ s/\.$//;
     unless (Genome::Utility::FileSystem->validate_directory_for_read_write_access($fastq_dirname)) {
         $self->error_message('Failed to validate directory '. $fastq_dirname ." for read/write access:  $!");
         die($self->error_message);
@@ -53,14 +52,14 @@ sub execute {
     my $cwd = getcwd;
     my $tmp_dir = $self->output_directory or Genome::Utility::FileSystem->base_temp_directory;
     chdir($tmp_dir);
-    my $cmd = 'split -l '. $self->sequences * 4 .' -a 3 -d '. $self->fastq_file .' '. $fastq_basename;
+    my $cmd = 'split -l '. $self->sequences * 4 .' -a 5 -d '. $self->fastq_file .' '. $fastq_basename.'-';
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
         input_files => [$self->fastq_file],
     );
     
     #If more than one lane processed in the same output_directory, this becomes a problem
-    my @tmp_fastqs = grep { $_ !~ /\.$fastq_suffix$/ } grep { /$fastq_basename\d+$/ } glob($fastq_basename.'*');
+    my @tmp_fastqs = grep { $_ !~ /\.$fastq_suffix$/ } grep { /$fastq_basename-\d+$/ } glob($fastq_basename.'*');
     my @fastq_files;
 
     # User should provide a directory as input, then we can keep output fastqs on tmp
@@ -68,7 +67,7 @@ sub execute {
     # However, by default write fastqs to the source fastq file dir
     my $output_dir = $self->output_directory || $fastq_dirname;
     for my $tmp_fastq (@tmp_fastqs){
-        my $fastq_file = $output_dir .'/'. $tmp_fastq .'.'. $fastq_suffix;
+        my $fastq_file = $output_dir .'/'. $tmp_fastq . $fastq_suffix;
         unless (move($tmp_fastq,$fastq_file,) ) {
             die('Failed to move file '. $tmp_fastq .' to '. $fastq_file .":  $!");
         }
