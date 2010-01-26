@@ -71,7 +71,7 @@ sub execute {
     my ($unaligned_reads_file1, $unaligned_reads_file2)  = ($dir . "/$base1.UNALIGNED1.sam", $dir . "/$base2.UNALIGNED2.sam");
     my ($alignment_file1, $alignment_file2) = ($dir . "/$base1.ALIGNED1.fasta",  $dir . "/$base2.ALIGNED2.fasta"); 
     my ($deduplicated_file1, $deduplicated_file2) = ($dir . "/$base1.DEDUP1.sam", $dir . "/$base2.DEDUP2.sam");
-    my $ref_seq_file = "/gsc/var/tmp/fasta/Hmp/db/human36/all_sequences.fa";
+    my $ref_seq_file = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-ContaminationScreen-Hmp-Illumina/all_sequences.fa";
     my $align_options = '-t 4 -n 8';
     my ($n_removed_file1, $n_removed_file2)  =  ($dir . "/$base1.N_REMOVED1.fastq", $dir . "/$base2.N_REMOVED2.fastq");
     my ($paired_end_file1,  $paired_end_file2) = ($dir . "/$base1.PAIRED_REMOVED1.sam", $dir . "/$base2.PAIRED_REMOVED2.sam");

@@ -5,17 +5,15 @@ use warnings;
 
 use above 'Genome';
 
-#use Test::More skip_all => 'related files not in place yet...';
 use Test::More tests => 5; 
 
 BEGIN {
     use_ok('Genome::Model::Tools::BacterialContaminationScreen');
 }
 
-my $path = "/gsc/var/tmp/bcs";
-
+my $path = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-BacterialContaminationScreen";
 my $input_file = "$path/bcs_input.txt";  
-my $output_file = "$path/bcs_output.txt";  
+my $output_file = Genome::Utility::FileSystem->create_temp_file_path("bcs_output.txt"); 
 my $output_expected_file = "$path/bcs_output_expected.txt";
 
 my $batch_screen = Genome::Model::Tools::BacterialContaminationScreen->create(

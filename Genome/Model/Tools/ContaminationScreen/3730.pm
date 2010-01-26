@@ -48,24 +48,6 @@ sub execute
                                         $self->summary_file ? $self->summary_file : $input_file . '.summary');
     my $parse_script = '/gscmnt/233/analysis/sequence_analysis/scripts/parse_blast_results_fullgroup_percid_fractionoflength.pl';
 
-#    my $wu_blast =  Genome::Model::Tools::WuBlast::Blastn->create(
-#                                                                    database   => $self->database,
-#                                                                    query_file => $self->input_file', 
-#                                                                    output_file=> $read_file,
-#                                                                    M => 1, 
-#                                                                    N => -3,
-#                                                                    R => 3,
-#                                                                    Q => 3,
-#                                                                    wordmask=seg lcmask,
-#                                                                    topcomboN=1,
-#                                                                    hspsepsmax=10,
-#                                                                    golmax=0,
-#                                                                    B=1,
-#                                                                    V=1,
-#                                                                    novalidctxok,
-#                                                                );
-
-
     #create read file
     my $cmd = 'blastn ' . $self->database . ' ' . $input_file . ' M=1 N=-3 R=3 Q=3 wordmask=seg lcmask topcomboN=1 hspsepsmax=10 golmax=0 B=1 V=1 novalidctxok >  ' . $read_file; 
     $self->status_message('Running: '. $cmd);

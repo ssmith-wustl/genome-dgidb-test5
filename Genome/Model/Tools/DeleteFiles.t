@@ -8,7 +8,7 @@ use Test::More tests => 7;
 
 BEGIN {use_ok('Genome::Model::Tools::DeleteFiles');}
 
-my ($dir, $file_count) = ('/gsc/var/tmp/fasta/t/', 5);
+my ($dir, $file_count) = (Genome::Utility::FileSystem->create_temp_directory, 5);
 
 my @files;
 
@@ -29,8 +29,5 @@ ok($delete_files->execute, "deleting files");
 foreach my $file(@files)
 {
     ok(!(-e $file), "$file was successfully deleted");
-    #my $val = eval(-e $file);
-    #print "$file exists:  " . $val . "\n";
-    #cmp_ok(-e $file, 'eq', 'true', "$file was successfully deleted");
 }
 
