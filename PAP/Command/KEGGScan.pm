@@ -60,7 +60,7 @@ operation PAP::Command::KEGGScan {
     input        => [ 'fasta_file', 'report_save_dir' ],
     output       => [ 'bio_seq_feature' ],
     lsf_queue    => 'long',
-    lsf_resource => '-R "select[mem>8192,type=LINUX64] rusage[mem=8192,tmp=100]" -M 8192000',
+    lsf_resource => '-R "select[mem>8192,type==LINUX64] rusage[mem=8192,tmp=100]" -M 8192000',
 };
 
 sub sub_command_sort_position { 10 }
