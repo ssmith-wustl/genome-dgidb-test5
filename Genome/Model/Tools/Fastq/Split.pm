@@ -57,9 +57,9 @@ sub execute {
         cmd => $cmd,
         input_files => [$self->fastq_file],
     );
-    
+    chdir($cwd);
     #If more than one lane processed in the same output_directory, this becomes a problem
-    my @tmp_fastqs = grep { $_ !~ /\.$fastq_suffix$/ } grep { /$fastq_basename-\d+$/ } glob($fastq_basename.'*');
+    my @tmp_fastqs = grep { $_ !~ /\.$fastq_suffix$/ } grep { /$fastq_basename-\d+$/ } glob($tmp_dir .'/'. $fastq_basename.'*');
     my @fastq_files;
 
     # User should provide a directory as input, then we can keep output fastqs on tmp
@@ -67,20 +67,15 @@ sub execute {
     # However, by default write fastqs to the source fastq file dir
     my $output_dir = $self->output_directory || $fastq_dirname;
 
-    # Now that we have actually changed directories, things get crazy here depending on the defined output_directory
-    # Since fully qualified paths may not be provided, then this will drop directories in unexpected locations
-    # If the directory we are in and the output directory are the same, remove the directory prefix all together
-    if ($tmp_dir eq $output_dir) {
-        $output_dir = '.';
-    }
     for my $tmp_fastq (@tmp_fastqs){
-        my $fastq_file = $output_dir .'/'. $tmp_fastq . $fastq_suffix;
+        my ($tmp_fastq_basename,$tmp_fastq_dirname) = File::Basename::fileparse($tmp_fastq);
+        my $fastq_file = $output_dir .'/'. $tmp_fastq_basename . $fastq_suffix;
         unless (move($tmp_fastq,$fastq_file,) ) {
             die('Failed to move file '. $tmp_fastq .' to '. $fastq_file .":  $!");
         }
         push @fastq_files, $fastq_file;
     }
-    chdir($cwd);
+    
     $self->fastq_files(\@fastq_files);
     return 1;
 }
