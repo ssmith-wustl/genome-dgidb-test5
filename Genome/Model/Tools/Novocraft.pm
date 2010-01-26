@@ -6,10 +6,18 @@ use warnings;
 use Genome;
 use File::Basename;
 
+my $DEFAULT_VERSION = '2.05.20';
+
 class Genome::Model::Tools::Novocraft {
     is => 'Command',
+    has_param => [
+        use_version => {
+            is => 'Version',
+            default_value => $DEFAULT_VERSION,
+            doc => 'Version of novocraft to use. default_value='. $DEFAULT_VERSION,
+        },
+    ],
     has => [
-        use_version => { is => 'Version', is_optional => 1, default_value => '0.6.3', doc => "Version of novocraft to use" },
         arch_os => {
                     calculate => q|
                             my $arch_os = `uname -m`;
@@ -39,12 +47,24 @@ More information about the novocraft suite of tools can be found at http://novoc
 EOS
 }
 
+sub novoindex_path {
+    my $self = shift;
+    return $self->novocraft_path .'/novoindex';
+}
+
+sub novoalign_path {
+    my $self = shift;
+    return $self->novocraft_path .'/novoalign';
+}
+
 sub novocraft_path {
     my $self = $_[0];
     return $self->path_for_novocraft_version($self->use_version);
 }
 my %NOVOCRAFT_VERSIONS = (
-                    '2.03.12' => '/gsc/pkg/bio/novocraft/novocraft-2.03.12/novoalign',
+                    '2.03.12' => '/gsc/pkg/bio/novocraft/novocraft-2.03.12',
+                    '2.04.02' => '/gsc/pkg/bio/novocraft/novocraft-2.04.02',
+                    '2.05.20' => '/gsc/pkg/bio/novocraft/novocraft-2.05.20',
                     'novocraft'   => 'novoalign',
                 );
 
