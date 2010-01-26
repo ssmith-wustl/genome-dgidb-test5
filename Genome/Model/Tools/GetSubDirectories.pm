@@ -8,7 +8,7 @@ use Workflow;
 use IO::File;
 
 class Genome::Model::Tools::GetSubDirectories{
-    is => 'Genome::Model::Tools',
+    is => 'Command',
     has => [
         dir => {is => 'String', doc => 'path for parent directory', is_input => 1,},
     ] ,

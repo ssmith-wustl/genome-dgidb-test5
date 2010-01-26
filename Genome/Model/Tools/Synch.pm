@@ -11,7 +11,7 @@ use Bio::SeqIO;
 
 class Genome::Model::Tools::Synch
 {
-    is => 'Genome::Model::Tools',
+    is => 'Command',
     has_input => [
             name1=> {
                                     doc => 'first sam file',

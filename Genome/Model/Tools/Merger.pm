@@ -15,7 +15,7 @@ use File::Temp;
 
 
 class Genome::Model::Tools::Merger {
-    is  => ['Genome::Model::Tools'],
+    is  => ['Command'],
     has_input => [  
         merged_file => { is => 'String',  doc => 'file merged chunks are written to' },
         file_chunks => { is => 'ARRAY',   doc => 'array of fasta file names', is_optional => 0 },

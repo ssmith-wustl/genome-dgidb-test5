@@ -11,7 +11,7 @@ use Workflow;
 use English;
 
 class Genome::Model::Tools::DeleteFiles {
-    is  => ['Genome::Model::Tools'],
+    is  => ['Command'],
     has_input => [
         files => { is => 'ARRAY', doc => 'array of files to delete' },
     ],
