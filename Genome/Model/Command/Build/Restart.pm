@@ -23,8 +23,12 @@ class Genome::Model::Command::Build::Restart {
 
 sub sub_command_sort_position { 5 }
 
-sub help_detail {
+sub help_brief {
     "Restart a builds master job on a blade";
+}
+
+sub help_detail {
+    return help_brief();
 }
 
 sub execute {
