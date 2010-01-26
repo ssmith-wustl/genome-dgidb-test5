@@ -66,6 +66,13 @@ sub execute {
     # and distribute bfqs in a downstream process
     # However, by default write fastqs to the source fastq file dir
     my $output_dir = $self->output_directory || $fastq_dirname;
+
+    # Now that we have actually changed directories, things get crazy here depending on the defined output_directory
+    # Since fully qualified paths may not be provided, then this will drop directories in unexpected locations
+    # If the directory we are in and the output directory are the same, remove the directory prefix all together
+    if ($tmp_dir eq $output_dir) {
+        $output_dir = '.';
+    }
     for my $tmp_fastq (@tmp_fastqs){
         my $fastq_file = $output_dir .'/'. $tmp_fastq . $fastq_suffix;
         unless (move($tmp_fastq,$fastq_file,) ) {
