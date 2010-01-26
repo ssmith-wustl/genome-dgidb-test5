@@ -22,6 +22,7 @@ my @SUB_COMMANDS = qw/
     instrument-data       
     processing-profile     
     model                  
+    model-group
     tools
     disk
     report
