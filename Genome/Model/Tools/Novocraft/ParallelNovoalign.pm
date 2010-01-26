@@ -7,6 +7,9 @@ use Genome;
 use Workflow;
 
 my $DEFAULT_SEQUENCES = 1_000_000;
+my $DEFAULT_LSF_QUEUE = 'long';
+my $DEFAULT_LSF_RESOURCE = "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000] span[hosts=1]'";
+## number of threads will be prepended at run time
 
 class Genome::Model::Tools::Novocraft::ParallelNovoalign {
     is  => ['Workflow::Operation::Command'],
@@ -19,6 +22,14 @@ class Genome::Model::Tools::Novocraft::ParallelNovoalign {
         return $rmapper;
     },
     has_optional => [
+        lsf_queue => {
+            doc => 'The lsf queue to use. default_value='. $DEFAULT_LSF_QUEUE,
+            default_value => $DEFAULT_LSF_QUEUE,
+        },
+        lsf_resource => {
+            doc => 'The lsf resource request necessary to execute.  default_value='. $DEFAULT_LSF_RESOURCE,
+            default_value => $DEFAULT_LSF_RESOURCE,
+        },
         sequences => {
             is => 'Number',
             doc => 'The number of sequences(paired or fragment) to include in each instance. default_value='. $DEFAULT_SEQUENCES,
@@ -45,15 +56,14 @@ sub pre_execute {
         $self->output_format(Genome::Model::Tools::Novocraft::Novoalign->default_output_format);
     }
 
-    unless ($self->lsf_queue) {
-        $self->lsf_queue(Genome::Model::Tools::Novocraft::Novoalign->default_lsf_queue);
-    }
-    unless ($self->lsf_resource) {
-        $self->lsf_resource(Genome::Model::Tools::Novocraft::Novoalign->default_lsf_resource);
-    }
     unless ($self->threads) {
         $self->threads(Genome::Model::Tools::Novocraft::Novoalign->default_threads);
     }
+    $self->lsf_resource('-n ' . $self->threads . ' ' . $self->lsf_resource);
+
+    $self->_operation->operation_type->lsf_resource($self->lsf_resource);
+    $self->_operation->operation_type->lsf_queue($self->lsf_queue);
+
     if (ref($self->fastq_files) ne 'ARRAY') {
         my @fastq_files = split(/\s+/,$self->fastq_files);
         $self->fastq_files(\@fastq_files);
@@ -65,6 +75,8 @@ sub pre_execute {
     my $template = $self->output_directory .'/Genome-Model-Tools-Novocraft-ParallelNovoalign-'. $ENV{'USER'} .'-XXXXX';
     my $tempdir = Genome::Utility::FileSystem->base_temp_directory($template);
     $self->output_directory($tempdir);
+
+    $self->_operation->log_dir($self->output_directory);
     my @output_basenames;
     my @sub_fastqs;
     for my $fastq_file (@fastq_files) {

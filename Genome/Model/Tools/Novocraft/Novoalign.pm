@@ -8,8 +8,6 @@ use Genome;
 my $DEFAULT_OUTPUT_FORMAT = 'SAM';
 my $DEFAULT_INPUT_FORMAT = 'ILMFQ';
 my $DEFAULT_THREADS = 4;
-my $DEFAULT_LSF_QUEUE = 'long';
-my $DEFAULT_LSF_RESOURCE = "-n $DEFAULT_THREADS -M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000] span[hosts=1]'";
 
 class Genome::Model::Tools::Novocraft::Novoalign {
     is => 'Genome::Model::Tools::Novocraft',
@@ -41,16 +39,6 @@ class Genome::Model::Tools::Novocraft::Novoalign {
             valid_values => ['Native', 'Pairwise','SAM'],
             default_value => $DEFAULT_OUTPUT_FORMAT,
             doc => 'The output format for alignment files. default_value='. $DEFAULT_OUTPUT_FORMAT,
-        },
-        lsf_queue => {
-            is_optional => 1,
-            doc => 'When run in parallel, the lsf queue to use. default_value='. $DEFAULT_LSF_QUEUE,
-            default_value => $DEFAULT_LSF_QUEUE,
-        },
-        lsf_resource => {
-            is_optional => 1,
-            doc => 'When run in parallel, the lsf resource request necessary to execute.  default_value='. $DEFAULT_LSF_RESOURCE,
-            default_value => $DEFAULT_LSF_RESOURCE,
         },
         threads => {
             is_optional => 1,
@@ -84,16 +72,6 @@ sub default_input_format {
 sub default_output_format {
     my $class = shift;
     return $DEFAULT_OUTPUT_FORMAT;
-}
-
-sub default_lsf_resource {
-    my $class = shift;
-    return $DEFAULT_LSF_RESOURCE;
-}
-
-sub default_lsf_queue {
-    my $class = shift;
-    return $DEFAULT_LSF_QUEUE;
 }
 
 sub default_threads {
