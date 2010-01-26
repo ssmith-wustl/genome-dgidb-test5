@@ -86,8 +86,10 @@ sub execute {
     }
     binmode $p2_in_fh, ":utf8";
     
-    my $p1_filter_file = $out_dir . "/$p1_base_name.trimq2.filtered.fastq";
-    my $p2_filter_file = $out_dir . "/$p2_base_name.trimq2.filtered.fastq";
+    #my $p1_filter_file = $out_dir . "/$p1_base_name.trimq2.filtered.fastq";
+    #my $p2_filter_file = $out_dir . "/$p2_base_name.trimq2.filtered.fastq";
+    my $pair_filter_file = $out_dir . '/trimq2.pair_end.filtered.fastq'; 
+    my $frag_filter_file = $out_dir . '/trimq2.pair_as_fragment.filtered.fastq';
 
     my $p1_out_file = $self->pair1_out_file || $out_dir ."/$p1_base_name.trimq2.fastq";
     my $p2_out_file = $self->pair2_out_file || $out_dir ."/$p2_base_name.trimq2.fastq";
@@ -109,19 +111,19 @@ sub execute {
     }
     binmode $p2_out_fh, ":utf8";
 
-    my $p1_filter_fh = Genome::Utility::FileSystem->open_file_for_writing($p1_filter_file);
-    unless ($p1_filter_fh) {
-        $self->error_message('Failed to open filtered file '. $p1_filter_file . ": $!");
+    my $pair_filter_fh = Genome::Utility::FileSystem->open_file_for_writing($pair_filter_file);
+    unless ($pair_filter_fh) {
+        $self->error_message('Failed to open filtered file '. $pair_filter_file . ": $!");
         return;
     }
-    binmode $p1_filter_fh, ":utf8";
+    binmode $pair_filter_fh, ":utf8";
 
-    my $p2_filter_fh = Genome::Utility::FileSystem->open_file_for_writing($p2_filter_file);
-    unless ($p2_filter_fh) {
-        $self->error_message('Failed to open filtered file '. $p2_filter_file . ": $!");
+    my $frag_filter_fh = Genome::Utility::FileSystem->open_file_for_writing($frag_filter_file);
+    unless ($frag_filter_fh) {
+        $self->error_message('Failed to open filtered file '. $frag_filter_file . ": $!");
         return;
     }
-    binmode $p2_filter_fh, ":utf8";
+    binmode $frag_filter_fh, ":utf8";
 
     my $report = $out_dir . '/trimq2.report';
     if (-e $report) {
@@ -227,7 +229,7 @@ sub execute {
                     $rd_trim_ct += 2;
                 }
                 else {
-                    $p2_filter_fh->print($p2_header, $seq2, $sep2, $qual2);
+                    $frag_filter_fh->print($p2_header, $seq2, $sep2, $qual2);
                     $report_fh->print($clean_header2."\tF\t".$seq_length2."\n");  #In report F for filtered
                     $filter_ct += $seq_length2;
                     $rd_filter_ct++;  
@@ -241,12 +243,13 @@ sub execute {
                 }
             }
             else {
-                $p1_filter_fh->print($p1_header, $seq1, $sep1, $qual1);
+                #$p1_filter_fh->print($p1_header, $seq1, $sep1, $qual1);
                 $report_fh->print($clean_header1."\tF\t".$seq_length1."\n");  #In report F for filtered
                 $filter_ct += $seq_length1;
                 $rd_filter_ct++;  
 
                 if ($trim_length2 >= $self->length_limit) {
+                    $frag_filter_fh->print($p1_header, $seq1, $sep1, $qual1);
                     my $trimmed_length2 = $seq_length2 - $trim_length2;
                     
                     $frag_fh->print($p2_header, substr($seq2, 0, $trim_length2)."\n", $sep2, $trim_qual2."\n"); 
@@ -256,8 +259,9 @@ sub execute {
                     $trim_ct += $trimmed_length2;
                     $rd_trim_ct++;
                 }
-                else {            
-                    $p2_filter_fh->print($p2_header, $seq2, $sep2, $qual2);
+                else {
+                    $pair_filter_fh->print($p1_header, $seq1, $sep1, $qual1);
+                    $pair_filter_fh->print($p2_header, $seq2, $sep2, $qual2);
                     $report_fh->print($clean_header2."\tF\t".$seq_length2."\n");  #In report F for filtered
                     $filter_ct += $seq_length2;
                     $rd_filter_ct++;  
@@ -279,7 +283,7 @@ sub execute {
                 $p2_out_fh->print($p2_header, $seq2, $sep2, $qual2);
             }
             else {
-                $p1_filter_fh->print($p1_header, $seq1, $sep1, $qual1);
+                $frag_filter_fh->print($p1_header, $seq1, $sep1, $qual1);
                 $report_fh->print($clean_header1."\tF\t".$seq_length1."\n");  #In report F for filtered
                 $filter_ct += $seq_length1;
                 $rd_filter_ct++;
@@ -304,7 +308,7 @@ sub execute {
                 $p1_out_fh->print($p1_header, $seq1, $sep1, $qual1);
             }
             else {
-                $p2_filter_fh->print($p2_header, $seq2, $sep2, $qual2);
+                $frag_filter_fh->print($p2_header, $seq2, $sep2, $qual2);
                 $report_fh->print($clean_header2."\tF\t".$seq_length2."\n");  #In report F for filtered
                 $filter_ct += $seq_length2;
                 $rd_filter_ct++;
@@ -325,8 +329,8 @@ sub execute {
     $p2_in_fh->close;
     $p1_out_fh->close;
     $p2_out_fh->close;
-    $p1_filter_fh->close;
-    $p2_filter_fh->close;
+    $pair_filter_fh->close;
+    $frag_filter_fh->close;
 
     $report_fh->print("\nSummary:\n");
     my $rd_new_ct  = $rd_ori_ct - $rd_filter_ct;

@@ -49,7 +49,7 @@ sub execute {
 
     $out_dir ||= $base_dir;
     
-    my $filter_file= $out_dir . "/$base_name.trimq2.filtered.fastq";
+    my $filter_file= $out_dir . "/trimq2.fragment.filtered.fastq";
     my $out_file   = $self->out_file || $out_dir."/$base_name.trimq2.fastq";
 
     $self->out_file($out_file);
