@@ -11,8 +11,12 @@ class Genome::Model::Command::Build::Abandon {
 
 sub sub_command_sort_position { 5 }
 
+sub help_brief {
+    return "Abandon a build and it's events";
+}
+
 sub help_detail {
-    "Abandon a build and it's events";
+    return help_brief();
 }
 
 sub execute {
