@@ -29,16 +29,6 @@ sub execute {
        return;
     }
 
-    my $bam_merged_output_file = $self->build->whole_rmdup_bam_file; 
-    if (-e $bam_merged_output_file) {
-        $self->status_message("A merged and rmdup'd bam file has been found at: $bam_merged_output_file");
-        $self->status_message("If you would like to regenerate this file, please delete it and rerun.");
-        $now = UR::Time->now;
-        $self->status_message("Skipping the rest of DeduplicateLibraries::Picard at $now");
-        $self->status_message("*** All processes skipped. ***");
-        return 1;
-    } 
-
     #get the instrument data assignments
     my @bam_files;
     my @idas = $self->build->instrument_data_assignments;
@@ -55,6 +45,35 @@ sub execute {
         push(@bam_files, @bam_file);
     } 
     $self->status_message("Collected files for merge and dedup: ".join("\n",@bam_files));
+    
+    my $bam_merged_output_file = $self->build->whole_rmdup_bam_file; 
+    
+    #Check if we already have a complete merged and rmdup'd bam
+    if (-e $bam_merged_output_file) {
+        $self->status_message("A merged and rmdup'd bam file has been found at: $bam_merged_output_file");
+        
+        $self->status_message("Checking that merged and rmdup'd bam contains expected alignment count.");
+        my $individual_flagstat_total = 0;
+        for my $bam_file (@bam_files) {
+            $individual_flagstat_total += $self->_bam_flagstat_total($bam_file);
+        }
+        
+        my $dedup_flagstat_total = $self->_bam_flagstat_total($bam_merged_output_file);
+        
+        #$self->status_message("If you would like to regenerate this file, please delete it and rerun.");
+        $now = UR::Time->now;
+        
+        if($dedup_flagstat_total eq $individual_flagstat_total) {
+            $self->status_message("Count matches sum of individual BAMs.");
+            $self->status_message("Skipping the rest of DeduplicateLibraries::Picard at $now");
+            $self->status_message("*** All processes skipped. ***");
+            return 1;
+        } else {
+            $self->status_message("The found merged and rmdup'd bam file appears incomplete.  Deleting and regenerating.");
+            unlink($bam_merged_output_file);
+        }
+
+    }    
 
     if (scalar @bam_files == 1 and $self->model->read_aligner_name =~ /^Imported$/i) {
         $self->status_message('Get 1 imported bam '.$bam_files[0]);
