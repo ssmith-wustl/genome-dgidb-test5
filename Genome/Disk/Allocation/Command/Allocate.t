@@ -28,7 +28,7 @@ my $known_base_filename = 'allocation_test_file.dat';
 my $known_file = '/gsc/var/cache/testsuite/data/Genome-Disk-Allocation/'. $known_base_filename;
 
 my $fake_mount_path = '/incorrect/mount/path';
-my $allocation_path = '/testing/allocate';
+my $allocation_path = '/medseq/testing/allocate';
 
 
 my $mock_model = Genome::Model::Test->create_mock_model(
@@ -89,7 +89,7 @@ eval {
 isa_ok($allocation,'Genome::Disk::Allocation::Command::Allocate');
 is($allocation->disk_group_name,'info_apipe','got the default disk_group_name');
 isa_ok($allocation->get_disk_group,'Genome::Disk::Group','got the default disk group object');
-is($allocation->get_disk_group->subdirectory,'info/medseq','got the default group_subdirectory');
+is($allocation->get_disk_group->subdirectory,'info','got the default group_subdirectory');
 
 my $allocator = $allocation->allocator;
 isa_ok($allocator,'GSC::PSE::AllocateDiskSpace');
