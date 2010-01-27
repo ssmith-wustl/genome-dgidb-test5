@@ -9,7 +9,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More 'no_plan';
+use Test::More tests => 42; 
 require Genome::Model::Test;
 
 BEGIN {
