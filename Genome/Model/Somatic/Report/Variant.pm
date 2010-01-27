@@ -1,4 +1,4 @@
-package Genome::Model::SomaticCapture::Report::Variant;
+package Genome::Model::Somatic::Report::Variant;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Path::Class::Dir;
 
-class Genome::Model::SomaticCapture::Report::Variant {
+class Genome::Model::Somatic::Report::Variant {
     is => 'Genome::Model::Report',
 };
 
