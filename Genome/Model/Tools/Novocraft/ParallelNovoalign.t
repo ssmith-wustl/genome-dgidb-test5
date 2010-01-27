@@ -19,8 +19,8 @@ my $expected_output = 2;
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Novocraft/Novoalign';
 my $ref_seq = '/gscmnt/839/info/medseq/reference_sequences/human-novoalign-reference-test/all_sequences_k14_s3';
 
-my $fragment_fastq_file = $test_data_dir .'/fragment.txt';
-my $pe_fastq_files = $test_data_dir .'/s_1_1_sequence.txt '. $test_data_dir .'/s_1_2_sequence.txt';
+my $fragment_fastq_file = $test_data_dir .'/fragment_100.txt';
+my $pe_fastq_files = $test_data_dir .'/s_1_1_sequence_100.txt '. $test_data_dir .'/s_1_2_sequence_100.txt';
 
 my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Novocraft-ParallelNovoalign-XXXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => $CLEANUP);
 
@@ -30,7 +30,7 @@ my $mapper = Genome::Model::Tools::Novocraft::ParallelNovoalign->create(
     novoindex_file => $ref_seq,
     fastq_files => $fragment_fastq_file,
     lsf_queue => 'short',
-    sequences => 250,
+    sequences => 25,
 );
 isa_ok($mapper,'Genome::Model::Tools::Novocraft::ParallelNovoalign');
 ok($mapper->execute,'execute command '. $mapper->command_name);
@@ -44,7 +44,7 @@ my $pe_mapper = Genome::Model::Tools::Novocraft::ParallelNovoalign->create(
     novoindex_file => $ref_seq,
     fastq_files => $pe_fastq_files,
     lsf_queue => 'short',
-    sequences => 250,
+    sequences => 25,
 );
 isa_ok($pe_mapper,'Genome::Model::Tools::Novocraft::ParallelNovoalign');
 ok($pe_mapper->execute,'execute command '. $pe_mapper->command_name);
