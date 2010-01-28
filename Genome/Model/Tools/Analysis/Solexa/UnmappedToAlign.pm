@@ -24,8 +24,8 @@ my $lsf_queue = "long";
 my $bsub_cmd = "bsub -q $lsf_queue -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000] span[hosts=1]\" -n $num_cores -M 8000000";
 my $novoalign_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.05.13";
 my $path_to_novoalign = "/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.13/novocraft/novoalign";
-my $novoalign_params = "-c $num_cores -a -l 36 -t 240 -k -s 5 -d $novoalign_reference"; #-o SAM 
-
+#my $novoalign_params = "-c $num_cores -a -l 36 -t 240 -k -s 5 -d $novoalign_reference"; #-o SAM 
+my $novoalign_params = "-c $num_cores -a -l 50 -t 240 -k -d $novoalign_reference"; #-o SAM 
 
 
 
@@ -87,19 +87,19 @@ sub execute {                               # replace with real execution logic.
 	my $alignment_output_dir = $output_dir . "/" . $aligner . "_out";
 	mkdir($alignment_output_dir) if(!(-d $alignment_output_dir));
 	
-	my $unmapped_pair_out = $alignment_output_dir . "/" . $name . "_sequence.pe.unmapped.$aligner";
-	my $unmapped_pair1_out = $alignment_output_dir . "/" . $name . "_sequence.pair1.unmapped.$aligner";
-	my $unmapped_pair2_out = $alignment_output_dir . "/" . $name . "_sequence.pair2.unmapped.$aligner";
-	my $unmapped_frag1_out = $alignment_output_dir . "/" . $name . "_1_sequence.unmapped.$aligner";
-	my $unmapped_frag2_out = $alignment_output_dir . "/" . $name . "_2_sequence.unmapped.$aligner";
-	my $unmapped_single_out = $alignment_output_dir . "/" . $name . "_sequence.unmapped.$aligner";
+	my $unmapped_pair_out = $alignment_output_dir . "/" . $name . "noTrim_sequence.pe.unmapped.$aligner";
+	my $unmapped_pair1_out = $alignment_output_dir . "/" . $name . "noTrim_sequence.read1.unmapped.$aligner";
+	my $unmapped_pair2_out = $alignment_output_dir . "/" . $name . "noTrim_sequence.read2.unmapped.$aligner";
+	my $unmapped_frag1_out = $alignment_output_dir . "/" . $name . "noTrim_sequence.frag1.unmapped.$aligner";
+	my $unmapped_frag2_out = $alignment_output_dir . "/" . $name . "noTrim_sequence.frag2.unmapped.$aligner";
+	my $unmapped_single_out = $alignment_output_dir . "/" . $name . "noTrim_sequence.single.unmapped.$aligner";
 
 	## check for existence and size of files ##
 	
 	if(check_fastq($unmapped_pair_read1) && check_fastq($unmapped_pair_read2))
 	{
 		## Run Paired-end Alignment ##
-		my $cmd = "$path_to_novoalign $novoalign_params -f $unmapped_pair_read1 $unmapped_pair_read2 >$unmapped_pair_out";
+		my $cmd = "$path_to_novoalign $novoalign_params -i 250 100 -f $unmapped_pair_read1 $unmapped_pair_read2 >$unmapped_pair_out";
 		print "$unmapped_pair_out\n";
 		system("$bsub_cmd -oo $unmapped_pair_out.log \"$cmd\"");		
 

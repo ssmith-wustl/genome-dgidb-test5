@@ -26,7 +26,8 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
 		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 0, is_input => 1 },
-		min_depth	=> { is => 'Text', doc => "Minimum depth to include a variant call [4]", is_optional => 1, is_input => 1}
+		min_depth	=> { is => 'Text', doc => "Minimum depth to include a variant call [4]", is_optional => 1, is_input => 1},
+		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1}
 	],
 };
 
@@ -76,6 +77,8 @@ sub execute {                               # replace with real execution logic.
 	my $input = new FileHandle ($variant_file);
 	my $lineCounter = 0;
 
+	my $file_type = "samtools";
+
 	while (<$input>)
 	{
 		chomp;
@@ -87,66 +90,109 @@ sub execute {                               # replace with real execution logic.
 		my $position = $lineContents[1];
 		my $ref_base = $lineContents[2];
 		my $cns_call = $lineContents[3];
-		my $depth = $lineContents[7];
-
-		if($ref_base ne "*" && $ref_base ne $cns_call)
+		
+		my $depth = 0;
+		
+		if(lc($chrom) =~ "chrom")
 		{
-			$stats{'num_snps'}++;
-
-			if($depth >= $min_depth)
+			## Ignore header ##
+			$file_type = "varscan";
+		}
+		else
+		{
+			if($lineContents[6] && $lineContents[6] =~ '%')
 			{
-				$stats{'num_min_depth'}++;
-				
-				my $key = "$chrom\t$position";
-				
-				if($genotypes{$key})
-				{
-					$stats{'num_with_genotype'}++;
-					
-					my $chip_gt = sort_genotype($genotypes{$key});
-					my $ref_gt = code_to_genotype($ref_base);
-					my $cons_gt = code_to_genotype($cns_call);
+				$file_type = "varscan";
+			}
 
-					if($chip_gt eq $ref_gt)
+			## Get depth ##
+			
+			if($file_type eq "varscan")
+			{
+				$depth = $lineContents[4] + $lineContents[5];
+			}
+			else
+			{
+				$depth = $lineContents[7];			
+			}
+	
+			## Only check SNP calls ##
+	
+			if($ref_base ne $cns_call && $ref_base ne "*" && length($ref_base) == 1 && length($cns_call) == 1)
+			{
+				$stats{'num_snps'}++;
+	
+				if($depth >= $min_depth)
+				{
+					$stats{'num_min_depth'}++;
+					
+					my $key = "$chrom\t$position";
+					
+					if($genotypes{$key})
 					{
-						$stats{'num_chip_was_reference'}++;
+						$stats{'num_with_genotype'}++;
 						
-					}
-					elsif($chip_gt ne $ref_gt)
-					{
-						$stats{'num_with_variant'}++;
-						
-						if(is_homozygous($chip_gt))
+						my $chip_gt = sort_genotype($genotypes{$key});
+						my $ref_gt = code_to_genotype($ref_base);
+						my $cons_gt = code_to_genotype($cns_call);
+	
+						if($chip_gt eq $ref_gt)
 						{
-							$stats{'rare_hom_total'}++;
+							$stats{'num_chip_was_reference'}++;
+							
 						}
-						
-						if($chip_gt eq $cons_gt)
+						elsif($chip_gt ne $ref_gt)
 						{
-							$stats{'num_variant_match'}++;
+							$stats{'num_with_variant'}++;
+							
+							my $comparison_result = "Unknown";
+							
 							if(is_homozygous($chip_gt))
 							{
-								$stats{'rare_hom_match'}++;
+								$stats{'rare_hom_total'}++;
 							}
-
+						
+							if($chip_gt eq $cons_gt)
+							{
+								$stats{'num_variant_match'}++;
+								if(is_homozygous($chip_gt))
+								{
+									$stats{'rare_hom_match'}++;
+								}
+								
+								$comparison_result = "Match";
+	
+							}
+							elsif(is_homozygous($chip_gt) && is_heterozygous($cons_gt))
+							{
+								$stats{'hom_was_het'}++;
+								$comparison_result = "HomWasHet";
+							}
+							elsif(is_heterozygous($chip_gt) && is_homozygous($cons_gt))
+							{
+								$stats{'het_was_hom'}++;
+								$comparison_result = "HetWasHom";
+							}
+							elsif(is_heterozygous($chip_gt) && is_heterozygous($chip_gt))
+							{
+								$stats{'het_was_diff_het'}++;
+								$comparison_result = "HetMismatch";
+							}
+							
+							if($self->verbose)
+							{
+								print "$line\t$chip_gt $comparison_result $cons_gt\n";
+							}
+							
+							
 						}
-						elsif(is_homozygous($chip_gt) && is_heterozygous($cons_gt))
-						{
-							$stats{'hom_was_het'}++;
-						}
-						elsif(is_heterozygous($chip_gt) && is_homozygous($cons_gt))
-						{
-							$stats{'het_was_hom'}++;
-						}
-						elsif(is_heterozygous($chip_gt) && is_heterozygous($chip_gt))
-						{
-							$stats{'het_was_diff_het'}++;
-						}
+						
 					}
-					
 				}
-			}
+			}			
 		}
+		
+
 		
 	}
 	
