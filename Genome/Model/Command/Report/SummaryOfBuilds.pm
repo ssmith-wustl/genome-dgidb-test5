@@ -83,12 +83,12 @@ sub execute {
     # Build the sql query
     my $query = $self->_build_sql_query
         or return;
-    #print "\n\n$query\n\n";
+    print "\n\n$query\n\n";
     
     # Execute the query - put in method to overload in test
     my $rows = $self->_selectall_arrayref($query);
     unless ( @$rows ) {
-        print 'No models found for '.$self->_descript1ion.".\n";
+        print 'No models found for '.$self->_description.".\n";
         return 1;
     }
 
