@@ -113,9 +113,23 @@ sub execute {                               # replace with real execution logic.
 			$cmd = "mv -f $bam_file.sorted.bam $bam_file";		
 			print SCRIPT "$cmd\n";
 
-			## Step 4: Generate Pileup ##
+			## Step 4: Index BAM file ##
+			$cmd = "samtools index $bam_file";		
+			print SCRIPT "$cmd\n";
+
+			## Step 5: Generate Pileup ##
 			print SCRIPT "echo Building the pileup file...\n";	
 			$cmd = "samtools pileup -f $ref_seq $bam_file >$bam_file.pileup";
+			print SCRIPT "$cmd\n";
+
+			## Step 6: Call SAMtools variants ##
+			print SCRIPT "echo Building the pileup file...\n";	
+			$cmd = "samtools pileup -c -v -f $ref_seq $bam_file >$bam_file.variants";
+			print SCRIPT "$cmd\n";
+
+			## Step 7: Filter SAMtools variants ##
+			print SCRIPT "echo Building the pileup file...\n";	
+			$cmd = "samtools.pl varFilter -D 10000 $bam_file.variants >$bam_file.variants.filter";
 			print SCRIPT "$cmd\n";
 			
 			close(SCRIPT);
@@ -125,7 +139,7 @@ sub execute {                               # replace with real execution logic.
 			
 			## Run bsub ##
 #			system("$script_filename");			
-			system("bsub -q bigmem -R\"select[type==LINUX64 && model != Opteron250 && mem>2000] rusage[mem=2000]\" -oo $script_filename.out $script_filename");
+			system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>2000] rusage[mem=2000]\" -oo $script_filename.out $script_filename");
 		}
 		else
 		{
