@@ -165,7 +165,7 @@ sub _run_aligner {
     #}
 
     my $files_to_align = join(' ',@input_pathnames);
-    my $cmdline = Genome::Model::Tools::Novocraft->path_for_novocraft_version($self->aligner_version)
+    my $cmdline = Genome::Model::Tools::Novocraft->path_for_novocraft_version($self->aligner_version) .'/novoalign'
         . sprintf(' %s -d %s -f %s > ',
                   $aligner_params,
                   $ref_seq_file,
