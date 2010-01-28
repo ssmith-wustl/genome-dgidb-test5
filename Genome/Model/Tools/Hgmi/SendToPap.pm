@@ -370,7 +370,8 @@ sub do_pap_workflow
     else {
         if($xml_file =~ /noblastp/)
         {
-            print STDERR "skipping blastp in PAP.\n";
+            #print STDERR "skipping blastp in PAP.\n";
+            $self->status_message("skipping blastp in PAP");
             $output = run_workflow_lsf(
                                        $xml_file,
                                        'fasta file'           => $fasta_file,

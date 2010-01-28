@@ -229,9 +229,10 @@ sub execute
     }
 
     # to use new predictscript if changes get made.
-    if (exists($config->{predict_script}) && (-x $config->{predict_script}) )
+    if (exists($config->{predict_script_location}) && (-x $config->{predict_script_location}) )
     {
-        $predict->script_location($config->{predict_script});
+        $predict->script_location($config->{predict_script_location});
+        $self->status_message("using predict script ". $config->{predict_script_location});
     }
 
     if ($predict)
@@ -388,6 +389,7 @@ sub execute
     }
 
     warn qq{\n\nBeginning to run SendToPap.pm(workflow) ... from Hap.pm\n\n};
+#    $self->status_message("starting send-to-pap/PAP workflow...");
 
     unless ( defined( $config->{workflowxml} ) )
     {
@@ -500,7 +502,7 @@ sub execute
 
         my @biosql2ace = (
             '/gsc/scripts/gsc/annotation/biosql2ace',
-            '--locus-id', $config->{locus_tag},
+            $config->{locus_tag},
         );
         if ( $self->dev )
         {

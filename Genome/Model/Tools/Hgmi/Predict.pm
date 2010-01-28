@@ -340,8 +340,8 @@ sub gather_details
     my $bappredictgenes_output = $cwd."/".$locus_tag."_bpg_BAP_screenoutput_".$sequence_set_id.".txt";
 
     print qq{\nbap_predict_genes.pl\n};
-
-    my @command_list = ('bap_predict_genes',
+    my $script_location = $self->script_location;
+    my @command_list = ($script_location,
                         '--sequence-set-id',
                         $sequence_set_id,
                         '--domain',

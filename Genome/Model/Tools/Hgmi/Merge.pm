@@ -68,7 +68,12 @@ UR::Object::Type->define(
 							 doc => "runner_count",
 							 default => 10,
 							 is_optional => 1,
-						       }
+						       },
+                 'script_location'  => { is => 'String',
+                                         doc => "default location for merge genes script",
+                                         is_optional => 1,
+                                         default => '/gsc/scripts/gsc/annotation/bap_merge_genes',
+                                        },
                                  ]
                          );
 
@@ -223,9 +228,9 @@ sub gather_details
     
     print "\nbap_merge_genes.pl\n";
     
-
+    my $script_location = $self->script_location;
     my @command = (
-                   'bap_merge_genes',
+                   $script_location,
                    '--sequence-set-id',
                    $sequence_set_id,
                    '--job-stdout',
