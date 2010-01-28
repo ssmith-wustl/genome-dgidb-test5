@@ -30,7 +30,7 @@ UR::Object::Type->define(
 							     },
 					'config'          => { 
 							      is => 'String',
-							      doc => "YAML file for reading.  This is the same config file used to start AMGAP.",
+							      doc => "YAML file for reading.  This is the same config file used to start hgmi tools.",
 							     },
 					'internalhash'    => {
 							      is => 'HashRef',
