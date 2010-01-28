@@ -78,6 +78,11 @@ sub execute {                               # replace with real execution logic.
 	print "Retrieving existing genome models...\n";
 	my %existing_models = get_genome_models($model_basename);
 
+	if(!($sample_list && -e $sample_list))
+	{
+		die "Sample list $sample_list not found!\n";
+	}
+
 	my $input = new FileHandle ($sample_list);
 	my $lineCounter = 0;
 	
@@ -257,7 +262,7 @@ sub get_genome_models
 	$stats{'num_matching_models'} = 0;
 	$stats{'num_completed_builds'} = 0;
 
-	my $model_output = `genome model list --filter=name~\'$model_basename%\' --show=id,subject_name,last_complete_build_directory 2>/dev/null`;
+	my $model_output = `genome model list --filter=name~\'$model_basename%\' --show=id,subject_name,last_succeeded_build_directory 2>/dev/null`;
 	chomp($model_output);
 	my @output_lines = split(/\n/, $model_output);
 	
@@ -279,6 +284,8 @@ sub get_genome_models
 					
 					$matching_models{$sample_name} = $model_id;
 					
+					my $build_status = "Running";
+					
 					if($build_dir && !($build_dir =~ 'NULL'))
 					{
 						## Get build ID ##
@@ -286,10 +293,23 @@ sub get_genome_models
 						my $numElements = @tempArray;
 						my $build_id = $tempArray[$numElements - 1];
 						$build_id =~ s/[^0-9]//g;
+
+						## Check for BAM file ##
 						
+						my $bam_list = `ls $build_dir/alignments/*.bam 2>/dev/null`;
+						my @bam_lines = split(/\n/, $bam_list);
+						
+						foreach my $bam_line (@bam_lines)
+						{
+							if($bam_line && -e $bam_line)
+							{
+								$build_status = "Completed";
+							}
+						}
+				
 						if($build_id)
 						{
-							$matching_models{$sample_name} = "$model_id\t$build_id\tCompleted\t$build_dir";
+							$matching_models{$sample_name} = "$model_id\t$build_id\t$build_status\t$build_dir";
 							$stats{'num_with_builds_completed'}++;
 						}
 					}

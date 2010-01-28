@@ -27,8 +27,9 @@ class Genome::Model::Tools::Varscan::ProcessSomatic {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		output	=> { is => 'Text', doc => "Basename for output, eg. varscan_out/varscan.status" , is_optional => 0},
+		status_file	=> { is => 'Text', doc => "File containing varscan calls, e.g. status.varscan.snp" , is_optional => 0, is_input => 1},
 		report_only	=> { is => 'Text', doc => "If set to 1, will not produce output files" , is_optional => 1},
+		somatic_out	=> { is => 'Text', doc => "DO NOT USE: Output name for Somatic calls [status_file.Somatic]" , is_optional => 1, is_input => 1, is_output => 1},
 	],
 };
 
@@ -61,17 +62,16 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
-	my $output = $self->output;
+	my $status_file = $self->status_file;
 	$report_only = $self->report_only if($self->report_only);
 
-	if(-e "$output.snp" && -e "$output.indel")
+	if(-e $status_file)
 	{
-		process_results("$output.snp");
-		process_results("$output.indel");		
+		process_results($status_file);
 	}
 	else
 	{
-		die "Error: One of the output files ($output.snp or $output.indel) is missing!\n";
+		die "Status file $status_file not found!\n";
 	}
 	
 	
@@ -93,6 +93,7 @@ sub process_results
 	print "Processing variants in $variants_file...\n";
 
 	my %variants_by_status = ();
+	$variants_by_status{'Somatic'} = $variants_by_status{'Germline'} = $variants_by_status{'LOH'} = '';
 	
 	## Parse the variant file ##
 
@@ -113,7 +114,21 @@ sub process_results
 		}
 		else
 		{
-			my $somatic_status = $lineContents[12];
+			my $somatic_status = "";
+			if($lineContents[13] && ($lineContents[13] =~ "Reference" || $lineContents[13] =~ "Somatic" || $lineContents[13] =~ "Germline" || $lineContents[13] =~ "Unknown" || $lineContents[13] =~ "LOH"))
+			{
+				$somatic_status = $lineContents[13];	
+			}
+			elsif($lineContents[12] && ($lineContents[12] =~ "Reference" || $lineContents[12] =~ "Somatic" || $lineContents[12] =~ "Germline" || $lineContents[12] =~ "Unknown" || $lineContents[12] =~ "LOH"))
+			{
+				$somatic_status = $lineContents[12];
+			}
+			else
+			{
+				warn "Unable to parse somatic_status from file $variants_file line $lineCounter\n";
+				$somatic_status = "Unknown";
+			}
+
 			$variants_by_status{$somatic_status} .= "\n" if($variants_by_status{$somatic_status});
 			$variants_by_status{$somatic_status} .= $line;
 		}
@@ -134,10 +149,12 @@ sub process_results
 		{
 			if(!$report_only)
 			{
-				open(HICONF, ">$variants_file.$status.high_conf") or die "Can't open output file: $!\n";
-				open(LOWCONF, ">$variants_file.$status.low_conf") or die "Can't open output file: $!\n";
+				open(STATUS, ">$variants_file.$status") or die "Can't open output file: $!\n";
+				open(HICONF, ">$variants_file.$status.hc") or die "Can't open output file: $!\n";
+				open(LOWCONF, ">$variants_file.$status.lc") or die "Can't open output file: $!\n";
 				print HICONF "$file_header\n";
 				print LOWCONF "$file_header\n";
+				print STATUS "$file_header\n";
 			}
 			
 			my $numHiConf = my $numLowConf = 0;
@@ -145,17 +162,29 @@ sub process_results
 			foreach my $line (@lines)
 			{
 				my @lineContents = split(/\t/, $line);
-				my $somatic_status = $lineContents[12];
-				my $p_value = 1;
+				my $numContents = @lineContents;
 				
-				if($lineContents[14] && ($somatic_status eq "LOH" || $somatic_status eq "Somatic"))
+				my $somatic_status = my $p_value = "";
+				
+				## Get Somatic status and p-value ##
+				
+				for(my $colCounter = 4; $colCounter < $numContents; $colCounter++)
 				{
-					$p_value = $lineContents[14];
+					if($lineContents[$colCounter])
+					{
+						my $value = $lineContents[$colCounter];
+						
+						if($value eq "Reference" || $value eq "Somatic" || $value eq "Germline" || $value eq "LOH" || $value eq "Unknown")
+						{
+							$somatic_status = $value;
+							$p_value = $lineContents[$colCounter + 1];
+							$p_value = $lineContents[$colCounter + 2] if($lineContents[$colCounter + 2] && $lineContents[$colCounter + 2] < $p_value);
+						}
+					}
 				}
-				else
-				{
-					$p_value = $lineContents[13];
-				}
+				
+				## Print to master status file ##
+				print STATUS "$line\n" if(!$report_only);
 				
 				if($p_value <= 1.0E-06)
 				{
@@ -167,6 +196,8 @@ sub process_results
 					print LOWCONF "$line\n" if(!$report_only);
 					$numLowConf++;
 				}
+				
+				
 			}
 			
 			close(HICONF);
