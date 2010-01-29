@@ -2,7 +2,7 @@ package Genome::Model::Tools::Assembly::AceAxe;
 
 use strict;
 use warnings;
-use above 'Genome';
+use Genome;
 use Genome::Assembly::Pcap::Ace;
 
 our $initialized = 0;
