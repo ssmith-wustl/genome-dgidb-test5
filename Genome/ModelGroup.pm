@@ -36,10 +36,34 @@ sub assign_models {
 
     for my $m (@models) {
 
+        if(grep($_->id eq $m->id, $self->models)) {
+            die('Model ' . $m->id . ' already in ModelGroup ' . $self->id);
+        }
+        
         my $bridge = Genome::ModelGroupBridge->create(
             model_group_id => $self->id,
             model_id       => $m->genome_model_id,
         );
+    }
+
+}
+
+sub unassign_models {
+
+    my ($self, @models) = @_;
+
+    for my $m (@models) {
+
+        my $bridge = Genome::ModelGroupBridge->get(
+            model_group_id => $self->id,
+            model_id       => $m->genome_model_id,
+        );
+        
+        unless($bridge){
+            die('Model ' . $m->id . ' not found in ModelGroup ' . $self->id);
+        }
+        
+        $bridge->delete();
     }
 
 }
