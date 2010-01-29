@@ -168,10 +168,17 @@ sub prepare_for_generate {
 
 sub __define__ {
     my $class = shift;
+    if ($class eq __PACKAGE__) {
+        # the super-class will delegate to the appropriate concrete subclass
+        # and this will be called again by it.
+        return $class->SUPER::__define__(@_);
+    }
 
-    my $self = $class->SUPER::create(@_);
+    my $self = $class->SUPER::__define__(@_);
     return unless $self;
 
+    # TODO: force unpaired alignment and filtering to using only one half of the pair are independent choices
+    # get rid of support for using the seq_id of 1/2 of the lane, since LIMS is getting rid of it too
     if ($self->instrument_data) {
         if ($self->force_fragment && !defined($self->_fragment_seq_id)) {
             $self->_fragment_seq_id($self->instrument_data_id);
