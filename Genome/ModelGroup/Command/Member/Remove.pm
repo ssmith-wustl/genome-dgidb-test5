@@ -37,7 +37,7 @@ sub execute {
     
     my @model_ids = split(',', $self->model_ids);
     
-    my @models_to_remove = Genome::Model->get(@model_ids);
+    my @models_to_remove = Genome::Model->get(id => \@model_ids);
     my @existing_models = $self->model_group->models;
     
     for my $model_id (@model_ids) {
