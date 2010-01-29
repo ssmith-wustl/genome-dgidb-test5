@@ -1,6 +1,6 @@
 package Genome::Model::ExperimentalMetric;
 
-use above 'Genome';
+use Genome;
 
 class Genome::Model::ExperimentalMetric {
     id_by => [
