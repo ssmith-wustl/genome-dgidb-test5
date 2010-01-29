@@ -26,11 +26,12 @@ class Genome::InstrumentData::Imported {
         description         => { is => 'VARCHAR2', len => 512,is_optional => 1 },
         read_count          => { is => 'NUMBER',   len => 20, is_optional => 1 },
         base_count          => { is => 'NUMBER',   len => 20, is_optional => 1 },
+        data_directory      => { via => 'disk_allocation', to => 'absolute_path' },
+        disk_allocation     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', is_many => 1 },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
-
 
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
