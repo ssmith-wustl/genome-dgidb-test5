@@ -88,6 +88,8 @@ sub execute {
             $temp_filename,
             '-L',
             '/gsc/pkg/bio/meta_rna/rRNA_hmm_fs/HMMs/',
+            '-e',
+            '10e-5',
         );
     eval {
         
@@ -109,7 +111,7 @@ sub execute {
     my $gff = Bio::Tools::GFF->new(-file => $temp_filename, -gff_version => 1);
 
     while (my $feature = $gff->next_feature()) {
-    
+           
         $seq->add_SeqFeature($feature);
 
     }
