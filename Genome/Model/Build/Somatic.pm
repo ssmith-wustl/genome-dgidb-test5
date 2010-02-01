@@ -68,6 +68,63 @@ sub create {
     return $self;
 }
 
+# Returns the newest somatic workflow instance associated with this build 
+sub newest_somatic_workflow_instance {
+    my $self = shift;
+
+    my @sorted = sort {
+        $b->id <=> $a->id
+    } Workflow::Store::Db::Operation::Instance->get(
+        name => 'Somatic Pipeline Build ' . $self->build_id
+    );
+
+    unless (@sorted) {
+        $self->warning_message("No somatic workflow instances found for this build.");
+        return;
+    }
+    
+    return $sorted[0];
+}
+
+# Returns a hash ref with all of the inputs of the newest somatic workflow instance
+sub somatic_workflow_inputs {
+    my $self = shift;
+
+    my $instance = $self->newest_somatic_workflow_instance;
+
+    unless ($instance) {
+        $self->error_message("no somatic workflow instance found (has build been started?)");
+        die;
+    }
+
+    # returns hashref of workflow params like { input => value }
+    return $instance->input;  
+}
+
+# Input: the name of the somatic workflow input you'd like to know
+# Returns: value of one input of the latest somatic workflow instance.
+sub somatic_workflow_input {
+    my $self = shift;
+    my $input_name = shift;
+
+    my $input = $self->somatic_workflow_inputs;
+    
+    $DB::single=1;
+    unless (exists $input->{$input_name}) {
+        my @valid_inputs = sort(keys %$input);
+        my $inputs_string = join(", ", @valid_inputs);
+        $self->error_message("Input $input_name does not exist. Valid inputs to query for this build are: \n$inputs_string");
+        die;
+    }
+
+    unless (defined $input->{$input_name}) {
+        $self->error_message("Input $input_name exists, but is not defined for this build. Something may have gone wrong with the build.");
+        die;
+    }
+
+    return $input->{$input_name};
+}
+
 sub calculate_estimated_kb_usage {
     my $self = shift;
 

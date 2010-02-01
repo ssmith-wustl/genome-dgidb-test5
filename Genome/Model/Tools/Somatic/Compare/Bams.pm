@@ -102,6 +102,9 @@ sub pre_execute {
         $self->require_dbsnp_allele_match(1);
     }
 
+    # Set the operation name so we can later easily access workflow properties by build id
+    $self->_operation->name($self->_operation->name . ' Build ' . $self->build_id); 
+
     return 1;
 }
 
