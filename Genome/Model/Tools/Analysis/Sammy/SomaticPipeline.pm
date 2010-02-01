@@ -545,7 +545,7 @@ sub run_annotation
 
 	if(!(-e $annotated_file))
 	{
-        #system("gt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file"); #1>/dev/null 2>/dev/null
+        #system("gmt annotate transcript-variants --variant-file $formatted_file --output-file $annotated_file"); #1>/dev/null 2>/dev/null
 	    my $variants_obj = Genome::Model::Tools::Annotate::TranscriptVariants->create(
             variant_file => $formatted_file,
             output_file => $annotated_file,

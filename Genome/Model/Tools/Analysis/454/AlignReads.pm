@@ -101,7 +101,7 @@ sub execute {                               # replace with real execution logic.
                     output_file => $aligner_output_file,
                 );
                 $cmd_obj->execute;
-                #my $cmd = "gt ssaha align-to-genome --query-file $fasta_file --output-file $aligner_output_file";
+                #my $cmd = "gmt ssaha align-to-genome --query-file $fasta_file --output-file $aligner_output_file";
                 #system($cmd);
 			}
 		}
