@@ -10,7 +10,7 @@ class Genome::Model::Tools::Somatic::UploadVariantValidation{
     has => [
     variant_file => {
         is  => 'String',
-        doc => 'The file of somatic pipeline results to be uploaded. This will usually be a high confidence tier 1 or 2 snp file, or a tier 1 indel file from the somatic pipeline.',
+        doc => 'The file of validation results to be uploaded. This should be a tab-separated file containing the following columns in order: chr,start,stop,reference_allele,variant_allele,validation_result.',
     },
     model_id => {
         is => 'Number',
