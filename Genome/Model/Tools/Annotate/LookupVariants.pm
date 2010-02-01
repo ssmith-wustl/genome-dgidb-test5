@@ -497,10 +497,8 @@ sub get_fh_for_chr {
 
     my $dbSNP_path = $self->dbSNP_path();
     my ($fh, $index);
-    my $f = $self->{'filehandles'};
-    my $i = $self->{'index_filehandles'};
 
-    if (!$f->{$chr}) {
+    if (!$self->{'filehandles'}->{$chr}) {
         my $dbSNP_filename = join('',  'variations_', $chr, '.csv');
         my $dbSNP_pathname = join('/',$dbSNP_path,$dbSNP_filename); 
         die "cant open dbSNP_pathname = $dbSNP_pathname" if ! -e $dbSNP_pathname ;
@@ -510,15 +508,15 @@ sub get_fh_for_chr {
         die "cant open index_pathname = $index_pathname" if ! -e $index_pathname ;
 
         open($fh, $dbSNP_pathname);
-        $f->{$chr} = $fh;
+        $self->{'filehandles'}->{$chr} = $fh;
 
         open($index, $index_pathname);
-        $i->{$chr} = $index;
+        $self->{'index_filehandles'}->{$chr} = $index;
     } else {
-        $fh = $f->{$chr};
+        $fh = $self->{'filehandles'}->{$chr};
         seek($fh, 0, 0);
 
-        $index = $i->{$chr};
+        $index = $self->{'index_filehandles'}->{$chr};
         seek($index, 0, 0);
     }
 

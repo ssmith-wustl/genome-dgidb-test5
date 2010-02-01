@@ -210,12 +210,13 @@ sub generate_report_detail
 
                 $self->status_message("Generating dbSNP intersection for concordance checking...");
                 unless (
-                    Genome::Model::Tools::Snp::CreateDbsnpFileFromSnpFile->execute(
+                    Genome::Model::Tools::Annotate::LookupVariants->execute(
                         output_file     => $db_snp_path,
-                        snp_file        => $snp_file
+                        variant_file    => $snp_file,
+                        report_mode     => 'known-only',
                     ) 
                 ) {
-                    die "Could not execute create-db-snp-file-from-snp-file.";
+                    die "Could not execute LookupVariants.";
                 }
 
                 unless (-e $db_snp_path) {

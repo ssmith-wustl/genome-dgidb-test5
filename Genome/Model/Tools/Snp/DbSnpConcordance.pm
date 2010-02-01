@@ -170,10 +170,8 @@ sub create_dbsnp_hash {
     #Chr\tPos\tPos\tSample1Present\t..SampleNPresent
     while(my $line = $dbsnp_fh->getline) {
         chomp $line;
-        my ($chr, $pos, $pos2, $dbsnp_status) = split /\t/, $line;
-        if($dbsnp_status) {
-            $dbsnp_at{$chr}{$pos} = $dbsnp_status;
-        }
+        my ($chr, $pos, $pos2) = split /\t/, $line;
+        $dbsnp_at{$chr}{$pos} = 1;
     }
     return \%dbsnp_at;
 }
