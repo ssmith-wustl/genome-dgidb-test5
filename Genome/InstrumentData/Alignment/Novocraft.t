@@ -50,7 +50,7 @@ my $fake_allocation = Genome::Disk::Allocation->__define__(
                                                        allocation_path => 'alignment_data/novocraft2_03_12/refseq-for-test/test_run_name/4_-123456',
                                                        allocator_id => '-123457',
                                                        kilobytes_requested => 100000,
-                                                       kilobutes_used => 0,
+                                                       kilobytes_used => 0,
                                                        owner_id => $instrument_data->id,
                                                        owner_class_name => 'Genome::InstrumentData::Solexa',
                                                    );
