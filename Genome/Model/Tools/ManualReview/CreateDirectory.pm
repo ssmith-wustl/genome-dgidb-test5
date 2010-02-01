@@ -59,8 +59,8 @@ sub execute {
     #}
     
     if(!-e $out_dir) {`mkdir -p $out_dir`;}
-    my $gt = `which gt`;
-    chomp($gt);
+    my $gmt = `which gmt`;
+    chomp($gmt);
     my $fh = IO::File->new($maplist);
     my @lines = <$fh>;
     chomp @lines;
@@ -78,11 +78,11 @@ sub execute {
             $o = $out_dir."/temp_map/".$l;
             print $o,"\n";
             die "File $o alreadys exists!\n" if(-e $o);
-            #system("bsub -q aml -oo $l.log gt maq get-intersect --input=$f --snpfile=$snps --output=$o");
+            #system("bsub -q aml -oo $l.log gmt maq get-intersect --input=$f --snpfile=$snps --output=$o");
             my %job_params = (
                 pp_type => 'lsf',
                 q => 'short',
-                command => "$gt maq get-intersect --input=$f --snpfile=$snps --output=$o",
+                command => "$gmt maq get-intersect --input=$f --snpfile=$snps --output=$o",
                 o => "$l.log",
             );
             my $job = PP::LSF->create(%job_params);
@@ -175,12 +175,12 @@ SLEEP:      sleep 30;
             chomp $line;
             my ($seq, $pos) = split /\s+/,$line; 
             my $seqpos = $seq.'_'.$pos;
-            #system("bsub -q aml -W 50 -oo $seqpos.log gt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos --justname=2");
+            #system("bsub -q aml -W 50 -oo $seqpos.log gmt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos --justname=2");
             my %job_params = (
                 pp_type => 'lsf',
                 q => 'long',
                 #W => 5,
-                command => "$gt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos --justname=2",
+                command => "$gmt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos --justname=2",
                 oo => "$seqpos.log",
             );
             my $job = PP::LSF->create(%job_params);
@@ -199,7 +199,7 @@ SLEEP:      sleep 30;
             {
                 if(defined $_ && $_->has_ended){
                     if($_->is_successful) {$_ = undef;}
-                    else {$self->error_message( "gt maq get-intersects failed.\n"); return;}                    
+                    else {$self->error_message( "gmt maq get-intersects failed.\n"); return;}                    
                 }
             }
             foreach(@jobs)
@@ -240,7 +240,7 @@ SLEEEP:      sleep 30;
             q => 'long',
             R => 'select[type=LINUX64]',
             #W => 15,
-            command =>$command,#"$gt manual-review prepare-nextgen-ace --project-dir=$line --basedir=$out_dir",
+            command =>$command,#"$gmt manual-review prepare-nextgen-ace --project-dir=$line --basedir=$out_dir",
             oo => "$line.log",
         );
         my $job = PP::LSF->create(%job_params);

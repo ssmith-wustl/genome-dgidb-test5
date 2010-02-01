@@ -106,7 +106,7 @@ sub execute {                               # replace with real execution logic.
 		
 		my $germline_non_dbsnp = $self->output_dir . "/" . $self->sample_name . ".germline.not-dbSNP";
 		
-        #system("gt bowtie limit-snps --positions-file $dbsnp_file --variants-file $germline_snp_file --not-file $germline_non_dbsnp");
+        #system("gmt bowtie limit-snps --positions-file $dbsnp_file --variants-file $germline_snp_file --not-file $germline_non_dbsnp");
 		my $limit_snps_obj = Genome::Model::Tools::Bowtie::LimitSnps->create(
             positions_file => $dbsnp_file,
             variants_file => $germline_snp_file,

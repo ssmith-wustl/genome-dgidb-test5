@@ -31,7 +31,7 @@ EOS
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
     return <<EOS 
     give the referance and variant alleles in the same orientation and get returned the Transition/Transversion annotation
-    for example gt annotation transition-transversion --referance-allele=A --variant-allele=C
+    for example gmt annotation transition-transversion --referance-allele=A --variant-allele=C
     should result in T:A>G:C(transversion)
 EOS
 }
