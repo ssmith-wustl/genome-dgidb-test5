@@ -77,7 +77,7 @@ sub annotate_sv {
         return unless defined $transcript_window;
         my @transcripts = $transcript_window->scroll($breaks[$i]);
         my %info;
-        $info{'transcripts'} = \@transcripts;
+        $info{'transcripts'} = @transcripts? \@transcripts : undef;
         $info{'chromosome'} = $chroms[$i];
         $info{'position'} = $breaks[$i];
         $return_value{'breakpoint_'.$i} = \%info;
