@@ -10,7 +10,7 @@ class Genome::Model::Tools::CommandLogReader{
     has =>[
         start_date => {
             is => 'Text',
-            doc => "Logs written after the specified date (YYYY-MM-DD) will be included in the reader's output",
+            doc => "Logs written after this date (YYYY-MM-DD) will be included in the reader's output",
         },
     ],
     has_optional =>[
@@ -21,13 +21,18 @@ class Genome::Model::Tools::CommandLogReader{
         },
         end_date => {
             is => 'Text',
-            doc => "Logs written before this date (YYYY-MM-DD) will not be included in the reader's output, defaults to current date"
+            doc => "Logs written before this date (YYYY-MM-DD) will be included in the reader's output, defaults to current date"
         },
         group_by => {
             is => 'Text',
             valid_values => ["user","command"],
             default => "user",
             doc => "Groups output by user name or command name, defaults to user",
+        },
+        print_headers => {
+            is => 'Boolean',
+            default => 1,
+            doc => "Print column headers on first line of output",
         },
     ],
 };
@@ -54,7 +59,21 @@ sub log_attributes {
 
 sub log_directory {
     my $self = shift;
-    return "/gscuser/bdericks/command_logs/";
+    return "/gsc/var/log/genome/command_line_usage";
+}
+
+sub output_attributes {
+    my $self = shift;
+    if ($self->group_by eq "user") {
+        return (qw/ user command params times_called/);
+    }
+    elsif ($self->group_by eq "command") {
+        return (qw/ command user params times_called/);
+    }
+    else {
+        $self->error_message("Unknown group by type, unable to provide column headers");
+        return;
+    }
 }
 
 sub get_current_date {
@@ -75,16 +94,40 @@ sub _sort_params {
         unless ($p =~ /=/) {  # Replace first space with = unless there's already an =
             $p =~ s/\s+/=/;
         }
-        $str .= $p . "\t";
+        $str .= $p . " ";
     }
     chop $str;
     return $str;
+}
+
+sub _create_file {
+    my ($self, $output_file) = @_;
+    my $output_fh;
+
+    if (-e $output_file) {
+        $self->warning_message("found previous output file, removing $output_file");
+        unlink $output_file;
+        if (-e $output_file) {
+            die "failed to remove previous file: $! ($output_file)";
+        }
+    }
+    $output_fh = IO::File->new("> $output_file");
+    unless ($output_fh) {
+        die "Can't open file ($output_file) for writing: $!";
+    }
+
+    return $output_fh;
 }
 
 sub execute {
     my $self = shift;
 
     my ($start_year, $start_month, $start_day) = split(/-/, $self->start_date);
+    unless (defined $start_year and defined $start_month and defined $start_day) {
+        $self->error_message("Trouble parsing start date, exiting");
+        return;
+    }
+
     if ($start_month =~ /^0/) {
         $start_month = substr $start_month, 1;
     }
@@ -109,7 +152,7 @@ sub execute {
             $loop_year++;
         }
 
-        if (not -e $log_file) {
+        unless (-e $log_file) {
             $self->warning_message("Could not find $log_file, continuing.");
             next LOG_FILE;
         }
@@ -128,17 +171,43 @@ sub execute {
                 last LOG_LINE;
             }
 
+            my $user = $line->{user};
+            my $command = $line->{command};
+            my $params = $self->_sort_params($line->{params});
             if ($self->group_by eq "command"){
-
+                $info{$command}->{$user}->{$params}++;
             }
             elsif ($self->group_by eq "user") {
-                my $user = $line->{user};
-                my $command = $line->{command};
-                my $params = $self->_sort_params($line->{params});
                 $info{$user}->{$command}->{$params}++;
             }
         }
-        print Data::Dumper::Dumper \%info;
+    }
+
+    # Print to output file, tab delimited
+    # Format (grouped by user): user command params(space delimited) times_called
+    # Format (grouped by command): command user params(space delimited) times_called
+    my $output_fh;
+    my $output_file = $self->output_file;
+    if ($self->output_file =~ /STDOUT/i) {
+        $output_fh = 'STDOUT';
+    }
+    else {
+        $output_fh = $self->_create_file($output_file);
+    }
+
+    if ($self->print_headers) {
+        $output_fh->print(join("\t", $self->output_attributes) . "\n");
+    }
+
+    for my $group (sort keys %info) {
+        for my $subgroup (sort keys %{$info{$group}}) {
+            for my $params (keys %{$info{$group}->{$subgroup}}) {
+                $output_fh->print($group . "\t");
+                $output_fh->print($subgroup . "\t");
+                $output_fh->print($params . "\t");
+                $output_fh->print($info{$group}->{$subgroup}->{$params} . "\n");
+            }
+        }
     }
 }
 1;
