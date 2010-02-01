@@ -35,12 +35,12 @@ class Genome::Model::Tools::Annotate::CompareMutations{
        omimaa => {
            is => 'Path',
            doc => 'omim amino acid mutation database',
-           default => '/gscmnt/200/medseq/analysis/software/resources/OMIM',
+           default => '/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/',
        },
        cosmic_dir => {
            is => 'Path',
            doc => 'cosmic amino acid mutation database',
-           default => '/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic',
+           default => '/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/',
        },
        force_rearchive => {
            is => 'Boolean',
