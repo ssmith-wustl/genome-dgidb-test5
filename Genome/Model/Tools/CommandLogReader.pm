@@ -59,7 +59,7 @@ sub log_attributes {
 
 sub log_directory {
     my $self = shift;
-    return "/gsc/var/log/genome/command_line_usage";
+    return "/gsc/var/log/genome/command_line_usage/";
 }
 
 sub output_attributes {
