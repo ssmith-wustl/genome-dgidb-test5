@@ -17,7 +17,7 @@ ok (-e "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequ
 ok (-d $test_dir);
 
 #my @command = ["gmt" , "annotate" , "transcript-sequence" , "-transcript" , "NM_001024809" , "-output" , "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequence/NM_001024809"];
-my $AnnotateTranscriptSequence = Genome::Model::Tools::Annotate::TranscriptSequence->create(transcript=>"NM_001024809",output=>"/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequence/NM_001024809");
+my $AnnotateTranscriptSequence = Genome::Model::Tools::Annotate::TranscriptSequence->create(transcript=>"NM_001024809",output=>"/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequence/NM_001024809",no_stdout=>"1");
 ok($AnnotateTranscriptSequence);
 ok($AnnotateTranscriptSequence->execute());
 #&ipc_run(@command);
