@@ -4,6 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
+use File::Copy;
+use File::Basename;
 
 my %properties = (
     original_data_path => {
@@ -21,8 +23,8 @@ my %properties = (
     },
     import_format => {
         is => 'Text',
-        doc => 'format of import data, like bam',
-        valid_values => ['bam'],
+        doc => 'format of import data, like microarray',   #this may need to change
+        valid_values => ['microarray'],                    #this may also need changing
         is_optional => 1,
     },
     sequencing_platform => {
@@ -35,27 +37,30 @@ my %properties = (
         doc => 'general description of import data, like which software maq/bwa/bowtie to used to generate this data',
         is_optional => 1,
     },
+    allocation => {
+        is => 'Genome::Disk::Allocation',
+        is_optional => 1,
+    },
 );
     
 
 class Genome::InstrumentData::Command::Import::Microarray {
     is  => 'Command',
     has => [%properties],
-    doc => 'create an instrument data AND and alignment for a BAM',
+    doc => 'create an instrument data for a microarray',
 };
 
 
 sub execute {
     my $self = shift;
 
-    $self->error_message("NOT CODED YET!");
-    return;
-
     unless (-s $self->original_data_path) {
         $self->error_message('Original data path of import file: '. $self->original_data_path .' is empty');
         return;
     }
 
+    #set the %params
+    
     my %params = ();
     for my $property_name (keys %properties) {
         unless ($properties{$property_name}->{is_optional}) {
@@ -65,10 +70,10 @@ sub execute {
             }
         }
         next if $property_name =~ /^(species|reference)_name$/;
-        $params{$property_name} = $self->$property_name if $self->$property_name;
+        next if $property_name eq "allocation";
+        $params{$property_name} = $self->$property_name if defined($self->$property_name);
     }
-    #TODO put logic to set sample_name and library_name
-    
+
     my $sample_name     = $self->sample_name;
     my $genome_sample = Genome::Sample->get(name => $sample_name);
 
@@ -127,8 +132,8 @@ sub execute {
     my $sample_id = $genome_sample->id;
     $self->status_message("genome sample $sample_name has id: $sample_id");
     $params{sample_id} = $sample_id;
-    
-    my $import_instrument_data = Genome::InstrumentData::Import::Bamed->create(%params);  
+
+    my $import_instrument_data = Genome::InstrumentData::Imported::Microarray->create(%params); #change Bamed to Microarray - create the Microarray subclass  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
        return;
@@ -137,42 +142,43 @@ sub execute {
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data: $instrument_data_id is imported");
 
-    my $ref_name = $self->reference_name;
-    if ($ref_name) {
-        my $ref_build = Genome::Model::Build::ReferencePlaceholder->get($ref_name);
-        unless ($ref_build) {
-            $self->warning_message("reference_name option: $ref_name is not valid. Skip allocation");
-            return 1;
-        }
+    my $kb_usage = $import_instrument_data->calculate_microarray_estimated_kb_usage;
 
-        my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage;
-        unless ($kb_usage) {
-            $self->warning_message('Failed to get estimate kb usage for instrument data '.$instrument_data_id);
-            return 1;
-        }
+    my $alloc_path = sprintf('microarray_data/imported/%s', $instrument_data_id);
 
-        my $alloc_path = sprintf('alignment_data/imported/%s/%s', $ref_name, $instrument_data_id);
+    my %alloc_params = (
+        disk_group_name     => 'info_alignments',
+        allocation_path     => $alloc_path,
+        kilobytes_requested => $kb_usage,
+        owner_class_name    => $import_instrument_data->class,
+        owner_id            => $import_instrument_data->id,
+    );
 
-        my %alloc_params = (
-            disk_group_name     => 'info_alignments',
-            allocation_path     => $alloc_path,
-            kilobytes_requested => $kb_usage,
-            owner_class_name    => $import_instrument_data->class,
-            owner_id            => $import_instrument_data->id,
-        );
+    my $disk_alloc;
 
-        my $disk_alloc = Genome::Disk::Allocation->allocate(%alloc_params);
-        unless ($disk_alloc) {
-            $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%alloc_params));
-            return 1;
-        }
-        $self->status_message("Alignment allocation created for $instrument_data_id .");
+    if($self->allocation) {
+        $disk_alloc = $self->allocation;
+    }else {
+        $disk_alloc = Genome::Disk::Allocation->allocate(%alloc_params); 
+    }
 
-        # TODO: copy the data from original_data_path into the above
-        # allocation
-
-        # When we "align" it copies the BAM and does whatever
-        # conversion is necessary, adds headers, etc.
+    unless ($disk_alloc) {
+        $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%alloc_params));
+        return;
+    }
+    $self->status_message("Microarray allocation created for $instrument_data_id .");
+    my $basename = basename($self->original_data_path);
+    my $target_file = $disk_alloc->absolute_path . "/" . $basename;
+    my $val = copy($self->original_data_path,$target_file);
+    unless($val) {
+       $self->error_message("Failed to copy file from source to allocation\n");
+       return;
+    }
+    my $source = Genome::Utility::FileSystem->md5sum($self->original_data_path);
+    my $target = Genome::Utility::FileSystem->md5sum($target_file);
+    unless( $source eq $target) {
+        $self->error_message("md5sum of source and target files did not match.");
+        return;
     }
 
     return 1;
