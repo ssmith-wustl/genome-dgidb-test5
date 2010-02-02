@@ -297,7 +297,7 @@ sub run {
     my $build_status;
     if (@failed_events) {
         $build_status = 'Failed';
-        diag("FAILED " . $build->command_name .' found '. scalar(@failed_events) .' incomplete events');
+        diag('FAILED -- build found '. scalar(@failed_events) .' incomplete events');
     } else {
         $build_status = 'Succeeded';
     }
