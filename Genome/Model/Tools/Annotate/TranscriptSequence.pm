@@ -44,6 +44,12 @@ class Genome::Model::Tools::Annotate::TranscriptSequence {
 	    doc   =>  "provide a file name to write you transcript information to .txt will be appended to it. Default is to print to stdout.",
 	    is_optional  => 1,
 	},
+	no_stdout => {
+	    is => 'Boolean',
+	    doc   =>  "Use this option if you do not want the info to print to stdout. Default is to print to stdout.",
+	    is_optional  => 1,
+	},
+
 
     ], 
 };
@@ -98,7 +104,7 @@ sub execute {
     
     for my $transcript (@trans) {
 
-	if ($n > 0) { print qq(\n\n\n); }
+	if ($n > 0) { unless ($self->no_stdout) { print qq(\n\n\n); }}
 
 	my $trans_pos;
 	if ($trans_poss) {
@@ -114,7 +120,7 @@ sub execute {
 	    if ($trans_pos_number_line) {
 		my $line = qq(\n$trans_pos_number_line. There are $post_pos_bases coding bases left in $transcript after $trans_pos\n);
 		if ($self->output) {print OUT qq($line);}
-		print qq($line);
+		unless ($self->no_stdout) {print qq($line);}
 		
 		$transcript_info->{$transcript}->{-1}->{post_pos_bases}=$post_pos_bases;
 
@@ -122,7 +128,7 @@ sub execute {
 		$transcript_info->{$transcript}->{-1}->{trans_posid}="not_ided";
 		my $line = qq(\n$trans_pos was not located\n);
 		if ($self->output) {print OUT qq($line);}
-		print qq($line);
+		unless ($self->no_stdout) {print qq($line);}
 
 	    }
 	}
@@ -241,16 +247,16 @@ sub get_transcript {
 		if ($coding_start) {
 		    my $line = qq($exon $region $range $p3\n);
 		    if ($self->output) {print OUT qq($line);}
-		    print qq($line);
+		    unless ($self->no_stdout) {print qq($line);}
 		    $p3=0;
 		    if ($utr_seq) { 
 			my $us = join '' , @p3;
-			print qq($us\n\n);
+			unless ($self->no_stdout) {print qq($us\n\n);}
 			if ($self->output) {print OUT qq($us\n\n);}
 			undef(@p3);
 			if ($self->masked) {
 			    my $mus = join '' , @p3m;
-			    print qq($mus\n\n);
+			    unless ($self->no_stdout) {print qq($mus\n\n);}
 			    if ($self->output) {print OUT qq($mus\n\n);}
 			    undef(@p3m);
 			}
@@ -259,16 +265,16 @@ sub get_transcript {
 		} else {
 		    my $line = qq($exon $region $range $p5\n);
 		    if ($self->output) {print OUT qq($line);}
-		    print qq($line);
+		    unless ($self->no_stdout) {print qq($line);}
 		    $p5=0;
 		    if ($utr_seq) { 
 			my $us = join '' , @p5;
-			print qq($us\n\n);
+			unless ($self->no_stdout) {print qq($us\n\n);}
 			if ($self->output) {print OUT qq($us\n\n);}
 			undef(@p5);
 			if ($self->masked) {
 			    my $mus = join '' , @p5m;
-			    print qq($mus\n\n);
+			    unless ($self->no_stdout) {print qq($mus\n\n);}
 			    if ($self->output) {print OUT qq($mus\n\n);}
 			    undef(@p5m);
 			}
@@ -282,12 +288,12 @@ sub get_transcript {
 
 		my $line =  qq($exon $region $range $length\n$cds\n\n);
 		if ($self->output) {print OUT qq($line);}
-		print qq($line);
+		unless ($self->no_stdout) {print qq($line);}
 
 		my $maskedcds;
 		if ($self->masked) {
 		    $maskedcds = join '' , @maskedseq;
-		    print qq($maskedcds\n\n);
+		    unless ($self->no_stdout) {print qq($maskedcds\n\n);}
 		    if ($self->output) {print OUT qq($maskedcds\n\n);}
 		}
 
@@ -308,7 +314,7 @@ sub get_transcript {
 
     my $line = qq(\n\>$transcript.dna.fasta\n$sequence\n\n\>$transcript.protien.fasta\n$protien_seq\n);
     if ($self->output) {print OUT qq($line);}
-    print qq($line);
+    unless ($self->no_stdout) {print qq($line);}
 
     return ($transcript_info,$trans_pos_number_line,$post_pos_bases);
 
@@ -322,12 +328,12 @@ sub print_utr_seq {
 	my $rev = &reverse_complement_allele($seq);
 	my $line = qq($rev\n\n);
 	if ($self->output) {print OUT qq($line);}
-	print qq($line);
+	unless ($self->no_stdout) {print qq($line);}
     } else {
 	my $seq = &get_ref_base($r_start,$r_stop,$chromosome,$organism);
 	my $line = qq($seq\n\n);
 	if ($self->output) {print OUT qq($line);}
-	print qq($line);
+	unless ($self->no_stdout) {print qq($line);}
     }
 }
 
@@ -372,7 +378,7 @@ sub get_transcript_info {
     }else{
 	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $genbank_data_directory)
     }
-
+    unless ($self->no_stdout) {print qq($ensembl_data_directory\n\n\n);}
     unless ($t) {print qq(\nCould not find a transcript object for $transcript from the $organism data warehouse\nWill exit the program now\n\n);;exit(1);}
 
     my $tseq = $t->cds_full_nucleotide_sequence;
@@ -398,7 +404,7 @@ sub get_transcript_info {
 
     my $line = qq(Hugo gene name $hugo_gene_name, Gene Id $gene_id, Transcript name $transcript, Chromosome $chromosome, Strand $strand, Transcript status $transcript_status, Transcript source $source $build_source\n\n\n);
     if ($self->output) {print OUT qq($line);}
-    print qq($line);
+    unless ($self->no_stdout) {print qq($line);}
 
     $transcript_info->{$transcript}->{-1}->{source_line} = qq(Hugo gene name $hugo_gene_name, Gene Id $gene_id, Transcript name $transcript, Chromosome $chromosome, Strand $strand, Transcript status $transcript_status, Transcript source $source $build_source);
     $transcript_info->{$transcript}->{-1}->{hugo_gene_name} = $hugo_gene_name;
@@ -468,7 +474,7 @@ sub get_transcript_info {
     } else {
 	my $line = qq(\nCould not find substructures in the transcript object for $transcript from the $organism data warehouse\nWill exit the program now\n\n);
 	if ($self->output) {print OUT qq($line);}
-	print qq($line);
+	unless ($self->no_stdout) {print qq($line);}
 	exit 1;	
     }
     
