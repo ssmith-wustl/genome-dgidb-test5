@@ -128,8 +128,8 @@ sub somatic_workflow_input {
 sub calculate_estimated_kb_usage {
     my $self = shift;
 
-    # 1.5 gig... overestimating by 50% or so...
-    return 1536000;
+    # 15 gig... overestimating by 50% or so...
+    return 15728640;
 }
 
 1;
