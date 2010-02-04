@@ -26,12 +26,35 @@ class Genome::InstrumentData::Imported {
         description         => { is => 'VARCHAR2', len => 512,is_optional => 1 },
         read_count          => { is => 'NUMBER',   len => 20, is_optional => 1 },
         base_count          => { is => 'NUMBER',   len => 20, is_optional => 1 },
-        data_directory      => { via => 'disk_allocation', to => 'absolute_path' },
-        disk_allocation     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', is_many => 1 },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub data_directory {
+    my $self = shift;
+
+    my $alloc = $self->get_disk_allocation;
+
+    if ($alloc) {
+        return $alloc->absolute_path;
+    }
+
+}
+
+sub get_disk_allocation {
+    my $self = shift;
+
+    my @allocations = Genome::Disk::Allocation->get(owner_class_name=>ref($self), 
+                                                    allocation_path => {operator => 'LIKE', value => '%imported%'},
+                                                    owner_id=>$self->id); 
+
+    if (@allocations > 1) {
+        die "Got more than one allocation for this imported data!";
+    }
+
+    return $allocations[0];
+}
 
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
