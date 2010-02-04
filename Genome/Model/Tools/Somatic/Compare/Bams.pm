@@ -53,6 +53,9 @@ sub pre_execute {
     unless (defined $self->skip_if_output_present) {
         $self->skip_if_output_present(1);
     }
+    unless (defined $self->imported_bams) {
+        $self->imported_bams(0);
+    }
     unless (defined $self->lookup_variants_report_mode) {
         $self->lookup_variants_report_mode("novel-only");
     }
@@ -234,6 +237,7 @@ __DATA__
   <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="transcript_annotation_file" />
 
+  <link fromOperation="input connector" fromProperty="imported_bams" toOperation="High Confidence Snp Tier 1" toProperty="prepend_chr" />
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="High Confidence Snp Tier 1" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="min_mapping_quality" toOperation="High Confidence Snp Tier 1" toProperty="min_mapping_quality" />
   <link fromOperation="input connector" fromProperty="min_somatic_quality" toOperation="High Confidence Snp Tier 1" toProperty="min_somatic_quality" />
@@ -241,6 +245,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tier_1_snp_high_confidence_file" toOperation="High Confidence Snp Tier 1" toProperty="output_file" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="High Confidence Snp Tier 1" toProperty="sniper_file" />
 
+  <link fromOperation="input connector" fromProperty="imported_bams" toOperation="High Confidence Snp Tier 2" toProperty="prepend_chr" />
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="High Confidence Snp Tier 2" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="min_mapping_quality" toOperation="High Confidence Snp Tier 2" toProperty="min_mapping_quality" />
   <link fromOperation="input connector" fromProperty="min_somatic_quality" toOperation="High Confidence Snp Tier 2" toProperty="min_somatic_quality" />
@@ -249,6 +254,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="High Confidence Snp Tier 2" toProperty="skip" /> 
   <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="High Confidence Snp Tier 2" toProperty="sniper_file" />
 
+  <link fromOperation="input connector" fromProperty="imported_bams" toOperation="High Confidence Snp Tier 3" toProperty="prepend_chr" />
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="High Confidence Snp Tier 3" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="min_mapping_quality" toOperation="High Confidence Snp Tier 3" toProperty="min_mapping_quality" />
   <link fromOperation="input connector" fromProperty="min_somatic_quality" toOperation="High Confidence Snp Tier 3" toProperty="min_somatic_quality" />
@@ -257,6 +263,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="High Confidence Snp Tier 3" toProperty="skip" /> 
   <link fromOperation="Tier Variants Snp" fromProperty="tier3_file" toOperation="High Confidence Snp Tier 3" toProperty="sniper_file" />
 
+  <link fromOperation="input connector" fromProperty="imported_bams" toOperation="High Confidence Snp Tier 4" toProperty="prepend_chr" />
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="High Confidence Snp Tier 4" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="min_mapping_quality" toOperation="High Confidence Snp Tier 4" toProperty="min_mapping_quality" />
   <link fromOperation="input connector" fromProperty="min_somatic_quality" toOperation="High Confidence Snp Tier 4" toProperty="min_somatic_quality" />
@@ -433,6 +440,7 @@ __DATA__
     <inputproperty isOptional="Y">tumor_snp_file</inputproperty>
     <inputproperty isOptional="Y">normal_snp_file</inputproperty>
     <inputproperty isOptional="Y">reference_fasta</inputproperty>
+    <inputproperty isOptional="Y">imported_bams</inputproperty>
 
     <inputproperty isOptional="Y">only_tier_1</inputproperty>
     <inputproperty isOptional="Y">only_tier_1_indel</inputproperty>

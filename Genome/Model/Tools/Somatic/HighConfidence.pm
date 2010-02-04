@@ -42,6 +42,13 @@ class Genome::Model::Tools::Somatic::HighConfidence {
             is_input => 1,
             doc => 'minimum somatic quality threshold for high confidence call',
        },
+       prepend_chr => {
+           is => 'Boolean',
+           default => '0',
+           is_optional => 1,
+           is_input => 1,
+           doc => 'prepend the string "chr" to chromosome names. This is primarily used for external/imported bam files.',
+       },
        # Make workflow choose 64 bit blades
        lsf_resource => {
             is_param => 1,
@@ -142,6 +149,10 @@ sub execute {
     while(my $line = $fh->getline) {
         chomp $line;
         my ($chr, $start, $stop, $ref, $iub, $type, $somatic_score, @annotation_columns) = split /\t/, $line;
+        if ($self->prepend_chr) {
+            $chr = "chr$chr";
+            $chr =~ s/MT$/M/;
+        };
         next if $ref eq "*";
         if($somatic_score >= $somatic_threshold) {
             print $tfh "$chr\t$start\t$stop\n";
