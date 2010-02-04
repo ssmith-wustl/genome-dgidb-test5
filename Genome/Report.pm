@@ -224,7 +224,6 @@ sub directory_to_name {
 sub save {
     my ($self, $parent_directory, $overwrite) = @_;
 
-    $DB::single = 1;
     unless ( $self->xml ) {
         $self->error_message('No XML was found to save');
         return;
