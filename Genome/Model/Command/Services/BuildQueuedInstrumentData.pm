@@ -146,9 +146,13 @@ sub execute {
                   ||
                   ($processing_profile_name eq 'maq 0.7.1')
                   ||
+                  ($processing_profile_name eq 'maq 0.7.1 alignments only') 
+                  ||
                   ($pp->id() == 2128324)  
                   ||
                   ($pp->id() == 2036054)
+                  ||
+                  ($pp->id() == 2158225)
                  ) {
                   $auto_build = 0;
               }
