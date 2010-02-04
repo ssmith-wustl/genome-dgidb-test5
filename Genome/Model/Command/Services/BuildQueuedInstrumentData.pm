@@ -113,12 +113,6 @@ sub execute {
                   push @processing_profile_names, 'bwa0.5.5 and samtools r453 and picard r107'; 
               }
 
-              my @maq_pp = grep { $_ eq 'maq 0.7.1' } @processing_profile_names;
-
-              unless (@maq_pp > 0) {
-                  push @processing_profile_names, 'maq 0.7.1';
-              }
-
           }
           
         my @process_errors;
@@ -146,13 +140,17 @@ sub execute {
                   ||
                   ($processing_profile_name eq 'maq 0.7.1')
                   ||
-                  ($processing_profile_name eq 'maq 0.7.1 alignments only') 
+                  ($processing_profile_name eq 'maq 0.7.1 alignments only')
+                  ||
+                  ($processing_profile_name eq 'bwa0.4.9 and samtools r320wu1')
                   ||
                   ($pp->id() == 2128324)  
                   ||
                   ($pp->id() == 2036054)
                   ||
                   ($pp->id() == 2158225)
+                  ||
+                  ($pp->id() == 2155404)
                  ) {
                   $auto_build = 0;
               }
