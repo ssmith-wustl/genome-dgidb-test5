@@ -60,7 +60,7 @@ sub execute {
     my $self = shift;
     unlink($self->logfile) if (-e $self->logfile);
     my $output = run_workflow_lsf(
-                              '/gscmnt/sata835/info/medseq/virome/workflow/xml/virome-screening2.xml',
+                              '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/virome-screening2.xml',
                               'fasta_file'  => $self->fasta_file,
                               'barcode_file'=> $self->barcode_file,
                               'dir'         => $self->dir,

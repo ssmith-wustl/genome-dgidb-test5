@@ -11,9 +11,15 @@ use Workflow;
 use English;
 
 class Genome::Model::Tools::DeleteFiles {
-    is  => ['Command'],
+    is  => ['Genome::Model::Tools'],
     has_input => [
         files => { is => 'ARRAY', doc => 'array of files to delete' },
+        delete_derivatives => {
+                            doc => 'delete any files derived from items in original list',
+                            is => 'Boolean',
+                            is_optional => 1,
+                            default => 0,
+                       },
     ],
     has_output => [
         
@@ -40,18 +46,32 @@ EOS
 sub execute {
     
     my $self = shift;
-
+    my $delete_derivatives = $self->delete_derivatives;
     
     my @files = @{$self->files()};
 
-    foreach my $file (@files) {
+    print "deleting these files:  " . join("\n*\t", @files) . "\n";
 
-    	if (-e $file) {
-            unless(unlink($file)) {
+    foreach my $file (@files) 
+    {
 
-                die "failed to unlink '$file': $OS_ERROR";
-
-         	}	
+    	if (-e $file) 
+        {
+            if ($delete_derivatives)
+            {
+                my $derivatives = "$file*";
+                foreach (glob($derivatives)) 
+                {
+                    unlink or warn "Couldn't unlink '$_': $!";
+                } 
+            }
+            else
+            {
+                unless(unlink($file)) 
+                {
+                    warn "failed to unlink '$file': $!";
+                }	
+            }
         }
 
     }

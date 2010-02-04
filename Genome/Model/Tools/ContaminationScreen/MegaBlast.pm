@@ -52,28 +52,23 @@ sub execute
     my $header = $self->header;
     my ($dir,$base) = (dirname($output_file), basename($output_file)); 
 
-#    #Step 0 - exec megablast
-#    my $raw_file = "$dir/0_$base.raw";
-#    my $mgb = "megablast -p 90.0 -D3 -F \"m D\" -fT -UT -R -d $database -i $input_file > $raw_file";
-        
-#    $self->_run_cmd($mgb); 
-
+    #Step 0 - exec megablast
+    my $raw_file = "$dir/0_$base.raw";
+    my $mgb = "megablast -p 90.0 -D3 -F \"m D\" -fT -UT -R -d $database -i $input_file > $raw_file";
+print "command:  $mgb\n";        
+    $self->_run_cmd($mgb); 
 
     #Step 1 - exec filter
-#    my $filtered_file = "$dir/1_$base.filtered";
-#    my $fmt = "awk '(\$3>=98.0 && \$4>=50)||(\$3>=94.0 && \$4>=100)||(\$3>=90.0 && \$4>=200)' $raw_file > $filtered_file"; 
-#    $self->status_message('Running: ' . $fmt);
-#    print "\nstep 1:\t$fmt\n";
-
-#    $self->_run_cmd($fmt); 
+    my $filtered_file = "$dir/1_$base.filtered";
+    my $fmt = "awk '(\$3>=98.0 && \$4>=50)||(\$3>=94.0 && \$4>=100)||(\$3>=90.0 && \$4>=200)' $raw_file > $filtered_file"; 
+    $self->status_message('Running: ' . $fmt);
+    $self->_run_cmd($fmt); 
 
     #Step 2 - sort
     my $sorted_file = "$dir/2_$base.sorted";
-#    my $srt = "sort $filtered_file > $sorted_file";
-#    $self->status_message('Running: ' . $srt);
-#    print "\nstep 2:\t$srt\n";
-
-#    $self->_run_cmd($srt); 
+    my $srt = "sort $filtered_file > $sorted_file";
+    $self->status_message('Running: ' . $srt);
+    $self->_run_cmd($srt); 
 
     #Step 3 - get max
     #   presumes this column order
@@ -152,9 +147,6 @@ sub _query()
     my $database = $self->database;
 
     my $cmd = "grep \"$key\" $database";
-    print "cmd:  $cmd\n";
-    #print "cmd:  " . system($cmd) . "\n";
-    
 }
 
 1;
