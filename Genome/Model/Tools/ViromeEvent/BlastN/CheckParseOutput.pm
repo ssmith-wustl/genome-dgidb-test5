@@ -124,12 +124,13 @@ sub check_completed_parse {
     while (my $line = $fh->getline) {
 	$line_count++;
 	$undef_taxon++ if $line =~ /undefined\s+taxon/;
-	if ($line =~ /\s+\Summery:\s+(\d+)out\s+of\s+(\d+)/) {
+	#if ($line =~ /#\s+Summary:\s+(\d+)\s+out\s+of\s+(\d+)/) {
+	if ($line =~ /\s+Summary:/) {
 	    #SKIP THE CHECKS BELOW .. COULD GO INTO INFINITE LOOP
 	    return 1;
 	    $parse_completed = 1;
-	    $saved_seq = $1;
-	    $total_seq = $2;
+	    #$saved_seq = $1;
+	    #$total_seq = $2;
 	}
     }
     $fh->close;
@@ -137,6 +138,7 @@ sub check_completed_parse {
 	#PARSING NEVER COMPLETED
 	return 0;
     }
+
     #CHECKS BELOW ARE NOT DONE TO AVOID POTENTIAL RERUNNING OF PARSE
     #AND GETTING THE SAME RESULT AND RUNNING IT AGAIN
     my $phylotyped_count = $total_seq - $saved_seq;
