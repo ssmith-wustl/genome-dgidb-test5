@@ -10,29 +10,35 @@ class Genome::Model::Tools::CommandLogReader{
     has =>[
         start_date => {
             is => 'Text',
-            doc => "Logs written after this date (YYYY-MM-DD) will be included in the reader's output",
+            doc => "Logs written after this date (YYYY-MM-DD) will be included in the reader's output.",
         },
     ],
     has_optional =>[
+        report_type => {
+            is => 'Text',
+            valid_values => ["full","abbreviated","summary"],
+            default => "summary",
+            doc => "A full report lists every user/command/parameter combination and counts number of times each combination occurs. An abbreviated report excludes the parameter column. A summary report includes how many commands each user ran (if group by is user, does not include commands) or how many times a command was executed (if group by is command, does not include user). Defaults to summary."
+        },
         output_file => {
             is => 'Text',
-            doc => "Store log information in the specified file, defaults to STDOUT",
+            doc => "Store log information in the specified file, defaults to STDOUT.",
             default => "STDOUT",
         },
         end_date => {
             is => 'Text',
-            doc => "Logs written before this date (YYYY-MM-DD) will be included in the reader's output, defaults to current date"
+            doc => "Logs written before this date (YYYY-MM-DD) will be included in the reader's output, defaults to current date."
         },
         group_by => {
             is => 'Text',
             valid_values => ["user","command"],
             default => "user",
-            doc => "Groups output by user name or command name, defaults to user",
+            doc => "Groups output by user name or command name, defaults to user.",
         },
         print_headers => {
             is => 'Boolean',
             default => 1,
-            doc => "Print column headers on first line of output",
+            doc => "Print column headers on first line of output.",
         },
     ],
 };
@@ -65,13 +71,29 @@ sub log_directory {
 sub output_attributes {
     my $self = shift;
     if ($self->group_by eq "user") {
-        return (qw/ user command params times_called/);
+        if ($self->report_type eq "full") {
+            return (qw/ user command params times_called/);
+        }
+        elsif ($self->report_type eq "abbreviated") {
+            return (qw/ user command times_called/);
+        }
+        elsif ($self->report_type eq "summary") {
+            return (qw/ user num_commands/);
+        }
     }
     elsif ($self->group_by eq "command") {
-        return (qw/ command user params times_called/);
+        if ($self->report_type eq "full") {
+            return (qw/ command user params times_called/);
+        }
+        elsif ($self->report_type eq "abbreviated") {
+            return (qw/ command user times_called/);
+        }
+        elsif ($self->report_type eq "summary") {
+            return (qw/ command times_called/);
+        }
     }
     else {
-        $self->error_message("Unknown group by type, unable to provide column headers");
+        $self->error_message("Unknown group by attribute or report type, unable to provide column headers");
         return;
     }
 }
@@ -87,6 +109,8 @@ sub _sort_params {
     my $params = shift;
 
     my @params = sort(split('--', $params));
+    return unless @params;
+
     my $str;
     for my $p (@params) {
         next if length $p == 0;
@@ -174,11 +198,21 @@ sub execute {
             my $user = $line->{user};
             my $command = $line->{command};
             my $params = $self->_sort_params($line->{params});
-            if ($self->group_by eq "command"){
-                $info{$command}->{$user}->{$params}++;
+            unless (defined $params) {
+                if ($self->group_by eq "command") {
+                    $info{$command}->{$user}->{"none"}++;
+                }
+                elsif ($self->group_by eq "user") {
+                    $info{$user}->{$command}->{"none"}++;
+                }
             }
-            elsif ($self->group_by eq "user") {
-                $info{$user}->{$command}->{$params}++;
+            else {
+                if ($self->group_by eq "command"){
+                    $info{$command}->{$user}->{$params}++;
+                }
+                elsif ($self->group_by eq "user") {
+                    $info{$user}->{$command}->{$params}++;
+                }
             }
         }
     }
@@ -200,14 +234,40 @@ sub execute {
     }
 
     for my $group (sort keys %info) {
-        for my $subgroup (sort keys %{$info{$group}}) {
-            for my $params (keys %{$info{$group}->{$subgroup}}) {
-                $output_fh->print($group . "\t");
-                $output_fh->print($subgroup . "\t");
-                $output_fh->print($params . "\t");
-                $output_fh->print($info{$group}->{$subgroup}->{$params} . "\n");
+        if ($self->report_type eq "summary") {
+            my $sum = 0;
+            for my $subgroup (sort keys %{$info{$group}}) {
+                for my $params (keys %{$info{$group}->{$subgroup}}) {
+                    $sum += $info{$group}->{$subgroup}->{$params};
+                }
+            }
+            $output_fh->print($group . "\t");
+            $output_fh->print($sum . "\n");
+        }
+
+        else {
+            for my $subgroup (sort keys %{$info{$group}}) {
+                if ($self->report_type eq "full") {
+                    for my $params (keys %{$info{$group}->{$subgroup}}) {
+                        $output_fh->print($group . "\t");
+                        $output_fh->print($subgroup . "\t");
+                        $output_fh->print($params . "\t");
+                        $output_fh->print($info{$group}->{$subgroup}->{$params} . "\n");
+                    }
+                }
+
+                elsif ($self->report_type eq "abbreviated") {
+                    my $sum = 0;
+                    for my $params (keys %{$info{$group}->{$subgroup}}) {
+                        $sum += $info{$group}->{$subgroup}->{$params};
+                    }
+                    $output_fh->print($group . "\t");
+                    $output_fh->print($subgroup . "\t");
+                    $output_fh->print($sum . "\n");
+                }
             }
         }
+
     }
 }
 1;
