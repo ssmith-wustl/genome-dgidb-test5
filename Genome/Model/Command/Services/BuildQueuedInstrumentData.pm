@@ -107,7 +107,7 @@ sub execute {
           }
           if ($instrument_data_type =~ /solexa/i) {
 
-              my @bwa_pp_1 = grep { $_ eq 'bwa0.4.9 28 seed -R 2 4 threads samtools r320wu1' } @processing_profile_names;
+              my @bwa_pp_1 = grep { $_ eq 'bwa0.5.5 and samtools r453 and picard r107' } @processing_profile_names;
 
               unless (@bwa_pp_1 > 0) {
                   push @processing_profile_names, 'bwa0.5.5 and samtools r453 and picard r107'; 
