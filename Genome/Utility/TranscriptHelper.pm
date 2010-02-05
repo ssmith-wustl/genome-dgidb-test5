@@ -49,51 +49,59 @@ sub annotate_sv {
     # breakpoint a and breakpoint b
     # Expecting self, type, chrom_a, break_a, chrom_b, break_b
     my $self = shift;
-    my $type = shift;
-    my @chroms = ($_[0], $_[2]);
-    my @breaks = ($_[1], $_[3]);
-    my %return_value;
+    my ($type, $chroma, $posa, $chromb, $posb) = @_;
 
-    if ($breaks[0] > $breaks[1] and $chroms[0] eq $chroms[1]) {
+    my %anno;
+    $anno{type} = $type;
+    $anno{breakpoint_a} = {chromosome => $chroma, position => $posa};
+    $anno{breakpoint_b} = {chromosome => $chromb, position => $posb};
+
+    if ($posa > $posb and $chroma eq $chromb) {
         $self->error_message("Breakpoint A should be less than breakpoint B on same chromosome");
         return;
     }
     
-    if ($type ne "DEL" and $type ne "INS" and $type ne "INV" and $type ne "CTX") {
+    unless (grep {$type eq $_} ("DEL" , "INS" , "INV" , "CTX") ) {
         $self->error_message("$type is an invalid event type, valid values are DEL, INS, INV, CTX");
+
         return;
     }
 
-    if ($chroms[0] ne $chroms[1] and $type ne "CTX") {
+    if ( ($chroma ne $chromb) and ($type ne "CTX") ) {
         $self->error_message("Only CTX can occur on two different chromosomes");
         return;
     }
 
-    my $transcript_window = $self->_get_transcript_window($chroms[0]);
+    my $transcript_window = $self->_get_transcript_window($chroma);
     return unless defined $transcript_window;
     
-    for (my $i = 0; $i <= 1; $i++) {
-        $transcript_window = $self->_get_transcript_window($chroms[$i]) if $chroms[$i] ne $chroms[0];
-        return unless defined $transcript_window;
-        my @transcripts = $transcript_window->scroll($breaks[$i]);
-        my %info;
-        $info{'transcripts'} = @transcripts? \@transcripts : undef;
-        $info{'chromosome'} = $chroms[$i];
-        $info{'position'} = $breaks[$i];
-        $return_value{'breakpoint_'.$i} = \%info;
+    my $chrom_for_window;
+    my $last_pos;
+    for my $break_anno ( $anno{breakpoint_a}, $anno{breakpoint_b} ) {
+        my $chrom = $break_anno->{chromosome};
+        my $pos = $break_anno->{position};
+        
+        $transcript_window = $self->_get_transcript_window($chrom) unless $chrom_for_window and $chrom_for_window eq $chrom;
 
-        if ($type eq "DEL" and not exists $return_value{'deleted_genes'}) {
-            my @deleted_trans = $transcript_window->scroll($breaks[0] + 1, $breaks[1] - 1);
+        $self->error_message("couldn't get transcript window for chromosome $chrom") and return unless defined $transcript_window;
+        if ($type eq "DEL" and $chrom_for_window){
+            my @deleted_transcripts = $transcript_window->scroll($last_pos+1, $pos-1);
             my %genes;
-            for my $t (@deleted_trans) {
+            for my $t (@deleted_transcripts) {
                 my $gene = $t->gene;
                 my $name = $gene->name() if defined $gene;
                 $genes{$name}++ if defined $name;
             }
-            $return_value{'deleted_genes'} = \%genes;
+            $anno{'deleted_genes'} = [keys %genes];
         }
+
+        my @transcripts = $transcript_window->scroll($pos);
+        $break_anno->{'transcripts'} = @transcripts? \@transcripts : undef;
+        $chrom_for_window = $chrom;
+        $last_pos = $pos;
     }
-    return %return_value;
+    
+    return %anno;
 }
 
 sub gene_names_from_transcripts {
