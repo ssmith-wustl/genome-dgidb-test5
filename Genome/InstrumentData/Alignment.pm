@@ -683,7 +683,11 @@ sub sanger_fastq_filenames {
             }
         }
 
-        if ($self->filter_name eq 'forward-only') {
+        # FIXME - getting a warning about undefined string with 'eq'
+        if (! defined($self->filter_name)) {
+            $self->status_message('No special filter for this assignment');
+        }
+        elsif ($self->filter_name eq 'forward-only') {
             # forward reads only
             $self->status_message('forward-only filter applied for this assignment');
             $params{paired_end_as_fragment} = 1;
@@ -693,9 +697,6 @@ sub sanger_fastq_filenames {
             $self->status_message('reverse-only filter applied for this assignment');
             $params{paired_end_as_fragment} = 2;
         }
-        elsif ($self->filter_name eq undef) {
-            $self->status_message('No special filter for this assignment');
-        } 
         else {
             die 'Unsupported filter: "' . $self->filter_name . '"!';
         }
@@ -809,7 +810,7 @@ sub generate_tcga_bam_file {
 
     $self->status_message("Cat-ing together: ".join("\n",@files_to_merge). "\n to output file ".$per_lane_sam_file);
 
-    $DB::single = 1;
+    #$DB::single = 1;
     
     my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@files_to_merge,output_file=>$per_lane_sam_file);
     if ($cat_rv ne 1) {
