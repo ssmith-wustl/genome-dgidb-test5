@@ -4,22 +4,14 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 6;
+use Test::More tests => 5;
 
 use Genome::Utility::FileSystem;
 
 my $tmp = Genome::Utility::FileSystem->create_temp_directory();
 
-#my $tmp = File::Temp::tempdir(CLEANUP=>0);
-
 # TODO: use a "testing" cDNA model to get build rather than this real build
-my $model = Genome::Model->get(name => 'pipeline_test_cDNA');
-unless ($model) {
-    die "Can't find a model to work with";
-}
-my $build = $model->last_complete_build;
-my $build_id = $build->id;
-ok($build, "build found with id $build_id");
+my $build_id = 98314469;
 
 my $r = Genome::Model::ReferenceAlignment::Report::ReferenceCoverage->create(
     build_id => $build_id,
