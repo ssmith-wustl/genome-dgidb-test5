@@ -85,33 +85,24 @@ sub create {
         if ( -l $base_path ) {
             my $link_path = readlink($base_path);
             if ( $link_path =~ /^offInstrumentApps/ ) {
-                unless (
-                    $link_path =~ /(offInstrumentApps)-(\d\.\d\.\d{2}\.\d{2})/ )
-                {
-                    $self->error_message(
-                        'Link to 454 tools was malformed: ' . $link_path );
+                unless ( $link_path =~ /(offInstrumentApps)-(\d\.\d\.\d{2}\.\d{2})/ ) {
+                    $self->error_message( 'Link to 454 tools was malformed: ' . $link_path );
                     return;
                 }
                 $self->version($2);
                 $self->version_subdirectory($1);
             }
             elsif ( $link_path =~ /^DataAnalysis/ ) {
-                if ($link_path =~ /^(DataAnalysis-([\d\.]+))/) {
-                    $self->version_subdirectory($1);
-                    $self->version($2);
-                }
-                else {
-                    $self->error_message(
-                        'Link to 454 tools was malformed: ' . $link_path );
-                    return;
-                }
-                # REMOVE THIS WHEN WE ACTUALLY SUPPORT THE NEW DIRECTORY STRUCTURE
-                die "The DatanAnalysis* directory structure for newbler is not supported yet!  Contact Informatics." 
+		unless ($link_path =~ /(DataAnalysis)-(\d+\.\d+)/) {
+		    $self->error_message('Link to 454 tools was malformed: '.$link_path);
+		    return;
+		}
+		$self->version($2);
+		$self->version_subdirectory($1);
             }
             elsif ( $link_path =~ /^mapasm454_source/ ) {
                 unless ( $link_path =~ /(mapasm454_source)_(\d{8})/ ) {
-                    $self->error_message(
-                        'Link to 454 tools was malformed: ' . $link_path );
+                    $self->error_message( 'Link to 454 tools was malformed: ' . $link_path );
                     return;
                 }
                 $self->version($2);
@@ -146,6 +137,8 @@ sub resolve_app_bin_name {
       if $self->version_subdirectory eq 'offInstrumentApps';
     $app_bin_name = 'applicationsBin'
       if $self->version_subdirectory eq 'mapasm454_source';
+    $app_bin_name = 'bin' if
+	$self->version_subdirectory eq 'DataAnalysis';
     return $app_bin_name;
 }
 
@@ -167,6 +160,17 @@ sub bin_path {
           . $self->version_subdirectory . '_'
           . $self->version . '/'
           . $self->resolve_app_bin_name;
+    }
+    elsif ( $self->version_subdirectory eq 'DataAnalysis') {
+	$bin_path = 
+	    $self->resolve_454_path
+	  . $self->version_subdirectory . '-'
+	  . $self->version . '/'
+          . $self->resolve_app_bin_name;
+    }
+    else {
+	$self->error_message("Can not resolve bin path .. expected offInstrumentApps or mapasm454_source or DataAnalysis but got ".$self->version_subdirectory);
+	return;
     }
     return $bin_path;
 }
