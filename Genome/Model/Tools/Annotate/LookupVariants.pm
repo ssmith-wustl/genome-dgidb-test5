@@ -209,8 +209,9 @@ sub print_matches {
 		my $is_validated_by_frequency = $snp->{'is_validated_by_frequency'};
 		my $is_validated_by_hap_map = $snp->{'is_validated_by_hap_map'};
 		my $is_validated_by_other_pop = $snp->{'is_validated_by_other_pop'};
-		
-		my $gff_line = qq(Chromosome$chr\tdbsnp_130\t$ds_type\t$ds_start\t$ds_stop\t.\t$strain\t.\t$rs_id \; Alleles \"$allele\" ; is_validated \"$is_validated\" ; submitter \"$submitter\"\n);
+		my $validation = "$is_validated:$is_validated_by_allele:$is_validated_by_cluster:$is_validated_by_frequency:$is_validated_by_hap_map:$is_validated_by_other_pop";
+		chomp $validation;
+		my $gff_line = qq(Chromosome$chr\tdbsnp_130\t$ds_type\t$ds_start\t$ds_stop\t.\t$strain\t.\t$rs_id \; Alleles \"$allele\" ; validation \"$validation\" ; submitter \"$submitter\"\n);
 		$fh->print($gff_line);
 	    }
 	}
@@ -220,13 +221,22 @@ sub print_matches {
 	chomp($line);
 
 	if (@matches) {
-	    my (@rs_ids,@submitters,@matchs);
+	    my (@rs_ids,@submitters,@matchs,@validation);
 	    for my $snp_line (@matches) {
 		my $snp = parse_dbsnp_line($snp_line);
 		my $rs_id = $snp->{'rs_id'};
 		my $allele = $snp->{'ds_allele'};
 		my $submitter = $snp->{'ds_submitter'};
+		my $is_validated = $snp->{'is_validated'};
+		my $is_validated_by_allele = $snp->{'is_validated_by_allele'};
+		my $is_validated_by_cluster = $snp->{'is_validated_by_cluster'};
+		my $is_validated_by_frequency = $snp->{'is_validated_by_frequency'};
+		my $is_validated_by_hap_map = $snp->{'is_validated_by_hap_map'};
+		my $is_validated_by_other_pop = $snp->{'is_validated_by_other_pop'};
 		
+		my $validation = "$is_validated\-$is_validated_by_allele\-$is_validated_by_cluster\-$is_validated_by_frequency\-$is_validated_by_hap_map\-$is_validated_by_other_pop";
+		chomp $validation;
+		push(@validation,$validation) unless grep (/$validation/ , @validation);
 		push(@rs_ids,$rs_id) unless grep (/$rs_id/ , @rs_ids);
 		push(@submitters,$submitter) unless grep (/$submitter/ , @submitters);
 		
@@ -243,7 +253,8 @@ sub print_matches {
 	    my $rs_id = join ':' , @rs_ids;
 	    my $submitter = join ':' , @submitters;
 	    my $match = join ':' , @matchs;
-	    $report_line = sprintf("%s\t%s\n",$line,"$rs_id,$submitter,$match");
+	    my $validation  = join ':' , @validation;
+	    $report_line = sprintf("%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation");
 	} else {
 	    my $match = "no_hit";
 	    $report_line = sprintf("%s\t%s\n",$line,$match); 
