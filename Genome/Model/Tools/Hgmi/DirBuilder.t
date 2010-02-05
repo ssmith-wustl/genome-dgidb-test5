@@ -5,6 +5,8 @@ use warnings;
 
 use above "Genome";
 use File::Remove qw/ remove /;
+use File::Temp qw/ tempdir/;
+use English;
 
 use Test::More tests => 3;
 
@@ -23,9 +25,13 @@ unless( -l "/tmp/disk/analysis")
             "/tmp/disk/analysis");
 }
 
+my $dir = tempdir("HGMI_XXXXXX", DIR => "/tmp/disk/analysis", 
+                                 CLEANUP => 1 );
+
 #/tmp/disk/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0/
 my $tool_db = Genome::Model::Tools::Hgmi::DirBuilder->create(
-                    path => "/tmp/disk/analysis/HGMI",
+                    #path => "/tmp/disk/analysis/HGMI",
+                    path => $dir,
                     'org_dirname' => "B_catenulatum",
                     'assembly_version_name' => "Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb",
                     'assembly_version' => "Version_1.0",
