@@ -455,7 +455,7 @@ sub _run_aligner {
         $self->die_and_clean_up($self->error_message);
     }
     
-        $DB::single = 1;
+        #$DB::single = 1;
 
     unless ($self->generate_tcga_bam_file(sam_file => $sam_map_output_fh->filename,
 					  unaligned_sam_file=> $self->unaligned_reads_list_path,

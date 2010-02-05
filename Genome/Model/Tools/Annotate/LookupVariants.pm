@@ -112,7 +112,7 @@ EOS
 
 sub execute { 
 
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
 
     my ($self) = @_;
 

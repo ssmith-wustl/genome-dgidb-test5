@@ -410,7 +410,6 @@ sub execute {
     $DB::single = $DB::stopper;
     
     print Data::Dumper::Dumper($self);
-    $DB::single = 1;
     
     #old AssignRun step 
     unless (-d $self->build_directory) {

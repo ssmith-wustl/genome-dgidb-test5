@@ -333,7 +333,7 @@ sub generate_report_detail
     }
 
     # let's make sure that the reports made it out of the loop:
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
 
     #
     # BUILD GRAPH

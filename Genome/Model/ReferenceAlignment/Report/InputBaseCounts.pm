@@ -110,8 +110,6 @@ sub generate_report_detail
     my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/InputBaseCounts.pm"};
     die 'failed to find module path!' unless $module_path;
    
-$DB::single = 1;
-
     my $r = new CGI;
     my $style = $self->get_css();
 
