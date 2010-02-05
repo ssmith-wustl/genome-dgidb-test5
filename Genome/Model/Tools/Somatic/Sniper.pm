@@ -118,7 +118,23 @@ sub execute {
 
     # Run sniper C program
     my $cmd = "bam-somaticsniper -q 1 -Q " . $self->quality_filter. " -f ".$self->reference_file." ".$self->tumor_bam_file." ".$self->normal_bam_file ." " . $self->output_snp_file . " " . $self->output_indel_file; 
-    my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->tumor_bam_file,$self->normal_bam_file], output_files=>[$self->output_snp_file,$self->output_indel_file], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
+    my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->tumor_bam_file,$self->normal_bam_file], output_files=>[$self->output_snp_file], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
+    
+    #Manually check for $self->output_indel_file as there might not be any indels and shellcmd()
+    # chokes unless either all are present or all are empty.
+    #(This means shellcmd() can check for the SNPs file on its own and still work given an empty result.)
+    #Varied the warning text slightly so this message can be disambiguated from shellcmd() output in future debugging
+    unless(-s $self->output_indel_file) {
+        #Touch the file to make sure it exists
+        my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_indel_file);
+        unless ($fh) {
+            $self->error_message("failed to touch " . $self->output_indel_file . "!: $!");
+            die;
+        }
+        $fh->close;
+        
+        $self->warning_message("ALLOWING zero size output file " . $self->output_indel_file . " for sniper command: $cmd");
+    }
 
     $self->status_message("ending execute");
     return $result; 
