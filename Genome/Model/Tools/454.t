@@ -4,8 +4,8 @@ use strict;
 use warnings;
 use above 'Genome';
 
-#use Test::More;
-use Test::More skip_all => "The new installed version of newbler has a new directory name/structure.  Update me to work with it!";
+use Test::More;
+#use Test::More skip_all => "The new installed version of newbler has a new directory name/structure.  Update me to work with it!";
 
 BEGIN {
     my $archos = `uname -a`;
@@ -30,18 +30,21 @@ foreach my $link (@installed_links) {
     is( $tool_454->arch_os, $arch_os, 'arch_os' );
     my $app_bin_name;
     if ( $link =~ /installed/ ) {
-        like( $tool_454->version, '/\d\.\d.\d{2}.\d{2}/',
-            'found a version like 0.0.00.00' );
-        $app_bin_name = '/bin';
+	if ($installed_path =~ /offInstrumentApps/) {
+	    like( $tool_454->version, '/\d\.\d.\d{2}.\d{2}/','found a version like 0.0.00.00' );
+	    $app_bin_name = '/bin';
+	}
+	if ($installed_path =~ /DataAnalysis/) {
+	    like($tool_454->version,'/\d+\.\d+/','found a version like 0.0');
+	    $app_bin_name = '/bin';
+	}
     }
     if ( $link =~ /newbler/ ) {
         like( $tool_454->version, '/\d{8}/', 'found a version like 00000000' );
         $app_bin_name = '/applicationsBin';
     }
     ok( -d $tool_454->bin_path, 'bin directory exists' );
-    my $installed_bin =
-      $tool_454->resolve_454_path . $installed_path . $app_bin_name;
-    is( $tool_454->bin_path, $installed_bin,
-        'expected path found for bin directory' );
+    my $installed_bin = $tool_454->resolve_454_path . $installed_path . $app_bin_name;
+    is( $tool_454->bin_path, $installed_bin,'expected path found for bin directory' );
 }
 
