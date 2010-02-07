@@ -20,14 +20,12 @@ require File::Path;
 require File::Copy;
 require Genome::Utility::Text;
 use Digest::MD5;
+use Sys::Hostname;
 
 require MIME::Lite;
 
 # this helps us clean-up locks
 
-
-$SIG{'INT'} = \&INT_cleanup;
-$SIG{'TERM'} = \&INT_cleanup;
 my %SYMLINKS_TO_REMOVE;
 
 class Genome::Utility::FileSystem { };
@@ -593,11 +591,11 @@ sub lock_resource {
         $parent_dir = $lock_directory
     }
     my $basename = File::Basename::basename($resource_lock);
-    
+
     my $block_sleep = delete $args{block_sleep} || 60;
     my $max_try = delete $args{max_try} || 7200;
 
-    my $my_host = (defined $ENV{'HOSTNAME'} ? $ENV{'HOSTNAME'} : $ENV{'HOST'});
+    my $my_host = hostname;
     my $job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
     my $lock_dir_template = sprintf("lock-%s--%s_%s_%s_%s_XXXX",$basename,$my_host,$ENV{'USER'},$$,$job_id);
     my $tempdir =  File::Temp::tempdir($lock_dir_template, DIR=>$parent_dir, CLEANUP=>1);
@@ -612,6 +610,9 @@ sub lock_resource {
     # drop an info file into here for compatibility's sake with old stuff.
     # put a "NOKILL" here on LSF_JOB_ID so an old process doesn't try to snap off the job ID and kill me.
     my $lock_info = IO::File->new(">$tempdir/info");
+    unless ($lock_info) {
+        die "Can't create info file $tempdir/info: $!";
+    }
     $lock_info->printf("HOST %s\nPID $$\nLSF_JOB_ID_NOKILL %s\nUSER %s\n",
                        $my_host,
                        $ENV{'LSB_JOBID'},
@@ -619,20 +620,35 @@ sub lock_resource {
                      );
     $lock_info->close();
 
-
     my $ret;
     while(!($ret = symlink($tempdir,$resource_lock))) {
+        # TONY: The only allowable failure is EEXIST, right?
+        # If any other error comes through, we end up in bigger trouble.
+         use Errno qw(EEXIST ENOENT :POSIX);
+         if ($! != EEXIST) {
+             $self->error_message("Can't create symlink from $tempdir to lock resource $resource_lock because: $!");
+             die $self->error_message();
+         }
         my $symlink_error = $!;
         chomp $symlink_error;
         return undef unless $max_try--;
     
         my $target = readlink($resource_lock);
-        if (!$target && -d $resource_lock) {
+        # TONY: symlink could have disappeared between the top of the while loop and now
+        # Is this the same as the very next case?
+         if ($! == ENOENT) {
+            sleep $block_sleep;
+            redo;
+         }
+
+         if (!$target and $! == EINVAL and -d $resource_lock) {
             $self->warning_message("Looks like $resource_lock is locked by the old scheme (not a symlink, but a directory).  Sleeping rather than doing anything scary.");
             sleep $block_sleep;
             next;
         }
         elsif (!$target || !-e $target) {
+            # TONY: This means the lock symlink points to something that's been deleted
+            # That's _really_ bad news and should probably get an email like below.
             $self->error_message("Lock target $target does not exist.  Dying off rather than doing anything scary.");
             die $self->error_message;
         } 
@@ -676,7 +692,7 @@ Genome::Utility::Filesystem
 END_CONTENT
 
                         my $msg = MIME::Lite->new(From    => sprintf('"Genome::Utility::Filesystem" <%s@genome.wustl.edu>', $ENV{'USER'}),
-                                              To      => 'apipe@genome.wustl.edu',
+                                              To      => 'apipe-run@genome.wustl.edu',
                                               Subject => 'Attempt to release a lock held by a dead process',
                                               Data    => sprintf($message_content, $my_host, $ENV{'LSB_JOBID'}, $ENV{'USER'}, $resource_lock, $info_content),
                                             );
@@ -689,8 +705,10 @@ END_CONTENT
            } 
         sleep $block_sleep;
        } 
-#    print "LOCKED $resource_lock PID $$\n";
     $SYMLINKS_TO_REMOVE{$resource_lock} = 1;
+
+    # do we need to activate a cleanup handler?
+    $self->cleanup_handler_check();
     return $resource_lock;
 }
 
@@ -705,14 +723,16 @@ sub unlock_resource {
         $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
         $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
     }
-#    print "UNLOCK ATTEMPT $resource_lock PID $$\n";
-
-    unless ( -l $resource_lock ) {
-        $self->error_message("Tried to unlock something that's not locked -- $resource_lock.");
-        die $self->error_message;
-    }
 
     my $target = readlink($resource_lock);
+    if (!$target) {
+        if ($! == ENOENT) {
+            $self->error_message("Tried to unlock something that's not locked -- $resource_lock.");
+            die $self->error_message;
+        } else {
+            $self->error_message("Couldn't readlink $resource_lock: $!");
+        }
+    }
     unless (-d $target) {
         $self->error_message("Lock symlink '$resource_lock' points to something that's not a directory - $target. ");
         die $self->error_message;
@@ -720,7 +740,7 @@ sub unlock_resource {
     my $basename = File::Basename::basename($target);
     $basename =~ s/lock-.*?--//;;
     my ($thost, $tuser, $tpid, $tlsf_id) = split /_/, $basename;
-    my $my_host = (defined $ENV{'HOSTNAME'} ? $ENV{'HOSTNAME'} : $ENV{'HOST'});
+    my $my_host = hostname;
     my $my_job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
 
     unless ($force) {
@@ -747,6 +767,7 @@ sub unlock_resource {
     }
 
     delete $SYMLINKS_TO_REMOVE{$resource_lock};
+    $self->cleanup_handler_check();
     return 1;
 }
 
@@ -771,13 +792,30 @@ sub check_for_path_existence {
     return;
 }
 
+
+sub cleanup_handler_check {
+    my $self = shift;
+    
+    my $symlink_count = scalar keys %SYMLINKS_TO_REMOVE;
+
+    if ($symlink_count > 0) {
+        $SIG{'INT'} = \&INT_cleanup;
+        $SIG{'TERM'} = \&INT_cleanup;
+    } else {
+        delete $SIG{'INT'};
+        delete $SIG{'TERM'};
+    }
+
+}
+
 END {
     exit_cleanup();
 };
 
 sub INT_cleanup {
     exit_cleanup();
-    die;
+    print STDERR "INT/TERM cleanup activated in Genome::Utility::Filesystem\n";
+    Carp::confess;
 }
 
 sub exit_cleanup {
