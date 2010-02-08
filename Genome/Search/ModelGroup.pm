@@ -24,7 +24,7 @@ sub _add_details_result_xml {
     my $xml_doc = $result_node->ownerDocument;
 
     my $content = $doc->value_for('content');
-    my $model_group_id = $doc->value_for('id');
+    my ($model_group_id) = $doc->value_for('id') =~ /(\d+)/;
     
     my $model_group_url = "/cgi-bin/dashboard/status.cgi?model-group-id=$model_group_id";
     my $model_group_url_node = $result_node->addChild( $xml_doc->createElement("url") );
@@ -50,7 +50,7 @@ sub generate_document {
 
     push @fields, WebService::Solr::Field->new( class => ref($model_group) );
     push @fields, WebService::Solr::Field->new( title => $model_group->name() );
-    push @fields, WebService::Solr::Field->new( id => $model_group->id() );
+    push @fields, WebService::Solr::Field->new( id => 'model-group' . $model_group->id() );
     push @fields, WebService::Solr::Field->new( timestamp => '1999-01-01T01:01:01Z');
     push @fields, WebService::Solr::Field->new( content => $content ? $content : '' );
     push @fields, WebService::Solr::Field->new( type => $self->type );
