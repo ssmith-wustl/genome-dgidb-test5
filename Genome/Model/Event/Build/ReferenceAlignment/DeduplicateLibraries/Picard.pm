@@ -112,6 +112,8 @@ sub execute {
     #    $merge_software = 'picard';
     #}
 
+    Genome::DataSource::GMSchema->disconnect_default_dbh; 
+  
     my $merged_fh = File::Temp->new(SUFFIX => ".bam", DIR => $alignments_dir);
     my $merged_file = $merged_fh->filename;
 
