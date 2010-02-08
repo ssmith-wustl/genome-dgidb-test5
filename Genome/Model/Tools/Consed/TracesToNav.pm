@@ -329,11 +329,19 @@ sub get_reads_to_nav {
 
 sub make_read_nav {
     
+    my $filename;
     if ($name_nav) {
-	open (NAV,">$edit_dir/$name_nav.$date_tag.nav");
+        $filename = "$edit_dir/$name_nav.$date_tag.nav";
+	#open (NAV,">$edit_dir/$name_nav.$date_tag.nav");
     } else {
-	open (NAV,">$edit_dir/sites_for_review.$date_tag.nav");
+        $filename = "$edit_dir/sites_for_review.$date_tag.nav";
+	#open (NAV,">$edit_dir/sites_for_review.$date_tag.nav");
     }
+    unless (open(NAV, ">$filename")) {
+        die "Can't open $filename for writing: $!";
+        return;
+    }
+    
     print NAV qq(TITLE:\n\n);
     
     foreach my $pos (sort {$a<=>$b} keys %{$nav_select}) {
