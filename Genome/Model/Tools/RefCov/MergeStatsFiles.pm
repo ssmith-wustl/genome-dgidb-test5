@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::RefCov::MergeStatsFiles {
-    is => ['Genome::Model::Tools','Genome::Utility::FileSystem'],
+    is => ['Command','Genome::Utility::FileSystem'],
     has_input => [
                   input_stats_files => { is => 'List', },
                   output_stats_file => { is => 'Text', },
