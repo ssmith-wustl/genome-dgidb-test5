@@ -41,7 +41,6 @@ sub startup : Tests(startup => 3) {
         or die "Can't create mock build";
     ok($build, 'Created mock build');
     $model->set_always('build', $build);
-    $build->build_event->mock('verify_successful_completion', sub{ note("VSC!"); return 1; } );
     $build->mock('initialize', sub{ 
             note("Build initialized!"); return 1;
             $build->build_event->event_status('Initialized');

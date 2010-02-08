@@ -32,6 +32,8 @@ sub execute {
         return;
     }
 
+    printf('Successfully abandoned build (%s).', $build->id);
+
     return 1;
 }
 

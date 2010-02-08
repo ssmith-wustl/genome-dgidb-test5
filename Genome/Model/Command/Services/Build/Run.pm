@@ -232,15 +232,6 @@ sub execute {
         return 1;
     }
 
-    # VSC - i think we will be able to remove this
-    unless ( $build->build_event->verify_successful_completion(0) ) {
-        my $msg = sprintf(
-            'Failed verify successful completion: %s',
-            $build->build_event->error_text || 'no error given',
-        );
-        return $self->_post_build_failure($msg);
-    }
-    
     # shall we clean up old builds?
     if ( defined $build->model->keep_n_most_recent_builds ) {
         my $handle_build_evisceration = sub {

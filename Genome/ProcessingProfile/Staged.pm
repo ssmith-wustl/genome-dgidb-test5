@@ -35,19 +35,7 @@ sub objects_for_stage {
     return $self->$objects_method_name($model);
 }
 
-sub verify_successful_completion_job_classes {
-    warn "VerifySuccessfulCompletion is deprecated\n";
-    my @sub_command_classes= ();
-    
-#   qw/
-#        Genome::Model::Event::Build::VerifySuccessfulCompletion
-#    /;
-    return @sub_command_classes;
-}
-
-sub verify_successful_completion_objects {
-    my $self = shift;
-    return 1;
-}
-
 1;
+
+#$HeadURL$
+#$Id$
