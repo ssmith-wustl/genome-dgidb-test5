@@ -150,7 +150,7 @@ sub execute {
     $self->status_message("genome sample $sample_name has id: $sample_id");
     $params{sample_id} = $sample_id;
     
-    my $import_instrument_data = Genome::InstrumentData::Import::Bamed->create(%params);  
+    my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
        return;
