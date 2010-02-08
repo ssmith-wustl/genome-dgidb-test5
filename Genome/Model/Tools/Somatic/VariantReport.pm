@@ -34,7 +34,7 @@ class Genome::Model::Tools::Somatic::VariantReport{
             is_optional => 1,
             is_input => 1,
             default => 0,
-            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+            doc => 'enable this flag to shortcut if the report_output is already present. Useful for pipelines.',
         },
         
     ],
