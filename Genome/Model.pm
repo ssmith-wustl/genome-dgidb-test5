@@ -150,7 +150,7 @@ class Genome::Model {
             is_many => 1,
             where => [ name => 'instrument_data' ],
             to => 'value',
-            doc => 'Instrument data currently asseigned to the model.',
+            doc => 'Instrument data currently assigned to the model.',
         },
         instrument_data => {
             via => 'instrument_data_assignments',
