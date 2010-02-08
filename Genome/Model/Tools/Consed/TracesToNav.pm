@@ -32,25 +32,29 @@ class Genome::Model::Tools::Consed::TracesToNav {
 		 doc          => "if your list does not included paired sample info use use this option", 
 		 is_optional  => 1,
 	     },
-	     
-	     
+	     input_type       => {
+		 type         => 'String',
+		 doc          => "state simple paired or expanded",
+
+	     },
+
 	     ],
     
     
 };
 
 
-sub help_brief {                            # keep this to just a few words <---
+sub help_brief {
     "This tool will make a consed ace navigator from a list of samples and coordinates"     
 }
 
-sub help_synopsis {                         # replace the text below with real examples <---
+sub help_synopsis {
     return <<EOS
 gmt consed traces-to-nav --ace --list
 
 running...
 
-gmt consed traces-to-nav --ace /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.ace.1 --convert-coords /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.c1.refseq.fasta --unpaired --name-nav test.traces.to.nav --list /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/Nav.list
+gmt consed traces-to-nav --ace /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.ace.1 --convert-coords /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.c1.refseq.fasta --input-type simple --name-nav test.traces.to.nav --list /gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToNav/Nav.list
 
 will produce a navigator ==> test.traces.to.nav.date.nav
 and a spreadsheet ==> test.traces.to.nav.date.csv
@@ -83,66 +87,67 @@ EOS
 }
 
 
-my $self; # = shift;
-my $ace;
-my $list;
-my $name_nav;
-my $csv;
+sub execute {                               
 
+    my $self = shift;
+    my $ace = $self->ace;
+    my $list = $self->list;
+    my $name_nav = $self->name_nav;
 
-my $edit_dir;
-
-
-my $sites_to_nav;
-my $samples_pos_info;
-my $notinnavigator;
-my $printed;
-
-my $nav_select;
-my $tumor_samples;
-my $paired_samples;
-my $genotypes;
-my $naved;
-
-my $gene;
-
-my $date_tag;
-my $refseq_info;
-
-
-sub execute {                               # replace with real execution logic.
-
-    $self = shift;
-    $ace = $self->ace;
-    $list = $self->list;
-    $name_nav = $self->name_nav;
-    #$csv = $self->csv;
-    
     my @subdir = split(/\//,$ace);
     my $ace_name = pop(@subdir);
-    $edit_dir = join('/',@subdir);
+    my $edit_dir = join('/',@subdir);
     chdir $edit_dir;
     
-    $date_tag = &get_date_tag();
+    my $date_tag = &get_date_tag();
     
-
+    
+    my ($out);
+    if ($name_nav) {
+	$out = "$edit_dir/$name_nav.$date_tag";
+    } else {
+	$out = "$edit_dir/sites_for_review.$date_tag";
+    }
 
     my $refseq = $self->convert_coords;
+    my ($refseq_info);
     if ($refseq) {
-	&parse_ref($refseq);
+	($refseq_info) = &parse_ref($refseq);
+    } else {
+	$refseq_info = 0;
     }
-    
-    &get_sites_to_nav($list); #read in list
-    &get_reads_to_nav; #find the reads for samples from the list
-    &make_read_nav; #write the navigator and if desired the spreadsheet
-    
-    
+
+    my ($sites_to_nav) = &get_sites_to_nav($self,$refseq_info); #read in list
+    unless ($sites_to_nav) {
+	App->error_message( "\n\ndidn't find sites to nav\n\n");
+	return;
+    }
+
+    my ($reads_to_nav,$main_contig) = &get_reads_to_nav($ace_name,$sites_to_nav); #find the reads for samples from the list
+    unless ($reads_to_nav) {
+	App->error_message( "\n\ndidn't find reads to nav\n\n");
+    }
+
+
+    my ($done) = &make_read_nav($sites_to_nav,$reads_to_nav,$main_contig,$out,$self); #write the navigator and if desired the spreadsheet
+    if ($done) {
+	return 1;    
+    } else {
+	App->error_message( "\n\ndidn't write to $out.nav or $out.csv\n\n");
+	return;
+    }
 }
 
 
 sub get_sites_to_nav {
     
-    open(LIST,"$list");
+    my ($self,$refseq_info) = @_;
+
+    my $list = $self->list;
+#(file_check);
+
+    my ($sites_to_nav,$samples_pos_info,$tumor_samples,$paired_samples);
+    open(LIST,"$list") ||  App->error_message( "\n\ncouldn't open the list $list\n\n") && return;
     while (<LIST>) {
 	chomp;
 	
@@ -150,47 +155,44 @@ sub get_sites_to_nav {
 	#my ($Gene,$pos,$note,$sample,$sample_gt,$pair,$pair_gt,$somatic_status)= split(/\,/,$line);
 	
 	my ($sample,$pos,$pair,$note);
-	if ($self->unpaired) {
+	if ($self->input_type eq "simple") {
 	    ($sample,$pos,$note) = split(/\,/,$line);
 	    $pair = $sample;
-	} else {
+	} elsif ($self->input_type eq "paired") {
 	    ($sample,$pos,$pair,$note) = split(/\,/,$line);
+	} elsif ($self->input_type eq "expanded") {
+	    App->error_message( "\n\ninput_type expanded not yet supported\n\n");
+	    return;
 	}
-	
-	if ($self->convert_coords) {
-	    $pos = &get_refpos($pos);
+	if ($refseq_info) {
+	    $pos = &get_refpos($refseq_info,$pos);
 	}
-	
 	
 	unless ($note) {$note="no comment";}
 	
-	$tumor_samples->{$sample}=$pair;
-	$paired_samples->{$sample}=$pair;
-	$paired_samples->{$pair}=$sample;
-	
-	#$genotypes->{$pos}->{$sample}=$sample_gt;
-	#$genotypes->{$pos}->{$pair}=$pair_gt;
-	
-	
 	$sites_to_nav->{$pos}->{$sample}->{comment}=$note;
-	$sites_to_nav->{$pos}->{$pair}->{comment}=$note;
-#	$sites_to_nav->{$pos}->{$sample}->{somatic_status}=$somatic_status;
-#	$sites_to_nav->{$pos}->{$pair}->{somatic_status}=$somatic_status;
-	$samples_pos_info->{$pos}->{comment}=$note;
+	$sites_to_nav->{$pos}->{$sample}->{primary}=$sample;
+	$sites_to_nav->{$pos}->{$sample}->{pair}=$pair;
+	$sites_to_nav->{$pos}->{$pair}->{pair}=$sample;
 	
     }
+    close (LIST);
+    return ($sites_to_nav);#,$samples_pos_info,$tumor_samples,$paired_samples);
 }
 
 
 
-my $main_contig;
 
 
 sub get_reads_to_nav {
     
+
+    my ($ace,$sites_to_nav) = @_;
+
     use GSC::IO::Assembly::Ace;
     my $ao = GSC::IO::Assembly::Ace->new(input_file => $ace);
-    
+    unless ($ao) { App->error_message( "\n\ndidn't get the ace object\n\n") && return;}
+    my ($reads_to_nav,$main_contig);
     foreach my $name (@{ $ao->get_contig_names }) {
 	my $contig = $ao->get_contig($name);
 	if (grep { /\.c1$/ } keys %{ $contig->reads }) {
@@ -205,7 +207,7 @@ sub get_reads_to_nav {
     my $q;
     my @con_seq;
     
-    open (ACE_file, "$ace") || die ("Could not open the ace file\n");
+    open (ACE_file, "$ace")  ||  App->error_message( "\n\ncouldn't open the ace file\n\n") && return;
     my @seq_line = ();
     my @file = <ACE_file>;
     my $file_n = @file;
@@ -259,15 +261,17 @@ sub get_reads_to_nav {
 		my $info = $contig->reads;
 		
 		foreach my $read (keys %{ $contig->reads }) {
-		    unless ($read =~ /\c1$/) {
+		    unless ($read =~ /\.c1$/) {
 			
 			my ($id);
 			
 			foreach my $sample (sort keys %{$sites_to_nav->{$pos}}) {
+			    
 			    if ($read =~ /$sample/) {
 				#my $sample = substr($read,$pretty_source_1,$pretty_source_2);
 				$id = $sample;
-			    }
+			    } 
+			    next if $id;
 			}
 			
 			if ($id) {
@@ -286,7 +290,11 @@ sub get_reads_to_nav {
 				    my $p1 = ($position  - $base_pad_count{$position});
 				    my $p2 = $p1 + $length;
 				    my $padded_pos = $pos + $base_pad_count{$pos};
+
+				    my $pair = $sites_to_nav->{$pos}->{$id}->{pair};
 				    my $comment = $sites_to_nav->{$pos}->{$id}->{comment};
+				    unless ($comment) {$comment = $sites_to_nav->{$pos}->{$pair}->{comment};}
+
 				    my $diff = "$pos $pos";
 				    my $ref_q1 = $position + $align_clip_start + 1;
 				    my $bases_clipped_off_end = $length - $align_clip_end;
@@ -296,12 +304,15 @@ sub get_reads_to_nav {
 					
 					print qq($read $p1 $position - $base_pad_count{$position} $length $diff pos\n);
 					
-					$nav_select->{$pos}->{$id}->{$read}->{nav} = "BEGIN_REGION\nTYPE: READ\nCONTIG: $name\nREAD: $read\nUNPADDED_CONS_POS: $diff\nCOMMENT: $comment\nEND_REGION\n\n";
-					
-					if ($sites_to_nav->{$pos}->{$id}->{nav}) {
-					    unless ($sites_to_nav->{$pos}->{$id}->{nav} =~ /$read/) {
-						my $read1 = $sites_to_nav->{$pos}->{$id}->{nav};
-						$sites_to_nav->{$pos}->{$id}->{nav} = "$read1:$read";
+					#$nav_select->{$pos}->{$id}->{$read}->{nav} = "BEGIN_REGION\nTYPE: READ\nCONTIG: $name\nREAD: $read\nUNPADDED_CONS_POS: $diff\nCOMMENT: $comment\nEND_REGION\n\n";
+					$reads_to_nav->{$pos}->{$id}->{$read}->{nav} = "BEGIN_REGION\nTYPE: READ\nCONTIG: $name\nREAD: $read\nUNPADDED_CONS_POS: $diff\nCOMMENT: $comment\nEND_REGION\n\n";
+
+
+					my $read_group = $sites_to_nav->{$pos}->{$id}->{nav};
+					if ($read_group) {
+					    unless ($read_group =~ /$read/) {
+						#my $read1 = $sites_to_nav->{$pos}->{$id}->{nav};
+						$sites_to_nav->{$pos}->{$id}->{nav} = "$read_group:$read";
 					    }
 					} else {
 					    
@@ -316,145 +327,111 @@ sub get_reads_to_nav {
 	    }
 	}
     }
-    
-    foreach my $pos (sort {$a<=>$b} keys %{$sites_to_nav}) {
-	unless ($nav_select->{$pos}) {
-	    $notinnavigator->{$pos}=1;
-	    $nav_select->{$pos}->{notinnavigator}=1;
+
+    foreach my $pos (sort keys %{$sites_to_nav}) {
+	my $navpos;
+	foreach my $id (sort keys %{$sites_to_nav->{$pos}}) {
+	    my $nav = $sites_to_nav->{$pos}->{$id}->{nav};
+	    if ($nav) {
+		$navpos = 1;
+	    } else {
+		$sites_to_nav->{$pos}->{$id}->{nav} = "notinnavigator";
+	    }
+	} 
+	unless ($navpos) {
+	    $sites_to_nav->{$pos}->{navconsensus} = "notinnavigator";
 	}
     }
+    return ($reads_to_nav,$main_contig);
 }
 ####################################################################
 
 
 sub make_read_nav {
     
-    my $filename;
-    if ($name_nav) {
-        $filename = "$edit_dir/$name_nav.$date_tag.nav";
-	#open (NAV,">$edit_dir/$name_nav.$date_tag.nav");
+    my ($sites_to_nav,$reads_to_nav,$main_contig,$out,$self) = @_;
+    
+#	$sites_to_nav->{$pos}->{$sample}->{comment}=$note;
+#	$sites_to_nav->{$pos}->{$sample}->{pair}=$pair;
+    
+    open (NAV,">$out.nav") || App->error_message( "\n\ncouldn't open $out.nav to for writting\n\n") && return;
+    open (CSV,">$out.csv") || App->error_message( "\n\ncouldn't open $out.csv to for writting\n\n") && return;
+    if ($self->unpaired) {
+	#($sample,$pos,$note) = split(/\,/,$line);
+	print CSV qq(refpos\tsample\treads\tnote\tmanual_genotype\tcomments\n);
     } else {
-        $filename = "$edit_dir/sites_for_review.$date_tag.nav";
-	#open (NAV,">$edit_dir/sites_for_review.$date_tag.nav");
-    }
-    unless (open(NAV, ">$filename")) {
-        die "Can't open $filename for writing: $!";
-        return;
+	#($sample,$pos,$pair,$note) = split(/\,/,$line);
+	print CSV qq(refpos\tsample\treads\tnote\tmanual_genotype\tsomatic_status\tcomments\n);
     }
     
     print NAV qq(TITLE:\n\n);
-    
-    foreach my $pos (sort {$a<=>$b} keys %{$nav_select}) {
-	foreach my $t_id (sort keys %{$nav_select->{$pos}}) {
-	    if ($t_id eq "notinnavigator") {
-		my $comment = $samples_pos_info->{$pos}->{comment};
-		my $nav_line =  "BEGIN_REGION\nTYPE: CONSENSUS\nCONTIG: $main_contig\nUNPADDED_CONS_POS: $pos $pos\nCOMMENT: $comment\nEND_REGION\n\n";
-		print NAV qq($nav_line);
+    my ($naved,$printed);
+    foreach my $pos (sort {$a<=>$b} keys %{$sites_to_nav}) {
+	my $navconsensus = $sites_to_nav->{$pos}->{navconsensus};
+	
+	if ($navconsensus) {
+
+	    my $comment = "no reads in navigator at this position.";
+	    my $nav_line =  "BEGIN_REGION\nTYPE: CONSENSUS\nCONTIG: $main_contig\nUNPADDED_CONS_POS: $pos $pos\nCOMMENT: $comment\nEND_REGION\n\n";
+	    print NAV qq($nav_line);
+	    
+	} else {
+	    
+	    foreach my $sample (sort keys %{$sites_to_nav->{$pos}}) {
 		
-	    } else {
+		my $pair = $sites_to_nav->{$pos}->{$sample}->{pair};
+		my $comment = $sites_to_nav->{$pos}->{$sample}->{comment};
 		
-		if ($tumor_samples->{$t_id}) {
-		    my $n_id = $tumor_samples->{$t_id};
-		    my @array;
-		    if ($t_id eq $n_id) {
-			@array=($t_id);
+		my $primary_sample = $sites_to_nav->{$pos}->{$sample}->{primary};
+		
+		if ($primary_sample) {
+		    my @samples;
+		    
+		    if ($primary_sample eq $pair) {
+			@samples=($primary_sample);
 		    } else {
-			@array=($t_id,$n_id);
+			@samples=($primary_sample,$pair);
 		    }
 		    
-		    for my $id (@array) { 
+		    for my $id (@samples) { 
 			
-			foreach my $read (sort keys %{$nav_select->{$pos}->{$id}}) {
-			    
-			    if ($nav_select->{$pos}->{$id}->{$read}->{nav}) {
-				my $nav_line = $nav_select->{$pos}->{$id}->{$read}->{nav};
-				
-				unless ($naved->{$pos}->{$id}->{$read}) {
-				    print NAV qq($nav_line);
-				    $naved->{$pos}->{$id}->{$read}=1;
+			if ($sites_to_nav->{$pos}->{$id}->{nav} eq "notinnavigator") {
+
+			    unless ($printed->{$pos}->{$id}) {
+				$printed->{$pos}->{$id}=1;
+				print CSV qq($pos\t$id\tnot in navigator\t$comment\t\n);
+			    }
+
+			} else {
+			    foreach my $read (sort keys %{$reads_to_nav->{$pos}->{$id}}) {
+				my $nav_line = $reads_to_nav->{$pos}->{$id}->{$read}->{nav};
+				if ($nav_line) {
+				    unless ($naved->{$pos}->{$id}->{$read}) {
+					print NAV qq($nav_line);
+					$naved->{$pos}->{$id}->{$read}=1;
+				    }
 				}
 			    }
-			}
-		    }
-		}
-	    }
-	}
-    }
-    
-    
-    #if ($csv) {
-	
-	if ($name_nav) {
-	    open (CSV,">$edit_dir/$name_nav.$date_tag.csv");
-	} else {
-	    open(CSV,">$edit_dir/sites_for_review.$date_tag.csv"); #the_rest_
-	}
-	
-	#print CSV qq(Gene\trefpos\tsample\tnote\tpair\treads\trefseq_orientation\tprettybase_genotype\tmanual_genotype\tsomatic_status\tcomments\n);
-	#my ($sample,$pos,$pair,$note);
-	if ($self->unpaired) {
-	    #($sample,$pos,$note) = split(/\,/,$line);
-	    print CSV qq(refpos\tsample\treads\tnote\tmanual_genotype\tcomments\n);
-	} else {
-	    #($sample,$pos,$pair,$note) = split(/\,/,$line);
-	    print CSV qq(refpos\tsample\treads\tnote\tmanual_genotype\tsomatic_status\tcomments\n);
-	}
-	
-	
-	foreach my $pos (sort {$a<=>$b} keys %{$sites_to_nav}) {
-	    foreach my $t_id (sort keys %{$sites_to_nav->{$pos}}) {
-		
-		if ($tumor_samples->{$t_id}) {
-		    my $n_id = $tumor_samples->{$t_id};
-		    
-		    my @array;
-		    if ($t_id eq $n_id) {
-			@array=($t_id);
-		    } else {
-			@array=($t_id,$n_id);
-		    }
-		    
-		    for my $id (@array) { 
-			
-			unless ($printed->{$pos}->{$id}) {
-			    
-			    #my $somatic_status = $sites_to_nav->{$pos}->{$id}->{somatic_status};
-			    my $pair = $paired_samples->{$id};
-			    
-			    if ($sites_to_nav->{$pos}->{$id}->{comment} && $sites_to_nav->{$pos}->{$id}->{nav}) {
-				#my $genotype = $genotypes->{$pos}->{$id};
-				#unless ($genotype) { $genotype = "no_gt"; }
-				
-				my $note = $sites_to_nav->{$pos}->{$id}->{comment};
+			    unless ($printed->{$pos}->{$id}) {
 				my $reads = $sites_to_nav->{$pos}->{$id}->{nav};
-				
 				$printed->{$pos}->{$id}=1;
-				print CSV qq($pos\t$id\t$reads\t$note\t\n);
-				
-			    } else {
-				#my $genotype = $genotypes->{$pos}->{$id};
-				#unless ($genotype) { $genotype = "no_gt"; }
-				
-				my $comment = $sites_to_nav->{$pos}->{$id}->{comment};
-				print qq(not in navigator $id,$comment\n);
-				
-				my $chrom_pos = $sites_to_nav->{$pos}->{$id}->{gc};
-				my $note = $sites_to_nav->{$pos}->{$id}->{comment};
-				my $reads = $sites_to_nav->{$pos}->{$id}->{nav};
-				unless ($reads) {$reads='';}
-				
-				$printed->{$pos}->{$id}=1;
-				print CSV qq($pos\t$id\tnot in navigator\t$note\t\n);
-				
-				#print CSV qq($gene\t$pos\t$id\t$note\t$pair\tnot in navigator\t$genotype-$somatic_status\t$genotype\n);
-				
+				print CSV qq($pos\t$id\t$reads\t$comment\t\n);
 			    }
 			}
-		    }
+		    }			
 		}
 	    }
 	}
-    #}
+    }	
+
+    close (NAV);
+    close (CSV);
+    if (-f "$out.nav" && -f "$out.csv") {
+	return 1;
+    } else {
+	return;
+    }
+
 }
 
 
@@ -462,22 +439,32 @@ sub make_read_nav {
 ####################################################################
 sub make_cons_nav {
     
-    if ($name_nav) {
-	open (NAV3,">$edit_dir/$name_nav.$date_tag.consensus.nav");
-    } else {
-	open (NAV3,">$edit_dir/sites_for_review.$date_tag.consensus.nav"); #the_rest_
-    }
+    my ($out,$main_contig,$sites_to_nav) = @_;
+    open (NAV3,">$out.consensus.nav") || App->error_message( "\n\ncouldn't open $out.consensus.nav to for writting\n\n") && return;
+
     print NAV3 qq(TITLE:\n\n);
-    
-    foreach my $pos (sort {$a<=>$b} keys %{$nav_select}) {
-	
-	my $comment = $samples_pos_info->{$pos}->{comment};
-	my $nav_line =  "BEGIN_REGION\nTYPE: CONSENSUS\nCONTIG: $main_contig\nUNPADDED_CONS_POS: $pos $pos\nCOMMENT: $comment\nEND_REGION\n\n";
-	print NAV3 qq($nav_line);
-	
+
+    my $cons;    
+    foreach my $pos (sort {$a<=>$b} keys %{$sites_to_nav}) {
+	foreach my $sample (sort keys %{$sites_to_nav->{$pos}}) {
+	    unless( $cons->{$pos} ) {
+		my $comment = $sites_to_nav->{$pos}->{$sample}->{comment};
+		if ($comment) {
+		    $cons->{$pos} = 1;
+		    my $comment = $sites_to_nav->{$pos}->{$sample}->{comment};
+		    my $nav_line =  "BEGIN_REGION\nTYPE: CONSENSUS\nCONTIG: $main_contig\nUNPADDED_CONS_POS: $pos $pos\nCOMMENT: $comment\nEND_REGION\n\n";
+		    print NAV3 qq($nav_line);
+		}
+	    }
+	}
+    }
+    close(NAV3);
+    if (-f "$out.consensus.nav") {
+	return 1;
+    } else {
+	return;
     }
 }
-
 
 
 sub get_newest {
@@ -529,8 +516,8 @@ sub parse_ref {
     my ($refseq) = @_;
     my $orientation;
     my $genomic_coord;
-    
-    open(REF,"$refseq") || die "couldn\'t open the refseq\n";
+    my $refseq_info;
+    open(REF,"$refseq")  || App->error_message( "\n\ncouldn't open $refseq\n\n") && return;
     while (<REF>) {
 	chomp; 
 	my $line = $_;
@@ -554,11 +541,13 @@ sub parse_ref {
     close(REF);
     $refseq_info->{orientation}=$orientation;
     $refseq_info->{genomic_coord}=$genomic_coord;
+    return ($refseq_info);
     
 }
 
 sub get_refpos {
-    my ($genpos) = @_;
+
+    my ($refseq_info,$genpos) = @_;
     my $orientation = $refseq_info->{orientation};
     my $genomic_coord = $refseq_info->{genomic_coord};
     
