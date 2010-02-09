@@ -1,4 +1,5 @@
 package Genome::Model::Tools::Annotate::Adaptor::Sniper;
+#adukes: 1/29/10, I started using this to adapt the snps.indelpe.filtered file in refalign pipe to annotation input.  We might want to rename this module to something not Sniper specific like FourColumnAdaptor or something.  This would require some more naive column printing after the first 4 columns, but I think that's okay.
 
 use strict;
 use warnings;

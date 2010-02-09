@@ -123,6 +123,10 @@ class Genome::ProcessingProfile::ReferenceAlignment {
                                  doc => '',
                                  is_optional => 1,
                              },
+        annotation_reference_transcripts => {
+                                             doc => 'The reference transcript set used for variant annotation',
+                                             is_optional => 1,
+        },
 
         ],
 };

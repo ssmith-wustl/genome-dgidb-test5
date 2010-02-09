@@ -58,6 +58,7 @@ class Genome::Model::ReferenceAlignment {
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
         reference_sequence_name      => { via => 'processing_profile'},
+        annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events   => { is => 'Genome::Model::Event::Build::ReferenceAlignment::AssignRun',
                                  is_many => 1,
                                  reverse_id_by => 'model',

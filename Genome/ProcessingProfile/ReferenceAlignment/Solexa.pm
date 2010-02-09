@@ -14,6 +14,7 @@ sub stages {
         deduplication
         reference_coverage
         variant_detection
+        transcript_annotation
         generate_reports
     /;
     return @stages;
@@ -54,6 +55,18 @@ sub deduplication_job_classes {
         'Genome::Model::Event::Build::ReferenceAlignment::PostDedupReallocate',
     );
     return @steps;
+}
+
+sub transcript_annotation_job_classes{
+    my $self = shift;
+    #if (defined($self->annotation_reference_transcripts)){
+        my @steps = (
+            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor',
+            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
+        );
+        return @steps;
+    #}
+    #return;
 }
 
 sub generate_reports_job_classes {
@@ -103,6 +116,12 @@ sub deduplication_objects {
 }
 
 sub generate_reports_objects {
+    my $self = shift;
+    my $model = shift;
+    return 'all_sequences';
+}
+
+sub transcript_annotation_objects {
     my $self = shift;
     my $model = shift;
     return 'all_sequences';
