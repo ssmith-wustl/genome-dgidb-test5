@@ -278,7 +278,7 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','DATE_COMPLETED','TIMESTAMP(6)','11','Y','2008-11-12 18:23:20',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','RP_ID','NUMBER','10','N','2008-11-12 18:23:33',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_INPUT','PARAM_VALUE','VARCHAR2','1000','N','2008-11-12 18:23:24',NULL);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','PROCESSING_PROFILE_ID','NUMBER','11','Y','2008-11-12 18:23:12',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','PROCESSING_PROFILE_ID','NUMBER','11','N','2008-11-12 18:23:12',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_METRIC','METRIC_NAME','VARCHAR2','100','N','2008-11-12 18:23:17',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ_METRIC','REF_SEQ_NAME','VARCHAR2','64','Y','2008-11-12 18:23:25',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','FULL_PATH','VARCHAR2','767','Y','2008-11-12 18:23:06',NULL);
