@@ -5,12 +5,13 @@ use warnings;
 
 use Genome;
 use File::Copy;
+use File::Copy::Recursive;
 use File::Basename;
 
 my %properties = (
     original_data_path => {
         is => 'Text',
-        doc => 'original data path of import data file',
+        doc => 'original data path of import data file(s): all files in path will be used as input',
     },
     sample_name => {
         is => 'Text',
@@ -23,8 +24,8 @@ my %properties = (
     },
     import_format => {
         is => 'Text',
-        doc => 'format of import data, like microarray',   #this may need to change
-        valid_values => ['microarray'],                    #this may also need changing
+        doc => 'format of import data, like microarray',
+        valid_values => ['microarray'],                
         is_optional => 1,
     },
     sequencing_platform => {
@@ -167,20 +168,28 @@ sub execute {
         return;
     }
     $self->status_message("Microarray allocation created for $instrument_data_id .");
-    my $basename = basename($self->original_data_path);
-    my $target_file = $disk_alloc->absolute_path . "/" . $basename;
-    my $val = copy($self->original_data_path,$target_file);
-    unless($val) {
-       $self->error_message("Failed to copy file from source to allocation\n");
-       return;
-    }
-    my $source = Genome::Utility::FileSystem->md5sum($self->original_data_path);
-    my $target = Genome::Utility::FileSystem->md5sum($target_file);
-    unless( $source eq $target) {
-        $self->error_message("md5sum of source and target files did not match.");
+
+    my $target_path = $disk_alloc->absolute_path . "/";
+
+    my $status = File::Copy::Recursive::dircopy($self->original_data_path,$target_path);
+    unless($status) {
+        $self->error_message("Directory copy failed to complete.\n");
         return;
     }
 
+#   Check disk usage of the source and target to ensure that dircopy has worked correctly 
+    my $du_source = "du -sb ".$self->original_data_path;
+    my $du_destination = "du -sb ".$target_path;
+    my $s_size = qx/ $du_source /;
+    my $d_size = qx/ $du_destination /;
+     
+    my @source_size = split(' ', $s_size);
+    my @destination_size = split(' ', $d_size);
+
+    unless($source_size[0] == $destination_size[0]){
+        $self->error_message("Source and target directory sizes do not match, directory copy was incomplete or incorrect.\n");
+        return;
+    } 
     return 1;
 }
 
