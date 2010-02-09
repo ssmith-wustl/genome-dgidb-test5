@@ -67,6 +67,12 @@ class Genome::InstrumentData::Command::Import::Bam {
     is  => 'Command',
     has => [%properties],
     doc => 'create an instrument data AND and alignment for a BAM',
+    has_optional => [
+        import_instrument_data_id => {
+            is  => 'Number',
+            doc => 'output instrument data id after import',
+        }
+    ],
 };
 
 
@@ -144,6 +150,8 @@ sub execute {
             die $self->error_message;
         }
         $self->status_message("Succeed to create genome sample for $sample_name");
+
+        #UR::Context->commit;
     }
     
     my $sample_id = $genome_sample->id;
@@ -158,6 +166,7 @@ sub execute {
 
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data: $instrument_data_id is imported");
+    $self->import_instrument_data_id($instrument_data_id);
 
     my $ref_name = $self->reference_name;
     if ($ref_name) {
