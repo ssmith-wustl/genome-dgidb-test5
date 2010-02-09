@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 
 BEGIN {use_ok('Genome::Model::Tools::454Screening');}
@@ -21,4 +21,5 @@ my $screen = Genome::Model::Tools::454Screening->create(
                                                                 tmp_dir => $tmp_dir,
                                                             );
 isa_ok($screen, 'Genome::Model::Tools::454Screening');
-$screen->execute();
+my $exc = $screen->execute();
+ok($exc, "454 screening runs ok");

@@ -70,7 +70,7 @@ UR::Object::Type->define(
             { 
                           doc => 'directory for saving temporary file chunks', 
                           is => 'SCALAR', 
-                          default => '/gsc/var/tmp/fasta/splits'
+                          default => Genome::Utility::FileSystem->create_temp_directory,
             }, 
             delete_derivatives => 
             {
