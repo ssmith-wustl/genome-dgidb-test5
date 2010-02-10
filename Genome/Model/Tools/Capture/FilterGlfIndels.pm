@@ -22,8 +22,8 @@ class Genome::Model::Tools::Capture::FilterGlfIndels {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		variants_file	=> { is => 'Text', doc => "File of variants in indel format", is_optional => 0 },
-		output_file     => { is => 'Text', doc => "Output file to receive filtered indels", is_optional => 0 },
+		variants_file	=> { is => 'Text', doc => "File of variants in indel format", is_optional => 0, is_input => 1 },
+		output_file     => { is => 'Text', doc => "Output file to receive filtered indels", is_optional => 0, is_input => 1, is_output => 1 },
 		min_coverage     => { is => 'Text', doc => "Minimum coverage to allow indel [8]", is_optional => 1 },
 		min_reads2     => { is => 'Text', doc => "Minimum read support to allow indel [2]", is_optional => 1 },
 		min_var_freq     => { is => 'Text', doc => "Minimum allele frequency to allow indel [0.10]", is_optional => 1 },

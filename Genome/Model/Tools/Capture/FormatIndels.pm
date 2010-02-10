@@ -171,6 +171,12 @@ sub execute {                               # replace with real execution logic.
 
 			}
 
+			## Fix chromosome ##
+			
+			$chrom =~ s/chr//;
+			$chrom = "MT" if($chrom eq "M");
+			$chrom = "" if($chrom =~ 'random');
+
 			## If we have the necessary information, output line ##
 			
 			if($chrom && $chr_start && $chr_stop && $allele1 && $allele2)
