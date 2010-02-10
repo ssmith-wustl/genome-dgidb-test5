@@ -29,12 +29,6 @@ my %properties = (
         doc => 'species name for imported file, like human, mouse',
         #is_optional => 1,
     },
-    import_format => {
-        is => 'Text',
-        doc => 'format of import data, like bam',
-        valid_values => ['bam'],
-        is_optional => 1,
-    },
     sequencing_platform => {
         is => 'Text',
         doc => 'sequencing platform of import data, like solexa',
@@ -77,14 +71,16 @@ class Genome::InstrumentData::Command::Import::Bam {
 
 
 sub execute {
-    my $self = shift;
-
-    unless (-s $self->original_data_path) {
-        $self->error_message('Original data path of import file: '. $self->original_data_path .' is empty');
+    my $self     = shift;
+    my $bam_path = $self->original_data_path;
+    
+    unless (-s $bam_path and $bam_path =~ /\.bam$/) {
+        $self->error_message('Original data path of import bam: '. $bam_path .' is either empty or not with .bam as name suffix');
         return;
     }
 
-    my %params = ();
+    my %params = (import_format => 'bam');
+
     for my $property_name (keys %properties) {
         unless ($properties{$property_name}->{is_optional}) {
             unless ($self->$property_name) {
@@ -97,7 +93,7 @@ sub execute {
     }
     #TODO put logic to set sample_name and library_name
     
-    my $sample_name     = $self->sample_name;
+    my $sample_name   = $self->sample_name;
     my $genome_sample = Genome::Sample->get(name => $sample_name);
 
     if ($genome_sample) {
@@ -151,7 +147,7 @@ sub execute {
         }
         $self->status_message("Succeed to create genome sample for $sample_name");
 
-        #UR::Context->commit;
+        UR::Context->commit;
     }
     
     my $sample_id = $genome_sample->id;

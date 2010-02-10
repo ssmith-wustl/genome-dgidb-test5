@@ -14,7 +14,6 @@ my $i = Genome::InstrumentData::Command::Import::Bam->create(
     sample_name         => $s->name,  
     import_source_name  => 'Broad',
     original_data_path  => '/gsc/var/cache/testsuite/data/Genome-InstrumentData--Command-Import-Bam/test.bam',
-    import_format       => 'bam',
     sequencing_platform => 'solexa',
     description         => 'bwa file',
     species_name        => 'human',
