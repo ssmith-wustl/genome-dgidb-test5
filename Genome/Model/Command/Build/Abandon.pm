@@ -32,7 +32,7 @@ sub execute {
         return;
     }
 
-    printf('Successfully abandoned build (%s).', $build->id);
+    printf("Successfully abandoned build (%s).\n", $build->id);
 
     return 1;
 }
