@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Genome;
 use IO::File;
+use DateTime;
 
 class Genome::Model::Tools::CommandLogReader{
     is => 'Command',
@@ -18,7 +19,7 @@ class Genome::Model::Tools::CommandLogReader{
             is => 'Text',
             valid_values => ["full","abbreviated","summary"],
             default => "summary",
-            doc => "A full report lists every user/command/parameter combination and counts number of times each combination occurs. An abbreviated report excludes the parameter column. A summary report includes how many commands each user ran (if group by is user, does not include commands) or how many times a command was executed (if group by is command, does not include user). Defaults to summary."
+            doc => "A full report lists every user/command/parameter combination and counts number of times each combination occurs. An abbreviated report excludes the parameter column. A summary report includes how many commands each user ran (if group by is user, does not include commands) or how many times a command was executed (if group by is command, does not include user). Defaults to summary.",
         },
         output_file => {
             is => 'Text',
@@ -27,7 +28,7 @@ class Genome::Model::Tools::CommandLogReader{
         },
         end_date => {
             is => 'Text',
-            doc => "Logs written before this date (YYYY-MM-DD) will be included in the reader's output, defaults to current date."
+            doc => "Logs written before this date (YYYY-MM-DD) will be included in the reader's output, defaults to current date.",
         },
         group_by => {
             is => 'Text',
@@ -63,9 +64,9 @@ sub log_attributes {
     return (qw/ date time user command params/);
 }
 
-sub log_directory {
+sub log_directory_base {
     my $self = shift;
-    return "/gsc/var/log/genome/command_line_usage/";
+    return "/gsc/var/log/genome/command_line_usage";
 }
 
 sub output_attributes {
@@ -98,17 +99,12 @@ sub output_attributes {
     }
 }
 
-sub get_current_date {
-    my $self = shift;
-    my ($sec, $min, $hour, $day, $month, $year, $wday, $yday, $isdst) = localtime(time);
-    return ($year + 1900, $month + 1, $day);
-}
-
 sub _sort_params {
     my $self = shift;
     my $params = shift;
 
     my @params = sort(split('--', $params));
+    @params = sort(split('/', $params)) unless @params;
     return unless @params;
 
     my $str;
@@ -146,39 +142,41 @@ sub _create_file {
 sub execute {
     my $self = shift;
 
-    my ($start_year, $start_month, $start_day) = split(/-/, $self->start_date);
-    unless (defined $start_year and defined $start_month and defined $start_day) {
-        $self->error_message("Trouble parsing start date, exiting");
+    unless (-e $self->log_directory_base and -d $self->log_directory_base) {
+        $self->error_message("Log directory $self->log_directory_base does not exist, exiting");
         return;
     }
 
-    if ($start_month =~ /^0/) {
-        $start_month = substr $start_month, 1;
+    if ($self->start_date !~ /\d{4}-\d{1,2}-\d{1,2}/) {
+        $self->error_message("Invalid start date format, use YYYY-MM-DD");
+        return;
     }
 
-    my ($end_year, $end_month, $end_day);
-    if (defined $self->end_date) {
-        ($end_year, $end_month, $end_day) = split(/-/, $self->end_date);
+    if (defined $self->end_date and $self->end_date !~ /\d{4}-\d{1,2}-\d{1,2}/) {
+        $self->error_message("Invalid end date format, use YYYY-MM-DD");
+        return;
     }
-    else {
-        ($end_year, $end_month, $end_day) = $self->get_current_date();
+
+    my ($start_year, $start_month, $start_day) = split(/-/, $self->start_date);
+    my $start_date = DateTime->new(year => $start_year, month => $start_month, day => $start_day);
+
+    my $end_date = DateTime->now;
+    if (defined $self->end_date) {
+        my ($end_year, $end_month, $end_day) = split(/-/, $self->end_date);
+        $end_date = DateTime->new(year => $end_year, month => $end_month, day => $end_day);
     }
 
     my %info;
-    my ($loop_year, $loop_month) = ($start_year, $start_month);
     my @log_columns = $self->log_attributes();
-    LOG_FILE: while ($loop_year < $end_year or $loop_month <= $end_month) {
-        my $log_file = $self->log_directory() . $loop_year . "-" . $loop_month . ".log";
+    until (DateTime->compare($start_date, $end_date) == 1) {
+        my $log_dir = $self->log_directory_base . "/" . $start_date->year . "/";
+        my $log_file = $log_dir . $start_date->month . "-" . $start_date->day . ".log";
 
-        $loop_month++;
-        if ($loop_month > 12) {
-            $loop_month = 1;
-            $loop_year++;
-        }
+        $start_date->add(days => 1);
 
         unless (-e $log_file) {
             $self->warning_message("Could not find $log_file, continuing.");
-            next LOG_FILE;
+            next;
         }
 
         my $log_svr = Genome::Utility::IO::SeparatedValueReader->create(
@@ -189,29 +187,24 @@ sub execute {
             ignore_extra_columns => 1,
         );
 
-        LOG_LINE: while (my $line = $log_svr->next) {
-            my ($log_year, $log_month, $log_day) = split(/-/, $line->{date}); 
-            if ($log_year == $end_year and $log_month == $end_month and $log_day > $end_day) {
-                last LOG_LINE;
-            }
-
+        while (my $line = $log_svr->next) {
             my $user = $line->{user};
             my $command = $line->{command};
             my $params = $self->_sort_params($line->{params});
-            unless (defined $params) {
-                if ($self->group_by eq "command") {
-                    $info{$command}->{$user}->{"none"}++;
-                }
-                elsif ($self->group_by eq "user") {
-                    $info{$user}->{$command}->{"none"}++;
-                }
-            }
-            else {
+            if ($params) {
                 if ($self->group_by eq "command"){
                     $info{$command}->{$user}->{$params}++;
                 }
                 elsif ($self->group_by eq "user") {
                     $info{$user}->{$command}->{$params}++;
+                }
+            }
+            else {
+                if ($self->group_by eq "command") {
+                    $info{$command}->{$user}->{'none'}++;
+                }
+                elsif ($self->group_by eq "user") {
+                    $info{$user}->{$command}->{'none'}++;
                 }
             }
         }
@@ -229,9 +222,7 @@ sub execute {
         $output_fh = $self->_create_file($output_file);
     }
 
-    if ($self->print_headers) {
-        $output_fh->print(join("\t", $self->output_attributes) . "\n");
-    }
+    $output_fh->print(join("\t", $self->output_attributes) . "\n") if $self->print_headers;
 
     for my $group (sort keys %info) {
         if ($self->report_type eq "summary") {
@@ -244,7 +235,6 @@ sub execute {
             $output_fh->print($group . "\t");
             $output_fh->print($sum . "\n");
         }
-
         else {
             for my $subgroup (sort keys %{$info{$group}}) {
                 if ($self->report_type eq "full") {
@@ -267,8 +257,8 @@ sub execute {
                 }
             }
         }
-
     }
+    close $output_fh unless $output_fh eq 'STDOUT';
 }
 1;
 
