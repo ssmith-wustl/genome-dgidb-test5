@@ -305,26 +305,6 @@ sub execute
         croak "can't set up finish step... Hap.pm\n\n";
     }
 
-    if($self->skip_protein_annotation)
-    {
-        $self->status_message("run complete, skipping protein annotation");
-        my ($dump_out,$dump_err); 
-        #need to specify output path, and filename(s)
-        #my $outputdir = $config->{path} . "/" . $config->{org_dirname} . "/"
-        #. $config->{assembly_name} . "/"
-        #. $config->{assembly_version} . "/" . "Sequence/Unmasked/";
-        #my $acedb_version = acedb_version_lookup($config->{acedb_version});
-        #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
-        ## change this to spit out sequence from oracle.
-        #IPC::Run::run(['ace2seq-dump', $acedbpath, $config->{locus_tag}, '-n', '--output', $outputdir,
-        #                '--seqfile', $config->{assembly_name}.".cds.fa" ],
-        #              '>',
-        #              \$dump_out,
-        #              '2>',
-        #              \$dump_err,) or croak "can't dump sequence from acedb: $CHILD_ERROR";
-        ##dna dump here????
-        return 1;
-    }
 
     # core genes and rrna screens
     $next_dir = $config->{path} . "/"
@@ -368,7 +348,29 @@ sub execute
         $self->status_message("Skipping core genes... Hap.pm\n\n");
     }
 
+    if($self->skip_protein_annotation)
+    {
+        $self->status_message("run complete, skipping protein annotation");
+        my ($dump_out,$dump_err); 
+        #need to specify output path, and filename(s)
+        #my $outputdir = $config->{path} . "/" . $config->{org_dirname} . "/"
+        #. $config->{assembly_name} . "/"
+        #. $config->{assembly_version} . "/" . "Sequence/Unmasked/";
+        #my $acedb_version = acedb_version_lookup($config->{acedb_version});
+        #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
+        ## change this to spit out sequence from oracle.
+        #IPC::Run::run(['ace2seq-dump', $acedbpath, $config->{locus_tag}, '-n', '--output', $outputdir,
+        #                '--seqfile', $config->{assembly_name}.".cds.fa" ],
+        #              '>',
+        #              \$dump_out,
+        #              '2>',
+        #              \$dump_err,) or croak "can't dump sequence from acedb: $CHILD_ERROR";
+        ##dna dump here????
+        return 1;
+    }
+
     warn qq{\n\nRunning rRNA screening step ... Hap.pm\n\n};
+#    $self->status_message("Running rRNA screening");
 
     # rrna screen step
     my $rrnascreen = Genome::Model::Tools::Hgmi::RrnaScreen->create(
@@ -381,12 +383,16 @@ sub execute
 
     if ($rrnascreen)
     {
-        $rrnascreen->execute() or croak "can't execute core gene screen";
+        $rrnascreen->execute() or croak "can't execute rrna screen";
     }
     else
     {
         croak "can't set up rrna screen step... Hap.pm\n\n";
     }
+
+
+    # FIXME:
+    # when skipping protein annotation, end here.
 
     warn qq{\n\nBeginning to run SendToPap.pm(workflow) ... from Hap.pm\n\n};
 #    $self->status_message("starting send-to-pap/PAP workflow...");
@@ -501,7 +507,7 @@ sub execute
         # make sure files are not blank. croak if they are
 
         my @biosql2ace = (
-            '/gsc/scripts/gsc/annotation/biosql2ace',
+            'biosql2ace',
             $config->{locus_tag},
         );
         if ( $self->dev )
