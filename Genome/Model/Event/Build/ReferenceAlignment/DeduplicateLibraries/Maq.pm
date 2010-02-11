@@ -86,7 +86,6 @@ sub execute {
 
     #parallelization starts here
     require Workflow::Simple;
-    $Workflow::Simple::store_db = 0;
         
     my $op = Workflow::Operation->create(
         name => 'Deduplicate libraries.',

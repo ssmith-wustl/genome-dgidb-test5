@@ -3,6 +3,7 @@ package Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor;
 use strict;
 use warnings;
 use IO::File;
+use File::Copy;
 use DateTime;
 
 use Genome;
@@ -51,17 +52,22 @@ sub execute{
         return;
     } 
 
-    my $adaptor = Genome::Model::Tools::Annotate::Adaptor::Sniper->create(
-        somatic_file => $self->filtered_snp_output_file,
-        output_file => $self->pre_annotation_filtered_snp_file,
-        skip_if_output_present => 1,
-    );
-
-    my $rv = $adaptor->execute;
-    unless ($rv){
-        $self->error_message("Adapting filtered snp output file for annotation failed");
-        return;
+    unless(-s $self->filtered_snp_output_file) {
+        copy($self->filtered_snp_output_file, $self->pre_annotation_filtered_snp_file);
+    } else {
+        my $adaptor = Genome::Model::Tools::Annotate::Adaptor::Sniper->create(
+            somatic_file => $self->filtered_snp_output_file,
+            output_file => $self->pre_annotation_filtered_snp_file,
+            skip_if_output_present => 1,
+        );
+    
+        my $rv = $adaptor->execute;
+        unless ($rv){
+            $self->error_message("Adapting filtered snp output file for annotation failed");
+            return;
+        }
     }
+    
     return 1;
 
 }

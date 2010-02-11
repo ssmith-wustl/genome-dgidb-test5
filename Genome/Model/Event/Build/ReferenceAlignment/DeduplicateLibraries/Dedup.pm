@@ -105,7 +105,7 @@ sub execute {
     my $log_fh = Genome::Utility::FileSystem->open_file_for_writing($log_file);
     unless($log_fh) {
        $self->error_message("Failed to open output filehandle for: " .  $log_file );
-       die "Could not open file ".$log_file." for writing.";
+       die "Could not open file ".$log_file." for writing: " .  Genome::Utility::FileSystem->error_message;
     } 
 
     my $now = UR::Time->now;
@@ -132,7 +132,7 @@ sub execute {
             #my $fh = IO::File->new($library_maplist,'w');
             my $maplist_fh = Genome::Utility::FileSystem->open_file_for_writing($library_maplist);
             unless ($maplist_fh) {
-                print $log_fh "Failed to create filehandle for '$library_maplist':  $!"."\n";
+                print $log_fh "Failed to create filehandle for '$library_maplist': " . Genome::Utility::FileSystem->error_message . "\n";
                 $log_fh->close; 
                 return;
             }
