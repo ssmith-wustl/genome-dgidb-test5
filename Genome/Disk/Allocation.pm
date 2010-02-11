@@ -49,6 +49,7 @@ class Genome::Disk::Allocation {
                          is => 'Number',
                          doc => 'The id for the owner of this allocation',
                          },
+            owner => { id_by => 'owner_id', is => 'UR::Object', id_class_by => 'owner_class_name' },
             group_subdirectory => {
                                    is => 'Text',
                                    doc => 'The group specific subdirectory where space is allocated',
