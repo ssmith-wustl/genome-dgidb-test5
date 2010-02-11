@@ -87,6 +87,8 @@ class Genome::Model::Build {
     },
     attributes                        => { is => 'Genome::MiscAttribute', reverse_id_by => '_build', where => [ entity_class_name => 'Genome::Model::Build' ] },
     metrics                           => { is => 'Genome::Model::Metric', reverse_id_by => 'build', doc => "Build metrics"},
+    variants                          => { is => 'Genome::Model::BuildVariant', reverse_id_by => 'build', 
+                                           doc => "variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects"},
     ], 
 
     schema_name => 'GMSchema',
@@ -905,7 +907,7 @@ sub get_all_objects {
             #}
     };
 
-    return map { $sorter->( $self->$_ ) } (qw/ events inputs metrics from_build_links to_build_links /);
+    return map { $sorter->( $self->$_ ) } (qw/ events inputs metrics from_build_links to_build_links variants/);
 }
 
 sub yaml_string {
