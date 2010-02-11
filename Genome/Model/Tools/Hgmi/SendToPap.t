@@ -34,7 +34,7 @@ my $s1 = Genome::Model::Tools::Hgmi::SendToPap->create(
 	  'organism_name'   => "Roseburia_intestinalis",
           'taxon_id' => 166486,
           'dev' => 1,
-          'keep_pep' => 1,
+          'keep_pep' => 0,
           'gram_stain' => 'negative',
 );
 
