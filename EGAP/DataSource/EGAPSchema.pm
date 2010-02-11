@@ -1,30 +1,17 @@
+package EGAP::DataSource::EGAPSchema;
+
 use strict;
 use warnings;
 
-package EGAP::DataSource::EGAPSchema;
-
 use EGAP;
 
-
 class EGAP::DataSource::EGAPSchema {
-    is        => ['UR::DataSource::Oracle'],
-    type_name => 'egap datasource egapschema',
+    is => [ 'UR::DataSource::Oracle', 'UR::Singleton' ],
 };
 
-sub server {
-    'dwdev';
-}
-
-sub login {
-    'egapuser';
-}
-
-sub auth {
-    'eg_dev';
-}
-
-sub owner {
-    'EGAP';
-}
+sub server { 'DWDEV' }
+sub login { 'egapuser' }
+sub auth { 'eg_dev' }
+sub owner { 'EGAP' }
 
 1;
