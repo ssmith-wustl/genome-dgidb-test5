@@ -80,14 +80,16 @@ eval {
 };
 ok(scalar(grep { 'Kilobytes requested is required!'} $@), 'kilobytes requested is required');
 
-$allocate_params{'mount_path'} = '/gscmnt/839';
+# no longer specifying a mount_path- default should be /tmp/test0r
+#$allocate_params{'mount_path'} = '/gscmnt/839';
+
 $allocate_params{'kilobytes_requested'} = '2000';
 $allocate_params{'local_confirm'} = 1;
 eval {
     $allocation = Genome::Disk::Allocation::Command::Allocate->create(%allocate_params);
 };
 isa_ok($allocation,'Genome::Disk::Allocation::Command::Allocate');
-is($allocation->disk_group_name,'info_apipe','got the default disk_group_name');
+is($allocation->disk_group_name,'analysis_test','not using default disk_group_name - using test group analysis_test');
 isa_ok($allocation->get_disk_group,'Genome::Disk::Group','got the default disk group object');
 is($allocation->get_disk_group->subdirectory,'info','got the default group_subdirectory');
 
