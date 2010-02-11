@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use above 'EGAP';
+use above 'GAP';
 
 use Bio::Seq;
 use Bio::SeqIO;
