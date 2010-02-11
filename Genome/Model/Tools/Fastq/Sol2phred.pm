@@ -8,12 +8,14 @@ use Genome;
 class Genome::Model::Tools::Fastq::Sol2phred {
     is => 'Genome::Model::Tools::Fastq',
     has => [
-            phred_fastq_file => {
-                                 is => 'Text',
-                                 is_optional => 1,
-                                 doc => 'The output fastq file for phred quality sequences',
-                             },
-        ],
+        phred_fastq_file => {
+            is => 'Text',
+            is_optional => 1,
+            shell_args_position => 1,
+            doc => 'The output fastq file for phred quality sequences',
+        },
+    ],
+    doc => 'convert an illumina/solexa fastq into a sanger/phred fastq'
 };
 
 sub create {
