@@ -64,7 +64,7 @@ sub execute {
         my @rna_genes    = $sequence->rna_genes();
 
         foreach my $gene ( @coding_genes, @trna_genes, @rna_genes ) {
-            #$gene->delete();
+            $gene->delete();
         }
 
     }
