@@ -5,6 +5,7 @@
   <link fromOperation="input connector"          fromProperty="seq set id"       toOperation="database upload"          toProperty="seq_set_id" />
   <link fromOperation="input connector"          fromProperty="fgenesh model"    toOperation="contig predict genes"     toProperty="fgenesh model" />
   <link fromOperation="input connector"          fromProperty="SNAP model"       toOperation="contig predict genes"     toProperty="SNAP model" />
+  <link fromOperation="input connector"          fromProperty="domain"           toOperation="contig predict genes"     toProperty="domain" />
   <link fromOperation="get sequence fasta files" fromProperty="fasta_files"      toOperation="contig predict genes"     toProperty="fasta file" />
   <link fromOperation="contig predict genes"     fromProperty="bio seq features" toOperation="database upload"          toProperty="bio_seq_features" />
   <link fromOperation="database upload"          fromProperty="result"           toOperation="wait db upload"           toProperty="db upload result" />
@@ -13,8 +14,7 @@
   <link fromOperation="wait db upload"           fromProperty="db upload result" toOperation="wait delete"              toProperty="db upload result" />
   <link fromOperation="cat files"                fromProperty="all files"        toOperation="delete files"             toProperty="files" />
   <link fromOperation="delete files"             fromProperty="result"           toOperation="wait delete"              toProperty="delete result" />
-  <link fromOperation="wait delete"              fromProperty="seq_set_id"       toOperation="mail"                     toProperty="seq_set_id" />
-  <link fromOperation="mail"                     fromProperty="result"           toOperation="output connector"         toProperty="result" />
+  <link fromOperation="wait delete"              fromProperty="delete result"    toOperation="output connector"         toProperty="result" />
   <operation name="get sequence fasta files">
     <operationtype commandClass="EGAP::Command::GetFastaFiles" typeClass="Workflow::OperationType::Command" />
   </operation>
@@ -38,14 +38,6 @@
       <property>seq_set_id</property>
     </operationtype>
   </operation>
-  <operation name="mail">
-    <operationtype typeClass="Workflow::OperationType::Mail">
-      <inputproperty default="mjohnson@watson.wustl.edu">email_address</inputproperty>
-      <inputproperty default="EGAP Workflow">subject</inputproperty>
-      <inputproperty default="data/output_mail.txt">template_file</inputproperty>
-      <inputproperty>seq_set_id</inputproperty>
-    </operationtype>
-  </operation>
   <operation name = "cat files">
     <operationtype typeClass="Workflow::OperationType::Converge">
       <inputproperty>model file</inputproperty>
@@ -59,6 +51,7 @@
     <inputproperty>seq set id</inputproperty>
     <inputproperty>fgenesh model</inputproperty>
     <inputproperty>SNAP model</inputproperty>
+    <inputproperty>domain</inputproperty>
     <outputproperty>result</outputproperty>
   </operationtype>
 </workflow>
