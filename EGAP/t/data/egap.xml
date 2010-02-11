@@ -10,9 +10,8 @@
   <link fromOperation="contig predict genes"     fromProperty="bio seq features" toOperation="database upload"          toProperty="bio_seq_features" />
   <link fromOperation="database upload"          fromProperty="result"           toOperation="wait db upload"           toProperty="db upload result" />
   <link fromOperation="get sequence fasta files" fromProperty="fasta_files"      toOperation="wait db upload"           toProperty="fasta_files" />
-  <link fromOperation="wait db upload"           fromProperty="fasta_files"      toOperation="cat files"                toProperty="fasta files" />
+  <link fromOperation="wait db upload"           fromProperty="fasta_files"      toOperation="delete files"             toProperty="files" />
   <link fromOperation="wait db upload"           fromProperty="db upload result" toOperation="wait delete"              toProperty="db upload result" />
-  <link fromOperation="cat files"                fromProperty="all files"        toOperation="delete files"             toProperty="files" />
   <link fromOperation="delete files"             fromProperty="result"           toOperation="wait delete"              toProperty="delete result" />
   <link fromOperation="wait delete"              fromProperty="delete result"    toOperation="output connector"         toProperty="result" />
   <operation name="get sequence fasta files">
@@ -36,15 +35,6 @@
       <property>delete result</property>
       <property>db upload result</property>
       <property>seq_set_id</property>
-    </operationtype>
-  </operation>
-  <operation name = "cat files">
-    <operationtype typeClass="Workflow::OperationType::Converge">
-      <inputproperty>model file</inputproperty>
-      <inputproperty>pwm file</inputproperty>
-      <inputproperty>fasta files</inputproperty>
-      <outputproperty>all files</outputproperty>
-      <outputproperty>result</outputproperty>
     </operationtype>
   </operation>
   <operationtype typeClass="Workflow::OperationType::Model">
