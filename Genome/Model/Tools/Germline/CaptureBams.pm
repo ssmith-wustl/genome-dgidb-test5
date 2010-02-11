@@ -17,7 +17,13 @@ package Genome::Model::Tools::Germline::CaptureBams;
 
 use strict;
 use warnings;
+use Genome;
 
+#TODO: the following one line program most work before the module is committed to svn: 
+# "use Genome::Model::Tools::Genrmline::CaptureBams"
+1;
+
+__END__
 class Genome::Model::Tools::Germline::CaptureBams {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
