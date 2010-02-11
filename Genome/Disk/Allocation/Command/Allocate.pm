@@ -111,6 +111,11 @@ sub create {
     if ($self->mount_path) {
         ($disk_volume) = $self->get_disk_volumes;
     }
+
+    if ( $ENV{UR_DBI_NO_COMMIT} ) {
+        $self->disk_group_name('analysis_test');
+    }
+
     unless ($self->allocator_id) {
         my %pse_params = (
                           process_to => 'allocate disk space',
