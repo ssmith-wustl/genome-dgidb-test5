@@ -608,7 +608,7 @@ sub execute
     }
     print $rtfile_fh qq{Location of this file:\n};
     print $rtfile_fh qq{\n$rtfullname\n\n};
-    print $rtfile_fh qq{I am transferring ownership to Xu.\n\n};
+    print $rtfile_fh qq{I am transferring ownership to Veena.\n\n};
     print $rtfile_fh qq{Thanks,\n\n};
     print $rtfile_fh qq{Sasi\n};
 
