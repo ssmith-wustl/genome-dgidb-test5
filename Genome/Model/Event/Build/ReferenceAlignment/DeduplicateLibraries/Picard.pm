@@ -46,6 +46,13 @@ sub execute {
     } 
     $self->status_message("Collected files for merge and dedup: ".join("\n",@bam_files));
     
+    $self->status_message('Checking bams...');
+    my $individual_flagstat_total = 0;
+    for my $bam_file (@bam_files) {
+        $individual_flagstat_total += $self->_bam_flagstat_total($bam_file); 
+    }
+    $self->status_message('Bam flagstat complete (individual total: ' . $individual_flagstat_total);
+    
     my $bam_merged_output_file = $self->build->whole_rmdup_bam_file; 
     
     #Check if we already have a complete merged and rmdup'd bam
@@ -53,10 +60,6 @@ sub execute {
         $self->status_message("A merged and rmdup'd bam file has been found at: $bam_merged_output_file");
         
         $self->status_message("Checking that merged and rmdup'd bam contains expected alignment count.");
-        my $individual_flagstat_total = 0;
-        for my $bam_file (@bam_files) {
-            $individual_flagstat_total += $self->_bam_flagstat_total($bam_file);
-        }
         
         my $dedup_flagstat_total = $self->_bam_flagstat_total($bam_merged_output_file);
         
@@ -64,12 +67,12 @@ sub execute {
         $now = UR::Time->now;
         
         if($dedup_flagstat_total eq $individual_flagstat_total) {
-            $self->status_message("Count matches sum of individual BAMs.");
+            $self->status_message("Dedup total ($dedup_flagstat_total) matches sum of individual BAMs.");
             $self->status_message("Skipping the rest of DeduplicateLibraries::Picard at $now");
             $self->status_message("*** All processes skipped. ***");
             return 1;
         } else {
-            $self->status_message("The found merged and rmdup'd bam file appears incomplete.  Deleting and regenerating.");
+            $self->status_message("The found merged and rmdup'd bam file didn't match (dedup: $dedup_flagstat_total).  Deleting and regenerating.");
             unlink($bam_merged_output_file);
         }
 
@@ -131,7 +134,6 @@ sub execute {
 
     $self->status_message("Merge return value:".$merge_rv);
 
-    my $merged_flagstat_total; #keep this around for comparison after deduplication
     if ($merge_rv ne 1)  {
         $self->error_message("Error merging: ".join("\n", @bam_files));
         $self->error_message("Output target: $merged_file");
@@ -143,12 +145,8 @@ sub execute {
     else {
 
         $self->status_message("Checking that merged bam contains expected alignment count.");
-        my $individual_flagstat_total = 0;
-        for my $bam_file (@bam_files) {
-            $individual_flagstat_total += $self->_bam_flagstat_total($bam_file);
-        }
         
-        $merged_flagstat_total = $self->_bam_flagstat_total($merged_file);
+        my $merged_flagstat_total = $self->_bam_flagstat_total($merged_file);
         
         unless($merged_flagstat_total == $individual_flagstat_total) {
             $self->error_message("Alignment counts of individual bams and merged bam don't match!");
@@ -204,9 +202,9 @@ sub execute {
         
         my $dedup_flagstat_total = $self->_bam_flagstat_total($dedup_temp_file);
         
-        unless($merged_flagstat_total == $dedup_flagstat_total) {
-            $self->error_message("Alignment counts of dedup bam and merged bam don't match!");
-            $self->error_message("(Dedup total: " . $dedup_flagstat_total . ", Merged total: " . $merged_flagstat_total);
+        unless($individual_flagstat_total == $dedup_flagstat_total) {
+            $self->error_message("Alignment counts of dedup bam and individual bams don't match!");
+            $self->error_message("(Dedup total: " . $dedup_flagstat_total . ", Individual total: " . $individual_flagstat_total);
             return;
         }
         
@@ -252,6 +250,8 @@ sub _bam_flagstat_total {
         $self->error_message('Unexpected output from samtools flagstat: ' . $lines[0]);
         return;
     }
+    
+    $self->status_message('flagstat for ' . $bam_file . ' reports ' . $total . ' in total');
     
     return $total;
 }
