@@ -18,7 +18,6 @@ sub help_brief {
 }
 
 sub help_synopsis{
-    my $self = shift;
     return <<"EOS"
 gmt wiki document-classes --svn-revision 50000
 gmt wiki document-classes --svn-revision 50000 Genome::Model::Tools::Wiki
@@ -26,7 +25,6 @@ EOS
 }
 
 sub help_detail {
-    my $self = shift;
     return join("\n", 
         'This tool generates documentation for each class and uploads it to the',
         'wiki. Additionally a link to a revision in Subversion is added if',
