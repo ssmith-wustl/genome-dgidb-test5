@@ -20,7 +20,7 @@ sub help_synopsis{
     my $self = shift;
     return <<"EOS"
 gmt wiki document-commands --svn-revision 50000
-gmt wiki document-commands --svn-revision 50000 Genome::Model::Tools::Wiki Genome::Model::Tools::Wiki
+gmt wiki document-commands --svn-revision 50000 Genome::Model::Tools::Wiki
 EOS
 }
 
