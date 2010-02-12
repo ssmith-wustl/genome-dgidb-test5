@@ -80,16 +80,17 @@ eval {
 };
 ok(scalar(grep { 'Kilobytes requested is required!'} $@), 'kilobytes requested is required');
 
-$allocate_params{'mount_path'} = '/gscmnt/839';
+$allocate_params{'mount_path'} = '/tmp/analysis_test/';
 $allocate_params{'kilobytes_requested'} = '2000';
 $allocate_params{'local_confirm'} = 1;
+$allocate_params{'disk_group_name'} = 'analysis_test';
 eval {
     $allocation = Genome::Disk::Allocation::Command::Allocate->create(%allocate_params);
 };
 isa_ok($allocation,'Genome::Disk::Allocation::Command::Allocate');
-is($allocation->disk_group_name,'info_apipe','got the default disk_group_name');
+is($allocation->disk_group_name,'analysis_test','got the default disk_group_name');
 isa_ok($allocation->get_disk_group,'Genome::Disk::Group','got the default disk group object');
-is($allocation->get_disk_group->subdirectory,'info','got the default group_subdirectory');
+is($allocation->get_disk_group->subdirectory,'test0r','got the default group_subdirectory');
 
 my $allocator = $allocation->allocator;
 isa_ok($allocator,'GSC::PSE::AllocateDiskSpace');
