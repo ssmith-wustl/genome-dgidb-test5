@@ -39,7 +39,7 @@ sub help_detail {
 sub for_each_class_object {
     my $self = shift;
     my $class_to_doc = shift;
-    $DB::single = 1;
+    
     my $doc = '';
     eval {        
         #Module Name
