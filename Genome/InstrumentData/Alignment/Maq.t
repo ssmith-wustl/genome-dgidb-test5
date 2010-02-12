@@ -10,7 +10,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25;
+        plan tests => 27;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -242,6 +242,17 @@ ok($alignment4->find_or_generate_alignment_data,'generated new alignment data fo
 my $dir4 = $alignment4->alignment_directory;
 ok($dir4, "alignments found/generated");
 ok(-d $dir4, "result is a real directory");
+
+my $expected_output_dir = "/gsc/var/cache/testsuite/data/Genome-InstrumentData-Alignment-Maq/expected_output";
+ok(-d $expected_output_dir, "found expected output directory");
+my @diff = `diff $expected_output_dir $dir4`;
+is(scalar(@diff), 1, "found 1 difference as expected (the output dir has timings in it)")
+    or do {
+        my $copy = "/tmp/maq-alignment-failed/$ENV{USER}";
+        system "cp -r $dir4 $copy";
+        diag("RUN THIS TO DEBUG: diff $expected_output_dir $copy");
+    };
+
 ok($alignment4->remove_alignment_directory,'removed alignment directory '. $dir4);
 ok(! -e $dir4, 'alignment directory does not exist');
 
