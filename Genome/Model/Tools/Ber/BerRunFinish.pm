@@ -554,9 +554,9 @@ sub execute
     print $rtfile_fh qq{Glimmer3 count =\t $glimmer3_counter}, "\n\n";
     print $rtfile_fh
         qq{Protein analysis by the following programs has been run via PAP workflow:\n\n};
-    print $rtfile_fh qq{Interpro\n};
-    print $rtfile_fh qq{Kegg\n};
-    print $rtfile_fh qq{psortB\n};
+    print $rtfile_fh qq{Interpro v4.5 (database v22.0)\n};
+    print $rtfile_fh qq{Keggscan v52\n};
+    print $rtfile_fh qq{psortB v2.1\n};
     print $rtfile_fh qq{Blastp\n\n};
     print $rtfile_fh
         qq{Location of AMGAP ace files can be located, here:\n\n};
