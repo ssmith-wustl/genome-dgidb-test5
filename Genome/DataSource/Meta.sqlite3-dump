@@ -211,48 +211,49 @@ CREATE TABLE dd_table (
      remarks varchar,
      PRIMARY KEY(data_source, owner, table_name)
 );
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_OUTPUT','TABLE','entity',NULL,'2008-11-12 18:23:39',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','TABLE','entity',NULL,'2008-11-12 18:23:35',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','TABLE','entity',NULL,'2008-11-12 18:23:06',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','TABLE','entity',NULL,'2009-09-16 16:45:22','The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.');
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ_METRIC','TABLE','entity',NULL,'2008-11-12 18:23:25',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ','TABLE','entity',NULL,'2008-11-12 18:23:15',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','TABLE','bridge',NULL,'2008-11-12 18:23:36','For composite genome models this will bridge the composite
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_OUTPUT','TABLE','entity','2008-06-16 16:05:22','2008-11-12 18:23:39',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','TABLE','entity','2008-11-11 14:32:16','2008-11-12 18:23:35',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','TABLE','entity','2008-06-16 16:15:34','2008-11-12 18:23:06',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','TABLE','entity','2010-02-09 13:43:03','2009-09-16 16:45:22','The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.');
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ_METRIC','TABLE','entity','2008-10-08 13:31:00','2008-11-12 18:23:25',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ','TABLE','entity','2008-10-08 11:26:37','2008-11-12 18:23:15',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','TABLE','bridge','2008-08-12 11:16:34','2008-11-12 18:23:36','For composite genome models this will bridge the composite
 models to the member models');
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_SHORT_READ','TABLE','entity',NULL,'2008-11-12 18:23:37',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET','TABLE','entity',NULL,'2008-11-12 18:23:10',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','TABLE','entity',NULL,'2008-11-12 18:23:33',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE','TABLE','entity',NULL,'2008-11-12 18:23:27',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD','TABLE','entity',NULL,'2008-11-12 18:23:29',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','TABLE','entity',NULL,'2008-11-12 18:23:20',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_METRIC','TABLE','entity',NULL,'2008-11-12 18:23:17',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','TABLE','entity',NULL,'2009-10-13 11:26:26',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','TABLE','entity',NULL,'2008-11-12 18:23:19',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','TABLE','entity',NULL,'2008-11-12 18:23:40',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_INPUT','TABLE','entity',NULL,'2008-11-12 18:23:24',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','TABLE','entity',NULL,'2008-12-04 10:48:50',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','TABLE','entity',NULL,'2008-12-04 10:48:44',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST_MEMBER','TABLE','entity',NULL,'2008-12-04 10:48:54',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','TABLE','entity',NULL,'2008-12-04 10:48:58',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','TABLE','entity',NULL,'2008-12-04 10:49:00',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SOFTWARE_RESULT','TABLE','entity',NULL,'2009-02-03 10:58:13',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','TABLE','entity',NULL,'2009-04-02 11:35:43',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','TABLE','entity',NULL,'2009-04-02 11:35:36',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','TABLE','entity',NULL,'2009-08-17 18:01:41',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SOFTWARE_RESULT_USER','TABLE','entity',NULL,'2009-08-17 18:01:40','Usage pattern: rows will be added to this table while a given result is in use, and removed when the user is done with the data. Builds used in publications may stay "used" indefinitely, but most data will be temporary.');
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','DISEASE','TABLE','entity',NULL,'2009-12-17 13:37:19','One row per disease which is an explicit subject of study.');
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_METRIC','TABLE','entity',NULL,'2009-08-19 13:40:37',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_VARIANT','TABLE','entity',NULL,'2009-12-17 13:36:52',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','TABLE','entity',NULL,'2009-09-16 16:45:23',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANTVALIDATION','TABLE','entity',NULL,'2009-09-16 16:45:20',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MISC_NOTE','TABLE','entity',NULL,'2009-10-02 11:07:30',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_INPUT','TABLE','entity',NULL,'2009-10-13 11:26:19',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','TABLE','entity',NULL,'2009-10-13 11:26:25',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_GROUP','TABLE','bridge',NULL,'2009-10-07 14:16:31',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MODEL_GROUP','TABLE','entity',NULL,'2009-10-07 14:16:35',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','TABLE','entity',NULL,'2009-12-17 13:37:26',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_SV','TABLE','entity',NULL,'2009-10-30 14:29:06',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_SV','TABLE','entity',NULL,'2009-10-29 15:15:04',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_SHORT_READ','TABLE','entity','2008-08-19 14:48:37','2008-11-12 18:23:37',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET','TABLE','entity','2009-03-09 14:57:50','2008-11-12 18:23:10',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','TABLE','entity','2008-09-03 12:16:23','2008-11-12 18:23:33',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE','TABLE','entity','2008-06-16 16:05:24','2008-11-12 18:23:27',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD','TABLE','entity','2009-03-09 13:59:19','2008-11-12 18:23:29',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','TABLE','entity','2009-03-10 09:39:10','2008-11-12 18:23:20',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_METRIC','TABLE','entity','2008-06-16 16:05:22','2008-11-12 18:23:17',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','TABLE','entity','2009-10-12 16:03:43','2009-10-13 11:26:26',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','TABLE','entity','2008-09-30 15:12:12','2008-11-12 18:23:19',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','TABLE','entity','2008-08-18 13:50:55','2008-11-12 18:23:40',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_INPUT','TABLE','entity','2008-06-16 16:05:22','2008-11-12 18:23:24',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','TABLE','entity','2008-06-16 16:15:36','2008-12-04 10:48:50',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','TABLE','entity','2009-02-05 13:53:11','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST_MEMBER','TABLE','entity','2008-11-19 14:56:37','2008-12-04 10:48:54',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','TABLE','entity','2008-12-12 16:20:25','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','TABLE','entity','2008-12-03 14:52:25','2008-12-04 10:49:00',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SOFTWARE_RESULT','TABLE','entity','2009-02-19 16:47:25','2009-02-03 10:58:13',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','TABLE','entity','2009-04-02 13:31:20','2009-04-02 11:35:43',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','TABLE','entity','2009-04-02 13:31:20','2009-04-02 11:35:36',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','TABLE','entity','2009-06-09 14:16:08','2009-08-17 18:01:41',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SOFTWARE_RESULT_USER','TABLE','entity','2009-08-03 12:34:30','2009-08-17 18:01:40','Usage pattern: rows will be added to this table while a given result is in use, and removed when the user is done with the data. Builds used in publications may stay "used" indefinitely, but most data will be temporary.');
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','DISEASE','TABLE','entity','2009-10-01 13:05:30','2009-12-17 13:37:19','One row per disease which is an explicit subject of study.');
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_METRIC','TABLE','entity','2009-08-19 13:29:43','2009-08-19 13:40:37',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_VARIANT','TABLE','entity','2009-11-03 14:24:25','2009-12-17 13:36:52',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','TABLE','entity','2009-12-29 15:18:21','2009-09-16 16:45:23',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANTVALIDATION','TABLE','entity','2009-09-10 17:01:40','2009-09-16 16:45:20',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MISC_NOTE','TABLE','entity','2009-09-17 16:09:40','2009-10-02 11:07:30',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_INPUT','TABLE','entity','2009-11-10 12:30:05','2009-10-13 11:26:19',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','TABLE','entity','2009-11-02 13:46:50','2009-10-13 11:26:25',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_GROUP','TABLE','bridge','2009-10-07 11:53:49','2009-10-07 14:16:31',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MODEL_GROUP','TABLE','entity','2009-10-07 11:53:01','2009-10-07 14:16:35',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','TABLE','entity','2010-02-10 15:05:53','2010-02-12 11:13:52',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_SV','TABLE','entity','2009-10-30 14:22:00','2009-10-30 14:29:06',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_SV','TABLE','entity','2009-10-29 15:00:56','2009-10-29 15:15:04',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','RESTORE','TABLE','entity','2010-01-28 15:27:05','2010-02-12 11:13:44',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -530,6 +531,18 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_SV','VERSION','VARCHAR2','50','N','2009-10-30 14:29:06',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_VARIANT','SOMATIC_QUALITY','NUMBER','5','Y','2009-12-17 13:36:52',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_VARIANT','MAPPING_QUALITY','NUMBER','5','Y','2009-12-17 13:36:52',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','RESTORE','PROCESSING_PROFILE_ID','NUMBER','11','Y','2010-02-12 11:13:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','FWD_READ_LENGTH','NUMBER','20','Y','2010-02-12 11:13:52',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','MEDIAN_INSERT_SIZE','NUMBER','20','Y','2010-02-12 11:13:52',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','SUBSET_NAME','VARCHAR2','255','Y','2010-02-12 11:13:52',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','RUN_NAME','VARCHAR2','255','Y','2010-02-12 11:13:52',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','REV_READ_LENGTH','NUMBER','20','Y','2010-02-12 11:13:52',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','RESTORE','PARAM_VALUE','VARCHAR2','1000','Y','2010-02-12 11:13:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','FRAGMENT_COUNT','NUMBER','20','Y','2010-02-12 11:13:52',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','IS_PAIRED_END','NUMBER','1','Y','2010-02-12 11:13:52',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','SD_ABOVE_INSERT_SIZE','NUMBER','20','Y','2010-02-12 11:13:52',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','RESTORE','PARAM_NAME','VARCHAR2','100','Y','2010-02-12 11:13:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','READ_LENGTH','NUMBER','20','Y','2010-02-12 11:13:52',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

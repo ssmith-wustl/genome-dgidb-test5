@@ -17,10 +17,7 @@ class Genome::Model::Build::Input {
         model      => { is => 'Genome::Model', via => 'build' },
         model_name => { via => 'model', to => 'name' },
         build      => { is => 'Genome::Model::Build', id_by => 'build_id', constraint_name => 'GMBI_GMB_FK' },
-        value      => { is => 'UR::Object', id_class_by => 'value_class_name', id_by => 'value_id' },
-    ],
-    unique_constraints => [
-        { properties => [qw/build_id name value_class_name value_id/], sql => 'GMBI_PK' },
+        value      => { is => 'UR::Object', id_by => 'value_id', id_class_by => 'value_class_name' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',

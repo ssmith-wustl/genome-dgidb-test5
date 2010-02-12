@@ -16,8 +16,8 @@ class Genome::Model::BuildVariant {
         variant_id => { is => 'NUMBER', len => 10, implied_by => 'variant' },
     ],
     has => [
-        build   => { is => 'Genome::Model::Build', id_by => 'build_id', constraint_name => 'GMBV_GMB_FK' },
-        variant => { is => 'Genome::Model::Variant', id_by => 'variant_id', constraint_name => 'GMBV_GMV_FK' },
+        build           => { is => 'Genome::Model::Build', id_by => 'build_id', constraint_name => 'GMBV_GMB_FK' },
+        variant         => { is => 'Genome::Model::Variant', id_by => 'variant_id', constraint_name => 'GMBV_GMV_FK' },
         mapping_quality => { is => 'NUMBER', len => 5, is_optional => 1 },
         somatic_quality => { is => 'NUMBER', len => 5, is_optional => 1 },
     ],

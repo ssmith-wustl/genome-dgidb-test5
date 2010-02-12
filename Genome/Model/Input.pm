@@ -17,7 +17,7 @@ class Genome::Model::Input {
     has => [
         model      => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GMI_GM_FK' },
         model_name => { via => 'model', to => 'name' },
-        value      => { is => 'UR::Object', id_class_by => 'value_class_name', id_by => 'value_id' },
+        value      => { is => 'UR::Object', id_by => 'value_id', id_class_by => 'value_class_name' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
