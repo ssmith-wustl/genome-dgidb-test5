@@ -9,11 +9,12 @@ class Genome::Model::Tools::Wiki::DocumentClasses {
         svn_revision => { is => 'Number', doc => 'SVN revision to link to for module', is_optional => 1 },
         _wiki_basepath => { is => 'Text', is_constant => 1, default => 'Analysis Pipeline Group/Class reference/' },
         _svn_basepath => { is => 'Text', is_constant => 1, default => 'http://svn/scm/viewvc/gscpan/perl_modules/trunk/' },
-    ]
+    ],
+    doc => "Uploads documentation to the wiki for classes in the Genome namespace.",
 };
 
 sub help_brief {
-    "Uploads documentation to the wiki for classes in the Genome namespace."
+    __PACKAGE__->__meta__->doc
 }
 
 sub help_synopsis{
