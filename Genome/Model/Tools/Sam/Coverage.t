@@ -20,7 +20,7 @@ my $temp_path = '/gsc/var/cache/testsuite/running_testsuites/';
 my $tmp_dir  = File::Temp::tempdir(
     "Coverage_XXXXXX", 
     DIR     => $temp_path,
-    CLEANUP => 0,
+    CLEANUP => 1,
 );
 
 my $compare_to_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-Coverage/compare.txt';

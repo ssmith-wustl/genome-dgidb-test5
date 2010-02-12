@@ -21,7 +21,7 @@ my $ref_seq = '/gscmnt/839/info/medseq/reference_sequences/human-novoalign-refer
 my $fragment_fastq_file = $test_data_dir .'/fragment_100.txt';
 my $pe_fastq_files = $test_data_dir .'/s_1_1_sequence_100.txt '. $test_data_dir .'/s_1_2_sequence_100.txt';
 
-my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Novocraft-Novoalign-XXXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
+my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Novocraft-Novoalign-XXXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my $fragment_output_directory = File::Temp::tempdir('Fragment-XXXX',DIR => $tmp_dir, CLEANUP => 1);
 my $mapper = Genome::Model::Tools::Novocraft::Novoalign->create(
@@ -36,7 +36,7 @@ my @fragment_output_files = glob($fragment_output_directory.'/*');
 ok( scalar(@fragment_output_files) eq $expected_output, "Number of output files expected = ". $expected_output );
 
 #Run Paired-End test
-my $pe_output_directory = File::Temp::tempdir('Paired-End-XXXX',DIR => $tmp_dir, CLEANUP => 0);
+my $pe_output_directory = File::Temp::tempdir('Paired-End-XXXX',DIR => $tmp_dir, CLEANUP => 1);
 my $pe_mapper = Genome::Model::Tools::Novocraft::Novoalign->create(
     output_directory => $pe_output_directory,
     novoindex_file => $ref_seq,
