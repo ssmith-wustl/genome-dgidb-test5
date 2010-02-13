@@ -362,15 +362,31 @@ sub whole_rmdup_bam_file {
 
     my @files = glob($self->accumulated_alignments_directory .'/*_merged_rmdup.bam');
 
-    if (@files == 0) {
-	return $self->accumulated_alignments_directory.'/'.$self->build_id.'_merged_rmdup.bam';
+    if (@files > 1) {
+        my @not_symlinks;
+        my @symlinks;
+        for (@files) {
+            if (-l $_) {
+                push @symlinks, $_;
+            }
+            else {
+                push @not_symlinks, $_;
+            }
+        }
+        if (@not_symlinks == 1) {
+            $self->warning_message("Found multiple files, but all but one are symlinks.  Selecting @not_symlinks.  Ignoring @symlinks.");
+            return $not_symlinks[0];
+        }
+        else {
+	        $self->error_message("Multiple merged rmdup bam file found.");
+            return;
+        }
     }
-    elsif (@files == 1) {
-	return $files[0];
+    elsif (@files == 0) {
+	    return $self->accumulated_alignments_directory.'/'.$self->build_id.'_merged_rmdup.bam';
     }
     else {
-	$self->error_message("Multiple merged rmdup bam file found");
-	return;
+    	return $files[0];
     }
 }
 
