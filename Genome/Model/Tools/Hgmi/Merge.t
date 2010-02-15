@@ -6,6 +6,7 @@ use warnings;
 use above "Genome";
 use File::Remove qw/ remove /;
 use File::Temp qw/tempdir/;
+use Cwd;
 
 use Test::More tests => 5;
 
@@ -29,7 +30,10 @@ isa_ok($d,'Genome::Model::Tools::Hgmi::DirBuilder');
 ok($d->execute());
 
 my $testpath = $tmpdir ."/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0";
+my $orig_dir = getcwd;
+diag($orig_dir);
 &chdir($testpath);
+
 my $m = Genome::Model::Tools::Hgmi::Merge->create(
   'organism_name' => "Bifidobacterium_catenulatum",
   'locus_tag' => "BIFCATDFT",
@@ -39,11 +43,10 @@ my $m = Genome::Model::Tools::Hgmi::Merge->create(
  );
 
 isa_ok($m,'Genome::Model::Tools::Hgmi::Merge');
-
-
+&chdir($orig_dir);
+remove \1, qw{ $tmpdir } ;
 
 #my $cmd = $m->gather_details();
 #diag( join(" ", @{$cmd[0]})."\n");
 
-remove \1, qw{ /tmp/disk/analysis };
 exit 0;

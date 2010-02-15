@@ -46,5 +46,5 @@ isa_ok($tool_db,'Genome::Model::Tools::Hgmi::DirBuilder');
 #system("mkdir -p /tmp/disk/analysis/HGMI");
 ok($tool_db->execute,'execute dir builder');
 # check directory structure, then remove what was created.
-remove \1, qw{ /tmp/disk/analysis/HGMI/B_catenulatum };
+remove \1, qw{ $dir };
 
