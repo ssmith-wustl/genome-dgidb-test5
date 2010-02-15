@@ -93,7 +93,8 @@ sub execute {
     my $self = shift;
     my $pid  = getppid(); 
     
-    my $log_dir = $self->accumulated_alignments_dir.'/../logs/';
+    #Use Path::Class::Dir to correctly handle relative path when accumulated_alignments_dir is a symlink
+    my $log_dir = Path::Class::Dir->new($self->accumulated_alignments_dir)->parent->subdir('logs')->stringify;
     unless (-e $log_dir ) {
 	    unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
             $self->error_message("Failed to create log directory for dedup process: $log_dir");
@@ -139,7 +140,7 @@ sub execute {
             my $cnt=0;
             for my $input_alignment (@library_maps) {
                 unless(-f $input_alignment) {
-                    print $log_fh "Expected $input_alignment not found.  Quiting."."\n";
+                    print $log_fh "Expected $input_alignment not found.  Quitting."."\n";
                     $log_fh->close;
                     $maplist_fh->close; 
                     return;
