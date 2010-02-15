@@ -93,10 +93,10 @@ INSERT INTO "dd_fk_constraint_column" VALUES('GMRSMC_GMB_FK','Genome::DataSource
 INSERT INTO "dd_fk_constraint_column" VALUES('GMRP_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','GENOME_MODEL','MODEL_ID','GENOME_MODEL_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('SMRD_VRD_FK','Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','VARIANT_REVIEW_DETAIL','DETAIL_ID','ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GME_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','GENOME_MODEL_BUILD','BUILD_ID','BUILD_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('GML_TB_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','GENOME_MODEL','TO_MODEL','GENOME_MODEL_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('GML_TB_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','GENOME_MODEL','TO_MODEL_ID','GENOME_MODEL_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMBL_FB_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','GENOME_MODEL_BUILD','FROM_BUILD_ID','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMBL_TB_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','GENOME_MODEL_BUILD','TO_BUILD_ID','BUILD_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('GML_FB_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','GENOME_MODEL','FROM_MODEL','GENOME_MODEL_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('GML_FB_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','GENOME_MODEL','FROM_MODEL_ID','GENOME_MODEL_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('VO_GMB_FK','Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','GENOME_MODEL_BUILD','BUILD_ID','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('DISEASE_PARENT_FK','Genome::DataSource::GMSchema','MG','DISEASE','DISEASE','PARENT_DISEASE_ID','ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMM_BI_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_METRIC','GENOME_MODEL_BUILD','BUILD_ID','BUILD_ID');
