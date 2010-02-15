@@ -30,6 +30,7 @@ class Genome::InstrumentData::Imported {
         description          => { is => 'VARCHAR2', len => 512, is_optional => 1 },
         read_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
         base_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
+        disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', where => [ allocation_path => {operator => 'like', value => '%imported%'} ], is_optional => 1, is_many => 1 },
         fragment_count       => { is => 'NUMBER', len => 20, is_optional => 1 },
         fwd_read_length      => { is => 'NUMBER', len => 20, is_optional => 1 },
         is_paired_end        => { is => 'NUMBER', len => 1, is_optional => 1 },
@@ -55,29 +56,41 @@ sub data_directory {
 
 }
 
+# TODO: remove me and use the actual object accessor
 sub get_disk_allocation {
     my $self = shift;
-
-    my @allocations = Genome::Disk::Allocation->get(owner_class_name=>ref($self), 
-                                                    allocation_path => {operator => 'LIKE', value => '%imported%'},
-                                                    owner_id=>$self->id); 
-
-    if (@allocations > 1) {
-        die "Got more than one allocation for this imported data!";
-    }
-
-    return $allocations[0];
+    return $self->disk_allocation;
 }
 
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
-    if (-s $self->original_data_path) {
-        my $stat = stat($self->original_data_path);
-        return int($stat->size/1000 + 100);   #use kb as unit
-    } 
-    else {
-        return 250000000;
+    my $answer;
+    if($self->original_data_path !~ /\,/ ) {
+        if (-d $self->original_data_path) {
+            my $du_source = "du -sb ".$self->original_data_path;
+            my $s_size = qx/ $du_source /;
+            my @source_size = split(' ', $s_size);
+            $answer = ($source_size[0]/1000)+ 100;
+        } else {
+            my $stat = stat($self->original_data_path);
+            $answer = ($stat->size/1000) + 100; 
+        } 
     }
+    else {
+        my @files = split /\,/  , $self->original_data_path;
+        my $stat;
+        my $size;
+        foreach (@files) {
+            if (-s $_) {
+                $stat = stat($_);
+                $size += $stat->size;
+            } else {
+                die "file not found - $_\n";
+            }
+        }
+        $answer = ($size/1000) + 100;
+    }
+    return int($answer);
 }
 
 
@@ -96,6 +109,85 @@ sub create {
     return $self;
 }
 
+################## Solexa Only ###################
+
+*fastq_filenames = \&Genome::InstrumentData::Solexa::fastq_filenames;
+*dump_illumina_fastq_archive = \&Genome::InstrumentData::Solexa::dump_illumina_fastq_archive;
+*resolve_fastq_filenames = \&Genome::InstrumentData::Solexa::resolve_fastq_filenames;
+
+sub total_bases_read {
+    my $self = shift;
+    return ($self->fwd_read_length + $self->rev_read_length) * $self->fragment_count;
+}
+
+# leave as-is for first test, 
+# ultimately find out what uses this and make sure it really wants clusters
+sub _calculate_total_read_count {
+    my $self = shift;
+    return $self->fragment_count;
+}
+
+# rename everything which uses this to fragment_count instead of read_count
+# DB: (column name is "fragment_count"
+#sub fragment_count { 10_000_000 }
+
+sub clusters { shift->fragment_count}
+
+sub flow_cell_id {
+    my $self = shift;
+    $self->id;
+}
+
+sub library_name {
+    my $self = shift;
+    $self->id;
+}
+
+sub lane {
+    my $self = shift;
+    return $self->subset_name;
+}
+
+sub run_start_date_formatted {
+    UR::Time->now();
+}
+
+sub seq_id {
+    my $self = shift;
+    return $self->id;
+}
+
+sub instrument_data_id {
+    my $self = shift;
+    return $self->id;
+}
+
+sub resolve_quality_converter {
+    'sol2phred'
+}
+
+sub gerald_directory {
+    undef;
+}
+
+sub desc {
+    my $self = shift;
+    return $self->description;
+}
+
+sub is_external {
+    0;
+}
+
+sub resolve_adaptor_file {
+ return '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
+}
+
+# okay for first test, before committing switch to getting the allocation and returning the path under it
+sub archive_path {
+    my $self = shift;
+    
+    $self->disk_allocations->absolute_path;
+}
 
 1;
-
