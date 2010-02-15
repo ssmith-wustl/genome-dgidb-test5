@@ -304,9 +304,11 @@ sub run_parser {
     $root_file_name =~ s/\.tblastx\.out$//;
     my $orig_fasta = $root_file_name.'.fa';
     my $filter_out_file = $root_file_name.'.TBXNTfiltered.fa';
+    my $hits_file = $root_file_name.'.TBXNThits.fa';
 
     my $in = Bio::SeqIO->new(-format => 'fasta', -file => $orig_fasta);
     my $out = Bio::SeqIO->new(-format => 'fasta', -file => ">$filter_out_file");
+    my $hits = Bio::SeqIO->new(-format => 'fasta', -file => ">$hits_file");
     unless ($in and $out) {
 	$self->log_event("Failed to create SeqIO to read/write sequence for ".basename($blast_out_file));
 	return;
@@ -316,6 +318,10 @@ sub run_parser {
 	if (grep (/^$read_name$/, @unassigned)) {
 	    $out->write_seq($seq);
 	}
+        else
+        {
+            $hits->write_seq($seq);
+        }
     }
 
     return 1;

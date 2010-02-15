@@ -62,6 +62,7 @@ sub execute {
 	my $blast_out = $root.'.HGblast.out';
 	my $blast_parse = $root.'.HGblast.parsed';
 	my $blast_filtered = $root.'.HGfiltered.fa';
+	my $blast_hits = $root.'.HGhits.fa';
 	my $blast_out_file_name = basename($blast_out);
 
 	unless (-s $blast_out) { #SHOULD HAVE BEEN CREATED IN PREVIOUS STEP
@@ -79,6 +80,7 @@ sub execute {
 
 	unlink $blast_parse if -s $blast_parse;
 	unlink $blast_filtered if -s $blast_filtered;
+	unlink $blast_hits if -s $blast_hits;
 
 	$self->log_event("Parsing $blast_out_file_name");
 
@@ -90,6 +92,7 @@ sub execute {
 	}
 
 	my $out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$blast_filtered");
+	my $hits_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$blast_hits");
 	my $in_io = Bio::SeqIO->new(-format => 'fasta', -file => $file);
 
 	while (my $seq = $in_io->next_seq) {
@@ -97,6 +100,10 @@ sub execute {
 	    unless (grep (/^$read_name$/, @$filtered_reads)) {
 		$out_io->write_seq($seq);
 	    }
+            else
+            {
+                $hits_io->write_seq($seq);
+            }
 	}
 
 	unless (-s $blast_filtered) {
