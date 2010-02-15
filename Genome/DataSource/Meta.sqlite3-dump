@@ -56,8 +56,6 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_GROUP','GENOME_MODEL','GMG_GM_FK','2009-10-07 14:16:31');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_BUILD_SV','GENOME_MODEL_BUILD','GMBSV_GMB_FK','2009-10-29 15:14:58');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_BUILD_SV','GENOME_MODEL_SV','GMBSV_GMSV_FK','2009-10-29 15:55:42');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','DISEASE','POPULATION_GROUP','DIS_PG_FK','2009-12-17 13:37:19');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','IMPORTED_INSTRUMENT_DATA','ORGANISM_SAMPLE','IID_OS_FK','2009-12-17 13:37:26');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -111,8 +109,6 @@ INSERT INTO "dd_fk_constraint_column" VALUES('GMG_GM_FK','Genome::DataSource::GM
 INSERT INTO "dd_fk_constraint_column" VALUES('GMG_MG_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_GROUP','MODEL_GROUP','MODEL_GROUP_ID','ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMBSV_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_SV','GENOME_MODEL_BUILD','BUILD_ID','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMBSV_GMSV_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_SV','GENOME_MODEL_SV','VARIANT_ID','VARIANT_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('DIS_PG_FK','Genome::DataSource::GMSchema','MG','DISEASE','POPULATION_GROUP','POPULATION_GROUP_ID','PG_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('IID_OS_FK','Genome::DataSource::GMSchema','MG','IMPORTED_INSTRUMENT_DATA','ORGANISM_SAMPLE','SAMPLE_ID','ORGANISM_SAMPLE_ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
