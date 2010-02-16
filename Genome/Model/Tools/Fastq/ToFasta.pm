@@ -33,6 +33,7 @@ sub execute {
 
 sub fastQ2A {
     my $self = shift;
+    #This is bad, what if the first base has a quality of '@'....
     local $/ = "\n@";
     my $in_fh = Genome::Utility::FileSystem->open_file_for_reading($self->fastq_file);
     my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->fasta_file);
