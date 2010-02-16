@@ -1,7 +1,13 @@
 $Genome::Model::Command::Report::List::OPTS_SPEC = [
+          'all!',
+          undef,
           'build-id=s',
           undef,
+          'generic!',
+          undef,
           'type-name=s',
+          undef,
+          'type-names!',
           undef,
           'help!',
           undef

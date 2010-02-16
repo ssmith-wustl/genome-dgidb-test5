@@ -3,6 +3,8 @@ $Genome::Model::Command::Build::Status::OPTS_SPEC = [
           undef,
           'display-output=s',
           undef,
+          'instance-id=s',
+          undef,
           'output-format=s',
           undef,
           'section=s',

@@ -1,4 +1,6 @@
 $Genome::Model::Event::OPTS_SPEC = [
+          '>metric',
+          \undef,
           'help!',
           undef
         ];

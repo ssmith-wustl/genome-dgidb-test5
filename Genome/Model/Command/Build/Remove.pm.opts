@@ -1,7 +1,9 @@
 $Genome::Model::Command::Build::Remove::OPTS_SPEC = [
-          'model-id=s',
-          undef,
           'build-id=s',
+          undef,
+          'method=s',
+          undef,
+          'model-identifier=s',
           undef,
           'help!',
           undef
