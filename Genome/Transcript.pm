@@ -132,6 +132,34 @@ sub structure_at_position {
     return;
 }
 
+sub structures_in_range {
+    my ($self, $start, $stop) = @_;
+
+    my @structures = $self->ordered_sub_structures;
+    unless (@structures){
+        $self->status_message("No sub-structures for transcript (chrom\tstart\tid):(". $self->id.") ".$self->transcript_name);
+        return;
+    }
+
+    if ( ($structures[0]->structure_start > $stop) or ($structures[$#structures]->structure_stop < $start)){
+        return;
+    }
+
+    my @structures_in_range;
+
+    for my $structure (@structures){
+        my $ss_start = $structure->structure_start;
+        my $ss_stop = $structure->structure_stop;
+        if (($ss_start >= $start and $ss_start <= $stop ) or 
+            ( $ss_stop >= $start and $ss_stop <= $stop ) or
+            ( $ss_start <= $start and $ss_stop >=$stop )
+        ){
+            push @structures_in_range, $structure;
+        }
+    }
+    return @structures_in_range;
+}
+
 sub structures_flanking_structure_at_position {
     my ($self, $position) = @_;
 

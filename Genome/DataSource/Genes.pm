@@ -38,7 +38,6 @@ sub file_resolver {
     my($composite_id, $data_directory) = @_;
     #my($gene_id, $species, $source, $version, $data_directory) = @_;
 
-    $DB::single = 1;
 
     my $meta = Genome::Gene->__meta__;
 

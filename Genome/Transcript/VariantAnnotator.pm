@@ -297,57 +297,42 @@ sub _transcript_annotation
 
     my $structure_type = $main_structure->structure_type;
 
-=cut
-#TODO, I'm taking this out for the time being because we are doing a really terrible job annotating substructure spanning variants, and not getting much value, just producing errors
-    my $alternate_structure = $transcript->structure_at_position( $variant->{stop} );
-
-    # If alternate sturcture is not defined here we are probably dealing with a very large deletion...
-    unless (defined $alternate_structure) {
-        $alternate_structure = $main_structure;
-        $self->warning_message("Alternate structure is not defined at the stop position (very large deletion? These are not handled well) for variant: " . Dumper $variant);
-    }
-
-    my $alternate_structure_type = $alternate_structure->structure_type;
-
-    unless ($structure_type eq $alternate_structure_type){
-        if ($structure_type eq 'flank'){
-            $structure_type = $alternate_structure_type;
-        }
-        if ($structure_type =~ /intron/){
-            $structure_type = $alternate_structure_type if $alternate_structure_type =~ /exon/;
-        }
-        if ($structure_type eq 'utr_exon'){
-            $structure_type = $alternate_structure_type if $alternate_structure_type eq 'cds_exon';
+    my $deletion_substructures;
+    if ($variant->{type} =~ /del/i){
+        my @structures_in_range = $transcript->structures_in_range($variant->{start}, $variant->{stop});
+        if (@structures_in_range){
+            $deletion_substructures = "(deletion:". join(", ", map{$_->{structure_type}."[".$_->structure_start.",".$_->structure_stop."]"} @structures_in_range).")";
         }
     }
-    #print "post: $structure_type : $alternate_structure_type\n";
-=cut
 
 
-my $method = '_transcript_annotation_for_' . $structure_type;
+    my $method = '_transcript_annotation_for_' . $structure_type;
 
-my %structure_annotation = $self->$method($transcript, $variant)
-    or return;
+    my %structure_annotation = $self->$method($transcript, $variant)
+        or return;
 
-my $source = $transcript->source;
-my $gene = $transcript->gene;
+    my $source = $transcript->source;
+    my $gene = $transcript->gene;
 
-my $conservation = $self->_ucsc_cons_annotation($variant);
-if(!exists($structure_annotation{domain}))
-{
-    $structure_annotation{domain} = 'NULL';
-}
+    my $conservation = $self->_ucsc_cons_annotation($variant);
+    if(!exists($structure_annotation{domain}))
+    {
+        $structure_annotation{domain} = 'NULL';
+    }
+    if ($deletion_substructures){
+        $structure_annotation{deletion_substructures} = $deletion_substructures;
+    }
 
-return (
-    %structure_annotation,
-    transcript_name => $transcript->transcript_name, 
-    transcript_status => $transcript->transcript_status,
-    transcript_source => $source,
-    transcript_species=> $transcript->species,
-    transcript_version => $transcript->version,
-    gene_name  => $gene->name(),
-    ucsc_cons => $conservation
-)
+    return (
+        %structure_annotation,
+        transcript_name => $transcript->transcript_name, 
+        transcript_status => $transcript->transcript_status,
+        transcript_source => $source,
+        transcript_species=> $transcript->species,
+        transcript_version => $transcript->version,
+        gene_name  => $gene->name(),
+        ucsc_cons => $conservation,
+    )
 }
 
 sub _transcript_annotation_for_rna
