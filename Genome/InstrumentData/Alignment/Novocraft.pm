@@ -1,13 +1,10 @@
 package Genome::InstrumentData::Alignment::Novocraft;
 
-#REVIEW fdu 11/17/2009
-#This subclass of G::I::A looks ok. The genome model based on novocraft aligner 
-#is probably being rarely used. 
-
 use strict;
 use warnings;
 
 use Genome;
+use File::Copy;
 
 class Genome::InstrumentData::Alignment::Novocraft {
     is => ['Genome::InstrumentData::Alignment'],
@@ -15,6 +12,10 @@ class Genome::InstrumentData::Alignment::Novocraft {
         aligner_name => { value => 'novocraft' },
     ],
 };
+
+sub _resolve_subclass_name_for_aligner_name {
+	return "Genome::InstrumentData::Alignment::Novocraft";
+}
 
 sub input_pathnames {
     my $self = shift;
@@ -33,7 +34,12 @@ sub input_pathnames {
 
 sub alignment_file {
     my $self = shift;
-    return $self->alignment_directory .'/all_sequences.novo';
+    return $self->alignment_directory .'/all_sequences.bam';
+}
+
+sub aligner_output_file_path {
+    my $self = shift;
+    return $self->alignment_directory .'/all_sequences.aligner_output';
 }
 
 
@@ -41,6 +47,7 @@ sub output_files {
     my $self = shift;
     my @output_files;
     push @output_files, $self->alignment_file;
+    push @output_files, $self->aligner_output_file_path;
     return @output_files;
 }
 
@@ -56,7 +63,6 @@ sub find_or_generate_alignment_data {
     return 1;
 }
 
-
 sub verify_alignment_data {
     my $self = shift;
 
@@ -65,7 +71,7 @@ sub verify_alignment_data {
     return unless -d $alignment_dir;
 
     unless ( $self->arch_os =~ /64/ ) {
-        die('Failed to verify_alignment_data.  Must run from 64-bit architecture.');
+        $self->die('Failed to verify_alignment_data.  Must run from 64-bit architecture.');
     }
 
     my $lock;
@@ -80,7 +86,7 @@ sub verify_alignment_data {
     unless (-e $alignment_file) {
         $self->status_message('No alignment file found in alignment directory: '. $alignment_dir);
         return;
-    } elsif (!$self->verify_aligner_successful_completion($alignment_file)) {
+    } elsif (!$self->verify_aligner_successful_completion($self->aligner_output_file_path)) {
         $self->error_message('Failed to verify aligner successful completion');
         $errors++;
     }
@@ -106,9 +112,11 @@ sub _run_aligner {
     my $self = shift;
 
     my $lock;
+    my $already_had_lock = 0;
     unless ($self->_resource_lock) {
         $lock = $self->lock_alignment_resource;
     } else {
+        $already_had_lock = 1;
         $lock = $self->_resource_lock;
     }
     my $instrument_data = $self->instrument_data;
@@ -147,58 +155,85 @@ sub _run_aligner {
     #unless ($adaptor_seq) {
     #    $self->die_and_clean_up("Failed to resolve adaptor sequence!");
     #}
+    
 
     # these are general params not infered from the above
-    my $aligner_params = $self->aligner_params || '';
-    my $alignment_file = $self->alignment_file;
-
+    my $aligner_params = '';
+    my $threads = 1;
+    if ($self->aligner_params) {
+        #TODO: parse the number of threads from param string
+        $aligner_params .= ' '. $self->aligner_params;
+    };
+    #TODO: Resolve the input read format(this is only necessary for old data(GAPipeline <v1.3)
+    my $input_format = 'ILMFQ';
+    
     # RESOLVE A STRING OF ALIGNMENT PARAMETERS
     if ($is_paired_end && $insert_size && $insert_sd) {
         $aligner_params .= ' -i '. $insert_size .' '. $insert_sd;
     }
 
-    #if ($adaptor_seq) {
-    #    $aligner_params .= ' -a '. $adaptor_seq;
-    #}
-    #else {
-    #    Carp::confess("No adaptor sequence?");
-    #}
-
+    my $tmp_dir = File::Temp::tempdir( CLEANUP => 1 );
     my $files_to_align = join(' ',@input_pathnames);
-    my $cmdline = Genome::Model::Tools::Novocraft->path_for_novocraft_version($self->aligner_version) .'/novoalign'
-        . sprintf(' %s -d %s -f %s > ',
-                  $aligner_params,
-                  $ref_seq_file,
-                  $files_to_align)
-            . $alignment_file . ' 2>&1';
-    my @input_files = ($ref_seq_file, @input_pathnames);
+    my $aligner_tool = Genome::Model::Tools::Novocraft::Novoalign->create(
+        use_version => $self->aligner_version,
+        novoindex_file => $ref_seq_file,
+        fastq_files => $files_to_align,
+        output_directory => $tmp_dir,
+        output_format => 'SAM',
+        input_format => $input_format,
+        threads => $threads,
+        params => $aligner_params,
+    );
 
-    my @output_files = ($alignment_file);
-    Genome::Utility::FileSystem->shellcmd(
-                                          cmd                         => $cmdline,
-                                          input_files                 => \@input_files,
-                                          output_files                => \@output_files,
-                                          skip_if_output_is_present   => 1,
-                                      );
+    unless ($aligner_tool->execute) {
+        die ('Failed to execute command '. $aligner_tool->command_name);
+    }
 
-    unless ($self->verify_aligner_successful_completion($alignment_file)) {
-        $self->error_message('Failed to verify novocraft successful completion from output file '. $alignment_file);
-        die($self->error_message);
+    unless ($self->generate_tcga_bam_file(
+        sam_file => $aligner_tool->output_file,
+        aligner_params => $aligner_tool->full_param_string,
+    ) ) {
+	my $error = $self->error_message;
+	$self->error_message("Error creating BAM file from SAM file; error message was $error");
+	return;
+    }
+    unless(copy($aligner_tool->log_file, $self->aligner_output_file_path)) {
+        $self->error_message("Failed copying completed alignment file.  Undoing...");
+        unlink($self->aligner_output_file_path);
+        return;
+    }
+    
+    unless ($self->verify_aligner_successful_completion($self->aligner_output_file_path)) {
+        $self->error_message('Failed to verify novocraft successful completion from output file '. $self->aligner_output_file_path);
+        $self->die_and_clean_up($self->error_message);
+    }
+
+    my $alignment_allocation = $self->get_allocation;
+
+    if ($alignment_allocation) {
+        unless ($alignment_allocation->reallocate) {
+            $self->error_message('Failed to reallocate disk space for disk allocation: '. $alignment_allocation->id);
+            $self->die_and_clean_up($self->error_message);
+        }
+    }
+    
+    # don't unlock if some caller lower on the stack had a lock
+    unless ($already_had_lock) {
+        unless ($self->unlock_alignment_resource) {
+             $self->error_message('Failed to unlock alignment resource '. $lock);
+             die $self->error_message;
+        }
     }
     return 1;
 }
 
-sub process_low_quality_alignments {
-    my $self = shift;
-    $self->die_and_clean_up('Please implement process_low_quality_alignments for '. __PACKAGE__);
-}
 
 sub verify_aligner_successful_completion {
     my $self = shift;
     my $aligner_output_file = shift;
 
     unless ($aligner_output_file) {
-        $aligner_output_file = $self->alignment_file;
+        $aligner_output_file = $self->aligner_output_file_path;
     }
     unless (-s $aligner_output_file) {
         $self->error_message("Aligner output file '$aligner_output_file' not found or zero size.");
@@ -240,7 +275,7 @@ sub get_alignment_statistics {
     my $self = shift;
     my $aligner_output_file = shift;
     unless ($aligner_output_file) {
-        $aligner_output_file = $self->alignment_file;
+        $aligner_output_file = $self->aligner_output_file_path;
     }
     unless (-s $aligner_output_file) {
         $self->error_message("Aligner output file '$aligner_output_file' not found or zero size.");
