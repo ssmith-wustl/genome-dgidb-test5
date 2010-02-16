@@ -9,7 +9,10 @@ use File::Basename;
 class Genome::Model::Tools::RepeatMasker::CompareTables {
     is => 'Genome::Model::Tools::RepeatMasker::TableI',
     has => [
-        input_tables => { },
+        input_tables => {
+            is => 'Text',
+            doc => 'A space separated list of RepeatMasker style tables',
+        },
         _total_count => {
             is => 'Integer',
             is_optional => 1,
@@ -21,12 +24,27 @@ class Genome::Model::Tools::RepeatMasker::CompareTables {
     ],
 };
 
+sub help_detail {
+    'This tools is used to compare the output from multiple runs of RepeatMasker or the gmt bio-samtools repeat-content tool.  Each input table is normalized with the other input tables to generate one file that can be imported into Excel for comparsion.';
+}
+
 sub execute {
     my $self = shift;
+
+    my $input_tables = $self->input_tables;
+    my @input_tables;
+    if (ref($input_tables)) {
+        @input_tables = @{$input_tables};
+    } else {
+        @input_tables = split(' ', $input_tables);
+    }
     my %samples;
-    for my $table ( @{$self->input_tables} ) {
+    for my $table ( @input_tables ) {
         my $sample_name = basename($table);
         my $table_fh = IO::File->new($table,'r');
+        unless ($table_fh) {
+            die('Failed to open file to read '. $table);
+        }
         my $family;
         while ( my $line = $table_fh->getline ) {
             chomp($line);
