@@ -58,6 +58,11 @@ class Genome::Model::Tools::Novocraft::Novoalign {
             is_optional => 1,
             is => 'String',
         },
+        full_param_string => {
+            doc => 'The full string of parameters passed to Novoalign upon execution',
+            is_optional => 1,
+            is => 'String',
+        },
     ],
     has_optional => [
         _fastq_count => { },
@@ -128,18 +133,23 @@ sub execute {
     } else {
         die('Invalid number of fastq files '. $fastq_count);
     }
+    unless (-d $self->output_directory) {
+        Genome::Utility::FileSystem->create_directory($self->output_directory);
+    }
     $self->output_file($self->output_directory .'/'. $output_basename .'.'. lc($self->output_format));
     $self->log_file($self->output_directory .'/'. $output_basename .'.aligner_out');
 
-    my $params = ' -F '. $self->input_format .' -o '. $self->output_format .' -c '. $self->threads .' '. $self->params;
+    $self->full_param_string(' -F '. $self->input_format .' -o '. $self->output_format .' -c '. $self->threads .' '. $self->params);
     my $cmdline = $self->novoalign_path
         . sprintf(' %s -d %s -f %s 1> %s 2>> %s',
-                  $params,
+                  $self->full_param_string,
                   $self->novoindex_file,
                   join(' ', @fastq_files),
                   $self->output_file,
                   $self->log_file,
               );
+    # db disconnect prior to alignment
+    Genome::DataSource::GMSchema->disconnect_default_dbh;
     Genome::Utility::FileSystem->shellcmd(
         cmd                         => $cmdline,
         input_files                 => [$self->novoindex_file, @fastq_files],
