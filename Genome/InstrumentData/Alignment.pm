@@ -751,6 +751,36 @@ sub sanger_fastq_filenames {
                         input => $sanger_fastq_pathname,
                         output => $trimmed_sanger_fastq_pathname,
                     );
+                } elsif ($self->trimmer_name eq 'random_subset') {
+                    my $seed_phrase = $instrument_data->run_name .'_'. $instrument_data->id;
+                    $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
+                        input_read_1_fastq_files => [$sanger_fastq_pathname],
+                        output_read_1_fastq_file => $trimmed_sanger_fastq_pathname,
+                        limit_type => 'reads',
+                        limit_value => $self->trimmer_params,
+                        seed_phrase => $seed_phrase,
+                    );
+                } elsif ($self->trimmer_name eq 'normalize') {
+                    my $params = $self->trimmer_params;
+                    my ($read_length,$reads) = split(':',$params);
+                    my $trim = Genome::Model::Tools::Fastq::Trim->execute(
+                        read_length => $read_length,
+                        orientation => 3,
+                        input => $sanger_fastq_pathname,
+                        output => $trimmed_sanger_fastq_pathname,
+                    );
+                    unless ($trim) {
+                        die('Failed to trim reads using test_trim_and_random_subset');
+                    }
+                    my $random_sanger_fastq_pathname = $self->create_temp_file_path('random-sanger-fastq-'. $counter);
+                    $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
+                        input_read_1_fastq_files => [$trimmed_sanger_fastq_pathname],
+                        output_read_1_fastq_file => $random_sanger_fastq_pathname,
+                        limit_type => 'reads',
+                        limit_value => $reads,
+                        seed_phrase => $instrument_data->run_name .'_'. $instrument_data->id,
+                    );
+                    $trimmed_sanger_fastq_pathname = $random_sanger_fastq_pathname;
                 } else {
                     $self->error_message('Unknown read trimmer_name '. $self->trimmer_name);
                     $self->die_and_clean_up($self->error_message);
@@ -762,6 +792,10 @@ sub sanger_fastq_filenames {
                 unless ($trimmer->execute) {
                     $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
                     $self->die_and_clean_up($self->error_message);
+                }
+                if ($self->trimmer_name eq 'normalize') {
+                    my @empty = ();
+                    $trimmer->_index(\@empty);
                 }
                 $sanger_fastq_pathname = $trimmed_sanger_fastq_pathname;
             }
@@ -784,11 +818,15 @@ sub generate_tcga_bam_file {
 
     my $groups_file_fh = $self->construct_groups_file($aligner_command_line);
     my $groups_file_name = $groups_file_fh->filename;
+    unless (-s $groups_file_name) {
+        $self->error_message('Failed to construct groups file '. $groups_file_name);
+        return;
+    }
     
     my $seq_dict = $self->get_or_create_sequence_dictionary();
 
     my $temp_dir = File::Temp::tempdir(CLEANUP=>1);
-
+    
     my $per_lane_sam_file = $temp_dir."/tcga_compliant.sam";
     my $per_lane_bam_file = $temp_dir."/tcga_compliant.bam";
 
@@ -801,6 +839,9 @@ sub generate_tcga_bam_file {
     my @files_to_merge = ();
     
     for my $file ($seq_dict, $groups_file_name, $sam_map_output_filename, $unaligned_sam_file) {
+        unless ($file) {
+            next;
+        }
         if (-z $file) {
             $self->warning_message("$file is empty, will not be used to cat");
             next;
