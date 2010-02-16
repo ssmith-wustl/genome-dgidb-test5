@@ -95,6 +95,90 @@ sub expressions_by_intensity
     return @expressions;
 }
 
+sub chrom_name {
+    my $self = shift;
+    my @t = $self->transcripts;
+    my $chrom_name;
+    for my $t (@t) {
+        unless ($chrom_name) {
+            $chrom_name = $t->chrom_name;
+        } else {
+            if ($chrom_name ne $t->chrom_name) {
+                die('Expected chrom '. $chrom_name .' but found chrom '. $t->chrom_name .' for transcript '. $t->transcript_name . ' of gene '. $self->name);
+            }
+        }
+    }
+    return $chrom_name;
+}
+
+sub gene_start {
+    my $self = shift;
+    my @t = $self->transcripts;
+    my $gene_start;
+    for my $t (@t) {
+        unless ($gene_start) {
+            $gene_start = $t->transcript_start;
+        } else {
+            if ($gene_start > $t->transcript_start) {
+                $gene_start = $t->transcript_start;
+            }
+        }
+    }
+    return $gene_start;
+}
+
+sub gene_stop {
+    my $self = shift;
+    my @t = $self->transcripts;
+    my $gene_stop;
+    for my $t (@t) {
+        unless ($gene_stop) {
+            $gene_stop = $t->transcript_stop;
+        } else {
+            if ($gene_stop < $t->transcript_stop) {
+                $gene_stop = $t->transcript_stop;
+            }
+        }
+    }
+    return $gene_stop;
+}
+
+sub strand_string {
+    my $self = shift;
+    my $strand = '.';
+    if ($self->strand eq '+1') {
+        $strand = '+';
+    } elsif ($self->strand eq '-1') {
+        $strand = '-';
+    }
+    return $strand;
+}
+
+sub bed_string {
+    my $self = shift;
+    my $bed_string = $self->chrom_name ."\t". $self->gene_start ."\t". $self->gene_stop ."\t". $self->name ."\t0\t". $self->strand_string;
+    return $bed_string;
+}
+
+sub _base_gff_string {
+    my $self = shift;
+    return $self->chrom_name ."\t". $self->source .'_'. $self->version ."\tgene\t". $self->gene_start ."\t". $self->gene_stop ."\t.\t". $self->strand_string ."\t.";
+}
+
+sub gff_string {
+    my $self = shift;
+    return $self->_base_gff_string ."\t". $self->name;
+}
+
+sub gff3_string {
+    my $self = shift;
+    return $self->_base_gff_string ."\tID=". $self->gene_id .'; NAME='. $self->name .';';
+}
+
+sub gtf_string {
+    my $self = shift;
+    return $self->_base_gff_string  ."\t".' gene_id "'. $self->name .'";';
+}
 
 1;
 

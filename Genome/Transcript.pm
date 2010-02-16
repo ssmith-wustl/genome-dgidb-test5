@@ -273,6 +273,42 @@ sub gene_name
     return $gene_name;
 }
 
+sub strand_string {
+    my $self = shift;
+    my $strand = '.';
+    if ($self->strand eq '+1') {
+        $strand = '+';
+    } elsif ($self->strand eq '-1') {
+        $strand = '-';
+    }
+    return $strand;
+}
+
+sub bed_string {
+    my $self = shift;
+    my $bed_string = $self->chrom_name ."\t". $self->transcript_start ."\t". $self->transcript_stop ."\t". $self->transcript_name ."\t0\t". $self->strand_string;
+    return $bed_string;
+}
+
+sub _base_gff_string {
+    my $self = shift;
+    return $self->chrom_name ."\t". $self->source .'_'. $self->version ."\t". 'transcript' ."\t". $self->transcript_start ."\t". $self->transcript_stop ."\t.\t". $self->strand_string ."\t.";
+}
+
+sub gff_string {
+    my $self = shift;
+    return $self->_base_gff_string ."\t". $self->gene->name ;
+}
+
+sub gff3_string {
+    my $self = shift;
+    return $self->_base_gff_string ."\tID=".$self->transcript_id ."; NAME=". $self->transcript_name ."; PARENT=". $self->gene->gene_id .';';
+}
+
+sub gtf_string {
+    my $self = shift;
+    return $self->_base_gff_string  ."\t".' gene_id "'. $self->gene->name .'"; transcript_id "'. $self->transcript_name .'";';
+}
 1;
 
 #TODO
