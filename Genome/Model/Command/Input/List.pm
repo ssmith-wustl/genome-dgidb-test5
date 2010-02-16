@@ -9,16 +9,15 @@ use Regexp::Common;
 
 class Genome::Model::Command::Input::List {
     is => 'UR::Object::Command::List',
-    english_name => 'genome model input command assign',
     doc => 'List inputs to a model.',
     has => [
-    subject_class_name => {
-        default_value => 'Genome::Model::Input',
-        is_constant => 1,
-    },
-    show => {
-        default_value => 'model_id,model_name,name,value_id',
-    },
+        subject_class_name => {
+            default_value => 'Genome::Model::Input',
+            is_constant => 1,
+        },
+        show => {
+            default_value => 'model_id,model_name,name,value',
+        },
     ],
 };
 
