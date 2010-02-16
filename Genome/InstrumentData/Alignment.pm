@@ -922,7 +922,7 @@ sub generate_tcga_bam_file {
     }
     
     my $md5sum_of_copy = Genome::Utility::FileSystem->md5sum($self->alignment_file);
-    print "Copied MD5 sum: $md5sum_of_original\n";
+    print "Copied MD5 sum: $md5sum_of_copy\n";
 
     unless ($md5sum_of_original eq $md5sum_of_copy) {
         $self->error_message("TCGA compliant BAM file failed to copy to alignment directory.  MD5 sum mismatch:  original was $md5sum_of_copy but copied was $md5sum_of_copy.  Deleting the copy.");
