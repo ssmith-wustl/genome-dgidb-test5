@@ -47,7 +47,7 @@ class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Ded
 
 
 sub make_real_rmdupped_map_file {
-    my ($self, $maplist, $library, $log_fh) = @_;
+    my ($self, $maplist, $library, $log_fh, $working_directory) = @_;
 
     print $log_fh "Library: ".$library." Maplist: ".$maplist."\n";
 
@@ -74,9 +74,11 @@ sub make_real_rmdupped_map_file {
             die "Failed to make intermediate file for (library) maps $!";
         }
         print $log_fh "Streaming into file $tmp_file."."\n";
-     
+        
+        my $working_file = $working_directory . '/' . $library . ".map";
+        
         my $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($self->aligner_version);
-        my $cmd = $maq_pathname . " rmdup " . $final_file . " " . $tmp_file;
+        my $cmd = $maq_pathname . " rmdup " . $working_file . " " . $tmp_file;
         print $log_fh "Running $cmd"."\n";
         #my $rv = system($cmd);
         my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
@@ -85,6 +87,8 @@ sub make_real_rmdupped_map_file {
             $log_fh->close;
             return;
         }
+        
+        rename($working_file, $final_file);
     }	
     return $final_file;
 }
@@ -120,6 +124,15 @@ sub execute {
         @list = @{$self->library_alignments};   	#the parallelized code will only receive a list of one item. 
     }
 
+    my $working_directory = File::Temp->newdir( 
+        "parallel_dedup_$pid-working-XXXXX",
+        DIR     => $self->accumulated_alignments_dir, 
+        CLEANUP => 1
+    );
+
+    # fix permissions on this temp dir so others can clean it up later if need be    
+    chmod(0775,$working_directory);
+
     print $log_fh "Input library list length: ".scalar(@list)."\n";
     for my $list_item ( @list ) {
         my %hash = %{$list_item};    		#there will only be one name-value-pair in the hash: $library name -> @list of alignment file paths (maps)
@@ -128,12 +141,14 @@ sub execute {
             my @library_maps = @{$hash{$library}};
             print $log_fh "key:>$library<  /  value:>".scalar(@library_maps)."<"."\n";
 
-            my $library_maplist = $self->accumulated_alignments_dir .'/' . $library . '.maplist';
-            print $log_fh "Library Maplist File:" .$library_maplist."\n";
+            my $final_library_maplist = $self->accumulated_alignments_dir . '/' . $library . '.maplist';
+            my $working_library_maplist = $working_directory .'/' . $library . '.maplist';
+            print $log_fh "Library Maplist File:" .$final_library_maplist."\n";
             #my $fh = IO::File->new($library_maplist,'w');
-            my $maplist_fh = Genome::Utility::FileSystem->open_file_for_writing($library_maplist);
+            
+            my $maplist_fh = Genome::Utility::FileSystem->open_file_for_writing($working_library_maplist);
             unless ($maplist_fh) {
-                print $log_fh "Failed to create filehandle for '$library_maplist': " . Genome::Utility::FileSystem->error_message . "\n";
+                print $log_fh "Failed to create filehandle for '$working_library_maplist': " . Genome::Utility::FileSystem->error_message . "\n";
                 $log_fh->close; 
                 return;
             }
@@ -151,12 +166,14 @@ sub execute {
             print $log_fh "Library $library has $cnt map files"."\n";
             $maplist_fh->close;
 	    
+	       rename($working_library_maplist, $final_library_maplist);
+	    
 	    # db disconnect prior to map merge
 	    Genome::DataSource::GMSchema->disconnect_default_dbh; 
 
             $now = UR::Time->now;
             print $log_fh ">>> Starting make_real_rmdupped_map_file() at $now for library: $library ."."\n";
-            my $map_file =  $self->make_real_rmdupped_map_file($library_maplist, $library, $log_fh);
+            my $map_file =  $self->make_real_rmdupped_map_file($final_library_maplist, $library, $log_fh, $working_directory);
             $now = UR::Time->now;
             print $log_fh "<<< Completed make_real_rmdupped_map_file() at $now for library: $library ."."\n";
 
