@@ -16,10 +16,10 @@ class Genome::Model::Tools::Fastq::Trim {
                        is => 'Text',
                        doc => 'the file name to use for the output file',
                    },
-            length => {
+            read_length => {
                        is => 'Number',
-                       doc => 'the length of the sequence to remove(default_value=9)',
-                       default_value => '9',
+                       doc => 'the length of the read to output',
+                       default_value => '50',
                    },
             orientation => {
                 is => 'Number',
@@ -84,21 +84,30 @@ sub execute {
         my @nucleotides = split("",$seq);
         my @quality_values = split("",$qual);
 
+        my $seq_length = scalar(@nucleotides);
+
+        my $trim_length;
+        if ($seq_length < $self->read_length) {
+            die('fastq sequence for '. $header .' is only '. $seq_length .' base pair and read length defined as '. $self->read_length);
+        } else {
+            $trim_length = $seq_length - $self->read_length;
+        }
+        
         my $offset;
         if ($self->orientation == 5) {
             $offset = 0;
         } elsif ($self->orientation == 3) {
-            $offset = -1 * $self->length;
+            $offset = -1 * $trim_length;
         }
         # TODO: maybe the read names should containt the positions of the bases like _10-50
-        my @spliced_nucleotides = splice(@nucleotides,$offset,$self->length);
-        my @spliced_quality_values = splice(@quality_values,$offset,$self->length);
+        my @spliced_nucleotides = splice(@nucleotides,$offset,$trim_length);
+        my @spliced_quality_values = splice(@quality_values,$offset,$trim_length);
         $output_fh->print($header,join("",@nucleotides)."\n",$sep,join("",@quality_values)."\n");
         if ($removed_fh) {
             # TODO: maybe the read names should containt the positions of the bases like _1-9
             chomp($header);
             chomp($seq);
-            $removed_fh->print($header .'-'. $self->orientation ."'-". $self->length ."\n",
+            $removed_fh->print($header .'-'. $self->orientation ."'-". $trim_length ."\n",
                                join("",@spliced_nucleotides)."\n",
                                $sep ."\n",
                                join("",@spliced_quality_values)."\n");
