@@ -15,8 +15,7 @@ class Genome::Model::Build::ImportedReferenceSequence {
     ],
 };
 
-sub sequence
-{
+sub sequence {
     my $self = shift;
     my ($file, $start, $stop) = @_;
 
@@ -30,8 +29,7 @@ sub sequence
     return $seq;
 }
 
-sub get_bases_file
-{
+sub get_bases_file {
     my $self = shift;
     my ($chromosome) = @_;
 
