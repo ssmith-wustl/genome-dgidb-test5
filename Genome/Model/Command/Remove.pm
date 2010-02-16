@@ -10,21 +10,22 @@ use Cwd;
 class Genome::Model::Command::Remove {
     is => 'Genome::Model::Command',
     has => [
-            model_id => {
-                         is => 'Integer',
-                         doc => 'The model_id of the model you wish to remove',
-                     },
-            archive  => {
-                         is => 'Boolean',
-                         default_value => 0,
-                         doc => 'A boolean flag to archive model data.(default_value=0)',
-                     },
-            force_delete => {
-                             is => 'Boolean',
-                             default_value => 0,
-                             doc => 'A boolean flag to force model delete.(default_value=0)',
-                         },
-        ],
+        model_id => {
+                        is => 'Integer',
+                        shell_args_position => 1,
+                        doc => 'The model_id of the model you wish to remove',
+                    },
+        archive  => {
+                        is => 'Boolean',
+                        default_value => 0,
+                        doc => 'A boolean flag to archive model data.(default_value=0)',
+                    },
+        force_delete => {
+                            is => 'Boolean',
+                            default_value => 0,
+                            doc => 'A boolean flag to force model delete.(default_value=0)',
+                        },
+    ],
     doc => "delete a genome model, all of its builds, and logs",
 };
 
@@ -39,11 +40,23 @@ EOS
 sub execute {
     my $self = shift;
 
+    $DB::single = 1;
+
     my $model = Genome::Model->get($self->model_id);
     unless ($model) {
-        $self->error_message('No model found for model id '. $model->id);
+        $self->error_message('No model found for model id '. $self->model_id);
         return;
     }
+   
+    my $subject = $model->subject;
+    my $subject_name = ($subject ? $subject->name : $model->subject_name);
+    my $subject_id = ($subject ? $subject->id : $model->subject_id);
+
+    $self->status_message(
+        "Removing model " . $model->name . " (" . $model->id 
+        . ") for " . $subject_name . " (" . $subject_id . ")\n"
+    );
+
     unless ($self->force_delete) {
         my $response = $self->_ask_user_question('Are you sure you want to remove model id '. $model->id .'?');
         unless ($response eq 'yes') {
@@ -51,6 +64,7 @@ sub execute {
             return 1;
         }
     }
+
     if ($self->archive) {
         my $data_directory = $model->data_directory;
         $self->status_message('Archiving model data directory: '. $data_directory);
