@@ -271,9 +271,11 @@ $DB::single = 1;
     @inst_data = Genome::InstrumentData->get(id => [ map { $_->instrument_data_id } @inst_data_ass ]);
 
     my $total_bases = 0;
-    for (@inst_data) { 
-        if ($_->can('total_bases_read'))  {
-            $total_bases += $_->total_bases_read;    
+    for (@inst_data_ass) {
+        my $inst_data = Genome::InstrumentData->get($_->instrument_data_id);
+        
+        if ($inst_data->can('total_bases_read'))  {
+            $total_bases += $inst_data->total_bases_read($_->filter_desc);    
         }
     }
     my $total_gigabases = sprintf("%.03f", $total_bases/1000000000);
