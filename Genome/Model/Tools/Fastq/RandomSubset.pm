@@ -43,6 +43,7 @@ class Genome::Model::Tools::Fastq::RandomSubset {
 
 sub execute {
     my $self = shift;
+    $self->dump_status_messages(1);
     $self->_create_index;
     $self->_set_limits;
     $self->_generate_fastqs;
@@ -65,10 +66,13 @@ sub _create_index {
             push @read_2_fhs, $read_2_fh;
         }
         while (my $header = $read_1_fh->getline) {
-            if ($header =~ /^@/) {
+            my $seq = $read_1_fh->getline;
+            my $sep = $read_1_fh->getline;
+            my $qual = $read_1_fh->getline;
+            my $offset = length( $header ) + length($seq) + length($sep) + length($qual);
+            if ($header =~ /^@/ && $sep =~ /^\+/) {
                 # $begin is the position of the first character after the '@'
-                my $begin = tell($read_1_fh) - length( $header );
-                my $seq = $read_1_fh->getline;
+                my $begin = tell($read_1_fh) - $offset;
                 chomp($seq);
                 my $seq_length = length($seq);
                 if (defined($self->_shortest_seq)) {
@@ -86,6 +90,7 @@ sub _create_index {
         $self->_read_2_fhs(\@read_2_fhs);
     }
     $self->_index(\@index);
+    $self->status_message('Finished indexing '. scalar(@index) .' reads from '. scalar(@read_1_fhs) .' files.');
     return 1;
 }
 
@@ -112,6 +117,8 @@ sub _set_limits {
         $self->limit_value($per_file_limit);
         $self->_max_read_per_end(int( ($self->limit_value / $self->_shortest_seq)) + 1);
     }
+    $self->status_message('Creating random subset of fastq(s) with '. $self->limit_type .' '. $self->limit_value .' and a maximum of '. $self->_max_read_per_end .' reads per end');
+    #print $self->status_message ."\n";
     return 1;
 }
 
@@ -136,6 +143,9 @@ sub _generate_fastq_for_read_end {
     my $out_file_method = 'output_read_'. $end.'_fastq_file';
     my $out_file = $self->$out_file_method;
     my $out = Genome::Utility::FileSystem->open_file_for_writing($out_file);
+    unless ($out) {
+        die;
+    }
 
     my @index = @{$self->_index};
 
@@ -143,6 +153,7 @@ sub _generate_fastq_for_read_end {
     my @fhs = @{$self->$fhs_method};
     
     my $total_seq;
+    my $total_reads;
     random_set_seed_from_phrase($self->seed_phrase);
     foreach my $i (random_uniform_integer($self->_max_read_per_end, 0, scalar(@index) - 1)) {
         my $index_string = $index[$i];
@@ -151,16 +162,18 @@ sub _generate_fastq_for_read_end {
         my $fh = $fhs[$fh_id];
         #set read pos
         $fh->seek($begin,0);
-        my @fastq_lines;
-        for (1 .. 4) {
-            push @fastq_lines, $fh->getline;
-        }
-        for my $line (@fastq_lines) {
-            print $out $line;
-        }
+        my $header = $fh->getline;
+        my $seq = $fh->getline;
+        chomp($seq);
+        my $sep = $fh->getline;
+        my $qual = $fh->getline;
+
+        my $seq_length = length($seq);
+        my $record = $header . $seq ."\n". $sep . $qual;
+        print $out $record;
+        $total_reads++;
+        $total_seq += $seq_length;
         if ($self->limit_type eq 'base_pair') {
-            my $seq_length = length($fastq_lines[1]);
-            $total_seq += $seq_length;
             if ($total_seq >= $self->limit_value) {
                 last;
             }
@@ -172,6 +185,13 @@ sub _generate_fastq_for_read_end {
             die('There was only '. $total_seq .' base pair per end but expecting '. $self->limit_value);
         }
     }
+    $self->status_message('Generated fastq file for read end '. $end  .' with '. $total_seq .' base pair in '. $total_reads .' reads.');
     return 1;
 
+}
+
+sub DESTROY {
+    my $self = shift;
+    my @empty = ();
+    $self->_index(\@empty);
 }
