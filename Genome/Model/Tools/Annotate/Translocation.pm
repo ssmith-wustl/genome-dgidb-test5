@@ -35,13 +35,14 @@ class Genome::Model::Tools::Annotate::Translocation {
      
 
 sub help_brief {   
-    return <<EOS
-	gmt annotation translocation 
-EOS  
+#return <<EOS
+	"gmt annotation translocation"
+#EOS  
 }
 
 sub help_synopsis {
     return <<EOS
+
 	gmt annotation translocation -breakdancer
 
 	or
