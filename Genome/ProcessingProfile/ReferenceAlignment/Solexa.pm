@@ -59,14 +59,14 @@ sub deduplication_job_classes {
 
 sub transcript_annotation_job_classes{
     my $self = shift;
-    #if (defined($self->annotation_reference_transcripts)){
+    if (defined($self->annotation_reference_transcripts)){
         my @steps = (
             'Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor',
             'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
         );
         return @steps;
-    #}
-    #return;
+    }
+    return;
 }
 
 sub generate_reports_job_classes {
