@@ -110,10 +110,16 @@ sub create {
 }
 
 ################## Solexa Only ###################
-
+# aliasing these methods before loading Genome::InstrumentData::Solexa causes it to 
+# believe Genome::InstrumentData::Solexa is already loaded.  So we load it first...
+##################################################
+BEGIN: {
+Genome::InstrumentData::Solexa->class;
 *fastq_filenames = \&Genome::InstrumentData::Solexa::fastq_filenames;
 *dump_illumina_fastq_archive = \&Genome::InstrumentData::Solexa::dump_illumina_fastq_archive;
 *resolve_fastq_filenames = \&Genome::InstrumentData::Solexa::resolve_fastq_filenames;
+}
+
 
 sub total_bases_read {
     my $self = shift;
