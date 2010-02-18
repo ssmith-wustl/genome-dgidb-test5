@@ -60,8 +60,18 @@ sub execute {
 
     my @fa_files = glob("$blast_dir/*fa");
     unless (scalar @fa_files > 0) {
-	$self->log_event("Did not find any fasta input to run NT blastN for $sample_name");
-	return;
+	if (-s $dir.'/'.$sample_name.'.HGfiltered.fa' > 0) {
+	    $self->log_event("Failed to find any NT blastN output files for $sample_name");
+	    return;
+	}
+	elsif (-e $dir.'/'.$sample_name.'.HGfiltered.fa') {
+	    $self->log_event("No NT blastN output files available for parsing for $sample_name");
+	    return 1;
+	}
+	else {
+	    $self->log_event("Failed to find any NT blastN out files for $sample_name");
+	    return;
+	}
     }
 
     foreach my $fa_file (@fa_files) {
