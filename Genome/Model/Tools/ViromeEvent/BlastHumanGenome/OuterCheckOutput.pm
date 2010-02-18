@@ -58,8 +58,23 @@ sub execute {
 
     my @fa_files = glob ("$hg_blast_dir/$sample_name*fa");
     unless (scalar @fa_files > 0) {
-	$self->log_event("No fasta files found to run HG blast for $sample_name");
-	return;
+	#IF PREVIOUS STEP FILTERED FILE EXISTS WITH SIZE
+	if (-s $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq' > 0) {
+	    $self->log_event("Failed to create fasta file for HG blast for $sample_name");
+	    return;
+	}
+	#IF ALL READS HAVE BEEN FILTERED OUT AT PREVIOUS REPEATMASKER STEP
+	elsif (-e $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq') {
+	    $self->log_event("No further reads available for HG blast for $sample_name");
+	    #GIVE IT A BLANK ARRYREF TO CONTINUE TO NEXT STEP
+	    $self->files_for_blast([]);
+	    return 1;
+	}
+	#SHOULD NEVER GET TO THIS POINT
+	else {
+	    $self->log_event("Failed previous step repeatMasker for $sample_name");
+	    return;
+	}
     }
 
     my @files_for_blast;
