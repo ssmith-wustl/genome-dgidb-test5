@@ -50,19 +50,25 @@ sub execute
 
     $self->log_event("Split reads executing for $sample_name");
 
-    #FILE TO SPLIT
-    my $good_seq_file = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq';
-    unless (-s $good_seq_file) {
-	$self->log_event("Failed to find repeat masker good seq file");
-	return;
-    }
-
-    #DIRECTORY TO PUT SPLIT FILES INTO
+   #DIRECTORY TO PUT SPLIT FILES INTO
     my $output_dir = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq_HGblast';
     system ("mkdir $output_dir");
     unless (-d $output_dir) {
 	$self->log_event("Failed to create human blast dir for $sample_name");
 	return;
+    }
+
+    #FILE TO SPLIT
+    my $good_seq_file = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq';
+    #IF FILE DOESN'T EXIST SOMETHING WENT WRONG
+    unless (-e $good_seq_file) {
+	$self->log_event("Failed to find repeat masker good seq file for $sample_name");
+	return;
+    }
+    #IF FILE IS ZERO SIZE ALL READS HAVE BEEN PROCESSED OUT
+    if (-s $good_seq_file == 0) {
+	$self->log_event("No reads available for further processing for $sample_name");
+	return 1;
     }
 
     my $in = Bio::SeqIO->new(-format => 'fasta', -file => $good_seq_file);
