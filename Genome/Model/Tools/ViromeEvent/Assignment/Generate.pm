@@ -85,13 +85,19 @@ sub _create_main_unassigned_reads_file {
     my $out = Bio::SeqIO->new(-format => 'fasta', -file => ">$unassigned_reads");
     foreach my $sample_name ($self->_get_sample_dir_names()) {
 	my $file = $self->dir.'/'.$sample_name.'/'.$sample_name.'.unassigned.fa';
-	unless (-s $file) {
-	    $self->log_event("Failed to find unassigned.fa file for $sample_name");
+	if (-s $file) {
+	    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $file);
+	    while (my $seq = $io->next_seq) {
+		$out->write_seq($seq);
+	    }
+	}
+	elsif (-e $file) { #NO DATA TO PROCESS
+	    $self->log_event("No unassigned data to process for $sample_name");
 	    next;
 	}
-	my $io = Bio::SeqIO->new(-format => 'fasta', -file => $file);
-	while (my $seq = $io->next_seq) {
-	    $out->write_seq($seq);
+	else { #FILE MISSING
+	    $self->log_event("Failed to find unassigned.fa file for $sample_name");
+	    return;
 	}
     }
     return 1;
@@ -99,22 +105,29 @@ sub _create_main_unassigned_reads_file {
 
 sub _report_interesting_reads {
     my $self = shift;
-    my $fh = shift;
+    my $fh = shift; #MAIN ANALYSIS FILE FH
     $fh->print("Interesting Reads\n\n");
     foreach my $dir_name($self->_get_sample_dir_names()) {
+	$fh->print("Sample: $dir_name\n\n");
 	my $file = $self->dir.'/'.$dir_name.'/'.$dir_name.'.InterestingReads';
-	unless (-s $file) {
-	    $self->log_event("Missing or blank interesting reads file ".basename($file));
-	    next;
+	if (-s $file) {
+	    my $reads_fh = IO::File->new("< $file") ||
+		die "Can not create file handle for $file";
+	    while (my $line = $reads_fh->getline) {
+		$fh->print($line);
+	    }
+	    $reads_fh->close;
 	}
-	my $reads_fh = IO::File->new("< $file") ||
-	    die "Can not create file handle for $file";
-	$fh->print($dir_name."\n\n");
-	while (my $line = $reads_fh->getline) {
-	    $fh->print($line);
+	elsif (-e $file) {
+	    $fh->print("No Interesting reads found\n\n");
+	    $self->log_event("No interesting reads for $dir_name");
 	}
+	else {
+	    $self->log_event("Missing interesting reads file ".basename($file));
+	    return;
+	}
+
 	$fh->print("###############################################################\n\n");
-	$reads_fh->close;
     }
     $fh->print("End of Interesting Reads");
     return 1;
@@ -128,7 +141,7 @@ sub _generate_assignment_summary {
 	my $summary_file = $self->dir.'/'.$dir_name.'/'.$dir_name.'.AssignmentSummary';
 	unless (-s $summary_file) {
 	    $self->log_event("Missing or blank summary file ".basename($summary_file));
-	    next;
+	    return;
 	}
 	my $sum_fh = IO::File->new("< $summary_file") ||
 	    die "Can not open file: $summary_file";
@@ -162,7 +175,7 @@ sub _generate_sequence_report {
     my $self = shift;
     my $fh = shift;
     $fh->print("Sequence Report\n\n".$self->dir."\n\n");
-    $fh->printf("%25s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s\n",
+    $fh->printf("%40s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s\n",
                  'sampleName','total','uniq','%','Filtered','%','good','%','BNassign','%','TBLASTX','%');
     my $counts;
     my $convert_table = $self->_convert_to_table_name();
@@ -189,7 +202,7 @@ sub _generate_sequence_report {
 	#BLASTN FILTERED AND PASSED ONTO BLASTX
 	my $bx_assigned = $counts->{$lib_name}->{'blastn'};
 	my $bx_assigned_ratio = sprintf ("%.1f", $bx_assigned * 100 / $total_count);
-	$fh->printf("%25s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s\n",
+	$fh->printf("%40s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s\n",
 	    $lib_name, $total_count, $uniq_count, $uniq_ratio, $filtered, $filtered_ratio, $good, $good_ratio, $bn_assigned, $bn_assigned_ratio, $bx_assigned, $bx_assigned_ratio);
 
     }
@@ -216,7 +229,7 @@ sub _generate_sample_description {
     my $self = shift;
     my $fh = shift;
     $fh->print("Summary:\n\n".$self->dir."\n");
-    $fh->printf("%25s%25s%40s\n", 'ViralRead', 'PercentIDrange', 'IdentifiedVirus');
+    $fh->printf("%40s%25s%40s\n", 'ViralRead', 'PercentIDrange', 'IdentifiedVirus');
     foreach (glob($self->dir."/*")) {
 	next unless -d $_; #ONLY SAMPLE DIRS ARE DIRS
 	my $lib_name = basename($_);
@@ -226,7 +239,7 @@ sub _generate_sample_description {
 	    return;
 	}
 	my $seq_count = $self->_get_fasta_seq_count($input_fa);
-	$fh->printf("\t%-25s%-25s\n", $lib_name, $seq_count);
+	$fh->printf("\t%-40s%-25s\n", $lib_name, $seq_count);
 	#PARSE ASSIGNMENT SUMMARY FILE
 	my $asum_file = $self->dir.'/'.$lib_name."/$lib_name.AssignmentSummary";
 	unless (-s $asum_file) {
@@ -244,7 +257,7 @@ sub _generate_sample_description {
 	    $lineage =~ s/\s+$//;
 	    my @tmp = split (';', $lineage);
 	    #VIRUS NAME = $tmp[-1];
-	    $fh->printf("%25s%25s%40s\n", $read_count, $range, $tmp[-1]);
+	    $fh->printf("%40s%25s%40s\n", $read_count, $range, $tmp[-1]);
 
 	}
 	$asum_fh->close;
