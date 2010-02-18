@@ -60,6 +60,15 @@ sub execute {
 
     my @fa_files = glob("$blast_dir/*fa");
     unless (scalar @fa_files > 0) {
+	if (-s $dir.'/'.$sample_name.'.TBXNTFiltered.fa' > 0) {
+	    $self->log_event("Failed to create fasta files for Viral BlastX for $sample_name");
+	    return;
+	}
+	elsif (-e $dir.'/'.$sample_name.'.TBXNTFiltered.fa') {
+	    $self->log_event("No further data available to process Viral BlastX for $sample_name");
+	    $self->files_for_blast([]);
+	    return 1;
+	}
 	$self->log_event("No fasta files found to run Viral blastX for $sample_name");
 	return;
     }
