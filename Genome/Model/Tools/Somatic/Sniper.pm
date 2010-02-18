@@ -128,7 +128,7 @@ sub execute {
         #Touch the file to make sure it exists
         my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_indel_file);
         unless ($fh) {
-            $self->error_message("failed to touch " . $self->output_indel_file . "!: $!");
+            $self->error_message("failed to touch " . $self->output_indel_file . "!: " . Genome::Utility::FileSystem->error_message);
             die;
         }
         $fh->close;
