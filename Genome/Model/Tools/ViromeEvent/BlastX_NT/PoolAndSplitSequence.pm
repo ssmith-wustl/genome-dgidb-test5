@@ -56,12 +56,32 @@ sub execute {
 
     $self->log_event("Pooling data to run NT blastX for $sample_name");
 
+    #CREATE NT BLASTX DIRECTORY
+    my $blast_dir = $dir.'/'.$sample_name.'.BNFiltered_TBLASTX_nt';
+    system ("mkdir $blast_dir");
+    unless (-d $blast_dir) {
+	$self->log_event("Failed to create dir ".basename($blast_dir));
+	return;
+    }
+
+    #DEFINE POOLED OUT FILE NAME POOL FILTER READS TO THAT FILE
+    my $pooled_file = $dir.'/'.$sample_name.'.BNFiltered.fa';
+    my $out = Bio::SeqIO->new(-format => 'fasta', -file => ">$pooled_file");
+
     #FIND NT BLASTN DATA DIR (PREVIOUS BLAST RUN)
     my $nt_blastn_dir = $dir.'/'.$sample_name.'.HGfiltered_BLASTN';
     unless (-d $nt_blastn_dir) {
 	$self->log_event("Failed to find NT blastN data dir for $sample_name");
 	return;
     }
+
+    #CHECK TO MAKE SURE THERE IS DATA TO PROCEED
+    my @nt_bl_files = glob("$nt_blastn_dir/*fa");
+    if (@nt_bl_files == 0) {
+	$self->log_event("No further data available for $sample_name");
+	return 1;
+    }
+
     #FIND FILES THAT CONTAIN BLASTN FILTERED READS
     my @filtered_files = glob("$nt_blastn_dir/*BNfiltered.fa");
     unless (scalar @filtered_files > 0) {
@@ -69,9 +89,7 @@ sub execute {
 	return;
     }
 
-    #DEFINE POOLED OUT FILE NAME POOL FILTER READS TO THAT FILE
-    my $pooled_file = $dir.'/'.$sample_name.'.BNFiltered.fa';
-    my $out = Bio::SeqIO->new(-format => 'fasta', -file => ">$pooled_file");
+    #POOL READS INFO POOLED OUTPUT FILE
     foreach my $file (@filtered_files) {
 	my $in = Bio::SeqIO->new(-format => 'fasta', -file => $file);
 	while (my $seq = $in->next_seq) {
@@ -82,14 +100,6 @@ sub execute {
     #CHECK TO MAKE SURE VALID POOLED FILE HAS BEEN MADE
     unless (-s $pooled_file) {
 	$self->log_event("Failed to create pooled file of NT blastN filtered reads");
-	return;
-    }
-
-    #SPLIT POOLED FILE TO RUN NT BLAST X
-    my $blast_dir = $dir.'/'.$sample_name.'.BNFiltered_TBLASTX_nt';
-    system ("mkdir $blast_dir");
-    unless (-d $blast_dir) {
-	$self->log_event("Failed to create dir ".basename($blast_dir));
 	return;
     }
 
