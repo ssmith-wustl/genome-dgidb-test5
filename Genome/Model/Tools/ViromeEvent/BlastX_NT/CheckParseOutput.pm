@@ -60,8 +60,18 @@ sub execute {
 
     my @fa_files = glob("$blast_dir/*fa"); #JUST TO GET ROOT FILE NAME TO DERIVE OTHER FILE NAMES
     unless (scalar @fa_files > 0) {
-	$self->log_event("Did not find any fasta input to run NT");
-	return;
+	if (-s $dir.'/'.$sample_name.'.BNFiltered.fa' > 0) {
+	    $self->log_event("Failed to find any NT BlastX out files for $sample_name");
+	    return;
+	}
+	elsif (-e $dir.'/'.$sample_name.'.BNFiltered.fa') {
+	    $self->log_event("No NT BlastX out files available for parsing for $sample_name");
+	    return 1;
+	}
+	else {
+	    $self->log_event("Failed to find any NT BlastX out files for $sample_name");
+	    return;
+	}
     }
 
     foreach my $fa_file (@fa_files) {
