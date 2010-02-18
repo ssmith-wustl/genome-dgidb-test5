@@ -57,8 +57,20 @@ sub execute {
 
     my @fa_files = glob("$nt_blast_dir/*fa");
     unless (scalar @fa_files > 0) {
-	$self->log_event("No fasta files found to run NT blast for $sample_name");
-	return;
+	#IF PREVIOUS EVENT FILTERED FILE EXISTS WITH SIZE
+	if (-s $dir.'/'.$sample_name.'.HGfiltered.fa' > 0) {
+	    $self->log_event("Failed to create fasta files for NT blastN for $sample_name");
+	    return;
+	}
+	elsif (-e $dir.'/'.$sample_name.'.HGfiltered.fa') {
+	    $self->log_event("No further data available for NT blastN for $sample_name");
+	    $self->files_for_blast([]);
+	    return 1;
+	}
+	else {
+	    $self->log_event("No fasta files found to run NT blastN for $sample_name");
+	    return;
+	}
     }
 
     my @files_for_blast;
