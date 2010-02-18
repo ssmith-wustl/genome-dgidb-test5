@@ -56,11 +56,30 @@ sub execute {
 
     $self->log_event("Pooling data to run NT blastN for $sample_name");
 
+    #CREATE DIRECTORY FOR NT BLASTN
+    my $nt_blast_dir = $dir.'/'.$sample_name.'.HGfiltered_BLASTN';
+    system("mkdir $nt_blast_dir");
+    unless (-d $nt_blast_dir) {
+	$self->log_event("Failed to create NT blast dir".basename($nt_blast_dir));
+	return;
+    }
+
+    #DEFINE OUTPUT FASTA TO POOL READS INTO
+    my $pooled_file = $dir.'/'.$sample_name.'.HGfiltered.fa';
+    my $out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$pooled_file");
+
     #FIND HG BLAST DATA DIR
     my $hg_blast_dir = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq_HGblast';
     unless (-d $hg_blast_dir) {
 	$self->log_event("Failed to find HG blast dir for $sample_name");
 	return;
+    }
+
+    #CHECK TO MAKE SURE THERE'S DATA AVAILABLE TO PROCEED
+    my @hg_bl_files = glob("$hg_blast_dir/*fa");
+    if (@hg_bl_files == 0) {
+	$self->log_event("No further data available for $sample_name");
+	return 1;
     }
 
     #FIND FILES THAT CONTAIN HG BLAST FILTERED READS
@@ -70,9 +89,7 @@ sub execute {
 	return;
     }
 
-    #DEFINE AND POOL FILTERED READS TO A SINGLE FILE
-    my $pooled_file = $dir.'/'.$sample_name.'.HGfiltered.fa';
-    my $out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$pooled_file");
+    #POOL READS INTO POOLED FILE
     foreach (@filtered_reads) {
 	my $in = Bio::SeqIO->new(-format => 'fasta', -file => $_);
 	#TODO - JUST CAT >> INSTEAD??
@@ -81,15 +98,7 @@ sub execute {
 	}
     }
 
-    #MAKE SURE POOLED FILTERED READS FILE EXISTS
-    unless (-s $pooled_file) {
-	$self->log_event("Failed to create pooled file of HG blast filtered reads");
-	return;
-    }
-
-    #SPLIT POOLED FILTERED READS FILE INTO SEPARATE DIRECTORY
-    my $nt_blast_dir = $dir.'/'.$sample_name.'.HGfiltered_BLASTN';
-    system("mkdir $nt_blast_dir");
+    #CHECK
     unless (-d $nt_blast_dir) {
 	$self->log_event("Failed to create NT blast dir".basename($nt_blast_dir));
 	return;
