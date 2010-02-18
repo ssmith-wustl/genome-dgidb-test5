@@ -47,6 +47,10 @@ sub create {
 sub execute {
     my $self = shift;
 
+    #IF ALL READS HAVE BEEN FILTERED OUT BY THIS POINT
+    #$self->log_event("No further data to process") and return 1
+    #	unless $self->file_to_run;
+
     my $input_file = $self->file_to_run;
     my $input_file_name = basename ($input_file);
     $self->log_event("Checking HG blastN run status for $input_file_name");
@@ -63,6 +67,7 @@ sub execute {
 	    return 1;
 	}
     }
+
     $self->log_event("Running HG blastN on $input_file_name");
 
     my $blast_db = '/gscmnt/sata835/info/medseq/virome/blast_db/human_genomic/2009_07_09.humna_genomic'; #TYPO!
