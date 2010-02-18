@@ -72,9 +72,6 @@ sub pre_execute {
     unless (defined $self->only_tier_1) {
         $self->only_tier_1(0);
     }
-    unless (defined $self->only_tier_1_indel) {
-        $self->only_tier_1_indel(1);
-    }
 
     unless (defined $self->skip_sv) {
         $self->skip_sv(0);
@@ -123,8 +120,8 @@ sub default_filenames{
         adaptor_output_snp                  => 'adv_adapted_snp.csv',
         dbsnp_output                        => 'dbsnp_filtered.csv',
         annotate_output_snp                 => 'anv_adapted_snp.csv',
-        ucsc_output                         => 'uca_ucsc_annotated.csv',
-        ucsc_unannotated_output             => 'ucu_ucsc_unannotated.csv',
+        ucsc_output_snp                     => 'uca_ucsc_annotated_snp.csv',
+        ucsc_unannotated_output_snp         => 'ucu_ucsc_unannotated_snp.csv',
         tier_1_snp_file                     => 't1v_tier1_snp.csv',
         tier_2_snp_file                     => 't2v_tier2_snp.csv',
         tier_3_snp_file                     => 't3v_tier3_snp.csv',
@@ -140,8 +137,14 @@ sub default_filenames{
         indel_lib_filter_single_output      => 'isl_indel_single_lib_filtered.csv',
         adaptor_output_indel                => 'adi_adaptor_output_indel',
         annotate_output_indel               => 'ani_annotated_indel.csv',
+        ucsc_output_indel                   => 'uci_ucsc_annotated_indel.csv',
+        ucsc_unannotated_output_indel       => 'ucn_ucsc_unannotated_indel.csv',
         tier_1_indel_file                   => 't1i_tier1_indel.csv',
-        upload_variants_indel_output        => 'ui_uploaded_indel.csv',
+        tier_2_indel_file                   => 't2i_tier2_indel.csv',
+        tier_3_indel_file                   => 't3i_tier3_indel.csv',
+        tier_4_indel_file                   => 't4i_tier4_indel.csv',
+        upload_variants_indel_1_output      => 'ui1_uploaded_tier1_indel.csv',
+        upload_variants_indel_2_output      => 'ui2_uploaded_tier2_indel.csv',
         breakdancer_config_file             => 'svc_breakdancer_config',
         breakdancer_output_file             => 'svo_breakdancer.csv',
         copy_number_output                  => 'cno_copy_number.csv',
@@ -220,11 +223,11 @@ __DATA__
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Snp" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Snp" toProperty="annotation_filter" />
 
-  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC" toProperty="skip_if_output_present" />
-  <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Annotate UCSC" toProperty="input_file" />
-  <link fromOperation="input connector" fromProperty="ucsc_output" toOperation="Annotate UCSC" toProperty="output_file" /> 
-  <link fromOperation="input connector" fromProperty="ucsc_unannotated_output" toOperation="Annotate UCSC" toProperty="unannotated_file" /> 
-  <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Annotate UCSC" toProperty="skip" /> 
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC Snp" toProperty="skip_if_output_present" />
+  <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Annotate UCSC Snp" toProperty="input_file" />
+  <link fromOperation="input connector" fromProperty="ucsc_output_snp" toOperation="Annotate UCSC Snp" toProperty="output_file" /> 
+  <link fromOperation="input connector" fromProperty="ucsc_unannotated_output_snp" toOperation="Annotate UCSC Snp" toProperty="unannotated_file" /> 
+  <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Annotate UCSC Snp" toProperty="skip" /> 
     
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Tier Variants Snp" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="tier_1_snp_file" toOperation="Tier Variants Snp" toProperty="tier1_file" />
@@ -232,7 +235,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tier_3_snp_file" toOperation="Tier Variants Snp" toProperty="tier3_file" />
   <link fromOperation="input connector" fromProperty="tier_4_snp_file" toOperation="Tier Variants Snp" toProperty="tier4_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Tier Variants Snp" toProperty="only_tier_1" />
-  <link fromOperation="Annotate UCSC" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="ucsc_file" />
+  <link fromOperation="Annotate UCSC Snp" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="ucsc_file" />
   <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="transcript_annotation_file" />
 
@@ -304,9 +307,19 @@ __DATA__
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Indel" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Indel" toProperty="annotation_filter" />
 
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC Indel" toProperty="skip_if_output_present" />
+  <link fromOperation="Sniper Adaptor Indel" fromProperty="output_file" toOperation="Annotate UCSC Indel" toProperty="input_file" />
+  <link fromOperation="input connector" fromProperty="ucsc_output_indel" toOperation="Annotate UCSC Indel" toProperty="output_file" /> 
+  <link fromOperation="input connector" fromProperty="ucsc_unannotated_output_indel" toOperation="Annotate UCSC Indel" toProperty="unannotated_file" /> 
+  <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Annotate UCSC Indel" toProperty="skip" /> 
+
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Tier Variants Indel" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="tier_1_indel_file" toOperation="Tier Variants Indel" toProperty="tier1_file" />
-  <link fromOperation="input connector" fromProperty="only_tier_1_indel" toOperation="Tier Variants Indel" toProperty="only_tier_1" />
+  <link fromOperation="input connector" fromProperty="tier_2_indel_file" toOperation="Tier Variants Indel" toProperty="tier2_file" />
+  <link fromOperation="input connector" fromProperty="tier_3_indel_file" toOperation="Tier Variants Indel" toProperty="tier3_file" />
+  <link fromOperation="input connector" fromProperty="tier_4_indel_file" toOperation="Tier Variants Indel" toProperty="tier4_file" />
+  <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Tier Variants Indel" toProperty="only_tier_1" />
+  <link fromOperation="Annotate UCSC Indel" fromProperty="output_file" toOperation="Tier Variants Indel" toProperty="ucsc_file" />
   <link fromOperation="Sniper Adaptor Indel" fromProperty="output_file" toOperation="Tier Variants Indel" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Tier Variants Indel" toProperty="transcript_annotation_file" />
 
@@ -316,13 +329,19 @@ __DATA__
   <link fromOperation="Breakdancer" fromProperty="breakdancer_output" toOperation="Plot Circos" toProperty="sv_file" />
   <link fromOperation="Upload Variants Snp Tier 1" fromProperty="output_file" toOperation="Plot Circos" toProperty="tier1_hclabel_file" />
 
-  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Upload Variants Indel" toProperty="variant_file" />
-  <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Upload Variants Indel" toProperty="annotation_file" />
-  <link fromOperation="input connector" fromProperty="upload_variants_indel_output" toOperation="Upload Variants Indel" toProperty="output_file" />
-  <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Indel" toProperty="build_id" />
+  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Upload Variants Indel Tier 1" toProperty="variant_file" />
+  <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Upload Variants Indel Tier 1" toProperty="annotation_file" />
+  <link fromOperation="input connector" fromProperty="upload_variants_indel_1_output" toOperation="Upload Variants Indel Tier 1" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Indel Tier 1" toProperty="build_id" />
+
+  <link fromOperation="Tier Variants Indel" fromProperty="tier2_file" toOperation="Upload Variants Indel Tier 2" toProperty="variant_file" />
+  <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Upload Variants Indel Tier 2" toProperty="annotation_file" />
+  <link fromOperation="input connector" fromProperty="upload_variants_indel_2_output" toOperation="Upload Variants Indel Tier 2" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Indel Tier 2" toProperty="build_id" />
+  <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Upload Variants Indel Tier 2" toProperty="_skip" />
 
   <link fromOperation="input connector" fromProperty="build_id" toOperation="Wait for Database Upload" toProperty="build_id" />
-  <link fromOperation="Upload Variants Indel" fromProperty="result" toOperation="Wait for Database Upload" toProperty="upload indel result" />
+  <link fromOperation="Upload Variants Indel Tier 1" fromProperty="result" toOperation="Wait for Database Upload" toProperty="upload indel result" />
   <link fromOperation="Upload Variants Snp Tier 2" fromProperty="result" toOperation="Wait for Database Upload" toProperty="upload snp tier 2 result" />
   <link fromOperation="Plot Circos" fromProperty="result" toOperation="Wait for Database Upload" toProperty="plot circos result" />
 
@@ -331,7 +350,8 @@ __DATA__
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Generate Report" toProperty="skip_if_output_present" />
 
   <link fromOperation="Plot Circos" fromProperty="output_file" toOperation="output connector" toProperty="circos_big_graph" />
-  <link fromOperation="Upload Variants Indel" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_indel_output" />
+  <link fromOperation="Upload Variants Indel Tier 1" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_indel_output" />
+  <link fromOperation="Upload Variants Indel Tier 2" fromProperty="output_file" toOperation="output connector" toProperty="tier_2_indel_output" />
   <link fromOperation="Generate Report" fromProperty="report_output" toOperation="output connector" toProperty="final_report_output" />
   
 
@@ -370,7 +390,7 @@ __DATA__
   <operation name="Filter Loh">
       <operationtype commandClass="Genome::Model::Tools::Somatic::FilterLoh" typeClass="Workflow::OperationType::Command" />
   </operation>   
-  <operation name="Annotate UCSC">
+  <operation name="Annotate UCSC Snp">
       <operationtype commandClass="Genome::Model::Tools::Somatic::UcscAnnotator" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="Annotate Transcript Variants Snp">
@@ -407,10 +427,16 @@ __DATA__
   <operation name="Annotate Transcript Variants Indel">
     <operationtype commandClass="Genome::Model::Tools::Annotate::TranscriptVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
+  <operation name="Annotate UCSC Indel">
+      <operationtype commandClass="Genome::Model::Tools::Somatic::UcscAnnotator" typeClass="Workflow::OperationType::Command" />
+  </operation>
   <operation name="Tier Variants Indel">
     <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
-  <operation name="Upload Variants Indel">
+  <operation name="Upload Variants Indel Tier 1">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::UploadVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Upload Variants Indel Tier 2">
     <operationtype commandClass="Genome::Model::Tools::Somatic::UploadVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
 
@@ -442,7 +468,6 @@ __DATA__
     <inputproperty isOptional="Y">imported_bams</inputproperty>
 
     <inputproperty isOptional="Y">only_tier_1</inputproperty>
-    <inputproperty isOptional="Y">only_tier_1_indel</inputproperty>
     <inputproperty isOptional="Y">skip_sv</inputproperty>
 
     <inputproperty isOptional="Y">data_directory</inputproperty>
@@ -475,8 +500,10 @@ __DATA__
     <inputproperty isOptional="Y">annotate_no_headers</inputproperty>
     <inputproperty isOptional="Y">transcript_annotation_filter</inputproperty>
     
-    <inputproperty isOptional="Y">ucsc_output</inputproperty>
-    <inputproperty isOptional="Y">ucsc_unannotated_output</inputproperty>
+    <inputproperty isOptional="Y">ucsc_output_snp</inputproperty>
+    <inputproperty isOptional="Y">ucsc_unannotated_output_snp</inputproperty>
+    <inputproperty isOptional="Y">ucsc_output_indel</inputproperty>
+    <inputproperty isOptional="Y">ucsc_unannotated_output_indel</inputproperty>
 
     <inputproperty isOptional="Y">tier_1_snp_file</inputproperty>
     <inputproperty isOptional="Y">tier_2_snp_file</inputproperty>
@@ -492,10 +519,13 @@ __DATA__
 
     <inputproperty isOptional="Y">upload_variants_snp_1_output</inputproperty>
     <inputproperty isOptional="Y">upload_variants_snp_2_output</inputproperty>
-    <inputproperty isOptional="Y">upload_variants_indel_output</inputproperty>
+    <inputproperty isOptional="Y">upload_variants_indel_1_output</inputproperty>
+    <inputproperty isOptional="Y">upload_variants_indel_2_output</inputproperty>
     
     <inputproperty isOptional="Y">tier_1_indel_file</inputproperty>
-    <inputproperty isOptional="Y">tier_1_indel_high_confidence_file</inputproperty>
+    <inputproperty isOptional="Y">tier_2_indel_file</inputproperty>
+    <inputproperty isOptional="Y">tier_3_indel_file</inputproperty>
+    <inputproperty isOptional="Y">tier_4_indel_file</inputproperty>
 
     <outputproperty>tier_1_snp_high_confidence</outputproperty>
     <outputproperty>tier_2_snp_high_confidence</outputproperty>
@@ -513,6 +543,7 @@ __DATA__
     <inputproperty isOptional="Y">report_output</inputproperty>
 
     <outputproperty>tier_1_indel_output</outputproperty>
+    <outputproperty>tier_2_indel_output</outputproperty>
     <outputproperty>circos_big_graph</outputproperty>
     <outputproperty>final_report_output</outputproperty>
   </operationtype>
