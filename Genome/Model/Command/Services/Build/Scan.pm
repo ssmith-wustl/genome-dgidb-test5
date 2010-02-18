@@ -8,7 +8,13 @@ use Workflow;
 
 class Genome::Model::Command::Services::Build::Scan {
     is  => 'Command',
-    doc => 'scan all non abandoned, completed or crashed builds for problems'
+    doc => 'scan all non abandoned, completed or crashed builds for problems',
+    has => [
+        cron => {
+            is => 'Boolean',
+            doc => 'Reduces output to a subset appropriate for a cron job to email'
+        }
+    ]
 };
 
 sub help_detail {
@@ -16,12 +22,24 @@ sub help_detail {
 EOS
 }
 
+my $printed = 0;
+sub write_form {
+    if (!$printed) {
+        print <<'        MARK';
+State      Build ID        LSF JOB ID Current Status  Action     Owner
+        MARK
+        $printed++;
+    }
+    
+    write STDOUT;
+}
+
 sub execute {
     my $self = shift;
 
     my (
         $builds_without_job, $builds_with_job, $job_without_build,
-        $events_with_job,    $build_inner_events
+        $events_with_job,    $build_inner_events, $job_info
     ) = $self->build_lists;
 
     my $state;
@@ -30,10 +48,6 @@ sub execute {
     my $event_status;
     my $action;
     my $owner;
-
-    print <<'    MARK';
-State      Build ID        LSF JOB ID Current Status  Action     Owner
-    MARK
 
     no warnings;
     format STDOUT =
@@ -57,9 +71,11 @@ $state,    $build_id,      shift @lsf_id,   $event_status, $action, $owner
         $action = $self->action_for_derived_status($fixed_status);
 
         @lsf_id = @$lsf_job_ids;
-        write STDOUT;
+        write_form();
     }
 
+    my $old_builds_with_job = {};
+    
     while ( my ( $bid, $lsf_job_ids ) = each %$builds_with_job ) {
         $state    = 'okay';
         $build_id = $bid;
@@ -69,8 +85,32 @@ $state,    $build_id,      shift @lsf_id,   $event_status, $action, $owner
         $action       = 'none';
         my %joined = map { $_ => 1 } @{ $lsf_job_ids->[0] },
           @{ $lsf_job_ids->[1] };
-        @lsf_id = keys %joined;
-        write STDOUT;
+
+        @lsf_id = sort {
+            exists $job_info->{$b} <=> exists $job_info->{$a} ||
+            $job_info->{$a}->started_on <=> $job_info->{$b}->started_on
+        } keys %joined;
+
+        my $t = $job_info->{ $lsf_id[0] }->started_on;
+        my $ftd = 60*60*24*15;
+        my $ftda = time - $ftd;
+        if ($t < $ftda) {
+            $old_builds_with_job->{$bid} = [$event, @lsf_id];
+        } else {
+            write_form() unless $self->cron;
+        }
+    }
+    
+    while ( my ( $bid, $lsf_job_ids ) = each %$old_builds_with_job ) {
+        $state    = 'old';
+        $build_id = $bid;
+        my $event = shift @$lsf_job_ids;
+        $event_status = $event->event_status;
+        $owner        = $event->user_name;
+        $action       = 'kill';
+        @lsf_id = @$lsf_job_ids;
+
+        write_form();
     }
 
     while ( my ( $bid, $lsf_job_ids ) = each %$job_without_build ) {
@@ -90,7 +130,8 @@ $state,    $build_id,      shift @lsf_id,   $event_status, $action, $owner
             $action .= ' ' . $daction;
         }
         @lsf_id = @$lsf_job_ids;
-        write STDOUT;
+
+        write_form();
     }
 
 }
@@ -131,24 +172,38 @@ sub build_lists {
 
     my $events_lsf = {};
     my $builds_lsf = {};
+    my $jobs_lsf = {};
     {
-        open my $bjobs, "bjobs -u all -w |";
-        while ( my $line = <$bjobs> ) {
-            if ( $line =~ /^(\d+).+?build run.+?--build-id (\d+)/ ) {
-                $builds_lsf->{$2} ||= [];
-                push @{ $builds_lsf->{$2} }, $1;
+        my $ji = Job::Iterator->new;
+        while (my $job = $ji->next) {
+            if ($job->{Command} =~ /build run.+?--build-id (\d+)/) {
+                $builds_lsf->{$1} ||= [];
+                push @{ $builds_lsf->{$1} }, $job->{Job};
             }
-            if ( $line =~
-/^(\d+).+?(\d+) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/
-              )
-            {
+            if (exists $job->{'Job Name'} && $job->{'Job Name'} =~ /(\d+)$/) {
+                $events_lsf->{$1} ||= [];
+                push @{ $events_lsf->{$1} }, $job->{Job};
+            }
+            
+            $jobs_lsf->{ $job->{Job} } = $job;
+        }
+#        open my $bjobs, "bjobs -u all -w |";
+#        while ( my $line = <$bjobs> ) {
+#            if ( $line =~ /^(\d+).+?build run.+?--build-id (\d+)/ ) {
+#                $builds_lsf->{$2} ||= [];
+#                push @{ $builds_lsf->{$2} }, $1;
+#            }
+#            if ( $line =~
+#/^(\d+).+?(\d+) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/
+#              )
+#            {
 
                 # this is a terrible match, but its the best i can do right now
-                $events_lsf->{$2} ||= [];
-                push @{ $events_lsf->{$2} }, $1;
-            }
-        }
-        close $bjobs;
+#                $events_lsf->{$2} ||= [];
+#                push @{ $events_lsf->{$2} }, $1;
+#            }
+#        }
+#        close $bjobs;
     }
 
     my $builds_both = { map { $_ => 1 } keys %$builds_lsf, keys %$builds_db };
@@ -191,7 +246,7 @@ sub build_lists {
         }
     }
 
-    return $builds_db, $builds_both, $builds_lsf, $events_lsf, $inner_events_db;
+    return $builds_db, $builds_both, $builds_lsf, $events_lsf, $inner_events_db, $jobs_lsf;
 }
 
 sub derive_build_status {
@@ -238,6 +293,134 @@ sub derive_build_status {
         }
     }
     return $new_status;
+}
+
+###
+### The following will be moved into their own files (and possibly renamed) if
+### they prove to be more stable than the other parsing code used in GME and
+### Workflow::Server::Hub
+
+package Job::Iterator;
+
+sub new {
+    my $class = shift;
+    open my $f, 'bjobs -l -u all |';
+    readline $f;    ## read off the blank line then read the first real line
+    return bless [ $f, scalar( readline($f) ) ], $class;
+}
+
+sub next {
+    my $self = shift;
+
+    while (1) {
+        my $line = readline( $self->[0] );
+        push @$self, $line;
+
+        if ( defined $line && $line =~ /^Job \</ ) {
+            last;
+        } elsif ( !defined $line ) {
+            last;
+        }
+    }
+    my @jl = splice( @$self, 1, -1 );
+    if ( defined $jl[0] ) {
+        return Job->new(@jl);
+    } else {
+        return;
+    }
+}
+
+package Job;
+
+sub new {
+    my ( $class, @lines ) = @_;
+    my $spool = join( '', @lines );
+
+    # this regex nukes the indentation and line feed
+    $spool =~ s/\s{22}//gm;
+
+    my @eventlines = split( /\n/, $spool );
+    my %jobinfo = ();
+
+    my $jobinfoline = shift @eventlines;
+    if ( defined $jobinfoline ) {
+
+        # sometimes the prior regex nukes the white space between Key <Value>
+        $jobinfoline =~ s/(?<!\s{1})</ </g;
+        $jobinfoline =~ s/>,(?!\s{1})/>, /g;
+
+        # parse out a line such as
+        # Key <Value>, Key <Value>, Key <Value>
+        while ( $jobinfoline =~
+            /(?:^|(?<=,\s{1}))(.+?)(?:\s+<(.*?)>)?(?=(?:$|;|,))/g )
+        {
+            $jobinfo{$1} = $2;
+        }
+    }
+
+    $jobinfo{__events} = [];
+    foreach my $el (@eventlines) {
+        if ( $el =~
+/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s{1,2}(\d{1,2})\s{1,2}(\d{1,2}):(\d{2}):(\d{2}):/
+          )
+        {
+
+            $el =~ s/(?<!\s{1})</ </g;
+            $el =~ s/>,(?!\s{1})/>, /g;
+
+            my $time = substr( $el, 0, 21, '' );
+            substr( $time, -2, 2, '' );
+
+            # see if we really got the time string
+            if ( $time !~ /\w{3} \w{3}\s+\d{1,2}\s+\d{1,2}:\d{2}:\d{2}/ ) {
+
+                # there's stuff we dont care about at the bottom, just skip it
+                next;
+            }
+
+            my $desc = {};
+            while ( $el =~
+/(?:^|(?<=,\s{1}))(.+?)(?:\s+<(.*?)>(?:\s+(.*?))?)?(?=(?:$|;|,))/g
+              )
+            {
+                if ( defined $3 ) {
+                    $desc->{$1} = [ $2, $3 ];
+                } else {
+                    $desc->{$1} = $2;
+                }
+            }
+            push @{ $jobinfo{__events} }, Job::Event->new( $time, $desc );
+
+        }
+    }
+
+    return bless \%jobinfo, $class;
+}
+
+sub started_on {
+    my $self = shift;
+    
+    for (reverse @{ $self->{__events} }) {
+        if (exists $_->{'Started on'}) {
+            return $_->{__time};
+        }
+    }
+    return;
+}
+
+sub events {
+    @{ $_[0]->{__events} };
+}
+
+package Job::Event;
+
+use Date::Parse;
+
+sub new {
+    my ( $class, $time, $desc ) = @_;
+
+    $desc->{__time} = str2time($time);
+    return bless $desc, $class;
 }
 
 1;
