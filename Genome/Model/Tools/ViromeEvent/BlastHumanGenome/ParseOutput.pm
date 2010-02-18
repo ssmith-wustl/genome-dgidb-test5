@@ -10,6 +10,7 @@ use IO::File;
 use File::Basename;
 use Bio::SeqIO;
 use Bio::SearchIO;
+use Data::Dumper;
 
 class Genome::Model::Tools::ViromeEvent::BlastHumanGenome::ParseOutput{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -55,6 +56,12 @@ sub execute {
 	return;
     }
     my @fa_files = glob("$hg_blast_dir/*fa");
+
+    if (@fa_files == 0) {
+	$self->log_event("No further data available for $sample_name");
+	return 1;
+    }
+
     foreach my $file (@fa_files) {
 	next if $file =~ /HGfiltered\.fa$/; #ALREADY RAN BLAST OUT FILES IF PRESENT
 	my $root = $file;
@@ -88,7 +95,6 @@ sub execute {
 	my $filtered_reads = $self->parse_blast_file($blast_out);
 	unless (scalar @$filtered_reads > 0) {
 	    $self->log_event("Warning: No reads filtered for ".basename($blast_out));
-	    next;
 	}
 
 	my $out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$blast_filtered");
@@ -132,12 +138,13 @@ sub parse_blast_file {
     while (my $result = $report->next_result) {
 	$read_count++;
 	while (my $hit = $result->next_hit) {
+#	    print Dumper $hit;
 	    if ($hit->significance <= $e_cutoff) {
 		$parse_out_fh->print ( $result->query_name."\t".
 				       $result->query_length."\tHomo\tHomo\t".
 				       $hit->name."\t".$hit->significance."\n" );
-
-		push @filtered_reads, $result->query_name;
+		
+		push @filtered_reads, $result->query_name; #READS THAT WILL NOT GO ON TO NEXT STAGES
 		last; #ONLY LOOKING AT THE THE FIRST HIT
 	    }
 	}
