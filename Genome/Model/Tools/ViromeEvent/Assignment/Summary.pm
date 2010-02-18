@@ -129,7 +129,7 @@ sub _print_seq_count_summary {
     }
     $fh->print("\n");
     my @counts = $self->_get_read_counts_from_fastas();
-
+    
     $fh->printf("%-9.0f", $counts[0]); #$counts[0] = total seq count
     $fh->printf("%-9.0f", $counts[1]); #$counts[1] = cd-hit filtered seqs
     $fh->printf("%-9.1f", $counts[1] * 100 / $counts[0]);
@@ -234,10 +234,12 @@ sub _get_read_counts_from_fastas {
 		$read_count++;
 	    }
 	}
-	else {
-	    #NOT SURE IF ALL OF THESE FILES SHOULD BE THERE
-	    #SOME COULD BE ZERO IN SIZE
-	    $self->log_event("Can not open or file is zero size: ".basename($fasta_file));
+	elsif (-e $fasta_file) { #NO DATA TO PROCESS
+	    $self->log_event("No data to process in ".basename($fasta_file));
+	}
+	else { #FILE IS MISSING .. THIS SHOULDN'T HAPPEN
+	    $self->log_event("Can not open file: ".basename($fasta_file));
+	    return;
 	}
 	push @read_counts, $read_count;
     }
