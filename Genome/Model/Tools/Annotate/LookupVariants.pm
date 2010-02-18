@@ -136,6 +136,10 @@ sub execute {
 
     close($in);
     $fh->close;
+    
+    for my $chr (keys %{ $self->{'filehandles'} }) {
+        $self->{'filehandles'}->{$chr}->close;
+    }
 
     return 1;
 }

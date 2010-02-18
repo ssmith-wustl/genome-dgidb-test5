@@ -89,6 +89,9 @@ sub execute {
             $output_fh->print("$chr\t$start\t$start\t$ref_base\t$variant_base\tSNP\t$somatic_score\t$consensus_quality\t$snp_quality\t$max_map_q\t$depth_tumor\t$depth_normal\n");
         }
     }
+    
+    $output_fh->close;
+    return 1;
 }
 
 
