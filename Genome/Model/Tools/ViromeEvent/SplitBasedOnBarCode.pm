@@ -117,57 +117,66 @@ sub _print_metrics {
     $out_fh->print($self->fasta_file."\n".
 		   "total number of samples: ".$metrics->{sample_count}."\n".
 		   "total number of sequences: ".$metrics->{read_count}."\n" );
-    #CONSIDER METRICS OF READS THAT HAVE PB SEQUENCES 3' VS 5' ENDS OR NEITHER
-    #ALSO METRICS OF WHETHER BARCODE SEQ WAS FOUND AT 3' OR 5' OR BOTH ENDS OR NOT FOUND
-    #NO PB
-    my $no_pb_read_count = 0;
-    my $no_pb_read_ratio = 0;
-    if (exists $metrics->{reads_with_no_pb}) {
-	$no_pb_read_count = $metrics->{reads_with_no_pb};
-	$no_pb_read_ratio = sprintf("%.1f", $no_pb_read_count * 100 / $metrics->{read_count});
-    }
-    $out_fh->print("number of sequences have no PB: $no_pb_read_count ( $no_pb_read_ratio% )\n");
-    #PB AT 5 END
-    my $five_prime_pb_read_count = 0;
-    my $five_prime_pb_read_ratio = 0;
-    if (exists $metrics->{reads_with_5prime_pb}) {
-	$five_prime_pb_read_count = $metrics->{reads_with_5prime_pb};
-	$five_prime_pb_read_ratio = sprintf("%.1f", $five_prime_pb_read_count * 100 / $metrics->{read_count});
-    }
-    $out_fh->print("number of sequences have 5 prime PB: $five_prime_pb_read_count ( $five_prime_pb_read_ratio% )\n");
-    #PB AT 3 END
-    my $three_prime_pb_read_count = 0;
-    my $three_prime_pb_read_ratio = 0;
-    if (exists $metrics->{reads_with_3prime_pb}) {
-	$three_prime_pb_read_count = $metrics->{reads_with_3prime_pb};
-	$three_prime_pb_read_ratio = sprintf("%.1f", $three_prime_pb_read_count * 100 / $metrics->{read_count});
-    }
-    $out_fh->print("number of sequences with 3 prime PB: $three_prime_pb_read_count ( $three_prime_pb_read_ratio% )\n");
-    #PB AT BOTH ENDS
-    my $both_end_pb_read_count = 0;
-    my $both_end_pb_read_ratio = 0;
-    #PB AT BOTH ENDS DECODED BY 5 PRIME
-    my $both_end_pb_decode_by_5pri_count = 0;
-    my $both_end_pb_decode_by_5pri_ratio = 0;
-    #PB AT BOTH ENDS DECODED BY 3 PRIME
-    my $both_end_pb_decode_by_3pri_count = 0;
-    my $both_end_pb_decode_by_3pri_ratio = 0;
 
-    if (exists $metrics->{reads_with_3and5prime_pb}) {
-	$both_end_pb_read_count = $metrics->{reads_with_3and5prime_pb};
-	$both_end_pb_read_ratio = sprintf("%.1f", $both_end_pb_read_count * 100 / $metrics->{read_count});
-	if (exists $metrics->{pb_at_both_ends_decoded_by_5prime}) {
-	    $both_end_pb_decode_by_5pri_count = $metrics->{pb_at_both_ends_decoded_by_5prime};
-	    $both_end_pb_decode_by_5pri_ratio = sprintf("%.1f", $both_end_pb_decode_by_5pri_count * 100 / $both_end_pb_read_count);
-	}
-	if (exists $metrics->{pb_at_both_ends_decoded_by_3prime}) {
-	    $both_end_pb_decode_by_3pri_count = $metrics->{pb_at_both_ends_decoded_by_3prime};
-	    $both_end_pb_decode_by_3pri_ratio = sprintf("%.1f", $both_end_pb_decode_by_3pri_count * 100 / $both_end_pb_read_count);
-	}
-    }
-    $out_fh->print("number of seq have PB at both ends: $both_end_pb_read_count ( $both_end_pb_read_ratio% ) ".
-		   "number of seq decoded by 5' code: $both_end_pb_decode_by_5pri_count ( $both_end_pb_decode_by_5pri_ratio% ) ".
-		   "number of seq decoded by 3' code: $both_end_pb_decode_by_3pri_count ( $both_end_pb_decode_by_3pri_ratio% )\n");
+    #PRIMER B FOUND AT BOTH ENDS
+    my $pb_at_both_ends_count = (exists $metrics->{reads_with_3and5prime_pb}) ? $metrics->{reads_with_3and5prime_pb} : '0';
+    my $pb_at_both_ends_ratio = sprintf("%.1f", $pb_at_both_ends_count * 100 / $metrics->{read_count});
+    $out_fh->print("\nNumber of sequences with 5' and 3' Primer B: $pb_at_both_ends_count ($pb_at_both_ends_ratio%)\n");
+    #DECODED BY BOTH ENDS
+    my $bc_at_both_ends_count = (exists $metrics->{pb_at_both_ends_decoded_by_5_and_3prime}) ?
+	$metrics->{pb_at_both_ends_decoded_by_5_and_3prime} : '0';
+    my $bc_at_both_ends_ratio = sprintf("%.1f", $bc_at_both_ends_count * 100 / $metrics->{read_count});
+    $out_fh->print("\tDecoded with 5' and 3' ends: $bc_at_both_ends_count\n");
+    #DECODED BY 5' END
+    my $bc_at_5_end_count = (exists $metrics->{pb_at_both_ends_decoded_by_5prime}) ?
+	$metrics->{pb_at_both_ends_decoded_by_5prime}: '0';
+    $out_fh->print("\tDecoded with 5' end: $bc_at_5_end_count\n");
+    #DECODED BY 3' END
+    my $bc_at_3_end_count = (exists $metrics->{pb_at_both_ends_decoded_by_3prime}) ?
+	$metrics->{pb_at_both_ends_decoded_by_3prime}: '0';
+    $out_fh->print("\tDecoded with 3' end: $bc_at_3_end_count\n");
+    #UNDECODED WITH NO VALID BARCODES:
+    my $bc_at_both_ends_undecoded_count = (exists $metrics->{pb_at_both_ends_with_different_barcodes}) ?
+	$metrics->{pb_at_both_ends_with_different_barcodes} : '0';
+    $out_fh->print("\tUndecoded with no valid barcodes: $bc_at_both_ends_undecoded_count\n");
+    #UNDECODED WITH DIFFERENT VALID BARCODES:
+    my $bc_at_both_ends_dif_bc_count = (exists $metrics->{pb_at_both_ends_no_valid_bc}) ?
+	$metrics->{pb_at_both_ends_no_valid_bc} : '0';
+    $out_fh->print("\tUndecoded with different valid barcodes: $bc_at_both_ends_dif_bc_count\n");
+
+
+    #PRIMER B FOUND AT 5' END ONLY
+    my $pb_at_5_end_count = (exists $metrics->{reads_with_5prime_pb}) ? $metrics->{reads_with_5prime_pb} : '0';
+    my $pb_at_5_end_ratio = sprintf("%.1f", $pb_at_5_end_count * 100 / $metrics->{read_count});
+    $out_fh->print("Number of sequences with 5' Primer B: $pb_at_5_end_count ($pb_at_5_end_ratio%)\n");
+    #DECODED BY 5' END
+    my $pb_at_5_end_decoded_by_5_end_count = (exists $metrics->{pb_at_5end_decoded_by_5prime}) ?
+	$metrics->{pb_at_5end_decoded_by_5prime} : '0';
+    $out_fh->print("\tDecoded with 5' end: $pb_at_5_end_decoded_by_5_end_count\n");
+    #UNDECODED
+    my $pb_at_5_end_undecoded_count = (exists $metrics->{pb_at_5end_undecoded}) ? $metrics->{pb_at_5end_undecoded} : '0';
+    $out_fh->print("\tUndecoded: $pb_at_5_end_undecoded_count\n");
+
+    #PRIMER B FOUND AT 3' END ONLY
+    my $pb_at_3_end_count = (exists $metrics->{reads_with_3prime_pb}) ? $metrics->{reads_with_3prime_pb} : '0';
+    my $pb_at_3_end_ratio = sprintf("%.1f", $pb_at_3_end_count * 100 / $metrics->{read_count});
+    $out_fh->print("Number of sequences with 3' Primer B: $pb_at_3_end_count ($pb_at_3_end_ratio%)\n");
+    #DECODED BY 3' END
+    my $pb_at_3_end_decoded_by_3_end_count = (exists $metrics->{pb_at_3end_decoded_by_3prime}) ?
+	$metrics->{pb_at_3end_decoded_by_3prime} : '0';
+    $out_fh->print("\tDecoded with 3' end: $pb_at_3_end_decoded_by_3_end_count\n");
+    #UNDECODED
+    my $pb_at_3_end_undecoded_count = (exists $metrics->{pb_at_3end_undecoded}) ? $metrics->{pb_at_3end_undecoded} : '0';
+    $out_fh->print("\tUndecoded: $pb_at_3_end_undecoded_count\n");
+
+
+    #NO PRIMER B AT EITHER ENDS
+    my $pb_at_no_ends_count = (exists $metrics->{reads_with_no_pb}) ? $metrics->{reads_with_no_pb} : '0';
+    my $pb_at_no_ends_ratio = sprintf("%.1f", $pb_at_no_ends_count * 100 / $metrics->{read_count});
+    $out_fh->print("Number of sequences with no Primer B: $pb_at_no_ends_count ($pb_at_no_ends_ratio%)\n");
+    #UNDECODED
+    $out_fh->print("\tUndecoded: $pb_at_no_ends_count\n\n");
+
     #READS DECODED
     my $reads_decoded_count = 0;
     my $reads_decoded_ratio = 0;
@@ -224,7 +233,7 @@ sub _print_distribution_metrics {
 	    $dists->{'total'}->{'total_read_count'}++;
 	}
     }
-    print Dumper $dists;
+#   print Dumper $dists;
     #PRINT TOTAL DIST STATS FIRST
     my $string = "total\t".$dists->{'total'}->{'total_read_count'}."\t".
 	         sprintf ("%.1f", $dists->{'total'}->{'total_seq_lengths'} / $dists->{'total'}->{'total_read_count'})."\t";
@@ -382,24 +391,41 @@ sub _filter_fasta_file {
 	    $self->log_event("No valid sequence left after clipping barcode sequence for ".$seq->primary_id);
 	    next;
 	}
-	#IF 5' AND 3' MATCHES
+	#IF 5' AND 3' PRIMER B MATCHES
 	if ($found_5prime_pb && $found_3prime_pb) {
 	    $metrics->{reads_with_3and5prime_pb}++;
-	    if (exists $barcodes->{$code_at_5end}) {
+	     #IF VALID 3' AND 5' CODES EXIST
+	    if (exists $barcodes->{$code_at_5end} && exists $barcodes->{$code_at_3end}) {
+		#IF THEY'RE THE SAME .. SEQ IS DECODED
+		if ($barcodes->{$code_at_5end} eq $barcodes->{$code_at_3end}) {
+		    $sequence_decoded = 1;
+		    $barcode = $code_at_5end;
+		    $metrics->{pb_at_both_ends_decoded_by_5_and_3prime}++;
+		}
+		#IF THEY'RE DIFFERENT .. SEQ IS NOT DECODED
+		else {
+		    $metrics->{pb_at_both_ends_with_different_barcodes}++;
+		}
+	    }
+	    #IF ONLY VALID 5' EXISTS
+	    elsif (exists $barcodes->{$code_at_5end}) {
 		$sequence_decoded = 1;
 		$barcode = $code_at_5end;
 		$metrics->{pb_at_both_ends_decoded_by_5prime}++;
 	    }
+	    #IF ONLY VALID 3' EXISTS
 	    elsif (exists $barcodes->{$code_at_3end}) {
 		$sequence_decoded = 1;
 		$barcode = $code_at_3end;
 		$metrics->{pb_at_both_ends_decoded_by_3prime}++;
 	    }
+	    #IF NEITHER ARE VALID BARCODES
 	    else {
 		#UNDECODED
+		$metrics->{pb_at_both_ends_no_valid_bc}++;
 	    }
 	}
-	#IF 5' MATCH
+	#IF 5' PRIMER B MATCH ONLY
 	elsif ($found_5prime_pb) {
 	    $metrics->{reads_with_5prime_pb}++;
 	    if (exists $barcodes->{$code_at_5end}) {
@@ -407,14 +433,20 @@ sub _filter_fasta_file {
 		$barcode = $code_at_5end;
 		$metrics->{pb_at_5end_decoded_by_5prime}++;
 	    }
+	    else {
+		$metrics->{pb_at_5end_undecoded}++;
+	    }
 	}
-	#IF 3' MATCH
+	#IF 3' PRIMER B MATCH ONLY
 	elsif ($found_3prime_pb) {
 	    $metrics->{reads_with_3prime_pb}++;
 	    if (exists $barcodes->{$code_at_3end}) {
 		$sequence_decoded = 1;
 		$barcode = $code_at_3end;
 		$metrics->{pb_at_3end_decoded_by_3prime}++;
+	    }
+	    else {
+		$metrics->{pb_at_3end_undecoded}++
 	    }
 	}
 	#NO MATCH
@@ -424,7 +456,7 @@ sub _filter_fasta_file {
 	#METRICS FOR LATER CALCULATIONS
 	$metrics->{read_count}++;
 	$metrics->{total_sequence_length} += length $seq->seq;
-	push @{$metrics->{lengths_of_seqs}}, length $seq->seq;
+#	push @{$metrics->{lengths_of_seqs}}, length $seq->seq;
 	#CREATE A FASTA HASH THAT CAN BE LOOKED UP BY BARCODE
 	if ($sequence_decoded == 1) {
 	    $fasta->{$barcode}->{$seq->primary_id} = $read_seq;
@@ -432,6 +464,7 @@ sub _filter_fasta_file {
 	}
 	else {
 	    $fasta->{undecodable}->{$seq->primary_id} = $read_seq;
+	    $metrics->{undecoded}++;
 	}
     }
     #GET A COUNT OF NUMBER OF SAMPLES
@@ -439,6 +472,8 @@ sub _filter_fasta_file {
 	next if $barcode eq 'undecodable';
 	$metrics->{sample_count}++;
     }
+
+    print Dumper $metrics;
     return $metrics, $fasta;
 }
 
