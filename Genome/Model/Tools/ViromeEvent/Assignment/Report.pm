@@ -71,7 +71,7 @@ sub execute {
 	my @parse_files = glob("$blast_dir/*parsed");
 	unless (@parse_files) {
 	    $self->log_event("Failed to find any blast parse files in ".basename($blast_dir));
-	    return;
+	    next;
 	}
 	foreach my $file (@parse_files) {
 	    my $hits = $self->get_organisms_hit($file);
@@ -100,7 +100,6 @@ sub execute {
     #print Dumper $all_orgs_hit;
     #print Dumper $viral_lineage_hits;
     #print Dumper \@all_virus_lineages;
-    #PRINT REPORT
     my $report_file = $self->dir.'/'.$lib_name.'.AssignmentReport';
     my $report_fh = IO::File->new("> $report_file") ||
 	die "Can not create file handle for ".basename($report_file);
@@ -132,7 +131,8 @@ sub execute {
 	    #THERE MUST BE OUT FILES .. 
 	    unless (@bl_out_files) {
 		$self->log_event("Failed to find any blast out file in ".basename($blast_dir));
-		return;
+		next;
+#		return;
 	    }
 	    #RE-ARRANGE DATA .. MAKE SURE READ SET CORRISPONDS WITH BLAST OUT FILES
 	    my $reads = {};
@@ -173,34 +173,41 @@ sub execute {
 	$report_fh->print("\n###########################################################\n\n");
     }
     $report_fh->close;
-    #CREATE VIRAL READS FASTA AND UNASSIGNED READS FASTA
-    my $fasta_file = $self->dir.'/'.$lib_name.'.fa.cdhit_out.masked.goodSeq';
-    unless (-s $fasta_file) {
-	$self->log_event("Can not find file".basename($fasta_file));
-	return;
-    }
-    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $fasta_file);
+
+    #DEFINE OUTPUT FILES .. WE WANT THESE TO BE THERE EVEN WITH ZERO SIZE
     #VIRAL READS OUT FILE
     my $viral_fasta_out = $self->dir.'/'.$lib_name.'.ViralReads_all.fa';
     my $v_out = Bio::SeqIO->new(-format => 'fasta', -file => ">$viral_fasta_out");
     #UNASSIGNED READS OUT FILE
     my $unassigned_out = $self->dir.'/'.$lib_name.'.unassigned.fa';
     my $unas_out = Bio::SeqIO->new(-format => 'fasta', -file => ">$unassigned_out");
-    while (my $seq = $in->next_seq) {
-	my $read_name = $seq->primary_id;
-	if (grep (/^$read_name$/, @unassigned_reads)) {
-	    $unas_out->write_seq($seq);
+
+    #CREATE VIRAL READS FASTA AND UNASSIGNED READS FASTA
+    my $fasta_file = $self->dir.'/'.$lib_name.'.fa.cdhit_out.masked.goodSeq';
+    if (-s $fasta_file) {
+	my $in = Bio::SeqIO->new(-format => 'fasta', -file => $fasta_file);
+	while (my $seq = $in->next_seq) {
+	    my $read_name = $seq->primary_id;
+	    if (grep (/^$read_name$/, @unassigned_reads)) {
+		$unas_out->write_seq($seq);
+	    }
+	    if (exists $detailed_read_info->{$read_name}) {
+		$v_out->write_seq($seq);
+	    }
 	}
-	if (exists $detailed_read_info->{$read_name}) {
-	    $v_out->write_seq($seq);
-	}
     }
-    unless (-s $viral_fasta_out) {
-	$self->log_event("No viral reads found for $lib_name")
+    elsif (-e $fasta_file) {
+	$self->log_event("No data available for analysis");
+	return 1;
     }
-    unless (-s $unassigned_out) {
-	$self->log_event("No unassigned reads found for $lib_name");
+    else {
+	$self->log_event("Failed to find repeatMasker goodSeq file");
+	return;
     }
+
+    $self->log_event("No viral reads found for $lib_name") unless -s $viral_fasta_out;
+    $self->log_event("No unassigned reads found for $lib_name") unless -s $unassigned_out;
+
     $self->log_event("Assignment Reporting completed for $lib_name");
     return 1;
 }
