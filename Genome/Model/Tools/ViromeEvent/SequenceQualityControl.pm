@@ -70,6 +70,13 @@ sub execute
 
     my @masked_files = glob ("$repeat_masker_dir/$sample_name*.fa.masked");
     unless (scalar @masked_files > 0) {
+	#CHECK FOR *cat.all FILE .. IF PRESENT IT MEANS ALL READS WERE PROCESSED OUT
+	my @cat_files = glob("$repeat_masker_dir/$sample_name*.cat.all");
+	if (@cat_files > 0) {
+	    $self->log_event("All reads have been filtered out for $sample_name");
+	    return 1;
+	}
+	#OTHERWISE IT FAILED
         $self->log_event("No masked fastas for repeat masker run found for sample: $sample_name");
         return;
     }
