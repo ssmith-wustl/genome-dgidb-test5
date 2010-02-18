@@ -11,6 +11,10 @@ package Genome::Model::Tools::Fastq::Trimq2::Simple;
 #For now both trim is only applied to sequences containing phred
 #quality 2 string. Bwa trim style can be used for all sequences.
 
+#For bwa trim style, bwa_trim_qual_level 10 is reasonable, while 20
+#overtrims a lot. bwa trim with 10 is also tolerable to single Q2 base
+#in the middle, and usually "shrink" the short trimmed seqs into 1
+#base/qual as "N/#" to avoid too short seqs passed into aligner
 
 use strict;
 use warnings;
@@ -131,13 +135,13 @@ sub execute {
                 $trimmed_length = $seq_length - $trim_length;
                 
                 $trim_seq  = $trim_qual ? substr($seq, 0, $trim_length) : 'N';
-                $trim_qual ||= '#';
+                $trim_qual ||= $qual_str;
                 
             }
-            elsif ($trim_style =~ /^bwa$/i) {
+            elsif ($trim_style =~ /^bwa$/i) {#This style look for continuous low qual on 3' end
                 my ($pos, $maxPos, $area, $maxArea) = ($seq_length, $seq_length, 0, 0);
 
-                while ($pos > 0 and $area >= 0) {
+                while ($pos > 0 and $area >= 0) {#If last base qual is high, loop will be ended even though it could contain Q2 base in the middle. In this case, nothing trimmed.
 		            $area += $self->bwa_trim_qual_level - (ord(substr($qual, $pos-1, 1)) - 33);
 		            if ($area > $maxArea) {
 			            $maxArea = $area;
@@ -146,9 +150,10 @@ sub execute {
 		            $pos--;
 	            }
 	            if ($pos == 0) { 
-                    ($trim_seq, $trim_qual) = ('N', '#');# scanned whole read and didn't integrate to zero?  replace with "empty" read ...
+                    ($trim_seq, $trim_qual) = ('N', $qual_str);# scanned whole read and didn't integrate to zero?  replace with "empty" read ...
                 }
 	            else {  # integrated to zero?  trim before position where area reached a maximum (~where string of qualities were still below 20 ...)
+                    $maxPos-- if $qual =~ /$qual_str$/;  #if last base is qual_str, need trim it. qual_str is observed left untrimmed when bwa_trim_qual_level is 10
 		            ($trim_seq, $trim_qual) = (substr($seq, 0, $maxPos),  substr($qual, 0, $maxPos));
 		        }
                 $trimmed_length = $seq_length - $maxPos;
