@@ -934,7 +934,94 @@ sub generate_tcga_bam_file {
     return $self->alignment_file;
 }
 
+sub get_bam_flagstat_statistics {
+    my $self = shift;
+    my %params = @_;
 
+    my $bam_file = $params{bam_file};
+    unless($bam_file) {
+        if($self->alignment_file =~ /\.bam$/) {
+            $bam_file = $self->alignment_file;
+        } else {
+            $self->error_message('No BAM file specified and alignment_file does not have .bam extension: ' . $self->alignment_file);
+            return;
+        }
+    }
+    unless(-s $bam_file) {
+        $self->error_message('BAM file ' . $bam_file . ' does not exist or is empty');
+        return;
+    }
+    
+    my $output_file = $params{output_file};
+    $output_file ||= $bam_file . '.flagstat';
+    
+    unless(-s $output_file) {
+        #Need to generate file
+        my $flagstat_command = Genome::Model::Tools::Sam::Flagstat->create(
+            bam_file => $bam_file,
+            output_file => $output_file,
+            include_stderr => 1,
+        );
+        
+        unless($flagstat_command and $flagstat_command->execute) {
+            $self->error_message('Failed to create or execute flagstat command.');
+            return;
+        }
+    }
+    
+    #Parse flagstat output
+    my $flagstat_fh = Genome::Utility::FileSystem->open_file_for_reading($output_file);
+    unless($flagstat_fh) {
+        $self->error_message('Could not open ' . $output_file . ' for reading: ' . Genome::Utility::FileSystem->error_message);
+        return;
+    }
+    
+    my %flagstat_data;
+    my @lines = <$flagstat_fh>;
+    
+    for(@lines){
+        chomp($_);
+    }
+    
+    while(scalar @lines and $lines[0] =~ /^\[.*\]/){
+        push @{ $flagstat_data{errors} }, shift @lines;
+    }
+
+    unless(scalar @lines == 12) {
+        $self->error_message('Unexpected output from flagstat. Check ' . $output_file);
+        return;
+    }
+
+    my ($total, $qc_failure, $duplicates, $mapped, $paired, $read1, $read2, $properly_paired, $mate_mapped, $singletons, $mate_different, $mate_different_hq) = @lines;
+    
+    ($flagstat_data{total}) = $total =~ /^(\d+) in total$/;
+    ($flagstat_data{qc_failure}) = $qc_failure =~ /^(\d+) QC failure$/;
+    ($flagstat_data{duplicates}) = $duplicates =~ /^(\d+) duplicates$/;
+    
+    ($flagstat_data{mapped}, $flagstat_data{mapped_percentage}) =
+        $mapped =~ /^(\d+) mapped \((\d{1,3}\.\d{2}|nan)\%\)$/;
+    undef($flagstat_data{mapped_percentage}) if $flagstat_data{mapped_percentage} eq 'nan';
+    
+    ($flagstat_data{paired}) = $paired =~ /^(\d+) paired in sequencing$/;
+    ($flagstat_data{read1}) = $read1 =~ /^(\d+) read1$/;
+    ($flagstat_data{read2}) = $read2 =~ /^(\d+) read2$/;
+    
+    ($flagstat_data{properly_paired}, $flagstat_data{properly_paired_percentage}) =
+        $properly_paired =~ /^(\d+) properly paired \((\d{1,3}\.\d{2}|nan)\%\)$/;
+    undef($flagstat_data{properly_paired_percentage}) if $flagstat_data{properly_paired_percentage} eq 'nan';
+    
+    ($flagstat_data{mate_mapped}) = $mate_mapped =~ /^(\d+) with itself and mate mapped$/;
+    
+    ($flagstat_data{singletons}, $flagstat_data{singletons_percentage}) =
+        $singletons =~ /^(\d+) singletons \((\d{1,3}\.\d{2}|nan)\%\)$/;
+    undef($flagstat_data{singletons_percentage}) if $flagstat_data{singletons_percentage} eq 'nan';
+    
+    ($flagstat_data{mate_different}) = $mate_different =~ /^(\d+) with mate mapped to a different chr$/;
+    ($flagstat_data{mate_different_hq}) = $mate_different_hq =~ /^(\d+) with mate mapped to a different chr \(mapQ>=5\)$/;
+    
+    $flagstat_fh->close;
+    return \%flagstat_data;
+}
 
 sub construct_groups_file {
 

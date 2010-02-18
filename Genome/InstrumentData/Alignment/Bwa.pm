@@ -241,34 +241,25 @@ sub verify_alignment_data {
         return;
     }
     
-    #Make sure the final BAM looks complete (i.e. not truncated)
-    my $flagstat_temp = Genome::Utility::FileSystem->create_temp_file_path;
-    my $flagstat = Genome::Model::Tools::Sam::Flagstat->create(
-        bam_file => $self->alignment_file,
-        use_version => $self->samtools_version,
-        output_file => $flagstat_temp,
-        include_stderr => 1,
-    );
+    my $flagstat_data = $self->get_bam_flagstat_statistics;
     
-    unless($flagstat->execute) {
-        $self->status_message('Could not flagstat alignment file ' . $self->alignment_file);
+    unless($flagstat_data) {
+        $self->status_message('Could not get flagstat data.');
         return;
     }
     
-    my $flagstat_fh = Genome::Utility::FileSystem->open_file_for_reading($flagstat_temp);
-    unless($flagstat_fh) {
-        $self->error_message('Error opening file: ' . Genome::Utility::FileSystem->error_message);
-        return;
-    }
-    
-    while(<$flagstat_fh>) {
-        if($_ =~ 'Truncated file') {
-            $self->status_message('Alignment file ' . $self->alignment_file . ' appears to be truncated');
-            $flagstat_fh->close;
-            return;
+    if(exists $flagstat_data->{errors}) {
+        my @errors = @{ $flagstat_data->{errors} };
+        
+        for my $error (@errors) {
+            if($error =~ 'Truncated file') {
+                $self->status_message('Alignment file ' . $self->alignment_file . ' appears to be truncated');
+                return;
+            } else {
+                $self->status_message('Continuing despite message from flagstat: ' . $error);
+            }
         }
     }
-    $flagstat_fh->close;
 
     # don't unlock if some caller lower on the stack had a lock
     unless ($already_had_lock) {
