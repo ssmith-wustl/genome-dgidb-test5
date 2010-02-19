@@ -409,9 +409,9 @@ sub parse_annotation {
 		$annotation->{$transcript}->{$start}->{$var}->{domain}=$domain;
 		
 		
-		if (($variant_type eq "SNP") && ($aa =~ /p\.[A-Z]\d+[A-Z]/)) {
-		    my ($var) = $aa =~ /p\.([A-Z]\d+[A-Z])/;
-		    my ($n) = $aa =~ /p\.[A-Z](\d+)[A-Z]/;
+		if (($variant_type eq "SNP") && ($aa =~ /p\.[A-Z][\d]+[A-Z]/)) {
+		    my ($var) = $aa =~ /p\.([A-Z][\d]+[A-Z])/;
+		    my ($n) = $aa =~ /p\.[A-Z]([\d]+)[A-Z]/;
 		    
 		    unless ($var =~ /[B|J|O|U|X|Z]/ ) {
 			$sift_vars->{$transcript}->{$n}->{$var}="$chromosome,$aa";
