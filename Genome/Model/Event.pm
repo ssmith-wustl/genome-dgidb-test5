@@ -524,9 +524,10 @@ sub abandon {
     if ($self->event_status eq 'Abandoned') {
         return 1;
     }
-    for my $next_event ($self->next_events) {
-        $next_event->abandon;
-    }
+    # TODO This was commented out to avoid a UR bug (RT 53928), uncomment this once that bug is resolved
+    #for my $next_event ($self->next_events) {
+        #$next_event->abandon;
+    #}
     if ($self->event_status =~ /Scheduled|Running/) {
         unless ($self->user_name eq $ENV{USER}) {
             $self->error_message('Attempted to abandon '. $self->event_status .' event '. $self->id .' owned by '. $self->user_name);
