@@ -7,6 +7,7 @@ use Genome;
 use File::Copy;
 use File::Copy::Recursive;
 use File::Basename;
+use File::Find;
 
 my %properties = (
     original_data_path => {
@@ -40,6 +41,10 @@ my %properties = (
     },
     allocation => {
         is => 'Genome::Disk::Allocation',
+        is_optional => 1,
+    },
+    library_id => {
+        is => 'Number',
         is_optional => 1,
     },
 );
@@ -168,6 +173,7 @@ sub execute {
     $self->status_message("Microarray allocation created for $instrument_data_id .");
 
     my $target_path = $disk_alloc->absolute_path . "/";
+    $self->status_message("Microarray allocation created at $target_path .");
 
     my $status = File::Copy::Recursive::dircopy($self->original_data_path,$target_path);
     unless($status) {
@@ -175,30 +181,18 @@ sub execute {
         return;
     }
 
-#   Check disk usage of the source and target to ensure that dircopy has worked correctly 
-    my $du_source = "du -sb ".$self->original_data_path;
-    my $du_destination = "du -sb ".$target_path;
-    my $s_size = qx/ $du_source /;
-    my $d_size = qx/ $du_destination /;
-     
-    my @source_size = split(' ', $s_size);
-    my @destination_size = split(' ', $d_size);
-
-    unless($source_size[0] == $destination_size[0]){
-        $self->error_message("Source and target directory sizes do not match, directory copy was incomplete or incorrect.\n");
+    my $ssize = 0;             
+    my $dsize = 0;             
+    find(sub { $ssize += -s if -f $_ }, $self->original_data_path);   #find sum of source file sizes
+    find(sub { $dsize += -s if -f $_ }, $target_path);                #find sum of target file sizes
+    unless ($ssize==$dsize) {
+        $self->error_message("source and distination do not match( source $ssize bytes vs destination $dsize). Copy failed.");
         return;
-    } 
+    }
+
     return 1;
 }
 
-sub data_directory {
-    my $self = shift;
-    my $answer;
-    if($self->allocation) {
-        $answer = $self->allocation->absolute_path;
-    }
-    return $answer;
-}
 
 1;
 
