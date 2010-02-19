@@ -16,9 +16,14 @@ my %properties = (
         is => 'Text',
         doc => 'source data path of import data file',
     },
+    library_name => {
+        is => 'Text',
+        doc => 'library name, used to fetch sample name',
+    },
     sample_name => {
         is => 'Text',
         doc => 'sample name for imported file, like TCGA-06-0188-10B-01D',
+        is_optional => 1,
     },
     import_source_name => {
         is => 'Text',
@@ -110,6 +115,11 @@ my %properties = (
         doc => '------',
         is_optional => 1,
     },
+    library_id => {
+        is => 'Number',
+        doc => '------',
+        is_optional => 1,
+    },
 
 );
     
@@ -123,24 +133,20 @@ class Genome::InstrumentData::Command::Import::Fastq {
 sub execute {
     my $self = shift;
 
-    my %params = ();
-    for my $property_name (keys %properties) {
-        unless ($properties{$property_name}->{is_optional}) {
-            unless ($self->$property_name) {
-                $self->error_message ("Required property: $property_name is not given");
-                return;
-            }
-        }
-        next if $property_name =~ /^(species|reference)_name$/;
-        next if $property_name =~ /^source_data_files$/;
-        next if $property_name =~ /^allocation$/;
-        $params{$property_name} = $self->$property_name if $self->$property_name;
-    }
     #TODO put logic to set sample_name and library_name
+    my $library = Genome::Library->get(name => $self->library_name);
+    unless ($library) {
+        $self->error_message("Library name not found.");
+        die $self->error_message;
+    }
     
-    my $sample_name     = $self->sample_name;
-    my $genome_sample = Genome::Sample->get(name => $sample_name);
-
+    my $genome_sample = Genome::Sample->get(id => $library->sample_id);
+    unless ($genome_sample) {
+        $self->error_message("Could not retrieve sample from library name");
+        die $self->error_message;
+    }
+    my $sample_name  = $genome_sample->name; #$self->sample_name;
+    $self->library_id($library->id);
     if ($genome_sample) {
         $self->status_message("Sample with full_name: $sample_name is found in database");
     }
@@ -195,8 +201,23 @@ sub execute {
     
     my $sample_id = $genome_sample->id;
     $self->status_message("genome sample $sample_name has id: $sample_id");
-    $params{sample_id} = $sample_id;
-    
+    $self->sample_name($genome_sample->name);
+   
+    # gather together params to create the imported instrument data object 
+    my %params = ();
+    for my $property_name (keys %properties) {
+        unless ($properties{$property_name}->{is_optional}) {
+            unless ($self->$property_name) {
+                $self->error_message ("Required property: $property_name is not given");
+                return;
+            }
+        }
+        next if $property_name =~ /^(species|reference)_name$/;
+        next if $property_name =~ /^source_data_files$/;
+        next if $property_name =~ /^allocation$/;
+        next if $property_name =~ /^library_name$/;
+        $params{$property_name} = $self->$property_name if $self->$property_name;
+    }
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
