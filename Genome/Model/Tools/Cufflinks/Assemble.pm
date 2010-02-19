@@ -7,7 +7,7 @@ class Genome::Model::Tools::Cufflinks::Assemble {
             doc => 'The sam file to generate transcripts and expression levels from.',
         },
         params => {
-            doc => 'Any additional parameters to pass to cufflinks'.
+            doc => 'Any additional parameters to pass to cufflinks',
         },
         threads => {
             is => 'Number',
