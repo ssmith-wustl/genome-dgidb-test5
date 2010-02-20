@@ -15,14 +15,15 @@ class Genome::ProcessingProfile::Command {
     is_abstract => 1,
     english_name => 'genome processing_profile command',
     has => [
-    processing_profile => {
-        is => 'Genome::ProcessingProfile',
-        id_by => 'processing_profile_id',
-    },
-    processing_profile_id => {
-        is => 'Integer',
-        doc => 'Identifies the genome processing profile by id',
-    },
+        processing_profile => {
+            is => 'Genome::ProcessingProfile',
+            id_by => 'processing_profile_id',
+        },
+        processing_profile_id => {
+            is => 'Integer',
+            shell_args_position => 1,
+            doc => 'Identifies the genome processing profile by id',
+        },
     ],
     doc => 'work with processing profiles.',
 };
