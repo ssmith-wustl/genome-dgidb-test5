@@ -1,4 +1,5 @@
 package Genome::ProcessingProfile::TestPipeline;
+
 use strict;
 use warnings;
 use Genome;
@@ -37,7 +38,7 @@ sub _execute_build {
 
     my $dir = $self->data_directory;
 
-    my $exit_code = system "$cmd $args >$dir/output 2>$dir/error";
+    my $exit_code = system "$cmd $args >$dir/output 2>$dir/errors";
     $exit_code /= 256;
     if ($exit_code != 0) {
         $self->error_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
