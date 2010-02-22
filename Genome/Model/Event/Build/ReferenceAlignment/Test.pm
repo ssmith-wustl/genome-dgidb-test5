@@ -264,7 +264,16 @@ sub run {
     		}   
 	} else {
         	@objects = $pp->objects_for_stage($stage_name,$self->model);
-	} 
+	}
+	
+	# Establish an alignment directory to prevent allocating one
+	#TODO: Remove this once a system exists for testing alignments without
+	#locking production disk groups
+	my $alignment_directory = $build->accumulated_alignments_directory;
+	unless(-d $alignment_directory) {
+	    Genome::Utility::FileSystem->create_directory($alignment_directory);
+	}
+	
         
 	for my $command_class (@classes) {
             @events = Genome::Model::Event->get(
@@ -394,6 +403,8 @@ sub remove_data {
 
     #ok(UR::Context->_sync_databases,'sync with the database');
     ok(1,'sync with the database');
+    
+    $DB::single = 1;
     ok($self->model->delete,'successfully removed model');
     my $directories_to_remove = $self->{_dir_array_ref};
     for my $dir (@{$directories_to_remove}) {

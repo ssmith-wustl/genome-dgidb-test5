@@ -8,14 +8,19 @@ use Genome;
 class Genome::Model::Convergence {
     is  => 'Genome::Model',
     has => [
+        group_id => {
+            is => 'Integer',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'group', value_class_name => 'Genome::ModelGroup' ],
+            doc => 'The id for the ModelGroup for which this is the Convergence model',
+            
+            is_mutable => 1,
+        },
         group => {
             is => 'Genome::ModelGroup',
             id_by => 'group_id',
             doc => 'The ModelGroup for which this is the Convergence model',
-        },
-        group_id => {
-            is => 'Number',
-            doc => 'The id for the ModelGroup for which this is the Convergence model'
         },
         members => {
             is => 'Genome::Model',
@@ -24,6 +29,11 @@ class Genome::Model::Convergence {
             to => 'models',
             doc => 'Models that are members of this Convergence model.',
         },
+        map({
+            $_ => {
+                via => 'processing_profile',
+            }
+        } Genome::ProcessingProfile::Convergence->params_for_class),
     ],
     doc => <<EODOC
 This model type attempts to use the data collected across many samples to generalize and summarize
