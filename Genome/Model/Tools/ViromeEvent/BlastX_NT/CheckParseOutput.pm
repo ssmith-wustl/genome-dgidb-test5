@@ -76,6 +76,7 @@ sub execute {
 
     foreach my $fa_file (@fa_files) {
 	next if $fa_file =~ /TBXNTfiltered\.fa$/; #ALREADY FILTERED FILES
+	next if $fa_file =~ /TBXNThits\.fa$/; #FASTA OF BLAST HITS
 	my $root_name = $fa_file;
 	$root_name =~ s/\.fa$//;
 
