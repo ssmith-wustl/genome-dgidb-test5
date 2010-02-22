@@ -233,7 +233,7 @@ sub execute {
         my $command_fh = IO::File->new(">command.sh");
         $self->error_message("Failed to create file handle for $project_dir/$name/command.sh\n") and die unless defined $command_fh;
         print $command_fh "$run_newbler\n";
-        print $command_fh "/bin/mv $project_dir/$name/$assembly_output_dir/consed/edit_dir/454Contigs.ace.1 $project_dir/$name/$assembly_output_dir/consed/edit_dir/$name.ace.1\n";
+        print $command_fh "/bin/mv $project_dir/$name/$assembly_output_dir/consed/edit_dir/454Contigs.ace $project_dir/$name/$assembly_output_dir/consed/edit_dir/$name.ace\n";
         system ("chmod 755 ./command.sh");
         my $gigs_of_ram = $self->bsub_mem_usage || 16;
         my %job_params = (
