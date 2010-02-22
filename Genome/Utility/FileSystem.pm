@@ -21,6 +21,7 @@ require File::Copy;
 require Genome::Utility::Text;
 use Digest::MD5;
 use Sys::Hostname;
+use File::Find;
 
 require MIME::Lite;
 
@@ -908,7 +909,15 @@ sub md5sum {
     
 }
 
-
+sub directory_size_recursive {
+    my ($self,$directory) = @_;#shift;
+    my $size;
+    unless (-e $directory) {
+        die "directory does not exist.";
+    }
+    find(sub { $size += -s if -f $_ }, $directory);
+    return $size;
+}  
 
 1;
 

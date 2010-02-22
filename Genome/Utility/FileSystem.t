@@ -484,6 +484,22 @@ sub test_md5sum : Test(1) {
 
 }
 
+sub test_directory_size_recursive : Test(1) {
+    my $dir = File::Temp->tempdir("Genome-Utility-Filesystem-t-directory-size-recursive-XXXX", CLEANUP=>1);
+    mkdir($dir."/testing",0777);
+    mkdir($dir."/testing2",0777);
+    open (F, ">$dir/testing/file1");
+    print F "1234567890\n";
+    close F;
+    open (F, ">$dir/testing2/file2");
+    print F "1234567890\n";
+    close F;
+    my $size = Genome::Utility::FileSystem->directory_size_recursive($dir);
+    my $expected_size = 22;
+
+    is($size,$expected_size,"directory_size_recursive returned the correct size for the test case";
+}
+
 =pod
 
 =head1 Tests
