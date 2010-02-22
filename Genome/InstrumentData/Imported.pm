@@ -11,7 +11,7 @@ use Genome;
 use File::stat;
 
 class Genome::InstrumentData::Imported {
-    is => [ 'Genome::InstrumentData' ],
+    is => [ 'Genome::InstrumentData','Genome::Utility::FileSystem' ],
     type_name => 'imported instrument data',
     table_name => 'IMPORTED_INSTRUMENT_DATA',
     subclassify_by => 'subclass_name',
@@ -40,6 +40,7 @@ class Genome::InstrumentData::Imported {
         run_name             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         sd_above_insert_size => { is => 'NUMBER', len => 20, is_optional => 1 },
         subset_name          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        library_id           => { is => 'NUMBER', len => 20, is_optional => 1 },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -52,6 +53,9 @@ sub data_directory {
 
     if ($alloc) {
         return $alloc->absolute_path;
+    } else {
+        $self->error_message("Could not find an associated disk_allocations record.");
+        die $self->error_message;
     }
 
 }
@@ -59,7 +63,7 @@ sub data_directory {
 # TODO: remove me and use the actual object accessor
 sub get_disk_allocation {
     my $self = shift;
-    return $self->disk_allocation;
+    return $self->disk_allocations;
 }
 
 sub calculate_alignment_estimated_kb_usage {
@@ -70,8 +74,16 @@ sub calculate_alignment_estimated_kb_usage {
             my $du_source = "du -sb ".$self->original_data_path;
             my $s_size = qx/ $du_source /;
             my @source_size = split(' ', $s_size);
+            unless ($source_size[0] > 0) {
+                $self->error_message("Data path exists, but shows 0 size.");
+                die $self->error_message;
+            }
             $answer = ($source_size[0]/1000)+ 100;
         } else {
+            unless ( -e $self->original_data_path) {
+                $self->error_message("Could not locate directory or file to import.");
+                die $self->error_message;
+            }
             my $stat = stat($self->original_data_path);
             $answer = ($stat->size/1000) + 100; 
         } 
@@ -146,7 +158,11 @@ sub flow_cell_id {
 
 sub library_name {
     my $self = shift;
-    $self->id;
+    unless ($self->library_id) {
+        return $self->id;
+    }
+
+    return Genome::Library->get($self->library_id)->name;
 }
 
 sub lane {
@@ -192,8 +208,14 @@ sub resolve_adaptor_file {
 # okay for first test, before committing switch to getting the allocation and returning the path under it
 sub archive_path {
     my $self = shift;
-    
-    $self->disk_allocations->absolute_path;
+    #die "in archive path\n";    
+    #my $alloc = $self->disk_allocations;
+    $self->disk_allocations->absolute_path . "/archive.tgz";
+    #if($alloc){
+    #    die "found an alloc!\n";
+    #}
+    # print "alloc->absolute_path = $alloc->absolute_path\n";
+    #return  $alloc->absolute_path."/archive.tgz";
 }
 
 1;
