@@ -32,7 +32,7 @@ my %properties = (
     sequencing_platform => {
         is => 'Text',
         doc => 'sequencing platform of import data, like illumina/affymetrix',
-        is_optional => 1,
+        valid_values => ['illumina', 'affymetrix'],
     },
     description  => {
         is => 'Text',

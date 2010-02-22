@@ -48,7 +48,7 @@ is($tmp_allocation->owner_id, $dummy_id, "owner-id is $dummy_id");
 my $cmd = Genome::InstrumentData::Command::Import::Microarray->create(
     sample_name => $sample_name,
     original_data_path => $source_dir,
-    sequencing_platform => 'illumina microarray',
+    sequencing_platform => 'illumina',
     allocation =>  $tmp_allocation,
     library_id => '-12345'
 );
@@ -65,7 +65,7 @@ ok($result, "execution was successful");
 
 my $i = Genome::InstrumentData::Imported->get(  
     sample_name => $sample_name, 
-    sequencing_platform => 'illumina microarray',      
+    sequencing_platform => 'illumina',      
 );
 
 is($i->original_data_path,$source_dir,"found imported data and source_data_path is properly set");
