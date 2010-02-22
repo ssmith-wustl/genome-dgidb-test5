@@ -6,7 +6,6 @@ use warnings;
 class Genome::Model::Tools::Wiki::DocumentClasses {
     is => ['UR::Namespace::Command::RunsOnModulesInTree', 'Genome::Model::Tools::Wiki'],
     has => [
-        rebuild_summary => { is => 'Boolean', default => '0', doc => '', is_optional => 1 },
         svn_revision => { is => 'Number', doc => 'SVN revision to link to for module', is_optional => 1 },
         _wiki_basepath => { is => 'Text', is_constant => 1, default => 'Analysis Pipeline Group/Class reference/' },
         _svn_basepath => { is => 'Text', is_constant => 1, default => 'http://svn/scm/viewvc/gscpan/perl_modules/trunk/' },
@@ -34,21 +33,6 @@ sub help_detail {
         'documented.  This tool must be run from within a directory of the ',
         'namespace to document. (e.g. /gsc/scripts/opt/genome-stable/lib/perl/Genome/)');
 }
-
-sub before {
-    my $self = shift;
-    my $classes_to_doc = shift;
-    
-    #Build summary page to link to all known classes
-    for my $class_to_doc (@$classes_to_doc) {
-        my $class_name = $class_to_doc->class_name;
-        
-        my $heading_depth = m/.../g;
-    }
-     
-    die;
-}
-
 
 #See also UR::Object::ModuleWriter->resolve_class_description_perl
 sub for_each_class_object {
