@@ -182,8 +182,8 @@ sub execute {
     my $new_ct  = $ori_ct - $trim_ct;
     my $percent = 100*$new_ct/$ori_ct;
         
-    $report_fh->print("\nNumberOfTrimmedReads  NumberOfOriginalBases  NumberOfTrimmedBases   NumberOfResultingBases  Percentage\n");
-    $report_fh->printf("%21s%21s%22s%24s%11.1f%%\n", $rd_trim_ct, $ori_ct, $trim_ct, $new_ct, $percent);
+    $report_fh->print("\nNumberOfOriginalBases  NumberOfTrimmedBases   NumberOfResultingBases  Percentage  NumberOfTrimmedReads\n");
+    $report_fh->printf("%21s%22s%24s%11.1f%%%21s\n", $ori_ct, $trim_ct, $new_ct, $percent, $rd_trim_ct);
     $report_fh->close;
     
     return 1;
