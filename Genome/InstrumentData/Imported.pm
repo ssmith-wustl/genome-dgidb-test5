@@ -71,14 +71,8 @@ sub calculate_alignment_estimated_kb_usage {
     my $answer;
     if($self->original_data_path !~ /\,/ ) {
         if (-d $self->original_data_path) {
-            my $du_source = "du -sb ".$self->original_data_path;
-            my $s_size = qx/ $du_source /;
-            my @source_size = split(' ', $s_size);
-            unless ($source_size[0] > 0) {
-                $self->error_message("Data path exists, but shows 0 size.");
-                die $self->error_message;
-            }
-            $answer = ($source_size[0]/1000)+ 100;
+            my $source_size = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);
+            $answer = ($source_size/1000)+ 100;
         } else {
             unless ( -e $self->original_data_path) {
                 $self->error_message("Could not locate directory or file to import.");
@@ -161,7 +155,7 @@ sub library_name {
     unless ($self->library_id) {
         return $self->id;
     }
-
+    
     return Genome::Library->get($self->library_id)->name;
 }
 

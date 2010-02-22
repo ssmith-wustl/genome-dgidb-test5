@@ -7,7 +7,7 @@ use Genome;
 use File::Copy;
 use File::Copy::Recursive;
 use File::Basename;
-use File::Find;
+#use Genome::Utility::FileSystem;
 
 my %properties = (
     original_data_path => {
@@ -181,10 +181,8 @@ sub execute {
         return;
     }
 
-    my $ssize = 0;             
-    my $dsize = 0;             
-    find(sub { $ssize += -s if -f $_ }, $self->original_data_path);   #find sum of source file sizes
-    find(sub { $dsize += -s if -f $_ }, $target_path);                #find sum of target file sizes
+    my $ssize = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);             
+    my $dsize = Genome::Utility::FileSystem->directory_size_recursive($target_path);             
     unless ($ssize==$dsize) {
         $self->error_message("source and distination do not match( source $ssize bytes vs destination $dsize). Copy failed.");
         return;
