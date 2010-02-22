@@ -50,7 +50,8 @@ my $cmd = Genome::InstrumentData::Command::Import::Microarray->create(
     original_data_path => $source_dir,
     sequencing_platform => 'illumina',
     allocation =>  $tmp_allocation,
-    library_id => '-12345'
+    library_id => '2820836078'
+
 );
 
 ok($cmd, "constructed an import command");
@@ -69,7 +70,7 @@ my $i = Genome::InstrumentData::Imported->get(
 );
 
 is($i->original_data_path,$source_dir,"found imported data and source_data_path is properly set");
-is($i->library_id, '-12345', "library_id stored and retrieved properly");
+is($i->library_id, '2820836078', "library_id stored and retrieved properly");
 
 my $disk = Genome::Disk::Allocation->get(allocator_id => -123459, owner_id => $dummy_id);#owner_class_name => $owner_class_name, owner_id => $dummy_id);
 
