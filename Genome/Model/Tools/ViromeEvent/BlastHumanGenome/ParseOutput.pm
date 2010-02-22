@@ -64,6 +64,7 @@ sub execute {
 
     foreach my $file (@fa_files) {
 	next if $file =~ /HGfiltered\.fa$/; #ALREADY RAN BLAST OUT FILES IF PRESENT
+	next if $file =~ /HGhits\.fa$/;  #FASTA OF BLAST HITS
 	my $root = $file;
 	$root =~ s/\.fa$//;
 	my $blast_out = $root.'.HGblast.out';
