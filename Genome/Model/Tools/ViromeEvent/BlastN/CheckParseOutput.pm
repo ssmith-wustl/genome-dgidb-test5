@@ -76,6 +76,7 @@ sub execute {
 
     foreach my $fa_file (@fa_files) {
 	next if $fa_file =~ /BNfiltered\.fa$/; #FILTERED FILES  .. NOT THE ORIG INPUT
+	next if $fa_file =~ /BNhits\.fa$/;     #FASTA OF BLAST HITS
 	my $root_name = $fa_file;
 	$root_name =~ s/\.fa$//;
 
