@@ -95,6 +95,27 @@ class Genome::Model::Build {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+# auto generate sub-classes for any valid processing profile
+sub __extend_namespace__ {
+    my ($self,$ext) = @_;
+
+    my $meta = $self->SUPER::__extend_namespace__($ext);
+    return $meta if $meta;
+    
+    my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
+    my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
+    if ($pp_subclass_meta) {
+        my $build_subclass_name = 'Genome::Model::Build::' . $ext;
+        my $build_subclass_meta = UR::Object::Type->define(
+            class_name => $build_subclass_name,
+            is => 'Genome::Model::Build',
+        );
+        die "Error defining $build_subclass_name for $pp_subclass_name!" unless $build_subclass_meta;
+        return $build_subclass_meta;
+    }
+    return;
+}
+
 sub create {
     my ($class, %params) = @_;
 

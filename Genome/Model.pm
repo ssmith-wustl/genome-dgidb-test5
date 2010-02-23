@@ -181,6 +181,27 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
+# auto generate sub-classes for any valid processing profile
+sub __extend_namespace__ {
+    my ($self,$ext) = @_;
+
+    my $meta = $self->SUPER::__extend_namespace__($ext);
+    return $meta if $meta;
+    
+    my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
+    my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
+    if ($pp_subclass_meta) {
+        my $model_subclass_name = 'Genome::Model::' . $ext;
+        my $model_subclass_meta = UR::Object::Type->define(
+            class_name => $model_subclass_name,
+            is => 'Genome::Model',
+        );
+        die "Error defining $model_subclass_name for $pp_subclass_name!" unless $model_subclass_meta;
+        return $model_subclass_meta;
+    }
+    return;
+}
+
 
 
 sub create {
