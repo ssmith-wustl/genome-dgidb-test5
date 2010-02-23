@@ -22,10 +22,11 @@ BEGIN {
 }
 
 my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-MapToBam';
+my $run_dir = '/gsc/var/cache/testsuite/running_testsuites';
 
 my $tmp_dir  = File::Temp::tempdir(
     "MapToBAMDir_XXXXXX", 
-    DIR     => $root_dir,
+    DIR     => $run_dir,
     CLEANUP => 0,
 );
 
