@@ -10,9 +10,17 @@ class Genome::Model::Tools::BioSamtools::RefCov {
     has_input => [
         bam_file => { },
         bed_file => { },
-        output_directory => { },
-        min_depth_filter => { default_value => 1 },
-        wingspan => { default_value => 0 },
+        output_directory => {
+            is_optional => 1
+        },
+        min_depth_filter => {
+            default_value => 1,
+            is_optional => 1,
+        },
+        wingspan => {
+            default_value => 0,
+            is_optional => 1,
+        },
     ],
     has_output => [
         stats_file => {
