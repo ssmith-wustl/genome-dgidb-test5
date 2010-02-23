@@ -43,10 +43,6 @@ my %properties = (
         is => 'Genome::Disk::Allocation',
         is_optional => 1,
     },
-    library_id => {
-        is => 'Number',
-        is_optional => 1,
-    },
 );
     
 
