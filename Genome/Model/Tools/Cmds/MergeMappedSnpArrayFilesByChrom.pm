@@ -11,9 +11,9 @@ class Genome::Model::Tools::Cmds::MergeMappedSnpArrayFilesByChrom {
     is => 'Command',
     has => [
     mapped_snp_array_files => {
-        type => 'space-delimited String',
+        type => 'Single-quoted String',
         is_optional => 0,
-        doc => 'Space-delimited list of snp array files with format [Chr \t Pos \t Sample_data]; There may be more than one Sample-data column in this file (see gmt nate create-mapped-snp-array-file).'
+        doc => "A single-quoted string describing the list of snp array files with format [Chr \t Pos \t Sample_data], such as '/dir/*.merged'.  There may be more than one sample-data column in this file (see gmt cmds create-mapped-snp-array-file)."
     },
     output_file => {
         type => 'String',
@@ -38,10 +38,16 @@ sub execute {
     #process input arguments
     my $outfile = $self->output_file;
     my $output_fh = new IO::File;
-    my $infiles = $self->mapped_snp_array_files;
-    my @infiles = split /\s+/,$infiles;
+    my @infiles = glob($self->mapped_snp_array_files);
     chomp @infiles;
     @infiles = sort @infiles; #so that the files are always read and printed in the same order
+
+    #make sure --mapped-snp-array-files were quoted
+    if (scalar @{$self->bare_args}) {
+        my @bare_args = @{$self->bare_args};
+        die "\nDid you forget to quote the --mapped-snp-array-files? I found these extra arguments in your call:\n@bare_args\n";
+    } 
+
 
     my %data;
     my %chr_to_index;
@@ -139,7 +145,7 @@ sub execute {
         $data{$file}{"filehandle"}->close;
     }
     $output_fh->close;
-    
+
     return 1;
 }
 

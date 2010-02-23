@@ -15,9 +15,9 @@ class Genome::Model::Tools::Cmds::CreateMappedSnpArrayFile {
         doc => 'map.csv file giving coordinates of log2 snp array data'
     },
     snp_array_files => {
-        type => 'Space-delimited String',
+        type => 'Single-quoted String',
         is_optional => 0,
-        doc => 'space delimited string of snp array *.log2 data files'
+        doc => "A single-quoted string describing the input snp array data files, such as '/dir/*.log2' or '/dir/BRC*'.",
     },
     output_file => {
         type => 'String',
@@ -55,11 +55,31 @@ sub execute {
     my $mapfile = $self->map_file;
     my $map_header_lines = $self->map_headers;
     my $snp_array_header_lines = $self->snp_array_headers;
-    my $infiles = $self->snp_array_files;
-    my @infiles = split /\s+/,$infiles;
+    my @infiles = glob($self->snp_array_files);
     chomp @infiles;
     @infiles = sort @infiles; #so that files are always read & printed in same order
     
+    #error checking:
+    
+    #check for not quoting --snp-array-files
+    if (scalar @{$self->bare_args}) {
+        my @bare_args = @{$self->bare_args};
+        die "\nDid you forget to quote the --snp-array-files? I found these extra arguments in your call:\n@bare_args\n";
+    }
+
+    #check file lengths: first, find length of map file
+    my $map_file_wc = `wc -l $mapfile`;
+    $map_file_wc =~ s/^(\d+)\s+\w+$/$1/;
+
+    #check for same length in snp-array-files
+    for my $snp_file (@infiles) {
+        my $snp_file_wc = `wc -l $snp_file`;
+        $snp_file_wc =~ s/^(\d+)\s+\w+$/$1/;
+        if ($snp_file_wc != $map_file_wc) {
+            die "Found different lengths between map file $mapfile ($map_file_wc) and snp-array file $snp_file ($snp_file_wc).\n";
+        }
+    }
+
     #open filehandles
     my @filehandles;
     my $out_fh = new IO::File $outfile,"w";
@@ -85,7 +105,7 @@ sub execute {
             $file->getline;
         }
     }
-    
+
     #write data to output file
     while (my $map_line = $map_fh->getline) {
         chomp $map_line;
