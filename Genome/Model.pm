@@ -263,6 +263,7 @@ sub create {
 
     unless ( $self->_build_model_filesystem_paths() ) {
         $self->error_message('Filesystem path creation failed');
+        $self->SUPER::delete;
         return;
     }
                                  
