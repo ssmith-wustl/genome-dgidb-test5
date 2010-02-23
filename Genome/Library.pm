@@ -13,7 +13,7 @@ use strict;
 use warnings;
 
 class Genome::Library {
-    type_name => 'genome library',
+    is => ['Genome::Notable'],
     table_name => 'GSC.LIBRARY_SUMMARY',
     id_by => [
         library_id          => { is => 'Number', len => 20 },
@@ -28,6 +28,7 @@ class Genome::Library {
         taxon_id            => { is => 'Number', via => 'sample', to => 'taxon_id' },
         taxon               => { is => 'Genome::Taxon', id_by => 'taxon_id' },
         species_name        => { via => 'taxon', to => 'species_name' },
+        protocol_name       => { is_transient => 1, is => 'Text', },
     ],
     has_many => [
         #solexa_lanes        => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'library' },
