@@ -18,8 +18,10 @@ my @subject_types = ();
     @subject_types = @{ $m->valid_values };
 }
 
+###################################################
+
 class Genome::Model::Command::Define {
-    is => 'Command',
+    is => 'Command::DynamicSubCommands',
     is_abstract => 1,
     has => [
         processing_profile_name => {
@@ -67,126 +69,53 @@ class Genome::Model::Command::Define {
             is_input => 1,
             doc => 'The building of the model is performed automatically',
         },
-	result_model_id => {
-	    is => 'Integer',
-	    is_output => 1,
-	}
+        result_model_id => {
+            is => 'Integer',
+            is_output => 1,
+        }
     ],
     schema_name => 'Main',
 };
 
+# Compiling this class autogenerates one sub-command per processing profile.
+# These are the commands which actually execute, and inherit from this
+# for general execution logic.
+
+sub _sub_commands_from { 'Genome::ProcessingProfile' }
+
 sub sub_command_sort_position { 1 }
 
-###################################################
-
-#< Auto generate the subclasses >#
-our @SUB_COMMAND_CLASSES;
-my $module = __PACKAGE__;
-$module =~ s/::/\//g;
-$module .= '.pm';
-my $pp_path = $INC{$module};
-$pp_path =~ s/$module//;
-my $base_path = $pp_path;
-$pp_path .= 'Genome/ProcessingProfile';
-for my $target ( glob("$base_path/Genome/ProcessingProfile/*pm") ) {
-    $target =~ s#$base_path\/Genome\/ProcessingProfile/##;
-    $target =~ s/\.pm//;
-    my $target_class = 'Genome::ProcessingProfile::' . $target;
-    next unless $target_class->isa('Genome::ProcessingProfile');
-    my $target_meta = $target_class->get_class_object;
-    unless ( $target_meta ) {
-        eval("use $target_class;");
-        die "$@\n" if $@;
-        $target_meta = $target_class->get_class_object;
-    }
-    #next if $target_class->get_class_object->is_abstract;
-    my $subclass = 'Genome::Model::Command::Define::' . $target;
-
-    # Do not autogenerate this if it has a module defined 
-    if (-e $base_path . 'Genome/Model/Command/Define/' . $target . '.pm') {
-        #print "skipping generating class for $target since a module is under $pp_path/Command/Define/\n";
+sub help_brief {
+    my $self = shift;
+    my $msg;
+    my $processing_profile_subclass = $self->_target_class_name;
+    if ($processing_profile_subclass) {
+        my $model_type = $processing_profile_subclass->_resolve_type_name_for_class;
+        $msg = "define a new $model_type genome model";
     }
     else {
-        no strict 'refs';
-        class {$subclass} {
-            is => __PACKAGE__,
-            sub_classification_method_name => 'class',
-        };
+        $msg = 'define a new genome model'
     }
-
-    push @SUB_COMMAND_CLASSES, $subclass;
-}
-
-###################################################
-
-sub sub_command_dirs {
-    my $class = ref($_[0]) || $_[0];
-    return ( $class eq __PACKAGE__ ? 1 : 0 );
-}
-
-sub sub_command_classes {
-    my $class = ref($_[0]) || $_[0];
-    return ( $class eq __PACKAGE__ ? @SUB_COMMAND_CLASSES : () );
-}
-
-sub help_brief {
-    my $model_type = $_[0]->_model_type;
-    $model_type =~ s/genome model command define //;
-    my $msg = ($model_type ? "$model_type genome model" : "genome model");
-    $msg = "define a new $msg"; 
     return $msg;
 }
 
 sub help_synopsis {
     return <<"EOS"
-genome model define 
+genome model define reference-alignment 
   --model-name test5
-  --subject_name ley_aml_patient1_tumor
+  --subject-name ley_aml_patient1_tumor
   --processing-profile-name nature_aml_08
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
-This defines a new genome model.
-The properties of the model determine what will happen when the add-reads command is run.
+This defines a new genome model for the specified subject, using the 
+specified processing profile.
 
-Define the processing profile to be used by name. Do not specify the
-processing_profile_id as this will be looked up and overridden by the processing
-profile name.
-
-To obtain a list of available processing profiles, use genome-model list
-processing-profiles.
+The first build of a model must be explicitly requested after the model is defined.
 EOS
 }
-
-###################################################
-
-sub _get_subclass {
-    my $class = ref($_[0]) || $_[0];
-
-    return if $class eq __PACKAGE__;
-    
-    $class =~ s/Genome::Model::Command::Create:://;
-
-    return $class;
-}
-
-sub _target_class {
-    my $subclass = _get_subclass(@_)
-        or return;
-    
-    return 'Genome::'.$subclass;
-}
-
-sub _model_type {
-    my $profile_name = _get_subclass(@_)
-        or return;
-    my @words = $profile_name =~ /([A-Z](?:[A-Z]*(?=$|[A-Z][a-z])|[a-z]*))/g;
-    return $profile_name = join(' ', map { lc } @words);
-}
-
-###################################################
 
 sub execute {
     my $self = shift;
@@ -269,7 +198,6 @@ sub execute {
     return 1;
 }
 
-#< Processing profile ># 
 sub _get_processing_profile_id_for_name {
     my $self = shift;
 
