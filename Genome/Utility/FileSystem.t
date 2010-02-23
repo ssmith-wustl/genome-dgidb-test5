@@ -497,7 +497,7 @@ sub test_directory_size_recursive : Test(1) {
     my $size = Genome::Utility::FileSystem->directory_size_recursive($dir);
     my $expected_size = 22;
 
-    is($size,$expected_size,"directory_size_recursive returned the correct size for the test case";
+    is($size,$expected_size,"directory_size_recursive returned the correct size for the test case");
 }
 
 =pod
