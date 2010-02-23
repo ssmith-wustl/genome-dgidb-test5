@@ -2,34 +2,14 @@
 
 use strict;
 use warnings;
-
 use above 'Genome';
+use Test::More tests => 3;
 
-use Genome::ProcessingProfile::Test; # test is here
+my $test_class = 'Genome::ProcessingProfile::Command::List';
+use_ok($test_class);
 
-Genome::ProcessingProfile::Command::List::Test->runtests;
+my $expect = Genome::ProcessingProfile::Command::List::TestPipeline->create();
+ok($expect, "made a command to list cases of the test pipeline");
 
-exit;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2006 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
+ok($expect->execute(), "list executes");
 

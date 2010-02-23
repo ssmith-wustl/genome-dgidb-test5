@@ -13,8 +13,8 @@ class Genome::ProcessingProfile::TestPipeline {
         args => {
             doc => 'the arguments to use',
         },
-        doc => "an example processing profile which runs one shell command and catches its output"
     ],
+    doc => "an example processing profile which runs one shell command and catches its output"
 };
 
 sub _initialize_model {

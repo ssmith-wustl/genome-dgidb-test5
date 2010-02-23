@@ -537,33 +537,6 @@ sub test01_invalid : Tests() {
     return 1;
 }
 
-# List - this class only runs the UR::Object::Command::List
-package Genome::ProcessingProfile::Command::List::Test;
-
-use strict;
-use warnings;
-
-use base 'Test::Class';
-
-use Test::More;
-
-sub test01 : Tests(2) {
-    my $self = shift;
-
-    my $test_class = 'Genome::ProcessingProfile::Command::List';
-    use_ok($test_class);
-    is(
-        $test_class->__meta__->property_meta_for_name('subject_class_name')->default_value,
-        'Genome::ProcessingProfile',
-        'Subject class name',
-    );
-    
-    return 1;
-}
-
-###################################################
-###################################################
-
 1;
 
 #$HeadURL$
