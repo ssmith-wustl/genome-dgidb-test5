@@ -7,6 +7,8 @@ use above 'Genome';
 use Genome::Model::Tools::Novocraft::ParallelNovoalign;
 use Test::More;
 
+plan skip_all => 'slooooow';
+
 if (`uname -a` =~ /x86_64/){
     plan tests => 6;
 } else{
