@@ -120,6 +120,10 @@ sub execute
     }
 
     my $config = $self->internalhash;
+    if($config->{cell_type} eq 'VIRAL')
+    {
+        $self->skip_core_check(1);
+    }
 
     # dir-builder
     my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
@@ -595,7 +599,7 @@ sub build_empty_config
             "<full org name, locus_tag, finish assembly, pipeline>",
         'assembly_version' => "",
         'pipe_version'     => "",
-        'cell_type'        => "<BACTERIA or ARCHEA>",
+        'cell_type'        => "<BACTERIA or ARCHEA or VIRAL>",
 
         #collect sequence stuff
         'seq_file_name'  => "",

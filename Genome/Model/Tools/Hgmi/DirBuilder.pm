@@ -37,7 +37,7 @@ UR::Object::Type->define(
 					     },
 		   'cell_type'            => {
 					      is  => 'String',
-					      doc => "[BACTERIA|EUKARYOTES]"
+					      doc => "[BACTERIA|EUKARYOTES|VIRAL]"
 					     },
 		  ],
 			 
@@ -76,7 +76,9 @@ sub execute
     $date = $ymd;
     my @moredirs = ();
 
-    if ( ($self->cell_type =~ /BACTERIA/) || ($self->cell_type =~ /ARCHEA/) )
+    if ( ($self->cell_type =~ /BACTERIA/) || 
+         ($self->cell_type =~ /ARCHEA/)  ||
+         ($self->cell_type =~ /VIRAL/) )
     {
         @moredirs = (
             'Ensembl_pipeline', 'Gene_predictions',
