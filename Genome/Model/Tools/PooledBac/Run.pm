@@ -109,7 +109,13 @@ class Genome::Model::Tools::PooledBac::Run {
             type => 'Integer',
             is_optional => 1,
             doc => "This designates the amount of RAM in Gigabytes that is used per newbler job.  The default is 16",
-        }
+        },
+        use_new_pipeline =>        
+        {
+            type => 'Boolean',
+            is_optional => 1,
+            doc => "Use this option to determine whether to use the new pipelien or revert to the old one, the default is to use the old pipeline",     
+        },
 
     ]
 };
@@ -190,7 +196,7 @@ $DB::single =1;
         $self->error_message('Pooled bac pipeline must be run from a 64-bit architecture');
         return;
     }
-    
+        
     my $params = {};
     $params = $self->get_params($self->params_file) if(defined $self->params_file &&    -e $self->params_file);
     my $project_dir = $self->project_dir || $self->project_dir($params->{project_dir});
@@ -209,6 +215,8 @@ $DB::single =1;
     my $blast_params = $self->blast_params || $self->blast_params($params->{blast_params});
     my $newbler_params = $self->newbler_params || $self->newbler_params($params->{newbler_params});
     my $bsub_mem_usage = $self->bsub_mem_usage || $self->bsub_mem_usage($params->{bsub_mem_usage});
+    my $use_new_pipeline = $self->use_new_pipeline;
+
 
     $self->error_message("The pipeline needs for the project_dir to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $project_dir);
     $self->error_message("The pipeline needs for the pooled_bac_dir to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $pooled_bac_dir);
@@ -239,13 +247,7 @@ $DB::single =1;
     Genome::Model::Tools::PooledBac::GenerateReports->execute( project_dir => $project_dir);
 
     $self->error_message("Error creating project directories")  and die unless
-    Genome::Model::Tools::PooledBac::CreateProjectDirectories->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name,phd_file_name_or_dir => $phd_ball, project_dir => $project_dir);
-
-    $self->error_message("Error running add-reference-reads")  and die unless
-    Genome::Model::Tools::PooledBac::AddReferenceReads->execute(project_dir => $project_dir);
-
-    $self->error_message("Error assembling bac projects")  and die unless
-    Genome::Model::Tools::PooledBac::AssembleBacProjects->execute(project_dir => $project_dir, sff_files => $sff_files, queue_type => $queue_type, retry_count => $retry_count, no_reference_sequence => $no_reference_sequence, newbler_params => $newbler_params, bsub_mem_usage => $bsub_mem_usage);
+    Genome::Model::Tools::PooledBac::CreateProjectDirectoriesNew->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name,phd_file_name_or_dir => $phd_ball, project_dir => $project_dir);
 
     $self->error_message("Error generating post assembly reports")  and die unless
     Genome::Model::Tools::PooledBac::GeneratePostAssemblyReports->execute( project_dir => $project_dir);

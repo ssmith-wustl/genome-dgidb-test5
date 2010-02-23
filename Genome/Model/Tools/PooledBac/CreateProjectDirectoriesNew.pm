@@ -1,4 +1,4 @@
-package Genome::Model::Tools::PooledBac::CreateProjectDirectories;
+package Genome::Model::Tools::PooledBac::CreateProjectDirectoriesNew;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome::Assembly::Pcap::Ace;
 use Genome::Assembly::Pcap::Phd;
 use Genome::Model::Tools::PooledBac::Utils;
 
-class Genome::Model::Tools::PooledBac::CreateProjectDirectories {
+class Genome::Model::Tools::PooledBac::CreateProjectDirectoriesNew {
     is => 'Command',
     has => 
     [        
@@ -77,15 +77,7 @@ sub execute {
     my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
     $self->error_message("Failed to open ace file") and die unless defined $ao;
     my $po;
-    if(-d $phd_dir_or_ball)
-    {
-        $po = Genome::Assembly::Pcap::Phd->new(input_directory => $phd_dir_or_ball);
-    }
-    elsif(-e $phd_dir_or_ball)
-    {
-        $po = Genome::Assembly::Pcap::Phd->new(input_file => $phd_dir_or_ball,using_db => 1);
-    }
-    $self->error_message("Failed to open phd object") unless defined $po;
+
     
     my $contig_map_file = $self->contig_map_file || "CONTIG_MAP";
     $contig_map_file = $project_dir.'/'.$contig_map_file;
@@ -112,7 +104,8 @@ sub execute {
         $self->error_message("Error creating directory $bac_dir") and die unless Genome::Utility::FileSystem->create_directory($bac_dir);
         my $old_dir = `pwd`;
         chdir($bac_dir);
-        $ut->write_fasta_from_contig_names($ao,$bac_dir."/pooledreads.fasta",$bac_dir."/pooledreads.fasta.qual",$po, \@contig_names);    
+        $ut->create_project_from_contig_names($ao,$bac_dir."/edit_dir/$bac_name.ace", \@contig_names, $pooled_bac_dir);    
+#        $ut->write_fasta_from_contig_names($ao,$bac_dir."/pooledreads.fasta",$bac_dir."/pooledreads.fasta.qual",$po, \@contig_names);    
         chdir($old_dir);
     }
 }

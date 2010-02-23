@@ -56,6 +56,9 @@ sub execute {
     my $contig_map = $ut->open_contig_map($contig_map_file);
     my $match_list;
     my $orphan_list;
+    Genome::Utility::FileSystem->create_directory('reports');
+    my $fh = IO::File->new(">reports/contigs_that_link_to_matching_contigs");
+    $self->error_message("Failed to open reports/contigs_that_link_to_matching_contigs for writing.\n") and die unless (-e 'reports/contigs_that_link_to_matching_contigs');
     ($match_list, $orphan_list) = $ut->create_match_and_orphan_lists($contig_map);
     foreach my $orphan (keys %{$orphan_list})
     {
@@ -70,7 +73,16 @@ sub execute {
             $contig_map->{$orphan}->{maps_to} = $match_list->{$pre_ctg}->{maps_to};
             $contig_map->{$orphan}->{module} = 'AddLinkingContigs';
         }
+        if(exists $match_list->{$pre_ctg})
+        {
+            $fh->print("$orphan links to $pre_ctg in $match_list->{$pre_ctg}{maps_to}\n");
+        }
+        if(exists $match_list->{$aft_ctg})
+        {
+            $fh->print("$orphan links to $aft_ctg in $match_list->{$aft_ctg}{maps_to}\n");
+        }    
     }
+    $fh->close;
     $ut->write_contig_map($contig_map,$contig_map_file);
     return 1;
 }

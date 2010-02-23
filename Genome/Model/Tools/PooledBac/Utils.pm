@@ -35,6 +35,56 @@ sub write_fasta_from_contig_names
     $qual_fh->close;
 }
 
+#create_project_from_contig_names($ao,$bac_dir."/pooledreads.fasta",$bac_dir."/pooledreads.fasta.qual",$po, \@contig_names);    
+
+sub create_project_from_contig_names
+{
+    my ($self, $ao, $ace_fn, $contig_names, $input_project_dir) = @_;
+    
+    my $current_dir = `pwd`;
+    print ("creating directory for $current_dir");
+    #Genome::Utility::FileSystem->create_directory("project_dir");
+    #chdir("project_dir");
+    Genome::Utility::FileSystem->create_directory("edit_dir");
+    Genome::Utility::FileSystem->create_directory("phd_dir");
+    Genome::Utility::FileSystem->create_directory("phdball_dir");
+    Genome::Utility::FileSystem->create_directory("sff_dir");
+    #copy links from input project
+    foreach my $sff_file (glob($input_project_dir.'/consed/sff_dir/*'))
+    {
+        `/bin/ln -s $sff_file sff_dir/.`;
+#        Genome::Utility::FileSystem->copy_file($sff_file, 'sff_dir/.');
+    }
+    foreach my $phd_file (glob($input_project_dir.'/consed/phdball_dir/*'))
+    {
+       # next if -d $phd_file;
+        `/bin/ln -s $phd_file phdball_dir/.`;
+#        Genome::Utility::FileSystem->copy_file($phd_file, 'phdball_dir/.');
+    }
+    #$ace_fn = "project_dir/edit_dir/$ace_fn";
+    create_ace_from_contig_names(@_);
+    
+}
+
+sub create_ace_from_contig_names
+{
+    my ($self, $ao, $ace_fn, $contig_names) = @_;
+    #`touch /tmp/temp.ace`;
+    my $out_ao = Genome::Assembly::Pcap::Ace->new(input_file => '/tmp/temp.ace');
+    $self->error_message("File $ace_fn failed to open for writing.") and die unless defined $out_ao;
+    
+    foreach my $contig_name (@{$contig_names})
+    {
+        $out_ao->add_contig($ao->get_contig($contig_name));
+    }
+    $out_ao->write_file(output_file =>$ace_fn);
+    $out_ao = undef;
+    my $fh = IO::File->new(">>$ace_fn");
+    $fh->print("\nWA{\nphdBall pooledbac 000000:000000\n../phdball_dir/phd.ball.1\n}\n");
+    $fh->close;
+    #`/bin/rm /tmp/temp.ace`;
+    #`/bin/rm /tmp/temp.ace.db`;
+}
 
 
 sub write_reads_to_fasta
