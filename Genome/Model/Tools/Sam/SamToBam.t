@@ -24,7 +24,9 @@ BEGIN {
 my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-SamToBam';
 
 my $tmp_dir  = File::Temp::tempdir(
-    CLEANUP => 0,
+    'SamToBam-XXXXX',
+    DIR => '/gsc/var/cache/testsuite/running_testsuites',
+    CLEANUP => 1,
 );
 
 copy "$root_dir/source-1.sam", $tmp_dir;

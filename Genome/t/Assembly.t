@@ -126,7 +126,11 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     for my $key (keys %pp_params) {
         is($pp->$key,$pp_params{$key},"$key accessor");
     }
-    my $data_directory = File::Temp::tempdir(CLEANUP => 0);
+    my $data_directory = File::Temp::tempdir(
+        'Assembly-XXXXX',
+        DIR => '/gsc/var/cache/testsuite/running_testsuites',
+        CLEANUP => 1
+    );
     my $model_define = Genome::Model::Command::Define::Assembly->create(
                                                                         processing_profile_name => $pp->name,
                                                                         model_name => $model_name,
