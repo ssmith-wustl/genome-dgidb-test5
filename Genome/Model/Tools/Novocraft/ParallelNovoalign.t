@@ -7,7 +7,7 @@ use above 'Genome';
 use Genome::Model::Tools::Novocraft::ParallelNovoalign;
 use Test::More;
 
-plan skip_all => 'slooooow';
+#plan skip_all => 'slooooow';
 
 if (`uname -a` =~ /x86_64/){
     plan tests => 6;
@@ -16,8 +16,11 @@ if (`uname -a` =~ /x86_64/){
 }
 
 my $CLEANUP = 1;
-my $expected_output = 2;
+my $TESTING_LSF_RESOURCE = "-R 'select[type==LINUX64]'";
+my $TESTING_LSF_QUEUE = 'short';
+my $TESTING_THREADS = 1;
 
+my $expected_output = 2;
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Novocraft/Novoalign';
 my $ref_seq = '/gscmnt/839/info/medseq/reference_sequences/human-novoalign-reference-test/all_sequences_k14_s3';
 
@@ -31,8 +34,10 @@ my $mapper = Genome::Model::Tools::Novocraft::ParallelNovoalign->create(
     output_directory => $fragment_output_directory,
     novoindex_file => $ref_seq,
     fastq_files => $fragment_fastq_file,
-    lsf_queue => 'short',
+    lsf_queue => $TESTING_LSF_QUEUE,
+    lsf_resource => $TESTING_LSF_RESOURCE,
     sequences => 25,
+    threads => $TESTING_THREADS,
 );
 isa_ok($mapper,'Genome::Model::Tools::Novocraft::ParallelNovoalign');
 ok($mapper->execute,'execute command '. $mapper->command_name);
@@ -45,8 +50,10 @@ my $pe_mapper = Genome::Model::Tools::Novocraft::ParallelNovoalign->create(
     output_directory => $pe_output_directory,
     novoindex_file => $ref_seq,
     fastq_files => $pe_fastq_files,
-    lsf_queue => 'short',
+    lsf_queue => $TESTING_LSF_QUEUE,
+    lsf_resource => $TESTING_LSF_RESOURCE,
     sequences => 25,
+    threads => $TESTING_THREADS,
 );
 isa_ok($pe_mapper,'Genome::Model::Tools::Novocraft::ParallelNovoalign');
 ok($pe_mapper->execute,'execute command '. $pe_mapper->command_name);
