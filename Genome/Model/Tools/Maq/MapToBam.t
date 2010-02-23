@@ -27,7 +27,7 @@ my $run_dir = '/gsc/var/cache/testsuite/running_testsuites';
 my $tmp_dir  = File::Temp::tempdir(
     "MapToBAMDir_XXXXXX", 
     DIR     => $run_dir,
-    CLEANUP => 0,
+    CLEANUP => 1,
 );
 
 copy "$root_dir/test.map", $tmp_dir;
