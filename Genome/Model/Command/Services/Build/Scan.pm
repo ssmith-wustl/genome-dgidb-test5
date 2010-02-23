@@ -13,7 +13,11 @@ class Genome::Model::Command::Services::Build::Scan {
         cron => {
             is => 'Boolean',
             doc => 'Reduces output to a subset appropriate for a cron job to email'
-        }
+        },
+        fix => {
+            is => 'Boolean',
+            doc => 'Take corrective action in some situations'
+        } 
     ]
 };
 
@@ -26,7 +30,7 @@ my $printed = 0;
 sub write_form {
     if (!$printed) {
         print <<'        MARK';
-State      Build ID        LSF JOB ID Current Status  Action     Owner
+State      Build ID     LSF JOB ID Current Status  Action     Owner    Fix
         MARK
         $printed++;
     }
@@ -48,17 +52,19 @@ sub execute {
     my $event_status;
     my $action;
     my $owner;
+    my $fix;
 
     no warnings;
     format STDOUT =
-@<<<<<<<<< @<<<<<<<<<<<<<< @<<<<<<<<< @<<<<<<<<<<<<<< @<<<<<<<<< @<<<<<<<<<
-$state,    $build_id,      shift @lsf_id,   $event_status, $action, $owner
-                           @<<<<<<<<< ~~
-                           shift @lsf_id 
+@<<<<<<<<< @<<<<<<<<<<< @<<<<<<<<< @<<<<<<<<<<<<<< @<<<<<<<<< @<<<<<<< @<<
+$state,    $build_id,  shift @lsf_id,   $event_status, $action, $owner, $fix
+                        @<<<<<<<<< ~~
+                       shift @lsf_id 
 .
     use warnings;
 
     while ( my ( $bid, $lsf_job_ids ) = each %$builds_without_job ) {
+        $fix      = ' ';
         $state    = 'no job';
         $build_id = $bid;
         my $event = shift @$lsf_job_ids;
@@ -71,12 +77,17 @@ $state,    $build_id,      shift @lsf_id,   $event_status, $action, $owner
         $action = $self->action_for_derived_status($fixed_status);
 
         @lsf_id = @$lsf_job_ids;
+
+        if ($self->fix) {
+            $fix = correct_status($event->build,$action) ? 'y' : 'n'; 
+        }
         write_form();
     }
 
     my $old_builds_with_job = {};
     
     while ( my ( $bid, $lsf_job_ids ) = each %$builds_with_job ) {
+        $fix      = ' ';
         $state    = 'okay';
         $build_id = $bid;
         my $event = shift @$lsf_job_ids;
@@ -102,6 +113,7 @@ $state,    $build_id,      shift @lsf_id,   $event_status, $action, $owner
     }
     
     while ( my ( $bid, $lsf_job_ids ) = each %$old_builds_with_job ) {
+        $fix      = ' ';
         $state    = 'old';
         $build_id = $bid;
         my $event = shift @$lsf_job_ids;
@@ -114,6 +126,7 @@ $state,    $build_id,      shift @lsf_id,   $event_status, $action, $owner
     }
 
     while ( my ( $bid, $lsf_job_ids ) = each %$job_without_build ) {
+        $fix      = ' ';
         $state    = 'no build';
         $build_id = $bid;
         my $event = shift @$lsf_job_ids;
@@ -134,6 +147,26 @@ $state,    $build_id,      shift @lsf_id,   $event_status, $action, $owner
         write_form();
     }
 
+    return 1;
+}
+
+sub correct_status {
+    my ($self, $build, $action) = @_;
+
+    if (!defined $action) {
+        return 0;
+    } elsif ($action eq 'success') {
+        $build->success;
+        return 1;
+    } elsif ($action eq 'fail') {
+        $build->fail;
+        return 1;
+    } elsif ($action eq 'abandon') {
+        $build->build_event->event_status('Abandoned');
+        $build->build_event->date_completed(UR::Time->now);
+        return 1;
+    } 
+    return 0;
 }
 
 sub action_for_derived_status {
