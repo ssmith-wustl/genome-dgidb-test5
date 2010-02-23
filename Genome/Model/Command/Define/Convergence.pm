@@ -32,7 +32,7 @@ class Genome::Model::Command::Define::Convergence {
         processing_profile_name => {
             is => 'Text',
             doc => 'identifies the processing profile by name',
-            default => 'default',
+            default => 'convergence default',
         },
         subject_name => {
             is => 'Text',
