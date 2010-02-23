@@ -12,12 +12,13 @@ class Genome::Model::Command::Services::Build::Scan {
     has => [
         cron => {
             is => 'Boolean',
-            doc => 'Reduces output to a subset appropriate for a cron job to email'
+            doc =>
+              'Reduces output to a subset appropriate for a cron job to email'
         },
         fix => {
-            is => 'Boolean',
+            is  => 'Boolean',
             doc => 'Take corrective action in some situations'
-        } 
+        }
     ]
 };
 
@@ -27,14 +28,15 @@ EOS
 }
 
 my $printed = 0;
+
 sub write_form {
-    if (!$printed) {
+    if ( !$printed ) {
         print <<'        MARK';
 State      Build ID     LSF JOB ID Current Status  Action     Owner    Fix
         MARK
         $printed++;
     }
-    
+
     write STDOUT;
 }
 
@@ -42,7 +44,7 @@ sub execute {
     my $self = shift;
 
     my (
-        $builds_without_job, $builds_with_job, $job_without_build,
+        $builds_without_job, $builds_with_job,    $job_without_build,
         $events_with_job,    $build_inner_events, $job_info
     ) = $self->build_lists;
 
@@ -78,17 +80,17 @@ $state,    $build_id,  shift @lsf_id,   $event_status, $action, $owner, $fix
 
         @lsf_id = @$lsf_job_ids;
 
-        if ($self->fix) {
-            $fix = correct_status($event->build,$action) ? 'y' : 'n'; 
+        if ( $self->fix ) {
+            $fix = $self->correct_status( $event->build, $action ) ? 'y' : 'n';
         }
         write_form();
     }
 
-    my $old_builds_with_job = {};
-    
+    my $old_builds_with_job  = {};
+    my $pend_builds_with_job = {};
     while ( my ( $bid, $lsf_job_ids ) = each %$builds_with_job ) {
         $fix      = ' ';
-        $state    = 'okay';
+        $state    = 'run';
         $build_id = $bid;
         my $event = shift @$lsf_job_ids;
         $event_status = $event->event_status;
@@ -98,20 +100,35 @@ $state,    $build_id,  shift @lsf_id,   $event_status, $action, $owner, $fix
           @{ $lsf_job_ids->[1] };
 
         @lsf_id = sort {
-            exists $job_info->{$b} <=> exists $job_info->{$a} ||
-            $job_info->{$a}->started_on <=> $job_info->{$b}->started_on
+            exists $job_info->{$b} <=> exists $job_info->{$a}
+              || $job_info->{$a}->started_on <=> $job_info->{$b}->started_on
         } keys %joined;
 
-        my $t = $job_info->{ $lsf_id[0] }->started_on;
-        my $ftd = 60*60*24*15;
+        my $t    = $job_info->{ $lsf_id[0] }->started_on;
+        my $ftd  = 60 * 60 * 24 * 15;
         my $ftda = time - $ftd;
-        if ($t < $ftda) {
-            $old_builds_with_job->{$bid} = [$event, @lsf_id];
+        if ( !defined $t ) {
+            $pend_builds_with_job->{$bid} = [ $event, @lsf_id ];
+        } elsif ( $t < $ftda ) {
+            $old_builds_with_job->{$bid} = [ $event, @lsf_id ];
         } else {
             write_form() unless $self->cron;
         }
     }
-    
+
+    while ( my ( $bid, $lsf_job_ids ) = each %$pend_builds_with_job ) {
+        $fix      = ' ';
+        $state    = 'pend';
+        $build_id = $bid;
+        my $event = shift @$lsf_job_ids;
+        $event_status = $event->event_status;
+        $owner        = $event->user_name;
+        $action       = 'kill';
+        @lsf_id       = @$lsf_job_ids;
+
+        write_form() unless $self->cron;
+    }
+
     while ( my ( $bid, $lsf_job_ids ) = each %$old_builds_with_job ) {
         $fix      = ' ';
         $state    = 'old';
@@ -120,7 +137,7 @@ $state,    $build_id,  shift @lsf_id,   $event_status, $action, $owner, $fix
         $event_status = $event->event_status;
         $owner        = $event->user_name;
         $action       = 'kill';
-        @lsf_id = @$lsf_job_ids;
+        @lsf_id       = @$lsf_job_ids;
 
         write_form();
     }
@@ -151,21 +168,21 @@ $state,    $build_id,  shift @lsf_id,   $event_status, $action, $owner, $fix
 }
 
 sub correct_status {
-    my ($self, $build, $action) = @_;
+    my ( $self, $build, $action ) = @_;
 
-    if (!defined $action) {
-        return 0;
-    } elsif ($action eq 'success') {
+    #    if (!defined $action) {
+    #        return 0;
+    if ( $action eq 'success' ) {
         $build->success;
         return 1;
-    } elsif ($action eq 'fail') {
+    } elsif ( $action eq 'fail' ) {
         $build->fail;
         return 1;
-    } elsif ($action eq 'abandon') {
+    } elsif ( $action eq 'abandon' ) {
         $build->build_event->event_status('Abandoned');
-        $build->build_event->date_completed(UR::Time->now);
+        $build->build_event->date_completed( UR::Time->now );
         return 1;
-    } 
+    }
     return 0;
 }
 
@@ -205,38 +222,39 @@ sub build_lists {
 
     my $events_lsf = {};
     my $builds_lsf = {};
-    my $jobs_lsf = {};
+    my $jobs_lsf   = {};
     {
         my $ji = Job::Iterator->new;
-        while (my $job = $ji->next) {
-            if ($job->{Command} =~ /build run.+?--build-id (\d+)/) {
+        while ( my $job = $ji->next ) {
+            if ( $job->{Command} =~ /build run.+?--build-id (\d+)/ ) {
                 $builds_lsf->{$1} ||= [];
                 push @{ $builds_lsf->{$1} }, $job->{Job};
             }
-            if (exists $job->{'Job Name'} && $job->{'Job Name'} =~ /(\d+)$/) {
+            if ( exists $job->{'Job Name'} && $job->{'Job Name'} =~ /(\d+)$/ ) {
                 $events_lsf->{$1} ||= [];
                 push @{ $events_lsf->{$1} }, $job->{Job};
             }
-            
+
             $jobs_lsf->{ $job->{Job} } = $job;
         }
-#        open my $bjobs, "bjobs -u all -w |";
-#        while ( my $line = <$bjobs> ) {
-#            if ( $line =~ /^(\d+).+?build run.+?--build-id (\d+)/ ) {
-#                $builds_lsf->{$2} ||= [];
-#                push @{ $builds_lsf->{$2} }, $1;
-#            }
-#            if ( $line =~
-#/^(\d+).+?(\d+) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/
-#              )
-#            {
 
-                # this is a terrible match, but its the best i can do right now
-#                $events_lsf->{$2} ||= [];
-#                push @{ $events_lsf->{$2} }, $1;
-#            }
-#        }
-#        close $bjobs;
+        #        open my $bjobs, "bjobs -u all -w |";
+        #        while ( my $line = <$bjobs> ) {
+        #            if ( $line =~ /^(\d+).+?build run.+?--build-id (\d+)/ ) {
+        #                $builds_lsf->{$2} ||= [];
+        #                push @{ $builds_lsf->{$2} }, $1;
+        #            }
+        #            if ( $line =~
+        #/^(\d+).+?(\d+) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/
+        #              )
+        #            {
+
+        # this is a terrible match, but its the best i can do right now
+        #                $events_lsf->{$2} ||= [];
+        #                push @{ $events_lsf->{$2} }, $1;
+        #            }
+        #        }
+        #        close $bjobs;
     }
 
     my $builds_both = { map { $_ => 1 } keys %$builds_lsf, keys %$builds_db };
@@ -279,7 +297,8 @@ sub build_lists {
         }
     }
 
-    return $builds_db, $builds_both, $builds_lsf, $events_lsf, $inner_events_db, $jobs_lsf;
+    return $builds_db, $builds_both, $builds_lsf, $events_lsf, $inner_events_db,
+      $jobs_lsf;
 }
 
 sub derive_build_status {
@@ -432,9 +451,9 @@ sub new {
 
 sub started_on {
     my $self = shift;
-    
-    for (reverse @{ $self->{__events} }) {
-        if (exists $_->{'Started on'}) {
+
+    for ( reverse @{ $self->{__events} } ) {
+        if ( exists $_->{'Started on'} ) {
             return $_->{__time};
         }
     }
