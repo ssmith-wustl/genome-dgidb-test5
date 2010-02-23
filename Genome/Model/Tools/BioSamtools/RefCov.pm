@@ -8,31 +8,41 @@ use Genome;
 class Genome::Model::Tools::BioSamtools::RefCov {
     is => ['Genome::Model::Tools::BioSamtools'],
     has_input => [
-        bam_file => { },
-        bed_file => { },
+        bam_file => {
+            doc => 'A BAM file, sorted and indexed, containing alignment/read data',
+        },
+        bed_file => {
+            doc => 'The BED format (chr\tstart\tend\tname) file containing annotation or regions of interest.',
+        },
         output_directory => {
+            doc => 'When run in parallel, this directory will contain all output and intermediate STATS files. Do not define if stats_file is defined.',
             is_optional => 1
         },
         min_depth_filter => {
+            doc => 'The minimum depth at each position to consider coverage.',
             default_value => 1,
             is_optional => 1,
         },
         wingspan => {
+            doc => 'A base pair wingspan value to add +/- of the input regions',
             default_value => 0,
             is_optional => 1,
         },
     ],
     has_output => [
         stats_file => {
+            doc => 'When run in parallel, do not define.  From the command line this file will contain the output metrics for each region.',
             is_optional => 1,
         },
     ],
     has_param => [
         lsf_queue => {
+            doc => 'When run in parallel, the LSF queue to submit jobs to.',
             is_optional => 1,
             default_value => 'long',
         },
         lsf_resource => {
+            doc => 'When run in parallel, the resource request necessary to run jobs on LSF.',
             is_optional => 1,
             default_value => "-R 'select[type==LINUX64]'",
         },
