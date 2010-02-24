@@ -60,7 +60,7 @@ class Genome::InstrumentData {
                'Genome::InstrumentData::Imported' subclass_name,
                to_char(imported.id) seq_id,
                NVL(imported.sample_name, 'unknown') sample_name,
-               1 subset_name,
+               to_number(imported.subset_name) subset_name,
                'unknown' library_name
           FROM imported_instrument_data imported
     ) idata
