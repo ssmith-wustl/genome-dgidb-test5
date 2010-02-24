@@ -44,6 +44,11 @@ class Genome::Model::Tools::Annotate::TranscriptSequence {
 	    doc   =>  "provide a file name to write you transcript information to .txt will be appended to it. Default is to print to stdout.",
 	    is_optional  => 1,
 	},
+	   fasta => {
+	    type  =>  'Boolean',
+	    doc   =>  "will write the nucleotide fasta to output.fasta. Default is to print to stdout.",
+	    is_optional  => 1,
+	},
 	no_stdout => {
 	    is => 'Boolean',
 	    doc   =>  "Use this option if you do not want the info to print to stdout. Default is to print to stdout.",
@@ -92,9 +97,12 @@ sub execute {
     my $output = $self->output;
 
     if ($output) {
-	open(OUT,">$output.txt");
+	open(OUT,">$output.txt") || App->error_message( "\n\ncouldn't open the output file $output.txt\n\n") && return; 
+	if ($self->fasta) {
+	    open(FASTA,">$output.fasta") || App->error_message( "\n\ncouldn't open the output file $output.fasta\n\n") && return;
+	}
     }
-
+    
     my $trans_poss = $self->trans_pos;
     #my $transcript = $self->transcript;
     my $transcripts = $self->transcript;
@@ -115,7 +123,7 @@ sub execute {
 	($transcript_info,$chromosome,$strand) = &get_transcript_info($self,$transcript,$transcript_info,$trans_pos);
 	my ($transcript_info,$trans_pos_number_line,$post_pos_bases) = &get_transcript($self,$transcript,$trans_pos,$transcript_info,$strand,$chromosome);
 	$transcript_info->{$transcript}->{-1}->{strand}=$strand;
-	
+
 	if ($self->trans_pos) {
 	    if ($trans_pos_number_line) {
 		my $line = qq(\n$trans_pos_number_line. There are $post_pos_bases coding bases left in $transcript after $trans_pos\n);
@@ -133,7 +141,18 @@ sub execute {
 	    }
 	}
     }
-
+    if ($self->fasta) {
+	unless ($self->no_stdout) {print qq(\n\n);}
+	for my $transcript (@trans) {
+	    my $fasta = $transcript_info->{$transcript}->{-1}->{FASTA};
+	    if ($self->output) {
+		print FASTA qq($fasta\n);
+	    } else {
+		unless ($self->no_stdout) {print qq($fasta\n);}
+	    }
+	}
+    }
+    
     close (OUT);
     return($transcript_info);
 }
@@ -311,6 +330,15 @@ sub get_transcript {
     $transcript_info->{$transcript}->{-1}->{protien_seq} = $protien_seq;
     $transcript_info->{$transcript}->{-1}->{sequence} = $sequence;
 
+    my $hugo_gene_name = $transcript_info->{$transcript}->{-1}->{hugo_gene_name};
+    
+    if ($self->fasta) {
+	if ($sequence) {
+	    $transcript_info->{$transcript}->{-1}->{FASTA} = "\>$transcript\|$strand\|Chromosome:$chromosome\|$hugo_gene_name\|\n$sequence";
+	} else {
+	    $transcript_info->{$transcript}->{-1}->{FASTA} = "\>$transcript\|$strand\|Chromosome:$chromosome\|$hugo_gene_name\|";
+	}
+    }
 
     my $line = qq(\n\>$transcript.dna.fasta\n$sequence\n\n\>$transcript.protien.fasta\n$protien_seq\n);
     if ($self->output) {print OUT qq($line);}
