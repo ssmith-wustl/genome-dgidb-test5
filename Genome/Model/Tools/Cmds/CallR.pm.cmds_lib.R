@@ -598,3 +598,26 @@ write.csv(pp,file=paste(outfile_chr,start,end,"call.csv",sep="_"),quote=F,row.na
 }
 
 ####################################################################################
+
+#Copy number data segmentation using CBS algorithm in R BioConductor package DNAcopy
+
+#example data
+#cn.file="/gscmnt/sata181/info/medseq/llin/BC/SNP/Infinium1MOmni_EllisBreastCancer_20100125_analysis/CN/BRC9T.log2"
+#map.file="/gscmnt/sata181/info/medseq/llin/BC/SNP/Infinium1MOmni_EllisBreastCancer_20100125_analysis/map.csv"
+
+cbs=function(cn.file,map.file,output.dir=".")
+{
+temp=strsplit(cn.file,split="/")[[1]]
+temp=temp[length(temp)]
+output.file=paste(output.dir,"/",temp,"_cbs",sep="")
+library(DNAcopy)
+read.table(cn.file,header=T,nrows=-1)->cn
+read.table(map.file,header=T,nrow=-1)->map
+cno <- CNA(as.numeric(cn[,1]),map[,1],map[,2],data.type="logratio",sampleid=names(cn))
+seg <- segment(smooth.CNA(cno), undo.splits = "sdundo", undo.SD=2)
+seg = seg$output[,-1]
+#plot(seg,plot.type="s")
+write.table(seg, file=output.file, row.names=F, quote=F)
+invisible(seg)
+}
+
