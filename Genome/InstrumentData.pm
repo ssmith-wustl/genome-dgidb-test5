@@ -1,6 +1,3 @@
-#:boberkfe this needs to be abstracted away from the LIMS schema
-
-
 package Genome::InstrumentData;
 
 use strict;
@@ -60,7 +57,7 @@ class Genome::InstrumentData {
                'Genome::InstrumentData::Imported' subclass_name,
                to_char(imported.id) seq_id,
                NVL(imported.sample_name, 'unknown') sample_name,
-               to_number(imported.subset_name) subset_name,
+               1 subset_name,
                'unknown' library_name
           FROM imported_instrument_data imported
     ) idata
@@ -184,7 +181,6 @@ sub _data_base_path {
 sub resolve_full_path{
     my $self = shift;
 
-    #FIXME ALLOCATE 
     return $self->full_path if $self->full_path;
 
     return $self->full_path( $self->_default_full_path );
