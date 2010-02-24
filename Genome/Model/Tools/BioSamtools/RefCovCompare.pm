@@ -62,6 +62,7 @@ sub execute {
         cmd => $cmd,
         input_files => [$self->bam_file_a,$self->bam_file_b,$self->bed_file],
         output_files => [$self->output_file],
+        skip_if_output_is_present => 0,
     );
     return 1;
 }
