@@ -18,7 +18,7 @@ class Genome::InstrumentData {
                'Genome::InstrumentData::Sanger' subclass_name,
                sanger.run_name seq_id,
                NVL(sample.value, 'unknown') sample_name,
-               1 subset_name,
+               '1' subset_name,
                NVL(library.value, 'unknown') library_name
           FROM gsc_run\@oltp sanger,
                mg.misc_attribute\@dw sample,
@@ -36,7 +36,7 @@ class Genome::InstrumentData {
                'Genome::InstrumentData::Solexa' subclass_name,
                to_char(solexa.seq_id) seq_id, 
                solexa.sample_name sample_name,
-               solexa.lane subset_name,
+               to_char(solexa.lane) subset_name,
                solexa.library_name library_name
           FROM solexa_lane_summary\@dw solexa
          WHERE run_type in ('Standard','Paired End Read 2')
@@ -47,7 +47,7 @@ class Genome::InstrumentData {
                'Genome::InstrumentData::454' subclass_name,
                to_char(x454.region_id) seq_id, 
                nvl(x454.sample_name, x454.incoming_dna_name) sample_name, 
-               x454.region_number subset_name,
+               to_char(x454.region_number) subset_name,
                x454.library_name library_name
           FROM run_region_454\@dw x454
      UNION ALL
@@ -57,7 +57,7 @@ class Genome::InstrumentData {
                'Genome::InstrumentData::Imported' subclass_name,
                to_char(imported.id) seq_id,
                NVL(imported.sample_name, 'unknown') sample_name,
-               1 subset_name,
+               subset_name,
                'unknown' library_name
           FROM imported_instrument_data imported
     ) idata
