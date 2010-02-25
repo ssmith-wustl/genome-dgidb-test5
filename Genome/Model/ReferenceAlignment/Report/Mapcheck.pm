@@ -75,7 +75,7 @@ sub get_bam_content {
     my $coverage = Genome::Model::Tools::Sam::Coverage->create( aligned_reads_file=>$aligned_reads,
                                                                 reference_file =>$reference_file,
                                                                 return_output =>1,
-                                                                coverage_command => '/gsc/bin/bam-check',
+                                                                coverage_command => '/gsc/bin/bam-check -q 1',
                                                                 #use_version => 'r350wu1', #lift this once set default to r350wu1 in G::M::T::Sam
                                                                 );
     my $bam_coverage_report = $coverage->execute;
