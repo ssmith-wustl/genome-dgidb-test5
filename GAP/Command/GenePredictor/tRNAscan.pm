@@ -18,7 +18,7 @@ class GAP::Command::GenePredictor::tRNAscan {
 };
 
 operation_io GAP::Command::GenePredictor::tRNAscan {
-    input  => [ 'fasta_file' ],
+    input  => [ 'fasta_file', 'domain' ],
     output => [ 'bio_seq_feature' ]
 };
 
