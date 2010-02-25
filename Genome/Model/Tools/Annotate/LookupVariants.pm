@@ -58,7 +58,7 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             doc      =>
            '     - novel-only (DEFAULT VALUE) prints lines from variant_file that are not found in dbSNP
      - known-only => prints lines from variant file that are found in dbSNP
-     - full => gives back each line from your variant file with matched lines from dbsnp
+     - full => gives back each line from your variant file with matched lines from dbsnp 
      - gff => gives back all the lines that match the range of coordinates in your variant file',
         },
         index_fixed_width => {
@@ -86,6 +86,13 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             is_input => 1,
             default => 0,
             doc => 'append allele from dbSNP to end of output'
+        },
+        append_population_allele_frequencies=> {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'use in junction with report-mode full or gff, to append population allele frequencies to end of output'
         },
         require_allele_match => {
             is => 'Boolean',
@@ -213,10 +220,39 @@ sub print_matches {
 		my $is_validated_by_frequency = $snp->{'is_validated_by_frequency'};
 		my $is_validated_by_hap_map = $snp->{'is_validated_by_hap_map'};
 		my $is_validated_by_other_pop = $snp->{'is_validated_by_other_pop'};
-		my $validation = "$is_validated:$is_validated_by_allele:$is_validated_by_cluster:$is_validated_by_frequency:$is_validated_by_hap_map:$is_validated_by_other_pop";
-		chomp $validation;
-		my $gff_line = qq(Chromosome$chr\tdbsnp_130\t$ds_type\t$ds_start\t$ds_stop\t.\t$strain\t.\t$rs_id \; Alleles \"$allele\" ; validation \"$validation\" ; submitter \"$submitter\"\n);
-		$fh->print($gff_line);
+
+		my @validated;
+		if ($is_validated_by_allele == 1) {
+		    push(@validated,"by2Hit2Allele");
+		}
+		if ($is_validated_by_cluster == 1) {
+		    push(@validated,"byCluster");
+		}
+		if ($is_validated_by_frequency == 1) {
+		    push(@validated,"byFrequency");
+		}
+		if ($is_validated_by_hap_map == 1) {
+		    push(@validated,"byHapMap");
+		}
+		if ($is_validated_by_other_pop == 1) {
+		    push(@validated,"byOtherPop");
+		}
+		unless (@validated) {@validated = "not_validated";}
+		my $validation = join ':' , @validated;
+
+
+
+		my $gff_line = qq(Chromosome$chr\tdbsnp_130\t$ds_type\t$ds_start\t$ds_stop\t.\t$strain\t.\t$rs_id \; Alleles \"$allele\" ; validation \"$validation\" ; submitter \"$submitter\");
+
+		if ($self->append_population_allele_frequencies) {
+		    my $freq = &get_frequencies($rs_id);
+		    if ($freq) {
+			chomp $freq;
+			$gff_line = "$gff_line ; $freq";
+		    }
+		}
+		
+		$fh->print("$gff_line\n");
 	    }
 	}
 	
@@ -238,9 +274,30 @@ sub print_matches {
 		my $is_validated_by_hap_map = $snp->{'is_validated_by_hap_map'};
 		my $is_validated_by_other_pop = $snp->{'is_validated_by_other_pop'};
 		
-		my $validation = "$is_validated\-$is_validated_by_allele\-$is_validated_by_cluster\-$is_validated_by_frequency\-$is_validated_by_hap_map\-$is_validated_by_other_pop";
-		chomp $validation;
-		push(@validation,$validation) unless grep (/$validation/ , @validation);
+		#my $validation = "$is_validated\-$is_validated_by_allele\-$is_validated_by_cluster\-$is_validated_by_frequency\-$is_validated_by_hap_map\-$is_validated_by_other_pop";
+		#chomp $validation;
+
+		my @validated;
+		if ($is_validated_by_allele == 1) {
+		    push(@validated,"by2Hit2Allele");
+		}
+		if ($is_validated_by_cluster == 1) {
+		    push(@validated,"byCluster");
+		}
+		if ($is_validated_by_frequency == 1) {
+		    push(@validated,"byFrequency");
+		}
+		if ($is_validated_by_hap_map == 1) {
+		    push(@validated,"byHapMap");
+		}
+		if ($is_validated_by_other_pop == 1) {
+		    push(@validated,"byOtherPop");
+		}
+		unless (@validated) {@validated = "not_validated";}
+
+		#my $validation = join ';' , @validated;
+		#push(@validation,$validation) unless grep (/$validation/ , @validation);
+
 		push(@rs_ids,$rs_id) unless grep (/$rs_id/ , @rs_ids);
 		push(@submitters,$submitter) unless grep (/$submitter/ , @submitters);
 		
@@ -253,16 +310,41 @@ sub print_matches {
 		    $match = $allele;
 		}
 		push(@matchs,$match) unless grep (/$match/ , @matchs);
+
+		if ($match =~ /no_match/) {push(@validated,"alternate_allele");}
+		my $validation = join ';' , @validated;
+		push(@validation,$validation) unless grep (/$validation/ , @validation);
+
 	    }
 	    my $rs_id = join ':' , @rs_ids;
 	    my $submitter = join ':' , @submitters;
 	    my $match = join ':' , @matchs;
 	    my $validation  = join ':' , @validation;
-	    $report_line = sprintf("%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation");
+	    
+	    my $frequencies;
+	    if ($self->append_population_allele_frequencies) {
+		my @freq;
+		for my $rsid (@rs_ids) {
+		    my $freq = &get_frequencies($rs_id);
+		    if ($freq) {
+			push(@freq,$freq);
+		    }
+		}
+		if (@freq) {
+		    $frequencies = join ':' , @freq;
+		} else {
+		    $frequencies = "-";
+		}
+		$report_line = sprintf("%s\t%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation",$frequencies);
+	    } else {
+		$report_line = sprintf("%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation");
+	    }
+
 	} else {
 	    my $match = "no_hit";
 	    $report_line = sprintf("%s\t%s\n",$line,$match); 
 	}
+
 	$fh->print($report_line);
     }
 }
@@ -341,6 +423,18 @@ sub reverse_complement {
     $sequence = reverse $sequence;
     $sequence =~ tr/aAcCtTgG/tTgGaAcC/;
     return $sequence;
+}
+
+sub get_frequencies {
+    my $RsDir = "/gsc/var/lib/import/dbsnp/130/frequencies";
+    my $rsdb = Bio::DB::Fasta->new($RsDir);
+
+    my ($rs_id) = @_;
+    my $freq = $rsdb->seq($rs_id, 1 => 6000);
+
+    return unless $freq;
+    return $freq;
+
 }
 
 sub filter_by_submitters {
