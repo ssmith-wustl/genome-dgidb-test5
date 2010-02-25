@@ -3,9 +3,9 @@
   <link fromOperation="input connector"   fromProperty="fasta file"         toOperation="split fasta files" toProperty="fasta_file" />
   <link fromOperation="input connector"   fromProperty="chunk size"         toOperation="split fasta files" toProperty="chunk_size" />
   <link fromOperation="input connector"   fromProperty="masked fasta file"  toOperation="join fasta files"  toProperty="fasta_file" />
-  <link fromOperation="split fasta files" fromProperty="fasta_files"        toOperation="mask sequences"    toProperty="fasta_file" />
+  <link fromOperation="split fasta files" fromProperty="fasta_files"        toOperation="mask sequences"    toProperty="fasta file" />
   <link fromOperation="mask sequences"    fromProperty="masked fasta files" toOperation="join fasta files"  toProperty="fasta_files" />
-  <link fromOperation="join fasta files"  fromProperty="fasta_file"         toOperation="output connector"  toProperty="masked fasta file" />
+  <link fromOperation="join fasta files"  fromProperty="result"             toOperation="output connector"  toProperty="result" />
   <operation name="split fasta files">
     <operationtype commandClass="GAP::Command::FastaSplitter" typeClass="Workflow::OperationType::Command" />
   </operation>

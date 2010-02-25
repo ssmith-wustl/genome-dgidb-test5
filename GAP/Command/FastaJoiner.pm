@@ -21,8 +21,8 @@ class GAP::Command::FastaJoiner {
 };
 
 operation GAP::Command::FastaJoiner {
-    input  => [ 'fasta_files'  ],
-    output => [ 'fasta_file' ],
+    input  => [ 'fasta_file', 'fasta_files' ],
+    output => [ ],
 };
 
 sub sub_command_sort_position { 10 }

@@ -1,7 +1,8 @@
 use strict;
 use warnings;
 
-use Workflow;
+#use Workflow;
+use above 'GAP';
 
 use Bio::Seq;
 use Bio::SeqIO;

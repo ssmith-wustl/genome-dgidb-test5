@@ -14,23 +14,16 @@ BEGIN {
     use_ok('GAP::Command::RepeatMasker');
 }
 
-my $temp_fh = File::Temp->new();
-my $temp_fn = $temp_fh->filename();
-
-$temp_fh->close();
 
 my $command = GAP::Command::RepeatMasker->create(
-                                                 'input_file'  => 'data/C_elegans.chrI.ws184.fasta.bz2',
-                                                 'output_file' => $temp_fn,
+                                                 'input_file'  => 'data/BACSTEFNL_Contig694.fasta',
                                                 );
 isa_ok($command, 'GAP::Command::RepeatMasker');
 
 ok($command->execute(), 'execute');
 
-my $seqio = Bio::SeqIO->new(-file => $temp_fn, -format => 'Fasta');
+my $seqio = Bio::SeqIO->new(-file => $command->output_file(), -format => 'Fasta');
 
 my $seq = $seqio->next_seq();
 
 isa_ok($seq, 'Bio::SeqI');
-
-warn $seq->length();
