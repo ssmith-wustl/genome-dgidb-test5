@@ -74,7 +74,7 @@ sub execute {
     opendir CMDS_TEST,$cmds_test_dir;
     while (my $file = readdir CMDS_TEST) {
         next if ($file eq "." || $file eq "..");
-        my $full_path_file = $cmds_test_dir . $file;
+        my $full_path_file = "$cmds_test_dir/$file";
         my $cmds_test_fh = new IO::File $full_path_file,"r" or die "Cannot open file $file\n";
         (my $chr = $file) =~ s/.+\.(.+)\.test/$1/;
         my $cur_reg_start; # used to record expanding window as more data meeting cutoff is found
@@ -131,35 +131,8 @@ sub execute {
         if (grep { /^$chr$/ } @chrs) {
             my $full_path_data_file = $data_dir . "/" . $file;
             for my $start (keys %{ $regions{$chr} }) {
-                my $r_command = "Region_calls(datafile='$full_path_data_file',chr=$chr,start=$start,end='$regions{$chr}{$start}',permun=$permutations,output_dir='$output_dir');";
-                Genome::Model::Tools::Cmds::CallR->execute(r_command => $r_command);
-            }
-        }
-    }#end, reading original data dir
-
-    return 1;
-}
-1;
- 
- 
- 
- 
- 
- 
- 
- 
- 
-=cut
-                my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
-                my $cwd = cwd();
-                my $R = Statistics::R->new(tmp_dir => $tempdir);
-                $R->startR();
-                $R->send(qq{
-                    source('/gscuser/ndees/svn/checkout/Genome/Model/Tools/Cmds/regioncall.R');
-                    Region_calls(datafile='$full_path_data_file',chr=$chr,start=$start,end='$regions{$chr}{$start}',permun=$permutations,output_dir='$output_dir');
-                    });
-                $R->stopR();
-                chdir $cwd;
+                my $command = "Region_calls(datafile='$full_path_data_file',chr=$chr,start=$start,end='$regions{$chr}{$start}',permun=$permutations,output_dir='$output_dir');";
+                Genome::Model::Tools::Cmds::CallR->execute(command => $command);
             }
         }
     }#end, reading original data dir

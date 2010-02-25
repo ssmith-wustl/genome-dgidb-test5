@@ -11,9 +11,9 @@ class Genome::Model::Tools::Cmds::MergeCnaOutputByChrom {
     is => 'Command',
     has => [
     bam_to_cna_output_files => {
-        type => 'space-delimited String',
+        type => 'Single-quoted String',
         is_optional => 0,
-        doc => 'Input a space-delimited string of copy_number_output.out files, or all the links to these files crated by "gmt cmds compile-cna-output".',
+        doc => "A single-quoted string describing the names of copy_number_output.out files, or all the links to these files created by tool gmt cmds compile-cna-output. Example: '/dir/*.out'",
     },
     output_filename => {
         type => 'String',
@@ -37,11 +37,16 @@ sub execute {
     #process input arguments
     my $outfile = $self->output_filename;
     my $output_fh = new IO::File;
-    my $infiles = $self->bam_to_cna_output_files;
-    my @infiles = split /\s+/,$infiles;
+    my @infiles = glob($self->bam_to_cna_output_files);
     chomp @infiles;
     @infiles = sort @infiles; #so that the files are always read and printed in the same order
 
+    #make sure --bam-to-cna-output-files were quoted
+    if (scalar @{$self->bare_args}) {
+        my @bare_args = @{$self->bare_args};
+        die "\nDid you forget to quote the --bam-to-cna-output-files? I found these extra arguments in your call:\n@bare_args\n";
+    }
+    
     my %data;
     my %chr_to_index;
     my %index_to_chr;
@@ -65,12 +70,9 @@ sub execute {
         $header .= "\t$col_id";
     }
     $header .= "\n";
-    print $header . "\n";
-
 
     #populate hashes with first line of data
     for my $file (@infiles) {
-        print "@infiles\n";
         ($data) = read_row_of_data($file,$data);;
     }
 
@@ -139,7 +141,7 @@ sub execute {
         $data{$file}{"filehandle"}->close;
     }
     $output_fh->close;
-    
+
     return 1;
 }
 
@@ -172,9 +174,10 @@ sub fill_chr_hashes {
 sub read_row_of_data {
     my $file = shift;
     my $data = shift;
-    if ($data->{$file}{"eof"} == 1) {
+    if (exists $data->{$file}{"eof"} && $data->{$file}{"eof"} == 1) {
         die "Reached the end of $file.\n";
     }
+    
     my $line = $data->{$file}{"filehandle"}->getline;
 
     #ignore header info
@@ -184,10 +187,10 @@ sub read_row_of_data {
 
     chomp $line;
     (my $chr, my $pos, my $tumor, my $normal, my $diff) = split /\t/,$line;
-    print $pos . "\n";
     $data->{$file}{"cur_chr"} = $chr;
     $data->{$file}{"cur_pos"} = $pos;
     $data->{$file}{"cur_data"} = $diff;
     $data->{$file}{"eof"} = $data->{$file}{"filehandle"}->eof;
+    return ($data);
 }
 1;

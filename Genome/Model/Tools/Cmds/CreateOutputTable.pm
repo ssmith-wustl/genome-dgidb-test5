@@ -51,7 +51,7 @@ sub execute {
     while (my $filename = readdir REGIONS) {
         next if $filename =~ /^ROI/;
         my $full_path_filename = $region_call_dir . "/" . $filename;
-        next if $filename =~ /^$outfile$/;
+        next if $outfile =~ /$filename/;
         (my $chr = $filename) =~ s/(\w+)_(\d+)_(\d+)_call\.csv/$1/;
         (my $start = $filename) =~ s/(\w+)_(\d+)_(\d+)_call\.csv/$2/;
         (my $stop = $filename) =~ s/(\w+)_(\d+)_(\d+)_call\.csv/$3/;
@@ -71,7 +71,6 @@ sub execute {
             }
             if ($pvalue <= $pval_cutoff) {
                 my $sdnew = $sd - 1;
-                print "sd minus 1: $sdnew\n";
                 if ($sd < 0.0) {
                     $out_fh->print("Del\n");
                     next;

@@ -34,27 +34,26 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+
+    #define input and output directories
     my $data_dir = $self->data_directory;
     my $output_dir = $self->output_directory;
+    my $plot_dir = $output_dir . "/cmds_plot";
+    my $test_dir = $output_dir . "/cmds_test";
     
+    #submit an R job for each chromosome input file
     my $index = 1;
     opendir DATA_DIR,$data_dir;
     while (my $file = readdir DATA_DIR) {
         next if ($file eq "." || $file eq "..");
-        my $job = "gmt cmds single-file-cmds --output-directory $output_dir --data-directory $data_dir --file-index $index";
+        my $command = "cmds.focal.test(data.dir='$data_dir',wsize=30,wstep=1,analysis.ID='$index',chr.colname='CHR',pos.colname='POS',plot.dir='$plot_dir',result.dir='$test_dir');";
+        my $job = "gmt cmds call-r --command \"$command\"";
         my $job_name = "cmds_" . $file . "_index_" . $index;
         my $oo = $output_dir . "/cmds_" . $file . "_index_" . $index . "_STDOUT";
-        LSF::Job->submit(-oo => $oo, -J => $job_name, "$job");
+        LSF::Job->submit(-oo => $oo, -J => $job_name, $job);
         $index++;
     }
 
     return 1;
 }
 1;
-
-        
-
-
-
-
-
