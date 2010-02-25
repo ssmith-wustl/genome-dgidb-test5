@@ -17,43 +17,44 @@ use Test::More;
 class Genome::Model::Tester { # 'real' model for testing
     is => 'Genome::Model',
     has => [
-    ( map { $_ => { via => 'processing_profile' } } Genome::ProcessingProfile::Tester->params_for_class ),
-    coolness => {
-        via => 'inputs',
-        is_mutable => 1,
-        where => [ name => 'coolness', value_class_name => 'UR::Value' ],
-        to => 'value_id',
-        doc => 'The level of coolness of this model.',
-    },
-    inst_data => {
-        is => 'Genome::InstrumentData',
-        via => 'inputs',
-        is_mutable => 1,
-        is_many => 1,
-        where => [ name => 'instrument_data' ],
-        to => 'value',
-        doc => 'Instrument data',
-    },
-    friends => {
-        is => 'Text',
-        via => 'inputs',
-        is_mutable => 1,
-        is_many => 1,
-        where => [ name => 'friends', value_class_name => 'UR::Value', ],
-        to => 'value_id',
-        doc => 'Friends of the model.',
-    },
+        ( map { $_ => { via => 'processing_profile' } } Genome::ProcessingProfile::Tester->params_for_class ),
+        coolness => {
+            via => 'inputs',
+            is_mutable => 1,
+            where => [ name => 'coolness', value_class_name => 'UR::Value' ],
+            to => 'value_id',
+            doc => 'The level of coolness of this model.',
+        },
+        inst_data => {
+            is => 'Genome::InstrumentData',
+            via => 'inputs',
+            is_mutable => 1,
+            is_many => 1,
+            where => [ name => 'instrument_data' ],
+            to => 'value',
+            doc => 'Instrument data',
+        },
+        friends => {
+            is => 'Text',
+            via => 'inputs',
+            is_mutable => 1,
+            is_many => 1,
+            where => [ name => 'friends', value_class_name => 'UR::Value', ],
+            to => 'value_id',
+            doc => 'Friends of the model.',
+        },
     ],
 };
+
 class Genome::Model::Build::Tester { # 'real' model for testing
     is => 'Genome::Model::Build',
     has => [
-    coolness => {
-        via => 'inputs',
-        where => [ name => 'coolness', value_class_name => 'UR::Value' ],
-        to => 'value_id',
-        doc => 'The level of coolness of the model when built.',
-    },
+        coolness => {
+            via => 'inputs',
+            where => [ name => 'coolness', value_class_name => 'UR::Value' ],
+            to => 'value_id',
+            doc => 'The level of coolness of the model when built.',
+        },
     ],
 };
 
@@ -105,10 +106,10 @@ sub _tester_processing_profile {
     unless ( $self->{_processing_profile} ) {
     $self->{_processing_profile} = Genome::ProcessingProfile::Test->create_mock_processing_profile('tester')
         or confess;
-}
+    }
     return $self->{_processing_profile};
 }
-            
+
 sub test_startup : Test(startup => 3) {
     my $self = shift;
 
@@ -219,8 +220,7 @@ sub create_basic_mock_model {
     
     # Processing profile
     my $pp = Genome::ProcessingProfile::Test->create_mock_processing_profile($type_name)
-        or confess "Can't create mock $type_name processing profile";
-
+        or confess "Can't create mock $type_name processing profile";    
     my $model_data_dir = ( delete $params{use_mock_dir} ) 
     ? $self->mock_model_dir_for_type_name($type_name)
     : File::Temp::tempdir(CLEANUP => 1);
@@ -346,7 +346,7 @@ sub add_mock_build_to_model {
             build_event build_events build_status
             date_completed date_scheduled
             add_report get_report reports 
-            schedule initialize success fail abandon delete
+            start initialize success fail abandon delete
             /),
     ) or confess "Can't add methods to mock build";
 

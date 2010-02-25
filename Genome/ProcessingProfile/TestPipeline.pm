@@ -11,6 +11,7 @@ class Genome::ProcessingProfile::TestPipeline {
             doc => 'the name of a single command to run',
         },
         args => {
+            is_optional => 1,
             doc => 'the arguments to use',
         },
     ],
@@ -36,7 +37,7 @@ sub _execute_build {
     my $cmd = $self->command_name;
     my $args = $self->args;
 
-    my $dir = $self->data_directory;
+    my $dir = $build->data_directory;
 
     my $exit_code = system "$cmd $args >$dir/output 2>$dir/errors";
     $exit_code /= 256;

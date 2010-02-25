@@ -178,8 +178,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
         model_id => $model->id,
     );
     ok($build, 'Created build');
-    my $stages = $build->schedule;
-    ok($stages, 'Scheduled build');
+    ok($build->start, 'started the build');
 
     for my $class ($pp->setup_project_job_classes) {
         my @events = $class->get(model_id => $model->id);

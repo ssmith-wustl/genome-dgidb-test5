@@ -9,7 +9,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 42; 
+use Test::More tests => 40; 
 require Genome::Model::Test;
 
 BEGIN {
@@ -58,8 +58,12 @@ ok(!$build->initialize, 'Failed to initialize an unscheduled build');
 ok(!$build->fail, 'Failed to fail an unscheduled build');
 ok(!$build->success, 'Failed to success an unscheduled build');
 # schedule - check events
-my $stages = $build->schedule;
+$DB::single = 1;
+my $stages = $build->start;
 ok($stages, 'Scheduled build');
+
+=cut
+
 is_deeply(
     [ map { $_->{name} } @$stages ],
     [qw/ prepare assemble /],
@@ -70,6 +74,9 @@ is_deeply(
     [qw/ 1 3 /],
     'Got scheduled stage events',
 );
+
+=cut
+
 my $build_event = $build->build_event;
 ok($build_event, 'Got build event');
 is($build_event->event_status, 'Scheduled', 'Build status is Scheduled');
@@ -82,7 +89,7 @@ my @events = Genome::Model::Event->get(
 );
 is(scalar(@events), 4, 'Scheduled 4 events');
 # try to schedule again - should fail
-ok(!$build->schedule, 'Failed to schedule build again');
+ok(!$build->start, 'Failed to schedule build again');
 
 # do not send the report
 my $gss_report = *Genome::Model::Build::generate_send_and_save_report;

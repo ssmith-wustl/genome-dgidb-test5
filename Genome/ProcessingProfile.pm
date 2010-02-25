@@ -1,18 +1,7 @@
 package Genome::ProcessingProfile;
 
-#:eclark 11/16/2009 Code review.
-
-# Short term:
-# Move (stages, classes_for_stage, objects_for_stage) to a subclass.
-
-# Long term:
-# Should this class even be abstract?  Perhaps there should be no subclasses of this, and the
-# description of how a build should be created for a processing profile should be data in the
-# database, not code.
-
 use strict;
 use warnings;
-
 use Genome;
 
 use Carp 'confess';
@@ -20,7 +9,6 @@ use Data::Dumper 'Dumper';
 require Genome::Utility::Text;
 
 class Genome::ProcessingProfile {
-    type_name => 'processing profile',
     table_name => 'PROCESSING_PROFILE',
     is_abstract => 1,
     attributes_have => [
@@ -51,15 +39,70 @@ class Genome::ProcessingProfile {
     subclass_description_preprocessor => '_expand_param_properties'
 };
 
-#< UR >#
+### Developer API ###
+
+sub _initialize_model {
+    # my ($self,$model) = @_;
+    # override in sub-classes to get custom mods to the model
+    return 1;
+}
+
+sub _initialize_build {
+    # my ($self,$model) = @_;
+    # override in sub-classes to get custom mods to the build
+    return 1;
+}
+
+sub _resolve_workflow_for_build {
+    my ($self,$build, $optional_lsf_queue) = @_;
+    
+    # override in sub-classes to return the correct workflow
+    # for now this is build specific, but should eventually be pp specific,
+    # and hopefully pp-subclass specific.
+
+    if ($self->can('_execute_build')) {
+        # NOTE: this workflow doesn't actually run yet.
+        # Instead the runner will detect it and just execute the Perl code.
+        my $workflow = Workflow::Model->create(
+            name => $self->__display_name__,
+            input_properties => [
+                # TODO: should the workflow decide how to turn build inputs and params
+                # into the inputs to the next steps?
+                'build',
+            ],
+            output_properties => [
+                'build'
+            ]
+        );
+        return $workflow;
+    }
+
+    my $msg = sprintf(
+        "\nFailed to either implement _execute_build, or override _resolve_workflow_for_build, in processing profile %s!\n"
+        . " for build %s of model %s\n"
+        . "And failed to ..\n",
+        $self->__display_name__,
+        $build->__display_name__,
+        $build->model->__display_name__
+    );
+    Carp::confess($msg);
+}
+
+# override in sub-classes if you want a non-workflow build
+#sub _execute_build {
+#   # my ($self,$build, $optional_lsf_queue) = @_;
+#    
+#    return;
+#}
+
+###
+
 sub create {
     my ($class, %params) = @_;
 
-    # Name
     $class->_validate_name_and_uniqueness($params{name})
         or return;
 
-    # Type name - confesses
     my $subclass;
     if ( $params{type_name} ) {
         $subclass = $class->_resolve_subclass_name_for_type_name($params{type_name});
@@ -68,7 +111,8 @@ sub create {
         }
     }
     else {
-        confess __PACKAGE__." is a abstract base class, and no type name was provided to resolve to the appropriate subclass" if $class eq __PACKAGE__;
+        confess __PACKAGE__ . " is a abstract base class, and no type name was provided to resolve to the appropriate subclass" 
+            if $class eq __PACKAGE__;
         $subclass = $class;
         $params{type_name} = $class->_resolve_type_name_for_class;
     }
@@ -229,16 +273,7 @@ sub delete {
 
     return 1;
 }
-#<>#
 
-# This is called by Genome::Model::Command::Build and must return an object of type
-# Workflow::Operation.
-sub workflow {
-    my $self = shift;
-    my $build = shift;
-
-    die ('workflow method not implemented in >' . (ref($self) || $self) . '<');
-}
 
 #< Params >#
 sub params_for_class {
@@ -362,7 +397,14 @@ sub _expand_param_properties {
     return $desc;
 }
 
-1;
+sub _resolve_log_resource {
+    my ($self, $event) = @_;
+    $event->create_log_directory; # dies upon failure
+    return ' -o '.$event->output_log_file.' -e '.$event->error_log_file;
+}
 
-#$HeadURL
-#$Id
+
+
+
+
+1;

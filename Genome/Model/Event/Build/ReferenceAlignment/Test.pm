@@ -120,7 +120,6 @@ sub runtests {
                  'startup',
                  'create_model',
                  'add_instrument_data',
-                 'schedule',
                  'run',
                  'remove_data',
              );
@@ -209,7 +208,7 @@ sub add_instrument_data {
     }
 }
 
-sub schedule {
+sub run {
     my $self = shift;
     my $model = $self->model;
 
@@ -221,29 +220,30 @@ sub schedule {
 
     # supress warning messages about obsolete locking
     Genome::Model::ReferenceAlignment->message_callback('warning', sub {});
-    my $stages = $build->schedule;
-    ok($stages, 'Scheduled build');
+    
+    ok($build->start(dispatch => 'inline'), 'scheduled and ran build inline');
+    my @stages = $build->processing_profile->stages();
 
     # Check we scheduled as expected
-    for my $stage ( @$stages ) {
+    for my $stage ( @stages ) {
 
         ## HACK - THIS IS NEEDED TO AVOID A UR GET FAILURE ##
         #####################################################
-        my @events = $build->build_event->events_for_stage($stage->{name});
+        my @events = $build->build_event->events_for_stage($stage);
         #####################################################
         
-        my @classes = $model->processing_profile->classes_for_stage($stage->{name});
+        my @classes = $model->processing_profile->classes_for_stage($stage);
         next unless @classes;
-        my @objects = $model->processing_profile->objects_for_stage($stage->{name}, $model);
-        my $event_count = scalar(@{$stage->{events}});
+        my @objects = $model->processing_profile->objects_for_stage($stage, $model);
+        my $event_count = scalar(@events);
         my $expected_event_count = scalar(@classes) * scalar(@objects);
-        is($event_count, $expected_event_count, "Got $expected_event_count events for stage ".$stage->{name});
+        is($event_count, $expected_event_count, "Got $expected_event_count events for stage ".$stage);
     }
 
     $self->build($build);
 }
 
-sub run {
+sub XXXrun {
     my $self = shift;
     my $model = $self->model;
     my $build = $self->build;

@@ -234,11 +234,20 @@ sub create_mock_processing_profile {
     my %create_params = map { $_ => delete $params{$_} } (qw/ class name type_name /);
     my $pp = $self->create_mock_object(%create_params)
         or confess "Can't create mock processing profile for '$type_name'";
-    
+    $DB::single = 1; 
     # Methods 
     $self->mock_methods(
         $pp,
         (qw/
+            _initialize_model
+            _initialize_build 
+            _generate_events_for_build
+            _generate_events_for_build_stage
+            _generate_events_for_object
+            _resolve_workflow_for_build
+            _workflow_for_stage
+            _merge_stage_workflows
+            _resolve_log_resource
             params_for_class
             stages objects_for_stage classes_for_stage
             delete

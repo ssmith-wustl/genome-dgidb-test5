@@ -33,7 +33,6 @@ use Archive::Tar;
 our %SUBJECT_TYPES;
 
 class Genome::Model {
-    type_name => 'genome model',
     table_name => 'GENOME_MODEL',
     is_abstract => 1,
     first_sub_classification_method_name => '_resolve_subclass_name',
@@ -45,51 +44,55 @@ class Genome::Model {
         name                    => { is => 'Text', len => 255 },
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         subject_name            => { is => 'Text', len => 255 },
-        subject_type            => { is => 'Text', len => 255, valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] },
+        subject_type            => { is => 'Text', len => 255, 
+            valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] 
+        },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
-        subject                 => { calculate_from => [ 'subject_name', 'subject_type' ],
+        subject                 => { 
+            calculate_from => [ 'subject_name', 'subject_type' ],
             calculate => q( 
-            if (not defined $subject_type) {
-            # this should not happen
-            return;
-            }
-            elsif ($subject_type eq 'dna_resource_item_name') {
-            # wtf is this?
-            return GSC::DNAResourceItem->get(dna_name => $subject_name);
-            }
-            elsif ($subject_type eq 'genomic_dna') {
-            # 454 issue with 
-            return;
-            die "not sure how to handle sample type $subject_type";
-            }
-            elsif ($subject_type eq 'sample_name') {
-            return Genome::Sample->get(name => $subject_name);
-            }
-            elsif ($subject_type eq 'species_name') {
-            return Genome::Taxon->get(species_name => $subject_name); 
-            }
-            elsif ($subject_type eq 'sample_group') {
-            return;
-            die "not sure how to handle sample type $subject_type";
-            }
-            elsif ($subject_type eq 'library_name') {
-            return;
-            die "not sure how to handle sample type $subject_type";
-            }
-            elsif ($subject_type eq 'flow_cell_id') {
-            return;
-            die "not sure how to handle sample type $subject_type";
-            }
-            else {
-            die "unknown sample type $subject_type!";
-            }
-            ) },
+                if (not defined $subject_type) {
+                    # this should not happen
+                    return;
+                }
+                elsif ($subject_type eq 'dna_resource_item_name') {
+                    # wtf is this?
+                    return GSC::DNAResourceItem->get(dna_name => $subject_name);
+                }
+                elsif ($subject_type eq 'genomic_dna') {
+                    # 454 issue with 
+                    return;
+                    die "not sure how to handle sample type $subject_type";
+                }
+                elsif ($subject_type eq 'sample_name') {
+                    return Genome::Sample->get(name => $subject_name);
+                }
+                elsif ($subject_type eq 'species_name') {
+                    return Genome::Taxon->get(species_name => $subject_name); 
+                }
+                elsif ($subject_type eq 'sample_group') {
+                    return;
+                    die "not sure how to handle sample type $subject_type";
+                }
+                elsif ($subject_type eq 'library_name') {
+                    return;
+                    die "not sure how to handle sample type $subject_type";
+                }
+                elsif ($subject_type eq 'flow_cell_id') {
+                    return;
+                    die "not sure how to handle sample type $subject_type";
+                }
+                else {
+                    die "unknown sample type $subject_type!";
+                }
+            )
+        },
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name               => { via => 'processing_profile' },
         events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1, 
-            doc => 'all events which have occurred for this model' },
+                                    doc => 'all events which have occurred for this model' },
         subject_class_name      => { is => 'VARCHAR2', len => 500, is_optional => 1 },
         subject_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
         reports                 => { via => 'last_succeeded_build' },
@@ -106,14 +109,16 @@ class Genome::Model {
                                     to      => 'model_group',
                                     is_many => 1,
                                    }
-        ],
-        has_optional => [
+    ],
+    has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
         creation_date                    => { is => 'TIMESTAMP', len => 6 },
         builds                           => { is => 'Genome::Model::Build', reverse_as => 'model', is_many => 1 },
         build_statuses                   => { via => 'builds', to => 'master_event_status', is_many => 1 },
         build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
-	keep_n_most_recent_builds	 => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] },
+        keep_n_most_recent_builds	     => { via => 'attributes', to => 'value', is_mutable => 1, 
+                                              where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] 
+                                            },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
             calculate => q($instrument_data_class_name->_dw_class), 
             doc => 'the class of instrument_data assignable to this model in the dw' },
@@ -128,8 +133,8 @@ class Genome::Model {
         sequencing_platform              => { via => 'processing_profile' },
         last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
         last_succeeded_build_directory    => { calculate => q($b = $self->last_succeeded_build; return unless $b; return $b->data_directory) },
-        ],
-        has_many_optional => [
+    ],
+    has_many_optional => [
         ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },
         project_assignments               => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
         projects                          => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
@@ -159,11 +164,17 @@ class Genome::Model {
         assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
         instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
         built_instrument_data             => { calculate => q( 
-            return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
-            ) },
+                                                    return 
+                                                        map { $_->instrument_data } 
+                                                        grep { defined $_->first_build_id } 
+                                                        $self->instrument_data_assignments;
+                                                ) },
         unbuilt_instrument_data           => { calculate => q( 
-            return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
-            ) },
+                                                    return 
+                                                        map { $_->instrument_data } 
+                                                        grep { !defined $_->first_build_id } 
+                                                        $self->instrument_data_assignments;
+                                                ) },
         instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_as => 'model', 
             doc => 'Each case of an instrument data being assigned to the model' },
         #<>#
@@ -205,13 +216,15 @@ sub __extend_namespace__ {
 
 
 sub create {
-    my ($class, %params) = @_;
+    my $class = shift;
+    my $params = $class->define_boolexpr(@_);
     
     # Processing profile - gotta validate here or SUPER::create will fail silently
-    $class->_validate_processing_profile_id($params{processing_profile_id})
+    my $processing_profile_id = $params->value_for('processing_profile_id');
+    $class->_validate_processing_profile_id($processing_profile_id)
         or return;
 
-    my $self = $class->SUPER::create(%params)
+    my $self = $class->SUPER::create($params)
         or return;
 
     # Model name - use default if none given
@@ -266,10 +279,18 @@ sub create {
         $self->SUPER::delete;
         return;
     }
-                                 
+
+    my $processing_profile= $self->processing_profile;
+    $DB::single = 1;
+    unless ($processing_profile->_initialize_model($self)) {
+        $self->error_message("The processing profile failed to initialize the new model:"
+            . $processing_profile->error_message);
+        $self->delete;
+        return;
+    }
+
     return $self;
 }
-
 
 sub _validate_processing_profile_id {
     my ($class, $pp_id) = @_;
@@ -311,10 +332,10 @@ BEGIN {  # This is ugly when its above the class definition, but I need it to ha
             property => 'library_name',
         },
         genomic_dna => {
-	    needs_to_be_verified => 1,
-	    class => 'Genome::Sample::Genomic',
-	    property => 'name',
-                    },
+            needs_to_be_verified => 1,
+            class => 'Genome::Sample::Genomic',
+            property => 'name',
+        },
         sample_group => {
             needs_to_be_verified => 0,
             #class => 'Genome::Sample',
@@ -326,10 +347,10 @@ BEGIN {  # This is ugly when its above the class definition, but I need it to ha
             #property => 'name',
         },
         flow_cell_id => {
-	    needs_to_be_verified => 1,
-	    class => 'Genome::InstrumentData::Solexa',
-	    property => 'flow_cell_id',
-	},
+            needs_to_be_verified => 1,
+            class => 'Genome::InstrumentData::Solexa',
+            property => 'flow_cell_id',
+        },
     );
 };
 

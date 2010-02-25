@@ -12,22 +12,32 @@ require Genome::ProcessingProfile::ViromeScreen;
 class Genome::Model::ViromeScreen {
     is => 'Genome::Model',
     has => [
-	   map({
-	         $_ => {
-		         via => 'processing_profile',
-	         }
-            } Genome::ProcessingProfile::ViromeScreen->params_for_class
-	),
+        barcode_file => {
+            doc => 'Barcode file that contains sequences to filter reads by',
+            is => 'String',
+            is_optional => 1,
+        },
+	    map { $_ => { via => 'processing_profile' } } 
+            Genome::ProcessingProfile::ViromeScreen->params_for_class,
+
     ],
 };
-
 
 sub create {
     my $class = shift;
 
     my $self = $class->SUPER::create(@_);
 
+    unless (-s $self->barcode_file) {
+        $self->error_message("Error: Uable to open file: ".$self->barcode_file);
+        $self->delete;
+        return;
+    }
+
+    $self->build->barcode_file($self->barcode_file);
+
     return $self;
 }
 
 1;
+

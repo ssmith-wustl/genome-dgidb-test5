@@ -103,6 +103,7 @@ sub sub_command_classes {
     my $self = shift;
     my @sscc = $self->SUPER::sub_command_classes(@_);
     push @sscc, 'Genome::Model::Metric::Command';
+    #push @sscc, 'Genome::Model::Build::Command';
     return @sscc;
 }
 

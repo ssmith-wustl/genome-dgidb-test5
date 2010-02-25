@@ -21,6 +21,7 @@ class Genome::Model::Build {
     ],
     has => [
         data_directory      => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+
         #< Model and props via model >#
         model               => { is => 'Genome::Model', id_by => 'model_id' },
         model_id            => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
@@ -30,13 +31,13 @@ class Genome::Model::Build {
         subject_name        => { via => 'model' },
         processing_profile  => { via => 'model' },
         processing_profile_name => { via => 'model' },
-        #<>#
+
         #< Events >#
         the_events          => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1,  },
         the_events_statuses => { via => 'the_events', to => 'event_status' },
         the_master_event    => { via => 'the_events', to => '-filter', where => [event_type => 'genome model build'] },
         run_by              => { via => 'the_master_event', to => 'user_name' },
-        status              => { via => 'the_master_event', to => 'event_status' },
+        status              => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
         master_event_status => { via => 'the_master_event', to => 'event_status' }, # this name is has an inside framing instead of outside
     ],
     has_optional => [
@@ -95,6 +96,7 @@ class Genome::Model::Build {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+
 # auto generate sub-classes for any valid processing profile
 sub __extend_namespace__ {
     my ($self,$ext) = @_;
@@ -147,6 +149,13 @@ sub create {
             return;
         }
         $self->data_directory($dir);
+    }
+
+    my $processing_profile = $self->processing_profile;
+    unless ($processing_profile->_initialize_build($self)) {
+        $class->error_message($processing_profile->error_message);
+        $self->delete;
+        return;
     }
 
     return $self;
@@ -214,9 +223,7 @@ sub _copy_model_inputs {
     return 1;
 
 }
-#<>#
 
-#< Inputs >#
 sub instrument_data_assignments {
     my $self = shift;
     my @idas = Genome::Model::InstrumentDataAssignment->get(
@@ -227,26 +234,14 @@ sub instrument_data_assignments {
         },
     );
     return @idas;
-    #my $model = $self->model;
-    #my @model_idas = $model->instrument_data_assignments;
-    #When a build was deleted the first_build_id was set to null, this bug has been corrected however...
-    #my @null_idas = grep { (!defined($_->first_build_id)) } @model_idas;
-    #if (@null_idas) {
-    #    $self->warning_message('There are undefined first_build_ids for build '. $self->build_id .'! YOU SHOULD START A NEW BUILD.');
-    #}
-    #my @build_idas = grep { (!defined($_->first_build_id)) || ($_->first_build_id <= $self->build_id) } @model_idas;
-    #return @build_idas;
 }
 
 sub instrument_data_count { # FIXME for inputs
     return scalar( $_[0]->instrument_data_assignments );
 }
-#<>#
 
-#< Events >#
 sub events {
     my $self = shift;
-
     my @events = Genome::Model::Event->get(
         model_id => $self->model_id,
         build_id => $self->build_id,
@@ -256,7 +251,6 @@ sub events {
 
 sub build_events {
     my $self = shift;
-
     my @build_events = Genome::Model::Event::Build->get(
         model_id => $self->model_id,
         build_id => $self->build_id,
@@ -280,22 +274,17 @@ sub build_event {
 
 sub workflow_instances {
     my $self = shift;
-    
     my @instances = Workflow::Store::Db::Operation::Instance->get(
         name => $self->build_id . ' all stages'
     );
-    
     return @instances;
 }
 
 sub newest_workflow_instance {
     my $self = shift;
-    
     my @sorted = sort { 
         $b->id <=> $a->id
     } $self->workflow_instances;
-    
-    
     if (@sorted) { 
         return $sorted[0];
     } else {
@@ -305,7 +294,6 @@ sub newest_workflow_instance {
 
 sub build_status {
     my $self = shift;
-
     my $build_event = $self->build_event;
     unless ($build_event) {
         return;
@@ -315,7 +303,6 @@ sub build_status {
 
 sub date_scheduled {
     my $self = shift;
-
     my $build_event = $self->build_event;
     unless ($build_event) {
         return;
@@ -325,7 +312,6 @@ sub date_scheduled {
 
 sub date_completed {
     my $self = shift;
-
     my $build_event = $self->build_event;
     unless ($build_event) {
         return;
@@ -344,7 +330,7 @@ sub calculate_estimated_kb_usage {
     # actual size.  Whereas the previous behaviour 
     # (return undef) caused *no* allocation to be made.
     # Which it has been decided is a bigger problem.
-    return 512000;
+    return 512_000;
 }
 
 sub resolve_data_directory {
@@ -386,7 +372,6 @@ sub resolve_data_directory {
     return $data_directory . $build_subdirectory;
 }
 
-#< Disk Allocation >#
 sub allocate {
     # FIXME - move the logic above to here
 }
@@ -404,17 +389,15 @@ sub reallocate {
     return 1;
 }
 
-
-#< Log >#
 sub log_directory { 
     return  $_[0]->data_directory . '/logs/';
 }
 
-#< Reports >#
 sub reports_directory { 
     return  $_[0]->data_directory . '/reports/';
 }
-sub resolve_reports_directory { return reports_directory(@_); }
+
+sub resolve_reports_directory { return reports_directory(@_); } #????
 
 sub add_report {
     my ($self, $report) = @_;
@@ -455,9 +438,127 @@ sub add_report {
     }
 }
 
-#< Build Actions >#
-sub schedule {
+sub start {
     my $self = shift;
+    my %params = @_;
+
+    # right now it is "inline" or the name of an LSF queue.
+    # ultimately, it will be the specification for parallelization
+    #  including whether the server is inline, forked, or bsubbed, and the
+    #  jobs are inline, forked or bsubbed from the server
+    my $server_dispatch = delete $params{server_dispatch} || 'inline';
+    my $job_dispatch = delete $params{job_dispatch} || 'inline';
+    die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
+
+    # TODO make it so we don't need to pass anything to init the workflow.
+    # Also, we should be able to interrogate a workflow to figure out its resource
+    # requirements.  The add_args should be part of dispatch logic.
+    my ($workflow,$resource,$add_args);
+    $DB::single = 1;
+    ($workflow,$resource,$add_args) = $self->_initialize_workflow($job_dispatch);
+
+    unless ($workflow) {
+        my $msg = $self->error_message("Failed to initialize a workflow!");
+        $self->status("Crashed");
+        die $msg;
+    }
+
+    my $model = $self->model;
+    my $processing_profile = $self->processing_profile;
+    my $build_event = $self->the_master_event;
+
+    # TODO: the workflow for processing profiles with _execute_build is broken
+    # We just run it directly during start() for now.
+    if ($processing_profile->can("_execute_build")) {
+        unless ($server_dispatch eq 'inline') {
+            warn "processing profiles using _execute_build must currently run inline.  Cannot respect the server_dispatch spec of $server_dispatch.";
+        }
+        unless ($job_dispatch eq 'inline') {
+            warn "processing profiles using _execute_build must currently run inline.  Cannot respect the server_dispatch spec of $job_dispatch.";
+        }
+        $workflow->delete;
+        print STDERR "Running directly...\n";
+        $self->status("Running");
+        my $rv = eval {
+            $processing_profile->_execute_build($self);
+        };
+        if ($@) {
+            print "Crashed with exception: $@\n";
+            $self->status("Crashed");
+        }
+        elsif ($self->status eq "Running") {
+            if ($rv) {
+                print "Setting to Succeeded!\n";
+                $self->status("Succeeded");
+            }
+            else {
+                print "Setting to Succeeded!\n";
+                $self->status("Failed");
+            }
+        }
+        else {
+            print "Ending with status " . $self->status . "\n"; 
+        }
+        return 1;
+    }
+
+    # TODO: send the workflow to the dispatcher instead of having LSF logic here.
+    if ($server_dispatch eq 'inline') {
+        # TODO: redirect STDOUT/STDERR to these files
+        #$build_event->output_log_file,
+        #$build_event->error_log_file,
+        my $rv = Genome::Model::Command::Services::Build::Run->execute(
+            model_id => $self->model_id,
+            build_id => $self->id,
+        );
+        return $rv;
+    }
+    else {
+        # bsub into the queue specified by the dispatch spec
+        my $lsf_command = sprintf(
+            'bsub -N -H -q %s -m blades %s -g /build/%s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
+            $server_dispatch,
+            $resource,
+            $ENV{USER},
+            $ENV{USER}, 
+            $build_event->output_log_file,
+            $build_event->error_log_file,
+            $add_args,
+            $model->id,
+            $self->id,
+        );
+    
+        my $job_id = $self->_execute_bsub_command($lsf_command)
+            or return;
+    
+        $build_event->lsf_job_id($job_id);
+    
+        UR::Context->create_subscription(
+            method => 'commit',
+            callback => sub{
+                `bresume $job_id`;
+            },
+        );
+
+        UR::Context->create_subscription(
+            method => 'rollback',
+            callback => sub{
+                `bkill $job_id`;
+            },
+        );
+        return 1;
+    }
+}
+
+sub _initialize_workflow {
+    my $self = shift;
+    my $lsf_queue_eliminate_me = shift || 'apipe';
+
+    Genome::Utility::FileSystem->create_directory( $self->data_directory )
+        or return;
+
+    Genome::Utility::FileSystem->create_directory( $self->log_directory )
+        or return;
 
     if ( my $existing_build_event = $self->build_event ) {
         $self->error_message(
@@ -468,17 +569,13 @@ sub schedule {
     }
 
     $self->software_revision(UR::Util::used_libs_perl5lib_prefix());
-    
-    Genome::Utility::FileSystem->create_directory( $self->data_directory )
-        or return;
-    Genome::Utility::FileSystem->create_directory( $self->log_directory )
-        or return;
 
     my $build_event = Genome::Model::Event::Build->create(
         model_id => $self->model->id,
         build_id => $self->id,
         event_type => 'genome model build',
     );
+
     unless ( $build_event ) {
         $self->error_message( 
             sprintf("Can't create build for model (%s %s)", $self->model->id, $self->model->name) 
@@ -486,158 +583,38 @@ sub schedule {
         $self->delete;
         return;
     }
+
     $build_event->schedule; # in G:M:Event, sets status, times, etc.
 
-    my @stages; 
-    for my $stage_name ( $self->processing_profile->stages ) {
-        # FIXME why are we attempting to schedule stages that have no classes??
-        my @events = $self->_schedule_stage($stage_name);
-        unless ( @events ) {
-            $self->error_message('WARNING: Stage '. $stage_name .' for build ('. $self->build_id .") failed to schedule objects for classes:\n".
-                join("\n",$self->processing_profile->classes_for_stage($stage_name)));
-            next;
-        }
-        push @stages, { name => $stage_name, events => \@events };
-    }
+    my $model = $self->model;
+    my $processing_profile = $self->processing_profile;
+
+    my ($workflow,$resource,$add_args) = $processing_profile->_resolve_workflow_for_build($self,$lsf_queue_eliminate_me);
+
+    $workflow->save_to_xml(OutputFile => $self->data_directory . '/build.xml');
     
-    return \@stages;
+    return $workflow;
 }
 
-sub _schedule_stage {
-    my ($self, $stage_name) = @_;
+sub _execute_bsub_command { # here to overload in testing
+    my ($self, $cmd) = @_;
 
-    my $pp = $self->processing_profile;
-    my @objects = $pp->objects_for_stage($stage_name, $self->model);
-    my @events;
-    foreach my $object (@objects) {
-        my $object_class;
-        my $object_id; 
-        if (ref($object)) {
-            $object_class = ref($object);
-            $object_id = $object->id;
-        } elsif ($object eq '1') {
-            $object_class = 'single_instance';
-        } else {
-            $object_class = 'reference_sequence';
-            $object_id = $object;
-        }
-
-        # Putting status message on build event because some tests expect it.  
-        #  Prolly can (re)move this to somewhere...
-        if ($object_class->isa('Genome::InstrumentData')) {
-            $self->status_message('Scheduling jobs for '
-                . $object_class . ' '
-                . $object->full_name
-                . ' (' . $object->id . ')'
-            );
-        } elsif ($object_class eq 'reference_sequence') {
-            $self->status_message('Scheduling jobs for reference sequence ' . $object_id);
-        } elsif ($object_class eq 'single_instance') {
-            $self->status_message('Scheduling '. $object_class .' for stage '. $stage_name);
-        } else {
-            $self->status_message('Scheduling for '. $object_class .' with id '. $object_id);
-        }
-        my @command_classes = $pp->classes_for_stage($stage_name);
-        push @events, $self->_schedule_command_classes_for_object($object,\@command_classes);
+    my $bsub_output = `$cmd`;
+    my $rv = $? >> 8;
+    if ( $rv ) {
+        $self->error_message("Failed to launch bsub (exit code: $rv) command:\n$bsub_output");
+        return;
     }
 
-    return @events;
-}
-
-sub _schedule_command_classes_for_object {
-    my $self = shift;
-    my $object = shift;
-    my $command_classes = shift;
-    my $prior_event_id = shift;
-
-    my @scheduled_commands;
-    for my $command_class (@{$command_classes}) {
-        if (ref($command_class) eq 'ARRAY') {
-            push @scheduled_commands, $self->_schedule_command_classes_for_object($object,$command_class,$prior_event_id);
-        } else {
-            if ($command_class->can('command_subclassing_model_property')) {
-                my $subclassing_model_property = $command_class->command_subclassing_model_property;
-                unless ($self->model->$subclassing_model_property) {
-                    # TODO: move into the creation of the processing profile
-                    #$self->status_message("This processing profile doesNo value defined for $subclassing_model_property in the processing profile.  Skipping related processing...");
-                    next;
-                }
-            }
-            my $command;
-            if ($command_class =~ /MergeAlignments|UpdateGenotype|FindVariations/) {
-                if (ref($object)) {
-                    unless ($object->isa('Genome::Model::RefSeq')) {
-                        my $error_message = 'Expecting Genome::Model::RefSeq for EventWithRefSeq but got '. ref($object);
-                        $self->error_message($error_message);
-                        die;
-                    }
-                    $command = $command_class->create(
-                        model_id => $self->model_id,
-                        ref_seq_id => $object->ref_seq_id,
-                    );
-                } else {
-                    $command = $command_class->create(
-                        model_id => $self->model_id,
-                        ref_seq_id => $object,
-                    );
-                }
-            } elsif ($command_class =~ /AlignReads|TrimReadSet|AssignReadSetToModel|AddReadSetToProject|FilterReadSet/) {
-                if ($object->isa('Genome::InstrumentData')) {
-                    my $ida = Genome::Model::InstrumentDataAssignment->get(
-                        model_id => $self->model_id,
-                        instrument_data_id => $object->id,
-                    );
-                    unless ($ida) {
-                        #This seems like duplicate logic but works best for the mock models in test case
-                        my $model = $self->model;
-                        ($ida) = grep { $_->instrument_data_id == $object->id} $model->instrument_data_assignments;
-                        unless ($ida) {
-                            $self->error_message('Failed to find InstrumentDataAssignment for instrument data '. $object->id .' and model '. $self->model_id);
-                            die $self->error_message;
-                        }
-                    }
-                    unless ($ida->first_build_id) {
-                        $ida->first_build_id($self->build_id);
-                    }
-                    $command = $command_class->create(
-                        instrument_data_id => $object->id,
-                        model_id => $self->model_id,
-                    );
-                } else {
-                    my $error_message = 'Expecting Genome::InstrumentData object but got '. ref($object);
-                    $self->error_message($error_message);
-                    die;
-                }
-            } elsif ($command_class->isa('Genome::Model::Event')) {
-                $command = $command_class->create(
-                    model_id => $self->model_id,
-                );
-            }
-            unless ($command) {
-                my $error_message = 'Problem creating subcommand for class '
-                . ' for object class '. ref($object)
-                . ' model id '. $self->model_id
-                . ': '. $command_class->error_message();
-                $self->error_message($error_message);
-                die;
-            }
-            $command->build_id($self->build_id);
-            $command->prior_event_id($prior_event_id);
-            $command->schedule;
-            $prior_event_id = $command->id;
-            push @scheduled_commands, $command;
-            my $object_id;
-            if (ref($object)) {
-                $object_id = $object->id;
-            } else {
-                $object_id = $object;
-            }
-            $self->status_message('Scheduled '. $command_class .' for '. $object_id
-                .' event_id '. $command->genome_model_event_id ."\n");
-        }
+    if ( $bsub_output =~ m/Job <(\d+)>/ ) {
+        return "$1";
+    } 
+    else {
+        $self->error_message("Launched busb command, but unable to parse bsub output: $bsub_output");
+        return;
     }
-    return @scheduled_commands;
 }
+
 
 sub initialize {
     my $self = shift;
@@ -711,7 +688,7 @@ sub _verify_build_is_not_abandoned_and_set_status_to {
     return $build_event;
 }
 
-# abandon
+
 sub abandon {
     my $self = shift;
 
@@ -745,7 +722,6 @@ sub _abandon_events { # does not realloc
     return 1;
 }
 
-#< Reports >#
 sub reports {
     my $self = shift;
     my $report_dir = $self->resolve_reports_directory;
@@ -976,7 +952,7 @@ sub add_to_build{
     return $bridge;
 }
 
-sub add_from_build{
+sub add_from_build { # rename "add an underlying build" or something...
     my $self = shift;
     my (%params) = @_;
     my $build = delete $params{from_build};
@@ -1012,7 +988,6 @@ sub add_from_build{
     return $bridge;
 }
 
-#< Delete >#
 sub delete {
     my $self = shift;
 
@@ -1047,11 +1022,6 @@ sub delete {
         $idas->first_build_id($next_build_id);
     }
 
-    #my @idas = $self->instrument_data_assignments;
-    #for my $ida (@idas) {
-    #    $ida->first_build_id(undef);
-    #}
-    #
     if ($self->data_directory && -e $self->data_directory) {
         unless (rmtree $self->data_directory) {
             $self->warning_message('Failed to rmtree build data directory '. $self->data_directory);
@@ -1094,7 +1064,7 @@ sub get_metric {
     }
 }
 
-
+# why hide this here? -ss
 package Genome::Model::Build::AbstractBaseTest;
 
 class Genome::Model::Build::AbstractBaseTest {
