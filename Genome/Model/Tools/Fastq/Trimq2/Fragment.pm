@@ -75,7 +75,7 @@ sub execute {
     }
     binmode $filter_fh, ":utf8";
 
-    my $report = $out_dir . "/trimq2.report";
+    my $report = $self->report_file || $out_dir . "/trimq2.report";
     my $report_fh = Genome::Utility::FileSystem->open_file_for_writing($report);
     unless ($report_fh) {
         $self->error_message("Failed to open report file " . $report . ": $!");

@@ -125,7 +125,7 @@ sub execute {
     }
     binmode $frag_filter_fh, ":utf8";
 
-    my $report = $out_dir . '/trimq2.report';
+    my $report = $self->report_file || $out_dir . '/trimq2.report';
     if (-e $report) {
         $self->warning_message("$report already exist. Now remove it");
         unlink $report;

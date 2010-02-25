@@ -34,11 +34,6 @@ class Genome::Model::Tools::Fastq::Trimq2::Simple {
             doc => 'the file name to use for the output file, default is xxx.trimq2.fastq in fastq_file dir',
             is_optional => 1,
         },
-        report_file => {
-            is  => 'Text',
-            doc => 'the report file name with path, default is trimq2.report in fastq_file dir',
-            is_optional => 1,
-        },
         trim_style => {
             is  => 'Text',
             doc => 'Trim style to use: hard or soft, the choices are [hard], bwa',

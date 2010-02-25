@@ -23,6 +23,11 @@ class Genome::Model::Tools::Fastq::Trimq2 {
             default => '#',
             doc     => 'quality trim string like #, B, i.. There are two types of fastq, sanger fastq quality = Qphred + 33, Solexa fastq quality = Qphred + 64. default is sanger format',
         },
+        report_file => {
+            is  => 'Text',
+            doc => 'the report file name with path, default is trimq2.report in fastq_file dir',
+            is_optional => 1,
+        },
     ],
 };
 
