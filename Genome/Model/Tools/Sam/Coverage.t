@@ -43,14 +43,14 @@ my $coverage = Genome::Model::Tools::Sam::Coverage->create(
     output_file => $output_file,                                                      
     return_output => 1,
     #use_version => 'r350wu1',  #This only works from r350wu1, once set Sam.pm default_value to r350wu1, this will become unnecessary
-    coverage_command => '/gsc/bin/bam-check',
+    coverage_command => '/gsc/bin/bam-check -q 1',
 );
 
 isa_ok($coverage,'Genome::Model::Tools::Sam::Coverage');
 my $result = $coverage->execute;
 $result =~ m/\nAverage Coverage:(\S+)/g; 
 my $haploid_coverage=$1 if defined($1);
-ok( $haploid_coverage eq '0.001', "haploid coverage calculated correctly" );
+ok( $haploid_coverage eq '0.000', "haploid coverage calculated correctly" );
 
 cmp_ok(compare($output_file, $compare_to_file), '==', 0, 'Coverage output file create ok.');
 
