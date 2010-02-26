@@ -59,8 +59,8 @@ ok(!$build->fail, 'Failed to fail an unscheduled build');
 ok(!$build->success, 'Failed to success an unscheduled build');
 # schedule - check events
 $DB::single = 1;
-my $stages = $build->start;
-ok($stages, 'Scheduled build');
+my ($workflow) = $build->_initialize_workflow('inline');
+ok($workflow, 'initialized a workflow');
 
 =cut
 
@@ -89,7 +89,8 @@ my @events = Genome::Model::Event->get(
 );
 is(scalar(@events), 4, 'Scheduled 4 events');
 # try to schedule again - should fail
-ok(!$build->start, 'Failed to schedule build again');
+my $result = eval { $build->start };
+ok(!$result, 'Failed to schedule build again');
 
 # do not send the report
 my $gss_report = *Genome::Model::Build::generate_send_and_save_report;
