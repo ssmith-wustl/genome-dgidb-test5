@@ -221,7 +221,7 @@ sub run {
     # supress warning messages about obsolete locking
     Genome::Model::ReferenceAlignment->message_callback('warning', sub {});
     
-    ok($build->start(dispatch => 'inline'), 'scheduled and ran build inline');
+    ok($build->start(server_dispatch => 'inline', job_dispatch => 'inline'), 'scheduled and ran build inline');
     my @stages = $build->processing_profile->stages();
 
     # Check we scheduled as expected
