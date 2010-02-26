@@ -29,7 +29,12 @@ UR::Object::Type->define(
 							       doc => "Name of proteins dumped out from biosql file",
 							       is_optional => 1,
 							   },
-				       ]
+				       ],
+             has_optional => [
+                   'outputdir' => { is => 'String',
+                                    doc => 'output directory files are to be written in',
+                                  },
+                   ],
 			);
 
 sub help_brief
@@ -78,13 +83,14 @@ sub execute
 
     my $res = $adp->find_by_query($query);
 
-  GENE: while ( my $seq = $res->next_object() ) {
+  #GENE: while ( my $seq = $res->next_object() ) {
+  while ( my $seq = $res->next_object() ) {
 
       my $gene_name = $seq->display_name();
       #print $gene_name, "\n";
 
       my @feat = $seq->get_SeqFeatures();
-      foreach my $f (@feat) {
+GENE:      foreach my $f (@feat) {
 
 	my $display_name = $f->display_name();
 	#print STDERR $display_name," ", $f->primary_tag,"\n";
@@ -137,8 +143,19 @@ sub execute
 				  -seq        => $newseq
 				 );
 
+    my $outputfile;
+    my $outputdir = $self->outputdir;
+    if( defined($outputdir)  && (-d $outputdir) )
+    {
+        $outputfile = $outputdir."/".$new_display_name;
+    }
+    else
+    {
+        $outputfile = $new_display_name;
+    }
 	my $seqout = new Bio::SeqIO(
-				    -file   => ">$new_display_name",
+				    #-file   => ">$new_display_name",
+				    -file   => ">$outputfile",
 				    -format => "fasta"
 				   );
 
