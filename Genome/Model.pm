@@ -579,7 +579,7 @@ sub last_succeeded_build_id {
 
 sub completed_builds {
     my $self = shift;
-    my @builds = $self->builds;
+    my @builds = $self->builds(status => 'Succeeded');
     unless (@builds) {
         return;
     }
