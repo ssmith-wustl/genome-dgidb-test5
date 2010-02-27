@@ -178,7 +178,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
         model_id => $model->id,
     );
     ok($build, 'Created build');
-    ok($build->start, 'started the build');
+    ok($build->_initialize_workflow, 'started the build');
 
     for my $class ($pp->setup_project_job_classes) {
         my @events = $class->get(model_id => $model->id);
