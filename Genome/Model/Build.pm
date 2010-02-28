@@ -191,7 +191,6 @@ sub _copy_model_inputs {
     my @inputs = $self->inputs;
     return 1 if @inputs;
 
-    $DB::single = 1;
     for my $input ( $self->model->inputs ) {
         my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
         unless ( $self->add_input(%params) ) {
@@ -510,6 +509,7 @@ sub start {
         my $rv = Genome::Model::Command::Services::Build::Run->execute(
             model_id => $self->model_id,
             build_id => $self->id,
+            inline => 1,
         );
         return $rv;
     }
