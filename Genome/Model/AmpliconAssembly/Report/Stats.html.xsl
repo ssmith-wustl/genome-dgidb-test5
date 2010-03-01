@@ -8,10 +8,10 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <title><xsl:value-of select="//report-meta/description"/></title> 
     <link href="layout.css" rel="stylesheet" type="text/css"></link>
-    <link rel="shortcut icon" href="https://lims.gsc.wustl.edu/static/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png"/>
-    <link rel="stylesheet" href="https://lims.gsc.wustl.edu/static/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen"/>
-    <script src="https://lims.gsc.wustl.edu/static/report_resources/db_snp_concordance/js/jquery.js" type="text/javascript"></script>
-    <script src="https://lims.gsc.wustl.edu/static/report_resources/db_snp_concordance/js/jquery.flot.js" type="text/javascript"></script>
+    <link rel="shortcut icon" href="https://imp.gsc.wustl.edu/static/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png"/>
+    <link rel="stylesheet" href="https://imp.gsc.wustl.edu/static/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen"/>
+    <script src="https://imp.gsc.wustl.edu/static/report_resources/db_snp_concordance/js/jquery.js" type="text/javascript"></script>
+    <script src="https://imp.gsc.wustl.edu/static/report_resources/db_snp_concordance/js/jquery.flot.js" type="text/javascript"></script>
     <script  type="text/javascript">
       $(function() {
       var datasets = {

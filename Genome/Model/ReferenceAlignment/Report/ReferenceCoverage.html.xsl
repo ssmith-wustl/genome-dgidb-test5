@@ -332,7 +332,7 @@
           <tr>
             <td>
               <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-                <tr><td class="label">Model ID:</td><td class="value"><a><xsl:attribute name="href"><xsl:text>https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?genome-model-id=</xsl:text><xsl:value-of select="//model-info/id"/></xsl:attribute><xsl:value-of select="//model-info/id"/></a></td></tr> 
+                <tr><td class="label">Model ID:</td><td class="value"><a><xsl:attribute name="href"><xsl:text>https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?genome-model-id=</xsl:text><xsl:value-of select="//model-info/id"/></xsl:attribute><xsl:value-of select="//model-info/id"/></a></td></tr> 
                 <tr><td class="label">Model Name:</td><td class="value"><xsl:value-of select="//model-info/name"/></td></tr>
                 <tr><td class="label">Model Type:</td><td class="value"><xsl:value-of select="//model-info/type-name"/></td></tr>
                 <tr><td class="label">Subject Name:</td><td class="value"><xsl:value-of select="//model-info/subject-name"/></td></tr>
@@ -342,7 +342,7 @@
             </td>
             <td>
               <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-                <tr><td class="label">Build ID:</td><td class="value"><a><xsl:attribute name="href"><xsl:text>https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=</xsl:text><xsl:value-of select="//model-info/build-id"/></xsl:attribute><xsl:value-of select="//model-info/build-id"/></a></td></tr>
+                <tr><td class="label">Build ID:</td><td class="value"><a><xsl:attribute name="href"><xsl:text>https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=</xsl:text><xsl:value-of select="//model-info/build-id"/></xsl:attribute><xsl:value-of select="//model-info/build-id"/></a></td></tr>
                 <tr><td class="label">Data Directory:</td><td class="value"><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="//model-info/data-directory"/></xsl:attribute>view build directory</a>
 </td></tr>                
                 <tr><td class="label">Processing Profile:</td><td class="value"><xsl:value-of select="//model-info/processing-profile-name"/></td></tr> 

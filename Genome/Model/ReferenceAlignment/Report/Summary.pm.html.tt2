@@ -53,7 +53,7 @@
 														model id:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-														[% model_id %] <a href="https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?genome-model-id=[% model_id %]" style="text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view model &gt;</a>
+														[% model_id %] <a href="https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?genome-model-id=[% model_id %]" style="text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view model &gt;</a>
 													</td>
 												</tr>
 												<tr>
@@ -113,7 +113,7 @@
 														build id:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-														[% build_id %] <a href="https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=[% build_id %]" style="text-decoration:none;font-weight:bold;font-size:85%;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view build &gt;</a>
+														[% build_id %] <a href="https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=[% build_id %]" style="text-decoration:none;font-weight:bold;font-size:85%;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view build &gt;</a>
 													</td>
 												</tr>
 												<tr>
