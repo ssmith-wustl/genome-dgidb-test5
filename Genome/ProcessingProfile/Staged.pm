@@ -3,9 +3,12 @@ package Genome::ProcessingProfile::Staged;
 
 use strict;
 use warnings;
+use Genome;
 
 class Genome::ProcessingProfile::Staged {
     is => 'Genome::ProcessingProfile',
+    is_abstract => 1,
+    doc => 'processing profile subclass for workflows defined by events grouped into stages'
 };
 
 sub stages {
@@ -43,6 +46,13 @@ sub _resolve_workflow_for_build {
     my $build = shift;
     my $lsf_queue = shift; # TODO: the workflow shouldn't need this yet
 
+    my $inline = 0;
+    if ($lsf_queue eq 'inline') {
+        $inline = 1;
+        $lsf_queue = undef;
+        $DB::single = 1;
+    }
+
     my $events_by_stage = $self->_generate_events_for_build($build);
 
     my @workflow_stages;
@@ -66,7 +76,9 @@ sub _resolve_workflow_for_build {
         $resource = $one_event->bsub_rusage;
         $add_args = ' --inline';
     }
-
+    elsif($inline) {
+        $add_args = ' --inline';
+    }
 
     return ($workflow, $resource, $add_args);
 }
