@@ -369,7 +369,7 @@ sub execute {
   MODEL: foreach my $model_id (keys %model_ids) {
       
         eval{
-            Genome::Model::Command::Build::Start->execute(
+            Genome::Model::Build::Command::Start->execute(
                 model_identifier => $model_id,
             ) or die 'Failed to start a build for model '. $model_id;
         };

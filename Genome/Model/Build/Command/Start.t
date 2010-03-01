@@ -9,12 +9,12 @@ use Genome::Model::Test;
 
 ###
 
-package Genome::Model::Command::Build::Start::Test;
+package Genome::Model::Build::Command::Start::Test;
 
 use base 'Genome::Utility::TestCommandBase';
 
 sub test_class {
-    return 'Genome::Model::Command::Build::Start';
+    return 'Genome::Model::Build::Command::Start';
 }
 
 sub valid_param_sets {
@@ -49,7 +49,7 @@ sub startup : Tests(startup => no_plan) {
 
 sub _overload_execute_bsub_command {
     no warnings;
-    *Genome::Model::Command::Build::Start::_execute_bsub_command = sub{ return 1; };
+    *Genome::Model::Build::Command::Start::_execute_bsub_command = sub{ return 1; };
     return 1;
 }
 
@@ -57,7 +57,7 @@ sub _overload_execute_bsub_command {
 
 package main;
 
-Genome::Model::Command::Build::Start::Test->runtests;
+Genome::Model::Build::Command::Start::Test->runtests;
 
 exit;
 

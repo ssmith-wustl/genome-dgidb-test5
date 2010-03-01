@@ -1,12 +1,12 @@
-package Genome::Model::Command::Build::Remove;
+package Genome::Model::Build::Command::Remove;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Command::Build::Remove {
-    is => 'Genome::Model::Command::Build::Base',
+class Genome::Model::Build::Command::Remove {
+    is => 'Genome::Model::Build::Command::Base',
     doc => 'delete a build and all of its data from the system'
 };
 

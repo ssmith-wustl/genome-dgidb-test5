@@ -36,7 +36,7 @@ sub execute {
     foreach my $build_model (
         Genome::Model::ReferenceAlignment->get( auto_build_alignments => 1 ) )
     {
-        Genome::Model::Command::Build::ScheduleStage->execute(stage_name => "alignment", model_id => $build_model->genome_model_id());
+        Genome::Model::Build::Command::ScheduleStage->execute(stage_name => "alignment", model_id => $build_model->genome_model_id());
     }
     return 1;
 }

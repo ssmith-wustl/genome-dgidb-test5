@@ -9,21 +9,21 @@ use Data::Dumper 'Dumper';
 use Genome::Model::Test;
 
 # Since 'Base' is abstract, create a subclass to test
-class Genome::Model::Command::Build::BaseTester { 
-    is => 'Genome::Model::Command::Build::Base',
+class Genome::Model::Build::Command::BaseTester { 
+    is => 'Genome::Model::Build::Command::Base',
 };
-sub Genome::Model::Command::Build::BaseTester::execute {
+sub Genome::Model::Build::Command::BaseTester::execute {
     return $_[0]->_resolve_build;
 }
 
 ###
 
-package Genome::Model::Command::Build::Base::Test;
+package Genome::Model::Build::Command::Base::Test;
 
 use base 'Genome::Utility::TestCommandBase';
 
 sub test_class {
-    return 'Genome::Model::Command::Build::BaseTester';
+    return 'Genome::Model::Build::Command::BaseTester';
 }
 
 sub valid_param_sets {
@@ -79,7 +79,7 @@ sub startup : Tests(startup => no_plan) {
 
 package main;
 
-Genome::Model::Command::Build::Base::Test->runtests;
+Genome::Model::Build::Command::Base::Test->runtests;
 
 exit;
 

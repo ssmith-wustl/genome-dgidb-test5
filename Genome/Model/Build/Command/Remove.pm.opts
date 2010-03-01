@@ -1,4 +1,4 @@
-$Genome::Model::Command::Build::Remove::OPTS_SPEC = [
+$Genome::Model::Build::Command::Remove::OPTS_SPEC = [
           'build-id=s',
           undef,
           'method=s',

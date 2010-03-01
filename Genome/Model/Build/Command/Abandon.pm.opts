@@ -1,4 +1,4 @@
-$Genome::Model::Command::Build::Abandon::OPTS_SPEC = [
+$Genome::Model::Build::Command::Abandon::OPTS_SPEC = [
           'build-id=s',
           undef,
           'method=s',

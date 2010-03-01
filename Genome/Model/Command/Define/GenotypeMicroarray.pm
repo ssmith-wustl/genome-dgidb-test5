@@ -69,9 +69,9 @@ sub execute {
     # For now this is just handled in the command which does the model definition.
 
     $self->status_message("building...\n");
-    my $cmd = Genome::Model::Command::Build::Start->execute(model_identifier => $model->id);
+    my $cmd = Genome::Model::Build::Command::Start->execute(model_identifier => $model->id);
     unless ($cmd) {
-        $self->error_message("Failed to run a build on model " . $model->id . ": " . Genome::Model::Command::Build->error_message);
+        $self->error_message("Failed to run a build on model " . $model->id . ": " . Genome::Model::Build::Command::Start->error_message);
         return;
     }
 

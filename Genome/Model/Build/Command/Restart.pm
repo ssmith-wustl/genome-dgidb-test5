@@ -1,12 +1,12 @@
-package Genome::Model::Command::Build::Restart;
+package Genome::Model::Build::Command::Restart;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Command::Build::Restart {
-    is => 'Genome::Model::Command::Build::Base',
+class Genome::Model::Build::Command::Restart {
+    is => 'Genome::Model::Build::Command::Base',
     has => [
         lsf_queue => {
             default_value => 'apipe',

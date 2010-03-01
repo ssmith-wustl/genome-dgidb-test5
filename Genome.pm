@@ -3,6 +3,21 @@ package Genome;
 use warnings;
 use strict;
 
+# if the POE modules are dynamically loaded when doing a "step over", the debugger will run away
+# detect the debugger, and pre-load POE
+BEGIN {
+    if ($ENV{PERL5DB}) {
+        warn "Debugger detected.  Using some modules which trigger runaway debugging...\n";
+        for my $mod (qw/Workflow::Server::Remote/) {
+            warn "\t$mod...\n";
+            eval "use $mod";
+            die $@ if $@;
+        }
+        warn "Module pre-use completed!";
+        warn "Close any extra debug windows which may have been created by the POE engine.\n";
+    }
+};
+
 # software infrastructure
 use UR;
 
@@ -12,9 +27,10 @@ use UR::ObjectV001removed;
 # environmental configuration
 use Genome::Config;
 
-# GSCApp removes our overrides to can/isa for Class::Autoloader.  Tell it to put them back.
+# linkage to certain GC LIMS classes
 use GSCApp;
 
+# ensure our access to the GSC schema is rw, and that our special env variables match up
 unless (App::Init->initialized) {
     App::DB->db_access_level('rw');
 }
@@ -31,8 +47,10 @@ if (App::DBI->no_commit || UR::DBI->no_commit) {
     UR::DBI->no_commit(1);
 }
 
+# GSCApp removes our overrides to can/isa for Class::Autoloader.  Tell it to put them back.
 App::Init->_restore_isa_can_hooks();
 
+# this ensures that the search system is updated when certain classes are updated 
 Genome::Search->register_callbacks('UR::Object');
 
 # DB::single is set to this value in many places, creating a source-embedded break-point

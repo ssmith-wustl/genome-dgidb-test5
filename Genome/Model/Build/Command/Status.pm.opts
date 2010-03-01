@@ -1,4 +1,4 @@
-$Genome::Model::Command::Build::Status::OPTS_SPEC = [
+$Genome::Model::Build::Command::Status::OPTS_SPEC = [
           'build-id=s',
           undef,
           'display-output=s',

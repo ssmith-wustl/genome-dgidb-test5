@@ -1,4 +1,4 @@
-package Genome::Model::Command::Build::Start;
+package Genome::Model::Build::Command::Start;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome;
 use Data::Dumper 'Dumper';
 use Regexp::Common;
 
-class Genome::Model::Command::Build::Start {
+class Genome::Model::Build::Command::Start {
     is => 'Command',
     doc => "Create and start a build.",
     has => [

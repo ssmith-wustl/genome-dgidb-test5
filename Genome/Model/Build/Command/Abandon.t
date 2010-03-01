@@ -9,7 +9,7 @@ use Genome::Model::Test;
 
 ###
 
-package Genome::Model::Command::Build::Abandon::Test;
+package Genome::Model::Build::Command::Abandon::Test;
 
 use base 'Genome::Utility::TestCommandBase';
 
@@ -17,7 +17,7 @@ use Data::Dumper 'Dumper';
 use Test::More;
 
 sub test_class {
-    return 'Genome::Model::Command::Build::Abandon';
+    return 'Genome::Model::Build::Command::Abandon';
 }
 
 sub valid_param_sets {
@@ -55,7 +55,7 @@ sub startup : Tests(startup => no_plan) {
 
 package main;
 
-Genome::Model::Command::Build::Abandon::Test->runtests;
+Genome::Model::Build::Command::Abandon::Test->runtests;
 
 exit;
 

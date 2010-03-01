@@ -1,4 +1,4 @@
-package Genome::Model::Command::Build::Base;
+package Genome::Model::Build::Command::Base;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Regexp::Common;
 
-class Genome::Model::Command::Build::Base {
+class Genome::Model::Build::Command::Base {
     is => 'Command',
     is_abstract => 1,
     has_optional => [

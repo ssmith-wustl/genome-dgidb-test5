@@ -9,7 +9,7 @@ use Genome::Model::Test;
 
 ###
 
-package Genome::Model::Command::Build::Remove::Test;
+package Genome::Model::Build::Command::Remove::Test;
 
 use base 'Genome::Utility::TestCommandBase';
 
@@ -17,7 +17,7 @@ use Data::Dumper 'Dumper';
 use Test::More;
 
 sub test_class {
-    return 'Genome::Model::Command::Build::Remove';
+    return 'Genome::Model::Build::Command::Remove';
 }
 
 sub valid_param_sets {
@@ -79,7 +79,7 @@ sub _overload_delete_to_return_true {
 
 package main;
 
-Genome::Model::Command::Build::Remove::Test->runtests;
+Genome::Model::Build::Command::Remove::Test->runtests;
 
 exit;
 

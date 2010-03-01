@@ -1,12 +1,12 @@
-package Genome::Model::Command::Build::Abandon;
+package Genome::Model::Build::Command::Abandon;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Command::Build::Abandon {
-    is => 'Genome::Model::Command::Build::Base',
+class Genome::Model::Build::Command::Abandon {
+    is => 'Genome::Model::Build::Command::Base',
 };
 
 sub sub_command_sort_position { 5 }

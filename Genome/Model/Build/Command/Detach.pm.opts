@@ -1,4 +1,4 @@
-$Genome::Model::Command::Build::Detach::OPTS_SPEC = [
+$Genome::Model::Build::Command::Detach::OPTS_SPEC = [
           'event-id=s',
           undef,
           'model-id=s',

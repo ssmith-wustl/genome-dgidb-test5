@@ -2,7 +2,7 @@
 #:boberkfe when build events update, stuff their status into memcache.  gathering info otherwise
 #:boberkfe can get reaaaaal slow.
 
-package Genome::Model::Command::Build::Status;
+package Genome::Model::Build::Command::Status;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use Data::Dumper;
 use XML::LibXML;
 use XML::LibXSLT;
 
-class Genome::Model::Command::Build::Status {
+class Genome::Model::Build::Command::Status {
     is => ['Command'],
         has => [
             build_id => {
