@@ -49,7 +49,7 @@ sub startup : Tests(startup => no_plan) {
 
 sub _overload_execute_bsub_command {
     no warnings;
-    *Genome::Model::Build::Command::Start::_execute_bsub_command = sub{ return 1; };
+    *Genome::Model::Build::_execute_bsub_command = sub{ return 1; };
     return 1;
 }
 
