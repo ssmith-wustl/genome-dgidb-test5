@@ -13,10 +13,11 @@ use Genome;
 class Genome::ProcessingProfile::Command::Rename {
     is => 'Genome::ProcessingProfile::Command',
     has => [
-    new_name => {
-        is => 'Text',
-        doc => 'The new name for the processing profile',
-    },
+        new_name => {
+            is => 'Text',
+            shell_args_position => 2,
+            doc => 'The new name for the processing profile.',
+        },
     ],
 };
 
