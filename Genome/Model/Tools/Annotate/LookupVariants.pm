@@ -426,7 +426,7 @@ sub reverse_complement {
 }
 
 sub get_frequencies {
-    my $RsDir = "/gsc/var/lib/import/dbsnp/130/frequencies";
+    my $RsDir = "/gsc/var/lib/import/dbsnp/129/frequencies";
     my $rsdb = Bio::DB::Fasta->new($RsDir);
 
     my ($rs_id) = @_;
