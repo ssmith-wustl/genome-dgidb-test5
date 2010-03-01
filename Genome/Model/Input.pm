@@ -15,9 +15,19 @@ class Genome::Model::Input {
         name             => { is => 'VARCHAR2', len => 255 },
     ],
     has => [
-        model      => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GMI_GM_FK' },
-        model_name => { via => 'model', to => 'name' },
-        value      => { is => 'UR::Object', id_by => 'value_id', id_class_by => 'value_class_name' },
+        model        => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GMI_GM_FK' },
+        model_name   => { via => 'model', to => 'name' },
+        
+        # i think this...
+        value        => { is => 'UR::Object', id_by => 'value_id', id_class_by => 'value_class_name' },
+        
+        # was supposed to be this...?
+
+        # value_object => { is => 'UR::Object', id_by => 'value_id', id_class_by => 'value_class_name' },
+        # value        => { 
+        #     calculate => q|$value_class_name->isa("UR::Value") ? $value_object : $value_id| 
+        #     calculate_from => [qw/value_class_name value_id value_object/], 
+        # }, 
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
