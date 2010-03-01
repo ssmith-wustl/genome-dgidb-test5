@@ -8,7 +8,7 @@ use Genome;
 class Genome::ModelGroup::Command::Member::Remove {
     is => ['Genome::ModelGroup::Command::Member'],
     has => [
-        model_ids    => { is => 'Text', doc => 'IDs of the model to remove from the model-group (comma delimited)' },
+        model_ids   => { is => 'Text', doc => 'IDs of the model to remove from the model-group (comma delimited)' },
     ],
     doc => 'remove member models from a model-group',
 };

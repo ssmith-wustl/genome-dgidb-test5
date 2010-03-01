@@ -17,7 +17,7 @@ sub help_brief {
 sub help_synopsis{
     my $self = shift;
     return <<"EOS"
-gmt harmonic-convergence pipeline --build-id 8 --data-directory /some/dir/for/data
+gmt convergence pipeline --build-id 8 --data-directory /some/dir/for/data
 EOS
 }
 

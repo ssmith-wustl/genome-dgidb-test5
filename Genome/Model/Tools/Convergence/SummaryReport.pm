@@ -27,19 +27,19 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt harmonic-convergence summary-report --build-id 101043871
+gmt convergence summary-report --build-id 101043871
 EOS
 }
 
 sub help_detail {
     return <<EOS 
-produces an HTML report summarizing the Harmonic Convergence model
+produces an HTML report summarizing the Convergence model
 EOS
 }
 
 sub execute {
     my $self = shift;
-$DB::single = 1;
+    
     my $build_id = $self->build_id;
     $build_id or return;
     

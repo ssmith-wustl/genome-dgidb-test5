@@ -24,10 +24,34 @@ class Genome::ModelGroup {
             via     => 'model_bridges',
             to      => 'model'
         },
+        convergence_model => {
+            is          => 'Genome::Model::Convergence',
+            is_many => 1, # We really should only have 1 here, however reverse_as requires this
+            reverse_as  => 'group',
+            doc         => 'The auto-generated Convergence Model summarizing knowledge about this model group',
+            is_optional => 1, 
+        },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub create {
+    my $class = shift;
+    
+    my $self = $class->SUPER::create(@_);
+    
+    my $define_command = Genome::Model::Command::Define::Convergence->create(
+        model_group_id => $self->id,
+    );
+
+    unless ($define_command->execute == 1) {
+        $self->error_message("Failed to create convergence model associated with this model group");
+        die;
+    }
+    
+    return $self;
+}
 
 
 sub assign_models {
@@ -46,6 +70,9 @@ sub assign_models {
         );
     }
 
+    $self->launch_convergence_rebuild;
+    
+    return 1;
 }
 
 sub unassign_models {
@@ -66,6 +93,23 @@ sub unassign_models {
         $bridge->delete();
     }
 
+    $self->launch_convergence_rebuild;
+
+    return 1;
+}
+
+sub launch_convergence_rebuild {
+    my $self = shift;
+    
+    if (defined $self->convergence_model) {
+        $self->status_message("Trying rebuild of associated convergence model.");
+        unless($self->convergence_model->launch_rebuild) {
+            $self->error_message($self->convergence_model->error_message);
+            die;
+        }
+    }
+    
+    return 1;
 }
 
 sub map_builds {

@@ -8,7 +8,7 @@ use Genome;
 class Genome::ModelGroup::Command::Member::Add {
     is => ['Genome::ModelGroup::Command::Member'],
     has => [
-        model_ids    => { is => 'Text', doc => 'IDs of the model to add to the model-group (comma delimited)' },
+        model_ids   => { is => 'Text', doc => 'IDs of the model to add to the model-group (comma delimited)' },
     ],
     doc => 'add member models to a model-group',
 };

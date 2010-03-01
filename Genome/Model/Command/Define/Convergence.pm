@@ -37,6 +37,11 @@ class Genome::Model::Command::Define::Convergence {
         subject_name => {
             is => 'Text',
             doc => 'The name of the subject the reads originate from',
+        },
+        auto_build_alignments => { #TODO Yeah, they're not really "alignments", but that's what the parameter is in the parent class
+            is => 'Boolean',
+            doc => 'If true, new builds will automatically be launched when the underlying model group changes.',
+            default_value => 1,
         }
         
    ],
@@ -81,11 +86,8 @@ sub create {
 sub execute {
     my $self = shift;
 
+    #execute for commands is renamed after some Command.pm magic
     $self->SUPER::_execute_body(@_) or return;
-
-#    run Genome::Model::Command::Define execute
-#    my $super = $self->super_can('_execute_body');
-#    $super->($self,@_);
 
     # get the model created by the super
     my $model = Genome::Model->get($self->result_model_id);

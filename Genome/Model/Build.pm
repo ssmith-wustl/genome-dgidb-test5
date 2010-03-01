@@ -656,6 +656,14 @@ sub success {
         $self->_verify_build_is_not_abandoned_and_set_status_to('Running');
         return;
     }
+    
+    # Launch new builds for any convergence models containing this model.
+    # To prevent infinite loops, don't do this for convergence builds.
+    if($self->type_name !~ /convergence/) {
+        for my $model_group ($self->model->model_groups) {
+            $model_group->launch_convergence_rebuild;
+        }
+    }
 
     # reallocate - always returns true (legacy behavior)
     return $self->reallocate; 

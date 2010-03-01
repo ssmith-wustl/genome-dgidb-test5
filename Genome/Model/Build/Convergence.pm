@@ -67,6 +67,41 @@ sub _assign_members {
     return 1;
 }
 
+sub all_subbuilds_closure {
+    my $self = shift;
+    
+    my @members = $self->members;
+    my $seen = {}; #Track which subbuilds are already processed
+    
+    return map($self->_all_subbuilds_helper($_, $seen), @members);
+}
+
+sub _all_subbuilds_helper {
+    my $self = shift;
+    my $subbuild = shift;
+    my $seen = shift;
+    
+    return if $seen->{$subbuild->id}; #Already processed previously
+    
+    $seen->{$subbuild->id}++;
+    
+    my $type = $subbuild->type_name;
+    
+    my @subbuilds_to_process;
+    
+    if ($type eq 'somatic') {
+        push @subbuilds_to_process,
+            $subbuild->tumor_build, $subbuild->normal_build;
+    } elsif ($type eq 'convergence') {
+        push @subbuilds_to_process,
+            $subbuild->members;
+    } else {
+        #No subbuilds to process
+    }
+    
+    return $subbuild, map($self->_all_subbuilds_helper($_, $seen), @subbuilds_to_process);
+}
+
 sub calculate_estimated_kb_usage {
     my $self = shift;
 
