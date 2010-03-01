@@ -102,8 +102,11 @@ sub class_for_sub_command
 sub sub_command_classes {
     my $self = shift;
     my @sscc = $self->SUPER::sub_command_classes(@_);
-    push @sscc, 'Genome::Model::Metric::Command';
-    push @sscc, 'Genome::Model::Build::Command';
+    my $class = $self->class;
+    if ($class eq __PACKAGE__) {
+        push @sscc, 'Genome::Model::Metric::Command';
+        push @sscc, 'Genome::Model::Build::Command';
+    }
     return @sscc;
 }
 
