@@ -143,8 +143,8 @@ sub _add_to_report_xml {
 
     #See if this is the build with the circos images
     my $data_dir = Path::Class::Dir->new($build->data_directory);
-    my $circos_large = $data_dir->file('circos_graph.out.3000x3000.png');
-    my $circos_small = $data_dir->file('circos_graph.out.920x920.png');
+    my $circos_large = $data_dir->file('circos_graph.png.3000x3000.png');
+    my $circos_small = $data_dir->file('circos_graph.png.920x920.png');
     my $circos_server = 'http://gscweb.gsc.wustl.edu/';
     if(-e $circos_large and -e $circos_small) {
         $circos_node->addChild( $doc->createAttribute('large', $circos_server . $circos_large) );
