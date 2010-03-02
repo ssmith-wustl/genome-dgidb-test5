@@ -593,7 +593,7 @@ sub _initialize_workflow {
 
     $workflow->save_to_xml(OutputFile => $self->data_directory . '/build.xml');
     
-    return $workflow;
+    return ($workflow, $resource, $add_args);
 }
 
 sub _execute_bsub_command { # here to overload in testing
