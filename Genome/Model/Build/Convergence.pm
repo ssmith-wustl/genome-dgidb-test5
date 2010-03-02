@@ -54,7 +54,7 @@ sub _assign_members {
     my @member_models = $self->model->members;
     
     for my $member_model (@member_models) {
-        my $last_succeeded_build = $member_model->last_succeeded_build;
+        my $last_succeeded_build = $member_model->last_complete_build;
         unless($last_succeeded_build) {
             $self->status_message('Skipping model ' . $member_model->id . ' (' . $member_model->name . ') with no succeeded builds.');
             next;

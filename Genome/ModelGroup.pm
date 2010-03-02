@@ -38,11 +38,18 @@ class Genome::ModelGroup {
 
 sub create {
     my $class = shift;
+    my %params = @_;
     
-    my $self = $class->SUPER::create(@_);
+    my %convergence_model_params = ();
+    if(exists $params{convergence_model_params}) {
+        %convergence_model_params = %{ delete $params{convergence_model_params} };
+    } 
+    
+    my $self = $class->SUPER::create(%params);
     
     my $define_command = Genome::Model::Command::Define::Convergence->create(
-        model_group_id => $self->id,
+        %convergence_model_params,
+        model_group_id => $self->id
     );
 
     unless ($define_command->execute == 1) {
