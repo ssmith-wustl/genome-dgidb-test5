@@ -49,6 +49,7 @@ sub create_project_from_contig_names
     Genome::Utility::FileSystem->create_directory("phd_dir");
     Genome::Utility::FileSystem->create_directory("phdball_dir");
     Genome::Utility::FileSystem->create_directory("sff_dir");
+    Genome::Utility::FileSystem->create_directory("chromat_dir");
     #copy links from input project
     foreach my $sff_file (glob($input_project_dir.'/consed/sff_dir/*'))
     {
