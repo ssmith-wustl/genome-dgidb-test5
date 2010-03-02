@@ -69,11 +69,15 @@ sub _assign_members {
 
 sub all_subbuilds_closure {
     my $self = shift;
+    my @initial_subbuilds = @_;
     
-    my @members = $self->members;
+    unless(scalar @initial_subbuilds) {
+        @initial_subbuilds = $self->members;
+    }
+
     my $seen = {}; #Track which subbuilds are already processed
     
-    return map($self->_all_subbuilds_helper($_, $seen), @members);
+    return map($self->_all_subbuilds_helper($_, $seen), @initial_subbuilds);
 }
 
 sub _all_subbuilds_helper {

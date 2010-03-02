@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use Array::Compare;
+
 class Genome::Model::Convergence {
     is  => 'Genome::Model',
     has => [
@@ -50,9 +52,26 @@ sub launch_rebuild {
         return 1;
     }
     
-    unless (scalar grep(defined $_->last_succeeded_build, $self->members)) {
-        $self->status_message('Skipping convergence rebuild--no succeeded builds found.');
+    my @potential_members = grep(defined $_->last_complete_build, $self->members); 
+    unless(scalar @potential_members) {
+        $self->status_message('Skipping convergence rebuild--no succeeded builds found among members.');
         return 1;
+    }
+    
+    #Check to see if our last build already used all the same builds as we're about to
+    if($self->last_complete_build) {
+        my $last_build = $self->last_complete_build;
+        
+        my @last_members = $last_build->members;
+        
+        my $comparator = Array::Compare->new;
+        if($comparator->perm(\@last_members, \@potential_members)) {
+            $self->status_message('Skipping convergence rebuild--list of members that would be included is identical to last build.');
+            return 1;
+            
+            #Potentially if some of the underlying builds in the $build->all_subbuilds_closure have changed, a rebuild might be desired
+            #For now this will require a manual rebuild (`genome model build start`)
+        }
     }
     
     my $build_command = Genome::Model::Build::Command::Start->create(
