@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-
+use Genome::Model::Command::Define::GenotypeMicroarray;
 use File::Slurp;
 use File::Temp;
 use Test::More tests => 6;
