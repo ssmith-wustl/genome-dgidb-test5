@@ -41,6 +41,7 @@ my %properties = (
     },
     allocation => {
         is => 'Genome::Disk::Allocation',
+        id_by => 'allocator_id',
         is_optional => 1,
     },
 );
