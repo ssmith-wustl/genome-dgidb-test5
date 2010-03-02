@@ -137,10 +137,29 @@ sub execute
 
     my $hgmi_acedb_path = $newHGMIpath;
 
-    my $Intergenic = join("\/",@cwd[0..7],'Gene_merging',$self->analysis_version,'Hybrid','intergenic');
-    my $BAPseq = join("\/", @cwd[0..7],'BAP',$self->analysis_version,'Sequence');
-    my $Ensemblseq = join("\/", @cwd[0..7],'Ensembl_pipeline',$self->analysis_version,'Sequence');
-    my $Rfamseq = join("\/", @cwd[0..7],'Rfam',$self->analysis_version);
+    my ($Intergenic,$BAPseq,$Ensemblseq,$Rfamseq);
+    # need to change directory construction here
+    # @cwd[0..8] for CORE projects
+    if($self->project_type eq 'HGMI')
+    {
+        $Intergenic = join("\/",@cwd[0..7],'Gene_merging',$self->analysis_version,'Hybrid','intergenic');
+        $BAPseq = join("\/", @cwd[0..7],'BAP',$self->analysis_version,'Sequence');
+        $Ensemblseq = join("\/", @cwd[0..7],'Ensembl_pipeline',$self->analysis_version,'Sequence');
+        $Rfamseq = join("\/", @cwd[0..7],'Rfam',$self->analysis_version);
+    }
+    elsif($self->project_type eq 'CORE')
+    {
+        $Intergenic = join("\/",@cwd[0..8],'Gene_merging',$self->analysis_version,'Hybrid','intergenic');
+        $BAPseq = join("\/", @cwd[0..8],'BAP',$self->analysis_version,'Sequence');
+        $Ensemblseq = join("\/", @cwd[0..8],'Ensembl_pipeline',$self->analysis_version,'Sequence');
+        $Rfamseq = join("\/", @cwd[0..8],'Rfam',$self->analysis_version);
+
+    }
+    else
+    {
+        $self->error_message("unknown project type: ".$self->project_type);
+        croak;
+    }
 
     # the presence of the symlink target should be
     # tested before creating the symlink
@@ -208,6 +227,8 @@ sub version_lookup
     my $self = shift;
     my $v = shift;
     my $lookup = undef;
+    # FIXME : have this be a regex substitution, otherwise we will
+    # have to constantly update this.
     my %version_lookup = ( 
 		       'Version_1.0' => 'v1', 'Version_2.0' => 'v2',
 		       'Version_3.0' => 'v3', 'Version_4.0' => 'v4',
