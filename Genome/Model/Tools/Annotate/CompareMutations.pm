@@ -248,9 +248,9 @@ die "Unable to load Cosmic data\n";
 my $parser = MG::Transform::Process::MutationCSV->new();
 my $fh = new FileHandle;
 # open "file.annotated"
-unless ($fh->open (qq{$mut_file})) {
-die "Could not open mutation project file '$mut_file' for reading";
-}
+unless ($fh->open (qq{$mut_file})) { die "Could not open mutation project file '$mut_file' for reading"; }
+my $header = <$fh>;   # place a single line into $line
+seek($fh, -length($header), 1); # place the same line back onto the filehandle
 $parse_args{'version'} = $mutversion;
 print "Parsing mutation file...\n";
 $DB::single = 1;
@@ -266,19 +266,30 @@ print "Done Parsing Mutation File! Yippee!\n";
 #  print Dumper $mutation;
 #  exit;
 
+unless ($fh->open (qq{$mut_file})) { die "Could not open mutation project file '$mut_file' for reading"; }
+my %fileline;
+my $i = 1;
+while (my $filehandleline = <$fh>) {
+	chomp $filehandleline;
+	$fileline{$i} = $filehandleline;
+	$i++;
+}
+$fh->close;
+
+
 my %cosmic_results;
 my %omim_results;
 my $summary_file = $basename;
 unless (open(SUMMARY,">$summary_file")) {
 die "Could not open output file '$summary_file' for writing";
 }
-print SUMMARY "Hugo_Gene_Name\tTranscript\tChromosome\tStart_Position\tEnd_Position\tReference_Allele\tVariant_Allele\tAmino_Acid_Change\tVariant_Type\tCosmic_Results (AA listed as residue1, res_start, residue2)\tOMIM_Results\tWarning: Input file must input all transcript names for each gene or else COSMIC and OMIM results may be invalid\n";
 
-foreach my $hugo (keys %{$mutation}) {
+print SUMMARY "$fileline{'1'}\tCosmic_Results (AA listed as residue1, res_start, residue2)\tOMIM_Results\tWarning: Input file must input all transcript names for each gene or else COSMIC and OMIM results may be invalid\n";
+
+foreach my $hugo (sort keys %{$mutation}) {
 foreach my $sample (keys %{$mutation->{$hugo}}) {
 foreach my $line_num (keys %{$mutation->{$hugo}->{$sample}}) {
 print STDOUT ".";   #report that we are starting a sample (For commandline user feedback)
-
 #read in the alleles. The keys may change with future file formats. If so, a new version should be added to
 #MG::Transform::Process::MutationCSV with a header translation
 
@@ -332,7 +343,8 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 	   my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = MG::Validate::AminoAcidChange::Check($aa_change);
 	   if(!$residue2 || $residue2 eq ' '){
 		print "Skipping Silent Mutation";
-		my $createspreadsheet = "$hugo\t$transcript\t$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$Variant_Type\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
+#		my $createspreadsheet = "$hugo\t$transcript\t$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$Variant_Type\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
+		my $createspreadsheet = "$fileline{$line_num}\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
 		print SUMMARY "$createspreadsheet\n";
 		next; #skip silent mutations
 	   }
@@ -435,7 +447,8 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 	   $cosmic_results{$line_num} = score_results(\%results_hash, "COSMIC");
 	   $omim_results{$line_num} = score_results(\%results_hash, "OMIM");
 
-	   my $createspreadsheet = "$hugo\t$transcript\t$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$Variant_Type\t$cosmic_results{$line_num}\t$omim_results{$line_num}";
+my $createspreadsheet = "$fileline{$line_num}\t$cosmic_results{$line_num}\t$omim_results{$line_num}";
+#	   my $createspreadsheet = "$hugo\t$transcript\t$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$Variant_Type\t$cosmic_results{$line_num}\t$omim_results{$line_num}";
 	   print SUMMARY "$createspreadsheet\n";
    }
 }
@@ -487,7 +500,17 @@ sub FindCosmic {
 	foreach my $sample (keys %{$cosmic->{$hugo}}) {
 		if (defined $cosmic->{$hugo}->{$sample}->{res_start}){
 			if ($cosmic->{$hugo}->{$sample}->{res_start} == $cosmic->{$hugo}->{$sample}->{res_stop}){
-			$aa_novel2 = $aa_novel2." || ".$cosmic->{$hugo}->{$sample}->{residue1}.$cosmic->{$hugo}->{$sample}->{res_start}.$cosmic->{$hugo}->{$sample}->{residue2};
+				$aa_novel2 = $aa_novel2." || ".$cosmic->{$hugo}->{$sample}->{residue1}.$cosmic->{$hugo}->{$sample}->{res_start}.$cosmic->{$hugo}->{$sample}->{residue2};
+			unless (defined($cosmic->{$hugo}->{$sample}->{residue1})){
+				print "res1undef";
+			}
+			unless (defined($cosmic->{$hugo}->{$sample}->{residue2})){
+				print "res2undef";
+			}
+			unless (defined($aa_novel2)){
+				print "aanovel2undef";
+			}
+
 			}
 			else {
 			$aa_novel2 = $aa_novel2." || ".$cosmic->{$hugo}->{$sample}->{residue1}.$cosmic->{$hugo}->{$sample}->{res_start}."-".$cosmic->{$hugo}->{$sample}->{res_stop}.$cosmic->{$hugo}->{$sample}->{residue2};
