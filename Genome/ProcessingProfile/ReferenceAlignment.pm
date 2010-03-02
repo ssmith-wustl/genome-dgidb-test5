@@ -103,6 +103,11 @@ class Genome::ProcessingProfile::ReferenceAlignment {
                                 is_optional => 1,
                             },
 
+        read_trimmer_style => {
+                                doc => 'the read trimmer style, there are three for trimq2: filter, no_filter_bwa, no_filter_hard',
+                                is_optional => 1,
+                                valid_values => ['filter', 'no_filter_bwa', 'no_filter_hard'],
+                            },
         read_calibrator_name => {
                                  doc => '',
                                  is_optional => 1,

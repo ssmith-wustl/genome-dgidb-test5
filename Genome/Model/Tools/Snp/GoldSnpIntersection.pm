@@ -25,6 +25,11 @@ class Genome::Model::Tools::Snp::GoldSnpIntersection {
         is_optional => 0,
         doc => "input file of snp locations and calls from the intersection of the affy and illumina platforms",
     },
+    missed_snp_file => {
+        type => 'String',
+        is_optional => 1,
+        doc => "file name of missed gold snv list",
+    },
     exclude_y =>
     {
         type => 'Boolean',
@@ -123,13 +128,30 @@ sub execute {
     }
 
     #Grab metrics
-    my ($total_snp_positions,$ref_breakdown_ref, $het_breakdown_ref, $hom_breakdown_ref) 
+    my ($total_snp_positions,$ref_breakdown_ref, $het_breakdown_ref, $hom_breakdown_ref, $missed_snps) 
         = $self->calculate_metrics($snp_fh,$gold_het_hash_ref,$gold_hom_hash_ref,$gold_ref_hash_ref);
     
     $self->store_report_txt($ref_breakdown_ref,$self->total_gold_homozygous_ref_positions,$het_breakdown_ref, $self->total_gold_heterozygote_snps, $hom_breakdown_ref, $self->total_gold_homozygous_snps);
 
     $self->store_report_xml($ref_breakdown_ref,$self->total_gold_homozygous_ref_positions,$het_breakdown_ref, $self->total_gold_heterozygote_snps, $hom_breakdown_ref, $self->total_gold_homozygous_snps);
 
+    if ($self->missed_snp_file) {
+        my $miss_fh = Genome::Utility::FileSystem->open_file_for_writing($self->missed_snp_file);
+        unless ($miss_fh) {
+            $self->error_message('Failed to open missed_snp_file for writing: '.$self->missed_snp_file);
+            return;
+        }
+    
+        for my $type (keys %$missed_snps) {
+            $miss_fh->print($type.":\n");
+            for my $chr (sort {$a cmp $b} keys %{$missed_snps->{$type}}) {
+                for my $pos (sort{$a <=> $b} keys %{$missed_snps->{$type}->{$chr}}) {
+                    $miss_fh->print("$chr\t$pos\t".$missed_snps->{$type}->{$chr}->{$pos}."\n");
+                }
+            }
+        }
+    }
+                
     # print report in requested format
     
     if ($self->report_format eq "xml") {
@@ -163,7 +185,11 @@ sub help_detail {
 
 
 sub calculate_metrics {
-    my ($self,$snp_fh,$gold_het_hash_ref, $gold_hom_hash_ref, $gold_ref_hash_ref, ) = @_;
+    my ($self,$snp_fh,$gold_het_hash_ref_in, $gold_hom_hash_ref_in, $gold_ref_hash_ref_in ) = @_;
+
+    my $gold_het_hash_ref = { %$gold_het_hash_ref_in };
+    my $gold_hom_hash_ref = { %$gold_hom_hash_ref_in };
+    my $gold_ref_hash_ref = { %$gold_ref_hash_ref_in };
 
     my %het_breakdown;
     my %hom_breakdown;
@@ -197,21 +223,25 @@ sub calculate_metrics {
             #if($maq_type eq 'homozygous variant') {
             #    print STDERR qq{"$comparison",},$metrics[0],"\n";
             #}
+            delete $gold_het_hash_ref->{$chr}{$pos};
         }
         elsif(exists($gold_ref_hash_ref->{$chr}{$pos})) { 
             #Gold standard ref call
             my $comparison = $self->compare_gold_to_call($gold_ref_hash_ref->{$chr}{$pos},$call);
             $ref_breakdown{$comparison}{$snp_type}{n} += 1;
             $ref_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
+            delete $gold_ref_hash_ref->{$chr}{$pos};
         }
         elsif(exists($gold_hom_hash_ref->{$chr}{$pos})) {
             #gold standard homozygous call at this site
             my $comparison = $self->compare_gold_to_call($gold_hom_hash_ref->{$chr}{$pos},$call);
             $hom_breakdown{$comparison}{$snp_type}{n} += 1;
             $hom_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
+            delete $gold_hom_hash_ref->{$chr}{$pos};
         }
     }
-    return ($total_snp_positions, \%ref_breakdown,\%het_breakdown,\%hom_breakdown);
+    my $gold_missed = { 'homozygous' => $gold_hom_hash_ref, 'heterozygous' => $gold_het_hash_ref, 'reference' => $gold_ref_hash_ref };
+    return ($total_snp_positions, \%ref_breakdown,\%het_breakdown,\%hom_breakdown, $gold_missed);
 
 }
 

@@ -139,6 +139,18 @@ sub generate_report_detail
 
     my $total_gb = sprintf("%.03f", $total_kb/1000000);
 
+    if ($model->read_trimmer_name eq 'trimq2') {
+        my ($total_ct, $total_trim_ct) = $build->calculate_input_base_counts_after_trimq2;
+        if ($total_ct and $total_trim_ct) {
+            my $gb       = sprintf("%.03f", $total_ct/1000000000);
+            my $trim_gb  = sprintf("%.03f", $total_trim_ct/1000000000);
+            $total_gb = "$trim_gb/$gb";
+        }
+        else {
+            $self->warning_message("Failed to get input base counts after trimq2");
+        }
+    }
+
     $report_content=<<END_CONTENT;
 <h2 class="section_title">Input Base Counts Per Lane</h2>
 <div class="section_content">

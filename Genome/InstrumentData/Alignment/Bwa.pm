@@ -47,7 +47,11 @@ sub verify_aligner_successful_completion {
 sub output_files {
     my $self = shift;
     my @output_files;
-    for my $method ('alignment_file_paths', 'aligner_output_file_paths','unaligned_reads_list_paths','unaligned_reads_fastq_paths') {
+    my @methods = qw(alignment_file_paths aligner_output_file_paths unaligned_reads_list_paths);
+    push @methods, 'unaligned_reads_fastq_paths' 
+        unless $self->trimmer_style and $self->trimmer_style eq 'filter';#add for now
+
+    for my $method (@methods) {
         push @output_files, $self->$method;
     }
     return @output_files;
@@ -240,7 +244,7 @@ sub verify_alignment_data {
 	$self->status_message("Alignment file " . $self->alignment_file . " does not have a valid header.");
         return;
     }
-    
+
     my $flagstat_data = $self->get_bam_flagstat_statistics;
     
     unless($flagstat_data) {
@@ -260,7 +264,7 @@ sub verify_alignment_data {
             }
         }
     }
-
+    
     # don't unlock if some caller lower on the stack had a lock
     unless ($already_had_lock) {
         unless ($self->unlock_alignment_resource) {
@@ -295,21 +299,32 @@ sub _run_aligner {
 
     $self->status_message("OUTPUT PATH: $alignment_directory\n");
 
+    #validate solexa lane software version for trimq2.
+    return unless $self->qualify_trimq2;
+    
     # these are general params not infered from the above
     my %aligner_params = $self->formatted_aligner_params;
     
     # we resolve these first, since we might just print the paths we work with then exit
     my @input_pathnames = $self->sanger_fastq_filenames;
+
+    my ($trimmer_name, $trimmer_style) = ($self->trimmer_name, $self->trimmer_style);
+    
+    @input_pathnames  = $self->run_trimq2_filter_style(@input_pathnames) 
+        if $trimmer_name and $trimmer_name eq 'trimq2' and $trimmer_style and $trimmer_style eq 'filter';
+
+    unless (@input_pathnames) {
+        $self->error_message('No input fastq pathnames to align');
+        $self->die_and_clean_up($self->error_message);
+    }
+
     $self->status_message("INPUT PATH(S): @input_pathnames\n");
     
     # establish ourselves a scratch dir
     my $tmp_dir = File::Temp::tempdir( CLEANUP => 1 );
     
     my $ref_basename = File::Basename::fileparse($reference_build->full_consensus_path('fa'));
-    my $reference_fasta_path = sprintf("%s/%s",
-				       $reference_build->data_directory,
-				       $ref_basename);
-
+    my $reference_fasta_path = sprintf("%s/%s", $reference_build->data_directory, $ref_basename);
     
     my $reference_fasta_index_path = $reference_fasta_path . ".fai";
     
@@ -400,113 +415,148 @@ sub _run_aligner {
         $is_paired_end = 0;
     }
 
-    my $samxe_logfile = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".bwa.samxe.log");
-    
-    my $sam_command_line = "";
-    if ( @input_pathnames == 1 ) {
-	
-	$sam_command_line = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
-	    . sprintf(
-	    ' samse %s %s %s %s',
-	    $bwa_samse_params, $reference_fasta_path,
-	    $sai_intermediate_files[0]->filename,
-	    $input_pathnames[0]
-	    )
-	    . " 2>>"
-	    . $samxe_logfile->filename
-	
-    }
-    else {
-	
-	# paired run
-	#my $upper_bound_option     = '-a ' . $self->upper_bound;
-	#my $max_occurrences_option = '-o ' . $self->max_occurrences;
-	my $paired_options = ""; #$upper_bound_option $max_occurrences_option";
-	
-	$sam_command_line = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
-	    . sprintf(
-	    ' sampe %s %s %s %s',
-	    $bwa_sampe_params,
-	    $reference_fasta_path,
-	    join (' ', map {$_->filename} @sai_intermediate_files),
-	    join (' ', @input_pathnames)
-	    )
-	    . " 2>>"
-	    . $samxe_logfile->filename
-    } 
-    
-    $self->status_message("Running samXe to get the output alignments");
-    
-    #BWA is not nice enough to give us an unaligned output file so we need to
-    #filter it out on our own
-    
-    my $sam_map_output_fh =
-	File::Temp->new( DIR => $tmp_dir, SUFFIX => ".sam" );
-    my $unaligned_output_fh =
-	IO::File->new( ">" . $self->unaligned_reads_list_path );
+    my $samxe_logfile       = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".bwa.samxe.log");
+    my $sam_map_output_fh   = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".sam" );
+    my $unaligned_output_fh = IO::File->new( ">" . $self->unaligned_reads_list_path );
 
-    my $sam_run_output_fh = IO::File->new( $sam_command_line . "|" );
-    if ( !$sam_run_output_fh ) {
-	$self->error_message("Error running $sam_command_line $!");
-	return;
-    }
-    
-    while (<$sam_run_output_fh>) {
-	my @line = split /\s+/;
+    my $sam_command_line = "";
+
+    if (@input_pathnames != 3 ) {
+        if ( @input_pathnames == 1 ) {
 	
-	# third column with a * indicates an unaligned read in the SAM format per samtools man page
-	if ( $line[2] eq "*" ) {
-	    $unaligned_output_fh->print($_);
-	}
-	else {
-            #write out the aligned map, excluding the default header- all lines starting with @.
-            my $first_char = substr($line[0],0,1);
-	    if ($first_char ne "@") {
-                $sam_map_output_fh->print($_);
-            }
-	}
-    }
+	        $sam_command_line = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
+	            . sprintf(
+	            ' samse %s %s %s %s',
+	            $bwa_samse_params, $reference_fasta_path,
+	            $sai_intermediate_files[0]->filename,
+	            $input_pathnames[0]
+	            )
+	            . " 2>>"
+	            . $samxe_logfile->filename;
+	
+        }
+        elsif (@input_pathnames == 2) {
+	
+	        # paired run
+	        #my $upper_bound_option     = '-a ' . $self->upper_bound;
+	        #my $max_occurrences_option = '-o ' . $self->max_occurrences;
+	        my $paired_options = ""; #$upper_bound_option $max_occurrences_option";
+	
+	        $sam_command_line = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
+	            . sprintf(
+	            ' sampe %s %s %s %s',
+	            $bwa_sampe_params,
+	            $reference_fasta_path,
+	            join (' ', map {$_->filename} @sai_intermediate_files),
+	            join (' ', @input_pathnames)
+	            )
+	            . " 2>>"
+	            . $samxe_logfile->filename;
+        } 
+        else {
+            $self->error_message('Number of input fastq files: '.@input_pathnames.' , which is wrong');
+            return;
+        }
     
+        $self->status_message("Running samXe to get the output alignments");
+    
+        #BWA is not nice enough to give us an unaligned output file so we need to
+        #filter it out on our own
+    
+        return unless $self->_filter_samXe_output($sam_command_line, $sam_map_output_fh, $unaligned_output_fh); 
+         
+    }
+    else {#trimq2 filter style pair-end got 3 input fastq files, 6 parts to concat: header, read-group, pe sam, frag sam, pe unalign, frag unalign,
+        unless ($trimmer_name eq 'trimq2' and $trimmer_style eq 'filter') {
+            $self->error_message('Only trimq2 with filter style should possibly have 3 input fastq files');
+            return;
+        }
+        unless (@sai_intermediate_files == 3) {
+            $self->error_message('The number of sai intermediate files should be 3, but get: '.@sai_intermediate_files);
+            return;
+        }
+        my $frag_fq  = pop @input_pathnames;
+        my $frag_sai = pop @sai_intermediate_files;
+
+        my $sam_command_line = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
+	        . sprintf(' sampe %s %s %s %s', $bwa_sampe_params, $reference_fasta_path,
+	        join (' ', map {$_->filename} @sai_intermediate_files), join (' ', @input_pathnames))
+	        . " 2>>" . $samxe_logfile->filename;
+
+        return unless $self->_filter_samXe_output($sam_command_line, $sam_map_output_fh, $unaligned_output_fh); 
+        
+        $sam_command_line = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
+	        . sprintf(' samse %s %s %s %s', $bwa_samse_params, $reference_fasta_path, $frag_sai, $frag_fq)
+	        . " 2>>" . $samxe_logfile->filename;
+
+        return unless $self->_filter_samXe_output($sam_command_line, $sam_map_output_fh, $unaligned_output_fh); 
+    } 
+
     $unaligned_output_fh->close();
     $sam_map_output_fh->close();
-        
-     unless ($self->process_low_quality_alignments) {
-        $self->error_message('Failed to process_low_quality_alignments');
-        $self->die_and_clean_up($self->error_message);
+    
+    my $unaligned_sam = $self->unaligned_reads_list_path;
+    
+    if ($trimmer_name eq 'trimq2' and $trimmer_style eq 'filter') {
+        my $trimq2_unaligned_sam = $self->trimq2_filtered_to_unaligned_sam;
+        if ($trimq2_unaligned_sam and -s $trimq2_unaligned_sam) {
+            my $rv = Genome::Utility::FileSystem->shellcmd(
+                cmd => "cat $trimq2_unaligned_sam >> ". $unaligned_sam,
+                input_files  => [$trimq2_unaligned_sam, $unaligned_sam],
+                output_files => [$unaligned_sam],
+                skip_if_output_is_present => 0,
+            );
+            unless ($rv == 1) {
+                $self->error_message("cating trimq2 unaligned sam to unaligned_sam failed");
+                return;
+            }
+            $self->status_message("cating trimq2_unaligned_sam to unaligned_sam succeeds");
+        }
+        else {
+            $self->warning_message("trimq2_unaligned_sam is empty");
+        }
+    }       
+    else {
+        #For now, do not run process_low_qual_align on trimq2 with filter style alignment since the *.unalign sam file could be combination
+        #of pair_end unaligned and fragment unaligned. It's not hard to parse this file to make unaligned.fastq. But anyway 
+        #why do we keep those unaligned.fastq ? Is there anybody using them ? Maybe it's time to stop making those unaligned.fastq 
+        #files in alignment directory since we already keep unaligned sam file to avoid redundant data storage.
+        unless ($self->process_low_quality_alignments) {
+            $self->error_message('Failed to process_low_quality_alignments');
+            $self->die_and_clean_up($self->error_message);
+        }
     }
     
-        #$DB::single = 1;
-
-    unless ($self->generate_tcga_bam_file(sam_file => $sam_map_output_fh->filename,
-					  unaligned_sam_file=> $self->unaligned_reads_list_path,
-					  aligner_params=>$self->aligner_params_for_sam_header) ) {
-	my $error = $self->error_message;
-	$self->error_message("Error creating BAM file from SAM file; error message was $error");
-	return;
+    unless ($self->generate_tcga_bam_file(
+        sam_file           => $sam_map_output_fh->filename,
+		unaligned_sam_file => $unaligned_sam,
+		aligner_params     => $self->aligner_params_for_sam_header,
+    )) {
+	    my $error = $self->error_message;
+	    $self->error_message("Error creating BAM file from SAM file; error message was $error");
+	    return;
     }
+    
+    #$DB::single = 1;
 
     unless (-e $self->alignment_file && -s $self->alignment_file) {
-	$self->error_message("Alignment output " . $self->alignment_file . " not found or zero length.  Something went wrong");
-	return;
+	    $self->error_message("Alignment output " . $self->alignment_file . " not found or zero length.  Something went wrong");
+	    return;
     }
-
-
 
     #### STEP 5: Concat all the log files into one
 
     my $log_input_fileset = join " ", map {$_->filename} (@aln_log_files, $samxe_logfile);
-    my $log_output_file = $self->aligner_output_file_path;
+    my $log_output_file   = $self->aligner_output_file_path;
     
-    my $concat_log_cmd = sprintf('cat %s > %s',
-				   $log_input_fileset,
-				   $log_output_file);
+    my $concat_log_cmd = sprintf('cat %s > %s', $log_input_fileset, $log_output_file);
     
     Genome::Utility::FileSystem->shellcmd(
-            cmd          => $concat_log_cmd,
-            input_files  => [ map {$_->filename} (@aln_log_files, $samxe_logfile 	) ],
-            output_files => [ $log_output_file ],
-            skip_if_output_is_present => 0,
-	    );
+        cmd          => $concat_log_cmd,
+        input_files  => [ map {$_->filename} (@aln_log_files, $samxe_logfile) ],
+        output_files => [ $log_output_file ],
+        skip_if_output_is_present => 0,
+	);
 
     unless ($self->verify_aligner_successful_completion($self->aligner_output_file_path)) {
         $self->error_message('Failed to verify bwa successful completion from output file '. $self->aligner_output_file_path);
@@ -534,6 +584,34 @@ sub _run_aligner {
 }
 
 
+sub _filter_samXe_output {
+    my ($self, $sam_cmd, $sam_map_fh, $unaligned_fh) = @_;
+
+    my $sam_run_output_fh = IO::File->new( $sam_cmd . "|" );
+    if ( !$sam_run_output_fh ) {
+	    $self->error_message("Error running $sam_cmd $!");
+	    return;
+    }
+    
+    while (<$sam_run_output_fh>) {
+	    my @line = split /\s+/;
+	
+	    # third column with a * indicates an unaligned read in the SAM format per samtools man page
+	    if ( $line[2] eq "*" ) {
+	        $unaligned_fh->print($_);
+        }
+	    else {
+            #write out the aligned map, excluding the default header- all lines starting with @.
+            my $first_char = substr($line[0],0,1);
+	        if ($first_char ne '@') {
+                $sam_map_fh->print($_);
+            }
+	    }
+    }
+    return 1;
+}
+
+        
 sub _verify_bwa_aln_did_happen {
     my $self = shift;
     my %p = @_;

@@ -76,6 +76,23 @@ sub calculate_estimated_kb_usage {
     return $temporary_value; 
 }
 
+
+sub calculate_input_base_counts_after_trimq2 {
+    my $self = shift;
+    my @idas = $self->instrument_data_assignments;
+    my ($total_ct, $total_trim_ct) = (0, 0);
+
+    for my $ida (@idas) {
+        my ($ct, $trim_ct) = $ida->alignment->calculate_base_counts_after_trimq2;
+        return unless $ct and $trim_ct;
+        $total_ct += $ct;
+        $total_trim_ct += $trim_ct;
+    }
+
+    return ($total_ct, $total_trim_ct);
+}
+
+
 sub consensus_directory {
     my $self = shift;
     return $self->data_directory .'/consensus';

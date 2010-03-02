@@ -145,11 +145,20 @@ $DB::single = 1;
 
     for my $list (qw/variant_list_files variant_filtered_list_files/) {
         my $snp_file = $self->create_temp_file_path($list);
+        my $name = $list;
+        $name =~ s/_files$//;
+        
         my @files = $self->$list;
         system "cat @files > $snp_file";
 
-        my %intersect_params = ('gold_snp_file' => $gold_snp_path,
-                                'snp_file' => $snp_file);
+        #my $report_dir = $build->resolve_reports_directory . $self->name; gold_snp subdir not ready yet.
+        my $missed_snp_file = $build->resolve_reports_directory. "$name.missed_gold_snv.dat";
+        
+        my %intersect_params = (
+            gold_snp_file   => $gold_snp_path,
+            snp_file        => $snp_file,
+            missed_snp_file => $missed_snp_file,
+        );
 
         if ($genotyper_name =~ m/samtools/) {
             $intersect_params{'snp_format'} = 'sam';
