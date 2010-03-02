@@ -28,6 +28,9 @@ has => [
 				doc => "new fasta output file",
 				is_optional => 1,
 			      },
+        'project_type' => { is => 'String',
+                            doc => "project type for pipeline [HGMI|CORE]...",
+                          },
        ]
 
 

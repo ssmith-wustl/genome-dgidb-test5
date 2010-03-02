@@ -173,6 +173,7 @@ sub execute
         fasta            => $cs->new_ctgs_out,
         analysis_version => $config->{pipe_version},
         acedb_version    => $config->{acedb_version},
+        project_type     => $config->{project_type},
 
     );
 
