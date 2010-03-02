@@ -115,6 +115,47 @@ sub create_temp_directory {
 
 
 #< Files >#
+
+sub read_file {
+    my ($self, $fname) = @_;
+    my $fh = $self->open_file_for_reading($fname);
+    die "Failed to open file $fname! " . $self->error_message() unless $fh;
+    my @lines = $fh->getlines;
+    if (wantarray) {
+        return @lines;
+    }
+    else { 
+        return join('',@lines)
+    }
+}
+
+sub write_file {
+    my ($self, $fname, @content) = @_;
+    my $fh = $self->open_file_for_writing($fname);
+    die "Failed to open file $fname! " . $self->error_message() unless $fh;
+    for (@content) {
+        $fh->print($_) or die "Failed to write to file $fname! $!";
+    }
+    $fh->close or die "Failed to close file $fname! $!";
+    return $fname;
+}
+
+sub diff_text_vs_text {
+    my ($self,$t1,$t2) = @_;
+    my $p1 = $self->create_temp_file_path();
+    $self->write_file($p1, $t1);
+    my $p2 = $self->create_temp_file_path();
+    $self->write_file($p2, $t2);
+    `sdiff -s $p1 $p2`;
+}
+
+sub diff_file_vs_text {
+    my ($self,$f1,$t2) = @_;
+    my $p2 = $self->create_temp_file_path();
+    $self->write_file($p2, $t2);
+    `sdiff -s $f1 $p2`;
+}
+
 sub _open_file {
     my ($self, $file, $rw) = @_;
 
