@@ -540,12 +540,13 @@ sub start {
             },
         );
 
-        UR::Context->create_subscription(
-            method => 'rollback',
-            callback => sub{
-                `bkill $job_id`;
-            },
-        );
+        ## temporarily commented out per eclark
+        #UR::Context->create_subscription(
+        #    method => 'rollback',
+        #    callback => sub{
+        #        `bkill $job_id`;
+        #    },
+        #);
         return 1;
     }
 }
