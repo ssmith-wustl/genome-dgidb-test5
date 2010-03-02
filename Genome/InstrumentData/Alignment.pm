@@ -1293,30 +1293,30 @@ sub get_bam_flagstat_statistics {
 
     my ($total, $qc_failure, $duplicates, $mapped, $paired, $read1, $read2, $properly_paired, $mate_mapped, $singletons, $mate_different, $mate_different_hq) = @lines;
     
-    ($flagstat_data{total}) = $total =~ /^(\d+) in total$/;
-    ($flagstat_data{qc_failure}) = $qc_failure =~ /^(\d+) QC failure$/;
-    ($flagstat_data{duplicates}) = $duplicates =~ /^(\d+) duplicates$/;
+    ($flagstat_data{total_reads}) = $total =~ /^(\d+) in total$/;
+    ($flagstat_data{reads_marked_failing_qc}) = $qc_failure =~ /^(\d+) QC failure$/;
+    ($flagstat_data{reads_marked_duplicates}) = $duplicates =~ /^(\d+) duplicates$/;
     
-    ($flagstat_data{mapped}, $flagstat_data{mapped_percentage}) =
+    ($flagstat_data{reads_mapped}, $flagstat_data{reads_mapped_percentage}) =
         $mapped =~ /^(\d+) mapped \((\d{1,3}\.\d{2}|nan)\%\)$/;
-    undef($flagstat_data{mapped_percentage}) if $flagstat_data{mapped_percentage} eq 'nan';
+    undef($flagstat_data{reads_mapped_percentage}) if $flagstat_data{reads_mapped_percentage} eq 'nan';
     
-    ($flagstat_data{paired}) = $paired =~ /^(\d+) paired in sequencing$/;
-    ($flagstat_data{read1}) = $read1 =~ /^(\d+) read1$/;
-    ($flagstat_data{read2}) = $read2 =~ /^(\d+) read2$/;
+    ($flagstat_data{reads_paired_in_sequencing}) = $paired =~ /^(\d+) paired in sequencing$/;
+    ($flagstat_data{reads_marked_as_read1}) = $read1 =~ /^(\d+) read1$/;
+    ($flagstat_data{reads_marked_as_read2}) = $read2 =~ /^(\d+) read2$/;
     
-    ($flagstat_data{properly_paired}, $flagstat_data{properly_paired_percentage}) =
+    ($flagstat_data{reads_mapped_in_proper_pairs}, $flagstat_data{reads_mapped_in_proper_pairs_percentage}) =
         $properly_paired =~ /^(\d+) properly paired \((\d{1,3}\.\d{2}|nan)\%\)$/;
-    undef($flagstat_data{properly_paired_percentage}) if $flagstat_data{properly_paired_percentage} eq 'nan';
+    undef($flagstat_data{reads_mapped_in_proper_pairs_percentage}) if $flagstat_data{reads_mapped_in_proper_pairs_percentage} eq 'nan';
     
-    ($flagstat_data{mate_mapped}) = $mate_mapped =~ /^(\d+) with itself and mate mapped$/;
+    ($flagstat_data{reads_mapped_in_pair}) = $mate_mapped =~ /^(\d+) with itself and mate mapped$/;
     
-    ($flagstat_data{singletons}, $flagstat_data{singletons_percentage}) =
+    ($flagstat_data{reads_mapped_as_singleton}, $flagstat_data{reads_mapped_as_singleton_percentage}) =
         $singletons =~ /^(\d+) singletons \((\d{1,3}\.\d{2}|nan)\%\)$/;
-    undef($flagstat_data{singletons_percentage}) if $flagstat_data{singletons_percentage} eq 'nan';
+    undef($flagstat_data{reads_mapped_as_singleton_percentage}) if $flagstat_data{reads_mapped_as_singleton_percentage} eq 'nan';
     
-    ($flagstat_data{mate_different}) = $mate_different =~ /^(\d+) with mate mapped to a different chr$/;
-    ($flagstat_data{mate_different_hq}) = $mate_different_hq =~ /^(\d+) with mate mapped to a different chr \(mapQ>=5\)$/;
+    ($flagstat_data{reads_mapped_in_interchromosomal_pairs}) = $mate_different =~ /^(\d+) with mate mapped to a different chr$/;
+    ($flagstat_data{hq_reads_mapped_in_interchromosomal_pairs}) = $mate_different_hq =~ /^(\d+) with mate mapped to a different chr \(mapQ>=5\)$/;
     
     $flagstat_fh->close;
     return \%flagstat_data;
