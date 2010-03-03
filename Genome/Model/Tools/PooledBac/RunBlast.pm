@@ -12,7 +12,7 @@ class Genome::Model::Tools::PooledBac::RunBlast {
     is => 'Command',
     has => 
     [ 
-        ref_sequence => 
+        ref_seq_file => 
         {
             type => 'String',
             is_optional => 0,
@@ -24,7 +24,7 @@ class Genome::Model::Tools::PooledBac::RunBlast {
             is_optional => 0,
             doc => "Pooled BAC Assembly Directory",    
         },    
-        pooled_bac_ace_file => 
+        ace_file_name => 
         {
             type => 'String',
             is_optional => 1,
@@ -81,7 +81,7 @@ sub execute {
     my $self = shift;
     $DB::single = 1;
     print "Running Blast...\n";
-    my $ref_sequence = $self->ref_sequence;
+    my $ref_seq_file = $self->ref_seq_file;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
     $self->error_message("Error creating directory $project_dir") and die unless Genome::Utility::FileSystem->create_directory($project_dir);
@@ -91,13 +91,13 @@ sub execute {
     chdir($self->pooled_bac_dir);
     #build db file
     #input that gets converted to query fasta file
-    $ace_file = $self->pooled_bac_dir.'/consed/edit_dir/'.$self->pooled_bac_ace_file if($self->pooled_bac_ace_file); 
+    $ace_file = $self->pooled_bac_dir.'/consed/edit_dir/'.$self->ace_file_name if($self->ace_file_name); 
     #if a pooled bac fasta file is provided, we use it instead of creating fasta from the ace file above
     $fasta_file = $self->project_dir.'/'.$self->pooled_bac_fasta_file if($self->pooled_bac_fasta_file); 
     $self->error_message("Need either an ace file or pooled bac fasta file to be specified.\n") and die unless (-e $ace_file || -e $fasta_file);
     my $ref_fasta_file =$self->project_dir.'/ref_seq.fasta';
     #build fasta containing reference sequence regions to be blasted against
-    $self->build_fasta_file($self->ref_sequence) if(!(-e $ref_fasta_file&&-e "$ref_fasta_file.qual"));
+    $self->build_fasta_file($self->ref_seq_file) if(!(-e $ref_fasta_file&&-e "$ref_fasta_file.qual"));
     
     chdir($project_dir);
     Genome::Model::Tools::WuBlast::Xdformat::Create->execute(
@@ -130,7 +130,7 @@ sub parse_ref_seq_coords_file
 {
     my ($self) = @_;
     
-    my $ref_coords_file = $self->ref_sequence;
+    my $ref_coords_file = $self->ref_seq_file;
     $self->error_message("$ref_coords_file does not exist\n") and die unless -e $ref_coords_file;
     my $fh = IO::File->new($ref_coords_file);
     $self->error_message("Error opening $ref_coords_file.\n") and die unless defined $fh;
@@ -244,7 +244,7 @@ sub write_fasta
 
 sub build_fasta_file
 {
-    my ($self, $ref_seq_coords_file) = @_;
+    my ($self, $ref_seq_file) = @_;
     my $data = $self->parse_ref_seq_coords_file;
     
     my $ref_seq_fasta = $self->project_dir.'/ref_seq.fasta';
