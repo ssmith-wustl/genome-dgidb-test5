@@ -49,7 +49,6 @@ my $cmd = Genome::InstrumentData::Command::Import::Microarray->create(
     sample_name => $sample_name,
     original_data_path => $source_dir,
     sequencing_platform => 'illumina genotype array',
-    import_format => 'unknown',
     allocation =>  $tmp_allocation,
 );
 

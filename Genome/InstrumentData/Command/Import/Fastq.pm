@@ -39,11 +39,13 @@ my %properties = (
         is => 'Text',
         doc => 'format of import data, like bam',
         valid_values => ['fastq'],
+        is_optional => 1,
     },
     sequencing_platform => {
         is => 'Text',
         doc => 'sequencing platform of import data, like solexa',
         valid_values => ['solexa'],
+        is_optional => 1,
     },
     description  => {
         is => 'Text',
@@ -217,6 +219,10 @@ sub execute {
         next if $property_name =~ /^library_name$/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
+
+    $params{sequencing_platform} = "solexa";
+    $params{import_format} = "fastq";
+
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);

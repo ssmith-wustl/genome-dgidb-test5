@@ -27,6 +27,7 @@ my %properties = (
         is => 'Text',
         doc => 'format of import data, like microarray',
         valid_values => ['unknown'],                
+        is_optional => 1,
     },
     sequencing_platform => {
         is => 'Text',
@@ -132,6 +133,7 @@ sub execute {
     my $sample_id = $genome_sample->id;
     $self->status_message("genome sample $sample_name has id: $sample_id");
     $params{sample_id} = $sample_id;
+    $params{import_format} = "unknown";
 
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params); #change Bamed to Microarray - create the Microarray subclass  
     unless ($import_instrument_data) {

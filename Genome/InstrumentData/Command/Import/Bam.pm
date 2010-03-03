@@ -33,11 +33,13 @@ my %properties = (
         is => 'Text',
         doc => 'sequencing platform of import data, like solexa',
         valid_values => ['solexa'],
+        is_optional => 1,
     },
     import_format => {
         is => 'Text',
         doc => 'import format, should be bam',
         valid_values => ['bam'],
+        is_optional =>1,
     },
     description  => {
         is => 'Text',
@@ -158,6 +160,8 @@ sub execute {
     my $sample_id = $genome_sample->id;
     $self->status_message("genome sample $sample_name has id: $sample_id");
     $params{sample_id} = $sample_id;
+    $params{sequencing_platform} = "solexa";
+    $params{import_format} = "bam";
     
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
