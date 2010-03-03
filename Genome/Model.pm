@@ -262,6 +262,15 @@ sub create {
         return;
     }
 
+    # Fill in the other subject properties if possible
+    # TODO These properties should be used to get the subject rather than be derived from it.
+    # Once all data has been backfilled and these properties are required this can be removed.
+    my $subject = $self->subject;
+    if(defined $subject) {
+        $self->subject_class_name(ref($subject));
+        $self->subject_id($subject->id());
+    }
+
     unless ($self->user_name) {
         $self->user_name($ENV{USER});
     }
