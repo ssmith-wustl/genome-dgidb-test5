@@ -1,0 +1,41 @@
+package Genome::Model::Event::Build::MetagenomicComposition16s::Trim;
+
+use strict;
+use warnings;
+
+use Genome;
+
+class Genome::Model::Event::Build::MetagenomicComposition16s::Trim {
+    is => 'Genome::Model::Event::Build::MetagenomicComposition16s',
+    is_abstract => 1,
+};
+
+sub _add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual {
+    my ($self, $fasta_file, $qual_file) = @_;
+
+    # Write the 'raw' read fastas
+    my $reader = $self->build->fasta_and_qual_reader($fasta_file, $qual_file)
+        or return;
+    while ( my $bioseq = $reader->() ) {
+        $self->_processed_reads_fasta_and_qual_writer->($bioseq)
+            or return;
+    }
+ 
+    return 1;
+}
+
+sub _processed_reads_fasta_and_qual_writer {
+    my $self = shift;
+
+    unless ( $self->{_processed_reads_fasta_and_qual_writer} ) {
+        $self->{_processed_reads_fasta_and_qual_writer} = $self->build->processed_reads_fasta_and_qual_writer
+            or return;
+    }
+
+    return $self->{_processed_reads_fasta_and_qual_writer};
+}
+
+1;
+
+#$HeadURL$
+#$Id$

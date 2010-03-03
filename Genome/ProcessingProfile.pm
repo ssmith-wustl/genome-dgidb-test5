@@ -118,8 +118,45 @@ sub create {
     }
 
     # Make sure subclass is a real class
-    unless ( $subclass->can('get_class_object') ) {
-        confess "Can't find meta for class ($class). Is type name ($params{type_name}) valid?";
+    my $meta;
+    eval {
+        $meta = $subclass->__meta__;
+    };
+    unless ( $meta ) {
+        confess "Can't find meta for class ($subclass). Is type name ($params{type_name}) valid?";
+    }
+
+    # Go thru params - set defaults, validate required and valid values
+    foreach my $property_name ( $subclass->params_for_class ) {
+        my $property_meta = $meta->property_meta_for_name($property_name);
+        if ( !defined $params{$property_name} ) {
+            my $default_value = $property_meta->default_value;
+            if ( defined $default_value ) {
+                $params{$property_name} = $default_value;
+                # let this fall thru to check valid values
+            }
+            elsif ( $property_meta->is_optional ) {
+                next;
+            }
+            else {
+                $class->error_message(
+                    sprintf('Invalid value (undefined) for %s', $property_name)
+                );
+                return;
+            }
+        }
+        next unless defined $property_meta->valid_values; 
+        unless ( grep { $params{$property_name} eq $_ } @{ $property_meta->valid_values } ) {
+            $class->error_message(
+                sprintf(
+                    'Invalid value (%s) for %s.  Valid values: %s.',
+                    $params{$property_name},
+                    $property_name,
+                    join(', ', @{ $property_meta->valid_values }),
+                )
+            );
+            return;
+        }
     }
 
     # Identical PPs
@@ -130,34 +167,6 @@ sub create {
     my $self = $class->SUPER::create(%params)
        or return;
    
-    my $meta = $self->class->__meta__;
-    foreach my $property_name ($self->params_for_class) {
-        my $property_meta = $meta->property_meta_for_name($property_name);
-        if (!defined $self->$property_name) {
-            if ($property_meta->is_optional) {
-                next;
-            } else {
-                $self->error_message(
-                    sprintf('Invalid value (undefined) for %s',$property_name)
-                );
-                $self->delete;
-                return;
-            }
-        }
-        next unless (defined $property_meta->valid_values); 
-        unless ( grep { $self->$property_name eq $_ } @{ $property_meta->valid_values } ) {
-            $self->error_message(
-                                 sprintf(
-                                         'Invalid value (%s) for %s.  Valid values: %s.',
-                                         $self->$property_name,
-                                         $property_name,
-                                         join(', ', @{ $property_meta->valid_values }),
-                                     )
-                             );
-            $self->delete;
-            return;
-        }
-    }
     
     return $self;
 }

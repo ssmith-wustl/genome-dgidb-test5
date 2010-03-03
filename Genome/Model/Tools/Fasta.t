@@ -27,7 +27,7 @@ my $ORIG_QUAL = $ORIG_FASTA.'.qual';
 ok(-f $ORIG_QUAL, "Original qual ($ORIG_QUAL) exists");
 # Temp files 
 # not using a tmp prefix for convenience
-my $DIR = tempdir(DIR => $ORIG_DIR, CLEANUP => 1);
+my $DIR = tempdir(CLEANUP => 1);
 ok(-d $DIR, "Temp dir ($DIR) exists");
 my $FASTA = $DIR.'/file.fasta';
 File::Copy::copy($ORIG_FASTA, $FASTA);

@@ -324,20 +324,21 @@ sub add_mock_build_to_model {
 
     confess "No model given to add mock build" unless $model;
 
-    #< Build
+    my $data_directory = $model->data_directory.'/build';
+    my $build_class = 'Genome::Model::Build::'.Genome::Utility::Text::string_to_camel_case($model->type_name);
+    if ( grep { $model->type_name eq $_ } ('metagenomic composition 16s', 'reference alignment') ) { # TODO add ref align too?
+        $build_class .= '::'.Genome::Utility::Text::string_to_camel_case($model->sequencing_platform);
+    }
+    
+    # Build
     my $build = $self->create_mock_object(
-        class => 'Genome::Model::Build::'.Genome::Utility::Text::string_to_camel_case($model->type_name),
+        class => $build_class,
         model => $model,
         model_id => $model->id,
-        data_directory => $model->data_directory.'/build', #FIXME
+        data_directory => $data_directory,
         type_name => $model->type_name,
     ) or confess "Can't create mock ".$model->type_name." build";
-
-    # data directory:
-    # tmp - use build id
-    # mock dir - no id
-    $build->data_directory( $model->data_directory.'/build'.( $model->data_directory =~ m#^/tmp# ? $build->id : ''));
-    mkdir $build->data_directory unless -d $build->data_directory;
+    mkdir $data_directory unless -d $data_directory;
 
     $self->mock_methods(
         $build,
@@ -350,14 +351,14 @@ sub add_mock_build_to_model {
             /),
     ) or confess "Can't add methods to mock build";
 
-    #< Event
+    # Event
     $self->add_mock_event_to_build($build)
         or confess "Can't add mock event to mock build";
 
-    #< Methods in subclass
-    my $add_mock_methods_to_build = '_add_mock_methods_to_'.join('_', split(' ',$model->type_name)).'_build';
-    if ( $self->can($add_mock_methods_to_build) ) {
-        $self->$add_mock_methods_to_build($build)
+    # Subclass specifics
+    my $build_subclass_specifics_method = '_build_subclass_specifics_for_'.join('_', split(' ',$model->type_name));
+    if ( $self->can($build_subclass_specifics_method) ) {
+        $self->$build_subclass_specifics_method($build)
             or confess;
     }
 
@@ -531,7 +532,7 @@ sub create_mock_454_instrument_data {
 
 #< Additional Methods for Mock Models Type Names >#
 # amplicon assembly
-sub _add_mock_methods_to_amplicon_assembly_build { 
+sub _build_subclass_specifics_for_amplicon_assembly { 
     my ($self, $build) = @_;
 
     $self->mock_methods(
@@ -547,8 +548,81 @@ sub _add_mock_methods_to_amplicon_assembly_build {
 
 }
 
+# metagenomic composition 16s 
+sub _build_subclass_specifics_for_metagenomic_composition_16s { 
+    my ($self, $build) = @_;
+
+    # base
+    my @methods = (qw/ 
+
+        description amplicon_iterator length_of_16s_region
+        sub_dirs _sub_dirs fasta_dir classification_dir 
+        file_base_name
+        clean_up
+        fasta_and_qual_reader fasta_and_qual_writer
+        _bioseq_io _bioseq_reader _bioseq_writer _create_bioseq_from_fasta_and_qual
+        _validate_fasta_and_qual_bioseq
+
+        processed_fasta_file processed_qual_file
+        processed_fasta_and_qual_reader processed_fasta_and_qual_writer
+
+        oriented_fasta_file oriented_qual_file 
+        oriented_fasta_and_qual_reader oriented_fasta_and_qual_writer
+        orient_amplicons_by_classification
+
+        classification_file_for_amplicon
+        load_classification_for_amplicon
+        save_classification_for_amplicon
+        
+        /);
+
+    # sanger
+    if ( $build->model->sequencing_platform eq 'sanger' ) {
+        push @methods, (qw/
+
+            link_instrument_data
+
+            chromat_dir phd_dir edit_dir
+            consed_directory 
+
+            raw_reads_fasta_file raw_reads_qual_file
+            raw_reads_fasta_and_qual_reader raw_reads_fasta_and_qual_writer
+            processed_reads_fasta_file processed_reads_qual_file
+            processed_reads_fasta_and_qual_reader processed_reads_fasta_and_qual_writer
+            
+            scfs_file_for_amplicon create_scfs_file_for_amplicon
+            phds_file_for_amplicon ace_file_for_amplicon
+            reads_fasta_file_for_amplicon reads_qual_file_for_amplicon
+            
+            load_bioseq_for_amplicon
+
+            _get_amplicon_name_for_gsc_read_name
+            _get_amplicon_name_for_broad_read_name
+            _get_all_reads_for_gsc_amplicon
+            _get_all_reads_for_broad_amplicon
+
+            /);
+    }
+    # 454
+    else {
+        # TODO 
+    }
+
+    # mock 'em
+    $self->mock_methods($build, @methods);
+
+    # create dirs
+    for my $dir ( $build->sub_dirs ) {
+        Genome::Utility::FileSystem->create_directory( $build->data_directory."/$dir" )
+            or return;
+    }
+
+    return 1;
+
+}
+
 # de novo assembly
-sub _add_mock_methods_to_de_novo_assembly_build { 
+sub _build_subclass_specifics_for_de_novo_assembly { 
     my ($self, $build) = @_;
 
     $self->mock_methods(
@@ -560,12 +634,12 @@ sub _add_mock_methods_to_de_novo_assembly_build {
 }
 
 # virome screening
-sub _add_mock_methods_to_virome_screen_build {
+sub _build_subclass_specifics_for_virome_screen {
     my ($self, $build) = @_;
 
     $self->mock_methods (
-	$build,
-	(qw/ barcode_file log_file /),
+        $build,
+        (qw/ barcode_file log_file /),
     );
     return 1;
 }
@@ -586,7 +660,7 @@ sub _additional_methods_to_reference_alignment_model {
     return 1;
 }
 
-sub _additional_methods_to_reference_alignment_build {
+sub _build_subclass_specifics_for_reference_alignment {
     my ($self, $build) = @_;
 
     if ( $build->model->sequencing_platform eq 'solexa' ) {

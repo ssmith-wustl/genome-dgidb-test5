@@ -10,9 +10,9 @@ use Test::More 'no_plan';
 use_ok('Genome::Utility::Text');
 
 # camel case
-my $string                  = 'genome model reference alignment 454';
-my $capitalized_string      = 'Genome Model Reference Alignment 454';
-my $camel_case              = 'GenomeModelReferenceAlignment454';
+my $string                  = 'genome model reference alignment 454x titanium';
+my $capitalized_string      = 'Genome Model Reference Alignment 454x Titanium';
+my $camel_case              = 'GenomeModelReferenceAlignment454xTitanium';
 is(Genome::Utility::Text::string_to_camel_case($string), $camel_case, 'string_to_camel_case');
 ok(!Genome::Utility::Text::string_to_camel_case(undef), 'string_to_camel_case failed w/o string');
 is(Genome::Utility::Text::camel_case_to_string($camel_case), $string, 'camel_case_to_string');

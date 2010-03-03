@@ -21,6 +21,7 @@ class Genome::ProcessingProfile::Tester {
         },
         dna_source => {
             is => 'Text',
+            default_value => 'genomic',
             valid_values => [qw/ genomic metagenomic /],
             doc => 'The dna source of this profile',
         },
@@ -83,12 +84,6 @@ sub required_params_for_class {
     return (qw/ name /);
 }
 
-sub invalid_params_for_test_class {
-    return (
-        type_name => 'not tester',
-    );
-}
-
 sub test_startup : Test(startup => 2) {
     my $self = shift;
 
@@ -123,6 +118,18 @@ sub test01_creates : Tests(6) {
     ); # we now have 2 pp in memory, the one above and the original with all params defined 
 
     #< INVALID CREATES >#
+    eval {
+        $self->test_class->create(
+            name => 'Invalid Type Name', # name must be different cuz it is checked first
+            type_name => 'not tester',
+            dna_source => $dna_source,
+            roi => $roi,
+        )
+    };
+    ok(
+        $@ =~ /^Can't find meta for class/, # specific error is important here!
+        "Failed as expected - create w/ invalid type name => 'not tester'"
+    );
     ok( # w/o sequencing platform (required)
         !$self->test_class->create(
             name => 'Dna Source is undef', # name must be different cuz it is checked first
@@ -161,6 +168,15 @@ sub test01_creates : Tests(6) {
             roi => $roi,
         ),
         'Create failed as expected - pp with different name, but same params',
+    );
+    ok( # check that default values are set by creating w/ duplicate params w/o dna_source
+        !$self->test_class->create(
+            name => 'Diff Name',
+            type_name => $type_name,
+            sequencing_platform => $sequencing_platform,
+            roi => $roi,
+        ),
+        'Create failed as expected - pp with same params, setting the default value for dna_source',
     );
     ok( # duplicate params w/ roi undef - checks undef params
         !$self->test_class->create(
@@ -305,6 +321,27 @@ my %TYPE_NAME_PARAMS = (
         sequencing_center => 'gsc',
         sequencing_platform => 'sanger',
     }, 
+    'metagenomic composition 16s sanger' => {
+        class => 'Genome::ProcessingProfile::MetagenomicComposition16s',
+        type_name => 'metagenomic composition 16s',
+        name => '16S Test Sanger',
+        amplicon_size => 1150,
+        sequencing_center => 'gsc',
+        sequencing_platform => 'sanger',
+        assembler => 'phred_phrap',
+        assembler_params => '-vector_bound 0 -trim_qual 0',
+        trimmer => 'finishing',
+        classifier => 'rdp',
+    }, 
+    'metagenomic composition 16s 454' => {
+        class => 'Genome::ProcessingProfile::MetagenomicComposition16s',
+        type_name => 'metagenomic composition 16s',
+        name => '16S Test 454',
+        amplicon_size => 200,
+        sequencing_center => 'gsc',
+        sequencing_platform => '454',
+        classifier => 'rdp',
+    }, 
     'reference alignment solexa' => {
         class => 'Genome::ProcessingProfile::ReferenceAlignment::Solexa',
         type_name => 'reference alignment',
@@ -367,14 +404,29 @@ sub valid_params_for_type_name {
 
     confess "No type name given" unless $type_name;
 
-    return unless exists $TYPE_NAME_PARAMS{$type_name};
+    my ($match) = grep { m#$type_name# } sort { $b cmp $a } keys %TYPE_NAME_PARAMS;
+    
+    return unless exists $TYPE_NAME_PARAMS{$match};
 
-    return %{$TYPE_NAME_PARAMS{$type_name}};
+    return %{$TYPE_NAME_PARAMS{$match}};
 }
 
 #< Additional Methods for Mock PP Type Names >#
 # TODO
 #sub _add_mock_methods_to_amplicon_assembly { }
+sub _add_mock_methods_to_metagenomic_composition_16s {
+    my ($self, $pp) = @_;
+
+    $self->mock_methods(
+        $pp, 
+        (qw/ 
+            _operation_params_as_hash
+            assembler_params_as_hash classifier_params_as_hash trimmer_params_as_hash
+            /),
+    );
+
+    return 1;
+}
 
 sub _add_mock_methods_to_de_novo_assembly { 
     my ($self, $pp) = @_;
@@ -475,6 +527,77 @@ sub invalid_params_for_test_class {
         sequencing_center => 'monsanto',
         purpose => 'because',
     );
+}
+
+###############################
+# Metagenomic Composition 16s #
+###############################
+
+package Genome::ProcessingProfile::MetagenomicComposition16s::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::ProcessingProfile::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub invalid_params_for_test_class {
+    return (
+        sequencing_platform => 'super-seq',
+        sequencing_center => 'monsanto',
+    );
+}
+
+sub test01_param_hashes : Tests() {
+    my $self = shift;
+    
+    my %assembler_params = $self->pp->assembler_params_as_hash;
+    is_deeply(
+        \%assembler_params,
+        { vector_bound => 0, trim_qual => 0 },
+        'assembler params as hash'
+    );
+
+    my %trimmer_params = $self->pp->trimmer_params_as_hash;
+    is_deeply(
+        \%trimmer_params,
+        {},
+        'trimmer params as hash'
+    );
+
+    my %classifier_params = $self->pp->classifier_params_as_hash;
+    is_deeply(
+        \%classifier_params,
+        {},
+        'classifier params as hash'
+    );
+
+    return 1;
+}
+
+sub test02_stages : Tests() {
+    my $self = shift;
+    
+    my @stages = $self->pp->stages;
+    is_deeply(\@stages, [qw/ one /], 'Stages');
+    my @stage_one_classes = $self->pp->classes_for_stage($stages[0]);
+    #print Dumper(\@stage_one_classes);
+    is_deeply(
+        \@stage_one_classes, 
+        [qw/
+        Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::Sanger
+        Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Finishing
+        Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::PhredPhrap
+        Genome::Model::Event::Build::MetagenomicComposition16s::Classify::Rdp
+        Genome::Model::Event::Build::MetagenomicComposition16s::Orient
+        Genome::Model::Event::Build::MetagenomicComposition16s::Reports
+        Genome::Model::Event::Build::MetagenomicComposition16s::CleanUp
+        /], 
+        'Stage one classes'
+    );
+    return 1;
 }
 
 #######################

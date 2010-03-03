@@ -21,29 +21,26 @@ sub string_to_camel_case {
     return join('', map { ucfirst } split(/[\s_]+/, $string));
 }
 
-sub camel_case_to_string {
+sub camel_case_to_words {
     my $camel_case = shift;
     unless ( $camel_case ) {
-        Carp::cluck('No camel case to convert to string');
+        Carp::cluck('No camel case to get words');
         return;
     }
-    my $join = ( @_ )
-    ? $_[0]
-    : ' '; 
-    my @words = $camel_case =~ /([A-Z\d](?:[A-Z\d]*(?=$|[A-Z][a-z])|[a-z]*))/g;
+    my @words = $camel_case =~ /([A-Z\d]+(?:[A-Z\d]*(?=$|[A-Z][a-z])|[a-z]*))/g;
+   #my @words = $camel_case =~ /([A-Z\d](?:[A-Z\d]*(?=$|[A-Z][a-z])|[a-z]*))/g;
+    return @words;
+}
+
+sub camel_case_to_string {
+    my @words = camel_case_to_words(shift);
+    my $join = ( @_ ) ? $_[0] : ' '; 
     return join($join, map { lc } @words);
 }
 
 sub camel_case_to_capitalized_words {
-    my $camel_case = shift;
-    unless ( $camel_case ) {
-        Carp::cluck('No camel case to convert to string');
-        return;
-    }
-    my $join = ( @_ )
-    ? $_[0]
-    : ' '; 
-    my @words = $camel_case =~ /([A-Z\d](?:[A-Z\d]*(?=$|[A-Z][a-z])|[a-z]*))/g;
+    my @words = camel_case_to_words(shift);
+    my $join = ( @_ ) ? $_[0] : ' '; 
     return join($join, map { ucfirst } @words);
 }
 
