@@ -284,7 +284,7 @@ unless (open(SUMMARY,">$summary_file")) {
 die "Could not open output file '$summary_file' for writing";
 }
 
-print SUMMARY "$fileline{'1'}\tCosmic_Results (AA listed as residue1, res_start, residue2)\tOMIM_Results\tWarning: Input file must input all transcript names for each gene or else COSMIC and OMIM results may be invalid\n";
+print SUMMARY "Line_Number\t$fileline{'1'}\tCosmic_Results (AA listed as residue1, res_start, residue2)\tOMIM_Results\tWarning: Input file must input all transcript names for each gene or else COSMIC and OMIM results may be invalid\n";
 
 foreach my $hugo (sort keys %{$mutation}) {
 foreach my $sample (keys %{$mutation->{$hugo}}) {
