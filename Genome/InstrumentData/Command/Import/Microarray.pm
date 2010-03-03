@@ -26,13 +26,12 @@ my %properties = (
     import_format => {
         is => 'Text',
         doc => 'format of import data, like microarray',
-        valid_values => ['microarray'],                
-        is_optional => 1,
+        valid_values => ['unknown'],                
     },
     sequencing_platform => {
         is => 'Text',
         doc => 'sequencing platform of import data, like illumina/affymetrix',
-        valid_values => ['illumina', 'affymetrix'],
+        valid_values => ['illumina genotype array', 'illumina expression array', 'affymetrix genotype array', '454','sanger'],
     },
     description  => {
         is => 'Text',

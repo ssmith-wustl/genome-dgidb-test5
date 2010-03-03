@@ -48,7 +48,8 @@ isa_ok($tmp_allocation,'Genome::Disk::Allocation');
 my $cmd = Genome::InstrumentData::Command::Import::Fastq->create(
     library_name => $library_name,
     source_data_files => $source_dir,
-    sequencing_platform => 'fastq',
+    sequencing_platform => 'solexa',
+    import_format => 'fastq',
     allocation =>  $tmp_allocation
 );
 
@@ -65,7 +66,8 @@ ok($result, "execution was successful");
 my $i = Genome::InstrumentData::Imported->get(  
     sample_name => $sample_name, 
     library_id => $library->id,
-    sequencing_platform => 'fastq',      
+    sequencing_platform => 'solexa',      
+    import_format => 'fastq',
     
 );
 

@@ -38,13 +38,12 @@ my %properties = (
     import_format => {
         is => 'Text',
         doc => 'format of import data, like bam',
-        valid_values => ['bam','fastq'],
-        is_optional => 1,
+        valid_values => ['fastq'],
     },
     sequencing_platform => {
         is => 'Text',
         doc => 'sequencing platform of import data, like solexa',
-        is_optional => 1,
+        valid_values => ['solexa'],
     },
     description  => {
         is => 'Text',
