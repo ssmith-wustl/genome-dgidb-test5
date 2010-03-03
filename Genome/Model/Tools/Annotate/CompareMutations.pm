@@ -337,14 +337,14 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 ##  WILL THINK THIS IS A DINUCLEOTIDE POLYMORPHISM INSTEAD OF AN INDEL, SO CHANGE THESE
 	   $Reference_Allele = '-' if $Reference_Allele eq '--';
 	   $proper_allele = '-' if $proper_allele eq '--';
-
+	   chomp($line_num);
 	   my %results_hash;
 #parse the amino acid string
 	   my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = MG::Validate::AminoAcidChange::Check($aa_change);
 	   if(!$residue2 || $residue2 eq ' '){
 		print "Skipping Silent Mutation";
 #		my $createspreadsheet = "$hugo\t$transcript\t$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$Variant_Type\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
-		my $createspreadsheet = "$fileline{$line_num}\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
+		my $createspreadsheet = "$line_num\t$fileline{$line_num}\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
 		print SUMMARY "$createspreadsheet\n";
 		next; #skip silent mutations
 	   }
@@ -447,7 +447,7 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 	   $cosmic_results{$line_num} = score_results(\%results_hash, "COSMIC");
 	   $omim_results{$line_num} = score_results(\%results_hash, "OMIM");
 
-my $createspreadsheet = "$fileline{$line_num}\t$cosmic_results{$line_num}\t$omim_results{$line_num}";
+my $createspreadsheet = "$line_num\t$fileline{$line_num}\t$cosmic_results{$line_num}\t$omim_results{$line_num}";
 #	   my $createspreadsheet = "$hugo\t$transcript\t$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$Variant_Type\t$cosmic_results{$line_num}\t$omim_results{$line_num}";
 	   print SUMMARY "$createspreadsheet\n";
    }
