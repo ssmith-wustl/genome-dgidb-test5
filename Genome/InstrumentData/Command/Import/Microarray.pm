@@ -168,7 +168,7 @@ sub execute {
         $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%alloc_params));
         return;
     }
-    $self->status_message("Microarray allocation created for $instrument_data_id .");
+    $self->status_message("Microarray allocation created for $instrument_data_id.");
 
     my $target_path = $disk_alloc->absolute_path . "/";
     $self->status_message("Microarray allocation created at $target_path .");
