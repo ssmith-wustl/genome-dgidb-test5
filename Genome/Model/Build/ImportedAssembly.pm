@@ -19,10 +19,12 @@ sub create {
 	return;
     }
     #TRACKING ALREADY EXISTING ASSEMBLIES SO DIRECTORY SHOULD ALREADY BE THERE
-    unless (-d $self->data_directory) {
-	$self->error_message("Failed to find assembly directory: ".$self->assembly_directory);
+    unless (-d $self->model->data_directory) {
+	$self->error_message("Failed to find assembly directory: ".$self->model->data_directory);
 	return;
     }
+
+    $self->status_message("Your assembly has been tracked successfully");
 
     return $self;
 }
