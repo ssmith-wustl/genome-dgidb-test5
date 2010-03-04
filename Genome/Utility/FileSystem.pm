@@ -719,7 +719,7 @@ I'm about to remove a lock file held by a LSF job that I think is dead.
 
 The resource is: 
 
-$resource_lock
+%s
 
 Here's info about the job that I think is gone.
 
