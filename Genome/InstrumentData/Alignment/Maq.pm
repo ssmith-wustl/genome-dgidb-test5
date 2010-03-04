@@ -8,6 +8,15 @@ use Genome;
 
 class Genome::InstrumentData::Alignment::Maq {
     is => ['Genome::InstrumentData::Alignment'],
+    has => [
+                    is_not_run_as_paired_end => {
+                        type => 'Boolean',
+                        calculate_from => ['filter_name', 'force_fragment'],
+                        calculate => q|return $force_fragment
+                                    or ($filter_name eq 'forward-only')
+                                    or ($filter_name eq 'reverse-only');|,
+                    }
+    ],
     has_constant => [
                      aligner_name => { value => 'maq' },
     ],
@@ -95,7 +104,7 @@ sub verify_aligner_successful_completion {
         unless ($stats) {
             return $self->_aligner_output_file_complete($aligner_output_file);
         }
-        if ($self->force_fragment) {
+        if ($self->is_not_run_as_paired_end) {
             if ($$stats{'isPE'} != 0) {
                 $self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as fragment data according to aligner output '. $aligner_output_file);
                 return;
@@ -925,7 +934,7 @@ sub process_low_quality_alignments {
         return 1;
     }
     elsif (-s $unaligned_reads_file) {
-        if ($self->instrument_data->is_paired_end && !$self->force_fragment) {
+        if ($self->instrument_data->is_paired_end && !$self->is_not_run_as_paired_end) {
             $result = Genome::Model::Tools::Maq::UnalignedDataToFastq->execute(
                 in => $unaligned_reads_file, 
                 fastq => $unaligned_reads_file . '.1.fastq',
@@ -944,7 +953,7 @@ sub process_low_quality_alignments {
     }
     else {
         foreach my $unaligned_reads_files_entry (@unaligned_reads_files){
-            if ($self->_alignment->instrument_data->is_paired_end && !$self->force_fragment) {
+            if ($self->_alignment->instrument_data->is_paired_end && !$self->is_not_run_as_paired_end) {
                 $result = Genome::Model::Tools::Maq::UnalignedDataToFastq->execute(
                     in => $unaligned_reads_files_entry, 
                     fastq => $unaligned_reads_files_entry . '.1.fastq',

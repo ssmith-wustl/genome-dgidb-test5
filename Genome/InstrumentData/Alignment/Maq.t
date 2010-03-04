@@ -10,7 +10,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 27;
+        plan tests => 32;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -255,5 +255,32 @@ is(scalar(@diff), 1, "found 1 difference as expected (the output dir has timings
 
 ok($alignment4->remove_alignment_directory,'removed alignment directory '. $dir4);
 ok(! -e $dir4, 'alignment directory does not exist');
+print "<<<End Test Case #4\n";
+#######End Test #4
+
+#######Begin Test #5
+#Run paired end with forward-only filter
+print ">>>Begin Test Case 5\n";
+$tmp_allocation->allocation_path('alignment_data/maq0_7_1.filter_name~forward-only/refseq-for-test/test_run_name/4_-123458');
+$tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+$instrument_data3->set_list('fastq_filenames',@fastq_files);
+$instrument_data3->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
+$instrument_data3->set_always('sample_id','2791246676');
+
+my $alignment5 = Genome::InstrumentData::Alignment->create(
+                                                       instrument_data_id => $instrument_data3->id,
+                                                       aligner_name => 'maq',
+                                                       aligner_version => '0.7.1',
+                                                       samtools_version => $samtools_version,
+                                                       picard_version => $picard_version,
+                                                       reference_name => 'refseq-for-test',
+                                                       filter_name => 'forward-only',
+                                                   );
+ok($alignment5->find_or_generate_alignment_data,'generated new alignment data for paired end data with filter applied');
+my $dir5 = $alignment5->alignment_directory;
+ok($dir5, "alignments found/generated");
+ok(-d $dir5, "result is a real directory");
+ok($alignment5->remove_alignment_directory,'removed alignment directory '. $dir5);
+ok(! -e $dir5, 'alignment directory does not exist');
 
 exit;
