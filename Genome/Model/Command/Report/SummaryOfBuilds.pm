@@ -68,7 +68,7 @@ class Genome::Model::Command::Report::SummaryOfBuilds {
 
 #< Help >#
 sub help_brief {
-    return 'Produce a report of completed builds';
+    return 'Produce a report of successfully completed builds';
 }
 
 sub help_detail {
@@ -83,7 +83,7 @@ sub execute {
     # Build the sql query
     my $query = $self->_build_sql_query
         or return;
-    print "\n\n$query\n\n";
+    #print "\n\n$query\n\n";
     
     # Execute the query - put in method to overload in test
     my $rows = $self->_selectall_arrayref($query);
@@ -200,7 +200,8 @@ SQL
     # where for event type and completed date
     push @{$query_parts->{where}}, (
         "e.event_type = 'genome model build'",
-        'e.date_completed is NOT NULL'
+        "e.event_status = 'Succeeded'",
+        #'e.date_completed is NOT NULL'
     );
     # add to query
     $query .= 'FROM '.join(", ", @{$query_parts->{from}});
