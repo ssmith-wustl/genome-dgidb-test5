@@ -4,22 +4,88 @@ use strict;
 use warnings;
 use Genome;
 use Carp;
+use YAML qw( DumpFile );
+use IPC::Run; # replace system()
 
+
+# any param marked 'input' will eventually have to be figured out
+# based on the (to be developed) model
 class Genome::ProcessingProfile::GenePrediction {
     is => 'Genome::ProcessingProfile',
     has_param => [
-#        command_name => {
-#            doc => 'the name of a single command to run',
+#        config_file => { # get rid of this?
+#            doc => "yaml file for gene prediction pipeline; eventually, we'll blow this up and use the options directly...",
 #        },
-        args => {
+        cell_type => {
+            doc => "one of BACTERIAL, ARCHAEA, VIRAL, CORE, or EUKARYOTIC",
+            valid_values => ["BACTERIAL","ARCHAEA","VIRAL","CORE","EUKARYOTIC" ],
+        },
+        locus_id => { # input?
+            doc => "locus tag without DFT/FNL/MSI...",
+        },
+        draft => {
+            doc => "a three letter identifier appended to locus id, ie DFT/FNL/MSI",
             is_optional => 1,
-            doc => 'the arguments to use',
         },
-        config_file => {
-            is => "String",
-            doc => "yaml file for gene prediction pipeline; eventually, we'll blow this up and use the options directly...",
+        path => {
+            doc => "base path where data/files land; usually /gscmnt/278/analysis/HGMI",
         },
-        
+        brev_orgname => { # input
+            doc => "abbreviated organism name; aka org_dirname",
+        },
+        organism_name => { # input
+            doc => "organism name",
+        },
+        assembly_version => {
+            doc => "assembly version",
+        },
+        pipeline_version => {
+            doc => "pipeline version",
+        },
+        minimum_seq_length => {
+            doc => "default 200 bases(?)",
+        },
+        acedb_version => {
+            doc => "version of acedb to load to",
+        },
+        project_type => {
+            doc => " project type",
+        },
+        runner_count => {
+            doc => "number of runners for bap_gene_predict",
+            is_optional => 1,
+        }, 
+        gram_stain => {
+            doc => "gram stain for bacterial genomes",
+            is_optional => 1,
+        },
+        ncbi_taxonomy_id => { # input
+            doc => "ncbi taxonomy id.",
+            is_optional => 1,
+        },
+        predict_script_location => {
+            doc => "location of prediction script",
+            is_optional => 1,
+        },
+        merge_script_location => {
+            doc => "location of finish script",
+            is_optional => 1,
+        },
+        finish_script_location => {
+            doc => "location of finish script",
+            is_optional => 1,
+        },
+        skip_acedb_parse => {
+            doc => "skip acedb parsing in bap project finish",
+            is_optional => 1,
+        },
+        seq_file_name => { # input
+            doc => "usually contigs.bases",
+        }, 
+        seq_file_dir => { # input
+            doc => "directory where contigs.bases/seq_file_name is found",
+        },
+
     ],
     doc => "gene prediction processing profile..."
 };
@@ -42,18 +108,22 @@ sub _execute_build {
 
     #my $cmd = $self->command_name;
     my $cmd = "gmt hgmi hap";
+    # generate a config file here.
     my $config = $self->config_file;
-    my $args = $self->args;
+#    my $args = $self->args;
 
     my $dir = $build->data_directory;
+
+    # create the yaml file for now
+
 
     # instead of nasty system(), we should pull in the stuff from dir build
     # mk prediction models, collect/name sequence, bap gene predict,
     # bap gene merge, bap_project_finish, rrna screen, core gene check
-    my $exit_code = system "$cmd --config $config --skip-protein-annotation $args >$dir/output 2>$dir/errors";
+    my $exit_code = system "$cmd --config $config --skip-protein-annotation  >$dir/output 2>$dir/errors";
     $exit_code /= 256;
     if ($exit_code != 0) {
-        $self->error_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
+        $self->error_message("Failed to run $cmd with args !  Exit code: $exit_code.");
         return;
     }
 
@@ -82,5 +152,16 @@ sub _validate_build {
     }
 }
 
+sub _create_yaml_config {
+    my $self = shift;
+    # pop all the params into a hash
+    my $option_hash_ref;
+    my $yaml_config;
+    # dump the yaml file out
+    DumpFile( $yaml_config ,$option_hash_ref);
+    return 1;
+}
+
 1;
+
 
