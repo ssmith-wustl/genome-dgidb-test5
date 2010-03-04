@@ -108,6 +108,10 @@ sub execute {
         return;
     }
     
+    #TODO This will eventually be incorporated into the Model constructor replacing subject_name/subject_type
+    $model->subject_id($self->_model_group->id);
+    $model->subject_class_name(ref $self->_model_group);
+    
     return 1;
 }
 
