@@ -37,6 +37,12 @@ sub execute {
         delete $REPORT_TYPES{InputBaseCounts};
     }
 
+    #for RT#53895 skip dbSNP report for non-human build for now
+    unless ($model->subject_name =~ /^H_/) {
+        $self->status_message("The model subject is not human. skip dbSNP_concordance report");
+        delete $REPORT_TYPES{DbSnpConcordance};
+    }
+
     my $gold_snp_path = $build->gold_snp_path;
     unless ($gold_snp_path and -s $gold_snp_path) {
         $self->status_message("No gold_snp_path provided for the build, skip its report");
@@ -159,5 +165,5 @@ sub verify_successful_completion {
 
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Command/Build/ReferenceAlignment/RunReports.pm $
-#$Id: RunReports.pm 53190 2009-11-18 22:51:23Z fdu $
+#$HeadURL$
+#$Id$
