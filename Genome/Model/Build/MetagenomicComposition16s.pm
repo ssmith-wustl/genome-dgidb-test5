@@ -60,7 +60,8 @@ sub create {
         or return;
     return $self if $class eq __PACKAGE__; # so UR doesn't try to re-subclass
 
-    unless ( $self->instrument_data ) {
+    my @instrument_data = $self->instrument_data;
+    unless ( @instrument_data ) {
         $self->error_message("No instrument data was found for model (".$self->model->id."), and cannot be built");
         $self->delete;
         return 1;
