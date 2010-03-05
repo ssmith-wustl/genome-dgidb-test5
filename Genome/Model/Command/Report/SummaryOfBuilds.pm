@@ -22,13 +22,17 @@ class Genome::Model::Command::Report::SummaryOfBuilds {
             is => 'Text',
             doc => 'Get builds for models with this processing profile id.',
         },
+        model_ids => {
+            is => 'Text',
+            doc => 'Get builds for models by id(s). Separate by commas.',
+        },
         subject_ids => {
             is => 'Text',
-            doc => 'Get builds for models by subject (dna) id(s). Separate by commas.',
+            doc => 'Get builds for models by subject (sample, dna) id(s). Separate by commas.',
         },
         subject_names => {
             is => 'Text',
-            doc => 'Get builds for models by subject (dna) name(s). Separate by commas.',
+            doc => 'Get builds for models by subject (sample, dna) name(s). Separate by commas.',
         },
         type_name => {
             is => 'Text',
@@ -159,6 +163,13 @@ sub _build_sql_query {
         }
         $query_parts = $self->_get_query_parts_for_builds_by_work_order_id;
         $self->_description("work order id ($wo_id)");
+    }
+    elsif ( $self->model_ids ) {
+        $query_parts = $self->_get_query_parts_for_builds_by_model_property(
+            'genome_model_id', $self->model_ids
+        )
+            or return;
+        $self->_description("subject id(s) (".$self->subject_ids.")");
     }
     elsif ( $self->subject_ids ) {
         $query_parts = $self->_get_query_parts_for_builds_by_model_property(
