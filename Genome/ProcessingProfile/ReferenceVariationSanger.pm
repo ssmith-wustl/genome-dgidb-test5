@@ -8,12 +8,62 @@ class Genome::ProcessingProfile::ReferenceVariationSanger {
     is => 'Genome::ProcessingProfile',
     has_param => [
         command_name => {
-            doc => 'gmt analysis auto-msa',
+            doc => 'build a profile to run gmt analysis auto-msa',
+            valid_values => ['gmt analysis auto-msa'],
+            default_value => 'gmt analysis auto-msa',
         },
-        args => {
-            is_optional => 1,
-            doc => 'the arguments to use in a space delimited quoted string; minimum requirements for gmt analysis auto-msa apply',
+	ace_fof => {
+            type  =>  'String',
+            doc  => "optional; provide an fof of ace files to run auto analysis including the full path",
+ 	    is_optional  => 1,
         },
+	mail_me => {
+	    type  =>  'Boolean',
+            doc  => 'optional; default no mail; use mail-me option to get mailed when the analysis is complete',
+    	    is_optional  => 1,
+	},
+	lsf_memory_requirement => {
+            type  =>  'String',
+            doc  => "optional provide gigs of resource to reserve for your lsf job as a number from 4 to 8; Default is 4",
+	    is_optional  => 1,
+  	    default => '4',
+	},
+	poly_source_1 => {
+            type  =>  'String',
+            doc  => 'optional; default is 1; poly-source-1 sets start of grouping of traces within a sample to be evaluated',
+   	    is_optional  => 1,
+	    default => '1',
+        },
+	poly_source_2 => {
+            type  =>  'String',
+            doc  => 'optional; default is 20; poly-source-2 sets stop of grouping of traces within a sample to be evaluated',
+    	    is_optional  => 1,
+ 	    default => '20',
+	},
+	poly_indel_source_1 => {
+            type  =>  'String',
+            doc  => 'optional; default is 1; poly-indel-source-1 sets start of grouping of traces within a sample to be evaluated',
+   	    is_optional  => 1,
+ 	    default => '1',
+	},
+	poly_indel_source_2 => {
+            type  =>  'String',
+            doc  => 'optional; default is 2; poly-indel-source-2 sets stop of grouping of traces within a sample to be evaluated',
+    	    is_optional  => 1,
+	    default => '2',
+	},
+	pretty_source_1 => {
+            type  =>  'String',
+            doc  => 'optional; default is 1; pretty-source-1 defines the start boundary of a sample name',
+    	    is_optional  => 1,
+ 	    default => '1',
+	},
+	pretty_source_2 => {
+            type  =>  'String',
+            doc  => 'optional; default is 20; pretty-source-2 defines the end boundary of a sample name',
+    	    is_optional  => 1,
+ 	    default => '20',
+	},
     ],
     doc => "gmt analysis auto-msa -ace-fof ace.fof"
 };
