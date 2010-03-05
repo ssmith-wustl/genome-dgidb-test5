@@ -676,6 +676,7 @@ sub _use_mock_dir { # use a real build to generate and compare report
 sub after_execute {
     my ($self, $summary, $params, $report) = @_;
 
+    #$report->save($self->_build->reports_directory);
     my $existing_report = Genome::Report->create_report_from_directory(
         $self->_build->reports_directory.'/'.$report->name_to_subdirectory($report->name)
     );
@@ -727,7 +728,7 @@ sub after_execute {
 
 ######
 
-package Genome::Model::MetagenomicComposition16s::Report::SummarySanger::Test;
+package Genome::Model::MetagenomicComposition16s::Report::Summary::Test;
 
 use strict;
 use warnings;
@@ -740,31 +741,7 @@ require File::Compare;
 use Test::More;
 
 sub test_class {
-    'Genome::Model::MetagenomicComposition16s::Report::SummarySanger';
-}
-
-sub _verify {
-    my ($self, $summary, $params, $report) = @_;
-
-    #< None Assembled >#
-    $summary->{_metrix}->{assembled} = 0;
-    my $raw_assembly_stats = $summary->get_assembly_stats;
-    is_deeply(
-        $raw_assembly_stats, {
-            headers => [qw/ assembled attempted assembly-success /],
-            stats => [qw/ 0 5 0.00 /],
-        },
-        'Assembly stats w/ none assembled',
-    );
-
-    my $raw_qual = $summary->get_position_quality_stats;
-    ok($raw_qual, 'Position quality stats w/ none assembled');
-
-    #< None Attempted >#
-    $summary->{_metrix}->{attempted} = 0;  
-    ok(!$summary->get_assembly_stats, 'Failed as expected - no assemblies attempted');
-    
-    return 1;
+    'Genome::Model::MetagenomicComposition16s::Report::Summary';
 }
 
 ######

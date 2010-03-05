@@ -84,15 +84,19 @@ sub create {
     
     my $self = $class->SUPER::create(@_)
         or return;
+
+    # Validate params
+    for my $type (qw/ assembler trimmer classifier /) { 
+        my $method = $type.'_params_as_hash';
+        $self->$method; # dies if error
+    }
     
     return $self;
 }
 
 #< BUILDING >#
 sub stages {
-    return (qw/
-        one
-        /);
+    return (qw/ one /);
 }
 
 sub one_job_classes {
@@ -146,7 +150,7 @@ sub _operation_params_as_hash {
 
     my %params = Genome::Utility::Text::param_string_to_hash($params_string);
     unless ( %params ) { # not ok
-        confess $self->error_message("Malformed $operation params: $params_string");
+        die $self->error_message("Malformed $operation params: $params_string");
     }
 
     return %params;

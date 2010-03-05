@@ -131,7 +131,6 @@ sub create {
     my $self = $class->SUPER::create(%params)
         or return;
 
-
     # inputs
     unless ( $self->_copy_model_inputs ) {
         $self->delete;

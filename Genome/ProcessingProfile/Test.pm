@@ -543,11 +543,11 @@ use base 'Genome::ProcessingProfile::TestBase';
 use Data::Dumper 'Dumper';
 use Test::More;
 
-sub invalid_params_for_test_class {
-    return (
-        sequencing_platform => 'super-seq',
-        sequencing_center => 'monsanto',
-    );
+sub params_for_test_class {
+    my $self = shift;
+    my %params = $self->SUPER::params_for_test_class;
+    $params{classifier} = 'kroyer';
+    return %params;
 }
 
 sub test01_param_hashes : Tests() {
@@ -590,7 +590,7 @@ sub test02_stages : Tests() {
         Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::Sanger
         Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Finishing
         Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::PhredPhrap
-        Genome::Model::Event::Build::MetagenomicComposition16s::Classify::Rdp
+        Genome::Model::Event::Build::MetagenomicComposition16s::Classify::Kroyer
         Genome::Model::Event::Build::MetagenomicComposition16s::Orient
         Genome::Model::Event::Build::MetagenomicComposition16s::Reports
         Genome::Model::Event::Build::MetagenomicComposition16s::CleanUp

@@ -219,6 +219,7 @@ sub _generate_events_for_object {
             } elsif ($command_class->isa('Genome::Model::Event')) {
                 $command = $command_class->create(
                     model_id => $build->model_id,
+                    build_id => $build->id,
                 );
             }
             unless ($command) {
@@ -229,7 +230,7 @@ sub _generate_events_for_object {
                 $build->error_message($error_message);
                 die;
             }
-            $command->build_id($build->build_id);
+            $command->build_id($build->build_id) unless defined $command->build_id;
             $command->prior_event_id($prior_event_id);
             $command->schedule;
             $prior_event_id = $command->id;

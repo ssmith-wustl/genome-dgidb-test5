@@ -8,6 +8,7 @@ use base 'Genome::Utility::TestBase';
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
+use Genome::Model::MetagenomicComposition16s::Test;
 use Test::More;
 
 sub test_class {
@@ -18,8 +19,8 @@ sub _model {
     my $self = shift;
 
     unless ( $self->{_model} ) {
-        $self->{_model} = Genome::Model::Test->create_basic_mock_model(
-            type_name => 'metagenomic composition 16s sanger'
+        $self->{_model} = Genome::Model::MetagenomicComposition16s::Test->create_mock_mc16s_model(
+            sequencing_platform => 'sanger',
         ) or die "Can't create metagenomic composition 16s sanger model";
     }
     
@@ -108,6 +109,13 @@ sub tests : Tests() {
     # orient
     ok($build->orient_amplicons_by_classification, 'orient amplicons');
 
+    # metrics
+    is($build->amplicons_attempted(5), 5, 'amplicons attempted');
+    is($build->amplicons_processed(4), 4, 'amplicons processed');
+    is($build->amplicons_processed_success, '0.80', 'amplicons processed success');
+    is($build->amplicons_classified(4), 4, 'amplicons classified');
+    is($build->amplicons_classified_success, '0.80', 'amplicons classified success');
+
     return 1;
 }
 
@@ -131,7 +139,6 @@ sub _link_dirs {
 
     return 1;
 }
-
 
 ###########################################################################
 
@@ -237,8 +244,8 @@ sub _model {
     my $self = shift;
 
     unless ( $self->{_model} ) {
-        $self->{_model} = Genome::Model::Test->create_basic_mock_model(
-            type_name => 'metagenomic composition 16s sanger',
+        $self->{_model} = Genome::Model::MetagenomicComposition16s::Test->create_mock_mc16s_model(
+            sequencing_platform => 'sanger',
             use_mock_dir => 1,
         ) or die "Can't create metagenomic composition 16s sanger model";
     }
@@ -536,8 +543,8 @@ sub _model {
     my $self = shift;
 
     unless ( $self->{_model} ) {
-        $self->{_model} = Genome::Model::Test->create_basic_mock_model(
-            type_name => 'metagenomic composition 16s 454',
+        $self->{_model} = Genome::Model::MetagenomicComposition16s::Test->create_mock_mc16s_model(
+            sequencing_platform => '454',
             use_mock_dir => 1,
         ) or die "Can't create metagenomic composition 16s 454 model";
     }

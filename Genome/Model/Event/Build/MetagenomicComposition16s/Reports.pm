@@ -14,7 +14,7 @@ class Genome::Model::Event::Build::MetagenomicComposition16s::Reports {
 sub execute {
     my $self = shift;
 
-    for my $report_name ('summary '.$self->processing_profile->sequencing_platform, 'composition') {
+    for my $report_name ('summary', 'composition') {
         $self->_generate_and_save_report($report_name);
     }
 

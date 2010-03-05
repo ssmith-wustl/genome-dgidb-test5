@@ -15,11 +15,36 @@ require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 class Genome::Model::Build::MetagenomicComposition16s {
     is => 'Genome::Model::Build',
     is_abstract => 1,
-    sub_classification_method_name => '_subclassify_by_sequencing_platform',
+    sub_classification_method_name => '_resolve_subclass_name',
     has => [
-    map( { 
-            $_ => { via => 'processing_profile' } 
-        } Genome::ProcessingProfile::MetagenomicComposition16s->params_for_class ),
+        map( { 
+                $_ => { via => 'processing_profile' } 
+            } Genome::ProcessingProfile::MetagenomicComposition16s->params_for_class 
+        ),
+        amplicons_attempted => {
+            is => 'Integer',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'amplicons attempted' ],
+            to => 'value',
+            doc => 'Number of amplicons that were attempted in this build.'
+        },
+        amplicons_processed => {
+            is => 'Integer',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'amplicons processed' ],
+            to => 'value',
+            doc => 'Number of amplicons that were processed in this build.'
+        },
+        amplicons_classified => {
+            is => 'Integer',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'amplicons classified' ],
+            to => 'value',
+            doc => 'Number of amplicons that were classified in this build.'
+        },
     ],
 };
 
@@ -35,6 +60,12 @@ sub create {
         or return;
     return $self if $class eq __PACKAGE__; # so UR doesn't try to re-subclass
 
+    unless ( $self->instrument_data ) {
+        $self->error_message("No instrument data was found for model (".$self->model->id."), and cannot be built");
+        $self->delete;
+        return 1;
+    }
+    
     unless ( $self->model->type_name eq 'metagenomic composition 16s' ) {
         $self->error_message( 
             sprintf(
@@ -58,7 +89,7 @@ sub create {
     return $self;
 }
 
-sub _subclassify_by_sequencing_platform { # only temporary, subclass will soon be stored
+sub _resolve_subclass_name { # only temporary, subclass will soon be stored
     my $class = shift;
 
     my $sequencing_platform;
@@ -409,8 +440,36 @@ sub save_classification_for_amplicon {
     return 1;
 }
 
+#< Metrics >#
+sub amplicons_processed_success {
+    my $self = shift;
+
+    my $attempted = $self->amplicons_attempted;
+    unless ( $attempted ) {
+        $self->error_message("No amplicons attempted for ".$self->description);
+        return;
+    }
+    my $processed = $self->amplicons_processed;
+    
+    return sprintf('%.2f', $processed / $attempted);
+}
+
+sub amplicons_classified_success {
+    my $self = shift;
+
+    my $attempted = $self->amplicons_attempted;
+    unless ( $attempted ) {
+        $self->error_message("No amplicons attempted for ".$self->description);
+        return;
+    }
+    my $classified = $self->amplicons_classified;
+
+    return sprintf('%.2f', $classified / $attempted);
+}
+
 #< Reports >#
 sub summary_report {
+    my $self = shift;
 }
 
 sub composition_report {

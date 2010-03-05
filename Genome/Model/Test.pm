@@ -348,6 +348,7 @@ sub add_mock_build_to_model {
             date_completed date_scheduled
             add_report get_report reports 
             start initialize success fail abandon delete
+            metrics
             /),
     ) or confess "Can't add methods to mock build";
 
@@ -574,6 +575,10 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
         load_classification_for_amplicon
         save_classification_for_amplicon
         
+        amplicons_attempted 
+        amplicons_processed amplicons_processed_success 
+        amplicons_classified amplicons_classified_success
+       
         /);
 
     # sanger
@@ -616,6 +621,11 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
         Genome::Utility::FileSystem->create_directory( $build->data_directory."/$dir" )
             or return;
     }
+
+    # metrics
+    $build->amplicons_attempted(5);
+    $build->amplicons_processed(4);
+    $build->amplicons_classified(4);
 
     return 1;
 

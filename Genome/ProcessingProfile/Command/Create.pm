@@ -190,6 +190,7 @@ sub _target_class {
 sub _profile_name {
     my $profile_name = _get_subclass(@_)
         or return;
+    return Genome::Utility::Text::camel_case_to_string($profile_name);
     my @words = $profile_name =~ /([A-Z](?:[A-Z]*(?=$|[A-Z][a-z])|[a-z]*))/g;
     return $profile_name = join(' ', map { lc } @words);
 }

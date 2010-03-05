@@ -23,10 +23,14 @@ sub execute {
     $self->_raw_reads_fasta_and_qual_writer
         or return;
 
+    my $attempted = 0;
     while ( my $amplicon = $amplicon_iterator->() ) {
+        $attempted++;
         $self->_prepare_instrument_data_for_phred_phrap($amplicon)
             or return;
     }
+
+    $self->build->amplicons_attempted($attempted);
 
     return 1;
 }
