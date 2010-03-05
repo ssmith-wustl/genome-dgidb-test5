@@ -61,9 +61,7 @@ class Genome::Model {
                     return GSC::DNAResourceItem->get(dna_name => $subject_name);
                 }
                 elsif ($subject_type eq 'genomic_dna') {
-                    # 454 issue with 
-                    return;
-                    die "not sure how to handle sample type $subject_type";
+                    return Genome::Sample->get(extraction_label => $subject_name, extraction_type => 'genomic dna');
                 }
                 elsif ($subject_type eq 'sample_name') {
                     return Genome::Sample->get(name => $subject_name);
@@ -76,12 +74,10 @@ class Genome::Model {
                     die "not sure how to handle sample type $subject_type";
                 }
                 elsif ($subject_type eq 'library_name') {
-                    return;
-                    die "not sure how to handle sample type $subject_type";
+                    return Genome::Library->get(name => $subject_name);
                 }
                 elsif ($subject_type eq 'flow_cell_id') {
-                    return;
-                    die "not sure how to handle sample type $subject_type";
+                    return GSC::Equipment::Solexa::Run->get(flow_cell_id => $subject_name);
                 }
                 else {
                     die "unknown sample type $subject_type!";
