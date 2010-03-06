@@ -49,10 +49,8 @@ sub execute {
         $classified++;
     }
 
-    $self->build->amplicons_processed($processed)
-        or return;
-    $self->build->amplicons_classified($classified)
-        or return;
+    $self->build->amplicons_processed($processed);
+    $self->build->amplicons_classified($classified);
 
     return 1;
 }
