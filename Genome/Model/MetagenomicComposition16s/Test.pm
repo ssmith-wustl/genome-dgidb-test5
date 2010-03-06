@@ -535,6 +535,11 @@ sub before_execute {
         my $class_file = $build->classification_file_for_amplicon($amplicon);
         unlink $class_file if -e $class_file;
     }
+    
+    $build->amplicons_processed(0);
+    $build->amplicons_classified(0);
+    is($build->amplicons_processed, 0, 'amplicons processed reset');
+    is($build->amplicons_classified, 0, 'amplicons classified reset');
 
     return 1;
 }
@@ -546,6 +551,10 @@ sub after_execute {
     my $amplicons  = $self->_amplicons;
     my $cnt = grep { -s $build->classification_file_for_amplicon($_) } @$amplicons;
     is($cnt, 4, 'Verified - Created classification for 4 of 5 amplicons');
+
+    is($build->amplicons_processed, 4, 'amplicons processed recorded');
+    is($build->amplicons_classified, 4, 'amplicons classified recorded');
+    
     #print $build->data_directory."\n";<STDIN>;
     
     return 1;
