@@ -100,6 +100,7 @@ sub execute {
     $self->_bsub_invoke(job_name => 'samtools-faidx',
                         cmd=> $samtools_version . " faidx $new_fasta_path");
 
+    return 1;
 }
 
 sub _bsub_invoke {
