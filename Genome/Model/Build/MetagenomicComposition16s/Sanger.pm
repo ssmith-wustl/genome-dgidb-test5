@@ -12,7 +12,18 @@ use Finishing::Assembly::Factory;
 
 class Genome::Model::Build::MetagenomicComposition16s::Sanger {
     is => 'Genome::Model::Build::MetagenomicComposition16s',
+    has => [
+        has_qual_files => {
+            is => 'Integer',
+            default_value => 1,
+            is_constant => 1,
+        },
+    ],
 };
+
+sub has_qual_files {
+    return 1;
+}
 
 #< INTR DATA >#
 sub link_instrument_data {
@@ -121,10 +132,14 @@ sub amplicon_iterator {
     }
     # skip . and ..
     $dh->read; $dh->read;
-    # capture position
-    my $pos = $dh->tell;
-    # check if there is anything
-    unless ( $dh->read ) {
+    # collect the read names
+    my @all_read_names;
+    while ( my $read_name = $dh->read ) {
+        $read_name =~ s#\.gz$##;
+        push @all_read_names, $read_name;
+    }
+    # make sure we got some 
+    unless ( @all_read_names ) {
         $self->error_message(
             sprintf(
                 "No reads found in chromat dir of build (%s) data directory (%s)",
@@ -134,10 +149,9 @@ sub amplicon_iterator {
         );
         return;
     }
-    # seek back
-    $dh->seek($pos); 
+    #sort
+    @all_read_names = sort { $a cmp $b } @all_read_names;
 
-   
     # Filters - setup
     my @filters;
     if ( $self->processing_profile->only_use_latest_iteration_of_reads ) {
@@ -150,43 +164,48 @@ sub amplicon_iterator {
 
     my $amplicon_name_for_read_name = '_get_amplicon_name_for_'.$self->sequencing_center
     .'_read_name';
+    my $pos = 0;
     return sub{
-        AMPLICON: while ( my $read_name = $dh->read ) {
-            $read_name =~ s#\.gz$##;
+        AMPLICON: while ( $pos < $#all_read_names ) {
             # Get amplicon name
-            my $amplicon_name = $self->$amplicon_name_for_read_name($read_name);
+            my $amplicon_name = $self->$amplicon_name_for_read_name($all_read_names[$pos]);
             unless ( $amplicon_name ) {
                 confess sprintf(
                     'Build determine amplicon name for %s read name (%s) for build (%s)',
-                    $read_name,
+                    $all_read_names[$pos],
                     $self->sequencing_center,
                     $self->id,
                 );
             }
             # Start reads list
-            my @read_names = ( $read_name );
-
-            # Save position so we can go back
-            my $pos = $dh->tell;
-            # Get reads for this amplicon
-            READS: while ( $read_name = $dh->read ) {
-                $read_name =~ s#\.gz##;
+            my @read_names = ( $all_read_names[$pos] );
+            READS: while ( $pos < $#all_read_names ) {
+                # incremnent
+                $pos++;
                 # Get amplicon name
-                my $read_amplicon_name = $self->$amplicon_name_for_read_name($read_name);
-                unless ( $read_amplicon_name eq $amplicon_name ) { 
-                    $dh->seek($pos); # go back one 'read'
-                    last READS; # go on to filtering
+                my $read_amplicon_name = $self->$amplicon_name_for_read_name($all_read_names[$pos]);
+                unless ( $read_amplicon_name ) {
+                    confess sprintf(
+                        'Could not determine amplicon name for %s read name (%s) for build (%s)',
+                        $all_read_names[$pos],
+                        $self->sequencing_center,
+                        $self->id,
+                    );
                 }
-                push @read_names, $read_name; # add read
-                $pos = $dh->tell; # get new position
+                unless ( $read_amplicon_name eq $amplicon_name ) { 
+                    # go on to filtering
+                    last READS; 
+                }
+                push @read_names, $all_read_names[$pos]; # add read
             }
+            #print Dumper({$amplicon_name => \@read_names});
 
             # Create amplicon object
             my $amplicon = Genome::Model::Build::MetagenomicComposition16s::Amplicon->create(
                 name => $amplicon_name,
                 reads => \@read_names,
             );
-            
+
             # Filter
             for my $filter ( @filters ) {
                 next AMPLICON unless $self->$filter($amplicon);
@@ -197,7 +216,7 @@ sub amplicon_iterator {
 
             # Classification
             $self->load_classification_for_amplicon($amplicon); # dies on error
-            
+
             return $amplicon;
         }
     };
@@ -207,7 +226,7 @@ sub load_bioseq_for_amplicon {
     my ($self, $amplicon) = @_;
 
     die "No amplicon to load bioseq." unless $amplicon;
-    
+
     # get contig from acefile
     my $acefile = $self->ace_file_for_amplicon($amplicon);
     return unless -s $acefile; # ok
