@@ -43,36 +43,42 @@ class Genome::Model::Tools::Analysis::MutationSpectrum {
             is  => 'String',
             is_input=>1, 
             is_optional => 1,
+            default_value => '1',
             doc => 'The number (1-based) of the column that points to Chromosome',
         },
         start_col => { 
             is  => 'String',
             is_input=>1, 
             is_optional => 1,
+            default_value => '2',
             doc => 'The number (1-based) of the column that points to Start Position',
         },
         stop_col => { 
             is  => 'String',
             is_input=>1, 
             is_optional => 1,
+            default_value => '3',
             doc => 'The number (1-based) of the column that points to Stop Position',
         },
         ref_col => { 
             is  => 'String',
             is_input=>1, 
             is_optional => 1,
+            default_value => '4',
             doc => 'The number (1-based) of the column that points to Reference Base',
         },
         var_col => { 
             is  => 'String',
             is_input=>1, 
             is_optional => 1,
+            default_value => '5',
             doc => 'The number (1-based) of the column that points to Tumor Base #1',
         },
         type_col => { 
             is  => 'String',
             is_input=>1, 
             is_optional => 1,
+            default_value => '14',
             doc => 'The number (1-based) of the column that points to syn/silent type column',
         },
         output_trans_file => {
@@ -139,16 +145,25 @@ sub execute {
     my $lines++;
     #first command fasta, next is variant file
     my $fasta = $self->fasta_file;
+	unless(-s $self->fasta_file) {
+	    $self->error_message(<'Could not open fasta input file '$fasta' for reading'>);
+	    return;
+	}
     my $fh = IO::File->new($self->mutation_file);
+	unless($fh) {
+	    my $errorfile = $self->mutation_file;
+	    $self->error_message(<'Could not open mutation input file '$errorfile' for reading'>);
+	    return;
+	}
 
     #next columns are pointer to new columns
-    my $chr_col = ($self->chr_col - 1) || "2";
-    my $start_col = ($self->start_col - 1) || "3";
-    my $stop_col = ($self->stop_col - 1) || "4";
-    my $ref_col = ($self->ref_col - 1) || "11";
-    my $var_col = ($self->var_col - 1) || "13";
+    my $chr_col = ($self->chr_col - 1);
+    my $start_col = ($self->start_col - 1);
+    my $stop_col = ($self->stop_col - 1);
+    my $ref_col = ($self->ref_col - 1);
+    my $var_col = ($self->var_col - 1);
     #next column points to syn/silent type column
-    my $type_col = ($self->type_col - 1) || "5";
+    my $type_col = ($self->type_col - 1);
 
     my $delimiter="\t";
     my %nonsyn_type;
