@@ -99,6 +99,29 @@ sub execute {
         return;
     }
 
+    my $tumor_subject = $self->tumor_model->subject;
+    my $normal_subject = $self->normal_model->subject;
+
+    if($tumor_subject->can('source') and $normal_subject->can('source')) {
+        my $tumor_source = $tumor_subject->source;
+        my $normal_source = $normal_subject->source;
+        
+        if($tumor_source eq $normal_source) {
+            my $subject = $tumor_source;
+            
+            #TODO this will need to be moved up and passed into the model constructor
+            $model->subject_id($subject->id);
+            $model->subject_class_name(ref $subject);
+            $model->subject_name($subject->common_name || $subject->name);
+        } else {
+            $self->error_message('Tumor and normal samples are not from same source!');
+            return;
+        }
+    } else {
+        $self->error_message('Unexpected subject for tumor or normal model!');
+        return;
+    }
+
     # Link this somatic model to the normal and tumor models  
     $model->add_from_model(from_model => $self->normal_model, role => 'normal');
     $model->add_from_model(from_model => $self->tumor_model, role => 'tumor');
