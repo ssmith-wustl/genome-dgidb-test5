@@ -377,6 +377,13 @@ sub whole_rmdup_map_file {
 sub whole_rmdup_bam_file {
     my $self = shift;
 
+    my $expected_whole_rmdup_bam_file = $self->accumulated_alignments_directory.'/'.$self->build_id.'_merged_rmdup.bam';
+    if(-e $expected_whole_rmdup_bam_file) {
+        #If we found one that matches the current naming convention, use it.
+        return $expected_whole_rmdup_bam_file; 
+    }
+
+    #Otherwise try to find one under a previous naming convention.
     my @files = glob($self->accumulated_alignments_directory .'/*_merged_rmdup.bam');
 
     if (@files > 1) {
@@ -400,7 +407,8 @@ sub whole_rmdup_bam_file {
         }
     }
     elsif (@files == 0) {
-	    return $self->accumulated_alignments_directory.'/'.$self->build_id.'_merged_rmdup.bam';
+         #There hasn't been one generated yet at all--give the name we'd expect to find
+	    return $expected_whole_rmdup_bam_file;
     }
     else {
     	return $files[0];
