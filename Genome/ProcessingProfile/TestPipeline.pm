@@ -7,10 +7,14 @@ use Genome;
 class Genome::ProcessingProfile::TestPipeline {
     is => 'Genome::ProcessingProfile',
     has_param => [
-        command_name => {
+        # NOTE: these are made up parameters just as examples
+        # A processing profile shouldn't really have params that specify shell commands :)
+        some_command_name => {
             doc => 'the name of a single command to run',
+            valid_values => ['ls','cat','wc'],
+            default_value => ['ls'],
         },
-        args => {
+        some_args => {
             is_optional => 1,
             doc => 'the arguments to use',
         },
@@ -34,12 +38,16 @@ sub _execute_build {
     my ($self,$build) = @_;
     warn "executing build logic for " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
 
-    my $cmd = $self->command_name;
-    my $args = $self->args;
+    # combine params with build inputs and produce output in the build's data directory
+
+    my $cmd = $self->some_command_name;
+    my $args = $self->some_args;
+
+    my @inputs = $build->inputs();
 
     my $dir = $build->data_directory;
 
-    my $exit_code = system "$cmd $args >$dir/output 2>$dir/errors";
+    my $exit_code = system "$cmd $args @inputs >$dir/output 2>$dir/errors";
     $exit_code /= 256;
     if ($exit_code != 0) {
         $self->error_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
