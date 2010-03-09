@@ -129,7 +129,7 @@ sub _unassign_by_instrument_data_id {
             for my $build ($first_build, @subsequent_builds) {
                 $self->status_message(
                     sprintf(
-                        'Abandoning build %d for model %s (%d)\n',
+                        'Abandoning build %d for model %s (%d)',
                         $build->id,
                         $build->model->name,
                         $build->model->id
