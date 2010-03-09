@@ -96,6 +96,17 @@ sub for_each_class_object {
             $doc .= $self->create_section('=' . $type . '=', $section_text);
         }
         
+        if($self->svn_revision) {
+            my $module = $class_to_doc->class_name;
+            my $module_path = $module;
+            $module_path =~ s!::!/!g;
+            $module_path .= '.pm';
+            my $url = $self->_svn_basepath . $module_path . '?view=markup&pathrev=' . $self->svn_revision;
+        
+            my $svn_link = "\n* [$url $module in SVN (rev " . $self->svn_revision . ")]";
+            
+            $doc .= $self->create_section('See Also', $svn_link);
+        }        
     };
     
     if($@) {
