@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 use Genome::Model::Tools::Pcap::Assemble;
 use Bio::SeqIO;
-use PP::LSF;
 use Data::Dumper;
 use GSCApp;
 class Genome::Model::Tools::PooledBac::UpdateSeqMgr {
@@ -57,21 +56,21 @@ sub execute {
             next;
         }
         chdir($project_dir."/$clone_name");
-        next if (-e 'core'||!(-e 'newbler_assembly/consed'));
+        next if (-e 'core'||!(-e 'edit_dir'));
         $p->set_project_status('pooled_bac_done'); 
         
         my $seqmgr_link = $p->seqmgr_link;
         print "Updating $clone_name...\n";
         #print "/bin/cp -rf newbler_assembly/consed/edit_dir $seqmgr_link/.\n";
-        system "/bin/cp -rf newbler_assembly/consed/edit_dir $seqmgr_link/.";
+        system "/bin/cp -rf edit_dir $seqmgr_link/.";
         #print "/bin/cp -rf newbler_assembly/consed/phd_dir $seqmgr_link/.\n";
-        system "/bin/cp -rf newbler_assembly/consed/phd_dir $seqmgr_link/.";
+        system "/bin/cp -rf phd_dir $seqmgr_link/.";
         #print "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/.\n";
-        system "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/.";
+        system "/bin/cp -rf chromat_dir $seqmgr_link/.";
         #print "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.\n";
-        system "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.";
+        system "/bin/cp -rf phdball_dir $seqmgr_link/.";
         #print "/bin/cp -rfL newbler_assembly/consed/sff_dir $seqmgr_link/.";
-        system "/bin/cp -rfL newbler_assembly/consed/sff_dir $seqmgr_link/.";
+        system "/bin/cp -rfL sff_dir $seqmgr_link/.";
 
         #print $project_dir."/$clone_name","\n";
         #print "project name is ",$p->name,"\n";
