@@ -1,0 +1,317 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Build 101289765 Status</title>
+<link rel="stylesheet" href="https://gscweb.gsc.wustl.edu/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen">
+</head>
+<body><div class="container"><div class="background">
+<h1 class="page_title">Build 101289765 Status</h1>
+<div class="page_padding">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<tr>
+<td><table border="0" cellpadding="0" cellspacing="0" class="info_table">
+<tr>
+<td class="label">Status:</td>
+<td class="value">Succeeded</td>
+</tr>
+<tr>
+<td class="label">Build:</td>
+<td class="value">101289765</td>
+</tr>
+<tr>
+<td class="label">Data Directory:</td>
+<td class="value"><a href="/gscmnt/sata427/info/model_data/2851407278/build101289765">/gscmnt/sata427/info/model_data/2851407278/build101289765</a></td>
+</tr>
+</table></td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="info_table">
+<tr>
+<td class="label">Model ID:</td>
+<td class="value">2851407278</td>
+</tr>
+<tr>
+<td class="label">Model Name:</td>
+<td class="value">ssmith-test2-realsample-realpp</td>
+</tr>
+<tr>
+<td class="label">Processing Profile:</td>
+<td class="value">bwa0.5.5 and samtools r453 and picard r107</td>
+</tr>
+</table></td>
+</tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" class="stages" width="100%"><tr>
+<td><table class="stage" border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr><th colspan="2">alignment</th></tr>
+<tr class="ghost">
+<td class="label">
+  Scheduled:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+  Running:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="label">
+<td class="label">
+  Succeeded:
+</td>
+<td class="value">1</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+  Abandoned:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+    Crashed/Failed:
+</td>
+<td class="value">0</td>
+</tr>
+<tr>
+<td class="label">
+  Total:
+</td>
+<td class="value">1</td>
+</tr>
+</table></td>
+<td><table class="stage" border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr><th colspan="2">deduplication</th></tr>
+<tr class="ghost">
+<td class="label">
+  Scheduled:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+  Running:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="label">
+<td class="label">
+  Succeeded:
+</td>
+<td class="value">2</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+  Abandoned:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+    Crashed/Failed:
+</td>
+<td class="value">0</td>
+</tr>
+<tr>
+<td class="label">
+  Total:
+</td>
+<td class="value">2</td>
+</tr>
+</table></td>
+<td><table class="stage" border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr><th colspan="2">variant detection</th></tr>
+<tr class="ghost">
+<td class="label">
+  Scheduled:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+  Running:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="label">
+<td class="label">
+  Succeeded:
+</td>
+<td class="value">2</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+  Abandoned:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+    Crashed/Failed:
+</td>
+<td class="value">0</td>
+</tr>
+<tr>
+<td class="label">
+  Total:
+</td>
+<td class="value">2</td>
+</tr>
+</table></td>
+<td><table class="stage" border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr><th colspan="2">generate reports</th></tr>
+<tr class="ghost">
+<td class="label">
+  Scheduled:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+  Running:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="label">
+<td class="label">
+  Succeeded:
+</td>
+<td class="value">1</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+  Abandoned:
+</td>
+<td class="value">0</td>
+</tr>
+<tr class="ghost">
+<td class="label">
+    Crashed/Failed:
+</td>
+<td class="value">0</td>
+</tr>
+<tr>
+<td class="label">
+  Total:
+</td>
+<td class="value">1</td>
+</tr>
+</table></td>
+</tr></table>
+<hr>
+<h3>alignment</h3>
+<table class="alignment_detail" width="100%" cellspacing="0" cellpadding="0" border="0">
+<colgroup>
+<col width="40%">
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<tr>
+<th>Flow Cell</th>
+<th>Status</th>
+<th>Scheduled</th>
+<th>Completed</th>
+<th class="last">Elapsed</th>
+</tr>
+<tr>
+<td><a href="/gscmnt/sata807/production/100109_HWUSI-EAS1605_100737092_61DTD/Data/Intensities/BaseCalls/GERALD_100829249_1263920180_lims">61DTD</a></td>
+<td><a href="">Succeeded</a></td>
+<td>2010-02-28 22:12:06</td>
+<td>2010-02-28 22:36:11</td>
+<td class="last">24:05</td>
+</tr>
+</table>
+<h3>deduplication</h3>
+<table class="alignment_detail" width="100%" cellspacing="0" cellpadding="0" border="0">
+<colgroup>
+<col width="40%">
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<tr>
+<th>Event</th>
+<th>Status</th>
+<th>Scheduled</th>
+<th>Completed</th>
+<th class="last">Elapsed</th>
+</tr>
+<tr>
+<td>ReferenceAlignment::DeduplicateLibraries::Picard</td>
+<td><a href="">Succeeded</a></td>
+<td>2010-02-28 22:36:33</td>
+<td>2010-02-28 23:14:48</td>
+<td class="last">38:15</td>
+</tr>
+<tr>
+<td>ReferenceAlignment::PostDedupReallocate</td>
+<td><a href="">Succeeded</a></td>
+<td>2010-02-28 23:15:02</td>
+<td>2010-02-28 23:15:10</td>
+<td class="last">00:08</td>
+</tr>
+</table>
+<h3>variant detection</h3>
+<table class="alignment_detail" width="100%" cellspacing="0" cellpadding="0" border="0">
+<colgroup>
+<col width="40%">
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<tr>
+<th>Event</th>
+<th>Status</th>
+<th>Scheduled</th>
+<th>Completed</th>
+<th class="last">Elapsed</th>
+</tr>
+<tr>
+<td>ReferenceAlignment::UpdateGenotype::Samtools</td>
+<td><a href="">Succeeded</a></td>
+<td>2010-02-28 23:15:26</td>
+<td>2010-02-28 23:15:27</td>
+<td class="last">00:01</td>
+</tr>
+<tr>
+<td>ReferenceAlignment::FindVariations::Samtools</td>
+<td><a href="">Succeeded</a></td>
+<td>2010-02-28 23:15:43</td>
+<td>2010-03-01 00:01:48</td>
+<td class="last">46:05</td>
+</tr>
+</table>
+<h3>generate reports</h3>
+<table class="alignment_detail" width="100%" cellspacing="0" cellpadding="0" border="0">
+<colgroup>
+<col width="40%">
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<tr>
+<th>Event</th>
+<th>Status</th>
+<th>Scheduled</th>
+<th>Completed</th>
+<th class="last">Elapsed</th>
+</tr>
+<tr>
+<td>ReferenceAlignment::RunReports</td>
+<td><a href="">Succeeded</a></td>
+<td>2010-03-01 00:02:00</td>
+<td>2010-03-01 07:14:30</td>
+<td class="last">07:12:30</td>
+</tr>
+</table>
+</div>
+</div></div></body>
+</html>
