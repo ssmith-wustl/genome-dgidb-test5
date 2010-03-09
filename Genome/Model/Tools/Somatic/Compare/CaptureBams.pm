@@ -678,7 +678,6 @@ __DATA__
     <outputproperty>circos_big_graph</outputproperty>
     <outputproperty>final_variant_report_output</outputproperty>
 
-    <outputproperty>tier_1_indel</outputproperty>
     <outputproperty>tier_1_indel_high</outputproperty>
     <outputproperty>tier_1_indel_highest</outputproperty>    
     <outputproperty>tier_1_snp_high</outputproperty>
