@@ -37,9 +37,9 @@ sub execute {
         delete $REPORT_TYPES{InputBaseCounts};
     }
 
-    #for RT#53895 skip dbSNP report for non-human build for now
-    unless ($model->subject_name =~ /^H_/) {
-        $self->status_message("The model subject is not human. skip dbSNP_concordance report");
+    #for RT#53895, 54440 only run dbSNP130 report for human genomic DNA build for now
+    unless ($model->subject_name =~ /^H_/ and $model->dna_type eq 'genomic dna') {
+        $self->status_message("Skip dbSNP_concordance report because it is for human genomic DNA now");
         delete $REPORT_TYPES{DbSnpConcordance};
     }
 
