@@ -182,11 +182,20 @@ sub default_filenames{
         tier_1_indel_file_high              => 'merged.somatic.indel.novel.tier1.hc',
         tier_1_indel_file_highest           => 'merged.somatic.indel.novel.tier1.gc',
 
+        ## Breakdancer and Copy Number files ##
+
+        breakdancer_config_file             => 'breakdancer_config',
+        breakdancer_output_file             => 'breakdancer.csv',
+        copy_number_output                  => 'copy_number.csv',
+        circos_graph                        => 'circos_graph.png',
+        variant_report_output               => 'cancer_report.html', 
+        file_summary_report_output          => 'file_summary_report.html',
+        
+
         upload_variants_snp_1_output        => 'upload-variants.snp_1.out',
         upload_variants_snp_2_output        => 'upload-variants.snp_2.out',
         upload_variants_indel_output        => 'upload-variants.indel.out',
         circos_graph                        => 'circos_graph.out',
-        report_output                       => 'cancer_report.html',
     );
 
     return %default_filenames;
@@ -435,8 +444,6 @@ __DATA__
   <link fromOperation="Breakdancer" fromProperty="breakdancer_output" toOperation="Plot Circos" toProperty="sv_file" />
   <link fromOperation="Upload Variants Snp Tier 1" fromProperty="output_file" toOperation="Plot Circos" toProperty="tier1_hclabel_file" />
 
-  <link fromOperation="Plot Circos" fromProperty="output_file" toOperation="output connector" toProperty="circos_big_graph" />
-  <link fromOperation="Generate Report" fromProperty="report_output" toOperation="output connector" toProperty="final_report_output" />
 
 
 <!-- WAIT FOR DATABASE UPLOAD -->
@@ -448,11 +455,17 @@ __DATA__
 
 
 <!-- GENERATE REPORT -->
+ 
+  <link fromOperation="Wait for Database Upload" fromProperty="build_id" toOperation="Generate Reports" toProperty="build_id" />
+  <link fromOperation="input connector" fromProperty="variant_report_output" toOperation="Generate Reports" toProperty="variant_report_output" />
+  <link fromOperation="input connector" fromProperty="file_summary_report_output" toOperation="Generate Reports" toProperty="file_summary_report_output" />
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Generate Reports" toProperty="skip_if_output_present" />
 
-  <link fromOperation="Wait for Database Upload" fromProperty="build_id" toOperation="Generate Report" toProperty="build_id" />
-  <link fromOperation="input connector" fromProperty="report_output" toOperation="Generate Report" toProperty="report_output" />
-  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Generate Report" toProperty="skip_if_output_present" />
+<!-- OUTPUT CONNECTORS -->
+  <link fromOperation="Plot Circos" fromProperty="output_file" toOperation="output connector" toProperty="circos_big_graph" />
+  <link fromOperation="Generate Reports" fromProperty="variant_report_output" toOperation="output connector" toProperty="final_variant_report_output" />
   
+
 
   <operation name="Varscan Somatic">
     <operationtype commandClass="Genome::Model::Tools::Varscan::Somatic" typeClass="Workflow::OperationType::Command" />
@@ -567,8 +580,8 @@ __DATA__
     </operationtype>
   </operation>
 
-  <operation name="Generate Report">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::VariantReport" typeClass="Workflow::OperationType::Command" />
+  <operation name="Generate Reports">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::RunReports" typeClass="Workflow::OperationType::Command" />
   </operation>  
 
 
@@ -599,7 +612,8 @@ __DATA__
     
     <inputproperty isOptional="Y">copy_number_output</inputproperty>
     <inputproperty isOptional="Y">circos_graph</inputproperty>
-    <inputproperty isOptional="Y">report_output</inputproperty>    
+    <inputproperty isOptional="Y">variant_report_output</inputproperty>
+    <inputproperty isOptional="Y">file_summary_report_output</inputproperty>
 
     <inputproperty isOptional="Y">varscan_snp_output</inputproperty>
     <inputproperty isOptional="Y">varscan_snp_germline</inputproperty>
@@ -662,7 +676,7 @@ __DATA__
     <inputproperty isOptional="Y">tier_4_snp_high_confidence_file</inputproperty>
 -->
     <outputproperty>circos_big_graph</outputproperty>
-    <outputproperty>final_report_output</outputproperty>
+    <outputproperty>final_variant_report_output</outputproperty>
 
     <outputproperty>tier_1_indel</outputproperty>
     <outputproperty>tier_1_indel_high</outputproperty>
