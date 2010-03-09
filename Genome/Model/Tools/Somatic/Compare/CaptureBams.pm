@@ -175,10 +175,12 @@ sub default_filenames{
         tier_4_snp_file                     => 'merged.somatic.snp.novel.tier4',
         tier_1_indel_file                   => 'merged.somatic.indel.tier1',
 
-        ## Tiered SNP files (high and highest conf ) ##
+        ## Tiered SNP/indel files (high and highest conf ) ##
         
         tier_1_snp_file_high                => 'merged.somatic.snp.novel.tier1.hc',
-        tier_1_snp_file_highest                => 'merged.somatic.snp.novel.tier1.gc',
+        tier_1_snp_file_highest             => 'merged.somatic.snp.novel.tier1.gc',
+        tier_1_indel_file_high              => 'merged.somatic.indel.novel.tier1.hc',
+        tier_1_indel_file_highest           => 'merged.somatic.indel.novel.tier1.gc',
 
         upload_variants_snp_1_output        => 'upload-variants.snp_1.out',
         upload_variants_snp_2_output        => 'upload-variants.snp_2.out',
@@ -372,11 +374,20 @@ __DATA__
 <link fromOperation="input connector" fromProperty="tier_1_snp_file_high" toOperation="Confidence Groups Snp Tier 1" toProperty="output_high" />
 <link fromOperation="input connector" fromProperty="tier_1_snp_file_highest" toOperation="Confidence Groups Snp Tier 1" toProperty="output_highest" />
 
+<!-- GROUP TIERED INDEL CALLS INTO HIGH AND HIGHEST CONF -->
+<link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Confidence Groups Indel Tier 1" toProperty="variant_file" />
+<link fromOperation="Filter Sniper Indel" fromProperty="output_file"  toOperation="Confidence Groups Indel Tier 1" toProperty="glf_file" />
+<link fromOperation="Varscan ProcessSomatic Indel" fromProperty="somatic_out" toOperation="Confidence Groups Indel Tier 1" toProperty="varscan_file" />
+<link fromOperation="input connector" fromProperty="tier_1_indel_file_high" toOperation="Confidence Groups Indel Tier 1" toProperty="output_high" />
+<link fromOperation="input connector" fromProperty="tier_1_indel_file_highest" toOperation="Confidence Groups Indel Tier 1" toProperty="output_highest" />
+
 <!-- PROVIDE OUTPUT CONNECTION FOR ENDPOINT FILES -->
 
-  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_indel" />
+  <!--link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_indel" /-->
   <link fromOperation="Confidence Groups Snp Tier 1" fromProperty="output_high" toOperation="output connector" toProperty="tier_1_snp_high" />
   <link fromOperation="Confidence Groups Snp Tier 1" fromProperty="output_highest" toOperation="output connector" toProperty="tier_1_snp_highest" />
+  <link fromOperation="Confidence Groups Indel Tier 1" fromProperty="output_high" toOperation="output connector" toProperty="tier_1_indel_high" />
+  <link fromOperation="Confidence Groups Indel Tier 1" fromProperty="output_highest" toOperation="output connector" toProperty="tier_1_indel_highest" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_snp" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier3_file" toOperation="output connector" toProperty="tier_3_snp" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier4_file" toOperation="output connector" toProperty="tier_4_snp" />
@@ -521,6 +532,9 @@ __DATA__
   <operation name="Tier Variants Indel">
     <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
+  <operation name="Confidence Groups Indel Tier 1">
+    <operationtype commandClass="Genome::Model::Tools::Capture::ConfidenceGroups" typeClass="Workflow::OperationType::Command" />
+  </operation>
 
   <operation name="Breakdancer">
     <operationtype commandClass="Genome::Model::Tools::Somatic::Breakdancer" typeClass="Workflow::OperationType::Command" />
@@ -630,6 +644,9 @@ __DATA__
     <inputproperty isOptional="Y">tier_1_snp_file_high</inputproperty>
     <inputproperty isOptional="Y">tier_1_snp_file_highest</inputproperty>
 
+    <inputproperty isOptional="Y">tier_1_indel_file_high</inputproperty>
+    <inputproperty isOptional="Y">tier_1_indel_file_highest</inputproperty>
+
     <inputproperty isOptional="Y">min_mapping_quality</inputproperty>
     <inputproperty isOptional="Y">min_somatic_quality</inputproperty>
     
@@ -648,6 +665,8 @@ __DATA__
     <outputproperty>final_report_output</outputproperty>
 
     <outputproperty>tier_1_indel</outputproperty>
+    <outputproperty>tier_1_indel_high</outputproperty>
+    <outputproperty>tier_1_indel_highest</outputproperty>    
     <outputproperty>tier_1_snp_high</outputproperty>
     <outputproperty>tier_1_snp_highest</outputproperty>
     <outputproperty>tier_2_snp</outputproperty>

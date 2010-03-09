@@ -26,8 +26,10 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
 		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 0, is_input => 1 },
-		min_depth	=> { is => 'Text', doc => "Minimum depth to include a variant call [4]", is_optional => 1, is_input => 1},
-		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1}
+		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [4]", is_optional => 1, is_input => 1},
+		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [4]", is_optional => 1, is_input => 1},
+		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
+		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1}
 	],
 };
 
@@ -40,7 +42,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command searches for Illumina/Solexa data using the database
-EXAMPLE:	gmt analysis lane-qc compare-snps --genotype-file affy.genotypes --variant-file lane1.var
+EXAMPLE:	gt analysis lane-qc compare-snps --genotype-file affy.genotypes --variant-file lane1.var
 EOS
 }
 
@@ -62,22 +64,35 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $genotype_file = $self->genotype_file;
 	my $variant_file = $self->variant_file;
-	my $min_depth = 4;
-	$min_depth = $self->min_depth if($self->min_depth);
+	my $min_depth_hom = 4;
+	my $min_depth_het = 8;
+	$min_depth_hom = $self->min_depth_hom if($self->min_depth_hom);
+	$min_depth_het = $self->min_depth_het if($self->min_depth_het);
+	
+	if($self->output_file)
+	{
+		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";
+#		print OUTFILE "file\tnum_snps\tnum_with_genotype\tnum_min_depth\tnum_variant\tvariant_match\thom_was_het\thet_was_hom\thet_was_diff\tconc_variant\tconc_rare_hom\n";
+		#num_ref\tref_was_ref\tref_was_het\tref_was_hom\tconc_overall
+	}
+
 	
 	my %stats = ();
 	$stats{'num_snps'} = $stats{'num_min_depth'} = $stats{'num_with_genotype'} = $stats{'num_with_variant'} = $stats{'num_variant_match'} = 0;
 	$stats{'het_was_hom'} = $stats{'hom_was_het'} = $stats{'het_was_diff_het'} = $stats{'rare_hom_match'} = $stats{'rare_hom_total'} = 0;
+	$stats{'num_ref_was_ref'} = $stats{'num_ref_was_hom'} = $stats{'num_ref_was_het'} = 0;
 
-	print "Loading genotypes from $genotype_file...\n";
+	print "Loading genotypes from $genotype_file...\n" if($self->verbose);
 	my %genotypes = load_genotypes($genotype_file);
 
-	print "Parsing variant calls in $variant_file...\n";
+	print "Parsing variant calls in $variant_file...\n" if($self->verbose);
 
 	my $input = new FileHandle ($variant_file);
 	my $lineCounter = 0;
 
 	my $file_type = "samtools";
+
+
 
 	while (<$input>)
 	{
@@ -122,24 +137,37 @@ sub execute {                               # replace with real execution logic.
 			{
 				$stats{'num_snps'}++;
 	
-				if($depth >= $min_depth)
+				my $key = "$chrom\t$position";
+					
+				if($genotypes{$key})
 				{
-					$stats{'num_min_depth'}++;
+					$stats{'num_with_genotype'}++;
 					
-					my $key = "$chrom\t$position";
-					
-					if($genotypes{$key})
+					my $chip_gt = sort_genotype($genotypes{$key});
+
+					if((is_homozygous($chip_gt) && $depth >= $min_depth_hom) || (is_heterozygous($chip_gt) && $depth >= $min_depth_het))
 					{
-						$stats{'num_with_genotype'}++;
-						
-						my $chip_gt = sort_genotype($genotypes{$key});
 						my $ref_gt = code_to_genotype($ref_base);
 						my $cons_gt = code_to_genotype($cns_call);
-	
+
+						$stats{'num_min_depth'}++;
+					
 						if($chip_gt eq $ref_gt)
 						{
 							$stats{'num_chip_was_reference'}++;
-							
+						
+							if(uc($cons_gt) eq $ref_gt)
+							{
+								$stats{'num_ref_was_ref'}++;
+							}
+							elsif(is_heterozygous($cons_gt))
+							{
+								$stats{'num_ref_was_het'}++;
+							}
+							else
+							{
+								$stats{'num_ref_was_hom'}++;
+							}
 						}
 						elsif($chip_gt ne $ref_gt)
 						{
@@ -186,9 +214,9 @@ sub execute {                               # replace with real execution logic.
 							
 							
 						}
-						
 					}
 				}
+			
 			}			
 		}
 		
@@ -198,8 +226,27 @@ sub execute {                               # replace with real execution logic.
 	
 	close($input);
 
+	## Parse out info from variant file ##
+
+	my @fileContents = split(/\//, $variant_file);
+	my $numContents = @fileContents;
+	my $lane_info = $fileContents[$numContents - 2];
+	my $machine_info = $fileContents[$numContents - 3];
+	my @machineContents = split(/\_/, $machine_info);
+	$numContents = @machineContents;
+	my $flowcell = $machineContents[$numContents - 1];
+	(my $lane) = split(/\_/, $lane_info);
+
+
 	## Calculate pct ##
 	
+	$stats{'pct_overall_match'} = "0.00";
+	if($stats{'num_with_variant'} || $stats{'num_chip_was_reference'})
+	{
+		$stats{'pct_overall_match'} = ($stats{'num_variant_match'}) / ($stats{'num_chip_was_reference'} + $stats{'num_with_variant'}) * 100;
+		$stats{'pct_overall_match'} = sprintf("%.3f", $stats{'pct_overall_match'});
+	}
+
 	$stats{'pct_variant_match'} = "0.00";
 	if($stats{'num_with_variant'})
 	{
@@ -214,18 +261,63 @@ sub execute {                               # replace with real execution logic.
 		$stats{'pct_hom_match'} = sprintf("%.3f", $stats{'pct_hom_match'});
 	}
 
-	
-	print $stats{'num_snps'} . " SNPs parsed from variants file\n";
-	print $stats{'num_min_depth'} . " met minimum depth of >= $min_depth\n";
-	print $stats{'num_with_genotype'} . " had genotype calls from the SNP array\n";
-	print $stats{'num_with_variant'} . " had informative genotype calls\n";
-	print $stats{'num_variant_match'} . " had matching calls from sequencing\n";
-	print $stats{'hom_was_het'} . " homozygotes from array were called heterozygous\n";
-	print $stats{'het_was_hom'} . " heterozygotes from array were called homozygous\n";
-	print $stats{'het_was_diff_het'} . " heterozygotes from array were different heterozygote\n";
+	if($self->verbose)
+	{
+		print $stats{'num_snps'} . " SNPs parsed from variants file\n";
+		print $stats{'num_with_genotype'} . " had genotype calls from the SNP array\n";
+		print $stats{'num_min_depth'} . " met minimum depth of >= $min_depth_hom/$min_depth_het\n";
+		print $stats{'num_chip_was_reference'} . " were called Reference on chip\n";
+#		print $stats{'num_ref_was_ref'} . " reference were called reference\n";
+		print $stats{'num_ref_was_het'} . " reference were called heterozygous\n";
+		print $stats{'num_ref_was_hom'} . " reference were called homozygous\n";
+		print $stats{'num_with_variant'} . " had informative genotype calls\n";
+		print $stats{'num_variant_match'} . " had matching calls from sequencing\n";
+		print $stats{'hom_was_het'} . " homozygotes from array were called heterozygous\n";
+		print $stats{'het_was_hom'} . " heterozygotes from array were called homozygous\n";
+		print $stats{'het_was_diff_het'} . " heterozygotes from array were different heterozygote\n";
+		print $stats{'pct_variant_match'} . "% concordance at variant sites\n";
+		print $stats{'pct_hom_match'} . "% concordance at rare-homozygous sites\n";
+		print $stats{'pct_overall_match'} . "% overall concordance match\n";
+	}
+	else
+	{
+		print "$flowcell.$lane\t";
+		print $stats{'num_snps'} . "\t";
+		print $stats{'num_with_genotype'} . "\t";
+		print $stats{'num_min_depth'} . "\t";
+		print $stats{'num_chip_was_reference'} . "\t";
+#		print $stats{'num_ref_was_ref'} . "\t";
+		print $stats{'num_ref_was_het'} . "\t";
+		print $stats{'num_ref_was_hom'} . "\t";
+		print $stats{'num_with_variant'} . "\t";
+		print $stats{'num_variant_match'} . "\t";
+		print $stats{'hom_was_het'} . "\t";
+		print $stats{'het_was_hom'} . "\t";
+		print $stats{'het_was_diff_het'} . "\t";
+		print $stats{'pct_variant_match'} . "%\t";
+		print $stats{'pct_hom_match'} . "%\t";		
+		print $stats{'pct_overall_match'} . "%\n";
+	}
 
-	print $stats{'pct_variant_match'} . "% concordance at variant sites\n";
-	print $stats{'pct_hom_match'} . "% concordance at rare-homozygous sites\n";
+	if($self->output_file)
+	{
+		print OUTFILE "$flowcell.$lane\t";
+		print OUTFILE $stats{'num_snps'} . "\t";
+		print OUTFILE $stats{'num_with_genotype'} . "\t";
+		print OUTFILE $stats{'num_min_depth'} . "\t";
+		print OUTFILE $stats{'num_chip_was_reference'} . "\t";
+#		print OUTFILE $stats{'num_ref_was_ref'} . "\t";
+		print OUTFILE $stats{'num_ref_was_het'} . "\t";
+		print OUTFILE $stats{'num_ref_was_hom'} . "\t";
+		print OUTFILE $stats{'num_with_variant'} . "\t";
+		print OUTFILE $stats{'num_variant_match'} . "\t";
+		print OUTFILE $stats{'hom_was_het'} . "\t";
+		print OUTFILE $stats{'het_was_hom'} . "\t";
+		print OUTFILE $stats{'het_was_diff_het'} . "\t";
+		print OUTFILE $stats{'pct_variant_match'} . "%\t";
+		print OUTFILE $stats{'pct_hom_match'} . "%\t";		
+		print OUTFILE $stats{'pct_overall_match'} . "%\n";		
+	}
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
@@ -263,7 +355,7 @@ sub load_genotypes
 	}
 	close($input);
 
-	print "$gtCounter genotypes loaded\n";
+#	print "$gtCounter genotypes loaded\n";
 	
 	return(%genotypes);                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }

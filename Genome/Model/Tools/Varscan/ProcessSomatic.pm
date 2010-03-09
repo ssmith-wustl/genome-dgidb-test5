@@ -22,13 +22,16 @@ use Genome;                                 # using the namespace authorizes Cla
 
 
 my $report_only = 0;
+my $p_value_for_hc = 1.0E-06;
 
 class Genome::Model::Tools::Varscan::ProcessSomatic {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		status_file	=> { is => 'Text', doc => "File containing varscan calls, e.g. status.varscan.snp" , is_optional => 0, is_input => 1},
+		p_value_for_hc =>  { is => 'Text', doc => "P-value threshold for high confidence", is_optional => 1, is_input => 1},	
 		report_only	=> { is => 'Text', doc => "If set to 1, will not produce output files" , is_optional => 1},
+		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, will not run if output is present" , is_optional => 1, is_input => 1},
 		somatic_out	=> { is => 'Text', doc => "DO NOT USE: Output name for Somatic calls [status_file.Somatic]" , is_optional => 1, is_input => 1, is_output => 1},
 	],
 };
@@ -64,10 +67,18 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $status_file = $self->status_file;
 	$report_only = $self->report_only if($self->report_only);
-
+	$p_value_for_hc = $self->p_value_for_hc if(defined($self->p_value_for_hc));
 	if(-e $status_file)
 	{
-		process_results($status_file);
+		if($self->skip_if_output_present && -e "$status_file.Somatic.hc")
+		{
+			## Skip ##
+		}
+		else
+		{
+			process_results($status_file);			
+		}
+
 	}
 	else
 	{
@@ -186,7 +197,7 @@ sub process_results
 				## Print to master status file ##
 				print STATUS "$line\n" if(!$report_only);
 				
-				if($p_value <= 1.0E-06)
+				if($p_value <= $p_value_for_hc) #1.0E-06)
 				{
 					print HICONF "$line\n" if(!$report_only);
 					$numHiConf++;

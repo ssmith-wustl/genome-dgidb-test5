@@ -165,7 +165,7 @@ sub execute {                               # replace with real execution logic.
 			{
 				for(my $colCounter = $restColumn; $colCounter < $numContents; $colCounter++)
 				{
-					$rest_of_line .= "\t" if($rest_of_line);
+					$rest_of_line .= "\t" if($colCounter > $restColumn);
 					$rest_of_line .= $lineContents[$colCounter];
 				}
 

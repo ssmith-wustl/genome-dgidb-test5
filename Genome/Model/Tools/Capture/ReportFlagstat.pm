@@ -157,11 +157,13 @@ sub execute {                               # replace with real execution logic.
 				my $est_gigabases = sprintf("%.2f", ($num_reads * $self->read_length / 1000000000));
 				$num_reads = commify($num_reads);
 				print "$local_filename\t$num_reads\t$pct_paired\t$pct_fragment\t$num_mapped\t$map_rate\t$num_dups\t$dup_rate\t$est_gigabases\n";						
+				print OUTFILE "$local_filename\t$num_reads\t$pct_paired\t$pct_fragment\t$num_mapped\t$map_rate\t$num_dups\t$dup_rate\t$est_gigabases\n" if($self->output_file);
 			}
 			else
 			{
 				$num_reads = commify($num_reads);
-				print "$local_filename\t$num_reads\t$pct_paired\t$pct_fragment\t$num_mapped\t$map_rate\t$num_dups\t$dup_rate\n";			
+				print "$local_filename\t$num_reads\t$pct_paired\t$pct_fragment\t$num_mapped\t$map_rate\t$num_dups\t$dup_rate\n";
+				print OUTFILE "$local_filename\t$num_reads\t$pct_paired\t$pct_fragment\t$num_mapped\t$map_rate\t$num_dups\t$dup_rate\n" if($self->output_file);
 			}
 
 		}
@@ -169,7 +171,6 @@ sub execute {                               # replace with real execution logic.
 
 	close($input);
 
-	close(OUTFILE) if($self->output_file);
 	
 	print $stats{'num_files'} . " flagstat files\n";
 
@@ -182,22 +183,41 @@ sub execute {                               # replace with real execution logic.
 
 
 	my $avg_reads = sprintf("%d", $total_reads / $total_files);
-
+	my $est_gigabases;
+	
 	if($self->read_length)
 	{
-		my $avg_gigabases = sprintf("%.2f", ($avg_reads * $self->read_length / 1000000000));
-		print "Avg. Gigabases:\t" . $avg_gigabases . "\n";
+		$est_gigabases = sprintf("%.2f", ($avg_reads * $self->read_length / 1000000000));
 	}
 
-
 	$avg_reads = commify($avg_reads);
+
 	print "Avg. Reads Per File:\t" . $avg_reads . "\n";
 	print "Pct. Paired-end:\t" . $pct_pair . "\n";
 	print "Pct. Fragment-end:\t" . $pct_frag . "\n";
 	print "Avg. Percent Mapped:\t" . $pct_map . "\n";
 	print "Avg. Duplication:\t" . $pct_dup . "\n";
+	if($self->read_length)
+	{
+		print "Avg. Gigabases Per:\t" . $est_gigabases . "\n";
+	}
 
+	if($self->output_file)
+	{
+		print OUTFILE "Avg. Reads Per File:\t" . $avg_reads . "\n";
+		print OUTFILE "Pct. Paired-end:\t" . $pct_pair . "\n";
+		print OUTFILE "Pct. Fragment-end:\t" . $pct_frag . "\n";
+		print OUTFILE "Avg. Percent Mapped:\t" . $pct_map . "\n";
+		print OUTFILE "Avg. Duplication:\t" . $pct_dup . "\n";
+		if($self->read_length)
+		{
+			print OUTFILE "Avg. Gigabases:\t" . $est_gigabases . "\n";
+		}
+	}
 	
+	close(OUTFILE) if($self->output_file);
+
+
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 

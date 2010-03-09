@@ -24,7 +24,7 @@ class Genome::Model::Tools::Varscan::Germline {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		normal_bam	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
+		bam_file	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
 		output_snp	=> { is => 'Text', doc => "Basename for SNP output, eg. varscan.snp" , is_optional => 0, is_input => 1, is_output => 1},
 		output_indel	=> { is => 'Text', doc => "Basename for indel output, eg. varscan.indel" , is_optional => 0, is_input => 1, is_output => 1},
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
@@ -40,7 +40,7 @@ class Genome::Model::Tools::Varscan::Germline {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run the VarScan germline variant detection"                 
+    "Run the VarScan germline variant detection (SNPs and indels)"                 
 }
 
 sub help_synopsis {
@@ -66,7 +66,7 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
-	my $normal_bam = $self->normal_bam;
+	my $bam_file = $self->bam_file;
 	my $output_snp = $self->output_snp;
 	my $output_indel = $self->output_indel;
 
@@ -83,11 +83,11 @@ sub execute {                               # replace with real execution logic.
 	my $path_to_varscan = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan";
 	$path_to_varscan = "java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan" if($self->heap_space);
 
-	if(-e $normal_bam)
+	if(-e $bam_file)
 	{
 		## Prepare pileup commands ##
 		
-		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
+		my $normal_pileup = "samtools pileup -f $reference $bam_file";
 		
 		## Run VarScan ##
 
@@ -103,10 +103,16 @@ sub execute {                               # replace with real execution logic.
 		print "RUN: $cmd\n";
 		system($cmd);
 
+		## Filter Indels ##
+
+		$cmd = "bash -c \"$path_to_varscan filter $output_indel >$output_indel.filter\"";
+		print "RUN: $cmd\n";
+		system($cmd);
+
 		## Filter SNPs using Indels ##
-		if(-e $output_snp && $output_indel)
+		if(-e $output_snp && -e "$output_indel.filter")
 		{
-			$cmd = "bash -c \"$path_to_varscan filter $output_snp $varscan_params --indel-file $output_indel >$output_snp.filter\"";
+			$cmd = "bash -c \"$path_to_varscan filter $output_snp --indel-file $output_indel.filter >$output_snp.filter\"";
 			print "RUN: $cmd\n";
 			system($cmd);
 		}

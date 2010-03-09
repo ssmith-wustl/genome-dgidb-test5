@@ -104,11 +104,11 @@ sub execute {                               # replace with real execution logic.
 			my $ucsc_cons = $lineContents[16];
 			my $domain = $lineContents[17];
 			
-			my $annotation = "$variant_type\t$gene_name\t$transcript_name\t$trv_type\t$c_position\t$aa_change\t$ucsc_cons\t$domain";
-			my $snp_key = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2";
+			my $snp_key = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2" if($chrom && $chr_start && $chr_stop);
 			
-			if($snp_calls{$snp_key})
+			if($snp_key && $snp_calls{$snp_key})
 			{
+				my $annotation = "$variant_type\t$gene_name\t$transcript_name\t$trv_type\t$c_position\t$aa_change\t$ucsc_cons\t$domain";
 #				print OUTFILE "$annotation\t$snp_calls{$snp_key}\n";
 				my $newline = $snp_key . "\t";
 				$newline .= $annotation . "\t";

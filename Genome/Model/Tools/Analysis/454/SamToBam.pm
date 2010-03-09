@@ -30,6 +30,7 @@ class Genome::Model::Tools::Analysis::454::SamToBam {
 		samples_file	=> { is => 'Text', doc => "Tab-delimited file of sample and SFF file(s)" },
 		output_dir	=> { is => 'Text', doc => "Output directory" },
 		aligner		=> { is => 'Text', doc => "Aligner that was used." },
+		reference		=> { is => 'Text', doc => "Reference sequence [default=Hs36 ssaha2]", is_optional => 1 },
 	],
 };
 
@@ -65,6 +66,14 @@ sub execute {                               # replace with real execution logic.
 	my $samples_file = $self->samples_file;
 	my $output_dir = $self->output_dir;
 	my $aligner = $self->aligner;
+
+	if($self->reference)
+	{
+		$ref_seq = $self->reference;
+		$ref_index = $ref_seq . ".fai";
+
+		die "Reference files not found!\n$ref_seq\n$ref_index\n" if(!(-e $ref_seq && -e $ref_index));
+	}
 
 	if(!(-e $samples_file))
 	{

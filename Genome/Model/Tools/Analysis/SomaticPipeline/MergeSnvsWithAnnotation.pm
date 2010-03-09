@@ -187,9 +187,22 @@ sub load_snp_calls
 		{
 			my $chrom = $lineContents[0];
 			$chrom =~ s/[^0-9XYMT]//g;
-			my $chr_start = my $chr_stop = $lineContents[1];
-			my $allele1 = $lineContents[2];
-			my $allele2 = $lineContents[3];
+			
+			my $chr_start = my $chr_stop = my $allele1 = my $allele2 = "";
+			
+			if($lineContents[2] =~ /[0-9]/)
+			{
+				$chr_start = $chr_stop = $lineContents[2];
+				$allele1 = $lineContents[3];
+				$allele2 = $lineContents[4];								
+			}
+			else
+			{
+				$chr_start = $chr_stop = $lineContents[1];
+				$allele1 = $lineContents[2];
+				$allele2 = $lineContents[3];				
+			}
+
 			
 			if($lineContents[3] =~ "INS" || $lineContents[3] =~ "DEL")
 			{

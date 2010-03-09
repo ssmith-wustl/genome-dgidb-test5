@@ -81,14 +81,14 @@ sub execute {                               # replace with real execution logic.
 
         if(defined($self->reference))
 	{
-		if(-e $self->reference)
-		{
+#		if(-e $self->reference)
+#		{
 			$reference = $self->reference;
-		}
-		else
-		{
-			die "Error: Reference file not found!\n";
-		}
+#		}
+#		else
+#		{
+#			die "Error: Reference file not found!\n";
+#		}
 	}
 
 	## Build FASTQ File ##
@@ -107,7 +107,7 @@ sub execute {                               # replace with real execution logic.
 
 	print "Aligning $fq_file to $reference\n";
 	system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file -save $reference $fq_file");
-
+#	system("ssaha2 $ssaha2_params -outfile $output_file -save $reference $fq_file");
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 

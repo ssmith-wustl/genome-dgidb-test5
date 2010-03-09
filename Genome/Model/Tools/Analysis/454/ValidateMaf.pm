@@ -26,9 +26,13 @@ class Genome::Model::Tools::Analysis::454::ValidateMaf {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		maf_file	=> { is => 'Text', doc => "Complete MAF file to be updated" },
 		status_file	=> { is => 'Text', doc => "Status file from VarScan with somatic_status in 13th column" },
+		snp_status_file	=> { is => 'Text', doc => "Status file from VarScan with somatic_status in 13th column", is_optional => 1 },
+		indel_status_file	=> { is => 'Text', doc => "Status file from VarScan with somatic_status in 13th column", is_optional => 1 },
 		positions_file		=> { is => 'Text', doc => "Positions that were targeted for validation" },
 		variant_type		=> { is => 'Text', doc => "Variant type, either SNP or INDEL"},
 		output_file		=> { is => 'Text', doc => "Output file for updated MAF" },
+		indel_padding	=> { is => 'Text', doc => "Position difference to allow to validate indel calls [15]", is_optional => 1},
+		max_size_diff	=> { is => 'Text', doc => "Maximum size difference to validate indel calls [1]", is_optional => 1},
 	],
 };
 
@@ -62,9 +66,15 @@ sub execute {                               # replace with real execution logic.
 
 	## Get required parameters ##
 	my $maf_file = $self->maf_file;
+	
+	
 	my $status_file = $self->status_file;
 	my $positions_file = $self->positions_file;
 	my $output_file = $self->output_file;
+	my $indel_padding = 15;
+	$indel_padding = $self->indel_padding if($self->indel_padding);
+	my $max_size_diff = 1;
+	$max_size_diff = $self->max_size_diff if($self->max_size_diff);
 
 	if(!(-e $maf_file))
 	{
@@ -92,9 +102,9 @@ sub execute {                               # replace with real execution logic.
 
 
 	## Load the 454 validation results ##
-	
 	my %results454 = load_454_results($status_file);	
-	
+#	my %results454snp = load_454_results($snp_status_file);	
+#	my %results454indel = load_454_results($indel_status_file);		
 	
 	## Parse the MAF file ##
 	
@@ -142,6 +152,8 @@ sub execute {                               # replace with real execution logic.
 			}
 	
 			## Check for targeted position ##
+			
+			## SNP VALIDATION ##
 			
 			if($var_type eq "SNP" && $target_positions{$position_key})
 			{
@@ -217,6 +229,9 @@ sub execute {                               # replace with real execution logic.
 					print OUTFILE "$line\n";				
 				}
 			}
+			
+			## INDEL VALIDATION ##
+			
 			elsif($current_val_status eq "unknown" && $self->variant_type eq "INDEL" && ($var_type eq "INS" || $var_type eq "DEL"))
 			{
 
@@ -229,16 +244,18 @@ sub execute {                               # replace with real execution logic.
 				$indel_bases =~ s/[^ACGTN]//g;
 				$indel_size = length($indel_bases);
 				
-				$region_start = $position - $indel_size;
-				$region_stop = $position + $indel_size;
+#				$region_start = $position - $indel_size;
+#				$region_stop = $position + $indel_size;
+
+				$region_start = $position - $indel_size - $indel_padding;
+				$region_stop = $position + $indel_size + $indel_padding;
 
 				## Reset variables for tracking newlines ##
 				my $newline = my $new_val_status = my $new_val_position = "";
+				
 
 				for(my $this_pos = $region_start; $this_pos <= $region_stop; $this_pos++)
 				{
-					## Check position for 454 results ##
-					
 					$position_key = "$chromosome\t$this_pos";
 					if($results454{$position_key})
 					{
@@ -253,94 +270,168 @@ sub execute {                               # replace with real execution logic.
 						my $normal_gt = $results[7];
 						my $tumor_gt = $results[11];
 						my $validation_status = $results[12];						
+
+#						$validation_bases++;
 						
-						my $indel_type_454 = my $indel_size_454 = my $indel_bases_454 = "";
-						
-						$indel_bases_454 = uc($var);
-						$indel_bases_454 =~ s/[^ACGTN]//g;
-						
-						if(substr($var, 0, 1) eq "+")
+						if($validation_status && $validation_status eq "Reference")
 						{
-							$indel_type_454 = "INS";
+#							$non_indel_bases++;
 						}
 						else
 						{
-							$indel_type_454 = "DEL";
-						}
-						
-						$indel_size_454 = length($indel_bases_454);
-						
-						## Ensure that 454 indel type matches MAF indel type ##
-						
-						if($indel_type_454 eq $var_type)
-						{
-							$stats{'num_type_matched'}++;
+							my $indel_type_454 = my $indel_size_454 = my $indel_bases_454 = "";
 							
-							## Determine size diff ##
+							$indel_bases_454 = uc($var);
+							$indel_bases_454 =~ s/[^ACGTN]//g;
 							
-							my $size_diff = abs($indel_size_454 - $indel_size);
-
-							## Ensure that indels are roughly the same size ##
-							
-							if($size_diff <= 1)
+							if(substr($var, 0, 1) eq "+")
 							{
-								$stats{'num_size_matched'}++;
+								$indel_type_454 = "INS";
+							}
+							else
+							{
+								$indel_type_454 = "DEL";
+							}
+							
+							$indel_size_454 = length($indel_bases_454);
+							
+							## Ensure that 454 indel type matches MAF indel type ##
+							
+							if($indel_type_454 eq $var_type)
+							{
+								$stats{'num_type_matched'}++;
+								
+								## Determine size diff ##
+								
+								my $size_diff = abs($indel_size_454 - $indel_size);
 	
-								## Parse out the normal and tumor alleles ##			
-								(my $normal_allele1, my $normal_allele2) = split(/\//, $normal_gt);
-								(my $tumor_allele1, my $tumor_allele2) = split(/\//, $tumor_gt);
-					
-								$lineContents[19] = $tumor_allele1;
-								$lineContents[20] = $tumor_allele2;
-								$lineContents[21] = $normal_allele1;
-								$lineContents[22] = $normal_allele2;
-								$lineContents[24] = $validation_status;
-
-								## Determine if we need to update the newline. Only do so if: ##
-								# 1. This is the first validation results for this variant, or
-								# 2. The previous validation result called it Reference/WildType, or
-								# 3. This validation result matches the previous one, but this is physically closer to the MAF variant
+								## Ensure that indels are roughly the same size ##
 								
-								if(!$new_val_status || ($validation_status eq "Somatic" && $new_val_status ne "Somatic") || $new_val_status eq "Reference" || ($validation_status eq $new_val_status && abs($position - $this_pos) < abs($position - $new_val_position)))
+								if($size_diff <= $max_size_diff)
 								{
-									## Update the newline ##
-
-									$new_val_status = $validation_status;
-									$new_val_position = $this_pos;
-
-									## Build a new line for MAF ##	
-									$newline = "";
-									my $numContents = @lineContents;
-									for(my $colCounter = 0; $colCounter < $numContents; $colCounter++)
-									{
-										$lineContents[$colCounter] = "" if(!$lineContents[$colCounter]);
-										$newline .= $lineContents[$colCounter] . "\t";
-									}
-
-									## Print the update that was made ##
-									print "$position_key\t$var_type-$indel_size\t$ref_base\t$indel_bases\n";
-									print "Updated\t$this_pos\t$indel_type_454-$indel_size_454\t$ref\t$var\t$validation_status\n";															
+									$stats{'num_size_matched'}++;
+		
+									## Parse out the normal and tumor alleles ##			
+									(my $normal_allele1, my $normal_allele2) = split(/\//, $normal_gt);
+									(my $tumor_allele1, my $tumor_allele2) = split(/\//, $tumor_gt);
+						
+									$lineContents[19] = $tumor_allele1;
+									$lineContents[20] = $tumor_allele2;
+									$lineContents[21] = $normal_allele1;
+									$lineContents[22] = $normal_allele2;
+									$lineContents[24] = $validation_status;
+	
+									## Determine if we need to update the newline. Only do so if: ##
+									# 1. This is the first validation results for this variant, or
+									# 2. The previous validation result called it Reference/WildType, or
+									# 3. This validation result [matches the previous one, but this] is physically closer to the MAF variant
 									
-									$stats{'changed from ' . $current_val_status . ' to ' . $validation_status}++;	
+									if(!$new_val_status || ($validation_status eq "Somatic" && $new_val_status ne "Somatic") || $new_val_status eq "Reference" || (abs($position - $this_pos) < abs($position - $new_val_position)))  #$validation_status eq $new_val_status 
+#									if(1)
+									{
+										print "$gene_name\t$chromosome\t$position\t$var_type\t$ref_base\t$var_base\t$tumor_sample\t$current_val_status\n";
+										print "454data\t$position_key\t$ref\t$var\tN=$normal_gt\tT=$tumor_gt\t$validation_status\t***UPDATED***\n\n";
+										## Update the newline ##
+	
+										$new_val_status = $validation_status;
+										$new_val_position = $this_pos;
+	
+										## Build a new line for MAF ##	
+										$newline = "";
+										my $numContents = @lineContents;
+										for(my $colCounter = 0; $colCounter < $numContents; $colCounter++)
+										{
+											$lineContents[$colCounter] = "" if(!$lineContents[$colCounter]);
+											$newline .= $lineContents[$colCounter] . "\t";
+										}
+	
+										## Print the update that was made ##
+#										print "$position_key\t$var_type-$indel_size\t$ref_base\t$indel_bases\n";
+#										print "Updated\t$this_pos\t$indel_type_454-$indel_size_454\t$ref\t$var\t$validation_status\n";															
+										
+										$stats{'changed from ' . $current_val_status . ' to ' . $validation_status}++;	
+									}
+									else
+									{
+#$										print "$position_key status NOT updated from $new_val_status to $validation_status\n";
+										print "$gene_name\t$chromosome\t$position\t$var_type\t$ref_base\t$var_base\t$tumor_sample\t$current_val_status\n";
+										print "454data\t$position_key\t$ref\t$var\tN=$normal_gt\tT=$tumor_gt\t$validation_status\t***NOT CHANGED***\n\n";
+									}
+	
+	
+									
+	
 								}
-								else
+								elsif($size_diff <= 1)
 								{
-									print "$position_key status NOT updated from $new_val_status to $validation_status\n";
+									warn "WARNING: Multiple Validation Results!\n";
+									print "$newline\n";
+									print "$this_pos\t$indel_type_454-$indel_size_454\t$ref\t$var\t$validation_status\n";																							
 								}
-
-
-								
-
-							}
-							elsif($size_diff <= 1)
-							{
-								warn "WARNING: Multiple Validation Results!\n";
-								print "$newline\n";
-								print "$this_pos\t$indel_type_454-$indel_size_454\t$ref\t$var\t$validation_status\n";																							
-							}
+							}							
 						}
+
+						
+
 					}
 				}
+				
+				
+				## If no validation was made, try to refute indel ##
+				
+				if(!$newline)
+				{
+					## Check to see if indel was refuted ##
+					my $validation_bases = my $non_indel_bases = 0;
+					my $validation_lines = "";
+
+					for(my $this_pos = $region_start - 1; $this_pos <= $region_stop + 1; $this_pos++)
+					{
+						$position_key = "$chromosome\t$this_pos";
+						
+						if($results454{$position_key})
+						{
+							my @results = split(/\t/, $results454{$position_key});
+							
+							my $ref = $results[2];
+							my $var = $results[3];
+							my $normal_gt = $results[7];
+							my $tumor_gt = $results[11];
+							my $validation_status = $results[12];						
+	
+							$validation_bases++;
+							
+							if($validation_status && $validation_status eq "Reference")
+							{
+								$non_indel_bases++;
+								$validation_lines .= "\t$results454{$position_key}\n";
+							}													
+						}
+
+					}
+
+					if($validation_bases && $non_indel_bases == $validation_bases)
+					{
+#						print "$chromosome\t$position\t$var_type refuted by $non_indel_bases non-indel bases\n";
+#						print $validation_lines . "\n";
+						my $validation_status = "WildType";
+						$lineContents[24] = "WildType";
+						## Update the newline ##
+
+						## Build a new line for MAF ##	
+						$newline = "";
+						my $numContents = @lineContents;
+						for(my $colCounter = 0; $colCounter < $numContents; $colCounter++)
+						{
+							$lineContents[$colCounter] = "" if(!$lineContents[$colCounter]);
+							$newline .= $lineContents[$colCounter] . "\t";
+						}
+						
+						$stats{'changed from ' . $current_val_status . ' to ' . $validation_status}++;	
+					}
+
+				}
+				
 				
 				if($newline)
 				{

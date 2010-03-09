@@ -81,7 +81,7 @@ sub execute {                               # replace with real execution logic.
 
 		print "$line\n";
 
-		if(!($lineContents[0] =~ "chrom" || $lineContents[0] =~ "ref_name"))
+		if(!(lc($lineContents[0]) =~ "chrom" || lc($lineContents[0]) =~ "ref_name"))
 		{
 			my $chrom = $lineContents[0];
 			$chrom =~ s/[^0-9XYMT]//g;
@@ -90,7 +90,7 @@ sub execute {                               # replace with real execution logic.
 
 			my $restColumn = 0;
 
-			if($lineContents[2] =~ /[0-9]/)
+			if($lineContents[2] && $lineContents[2] =~ /[0-9]/)
 			{
 				$chr_stop = $lineContents[2];
 				$allele1 = $lineContents[3];
@@ -105,23 +105,26 @@ sub execute {                               # replace with real execution logic.
 				$restColumn = 4;
 			}
 
-			$allele2 = iupac_to_base($allele1, $allele2);
-
-			## If we have other information on line, output it ##
-			my $numContents = @lineContents;
-			my $rest_of_line = "";
-			if($restColumn && $restColumn > 0 && $restColumn < $numContents)
+			if($chrom && $chr_start && $chr_stop)
 			{
-				for(my $colCounter = $restColumn; $colCounter < $numContents; $colCounter++)
+				$allele2 = iupac_to_base($allele1, $allele2);
+	
+				## If we have other information on line, output it ##
+				my $numContents = @lineContents;
+				my $rest_of_line = "";
+				if($restColumn && $restColumn > 0 && $restColumn < $numContents)
 				{
-					$rest_of_line .= "\t" if($rest_of_line);
-					$rest_of_line .= $lineContents[$colCounter];
+					for(my $colCounter = $restColumn; $colCounter < $numContents; $colCounter++)
+					{
+						$rest_of_line .= "\t" if($colCounter > $restColumn);
+						$rest_of_line .= $lineContents[$colCounter];
+					}
+	
 				}
-
+	
+				$formatted[$formatCounter] = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2\t$rest_of_line";
+				$formatCounter++;
 			}
-
-			$formatted[$formatCounter] = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2\t$rest_of_line";
-			$formatCounter++;			
 		}
 	}
 

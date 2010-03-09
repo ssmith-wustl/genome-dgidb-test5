@@ -33,6 +33,7 @@ class Genome::Model::Tools::Capture::CompareModels {
 		output_dir	=> { is => 'Text', doc => "Output directory for comparison files" , is_optional => 0},
 		sample_list	=> { is => 'Text', doc => "Text file normal-tumor sample pairs to include, one pair per line" , is_optional => 0},
 		report_only	=> { is => 'Text', doc => "Flag to skip actual execution" , is_optional => 1},
+		skip_if_output_present => { is => 'Text', doc => "Do not attempt to run pipeline if output present" , is_optional => 1},
 	],
 };
 
@@ -134,7 +135,7 @@ sub execute {                               # replace with real execution logic.
 			## Define a data directory ##
 			my $data_dir = $output_dir . "/somatic_pipeline/" . $tumor_sample;			
 
-			if(-e "$data_dir/varScan.output.snp")
+			if($self->skip_if_output_present && -e "$data_dir/merged.somatic.snp.novel.tier1.gc")
 			{
 				$stats{'num_pipeline_output'}++;
 			}
@@ -146,16 +147,20 @@ sub execute {                               # replace with real execution logic.
 				if($tumor_build_id && -d $data_dir && -e $normal_bam_file && -e $tumor_bam_file && -e $normal_snp_file && -e $tumor_snp_file)
 				{
 					## Launch the pipeline ##
-					system("bsub -q long gmt somatic compare capture-bams --skip-sv 1 --only-tier-1 1 --normal-bam-file $normal_bam_file --tumor-bam-file $tumor_bam_file --normal-snp-file $normal_snp_file --tumor-snp-file $tumor_snp_file --build-id $tumor_build_id --data-directory $data_dir");
+					system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" gmt somatic compare capture-bams --min-mapping-quality 40 --min-somatic-quality 40 --skip-sv 1 --only-tier-1 1 --skip-if-output-present 1 --normal-bam-file $normal_bam_file --tumor-bam-file $tumor_bam_file --normal-snp-file $normal_snp_file --tumor-snp-file $tumor_snp_file --build-id $tumor_build_id --data-directory $data_dir");
+
+#					print "gmt somatic compare capture-bams --skip-sv 1 --only-tier-1 1 --skip-if-output-present 1 --normal-bam-file $normal_bam_file --tumor-bam-file $tumor_bam_file --normal-snp-file $normal_snp_file --tumor-snp-file $tumor_snp_file --build-id $tumor_build_id --data-directory $data_dir\n";
+#					system("gmt somatic compare capture-bams --skip-sv 1 --only-tier-1 1 --skip-if-output-present 1 --normal-bam-file $normal_bam_file --tumor-bam-file $tumor_bam_file --normal-snp-file $normal_snp_file --tumor-snp-file $tumor_snp_file --build-id $tumor_build_id --data-directory $data_dir");
+#					exit(0);
 				}
 			}
 			else
 			{
-#				print "$tumor_sample\n";
-#				print "Normal BAM: $normal_bam_file\n";
-#				print "Tumor BAM: $tumor_bam_file\n";
-#				print "Normal SNP: $normal_snp_file\n";
-#				print "Tumor SNP: $tumor_snp_file\n";
+				print "$tumor_sample\n";
+				print "Normal BAM: $normal_bam_file\n";
+				print "Tumor BAM: $tumor_bam_file\n";
+				print "Normal SNP: $normal_snp_file\n";
+				print "Tumor SNP: $tumor_snp_file\n";
 #				print "Build ID: $tumor_build_id\n";
 #				print "Data Dir: $data_dir\n";
 #				exit(0);
@@ -199,7 +204,7 @@ sub get_genome_models
 	$stats{'num_matching_models'} = 0;
 	$stats{'num_completed_builds'} = 0;
 
-	my $model_output = `genome model list --filter=name~\'$model_basename%\' --show=id,subject_name,last_complete_build_directory 2>/dev/null`;
+	my $model_output = `genome model list --filter=name~\'$model_basename%\' --show=id,subject_name,last_succeeded_build_directory 2>/dev/null`;
 	chomp($model_output);
 	my @output_lines = split(/\n/, $model_output);
 	
@@ -354,12 +359,25 @@ sub get_bam_file
 		my $model_status = $modelContents[2];
 		my $build_dir = $modelContents[3];
 
+		my $model_dir = $build_dir;
+		my $filter_string = "build" . $build_id;
+		$model_dir =~ s/$build_dir//;
+
 		if($build_dir && -d $build_dir)
 		{
 			## Search for the BAM file ##
 			
 			my $bam_file = `ls $build_dir/alignments/*.bam`;
 			chomp($bam_file) if($bam_file);
+
+			## If BAM file not found, try for one in another build dir ##
+			
+			if(!$bam_file)
+			{
+				$bam_file = `ls $model_dir/build*/alignments/*.bam | head -1`;
+				chomp($bam_file) if($bam_file);							
+			}
+
 			return($bam_file) if($bam_file);
 		}
 	}

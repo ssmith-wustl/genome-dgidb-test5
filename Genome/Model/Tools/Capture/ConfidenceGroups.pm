@@ -80,6 +80,8 @@ sub execute {                               # replace with real execution logic.
 		die "One or more files didn't exist!\n";
 	}
 
+	$stats{'highest-conf'} = $stats{'high-conf'} = $stats{'varscan-only'} = $stats{'sniper-only'} = 0;
+
 	my %varscan = load_positions($varscan_file);
 	my %sniper = load_positions($glf_file);
 
@@ -131,7 +133,6 @@ sub execute {                               # replace with real execution logic.
 	print $stats{'high-conf'} . " high confidence\n";
 	print $stats{'varscan-only'} . " varscan-only\n";
 	print $stats{'sniper-only'} . " sniper-only\n";
-
 
 	close(HIGH);
 	close(HIGHEST);

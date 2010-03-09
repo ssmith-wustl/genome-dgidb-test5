@@ -171,6 +171,8 @@ sub execute {                               # replace with real execution logic.
 			}
 
 			## If we have the necessary information, output line ##
+			$chrom =~ s/chr// if(substr($chrom, 0, 3) eq "chr");
+			$chrom = "" if($chrom =~ 'random');
 			
 			if($chrom && $chr_start && $chr_stop && $allele1 && $allele2)
 			{

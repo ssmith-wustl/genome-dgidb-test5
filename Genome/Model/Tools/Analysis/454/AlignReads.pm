@@ -27,6 +27,7 @@ class Genome::Model::Tools::Analysis::454::AlignReads {
 		samples_file	=> { is => 'Text', doc => "Tab-delimited file of sample and SFF file(s)" },
 		output_dir	=> { is => 'Text', doc => "Output directory" },
 		aligner		=> { is => 'Text', doc => "Aligner to use" },
+		reference		=> { is => 'Text', doc => "Reference sequence [default=Hs36 ssaha2]", is_optional => 1 },
 	],
 };
 
@@ -96,11 +97,27 @@ sub execute {                               # replace with real execution logic.
 			if($aligner eq "ssaha2")
 			{
 				my $aligner_output_file = "$aligner_output_dir/$sample_name.$aligner.sam";
-                my $cmd_obj = Genome::Model::Tools::Ssaha::AlignToGenome->create(
-                    query_file => $fasta_file,
-                    output_file => $aligner_output_file,
-                );
-                $cmd_obj->execute;
+
+				## Declare command object ##
+				my $cmd_obj;
+
+				if($self->reference)
+				{
+					$cmd_obj = Genome::Model::Tools::Ssaha::AlignToGenome->create(
+					    query_file => $fasta_file,
+					    output_file => $aligner_output_file,
+					    reference => $self->reference,
+					);					
+				}
+				else
+				{
+					$cmd_obj = Genome::Model::Tools::Ssaha::AlignToGenome->create(
+					    query_file => $fasta_file,
+					    output_file => $aligner_output_file,
+					);					
+				}
+	
+		                $cmd_obj->execute;
                 #my $cmd = "gmt ssaha align-to-genome --query-file $fasta_file --output-file $aligner_output_file";
                 #system($cmd);
 			}
