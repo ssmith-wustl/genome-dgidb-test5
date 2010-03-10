@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Model::Tools::Fastq::ToFasta {
     is => 'Genome::Model::Tools::Fastq',
-    has => [
+    has_input => [
             fasta_file => {
                            is => 'Text',
                            doc => 'the output fasta format sequence file',
@@ -19,6 +19,14 @@ class Genome::Model::Tools::Fastq::ToFasta {
                          },
         ],
 };
+
+sub create {
+    my $class = shift;
+    
+    my $self = $class->SUPER::create(@_);
+
+    return $self;
+}
 
 sub execute {
     my $self = shift;

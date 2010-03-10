@@ -19,6 +19,12 @@ class Genome::Model::Tools::Fastq::RemoveN
                                     is_output => 1,
                                     is_optional => 1,
                                 },
+            cutoff =>   {
+                                    doc => 'minimum # of N\'s to screen on.  Set to 0 to disable',
+                                    is => 'Number',
+                                    is_optional => 1,
+                                    default => 1, 
+                        },
          ],
 };
 
@@ -29,7 +35,7 @@ sub help_brief
 
 sub help_detail
 {   
-    "Removes reads that have internal N's, or more than cutoff amount of N's on ends.  Cutoff is 6 for 75-mer, 9 for 100-mer";
+    "Removes reads that have internal N's, or more than cutoff amount of N's on ends.  By default, removes for a single N.  Set cutoff to 0 to disable";
 }
 
 sub help_synopsis 
@@ -51,6 +57,7 @@ sub execute
     my $self = shift;
     my $fastq_file = $self->fastq_file;
     my $n_removed_file = ($self->n_removed_file ? $self->n_removed_file : $fastq_file . "n_removed");
+    my $cutoff = $self->cutoff;
 
     my $input_fh = IO::File->new($fastq_file);
     unless ($input_fh) {
@@ -70,8 +77,10 @@ sub execute
         my $seq = $input_fh->getline;
         my $sep = $input_fh->getline;
         my $qual = $input_fh->getline;
+        my $count = 0;
 
-        $output_fh->print("$header$seq$sep$qual") unless ($seq=~'N');
+        $seq=~s/(N)/$count++;$1/eg; # get N-count
+        $output_fh->print("$header$seq$sep$qual") unless ($cutoff > 0 and $count >= $cutoff); #check if cutoff disabled, then compare count
     }   
 
     $input_fh->close;

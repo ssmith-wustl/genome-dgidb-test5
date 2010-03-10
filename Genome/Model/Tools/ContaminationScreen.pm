@@ -16,6 +16,7 @@ class Genome::Model::Tools::ContaminationScreen {
                                 doc => 'file of reads to be checked for contamination',
                                 is => 'String',
                                 is_input => 1,
+                                is_optional => 1,
                             },
             output_file =>  {
                                 doc => 'file to write contaminations to',
@@ -27,6 +28,7 @@ class Genome::Model::Tools::ContaminationScreen {
                                 doc => 'alignment database', 
                                 is => 'String',
                                 is_input => 1,
+                                is_optional => 1,
                             },
             summary_file => {
                                 doc => 'statistical report',

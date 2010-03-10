@@ -47,6 +47,30 @@ class Genome::Model::Tools::Synch
                                     is_output => 1,
                                     is_optional => 1,
                                 },
+            output_only1 => {
+                                doc         => 'first single-end output',
+                                is          => 'String',
+                                is_output   => 1,
+                                    is_optional => 1,
+                            },
+            output_only2 => {
+                                doc         => 'second single-end output',
+                                is          => 'String',
+                                is_output   => 1,
+                                    is_optional => 1,
+                            },
+            output_both1 => {
+                                doc         => 'first paired-end output',
+                                is          => 'String',
+                                is_output   => 1,
+                                    is_optional => 1,
+                            },
+            output_both2 => {
+                                doc         => 'second paired-end output',
+                                is          => 'String',
+                                is_output   => 1,
+                                    is_optional => 1,
+                            },
          ],
 };
 
@@ -220,6 +244,11 @@ sub execute
     $output_only_file2->close;
     $output_both_file2->close;
     $fastq2->close;
+
+    $self->output_only1($output_only_file1_name);
+    $self->output_both1($output_both_file1_name);
+    $self->output_only2($output_only_file2_name);
+    $self->output_both2($output_both_file2_name);
 
     return 1;
 }

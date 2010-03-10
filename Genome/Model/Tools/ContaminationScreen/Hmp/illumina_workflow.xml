@@ -1,76 +1,94 @@
 <?xml version='1.0' standalone='yes'?>
 <workflow name="human contamination screening" executor="Workflow::Executor::SerialDeferred" logDir="/gscmnt/sata409/research/mmitreva/edemello/workflow_logs">
-    <link fromOperation="input connector"       fromProperty="fastq_1"                  toOperation="remove n 1"                toProperty="fastq_file" />
-    <link fromOperation="input connector"       fromProperty="fastq_1"                  toOperation="synch fastq"               toProperty="fastq1" />
-    <link fromOperation="input connector"       fromProperty="n_removed_file_1"         toOperation="remove n 1"                toProperty="n_removed_file" />
-    <link fromOperation="input connector"       fromProperty="n_removed_file_1"         toOperation="wait for n removal 1"      toProperty="files_to_align_path_1" />
-    <link fromOperation="input connector"       fromProperty="fastq_2"                  toOperation="remove n 2"                toProperty="fastq_file" />
-    <link fromOperation="input connector"       fromProperty="fastq_2"                  toOperation="synch fastq"               toProperty="fastq2" />
-    <link fromOperation="input connector"       fromProperty="n_removed_file_2"         toOperation="remove n 2"                toProperty="n_removed_file" />
-    <link fromOperation="input connector"       fromProperty="n_removed_file_2"         toOperation="wait for n removal 2"      toProperty="files_to_align_path_2" />
+    <link fromOperation="input connector"           fromProperty="fastq_1"                  toOperation="remove n 1"                toProperty="fastq_file" />
+    <link fromOperation="input connector"           fromProperty="fastq_1"                  toOperation="synch fastq"               toProperty="fastq1" />
+    <link fromOperation="input connector"           fromProperty="cutoff"                   toOperation="remove n 1"                toProperty="cutoff" />
+    <link fromOperation="input connector"           fromProperty="n_removed_file_1"         toOperation="remove n 1"                toProperty="n_removed_file" />
+    <link fromOperation="input connector"           fromProperty="n_removed_file_1"         toOperation="wait for n removal 1"      toProperty="files_to_align_path_1" />
+    <link fromOperation="input connector"           fromProperty="fastq_2"                  toOperation="remove n 2"                toProperty="fastq_file" />
+    <link fromOperation="input connector"           fromProperty="fastq_2"                  toOperation="synch fastq"               toProperty="fastq2" />
+    <link fromOperation="input connector"           fromProperty="cutoff"                   toOperation="remove n 2"                toProperty="cutoff" />
+    <link fromOperation="input connector"           fromProperty="n_removed_file_2"         toOperation="remove n 2"                toProperty="n_removed_file" />
+    <link fromOperation="input connector"           fromProperty="n_removed_file_2"         toOperation="wait for n removal 2"      toProperty="files_to_align_path_2" />
 
-    <link fromOperation="input connector"       fromProperty="prefix1"                  toOperation="synch fastq"               toProperty="prefix1" />
-    <link fromOperation="input connector"       fromProperty="prefix2"                  toOperation="synch fastq"               toProperty="prefix2" />
+    <link fromOperation="input connector"           fromProperty="prefix1"                  toOperation="synch fastq"               toProperty="prefix1" />
+    <link fromOperation="input connector"           fromProperty="prefix2"                  toOperation="synch fastq"               toProperty="prefix2" />
 
-    <link fromOperation="input connector"       fromProperty="output"                   toOperation="synch fastq"               toProperty="output" />
+    <link fromOperation="input connector"           fromProperty="fasta_file1"              toOperation="wait for synch"            toProperty="fasta_file1" />
+    <link fromOperation="input connector"           fromProperty="fasta_file2"              toOperation="wait for synch"            toProperty="fasta_file2" />
 
-    <link fromOperation="input connector"       fromProperty="align_options_1"          toOperation="run screen 1"              toProperty="align_options" />
-    <link fromOperation="input connector"       fromProperty="aligner_output_file_1"    toOperation="run screen 1"              toProperty="aligner_output_file" />
-    <link fromOperation="input connector"       fromProperty="alignment_file_1"         toOperation="run screen 1"              toProperty="alignment_file" /> 
-    <link fromOperation="input connector"       fromProperty="ref_seq_file"             toOperation="run screen 1"              toProperty="ref_seq_file" />
-    <link fromOperation="input connector"       fromProperty="unaligned_reads_file_1"   toOperation="run screen 1"              toProperty="unaligned_reads_file" /> 
-    <link fromOperation="input connector"       fromProperty="unaligned_reads_file_1"   toOperation="wait for screen"           toProperty="sam1" /> 
-    <link fromOperation="input connector"       fromProperty="unaligned_reads_file_1"   toOperation="resurrect duplicates"      toProperty="orig_sam1" /> 
+    <link fromOperation="input connector"           fromProperty="output"                   toOperation="synch fastq"               toProperty="output" />
 
-    <link fromOperation="input connector"       fromProperty="align_options_2"          toOperation="run screen 2"              toProperty="align_options" />
-    <link fromOperation="input connector"       fromProperty="aligner_output_file_2"    toOperation="run screen 2"              toProperty="aligner_output_file" />
-    <link fromOperation="input connector"       fromProperty="alignment_file_2"         toOperation="run screen 2"              toProperty="alignment_file" /> 
-    <link fromOperation="input connector"       fromProperty="ref_seq_file"             toOperation="run screen 2"              toProperty="ref_seq_file" />
-    <link fromOperation="input connector"       fromProperty="unaligned_reads_file_2"   toOperation="run screen 2"              toProperty="unaligned_reads_file" /> 
-    <link fromOperation="input connector"       fromProperty="unaligned_reads_file_2"   toOperation="wait for screen"           toProperty="sam2" /> 
-    <link fromOperation="input connector"       fromProperty="unaligned_reads_file_2"   toOperation="resurrect duplicates"      toProperty="orig_sam2" /> 
+    <link fromOperation="input connector"           fromProperty="align_options_1"          toOperation="run screen 1"              toProperty="align_options" />
+    <link fromOperation="input connector"           fromProperty="aligner_output_file_1"    toOperation="run screen 1"              toProperty="aligner_output_file" />
+    <link fromOperation="input connector"           fromProperty="alignment_file_1"         toOperation="run screen 1"              toProperty="alignment_file" /> 
+    <link fromOperation="input connector"           fromProperty="ref_seq_file"             toOperation="run screen 1"              toProperty="ref_seq_file" />
+    <link fromOperation="input connector"           fromProperty="unaligned_reads_file_1"   toOperation="run screen 1"              toProperty="unaligned_reads_file" /> 
+    <link fromOperation="input connector"           fromProperty="unaligned_reads_file_1"   toOperation="wait for screen"           toProperty="sam1" /> 
+    <link fromOperation="input connector"           fromProperty="unaligned_reads_file_1"   toOperation="resurrect duplicates"      toProperty="orig_sam1" /> 
 
-    <link fromOperation="input connector"       fromProperty="paired_end_file_1"        toOperation="wait for screen"           toProperty="paired_end_file_1" />
-    <link fromOperation="input connector"       fromProperty="paired_end_file_2"        toOperation="wait for screen"           toProperty="paired_end_file_2" />
-    <link fromOperation="input connector"       fromProperty="deduplicated_file_1"      toOperation="dedup 1"                   toProperty="deduplicated_file" />
-    <link fromOperation="input connector"       fromProperty="deduplicated_file_2"      toOperation="dedup 2"                   toProperty="deduplicated_file" />
+    <link fromOperation="input connector"           fromProperty="align_options_2"          toOperation="run screen 2"              toProperty="align_options" />
+    <link fromOperation="input connector"           fromProperty="aligner_output_file_2"    toOperation="run screen 2"              toProperty="aligner_output_file" />
+    <link fromOperation="input connector"           fromProperty="alignment_file_2"         toOperation="run screen 2"              toProperty="alignment_file" /> 
+    <link fromOperation="input connector"           fromProperty="ref_seq_file"             toOperation="run screen 2"              toProperty="ref_seq_file" />
+    <link fromOperation="input connector"           fromProperty="unaligned_reads_file_2"   toOperation="run screen 2"              toProperty="unaligned_reads_file" /> 
+    <link fromOperation="input connector"           fromProperty="unaligned_reads_file_2"   toOperation="wait for screen"           toProperty="sam2" /> 
+    <link fromOperation="input connector"           fromProperty="unaligned_reads_file_2"   toOperation="resurrect duplicates"      toProperty="orig_sam2" /> 
 
-    <link fromOperation="input connector"       fromProperty="resurrected_file_1"       toOperation="resurrect duplicates"      toProperty="output_file1" />
-    <link fromOperation="input connector"       fromProperty="resurrected_file_2"       toOperation="resurrect duplicates"      toProperty="output_file2" />
-    <link fromOperation="input connector"       fromProperty="resurrected_file_1"       toOperation="wait for resurrect"        toProperty="sam1" />
-    <link fromOperation="input connector"       fromProperty="resurrected_file_2"       toOperation="wait for resurrect"        toProperty="sam2" />
+    <link fromOperation="input connector"           fromProperty="paired_end_file_1"        toOperation="wait for screen"           toProperty="paired_end_file_1" />
+    <link fromOperation="input connector"           fromProperty="paired_end_file_2"        toOperation="wait for screen"           toProperty="paired_end_file_2" />
+    <link fromOperation="input connector"           fromProperty="deduplicated_file_1"      toOperation="dedup 1"                   toProperty="deduplicated_file" />
+    <link fromOperation="input connector"           fromProperty="deduplicated_file_2"      toOperation="dedup 2"                   toProperty="deduplicated_file" />
 
-    <link fromOperation="remove n 1"            fromProperty="result"                   toOperation="wait for n removal 1"      toProperty="n_removal_1_complete" />
-    <link fromOperation="remove n 2"            fromProperty="result"                   toOperation="wait for n removal 2"      toProperty="n_removal_2_complete" />
-    <link fromOperation="wait for n removal 1"  fromProperty="files_to_align_path_1"    toOperation="run screen 1"              toProperty="files_to_align_path" />
-    <link fromOperation="wait for n removal 2"  fromProperty="files_to_align_path_2"    toOperation="run screen 2"              toProperty="files_to_align_path" />
-    <link fromOperation="run screen 1"          fromProperty="result"                   toOperation="wait for screen"           toProperty="bwa_1_complete" />
-    <link fromOperation="run screen 2"          fromProperty="result"                   toOperation="wait for screen"           toProperty="bwa_2_complete" />
-    <link fromOperation="wait for screen"       fromProperty="sam1"                     toOperation="remove paired ends"        toProperty="sam1" />
-    <link fromOperation="wait for screen"       fromProperty="sam2"                     toOperation="remove paired ends"        toProperty="sam2" />
-    <link fromOperation="wait for screen"       fromProperty="paired_end_file_1"        toOperation="remove paired ends"        toProperty="paired_end_removed_file1" />
-    <link fromOperation="wait for screen"       fromProperty="paired_end_file_2"        toOperation="remove paired ends"        toProperty="paired_end_removed_file2" />
-    <link fromOperation="wait for screen"       fromProperty="paired_end_file_1"        toOperation="wait for per"              toProperty="paired_end_removed_file1" />
-    <link fromOperation="wait for screen"       fromProperty="paired_end_file_2"        toOperation="wait for per"              toProperty="paired_end_removed_file2" />
-    <link fromOperation="remove paired ends"    fromProperty="result"                   toOperation="wait for per"              toProperty="per_complete" />
+    <link fromOperation="input connector"           fromProperty="resurrected_file_1"       toOperation="resurrect duplicates"      toProperty="output_file1" />
+    <link fromOperation="input connector"           fromProperty="resurrected_file_2"       toOperation="resurrect duplicates"      toProperty="output_file2" />
+    <link fromOperation="input connector"           fromProperty="resurrected_file_1"       toOperation="wait for resurrect"        toProperty="sam1" />
+    <link fromOperation="input connector"           fromProperty="resurrected_file_2"       toOperation="wait for resurrect"        toProperty="sam2" />
 
-    <link fromOperation="wait for per"          fromProperty="paired_end_removed_file1" toOperation="dedup 1"                   toProperty="sam_file" />
-    <link fromOperation="wait for per"          fromProperty="paired_end_removed_file2" toOperation="dedup 2"                   toProperty="sam_file" />
+    <link fromOperation="remove n 1"                fromProperty="result"                   toOperation="wait for n removal 1"      toProperty="n_removal_1_complete" />
+    <link fromOperation="remove n 2"                fromProperty="result"                   toOperation="wait for n removal 2"      toProperty="n_removal_2_complete" />
+    <link fromOperation="wait for n removal 1"      fromProperty="files_to_align_path_1"    toOperation="run screen 1"              toProperty="files_to_align_path" />
+    <link fromOperation="wait for n removal 2"      fromProperty="files_to_align_path_2"    toOperation="run screen 2"              toProperty="files_to_align_path" />
+    <link fromOperation="run screen 1"              fromProperty="result"                   toOperation="wait for screen"           toProperty="bwa_1_complete" />
+    <link fromOperation="run screen 2"              fromProperty="result"                   toOperation="wait for screen"           toProperty="bwa_2_complete" />
+    <link fromOperation="wait for screen"           fromProperty="sam1"                     toOperation="remove paired ends"        toProperty="sam1" />
+    <link fromOperation="wait for screen"           fromProperty="sam2"                     toOperation="remove paired ends"        toProperty="sam2" />
+    <link fromOperation="wait for screen"           fromProperty="paired_end_file_1"        toOperation="remove paired ends"        toProperty="paired_end_removed_file1" />
+    <link fromOperation="wait for screen"           fromProperty="paired_end_file_2"        toOperation="remove paired ends"        toProperty="paired_end_removed_file2" />
+    <link fromOperation="wait for screen"           fromProperty="paired_end_file_1"        toOperation="wait for per"              toProperty="paired_end_removed_file1" />
+    <link fromOperation="wait for screen"           fromProperty="paired_end_file_2"        toOperation="wait for per"              toProperty="paired_end_removed_file2" />
+    <link fromOperation="remove paired ends"        fromProperty="result"                   toOperation="wait for per"              toProperty="per_complete" />
 
-    <link fromOperation="dedup 1"               fromProperty="result"                   toOperation="wait for dedup 1"          toProperty="dedup_1_complete" />
-    <link fromOperation="dedup 1"               fromProperty="deduplicated_file"        toOperation="wait for dedup 1"          toProperty="deduplicated_file1" />
-    <link fromOperation="dedup 2"               fromProperty="result"                   toOperation="wait for dedup 2"          toProperty="dedup_2_complete" />
-    <link fromOperation="dedup 2"               fromProperty="deduplicated_file"        toOperation="wait for dedup 2"          toProperty="deduplicated_file2" />
+    <link fromOperation="wait for per"              fromProperty="paired_end_removed_file1" toOperation="dedup 1"                   toProperty="sam_file" />
+    <link fromOperation="wait for per"              fromProperty="paired_end_removed_file2" toOperation="dedup 2"                   toProperty="sam_file" />
 
-    <link fromOperation="wait for dedup 1"      fromProperty="deduplicated_file1"       toOperation="resurrect duplicates"      toProperty="raw_dedup_sam1" />
-    <link fromOperation="wait for dedup 2"      fromProperty="deduplicated_file2"       toOperation="resurrect duplicates"      toProperty="raw_dedup_sam2" />
+    <link fromOperation="dedup 1"                   fromProperty="result"                   toOperation="wait for dedup 1"          toProperty="dedup_1_complete" />
+    <link fromOperation="dedup 1"                   fromProperty="deduplicated_file"        toOperation="wait for dedup 1"          toProperty="deduplicated_file1" />
+    <link fromOperation="dedup 2"                   fromProperty="result"                   toOperation="wait for dedup 2"          toProperty="dedup_2_complete" />
+    <link fromOperation="dedup 2"                   fromProperty="deduplicated_file"        toOperation="wait for dedup 2"          toProperty="deduplicated_file2" />
 
-    <link fromOperation="resurrect duplicates"  fromProperty="result"                   toOperation="wait for resurrect"        toProperty="resurrect_complete" />
+    <link fromOperation="wait for dedup 1"          fromProperty="deduplicated_file1"       toOperation="resurrect duplicates"      toProperty="raw_dedup_sam1" />
+    <link fromOperation="wait for dedup 2"          fromProperty="deduplicated_file2"       toOperation="resurrect duplicates"      toProperty="raw_dedup_sam2" />
 
-    <link fromOperation="wait for resurrect"    fromProperty="sam1"                     toOperation="synch fastq"               toProperty="name1" />
-    <link fromOperation="wait for resurrect"    fromProperty="sam2"                     toOperation="synch fastq"               toProperty="name2" />
+    <link fromOperation="resurrect duplicates"      fromProperty="result"                   toOperation="wait for resurrect"        toProperty="resurrect_complete" />
 
-    <link fromOperation="synch fastq"           fromProperty="result"                   toOperation="output connector"          toProperty="result" />
+    <link fromOperation="wait for resurrect"        fromProperty="sam1"                     toOperation="synch fastq"               toProperty="name1" />
+    <link fromOperation="wait for resurrect"        fromProperty="sam2"                     toOperation="synch fastq"               toProperty="name2" />
+    
+    <link fromOperation="synch fastq"               fromProperty="output_both1"             toOperation="wait for synch"            toProperty="fastq1" />
+    <link fromOperation="synch fastq"               fromProperty="output_both2"             toOperation="wait for synch"            toProperty="fastq2" />
+    <link fromOperation="synch fastq"               fromProperty="result"                   toOperation="wait for synch"            toProperty="synch_complete" />
+
+    <link fromOperation="wait for synch"            fromProperty="fasta_file1"              toOperation="dust 1"                    toProperty="fasta_file" />
+    <link fromOperation="wait for synch"            fromProperty="fastq1"                   toOperation="dust 1"                    toProperty="fastq_file" />
+
+    <link fromOperation="wait for synch"            fromProperty="fasta_file2"              toOperation="dust 2"                    toProperty="fasta_file" />
+    <link fromOperation="wait for synch"            fromProperty="fastq2"                   toOperation="dust 2"                    toProperty="fastq_file" />
+    
+    <link fromOperation="dust 1"                    fromProperty="result"                   toOperation="wait for dust"             toProperty="dust_1_complete" />
+    <link fromOperation="dust 2"                    fromProperty="result"                   toOperation="wait for dust"             toProperty="dust_2_complete" />
+
+    <link fromOperation="wait for dust"             fromProperty="dusted"                   toOperation="output connector"          toProperty="result" />
 
     <operation name="remove n 1">
         <operationtype commandClass="Genome::Model::Tools::Fastq::RemoveN" typeClass="Workflow::OperationType::Command" />
@@ -159,7 +177,34 @@
         <operationtype commandClass="Genome::Model::Tools::Synch" typeClass="Workflow::OperationType::Command" />
     </operation>
 
+    <operation name="wait for synch">
+        <operationtype typeClass="Workflow::OperationType::Block">
+            <property>fasta_file1</property>
+            <property>fastq1</property>
+            <property>fasta_file2</property>
+            <property>fastq2</property>
+            <property>synch_complete</property>
+        </operationtype>
+    </operation>
+
+    <operation name="dust 1" workflowFile="dust.xml">
+        <operationtype commandClass="Genome::Model::Tools::Fasta::Dust" typeClass="Workflow::OperationType::Command" />
+    </operation>
+
+    <operation name="dust 2" workflowFile="dust.xml">
+        <operationtype commandClass="Genome::Model::Tools::Fasta::Dust" typeClass="Workflow::OperationType::Command" />
+    </operation>
+
+    <operation name="wait for dust">
+        <operationtype typeClass="Workflow::OperationType::Block">
+            <property>dust_1_complete</property>
+            <property>dust_2_complete</property>
+            <property>dusted</property>
+        </operationtype>
+    </operation>
+
     <operationtype typeClass="Workflow::OperationType::Model">
+        <inputproperty>cutoff</inputproperty>
         <inputproperty>align_options_1</inputproperty>
         <inputproperty>aligner_output_file_1</inputproperty>
         <inputproperty>alignment_file_1</inputproperty>
@@ -182,6 +227,8 @@
         <inputproperty>output</inputproperty>
         <inputproperty>prefix1</inputproperty>
         <inputproperty>prefix2</inputproperty>
+        <inputproperty>fasta_file1</inputproperty>
+        <inputproperty>fasta_file2</inputproperty>
         <outputproperty>result</outputproperty>
     </operationtype>
 </workflow>

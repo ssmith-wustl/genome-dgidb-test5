@@ -72,7 +72,7 @@ sub execute {
 
     $self->log_event("Running Viral blastX for $input_file_name");
 
-    my $blast_db = '/gscmnt/sata835/info/medseq/virome/blast_db/viral/2009_07_09.viral.genomic.fna';
+    my $blast_db = '/gscmnt/sata835/info/medseq/virome/blast_db2/viral/viral1.genomic.fna';
     my $cmd = 'blastall -p tblastx -e 0.1 -I T -i '.$input_file.' -o '.$blast_out_file.' -d '.$blast_db;
     if (system($cmd)) {
 	$self->log_event("Viral blastX failed for $input_file_name");
@@ -85,3 +85,4 @@ sub execute {
 }
 
 1;
+

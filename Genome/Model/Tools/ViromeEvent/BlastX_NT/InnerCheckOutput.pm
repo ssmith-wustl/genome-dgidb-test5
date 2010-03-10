@@ -73,7 +73,7 @@ sub execute {
 
     $self->log_event("Running NT blastX for $input_file_name");
 
-    my $blast_db = '/gscmnt/sata835/info/medseq/virome/blast_db/nt/2009_07_09.nt';
+    my $blast_db = '/gscmnt/sata835/info/medseq/virome/blast_db2/nt/nt';
     my $cmd = 'blastall -p tblastx -e 1e-2 -I T -i '.$input_file.' -o '.$blast_out_file.' -d '.$blast_db;
 
     if (system($cmd)) {
@@ -86,4 +86,5 @@ sub execute {
 };
 
 1;
+
 
