@@ -8,6 +8,15 @@ use Genome;
 class Genome::Model::Tools::BioSamtools {
     is => ['Command'],
     is_abstract => 1,
+    has => {
+        arch_os => {
+            calculate => q|
+                            my $arch_os = `uname -m`;
+                            chomp($arch_os);
+                            return $arch_os;
+                        |
+                    },
+    },
 };
 
 sub help_detail {
