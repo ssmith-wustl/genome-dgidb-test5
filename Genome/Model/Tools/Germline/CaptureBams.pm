@@ -17,13 +17,7 @@ package Genome::Model::Tools::Germline::CaptureBams;
 
 use strict;
 use warnings;
-use Genome;
 
-#TODO: the following one line program most work before the module is committed to svn: 
-# "use Genome::Model::Tools::Genrmline::CaptureBams"
-1;
-
-__END__
 class Genome::Model::Tools::Germline::CaptureBams {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
@@ -36,7 +30,10 @@ sub help_brief {
 sub help_synopsis{
     my $self = shift;
     return <<"EOS"
-gmt germline capture-bams --normal-bam-file normal.bam --tumor-bam-file tumor.bam --tumor-snp-file tumor.snp --data-directory /some/dir/for/data
+
+example:
+gmt germline capture-bams --annotate-output-germline-indel=/gscuser/wschierd/perl_modules/Genome/Model/Tools/Germline/H_HY-02092.indels.annotation --build-id=0 --annotate-output-germline-snp=/gscuser/wschierd/perl_modules/Genome/Model/Tools/Germline/H_HY-02092.annotation --data-directory=/gscuser/tmooney/germline_test/ --ucsc-output=/gscuser/wschierd/perl_modules/Genome/Model/Tools/Germline/H_HY-02092.annotation.ucsc
+
 EOS
 }
 
@@ -87,15 +84,6 @@ sub default_filenames{
     my $self = shift;
    
     my %default_filenames = (        
-
-        ROI_list                            => 'ROI.list',
-        filtered_indelpe_snps               => 'filtered.indelpe.snps',
-        adapted_indel_file                  => 'adapted.indels',
-
-        ## New annotation files for germline variants ##
-        annotate_output_germline_snp        => 'annotation.germline.snp.transcript',
-        annotate_output_germline_indel      => 'annotation.germline.indel.transcript',
-
         ## Tiered SNP and indel files (all confidence) ##
         tier_1_snp_file                     => 'merged.germline.snp.tier1.out',
         tier_2_snp_file                     => 'merged.germline.snp.tier2.out',
@@ -104,11 +92,9 @@ sub default_filenames{
         tier_1_indel_file                   => 'merged.germline.indel.tier1.out',
 
         ## Other pipeline output files ##
-        upload_variants_snp_1_output        => 'upload-variants.snp_1.out',
-        upload_variants_snp_2_output        => 'upload-variants.snp_2.out',
-        upload_variants_indel_output        => 'upload-variants.indel.out',
         circos_graph                        => 'circos_graph.out',
-        report_output                       => 'cancer_report.html',
+        variant_report_output               => 'cancer_report.html', 
+        file_summary_report_output          => 'file_summary_report.html',
     );
 
     return %default_filenames;
@@ -120,109 +106,76 @@ __DATA__
 
 <workflow name="Germline Pipeline" logDir="/gsc/var/log/genome/germline_capture_pipeline">
 
-  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="ROI List" toProperty="skip_if_output_present" />
-  <link fromOperation="input connector" fromProperty="ucsc_output" toOperation="ROI List" toProperty="ucsc_file" />
-  <link fromOperation="input connector" fromProperty="filtered_indelpe_snps" toOperation="ROI List" toProperty="variant_file" />
-  <link fromOperation="input connector" fromProperty="annotate_output_germline_snp" toOperation="ROI List" toProperty="transcript_annotation_file" />
-  <link fromOperation="input connector" fromProperty="tier_1_snp_file" toOperation="ROI List" toProperty="tier_1_snp_ROI" />
-  <link fromOperation="input connector" fromProperty="tier_2_snp_file" toOperation="ROI List" toProperty="tier_2_snp_ROI" />
-  <link fromOperation="input connector" fromProperty="tier_3_snp_file" toOperation="ROI List" toProperty="tier_3_snp_ROI" />
-  <link fromOperation="input connector" fromProperty="tier_4_snp_file" toOperation="ROI List" toProperty="tier_4_snp_ROI" />
-  <link fromOperation="input connector" fromProperty="tier_1_indel_file" toOperation="ROI List" toProperty="tier1_indel_ROI" />
-    
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Tier Variants Snp" toProperty="skip_if_output_present" />
-  <link fromOperation="ROI List" fromProperty="tier_1_snp_ROI" toOperation="Tier Variants Snp" toProperty="tier1_file" />
-  <link fromOperation="ROI List" fromProperty="tier_2_snp_ROI" toOperation="Tier Variants Snp" toProperty="tier2_file" />
-  <link fromOperation="ROI List" fromProperty="tier_3_snp_ROI" toOperation="Tier Variants Snp" toProperty="tier3_file" />
-  <link fromOperation="ROI List" fromProperty="tier_4_snp_ROI" toOperation="Tier Variants Snp" toProperty="tier4_file" />
+  <link fromOperation="input connector" fromProperty="tier_1_snp_file" toOperation="Tier Variants Snp" toProperty="tier1_file" />
+  <link fromOperation="input connector" fromProperty="tier_2_snp_file" toOperation="Tier Variants Snp" toProperty="tier2_file" />
+  <link fromOperation="input connector" fromProperty="tier_3_snp_file" toOperation="Tier Variants Snp" toProperty="tier3_file" />
+  <link fromOperation="input connector" fromProperty="tier_4_snp_file" toOperation="Tier Variants Snp" toProperty="tier4_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Tier Variants Snp" toProperty="only_tier_1" />
   <link fromOperation="input connector" fromProperty="ucsc_output" toOperation="Tier Variants Snp" toProperty="ucsc_file" />
   <link fromOperation="input connector" fromProperty="filtered_indelpe_snps" toOperation="Tier Variants Snp" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_germline_snp" toOperation="Tier Variants Snp" toProperty="transcript_annotation_file" />
 
-  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="Upload Variants Snp Tier 1" toProperty="variant_file" />
-  <link fromOperation="input connector" fromProperty="annotate_output_germline_snp" toOperation="Upload Variants Snp Tier 1" toProperty="annotation_file" />
-  <link fromOperation="input connector" fromProperty="upload_variants_snp_1_output" toOperation="Upload Variants Snp Tier 1" toProperty="output_file" />
-  <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Snp Tier 1" toProperty="build_id" />
-
-  <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="Upload Variants Snp Tier 2" toProperty="variant_file" />
-  <link fromOperation="input connector" fromProperty="annotate_output_germline_snp" toOperation="Upload Variants Snp Tier 2" toProperty="annotation_file" />
-  <link fromOperation="input connector" fromProperty="upload_variants_snp_2_output" toOperation="Upload Variants Snp Tier 2" toProperty="output_file" />
-  <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Snp Tier 2" toProperty="build_id" />
-  <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Upload Variants Snp Tier 2" toProperty="_skip" />
-
-  <link fromOperation="Upload Variants Snp Tier 1" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_snp" />
-  <link fromOperation="Upload Variants Snp Tier 2" fromProperty="output_file" toOperation="output connector" toProperty="tier_2_snp" />
-
-  <link fromOperation="Tier Variants Snp" fromProperty="tier3_file" toOperation="output connector" toProperty="tier_3_snp" />
-  <link fromOperation="Tier Variants Snp" fromProperty="tier4_file" toOperation="output connector" toProperty="tier_4_snp" />
-
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Tier Variants Indel" toProperty="skip_if_output_present" />
-  <link fromOperation="ROI List" fromProperty="tier_1_indel_ROI" toOperation="Tier Variants Indel" toProperty="tier1_file" />
+  <link fromOperation="input connector" fromProperty="tier_1_indel_file" toOperation="Tier Variants Indel" toProperty="tier1_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1_indel" toOperation="Tier Variants Indel" toProperty="only_tier_1" />
   <link fromOperation="input connector" fromProperty="adapted_indel_file" toOperation="Tier Variants Indel" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_germline_indel" toOperation="Tier Variants Indel" toProperty="transcript_annotation_file" />
 
+<!-- PLOT CIRCOS -->
+
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Plot Circos" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="circos_graph" toOperation="Plot Circos" toProperty="output_file" />
-  <link fromOperation="Upload Variants Snp Tier 1" fromProperty="output_file" toOperation="Plot Circos" toProperty="tier1_hclabel_file" />
+  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="Plot Circos" toProperty="tier1_hclabel_file" />
 
-  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Upload Variants Indel" toProperty="variant_file" />
-  <link fromOperation="input connector" fromProperty="annotate_output_germline_indel" toOperation="Upload Variants Indel" toProperty="annotation_file" />
-  <link fromOperation="input connector" fromProperty="upload_variants_indel_output" toOperation="Upload Variants Indel" toProperty="output_file" />
-  <link fromOperation="input connector" fromProperty="build_id" toOperation="Upload Variants Indel" toProperty="build_id" />
+<!-- WAIT FOR CIRCOS -->
 
-  <link fromOperation="input connector" fromProperty="build_id" toOperation="Wait for Database Upload" toProperty="build_id" />
-  <link fromOperation="Upload Variants Indel" fromProperty="result" toOperation="Wait for Database Upload" toProperty="upload indel result" />
-  <link fromOperation="Upload Variants Snp Tier 2" fromProperty="result" toOperation="Wait for Database Upload" toProperty="upload snp tier 2 result" />
-  <link fromOperation="Plot Circos" fromProperty="result" toOperation="Wait for Database Upload" toProperty="plot circos result" />
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Wait for Circos" toProperty="build_id" />
+  <link fromOperation="Plot Circos" fromProperty="result" toOperation="Wait for Circos" toProperty="plot circos result" />
 
-  <link fromOperation="Wait for Database Upload" fromProperty="build_id" toOperation="Generate Report" toProperty="build_id" />
-  <link fromOperation="input connector" fromProperty="report_output" toOperation="Generate Report" toProperty="report_output" />
-  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Generate Report" toProperty="skip_if_output_present" />
 
+<!-- GENERATE REPORT -->
+ 
+  <link fromOperation="Wait for Circos" fromProperty="build_id" toOperation="Generate Reports" toProperty="build_id" />
+  <link fromOperation="input connector" fromProperty="variant_report_output" toOperation="Generate Reports" toProperty="variant_report_output" />
+  <link fromOperation="input connector" fromProperty="file_summary_report_output" toOperation="Generate Reports" toProperty="file_summary_report_output" />
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Generate Reports" toProperty="skip_if_output_present" />
+
+<!-- OUTPUT CONNECTORS -->
   <link fromOperation="Plot Circos" fromProperty="output_file" toOperation="output connector" toProperty="circos_big_graph" />
-  <link fromOperation="Upload Variants Indel" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_indel_output" />
-  <link fromOperation="Generate Report" fromProperty="report_output" toOperation="output connector" toProperty="final_report_output" />
+  <link fromOperation="Generate Reports" fromProperty="variant_report_output" toOperation="output connector" toProperty="final_variant_report_output" />
 
+  <link fromOperation="Tier Variants Snp" fromProperty="tier3_file" toOperation="output connector" toProperty="tier_3_snp" />
+  <link fromOperation="Tier Variants Snp" fromProperty="tier4_file" toOperation="output connector" toProperty="tier_4_snp" />
 
-  <operation name="ROI List">
-    <operationtype commandClass="Genome::Model::Tools::Germline::ROIList" typeClass="Workflow::OperationType::Command" />
-  </operation>
+  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_snp" />
+  <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_snp" />
+  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_indel_output" />
+  
 
   <operation name="Tier Variants Snp">
     <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
-  </operation>
-  <operation name="Upload Variants Snp Tier 1">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::UploadVariants" typeClass="Workflow::OperationType::Command" />
-  </operation>
-  <operation name="Upload Variants Snp Tier 2">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::UploadVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Tier Variants Indel">
     <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
-  <operation name="Upload Variants Indel">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::UploadVariants" typeClass="Workflow::OperationType::Command" />
-  </operation>
+
 
   <operation name="Plot Circos">
     <operationtype commandClass="Genome::Model::Tools::Somatic::PlotCircos" typeClass="Workflow::OperationType::Command" />
   </operation>
 
-  <operation name="Wait for Database Upload">
+  <operation name="Wait for Circos">
       <operationtype typeClass="Workflow::OperationType::Block">
         <property>build_id</property>
-        <property>upload snp tier 2 result</property>
-        <property>upload indel result</property>
         <property>plot circos result</property>
     </operationtype>
   </operation>
 
-  <operation name="Generate Report">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::VariantReport" typeClass="Workflow::OperationType::Command" />
-  </operation>
+  <operation name="Generate Reports">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::RunReports" typeClass="Workflow::OperationType::Command" />
+  </operation>  
 
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>build_id</inputproperty>
@@ -236,8 +189,8 @@ __DATA__
 
     <inputproperty isOptional="Y">data_directory</inputproperty>
 
-    <inputproperty isOptional="Y">annotate_output_germline_snp</inputproperty>
-    <inputproperty isOptional="Y">annotate_output_germline_indel</inputproperty>
+    <inputproperty>annotate_output_germline_snp</inputproperty>
+    <inputproperty>annotate_output_germline_indel</inputproperty>
 
     <inputproperty isOptional="Y">ucsc_output</inputproperty>
 
@@ -245,17 +198,14 @@ __DATA__
     <inputproperty isOptional="Y">tier_2_snp_file</inputproperty>
     <inputproperty isOptional="Y">tier_3_snp_file</inputproperty>
     <inputproperty isOptional="Y">tier_4_snp_file</inputproperty>
-
-    <inputproperty isOptional="Y">upload_variants_snp_1_output</inputproperty>
-    <inputproperty isOptional="Y">upload_variants_snp_2_output</inputproperty>
-    <inputproperty isOptional="Y">upload_variants_indel_output</inputproperty>
     
     <inputproperty isOptional="Y">tier_1_indel_file</inputproperty>
    
     <inputproperty isOptional="Y">circos_graph</inputproperty>
 
-    <inputproperty isOptional="Y">report_output</inputproperty>
-    
+    <inputproperty isOptional="Y">variant_report_output</inputproperty>
+    <inputproperty isOptional="Y">file_summary_report_output</inputproperty>
+
     <outputproperty>tier_1_snp</outputproperty>
     <outputproperty>tier_2_snp</outputproperty>
     <outputproperty>tier_3_snp</outputproperty>
@@ -263,7 +213,7 @@ __DATA__
 
     <outputproperty>tier_1_indel_output</outputproperty>
     <outputproperty>circos_big_graph</outputproperty>
-    <outputproperty>final_report_output</outputproperty>
+    <outputproperty>final_variant_report_output</outputproperty>
   </operationtype>
 
 </workflow>
