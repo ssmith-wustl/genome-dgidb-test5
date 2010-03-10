@@ -177,26 +177,20 @@ sub execute {
    #remove intermediate files
    $now = UR::Time->now;
    $self->status_message(">>> Removing intermediate files at $now");
-       
-   #clean up files for dna typed models
-   my $dna_type = $self->model->dna_type;
-   if ( $dna_type eq 'rna' || $dna_type eq 'cdna' ) {
-       $self->status_message("Model is of type $dna_type.  Keeping all files.");
-   } else {
-       #delete everything except big dedup bam file and index 
-       my @all_files = <$alignments_dir/*>;
-       for my $each_bam_file (@all_files) {
-           if ( ($each_bam_file eq $bam_merged_output_file) || ($each_bam_file eq $bam_merged_output_file.".bai" ) ) {   
-                $self->status_message("Keeping $each_bam_file");
-           } else {
-                $self->status_message("Executing unlink command on $each_bam_file");
-                my $rm_rv1 = unlink($each_bam_file);
-                unless ($rm_rv1 == 1) {
-                    $self->error_message("There was a problem with the bam remove command: $rm_rv1");
-                }  
-           }
-       }
-   } 
+
+    #delete everything except big dedup bam file and index 
+    my @all_files = <$alignments_dir/*>;
+    for my $each_bam_file (@all_files) {
+        if ( ($each_bam_file eq $bam_merged_output_file) || ($each_bam_file eq $bam_merged_output_file.".bai" ) ) {   
+            $self->status_message("Keeping $each_bam_file");
+        } else {
+            $self->status_message("Executing unlink command on $each_bam_file");
+            my $rm_rv1 = unlink($each_bam_file);
+            unless ($rm_rv1 == 1) {
+                $self->error_message("There was a problem with the bam remove command: $rm_rv1");
+            }
+        }
+    }
 
    $now = UR::Time->now;
    $self->status_message("<<< Completed removing intermediate files at $now");
