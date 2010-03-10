@@ -2,7 +2,6 @@ package Genome::Model::Event::Build::ReferenceAlignment::RefCov;
 
 #REVIEW fdu 11/19/2009
 #1. Fix help_detail
-#2. Convert /gscuser/jwalker/svn/TechD/RefCov/bin/breakdown-64.pl to genome model tool 
 
 use strict;
 use warnings;
@@ -127,7 +126,7 @@ sub execute {
                 $op,
                 'output_directory' => $ref_cov_dir,
                 'bam_files' => $progression_array_ref,
-                'target_query_file' => $self->build->genes_file,
+                'target_query_file' => $self->build->transcript_bed_file,
                 'samtools_version' => $self->model->rmdup_version,
             );
         } else {
@@ -135,7 +134,7 @@ sub execute {
                 $op,
                 'output_directory' => $ref_cov_dir,
                 'bam_files' => $progression_array_ref,
-                'target_query_file' => $self->build->genes_file,
+                'target_query_file' => $self->build->transcript_bed_file,
             );
         }
         #check workflow for errors 
@@ -205,15 +204,12 @@ sub execute {
     }
 
     unless (-s $self->build->breakdown_file) {
-        my @sorted_bam_files = $self->sorted_bam_files;
-        my $breakdown_cmd = '/gscuser/jwalker/svn/TechD/RefCov/bin/breakdown-64.pl '. $ref_cov_dir .' '. join(' ',@sorted_bam_files);
-        Genome::Utility::FileSystem->shellcmd(
-            cmd => $breakdown_cmd,
-            input_files => \@sorted_bam_files,
-            output_files => [$self->build->breakdown_file],
+        my $breakdown = Genome::Model::Tools::BioSamtools::Breakdown->execute(
+            bam_file => $self->build->whole_rmdup_bam_file,
+            output_file => $self->build->breakdown_file,
         );
     }
-    
+
     my $report_generator = Genome::Model::ReferenceAlignment::Report::ReferenceCoverage->create(build_id => $self->build->id);
     unless ($report_generator) {
         $self->error_message('Error creating ReferenceCoverage report generator: '. Genome::Model::ReferenceAlignment::Report::ReferenceCoverage->error_message());
