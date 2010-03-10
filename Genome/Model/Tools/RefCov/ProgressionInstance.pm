@@ -71,30 +71,24 @@ sub execute {
         merged_file => $merged_bam,
         use_version => $self->samtools_version,
     );
-    my $merge = Genome::Model::Tools::Sam::Merge->create(%params);
+    my $merge = Genome::Model::Tools::Sam::Merge->execute(%params);
     unless ($merge) {
-        $self->error_message('Failed to create bam file merge tool with params '. Data::Dumper::Dumper(%params));
-        die($self->error_message);
-    }
-    unless ($merge->execute) {
-        $self->error_message('Failed to execute bam file merge '. $merge->command_name);
+        $self->error_message('Failed to execute bam file merge tool with params '. Data::Dumper::Dumper(%params));
         die($self->error_message);
     }
     Genome::Utility::FileSystem->create_directory($self->output_directory);
     $self->instance(scalar(@bam_files));
     $self->stats_file($self->output_directory .'/STATS_'. $self->instance .'.tsv');
     $self->bias_basename($self->output_directory .'/bias_'.$self->instance);
-    my $cmd = sprintf("/gscuser/jwalker/svn/TechD/RefCov/bin/refcov-64.pl %s %s %s %s",
-                      $merged_bam,
-                      $self->target_query_file,
-                      $self->stats_file,
-                      $self->bias_basename,
-                  );
-    Genome::Utility::FileSystem->shellcmd(
-        cmd => $cmd,
-        input_files => [$merged_bam,$self->target_query_file],
-        output_files => [$self->stats_file],
+    my $cmd = Genome::Model::Tools::BioSamtools::RelativeCoverage->execute(
+        bam_file => $merged_bam,
+        bed_file => $self->target_query_file,
+        stats_file => $self->stats_file,
+        bias_file => $self->bias_basename,
     );
+    unless ($cmd) {
+        die('Failed to execute relative reference coverage.');
+    }
     return 1;
 }
 
