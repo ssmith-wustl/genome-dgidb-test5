@@ -453,6 +453,13 @@ sub genes_file {
     return $reference_build->data_directory .'/BACKBONE.tsv';
 }
 
+sub transcript_bed_file {
+    my $self = shift;
+    my $model = $self->model;
+    my $reference_build = $model->reference_build;
+    return $reference_build->data_directory .'/transcripts.bed';
+}
+
 sub relative_coverage_files {
     my $self = shift;
     my $model = $self->model;
