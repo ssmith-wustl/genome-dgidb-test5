@@ -152,8 +152,8 @@ sub parse_ref_seq_coords_file
         
     }    
     my $bac_name;
-    $self->error_message ("Could not find any coordinates, ref seq coordinates should be preceded by the heading 'REF_SEQ_COORDINATES', followed by a list of 1 or more ref seq coordinates.\n") and die unless ($line = $fh->getline);
-    do 
+    $self->error_message ("Could not find any coordinates, ref seq coordinates should be preceded by the heading 'REF_SEQ_COORDINATES', followed by a list of 1 or more ref seq coordinates.\n") and die unless ($line =~ /REF_SEQ_COORDINATES/);
+    while ($line = $fh->getline) 
     {
         $lc++;
         chomp $line;
@@ -177,7 +177,7 @@ sub parse_ref_seq_coords_file
         $self->error_message("line $lc: Start position needs to be less than or equal to the end position\n") and die unless($tokens[2] <= $tokens[3]);
         $ref_seq_coords{$bac_name} = \%hash;        
     }
-    while ($line = $fh->getline);
+    $self->error_message ("Could not find any coordinates, ref seq coordinates should be preceded by the heading 'REF_SEQ_COORDINATES', followed by a list of 1 or more ref seq coordinates.\n") and die unless(scalar (keys %ref_seq_coords));
     
     return \%ref_seq_coords;
 }
