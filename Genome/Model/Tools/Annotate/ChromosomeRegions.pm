@@ -38,38 +38,46 @@ sub execute {
     my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
 
     Genome::Utility::FileSystem->create_directory($self->output_directory);
-    
-    $self->anno_file($self->output_directory .'/'. $basename .'_'.$self->chromosome .'.bed');
-    my $fh = IO::File->new($self->anno_file,'w');
-    
     my $bed = Bio::DB::Sam::RefCov::Bed->new(file => $self->bed_file);
-    my @regions = sort{ $a->start <=> $b->start } $bed->chromosome_regions($self->chromosome);
+    my @chromosomes;
+    unless ($self->chromosome) {
+        @chromosomes = $bed->chromosomes;
+    } else {
+        push @chromosomes, $self->chromosome;
+    }
+    for my $chromosome (@chromosomes) {
+        $self->chromosome($chromosome);
+        $self->anno_file($self->output_directory .'/'. $basename .'_'.$self->chromosome .'.bed');
+        my $fh = IO::File->new($self->anno_file,'w');
     
-    my $ti = Genome::Model->get(name => $self->anno_db)->build_by_version($self->version)->transcript_iterator(chrom_name => $self->chromosome);
-    my $transcript_window =  Genome::Utility::Window::Transcript->create(iterator => $ti);
+        my @regions = sort{ $a->start <=> $b->start } $bed->chromosome_regions($self->chromosome);
+    
+        my $ti = Genome::Model->get(name => $self->anno_db)->build_by_version($self->version)->transcript_iterator(chrom_name => $self->chromosome);
+        my $transcript_window =  Genome::Utility::Window::Transcript->create(iterator => $ti);
 
-    for my $region (@regions) {
-        for my $t ($transcript_window->scroll($region->start,$region->end)){
-            my $gene = $t->gene;
-            my $gene_name;
-            if ($gene) {
-                $gene_name = $gene->name || 'unknown';
-            }
-            my @sub_structure = $t->ordered_sub_structures;
-            for my $ss (@sub_structure){
-                my $ss_region = Bio::DB::Sam::RefCov::Region->new(
-                    start => $ss->structure_start,
-                    end => $ss->structure_stop,
-                    strand => $t->strand,
-                );
-                if ($ss_region->overlaps($region)) {
-                    print $fh $t->chrom_name ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t". $gene_name
-                        .':'. $ss->structure_type ."\t". $ss->ordinal ."\t". $t->strand ."\n";
+        for my $region (@regions) {
+            for my $t ($transcript_window->scroll($region->start,$region->end)){
+                my $gene = $t->gene;
+                my $gene_name;
+                if ($gene) {
+                    $gene_name = $gene->name || 'unknown';
+                }
+                my @sub_structure = $t->ordered_sub_structures;
+                for my $ss (@sub_structure){
+                    my $ss_region = Bio::DB::Sam::RefCov::Region->new(
+                        start => $ss->structure_start,
+                        end => $ss->structure_stop,
+                        strand => $t->strand,
+                    );
+                    if ($ss_region->overlaps($region)) {
+                        print $fh $t->chrom_name ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t". $gene_name
+                            .':'. $ss->structure_type ."\t". $ss->ordinal ."\t". $t->strand ."\n";
+                    }
                 }
             }
         }
+        $fh->close;
     }
-    $fh->close;
 }
 
 1;
