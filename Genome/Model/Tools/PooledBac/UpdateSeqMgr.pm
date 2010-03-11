@@ -61,16 +61,31 @@ sub execute {
         
         my $seqmgr_link = $p->seqmgr_link;
         print "Updating $clone_name...\n";
-        #print "/bin/cp -rf newbler_assembly/consed/edit_dir $seqmgr_link/.\n";
-        system "/bin/cp -rf edit_dir $seqmgr_link/.";
-        #print "/bin/cp -rf newbler_assembly/consed/phd_dir $seqmgr_link/.\n";
-        system "/bin/cp -rf phd_dir $seqmgr_link/.";
-        #print "/bin/cp -rf newbler_assembly/consed/chromat_dir $seqmgr_link/.\n";
-        system "/bin/cp -rf chromat_dir $seqmgr_link/.";
-        #print "/bin/cp -rf newbler_assembly/consed/phdball_dir $seqmgr_link/.\n";
-        system "/bin/cp -rf phdball_dir $seqmgr_link/.";
-        #print "/bin/cp -rfL newbler_assembly/consed/sff_dir $seqmgr_link/.";
-        system "/bin/cp -rfL sff_dir $seqmgr_link/.";
+        Genome::Utility::FileSystem->create_directory("edit_dir");
+        foreach my $ace_file (glob('edit_dir/*'))
+        {
+            system "/bin/cp -rfP $ace_file $seqmgr_link/edit_dir/.";
+        }
+        Genome::Utility::FileSystem->create_directory("phd_dir");
+        foreach my $phd_file (glob('phd_dir/*'))
+        {        
+            system "/bin/cp -rfP $phd_file $seqmgr_link/phd_dir/.";
+        }
+        Genome::Utility::FileSystem->create_directory("chromat_dir");
+        foreach my $chromat_file (glob('chromat_dir/*'))
+        {
+            system "/bin/cp -rfP $chromat_file $seqmgr_link/chromat_dir/.";
+        }
+        Genome::Utility::FileSystem->create_directory("phdball_dir");
+        foreach my $phdball_file (glob('phdball_dir/*'))
+        {
+            system "/bin/cp -rfP $phdball_file $seqmgr_link/phdball_dir/.";
+        }
+        Genome::Utility::FileSystem->create_directory("sff_dir");
+        foreach my $sff_file (glob('sff_dir/*'))
+        {
+            system "/bin/cp -rfP $sff_file $seqmgr_link/sff_dir/.";
+        }
 
         #print $project_dir."/$clone_name","\n";
         #print "project name is ",$p->name,"\n";
