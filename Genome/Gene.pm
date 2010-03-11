@@ -157,7 +157,7 @@ sub strand_string {
 sub bed_string {
     my $self = shift;
     my $bed_string = $self->chrom_name ."\t". $self->gene_start ."\t". $self->gene_stop ."\t". $self->name ."\t0\t". $self->strand_string;
-    return $bed_string;
+    return $bed_string ."\n";
 }
 
 sub _base_gff_string {
@@ -167,17 +167,17 @@ sub _base_gff_string {
 
 sub gff_string {
     my $self = shift;
-    return $self->_base_gff_string ."\t". $self->name;
+    return $self->_base_gff_string ."\t". $self->name ."\n";
 }
 
 sub gff3_string {
     my $self = shift;
-    return $self->_base_gff_string ."\tID=". $self->gene_id .'; NAME='. $self->name .';';
+    return $self->_base_gff_string ."\tID=". $self->gene_id .'; NAME='. $self->name .';' ."\n";
 }
 
 sub gtf_string {
     my $self = shift;
-    return $self->_base_gff_string  ."\t".' gene_id "'. $self->name .'";';
+    return undef;
 }
 
 1;
