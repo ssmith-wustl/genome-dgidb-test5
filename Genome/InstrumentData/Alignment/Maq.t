@@ -263,7 +263,7 @@ print "<<<End Test Case #4\n";
 print ">>>Begin Test Case 5\n";
 $tmp_allocation->allocation_path('alignment_data/maq0_7_1.filter_name~forward-only/refseq-for-test/test_run_name/4_-123458');
 $tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-$instrument_data3->set_list('fastq_filenames',@fastq_files);
+$instrument_data3->set_list('fastq_filenames',$fastq_files[0]);
 $instrument_data3->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
 $instrument_data3->set_always('sample_id','2791246676');
 
