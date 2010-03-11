@@ -83,11 +83,32 @@ class Genome::Model::Tools::Snp::GoldSnpIntersection {
         type => 'String',
         is_optional => 1,
         doc => 'Report results stored here as xml after execute.'
-    }                
-            
+    },                
+    report_file => {
+        is_optional => 1,
+        doc => 'A file path to write the report to.',
+    },
+    _report_fh => {
+        is_optional => 1,
+        doc => 'A filehanlde to write the report to.',
+    },
     ]
 };
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    if ($self->report_file) {
+        $self->_report_fh(Genome::Utility::FileSystem->open_file_for_writing($self->report_file));
+    } else {
+        open( my $fh,'>&STDOUT');
+        unless ($fh) {
+            die('Failed to open a filehandle to redirect output to STDOUT');
+        }
+        $self->_report_fh($fh);
+    }
+    return $self;
+}
 
 sub execute {
     my $self = shift;
@@ -153,15 +174,15 @@ sub execute {
     }
                 
     # print report in requested format
-    
+    my $_report_fh = $self->_report_fh;
     if ($self->report_format eq "xml") {
-        print STDOUT $self->_report_xml;
+        print $_report_fh $self->_report_xml;
     } elsif ($self->report_format eq "txt") {
-        print STDOUT $self->_report_txt;
+        print $_report_fh $self->_report_txt;
     } else {
         $self->error_message("Report format '" . $self->report_format . "' not supported, please specify 'txt' or 'xml'.");
     }
-                              
+    $_report_fh->close;
     $gold_fh->close;
     $snp_fh->close;
 
@@ -246,22 +267,24 @@ sub calculate_metrics {
 }
 
 sub print_report {
-    my ($self, $ref_breakdown_ref, $gold_ref_total, $het_breakdown_ref, $gold_het_total, $hom_breakdown_ref, $gold_hom_total) = @_; 
-    print STDOUT "There were $gold_ref_total homozygous ref sites\n";
+    my ($self, $ref_breakdown_ref, $gold_ref_total, $het_breakdown_ref, $gold_het_total, $hom_breakdown_ref, $gold_hom_total) = @_;
+    my $_report_fh = $self->_report_fh;
+    print $_report_fh "There were $gold_ref_total homozygous ref sites\n";
     $self->print_breakdown($gold_ref_total,$ref_breakdown_ref);
-    print STDOUT "There were $gold_het_total heterozygous calls (could include bi-allelic calls)\n";
+    print $_report_fh "There were $gold_het_total heterozygous calls (could include bi-allelic calls)\n";
     $self->print_breakdown($gold_het_total,$het_breakdown_ref);
-    print STDOUT "There were $gold_hom_total homozygous calls\n";
+    print $_report_fh "There were $gold_hom_total homozygous calls\n";
     $self->print_breakdown($gold_hom_total, $hom_breakdown_ref);
 }
 
 sub print_breakdown {
     my ($self, $total, $hash) = @_;
     #first print predominant class (match)
+    my $_report_fh = $self->_report_fh;
     if(exists($hash->{'match'})) {
-        print STDOUT "\tMatching Gold Genotype\n";
+        print $_report_fh "\tMatching Gold Genotype\n";
         foreach my $type (keys %{$hash->{'match'}}) {
-            printf STDOUT (
+            printf $_report_fh (
                            "\t\t%s\t%d\t%0.2f\t%0.2f\n",
                            $type,
                            $hash->{'match'}{$type}{'n'},
@@ -271,9 +294,9 @@ sub print_breakdown {
         }
     }
     if(exists($hash->{'partial match'})) {
-        print STDOUT "\tPartially Matching Gold Genotype\n";
+        print $_report_fh "\tPartially Matching Gold Genotype\n";
         foreach my $type (keys %{$hash->{'partial match'}}) {
-            printf STDOUT (
+            printf $_report_fh (
                            "\t\t%s\t%d\t%0.2f\t%0.2f\n",
                            $type,
                            $hash->{'partial match'}{$type}{'n'},
@@ -284,9 +307,9 @@ sub print_breakdown {
     }
     #next print un-matching classes
     if(exists($hash->{'mismatch'})) {
-        print STDOUT "\tMismatching Gold Genotype\n";
+        print $_report_fh "\tMismatching Gold Genotype\n";
         foreach my $type (keys %{$hash->{'mismatch'}}) {
-            printf STDOUT (
+            printf $_report_fh (
                            "\t\t%s\t%d\t%0.2f\t%0.2f\n",
                            $type,
                            $hash->{'mismatch'}{$type}{'n'},
