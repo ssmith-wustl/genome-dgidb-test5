@@ -18,7 +18,7 @@ class Genome::Model::Tools::ImportTranscriptFeature::KeggPathway {
             is => 'Text',
             is_optional => 1,
             default => '-',
-            doc => 'Output file for gene/pathway/pathway description info, default is STDOUT',
+            doc => 'Output file for gene/pathway info, default is STDOUT',
         },
         kegg_wsdl => {
             is => 'Text',
@@ -29,7 +29,7 @@ class Genome::Model::Tools::ImportTranscriptFeature::KeggPathway {
         pathway_description_file => {
             is => 'Text',
             is_optional => 1,
-            doc => 'If set, pathway descriptions are written to this file',
+            doc => 'If set, pathway name/pathway description pairs are written to this file',
         },
     ],
     doc => "Downloads human metabolic pathway information from Kegg and stores gene id, pathway, and pathway description\n",
@@ -37,7 +37,7 @@ class Genome::Model::Tools::ImportTranscriptFeature::KeggPathway {
 
 sub help_detail {
     return <<EOS
-This tool connects to Kegg's pathway database over the web and pulls information about 
+This tool connects to Kegg's pathway database and pulls information about 
 metabolic pathways (name and description) and the genes that are a part of those 
 pathways. For each gene that is part of a pathway, a path name/gene name line is written
 to the gene pathway file. If specified, each pathway's name and description is stored in 
