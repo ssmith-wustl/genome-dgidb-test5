@@ -107,13 +107,6 @@ sub execute {
     $self->status_message("Using rmdup version $rmdup_name");
     my $pp_name = $self->model->processing_profile_name;
     $self->status_message("Using pp: ".$pp_name);
-    
-    #my $merge_software;
-    #if ($self->model->dna_type eq 'cdna' && $self->model->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo') {
-    #    $merge_software = 'samtools';
-    #} else {
-    #    $merge_software = 'picard';
-    #}
 
     Genome::DataSource::GMSchema->disconnect_default_dbh; 
   
