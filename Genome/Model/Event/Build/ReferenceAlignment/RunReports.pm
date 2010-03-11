@@ -48,7 +48,7 @@ sub execute {
         $self->status_message("No gold_snp_path provided for the build, skip its report");
         delete $REPORT_TYPES{GoldSnpConcordance};
     }
-    unless ( ($model->dna_type eq 'cdna' || $model->dna_type eq 'rna') && $model->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo' ) {
+    unless ( ($model->dna_type eq 'cdna' || $model->dna_type eq 'rna') && $model->reference_sequence_name =~ /^XStrans_adapt_smallRNA_ribo/ ) {
         delete $REPORT_TYPES{ReferenceCoverage};
     }
     unless ($self->create_directory($build->resolve_reports_directory) ) {
@@ -148,7 +148,7 @@ sub verify_successful_completion {
 
     delete $REPORT_TYPES{InputBaseCounts} if $model->read_aligner_name =~ /^Imported$/i;
 
-    unless ( ($model->dna_type eq 'cdna' || $model->dna_type eq 'rna') && $model->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo' ) {
+    unless ( ($model->dna_type eq 'cdna' || $model->dna_type eq 'rna') && $model->reference_sequence_name =~ /^XStrans_adapt_smallRNA_ribo/ ) {
         delete $REPORT_TYPES{ReferenceCoverage};
     }
         
