@@ -315,7 +315,7 @@ sub strand_string {
 sub bed_string {
     my $self = shift;
     my $bed_string = $self->chrom_name ."\t". $self->transcript_start ."\t". $self->transcript_stop ."\t". $self->transcript_name ."\t0\t". $self->strand_string;
-    return $bed_string;
+    return $bed_string ."\n";
 }
 
 sub _base_gff_string {
@@ -325,18 +325,61 @@ sub _base_gff_string {
 
 sub gff_string {
     my $self = shift;
-    return $self->_base_gff_string ."\t". $self->gene->name ;
+    return $self->_base_gff_string ."\t". $self->gene->name ."\n";
 }
 
 sub gff3_string {
     my $self = shift;
-    return $self->_base_gff_string ."\tID=".$self->transcript_id ."; NAME=". $self->transcript_name ."; PARENT=". $self->gene->gene_id .';';
+    return $self->_base_gff_string ."\tID=".$self->transcript_id ."; NAME=". $self->transcript_name ."; PARENT=". $self->gene->gene_id .';' ."\n";
 }
 
 sub gtf_string {
     my $self = shift;
-    return $self->_base_gff_string  ."\t".' gene_id "'. $self->gene->name .'"; transcript_id "'. $self->transcript_name .'";';
+    my @sub_structure = grep {$_->structure_type ne 'flank'} $self->ordered_sub_structures;
+    my %exon_sub_structures;
+    for my $ss (@sub_structure){
+        push @{$exon_sub_structures{$ss->ordinal}}, $ss;
+    }
+    my $string;
+    for my $ordinal ( sort {$a <=> $b} keys %exon_sub_structures ) {
+        my @cds_strings;
+        my $exon_start;
+        my $exon_stop;
+        my $exon_strand;
+        for my $ss (@{$exon_sub_structures{$ordinal}}) {
+            my $type = $ss->structure_type;
+            if ($type =~ /intron/ || $type =~ /flank/) {
+                next;
+            } elsif ($type eq 'cds_exon') {
+                $type = 'CDS';
+                push @cds_strings, $ss->chrom_name ."\t". $ss->source .'_'. $ss->version ."\t". $type ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t.\t". $ss->strand ."\t". $ss->frame ."\t".' gene_id "'. $ss->gene_name .'"; transcript_id "'. $ss->transcript_name .'"; exon_number "'. $ordinal .'";';
+            }
+            unless ($exon_start && $exon_stop) {
+                $exon_start = $ss->structure_start;
+                $exon_stop = $ss->structure_stop;
+                $exon_strand = $ss->strand;
+            } else {
+                if ($ss->structure_start < $exon_start) {
+                    # Should never happen since ss are ordered
+                    $exon_start = $ss->structure_start;
+                }
+                if ($ss->structure_stop > $exon_stop) {
+                    $exon_stop = $ss->structure_stop;
+                }
+                if ($ss->strand ne $exon_strand) {
+                    #This should never happen
+                    die('Inconsistent strand on transcript '. $self->transcript_name);
+                }
+            }
+        }
+        $string .= $self->chrom_name ."\t". $self->source .'_'. $self->version ."\texon\t". $exon_start ."\t". $exon_stop ."\t.\t". $exon_strand ."\t.\t".' gene_id "'. $self->gene->name .'"; transcript_id "'. $self->transcript_name .'"; exon_number "'. $ordinal .'";' ."\n";
+        if (scalar(@cds_strings)) {
+            $string .= join("\n", @cds_strings) ."\n";
+        }
+    }
+    return $string;
 }
+
 1;
 
 #TODO
