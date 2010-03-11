@@ -3,21 +3,6 @@ package Genome;
 use warnings;
 use strict;
 
-# if the POE modules are dynamically loaded when doing a "step over", the debugger will run away
-# detect the debugger, and pre-load POE
-BEGIN {
-    if ($ENV{PERL5DB}) {
-        warn "Debugger detected.  Using some modules which trigger runaway debugging...\n";
-        for my $mod (qw/Workflow::Server::Remote/) {
-            warn "\t$mod...\n";
-            eval "use $mod";
-            die $@ if $@;
-        }
-        warn "Module pre-use completed!";
-        warn "Close any extra debug windows which may have been created by the POE engine.\n";
-    }
-};
-
 # software infrastructure
 use UR;
 
