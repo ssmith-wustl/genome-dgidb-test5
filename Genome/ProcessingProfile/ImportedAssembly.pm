@@ -37,37 +37,13 @@ sub _execute_build {
     return 1;
 }
 
+
 #MORE LATER IF NECESSARY
 #sub _validate_assembler {
 #    return 1;
 #}
 #MORE LATER IF NECESSARY
 #sub _validate_assembler_version {
-#    return 1;
-#}
-
-#sub stages {
-#    return (qw/ track /);
-#}
-
-#sub track_job_classes {
-#    return (qw/ Genome::Model::Event::Build::ImportedAssembly /);
-#}
-
-#sub objects_for_stage {
-#    return (qw/ Genome::Model::Event::Build::ImportedAssembly /);
-#}
-
-#sub stages {
-#    return (qw/ ImportedAssembly /);
-#    return 1;
-#}
-
-#sub objects_for_stage {
-#    return 1;
-#}
-
-#sub classes_for_stage {
 #    return 1;
 #}
 
