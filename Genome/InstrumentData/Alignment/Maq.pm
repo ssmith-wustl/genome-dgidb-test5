@@ -13,8 +13,8 @@ class Genome::InstrumentData::Alignment::Maq {
                         type => 'Boolean',
                         calculate_from => ['filter_name', 'force_fragment'],
                         calculate => q{return $force_fragment
-                                    || ($filter_name eq 'forward-only')
-                                    || ($filter_name eq 'reverse-only'); },
+                                    || ($filter_name && (($filter_name eq 'forward-only')
+                                    || ($filter_name eq 'reverse-only'))); },
                     }
     ],
     has_constant => [
