@@ -57,12 +57,16 @@ sub execute {
         my $gene = $t->gene;
         unless ($gene_strings{$gene->gene_id}) {
             $gene_strings{$gene->gene_id} = $gene->$format_string;
-            print $fh $gene->$format_string ."\n";
+            my $gene_string = $gene->$format_string;
+            print $fh $gene_string;
         }
-        print $fh $t->$format_string ."\n";
+        print $fh $t->$format_string;
         my @sub_structure = grep {$_->structure_type ne 'flank'} $t->ordered_sub_structures;
         for my $ss (@sub_structure){
-            print $fh $ss->$format_string ."\n";
+            my $ss_string = $ss->$format_string;
+            if ($ss_string) {
+                print $fh $ss_string;
+            }
         }
     }
     $fh->close;
