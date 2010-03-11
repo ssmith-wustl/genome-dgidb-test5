@@ -106,7 +106,7 @@ sub strand {
 
 sub frame {
     my $self = shift;
-    if ($self->phase) {
+    if (defined($self->phase)) {
         return $self->phase;
     }
     return '.';
@@ -115,7 +115,7 @@ sub frame {
 sub bed_string {
     my $self = shift;
     my $bed_string = $self->chrom_name ."\t". $self->structure_start ."\t". $self->structure_stop ."\t". $self->gene_name
-        .':'. $self->structure_type .":". $self->ordinal ."\t0\t". $self->strand;
+        .':'. $self->structure_type .":". $self->ordinal ."\t0\t". $self->strand ."\n";
     return $bed_string;
 }
 
@@ -126,17 +126,16 @@ sub _base_gff_string {
 
 sub gff_string {
     my $self = shift;
-    return $self->_base_gff_string ."\t". $self->gene_name;
+    return $self->_base_gff_string ."\t". $self->gene_name ."\n";
 }
 
 sub gff3_string {
     my $self = shift;
-    return $self->_base_gff_string ."\tID=". $self->transcript_structure_id .'; PARENT='. $self->transcript->transcript_id .';';
+    return $self->_base_gff_string ."\tID=". $self->transcript_structure_id .'; PARENT='. $self->transcript->transcript_id .';' ."\n";
 }
 
 sub gtf_string {
-    my $self = shift;
-    return $self->_base_gff_string  ."\t".' gene_id "'. $self->gene_name .'"; transcript_id "'. $self->transcript_name .'"; exon_number '. $self->ordinal;
+    return undef;
 }
 
 1;
