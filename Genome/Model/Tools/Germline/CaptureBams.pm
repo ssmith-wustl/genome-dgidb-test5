@@ -4,13 +4,6 @@ package Genome::Model::Tools::Germline::CaptureBams;
 # CaptureBams.pm - A module for comparing tumor-normal BAM files in capture data
 #
 #   TO-DO LIST
-#   -Merge somaticSniper and VarScan somatic calls
-#   -Merge somaticSniper and VarScan germline calls
-#   -Merge somaticSniper and VarScan LOH calls
-#   -Format merged files for annotation
-#   -Move CEU/YRI/dbSNP filters to AFTER annotation step
-#   -Generate new endpoint files in MAF-like format
-#   -Restrict endpoint variant calls to ROI ()
 #   -Run Sample QC checks (SNP and CNV)
 #   
 ########################################################################################################################
@@ -32,7 +25,7 @@ sub help_synopsis{
     return <<"EOS"
 
 example:
-gmt germline capture-bams --annotate-output-germline-indel=/gscuser/wschierd/perl_modules/Genome/Model/Tools/Germline/H_HY-02092.indels.annotation --build-id=0 --annotate-output-germline-snp=/gscuser/wschierd/perl_modules/Genome/Model/Tools/Germline/H_HY-02092.annotation --data-directory=/gscuser/tmooney/germline_test/ --ucsc-output=/gscuser/wschierd/perl_modules/Genome/Model/Tools/Germline/H_HY-02092.annotation.ucsc
+gmt germline capture-bams --annotate-output-germline-indel=/gscmnt/sata424/info/medseq/Freimer-Boehnke/FB_2_100_dedup/H_HY-02092.indels.annotation --build-id=0 --annotate-output-germline-snp=/gscmnt/sata424/info/medseq/Freimer-Boehnke/FB_2_100_dedup/H_HY-02092.annotation --data-directory=/gscmnt/sata424/info/medseq/Freimer-Boehnke/FB_2_100_dedup/H_HY-02092_tiering --ucsc-output-snp=/gscmnt/sata424/info/medseq/Freimer-Boehnke/FB_2_100_dedup/H_HY-02092.annotation.ucsc --filtered-indelpe-snps=/gscmnt/sata424/info/medseq/Freimer-Boehnke/FB_2_100_dedup/H_HY-02092.annotation --adapted-indel-file=/gscmnt/sata424/info/medseq/Freimer-Boehnke/FB_2_100_dedup/H_HY-02092.filtered.indels --ucsc-output-indel=/gscmnt/sata424/info/medseq/Freimer-Boehnke/FB_2_100_dedup/H_HY-02092.indels.annotation.ucsc
 
 EOS
 }
@@ -41,7 +34,6 @@ sub help_detail {
     my $self = shift;
     return <<"EOS"
 This tool runs the capture germline pipeline to take in annotated SNPs and indels. It results in tiered SNPs and indels.
-This tool is called automatically when running a build on a germline-capture model.  See also 'genome model tools capture build-models'.
 EOS
 }
 
@@ -74,7 +66,7 @@ sub pre_execute {
         $self->only_tier_1(0);
     }
     unless (defined $self->only_tier_1_indel) {
-        $self->only_tier_1_indel(1);
+        $self->only_tier_1_indel(0);
     }
 
     return 1;
@@ -90,6 +82,9 @@ sub default_filenames{
         tier_3_snp_file                     => 'merged.germline.snp.tier3.out',
         tier_4_snp_file                     => 'merged.germline.snp.tier4.out',
         tier_1_indel_file                   => 'merged.germline.indel.tier1.out',
+        tier_2_indel_file                   => 'merged.germline.indel.tier2.out',
+        tier_3_indel_file                   => 'merged.germline.indel.tier3.out',
+        tier_4_indel_file                   => 'merged.germline.indel.tier4.out',
 
         ## Other pipeline output files ##
         circos_graph                        => 'circos_graph.out',
@@ -106,19 +101,27 @@ __DATA__
 
 <workflow name="Germline Pipeline" logDir="/gsc/var/log/genome/germline_capture_pipeline">
 
+<!-- TIER VARIANTS -->
+
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Tier Variants Snp" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="tier_1_snp_file" toOperation="Tier Variants Snp" toProperty="tier1_file" />
   <link fromOperation="input connector" fromProperty="tier_2_snp_file" toOperation="Tier Variants Snp" toProperty="tier2_file" />
   <link fromOperation="input connector" fromProperty="tier_3_snp_file" toOperation="Tier Variants Snp" toProperty="tier3_file" />
   <link fromOperation="input connector" fromProperty="tier_4_snp_file" toOperation="Tier Variants Snp" toProperty="tier4_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Tier Variants Snp" toProperty="only_tier_1" />
-  <link fromOperation="input connector" fromProperty="ucsc_output" toOperation="Tier Variants Snp" toProperty="ucsc_file" />
+  <link fromOperation="input connector" fromProperty="ucsc_output_snp" toOperation="Tier Variants Snp" toProperty="ucsc_file" />
   <link fromOperation="input connector" fromProperty="filtered_indelpe_snps" toOperation="Tier Variants Snp" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_germline_snp" toOperation="Tier Variants Snp" toProperty="transcript_annotation_file" />
 
+<!-- TIER INDELS -->
+
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Tier Variants Indel" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="tier_1_indel_file" toOperation="Tier Variants Indel" toProperty="tier1_file" />
+  <link fromOperation="input connector" fromProperty="tier_2_indel_file" toOperation="Tier Variants Indel" toProperty="tier2_file" />
+  <link fromOperation="input connector" fromProperty="tier_3_indel_file" toOperation="Tier Variants Indel" toProperty="tier3_file" />
+  <link fromOperation="input connector" fromProperty="tier_4_indel_file" toOperation="Tier Variants Indel" toProperty="tier4_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1_indel" toOperation="Tier Variants Indel" toProperty="only_tier_1" />
+  <link fromOperation="input connector" fromProperty="ucsc_output_indel" toOperation="Tier Variants Indel" toProperty="ucsc_file" />
   <link fromOperation="input connector" fromProperty="adapted_indel_file" toOperation="Tier Variants Indel" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_germline_indel" toOperation="Tier Variants Indel" toProperty="transcript_annotation_file" />
 
@@ -133,7 +136,6 @@ __DATA__
   <link fromOperation="input connector" fromProperty="build_id" toOperation="Wait for Circos" toProperty="build_id" />
   <link fromOperation="Plot Circos" fromProperty="result" toOperation="Wait for Circos" toProperty="plot circos result" />
 
-
 <!-- GENERATE REPORT -->
  
   <link fromOperation="Wait for Circos" fromProperty="build_id" toOperation="Generate Reports" toProperty="build_id" />
@@ -142,16 +144,19 @@ __DATA__
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Generate Reports" toProperty="skip_if_output_present" />
 
 <!-- OUTPUT CONNECTORS -->
+
   <link fromOperation="Plot Circos" fromProperty="output_file" toOperation="output connector" toProperty="circos_big_graph" />
   <link fromOperation="Generate Reports" fromProperty="variant_report_output" toOperation="output connector" toProperty="final_variant_report_output" />
 
+  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_snp" />
+  <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_snp" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier3_file" toOperation="output connector" toProperty="tier_3_snp" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier4_file" toOperation="output connector" toProperty="tier_4_snp" />
 
-  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_snp" />
-  <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_snp" />
   <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_indel_output" />
-  
+  <link fromOperation="Tier Variants Indel" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_indel_output" />
+  <link fromOperation="Tier Variants Indel" fromProperty="tier3_file" toOperation="output connector" toProperty="tier_3_indel_output" />
+  <link fromOperation="Tier Variants Indel" fromProperty="tier4_file" toOperation="output connector" toProperty="tier_4_indel_output" />
 
   <operation name="Tier Variants Snp">
     <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
@@ -181,6 +186,8 @@ __DATA__
     <inputproperty>build_id</inputproperty>
     <inputproperty>filtered_indelpe_snps</inputproperty>
     <inputproperty>adapted_indel_file</inputproperty>
+    <inputproperty>ucsc_output_snp</inputproperty>
+    <inputproperty>ucsc_output_indel</inputproperty>
     
     <inputproperty isOptional="Y">skip_if_output_present</inputproperty>
 
@@ -192,7 +199,7 @@ __DATA__
     <inputproperty>annotate_output_germline_snp</inputproperty>
     <inputproperty>annotate_output_germline_indel</inputproperty>
 
-    <inputproperty isOptional="Y">ucsc_output</inputproperty>
+
 
     <inputproperty isOptional="Y">tier_1_snp_file</inputproperty>
     <inputproperty isOptional="Y">tier_2_snp_file</inputproperty>
@@ -200,6 +207,9 @@ __DATA__
     <inputproperty isOptional="Y">tier_4_snp_file</inputproperty>
     
     <inputproperty isOptional="Y">tier_1_indel_file</inputproperty>
+    <inputproperty isOptional="Y">tier_2_indel_file</inputproperty>
+    <inputproperty isOptional="Y">tier_3_indel_file</inputproperty>
+    <inputproperty isOptional="Y">tier_4_indel_file</inputproperty>
    
     <inputproperty isOptional="Y">circos_graph</inputproperty>
 
@@ -212,6 +222,9 @@ __DATA__
     <outputproperty>tier_4_snp</outputproperty>
 
     <outputproperty>tier_1_indel_output</outputproperty>
+    <outputproperty>tier_2_indel_output</outputproperty>
+    <outputproperty>tier_3_indel_output</outputproperty>
+    <outputproperty>tier_4_indel_output</outputproperty>
     <outputproperty>circos_big_graph</outputproperty>
     <outputproperty>final_variant_report_output</outputproperty>
   </operationtype>
