@@ -233,6 +233,27 @@ sub desc {
     return $self->full_name .'('. $self->id .')';
 }
 
+sub read1_fastq_name {
+    my $self = shift;
+    my $lane = $self->subset_name;
+    
+    return "s_${lane}_1_sequence.txt";
+}
+
+sub read2_fastq_name {
+    my $self = shift;
+    my $lane = $self->subset_name;
+    
+    return "s_${lane}_2_sequence.txt";
+}
+
+sub fragment_fastq_name {
+    my $self = shift;
+    my $lane = $self->subset_name;
+    
+    return "s_${lane}_sequence.txt";
+}
+
 sub resolve_fastq_filenames {
     my $self = shift;
     my %params = @_;
@@ -261,28 +282,28 @@ sub resolve_fastq_filenames {
             # handle fragment or paired-end data
             if ($self->is_paired_end) {
                 if (!$paired_end_as_fragment || $paired_end_as_fragment == 1) {
-                    if (-e "$directory/s_${lane}_1_sequence.txt") {
-                        push @illumina_output_paths, "$directory/s_${lane}_1_sequence.txt";
-                    } elsif (-e "$directory/Temp/s_${lane}_1_sequence.txt") {
-                        push @illumina_output_paths, "$directory/Temp/s_${lane}_1_sequence.txt";
+                    if (-e "$directory/" . $self->read1_fastq_name) {
+                        push @illumina_output_paths, "$directory/" . $self->read1_fastq_name;
+                    } elsif (-e "$directory/Temp/" . $self->read1_fastq_name) {
+                        push @illumina_output_paths, "$directory/Temp/" . $self->read1_fastq_name;
                     } else {
                         die "No illumina forward data in directory for lane $lane! $directory";
                     }
                 }
                 if (!$paired_end_as_fragment || $paired_end_as_fragment == 2) {
-                    if (-e "$directory/s_${lane}_2_sequence.txt") {
-                        push @illumina_output_paths, "$directory/s_${lane}_2_sequence.txt";
-                    } elsif (-e "$directory/Temp/s_${lane}_2_sequence.txt") {
-                        push @illumina_output_paths, "$directory/Temp/s_${lane}_2_sequence.txt";
+                    if (-e "$directory/" . $self->read2_fastq_name) {
+                        push @illumina_output_paths, "$directory/" . $self->read2_fastq_name;
+                    } elsif (-e "$directory/Temp/" . $self->read2_fastq_name) {
+                        push @illumina_output_paths, "$directory/Temp/" . $self->read2_fastq_name;
                     } else {
                         die "No illumina reverse data in directory for lane $lane! $directory";
                     }
                 }
             } else {
-                if (-e "$directory/s_${lane}_sequence.txt") {
-                    push @illumina_output_paths, "$directory/s_${lane}_sequence.txt";
-                } elsif (-e "$directory/Temp/s_${lane}_sequence.txt") {
-                    push @illumina_output_paths, "$directory/Temp/s_${lane}_sequence.txt";
+                if (-e "$directory/" . $self->fragment_fastq_name) {
+                    push @illumina_output_paths, "$directory/" . $self->fragment_fastq_name;
+                } elsif (-e "$directory/Temp/" . $self->fragment_fastq_name) {
+                    push @illumina_output_paths, "$directory/Temp/" . $self->fragment_fastq_name;
                 } else {
                     die "No illumina data in directory for lane $lane! $directory";
                 }
@@ -313,14 +334,32 @@ sub dump_illumina_fastq_archive {
     unless ($dir) {
         $dir = $self->base_temp_directory;
     }
-    my $cmd = "tar -xzf $archive --directory=$dir";
-    unless ($self->shellcmd(
-                            cmd => $cmd,
-                            input_files => [$archive],
-                        ) ) {
-        $self->error_message('Failed to run tar command '. $cmd);
-        die($self->error_message);
+    
+    #Prevent unarchiving multiple times during execution
+    #Hopefully nobody passes in a $dir expecting to overwrite another set of FASTQs coincidentally from the same lane number
+    my $already_dumped = 0;
+    my $lane = $self->subset_name;
+    if($self->is_paired_end) {
+        if(-e $dir . '/' . $self->read1_fastq_name and -e $dir . '/' . $self->read2_fastq_name) {
+            $already_dumped = 1;
+        }
+    } else {
+        if(-e $dir . '/' . $self->fragment_fastq_name) {
+            $already_dumped = 1;
+        }
     }
+    
+    unless($already_dumped) {
+        my $cmd = "tar -xzf $archive --directory=$dir";
+        unless ($self->shellcmd(
+                                cmd => $cmd,
+                                input_files => [$archive],
+                            ) ) {
+            $self->error_message('Failed to run tar command '. $cmd);
+            die($self->error_message);
+        }
+    }
+    
     return $dir;
 }
 

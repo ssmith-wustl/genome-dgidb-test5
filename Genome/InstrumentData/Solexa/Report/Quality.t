@@ -26,6 +26,8 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                               );
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
 $instrument_data->set_always('dump_illumina_fastq_archive',$instrument_data->gerald_directory);
+$instrument_data->mock('read1_fastq_name', \&Genome::InstrumentData::Solexa::read1_fastq_name);
+$instrument_data->mock('read2_fastq_name', \&Genome::InstrumentData::Solexa::read2_fastq_name);
 
 my $r = Genome::InstrumentData::Solexa::Report::Quality->create(
     instrument_data_id => $instrument_data->id,
