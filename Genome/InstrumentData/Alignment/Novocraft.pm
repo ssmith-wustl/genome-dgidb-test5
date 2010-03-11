@@ -161,7 +161,11 @@ sub _run_aligner {
     my $aligner_params = '';
     my $threads = 1;
     if ($self->aligner_params) {
-        #TODO: parse the number of threads from param string
+        if ($aligner_params =~ /(-c\s*(\d))/) {
+            my $match = $1;
+            $threads = $2;
+            $aligner_params =~ s/$match//;
+        }
         $aligner_params .= ' '. $self->aligner_params;
     };
     #TODO: Resolve the input read format(this is only necessary for old data(GAPipeline <v1.3)
