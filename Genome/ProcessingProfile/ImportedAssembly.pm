@@ -23,18 +23,53 @@ class Genome::ProcessingProfile::ImportedAssembly {
     doc => "Processing profile to track manually created assemblies",
 };
 
-#MORE LATER IF NECESSARY
-sub _validate_assembler {
-    return 1;
-}
-#MORE LATER IF NECESSARY
-sub _validate_assembler_version {
+sub _execute_build {
+    my ($self, $build) = @_;
+
+    unless (-d $build->data_directory) {
+	$self->error_message("Failed to find build directory: ".$build->data_directory);
+	return;
+    }
+    else {
+	$self->status_message("Created build directory: ".$build->data_directory);
+    }
+
     return 1;
 }
 
-sub stages {
-    return (qw/ ImportedAssembly /);
-}
+#MORE LATER IF NECESSARY
+#sub _validate_assembler {
+#    return 1;
+#}
+#MORE LATER IF NECESSARY
+#sub _validate_assembler_version {
+#    return 1;
+#}
+
+#sub stages {
+#    return (qw/ track /);
+#}
+
+#sub track_job_classes {
+#    return (qw/ Genome::Model::Event::Build::ImportedAssembly /);
+#}
+
+#sub objects_for_stage {
+#    return (qw/ Genome::Model::Event::Build::ImportedAssembly /);
+#}
+
+#sub stages {
+#    return (qw/ ImportedAssembly /);
+#    return 1;
+#}
+
+#sub objects_for_stage {
+#    return 1;
+#}
+
+#sub classes_for_stage {
+#    return 1;
+#}
 
 1;
 
