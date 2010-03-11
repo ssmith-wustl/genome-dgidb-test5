@@ -39,9 +39,9 @@ my $number_cmd_obj = Genome::Model::Tools::Annotate::TranscriptVariantsParallel-
 $number_cmd_obj->execute() if $number_cmd_obj;
 
 ok (compare($number_output, $reference_output) == 0, "Output of transcript variants and transcript variants parallel (split by line number) are the same");
-system("cp $number_output /gscuser/bdericks/test_output.tsv");
+#system("cp $number_output /gscuser/bdericks/test_output.tsv");
 unlink $number_output;
-die;
+#die;
 
 # Split by chromosome test
 my $chrom_output = $test_output_dir . "/chrom_output";
