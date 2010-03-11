@@ -1,7 +1,7 @@
 package Genome::Model::Tools::Annotate::CosmicUpdate;
 
 ########################################################################################################################
-# CosmicUpdate.pm - A module for updating the downloaded COSMIC database to reflect the current COSMIC database.
+# CosmicUpdate.pm - A module for updating the local COSMIC database to reflect the current COSMIC database.
 #					
 #	AUTHOR:		Will Schierding (wschierd@genome.wustl.edu)
 #
@@ -23,9 +23,9 @@ class Genome::Model::Tools::Annotate::CosmicUpdate {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		cosmic_folder	=> { is => 'Text', doc => "", is_optional => 1 },
-		cosmic_url	=> { is => 'Text', doc => "", is_optional => 1 },
-		output_file	=> { is => 'Text', doc => "" , is_optional => 1},
+		cosmic_folder	=> { is => 'Text', doc => "Path to the current local COSMIC files", is_optional => 1 },
+		cosmic_url	=> { is => 'Text', doc => "URL to the online COSMIC repository", is_optional => 1 },
+		output_file	=> { is => 'Text', doc => "Output file name for flatfile of amino acid changes" , is_optional => 1},
 	],
 };
 
@@ -42,7 +42,7 @@ EOS
 
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
     return <<EOS 
-
+A module for updating the downloaded COSMIC database to reflect the current COSMIC database.
 EOS
 }
 
@@ -59,8 +59,6 @@ my $URL = $self->cosmic_url;
 my $COSMICpath = $self->cosmic_folder;
 my $cosmicdb = $self->output_file;
 
-my $dir = getcwd;
-
 my $cosmicdir;
 if (defined $COSMICpath) {
 	$cosmicdir = $COSMICpath;
@@ -68,6 +66,10 @@ if (defined $COSMICpath) {
 else {
 	$cosmicdir = '/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/';
 }
+
+chdir ($cosmicdir);
+my $dir = getcwd;
+print "Working Directory: $dir";
 
 print "Retrieving File(s) from COSMIC\n";
 
@@ -158,8 +160,6 @@ foreach my $genefile (@cosmiccsvfiles) {
 	}
 }
 
-exit 1;
 
-	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
