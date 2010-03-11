@@ -909,6 +909,12 @@ sub gold_snp_path {
     {
         $self->error_message("WTF!?!? multiple genotype files for ".$self->subject_name);
     } 
+
+    if(scalar(@builds) == 0)
+    {
+        $self->error_message("no build for model ".$self->subject_name);
+        return;
+    }
     my $build = shift @builds;
     return $build->formatted_genotype_file_path;
 }
