@@ -92,9 +92,8 @@ sub execute {
     }
 
     my $merge_software = 'picard';
-    # Picard fails when merging BAMs aligned against the transcriptome
-    if ($self->model->dna_type eq 'cdna' && $self->model->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo') {
-        $merge_software = 'samtools';
+    if ($self->model->merge_software) {
+        $merge_software = $self->model->merge_software;
     }
 
     #parallelization starts here
