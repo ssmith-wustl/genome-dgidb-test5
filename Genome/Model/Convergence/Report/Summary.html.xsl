@@ -21,10 +21,10 @@
         }
         /* This report is extra-wide */
         div.container {
-            width: 1010px !important;
+            width: 1020px !important;
         }
         div.background {
-            width: 1010px !important;
+            width: 1020px !important;
         }
         </style>
         <script type="text/javascript" src="https://imp.gsc.wustl.edu/resources/report_resources/jquery/jquery.js"></script>
@@ -119,6 +119,7 @@
                       <tr>
                         <th>build id</th>
                         <th>name</th>
+                        <th>lanes</th>
                         <th>haploid coverage</th>
                         <th>input base count (kb)</th>
                         <th>unfiltered SNP calls</th>
@@ -135,6 +136,9 @@
                           </td>
                           <td>
                             <xsl:value-of select="@name"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@lanes"/>
                           </td>
                           <td>
                             <xsl:value-of select="@haploid-coverage"/>
@@ -173,6 +177,7 @@
                           "aoColumns": [
                               null,
                               null,
+                              { "sClass": "last" },
                               { "sClass": "last" },
                               { "sClass": "last" },
                               { "sClass": "last", "sType": "formatted-num" },
