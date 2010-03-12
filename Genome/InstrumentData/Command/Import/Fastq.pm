@@ -9,7 +9,7 @@ use warnings;
 
 use Genome;
 use File::Copy;
-
+use Data::Dumper;
 
 my %properties = (
     source_data_files => {
@@ -222,6 +222,7 @@ sub execute {
 
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "fastq";
+    $params{sample_id} = $sample_id;
 
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
@@ -270,6 +271,8 @@ sub execute {
 
 
     my $disk_alloc;
+
+
     if($self->allocation) {
         $disk_alloc = $self->allocation;
     } else {
@@ -297,6 +300,9 @@ sub execute {
         $disk_alloc->deallocate;
         return;
     }
+
+
+
 
     return 1;
 
