@@ -91,7 +91,7 @@ sub execute {
     }
 
     #open output file
-    my $outfile = $self->output_path."/genotype/".$self->sample_name.".genotype";
+    my $outfile = $self->output_path."/".$self->sample_name.".genotype";
     my $out_fh = new IO::File $outfile,"w";
     unless (defined($out_fh)) {
         $self->error_message("unable to open file ".$outfile." for reading.");
