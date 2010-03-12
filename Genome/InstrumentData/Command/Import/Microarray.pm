@@ -7,7 +7,7 @@ use Genome;
 use File::Copy;
 use File::Copy::Recursive;
 use File::Basename;
-#use Genome::Utility::FileSystem;
+use IO::Handle;
 
 my %properties = (
     original_data_path => {
@@ -32,7 +32,7 @@ my %properties = (
     sequencing_platform => {
         is => 'Text',
         doc => 'sequencing platform of import data, like illumina/affymetrix',
-        valid_values => ['illumina genotype array', 'illumina expression array', 'affymetrix genotype array', '454','sanger'],
+        valid_values => ['illumina genotype array', 'illumina expression array', 'affymetrix genotype array', '454','sanger','unknown'],
     },
     description  => {
         is => 'Text',
@@ -46,17 +46,20 @@ my %properties = (
     },
 );
     
-
 class Genome::InstrumentData::Command::Import::Microarray {
-    is  => 'Command',
+    is => 'Command',
+    is_abstract => 1,
     has => [%properties],
-    doc => 'create an instrument data for a microarray',
+    doc => 'import external microarray instrument data',
 };
-
 
 sub execute {
     my $self = shift;
+    $self->process_imported_files;
+}
 
+sub process_imported_files {
+    my $self = shift;
     unless (-s $self->original_data_path) {
         $self->error_message('Original data path of import file: '. $self->original_data_path .' is empty');
         return;
@@ -144,7 +147,7 @@ sub execute {
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data: $instrument_data_id is imported");
 
-    my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage;
+    my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage * 5;
 
     my $alloc_path = sprintf('microarray_data/imported/%s', $instrument_data_id);
 
@@ -172,7 +175,7 @@ sub execute {
 
     my $target_path = $disk_alloc->absolute_path . "/";
     $self->status_message("Microarray allocation created at $target_path .");
-
+    print "attempting to copy data to allocation\n";
     my $status = File::Copy::Recursive::dircopy($self->original_data_path,$target_path);
     unless($status) {
         $self->error_message("Directory copy failed to complete.\n");
@@ -185,15 +188,13 @@ sub execute {
         $self->error_message("source and distination do not match( source $ssize bytes vs destination $dsize). Copy failed.");
         return;
     }
+    
+    $self->status_message("Finished copying data into the allocated disk");
 
     return 1;
 }
 
-
 1;
 
-    
-
-
-    
-
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/InstrumentData/Command/Import.pm $
+#$Id: Import.pm 53285 2009-11-20 21:28:55Z fdu $
