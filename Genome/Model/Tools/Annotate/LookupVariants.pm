@@ -94,6 +94,13 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             default => 0,
             doc => 'use in junction with report-mode full or gff, to append population allele frequencies to end of output'
         },
+	organism => {
+	    type  =>  'String',
+	    doc   =>  "provide the organism if annotating mouse",
+	    valid_values => ['human', 'mouse'],
+	    is_optional  => 1,
+	    default => 'human',
+	},
         require_allele_match => {
             is => 'Boolean',
             is_optional => 1,
@@ -245,7 +252,7 @@ sub print_matches {
 		my $gff_line = qq(Chromosome$chr\tdbsnp_130\t$ds_type\t$ds_start\t$ds_stop\t.\t$strain\t.\t$rs_id \; Alleles \"$allele\" ; validation \"$validation\" ; submitter \"$submitter\");
 
 		if ($self->append_population_allele_frequencies) {
-		    my $freq = &get_frequencies($rs_id);
+		    my $freq = &get_frequencies($self,$rs_id);
 		    if ($freq) {
 			chomp $freq;
 			$gff_line = "$gff_line ; $freq";
@@ -325,7 +332,7 @@ sub print_matches {
 	    if ($self->append_population_allele_frequencies) {
 		my @freq;
 		for my $rsid (@rs_ids) {
-		    my $freq = &get_frequencies($rs_id);
+		    my $freq = &get_frequencies($self,$rs_id);
 		    if ($freq) {
 			push(@freq,$freq);
 		    }
@@ -426,10 +433,16 @@ sub reverse_complement {
 }
 
 sub get_frequencies {
-    my $RsDir = "/gsc/var/lib/import/dbsnp/129/frequencies";
-    my $rsdb = Bio::DB::Fasta->new($RsDir);
 
-    my ($rs_id) = @_;
+    my ($self,$rs_id) = @_;
+
+    my $RsDir = "/gsc/var/lib/import/dbsnp/129/frequencies";
+
+    my $organism = $self->organism;
+    if ($organism eq "mouse") {
+	$RsDir = "/gsc/var/lib/import/dbsnp/mouse/10090/frequencies";
+    }
+    my $rsdb = Bio::DB::Fasta->new($RsDir);
     my $freq = $rsdb->seq($rs_id, 1 => 6000);
 
     return unless $freq;
@@ -605,6 +618,12 @@ sub get_fh_for_chr {
     my ($self, $chr) = @_;
 
     my $dbSNP_path = $self->dbSNP_path();
+
+    my $organism = $self->organism;
+    if ($dbSNP_path eq "/gsc/var/lib/import/dbsnp/130/tmp/" && $organism eq "mouse") {
+	$dbSNP_path = "/gscmnt/temp209/info/import/dbsnp/mouse/10090/";
+    }
+
     my ($fh, $index);
 
     if (!$self->{'filehandles'}->{$chr}) {
