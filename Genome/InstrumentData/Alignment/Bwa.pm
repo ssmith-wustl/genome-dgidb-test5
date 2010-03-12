@@ -49,7 +49,7 @@ sub output_files {
     my @output_files;
     my @methods = qw(alignment_file_paths aligner_output_file_paths unaligned_reads_list_paths);
     push @methods, 'unaligned_reads_fastq_paths' 
-        unless $self->trimmer_style and $self->trimmer_style eq 'filter';#add for now
+        unless $self->trimmer_name eq 'trimq2_wugc';#add for now
 
     for my $method (@methods) {
         push @output_files, $self->$method;
@@ -308,10 +308,10 @@ sub _run_aligner {
     # we resolve these first, since we might just print the paths we work with then exit
     my @input_pathnames = $self->sanger_fastq_filenames;
 
-    my ($trimmer_name, $trimmer_style) = ($self->trimmer_name, $self->trimmer_style);
+    my $trimmer_name = $self->trimmer_name;
     
     @input_pathnames  = $self->run_trimq2_filter_style(@input_pathnames) 
-        if $trimmer_name and $trimmer_name eq 'trimq2' and $trimmer_style and $trimmer_style eq 'filter';
+        if $trimmer_name and $trimmer_name eq 'trimq2_wugc';
 
     unless (@input_pathnames) {
         $self->error_message('No input fastq pathnames to align');
@@ -466,9 +466,9 @@ sub _run_aligner {
         return unless $self->_filter_samXe_output($sam_command_line, $sam_map_output_fh, $unaligned_output_fh); 
          
     }
-    else {#trimq2 filter style pair-end got 3 input fastq files, 6 parts to concat: header, read-group, pe sam, frag sam, pe unalign, frag unalign,
-        unless ($trimmer_name eq 'trimq2' and $trimmer_style eq 'filter') {
-            $self->error_message('Only trimq2 with filter style should possibly have 3 input fastq files');
+    else {#trimq2_wugc, filter style pair-end got 3 input fastq files, 6 parts to concat: header, read-group, pe sam, frag sam, pe unalign, frag unalign,
+        unless ($trimmer_name eq 'trimq2_wugc') {
+            $self->error_message('Only trimq2_wugc, filter style should possibly have 3 input fastq files');
             return;
         }
         unless (@sai_intermediate_files == 3) {
@@ -497,7 +497,7 @@ sub _run_aligner {
     
     my $unaligned_sam = $self->unaligned_reads_list_path;
     
-    if ($trimmer_name eq 'trimq2' and $trimmer_style eq 'filter') {
+    if ($trimmer_name eq 'trimq2_wugc') {
         my $trimq2_unaligned_sam = $self->trimq2_filtered_to_unaligned_sam;
         if ($trimq2_unaligned_sam and -s $trimq2_unaligned_sam) {
             my $rv = Genome::Utility::FileSystem->shellcmd(

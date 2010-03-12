@@ -53,10 +53,6 @@ class Genome::InstrumentData::Alignment {
                                 is => 'Text',
                                 doc => 'any additional params for the trimmer in a single string'
                             },
-         trimmer_style      => {
-                                is => 'Text',
-                                doc => 'the style of read trimmer to use, i.e. for trimq2, filter, no_filter_hard, no_filter_bwa'
-                            },
          aligner_version    => {
                                 is => 'Text',
                                 doc => 'the version of maq to use, i.e. 0.6.8, 0.7.1, etc.'
@@ -493,15 +489,11 @@ sub trimmer_label {
     my $trimmer_name    = $self->trimmer_name;
     my $trimmer_version = $self->trimmer_version;
     my $trimmer_params  = $self->trimmer_params;
-    my $trimmer_style   = $self->trimmer_style;
 
     my $trimmer_label = $trimmer_name;
     if (defined($trimmer_version)) {
         $trimmer_version =~ s/\./_/g;
         $trimmer_label .= $trimmer_version;
-    }
-    if (defined ($trimmer_style)) {
-        $trimmer_label .= '_'.$trimmer_style;
     }
     if ($trimmer_params and $trimmer_params ne '') {
         my $params_md5 = md5_hex($trimmer_params);
@@ -747,8 +739,7 @@ sub sanger_fastq_filenames {
             }
 
             if ($self->trimmer_name) {
-                my $trim_style = $self->trimmer_style;
-                unless ($self->trimmer_name eq 'trimq2' and $trim_style and $trim_style eq 'filter') {
+                unless ($self->trimmer_name eq 'trimq2_wugc') {
                     my $trimmed_sanger_fastq_pathname = $self->create_temp_file_path('trimmed-sanger-fastq-'. $counter);
                     my $trimmer;
                     if ($self->trimmer_name eq 'fastx_clipper') {
@@ -767,15 +758,15 @@ sub sanger_fastq_filenames {
                             output => $trimmed_sanger_fastq_pathname,
                         );
                     } 
-                    elsif ($self->trimmer_name eq 'trimq2' and $trim_style) {
+                    elsif ($self->trimmer_name =~ /trimq2_(\S+)/) {
                         #This is for trimq2 no_filter style
-                        #will move trimq2.report to alignment directory
-                        my ($style) = $trim_style =~ /filter_(\S+)/;
+                        #move trimq2.report to alignment directory
+                        
                         my %params = (
                             fastq_file  => $sanger_fastq_pathname,
                             out_file    => $trimmed_sanger_fastq_pathname,
                             report_file => $self->alignment_directory.'/trimq2.report.'.$counter,
-                            trim_style  => $style,
+                            trim_style  => $1,
                         );
                         my ($qual_level, $string) = $self->_get_trimq2_params;
                         $params{bwa_trim_qual_level} = $qual_level if $qual_level;
@@ -847,12 +838,16 @@ sub qualify_trimq2 {
     my $self = shift;
     my $trimmer_name = $self->trimmer_name;
 
-    return 1 unless $trimmer_name and $trimmer_name eq 'trimq2';
-
+    return 1 unless $trimmer_name and $trimmer_name =~ /trimq2/;
     $self->status_message('trimq2 will be used as fastq trimmer');
+
+    my ($style) = $trimmer_name =~ /trimq2_(\S+)/;
+    unless ($style =~ /^(wugc|bwa|hard)$/) {
+        $self->error_message("unrecognized trimq2 trimmer name: $trimmer_name");
+        return;
+    }
     
     my $ver = $self->instrument_data->analysis_software_version;
-
     unless ($ver) {
         $self->error_message("Unknown analysis software version for instrument data: ".$self->instrument_data->id);
         return;
@@ -869,7 +864,7 @@ sub qualify_trimq2 {
 sub _get_trimq2_params {
     my $self = shift;
 
-    my $param = $self->trimmer_params || '::'; #for trimq2 filter style, input something like "32:#" (length:string) in processing profile as trimmer_params, for no_filter_bwa style, input "20:#" (quality_level:string)
+    my $param = $self->trimmer_params || '::'; #for trimq2_wugc, input something like "32:#" (length:string) in processing profile as trimmer_params, for trimq2_bwa, input "20:#" (quality_level:string)
     my ($first_param, $string) = split /\:/, $param;
 
     return ($first_param, $string);
@@ -886,11 +881,17 @@ sub _get_base_counts_from_trimq2_report {
     my $last_line = `tail -1 $report`;
     my ($ct, $trim_ct);
 
-    if ($self->trimmer_style =~ /no_filter/i) {#Simple, no_filter style
+    my ($style) = $self->trimmer_name =~ /trimq2_(\S+)/;
+    
+    if ($style =~ /^(bwa|hard)$/) {#Simple, no_filter style
         ($ct, $trim_ct) = $last_line =~ /^\s+(\d+)\s+\d+\s+(\d+)\s+/;
     }
-    elsif ($self->trimmer_style eq 'filter') {
+    elsif ($style eq 'wugc') {
         ($ct, $trim_ct) = $last_line =~ /^\s+(\d+)\s+\d+\s+\d+\s+(\d+)\s+/;
+    }
+    else {
+        $self->error_message("unrecognized trimq2 style: $style");
+        return;
     }
     
     return ($ct, $trim_ct) if $ct and $trim_ct;
@@ -910,8 +911,8 @@ sub calculate_base_counts_after_trimq2 {
         return;
     }
     
-    #Trimq2::Simple,  no_fileter style, get two report
-    #Trimq2::PairEnd/Fragment, filter style, get one report
+    #Trimq2::Simple,  trimq2_bwa, get two report
+    #Trimq2::PairEnd/Fragment, trimq2_wugc, get one report
 
     for my $report (@reports) {
         my ($ct, $trim_ct) = $self->_get_base_counts_from_trimq2_report($report);
@@ -1010,8 +1011,8 @@ sub run_trimq2_filter_style {
 sub trimq2_filtered_to_unaligned_sam {
     my $self = shift;
 
-    unless ($self->trimmer_name eq 'trimq2') {
-        $self->error_message('trimq2_filtered_to_unaligned method only applies to trimq2 as trimmer');
+    unless ($self->trimmer_name eq 'trimq2_wugc') {
+        $self->error_message('trimq2_filtered_to_unaligned method only applies to trimq2_wugc as trimmer');
         return;
     }
     

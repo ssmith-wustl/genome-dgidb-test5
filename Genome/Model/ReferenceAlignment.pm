@@ -54,7 +54,6 @@ class Genome::Model::ReferenceAlignment {
         read_trimmer_name            => { via => 'processing_profile'},
         read_trimmer_version         => { via => 'processing_profile'},
         read_trimmer_params          => { via => 'processing_profile'},
-        read_trimmer_style           => { via => 'processing_profile'},
         force_fragment               => { via => 'processing_profile'},
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},

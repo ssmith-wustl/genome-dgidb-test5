@@ -161,10 +161,6 @@ sub params_for_alignment {
         if ($model->read_trimmer_params) {
             $params{'trimmer_params'} = $model->read_trimmer_params;
         }
-        if ($model->read_trimmer_style) {
-            $params{'trimmer_style'}  = $model->read_trimmer_style;
-        }
-
         # These should be given generic names, or merged into the aligner parameters.
         if ($model->picard_version) {
             $params{'picard_version'} = $model->picard_version;
