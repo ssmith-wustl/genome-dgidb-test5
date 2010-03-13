@@ -26,9 +26,11 @@ class Genome::Model::Tools::Annotate::OMIMUpdate {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		omim_folder	=> { is => 'Text', doc => "Path to the current local OMIM files", is_optional => 1 },
-		omim_url	=> { is => 'Text', doc => "URL to the online OMIM repository", is_optional => 1 },
-		output_file	=> { is => 'Text', doc => "Output file name for flatfile of amino acid changes" , is_optional => 1},
+		omim_folder	=> { is => 'Text', doc => "Path to the current local OMIM files", is_optional => 1, default => '/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/' },
+		omim_url	=> { is => 'Text', doc => "URL to the online OMIM repository", is_optional => 1, default => 'ftp://ftp.ncbi.nih.gov/repository/OMIM/' },
+		omim_db_zipfile	=> { is => 'Text', doc => "Zipped filename to download from the online OMIM repository", is_optional => 1, default => 'omim.txt.Z' },
+		omim_db_file	=> { is => 'Text', doc => "Filename of file inside zip file downloaded from the online OMIM repository", is_optional => 1, default => 'omim.txt' },
+		output_file	=> { is => 'Text', doc => "Output file name for flatfile of amino acid changes", is_optional => 1, default => 'OMIM_aa_will.csv' },
 	],
 };
 
@@ -61,35 +63,29 @@ my $self = shift;
 my $URL = $self->omim_url;
 my $OMIMpath = $self->omim_folder;
 my $OMIM_DB = $self->output_file;
-
-my ($OMIMINPUT, $OMIMZINPUT, $OMIMfile);
-
+my $OMIMZINPUT = $self->omim_db_zipfile;
+my $OMIMINPUT = $self->omim_db_file;
 print "retrieving file from OMIM\n";
-#zipped file
-$OMIMZINPUT = 'omim.txt.Z';
-#file from unzipping
-$OMIMINPUT = 'omim.txt';
-$OMIMpath ||= '/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/';
+
 chdir ($OMIMpath);
 my $dir = getcwd;
 print "Working Directory: $dir";
-$OMIMfile ||= "$OMIMpath/$OMIMINPUT";
-
 system ( rm, $OMIMZINPUT);
 system ( rm, $OMIMINPUT);
 
 #directory on OMIM server
-$URL ||= 'ftp://ftp.ncbi.nih.gov/repository/OMIM/'.$OMIMZINPUT;
-system ( wget, $URL);
+my $URL_file = $URL.$OMIMZINPUT;
+system ( wget, $URL_file);
 
 print "unzipping OMIM file\n";
 system ( gunzip, $OMIMZINPUT);
 
 print "Writing OMIM_aa File...\n";
+my $OMIMfile = "$OMIMpath/$OMIMINPUT";
 my $omim_parser = Bio::Phenotype::OMIM::OMIMparser->new(-omimtext => $OMIMfile );
 
 # amino acid output file
-$OMIM_DB ||= 'OMIM_aa_will.csv';
+
 unless (open(OMIM_DB,">$OMIM_DB")) {
     die "Could not open output file '$OMIM_DB' for writing";
 }
