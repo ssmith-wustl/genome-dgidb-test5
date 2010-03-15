@@ -1,4 +1,4 @@
-package Genome::InstrumentData::Command::List::Solexa;
+package Genome::InstrumentData::Command::List::Imported;
 
 #rlong 2/22/10
 # This command is picking up properties of InstrumentData
