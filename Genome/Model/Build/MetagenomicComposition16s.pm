@@ -37,6 +37,14 @@ class Genome::Model::Build::MetagenomicComposition16s {
             to => 'value',
             doc => 'Number of amplicons that were processed in this build.'
         },
+        amplicons_processed_success => {
+            is => 'Integer',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'amplicons processed success' ],
+            to => 'value',
+            doc => 'Number of amplicons that were successfully processed in this build.'
+        },
         amplicons_classified => {
             is => 'Integer',
             via => 'metrics',
@@ -44,6 +52,14 @@ class Genome::Model::Build::MetagenomicComposition16s {
             where => [ name => 'amplicons classified' ],
             to => 'value',
             doc => 'Number of amplicons that were classified in this build.'
+        },
+        amplicons_classified_success => {
+            is => 'Integer',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'amplicons classified success' ],
+            to => 'value',
+            doc => 'Number of amplicons that were successfully classified in this build.'
         },
     ],
 };
@@ -384,6 +400,13 @@ sub orient_amplicons_by_classification {
 }
 
 #< Classification >#
+sub classification_file {
+    my $self = shift;
+
+    return $self->classification_dir.'/classifications.tsv';
+    #return $self->classification_dir.'/'.$self->classifier.'.tsv';
+}
+
 sub classification_file_for_amplicon {
     my ($self, $amplicon) = @_;
     return $self->classification_dir.'/'.$amplicon->name.'.classification.stor';
@@ -439,33 +462,6 @@ sub save_classification_for_amplicon {
     }
 
     return 1;
-}
-
-#< Metrics >#
-sub amplicons_processed_success {
-    my $self = shift;
-
-    my $attempted = $self->amplicons_attempted;
-    unless ( $attempted ) {
-        $self->error_message("No amplicons attempted for ".$self->description);
-        return;
-    }
-    my $processed = $self->amplicons_processed;
-    
-    return sprintf('%.2f', $processed / $attempted);
-}
-
-sub amplicons_classified_success {
-    my $self = shift;
-
-    my $attempted = $self->amplicons_attempted;
-    unless ( $attempted ) {
-        $self->error_message("No amplicons attempted for ".$self->description);
-        return;
-    }
-    my $classified = $self->amplicons_classified;
-
-    return sprintf('%.2f', $classified / $attempted);
 }
 
 #< Reports >#

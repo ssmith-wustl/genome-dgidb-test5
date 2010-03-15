@@ -125,13 +125,8 @@ sub one_job_classes {
         );
     }
 
-    # Classify
-    push @subclasses, 'Classify::'.Genome::Utility::Text::string_to_camel_case(
-        $self->classifier
-    );
-
-    # Orient Reports and Clean Up work w/ all mc16s builds
-    push @subclasses, (qw/ Orient Reports CleanUp /);
+    # Classify, Orient, Reports and Clean Up work w/ all mc16s builds
+    push @subclasses, (qw/ Classify Orient Reports CleanUp /);
 
     return map { 'Genome::Model::Event::Build::MetagenomicComposition16s::'.$_ } @subclasses;
 }

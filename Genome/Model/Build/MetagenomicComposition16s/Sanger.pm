@@ -456,6 +456,8 @@ sub _get_all_reads_for_broad_amplicon {
 sub clean_up {
     my $self = shift;
 
+    return 1;
+
     my $amplicon_iterator = $self->amplicon_iterator
         or return;
     

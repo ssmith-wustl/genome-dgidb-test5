@@ -590,7 +590,7 @@ sub test02_stages : Tests() {
         Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::Sanger
         Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Finishing
         Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::PhredPhrap
-        Genome::Model::Event::Build::MetagenomicComposition16s::Classify::Kroyer
+        Genome::Model::Event::Build::MetagenomicComposition16s::Classify
         Genome::Model::Event::Build::MetagenomicComposition16s::Orient
         Genome::Model::Event::Build::MetagenomicComposition16s::Reports
         Genome::Model::Event::Build::MetagenomicComposition16s::CleanUp

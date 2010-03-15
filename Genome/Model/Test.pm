@@ -571,6 +571,7 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
         oriented_fasta_and_qual_reader oriented_fasta_and_qual_writer
         orient_amplicons_by_classification
 
+        classification_file
         classification_file_for_amplicon
         load_classification_for_amplicon
         save_classification_for_amplicon
@@ -625,7 +626,9 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
     # metrics
     $build->amplicons_attempted(5);
     $build->amplicons_processed(4);
+    $build->amplicons_processed_success( $build->amplicons_processed / $build->amplicons_attempted );
     $build->amplicons_classified(4);
+    $build->amplicons_classified_success( $build->amplicons_classified / $build->amplicons_processed );
 
     return 1;
 

@@ -112,9 +112,13 @@ sub tests : Tests() {
     # metrics
     is($build->amplicons_attempted(5), 5, 'amplicons attempted');
     is($build->amplicons_processed(4), 4, 'amplicons processed');
-    is($build->amplicons_processed_success, '0.80', 'amplicons processed success');
+    is($build->amplicons_processed_success( 
+            $build->amplicons_processed / $build->amplicons_attempted
+        ), .8, 'amplicons processed success');
     is($build->amplicons_classified(4), 4, 'amplicons classified');
-    is($build->amplicons_classified_success, '0.80', 'amplicons classified success');
+    is($build->amplicons_classified_success( 
+            $build->amplicons_classified / $build->amplicons_processed
+        ), 1, 'amplicons classified success');
 
     return 1;
 }

@@ -499,29 +499,11 @@ use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
 
 use Genome;
 
-# Since the test class is abstract, make a class to inherit from it, and use that for testing
-class Genome::Model::Event::Build::MetagenomicComposition16s::Classify::Tester {
-    is => 'Genome::Model::Event::Build::MetagenomicComposition16s::Classify',
-};
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Classify::Tester';
-}
-
-######
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::Classify::Rdp::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
+require File::Copy;
 use Test::More;
 
 sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Classify::Rdp';
+    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Classify';
 }
 
 sub _dirs_to_link { return (qw/ chromat_dir edit_dir /); }
@@ -530,16 +512,17 @@ sub before_execute {
     my $self = shift;
 
     my $build = $self->_build;
-    my $amplicons = $self->_amplicons;
-    for my $amplicon ( @$amplicons ) {
-        my $class_file = $build->classification_file_for_amplicon($amplicon);
-        unlink $class_file if -e $class_file;
-    }
+    #File::Copy::move($build->classification_file);
     
     $build->amplicons_processed(0);
-    $build->amplicons_classified(0);
     is($build->amplicons_processed, 0, 'amplicons processed reset');
+    $build->amplicons_processed_success(0);
+    is($build->amplicons_processed_success, 0, 'amplicons processed success reset');
+    
+    $build->amplicons_classified(0);
     is($build->amplicons_classified, 0, 'amplicons classified reset');
+    $build->amplicons_classified_success(0);
+    is($build->amplicons_classified_success, 0, 'amplicons classified success reset');
 
     return 1;
 }
@@ -552,6 +535,8 @@ sub after_execute {
     my $cnt = grep { -s $build->classification_file_for_amplicon($_) } @$amplicons;
     is($cnt, 4, 'Verified - Created classification for 4 of 5 amplicons');
 
+    #ok(-s $build->classification_file, 'build classification file');
+    
     is($build->amplicons_processed, 4, 'amplicons processed recorded');
     is($build->amplicons_classified, 4, 'amplicons classified recorded');
     
@@ -653,7 +638,8 @@ sub after_execute {
     my $self = shift;
 
     my @files_remaining = glob($self->_build->edit_dir.'/*');
-    is(@files_remaining, 15, "Removed correct number of files");
+    is(@files_remaining, 80, "Removed correct number of files");
+    #is(@files_remaining, 15, "Removed correct number of files");
     #print $self->_build->data_directory."\n";<STDIN>;
 
     return 1;
@@ -685,7 +671,7 @@ sub _use_mock_dir { # use a real build to generate and compare report
 sub after_execute {
     my ($self, $summary, $params, $report) = @_;
 
-    #$report->save($self->_build->reports_directory);
+    #$report->save($self->_build->reports_directory, 1);
     my $existing_report = Genome::Report->create_report_from_directory(
         $self->_build->reports_directory.'/'.$report->name_to_subdirectory($report->name)
     );
