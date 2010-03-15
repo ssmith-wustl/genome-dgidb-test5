@@ -75,9 +75,11 @@ sub verify_alignment_data {
     }
 
     my $lock;
+    my $already_had_lock = 0;
     unless ($self->_resource_lock) {
         $lock = $self->lock_alignment_resource;
     } else {
+        $already_had_lock = 1;
         $lock = $self->_resource_lock;
     }
 
@@ -100,10 +102,12 @@ sub verify_alignment_data {
         return;
     }
     $self->status_message('Alignment data verified: '. $alignment_dir);
-
-    unless ($self->unlock_alignment_resource) {
-        $self->error_message('Failed to unlock alignment resource '. $lock);
-        return;
+    # don't unlock if some caller lower on the stack had a lock
+    unless ($already_had_lock) {
+        unless ($self->unlock_alignment_resource) {
+            $self->error_message('Failed to unlock alignment resource '. $lock);
+            return;
+        }
     }
     return 1;
 }
