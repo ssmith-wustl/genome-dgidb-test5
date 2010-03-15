@@ -35,6 +35,7 @@ class Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments {
             is => 'String',
             is_input => 1,
             doc => '',
+            is_optional => 1,
         },
         sam_combined_output_file => {
             is => 'String',
@@ -171,6 +172,7 @@ sub execute {
     my $warn_file = $self->sam_combined_output_file.".warn";
 
     my @expected_output_files = ($warn_file,$self->read_count_output_file,$self->genus_output_file,$self->phyla_output_file,$bam_combined_output_file);
+    #TODO viral output files
     
     my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
     if ($rv_check) {
@@ -196,6 +198,7 @@ sub execute {
     my $read_cnt_o=Genome::Utility::FileSystem->open_file_for_writing($self->read_count_output_file);
     my $phyla_o=Genome::Utility::FileSystem->open_file_for_writing($self->phyla_output_file);
     my $genus_o=Genome::Utility::FileSystem->open_file_for_writing($self->genus_output_file);
+
 
     if ( !defined($sam_o) || !defined($read_cnt_o) || !defined($phyla_o) || !defined($genus_o) ) {
         $self->error_message("Failed to open an output file for writing.");
