@@ -7,11 +7,6 @@ use Genome;
 class Genome::ProcessingProfile::ReferenceVariationSanger {
     is => 'Genome::ProcessingProfile',
     has_param => [
-        command_name => {
-            doc => 'build a profile to run gmt analysis auto-msa',
-            valid_values => ['gmt analysis auto-msa'],
-            default_value => 'gmt analysis auto-msa',
-        },
 	ace_fof => {
             type  =>  'String',
             doc  => "optional; provide an fof of ace files to run auto analysis including the full path",
@@ -58,7 +53,7 @@ class Genome::ProcessingProfile::ReferenceVariationSanger {
     	    is_optional  => 1,
 	},
     ],
-    doc => "gmt analysis auto-msa -ace-fof ace.fof"
+    doc => "runs gmt analysis auto-msa"
 };
 
 sub _initialize_model {
@@ -74,71 +69,21 @@ sub _initialize_build {
 }
 
 sub _execute_build {
-    my ($self,$build) = @_;
-    warn "executing build logic for " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
+     my ($self, $build) = @_;
+     warn "executing build logic for " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
+     my $dir = $build->data_directory;
 
-    my $cmd = $self->command_name;
-    #my $args = $self->args;
-    my $ace_fof = $self->ace_fof;
-    my $mail_me = $self->mail_me;
-    my $lsf_memory_requirement = $self->lsf_memory_requirement;
-    my $poly_source_1 = $self->poly_source_1;
-    my $poly_source_2 = $self->poly_source_2;
-    my $poly_indel_source_1 = $self->poly_indel_source_1;
-    my $poly_indel_source_2 = $self->poly_indel_source_2;
-    my $pretty_source_1 = $self->pretty_source_1;
-    my $pretty_source_2 = $self->pretty_source_2;
-    
-    my $dir = $build->data_directory;
-    
-    my @command;
-    if ($ace_fof && -f $ace_fof) {
-	push(@command,"-ace-fof");
-	push(@command,$ace_fof);
-    }
-    if ($mail_me) {
-	push(@command,"-mail-me");
-    }
-    if ($lsf_memory_requirement) {
-	push(@command,"-lsf-memory-requirement");
-	push(@command,$lsf_memory_requirement);
-    }
-    if ($poly_source_1) {
-	push(@command,"-poly-source-1");
-	push(@command,$poly_source_1);
-    }
-    if ($poly_source_2) {
-	push(@command,"-poly-source-2");
-	push(@command,$poly_source_2);
-    }
-    if ($poly_indel_source_1) {
-	push(@command,"-poly-indel-source-1");
-	push(@command,$poly_indel_source_1);
-    }
-    if ($poly_indel_source_2) {
-	push(@command,"-poly-indel-source-2");
-	push(@command,$poly_indel_source_2);
-    }
-    if ($pretty_source_1) {
-	push(@command,"-pretty-source-1");
-	push(@command,$pretty_source_1);
-    }
-    if ($pretty_source_2) {
-	push(@command,"-pretty-source-2");
-	push(@command,$pretty_source_2);
-    }
+     my %params = map { $_->name => $_->value } $self->params;
+     my $result = Genome::Model::Tools::Analysis::AutoMsa->execute(%params);
 
-    my $args = join ' ' , @command;
-    
-    my $exit_code = system "$cmd $args >$dir/output 2>$dir/errors";
-    
-    $exit_code /= 256;
-    if ($exit_code != 0) {
-        $self->error_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
-        return;
-    }
-    
-    return 1;
+     if ($result) {
+	 print qq(you're analysis has been executed\n);
+	 return $result;
+
+     } else {
+	 print qq(you're analysis has failed to execute\n);
+	 return;
+     }
 }
 
 sub _validate_build {
