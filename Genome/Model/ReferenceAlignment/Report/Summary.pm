@@ -308,7 +308,16 @@ $DB::single = 1;
     }
 
     # sample variables
-    my $sample = $model->subject;
+    my $sample;
+    if($model->subject_type eq 'sample_name' or $model->subject_type eq 'genomic_dna') {
+        $sample = $model->subject;
+    } elsif ($model->subject_type eq 'library_name') {
+        my $library = $model->subject;
+        if($library) { 
+            $sample = $library->sample;
+        }
+    }
+    
     my ($extraction_label,$tissue_label,$extraction_name,$extraction_id,$extraction_desc,$extraction_type) = ($na,$na,$na,$na,$na,$na);
     if ($sample) {
         $tissue_label = $sample->tissue_label || $na;
