@@ -960,6 +960,100 @@ sub directory_size_recursive {
     return $size;
 }  
 
+sub is_file_ok {
+    my ($self, $file) = @_;
+
+    my $ok_file = $file.".ok";
+
+    #if the file exists and is ok, return 1
+    if ($self->validate_file_for_reading($file)) {
+        if (-e $ok_file) {
+            return 1;
+        } else {
+            #if the file exists, but is not ok, erase the file, return
+            my $unlink_rv = unlink($file);
+            $self->status_message("File $file not ok.  Deleting.");
+            if ($unlink_rv ne 1) {
+               die $self->error_message("Can't unlink $file.  No ok file found.");
+            }
+            return;
+        }
+    } else {
+        #if the file doesn't exist, but the ok file does, unlink the ok file.
+        if (-e $ok_file) {
+        	$self->status_message("File $ok_file exists but does not have an original file.  Deleting.");
+            my $unlink_rv = unlink($ok_file);
+            if ($unlink_rv ne 1) {
+               die $self->error_message("Can't unlink $ok_file.  No original file found.");
+            }
+            return;
+        }
+    }
+
+    return;
+
+}
+
+sub mark_file_ok {
+    my ($self, $file) = @_;
+    
+    my $ok_file = $file.".ok";
+
+    if (-f $file ) {
+        my $touch_rv = $self->shellcmd(cmd=>"touch $ok_file");
+        if ($touch_rv ne 1) {
+            die $self->error_message("Can't touch ok file $ok_file.");
+        } else {
+            return 1;
+        }
+    } else {
+    	$self->status_message("Not touching.  Cannot validate file for reading: ".$file);
+    }
+    return;
+}
+
+sub mark_files_ok {
+	my ($self,%params) = @_;	
+	my $input_files = delete $params{input_files};
+	for my $input_file (@$input_files) {
+		$self->status_message("Marking file: ".$input_file);
+		$self->mark_file_ok($input_file);
+	}
+	return 1;
+}
+
+
+sub are_files_ok {
+
+	my ($self,%params) = @_;	
+	my $input_files = delete $params{input_files};
+	my $all_ok = 1;
+	for my $input_file (@$input_files) {
+		if (!$self->is_file_ok($input_file) ) {
+			$all_ok = 0;
+		} 
+	}
+	
+	if ($all_ok != 1) {
+    	#delete all the files and start over
+    	$self->status_message("Files are NOT OK.  Deleting files: ");
+    	$self->status_message(join("\n",@$input_files));
+    	for my $file (@$input_files) {
+    		unlink($file);
+    		unlink($file.".ok");
+    	}
+    	return;
+    } else {
+    	#shortcut this step, all the required files exist.
+    	$self->status_message("Expected output files already exist.");
+   	    return 1;
+    }
+	
+	return;
+}
+
+
+
 1;
 
 =pod

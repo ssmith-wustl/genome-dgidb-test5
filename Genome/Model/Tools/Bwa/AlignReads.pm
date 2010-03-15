@@ -104,6 +104,24 @@ class Genome::Model::Tools::Bwa::AlignReads {
             is          => 'String',
             is_optional => 1,
         },
+        picard_conversion => {
+            doc => 'Flag specifying whether to use the samtools conversion tools or picard conversion tools from sam to bam.  Default is samtools. ',
+            is          => 'Integer',
+            is_optional => 1,
+            default_value => 0,
+        },
+        sam_only => {
+            doc => 'Flag to leave the sam files in tact.',
+            is          => 'Integer',
+            is_optional => 1,
+            default_value => 0,
+        },
+        read_group_tag => {
+            doc => 'Flag to leave the sam files in tact.',
+            is  => 'String',
+            is_optional => 1,
+        },
+
         #####################################################
         #private variables
         _files_to_align_list => {
@@ -258,6 +276,7 @@ sub _check_output_files_and_log_files_for_success {
 sub execute {
 
     my $self = shift;
+    $self->dump_status_messages(1);
 
     $self->status_message("\n");
     $self->status_message('Running AlignReads with parameters');
@@ -279,6 +298,7 @@ sub execute {
       if defined( $self->aligner_output_file );
     $self->status_message('');
     $self->status_message('Other Parameters:');
+    $self->status_message('Sam only flag:'. $self->sam_only );
     $self->status_message( 'Align options:' . $self->align_options )
       if defined( $self->align_options );
     $self->status_message( 'Upper bound value:' . $self->upper_bound )
@@ -397,7 +417,7 @@ sub execute {
         }
 
 	$self->status_message("Running samXe to get the output alignments");
-
+	$self->status_message("Command: $sam_command_line");
        #BWA is not nice enough to give us an unaligned output file so we need to
        #filter it out on our own
 
@@ -419,8 +439,11 @@ sub execute {
             if ( $line[2] eq "*" ) {
                 $unaligned_output_fh->print($_);
             }
-            else {
-                $sam_map_output_fh->print($_);
+            else {#write out the aligned map, excluding the default header- all lines starting with @.
+                my $first_char = substr($line[0],0,1);
+	        if ($first_char ne "@") {
+                    $sam_map_output_fh->print($_);
+                }
             }
         }
 
@@ -438,26 +461,76 @@ sub execute {
         #### STEP 3: Convert the SAM format output from samse/sampe (a text file) into the binary
         #### BAM file format.  This requires "samtools import"
 
-        my $samtools_import_command_line = sprintf(
-            "samtools import %s %s %s 2>>%s",
-            $self->_ref_seq_index_file, $sam_map_output_fh->filename,
-            $self->alignment_file,      $self->aligner_output_file
-        );
+        #picard merge command
+        #java -Xmx8g -XX:MaxPermSize=256m -cp /gsc/scripts/lib/java/samtools/picard-tools-1.07/SamFormatConverter.jar net.sf.picard.sam.SamFormatConverter I=Q6OBHLc6AP.sam O=out2.bam VALIDATION_STRINGENCY=SILENT
 
-        Genome::Utility::FileSystem->shellcmd(
-            cmd         => $samtools_import_command_line,
-            input_files => [ $self->_ref_seq_index_file, $sam_map_output_fh->filename ],
-            output_files              => [ $self->alignment_file ],
-            skip_if_output_is_present => 1,
-        );
+        if ($self->sam_only) {
 
-	unless (-e $self->alignment_file && -s $self->alignment_file) {
-		$self->error_message("Alignment output " . $self->alignment_file . " not found or zero length.  Something went wrong");
-		return;
-	}
+            my $from_file = $sam_map_output_fh->filename;
+
+            if (defined($self->read_group_tag) ) {
+                $self->status_message(">>>Adding readgroup tag.");
+                my $tagged_sam_file = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".sam" );
+                my $cmd_tag = Genome::Model::Tools::Sam::AddReadGroupTag->create(input_file => $sam_map_output_fh->filename, output_file=>$tagged_sam_file->filename, read_group_tag=>$self->read_group_tag);
+                unless ($cmd_tag->execute) {
+                    $self->error_message("Error adding read group tag.");
+                } 
+                $self->status_message("<<<Done adding readgroup tag.");
+                $from_file = $tagged_sam_file;
+            }
+ 
+            $self->status_message("Leaving alignment file in sam format. Moving from temp file to final file.");
+            my $cmd_move = "mv ".$from_file." ".$self->alignment_file;
+            my $rv_move = Genome::Utility::FileSystem->shellcmd( cmd => $cmd_move ); 
+            unless ($rv_move) {
+            $self->status_error("Failed to execute $cmd_move");
+            return;  
+            } 
+        } else {
+
+            $self->status_message("Converting from Sam to Bam.");
+            my $samtools_import_command_line;
+            my @conversion_input_files;
+
+            if ($self->picard_conversion eq 1) {
+                $samtools_import_command_line = sprintf(
+                    "java -Xmx8g -XX:MaxPermSize=256m -cp /gsc/scripts/lib/java/samtools/picard-tools-1.07/SamFormatConverter.jar net.sf.picard.sam.SamFormatConverter I=%s O=%s VALIDATION_STRINGENCY=SILENT 2>>%s",
+                     $sam_map_output_fh->filename, $self->alignment_file, $self->aligner_output_file
+                );
+                push(@conversion_input_files,$sam_map_output_fh->filename);
+            } else  {
+                $samtools_import_command_line = sprintf(
+                    "samtools import %s %s %s 2>>%s",
+                    $self->_ref_seq_index_file, $sam_map_output_fh->filename,
+                   $self->alignment_file,      $self->aligner_output_file
+                );
+                push(@conversion_input_files,$sam_map_output_fh->filename);
+                push(@conversion_input_files,$self->_ref_seq_index_file);
+            }
+
+            $self->status_message( "Merging with cmd: " . $samtools_import_command_line );
+            
+            Genome::Utility::FileSystem->shellcmd(
+                cmd         => $samtools_import_command_line,
+                #input_files => [ $self->_ref_seq_index_file, $sam_map_output_fh->filename ],
+                input_files => \@conversion_input_files,
+                output_files              => [ $self->alignment_file ],
+                skip_if_output_is_present => 1,
+            );
+
+            unless (-e $self->alignment_file && -s $self->alignment_file) {
+                    $self->error_message("Alignment output " . $self->alignment_file . " not found or zero length.  Something went wrong");
+                    return;
+            }
+
+        }
+
     }
 
-    print "Align Reads completed with " . $self->unaligned_reads_file . "\n";
+    $self->status_message("Align Reads completed.");
+    $self->status_message("Unaligned reads: ".$self->unaligned_reads_file );
+    $self->status_message("Aligned reads: ".$self->alignment_file );
+    
     return 1;
 
 }
