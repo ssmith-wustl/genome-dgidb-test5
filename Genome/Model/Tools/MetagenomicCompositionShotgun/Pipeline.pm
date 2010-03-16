@@ -116,7 +116,7 @@ __DATA__
 
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="AlignTopHit" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="reads_and_references"	        toOperation="AlignTopHit" toProperty="reads_and_references" />
-  <link fromOperation="input connector" fromProperty="bwa_edit_distance"	            toOperation="AlignTopHit" toProperty="bwa_edit_length" />
+  <link fromOperation="input connector" fromProperty="bwa_edit_distance"	            toOperation="AlignTopHit" toProperty="bwa_edit_distance" />
   <link fromOperation="AlignTopHit"     fromProperty="aligned_file"                 toOperation="MergeAlignments" toProperty="alignment_files" />
   <link fromOperation="AlignTopHit"     fromProperty="unaligned_file"               toOperation="MergeAlignments" toProperty="unaligned_files" />
   <link fromOperation="AlignTopHit"     fromProperty="working_directory"            toOperation="MergeAlignments" toProperty="working_directory" />
