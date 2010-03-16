@@ -105,6 +105,8 @@ sub post_execute {
 	$self->status_message("Done.");
     return 1;
 }
+#<inputproperty>viral_taxonomy_file</inputproperty>
+#<link fromOperation="input connector" fromProperty="viral_taxonomy_file"          toOperation="FilterResults" toProperty="viral_taxonomy_file" /> 
 
 1;
 __DATA__
@@ -113,14 +115,15 @@ __DATA__
 <workflow name="HMP Metagenomic Pipeline">
 
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="AlignTopHit" toProperty="working_directory" /> 
-  <link fromOperation="input connector" fromProperty="reads_and_references"	    toOperation="AlignTopHit" toProperty="reads_and_references" />
+  <link fromOperation="input connector" fromProperty="reads_and_references"	        toOperation="AlignTopHit" toProperty="reads_and_references" />
+  <link fromOperation="input connector" fromProperty="bwa_edit_distance"	            toOperation="AlignTopHit" toProperty="bwa_edit_length" />
   <link fromOperation="AlignTopHit"     fromProperty="aligned_file"                 toOperation="MergeAlignments" toProperty="alignment_files" />
   <link fromOperation="AlignTopHit"     fromProperty="unaligned_file"               toOperation="MergeAlignments" toProperty="unaligned_files" />
   <link fromOperation="AlignTopHit"     fromProperty="working_directory"            toOperation="MergeAlignments" toProperty="working_directory" />
 
   <link fromOperation="MergeAlignments"	fromProperty="merged_aligned_file"          toOperation="FilterResults" toProperty="sam_input_file" />
    
-  <link fromOperation="input connector" fromProperty="sam_header"	            toOperation="FilterResults" toProperty="sam_header_file" />
+  <link fromOperation="input connector" fromProperty="sam_header"	                toOperation="FilterResults" toProperty="sam_header_file" />
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="FilterResults" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="taxonomy_file"                toOperation="FilterResults" toProperty="taxonomy_file" /> 
   <link fromOperation="FilterResults"   fromProperty="bam_combined_output_file"     toOperation="RefCov" toProperty="aligned_bam_file" /> 
@@ -160,6 +163,7 @@ __DATA__
     <inputproperty>reference_prefix</inputproperty>
     <inputproperty>reference_directory</inputproperty>
     <inputproperty>reads_and_references</inputproperty>
+    <inputproperty>bwa_edit_distance</inputproperty>
     <inputproperty>taxonomy_file</inputproperty>
     <inputproperty>regions_file</inputproperty>
     <inputproperty>sam_header</inputproperty>
