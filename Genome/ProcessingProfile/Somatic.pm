@@ -25,6 +25,14 @@ class Genome::ProcessingProfile::Somatic{
         skip_sv => {
             doc => "If set to true, the pipeline will skip structural variation detection",
         },
+        sv_detector_version => {
+            doc => "Version of the SV detector to use.  If blank, use the default specified in the Genome::Model::Tools::BreakDancer module",
+            is_optional => 1,
+        },
+        sv_detector_params => {
+            doc => "Parameters to pass to the SV detector.  For breakdancer, separate params for bam2cfg & BreakDancerMax with a colon",
+            is_optional => 1,
+        },
         require_dbsnp_allele_match => {
             doc => "If set to true, the pipeline will require the allele to match during Lookup Variants"  
         },

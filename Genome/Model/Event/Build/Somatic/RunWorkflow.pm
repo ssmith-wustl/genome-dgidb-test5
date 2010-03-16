@@ -68,6 +68,7 @@ sub execute {
     my $min_somatic_quality = $processing_profile->min_somatic_quality;
     
     my $require_dbsnp_allele_match = $processing_profile->require_dbsnp_allele_match;
+
     unless(defined $require_dbsnp_allele_match) {
         $require_dbsnp_allele_match = 1;
     }
@@ -126,6 +127,9 @@ sub execute {
         return;
     }
 
+    my ($bam2cfg_params, $breakdancer_params) = split(":", $processing_profile->sv_detector_params);
+    my $breakdancer_version = $processing_profile->sv_detector_version;
+    
     my $workflow = Genome::Model::Tools::Somatic::Compare::Bams->create(
         normal_bam_file => $normal_bam,
         tumor_bam_file => $tumor_bam,
@@ -138,6 +142,9 @@ sub execute {
         min_somatic_quality => $min_somatic_quality,
         require_dbsnp_allele_match => $require_dbsnp_allele_match,
         build_id => $build->id,
+        bam2cfg_params => $bam2cfg_params,
+        breakdancer_params => $breakdancer_params,
+        breakdancer_version => $breakdancer_version,
     );
 
     Genome::DataSource::GMSchema->disconnect_default_dbh;

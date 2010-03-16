@@ -76,6 +76,15 @@ sub pre_execute {
     unless (defined $self->skip_sv) {
         $self->skip_sv(0);
     }
+    unless (defined $self->breakdancer_params) {
+        $self->breakdancer_params("");
+    }
+    unless (defined $self->bam2cfg_params) {
+        $self->bam2cfg_params("");
+    }
+    unless (defined $self->breakdancer_version) {
+        $self->breakdancer_version("");
+    }
 
     # The output files of indel pe step should go into the workflow directory
     unless (defined $self->normal_indelpe_data_directory) {
@@ -171,6 +180,9 @@ __DATA__
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Somatic Sniper" toProperty="reference_file" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Breakdancer" toProperty="skip_if_output_present" />
+  <link fromOperation="input connector" fromProperty="breakdancer_params" toOperation="Breakdancer" toProperty="breakdancer_params" />
+  <link fromOperation="input connector" fromProperty="bam2cfg_params" toOperation="Breakdancer" toProperty="bam2cfg_params" />
+  <link fromOperation="input connector" fromProperty="breakdancer_version" toOperation="Breakdancer" toProperty="use_version" />
   <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Breakdancer" toProperty="normal_bam_file" />
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Breakdancer" toProperty="tumor_bam_file" />
   <link fromOperation="input connector" fromProperty="breakdancer_output_file" toOperation="Breakdancer" toProperty="breakdancer_output" />
@@ -468,6 +480,9 @@ __DATA__
     <inputproperty isOptional="Y">normal_snp_file</inputproperty>
     <inputproperty isOptional="Y">reference_fasta</inputproperty>
     <inputproperty isOptional="Y">imported_bams</inputproperty>
+    <inputproperty isOptional="Y">breakdancer_params</inputproperty>
+    <inputproperty isOptional="Y">bam2cfg_params</inputproperty>
+    <inputproperty isOptional="Y">breakdancer_version</inputproperty>
 
     <inputproperty isOptional="Y">only_tier_1</inputproperty>
     <inputproperty isOptional="Y">skip_sv</inputproperty>

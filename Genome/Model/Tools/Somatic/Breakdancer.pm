@@ -8,7 +8,7 @@ use Genome;
 # TODO 
 # Make this more generic, make it subclass like alignments/aligner rather than always run breakdancer
 
-my $DEFAULT_VERSION = '0.0.1r59';
+my $DEFAULT_VERSION = '2010_02_17';
 my $CONFIG_COMMAND = 'bam2cfg.pl';
 my $BREAKDANCER_COMMAND = 'BreakDancerMax.pl';
 
@@ -18,6 +18,7 @@ class Genome::Model::Tools::Somatic::Breakdancer{
         use_version => {
             is => 'Version',
             is_optional => 1,
+            is_input => 1,
             default_value => $DEFAULT_VERSION,
             doc => "Version of breakdancer to use, default is $DEFAULT_VERSION"
         },
@@ -43,6 +44,20 @@ class Genome::Model::Tools::Somatic::Breakdancer{
             is_output => 1,
             doc => "Store breakdancer output in the specified file"
         },
+        breakdancer_params => {
+            is => 'Text',
+            is_input => 1,
+            is_optional => 1,
+            default_value => "",
+            doc => "Parameters to pass to breakdancer, default to none",
+        },
+        bam2cfg_params => {
+            is => 'Text',
+            is_input => 1,
+            is_optional => 1,
+            default_value => "",
+            doc => "Parameters to pass to bam2cfg, default to none",
+        },
         skip => {
             is => 'Boolean',
             default => '0',
@@ -60,8 +75,26 @@ class Genome::Model::Tools::Somatic::Breakdancer{
     ],
 };
 
+
+# HACK HACK HACK HACK WARNING THIS IS A HORRIBLE HACK 
+# workflow passes in an empty string for use version if the value is undef
+# but empty string can't resolve to a version, so stuff the default one in 
+# while creating.
+################################################
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+   
+    if ($self->use_version eq "") {
+        $self->use_version($DEFAULT_VERSION);
+    }
+
+    return $self; }
+
 my %BREAKDANCER_VERSIONS = (
 	'0.0.1r59' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-0.0.1r59',
+	'2010_02_17' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_02_17',
+	'2010_03_02' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_03_02',
 );
 
 sub help_brief {
@@ -106,7 +139,9 @@ sub run_config {
     my $self = shift;
 
     my $config_path = $self->breakdancer_path . "/$CONFIG_COMMAND";
-    my $return = system("$config_path " . $self->tumor_bam_file . " " . $self->normal_bam_file ." > "  . $self->config_output);
+    my $cmd = "$config_path " . $self->tumor_bam_file . " " . $self->normal_bam_file . " " . $self->bam2cfg_params . " > "  . $self->config_output;
+    $self->status_message("EXECUTING CONFIG STEP: $cmd");
+    my $return = system($cmd);
 
     unless ($return == 0) {
         $self->error_message("$CONFIG_COMMAND returned a nonzero code of $return");
@@ -117,6 +152,7 @@ sub run_config {
         $self->error_message("$CONFIG_COMMAND output " . $self->config_output . " does not exist or has zero size");
         die;
     }
+
     
     return 1;
 }
@@ -125,7 +161,9 @@ sub run_breakdancer {
     my $self = shift;
 
     my $breakdancer_path = $self->breakdancer_path . "/$BREAKDANCER_COMMAND";
-    my $return = system("$breakdancer_path " . $self->config_output ." > "  . $self->breakdancer_output);
+    my $cmd = "$breakdancer_path " . $self->config_output . " " . $self->breakdancer_params . " > "  . $self->breakdancer_output;
+    $self->status_message("EXECUTING BREAKDANCER STEP: $cmd");
+    my $return = system($cmd);
 
     unless ($return == 0) {
         $self->error_message("$BREAKDANCER_COMMAND returned a nonzero code of $return");
