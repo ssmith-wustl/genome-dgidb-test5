@@ -60,12 +60,20 @@ sub base_temp_directory {
         my $prefix = $self->_temp_directory_prefix();
         $prefix ||= $class;
         my $time = UR::Time->now;
+
         $time =~ s/\s\: /_/g;
-        $template = "/tmp/gm-$prefix-$time-$id-XXXX";
+        $template = "/gm-$prefix-$time-$id-XXXX";
         $template =~ s/ /-/g;
     }
 
-    my $dir = File::Temp::tempdir($template, CLEANUP => 1);
+    # See if we're running under LSF and LSF gave us a directory that will be
+    # auto-cleaned up when the job terminates
+    my $tmp_location = $ENV{'TMPDIR'};
+    if ($ENV{'LSB_JOBID'}) {
+        my $lsf_possible_tempdir = sprintf("%s/%s.tmpdir", $ENV{'TMPDIR'}, $ENV{'LSB_JOBID'});
+        $tmp_location = $lsf_possible_tempdir if (-d $lsf_possible_tempdir);
+    }
+    my $dir = File::Temp::tempdir($template, DIR=>$tmp_location, CLEANUP => 1);
     $self->create_directory($dir);
 
     if (ref($self)) {
