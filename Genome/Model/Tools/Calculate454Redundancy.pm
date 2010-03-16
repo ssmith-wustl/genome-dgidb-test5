@@ -11,6 +11,7 @@ use File::Basename;
 use PP::LSF;
 use Data::Dumper;
 use Bio::SeqIO;
+use Sys::Hostname;
 require File::Copy;
 
 
@@ -68,6 +69,13 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    my $host = hostname();
+
+    unless ($host =~ /blade/) {
+	$self->error_message("You must run this program from a 64 bit blade platform");
+	return;
+    }
 
     #RUN NEWBLER PARTIALLY TO TRIM REMOVE LINKER FROM SFF FILE
     $self->status_message("Running newbler to create 454Trim file");
@@ -132,7 +140,6 @@ sub _resolve_cross_match_dir_name {
     my $cm_dir = $dir.'/CROSS_MATCH_'.$screen_length.'_BASES';
     return $cm_dir;
 }
-
 
 sub _get_cross_match_report_files {
     my $self = shift;
@@ -384,8 +391,6 @@ sub _filter_trim_file_for_read_positions {
 	my ($sff_root_name) = $sff_file_name =~ /^(\S+)\.sff/;
 	#HASH TO KEEP TRACK OF READS WE WANT AND READ LENGTHS WHICH IS
 	#NEEDED LATER
-#	my $read_lengths = {};
-
 	my $fh = IO::File->new("< $trim_file") ||
 	    die "Can not create file handle for 454TrimStatus file\n";
 	while (my $line = $fh->getline) {
@@ -402,6 +407,9 @@ sub _filter_trim_file_for_read_positions {
 	    #LATER LOOK UP
 	    $read_name =~ s/_left$//;
 	    $read_lengths->{$read_name} = $read_length;
+	    #KEEPING TAB OF NUMBER OF READS FOR EACH SFF FILE
+	    $read_counts->{$sff_root_name}++;
+	    $read_counts->{combined}++;
 	}
 	$fh->close;
 	#FIGURE OUT THE NAME OF SFF FASTA FILE
@@ -414,8 +422,6 @@ sub _filter_trim_file_for_read_positions {
 	#AND GET APPROPRIATE SUBSTRING OF THE SEQUENCE TO RUN CROSS-MATCH
 	my $io = Bio::SeqIO->new(-file => $sff_fa_file, -format => 'fasta');
 	while (my $seq = $io->next_seq) {
-	    $read_counts->{$sff_root_name}++;
-	    $read_counts->{combined}++;
 	    next unless exists $read_lengths->{$seq->primary_id};
 	    my $read_name = $seq->primary_id.'_left';
 	    my $read_length = $read_lengths->{$seq->primary_id};
@@ -423,6 +429,7 @@ sub _filter_trim_file_for_read_positions {
 	    my $sub_seq = substr($seq->seq, 0, $screen_length);
 	    $filtered_seq_fh->print(">$read_name $read_length\n$sub_seq\n");
 	}
+	unlink $sff_fa_file;
     }
     $filtered_seq_fh->close;
     
