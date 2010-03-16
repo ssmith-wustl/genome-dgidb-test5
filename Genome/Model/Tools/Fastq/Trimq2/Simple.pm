@@ -1,18 +1,22 @@
 package Genome::Model::Tools::Fastq::Trimq2::Simple;
 
+#The later version of Illumina/Solexa sequnecer (GA pipeline 1.2 or
+#later) uses phredquality2 (Q2) string to indicate untrutstable seq 
+#position.
+
 #This module will keep trimmed pair_end as "it is", not mess up with
 #pair and pair_as_fragment. This module will trim fastq with two ways:
 #1. Hard trim: trim all bases from the first phred qual 2 base to 3'end
-#2. Bwa trim: trim using BWA style like what is used in 'bwa aln -q '.
+#2. Smart1 trim: trim using BWA style like what is used in 'bwa aln -q '.
 #
-#Hard style will leave trimmed seq as "it is", while Bwa style will
+#Hard style will leave trimmed seq as "it is", while Smart1 style will
 #probably trim off some non-phredqual2 seqs.
 #
 #For now both trim is only applied to sequences containing phred
-#quality 2 string. Bwa trim style can be used for all sequences.
+#quality 2 string. Smart1 trim style can be used for all sequences.
 
-#For bwa trim style, bwa_trim_qual_level 10 is reasonable, while 20
-#overtrims a lot. bwa trim with 10 is also tolerable to single Q2 base
+#For smart1 trim style, trim_qual_level 10 is reasonable, while 20
+#overtrims a lot. smart1 trim with 10 is also tolerable to single Q2 base
 #in the middle, and usually "shrink" the short trimmed seqs into 1
 #base/qual as "N/#" to avoid too short seqs passed into aligner
 
@@ -36,13 +40,13 @@ class Genome::Model::Tools::Fastq::Trimq2::Simple {
         },
         trim_style => {
             is  => 'Text',
-            doc => 'Trim style to use: hard or soft, the choices are [hard], bwa',
+            doc => 'Trim style to use: hard or smart1, the choices are [hard], smart1',
             default => 'hard',
             is_optional => 1,
         },
-        bwa_trim_qual_level => {
+        trim_qual_level => {
             is  => 'Integer',
-            doc => 'quality level of bwa trim style, default is 10',
+            doc => 'quality level of smart1/bwa trim style, default is 10',
             default => 10,
             is_optional => 1,
         },
@@ -133,11 +137,11 @@ sub execute {
                 $trim_qual ||= $qual_str;
                 
             }
-            elsif ($trim_style =~ /^bwa$/i) {#This style look for continuous low qual on 3' end
+            elsif ($trim_style =~ /^smart1$/i) {#This style look for continuous low qual on 3' end
                 my ($pos, $maxPos, $area, $maxArea) = ($seq_length, $seq_length, 0, 0);
 
                 while ($pos > 0 and $area >= 0) {#If last base qual is high, loop will be ended even though it could contain Q2 base in the middle. In this case, nothing trimmed.
-		            $area += $self->bwa_trim_qual_level - (ord(substr($qual, $pos-1, 1)) - 33);
+		            $area += $self->trim_qual_level - (ord(substr($qual, $pos-1, 1)) - 33);
 		            if ($area > $maxArea) {
 			            $maxArea = $area;
 			            $maxPos = $pos;
@@ -148,7 +152,7 @@ sub execute {
                     ($trim_seq, $trim_qual) = ('N', $qual_str);# scanned whole read and didn't integrate to zero?  replace with "empty" read ...
                 }
 	            else {  # integrated to zero?  trim before position where area reached a maximum (~where string of qualities were still below 20 ...)
-                    $maxPos-- if $qual =~ /$qual_str$/;  #if last base is qual_str, need trim it. qual_str is observed left untrimmed when bwa_trim_qual_level is 10
+                    $maxPos-- if $qual =~ /$qual_str$/;  #if last base is qual_str, need trim it. qual_str is observed left untrimmed when trim_qual_level is 10
 		            ($trim_seq, $trim_qual) = (substr($seq, 0, $maxPos),  substr($qual, 0, $maxPos));
 		        }
                 $trimmed_length = $seq_length - $maxPos;

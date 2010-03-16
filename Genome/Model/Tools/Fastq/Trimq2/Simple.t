@@ -41,12 +41,12 @@ compare_output('hard');
 $trimq2 = Genome::Model::Tools::Fastq::Trimq2::Simple->create(
     fastq_file  => $fastq_file,
     output_dir  => $tmp_dir,
-    trim_style  => 'bwa',
+    trim_style  => 'smart1',
     #trim_string => '#',  default is #
 );
 ok($trimq2->execute,'execute command '. $trimq2->command_name);
 
-compare_output('bwa');
+compare_output('smart1');
 
 sub compare_output {
     my $style = shift;
