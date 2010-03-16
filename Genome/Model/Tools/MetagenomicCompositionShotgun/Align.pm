@@ -35,11 +35,17 @@ class Genome::Model::Tools::MetagenomicCompositionShotgun::Align{
             is_optional => '1',
             doc => 'The resulting alignment.',
         },
+        bwa_edit_distance=> {
+            is => 'String',
+            is_input => 1,
+            doc => 'edit_distance param(-n) for bwa aligner (default value = .04)',
+        },
         lsf_resource => {
                 is_param => 1,
                 value => "-R 'select[mem>8000 && model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=8000]' -M 8000000",
                 #default_value => "-R 'select[mem>30000 && model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=30000]' -M 30000000",
         }
+
 	],
 };
 
@@ -93,6 +99,7 @@ sub execute {
  	#switch here on all whether or not to generate a concise alignment only
     my $subdirectory = "alignments_top_hit";
     my $alignment_options = " -t4 ";
+    $alignment_options .= "-n ".$self->bwa_edit_distance;
     my $alignment_file_name = "aligned.sam";
     my $top_hits = 1;
  	
