@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovCombine{
-    is => 'Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovCombine',
+    is => ['Command'],
     has =>[
         refcov_output_file => {
             is => 'Text',
