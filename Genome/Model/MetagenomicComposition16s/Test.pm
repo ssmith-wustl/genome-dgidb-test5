@@ -512,8 +512,6 @@ sub before_execute {
     my $self = shift;
 
     my $build = $self->_build;
-    #File::Copy::move($build->classification_file);
-    
     $build->amplicons_processed(0);
     is($build->amplicons_processed, 0, 'amplicons processed reset');
     $build->amplicons_processed_success(0);
@@ -535,10 +533,10 @@ sub after_execute {
     my $cnt = grep { -s $build->classification_file_for_amplicon($_) } @$amplicons;
     is($cnt, 4, 'Verified - Created classification for 4 of 5 amplicons');
 
-    #ok(-s $build->classification_file, 'build classification file');
-    
     is($build->amplicons_processed, 4, 'amplicons processed recorded');
     is($build->amplicons_classified, 4, 'amplicons classified recorded');
+    
+    ok(-s $build->classification_file, 'build classification file');
     
     #print $build->data_directory."\n";<STDIN>;
     
