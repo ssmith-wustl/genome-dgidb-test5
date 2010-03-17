@@ -177,6 +177,10 @@ sub percent_assembled {
 }
 
 #< Files >#
+sub fasta_dir {
+    return $_[0]->amplicon_assembly->fasta_dir;
+}
+
 sub oriented_fasta {
     return $_[0]->amplicon_assembly->fasta_file_for_type('oriented');
 }
