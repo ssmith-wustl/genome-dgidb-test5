@@ -54,7 +54,7 @@ class Genome::Model::Command::Report::SummaryOfBuilds {
         },
         show_additional => {
             is => 'Text',
-            doc => 'Show these properties for each build, in addition to the defaults: model id build id, build status ands date completed. Separate values by commas.',
+            doc => 'Show these properties for each build, in addition to the defaults: model name, model id, build id, build status ands date completed. Separate values by commas.',
         },
         # As
         #as => { is => 'Text', doc => 'Use these headers for the properties to be shown for each build. Separate values by commas.', },
@@ -125,6 +125,18 @@ sub execute {
 
     return $report;
 }
+
+sub _validate_opts {
+    my $self = shift;
+
+    # Can't show and show add'al
+    if ( $self->show and $self->show_additional ) {
+        $self->error_message("Indicated both show and show_additional. Please indicate only one of these options.");
+        return;
+    }
+
+    return 1;
+}
 #<>#
 
 #< Builds >#
@@ -186,7 +198,12 @@ sub _build_sql_query {
         $self->_description("subject name(s) (".$self->subject_names.")");
     }
     elsif ( my $type_name = $self->type_name ){ 
-        # TODO validate?
+           if ( $self->show and $self->show_additional ) {
+        $self->error_message("Indicated both show and show_additional. Please indicate only one of these options.");
+        return;
+    }
+
+ # TODO validate?
         $query_parts = $self->_get_query_parts_for_builds_by_type_name;
         $self->_description("type name ($type_name)");
     }
@@ -197,7 +214,8 @@ sub _build_sql_query {
 
     # select
     my $query = <<SQL;
-SELECT m.genome_model_id as model_id,
+SELECT m.name as model_name,
+       m.genome_model_id as model_id,
        b.build_id,
        e.event_status as build_status,
        to_char(e.date_completed, 'YYYY-MM-DD') as build_completed
@@ -226,7 +244,7 @@ SQL
         $query .=  "\nAND e.date_completed > sysdate - ".$self->days;
         $self->_description( $self->_description.'within the past '.$self->days.' days.');
     }
-    $query .= "\nORDER BY e.date_completed DESC";
+    $query .= "\nORDER BY m.name ASC";
 
     return $query;
 }
@@ -291,18 +309,18 @@ sub _validate_days {
 #<>#
 
 #< Properties to Show >#
+sub _properties_retrieved {
+    return (qw/ model_name model_id build_id build_status date_completed /);
+}
+
+sub _build_id_position_in_properties_retrieved {
+    return 2;
+}
+
 sub _resolve_properties_and_data_to_show {
     my ($self, $retrieved_rows) = @_;
 
-    if ( $self->show and $self->show_additional ) {
-        $self->error_message("Indicated both show and show_additional. Please indicate only one of these options.");
-        return;
-    }
-
-    my @default_properties = (qw/ 
-        model_id build_id build_status date_completed 
-        /);
-
+    my @default_properties = $self->_properties_retrieved;
     my (@row_properties, @build_properties);
     if ( $self->show ) { # show these
         for my $prop ( split(',', $self->show) ) {
@@ -324,6 +342,7 @@ sub _resolve_properties_and_data_to_show {
     }
     
     my @data;
+    my $build_id_pos = $self->_build_id_position_in_properties_retrieved;
     for my $retrieved_row ( @$retrieved_rows ) {
         my @data_for_row;
         # Row props
@@ -334,7 +353,7 @@ sub _resolve_properties_and_data_to_show {
         }
         # Build Props
         if ( @build_properties ) {
-            my $build_id = $retrieved_row->[1];
+            my $build_id = $retrieved_row->[$build_id_pos];
             my $build = Genome::Model::Build->get($build_id); 
             confess "Can't get build for id ($build_id)" unless $build; # should not happen!
             for my $prop ( @build_properties ) {
