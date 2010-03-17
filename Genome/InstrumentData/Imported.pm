@@ -202,14 +202,13 @@ sub resolve_adaptor_file {
 # okay for first test, before committing switch to getting the allocation and returning the path under it
 sub archive_path {
     my $self = shift;
-    #die "in archive path\n";    
-    #my $alloc = $self->disk_allocations;
+    my $alloc = $self->disk_allocations;
     $self->disk_allocations->absolute_path . "/archive.tgz";
-    #if($alloc){
-    #    die "found an alloc!\n";
-    #}
-    # print "alloc->absolute_path = $alloc->absolute_path\n";
-    #return  $alloc->absolute_path."/archive.tgz";
+    if($alloc){
+        die "found an alloc!\n";
+    }
+    $self->status_message("Genome::InstrumentData::Imported  alloc->absolute_path = " . $alloc->absolute_path . "\n");
+    return  $alloc->absolute_path."/archive.tgz";
 }
 
 1;
