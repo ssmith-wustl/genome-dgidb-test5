@@ -189,6 +189,19 @@ sub oriented_qual {
     return $_[0]->amplicon_assembly->qual_file_for_type('oriented');
 }
 
+#< These map to MC16s models tmp until all aa go to mgc >#
+sub amplicons_processed_success {
+    return percent_assembled(@_);
+}
+
+sub oriented_fasta_file {
+    return oriented_fasta(@_);
+}
+
+sub oriented_qual_file {
+    return oriented_qual(@_);
+}
+
 ############################################
 #< THIS IS OLD...DON'T WANNA (RE)MOVE YET >#
 sub amplicons_and_headers { 
