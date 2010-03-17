@@ -54,8 +54,20 @@ class Genome::Model::Command::Define {
             is => 'Text',
             len => 255,
             is_input => 1,
-            doc => 'The type of subject all the reads originate from',
+            doc => 'The type of subject all the reads originate from (sample_name is assumed if none given)',
             valid_values => \@subject_types
+        },
+        subject_id => {
+            is => 'Number',
+            len => 15,
+            is_input => 1,
+            doc => 'The ID of the subject all the reads originate from (may specify this and subject_class_name in lieu of subject_type)',  
+        },
+        subject_class_name => {
+            is => 'Text',
+            len => 500,
+            is_input => 1,
+            doc => 'The Perl class name of the subject whose ID is subject_id'  
         },
         auto_assign_inst_data => {
             is => 'Boolean',
@@ -134,18 +146,29 @@ sub execute {
 
     #attempt derive subject_type if not passed as an arg
     #die if subject type isnt sample_name for now
-    my $subject_type;
-    if  ($self->subject_type){
-        $subject_type = $self->subject_type;
+    my ($subject_type, $subject_id, $subject_class_name);
+    if ($self->subject_id and $self->subject_class_name) {
+        $subject_class_name = $self->subject_class_name;
+        $subject_id = $self->subject_id;
+        $subject_type = Genome::Model->_subject_type_for_class_name($subject_class_name);
+        
+        my $subject = $subject_class_name->get($subject_id);
+        
+        unless($subject) {
+            $self->error_message('Subject not found for subject with id ' . $subject_id . ' and class ' . $subject_class_name);
+            return;
         }
-    else {
+    } elsif ($self->subject_type){
+        $subject_type = $self->subject_type;
+    } else {
         my $sample = Genome::Sample->get(name => $self->subject_name);
         if ($sample){
             $subject_type = 'sample_name'; 
         }
         else {
-            $self->status_message('subject_name did not specify a sample, other subject types not yet supported.'); 
-            $self->status_message('specify a sample or contact apipe@genome.wustl.edu for creation of a custom model');
+            $self->status_message('subject_name did not specify a sample, other subject types not yet supported.');
+            $self->status_message('specify a sample or explicitly define the subject_id and subject_class_name'); 
+            $self->status_message('...or contact apipe@genome.wustl.edu for creation of a custom model');
         exit;
         }
     }
@@ -156,6 +179,8 @@ sub execute {
         processing_profile_id => $processing_profile_id,
         subject_name => $self->subject_name,
         subject_type => $subject_type,
+        subject_id => $subject_id,
+        subject_class_name => $subject_class_name,
         auto_assign_inst_data => $self->auto_assign_inst_data,
         auto_build_alignments => $self->auto_build_alignments,
     );

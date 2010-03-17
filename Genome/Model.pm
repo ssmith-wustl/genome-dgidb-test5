@@ -1,14 +1,7 @@
 
 # review jlolofie gsanders
-# 1. subject calculate can be cleaned up: 
-#    - need comments describing what subject means
-#    - why return instead of die?
-#    - multiple cases (genomic_dna, flow_cell_id, etc) seem the same as the else
-#    - genome_dna case same as else
 # 2. remove stuff that is not generic to models (goldsnp path... should be in model/ReferenceAlignment? )
 #
-# 3. sub comparable_normal_model... this is a hack left over from AML1 to match the tumor 98 and tumor 34 models to the skin model... lets get rid of this.
-#    (Sat, 30 Aug 2008) # TODO: a dba ticket is in place to make this a database-tracked item
 #    (need to think about / work on "star" models)
 # 4.  Genome::Config calls... 4 methods below with : TODO: remove these since they're not supposed to vary on a per-model basis.... 
 #    what needs to be done with these?
@@ -30,8 +23,6 @@ use Sort::Naturally;
 use YAML;
 use Archive::Tar;
 
-our %SUBJECT_TYPES;
-
 class Genome::Model {
     table_name => 'GENOME_MODEL',
     is_abstract => 1,
@@ -44,43 +35,19 @@ class Genome::Model {
         name                    => { is => 'Text', len => 255 },
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         subject_name            => { is => 'Text', len => 255 },
-        subject_type            => { is => 'Text', len => 255, 
+        subject_type            => { is => 'Text', len => 255,
             valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] 
         },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
         subject                 => { 
-            calculate_from => [ 'subject_name', 'subject_type' ],
+            calculate_from => [ 'subject_id', 'subject_class_name' ],
             calculate => q( 
-                if (not defined $subject_type) {
-                    # this should not happen
-                    return;
-                }
-                elsif ($subject_type eq 'dna_resource_item_name') {
-                    # wtf is this?
-                    return GSC::DNAResourceItem->get(dna_name => $subject_name);
-                }
-                elsif ($subject_type eq 'genomic_dna') {
-                    return Genome::Sample->get(extraction_label => $subject_name, extraction_type => 'genomic dna');
-                }
-                elsif ($subject_type eq 'sample_name') {
-                    return Genome::Sample->get(name => $subject_name);
-                }
-                elsif ($subject_type eq 'species_name') {
-                    return Genome::Taxon->get(species_name => $subject_name); 
-                }
-                elsif ($subject_type eq 'sample_group') {
-                    return;
-                    die "not sure how to handle sample type $subject_type";
-                }
-                elsif ($subject_type eq 'library_name') {
-                    return Genome::Library->get(name => $subject_name);
-                }
-                elsif ($subject_type eq 'flow_cell_id') {
-                    return GSC::Equipment::Solexa::Run->get(flow_cell_id => $subject_name);
-                }
-                else {
-                    die "unknown sample type $subject_type!";
+                if(defined $subject_id and defined $subject_class_name) {
+                    return $subject_class_name->get($subject_id);
+                } else {
+                    #Old way of figuring out subject:
+                    return $self->_resolve_subject
                 }
             )
         },
@@ -125,6 +92,7 @@ class Genome::Model {
             doc => 'testing flag' },
         _printable_property_names_ref    => { is => 'array_ref', is_transient => 1 },
         comparable_normal_model_id       => { is => 'Number', len => 10 },
+        comparable_normal_model          => { is => 'Genome::Model', id_by => 'comparable_normal_model_id' },
         sample_name                      => { is => 'Text', len => 255 },
         sequencing_platform              => { via => 'processing_profile' },
         last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
@@ -234,37 +202,10 @@ sub create {
         );
     }
 
-    # Verify subject_type
-    unless ( $self->subject_type ) {
-        $self->error_message("No subject type given.");
-        return;
-    }
-
-    unless ( grep { $self->subject_type eq $_ } subject_types() ) {
-        $self->error_message(
-            sprintf(
-                "Invalid subject type (%s), please select from:\n %s",
-                $self->subject_type,
-                join("\n ", subject_types()), 
-            )
-        );
+    # Verify subjects--fills in subject_* properties
+    unless ( $self->_verify_subject ) {
         $self->SUPER::delete;
         return;
-    }
-    
-    # Verify subjects
-    unless ( $self->_verify_subjects ) {
-        $self->SUPER::delete;
-        return;
-    }
-
-    # Fill in the other subject properties if possible
-    # TODO These properties should be used to get the subject rather than be derived from it.
-    # Once all data has been backfilled and these properties are required this can be removed.
-    my $subject = $self->subject;
-    if(defined $subject) {
-        $self->subject_class_name(ref($subject));
-        $self->subject_id($subject->id());
     }
 
     unless ($self->user_name) {
@@ -286,7 +227,7 @@ sub create {
     }
 
     my $processing_profile= $self->processing_profile;
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     unless ($processing_profile->_initialize_model($self)) {
         $self->error_message("The processing profile failed to initialize the new model:"
             . $processing_profile->error_message);
@@ -318,123 +259,123 @@ sub _validate_processing_profile_id {
     return 1;
 }
 
-BEGIN {  # This is ugly when its above the class definition, but I need it to happen first.
-#< Subjects >#
-    %SUBJECT_TYPES = (
-        species_name => {
-            needs_to_be_verified => 1,
-            class => 'Genome::Taxon',
-            property => 'species_name',
-        },
-        sample_name => {
-            needs_to_be_verified => 1,
-            class => 'Genome::Sample',
-            property => 'name',
-        },
-        library_name => {
-            needs_to_be_verified => 1,
-            class => 'Genome::InstrumentData',
-            property => 'library_name',
-        },
-        genomic_dna => {
-            needs_to_be_verified => 1,
-            class => 'Genome::Sample::Genomic',
-            property => 'name',
-        },
-        sample_group => {
-            needs_to_be_verified => 0,
-            #class => 'Genome::Sample',
-            #property => 'name',
-        },
-        dna_resource_item_name => {
-            needs_to_be_verified => 0,
-            #class => 'Genome::Sample',
-            #property => 'name',
-        },
-        flow_cell_id => {
-            needs_to_be_verified => 1,
-            class => 'Genome::InstrumentData::Solexa',
-            property => 'flow_cell_id',
-        },
-    );
-};
-
-sub subject_types {
-    return keys %SUBJECT_TYPES;
-}
-
-sub subject_type_class {
-    return $SUBJECT_TYPES{ $_[0]->subject_type }->{class};
-}
-
-sub subject_type_property {
-    return $SUBJECT_TYPES{ $_[0]->subject_type }->{property};
-}
-
-sub need_to_verify_subjects_for_type {
-    return $SUBJECT_TYPES{ $_[0]->subject_type }->{needs_to_be_verified};
-}
-
-sub get_subjects {
+#This is the old way of determining subject based on type and name
+#Typically this is only needed in the constructor to find the id and class_name to populate those columns
+sub _resolve_subject {
     my $self = shift;
-
-    my $subject_class = $self->subject_type_class;
-    my $subject_property = $self->subject_type_property;
-
-    return $subject_class->get(
-        $subject_property => $self->subject_name,
-    );
+    my $subject_type = $self->subject_type;
+    my $subject_name = $self->subject_name;
+    
+    if (not defined $subject_type or not defined $subject_name) {
+        # this should not happen
+        return;
+    }
+    elsif ($subject_type eq 'dna_resource_item_name') {
+        # wtf is this?
+        return GSC::DNAResourceItem->get(dna_name => $subject_name);
+    }
+    elsif ($subject_type eq 'genomic_dna') {
+        return Genome::Sample->get(extraction_label => $subject_name, extraction_type => 'genomic dna');
+    }
+    elsif ($subject_type eq 'sample_name') {
+        return Genome::Sample->get(name => $subject_name);
+    }
+    elsif ($subject_type eq 'species_name') {
+        return Genome::Taxon->get(species_name => $subject_name); 
+    }
+    elsif ($subject_type eq 'sample_group') {
+        return;
+        die "not sure how to handle sample type $subject_type";
+    }
+    elsif ($subject_type eq 'library_name') {
+        return Genome::Library->get(name => $subject_name);
+    }
+    elsif ($subject_type eq 'flow_cell_id') {
+        return GSC::Equipment::Solexa::Run->get(flow_cell_id => $subject_name);
+    }
+    else {
+        die "unknown sample type $subject_type!";
+    }
 }
 
-
-sub _verify_subjects {
+#Eventually this can replace the subject_type property completely.
+sub _subject_type_for_class_name {
     my $self = shift;
+    my $subject_class_name = shift || $self->subject_class_name;
+    
+    return unless $subject_class_name;
+    
+    my %types = (
+        'Genome::Sample' => 'sample_name',
+        'GSC::DNAResourceItem' => 'dna_resource_item_name',
+        'GSC::Equipment::Solexa::Run' => 'flow_cell_id',
+        'Genome::ModelGroup' => 'sample_group',
+        'Genome::PopulationGroup' => 'sample_group',
+        'Genome::Individual' => 'sample_group',
+        'Genome::Taxon' => 'species_name',
+        'Genome::Library' => 'library_name',
+        'Genome::Sample::Genomic' => 'genomic_dna',  
+    );
+    
+    return $types{$subject_class_name};
+}
 
-    unless ( $self->subject_name ) {
-        $self->error_message("No subject name for model id: ".$self->id);
+#Eventually this can replace the subject_name property completely.
+sub _subject_name_for_subject {
+    my $self = shift;
+    my $subject = shift || $self->subject;
+    
+    if($subject->class eq 'GSC::Equipment::Solexa::Run') {
+        return $subject->flow_cell_id;
+    } else {
+        return $subject->name;
+    }
+}
+
+sub _verify_subject {
+    my $self = shift;
+    
+    my $subject = $self->subject;
+    
+    unless($subject) {
+        my $null = '<NULL>';
+        $self->error_message('Could not verify subject given ' . join(', ',
+            'subject_id: ' . ($self->subject_id || $null),
+            'subject_class_name: ' . ($self->subject_class_name || $null),
+            'subject_type: ' . ($self->subject_type || $null),
+            'subject_name: ' . ($self->subject_name || $null),
+        ));
         return;
     }
     
-    return 1 unless $self->need_to_verify_subjects_for_type;
-
-    my @subjects = $self->get_subjects;
-    unless ( @subjects ) {
-        $self->error_message('No subject found for subject name: '.$self->subject_name);
-        return;
-        my $subject_class = $self->subject_type_class;
-        my $subject_property = $self->subject_type_property;
-        $self->error_message( 
-            sprintf(
-                "No subjects with %s (%s) found.\nPossible subjects for type (%s) include:\n %s\nPlease select from the above", 
-                $subject_property,
-                $self->subject_name,
-                $self->subject_type,
-                join("\n ", sort map { $_->$subject_property } $subject_class->get()),
-            ) 
-        );
-        return;
+    #Fill out the rest of the attributes based on what was used to create the subject
+    if($self->subject_id and $self->subject_class_name) {
+        $self->subject_type($self->_subject_type_for_class_name); #Backfill old way for now.
+        $self->subject_name($self->_subject_name_for_subject); 
+    } else {
+        $self->subject_id($subject->id);
+        $self->subject_class_name($subject->class);        
     }
-
-    return @subjects;
+    
+    return $subject;
 }
 
-sub get_all_possible_sample_names { # 
+sub get_all_possible_sample_names {
     my $self = shift;
 
     my @sample_names;
-    if ( $self->subject_type eq 'species_name' ) {
+    if ( $self->subject_class_name eq 'Genome::Taxon' ) {
         my $taxon = Genome::Taxon->get(species_name => $self->subject_name);
         @sample_names = map { $_->name } $taxon->samples;
-    } elsif (
-        $self->subject_type eq 'flow_cell_id' ||
-            $self->subject_type eq 'library_name'
-        ) {
-        return;
+    } elsif ($self->subject_class_name eq 'Genome::Sample'){
+        @sample_names = ( $self->subject->name );
+    #} elsif () {
+        #TODO Possibly fill in for Genome::Individual, Genome::PopulationGroup and possibly others
     } else {
-        @sample_names = ( $self->subject_name );
+        @sample_names = ();
     }
 
-    return @sample_names
+    return @sample_names;
 }
 
 #< Instrument Data >#
@@ -443,26 +384,7 @@ sub compatible_instrument_data {
     my %params;
 
     my $subject_type_class;
-    #TODO: This is a hack for 454 variant detection
-    if ($self->subject_type eq 'genomic_dna' &&
-        $self->sequencing_platform eq '454' &&
-        $self->type_name eq 'reference alignment') {
-        my $dna = GSC::DNA->get(dna_name => $self->subject_name);
-        if ($dna) {
-            my @rr454 = GSC::RunRegion454->search_runs_for_sample($dna);
-            my @seq_ids;
-            for my $rr454 ( @rr454 ) {
-                my @genomic_dna = $rr454->get_dna_from_library('genomic dna');
-                unless (scalar(@genomic_dna) == 1 && $genomic_dna[0]->dna_name eq $self->subject_name) {
-                    next;
-                }
-                push @seq_ids, $rr454->region_id;
-            }
-            if (scalar(@seq_ids)) {
-                %params = (id => \@seq_ids);
-            }
-        }
-    } elsif ($self->get_all_possible_sample_names)  {
+    if ($self->get_all_possible_sample_names)  {
         %params = (
                    sample_name => [ $self->get_all_possible_sample_names ],
                );
@@ -471,12 +393,19 @@ sub compatible_instrument_data {
         %params = (
                    $self->subject_type => $self->subject_name,
                );
-        $subject_type_class = $self->subject_type_class;
+        $subject_type_class = $self->instrument_data_class_name;
     }
     unless ($subject_type_class) {
         $subject_type_class = 'Genome::InstrumentData';
     }
-    return $subject_type_class->get(%params);
+    my @compatible_instrument_data = $subject_type_class->get(%params);
+    
+    if($params{sequencing_platform} and $params{sequencing_platform} eq 'solexa') {
+        #FASTQs with 0 reads crash in alignment.  Don't assign them.
+        @compatible_instrument_data = grep($_->total_bases_read, @compatible_instrument_data);
+    }
+    
+    return @compatible_instrument_data;
 }
 
 sub available_instrument_data { return unassigned_instrument_data(@_); }
@@ -492,20 +421,6 @@ sub unassigned_instrument_data {
 }
 
 #<>#
-sub comparable_normal_model {
-    # TODO: a dba ticket is in place to make this a database-tracked item
-    my $self = shift;
-    my $name = $self->model->name;
-    return unless $name =~ /tumor/;
-    unless ($name =~ s/tumor98/tumor34/) {
-       unless ($name =~ s/tumor/skin/) {
-            die "error finding normal for $name!";
-        }
-    }
-    my $other = Genome::Model->get(name => $name);
-    die unless ($other);
-    return $other;
-}
 
 # TODO: remove these since they're not supposed to vary on a per-model basis.
 sub base_parent_directory {
@@ -755,7 +670,7 @@ sub get_all_objects {
         }
     };
 
-    return map { $sorter->( $self->$_ ) } (qw/ instrument_data_assignments inputs builds project_assignments to_model_links from_model_links /);
+    return map { $sorter->( $self->$_ ) } (qw{ instrument_data_assignments inputs builds project_assignments to_model_links from_model_links });
 }
 
 sub yaml_string {
