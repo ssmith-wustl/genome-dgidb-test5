@@ -9,6 +9,7 @@ use warnings;
 
 use Genome;
 use File::Copy;
+use File::Basename;
 use Data::Dumper;
 
 my %properties = (
@@ -244,8 +245,22 @@ sub execute {
     }
     my $tmp_tar_file = File::Temp->new("fastq-archive-XXXX",DIR=>"/tmp");
     my $tmp_tar_filename = $tmp_tar_file->filename;
-        
-    my $tar_cmd = sprintf("tar cvzf %s %s", $tmp_tar_filename, join " ", @input_files);
+
+    my @suffixes = ("txt","fastq");    
+    my $basename;
+    my %basenames;
+
+    for my $file (@input_files) {
+        my ($filename,$path,$suffix) = fileparse($file, @suffixes);
+        $basenames{$path}++;
+        $basename = $path;
+    }
+    unless(scalar(keys(%basenames))==1) {
+        $self->error_message("Found more than on path to imported files.");
+        die $self->error_message;
+    }
+
+    my $tar_cmd = sprintf("tar cvzf -D %s %s %s",$basename, $tmp_tar_filename, join " ", @input_files);
     print $tar_cmd, "\n";
     system($tar_cmd);
 
