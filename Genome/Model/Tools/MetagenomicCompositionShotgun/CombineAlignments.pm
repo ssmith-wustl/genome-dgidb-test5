@@ -72,6 +72,34 @@ class Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments {
             is_optional =>1,
             doc => '',
         },
+        viral_family_output_file => {
+            is => 'String',
+            is_input => '1',
+            is_output => '1',
+            is_optional =>1,
+            doc => '',
+        },
+        viral_subfamily_output_file => {
+            is => 'String',
+            is_input => '1',
+            is_output => '1',
+            is_optional =>1,
+            doc => '',
+        },
+        viral_genus_output_file => {
+            is => 'String',
+            is_input => '1',
+            is_output => '1',
+            is_optional =>1,
+            doc => '',
+        },
+        viral_species_output_file => {
+            is => 'String',
+            is_input => '1',
+            is_output => '1',
+            is_optional =>1,
+            doc => '',
+        },
         lsf_resource => {
                 is_param => 1,
                 value => "-R 'select[mem>4000 && model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=4000]' -M 4000000",
@@ -166,13 +194,19 @@ sub execute {
     $self->read_count_output_file("$report_directory/reads_per_contig.txt") if (!defined($self->read_count_output_file));
     $self->genus_output_file("$report_directory/genus.txt") if (!defined($self->genus_output_file));
     $self->phyla_output_file("$report_directory/phyla.txt") if (!defined($self->phyla_output_file));
+    $self->viral_species_output_file("$report_directory/viral_species.txt") if (!defined($self->viral_species_output_file));
+    $self->viral_genus_output_file("$report_directory/viral_genus.txt") if (!defined($self->viral_genus_output_file));
+    $self->viral_family_output_file("$report_directory/viral_family.txt") if (!defined($self->viral_family_output_file));
+    $self->viral_subfamily_output_file("$report_directory/viral_subfamily.txt") if (!defined($self->viral_subfamily_output_file));
     
     $self->sam_combined_output_file("$working_directory/combined.sam") if (!defined($self->sam_combined_output_file));
     my $bam_combined_output_file = "$working_directory/combined.bam";
     my $warn_file = $self->sam_combined_output_file.".warn";
 
     my @expected_output_files = ($warn_file,$self->read_count_output_file,$self->genus_output_file,$self->phyla_output_file,$bam_combined_output_file);
-    #TODO viral output files
+    if ($self->viral_taxonomy_file){
+        push @expected_output_files, ($self->viral_family_output_file, $self->viral_subfamily_output_file, $self->viral_genus_output_file, $self->viral_species_output_file);
+    }
     
     my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
     if ($rv_check) {
@@ -184,10 +218,13 @@ sub execute {
 
     my $sam_i=Genome::Utility::FileSystem->open_file_for_reading($self->sam_input_file);
     my $tax=Genome::Utility::FileSystem->open_file_for_reading($self->taxonomy_file);
-    my $v_tax=Genome::Utility::FileSystem->open_file_for_reading($self->viral_taxonomy_file);
+    my $v_tax;
+    if ($self->viral_taxonomy_file){
+        $v_tax = Genome::Utility::FileSystem->open_file_for_reading($self->viral_taxonomy_file);
+    }
     my $sam_header_i = Genome::Utility::FileSystem->open_file_for_reading($self->sam_header_file);
 
-    if ( !defined($sam_i) || !defined($tax) || defined($v_tax) ) {
+    if ( !defined($sam_i) || !defined($tax) || ($self->viral_taxonomy_file and !defined($v_tax)) ) {
         $self->error_message("Failed to open a required file for reading.");
         return;
     }
@@ -198,6 +235,14 @@ sub execute {
     my $read_cnt_o=Genome::Utility::FileSystem->open_file_for_writing($self->read_count_output_file);
     my $phyla_o=Genome::Utility::FileSystem->open_file_for_writing($self->phyla_output_file);
     my $genus_o=Genome::Utility::FileSystem->open_file_for_writing($self->genus_output_file);
+
+    my ($viral_family_o, $viral_subfamily_o, $viral_genus_o, $viral_species_o);
+    if ($self->viral_taxonomy_file){
+        $viral_family_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_family_output_file);
+        $viral_subfamily_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_subfamily_output_file);
+        $viral_genus_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_genus_output_file);
+        $viral_species_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_species_output_file);
+    }
 
 
     if ( !defined($sam_o) || !defined($read_cnt_o) || !defined($phyla_o) || !defined($genus_o) ) {
@@ -222,18 +267,21 @@ sub execute {
     }
 
     my $viral_taxonomy;
-    while(<$v_tax>){
-        chomp;
-        my $line=$_;
-        next if ($line =~ /^gi/);
-        my ($gi, $species, $genus,$subfamily, $family, $infraorder, $suborder, $superorder) = split(/\t/,$line);
-        $viral_taxonomy->{$gi}->{species} = $species;
-        $viral_taxonomy->{$gi}->{genus} = $genus;
-        $viral_taxonomy->{$gi}->{subfamily} = $subfamily;
-        $viral_taxonomy->{$gi}->{family} = $family;
-        $viral_taxonomy->{$gi}->{infraorder} = $infraorder;
-        $viral_taxonomy->{$gi}->{suborder} = $suborder;
-        $viral_taxonomy->{$gi}->{superorder} = $superorder;
+    if ($v_tax){
+        while(<$v_tax>){
+            chomp;
+            my $line=$_;
+            next if ($line =~ /^gi/);
+            my ($gi, $species, $genus,$subfamily, $family, $infraorder, $suborder, $superorder) = split(/\t/,$line);
+            $viral_taxonomy->{$gi}->{species} = $species;
+            $viral_taxonomy->{$gi}->{genus} = $genus;
+            $viral_taxonomy->{$gi}->{subfamily} = $subfamily;
+            $viral_taxonomy->{$gi}->{family} = $family;
+            $viral_taxonomy->{$gi}->{infraorder} = $infraorder;
+            $viral_taxonomy->{$gi}->{suborder} = $suborder;
+            $viral_taxonomy->{$gi}->{superorder} = $superorder;
+        }
+
     }
 
     my $first = 1;
@@ -260,7 +308,7 @@ sub execute {
             my $current_read_name =  $fields[0];
 
             my $bitflag = $fields[1];
-            my $ref=(split(/\|/,$fields[2]))[0];
+            my ($ref, $null, $gi)= split(/\|/,$fields[2]);
 
             my $rg;
             if ($current_record =~ /RG\:Z\:(\d+)\s/){
@@ -282,8 +330,14 @@ sub execute {
             $data->{$rg}->{reads}=$current_read_name;
             $data->{$rg}->{ref}=$flag;
             $data->{$rg}->{mismatches}+=$mismatches; 
+
             $data->{$rg}->{ref_names} ||= {};
-            $data->{$rg}->{ref_names}->{$ref}++;
+            if ($ref eq "VIRL"){
+                $data->{$rg}->{ref_names}->{$gi}++;
+            }else{
+                $data->{$rg}->{ref_names}->{$ref}++;
+            }
+
             
             $lists{$rg} ||= []; 
             push(@{$lists{$rg}}, $current_record);
@@ -303,8 +357,10 @@ sub execute {
         foreach my $selected_record (@selected_list)  {
             print $sam_o $selected_record."\n";
             my @selected_fields=split(/\t/,$selected_record);
-            my $selected_ref = (split(/\|/,$selected_fields[2]))[0];
-            #print(">".$selected_ref."\n");
+            my ($selected_ref, $null, $gi) = split(/\|/,$selected_fields[2]);
+            if ($selected_ref eq "VIRL"){
+                $selected_ref .= "_$gi";
+            }
             $ref_counts_hash{$selected_ref}++;
         } 
     }
@@ -315,7 +371,6 @@ sub execute {
     $self->status_message("Converting from sam to bam file: ".$self->sam_combined_output_file." to $bam_combined_output_file_unsorted");
     my $picard_path = "/gsc/scripts/lib/java/samtools/picard-tools-1.07/";
     my $cmd_convert = "java -XX:MaxPermSize=512m -Xmx4g -cp $picard_path/SamFormatConverter.jar net.sf.picard.sam.SamFormatConverter VALIDATION_STRINGENCY=SILENT I=".$self->sam_combined_output_file." O=$bam_combined_output_file_unsorted";  
-    #my $cmd_convert = "samtools view -bS $ > $merged_alignment_files_per_refseq_sam";
     my $rv_convert = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_convert);											 
 
     if ($rv_convert != 1) {
@@ -343,18 +398,35 @@ sub execute {
     #do phyla/genus
     my %phyla_counts_hash;
     my %genus_counts_hash;
+    my %viral_family_counts_hash;
+    my %viral_subfamily_counts_hash;
+    my %viral_genus_counts_hash;
+    my %viral_species_counts_hash;
     print $read_cnt_o "Reference Name\t#Reads with hits\tPhyla\tHMP genome\n";
     foreach my $ref_id (keys%ref_counts_hash){
         #print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$g\t$p\n";
-        if (($ref_id =~ /^BACT/) or ($ref_id =~ /^ARCH/)){
+        if (($ref_id =~ /^BACT/) or ($ref_id =~ /^ARCH/) or ($ref_id =~ /^EUKY/)){
             my $phyla=$taxonomy->{$ref_id}->{phyla};
             $phyla_counts_hash{$phyla}+=$ref_counts_hash{$ref_id};
             my $genus=$taxonomy->{$ref_id}->{genus};
             $genus_counts_hash{$genus}+=$ref_counts_hash{$ref_id};
             my $hmp_flag=$taxonomy->{$ref_id}->{hmp};	
             print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$phyla\t$hmp_flag\n";
-        }else{
-            print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\n";
+        }elsif ($ref_id =~ /^VIRL/){ #produce reports for viral taxonomy if available
+            my ($gi) = $ref_id =~/^VIRL_(\d+)$/;
+            if ($viral_taxonomy->{$gi}){
+                my $species = $viral_taxonomy->{$gi}->{species};
+                $viral_species_counts_hash{$species}+=$ref_counts_hash{$ref_id};
+                my $genus = $viral_taxonomy->{$gi}->{genus};
+                $viral_genus_counts_hash{$genus}+=$ref_counts_hash{$ref_id};
+                my $family = $viral_taxonomy->{$gi}->{family};
+                $viral_family_counts_hash{$family}+=$ref_counts_hash{$ref_id};
+                my $subfamily = $viral_taxonomy->{$gi}->{subfamily};
+                $viral_subfamily_counts_hash{$subfamily}+=$ref_counts_hash{$ref_id};
+                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t\n";
+            }else{
+                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\n";
+            }
         }
 
     }
@@ -373,6 +445,34 @@ sub execute {
         print $genus_o "$gen\t$genus_counts_hash{$gen}\n";
     }
     $genus_o->close;
+
+    print $viral_species_o "Species Name\t#Reads with hits\n";
+    foreach my $name (keys%viral_species_counts_hash){
+        next if (($name eq "") or ($name =~ /^\s+$/));
+        print $viral_species_o "$name\t$viral_species_counts_hash{$name}\n";
+    }
+    $viral_species_o->close;
+    
+    print $viral_genus_o "Genus Name\t#Reads with hits\n";
+    foreach my $name (keys%viral_genus_counts_hash){
+        next if (($name eq "") or ($name =~ /^\s+$/));
+        print $viral_genus_o "$name\t$viral_genus_counts_hash{$name}\n";
+    }
+    $viral_genus_o->close;
+    
+    print $viral_family_o "Family Name\t#Reads with hits\n";
+    foreach my $name (keys%viral_family_counts_hash){
+        next if (($name eq "") or ($name =~ /^\s+$/));
+        print $viral_family_o "$name\t$viral_family_counts_hash{$name}\n";
+    }
+    $viral_family_o->close;
+    
+    print $viral_subfamily_o "Subfamily Name\t#Reads with hits\n";
+    foreach my $name (keys%viral_subfamily_counts_hash){
+        next if (($name eq "") or ($name =~ /^\s+$/));
+        print $viral_family_o "$name\t$viral_family_counts_hash{$name}\n";
+    }
+    $viral_subfamily_o->close;
 
     Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
 
