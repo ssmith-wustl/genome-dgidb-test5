@@ -105,8 +105,6 @@ sub post_execute {
 	$self->status_message("Done.");
     return 1;
 }
-#<inputproperty>viral_taxonomy_file</inputproperty>
-#<link fromOperation="input connector" fromProperty="viral_taxonomy_file"          toOperation="FilterResults" toProperty="viral_taxonomy_file" /> 
 
 1;
 __DATA__
@@ -126,6 +124,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="sam_header"	                toOperation="FilterResults" toProperty="sam_header_file" />
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="FilterResults" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="taxonomy_file"                toOperation="FilterResults" toProperty="taxonomy_file" /> 
+  <link fromOperation="input connector" fromProperty="viral_taxonomy_file"          toOperation="FilterResults" toProperty="viral_taxonomy_file" /> 
   <link fromOperation="FilterResults"   fromProperty="bam_combined_output_file"     toOperation="RefCov" toProperty="aligned_bam_file" /> 
   <link fromOperation="FilterResults"   fromProperty="read_count_output_file"       toOperation="RefCov" toProperty="read_count_file" /> 
 
@@ -165,6 +164,7 @@ __DATA__
     <inputproperty>reads_and_references</inputproperty>
     <inputproperty>bwa_edit_distance</inputproperty>
     <inputproperty>taxonomy_file</inputproperty>
+    <inputproperty>viral_taxonomy_file</inputproperty>
     <inputproperty>regions_file</inputproperty>
     <inputproperty>sam_header</inputproperty>
     <outputproperty>final_file</outputproperty>
