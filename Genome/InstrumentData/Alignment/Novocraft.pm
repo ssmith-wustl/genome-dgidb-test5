@@ -32,6 +32,11 @@ sub input_pathnames {
     return @illumina_fastq_pathnames;
 }
 
+sub alignment_bam_file_paths {
+    my $self = shift;
+    return $self->alignment_file;
+}
+
 sub alignment_file {
     my $self = shift;
     return $self->alignment_directory .'/all_sequences.bam';
