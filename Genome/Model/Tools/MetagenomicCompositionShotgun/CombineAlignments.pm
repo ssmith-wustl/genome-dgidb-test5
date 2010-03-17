@@ -261,6 +261,7 @@ sub execute {
         $ref =~ s/\>//;
         $array[2] =~ s/\s+//g;
         $array[4] =~ s/\s+//g;
+        $taxonomy->{$ref}->{species}=$array[1];
         $taxonomy->{$ref}->{phyla}=$array[2];
         $taxonomy->{$ref}->{genus}=$array[3];
         $taxonomy->{$ref}->{hmp}=$array[5];
@@ -396,6 +397,7 @@ sub execute {
     }
 
     #do phyla/genus
+    my %species_counts_hash;
     my %phyla_counts_hash;
     my %genus_counts_hash;
     my %viral_family_counts_hash;
@@ -406,6 +408,8 @@ sub execute {
     foreach my $ref_id (keys%ref_counts_hash){
         #print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$g\t$p\n";
         if (($ref_id =~ /^BACT/) or ($ref_id =~ /^ARCH/) or ($ref_id =~ /^EUKY/)){
+            my $species= $taxonomy->{$ref_id}->{species};
+            $species_counts_hash{$species}+=$ref_counts_hash{$ref_id};
             my $phyla=$taxonomy->{$ref_id}->{phyla};
             $phyla_counts_hash{$phyla}+=$ref_counts_hash{$ref_id};
             my $genus=$taxonomy->{$ref_id}->{genus};
@@ -470,7 +474,7 @@ sub execute {
     print $viral_subfamily_o "Subfamily Name\t#Reads with hits\n";
     foreach my $name (keys%viral_subfamily_counts_hash){
         next if (($name eq "") or ($name =~ /^\s+$/));
-        print $viral_family_o "$name\t$viral_family_counts_hash{$name}\n";
+        print $viral_subfamily_o "$name\t$viral_family_counts_hash{$name}\n";
     }
     $viral_subfamily_o->close;
 
