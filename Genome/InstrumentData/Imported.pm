@@ -124,6 +124,9 @@ Genome::InstrumentData::Solexa->class;
 *fastq_filenames = \&Genome::InstrumentData::Solexa::fastq_filenames;
 *dump_illumina_fastq_archive = \&Genome::InstrumentData::Solexa::dump_illumina_fastq_archive;
 *resolve_fastq_filenames = \&Genome::InstrumentData::Solexa::resolve_fastq_filenames;
+*fragment_fastq_name = \&Genome::InstrumentData::Solexa::fragment_fastq_name;
+*read1_fastq_name = \&Genome::InstrumentData::Solexa::read1_fastq_name;
+*read2_fastq_name = \&Genome::InstrumentData::Solexa::read2_fastq_name;
 }
 
 
@@ -203,7 +206,7 @@ sub resolve_adaptor_file {
 sub archive_path {
     my $self = shift;
     my $alloc = $self->disk_allocations;
-    $self->disk_allocations->absolute_path . "/archive.tgz";
+    return $self->disk_allocations->absolute_path . "/archive.tgz";
     if($alloc){
         die "found an alloc!\n";
     }
