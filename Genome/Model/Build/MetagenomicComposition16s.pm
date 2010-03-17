@@ -180,12 +180,10 @@ sub processed_fasta_and_qual_writer {
 }
 
 # oriented
-sub oriented_fasta { return oriented_fasta_file(@_); }
 sub oriented_fasta_file {
     return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.oriented.fasta';
 }
 
-sub oriented_qual { return oriented_qual_file(@_); }
 sub oriented_qual_file {
     return $_[0]->oriented_fasta_file.'.qual';
 }
