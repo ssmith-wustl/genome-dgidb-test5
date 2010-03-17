@@ -108,7 +108,7 @@ sub _xml {
 }
 
 sub _csv {
-    return $_[1]->to_separated_value_string(',');
+    return $_[1]->to_separated_value_string(separator => ',');
 }
 
 1;
