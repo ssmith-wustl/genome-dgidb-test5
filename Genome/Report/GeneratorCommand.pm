@@ -22,11 +22,17 @@ class Genome::Report::GeneratorCommand {
         },
         datasets => {
             is => 'Text',
-            doc => 'Datasets to print, save or email. Use with functions print_datasets, save or email.  Separate by commas.  To indicate all datasets, use optiona "all_datasets".',
+            doc => 'Datasets to print, save or email. Defaults to all datasets.  Note that for email, this option only effects the attachments.  All datasets will still appear in the tranformed report.  Datasets will be comma sparated.  Separate dataset names by commas.',
         },
-        all_datasets => {
+        separator => {
             is => 'Text',
-            doc => 'Print, save or email all datasets in the report. Use with functions print_datasets, save or email.',
+            default_value => ',',
+            doc => 'Separator character to use when printing, saving and email attachments. For tab separator, use "tab".',
+        },
+        include_headers => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'Include dataset headers when printing, saving and email attachments.',
         },
         email => {
             is => 'Text',
@@ -44,14 +50,45 @@ class Genome::Report::GeneratorCommand {
         _dataset_names => {
             is => 'Array',
         },
-        _datasets_csv => {
+        _datasets_svs => {
             is => 'Hash',
         },
         _datasets_files => {
             is => 'Hash',
         },
+        _sv_ext => {
+            is => 'Text',
+            default_value => 'csv',
+        },
     ],
 };
+
+#< Helps >#
+sub help_detail {
+    return <<STRING;
+    
+STRING
+}
+
+#< Create 
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    # Set separator stuff.  Default are ',' and 'csv'
+    if ( $self->separator eq 'tab' ) {
+        $self->separator("\t");
+        $self->_sv_ext('tsv');
+    }
+    elsif ( $self->separator ne ',' ) {
+        $self->_sv_ext('txt');
+    }
+
+    return $self;
+}
+# >
 
 #< Generate Report >#
 sub _generate_report_and_execute_functions {
@@ -87,20 +124,25 @@ sub _generate_report_and_execute_functions {
 sub _resolve_dataset_names {
     my ($self, $report) = @_;
 
-    if ( $self->print_datasets and not $self->datasets ) {
-        $self->all_datasets(1);
+    my @dataset_names = $report->get_dataset_names;
+    unless ( @dataset_names ) {
+        $self->error_message("Indicated to use all datasets (for print_xml, print_datasets, email save), but this report does not have any.");
+        return;
     }
 
-    if ( $self->all_datasets ) {
-        my @dataset_names = $report->get_dataset_names;
-        unless ( @dataset_names ) {
-            $self->error_message("Indicated to use all datasets (for print_xml, print_datasets, email save), but this report does not have any.");
-            return;
+    if ( $self->datasets ) { # chack they exist
+        my @datasets_requested;
+        for my $dataset_requested ( split(',', $self->datasets) ) {
+            unless ( grep { $dataset_requested eq $_ } @dataset_names ) {
+                $self->error_message("Dataset requested ($dataset_requested) not found in report (".$report->name.")");
+                return;
+            }
+            push @datasets_requested, $dataset_requested;
         }
-        $self->_dataset_names(\@dataset_names);
+        $self->_dataset_names(\@datasets_requested);
     }
-    elsif ( $self->datasets ) {
-        $self->_dataset_names([ split(',', $self->datasets) ]);
+    else { # all
+        $self->_dataset_names(\@dataset_names);
     }
 
     return 1;
@@ -117,28 +159,28 @@ sub _print_xml {
 sub _print_datasets {
     my ($self, $report) = @_;
 
-    my $datasets_csv = $self->_datasets_to_csv($report)
+    my $datasets_svs = $self->_datasets_to_svs($report)
         or return;
 
-    for my $csv ( values %$datasets_csv ) {
-        print $csv;
+    for my $svs ( values %$datasets_svs ) {
+        print $svs;
     }
 
     return 1;
 }
 
-sub _datasets_to_csv {
+sub _datasets_to_svs {
     my ($self, $report) = @_;
 
-    return $self->_datasets_csv if $self->_datasets_csv;
+    return $self->_datasets_svs if $self->_datasets_svs;
 
     my $dataset_names = $self->_dataset_names;
     unless ( $dataset_names ) {
-        $self->_datasets_csv({});
-        return $self->_datasets_csv;
+        $self->_datasets_svs({});
+        return $self->_datasets_svs;
     }
-    
-    my %datasets_csv;
+
+    my %datasets_svs;
     for my $name ( @$dataset_names ) {
         my $ds = $report->get_dataset($name);
         unless ( $ds ) { # bad
@@ -146,15 +188,18 @@ sub _datasets_to_csv {
             return;
         }
 
-        my $csv = $ds->to_separated_value_string(',');
-        unless ( $csv ) {
+        my $svs = $ds->to_separated_value_string(
+            separator => $self->separator,
+            include_headers => $self->include_headers,
+        );
+        unless ( $svs ) {
             $self->error_message("Can't get separated value string from build dataset");
             return;
         }
-        $datasets_csv{$name} = $csv;
+        $datasets_svs{$name} = $svs;
     }
 
-    return $self->_datasets_csv(\%datasets_csv);
+    return $self->_datasets_svs(\%datasets_svs);
 }
 
 #< Save >#
@@ -185,16 +230,16 @@ sub _save_datasets {
 
     return $self->_datasets_files if $self->_datasets_files;
 
-    my $datasets_csv = $self->_datasets_to_csv($report)
+    my $datasets_svs = $self->_datasets_to_svs($report)
         or return;
 
     my $dir = ( $self->save ? $self->save : File::Temp::tempdir(CLEANUP => 1) );
     my %datasets_files;
-    for my $name ( keys %$datasets_csv ) {
-        my $file = sprintf('%s/%s.csv', $dir, $name);
+    for my $name ( keys %$datasets_svs ) {
+        my $file = sprintf('%s/%s.%s', $dir, $name, $self->_sv_ext);
         my $fh = Genome::Utility::FileSystem->open_file_for_writing($file)
             or return;
-        $fh->print($datasets_csv->{$name});
+        $fh->print($datasets_svs->{$name});
         $fh->close;
         $datasets_files{$name} = $file;
     }
