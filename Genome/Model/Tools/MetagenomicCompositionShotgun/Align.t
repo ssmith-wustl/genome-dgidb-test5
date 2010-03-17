@@ -13,7 +13,7 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    plan tests => 1;
+    plan tests => 2;
 }
 
 
