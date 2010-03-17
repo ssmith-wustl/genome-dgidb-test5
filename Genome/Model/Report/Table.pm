@@ -75,7 +75,7 @@ sub _add_to_report_xml {
     for my $header ( @headers ) {
         my $node = $self->_xml->createElement('header');
         $headers_node->addChild($node);
-        $header =~ s#\_#\ #g;
+        $header =~ s#[\-\_]#\ #g;
         $node->appendTextNode(  Genome::Utility::Text::capitalize_words($header) );
     }
 
