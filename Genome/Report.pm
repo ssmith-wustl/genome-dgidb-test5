@@ -114,7 +114,7 @@ sub get_datasets_by_name_as_separated_value_string {
     my $dataset = $self->get_dataset($name)
         or return;
 
-    return $dataset->to_separated_value_string($separator);
+    return $dataset->to_separated_value_string(separator => $separator);
 }
 
 #<>#
