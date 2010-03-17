@@ -279,11 +279,16 @@ sub test01_xml : Tests(2) {
 sub test02_svs : Tests(1) {
     my $self = shift;
 
-   is(
-       $self->{_object}->to_separated_value_string('|'), 
-       "attempted|assembled|assembled-percent\n4|5|80.0\%\n",
-       'SVS string',
-   );
+    is(
+        $self->{_object}->to_separated_value_string(separator => '|'), 
+        "attempted|assembled|assembled-percent\n4|5|80.0\%\n",
+        'SVS string',
+    );
+    is(
+        $self->{_object}->to_separated_value_string(separator => '|', include_headers => 0), 
+        "4|5|80.0\%\n",
+        'SVS string',
+    );
 
     return 1;
 }
