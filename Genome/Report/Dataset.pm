@@ -312,10 +312,19 @@ sub to_xml_element {
 
 #< SVS >#
 sub to_separated_value_string {
-    my $self = shift;
+    my ($self, %params) = @_;
 
-    my $separator = ( $_[0] and $_[0] ne '' ) ? $_[0] : ',';
-    my $svs = join($separator, @{$self->headers})."\n";
+    # separator
+    my $separator = ( defined $params{separator} ) ? $params{separator} : ',';
+
+    my $svs;
+    
+    # headers - default is to include them
+    unless ( defined $params{include_headers} and $params{include_headers} == 0 ) {
+        $svs = join($separator, @{$self->headers})."\n";
+    }
+
+    # rows
     for my $row ( @{$self->rows} ) {
         $svs .= join($separator, @$row)."\n";
     }
