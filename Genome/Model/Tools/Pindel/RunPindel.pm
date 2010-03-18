@@ -77,7 +77,7 @@ class Genome::Model::Tools::Pindel::RunPindel {
         # Make workflow choose 64 bit blades
         lsf_resource => {
             is_param => 1,
-            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
+            default_value => 'rusage[mem=8000] select[type==LINUX64] span[hosts=1] -M 8589934592',
         },
         lsf_queue => {
             is_param => 1,
@@ -192,7 +192,7 @@ sub calculate_average_insert_size {
     for my $ida (@idas) {
         my $id = $ida->instrument_data;
         # throw away junk
-        if($id->median_insert_size > 0) {
+        if( (defined $id->median_insert_size) && ($id->median_insert_size > 0) ) {
             $count++;
             $total+=$id->median_insert_size;
         }
