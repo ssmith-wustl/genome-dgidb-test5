@@ -107,6 +107,9 @@ sub execute {
         $rows = \@model_rows;
     }
 
+    # Rows were sorted by date, now let's sort them by name
+    $rows = [ sort { $a->[0] cmp $b->[0] } @$rows ];
+
     # Get the properties and data for the report
     my ($properties, $data) = $self->_resolve_properties_and_data_to_show($rows)
         or return;
@@ -244,7 +247,8 @@ SQL
         $query .=  "\nAND e.date_completed > sysdate - ".$self->days;
         $self->_description( $self->_description.'within the past '.$self->days.' days.');
     }
-    $query .= "\nORDER BY m.name ASC";
+    $query .= "\nORDER BY e.date_completed DESC";
+    #$query .= "\nORDER BY m.name ASC";
 
     return $query;
 }
