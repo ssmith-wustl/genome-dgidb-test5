@@ -244,7 +244,7 @@ sub instrument_data_count {
     }
 
     # use first build id on model's ida for older builds
-    return scalar( $_[0]->instrument_data_assignments );
+    return scalar( $self->instrument_data_assignments );
 }
 
 sub events {
