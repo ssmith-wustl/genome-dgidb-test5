@@ -76,10 +76,6 @@ sub required_params_for_class {
     return (qw/ subject_type subject_name processing_profile_id /);
 }
 
-sub optional_params_for_class {
-    return (qw/ name data_directory /);
-}
-
 sub invalid_params_for_test_class {
     return (
         subject_name => 'invalid_subject_name',
@@ -127,6 +123,17 @@ sub test_shutdown : Test(shutdown => 1) {
     my $self = shift;
 
     ok($self->_model->delete, 'Delete model');
+
+    return 1;
+}
+
+sub test00_invalid_creates : Tests(4) {
+    my $self = shift;
+
+    my %params = $self->params_for_test_class;
+
+    # try to recreate
+    ok(!$self->test_class->create(%params), 'Recreate fails');
 
     return 1;
 }

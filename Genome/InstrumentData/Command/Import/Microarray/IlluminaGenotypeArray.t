@@ -40,6 +40,13 @@ no warnings;
 *Genome::Disk::Allocation::absolute_path = sub { return $tmp_dir };
 *Genome::Disk::Allocation::reallocate = sub { 1 };
 *Genome::Disk::Allocation::deallocate = sub { 1 };
+# Overload define - a model for this already exists, and and this will fail.
+#  Set defined model instead and test at end
+my $defined_model;
+*Genome::Model::Command::Define::GenotypeMicroarray::execute = sub{ 
+    $defined_model = Genome::Model->get(name => "H_KU-6888-D59687.illumina/wugc");
+    return 1;
+};
 use warnings;
 
 isa_ok($tmp_allocation,'Genome::Disk::Allocation'); 
@@ -96,6 +103,5 @@ ok($ssize<=$dsize, "source and destination sizes match")
     or die "Source directory size($ssize bytes) did not match or excede destination directory size($dsize), dircopy did not succeed.";
 ok(-e $i->data_directory."/genotype/".$sample_name.".genotype","found input genotype file");
 ok(-e $i->data_directory."/genotype/SNPArray.genotype","found SNP Array Genotype");
-my @model = Genome::Model->get( name    =>  "H_KU-6888-D59687.illumina/wugc",);
-ok($model[1],"model was created, and properly retrieved.");
+ok($defined_model,"model was created, and properly retrieved.");
                                 

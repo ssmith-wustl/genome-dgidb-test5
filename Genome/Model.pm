@@ -208,6 +208,12 @@ sub create {
         return;
     }
 
+    # Check that this model doen't already exist.  If other models with the same name
+    #  and type name exist, this method lists them, errors and deletes this model.
+    #  Checking after subject verification to catch that error first.
+    $self->_verify_no_other_models_with_same_name_and_type_name_exist 
+        or return;
+    
     unless ($self->user_name) {
         $self->user_name($ENV{USER});
     }
@@ -227,7 +233,6 @@ sub create {
     }
 
     my $processing_profile= $self->processing_profile;
-    $DB::single = $DB::stopper;
     unless ($processing_profile->_initialize_model($self)) {
         $self->error_message("The processing profile failed to initialize the new model:"
             . $processing_profile->error_message);
@@ -259,13 +264,52 @@ sub _validate_processing_profile_id {
     return 1;
 }
 
+sub _verify_no_other_models_with_same_name_and_type_name_exist {
+    # Checks that this model doen't already exist.  If other models with the same name
+    #  and type name exist, this method lists them, errors and deletes this model.
+    #  Should only be called from create.
+    my $self = shift;
+
+    my @models = Genome::Model->get(
+        id => {
+            operator => '!=',
+            value => $self->id,
+        },
+        name => $self->name,
+        type_name => $self->type_name
+    );
+
+    return 1 unless @models; # ok
+    
+    my $message = "\n";
+    for my $model ( @models ) {
+        $message .= sprintf(
+            "Name: %s\nSubject Name: %s\nId: %s\nProcessing Profile Id: %s\nType Name: %s\n\n",
+            $model->name,
+            $model->subject_name,
+            $model->id,
+            $model->processing_profile_id,
+            $model->type_name,
+
+        );
+    }
+    $message .= sprintf(
+        'Found the above %s with the same name and type name.  Please select a new name.',
+        Lingua::EN::Inflect::PL('model', scalar(@models)),
+    );
+    $self->error_message($message);
+    $self->delete;
+
+    return;
+}
+
 #This is the old way of determining subject based on type and name
 #Typically this is only needed in the constructor to find the id and class_name to populate those columns
 sub _resolve_subject {
     my $self = shift;
     my $subject_type = $self->subject_type;
     my $subject_name = $self->subject_name;
-    
+
     if (not defined $subject_type or not defined $subject_name) {
         # this should not happen
         $self->error_message("bad data--missing subject_type or subject_name!");
