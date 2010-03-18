@@ -271,8 +271,8 @@ sub _resolve_subject {
         return;
     }
     elsif ($subject_type eq 'dna_resource_item_name') {
-        # wtf is this?
-        return GSC::DNAResourceItem->get(dna_name => $subject_name);
+        #If they specified dna_resource_item_name, they might actually have meant some sort of "DNA"
+        return GSC::DNAResourceItem->get(dna_name => $subject_name) || GSC::DNA->get(dna_name => $subject_name);
     }
     elsif ($subject_type eq 'genomic_dna') {
         return Genome::Sample->get(extraction_label => $subject_name, extraction_type => 'genomic dna');
@@ -294,7 +294,8 @@ sub _resolve_subject {
         return GSC::Equipment::Solexa::Run->get(flow_cell_id => $subject_name);
     }
     else {
-        die "unknown sample type $subject_type!";
+        $self->error_message("unknown sample type $subject_type!");
+        return;
     }
 }
 
@@ -305,8 +306,13 @@ sub _subject_type_for_class_name {
     
     return unless $subject_class_name;
     
+    if($subject_class_name->class and $subject_class_name->isa('GSC::DNA')) {
+        $subject_class_name = 'GSC::DNA'; #Avoid needing to list entire DNA heirarchy
+    }
+    
     my %types = (
         'Genome::Sample' => 'sample_name',
+        'GSC::DNA' => 'dna_resource_item_name',
         'GSC::DNAResourceItem' => 'dna_resource_item_name',
         'GSC::Equipment::Solexa::Run' => 'flow_cell_id',
         'Genome::ModelGroup' => 'sample_group',
