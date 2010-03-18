@@ -77,7 +77,7 @@ class Genome::Model::Tools::Pindel::RunPindel {
         # Make workflow choose 64 bit blades
         lsf_resource => {
             is_param => 1,
-            default_value => 'rusage[mem=8000] select[type==LINUX64] span[hosts=1] -M 8589934592',
+            default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000] span[hosts=1]'",
         },
         lsf_queue => {
             is_param => 1,
