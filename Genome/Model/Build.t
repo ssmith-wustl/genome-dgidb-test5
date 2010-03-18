@@ -9,7 +9,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 40; 
+use Test::More tests => 41; 
 require Genome::Model::Test;
 
 BEGIN {
@@ -49,6 +49,7 @@ is(scalar(@build_inputs), 2, 'Correct number of build inputs');
 my @build_inst_data = $build->instrument_data;
 is_deeply(\@build_inst_data, [ $inst_data ], 'Build instrument data');
 is($build->coolness, 'moderate', 'Got coolness'); 
+is($build->instrument_data_count, 1, 'Instrument data count');
 #print Data::Dumper::Dumper({bin=>\@build_inputs,bid=>\@build_inst_data,min=>\@model_inputs,mid=>\@model_inst_data,});
 
 #< ACTIONS >#
