@@ -268,6 +268,7 @@ sub _resolve_subject {
     
     if (not defined $subject_type or not defined $subject_name) {
         # this should not happen
+        $self->error_message("bad data--missing subject_type or subject_name!");
         return;
     }
     elsif ($subject_type eq 'dna_resource_item_name') {
