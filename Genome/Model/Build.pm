@@ -234,7 +234,16 @@ sub instrument_data_assignments {
     return @idas;
 }
 
-sub instrument_data_count { # FIXME for inputs
+sub instrument_data_count {
+    my $self = shift;
+
+    # Try inst data from inputs
+    my @instrument_data = $self->instrument_data;
+    if ( @instrument_data ) {
+        return scalar(@instrument_data);
+    }
+
+    # use first build id on model's ida for older builds
     return scalar( $_[0]->instrument_data_assignments );
 }
 
