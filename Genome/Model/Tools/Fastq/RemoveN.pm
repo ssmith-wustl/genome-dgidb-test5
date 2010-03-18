@@ -25,6 +25,13 @@ class Genome::Model::Tools::Fastq::RemoveN
                                     is_optional => 1,
                                     default => 1, 
                         },
+            save_screened_reads => 
+                                {
+                                    doc => 'save screened reads in separate file',
+                                    is => 'Boolean',
+                                    is_optional => 1,
+                                    default => 0,
+                                },
          ],
 };
 
@@ -58,6 +65,7 @@ sub execute
     my $fastq_file = $self->fastq_file;
     my $n_removed_file = ($self->n_removed_file ? $self->n_removed_file : $fastq_file . "n_removed");
     my $cutoff = $self->cutoff;
+    my $save_screened_reads = $self->save_screened_reads;
 
     my $input_fh = IO::File->new($fastq_file);
     unless ($input_fh) {
@@ -71,7 +79,6 @@ sub execute
         return;
     }
 
-    
     while (my $header = $input_fh->getline) 
     {
         my $seq = $input_fh->getline;

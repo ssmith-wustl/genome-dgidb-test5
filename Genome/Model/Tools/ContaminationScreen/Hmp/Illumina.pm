@@ -83,9 +83,10 @@ sub execute {
     my $base1 = basename $fastq1;
     my $base2 = basename $fastq2;
     my $cutoff = $self->n_cutoff;
-    my ($aligner_output_file1, $aligner_output_file2)  = ($dir . "/$base1.ALIGNER_OUTPUT1.fasta", $dir . "/$base2.ALIGNER_OUTPUT2.fasta");
+    my ($primer_trim_file1, $primer_trim_file2)  = ($dir . "/$base1.TRIMMED1.fasta", $dir . "/$base2.TRIMMED2.fasta");
+    my ($aligner_output_file1, $aligner_output_file2)  = ($dir . "/$base1.ALIGNER_OUTPUT1.sai", $dir . "/$base2.ALIGNER_OUTPUT2.sai");
     my ($unaligned_reads_file1, $unaligned_reads_file2)  = ($dir . "/$base1.UNALIGNED1.sam", $dir . "/$base2.UNALIGNED2.sam");
-    my ($alignment_file1, $alignment_file2) = ($dir . "/$base1.ALIGNED1.fasta",  $dir . "/$base2.ALIGNED2.fasta"); 
+    my ($alignment_file1, $alignment_file2) = ($dir . "/$base1.ALIGNED1.sam",  $dir . "/$base2.ALIGNED2.sam"); 
     my ($deduplicated_file1, $deduplicated_file2) = ($dir . "/$base1.DEDUP1.sam", $dir . "/$base2.DEDUP2.sam");
     my $ref_seq_file = "/gscmnt/sata156/research/mmitreva/databases/human_build36/Homo_sapiens.NCBI36.45.dna.aml.plus5.8s15s28s.fna";
     my $align_options = '-t 4 -n ' . $self->edit_distance;
@@ -100,6 +101,8 @@ sub execute {
                               $xml_file,
                               'fastq_1'                 => $fastq1,
                               'fastq_2'                 => $fastq2,
+                              'primer_trim_file1'       => $primer_trim_file1,
+                              'primer_trim_file2'       => $primer_trim_file2,
                               'cutoff'                  => $cutoff,
                               'align_options_1'         => $align_options,
                               'align_options_2'         => $align_options,
@@ -136,8 +139,11 @@ print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
         to => $mail_dest,
         subject => "Illumina Bwa Test",
         msg     => "Illumina Bwa Test run with\n\n" .
-                              "input 1\t:$fastq1\n" .
-                              "input 2\t:$fastq2\n" .
+                              "input 1:\t$fastq1\n" .
+                              "input 2:\t$fastq2\n" .
+                              "primer_trim_file 1:\t$primer_trim_file1\n" .
+                              "primer_trim_file 2:\t$primer_trim_file2\n" .
+                              "n cutoff:\t$cutoff\n" .
                               "n_removed_file 1:\t$n_removed_file1\n" .
                               "n_removed_file 2:\t$n_removed_file2\n" .
                               "align_options 1:\t$align_options\n" .

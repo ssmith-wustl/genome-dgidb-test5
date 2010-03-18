@@ -1,12 +1,21 @@
 <?xml version='1.0' standalone='yes'?>
 <workflow name="human contamination screening" executor="Workflow::Executor::SerialDeferred" logDir="/gscmnt/sata409/research/mmitreva/edemello/workflow_logs">
-    <link fromOperation="input connector"           fromProperty="fastq_1"                  toOperation="remove n 1"                toProperty="fastq_file" />
-    <link fromOperation="input connector"           fromProperty="fastq_1"                  toOperation="synch fastq"               toProperty="fastq1" />
+    <link fromOperation="input connector"           fromProperty="fastq_1"                  toOperation="trim primer 1"             toProperty="fastq_file" />
+    <link fromOperation="input connector"           fromProperty="fastq_2"                  toOperation="trim primer 2"             toProperty="fastq_file" />
+    <link fromOperation="input connector"           fromProperty="primer_trim_file1"        toOperation="trim primer 1"             toProperty="output"/>
+    <link fromOperation="input connector"           fromProperty="primer_trim_file2"        toOperation="trim primer 2"             toProperty="output" />
+    <link fromOperation="input connector"           fromProperty="primer_trim_file1"        toOperation="wait for primer trim"      toProperty="primer_trim_file1"/>
+    <link fromOperation="input connector"           fromProperty="primer_trim_file2"        toOperation="wait for primer trim"      toProperty="primer_trim_file2" />
+    <link fromOperation="trim primer 1"             fromProperty="result"                   toOperation="wait for primer trim"      toProperty="trim_1_complete" />
+    <link fromOperation="trim primer 2"             fromProperty="result"                   toOperation="wait for primer trim"      toProperty="trim_2_complete" />
+
+    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file1"        toOperation="remove n 1"                toProperty="fastq_file" />
+    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file1"        toOperation="synch fastq"               toProperty="fastq1" />
     <link fromOperation="input connector"           fromProperty="cutoff"                   toOperation="remove n 1"                toProperty="cutoff" />
     <link fromOperation="input connector"           fromProperty="n_removed_file_1"         toOperation="remove n 1"                toProperty="n_removed_file" />
     <link fromOperation="input connector"           fromProperty="n_removed_file_1"         toOperation="wait for n removal 1"      toProperty="files_to_align_path_1" />
-    <link fromOperation="input connector"           fromProperty="fastq_2"                  toOperation="remove n 2"                toProperty="fastq_file" />
-    <link fromOperation="input connector"           fromProperty="fastq_2"                  toOperation="synch fastq"               toProperty="fastq2" />
+    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file2"        toOperation="remove n 2"                toProperty="fastq_file" />
+    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file2"        toOperation="synch fastq"               toProperty="fastq2" />
     <link fromOperation="input connector"           fromProperty="cutoff"                   toOperation="remove n 2"                toProperty="cutoff" />
     <link fromOperation="input connector"           fromProperty="n_removed_file_2"         toOperation="remove n 2"                toProperty="n_removed_file" />
     <link fromOperation="input connector"           fromProperty="n_removed_file_2"         toOperation="wait for n removal 2"      toProperty="files_to_align_path_2" />
@@ -90,6 +99,23 @@
 
     <link fromOperation="wait for dust"             fromProperty="dusted"                   toOperation="output connector"          toProperty="result" />
 
+    <operation name="trim primer 1">
+        <operationtype commandClass="Genome::Model::Tools::Fastq::TrimPrimer" typeClass="Workflow::OperationType::Command" />
+    </operation>
+
+    <operation name="trim primer 2">
+        <operationtype commandClass="Genome::Model::Tools::Fastq::TrimPrimer" typeClass="Workflow::OperationType::Command" />
+    </operation>
+
+    <operation name="wait for primer trim">
+        <operationtype typeClass="Workflow::OperationType::Block">
+            <property>primer_trim_file1</property>
+            <property>primer_trim_file2</property>
+            <property>trim_1_complete</property>
+            <property>trim_2_complete</property>
+        </operationtype>
+    </operation>
+    
     <operation name="remove n 1">
         <operationtype commandClass="Genome::Model::Tools::Fastq::RemoveN" typeClass="Workflow::OperationType::Command" />
     </operation>
@@ -205,6 +231,8 @@
 
     <operationtype typeClass="Workflow::OperationType::Model">
         <inputproperty>cutoff</inputproperty>
+        <inputproperty>primer_trim_file1</inputproperty>
+        <inputproperty>primer_trim_file2</inputproperty>
         <inputproperty>align_options_1</inputproperty>
         <inputproperty>aligner_output_file_1</inputproperty>
         <inputproperty>alignment_file_1</inputproperty>
