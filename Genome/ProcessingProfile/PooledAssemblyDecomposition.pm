@@ -1,10 +1,10 @@
-package Genome::ProcessingProfile::PooledAssembly;
+package Genome::ProcessingProfile::PooledAssemblyDecomposition;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::ProcessingProfile::PooledAssembly {
+class Genome::ProcessingProfile::PooledAssemblyDecomposition {
     is => 'Genome::ProcessingProfile',
     has_param => [
         percent_overlap => 
@@ -56,18 +56,18 @@ class Genome::ProcessingProfile::PooledAssembly {
             doc => "name of phdball if different than phd.ball.1"        
         },    
     ],
-    doc => "Processing Profile for the Pooled Assembly Pipeline"
+    doc => "Processing Profile for the Pooled Assembly Decomposition Pipeline"
 };
 
 #sub stages {
-#    return (qw/ pooled_assembly /);
+#    return (qw/ pooled_assembly_decomposition /);
 #}
 #
-#sub pooled_assembly_objects {
+#sub pooled_assembly_decomposition_objects {
 #    return 1;
 #}
 #
-#sub pooled_assembly_job_classes {
+#sub pooled_assembly_decomposition_job_classes {
 #    return (qw/
 #               Genome::Model::Event::Build::PooledAssembly::RunBlast;
 #               Genome::Model::Event::Build::PooledAssembly::MapContigsToAssembly;
