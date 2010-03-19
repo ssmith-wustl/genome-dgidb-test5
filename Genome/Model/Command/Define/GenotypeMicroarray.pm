@@ -16,6 +16,10 @@ class Genome::Model::Command::Define::GenotypeMicroarray {
             is => 'Path',
             doc => 'path to the file or directory of microarray data',
         },
+        no_build => {
+            is => 'Boolean',
+            is_optional => 1,
+        },
 
     ],
 };
@@ -68,26 +72,31 @@ sub execute {
     # TODO: we should flag model types which do not do multiple builds and which should auto build when defined.
     # For now this is just handled in the command which does the model definition.
 
-    $self->status_message("building...\n");
-    my $cmd = Genome::Model::Build::Command::Start->execute(model_identifier => $model->id);
-    unless ($cmd) {
-        $self->error_message("Failed to run a build on model " . $model->id . ": " . Genome::Model::Build::Command::Start->error_message);
-        return;
+    unless ($self->no_build) {
+
+        $self->status_message("building...\n");
+        my $cmd = Genome::Model::Build::Command::Start->execute(model_identifier => $model->id);
+        unless ($cmd) {
+            $self->error_message("Failed to run a build on model " . $model->id . ": " . Genome::Model::Build::Command::Start->error_message);
+            return;
+        }
+
+        my $build = $cmd->build;
+        unless ($build) {
+            $self->error_message("Failed to generate a new build for model " . $model->id . ": " . $cmd->error_message);
+            return;
+        }
+
+        $self->status_message("Copying genotype data to " . $build->formatted_genotype_file_path . "...");
+        Genome::Utility::FileSystem->copy_file(
+            $self->file,
+            $build->formatted_genotype_file_path
+        );
+
+        $build->success;
     }
 
-    my $build = $cmd->build;
-    unless ($build) {
-        $self->error_message("Failed to generate a new build for model " . $model->id . ": " . $cmd->error_message);
-        return;
-    }
 
-    $self->status_message("Copying genotype data to " . $build->formatted_genotype_file_path . "...");
-    Genome::Utility::FileSystem->copy_file(
-        $self->file,
-        $build->formatted_genotype_file_path
-    );
-
-    $build->success;
 
     return $self;
 }
