@@ -474,7 +474,7 @@ sub execute {
     print $viral_subfamily_o "Subfamily Name\t#Reads with hits\n";
     foreach my $name (keys%viral_subfamily_counts_hash){
         next if (($name eq "") or ($name =~ /^\s+$/));
-        print $viral_subfamily_o "$name\t$viral_family_counts_hash{$name}\n";
+        print $viral_subfamily_o "$name\t$viral_subfamily_counts_hash{$name}\n";
     }
     $viral_subfamily_o->close;
 
