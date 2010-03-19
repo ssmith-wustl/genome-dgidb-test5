@@ -16,6 +16,10 @@ class GAP::Command::RepeatMasker {
                             is  => 'SCALAR', 
                             doc => 'input fasta file' 
                            },
+            repeat_library => {
+                               is  => 'SCALAR',
+                               doc => 'repeat library to pass to RepeatMasker', 
+                              },
             output_file => { 
                             is          => 'SCALAR',
                             is_optional => 1,
@@ -25,7 +29,7 @@ class GAP::Command::RepeatMasker {
 };
 
 operation_io GAP::Command::RepeatMasker {
-    input  => [ 'input_file'  ],
+    input  => [ 'input_file', 'repeat_library' ],
     output => [ 'output_file' ]
 };
 
