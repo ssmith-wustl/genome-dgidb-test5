@@ -54,6 +54,9 @@ sub execute {
     $self->status_message("Finished creating call file hash");
     #Store the header information for creating filenames later
     my @filehandles = split /\t/, $call_href->{ID};
+    for my $name (@filehandles) {
+        $name =~s/\r//;
+    }
 
     $call_href = $self->convert_to_genotype($call_href);#, $probe_href);
 
