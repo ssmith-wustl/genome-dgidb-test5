@@ -12,6 +12,20 @@ use IPC::Run; # replace system()
 # based on the (to be developed) model
 class Genome::ProcessingProfile::GenePrediction {
     is => 'Genome::ProcessingProfile',
+    has => [
+        server_dispatch => {
+            is_constant => 1,
+            is_class_wide => 1,
+            value => 'inline',
+            doc => 'lsf queue to submit the launcher or \'inline\''
+        },
+        job_dispatch => {
+            is_constant => 1,
+            is_class_wide => 1,
+            value => 'inline',
+            doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
+        }
+    ],
     has_param => [
 #        config_file => { # get rid of this?
 #            doc => "yaml file for gene prediction pipeline; eventually, we'll blow this up and use the options directly...",

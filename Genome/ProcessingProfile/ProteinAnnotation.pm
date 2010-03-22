@@ -6,6 +6,20 @@ use Genome;
 
 class Genome::ProcessingProfile::ProteinAnnotation {
     is => 'Genome::ProcessingProfile',
+    has => [
+        server_dispatch => {
+            is_constant => 1,
+            is_class_wide => 1,
+            value => 'inline',
+            doc => 'lsf queue to submit the launcher or \'inline\''
+        },
+        job_dispatch => {
+            is_constant => 1,
+            is_class_wide => 1,
+            value => 'inline',
+            doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
+        }
+    ],
     has_param => [
         command_name => {
             doc => 'the name of a single command to run',
