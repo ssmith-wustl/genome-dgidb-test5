@@ -123,7 +123,7 @@ $state,    $build_id,  shift @lsf_id,   $event_status, $action, $owner, $fix
         my $event = shift @$lsf_job_ids;
         $event_status = $event->event_status;
         $owner        = $event->user_name;
-        $action       = 'kill';
+        $action       = 'none';
         @lsf_id       = @$lsf_job_ids;
 
         write_form() unless $self->cron;

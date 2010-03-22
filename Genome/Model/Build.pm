@@ -449,29 +449,79 @@ sub start {
     my $self = shift;
     my %params = @_;
 
+    # TODO make it so we don't need to pass anything to init the workflow.
+    my $workflow = $self->_initialize_workflow($params{job_dispatch} || 'apipe');
+    unless ($workflow) {
+        my $msg = $self->error_message("Failed to initialize a workflow!");
+        croak $msg;
+    }
+
+    $params{workflow} = $workflow;
+    
+    return $self->_launch(%params);
+}
+
+sub restart {
+    my $self = shift;
+    my %params = @_;
+    
+    my $dont_resume_newest_workflow = delete $params{dont_resume_newest_workflow};
+
+    if (delete $params{job_dispatch}) {
+        cluck $self->error_message('job_dispatch cannot be changed on restart');
+    }
+    
+    if ($self->run_by ne $ENV{USER}) {
+        croak $self->error_message("Can't restart a build originally started by: " . $self->run_by);
+    }
+
+    my $xmlfile = $self->data_directory . '/build.xml';
+    if (!-e $xmlfile) {
+        croak $self->error_message("Can't find xml file for build (" . $self->id . "): " . $xmlfile);
+    }
+
+    my $loc_file = $self->data_directory . '/server_location.txt';
+    if (-e $loc_file) {
+        croak $self->error_message("Server location file in build data directory exists");
+    }
+
+    my $w = $self->newest_workflow_instance;
+    if ($w && !$dont_resume_newest_workflow) {
+        if ($w->is_done) {
+            croak $self->error_message("Workflow Instance is complete");
+        }
+    }
+
+    my $build_event = $self->build_event;
+    $build_event->event_status('Scheduled');
+    $build_event->date_completed(undef);
+    
+    return $self->_launch(%params);
+}
+
+sub _launch {
+    my $self = shift;
+    my %params = @_;
+
     # right now it is "inline" or the name of an LSF queue.
     # ultimately, it will be the specification for parallelization
     #  including whether the server is inline, forked, or bsubbed, and the
     #  jobs are inline, forked or bsubbed from the server
     my $server_dispatch = delete $params{server_dispatch} || 'inline';
     my $job_dispatch = delete $params{job_dispatch} || 'inline';
+    my $fresh_workflow_instance = delete $params{job_dispatch};
+    my $workflow = delete $params{workflow};
+    my $workflow_instance_id = delete $params{workflow_instance_id};
+
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
 
-    # TODO make it so we don't need to pass anything to init the workflow.
-    my $workflow = $self->_initialize_workflow($job_dispatch);
-
-    unless ($workflow) {
-        my $msg = $self->error_message("Failed to initialize a workflow!");
-        $self->status("Crashed");
-        die $msg;
-    }
-
     my $model = $self->model;
-    my $processing_profile = $self->processing_profile;
+#    my $processing_profile = $self->processing_profile;
     my $build_event = $self->the_master_event;
 
     # TODO: the workflow for processing profiles with _execute_build is broken
     # We just run it directly during start() for now.
+=pod
     if ($processing_profile->can("_execute_build")) {
         unless ($server_dispatch eq 'inline') {
             warn "processing profiles using _execute_build must currently run inline.  Cannot respect the server_dispatch spec of $server_dispatch.";
@@ -504,6 +554,7 @@ sub start {
         }
         return 1;
     }
+=cut
 
     # TODO: send the workflow to the dispatcher instead of having LSF logic here.
     if ($server_dispatch eq 'inline') {
@@ -523,7 +574,7 @@ sub start {
         return $rv;
     }
     else {
-        my $add_args = ($job_dispatch eq 'inline' ? ' --inline' : '';
+        my $add_args = ($job_dispatch eq 'inline') ? ' --inline' : '';
     
         # bsub into the queue specified by the dispatch spec
         my $lsf_command = sprintf(
@@ -543,21 +594,32 @@ sub start {
             or return;
     
         $build_event->lsf_job_id($job_id);
-    
-        UR::Context->create_subscription(
-            method => 'commit',
-            callback => sub{
+
+        my $commit_observer;
+        my $rollback_observer;
+        
+        $commit_observer = UR::Context->add_observer(
+            aspect => 'commit',
+            callback => sub {
                 `bresume $job_id`;
-            },
+                $commit_observer->delete;
+                undef $commit_observer;
+                $rollback_observer->delete;
+                undef $rollback_observer;
+            }
         );
 
-        ## temporarily commented out per eclark
-        #UR::Context->create_subscription(
-        #    method => 'rollback',
-        #    callback => sub{
-        #        `bkill $job_id`;
-        #    },
-        #);
+        $rollback_observer = UR::Context->add_observer(
+            aspect => 'rollback',
+            callback => sub {
+                `bkill $job_id`;
+                $rollback_observer->delete;
+                undef $rollback_observer;
+                $commit_observer->delete;
+                undef $commit_observer;
+            }
+        );
+        
         return 1;
     }
 }

@@ -19,12 +19,12 @@ class Genome::Model::Build::Command::Start {
         },
         job_dispatch => {
             default_value => 'apipe',
-            is_constant => 1,
+#            is_constant => 1,
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
         server_dispatch => {
             default_value => 'long',
-            is_constant => 1,
+#            is_constant => 1,
             doc => 'dispatch specification: an LSF queue or "inline"',
         },
     ],
@@ -97,7 +97,7 @@ sub execute {
     # Create the build
     my $build = Genome::Model::Build->create(model_id => $model->id, @p);
     unless ( $build ) {
-        $self->error_message( 
+        $self->error_message(
             sprintf("Can't create build for model (%s %s)", $model->id, $model->name) 
         );
         return;

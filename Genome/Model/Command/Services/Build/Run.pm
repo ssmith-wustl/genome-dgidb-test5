@@ -119,71 +119,30 @@ sub execute {
         }
     }
 
-    $self->build->initialize;
+    $build->initialize;
     UR::Context->commit;
 
     $w = $build->newest_workflow_instance;
 
     my $success;
-    my $inline_error;
-
+    
     if ($self->inline) {
-        ## this is the most sensible representation of the event flow, since
-        #  the event table doesnt have anything to represent stages
-        
-        my $plan = Workflow::Operation->create_from_xml($xmlfile);
+        if ($w && !$self->restart) {
 
-        # inline provides minimal safety and no retries
-        # it only assures it will fail quickly and hard
+            $self->set_not_running($w);
+            UR::Context->commit;
 
-        my $flatten;
-        $flatten = sub {
-            $_[0]->can('operations') ? map { $flatten->($_) } $_[0]->operations_in_series : $_[0];
-        };
+            $success = Workflow::Simple::resume($w->id);
+        } 
+        else {
+            my %inputs = $build->processing_profile->_map_workflow_inputs($build);
 
-        my @event_adaptors = map {
-            $_->operation_type
-        } grep { 
-            $_->operation_type->isa('Workflow::OperationType::Event')
-        } $flatten->($plan);
-        
-        $DB::single=1;
-        foreach my $event_adaptor (@event_adaptors) {
-            my $output;
-            eval {
-                $output = $event_adaptor->execute(prior_result => 1);
-            }; 
-            if ($@) {
-                $self->error_message('event ' . $event_adaptor->event_id . ' died');
-                $self->error_message($@);
-
-                my $event = Genome::Model::Event->get($event_adaptor->event_id);
-                $inline_error = Genome::Model::Build::Error->create(
-                    build_event_id => $build->build_event->id,
-                    stage_event_id => $build->build_event->id,
-                    stage => 'unknown',
-                    step => defined $event ? $event->command_name_brief : '',
-                    step_event_id => $event_adaptor->event_id,
-                    error => 'Event returned undef'
-                );
-                last;
-            } elsif (!defined $output) {
-                $self->error_message('event ' . $event_adaptor->event_id . ' returned undef');
-                
-                my $event = Genome::Model::Event->get($event_adaptor->event_id);
-                $inline_error = Genome::Model::Build::Error->create(
-                    build_event_id => $build->build_event->id,
-                    stage_event_id => $build->build_event->id,
-                    stage => 'unknown',
-                    step => defined $event ? $event->command_name_brief : '',
-                    step_event_id => $event_adaptor->event_id,
-                    error => 'Event returned undef'
-                );
-                last;
-            }
+            $success = Workflow::Simple::run_workflow(
+                $xmlfile,
+                %inputs
+            );
         }
-        
-        $success = 1 unless defined $inline_error;
+
     } else {
         Genome::DataSource::GMSchema->disconnect_default_dbh;
 
@@ -198,28 +157,24 @@ sub execute {
             $success = Workflow::Simple::resume_lsf($w->id);
         } 
         else {
+            my %inputs = $build->processing_profile->_map_workflow_inputs($build);
             Workflow::DataSource::InstanceSchema->disconnect_default_dbh;
 
             $success = Workflow::Simple::run_workflow_lsf(
                 $xmlfile,
-                prior_result => 1
+                %inputs
             );
         }
     }
 
     # Failed a stage/step - send report
     unless ( $success ) {
-        my @errors;
-        if (defined $inline_error) {
-            @errors = ($inline_error);
-        } else {
-            unless ( @Workflow::Simple::ERROR ) {
-                return $self->_post_build_failure("Workflow failed, but no errors given");
-            }
-            @errors = Genome::Model::Build::Error->create_from_workflow_errors(
-                @Workflow::Simple::ERROR 
-            );
+        unless ( @Workflow::Simple::ERROR ) {
+            return $self->_post_build_failure("Workflow failed, but no errors given");
         }
+        my @errors = Genome::Model::Build::Error->create_from_workflow_errors(
+            @Workflow::Simple::ERROR 
+        );
         
         unless ( @errors ) {
             print STDERR "Can't convert workflow errors to build errors\n";

@@ -166,10 +166,15 @@ sub __extend_namespace__ {
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
     my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
     if ($pp_subclass_meta) {
+        my @pp_delegated_properties = map {
+            $_ => { via => 'processing_profile' }
+        } $pp_subclass_name->params_for_class;
+    
         my $model_subclass_name = 'Genome::Model::' . $ext;
         my $model_subclass_meta = UR::Object::Type->define(
             class_name => $model_subclass_name,
             is => 'Genome::Model',
+            has => \@pp_delegated_properties
         );
         die "Error defining $model_subclass_name for $pp_subclass_name!" unless $model_subclass_meta;
         return $model_subclass_meta;

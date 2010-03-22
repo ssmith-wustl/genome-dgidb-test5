@@ -63,17 +63,13 @@ sub _resolve_workflow_for_build {
     if ($self->can('_execute_build')) {
         # NOTE: this workflow doesn't actually run yet.
         # Instead the runner will detect it and just execute the Perl code.
-        my $workflow = Workflow::Model->create(
+        #
+        # Need to wrap _execution_build in a command class to make it work.
+        my $workflow = Workflow::Operation->create(
             name => $self->__display_name__,
-            input_properties => [
-                # TODO: should the workflow decide how to turn build inputs and params
-                # into the inputs to the next steps?
-                'build',
-            ],
-            output_properties => [
-                'build'
-            ]
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::Event::Build::ProcessingProfileMethodWrapper')
         );
+        
         return $workflow;
     }
 
@@ -88,9 +84,16 @@ sub _resolve_workflow_for_build {
     Carp::confess($msg);
 }
 
+# override in subclasses to compose processing profile parameters and build inputs to the workflow provided above
+sub _map_workflow_inputs {
+    my ($self, $build) = @_;
+    
+    return (build_id => $build->id);
+}
+
 # override in sub-classes if you want a non-workflow build
 #sub _execute_build {
-#   # my ($self,$build, $optional_lsf_queue) = @_;
+#   # my ($self,$build) = @_;
 #    
 #    return;
 #}

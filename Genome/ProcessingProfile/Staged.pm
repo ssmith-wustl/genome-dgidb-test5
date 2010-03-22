@@ -68,6 +68,10 @@ sub _resolve_workflow_for_build {
     return $workflow;
 }
 
+sub _map_workflow_inputs {
+    return (prior_result => 1);
+}
+
 sub _generate_events_for_build {
     my ($self, $build) = @_;
 
