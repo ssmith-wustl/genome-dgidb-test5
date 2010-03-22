@@ -17,18 +17,18 @@ class Genome::Model::Build::Command::Start {
             doc => 'Model identifier.  Use model id or name.',
             shell_args_position => 1,
         },
+    ],
+    has_optional => [
         job_dispatch => {
-            default_value => 'apipe',
+#            default_value => 'apipe',
 #            is_constant => 1,
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
         server_dispatch => {
-            default_value => 'long',
+#            default_value => 'long',
 #            is_constant => 1,
             doc => 'dispatch specification: an LSF queue or "inline"',
         },
-    ],
-    has_optional => [
         data_directory => { },
         force => {
             is => 'Boolean',
@@ -54,9 +54,11 @@ sub help_synopsis {
 genome model build start 1234
 
 genome model build start somename
+# default values for dispatching will be either -s long -j apipe
+# or come from the processing profile if available as a param
 
 genome model build start somename -s long -j apipe
-# run the server in the long queue, and jobs in the apipe queue (default)
+# run the server in the long queue, and jobs in the apipe queue
 
 genome model build start somename -s inline -j inline
 # run the server inline, and the jobs inline
@@ -94,6 +96,25 @@ sub execute {
         push @p, data_directory => $self->data_directory;
     }
 
+    my $server_dispatch;
+    my $job_dispatch;
+
+    if (defined $self->server_dispatch) {
+        $server_dispatch = $self->server_dispatch;
+    } elsif ($model->processing_profile->can('server_dispatch') && defined $model->processing_profile->server_dispatch) {
+        $server_dispatch = $model->processing_profile->server_dispatch;
+    } else {
+        $server_dispatch = 'long';
+    }
+
+    if (defined $self->job_dispatch) {
+        $job_dispatch = $self->job_dispatch;
+    } elsif ($model->processing_profile->can('job_dispatch') && defined $model->processing_profile->job_dispatch) {
+        $job_dispatch = $model->processing_profile->job_dispatch;
+    } else {
+        $job_dispatch = 'apipe';
+    }
+
     # Create the build
     my $build = Genome::Model::Build->create(model_id => $model->id, @p);
     unless ( $build ) {
@@ -107,8 +128,8 @@ sub execute {
     # Launch the build
     unless (
         $build->start(
-            server_dispatch => $self->server_dispatch,
-            job_dispatch => $self->job_dispatch
+            server_dispatch => $server_dispatch,
+            job_dispatch => $job_dispatch
         )
     ) {
         $self->error_message("Failed to start new build: " . $build->error_message);
