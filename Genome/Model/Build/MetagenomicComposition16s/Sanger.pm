@@ -96,11 +96,11 @@ sub raw_reads_qual_file {
 }
 
 sub raw_reads_fasta_and_qual_reader {
-    return $_[0]->fasta_and_qual_reader($_[0]->raw_reads_fasta_file, $_[0]->raw_reads_qual_file);
+    return $_[0]->_fasta_and_qual_reader($_[0]->raw_reads_fasta_file, $_[0]->raw_reads_qual_file);
 }
     
 sub raw_reads_fasta_and_qual_writer {
-    return $_[0]->fasta_and_qual_writer($_[0]->raw_reads_fasta_file, $_[0]->raw_reads_qual_file);
+    return $_[0]->_fasta_and_qual_writer($_[0]->raw_reads_fasta_file, $_[0]->raw_reads_qual_file);
 }
 
 # processsed reads
@@ -113,11 +113,11 @@ sub processed_reads_qual_file {
 }
 
 sub processed_reads_fasta_and_qual_reader {
-    return $_[0]->fasta_and_qual_reader($_[0]->processed_reads_fasta_file, $_[0]->processed_reads_qual_file);
+    return $_[0]->_fasta_and_qual_reader($_[0]->processed_reads_fasta_file, $_[0]->processed_reads_qual_file);
 }
     
 sub processed_reads_fasta_and_qual_writer {
-    return $_[0]->fasta_and_qual_writer($_[0]->processed_reads_fasta_file, $_[0]->processed_reads_qual_file);
+    return $_[0]->_fasta_and_qual_writer($_[0]->processed_reads_fasta_file, $_[0]->processed_reads_qual_file);
 }
 
 #< Amplicons >#
@@ -260,7 +260,7 @@ sub load_bioseq_for_amplicon {
         $self->error_message("Can't make bioseq from contig from amplicon acefile ($acefile).");
         die;
     }
-    $self->_validate_fasta_and_qual_bioseq($bioseq, $bioseq)
+    Genome::Utility::BioPerl->validate_fasta_and_qual_bioseq($bioseq, $bioseq)
         or die; # bad
 
     $amplicon->bioseq($bioseq);

@@ -174,11 +174,11 @@ sub processed_qual_file {
 }
 
 sub processed_fasta_and_qual_reader {
-    return $_[0]->fasta_and_qual_reader($_[0]->processed_fasta_file, $_[0]->processed_qual_file);
+    return $_[0]->_fasta_and_qual_reader($_[0]->processed_fasta_file, $_[0]->processed_qual_file);
 }
     
 sub processed_fasta_and_qual_writer {
-    return $_[0]->fasta_and_qual_writer($_[0]->processed_fasta_file, $_[0]->processed_qual_file);
+    return $_[0]->_fasta_and_qual_writer($_[0]->processed_fasta_file, $_[0]->processed_qual_file);
 }
 
 # oriented
@@ -191,178 +191,34 @@ sub oriented_qual_file {
 }
 
 sub oriented_fasta_and_qual_reader {
-    return $_[0]->fasta_and_qual_reader($_[0]->oriented_fasta_file, $_[0]->oriented_qual_file);
+    return $_[0]->_fasta_and_qual_reader($_[0]->oriented_fasta_file, $_[0]->oriented_qual_file);
 }
 
 sub oriented_fasta_and_qual_writer {
-    return $_[0]->fasta_and_qual_writer($_[0]->oriented_fasta_file, $_[0]->oriented_qual_file);
+    return $_[0]->_fasta_and_qual_writer($_[0]->oriented_fasta_file, $_[0]->oriented_qual_file);
 }
 
 # reader/writer helpers
-sub fasta_and_qual_reader {
+sub _fasta_and_qual_reader {
     my ($self, $fasta_file, $qual_file) = @_;
 
-    my $fasta_reader = $self->_bioseq_reader($fasta_file, 'fasta')
-        or return;
-    my $qual_reader;
+    my %params = ( fasta_file => $fasta_file);
     if ( -e $qual_file ) { 
-         $qual_reader = $self->_bioseq_reader($qual_file, 'qual')
-            or return;
+        $params{qual_file} = $qual_file;
     }
 
-    return sub {
-        my $fasta = $fasta_reader->next_seq
-            or return;
-        
-        return $fasta unless $qual_reader;
-        
-        my $qual = $qual_reader->next_seq;
-
-        my $bioseq = $self->_create_bioseq_from_fasta_and_qual($fasta, $qual)
-            or die;
-
-        return $bioseq;
-    };
+    return Genome::Utility::BioPerl::FastaAndQualReader->create(%params);
 }
 
-sub fasta_and_qual_writer {
+sub _fasta_and_qual_writer {
     my ($self, $fasta_file, $qual_file) = @_;
 
-    my @writers;
-    push @writers, $self->_bioseq_writer($fasta_file, 'fasta')
-        or return;
+    my %params = ( fasta_file => $fasta_file);
     if ( $self->sequencing_platform eq 'sanger' ) { # FIXME better way? 454 don't have qual?
-        push @writers, $self->_bioseq_writer($qual_file, 'qual')
-            or return;
+        $params{qual_file} = $qual_file;
     }
 
-    return sub {
-        my $bioseq = shift;
-
-        for my $writer ( @writers ) {
-            eval { $writer->write_seq($bioseq); };
-            if ( $@ ) {
-                $self->error_message(
-                    sprintf(
-                        "Can't write bioseq (%s) for %s: %s",
-                        $bioseq->id,
-                        $self->description,
-                        $@,
-                    )
-                );
-                return;
-            }
-        }
-        
-        return 1;
-    };
-}
-
-sub _bioseq_io {
-    my ($self, $file, $format, $rw) = @_;
-
-    my $bioseq_io;
-    eval{
-        $bioseq_io = Bio::SeqIO->new(
-            '-file' => $rw.$file,
-            '-format' => $format,
-        ); 
-    };
-    unless ( $bioseq_io ) {
-        $self->error_message("Can't open $format file ($file) for build (".$self->id."): $@");
-        return;
-    }
-
-    return $bioseq_io;
-}
-
-sub _bioseq_reader {
-    my ($self, $file, $format) = @_;
-
-    die "No file given to open bioseq writer" unless $file;
-    die "No format given to open bioseq writer" unless $format;
-
-    Genome::Utility::FileSystem->validate_file_for_reading($file)
-        or return;
-
-    return $self->_bioseq_io($file, $format, '<');
-}
-
-sub _bioseq_writer {
-    my ($self, $file, $format) = @_;
-
-    die "No file given to open bioseq writer" unless $file;
-    die "No format given to open bioseq writer" unless $format;
-    
-    unlink $file if -e $file;
-    Genome::Utility::FileSystem->validate_file_for_writing($file)
-        or return;
-
-    return $self->_bioseq_io($file, $format, '>');
-}
-
-sub _create_bioseq_from_fasta_and_qual {
-    my ($self, $fasta, $qual) = @_;
-
-    $self->_validate_fasta_and_qual_bioseq($fasta, $qual)
-        or return;
-    
-    my $bioseq;
-    eval {
-        $bioseq = Bio::Seq::Quality->new(
-            '-id' => $fasta->id,
-            '-desc' => $fasta->desc,
-            '-alphabet' => 'dna',
-            '-force_flush' => 1,
-            '-seq' => $fasta->seq,
-            '-qual' => $qual->qual,
-        ),
-    };
-
-    if ( $@ ) {
-        $self->error_message("Can't create combined fasta/qual (".$fasta->id.") bioseq for ".$self->description.": $@");
-        return;
-    }
-
-    return $bioseq;
-}
-
-sub _validate_fasta_and_qual_bioseq {
-    my ($self, $fasta, $qual) = @_;
-
-    unless ( $fasta ) {
-        $self->error_message("No fasta given to validate for ".$self->description);
-        return;
-    }
-
-    unless ( $qual ) {
-        $self->error_message("No qual given to validate for ".$self->description);
-        return;
-    }
-
-    unless ( $fasta->seq =~ /^[ATGCNX]+$/i ) {
-        $self->error_message(
-            sprintf(
-                "Illegal characters found in fasta (%s) seq:\n%s",
-                $fasta->id,
-                $fasta->seq,
-            )
-        );
-        return;
-    }
-
-    unless ( $fasta->length == $qual->length ) {
-        $self->error_message(
-            sprintf(
-                'Unequal length for fasta (%s) and quality (%s)',
-                $fasta->id,
-                $qual->id,
-            )
-        );
-        return;
-    }
-    
-    return 1;
+    return Genome::Utility::BioPerl::FastaAndQualWriter->create(%params);
 }
 
 #< Orient >#
@@ -395,7 +251,7 @@ sub orient_amplicons_by_classification {
             }
         }
 
-        $writer->($bioseq);
+        $writer->write_seq($bioseq);
     }
 
     return 1;

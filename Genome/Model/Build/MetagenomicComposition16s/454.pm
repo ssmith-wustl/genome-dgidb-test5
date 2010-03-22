@@ -25,7 +25,7 @@ sub amplicon_sets {
         or return;
 
     my $amplicon_set = sub{
-        my $bioseq = $reader->();
+        my $bioseq = $reader->next_seq;
         return unless $bioseq;
 
         my $amplicon = Genome::Model::Build::MetagenomicComposition16s::Amplicon->create(

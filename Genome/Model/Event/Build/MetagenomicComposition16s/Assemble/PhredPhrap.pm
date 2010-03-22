@@ -42,7 +42,7 @@ sub execute {
         $self->build->load_bioseq_for_amplicon($amplicon)
             or next; # ok
         
-        $writer->( $amplicon->bioseq );
+        $writer->write_seq( $amplicon->bioseq );
     }
 
     return 1;

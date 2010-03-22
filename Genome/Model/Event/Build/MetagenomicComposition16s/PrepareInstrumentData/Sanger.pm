@@ -142,10 +142,12 @@ sub _prepare_instrument_data_for_phred_phrap {
     }
     
     # Write the 'raw' read fastas
-    my $reader = $self->build->fasta_and_qual_reader($fasta_file, $qual_file)
-        or return;
-    while ( my $bioseq = $reader->() ) {
-        $self->_raw_reads_fasta_and_qual_writer->($bioseq)
+    my $reader = Genome::Utility::BioPerl::FastaAndQualReader->create(
+        fasta_file => $fasta_file,
+        qual_file => $qual_file,
+    ) or return;
+    while ( my $bioseq = $reader->next_seq ) {
+        $self->_raw_reads_fasta_and_qual_writer->write_seq($bioseq)
             or return;
     }
     

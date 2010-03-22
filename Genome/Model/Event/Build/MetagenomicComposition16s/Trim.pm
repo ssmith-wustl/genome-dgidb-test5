@@ -14,10 +14,12 @@ sub _add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual {
     my ($self, $fasta_file, $qual_file) = @_;
 
     # Write the 'raw' read fastas
-    my $reader = $self->build->fasta_and_qual_reader($fasta_file, $qual_file)
-        or return;
-    while ( my $bioseq = $reader->() ) {
-        $self->_processed_reads_fasta_and_qual_writer->($bioseq)
+    my $reader = Genome::Utility::BioPerl::FastaAndQualReader->create(
+        fasta_file => $fasta_file,
+        qual_file => $qual_file,
+    ) or return;
+    while ( my $bioseq = $reader->next_seq ) {
+        $self->_processed_reads_fasta_and_qual_writer->write_seq($bioseq)
             or return;
     }
  

@@ -568,9 +568,7 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
         sub_dirs _sub_dirs fasta_dir classification_dir 
         file_base_name
         clean_up
-        fasta_and_qual_reader fasta_and_qual_writer
-        _bioseq_io _bioseq_reader _bioseq_writer _create_bioseq_from_fasta_and_qual
-        _validate_fasta_and_qual_bioseq
+        _fasta_and_qual_reader _fasta_and_qual_writer
 
         processed_fasta_file processed_qual_file
         processed_fasta_and_qual_reader processed_fasta_and_qual_writer

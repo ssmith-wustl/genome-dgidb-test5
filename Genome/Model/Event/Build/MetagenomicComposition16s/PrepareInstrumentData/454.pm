@@ -35,11 +35,11 @@ sub execute {
 
         my $reader = $self->fasta_and_qual_reader($fasta_file);
         my $min_read_length = $self->processing_profile->amplicon_size;
-        while ( my $bioseq = $reader->() ) {
+        while ( my $bioseq = $reader->next_seq ) {
             $attempted++;
             next unless $bioseq->length >= $min_read_length;
             # TODO remove primer, add to bioseq desc
-            $writer->($bioseq)
+            $writer->write_seq($bioseq)
                 or return;
         }
     }
