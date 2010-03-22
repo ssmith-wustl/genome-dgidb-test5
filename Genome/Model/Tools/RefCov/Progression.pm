@@ -99,11 +99,13 @@ sub execute {
             my @instrument_data_ids = @{$self->instrument_data_ids};
             my $instrument_data_id = $instrument_data_ids[$i];
             my $rls = GSC::RunLaneSolexa->get($instrument_data_id);
-            my $error_avg = $rls->filt_error_rate_avg;
-            my $error_stdev = $rls->filt_error_rate_stdev;
-            $progression{$current_interval}{'interval_id'} = $instrument_data_id;
-            $progression{$current_interval}{'interval_error_avg'} = $error_avg;
-            $progression{$current_interval}{'interval_error_stdev'} = $error_stdev;
+            if ($rls) {
+                my $error_avg = $rls->filt_error_rate_avg;
+                my $error_stdev = $rls->filt_error_rate_stdev;
+                $progression{$current_interval}{'interval_id'} = $instrument_data_id;
+                $progression{$current_interval}{'interval_error_avg'} = $error_avg;
+                $progression{$current_interval}{'interval_error_stdev'} = $error_stdev;
+            }
         }
         $current_interval += $self->interval;
     }
