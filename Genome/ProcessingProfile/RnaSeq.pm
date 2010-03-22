@@ -17,23 +17,6 @@ class Genome::ProcessingProfile::RnaSeq {
             doc => 'the type of dna used in the reads for this model',
             valid_values => ['cdna']
         },
-        merge_software => {
-            doc => 'picard or samtools for merging',
-            valid_values => ['picard','samtools'],
-            is_optional => 1,
-        },
-        merge_version => {
-            doc => 'picard version for MarkDuplicates, MergeSamfiles, CreateSequenceDictionary...',
-            is_optional => 1,
-        },
-        dedup_name => {
-            doc => 'dedup tool used for this model',
-            is_optional => 1,
-        },
-        dedup_version => {
-            doc => 'dedup tool version used for this model',
-            is_optional => 1,
-        },
         read_aligner_name => {
             doc => 'alignment algorithm/software used for this model',
         },
@@ -55,14 +38,6 @@ class Genome::ProcessingProfile::RnaSeq {
         },
         expression_params => {
             doc => 'the expression detection params used for this model',
-            is_optional => 1,
-        },
-        force_fragment => {
-            is => 'Integer',
-            #This doesn't seem to work yet because of the create code, can't the valid values logic be removed from create???
-            #default_value => '0',
-            #valid_values => ['0', '1'],
-            doc => 'force all alignments as fragment reads',
             is_optional => 1,
         },
         read_trimmer_name => {
