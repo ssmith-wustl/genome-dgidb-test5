@@ -180,7 +180,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     ok($build, 'Created build');
     
     my @workflow_results = $build->_initialize_workflow;
-    is(scalar @workflow_results, 3, 'started the build');
+    is(scalar @workflow_results, 1, 'started the build');
 
     for my $class ($pp->setup_project_job_classes) {
         my @events = $class->get(model_id => $model->id);
