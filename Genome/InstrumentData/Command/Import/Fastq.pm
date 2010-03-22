@@ -224,7 +224,9 @@ sub execute {
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "fastq";
     $params{sample_id} = $sample_id;
-
+    if(defined($self->allocations)){
+        $params{disk_allocations} = $self->allocation;
+    }
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
@@ -237,6 +239,7 @@ sub execute {
     my $ref_name = $self->reference_name;
 
     my @input_files = split /\,/, $self->source_data_files;
+
     foreach (@input_files) {
         unless( -s $_) {
             $self->error_message("Input file(s) were not found $_");
@@ -260,7 +263,7 @@ sub execute {
         die $self->error_message;
     }
 
-    my $tar_cmd = sprintf("tar cvzf -D %s %s %s",$basename, $tmp_tar_filename, join " ", @input_files);
+    my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @input_files);
     print $tar_cmd, "\n";
     system($tar_cmd);
 
