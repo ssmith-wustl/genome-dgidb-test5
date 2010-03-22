@@ -18,7 +18,7 @@ sub stages {
     return @stages;
 }
 
-sub prepare_reads {
+sub prepare_reads_job_classes {
     my @sub_command_classes = qw/
         Genome::Model::Event::Build::RnaSeq::PrepareReads
     /;
