@@ -8,10 +8,7 @@ class Genome::Model::Tools::Cufflinks::Assemble {
         },
         params => {
             doc => 'Any additional parameters to pass to cufflinks',
-        },
-        threads => {
-            is => 'Number',
-            doc => 'The number of CPU threads to use',
+            is_optional => 1,
         },
     ],
     has_output => [
@@ -30,8 +27,7 @@ sub execute {
     $self->transcript_expression_file('transcripts.expr');
     $self->gene_expression_file('genes.expr');
 
-    my $params = '--num-threads='. $self->threads;
-    $params .= ' '. $self->params;
+    my $params = $self->params || '';
     my $cmd = $self->cufflinks_path .' '. $params .' '. $self->sam_file;
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
