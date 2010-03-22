@@ -458,11 +458,7 @@ sub start {
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
 
     # TODO make it so we don't need to pass anything to init the workflow.
-    # Also, we should be able to interrogate a workflow to figure out its resource
-    # requirements.  The add_args should be part of dispatch logic.
-    my ($workflow,$resource,$add_args);
-    $DB::single = 1;
-    ($workflow,$resource,$add_args) = $self->_initialize_workflow($job_dispatch);
+    my $workflow = $self->_initialize_workflow($job_dispatch);
 
     unless ($workflow) {
         my $msg = $self->error_message("Failed to initialize a workflow!");
@@ -481,7 +477,7 @@ sub start {
             warn "processing profiles using _execute_build must currently run inline.  Cannot respect the server_dispatch spec of $server_dispatch.";
         }
         unless ($job_dispatch eq 'inline') {
-            warn "processing profiles using _execute_build must currently run inline.  Cannot respect the server_dispatch spec of $job_dispatch.";
+            warn "processing profiles using _execute_build must currently run inline.  Cannot respect the job_dispatch spec of $job_dispatch.";
         }
         $workflow->delete;
         print STDERR "Running directly...\n";
@@ -499,7 +495,7 @@ sub start {
                 $self->status("Succeeded");
             }
             else {
-                print "Setting to Succeeded!\n";
+                print "Setting to Failed!\n";
                 $self->status("Failed");
             }
         }
@@ -514,19 +510,26 @@ sub start {
         # TODO: redirect STDOUT/STDERR to these files
         #$build_event->output_log_file,
         #$build_event->error_log_file,
-        my $rv = Genome::Model::Command::Services::Build::Run->execute(
+        
+        my %args = (
             model_id => $self->model_id,
             build_id => $self->id,
-            inline => 1,
         );
+        if ($job_dispatch eq 'inline') {
+            $args{inline} = 1;
+        }
+        
+        my $rv = Genome::Model::Command::Services::Build::Run->execute(%args);
         return $rv;
     }
     else {
+        my $add_args = ($job_dispatch eq 'inline' ? ' --inline' : '';
+    
         # bsub into the queue specified by the dispatch spec
         my $lsf_command = sprintf(
             'bsub -N -H -q %s -m blades %s -g /build/%s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
             $server_dispatch,
-            $resource,
+            "-R 'select[type==LINUX86]'",
             $ENV{USER},
             $ENV{USER}, 
             $build_event->output_log_file,
@@ -598,7 +601,7 @@ sub _initialize_workflow {
     my $model = $self->model;
     my $processing_profile = $self->processing_profile;
 
-    my ($workflow,$resource,$add_args) = $processing_profile->_resolve_workflow_for_build($self,$lsf_queue_eliminate_me);
+    my $workflow = $processing_profile->_resolve_workflow_for_build($self,$lsf_queue_eliminate_me);
 
     $workflow->save_to_xml(OutputFile => $self->data_directory . '/build.xml');
     

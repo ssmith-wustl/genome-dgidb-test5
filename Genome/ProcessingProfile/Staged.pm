@@ -40,17 +40,14 @@ sub objects_for_stage {
 
 sub _resolve_workflow_for_build {
     # This is called by Genome::Model::Build::start()
-    # Returns a Workflow::Operation, lsf resource string, and additional bsub params
+    # Returns a Workflow::Operation
     # By default, builds this from stages(), but can be overridden for custom workflow.
     my $self = shift;
     my $build = shift;
     my $lsf_queue = shift; # TODO: the workflow shouldn't need this yet
 
-    my $inline = 0;
-    if ($lsf_queue eq 'inline') {
-        $inline = 1;
-        $lsf_queue = undef;
-        $DB::single = 1;
+    if (!defined $lsf_queue || $lsf_queue eq '' || $lsf_queue eq 'inline') {
+        $lsf_queue = 'apipe';
     }
 
     my $events_by_stage = $self->_generate_events_for_build($build);
@@ -68,19 +65,7 @@ sub _resolve_workflow_for_build {
     # FIXME check for errors here???
     my $workflow = $self->_merge_stage_workflows($build,@workflow_stages);
 
-    my $resource = "-R 'select[type==LINUX86]'";
-    my $add_args = '';
-
-    if (scalar @$events_by_stage == 1 && scalar @{ $events_by_stage->[0]->{events} } == 1) {
-        my $one_event = $events_by_stage->[0]->{events}->[0];
-        $resource = $one_event->bsub_rusage;
-        $add_args = ' --inline';
-    }
-    elsif($inline) {
-        $add_args = ' --inline';
-    }
-
-    return ($workflow, $resource, $add_args);
+    return $workflow;
 }
 
 sub _generate_events_for_build {
