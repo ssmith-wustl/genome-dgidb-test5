@@ -32,15 +32,14 @@ sub execute {
         my $somatic_build = $somatic_model->last_succeeded_build or die "No succeeded build found for somatic model id $somatic_model_id.\n";
         my $somatic_build_id = $somatic_build->id or die "No build id found in somatic build object for somatic model id $somatic_model_id.\n";
         print "Last succeeded build for somatic model $somatic_model_id is build $somatic_build_id. ";
-        my $data_dir = $somatic_build->data_directory or die "No data dir found for somatic build $somatic_build_id.\n";
-        my $cn_data_file = $data_dir . "/copy_number_output.out";
-        my $cn_png_file = $data_dir . "/copy_number_output.out.png";
+        my $cn_data_file = $somatic_build->somatic_workflow_input("copy_number_output") or die "Could not query somatic build for copy number output.\n";
+        my $cn_png_file = $cn_data_file . ".png";
 
         #if files are found (bam-to-cna has been run correctly already), create link to the data in current folder
         if (-s $cn_data_file && -s $cn_png_file) {
-            my $link_name = $somatic_model_id . ".copy_number_output.out";
+            my $link_name = $somatic_model_id . ".copy_number.csv";
             `ln -s $cn_data_file $link_name`;
-            print "Link to copy_number_output.out created.\n";
+            print "Link to copy_number_output created.\n";
         }
         else {
             #get tumor and normal bam files
