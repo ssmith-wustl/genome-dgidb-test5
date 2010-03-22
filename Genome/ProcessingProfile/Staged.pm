@@ -189,7 +189,7 @@ sub _generate_events_for_object {
                         ref_seq_id => $object,
                     );
                 }
-            } elsif ($command_class =~ /AlignReads|TrimReadSet|AssignReadSetToModel|AddReadSetToProject|FilterReadSet/) {
+            } elsif ($command_class =~ /ReferenceAlignment::AlignReads|TrimReadSet|AssignReadSetToModel|AddReadSetToProject|FilterReadSet|RnaSeq::PrepareReads/) {
                 if ($object->isa('Genome::InstrumentData')) {
                     my $ida = Genome::Model::InstrumentDataAssignment->get(
                         model_id => $build->model_id,
