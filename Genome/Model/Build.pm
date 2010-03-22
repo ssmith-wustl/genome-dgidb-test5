@@ -456,7 +456,7 @@ sub start {
         croak $msg;
     }
 
-    $params{workflow} = $workflow;
+#    $params{workflow} = $workflow;
     
     return $self->_launch(%params);
 }
@@ -464,9 +464,7 @@ sub start {
 sub restart {
     my $self = shift;
     my %params = @_;
-    
-    my $dont_resume_newest_workflow = delete $params{dont_resume_newest_workflow};
-
+   
     if (delete $params{job_dispatch}) {
         cluck $self->error_message('job_dispatch cannot be changed on restart');
     }
@@ -482,11 +480,11 @@ sub restart {
 
     my $loc_file = $self->data_directory . '/server_location.txt';
     if (-e $loc_file) {
-        croak $self->error_message("Server location file in build data directory exists");
+        croak $self->error_message("Server location file in build data directory exists. Cannot restart");
     }
 
     my $w = $self->newest_workflow_instance;
-    if ($w && !$dont_resume_newest_workflow) {
+    if ($w && !$params{fresh_workflow}) {
         if ($w->is_done) {
             croak $self->error_message("Workflow Instance is complete");
         }
@@ -509,52 +507,12 @@ sub _launch {
     #  jobs are inline, forked or bsubbed from the server
     my $server_dispatch = delete $params{server_dispatch} || 'inline';
     my $job_dispatch = delete $params{job_dispatch} || 'inline';
-    my $fresh_workflow_instance = delete $params{job_dispatch};
-    my $workflow = delete $params{workflow};
-    my $workflow_instance_id = delete $params{workflow_instance_id};
+    my $fresh_workflow = delete $params{fresh_workflow};
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
 
     my $model = $self->model;
-#    my $processing_profile = $self->processing_profile;
     my $build_event = $self->the_master_event;
-
-    # TODO: the workflow for processing profiles with _execute_build is broken
-    # We just run it directly during start() for now.
-=pod
-    if ($processing_profile->can("_execute_build")) {
-        unless ($server_dispatch eq 'inline') {
-            warn "processing profiles using _execute_build must currently run inline.  Cannot respect the server_dispatch spec of $server_dispatch.";
-        }
-        unless ($job_dispatch eq 'inline') {
-            warn "processing profiles using _execute_build must currently run inline.  Cannot respect the job_dispatch spec of $job_dispatch.";
-        }
-        $workflow->delete;
-        print STDERR "Running directly...\n";
-        $self->status("Running");
-        my $rv = eval {
-            $processing_profile->_execute_build($self);
-        };
-        if ($@) {
-            print "Crashed with exception: $@\n";
-            $self->status("Crashed");
-        }
-        elsif ($self->status eq "Running") {
-            if ($rv) {
-                print "Setting to Succeeded!\n";
-                $self->status("Succeeded");
-            }
-            else {
-                print "Setting to Failed!\n";
-                $self->status("Failed");
-            }
-        }
-        else {
-            print "Ending with status " . $self->status . "\n"; 
-        }
-        return 1;
-    }
-=cut
 
     # TODO: send the workflow to the dispatcher instead of having LSF logic here.
     if ($server_dispatch eq 'inline') {
@@ -575,6 +533,9 @@ sub _launch {
     }
     else {
         my $add_args = ($job_dispatch eq 'inline') ? ' --inline' : '';
+        if ($fresh_workflow) {
+            $add_args .= ' --restart';
+        }
     
         # bsub into the queue specified by the dispatch spec
         my $lsf_command = sprintf(
