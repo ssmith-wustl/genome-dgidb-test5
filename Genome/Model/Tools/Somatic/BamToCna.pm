@@ -80,6 +80,12 @@ class Genome::Model::Tools::Somatic::BamToCna {
         default => 1,
         doc => 'Percent of reads (value x 100%) to use in calculations (max,default = 1).'
     },
+    plot => {
+        type => 'Boolean',
+        is_optional => 1,
+        doc => "whether or not to run R plot command at end to create .png image of data. Use --noplot to skip plot. Default is to make a plot.",
+        default => 1,
+    },
     skip_if_output_present => {
         is => 'Boolean',
         is_optional => 1,
@@ -100,7 +106,7 @@ class Genome::Model::Tools::Somatic::BamToCna {
 };
 
 my %BAMWINDOW_VERSIONS = (
-     '0.1' => '/gsc/pkg/bio/bamwindow/bamwindow-v0.1/' . $BAMWINDOW_COMMAND,
+    '0.1' => '/gsc/pkg/bio/bamwindow/bamwindow-v0.1/' . $BAMWINDOW_COMMAND,
 );
 
 sub help_synopsis {
@@ -133,13 +139,13 @@ sub execute {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
         return 1;
     }
-    
+
     #test architecture to make sure bam-window program can run (req. 64-bit)
     unless (`uname -a` =~ /x86_64/) {
         $self->error_message("Must run on a 64 bit machine");
         die;
     }
-                                      
+
     ####################### Compute read counts in sliding windows ########################
     my %data;
     my %statistics;
@@ -249,7 +255,18 @@ sub execute {
     }
     close(OUT);
 
-    $self->plot_output($outfile, \@included_chrs);
+    #clear some memory
+    undef %data;
+    undef %statistics;
+    undef %medians;
+    undef %num_CN_neutral_pos;
+    undef %NReads_CN_neutral;
+    undef %depth2x;
+
+    #plot output
+    if ($self->plot) { 
+        $self->plot_output($outfile, \@included_chrs);
+    }
 
     return 1;
 }
@@ -274,27 +291,26 @@ sub plot_output {
     my $self = shift;
     my $datafile = shift;
     my $chr_array = shift;
-    
+
     $datafile = abs_path($datafile);
     my $Routfile = $datafile.".png";
     my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
     my $chr_list = join(',', map("'$_'", @$chr_array));
-    
+
     #R automatically sets the working directory to its tmp_dir, which prevents Genome::Utility::FileSystem from cleaning it up...
     #So save the original beforehand and restore it after we're done
     my $cwd = cwd();
-    
+
     my $R = Statistics::R->new(tmp_dir => $tempdir);
     $R->startR();
     $R->send(qq{
         bitmap('$Routfile', height = 8.5, width=11, res=200);
         par(mfrow=c(4,6));
         x=read.table('$datafile',comment.char='#',header=TRUE);
-        for (i in c($chr_list)) { y=subset(x,CHR==i); plot( y\$POS, y\$DIFF, main=paste('chr.',i), xlab='mb', ylab='cn', type='p', col=rgb(0,0,0), pch='.', ylim=c(-4,4) ) };
+        for (i in c($chr_list)) {y=subset(x,CHR==i); plot(y\$POS,y\$DIFF,main=paste('chr.',i),xlab='mb',ylab='cn',type='p',col=rgb(0,0,0),pch='.',ylim=c(-4,4))};
         dev.off();
     });
     $R->stopR();
-    
     chdir $cwd; 
 }
 
