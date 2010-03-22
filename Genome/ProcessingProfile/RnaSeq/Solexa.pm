@@ -8,13 +8,12 @@ use Genome;
 class Genome::ProcessingProfile::RnaSeq::Solexa {
     is => 'Genome::ProcessingProfile::RnaSeq',
 };
+
 sub stages {
     my @stages = qw/
         prepare_reads
         alignment
-        deduplication
-        reference_coverage
-        transcript_expression
+        expression
     /;
     return @stages;
 }
@@ -33,25 +32,10 @@ sub alignment_job_classes {
     return @sub_command_classes;
 }
 
-sub reference_coverage_job_classes {
-    my @sub_command_classes = qw/
-        Genome::Model::Event::Build::RnaSeq::RefCov
-    /;
-    return @sub_command_classes;
-}
-
-sub deduplication_job_classes {
-    my @steps = ( 
-        'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries',
-        'Genome::Model::Event::Build::ReferenceAlignment::PostDedupReallocate',
-    );
-    return @steps;
-}
-
-sub transcript_expression_job_classes{
+sub expression_job_classes{
     my $self = shift;
     my @steps = (
-        'Genome::Model::Event::Build::RnaSeq::TranscriptExpression',
+        'Genome::Model::Event::Build::RnaSeq::Expression',
     );
     return @steps;
 }
@@ -78,19 +62,7 @@ sub alignment_objects {
     return 'all_sequences';
 }
 
-sub reference_coverage_objects {
-    my $self = shift;
-    my $model = shift;
-    return 'all_sequences';
-}
-
-sub deduplication_objects {
-    my $self = shift;
-    my $model = shift;
-    return 'all_sequences';
-}
-
-sub transcript_expression_objects {
+sub expression_objects {
     my $self = shift;
     my $model = shift;
     return 'all_sequences';
