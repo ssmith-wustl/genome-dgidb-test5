@@ -51,7 +51,7 @@ sub data_directory {
 
     my $alloc = $self->get_disk_allocation;
 
-    if ($alloc) {
+    if (defined($alloc)) {
         return $alloc->absolute_path;
     } else {
         $self->error_message("Could not find an associated disk_allocations record.");
