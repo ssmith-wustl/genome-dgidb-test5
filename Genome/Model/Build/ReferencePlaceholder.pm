@@ -64,16 +64,16 @@ sub create {
     }
 
     my $path = sprintf('%s/reference_sequences/%s','/gscmnt/839/info/medseq',$self->name);
-    my $dna_type = $self->sample_type;
+    #my $dna_type = $self->sample_type;
     #if $dna_type contains spaces, replace them with underscores
-    if ( $dna_type =~ m/\s/ ) {
-        $dna_type =~ tr/ /_/;
-    }
+    #if ( $dna_type =~ m/\s/ ) {
+    #    $dna_type =~ tr/ /_/;
+    #}
     
-    my $dna_path = $path .'.'. $dna_type;
-    if (-d $dna_path || -l $dna_path) {
-        $path = $dna_path;
-    }
+    #my $dna_path = $path .'.'. $dna_type;
+    #if (-d $dna_path || -l $dna_path) {
+    #    $path = $dna_path;
+    #}
     $self->data_directory($path);
 
     return $self;
