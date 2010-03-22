@@ -188,7 +188,7 @@ sub create {
 
     unless ( -e $self->_ref_seq_index_file ) {
         $self->error_message( "Samtools refseq list does not exist.  Expected "
-              . $self->_ref_seq_idx_file
+              . $self->_ref_seq_index_file
               . ".  Use 'samtools faidx' to go make one!" );
         return;
     }
