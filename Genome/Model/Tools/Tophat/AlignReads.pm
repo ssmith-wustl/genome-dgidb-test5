@@ -209,7 +209,7 @@ sub execute {
         is_sorted   => 0,
         index_bam   => 1,
         fix_mate    => 1,
-        keep_sam    => 0,
+        keep_sam    => 1,
     );
     unless ($sam_to_bam) {
         $self->error_message('Error converting SAM file: '. $self->sam_file .' to BAM file '. $self->bam_file);
@@ -286,7 +286,7 @@ sub verify_aligner_successful_completion {
 sub output_files {
     my $self = shift;
     my @output_files;
-    for my $method (qw/aligner_output_file bam_file coverage_file junctions_file/) {
+    for my $method (qw/aligner_output_file sam_file bam_file coverage_file junctions_file/) {
         push @output_files, $self->$method;
     }
     return @output_files;
