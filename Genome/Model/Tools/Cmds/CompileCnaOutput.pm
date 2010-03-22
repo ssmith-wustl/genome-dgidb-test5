@@ -9,8 +9,13 @@ class Genome::Model::Tools::Cmds::CompileCnaOutput {
     has => [
     model_ids => {
         type => 'String',
-        is_optional => 0,
-        doc => 'Somatic build ids to check for CNA output (space delimited).'
+        is_optional => 1,
+        doc => 'Space-delimited somatic build ids to check for CNA output.'
+    },
+    model_group => {
+        type => 'String',
+        is_optional => 1,
+        doc => "The name of the Model Group to use.",
     },
     ]
 };
@@ -25,10 +30,34 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    my @model_ids = split /\s+/,$self->model_ids;
+    my @somatic_models;
 
-    for my $somatic_model_id (@model_ids) {
-        my $somatic_model = Genome::Model->get($somatic_model_id) or die "No somatic model found for id $somatic_model_id.\n";
+    if($self->model_ids) {
+        my @model_ids = split /\s+/, $self->model_ids;
+        for my $model_id (@model_ids) {
+            my $model = Genome::Model->get($model_id);
+            unless(defined($model)) {
+                $self->error_message("Unable to find somatic model $model_id. Please check that this model_id is correct. Continuing...\n");
+                return;
+            }
+            push @somatic_models, $model;
+        }
+    }
+    elsif($self->model_group) {
+        my $group = Genome::ModelGroup->get(name => $self->model_group);
+        unless($group) {
+            $self->error_message("Unable to find a model group named " . $self->model_group);
+            return;
+        }
+        push @somatic_models, $group->models;
+    }
+    else {
+        $self->error_message("You must provide either model id(s) or a model group name to run this script");
+        return;
+    }
+
+    for my $somatic_model (@somatic_models) {
+        my $somatic_model_id = $somatic_model->id;
         my $somatic_build = $somatic_model->last_succeeded_build or die "No succeeded build found for somatic model id $somatic_model_id.\n";
         my $somatic_build_id = $somatic_build->id or die "No build id found in somatic build object for somatic model id $somatic_model_id.\n";
         print "Last succeeded build for somatic model $somatic_model_id is build $somatic_build_id. ";
