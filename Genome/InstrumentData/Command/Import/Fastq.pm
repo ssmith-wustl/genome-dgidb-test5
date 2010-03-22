@@ -224,7 +224,7 @@ sub execute {
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "fastq";
     $params{sample_id} = $sample_id;
-    if(defined($self->allocations)){
+    if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
