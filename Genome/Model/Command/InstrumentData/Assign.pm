@@ -23,6 +23,10 @@ class Genome::Model::Command::InstrumentData::Assign {
             is => 'Number',
             doc => 'The unique ID of the instrument data to assign.  To assign multiple instrument data, enclose this param in quotes(\'), and separate the IDs by a space.'
         },
+        flow_cell_id => {
+            is => 'Number',
+            doc => 'Assigns all lanes in the given flowcell whose sample_name matches the model\'s subject name'       
+        },
         instrument_data_ids => {
             is => 'Number',
             doc => 'The unique IDs of the instrument data to assign, enclosed in quotes(\'\'), and separated by a space.'
@@ -76,7 +80,7 @@ sub create {
     
     my @requested_actions = grep { 
         $self->$_ 
-    } (qw/ instrument_data_id instrument_data_ids all /);
+    } (qw/ flow_cell_id instrument_data_id instrument_data_ids all /);
     
     if ( @requested_actions > 1 ) {
         $self->error_message('Multiple actions requested: '.join(', ', @requested_actions));
@@ -99,6 +103,18 @@ sub execute {
     }
     elsif ( $self->instrument_data_ids ) { # assign these
         return $self->_assign_by_instrument_data_ids;
+    }
+    elsif ( $self->flow_cell_id ) { #assign all instrument data ids whose sample name matches the models subject name and flow_cell_id matches the flow_cell_id given by the user
+        my $flow_cell_id = $self->flow_cell_id;
+        my $sample_name = $self->model->subject_name;
+        my @instrument_data_ids = `sqlrun "select seq_id from solexa_lane_summary WHERE SAMPLE_NAME ='$sample_name' AND FLOW_CELL_ID = '$flow_cell_id' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;
+        chomp @instrument_data_ids;
+        unless ( @instrument_data_ids ){
+            $self->error_message("Found no matching instrument data for flowcell id $flow_cell_id");
+            return;
+        }
+        $self->instrument_data_ids( join (' ',@instrument_data_ids));
+        return $self->_assign_by_instrument_data_ids;        
     }
     elsif ( $self->all ) { # assign all
         return $self->_assign_all_instrument_data;
