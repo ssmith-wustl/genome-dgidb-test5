@@ -16,11 +16,11 @@ class Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Finishing {
 sub execute {
     my $self = shift;
 
-    my $amplicon_iterator = $self->build->amplicon_iterator
+    my $amplicon_set = $self->build->amplicon_sets
         or return;
 
     my %trimmer_params = $self->processing_profile->trimmer_params_as_hash; # TODO separate out params - screen only has project name
-    while ( my $amplicon = $amplicon_iterator->() ) {
+    while ( my $amplicon = $amplicon_set->() ) {
         my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
         next unless -s $fasta_file; # ok
 

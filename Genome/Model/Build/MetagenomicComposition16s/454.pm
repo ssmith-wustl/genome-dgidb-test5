@@ -18,13 +18,13 @@ sub _sub_dirs {
 }
 
 #< Amplicons >#
-sub amplicon_iterator {
+sub amplicon_sets {
     my $self = shift;
 
     my $reader = $self->processed_fasta_and_qual_reader
         or return;
 
-    my $amplicon_iterator = sub{
+    my $amplicon_set = sub{
         my $bioseq = $reader->();
         return unless $bioseq;
 
@@ -39,7 +39,7 @@ sub amplicon_iterator {
         return $amplicon;
     };
     
-    return $amplicon_iterator;
+    return $amplicon_set;
 }
 
 #< Clean Up >#

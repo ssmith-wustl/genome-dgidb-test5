@@ -564,7 +564,7 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
     # base
     my @methods = (qw/ 
 
-        description amplicon_iterator length_of_16s_region
+        description amplicon_sets length_of_16s_region
         sub_dirs _sub_dirs fasta_dir classification_dir 
         file_base_name
         clean_up

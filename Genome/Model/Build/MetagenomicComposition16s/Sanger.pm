@@ -121,7 +121,7 @@ sub processed_reads_fasta_and_qual_writer {
 }
 
 #< Amplicons >#
-sub amplicon_iterator {
+sub amplicon_sets {
     my $self = shift;
 
     # open chromt_dir
@@ -458,7 +458,7 @@ sub clean_up {
 
     return 1;
 
-    my $amplicon_iterator = $self->amplicon_iterator
+    my @amplicon_sets = $self->amplicon_sets
         or return;
     
     my @unneeded_file_exts = (qw/
@@ -471,10 +471,12 @@ sub clean_up {
         scfs phds
         /);
 
-    while ( my $amplicon = $amplicon_iterator->() ) {
-        for my $ext ( @unneeded_file_exts ) {
-            my $file = sprintf('%s/%s.%s', $self->edit_dir, $amplicon->name, $ext);
-            unlink $file if -e $file;
+    for my $amplicon_set ( @amplicon_sets ) {
+        while ( my $amplicon = $amplicon_set->() ) {
+            for my $ext ( @unneeded_file_exts ) {
+                my $file = sprintf('%s/%s.%s', $self->edit_dir, $amplicon->name, $ext);
+                unlink $file if -e $file;
+            }
         }
     }
 

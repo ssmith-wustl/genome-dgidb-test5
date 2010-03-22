@@ -30,7 +30,7 @@ sub _add_to_report_xml {
     
     $self->_create_metrics;
 
-    my $amplicons = $self->build->amplicon_iterator
+    my $amplicons = $self->build->amplicon_sets
         or return;
 
     while ( my $amplicon = $amplicons->() ) {

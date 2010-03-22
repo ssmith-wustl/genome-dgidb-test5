@@ -38,7 +38,7 @@ sub _add_to_report_xml {
         confidence_threshold => $self->confidence_threshold,
     );
 
-    my $amplicons = $self->build->amplicon_iterator;
+    my $amplicons = $self->build->amplicon_sets;
     unless ( $amplicons ) {
         $self->error_message( sprintf("No amplicons for build (ID %s)", $self->build_id) );
         return;

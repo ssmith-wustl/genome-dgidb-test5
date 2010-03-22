@@ -14,14 +14,14 @@ class Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::PhredPhr
 sub execute {
     my $self = shift;
 
-    my $amplicon_iterator = $self->build->amplicon_iterator
+    my $amplicon_set = $self->build->amplicon_sets
         or return;
 
     my $writer = $self->build->processed_fasta_and_qual_writer
         or return;
     
     my %assembler_params = $self->processing_profile->assembler_params_as_hash;
-    while ( my $amplicon = $amplicon_iterator->() ) {
+    while ( my $amplicon = $amplicon_set->() ) {
         my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
         next unless -s $fasta_file; # ok
 

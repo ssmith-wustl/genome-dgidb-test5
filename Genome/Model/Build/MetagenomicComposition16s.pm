@@ -21,6 +21,12 @@ class Genome::Model::Build::MetagenomicComposition16s {
                 $_ => { via => 'processing_profile' } 
             } Genome::ProcessingProfile::MetagenomicComposition16s->params_for_class 
         ),
+        length_of_16s_region => {
+            is => 'Integer',
+            default_value => 1542,
+            is_constant => 1,
+        },
+        # Metrics
         amplicons_attempted => {
             is => 'Integer',
             via => 'metrics',
@@ -63,10 +69,6 @@ class Genome::Model::Build::MetagenomicComposition16s {
         },
     ],
 };
-
-sub length_of_16s_region {
-    return 1542;
-}
 
 #< UR >#
 sub create {
@@ -367,13 +369,13 @@ sub _validate_fasta_and_qual_bioseq {
 sub orient_amplicons_by_classification {
     my $self = shift;
 
-    my $amplicon_iterator = $self->amplicon_iterator
+    my $amplicon_set = $self->amplicon_sets
         or return;
 
     my $writer = $self->oriented_fasta_and_qual_writer
         or return;
     
-    while ( my $amplicon = $amplicon_iterator->() ) {
+    while ( my $amplicon = $amplicon_set->() ) {
         my $bioseq = $amplicon->bioseq;
         unless ( $bioseq ) { 
             # OK

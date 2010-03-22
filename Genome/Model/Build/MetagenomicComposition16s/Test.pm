@@ -87,8 +87,8 @@ sub tests : Tests() {
     $self->_link_dirs($source_dir.'/classification', $build->classification_dir);
 
     # amplicon - just one for testing
-    my $amplicon_iterator = $build->amplicon_iterator;
-    my $amplicon = $amplicon_iterator->();
+    my $amplicon_set = $build->amplicon_sets;
+    my $amplicon = $amplicon_set->();
     ok($amplicon, 'got amplicon');
     
     # classification
@@ -276,8 +276,8 @@ sub test02_amplicons_gsc : Tests() {
     my $build = $self->_build;
     
     my $amplicons = [];
-    my $amplicon_iterator = $build->amplicon_iterator;
-    while ( my $amplicon = $amplicon_iterator->() ) {
+    my $amplicon_set = $build->amplicon_sets;
+    while ( my $amplicon = $amplicon_set->() ) {
         push @$amplicons, $amplicon;
     }
 
@@ -305,9 +305,9 @@ sub test02_amplicons_gsc : Tests() {
     
     # Contamination - should get 4 amplicons
     $build->processing_profile->exclude_contaminated_amplicons(1);
-    $amplicon_iterator = $build->amplicon_iterator;
+    $amplicon_set = $build->amplicon_sets;
     my @uncontaminated_amplicons;
-    while ( my $amplicon = $amplicon_iterator->() ) {
+    while ( my $amplicon = $amplicon_set->() ) {
         push @uncontaminated_amplicons, $amplicon;
     }
     is_deeply(
@@ -319,8 +319,8 @@ sub test02_amplicons_gsc : Tests() {
     # Latest iteration of reads - 5 amplicons because the contaminated read is older
     $build->processing_profile->only_use_latest_iteration_of_reads(1);
     my @only_latest_reads_amplicons;
-    $amplicon_iterator = $build->amplicon_iterator;
-    while ( my $amplicon = $amplicon_iterator->() ) {
+    $amplicon_set = $build->amplicon_sets;
+    while ( my $amplicon = $amplicon_set->() ) {
         push @only_latest_reads_amplicons, $amplicon;
     }
     is_deeply(
@@ -575,7 +575,7 @@ sub test02_amplicons_gsc : Tests() {
     # amplicons
     my $build = $self->_build;
     #print $build->directory."\n";<STDIN>;
-    my $amplicons = $build->amplicon_iterator;
+    my $amplicons = $build->amplicon_sets;
     ok($amplicons, 'amplicons');
 
     my @amplicons;
