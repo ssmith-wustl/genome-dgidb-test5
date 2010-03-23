@@ -30,16 +30,34 @@ class Genome::InstrumentData {
                library.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
                library.property_name(+) = 'library_name'
      UNION ALL
-        SELECT to_char(seq_id) id,
-               solexa.run_name,
+        SELECT to_char(solexa.analysis_id),
+               fc.run_name,
                'solexa' sequencing_platform,
                'Genome::InstrumentData::Solexa' subclass_name,
-               to_char(solexa.seq_id) seq_id, 
-               solexa.sample_name sample_name,
-               to_char(solexa.lane) subset_name,
-               solexa.library_name library_name
-          FROM solexa_lane_summary\@dw solexa
-         WHERE run_type in ('Standard','Paired End Read 2')
+               to_char(nvl(solexa2.sls_seq_id,solexa1.sls_seq_id)) seq_id,
+               sam.full_name sample_name,
+               (
+                    case 
+                        when solexa.index_sequence is null then to_char(solexa.lane) 
+                        else to_char(solexa.lane) || '-' || solexa.index_sequence
+                    end
+               ) subset_name,
+               lib.full_name library_name
+          FROM index_illumina\@dw solexa 
+          JOIN flow_cell_illumina\@dw fc on fc.flow_cell_id = solexa.flow_cell_id
+          JOIN read_illumina\@dw solexa1 
+                    on solexa1.ii_seq_id = solexa.seq_id 
+                    and (
+                        (run_type = 'Paired End' and solexa1.read_number = 2)
+                        or
+                        (run_type = 'Fragment' and solexa1.read_number = 1)
+                    )
+           JOIN read_illumina\@dw solexa2 
+                on solexa2.ii_seq_id = solexa.seq_id
+                and run_type = 'Paired End' 
+                and solexa2.read_number = 1 
+           JOIN library_summary\@dw lib on lib.library_id = solexa.library_id
+           JOIN organism_sample\@dw sam on sam.organism_sample_id = lib.sample_id
      UNION ALL
         SELECT to_char(x454.region_id) id,
                x454.run_name,
@@ -74,7 +92,6 @@ EOS
         sample_name         => { is => 'VARCHAR2', len => 255 },
         #sample              => { is => 'Genome::Sample', where => [ 'sample_name' => \'sample_name' ] },
         library_name        => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        seq_id => { is => 'VARCHAR2', len => 15, is_optional => 1 },
         events => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "instrument_data" },
         full_name => { calculate_from => ['run_name','subset_name'], calculate => q|"$run_name/$subset_name"| },        
         name => {

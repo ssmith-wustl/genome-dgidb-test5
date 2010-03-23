@@ -1030,7 +1030,7 @@ sub trimq2_filtered_to_unaligned_sam {
     );
     
     my $filler = "\t*\t0\t0\t*\t*\t0\t0\t";
-    my $seq_id = $self->instrument_data->seq_id;
+    my $seq_id = $self->instrument_data->id;
     my ($pair1, $pair2, $frag) = ("\t69", "\t133", "\t4");
     my ($rg_tag, $pg_tag)      = ("\tRG:Z:", "\tPG:Z:");
     
@@ -1164,10 +1164,11 @@ sub generate_tcga_bam_file {
     } 
     else {
     
+        $DB::single = 1; 
         my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_file     => $per_lane_sam_file,
             output_file    => $per_lane_sam_file_rg,
-            read_group_tag => $self->instrument_data->seq_id,
+            read_group_tag => $self->instrument_data->id,
         );
 
         my $add_rg_cmd_rv = $add_rg_cmd->execute;
@@ -1346,7 +1347,7 @@ sub construct_groups_file {
 
    
     # build the header 
-    my $id_tag = $self->instrument_data->seq_id;
+    my $id_tag = $self->instrument_data->id;
     my $pu_tag = sprintf("%s.%s",$self->instrument_data->flow_cell_id,$self->instrument_data->lane);
     my $lib_tag = $self->instrument_data->library_name;
     my $date_run_tag = $self->instrument_data->run_start_date_formatted;

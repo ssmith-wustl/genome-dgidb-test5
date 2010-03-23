@@ -20,7 +20,7 @@ class Genome::InstrumentData::Command::List::Solexa {
             is_constant => 1, 
             value => 'Genome::InstrumentData::Solexa' 
         },
-        show => { default_value => 'id,flow_cell_id,lane,sample_name,library_name,read_length,is_paired_end,clusters,median_insert_size,sd_above_insert_size' },
+        show => { default_value => 'id,flow_cell_id,lane,index_sequence,sample_name,library_name,read_length,is_paired_end,clusters,median_insert_size,sd_above_insert_size,target_region_set_name' },
     ],
     doc => 'list illumina/solexa lanes available for analysis',
 };

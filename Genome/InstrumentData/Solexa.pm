@@ -24,46 +24,128 @@ class Genome::InstrumentData::Solexa {
     is => ['Genome::InstrumentData', 'Genome::Utility::FileSystem'],
     table_name => <<EOS
         (
-            select to_char(s_rev.seq_id) id,
-                   'solexa' sequencing_platform,
-                   s_rev.research_project project_name,
-                   s_rev.target_region_set_name,
-                   s_rev.sample_id,
-                   s_rev.library_id, --library.dna_id library_id,
-                   s_rev.run_name,
-                   s_rev.flow_cell_id,
-                   s_rev.lane,
-                   s_rev.read_length,
-                   s_rev.filt_error_rate_avg,
-                   (case when s_rev.run_type = 'Paired End Read 2' then s_rev.filt_error_rate_avg else null end) rev_filt_error_rate_avg,
-                   (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.filt_error_rate_avg else null end) fwd_filt_error_rate_avg,
-                   (case when s_rev.run_type = 'Paired End Read 2' then s_rev.filt_aligned_clusters_pct else null end) rev_filt_aligned_clusters_pct,
-                   (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.filt_aligned_clusters_pct else null end) fwd_filt_aligned_clusters_pct,
-                   (case when s_rev.run_type = 'Paired End Read 2' then s_rev.seq_id else null end) rev_seq_id,
-                   (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.seq_id else null end) fwd_seq_id,
-                   (case when s_rev.run_type = 'Paired End Read 2' then s_rev.read_length else null end) rev_read_length,
-                   (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.read_length else null end) fwd_read_length,
-                   (case when s_rev.run_type = 'Paired End Read 2' then s_rev.run_type else null end) rev_run_type,
-                   (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.run_type else null end) fwd_run_type,
-                   (case when s_rev.run_type = 'Paired End Read 2' then 'Paired' else 'Standard' end) run_type,
-                   s_rev.gerald_directory,
-                   s_rev.median_insert_size,
-                   s_rev.sd_above_insert_size,
-                   s_rev.is_external,
-                   archive.path archive_path,
-                   adaptor.path adaptor_path,
-                   (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.FILT_CLUSTERS else null end) fwd_filt_clusters,
-                   (case when s_rev.run_type = 'Paired End Read 2' then s_rev.FILT_CLUSTERS else null end) rev_filt_clusters,
-                   (nvl(s_fwd.FILT_CLUSTERS,0) + s_rev.FILT_CLUSTERS) filt_clusters, /** s_rev.FILT_CLUSTERS is still the expected value for fragment reads **/
-                   s_rev.analysis_software_version,
-                   1 one
-            from solexa_lane_summary\@dw s_rev
-            left join solexa_lane_summary\@dw s_fwd on s_fwd.sral_id = s_rev.sral_id and s_fwd.run_type = 'Paired End Read 1'
-            left join seq_fs_path\@dw archive on archive.seq_id = s_rev.seq_id
-                 and archive.data_type = 'illumina fastq tgz'
-            left join seq_fs_path\@dw adaptor on adaptor.seq_id = s_rev.seq_id
-                 and adaptor.data_type = 'adaptor sequence file'
-            where s_rev.run_type in ('Standard','Paired End Read 2')
+            select 
+                --to_char(s_rev.seq_id) id,
+                to_char(i.analysis_id) id,
+
+                'solexa' sequencing_platform,
+
+                i.research_project project_name,
+
+                i.target_region_set_name,
+
+                --s_rev.sample_id,		   
+                lib.sample_id,
+
+                i.library_id,
+
+                --s_rev.run_name,
+                fc.run_name,
+
+                fc.flow_cell_id,
+                i.lane,
+
+                r2.read_length,
+                r2.filt_error_rate_avg,
+
+                --(case when s_rev.run_type = 'Paired End Read 2' then s_rev.filt_error_rate_avg else null end) rev_filt_error_rate_avg,
+                (case when r1.seq_id is not null then r2.filt_error_rate_avg else null end) rev_filt_error_rate_avg,
+
+                --(case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.filt_error_rate_avg else null end) fwd_filt_error_rate_avg,
+                r1.filt_error_rate_avg fwd_filt_error_rate_avg,
+
+                --(case when s_rev.run_type = 'Paired End Read 2' then s_rev.filt_aligned_clusters_pct else null end) rev_filt_aligned_clusters_pct,
+                (case when r1.seq_id is not null then r2.filt_aligned_clusters_pct else null end) rev_filt_aligned_clusters_pct,
+
+                --(case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.filt_aligned_clusters_pct else null end) fwd_filt_aligned_clusters_pct,
+                r1.filt_aligned_clusters_pct fwd_filt_aligned_clusters_pct,
+
+                --(case when s_rev.run_type = 'Paired End Read 2' then s_rev.seq_id else null end) rev_seq_id,
+                (case when r1.seq_id is not null then r2.sls_seq_id else null end) rev_seq_id,
+
+                --(case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.seq_id else null end) fwd_seq_id,
+                r1.sls_seq_id fwd_seq_id,
+
+                --(case when s_rev.run_type = 'Paired End Read 2' then s_rev.read_length else null end) rev_read_length,
+                --(case when r1.seq_id is not null then r2.read_length else null end) rev_read_length,
+                (case when r1.seq_id is not null then r2.read_length else -1 end) rev_read_length,
+
+
+                --(case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.read_length else null end) fwd_read_length,
+                --r1.read_length fwd_read_length,
+                nvl(r1.read_length,-1) fwd_read_length,
+
+                --(case when s_rev.run_type = 'Paired End Read 2' then s_rev.run_type else null end) rev_run_type,
+                (case when r1.seq_id is not null then 'Paired End Read 2' else null end) rev_run_type,
+
+                --(case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.run_type else null end) fwd_run_type,
+                (case when r1.seq_id is not null then 'Paired End Read 1' else null end) fwd_run_type,
+
+                --(case when s_rev.run_type = 'Paired End Read 2' then 'Paired' else 'Standard' end) run_type,
+                (case when r1.seq_id is not null then 'Paired' else 'Standard' end) run_type,
+
+                --s_rev.gerald_directory,
+                i.gerald_directory,
+
+                --s_rev.median_insert_size,
+                i.median_insert_size,
+
+                --s_rev.sd_above_insert_size,
+                i.sd_above_insert_size,
+
+                --s_rev.is_external,
+                0 is_external,
+
+                --archive.path archive_path,
+                archive2.path archive_path,
+                                
+                --adaptor.path adaptor_path,        
+                --adaptor2.path adaptor_path,
+                '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer'
+                    || (case when sample_type = 'rna' then '_SMART' else '' end) adaptor_path,
+                                
+                --(case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.FILT_CLUSTERS else null end) fwd_filt_clusters,
+                (case when r1.seq_id is not null then i.filt_clusters else null end) fwd_filt_clusters,
+                        
+                --(case when s_rev.run_type = 'Paired End Read 2' then s_rev.FILT_CLUSTERS else null end) rev_filt_clusters,
+                (case when r1.seq_id is not null then i.filt_clusters else null end) rev_filt_clusters,
+                        
+                --(nvl(s_fwd.FILT_CLUSTERS,0) + s_rev.FILT_CLUSTERS) filt_clusters, 	-- s_rev.FILT_CLUSTERS is still the expected value for fragment reads 
+                i.filt_clusters,
+                        
+                --s_rev.analysis_software_version,
+                i.analysis_software_version,
+
+                i.index_sequence
+
+                --from solexa_lane_summary\@dw s_rev 
+                --join read_illumina r2 on r2.sls_seq_id = s_rev.seq_id --and r1.read_number = 1
+                from index_illumina\@dw i 
+                    join flow_cell_illumina\@dw fc on fc.flow_cell_id = i.flow_cell_id
+                    join read_illumina\@dw r2 
+                        on i.seq_id = r2.ii_seq_id	
+                        and (
+                            (fc.run_type = 'Paired End' and r2.read_number = 2)
+                            or
+                            (fc.run_type = 'Fragment' and r2.read_number = 1)
+                        )
+                    left join seq_fs_path\@dw archive2 on archive2.seq_id = i.seq_id
+                        and archive2.data_type = 'illumina fastq tgz'		 	    
+                    left join read_illumina\@dw r1 
+                        on run_type = 'Paired End' 
+                        and r1.ii_seq_id = i.seq_id
+                        and r1.read_number = 1
+                    join library_summary\@dw lib on lib.library_id = i.library_id
+                    join organism_sample\@dw sam on sam.organism_sample_id = lib.sample_id
+            /*
+                    left join solexa_lane_summary\@dw s_fwd on s_fwd.sral_id = s_rev.sral_id and s_fwd.run_type = 'Paired End Read 1'
+                    left join seq_fs_path\@dw archive on archive.seq_id = s_rev.seq_id
+                        and archive.data_type = 'illumina fastq tgz'
+                    left join seq_fs_path\@dw adaptor on adaptor.seq_id = s_rev.seq_id
+                        and adaptor.data_type = 'adaptor sequence file'
+                    where s_rev.run_type in ('Standard','Paired End Read 2')
+                        and s_rev.flow_cell_id = '617ER'
+            */
         )
         solexa_detail
 EOS
@@ -73,16 +155,17 @@ EOS
     ],    
     has_optional => [
         flow_cell_id                    => { }, # = short name
-        lane                            => { }, # = subset_name
+        lane                            => { }, 
+        index_sequence                  => { },
+        read_length                     => { },
+        fwd_read_length                 => { },
+        rev_read_length                 => { },
         #TODO These three columns will point to "read_length" or whatever name is decided
         #(see also https://gscweb.gsc.wustl.edu/wiki/Software_Development:Illumina_Indexed_Runs_Warehouse_Schema)
-        read_length                     => { calculate => q| return $self->_sls_read_length - 1| },
-        fwd_read_length                 => { calculate => q| return $self->_sls_fwd_read_length - 1|},
-        rev_read_length                 => { calculate => q| return $self->_sls_rev_read_length - 1|},
-        _sls_read_length                => { column_name => 'read_length' },
-        _sls_fwd_read_length            => { column_name => 'fwd_read_length' },
-        _sls_rev_read_length            => { column_name => 'rev_read_length' },
-        cycles                          => { column_name => 'read_length' }, #TODO point to an actual "cycles" column
+        _sls_read_length                => { calculate => q| return $self->read_length + 1| },
+        _sls_fwd_read_length            => { calculate => q| return $self->fwd_read_length + 1| },
+        _sls_rev_read_length            => { calculate => q| return $self->rev_read_length + 1| },
+        cycles                          => { calculate => q| return $self->read_length + 1| }, #TODO point to an actual "cycles" column
         run_type                        => { },
         fwd_run_type                    => { },
         rev_run_type                    => { },
@@ -93,7 +176,7 @@ EOS
         adaptor_path                    => { },
         archive_path                    => { },
         analysis_software_version       => { },
-        clusters                        => { column_name => 'FILT_CLUSTERS' },
+        clusters                        => { column_name => 'filt_clusters' },
         fwd_clusters                    => { column_name => 'fwd_filt_clusters' },
         rev_clusters                    => { column_name => 'rev_filt_clusters' },
         fwd_seq_id                      => { },
@@ -142,7 +225,7 @@ EOS
         sample              => { is => 'Genome::Sample', id_by => ['sample_id'] },
         sample_id           => { is => 'Number', },
         
-        sample_source       => { via => 'sample', to => 'source' },
+        sample_source       => { is => 'Genome::SampleSource', via => 'sample', to => 'source' },
         sample_source_name  => { via => 'sample_source', to => 'name' },
         
         # indirect via the sample source, but we let the sample manage that
@@ -235,21 +318,21 @@ sub desc {
 
 sub read1_fastq_name {
     my $self = shift;
-    my $lane = $self->subset_name;
+    my $lane = $self->lane;
     
     return "s_${lane}_1_sequence.txt";
 }
 
 sub read2_fastq_name {
     my $self = shift;
-    my $lane = $self->subset_name;
+    my $lane = $self->lane;
     
     return "s_${lane}_2_sequence.txt";
 }
 
 sub fragment_fastq_name {
     my $self = shift;
-    my $lane = $self->subset_name;
+    my $lane = $self->lane;
     
     return "s_${lane}_sequence.txt";
 }
