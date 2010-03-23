@@ -301,6 +301,12 @@ sub execute
 
     }
 
+    if( exists( $config->{finish_script_location}) && -f $config->{finish_script_location} )
+    {
+        $self->status_message("changing finish script location to ". $config->{finish_script_location});
+        $fin->script_location($config->{finish_script_location});
+    }
+
     if ($fin)
     {
         $fin->execute() or croak "can't run finish step... Hap.pm\n\n";
