@@ -550,18 +550,21 @@ sub _submit_newbler_to_lsf {
     #RESOLVE NEWBLER VERSION TO RUN .. USER SPECIFIED OR INSTALLED?
     if ($self->newbler) {
 	unless (-s $self->newbler) {
-	    $self->error_message("Not not find user specified newbler software: ".$self->newbler);
+	    $self->error_message("Can not find user specified newbler software: ".$self->newbler);
 	    return;
 	}
     }
 
-    my $version_newbler = ($self->newbler) ? $self->newbler.'/runAssembly' : 'runAssembly';
+    my $version_newbler = ($self->newbler) ? $self->newbler : 'runAssembly';
     #SUBMIT JOB TO 
     my $cmd = "$version_newbler -o $newb_run_dir -cpu 1 ";
     if ($self->newbler_params) {
 	$cmd .= $self->newbler_params;
     }
     $cmd .= ' '.$sff_files_string;
+
+    print $cmd."\n";
+    exit (0);
 
     my $job_id = 'NwB'.$$;
     my $job = PP::LSF->run(
