@@ -71,13 +71,13 @@
                       <xsl:for-each select="//members/member">
                         <tr>
                           <td>
-                            <xsl:value-of select="@model-id"/>
+                            <a><xsl:attribute name="href">https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?genome-model-id=<xsl:value-of select="@model-id"/></xsl:attribute><xsl:value-of select="@model-id"/></a>
                           </td>
                           <td>
                             <xsl:value-of select="@name"/>
                           </td>
                           <td>
-                            <xsl:value-of select="@build-id"/>
+                             <a><xsl:attribute name="href">https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=<xsl:value-of select="@build-id"/></xsl:attribute><xsl:value-of select="@build-id"/></a>
                           </td>
                           <td>
                             <xsl:value-of select="@completed"/>
@@ -132,7 +132,7 @@
                       <xsl:for-each select="//metrics/build">
                         <tr>
                           <td>
-                            <xsl:value-of select="@build-id"/>
+                           <a><xsl:attribute name="href">https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=<xsl:value-of select="@build-id"/></xsl:attribute><xsl:value-of select="@build-id"/></a>
                           </td>
                           <td>
                             <xsl:value-of select="@name"/>
@@ -219,7 +219,7 @@
                       <xsl:for-each select="//somatic-stats/build">
                         <tr>
                           <td>
-                            <xsl:value-of select="@build-id"/>
+                            <a><xsl:attribute name="href">https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=<xsl:value-of select="@build-id"/></xsl:attribute><xsl:value-of select="@build-id"/></a>
                           </td>
                           <td>
                             <xsl:value-of select="@name"/>
@@ -327,7 +327,7 @@
                       <xsl:for-each select="//somatic-stats/build">
                         <tr>
                           <td>
-                            <xsl:value-of select="@build-id"/>
+                            <a><xsl:attribute name="href">https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=<xsl:value-of select="@build-id"/></xsl:attribute><xsl:value-of select="@build-id"/></a>
                           </td>
                           <td>
                             <xsl:value-of select="@name"/>
