@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '1.0.12';
+my $DEFAULT = '1.0.13';
 
 class Genome::Model::Tools::Tophat {
     is => 'Command',
@@ -46,7 +46,9 @@ my %TOPHAT_VERSIONS = (
     '0.7.1'  => '/gsc/pkg/bio/tophat/tophat-0.7.1-64/bin/tophat',
     '0.7.2'  => '/gsc/pkg/bio/tophat/tophat-0.7.2-64/bin/tophat',
     '1.0.10' => '/gsc/pkg/bio/tophat/tophat-1.0.10-64/bin/tophat',
+    # These are 64-bit installations.  tophat is really a python script and is OS dependent.
     '1.0.12' => '/gsc/pkg/bio/tophat/tophat-1.0.12/bin/tophat',
+    '1.0.13' => '/gsc/pkg/bio/tophat/tophat-1.0.13/bin/tophat',
     'tophat' => 'tophat',
 );
 
