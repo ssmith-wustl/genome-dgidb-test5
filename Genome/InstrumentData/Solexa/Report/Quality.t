@@ -20,6 +20,7 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   library_name => 'test_library_name',
                                                                   run_name => 'test_run_name',
                                                                   subset_name => 4,
+                                                                  lane => 4,
                                                                   run_type => 'Paired End Read 2',
                                                                   is_paired_end => 1,
                                                                   gerald_directory => $gerald_directory,
