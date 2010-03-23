@@ -563,9 +563,6 @@ sub _submit_newbler_to_lsf {
     }
     $cmd .= ' '.$sff_files_string;
 
-    print $cmd."\n";
-    exit (0);
-
     my $job_id = 'NwB'.$$;
     my $job = PP::LSF->run(
 	pp_type => "lsf",
