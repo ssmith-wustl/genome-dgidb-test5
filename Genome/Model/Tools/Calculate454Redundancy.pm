@@ -14,7 +14,6 @@ use Bio::SeqIO;
 use Sys::Hostname;
 require File::Copy;
 
-
 class Genome::Model::Tools::Calculate454Redundancy {
     is => 'Command',
     has => [
@@ -42,6 +41,11 @@ class Genome::Model::Tools::Calculate454Redundancy {
 	    type => 'Number',
 	    is_optional => 1,
 	    doc => 'Seqment of read to run cross-match to determine redundancy',
+	},
+	newbler_params => {
+	    type => 'String',
+	    is_optional => 1,
+	    doc => 'Optional params for newbler',
 	},
     ],
 };
@@ -128,7 +132,75 @@ sub execute {
 	return;
     }
 
+    #GET DATA TO CALCULATE 454 PARIED EFFICACY
+    my $paired_counts;
+    $self->status_message("Calculating PE efficiency");
+    unless ($paired_counts = $self->_get_pe_efficiency_data()) {
+	$self->error_message("Failed to get PE efficiency data");
+	return;
+    }
+
+    #PRINT PAIRED END EFFICIENCY REPORT
+    $self->status_message("Printing PE efficiency");
+    unless ($self->_print_PE_efficiency($paired_counts)) {
+	$self->error_message("Failed to print PE efficiency");
+	return;
+    }
+
     $self->status_message("Finished");
+    return 1;
+}
+
+sub _get_pe_efficiency_data {
+    my $self = shift;
+    my $dir = $self->_resolve_directory_path();
+    my $trim_file = $dir.'/454TrimStatus.txt';
+    my $counts = {};
+    my $fh = IO::File->new("< $trim_file") ||
+	die "Can not create file handle for $trim_file\n";
+    while (my $line = $fh->getline) {
+	next if $line =~ /^Accno/; #FILE HEADER
+	$counts->{all_read_count}++;
+	my @tmp = split(/\s+/, $line);
+	#$tmp[0] = read_name
+	#$tmp[2] = $read_length
+	if ($tmp[0] =~ /_left$|_right$/) {
+	    my $root_name = $tmp[0];
+	    $root_name =~ s/_left$|_right$//;
+	    if ($tmp[0] =~ /_left$/) {
+		$counts->{$root_name}->{left} = $tmp[2];
+	    }
+	    if ($tmp[0] =~ /_right$/) {
+		$counts->{$root_name}->{right} = $tmp[2];
+	    }
+	}
+    }
+    $fh->close;
+    return $counts;
+}
+
+sub _print_PE_efficiency {
+    my $self = shift;
+    my $counts = shift;
+    my $dir = $self->_resolve_directory_path();
+    my $out_file = $dir.'/PE_efficiency';
+    my $paired_read_count = scalar (keys %$counts);
+    my $total_read_count = $counts->{all_read_count} - $paired_read_count;
+    delete $counts->{all_read_count};
+    my $paired_read_ratio = int ($paired_read_count / $total_read_count * 100);
+    my $greater_than_50bp_count = 0;
+    foreach my $pe_read (keys %$counts) {
+	$greater_than_50bp_count ++ if
+	    $counts->{$pe_read}->{left} > 50 and $counts->{$pe_read}->{right} > 50;
+	delete $counts->{$pe_read};
+    }
+    my $paired_read_gt_50_ratio = int ($greater_than_50bp_count / $total_read_count * 100);
+    my $fh = IO::File->new("> $out_file") ||
+	die "Can not create file handle for $out_file\n";
+    $fh->print("Paired end efficiency %\n");
+    $fh->print("% of paired end reads = $paired_read_ratio".'%'." ($paired_read_count/$total_read_count)\n");
+    $fh->print("% of paired end reads which are greater than 50 bps at both ends = $paired_read_gt_50_ratio".'%'." ($greater_than_50bp_count/$total_read_count)\n");
+    $fh->close;
     return 1;
 }
 
@@ -477,14 +549,20 @@ sub _submit_newbler_to_lsf {
     }
     #RESOLVE NEWBLER VERSION TO RUN .. USER SPECIFIED OR INSTALLED?
     if ($self->newbler) {
-	unless (-d $self->newbler) {
+	unless (-s $self->newbler) {
 	    $self->error_message("Not not find user specified newbler software: ".$self->newbler);
 	    return;
 	}
     }
-    my $version_newbler = ($self->newbler) ? $self->newbler : 'runAssembly';
+
+    my $version_newbler = ($self->newbler) ? $self->newbler.'/runAssembly' : 'runAssembly';
     #SUBMIT JOB TO 
-    my $cmd = "$version_newbler -o $newb_run_dir -cpu 1 $sff_files_string";
+    my $cmd = "$version_newbler -o $newb_run_dir -cpu 1 ";
+    if ($self->newbler_params) {
+	$cmd .= $self->newbler_params;
+    }
+    $cmd .= ' '.$sff_files_string;
+
     my $job_id = 'NwB'.$$;
     my $job = PP::LSF->run(
 	pp_type => "lsf",
