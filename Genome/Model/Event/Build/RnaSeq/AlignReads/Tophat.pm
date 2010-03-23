@@ -73,6 +73,10 @@ sub create_aligner_tool {
     my $read_1_fastq_list = join(',',@left_reads);
     my $read_2_fastq_list = join(',',@right_reads);
     my $reference_path = $reference_build->full_consensus_path('bowtie');
+    my $transcripts_path = $reference_build->full_consensus_path('gff3');
+    if ($transcripts_path) {
+        $aligner_params .= ' --GFF '. $transcripts_path;
+    }
     unless ($reference_path) {
         $self->error_message('Need to make bowtie reference index in directory: '. $reference_build->data_directory);
         die($self->error_message);
