@@ -91,9 +91,10 @@ EOS
 
 sub help_detail {
     return <<EOS
-Provides an interface to the Tophat aligner.  Inputs are:
+Provides an interface to the Tophat aligner.
 
-NOT IMPLEMENTED
+Input fastq files should be in SANGER fastq format.  If Solexa(prior GAPipeline v1.3) or Illumina(GAPipeline v1.3 or later)
+fastq files are used as input, one of --solexa-quals or --solexa1.3-quals parameters should be defined respective to the input fastq format.
 
 EOS
 }
@@ -170,6 +171,7 @@ sub execute {
     my $aligner_output_file = $self->aligner_output_file;
     my $aligner_params = $self->aligner_params;
 
+    # TODO: Does tophat/bowtie need a param for quality conversion???
     #if ($instrument_data->resolve_quality_converter eq 'sol2phred') {
     #    $aligner_params .= ' --solexa1.3-quals';
     #} elsif ($instrument_data->resolve_quality_converter eq 'sol2sanger') {
@@ -181,7 +183,7 @@ sub execute {
 
     # RESOLVE A STRING OF ALIGNMENT PARAMETERS
     if ($is_paired_end && $insert_size && $insert_sd) {
-        #The standard deviation is the above instert size deviation, does below insert size stdev matter?
+        #The standard deviation is the above insert size deviation from sls, does below insert size stdev matter?
         $aligner_params .= ' --mate-inner-dist '. $insert_size .' --mate-std-dev '. $insert_sd;
     }
 
@@ -219,21 +221,15 @@ sub execute {
         $self->error_message('Failed to verify Tophat successful completion!');
         die($self->error_message);
     }
-    unless ($self->use_version eq '1.0.12' || $self->use_version eq 'tophat') {
-        unless (rmtree($self->tmp_tophat_directory)) {
-            $self->error_message('Failed to remove tmp tophat directory '. $self->tmp_tophat_directory .":  $!");
-            die($self->error_message);
-        }
-    }
-    my @intermediate_files = glob($self->alignment_directory .'/*.fq*');
-    for my $intermediate_file (@intermediate_files) {
-        unless (unlink($intermediate_file)) {
-            $self->error_message('Failed to remove intermediate tophat file '. $intermediate_file .":  $!");
-            die($self->error_message);
-        }
-    }
-    $self->error_message('No execute method implemeted in '. __PACKAGE__);
-    return;
+    #Lets leave these around until we know they are completely unnecessary
+    #my @intermediate_files = glob($self->alignment_directory .'/*.fq*');
+    #for my $intermediate_file (@intermediate_files) {
+        #unless (unlink($intermediate_file)) {
+        #    $self->error_message('Failed to remove intermediate tophat file '. $intermediate_file .":  $!");
+        #    die($self->error_message);
+        #}
+    #}
+    return 1;
 }
 
 sub verify_aligner_successful_completion {
@@ -246,28 +242,6 @@ sub verify_aligner_successful_completion {
             return;
         }
     }
-    #TODO: Find a line in the aligner output that
-    # 1.) denotes paired end alignment
-    #Otherwise the file existence check is already occuring in shellcmd
-    
-    #my $instrument_data = $self->instrument_data;
-    #if ($instrument_data->is_paired_end) {
-        #my $stats = $self->get_alignment_statistics($aligner_output_file);
-        #unless ($stats) {
-        #    return;
-        #}
-        #if ($self->force_fragment) {
-            #if (defined($$stats{'Paired Reads'})) {
-                #$self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as fragment data according to aligner output '. $aligner_output_file);
-                #return;
-            #}
-        #}  else {
-            #if (!defined($$stats{'Paired Reads'})) {
-                #$self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as paired end data according to aligner output '. $aligner_output_file);
-                #return;
-            #}
-        #}
-    #}
     my $aligner_output_fh = Genome::Utility::FileSystem->open_file_for_reading($self->aligner_output_file);
     unless ($aligner_output_fh) {
         $self->error_message('Failed to open aligner output file '. $self->aligner_output_file .":  $!");
