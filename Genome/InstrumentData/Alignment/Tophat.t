@@ -44,6 +44,8 @@ $instrument_data->set_always('resolve_quality_converter','sol2sanger');
 $instrument_data->set_always('is_paired_end',1);
 $instrument_data->set_always('sd_above_insert_size',20);
 $instrument_data->set_always('median_insert_size',200);
+my @fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
+$instrument_data->set_list('fastq_filenames',@fastq_files);
 ok($instrument_data->is_paired_end,'instrument data is paired end');
 
 
@@ -89,7 +91,8 @@ $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                run_type => 'Paired End Read 2',
                                                                gerald_directory => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name',
                                                            );
-my @fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
+@fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
+$instrument_data->set_list('fastq_filenames',@fastq_files);
 $instrument_data->set_always('sample_type','dna');
 $instrument_data->set_always('is_paired_end',1);
 $instrument_data->set_always('sd_above_insert_size',20);
@@ -117,7 +120,6 @@ $tmp_allocation->set_always('reallocate',1);
 $tmp_allocation->set_always('deallocate',1);
 isa_ok($tmp_allocation,'Genome::Disk::Allocation');
 $instrument_data->set_list('allocations',$tmp_allocation);
-$instrument_data->set_list('fastq_filenames',@fastq_files);
 $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
 
 $alignment = Genome::InstrumentData::Alignment->create(
