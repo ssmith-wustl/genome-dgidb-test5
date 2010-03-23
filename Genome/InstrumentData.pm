@@ -52,12 +52,12 @@ class Genome::InstrumentData {
                         or
                         (run_type = 'Fragment' and solexa1.read_number = 1)
                     )
-           JOIN read_illumina\@dw solexa2 
+           JOIN library_summary\@dw lib on lib.library_id = solexa.library_id
+           JOIN organism_sample\@dw sam on sam.organism_sample_id = lib.sample_id
+           LEFT JOIN read_illumina\@dw solexa2 
                 on solexa2.ii_seq_id = solexa.seq_id
                 and run_type = 'Paired End' 
                 and solexa2.read_number = 1 
-           JOIN library_summary\@dw lib on lib.library_id = solexa.library_id
-           JOIN organism_sample\@dw sam on sam.organism_sample_id = lib.sample_id
      UNION ALL
         SELECT to_char(x454.region_id) id,
                x454.run_name,
