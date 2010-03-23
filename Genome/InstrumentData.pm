@@ -147,6 +147,8 @@ sub _resolve_subclass_name {
 	}
 }
 
+sub seq_id { shift->id }
+
 sub _resolve_subclass_name_for_sequencing_platform {
     my ($class,$sequencing_platform) = @_;
     my @type_parts = split(' ',$sequencing_platform);
