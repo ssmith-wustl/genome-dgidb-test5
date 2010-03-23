@@ -60,7 +60,6 @@ EOS
 sub execute {
     my $self = shift;
     unlink($self->logfile) if (-e $self->logfile);
-    die (dirname ($self->__meta__->module_path()) . "\n");
     my $output = run_workflow_lsf(
                               '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/virome-screening2.xml',
                               'fasta_file'  => $self->fasta_file,
