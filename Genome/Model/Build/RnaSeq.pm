@@ -39,11 +39,16 @@ sub accumulated_fastq_directory {
     return $self->data_directory . '/fastq';
 }
 
+sub accumulated_expression_directory {
+    my $self = shift;
+    return $self->data_directory . '/expression';
+}
+
 sub delete {
     my $self = shift;
     
     # if we have an alignments directory, nuke it first since it has its own allocation
-    if (-e $self->accumulated_alignments_directory || -e $self->accumulated_fastq_directory) {
+    if (-e $self->accumulated_alignments_directory || -e $self->accumulated_fastq_directory || -e $self->accumulated_expression_directory) {
         unless($self->eviscerate()) {
             my $eviscerate_error = $self->error_message();
             $self->error_message("Eviscerate failed: $eviscerate_error");
@@ -63,8 +68,9 @@ sub eviscerate {
     my $alignment_alloc = $self->accumulated_alignments_disk_allocation;
     my $alignment_path = ($alignment_alloc ? $alignment_alloc->absolute_path :  $self->accumulated_alignments_directory);
     my $fastq_directory = $self->accumulated_fastq_directory;
+    my $expression_directory = $self->accumulated_expression_directory;
     
-    if (!-d $alignment_path && !-l $self->accumulated_alignments_directory && !-d $fastq_directory) {
+    if (!-d $alignment_path && !-l $self->accumulated_alignments_directory && !-d $fastq_directory && !-d $expression_directory) {
         $self->status_message("Nothing to do, alignment path doesn't exist and this build has no alignments symlink.  Skipping out.");
         return;
     }
@@ -92,11 +98,19 @@ sub eviscerate {
             return;
         }
     }
-    
+
     if (-d $fastq_directory) {
         rmtree($fastq_directory);
         if (-d $fastq_directory) {
             $self->error_message("fastq path $fastq_directory still exists after evisceration attempt, something went wrong.");
+            return;
+        }
+    }
+
+    if (-d $expression_directory) {
+        rmtree($expression_directory);
+        if (-d $expression_directory) {
+            $self->error_message("expression path $expression_directory still exists after evisceration attempt, something went wrong.");
             return;
         }
     }
