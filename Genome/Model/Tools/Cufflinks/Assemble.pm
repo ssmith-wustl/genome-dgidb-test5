@@ -28,6 +28,9 @@ class Genome::Model::Tools::Cufflinks::Assemble {
         gene_expression_file => {
             is_optional => 1,
         },
+        assembler_output_file => {
+            is_optional => 1,
+        }
     ],
 };
 
