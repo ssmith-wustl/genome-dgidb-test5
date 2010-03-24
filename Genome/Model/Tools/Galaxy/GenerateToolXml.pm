@@ -11,6 +11,16 @@ class Genome::Model::Tools::Galaxy::GenerateToolXml {
         class_name => {
             is  => 'String',
             doc => 'Input class name'
+        },
+        output => {
+            is_optional => 1,
+            is => 'String',
+            doc => 'XML string'
+        },
+        'print' => {
+            is => 'Boolean',
+            doc => 'Prints XML to stdout by default',
+            default_value => 1
         }
     ]
 };
@@ -35,14 +45,21 @@ sub execute {
     }
 
     my $help_brief  = $class_name->help_brief;
-    my $help_detail = $class_name->help_detail;
+    my $help_detail;
+    {
+        local $ENV{ANSI_COLORS_DISABLED} = 1;
+        $help_detail = $class_name->help_usage_complete_text;
+    }
 
-    my $tool_id = 'dummyval'; #TODO
+    my $tool_id = $class_name->command_name;
+    $tool_id =~ s/ /_/g;
+
     my $tool_name = $class_name->command_name;
     my $command_line = $tool_name;
     my $input_params = '';
     my $output_data = '';
-    
+
+=pod    
     my @property_meta = $class_meta->all_property_metas();
 
     my %categories = bin_properties(
@@ -140,22 +157,48 @@ sub execute {
 
         $command_line .= ' --' . $option . '=$' . $pn;
     }
+=cut
+
+    $input_params = <<"    XML";
+    <param name="command_line" type="text"/> 
+    <param name="in_file" type="text" value="/dev/null"/>
+    XML
+
+    $output_data = <<"    XML";
+    <data name="out_file" format="txt" label="$tool_name Stdout"/>
+    <data name="err_file" format="txt" label="$tool_name Stderr"/>
+    XML
+
+    $command_line .= ' 
+      $command_line 
+      &lt;$in_file 
+      1&gt;$out_file 
+      2&gt;$err_file'; 
+
+    $help_detail =~ s/^/ /mg;
+    $help_detail =~ s/^ //;
 
     my $xml = <<"    XML";
 <tool id="$tool_id" name="$tool_name">
   <description>$help_brief</description>
-  <command>$command_line</command>
-  <inputs>$input_params
-  </inputs>
-  <outputs>$output_data
-  </outputs>
+  <command>
+    $command_line
+  </command>
+  <inputs>
+$input_params</inputs>
+  <outputs>
+$output_data</outputs>
   <help>
+::
 $help_detail
   </help>
 </tool>
     XML
 
-    print $xml;
+    print $xml if $self->print;
+
+    $self->output($xml);
+    return 1
 }
 
 sub bin_properties {
