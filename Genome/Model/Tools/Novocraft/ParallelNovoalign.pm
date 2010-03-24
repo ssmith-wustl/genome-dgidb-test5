@@ -72,8 +72,8 @@ sub pre_execute {
     my $fastq_count = scalar(@fastq_files);
 
     $self->_base_output_directory($self->output_directory);
-    my $template = $self->output_directory .'/Genome-Model-Tools-Novocraft-ParallelNovoalign-'. $ENV{'USER'} .'-XXXXX';
-    my $tempdir = Genome::Utility::FileSystem->base_temp_directory($template);
+    my $template = '/Genome-Model-Tools-Novocraft-ParallelNovoalign-'. $ENV{'USER'} .'-XXXXX';
+    my $tempdir = File::Temp->tempdir($template, DIR=>$self->output_directory, CLEANUP=>1);
     $self->output_directory($tempdir);
 
     $self->_operation->log_dir($self->output_directory);
