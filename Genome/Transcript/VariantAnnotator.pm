@@ -98,8 +98,11 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
     }
 
     my $start = new Benchmark;
-    my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($variant{start})
-        or return;
+    my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($variant{start});
+    unless (@transcripts_to_annotate) {
+        $self->warning_message("No transcripts found in region surrounding position " . $variant{start} . " on chromosome " . $variant{chromosome_name});
+        return;
+    }
 
     my @annotations;
     foreach my $transcript ( @transcripts_to_annotate ) {
