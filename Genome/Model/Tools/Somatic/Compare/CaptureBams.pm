@@ -106,7 +106,7 @@ sub pre_execute {
 
     # Default high confidence parameters 
     unless (defined $self->min_mapping_quality) {
-        $self->min_mapping_quality(70);
+        $self->min_mapping_quality(40);
     }
     unless (defined $self->min_somatic_quality) {
         $self->min_somatic_quality(40);
@@ -195,7 +195,6 @@ sub default_filenames{
         upload_variants_snp_1_output        => 'upload-variants.snp_1.out',
         upload_variants_snp_2_output        => 'upload-variants.snp_2.out',
         upload_variants_indel_output        => 'upload-variants.indel.out',
-        circos_graph                        => 'circos_graph.out',
     );
 
     return %default_filenames;
