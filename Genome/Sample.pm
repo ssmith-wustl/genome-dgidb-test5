@@ -11,6 +11,7 @@ package Genome::Sample;
 
 use strict;
 use warnings;
+use Genome;
 
 =pod
 
@@ -106,8 +107,11 @@ class Genome::Sample {
         
         species_name                => { via => 'taxon', to => 'species_name', 
                                         doc => 'the name of the species of the sample source\'s taxonomic category' },
+
+        sub_type                    => { via => 'attributes', where => [ name => 'sub-type'], to => 'value' },
     ],
     has_many => [
+        attributes                  => { is => 'Genome::Sample::Attribute', reverse_as => 'sample', specify_by => 'name' },
         libraries                   => { is => 'Genome::Library', reverse_id_by => 'sample' },
         solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample' },
         solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
