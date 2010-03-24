@@ -118,8 +118,31 @@ sub execute {                               # replace with real execution logic.
 				}
 	
 		                $cmd_obj->execute;
-                #my $cmd = "gmt ssaha align-to-genome --query-file $fasta_file --output-file $aligner_output_file";
-                #system($cmd);
+			}
+			elsif($aligner eq "bwasw")
+			{
+				my $aligner_output_file = "$aligner_output_dir/$sample_name.$aligner.sam";
+
+				## Declare command object ##
+				my $cmd_obj;
+
+				if($self->reference)
+				{
+					$cmd_obj = Genome::Model::Tools::BwaSw::AlignToGenome->create(
+					    query_file => $fasta_file,
+					    output_file => $aligner_output_file,
+					    reference => $self->reference,
+					);					
+				}
+				else
+				{
+					$cmd_obj = Genome::Model::Tools::BwaSw::AlignToGenome->create(
+					    query_file => $fasta_file,
+					    output_file => $aligner_output_file,
+					);					
+				}
+	
+		                $cmd_obj->execute;
 			}
 		}
 		else
