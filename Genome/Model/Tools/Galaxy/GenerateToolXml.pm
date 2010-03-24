@@ -175,8 +175,7 @@ sub execute {
       1&gt;$out_file 
       2&gt;$err_file'; 
 
-    $help_detail =~ s/^/ /mg;
-    $help_detail =~ s/^ //;
+    $help_detail =~ s/^/> /mg;
 
     my $xml = <<"    XML";
 <tool id="$tool_id" name="$tool_name">
@@ -190,6 +189,7 @@ $input_params</inputs>
 $output_data</outputs>
   <help>
 ::
+
 $help_detail
   </help>
 </tool>
