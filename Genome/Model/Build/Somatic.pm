@@ -94,8 +94,7 @@ sub somatic_workflow_inputs {
     my $instance = $self->newest_somatic_workflow_instance;
 
     unless ($instance) {
-        $self->error_message("no somatic workflow instance found (has build been started?)");
-        $self->error_message("It is possible this build is too old to have been associated with a workflow.");
+        $self->warning_message("no somatic workflow instance found. It is possible this build is too old to have been associated with a workflow.");
         return;
     }
 
