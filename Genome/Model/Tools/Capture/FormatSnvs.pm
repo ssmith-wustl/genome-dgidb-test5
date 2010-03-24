@@ -79,8 +79,6 @@ sub execute {                               # replace with real execution logic.
 
 		my @lineContents = split(/\t/, $line);
 
-		print "$line\n";
-
 		if(!(lc($lineContents[0]) =~ "chrom" || lc($lineContents[0]) =~ "ref_name"))
 		{
 			my $chrom = $lineContents[0];
