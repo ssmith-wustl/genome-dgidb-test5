@@ -17,17 +17,19 @@ sub execute {
     $self->_dump_and_link_instrument_data
         or return;
 
-    my $amplicon_set = $self->build->amplicon_sets # sanger build only have one
+    my @amplicon_sets = $self->build->amplicon_sets
         or return;
 
     $self->_raw_reads_fasta_and_qual_writer
         or return;
 
     my $attempted = 0;
-    while ( my $amplicon = $amplicon_set->() ) {
-        $attempted++;
-        $self->_prepare_instrument_data_for_phred_phrap($amplicon)
-            or return;
+    for my $amplicon_set ( @amplicon_sets ) {
+        while ( my $amplicon = $amplicon_set->() ) {
+            $attempted++;
+            $self->_prepare_instrument_data_for_phred_phrap($amplicon)
+                or return;
+        }
     }
 
     $self->build->amplicons_attempted($attempted);

@@ -146,6 +146,41 @@ sub description {
     );
 }
 
+#< Amplicons >#
+sub amplicon_set_names {
+    return ( $_[0]->sequencing_platform eq 'sanger' ) 
+    ? ( '' ) 
+    : (qw/ I II III /);
+}
+
+sub amplicon_sets {
+    my $self = shift;
+
+    my @amplicon_sets;
+    for my $set_name ( $self->amplicon_set_names ) {
+        unless ( push @amplicon_sets, $self->amplicon_set_for_name($set_name) ) {
+            $self->error_message("Unable to get amplicon set ($set_name) for ".$self->description);
+            return;
+        }
+    }
+
+    return @amplicon_sets;
+}
+
+sub amplicon_set_for_name {
+    my ($self, $set_name) = @_;
+
+    my $amplicon_iterator = $self->_amplicon_iterator_for_name($set_name)
+        or return;
+
+    # Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(
+    # name => $set_name,
+    # amplicon_iterator => $amplicon_iterator,
+    # );
+    
+    return $amplicon_iterator;
+}
+
 #< Dirs >#
 sub sub_dirs {
     return (qw/ classification fasta reports /), $_[0]->_sub_dirs;
@@ -225,33 +260,35 @@ sub _fasta_and_qual_writer {
 sub orient_amplicons_by_classification {
     my $self = shift;
 
-    my $amplicon_set = $self->amplicon_sets
+    my @amplicon_sets = $self->amplicon_sets
         or return;
 
     my $writer = $self->oriented_fasta_and_qual_writer
         or return;
-    
-    while ( my $amplicon = $amplicon_set->() ) {
-        my $bioseq = $amplicon->bioseq;
-        unless ( $bioseq ) { 
-            # OK
-            next;
-        }
-        
-        my $classification = $amplicon->classification;
-        unless ( $classification ) {
-            warn "No classification for ".$amplicon->name;
-            next;
-        }
 
-        if ( $classification->is_complemented ) {
-            eval { $bioseq = $bioseq->revcom; };
-            unless ( $bioseq ) {
-                die "Can't reverse complement biobioseq for amplicon (".$amplicon->name."): $!";
+    for my $amplicon_set ( @amplicon_sets ) {
+        while ( my $amplicon = $amplicon_set->() ) {
+            my $bioseq = $amplicon->bioseq;
+            unless ( $bioseq ) { 
+                # OK
+                next;
             }
-        }
 
-        $writer->write_seq($bioseq);
+            my $classification = $amplicon->classification;
+            unless ( $classification ) {
+                warn "No classification for ".$amplicon->name;
+                next;
+            }
+
+            if ( $classification->is_complemented ) {
+                eval { $bioseq = $bioseq->revcom; };
+                unless ( $bioseq ) {
+                    die "Can't reverse complement biobioseq for amplicon (".$amplicon->name."): $!";
+                }
+            }
+
+            $writer->write_seq($bioseq);
+        }
     }
 
     return 1;
@@ -269,7 +306,7 @@ sub classification_file_for_amplicon {
     my ($self, $amplicon) = @_;
     return $self->classification_dir.'/'.$amplicon->name.'.classification.stor';
 }
-    
+
 sub load_classification_for_amplicon {
     my ($self, $amplicon) = @_;
 

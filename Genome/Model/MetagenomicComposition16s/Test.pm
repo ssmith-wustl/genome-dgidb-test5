@@ -248,7 +248,7 @@ sub _amplicons {
 
     unless ( $self->{_amplicons} ) {
         $self->{_amplicons} = [];
-        my $amplicon_set = $self->_build->amplicon_sets
+        my ($amplicon_set) = $self->_build->amplicon_sets
             or die "No amplicons found";
         while ( my $amplicon = $amplicon_set->() ) {
             push @{$self->{_amplicons}}, $amplicon;

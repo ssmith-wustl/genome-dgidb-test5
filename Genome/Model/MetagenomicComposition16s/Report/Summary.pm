@@ -30,11 +30,13 @@ sub _add_to_report_xml {
     
     $self->_create_metrics;
 
-    my $amplicons = $self->build->amplicon_sets
+    my @amplicon_sets = $self->build->amplicon_sets
         or return;
 
-    while ( my $amplicon = $amplicons->() ) {
-        $self->_add_amplicon($amplicon);
+    for my $amplicon_set ( @amplicon_sets ) {
+        while ( my $amplicon = $amplicon_set->() ) {
+            $self->_add_amplicon($amplicon);
+        }
     }
 
     # Summary Stats 

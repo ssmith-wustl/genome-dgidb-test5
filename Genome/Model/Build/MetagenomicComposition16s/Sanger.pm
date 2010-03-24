@@ -13,17 +13,8 @@ use Finishing::Assembly::Factory;
 class Genome::Model::Build::MetagenomicComposition16s::Sanger {
     is => 'Genome::Model::Build::MetagenomicComposition16s',
     has => [
-        has_qual_files => {
-            is => 'Integer',
-            default_value => 1,
-            is_constant => 1,
-        },
     ],
 };
-
-sub has_qual_files {
-    return 1;
-}
 
 #< INTR DATA >#
 sub link_instrument_data {
@@ -121,7 +112,7 @@ sub processed_reads_fasta_and_qual_writer {
 }
 
 #< Amplicons >#
-sub amplicon_sets {
+sub _amplicon_iterator_for_name {
     my $self = shift;
 
     # open chromt_dir

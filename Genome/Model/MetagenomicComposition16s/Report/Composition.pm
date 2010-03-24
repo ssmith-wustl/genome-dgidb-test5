@@ -38,46 +38,45 @@ sub _add_to_report_xml {
         confidence_threshold => $self->confidence_threshold,
     );
 
-    my $amplicons = $self->build->amplicon_sets;
-    unless ( $amplicons ) {
-        $self->error_message( sprintf("No amplicons for build (ID %s)", $self->build_id) );
-        return;
-    }
+    my @amplicon_sets = $self->build->amplicon_sets
+        or return;
 
-    while ( my $amplicon = $amplicons->() ) {
-        my $classification = $amplicon->classification
-            or next;
-        $population_composition->add_classification($classification);
-    }
-
-    my @domains = grep { $_ ne 'anamalia' } Genome::Utility::MetagenomicClassifier->domains;
-    my @ranks = grep { $_ ne 'kingdom' } Genome::Utility::MetagenomicClassifier->taxonomic_ranks;
-    pop @ranks; # remove species
-    for my $domain ( @domains ) {
-        my @headers = (qw/ taxonomy rank total /);
-        my @ranks_involved;
-        for my $rank ( @ranks ) {
-            push @ranks_involved, $rank;
-            my %counts = $population_composition->get_counts_for_domain_down_to_rank($domain, $rank)
+    for my $amplicon_set ( @amplicon_sets ) {
+        while ( my $amplicon = $amplicon_set->() ) {
+            my $classification = $amplicon->classification
                 or next;
-            #print Dumper(\%counts);
-            my @rows;
-            for my $tax ( keys %counts ) {
-                push @rows, [
-                $tax, 
-                $rank,
-                $counts{$tax}->{total}, 
-                ( map { $counts{$tax}->{$_} } @ranks_involved),
-                ];
+            $population_composition->add_classification($classification);
+        }
+
+        my @domains = grep { $_ ne 'anamalia' } Genome::Utility::MetagenomicClassifier->domains;
+        my @ranks = grep { $_ ne 'kingdom' } Genome::Utility::MetagenomicClassifier->taxonomic_ranks;
+        pop @ranks; # remove species
+        for my $domain ( @domains ) {
+            my @headers = (qw/ taxonomy rank total /);
+            my @ranks_involved;
+            for my $rank ( @ranks ) {
+                push @ranks_involved, $rank;
+                my %counts = $population_composition->get_counts_for_domain_down_to_rank($domain, $rank)
+                    or next;
+                #print Dumper(\%counts);
+                my @rows;
+                for my $tax ( keys %counts ) {
+                    push @rows, [
+                    $tax, 
+                    $rank,
+                    $counts{$tax}->{total}, 
+                    ( map { $counts{$tax}->{$_} } @ranks_involved),
+                    ];
+                }
+                $self->_add_dataset(
+                    #print Dumper({
+                    name => join('-', lc($domain), lc($rank), 'counts'),
+                    headers => [ @headers, @ranks_involved ],
+                    row_name => 'count',
+                    rows => \@rows,
+                    #});
+                ) or return;
             }
-            $self->_add_dataset(
-                #print Dumper({
-                name => join('-', lc($domain), lc($rank), 'counts'),
-                headers => [ @headers, @ranks_involved ],
-                row_name => 'count',
-                rows => \@rows,
-                #});
-            ) or return;
         }
     }
 

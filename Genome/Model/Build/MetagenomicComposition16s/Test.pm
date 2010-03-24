@@ -87,7 +87,9 @@ sub tests : Tests() {
     $self->_link_dirs($source_dir.'/classification', $build->classification_dir);
 
     # amplicon - just one for testing
-    my $amplicon_set = $build->amplicon_sets;
+    my @amplicon_sets = $build->amplicon_sets;
+    is(scalar(@amplicon_sets), 1, 'Got one amplicon set for sanger');
+    my $amplicon_set = $amplicon_sets[0];
     my $amplicon = $amplicon_set->();
     ok($amplicon, 'got amplicon');
     
@@ -276,7 +278,8 @@ sub test02_amplicons_gsc : Tests() {
     my $build = $self->_build;
     
     my $amplicons = [];
-    my $amplicon_set = $build->amplicon_sets;
+    my @amplicon_sets = $build->amplicon_sets;
+    my $amplicon_set = $amplicon_sets[0];
     while ( my $amplicon = $amplicon_set->() ) {
         push @$amplicons, $amplicon;
     }
@@ -305,7 +308,8 @@ sub test02_amplicons_gsc : Tests() {
     
     # Contamination - should get 4 amplicons
     $build->processing_profile->exclude_contaminated_amplicons(1);
-    $amplicon_set = $build->amplicon_sets;
+    @amplicon_sets = $build->amplicon_sets;
+    $amplicon_set = $amplicon_sets[0];
     my @uncontaminated_amplicons;
     while ( my $amplicon = $amplicon_set->() ) {
         push @uncontaminated_amplicons, $amplicon;
@@ -319,7 +323,8 @@ sub test02_amplicons_gsc : Tests() {
     # Latest iteration of reads - 5 amplicons because the contaminated read is older
     $build->processing_profile->only_use_latest_iteration_of_reads(1);
     my @only_latest_reads_amplicons;
-    $amplicon_set = $build->amplicon_sets;
+    @amplicon_sets = $build->amplicon_sets;
+    $amplicon_set = $amplicon_sets[0];
     while ( my $amplicon = $amplicon_set->() ) {
         push @only_latest_reads_amplicons, $amplicon;
     }
@@ -572,14 +577,17 @@ sub startup : Tests(startup => no_plan) {
 sub test02_amplicons_gsc : Tests() {
     my $self = shift;
     
-    # amplicons
+    #print $self->_build->directory."\n";<STDIN>;
+    
     my $build = $self->_build;
-    #print $build->directory."\n";<STDIN>;
-    my $amplicons = $build->amplicon_sets;
-    ok($amplicons, 'amplicons');
+    is_deeply([ $build->amplicon_set_names ], [qw/ I II III /]);
+    
+    my @amplicon_sets = $build->amplicon_sets;
+    my $amplicon_set = $amplicon_sets[0];
+    ok($amplicon_set, 'amplicon set');
 
     my @amplicons;
-    while ( my $amplicon = $amplicons->() ) {
+    while ( my $amplicon = $amplicon_set->() ) {
         isa_ok($amplicon, 'Genome::Model::Build::MetagenomicComposition16s::Amplicon');
         push @amplicons, $amplicon;
     }
