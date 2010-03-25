@@ -147,7 +147,7 @@ sub default_filenames{
         varscan_adaptor_indel               => 'varScan.output.indel.formatted',
         varscan_snp_germline                => 'varScan.output.snp.formatted.Germline',
         varscan_snp_loh                     => 'varScan.output.snp.formatted.LOH',
-        varscan_snp_somatic                 => 'varScan.output.snp.formatted.Somatic',
+        varscan_snp_somatic                 => 'varScan.output.snp.formatted.Somatic.hc',
        
         varscan_indel_germline              => 'varScan.output.indel.formatted.Germline',
         varscan_indel_loh                   => 'varScan.output.indel.formatted.LOH',
