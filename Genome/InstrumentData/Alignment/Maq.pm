@@ -206,7 +206,8 @@ sub alignment_bam_file_paths {
                 
                 $self->status_message("Aligner version: ".$self->aligner_version);
 
-                my $read_group_name = $self->instrument_data->seq_id;
+                #my $read_group_name = $self->instrument_data->seq_id;
+                my $read_group_name = $self->instrument_data->id;
                 
                 $self->status_message("Read Group name/tag: $read_group_name");
                 
@@ -466,7 +467,7 @@ sub verify_alignment_data {
         if (@output_files) {
             my $msg = 'REFUSING TO CONTINUE with files in place in alignment directory:' ."\n";
             $msg .= join("\n",@output_files) ."\n";
-            $self->die_and_clean_up($msg);
+            #$self->die_and_clean_up($msg);  Too risky to remove alignment dir, especially for some old published data
         }
         return;
     }
@@ -805,11 +806,17 @@ sub create_combined_bam_file {
     my $instrument_data = $self->instrument_data;
     $self->status_message("\nInstrument data id ".$instrument_data->id."\n");
 
-    my $seq_id = $self->instrument_data->seq_id;
+    #my $seq_id = $self->instrument_data->seq_id;
+    my $seq_id = $self->instrument_data->id;
     $self->status_message("\nSeq id ".$seq_id."\n");    $self->status_message("Converting unaligned reads to Sam format.");
     #convert the unaligned read file to sam format 
     #input file
-    my $unaligned_file = $self->unaligned_reads_list_path; 
+    my @unaligned_files = $self->unaligned_reads_list_paths;
+    unless (@unaligned_files == 1) {
+        $self->error_message("More than one unaligned files existing in alignment dir");
+        return;
+    }
+    my $unaligned_file = $unaligned_files[0];
     #output file
     my $unaligned_sam_file =  $self->alignment_directory."/unaligned.sam";
     unlink($unaligned_sam_file) if (-e $unaligned_sam_file);

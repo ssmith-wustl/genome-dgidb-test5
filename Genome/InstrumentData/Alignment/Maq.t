@@ -41,7 +41,7 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   subset_name => 4,
                                                                   run_type => 'Paired End Read 2',
                                                                   gerald_directory => $gerald_directory,
-                                                                  seq_id => '-923458',
+                                                                  #seq_id => '-923458',
                                                                   flow_cell_id => '33G',
                                                                   lane => '4',
                                                                
@@ -108,7 +108,7 @@ my $instrument_data2 = Genome::InstrumentData::Solexa->create_mock(
                                                                   subset_name => 4,
                                                                   run_type => 'Paired End Read 2',
                                                                   gerald_directory => $gerald_directory,
-                                                                  seq_id => '-923458',
+                                                                  #seq_id => '-923458',
                                                                   flow_cell_id => '33G',
                                                                   lane => '4',
                                                                
@@ -153,7 +153,7 @@ print "<<<End Test Case #2\n";
 print ">>>Begin Test Case #3\n";
 my $instrument_data3 = Genome::InstrumentData::Solexa->create_mock(
                                                                id => '-123458',
-                                                               seq_id => '-923458',
+                                                               #seq_id => '-923458',
                                                                flow_cell_id => '33G',
                                                                lane => '4',
                                                                median_insert_size => '313',
@@ -246,12 +246,13 @@ ok(-d $dir4, "result is a real directory");
 my $expected_output_dir = "/gsc/var/cache/testsuite/data/Genome-InstrumentData-Alignment-Maq/expected_output";
 ok(-d $expected_output_dir, "found expected output directory");
 my @diff = `diff $expected_output_dir $dir4`;
-is(scalar(@diff), 1, "found 1 difference as expected (the output dir has timings in it)")
+is(scalar(@diff), 2, "found 2 difference as expected (the output dir has timings in it)")
     or do {
-        my $copy = "/tmp/maq-alignment-failed/$ENV{USER}";
+        #my $copy = "/tmp/maq-alignment-failed/$ENV{USER}";
+        my $copy = "/tmp/maq-alignment-failed.$ENV{USER}.$$";
         system "cp -r $dir4 $copy";
         diag("RUN THIS TO DEBUG: diff $expected_output_dir $copy");
-    };
+    }; #leave the old all_sequences.bam (seq_id not equal to id)
 
 ok($alignment4->remove_alignment_directory,'removed alignment directory '. $dir4);
 ok(! -e $dir4, 'alignment directory does not exist');
