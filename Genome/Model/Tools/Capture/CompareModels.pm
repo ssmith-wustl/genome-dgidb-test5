@@ -169,10 +169,26 @@ sub execute {                               # replace with real execution logic.
 		elsif($normal_bam_file || $tumor_bam_file)
 		{
 			$stats{'num_pairs_one_bam'}++;
+			if($self->report_only)
+			{
+				print "$tumor_sample\n";
+				print "Normal BAM: $normal_bam_file\n";
+				print "Tumor BAM: $tumor_bam_file\n";
+				print "Normal SNP: $normal_snp_file\n";
+				print "Tumor SNP: $tumor_snp_file\n";				
+			}
 		}
 		else
 		{
 			$stats{'num_pairs_no_bams'}++;
+			if($self->report_only)
+			{
+				print "$tumor_sample\n";
+				print "Normal BAM: \n";
+				print "Tumor BAM: \n";
+				print "Normal SNP: \n";
+				print "Tumor SNP: \n";				
+			}
 		}
 
 	}

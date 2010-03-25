@@ -121,13 +121,6 @@ sub execute {                               # replace with real execution logic.
 		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
 		
 		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\"";
-#		my $cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params";
-#		open(SCRIPT, ">$output_snp.sh") or die "Can't open output file!\n";
-#		print SCRIPT "#!/gsc/bin/bash\n";
-#		print SCRIPT "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\n";
-#		close(SCRIPT);
-#		system("chmod 755 $output_snp.sh");
-#		system("bash $output_snp.sh");
 
 		## Run VarScan ##
 		if($self->heap_space)
@@ -138,6 +131,21 @@ sub execute {                               # replace with real execution logic.
 		print "Running $cmd\n";
 		system($cmd);
 
+
+		## Run the filter command ##
+		
+		if(-e $output_snp && -e $output_indel)
+		{
+			$cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somaticFilter $output_snp --indel-file $output_indel --output-file $output_snp.filter";
+			print "Running $cmd\n";
+			system($cmd);
+			
+			if(-e "$output_snp.filter")
+			{
+				system("mv -f $output_snp $output_snp.unfiltered");
+				system("mv -f $output_snp.filter $output_snp");
+			}
+		}
 
 	}
 	else

@@ -99,7 +99,7 @@ sub execute {                               # replace with real execution logic.
 sub process_results
 {
 	my $variants_file = shift(@_);
-	my $file_header = "chrom\tposition";
+	my $file_header = "";
 
 	print "Processing variants in $variants_file...\n";
 
@@ -163,9 +163,9 @@ sub process_results
 				open(STATUS, ">$variants_file.$status") or die "Can't open output file: $!\n";
 				open(HICONF, ">$variants_file.$status.hc") or die "Can't open output file: $!\n";
 				open(LOWCONF, ">$variants_file.$status.lc") or die "Can't open output file: $!\n";
-				print HICONF "$file_header\n";
-				print LOWCONF "$file_header\n";
-				print STATUS "$file_header\n";
+				print HICONF "$file_header\n" if($file_header);
+				print LOWCONF "$file_header\n" if($file_header);
+				print STATUS "$file_header\n" if($file_header);
 			}
 			
 			my $numHiConf = my $numLowConf = 0;
