@@ -15,6 +15,7 @@ use constant EXPECTED_DATA => {
   'haploid_coverage' => '31.072',
   'build_id' => '101057421',
   'unfiltered_dbsnp_concordance' => '77.08%',
+  'lane_count' => '18',
   'unfiltered_snp_calls' => '4,500,450',
   'filtered_snp_calls' => '3,468,651',
   'filtered_dbsnp_concordance' => '90.61%'

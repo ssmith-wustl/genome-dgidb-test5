@@ -45,16 +45,13 @@ sub _add_to_report_xml {
         
         my $build_node = $metrics_node->addChild( $doc->createElement('build') );
         
-        my @instrument_data = $subbuild->instrument_data;
-        my $num_lanes = scalar @instrument_data;
+        my $data = $self->extract_refalign_report_data($subbuild);
         
         $build_node->addChild( $doc->createAttribute('build-id', $subbuild->id) );
         $build_node->addChild( $doc->createAttribute('name', $subbuild->model->name) );
-        $build_node->addChild( $doc->createAttribute('lanes', $num_lanes));
+        $build_node->addChild( $doc->createAttribute('lanes', $data->{lane_count}));
         $build_node->addChild( $doc->createAttribute('haploid-coverage', $subbuild->get_metric('haploid_coverage')) );
         $build_node->addChild( $doc->createAttribute('instrument-data-total-kb', $subbuild->get_metric('instrument data total kb')) );
-        
-        my $data = $self->extract_refalign_report_data($subbuild);
         
         $build_node->addChild( $doc->createAttribute('unfiltered-snp-calls', $data->{unfiltered_snp_calls} || '-'));
         $build_node->addChild( $doc->createAttribute('unfiltered-dbsnp-concordance', $data->{unfiltered_dbsnp_concordance} || '-'));
