@@ -147,8 +147,13 @@ $state,    $build_id,  shift @lsf_id,   $event_status, $action, $owner, $fix
         $state    = 'no build';
         $build_id = $bid;
         my $event = shift @$lsf_job_ids;
-        $event_status = $event->event_status;
-        $owner        = $event->user_name;
+        if (defined $event) {
+            $event_status = $event->event_status;
+            $owner        = $event->user_name;
+        } else {
+            $event_status = '(undef)';
+            $owner = '(undef)';
+        }
         my @event_ids_only = keys %$events_with_job;
         my $fixed_status =
           $self->derive_build_status( $build_inner_events->{$build_id},

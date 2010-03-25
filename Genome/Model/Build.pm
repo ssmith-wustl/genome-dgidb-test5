@@ -42,6 +42,7 @@ class Genome::Model::Build {
     ],
     has_optional => [
         disk_allocation     => {
+                                is => 'Genome::Disk::Allocation',
                                 calculate_from => [ 'class', 'id' ],
                                 calculate => q|
                                     my $disk_allocation = Genome::Disk::Allocation->get(
