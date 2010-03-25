@@ -11,11 +11,12 @@ use strict;
 use warnings;
 
 class Genome::Taxon {
-    table_name => '(select * from organism_taxon@dw) taxon',
+    table_name => "(select t.*, species_name name from organism_taxon\@dw t) taxon",
     id_by => [
         taxon_id         => { is => 'Number', len => 10 },
     ],
     has => [
+        name                            => { is => "Text", len => 99 },
         domain                          => { is => "Text",   len => 9 },
         species_name                    => { is => "Text",   len => 64 },
         strain_name                     => { is => "Text",   len => 32 },
