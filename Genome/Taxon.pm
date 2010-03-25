@@ -57,5 +57,12 @@ class Genome::Taxon {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+
+#Alias for species name for now--many things look generically for "name"s of things
+sub name {
+    my $self = shift;
+    return $self->species_name(@_);
+}
+
 1;
 
