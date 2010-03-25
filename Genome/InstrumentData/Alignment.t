@@ -102,7 +102,8 @@ my $real_alignment = Genome::InstrumentData::Alignment->create(
                                                            );
 
 my $real_alignment_directory = $real_alignment->resolve_alignment_directory;
-like($real_alignment_directory,qr/alignment_data\/maq0_6_8\/NCBI-human-build36\/080428_HWI-EAS292_0039_3035U\/8_2499312867/,'got expected alignment directory');
+#like($real_alignment_directory,qr/alignment_data\/maq0_6_8\/NCBI-human-build36\/080428_HWI-EAS292_0039_3035U\/8_2499312867/,'got expected alignment directory');
+like($real_alignment_directory,qr/alignment_data\/maq0_6_8\/NCBI-human-build36\/080425_HWI-EAS292_0000_3035U\/8_2499312867/,'got expected alignment directory');
 
 ok(my @alignment_file_paths = $real_alignment->alignment_file_paths, "Got the alignment_file_paths");
 for my $file_path (@alignment_file_paths) {
@@ -187,8 +188,8 @@ my $trimmer_label = $trimmed_alignment->trimmer_label;
 is($trimmer_label,'trim5/1679091c5a880faf6fb5e6087eb1b2dc','got expected trimmer label');
 
 my $trimmed_alignment_directory = $trimmed_alignment->resolve_alignment_directory;
-like($trimmed_alignment_directory,qr/alignment_data\/maq0_7_1\/NCBI-human-build36\/080428_HWI-EAS292_0039_3035U\/trim5\/1679091c5a880faf6fb5e6087eb1b2dc\/8_2499312867/,'got expected trimmed alignment directory');
-
+#like($trimmed_alignment_directory,qr/alignment_data\/maq0_7_1\/NCBI-human-build36\/080428_HWI-EAS292_0039_3035U\/trim5\/1679091c5a880faf6fb5e6087eb1b2dc\/8_2499312867/,'got expected trimmed alignment directory');
+like($trimmed_alignment_directory,qr/alignment_data\/maq0_7_1\/NCBI-human-build36\/080425_HWI-EAS292_0000_3035U\/trim5\/1679091c5a880faf6fb5e6087eb1b2dc\/8_2499312867/,'got expected trimmed alignment directory');
 
 exit;
 
