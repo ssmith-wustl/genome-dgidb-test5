@@ -110,7 +110,7 @@ class Genome::Sample {
 
         sub_type                    => { via => 'attributes', where => [ name => 'sub-type'], to => 'value' },
         
-        _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "GC" }, 
+        _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
     ],
     has_many => [
         attributes                  => { is => 'Genome::Sample::Attribute', reverse_as => 'sample', specify_by => 'name' },
