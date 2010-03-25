@@ -256,7 +256,10 @@ sub execute {
             #Tier1 exonic genes were printed when the snp file was read in
             #
             #Tier2 Conserved Blocks
-            if(($phastConsElements28way && $phastConsElements28way >= 500) || ($phastConsElements17way && $phastConsElements17way >= 500)) {
+            #These can be strings of space separated values
+            my @phastConsElements28way = split /\s+/, $phastConsElements28way;
+            my @phastConsElements17way = split /\s+/, $phastConsElements17way;
+            if((@phastConsElements28way && scalar(grep { $_ >= 500} @phastConsElements28way)) || (@phastConsElements17way && scalar(grep { $_ >= 500 } @phastConsElements17way))) {
                 for my $reference (keys %{$variant_at{$chr}{$start}{$stop}}) {
                     for my $variant(keys %{$variant_at{$chr}{$start}{$stop}{$reference}}) {
                         print $tier2 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
