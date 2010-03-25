@@ -77,7 +77,7 @@ class Genome::Model::Tools::Pindel::RunPindel {
         # Make workflow choose 64 bit blades
         lsf_resource => {
             is_param => 1,
-            default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000] span[hosts=1]'",
+            default_value => "-M 12000000 -R 'select[type==LINUX64 && mem>12000] rusage[mem=12000] span[hosts=1]'",
         },
         lsf_queue => {
             is_param => 1,
@@ -138,7 +138,13 @@ sub execute {
     # We do not check output_files because we accept that at least di may not be present
     my $result = Genome::Utility::FileSystem->shellcmd(cmd => $cmd, input_files => [$self->reads_file_merged]);
 
-    return $result;
+    # need to die here so workflow correctly sees a failure
+    unless ($result == 1) {
+        $self->error_message("Received nonzero exit code from pindel execution");
+        die;
+    }
+
+    return 1;
 }
 
 # Hackidy hack hack
