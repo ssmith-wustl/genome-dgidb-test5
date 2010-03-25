@@ -112,7 +112,7 @@ sub launch_convergence_rebuild {
         $self->status_message("Trying rebuild of associated convergence model.");
         unless($self->convergence_model->launch_rebuild) {
             $self->error_message($self->convergence_model->error_message);
-            die;
+            die $self->error_message;
         }
     }
     
