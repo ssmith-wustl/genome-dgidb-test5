@@ -109,6 +109,8 @@ class Genome::Sample {
                                         doc => 'the name of the species of the sample source\'s taxonomic category' },
 
         sub_type                    => { via => 'attributes', where => [ name => 'sub-type'], to => 'value' },
+        
+        _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "GC" }, 
     ],
     has_many => [
         attributes                  => { is => 'Genome::Sample::Attribute', reverse_as => 'sample', specify_by => 'name' },
