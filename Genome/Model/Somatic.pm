@@ -14,8 +14,8 @@ class Genome::Model::Somatic {
        min_somatic_quality => { via => 'processing_profile'},
        skip_sv => { via => 'processing_profile'},
        require_dbsnp_allele_match => { via => 'processing_profile'},
-       breakdancer_params => { via => 'processing_profile'},
-       bam2cfg_params => { via => 'processing_profile'},
+       sv_detector_params => { via => 'processing_profile'},
+       sv_detector_version => { via => 'processing_profile'},
     ],
     has_optional => [
          tumor_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', where => [ role => 'tumor'], is_many => 1,
