@@ -26,6 +26,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
 		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 0, is_input => 1 },
+		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
 		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [4]", is_optional => 1, is_input => 1},
 		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [4]", is_optional => 1, is_input => 1},
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
@@ -62,8 +63,10 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
+	my $sample_name = $self->variant_file;
 	my $genotype_file = $self->genotype_file;
 	my $variant_file = $self->variant_file;
+	$sample_name = $self->sample_name if($self->sample_name);
 	my $min_depth_hom = 4;
 	my $min_depth_het = 8;
 	$min_depth_hom = $self->min_depth_hom if($self->min_depth_hom);
@@ -72,6 +75,7 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_file)
 	{
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";
+		print OUTFILE 
 #		print OUTFILE "file\tnum_snps\tnum_with_genotype\tnum_min_depth\tnum_variant\tvariant_match\thom_was_het\thet_was_hom\thet_was_diff\tconc_variant\tconc_rare_hom\n";
 		#num_ref\tref_was_ref\tref_was_het\tref_was_hom\tconc_overall
 	}
@@ -120,15 +124,31 @@ sub execute {                               # replace with real execution logic.
 				$file_type = "varscan";
 			}
 
-			## Get depth ##
-			
+			## Get depth and consensus genotype ##
+
+			my $cons_gt = "";			
+
 			if($file_type eq "varscan")
 			{
 				$depth = $lineContents[4] + $lineContents[5];
+				my $var_freq = $lineContents[6];
+				my $allele1 = $lineContents[2];
+				my $allele2 = $lineContents[3];
+				$var_freq =~ s/\%//;
+				if($var_freq >= 80)
+				{
+					$cons_gt = $allele2 . $allele2;
+				}
+				else
+				{
+					$cons_gt = $allele1 . $allele2;
+					$cons_gt = sort_genotype($cons_gt);
+				}
 			}
 			else
 			{
-				$depth = $lineContents[7];			
+				$depth = $lineContents[7];
+				$cons_gt = code_to_genotype($cns_call);
 			}
 	
 			## Only check SNP calls ##
@@ -148,7 +168,7 @@ sub execute {                               # replace with real execution logic.
 					if((is_homozygous($chip_gt) && $depth >= $min_depth_hom) || (is_heterozygous($chip_gt) && $depth >= $min_depth_het))
 					{
 						my $ref_gt = code_to_genotype($ref_base);
-						my $cons_gt = code_to_genotype($cns_call);
+						
 
 						$stats{'num_min_depth'}++;
 					
@@ -281,7 +301,8 @@ sub execute {                               # replace with real execution logic.
 	}
 	else
 	{
-		print "$flowcell.$lane\t";
+		print "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print "$sample_name\t";
 		print $stats{'num_snps'} . "\t";
 		print $stats{'num_with_genotype'} . "\t";
 		print $stats{'num_min_depth'} . "\t";
@@ -301,7 +322,8 @@ sub execute {                               # replace with real execution logic.
 
 	if($self->output_file)
 	{
-		print OUTFILE "$flowcell.$lane\t";
+		print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print OUTFILE "$sample_name\t";
 		print OUTFILE $stats{'num_snps'} . "\t";
 		print OUTFILE $stats{'num_with_genotype'} . "\t";
 		print OUTFILE $stats{'num_min_depth'} . "\t";
