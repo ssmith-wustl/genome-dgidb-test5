@@ -83,6 +83,30 @@ sub execute {
     $DB::single=1;
 #    $self->SUPER::execute(@_) or return;
 
+    #Set up the "subject" of the model
+    my $tumor_subject = $self->tumor_model->subject;
+    my $normal_subject = $self->normal_model->subject;
+
+    if($tumor_subject->can('source') and $normal_subject->can('source')) {
+        my $tumor_source = $tumor_subject->source;
+        my $normal_source = $normal_subject->source;
+        
+        if($tumor_source eq $normal_source) {
+            my $subject = $tumor_source;
+            
+            #Set up other parameters for call to parent execute()
+            $self->subject_id($subject->id);
+            $self->subject_class_name($subject->class);
+            $self->subject_name($subject->common_name || $subject->name);
+        } else {
+            $self->error_message('Tumor and normal samples are not from same source!');
+            return;
+        }
+    } else {
+        $self->error_message('Unexpected subject for tumor or normal model!');
+        return;
+    }
+
     # run Genome::Model::Command::Define execute
     my $super = $self->super_can('_execute_body');
     $super->($self,@_);
