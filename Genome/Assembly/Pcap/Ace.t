@@ -4,6 +4,7 @@ use above 'Genome';
 use Genome::Assembly::Pcap::Ace;
 use base qw(Test::Class);
 use Test::More tests => 21;
+use File::Temp;
 
 #use Test::Deep;
 
@@ -26,10 +27,13 @@ sub setup : Test(setup){
 
 sub setup2 : Test(setup){
 	my $self = shift;
+    $self->{tmp} = File::Temp->new( UNLINK => 1, SUFFIX => '.db' );
+    die "Failed to create temp sqlite db file for testing.\n" unless defined $self->{tmp};
 	push(@{$self->{assembly}}, Genome::Assembly::Pcap::Ace->new(
 											input_file => "/gsc/var/cache/testsuite/data/Genome-Assembly-Pcap/test.ace",
 											using_db => 1,
-											db_type => "SQLite"
+											db_type => "SQLite",
+                                            db_file => $self->{tmp}->filename
 										));
 	
 	
@@ -50,6 +54,7 @@ sub teardown : Test(teardown){
 	my $self = shift;
 	
 	$self->{assembly} = undef;
+    $self->{tmp} = undef;
 }
 
 sub test_get_contig : Tests{
