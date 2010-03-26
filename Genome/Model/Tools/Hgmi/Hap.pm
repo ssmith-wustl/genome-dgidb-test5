@@ -174,7 +174,7 @@ sub execute
         analysis_version => $config->{pipe_version},
         acedb_version    => $config->{acedb_version},
         project_type     => $config->{project_type},
-
+        path             => $config->{path},
     );
 
     if ($sn)
