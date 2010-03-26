@@ -259,7 +259,7 @@ sub _assign_all_instrument_data {
 
     my $requested_capture_target = $self->capture_target();
     
-  ID: for my $id ( @unassigned_instrument_data ) {
+    ID: for my $id ( @unassigned_instrument_data ) {
 
         my $id_capture_target;
         
@@ -288,7 +288,16 @@ sub _assign_all_instrument_data {
             }
             
         }
-        
+
+        if ($id->isa("Genome::InstrumentData::Imported")) {
+            $self->warning_message("IGNORING IMPORTED INSTRUMENT DATA: " . $id->id 
+                    . " sequencing platform " . $id->sequencing_platform
+                    . " imported by " . $id->user_name
+                    . ".  Add this explicitly if you want it in the model."
+            );
+            next ID;
+        }
+
         $self->_assign_instrument_data($id)
             or return;
     }
