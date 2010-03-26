@@ -9,9 +9,9 @@ use XML::LibXML;
 class Genome::Model::View::Status::Xml {
     is => 'UR::Object::View::Default::Xml',
     has => [
-        _doc    => { 
-            is_transient => 1, 
-            doc => 'the XML::LibXML document object used to build the content for this view' 
+        _doc    => {
+            is_transient => 1,
+            doc => 'the XML::LibXML document object used to build the content for this view'
         },
     ]
 };
@@ -60,8 +60,13 @@ sub get_model_node {
     my $model = $self->subject;
     return unless $model;
 
-	my $source = eval{$model->subject->source;};
-	warn "Model has no source: $@" if $@;
+    my $source;
+    my $subject = $model->subject;
+    if ($subject->can('source')) {
+        $source = $subject->source;
+    }
+	#my $source = eval{$model->subject->source;};
+	#warn "Model has no source: $@" if $@;
 
     $modelnode->addChild( $doc->createAttribute("model-id",$model->id) );
     $modelnode->addChild( $doc->createAttribute("model-name",$model->name) );
@@ -69,7 +74,7 @@ sub get_model_node {
     $modelnode->addChild( $doc->createAttribute("creation-date",$model->creation_date) );
     $modelnode->addChild( $doc->createAttribute("processing-profile-name", $model->processing_profile->name) );
 	$modelnode->addChild( $doc->createAttribute("sample-name",$model->subject_name) );
-	if ($source) { 
+	if ($source and $source->can('common_name')) {
         $modelnode->addChild( $doc->createAttribute("common-name",$source->common_name || 'UNSPECIFIED') );
     }
     $modelnode->addChild( $doc->createAttribute("subject-id",$model->subject_id) );
@@ -264,7 +269,7 @@ sub calculate_elapsed_time {
 
 1;
 
-=pod 
+=pod
 
 =head1 NAME
 
