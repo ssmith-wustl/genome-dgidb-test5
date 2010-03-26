@@ -1,5 +1,5 @@
 <?xml version='1.0' standalone='yes'?>
-<workflow name="human contamination screening" executor="Workflow::Executor::SerialDeferred" logDir="/gscmnt/sata409/research/mmitreva/edemello/workflow_logs">
+<workflow name="human contamination screening" executor="Workflow::Executor::SerialDeferred">
     <link fromOperation="input connector"           fromProperty="fastq_1"                  toOperation="trim primer 1"             toProperty="fastq_file" />
     <link fromOperation="input connector"           fromProperty="fastq_2"                  toOperation="trim primer 2"             toProperty="fastq_file" />
     <link fromOperation="input connector"           fromProperty="primer_trim_file1"        toOperation="trim primer 1"             toProperty="output"/>
@@ -54,6 +54,11 @@
     <link fromOperation="input connector"           fromProperty="resurrected_file_1"       toOperation="wait for resurrect"        toProperty="sam1" />
     <link fromOperation="input connector"           fromProperty="resurrected_file_2"       toOperation="wait for resurrect"        toProperty="sam2" />
 
+    <link fromOperation="input connector"           fromProperty="mismatch_removed_file1"   toOperation="wait for dust"             toProperty="mismatch_removed_file1" />
+    <link fromOperation="input connector"           fromProperty="mismatch_removed_file2"   toOperation="wait for dust"             toProperty="mismatch_removed_file2" />
+    <link fromOperation="input connector"           fromProperty="mismatch_cutoff"          toOperation="wait for dust"             toProperty="mismatch_cutoff" />
+    <link fromOperation="input connector"           fromProperty="save_screened_reads"      toOperation="wait for dust"             toProperty="save_screened_reads" />
+
     <link fromOperation="remove n 1"                fromProperty="result"                   toOperation="wait for n removal 1"      toProperty="n_removal_1_complete" />
     <link fromOperation="remove n 2"                fromProperty="result"                   toOperation="wait for n removal 2"      toProperty="n_removal_2_complete" />
     <link fromOperation="wait for n removal 1"      fromProperty="files_to_align_path_1"    toOperation="run screen 1"              toProperty="files_to_align_path" />
@@ -95,9 +100,23 @@
     <link fromOperation="wait for synch"            fromProperty="fastq2"                   toOperation="dust 2"                    toProperty="fastq_file" />
     
     <link fromOperation="dust 1"                    fromProperty="result"                   toOperation="wait for dust"             toProperty="dust_1_complete" />
+    <link fromOperation="dust 1"                    fromProperty="dusted_file"              toOperation="wait for dust"             toProperty="fasta_file1" />
     <link fromOperation="dust 2"                    fromProperty="result"                   toOperation="wait for dust"             toProperty="dust_2_complete" />
+    <link fromOperation="dust 2"                    fromProperty="dusted_file"              toOperation="wait for dust"             toProperty="fasta_file2" />
 
-    <link fromOperation="wait for dust"             fromProperty="dusted"                   toOperation="output connector"          toProperty="result" />
+    <link fromOperation="wait for dust"             fromProperty="fasta_file1"              toOperation="remove mismatch 1"         toProperty="fasta_file" />
+    <link fromOperation="wait for dust"             fromProperty="mismatch_removed_file1"   toOperation="remove mismatch 1"         toProperty="n_removed_file" />
+    <link fromOperation="wait for dust"             fromProperty="mismatch_cutoff"          toOperation="remove mismatch 1"         toProperty="cutoff" />
+    <link fromOperation="wait for dust"             fromProperty="save_screened_reads"      toOperation="remove mismatch 1"         toProperty="save_screened_reads" />
+    <link fromOperation="wait for dust"             fromProperty="fasta_file2"              toOperation="remove mismatch 2"         toProperty="fasta_file" />
+    <link fromOperation="wait for dust"             fromProperty="mismatch_removed_file2"   toOperation="remove mismatch 2"         toProperty="n_removed_file" />
+    <link fromOperation="wait for dust"             fromProperty="mismatch_cutoff"          toOperation="remove mismatch 2"         toProperty="cutoff" />
+    <link fromOperation="wait for dust"             fromProperty="save_screened_reads"      toOperation="remove mismatch 2"         toProperty="save_screened_reads" />
+
+    <link fromOperation="remove mismatch 1"         fromProperty="result"                   toOperation="wait for mismatch removal" toProperty="removal_1_complete" />
+    <link fromOperation="remove mismatch 2"         fromProperty="result"                   toOperation="wait for mismatch removal" toProperty="removal_2_complete" />
+
+    <link fromOperation="wait for mismatch removal" fromProperty="both_complete"            toOperation="output connector"          toProperty="result" />
 
     <operation name="trim primer 1">
         <operationtype commandClass="Genome::Model::Tools::Fastq::TrimPrimer" typeClass="Workflow::OperationType::Command" />
@@ -223,9 +242,30 @@
 
     <operation name="wait for dust">
         <operationtype typeClass="Workflow::OperationType::Block">
+            <property>save_screened_reads</property>
+            <property>mismatch_cutoff</property>
+            <property>fasta_file1</property>
+            <property>mismatch_removed_file1</property>
             <property>dust_1_complete</property>
+            <property>fasta_file2</property>
+            <property>mismatch_removed_file2</property>
             <property>dust_2_complete</property>
-            <property>dusted</property>
+        </operationtype>
+    </operation>
+
+    <operation name="remove mismatch 1">
+        <operationtype commandClass="Genome::Model::Tools::Fasta::RemoveN" typeClass="Workflow::OperationType::Command" />
+    </operation>
+
+    <operation name="remove mismatch 2">
+        <operationtype commandClass="Genome::Model::Tools::Fasta::RemoveN" typeClass="Workflow::OperationType::Command" />
+    </operation>
+
+    <operation name="wait for mismatch removal">
+        <operationtype typeClass="Workflow::OperationType::Block">
+            <property>removal_1_complete</property>
+            <property>removal_2_complete</property>
+            <property>both_complete</property>
         </operationtype>
     </operation>
 
@@ -257,6 +297,10 @@
         <inputproperty>prefix2</inputproperty>
         <inputproperty>fasta_file1</inputproperty>
         <inputproperty>fasta_file2</inputproperty>
+        <inputproperty>mismatch_removed_file1</inputproperty>
+        <inputproperty>mismatch_removed_file2</inputproperty>
+        <inputproperty>mismatch_cutoff</inputproperty>
+        <inputproperty>save_screened_reads</inputproperty>
         <outputproperty>result</outputproperty>
     </operationtype>
 </workflow>

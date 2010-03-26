@@ -35,14 +35,28 @@ UR::Object::Type->define(
                            is => 'Number',
                            is_input => 1,
                            is_optional => 1,
-                           default => 10,
+                           default => 15,
                         },
                         n_cutoff =>  {
                            doc => 'cutoff for n-removal (0 to override)',
                            is => 'Number',
                            is_input => 1,
                            is_optional => 1,
+                           default => 0,
+                        },
+                        save_screened_reads =>  {
+                           doc => 'save reads screened during post-dust n-removal',
+                           is => 'Boolean',
+                           is_input => 1,
+                           is_optional => 1,
                            default => 1,
+                        },
+                        mismatch_cutoff =>  {
+                           doc => 'cutoff for post-dust n-removal (0 to override)',
+                           is => 'Number',
+                           is_input => 1,
+                           is_optional => 1,
+                           default => 10,
                         },
 
                     ],
@@ -96,6 +110,9 @@ sub execute {
     my $synch_output  = ".SYNCH";
     my ($prefix1, $prefix2) = ($dir . "/$base1", $dir . "/$base2");
     my ($fasta_file1, $fasta_file2) = ("$dir/$base1.SYNCH.fasta", "$dir/$base2.SYNCH.fasta");
+    my $save_screened_reads = $self->save_screened_reads;
+    my $mismatch_cutoff = $self->mismatch_cutoff;
+    my ($mismatch_removed_file1, $mismatch_removed_file2) = ("$dir/$base1.MISMATCH_REMOVED.fasta", "$dir/$base2.MISMATCH_REMOVED.fasta");
     my $xml_file = dirname ($self->__meta__->module_path()) . "/illumina_workflow.xml";
     my $output = run_workflow_lsf(
                               $xml_file,
@@ -126,6 +143,10 @@ sub execute {
                               'fasta_file1'             => $fasta_file1,
                               'fasta_file2'             => $fasta_file2,
                               'output'                  => $synch_output,
+                              'save_screened_reads'     => $save_screened_reads,
+                              'mismatch_removed_file1'  => $mismatch_removed_file1,
+                              'mismatch_removed_file2'  => $mismatch_removed_file2,
+                              'mismatch_cutoff'         => $mismatch_cutoff,
                           );
 
 print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
@@ -163,7 +184,8 @@ print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
                               "prefix2:\t$prefix2\n" .
                               "fasta file 1:\t$fasta_file1\n" .
                               "fasta file 2:\t$fasta_file2\n" .
-                              "output:\t$synch_output\n",
+                              "output:\t$synch_output\n" .
+                              "mismatch_cutoff:\t$mismatch_cutoff\n" ,
     });
 
     return 1;

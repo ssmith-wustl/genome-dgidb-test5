@@ -8,6 +8,7 @@
 
     <link fromOperation="wait for fastq2fasta"      fromProperty="fasta_file"   toOperation="dust"                      toProperty="fasta_file" />
 
+    <link fromOperation="dust"                      fromProperty="dusted_file"  toOperation="output connector"          toProperty="dusted_file" />
     <link fromOperation="dust"                      fromProperty="result"       toOperation="output connector"          toProperty="result" />
 
     <operation name="fastq2fasta">
@@ -28,6 +29,7 @@
     <operationtype typeClass="Workflow::OperationType::Model">
         <inputproperty>fastq_file</inputproperty>
         <inputproperty>fasta_file</inputproperty>
+        <outputproperty>dusted_file</outputproperty>
         <outputproperty>result</outputproperty>
     </operationtype>
 </workflow>
