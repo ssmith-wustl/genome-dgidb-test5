@@ -407,7 +407,7 @@ sub _verify_subject {
     #Fill out the rest of the attributes based on what was used to create the subject
     if($self->subject_id and $self->subject_class_name) {
         $self->subject_type($self->_subject_type_for_class_name); #Backfill old way for now.
-        $self->subject_name($self->_subject_name_for_subject); 
+        $self->subject_name($self->_subject_name_for_subject) if $self->_subject_name_for_subject; #don't overwrite if we get back nothing
     } else {
         $self->subject_id($subject->id);
         $self->subject_class_name($subject->class);        
