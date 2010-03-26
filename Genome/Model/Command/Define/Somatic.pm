@@ -80,6 +80,15 @@ sub create {
 sub execute {
     my $self = shift;
 
+    unless(defined $self->normal_model) {
+        $self->error_message("Could not get a model for normal model id: " . $self->normal_model_id);
+        return;
+    }
+    unless(defined $self->tumor_model) {
+        $self->error_message("Could not get a model for tumor model id: " . $self->tumor_model_id);
+        return;
+    }
+
     my $tumor_subject = $self->tumor_model->subject;
     my $normal_subject = $self->normal_model->subject;
 
@@ -109,17 +118,6 @@ sub execute {
 
     # get the model created by the super
     my $model = Genome::Model->get($self->result_model_id);
-
-    unless(defined $self->normal_model) {
-        $self->error_message("Could not get a model for normal model id: " . $self->normal_model_id);
-        return;
-    }
-    unless(defined $self->tumor_model) {
-        $self->error_message("Could not get a model for tumor model id: " . $self->tumor_model_id);
-        return;
-    }
-
-
 
     # Link this somatic model to the normal and tumor models  
     $model->add_from_model(from_model => $self->normal_model, role => 'normal');
