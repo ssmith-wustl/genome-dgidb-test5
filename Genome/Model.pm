@@ -34,30 +34,59 @@ class Genome::Model {
     has => [
         name                    => { is => 'Text', len => 255 },
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
-        subject_name            => { is => 'Text', len => 255 },
-        subject_type            => { is => 'Text', len => 255,
+        subject_name            => {
+            is => 'Text', len => 255, calculate_from => 'subject',
+            calculate => q(
+                if($subject->class eq 'GSC::Equipment::Solexa::Run') {
+                   return $subject->flow_cell_id;
+                } elsif($subject->class eq 'Genome::Sample') {
+                    return $subject->name || $subject->common_name;
+                } elsif($subject->can('name')) {
+                    return $subject->name;
+                } else {
+                    $self->error_message('Unable to determine name for subject');
+                    return;
+                }
+            ),
+        },
+        subject_type            => {
+            is => 'Text', len => 255, calculate_from => 'subject_class_name',
+            calculate => q( 
+                if($subject_class_name->class and $subject_class_name->isa('GSC::DNA')) {
+                    $subject_class_name = 'GSC::DNA'; #Avoid needing to list entire DNA heirarchy
+                }
+
+                #This could potentially live someplace else like the previous giant hash
+                my %types = (
+                    'Genome::Sample' => 'sample_name',
+                    'GSC::DNA' => 'dna_resource_item_name',
+                    'GSC::DNAResourceItem' => 'dna_resource_item_name',
+                    'GSC::Equipment::Solexa::Run' => 'flow_cell_id',
+                    'Genome::ModelGroup' => 'sample_group',
+                    'Genome::PopulationGroup' => 'sample_group',
+                    'Genome::Individual' => 'sample_group',
+                    'Genome::Taxon' => 'species_name',
+                    'Genome::Library' => 'library_name',
+                    'Genome::Sample::Genomic' => 'genomic_dna',  
+                );
+    
+                return $types{$subject_class_name}; 
+            ),
             valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] 
         },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
         subject                 => { 
             calculate_from => [ 'subject_id', 'subject_class_name' ],
-            calculate => q( 
-                if(defined $subject_id and defined $subject_class_name) {
-                    return $subject_class_name->get($subject_id);
-                } else {
-                    #Old way of figuring out subject:
-                    return $self->_resolve_subject
-                }
-            )
+            calculate => q( return $subject_class_name->get($subject_id); ),
         },
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name               => { via => 'processing_profile' },
         events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1, 
                                     doc => 'all events which have occurred for this model' },
-        subject_class_name      => { is => 'VARCHAR2', len => 500, is_optional => 1 },
-        subject_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
+        subject_class_name      => { is => 'VARCHAR2', len => 500 },
+        subject_id              => { is => 'NUMBER', len => 15 },
         reports                 => { via => 'last_succeeded_build' },
         reports_directory       => { via => 'last_succeeded_build' },
         is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
@@ -186,7 +215,36 @@ sub __extend_namespace__ {
 
 sub create {
     my $class = shift;
-    my $params = $class->define_boolexpr(@_);
+    
+    my $params;
+    my $entered_subject_name; #So the user gets what they expect, use this when coming up with the default model name
+    
+    #Create gets called twice... Only set things up the first time
+    #The second time we get the UR::BoolExpr handed to us.
+    if(ref $_[0]) {
+        $params = $class->define_boolexpr(@_);
+    } else {
+        my %input_params = @_;
+    
+        if(exists $input_params{subject_name} or exists $input_params{subject_type}) {
+            $entered_subject_name = delete $input_params{subject_name};
+            my $entered_subject_type = delete $input_params{subject_type};
+            
+            if(exists $input_params{subject_id} and defined $input_params{subject_id}
+                and exists $input_params{subject_class_name} and defined $input_params{subject_class_name}) {
+                #They already gave us a subject; we'll test if it's good in _verify_subject below.
+                #Just ignore the other parameters--
+            } else {
+                my $subject = $class->_resolve_subject($entered_subject_name, $entered_subject_type)
+                    or return;
+            
+                $input_params{subject_id} = $subject->id;
+                $input_params{subject_class_name} = $subject->class;
+            }
+        }
+    
+        $params = $class->define_boolexpr(%input_params);
+    }
     
     # Processing profile - gotta validate here or SUPER::create will fail silently
     my $processing_profile_id = $params->value_for('processing_profile_id');
@@ -201,13 +259,13 @@ sub create {
         $self->name(
             join(
                 '.',
-                Genome::Utility::Text::sanitize_string_for_filesystem($self->subject_name),
+                Genome::Utility::Text::sanitize_string_for_filesystem($entered_subject_name || $self->subject_name),
                 $self->processing_profile_name
             )
         );
     }
 
-    # Verify subjects--fills in subject_* properties
+    # Make sure the subject we got is really an object
     unless ( $self->_verify_subject ) {
         $self->SUPER::delete;
         return;
@@ -308,83 +366,78 @@ sub _verify_no_other_models_with_same_name_and_type_name_exist {
     return;
 }
 
-#This is the old way of determining subject based on type and name
-#Typically this is only needed in the constructor to find the id and class_name to populate those columns
+#If a user defines a model with a name (and possibly type), we need to find/make sure there's an
+#appropriate subject to use based upon that name/type.
 sub _resolve_subject {
-    my $self = shift;
-    my $subject_type = $self->subject_type;
-    my $subject_name = $self->subject_name;
+    my $class = shift;
+    my $subject_name = shift;
+    my $subject_type = shift;
 
-    if (not defined $subject_type or not defined $subject_name) {
-        # this should not happen
-        $self->error_message("bad data--missing subject_type or subject_name!");
+    if (not defined $subject_name) {
+        $class->error_message("bad data--missing subject_name!");
         return;
     }
-    elsif ($subject_type eq 'dna_resource_item_name') {
-        #If they specified dna_resource_item_name, they might actually have meant some sort of "DNA"
-        return GSC::DNAResourceItem->get(dna_name => $subject_name) || GSC::DNA->get(dna_name => $subject_name);
-    }
-    elsif ($subject_type eq 'genomic_dna') {
-        return Genome::Sample->get(extraction_label => $subject_name, extraction_type => 'genomic dna');
-    }
-    elsif ($subject_type eq 'sample_name') {
-        return Genome::Sample->get(name => $subject_name);
-    }
-    elsif ($subject_type eq 'species_name') {
-        return Genome::Taxon->get(species_name => $subject_name); 
-    }
-    elsif ($subject_type eq 'sample_group') {
-        return;
-        die "not sure how to handle sample type $subject_type";
-    }
-    elsif ($subject_type eq 'library_name') {
-        return Genome::Library->get(name => $subject_name);
-    }
-    elsif ($subject_type eq 'flow_cell_id') {
-        return GSC::Equipment::Solexa::Run->get(flow_cell_id => $subject_name);
-    }
-    else {
-        $self->error_message("unknown sample type $subject_type!");
-        return;
-    }
-}
+    
+    my $try_all_types = 0;
+    if (not defined $subject_type) {
+        #If they didn't give a subject type, we'll keep trying subjects until we find something that sticks.
+        $try_all_types = 1;
+    }    
 
-#Eventually this can replace the subject_type property completely.
-sub _subject_type_for_class_name {
-    my $self = shift;
-    my $subject_class_name = shift || $self->subject_class_name;
-    
-    return unless $subject_class_name;
-    
-    if($subject_class_name->class and $subject_class_name->isa('GSC::DNA')) {
-        $subject_class_name = 'GSC::DNA'; #Avoid needing to list entire DNA heirarchy
+    my @subjects = ();
+
+    if($try_all_types or $subject_type eq 'sample_name') {
+        my $subject = Genome::Sample->get(name => $subject_name);
+        return $subject if $subject; #sample_name is the favoured default.  If we get one, use it.
+    }
+    if ($try_all_types or $subject_type eq 'species_name') {
+        push @subjects, Genome::Taxon->get(species_name => $subject_name);
+    }
+    if ($try_all_types or $subject_type eq 'library_name') {
+        push @subjects, Genome::Library->get(name => $subject_name);
+    }
+    if ($try_all_types or $subject_type eq 'genomic_dna') {
+        push @subjects, Genome::Sample->get(extraction_label => $subject_name, extraction_type => 'genomic dna');
+    }
+    if ($try_all_types or $subject_type eq 'flow_cell_id') {
+        push @subjects, GSC::Equipment::Solexa::Run->get(flow_cell_id => $subject_name);
     }
     
-    my %types = (
-        'Genome::Sample' => 'sample_name',
-        'GSC::DNA' => 'dna_resource_item_name',
-        'GSC::DNAResourceItem' => 'dna_resource_item_name',
-        'GSC::Equipment::Solexa::Run' => 'flow_cell_id',
-        'Genome::ModelGroup' => 'sample_group',
-        'Genome::PopulationGroup' => 'sample_group',
-        'Genome::Individual' => 'sample_group',
-        'Genome::Taxon' => 'species_name',
-        'Genome::Library' => 'library_name',
-        'Genome::Sample::Genomic' => 'genomic_dna',  
-    );
+    #Only resort to a GSC::DNA if nothing else so far has worked
+    if (($try_all_types and not scalar(@subjects)) or $subject_type eq 'dna_resource_item_name') {
+        #If they specified dna_resource_item_name, they might actually have meant some other sort of "DNA"
+        #This will get the GSC::DNAResourceItem if that's what they asked for.
+        push @subjects, GSC::DNA->get(dna_name => $subject_name);
+    }
     
-    return $types{$subject_class_name};
-}
+    #This case will only be entered if the user asked specifically for a sample_group
+    if ($subject_type and $subject_type eq 'sample_group') {
+        push @subjects,
+            Genome::Individual->get(name => $subject_name),
+            Genome::ModelGroup->get(name => $subject_name),
+            Genome::PopulationGroup->get(name => $subject_name);
+    }
 
-#Eventually this can replace the subject_name property completely.
-sub _subject_name_for_subject {
-    my $self = shift;
-    my $subject = shift || $self->subject;
-    
-    if($subject->class eq 'GSC::Equipment::Solexa::Run') {
-        return $subject->flow_cell_id;
+    if(scalar @subjects == 1) {
+        return $subjects[0];
+    } elsif (scalar @subjects) {
+        my $null = '<NULL>';
+        $class->error_message('Multiple matches for ' . join(', ',
+            'subject_name: ' . ($subject_name || $null),
+            'subject_type: ' . ($subject_type || $null),
+        ) . '. Please specify a subject_type or use subject_id/subject_class_name instead.'
+        );
+        $class->error_message('Possible subjects named "' . $subject_name . '": ' . join(', ', 
+            map($_->class . ' #' . $_->id, @subjects)
+        ));
     } else {
-        return $subject->name;
+        #If we get here, nothing matched.
+        my $null = '<NULL>';
+        $class->error_message('Unable to determine a subject given ' . join(', ',
+            'subject_name: ' . ($subject_name || $null),
+            'subject_type: ' . ($subject_type || $null),
+        ));
+        return;
     }
 }
 
@@ -398,19 +451,8 @@ sub _verify_subject {
         $self->error_message('Could not verify subject given ' . join(', ',
             'subject_id: ' . ($self->subject_id || $null),
             'subject_class_name: ' . ($self->subject_class_name || $null),
-            'subject_type: ' . ($self->subject_type || $null),
-            'subject_name: ' . ($self->subject_name || $null),
         ));
         return;
-    }
-    
-    #Fill out the rest of the attributes based on what was used to create the subject
-    if($self->subject_id and $self->subject_class_name) {
-        $self->subject_type($self->_subject_type_for_class_name); #Backfill old way for now.
-        $self->subject_name($self->_subject_name_for_subject) if $self->_subject_name_for_subject; #don't overwrite if we get back nothing
-    } else {
-        $self->subject_id($subject->id);
-        $self->subject_class_name($subject->class);        
     }
     
     return $subject;

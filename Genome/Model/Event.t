@@ -30,6 +30,8 @@ my $model = Genome::Model->create_mock(
                                        name => 'test_model_name',
                                        subject_name => 'test_subject_name',
                                        subject_type => 'test_subject_type',
+                                       subject_id => --$bogus_id,
+                                       subject_class_name => 'Test::MockObject', 
                                        processing_profile_id => $pp->id,
                                        data_directory => $test_data_directory,
                                    );

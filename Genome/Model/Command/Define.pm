@@ -150,26 +150,12 @@ sub execute {
     if ($self->subject_id and $self->subject_class_name) {
         $subject_class_name = $self->subject_class_name;
         $subject_id = $self->subject_id;
-        $subject_type = Genome::Model->_subject_type_for_class_name($subject_class_name);
         
         my $subject = $subject_class_name->get($subject_id);
         
         unless($subject) {
             $self->error_message('Subject not found for subject with id ' . $subject_id . ' and class ' . $subject_class_name);
             return;
-        }
-    } elsif ($self->subject_type){
-        $subject_type = $self->subject_type;
-    } else {
-        my $sample = Genome::Sample->get(name => $self->subject_name);
-        if ($sample){
-            $subject_type = 'sample_name'; 
-        }
-        else {
-            $self->status_message('subject_name did not specify a sample, other subject types not yet supported.');
-            $self->status_message('specify a sample or explicitly define the subject_id and subject_class_name'); 
-            $self->status_message('...or contact apipe@genome.wustl.edu for creation of a custom model');
-        exit;
         }
     }
 
@@ -178,7 +164,7 @@ sub execute {
         name => $self->model_name,
         processing_profile_id => $processing_profile_id,
         subject_name => $self->subject_name,
-        subject_type => $subject_type,
+        subject_type => $self->subject_type,
         subject_id => $subject_id,
         subject_class_name => $subject_class_name,
         auto_assign_inst_data => $self->auto_assign_inst_data,

@@ -66,6 +66,8 @@ sub create_successfully {
                                                           name => $pp->name .'_model',
                                                           subject_name => $pp->name .'_subject_name',
                                                           subject_type => $pp->name .'_subject_type',
+                                                          subject_id => --$mock_id,
+                                                          subject_class_name => 'Test::MockObject',
                                                           processing_profile_id => $pp->id,
                                                       );
 

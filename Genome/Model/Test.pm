@@ -73,7 +73,7 @@ sub params_for_test_class {
 }
 
 sub required_params_for_class {
-    return (qw/ subject_type subject_name processing_profile_id /);
+    return (qw/ subject_name processing_profile_id /);
 }
 
 sub invalid_params_for_test_class {
@@ -209,6 +209,29 @@ sub test03_inputs : Tests() {
     ok(!$model->inst_data, 'removed instrument data');
     
     return 1;
+}
+
+sub test04_subjects : Tests() {
+    my $self = shift;
+    
+    my $mock_sample = Genome::Sample->get(name => $self->mock_sample_name);
+    
+    my %params = $self->params_for_test_class;
+    
+    delete $params{subject_name};
+    delete $params{subject_type};
+    $params{name} .= ' 2 - Now with improved Subject tracking!'; #avoid same model name
+    
+    $params{subject_id} = $self->_model->id;
+    $params{subject_class_name} = 'Genome::Sample';
+    
+    ok(!$self->test_class->create(%params), 'Failed to create model with nonexistent sample');
+    
+    delete $params{subject_id}; 
+    ok(!$self->test_class->create(%params), 'Failed to create model without subject_id');
+    
+    $params{subject_id} = $mock_sample->id;
+    ok($self->test_class->create(%params), 'Created model based on subject_id and subject_class_name');
 }
 
 #< MOCK ># 
