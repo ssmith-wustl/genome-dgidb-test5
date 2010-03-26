@@ -97,6 +97,16 @@ sub execute {                               # replace with real execution logic.
 		$cmd = "bash -c \"$path_to_varscan pileup2snp <\($normal_pileup\) $varscan_params >$output_snp\"";
 		print "RUN: $cmd\n";
 		system($cmd);
+		
+		## Get length of SNP file ##
+		
+		my $snp_len = `cat $output_snp | wc -l`;
+		chomp($snp_len);
+		if(!$snp_len)
+		{
+			print "RE-RUN: $cmd\n";
+			system($cmd);			
+		}
 
 		## Call Indels ##
 		$cmd = "bash -c \"$path_to_varscan pileup2indel <\($normal_pileup\) $varscan_params >$output_indel\"";
