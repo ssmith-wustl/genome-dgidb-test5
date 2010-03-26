@@ -28,6 +28,9 @@ has => [
 				doc => "new fasta output file",
 				is_optional => 1,
 			      },
+        'path' => { is => 'String',
+                    doc => "base path for output files",
+                   }, 
         'project_type' => { is => 'String',
                             doc => "project type for pipeline [HGMI|CORE]...",
                           },
@@ -105,24 +108,15 @@ sub execute
     {
         croak "the current working directory seems short,\nare you in the right place?\n$cwd\n$#cwd";
     }
+    # this is getting hard coded here.  this is not good.
     my $hgmi_acedb_patha;
-    # this should be cleaned up with a lookup for the V# to Version_#.0
-#    if ($self->acedb_version eq 'V1') 
-#    {
-#        $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/Version_1.0/ace_files/" . 
-#                            $self->locus_id;
-    
-#    } 
-#    elsif ($self->acedb_version eq 'V2')
-#    {
-#        $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/Version_2.0/ace_files/" .
-#                            $self->locus_id;
-#    }
 
     my $acedb_version = $self->acedb_version;
     $acedb_version =~ s/V(\d)/Version_$1\.0/;
-    $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/". $acedb_version . 
+    $hgmi_acedb_patha = $self->path. "/".$self->project_type ."/Acedb/". $acedb_version .
                         "/ace_files/". $self->locus_tag;
+#    $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/". $acedb_version . 
+#                        "/ace_files/". $self->locus_tag;
 
     unless (-e $hgmi_acedb_patha)
     {
@@ -141,6 +135,7 @@ sub execute
     my $hgmi_acedb_path = $newHGMIpath;
 
     my ($Intergenic,$BAPseq,$Ensemblseq,$Rfamseq);
+    # FIXME: the @cwd[..] is bad, need to get rid of it.
     # need to change directory construction here
     # @cwd[0..8] for CORE projects
     if($self->project_type eq 'HGMI')
@@ -151,6 +146,14 @@ sub execute
         $Rfamseq = join("\/", @cwd[0..7],'Rfam',$self->analysis_version);
     }
     elsif($self->project_type eq 'CORE')
+    {
+        $Intergenic = join("\/",@cwd[0..8],'Gene_merging',$self->analysis_version,'Hybrid','intergenic');
+        $BAPseq = join("\/", @cwd[0..8],'BAP',$self->analysis_version,'Sequence');
+        $Ensemblseq = join("\/", @cwd[0..8],'Ensembl_pipeline',$self->analysis_version,'Sequence');
+        $Rfamseq = join("\/", @cwd[0..8],'Rfam',$self->analysis_version);
+
+    }
+    elsif($self->project_type eq 'VIRAL')
     {
         $Intergenic = join("\/",@cwd[0..8],'Gene_merging',$self->analysis_version,'Hybrid','intergenic');
         $BAPseq = join("\/", @cwd[0..8],'BAP',$self->analysis_version,'Sequence');
