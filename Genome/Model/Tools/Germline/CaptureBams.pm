@@ -65,6 +65,12 @@ sub pre_execute {
     unless (defined $self->skip_if_output_present) {
         $self->skip_if_output_present(1);
     }
+    unless (defined $self->annotate_no_headers) {
+        $self->annotate_no_headers(1);
+    }
+    unless (defined $self->transcript_annotation_filter) {
+        $self->transcript_annotation_filter("top");
+    }
     unless (defined $self->only_tier_1) {
         $self->only_tier_1(0);
     }
