@@ -15,7 +15,7 @@ class Genome::Model::Tools::Annotate::AminoAcidSubstitution {
 	amino_acid_substitution => {
 	    type      => 'String',
             is_input => 1,
-	    doc       => "Provide the amino acid substitution represented in this format => P2249A.",
+	    doc       => "Provide the amino acid substitution or substitution's for the transcript represented in this format => P2249A or Q165H,S166C.",
 	},
 	 organism => {
 	    type  =>  'String',
@@ -152,7 +152,7 @@ sub get_result {
     $all_combo_codons =~ s/([\S\s]+)/\U$1/;
     
 
-    my $line = "A mutation in protien number $protein_number causing a nonsynonymous change from $aa to $daa could occur by changing the codon $codon to $all_combo_codons.\n";
+    my $line = "A mutation in amino acid number $protein_number causing a nonsynonymous change from $aa to $daa could occur by changing the codon $codon to $all_combo_codons.\n";
     push (@result,$line);
     
 
