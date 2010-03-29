@@ -9,9 +9,15 @@ class Genome::Model::Tools::Annotate::AminoAcidSubstitution {
     has => [
         transcript => {
             type     => 'String',
-            is_input => 1,
-            doc      => "Provide the transcript name.",
+ 	    is_optional  => 1,
+           doc      => "Provide the transcript name.",
         },
+	gene => {
+            type     => 'String',
+	    is_optional  => 1,
+            doc      => "Provide the hugo gene name.",
+        },
+	
 	amino_acid_substitution => {
 	    type      => 'String',
             is_input => 1,
@@ -39,7 +45,11 @@ class Genome::Model::Tools::Annotate::AminoAcidSubstitution {
 };
 
 sub help_synopsis { 
-    "gmt annotate amino-acid-substitution -transcript ENST00000269305 -amino-acid-substitution S166C"
+"
+gmt annotate amino-acid-substitution -transcript ENST00000269305 -amino-acid-substitution S166C
+        or
+gmt annotate amino-acid-substitution -gene TP53 -amino-acid-substitution S166C
+"
 }
 
 sub help_detail {
@@ -55,80 +65,95 @@ sub execute {
     my $self = shift;
     
     my $transcript = $self->transcript;
+    my $gene = $self->gene;
+
+    unless ($transcript || $gene) {
+	App->error_message("\nyou need to provide either a hugo gene name or a transcript name\n\n"); return;
+    }
+
     my $amino_acid = $self->amino_acid_substitution;
     my $organism = $self->organism;
     my $version = $self->version;
     if ($organism eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
 
-    my $TranscriptSequence = Genome::Model::Tools::Annotate::TranscriptSequence->create(transcript => $transcript, organism => $organism, version => $version, no_stdout => "1");
-    unless ($TranscriptSequence) { App->error_message("couldn't create a transcript sequence object for $transcript"); return;}
-    
-    my ($transcript_info) = $TranscriptSequence->execute();
-    unless ($transcript_info) { App->error_message("couldn't execute the transcript sequence object for $transcript"); return;}
-    
-    my @positions = &get_positions ($transcript_info,$transcript);
-    unless (@positions) { App->error_message("couldn't extract positions from the transcript sequence object"); return;}
+    my @transcripts;
+    if ($gene) {
+	my $transcripts = &get_transcripts($gene,$version);
+	@transcripts = split(/\,/,$transcripts);
+    } else {
+	push(@transcripts,$transcript);
+    }
 
     my $output = $self->output;
     if ($output) {
 	open(OUT,">$output.txt") || App->error_message("couldn't open the output file $output.txt") && return;
     }
-
     my @results;
-    my @amino_acid_subs = split(/\,/,$amino_acid);
-    for my $nsprotein (@amino_acid_subs) { #nsprotein nonsynonymous protein
-	
-	my ($taa,$protein_number,$daa) = $nsprotein =~ /^(\D)([\d]+)(\D)$/;
-	unless ($taa && $protein_number && $daa) {
-	    App->error_message("\n$nsprotein is an invalid format. The amino acid change should be represented in this format => P2249A. $nsprotein will be skipped.\n\n");
-	    if ($output) {
-		print OUT qq(\n$nsprotein is an invalid format. The amino acid change should be represented in this format => P2249A. $nsprotein will be skipped.\n\n);
-	    } 
-	    next;
-	}
-	$taa =~ s/(\D)/\U$1/;
-	$daa =~ s/(\D)/\U$1/;
-	unless ($taa =~ /[C,H,I,M,S,V,A,G,L,P,T,R,F,Y,W,D,N,E,Q,K]/ && $daa =~ /[C,H,I,M,S,V,A,G,L,P,T,R,F,Y,W,D,N,E,Q,K]/) {
-	    App->error_message("\n$nsprotein is an invalid format. The amino acids most be one of twenty found in a protein chain. $nsprotein will be skipped.\n\n");
-	    if ($output) {
-		print OUT qq(\n$nsprotein is an invalid format. The amino acids most be one of twenty found in a protein chain. $nsprotein will be skipped.\n\n);
-	    } 
-	    next;
-	}
+    for my $transcript (@transcripts) {
 
-	my ($p1,$p2,$p3,$b1,$b2,$b3) = &get_codon ($transcript_info,$transcript,$protein_number,@positions);
-	unless ($p1 && $p2 && $p3 && $b1 && $b2 && $b3) {  
-	    App->error_message("\nCouldn't identify the target codon $protein_number.  $nsprotein will be skipped.\n\n");
-	    if ($output) {
-		print OUT qq(\nCouldn't identify the target codon $protein_number.  $nsprotein will be skipped.\n\n);
-	    } 
-	    next;
-	}
+	my $TranscriptSequence = Genome::Model::Tools::Annotate::TranscriptSequence->create(transcript => $transcript, organism => $organism, version => $version, no_stdout => "1");
+	unless ($TranscriptSequence) { App->error_message("couldn't create a transcript sequence object for $transcript"); next;}
 	
-	my ($result) = &get_result($p1,$p2,$p3,$b1,$b2,$b3,$transcript,$taa,$protein_number,$daa);
-	unless ($result) {
-	    App->error_message("\nNo result was found for $nsprotein. $nsprotein will be skipped.\n\n");
-	    if ($output) {
-		print OUT qq(\nNo result was found for $nsprotein.  $nsprotein will be skipped.\n\n);
-	    } 
-	    next;
-	}
+	my ($transcript_info) = $TranscriptSequence->execute();
+	unless ($transcript_info) { App->error_message("couldn't execute the transcript sequence object for $transcript"); next;}
 	
-	if ($output) {
-	    print OUT qq(\n$result\n\n);
-	} else {
-	    print qq(\n$result\n\n);
+	my @positions = &get_positions ($transcript_info,$transcript);
+	unless (@positions) { App->error_message("couldn't extract positions from the transcript sequence object for $transcript"); next;}
+	
+	my @amino_acid_subs = split(/\,/,$amino_acid);
+	for my $nsprotein (@amino_acid_subs) { #nsprotein nonsynonymous protein
+	    
+	    my ($taa,$protein_number,$daa) = $nsprotein =~ /^(\D)([\d]+)(\D)$/;
+	    unless ($taa && $protein_number && $daa) {
+		App->error_message("\n$nsprotein is an invalid format. The amino acid change should be represented in this format => P2249A. $nsprotein will be skipped.\n\n");
+		if ($output) {
+		    print OUT qq(\n$nsprotein is an invalid format. The amino acid change should be represented in this format => P2249A. $nsprotein will be skipped.\n\n);
+		} 
+		next;
+	    }
+	    $taa =~ s/(\D)/\U$1/;
+	    $daa =~ s/(\D)/\U$1/;
+	    unless ($taa =~ /[C,H,I,M,S,V,A,G,L,P,T,R,F,Y,W,D,N,E,Q,K]/ && $daa =~ /[C,H,I,M,S,V,A,G,L,P,T,R,F,Y,W,D,N,E,Q,K]/) {
+		App->error_message("\n$nsprotein is an invalid format. The amino acids most be one of twenty found in a protein chain. $nsprotein will be skipped.\n\n");
+		if ($output) {
+		    print OUT qq(\n$nsprotein is an invalid format. The amino acids most be one of twenty found in a protein chain. $nsprotein will be skipped.\n\n);
+		} 
+		next;
+	    }
+	    
+	    my ($p1,$p2,$p3,$b1,$b2,$b3) = &get_codon ($transcript_info,$transcript,$protein_number,@positions);
+	    unless ($p1 && $p2 && $p3 && $b1 && $b2 && $b3) {  
+		App->error_message("\nCouldn't identify the target codon $protein_number in $transcript.  $nsprotein will be skipped for $transcript.\n\n");
+		if ($output) {
+		    print OUT qq(\nCouldn't identify the target codon $protein_number in $transcript.  $nsprotein will be skipped for $transcript.\n\n);
+		} 
+		next;
+	    }
+	    
+	    my ($result) = &get_result($p1,$p2,$p3,$b1,$b2,$b3,$transcript,$taa,$protein_number,$daa);
+	    unless ($result) {
+		App->error_message("\nNo result was found for $nsprotein in $transcript. $nsprotein will be skipped for $transcript.\n\n");
+		if ($output) {
+		    print OUT qq(\nNo result was found for $nsprotein in $transcript.  $nsprotein will be skipped for $transcript.\n\n);
+		} 
+		next;
+	    }
+	    
+	    if ($output) {
+		print OUT qq(\n$result\n\n);
+	    } else {
+		print qq(\n$result\n\n);
+	    }
+	    push(@results,$result);
 	}
-	push(@results,$result);
     }
     if ($output) {
 	print qq(Your results have been printed in $output.txt\n);
 	close OUT;
     }
-
     return unless @results;
     return 1;
-
+    
 }
 
 sub get_result {
@@ -142,7 +167,7 @@ sub get_result {
     my $newcodon = Bio::Seq->new( -display_id => $display_id, -seq => $codon );
     my $aa = $newcodon->translate->seq;
     
-    unless ($taa eq $aa) {my $result = "The amino acid $taa input for position doesn\'t match the expected amino acid identified $aa"; return $result; }
+    unless ($taa eq $aa) {my $result = "The amino acid $taa input for position doesn\'t match the expected amino acid identified as $aa in $transcript"; return $result; }
 
     
     my $myCodonTable = Bio::Tools::CodonTable->new();
@@ -152,7 +177,7 @@ sub get_result {
     $all_combo_codons =~ s/([\S\s]+)/\U$1/;
     
 
-    my $line = "A mutation in amino acid number $protein_number causing a nonsynonymous change from $aa to $daa could occur by changing the codon $codon to $all_combo_codons.\n";
+    my $line = "A mutation in amino acid number $protein_number of $transcript causing a nonsynonymous change from $aa to $daa could occur by changing the codon $codon to $all_combo_codons.\n";
     push (@result,$line);
     
 
@@ -218,6 +243,20 @@ sub get_positions {
 
     return @positions;   
     
+}
+
+sub get_transcripts {
+
+    my ($gene,$version) = @_;
+
+    my $GTDir = "/gscmnt/200/medseq/biodb/shared/misc/annotation/$version";
+
+    my $gtdb = Bio::DB::Fasta->new($GTDir);
+    my $transcripts = $gtdb->seq($gene, 1 => 1000);
+
+    return unless $transcripts;
+    return $transcripts;
+
 }
 
 sub get_codon {
