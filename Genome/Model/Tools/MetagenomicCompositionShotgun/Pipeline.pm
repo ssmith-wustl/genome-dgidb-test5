@@ -125,6 +125,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="FilterResults" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="taxonomy_file"                toOperation="FilterResults" toProperty="taxonomy_file" /> 
   <link fromOperation="input connector" fromProperty="viral_taxonomy_file"          toOperation="FilterResults" toProperty="viral_taxonomy_file" /> 
+  <link fromOperation="input connector" fromProperty="bwa_edit_distance"	            toOperation="FilterResults" toProperty="bwa_edit_distance" />
   <link fromOperation="FilterResults"   fromProperty="bam_combined_output_file"     toOperation="RefCov" toProperty="aligned_bam_file" /> 
   <link fromOperation="FilterResults"   fromProperty="read_count_output_file"       toOperation="RefCov" toProperty="read_count_file" /> 
 
