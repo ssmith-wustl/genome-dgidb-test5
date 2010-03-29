@@ -148,9 +148,26 @@ sub _calculate_total_read_count {
 
 sub clusters { shift->fragment_count}
 
+sub run_name {
+    my $self= shift;
+    if($self->__run_name) {
+        return $self->__run_name;
+    }
+    return $self->id;
+}
+
+sub short_run_name {
+    my $self = shift;
+    unless($self->run_name eq $self->id){
+        my (@names) = split('-',$self->run_name);
+        return $names[-1];
+    }
+    return $self->run_name;
+}
+
 sub flow_cell_id {
     my $self = shift;
-    $self->id;
+    return $self->short_run_name;
 }
 
 sub library_name {

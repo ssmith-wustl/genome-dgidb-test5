@@ -65,6 +65,7 @@ my $i3 = Genome::InstrumentData::Imported->create(
     description             => 'fastq import test',
     read_count              => 1000,
     base_count              => 100000,
+    run_name                => '12345-65432-FC666',
 );
 
 ok($i3, "created a new imported instrument data");
@@ -75,6 +76,8 @@ is($i3->user_name, $ENV{USER}, "user name is correct");
 is($i3->import_format, "fastq","import format = fastq");
 is($i3->original_data_path, "/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_1_sequence.txt,/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_2_sequence.txt", "original_data_path matches");
 is($i3->calculate_alignment_estimated_kb_usage, "585", "estimated kb usage is correct");
+is($i3->run_name, "12345-65432-FC666", "run_name is correct");
+is($i3->short_run_name, "FC666", "short_run_name is correct");
 
 
 my $ok;
