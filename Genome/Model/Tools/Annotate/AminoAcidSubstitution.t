@@ -13,7 +13,7 @@ ok (-d $test_dir);
 my $expected = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-AminoAcidSubstitution/expected.txt";
 ok (-e $expected);
 
-my $output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequence/output";
+my $output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-AminoAcidSubstitution/output";
 my @command = ["rm" , "$output.txt"];
 &ipc_run(@command);
 
