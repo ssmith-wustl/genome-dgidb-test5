@@ -1,18 +1,12 @@
 package Genome::ProcessingProfile::Command::Create;
 
 #REVIEW fdu 11/23/2009
-#1. Remove "use Genome::ProcessingProfile;" and "use Genome::ProcessingProfile::Command::Describe;"
-#2. Add a new property "describe" (default_value => 1) to turn off "pp describe" after create if user likes
 #3. List all the models using supersedse pp name if supersedse option given
 
 use strict;
 use warnings;
 
 use Genome;
-
-use Data::Dumper;
-use Genome::ProcessingProfile;
-use Genome::ProcessingProfile::Command::Describe;
 
 class Genome::ProcessingProfile::Command::Create {
     is => 'Command',
@@ -35,6 +29,12 @@ class Genome::ProcessingProfile::Command::Create {
             doc => 'The processing profile name that this replaces',
             is_optional => 1,
         },
+        describe => {
+            is => 'Boolean',
+            doc => 'Display the output of `genome processing-profile describe` for the processing profile that is created',
+            default => 1,
+            is_optional => 1,
+        }
     ],
 };
 
@@ -161,10 +161,13 @@ sub execute {
     }
 
     $self->status_message('Created processing profile:');
-    my $describer = Genome::ProcessingProfile::Command::Describe->create(
-        processing_profile_id => $processing_profile->id,
-    );
-    $describer->execute;
+    
+    if($self->describe) {
+        my $describer = Genome::ProcessingProfile::Command::Describe->create(
+            processing_profile_id => $processing_profile->id,
+        );
+        $describer->execute;
+    }
 
     return 1;
 }
