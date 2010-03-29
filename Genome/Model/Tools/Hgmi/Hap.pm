@@ -169,7 +169,7 @@ sub execute
 
     # sequence-name
     my $sn = Genome::Model::Tools::Hgmi::SequenceName->create(
-        locus_tag        => $config->{locus_tag},
+        locus_tag        => $config->{locus_id},
         fasta            => $cs->new_ctgs_out,
         analysis_version => $config->{pipe_version},
         acedb_version    => $config->{acedb_version},
