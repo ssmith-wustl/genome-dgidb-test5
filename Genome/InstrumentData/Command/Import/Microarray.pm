@@ -44,6 +44,11 @@ my %properties = (
         id_by => 'allocator_id',
         is_optional => 1,
     },
+    species_name => {
+        is => 'Text',
+        doc => 'this is only needed if the sample being used is not already in the database.',
+        is_optional => 1,
+    },
 );
     
 class Genome::InstrumentData::Command::Import::Microarray {
@@ -92,7 +97,10 @@ sub process_imported_files {
 
     unless ($genome_sample) {
         $self->status_message("Sample $sample_name is not found in database, now try to store it");
-        
+        unless($self->species_name) {
+            $self->error_message("No sample was found by the name $sample_name. specify --species-name in your command to correctly create a sample.");
+            die $self->error_message;
+        }
         my $species_name = $self->species_name;
         my $taxon;
         
