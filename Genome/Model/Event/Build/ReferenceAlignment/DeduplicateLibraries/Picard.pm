@@ -228,21 +228,24 @@ sub _bam_flagstat_total {
     my $self = shift;
     my $bam_file = shift;
     
-    my $flagstat_command = 'samtools flagstat ' . $bam_file;
+    my $flagstat_data = Genome::InstrumentData::Alignment->get_bam_flagstat_statistics(
+        bam_file => $bam_file
+    );
     
-    my @lines = `$flagstat_command`;
-    
-    unless(@lines) {
+    unless($flagstat_data) {
         $self->error_message('No output from samtools flagstat');
         return;
     }
     
-    my ($total) = $lines[0] =~ m/(\d+) in total/;
-    
-    unless(defined $total) {
-        $self->error_message('Unexpected output from samtools flagstat: ' . $lines[0]);
-        return;
+    if(exists $flagstat_data->{errors}) {
+        for my $error (@{ $flagstat_data->{errors} }) {
+            if($error =~ m/Truncated file/) {
+                $self->error_message('Flagstat output for ' . $bam_file . ' indicates possible truncation.');
+            }
+        }
     }
+    
+    my $total = $flagstat_data->{total_reads};
     
     $self->status_message('flagstat for ' . $bam_file . ' reports ' . $total . ' in total');
     
