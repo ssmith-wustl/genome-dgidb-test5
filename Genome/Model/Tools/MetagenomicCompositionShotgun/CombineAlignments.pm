@@ -37,11 +37,23 @@ class Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments {
             doc => '',
             is_optional => 1,
         },
+        bwa_edit_distance => {
+            is => 'String',
+            is_input => 1,
+            doc => '',
+        },
         sam_combined_output_file => {
             is => 'String',
             is_input => '1',
             is_output => '1',
             is_optional =>1,
+            doc => '',
+        },
+        sam_low_priority_output_file => {
+            is => 'String',
+            is_input => '1', 
+            is_output => '1',
+            is_optional => 1, 
             doc => '',
         },
         bam_combined_output_file => {
@@ -200,6 +212,7 @@ sub execute {
     $self->viral_subfamily_output_file("$report_directory/viral_subfamily.txt") if (!defined($self->viral_subfamily_output_file));
     
     $self->sam_combined_output_file("$working_directory/combined.sam") if (!defined($self->sam_combined_output_file));
+    $self->sam_low_priority_output_file("$working_directory/low_priority.sam") if (!defined($self->sam_low_priority_output_file));
     my $bam_combined_output_file = "$working_directory/combined.bam";
     my $warn_file = $self->sam_combined_output_file.".warn";
 
@@ -231,6 +244,7 @@ sub execute {
 
     #Output files
     my $sam_o=Genome::Utility::FileSystem->open_file_for_writing($self->sam_combined_output_file);
+    my $sam_lp_o = Genome::Utility::FileSystem->open_file_for_writing($self->sam_low_priority_output_file);
     my $sam_warn=Genome::Utility::FileSystem->open_file_for_writing($warn_file);
     my $read_cnt_o=Genome::Utility::FileSystem->open_file_for_writing($self->read_count_output_file);
     my $phyla_o=Genome::Utility::FileSystem->open_file_for_writing($self->phyla_output_file);
@@ -309,41 +323,51 @@ sub execute {
             my $current_read_name =  $fields[0];
 
             my $bitflag = $fields[1];
-            my ($ref, $null, $gi)= split(/\|/,$fields[2]);
 
+            my $unmapped = $bitflag & 0x0040;
+
+            my ($ref, $null, $gi)= split(/\|/,$fields[2]);
+            if ($ref eq "VIRL"){
+                $ref = $gi;
+            }
+
+            my $cigar_string = $fields[5];
+            my ($start_clip, $stop_clip) = $cigar_string =~ /^(\d)[HS].*(\d)[HS]/;
+            $start_clip ||= 0;
+            $stop_clip ||= 0;
+            my $clipping_errors = $start_clip + $stop_clip;
+
+            my $seq = $fields[9];
+            
             my $rg;
             if ($current_record =~ /RG\:Z\:(\d+)\s/){
                 $rg = $1; 
             } 
 
-            my $flag=0;
-            unless (($bitflag & 0x0004) or ($bitflag & 0x0008)){
-                $flag=1;
-                #flag = 1 both ends of the pair hit the same reference;
-                #flag = 0 if either the query or mate is unmapped
-            } 
             my $mismatches=0;
             if ($current_record =~ /NM\:i\:(\d+)\s/){
                 $mismatches=$1;
             }
 
-
-            $data->{$rg}->{reads}=$current_read_name;
-            $data->{$rg}->{ref}=$flag;
-            $data->{$rg}->{mismatches}+=$mismatches; 
-
-            $data->{$rg}->{ref_names} ||= {};
-            if ($ref eq "VIRL"){
-                $data->{$rg}->{ref_names}->{$gi}++;
-            }else{
-                $data->{$rg}->{ref_names}->{$ref}++;
-            }
-
+            my $length = length $seq;
+            my $percent_mismatch = (($clipping_errors + $mismatches)/$length)*100;
             
+            if (defined $data->{$rg}->{ref}){
+                $data->{$rg}->{ref} = ($ref eq $data->{$rg}->{ref}) ? 1 : 0;
+            }else{
+                $data->{$rg}->{ref} = $ref;
+            }
+            
+            $data->{$rg}->{mismatches}+= $mismatches + $clipping_errors; 
+            $data->{$rg}->{records}->{$current_record} = [$percent_mismatch, $unmapped];
+            $data->{$rg}->{ref_names} ||= {};
+            $data->{$rg}->{ref_names}->{$ref}++;
+
+
             $lists{$rg} ||= []; 
             push(@{$lists{$rg}}, $current_record);
         } 
-        
+
         for my $rg (keys %$data){
             $data->{$rg}->{unique_references} = scalar (keys %{$data->{$rg}->{ref_names}});
         }
@@ -353,16 +377,23 @@ sub execute {
                 or $data->{$a}->{mismatches} <=> $data->{$b}->{mismatches} } keys %$data;
 
         my $selected_rg = shift @selection;
-        my @selected_list = @{$lists{$selected_rg}};
 
-        foreach my $selected_record (@selected_list)  {
-            print $sam_o $selected_record."\n";
-            my @selected_fields=split(/\t/,$selected_record);
-            my ($selected_ref, $null, $gi) = split(/\|/,$selected_fields[2]);
-            if ($selected_ref eq "VIRL"){
-                $selected_ref .= "_$gi";
+        foreach my $selected_record (keys %{$data->{$selected_rg}->{records}})  {
+            my ($percent_mismatch, $unmapped) = @{$data->{$selected_rg}->{records}->{$selected_record}};
+
+            if ($percent_mismatch <= $self->bwa_edit_distance and !$unmapped){
+
+                print $sam_o $selected_record."\n";
+                my @selected_fields=split(/\t/,$selected_record);
+                my ($selected_ref, $null, $gi) = split(/\|/,$selected_fields[2]);
+                if ($selected_ref eq "VIRL"){
+                    $selected_ref .= "_$gi";
+                }
+                $ref_counts_hash{$selected_ref}++;
+
+            }else{
+                print $sam_lp_o $selected_record."\n";
             }
-            $ref_counts_hash{$selected_ref}++;
         } 
     }
 
@@ -405,7 +436,7 @@ sub execute {
     my %viral_genus_counts_hash;
     my %viral_species_counts_hash;
     print $read_cnt_o "Reference Name\t#Reads with hits\tPhyla\tHMP genome\n";
-    foreach my $ref_id (keys%ref_counts_hash){
+    foreach my $ref_id (keys %ref_counts_hash){
         #print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$g\t$p\n";
         if (($ref_id =~ /^BACT/) or ($ref_id =~ /^ARCH/) or ($ref_id =~ /^EUKY/)){
             my $species= $taxonomy->{$ref_id}->{species};
@@ -456,21 +487,21 @@ sub execute {
         print $viral_species_o "$name\t$viral_species_counts_hash{$name}\n";
     }
     $viral_species_o->close;
-    
+
     print $viral_genus_o "Genus Name\t#Reads with hits\n";
     foreach my $name (keys%viral_genus_counts_hash){
         next if (($name eq "") or ($name =~ /^\s+$/));
         print $viral_genus_o "$name\t$viral_genus_counts_hash{$name}\n";
     }
     $viral_genus_o->close;
-    
+
     print $viral_family_o "Family Name\t#Reads with hits\n";
     foreach my $name (keys%viral_family_counts_hash){
         next if (($name eq "") or ($name =~ /^\s+$/));
         print $viral_family_o "$name\t$viral_family_counts_hash{$name}\n";
     }
     $viral_family_o->close;
-    
+
     print $viral_subfamily_o "Subfamily Name\t#Reads with hits\n";
     foreach my $name (keys%viral_subfamily_counts_hash){
         next if (($name eq "") or ($name =~ /^\s+$/));
