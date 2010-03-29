@@ -113,8 +113,10 @@ sub execute
 
     my $acedb_version = $self->acedb_version;
     $acedb_version =~ s/V(\d)/Version_$1\.0/;
-    $hgmi_acedb_patha = $self->path. "/".$self->project_type ."/Acedb/". $acedb_version .
+    #$hgmi_acedb_patha = $self->path. "/".$self->project_type ."/Acedb/". $acedb_version .
+    $hgmi_acedb_patha = $self->path. "/Acedb/". $acedb_version .
                         "/ace_files/". $self->locus_tag;
+    $self->status_message("acedb path will be: ".$hgmi_acedb_patha);
 #    $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/". $acedb_version . 
 #                        "/ace_files/". $self->locus_tag;
 
@@ -249,5 +251,13 @@ sub version_lookup
 
     return $lookup;
 }
+
+# for the future
+#sub directory_create
+#{
+#    my $self = shift;
+#
+#    return 1;
+#}
 
 1;
