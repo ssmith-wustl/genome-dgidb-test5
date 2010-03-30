@@ -36,7 +36,7 @@ class Genome::Model::Tools::CopyElandAlignments {
               };
 
 
-sub help_brief { "This script will copy Eland s_N_sorted.txt files to an archive directory if they still exist in a Gerald run directory structure." }
+sub help_brief { "This script will copy (non-multiplexed) Eland s_N_sorted.txt files to an archive directory if they still exist in a Gerald run directory structure." }
 
 
 sub help_synopsis {
@@ -49,10 +49,10 @@ EOS
 sub help_detail {
     return <<EOS
 Eland alignment information is transient within Gerald run directories; the
-information usual lasts about 1 week post-processing before being removed. To
+information usually lasts about 1 week post-processing before being removed. To
 archive (i.e., copy) pertinent Eland alignment information (s_N_sorted.txt)
 files, this script will copy files to a given out directory given a single FLOW
-CELL id.
+CELL id. CURRENTLY, ONLY WORKS ON NON-MULTIPLEXED RUNS.
 ** WARNING ** You will probably need ~100Gb of disk space for the copy.
 EOS
 }
@@ -92,6 +92,7 @@ sub execute {
                 my $eval_file = $lane_path->gerald_directory() . '/' . $possible_file;
                 if (-e $eval_file) {
                     push (@eland_files, $eval_file);
+                    print 'EVAL: ' . $eval_file . "\n";
                 }
             }
             else {
@@ -101,6 +102,7 @@ sub execute {
                         my $eval_file = $lane_path->gerald_directory() . '/' . $possible_file;
                         if (-e $eval_file) {
                             push (@eland_files, $eval_file);
+                            print 'EVAL: ' . $eval_file . "\n";
                         }
                     }
                 }
@@ -108,11 +110,16 @@ sub execute {
         }
     }
     my $file_count = scalar( @eland_files );
+    if ($file_count == 0) {
+        croak "Only $file_count number of files found. Too few, please investigate.";
+    }
     unless ($self->lanes()) {
         if ($file_count < 8) {
             croak "Only $file_count number of files found. Too few, please investigate.";
         }
     }
+    print "(FILE COUNT = $file_count)\n";
+
 
     # Output directory.
     if (-d $self->outdir()) { croak "Output directory already exists." }
@@ -148,7 +155,7 @@ sub execute {
                                'cp ',
                                $eland_file,
                                $outdir_path . '/',
-                               "\ntouch " . $eland_file . '.FINISHED',
+                               "\ntouch " . $outdir_path . '/' . $sorted_file . '.FINISHED',
                               ) . "\n";
             close (SCRIPT);
         }
@@ -158,7 +165,7 @@ sub execute {
                                'cp ',
                                $eland_file,
                                $outdir_path . '/',
-                               "\ntouch " . $eland_file . '.FINISHED',
+                               "\ntouch " . $outdir_path . '/' . $sorted_file . '.FINISHED',
                               ) . "\n";
             close (SCRIPT);
         }
