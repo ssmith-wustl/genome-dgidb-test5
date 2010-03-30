@@ -18,13 +18,22 @@ class Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArray
 sub process_imported_files {
     my $self = shift;
     $self->SUPER::process_imported_files(@_);
+    my $instrument_data = Genome::InstrumentData::Imported->get( sample_name => $self->sample_name, sequencing_platform => $self->sequencing_platform);
+    my $disk_alloc;# = $self->allocation;
+    if($instrument_data) {
+        $disk_alloc = $instrument_data->disk_allocations;
+    }
+    unless($disk_alloc) {
+        $self->error_message("could not retrieve disk allocation");
+        die $self->error_message;
+    }
 
-    my $disk_alloc = $self->allocation;
     my $genome_sample = Genome::Sample->get(name => $self->sample_name);
 
 
     my $path = $disk_alloc->absolute_path;
-    my $genotype_path = $disk_alloc->absolute_path."/genotype";
+    my $genotype_path = $disk_alloc->absolute_path;
+
     unless (-d $genotype_path) {
         print "No genotype folder was found, attempting to generate one\n";
         
@@ -97,7 +106,6 @@ sub process_imported_files {
         }
     }
 
-
     unless(defined($genotype_path_and_file)) {
         $genotype_path_and_file = $genotype_path."/".$genome_sample->name.".genotype";
     }
@@ -122,7 +130,7 @@ sub process_imported_files {
     }
 
     #create SNP Array Genotype (goldSNP)
-    my $genotype_path_and_SNP = $genotype_path."/SNPArray.genotype";
+    my $genotype_path_and_SNP = $genotype_path."/".$genome_sample->name."_SNPArray.genotype";
     unless(Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->execute(    genotype_file1 => $genotype_path_and_file,
                                                                                 genotype_file2 => $genotype_path_and_file,
                                                                                 output_file    => $genotype_path_and_SNP,)) {

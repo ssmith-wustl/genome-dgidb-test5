@@ -32,7 +32,7 @@ my $tmp_allocation = Genome::Disk::Allocation->__define__(
                                                            allocator_id => '-123459',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
-                                                           owner_id => $dummy_id,
+                                                           owner_id => $dummy_id,#-830002,#$dummy_idi,
                                                            owner_class_name => 'Genome::InstrumentData::Imported',
                                                        );
 
@@ -52,11 +52,11 @@ use warnings;
 isa_ok($tmp_allocation,'Genome::Disk::Allocation'); 
 
 is($tmp_allocation->owner_id, $dummy_id, "owner-id is $dummy_id");
-my $cmd = Genome::InstrumentData::Command::Import::Microarray::Misc->create(
+my $cmd = Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArray->create(
     sample_name => $sample_name,
     original_data_path => $source_dir,
     sequencing_platform => 'unknown',
-    allocation =>  $tmp_allocation,
+    #allocation =>  $tmp_allocation,
 );
 
 ok($cmd, "constructed an import command");
@@ -101,7 +101,7 @@ my $dsize = Genome::Utility::FileSystem->directory_size_recursive($i->data_direc
 #find(sub { $dsize += -s if -f $_ }, $i->data_directory);                #find sum of target file sizes
 ok($ssize<=$dsize, "source and destination sizes match")
     or die "Source directory size($ssize bytes) did not match or excede destination directory size($dsize), dircopy did not succeed.";
-ok(-e $i->data_directory."/genotype/".$sample_name.".genotype","found input genotype file");
-ok(-e $i->data_directory."/genotype/SNPArray.genotype","found SNP Array Genotype");
+ok(-e $i->data_directory."/".$sample_name.".genotype","found input genotype file");
+ok(-e $i->data_directory."/".$sample_name."_SNPArray.genotype","found SNP Array Genotype");
 ok($defined_model,"model was created, and properly retrieved.");
                                 
