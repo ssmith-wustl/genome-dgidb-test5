@@ -56,7 +56,7 @@ my $cmd = Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeA
     sample_name => $sample_name,
     original_data_path => $source_dir,
     sequencing_platform => 'unknown',
-    #allocation =>  $tmp_allocation,
+    allocation =>  $tmp_allocation,
 );
 
 ok($cmd, "constructed an import command");
