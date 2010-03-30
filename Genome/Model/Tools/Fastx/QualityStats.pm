@@ -3,7 +3,7 @@ package Genome::Model::Tools::Fastx::QualityStats;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 use Genome::Utility::FileSystem;
 use File::Basename;
 
