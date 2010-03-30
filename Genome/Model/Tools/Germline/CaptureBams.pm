@@ -186,7 +186,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tier_4_snp_file" toOperation="Tier Variants Snp" toProperty="tier4_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Tier Variants Snp" toProperty="only_tier_1" />
   <link fromOperation="Annotate UCSC" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="ucsc_file" />
-  <link fromOperation="input connector" fromProperty="filtered_indelpe_snps" toOperation="Tier Variants Snp" toProperty="variant_file" />
+  <link fromOperation="Merge SNPs" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="transcript_annotation_file" />
 
 <!-- FORMAT SAMTOOLS INDELS -->
