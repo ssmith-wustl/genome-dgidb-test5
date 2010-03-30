@@ -1,24 +1,17 @@
 <?xml version='1.0' standalone='yes'?>
 <workflow name="human contamination screening" executor="Workflow::Executor::SerialDeferred" logDir="/gscmnt/sata852/research/kwylie/Storch_Illumina_2010_03/2010_03_15_Storch_Illumina_1/copy_fastq_paired/logs">
     <link fromOperation="input connector"           fromProperty="fastq_1"                      toOperation="trim primer 1"             toProperty="fastq_file" />
-    <link fromOperation="input connector"           fromProperty="fastq_2"                      toOperation="trim primer 2"             toProperty="fastq_file" />
     <link fromOperation="input connector"           fromProperty="primer_trim_file1"            toOperation="trim primer 1"             toProperty="output"/>
+    <link fromOperation="input connector"           fromProperty="fastq_2"                      toOperation="trim primer 2"             toProperty="fastq_file" />
     <link fromOperation="input connector"           fromProperty="primer_trim_file2"            toOperation="trim primer 2"             toProperty="output" />
+
     <link fromOperation="input connector"           fromProperty="primer_trim_file1"            toOperation="wait for primer trim"      toProperty="primer_trim_file1"/>
     <link fromOperation="input connector"           fromProperty="primer_trim_file2"            toOperation="wait for primer trim"      toProperty="primer_trim_file2" />
     <link fromOperation="trim primer 1"             fromProperty="result"                       toOperation="wait for primer trim"      toProperty="trim_1_complete" />
     <link fromOperation="trim primer 2"             fromProperty="result"                       toOperation="wait for primer trim"      toProperty="trim_2_complete" />
 
-    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file1"            toOperation="remove n 1"                toProperty="fastq_file" />
     <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file1"            toOperation="synch fastq"               toProperty="fastq1" />
-    <link fromOperation="input connector"           fromProperty="cutoff"                       toOperation="remove n 1"                toProperty="cutoff" />
-    <link fromOperation="input connector"           fromProperty="n_removed_file_1"             toOperation="remove n 1"                toProperty="n_removed_file" />
-    <link fromOperation="input connector"           fromProperty="n_removed_file_1"             toOperation="wait for n removal 1"      toProperty="files_to_align_path_1" />
-    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file2"            toOperation="remove n 2"                toProperty="fastq_file" />
     <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file2"            toOperation="synch fastq"               toProperty="fastq2" />
-    <link fromOperation="input connector"           fromProperty="cutoff"                       toOperation="remove n 2"                toProperty="cutoff" />
-    <link fromOperation="input connector"           fromProperty="n_removed_file_2"             toOperation="remove n 2"                toProperty="n_removed_file" />
-    <link fromOperation="input connector"           fromProperty="n_removed_file_2"             toOperation="wait for n removal 2"      toProperty="files_to_align_path_2" />
 
     <link fromOperation="input connector"           fromProperty="prefix1"                      toOperation="synch fastq"               toProperty="prefix1" />
     <link fromOperation="input connector"           fromProperty="prefix2"                      toOperation="synch fastq"               toProperty="prefix2" />
@@ -65,10 +58,8 @@
     <link fromOperation="input connector"           fromProperty="save_screened_reads"          toOperation="wait for dust"             toProperty="save_screened_reads" />
     <link fromOperation="input connector"           fromProperty="mismatch_cutoff"              toOperation="wait for dust"             toProperty="mismatch_cutoff" />
 
-    <link fromOperation="remove n 1"                fromProperty="result"                       toOperation="wait for n removal 1"      toProperty="n_removal_1_complete" />
-    <link fromOperation="remove n 2"                fromProperty="result"                       toOperation="wait for n removal 2"      toProperty="n_removal_2_complete" />
-    <link fromOperation="wait for n removal 1"      fromProperty="files_to_align_path_1"        toOperation="run screen 1"              toProperty="files_to_align_path" />
-    <link fromOperation="wait for n removal 2"      fromProperty="files_to_align_path_2"        toOperation="run screen 2"              toProperty="files_to_align_path" />
+    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file1"            toOperation="run screen 1"              toProperty="files_to_align_path" />
+    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file2"            toOperation="run screen 2"              toProperty="files_to_align_path" />
     <link fromOperation="run screen 1"              fromProperty="result"                       toOperation="wait for screen"           toProperty="bwa_1_complete" />
     <link fromOperation="run screen 2"              fromProperty="result"                       toOperation="wait for screen"           toProperty="bwa_2_complete" />
     <link fromOperation="wait for screen"           fromProperty="sam1"                         toOperation="remove paired ends"        toProperty="sam1" />
@@ -140,28 +131,6 @@
         </operationtype>
     </operation>
     
-    <operation name="remove n 1">
-        <operationtype commandClass="Genome::Model::Tools::Fastq::RemoveN" typeClass="Workflow::OperationType::Command" />
-    </operation>
-
-    <operation name="remove n 2">
-        <operationtype commandClass="Genome::Model::Tools::Fastq::RemoveN" typeClass="Workflow::OperationType::Command" />
-    </operation>
-
-    <operation name="wait for n removal 1">
-        <operationtype typeClass="Workflow::OperationType::Block">
-            <property>files_to_align_path_1</property>
-            <property>n_removal_1_complete</property>
-        </operationtype>
-    </operation>
-
-    <operation name="wait for n removal 2">
-        <operationtype typeClass="Workflow::OperationType::Block">
-            <property>files_to_align_path_2</property>
-            <property>n_removal_2_complete</property>
-        </operationtype>
-    </operation>
-
     <operation name="run screen 1" workflowFile="bwa_screen.xml"/>
 
     <operation name="run screen 2" workflowFile="bwa_screen.xml"/>
@@ -276,22 +245,19 @@
     </operation>
 
     <operationtype typeClass="Workflow::OperationType::Model">
-        <inputproperty>cutoff</inputproperty>
+        <inputproperty>fastq_1</inputproperty>
         <inputproperty>primer_trim_file1</inputproperty>
+        <inputproperty>fastq_2</inputproperty>
         <inputproperty>primer_trim_file2</inputproperty>
         <inputproperty>align_options_1</inputproperty>
         <inputproperty>aligner_output_file_1</inputproperty>
         <inputproperty>alignment_file_1</inputproperty>
         <inputproperty>ref_seq_file</inputproperty>
         <inputproperty>unaligned_reads_file_1</inputproperty>
-        <inputproperty>n_removed_file_1</inputproperty>
-        <inputproperty>fastq_1</inputproperty>
         <inputproperty>align_options_2</inputproperty>
         <inputproperty>aligner_output_file_2</inputproperty>
         <inputproperty>alignment_file_2</inputproperty>
         <inputproperty>unaligned_reads_file_2</inputproperty>
-        <inputproperty>n_removed_file_2</inputproperty>
-        <inputproperty>fastq_2</inputproperty>
         <inputproperty>paired_end_file_1</inputproperty>
         <inputproperty>paired_end_file_2</inputproperty>
         <inputproperty>deduplicated_file_1</inputproperty>

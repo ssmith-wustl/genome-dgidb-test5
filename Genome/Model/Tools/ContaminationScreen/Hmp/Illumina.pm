@@ -37,13 +37,6 @@ UR::Object::Type->define(
                            is_optional => 1,
                            default => 15,
                         },
-                        n_cutoff =>  {
-                           doc => 'cutoff for n-removal (0 to override)',
-                           is => 'Number',
-                           is_input => 1,
-                           is_optional => 1,
-                           default => 0,
-                        },
                         save_screened_reads =>  {
                            doc => 'save reads screened during post-dust n-removal',
                            is => 'Boolean',
@@ -96,7 +89,6 @@ sub execute {
     my ($fastq1, $fastq2) = ($self->fastq1, $self->fastq2);
     my $base1 = basename $fastq1;
     my $base2 = basename $fastq2;
-    my $cutoff = $self->n_cutoff;
     my ($primer_trim_file1, $primer_trim_file2)  = ($dir . "/$base1.TRIMMED1.fasta", $dir . "/$base2.TRIMMED2.fasta");
     my ($aligner_output_file1, $aligner_output_file2)  = ($dir . "/$base1.ALIGNER_OUTPUT1.sai", $dir . "/$base2.ALIGNER_OUTPUT2.sai");
     my ($unaligned_reads_file1, $unaligned_reads_file2)  = ($dir . "/$base1.UNALIGNED1.sam", $dir . "/$base2.UNALIGNED2.sam");
@@ -104,7 +96,6 @@ sub execute {
     my ($deduplicated_file1, $deduplicated_file2) = ($dir . "/$base1.DEDUP1.sam", $dir . "/$base2.DEDUP2.sam");
     my $ref_seq_file = "/gscmnt/sata156/research/mmitreva/databases/human_build36/Homo_sapiens.NCBI36.45.dna.aml.plus5.8s15s28s.fna";
     my $align_options = '-t 4 -n ' . $self->edit_distance;
-    my ($n_removed_file1, $n_removed_file2)  =  ($dir . "/$base1.N_REMOVED1.fastq", $dir . "/$base2.N_REMOVED2.fastq");
     my ($paired_end_file1,  $paired_end_file2) = ($dir . "/$base1.PAIRED_REMOVED1.sam", $dir . "/$base2.PAIRED_REMOVED2.sam");
     my ($resurrected_file1, $resurrected_file2) = ($dir . "/$base1.RESURRECTED1.sam", $dir . "/$base2.RESURRECTED2.sam");
     my $synch_output  = ".SYNCH";
@@ -121,7 +112,6 @@ sub execute {
                               'fastq_2'                 => $fastq2,
                               'primer_trim_file1'       => $primer_trim_file1,
                               'primer_trim_file2'       => $primer_trim_file2,
-                              'cutoff'                  => $cutoff,
                               'align_options_1'         => $align_options,
                               'align_options_2'         => $align_options,
                               'alignment_file_1'        => $alignment_file1, 
@@ -130,8 +120,6 @@ sub execute {
                               'aligner_output_file_2'   => $aligner_output_file2,
                               'unaligned_reads_file_1'  => $unaligned_reads_file1,
                               'unaligned_reads_file_2'  => $unaligned_reads_file2,
-                              'n_removed_file_1'        => $n_removed_file1,
-                              'n_removed_file_2'        => $n_removed_file2,
                               'paired_end_file_1'       => $paired_end_file1,
                               'paired_end_file_2'       => $paired_end_file2,
                               'deduplicated_file_1'     => $deduplicated_file1,
@@ -167,9 +155,6 @@ print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
                               "input 2:\t$fastq2\n" .
                               "primer_trim_file 1:\t$primer_trim_file1\n" .
                               "primer_trim_file 2:\t$primer_trim_file2\n" .
-                              "n cutoff:\t$cutoff\n" .
-                              "n_removed_file 1:\t$n_removed_file1\n" .
-                              "n_removed_file 2:\t$n_removed_file2\n" .
                               "align_options 1:\t$align_options\n" .
                               "align_options 2:\t$align_options\n" .
                               "aligner_output_file 1:\t$aligner_output_file1\n" .
