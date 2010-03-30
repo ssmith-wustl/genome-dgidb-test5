@@ -102,6 +102,3 @@ my $dsize = Genome::Utility::FileSystem->directory_size_recursive($i->data_direc
 #find(sub { $dsize += -s if -f $_ }, $i->data_directory);                #find sum of target file sizes
 ok($ssize<=$dsize, "source and destination sizes match")
     or die "Source directory size($ssize bytes) did not match or excede destination directory size($dsize), dircopy did not succeed.";
-#ok(-e $i->data_directory."/genotype/".$sample_name.".genotype","found input genotype file");
-#ok(-e $i->data_directory."/genotype/SNPArray.genotype","found SNP Array Genotype");
-#ok($defined_model,"model was created, and properly retrieved.");
