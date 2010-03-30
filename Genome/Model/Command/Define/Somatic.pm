@@ -20,36 +20,12 @@ class Genome::Model::Command::Define::Somatic {
             id_by => 'normal_model_id', 
             doc => 'The normal model id being analyzed' 
         },
-        data_directory => {
-            is => 'Text',
-            len => 255,
-            doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
-        },
-        subject_name => {
-            is => 'Text',
-            len => 255,
-            doc => 'The name of the subject all the reads originate from',
-        },
-    ],
-    has_optional => [
-        model_name => {
-            is => 'Text',
-            len => 255,
-            doc => 'User meaningful name for this model (default value: $SUBJECT_NAME.$PP_NAME)'
-        },
-        subject_type => {
-            is => 'Text',
-            len => 255,
-            doc => 'The type of subject all the reads originate from, defaults to sample_name',
-            default => 'sample_group',
-        },
         processing_profile_name => {
             is => 'Text',
             doc => 'identifies the processing profile by name',
             default => 'default',
         },
-
-   ],
+    ],
 };
 
 sub help_synopsis {
