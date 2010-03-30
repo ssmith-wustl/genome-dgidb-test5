@@ -93,7 +93,6 @@ sub execute {
             $build->formatted_genotype_file_path
         );
 
-        $build->success;
     }
 
 
