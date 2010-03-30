@@ -265,6 +265,30 @@ sub verify_alignment_data {
         }
     }
     
+    my $total_reads = $flagstat_data->{total_reads};
+    my $filter = $self->filter_name;
+    my $instrument_data = $self->instrument_data;
+    
+    my $expected_reads;
+
+    $DB::single = 1;
+    
+    if(!$instrument_data->is_paired_end) {
+        $expected_reads = $instrument_data->clusters;
+    } elsif($filter eq 'forward-only') {
+        $expected_reads = $instrument_data->fwd_clusters;
+    } elsif ($filter eq 'reverse-only') {
+        $expected_reads = $instrument_data->rev_clusters;
+    } else {
+        $expected_reads = $instrument_data->fwd_clusters + $instrument_data->rev_clusters;
+    }
+    
+    unless($total_reads eq $expected_reads) {
+        $self->status_message('Alignment file ' . $self->alignment_file . ' has ' . $total_reads . ' reads, ' . 
+            'but the instrument data claims to have ' . $expected_reads);
+        return;
+    }
+    
     # don't unlock if some caller lower on the stack had a lock
     unless ($already_had_lock) {
         unless ($self->unlock_alignment_resource) {
