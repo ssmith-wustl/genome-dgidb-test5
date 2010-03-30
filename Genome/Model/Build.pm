@@ -97,6 +97,39 @@ class Genome::Model::Build {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass will soon be stored
+    my $class = shift;
+
+    Carp::confess("this is used by sub-classes which further subclassify by sequencing platform!")
+        if $class eq __PACKAGE__;
+
+    my $sequencing_platform;
+    if (ref($_[0]) and $_[0]->isa('Genome::Model::Build')) {
+        $sequencing_platform = $_[0]->model->sequencing_platform;
+    } 
+    else {
+        my %params;
+        if (ref($_[0]) and $_[0]->isa("UR::BoolExpr")) {
+            %params = $_[0]->params_list;
+        }
+        else {
+            %params = @_;
+        }
+        my $model_id = $params{model_id};
+        $class->_validate_model_id($params{model_id})
+            or return;
+        my $model = Genome::Model->get($params{model_id});
+        unless ( $model ) {
+            Carp::confess("Can't get model for id: .".$params{model_id});
+        }
+        $sequencing_platform = $model->sequencing_platform;
+    }
+
+    return unless $sequencing_platform;
+
+    return $class. '::'.Genome::Utility::Text::string_to_camel_case($sequencing_platform);
+}
+
 
 # auto generate sub-classes for any valid processing profile
 sub __extend_namespace__ {
@@ -120,18 +153,26 @@ sub __extend_namespace__ {
 }
 
 sub create {
-    my ($class, %params) = @_;
-
-    # model
-    unless ( $class->_validate_model_id($params{model_id}) ) {
-        $class->delete;
-        return;
+    my $class = shift;
+    if ($class eq __PACKAGE__) {
+        # let the base class re-call the constructor from the correct sub-class
+        return $class->SUPER::create(@_);
     }
 
-    # create
-    my $self = $class->SUPER::create(%params)
-        or return;
+    my $bx = $class->define_boolexpr(@_);
+    my $model_id = $bx->value_for('model_id');
 
+    # model
+    unless ( $class->_validate_model_id($model_id) ) {
+        return;
+    }
+    # create
+$DB::single = 1;
+    my $self = $class->SUPER::create($bx);
+$DB::single = 1;
+    return unless $self;
+
+$DB::single = 1;
     # inputs
     unless ( $self->_copy_model_inputs ) {
         $self->delete;
@@ -879,7 +920,8 @@ sub _resolve_subclass_name {
 		$type_name = $_[0]->model->type_name;
 	}
     else {
-        my %params = @_;
+        my ($bx,@extra) = $class->define_boolexpr(@_);
+        my %params = ($bx->params_list, @extra);
         my $model_id = $params{model_id};
         my $model = Genome::Model->get($model_id);
         unless ($model) {
@@ -889,7 +931,7 @@ sub _resolve_subclass_name {
     }
 
     unless ( $type_name ) {
-        my $rule = $class->get_rule_for_params(@_);
+        my $rule = $class->define_boolexpr(@_);
         $type_name = $rule->specified_value_for_property_name('type_name');
     }
 

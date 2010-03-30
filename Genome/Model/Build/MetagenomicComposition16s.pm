@@ -73,10 +73,12 @@ class Genome::Model::Build::MetagenomicComposition16s {
 #< UR >#
 sub create {
     my $class = shift;
+    if ($class eq __PACKAGE__) {
+        return $class->SUPER::create(@_);
+    }
 
-    my $self = $class->SUPER::create(@_)
-        or return;
-    return $self if $class eq __PACKAGE__; # so UR doesn't try to re-subclass
+    my $self = $class->SUPER::create(@_);
+    return unless $self;
 
     my @instrument_data = $self->instrument_data;
     unless ( @instrument_data ) {
@@ -110,28 +112,9 @@ sub create {
 
 sub _resolve_subclass_name { # only temporary, subclass will soon be stored
     my $class = shift;
-
-    my $sequencing_platform;
-    if (ref($_[0])) {
-        if ($_[0]->isa(__PACKAGE__) || $_[0]->can('model')) {
-            $sequencing_platform = $_[0]->model->sequencing_platform;
-        }
-    } else {
-        my %params = @_;
-        my $model_id = $params{model_id};
-        $class->_validate_model_id($params{model_id})
-            or return;
-        my $model = Genome::Model->get($params{model_id});
-        unless ( $model ) {
-            confess "Can't get model for id: .".$params{model_id};
-        }
-        $sequencing_platform = $model->sequencing_platform;
-    }
-
-    return unless $sequencing_platform;
-
-    return 'Genome::Model::Build::MetagenomicComposition16s::'.Genome::Utility::Text::string_to_camel_case($sequencing_platform);
+    return __PACKAGE__->_resolve_subclass_name_by_sequencing_platform(@_);
 }
+
 
 #< Description >#
 sub description {

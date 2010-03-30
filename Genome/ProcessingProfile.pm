@@ -101,7 +101,13 @@ sub _map_workflow_inputs {
 ###
 
 sub create {
-    my ($class, %params) = @_;
+    my $class = shift;
+    if ($class eq __PACKAGE__) {
+        return $class->SUPER::create(@_);
+    }
+
+    my $bx = $class->define_boolexpr(@_);
+    my %params = $bx->params_list;
 
     $class->_validate_name_and_uniqueness($params{name})
         or return;

@@ -37,13 +37,11 @@ sub create {
     }
 
     my $model = $self->model;
-
     my @idas = $model->instrument_data_assignments;
-
     unless (scalar(@idas) && ref($idas[0])  &&  $idas[0]->isa('Genome::Model::InstrumentDataAssignment')) {
-        $self->error_message('No instrument data have been added to model: '. $model->name);
-        $self->error_message("The following command will add all available instrument data:\ngenome model instrument-data assign  --model-id=".
-        $model->id .' --all');
+        $self->error_message('No instrument data have been added to model! '. $model->name);
+        $self->error_message("The following command will add all available instrument data:\ngenome model instrument-data assign  --model-id=". $model->id .' --all');
+        $self->delete;
         return;
     }
 

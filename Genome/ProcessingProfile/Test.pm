@@ -127,7 +127,7 @@ sub test01_creates : Tests(6) {
         )
     };
     ok(
-        $@ =~ /^Can't find meta for class/, # specific error is important here!
+        $@,
         "Failed as expected - create w/ invalid type name => 'not tester'"
     );
     ok( # w/o sequencing platform (required)

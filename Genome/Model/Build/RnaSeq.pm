@@ -118,29 +118,9 @@ sub eviscerate {
     return 1;
 }
 
-sub _resolve_subclass_name {
+sub _resolve_subclass_name { # only temporary, subclass will soon be stored
     my $class = shift;
-
-    my $sequencing_platform;
-    if (ref($_[0])) {
-        if ($_[0]->isa(__PACKAGE__) || $_[0]->can('model')) {
-            $sequencing_platform = $_[0]->model->sequencing_platform;
-        }
-    } else {
-        my %params = @_;
-        my $model_id = $params{model_id};
-        my $model = Genome::Model->get($model_id);
-        $sequencing_platform = $model->sequencing_platform;
-    }
-
-    unless ( $sequencing_platform ) {
-        my $rule = $class->get_rule_for_params(@_);
-        $sequencing_platform = $rule->specified_value_for_property_name('sequencing_platform');
-    }
-
-    return ( defined $sequencing_platform ) 
-        ? $class->_resolve_subclass_name_for_sequencing_platform($sequencing_platform)
-            : undef;
+    return __PACKAGE__->_resolve_subclass_name_by_sequencing_platform(@_);
 }
 
 sub _resolve_subclass_name_for_sequencing_platform {

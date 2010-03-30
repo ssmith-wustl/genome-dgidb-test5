@@ -215,7 +215,11 @@ sub __extend_namespace__ {
 
 sub create {
     my $class = shift;
-    
+    if ($class eq __PACKAGE__) {
+        # this class is abstract, and the super-class re-calls the constructor from the correct subclass
+        return $class->SUPER::create(@_);
+    }
+
     my $params;
     my $entered_subject_name; #So the user gets what they expect, use this when coming up with the default model name
     
