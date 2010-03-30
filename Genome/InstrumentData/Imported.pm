@@ -132,7 +132,12 @@ Genome::InstrumentData::Solexa->class;
 
 sub total_bases_read {
     my $self = shift;
-    return ($self->fwd_read_length + $self->rev_read_length) * $self->fragment_count;
+    
+    my $fwd_read_length = $self->fwd_read_length || 0;
+    my $rev_read_length = $self->rev_read_length || 0;
+    my $fragment_count = $self->fragment_count || 0;
+    
+    return ($fwd_read_length + $rev_read_length) * $fragment_count;
 }
 
 # leave as-is for first test, 
