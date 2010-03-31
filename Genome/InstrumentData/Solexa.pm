@@ -578,6 +578,13 @@ sub total_bases_read {
     return $count;
 }
 
+sub summary_xml_content {
+    my $self = shift;
+    my $rls = $self->_run_lane_solexa;
+    unless ($rls) { return; }
+    return $rls->summary_xml_content;
+}
+
 1;
 
 #$HeaderURL$
