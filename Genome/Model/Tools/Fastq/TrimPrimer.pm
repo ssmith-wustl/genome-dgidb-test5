@@ -20,6 +20,12 @@ class Genome::Model::Tools::Fastq::TrimPrimer {
                        is_optional => 1,
                        doc => 'the file name to use for the output file',
                    },
+            trim_count => {
+                       is => 'Number',
+                       is_optional => 1,
+                       is_output => 1,
+                       doc => 'the # of sequences trimmed',
+                   },
     ],
     doc => "Remove primer sequence from fastq sequence ends.",
 };
@@ -73,6 +79,7 @@ sub execute {
     my $primer_sequence = $self->primer_sequence;
     my $seqobj = Bio::Seq->new(-seq => $primer_sequence);
     my $reverse_sequence = $seqobj->revcom->seq;
+    my $trim_count = 0;
 
     while (my $header = $input_fh->getline) 
     {
@@ -87,6 +94,7 @@ sub execute {
            $screened_fh->print("$seq\n"); #log read before trimming
            $seq = $2 unless (length($2) < 0 and die("The primer sequence is longer than read '$seq'")); 
            $qual = substr($qual, length($1));
+           $trim_count++;
        } 
 
         # TODO: maybe the read names should containt the positions of the bases like _10-50
@@ -95,6 +103,8 @@ sub execute {
     $input_fh->close;
     $output_fh->close;
     $screened_fh->close;
+    
+    $self->trim_count($trim_count);
     return 1;
 }
 

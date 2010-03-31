@@ -99,6 +99,7 @@ sub execute {
     my ($paired_end_file1,  $paired_end_file2) = ($dir . "/$base1.PAIRED_REMOVED1.sam", $dir . "/$base2.PAIRED_REMOVED2.sam");
     my ($resurrected_file1, $resurrected_file2) = ($dir . "/$base1.RESURRECTED1.sam", $dir . "/$base2.RESURRECTED2.sam");
     my $synch_output  = ".SYNCH";
+    my $synch_fasta_output  = ".SYNCH_FASTA";
     my ($prefix1, $prefix2) = ($dir . "/$base1", $dir . "/$base2");
     my ($fasta_file1, $fasta_file2) = ("$dir/$base1.SYNCH.fasta", "$dir/$base2.SYNCH.fasta");
     my ($dusted_file1, $dusted_file2) = ("$dir/$base1.SYNCH.DUSTED.fasta", "$dir/$base2.SYNCH.DUSTED.fasta");
@@ -134,6 +135,7 @@ sub execute {
                               'dusted_file1',           => $dusted_file1,
                               'dusted_file2',           => $dusted_file2,
                               'output'                  => $synch_output,
+                              'synch_fasta_output'      => $synch_fasta_output,
                               'save_screened_reads'     => $save_screened_reads,
                               'mismatch_removed_file1'  => $mismatch_removed_file1,
                               'mismatch_removed_file2'  => $mismatch_removed_file2,

@@ -32,6 +32,13 @@ class Genome::Model::Tools::Fasta::RemoveN
                                     is_optional => 1,
                                     default => 1,
                                 },
+            screened_count => 
+                                {
+                                    doc => '# of reads screened',
+                                    is => 'Boolean',
+                                    is_optional => 1,
+                                    is_output => 1,
+                                },
          ],
 };
 
@@ -82,7 +89,7 @@ sub execute
         return;
     }
 
-    my ($header, $seq, $count, $removal_count) = ("", "", 0, 0);
+    my ($header, $seq, $count, $screened_count) = ("", "", 0, 0);
     while (my $line = $input_fh->getline) 
     {
         if ($line=~/^>.*/) #found a header
@@ -107,7 +114,7 @@ sub execute
         }
 
         $seq=~s/(N)/$count++;$1/eg; #get N-count
-        if ($cutoff > 0 and $count >= $cutoff and ++$removal_count) # check if cutoff disabled, then compare count
+        if ($cutoff > 0 and $count >= $cutoff and ++$screened_count) # check if cutoff disabled, then compare count
         {
             push (@screened, "$header$seq");
         }
@@ -139,8 +146,7 @@ sub execute
         $screened_fh->close;
     }
 
-    #logging stats
-    #print "LOGGING trim count for $fasta_file:\t$removal_count\n"; 
+    $self->screened_count($screened_count);
 
     return 1;
 }
