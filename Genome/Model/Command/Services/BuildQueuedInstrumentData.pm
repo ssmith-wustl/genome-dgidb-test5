@@ -371,6 +371,7 @@ sub execute {
         eval{
             Genome::Model::Build::Command::Start->execute(
                 model_identifier => $model_id,
+                force            => 1,
             ) or die 'Failed to start a build for model '. $model_id;
         };
 
