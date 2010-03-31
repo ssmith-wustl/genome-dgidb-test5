@@ -48,9 +48,9 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   subset_name => 4,
                                                                   run_type => 'Paired End Read 2',
                                                                   gerald_directory => $gerald_directory,
-                                                                  fwd_clusters => 30,
-                                                                  rev_clusters => 30,
-                                                                  clusters => 3000,
+                                                                  fwd_clusters => 300,
+                                                                  rev_clusters => 300,
+                                                                  clusters => 300,
                                                               );
 
 
