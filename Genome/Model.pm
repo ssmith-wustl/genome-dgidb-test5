@@ -194,7 +194,7 @@ sub __extend_namespace__ {
     
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
     my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
-    if ($pp_subclass_meta) {
+    if ($pp_subclass_meta and $pp_subclass_name->isa('Genome::ProcessingProfile')) {
         my @pp_delegated_properties = map {
             $_ => { via => 'processing_profile' }
         } $pp_subclass_name->params_for_class;
