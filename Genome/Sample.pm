@@ -108,7 +108,9 @@ class Genome::Sample {
         species_name                => { via => 'taxon', to => 'species_name', 
                                         doc => 'the name of the species of the sample source\'s taxonomic category' },
 
-        sub_type                    => { via => 'attributes', where => [ name => ['sub-type','subtype'] ], to => 'value' },
+        sub_type                    => { calculate_from => ['_sub_type1','_sub_type2'], calculate => q|$_sub_type1 or $_sub_type2| }, 
+        _sub_type1                  => { via => 'attributes', where => [ name => 'sub-type' ], to => 'value' },
+        _sub_type2                  => { via => 'attributes', where => [ name => 'subtype' ], to => 'value' },
         
         _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
     ],
