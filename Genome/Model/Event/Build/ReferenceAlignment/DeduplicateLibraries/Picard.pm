@@ -33,10 +33,15 @@ sub execute {
     my @bam_files;
     my @idas = $self->build->instrument_data_assignments;
     for my $ida (@idas) {
-        my @bam_file = $ida->alignment->alignment_bam_file_paths;
+        my $alignment = $ida->alignment;
+        my @bam_file = $alignment->alignment_bam_file_paths;
         unless(scalar @bam_file) {
-            $self->error_message("Couldn't find bam for alignment of instrument data #" . $ida->instrument_data_id);
-            return;
+            if($alignment->aligner_name eq 'maq' and $alignment->verify_aligner_successful_completion eq 2) {
+                $self->status_message("No bam for alignment of instrument data #" . $ida->instrument_data_id . " due to 'no reasonable reads'");
+            } else {
+                $self->error_message("Couldn't find bam for alignment of instrument data #" . $ida->instrument_data_id);
+                return;
+            }
         }
         if(scalar @bam_file > 1) {
             $self->warning_message("Found multiple bam files for alignment of instrument data #" . $ida->instrument_data_id);
