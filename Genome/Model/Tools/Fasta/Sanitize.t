@@ -6,6 +6,7 @@ use warnings;
 use above "Genome";
 
 use Bio::SeqIO;
+require Cwd;
 use Data::Dumper 'Dumper';
 use File::Compare 'compare';
 use File::Temp 'tempdir';
@@ -19,7 +20,7 @@ use_ok ('Genome::Model::Tools::Fasta::Sanitize')
     or die;
 
 ##< SETUP: 3 TESTS >#
-my $DIR = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-Sanitize';
+my $DIR = Cwd::abs_path('/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-Sanitize');
 ok(-d $DIR, "Test dir ($DIR) exists");
 my $DIRTY_FASTA = $DIR.'/dirty.fasta';
 ok(-f $DIRTY_FASTA, "Dirty fasta ($DIRTY_FASTA) exists");
