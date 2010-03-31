@@ -108,7 +108,7 @@ class Genome::Sample {
         species_name                => { via => 'taxon', to => 'species_name', 
                                         doc => 'the name of the species of the sample source\'s taxonomic category' },
 
-        sub_type                    => { via => 'attributes', where => [ name => 'sub-type'], to => 'value' },
+        sub_type                    => { via => 'attributes', where => [ name => ['sub-type','subtype'] ], to => 'value' },
         
         _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
     ],
