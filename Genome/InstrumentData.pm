@@ -30,7 +30,7 @@ class Genome::InstrumentData {
                library.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
                library.property_name(+) = 'library_name'
      UNION ALL
-        SELECT to_char(solexa.analysis_id),
+         SELECT to_char(solexa.analysis_id),
                fc.run_name,
                'solexa' sequencing_platform,
                'Genome::InstrumentData::Solexa' subclass_name,
@@ -59,15 +59,24 @@ class Genome::InstrumentData {
                 and run_type = 'Paired End' 
                 and solexa2.read_number = 1 
      UNION ALL
-        SELECT to_char(x454.region_id) id,
-               x454.run_name,
+            SELECT 
+               to_char(case when ri.index_sequence is null then ri.region_id else ri.seq_id end) id,
+               r.run_name,
                '454' sequencing_platform,
                'Genome::InstrumentData::454' subclass_name,
-               to_char(x454.region_id) seq_id, 
-               nvl(x454.sample_name, x454.incoming_dna_name) sample_name, 
-               to_char(x454.region_number) subset_name,
-               x454.library_name library_name
-          FROM run_region_454\@dw x454
+               to_char(ri.seq_id) seq_id,
+               s.full_name sample_name,
+               (
+                case
+                    when ri.index_sequence is null then to_char(r.region_number)
+                    else to_char(r.region_number) || '-' || ri.index_sequence
+                end
+               ) subset_name,
+               lib.full_name library_name
+           FROM run_region_454\@dw r 
+            JOIN region_index_454\@dw ri on ri.region_id = r.region_id
+            JOIN library_summary\@dw lib on lib.library_id = ri.library_id
+            JOIN organism_sample\@dw s on s.organism_sample_id = lib.sample_id
      UNION ALL
         SELECT to_char(imported.id) id,
                'unknown' run_name,

@@ -10,12 +10,36 @@ class Genome::InstrumentData::454 {
     table_name => <<'EOS'
         (
             select 
-                to_char(region_id) id,
+                to_char(case when ri.index_sequence is null then ri.region_id else ri.seq_id end) id,
                 '454' sequencing_platform,
-                region_id genome_model_run_id, --legacy
-                region_number limit_regions, --legacy
-                r.* 
-            from run_region_454@dw r
+                r.region_id genome_model_run_id, --legacy
+                BEADS_LOADED,
+                COPIES_PER_BEAD,          
+                FC_ID,                    
+                INCOMING_DNA_NAME,        
+                KEY_PASS_WELLS,           
+                ri.library_id, --r.LIBRARY_ID,               
+                lib.full_name library_name, -- r.LIBRARY_NAME,             
+                PAIRED_END,               
+                PREDICTED_RECOVERY_BEADS, 
+                r.REGION_ID,                
+                REGION_NUMBER,            
+                RESEARCH_PROJECT,         
+                RUN_NAME,                 
+                lib.SAMPLE_ID,                
+                s.full_name SAMPLE_NAME,              
+                SAMPLE_SET,               
+                SS_ID,                    
+                SUPERNATANT_BEADS,        
+                TOTAL_KEY_PASS,           
+                TOTAL_RAW_WELLS,
+                NUM_BASES,
+                NUM_READS,
+                INDEX_SEQUENCE
+            from run_region_454@dw r 
+            join region_index_454@dw ri on ri.region_id = r.region_id
+            join library_summary@dw lib on lib.library_id = ri.library_id
+            join organism_sample@dw s on s.organism_sample_id = lib.sample_id
         ) x454_detail
 EOS
     ,
@@ -42,24 +66,26 @@ EOS
         run_region_454     => {
             doc => '454 Run Region from LIMS.',
             is => 'GSC::RunRegion454',
-            calculate => q| GSC::RunRegion454->get($id); |,
+            calculate => q| GSC::RunRegion454->get($region_id); |,
+            calculate_from => ['region_id']
+        },
+        region_index_454     => {
+            doc => 'Region Index 454 from LIMS.',
+            is => 'GSC::RegionIndex454',
+            calculate => q| GSC::RegionIndex454->get($id); |,
             calculate_from => ['id']
         },
         region_id           => { },
         region_number       => { },
-        total_reads         => { column_name => "TOTAL_KEY_PASS" },
+        total_reads         => { column_name => "NUM_READS" },
         is_paired_end       => { column_name => "PAIRED_END" },
-
-        # deprecated, compatible with Genome::RunChunk::Solexa
-        genome_model_run_id => {},
-        limit_regions       => {},
-
+        index_sequence      => { },
     ],
 };
 
 sub _default_full_path {
     my $self = shift;
-    return sprintf('%s/%s/%s', $self->_data_base_path, $self->run_name, $self->id);
+    return sprintf('%s/%s/%s', $self->_data_base_path, $self->run_name, $self->region_id);
 }
 
 sub calculate_alignment_estimated_kb_usage {
@@ -80,6 +106,10 @@ sub resolve_sff_path {
         my $sff_file_object = $rr_454->sff_filesystem_location;
         if ($sff_file_object) {
             $sff_file = $sff_file_object->stringify;
+            if (my $index_sequence = $self->index_sequence) {
+                $sff_file =~ s|/sff/|/sff/demux/|;
+                $sff_file =~ s|.sff$|.demux.$index_sequence.sff|;
+            }
         }
     };
 

@@ -187,6 +187,7 @@ EOS
         fwd_filt_aligned_clusters_pct   => { },
         rev_filt_aligned_clusters_pct   => { },
         target_region_set_name          => { },
+
         short_name => {
             doc => 'The essential portion of the run name which identifies the run.  The rest is redundent information about the instrument, date, etc.',
             is => 'Text', 

@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 13;
+use Test::More tests => 15;
 use above 'Genome';
 
 my $base_class = 'Genome::InstrumentData';
@@ -15,13 +15,16 @@ BEGIN {
 };
 
 my %seq_plats_and_ids = (
-    454     => '2403581188',
-    sanger  => '03may05.868pmaa1',
-    solexa  => '2338813239',
+    454     => ['2853729293','2853729397'],
+        # region_id  seq_id     index_sequence
+        # 2853729293 2853729194
+        # 2853729292 2853729397 AACAACTC
+    sanger  => ['03may05.868pmaa1'],
+    solexa  => ['2338813239'],
 );
 
-my @rcs = Genome::InstrumentData->get([ values %seq_plats_and_ids ]);
-is(scalar(@rcs), 3, "got 3 objects");
+my @rcs = Genome::InstrumentData->get([ map { @$_ } values %seq_plats_and_ids ]);
+is(scalar(@rcs), 4, "got 4 objects");
 
 for my $platform (keys %seq_plats_and_ids) {
     note("Now test $platform");
@@ -29,13 +32,15 @@ for my $platform (keys %seq_plats_and_ids) {
     my $subclass = $base_class.'::'.ucfirst($platform);
     use_ok($subclass);
     
-    my $instrument_data =Genome::InstrumentData->get($seq_plats_and_ids{$platform});
-    isa_ok($instrument_data, $subclass);
-    is($instrument_data->sequencing_platform, $platform, 'platform is correct');
-    
-    if ( $platform eq 'solexa' ) {
-        is($instrument_data->sample_type,'rna','got expected sample type');
-        is($instrument_data->resolve_quality_converter,'sol2sanger','got expected quality converter');
+    for my $id (@{ $seq_plats_and_ids{$platform} }) {
+        my $instrument_data =Genome::InstrumentData->get($id);
+        isa_ok($instrument_data, $subclass);
+        is($instrument_data->sequencing_platform, $platform, 'platform is correct');
+        
+        if ( $platform eq 'solexa' ) {
+            is($instrument_data->sample_type,'rna','got expected sample type');
+            is($instrument_data->resolve_quality_converter,'sol2sanger','got expected quality converter');
+        }
     }
 }
 
