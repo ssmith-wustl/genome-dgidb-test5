@@ -10,11 +10,8 @@ use_ok('Genome::Model::Tools::BreakpointPal');
 
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-BreakpointPal";
 ok(-e $test_dir , "test-dir exists");
-chdir($test_dir);
+ok(chdir($test_dir));
 
-my $pwd = `pwd`;
-chomp $pwd;
-ok($pwd eq $test_dir , "working in the test-dir");
 system qq(rm chr11:36287905-36288124*);
 
 system qq(gmt breakpoint-pal --breakpoint-id chr11:36287905-36288124 --span);
