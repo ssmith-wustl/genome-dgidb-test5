@@ -86,13 +86,22 @@ sub alignment_objects {
 
     my @assignments = $model->instrument_data_assignments();
 
+    $DB::single = 1;
+
     my @instrument_data_ids = map { $_->instrument_data_id() } @assignments;
     my @solexa_instrument_data = Genome::InstrumentData::Solexa->get( \@instrument_data_ids );
-    unless (@solexa_instrument_data) {
-        $self->warning_message('Failed to find instrument data for model: '.$model->id.'. Now try imported data');
-        @solexa_instrument_data = Genome::InstrumentData::Imported->get( \@instrument_data_ids );
-        $self->warning_message('Failed to find imported data for model: '.$model->id.' either') unless @solexa_instrument_data;
+
+    unless (scalar @solexa_instrument_data == scalar @instrument_data_ids) {
+        $self->warning_message('Failed to find all of the assigned instrument data for model: '.$model->id.'. Now trying imported data');
+        my @imported_instrument_data = Genome::InstrumentData::Imported->get( \@instrument_data_ids );
+        
+        push @solexa_instrument_data, @imported_instrument_data;
+        unless (scalar @solexa_instrument_data == scalar @instrument_data_ids) {
+            $self->error_message('Still did not find all of the assigned instrument data for model: '.$model->id.' even after trying imported data.  Bailing out!');
+            die $self->error_message;
+        }
     }
+    
     return @solexa_instrument_data;
 }
 
