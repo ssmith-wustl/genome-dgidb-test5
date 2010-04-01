@@ -130,7 +130,7 @@ sub sample_type {
 
 sub models {
     my $self = shift;
-    my @m = Genome::Model->get(subject_name => $self->name);
+    my @m = Genome::Model->get(subject_id => $self->id, subject_class_name => $self->class);
     return @m;
 }
 
