@@ -34,9 +34,9 @@ class Genome::ProcessingProfile::GenePrediction {
             doc => "one of BACTERIAL, ARCHAEA, VIRAL, CORE, or EUKARYOTIC",
             valid_values => ["BACTERIAL","ARCHAEA","VIRAL","CORE","EUKARYOTIC" ],
         },
-        locus_id => { # input?
-            doc => "locus tag without DFT/FNL/MSI...",
-        },
+#        locus_id => { # input?
+#            doc => "locus tag without DFT/FNL/MSI...",
+#        },
         draft => {
             doc => "a three letter identifier appended to locus id, ie DFT/FNL/MSI",
             is_optional => 1,
@@ -44,12 +44,12 @@ class Genome::ProcessingProfile::GenePrediction {
         path => {
             doc => "base path where data/files land; usually /gscmnt/278/analysis/HGMI",
         },
-        brev_orgname => { # input
-            doc => "abbreviated organism name; aka org_dirname",
-        },
-        organism_name => { # input
-            doc => "organism name",
-        },
+#        brev_orgname => { # input
+#            doc => "abbreviated organism name; aka org_dirname",
+#        },
+#        organism_name => { # input
+#            doc => "organism name",
+#        },
         assembly_version => {
             doc => "assembly version",
         },
@@ -73,10 +73,10 @@ class Genome::ProcessingProfile::GenePrediction {
             doc => "gram stain for bacterial genomes",
             is_optional => 1,
         },
-        ncbi_taxonomy_id => { # input
-            doc => "ncbi taxonomy id.",
-            is_optional => 1,
-        },
+#        ncbi_taxonomy_id => { # input
+#            doc => "ncbi taxonomy id.",
+#            is_optional => 1,
+#        },
         predict_script_location => {
             doc => "location of prediction script",
             is_optional => 1,
@@ -93,12 +93,12 @@ class Genome::ProcessingProfile::GenePrediction {
             doc => "skip acedb parsing in bap project finish",
             is_optional => 1,
         },
-        seq_file_name => { # input
-            doc => "usually contigs.bases",
-        }, 
-        seq_file_dir => { # input
-            doc => "directory where contigs.bases/seq_file_name is found",
-        },
+#        seq_file_name => { # input
+#            doc => "usually contigs.bases",
+#        }, 
+#        seq_file_dir => { # input
+#            doc => "directory where contigs.bases/seq_file_name is found",
+#        },
 
     ],
     doc => "gene prediction processing profile..."
