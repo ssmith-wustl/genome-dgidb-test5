@@ -102,8 +102,8 @@ sub default_filenames{
         merged_indel_output                 => 'merged.germline.indel',          ## Generated from merge-variants of samtools and varScan ##
 
         ## Limit to ROI, Combined samtools+VarScan Output files ##
-        merged_snp_output_ROI                 => 'merged.germline.snp.ROI',          ## Generated from merge-variants of samtools and varScan ##
-        merged_indel_output_ROI                 => 'merged.germline.indel.ROI',          ## Generated from merge-variants of samtools and varScan ##
+        merged_snp_output_ROI               => 'merged.germline.snp.ROI',          ## Generated from merge-variants of samtools and varScan ##
+        merged_indel_output_ROI             => 'merged.germline.indel.ROI',          ## Generated from merge-variants of samtools and varScan ##
 
         ## Annotation output files ##
         annotate_output_snp                 => 'annotation.germline.snp.transcript',
@@ -125,8 +125,6 @@ sub default_filenames{
 
         ## Other pipeline output files ##
         circos_graph                        => 'circos_graph.out',
-        variant_report_output               => 'cancer_report.html', 
-        file_summary_report_output          => 'file_summary_report.html',
     );
 
     return %default_filenames;
@@ -214,7 +212,7 @@ __DATA__
 
   <link fromOperation="Merge Indels" fromProperty="output_file" toOperation="Limit Indels ROI" toProperty="input_file" />
   <link fromOperation="input connector" fromProperty="regions_file" toOperation="Limit Indels ROI" toProperty="regions_file" />
-  <link fromOperation="input connector" fromProperty="merged_snp_output_ROI" toOperation="Limit Indels ROI" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="merged_indel_output_ROI" toOperation="Limit Indels ROI" toProperty="output_file" />
 
 <!-- RUN TRANSCRIPT ANNOTATION FOR INDELS -->
 
@@ -250,22 +248,9 @@ __DATA__
   <link fromOperation="input connector" fromProperty="circos_graph" toOperation="Plot Circos" toProperty="output_file" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="Plot Circos" toProperty="tier1_hclabel_file" />
 
-<!-- WAIT FOR CIRCOS -->
-
-  <link fromOperation="input connector" fromProperty="build_id" toOperation="Wait for Circos" toProperty="build_id" />
-  <link fromOperation="Plot Circos" fromProperty="result" toOperation="Wait for Circos" toProperty="plot circos result" />
-
-<!-- GENERATE REPORT -->
- 
-  <link fromOperation="Wait for Circos" fromProperty="build_id" toOperation="Generate Reports" toProperty="build_id" />
-  <link fromOperation="input connector" fromProperty="variant_report_output" toOperation="Generate Reports" toProperty="variant_report_output" />
-  <link fromOperation="input connector" fromProperty="file_summary_report_output" toOperation="Generate Reports" toProperty="file_summary_report_output" />
-  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Generate Reports" toProperty="skip_if_output_present" />
-
 <!-- OUTPUT CONNECTORS -->
 
   <link fromOperation="Plot Circos" fromProperty="output_file" toOperation="output connector" toProperty="circos_big_graph" />
-  <link fromOperation="Generate Reports" fromProperty="variant_report_output" toOperation="output connector" toProperty="final_variant_report_output" />
 
   <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_snp" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_snp" />
@@ -333,17 +318,6 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Somatic::PlotCircos" typeClass="Workflow::OperationType::Command" />
   </operation>
 
-  <operation name="Wait for Circos">
-      <operationtype typeClass="Workflow::OperationType::Block">
-        <property>build_id</property>
-        <property>plot circos result</property>
-    </operationtype>
-  </operation>
-
-  <operation name="Generate Reports">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::RunReports" typeClass="Workflow::OperationType::Command" />
-  </operation>  
-
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>build_id</inputproperty>
     <inputproperty>filtered_indelpe_snps</inputproperty>
@@ -405,9 +379,6 @@ __DATA__
    
     <inputproperty isOptional="Y">circos_graph</inputproperty>
 
-    <inputproperty isOptional="Y">variant_report_output</inputproperty>
-    <inputproperty isOptional="Y">file_summary_report_output</inputproperty>
-
     <outputproperty>tier_1_snp</outputproperty>
     <outputproperty>tier_2_snp</outputproperty>
     <outputproperty>tier_3_snp</outputproperty>
@@ -418,7 +389,6 @@ __DATA__
     <outputproperty>tier_3_indel_output</outputproperty>
     <outputproperty>tier_4_indel_output</outputproperty>
     <outputproperty>circos_big_graph</outputproperty>
-    <outputproperty>final_variant_report_output</outputproperty>
   </operationtype>
 
 </workflow>
