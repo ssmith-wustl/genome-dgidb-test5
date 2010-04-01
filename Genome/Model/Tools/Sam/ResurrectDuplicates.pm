@@ -113,6 +113,7 @@ sub execute
         $master_hash{$line[0]} = 1;
     }
     $dedup1->close;
+print "attempting $raw_dedup_sam2\n";
     my $dedup2 = new IO::File $raw_dedup_sam2;
     while (<$dedup2>) 
     {
@@ -138,7 +139,9 @@ sub execute
         my @line = split(/\s+/,$line);
         if (defined $master_hash{$line[0]}) 
         {
-	    print $end1_output "$line\n";
+	    my $header = $line[0] . "/1";
+       	    print $end1_output ">$header\n";
+	    print $end1_output "$line[9]\n";
 	    $master_hash{$line[0]}++; #This is to make sure every read in the master hash is found
         }
     }
@@ -154,7 +157,9 @@ sub execute
         my @line = split(/\s+/,$line);
         if (defined $master_hash{$line[0]}) 
         {
-	    print $end2_output "$line\n";
+	    my $header = $line[0] . "/2";
+	    print $end2_output ">$header\n";
+	    print $end2_output "$line[9]\n";
 	    $master_hash{$line[0]}++; #This is to make sure every read in the master hash is found
         }
     }

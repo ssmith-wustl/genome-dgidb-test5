@@ -12,18 +12,14 @@
     <link fromOperation="trim primer 2"             fromProperty="result"                       toOperation="wait for primer trim"      toProperty="trim_2_complete" />
     <link fromOperation="trim primer 2"             fromProperty="trim_count"                   toOperation="penult"                    toProperty="trim_count2" />
 
-    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file1"            toOperation="synch fastq"               toProperty="fastq1" />
-    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file2"            toOperation="synch fastq"               toProperty="fastq2" />
+    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file1"            toOperation="wait for mismatch removal" toProperty="fastq_file1" />
+    <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file2"            toOperation="wait for mismatch removal" toProperty="fastq_file2" />
 
-    <link fromOperation="input connector"           fromProperty="prefix1"                      toOperation="synch fastq"               toProperty="prefix1" />
-    <link fromOperation="input connector"           fromProperty="prefix2"                      toOperation="synch fastq"               toProperty="prefix2" />
     <link fromOperation="input connector"           fromProperty="prefix1"                      toOperation="wait for mismatch removal" toProperty="prefix1" />
     <link fromOperation="input connector"           fromProperty="prefix2"                      toOperation="wait for mismatch removal" toProperty="prefix2" />
 
-    <link fromOperation="input connector"           fromProperty="fasta_file1"                  toOperation="wait for synch"            toProperty="fasta_file1" />
-    <link fromOperation="input connector"           fromProperty="fasta_file2"                  toOperation="wait for synch"            toProperty="fasta_file2" />
-
-    <link fromOperation="input connector"           fromProperty="output"                       toOperation="synch fastq"               toProperty="output" />
+    <link fromOperation="input connector"           fromProperty="fasta_file1"                  toOperation="wait for resurrect"        toProperty="fasta_file1" />
+    <link fromOperation="input connector"           fromProperty="fasta_file2"                  toOperation="wait for resurrect"        toProperty="fasta_file2" />
 
     <link fromOperation="input connector"           fromProperty="align_options_1"              toOperation="run screen 1"              toProperty="align_options" />
     <link fromOperation="input connector"           fromProperty="aligner_output_file_1"        toOperation="run screen 1"              toProperty="aligner_output_file" />
@@ -48,13 +44,12 @@
 
     <link fromOperation="input connector"           fromProperty="resurrected_file_1"           toOperation="resurrect duplicates"      toProperty="output_file1" />
     <link fromOperation="input connector"           fromProperty="resurrected_file_2"           toOperation="resurrect duplicates"      toProperty="output_file2" />
-    <link fromOperation="input connector"           fromProperty="resurrected_file_1"           toOperation="wait for resurrect"        toProperty="sam1" />
-    <link fromOperation="input connector"           fromProperty="resurrected_file_2"           toOperation="wait for resurrect"        toProperty="sam2" />
+    <link fromOperation="input connector"           fromProperty="resurrected_file_1"           toOperation="wait for resurrect"        toProperty="fasta_file1" />
+    <link fromOperation="input connector"           fromProperty="resurrected_file_2"           toOperation="wait for resurrect"        toProperty="fasta_file2" />
     
-    <link fromOperation="input connector"           fromProperty="dusted_file1"                 toOperation="wait for synch"            toProperty="dusted_file1" />
-    <link fromOperation="input connector"           fromProperty="dusted_file2"                 toOperation="wait for synch"            toProperty="dusted_file2" />
-
+    <link fromOperation="input connector"           fromProperty="dusted_file1"                 toOperation="wait for resurrect"        toProperty="dusted_file1" />
     <link fromOperation="input connector"           fromProperty="dusted_file1"                 toOperation="wait for dust"             toProperty="fasta_file1" />
+    <link fromOperation="input connector"           fromProperty="dusted_file2"                 toOperation="wait for resurrect"        toProperty="dusted_file2" />
     <link fromOperation="input connector"           fromProperty="dusted_file2"                 toOperation="wait for dust"             toProperty="fasta_file2" />
 
     <link fromOperation="input connector"           fromProperty="mismatch_removed_file1"       toOperation="wait for dust"             toProperty="mismatch_removed_file1" />
@@ -64,8 +59,6 @@
 
     <link fromOperation="input connector"           fromProperty="mismatch_removed_file1"       toOperation="wait for mismatch removal" toProperty="mismatch_removed_file1" />
     <link fromOperation="input connector"           fromProperty="mismatch_removed_file2"       toOperation="wait for mismatch removal" toProperty="mismatch_removed_file2" />
-    <link fromOperation="input connector"           fromProperty="fastq_1"                      toOperation="wait for mismatch removal" toProperty="fastq_file1" />
-    <link fromOperation="input connector"           fromProperty="fastq_2"                      toOperation="wait for mismatch removal" toProperty="fastq_file2" />
     <link fromOperation="input connector"           fromProperty="synch_fasta_output"           toOperation="wait for mismatch removal" toProperty="output" />
 
     <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file1"            toOperation="run screen 1"              toProperty="files_to_align_path" />
@@ -93,19 +86,10 @@
 
     <link fromOperation="resurrect duplicates"      fromProperty="result"                       toOperation="wait for resurrect"        toProperty="resurrect_complete" />
 
-    <link fromOperation="wait for resurrect"        fromProperty="sam1"                         toOperation="synch fastq"               toProperty="name1" />
-    <link fromOperation="wait for resurrect"        fromProperty="sam2"                         toOperation="synch fastq"               toProperty="name2" />
-    
-    <link fromOperation="synch fastq"               fromProperty="output_both1"                 toOperation="wait for synch"            toProperty="fastq1" />
-    <link fromOperation="synch fastq"               fromProperty="output_both2"                 toOperation="wait for synch"            toProperty="fastq2" />
-    <link fromOperation="synch fastq"               fromProperty="result"                       toOperation="wait for synch"            toProperty="synch_complete" />
-
-    <link fromOperation="wait for synch"            fromProperty="fasta_file1"                  toOperation="dust 1"                    toProperty="fasta_file" />
-    <link fromOperation="wait for synch"            fromProperty="fastq1"                       toOperation="dust 1"                    toProperty="fastq_file" />
-    <link fromOperation="wait for synch"            fromProperty="dusted_file1"                 toOperation="dust 1"                    toProperty="dusted_file" />
-    <link fromOperation="wait for synch"            fromProperty="fasta_file2"                  toOperation="dust 2"                    toProperty="fasta_file" />
-    <link fromOperation="wait for synch"            fromProperty="fastq2"                       toOperation="dust 2"                    toProperty="fastq_file" />
-    <link fromOperation="wait for synch"            fromProperty="dusted_file2"                 toOperation="dust 2"                    toProperty="dusted_file" />
+    <link fromOperation="wait for resurrect"        fromProperty="fasta_file1"                  toOperation="dust 1"                    toProperty="fasta_file" />
+    <link fromOperation="wait for resurrect"        fromProperty="dusted_file1"                 toOperation="dust 1"                    toProperty="dusted_file" />
+    <link fromOperation="wait for resurrect"        fromProperty="fasta_file2"                  toOperation="dust 2"                    toProperty="fasta_file" />
+    <link fromOperation="wait for resurrect"        fromProperty="dusted_file2"                 toOperation="dust 2"                    toProperty="dusted_file" />
 
     <link fromOperation="dust 1"                    fromProperty="result"                       toOperation="wait for dust"             toProperty="dust_1_complete" />
     <link fromOperation="dust 2"                    fromProperty="result"                       toOperation="wait for dust"             toProperty="dust_2_complete" />
@@ -207,32 +191,18 @@
     <operation name="wait for resurrect">
         <operationtype typeClass="Workflow::OperationType::Block">
             <property>resurrect_complete</property>
-            <property>sam1</property>
-            <property>sam2</property>
-        </operationtype>
-    </operation>
-
-    <operation name="synch fastq">
-        <operationtype commandClass="Genome::Model::Tools::Synch" typeClass="Workflow::OperationType::Command" />
-    </operation>
-
-    <operation name="wait for synch">
-        <operationtype typeClass="Workflow::OperationType::Block">
             <property>fasta_file1</property>
-            <property>fastq1</property>
-            <property>dusted_file1</property>
             <property>fasta_file2</property>
-            <property>fastq2</property>
+            <property>dusted_file1</property>
             <property>dusted_file2</property>
-            <property>synch_complete</property>
         </operationtype>
     </operation>
 
-    <operation name="dust 1" workflowFile="dust.xml">
+    <operation name="dust 1" workflowFile="dust_fasta.xml">
         <operationtype commandClass="Genome::Model::Tools::Fasta::Dust" typeClass="Workflow::OperationType::Command" />
     </operation>
 
-    <operation name="dust 2" workflowFile="dust.xml">
+    <operation name="dust 2" workflowFile="dust_fasta.xml">
         <operationtype commandClass="Genome::Model::Tools::Fasta::Dust" typeClass="Workflow::OperationType::Command" />
     </operation>
 

@@ -97,11 +97,11 @@ sub execute {
     my $ref_seq_file = "/gscmnt/sata156/research/mmitreva/databases/human_build36/Homo_sapiens.NCBI36.45.dna.aml.plus5.8s15s28s.fna";
     my $align_options = '-t 4 -n ' . $self->edit_distance;
     my ($paired_end_file1,  $paired_end_file2) = ($dir . "/$base1.PAIRED_REMOVED1.sam", $dir . "/$base2.PAIRED_REMOVED2.sam");
-    my ($resurrected_file1, $resurrected_file2) = ($dir . "/$base1.RESURRECTED1.sam", $dir . "/$base2.RESURRECTED2.sam");
+    my ($resurrected_file1, $resurrected_file2) = ($dir . "/$base1.RESURRECTED1.fna", $dir . "/$base2.RESURRECTED2.fna");
     my $synch_output  = ".SYNCH";
     my $synch_fasta_output  = ".SYNCH_FASTA";
     my ($prefix1, $prefix2) = ($dir . "/$base1", $dir . "/$base2");
-    my ($fasta_file1, $fasta_file2) = ("$dir/$base1.SYNCH.fasta", "$dir/$base2.SYNCH.fasta");
+    my ($fasta_file1, $fasta_file2) = ("$dir/$base1.RESURRECTED.fasta", "$dir/$base2.RESURRECTED.fasta");
     my ($dusted_file1, $dusted_file2) = ("$dir/$base1.SYNCH.DUSTED.fasta", "$dir/$base2.SYNCH.DUSTED.fasta");
     my $save_screened_reads = $self->save_screened_reads;
     my $mismatch_cutoff = $self->mismatch_cutoff;
