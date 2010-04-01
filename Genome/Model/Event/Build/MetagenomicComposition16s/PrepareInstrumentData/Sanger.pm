@@ -25,7 +25,7 @@ sub execute {
 
     my $attempted = 0;
     for my $amplicon_set ( @amplicon_sets ) {
-        while ( my $amplicon = $amplicon_set->() ) {
+        while ( my $amplicon = $amplicon_set->next_amplicon ) {
             $attempted++;
             $self->_prepare_instrument_data_for_phred_phrap($amplicon)
                 or return;
@@ -41,8 +41,10 @@ sub _raw_reads_fasta_and_qual_writer {
     my $self = shift;
 
     unless ( $self->{_raw_reads_fasta_and_qual_writer} ) {
-        $self->{_raw_reads_fasta_and_qual_writer} = $self->build->raw_reads_fasta_and_qual_writer
-            or return;
+        $self->{_raw_reads_fasta_and_qual_writer} = Genome::Utility::BioPerl::FastaAndQualWriter->create(
+            fasta_file => $self->build->raw_reads_fasta_file,
+            qual_file => $self->build->raw_reads_qual_file,
+        ) or return;
     }
 
     return $self->{_raw_reads_fasta_and_qual_writer};

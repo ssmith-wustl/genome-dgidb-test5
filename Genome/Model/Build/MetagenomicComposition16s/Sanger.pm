@@ -16,6 +16,9 @@ class Genome::Model::Build::MetagenomicComposition16s::Sanger {
     ],
 };
 
+#< Prepare Inst Data >#
+# TODO move here
+
 #< INTR DATA >#
 sub link_instrument_data {
     my ($self, $instrument_data) = @_;
@@ -86,14 +89,6 @@ sub raw_reads_qual_file {
     return $_[0]->raw_reads_fasta_file.'.qual';
 }
 
-sub raw_reads_fasta_and_qual_reader {
-    return $_[0]->_fasta_and_qual_reader($_[0]->raw_reads_fasta_file, $_[0]->raw_reads_qual_file);
-}
-    
-sub raw_reads_fasta_and_qual_writer {
-    return $_[0]->_fasta_and_qual_writer($_[0]->raw_reads_fasta_file, $_[0]->raw_reads_qual_file);
-}
-
 # processsed reads
 sub processed_reads_fasta_file {
     return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.reads.processed.fasta';
@@ -101,14 +96,6 @@ sub processed_reads_fasta_file {
 
 sub processed_reads_qual_file {
     return $_[0]->processed_reads_fasta_file.'.qual';
-}
-
-sub processed_reads_fasta_and_qual_reader {
-    return $_[0]->_fasta_and_qual_reader($_[0]->processed_reads_fasta_file, $_[0]->processed_reads_qual_file);
-}
-    
-sub processed_reads_fasta_and_qual_writer {
-    return $_[0]->_fasta_and_qual_writer($_[0]->processed_reads_fasta_file, $_[0]->processed_reads_qual_file);
 }
 
 #< Amplicons >#
@@ -195,6 +182,7 @@ sub _amplicon_iterator_for_name {
             my $amplicon = Genome::Model::Build::MetagenomicComposition16s::Amplicon->create(
                 name => $amplicon_name,
                 reads => \@read_names,
+                classification_file => $self->classification_file_for_amplicon_name($amplicon_name),
             );
 
             # Filter
@@ -205,12 +193,27 @@ sub _amplicon_iterator_for_name {
             # Processed bioseq
             $self->load_bioseq_for_amplicon($amplicon); # dies on error
 
-            # Classification
-            $self->load_classification_for_amplicon($amplicon); # dies on error
-
             return $amplicon;
         }
     };
+}
+
+sub _get_amplicon_name_for_gsc_read_name {
+    my ($self, $read_name) = @_;
+
+    $read_name =~ /^(.+)\.[bg]\d+$/
+        or return;
+
+    return $1;
+}
+
+sub _get_amplicon_name_for_broad_read_name {
+    my ($self, $read_name) = @_;
+
+    $read_name =~ s#\.T\d+$##;
+    $read_name =~ s#[FR](\w\d\d?)$#\_$1#; # or next;
+
+    return $read_name;
 }
 
 sub load_bioseq_for_amplicon {
@@ -267,7 +270,6 @@ sub _remove_old_read_iterations_from_amplicon {
 
     my %reads;
     for my $read_name ( @{$amplicon->reads} ) {
-        #my $read = $self->_get_gsc_sequence_read($read_name);
         my $read = GSC::Sequence::Read->get(trace_name => $read_name);
         confess "Can't get GSC read ($read_name). This is required to remove old read iterations from an amplicon." unless $read;
 
@@ -301,7 +303,7 @@ sub _amplicon_is_not_contaminated {
     my ($self, $amplicon) = @_;
 
     for my $read_name ( @{$amplicon->reads} ) {
-        my $read = $self->_get_gsc_sequence_read($read_name);
+        my $read = GSC::Sequence::Read->get(trace_name => $read_name);
         confess "Can't get GSC read ($read_name). This is required to check if an amplicon is contaminated." unless $read;
         my $screen_reads_stat = $read->get_screen_read_stat_hmp;
         if ( $screen_reads_stat and $screen_reads_stat->is_contaminated ) {
@@ -360,87 +362,6 @@ sub reads_qual_file_for_amplicon {
 sub ace_file_for_amplicon { 
     my ($self, $amplicon) = @_;
     return $self->edit_dir.'/'.$amplicon->name.'.fasta.ace';
-}
-
-#< Amplicon Reads >#
-sub get_method_for_get_amplicon_name_for_read_name {
-    my $self = shift;
-
-    return sprintf(
-        '_get_amplicon_name_for_%s_read_name', 
-        $self->sequencing_center,
-    );
-}
-
-sub _get_amplicon_name_for_gsc_read_name {
-    my ($self, $read_name) = @_;
-
-    $read_name =~ /^(.+)\.[bg]\d+$/
-        or return;
-
-    return $1;
-}
-
-sub _get_amplicon_name_for_broad_read_name { # FIXME not tested!
-    my ($self, $read_name) = @_;
-
-    $read_name =~ s#\.T\d+$##
-        or return;
-    $read_name =~ s#[FR](\w\d\d?)$#\_$1#
-        or return;
-
-    return $read_name;
-}
-
-sub get_all_amplicons_reads_for_read_name {
-    my ($self, $read_name) = @_;
-
-    unless ( $read_name ) {
-        $self->error_message("No read name given to get all reads for amplicon.");
-        return;
-    }
-
-    my $amp_method = $self->get_method_for_get_amplicon_name_for_read_name;
-    my $amplicon_name = $self->$amp_method($read_name);
-    unless ( $amplicon_name ) {
-        $self->error_message("Can't get amplicon name for read name ($read_name)");
-        return;
-    }
-
-    my $reads_method = $self->get_method_for_get_all_amplicons_reads_for_read_name;
-    my @read_names = $self->$reads_method($amplicon_name);
-    unless ( @read_names ) {
-        $self->error_message("No reads found for amplicon name ($amplicon_name)");
-        return;
-    }
-
-
-    return @read_names;
-}
-
-sub get_method_for_get_all_amplicons_reads_for_read_name {
-    sprintf(
-        '_get_all_reads_for_%s_amplicon',
-        $_[0]->sequencing_center,
-    );
-}
-
-sub _get_all_reads_for_gsc_amplicon {
-    my ($self, $amplicon_name) = @_;
-    
-    my $chromat_dir = $self->chromat_dir;
-    my @read_names;
-    for my $read_name ( glob("$chromat_dir/$amplicon_name.*") ) {
-        $read_name =~ s#$chromat_dir/##;
-        $read_name =~ s#\.gz##;
-        push @read_names, $read_name;
-    }
-
-    return @read_names;
-}
-
-sub _get_all_reads_for_broad_amplicon {
-    die "Not implemented\n";
 }
 
 #< Clean Up >#

@@ -17,12 +17,13 @@ sub execute {
     my @amplicon_sets = $self->build->amplicon_sets
         or return;
 
-    my $writer = $self->build->processed_fasta_and_qual_writer
-        or return;
-    
     my %assembler_params = $self->processing_profile->assembler_params_as_hash;
     for my $amplicon_set ( @amplicon_sets ) {
-        while ( my $amplicon = $amplicon_set->() ) {
+
+        my $writer = $self->build->fasta_and_qual_writer_for_type_and_set_name('processed', $amplicon_set->name)
+            or return;
+    
+        while ( my $amplicon = $amplicon_set->next_amplicon ) {
             my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
             next unless -s $fasta_file; # ok
 

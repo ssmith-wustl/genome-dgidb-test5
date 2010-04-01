@@ -34,7 +34,7 @@ sub _add_to_report_xml {
         or return;
 
     for my $amplicon_set ( @amplicon_sets ) {
-        while ( my $amplicon = $amplicon_set->() ) {
+        while ( my $amplicon = $amplicon_set->next_amplicon ) {
             $self->_add_amplicon($amplicon);
         }
     }
@@ -59,7 +59,6 @@ sub _create_metrics {
         lengths => [],
         reads => [],
         reads_assembled => [],
-        zeros => 0,
     };
 
     return 1;
@@ -74,11 +73,6 @@ sub _add_amplicon {
 
     # Length
     push @{$self->{_metrix}->{lengths}}, $bioseq->length;
-
-    # Zeros
-    if ( $bioseq->qual_text =~ /^0 / or $bioseq->qual_text =~ / 0$/ ) {
-        $self->{_metrix}->{zeros}++;
-    }
 
     # Reads
     push @{ $self->{_metrix}->{reads} }, $amplicon->read_count;
@@ -121,7 +115,6 @@ sub get_summary_stats {
         'amplicons-processed-success' => $build->amplicons_processed_success,
         'amplicons-classified' => $build->amplicons_classified,
         'amplicons-classified-success' => $build->amplicons_classified,
-        'amplicons-with-zeros' => $self->{_metrix}->{zeros},
         # Lengths
         'length-minimum' => $lengths[0],
         'length-maximum' => $lengths[$#lengths],

@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 
 use Data::Dumper 'Dumper';
-require Bio::SeqIO;
 
 class Genome::Model::Build::MetagenomicComposition16s::454 {
     is => 'Genome::Model::Build::MetagenomicComposition16s',
@@ -18,11 +17,39 @@ sub _sub_dirs {
 }
 
 #< Amplicons >#
+sub amplicon_set_names_and_primers {
+    return (
+        I => #V1_V3 =>
+        [qw/
+            ATTACCGCGGCTGCTGG 
+        /],
+        II => #V3_V5 =>
+        [qw/ 
+            CCGTCAATTCATTTAAGT
+            CCGTCAATTCATTTGAGT
+            CCGTCAATTCCTTTAAGT
+            CCGTCAATTCCTTTGAGT
+        /],
+        III => #V6_V9 => 
+        [qw/
+            TACGGCTACCTTGTTACGACTT
+            TACGGCTACCTTGTTATGACTT
+            TACGGTTACCTTGTTACGACTT
+            TACGGTTACCTTGTTATGACTT
+        /],
+    );
+}
+
+sub amplicon_set_names {
+    my %set_names_and_primers = $_[0]->amplicon_set_names_and_primers;
+    return sort keys %set_names_and_primers;
+}
+
 sub _amplicon_iterator_for_name {
     my ($self, $set_name) = @_;
 
-    my $reader = $self->processed_fasta_and_qual_reader
-        or return;
+    my $reader = $self->fasta_and_qual_reader_for_type_and_set_name('processed', $set_name);
+    return unless $reader; # returns undef if no file exists OK or dies w/ error 
 
     my $amplicon_iterator = sub{
         my $bioseq = $reader->next_seq;
@@ -32,9 +59,12 @@ sub _amplicon_iterator_for_name {
             name => $bioseq->id,
             reads => [ $bioseq->id ],
             bioseq => $bioseq,
+            classification_file => $self->classification_file_for_amplicon_name( $bioseq->id ),
         );
 
-        $self->load_classification_for_amplicon($amplicon); # dies on error
+        unless ( $amplicon ) {
+            die $self->error_message("Can't create amplicon for ".$bioseq->id);
+        }
         
         return $amplicon;
     };

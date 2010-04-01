@@ -12,8 +12,8 @@ class Genome::Model::Event::Build::MetagenomicComposition16s::Orient {
 sub execute {
     my $self = shift;
 
-    unless ( $self->build->orient_amplicons_by_classification ) {
-        $self->error_message("Failed to orient amplicons by classification for ".$self->build->description);
+    unless ( $self->build->orient_amplicons ) {
+        $self->error_message("Failed to orient amplicons for ".$self->build->description);
         return;
     }
 

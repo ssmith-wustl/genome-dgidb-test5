@@ -8,6 +8,7 @@ use Genome;
 require Bio::SeqIO;
 require Bio::Seq;
 require Bio::Seq::Quality;
+use Carp 'confess';
 use Data::Dumper 'Dumper';
 
 class Genome::Utility::BioPerl::FastaAndQualWriter {
@@ -70,16 +71,16 @@ sub _create_writers {
 sub write_seq {
     my ($self, $bioseq) = @_;
 
-    Genome::Utility::BioPerl->validate_fasta_and_qual_bioseq($bioseq, $bioseq);
+    Genome::Utility::BioPerl->validate_bioseq($bioseq);
     
     for my $writer ( $self->_fasta_io, $self->_qual_io ) {
+        next unless $writer;
         eval { $writer->write_seq($bioseq); };
         if ( $@ ) {
-            die sprintf(
-                "%s => Can't write bioseq (%s) for %s: %s",
+            confess sprintf(
+                "%s => Can't write %s\:\n$@",
                 $self->class,
                 $bioseq->id,
-                $self->description,
                 $@,
             );
         }

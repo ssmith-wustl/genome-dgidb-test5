@@ -42,7 +42,7 @@ sub _add_to_report_xml {
         or return;
 
     for my $amplicon_set ( @amplicon_sets ) {
-        while ( my $amplicon = $amplicon_set->() ) {
+        while ( my $amplicon = $amplicon_set->next_amplicon ) {
             my $classification = $amplicon->classification
                 or next;
             $population_composition->add_classification($classification);

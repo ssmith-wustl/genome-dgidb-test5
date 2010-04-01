@@ -8,6 +8,7 @@ use Genome;
 require Bio::SeqIO;
 require Bio::Seq;
 require Bio::Seq::Quality;
+use Carp 'confess';
 use Data::Dumper 'Dumper';
 
 class Genome::Utility::BioPerl {
@@ -24,14 +25,11 @@ sub _create_bioseq_io {
         ); 
     };
     unless ( $bioseq_io ) {
-        $self->error_message(
-            sprintf(
-                "Failed to create %s Bio::SeqIO => %s",
-                $format,
-                $@,
-            )
+        confess sprintf(
+            "Failed to create %s Bio::SeqIO => %s",
+            $format,
+            $@,
         );
-        return;
     }
 
     return $bioseq_io;
@@ -40,8 +38,10 @@ sub _create_bioseq_io {
 sub create_bioseq_writer {
     my ($self, $file, $format) = @_;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($file)
-        or return;
+    my $fh = Genome::Utility::FileSystem->open_file_for_writing($file);
+    unless ( $fh ) {
+        confess "Can't open file for writing to create bioseq writer.  See above error.";
+    }
 
     $format = 'fasta' unless defined $format;
 
@@ -51,8 +51,10 @@ sub create_bioseq_writer {
 sub create_bioseq_reader {
     my ($self, $file, $format) = @_;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file)
-        or return;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    unless ( $fh ) {
+        confess "Can't open file for reading to create bioseq reader.  See above error.";
+    }
 
     $format = 'fasta' unless defined $format;
 
@@ -62,8 +64,7 @@ sub create_bioseq_reader {
 sub create_bioseq_from_fasta_and_qual {
     my ($self, %params) = @_;
 
-    $self->validate_fasta_and_qual_bioseq($params{fasta}, $params{qual})
-        or return;
+    $self->validate_fasta_and_qual_bioseq($params{fasta}, $params{qual}); # confesses on error
     
     my $bioseq;
     eval {
@@ -87,28 +88,51 @@ sub create_bioseq_from_fasta_and_qual {
     return $bioseq;
 }
 
-sub validate_fasta_and_qual_bioseq {
-    my ($self, $fasta, $qual) = @_;
+sub validate_bioseq {
+    my ($self, $bioseq) = @_;
 
-    unless ( $fasta ) {
-        die $self->class." => No fasta given to validate.";
+    unless ( $bioseq ) {
+        confess $self->class." => No bioseq given to validate.";
     }
 
-    unless ( $qual ) {
-        die $self->class." => No qual given to validate.";
+    unless ( ref($bioseq) ) {
+        confess $self->class." => Bioseq given to validate is not an object: $bioseq";
     }
 
-    unless ( $fasta->seq =~ /^[ATGCNX]+$/i ) {
-        die sprintf(
-            "%s => Illegal characters found in fasta (%s) seq:\n%s",
+    unless ( $bioseq->seq =~ /^[ATGCNX]+$/i ) {
+        confess sprintf(
+            "%s => Bioseq (%s) has illegal characters in sequence:\n%s",
             $self->class,
-            $fasta->id,
-            $fasta->seq,
+            $bioseq->id,
+            $bioseq->seq,
         );
     }
 
+    return 1 unless $bioseq->can('qual');
+    
+    unless ( length($bioseq->seq) == scalar(@{$bioseq->qual}) ) {
+        confess sprintf(
+            '%s => Bioseq (%s) has unequal length for fasta and quality',
+            $self->class,
+            $bioseq->id,
+        );
+    }
+
+    return 1;
+}
+
+sub validate_fasta_and_qual_bioseq {
+    my ($self, $fasta, $qual) = @_;
+
+    unless ( $qual ) {
+        confess $self->class." => No qual bioseq given to validate.";
+    }
+    
+    Genome::Utility::BioPerl->validate_bioseq($fasta);
+
+    # validate length of seq v. qual
     unless ( length($fasta->seq) == scalar(@{$qual->qual}) ) {
-        die sprintf(
+        confess sprintf(
             '%s => Unequal length for fasta (%s) and quality (%s)',
             $self->class,
             $fasta->id,

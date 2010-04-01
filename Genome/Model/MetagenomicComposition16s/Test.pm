@@ -108,12 +108,9 @@ sub _create_mock_454_instrument_data {
         full_path => $full_path,
     ) or confess "Unable to create mock 454 id #";
     $inst_data->mock('fasta_file', sub {  #FIXME
-            return $full_path.'/Titanium17_2009_05_05_set0.fna';
+            return $full_path.'/zymo4_pool7_DNA_extract.fasta';
         }
     );
-    #$id->mock('log_file', sub {return 'mock_test_log';});
-    #my $barcode_file = $dir .'454_Sequencing_log_Titanium_test.txt';
-    #$id->mock('barcode_file', sub {return $barcode_file;});
     $inst_data->mock('dump_to_file_system', sub{ return 1; });
 
     return $inst_data;
@@ -250,7 +247,7 @@ sub _amplicons {
         $self->{_amplicons} = [];
         my ($amplicon_set) = $self->_build->amplicon_sets
             or die "No amplicons found";
-        while ( my $amplicon = $amplicon_set->() ) {
+        while ( my $amplicon = $amplicon_set->next_amplicon ) {
             push @{$self->{_amplicons}}, $amplicon;
         }
     }
@@ -355,12 +352,43 @@ use warnings;
 
 use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
 
+use Test::More;
+
 sub test_class {
     return 'Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::454';
 }
 
 sub _sequencing_platform {
     return '454';
+}
+
+sub before_execute {
+    my $self = shift;
+
+    my $build = $self->_build;
+    for my $set_name ( $build->amplicon_set_names, 'none' ) {
+        my $fasta_file = $build->processed_fasta_file_for_set_name($set_name);
+        ok($fasta_file, "fasta file for $set_name");
+        ok(!-e $fasta_file, "fasta file for $set_name does not exist");
+    }
+    #print $build->data_directory."\n";<STDIN>;
+    
+    return 1;
+}
+
+sub after_execute {
+    my $self = shift;
+
+    my $build = $self->_build;
+    for my $set_name ( $build->amplicon_set_names, 'none' ) {
+        my $fasta_file = $build->processed_fasta_file_for_set_name($set_name);
+        ok($fasta_file, "fasta file for $set_name");
+        ok(-s $fasta_file, "fasta file for $set_name was created");
+    }
+    is($build->amplicons_attempted, 20, 'attemplted 20 amplicons');
+    #print $build->data_directory."\n";<STDIN>;
+    
+    return 1;
 }
 
 ########
@@ -474,13 +502,13 @@ sub after_execute {
     my $self = shift;
 
     my $build = $self->_build;
-    my $amplicons = $self->_amplicons
-        or return;
-    for my $amplicon ( @$amplicons ){
+    my ($amplicon_set) = $build->amplicon_sets;
+    ok($amplicon_set, 'amplicon set');
+    ok(-s $amplicon_set->processed_fasta_file, 'Created the processed fasta file');
+    ok(-s $amplicon_set->processed_qual_file, 'Created the processed qual file');
+    while ( my $amplicon = $amplicon_set->next_amplicon ) {
         ok(-s $build->ace_file_for_amplicon($amplicon), 'ace file');
     }
-    ok(-s $build->processed_fasta_file, 'Created the processed fasta file');
-    ok(-s $build->processed_qual_file, 'Created the processed qual file');
     #print $build->data_directory."\n";<STDIN>;
     
     return 1;
@@ -530,13 +558,13 @@ sub after_execute {
 
     my $build = $self->_build;
     my $amplicons  = $self->_amplicons;
-    my $cnt = grep { -s $build->classification_file_for_amplicon($_) } @$amplicons;
+    my $cnt = grep { -s $build->classification_file_for_amplicon_name($_->name) } @$amplicons;
     is($cnt, 4, 'Verified - Created classification for 4 of 5 amplicons');
 
     is($build->amplicons_processed, 4, 'amplicons processed recorded');
     is($build->amplicons_classified, 4, 'amplicons classified recorded');
     
-    ok(-s $build->classification_file, 'build classification file');
+    ok(-s $build->classification_file_for_set_name(''), 'build classification file');
     
     #print $build->data_directory."\n";<STDIN>;
     
@@ -592,12 +620,23 @@ sub test_class {
 
 sub _dirs_to_link { return (qw/ chromat_dir edit_dir classification_dir /); }
 
+sub before_execute {
+    my $self = shift;
+
+    my $build = $self->_build;
+    ok(!-e $build->oriented_fasta_file_for_set_name(''), 'oriented fasta does not exist');
+    ok(!-e $build->oriented_qual_file_for_set_name(''), 'oriented qual does not exist');
+    #print $build->data_directory."\n";<STDIN>;
+
+    return 1;
+}
+
 sub after_execute {
     my $self = shift;
 
     my $build = $self->_build;
-    ok(-s $build->oriented_fasta_file, 'oriented fasta file was created');
-    ok(-s $build->oriented_qual_file, 'oriented qual file was created');
+    ok(-s $build->oriented_fasta_file_for_set_name(''), 'oriented fasta file was created');
+    ok(-s $build->oriented_qual_file_for_set_name(''), 'oriented qual file was created');
     #print $build->data_directory."\n";<STDIN>;
 
     return 1;
@@ -669,7 +708,7 @@ sub _use_mock_dir { # use a real build to generate and compare report
 sub after_execute {
     my ($self, $summary, $params, $report) = @_;
 
-    #$report->save($self->_build->reports_directory, 1);
+    $report->save($self->_build->reports_directory, 1);
     my $existing_report = Genome::Report->create_report_from_directory(
         $self->_build->reports_directory.'/'.$report->name_to_subdirectory($report->name)
     );

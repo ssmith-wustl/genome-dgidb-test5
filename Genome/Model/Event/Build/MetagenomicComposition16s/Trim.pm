@@ -30,7 +30,10 @@ sub _processed_reads_fasta_and_qual_writer {
     my $self = shift;
 
     unless ( $self->{_processed_reads_fasta_and_qual_writer} ) {
-        $self->{_processed_reads_fasta_and_qual_writer} = $self->build->processed_reads_fasta_and_qual_writer
+        $self->{_processed_reads_fasta_and_qual_writer} = Genome::Utility::BioPerl::FastaAndQualWriter->create(
+            fasta_file => $self->build->processed_reads_fasta_file,
+            qual_file => $self->build->processed_reads_qual_file,
+        )
             or return;
     }
 

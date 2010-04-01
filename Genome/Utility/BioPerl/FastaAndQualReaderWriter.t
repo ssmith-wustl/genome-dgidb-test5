@@ -33,7 +33,9 @@ my $writer_class = 'Genome::Utility::BioPerl::FastaAndQualWriter';
 use_ok($writer_class) or die;
 
 # Fail - No fasta file
-ok(!$writer_class->create(), 'Create  w/o fasta file.');
+eval{ $writer_class->create; };
+ok($@, 'Create  w/o fasta file.');
+diag($@);
 
 # Good
 my $writer = $writer_class->create(
@@ -50,7 +52,9 @@ my $reader_class = 'Genome::Utility::BioPerl::FastaAndQualReader';
 use_ok($reader_class) or die;
 
 # Fail - No fasta file
-ok(!$reader_class->create(), 'Create  w/o fasta file.');
+eval{ $reader_class->create };
+ok($@, 'Create  w/o fasta file.');
+diag($@);
 
 my $reader = $reader_class->create(
     fasta_file => $fasta_file,

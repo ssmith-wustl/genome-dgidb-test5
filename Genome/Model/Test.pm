@@ -382,6 +382,9 @@ sub add_mock_build_to_model {
             /),
     ) or confess "Can't add methods to mock build";
 
+    # Inst Data
+    $build->mock('instrument_data', sub{ return $_[0]->model->instrument_data; });
+    
     # Event
     $self->add_mock_event_to_build($build)
         or confess "Can't add mock event to mock build";
@@ -591,20 +594,23 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
         sub_dirs _sub_dirs fasta_dir classification_dir 
         file_base_name
         clean_up
-        _fasta_and_qual_reader _fasta_and_qual_writer
+
+        _fasta_file_for_type_and_set_name
+        fasta_and_qual_reader_for_type_and_set_name
+        _qual_file_for_type_and_set_name
+        fasta_and_qual_writer_for_type_and_set_name
 
         processed_fasta_file processed_qual_file
-        processed_fasta_and_qual_reader processed_fasta_and_qual_writer
+        processed_fasta_file_for_set_name processed_qual_file_for_set_name
 
-        oriented_fasta_file oriented_qual_file 
-        oriented_fasta_and_qual_reader oriented_fasta_and_qual_writer
-        orient_amplicons_by_classification
-
-        classification_file
-        classification_file_for_amplicon
-        load_classification_for_amplicon
-        save_classification_for_amplicon
+        classify_amplicons
+        classification_file_for_set_name
+        classification_file_for_amplicon_name
         
+        orient_amplicons
+        oriented_fasta_file oriented_qual_file 
+        oriented_fasta_file_for_set_name oriented_qual_file_for_set_name
+
         amplicons_attempted 
         amplicons_processed amplicons_processed_success 
         amplicons_classified amplicons_classified_success
@@ -621,9 +627,7 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
             consed_directory 
 
             raw_reads_fasta_file raw_reads_qual_file
-            raw_reads_fasta_and_qual_reader raw_reads_fasta_and_qual_writer
             processed_reads_fasta_file processed_reads_qual_file
-            processed_reads_fasta_and_qual_reader processed_reads_fasta_and_qual_writer
             
             scfs_file_for_amplicon create_scfs_file_for_amplicon
             phds_file_for_amplicon ace_file_for_amplicon
@@ -633,14 +637,11 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
 
             _get_amplicon_name_for_gsc_read_name
             _get_amplicon_name_for_broad_read_name
-            _get_all_reads_for_gsc_amplicon
-            _get_all_reads_for_broad_amplicon
-
             /);
     }
     # 454
     else {
-        # TODO 
+        push @methods, (qw/ amplicon_set_names_and_primers /);
     }
 
     # mock 'em
@@ -660,7 +661,6 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
     $build->amplicons_classified_success( $build->amplicons_classified / $build->amplicons_processed );
 
     return 1;
-
 }
 
 # de novo assembly

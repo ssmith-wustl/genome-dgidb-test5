@@ -21,7 +21,7 @@ sub execute {
 
     my %trimmer_params = $self->processing_profile->trimmer_params_as_hash; # TODO separate out params - screen only has project name
     for my $amplicon_set ( @amplicon_sets ) {
-        while ( my $amplicon = $amplicon_set->() ) {
+        while ( my $amplicon = $amplicon_set->next_amplicon ) {
             my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
             next unless -s $fasta_file; # ok
 
