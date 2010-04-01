@@ -232,12 +232,11 @@ sub execute {
               # No existing model that wants this instrument data? Create one!
               unless (@models > 0) {
                   
-                  my $model_name = $subject_name .'.'. $pp->name;
-                  
+                  my $model_name     = $subject_name .'.'. $pp->name;
+                  my $capture_target = $genome_instrument_data->target_region_set_name();
+                   
                   # Label Solexa capture stuff as such
                   if ($instrument_data_type =~ /solexa/i) {
-                      
-                      my $capture_target = $genome_instrument_data->target_region_set_name();
                       
                       if (defined($capture_target)) {
                           $model_name = join('.', $model_name, 'capture', $capture_target); 
@@ -249,7 +248,7 @@ sub execute {
                       name                  => $model_name,
                       subject_name          => $subject_name,
                       subject_type          => $subject_type,
-                      processing_profile_id    => $pp->id(),
+                      processing_profile_id => $pp->id(),
                       auto_assign_inst_data => 1,
                   );
 
@@ -258,7 +257,23 @@ sub execute {
                       push @process_errors, $self->error_message;
                       next PP;
                   }
-		  
+
+                  if (defined($capture_target)) {
+
+                      my $n = $model->add_input(
+                          name             => "target_region_set_name",
+                          value_class_name => "UR::Value", value_id => $capture_target
+                      );
+                  
+                      unless (defined($n)) {
+                          $self->error_message('Failed to set capture target input for model ' . $model->id . ' and instrument data '. $instrument_data_id);
+                          push @process_errors, $self->error_message;
+                          $model->delete();
+                          next PP;
+                      }
+                      
+                  }
+                  
 		  # does this processing profile replace another one? check to see if we need to pull in 
 		  if ($pp->supersedes) {
 		    my $obsolete_pp = Genome::ProcessingProfile->get(name=>$pp->supersedes);
@@ -308,8 +323,7 @@ sub execute {
               }
               
               MODEL_IDA: foreach my $model (@models) {
-		  
-                  
+		   
                   my @existing_instrument_data = Genome::Model::InstrumentDataAssignment->get(
                       instrument_data_id => $instrument_data_id,
                       model_id => $model->id,
