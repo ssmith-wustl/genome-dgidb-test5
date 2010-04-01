@@ -31,6 +31,7 @@ class Genome::Model::Tools::Capture::ProcessModels {
 		output_dir	=> { is => 'Text', doc => "Output directory for comparison files" , is_optional => 0},
 		model_list	=> { is => 'Text', doc => "Text file normal-tumor sample pairs to include, one pair per line" , is_optional => 0},
 		report_only	=> { is => 'Text', doc => "Flag to skip actual execution" , is_optional => 1},
+		regions_file	=> { is => 'Text', doc => "Optional limit to regions file" , is_optional => 1},
 		skip_if_output_present => { is => 'Text', doc => "Do not attempt to run pipeline if output present" , is_optional => 1},
 	],
 };
@@ -67,7 +68,7 @@ sub execute {                               # replace with real execution logic.
 	my $model_list = $self->model_list;
 	my $output_dir = "./";
 	$output_dir = $self->output_dir if($self->output_dir);
-
+	my $regions_file = $self->regions_file if($self->regions_file);
 	my $input = new FileHandle ($model_list);
 	my $lineCounter = 0;
 	
@@ -113,7 +114,7 @@ sub execute {                               # replace with real execution logic.
 			else
 			{
 				#print "$sample_name\t$model_id\t$build_id\n";
-				my $cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir";
+				my $cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file";
 				print "$cmd\n";
 				my $job_name = "$sample_output_dir/$sample_name";
 				my $output_name = "$sample_output_dir/$sample_name.output";
@@ -132,6 +133,7 @@ sub execute {                               # replace with real execution logic.
 	#			$cmd_obj->execute;
 			}
 		}
+	exit;
 
 	}
 
