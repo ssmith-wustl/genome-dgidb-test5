@@ -23,7 +23,7 @@ sub help_synopsis{
     return <<"EOS"
 
 example:
-gmt germline capture-bams --build-id=101625141 --filtered-indelpe-snps='/gscmnt/sata835/info/medseq/model_data/2852971605/build101625141/sam_snp_related_metrics/filtered.indelpe.snps' --indels-all-sequences-filtered='/gscmnt/sata835/info/medseq/model_data/2852971605/build101625141/sam_snp_related_metrics/indels_all_sequences.filtered' --germline-bam-file='/gscmnt/sata835/info/medseq/model_data/2852971605/build101625141/alignments/101625141_merged_rmdup.bam' --data-directory=/gscmnt/sata424/info/medseq/Freimer-Boehnke/Germline_Pipeline_Test/
+gmt germline capture-bams --build-id=101625141 --filtered-indelpe-snps='/gscmnt/sata835/info/medseq/model_data/2852971605/build101625141/sam_snp_related_metrics/filtered.indelpe.snps' --indels-all-sequences-filtered='/gscmnt/sata835/info/medseq/model_data/2852971605/build101625141/sam_snp_related_metrics/indels_all_sequences.filtered' --germline-bam-file='/gscmnt/sata835/info/medseq/model_data/2852971605/build101625141/alignments/101625141_merged_rmdup.bam' --data-directory=/gscmnt/sata424/info/medseq/Freimer-Boehnke/Germline_Pipeline_Test/ --regions-file=/gscmnt/sata424/info/medseq/Freimer-Boehnke/targets/capture-targets.set1.tsv
 
 EOS
 }
@@ -75,7 +75,7 @@ sub pre_execute {
         $self->only_tier_1(0);
     }
     unless (defined $self->only_tier_1_indel) {
-        $self->only_tier_1_indel(0);
+        $self->only_tier_1_indel(1);
     }
 
     return 1;
@@ -100,6 +100,10 @@ sub default_filenames{
         ## Combined samtools+VarScan Output files ##
         merged_snp_output                   => 'merged.germline.snp',            ## Generated from merge-variants of samtools and varScan
         merged_indel_output                 => 'merged.germline.indel',          ## Generated from merge-variants of samtools and varScan ##
+
+        ## Limit to ROI, Combined samtools+VarScan Output files ##
+        merged_snp_output_ROI                 => 'merged.germline.snp.ROI',          ## Generated from merge-variants of samtools and varScan ##
+        merged_indel_output_ROI                 => 'merged.germline.indel.ROI',          ## Generated from merge-variants of samtools and varScan ##
 
         ## Annotation output files ##
         annotate_output_snp                 => 'annotation.germline.snp.transcript',
@@ -161,10 +165,16 @@ __DATA__
   <link fromOperation="Format Samtools Snvs" fromProperty="output_file" toOperation="Merge SNPs" toProperty="glf_file" />
   <link fromOperation="input connector" fromProperty="merged_snp_output" toOperation="Merge SNPs" toProperty="output_file" />
 
+<!-- Limit SNPs ROI --> 
+
+  <link fromOperation="Merge SNPs" fromProperty="output_file" toOperation="Limit SNPs ROI" toProperty="input_file" />
+  <link fromOperation="input connector" fromProperty="regions_file" toOperation="Limit SNPs ROI" toProperty="regions_file" />
+  <link fromOperation="input connector" fromProperty="merged_snp_output_ROI" toOperation="Limit SNPs ROI" toProperty="output_file" />
+
 <!-- RUN TRANSCRIPT ANNOTATION FOR SNPS --> 
   
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate Transcript Variants Snp" toProperty="skip_if_output_present" />
-  <link fromOperation="Merge SNPs" fromProperty="output_file" toOperation="Annotate Transcript Variants Snp" toProperty="variant_file" />
+  <link fromOperation="Limit SNPs ROI" fromProperty="output_file" toOperation="Annotate Transcript Variants Snp" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_snp" toOperation="Annotate Transcript Variants Snp" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Snp" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Snp" toProperty="annotation_filter" />
@@ -172,7 +182,7 @@ __DATA__
 <!-- RUN UCSC ANNOTATION FOR SNPS --> 
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC" toProperty="skip_if_output_present" />
-  <link fromOperation="Merge SNPs" fromProperty="output_file" toOperation="Annotate UCSC" toProperty="input_file" />
+  <link fromOperation="Limit SNPs ROI" fromProperty="output_file" toOperation="Annotate UCSC" toProperty="input_file" />
   <link fromOperation="input connector" fromProperty="ucsc_output_snp" toOperation="Annotate UCSC" toProperty="output_file" /> 
   <link fromOperation="input connector" fromProperty="ucsc_unannotated_output" toOperation="Annotate UCSC" toProperty="unannotated_file" /> 
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Annotate UCSC" toProperty="skip" /> 
@@ -200,10 +210,16 @@ __DATA__
   <link fromOperation="Format Samtools Indels" fromProperty="output_file" toOperation="Merge Indels" toProperty="glf_file" />
   <link fromOperation="input connector" fromProperty="merged_indel_output" toOperation="Merge Indels" toProperty="output_file" />
 
+<!-- Limit Indels ROI -->
+
+  <link fromOperation="Merge Indels" fromProperty="output_file" toOperation="Limit Indels ROI" toProperty="input_file" />
+  <link fromOperation="input connector" fromProperty="regions_file" toOperation="Limit Indels ROI" toProperty="regions_file" />
+  <link fromOperation="input connector" fromProperty="merged_snp_output_ROI" toOperation="Limit Indels ROI" toProperty="output_file" />
+
 <!-- RUN TRANSCRIPT ANNOTATION FOR INDELS -->
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate Transcript Variants Indel" toProperty="skip_if_output_present" />
-  <link fromOperation="Merge Indels" fromProperty="output_file" toOperation="Annotate Transcript Variants Indel" toProperty="variant_file" />
+  <link fromOperation="Limit Indels ROI" fromProperty="output_file" toOperation="Annotate Transcript Variants Indel" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_indel" toOperation="Annotate Transcript Variants Indel" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Indel" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Indel" toProperty="annotation_filter" />
@@ -211,7 +227,7 @@ __DATA__
 <!-- RUN UCSC ANNOTATION FOR INDELS --> 
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC Indel" toProperty="skip_if_output_present" />
-  <link fromOperation="Merge Indels" fromProperty="output_file" toOperation="Annotate UCSC Indel" toProperty="input_file" />
+  <link fromOperation="Limit Indels ROI" fromProperty="output_file" toOperation="Annotate UCSC Indel" toProperty="input_file" />
   <link fromOperation="input connector" fromProperty="ucsc_output_indel" toOperation="Annotate UCSC Indel" toProperty="output_file" /> 
   <link fromOperation="input connector" fromProperty="ucsc_unannotated_indel_output" toOperation="Annotate UCSC Indel" toProperty="unannotated_file" /> 
   <link fromOperation="input connector" fromProperty="only_tier_1_indel" toOperation="Annotate UCSC Indel" toProperty="skip" /> 
@@ -284,6 +300,13 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Capture::MergeAdaptedIndels" typeClass="Workflow::OperationType::Command" />
   </operation>  
 
+  <operation name="Limit SNPs ROI">
+    <operationtype commandClass="Genome::Model::Tools::Capture::LimitToRoi" typeClass="Workflow::OperationType::Command" />
+  </operation> 
+  <operation name="Limit Indels ROI">
+    <operationtype commandClass="Genome::Model::Tools::Capture::LimitToRoi" typeClass="Workflow::OperationType::Command" />
+  </operation> 
+
   <operation name="Annotate UCSC">
       <operationtype commandClass="Genome::Model::Tools::Somatic::UcscAnnotator" typeClass="Workflow::OperationType::Command" />
   </operation>
@@ -325,6 +348,7 @@ __DATA__
     <inputproperty>build_id</inputproperty>
     <inputproperty>filtered_indelpe_snps</inputproperty>
     <inputproperty>indels_all_sequences_filtered</inputproperty>
+    <inputproperty>regions_file</inputproperty>
 
     <inputproperty isOptional="Y">germline_bam_file</inputproperty>   
     <inputproperty isOptional="Y">reference_fasta</inputproperty>
@@ -365,8 +389,9 @@ __DATA__
     <inputproperty isOptional="Y">varscan_adaptor_indel</inputproperty>
 
     <inputproperty isOptional="Y">merged_snp_output</inputproperty>
-    <inputproperty isOptional="Y">merged_snp_output_novel</inputproperty>
     <inputproperty isOptional="Y">merged_indel_output</inputproperty>
+    <inputproperty isOptional="Y">merged_snp_output_ROI</inputproperty>
+    <inputproperty isOptional="Y">merged_indel_output_ROI</inputproperty>
 
     <inputproperty isOptional="Y">tier_1_snp_file</inputproperty>
     <inputproperty isOptional="Y">tier_2_snp_file</inputproperty>
