@@ -73,7 +73,7 @@ sub execute {
 
     my $input_seq = $seqin->next_seq();
 
-    my $masker = Bio::Tools::Run::RepeatMasker->new();
+    my $masker = Bio::Tools::Run::RepeatMasker->new(-lib => $self->repeat_library());
     
     my $masked_seq = $masker->run($input_seq);
    
