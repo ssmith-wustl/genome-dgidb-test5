@@ -41,8 +41,9 @@ my %properties = (
     },
     allocation => {
         is => 'Genome::Disk::Allocation',
-        id_by => 'allocator_id',
         is_optional => 1,
+        reverse_as => 'owner', where => [ allocation_path => {operator => 'like', value => '%imported%'} ], is_optional => 1, is_many => 1, 
+
     },
     species_name => {
         is => 'Text',
@@ -64,12 +65,11 @@ sub execute {
 }
 
 sub process_imported_files {
-    my $self = shift;
+    my ($self,$sample_name) = @_;
     unless (-s $self->original_data_path) {
         $self->error_message('Original data path of import file: '. $self->original_data_path .' is empty');
         return;
     }
-
     my %params = ();
     for my $property_name (keys %properties) {
         unless ($properties{$property_name}->{is_optional}) {
@@ -83,7 +83,7 @@ sub process_imported_files {
         $params{$property_name} = $self->$property_name if defined($self->$property_name);
     }
 
-    my $sample_name     = $self->sample_name;
+    $sample_name = $self->sample_name;
     my $genome_sample = Genome::Sample->get(name => $sample_name);
 
     if ($genome_sample) {
@@ -96,49 +96,8 @@ sub process_imported_files {
     }
 
     unless ($genome_sample) {
-        $self->status_message("Sample $sample_name is not found in database, now try to store it");
-        unless($self->species_name) {
-            $self->error_message("No sample was found by the name $sample_name. specify --species-name in your command to correctly create a sample.");
-            die $self->error_message;
-        }
-        my $species_name = $self->species_name;
-        my $taxon;
-        
-        $taxon = GSC::Organism::Taxon->get(species_name => $species_name);
-        unless ($taxon) {
-            $self->error_message("Failed to get GSC::Organism::Taxon for sample $sample_name and species $species_name");
-            die $self->error_message;
-        }
-        $self->status_message("Species_name: $species_name is stored in organism_taxon");
-        
-        #Need set full name so Genome::Sample can recognize:
-        #Organism_sample full name => Genome Sample name => Genome Model subject_name
-        
-        my $full_name;
-        if ($sample_name =~ /^TCGA\-/) {
-            $full_name = $sample_name;
-            $full_name =~ s/^TCGA/H_GP/;
-            chop $full_name unless $full_name =~ /R$/;
-        }
-        else {
-            $full_name = undef;
-            #maybe it should die here.
-        }
-
-        my %create_params = (
-            name             => $full_name,      # internal/LIMS DNA_NAME
-            extraction_label => $sample_name,    # external name (biospecimen or TCGA-*)
-            cell_type        => 'primary',
-            taxon_id         => $taxon->taxon_id,
-        );
-       
-        $genome_sample = Genome::Sample->create(%create_params);
-       
-        unless ($genome_sample){
-            $self->error_message('Failed to create the genome sample : '.Genome::Sample->error_message);
-            die $self->error_message;
-        }
-        $self->status_message("Succeed to create genome sample for $sample_name");
+        $self->error_message("Could not find sample by the name of: ".$sample_name.". To continue, add the sample and rerun.");
+        die $self->error_message;
     }
     
     my $sample_id = $genome_sample->id;
@@ -149,7 +108,8 @@ sub process_imported_files {
         $params{disk_allocations} = $self->allocation;
     }
 
-    my $import_instrument_data = Genome::InstrumentData::Imported->create(%params); #change Bamed to Microarray - create the Microarray subclass  
+    my $import_instrument_data = Genome::InstrumentData::Imported->create(%params); 
+
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
        return;
@@ -157,7 +117,7 @@ sub process_imported_files {
 
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data: $instrument_data_id is imported");
-
+    print "Intrument data:".$instrument_data_id." is imported.\n";
     my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage * 5;
 
     my $alloc_path = sprintf('microarray_data/imported/%s', $instrument_data_id);
@@ -165,26 +125,25 @@ sub process_imported_files {
     my %alloc_params = (
         disk_group_name     => 'info_alignments',
         allocation_path     => $alloc_path,
-        kilobytes_requested => $kb_usage,
+        kilobytes_requested => $kb_usage * 5,
         owner_class_name    => $import_instrument_data->class,
         owner_id            => $import_instrument_data->id,
     );
 
-    my $disk_alloc;
+    my $disk_alloc = $import_instrument_data->disk_allocations;
 
-    if($self->allocation) {
-        $disk_alloc = $self->allocation;
-    }else {
+    unless($disk_alloc) {
+        print "Allocating disk space\n";
+        $self->status_message("Allocating disk space");
         $disk_alloc = Genome::Disk::Allocation->allocate(%alloc_params); 
     }
-
     unless ($disk_alloc) {
         $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%alloc_params));
-        return;
+        die $self->error_message;
     }
     $self->status_message("Microarray allocation created for $instrument_data_id.");
 
-    my $target_path = $disk_alloc->absolute_path . "/";
+    my $target_path = $disk_alloc->absolute_path;# . "/";
     $self->status_message("Microarray allocation created at $target_path .");
     print "attempting to copy data to allocation\n";
     my $status = File::Copy::Recursive::dircopy($self->original_data_path,$target_path);
@@ -196,11 +155,14 @@ sub process_imported_files {
     my $ssize = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);             
     my $dsize = Genome::Utility::FileSystem->directory_size_recursive($target_path);             
     unless ($ssize==$dsize) {
-        $self->error_message("source and distination do not match( source $ssize bytes vs destination $dsize). Copy failed.");
-        return;
+        unless($import_instrument_data->id < 0) {
+            $self->error_message("source and distination do not match( source $ssize bytes vs destination $dsize). Copy failed.");
+            return;
+        }
     }
     
     $self->status_message("Finished copying data into the allocated disk");
+    print "Finished copying data into the allocated disk.\n";
 
     return 1;
 }
