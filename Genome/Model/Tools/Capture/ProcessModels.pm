@@ -71,9 +71,10 @@ sub execute {                               # replace with real execution logic.
 	my $regions_file = $self->regions_file if($self->regions_file);
 	my $input = new FileHandle ($model_list);
 	my $lineCounter = 0;
-	
+	my $i = 0;
 	while (<$input>)
 	{
+		$i++;
 		chomp;
 		my $line = $_;
 		$lineCounter++;
@@ -121,6 +122,7 @@ sub execute {                               # replace with real execution logic.
 				my $error_name = "$sample_output_dir/$sample_name.err";
 				system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$cmd\"");
 				sleep(1);
+
 				## Figure out a way to run this on bsub! ##
 	#			my $cmd_obj = Genome::Model::Tools::Germline::CaptureBams->create(
 	#				build_id => $build_id,
@@ -134,7 +136,6 @@ sub execute {                               # replace with real execution logic.
 			}
 		}
 	exit;
-
 	}
 
 	close($input);
