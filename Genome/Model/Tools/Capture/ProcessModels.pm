@@ -115,7 +115,10 @@ sub execute {                               # replace with real execution logic.
 				#print "$sample_name\t$model_id\t$build_id\n";
 				my $cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir";
 				print "$cmd\n";
-				system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 \"$cmd\"");
+				my $job_name = "$sample_output_dir/$sample_name";
+				my $output_name = "$sample_output_dir/$sample_name.output";
+				my $error_name = "$sample_output_dir/$sample_name.err";
+				system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$cmd\"");
 				sleep(1);
 				## Figure out a way to run this on bsub! ##
 	#			my $cmd_obj = Genome::Model::Tools::Germline::CaptureBams->create(
