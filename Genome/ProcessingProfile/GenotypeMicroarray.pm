@@ -37,5 +37,22 @@ sub _execute_build {
     return 1;
 }
 
+sub stages {
+    return (qw/
+            GenotypeMicroarray
+            /);
+}
+
+sub genotype_microarray_job_classes {
+    return (qw/
+            Genome::Model::Event::Build::GenotypeMicroarray::NoOp
+        /);
+}
+
+sub genotype_microarray_objects {
+    return 1;
+}
+
+
 1;
 
