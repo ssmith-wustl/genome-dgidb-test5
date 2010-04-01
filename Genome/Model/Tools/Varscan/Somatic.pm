@@ -32,7 +32,7 @@ class Genome::Model::Tools::Varscan::Somatic {
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
-		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 1.0e-02]" , is_optional => 1, is_input => 1},
+		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 6 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 1.0e-02]" , is_optional => 1, is_input => 1},
 	],	
 
 	has_param => [
@@ -95,7 +95,7 @@ sub execute {                               # replace with real execution logic.
 
 	my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
 	$reference = $self->reference if($self->reference);
-	my $varscan_params = "--min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01"; #--min-coverage 8 --verbose 1
+	my $varscan_params = "--min-coverage 6 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.05"; #--min-coverage 8 --verbose 1
 	$varscan_params = $self->varscan_params if($self->varscan_params);
 
 	## Check skip if output present ##
