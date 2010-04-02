@@ -231,12 +231,15 @@ sub execute {
               
               # No existing model that wants this instrument data? Create one!
               unless (@models > 0) {
-                  
+                 
                   my $model_name     = $subject_name .'.'. $pp->name;
-                  my $capture_target = $genome_instrument_data->target_region_set_name();
+                  
+                  my $capture_target;
                    
                   # Label Solexa capture stuff as such
                   if ($instrument_data_type =~ /solexa/i) {
+                      
+                      $capture_target = $genome_instrument_data->target_region_set_name();
                       
                       if (defined($capture_target)) {
                           $model_name = join('.', $model_name, 'capture', $capture_target); 
