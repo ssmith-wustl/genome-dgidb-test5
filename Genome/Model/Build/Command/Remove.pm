@@ -7,7 +7,16 @@ use Genome;
 
 class Genome::Model::Build::Command::Remove {
     is => 'Genome::Model::Build::Command::Base',
-    doc => 'delete a build and all of its data from the system'
+    doc => 'delete a build and all of its data from the system',
+    has_optional =>
+    [
+        keep_build_directory => 
+        {
+            is => 'Boolean',
+            default_value => 0,
+            doc => 'A boolean flag to allow the retention of the model directory after the model is purged from the database.(default_value=0)',
+        }    
+    ],
 };
 
 #< Command >#
@@ -23,14 +32,14 @@ sub help_detail {
 
 #< Execute >#
 sub execute {
-    my $self = shift;
+    my $self = shift;    
 
     # Get build
     my $build = $self->_resolve_build
         or return;
     
     # Delete - also abandons
-    unless ( $build->delete ) {
+    unless ( $build->delete(keep_build_directory => $self->keep_build_directory)) {
         $self->error_message('Failed to remove build ('.$build->id.')');
         return;
     }

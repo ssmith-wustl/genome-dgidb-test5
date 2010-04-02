@@ -1076,6 +1076,8 @@ sub add_from_build { # rename "add an underlying build" or something...
 
 sub delete {
     my $self = shift;
+    my %params = @_;
+    my $keep_build_directory = $params{keep_build_directory};
 
     # Abandon
     unless ( $self->_abandon_events ) {
@@ -1108,13 +1110,13 @@ sub delete {
         $idas->first_build_id($next_build_id);
     }
 
-    if ($self->data_directory && -e $self->data_directory) {
+    if ($self->data_directory && -e $self->data_directory && !$keep_build_directory) {
         unless (rmtree $self->data_directory) {
             $self->warning_message('Failed to rmtree build data directory '. $self->data_directory);
         }
     }
     my $disk_allocation = $self->disk_allocation;
-    if ($disk_allocation) {
+    if ($disk_allocation && !$keep_build_directory) {
         unless ($disk_allocation->deallocate) {
              $self->warning_message('Failed to deallocate disk space.');
         }

@@ -25,6 +25,16 @@ class Genome::Model::Command::Remove {
                             default_value => 0,
                             doc => 'A boolean flag to force model delete.(default_value=0)',
                         },
+         keep_model_directory => {
+                            is => 'Boolean',
+                            default_value => 0,
+                            doc => 'A boolean flag to allow the retention of the model directory after the model is purged from the database.(default_value=0)',
+         },
+         keep_build_directories => {
+                            is => 'Boolean',
+                            default_value => 0,
+                            doc => 'A boolean flag to allow the retention of the model directory after the model is purged from the database.(default_value=0)',
+         }
     ],
     doc => "delete a genome model, all of its builds, and logs",
 };
@@ -39,6 +49,9 @@ EOS
 
 sub execute {
     my $self = shift;
+    
+    my $keep_model_directory = $self->keep_model_directory;
+    my $keep_build_directories = $self->keep_build_directories;
 
     $DB::single = 1;
 
@@ -98,7 +111,7 @@ sub execute {
         $self->status_message('chdir to '. $cwd);
     }
     my $model_id = $model->id;
-    unless ($model->delete) {
+    unless ($model->delete(keep_model_directory => $keep_model_directory, keep_build_directories => $keep_build_directories)) {
         $self->error_message('Failed to delete model id '. $model->id);
         return;
     }

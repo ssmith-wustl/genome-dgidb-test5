@@ -144,7 +144,7 @@ sub execute {
         $model->add_input(name => 'phd_ball_name', value_class_name => 'UR::Value', value_id => $self->phd_ball_name);
         return;
     }
-    $model->add_from_model(from_model => $self->pooled_assemblyl, role => 'pooled_assembly');
+    $model->add_from_model(from_model => $self->pooled_assembly, role => 'pooled_assembly');
 
     return 1; # for now just execute body an return
     # get the model created by the super
@@ -163,7 +163,7 @@ sub execute {
     #$model->ref_seq_path($self->ref_seq_path);
 
     # Link to pooled assembly model
-    #$model->add_from_model(from_model => $self->pooled_assemblyl, role => 'normal');#todo figure out what the correct parameter for role is
+    #$model->add_from_model(from_model => $self->pooled_assembly, role => 'normal');#todo figure out what the correct parameter for role is
 
     return 1;
 }

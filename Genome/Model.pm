@@ -860,6 +860,10 @@ sub add_from_model{
 
 sub delete {
     my $self = shift;
+    my %params = @_;
+    my $keep_model_directory = $params{keep_model_directory};
+    my $keep_build_directories = $params{keep_build_directories};
+    my @build_directories;
 
     # This may not be the way things are working but here is the order of operations for removing db events
     # 1.) Remove all instrument data assignment entries for model
@@ -870,7 +874,18 @@ sub delete {
     
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
-        unless ($object->delete) {
+        my $status;
+        if($object->isa('Genome::Model::Build'))
+        {
+            push @build_directories,$object->data_directory;
+            $status = $object->delete(keep_build_directory => $keep_build_directories);
+        }
+        else
+        {
+             $status = $object->delete;
+        }
+        
+        unless ($status) {
             $self->error_message('Failed to remove object '. $object->class .' '. $object->id);
             return;
         }
@@ -882,7 +897,13 @@ sub delete {
             return;
         }
     }
-    if (-e $self->data_directory) {
+    #make sure the model directory doesn't contain any builds if we are saving them
+    if ($keep_build_directories && !$keep_model_directory)
+    {
+        my $model_directory = $self->data_directory;
+        $keep_model_directory = grep { /$model_directory/ } @build_directories;    
+    }
+    if (-e $self->data_directory && !$keep_model_directory) {
         unless (rmtree $self->data_directory) {
             $self->warning_message('Failed to rmtree model data directory '. $self->data_directory);
         }
