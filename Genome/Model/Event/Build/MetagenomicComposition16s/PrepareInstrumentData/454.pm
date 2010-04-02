@@ -40,15 +40,15 @@ sub execute {
             REGION: for my $region ( keys %primers ) {
                 for my $primer ( @{$primers{$region}} ) {
                     if ( $seq =~ s/^$primer// ) {
+                        # check length again
                         $fasta->seq($seq); # set new seq w/o primer
                         $set_name = $region;
                         last REGION; # go on to write 
                     }
                 }
             }
-            # and here 
             next unless $fasta->length >= $min_length;
-            #print $fasta->id." $set_name ".substr($seq, 0, 17)."\n";
+            $fasta->desc(undef); # clear description
             my $writer = $self->_get_writer_for_set_name($set_name);
             $writer->write_seq($fasta);
         }

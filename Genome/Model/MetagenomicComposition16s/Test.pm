@@ -708,7 +708,7 @@ sub _use_mock_dir { # use a real build to generate and compare report
 sub after_execute {
     my ($self, $summary, $params, $report) = @_;
 
-    $report->save($self->_build->reports_directory, 1);
+    #$report->save($self->_build->reports_directory, 1);
     my $existing_report = Genome::Report->create_report_from_directory(
         $self->_build->reports_directory.'/'.$report->name_to_subdirectory($report->name)
     );
