@@ -120,7 +120,7 @@ sub execute {                               # replace with real execution logic.
 				my $job_name = "$sample_output_dir/$sample_name";
 				my $output_name = "$sample_output_dir/$sample_name.output";
 				my $error_name = "$sample_output_dir/$sample_name.err";
-				system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$cmd\"");
+				system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$cmd\"");
 				sleep(1);
 
 				## Figure out a way to run this on bsub! ##
@@ -135,7 +135,10 @@ sub execute {                               # replace with real execution logic.
 	#			$cmd_obj->execute;
 			}
 		}
-	exit;
+		my $count = $i%15;
+		if ($count == 1) {
+			sleep(1200);
+		}
 	}
 
 	close($input);
