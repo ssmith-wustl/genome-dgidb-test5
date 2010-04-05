@@ -75,7 +75,7 @@ sub pre_execute {
         $self->only_tier_1(0);
     }
     unless (defined $self->only_tier_1_indel) {
-        $self->only_tier_1_indel(1);
+        $self->only_tier_1_indel(0);
     }
 
     return 1;
@@ -114,17 +114,15 @@ sub default_filenames{
         annotate_output_indel               => 'annotation.germline.indel.transcript',
 
         ## Tiered SNP and indel files (all confidence) ##
-        tier_1_snp_file                     => 'merged.germline.snp.tier1.out',
-        tier_2_snp_file                     => 'merged.germline.snp.tier2.out',
-        tier_3_snp_file                     => 'merged.germline.snp.tier3.out',
-        tier_4_snp_file                     => 'merged.germline.snp.tier4.out',
-        tier_1_indel_file                   => 'merged.germline.indel.tier1.out',
-        tier_2_indel_file                   => 'merged.germline.indel.tier2.out',
-        tier_3_indel_file                   => 'merged.germline.indel.tier3.out',
-        tier_4_indel_file                   => 'merged.germline.indel.tier4.out',
+        tier_1_snp_file                     => 'merged.germline.snp.ROI.tier1.out',
+        tier_2_snp_file                     => 'merged.germline.snp.ROI.tier2.out',
+        tier_3_snp_file                     => 'merged.germline.snp.ROI.tier3.out',
+        tier_4_snp_file                     => 'merged.germline.snp.ROI.tier4.out',
+        tier_1_indel_file                   => 'merged.germline.indel.ROI.tier1.out',
+        tier_2_indel_file                   => 'merged.germline.indel.ROI.tier2.out',
+        tier_3_indel_file                   => 'merged.germline.indel.ROI.tier3.out',
+        tier_4_indel_file                   => 'merged.germline.indel.ROI.tier4.out',
 
-        ## Other pipeline output files ##
-        circos_graph                        => 'circos_graph.out',
     );
 
     return %default_filenames;
@@ -242,15 +240,7 @@ __DATA__
   <link fromOperation="Merge Indels" fromProperty="output_file" toOperation="Tier Variants Indel" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Tier Variants Indel" toProperty="transcript_annotation_file" />
 
-<!-- PLOT CIRCOS -->
-
-  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Plot Circos" toProperty="skip_if_output_present" />
-  <link fromOperation="input connector" fromProperty="circos_graph" toOperation="Plot Circos" toProperty="output_file" />
-  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="Plot Circos" toProperty="tier1_hclabel_file" />
-
 <!-- OUTPUT CONNECTORS -->
-
-  <link fromOperation="Plot Circos" fromProperty="output_file" toOperation="output connector" toProperty="circos_big_graph" />
 
   <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_snp" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_snp" />
@@ -314,10 +304,6 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
 
-  <operation name="Plot Circos">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::PlotCircos" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>build_id</inputproperty>
     <inputproperty>filtered_indelpe_snps</inputproperty>
@@ -377,8 +363,6 @@ __DATA__
     <inputproperty isOptional="Y">tier_3_indel_file</inputproperty>
     <inputproperty isOptional="Y">tier_4_indel_file</inputproperty>
    
-    <inputproperty isOptional="Y">circos_graph</inputproperty>
-
     <outputproperty>tier_1_snp</outputproperty>
     <outputproperty>tier_2_snp</outputproperty>
     <outputproperty>tier_3_snp</outputproperty>
@@ -388,7 +372,6 @@ __DATA__
     <outputproperty>tier_2_indel_output</outputproperty>
     <outputproperty>tier_3_indel_output</outputproperty>
     <outputproperty>tier_4_indel_output</outputproperty>
-    <outputproperty>circos_big_graph</outputproperty>
   </operationtype>
 
 </workflow>
