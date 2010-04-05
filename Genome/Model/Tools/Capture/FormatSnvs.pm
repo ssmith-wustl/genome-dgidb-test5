@@ -82,7 +82,7 @@ sub execute {                               # replace with real execution logic.
 		if(!(lc($lineContents[0]) =~ "chrom" || lc($lineContents[0]) =~ "ref_name"))
 		{
 			my $chrom = $lineContents[0];
-			$chrom =~ s/[^0-9XYMT]//g;
+			$chrom =~ s/[^0-9XYMNT\_]//g;
 			my $chr_start = $lineContents[1];
 			my $chr_stop = my $allele1  = my $allele2 = "";
 
