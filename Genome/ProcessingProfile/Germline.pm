@@ -11,13 +11,13 @@ class Genome::ProcessingProfile::Germline {
         server_dispatch => {
             is_constant => 1,
             is_class_wide => 1,
-            value => 'inline',
+            value => 'long',
             doc => 'lsf queue to submit the launcher or \'inline\''
         },
         job_dispatch => {
             is_constant => 1,
             is_class_wide => 1,
-            value => 'inline',
+            value => 'apipe',
             doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
         }
     ],
@@ -73,6 +73,10 @@ sub _execute_build {
 	    return;
 	}
 	$cmd_obj->execute;
+    }
+    else {
+        $self->error_message("Bam or SNP or Indel file undefined");
+	return;
     }
     return 1;
 }
