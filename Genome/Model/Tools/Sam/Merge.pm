@@ -254,7 +254,7 @@ MESSAGE
                 undef $w;
                 my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', $ENV{USER});
 
-                my @to = qw/eclark ssmith boberkfel jeldred abrummet/;
+                my @to = qw/eclark ssmith boberkfe jeldred abrummet/;
                 my $to = join(', ', map { "$_\@genome.wustl.edu" } @to);
                 my $subject = 'Slow bam merge happening right now';
                 my $data = sprintf($message,
