@@ -562,15 +562,21 @@ sub shellcmd {
     $self->status_message("RUN: $cmd");
     my $exit_code = system($cmd);
     #my $exit_code = $self->system_inhibit_std_out_err($cmd);
-    $exit_code /= 256;
-    if ($exit_code) {
+    if ( $exit_code == -1 ) {
+        die "ERROR RUNNING COMMAND. Failed to execute: $cmd";
+    } elsif ( $exit_code & 127 ) {
+        my $signal = $exit_code & 127;
+        my $withcore = ( $exit_code & 128 ) ? 'with' : 'without';
+
+        die "COMMAND KILLED. Signal $signal, $withcore coredump: $cmd";
+    } else {
+        $exit_code = $exit_code >> 8;
         if ($allow_failed_exit_code) {
             $DB::single = $DB::stopper;
-            warn "TOLERATING Exit code $exit_code, msg $! from: $cmd";
-        }
-        else {
+            warn "TOLERATING Exit code $exit_code from: $cmd";
+        } else {
             $DB::single = $DB::stopper;
-            die "ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd";
+            die "ERROR RUNNING COMMAND.  Exit code $exit_code from: $cmd";
         }
     }
 
