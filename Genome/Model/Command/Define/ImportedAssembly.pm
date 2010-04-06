@@ -137,8 +137,8 @@ sub _define_from_sff_files {
 
     if (@model>0) { #EXISTING MODEL(S)
         $self->status_message("\nModel(s) with subject name $subject_name already exists. ".
-            "\tMODEL ID: ".$model[0]->id."\n\tSUBJECT NAME: ".$model[0]->subject_name."\n\tMODEL NAME: ".$model[0]->name."\n\n".
-            "It is not necessary to create new model for $subject_name, please add new data to this model using genome model build start ".$model[0]->name."\n");
+            "\n\tMODEL ID: ".$model[0]->id."\n\tSUBJECT NAME: ".$model[0]->subject_name."\n\tMODEL NAME: ".$model[0]->name."\n\n".
+            "It is not necessary to create new model for $subject_name, please add new data to this model using the following command:\ngenome model build start ".$model[0]->name." --data-directory=/path/to/your/assembly\n");
     }
     else { #CREATE A NEW MODEL
         $self->status_message("\nDefining model with subject name: $subject_name and subject type: $subject_type");
