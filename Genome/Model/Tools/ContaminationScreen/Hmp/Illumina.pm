@@ -138,6 +138,12 @@ sub execute {
                               'mismatch_cutoff'         => $mismatch_cutoff,
                           );
 
+    my $summary =   "Step\t\t\tEnd #1\t\t\t\t\tEnd #2\n"    .
+                    "Primer Trimming\t\t\t\t\t"             . $output->{trim_count1}                . "\t\t\t" . $output->{trim_count2}                 . "\n" . 
+                    "Paired End Removal\t\t\t\t\t"          . $output->{paired_end_removed_count1}  . "\t\t\t" . $output->{paired_end_removed_count2}   . "\n" .
+                    "Redundancy Removal\t\t\t\t\t"          . $output->{deduplicated_count1}        . "\t\t\t" . $output->{deduplicated_count2}         . "\n" .
+                    "N Removal\t\t\t\t\t"                   . $output->{mismatch_removed_count1}    . "\t\t\t" . $output->{mismatch_removed_count2};
+
 print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
     my $mail_dest = $ENV{USER}.'@genome.wustl.edu';
     my $sender = Mail::Sender->new({
@@ -147,8 +153,9 @@ print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
     });
     $sender->MailMsg({
         to => $mail_dest,
-        subject => "Illumina Bwa Test",
-        msg     => "Illumina Bwa Test run with\n\n" .
+        subject => "Illumina Bwa Report",
+        msg     => "Results of Illumina Bwa\n\n" .
+                              "$summary\n\n" . 
                               "input 1:\t$fastq1\n" .
                               "input 2:\t$fastq2\n" .
                               "primer_trim_file 1:\t$primer_trim_file1\n" .
@@ -173,7 +180,7 @@ print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
                               "output:\t$synch_output\n" .
                               "mismatch_cutoff:\t$mismatch_cutoff\n" . 
                               "mismatch_removed_file1:\t$mismatch_removed_file1" .
-                              "mismatch_removed_file2:\t$mismatch_removed_file2",
+                              "mismatch_removed_file2:\t$mismatch_removed_file2",  
     });
 
     return 1;

@@ -119,6 +119,14 @@
 
     <link fromOperation="synch fastq with fasta"    fromProperty="result"                       toOperation="penult"                    toProperty="completed" />
 
+    <link fromOperation="penult"                    fromProperty="trim_count1"                  toOperation="output connector"          toProperty="trim_count1" />
+    <link fromOperation="penult"                    fromProperty="trim_count2"                  toOperation="output connector"          toProperty="trim_count2" />
+    <link fromOperation="penult"                    fromProperty="paired_end_removed_count1"    toOperation="output connector"          toProperty="paired_end_removed_count1" />
+    <link fromOperation="penult"                    fromProperty="paired_end_removed_count2"    toOperation="output connector"          toProperty="paired_end_removed_count2" />
+    <link fromOperation="penult"                    fromProperty="deduplicated_count1"          toOperation="output connector"          toProperty="deduplicated_count1" />
+    <link fromOperation="penult"                    fromProperty="deduplicated_count2"          toOperation="output connector"          toProperty="deduplicated_count2" />
+    <link fromOperation="penult"                    fromProperty="mismatch_removed_count1"      toOperation="output connector"          toProperty="mismatch_removed_count1" />
+    <link fromOperation="penult"                    fromProperty="mismatch_removed_count2"      toOperation="output connector"          toProperty="mismatch_removed_count2" />
     <link fromOperation="penult"                    fromProperty="completed"                    toOperation="output connector"          toProperty="result" />
 
     <operation name="trim primer 1">
@@ -291,6 +299,14 @@
         <inputproperty>mismatch_removed_file2</inputproperty>
         <inputproperty>mismatch_cutoff</inputproperty>
         <inputproperty>save_screened_reads</inputproperty>
+        <outputproperty>trim_count1</outputproperty>
+        <outputproperty>trim_count2</outputproperty>
+        <outputproperty>paired_end_removed_count1</outputproperty>
+        <outputproperty>paired_end_removed_count2</outputproperty>
+        <outputproperty>deduplicated_count1</outputproperty>
+        <outputproperty>deduplicated_count2</outputproperty>
+        <outputproperty>mismatch_removed_count1</outputproperty>
+        <outputproperty>mismatch_removed_count2</outputproperty>
         <outputproperty>result</outputproperty>
     </operationtype>
 </workflow>
