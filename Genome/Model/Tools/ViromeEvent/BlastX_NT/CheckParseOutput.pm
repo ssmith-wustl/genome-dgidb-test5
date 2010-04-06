@@ -11,6 +11,7 @@ use File::Temp;
 use File::Basename;
 use Bio::SeqIO;
 use Bio::SearchIO;
+use Data::Dumper;
 
 class Genome::Model::Tools::ViromeEvent::BlastX_NT::CheckParseOutput{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -53,6 +54,7 @@ sub execute {
     $self->log_event("Checking NT blastX parse for $sample_name");
 
     my $blast_dir = $dir.'/'.$sample_name.'.BNFiltered_TBLASTX_nt';
+
     unless (-d $blast_dir) {
 	$self->log_event("Failed to find NT blastX dir for $sample_name");
 	return;
@@ -92,7 +94,7 @@ sub execute {
 	my $blast_filtered_file = $root_name.'.TBXNTfiltered.fa';
 
 	unless (-s $blast_parse_file) {
-	    $self->log_event("Running NT blastX for ".basename($blast_out_file));
+	    $self->log_event("Running parse NT blastX for ".basename($blast_out_file));
 	    unless ($self->run_parser($blast_out_file)) {
 		$self->log_event("Parsing failed for ".basename($blast_out_file));
 		return;
@@ -204,7 +206,15 @@ sub run_parser {
 	my $best_e = 100;
 	my $hit_count = 0;
 	my $determined = 0;
+
+	my $bits_cutoff = 45;
+	my $best_bit_value = 0;
+	my $highest_bit_value = 0;
 	while(my $hit = $result->next_hit) {
+	    foreach my $hsp ($hit->hsps) {
+		$highest_bit_value = $hsp->bits if $hsp->bits > $highest_bit_value;
+	    }
+
 	    my @temp_arr = split(/\|/, $hit->name); # gi|num|database|accessionNum|
 	    my $gi = $temp_arr[1];
 	    next if $temp_arr[2] eq 'pdb'; # skip data from pdb database
@@ -212,13 +222,17 @@ sub run_parser {
 	    $haveHit = 1;
 	    $hit_count++;
 	    if ($hit_count == 1) {
-		$best_e = $hit->significance;
+#		$best_e = $hit->significance;
+		$best_bit_value = $highest_bit_value;
 	    }
    
 	    # check whether the hit should be kept for further analysis
-	    if ($hit->significance <= $E_cutoff){ # similar to known, need Phylotyped
+#	    if ($hit->significance <= $E_cutoff){ # similar to known, need Phylotyped
+	    if ($highest_bit_value >= $bits_cutoff) { 
+
 		my $have_significant_hit = 1;
-		if ($hit->significance == $best_e) {
+#		if ($hit->significance == $best_e) {      <--------------------------- OLD
+		if ($highest_bit_value == $best_bit_value) {
 		    # from gi get taxonomy lineage
 		    my $sth = $dbh_sqlite->prepare("SELECT * FROM gi_taxid where gi = $gi");
 		    $sth->execute();
