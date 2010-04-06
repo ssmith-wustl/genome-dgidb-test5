@@ -169,7 +169,7 @@ sub execute {                               # replace with real execution logic.
 			}
 		}
 		
-		return(0);
+#		return(0);
 		
 	}
 	close($input);
