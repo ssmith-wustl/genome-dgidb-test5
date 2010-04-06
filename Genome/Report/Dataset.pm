@@ -293,7 +293,7 @@ sub to_xml_element {
             #print Dumper([$headers->[$i], $row->[$i]]);
             my $element = $row_element->addChild( XML::LibXML::Element->new($headers->[$i]) )
                 or return;
-            $element->appendTextNode($row->[$i]);
+            $element->appendTextNode($row->[$i])if(defined $row and defined $row->[$i]);
             #$row_element->addChild( $libxml->createAttribute($headers->[$i], $row->[$i]) )
             #    or return;
         }
