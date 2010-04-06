@@ -17,7 +17,7 @@ class Genome::Model::Command::Define::PooledAssemblyDecomposition {
 #        },
 #        pooled_assembly => { 
 #            is => 'Genome::Model', 
-#            via => 'tumor_model_links', 
+#            via => 'pooled_assembly_links', 
 #            to => 'from_model', 
 #            id_by => 'from_assembly',
 #            doc => '' 
