@@ -28,7 +28,6 @@ sub help_synopsis {
     return <<"EOS"
 genome model define imported-assembly --subject-name <human> --subject-type <species_name>
 genome model define imported-assembly --model-name <MY_MODEL_NAME> --subject-name <human> --subject-type <species_name>
-genome model define imported-assembly --subject-name <human> --subject-type <species_name> --assembly-directory </path_to_assembly/>
 genome model define imported-assembly --subject-name <unknown> --files <FULL_PATH_TO_SFF.1,FULL_PATH_TO_SFF2>
 EOS
 }
@@ -52,39 +51,23 @@ sub execute {
     my $self = shift;
     #DEFINE MODEL
     if (my @files = $self->files) {
-        #DEFINE MODEL BY INPUT DATA
-        unless ($self->_define_from_files(@files)) {
+        #DEFINE MODEL AND DERIVE SUBJECT NAME FROM SFF FILES
+        unless ($self->_define_from_sff_files(@files)) {
             $self->error_message("Failed to define model from sff files");
             return;
         }
     }
     else {
-        #DEFINE MODEL BY SUPPLIED SUBJECT TYPE AND SUBJECT NAME
-        unless ($self->_define_from_attributes()) {
-            $self->error_message("Failed to define model with SUBJECT_NAME: ".$self->subject_name." SUBJECT TYPE: ".$self->subject_type);
-            return;
-        }
+        # run Genome::Model::Command::Define execute
+        my $super = $self->super_can('_execute_body');
+        return $super->($self,@_);    
     }
 
     return 1;
 }
 
-sub _define_from_attributes {
-    my $self = shift;
-
-    # run Genome::Model::Command::Define execute
-    my $super = $self->super_can('_execute_body');
-    $super->($self,@_);    
-
-    my $model = Genome::Model->get($self->result_model_id);
-    
-    return 1;
-}
-
-sub _define_from_files {
+sub _define_from_sff_files {
     my ($self, @sffs) = @_;
-    #VALIDATE PROCESSING PROFILE
-    my $pp = $self->_validate_processing_profile();
 
     #GET LIBRARY NAMES FROM EACH SFF FILE
     my $library_names = {}; #HASH TO STORE UNIQ LIB NAMES
@@ -146,26 +129,23 @@ sub _define_from_files {
     }
 
     #CHECK IF A MODEL WITH THIS SUBJECT NAME ALREADY EXISTS
-    my $model;
-    $model = Genome::Model->get(
+    my @model;
+    @model = Genome::Model->get(
         subject_name => $subject_name,
-        processing_profile_id => $pp->id,
+        processing_profile_name => $self->processing_profile_name,
     );
-    $self->subject_name($subject_name);
-    $self->subject_type($subject_type);
 
-    if ($model) { #EXISTING MODEL
-        $self->status_message("\nModel with subject name $subject_name already exists. ".
-            "\tMODEL ID: ".$model->id."\n\tSUBJECT NAME: ".$model->subject_name."\n\tMODEL NAME: ".$model->name."\n\n".
-            "It is not necessary to create new model for $subject_name, please add new data to this model using genome model build start ".$model->name."\n");
+    if (@model>0) { #EXISTING MODEL(S)
+        $self->status_message("\nModel(s) with subject name $subject_name already exists. ".
+            "\tMODEL ID: ".$model[0]->id."\n\tSUBJECT NAME: ".$model[0]->subject_name."\n\tMODEL NAME: ".$model[0]->name."\n\n".
+            "It is not necessary to create new model for $subject_name, please add new data to this model using genome model build start ".$model[0]->name."\n");
     }
     else { #CREATE A NEW MODEL
         $self->status_message("\nDefining model with subject name: $subject_name and subject type: $subject_type");
+        $self->subject_name($subject_name);
+        $self->subject_type($subject_type);
         my $super = $self->super_can('_execute_body');
-        $super->($self,@_);    
-
-        $model = Genome::Model->get($self->result_model_id);
-       
+        return $super->($self,@_);       
     }    
     return 1;
 }
