@@ -58,8 +58,12 @@ sub create {
     }
     else {
         $input = Cwd::abs_path($input);
-        my $fh = Genome::Utility::FileSystem->open_file_for_reading($input)
-            or return;
+        my $fh = eval { Genome::Utility::FileSystem->open_file_for_reading($input) };
+        if (!$fh or $@) {
+            $self->error_message("Can't open file $input for reading: $@");
+            return;
+        }
+
         $self->{_original_input} = $input;
         $self->input($fh);
     }

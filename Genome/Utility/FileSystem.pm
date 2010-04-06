@@ -1,7 +1,5 @@
 package Genome::Utility::FileSystem;
 
-#:eclark 11/17/2009 Code review.
-
 # Short Term: shellcmd() should probably be rewritten, it does not correctly use $! after the system call.  Would also be nice if
 # it could support IO wrapping of command being executed.  shellcmd() might be better off in its own module, since its not strictly
 # a filesystem function.
@@ -73,6 +71,7 @@ sub base_temp_directory {
         my $lsf_possible_tempdir = sprintf("%s/%s.tmpdir", $ENV{'TMPDIR'}, $ENV{'LSB_JOBID'});
         $tmp_location = $lsf_possible_tempdir if (-d $lsf_possible_tempdir);
     }
+    # tempdir() thows its own exception if there's a problem
     my $dir = File::Temp::tempdir($template, DIR=>$tmp_location, CLEANUP => 1);
     $self->create_directory($dir);
 
@@ -82,6 +81,10 @@ sub base_temp_directory {
     else {
         # work as a class method
         return $base_temp_directory = $dir;
+    }
+
+    unless ($dir) {
+        Carp::croak("Unable to determine base_temp_directory");
     }
 
     return $dir;
@@ -97,17 +100,22 @@ sub create_temp_file_path {
     my $dir = $self->base_temp_directory;
     my $path = $dir .'/'. $name;
     if (-e $path) {
-        die "temp path '$path' already exists!";
+        Carp::croak "temp path '$path' already exists!";
     }
+
+    if (!$path or $path eq '/') {
+        Carp::croak("create_temp_file_path() failed");
+    }
+
     return $path;
 }
 
 sub create_temp_file {
     my $self = shift;
     my $path = $self->create_temp_file_path(@_);
-    my $fh = IO::File->new(">$path");
+    my $fh = IO::File->new($path, '>');
     unless ($fh) {
-        die "Failed to create temp file $path!";
+        Carp::croak "Failed to create temp file $path: $!";
     }
     return ($fh,$path) if wantarray;
     return $fh;
@@ -127,24 +135,25 @@ sub create_temp_directory {
 sub read_file {
     my ($self, $fname) = @_;
     my $fh = $self->open_file_for_reading($fname);
-    die "Failed to open file $fname! " . $self->error_message() unless $fh;
-    my @lines = $fh->getlines;
+    Carp::croak "Failed to open file $fname! " . $self->error_message() . ": $!" unless $fh;
     if (wantarray) {
+        my @lines = $fh->getlines;
         return @lines;
     }
     else { 
-        return join('',@lines)
+        my $text = do { local( $/ ) ; <$fh> } ;  # slurp mode
+        return $text;
     }
 }
 
 sub write_file {
     my ($self, $fname, @content) = @_;
     my $fh = $self->open_file_for_writing($fname);
-    die "Failed to open file $fname! " . $self->error_message() unless $fh;
+    Carp::croak "Failed to open file $fname! " . $self->error_message() . ": $!" unless $fh;
     for (@content) {
-        $fh->print($_) or die "Failed to write to file $fname! $!";
+        $fh->print($_) or Carp::croak "Failed to write to file $fname! $!";
     }
-    $fh->close or die "Failed to close file $fname! $!";
+    $fh->close or Carp::croak "Failed to close file $fname! $!";
     return $fname;
 }
 
@@ -154,14 +163,25 @@ sub diff_text_vs_text {
     $self->write_file($p1, $t1);
     my $p2 = $self->create_temp_file_path();
     $self->write_file($p2, $t2);
-    `sdiff -s $p1 $p2`;
+    
+    my $diff_fh = IO::File->new("sdiff -s $p1 $p2 |");
+    unless ($diff_fh) {
+        Carp::croak("Can't run 'sdiff -s $p1 $p2' for diff_text_vs_text(): $!");
+    }
+    my $diff_output = do { local( $/ ) ; <$diff_fh> };
+    return $diff_output;
 }
 
 sub diff_file_vs_text {
     my ($self,$f1,$t2) = @_;
     my $p2 = $self->create_temp_file_path();
     $self->write_file($p2, $t2);
-    `sdiff -s $f1 $p2`;
+    my $diff_fh = IO::File->new("sdiff -s $f1 $p2 |");
+    unless ($diff_fh) {
+        Carp::croak("Can't run 'sdiff -s $f1 $p2' for diff_file_vs_text(): $!");
+    }
+    my $diff_output = do { local( $/ ) ; <$diff_fh> };
+    return $diff_output;
 }
 
 sub _open_file {
@@ -171,33 +191,26 @@ sub _open_file {
 
     return $fh if $fh;
 
-    $self->error_message("Can't open file ($file): $!");
-    
-    return;
+    Carp::croak("Can't open file ($file) with access '$rw': $!");
 }
 
 sub validate_file_for_reading {
     my ($self, $file) = @_;
 
     unless ( defined $file ) {
-        $self->error_message("No file given");
-        return;
+        Carp::croak("Can't validate_file_for_reading: No file given");
     }
 
-    unless ( -f $file ) {
-        $self->error_message(
-            sprintf(
-                'File (%s) %s',
-                $file,
-                ( -e $file ? 'exists, but is not a file' : 'does not exist' ),
-            )
-        );
-        return;
+    unless (-e $file ) {
+        Carp::croak("File ($file) does not exist");
+    } 
+
+    unless (-f $file) {
+        Carp::croak("File ($file) exists but is not a plain file");
     }
 
     unless ( -r $file ) { 
-        $self->error_message("Do not have READ access to file ($file)");
-        return;
+        Carp::croak("Do not have READ access to file ($file)");
     }
 
     return 1;
@@ -209,6 +222,7 @@ sub open_file_for_reading {
     $self->validate_file_for_reading($file)
         or return;
 
+    # _open_file throws its own exception if it doesn't work
     return $self->_open_file($file, 'r');
 }
 
@@ -216,15 +230,18 @@ sub validate_file_for_writing {
     my ($self, $file) = @_;
 
     unless ( defined $file ) {
-        $self->error_message("No file given");
-        return;
+        Carp::croak("Can't validate_file_for_writing: No file given");
     }
 
     if ( -s $file ) {
-        $self->error_message("File ($file) already has data, cannot write to it");
-        return;
+        Carp::croak("Can't validate_file_for_writing: File ($file) has non-zero size, refusing to write to it");
     }
 
+    # FIXME there is a race condition where the path could go away or become non-writable
+    # between the time this method returns and the time we actually try opening the file
+    # for writing
+
+    # validate_file_for_writing_overwrite throws its own exceptions if there are problems
     return $self->validate_file_for_writing_overwrite($file);
 }
 
@@ -233,21 +250,19 @@ sub validate_file_for_writing_overwrite {
     my ($self, $file) = @_;
 
     unless ( defined $file ) {
-        $self->error_message("No file given");
-        return;
+        Carp::croak("Can't validate_file_for_writing_overwrite: No file given");
     }
 
     my ($name, $dir) = File::Basename::fileparse($file);
     unless ( $dir ) {
-        $self->error_message("Cannot determine directory from file ($file)");
-        return;
+        Carp::croak("Can't validate_file_for_writing_overwrite: Can't determine directory from pathname ($file)");
     }
     
     unless ( -w $dir ) { 
-        $self->error_message("Do not have WRITE access to directory ($dir) to create file ($name)");
-        return;
+        Carp::croak("Can't validate_file_for_writing_overwrite: Do not have WRITE access to directory ($dir) to create file ($name)");
     }
 
+    # FIXME same problem with the race condition as noted at the end of validate_file_for_writing()
     return 1;
 }
 
@@ -255,14 +270,17 @@ sub bzip {
     my $self = shift;
     my $file = shift;
 
+    # validate_file_for_reading throws its own exceptions when there are problems
     $self->validate_file_for_reading($file)
         or return;
 
     my $bzip_cmd = "bzip2 -z $file";
     my $result_file = $file.".bz2";
+    # shellcmd throws its own exceptions when there are problems, including checking existence of output file
     $self->shellcmd(cmd=>$bzip_cmd, 
                     output_files=>[$result_file]
                     );
+
     return $result_file;
 
 }
@@ -274,7 +292,7 @@ sub bunzip {
     $self->validate_file_for_reading($file)
         or return;
 
-    if ($file=~m/.bz2/) {  
+    if ($file=~m/\.bz2$/) {  
 
         #the -k option will keep the bzip file around
         my $bzip_cmd = "bzip2 -dk $file";
@@ -290,8 +308,9 @@ sub bunzip {
         return $result_file;
 
     } else {
-        $self->error_message("Input file does not have .bz2 extension. Not unzipping.");
-        return;
+        #$self->error_message("Input file does not have .bz2 extension. Not unzipping.");
+        Carp::croak("Input file ($file) does not have .bz2 extension.  Not unzipping.");
+        #return;
     } 
 
 }
@@ -302,7 +321,11 @@ sub open_file_for_writing {
     $self->validate_file_for_writing($file)
         or return;
 
-    unlink $file if -e $file;
+    if (-e $file) {
+        unless (unlink $file) {
+            Carp::croak("Can't unlink $file: $!");
+        }
+    }
     
     return $self->_open_file($file, 'w');
 }
@@ -313,16 +336,16 @@ sub copy_file {
     $self->status_message("copying $file to $dest...\n");
 
     $self->validate_file_for_reading($file)
-        or die $self->error_message("cannot open input file for reading!");
+        or Carp::croak("Cannot open input file ($file) for reading!");
 
     $self->validate_file_for_writing($dest)
-        or die $self->error_message("cannot open output file for writing!");
+        or Carp::croak("Cannot open output file ($dest) for writing!");
 
     # Note: since the file is validate_file_for_reading, and the dest is validate_file_for_writing, 
     #  the files can never be exactly the same.
     
     unless ( File::Copy::copy($file, $dest) ) {
-        die $self->error_message("Can't copy $file to $dest: $!");
+        Carp::croak("Can't copy $file to $dest: $!");
     }
     
     return 1;
@@ -348,19 +371,16 @@ sub validate_existing_directory {
     my ($self, $directory) = @_;
 
     unless ( defined $directory ) {
-        $self->error_message("No directory given");
-        return;
+        Carp::croak("Can't validate_existing_directory: No directory given");
     }
 
     unless ( -e $directory ) {
-        $self->error_message("Directory ($directory) does not exist");
-        return;
+        Carp::croak("Can't validate_existing_director: $directory: Path does not exist");
     }
 
 
     unless ( -d $directory ) {
-        $self->error_message("Directory ($directory) exists, but is not a directory");
-        return;
+        Carp::croak("Can't validate_existing_director: $directory: path exists but is not a directory");
     }
 
     return 1;
@@ -369,6 +389,7 @@ sub validate_existing_directory {
 sub validate_directory_for_read_access {
     my ($self, $directory) = @_;
 
+    # Both underlying methods throw their own exceptions
     $self->validate_existing_directory($directory)
         or return;
     
@@ -378,6 +399,7 @@ sub validate_directory_for_read_access {
 sub validate_directory_for_write_access {
     my ($self, $directory) = @_;
 
+    # Both underlying methods throw their own exceptions
     $self->validate_existing_directory($directory)
         or return;
     
@@ -387,6 +409,7 @@ sub validate_directory_for_write_access {
 sub validate_directory_for_read_write_access {
     my ($self, $directory) = @_;
 
+    # All three underlying methods throw their own exceptions
     $self->validate_existing_directory($directory)
         or return;
     
@@ -400,8 +423,7 @@ sub _can_read_from_directory {
     my ($self, $directory) = @_;
 
     unless ( -r $directory ) {
-        $self->error_message("Cannot read from directory ($directory)");
-        return;
+        Carp::croak("Directory ($directory) is not readable");
     }
 
     return 1;
@@ -411,8 +433,7 @@ sub _can_write_to_directory {
     my ($self, $directory) = @_;
 
     unless ( -w $directory ) {
-        $self->error_message("Cannot write to directory ($directory)");
-        return;
+        Carp::croak("Directory ($directory) is not writable");
     }
 
     return 1;
@@ -421,53 +442,40 @@ sub _can_write_to_directory {
 sub open_directory {
     my ($self, $directory) = @_;
 
-    $self->validate_existing_directory($directory)
-        or return;
-
     my $dh = IO::Dir->new($directory);
-
-    return $dh if $dh;
-
-    $self->error_message("Can't open directory ($directory): $!");
-    
-    return;
+  
+    unless ($dh) {
+        Carp::croak("Can't open_directory $directory: $!");
+    }
+    return $dh;
 }
 
 sub create_directory {
     my ($self, $directory) = @_;
 
     unless ( defined $directory ) {
-        $self->error_message("No directory given to create");
-        return;
+        Carp::croak("Can't create_directory: No path given");
     }
 
+    # FIXME do we want to throw an exception here?  What if the user expected
+    # the directory to be created, not that it already existed
     return $directory if -d $directory;
 
-    if ( -f $directory ) {
-        $self->error_message("Can't create directory ($directory), already exists as a file");
-        return;
-    }
-
-    if ( -l $directory ) {
-        $self->error_message("Can't create directory ($directory), already exists as a symlink");
-        return;
-    }
-
-    if ( -p $directory ) {
-        $self->error_message("Can't create directory ($directory), already exists as a named pipe");
-        return;
-    }
-
-    eval{ File::Path::mkpath($directory, 0, 02775); };
-
-    if ( $@ ) {
-        $self->error_message("Can't create directory ($directory) w/ File::Path::mkpath: $@");
-        return;
+    my $errors;
+    # make_path may throw its own exceptions...
+    File::Path::make_path($directory, { mode => 02775, error => \$errors });
+    
+    if ($errors and @$errors) {
+        my $message = "create_directory for path $directory failed:\n";
+        foreach my $err ( @$errors ) {
+            my($path, $err_str) = %$err;
+            $message .= "Pathname " . $path || 'General error' . ": $err_str\n";
+        }
+        Carp::croak($message);
     }
     
     unless (-d $directory) {
-        $self->error_message("No error from 'File::Path::mkpath', but failed to create directory ($directory)");
-        return;
+        Carp::croak("No error from 'File::Path::make_path', but failed to create directory ($directory)");
     }
 
     return $directory;
@@ -476,39 +484,36 @@ sub create_directory {
 sub create_symlink {
     my ($self, $target, $link) = @_;
 
-    unless ( $target ) {
-        $self->error_message("No target given to create create_symlink");
-        return;
+    unless ( defined $target ) {
+        Carp::croak("Can't create_symlink: no target given");
+    }
+
+    unless ( defined $link ) {
+        Carp::croak("Can't create_symlink: no 'link' given");
     }
 
     unless ( -e $target ) {
-        $self->error_message("Cannot create link ($link) to target ($target) does not exist");
-        return;
+        Carp::croak("Cannot create link ($link) to target ($target): target does not exist");
     }
-
-    unless ( $link ) {
-        $self->error_message("No link given to create create_symlink");
-        return;
-    }
-
+    
     if ( -e $link ) { # the link exists and points to spmething
-        $self->error_message("Link ($link) for target ($target) already exists.");
-        return;
+        Carp::croak("Link ($link) for target ($target) already exists.");
     }
-
+    
     if ( -l $link ) { # the link exists, but does not point to something
-        $self->error_message("Link ($link) for target ($target) is already a link.");
-        return;
+        Carp::croak("Link ($link) for target ($target) is already a link.");
     }
 
     unless ( symlink($target, $link) ) {
-        $self->error_message("Can't create link ($link) to $target\: $!");
-        return;
+        Carp::croak("Can't create link ($link) to $target\: $!");
     }
     
     return 1;
 }
 
+# FIXME there are several places where it excludes named pipes explicitly...
+# These may not always be appropriate in the general sense, but may be
+# for things under Genome::*
 sub shellcmd {
     # execute a shell command in a standard way instead of using system()\
     # verifies inputs and ouputs, and does detailed logging...
@@ -546,37 +551,35 @@ sub shellcmd {
     if ($input_files and @$input_files) {
         my @missing_inputs = grep { not -s $_ } grep { not -p $_ } @$input_files;
         if (@missing_inputs) {
-            die "CANNOT RUN (missing input files):     $cmd\n\t"
-                . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_inputs);
+            Carp::croak("CANNOT RUN (missing input files):     $cmd\n\t"
+                         . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_inputs));
         }
     }
 
     if ($input_directories and @$input_directories) {
         my @missing_inputs = grep { not -d $_ } @$input_directories;
         if (@missing_inputs) {
-            die "CANNOT RUN (missing input directories):     $cmd\n\t"
-                . join("\n\t", @missing_inputs);
+            Carp::croak("CANNOT RUN (missing input directories):     $cmd\n\t"
+                        . join("\n\t", @missing_inputs));
         }
     }
 
     $self->status_message("RUN: $cmd");
     my $exit_code = system($cmd);
-    #my $exit_code = $self->system_inhibit_std_out_err($cmd);
     if ( $exit_code == -1 ) {
-        die "ERROR RUNNING COMMAND. Failed to execute: $cmd";
+        Carp::croak("ERROR RUNNING COMMAND. Failed to execute: $cmd");
     } elsif ( $exit_code & 127 ) {
         my $signal = $exit_code & 127;
         my $withcore = ( $exit_code & 128 ) ? 'with' : 'without';
 
-        die "COMMAND KILLED. Signal $signal, $withcore coredump: $cmd";
+        Carp::croak("COMMAND KILLED. Signal $signal, $withcore coredump: $cmd");
     } elsif ($exit_code >> 8 != 0) {
         $exit_code = $exit_code >> 8;
+        $DB::single = $DB::stopper;
         if ($allow_failed_exit_code) {
-            $DB::single = $DB::stopper;
-            warn "TOLERATING Exit code $exit_code from: $cmd";
+            Carp::carp("TOLERATING Exit code $exit_code, msg $! from: $cmd");
         } else {
-            $DB::single = $DB::stopper;
-            die "ERROR RUNNING COMMAND.  Exit code $exit_code from: $cmd";
+            Carp::croak("ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd");
         }
     }
 
@@ -589,10 +592,10 @@ sub shellcmd {
             and @$output_files == @missing_output_files
         ) {
             for my $output_file (@$output_files) {
-                warn "ALLOWING zero size output file '$output_file' for command: $cmd";
+                Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
                 my $fh = $self->open_file_for_writing($output_file);
                 unless ($fh) {
-                    die "failed to open $output_file!: $!";
+                    Carp::croak("failed to open $output_file for writing to replace missing output file: $!");
                 }
                 $fh->close;
             }
@@ -607,9 +610,11 @@ sub shellcmd {
 
 
     if (@missing_output_files or @missing_output_directories) {
-        for (@$output_files) { unlink $_ }
-        die "MISSING OUTPUTS! @missing_output_files @missing_output_directories\n";
-        #    . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_outputs);
+        for (@$output_files) { unlink $_ or Carp::croak("Can't unlink $_: $!"); }
+        Carp::croak("MISSING OUTPUTS! "
+                    . join(', ', @missing_output_files)
+                    . " "
+                    . join(', ', @missing_output_directories));
     } 
 
     return 1;    
@@ -636,13 +641,13 @@ sub lock_resource {
         $parent_dir = File::Basename::dirname($resource_lock);
         $self->create_directory($parent_dir);
         unless (-d $parent_dir) {
-            die "failed to make parent directory $parent_dir for lock $resource_lock!: $!";
+            Carp::croak("failed to make parent directory $parent_dir for lock $resource_lock!: $!");
         }
     }
     else {
-        $lock_directory =  delete $args{lock_directory} || die('Must supply lock_directory to lock resource');
+        $lock_directory =  delete $args{lock_directory} || Carp::croak('Must supply lock_directory to lock resource');
         $self->create_directory($lock_directory);
-        $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
+        $resource_id = $args{'resource_id'} || Carp::croak('Must supply resource_id to lock resource');
         $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
         $parent_dir = $lock_directory
     }
@@ -657,17 +662,17 @@ sub lock_resource {
     my $tempdir =  File::Temp::tempdir($lock_dir_template, DIR=>$parent_dir, CLEANUP=>1);
 
     unless (-d $tempdir) {
-        die "Failed to create temp lock directory.";
+        Carp::croak("Failed to create temp lock directory ($tempdir)");
     }
 
     # make this readable for everyone
-    chmod(0777, $tempdir);
+    chmod(0777, $tempdir) or Carp::croak("Can't chmod 0777 path ($tempdir): $!");
     
     # drop an info file into here for compatibility's sake with old stuff.
     # put a "NOKILL" here on LSF_JOB_ID so an old process doesn't try to snap off the job ID and kill me.
-    my $lock_info = IO::File->new(">$tempdir/info");
+    my $lock_info = IO::File->new("$tempdir/info", ">");
     unless ($lock_info) {
-        die "Can't create info file $tempdir/info: $!";
+        Carp::croak("Can't create info file $tempdir/info: $!");
     }
     $lock_info->printf("HOST %s\nPID $$\nLSF_JOB_ID_NOKILL %s\nUSER %s\n",
                        $my_host,
@@ -683,7 +688,7 @@ sub lock_resource {
          use Errno qw(EEXIST ENOENT :POSIX);
          if ($! != EEXIST) {
              $self->error_message("Can't create symlink from $tempdir to lock resource $resource_lock because: $!");
-             die $self->error_message();
+             Carp::croak($self->error_message());
          }
         my $symlink_error = $!;
         chomp $symlink_error;
@@ -706,7 +711,7 @@ sub lock_resource {
             # TONY: This means the lock symlink points to something that's been deleted
             # That's _really_ bad news and should probably get an email like below.
             $self->error_message("Lock target $target does not exist.  Dying off rather than doing anything scary.");
-            die $self->error_message;
+            Carp::croak($self->error_message);
         } 
         my $target_basename = File::Basename::basename($target);
         
@@ -775,8 +780,8 @@ sub unlock_resource {
 
     my ($lock_directory,$resource_id);
     unless ($resource_lock) {
-        $lock_directory =  delete $args{lock_directory} || die('Must supply lock_directory to lock resource');
-        $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
+        $lock_directory =  delete $args{lock_directory} || Carp::croak('Must supply lock_directory to lock resource');
+        $resource_id = $args{'resource_id'} || Carp::croak('Must supply resource_id to lock resource');
         $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
     }
 
@@ -784,14 +789,14 @@ sub unlock_resource {
     if (!$target) {
         if ($! == ENOENT) {
             $self->error_message("Tried to unlock something that's not locked -- $resource_lock.");
-            die $self->error_message;
+            Carp::croak($self->error_message);
         } else {
             $self->error_message("Couldn't readlink $resource_lock: $!");
         }
     }
     unless (-d $target) {
         $self->error_message("Lock symlink '$resource_lock' points to something that's not a directory - $target. ");
-        die $self->error_message;
+        Carp::croak($self->error_message);
     }
     my $basename = File::Basename::basename($target);
     $basename =~ s/lock-.*?--//;;
@@ -806,20 +811,20 @@ sub unlock_resource {
              && $tlsf_id eq $my_job_id) {
         
              $self->error_message("This lock does not look like it belongs to me.  $basename does not match $my_host $ENV{'USER'} $$ $my_job_id.");
-             die $self->error_message;
+             Carp::croak($self->error_message);
         }
     }
 
     my $unlink_rv = unlink($resource_lock);
     if (!$unlink_rv) {
         $self->error_message("Failed to remove lock symlink '$resource_lock':  $!");
-        die $self->error_message;
+        Carp::croak($self->error_message);
     }
 
     my $rmdir_rv = File::Path::rmtree($target);
     if (!$rmdir_rv) {
         $self->error_message("Failed to remove lock symlink target '$target', but we successfully unlocked.");
-        die $self->error_message;
+        Carp::croak($self->error_message);
     }
 
     delete $SYMLINKS_TO_REMOVE{$resource_lock};
@@ -827,6 +832,7 @@ sub unlock_resource {
     return 1;
 }
 
+# This method does _not_ throw exceptions since it seems like a non-critical method
 sub check_for_path_existence {
     my ($self,$path,$attempts) = @_;
 
@@ -834,21 +840,28 @@ sub check_for_path_existence {
         $attempts = 5;
     }
 
-    my $try = 0;
-    my $found = 0;
-    while (!$found && $try < $attempts) {
-        $found = -e $path;
+    while ($attempts-- > 0) {
+        return 1 if -e $path;
         sleep(1);
-        $try++;
-        if ($found) {
-            #$self->status_message("existence check passed: $path");
-            return $found;
-        }
     }
+    #my $try = 0;
+    #my $found = 0;
+    ## FIXME - why not while (!$found and $attempts-- > 0)
+    #while (!$found && $try < $attempts) {
+    #    $found = -e $path;
+    #    # FIXME - if $found is true, shouldn't it return immediately? - move the sleep to the bottom of the loop
+    #    sleep(1);
+    #    $try++;
+    #    if ($found) {
+    #        #$self->status_message("existence check passed: $path");
+    #        return $found;
+    #    }
+    #}
     return;
 }
 
 
+# FIXME - I think this is a private function to Filesystem.pm
 sub cleanup_handler_check {
     my $self = shift;
     
@@ -879,7 +892,7 @@ sub exit_cleanup {
     for my $sym_to_remove (keys %SYMLINKS_TO_REMOVE) {
         if (-l $sym_to_remove) {
             warn("Removing remaining resource lock: '$sym_to_remove'");
-            unlink($sym_to_remove);
+            unlink($sym_to_remove) or warn "Can't unlink $sym_to_remove: $!";
         }
     }
 }
@@ -902,14 +915,14 @@ sub get_classes_in_subdirectory {
     my ($subdirectory) = @_;
 
     unless ( $subdirectory ) {
-        Carp::confess("No subdirectory given to get classes\n"); 
-        return;
+        Carp::croak("No subdirectory given to get_classes_in_subdirectory"); 
+        #return;
     }
 
     my $inc_directory = get_inc_directory_for_class(__PACKAGE__);
     unless ( $inc_directory ) {
-        Carp::confess('Could not get inc directory for '.__PACKAGE__."\n"); 
-        return;
+        Carp::croak('Could not get inc directory for '.__PACKAGE__."\n"); 
+        #return;
     }
 
     my $directory = $inc_directory.'/'.$subdirectory;
@@ -930,7 +943,7 @@ sub get_classes_in_subdirectory_that_isa {
 
     unless ( $isa ) {
         Carp::confess("No isa given to get classes in directory that isa\n"); 
-        return;
+        #return;
     }
 
     my @classes;
@@ -947,18 +960,15 @@ sub md5sum {
     my ($self, $file) = @_;
 
     my $digest;
-    eval {
-        open (IN, $file) || die "Can't open file to md5sum: $file  ($!)";
-        my $d = Digest::MD5->new;
-        $d->addfile(*IN);
-        $digest = $d->hexdigest;
-        close IN;
-    };
-    
-    if ($@) {
-        $self->error_message("Failure to MD5: $@");
-        return;
+
+    my $fh = IO::File->new($file);
+    unless ($fh) {
+        Carp::croak("Can't open file ($file) to md5sum: $!");
     }
+    my $d = Digest::MD5->new;
+    $d->addfile($fh);
+    $digest = $d->hexdigest;
+    $fh->close;
     
     return $digest;
     
@@ -968,7 +978,7 @@ sub directory_size_recursive {
     my ($self,$directory) = @_;#shift;
     my $size;
     unless (-e $directory) {
-        die "directory does not exist.";
+        Carp::croak("directory $directory does not exist");
     }
     find(sub { $size += -s if -f $_ }, $directory);
     return $size;
@@ -988,7 +998,7 @@ sub is_file_ok {
             my $unlink_rv = unlink($file);
             $self->status_message("File $file not ok.  Deleting.");
             if ($unlink_rv ne 1) {
-               die $self->error_message("Can't unlink $file.  No ok file found.");
+               Carp::croak($self->error_message("Can't unlink $file.  No ok file found."));
             }
             return;
         }
@@ -998,7 +1008,7 @@ sub is_file_ok {
         	$self->status_message("File $ok_file exists but does not have an original file.  Deleting.");
             my $unlink_rv = unlink($ok_file);
             if ($unlink_rv ne 1) {
-               die $self->error_message("Can't unlink $ok_file.  No original file found.");
+               Carp::croak($self->error_message("Can't unlink $ok_file.  No original file found."));
             }
             return;
         }
@@ -1016,7 +1026,7 @@ sub mark_file_ok {
     if (-f $file ) {
         my $touch_rv = $self->shellcmd(cmd=>"touch $ok_file");
         if ($touch_rv ne 1) {
-            die $self->error_message("Can't touch ok file $ok_file.");
+            Carp::croak($self->error_message("Can't touch ok file $ok_file."));
         } else {
             return 1;
         }
@@ -1053,8 +1063,8 @@ sub are_files_ok {
     	$self->status_message("Files are NOT OK.  Deleting files: ");
     	$self->status_message(join("\n",@$input_files));
     	for my $file (@$input_files) {
-    		unlink($file);
-    		unlink($file.".ok");
+    		unlink($file) or Carp::croak("Can't unlink $file: $!");
+    		unlink($file.".ok") or Carp::croak("Can't unlink ${file}.ok: $!");
     	}
     	return;
     } else {

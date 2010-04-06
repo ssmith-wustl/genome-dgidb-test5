@@ -41,6 +41,11 @@ sub execute {
             separator => "\t",
             input => $input_file,
         );
+
+        unless ($reader) {
+            $self->error_message("Can't create SeparatedValueReader for input file $input_file");
+            return;
+        }
         while (my $data = $reader->next) {
             if ($library) {
                 $data->{library} = $library;

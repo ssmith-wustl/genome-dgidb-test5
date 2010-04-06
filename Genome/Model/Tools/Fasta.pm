@@ -41,8 +41,11 @@ sub create {
 
     $self->fasta_file( Cwd::abs_path( $self->fasta_file ) );
 
-    Genome::Utility::FileSystem->validate_file_for_reading( $self->fasta_file )
-        or return;
+    my $validate = eval { Genome::Utility::FileSystem->validate_file_for_reading( $self->fasta_file ); };
+    if (!$validate or $@) {
+        $self->error_message("validate_file_for_reading failed: $@");
+        return;
+    }
     
     my ($basename, $directory, $suffix) = File::Basename::fileparse($self->fasta_file, '.fasta', '.fas', '.fa', '.fna');
     unless ( $suffix ) {

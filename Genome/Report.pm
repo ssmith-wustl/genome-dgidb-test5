@@ -233,8 +233,11 @@ sub save {
     # TODO validate meta? 
     
     # Dir
-    Genome::Utility::FileSystem->validate_directory_for_write_access($parent_directory)
-        or return;
+    my $validate = eval { Genome::Utility::FileSystem->validate_directory_for_write_access($parent_directory) };
+    if (!$validate or $@) {
+        $self->error_message("validate_directory_for_write_access on $parent_directory failed: $@");
+        return;
+    }
 
     my $directory = $parent_directory.'/'.$self->name_to_subdirectory( $self->name );
     Genome::Utility::FileSystem->create_directory($directory)
@@ -246,8 +249,11 @@ sub save {
     if ( $overwrite ) {
         unlink $file if -e $file;
     }
-    Genome::Utility::FileSystem->validate_file_for_writing($file)
-        or return;
+    $validate = eval { Genome::Utility::FileSystem->validate_file_for_writing($file)};
+    if (!$validate or $@) {
+        $self->error_message("validate_file_for_writing on $file failed: $@");
+        return;
+    }
 
     # Save it
     unless ( $self->xml->toFile($file, 1) ) {

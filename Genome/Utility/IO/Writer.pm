@@ -63,8 +63,11 @@ sub create {
     }
     else { # Assume it is a file
         $output = Cwd::abs_path($output);
-        my $fh = Genome::Utility::FileSystem->open_file_for_writing($output)
-            or return;
+        my $fh = eval { Genome::Utility::FileSystem->open_file_for_writing($output) };
+        if (!$fh or $@) {
+            $self->error_message("Can't open file $output for writing: $@");
+            return;
+        }
         $fh->autoflush;
         $self->{_original_output} = $output;
         $self->output($fh);

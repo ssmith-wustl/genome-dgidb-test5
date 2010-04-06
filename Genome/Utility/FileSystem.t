@@ -119,25 +119,24 @@ sub test1_file : Tests {
     $fh->close;
 
     # No file
-    ok(!Genome::Utility::FileSystem->open_file_for_reading, 'Tried to open undef file');
+    my $worked = eval { Genome::Utility::FileSystem->open_file_for_reading };
+    ok(! $worked, 'open_file_for_reading with no args fails as expected');
+    like($@, qr/Can't validate_file_for_reading: No file given/, 'Exception looks right');
 
     # File no exist 
-    ok(
-        !Genome::Utility::FileSystem->open_file_for_reading($new_file),
-        'Tried to open a non existing file for reading'
-    );
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_reading($new_file) };
+    ok(!$worked, 'Tried to open a non existing file for reading');
+    like($@, qr/File \($new_file\) does not exist/, 'exception message is correct');
     
     # No read access
-    ok(
-        !Genome::Utility::FileSystem->open_file_for_reading( $self->_no_read_file() ),
-        'Try to open a file that can\'t be read from',
-    );
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_reading( $self->_no_read_file() ) };
+    ok(!$worked, 'Try to open a file that can\'t be read from');
+    like($@, qr/File .* does not exist/, 'exception message is correct');
 
     # File is a dir
-    ok(
-        !Genome::Utility::FileSystem->open_file_for_reading( $self->_base_test_dir() ),
-        'Try to open a file, but it\'s a directory',
-    );
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_reading( $self->_base_test_dir() ) };
+    ok(!$worked, 'Try to open a file, but it\'s a directory');
+    like($@, qr/File .* exists but is not a plain file/, 'exception message is correct');
 
     # Write file
     $fh = Genome::Utility::FileSystem->open_file_for_writing($new_file);
@@ -147,25 +146,24 @@ sub test1_file : Tests {
     unlink $new_file;
 
     # No file
-    ok(!Genome::Utility::FileSystem->open_file_for_writing, 'Tried to open undef file');
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_writing };
+    ok(!$worked, 'Tried to open undef file');
+    like($@, qr/Can't validate_file_for_writing: No file given/, 'exception message is correct');
 
     # File exists
-    ok(
-        !Genome::Utility::FileSystem->open_file_for_writing($existing_file), 
-        'Tried to open an existing file for writing'
-    );
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_writing($existing_file) };
+    ok(!$worked, 'Tried to open an existing file for writing');
+    like($@, qr/Can't validate_file_for_writing: File \($existing_file\) has non-zero size/, 'exception message is correct');
 
     # No write access
-    ok(
-        !Genome::Utility::FileSystem->open_file_for_writing( _no_write_file() ),
-        'Try to open a file that can\'t be written to',
-    );
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_writing( _no_write_file() ) };
+    ok(!$worked, 'Try to open a file that can\'t be written to');
+    like($@, qr/Can't validate_file_for_writing_overwrite: Do not have WRITE access to directory/, 'exception message is correct');
 
     # File is a dir
-    ok(
-        !Genome::Utility::FileSystem->open_file_for_writing( _base_test_dir() ),
-        'Try to open a file, but it\'s a directory',
-    );
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_writing( _base_test_dir() ) };
+    ok(!$worked, 'Try to open a file, but it\'s a directory');
+    like($@, qr/Can't validate_file_for_writing: File .* has non-zero size, refusing to write to it/, 'exception message is correct');
 
     #< Copying >#
     my $file_to_copy_to = $self->_tmpdir.'/file_to_copy_to';
@@ -193,7 +191,7 @@ sub test1_file : Tests {
     return 1;
 }
 
-sub test2_directory : Test(14) {
+sub test2_directory : Test(22) {
     my $self = shift;
 
     # Real dir
@@ -202,64 +200,64 @@ sub test2_directory : Test(14) {
     isa_ok($dh, 'IO::Dir');
 
     # No dir
-    ok(!Genome::Utility::FileSystem->open_directory, 'Tried to open undef directory');
+    my $worked = eval { Genome::Utility::FileSystem->open_directory };
+    ok (!$worked, 'open_directory with no args fails as expected');
+    like($@, qr/Can't open_directory : No such file or directory/, 'Exception message is correct');
 
     # Dir no exist 
-    ok(
-        !Genome::Utility::FileSystem->open_directory('/tmp/no_way_this_exists_for_cryin_out_loud'), 
-        'Tried to open a non existing directory',
-    );
+    $worked = eval { Genome::Utility::FileSystem->open_directory('/tmp/no_way_this_exists_for_cryin_out_loud') };
+    ok(!$worked, 'Tried to open a non existing directory');
+    like($@, qr(Can't open_directory /tmp/no_way_this_exists_for_cryin_out_loud: No such file or directory), 'Exception message is correct');
     
     # Dir is file
-    ok(
-        !Genome::Utility::FileSystem->open_directory( sprintf('%s/existing_file.txt', _base_test_dir()) ),
-        'Try to open a directory, but it\'s a file',
-    );
+    $worked = eval { Genome::Utility::FileSystem->open_directory( sprintf('%s/existing_file.txt', _base_test_dir()) ) };
+    ok(!$worked, 'Try to open a directory, but it\'s a file');
+    like($@, qr/Can't open_directory .*existing_file.txt: Not a directory/, 'Exception message is correct');
 
     # Read access
     ok( # good
         Genome::Utility::FileSystem->validate_directory_for_read_access( _base_test_dir() ),
         'validate_directory_for_read_access',
     );
-    ok( # fail
-        !Genome::Utility::FileSystem->validate_directory_for_read_access( _no_read_dir() ),
-        'Failed as expected - can\'t read from dir',
-    );
+    $worked = eval { Genome::Utility::FileSystem->validate_directory_for_read_access( _no_read_dir() ) };
+    ok(!$worked, 'Failed as expected - can\'t read from dir');
+    like($@, qr/Directory .* is not readable/, 'Exception message is correct');
 
     # Write access
     ok( # good
         Genome::Utility::FileSystem->validate_directory_for_write_access( _base_test_dir() ),
         'validate_directory_for_write_access',
     );
-    ok( # fail
-        !Genome::Utility::FileSystem->validate_directory_for_write_access( _no_write_dir() ),
-        'Failed as expected - can\'t write to dir',
-    );
+    $worked = eval { Genome::Utility::FileSystem->validate_directory_for_write_access( _no_write_dir() ) };
+    ok(!$worked, 'Failed as expected - can\'t write to dir');
+    like($@, qr/Directory .* is not writable/, 'Exception message is correct');
+
     # R+W access
     ok( # good
         Genome::Utility::FileSystem->validate_directory_for_read_write_access( _base_test_dir() ),
         'validate_directory_for_read_write_access',
     );
-    ok( # fail - read
-        !Genome::Utility::FileSystem->validate_directory_for_read_write_access( _no_read_dir() ),
-        'Failed as expected - can\'t read from dir',
-    );
-    ok( # fail - write
-        !Genome::Utility::FileSystem->validate_directory_for_read_write_access( _no_write_dir() ),
-        'Failed as expected - can\'t write to dir',
-    );
+    $worked = eval { Genome::Utility::FileSystem->validate_directory_for_read_write_access( _no_read_dir() ) };
+    ok(!$worked, 'Failed as expected - can\'t read from dir');
+    like($@, qr/Directory .* is not readable/, 'Exception message is correct');
+
+    $worked = eval { Genome::Utility::FileSystem->validate_directory_for_read_write_access( _no_write_dir() ) };
+    ok(!$worked, 'Failed as expected - can\'t write to dir');
+    like($@, qr/Directory .* is not writable/, 'Exception message is correct');
 
     my $new_dir = $self->_new_dir;
     ok( Genome::Utility::FileSystem->create_directory($new_dir), "Created new dir: $new_dir");
 
     my $fifo = $new_dir .'/test_pipe';
     `mkfifo $fifo`;
-    ok(!Genome::Utility::FileSystem->create_directory($fifo),'failed to create_directory '. $fifo);
+    $worked = eval { Genome::Utility::FileSystem->create_directory($fifo) };
+    ok(!$worked,'failed to create_directory '. $fifo);
+    like($@, qr/create_directory for path .* failed/, 'exception message is correct');
 
     return 1;
 }
 
-sub test3_symlink : Test(5) {
+sub test3_symlink : Test(9) {
     my $self = shift;
 
     my $target = _existing_file();
@@ -269,13 +267,23 @@ sub test3_symlink : Test(5) {
     ok( Genome::Utility::FileSystem->create_symlink($target, $new_link), 'Created symlink');
 
     # Link Failures
-    ok( !Genome::Utility::FileSystem->create_symlink($target), 'Failed as expected - create_symlink w/o link');
-    ok( !Genome::Utility::FileSystem->create_symlink($target, $new_link), 'Failed as expected - create_symlink when link already exists');
+    my $worked = eval { Genome::Utility::FileSystem->create_symlink($target) };
+    ok(!$worked, "create_symlink with no 'link' fails as expected");
+    like($@, qr/Can't create_symlink: no 'link' given/, 'exception message is correct');
+
+    $worked = eval { Genome::Utility::FileSystem->create_symlink($target, $new_link) };
+    ok(!$worked, 'Failed as expected - create_symlink when link already exists');
+    like($@, qr/Link \($new_link\) for target \($target\) already exists/, 'exception message is correct');
     unlink $new_link; # remove to not influence target failures below
     
     # Target Failures
-    ok( !Genome::Utility::FileSystem->create_symlink(undef, $new_link), 'Failed as expected - create_symlink w/o target');
-    ok( !Genome::Utility::FileSystem->create_symlink(_tmpdir().'/target', $new_link), 'Failed as expected - create_symlink when target does not exist');
+    $worked = eval { Genome::Utility::FileSystem->create_symlink(undef, $new_link) };
+    ok(!$worked, 'Failed as expected - create_symlink w/o target');
+    like($@, qr/Can't create_symlink: no target given/, 'exception message is correct');
+
+    $worked = eval { Genome::Utility::FileSystem->create_symlink(_tmpdir().'/target', $new_link) };
+    ok(!$worked, 'Failed as expected - create_symlink when target does not exist');
+    like($@, qr/Cannot create link \($new_link\) to target \(.*target\): target does not exist/, 'exception message is correct');
     
     return 1;
 }
