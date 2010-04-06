@@ -95,8 +95,8 @@ sub _generate_content {
         #            -recurse => ['parent_instance_id','instance_id']
         #        ));
 
-        my @exec_ids = map {
-            $_->current_execution_id
+        my @ids = map {
+            $_->id
         } (Workflow::Store::Db::Operation::Instance->get(
             sql => 'select workflow_instance.workflow_instance_id
                       from workflow_instance
@@ -105,7 +105,7 @@ sub _generate_content {
                  ));
 
         my @ex = Workflow::Store::Db::Operation::InstanceExecution->get(
-            instance_id => { operator => '[]', value=>\@exec_ids }
+            instance_id => { operator => '[]', value=>\@ids }
         );
 
         $buildnode->addChild( $self->get_workflow_node );
