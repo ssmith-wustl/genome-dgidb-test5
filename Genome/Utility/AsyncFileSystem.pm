@@ -13,6 +13,8 @@ class Genome::Utility::AsyncFileSystem {};
 
 # execute a shell command in a standard way instead of using system()\
 # verifies inputs and ouputs, and does detailed logging...
+# this version returns a condition variable, to wait for its results
+# you need to call ->recv on it which will return 1 just like GUFS->shellcmd.
 sub shellcmd {
     my ( $self, %params ) = @_;
     my $cmd                    = delete $params{cmd};
@@ -83,13 +85,15 @@ sub shellcmd {
             my ($cv) = shift;
 
             eval {
-                if ( $exit_code == -1 ) {
+                if ( $exit_code == -1 )
+                {
                     die "ERROR RUNNING COMMAND. Failed to execute: $cmd";
                 } elsif ( $exit_code & 127 ) {
                     my $signal = $exit_code & 127;
                     my $withcore = ( $exit_code & 128 ) ? 'with' : 'without';
 
-                    die "COMMAND KILLED. Signal $signal, $withcore coredump: $cmd";
+                    die
+"COMMAND KILLED. Signal $signal, $withcore coredump: $cmd";
                 } else {
                     $exit_code = $exit_code >> 8;
                     if ($allow_failed_exit_code) {

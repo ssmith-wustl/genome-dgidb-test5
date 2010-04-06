@@ -49,16 +49,23 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   </xsl:template>> -->
 
   <xsl:template match="display_name">
+    <xsl:variable name="typeLink">
+      <xsl:call-template name="string-replace-all">
+        <xsl:with-param name="text" select="../@type"/>
+        <xsl:with-param name="replace" select="'::'"/>
+        <xsl:with-param name="by" select="'/'"/>
+      </xsl:call-template>
+    </xsl:variable>
     <span>
       <a>
         <xsl:attribute name="href">
           <xsl:value-of select="$rest"/>
           <xsl:text>/</xsl:text>
+          <xsl:value-of select="$typeLink"/>
+          <xsl:text>/</xsl:text>
           <xsl:value-of select="$currentPerspective"/>
-          <xsl:text>/</xsl:text>
+          <xsl:text>.</xsl:text>
           <xsl:value-of select="$currentToolkit"/>
-          <xsl:text>/</xsl:text>
-          <xsl:value-of select="../@type"/>
           <xsl:text>?id=</xsl:text>
           <xsl:value-of select="../@id"/>
         </xsl:attribute>
