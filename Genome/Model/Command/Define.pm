@@ -201,7 +201,7 @@ sub execute {
             (qw/ id name data_directory subject_name subject_type processing_profile_id processing_profile_name /),
             #$model->processing_profile->params_for_class,
         ),
-        as => 'pretty',
+        style => 'pretty',
     );
     $list->execute;
     $self->result_model_id($model->id);
