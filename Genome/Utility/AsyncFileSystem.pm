@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use lib '/gscuser/eclark/lib';
 use AnyEvent::Util;
 use Exporter qw( import );
 
