@@ -21,13 +21,19 @@ class Genome::Model::Command::Define::ImportedAssembly {
 	    is => 'Text',
 	    doc => 'model name',
 	},
+	assembly_directory => {
+	    is => 'Text',
+	    doc => 'Assembly directory to track',
+	},
     ],
 };
 
 sub help_synopsis {
     return <<"EOS"
-genome model define imported-assembly --subject-name human --subject-type species-name
-genome model define imported-assembly --subject-name unknown --files <FULL_PATH_TO_SFF.1,FULL_PATH_TO_SFF2>
+genome model define imported-assembly --subject-name <human> --subject-type <species_name>
+genome model define imported-assembly --model-name <MY_MODEL_NAME> --subject-name <human> --subject-type <species_name>
+genome model define imported-assembly --subject-name <human> --subject-type <species_name> --assembly-directory </path_to_assembly/>
+genome model define imported-assembly --subject-name <unknown> --files <FULL_PATH_TO_SFF.1,FULL_PATH_TO_SFF2>
 EOS
 }
  
@@ -42,33 +48,88 @@ sub create {
 
     my $self = $class->SUPER::create(@_)
 	or return;
-    
+
     return $self;
 }
 
 sub execute {
     my $self = shift;
-
-    if (my @files = $self->files) {
-        return $self->define_from_files(@files);
+    #VALIDATE ASSEMBLY DIRECTORY
+    if ($self->assembly_directory) {
+	unless (-d $self->assembly_directory) {
+	    $self->error_message("Assembly directory does not exist: ".$self->assembly_directory);
+	    return;
+	}
     }
-
-    my $super = $self->super_can('_execute_body');
-    $super->($self,@_);
-
+    #DEFINE MODEL
+    if (my @files = $self->files) {
+	#DEFINE MODEL BY INPUT DATA
+	unless ($self->_define_from_files(@files)) {
+	    $self->error_message("Failed to define model from sff files");
+	    return;
+	}
+    }
+    else {
+	#DEFINE MODEL BY SUPPLIED SUBJECT TYPE AND SUBJECT NAME
+	unless ($self->_define_from_attributes()) {
+	    $self->error_message("Failed to define model with SUBJECT_NAME: ".$self->subject_name." SUBJECT TYPE: ".$self->subject_type);
+	    return;
+	}
+    }
+    #my $super = $self->super_can('_execute_body');
+    #$super->($self,@_);
     return 1;
 }
 
-sub define_from_files {
+sub _define_from_attributes {
     my $self = shift;
-    my @sffs = @_;
+    my $pp = $self->_validate_processing_profile();
 
-    #VALIDATE PROCESSING PROFILE
-    my $pp = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
-    unless ($pp) {
-	$self->error_message("Could not find processing profile with name ".$self->processing_profile_name);
-	return;
+    my $model;
+    #HERE ALLOW MULTIPLE MODLES TO BE DEFINED WITH SAME SUBJECT NAME AND TYPE
+    #$model = Genome::Model->get(
+	#subject_name => $self->subject_name,
+	#processing_profile_id => $pp->id,
+	#);
+    #if ($model) { #USE EXISTING MODEL
+	#$self->status_message("\nModel with subject name ".$self->subject_name." already exists. ".
+		#	      "Build will be assigned to this model:\n".
+		#	      "\tMODEL ID: ".$model->id."\n\tSUBJECT NAME: ".$model->subject_name."\n\tMODEL NAME: ".$model->name."\n\n");
+    #}
+    #else { #DEFINE A NEW MODEL
+	$self->status_message("\nDefining model with subject name: ".$self->subject_name." and subject type: ".$self->subject_type);
+	my %model_params = (
+	    processing_profile_id => $pp->id,
+	    subject_name => $self->subject_name,
+	    subject_type => $self->subject_type,
+	    );
+	#IF USER SUPPLIED MODEL NAME
+	if ($self->model_name) {
+	    $model_params{name} = $self->model_name;
+	}
+	$model = $self->_create_model( %model_params );
+    #}
+    #CREATE A BUILD IF ASSEMBLY DIRECTORY IS SPECIFIED
+    if ($self->assembly_directory) {
+	#CHECK FOR EXISTING BUILDS WITH SAME DIRECTORY
+	my @existing_builds = $model->builds;
+	foreach my $build (@existing_builds) {
+	    if ($build->data_directory eq $self->assembly_directory) {
+		$self->error_message("Build already exists for this model with directory: ".$self->data_directory);
+		return;
+	    }
+	}
+	my $build = $self->_create_build( $model );
+	#CREATE AN EMPTY EVENT FOR THE BUILD
+	my $event = $self->_create_event_for_build( $model, $build );
     }
+    return 1;
+}
+
+sub _define_from_files {
+    my ($self, @sffs) = @_;
+    #VALIDATE PROCESSING PROFILE
+    my $pp = $self->_validate_processing_profile();
 
     #GET LIBRARY NAMES FROM EACH SFF FILE
     my $library_names = {}; #HASH TO STORE UNIQ LIB NAMES
@@ -137,45 +198,101 @@ sub define_from_files {
     }
 
     #CHECK IF A MODEL WITH THIS SUBJECT NAME ALREADY EXISTS
-    my $existing_model = Genome::Model->get(
+    my $model;
+    $model = Genome::Model->get(
 	subject_name => $subject_name,
 	processing_profile_id => $pp->id,
     );
 
-    if ($existing_model) {
-	$self->status_message("\nModel with subject name $subject_name already exists\n");
-	my $cmd = "genome model list --filter \"id=".$existing_model->id."\"";
-	my $out = `$cmd`;
-	unless ($out) {
-	    $self->error_message("Failed query for existing model: $cmd");
-	    return;
+    if ($model) { #EXISTING MODEL
+	$self->status_message("\nModel with subject name $subject_name already exists. ".
+			      "Build will be assigned to this model:\n".
+			      "\tMODEL ID: ".$model->id."\n\tSUBJECT NAME: ".$model->subject_name."\n\tMODEL NAME: ".$model->name."\n\n");
+    }
+    else { #CREATE A NEW MODEL
+	$self->status_message("\nDefining model with subject name: $subject_name and subject type: $subject_type");
+	my %model_params = (
+	    subject_name => $subject_name,
+	    subject_type => $subject_type,
+	    processing_profile_id => $pp->id,
+	    );
+	if ($self->model_name) { #IF USER DEFINED MODEL NAME
+	    $model_params{name} = $self->model_name;
 	}
-	$self->status_message("Use this model instead\n$out");
-	#my $header = sprintf("%-15s%-45s%-45s\n", 'MODEL_ID', 'SUBJECT_NAME', 'MODEL_NAME');
-	#my $line = sprintf("%-15s%-45s%-45s\n", $existing_model->id, $existing_model->subject_name, $existing_model->name);
-	#$self->status_message($header.$line."\n");
-	return 1;
+	$model = $self->_create_model( %model_params );
     }
-
-    #DEFINE A NEW MODEL
-    $self->status_message("\nDefining model with subject name: $subject_name and subject type: $subject_type");
-
-    my %model_params = (
-	subject_name => $subject_name,
-	subject_type => $subject_type,
-	processing_profile_name => $self->processing_profile_name,
-    );
-    if ($self->model_name) { #IF USER DEFINED MODEL NAME
-	$model_params{model_name} = $self->model_name;
+    #CREATE A BUILD
+    if ($self->assembly_directory) {
+	#CHECK FOR EXISTING BUILDS WITH SAME DIRECTORY
+	my @existing_builds = $model->builds;
+	foreach my $b (@existing_builds) {
+	    if ($b->data_directory eq $self->assembly_directory) {
+		$self->status_message("Build with assembly directory already exists:".
+				      "\n\tBUILD ID: ".$b->build_id."\n\tDATA DIRECTORY: ".$self->assembly_directory);
+		return 1;
+	    }
+	}
+	my $build = $self->_create_build( $model );
+	#CREATE AN EMPTY EVENT FOR THE BUILD
+	my $event = $self->_create_event_for_build( $model, $build );
     }
+    return 1;
+}
 
-    my $model = Genome::Model::Command::Define::ImportedAssembly->create( %model_params );
+sub _create_model {
+    my ($self, %p) = @_;
+    my $model = Genome::Model->create( %p );
     unless ($model) {
-	$self->error_message("Failed to create model for subject name: $subject_name");
+	$self->error_message("Failed to create model for subject_name: ".$p{subject_name});
 	return;
     }
-    $model->execute;
-    return 1;
+    $self->status_message("Created model:\n"."\tMODEL ID: ".$model->id."\n\tSUBJECT NAME: ".$model->subject_name."\n\tMODEL NAME: ".$model->name."\n\n");
+    return $model;
+}
+
+sub _validate_processing_profile {
+    my $self = shift;
+    my $pp = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
+    unless ($pp) {
+	$self->error_message("Could not find processing profile with name ".$self->processing_profile_name);
+	return;
+    };
+    return $pp;
+}
+
+sub _create_build {
+    my $self = shift;
+    my $model = shift;
+    my $build = Genome::Model::Build->create(
+	data_directory => $self->assembly_directory,
+	model_id => $model->id,
+	);
+    unless ($build) {
+	$self->error_message("Build failed for ".$self->assembly_directory);
+	return;
+    }
+    $self->status_message("Created build: BUILD ID: ".$build->build_id."\tDATA DIRECTORY: ".$self->assembly_directory);
+    return $build;
+}
+
+sub _create_event_for_build {
+    my $self = shift;
+    my $model = shift;
+    my $build = shift;
+    my $event = Genome::Model::Event::Build->create (
+	event_type => 'genome model build',
+	model_id => $model->id,
+	build_id => $build->id,
+	date_scheduled => UR::Time->now, #MUST SET THESE FOR BUILD TO HAVE SUCCEEDED STATUS
+	event_status => 'Succeeded',
+	date_completed => UR::Time->now,
+	);
+    unless ($event) {
+	$self->error_message("Failed to create event");
+	return;
+    }
+    $self->status_message("Created event for build");
+    return $event;
 }
 
 sub _get_species_name {
