@@ -21,7 +21,7 @@ class Genome::PopulationGroup {
     ],
     has_many => [
         member_links        => { is => 'Genome::PopulationGroup::Member', reverse_id_by => 'population_group' },
-        members             => { via => 'member_links', to => 'member' },
+        members             => { is => 'Genome::Individual', via => 'member_links', to => 'member' },
     ],
     doc => 'an defined, possibly arbitrary, group of individual organisms',
     data_source => 'Genome::DataSource::GMSchema',
