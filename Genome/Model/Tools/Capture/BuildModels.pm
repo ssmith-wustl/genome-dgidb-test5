@@ -140,19 +140,31 @@ sub execute {                               # replace with real execution logic.
 			my $instrument_data = get_instrument_data($sample_name, $subject_type);
 			if($instrument_data)
 			{
+				## Parse out the instrument data lines ##
+				
 				my @data_lines = split(/\n/, $instrument_data);
 				foreach my $data_line (@data_lines)
 				{
 					#my @dataLineContents = split(/\,/, $data_line);
 					(my $id, my $flow_cell_id, my $lane, my $filt_error_rate_avg, my $clusters, my $read_length, my $target_region_set_name) = split(/\,/, $data_line);
 					print "$id\t$flow_cell_id\t$lane\t$filt_error_rate_avg\t$clusters\t$read_length\t$target_region_set_name\n";
+
+					## Assign instrument data to model ##
+
 					my $cmd = "genome model instrument-data assign --model-id $model_id --instrument-data-id $id";
+
 					if(!$self->report_only)
 					{
 						system($cmd);
 					}
 				}
 				
+
+				## Build the model ##
+				
+				my $cmd = "genome model build start --model-id $model_id";
+				print "RUN: $cmd\n";
+				system($cmd);
 	
 			}
 		}
