@@ -6,9 +6,11 @@ use warnings;
 use above "Genome";
 
 use Genome::Model::Test;
-use Test::More tests => 28;
+use Test::More;
 
 BEGIN {
+    $ENV{UR_DBI_NO_COMMIT} = 1;
+    $ENV{UR_USE_DUMMY_IDS} = 1;
     use_ok('Genome::Model::InstrumentDataAssignment');
 }
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
@@ -66,6 +68,19 @@ my $mock_pp = Genome::ProcessingProfile::ReferenceAlignment::Solexa->create_mock
                                                                              );
 
 my $mock_model = Genome::Model::Test->create_basic_mock_model(type_name => 'reference alignment solexa');
+
+#
+# Inputs
+#  are created when an ida is created, and also removed whe an ida is deleted.  
+#  Create an extra input for the model, to make sure that correct inputs are deleted.
+#
+my $extra_input = $mock_model->add_input(
+    name => 'instrument_data',
+    value_class_name => 'Genome::InstrumentData::Sanger',
+    value_id => '2sep09.934pmaa2',
+);
+ok($extra_input, 'Created extra input');
+
 $invalid_instrument_data = Genome::Model::InstrumentDataAssignment->create(
                                                                            model_id => $mock_model->id,
                                                                            instrument_data_id => --$mock_id,
@@ -113,6 +128,10 @@ SKIP: {
 
 ok($new_instrument_data->yaml_string,'got a yaml string');
 ok($new_instrument_data->delete,'deleted test instrument data');
+# check that the input still exists
+my @inputs = $mock_model->inputs();
+ok(@inputs, 'Model still has input for other inst data');
+is_deeply([ $extra_input->value_id ], [ map { $_->value_id } @inputs ], 'Removed input for this ida, but not other inst data input');
 
 ##################################################
 # below tests rely on real run chunks and models #
@@ -133,5 +152,7 @@ ok(my $read_length = $instrument_data->read_length, "Got the read length");
 ok(my $total_read_count = $instrument_data->_calculate_total_read_count, "Got total read count");
 ok(my $yaml_string = $instrument_data->yaml_string, "Got the yaml string");
 
+done_testing();
+exit;
 
 

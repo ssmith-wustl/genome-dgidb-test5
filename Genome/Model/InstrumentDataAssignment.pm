@@ -284,8 +284,24 @@ sub yaml_string {
 sub delete {
     my $self = shift;
 
+    #< Temp - remove input, if exists.
+    #   - get input that matches this ida
+    #   - delete input
+    #   - delete ida 
+    my $input = Genome::Model::Input->get(
+        model_id => $self->model_id,
+        value_class_name => $self->instrument_data->class,
+        value_id => $self->instrument_data_id,
+    );
+    if ( $input ) {
+        $input->delete;
+    }
+    #>
+    
     $self->warning_message('DELETING '. $self->class .': '. $self->id);
-    return $self->SUPER::delete();
+    $self->SUPER::delete;
+
+    return 1;
 }
 
 1;
