@@ -569,7 +569,7 @@ sub shellcmd {
         my $withcore = ( $exit_code & 128 ) ? 'with' : 'without';
 
         die "COMMAND KILLED. Signal $signal, $withcore coredump: $cmd";
-    } else {
+    } elsif ($exit_code >> 8 != 0) {
         $exit_code = $exit_code >> 8;
         if ($allow_failed_exit_code) {
             $DB::single = $DB::stopper;
