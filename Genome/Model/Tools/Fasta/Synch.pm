@@ -32,8 +32,8 @@ class Genome::Model::Tools::Fasta::Synch
             output=> {
                                     doc => 'file to write to',
                                     is => 'String',
-                                    is_output => 1,
                                     is_optional => 1,
+                                    default => 'SYNCH',
                                 },
             prefix1=> {
                                     doc => 'file to write to',

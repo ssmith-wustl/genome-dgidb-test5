@@ -23,6 +23,12 @@ class Genome::Model::Tools::Sam::Deduplicator
                                     is_output   => 1,
                                     is_optional => 1,
                                    },
+            deduplicated_count  => {
+                                    doc         => '# of reads deduplicated',
+                                    is          => 'Integer',
+                                    is_output   => 1,
+                                    is_optional => 1,
+                                   },
          ],
 };
 
@@ -52,8 +58,8 @@ sub execute
     my $deduplicated_file = ($self->deduplicated_file ? $self->deduplicated_file : $sam_file . "dedup");
     my $sam_fh = Genome::Utility::FileSystem->open_file_for_reading($sam_file) or return;
     my $dd_fh = Genome::Utility::FileSystem->open_file_for_writing($deduplicated_file) or return;
+    my $dedup_count = 0;
 
-    print "dedup begun with $sam_file\n";
 
     my %reads;
     
@@ -62,11 +68,12 @@ sub execute
         #my ($chr, $pos, $cns_qual, $snp_qual, $map_qual, $rd_depth) = 
         $sam =~ m/^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+/;    
         
-        ($dd_fh->print($sam) and $reads{$10}++) unless ($reads{$10});
+        ($dd_fh->print($sam) and $reads{$10}++) unless ($reads{$10} and ++$dedup_count);
     }   
-    $self->deduplicated_file($deduplicated_file);
 
-    print "dedup completed with $sam_file\n";
+    $self->deduplicated_file($deduplicated_file);
+    $self->deduplicated_count($dedup_count);
+
     return 1;
 }
 

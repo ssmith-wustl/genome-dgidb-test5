@@ -101,8 +101,7 @@ sub execute {
     my $synch_output  = ".SYNCH";
     my $synch_fasta_output  = ".SYNCH_FASTA";
     my ($prefix1, $prefix2) = ($dir . "/$base1", $dir . "/$base2");
-    my ($fasta_file1, $fasta_file2) = ("$dir/$base1.RESURRECTED.fasta", "$dir/$base2.RESURRECTED.fasta");
-    my ($dusted_file1, $dusted_file2) = ("$dir/$base1.SYNCH.DUSTED.fasta", "$dir/$base2.SYNCH.DUSTED.fasta");
+    my ($dusted_file1, $dusted_file2) = ("$dir/$base1.DUSTED.fasta", "$dir/$base2.DUSTED.fasta");
     my $save_screened_reads = $self->save_screened_reads;
     my $mismatch_cutoff = $self->mismatch_cutoff;
     my ($mismatch_removed_file1, $mismatch_removed_file2) = ("$dir/$base1.MISMATCH_REMOVED.fasta", "$dir/$base2.MISMATCH_REMOVED.fasta");
@@ -130,11 +129,8 @@ sub execute {
                               'resurrected_file_2'      => $resurrected_file2, 
                               'prefix1'                 => $prefix1,
                               'prefix2'                 => $prefix2,
-                              'fasta_file1'             => $fasta_file1,
-                              'fasta_file2'             => $fasta_file2,
                               'dusted_file1',           => $dusted_file1,
                               'dusted_file2',           => $dusted_file2,
-                              'output'                  => $synch_output,
                               'synch_fasta_output'      => $synch_fasta_output,
                               'save_screened_reads'     => $save_screened_reads,
                               'mismatch_removed_file1'  => $mismatch_removed_file1,
@@ -172,10 +168,12 @@ print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
                               "resurrected_file2:\t$resurrected_file2\n" . 
                               "prefix1:\t$prefix1\n" .
                               "prefix2:\t$prefix2\n" .
-                              "fasta file 1:\t$fasta_file1\n" .
-                              "fasta file 2:\t$fasta_file2\n" .
+                              "dusted file1:\t$dusted_file1\n" .
+                              "dusted file2:\t$dusted_file2\n" .
                               "output:\t$synch_output\n" .
-                              "mismatch_cutoff:\t$mismatch_cutoff\n" ,
+                              "mismatch_cutoff:\t$mismatch_cutoff\n" . 
+                              "mismatch_removed_file1:\t$mismatch_removed_file1" .
+                              "mismatch_removed_file2:\t$mismatch_removed_file2",
     });
 
     return 1;

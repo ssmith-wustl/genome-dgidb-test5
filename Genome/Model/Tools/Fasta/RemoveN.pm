@@ -35,7 +35,7 @@ class Genome::Model::Tools::Fasta::RemoveN
             screened_count => 
                                 {
                                     doc => '# of reads screened',
-                                    is => 'Boolean',
+                                    is => 'Integer',
                                     is_optional => 1,
                                     is_output => 1,
                                 },

@@ -38,6 +38,18 @@ class Genome::Model::Tools::Sam::RemovePairedEnds
                                     is_output   => 1,
                                     is_optional => 1,
                                    },
+            paired_end_removed_count1 => {
+                                    doc         => '# of reads removed from 1st file',
+                                    is          => 'String',
+                                    is_output   => 1,
+                                    is_optional => 1,
+                                   },
+            paired_end_removed_count2 => {
+                                    doc         => '# of reads removed from 2nd file',
+                                    is          => 'String',
+                                    is_output   => 1,
+                                    is_optional => 1,
+                                   },
          ],
 };
 
@@ -68,8 +80,7 @@ sub execute
 {
     my $self = shift;
     my ($sam_file1, $sam_file2) = ($self->sam1, $self->sam2);
-
-    print "Paired end begun with $sam_file1 and $sam_file2\n";
+    my ($perc1, $perc2) = (0,0);
 
     #Build %wanted_read hash
     my %wanted_read;
@@ -103,6 +114,10 @@ sub execute
 	    print $sam2_output "$line\n";
 	    $sam2_final_count++;
         }
+        else
+        {
+            $perc2++;
+        }
     }
     $sam2->close;
     $sam2_output->close;
@@ -122,13 +137,20 @@ sub execute
 	    print $sam1_output "$line\n";
 	    $sam1_final_count++;
         }
+        else
+        {
+            $perc1++;
+        }
     }
     $sam1->close;
     $sam1_output->close;
 
     $self->paired_end_removed_file1($sam1_output_name);
     $self->paired_end_removed_file2($sam2_output_name);
-    print "Paired end completed with $sam1_output_name and $sam2_output_name\n";
+
+    $self->paired_end_removed_count1($perc1);
+    $self->paired_end_removed_count2($perc2);
+
     return 1;
 }
 

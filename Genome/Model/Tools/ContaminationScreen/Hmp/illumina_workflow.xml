@@ -18,9 +18,6 @@
     <link fromOperation="input connector"           fromProperty="prefix1"                      toOperation="wait for mismatch removal" toProperty="prefix1" />
     <link fromOperation="input connector"           fromProperty="prefix2"                      toOperation="wait for mismatch removal" toProperty="prefix2" />
 
-    <link fromOperation="input connector"           fromProperty="fasta_file1"                  toOperation="wait for resurrect"        toProperty="fasta_file1" />
-    <link fromOperation="input connector"           fromProperty="fasta_file2"                  toOperation="wait for resurrect"        toProperty="fasta_file2" />
-
     <link fromOperation="input connector"           fromProperty="align_options_1"              toOperation="run screen 1"              toProperty="align_options" />
     <link fromOperation="input connector"           fromProperty="aligner_output_file_1"        toOperation="run screen 1"              toProperty="aligner_output_file" />
     <link fromOperation="input connector"           fromProperty="alignment_file_1"             toOperation="run screen 1"              toProperty="alignment_file" /> 
@@ -71,6 +68,8 @@
     <link fromOperation="wait for screen"           fromProperty="paired_end_file_2"            toOperation="remove paired ends"        toProperty="paired_end_removed_file2" />
     <link fromOperation="wait for screen"           fromProperty="paired_end_file_1"            toOperation="wait for per"              toProperty="paired_end_removed_file1" />
     <link fromOperation="wait for screen"           fromProperty="paired_end_file_2"            toOperation="wait for per"              toProperty="paired_end_removed_file2" />
+    <link fromOperation="remove paired ends"        fromProperty="paired_end_removed_count1"    toOperation="penult"                    toProperty="paired_end_removed_count1" />
+    <link fromOperation="remove paired ends"        fromProperty="paired_end_removed_count2"    toOperation="penult"                    toProperty="paired_end_removed_count2" />
     <link fromOperation="remove paired ends"        fromProperty="result"                       toOperation="wait for per"              toProperty="per_complete" />
 
     <link fromOperation="wait for per"              fromProperty="paired_end_removed_file1"     toOperation="dedup 1"                   toProperty="sam_file" />
@@ -78,8 +77,10 @@
 
     <link fromOperation="dedup 1"                   fromProperty="result"                       toOperation="wait for dedup 1"          toProperty="dedup_1_complete" />
     <link fromOperation="dedup 1"                   fromProperty="deduplicated_file"            toOperation="wait for dedup 1"          toProperty="deduplicated_file1" />
+    <link fromOperation="dedup 1"                   fromProperty="deduplicated_count"           toOperation="penult"                    toProperty="deduplicated_count1" />
     <link fromOperation="dedup 2"                   fromProperty="result"                       toOperation="wait for dedup 2"          toProperty="dedup_2_complete" />
     <link fromOperation="dedup 2"                   fromProperty="deduplicated_file"            toOperation="wait for dedup 2"          toProperty="deduplicated_file2" />
+    <link fromOperation="dedup 2"                   fromProperty="deduplicated_count"           toOperation="penult"                    toProperty="deduplicated_count2" />
 
     <link fromOperation="wait for dedup 1"          fromProperty="deduplicated_file1"           toOperation="resurrect duplicates"      toProperty="raw_dedup_sam1" />
     <link fromOperation="wait for dedup 2"          fromProperty="deduplicated_file2"           toOperation="resurrect duplicates"      toProperty="raw_dedup_sam2" />
@@ -103,7 +104,9 @@
     <link fromOperation="wait for dust"             fromProperty="mismatch_cutoff"              toOperation="remove mismatch 2"         toProperty="cutoff" />
     <link fromOperation="wait for dust"             fromProperty="save_screened_reads"          toOperation="remove mismatch 2"         toProperty="save_screened_reads" />
 
+    <link fromOperation="remove mismatch 1"         fromProperty="screened_count"               toOperation="penult"                    toProperty="mismatch_removed_count1" />
     <link fromOperation="remove mismatch 1"         fromProperty="result"                       toOperation="wait for mismatch removal" toProperty="removal_1_complete" />
+    <link fromOperation="remove mismatch 2"         fromProperty="screened_count"               toOperation="penult"                    toProperty="mismatch_removed_count2" />
     <link fromOperation="remove mismatch 2"         fromProperty="result"                       toOperation="wait for mismatch removal" toProperty="removal_2_complete" />
 
     <link fromOperation="wait for mismatch removal" fromProperty="fastq_file1"                  toOperation="synch fastq with fasta"    toProperty="fastq1" />
@@ -249,6 +252,12 @@
         <operationtype typeClass="Workflow::OperationType::Block">
             <property>trim_count1</property>
             <property>trim_count2</property>
+            <property>paired_end_removed_count1</property>
+            <property>paired_end_removed_count2</property>
+            <property>deduplicated_count1</property>
+            <property>deduplicated_count2</property>
+            <property>mismatch_removed_count1</property>
+            <property>mismatch_removed_count2</property>
             <property>completed</property>
         </operationtype>
     </operation>
@@ -273,11 +282,8 @@
         <inputproperty>deduplicated_file_2</inputproperty>
         <inputproperty>resurrected_file_1</inputproperty>
         <inputproperty>resurrected_file_2</inputproperty>
-        <inputproperty>output</inputproperty>
         <inputproperty>prefix1</inputproperty>
         <inputproperty>prefix2</inputproperty>
-        <inputproperty>fasta_file1</inputproperty>
-        <inputproperty>fasta_file2</inputproperty>
         <inputproperty>dusted_file1</inputproperty>
         <inputproperty>dusted_file2</inputproperty>
         <inputproperty>synch_fasta_output</inputproperty>
