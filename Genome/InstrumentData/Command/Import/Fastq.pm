@@ -159,46 +159,8 @@ sub execute {
     }
 
     unless ($genome_sample) {
-        $self->status_message("Sample $sample_name is not found in database, now try to store it");
-        
-        my $species_name = $self->species_name;
-        my $taxon;
-        
-        $taxon = GSC::Organism::Taxon->get(species_name => $species_name);
-        unless ($taxon) {
-            $self->error_message("Failed to get GSC::Organism::Taxon for sample $sample_name and species $species_name");
-            die $self->error_message;
-        }
-        $self->status_message("Species_name: $species_name is stored in organism_taxon");
-        
-        #Need set full name so Genome::Sample can recognize:
-        #Organism_sample full name => Genome Sample name => Genome Model subject_name
-        
-        my $full_name;
-        if ($sample_name =~ /^TCGA\-/) {
-            $full_name = $sample_name;
-            $full_name =~ s/^TCGA/H_GP/;
-            chop $full_name unless $full_name =~ /R$/;
-        }
-        else {
-            $full_name = undef;
-            #maybe it should die here.
-        }
-
-        my %create_params = (
-            name             => $full_name,      # internal/LIMS DNA_NAME
-            extraction_label => $sample_name,    # external name (biospecimen or TCGA-*)
-            cell_type        => 'primary',
-            taxon_id         => $taxon->taxon_id,
-        );
-       
-        $genome_sample = Genome::Sample->create(%create_params);
-       
-        unless ($genome_sample){
-            $self->error_message('Failed to create the genome sample : '.Genome::Sample->error_message);
-            die $self->error_message;
-        }
-        $self->status_message("Succeed to create genome sample for $sample_name");
+        $self->error_message("Sample $sample_name is not found in database");
+        die $self->error_message;
     }
     
     my $sample_id = $genome_sample->id;
@@ -249,21 +211,21 @@ sub execute {
     my $tmp_tar_file = File::Temp->new("fastq-archive-XXXX",DIR=>"/tmp");
     my $tmp_tar_filename = $tmp_tar_file->filename;
 
-    my @suffixes = ("txt","fastq");    
+    my @suffixes = (".txt",".fastq");    
     my $basename;
     my %basenames;
-
+    my @inputs;
     for my $file (@input_files) {
         my ($filename,$path,$suffix) = fileparse($file, @suffixes);
         $basenames{$path}++;
         $basename = $path;
+        push @inputs,$filename.$suffix;
     }
     unless(scalar(keys(%basenames))==1) {
         $self->error_message("Found more than on path to imported files.");
         die $self->error_message;
     }
-
-    my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @input_files);
+    my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @inputs);
     print $tar_cmd, "\n";
     system($tar_cmd);
 
