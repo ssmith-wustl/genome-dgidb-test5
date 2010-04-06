@@ -33,10 +33,18 @@ class Genome::Transcript::VariantAnnotator{
 };
 
 my %variant_priorities = Genome::Info::VariantPriorities->for_annotation;
+my $file_system_check_flag = 0;
 
 local $SIG{__WARN__} = sub { 
     __PACKAGE__->save_error_producing_variant(); 
     warn @_ 
+};
+
+# ALRM signal used when checking for file system issues
+local $SIG{ALRM} = sub {
+    if ($file_system_check_flag == 1) {
+        die "File system commands are hanging, assuming file system unavailable";
+    }
 };
 
 sub warning_message{
@@ -98,9 +106,14 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
     }
 
     my $start = new Benchmark;
+
+    # TODO
+    # transcripts_to_annotate can be empty under one of two conditions: either there aren't any transcripts 
+    # at the location of the variant, or the disk has become unavailable (window->scroll does NOT check this)
+    # If empty and disk not available, produce an error and die instead of silently skipping annotation
     my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($variant{start});
     unless (@transcripts_to_annotate) {
-        $self->warning_message("No transcripts found in region surrounding position " . $variant{start} . " on chromosome " . $variant{chromosome_name});
+        #$self->warning_message("No transcripts found near position " . $variant{start} . " on chromosome " . $variant{chromosome_name});
         return;
     }
 

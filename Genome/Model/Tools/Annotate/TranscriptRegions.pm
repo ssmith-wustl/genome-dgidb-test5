@@ -88,10 +88,10 @@ sub execute {
     my $ensembl_build = Genome::Model::ImportedAnnotation->get(name => $eianame)->build_by_version($version);
     unless ($ensembl_build) { die qq(Couldn't get ensembl build info for $build_source\n);}
 
-    my $ensembl_data_directory = $ensembl_build->annotation_data_directory;
+    my ($ensembl_data_directory) = $ensembl_build->determine_data_directory;
 
     my $genbank_build = Genome::Model::ImportedAnnotation->get(name => $gianame)->build_by_version($version);
-    my $genbank_data_directory = $genbank_build->annotation_data_directory;
+    my ($genbank_data_directory) = $genbank_build->determine_data_directory;
     
     my (@et) = Genome::Transcript->get(data_directory => $ensembl_data_directory);
     my (@gt) = Genome::Transcript->get(data_directory => $genbank_data_directory);

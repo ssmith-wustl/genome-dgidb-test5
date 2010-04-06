@@ -58,7 +58,8 @@ sub execute {
         );
         $command->execute;
 
-        symlink $annotation_data_source_directory, $build->annotation_data_directory;
+        my ($data_directory) = $build->determine_data_directory;
+        symlink $annotation_data_source_directory, $data_directory;
 
     }elsif ($source =~ /^ensembl$/i){
 
@@ -73,7 +74,8 @@ sub execute {
         );
         $command->execute;
             
-        symlink $annotation_data_source_directory, $build->annotation_data_directory;
+        my ($data_directory) = $build->determine_data_directory;
+        symlink $annotation_data_source_directory, $data_directory;
 
     }elsif ($source =~ /^combined-annotation$/){
         my @from_models = $model->from_models;

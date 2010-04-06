@@ -8,6 +8,7 @@ use Genome;
 class Genome::ProcessingProfile::ReferenceAlignment::Solexa {
     is => 'Genome::ProcessingProfile::ReferenceAlignment',
 };
+
 sub stages {
     my @stages = qw/
         alignment
@@ -40,7 +41,6 @@ sub reference_coverage_job_classes {
     return;
 }
 
-
 sub variant_detection_job_classes {
     my @steps = (
         'Genome::Model::Event::Build::ReferenceAlignment::UpdateGenotype',
@@ -62,7 +62,8 @@ sub transcript_annotation_job_classes{
     if (defined($self->annotation_reference_transcripts)){
         my @steps = (
             'Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor',
-            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
+            #'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
+            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariantsParallel',
         );
         return @steps;
     }

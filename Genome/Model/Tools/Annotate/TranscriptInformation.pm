@@ -299,9 +299,9 @@ sub get_transcript_info {
     my $build_source = "$organism build $ncbi_reference version $version";
 
     my $ensembl_build = Genome::Model::ImportedAnnotation->get(name => $eianame)->build_by_version($version);
-    my $ensembl_data_directory = $ensembl_build->annotation_data_directory;
+    my ($ensembl_data_directory) = $ensembl_build->determine_data_directory;
     my $genbank_build = Genome::Model::ImportedAnnotation->get(name => $gianame)->build_by_version($version);
-    my $genbank_data_directory = $genbank_build->annotation_data_directory;
+    my ($genbank_data_directory) = $genbank_build->determine_data_directory;
 
     my $t;
     if ($transcript =~/^ENS/){ #ENST for Human ENSMUST

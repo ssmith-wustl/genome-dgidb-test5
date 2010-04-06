@@ -50,7 +50,7 @@ sub build_by_version {
 sub annotation_data_directory{
     my $self = shift;
     my $build = $self->last_complete_build;
-    return $build->annotation_data_directory;
+    return $build->determine_data_directory;
 }
 
 1;

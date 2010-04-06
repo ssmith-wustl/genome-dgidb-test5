@@ -13,6 +13,10 @@ class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Pic
     is => ['Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries'],
 };
 
+sub bsub_rusage {
+    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=90000:mem=8000]' -M 8000000";
+}
+
 sub execute {
     my $self = shift;
     my $now  = UR::Time->now;
@@ -185,6 +189,8 @@ sub execute {
        remove_duplicates => 0,
        tmp_dir => $tmp_dir->dirname,
        log_file => $markdup_log_file, 
+       max_jvm_heap_size => 6,
+
     ); 
 
     my $mark_dup_rv = $mark_dup_cmd->execute;

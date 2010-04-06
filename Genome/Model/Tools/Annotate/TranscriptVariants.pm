@@ -9,6 +9,7 @@ use Command;
 use Data::Dumper;
 use IO::File;
 use Genome::Info::IUB;
+use Benchmark;
 
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
@@ -103,6 +104,20 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             default => 0,
             doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
         },
+        # Performance options
+        cache_annotation_data_directory => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'enable this flag to cache annotation data locally, useful if annotation is being run repeatedly on a pipeline',
+        },
+        benchmark => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            is_input => 1,
+            doc => 'if set, run times are displayed as status messages after certain steps are completed (annotation of whole chromosomes, caching times, etc)',
+        },
     ], 
 };
 
@@ -158,6 +173,9 @@ EOS
 sub execute { 
     my $self = shift;
 
+    my $total_start = Benchmark->new;
+    my $pre_annotation_start = Benchmark->new;
+
     if ($self->_is_parallel) {
         $self->output_file($self->variant_file . ".out");
     }
@@ -182,7 +200,7 @@ sub execute {
         $self->error_message("error opening file $variant_file");
         return;
     }
-    
+
     # establish the output handle for the transcript variants
     my $output_fh;
     my $output_file = $self->output_file;
@@ -193,13 +211,13 @@ sub execute {
         $output_fh = $self->_create_file($output_file);
     }
     $self->_transcript_report_fh($output_fh);
-    
+
     #check to see if reference_transcripts set name and build_id given
     if ($self->build and $self->reference_transcripts){
         $self->error_message("Please provide a build id OR a reference transcript set name, not both");
         return;
     }
-    
+
     #if no build is provided, use the v0 of our generic NCBI-human-36 imported annotation model
     unless ($self->build){
         if ($self->reference_transcripts){
@@ -239,27 +257,55 @@ sub execute {
         }
     }
 
+    my $pre_annotation_stop = Benchmark->new;
+    my $pre_annotation_time = timediff($pre_annotation_stop, $pre_annotation_start);
+    $self->status_message('Pre-annotation: ' . timestr($pre_annotation_time, 'noc')) if $self->benchmark;
+
+    if ($self->build and $self->cache_annotation_data_directory) {
+        my $cache_start = Benchmark->new;
+        $self->status_message('Caching annotation data directory');
+        $self->build->cache_annotation_data;
+        my $cache_stop = Benchmark->new;
+        my $cache_time = timediff($cache_stop, $cache_start);
+        $self->status_message('Annotation data caching: ' . timestr($cache_time, 'noc')) if $self->benchmark;
+    }
+    elsif (not $self->cache_annotation_data_directory) {
+        $self->status_message("Not caching annotation data directory");
+    }
+
     # omit headers as necessary 
     $output_fh->print( join("\t", $self->transcript_report_headers), "\n" ) unless $self->no_headers;
 
     # annotate all of the input variants
+    $self->status_message("Annotation start") if $self->benchmark;
+    my $annotation_total_start = Benchmark->new;
+    my ($annotation_start, $annotation_stop);
     my $chromosome_name = '';
     my $last_variant_start = 0;
     my $annotator = undef;
     my $sloppy_skip = 0; #This var is set when we can't annotate a chromosome and want to skip the rest of the variants on that chromosome
+
     while ( my $variant = $variant_svr->next ) {
+
         $variant->{type} = $self->infer_variant_type($variant);
         # make a new annotator when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
+            if ($annotation_start) {
+                $annotation_stop = Benchmark->new;
+                my $annotation_time = timediff($annotation_stop, $annotation_start);
+                $self->status_message("Annotating chromsome $chromosome_name took " . timestr($annotation_time)) if $self->benchmark;
+            }
 
             $chromosome_name = $variant->{chromosome_name};
             $last_variant_start = 0;
             $sloppy_skip = 0;  #reset skip behavior on new chrom
 
+            my $iter_start = Benchmark->new;
             my $transcript_iterator;
-            if ($self->build){
+            if ($self->build) {
                 $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
-            }else{
+            }
+            else{
                 $transcript_iterator = Genome::Transcript->create_iterator(data_directory=>$self->data_directory, chrom_name => $chromosome_name);
             }
             unless ($transcript_iterator){
@@ -291,16 +337,33 @@ sub execute {
                 die;
             }
 
+            my $iter_stop = Benchmark->new;
+            my $iter_time = timediff($iter_stop, $iter_start);
+
+            $annotation_start = Benchmark->new;
+            if ($self->benchmark) {
+                $self->status_message("Annotation start for chromosome $chromosome_name");
+            }
         }
+
         next if $sloppy_skip;
+
         unless ( $variant->{start} >= $last_variant_start){
+            my $iter_start = Benchmark->new;
+
             $self->warning_message("Improperly sorted input! Restarting iterator!  Improve your annotation speed by sorting input variants by chromosome, then position!  chromosome:". $variant->{chromosome_name}." start".$variant->{start}." stop".$variant->{stop});
             $chromosome_name = $variant->{chromosome_name};
             $last_variant_start = 0;
 
             my $transcript_iterator;
             if ($self->build){
+                my $iter_start = Benchmark->new;
                 $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+                my $iter_stop = Benchmark->new;
+                my $iter_time = timediff($iter_stop, $iter_start);
+                if ($self->benchmark) {
+                    $self->status_message("\tIterator creation: " . timestr($iter_time, 'noc'));
+                }
             }else{
                 $transcript_iterator = Genome::Transcript->create_iterator(data_directory=>$self->data_directory, chrom_name => $chromosome_name);
             }
@@ -315,6 +378,12 @@ sub execute {
                 transcript_window => $transcript_window,
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
+
+            my $iter_stop = Benchmark->new;
+            my $iter_time = timediff($iter_stop, $iter_start);
+            if ($self->benchmark) {
+                $self->status_message("\tIterator, window, and annotator recreation: " . timestr($iter_time, 'noc')); 
+            }
         }
         $last_variant_start = $variant->{start};
 
@@ -366,6 +435,14 @@ sub execute {
             $self->_print_annotation($variant, \@transcripts);
         }
     }
+
+    $annotation_stop = Benchmark->new;
+    my $annotation_time = timediff($annotation_stop, $annotation_start);
+    $self->status_message("Annotating $chromosome_name took " . timestr($annotation_time) . "\n") if $self->benchmark;
+
+    my $annotation_total_stop = Benchmark->new;
+    my $total_time = timediff($annotation_total_stop, $annotation_total_start);
+    $self->status_message('Total time to complete: ' . timestr($total_time, 'noc') . "\n\n") if $self->benchmark;
 
     $output_fh->close unless $output_fh eq 'STDOUT';
     return 1;

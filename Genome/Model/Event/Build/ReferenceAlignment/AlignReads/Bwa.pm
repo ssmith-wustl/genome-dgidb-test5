@@ -23,7 +23,7 @@ class Genome::Model::Event::Build::ReferenceAlignment::AlignReads::Bwa {
 };
 
 sub bsub_rusage {
-    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=90000:mem=8000]' -M 8000000 -n 4";
+    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=90000:mem=10000]' -M 10000000 -n 4";
 }
 
 

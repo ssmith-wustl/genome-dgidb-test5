@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 use IO::File;
-use File::Temp;
+use File::Temp qw/ tempdir /;
 use Genome::Utility::IO::SeparatedValueReader;
 use Workflow;
 use File::Basename;
@@ -31,7 +31,12 @@ class Genome::Model::Tools::Annotate::TranscriptVariantsParallel{
             is => 'Number',
             is_optional => 1,
             doc => 'enable this flag to split the variant file by number',
-        },  
+        },
+        log_directory => {
+            is => 'Path',
+            is_optional => 1,
+            doc => 'If provided, logs for each transcript variants subprocess are stored in the directory'
+        },
         _output_file => {
             is => 'Text',
             is_optional => 1,
@@ -52,33 +57,49 @@ sub pre_execute {
     my $self = shift;
 
     if ($self->output_file eq 'STDOUT') {
-        $self->error_message("Must specify an output file\n") and die;
+        $self->error_message("Must specify an output file") and die;
     }
 
     # Simple checks on command line args
     if (-s $self->output_file) {
-        die "$self->output_file exists and has a size, exiting.\n";
+        $self->error_message($self->output_file . " exists and has a size, exiting") and die;
     }
     $self->_output_file($self->output_file);
 
     unless (-s $self->variant_file) {
-        die "$self->variant_file does not exist or has no size, exiting.\n";
+        $self->error_message($self->variant_file . " does not exist or has no size, exiting") and die;
     }
+
+    # Make log directory and have workflow put child process output there
+    if (defined $self->log_directory) {
+        unless (-d $self->log_directory) {
+            my $log_dir = Genome::Utility::FileSystem->create_directory($self->log_directory);
+            unless (defined $log_dir) {
+                $self->error_message("Error creating log directory at " . $self->log_directory);
+                return;
+            }
+        }
+        $self->_operation->log_dir($self->log_directory);
+    }
+
 
     # Make temp dir
-    $self->_temp_dir(abs_path(dirname($self->output_file)) . "/annotation_temp_$$/");
-    unless (-d $self->_temp_dir or mkdir ($self->_temp_dir)) {
-        $self->error_message("Could not create temporary annotation directory at $self->_temp_dir\n
-            Please specify an output file in a directory you have write permissions\n");
+    my $temp_dir =  tempdir(
+        'annotation_temp_XXXXX', 
+        DIR => abs_path(dirname($self->output_file)), 
+        CLEANUP => 1
+    );
+    unless (-d $temp_dir) {
+        $self->error_message("Could not create temporary output directory at " . 
+            abs_path(dirname($self->output_file)));
         die;
     }
-
-    # Split up the input file
-    my $inputFileHandler = IO::File->new($self->variant_file);
+    $self->_temp_dir($temp_dir);
+    
     my @splitFiles;
-
     # Split by line number
     if ($self->split_by_number and not $self->split_by_chromosome) {
+        my $inputFileHandler = IO::File->new($self->variant_file, "r");
         my $done = 0;
         until ($done == 1) {
             my $temp = File::Temp->new(DIR => $self->_temp_dir);
@@ -109,7 +130,12 @@ sub pre_execute {
             headers => \@variant_columns,
             separator => '\t',
             is_regex => 1,
+            ignore_extra_columns => 1,
         );
+        unless ($reader) {
+            $self->error_message("Could not get reader for " . $self->variant_file);
+            die;
+        }
 
         my $currChrom = '';
         my $fh;
@@ -132,6 +158,7 @@ sub pre_execute {
         $fh->close if $fh;
         $self->variant_file([map { $_->filename } @splitFiles]);
     }
+    
     $self->_is_parallel(1);
     $self->no_headers(1);
     $self->_variant_files(\@splitFiles);
@@ -146,11 +173,18 @@ sub post_execute {
     }
 
     my @output_files;
+    my @zero_size_files;
     for (@{$self->output_file}){
-        print "output file undefined\n" and next unless $_;
-        print "output file $_ doesn't exist\n" and next unless -e $_;
-        print "output file $_ has no size\n" unless -s $_;  #still want to unlink these later
-        push @output_files, $_;
+        print "Output file undefined\n" and next unless $_;
+        print "Output file $_ doesn't exist\n" and next unless -e $_;
+
+        unless (-s $_) {
+            print "Output file $_ has no size\n";
+            push @zero_size_files, $_;
+        }
+        else {
+            push @output_files, $_;
+        }
     }
 
     Genome::Utility::FileSystem->cat(
@@ -158,15 +192,14 @@ sub post_execute {
         output_file => $self->_output_file,
     );
 
-    for my $file (@{$self->variant_file},@output_files) {
+    for my $file (@{$self->variant_file},@output_files, @zero_size_files) {
         unless (unlink $file) {
             $self->error_message('Failed to remove file '. $file .":  $!");
-            die($self->error_message);
         }
     }
 
     unless (rmdir ($self->_temp_dir)) {
-        $self->status_message("Could not remove temporary annotation directory at $self->_temp_dir\n");
+        $self->warning_message("Could not remove temporary annotation directory at " . $self->_temp_dir . "\n");
     }
 
     $self->output_file($self->_output_file);
