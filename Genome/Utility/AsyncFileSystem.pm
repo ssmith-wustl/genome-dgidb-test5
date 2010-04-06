@@ -58,21 +58,19 @@ sub shellcmd {
         }
     }
 
-    if ( $input_files and @$input_files ) {
-        my @missing_inputs =
-          grep { not -s $_ } grep { not -p $_ } @$input_files;
+    if ($input_files and @$input_files) {
+        my @missing_inputs = grep { not -s $_ } grep { not -p $_ } @$input_files;
         if (@missing_inputs) {
-            die "CANNOT RUN (missing input files):     $cmd\n\t"
-              . join( "\n\t",
-                map { -e $_ ? "(empty) $_" : $_ } @missing_inputs );
+            Carp::croak("CANNOT RUN (missing input files):     $cmd\n\t"
+                         . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_inputs));
         }
     }
 
-    if ( $input_directories and @$input_directories ) {
+    if ($input_directories and @$input_directories) {
         my @missing_inputs = grep { not -d $_ } @$input_directories;
         if (@missing_inputs) {
-            die "CANNOT RUN (missing input directories):     $cmd\n\t"
-              . join( "\n\t", @missing_inputs );
+            Carp::croak("CANNOT RUN (missing input directories):     $cmd\n\t"
+                        . join("\n\t", @missing_inputs));
         }
     }
 
@@ -87,22 +85,18 @@ sub shellcmd {
             eval {
                 if ( $exit_code == -1 )
                 {
-                    die "ERROR RUNNING COMMAND. Failed to execute: $cmd";
+                    Carp::croak("ERROR RUNNING COMMAND. Failed to execute: $cmd");
                 } elsif ( $exit_code & 127 ) {
                     my $signal = $exit_code & 127;
                     my $withcore = ( $exit_code & 128 ) ? 'with' : 'without';
-
-                    die
-"COMMAND KILLED. Signal $signal, $withcore coredump: $cmd";
+                    Carp::croak("COMMAND KILLED. Signal $signal, $withcore coredump: $cmd");
                 } elsif ( $exit_code >> 8 != 0 ) {
                     $exit_code = $exit_code >> 8;
+                    $DB::single = $DB::stopper;
                     if ($allow_failed_exit_code) {
-                        $DB::single = $DB::stopper;
-                        warn "TOLERATING Exit code $exit_code from: $cmd";
+                        Carp::carp("TOLERATING Exit code $exit_code, msg $! from: $cmd");
                     } else {
-                        $DB::single = $DB::stopper;
-                        die
-"ERROR RUNNING COMMAND.  Exit code $exit_code from: $cmd";
+                        Carp::croak("ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd");
                     }
                 }
 
@@ -116,11 +110,10 @@ sub shellcmd {
                         and @$output_files == @missing_output_files )
                     {
                         for my $output_file (@$output_files) {
-                            warn
-"ALLOWING zero size output file '$output_file' for command: $cmd";
+                            Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
                             my $fh = $self->open_file_for_writing($output_file);
                             unless ($fh) {
-                                die "failed to open $output_file!: $!";
+                                Carp::croak("failed to open $output_file for writing to replace missing output file: $!");
                             }
                             $fh->close;
                         }
@@ -136,11 +129,11 @@ sub shellcmd {
                 }
 
                 if ( @missing_output_files or @missing_output_directories ) {
-                    for (@$output_files) { unlink $_ }
-                    die
-"MISSING OUTPUTS! @missing_output_files @missing_output_directories\n";
-
-        #    . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_outputs);
+                    for (@$output_files) { unlink $_ or Carp::croak("Can't unlink $_: $!"); }
+                    Carp::croak("MISSING OUTPUTS! "
+                                . join(', ', @missing_output_files)
+                                . " "
+                                . join(', ', @missing_output_directories));
                 }
             };
             if ($@) {
