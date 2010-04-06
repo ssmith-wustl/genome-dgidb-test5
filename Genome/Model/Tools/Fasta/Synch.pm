@@ -104,8 +104,6 @@ sub execute
     my %ref_hash;
     my $output = $self->output;
 
-    $self->log_event("synch fasta entered");
-
     ####print "Reading the first fasta file into the reference hash......\n";
 
     my $name1  = new IO::File $self->name1;
@@ -119,8 +117,6 @@ sub execute
 	$ref_hash{ $line[0] } = 1;
     }
     $name1->close;
-
-    $self->log_event("$name1 processed");
 
     ####my $size = keys(%ref_hash);
     ####print "Size of first fasta file is $size\n";
@@ -147,8 +143,6 @@ sub execute
         }
     }
     $name2->close;
-
-    $self->log_event("$name2 processed");
 
     ####print "Size of second fasta file is $name2_counter\n";
     ####$size = keys(%ref_hash);
@@ -211,8 +205,6 @@ sub execute
     $output_both_file1->close;
     $fastq1->close;
 
-    $self->log_event($self->fastq1 . " processed");
-
     #___END_2
     my $fastq2 = new IO::File $self->fastq2;
     my $output_only_file2_name = $self->prefix2 . $output . ".only_end2.fastq";
@@ -257,27 +249,12 @@ sub execute
     $output_both_file2->close;
     $fastq2->close;
 
-    $self->log_event($self->fastq2 . " processed");
-
-
     $self->output_only1($output_only_file1_name);
     $self->output_both1($output_both_file1_name);
     $self->output_only2($output_only_file2_name);
     $self->output_both2($output_both_file2_name);
 
-    $self->log_event("done with $output_only_file1_name\n$output_both_file1_name\n$output_only_file2_name\n$output_both_file2_name");
-
     return 1;
 }
 
-sub log_event()
-{
-    my ($self,$str) = @_;
-    my @name = split("=",$self);
-    my $fh = IO::File->new(">> /gscuser/edemello/svn/fresh7/trunk/Genome/logfile.txt");
-    print $fh localtime(time) . "\t " . $name[0] . ":\t$str\n";
-    $fh->close();
-}
-
-    
 1;
