@@ -193,15 +193,20 @@ sub on_each_line (&) {
     my $buf = '';
     return sub {
         my $data = shift;
-        return unless defined $data;
 
-        $buf .= $data;
+        $buf .= $data if (defined $data);
         while (1) {
             my $pos = index( $buf, "\n" );
             last if ( $pos < 0 );
 
             my $line = substr( $buf, 0, $pos + 1, '' );
             $code->($line);
+        }
+
+        unless (defined $data) {
+            $code->($buf) if ($buf ne '');
+            undef $buf;
+            $code->();
         }
       }
 }
