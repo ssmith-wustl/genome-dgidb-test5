@@ -10,6 +10,7 @@ use Digest::MD5 qw(md5_hex);
 
 our $override_testdir;
 BEGIN {
+    $ENV{UR_DBI_NO_COMMIT} = 1;
     $override_testdir = pop(@ARGV);
     if ($override_testdir) {
         unless ($override_testdir =~ /^\//) {
@@ -20,11 +21,10 @@ BEGIN {
 }
 
 use Test::More;
-plan skip_all => "broken with new API";
+#plan skip_all => "broken with new API";
 
 use above 'Genome';
 use Genome::Model::Event::Build::ReferenceAlignment::Test;
-$ENV{UR_DBI_NO_COMMIT} = 1;
 
 use GSCApp;
 App::DB->db_access_level('rw');

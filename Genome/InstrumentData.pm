@@ -12,29 +12,11 @@ class Genome::InstrumentData {
     id_by => ['id'],
     table_name => <<EOS
     (
-        SELECT run_name id,
-               sanger.run_name,
-               'sanger' sequencing_platform,
-               'Genome::InstrumentData::Sanger' subclass_name,
-               sanger.run_name seq_id,
-               NVL(sample.value, 'unknown') sample_name,
-               '1' subset_name,
-               NVL(library.value, 'unknown') library_name
-          FROM gsc_run\@oltp sanger,
-               mg.misc_attribute\@dw sample,
-               mg.misc_attribute\@dw library
-         WHERE sanger.run_name = sample.entity_id(+) AND
-               sanger.run_name = library.entity_id(+) AND
-               sample.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
-               sample.property_name(+) = 'sample_name' AND
-               library.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
-               library.property_name(+) = 'library_name'
-     UNION ALL
-         SELECT to_char(solexa.analysis_id),
+         SELECT to_char(solexa.analysis_id) id,
                fc.run_name,
-               'solexa' sequencing_platform,
                'Genome::InstrumentData::Solexa' subclass_name,
-               to_char(nvl(solexa2.sls_seq_id,solexa1.sls_seq_id)) seq_id,
+               'solexa' sequencing_platform,
+               to_char(solexa.analysis_id) seq_id,
                sam.full_name sample_name,
                (
                     case 
@@ -44,26 +26,15 @@ class Genome::InstrumentData {
                ) subset_name,
                lib.full_name library_name
           FROM index_illumina\@dw solexa 
+          JOIN library_summary\@dw lib on lib.library_id = solexa.library_id
+          JOIN organism_sample\@dw sam on sam.organism_sample_id = lib.sample_id
           JOIN flow_cell_illumina\@dw fc on fc.flow_cell_id = solexa.flow_cell_id
-          JOIN read_illumina\@dw solexa1 
-                    on solexa1.ii_seq_id = solexa.seq_id 
-                    and (
-                        (run_type = 'Paired End' and solexa1.read_number = 2)
-                        or
-                        (run_type = 'Fragment' and solexa1.read_number = 1)
-                    )
-           JOIN library_summary\@dw lib on lib.library_id = solexa.library_id
-           JOIN organism_sample\@dw sam on sam.organism_sample_id = lib.sample_id
-           LEFT JOIN read_illumina\@dw solexa2 
-                on solexa2.ii_seq_id = solexa.seq_id
-                and run_type = 'Paired End' 
-                and solexa2.read_number = 1 
      UNION ALL
             SELECT 
                to_char(case when ri.index_sequence is null then ri.region_id else ri.seq_id end) id,
                r.run_name,
-               '454' sequencing_platform,
                'Genome::InstrumentData::454' subclass_name,
+               '454' sequencing_platform,
                to_char(ri.seq_id) seq_id,
                s.full_name sample_name,
                (
@@ -80,13 +51,31 @@ class Genome::InstrumentData {
      UNION ALL
         SELECT to_char(imported.id) id,
                'unknown' run_name,
-               sequencing_platform,
                'Genome::InstrumentData::Imported' subclass_name,
+               sequencing_platform,
                to_char(imported.id) seq_id,
                NVL(imported.sample_name, 'unknown') sample_name,
                subset_name,
                'unknown' library_name
-          FROM imported_instrument_data imported
+          FROM imported_instrument_data imported 
+     UNION ALL
+        SELECT run_name id,
+               sanger.run_name,
+               'Genome::InstrumentData::Sanger' subclass_name,
+               'sanger' sequencing_platform,
+               sanger.run_name seq_id,
+               NVL(sample.value, 'unknown') sample_name,
+               '1' subset_name,
+               NVL(library.value, 'unknown') library_name
+          FROM gsc_run\@oltp sanger,
+               mg.misc_attribute\@dw sample,
+               mg.misc_attribute\@dw library
+         WHERE sanger.run_name = sample.entity_id(+) AND
+               sanger.run_name = library.entity_id(+) AND
+               sample.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
+               sample.property_name(+) = 'sample_name' AND
+               library.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
+               library.property_name(+) = 'library_name'
     ) idata
 EOS
     ,
