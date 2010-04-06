@@ -1,5 +1,3 @@
-# FIXME ebelter
-#  Long: remove this and all define modeuls to have just one that can handle model inputs
 package Genome::Model::Command::Define::PooledAssemblyDecomposition;
 
 use strict;
@@ -38,34 +36,14 @@ class Genome::Model::Command::Define::PooledAssemblyDecomposition {
             type => 'String',
             is_optional => 0,
             doc => "location of the reference sequence"        
-        },        
-        subject_name => {
-            is => 'Text',
-            len => 255,
-            doc => 'The name of the subject all the reads originate from',
         },
     ],
     has_optional => [
-        model_name => {
-            is => 'Text',
-            len => 255,
-            doc => 'User meaningful name for this model (default value: $SUBJECT_NAME.$PP_NAME)'
-        },
-        subject_type => {
-            is => 'Text',
-            len => 255,
-            doc => 'The type of subject all the reads originate from, defaults to sample_name',
-            default => 'sample_group',
-        },
-        data_directory => {
-            is => 'Text',
-            len => 255,
-            doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
-        },
-        processing_profile_name => {
-            is => 'Text',
-            doc => 'identifies the processing profile by name',
-            default => 'default',
+        subject_name =>
+        {
+            type => 'String',
+            is_optional => 1,
+            doc => "this parameter is for internal use, any value specified will be over-ridden"
         },
         ace_file_name =>
         {
@@ -78,15 +56,13 @@ class Genome::Model::Command::Define::PooledAssemblyDecomposition {
             type => 'String',
             is_optional => 1,
             doc => "name of phdball if different than phd.ball.1"        
-        }, 
-
+        },
    ],
 };
 
 sub help_synopsis {
     return <<"EOS"
 genome model define pooled-assembly-decomposition
-  --subject_name ovc2
   --from-assembly 54321
   --data-directory /gscmnt/somedisk/somedir/model_dir
 EOS
@@ -120,20 +96,21 @@ sub execute {
         $self->error_message("Ref_seq_file does not exist");
         return;
     }
-    
-        # run Genome::Model::Command::Define execute
-    my $super = $self->super_can('_execute_body');
-    $super->($self,@_);
-    
-
-    my $model = Genome::Model->get($self->result_model_id);
     my $pooled_assembly = $self->pooled_assembly;
+    $self->subject_name($pooled_assembly->subject_name);
+    $self->subject_type($pooled_assembly->subject_type);
+     
+     # run Genome::Model::Command::Define execute
+    my $super = $self->super_can('_execute_body');
+    $super->($self,@_);    
+
+    my $model = Genome::Model->get($self->result_model_id);    
     my $pooled_assembly_build_directory = $pooled_assembly->last_complete_build_directory;
     unless ($pooled_assembly_build_directory && -e $pooled_assembly_build_directory) {
         $self->error_message("Failed to get last complete build directory for the input pooled assembly");
         return;
     }
-    #exit;
+
     $model->add_input(name => 'pooled_assembly_dir', value_class_name => 'UR::Value', value_id => $pooled_assembly_build_directory);
     $model->add_input(name => 'ref_seq_file', value_class_name => 'UR::Value', value_id => $self->ref_seq_file);
     unless(!defined $self->ace_file_name) {
@@ -146,26 +123,7 @@ sub execute {
     }
     $model->add_from_model(from_model => $self->pooled_assembly, role => 'pooled_assembly');
 
-    return 1; # for now just execute body an return
-    # get the model created by the super
-    $model = Genome::Model->get($self->result_model_id);
-
-    unless(defined $self->pooled_assembly) {
-        $self->error_message("Could not get a model for pooled assembly id: " . $self->from_assembly);
-        return;
-    }
-    
-#ddd    Genome::Model::Input GENOME_MODEL_INPUT model_id, name, value_class
-
-
-    $model->add_input(name => 'ref_seq_path', value_class_name => 'UR::Value', value_id => $self->ref_seq_path);
-    #$model->add_input(name => 'ref_seq_path', value => $self->ref_seq_path);
-    #$model->ref_seq_path($self->ref_seq_path);
-
-    # Link to pooled assembly model
-    #$model->add_from_model(from_model => $self->pooled_assembly, role => 'normal');#todo figure out what the correct parameter for role is
-
-    return 1;
+    return 1; 
 }
 
 1;
