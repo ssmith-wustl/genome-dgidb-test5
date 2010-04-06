@@ -7,6 +7,8 @@ use Genome;
 use Command;
 use IO::File;
 use File::Basename;
+use Sys::Hostname;
+use Genome::Utility::AsyncFileSystem qw(on_each_line);
 
 class Genome::Model::Tools::Sam::Merge {
     is  => 'Genome::Model::Tools::Sam',
@@ -155,12 +157,29 @@ sub execute {
         my $bam_merge_cmd = $self->merge_command(@input_files);
 	    $self->status_message("Bam merge command: $bam_merge_cmd");
 
-	    my $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_merge_cmd,
-								 input_files=>\@input_files,
-								 output_files=>[$result],
-								 skip_if_output_is_present=>0
-								);
-	    $self->status_message("Bam merge return value: $bam_merge_rv");
+        my $bam_merge_rv;
+
+        if ($self->software eq 'picard') {
+            $bam_merge_rv = $self->monitor_shellcmd(
+                {
+                    cmd=>$bam_merge_cmd,
+                    input_files=>\@input_files,
+                    output_files=>[$result],
+                    skip_if_output_is_present=>0
+                },
+                60,
+                900
+            );
+        } else {
+            $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(
+                cmd=>$bam_merge_cmd,
+                input_files=>\@input_files,
+                output_files=>[$result],
+                skip_if_output_is_present=>0
+            );
+        }
+
+ 	    $self->status_message("Bam merge return value: $bam_merge_rv");
 	    if ($bam_merge_rv != 1) {
 		    $self->error_message("Bam merge error!  Return value: $bam_merge_rv");
 	    } 
@@ -203,5 +222,67 @@ sub execute {
     return 1;
 }
 
+sub monitor_shellcmd {
+    my ($self,$shellcmd_args,$check_interval,$max_stdout_interval) = @_;
+
+    my $cmd = $shellcmd_args->{cmd};
+    my $last_update = time;
+    my $pid;
+    my $w;
+    $w = AnyEvent->timer(
+        interval => $check_interval,
+        cb => sub {
+            if ( time - $last_update >= $max_stdout_interval) {
+                my $message = <<MESSAGE;
+To whom it may concern,
+
+This command:
+
+$cmd
+
+Has not produced output on STDOUT in at least $max_stdout_interval seconds.
+
+Host: %s
+Perl Pid: %s 
+Java Pid: %s
+LSF Job: %s
+User: %s
+
+This is the last warning you will receive about this process.
+MESSAGE
+
+                undef $w;
+                my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', $ENV{USER});
+
+                my @to = qw/eclark ssmith boberkfel jeldred abrummet/;
+                my $to = join(', ', map { "$_\@genome.wustl.edu" } @to);
+                my $subject = 'Slow bam merge happening right now';
+                my $data = sprintf($message,
+                    hostname,$$,$pid,$ENV{LSB_JOBID},$ENV{USER});
+
+                my $msg = MIME::Lite->new(
+                    From => $from,
+                    To => $to,
+                    Cc => 'apipe-run@genome.wustl.edu',
+                    Subject => $subject,
+                    Data => $data
+                );
+                $msg->send();
+            }
+        }
+    );
+
+    my $cv = Genome::Utility::AsyncFileSystem->shellcmd(
+        %$shellcmd_args,
+        '>' => on_each_line {
+            $last_update = time;
+            print $_[0] if defined $_[0];
+        },
+        '$$' => \$pid
+    );
+    $cv->cb(sub { undef $w });
+
+    return $cv->recv;
+}
 
 1;
