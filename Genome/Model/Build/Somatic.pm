@@ -80,7 +80,7 @@ sub newest_somatic_workflow_instance {
     );
 
     unless (@sorted) {
-        $self->warning_message("No somatic workflow instances found for this build.");
+        $self->warning_message("No somatic workflow instances found for build " . $self->id);
         return;
     }
     
@@ -94,7 +94,7 @@ sub somatic_workflow_inputs {
     my $instance = $self->newest_somatic_workflow_instance;
 
     unless ($instance) {
-        $self->warning_message("no somatic workflow instance found. It is possible this build is too old to have been associated with a workflow.");
+        $self->warning_message("No somatic workflow instance found for build " . $self->id . ". It is possible this build is too old to have been associated with a workflow.");
         return;
     }
 
