@@ -9,16 +9,13 @@ use Genome;
 class Genome::Model::ImportedReferenceSequence{
     is => 'Genome::Model',
     has => [
-        species_name => {
-            via => 'subject',
-            to => 'species_name',
-        },
         fasta_file => {
             is => 'UR::Value',
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'fasta_file'],
             is_mutable => 1,
+            is_many => 0,
             doc => 'fully qualified fasta filename (eg /foo/bar/input.fasta)'
         },
     ],
@@ -28,6 +25,7 @@ class Genome::Model::ImportedReferenceSequence{
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'version'],
+            is_many => 0,
             is_mutable => 1 
         },
     ]

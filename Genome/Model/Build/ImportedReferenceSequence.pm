@@ -53,12 +53,6 @@ sub create {
         $self->data_directory(undef);
     }
 
-    # Copy the imported reference sequence version string from the version value in the model's inputs hash
-    if(defined($self->model->version))
-    {
-        $self->version($self->model->version);
-    }
-
     return $self;
 }
 

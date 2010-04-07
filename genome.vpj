@@ -1,0 +1,91 @@
+<!DOCTYPE Project SYSTEM "http://www.slickedit.com/dtd/vse/10.0/vpj.dtd">
+<Project
+	Version="10.0"
+	VendorName="SlickEdit"
+	WorkingDir="."
+	VCSProject=":">
+	<Files>
+		<Folder
+			Name="Source Files"
+			Filters="*.pl;*.pm;*.perl;*.plx">
+			<Folder
+				Name="build"
+				Filters="">
+				<F N="Genome/Model/Build/ImportedReferenceSequence.pm"/>
+			</Folder>
+			<Folder
+				Name="model"
+				Filters="">
+				<F N="Genome/Model/ImportedReferenceSequence.pm"/>
+			</Folder>
+			<Folder
+				Name="processing profile"
+				Filters="">
+				<F N="Genome/ProcessingProfile/ImportedReferenceSequence.pm"/>
+			</Folder>
+			<Folder
+				Name="define"
+				Filters="">
+				<F N="Genome/Model/Command/Define/ImportedReferenceSequence.pm"/>
+			</Folder>
+			<F N="Genome/Model/Tools/RefSeq/Modify.pm"/>
+			<F N="Genome/Model/Tools/RefSeq/Prepare.pm"/>
+		</Folder>
+		<Folder
+			Name="Other Files"
+			Filters=""/>
+	</Files>
+	<Config
+		Name="Debug"
+		DebugCallbackName="perl5db"
+		Type="perl"
+		OutputFile=""
+		CompilerConfigName="">
+		<Menu>
+			<Target
+				Name="Execute"
+				MenuCaption="E&amp;xecute"
+				Dialog="_perl_options_form Run"
+				CaptureOutputWith="ProcessBuffer"
+				SaveOption="SaveNone"
+				RunFromDir="%rw"
+				Deletable="0">
+				<Exec CmdLine='"%(SLICKEDIT_PERL_EXE)" %(SLICKEDIT_PERL_EXECUTE_ARGS) /gscuser/ehvatum/repo/tsplit.pl %~other'/>
+			</Target>
+			<Target
+				Name="Debug"
+				MenuCaption="&amp;Debug"
+				Dialog="_perl_options_form Debug"
+				CaptureOutputWith="ProcessBuffer"
+				SaveOption="SaveNone"
+				RunFromDir="%rw"
+				Deletable="0">
+				<Exec
+					CmdLine="perl_debug"
+					Type="Slick-C"/>
+			</Target>
+			<Target
+				Name="Perl Options"
+				MenuCaption="Perl &amp;Options"
+				ShowOnMenu="HideIfNoCmdLine"
+				Deletable="0">
+				<Exec
+					CmdLine="perloptions"
+					Type="Slick-C"/>
+			</Target>
+		</Menu>
+		<List Name="Perl Options">
+		</List>
+		<List Name="perl5db Options">
+			<Item
+				Name="ServerHost"
+				Value="127.0.0.1"/>
+			<Item
+				Name="ServerPort"
+				Value="0"/>
+			<Item
+				Name="ListenInBackground"
+				Value="1"/>
+		</List>
+	</Config>
+</Project>
