@@ -22,14 +22,18 @@ use Genome;                                 # using the namespace authorizes Cla
 
 
 my $report_only = 0;
-my $p_value_for_hc = 1.0E-06;
+my $p_value_for_hc = 1.0E-02;
+my $max_normal_freq = 4;
+my $min_tumor_freq = 15;
 
 class Genome::Model::Tools::Varscan::ProcessSomatic {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		status_file	=> { is => 'Text', doc => "File containing varscan calls, e.g. status.varscan.snp" , is_optional => 0, is_input => 1},
-		p_value_for_hc =>  { is => 'Text', doc => "P-value threshold for high confidence", is_optional => 1, is_input => 1},	
+		p_value_for_hc =>  { is => 'Text', doc => "P-value threshold for high confidence [1.0e-02]", is_optional => 1, is_input => 1},	
+		max_normal_freq =>  { is => 'Text', doc => "Maximum normal frequency for HC Somatic [4]", is_optional => 1, is_input => 1},	
+		min_tumor_freq =>  { is => 'Text', doc => "Minimum tumor freq for HC Somatic [15]", is_optional => 1, is_input => 1},	
 		report_only	=> { is => 'Text', doc => "If set to 1, will not produce output files" , is_optional => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, will not run if output is present" , is_optional => 1, is_input => 1},
 		somatic_out	=> { is => 'Text', doc => "DO NOT USE: Output name for Somatic calls [status_file.Somatic]" , is_optional => 1, is_input => 1, is_output => 1},
@@ -44,14 +48,14 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-Processes output from VarScan somatic
-EXAMPLE:	gmt varscan process-somatic ...
+	This command processes output from VarScan somatic (.snp or.indel), classifying variants by somatic status
+	(Germline/Somatic/LOH) and by confidence (high/low).
+	EXAMPLE:	gmt varscan process-somatic ...
 EOS
 }
 
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
-    return <<EOS 
-
+    return <<EOS 	
 EOS
 }
 
@@ -68,6 +72,9 @@ sub execute {                               # replace with real execution logic.
 	my $status_file = $self->status_file;
 	$report_only = $self->report_only if($self->report_only);
 	$p_value_for_hc = $self->p_value_for_hc if(defined($self->p_value_for_hc));
+	$max_normal_freq = $self->max_normal_freq if(defined($self->max_normal_freq));
+	$min_tumor_freq = $self->min_tumor_freq if(defined($self->min_tumor_freq));
+	
 	if(-e $status_file)
 	{
 		if($self->skip_if_output_present && -e "$status_file.Somatic.hc")
@@ -176,6 +183,7 @@ sub process_results
 				my $numContents = @lineContents;
 				
 				my $somatic_status = my $p_value = "";
+				my $normal_freq = my $tumor_freq = "";
 				
 				## Get Somatic status and p-value ##
 				
@@ -187,6 +195,11 @@ sub process_results
 						
 						if($value eq "Reference" || $value eq "Somatic" || $value eq "Germline" || $value eq "LOH" || $value eq "Unknown")
 						{
+							$normal_freq = $lineContents[$colCounter - 6];
+							$tumor_freq = $lineContents[$colCounter - 2];
+							$normal_freq =~ s/\%//;
+							$tumor_freq =~ s/\%//;
+
 							$somatic_status = $value;
 							$p_value = $lineContents[$colCounter + 1];
 							$p_value = $lineContents[$colCounter + 2] if($lineContents[$colCounter + 2] && $lineContents[$colCounter + 2] < $p_value);
@@ -194,19 +207,58 @@ sub process_results
 					}
 				}
 				
-				## Print to master status file ##
-				print STATUS "$line\n" if(!$report_only);
+				## Determine somatic status ##
 				
-				if($p_value <= $p_value_for_hc) #1.0E-06)
+				if($status eq "Somatic")
 				{
-					print HICONF "$line\n" if(!$report_only);
-					$numHiConf++;
+					## Print to master status file ##
+					print STATUS "$line\n" if(!$report_only);
+					
+					if($normal_freq <= $max_normal_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) #1.0E-06)
+					{
+						print HICONF "$line\n" if(!$report_only);
+						$numHiConf++;
+					}
+					else
+					{
+						print LOWCONF "$line\n" if(!$report_only);
+						$numLowConf++;
+					}					
 				}
-				else
+				elsif($status eq "Germline")
 				{
-					print LOWCONF "$line\n" if(!$report_only);
-					$numLowConf++;
+					## Print to master status file ##
+					print STATUS "$line\n" if(!$report_only);
+					
+					if($normal_freq >= $min_tumor_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) #1.0E-06)
+					{
+						print HICONF "$line\n" if(!$report_only);
+						$numHiConf++;
+					}
+					else
+					{
+						print LOWCONF "$line\n" if(!$report_only);
+						$numLowConf++;
+					}					
 				}
+				elsif($status eq "LOH")
+				{
+					## Print to master status file ##
+					print STATUS "$line\n" if(!$report_only);
+					
+					if($normal_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) #1.0E-06)
+					{
+						print HICONF "$line\n" if(!$report_only);
+						$numHiConf++;
+					}
+					else
+					{
+						print LOWCONF "$line\n" if(!$report_only);
+						$numLowConf++;
+					}					
+				}
+
+
 				
 				
 			}
