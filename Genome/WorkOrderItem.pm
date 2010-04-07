@@ -3,7 +3,7 @@ package Genome::WorkOrderItem;
 use strict;
 use warnings;
 
-use Genome;
+use above 'Genome';
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
@@ -73,6 +73,44 @@ sub sequence_products {
     return @seq_items;
 }
 
+sub instrument_data {
+    my $self = shift;
+
+    my @instrument_data_ids = $self->instrument_data_ids
+        or return;
+
+    my @instrument_data;
+    for my $id ( @instrument_data_ids ) {
+        print "$id\n";
+        my $instrument_data = Genome::InstrumentData->get($id);
+        unless ( $instrument_data ) { # bad
+            confess "Can't get instrument data for id ($id) for work order item (".$self->id.")";
+        }
+        push @instrument_data, $instrument_data;
+    }
+    
+    return @instrument_data;
+}
+
+sub instrument_data_ids {
+    my $self = shift;
+
+    my @sequence_products = $self->sequence_products
+        or return;
+
+    my %instrument_data_ids;
+    for my $sequence_product ( @sequence_products ) {
+        if ( $sequence_product->isa('GSC::Sequence::Read') ) {
+            $instrument_data_ids{ $sequence_product->prep_group_id } = 1;
+        }
+        else {
+            $instrument_data_ids{ $sequence_product->seq_id } = 1;
+        }
+    }
+
+    return sort keys %instrument_data_ids;
+}
+
 sub models {
     my $self = shift;
 
@@ -87,21 +125,11 @@ sub models {
     #       use seq_id
     #  c - get models via inst data assignments (inputs eventually)
     #  
-    
-    my @sequence_products = $self->sequence_products;
-    if ( @sequence_products ) {
-        my %instrument_data_ids;
-        for my $sequence_product ( @sequence_products ) {
-            if ( $sequence_product->isa('GSC::Sequence::Read') ) {
-                $instrument_data_ids{ $sequence_product->prep_group_id } = 1;
-            }
-            else {
-                $instrument_data_ids{ $sequence_product->seq_id } = 1;
-            }
-        }
 
+    my @instrument_data_ids = $self->instrument_data_ids;
+    if ( @instrument_data_ids ) {
         my %model_ids;
-        for my $instrument_data_id ( keys %instrument_data_ids ) {
+        for my $instrument_data_id ( @instrument_data_ids ) {
             my $ida = Genome::Model::InstrumentDataAssignment->get(
                 instrument_data_id => $instrument_data_id,
             );
@@ -112,6 +140,9 @@ sub models {
         return unless %model_ids;
 
         return Genome::Model->get(id => [ keys %model_ids ]);
+    }
+    else {
+        $self->warning_message("No sequence products (instrument data) found for work order item (".$self->id.").  Attempting to get models via dna_id.");
     }
 
     # 2 - Round about, not so accurate way, but works sometimes.
