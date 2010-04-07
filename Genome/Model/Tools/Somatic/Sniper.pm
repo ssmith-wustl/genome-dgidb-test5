@@ -63,7 +63,7 @@ class Genome::Model::Tools::Somatic::Sniper {
             is_optional => 1,
             is_input => 1,
             default => 1,
-            doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
+            doc => 'enable this flag to skip this step if the output_file is already present. Useful for pipelines.',
         },
     ],
 };
