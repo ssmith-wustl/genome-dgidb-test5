@@ -8,7 +8,7 @@ use Genome;
 # TODO 
 # Make this more generic, make it subclass like alignments/aligner rather than always run breakdancer
 
-my $DEFAULT_VERSION = '2010_02_17';
+my $DEFAULT_VERSION = '2010_03_02';
 my $CONFIG_COMMAND = 'bam2cfg.pl';
 my $BREAKDANCER_COMMAND = 'BreakDancerMax.pl';
 
