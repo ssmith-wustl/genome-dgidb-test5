@@ -1,54 +1,78 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <xsl:stylesheet version="1.0"
-xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-
-  <xsl:template name="ur_object" match="object">
+                xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:template name="ur_object_header" match="/object[1]" priority="10">
+    <xsl:comment>
+      name: ur_object_header  match: /object[1]
+    </xsl:comment>
     <div class="object">
-      <div class="identity">
+      <div class="header_object">
         <div class="display_name">
-          <xsl:apply-templates select="display_name"/>
+          <xsl:call-template name="header_display_name"/>
         </div>
-        <div class="representation">
-          <div class="type">
-            <span><xsl:value-of select="@type"/></span>
-          </div>
-          <div class="id">
-            <xsl:variable name="prettyId">
-              <xsl:call-template name="string-replace-all">
-                <xsl:with-param name="text" select="@id"/>
-                <xsl:with-param name="replace" select="'%09'"/>
-                <xsl:with-param name="by" select="' '"/>
-              </xsl:call-template>
-            </xsl:variable>
-            <span><xsl:value-of select="$prettyId" /></span>
-          </div>
-        </div>
-        <br/>
       </div>
-      <xsl:if test="count(aspect) > 0">
-        <div class="aspects">
-          <table class="aspects">
-            <tbody>
-              <xsl:for-each select="aspect">
-                <tr>
-                  <td>
-                    <xsl:value-of select="@name"/>
-                  </td>
-                  <td><xsl:apply-templates/></td>
-                </tr>
-              </xsl:for-each>
-            </tbody>
-          </table>
-        </div>
-      </xsl:if>
+      <div class="content">
+        <xsl:if test="count(aspect) > 0">
+          <div class="aspects">
+            <table class="aspects" cellpadding="0" cellspacing="0" border="0">
+              <tbody>
+                <xsl:for-each select="aspect">
+                  <tr>
+                    <td class="name">
+                      <strong><xsl:value-of select="@name"/></strong>
+                    </td>
+                    <td class="value"><xsl:apply-templates/></td>
+                  </tr>
+                </xsl:for-each>
+              </tbody>
+            </table>
+          </div>
+        </xsl:if>
+      </div>
     </div>
+
   </xsl:template>
 
-<!--  <xsl:template match="object[@type='UR::Object::Property']">
-    <code><xsl:value-of select="@id"/></code><br/>
-  </xsl:template>> -->
+  <xsl:template name="header_display_name">
+    <xsl:comment>
+      match: header_display_name
+    </xsl:comment>
+    <span style="font-weight: bold;">
+      <h1>
+        <xsl:value-of select="@type"/><span class="id"> (<xsl:value-of select="display_name"/>)</span>
+      </h1>
+    </span>
+  </xsl:template>
+
+  <xsl:template name="ur_object" match="object">
+    <xsl:comment>
+      name: ur_object  match: object
+    </xsl:comment>
+    <p>
+      <xsl:apply-templates select="display_name"/>
+    </p>
+    <xsl:if test="count(aspect) > 0">
+      <div class="aspects">
+        <table class="aspects" cellpadding="0" cellspacing="0" border="0">
+          <tbody>
+            <xsl:for-each select="aspect">
+              <tr>
+                <td class="name">
+                  <strong><xsl:value-of select="@name"/></strong>
+                </td>
+                <td class="value"><xsl:apply-templates/></td>
+              </tr>
+            </xsl:for-each>
+          </tbody>
+        </table>
+      </div>
+    </xsl:if>
+  </xsl:template>
 
   <xsl:template match="display_name">
+    <xsl:comment>
+      match: display_name
+    </xsl:comment>
     <xsl:variable name="typeLink">
       <xsl:call-template name="string-replace-all">
         <xsl:with-param name="text" select="../@type"/>
@@ -57,45 +81,65 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       </xsl:call-template>
     </xsl:variable>
     <span>
-      <a>
-        <xsl:attribute name="href">
-          <xsl:value-of select="$rest"/>
-          <xsl:text>/</xsl:text>
-          <xsl:value-of select="$typeLink"/>
-          <xsl:text>/</xsl:text>
-          <xsl:value-of select="$currentPerspective"/>
-          <xsl:text>.</xsl:text>
-          <xsl:value-of select="$currentToolkit"/>
-          <xsl:text>?id=</xsl:text>
-          <xsl:value-of select="../@id"/>
-        </xsl:attribute>
-        <xsl:value-of select="."/>
-      </a>
+      <span class="display_name"><xsl:value-of select="../@type"/></span><span class="id"> (<a>
+      <xsl:attribute name="href">
+        <xsl:value-of select="$rest"/>
+        <xsl:text>/</xsl:text>
+        <xsl:value-of select="$typeLink"/>
+        <xsl:text>/</xsl:text>
+        <xsl:value-of select="$currentPerspective"/>
+        <xsl:text>.</xsl:text>
+        <xsl:value-of select="$currentToolkit"/>
+        <xsl:text>?id=</xsl:text>
+        <xsl:value-of select="../@id"/>
+      </xsl:attribute>
+      <xsl:value-of select="."/>
+      </a>)</span>
     </span>
   </xsl:template>
 
   <xsl:template match="exception">
-    <code>[!] Exception</code><br/>
+    <xsl:comment>
+      match: exception
+    </xsl:comment>
+    <p class="exception">
+        Exception
+    </p>
   </xsl:template>
 
   <xsl:template match="value">
-    <code><xsl:value-of select="."/></code><br/>
+    <xsl:comment>
+      match: value
+    </xsl:comment>
+    <p><xsl:value-of select="."/></p>
   </xsl:template>
 
   <xsl:template match="perldata/scalar">
-    <code><xsl:value-of select="."/></code><br/> 
+    <xsl:comment>
+      match: perldata/scalar
+    </xsl:comment>
+    <p><xsl:value-of select="."/></p>
   </xsl:template>
 
   <xsl:template match="perldata/scalarref">
-    <code><xsl:value-of select="."/></code><br/>
+    <xsl:comment>
+      match: perldata/scalarref
+    </xsl:comment>
+    <p><xsl:value-of select="."/></p>
   </xsl:template>
 
   <xsl:template match="perldata/arrayref">
-    <code><xsl:value-of select="@blessed_package"/>=ARRAY(<xsl:value-of select="@memory_address"/>)</code><br/>
+    <xsl:comment>
+      match: perldata/arrayref
+    </xsl:comment>
+    <p><xsl:value-of select="@blessed_package"/>=ARRAY(<xsl:value-of select="@memory_address"/>)</p>
   </xsl:template>
 
   <xsl:template match="perldata/hashref">
-    <code><xsl:value-of select="@blessed_package"/>=HASH(<xsl:value-of select="@memory_address"/>)</code><br/>
+    <xsl:comment>
+      match: perldata/hashref
+    </xsl:comment>
+    <p><xsl:value-of select="@blessed_package"/>=HASH(<xsl:value-of select="@memory_address"/>)</p>
   </xsl:template>
 
   <xsl:template name="string-replace-all">
@@ -108,7 +152,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <xsl:value-of select="$by" />
         <xsl:call-template name="string-replace-all">
           <xsl:with-param name="text"
-          select="substring-after($text,$replace)" />
+                          select="substring-after($text,$replace)" />
           <xsl:with-param name="replace" select="$replace" />
           <xsl:with-param name="by" select="$by" />
         </xsl:call-template>
@@ -119,4 +163,4 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     </xsl:choose>
   </xsl:template>
 
-</xsl:stylesheet> 
+</xsl:stylesheet>
