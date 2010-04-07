@@ -55,7 +55,14 @@ sub _execute_build {
         return;
     }
 
-    my ($allocation, $outDir);
+    my ($allocation, $outDir, $subDir);
+
+    $subDir = $model->name;
+    if(defined($self->build->version))
+    {
+        $subDir .= '-v' . $self->build->version;
+    }
+    $subDir .= '-' . $self->build->build_id;
 
     # Make allocation unless the user wants to put the data in specific place and manage it himself
     if(defined($self->build->data_directory))
@@ -73,12 +80,7 @@ sub _execute_build {
     }
     else
     {
-        my $allocationPath = 'reference_sequences/' . $model->name;
-        if(defined($self->build->version))
-        {
-            $allocationPath .= '-v_' . $self->build->version;
-        }
-        $allocationPath .= '-' . $self->build->build_id;
+        my $allocationPath = 'reference_sequences/' . $subDir;
         # Space required is estimated to be three times the size of the reference sequence fasta
         $allocation = Genome::Disk::Allocation->allocate('allocation_path' => $allocationPath,
                                                          'disk_group_name' => 'info_apipe_ref',
@@ -121,6 +123,13 @@ sub _execute_build {
             $self->status_message("Failed to determine the amount of space actually consumed by \"$outDir\" and therefore can not reallocate.");
             return;
         }
+    }
+
+    # Make a symlink for stuff that looks for ref seq data in the old place
+    unless(symlink($self->build->data_directory, File::Spec->catpath('/gscmnt/839/info/medseq/reference_sequences', $subDir))
+    {
+        $self->status_message('Failed to symlink "' . File::Spec->catpath('/gscmnt/839/info/medseq/reference_sequences', $subDir) . '" -> "' . $self->build->data_directory . '".');
+        return;
     }
 
     return 1;
