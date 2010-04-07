@@ -13,13 +13,39 @@ class Genome::Model::ImportedReferenceSequence{
             via => 'subject',
             to => 'species_name',
         },
+        fasta_file => {
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'fasta_file'],
+            is_mutable => 1,
+            doc => 'fully qualified fasta filename (eg /foo/bar/input.fasta)'
+        },
+    ],
+    has_optional => [
+        version => {
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'version'],
+            is_mutable => 1 
+        },
     ]
 };
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    return $self;
+}
 
 sub build_by_version {
     my $self = shift;
     my $version = shift;
-    my @b = $self->builds("data_directory like" => "%/v${version}-%");
+    my @b = $self->builds("version" => "$version");
     if (@b > 1) {
         die "Multiple builds for version $version for model " . $self->model_id;
     }
@@ -40,7 +66,8 @@ sub get_bases_file
     return $build->get_bases_file(@_);
 }
 
-sub species{
+sub species
+{
     my $self = shift;
     return $self->subject_name;
 }

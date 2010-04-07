@@ -12,8 +12,55 @@ class Genome::Model::Build::ImportedReferenceSequence {
             via => 'model',
             to => 'species_name',
         },
+        fasta_file => {
+            is, => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'fasta_file'],
+            doc => 'fully qualified fasta filename (eg /foo/bar/input.fasta)'
+        },
     ],
+    has_optional => [
+        version => {
+            is, => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'version'],
+            doc => 'Identifies the version of the reference sequence.  This string may not contain spaces.'
+        },
+    ]
 };
+
+sub create {
+    my ($class, %params) = @_;
+
+    unless(defined($self->version) && $self->version =~ /\s/) {
+        self->error_message('"version" attribute may not contain whitespace');
+        return;
+    }
+
+    # Prevent the base class Build from creating an initial allocation in the wrong disk group
+    my $data_directorySupplied = defined($self->data_directory);
+    if(!$data_directorySupplied) {
+        $self->data_directory("nill");
+        $data_directorySupplied = 0;
+    }
+
+    my $self = $class->SUPER::create(%params)
+        or return;
+
+    if(!$data_directorySupplied) {
+        $self->data_directory(undef);
+    }
+
+    # Copy the imported reference sequence version string from the version value in the model's inputs hash
+    if(defined($self->model->version))
+    {
+        $self->version($self->model->version);
+    }
+
+    return $self;
+}
 
 sub sequence {
     my $self = shift;
@@ -36,6 +83,8 @@ sub get_bases_file {
 
     # grab the dir here?
     my $bases_file = $self->data_directory()."/".$chromosome.".bases";
+
+    $self->version = 'test';
 
     return $bases_file;
 }
