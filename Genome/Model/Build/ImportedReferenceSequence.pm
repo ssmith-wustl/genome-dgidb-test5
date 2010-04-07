@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use POSIX;
 
 class Genome::Model::Build::ImportedReferenceSequence {
     is => 'Genome::Model::Build',
@@ -13,47 +14,71 @@ class Genome::Model::Build::ImportedReferenceSequence {
             to => 'species_name',
         },
         fasta_file => {
-            is, => 'UR::Value',
+            is => 'UR::Value',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'fasta_file'],
+            where => [ name => 'fasta_file', value_class_name => 'UR::Value'],
             doc => 'fully qualified fasta filename (eg /foo/bar/input.fasta)'
         },
     ],
     has_optional => [
         version => {
-            is, => 'UR::Value',
+            is => 'UR::Value',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'version'],
+            where => [ name => 'version', value_class_name => 'UR::Value'],
             doc => 'Identifies the version of the reference sequence.  This string may not contain spaces.'
         },
     ]
 };
 
-sub create {
-    my ($class, %params) = @_;
-
-    unless(defined($self->version) && $self->version =~ /\s/) {
-        self->error_message('"version" attribute may not contain whitespace');
-        return;
+sub resolve_data_directory {
+    my $self = shift @_;
+    # Make allocation unless the user wants to put the data in specific place and manage it himself
+    if(defined($self->data_directory))
+    {
+        my $outDir = $self->data_directory;
+        if(!-d $outDir)
+        {
+            make_path($outDir);
+            if(!-d $outDir)
+            {
+                $self->error_message("\"$outDir\" does not exist and could not be created.");
+                die $self->error_message;
+            }
+        }
     }
-
-    # Prevent the base class Build from creating an initial allocation in the wrong disk group
-    my $data_directorySupplied = defined($self->data_directory);
-    if(!$data_directorySupplied) {
-        $self->data_directory("nill");
-        $data_directorySupplied = 0;
+    else
+    {
+        my $subDir = $self->model->name;
+        if(defined($self->version))
+        {
+            $subDir .= '-v' . $self->version;
+        }
+        $subDir .= '-' . $self->build_id;
+        my $allocationPath = 'reference_sequences/' . $subDir;
+        my $fastaSize = -s $self->fasta_file;
+        if(defined($fastaSize) && $fastaSize > 0)
+        {
+            $fastaSize = POSIX::ceil($fastaSize / 1024);
+        }
+        else
+        {
+            # The fasta file couldn't be statted, and if it is really not accessible, the build will fail during execution.
+            # For now, guess that the fasta file is 1GiB.
+            $fastaSize = 1048576;
+        }
+        # Space required is estimated to be three times the size of the reference sequence fasta
+        my $allocation = Genome::Disk::Allocation->allocate('allocation_path' => $allocationPath,
+                                                            'disk_group_name' => 'info_apipe_ref',
+                                                            'kilobytes_requested' => (3 * $fastaSize),
+                                                            'owner_class_name' => 'Genome::Model::Build::ImportedReferenceSequence',
+                                                            'owner_id' => $self->build_id);
+        # Note: Genome::Disk::Allocation->allocate does error checking and will cause the calling program to exit with an
+        # error allocation fails, so it has succeeded if execution reaches this point
+        $self->data_directory($allocation->absolute_path);
     }
-
-    my $self = $class->SUPER::create(%params)
-        or return;
-
-    if(!$data_directorySupplied) {
-        $self->data_directory(undef);
-    }
-
-    return $self;
+    return $self->data_directory;
 }
 
 sub sequence {

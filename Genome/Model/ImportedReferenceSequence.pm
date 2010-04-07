@@ -13,7 +13,7 @@ class Genome::Model::ImportedReferenceSequence{
             is => 'UR::Value',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'fasta_file'],
+            where => [ name => 'fasta_file', value_class_name => 'UR::Value'],
             is_mutable => 1,
             is_many => 0,
             doc => 'fully qualified fasta filename (eg /foo/bar/input.fasta)'
@@ -24,21 +24,12 @@ class Genome::Model::ImportedReferenceSequence{
             is => 'UR::Value',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'version'],
+            where => [ name => 'version', value_class_name => 'UR::Value'],
             is_many => 0,
             is_mutable => 1 
         },
     ]
 };
-
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    return $self;
-}
 
 sub build_by_version {
     my $self = shift;

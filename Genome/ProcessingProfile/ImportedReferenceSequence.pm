@@ -40,63 +40,27 @@ sub _execute_build {
         return;
     }
 
-    my $fastaSize = -s $self->build->fasta_file;
-    unless(-e $self->build->fasta_file && $fastaSize > 0)
+    my $fastaSize = -s $build->fasta_file;
+    unless(-e $build->fasta_file && $fastaSize > 0)
     {
-        $self->status_message("Reference sequence fasta file \"" . $self->build->fasta_file . "\" is either inaccessible, empty, or non-existent.");
+        $self->status_message("Reference sequence fasta file \"" . $build->fasta_file . "\" is either inaccessible, empty, or non-existent.");
         return;
     }
     if($fastaSize >= $num4GiB)
     {
-        $self->status_message("Reference sequence fasta file \"". $self->build->fasta_file . "\" is larger than 4GiB.  In order to accommodate " .
+        $self->status_message("Reference sequence fasta file \"". $build->fasta_file . "\" is larger than 4GiB.  In order to accommodate " .
                               "BWA, reference sequence fasta files > 4GiB are not supported.  Such sequences must be broken up and each chunk must " .
                               "have its own build and model(s).  Support for associating multiple fastas with a single reference model is " .
                               "desired but will require modifying the alignment code.");
         return;
     }
 
-    my ($allocation, $outDir, $subDir);
-
-    $subDir = $model->name;
-    if(defined($self->build->version))
-    {
-        $subDir .= '-v' . $self->build->version;
-    }
-    $subDir .= '-' . $self->build->build_id;
-
-    # Make allocation unless the user wants to put the data in specific place and manage it himself
-    if(defined($self->build->data_directory))
-    {
-        $outDir = $self->build->data_directory;
-        if(!-d $outDir)
-        {
-            make_path($outDir);
-            if(!-d $outDir)
-            {
-                self->status_message("\"$outDir\" does not exist and could not be created.");
-                return;
-            }
-        }
-    }
-    else
-    {
-        my $allocationPath = 'reference_sequences/' . $subDir;
-        # Space required is estimated to be three times the size of the reference sequence fasta
-        $allocation = Genome::Disk::Allocation->allocate('allocation_path' => $allocationPath,
-                                                         'disk_group_name' => 'info_apipe_ref',
-                                                         'kilobytes_requested' => (3 * $fastaSize) / 1024,
-                                                         'owner_class_name' => 'Genome::Model::Build::ImportedReferenceSequence',
-                                                         'owner_id' => $self->build->build_id);
-        $self->build->allocation($allocation);
-        $self->build->data_directory($allocation->absolute_path);
-        $outDir = $allocation->absolute_path;
-    }
-
     # Copy the original fasta
+    my $outDir = $build->data_directory;
     my $fasta = File::Spec->catfile($outDir, 'all_sequences.fasta');
-    unless(copy($self->build->fasta_file, $fasta))
+    unless(copy($build->fasta_file, $fasta))
     {
-        self->error_message("Failed to copy \"" . $self->build->fasta_file . "\" to \"$fasta\": $!.");
+        $self->error_message("Failed to copy \"" . $build->fasta_file . "\" to \"$fasta\": $!.");
         return;
     }
 
@@ -108,15 +72,16 @@ sub _execute_build {
 
     system("samtools faidx $fasta");
 
-    # Reallocate to amount of space actually consumed
-    if(defined($allocation))
+    # Reallocate to amount of space actually consumed if the build has an associated allocation and that allocation
+    # has an absolute path the same as this build's data_path
+    if(defined($build->disk_allocation) && $outDir eq $build->disk_allocation->absolute_path)
     {
         my $duOut = `du -s -k $outDir`;
 		if ( $? == 0
 		     && $duOut =~ /^(\d+)\s/
 			 && $1 > 0 )
         {
-            $allocation->reallocate('kilobytes_requested' => $1);
+            $build->disk_allocation->reallocate('kilobytes_requested' => $1);
         }
         else
         {
@@ -126,7 +91,13 @@ sub _execute_build {
     }
 
     # Make a symlink for stuff that looks for ref seq data in the old place
-    unless(symlink($self->build->data_directory, File::Spec->catpath('/gscmnt/839/info/medseq/reference_sequences', $subDir))
+    my $subDir = $model->name;
+    if(defined($self->build->version))
+    {
+        $subDir .= '-v' . $self->build->version;
+    }
+    $subDir .= '-' . $self->build->build_id;
+    unless(symlink($self->build->data_directory, File::Spec->catpath('/gscmnt/839/info/medseq/reference_sequences', $subDir)))
     {
         $self->status_message('Failed to symlink "' . File::Spec->catpath('/gscmnt/839/info/medseq/reference_sequences', $subDir) . '" -> "' . $self->build->data_directory . '".');
         return;

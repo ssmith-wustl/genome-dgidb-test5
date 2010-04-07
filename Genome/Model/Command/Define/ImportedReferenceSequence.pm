@@ -27,10 +27,29 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             is => 'Text',
             doc => 'The source of the sequence, such as "NCBI".  May not have spaces.'
         },
+        processing_profile_name => {
+            is_constant => 1,
+            value => 'chromosome-fastas',
+            doc => 'The processing profile takes no parameters, so all imported reference sequence models share the same processing profile instance.'
+        },
         species_name => {
             is => 'Text',
             len => 64,
             doc => 'The species name of the reference.  This value must correspond to a species name found in the gsc.organism_taxon table.'
+        },
+        subject_name => {
+            is_optional => 1,
+            doc => 'Copied from species_name.'
+        },
+        subject_type => {
+            is_constant => 1,
+            value => 'species_name',
+            doc => 'All imported reference sequence models use "species_name" for subject type.'
+        },
+        subject_class_name => {
+            is_constant => 1,
+            value => 'Genome::Taxon',
+            doc => 'All imported reference sequence model subjects are represented by the Genome::Taxon class.'
         },
         version => {
             is => 'Text',
@@ -51,18 +70,17 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
         server_dispatch => {
 #            default_value => 'long',
 #            is_constant => 1,
-            doc => 'dispatch specification: an LSF queue or "inline"',
+            doc => 'dispatch specification: an LSF queue or "inline"'
         },
    ],
 };
 
 sub help_synopsis {
-    return "Prepares a fasta file to be used as a new refseq in processing profiles";
+    return "genome model define imported-reference-sequence --species-name=human --prefix=FoobarLaboratories --fasta-file=/gscuser/person/fastafile.fasta\n"
 }
 
 sub help_detail {
-    return "Copies a fasta file out to the reference path, and then schedules jobs which will " . 
-           "create appropriate BWA, Maq, and Samtools index files."
+    return "Prepares a fasta file to be used as a new refseq in processing profiles.";
 }
 
 use Exception::Class('ImportedReferenceSequenceException');
@@ -113,22 +131,6 @@ sub _execute_try {
         $err->("Either model name or species name must be supplied.  For a new model, species name is always required.");
     }
 
-    # * Verify that model attributes we generate were not supplied by the caller
-    my $errStr = "";
-    foreach grep( {eval 'defined $self->' . $_} ('data_directory', 'processing_profile_name', 'subject_type', 'subject_id', 'subject_class_name') )
-    {
-        if(length($errStr) > 0)
-        {
-            $errStr .= "\n";
-        }
-        $errStr .= "$_ is generated automatically and must not be specified for an imported reference sequence.";
-    }
-    if(length($errStr) > 0)
-    {
-        $err->($errStr);
-    }
-    undef $errStr;
-
     # * Verify that species name matches a taxon
     my $taxon;
     if(defined($self->species_name))
@@ -136,12 +138,12 @@ sub _execute_try {
         my @taxons = Genome::Taxon->get('species_name' => $self->species_name);
         if($#taxons == -1)
         {
-            $err->("No Genome::Taxon found with species name \"" . $self->species_name "\".");
+            $err->("No Genome::Taxon found with species name \"" . $self->species_name . "\".");
             return;
         }
         if($#taxons > 0)
         {
-            $err->("Multiple Genome::Taxon instances found with species name \"" . $self->species_name "\".  This code was written " .
+            $err->("Multiple Genome::Taxon instances found with species name \"" . $self->species_name . "\".  This code was written " .
                    "with the assumption that species name uniquely identifies each Genome::Taxon instance.  If strain name or " .
                    "another other field is required in addition to species name to uniquely identify some Genome::Taxon instances, " .
                    "this code should be updated to take strain name or whatever other field as an argument in addition to " .
@@ -157,6 +159,7 @@ sub _execute_try {
         my $transformedSpeciesName = $self->species_name;
         $transformedSpeciesName =~ s/\s/_/g;
         $self->model_name($self->prefix . '-' . $transformedSpeciesName);
+        $self->status_message('Generated model name "' . $self->model_name . '".');
     }
 
     # * Make a model if one with the appropriate name does not exist.  If one does, check whether making a build for it would duplicate an
@@ -183,7 +186,7 @@ sub _execute_try {
         }
         unless(defined($self->version))
         {
-            $check->("A model of name \"" . $model->name "\" exists and imported reference version was not specified.");
+            $check->("A model of name \"" . $model->name . "\" exists and imported reference version was not specified.");
         }
         my @builds = grep( defined($self->version) ? {defined($_->version) && $_->version eq $self->version} : {!defined($_->version)},
                            Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence') );
@@ -192,7 +195,7 @@ sub _execute_try {
             my $errStr = 'The ';
             if($#builds > 0)
             {
-                $errStr .= 'builds of ids [' . join(', ', map({$_->build_id}, @builds)) . '] of this model have the same version identifier.';
+                $errStr .= 'builds of ids [' . join(', ', map({$_->build_id()} @builds)) . '] of this model have the same version identifier.';
             }
             else
             {
@@ -200,22 +203,32 @@ sub _execute_try {
             }
             $check->($errStr);
         }
+        $self->status_message('Using existing model of name "' . $model->name . '" and id ' . $model->genome_model_id . '.');
+        # Update the model's version and fasta_file inputs for the next build of the model
+        $model->version($self->version);
+        $model->fasta_file($self->fasta_file);
     }
     else
     {
         # * We need a new model
-        %modelParams = ('subject_type' => 'species_name',
-                        'subject_name' => $self->species_name,
-                        'subject_class_name' => 'Genome::Taxon',
-                        'subject_id' => $taxon->taxon_id,
-                        'processing_profile_id' => $self->_get_processing_profile_id_for_name,
-                        'name' => $self->model_name);
+        # Note: Genome::Model->data_directory is deprecated and therefore not supplied
+        my %modelParams = ('subject_type' => 'species_name',
+                           'subject_name' => $self->species_name,
+                           'subject_class_name' => 'Genome::Taxon',
+                           'subject_id' => $taxon->taxon_id,
+                           'processing_profile_id' => $self->_get_processing_profile_id_for_name,
+                           'name' => $self->model_name,
+                           'fasta_file' => $self->fasta_file);
         if(defined($self->version))
         {
             $modelParams{'version'} = $self->version;
         }
-        $model = Genome::Model->create(%modelParams);
-        unless($model)
+        $model = Genome::Model::ImportedReferenceSequence->create(%modelParams);
+        if($model)
+        {
+            $self->status_message('Created model of name "' . $model->name . '" and id ' . $model->genome_model_id . '.');
+        }
+        else
         {
             $err->("Failed to create model.");
         }
@@ -227,13 +240,23 @@ sub _execute_try {
     }
     undef @models;
 
-    # * Create the build
-    my $cmd = "genome model build create " . $model->genome_model_id;
-    $cmd .= ' --server-dispatch "' . $self->server_dispatch . '"' if(defined($self->server_dispatch));
-    $cmd .= ' --job-dispatch "' . $self->job_dispatch . '"' if(defined($self->job_dispatch));
-    unless(system($cmd) == 0)
+    # * Create and start the build
+    my $build = Genome::Model::Build->create('model_id' => $model->genome_model_id);
+    if($build)
+    {
+        $self->status_message('Created build of id ' . $build->build_id . '.');
+    }
+    else
     {
         $err->("Failed to create build for model " . $model->genome_model_id . ".");
+    }
+    push @$news, $build;
+    my %buildParams;
+    $buildParams{'server_dispatch'} = $self->server_dispatch if(defined($self->server_dispatch));
+    $buildParams{'job_dispatch'} = $self->job_dispatch if(defined($self->job_dispatch));
+    unless($build->start(%buildParams))
+    {
+        $err->("Failed to start build " . $build->build_id . " for model " . $model->genome_model_id . ".");
     }
 }
 
@@ -268,41 +291,18 @@ sub execute {
         }
 
         $self->_execute_try(\@news);
-    }
+    };
     if(my $e = Exception::Class->caught('ImportedReferenceSequenceException'))
     {
-        my $new;
-        foreach $new (@news)
+        foreach my $dynItem (@news)
         {
-            $new->delete();
+            $dynItem->delete();
         }
-        $self->error_message($exceptionstring);
+        $self->error_message($e->error);
         return;
     }
 
     return 1;
-
-#
-#   my @new;
-#   # if it does not exist
-#       # ensure species is specified, tell them to select one
-#       # get the species, and ensure it is valid/real
-#       # make a model with that Genome::Taxon as the "subject"
-#       # use the single existing processing profile, named "imported reference", like the type_name
-#       my $m = Genome::Model->create();
-#       push @new, $m;
-#
-#   # set the model's external_version_number and input_filename
-#   my $b = Genome::Model::Build->create(model => $m);
-#   unless ($b) {
-#       $self->error_message("Failed to generate a new build for model "
-#                            . $m->__display_name__ . "!"
-#                            . Genome::Model::Build->error_message()
-#       );
-#       for (@new) { $_->delete }
-#       return;
-#   }
-#   $b->succeeded();
 }
 
 1;
