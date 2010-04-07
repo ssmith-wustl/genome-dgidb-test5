@@ -93,8 +93,8 @@ sub create {
 
 my %BREAKDANCER_VERSIONS = (
 	'0.0.1r59' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-0.0.1r59',
-	'2010_02_17' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_02_17',
-	'2010_03_02' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_03_02',
+	'2010_02_17' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_02_17/bin',
+	'2010_03_02' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_03_02/bin',
 );
 
 sub help_brief {
