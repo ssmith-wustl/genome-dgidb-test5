@@ -119,13 +119,17 @@ sub execute {
         }
     }
 
-    $build->initialize;
-    UR::Context->commit;
+    eval {
+        $build->initialize;
+    };
+    if ($@) {
+        return $self->_post_build_failure($@);
+    }
 
+    UR::Context->commit;
     $w = $build->newest_workflow_instance;
 
     my $success;
-    
     if ($self->inline) {
         if ($w && !$self->restart) {
 
@@ -136,7 +140,6 @@ sub execute {
         } 
         else {
             my %inputs = $build->processing_profile->_map_workflow_inputs($build);
-
             $success = Workflow::Simple::run_workflow(
                 $xmlfile,
                 %inputs
