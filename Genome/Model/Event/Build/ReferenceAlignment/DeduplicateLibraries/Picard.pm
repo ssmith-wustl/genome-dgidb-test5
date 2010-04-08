@@ -189,6 +189,7 @@ sub execute {
        remove_duplicates => 0,
        tmp_dir => $tmp_dir->dirname,
        log_file => $markdup_log_file, 
+       use_picard_version => $rmdup_version,
        max_jvm_heap_size => 6,
 
     ); 
