@@ -6,7 +6,7 @@ use warnings;
 use Genome; 
 use File::Basename;
 
-my $PICARD_DEFAULT = 'r107';
+my $PICARD_DEFAULT = '1.17';
 my $DEFAULT_MEMORY = 2;
 my $DEFAULT_VALIDATION_STRINGENCY = 'SILENT';
 
@@ -60,10 +60,13 @@ EOS
 }
 
 my %PICARD_VERSIONS = (
-    r116 => '/gsc/scripts/lib/java/samtools/picard-tools-1.16',
-    r107 => '/gsc/scripts/lib/java/samtools/picard-tools-1.07/',
-    r104 => '/gsc/scripts/lib/java/samtools/picard-tools-1.04/',
-    r103wu0 => '/gsc/scripts/lib/java/samtools/picard-tools-1.03/',
+    '1.17' => '/gsc/scripts/lib/java/samtools/picard-tools-1.17',
+    # old processing profiles used a different standard
+    # this was supposed to be ONLY for things where we work directly from svn instead of released versions, like samtools :(
+    'r116' => '/gsc/scripts/lib/java/samtools/picard-tools-1.16',
+    'r107' => '/gsc/scripts/lib/java/samtools/picard-tools-1.07/',
+    'r104' => '/gsc/scripts/lib/java/samtools/picard-tools-1.04/',
+    'r103wu0' => '/gsc/scripts/lib/java/samtools/picard-tools-1.03/',
 );
 
 sub path_for_picard_version {
