@@ -13,42 +13,42 @@ use Data::Dumper 'Dumper';
 class Genome::Model::Command::InstrumentData::Assign {
     is => 'Genome::Model::Event',
     has => [
-        model_id => {
-            is => 'Integer', 
-            doc => 'ID for the genome model to assign instrument data.'
-        },
+    model_id => {
+        is => 'Integer', 
+        doc => 'ID for the genome model to assign instrument data.'
+    },
     ],
     has_optional => [
-        instrument_data_id => {
-            is => 'Number',
-            doc => 'The unique ID of the instrument data to assign.  To assign multiple instrument data, enclose this param in quotes(\'), and separate the IDs by a space.'
-        },
-        flow_cell_id => {
-            is => 'Number',
-            doc => 'Assigns all lanes in the given flowcell whose sample_name matches the model\'s subject name'       
-        },
-        instrument_data_ids => {
-            is => 'Number',
-            doc => 'The unique IDs of the instrument data to assign, enclosed in quotes(\'\'), and separated by a space.'
-        },
-        all => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'Assign all available unassigned instrument data to the model.'
-        },
-        capture => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'Only assign capture data',
-        },
-        capture_target => {
-            is => 'String',
-            doc => 'Only assign capture data with the specified target (implies --capture)',
-        },
-        filter => {
-            is => 'Text',
-            valid_values => ['forward-only','reverse-only'],
-        },
+    instrument_data_id => {
+        is => 'Number',
+        doc => 'The unique ID of the instrument data to assign.  To assign multiple instrument data, enclose this param in quotes(\'), and separate the IDs by a space.'
+    },
+    flow_cell_id => {
+        is => 'Number',
+        doc => 'Assigns all lanes in the given flowcell whose sample_name matches the model\'s subject name'       
+    },
+    instrument_data_ids => {
+        is => 'Number',
+        doc => 'The unique IDs of the instrument data to assign, enclosed in quotes(\'\'), and separated by a space.'
+    },
+    all => {
+        is => 'Boolean',
+        default => 0,
+        doc => 'Assign all available unassigned instrument data to the model.'
+    },
+    capture => {
+        is => 'Boolean',
+        default => 0,
+        doc => 'Only assign capture data',
+    },
+    capture_target => {
+        is => 'String',
+        doc => 'Only assign capture data with the specified target (implies --capture)',
+    },
+    filter => {
+        is => 'Text',
+        valid_values => ['forward-only','reverse-only'],
+    },
     ],
 };
 
@@ -73,31 +73,31 @@ sub create {
     if (defined($self->capture_target())) {
         $self->capture(1);
     }
-    
+
     if ($self->capture()) {
         $self->all(1);
     }
-    
+
     my @requested_actions = grep { 
         $self->$_ 
     } (qw/ flow_cell_id instrument_data_id instrument_data_ids all /);
-    
+
     if ( @requested_actions > 1 ) {
         $self->error_message('Multiple actions requested: '.join(', ', @requested_actions));
         $self->delete;
         return;
     }
-    
+
     $self->_verify_model
         or  return;
 
     return $self;
-    
+
 }
 
 sub execute {
     my $self = shift;
-
+    $DB::single=1;
     if ( $self->instrument_data_id ) { # assign this
         return $self->_assign_by_instrument_data_id;
     }
@@ -143,8 +143,8 @@ sub _assign_instrument_data {
                 $self->model->name,
                 (
                     $existing_ida->filter_desc 
-                        ? ' with filter ' . $existing_ida->filter_desc
-                        : ''
+                    ? ' with filter ' . $existing_ida->filter_desc
+                    : ''
                 )
             )
         );
@@ -180,8 +180,8 @@ sub _assign_instrument_data {
             $self->model->name,
             (
                 $ida->filter_desc 
-                        ? (' with filter ' . $ida->filter_desc)
-                        : ''
+                ? (' with filter ' . $ida->filter_desc)
+                : ''
             )
         )
     );
@@ -249,20 +249,20 @@ sub _assign_all_instrument_data {
 
     # Assign all unassigned if requested 
     $self->status_message("Attempting to assign all available instrument data");
-    
+
     my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
-    
+
     unless ( @unassigned_instrument_data ){
         $self->error_message("Attempted to assign all instrument data that was unassigned for model, but found none");
         return;
     }
 
     my $requested_capture_target = $self->capture_target();
-    
+
     ID: for my $id ( @unassigned_instrument_data ) {
 
         my $id_capture_target;
-        
+
         if ($id->can('target_region_set_name')) {
             $id_capture_target = $id->target_region_set_name();
         }
@@ -270,30 +270,42 @@ sub _assign_all_instrument_data {
         if ($self->capture()) {
 
             unless (defined($id_capture_target)) {
+                $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
+                    . " sequencing platform " . $id->sequencing_platform
+                    . ".\nThis instrument data has no capture target and you've requested that only captured data is added.\n"
+                    ."Assign the instrument data explicitly if you want it in the model, or remove the --capture flag."
+                );
                 next ID;
             }
 
             if (defined($requested_capture_target)) {
+
                 unless ($id_capture_target eq $requested_capture_target) {
+                    $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
+                        . " sequencing platform " . $id->sequencing_platform
+                        . ".\nThe model and instrument data's capture target do not match, and you've requestied that only matching capture data should be added.\n"
+                        ."Assign the instrument data explicitly if you want it in the model."
+                    );
                     next ID;
                 }
             }
-
         }
-        
         else {
-
             if (defined($id_capture_target)) {
+                $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
+                        . " sequencing platform " . $id->sequencing_platform
+                        . ".\nThis instrument data has a capture target and you've requested that only uncaptured data is added.\n"
+                        ."Assign the instrument data explicitly if you want it in the model, or use the --capture flag."
+                );                
                 next ID;
             }
-            
         }
 
         if ($id->isa("Genome::InstrumentData::Imported")) {
             $self->warning_message("IGNORING IMPORTED INSTRUMENT DATA: " . $id->id 
-                    . " sequencing platform " . $id->sequencing_platform
-                    . " imported by " . $id->user_name
-                    . ".  Add this explicitly if you want it in the model."
+                . " sequencing platform " . $id->sequencing_platform
+                . " imported by " . $id->user_name
+                . ".  Add this explicitly if you want it in the model."
             );
             next ID;
         }
