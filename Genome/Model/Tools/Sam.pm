@@ -7,7 +7,7 @@ use Genome;
 use File::Basename;
 
 my $DEFAULT = 'r510';
-my $PICARD_DEFAULT = 'r107';
+my $PICARD_DEFAULT = '1.17';
 #3Gb
 my $DEFAULT_MEMORY = 402653184;
 
@@ -68,9 +68,10 @@ my %SAMTOOLS_VERSIONS = (
 );
 
 my %PICARD_VERSIONS = (
-    r116 => '/gsc/scripts/lib/java/samtools/picard-tools-1.16',
-    r107 => '/gsc/scripts/lib/java/samtools/picard-tools-1.07/',
-    r104 => '/gsc/scripts/lib/java/samtools/picard-tools-1.04/',
+    '1.17'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.17',
+    r116    => '/gsc/scripts/lib/java/samtools/picard-tools-1.16',
+    r107    => '/gsc/scripts/lib/java/samtools/picard-tools-1.07/',
+    r104    => '/gsc/scripts/lib/java/samtools/picard-tools-1.04/',
     r103wu0 => '/gsc/scripts/lib/java/samtools/picard-tools-1.03/',
 );
 
