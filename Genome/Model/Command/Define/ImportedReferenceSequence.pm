@@ -188,8 +188,25 @@ sub _execute_try {
         {
             $check->("A model of name \"" . $model->name . "\" exists and imported reference version was not specified.");
         }
-        my @builds = grep( defined($self->version) ? {defined($_->version) && $_->version eq $self->version} : {!defined($_->version)},
-                           Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence') );
+        my @builds;
+        foreach my $build (Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence'))
+        {
+            if(defined($self->version))
+            {
+                if(defined($build->version) && $build->version eq $self->version)
+                {
+                    push @builds, $build;
+                }
+            }
+            else
+            {
+                if(!defined($build->version))
+                {
+                    push @builds, $build;
+                }
+            }
+        }
+#       my @builds = grep( (defined($self->version) ? {defined($_->version) && $_->version eq $self->version} : {!defined($_->version)}) );
         if($#builds > -1)
         {
             my $errStr = 'The ';

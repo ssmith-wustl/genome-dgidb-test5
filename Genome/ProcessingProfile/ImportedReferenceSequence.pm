@@ -64,16 +64,29 @@ sub _execute_build {
         return;
     }
 
+    $self->status_message("Doing bwa indexing.");
     my $bwaIdxAlg = ($fastaSize < 11000000) ? "is" : "bwtsw";
-    system("bwa index -a $bwaIdxAlg $fasta");
+    if(system("bwa index -a $bwaIdxAlg $fasta") != 0)
+    {
+        $self->error_message("bwa indexing failed.");
+    }
 
+    $self->status_message("Doing maq fasta2bfa.");
     my $bfa = File::Spec->catfile($outDir, 'all_sequences.bfa');
-    system("maq fasta2bfa $fasta $bfa");
+    if(system("maq fasta2bfa $fasta $bfa") != 0)
+    {
+        $self->error_message("maq fasta2bfa failed.");
+    }
 
-    system("samtools faidx $fasta");
+    $self->status_message("Doing samtools faidx.");
+    if(system("samtools faidx $fasta") != 0)
+    {
+        $self->error_message("samtools faidx failed.");
+    }
 
     # Reallocate to amount of space actually consumed if the build has an associated allocation and that allocation
     # has an absolute path the same as this build's data_path
+    $self->status_message("Reallocating.");
     if(defined($build->disk_allocation) && $outDir eq $build->disk_allocation->absolute_path)
     {
         my $duOut = `du -s -k $outDir`;
@@ -85,24 +98,27 @@ sub _execute_build {
         }
         else
         {
-            $self->status_message("Failed to determine the amount of space actually consumed by \"$outDir\" and therefore can not reallocate.");
+            $self->error_message("Failed to determine the amount of space actually consumed by \"$outDir\" and therefore can not reallocate.");
             return;
         }
     }
 
     # Make a symlink for stuff that looks for ref seq data in the old place
+    $self->status_message("Making symlink.");
     my $subDir = $model->name;
-    if(defined($self->build->version))
+    if(defined($build->version))
     {
-        $subDir .= '-v' . $self->build->version;
+        $subDir .= '-v' . $build->version;
     }
-    $subDir .= '-' . $self->build->build_id;
-    unless(symlink($self->build->data_directory, File::Spec->catpath('/gscmnt/839/info/medseq/reference_sequences', $subDir)))
+    $subDir .= '-' . $build->build_id;
+    $self->status_message(sprintf("symlink(%s, %s)\n", $build->data_directory, File::Spec->catdir('/gscmnt/839/info/medseq/reference_sequences', $subDir)));
+    unless(symlink($build->data_directory, File::Spec->catdir('/gscmnt/839/info/medseq/reference_sequences', $subDir)))
     {
-        $self->status_message('Failed to symlink "' . File::Spec->catpath('/gscmnt/839/info/medseq/reference_sequences', $subDir) . '" -> "' . $self->build->data_directory . '".');
+        $self->error_message('Failed to symlink "' . File::Spec->catdir('/gscmnt/839/info/medseq/reference_sequences', $subDir) . '" -> "' . $build->data_directory . '".');
         return;
     }
 
+    $self->status_message("Done.");
     return 1;
 }
 
