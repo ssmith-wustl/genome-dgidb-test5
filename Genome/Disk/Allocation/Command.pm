@@ -17,7 +17,6 @@ class Genome::Disk::Allocation::Command {
     has => [
             disk_group_name => {
                                 is => 'Text',
-                                default_value => 'info_apipe',
                                 doc => 'The disk group name to work with for disk allocation',
                             },
         ],
