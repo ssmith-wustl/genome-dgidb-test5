@@ -8,20 +8,6 @@ use Genome;
 class Genome::Model::Command::Define::PooledAssemblyDecomposition {
     is => 'Genome::Model::Command::Define',
     has => [
-#         pooled_assembly_links => { 
-#            is => 'Genome::Model::Link', 
-#            reverse_as => 'to_model', 
-#            where => [ role => 'pooled_assembly'], 
-#            is_many => 1,
-#            doc => '' 
-#        },
-#        pooled_assembly => { 
-#            is => 'Genome::Model', 
-#            via => 'pooled_assembly_links', 
-#            to => 'from_model', 
-#            id_by => 'from_assembly',
-#            doc => '' 
-#        },
         pooled_assembly => { 
             is => 'Genome::Model', 
             id_by => 'from_assembly',

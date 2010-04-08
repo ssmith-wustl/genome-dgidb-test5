@@ -39,58 +39,9 @@ class Genome::ProcessingProfile::PooledAssemblyDecomposition {
             is_optional => 1,
             doc => "Use this option to override the default blast params, the default param string is:\n M=1 N=-3 R=3 Q=3 W=30 wordmask=seg lcmask hspsepsmax=1000 golmax=0 B=1 V=1 topcomboN=1 -errors -notes -warnings -cpus 4 2>/dev/null",        
         }, 
-        #these params should become inputs
-#        pooled_assembly => { 
-#            is => 'Genome::Model',
-#            id_by => 'from_assembly', 
-#            doc => 'The input pooled assembly' 
-#        },
-#        pooled_assembly_dir => 
-#        {
-#            type => 'String',
-#            is_optional => 0,
-#            doc =>  'The input pooled assembly' 
-#        },
-#        ref_seq_file =>
-#        {
-#            type => 'String',
-#            is_optional => 0,
-#            doc => "location of the reference sequence"        
-#        },
-#        ace_file_name =>
-#        {
-#            type => 'String',
-#            is_optional => 1,
-#            doc => "name of ace file, if different than Pcap.454Contigs.ace.1"        
-#        },
-#        phd_ball_name =>
-#        {
-#            type => 'String',
-#            is_optional => 1,
-#            doc => "name of phdball if different than phd.ball.1"        
-#        },    
     ],
     doc => "Processing Profile for the Pooled Assembly Decomposition Pipeline"
 };
-
-#sub stages {
-#    return (qw/ pooled_assembly_decomposition /);
-#}
-#
-#sub pooled_assembly_decomposition_objects {
-#    return 1;
-#}
-#
-#sub pooled_assembly_decomposition_job_classes {
-#    return (qw/
-#               Genome::Model::Event::Build::PooledAssembly::RunBlast;
-#               Genome::Model::Event::Build::PooledAssembly::MapContigsToAssembly;
-#               Genome::Model::Event::Build::PooledAssembly::AddLinkingContigs;
-#               Genome::Model::Event::Build::PooledAssembly::GenerateReports;
-#               Genome::Model::Event::Build::PooledAssembly::CreateProjectDirectories;
-#               Genome::Model::Event::Build::PooledAssembly::GeneratePostAssemblyReports;
-#            /);
-#}
 
 sub _execute_build {
     my ($self,$build) = @_;
