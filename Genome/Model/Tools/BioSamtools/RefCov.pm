@@ -15,8 +15,9 @@ class Genome::Model::Tools::BioSamtools::RefCov {
             doc => 'The BED format file (tab delimited: chr,start,end,name) file containing annotation or regions of interest.',
         },
         output_directory => {
-            doc => 'When run in parallel, this directory will contain all output and intermediate STATS files. Do not define if stats_file is defined.',
-            is_optional => 1
+            doc => 'When run in parallel, this directory will contain all output and intermediate STATS files. Sub-directories will be made for wingspan and min_depth_filter params. Do not define if stats_file is defined.',
+            is_optional => 1,
+            is_output => 1
         },
         min_depth_filter => {
             doc => 'The minimum depth at each position to consider coverage.',
@@ -88,18 +89,35 @@ sub create {
 sub execute {
     my $self = shift;
 
-    if ($self->output_directory) {
-        unless (-e $self->output_directory){
-            Genome::Utility::FileSystem->create_directory($self->output_directory);
+    my $output_directory = $self->output_directory;
+    my $min_depth_filter = $self->min_depth_filter;
+    my $wingspan = $self->wingspan;
+    if ($output_directory) {
+        if (defined($min_depth_filter)) {
+            $output_directory .= '/min_depth_'. $min_depth_filter;
         }
+        if (defined($wingspan)) {
+            $output_directory .= '/wingspan_'. $wingspan;
+        }
+        unless (-d $output_directory){
+            unless (Genome::Utility::FileSystem->create_directory($output_directory)) {
+                die('Failed to create output directory '. $output_directory);
+            }
+        }
+        $self->output_directory($output_directory);
     }
     unless ($self->stats_file) {
         my ($bam_basename,$bam_dirname,$bam_suffix) = File::Basename::fileparse($self->bam_file,qw/.bam/);
-
-        my ($regions_basename,$regions_dirname,$regions_suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
+        unless (defined($bam_suffix)) {
+            die('Failed to recognize bam_file '. $self->bam_file .' without bam suffix');
+        }
+        my ($regions_basename,$regions_dirname,$bed_suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
+        unless (defined($bed_suffix)) {
+            die('Failed to recognize bed_file '. $self->bed_file .' without bed suffix');
+        }
         $self->stats_file($self->output_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
     }
-    my $cmd = $self->execute_path .'/bed_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $self->min_depth_filter .' '. $self->wingspan;
+    my $cmd = $self->execute_path .'/bed_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $min_depth_filter .' '. $wingspan;
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
         input_files => [$self->bam_file,$self->bed_file],

@@ -9,15 +9,22 @@ use Statistics::Descriptive;
 class Genome::Model::Tools::BioSamtools::StatsSummary {
     is => ['Genome::Model::Tools::BioSamtools'],
     has_input => [
-       stats_file => {
+        stats_file => {
             is => 'Text',
             doc => 'A STATS file output from refcov',
         },
-       output_file => {
-           is => 'Text',
-           doc => 'The output file to write summary stats',
-       },
-   ],
+        output_directory => {
+            doc => 'When run in parallel, this directory will contain all output files. Do not define if output_file is defined.',
+            is_optional => 1
+        },
+    ],
+    has_output => [
+        output_file => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'The output file to write summary stats',
+        },
+    ],
 };
 
 sub help_detail {
@@ -26,7 +33,21 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-
+    
+    if ($self->output_directory) {
+        unless (-d $self->output_directory){
+            unless (Genome::Utility::FileSystem->create_directory($self->output_directory)) {
+                die('Failed to create output directory '. $self->output_directory);
+            }
+        }
+    }
+    unless ($self->output_file) {
+        my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->stats_file,qw/.tsv/);
+        unless (defined($suffix)) {
+            die('Failed to recognize stats_file '. $self->stats_file .' without a tsv suffix');
+        }
+        $self->output_file($self->output_directory .'/'. $basename .'.txt');
+    }
     my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($self->stats_file);
     unless ($stats_fh) {
         die('Failed to read file stats file: '. $self->stats_file);

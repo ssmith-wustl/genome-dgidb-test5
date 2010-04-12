@@ -14,17 +14,37 @@ class Genome::Model::Tools::BioSamtools::AlignmentSummary {
         },
         bed_file => {
             is => 'Text',
-            doc => 'A BED file of target regions to evaluate on/off target alignment',
+            doc => 'A BED file of regions of interest to evaluate on/off target alignment',
             is_optional => 1,
         },
         wingspan => {
             is => 'Integer',
-            doc => 'A wingspan to add to each target region coordinate span',
+            doc => 'A wingspan to add to each region of interest coordinate span',
             is_optional => 1,
         },
+        output_directory => {
+            is => 'Text',
+            doc => 'A directory path used to resolve the output file name.  Required if output_file not defined.  Mostly used for workflow parallelization.',
+            is_optional => 1,
+        },
+    ],
+    has_output => [
         output_file => {
             is => 'Text',
-            doc => 'A file path to store tab delimited output',
+            doc => 'A file path to store tab delimited output.  Required if ouput_directory not provided.',
+            is_optional => 1,
+        },
+    ],
+    has_param => [
+        lsf_queue => {
+            doc => 'When run in parallel, the LSF queue to submit jobs to.',
+            is_optional => 1,
+            default_value => 'long',
+        },
+        lsf_resource => {
+            doc => 'When run in parallel, the resource request necessary to run jobs on LSF.',
+            is_optional => 1,
+            default_value => "-R 'select[type==LINUX64]'",
         },
     ],
 };
@@ -32,14 +52,48 @@ class Genome::Model::Tools::BioSamtools::AlignmentSummary {
 sub execute {
     my $self = shift;
 
-    my $cmd = $self->execute_path .'/alignment_summary-64.pl '. $self->bam_file;
-    my @input_files = ($self->bam_file);
-    if ($self->bed_file) {
-        $cmd .= ' '. $self->bed_file;
-        push @input_files, $self->bed_file;
-        if (defined($self->wingspan)) {
-            $cmd .= ' '. $self->wingspan;
+    my $bam_file = $self->bam_file;
+    # resolve the output file but only use it if the param was not defined
+    my $resolved_output_file;
+    my $output_directory = $self->output_directory;
+    if ($output_directory) {
+        unless ($output_directory) {
+            die('Failed to provide either output_file or output_directory!');
         }
+        unless (-d $output_directory) {
+            unless (Genome::Utility::FileSystem->create_directory($output_directory)) {
+                die('Failed to create output directory: '. $output_directory);
+            }
+        }
+        my ($bam_basename,$bam_dirname,$bam_suffix) = File::Basename::fileparse($bam_file,qw/\.bam/);
+        unless(defined($bam_suffix)) {
+            die ('Failed to recognize bam_file '. $bam_file .' without bam suffix');
+        }
+        $resolved_output_file = $output_directory .'/'. $bam_basename;
+    } elsif (!defined($self->output_file)) {
+        die('Failed to provide either output_file or output_directory!');
+    }
+    
+    my $cmd = $self->execute_path .'/alignment_summary-64.pl '. $bam_file;
+    my @input_files = ($bam_file);
+    my $bed_file = $self->bed_file;
+    if ($bed_file) {
+        my ($bed_basename,$bed_dirname,$bed_suffix) = File::Basename::fileparse($bed_file,qw/\.bed/);
+        unless(defined($bed_suffix)) {
+            die ('Failed to recognize bed_file '. $bed_file .' without bed suffix');
+        }
+        $resolved_output_file .= '-'. $bed_basename;
+        $cmd .= ' '. $bed_file;
+        push @input_files, $bed_file;
+        my $wingspan = $self->wingspan;
+        if (defined($wingspan)) {
+            $cmd .= ' '. $wingspan;
+            $resolved_output_file .= '-wingspan_'. $wingspan;
+        }
+    }
+    $resolved_output_file .= '-alignment_summary.tsv';
+    unless ($self->output_file) {
+        $self->output_file($resolved_output_file);
     }
     $cmd .= ' > '. $self->output_file;
     Genome::Utility::FileSystem->shellcmd(
