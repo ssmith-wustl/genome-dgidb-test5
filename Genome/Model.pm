@@ -772,7 +772,7 @@ sub get_all_objects {
         }
     };
 
-    return map { $sorter->( $self->$_ ) } (qw{ instrument_data_assignments inputs builds project_assignments to_model_links from_model_links });
+    return map { $sorter->( $self->$_ ) } (qw{ inputs instrument_data_assignments builds project_assignments to_model_links from_model_links });
 }
 
 sub yaml_string {
