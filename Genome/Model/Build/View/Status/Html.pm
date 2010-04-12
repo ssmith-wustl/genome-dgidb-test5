@@ -53,13 +53,9 @@ sub _generate_content {
     }
     my $parser = XML::LibXML->new;
     my $xslt = XML::LibXSLT->new;
-    my @template_lines;
     my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->xsl_file);
-    while (my $line = $fh->getline()) {
-        push @template_lines,$line;
-    }
+    my $xsl_template = do { local( $/ ) ; <$fh> } ;
     $fh->close();
-    my $xsl_template = join("",@template_lines);
 
     # get the xml
     $DB::single = 1;
