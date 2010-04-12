@@ -141,7 +141,8 @@ sub pre_execute {
         my $fh;
         while (my $line = $reader->next) {
             my $chrom = $line->{chromosome_name};
-            if ($chrom ne $currChrom) {
+            if ($chrom ne $currChrom and ($chrom !~ /[M|N]T/ or $currChrom !~ /[M|N]T/)) {
+                print "Making new file for $chrom\n";
                 $currChrom = $chrom;
                 $fh->close if $fh;
                 $fh = File::Temp->new (DIR => $self->_temp_dir);
