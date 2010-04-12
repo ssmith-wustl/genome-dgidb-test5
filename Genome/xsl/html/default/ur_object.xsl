@@ -103,8 +103,11 @@
       match: exception
     </xsl:comment>
     <p class="exception">
-        Exception
+      Exception <span class="trigger">[toggle view]</span>
     </p>
+    <div class="toggle_container">
+      <p><xsl:value-of select="."/></p>
+    </div>
   </xsl:template>
 
   <xsl:template match="value">

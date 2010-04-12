@@ -10,6 +10,26 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:template match="/">
     <html>
       <head>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+
+        <script language="javascript" type="text/javascript">
+          <![CDATA[
+                   $(document).ready(function(){
+
+//Hide (Collapse) the toggle containers on load
+$(".toggle_container").hide();
+
+//Slide up and down on click
+$("span.trigger").click(function(){
+console.log("this: " + $(this));
+$(this).parent().next(".toggle_container").slideToggle("slow");
+});
+
+});
+          ]]>
+        </script>
+
+
         <style type="text/css">
           <![CDATA[
                    body {
@@ -62,6 +82,28 @@ span.display_name {
 p.exception {
 font-weight: bold;
 color: #C33;
+}
+
+p.exception span.trigger {
+color: #999;
+font-weight: normal;
+text-decoration: none;
+}
+
+p.exception span.trigger:hover {
+cursor: pointer;
+}
+
+div.toggle_container {
+border: 1px solid #EFEFEF;
+padding: 5px 10px;
+}
+
+div.toggle_container p {
+font-size: 9px;
+font-family: "Courier New", Courier, Consolas, "Lucida Sans Typewriter", monospace;
+font-weight: bold;
+max-width: 380px;
 }
 
 table.aspects {
