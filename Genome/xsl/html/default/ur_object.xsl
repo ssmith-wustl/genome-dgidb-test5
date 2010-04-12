@@ -21,7 +21,16 @@
                     <td class="name">
                       <strong><xsl:value-of select="@name"/></strong>
                     </td>
-                    <td class="value"><xsl:apply-templates/></td>
+                    <td class="value">
+                      <xsl:choose>
+                        <xsl:when test="normalize-space(.)">
+                          <xsl:apply-templates/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          <p>--</p>
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </td>
                   </tr>
                 </xsl:for-each>
               </tbody>
