@@ -43,7 +43,7 @@ sub determine_data_directory {
         }
     }
     else {
-        if (-d $self->_cache_directory) { 
+        if (-d $self->_cache_directory) {
             push @directories, $self->_cache_directory; 
         }
         elsif (-d $self->_annotation_data_directory) { 
@@ -62,41 +62,47 @@ sub determine_data_directory {
 # Returns annotation data directory that should be used
 sub cache_annotation_data {
     my $self = shift;
- 
+
     my @composite_builds = $self->from_builds;
     if (@composite_builds) {
         for (@composite_builds) { $_->cache_annotation_data }
     }
     else {
-        my $data_dir = $self->_annotation_data_directory;
-        if (-d $self->_cache_copying_directory){
-            $self->status_message("Caching in progress (".$self->_cache_copying_directory."), using annotation data dir at " . $data_dir);
-            return $data_dir;
+        if (-d $self->_cache_copying_directory) {
+            $self->status_message("Caching in progress (".$self->_cache_copying_directory."), using annotation data dir at " . $self->_annotation_data_directory);
+            return $self->_annotation_data_directory;
         }
-        if (-d $self->_cache_directory){
-            $self->status_message("Annotation data already cached at ".$self->_cache_directory);
+        elsif (-d $self->_cache_directory) {
+            $self->status_message("Updating local annotation data cache");
+            $self->_update_cache;
+            $self->status_message("Cache successfully updated"); 
             return $self->_cache_directory;
         }
-
-        $self->status_message("Caching annotation data locally");
-        my $mkdir_rv = system("mkdir -p " . $self->_cache_copying_directory);
-        if ($mkdir_rv == 0) {
-            $self->status_message("Directory created at " . $self->_cache_copying_directory . ", starting copy from " . $data_dir);
-            my $cp_rv = system("cp -Lr " . $data_dir . "/* " . $self->_cache_copying_directory);
-            if ($cp_rv == 0) {
-                $self->status_message("Annotation data directory copied, moving to " . $self->_cache_directory);
-                my $mv_rv = system("mv " . $self->_cache_copying_directory ." ". $self->_cache_directory);
-                if ($mv_rv == 0) {
-                    $self->status_message("Created annotation data cache at " . $self->_cache_directory);
-                    return $self->_cache_directory;
-                }
+        else {
+            $self->status_message("No local cache found at " . $self->_cache_directory . ", copying files from " . $self->_annotation_data_directory);
+            my $mkdir_rv = Genome::Utility::FileSystem->shellcmd(cmd => "mkdir -p " . $self->_cache_copying_directory);
+            unless ($mkdir_rv) {
+                $self->error_message("Error encountered while making directory at " . $self->_cache_copying_directory);
+                die;
             }
-        }
 
-        system("rm -rf " . $self->_cache_copying_directory) if -d $self->_cache_copying_directory;
-        system("rm -rf " . $self->_cache_directory) if -d $self->_cache_directory;
-        $self->warning_message("Could not create annotation data cache at " . $self->_cache_directory . ", using data at " . $data_dir);
-        return $data_dir;
+            my $cp_rv = Genome::Utility::FileSystem->shellcmd(cmd => "cp -Lr " . $self->_annotation_data_directory . "/* " . $self->_cache_copying_directory);
+            unless ($cp_rv) {
+                $self->error_message("Error encountered while copying data into " . $self->_cache_copying_directory);
+                $self->_caching_cleanup;
+                die;
+            }
+
+            my $mv_rv = Genome::Utility::FileSystem->shellcmd(cmd => "mv " . $self->_cache_copying_directory . " " . $self->_cache_directory);
+            unless ($mv_rv) {
+                $self->error_message("Error encountered while moving data from " . $self->_cache_copying_direcory . " to " . $self->_cache_directory);
+                $self->_caching_cleanup;
+                die;
+            }
+
+            $self->status_message("Caching complete, locally stored at " . $self->_cache_directory);
+            return $self->_cache_directory;
+        }
     }
 }
 
@@ -106,7 +112,7 @@ sub transcript_iterator{
     my %p = @_;
 
     my $chrom_name = $p{chrom_name};
-    
+
     my @composite_builds = $self->from_builds;
     if (@composite_builds){
         my @iterators = map {$_->transcript_iterator(chrom_name => $chrom_name)} @composite_builds;
@@ -147,7 +153,7 @@ sub transcript_iterator{
             $self->error_message("Could not determine data directory for transcript iterator");
             return;
         }
-        
+
         if ($chrom_name){
             return Genome::Transcript->create_iterator(where => [data_directory => $data_dir, chrom_name => $chrom_name]);
         }
@@ -176,6 +182,23 @@ sub transcript_cmp {
     return ($cached_transcript->transcript_id <=> $lowest->transcript_id);
 }
 
+# Recopies any files from the remote directory that are newer or different than local cache
+sub _update_cache {
+    my $self = shift;
+    my @composite_builds = $self->from_builds;
+    if (@composite_builds) {
+        for (@composite_builds) { $_->_update_cache }
+    }
+    else {
+        my $cp_rv = Genome::Utility::FileSystem->shellcmd(cmd => "cp -Lru " . $self->_annotation_data_directory . "/* " . $self->_cache_directory);
+        unless ($cp_rv) {
+            $self->error_message("Error encountered while updating cache");
+            die;
+        }
+    }
+    return 1;
+}
+
 # Location of annotation data cache
 sub _cache_directory {
     my $self = shift;
@@ -194,6 +217,13 @@ sub _annotation_data_directory{
     return $self->data_directory . "/annotation_data";
 }
 
+# Cleans up any mess left by the caching process
+sub _caching_cleanup {
+    my $self = shift;
+    Genome::Utility::FileSystem->shellcmd(cmd => "rm -rf " . $self->_cache_copying_directory) if -d $self->_cache_copying_directory;
+    Genome::Utility::FileSystem->shellcmd(cmd => "rm -rf " . $self->_cache_directory) if -d $self->_cache_directory;
+    $self->status_message("Any mess from caching cleaned up");
+}
 
 package Genome::Model::ImportedAnnotation::Iterator;
 our @ISA = ('UR::Object::Iterator');

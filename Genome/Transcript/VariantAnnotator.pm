@@ -16,7 +16,9 @@ use DateTime;
 class Genome::Transcript::VariantAnnotator{
     is => 'UR::Object',
     has => [
-        transcript_window => {is => 'Genome::Utility::Window::Transcript'},
+        transcript_window => {
+            is => 'Genome::Utility::Window::Transcript'
+        },
         benchmark => {
             is => 'boolean',
             is_optional => 1,
@@ -29,22 +31,19 @@ class Genome::Transcript::VariantAnnotator{
             is => 'Bio::Tools::CodonTable',
             is_optional => 1,
         },
+        ucsc_conservation_directory => {
+            is => 'Path',
+            is_optional => 1,
+            default => '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/ucsc_conservation/',
+        },
     ]
 };
 
 my %variant_priorities = Genome::Info::VariantPriorities->for_annotation;
-my $file_system_check_flag = 0;
 
 local $SIG{__WARN__} = sub { 
     __PACKAGE__->save_error_producing_variant(); 
     warn @_ 
-};
-
-# ALRM signal used when checking for file system issues
-local $SIG{ALRM} = sub {
-    if ($file_system_check_flag == 1) {
-        die "File system commands are hanging, assuming file system unavailable";
-    }
 };
 
 sub warning_message{
@@ -107,13 +106,8 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
 
     my $start = new Benchmark;
 
-    # TODO
-    # transcripts_to_annotate can be empty under one of two conditions: either there aren't any transcripts 
-    # at the location of the variant, or the disk has become unavailable (window->scroll does NOT check this)
-    # If empty and disk not available, produce an error and die instead of silently skipping annotation
     my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($variant{start});
     unless (@transcripts_to_annotate) {
-        #$self->warning_message("No transcripts found near position " . $variant{start} . " on chromosome " . $variant{chromosome_name});
         return;
     }
 
@@ -330,7 +324,7 @@ sub _transcript_annotation
     my $source = $transcript->source;
     my $gene = $transcript->gene;
 
-    my $conservation = $self->_ucsc_cons_annotation($variant);
+    my $conservation = $self->_ucsc_conservation_score($variant);
     if(!exists($structure_annotation{domain}))
     {
         $structure_annotation{domain} = 'NULL';
@@ -803,11 +797,13 @@ sub _transcript_annotation_for_cds_exon_modified
     $mutated_seq_translated = $self->translate($variant->{chromosome_name}, $mutated_sequence);
 
     my $protein_string = 'NULL';
+    my $protein_position;
     if($variant->{type} =~ /del|ins/i) {
         if ($indel_size%3==0) {$trv_type="in_frame_";}
         else {$trv_type="frame_shift_"; }
         $trv_type.= lc ($variant->{type});
         my $hash_pro= $self->compare_protein_seq($trv_type,$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);
+        $protein_position = $hash_pro->{pos};
         $protein_string="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{type}.$hash_pro->{new};
     }
     else { #SNP DNP
@@ -820,6 +816,7 @@ sub _transcript_annotation_for_cds_exon_modified
             return ;
         }
         my $hash_pro= $self->compare_protein_seq($variant->{type},$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);
+        $protein_position = $hash_pro->{pos};
         $trv_type = lc $hash_pro->{type};
         $protein_string="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{new};
     }
@@ -834,11 +831,8 @@ sub _transcript_annotation_for_cds_exon_modified
         }      
     } 
 
-    my $conservation = $self->_ucsc_cons_annotation($variant);
-    my $pdom = $self->_protein_domain($variant,
-        $transcript->gene,
-        $transcript->transcript_name,
-        $first_amino_acid_affected);
+    my $conservation = $self->_ucsc_conservation_score($variant);
+    my ($protein_domain, $all_protein_domains) = $self->_protein_domain($transcript, $variant, $protein_position);
 
     return 
     (
@@ -848,7 +842,7 @@ sub _transcript_annotation_for_cds_exon_modified
         amino_acid_change => $protein_string,
         amino_acid_length => length($amino_acid_seq),
         ucsc_cons => $conservation,
-        domain => $pdom
+        domain => $protein_domain
     );
 }
 
@@ -967,6 +961,7 @@ sub _transcript_annotation_for_cds_exon
 
 
     my $pro_str = 'NULL';
+    my $protein_position;
     if($variant->{type} =~ /del|ins/i) {
         if ($size2%3==0) {$trv_type="in_frame_";}
         else {$trv_type="frame_shift_"; }
@@ -975,6 +970,7 @@ sub _transcript_annotation_for_cds_exon
         unless ($hash_pro){
             return;
         }
+        $protein_position = $hash_pro->{pos};
         $pro_str="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{type}.$hash_pro->{new};
     }
     else {
@@ -991,6 +987,7 @@ sub _transcript_annotation_for_cds_exon
             return;
         }
         $trv_type = lc $hash_pro->{type};
+        $protein_position = $hash_pro->{pos};
         $pro_str="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{new};
     }
 
@@ -1004,12 +1001,8 @@ sub _transcript_annotation_for_cds_exon
         }      
     }
 
-    my $conservation = $self->_ucsc_cons_annotation($variant);
-    # change to pick up the other domains...
-    my ($pdom, $alldomains) = $self->_protein_domain($variant,
-        $transcript->gene,
-        $transcript->transcript_name,
-        $amino_acid_change);
+    my $conservation = $self->_ucsc_conservation_score($variant);
+    my ($protein_domain, $all_protein_domains) = $self->_protein_domain($transcript, $variant, $protein_position);
 
     return 
     (
@@ -1019,19 +1012,18 @@ sub _transcript_annotation_for_cds_exon
         amino_acid_change => $pro_str,
         amino_acid_length => length($amino_acid_seq),
         ucsc_cons => $conservation,
-        domain => $pdom,
-        all_domains => $alldomains,
+        domain => $protein_domain,
+        all_domains => $all_protein_domains,
         #full_protein_anno=> $full_protein_anno,
     );
 }
 
-sub _ucsc_cons_annotation
-{
+# TODO Clean this up, quite messy
+sub _ucsc_conservation_score {
     my ($self, $variant) = @_;
-    # goto the annotation files for this.
-    #print Dumper $variant;
-    return 'null' if $variant->{chromosome_name} =~ /^[MN]T/;
-    my $c = new MG::ConsScore(-location => "/gscmnt/temp202/info/medseq/josborne/conservation/b36/fixed-records/");
+    return 'NULL' if $variant->{chromosome_name} =~ /^[MN]T/;
+
+    my $c = new MG::ConsScore(-location => $self->ucsc_conservation_directory);
 
     my $range = [ $variant->{start}..$variant->{stop} ] ;
     my $ref = $c->get_scores($variant->{chromosome_name},$range);
@@ -1043,33 +1035,31 @@ sub _ucsc_cons_annotation
     return join(":",@ret); 
 }
 
-sub _protein_domain
-{
-    my ($self, $variant, $gene, $transcript, $amino_acid_change) = @_;
-    #my ($gene,$transcript);
-    unless (defined $gene and defined $transcript){
-        return 'NULL', 'NULL';
-    }
-    require SnpDom;
-    my $s = SnpDom->new({'-inc-ts' => 1});
-    $s->add_mutation($gene->name ,$transcript ,$amino_acid_change);
-    my %domlen;
-    $s->mutation_in_dom(\%domlen,"HMMPfam");
-    # by request.... add in all domains on this transcript/protein
-    my @all_domains = $s->get_all_domains($gene->name,$transcript);
-    my $alldoms = join(',', @all_domains);
-    my $mutation_domains = 'NULL';
+# Returns all protein domains affected by the variant and all protein domains for the transcript
+sub _protein_domain {
+    my ($self, $transcript, $variant, $protein_position) = @_;
+    return 'NULL', 'NULL' unless defined $transcript and defined $variant;
 
-    my $obj = $s->get_mut_obj($transcript . "," . $gene->name);
-    return 'NULL',$alldoms unless $obj;
-    my $doms = $obj->get_domain($amino_acid_change);
-    if(defined($doms))
-    {
-        return join(":", uniq @$doms),$alldoms;
+    my @all_domains = Genome::InterproResult->get(
+        transcript_name => $transcript->transcript_name,
+        data_directory => $transcript->data_directory,
+        chrom_name => $variant->{chromosome_name},
+        'setid like' => 'HMMPfam%match_part%',
+    );
+    return 'NULL', 'NULL' unless @all_domains;
+
+    my @variant_domains;
+    my @all_domain_names;
+    for my $domain (@all_domains) {
+        if ($protein_position >= $domain->{start} and $protein_position <= $domain->{stop}) {
+            push @variant_domains, $domain->{name};
+        }
+        push @all_domain_names, $domain->{name};
     }
-    return 'NULL',$alldoms;
+
+    return 'NULL', join(",", uniq @all_domain_names) unless @variant_domains;
+    return join(",", uniq @variant_domains), join(",", uniq @all_domain_names);
 }
-
 
 sub compare_protein_seq   {
     my $self = shift;
