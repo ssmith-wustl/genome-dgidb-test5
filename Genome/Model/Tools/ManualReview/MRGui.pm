@@ -109,9 +109,16 @@ sub open_file_dialog
 	'gtk-ok' => 'ok');
   	$fc->set_select_multiple(0);
  	my $response = $fc->run;
- 	my $file = $fc->get_filename;
-  	$fc->destroy;
-	$self->open_file($file);
+    if($response eq 'ok')
+    {
+ 	    my $file = $fc->get_filename;
+  	    $fc->destroy;
+	    $self->open_file($file);
+    }
+    else
+    {
+        $fc->destroy;
+    }
 }
 
 my %cmp_hash = (x => 30, X => 30, y => 31, Y=>31);
