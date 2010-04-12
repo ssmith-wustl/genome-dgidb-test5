@@ -3,7 +3,8 @@
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use File::Compare;
+use Test::More tests => 9;
 
 use above 'Genome';
 
@@ -15,4 +16,13 @@ is($capture_set->description,'RT45860 pool combining 4k001F, 4k001G, 4k001H, and
 is($capture_set->status,'active','found correct capture set status');
 my @set_oligos = $capture_set->set_oligos;
 ok(@set_oligos,'got the capture set oligos');
+
+my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path('NimbleGen_Exome_Capture_v1.bed');
+my $expected_file = '/gsc/var/cache/testsuite/data/Genome-Capture-Set/NimbleGen_Exome_Capture_v1.bed';
+
+my $exome_capture_set = Genome::Capture::Set->get(name => 'nimblegen exome version 1');
+isa_ok($exome_capture_set,'Genome::Capture::Set');
+ok($exome_capture_set->print_bed_file($tmp_file),'dump the bed file to '. $tmp_file);
+ok(!compare($tmp_file,$expected_file),'dumped bed file is identical to expected');
+
 exit;
