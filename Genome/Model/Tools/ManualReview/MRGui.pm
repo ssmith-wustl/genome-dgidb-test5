@@ -59,6 +59,10 @@ my %somatic_status = (WT => 1,
 
 my %rev_somatic_status = map { $somatic_status{$_},$_; } keys %somatic_status;
 
+my $last_chrom='';
+my $last_pos='';
+my @last_vals;
+
 sub new 
 {
     my ($caller, %params) = @_;   
@@ -90,7 +94,7 @@ sub new
     my $treeview = $glade->get_widget("review_list");
     $self->build_review_tree;
 
-    $mainWin->signal_connect("destroy", sub { Gtk2->main_quit; system "killall -s QUIT -q consed"; });   
+    $mainWin->signal_connect("destroy", sub { Gtk2->main_quit; nuke_consed_from_orbit(); });   
 
     my $project_file = $params{project_file};
     $self->open_file(abs_path($project_file)) if($project_file && -e $project_file);  
@@ -277,7 +281,7 @@ sub open_consed
     
     my $ace1 = "$proj_name.ace$suffix";
     $ace1 = "$proj_name.ace" unless (-e $edit_dir.'/'.$ace1);
-    print $edit_dir.'/'.$ace1,"\n";
+    #print "opening ",$edit_dir.'/'.$ace1,"\n";
     my $contig_start_pos = $self->get_contig_start_pos($edit_dir.'/'.$ace1);
     if($contig_start_pos)#don't assume consed starts at 1, convert coords if necessary
     {
@@ -307,12 +311,17 @@ sub open_consed
         }
         #end hack
         
-        my $c_command= "$consed -socket 0 -ace $ace1 -mainContigPos $relative_target_base_pos >/dev/null";
-        print $c_command,"\n";
+        my $c_command= "$consed -socket 0 -ace $ace1 -mainContigPos $relative_target_base_pos";
+        #print $c_command,"\n";
+        open (STDOUT, '>/dev/null');
+        open (STDERR, '>/dev/null');
+#        *STDOUT = *LOG;
+#        *STDERR = *LOG;
         my $rc = system($c_command);
         if($rc)
         {
-            #warn "Failed to launch consed.\n";
+            warn "Failed to launch consed.\n";
+            #print "just finished opening consed\n";
             `touch consedSocketLocalPortNumber`;
         }
     }else{
@@ -552,12 +561,16 @@ sub on_re_ok
 sub on_review_editor_destroy
 {
     my ($self, $review_editor) = @_;
-    
+
     #saving window location
     my ($x, $y) = $review_editor->get_position;    
     $self->{last_x} = $x;
     $self->{last_y} = $y;
     $review_editor->destroy;
+    $last_chrom = -1;
+    $last_pos = -1;
+    @last_vals = ();
+    nuke_consed_from_orbit();
     return 1;
 }
 
@@ -674,9 +687,24 @@ sub get_row_hash
 sub display_row
 {
     my ($self,$model, $row, $glade) = @_;
+        $DB::single = 1;
     
     my @val = $model->get($row,6,7,8,9,10,11);
     #set widgets
+    my ($chrom,$pos) = $model->get($row,1,2);
+
+    if($last_chrom == $chrom && $last_pos == $pos)
+    {
+        
+        if(@last_vals >1 && !scalar(grep {defined $_;} @val))
+        {
+            @val = @last_vals;
+            #for(my$i = 0;$i<@last_vals;$i++)
+            #{
+            #    $val[$i] = $last_vals[$i];
+            #}
+        }    
+    }
 
     my %pf = (Pass => 1, Fail => 2);
     my %dn = (Yes => 1, No => 2);
@@ -687,7 +715,7 @@ sub display_row
     }
     else
     {
-            $cb->set_active(undef);        
+            $cb->set_active(0);        
     }
     $cb = $glade->get_widget('re_passfail');
     
@@ -697,7 +725,7 @@ sub display_row
     }
     else
     {
-        $cb->set_active(undef);
+        $cb->set_active(0);
     }
     $cb = $glade->get_widget('re_genotype_variant');
     
@@ -707,7 +735,7 @@ sub display_row
     }
     else
     {
-        $cb->set_active(undef);
+        $cb->set_active(0);
     }    
     
     $cb = $glade->get_widget('re_somatic_status');
@@ -717,7 +745,7 @@ sub display_row
     }
     else
     {
-        $cb->set_active(undef);
+        $cb->set_active(0);
     }
     $cb = $glade->get_widget('re_data_needed');
     if(defined $val[5] && exists $dn{$val[5]})
@@ -726,16 +754,20 @@ sub display_row
     }
     else
     {
-        $cb->set_active(undef);
+        $cb->set_active(0);
     }
     
     my $tb = $glade->get_widget('re_text_view');
-    $tb->get_buffer->set_text($val[3]);
+    $tb->get_buffer->set_text($val[3]||'');
 
     @val = $model->get($row,1,2);
     my $proj_dir = join '_',@val;
-    system "killall -s QUIT -q consed";
-    $self->open_consed($proj_dir,$val[1]);
+    unless($last_chrom == $chrom && $last_pos == $pos)
+    {
+        nuke_consed_from_orbit();
+        #system "killall -s QUIT -q consed";
+        $self->open_consed($proj_dir,$val[1]);
+    }
     return ;
 }
 
@@ -746,30 +778,35 @@ sub save_row
     my %rpf = (1 => 'Pass', 2 => 'Fail');
     my %dn = (Yes => 1, No => 2);
     my %rdn = (1 => 'Yes', 2 => 'No');
-    
+        $DB::single = 1;
     my $cb = $glade->get_widget('re_genotype');
     my $active = $cb->get_active();
     $model->set($row,6 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
+    $last_vals[0] = $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_passfail');
     $active = $cb->get_active();
     $model->set($row,7 => $rpf{$active}) if exists $rpf{$active};
+    $last_vals[1] = $rpf{$active};
     $cb = $glade->get_widget('re_genotype_variant');
     $active = $cb->get_active();   
     
     $model->set($row,8 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
+    $last_vals[2] = $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_somatic_status');
     $active = $cb->get_active();
     $model->set($row,10 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
+    $last_vals[4] = $rev_somatic_status{$active};
     $cb = $glade->get_widget('re_data_needed');
     $active = $cb->get_active();
     $model->set($row,11 => $rdn{$active}) if exists $rdn{$active};
+    $last_vals[5] = $rdn{$active};
     
     my $tb = $glade->get_widget('re_text_view');
     my ($s,$e) = $tb->get_buffer->get_bounds;
     my $text = $tb->get_buffer->get_text($s,$e,0);
     $text =~ tr/\n\t/  /;
     $model->set($row, 9 => $text) if defined $text;    
-
+    $last_vals[3] = $text;
     return 1;
 
 }
@@ -806,11 +843,12 @@ sub on_prev_button_clicked
 
     my $model = $review_list->get_model;
     my $iter = $model->get_iter($path);  
+    ($last_chrom,$last_pos) = $model->get($iter,1,2);  
     $self->save_row($model, $iter, $glade) if $glade; 
     return unless $path;
     return unless $path->prev;
     $iter = $model->get_iter($path);
-    $self->display_row($model, $iter, $glade) if ($glade && $path);
+    $self->display_row($model, $iter, $glade) if ($glade && $path && $iter);
     
     $review_list->set_cursor($path);
 
@@ -819,7 +857,7 @@ sub on_prev_button_clicked
 sub on_next_button_clicked
 {
     my ($self, $glade) = @_;
-#    $DB::single = 1;
+    $DB::single = 1;
     my $g_handle = $self->g_handle;
     my $review_list = $g_handle->get_widget("review_list");
     my $mainWin = $g_handle->get_widget("manual_review");
@@ -848,22 +886,38 @@ sub on_next_button_clicked
     }
     
     my $model = $review_list->get_model;
-    my $iter = $model->get_iter($path);   
+    my $iter = $model->get_iter($path);
+    ($last_chrom,$last_pos) = $model->get($iter,1,2);   
     $self->save_row($model, $iter, $glade) if $glade; 
     return unless $path;
     $path->next;
     $iter = $model->get_iter($path);
-    $self->display_row($model, $iter, $glade) if ($glade && $path);
+    $path->prev if(!$iter);
+    $self->display_row($model, $iter, $glade) if ($glade && $path && $iter);
     $review_list->set_cursor($path);
     #set widgets
 
     return ;
 }
 
+sub nuke_consed_from_orbit #killall doesn't seem to work since the default variant of consed keeps changing it's name, i.e. consed04032007 blah
+{
+    my @procs = `ps -o pid,command=`;
+    chomp @procs;
+    @procs = grep { /consed/; } @procs;    
+    foreach (@procs)
+    {
+        $_ =~ s/^\s+//;#trim leading white space
+        my ($pid) = split /\s+/,$_;
+        `kill -s 9 $pid`;
+    }    
+}
+
 sub gtk_main_quit
 {
     Gtk2->main_quit;
-    system "killall -s QUIT -q consed";
+    nuke_consed_from_orbit();
+    #system "killall -s QUIT -q consed";
 }
 
 
