@@ -9,10 +9,8 @@ class Genome::Capture::Set::Command {
     is => 'Command',
     is_abstract => 1,
     has => [
-        capture_set => {
-            is => 'Genome::Capture::Set',
-            id_by => 'id',
-        },
+        capture_set => {is => 'Genome::Capture::Set',id_by => 'capture_set_id'},
+        capture_set_id => { is => 'Integer', doc => 'identifies the capture set by id' },
     ],
     doc => 'work with capture set',
 };
