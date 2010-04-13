@@ -87,6 +87,14 @@ sub _execute_build {
      warn "executing build logic for " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
      my $dir = $build->data_directory;
 
+     my $ace_fof = $self->ace_fof;
+     my $linked = &link_dirs($dir,$ace_fof,$self);
+
+     unless ($linked) {
+	 print qq(couldn't link in the project dirs to the data_dir\n);
+	 return;
+     }
+
      my %params = map { $_->name => $_->value } $self->params;
      my $result = Genome::Model::Tools::Analysis::AutoMsa->execute(%params);
 
@@ -120,6 +128,30 @@ sub _validate_build {
     else {
         return 1;
     }
+}
+
+sub link_dirs {
+
+    my ($dir,$ace_fof,$self) = @_;
+    unless (-f $ace_fof) { return; }
+    unless (-d $dir) { return; }
+    my $working_dir = `pwd`;
+    chdir $dir;
+    my $n = 0;
+    open (FOF,$ace_fof) || $self->error_message("Couldn't open the ace_fof $ace_fof") && return;
+    while (<FOF>) {
+	chomp;
+	my $ace = $_;
+	my ($project_dir_path) = (split(/\/edit_dir/,$ace))[0];
+	my ($project_dir) = (split(/\//,$project_dir_path))[-1];
+	
+	system qq(ln -s $project_dir_path $project_dir);
+	if ("$dir/$project_dir") { $n++; }
+	
+    }
+    close FOF;
+    chdir $working_dir;
+    return $n;
 }
 
 1;
