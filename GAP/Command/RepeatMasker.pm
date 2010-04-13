@@ -73,15 +73,17 @@ sub execute {
 
     my $input_seq = $seqin->next_seq();
 
-    my $masker = Bio::Tools::Run::RepeatMasker->new(-lib => $self->repeat_library());
+    my $masker = Bio::Tools::Run::RepeatMasker->new(lib => $self->repeat_library());
     
-    my $masked_seq = $masker->run($input_seq);
-   
+    $masker->run($input_seq);
+
+    my $masked_seq = $masker->masked_seq();     
+ 
     $seqout->write_seq($masked_seq);
    
     $output_fh->close();
 
-    $self->ouput_file($output_fh->filename());
+    $self->output_file($output_fh->filename());
     
     return 1;
     
