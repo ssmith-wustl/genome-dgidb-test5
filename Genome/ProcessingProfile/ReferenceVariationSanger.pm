@@ -101,7 +101,6 @@ sub _execute_build {
      if ($result) {
 	 print qq(you're analysis has been executed\n);
 	 return $result;
-
      } else {
 	 print qq(you're analysis has failed to execute\n);
 	 return;
