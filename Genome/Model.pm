@@ -180,6 +180,11 @@ class Genome::Model {
                                                doc => 'bridge entries where this is the \"from\" model(used to retrieve models models this model is \"to\")' },
         to_models                         => { is => 'Genome::Model', via => 'to_model_links', to => 'to_model', 
                                                doc => 'Genome models this model contributes \"to\"' },
+    variant_validations                   => { is => 'Genome::Model::VariantValidation', reverse_id_by => 'model', 
+                                           doc => "variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion"},
+    putative_variant_validations          => { is => 'Genome::Model::VariantValidation', reverse_id_by => 'model', 
+                                           doc => "putative (only) variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion",
+                                           where => [ validation_type => 'Official', validation_result => 'P' ] },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -773,7 +778,7 @@ sub get_all_objects {
         }
     };
 
-    return map { $sorter->( $self->$_ ) } (qw{ inputs instrument_data_assignments builds project_assignments to_model_links from_model_links });
+    return map { $sorter->( $self->$_ ) } (qw{ inputs instrument_data_assignments builds project_assignments to_model_links from_model_links putative_variant_validations});
 }
 
 sub yaml_string {
