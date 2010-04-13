@@ -153,6 +153,7 @@ class Genome::Model {
         instrument_data => {
             via => 'instrument_data_assignments',
             to => 'instrument_data',
+            is => 'Genome::InstrumentData',
         },
         assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
         instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
