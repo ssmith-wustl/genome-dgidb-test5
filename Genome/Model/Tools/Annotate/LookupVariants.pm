@@ -621,7 +621,7 @@ sub get_fh_for_chr {
 
     my $organism = $self->organism;
     if ($dbSNP_path eq "/gsc/var/lib/import/dbsnp/130/tmp/" && $organism eq "mouse") {
-	$dbSNP_path = "/gscmnt/temp209/info/import/dbsnp/mouse/10090/";
+	$dbSNP_path = "/gsc/var/lib/import/dbsnp/mouse/10090/";
     }
 
     my ($fh, $index);
