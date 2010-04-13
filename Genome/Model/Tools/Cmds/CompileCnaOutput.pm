@@ -60,19 +60,24 @@ sub execute {
         my $somatic_model_id = $somatic_model->id;
         my $somatic_build = $somatic_model->last_succeeded_build or die "No succeeded build found for somatic model id $somatic_model_id.\n";
         my $somatic_build_id = $somatic_build->id or die "No build id found in somatic build object for somatic model id $somatic_model_id.\n";
-        print "Last succeeded build for somatic model $somatic_model_id is build $somatic_build_id. ";
+        $self->status_message("Last succeeded build for somatic model $somatic_model_id is build $somatic_build_id. ");
         my $cn_data_file = $somatic_build->somatic_workflow_input("copy_number_output") or die "Could not query somatic build for copy number output.\n";
         my $cn_png_file = $cn_data_file . ".png";
 
         #if files are found (bam-to-cna has been run correctly already), create link to the data in current folder
         if (-s $cn_data_file && -s $cn_png_file) {
             my $link_name = $somatic_model_id . ".copy_number.csv";
-            `ln -s $cn_data_file $link_name`;
-            print "Link to copy_number_output created.\n";
+            if (-e $link_name) {
+                $self->status_message("Link $link_name already found in dir.\n");
+            }
+            else {
+                `ln -s $cn_data_file $link_name`;
+                $self->status_message("Link to copy_number_output created.\n");
+            }
         }
         else {
             #get tumor and normal bam files
-            print "Copy number output not found for build $somatic_build_id. ";
+            $self->status_message("Copy number output not found for build $somatic_build_id. ");
             my $tumor_build = $somatic_build->tumor_build or die "Cannot find tumor model.\n";
             my $normal_build = $somatic_build->normal_build or die "Cannot find normal model.\n";
             my $tumor_bam = $tumor_build->whole_rmdup_bam_file or die "Cannot find tumor .bam.\n";
@@ -82,7 +87,7 @@ sub execute {
             my $job = "gmt somatic bam-to-cna --tumor-bam-file $tumor_bam --normal-bam-file $normal_bam --output-file $cn_data_file";
             my $job_name = $somatic_model_id . "_bam2cna";
             my $oo = $job_name . "_stdout"; #print job's STDOUT in the current directory
-            print "Submitting job $job_name (bam-to-cna).\n";
+            $self->status_message("Submitting job $job_name (bam-to-cna).\n");
             LSF::Job->submit(-q => 'long', -J => $job_name, -R => 'select[type==LINUX64]', -oo => $oo, "$job");
         }
     }   

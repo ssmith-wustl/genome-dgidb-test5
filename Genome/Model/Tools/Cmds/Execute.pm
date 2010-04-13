@@ -29,7 +29,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    "This script runs the CMDS tool written by Qunyuan. It submits a job array to parallelize the process by chromosome. The process runs on every file in the data directory, so make sure it is clean. It creates two folders for output in the 'output_directory', one called cmds_test, containing text files of results, and a second caled cmds_plot, containing results in the form of images."
+    "run CMDS analysis"
 }
 
 sub execute {
@@ -47,7 +47,7 @@ sub execute {
     while (my $file = readdir DATA_DIR) {
         next if ($file eq "." || $file eq "..");
         my $command = "cmds.focal.test(data.dir='$data_dir',wsize=30,wstep=1,analysis.ID='$index',chr.colname='CHR',pos.colname='POS',plot.dir='$plot_dir',result.dir='$test_dir');";
-        my $job = "gmt cmds call-r --command \"$command\"";
+        my $job = "gmt r call-r --command \"$command\" --library 'cmds_lib.R'";
         my $job_name = "cmds_" . $file . "_index_" . $index;
         my $oo = $output_dir . "/cmds_" . $file . "_index_" . $index . "_STDOUT";
         LSF::Job->submit(-oo => $oo, -J => $job_name, $job);

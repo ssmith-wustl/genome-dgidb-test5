@@ -132,7 +132,7 @@ sub execute {
             my $full_path_data_file = $data_dir . "/" . $file;
             for my $start (keys %{ $regions{$chr} }) {
                 my $command = "Region_calls(datafile='$full_path_data_file',chr=$chr,start=$start,end='$regions{$chr}{$start}',permun=$permutations,output_dir='$output_dir');";
-                Genome::Model::Tools::Cmds::CallR->execute(command => $command);
+                Genome::Model::Tools::R::CallR->execute(command => $command, library => "cmds_lib.R");
             }
         }
     }#end, reading original data dir
