@@ -1,5 +1,3 @@
-# FIXME ebelter
-#  Long: remove this and all define modules to have just one that can handle model inputs
 package Genome::Model::Command::Define::ImportedReferenceSequence;
 
 use strict;
@@ -76,7 +74,7 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
 };
 
 sub help_synopsis {
-    return "genome model define imported-reference-sequence --species-name=human --prefix=FoobarLaboratories --fasta-file=/gscuser/person/fastafile.fasta\n"
+    return "genome model define imported-reference-sequence --species-name=human --prefix=NCBI --fasta-file=/gscuser/person/fastafile.fasta\n"
 }
 
 sub help_detail {
