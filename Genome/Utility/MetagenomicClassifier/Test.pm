@@ -458,51 +458,6 @@ sub test003_read_and_compare : Test(3) {
 
 #####################################################################################################
 
-package Genome::Model::Tools::MetagenomicClassifier::Rdp::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Utility::MetagenomicClassifier::TestBase';
-
-use File::Grep 'fgrep';
-use Genome::Utility::FileSystem;
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Tools::MetagenomicClassifier::Rdp';
-}
-
-sub params_for_test_class { 
-    return ( 
-        input_file => $_[0]->fasta,
-        output_file => $_[0]->tmp_rdp_file,
-        training_set => 'broad',
-    );
-}
-
-sub required_attrs {
-    return;
-}
-
-sub test003_execute_read_and_compare : Test(11) {
-    my $self = shift;
-
-    ok($self->{_object}->execute, 'execute');
-
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->tmp_rdp_file )
-        or die;
-    while ( my $line = $fh->getline ) {
-        chomp $line;
-        my ($seq_id) = split(/;/, $line);
-        my ($match) = fgrep { /^>$seq_id/ } $self->fasta;
-        cmp_ok($match->{count}, '==', 1, "Got an rdp output for seq ($seq_id)");
-    }
-    $fh->close;
-
-    return 1;
-}
-
 1;
 
 =pod

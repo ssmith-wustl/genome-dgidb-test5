@@ -32,8 +32,8 @@ sub execute {
     my $amplicons = $self->get_amplicons
         or return;
 
-    require Genome::Utility::MetagenomicClassifier::Rdp;
-    my $classifier = Genome::Utility::MetagenomicClassifier::Rdp->new()
+    require Genome::Utility::MetagenomicClassifier::Rdp::Version2x1;
+    my $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new()
         or return;
 
     for my $amplicon ( @$amplicons ) {

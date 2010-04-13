@@ -23,7 +23,13 @@ class Genome::Model::Tools::MetagenomicClassifier::Rdp {
         },
         training_set => {
             type => 'String',
-            doc => 'name of training set (broad)',
+            doc => 'name of training set (4, 6, broad)',
+        },
+        version => {
+            type => 'String',
+            is_optional => 1,
+            default => '2.1',
+            doc => 'Version of rdp to run.  Available versions (2.1, 2.2)',
         },
     ],
 };
@@ -47,15 +53,29 @@ sub create {
     return $self;
 }
 
+sub _get_classifier
+{
+    my $self = shift;
+    my ($version, $training_set) = ($self->version, $self->training_set);
+    my $classifier;
+
+    if ($version == '2.2')
+    {
+        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x2->new(training_set => $self->training_set);
+    }
+    else #2.1 or default
+    {
+        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new(training_set => $self->training_set);
+    }
+    
+    return $classifier;
+}
+
 sub execute {
     my $self = shift;
     
     #< CLASSIFER >#
-    require Genome::Utility::MetagenomicClassifier::Rdp;
-    my $classifier = Genome::Utility::MetagenomicClassifier::Rdp->new(
-        training_set => $self->training_set,
-    )
-        or return;
+    my $classifier = $self->_get_classifier or return;
     
     #< IN >#
     my $bioseq_in = Bio::SeqIO->new(

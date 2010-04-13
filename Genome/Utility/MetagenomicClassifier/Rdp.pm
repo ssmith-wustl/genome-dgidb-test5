@@ -10,52 +10,11 @@ require Genome::Utility::FileSystem;
 require Genome::Utility::MetagenomicClassifier;
 require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 
+class Genome::Utility::MetagenomicClassifier::Rdp{
+    is_abstract => 1,
+};
+
 $ENV{PERL_INLINE_JAVA_JNI} = 1;
-use Inline(
-    Java => <<'END', 
-      import edu.msu.cme.rdp.classifier.rrnaclassifier.*;
-
-      class FactoryInstance {
-         static ClassifierFactory f = null;
-
-         public FactoryInstance() {
-         }
-         public FactoryInstance(String property_path){
-            ClassifierFactory.setDataProp(property_path);
-            try {
-                f = ClassifierFactory.getFactory();
-            }
-            catch (java.lang.Exception e) {
-                e.printStackTrace(System.out);
-            }
-         }
-
-         public Classifier createClassifier() {
-            return f.createClassifier();
-         }
-
-         public String getHierarchyVersion() {
-            return f.getHierarchyVersion();
-         }
-
-      };
-END
-
-    AUTOSTUDY => 1,
-    CLASSPATH => '/gsc/scripts/lib/java/rdp_classifier-2.1.jar',
-    STUDY => [
-        'edu.msu.cme.rdp.classifier.rrnaclassifier.ClassifierFactory',
-        'edu.msu.cme.rdp.classifier.rrnaclassifier.Classifier',
-        'edu.msu.cme.rdp.classifier.rrnaclassifier.ClassificationResult',
-        'edu.msu.cme.rdp.classifier.rrnaclassifier.RankAssignment',
-        'edu.msu.cme.rdp.classifier.readseqwrapper.ParsedSequence',
-        'edu.msu.cme.rdp.classifier.readseqwrapper.Sequence',
-    ],
-    PACKAGE => 'main',
-    DIRECTORY => Genome::InlineConfig::DIRECTORY(),
-    EXTRA_JAVA_ARGS => '-Xmx1000m',
-    JNI => 1,
-) ;
 
 sub get_training_path {
     my $class = shift;
@@ -118,7 +77,7 @@ sub classify {
     }
     
     my $parsed_seq = new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
-    my $complemented = $self->{'classifier'}->isSeqReversed($parsed_seq);
+    my $complemented = $self->_is_seq_reversed($parsed_seq);
     my $classification_result = $self->{'classifier'}->classify($parsed_seq);
 
     return unless $classification_result;
@@ -136,7 +95,11 @@ sub is_reversed {
     my $self = shift;
     my $seq = shift;
     my $parsed_seq = new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
-    return $self->{'classifier'}->isSeqReversed($parsed_seq);
+    return $self->_is_seq_reversed($parsed_seq);
+}
+
+sub _is_seq_reversed {
+    die("abstract method.  define in inheriting class");
 }
 
 sub _build_taxon_from_classification_result {
