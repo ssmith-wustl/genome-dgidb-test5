@@ -23,7 +23,7 @@ my $tmp_dir = File::Temp::tempdir('BioSamtools-RefCov-'.$ENV{USER}.'-XXXX',DIR =
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/RefCov';
 
 my $bam_file = $data_dir .'/test.bam';
-my $bed_file = $data_dir .'/test_regions.bed';
+my $bed_file = $data_dir .'/test_regions_zero_based_start.bed';
 my $expected_stats_file = $data_dir .'/test_test_regions_STATS-2.tsv';
 
 my $ref_cov = Genome::Model::Tools::BioSamtools::ParallelRefCov->create(
