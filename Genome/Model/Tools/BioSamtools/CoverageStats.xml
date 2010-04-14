@@ -8,7 +8,8 @@
     <link fromOperation="input connector" fromProperty="bam_file" toOperation="Coverage" toProperty="bam_file" />
     <link fromOperation="input connector" fromProperty="minimum_depth" toOperation="Coverage" toProperty="minimum_depth" />
     <link fromOperation="input connector" fromProperty="wingspan" toOperation="Coverage" toProperty="wingspan" />
-    <link fromOperation="input connector" fromProperty="output_directory" toOperation="Coverage" toProperty="output_directory" />    
+    <link fromOperation="input connector" fromProperty="output_directory" toOperation="Coverage" toProperty="output_directory" />
+    <link fromOperation="input connector" fromProperty="minimum_base_quality" toOperation="Coverage" toProperty="minimum_base_quality" />     
     <link fromOperation="Alignment Summary" fromProperty="output_file" toOperation="output connector" toProperty="alignment_summaries" />
     <link fromOperation="Coverage" fromProperty="stats_file" toOperation="output connector" toProperty="stats_files" />
     <link fromOperation="Coverage" fromProperty="stats_summary" toOperation="output connector" toProperty="stats_summaries" />
@@ -20,6 +21,7 @@
       <link fromOperation="input connector" fromProperty="bam_file" toOperation="RefCov" toProperty="bam_file" />
       <link fromOperation="input connector" fromProperty="wingspan" toOperation="RefCov" toProperty="wingspan" />
       <link fromOperation="input connector" fromProperty="minimum_depth" toOperation="RefCov" toProperty="min_depth_filter" />
+      <link fromOperation="input connector" fromProperty="minimum_base_quality" toOperation="RefCov" toProperty="min_base_quality" /> 
       <link fromOperation="input connector" fromProperty="output_directory" toOperation="RefCov" toProperty="output_directory" />
       <link fromOperation="RefCov" fromProperty="stats_file" toOperation="Stats Summary" toProperty="stats_file" />
       <link fromOperation="RefCov" fromProperty="final_directory" toOperation="Stats Summary" toProperty="output_directory" />
@@ -36,6 +38,7 @@
         <inputproperty>bam_file</inputproperty>
         <inputproperty>wingspan</inputproperty>
         <inputproperty>minimum_depth</inputproperty>
+        <inputproperty>minimum_base_quality</inputproperty>
         <inputproperty>output_directory</inputproperty>
         <outputproperty>stats_file</outputproperty>
         <outputproperty>stats_summary</outputproperty>
@@ -47,6 +50,7 @@
       <inputproperty>wingspan</inputproperty>
       <inputproperty>output_directory</inputproperty>
       <inputproperty>minimum_depth</inputproperty>
+      <inputproperty>minimum_base_quality</inputproperty>
       <outputproperty>alignment_summaries</outputproperty>
       <outputproperty>stats_files</outputproperty>
       <outputproperty>stats_summaries</outputproperty>

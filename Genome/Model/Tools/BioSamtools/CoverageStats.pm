@@ -32,11 +32,22 @@ class Genome::Model::Tools::BioSamtools::CoverageStats {
             default_value => $DEFAULT_WINGSPAN_VALUES,
             is_optional => 1,
         },
+        minimum_base_quality => {
+            is => 'Text',
+            doc => 'A minimum base quality to consider in coverage assesment',
+            default_value => 0,
+            is_optional => 1,
+        },
         output_directory => {
             is => 'Text',
             doc => 'The output directory to generate coverage stats',
         },
     ],
+    has_output => [
+        stats_files => { is => 'Array', is_many => 1, is_optional => 1, doc => 'a list of stats files produced by the workflow'},
+        alignment_summaries => { is => 'Array', is_many => 1, is_optional => 1, doc => 'a list of alignment summaries produced by the workflow'},
+        stats_summaries => { is => 'Array', is_many => 1, is_optional => 1, doc => 'a list of stats summaries produced by the workflow'},
+    ]
 };
 
 sub execute {
@@ -52,17 +63,51 @@ sub execute {
     my @wingspans = split(',',$self->wingspan_values);
     my @minimum_depths = split(',',$self->minimum_depths);
     my $output = run_workflow_lsf($xml_path,
-        bed_file => $self->bed_file,
-        bam_file => $self->bam_file,
-        wingspan => \@wingspans,
-        minimum_depth => \@minimum_depths,
-        output_directory => $self->output_directory,
-    );
+                                  bed_file => $self->bed_file,
+                                  bam_file => $self->bam_file,
+                                  wingspan => \@wingspans,
+                                  minimum_depth => \@minimum_depths,
+                                  output_directory => $self->output_directory,
+                                  minimum_base_quality => $self->minimum_base_quality,
+                              );
     unless (defined $output) {
         for (@Workflow::Simple::ERROR) {
             print STDERR $_->error ."\n";
         }
     }
+    my $alignment_summaries = $output->{alignment_summaries};
+    unless (scalar(@$alignment_summaries) == scalar(@wingspans)) {
+        die('Incorrect number of alignment summaries!');
+    }
+    $self->alignment_summaries($alignment_summaries);
+    my $stats_file_array_ref = $output->{stats_files};
+    my @stats_files;
+    my $j = scalar(@$stats_file_array_ref);
+    unless ($j == scalar(@wingspans)) {
+        die('Incorrect number of wingspan iterations for stats files!');
+    }
+    for (my $i = 0; $i < $j; $i++) {
+        my $stats_files = @$stats_file_array_ref[$i];
+        unless (scalar(@$stats_files) == scalar(@minimum_depths)) {
+            die('Incorrect number of stats files found per wingspan!');
+        }
+        push @stats_files, @$stats_files;
+    }
+    $self->stats_files(\@stats_files);
+    my $stats_sum_array_ref = $output->{stats_summaries};
+    my @stats_sums;
+    my $k = scalar(@$stats_sum_array_ref);
+    unless ($k == scalar(@wingspans)) {
+        die('Incorrect number of wingspan iterations for stats summariess!');
+    }
+    for (my $i = 0; $i < $k; $i++) {
+        my $stats_sums = @$stats_sum_array_ref[$i];
+        unless (scalar(@$stats_sums) == scalar(@minimum_depths)) {
+            die('Incorrect number of stats summaries found per wingspan!');
+        }
+        push @stats_sums, @$stats_sums;
+    }
+    $self->stats_summaries(\@stats_sums);
     return 1;
 }
 
