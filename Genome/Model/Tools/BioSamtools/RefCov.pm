@@ -28,6 +28,10 @@ class Genome::Model::Tools::BioSamtools::RefCov {
             default_value => 0,
             is_optional => 1,
         },
+        min_base_quality => {
+            doc => 'only consider bases with a minimum phred quality',
+            is_optional => 1,
+        },
     ],
     has_output => [
         stats_file => {
@@ -111,6 +115,9 @@ sub execute {
         $self->stats_file($self->final_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
     }
     my $cmd = $self->execute_path .'/bed_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $min_depth_filter .' '. $wingspan;
+    if ($self->min_base_quality) {
+        $cmd .= ' '. $self->min_base_quality;
+    }
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
         input_files => [$self->bam_file,$self->bed_file],
