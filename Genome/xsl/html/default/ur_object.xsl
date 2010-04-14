@@ -151,7 +151,19 @@
     <xsl:comment>
       match: perldata/hashref
     </xsl:comment>
-    <p><xsl:value-of select="@blessed_package"/>=HASH(<xsl:value-of select="@memory_address"/>)</p>
+    <p><xsl:value-of select="@blessed_package"/>=HASH(<xsl:value-of select="@memory_address"/>) <span class="trigger">[toggle view]</span></p>
+    <div class="toggle_container">
+      <table class="hash">
+        <tbody>
+          <xsl:for-each select="item">
+            <tr>
+              <td class="name"><xsl:value-of select="@key"/></td>
+              <td class="value"><xsl:value-of select="."/></td>
+            </tr>
+          </xsl:for-each>
+        </tbody>
+      </table>
+    </div>
   </xsl:template>
 
   <xsl:template name="string-replace-all">

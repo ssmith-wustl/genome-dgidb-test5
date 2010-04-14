@@ -50,12 +50,13 @@ div.background {
 float: left;
 background-color: #FFF;
 width: 800px;
+border-bottom: 5px solid #AAA;
+margin-bottom: 30px;
 }
 
 div.content {
 width: 760px;
 padding: 15px 20px;
-border-bottom: 5px solid #AAA;
 }
 
 div.header_object {
@@ -84,13 +85,13 @@ font-weight: bold;
 color: #C33;
 }
 
-p.exception span.trigger {
+span.trigger {
 color: #999;
 font-weight: normal;
 text-decoration: none;
 }
 
-p.exception span.trigger:hover {
+span.trigger:hover {
 cursor: pointer;
 }
 
@@ -100,9 +101,8 @@ padding: 5px 10px;
 }
 
 div.toggle_container p {
-font-size: 9px;
+font-size: 10px;
 font-family: "Courier New", Courier, Consolas, "Lucida Sans Typewriter", monospace;
-font-weight: bold;
 max-width: 380px;
 }
 
@@ -124,6 +124,14 @@ vertical-align: top;
 table.aspects td.value p {
 margin: 0 0 5px 0;
 padding: 0;
+}
+
+table.hash td {
+border: none;
+}
+
+table.hash td.name {
+font-weight: bold;
 }
 
           ]]>
