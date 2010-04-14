@@ -422,9 +422,8 @@ sub resolve_data_directory {
 }
 
 sub allocate {
-    # FIXME - move the logic above to here
-    # also fix Genome/Model/Build/ImportedReferenceSequence.pm which overrides resolve_data_directory
-    # so that create will cause the correct allocation to be made
+    # FIXME - move the logic above to here.  When this is done, Genome/Model/Build/ImportedReferenceSequence.pm will
+    # also need to be fixed as it overrides resolve_data_directory.
 }
 
 sub reallocate {

@@ -218,7 +218,8 @@ sub _execute_try {
             $check->($errStr);
         }
         $self->status_message('Using existing model of name "' . $model->name . '" and id ' . $model->genome_model_id . '.');
-        # Update the model's version and fasta_file inputs for the next build of the model
+        # Update the model's prefix, version, and fasta_file inputs for the next build of the model
+        $model->prefix($self->prefix);
         $model->version($self->version);
         $model->fasta_file($self->fasta_file);
     }
@@ -236,6 +237,10 @@ sub _execute_try {
         if(defined($self->version))
         {
             $modelParams{'version'} = $self->version;
+        }
+        if(defined($self->prefix))
+        {
+            $modelParams{'prefix'} = $self->prefix;
         }
         $model = Genome::Model::ImportedReferenceSequence->create(%modelParams);
         if($model)
@@ -255,7 +260,7 @@ sub _execute_try {
     undef @models;
 
     # * Create and start the build
-    my %buildParams('model_id' => $model->genome_model_id);
+    my %buildParams = ('model_id' => $model->genome_model_id);
     if(defined($self->data_directory))
     {
         $buildParams{'data_directory'} = $self->data_directory;
@@ -271,7 +276,7 @@ sub _execute_try {
     }
     push @$news, $build;
 
-    my %buildParams;
+    %buildParams = ();
     if(defined($self->server_dispatch))
     {
         $buildParams{'server_dispatch'} = $self->server_dispatch;

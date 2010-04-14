@@ -29,6 +29,13 @@ class Genome::Model::Build::ImportedReferenceSequence {
             where => [ name => 'version', value_class_name => 'UR::Value'],
             doc => 'Identifies the version of the reference sequence.  This string may not contain spaces.'
         },
+        prefix => {
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'prefix', value_class_name => 'UR::Value'],
+            doc => 'The source of the sequence (such as NCBI).  May not contain spaces.'
+        }
     ]
 };
 
@@ -53,7 +60,7 @@ sub resolve_data_directory {
         my $subDir = $self->model->name;
         if(defined($self->version))
         {
-            $subDir .= '-v' . $self->version;
+            $subDir .= '-' . $self->version;
         }
         $subDir .= '-' . $self->build_id;
         my $allocationPath = 'reference_sequences/' . $subDir;
