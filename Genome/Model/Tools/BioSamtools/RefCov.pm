@@ -17,7 +17,6 @@ class Genome::Model::Tools::BioSamtools::RefCov {
         output_directory => {
             doc => 'When run in parallel, this directory will contain all output and intermediate STATS files. Sub-directories will be made for wingspan and min_depth_filter params. Do not define if stats_file is defined.',
             is_optional => 1,
-            is_output => 1,
         },
         min_depth_filter => {
             doc => 'The minimum depth at each position to consider coverage.',
@@ -33,6 +32,10 @@ class Genome::Model::Tools::BioSamtools::RefCov {
     has_output => [
         stats_file => {
             doc => 'When run in parallel, do not define.  From the command line this file will contain the output metrics for each region.',
+            is_optional => 1,
+        },
+        final_directory => {
+            doc => 'The directory where parallel output is written to',
             is_optional => 1,
         },
     ],
@@ -91,11 +94,11 @@ sub execute {
                 die('Failed to create output directory '. $output_directory);
             }
         }
-        $self->output_directory($output_directory);
+        $self->final_directory($output_directory);
     }
-    unless ($self->stats_file) {
-        unless ($self->output_directory) {
-            die('Failed to define output directory or stats file!');
+    unless (defined($self->stats_file)) {
+        unless (defined($self->output_directory)) {
+            die('Failed to define output_directory or stats_file!');
         }
         my ($bam_basename,$bam_dirname,$bam_suffix) = File::Basename::fileparse($self->bam_file,qw/.bam/);
         unless (defined($bam_suffix)) {
@@ -105,7 +108,7 @@ sub execute {
         unless (defined($bed_suffix)) {
             die('Failed to recognize bed_file '. $self->bed_file .' without bed suffix');
         }
-        $self->stats_file($self->output_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
+        $self->stats_file($self->final_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
     }
     my $cmd = $self->execute_path .'/bed_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $min_depth_filter .' '. $wingspan;
     Genome::Utility::FileSystem->shellcmd(
