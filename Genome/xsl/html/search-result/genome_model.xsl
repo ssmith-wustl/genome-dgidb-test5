@@ -8,7 +8,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       <td>
         <div class="icon">
           <xsl:call-template name="object_link">
-             <xsl:with-param name="perspective" select="'status'" />
              <xsl:with-param name="linktext">
               <img width="32" height="32" src="/resources/report_resources/apipe_dashboard/images/icons/model_32.png" />
             </xsl:with-param>
@@ -21,9 +20,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             Model:
           </span>
           <span class="title"> 
-            <xsl:call-template name="object_link">
-              <xsl:with-param name="perspective" select="'status'" />
-            </xsl:call-template>
+            <xsl:call-template name="object_link" />
           </span>
         </h2>
         <p>
@@ -31,7 +28,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:when test="aspect[@name='last_succeeded_build']/object">
             <xsl:for-each select="aspect[@name='last_succeeded_build']/object">
             <xsl:call-template name="object_link">
-              <xsl:with-param name="perspective" select="'status'" />
               <xsl:with-param name="linktext" select="'last succeeded build'" />
             </xsl:call-template>
             | <a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="normalize-space(aspect[@name='data_directory']/value)" /></xsl:attribute>data directory</a>

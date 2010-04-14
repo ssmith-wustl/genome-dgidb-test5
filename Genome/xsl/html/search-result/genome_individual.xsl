@@ -8,7 +8,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       <td>
         <div class="icon">
            <xsl:call-template name="object_link">
-             <xsl:with-param name="perspective" select="'status'" />
              <xsl:with-param name="linktext">
               <img width="32" height="32" src="/resources/report_resources/apipe_dashboard/images/icons/individual_32.png" />
             </xsl:with-param>
@@ -22,7 +21,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           </span>
           <span class="title"> 
             <xsl:call-template name="object_link">
-              <xsl:with-param name="perspective" select="'status'" />
               <xsl:with-param name="linktext">
                 <xsl:choose>
                   <xsl:when test="normalize-space(aspect[@name='common_name']/value)">

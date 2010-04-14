@@ -33,7 +33,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:template name="object_link">
     <xsl:param name="type" select="./@type"/>
     <xsl:param name="id" select="./@id"/>
-    <xsl:param name="perspective" select="'default'"/>
+    <xsl:param name="perspective" select="'status'"/>
     <xsl:param name="toolkit" select="'html'"/>
     <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
     <xsl:variable name="typeLink">

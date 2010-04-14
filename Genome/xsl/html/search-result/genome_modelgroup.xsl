@@ -8,7 +8,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       <td>
         <div class="icon">
           <xsl:call-template name="object_link">
-             <xsl:with-param name="perspective" select="'status'" />
              <xsl:with-param name="linktext">
               <img width="32" height="32" src="/resources/report_resources/apipe_dashboard/images/icons/modelgroup_32.png" />
             </xsl:with-param>
@@ -21,22 +20,18 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             Model Group:
           </span>
           <span class="title"> 
-            <xsl:call-template name="object_link">
-              <xsl:with-param name="perspective" select="'status'" />
-            </xsl:call-template>
+            <xsl:call-template name="object_link" />
           </span>
         </h2>
         <p>
           <xsl:for-each select="aspect[@name='convergence_model']/object">
             <xsl:call-template name="object_link">
-              <xsl:with-param name="perspective" select="'status'" />
               <xsl:with-param name="linktext" select="'convergence model'" />
             </xsl:call-template>
             (<xsl:choose>
               <xsl:when test="aspect[@name='last_succeeded_build']/object">
                 <xsl:for-each select="aspect[@name='last_succeeded_build']/object">
                   <xsl:call-template name="object_link">
-                    <xsl:with-param name="perspective" select="'status'" />
                     <xsl:with-param name="linktext" select="'last succeeded build'" />
                   </xsl:call-template>
                 </xsl:for-each>
