@@ -30,7 +30,7 @@ sub perl_path {
 sub bin_path {
     return '/gsc/var/tmp/Bio-SamTools/bin';
     #TESTING-ONLY
-    #return '/gscuser/jwalker/svn/TechD/bio_db_sam';
+    #return '/gscuser/jwalker/svn/TechD/Bio-SamTools/bin';
 }
 
 sub execute_path {
