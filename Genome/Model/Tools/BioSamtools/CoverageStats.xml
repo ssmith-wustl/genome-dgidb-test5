@@ -22,7 +22,7 @@
       <link fromOperation="input connector" fromProperty="minimum_depth" toOperation="RefCov" toProperty="min_depth_filter" />
       <link fromOperation="input connector" fromProperty="output_directory" toOperation="RefCov" toProperty="output_directory" />
       <link fromOperation="RefCov" fromProperty="stats_file" toOperation="Stats Summary" toProperty="stats_file" />
-      <link fromOperation="RefCov" fromProperty="output_directory" toOperation="Stats Summary" toProperty="output_directory" />
+      <link fromOperation="RefCov" fromProperty="final_directory" toOperation="Stats Summary" toProperty="output_directory" />
       <link fromOperation="RefCov" fromProperty="stats_file" toOperation="output connector" toProperty="stats_file" />
       <link fromOperation="Stats Summary" fromProperty="output_file" toOperation="output connector" toProperty="stats_summary" />
       <operation name="RefCov">
