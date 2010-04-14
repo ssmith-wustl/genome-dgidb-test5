@@ -403,6 +403,11 @@ sub classification_file_for_amplicon_name {
     return $self->classification_dir."/$name.classification.stor";
 }
 
+sub _get_classifier
+{
+    
+}
+
 sub classify_amplicons {
     my $self = shift;
    
@@ -412,8 +417,8 @@ sub classify_amplicons {
     my $classifier;
     my %classifier_params = $self->processing_profile->classifier_params_as_hash;
     if ( $self->classifier eq 'rdp' ) {
-        require Genome::Utility::MetagenomicClassifier::Rdp;
-        $classifier = Genome::Utility::MetagenomicClassifier::Rdp->new(%classifier_params);
+        #require Genome::Utility::MetagenomicClassifier::Rdp;
+        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new(%classifier_params);
     }
     else {
         $self->error_message("Invalid classifier (".$self->classifier.") for ".$self->description);

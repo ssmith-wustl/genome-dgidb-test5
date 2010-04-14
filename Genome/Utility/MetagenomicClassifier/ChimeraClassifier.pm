@@ -9,7 +9,6 @@ use warnings;
 require Bio::Seq;
 require Bio::Taxon;
 require Genome::Utility::MetagenomicClassifier::ChimeraClassification;
-require Genome::Utility::MetagenomicClassifier::Rdp;
 
 sub create {
     my ($class, %params) = @_;
@@ -20,13 +19,13 @@ sub create {
     unless ($classifier) {
         if ($self->{training_set}) {
             my $training_set = $self->{training_set};
-            $classifier = new Genome::Utility::MetagenomicClassifier::Rdp(training_set => $training_set);
+            $classifier = new Genome::Utility::MetagenomicClassifier::Rdp::Version2x1(training_set => $training_set);
         }
         elsif ($self->{training_path}) {
-            $classifier = new Genome::Utility::MetagenomicClassifier::Rdp(training_path => $self->{training_path});
+            $classifier = new Genome::Utility::MetagenomicClassifier::Rdp::Version2x1(training_path => $self->{training_path});
         }
         else {
-            $classifier = new Genome::Utility::MetagenomicClassifier::Rdp();
+            $classifier = new Genome::Utility::MetagenomicClassifier::Rdp::Version2x1();
         }
         $self->classifier($classifier);
     }
