@@ -82,12 +82,12 @@ sub execute {
     #test architecture to make sure we can run yenta program
     #copied from G::M::T::Maq""Align.t 
     unless (`uname -a` =~ /x86_64/) {
-       $self->error_message(`uname -a`); #FIXME remove
-       $self->error_message("Must run on a 64 bit machine");
-       die;
+        $self->error_message(`uname -a`); #FIXME remove
+        $self->error_message("Must run on a 64 bit machine");
+        die;
     }
     #Not allowed to store hash in UR?
-    
+
     my @types = map { uc $_ } split /,/, $self->types;
     my $allowed_types = $self->possible_BD_type;
     foreach my $type (@types) {
@@ -97,8 +97,8 @@ sub execute {
         }
     }
     my %types = map {$_ => 1} @types; #create types hash
-    
-    
+
+
     unless(-f $self->breakdancer_file) {
         $self->error_message("breakdancer file is not a file: " . $self->breakdancer_file);
         return;
@@ -151,6 +151,7 @@ sub execute {
     #assuming we are reasonably sorted
     while ( my $line = $indel_fh->getline) {
         chomp $line;
+        $line =~ s/"//g; #kill any quotes that may have snuck in
         my ($chr1,
             $chr1_pos,
             $orientation1,
@@ -160,6 +161,29 @@ sub execute {
             $type,
             $size,
         ) = split /\s+/, $line; 
+        #skip headers
+        next if $line =~ /START|TYPE/;
+        #validate columns
+        unless($chr1 =~ /^[0-9XYNMT_]+$/i) {
+            $self->error_message("First column contains invalid chromosome name $chr1 at line " . $indel_fh->input_line_number);
+            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            return;
+        }
+        unless($chr2 =~ /^[0-9XYNMT_]+$/i) {
+            $self->error_message("Fourth column contains invalid chromosome name $chr2 at line " . $indel_fh->input_line_number);
+            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            return;
+        }
+        unless($chr1_pos =~ /^\d+$/) {
+            $self->error_message("Second column contains non-digit characters $chr1_pos at line " . $indel_fh->input_line_number);
+            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            return;
+        }
+        unless($chr2_pos =~ /^\d+$/) {
+            $self->error_message("Fifth column contains non-digit characters $chr2_pos at line " . $indel_fh->input_line_number);
+            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            return;
+        }
         if(exists($types{$type})) {
             $count++;
             #then we should graph it
@@ -201,7 +225,14 @@ sub execute {
                 system($cmd);
             }
         }
-            
+        unless(exists($allowed_types->{$type})) {
+            $self->error_message("Type $type invalid");
+            $self->error_message("Valid types are " . join("\t",keys %{$allowed_types}));
+            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            return;
+        }
+
+
     }
 
     $indel_fh->close; 
@@ -227,6 +258,9 @@ Yenta.pm generates 4 PNG images for each predicted SV, 2 for tumor and 2 for nor
 
 The naming convention of the files produced is as follows:
 chr_pos_chr_pos_tumor/normal_type.q#.png
+
+The input file must be formatted as follows:
+chr1	position	dummy	chr2	position2	dummy	type
 
 HELP
 
