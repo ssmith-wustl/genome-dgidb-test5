@@ -17,7 +17,7 @@ class Genome::Model::Tools::BioSamtools::RefCov {
         output_directory => {
             doc => 'When run in parallel, this directory will contain all output and intermediate STATS files. Sub-directories will be made for wingspan and min_depth_filter params. Do not define if stats_file is defined.',
             is_optional => 1,
-            is_output => 1
+            is_output => 1,
         },
         min_depth_filter => {
             doc => 'The minimum depth at each position to consider coverage.',
@@ -73,19 +73,6 @@ Output file format(stats_file):
 ';
 }
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    if ($self->output_directory) {
-        if ($self->stats_file) {
-            die('No need to define stats_file when output_directory is defined');
-        }
-    } elsif (!defined($self->stats_file)) {
-        die ('Must define stats_file or output_directory');
-    }
-    return $self;
-}
-
 sub execute {
     my $self = shift;
 
@@ -107,6 +94,9 @@ sub execute {
         $self->output_directory($output_directory);
     }
     unless ($self->stats_file) {
+        unless ($self->output_directory) {
+            die('Failed to define output directory or stats file!');
+        }
         my ($bam_basename,$bam_dirname,$bam_suffix) = File::Basename::fileparse($self->bam_file,qw/.bam/);
         unless (defined($bam_suffix)) {
             die('Failed to recognize bam_file '. $self->bam_file .' without bam suffix');
