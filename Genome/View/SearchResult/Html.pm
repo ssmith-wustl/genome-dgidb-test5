@@ -3,6 +3,8 @@ package Genome::View::SearchResult::Html;
 use strict;
 use warnings;
 
+use Genome;
+
 class Genome::View::SearchResult::Html {
     is => 'UR::Object::View::Default::Html',
     is_abstract => 1,
