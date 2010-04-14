@@ -21,7 +21,7 @@ BEGIN {
 }
 
 use Test::More;
-#plan skip_all => "broken with new API";
+plan skip_all => "broken with new API";
 
 use above 'Genome';
 use Genome::Model::Event::Build::ReferenceAlignment::Test;
