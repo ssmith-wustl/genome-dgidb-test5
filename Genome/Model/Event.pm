@@ -68,6 +68,13 @@ class Genome::Model::Event {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub command_name {
+    my $self = shift;
+    my $command_name = $self->SUPER::command_name(@_);
+    $command_name =~ s/event // unless $command_name eq 'genome model event generic';
+    return $command_name;
+}
+
 sub _preprocess_subclass_description {
     my ($class,$desc) = @_;
     my $has = $desc->{has};
