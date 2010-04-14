@@ -30,10 +30,10 @@ sub create {
     $self->directory( Cwd::abs_path( $self->directory) );
 
     eval {
-        Genome::Utility::FileSystem->validate_existing_directory($self->directory);
+        Genome::Utility::FileSystem->validate_existing_directory($self->directory)
     };
     if($@) {
-        $self->error_message('Directory does not exist: "' . $self->directory . '".');
+        $self->warning_message('Directory does not exist: "' . $self->directory . '".');
         return;
     }
 
