@@ -30,6 +30,7 @@ class Genome::Model::Tools::BioSamtools::RefCov {
         },
         min_base_quality => {
             doc => 'only consider bases with a minimum phred quality',
+            default_value => 0,
             is_optional => 1,
         },
     ],
