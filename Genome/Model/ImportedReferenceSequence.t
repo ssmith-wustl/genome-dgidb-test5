@@ -12,7 +12,11 @@ BEGIN
 
 my $model = Genome::Model::ImportedReferenceSequence->get(2741951221);
 isa_ok( $model, 'Genome::Model::ImportedReferenceSequence' );
-my $build = $model->build_by_version(36);    # returns a hashref
+#my $build = $model->build_by_version(36);    # returns a hashref
+# The test wants to retrieve an old build for ncbi-human 36 that have
+# a version attribute and that would conflict with a newer build if it did.
+# So, we ensure that it gets the old version.
+my $build = Genome::Model::Build::ImportedReferenceSequence->get(93636924);
 
 #print $build,"\n";
 #print Dumper($build),"\n";

@@ -42,9 +42,11 @@ class Genome::Model::ImportedReferenceSequence{
 sub build_by_version {
     my $self = shift;
     my $version = shift;
-    my @b = $self->builds("version" => "$version");
+    my @b = Genome::Model::Build::ImportedReferenceSequence->get('type_name' => 'imported reference sequence',
+                                                                 'version' => $version,
+                                                                 'model_id' => $self->genome_model_id);
     if (@b > 1) {
-        die "Multiple builds for version $version for model " . $self->model_id;
+        die "Multiple builds for version $version for model " . $self->genome_model_id;
     }
     return $b[0];
 }

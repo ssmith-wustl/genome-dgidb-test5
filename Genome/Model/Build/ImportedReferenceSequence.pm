@@ -106,11 +106,8 @@ sub get_bases_file {
     my $self = shift;
     my ($chromosome) = @_;
 
-
     # grab the dir here?
-    my $bases_file = $self->data_directory()."/".$chromosome.".bases";
-
-    $self->version = 'test';
+    my $bases_file = $self->data_directory . "/" . $chromosome.".bases";
 
     return $bases_file;
 }
