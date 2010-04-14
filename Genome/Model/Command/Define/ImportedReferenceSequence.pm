@@ -204,7 +204,6 @@ sub _execute_try {
                 }
             }
         }
-#       my @builds = grep( (defined($self->version) ? {defined($_->version) && $_->version eq $self->version} : {!defined($_->version)}) );
         if($#builds > -1)
         {
             my $errStr = 'The ';
@@ -256,20 +255,37 @@ sub _execute_try {
     undef @models;
 
     # * Create and start the build
-    my $build = Genome::Model::Build->create('model_id' => $model->genome_model_id);
+    my %buildParams('model_id' => $model->genome_model_id);
+    if(defined($self->data_directory))
+    {
+        $buildParams{'data_directory'} = $self->data_directory;
+    }
+    my $build = Genome::Model::Build->create(%buildParams);
     if($build)
     {
-        $self->status_message('Created build of id ' . $build->build_id . '.');
+        $self->status_message('Created build of id ' . $build->build_id . ' with data directory "' . $build->data_directory . '".');
     }
     else
     {
         $err->("Failed to create build for model " . $model->genome_model_id . ".");
     }
     push @$news, $build;
+
     my %buildParams;
-    $buildParams{'server_dispatch'} = $self->server_dispatch if(defined($self->server_dispatch));
-    $buildParams{'job_dispatch'} = $self->job_dispatch if(defined($self->job_dispatch));
-    unless($build->start(%buildParams))
+    if(defined($self->server_dispatch))
+    {
+        $buildParams{'server_dispatch'} = $self->server_dispatch;
+    }
+    if(defined($self->job_dispatch))
+    {
+        $buildParams{'job_dispatch'} = $self->job_dispatch ;
+    }
+
+    if($build->start(%buildParams))
+    {
+        $self->status_message('Started build.');
+    }
+    else
     {
         $err->("Failed to start build " . $build->build_id . " for model " . $model->genome_model_id . ".");
     }
