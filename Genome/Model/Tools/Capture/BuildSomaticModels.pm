@@ -100,14 +100,25 @@ sub execute {                               # replace with real execution logic.
 		my $model_name = $model_basename . "-" . $sample_name;
 		my $model_id = get_model_id($model_name);
 
+		print "$sample_name\t$model_name\n";
+
 		## Build the somatic model ##
 		if(!$model_id)
 		{
-			my $cmd = "genome model define somatic-capture --processing-profile-name \"$processing_profile\" --data-directory $data_dir --model-name \"$model_name\" --subject-name \"$sample_name\" --subject_type \"$subject_type\" --normal-model-id $normal_model_id --tumor-model-id $tumor_model_id";
-			print "$sample_name\t$model_name\n";
-			print "$cmd\n";
+			my $cmd = "genome model define somatic-capture --processing-profile-name \"$processing_profile\" --subject-type \"$subject_type\" --data-directory $data_dir --model-name \"$model_name\" --normal-model-id $normal_model_id --tumor-model-id $tumor_model_id";
+			#--subject-name \"$sample_name\" --subject-type \"$subject_type\" 
+			print "RUN $cmd\n";
+			system($cmd) if(!$self->report_only);
 		
 			$model_id = get_model_id($model_name);
+		}
+		
+		if($model_id)
+		{
+			print "MODEL ID: $model_id\n";
+			my $cmd = "genome model build start --model-id $model_id";
+			print "RUN: $cmd\n";
+			system($cmd);
 		}
 
 	}
@@ -147,32 +158,6 @@ sub get_model_id
 }
 
 
-
-#############################################################
-# ParseFile - takes input file and parses it
-#
-#############################################################
-
-sub get_model_id
-{
-	my $model_name = shift(@_);
-	my $model_id = 0;
-
-	my $model_output = `genome model list --filter=name=\'$model_name\' --show=id 2>/dev/null`;
-	chomp($model_output);
-	my @output_lines = split(/\n/, $model_output);
-	
-	foreach my $line (@output_lines)
-	{
-		$line =~ s/[^0-9]//g;
-		if($line)
-		{
-			$model_id = $line;
-		}
-	}
-	
-	return($model_id);
-}
 
 
 
