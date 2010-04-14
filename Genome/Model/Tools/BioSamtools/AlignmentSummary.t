@@ -18,12 +18,12 @@ use_ok('Genome::Model::Tools::BioSamtools');
 use_ok('Genome::Model::Tools::BioSamtools::AlignmentSummary');
 
 
-my $tmp_dir = File::Temp::tempdir('BioSamtools-AlignmentSummary-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('BioSamtools-AlignmentSummary-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 0);
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/AlignmentSummary';
 
 my $bam_file = $data_dir .'/test.bam';
-my $regions_file = $data_dir .'/test_regions.bed';
+my $regions_file = $data_dir .'/test_regions_zero_based_start.bed';
 my $expected_output_file = $data_dir .'/alignment_summary_2.tsv';
 
 my $as = Genome::Model::Tools::BioSamtools::AlignmentSummary->create(
