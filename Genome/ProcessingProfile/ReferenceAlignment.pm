@@ -110,6 +110,10 @@ class Genome::ProcessingProfile::ReferenceAlignment {
                                    doc => '',
                                    is_optional => 1,
                                },
+        coverage_stats_params => {
+            doc => 'parameters necessary for generating reference coverage in the form of two comma delimited lists split by a colon like 1,5,10,15,20:0,200,500',
+            is_optional => 1,
+        },
         prior_ref_seq => {
                           doc => '',
                           is_optional => 1,
@@ -118,6 +122,10 @@ class Genome::ProcessingProfile::ReferenceAlignment {
                                     doc => 'identifies the reference sequence used in the model(required if no prior_ref_seq)',
                                     is_optional => 1,
                                 },
+        capture_set_name => {
+            doc => 'The name of the capture set to evaluate coverage and limit variant calls to within the defined target regions',
+            is_optional => 1,
+        },
         align_dist_threshold => {
                                  doc => '',
                                  is_optional => 1,
