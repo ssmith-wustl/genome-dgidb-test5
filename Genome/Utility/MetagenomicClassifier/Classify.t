@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 9;
+use Test::More tests => 12;
 use Genome::Utility::MetagenomicClassifier::ChimeraClassifier;
 
 my $cc_broad = Genome::Utility::MetagenomicClassifier::ChimeraClassifier->create(
@@ -35,6 +35,18 @@ my $cc_broad = Genome::Utility::MetagenomicClassifier::ChimeraClassifier->create
     my $divergent_count = $classification->divergent_genera_count;
     ok ($divergent_count > 0, "$divergent_count divergent genera");
     ok( $classification->maximum_common_depth < 6, "correct lca");
+
+#################################################################################################
+use Genome::Utility::MetagenomicClassifier::PopulationCompositionFactory;
+
+    my $factory = Genome::Utility::MetagenomicClassifier::PopulationCompositionFactory->instance;
+    ok($factory, 'Got factory instance');
+    my $composition = $factory->get_composition(
+        classifier => Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new( training_set => 'broad',),
+        fasta_file => '/gsc/var/cache/testsuite/data/Genome-Utility-MetagenomicClassifier/U_PR-JP_TS1_2PCA.fasta',
+    );
+    ok($composition, 'Got composition from factory');
+    isa_ok($composition, 'Genome::Utility::MetagenomicClassifier::PopulationComposition');
 
     done_testing();
     exit;
