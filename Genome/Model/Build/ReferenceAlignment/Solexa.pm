@@ -433,10 +433,33 @@ sub generate_tcga_file_name {
     return $ex_species_name->name."-".$ex_plate_name->name."-09"; 
 }
 
+
+#This directory is used by both CDNA and now Capture models as well
 sub reference_coverage_directory {
     my $self = shift;
     return $self->data_directory .'/reference_coverage';
 }
+
+####BEGIN CAPTURE SECTION####
+
+sub capture_set_bed_file {
+    my $self = shift;
+    my $capture_set = $self->model->capture_set;
+    unless ($capture_set) {
+        die('Failed to find capture set!');
+    }
+    my $bed_file_path = $self->reference_coverage_directory .'/'. $capture_set->id .'.bed';
+    unless (-e $bed_file_path) {
+        unless ($capture_set->print_bed_file($bed_file_path)) {
+            die('Failed to print bed file to path '. $bed_file_path);
+        }
+    }
+    return $bed_file_path;
+}
+
+####END CAPTURE SECTION####
+
+####BEGIN CDNA SECTION####
 
 sub layers_file {
     my $self = shift;
@@ -510,6 +533,8 @@ sub _coverage_data_file {
     my $model = $self->model;
     return $self->reference_coverage_directory .'/'. $model->subject_name .'_'. $type .'.tsv';
 }
+
+#####END OF CDNA SECTION###
 
 sub maplist_file_paths {
     my $self = shift;
