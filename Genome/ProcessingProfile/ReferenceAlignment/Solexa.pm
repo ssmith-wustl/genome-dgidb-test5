@@ -38,6 +38,12 @@ sub reference_coverage_job_classes {
             return @steps;
         }
     }
+    if (defined($self->capture_set_name)) {
+        my @steps = (
+            'Genome::Model::Event::Build::ReferenceAlignment::CoverageStats',
+        );
+        return @steps;
+    }
     return;
 }
 
