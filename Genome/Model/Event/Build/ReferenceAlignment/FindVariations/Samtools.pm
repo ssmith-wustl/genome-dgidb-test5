@@ -10,6 +10,7 @@ use warnings;
 
 use Genome;
 use IO::File;
+use File::Copy qw(move);
 
 class Genome::Model::Event::Build::ReferenceAlignment::FindVariations::Samtools {
     is => ['Genome::Model::Event::Build::ReferenceAlignment::FindVariations'],
@@ -106,11 +107,36 @@ sub execute {
     my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snp_output_file);
     $rv = $snp_sanitizer->execute;
     return unless $self->_check_rv("Running samtools snp-sanitizer failed with exit code $rv", $rv, 1);
-    
+
     my $indel_cmd = "$samtools_cmd -i $bam_file > $indel_output_file";
     $rv = system $indel_cmd;
     return unless $self->_check_rv("Running samtools indel failed with exit code $rv\nCommand: $indel_cmd", $rv, 0);
 
+    #for capture models we need to limit the snps and indels to within the defined target regions
+    if ($self->model->capture_set_name) {
+        my $bed_file = $self->build->capture_set_bed_file;
+        for my $var_file ($snp_output_file, $indel_output_file) {
+            my $tmp_limited_file = $var_file .'_limited';
+            my $no_limit_file = $var_file .'.no_bed_limit';
+            unless (Genome::Model::Tools::Sam::LimitVariants->execute(
+                variants_file => $var_file,
+                bed_file => $bed_file,
+                output_file => $tmp_limited_file,
+            )) {
+                $self->error_message('Failed to limit samtools variants '. $var_file .' to within capture target regions '. $bed_file);
+                die($self->error_message);
+            }
+            unless (move($var_file,$no_limit_file)) {
+                $self->error_message('Failed to move all variants from '. $var_file .' to '. $no_limit_file);
+                die($self->error_message);
+            }
+            unless (move($tmp_limited_file,$var_file)) {
+                $self->error_message('Failed to move limited variants from '. $tmp_limited_file .' to '. $var_file);
+                die($self->error_message);
+            }
+        }
+    }
+    
     #For test purpose, put filter switch here. In the future, probably only one is needed.
     my $filter_type = $model->variant_filter || 'SnpFilter';
 
@@ -127,7 +153,12 @@ sub execute {
         return unless $self->_check_rv("Running samtools varFilter failed with exit code $rv", $rv, 1);
     }
     elsif ($filter_type =~ /^SnpFilter$/i) {
-        my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(indel_file => $indel_output_file);
+        my %indel_filter_params = ( indel_file => $indel_output_file);
+        # for capture data we do not know the proper ceiling for depth
+        if ($self->model->capture_set_name) {
+            $indel_filter_params{max_read_depth} = 1000000;
+        }
+        my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(%indel_filter_params);
         $rv = $indel_filter->execute;
         return unless $self->_check_rv("Running sam indel-filter failed with exit code $rv", $rv, 1);
    
