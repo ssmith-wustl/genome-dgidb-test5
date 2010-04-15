@@ -17,6 +17,11 @@ class Genome::Model::Tools::Consed::AceReference {
             doc  => "gets the name and number of the contig with your reference sequence in it; reference defined by a read ending in .c1",
   	    is_optional  => 1,
 	},
+	no_stdout => {
+	    is => 'Boolean',
+	    doc   =>  "Use this option if you do not want the info to print to stdout. Default is to print to stdout.",
+	    is_optional  => 1,
+	},
 	], 
 };
 
@@ -49,9 +54,9 @@ sub execute {
 	($ace_reference) = &name_and_number($self,$ace_reference);
 	my $Contig_number = $ace_reference->{Contig_number};
 	my $reseqid = $ace_reference->{reseqid};
-
-	print qq(Contig_number => $Contig_number, Refseq_id => $reseqid\n);
-
+	unless ($self->no_stdout) {
+	    print qq(Contig_number => $Contig_number, Refseq_id => $reseqid\n);
+	}
     }
 
     return unless $ace_reference;
