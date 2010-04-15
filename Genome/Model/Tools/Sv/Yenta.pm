@@ -175,7 +175,7 @@ sub execute {
             $orientation,
         ) = split /\s+/, $line; 
         #skip headers
-        next if $line =~ /START|TYPE/;
+        next if $line =~ /^#|START|TYPE/i;
         #validate columns
         unless($chr1 =~ /^[0-9XYNMT_]+$/i) {
             $self->error_message("First column contains invalid chromosome name $chr1 at line " . $indel_fh->input_line_number);
