@@ -11,6 +11,11 @@ class Genome::Model::Tools::RefSeq::Fasta {
             type  =>  'String',
             doc  => "refseq fasta file",
 	},
+	no_stdout => {
+	    is => 'Boolean',
+	    doc   =>  "Use this option if you do not want the info to print to stdout. Default is to print to stdout.",
+	    is_optional  => 1,
+	},
 
 	], 
 };
@@ -50,9 +55,9 @@ sub execute {
     my $start = $refseq_header->{start};
     my $stop = $refseq_header->{stop};
     my $name = $refseq_header->{name};
-
-    print qq(name => $name, chromosome => $chromosome, orientation => $orientation, genomic_coord => $genomic_coord, start => $start, stop => $stop, length => $length\n);
-
+    unless ($self->no_stdout) {
+	print qq(name => $name, chromosome => $chromosome, orientation => $orientation, genomic_coord => $genomic_coord, start => $start, stop => $stop, length => $length\n);
+    }
     return unless $refseq_header;
     return $refseq_header;
 
