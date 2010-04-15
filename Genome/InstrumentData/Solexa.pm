@@ -24,7 +24,7 @@ class Genome::InstrumentData::Solexa {
     is => ['Genome::InstrumentData', 'Genome::Utility::FileSystem'],
     table_name => <<EOS
         (
-            select 
+            select
                 --to_char(s_rev.seq_id) id,
                 to_char(i.analysis_id) id,
 
@@ -34,7 +34,7 @@ class Genome::InstrumentData::Solexa {
 
                 i.target_region_set_name,
 
-                --s_rev.sample_id,		   
+                --s_rev.sample_id,
                 lib.sample_id,
 
                 i.library_id,
@@ -98,41 +98,41 @@ class Genome::InstrumentData::Solexa {
 
                 --archive.path archive_path,
                 archive2.path archive_path,
-                                
-                --adaptor.path adaptor_path,        
+
+                --adaptor.path adaptor_path,
                 --adaptor2.path adaptor_path,
                 '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer'
                     || (case when sample_type = 'rna' then '_SMART' else '' end) adaptor_path,
-                                
+
                 --(case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.FILT_CLUSTERS else null end) fwd_filt_clusters,
                 (case when r1.seq_id is not null then i.filt_clusters else null end) fwd_filt_clusters,
-                        
+
                 --(case when s_rev.run_type = 'Paired End Read 2' then s_rev.FILT_CLUSTERS else null end) rev_filt_clusters,
                 (case when r1.seq_id is not null then i.filt_clusters else null end) rev_filt_clusters,
-                        
-                --(nvl(s_fwd.FILT_CLUSTERS,0) + s_rev.FILT_CLUSTERS) filt_clusters, 	-- s_rev.FILT_CLUSTERS is still the expected value for fragment reads 
+
+                --(nvl(s_fwd.FILT_CLUSTERS,0) + s_rev.FILT_CLUSTERS) filt_clusters, 	-- s_rev.FILT_CLUSTERS is still the expected value for fragment reads
                 i.filt_clusters,
-                        
+
                 --s_rev.analysis_software_version,
                 i.analysis_software_version,
 
                 i.index_sequence
 
-                --from solexa_lane_summary\@dw s_rev 
+                --from solexa_lane_summary\@dw s_rev
                 --join read_illumina r2 on r2.sls_seq_id = s_rev.seq_id --and r1.read_number = 1
-                from index_illumina\@dw i 
+                from index_illumina\@dw i
                     join flow_cell_illumina\@dw fc on fc.flow_cell_id = i.flow_cell_id
-                    join read_illumina\@dw r2 
-                        on i.seq_id = r2.ii_seq_id	
+                    join read_illumina\@dw r2
+                        on i.seq_id = r2.ii_seq_id
                         and (
                             (fc.run_type = 'Paired End' and r2.read_number = 2)
                             or
                             (fc.run_type = 'Fragment' and r2.read_number = 1)
                         )
                     left join seq_fs_path\@dw archive2 on archive2.seq_id = i.seq_id
-                        and archive2.data_type = 'illumina fastq tgz'		 	    
-                    left join read_illumina\@dw r1 
-                        on run_type = 'Paired End' 
+                        and archive2.data_type = 'illumina fastq tgz'
+                    left join read_illumina\@dw r1
+                        on run_type = 'Paired End'
                         and r1.ii_seq_id = i.seq_id
                         and r1.read_number = 1
                     join library_summary\@dw lib on lib.library_id = i.library_id
@@ -152,10 +152,11 @@ EOS
     ,
     has_constant => [
         sequencing_platform => { value => 'solexa' },
-    ],    
+    ],
     has_optional => [
         flow_cell_id                    => { }, # = short name
-        lane                            => { }, 
+        flow_cell                       => { is => 'Genome::InstrumentData::FlowCell', id_by => 'flow_cell_id' },
+        lane                            => { },
         index_sequence                  => { },
         read_length                     => { },
         fwd_read_length                 => { },
@@ -190,7 +191,7 @@ EOS
 
         short_name => {
             doc => 'The essential portion of the run name which identifies the run.  The rest is redundent information about the instrument, date, etc.',
-            is => 'Text', 
+            is => 'Text',
             calculate_from => ['run_name'],
             calculate => q|($run_name =~ /_([^_]+)$/)[0]|
         },
@@ -207,7 +208,7 @@ EOS
         project_name => { },
         project => {
             is => "Genome::Project",
-            calculate => q|Genome::Project->get(name => $self->research_project_name)| 
+            calculate => q|Genome::Project->get(name => $self->research_project_name)|
         },
         _run_lane_solexa => {
             doc => 'Solexa Lane Summary from LIMS.',
@@ -221,14 +222,14 @@ EOS
         # basic relationship to the "source" of the lane
         library         => { is => 'Genome::Library', id_by => ['library_id'] },
         library_id      => { is => 'Number', },
-    
+
         # these are indirect via library, but must be set directly for lanes missing library info
         sample              => { is => 'Genome::Sample', id_by => ['sample_id'] },
         sample_id           => { is => 'Number', },
-        
+
         sample_source       => { is => 'Genome::SampleSource', via => 'sample', to => 'source' },
         sample_source_name  => { via => 'sample_source', to => 'name' },
-        
+
         # indirect via the sample source, but we let the sample manage that
         # since we sometimes don't know the source, it also tracks taxon directly
         taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
@@ -320,21 +321,21 @@ sub desc {
 sub read1_fastq_name {
     my $self = shift;
     my $lane = $self->lane;
-    
+
     return "s_${lane}_1_sequence.txt";
 }
 
 sub read2_fastq_name {
     my $self = shift;
     my $lane = $self->lane;
-    
+
     return "s_${lane}_2_sequence.txt";
 }
 
 sub fragment_fastq_name {
     my $self = shift;
     my $lane = $self->lane;
-    
+
     return "s_${lane}_sequence.txt";
 }
 
@@ -418,7 +419,7 @@ sub dump_illumina_fastq_archive {
     unless ($dir) {
         $dir = $self->base_temp_directory;
     }
-    
+
     #Prevent unarchiving multiple times during execution
     #Hopefully nobody passes in a $dir expecting to overwrite another set of FASTQs coincidentally from the same lane number
     my $already_dumped = 0;
@@ -432,7 +433,7 @@ sub dump_illumina_fastq_archive {
             $already_dumped = 1;
         }
     }
-    
+
     unless($already_dumped) {
         my $cmd = "tar -xzf $archive --directory=$dir";
         unless ($self->shellcmd(
@@ -443,7 +444,7 @@ sub dump_illumina_fastq_archive {
             die($self->error_message);
         }
     }
-    
+
     return $dir;
 }
 
@@ -478,7 +479,7 @@ sub resolve_quality_converter {
 
     # old stuff needed sol2sanger, new stuff all uses sol2phred, but
     # we dont care what the version is anymore
-    
+
     my $self = shift;
 
     my %analysis_software_versions = (
@@ -546,11 +547,11 @@ sub run_start_date_formatted {
     my $self = shift;
 
     my ($y, $m, $d) = $self->run_name =~ m/^(\d{2})(\d{2})(\d{2})_.*$/;
-     
+
     my $dt_format = UR::Time->config('datetime');
     #UR::Time->config(datetime => '%a %b %d %T %Z %Y');
     UR::Time->config(datetime => '%Y-%m-%d');
-    my $dt = UR::Time->numbers_to_datetime(0, 0, 0, $d, $m, "20$y");    
+    my $dt = UR::Time->numbers_to_datetime(0, 0, 0, $d, $m, "20$y");
     UR::Time->config(datetime => $dt_format);
 
     return $dt;
@@ -564,7 +565,7 @@ sub total_bases_read {
         $filter = 'both';
     }
     my $total_bases; # unused?
-        
+
 
     my $count;
     if ($self->is_paired_end) {
