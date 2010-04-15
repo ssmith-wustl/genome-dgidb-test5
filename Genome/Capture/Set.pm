@@ -64,7 +64,9 @@ sub print_bed_file {
         $self->error_message('Failed to find BED format content.');
         return;
     }
-    print $bed_fh $self->bed_file_content;
+    # Remove the chr globally from the files
+    $bed_file_content =~ s/chr//g;
+    print $bed_fh $bed_file_content;
     return 1;
 }
 
