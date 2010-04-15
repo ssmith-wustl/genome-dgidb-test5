@@ -47,10 +47,6 @@ sub _generate_content {
     my $xml_view = $subject->create_view(
         perspective => $self->perspective,
         toolkit => 'xml',
-
-        # custom for this view
-        instance_id => $self->instance_id,
-        use_lsf_file => $self->use_lsf_file,
     );
     my $xml_content = $xml_view->_generate_content();
 
