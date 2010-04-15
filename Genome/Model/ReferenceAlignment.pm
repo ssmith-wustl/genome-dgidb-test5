@@ -58,6 +58,8 @@ class Genome::Model::ReferenceAlignment {
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
         reference_sequence_name      => { via => 'processing_profile'},
+        coverage_stats_params        => { via => 'processing_profile'},
+        capture_set_name             => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events   => { is => 'Genome::Model::Event::Build::ReferenceAlignment::AssignRun',
                                  is_many => 1,
@@ -590,6 +592,19 @@ sub _get_sum_of_metric_values_from_events {
     return $sum;
 }
 
+sub capture_set {
+    my $self = shift;
+    unless ($self->{capture_set}) {
+        my $name = $self->capture_set_name;
+        my $capture_set = Genome::Capture::Set->get(name => $name);
+        unless ($capture_set) {
+            die('Failed to find capture set by name '. $name);
+        }
+        $self->{capture_set} = $capture_set;
+    }
+    return $self->{capture_set};
+}
+
 sub reference_build {
     # we'll eventually have this return a real model build
     # for now we return an object which handles making some
@@ -896,22 +911,27 @@ sub gold_snp_path {
     my $self = shift;
     # should only be one of these...
     # pop the last one just in case there are multiple.
-    my @genotype_models = Genome::Model::GenotypeMicroarray->get(subject_name => $self->subject_name);
+    my $subject_name = $self->subject_name;
+    if ($self->subject_type eq 'library_name') {
+        my $subject = $self->subject;
+        $subject_name = $subject->sample_name;
+    }
+    my @genotype_models = Genome::Model::GenotypeMicroarray->get(subject_name => $subject_name);
     my $gold_model = pop(@genotype_models);
     if(!defined($gold_model))
     {
-        $self->error_message("no genotype microarray model defined for ".$self->subject_name);
+        $self->error_message("no genotype microarray model defined for ".$subject_name);
         return;
     }
     my @builds = $gold_model->builds;
     if(@builds > 1)
     {
-        $self->error_message("WTF!?!? multiple genotype files for ".$self->subject_name);
+        $self->error_message("WTF!?!? multiple genotype files for ".$subject_name);
     } 
 
     if(scalar(@builds) == 0)
     {
-        $self->error_message("no build for model ".$self->subject_name);
+        $self->error_message("no build for model ".$subject_name);
         return;
     }
     my $build = shift @builds;
