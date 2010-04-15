@@ -510,9 +510,7 @@ sub find_matches_around {
     my $variant = {};
     my (@forward, @backward);
 
-    if ($chr =~ /^(MT|NT)/) {
-        return;
-    }
+    return unless grep {$_ eq $chr } ( 1..22, 'X', 'Y');
 
     my ($fh, $index) = $self->get_fh_for_chr($chr);
 
@@ -567,9 +565,7 @@ sub find_a_matching_pos {
 
     my ($chr, $start, $stop) = split(/\t/,$line);
 
-    if ($chr =~ /^(MT|NT)/) {
-        return;
-    }
+    return unless grep {$_ eq $chr } ( 1..22, 'X', 'Y');
 
     my ($fh, $index) = $self->get_fh_for_chr($chr);
     my $match_count = 0;
@@ -687,7 +683,6 @@ sub parse_dbsnp_line {
 
     return $snp;
 }
-
 
 1;
 
