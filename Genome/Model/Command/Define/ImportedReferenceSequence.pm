@@ -286,9 +286,10 @@ sub _execute_try {
         $buildParams{'job_dispatch'} = $self->job_dispatch ;
     }
 
+    $self->status_message('Starting build.');
     if($build->start(%buildParams))
     {
-        $self->status_message('Started build.');
+        $self->status_message('Started build (build is complete if it was run inline).');
     }
     else
     {
