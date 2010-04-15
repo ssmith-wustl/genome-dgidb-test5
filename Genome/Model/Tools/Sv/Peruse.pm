@@ -11,11 +11,11 @@ use Text::CSV_XS;
 class Genome::Model::Tools::Sv::Peruse {
     is => 'Command',
     has => [
-    breakdancer_file => 
+    primer_design_file => 
     { 
         type => 'String',
         is_optional => 0,
-        doc => "Input file of breakdancer output for a single individual",
+        doc => "Input file of svs in primer design input format",
     },
     dir =>
     {
@@ -51,7 +51,12 @@ class Genome::Model::Tools::Sv::Peruse {
         is_optional => 1,
         default => {INV => 1,INS => 1,DEL => 1,ITX => 1,CTX => 1,},
     },
-
+    prefix => {
+        type => 'Boolean',
+        is_optional => 1,
+        default => 0,
+        doc => "Whether or not the input file has an additional first column indicating the prefix",
+    },
     ],
 };
 
@@ -70,14 +75,14 @@ sub execute {
     }
     my %types = map {$_ => 1} @types; #create types hash
 
-    unless(-f $self->breakdancer_file) {
-        $self->error_message("breakdancer file is not a file: " . $self->breakdancer_file);
+    unless(-f $self->primer_design_file) {
+        $self->error_message("primer design file is not a file: " . $self->primer_design_file);
         return;
     }
 
-    my $indel_fh = IO::File->new($self->breakdancer_file);
+    my $indel_fh = IO::File->new($self->primer_design_file);
     unless($indel_fh) {
-        $self->error_message("Failed to open filehandle for: " .  $self->breakdancer_file );
+        $self->error_message("Failed to open filehandle for: " .  $self->primer_design_file );
         return;
     }
 
@@ -93,8 +98,17 @@ sub execute {
     }
 
 
-    my ($start_chr1, $start_chr1_pos, $start_chr2,$start_chr2_pos,$start_type);
+    my ($start_prefix, $start_chr1, $start_chr1_pos, $start_chr2,$start_chr2_pos,$start_type);
     if($start) {
+        #strip off optional prefix
+        ($start_prefix) = $start =~ /(.+\.)/;
+        $start =~ s/(.+\.)//;
+        if($start_prefix) {
+            #report what we chunked off in case this is unexpected
+            $self->status_message("Identified $start_prefix from the beginning of $start as a prefix");
+        }
+        $start_prefix =~ s/\.//;
+        
         ($start_chr1, $start_chr1_pos, $start_chr2,$start_chr2_pos,$start_type) = split /\_/, $start;
         unless(defined $start_chr1 && defined $start_chr1_pos && defined $start_chr2_pos && defined $start_type) {
             $self->error_message("Invalid --start-from string $start. Must contain both start and stop chromosomes and positions as well as a type.");
@@ -109,33 +123,36 @@ sub execute {
     SV:
     while(my $line = $indel_fh->getline) {
         chomp $line;
+        next if $line =~ /OUTER|TYPE/i;
         unless($csv->parse($line)) {
             $self->error_message("Failed to parse line. Parser returned: " . $self->error_message);
             return;
         }
-
+        my @fields = $csv->fields();
+        my $prefix = $self->prefix ? shift @fields : q{};
         my ($chr1,
             $chr1_pos,
-            $orientation1,
             $chr2,
             $chr2_pos,
-            $orientation2,
             $type,
             $size,
-        ) = $csv->fields(); 
+            $orientation,
+        ) = @fields; 
         if(exists($types{$type})) {
             if($start) {
                 #handle the initial search operation if requested
                 if($chr1 eq $start_chr1 && $chr2 eq $start_chr2 && $start_chr1_pos eq $chr1_pos && $start_chr2_pos eq $chr2_pos && $start_type eq $type) {
-                    $start = 0;
+                    if(!$self->prefix || ($self->prefix && $start_prefix eq $prefix)) {
+                        $start = 0;
+                    }
                 }
                 else {
                     next SV;
                 }
             }
-
-            my $name = "$dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_*_${type}*.png";
-            print "Opening files for ${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_${type}\n";
+            $prefix .= '.' if $prefix ne q{};   #if prefix is a string append the expected period for filename matching
+            my $name = "$dir/$prefix${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_*_${type}*.png";
+            print "Opening files for $prefix${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_${type}\n";
             system("$viewer $name &");
             my $next = <STDIN>;
             chomp $next;
@@ -153,7 +170,7 @@ sub execute {
 
 sub help_detail {
     my $value = <<HELP;
-This module reads through a breakdancer output file and opens up all the associated files produced through gmt sv yenta for viewing. The default viewer is eog. Each viewer is opened as a background process. To proceed to the next SV just hit enter. To quit, type q.
+This module reads through a sv primer design file and opens up all the associated files produced through gmt sv yenta for viewing. The default viewer is eog. Each viewer is opened as a background process. To proceed to the next SV just hit enter. To quit, type q.
 HELP
 
     return $value;
