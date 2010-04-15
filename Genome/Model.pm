@@ -24,6 +24,7 @@ use YAML;
 use Archive::Tar;
 
 class Genome::Model {
+    type_name => 'genome model',
     table_name => 'GENOME_MODEL',
     is_abstract => 1,
     first_sub_classification_method_name => '_resolve_subclass_name',
@@ -34,9 +35,8 @@ class Genome::Model {
     has => [
         name                    => { is => 'Text', len => 255 },
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
-        subject_name            => {
-            is => 'Text', len => 255, calculate_from => 'subject',
-            calculate => q(
+        subject_name            => { is => 'Text', len => 255, calculate_from => 'subject',
+                                     calculate => q(
                 if($subject->class eq 'GSC::Equipment::Solexa::Run') {
                    return $subject->flow_cell_id;
                 } elsif($subject->class eq 'Genome::Sample') {
@@ -47,11 +47,9 @@ class Genome::Model {
                     $self->error_message('Unable to determine name for subject');
                     return;
                 }
-            ),
-        },
-        subject_type            => {
-            is => 'Text', len => 255, calculate_from => 'subject_class_name',
-            calculate => q( 
+            ) },
+        subject_type            => { is => 'Text', len => 255, calculate_from => 'subject_class_name',
+                                     calculate => q( 
                 if($subject_class_name->class and $subject_class_name->isa('GSC::DNA')) {
                     $subject_class_name = 'GSC::DNA'; #Avoid needing to list entire DNA heirarchy
                 }
@@ -71,36 +69,24 @@ class Genome::Model {
                 );
     
                 return $types{$subject_class_name}; 
-            ),
-            valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] 
-        },
+            ), valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
-        subject                 => { 
-            calculate_from => [ 'subject_id', 'subject_class_name' ],
-            calculate => q( return $subject_class_name->get($subject_id); ),
-        },
+        subject                 => { calculate_from => [ 'subject_id', 'subject_class_name' ],
+                                     calculate => q( return $subject_class_name->get($subject_id); ) },
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name               => { via => 'processing_profile' },
         events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1, 
-                                    doc => 'all events which have occurred for this model' },
+                                     doc => 'all events which have occurred for this model' },
         subject_class_name      => { is => 'VARCHAR2', len => 500 },
         subject_id              => { is => 'NUMBER', len => 15 },
         reports                 => { via => 'last_succeeded_build' },
         reports_directory       => { via => 'last_succeeded_build' },
         is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
-        model_bridges           => {
-                                    is         => 'Genome::ModelGroupBridge',
-                                    reverse_as => 'model',
-                                    is_many    => 1
-                                   },
-        model_groups            => { 
-                                    is      => 'Genome::ModelGroup', 
-                                    via     => 'model_bridges',
-                                    to      => 'model_group',
-                                    is_many => 1,
-                                   }
+        model_bridges           => { is => 'Genome::ModelGroupBridge', reverse_as => 'model', is_many => 1 },
+        model_groups            => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group', is_many => 1 },
+        subclass_name           => { is => 'VARCHAR2', len => 255, is_optional => 1 },
     ],
     has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
@@ -108,24 +94,22 @@ class Genome::Model {
         builds                           => { is => 'Genome::Model::Build', reverse_as => 'model', is_many => 1 },
         build_statuses                   => { via => 'builds', to => 'master_event_status', is_many => 1 },
         build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
-        keep_n_most_recent_builds	     => { via => 'attributes', to => 'value', is_mutable => 1, 
-                                              where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] 
-                                            },
+        keep_n_most_recent_builds        => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
-            calculate => q($instrument_data_class_name->_dw_class), 
-            doc => 'the class of instrument_data assignable to this model in the dw' },
+                                              calculate => q($instrument_data_class_name->_dw_class), 
+                                              doc => 'the class of instrument_data assignable to this model in the dw' },
         instrument_data_class_name       => { calculate_from => 'sequencing_platform',
-            calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
-            doc => 'the class of instrument data assignable to this model' },
+                                              calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
+                                              doc => 'the class of instrument data assignable to this model' },
         test                             => { is => 'Boolean', is_transient => 1, 
-            doc => 'testing flag' },
+                                              doc => 'testing flag' },
         _printable_property_names_ref    => { is => 'array_ref', is_transient => 1 },
-        comparable_normal_model_id       => { is => 'Number', len => 10 },
+        comparable_normal_model_id       => { is => 'Number', len => 10, implied_by => 'comparable_normal_model' },
         comparable_normal_model          => { is => 'Genome::Model', id_by => 'comparable_normal_model_id' },
         sample_name                      => { is => 'Text', len => 255 },
         sequencing_platform              => { via => 'processing_profile' },
         last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
-        last_succeeded_build_directory    => { calculate => q($b = $self->last_succeeded_build; return unless $b; return $b->data_directory) },
+        last_succeeded_build_directory   => { calculate => q($b = $self->last_succeeded_build; return unless $b; return $b->data_directory) },
     ],
     has_many_optional => [
         ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },
@@ -133,58 +117,39 @@ class Genome::Model {
         projects                          => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
         project_names                     => { is => 'Text', via => 'projects', to => 'name' },
         attributes                        => { is => 'Genome::MiscAttribute', reverse_as => '_model', where => [ entity_class_name => 'Genome::Model' ] },
-        #< Inputs >#
-        inputs => {
-            is => 'Genome::Model::Input',
-            reverse_as => 'model',
-            doc => 'Inputs currently assigned to the model.'
-        },
-        # Instrument Data
-        #This will be the new instrument data properties, the rest of these props will go away
-        inst_data => {#instrument_data => {
-            is => 'Genome::InstrumentData',
-            via => 'inputs',
-            is_mutable => 1,
-            is_many => 1,
-            where => [ name => 'instrument_data' ],
-            to => 'value',
-            doc => 'Instrument data currently assigned to the model.',
-        },
-        instrument_data => {
-            via => 'instrument_data_assignments',
-            to => 'instrument_data',
-            is => 'Genome::InstrumentData',
-        },
+        inputs                            => { is => 'Genome::Model::Input', reverse_as => 'model', 
+                                               doc => 'Inputs currently assigned to the model.' },
+        inst_data                         => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, where => [ name => 'instrument_data' ], 
+                                               doc => 'Instrument data currently assigned to the model.' },
+        instrument_data                   => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments' },
         assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
         instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
         built_instrument_data             => { calculate => q( 
-                                                    return 
+                                                                                                   return 
                                                         map { $_->instrument_data } 
                                                         grep { defined $_->first_build_id } 
                                                         $self->instrument_data_assignments;
                                                 ) },
         unbuilt_instrument_data           => { calculate => q( 
-                                                    return 
+                                                                                                   return 
                                                         map { $_->instrument_data } 
                                                         grep { !defined $_->first_build_id } 
                                                         $self->instrument_data_assignments;
                                                 ) },
         instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_as => 'model', 
-            doc => 'Each case of an instrument data being assigned to the model' },
-        #<>#
+                                               doc => 'Each case of an instrument data being assigned to the model' },
         from_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', 
-                                               doc => 'bridge table entries where this is the \"to\" model(used to retrieve models this model is \"from\")' },
+                                               doc => 'bridge table entries where this is the \\\"to\\\" model(used to retrieve models this model is \\\"from\\\")' },
         from_models                       => { is => 'Genome::Model', via => 'from_model_links', to => 'from_model', 
-                                               doc => 'Genome models that contribute \"to\" this model' },
+                                               doc => 'Genome models that contribute \\\"to\\\" this model' },
         to_model_links                    => { is => 'Genome::Model::Link', reverse_as => 'from_model', 
-                                               doc => 'bridge entries where this is the \"from\" model(used to retrieve models models this model is \"to\")' },
+                                               doc => 'bridge entries where this is the \\\"from\\\" model(used to retrieve models models this model is \\\"to\\\")' },
         to_models                         => { is => 'Genome::Model', via => 'to_model_links', to => 'to_model', 
-                                               doc => 'Genome models this model contributes \"to\"' },
-    variant_validations                   => { is => 'Genome::Model::VariantValidation', reverse_id_by => 'model', 
-                                           doc => "variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion"},
-    putative_variant_validations          => { is => 'Genome::Model::VariantValidation', reverse_id_by => 'model', 
-                                           doc => "putative (only) variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion",
-                                           where => [ validation_type => 'Official', validation_result => 'P' ] },
+                                               doc => 'Genome models this model contributes \\\"to\\\"' },
+        variant_validations               => { is => 'Genome::Model::VariantValidation', reverse_as => 'model', 
+                                               doc => 'variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion' },
+        putative_variant_validations      => { is => 'Genome::Model::VariantValidation', reverse_as => 'model', where => [ validation_type => 'Official', validation_result => 'P' ], 
+                                               doc => 'putative (only) variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -221,6 +186,7 @@ sub __extend_namespace__ {
 
 sub create {
     my $class = shift;
+
     if ($class eq __PACKAGE__) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
@@ -260,6 +226,10 @@ sub create {
     my $processing_profile_id = $params->value_for('processing_profile_id');
     $class->_validate_processing_profile_id($processing_profile_id)
         or return;
+
+    unless ($params->value_for('subclass_name')) {
+        $params = $params->add_filter(subclass_name => $class);
+    }
 
     my $self = $class->SUPER::create($params)
         or return;

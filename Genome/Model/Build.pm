@@ -13,6 +13,7 @@ use Workflow;
 use YAML;
 
 class Genome::Model::Build {
+    type_name => 'genome model build',
     table_name => 'GENOME_MODEL_BUILD',
     is_abstract => 1,
     sub_classification_method_name => '_resolve_subclass_name',
@@ -20,79 +21,53 @@ class Genome::Model::Build {
         build_id => { is => 'NUMBER', len => 10 },
     ],
     has => [
-        data_directory      => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
-
-        #< Model and props via model >#
-        model               => { is => 'Genome::Model', id_by => 'model_id' },
-        model_id            => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
-        model_name          => { via => 'model', to => 'name' },
-        type_name           => { via => 'model' },
-        subject_id          => { via => 'model' },
-        subject_name        => { via => 'model' },
-        processing_profile  => { via => 'model' },
+        data_directory          => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+        model                   => { is => 'Genome::Model', id_by => 'model_id' },
+        model_id                => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
+        model_name              => { via => 'model', to => 'name' },
+        type_name               => { via => 'model' },
+        subject_id              => { via => 'model' },
+        subject_name            => { via => 'model' },
+        processing_profile      => { via => 'model' },
         processing_profile_name => { via => 'model' },
-
-        #< Events >#
-        the_events          => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1,  },
-        the_events_statuses => { via => 'the_events', to => 'event_status' },
-        the_master_event    => { via => 'the_events', to => '-filter', where => [event_type => 'genome model build'] },
-        run_by              => { via => 'the_master_event', to => 'user_name' },
-        status              => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
-        master_event_status => { via => 'the_master_event', to => 'event_status' }, # this name is has an inside framing instead of outside
+        the_events              => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1 },
+        the_events_statuses     => { via => 'the_events', to => 'event_status' },
+        the_master_event        => { is => 'Genome::Model::Event', via => 'the_events', to => '-filter', reverse_as => 'build', where => [ event_type => 'genome model build' ] },
+        run_by                  => { via => 'the_master_event', to => 'user_name' },
+        status                  => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
+        master_event_status     => { via => 'the_master_event', to => 'event_status' },
+        subclass_name           => { is => 'VARCHAR2', len => 255, is_optional => 1 },
     ],
     has_optional => [
-        disk_allocation     => {
-                                is => 'Genome::Disk::Allocation',
-                                calculate_from => [ 'class', 'id' ],
-                                calculate => q|
+        disk_allocation   => { is => 'Genome::Disk::Allocation', calculate_from => [ 'class', 'id' ],
+                               calculate => q(
                                     my $disk_allocation = Genome::Disk::Allocation->get(
                                                           owner_class_name => $class,
                                                           owner_id => $id,
                                                       );
                                     return $disk_allocation;
-                                |,
-        },
-        software_revision   => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+                                ) },
+        software_revision => { is => 'VARCHAR2', len => 1000 },
     ],
     has_many_optional => [
-    #< Inputs >#
-    inputs => {
-        is => 'Genome::Model::Build::Input',
-        reverse_as => 'build',
-        doc => 'Inputs assigned to the model when the build was created.'
-    },
-    instrument_data => {
-        is => 'Genome::InstrumentData',
-        via => 'inputs',
-        is_mutable => 1,
-        is_many => 1,
-        where => [ name => 'instrument_data' ],
-        to => 'value',
-        doc => 'Instrument data assigned to the model when the build was created.'
-    },
-    #<>#
-    from_build_links                  => { is => 'Genome::Model::Build::Link',
-        reverse_id_by => 'to_build',
-        doc => 'bridge table entries where this is the "to" build(used to retrieve builds this build is "from")'
-    },
-    from_builds                       => { is => 'Genome::Model::Build',
-        via => 'from_build_links', to => 'from_build',
-        doc => 'Genome builds that contribute "to" this build',
-    },
-    to_build_links                    => { is => 'Genome::Model::Build::Link',
-        reverse_id_by => 'from_build',
-        doc => 'bridge entries where this is the "from" build(used to retrieve builds builds this build is "to")'
-    },
-    to_builds                       => { is => 'Genome::Model::Build',
-        via => 'to_build_links', to => 'to_build',
-        doc => 'Genome builds this build contributes "to"',
-    },
-    attributes                        => { is => 'Genome::MiscAttribute', reverse_id_by => '_build', where => [ entity_class_name => 'Genome::Model::Build' ] },
-    metrics                           => { is => 'Genome::Model::Metric', reverse_id_by => 'build', doc => "Build metrics"},
-    variants                          => { is => 'Genome::Model::BuildVariant', reverse_id_by => 'build', 
-                                           doc => "variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects"},
-    ], 
-
+        inputs           => { is => 'Genome::Model::Build::Input', reverse_as => 'build', 
+                              doc => 'Inputs assigned to the model when the build was created.' },
+        instrument_data  => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, where => [ name => 'instrument_data' ], 
+                              doc => 'Instrument data assigned to the model when the build was created.' },
+        from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', 
+                              doc => 'bridge table entries where this is the \"to\" build(used to retrieve builds this build is \"from\")' },
+        from_builds      => { is => 'Genome::Model::Build', via => 'from_build_links', to => 'from_build', 
+                              doc => 'Genome builds that contribute \"to\" this build' },
+        to_build_links   => { is => 'Genome::Model::Build::Link', reverse_as => 'from_build', 
+                              doc => 'bridge entries where this is the \"from\" build(used to retrieve builds builds this build is \"to\")' },
+        to_builds        => { is => 'Genome::Model::Build', via => 'to_build_links', to => 'to_build', 
+                              doc => 'Genome builds this build contributes \"to\"' },
+        attributes       => { is => 'Genome::MiscAttribute', reverse_as => '_build', where => [ entity_class_name => 'Genome::Model::Build' ] },
+        metrics          => { is => 'Genome::Model::Metric', reverse_as => 'build', 
+                              doc => 'Build metrics' },
+        variants         => { is => 'Genome::Model::BuildVariant', reverse_as => 'build', 
+                              doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
@@ -166,6 +141,11 @@ sub create {
     unless ( $class->_validate_model_id($model_id) ) {
         return;
     }
+
+    unless ($bx->value_for('subclass_name')) {
+        $bx = $bx->add_filter(subclass_name => $class);
+    }
+
     # create
 $DB::single = 1;
     my $self = $class->SUPER::create($bx);

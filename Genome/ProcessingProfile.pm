@@ -9,34 +9,35 @@ use Data::Dumper 'Dumper';
 require Genome::Utility::Text;
 
 class Genome::ProcessingProfile {
+    type_name => 'processing profile',
     table_name => 'PROCESSING_PROFILE',
     is_abstract => 1,
     attributes_have => [
-        is_param => { is => 'Boolean', is_optional => 1 }
+        is_param => { is => 'Boolean', is_optional => 1 },
     ],
     sub_classification_method_name => '_resolve_subclass_name',
+    subclass_description_preprocessor => 'Genome::ProcessingProfile::_expand_param_properties',
     id_by => [
         id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        name      => { is => 'VARCHAR2', is_optional => 1, len => 255, doc => 'Human readable name', },
-        type_name => { is => 'VARCHAR2', is_optional => 1, len => 255, is_optional => 1, doc => 'The type of processing profile' },
-        supersedes => {
-                       via => 'params',
-                       to => 'value',
-                       where => [ name => 'supersedes' ],
-                       is_optional => 1,
-                       is_mutable => 1,
-                       doc => "The processing profile replaces the one named here.",
-                   },
+        name          => { is => 'VARCHAR2', len => 255, is_optional => 1, 
+                           doc => 'Human readable name' },
+        type_name     => { is => 'VARCHAR2', len => 255, is_optional => 1, 
+                           doc => 'The type of processing profile' },
+        supersedes    => { via => 'params', to => 'value', is_mutable => 1, where => [ name => 'supersedes' ], is_optional => 1, 
+                           doc => 'The processing profile replaces the one named here.' },
+        subclass_name => { is => 'VARCHAR2', len => 255, is_optional => 1 },
     ],
     has_many_optional => [
-        params => { is => 'Genome::ProcessingProfile::Param', reverse_id_by => 'processing_profile' },
-        models => { is => 'Genome::Model', reverse_id_by => 'processing_profile' },
+        params => { is => 'Genome::ProcessingProfile::Param', reverse_as => 'processing_profile' },
+        models => { is => 'Genome::Model', reverse_as => 'processing_profile' },
+    ],
+    unique_constraints => [
+        { properties => [qw/subclass_name/], sql => 'PP_SN_I' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
-    subclass_description_preprocessor => '_expand_param_properties'
 };
 
 ### Developer API ###
@@ -171,6 +172,10 @@ sub create {
     # Identical PPs
     $subclass->_validate_no_existing_processing_profiles_with_idential_params(%params)
         or return;
+
+    unless ($params{'subclass_name'}) {
+        $params{'subclass_name'} = $class;
+    }
 
     # Create
     my $self = $class->SUPER::create(%params)

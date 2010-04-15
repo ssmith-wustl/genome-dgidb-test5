@@ -9,7 +9,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 41; 
+use Test::More tests => 42; 
 require Genome::Model::Test;
 
 BEGIN {
@@ -40,6 +40,7 @@ my $build = Genome::Model::Build->create(
 );
 ok($build, 'Created build');
 isa_ok($build, 'Genome::Model::Build');
+is(ref($build), $build->subclass_name, 'subclass_name is correctly filled in');
 is($build->data_directory,$model->data_directory.'/build'. $build->id, 'build directory resolved');
 is($build->model->id, $model->id, 'indirect model accessor');
 

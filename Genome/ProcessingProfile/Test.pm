@@ -95,7 +95,7 @@ sub test_startup : Test(startup => 2) {
     return;
 }
     
-sub test01_creates : Tests(6) {
+sub test01_creates : Tests(7) {
     my $self = shift;
 
     # Get params, put into separate varibales for clarity.
@@ -106,16 +106,18 @@ sub test01_creates : Tests(6) {
         /}; 
 
     #< VALID CREATES >#
-    ok( # roi is undef
-        $self->test_class->create(
+    do {
+        # roi is undef
+        my $created = $self->test_class->create(
             name => 'No Region of Interest (ROI)',
             type_name => $type_name,
             sequencing_platform => $sequencing_platform,
             dna_source => $dna_source,
             roi => undef,
-        ),
-        'Create w/ roi undef',
-    ); # we now have 2 pp in memory, the one above and the original with all params defined 
+        );
+        ok($created, 'Create w/ roi undef'); # we now have 2 pp in memory, the one above and the original with all params defined 
+        is(ref($created), $created->subclass_name, 'subclass_name is correctly filled in');
+    };
 
     #< INVALID CREATES >#
     eval {

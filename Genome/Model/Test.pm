@@ -231,7 +231,10 @@ sub test04_subjects : Tests() {
     ok(!$self->test_class->create(%params), 'Failed to create model without subject_id');
     
     $params{subject_id} = $mock_sample->id;
-    ok($self->test_class->create(%params), 'Created model based on subject_id and subject_class_name');
+    my $created = $self->test_class->create(%params);
+    ok($created, 'Created model based on subject_id and subject_class_name');
+
+    is(ref($created), $created->subclass_name, 'subclass_name property is correctly filled in');
 }
 
 #< MOCK ># 
