@@ -18,7 +18,9 @@ my @set_oligos = $capture_set->set_oligos;
 ok(@set_oligos,'got the capture set oligos');
 
 my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path('NimbleGen_Exome_Capture_v1.bed');
-my $expected_file = '/gsc/var/cache/testsuite/data/Genome-Capture-Set/NimbleGen_Exome_Capture_v1.bed';
+#my $tmp_file = 'NimbleGen_Exome_Capture_v1.bed';
+
+my $expected_file = '/gsc/var/cache/testsuite/data/Genome-Capture-Set/NimbleGen_Exome_Capture_v1_wo_chr.bed';
 
 my $exome_capture_set = Genome::Capture::Set->get(name => 'nimblegen exome version 1');
 isa_ok($exome_capture_set,'Genome::Capture::Set');
