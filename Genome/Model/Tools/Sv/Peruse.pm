@@ -123,7 +123,7 @@ sub execute {
     SV:
     while(my $line = $indel_fh->getline) {
         chomp $line;
-        next if $line =~ /OUTER|TYPE/i;
+        next if $line =~ /^#|OUTER|TYPE/i;
         unless($csv->parse($line)) {
             $self->error_message("Failed to parse line. Parser returned: " . $self->error_message);
             return;
