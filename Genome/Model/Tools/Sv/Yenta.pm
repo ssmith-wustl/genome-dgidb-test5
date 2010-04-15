@@ -10,11 +10,11 @@ use IO::File;
 class Genome::Model::Tools::Sv::Yenta {
     is => 'Command',
     has => [
-    breakdancer_file => 
+    primer_design_file => 
     { 
         type => 'String',
         is_optional => 0,
-        doc => "Input file of breakdancer output for a single individual",
+        doc => "Input file of svs in primer design input format",
     },
     output_dir =>
     {
@@ -70,6 +70,12 @@ class Genome::Model::Tools::Sv::Yenta {
         doc => "option string to pass through to yenta for experimental options etc",
         is_optional => 1,
     },
+    output_prefix => {
+        type => "String",
+        default => "",
+        doc => "String that will be prepended to all output file names. Cannot contain an underscore or period",
+        is_optional => 1,
+    },
 
     ],
 };
@@ -99,14 +105,14 @@ sub execute {
     my %types = map {$_ => 1} @types; #create types hash
 
 
-    unless(-f $self->breakdancer_file) {
-        $self->error_message("breakdancer file is not a file: " . $self->breakdancer_file);
+    unless(-f $self->primer_design_file) {
+        $self->error_message("primer design file is not a file: " . $self->primer_design_file);
         return;
     }
 
-    my $indel_fh = IO::File->new($self->breakdancer_file);
+    my $indel_fh = IO::File->new($self->primer_design_file);
     unless($indel_fh) {
-        $self->error_message("Failed to open filehandle for: " .  $self->breakdancer_file );
+        $self->error_message("Failed to open filehandle for: " .  $self->primer_design_file );
         return;
     }
 
@@ -144,6 +150,14 @@ sub execute {
         }
         $additional_opts = $additional_opts ? $additional_opts . " -g $exon_file" : "-g $exon_file";
     }
+    
+    my $prefix = $self->output_prefix;
+    if($prefix =~ /[_.]/) {
+        $self->error_message("Output prefix cannot contain an underscore or period");
+        return;
+    }
+    $prefix .= '.' if $prefix ne q{};
+
     $self->status_message("Using option string $additional_opts");
     my $buffer = $self->buffer_size;
 
@@ -154,12 +168,11 @@ sub execute {
         $line =~ s/"//g; #kill any quotes that may have snuck in
         my ($chr1,
             $chr1_pos,
-            $orientation1,
             $chr2,
             $chr2_pos,
-            $orientation2,
             $type,
             $size,
+            $orientation,
         ) = split /\s+/, $line; 
         #skip headers
         next if $line =~ /START|TYPE/;
@@ -189,46 +202,46 @@ sub execute {
             #then we should graph it
             #Doing this based on chromosomes in case types ever change
             if($chr1 eq $chr2) {
-                my $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
+                my $name = "$output_dir/${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
                 my $cmd = "$grapher -q 1 -b $buffer -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr2_pos";
-                $self->error_message("Running: $cmd");
+                $self->status_message("Running: $cmd");
                 system($cmd);
-                $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
+                $name = "$output_dir/${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
                 $cmd = "$grapher -q 1 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr2_pos";
-                $self->error_message("Running: $cmd");
+                $self->status_message("Running: $cmd");
                 system($cmd);
-                $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
+                $name = "$output_dir/${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
                 $cmd = "$grapher -q 0 -b $buffer  -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr2_pos";
-                $self->error_message("Running: $cmd");
+                $self->status_message("Running: $cmd");
                 system($cmd);
-                $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
+                $name = "$output_dir/${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
                 $cmd = "$grapher -q 0 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr2_pos";
-                $self->error_message("Running: $cmd");
+                $self->status_message("Running: $cmd");
                 system($cmd);
             }
             else {
-                my $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
+                my $name = "$output_dir/${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
                 my $cmd = "$grapher -q 1 -b $buffer -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos";
-                $self->error_message("Running: $cmd");
+                $self->status_message("Running: $cmd");
                 system($cmd);
-                $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
+                $name = "$output_dir/${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
                 $cmd = "$grapher -q 1 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos";
-                $self->error_message("Running: $cmd");
+                $self->status_message("Running: $cmd");
                 system($cmd);
-                $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
+                $name = "$output_dir/${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
                 $cmd = "$grapher -q 0 -b $buffer  -o $name $additional_opts $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos";
-                $self->error_message("Running: $cmd");
+                $self->status_message("Running: $cmd");
                 system($cmd);
-                $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
+                $name = "$output_dir/${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
                 $cmd = "$grapher -q 0 -b $buffer  -o $name $additional_opts $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos";
-                $self->error_message("Running: $cmd");
+                $self->status_message("Running: $cmd");
                 system($cmd);
             }
         }
         unless(exists($allowed_types->{$type})) {
             $self->error_message("Type $type invalid");
             $self->error_message("Valid types are " . join("\t",keys %{$allowed_types}));
-            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	chr2	pos2	type");
             return;
         }
 
@@ -257,17 +270,17 @@ One read mapped to a different chromosome           cyan
 Yenta.pm generates 4 PNG images for each predicted SV, 2 for tumor and 2 for normal. There is a q0 file showing reads of all mapping qualities and a q1 file showing reads of mapping quality 1 or more. A maq mapping quality of zero indicates a repeat region that mapped multiple places in the genome equally well.
 
 The naming convention of the files produced is as follows:
-chr_pos_chr_pos_tumor/normal_type.q#.png
+(prefix.)chr_pos_chr_pos_tumor/normal_type.q#.png
 
 The input file must be formatted as follows:
-chr1	position	dummy	chr2	position2	dummy	type
+chr1	position1	chr2	position2	type
 
 HELP
 
 }
 
 sub help_brief {
-    return "This module takes a breakdancer file and uses the rudimentary graphical tool yenta to graph the read pairs.";
+    return "This module takes a sv primer design file and uses the rudimentary graphical tool yenta to graph the read pairs.";
 }
 
 
