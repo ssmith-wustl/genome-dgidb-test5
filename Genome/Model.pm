@@ -80,7 +80,7 @@ class Genome::Model {
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
         subject                 => { calculate_from => [ 'subject_id', 'subject_class_name' ],
-                                     calculate => q( return $subject_class_name->get($subject_id); ) },
+                                     calculate => q| Carp::confess("No subject_class_name set on model!") unless $subject_class_name; return $subject_class_name->get($subject_id);| },
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name               => { via => 'processing_profile' },

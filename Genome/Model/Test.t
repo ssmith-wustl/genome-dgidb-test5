@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-
+use Carp::Always;
 use Data::Dumper 'Dumper';
 use Test::More 'no_plan';
 

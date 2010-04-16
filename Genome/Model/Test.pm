@@ -265,6 +265,8 @@ sub create_basic_mock_model {
     my $model = $self->create_mock_object(
         class => 'Genome::Model::'.Genome::Utility::Text::string_to_camel_case($pp->type_name),
         name => 'mr. mock',
+        subject_class_name => 'Genome::Sample',
+        subject_id => $sample->id,
         subject_name => $sample->name,
         subject_type => 'sample_name',
         processing_profile_id => $pp->id,
