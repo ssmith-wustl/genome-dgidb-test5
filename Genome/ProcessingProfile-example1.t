@@ -17,11 +17,11 @@ use Genome::Model::Build;
 # used for everything below which requires a name
 my $tname = "test-new-processing-profile";
 
-# sample
+# create a new sample
 my $s = Genome::Sample->create(name => $tname);
 ok($s, "made a sample on which to test");
 
-# instrument data
+# create new imported instrument data
 my $i = Genome::InstrumentData::Imported->create(
     sample_name => $s->name, 
     sample_id => $s->id,
@@ -29,7 +29,7 @@ my $i = Genome::InstrumentData::Imported->create(
 );
 ok($i, "made instrument data for the sample");
 
-# processing profile class
+# define a processing profile subclass for this pipeline
 class Genome::ProcessingProfile::Foo {
     is => 'Genome::ProcessingProfile',
     has_param => [
@@ -37,6 +37,8 @@ class Genome::ProcessingProfile::Foo {
         p2 => { doc => 'param 2' },
     ]
 };
+
+# these key methods in the class are configured to just log that they've been run...
 my ($init_model,$init_build,$execute_build) = (0,0,0);
 sub Genome::ProcessingProfile::Foo::_initialize_model { $init_model = pop; 1; };
 sub Genome::ProcessingProfile::Foo::_initialize_build { $init_build = pop; 1; };
@@ -46,15 +48,16 @@ ok(Genome::ProcessingProfile::Foo->can("get"), "defined a new class of processin
 ok(Genome::Model::Foo->can('get'), "the corresponding model class auto generates");
 ok(Genome::Model::Build::Foo->can('get'), "the corresponding build class auto generates");
 
-# processing profile 
+# make an initial processing profile with a given set of parameter values 
 my $p = Genome::ProcessingProfile::Foo->create(
     name => $tname,
-    p1 => 'ls', 
-    p2 => '/etc'
+    p1 => 'value1', 
+    p2 => 'value2'
 );
 ok($p, "made a new processing profile");
 
-# model
+# define a model of the sample with that profile
+# $p->add_model($sample) == $sample->add_model($p) == Genome::Model->create(subject => $s, processing_profile => $p);
 my $m = $p->add_model(
     name                => $tname,
     subject_id          => $s->id,
@@ -66,14 +69,14 @@ ok($m, "made a new model");
 isa_ok($m,'Genome::Model::Foo',"the model is of the correct subclass");
 is($init_model,$m,"model is initialized");
 
-# instrument data assignment
+# add instrument data
 my $a = $m->add_instrument_data_assignment(
     instrument_data => $i,
     filter_desc => '',
 );
 ok($a, "assigned instrument data to the model");
 
-# other input
+# add other input
 my $n = $m->add_input(name => "foo", value_class_name => "UR::Value", value_id => "123");
 ok($n, "added a misc input to the model");
 
@@ -94,3 +97,4 @@ ok($b->start(), "build started");
 is($execute_build,$b,"the build execution logic ran");
 is($b->status,'Succeeded',"the build status is Succeeded");
 ok(-d $b->data_directory, "the data directory " . $b->data_directory . " is present");
+
