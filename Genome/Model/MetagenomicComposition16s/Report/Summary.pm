@@ -57,8 +57,8 @@ sub _create_metrics {
 
     $self->{_metrix} = {
         lengths => [],
-        reads => [],
-        reads_assembled => [],
+        reads => 0,
+        reads_processed => 0,
     };
 
     return 1;
@@ -75,9 +75,8 @@ sub _add_amplicon {
     push @{$self->{_metrix}->{lengths}}, $bioseq->length;
 
     # Reads
-    push @{ $self->{_metrix}->{reads} }, $amplicon->read_count;
-    my $read_count = $amplicon->assembled_read_count;
-    push @{ $self->{_metrix}->{reads_assembled} }, $read_count;
+    $self->{_metrix}->{reads} += $amplicon->reads_count;
+    $self->{_metrix}->{reads_processed} += $amplicon->reads_processed_count;
 
     return 1;
 }
@@ -88,11 +87,12 @@ sub get_summary_stats {
     my $build = $self->build;
     my $attempted = $build->amplicons_attempted;
     my $processed = $build->amplicons_processed;
+    my $processed_success = $build->amplicons_processed_success;
     unless ( $processed ) {
         $self->warning_message("No amplicons processed for ".$build->description);
         return {
             headers => [qw/ amplicons-processed amplicons-attempted amplicons-success /],
-            stats => [ $processed, $attempted, sprintf('%.2f', (100 * $processed / $attempted)) ] 
+            stats => [ $processed, $attempted, $processed_success ] 
         };
     }
 
@@ -102,19 +102,19 @@ sub get_summary_stats {
         return $total;
     };
 
-    my $read_cnt = $sum->( @{$self->{_metrix}->{reads}} );
-    my $assembled_read_cnt = $sum->( @{$self->{_metrix}->{reads_assembled}} );
     my @lengths = sort { $a <=> $b } @{ $self->{_metrix}->{lengths} };
     my $length = $sum->(@lengths);
-    my @reads = sort { $a <=> $b } @{ $self->{_metrix}->{reads_assembled} };
+    my $reads_processed_success = ( $self->{_metrix}->{reads_processed} > 0 )
+    ? sprintf('%.2f', $self->{_metrix}->{reads_processed} / $self->{_metrix}->{reads})
+    : 'NA';
 
     my %totals = (
         # Amplicons
         'amplicons-attempted' => $attempted,
         'amplicons-processed' => $processed,
-        'amplicons-processed-success' => $build->amplicons_processed_success,
+        'amplicons-processed-success' => $processed_success,
         'amplicons-classified' => $build->amplicons_classified,
-        'amplicons-classified-success' => $build->amplicons_classified,
+        'amplicons-classified-success' => $build->amplicons_classified_success,
         # Lengths
         'length-minimum' => $lengths[0],
         'length-maximum' => $lengths[$#lengths],
@@ -124,19 +124,9 @@ sub get_summary_stats {
             $length / $processed,
         ),
         # Reads
-        reads => $read_cnt,
-        'reads-assembled' => $assembled_read_cnt,
-        'reads-assembled-success' => sprintf(
-            '%.2f',
-            100 * $assembled_read_cnt / $read_cnt,
-        ),
-        'reads-assembled-minimum' => $reads[0],
-        'reads-assembled-maximum' => $reads[$#reads],
-        'reads-assembled-median' => $reads[( $#reads / 2 )],
-        'reads-assembled-average' => sprintf(
-            '%.2F',
-            $assembled_read_cnt / $processed,
-        ),
+        reads => $self->{_metrix}->{reads},
+        'reads-processed' => $self->{_metrix}->{reads_processed},
+        'reads-processed-success' => $reads_processed_success,
     );
 
     return {
