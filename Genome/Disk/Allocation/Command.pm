@@ -71,7 +71,7 @@ sub create {
     
     # this breaks thins if done in modules
     #App->init unless App::Init->initialized;
-
+    
     my $self = $class->SUPER::create(@_);
     return unless $self;
     return $self;
@@ -152,11 +152,30 @@ sub confirm_scheduled_pse {
         return;
     }
 
+    STDERR->autoflush(1);
+    
+    my $old_cb = App::MsgLogger->message_callback('status');
+    if ($ENV{MONITOR_ALLOCATE_LOCK}) {
+        App::MsgLogger->message_callback(
+            'status', sub {
+                my $msg = $_[0]->text;
+                print STDERR "genome allocate: STATUS: $msg\n";
+            }
+        );
+    }
+
     unless ($pse->confirm(no_pse_job_check => 1)) {
         $self->error_message('Failed to confirm PSE: '. $pse->pse_id);
         $pse->uninit_pse;
         return;
     }
+
+    if ($ENV{MONITOR_ALLOCATE_LOCK}) {
+        App::MsgLogger->message_callback(
+            'status', $old_cb
+        );
+    }
+
     unless ($pse->pse_status eq 'inprogress' || $pse->pse_status eq 'completed') {
         $self->error_message('PSE pse_status not inprogress: '. $pse->pse_status);
         $pse->uninit_pse;
@@ -202,7 +221,6 @@ sub pse_not_complete {
     }
     return 1;
 }
-
 
 1;
 

@@ -17,6 +17,10 @@ sub current_user_id {
     return $ENV{USER} . '@genome.wustl.edu';
 }
 
+sub admin_notice_users {
+    qw/abrummet boberkfe eclark jeldred jlolofie ssmith apipe-run/;
+}
+
 # operating directories
 
 sub root_directory {

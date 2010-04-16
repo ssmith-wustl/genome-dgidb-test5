@@ -11,6 +11,8 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::Utility::AsyncFileSystem qw/on_each_line/;
+use Sys::Hostname qw/hostname/;
 
 class Genome::Disk::Allocation {
     table_name => "(select * from disk_allocation\@dw) disk_allocation",
@@ -96,8 +98,7 @@ sub allocate {
         if ($params{mount_path}) {
             $allocate_cmd .= ' --mount-path='. $params{mount_path};
         }
-        my $rv = system($allocate_cmd);
-        unless ($rv == 0) {
+        unless($class->monitor_allocate_command($allocate_cmd)) {
             die('Failed to allocate disk space with command '. $allocate_cmd);
         }
     }
@@ -131,8 +132,7 @@ sub reallocate {
         if ($params{kilobytes_requested}) {
             $reallocate_cmd .= ' --kilobytes-requested='. $params{kilobytes_requested};
         }
-        my $rv = system($reallocate_cmd);
-        unless ($rv == 0) {
+        unless($self->monitor_allocate_command($reallocate_cmd)) {
             $self->error_message('Failed to reallocate disk space with command '. $reallocate_cmd);
             return;
         }
@@ -150,8 +150,7 @@ sub deallocate {
         }
     } else {
         my $deallocate_cmd = sprintf('genome disk allocation deallocate --allocator-id=%s',$self->allocator_id);
-        my $rv = system($deallocate_cmd);
-        unless ($rv == 0) {
+        unless ($self->monitor_allocate_command($deallocate_cmd)) {
             $self->error_message('Failed to deallocate disk space with command '. $deallocate_cmd);
             return;
         }
@@ -168,6 +167,116 @@ sub get_actual_disk_usage {
 
     return $kb;
 }
+
+sub pse_not_complete {
+    my $self = shift;
+    my $pse = shift;
+    my @not_completed = grep { $_ eq $pse->pse_status } ('scheduled', 'wait', 'confirm', 'confirming');
+    unless (@not_completed) {
+        return;
+    }
+    return 1;
+}
+
+## warning times in seconds
+our $after_start = 600;
+our $after_lock_acquired = 120;
+sub monitor_allocate_command {
+    my $self = shift;
+    my $cmd = shift;
+
+    my $pid;
+    my $lock_acquire_time;         # will be set once we see the lock acquired
+    my $ow;                        # overall watcher;
+    my $w;                         # after lock acquired watcher;
+    
+    $ow = AnyEvent->timer(
+        after => $after_start,
+        cb => sub {
+           $self->send_message_about_command($cmd,$pid,$after_start,0);
+           undef $ow;
+           undef $w;
+    });
+    
+    $self->status_message('Allocation process started at ' . UR::Time->now);
+    local $ENV{'MONITOR_ALLOCATE_LOCK'} = 1;
+    my $cv = Genome::Utility::AsyncFileSystem->shellcmd(
+        cmd => $cmd,
+        '2>' => on_each_line {
+            if (defined $_[0]) {
+                if ($_[0] !~ /^genome allocate: STATUS:/) {
+                    print $_[0];
+                }
+                if ($_[0] =~ /^genome allocate: STATUS: Lock acquired/) {
+                    $self->status_message('Allocation lock acquired at ' . UR::Time->now);
+                    $w = AnyEvent->timer(
+                        after => $after_lock_acquired,
+                        cb => sub {
+                           $self->send_message_about_command($cmd,$pid,$after_lock_acquired,1);
+                           undef $ow;
+                           undef $w;
+                    });
+                }
+            }
+        },
+        '$$' => \$pid
+    );
+    $cv->cb(sub {
+        undef $ow;
+        undef $w;
+        $self->status_message('Allocation command ended at ' . UR::Time->now);
+    });
+    
+    return $cv->recv;
+}
+
+sub send_message_about_command {
+    my $self = shift;
+    my $cmd = shift;
+    my $pid = shift;
+    my $after = shift;
+    my $was_lock_acquired = shift;
+
+    my $lock_msg = $was_lock_acquired 
+        ? 'Lock Held' 
+        : '';
+
+    my $message = <<MESSAGE;
+To whom it may concern,
+
+This command:
+
+$cmd
+
+Has not exited after $after seconds. $lock_msg
+
+Host: %s
+My Pid: %s 
+Allocation Pid: %s
+LSF Job: %s
+User: %s
+
+This is the only warning you will receive about this process.  Action
+may be required.
+MESSAGE
+
+    my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', $ENV{USER});
+
+    my $to = join(', ', map { Genome::Config->user_email($_) } Genome::Config->admin_notice_users());
+    my $subject = 'Allocation problem on ' . hostname . ' pid ' . $pid . '. ' . $lock_msg;
+    my $data = sprintf($message,
+        hostname,$$,$pid,($ENV{LSB_JOBID} || ''),scalar(getpwuid($<)));
+
+    my $msg = MIME::Lite->new(
+        From => $from,
+        To => $to,
+        Subject => $subject,
+        Data => $data
+    );
+    $msg->send();
+
+}
+
 
 1;
 
