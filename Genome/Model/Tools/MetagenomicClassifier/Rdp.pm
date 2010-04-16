@@ -18,11 +18,13 @@ class Genome::Model::Tools::MetagenomicClassifier::Rdp {
     has_optional => [
         output_file => { 
             type => 'String',
-            is_optional => 1, ###
+            is_optional => 1, 
             doc => "path to output file.  Defaults to STDOUT"
         },
         training_set => {
             type => 'String',
+            is_optional => 1,
+            default => '4',
             doc => 'name of training set (4, 6, broad)',
         },
         version => {

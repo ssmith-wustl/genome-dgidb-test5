@@ -24,7 +24,7 @@ my $seq = Bio::Seq->new(
 
 my $rev_seq = $seq->revcom();
 
-my $training_set = '';#'broad';#(4,6)
+my $training_set = '4'; #(4,6,broad)
 
 #list versions
 my @versions = (Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new(training_set => $training_set),
