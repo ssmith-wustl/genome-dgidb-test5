@@ -363,6 +363,9 @@ sub calculate_estimated_kb_usage {
     return 512_000;
 }
 
+# If the data directory is not set, resolving it requires making an allocation.  A build is unlikely to
+# make a new allocation at any other time, so a separate build instance method for allocating is not
+# provided.
 sub resolve_data_directory {
     my $self = shift;
     my $model = $self->model;
@@ -400,11 +403,6 @@ sub resolve_data_directory {
         }
     }
     return $data_directory . $build_subdirectory;
-}
-
-sub allocate {
-    # FIXME - move the logic above to here.  When this is done, Genome/Model/Build/ImportedReferenceSequence.pm will
-    # also need to be fixed as it overrides resolve_data_directory.
 }
 
 sub reallocate {
