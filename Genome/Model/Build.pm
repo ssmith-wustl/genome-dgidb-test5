@@ -374,7 +374,7 @@ sub resolve_data_directory {
         my $kb_requested = $self->calculate_estimated_kb_usage;
         if ($kb_requested) {
             my $disk_allocation = Genome::Disk::Allocation->allocate(
-                                                                     disk_group_name => $self->processing_profile->_resolve_disk_group_for_build(),
+                                                                     disk_group_name => $self->processing_profile->_resolve_disk_group_name_for_build(),
                                                                      allocation_path => $allocation_path,
                                                                      kilobytes_requested => $kb_requested,
                                                                      owner_class_name => $self->class,
