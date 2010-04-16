@@ -37,14 +37,21 @@ class Genome::Model {
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         subject_name            => { is => 'Text', len => 255, calculate_from => 'subject',
                                      calculate => q(
+                unless($subject) {
+                    #$self->error_message('Subject not found.');
+                    return;
+                }
+                
                 if($subject->class eq 'GSC::Equipment::Solexa::Run') {
                    return $subject->flow_cell_id;
                 } elsif($subject->class eq 'Genome::Sample') {
                     return $subject->name || $subject->common_name;
+                } elsif($subject->isa('GSC::DNA')) {
+                    return $subject->dna_name;
                 } elsif($subject->can('name')) {
                     return $subject->name;
                 } else {
-                    $self->error_message('Unable to determine name for subject');
+                    #$self->error_message('Unable to determine name for subject');
                     return;
                 }
             ) },
