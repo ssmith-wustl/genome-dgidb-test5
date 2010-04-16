@@ -3,6 +3,10 @@ package Genome::Search;
 use strict;
 use warnings;
 
+#When loading objects this has already been done (or how did we get the objects?)
+#When pulling out of the cache, don't need this either.  There's a require below for when we need it.
+#use Genome;
+
 use WebService::Solr;
 use MRO::Compat;
 use Cache::Memcached;
@@ -20,18 +24,23 @@ class Genome::Search {
             calculate_from => 'solr_server_location',
             calculate => q|WebService::Solr->new($solr_server_location)|
         },
-        memcached_location => {
+        memcached_server_location => {
             is => 'Text',
-            default_value => 'lims-dev:11211',
+            default_value => 'imp:11211',
         },
-        _memcache => {
-            calculate_from => 'memcached_location',
-            calculate => q|new Cache::Memcached {'servers' => [$memcached_location], 'debug' => 0, 'compress_threshold' => 10_000,}|
+        _memcached_server => {
+            calculate_from => 'memcached_server_location',
+            calculate => q|new Cache::Memcached {'servers' => [$memcached_server_location], 'debug' => 0, 'compress_threshold' => 10_000,}|
         },
         type => {
             is => 'Text',
             default_value => 'unknown',
             doc => 'The type represented by the document--override this in subclasses'
+        },
+        cache_timeout => {
+            is => 'Integer',
+            default_value => 0,
+            doc => 'Number of seconds for a document to persist in memcached.  Set to 0 for forever. [Note: If > 30 days, memcached instead uses the value as the timestamp at which the information should be expired.'
         }
     ],
 };
@@ -55,7 +64,49 @@ sub is_indexable {
     my $class = shift;
     my $object = shift;
     
-    return $class->_resolve_subclass_for_object($object) ? 1 : 0;
+    #Old way (compatible with any Perl module)
+    if($class->_resolve_subclass_for_object($object)) {
+        return 1;
+    }
+    
+    #New way (for Genome namespace only)
+    return $class->_has_solr_xml_view($object);
+}
+
+sub _has_solr_xml_view {
+    my $class = shift;
+    my $object = shift;
+    
+    my $type = ref $object || $object;
+    
+    my $classes_to_try = mro::get_linear_isa($type);
+    
+    #Try increasingly general subtypes until we find an appropriate one
+    for my $class_to_try (@$classes_to_try) {
+        if(($class_to_try . '::View::Solr::Xml')->isa('Genome::View::Solr::Xml')) {
+            return 1;
+        }
+    }
+    
+    return 0;
+}
+
+sub _has_result_xml_view {
+    my $class = shift;
+    my $object = shift;
+    
+    my $type = ref $object || $object;
+    
+    my $classes_to_try = mro::get_linear_isa($type);
+    
+    #Try increasingly general subtypes until we find an appropriate one
+    for my $class_to_try (@$classes_to_try) {
+        if(($class_to_try . '::View::SearchResult::Xml')->isa('Genome::View::SearchResult::Xml')) {
+            return 1;
+        }
+    }
+    
+    return 0;    
 }
 
 
@@ -74,6 +125,16 @@ sub add {
     unless($self->_solr_server->add(\@docs)) {
         $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to Solr.');
         return;
+    }
+    
+    my @results_to_cache = grep($self->_has_result_xml_view($_->value_for('class')), @docs);
+    
+    my $memcached = $self->_memcached_server;
+    
+    for my $doc (@results_to_cache) {
+        my $result_node = $self->generate_result_xml($doc, undef, 'html');
+        
+        $self->_cache_result($doc, $result_node);
     }
 
     #$self->status_message('Sent ' . (scalar @docs) . ' document(s) to Solr.');
@@ -97,12 +158,7 @@ sub delete {
     
     return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
     
-    my $error_count = 0;
-    for my $doc (@docs) {
-        unless($self->_solr_server->delete_by_id($doc->value_for('id'))) {
-            $error_count++;
-        }
-    }
+    my $error_count = $class->_delete_by_doc(@docs);
     
     my $deleted_count = scalar(@docs) - $error_count;
 #    if($deleted_count) {
@@ -116,6 +172,28 @@ sub delete {
     return $deleted_count || 1;
 }
 
+sub _delete_by_doc {
+    my $class = shift;
+    my @docs = @_;
+    
+    my $self = $class->_singleton_object;
+    my $solr = $self->_solr_server;
+    my $memcached = $self->_memcached_server;
+    
+    return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
+    
+    my $error_count = 0;
+    for my $doc (@docs) {
+        if($solr->delete_by_id($doc->value_for('id'))) {
+            $memcached->delete($self->cache_key_for_doc($doc));
+        } else {
+            $error_count++;
+        }
+    }
+    
+    return $error_count;
+}
+
 sub clear {
     my $class = shift;
     
@@ -123,13 +201,26 @@ sub clear {
     
     return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
     
-    $self->_solr_server->delete_by_query('*:*'); #Optimized by solr for fast index clearing
-    $self->_solr_server->optimize(); #Prevent former entries from influencing future index
+    my $solr = $self->_solr_server;
+    
+    $solr->delete_by_query('*:*'); #Optimized by solr for fast index clearing
+    $solr->optimize(); #Prevent former entries from influencing future index
     
     #$self->status_message('Solr index cleared.');
     
+    #NOTE: The memcached information is not cleared at this point.
+    #However, anything added to search will trigger a cache update.
+    
     return 1;
 }
+
+sub cache_key_for_doc {
+    my $class = shift;
+    my $doc = shift;
+    
+    return 'genome_search:' . $doc->value_for('id');
+}
+
 
 
 ###  XML Generation for results  ###
@@ -155,9 +246,63 @@ sub generate_result_xml {
     my $class = shift;
     my $doc = shift;
     my $xml_doc = shift || XML::LibXML->createDocument();
+    my $format = shift || 'xml';
     
+    require Genome; #It is only at this point that we actually need to load other objects
+    
+    my $object_class = $doc->value_for('class');
+    
+    $object_class->can('isa'); #Force class autoloading
+    
+    if($class->_has_result_xml_view($object_class)) {
+        
+        my $object_id = $doc->value_for('object_id');
+        
+        unless($object_id) {
+            #Fall back on old way of storing id--this can be removed after all snapshots in use set object_id in Solr
+            $object_id = $doc->value_for('id');
+            ($object_id) = $object_id =~ m/.*?(\d+)$/;
+        } 
+        
+        my $object = $object_class->get($object_id);
+        
+        unless($object) {
+            $class->_delete_by_doc($doc); #Entity in index that no longer exists--clear it out
+        }
+        return unless $object;
+        
+        my %view_args = (
+            perspective => 'search-result',
+            toolkit => $format,
+        );
+        
+        if($format eq 'xsl' or $format eq 'html') {
+            $view_args{xsl_path} = Genome->base_dir . '/xsl';
+        }
+        
+        my $view = $object->create_view(%view_args);
+        my $object_content = $view->content;
+        
+        if($format eq 'xsl' or $format eq 'html') {
+            $object_content =~ s/^<\?.*?\?>//;
+        }
+        
+        my $result_node = $xml_doc->createElement('result');
+        
+        if($format eq 'xml') {
+            my $lib_xml = XML::LibXML->new();
+            my $content = $lib_xml->parse_string($object_content);
+            
+            $result_node->addChild($content->childNodes);
+        } else {
+            $result_node->addChild($xml_doc->createTextNode($object_content));
+        }
+        
+        return $result_node;
+    }
+    
+    #This represents the 'old' way of producing a result--still used for modules outside the Genome namespace
     my $result_node = $xml_doc->createElement('result');
-   
     
     $result_node = $class->_add_standard_result_xml($doc, $result_node);
     return $class->_add_details_result_xml($doc, $result_node);
@@ -166,7 +311,8 @@ sub generate_result_xml {
 sub resolve_result_xml_for_document {
     my $class = shift;
     my $doc = shift;
-    my $xml_doc = shift;
+    my $xml_doc = shift || XML::LibXML->createDocument();
+    my $format = shift; #For views
     
     my $object_class = $doc->value_for('class');
     
@@ -174,9 +320,59 @@ sub resolve_result_xml_for_document {
     
     unless($subclass) {
         $subclass = __PACKAGE__;
+        
+        #Check memcached for view-based objects to save loading them.
+        #(View-based should not also have Genome::Search subclasses defined.)
+        if($format eq 'html') {
+            my $result_node = $class->_get_cached_result($doc, $xml_doc);
+            
+            unless($result_node) {
+                #Cache miss
+                $result_node = $subclass->generate_result_xml($doc, $xml_doc, $format);
+                return unless $result_node;
+                
+                $class->_cache_result($doc, $result_node);
+            }
+            return $result_node;
+        }
     }
     
-    return $subclass->generate_result_xml($doc, $xml_doc);
+    return $subclass->generate_result_xml($doc, $xml_doc, $format);
+}
+
+sub _cache_result {
+    my $class = shift;
+    my $doc = shift;
+    my $result_node = shift;
+    
+    my $self = $class->_singleton_object;
+    
+    my $html_to_cache = $result_node->childNodes->string_value;
+    
+    my $memcached = $self->_singleton_object->_memcached_server;
+    
+    return 1 if UR::DBI->no_commit; #Don't try to manipulate the cache with test code
+    
+    return $memcached->set($self->cache_key_for_doc($doc), $html_to_cache, $self->cache_timeout);
+}
+
+sub _get_cached_result {
+    my $class = shift;
+    my $doc = shift;
+    my $xml_doc = shift;
+    
+    my $memcached = $class->_singleton_object->_memcached_server;
+    
+    my $cache_key = $class->cache_key_for_doc($doc);
+    my $html_snippet = $memcached->get($cache_key);
+    
+    #Cache miss
+    return unless $html_snippet;
+    
+    my $result_node = $xml_doc->createElement('result');
+    $result_node->addChild($xml_doc->createTextNode($html_snippet));
+    
+    return $result_node;
 }
 
 sub _add_standard_result_xml {
@@ -220,8 +416,13 @@ sub generate_document {
     my $class = shift;
     my $object = shift;
     
+    if($class->_has_solr_xml_view($object)) {
+        my $view = $object->create_view(perspective => 'solr', toolkit => 'xml');
+        return $view->content_doc;
+    }
+    
     #Possibly create a generic document?
-    die('This method should be implemented by the subclass.');
+    die('This method should be implemented by the subclass or an appropriate view should be created.');
 }
 
 sub resolve_document_for_object {
@@ -229,6 +430,10 @@ sub resolve_document_for_object {
     my $object = shift;
     
     my $self = $class->_singleton_object;
+    
+    if($class->_has_solr_xml_view($object)) {
+        return $class->generate_document($object);
+    }
     
     my $subclass = $class->_resolve_subclass_for_object($object);
     
@@ -255,6 +460,10 @@ sub _resolve_subclass_for_type {
     
     return unless $type;
     
+    return if $type =~ /^Genome::/; #Genome-based things should use views instead.
+    
+    require Genome; #We need to be able to get at Genome::Search subclasses if we get here.
+    
     return if $type =~ /::Ghost$/;  #Don't try to (de)index deleted references.
     return unless $type->can('isa'); #Force class autoloading
     
@@ -269,7 +478,6 @@ sub _resolve_subclass_for_type {
     #Try increasingly general subtypes until we find an appropriate one
     for my $class_to_try (@$classes_to_try) {
         my @type_parts = split('::', $class_to_try);
-        shift @type_parts if $type_parts[0] eq 'Genome'; #Avoid redundant folder in search tree
     
         my $subclass .= join('::', 'Genome::Search', @type_parts);
         
@@ -289,6 +497,8 @@ sub _commit_callback {
     my $class = shift;
     my $object = shift;
     
+    return unless $object;
+    
     eval {
         if($class->is_indexable($object)) {
             $class->add($object);
@@ -307,6 +517,8 @@ sub _commit_callback {
 sub _delete_callback {
     my $class = shift;
     my $object = shift;
+    
+    return unless $object;
     
     eval {
         if($class->is_indexable($object)) {
@@ -341,7 +553,6 @@ sub register_callbacks {
 
 #OK!
 1;
-
 
 =pod
 
@@ -390,6 +601,8 @@ Removes all objects from the Solr index.
 =back
 
 =head1 DETAILS
+
+#TODO [This should be updated with information about Genome::View::Solr::Xml]
 
 To make a new type of object indexable by Solr, create a subclass of this
 class.  For example, to make a Genome::Individual indexable, the class

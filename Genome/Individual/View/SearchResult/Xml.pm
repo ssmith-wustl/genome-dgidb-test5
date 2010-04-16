@@ -15,6 +15,7 @@ class Genome::Individual::View::SearchResult::Xml {
                 'name',
                 'upn',
                 'gender',
+                'description',
             ]
         }
     ]
