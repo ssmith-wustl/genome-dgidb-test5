@@ -6,7 +6,7 @@ use warnings;
 use File::Path;
 use File::Temp;
 use Test::More;
-#use Test::More skip_all => 'due to taking model ids as input now we have to mock models to test this, and havnt done so yet';
+use Test::More skip_all => "This tests depends on files in Josh Pecks's home directory which are now missing.  Like him.";
 use above 'Genome';
 
 my $archos = `uname -a`;
