@@ -107,4 +107,10 @@ sub _execute_build {
     return 1;
 }
 
+sub _resolve_disk_group_for_build {
+    return 'info_apipe_ref';
+}
+
+
+
 1;

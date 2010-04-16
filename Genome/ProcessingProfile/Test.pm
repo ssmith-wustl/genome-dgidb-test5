@@ -266,6 +266,7 @@ sub create_mock_processing_profile {
             _workflow_for_stage
             _merge_stage_workflows
             _resolve_log_resource
+            _resolve_disk_group_name_for_build
             params_for_class
             stages objects_for_stage classes_for_stage
             delete

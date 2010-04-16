@@ -426,8 +426,9 @@ sub _resolve_log_resource {
     return ' -o '.$event->output_log_file.' -e '.$event->error_log_file;
 }
 
-
-
+sub _resolve_disk_group_name_for_build {
+    return 'info_genome_models';
+}
 
 
 1;
