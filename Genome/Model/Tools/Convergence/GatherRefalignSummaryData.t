@@ -18,7 +18,9 @@ use constant EXPECTED_DATA => {
   'lane_count' => '18',
   'unfiltered_snp_calls' => '4,500,450',
   'filtered_snp_calls' => '3,468,651',
-  'filtered_dbsnp_concordance' => '90.61%'
+  'filtered_dbsnp_concordance' => '90.61%',
+  'unfiltered_diploid_heterozygous_percentage' => 'Not Available',
+  'filtered_diploid_heterozygous_percentage' => 'Not Available',
 };
 
 my $test_build = setup_test_build();  #A lot of objects have to be created to create a build!

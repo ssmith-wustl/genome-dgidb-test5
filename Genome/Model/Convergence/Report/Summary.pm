@@ -57,6 +57,9 @@ sub _add_to_report_xml {
         $build_node->addChild( $doc->createAttribute('unfiltered-dbsnp-concordance', $data->{unfiltered_dbsnp_concordance} || '-'));
         $build_node->addChild( $doc->createAttribute('filtered-snp-calls', $data->{filtered_snp_calls} || '-'));
         $build_node->addChild( $doc->createAttribute('filtered-dbsnp-concordance', $data->{filtered_dbsnp_concordance} || '-'));
+        
+        $build_node->addChild( $doc->createAttribute('unfiltered-diploid-heterozygous-percentage', $data->{unfiltered_diploid_heterozygous_percentage} || '-'));
+        $build_node->addChild( $doc->createAttribute('filtered-diploid-heterozygous-percentage', $data->{filtered_diploid_heterozygous_percentage} || '-'));
     }
     $self->_main_node->addChild($metrics_node);
     

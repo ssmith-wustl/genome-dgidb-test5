@@ -123,8 +123,10 @@
                         <th>haploid coverage</th>
                         <th>input base count (kb)</th>
                         <th>unfiltered SNP calls</th>
+                        <th>unfiltered Het %</th>
                         <th>unfiltered dbSNP concordance</th>
                         <th>filtered SNP calls</th>
+                        <th>filtered Het %</th>
                         <th>filtered dbSNP concordance</th>
                       </tr>
                     </thead>
@@ -150,10 +152,16 @@
                             <xsl:value-of select="@unfiltered-snp-calls"/>
                           </td>
                           <td>
+                            <xsl:value-of select="@unfiltered-diploid-heterozygous-percentage"/>
+                          </td>
+                          <td>
                             <xsl:value-of select="@unfiltered-dbsnp-concordance"/>
                           </td>
                           <td>
                             <xsl:value-of select="@filtered-snp-calls"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@filtered-diploid-heterozygous-percentage"/>
                           </td>
                           <td>
                             <xsl:value-of select="@filtered-dbsnp-concordance"/>
@@ -182,7 +190,9 @@
                               { "sClass": "last" },
                               { "sClass": "last", "sType": "formatted-num" },
                               { "sClass": "last" },
+                              { "sClass": "last" },
                               { "sClass": "last", "sType": "formatted-num" },
+                              { "sClass": "last" },
                               { "sClass": "last" },
                           ]
                       } );
