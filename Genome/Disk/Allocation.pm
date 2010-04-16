@@ -205,7 +205,7 @@ sub monitor_allocate_command {
         '2>' => on_each_line {
             if (defined $_[0]) {
                 if ($_[0] !~ /^genome allocate: STATUS:/) {
-                    print $_[0];
+                    print STDERR $_[0];
                 }
                 if ($_[0] =~ /^genome allocate: STATUS: Lock acquired/) {
                     $self->status_message('Allocation lock acquired at ' . UR::Time->now);
