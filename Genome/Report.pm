@@ -15,6 +15,11 @@ class Genome::Report {
     is => 'UR::Object',
     has => [
     xml => { is => 'XML::LibXML::Document', doc => 'XML document object', },
+    parent_directory => {
+        is => 'Text',
+        is_optional => 1,
+        doc => 'Parent directory where report lives.',
+    },
     name => {
         calculate => q| return $self->_get_report_attribute('name'); |,
         doc => 'Report name',
@@ -173,10 +178,13 @@ sub create_report_from_directory {
 
     $class->_convert_properties_file_to_xml($directory);
     
-    my $xml = $class->_retrieve_xml($directory)
+    my %params;
+    $params{xml} = $class->_retrieve_xml($directory)
         or return;
 
-    return $class->create(xml => $xml);
+    $params{parent_directory} = File::Basename::dirname($directory);
+    
+    return $class->create(%params);
 }
 
 sub create_reports_from_parent_directory {
@@ -199,7 +207,34 @@ sub create_reports_from_parent_directory {
     return @reports;
 }
 
-#< File Naming >#
+#< File and Directory Naming >#
+sub directory {
+    my $self = shift;
+
+    # Validate parent dir
+    my $parent_directory = $self->parent_directory;
+    unless ( $parent_directory ) {
+        $self->error_message("No parent directory set for report: ".$self->name);
+        return;
+    }
+    my $validate = eval {
+        Genome::Utility::FileSystem->validate_directory_for_write_access( 
+            $parent_directory
+        ); 
+    };
+    if (!$validate or $@) {
+        $self->error_message("validate_directory_for_write_access on $parent_directory failed: $@");
+        return;
+    }
+
+    # Get dir, create
+    my $directory = $parent_directory.'/'.join('_', split(' ', $self->name));
+    Genome::Utility::FileSystem->create_directory($directory)
+        or return;
+
+    return $directory;
+}
+
 sub _xml_file {
     my ($class, $directory) = @_;
 
@@ -224,23 +259,13 @@ sub directory_to_name {
 sub save {
     my ($self, $parent_directory, $overwrite) = @_;
 
-    #$DB::single = 1;
     unless ( $self->xml ) {
         $self->error_message('No XML was found to save');
         return;
     }
 
-    # TODO validate meta? 
-    
-    # Dir
-    my $validate = eval { Genome::Utility::FileSystem->validate_directory_for_write_access($parent_directory) };
-    if (!$validate or $@) {
-        $self->error_message("validate_directory_for_write_access on $parent_directory failed: $@");
-        return;
-    }
-
-    my $directory = $parent_directory.'/'.$self->name_to_subdirectory( $self->name );
-    Genome::Utility::FileSystem->create_directory($directory)
+    $self->parent_directory($parent_directory);
+    my $directory = $self->directory
         or return;
 
     # File
@@ -249,7 +274,7 @@ sub save {
     if ( $overwrite ) {
         unlink $file if -e $file;
     }
-    $validate = eval { Genome::Utility::FileSystem->validate_file_for_writing($file)};
+    my $validate = eval { Genome::Utility::FileSystem->validate_file_for_writing($file)};
     if (!$validate or $@) {
         $self->error_message("validate_file_for_writing on $file failed: $@");
         return;

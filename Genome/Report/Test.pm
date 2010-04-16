@@ -84,6 +84,10 @@ sub test00_attrs : Test(8) {
         is_deeply($report->$attr, $report_meta{$attr}, $attr);
     }
     
+    # dir
+    ok(!$report->parent_directory, 'parent directory is undef');
+    ok(!$report->directory, "Can't access directory w/o setting parent directory");
+    
     # datasets
     my @datasets = $report->get_dataset_nodes;
     ok(@datasets, 'datasets') or die;
@@ -94,7 +98,7 @@ sub test00_attrs : Test(8) {
     return 1;
 }
 
-sub test01_save_report : Test(5) {
+sub test01_save_report : Test(6) {
     my $self = shift;
 
     # Save - fails
@@ -103,6 +107,7 @@ sub test01_save_report : Test(5) {
 
     # Save
     ok($self->report->save( $self->tmp_dir ), 'Saved report to tmp dir');
+    is($self->report->directory, $self->tmp_dir.'/Assembly_Stats', 'Directory name matches');
     
     # Resave 
     ok(!$self->report->save( $self->tmp_dir ), 'Failed as expected - resave report');
@@ -118,6 +123,7 @@ sub test02_create_report_from_directories : Tests {
     my @reports = $self->test_class->create_reports_from_parent_directory( $self->reports_dir );
     is(@reports, 2, 'Got two reports using create_reports_from_parent_directory');
     is($reports[0]->name, 'Test Report 1', 'Report 1 has correct name');
+    is($reports[0]->parent_directory, $self->reports_dir, 'Report 1 has correct parent directory');
     is($reports[1]->name, 'Test Report 2', 'Report 2 has correct name');
     is_deeply(
         $reports[1]->generator_params,
