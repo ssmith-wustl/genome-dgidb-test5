@@ -90,7 +90,6 @@ sub generate_document {
     push @fields, WebService::Solr::Field->new( class     => 'Email::Simple' );
     push @fields, WebService::Solr::Field->new( title     => $email->header('Subject') );
     push @fields, WebService::Solr::Field->new( id        => $email->header('X-Genome-Search-ID') );
-    push @fields, WebService::Solr::Field->new( object_id => $email->header('X-Genome-Search-ID') );
     push @fields, WebService::Solr::Field->new( timestamp => $date );
     push @fields, WebService::Solr::Field->new( content   => $email->body() );
     push @fields, WebService::Solr::Field->new( type      => 'mail' );

@@ -37,9 +37,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <p class="info">
           <xsl:value-of select="aspect[@name='name']/value"/> <xsl:value-of select="aspect[@name='gender']/value"/>
         </p>
-        <p class="blurb">
-          <xsl:value-of select="aspect[@name='description']/value"/>
-        </p>
       </div>
       </td></tr></tbody></table>
     </div>
