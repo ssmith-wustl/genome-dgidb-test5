@@ -1044,14 +1044,15 @@ sub _protein_domain {
         transcript_name => $transcript->transcript_name,
         data_directory => $transcript->data_directory,
         chrom_name => $variant->{chromosome_name},
-        'setid like' => 'HMMPfam%match_part%',
+        'setid like' => 'HMMPfam%',
     );
     return 'NULL', 'NULL' unless @all_domains;
 
     my @variant_domains;
     my @all_domain_names;
     for my $domain (@all_domains) {
-        if ($protein_position >= $domain->{start} and $protein_position <= $domain->{stop}) {
+        if ($protein_position >= $domain->{start} and $protein_position <= $domain->{stop} and
+                $domain->{name} =~ /HMMPfam/) {
             push @variant_domains, $domain->{name};
         }
         push @all_domain_names, $domain->{name};
