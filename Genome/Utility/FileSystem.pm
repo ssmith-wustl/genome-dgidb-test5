@@ -990,7 +990,9 @@ sub is_file_ok {
     my $ok_file = $file.".ok";
 
     #if the file exists and is ok, return 1
-    if ($self->validate_file_for_reading($file)) {
+    my $rv;
+    eval{$rv = $self->validate_file_for_reading};
+    if ($rv) {
         if (-e $ok_file) {
             return 1;
         } else {
@@ -1063,8 +1065,12 @@ sub are_files_ok {
     	$self->status_message("Files are NOT OK.  Deleting files: ");
     	$self->status_message(join("\n",@$input_files));
     	for my $file (@$input_files) {
-    		unlink($file) or Carp::croak("Can't unlink $file: $!");
-    		unlink($file.".ok") or Carp::croak("Can't unlink ${file}.ok: $!");
+            if (-e $file){
+                unlink($file) or Carp::croak("Can't unlink $file: $!");
+            }
+            if (-e "$file.ok"){
+                unlink("$file.ok") or Carp::croak("Can't unlink ${file}.ok: $!");
+            }
     	}
     	return;
     } else {
