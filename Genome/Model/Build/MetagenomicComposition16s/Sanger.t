@@ -75,6 +75,10 @@ my $classification_dir = $build->classification_dir;
 is($classification_dir, $build->data_directory.'/classification', 'classification_dir');
 ok(-d $classification_dir, 'classification_dir exists');
 
+my $amplicons_dir = $build->amplicons_dir;
+is($amplicons_dir, $build->data_directory.'/amplicons', 'amplicons_dir');
+ok(-d $amplicons_dir, 'amplicons_dir exists');
+
 my $fasta_dir = $build->fasta_dir;
 is($fasta_dir, $build->data_directory.'/fasta', 'fasta_dir');
 ok(-d $fasta_dir, 'fasta_dir exists');
@@ -117,12 +121,12 @@ is_deeply(
 my $classification_file = $build->classification_file_for_set_name( $amplicon_set->name );
 is(
     $classification_file, 
-    $classification_dir.'/'.$file_base_name.'.classifications.tsv',
-    'classification file for set name \''.$amplicon_set->name.'\' is correct');
+    $classification_dir.'/'.$file_base_name.'.rdp',
+    'classification file name for set name \''.$amplicon_set->name.'\' is correct');
 is(
     $classification_file, 
     $amplicon_set->classification_file,
-    'classification file from build and amplicon set match',
+    'classification file name from build and amplicon set match',
 );
 ok($build->classify_amplicons, 'classify amplicons');
 ok(-s $classification_file, 'created classification file');
@@ -130,14 +134,14 @@ for my $amplicon ( @amplicons ) {
     my $classification_file = $build->classification_file_for_amplicon_name($amplicon->name);
     is(
         $classification_file,
-        $classification_dir.'/'.$amplicon->name.'.classification.stor',
+        $amplicons_dir.'/'.$amplicon->name.'.classification.stor',
         "classification file for amplicon name: ".$amplicon->name,
     );
     next unless -e $classification_file; # one does not classify cuz it didn't assemble
     isa_ok($amplicon->classification, 'Genome::Utility::MetagenomicClassifier::SequenceClassification');
 }
 is($build->amplicons_classified, 4, 'amplicons classified');
-is($build->amplicons_classified_success, 1, 'amplicons classified success');
+is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
 
 #< ORIENT ># rm files, orient, check
 ok(unlink($build->oriented_fasta_file), 'unlinked oriented fasta file');

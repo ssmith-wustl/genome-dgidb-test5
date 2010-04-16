@@ -51,6 +51,10 @@ my $classification_dir = $build->classification_dir;
 is($classification_dir, $build->data_directory.'/classification', 'classification_dir');
 ok(-d $classification_dir, 'classification_dir exists');
 
+my $amplicons_dir = $build->amplicons_dir;
+is($amplicons_dir, $build->data_directory.'/amplicons', 'amplicons_dir');
+ok(-d $amplicons_dir, 'amplicons_dir exists');
+
 my $fasta_dir = $build->fasta_dir;
 is($fasta_dir, $build->data_directory.'/fasta', 'fasta_dir');
 ok(-d $fasta_dir, 'fasta_dir exists');
@@ -62,14 +66,15 @@ is($file_base, $build->subject_name, 'file base');
 
 #< CLASSIFY >#
 ok($build->classify_amplicons, 'classify amplicons');
+is($build->amplicons_classified_success, '0.93', 'amplicons classified success');
 
 #< ORIENT >#
 ok($build->orient_amplicons, 'orient amplicons');
 
 my @standards = (
-    { name => 'I', amplicons => [qw/ FZ0V7MM01A01AQ FZ0V7MM01A01O4 FZ0V7MM01A02JE FZ0V7MM01A02T9 FZ0V7MM01A0327 /] },
-    { name => 'II', amplicons => [qw/ FZ0V7MM01A00L3 FZ0V7MM01A00YG FZ0V7MM01A02O2 FZ0V7MM01A03HG FZ0V7MM01A03PV /] },
-    { name => 'III', amplicons => [qw/ FZ0V7MM01A004O FZ0V7MM01A00FU FZ0V7MM01A00G0 FZ0V7MM01A00IA FZ0V7MM01A00XH /] },
+    { name => 'V1_V3', amplicons => [qw/ FZ0V7MM01A01AQ FZ0V7MM01A01O4 FZ0V7MM01A02JE FZ0V7MM01A02T9 FZ0V7MM01A0327 /] },
+    { name => 'V3_V5', amplicons => [qw/ FZ0V7MM01A00L3 FZ0V7MM01A00YG FZ0V7MM01A02O2 FZ0V7MM01A03HG FZ0V7MM01A03PV /] },
+    { name => 'V6_V9', amplicons => [qw/ FZ0V7MM01A004O FZ0V7MM01A00FU FZ0V7MM01A00G0 FZ0V7MM01A00IA FZ0V7MM01A00XH /] },
 );
 
 #< Amplicon Set Names >#
@@ -97,8 +102,8 @@ for my $amplicon_set ( @amplicon_sets ) {
     my $classification_file = $build->classification_file_for_set_name($set_name);
     is(
         $classification_file,
-        $classification_dir.'/'.$file_base.'.'.$set_name.'.classifications.tsv',
-        "classification file for set name: $set_name"
+        $classification_dir.'/'.$file_base.'.'.$set_name.'.rdp',
+        "classification file name for set name: $set_name"
     );
     # amplicons
     my @amplicon_names;
@@ -106,7 +111,7 @@ for my $amplicon_set ( @amplicon_sets ) {
         my $classification_file = $build->classification_file_for_amplicon_name($amplicon->name);
         is(
             $classification_file,
-            $classification_dir.'/'.$amplicon->name.'.classification.stor',
+            $amplicons_dir.'/'.$amplicon->name.'.classification.stor',
             "classification file for amplicon name: ".$amplicon->name,
         );
         push @amplicon_names, $amplicon->name;

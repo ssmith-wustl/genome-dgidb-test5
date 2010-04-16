@@ -74,6 +74,24 @@ sub _generate_and_save_report {
         $fh->close;
     }
 
+    my $xsl_file = $generator->get_xsl_file_for_html;
+    if ( -e $xsl_file ) {
+        my $xslt = Genome::Report::XSLT->transform_report(
+            report => $report,
+            xslt_file => $xsl_file,
+        );
+        unless ( $xslt ) {
+            $self->error_message("Can't transform report to html.");
+            return;
+        }
+        # Save
+        my $html_file = $report->directory.'/report.html';
+        my $fh = Genome::Utility::FileSystem->open_file_for_writing($html_file);
+        unless ( $fh ) {
+        }
+        $fh->print( $xslt->{content} );
+    }
+
     return $report;
 }
 

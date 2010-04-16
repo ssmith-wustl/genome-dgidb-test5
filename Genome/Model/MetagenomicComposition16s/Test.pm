@@ -182,6 +182,7 @@ sub _link_contents_of_dir {
     $dh->read; $dh->read; # . and .. dirs
     while ( my $file = $dh->read ) {
         my $target = "$source_dir/$file";
+        next if -d $target;
         my $link =  $dest_dir.'/'.$file;
         unless ( symlink($target, $link) ) {
             confess "Can't symlink ($target) to ($link): $!.";
@@ -596,6 +597,10 @@ sub after_execute {
 
     my @reports = glob($self->_build->reports_directory.'/*');
     is(@reports, 2, "Created 2 reports");
+    ok(-s $self->_build->reports_directory.'/Summary/report.xml', 'Created summary report');
+    ok(-s $self->_build->reports_directory.'/Summary/report.html', 'Created summary report html');
+    ok(-s $self->_build->reports_directory.'/Composition/report.xml', 'Created composition report');
+    #print $self->_build->data_directory."\n";<STDIN>;
 
     return 1;
 }
@@ -618,7 +623,7 @@ sub test_class {
     return 'Genome::Model::Event::Build::MetagenomicComposition16s::Orient';
 }
 
-sub _dirs_to_link { return (qw/ chromat_dir edit_dir classification_dir /); }
+sub _dirs_to_link { return (qw/ chromat_dir edit_dir amplicons_dir /); }
 
 sub before_execute {
     my $self = shift;

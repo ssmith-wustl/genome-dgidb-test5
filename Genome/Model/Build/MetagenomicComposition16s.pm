@@ -178,11 +178,15 @@ sub amplicon_set_for_name {
 
 #< Dirs >#
 sub sub_dirs {
-    return (qw/ classification fasta reports /), $_[0]->_sub_dirs;
+    return (qw| amplicons classification amplicons fasta reports |), $_[0]->_sub_dirs;
 }
 
 sub classification_dir {
     return $_[0]->data_directory.'/classification';
+}
+
+sub amplicons_dir {
+    return $_[0]->data_directory.'/amplicons';
 }
 
 sub fasta_dir {
@@ -388,10 +392,11 @@ sub classification_file_for_set_name {
     die "No set name given to get classification file for ".$self->description unless defined $set_name;
 
     return sprintf(
-        '%s/%s%s.classifications.tsv',
+        '%s/%s%s.%s',
         $self->classification_dir,
         $self->subject_name,
         ( $set_name eq '' ? '' : ".$set_name" ),
+        lc($self->classifier),
     );
 }
 
@@ -400,12 +405,7 @@ sub classification_file_for_amplicon_name {
 
     die "No amplicon name given to get classification file for ".$self->description unless defined $name;
 
-    return $self->classification_dir."/$name.classification.stor";
-}
-
-sub _get_classifier
-{
-    
+    return $self->amplicons_dir."/$name.classification.stor";
 }
 
 sub classify_amplicons {
@@ -429,11 +429,11 @@ sub classify_amplicons {
     for my $amplicon_set ( @amplicon_sets ) {
         my $classification_file = $amplicon_set->classification_file;
         unlink $classification_file if -e $classification_file;
-        my $classification_fh = Genome::Utility::FileSystem->open_file_for_writing(
-            $classification_file
+        my $writer =  Genome::Utility::MetagenomicClassifier::Rdp::Writer->create(
+            output => $classification_file,
         );
-        unless ( $classification_fh ) {
-            $self->error_message("Could not open classification file ($classification_file) for writing. See above error.");
+        unless ( $writer ) {
+            $self->error_message("Could not create classification writer for file ($classification_file) for writing.");
             return;
         }
 
@@ -463,10 +463,8 @@ sub classify_amplicons {
             }
 
             # Write classification to file
-            $classification_fh->print($classification->to_string."\n");
+            $writer->write_one($classification);
         }
-        $classification_fh->close
-            or return; # file is not written unless it is closed
     }
 
     unless ( $processed > 0 ) {
@@ -475,9 +473,9 @@ sub classify_amplicons {
     }
 
     $self->amplicons_processed($processed);
-    $self->amplicons_processed_success( $processed / $self->amplicons_attempted );
+    $self->amplicons_processed_success( sprintf('%.2f', $processed / $self->amplicons_attempted) );
     $self->amplicons_classified($classified);
-    $self->amplicons_classified_success( $classified / $processed );
+    $self->amplicons_classified_success( sprintf('%.2f', $classified / $processed) );
 
     return 1;
 }

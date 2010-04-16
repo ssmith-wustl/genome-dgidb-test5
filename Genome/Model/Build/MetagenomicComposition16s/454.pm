@@ -19,19 +19,16 @@ sub _sub_dirs {
 #< Amplicons >#
 sub amplicon_set_names_and_primers {
     return (
-        I => #V1_V3 =>
-        [qw/
+        V1_V3 => [qw/
             ATTACCGCGGCTGCTGG 
         /],
-        II => #V3_V5 =>
-        [qw/ 
+        V3_V5 => [qw/ 
             CCGTCAATTCATTTAAGT
             CCGTCAATTCATTTGAGT
             CCGTCAATTCCTTTAAGT
             CCGTCAATTCCTTTGAGT
         /],
-        III => #V6_V9 => 
-        [qw/
+        V6_V9 => [qw/
             TACGGCTACCTTGTTACGACTT
             TACGGCTACCTTGTTATGACTT
             TACGGTTACCTTGTTACGACTT

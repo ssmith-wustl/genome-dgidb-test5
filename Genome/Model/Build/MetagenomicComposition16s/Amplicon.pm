@@ -7,6 +7,7 @@ use Genome;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
+require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 require Storable;
 
 class Genome::Model::Build::MetagenomicComposition16s::Amplicon {
@@ -26,9 +27,10 @@ class Genome::Model::Build::MetagenomicComposition16s::Amplicon {
         },
     ],
     has_optional => [
-        assembled_reads => {
+        reads_processed => {
             is => 'ARRAY',
-            doc => 'Reads that were assembled.',
+            default_value => [],
+            doc => 'Reads that were porcessed and incorporated into this amplicon\'s sequence.',
         },
         bioseq => {
             is => 'Bio::Seq',
@@ -75,15 +77,12 @@ sub oriented_bioseq {
 }
 
 #< Read Counts >#
-sub read_count {
+sub reads_count {
     return scalar(@{$_[0]->reads});
 }
 
-sub assembled_read_count {
-    my $self = shift;
-    return $self->assembled_reads
-    ? scalar(@{$self->assembled_reads})
-    : undef;
+sub reads_processed_count {
+    return scalar(@{$_[0]->reads_processed});
 }
 
 #< Classification >#

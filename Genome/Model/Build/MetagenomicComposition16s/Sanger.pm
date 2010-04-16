@@ -258,7 +258,7 @@ sub load_bioseq_for_amplicon {
         or die; # bad
 
     $amplicon->bioseq($bioseq);
-    $amplicon->assembled_reads($reads);
+    $amplicon->reads_processed($reads);
 
     $ace->disconnect;
     
