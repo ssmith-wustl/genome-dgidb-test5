@@ -22,6 +22,21 @@ class Genome::Model::Tools::BioSamtools::CompareAlignmentSummaries {
     ],
 };
 
+sub create {
+    my $class = shift;
+    my %params = @_;
+    if ($params{libraries}) {
+        my $libraries = delete($params{libraries});
+        my $input_files = delete($params{input_files});
+        my $self = $class->SUPER::create(%params);
+        $self->input_files($input_files);
+        $self->libraries($libraries);
+        return $self;
+    } else {
+        return $class->SUPER::create(%params);
+    }
+}
+
 sub execute {
     my $self = shift;
 
