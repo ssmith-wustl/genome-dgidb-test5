@@ -53,6 +53,10 @@ readcount <- function(name=NULL){
 	data_name <- as.character(name$V1[2])
 	picName <- as.character(name$V2[2])
 	chromosome <- name$V3[2]
+	
+	# read the plotting options
+	isTitle <- as.character(name$V4[2])
+	isSubTitle <-as.character(name$V5[2])
 
 	# number of the annotations
 	num <- 4
@@ -62,7 +66,7 @@ readcount <- function(name=NULL){
 	tmp <- name$V1[4]
 	Read_Annotation(tmp) -> seg
 	seg_ <- as.numeric();
-	if(class(seg)!='try-error'){
+	if(class(seg)!='try-error' && length(seg$Start)>=1 ){
 		for(i in 1:length(seg$Start)){
 			seg_ = c(seg_, seg$Start[i]:seg$End[i]);
 		}
@@ -137,7 +141,7 @@ readcount <- function(name=NULL){
 		else
 			par(mar=c(3,5,5,3))
 			
-		Printing_Graph(a_, a_axis, "red", a_median, "green", aNeighbor_NoSeg, aNeighbor_NoSeg_axis, "blue", aNeighbor_Seg, aNeighbor_Seg_axis, "grey", aNeighbor_median, "black", "Tumor", pch_, cex_, lwd_)
+		Printing_Graph(a_, a_axis, "red", a_median, "green", aNeighbor_NoSeg, aNeighbor_NoSeg_axis, "blue", aNeighbor_Seg, aNeighbor_Seg_axis, "grey", aNeighbor_median, "black", "Tumor", pch_, cex_, lwd_, isSubTitle)
 	}
 
 	if(normal == 1){
@@ -146,7 +150,7 @@ readcount <- function(name=NULL){
 		else
 			par(mar=c(3,5,5,3))
 
-		Printing_Graph(aN_, a_axisN, "red", aN_median, "green", aNeighborN_NoSeg, aNeighborN_NoSeg_axis, "blue", aNeighborN_Seg, aNeighborN_Seg_axis, "grey", aNeighborN_median, "black", "Normal", pch_, cex_, lwd_)
+		Printing_Graph(aN_, a_axisN, "red", aN_median, "green", aNeighborN_NoSeg, aNeighborN_NoSeg_axis, "blue", aNeighborN_Seg, aNeighborN_Seg_axis, "grey", aNeighborN_median, "black", "Normal", pch_, cex_, lwd_, isSubTitle)
 	}
 
 	lwd_ = 7
@@ -193,7 +197,9 @@ readcount <- function(name=NULL){
 		main_title <- chromosome
 	else
   		main_title <- paste(data_name,chromosome,sep=" ")
-	mtext(main_title, outer=TRUE, line=-2, cex=1.5)
+  	if(isTitle == 1){
+		mtext(main_title, outer=TRUE, line=-2, cex=1.5)
+	}
 
 	dev.off()
 }
@@ -220,7 +226,7 @@ normalization = function(x, y, annot)
 	median_new_y
 }
 
-Printing_Graph = function(y,x,col_data,med,col_med,y1,x1,col_data1,y2,x2,col_data2,med_,col_med_,title_,pch_,cex_,lwd_)
+Printing_Graph = function(y,x,col_data,med,col_med,y1,x1,col_data1,y2,x2,col_data2,med_,col_med_,title_,pch_,cex_,lwd_,isSubTitle)
 {
 	plot(y ~ x, col = col_data, xlim = c(min(c(x1,x2)),max(c(x1,x2))), ylim = c(0,4), xlab = "Base", ylab = "Copy Number", pch = pch_, cex = cex_)
 	points(y1~x1, col=col_data1, pch=pch_, cex=cex_)
@@ -231,7 +237,9 @@ Printing_Graph = function(y,x,col_data,med,col_med,y1,x1,col_data1,y2,x2,col_dat
 	segments(max(x), med_, max(c(x1,x2)), med_, col=col_med_, lwd=lwd_)
 	segments(min(x), med, max(x), med, col=col_med, lwd=lwd_)
 	
-	title(title_, cex.main=1.1, line = 1)
+	if(isSubTitle==1) {
+		title(title_, cex.main=1.1, line = 1)
+	}
 }
 
 Draw_Annotation = function(data,x,y,col1,col2,lwd1,lwd2,name,height,cex_)
