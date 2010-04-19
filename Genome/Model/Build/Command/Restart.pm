@@ -63,6 +63,8 @@ sub execute {
         }
     }
 
+    $build->software_revision(UR::Util::used_libs_perl5lib_prefix());
+
     my $build_event = $build->build_event;
     $build_event->event_status('Scheduled');
     $build_event->date_completed(undef);
