@@ -65,7 +65,7 @@ sub execute {
             $self->error_message("Build master job did not die after 60 seconds.");
             return 0;
         }
-    } while ($job || ($job->{Status} ne 'EXIT' && $job->{Status} ne 'DONE'));
+    } while ($job && ($job->{Status} ne 'EXIT' && $job->{Status} ne 'DONE'));
 
 
     $self->status_message(sprintf(
