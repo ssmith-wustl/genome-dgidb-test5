@@ -8,6 +8,7 @@ use Getopt::Long;
 use Statistics::R;
 use File::Temp;
 use DBI;
+require Genome::Utility::FileSystem;
 
 class Genome::Model::Tools::CopyNumber::Graph {
     is => 'Command',
@@ -58,7 +59,19 @@ class Genome::Model::Tools::CopyNumber::Graph {
         is_optional => 1,
         default => 1000,
         doc => 'How many sites to count the read each time. By default it is set to be 1000.',
-    },	
+    },	    
+    plot_title => {
+    	type => 'Boolean',
+    	is_optional => 1,
+    	default => 1,
+    	doc => 'Whether to have a title.',
+    },
+    plot_subtitle => {
+    	type => 'Boolean',
+    	is_optional => 1,
+    	default => 1,
+    	doc => 'Whether to have a sub title.',
+    },
     ]
 };
 
@@ -85,10 +98,18 @@ sub execute {
     my $bam_normal = $self->normal_bam_file;
     my $multiple_neighbor = $self->flanking_region;
     my $slide = $self->sliding_window;
-
+	my $isTitle = $self->plot_title;
+	my $isSubTitle = $self->plot_subtitle;
+	
     # Process options.
-    die("Input not fulfill the conditions. Please type 'perl CNprocess.pl' to see the manual.\n") unless (-e "$bam_tumor" || -e "$bam_tumor");
+    die("Input not fulfill the conditions. Please type 'gmt copy-number graph.pm -h' to see the manual.\n") unless (-e "$bam_tumor" || -e "$bam_tumor");
 
+    #test architecture to make sure bam-window program can run (req. 64-bit)
+    unless (`uname -a` =~ /x86_64/) {
+        $self->error_message("Must run on a 64 bit machine");
+        die;
+    }
+    
     my $outputFigDir = abs_path($outputFigDir);
     
     # connect to database
@@ -203,7 +224,7 @@ sub execute {
     #my $tmp_name = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_name.csv";
 
     open FILE_name, ">", $tmp_name or die $!;
-    print FILE_name "$tmp_in_name\t$tmp_outL_name\t$tmp_outR_name\t$tmp_in_name_n\t$tmp_outL_name_n\t$tmp_outR_name_n\n$name\t$picName\tchr$chr\t\t\t\n$start\t$end\t$neighbor1_left\t$neighbor1_right\t$neighbor2_left\t$neighbor2_right\n$seg_file\t$rep_file\t$dgv_file\t$gene_file\t\t\n";
+    print FILE_name "$tmp_in_name\t$tmp_outL_name\t$tmp_outR_name\t$tmp_in_name_n\t$tmp_outL_name_n\t$tmp_outR_name_n\n$name\t$picName\tchr$chr\t$isTitle\t$isSubTitle\t\n$start\t$end\t$neighbor1_left\t$neighbor1_right\t$neighbor2_left\t$neighbor2_right\n$seg_file\t$rep_file\t$dgv_file\t$gene_file\t\t\n";
     close FILE_name;
     # Step 3: Read the coverage depth using R 
     my $command = qq{readcount(name="$tmp_name")};
