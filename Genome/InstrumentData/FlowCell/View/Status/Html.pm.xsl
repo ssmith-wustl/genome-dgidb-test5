@@ -102,7 +102,7 @@
                               <xsl:when test="report">
                                 <xsl:for-each select="report">
                                   <xsl:variable select="@name" name="report_name_full"/>
-                                  <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">flow_cell_report.cgi?instrument-data-id=<xsl:value-of select="../@id"/>&amp;report-name=<xsl:value-of select="@name"/></xsl:attribute><xsl:value-of select="substring-before($report_name_full,'.')"/></a><xsl:text> </xsl:text>
+                                  <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">/cgi-bin/dashboard/flow_cell_report.cgi?instrument-data-id=<xsl:value-of select="../@id"/>&amp;report-name=<xsl:value-of select="@name"/></xsl:attribute><xsl:value-of select="substring-before($report_name_full,'.')"/></a><xsl:text> </xsl:text>
                                 </xsl:for-each>
                               </xsl:when>
                               <xsl:otherwise>
