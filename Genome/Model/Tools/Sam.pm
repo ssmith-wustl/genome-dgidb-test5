@@ -6,7 +6,7 @@ use warnings;
 use Genome; 
 use File::Basename;
 
-my $DEFAULT = 'r510';
+my $DEFAULT = 'r544';
 my $PICARD_DEFAULT = '1.17';
 #3Gb
 my $DEFAULT_MEMORY = 402653184;
@@ -58,6 +58,7 @@ EOS
 
 
 my %SAMTOOLS_VERSIONS = (
+    r544    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar544/samtools',
     r510    => '/gsc/pkg/bio/samtools/samtools-0.1.7a/samtools',
     r453    => '/gsc/pkg/bio/samtools/samtools-0.1.6/samtools',
     r449    => '/gsc/pkg/bio/samtools/samtools-0.1.5-32/samtools',

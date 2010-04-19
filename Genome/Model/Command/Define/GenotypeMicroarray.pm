@@ -41,20 +41,28 @@ EOS
 
 sub execute {
     my $self = shift;
+    my $file = $self->file;
 
     # This only needs to be done b/c we're not tracking microarray data as instrument data.
     # Once it _is_ tracked as instrument data, the normal model/build process would occur.
 
     $DB::single = 1;
 
-    if (not -e $self->file) {
-
+    unless ($file and -s $file) {
+        $self->error_message("Provided genotype file: $file is not valid.");
+        return;
     }
-
-    if (-z $self->file) {
-
+    
+    #step to validate input genotype snp file is 9-column like followings:
+    #1       554484  554484  C       C       ref     ref     ref     ref
+    my $head    = `head -1 $file`;
+    my @columns = split /\s+/, $head;
+    
+    unless (@columns and @columns == 9) {
+        $self->error_message("Genotype file: $file is not 9-column format");
+        return;
     }
-
+    
     # let the super class make the model
     my $super = $self->super_can('_execute_body');
     $super->($self,@_);
@@ -89,13 +97,11 @@ sub execute {
 
         $self->status_message("Copying genotype data to " . $build->formatted_genotype_file_path . "...");
         Genome::Utility::FileSystem->copy_file(
-            $self->file,
+            $file,
             $build->formatted_genotype_file_path
         );
 
     }
-
-
 
     return $self;
 }
