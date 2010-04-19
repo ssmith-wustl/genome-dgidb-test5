@@ -25,10 +25,10 @@ class Genome::InstrumentData {
                     end
                ) subset_name,
                lib.full_name library_name
-          FROM index_illumina\@dw solexa 
-          JOIN library_summary\@dw lib on lib.library_id = solexa.library_id
-          JOIN organism_sample\@dw sam on sam.organism_sample_id = lib.sample_id
-          JOIN flow_cell_illumina\@dw fc on fc.flow_cell_id = solexa.flow_cell_id
+          FROM GSC.index_illumina solexa 
+          JOIN GSC.library_summary lib on lib.library_id = solexa.library_id
+          JOIN GSC.organism_sample sam on sam.organism_sample_id = lib.sample_id
+          JOIN GSC.flow_cell_illumina fc on fc.flow_cell_id = solexa.flow_cell_id
      UNION ALL
             SELECT 
                to_char(case when ri.index_sequence is null then ri.region_id else ri.seq_id end) id,
@@ -44,10 +44,10 @@ class Genome::InstrumentData {
                 end
                ) subset_name,
                lib.full_name library_name
-           FROM run_region_454\@dw r 
-            JOIN region_index_454\@dw ri on ri.region_id = r.region_id
-            JOIN library_summary\@dw lib on lib.library_id = ri.library_id
-            JOIN organism_sample\@dw s on s.organism_sample_id = lib.sample_id
+           FROM GSC.run_region_454 r 
+            JOIN GSC.region_index_454 ri on ri.region_id = r.region_id
+            JOIN GSC.library_summary lib on lib.library_id = ri.library_id
+            JOIN GSC.organism_sample s on s.organism_sample_id = lib.sample_id
      UNION ALL
         SELECT to_char(imported.id) id,
                'unknown' run_name,
@@ -68,8 +68,8 @@ class Genome::InstrumentData {
                '1' subset_name,
                NVL(library.value, 'unknown') library_name
           FROM gsc_run\@oltp sanger,
-               mg.misc_attribute\@dw sample,
-               mg.misc_attribute\@dw library
+               mg.misc_attribute sample,
+               mg.misc_attribute library
          WHERE sanger.run_name = sample.entity_id(+) AND
                sanger.run_name = library.entity_id(+) AND
                sample.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND

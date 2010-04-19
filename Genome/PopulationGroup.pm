@@ -15,7 +15,7 @@ use Genome;
 
 class Genome::PopulationGroup {
     is => 'Genome::SampleSource',
-    table_name => 'GSC.POPULATION_GROUP@dw population_group',
+    table_name => 'GSC.POPULATION_GROUP population_group',
     id_by => [
         individual_id => { is => 'Number', len => 10, column_name => 'PG_ID' },
     ],

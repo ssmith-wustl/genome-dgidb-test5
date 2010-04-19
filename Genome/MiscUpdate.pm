@@ -5,7 +5,7 @@ use warnings;
 
 class Genome::MiscUpdate {
     is => ['UR::Object'],
-    table_name => 'gsc.misc_update@dw misc_update',
+    table_name => 'gsc.misc_update misc_update',
     id_by => [
         subject_class_name      => { is => 'Text', len => 255, doc => 'the table in which the change occurred' },
         subject_id              => { is => 'Text', len => 255, doc => 'the primary key of the row that changed' },

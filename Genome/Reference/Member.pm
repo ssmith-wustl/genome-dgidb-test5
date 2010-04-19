@@ -2,7 +2,7 @@ package Genome::Reference::Member;
 
 class Genome::Reference::Member {
     id_by => ['seq_id','member_seq_id'],
-    table_name => '(select * from reference_sequence_set_member@dw) reference_set_member',
+    table_name => 'GSC.reference_sequence_set_member reference_sequence_set_member',
     has => [
             reference => {
                               is => 'Genome::Reference',

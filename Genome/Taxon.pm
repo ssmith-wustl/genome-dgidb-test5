@@ -11,7 +11,7 @@ use strict;
 use warnings;
 
 class Genome::Taxon {
-    table_name => "(select t.*, species_name name from organism_taxon\@dw t) taxon",
+    table_name => "(select t.*, species_name name from GSC.organism_taxon t) taxon",
     id_by => [
         taxon_id         => { is => 'Number', len => 10 },
     ],

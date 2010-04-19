@@ -15,10 +15,10 @@ class Genome::Sample::ProjectAssignment {
             select project.setup_id project_id, dna.dna_id sample_id
             from (
                 select research_project project_name, sample_name
-                from solexa_lane_summary@dw
+                from GSC.solexa_lane_summary
                 union
                 select research_project, nvl(sample_name,incoming_dna_name)
-                from run_region_454@dw
+                from GSC.run_region_454
             ) ps
             join (
                     SELECT setup_id, setup_name 

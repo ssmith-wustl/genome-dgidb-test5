@@ -40,7 +40,7 @@ use Genome;
 
                 -- species/strain
                 s.taxon_id              taxon_id
-            from organism_sample@dw s
+            from GSC.organism_sample s
         ) sample
     |,
 

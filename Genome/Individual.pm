@@ -15,7 +15,7 @@ use Genome;
 
 class Genome::Individual {
     is => 'Genome::SampleSource',
-    table_name => 'GSC.ORGANISM_INDIVIDUAL@dw individual',
+    table_name => 'GSC.ORGANISM_INDIVIDUAL individual',
     id_by => [
         individual_id => { is => 'Number', len => 10, column_name => 'ORGANISM_ID' },
     ],

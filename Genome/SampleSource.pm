@@ -16,7 +16,7 @@ class Genome::SampleSource {
                 description,
                 common_name,
                 'Genome::Individual' sample_source_subclass_name
-            from organism_individual@dw
+            from GSC.organism_individual
             union all
             select pg_id id,
                 name,
@@ -24,7 +24,7 @@ class Genome::SampleSource {
                 description,
                 NULL common_name,
                 'Genome::PopulationGroup' sample_source_subclass_name 
-            from population_group@dw
+            from GSC.population_group
         ) sample_source|,
     is_abstract => 1,
     subclassify_by => 'sample_source_subclass_name',

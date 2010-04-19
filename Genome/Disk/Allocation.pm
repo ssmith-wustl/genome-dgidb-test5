@@ -15,7 +15,7 @@ use Genome::Utility::AsyncFileSystem qw/on_each_line/;
 use Sys::Hostname qw/hostname/;
 
 class Genome::Disk::Allocation {
-    table_name => "(select * from disk_allocation\@dw) disk_allocation",
+    table_name => 'GSC.disk_allocation disk_allocation',
     id_by => [
               allocator_id => {
                                is => 'Number',

@@ -13,7 +13,7 @@ class Genome::Sample::Genomic {
 		    on eav.entity_id = dr.dr_id
 		        and eav.type_name = 'dna'
 		        and eav.attribute_name = 'org id'	
-	            join organism_taxon\@dw o 
+	            join GSC.organism_taxon o 
 		        on o.legacy_org_id = eav.value
                    ) on dr.dna_resource_prefix = substr(dna_name,0,4)
          where dna_type = 'genomic dna'

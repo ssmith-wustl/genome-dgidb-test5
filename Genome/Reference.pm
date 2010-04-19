@@ -2,7 +2,7 @@ package Genome::Reference;
 
 class Genome::Reference {
     id_by => 'seq_id',
-    table_name => '(select * from reference_sequence_set@dw) reference',
+    table_name => 'GSC.reference_sequence_set reference_sequence_set',
     has => [
             description => {
                             is => 'Text',
