@@ -18,14 +18,10 @@ class Genome::ProcessingProfile::ReferenceVariationSanger {
             is_class_wide => 1,
             value => 'inline',
             doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
-        }
+        },
     ],
     has_param => [
-	ace_fof => {
-            type  =>  'String',
-            doc  => "optional; provide an fof of ace files to run auto analysis including the full path",
- 	    is_optional  => 1,
-        },
+
 	mail_me => {
 	    type  =>  'Boolean',
             doc  => 'optional; default no mail; use mail-me option to get mailed when the analysis is complete',
@@ -87,7 +83,23 @@ sub _execute_build {
      warn "executing build logic for " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
      my $dir = $build->data_directory;
 
-     my $ace_fof = $self->ace_fof;
+
+     my $model = $build->model;
+
+     unless ($model){
+	 $self->error_message("Couldn't find model for id ". $self->model_id);
+	 return;
+     }
+
+     $self->status_message("Found Model: " . $model->name);
+
+     my @inputs = $build->inputs();
+     unless (@inputs) {$self->error_message("Couldn't find the inputs model for id ". $self->model_id);return;}
+     my %input = map {$_->name,$_->value_id;} @inputs;
+
+     my $ace_fof = $input{ace_fof};
+     unless ($ace_fof) {$self->error_message("Couldn't find the ace_fof model for id ". $self->model_id);return;}
+
      my $linked = &link_dirs($dir,$ace_fof,$self);
 
      unless ($linked) {
@@ -96,7 +108,7 @@ sub _execute_build {
      }
 
      my %params = map { $_->name => $_->value } $self->params;
-     my $result = Genome::Model::Tools::Analysis::AutoMsa->execute(%params);
+     my $result = Genome::Model::Tools::Analysis::AutoMsa->execute(%params,%input);
 
      if ($result) {
 	 print qq(you're analysis has been executed\n);
@@ -131,20 +143,26 @@ sub _validate_build {
 
 sub link_dirs {
 
+    use File::Copy;
+
     my ($dir,$ace_fof,$self) = @_;
     unless (-f $ace_fof) { return; }
     unless (-d $dir) { return; }
+
     my $working_dir = `pwd`;
     chdir $dir;
     my $n = 0;
     open (FOF,$ace_fof) || $self->error_message("Couldn't open the ace_fof $ace_fof") && return;
+    copy ($ace_fof,$dir) || $self->error_message("Couldn't copy the ace_fof $ace_fof to the build directory $dir");
+
     while (<FOF>) {
 	chomp;
 	my $ace = $_;
 	my ($project_dir_path) = (split(/\/edit_dir/,$ace))[0];
 	my ($project_dir) = (split(/\//,$project_dir_path))[-1];
 	
-	system qq(ln -s $project_dir_path $project_dir);
+	symlink($project_dir_path, $project_dir);
+
 	if ("$dir/$project_dir") { $n++; }
 	
     }
