@@ -37,7 +37,7 @@ sub execute {
 
     my $job_id = $build->the_master_event->lsf_job_id;
 
-    if (0 && $build->run_by ne $ENV{USER}) {
+    if ($build->run_by ne $ENV{USER}) {
         $self->error_message("Can't stop a build originally started by: " . $build->run_by);
         return 0;
     }
