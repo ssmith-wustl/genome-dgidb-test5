@@ -44,6 +44,10 @@ class Genome::Model::Tools::Realign {
             type => 'Number',
             is_input => 1,
         },
+        worker_id => {
+            type => 'Number',
+            is_input => 1,
+        },
         whole_file => {
             type => 'Boolean',
             is_input => 1,
@@ -98,42 +102,73 @@ sub worker_execute {
     my ($self) = @_;
 
     if (!defined($self->first_line())
-        || !defined($self->last_line())) {
+        || !defined($self->last_line())
+        || !defined($self->worker_id())) {
         die 'ERROR: You must specify first-line and last-line of '
-            . 'regions file you would like to realign (or use --whole-file for whole file)';
+            . 'regions file you would like to realign and worker-id (or use --whole-file for whole file)';
     }
 
-    my $tmp_dir = File::Temp->tempdir('realignXXXXX', CLEANUP => 1);
+    $self->make_output_dir(); # probably created by master_execute() already anyway
 
+    # writing all this stuff to tmp
+    my $tmp_dir = File::Temp->tempdir('realignXXXXX', CLEANUP => 1);
     my $mini_bam   = $self->create_mini_bam($tmp_dir);
-    my $sorted_bam = $self->sort_and_index_bam($mini_bam);
+    my $sorted_bam = $self->sort_rmdup_index_bam($mini_bam);
+
+    # writing finally realignment bam to output_dir
     my $new_bam    = $self->realign($sorted_bam);
 
     print "created realigned bam: $new_bam\n";
     return 1;
 }
 
-sub sort_and_index_bam {
+sub make_output_dir {
+
+    my ($self) = @_;
+
+    my $output_dir = $self->output_dir();
+    my $cmd = "mkdir -p $output_dir";
+
+    my $r = system($cmd);
+    if ( (defined($r) && $r > 0) 
+        || ! -d $output_dir ) {
+        die "ERROR: failed to mkdir: $output_dir";
+    }
+
+    return 1;
+}
+
+sub sort_rmdup_index_bam {
 
     my ($self, $bam) = @_;
 
     my ($bam_without_ext) = $bam =~ /(.*)\.bam/;
     $bam_without_ext .= '_sorted';
-    my $sorted_bam = join('.', $bam_without_ext, 'bam');
 
-    my $cmd = "samtools sort $bam $bam_without_ext && samtools index $sorted_bam";
+    my $sorted_bam = join('.', $bam_without_ext, 'bam');
+    my $rmdup_bam = join('.', $bam_without_ext . '_rmdup' , 'bam');
+    my $metrics_file = join('.', $bam_without_ext . '_rmdup' , 'metrics');
+
+#               "&& samtools index $sorted_bam",
+#               "&& samtools rmdup $sorted_bam $rmdup_bam",
+    my @cmds = ("samtools sort $bam $bam_without_ext",
+               "&& gmt sam mark-duplicates --file-to-mark $sorted_bam --marked-file $rmdup_bam --metrics-file $metrics_file",
+               "&& samtools index $rmdup_bam"
+    );
+
+    my $cmd = join(' ', @cmds);
+
     my $r = system($cmd);
     if (defined($r) && $r > 0) {
-        die "ERROR: failed to create index: $cmd";
+        die "ERROR: failed during sort/dedup/index: $cmd";
     }
 
-    my $index_pathname = join('.', $sorted_bam, 'bai');
-
+    my $index_pathname = join('.', $rmdup_bam, 'bai');
     if (! -f $index_pathname || (-s $index_pathname <= 0)) {
         die "ERROR: index is empty: $index_pathname";
     }
 
-    return $sorted_bam;
+    return $rmdup_bam;
 }
 
 sub realign {
@@ -175,7 +210,8 @@ sub realigned_bam_pathname {
     my $original_filename = $bam->basename();
     my ($uniq_bit) = $original_filename =~ /^(.*)\.bam$/;
 
-    my $filename = join('_', $uniq_bit, 'part', $self->first_line(), $self->last_line());
+    my $worker_id = sprintf("%05d", $self->worker_id());
+    my $filename = join('_', $uniq_bit, 'part', $worker_id);
     $filename .= '.bam';
 
     my $pathname = join('/', $self->output_dir(), $filename);
@@ -290,9 +326,12 @@ sub master_execute {
     my ($self) = @_;
 
     if (defined($self->first_line())
-        || defined($self->last_line())) {
-        die 'ERROR: dont specify first or last line if youre realigning --whole-file';
+        || defined($self->last_line())
+        || defined($self->worker_id())) {
+        die 'ERROR: dont specify first or last line or worker-id if youre realigning the whole-file';
     }
+
+    $self->make_output_dir();
 
     my $num_lines_in_file = $self->regions_file_line_count();
     my $n = $num_lines_in_file;
@@ -300,19 +339,37 @@ sub master_execute {
 
     my @jobs;
 
+    my $log_pathname = $self->log_pathname();
+    open(my $log, $log_pathname);
+    print "log is $log_pathname\n";
+
     while ($n > 0) {
 
-        my $job_id = $self->submit_worker_job($partition, $num_lines_in_file);
+        my ($job_id, $min, $max) = $self->submit_worker_job($partition, $num_lines_in_file);
         push @jobs, $job_id;
+
+        print $log "$partition\t$job_id\t$min\t$max\n";
 
         $partition++;  # parition starts at 1
         $n -= $self->lines_per_job(); 
     }
 
+    close($log);
+
     my $job_id = $self->submit_master_job(\@jobs);
     print "master job_id: $job_id\n";
     return 1;
 }
+
+
+sub log_pathname {
+
+    my ($self) = @_;
+
+    my $log = join("/",$self->output_dir, 'worker.log');
+    return $log;
+}
+
 
 sub submit_worker_job {
 
@@ -335,6 +392,7 @@ sub submit_worker_job {
                         "--first-line $min",
                         "--last-line $max",
                         "--lines-per-job $n",
+                        "--worker-id $partition",
                         "--output-dir $output_dir"
                     );
 
@@ -347,7 +405,7 @@ sub submit_worker_job {
         die 'ERROR: failed to submit worker job';
     }
 
-    return $jid;
+    return ($jid, $min, $max);
 }
 
 sub submit_master_job {
