@@ -16,7 +16,9 @@ class Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArray
 
 
 sub process_imported_files {
+
     my $self = shift;
+    $self->sequencing_platform("illumina genotype array");
     $self->SUPER::process_imported_files(@_);
     my $instrument_data = Genome::InstrumentData::Imported->get( sample_name => $self->sample_name, sequencing_platform => $self->sequencing_platform);
     my $disk_alloc;# = $self->allocation;

@@ -17,6 +17,7 @@ class Genome::InstrumentData::Command::Import::Microarray::Misc {
 
 sub process_imported_files {
     my $self = shift;
+    $self->sequencing_platform("unknown");
     $self->SUPER::process_imported_files(@_);
 
 

@@ -71,7 +71,7 @@ ok($result, "execution was successful");
 
 my $i = Genome::InstrumentData::Imported->get(  
     sample_name => $sample_name, 
-    sequencing_platform => 'unknown',      
+    sequencing_platform => 'illumina genotype array',      
 );
 
 is($i->original_data_path,$source_dir,"found imported data and source_data_path is properly set");

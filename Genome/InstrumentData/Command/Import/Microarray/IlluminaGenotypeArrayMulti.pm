@@ -80,6 +80,7 @@ sub execute {
 
 sub process_imported_files {
     my $self = shift;
+    $self->sequencing_platform("illumina genotype array");
 
     my %excluded_names;
     my %included_names;
