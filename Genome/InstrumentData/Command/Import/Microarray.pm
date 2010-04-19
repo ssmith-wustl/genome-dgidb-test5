@@ -33,6 +33,7 @@ my %properties = (
         is => 'Text',
         doc => 'sequencing platform of import data, like illumina/affymetrix',
         valid_values => ['illumina genotype array', 'illumina expression array', 'affymetrix genotype array', '454','sanger','unknown'],
+        is_optional => 1,
     },
     description  => {
         is => 'Text',
