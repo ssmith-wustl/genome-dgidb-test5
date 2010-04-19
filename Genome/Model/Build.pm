@@ -690,7 +690,12 @@ sub fail {
 
     $self->_verify_build_is_not_abandoned_and_set_status_to('Failed', 1)
         or return;
-   
+
+    # set event status
+    for my $e ($self->the_events(event_status => 'Running')) {
+        $e->event_status('Failed');
+    }
+
     $self->generate_send_and_save_report(
         'Genome::Model::Report::BuildFailed', {
             errors => \@errors,
@@ -707,6 +712,11 @@ sub success {
     # set status
     $self->_verify_build_is_not_abandoned_and_set_status_to('Succeeded', 1)
         or return;
+
+    # set event status
+    for my $e ($self->the_events(event_status => 'Running'),$self->the_events(event_status => 'Scheduled')) {
+        $e->event_status('Abandoned');
+    }
 
     # report - if this fails set status back to Running, then the workflow will fail it
     unless ( $self->generate_send_and_save_report( $self->report_generator_class_for_success ) ) {
