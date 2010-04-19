@@ -67,6 +67,10 @@ sub execute {
     $build_event->event_status('Scheduled');
     $build_event->date_completed(undef);
 
+    for my $e ($build->the_events(event_status => ['Running','Failed'])) {
+        $e->event_status('Scheduled');
+    }
+
     my $lsf_command = sprintf(
         'bsub -N -H -q %s -m blades %s -g /build/%s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
         $self->lsf_queue,

@@ -361,7 +361,8 @@ package Job::Iterator;
 
 sub new {
     my $class = shift;
-    open my $f, 'bjobs -l -u all |';
+    my $opts = shift || '-u all';
+    open my $f, 'bjobs -l ' . $opts . ' |';
     readline $f;    ## read off the blank line then read the first real line
     return bless [ $f, scalar( readline($f) ) ], $class;
 }

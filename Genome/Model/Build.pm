@@ -688,6 +688,9 @@ sub initialize {
 sub fail {
     my ($self, @errors) = @_;
 
+    # reload all the events
+    my @e = Genome::Model::Event->load(build_id => $self->build_id);
+
     $self->_verify_build_is_not_abandoned_and_set_status_to('Failed', 1)
         or return;
 
@@ -709,12 +712,15 @@ sub fail {
 sub success {
     my $self = shift;
 
+    # reload all the events
+    my @e = Genome::Model::Event->load(build_id => $self->build_id);
+
     # set status
     $self->_verify_build_is_not_abandoned_and_set_status_to('Succeeded', 1)
         or return;
 
     # set event status
-    for my $e ($self->the_events(event_status => 'Running'),$self->the_events(event_status => 'Scheduled')) {
+    for my $e ($self->the_events(event_status => ['Running','Scheduled'])) {
         $e->event_status('Abandoned');
     }
 
