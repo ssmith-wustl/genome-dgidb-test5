@@ -189,7 +189,16 @@ sub monitor_allocate_command {
     my $lock_acquire_time;         # will be set once we see the lock acquired
     my $ow;                        # overall watcher;
     my $w;                         # after lock acquired watcher;
-    
+
+    my $trace_fh = File::Temp->new(
+        'TEMPLATE' => hostname . '-' . $$ . '_XXXX',
+        'DIR'      => '/gsc/var/log/genome/allocation_debugging',
+        'SUFFIX'   => '.log',
+        'UNLINK'   => '1'
+    );
+    $trace_fh->autoflush(1);
+    chmod 0644, $trace_fh;
+ 
     $ow = AnyEvent->timer(
         after => $after_start,
         cb => sub {
@@ -200,11 +209,16 @@ sub monitor_allocate_command {
     
     $self->status_message('Allocation process started at ' . UR::Time->now);
     local $ENV{'MONITOR_ALLOCATE_LOCK'} = 1;
+    local $ENV{'DBI_TRACE'} = 5;
+    local $ENV{'UR_DBI_MONITOR_SQL'} = 1;
+    local $ENV{'APP_DBI_MONITOR_SQL'} = 1;
     my $cv = Genome::Utility::AsyncFileSystem->shellcmd(
         cmd => $cmd,
+        '>' => $trace_fh,
         '2>' => on_each_line {
             if (defined $_[0]) {
-                if ($_[0] !~ /^genome allocate: STATUS:/) {
+                print $trace_fh $_[0];
+                if ($_[0] =~ /^ERROR/) {
                     print STDERR $_[0];
                 }
                 if ($_[0] =~ /^genome allocate: STATUS: Lock acquired/) {
@@ -225,6 +239,7 @@ sub monitor_allocate_command {
         undef $ow;
         undef $w;
         $self->status_message('Allocation command ended at ' . UR::Time->now);
+        close $trace_fh;
     });
     
     return $cv->recv;
