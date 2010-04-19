@@ -6,7 +6,7 @@ use warnings;
 use File::Path;
 use File::Temp;
 use Test::More;
-use Test::More skip_all => "This tests depends on files in Josh Pecks's home directory which are now missing.  Like him.";
+#use Test::More skip_all => "This tests depends on files in Josh Pecks's home directory which are now missing.  Like him.";
 use above 'Genome';
 
 my $archos = `uname -a`;
@@ -25,10 +25,11 @@ if ($archos !~ /64/) {
 
 #use_ok('Genome::Model::Tools::HmpShotgun::AlignMetagenomes');
 my $ref_seq_file = "/gscmnt/sata413/research/kwylie/references/refseq_metagenome1/all_sequences.fa";
-my $r1 = "/gscmnt/sata413/research/kwylie/jpeck/compare/bacteria_reads/s_5_1_sequence.txt";
-my $r2 = "/gscmnt/sata413/research/kwylie/jpeck/compare/bacteria_reads/s_5_2_sequence.txt";
+my $dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-MetagenomicCompositionShotgun-Align";
+my $r1 = "$dir/1_sequence.txt";
+my $r2 = "$dir/2_sequence.txt";
 my $reads_file = "$r1\|$r2";
-my $working_dir = "/gscmnt/sata413/research/kwylie/jpeck/compare/bwa_results/";
+my $working_dir = "$dir/bwa_results";
 
 my $aligner = Genome::Model::Tools::Bwa::AlignReads->create(dna_type=>'dna', 
                                                             ref_seq_file=>$ref_seq_file,
