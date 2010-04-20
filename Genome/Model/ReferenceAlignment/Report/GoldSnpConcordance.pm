@@ -154,6 +154,15 @@ $DB::single = 1;
         #my $report_dir = $build->resolve_reports_directory . $self->name; gold_snp subdir not ready yet.
         my $missed_snp_file = $build->resolve_reports_directory. "$name.missed_gold_snv.dat";
         
+        if(-e $missed_snp_file) {
+            $self->warning_message('Existing missed snp file found: ' . $missed_snp_file . ' -- moving it out of the way.');
+            #This will overwrite any existing ".old" file if someone runs this a third time. Maybe we should just delete it right here anyway?
+            unless(rename($missed_snp_file, $missed_snp_file . '.old')) {
+                $self->error_message('Failed to move file!');
+                die $self->error_message;
+            }
+        }
+        
         my %intersect_params = (
             gold_snp_file   => $gold_snp_path,
             snp_file        => $snp_file,

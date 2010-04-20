@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use File::Basename;
 
 class Genome::Model::Tools::Convergence {
     is => 'Command',
@@ -19,7 +18,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt harmonic-convergence ...    
+gmt convergence ...
 EOS
 }
 
@@ -28,7 +27,5 @@ sub help_detail {
 Tools to run Harmonic Convergence analysis on a set of models.
 EOS
 }
-
-
 
 1;
