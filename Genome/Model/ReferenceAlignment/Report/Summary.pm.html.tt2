@@ -64,6 +64,25 @@
 														[% patient_upn %]
 													</td>
 												</tr>
+												<tr>
+                                                  <td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
+                                                    species:
+                                                  </td>
+                                                  <td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
+                                                    [% species %] <a href="https://imp.gsc.wustl.edu/view/Genome/Taxon/default.html?id=[% taxon_id %] " style="text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view taxon &gt;</a>
+
+                                                  </td>
+												</tr>
+
+												<tr>
+                                                  <td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
+                                                    reference sequence:
+                                                  </td>
+                                                  <td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
+                                                    [% ref_seq_name %] <a href="https://gscweb.gsc.wustl.edu[% ref_seq_dir %]" style="text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view reference directory &gt;</a>
+                                                  </td>
+												</tr>
+
 
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">

@@ -13,7 +13,7 @@ use CGI;
 use IO::String;
 use Template;
 use Data::Dumper;
-use POSIX; 
+use POSIX;
 
 my $base_template_path = __PACKAGE__->_base_path_for_templates;
 
@@ -39,7 +39,7 @@ class Genome::Model::ReferenceAlignment::Report::Summary {
 };
 
 # TODO: move up into base class
-sub _base_path_for_templates 
+sub _base_path_for_templates
 {
     my $module = __PACKAGE__;
     $module =~ s/::/\//g;
@@ -51,7 +51,7 @@ sub _base_path_for_templates
     return $module_path;
 }
 
-sub _add_to_report_xml 
+sub _add_to_report_xml
 {
     my $self = shift;
     my $template = shift;
@@ -63,7 +63,7 @@ sub _add_to_report_xml
 
     #my $data = { description => $self->generate_report_brief };
     my $data = {};
-    
+
     for my $template (@templates) {
         my $content = $self->generate_report_detail($template);
         my ($format,$key);
@@ -73,7 +73,7 @@ sub _add_to_report_xml
         }
         else {
             $format = 'text';
-            $key = 'txt'; 
+            $key = 'txt';
         }
         if (exists $data->{$key}) {
             die "Multiple templates return content in $format format.  This is not supported, sadly."
@@ -84,25 +84,25 @@ sub _add_to_report_xml
     return $data;
 }
 
-sub generate_report_brief 
+sub generate_report_brief
 {
     my $self=shift;
     return "Link to summary report will go here";
 }
 
-sub generate_report_detail 
+sub generate_report_detail
 {
     my $self = shift;
     my $template = shift;
     unless ($template) {
         die "please specify which template to use for this report!";
     }
-    
+
     my $model = $self->model;
     my $build = $self->build;
-    
+
     $self->status_message("Running report summary for build ".$build->id.".");
-    my $body = IO::String->new();  
+    my $body = IO::String->new();
     die $! unless $body;
     my $summary = $self->get_summary_information($template);
     $body->print($summary);
@@ -110,7 +110,7 @@ sub generate_report_detail
     return join('', $body->getlines);
 }
 
-sub get_summary_information 
+sub get_summary_information
 {
     my $self = shift;
     my $template = shift;
@@ -118,16 +118,14 @@ sub get_summary_information
         die "please specify which template to use for this report!";
     }
 
-$DB::single = 1;   
-
     my $build = $self->build;
     my $model = $build->model;
-    
+
     my $content;
- 
-    ################################# 
+
+    #################################
     my $na = "Not Available";
-    
+
     my $haploid_coverage=$na;
 
     my $total_unfiltered_snps=$na;
@@ -135,7 +133,7 @@ $DB::single = 1;
 
     my $unfiltered_dbsnp_positions=$na;
     my $filtered_dbsnp_positions=$na;
-    
+
     my $unfiltered_dbsnp_concordance=$na;
     my $filtered_dbsnp_concordance=$na;
 
@@ -163,52 +161,51 @@ $DB::single = 1;
 
     ##match goldsnp report
     $fh = new IO::File($goldsnp_report_file, "r");
-    
+
     my $unfiltered_diploid_het_coverage_actual_number = $na;
-    my $unfiltered_diploid_het_coverage_percent = $na;  
+    my $unfiltered_diploid_het_coverage_percent = $na;
     my $unfiltered_diploid_hom_coverage_actual_number = $na;
-    my $unfiltered_diploid_hom_coverage_percent = $na;         
-    
-    my $filtered_diploid_het_coverage_actual_number = $na;     
-    my $filtered_diploid_het_coverage_percent = $na;           
-    my $filtered_diploid_hom_coverage_actual_number = $na;     
-    my $filtered_diploid_hom_coverage_percent = $na;           
-    
+    my $unfiltered_diploid_hom_coverage_percent = $na;
+
+    my $filtered_diploid_het_coverage_actual_number = $na;
+    my $filtered_diploid_het_coverage_percent = $na;
+    my $filtered_diploid_hom_coverage_actual_number = $na;
+    my $filtered_diploid_hom_coverage_percent = $na;
+
     if ($fh) {
         my $goldsnp_contents = get_contents($fh);
         my ($unfiltered,$filtered) = ($goldsnp_contents =~ /Gold Concordance for Unfiltered SNVs(.*)Gold Concordance for SNPFilter SNVs(.*)/ms);
-        
+
         my ($unfiltered_het, $unfiltered_hom) = ($unfiltered    =~ /(heterozygous calls.*)Partially.*?(homozygous calls.*)Partially/ms);
         my ($filtered_het,   $filtered_hom)   = ($filtered      =~ /(heterozygous calls.*)Partially.*?(homozygous calls.*)Partially/ms);
 
-$DB::single = 1;
 
         if ($unfiltered_het =~ m|heterozygous - 1 allele variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
             #print ("Found match. >$1, $2<\n");
-            $unfiltered_diploid_het_coverage_actual_number=$1; 
-            $unfiltered_diploid_het_coverage_percent=$2; 
+            $unfiltered_diploid_het_coverage_actual_number=$1;
+            $unfiltered_diploid_het_coverage_percent=$2;
         }
-        
+
         if ($filtered_het =~ m|heterozygous - 1 allele variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
             #print ("Found match. >$1, $2, $3<\n");
-            $filtered_diploid_het_coverage_actual_number=$1; 
-            $filtered_diploid_het_coverage_percent=$2; 
+            $filtered_diploid_het_coverage_actual_number=$1;
+            $filtered_diploid_het_coverage_percent=$2;
         }
-        
+
         if ($unfiltered_hom =~ m|homozygous variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
             #print ("Found match. >$1, $2, $3<\n");
-            $unfiltered_diploid_hom_coverage_actual_number=$1; 
-            $unfiltered_diploid_hom_coverage_percent=$2; 
+            $unfiltered_diploid_hom_coverage_actual_number=$1;
+            $unfiltered_diploid_hom_coverage_percent=$2;
         }
-        
+
         if ($filtered_hom =~ m|homozygous variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
             #print ("Found match. >$1, $2, $3<\n");
-            $filtered_diploid_hom_coverage_actual_number=$1; 
-            $filtered_diploid_hom_coverage_percent=$2; 
+            $filtered_diploid_hom_coverage_actual_number=$1;
+            $filtered_diploid_hom_coverage_percent=$2;
         }
         $fh->close;
     }
-    
+
     ##match dbsnp report
     $fh = new IO::File($dbsnp_report_file, "r");
     if ($fh) {
@@ -230,7 +227,7 @@ $DB::single = 1;
             $unfiltered_dbsnp_concordance = $1;
         } else {
             $self->status_message("Could not extract unfiltered concordance from $dbsnp_report_file!");
-        }        
+        }
 
         # get filtered data
         if ( $dbsnp_contents =~ /^\s*total filtered SNPs: (\S+)$/m) {
@@ -252,11 +249,11 @@ $DB::single = 1;
             $self->status_message("filtered_dbsnp_concordance: $filtered_dbsnp_concordance");
         } else {
             $self->status_message("Could not extract filtered concordance from $dbsnp_report_file!");
-        }        
-        
+        }
+
         # if ( $dbsnp_contents =~ m|There were (\S+) positions in dbSNP for a concordance of (\S+)%|g ) {
         #     $unfiltered_dbsnp_concordance=$2;
-        # } 
+        # }
         # if ( $dbsnp_contents =~ m|There were (\S+) positions in dbSNP for a concordance of (\S+)%|g ) {
         #     $filtered_dbsnp_concordance=$2;
         # }
@@ -265,7 +262,7 @@ $DB::single = 1;
 
     ##the number of instrument data assignments is:
     my @inst_data_ass = $build->instrument_data_assignments;
-    
+
     my @inst_data;
     eval { @inst_data = $build->instrument_data };
     @inst_data = Genome::InstrumentData->get(id => [ map { $_->instrument_data_id } @inst_data_ass ]);
@@ -273,9 +270,9 @@ $DB::single = 1;
     my $total_bases = 0;
     for (@inst_data_ass) {
         my $inst_data = Genome::InstrumentData->get($_->instrument_data_id);
-        
+
         if ($inst_data->can('total_bases_read'))  {
-            $total_bases += $inst_data->total_bases_read($_->filter_desc);    
+            $total_bases += $inst_data->total_bases_read($_->filter_desc);
         }
     }
     my $total_gigabases = sprintf("%.03f", $total_bases/1000000000);
@@ -291,7 +288,7 @@ $DB::single = 1;
             $self->warning_message("Failed to get input base counts after trimq2");
         }
     }
-    
+
     # summarize the instrument data
     my %library_lane_counts;
 
@@ -313,15 +310,15 @@ $DB::single = 1;
         $sample = $model->subject;
     } elsif ($model->subject_type eq 'library_name') {
         my $library = $model->subject;
-        if($library) { 
+        if($library) {
             $sample = $library->sample;
         }
     }
-    
+
     my ($extraction_label,$tissue_label,$extraction_name,$extraction_id,$extraction_desc,$extraction_type) = ($na,$na,$na,$na,$na,$na);
     if ($sample) {
         $tissue_label = $sample->tissue_label || $na;
-        
+
         $extraction_label = $sample->extraction_label || $na;
         $extraction_name  = $sample->name || $na;
         $extraction_id    = $sample->id || $na;
@@ -331,7 +328,7 @@ $DB::single = 1;
     else {
         $self->warning_message("No sample found for " . $model->subject_name);
     }
-    
+
     # patient variables
     my $source;
     my ($source_upn,$source_desc) = ($na,$na);
@@ -345,6 +342,25 @@ $DB::single = 1;
         $self->warning_message("No source individual/population found for sample!");
     }
 
+    my $taxon;
+    my $taxon_id;
+    my $species = $na;
+    my $species_latin_name = $na;
+    $taxon = $sample->taxon;
+
+    if ($taxon) {
+        $taxon_id = $taxon->taxon_id;
+        $species = $taxon->species_name;
+        $species_latin_name = $taxon->species_latin_name;
+    } else {
+        $self->warming_message("No taxon found for sample!");
+    }
+
+    my $ref_seq_name = $self->model->reference_build->name;
+    my $ref_seq_dir = $self->model->reference_build->data_directory;
+
+    $DB::single = 1;
+
     # processing profile
     my $pp = $model->processing_profile;
 
@@ -352,7 +368,7 @@ $DB::single = 1;
     my $unfiltered_snp_calls = `wc -l @unfiltered_files | tail -n 1`;
     $unfiltered_snp_calls =~ s/\s\S+\s*$//i;
     $unfiltered_snp_calls =~ s/\s//g;
-    
+
     my @filtered_files = $build->_snv_file_filtered;
     my $filtered_snp_calls = `wc -l @filtered_files | tail -n 1`;
     $filtered_snp_calls =~ s/\s\S+\s*$//i;
@@ -360,8 +376,8 @@ $DB::single = 1;
 
     my $snp_chromosomes = $self->model->reference_build->description;
     my $snp_caller = $self->model->genotyper_name;
-    
-    my @stat = stat($filtered_files[-1]); 
+
+    my @stat = stat($filtered_files[-1]);
     my $time = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime($stat[10]));
 
     my $model_name = $model->name;
@@ -371,32 +387,39 @@ $DB::single = 1;
     my @vars = (
         model_id                                      => $model->id,
         model_name                                    => $model->name,
-        
+
         patient_upn                                   => $source_upn,
-        
+
+        taxon_id                                      => $taxon_id,
+        species                                       => $species,
+        species_latin_name                            => $species_latin_name,
+
+        ref_seq_name                                  => $ref_seq_name,
+        ref_seq_dir                                   => $ref_seq_dir,
+
         tissue_sample_label                           => $tissue_label,
-        
+
         extraction_label                              => $extraction_label,
         extraction_type                               => $extraction_type,
         extraction_name                               => $extraction_name,
         extraction_id                                 => $extraction_id,
         extraction_desc                               => $extraction_desc,
-        
+
         processing_profile_type                       => $pp->type_name,
         processing_profile_name                       => $pp->name,
         processing_profile_id                         => $pp->id,
-        
+
         build_id                                      => $build->id,
         build_date                                    => $time,
         data_directory                                => $data_directory,
-        
+
         total_number_of_lanes                         => scalar(@inst_data_ass),
         total_gigabases                               => $total_gigabases,
         libraries                                     => [ sort keys %library_lane_counts ],
         lanes_by_library                              => \%library_lane_counts,
-        
+
         haploid_coverage                              => $haploid_coverage,
-        
+
         unfiltered_snp_calls                          => commify($unfiltered_snp_calls),
         filtered_snp_calls                            => commify($filtered_snp_calls),
 
@@ -408,15 +431,15 @@ $DB::single = 1;
 
         unfiltered_dnsbp_positions                    => commify($unfiltered_dbsnp_positions),
         filtered_dnsbp_positions                      => commify($filtered_dbsnp_positions),
-        
+
         unfiltered_dbsnp_concordance                  => $unfiltered_dbsnp_concordance,
         filtered_dbsnp_concordance                    => $filtered_dbsnp_concordance,
-        
+
         unfiltered_diploid_het_coverage_actual_number => commify($unfiltered_diploid_het_coverage_actual_number),
         unfiltered_diploid_het_coverage_percent       => $unfiltered_diploid_het_coverage_percent,
         unfiltered_diploid_hom_coverage_actual_number => commify($unfiltered_diploid_hom_coverage_actual_number),
         unfiltered_diploid_hom_coverage_percent       => $unfiltered_diploid_hom_coverage_percent,
-        
+
         filtered_diploid_het_coverage_actual_number   => commify($filtered_diploid_het_coverage_actual_number),
         filtered_diploid_het_coverage_percent         => $filtered_diploid_het_coverage_percent,
         filtered_diploid_hom_coverage_actual_number   => commify($filtered_diploid_hom_coverage_actual_number),
@@ -424,9 +447,9 @@ $DB::single = 1;
     );
 
     #$self->status_message("Summary Report values: ".Dumper(\@vars) );
-    
+
     ##################################
-      
+
     my $tt = Template->new({
          ABSOLUTE => 1,
         #INCLUDE_PATH => '/gscuser/jpeck/svn/pm2/Genome/Model/ReferenceAlignment/Report',
