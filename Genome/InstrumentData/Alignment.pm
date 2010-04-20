@@ -846,6 +846,11 @@ sub qualify_trimq2 {
         $self->error_message("unrecognized trimq2 trimmer name: $trimmer_name");
         return;
     }
+
+    # assume that all imported instrument data is ok for trimming
+    if (ref($self->instrument_data) =~ m/Genome::InstrumentData::Imported/) {
+        return 1;
+    }
     
     my $ver = $self->instrument_data->analysis_software_version;
     unless ($ver) {
