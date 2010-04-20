@@ -155,7 +155,7 @@ sub execute {
 
 
     # Step 2: get samtools and write to a file
-	my $system_tmp = 0;
+	my $system_tmp = 1;
 
     # tumor
     my ($tmp_in, $tmp_outL, $tmp_outR);
@@ -229,7 +229,7 @@ if($isAnnotation == 1){
     readTable($dbh, $table, $chr, $neighbor1_left, $neighbor2_right, $seg_file, $seg_geneTableQuery);  
 
     # repeat mask
-    $table = "chr1_rmsk";
+    $table = "chr".$chr."_rmsk";
 
     if($system_tmp == 1){        
 	    my $rep = File::Temp->new();
