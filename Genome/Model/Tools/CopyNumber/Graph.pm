@@ -41,13 +41,18 @@ class Genome::Model::Tools::CopyNumber::Graph {
     tumor_bam_file => {
         is => 'String',
         is_optional => 1,
-        doc => 'The bam file of the tumor. Should include the whole path. One of tumor and normal bam file should be specified.',
+        doc => 'The bam file of the tumor. Should include the whole path. One of tumor and normal bam file and array data should be specified.',
     },	
     normal_bam_file => {
         is => 'String',
         is_optional => 1,
-        doc => 'The bam file of the normal. Should include the whole path. One of tumor and normal bam file should be specified.',
+        doc => 'The bam file of the normal. Should include the whole path. One of tumor and normal bam file and array data should be specified.',
     },	
+    array_file => {
+    	is => 'String',
+    	is_optional => 1,
+    	doc => 'Array data. Should include the whole path.',
+    },
     flanking_region => {
         is => 'Integer',
         is_optional => 1,
@@ -59,7 +64,13 @@ class Genome::Model::Tools::CopyNumber::Graph {
         is_optional => 1,
         default => 1000,
         doc => 'How many sites to count the read each time. By default it is set to be 1000.',
-    },	    
+    },	  
+    plot_array => {
+    	type => 'Boolean',
+    	is_optional => 1,
+    	default =>  1,
+    	doc => 'Whether to plot array data.',
+    },
     plot_title => {
     	type => 'Boolean',
     	is_optional => 1,
@@ -96,13 +107,19 @@ sub execute {
     my $end = $self->end;
     my $bam_tumor = $self->tumor_bam_file;
     my $bam_normal = $self->normal_bam_file;
+    my $array = $self->array_file;
     my $multiple_neighbor = $self->flanking_region;
     my $slide = $self->sliding_window;
+    my $isArray = $self->plot_array;
 	my $isTitle = $self->plot_title;
 	my $isSubTitle = $self->plot_subtitle;
 	
+	if($isArray == 1 && $array eq ""){
+		die("Array data is to be plotted but no array file given.\n");
+	}
+	
     # Process options.
-    die("Input not fulfill the conditions. Please type 'gmt copy-number graph.pm -h' to see the manual.\n") unless (-e "$bam_tumor" || -e "$bam_tumor");
+    die("Input not fulfill the conditions. Please type 'gmt copy-number graph.pm -h' to see the manual.\n") unless (-e "$bam_tumor" || -e "$bam_tumor" || $isArray == 1);
 
     #test architecture to make sure bam-window program can run (req. 64-bit)
     unless (`uname -a` =~ /x86_64/) {
@@ -131,6 +148,7 @@ sub execute {
 
 
     # Step 2: get samtools and write to a file
+	my $system_tmp = 0;
 
     # tumor
     my ($tmp_in, $tmp_outL, $tmp_outR);
@@ -139,15 +157,19 @@ sub execute {
     my $tmp_outR_name = "NA";
 
     if(-e "$bam_tumor"){
-        $tmp_in = File::Temp->new();
-        $tmp_in_name = $tmp_in -> filename;
-        $tmp_outL = File::Temp->new();
-        $tmp_outL_name = $tmp_outL -> filename;
-        $tmp_outR = File::Temp->new();
-        $tmp_outR_name = $tmp_outR -> filename;
-        #$tmp_in_name = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_in.csv";
-        #$tmp_outL_name = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outL.csv";
-        #$tmp_outR_name = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outR.csv";
+        if($system_tmp == 1){        
+	        $tmp_in = File::Temp->new();
+    	    $tmp_in_name = $tmp_in -> filename;
+    	    $tmp_outL = File::Temp->new();
+    	    $tmp_outL_name = $tmp_outL -> filename;
+    	    $tmp_outR = File::Temp->new();
+    	    $tmp_outR_name = $tmp_outR -> filename;
+        }
+        else{
+    	    $tmp_in_name = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_in.csv";
+    	    $tmp_outL_name = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outL.csv";
+    	    $tmp_outR_name = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outR.csv";
+        }
                 
         write_read_count($bam_tumor, $chr, $start, $end, $tmp_in_name, $slide);
         write_read_count($bam_tumor, $chr, $neighbor1_left, $neighbor1_right, $tmp_outL_name, $slide);  
@@ -161,15 +183,19 @@ sub execute {
     my $tmp_outR_name_n = "NA";
 
     if(-e "$bam_normal"){
-        $tmp_in_n = File::Temp->new();
-        $tmp_in_name_n = $tmp_in_n -> filename;
-        $tmp_outL_n = File::Temp->new();
-        $tmp_outL_name_n = $tmp_outL_n -> filename;
-        $tmp_outR_n = File::Temp->new();
-        $tmp_outR_name_n = $tmp_outR_n -> filename;
-        #$tmp_in_name_n = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_inN.csv";
-        #$tmp_outL_name_n = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outLN.csv";
-        #$tmp_outR_name_n = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outRN.csv";        
+        if($system_tmp == 1){    
+	        $tmp_in_n = File::Temp->new();
+	        $tmp_in_name_n = $tmp_in_n -> filename;
+	        $tmp_outL_n = File::Temp->new();
+	        $tmp_outL_name_n = $tmp_outL_n -> filename;
+	        $tmp_outR_n = File::Temp->new();
+	        $tmp_outR_name_n = $tmp_outR_n -> filename;
+	    }
+        else{
+        	$tmp_in_name_n = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_inN.csv";
+        	$tmp_outL_name_n = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outLN.csv";
+        	$tmp_outR_name_n = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outRN.csv";        
+        }
 
         write_read_count($bam_normal, $chr, $start, $end, $tmp_in_name_n, $slide);
         write_read_count($bam_normal, $chr, $neighbor1_left, $neighbor1_right, $tmp_outL_name_n, $slide);
@@ -179,34 +205,54 @@ sub execute {
     # read the table and write to file temp_seg.csv
     # read annotation (segmentatl duplication), ready for printing in R
     $table = "genomicSuperDups";
-    my $seg = File::Temp->new();
-    my $seg_file = $seg -> filename;
+    my $seg_file;
+    if($system_tmp == 1){    
+	    my $seg = File::Temp->new();
+    	$seg_file = $seg -> filename;    	
+    }
+    else{
+    	$seg_file = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_seg.csv";    
+    }
     my $seg_geneTableQuery = "SELECT chrom, chromStart, chromEnd FROM $table";
-    #my $seg_file = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_seg.csv";    
     readTable($dbh, $table, $chr, $neighbor1_left, $neighbor2_right, $seg_file, $seg_geneTableQuery);  
 
     # repeat mask
     $table = "chr1_rmsk";
-    my $rep = File::Temp->new();
-    my $rep_file = $rep -> filename;
+    my $rep_file;
+    if($system_tmp == 1){        
+	    my $rep = File::Temp->new();
+	    $rep_file = $rep -> filename;
+	}
+	else{
+	    $rep_file = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_rep.csv";    
+	}
 	my $rep_geneTableQuery = "SELECT genoName, genoStart, genoEnd FROM $table";
-    #my $rep_file = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_rep.csv";    
     readTable($dbh, $table, $chr, $neighbor1_left, $neighbor2_right, $rep_file, $rep_geneTableQuery); 
 
     # dgv
     $table = "dgv";
-    my $dgv = File::Temp->new();
-    my $dgv_file = $dgv -> filename;
+    my $dgv_file;
+	if($system_tmp == 1){    
+	    my $dgv = File::Temp->new();
+	    $dgv_file = $dgv -> filename;
+	}
+	else{
+		$dgv_file = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_dgv.csv";        
+	}
     my $dgv_geneTableQuery = "SELECT chrom, chromStart, chromEnd FROM $table";    
-    #my $dgv_file = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_dgv.csv";        
     readTable($dbh, $table, $chr, $neighbor1_left, $neighbor2_right, $dgv_file, $dgv_geneTableQuery);
 
     # gene
     $table = "knownGene";
-    my $gene = File::Temp->new();
-    my $gene_file = $gene -> filename;
+    my $gene_file;
+    if($system_tmp == 1){
+	    my $gene = File::Temp->new();
+    	$gene_file = $gene -> filename;
+    }
+    else{
+    	$gene_file = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_gene.csv";        
+    }
     my $gene_geneTableQuery = "SELECT chrom, txStart, txEnd FROM $table";
-    #my $gene_file = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_gene.csv";        
     readTable($dbh, $table, $chr, $neighbor1_left, $neighbor2_right, $gene_file, $gene_geneTableQuery);
 
     # disconnect DBI
@@ -219,12 +265,17 @@ sub execute {
     else{
         $picName = $outputFigDir . "/". $name . "_chr" . $chr . "_" . $start .  "_readcount_annotation.png";
     }
-    my $tmp_ = File::Temp->new();
-    my $tmp_name = $tmp_ -> filename;
-    #my $tmp_name = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_name.csv";
+    my $tmp_name;
+    if($system_tmp == 1){
+	    my $tmp_ = File::Temp->new();
+    	$tmp_name = $tmp_ -> filename;
+    }
+    else{
+    	$tmp_name = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_name.csv";
+    }
 
     open FILE_name, ">", $tmp_name or die $!;
-    print FILE_name "$tmp_in_name\t$tmp_outL_name\t$tmp_outR_name\t$tmp_in_name_n\t$tmp_outL_name_n\t$tmp_outR_name_n\n$name\t$picName\tchr$chr\t$isTitle\t$isSubTitle\t\n$start\t$end\t$neighbor1_left\t$neighbor1_right\t$neighbor2_left\t$neighbor2_right\n$seg_file\t$rep_file\t$dgv_file\t$gene_file\t\t\n";
+    print FILE_name "$tmp_in_name\t$tmp_outL_name\t$tmp_outR_name\t$tmp_in_name_n\t$tmp_outL_name_n\t$tmp_outR_name_n\n$name\t$picName\t$chr\t$isTitle\t$isSubTitle\t\n$start\t$end\t$neighbor1_left\t$neighbor1_right\t$neighbor2_left\t$neighbor2_right\n$seg_file\t$rep_file\t$dgv_file\t$gene_file\t$array\t$isArray\n";
     close FILE_name;
     # Step 3: Read the coverage depth using R 
     my $command = qq{readcount(name="$tmp_name")};
