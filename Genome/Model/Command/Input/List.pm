@@ -16,7 +16,7 @@ class Genome::Model::Command::Input::List {
             is_constant => 1,
         },
         show => {
-            default_value => 'model_id,model_name,name,value',
+            default_value => 'model_id,model_name,name,value_id',
         },
     ],
 };
