@@ -83,6 +83,12 @@ class Genome::Model::Tools::CopyNumber::Graph {
     	default => 1,
     	doc => 'Whether to have a sub title.',
     },
+    plot_annotation => {
+    	type => 'Boolean',
+    	is_optional => 1,
+    	default => 1,
+    	doc => 'Whether to have the annotation.',
+    },
     ]
 };
 
@@ -91,7 +97,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    "This script will call samtools and count the read per sliding-window for the region expanded to the flanking region, and draw the graph with the annotations (segmental duplication, repeat mask, dgv, gene) on the bottom. You can draw the normal and tumor separately, or you can draw both as long as their bam files are given."
+    "This script will call samtools and count the read per sliding-window for the region expanded to the flanking region, and draw the graph with the annotations (segmental duplication, repeat mask, dgv, gene) on the bottom. You can draw the normal and tumor separately, or you can draw both as long as their bam files are given. If the array data is given, it will draw either only the array data or both the tumor and array data or both the tumor and normal data."
 }
 
 sub execute {
@@ -113,6 +119,7 @@ sub execute {
     my $isArray = $self->plot_array;
 	my $isTitle = $self->plot_title;
 	my $isSubTitle = $self->plot_subtitle;
+	my $isAnnotation = $self->plot_annotation;
 	
 	if($isArray == 1 && $array eq ""){
 		die("Array data is to be plotted but no array file given.\n");
@@ -201,11 +208,16 @@ sub execute {
         write_read_count($bam_normal, $chr, $neighbor1_left, $neighbor1_right, $tmp_outL_name_n, $slide);
         write_read_count($bam_normal, $chr, $neighbor2_left, $neighbor2_right, $tmp_outR_name_n, $slide);
     }
-
+    
+    my $seg_file = "NA";
+    my $rep_file = "NA";
+    my $dgv_file = "NA";
+    my $gene_file = "NA";    
+if($isAnnotation == 1){
     # read the table and write to file temp_seg.csv
     # read annotation (segmentatl duplication), ready for printing in R
     $table = "genomicSuperDups";
-    my $seg_file;
+
     if($system_tmp == 1){    
 	    my $seg = File::Temp->new();
     	$seg_file = $seg -> filename;    	
@@ -218,7 +230,7 @@ sub execute {
 
     # repeat mask
     $table = "chr1_rmsk";
-    my $rep_file;
+
     if($system_tmp == 1){        
 	    my $rep = File::Temp->new();
 	    $rep_file = $rep -> filename;
@@ -231,7 +243,7 @@ sub execute {
 
     # dgv
     $table = "dgv";
-    my $dgv_file;
+
 	if($system_tmp == 1){    
 	    my $dgv = File::Temp->new();
 	    $dgv_file = $dgv -> filename;
@@ -244,7 +256,7 @@ sub execute {
 
     # gene
     $table = "knownGene";
-    my $gene_file;
+
     if($system_tmp == 1){
 	    my $gene = File::Temp->new();
     	$gene_file = $gene -> filename;
@@ -254,7 +266,7 @@ sub execute {
     }
     my $gene_geneTableQuery = "SELECT chrom, txStart, txEnd FROM $table";
     readTable($dbh, $table, $chr, $neighbor1_left, $neighbor2_right, $gene_file, $gene_geneTableQuery);
-
+}
     # disconnect DBI
     $dbh->disconnect();
 
@@ -275,7 +287,7 @@ sub execute {
     }
 
     open FILE_name, ">", $tmp_name or die $!;
-    print FILE_name "$tmp_in_name\t$tmp_outL_name\t$tmp_outR_name\t$tmp_in_name_n\t$tmp_outL_name_n\t$tmp_outR_name_n\n$name\t$picName\t$chr\t$isTitle\t$isSubTitle\t\n$start\t$end\t$neighbor1_left\t$neighbor1_right\t$neighbor2_left\t$neighbor2_right\n$seg_file\t$rep_file\t$dgv_file\t$gene_file\t$array\t$isArray\n";
+    print FILE_name "$tmp_in_name\t$tmp_outL_name\t$tmp_outR_name\t$tmp_in_name_n\t$tmp_outL_name_n\t$tmp_outR_name_n\n$name\t$picName\t$chr\t$isTitle\t$isSubTitle\t$isAnnotation\n$start\t$end\t$neighbor1_left\t$neighbor1_right\t$neighbor2_left\t$neighbor2_right\n$seg_file\t$rep_file\t$dgv_file\t$gene_file\t$array\t$isArray\n";
     close FILE_name;
     # Step 3: Read the coverage depth using R 
     my $command = qq{readcount(name="$tmp_name")};
