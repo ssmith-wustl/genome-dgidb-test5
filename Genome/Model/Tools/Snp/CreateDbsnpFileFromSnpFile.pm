@@ -70,12 +70,16 @@ sub execute {
     #print output header
     print $output_fh "chromosome\tstart\tend\tdbSNP-129\n";
 
-    # TODO: let the caller do this from any model    
-    my $model = Genome::Model->get(name => "NCBI-human");
-    my $build = $model->build_by_version("36");
-    unless ($build) {
-        die "failed to find build 36 Hs?";
-    }
+    # TODO: let the caller do this from any model   
+    # Due to the new import-ref-seq implementaion, NCBI-human
+    # model/build got changed, *.dat will not exist anymore. So use
+    # hard-coded path fro now. But this module is not needed anyway.
+
+    #my $model = Genome::Model->get(name => "NCBI-human");
+    #my $build = $model->build_by_version("36");
+    #unless ($build) {
+    #   die "failed to find build 36 Hs?";
+    #}
 
     my $cur_chr = 0;
     my $dbsnp_fh;
@@ -92,7 +96,8 @@ sub execute {
             # switch to a new chromosome, and open its file
             my $alter_chr = $chr;
             ($alter_chr) = $chr =~ /^chr(\S+)$/ if $chr =~ /^chr/;
-            $path = $build->data_directory . "/annotation/dbsnp-variations/$alter_chr.dat";
+            #$path = $build->data_directory . "/annotation/dbsnp-variations/$alter_chr.dat";
+            $path = "/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/annotation/dbsnp-variations/$alter_chr.dat";
             $dbsnp_fh = IO::File->new($path);
             
             ###jpeck added if/then after per chromosome to whole genome pipeline conversion in April 2009
