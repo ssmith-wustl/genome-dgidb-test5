@@ -89,7 +89,12 @@ readcount <- function(name=NULL){
 	# read the plotting options
 	isTitle <- as.character(name$V4[2])
 	isSubTitle <-as.character(name$V5[2])
+	isAnnotation <- as.character(name$V6[2])
 
+	# prepare for the normalization even if no annotation
+	seg_ <- as.numeric();
+	
+if(isAnnotation == 1){
 	# number of the annotations
 	num <- 4
 
@@ -97,7 +102,7 @@ readcount <- function(name=NULL){
 	############### segmental Duplication
 	tmp <- name$V1[4]
 	Read_Annotation(tmp) -> seg
-	seg_ <- as.numeric();
+
 	if(class(seg)!='try-error' && length(seg$Start)>=1 ){
 		for(i in 1:length(seg$Start)){
 			seg_ = c(seg_, seg$Start[i]:seg$End[i]);
@@ -115,7 +120,7 @@ readcount <- function(name=NULL){
 	############### gene
 	tmp <- name$V4[4]
 	Read_Annotation(tmp) -> gene
-
+}
 	############################# normalize data by segmental duplication ###################
 	# tumor:
 	if(tumor == 1){
@@ -174,10 +179,18 @@ readcount <- function(name=NULL){
 
 	png(picName)
 
-	if(tumor == 1 && normal == 1 || tumor == 1 && isArray == 1)
+	if((tumor == 1 && normal == 1 || tumor == 1 && isArray == 1) && isAnnotation == 1){
 	    nf <- layout(matrix(c(1:4),2,2,byrow=TRUE), c(2,2), c(3,1), TRUE)
-	else
+	}
+	if((tumor == 1 && normal == 1 || tumor == 1 && isArray == 1) && isAnnotation != 1){
+  		nf <- layout(matrix(c(1:2),nrow=1,ncol=2,byrow=TRUE), c(2,2), c(4), TRUE)
+  	}
+  	if(!(tumor == 1 && normal == 1 || tumor == 1 && isArray == 1) && isAnnotation == 1){
   		nf <- layout(matrix(c(1:2),nrow=2,ncol=1,byrow=TRUE), c(4), c(3,1), TRUE)
+  	}
+  	if(!(tumor == 1 && normal == 1 || tumor == 1 && isArray == 1) && isAnnotation != 1){
+  		nf <- layout(matrix(c(1:1)), c(4), TRUE)
+  	}
 	layout.show(nf)
 
 
@@ -218,6 +231,7 @@ readcount <- function(name=NULL){
 
 	lwd_ = 7
 
+if(isAnnotation == 1){
 	if(tumor == 1){
 		if(normal == 1 || isArray == 1)
 			par(mar=c(0,5,0,0))
@@ -272,7 +286,7 @@ readcount <- function(name=NULL){
 		################# dgv
 		Draw_Annotation(dgv, aNeighbor_axisR, num-3, "grey", "black", 1, lwd_, "Database of Genomic Variants", num-3.4, 0.8)
 	}
-
+}
 	# main title
 	if(is.na(data_name))
 		main_title <- chromosome
