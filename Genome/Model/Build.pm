@@ -369,55 +369,59 @@ sub calculate_estimated_kb_usage {
 sub resolve_data_directory {
     my $self = shift;
     my $model = $self->model;
-
+    my $build_data_directory;
     my $model_data_directory = $model->data_directory;
-    if (defined($model_data_directory) && $model_data_directory !~ /\/gscmnt\/.*\/info\/(?:medseq\/)?.*/) {
-        # why should this ever fail?
-        warn "The model data directory \"$model_data_directory\" follows an unexpected pattern!";
-    }
+    my $model_path_is_abnormal = defined($model_data_directory) && $model_data_directory !~ /\/gscmnt\/.*\/info\/(?:medseq\/)?.*/;
 
-    my $allocation_path = 'model_data/' . $model->id . '/build'. $self->build_id;
-    my $kb_requested = $self->calculate_estimated_kb_usage;
-    unless ($kb_requested) {
-        warn "No disk allocation for this build.";
-        return;
-    }
-
-    if ($model_data_directory =~ /^\/tmp\//) {
-        # support legacy tests which do not pass-in a build data directory, and rely on an old
-        # side-effect of having an odd model directory to skip allocation
-        my $build_data_directory = $model_data_directory . '/build' . $self->id;
-        warn "Instead of allocating, putting the build subdir under the model subdir.  CHANGE ME TO PASS-IN THE BUILD DIRECTORY!!! $build_data_directory";
+    if($model->genome_model_id < 0 && $model_path_is_abnormal)
+    {
+        # The build is being created for an automated test; allocating for it would leave stray directories.
+        # Rather than relying on this if statement, tests should specify a build directory.
+        $build_data_directory = $model_data_directory . '/build' . $self->id;
+        warn "Please update this test to set build data_directory. (generated data_directory: \"$build_data_directory\")";
         unless (Genome::Utility::FileSystem->create_directory($build_data_directory)) {
             $self->error_message("Failed to create directory '$build_data_directory'");
             die $self->error_message;
         }
-        return $build_data_directory;
     }
-
-    my $disk_group_name = $model->processing_profile->_resolve_disk_group_name_for_build($self);
-    unless ($disk_group_name) {
-        die $self->error_message('Failed to resolve a disk group for a new build!');
-    }
-
-    my $disk_allocation = Genome::Disk::Allocation->allocate(disk_group_name => $disk_group_name,
-                                                             allocation_path => $allocation_path,
-                                                             kilobytes_requested => $kb_requested,
-                                                             owner_class_name => $self->class,
-                                                             owner_id => $self->id);
-    unless ($disk_allocation) {
-        die $self->error_message('Failed to get disk allocation');
-    }
-
-    my $build_data_directory = $disk_allocation->absolute_path;
-    Genome::Utility::FileSystem->validate_existing_directory($build_data_directory);
-
-    # TODO: we should stop having model directories and making build symlinks!!!
-    my $build_symlink = $model_data_directory . '/build' . $self->build_id;
-    unlink $build_symlink if -e $build_symlink;
-    unless (Genome::Utility::FileSystem->create_symlink($build_data_directory,$build_symlink)) {
-        $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
-        die $self->error_message;
+    else
+    {
+        if ($model_path_is_abnormal) {
+            # why should this ever fail?
+            warn "The model data directory \"$model_data_directory\" follows an unexpected pattern!";
+        }
+    
+        my $allocation_path = 'model_data/' . $model->id . '/build'. $self->build_id;
+        my $kb_requested = $self->calculate_estimated_kb_usage;
+        unless ($kb_requested) {
+            warn "No disk allocation for this build.";
+            return;
+        }
+    
+        my $disk_group_name = $model->processing_profile->_resolve_disk_group_name_for_build($self);
+        unless ($disk_group_name) {
+            die $self->error_message('Failed to resolve a disk group for a new build!');
+        }
+    
+        my $disk_allocation = Genome::Disk::Allocation->allocate(disk_group_name => $disk_group_name,
+                                                                 allocation_path => $allocation_path,
+                                                                 kilobytes_requested => $kb_requested,
+                                                                 owner_class_name => $self->class,
+                                                                 owner_id => $self->id);
+        unless ($disk_allocation) {
+            die $self->error_message('Failed to get disk allocation');
+        }
+    
+        $build_data_directory = $disk_allocation->absolute_path;
+        Genome::Utility::FileSystem->validate_existing_directory($build_data_directory);
+    
+        # TODO: we should stop having model directories and making build symlinks!!!
+        my $build_symlink = $model_data_directory . '/build' . $self->build_id;
+        unlink $build_symlink if -e $build_symlink;
+        unless (Genome::Utility::FileSystem->create_symlink($build_data_directory,$build_symlink)) {
+            $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
+            die $self->error_message;
+        }
     }
 
     return $build_data_directory;
