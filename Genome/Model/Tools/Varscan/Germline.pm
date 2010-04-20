@@ -87,31 +87,19 @@ sub execute {                               # replace with real execution logic.
 	{
 		## Prepare pileup commands ##
 		
-		my $normal_pileup = "samtools pileup -f $reference $bam_file";
+		my $normal_pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
 		
 		## Run VarScan ##
 
 		my $cmd = "";
 
 		## Call SNPs ##
-		$cmd = "bash -c \"$path_to_varscan pileup2snp <\($normal_pileup\) $varscan_params >$output_snp\"";
+		$cmd = "bash -c \"$path_to_varscan pileup2cns <\($normal_pileup\) --variants 1 $varscan_params >$output_snp.variants\"";
 		print "RUN: $cmd\n";
 		system($cmd);
 		
-		## Get length of SNP file ##
-		
-		my $snp_len = `cat $output_snp | wc -l`;
-		chomp($snp_len);
-		if(!$snp_len)
-		{
-			print "RE-RUN: $cmd\n";
-			system($cmd);			
-		}
-
-		## Call Indels ##
-		$cmd = "bash -c \"$path_to_varscan pileup2indel <\($normal_pileup\) $varscan_params >$output_indel\"";
-		print "RUN: $cmd\n";
-		system($cmd);
+		print "Parsing Variants into SNP/Indel files...\n";
+		parse_variants_file("$output_snp.variants", $output_snp, $output_indel);
 
 		## Filter Indels ##
 
@@ -136,6 +124,56 @@ sub execute {                               # replace with real execution logic.
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
+
+
+
+################################################################################################
+# Variants-to-SNPs-Indels
+#
+################################################################################################
+
+sub parse_variants_file
+{
+	(my $variants_file, my $output_snp, my $output_indel) = @_;
+	
+	open(SNPS, ">$output_snp") or die "Can't open outfile: $!\n";
+	open(INDELS, ">$output_indel") or die "Can't open outfile: $!\n";
+
+	my $input = new FileHandle ($variants_file);	
+	my $lineCounter = 0;
+
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+		
+		(my $chrom, my $position, my $ref, my $cns) = split(/\t/, $line);
+		if($lineCounter == 1)
+		{
+			## Print header to both files ##
+			
+			print SNPS "$line\n";
+			print INDELS "$line\n";
+		}
+		if(length($cns) > 1)
+		{
+			## Indel ##
+			print INDELS "$line\n";
+		}
+		else
+		{
+			## SNP ##
+			print SNPS "$line\n";
+		}
+	}
+	
+	close($input);
+
+	close(SNPS);
+	close(INDELS);
+
+}
 
 1;
 
