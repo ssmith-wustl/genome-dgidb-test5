@@ -12,6 +12,10 @@ readcount <- function(name=NULL){
 	inFile_n <- as.character(name$V4[1])
 	outFileL_n <- as.character(name$V5[1])
 	outFileR_n <- as.character(name$V6[1])
+	
+	# array data
+	arrayFile <- as.character(name$V5[4])
+	isArray <- as.character(name$V6[4])
 
 	# control the flow
 	tumor <- 1
@@ -47,12 +51,40 @@ readcount <- function(name=NULL){
 		aNeighborN_ <- aNeighborN$V3
 		aNeighbor_axisN <- aNeighborN$V2
 	}
+	
+	# array
+	a_axisR <- as.numeric()
+	aR_ <- as.numeric()
+	aNeighbor_axisR <- as.numeric()
+	aNeighborR_ <- as.numeric()
+	start <- as.numeric(as.character(name$V1[3]))
+	end <- as.numeric(as.character(name$V2[3]))
+	neighbor1_left <- as.numeric(as.character(name$V3[3]))
+	neighbor1_right <- as.numeric(as.character(name$V4[3]))
+	neighbor2_left <- as.numeric(as.character(name$V5[3]))
+	neighbor2_right <- as.numeric(as.character(name$V6[3]))
+	
+	if(isArray == 1){
+		load(arrayFile)
+		array_pos1 <- z$pos1
+		
+		mychr=as.character(name$V3[2]);
+		if (as.character(name$V3[2])=="X") {mychr=23};
+		if (as.character(name$V3[2])=="Y") {mychr=24};
+		
+		a_axisR <- z[z[,1]==mychr & z[,2]> start & z[,2]<end,]$pos1;
+		aR_=2*2^z[z[,1]==mychr & z[,2]> start & z[,2]<end,]$cn; 	
+		
+		aNeighbor_axisR <- z[z[,1]==mychr & (z[,2] > neighbor1_left & z[,2] < neighbor1_right | z[,2] > neighbor2_left & z[,2] < neighbor2_right),]$pos1;
+		aNeighborR_=2*2^z[z[,1]==mychr & (z[,2] > neighbor1_left & z[,2] < neighbor1_right | z[,2] > neighbor2_left & z[,2] < neighbor2_right),]$cn; 	
+			
+	}
 
 
 	# read the file to get the picture name, title and axis
 	data_name <- as.character(name$V1[2])
 	picName <- as.character(name$V2[2])
-	chromosome <- name$V3[2]
+	chromosome <- paste("chr", name$V3[2], sep="")
 	
 	# read the plotting options
 	isTitle <- as.character(name$V4[2])
@@ -103,6 +135,15 @@ readcount <- function(name=NULL){
 		aNeighborN_median <- 2
 	}
 	
+	# array:
+	if(isArray == 1){
+		normalization(aNeighbor_axisR, aNeighborR_, seg_) -> aNeighborR_median_old
+		aR_ <- 2*aR_/aNeighborR_median_old
+		aNeighborR_ <- 2*aNeighborR_/aNeighborR_median_old
+		aR_median <- median(aR_)
+		aNeighborR_median <- 2
+	}
+	
 	############################## not to consider those in annotation segmental duplication #######
 	#tumor
 	if(tumor == 1){
@@ -118,6 +159,13 @@ readcount <- function(name=NULL){
 		aNeighborN_Seg <- aNeighborN_[aNeighbor_axisN %in% seg_]
 		aNeighborN_Seg_axis <- aNeighbor_axisN[aNeighbor_axisN %in% seg_]
 	}
+	#array
+	if(isArray == 1){
+		aNeighborR_NoSeg <- aNeighborR_[! aNeighbor_axisR %in% seg_]
+		aNeighborR_NoSeg_axis <- aNeighbor_axisR[! aNeighbor_axisR %in% seg_]
+		aNeighborR_Seg <- aNeighborR_[aNeighbor_axisR %in% seg_]
+		aNeighborR_Seg_axis <- aNeighbor_axisR[aNeighbor_axisR %in% seg_]
+	}
 
 	############################### printing start here ################################################
 	cex_ <- 0.6
@@ -126,7 +174,7 @@ readcount <- function(name=NULL){
 
 	png(picName)
 
-	if(tumor == 1 && normal == 1)
+	if(tumor == 1 && normal == 1 || tumor == 1 && isArray == 1)
 	    nf <- layout(matrix(c(1:4),2,2,byrow=TRUE), c(2,2), c(3,1), TRUE)
 	else
   		nf <- layout(matrix(c(1:2),nrow=2,ncol=1,byrow=TRUE), c(4), c(3,1), TRUE)
@@ -136,12 +184,14 @@ readcount <- function(name=NULL){
 
 
 	if(tumor == 1){
-		if(normal == 1)
+		if(normal == 1 || isArray == 1)
 			par(mar=c(3,5,5,0))
 		else
 			par(mar=c(3,5,5,3))
 			
-		Printing_Graph(a_, a_axis, "red", a_median, "green", aNeighbor_NoSeg, aNeighbor_NoSeg_axis, "blue", aNeighbor_Seg, aNeighbor_Seg_axis, "grey", aNeighbor_median, "black", "Tumor", pch_, cex_, lwd_, isSubTitle)
+		x_limit <- c(min(c(a_axis,aNeighbor_axis)),max(c(a_axis,aNeighbor_axis)))
+		y_limit <- c(0,4)
+		Printing_Graph(a_, a_axis, "red", a_median, "green", aNeighbor_NoSeg, aNeighbor_NoSeg_axis, "blue", aNeighbor_Seg, aNeighbor_Seg_axis, "grey", aNeighbor_median, "black", "Tumor", pch_, cex_, lwd_, isSubTitle, x_limit, y_limit)
 	}
 
 	if(normal == 1){
@@ -149,14 +199,27 @@ readcount <- function(name=NULL){
 			par(mar=c(3,2,5,3))
 		else
 			par(mar=c(3,5,5,3))
-
-		Printing_Graph(aN_, a_axisN, "red", aN_median, "green", aNeighborN_NoSeg, aNeighborN_NoSeg_axis, "blue", aNeighborN_Seg, aNeighborN_Seg_axis, "grey", aNeighborN_median, "black", "Normal", pch_, cex_, lwd_, isSubTitle)
+			
+		x_limit <- c(min(c(a_axisN,aNeighbor_axisN)),max(c(a_axisN,aNeighbor_axisN)))
+		y_limit <- c(0,4)
+		Printing_Graph(aN_, a_axisN, "red", aN_median, "green", aNeighborN_NoSeg, aNeighborN_NoSeg_axis, "blue", aNeighborN_Seg, aNeighborN_Seg_axis, "grey", aNeighborN_median, "black", "Normal", pch_, cex_, lwd_, isSubTitle, x_limit, y_limit)
 	}
+	
+	if(isArray == 1){
+		if(tumor ==1 )
+			par(mar=c(3,2,5,3))
+		else
+			par(mar=c(3,5,5,3))
+
+		x_limit <- c(min(c(a_axisR,aNeighbor_axisR)),max(c(a_axisR,aNeighbor_axisR)))
+		y_limit <- c(0,4)
+		Printing_Graph(aR_, a_axisR, "red", aR_median, "green", aNeighborR_NoSeg, aNeighborR_NoSeg_axis, "blue", aNeighborR_Seg, aNeighborR_Seg_axis, "grey", aNeighborR_median, "black", "Array", pch_, cex_, lwd_, isSubTitle, x_limit, y_limit)
+	}	
 
 	lwd_ = 7
 
 	if(tumor == 1){
-		if(normal == 1)
+		if(normal == 1 || isArray == 1)
 			par(mar=c(0,5,0,0))
 		else
 			par(mar=c(0,5,0,3))
@@ -190,6 +253,24 @@ readcount <- function(name=NULL){
 
 		################# dgv
 		Draw_Annotation(dgv, aNeighbor_axis, num-3, "grey", "black", 1, lwd_, "Database of Genomic Variants", num-3.4, 0.8)
+	}
+	
+	if(isArray == 1){
+		if(tumor == 1)
+			par(mar=c(0,2,0,3))
+		else
+			par(mar=c(0,5,0,3))
+		##################### segmental Duplication
+		Draw_Annotation_First(seg, aNeighbor_axisR, num, "grey", "purple", 1, lwd_, "Segmental Duplication", num-0.4, 0.8)
+		
+		################# repeat Mask
+		Draw_Annotation(rep, aNeighbor_axisR, num-1, "grey", "green", 1, lwd_, "Repeat Mask", num-1.4, 0.8)
+		
+		################# gene
+		Draw_Annotation(gene, aNeighbor_axisR, num-2, "grey", "yellow", 1, lwd_, "Gene", num-2.4, 0.8)
+
+		################# dgv
+		Draw_Annotation(dgv, aNeighbor_axisR, num-3, "grey", "black", 1, lwd_, "Database of Genomic Variants", num-3.4, 0.8)
 	}
 
 	# main title
@@ -226,9 +307,9 @@ normalization = function(x, y, annot)
 	median_new_y
 }
 
-Printing_Graph = function(y,x,col_data,med,col_med,y1,x1,col_data1,y2,x2,col_data2,med_,col_med_,title_,pch_,cex_,lwd_,isSubTitle)
+Printing_Graph = function(y,x,col_data,med,col_med,y1,x1,col_data1,y2,x2,col_data2,med_,col_med_,title_,pch_,cex_,lwd_,isSubTitle,x_limit,y_limit)
 {
-	plot(y ~ x, col = col_data, xlim = c(min(c(x1,x2)),max(c(x1,x2))), ylim = c(0,4), xlab = "Base", ylab = "Copy Number", pch = pch_, cex = cex_)
+	plot(y ~ x, col = col_data, xlim = x_limit, ylim = y_limit, xlab = "Base", ylab = "Copy Number", pch = pch_, cex = cex_)
 	points(y1~x1, col=col_data1, pch=pch_, cex=cex_)
 	points(y2~x2, col=col_data2, pch=pch_, cex=cex_)
 	
