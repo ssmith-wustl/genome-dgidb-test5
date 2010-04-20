@@ -81,7 +81,14 @@ sub parse_header {
 	
 	my ($fisrt_coord,$second_coord) = $line =~ /Coords[\s]+(\d+)\S(\d+)/;
 	my ($chromosome) = $line =~ /Chr\:([\S]+)\,/;
-	
+	my $ncbi_build_no = $line =~ /\s+NCBI Build\s(\d+)/;
+	my ($gene) = $line =~ /GeneName:(\S+),/;
+	my ($gene_id) = $line =~ /GeneID:(\S+),/;
+
+	unless ($gene) { $gene = "-"; }
+	unless ($gene_id) { ($gene_id) = $line =~ /Target (\S+)\,/; }
+	unless ($gene_id) { $gene_id = "-"; }
+
 	if ($line=~ /Ori[\s]+\(\+\)/) {
 	    $orientation="plus";
 	    $genomic_coord = $fisrt_coord - 1;
@@ -101,7 +108,8 @@ sub parse_header {
 	    $self->error_message("couldn't parse the information from the refseq fasta file header");
 	    return;
 	}
-	
+
+	unless ($ncbi_build_no) {$ncbi_build_no = "-";}
 	$refseq_header->{orientation}=$orientation;
 	$refseq_header->{genomic_coord}=$genomic_coord;
 	$refseq_header->{chromosome}=$chromosome;
@@ -109,7 +117,11 @@ sub parse_header {
 	$refseq_header->{start}=$fisrt_coord;
 	$refseq_header->{stop}=$second_coord;
 	$refseq_header->{name}=$name;
-	
+	$refseq_header->{ncbi_build_no}=$ncbi_build_no;
+	$refseq_header->{gene}=$gene;
+	$refseq_header->{gene_id}=$gene_id;
+
+
 	if ($refseq_header) {
 	    close REF;
 	    return $refseq_header;
