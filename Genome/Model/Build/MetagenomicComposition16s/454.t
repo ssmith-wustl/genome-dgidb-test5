@@ -102,7 +102,7 @@ for my $amplicon_set ( @amplicon_sets ) {
     my $classification_file = $build->classification_file_for_set_name($set_name);
     is(
         $classification_file,
-        $classification_dir.'/'.$file_base.'.'.$set_name.'.rdp',
+        $classification_dir.'/'.$file_base.'.'.$set_name.'.'.$build->classifier,
         "classification file name for set name: $set_name"
     );
     # amplicons

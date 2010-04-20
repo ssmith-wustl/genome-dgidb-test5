@@ -121,7 +121,7 @@ is_deeply(
 my $classification_file = $build->classification_file_for_set_name( $amplicon_set->name );
 is(
     $classification_file, 
-    $classification_dir.'/'.$file_base_name.'.rdp',
+    $classification_dir.'/'.$file_base_name.'.'.$build->classifier,
     'classification file name for set name \''.$amplicon_set->name.'\' is correct');
 is(
     $classification_file, 

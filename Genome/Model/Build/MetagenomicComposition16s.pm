@@ -416,12 +416,15 @@ sub classify_amplicons {
 
     my $classifier;
     my %classifier_params = $self->processing_profile->classifier_params_as_hash;
-    if ( $self->classifier eq 'rdp' ) {
-        #require Genome::Utility::MetagenomicClassifier::Rdp;
+    if ( $self->classifier eq 'rdp2-1' ) {
         $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new(%classifier_params);
+    }
+    elsif ( $self->classifier eq 'rdp2-2' ) {
+        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x2->new(%classifier_params);
     }
     else {
         $self->error_message("Invalid classifier (".$self->classifier.") for ".$self->description);
+        return;
     }
 
     my $processed = 0;

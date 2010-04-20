@@ -334,7 +334,7 @@ my %TYPE_NAME_PARAMS = (
         assembler => 'phred_phrap',
         assembler_params => '-vector_bound 0 -trim_qual 0',
         trimmer => 'finishing',
-        classifier => 'rdp',
+        classifier => 'rdp2-1',
     }, 
     'metagenomic composition 16s 454' => {
         class => 'Genome::ProcessingProfile::MetagenomicComposition16s',
@@ -343,7 +343,7 @@ my %TYPE_NAME_PARAMS = (
         amplicon_size => 200,
         sequencing_center => 'gsc',
         sequencing_platform => '454',
-        classifier => 'rdp',
+        classifier => 'rdp2-1',
     }, 
     'reference alignment solexa' => {
         class => 'Genome::ProcessingProfile::ReferenceAlignment::Solexa',
