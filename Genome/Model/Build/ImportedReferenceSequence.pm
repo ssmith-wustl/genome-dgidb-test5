@@ -39,53 +39,18 @@ class Genome::Model::Build::ImportedReferenceSequence {
     ]
 };
 
-sub resolve_data_directory {
-    my $self = shift @_;
-    # Make allocation unless the user wants to put the data in specific place and manage it himself
-    if(defined($self->data_directory))
+sub calculate_estimated_kb_usage {
+    my $self = shift;
+    my $fastaSize = -s $self->fasta_file;
+    if(defined($fastaSize) && $fastaSize > 0)
     {
-        my $outDir = $self->data_directory;
-        if(!-d $outDir)
-        {
-            make_path($outDir);
-            if(!-d $outDir)
-            {
-                $self->error_message("\"$outDir\" does not exist and could not be created.");
-                die $self->error_message;
-            }
-        }
+        $fastaSize = POSIX::ceil($fastaSize * 3 / 1024);
     }
     else
     {
-        my $subDir = $self->model->name;
-        if(defined($self->version))
-        {
-            $subDir .= '-' . $self->version;
-        }
-        $subDir .= '-' . $self->build_id;
-        my $allocationPath = 'reference_sequences/' . $subDir;
-        my $fastaSize = -s $self->fasta_file;
-        if(defined($fastaSize) && $fastaSize > 0)
-        {
-            $fastaSize = POSIX::ceil($fastaSize / 1024);
-        }
-        else
-        {
-            # The fasta file couldn't be statted, and if it is really not accessible, the build will fail during execution.
-            # For now, guess that the fasta file is 1GiB.
-            $fastaSize = 1048576;
-        }
-        # Space required is estimated to be three times the size of the reference sequence fasta
-        my $allocation = Genome::Disk::Allocation->allocate('allocation_path' => $allocationPath,
-                                                            'disk_group_name' => 'info_apipe_ref',
-                                                            'kilobytes_requested' => (3 * $fastaSize),
-                                                            'owner_class_name' => 'Genome::Model::Build::ImportedReferenceSequence',
-                                                            'owner_id' => $self->build_id);
-        # Note: Genome::Disk::Allocation->allocate does error checking and will cause the calling program to exit with an
-        # error allocation fails, so it has succeeded if execution reaches this point
-        $self->data_directory($allocation->absolute_path);
+        $fastaSize = $self->SUPER::calculate_estimated_kb_usage();
     }
-    return $self->data_directory;
+    return $fastaSize;
 }
 
 sub sequence {

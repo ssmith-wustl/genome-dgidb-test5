@@ -5,6 +5,9 @@ use warnings;
 
 use Genome;
 
+# Define a custom exception that may be caught specifically so that any other type of exception falls through.
+use Exception::Class('ImportedReferenceSequenceException');
+
 class Genome::Model::Command::Define::ImportedReferenceSequence {
     is => 'Genome::Model::Command::Define',
     has => [
@@ -80,8 +83,6 @@ sub help_synopsis {
 sub help_detail {
     return "Prepares a fasta file to be used as a new refseq in processing profiles.";
 }
-
-use Exception::Class('ImportedReferenceSequenceException');
 
 sub onErr
 {
