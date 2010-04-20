@@ -14,7 +14,7 @@ class Genome::Model::Tools::Recurrence::Gene{
     somatic_anno_file => {
         is  => 'String',
         is_input  => 1,
-        doc => 'The list of tumor SNPs in maq-like format (chromosome position reference variant)... often the somatic sniper output from the somatic pipeline',
+        doc => 'The list of annotated tumor SNPs',
     },
     output_file => {
         is => 'Text',
@@ -26,7 +26,7 @@ class Genome::Model::Tools::Recurrence::Gene{
         is => 'Text',
         is_input => 1,
         is_optional => 1,
-        doc => "the model id that produced these variants. prevents finding yourself.",
+        doc => "the model id that produced these variants. prevents finding yourself as a recurrence.",
     },
     skip_if_output_present => {
         is => 'Boolean',
