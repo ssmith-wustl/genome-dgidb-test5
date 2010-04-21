@@ -8,6 +8,13 @@ use Genome;
 class Genome::View::SearchResult::Html {
     is => 'UR::Object::View::Default::Html',
     is_abstract => 1,
+    has => [
+        solr_doc => {
+            is => 'WebService::Solr::Document',
+            doc => 'The Solr document that triggered the desire to create this view',
+            is_optional => 1,
+        }
+    ],
     has_constant => [
         perspective => 'search-result',
     ],
