@@ -28,9 +28,9 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
 });
           ]]>
         </script>
-
-
-        <style type="text/css">
+        <link rel="shortcut icon" href="/static/images/gc_favicon.png" type="image/png" />
+        <link rel="stylesheet" href="/static/css/master.css" type="text/css" media="screen" />
+        <style type="text/css" media="screen">
           <![CDATA[
                    body {
                    padding: 0;
