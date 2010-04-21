@@ -340,7 +340,8 @@ sub master_execute {
     my @jobs;
 
     my $log_pathname = $self->log_pathname();
-    open(my $log, $log_pathname);
+$DB::single = 1;
+    open(my $log_fh, ">$log_pathname");
     print "log is $log_pathname\n";
 
     while ($n > 0) {
@@ -348,17 +349,57 @@ sub master_execute {
         my ($job_id, $min, $max) = $self->submit_worker_job($partition, $num_lines_in_file);
         push @jobs, $job_id;
 
-        print $log "$partition\t$job_id\t$min\t$max\n";
+        $self->log($log_fh, $min, $max);
 
         $partition++;  # parition starts at 1
         $n -= $self->lines_per_job(); 
     }
 
-    close($log);
+    close($log_fh);
 
     my $job_id = $self->submit_master_job(\@jobs);
     print "master job_id: $job_id\n";
     return 1;
+}
+
+
+sub log {
+
+    my ($self, $fh, $min, $max) = @_;
+
+    my ($first_pos, $last_pos) = $self->get_positions($min, $max);
+    my $log_msg = sprintf("%s\t%s\t%s\t%s\t%s\n", $self->worker_id(), $min, $max, $first_pos, $last_pos);
+    print $fh $log_msg;
+
+    return 1;
+}
+
+
+sub get_positions {
+
+    my ($self, $first, $last) = @_;
+
+    open(my $fh, $self->regions_file);
+    my $i = 0;
+    my ($chr_pos1, $chr_pos2);
+
+    while(my $line = <$fh>) {
+     
+        if ($first == $i) {
+            my ($chr, $pos) = split(/\t/,$line);
+            $chr_pos1 = join(':', $chr, $pos);
+        } elsif($last == $i) {
+            my ($chr, $pos) = split(/\t/,$line);
+            $chr_pos2 = join(':', $chr, $pos);
+            last;
+        }
+
+        $i++;
+    }
+
+    close($fh);
+
+    return ($chr_pos1, $chr_pos2);
 }
 
 
@@ -385,7 +426,7 @@ sub submit_worker_job {
         $max = $num_lines_in_file
     }
 
-    my $cmd = join(' ', 'bsub -u jlolofie@genome.wustl.edu -g /jlolofie/realign -q short -J realign_worker',
+    my $cmd = join(' ', 'bsub -u jlolofie@genome.wustl.edu -g /jlolofie/realign -q long -J realign_worker',
                         "gmt realign",
                         '--bam ' . $self->bam(),
                         '--regions-file ' . $self->regions_file(),
