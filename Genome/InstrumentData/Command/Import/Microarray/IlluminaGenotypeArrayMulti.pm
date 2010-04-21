@@ -93,7 +93,6 @@ sub process_imported_files {
     my $genotype;
     my $illumina_manifest;
     my $forward_strand_report;
-    my $sample_map;
 
     if(defined($self->exclude_common_names) and not defined($self->include_common_names)) {
         %excluded_names = map { $_ => 1} split( ',', $self->exclude_common_names);
@@ -111,148 +110,62 @@ sub process_imported_files {
     }
 
     my $path = $self->original_data_path;
-    opendir(DIR,$path);
-    my @files = readdir(DIR);
 
-    #read through the files in the provided source dir, 
-    # looking for the sample mapping and the forwardread file.
-    for my $file (@files) {
-        if(-d "$path/$file") {
-            next;
-        } elsif (-b "$path/$file") {
-            next;
-        } else {
-            my $fh = new IO::File "$path/$file","r";
-            unless(defined($fh)) {
-                print "could not open ".$file.". Skipping this file.\n";
-                next;
-            }
-            my $count = 0;
-
-            #test to see if files for illumina genotype array are present
-            my $match;
-            while ($count < 10) {
-                my $line = $fh->getline; 
-                unless(defined($line)) {
-                    last;
-                }
-                if ($line =~ /Data/) {
-                    $match = $&;
-                    last;
-                }
-                if ($line =~ /Index,Name,ID/) {
-                    $match = $&;
-                    last;
-                }
-                $count++;
-            }
-            $fh->close;
-            if (defined($match)) {
-                if ($match eq "Index,Name,ID") {
-                    $sample_map = $file;
-                    #last;
-                } elsif ($match eq "Data") {
-                    $genotype = $file;
-                }
-            }
-
-            if (defined($genotype) and defined($sample_map)) {
-                last;
-            }
+    my @files = glob( $path."/*" );
+    
+    for (@files) {
+        if ($_ =~ /FinalReport/) {
+            $genotype = $_;
+            last;
         }
     }
 
+    print "genotype = ".$genotype."\n";
+    my $sample_map= "$path/Sample_Map.csv";
+    print "sample map = ".$sample_map."\n";
 
     my $sample_map_fh;
-    unless($sample_map_fh = new IO::File "$path/$sample_map","r"){
-        $self->error_message("Could not open file ".$path."/".$sample_map);
+    unless($sample_map_fh = new IO::File $sample_map,"r"){
+        $self->error_message("Could not open file ".$sample_map);
         die $self->error_message;
     }
-    #my $throwaway = 
+
     $sample_map_fh->getline;
     my %names;
     my %normal;
     my %internal;
+    my %samples;
+    my %sample_names;
 
     #extract common_name from sample mapping
     while(my $line = $sample_map_fh->getline) {
-        my ($index, $common_name,$internal, @junk) = split ',', $line;
-        $common_name =~ s/(\s)//;
-        $common_name =~ s/(.)$//;
-        my $norm = $&;
-        if($norm eq "T") {
-            $norm = "tumor";
-        } elsif ($norm eq "N") {
-            $norm = "normal";
+        my ($index, $sample_name,$internal_name, @junk) = split ',', $line;
+        $sample_names{$internal_name} = $sample_name;
+        $internal{$sample_name} = $internal_name;
+        print $sample_name."\n";
+    }
+    
+    for(sort(keys(%sample_names))) {
+        my $local_sample = Genome::Sample->get( name => $sample_names{$_} );
+        unless($local_sample) {
+            $self->error_message("Could not locate sample by the name of $sample_names{$_}.");
+            die $self->error_message;
         }
-        $names{$internal}=$common_name;
-        $normal{$internal}=$norm;
+        $samples{$_} = $local_sample;
+        print "Found sample: ".$local_sample->name." to associate with barcode: ".$_."\n";
     }
 
-    my %samples;
 
     my $temp_dir = File::Temp::tempdir('Genome-InstrumentData-Commnd-Import-Microarray-Illumina-Multi-Sample-XXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1); 
 
-    for my $k (sort(keys(%names))) {
-        if(%excluded_names) {
-            next if $excluded_names{$names{$k}}; 
-        }
-        if(%included_names) {
-            next if not $included_names{$names{$k}};
-        }        
-        
-        my (@individual,@sample);
-        unless(@individual = Genome::Individual->get( common_name => $names{$k})) {
-            $self->error_message("Could not locate a Genome::Individual record for ".$names{$k});
-            die $self->error_message;
-        }
-        unless(@sample = Genome::Sample->get( source_id => $individual[0]->ORGANISM_ID,  common_name =>  $normal{$k})) {
-            $self->error_message("Could not locate a Genome::Sample record for ".$names{$k}." ".$normal{$k}."\n");
-            die $self->error_message;
-        }
-        unless(scalar(@individual) <= 1) {
-            print "More than one individual was found for the common_name of: $names{$k}\n\n";
-            for (@individual) {
-                print "individual having organism_id: ".$_->organism_id."\n";
-            }
-            print "\nIn order to proceed with this command, either remove all but one individual with the above common_name, or run the command excluding the common_name of : $names{$k}\n\n";
-            $self->error_message("More than one individual found, stopping import command.");
-            die $self->error_message;
-        }
-
-        unless(scalar(@sample) <= 1) {
-            print "More than one sample was found which relates to the organism_id: ".$individual[0]->ORGANISM_ID." \n\n";
-            for (@sample) {
-                print "sample having sample_id: ".$_->id."\n";
-            }
-            print "\nIn order to proceed with this command, either remove all but one sample with the above common_name, or run the command excluding the common_name of : $names{$k}\n\n";
-            $self->error_message("More than one individual found, stopping import command.");
-            die $self->error_message;
-        }
-        my $name = $sample[0]->name;
-        $samples{$k} = $sample[0];
-        $internal{$name}=$k;
-    }
-
-
     unless(Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls->execute(
-        genotype_file => "$path/$genotype",
+        genotype_file => $genotype,
         output_directory => "$temp_dir", 
         ucsc_array_file => $self->ucsc_array_file,)) {
             $self->error_message("Call to Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls failed");
             die $self->error_message;
     }
     print "finished creating genotypes.\n";   
-    #my @genotypes = grep { -e $_ } glob("$temp_dir/*genotype");
-
-    #my @genotypes = map { return $_.".genotype" } keys(%names);
-
-    #for (sort(@genotypes)) {
-    #    unless(-e $_) {
-    #        $self->error_message("Could not find expected output file ".$_."\n");
-    #        die $self->error_message;
-    #    }
-    #}
 
 
     #first_sample is being used to facilitate testing. Specifically, to avoid creating multiple test allocations.
@@ -353,6 +266,7 @@ sub process_imported_files {
     for (@model_ids) {
         print "\t\t".$_."\n";
     }
+
     return 1;
 }
 

@@ -17,7 +17,7 @@ use File::Find;
 
 my $sample_name = 'multiple'; 
 my $source_dir = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Microarray/test_files/multi'; 
-
+#my $source_dir = '/gscmnt/sata422/info/medseq/brc_wgs/snp_array/Data_Infinium1MOmni_BRC-samples-only_20100412';
 ok (-d $source_dir, "our example directory exists");
 
 my $tmp_dir = File::Temp::tempdir('Genome-InstrumentData-Command-Import-Microarray-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
