@@ -79,7 +79,12 @@ sub execute {
         $self->error_message("Tumor or normal input not found. Aborting\n");
         return;
     }
+    unless (`uname -a` =~ /x86_64/) {
+        $self->error_message("Must run on a 64 bit machine");
+        return;
+    }
 
+    
     my $tumorfh = IO::File->new($self->tumor_indel_file);
     my $normalfh = IO::File->new($self->normal_indel_file);
     my %normal_hash;
