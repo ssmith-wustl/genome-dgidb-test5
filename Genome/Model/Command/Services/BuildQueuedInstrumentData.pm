@@ -59,7 +59,6 @@ sub execute {
           my ($subject_name)              = $pse->added_param('subject_name');
           my ($sample_name)               = $pse->added_param('sample_name');
           my ($library_name)              = $pse->added_param('library_name');
-          my ($research_project_name)     = $pse->added_param('research_project_name');
           
           my @processing_profile_names    = $pse->added_param('processing_profile_name');
           
