@@ -82,6 +82,8 @@ sub execute {
     # reallocation PSE via confirm_scheduled_pse().
     UR::Context->commit();
     
+    $self->status_message('Committed and released lock');
+    
     unless ($rv) {
         $self->error_message('Failed to confirm pse '. $self->reallocator_id);
         return;

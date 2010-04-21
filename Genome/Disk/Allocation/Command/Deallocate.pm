@@ -80,7 +80,9 @@ sub execute {
     # Commit here to free up a DB lock we'll be holding if we executed the 
     # deallocation PSE via confirm_scheduled_pse().  
     UR::Context->commit();
-        
+
+    $self->status_message('Committed and released lock');
+
     unless ($rv) {
         $self->error_message('Failed to confirm pse '. $self->deallocator_id);
         return;

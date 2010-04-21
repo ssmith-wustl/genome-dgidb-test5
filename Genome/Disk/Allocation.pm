@@ -231,6 +231,11 @@ sub monitor_allocate_command {
                            undef $w;
                     });
                 }
+                if ($_[0] =~ /Committed and released lock/) {
+                    $self->status_message('Allocation lock released at ' . UR::Time->now);
+                    undef $w;
+                    undef $ow;
+                }
             }
         },
         '$$' => \$pid

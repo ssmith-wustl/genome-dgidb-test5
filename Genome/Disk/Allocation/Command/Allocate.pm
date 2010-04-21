@@ -159,6 +159,8 @@ sub execute {
     # mount below when we check / create the directory. 
     UR::Context->commit();
 
+    $self->status_message('Committed and released lock');
+
     unless ($rv) {
         $self->error_message('Failed to confirm pse '. $self->allocator_id);
         return;
