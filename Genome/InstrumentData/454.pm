@@ -80,6 +80,29 @@ EOS
         total_reads         => { column_name => "NUM_READS" },
         is_paired_end       => { column_name => "PAIRED_END" },
         index_sequence      => { },
+
+        # stolen from Genome::InstrumentData::Solexa
+  
+        # basic relationship to the "source" of the lane
+        library         => { is => 'Genome::Library', id_by => ['library_id'] },
+        library_id      => { is => 'Number', },
+
+        # these are indirect via library, but must be set directly for lanes missing library info
+        sample              => { is => 'Genome::Sample', id_by => ['sample_id'] },
+        sample_id           => { is => 'Number', },
+
+        sample_source       => { is => 'Genome::SampleSource', via => 'sample', to => 'source' },
+        sample_source_name  => { via => 'sample_source', to => 'name' },
+
+        # indirect via the sample source, but we let the sample manage that
+        # since we sometimes don't know the source, it also tracks taxon directly
+        taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
+        species_name        => { via => 'taxon' },
+        target_set         => {
+            is => 'Genome::Capture::Set',
+            calculate_from => 'target_region_set_name',
+            calculate => q|Genome::Capture::Set->get(name => $target_region_set_name)|,
+        },
     ],
 };
 
