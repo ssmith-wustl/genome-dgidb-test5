@@ -36,21 +36,4 @@ class Genome::Individual::View::Solr::Xml {
     ]
 };
 
-
-sub _generate_title_field_data {
-    my $self = shift;
-    my $subject = $self->subject;
-    
-    return $subject->common_name || $self->SUPER::_generate_title_field_data($subject);
-}
-
-sub _generate_content_field_data {
-    my $self = shift;
-    my $subject = $self->subject;
-    
-    my $content = join(' ', $subject->common_name, $subject->name, ($subject->gender || ''));
-    
-    return $content;
-}
-
 1;
