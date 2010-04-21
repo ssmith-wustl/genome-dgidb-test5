@@ -8,6 +8,8 @@ use warnings;
 
 use Genome;
 
+use Regexp::Common;
+
 class Genome::ProcessingProfile::Command::Create {
     is => 'Command',
     is_abstract => 1,
@@ -20,7 +22,7 @@ class Genome::ProcessingProfile::Command::Create {
         based_on => {
             is => 'Text',
             len => '255',
-            doc => 'The (optional) name or ID of another profile which is used to specify default values for this new one.',
+            doc => "The name or ID of another profile which is used to specify default values for this new one. To qualify a the based on profile must have params, and at least one must be different. Use --param-name='UNDEF' to indicate that a param that is defined for the based on profile should not be for the new profile.",
             is_optional => 1,
         },
         supersedes => {
@@ -103,11 +105,11 @@ sub create {
     if (my $based_on = $self->based_on) {
         my $target_class = $self->_target_class;
         my $other_profile;
-        if ($based_on =~ /\D/) {
-            $other_profile = $target_class->get(name => $based_on);
+        if ($based_on =~ /^$RE{num}{int}$/) { # id
+            $other_profile = $target_class->get($based_on);
         }
         else {
-            $other_profile = $target_class->get($based_on);
+            $other_profile = $target_class->get(name => $based_on);
         }
         unless ($other_profile) {
             $self->error_message("Failed to find a processing profile of class $target_class with name or ID '$based_on'!");
@@ -115,7 +117,7 @@ sub create {
         }
         my @params = $other_profile->params;
         if (not @params) {
-            $self->error_message("When basing on another processing profile, you must specify some parameters which will be different!");
+            $self->error_message("In order for a processing profile to used as a 'based on', it must have params that can be copied and at least one of them changed. The based on processing profile (".$other_profile->id." ".$other_profile->name.") does not have any params, and cannot be used.");
             return;
         }
         for my $param (@params) {
@@ -123,6 +125,9 @@ sub create {
             my $specified_value = $self->$name;
             if (not defined $specified_value or not length $specified_value) {
                 $self->$name($param->value);
+            }
+            elsif ( $specified_value eq 'UNDEF' ) { # allow the undef-ing of params, cannot be done from the command line
+                $self->$name(undef);
             }
         }
     }
