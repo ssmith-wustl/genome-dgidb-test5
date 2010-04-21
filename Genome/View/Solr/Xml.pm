@@ -32,7 +32,7 @@ sub create {
     my $class = shift;
     my %params = @_;
     
-    if(defined $params{content_doc}) {
+    if(exists $params{content_doc}) {
         return $class->_reconstitute_from_doc($params{content_doc});
     } else {
         return $class->SUPER::create(%params);
