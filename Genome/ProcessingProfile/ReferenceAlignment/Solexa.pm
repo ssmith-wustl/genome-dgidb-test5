@@ -10,15 +10,28 @@ class Genome::ProcessingProfile::ReferenceAlignment::Solexa {
 };
 
 sub stages {
-    my @stages = qw/
-        alignment
-        deduplication
-        reference_coverage
-        variant_detection
-        transcript_annotation
-        generate_reports
-    /;
-    return @stages;
+    my $self = shift;
+$DB::single=1;
+    ## second parameter of each pair is the required flag
+    ## if it is 1 and no job events are made at start time
+    ## a warning will be printed to the user
+    my @stages = (
+        alignment             => 1,
+        deduplication         => 1,
+        reference_coverage    => 0,
+        variant_detection     => 1,
+        transcript_annotation => 0,
+        generate_reports      => 0,
+    );
+    
+    my @filtered_stages;
+    for (my $i=0; $i < $#stages; $i += 2) {
+        my $method = $stages[$i] . '_job_classes';
+        
+        push @filtered_stages, $stages[$i] if ($stages[$i+1] || $self->$method());
+    }
+    
+    return @filtered_stages;
 }
 
 sub alignment_job_classes {
