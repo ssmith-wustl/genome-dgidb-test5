@@ -56,15 +56,15 @@ my %properties = (
         is => 'Text',
         is_optional => 1,
     },
-    exclude_common_names => {
+    exclude_sample_names => {
         is => 'Text',
         is_optional => 1,
-        doc => 'Common names (names like "BRC1"), delineated by commas, to be excluded from the import command.\n',
+        doc => 'sample names (names like H_KU-16021-D801387), delineated by commas, to be excluded from the import command.',
     },
-    include_common_names => {
+    include_sample_names => {
         is => 'Text',
         is_optional => 1,
-        doc => 'Common names (names like "BRC1"), delineated by commas, to be included in the import command. All others will be excluded.\n',
+        doc => 'sample names (names like H_KU-16021-D801387), delineated by commas, to be included in the import command.',
     },
 );
     
@@ -97,14 +97,14 @@ sub process_imported_files {
     my $illumina_manifest;
     my $forward_strand_report;
 
-    if(defined($self->exclude_common_names) and not defined($self->include_common_names)) {
-        %excluded_names = map { $_ => 1} split( ',', $self->exclude_common_names);
+    if(defined($self->exclude_sample_names) and not defined($self->include_sample_names)) {
+        %excluded_names = map { $_ => 1} split( ',', $self->exclude_sample_names);
     }
-    if(defined($self->include_common_names) and not defined($self->exclude_common_names)) {
-        %included_names = map { $_ => 1} split( ',', $self->include_common_names);
+    if(defined($self->include_sample_names) and not defined($self->exclude_sample_names)) {
+        %included_names = map { $_ => 1} split( ',', $self->include_sample_names);
     }
-    if(defined($self->include_common_names) and defined($self->exclude_common_names)) {
-        $self->error_message("You may not simultaneously include and exclude common names.");
+    if(defined($self->include_sample_names) and defined($self->exclude_sample_names)) {
+        $self->error_message("You may not simultaneously include and exclude sample names.");
         die $self->error_message;
     }
 
@@ -140,12 +140,26 @@ sub process_imported_files {
     my %samples;
     my %sample_names;
 
-    #extract common_name from sample mapping
+    #extract sample_name from sample mapping, and include or exclude as directed by parameters
     while(my $line = $sample_map_fh->getline) {
         my ($index, $sample_name,$internal_name, @junk) = split ',', $line;
+        if (scalar(keys(%included_names))) {
+            unless($included_names{$sample_name}) {
+                next;
+            }
+        } elsif (scalar(keys(%excluded_names))) {
+            if ($excluded_names{$sample_name}) {
+                next;
+            }
+        }
+
         $sample_names{$internal_name} = $sample_name;
         $internal{$sample_name} = $internal_name;
         print $sample_name."\n";
+    }
+    unless(scalar(keys(%sample_names))) {
+        $self->error_message("Found no samples / excluded all samples");
+        die $self->error_message;
     }
     
     for(sort(keys(%sample_names))) {
@@ -177,7 +191,6 @@ sub process_imported_files {
 
     for my $k (sort(keys(%samples))) {
         my $sample_name = $samples{$k}->name;
-        #print "working on sample : ".$sample_name."\n";
         $self->status_message("working on sample ".$sample_name);
         my $num_samples = scalar(keys(%samples));
         print "working on sample ".$sample_name." # ".($count+1)." of $num_samples samples.\n";
