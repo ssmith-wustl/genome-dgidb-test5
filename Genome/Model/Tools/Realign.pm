@@ -334,13 +334,14 @@ sub master_execute {
     $self->make_output_dir();
 
     my $num_lines_in_file = $self->regions_file_line_count();
+
     my $n = $num_lines_in_file;
     my $partition = 1;
 
     my @jobs;
 
     my $log_pathname = $self->log_pathname();
-$DB::single = 1;
+
     open(my $log_fh, ">$log_pathname");
     print "log is $log_pathname\n";
 
@@ -349,7 +350,7 @@ $DB::single = 1;
         my ($job_id, $min, $max) = $self->submit_worker_job($partition, $num_lines_in_file);
         push @jobs, $job_id;
 
-        $self->log($log_fh, $min, $max);
+        $self->log($log_fh, $partition, $min, $max);
 
         $partition++;  # parition starts at 1
         $n -= $self->lines_per_job(); 
@@ -358,17 +359,16 @@ $DB::single = 1;
     close($log_fh);
 
     my $job_id = $self->submit_master_job(\@jobs);
-    print "master job_id: $job_id\n";
     return 1;
 }
 
 
 sub log {
 
-    my ($self, $fh, $min, $max) = @_;
+    my ($self, $fh, $partition, $min, $max) = @_;
 
     my ($first_pos, $last_pos) = $self->get_positions($min, $max);
-    my $log_msg = sprintf("%s\t%s\t%s\t%s\t%s\n", $self->worker_id(), $min, $max, $first_pos, $last_pos);
+    my $log_msg = sprintf("%s\t%s\t%s\t%s\t%s\n", $partition, $min, $max, $first_pos, $last_pos);
     print $fh $log_msg;
 
     return 1;
@@ -376,7 +376,10 @@ sub log {
 
 
 sub get_positions {
-
+    
+    # returns the range (genomic position) between the first and last line of the region file
+    #   for filtering out indels that should not be associated with a given minibam
+    
     my ($self, $first, $last) = @_;
 
     open(my $fh, $self->regions_file);
@@ -386,11 +389,11 @@ sub get_positions {
     while(my $line = <$fh>) {
      
         if ($first == $i) {
-            my ($chr, $pos) = split(/\t/,$line);
-            $chr_pos1 = join(':', $chr, $pos);
+            my ($chr, $start) = split(/\t/,$line);
+            $chr_pos1 = join(':', $chr, $start);
         } elsif($last == $i) {
-            my ($chr, $pos) = split(/\t/,$line);
-            $chr_pos2 = join(':', $chr, $pos);
+            my ($chr, $start, $end) = split(/\t/,$line);
+            $chr_pos2 = join(':', $chr, $end);
             last;
         }
 
@@ -490,7 +493,7 @@ sub regions_file_line_count {
     
     my $file = $self->regions_file();
 
-    my $n = 0;
+    my $n = -1; # first line is 0
     open(my $fh, $file) || die "ERROR: cant open $file... $!";
     while(<$fh>) {
         $n++;
