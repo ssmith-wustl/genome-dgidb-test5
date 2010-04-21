@@ -63,10 +63,10 @@ sub execute {
         return 1;
     }
 
-    my @intersect_files = ($self->variant_file, $self->datasource_file);
     my $command = Genome::Model::Tools::Snp::Intersect->create(
         f1_only_output => $self->output_file,
-        bare_args => \@intersect_files
+        file1 => $self->variant_file,
+        file2 => $self->datasource_file
     );
 
     my $return = $command->execute;

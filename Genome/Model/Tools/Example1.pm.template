@@ -16,6 +16,7 @@ class Genome::Model::Tools::Example1 {
     has_many => [                           # specify the command's multi-value properties (parameters) <--- 
         infiles  => { is => 'Text', doc => 'this is a list of values' },
         outfiles => { is => 'Text', doc => 'also a list of values' },
+        bare_args => { is => 'Text', shell_args_position => 1, is_optional => 1, doc => 'list of bare arguments' },
     ], 
 };
 
@@ -64,7 +65,7 @@ sub execute {                               # replace with real execution logic.
         . "\n" 
         . "    outfiles are :" . join(',',$self->outfiles) 
         . "\n" 
-        . "    bare args are: " . (defined $self->bare_args ? join(",",@{ $self->bare_args })  : '<not defined>') 
+        . "    bare args are: " . ($self->bare_args ? join(",",$self->bare_args)  : '<none>') 
         . "\n";     
     return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }

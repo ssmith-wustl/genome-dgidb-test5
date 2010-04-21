@@ -22,6 +22,7 @@ class Genome::Model::Command {
         model           => { is => 'Genome::Model', id_by => 'model_id' },
         model_id        => { is => 'Integer', doc => 'identifies the genome model by id' },
         model_name      => { is => 'String', via => 'model', to => 'name' },
+        name_pattern    => { is => 'String', shell_args_position => 99, is_optional => 1, doc => 'like expression to match against model name' }
     ],
     doc => "work with genome models",
 };
@@ -136,8 +137,8 @@ sub create {
     }
     
     unless ($class->get_class_object->property_meta_for_name("model")->is_optional or $self->model) {
-        if ($self->bare_args) {
-            my $pattern = $self->bare_args->[0];
+        if ($self->name_pattern) {
+            my $pattern = $self->name_pattern;
             if ($pattern) {
                 my @models = Genome::Model->get(name => { operator => "like", value => '%' . $pattern . '%' });
                 if (@models >1) {
@@ -156,7 +157,7 @@ sub create {
                 # continue, the developer may set this value later...
             }
         } else {
-            $self->error_message("No model or bare_args exists");
+            $self->error_message("No model or name_pattern exists");
             $self->delete;
             return;
         }

@@ -147,6 +147,7 @@ sub execute {                               # replace with real execution logic.
 				$tumor_freq = sprintf("%.2f", ($tumor_freq * 100));
 
 				print OUTFILE "$chrom\t$chr_start\t$chr_stop\t*\t$genotype\t$somatic_score\t$tumor_coverage\t$tumor_reads1\t$tumor_reads2\t$tumor_freq\%\t$normal_coverage\t$normal_reads1\t$normal_reads2\n";	
+# if the next line ever become uncommented, please change ARGV usage to a property with shell_args_position
 #				print OUTFILE "$line\n" if($ARGV[1]);
 #				print "$chr\t$pos\t$indel1\t$indel2\t$tumor_reads1\t$tumor_reads2\t$tumor_freq\n";
 			}

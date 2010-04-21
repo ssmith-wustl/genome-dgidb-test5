@@ -84,6 +84,11 @@ class Genome::Model::Command::Define {
         result_model_id => {
             is => 'Integer',
             is_output => 1,
+        },
+        bare_args => {
+            is_many => 1,
+            is_optional => 1,
+            shell_args_position => 99
         }
     ],
     schema_name => 'Main',
@@ -133,12 +138,12 @@ sub execute {
     my $self = shift;
 
     # Make sure there aren't any bare args
-    my $ref = $self->bare_args;
-    if ( $ref && (my @args = @$ref) ) {
+    if (my @args = $self->bare_args) {
         $self->error_message("extra arguments: @args");
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
+
 
     # Get processing profile id for the name given
     my $processing_profile_id = $self->_get_processing_profile_id_for_name

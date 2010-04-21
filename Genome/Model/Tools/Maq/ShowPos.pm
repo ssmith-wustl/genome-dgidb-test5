@@ -11,7 +11,8 @@ class Genome::Model::Tools::Maq::ShowPos {
     is => 'Genome::Model::Tools::Maq',
     has => [
         input    => { is => 'FilePath', is_optional => 1,
-                        doc => 'the name of the mapfile to view, defaults to STDIN' },
+                      shell_args_position => 1,
+                      doc => 'the name of the mapfile to view, defaults to STDIN' },
         position => { is => 'Number', is_optional => 1,
                         doc => 'show the reads at the specified position, defaults to parsing the map name' },
         refseq   => { is => 'Text', is_optional => 1,
@@ -42,16 +43,6 @@ sub execute {
     my $show_refseq     = $self->refseq;
     my $show_position   = $self->position;;
     my $sep             = $self->separator;
-
-    my $bare_args       = $self->bare_args;
-    if ($bare_args and @$bare_args) {
-        if (@$bare_args == 1) {
-            $self->input($bare_args->[0]);
-        }
-        else {
-            $self->error_message("Execution on multiple maps not currently supported!");
-        }
-    }
 
     my $input           = $self->input;
     my $output          = $self->output;

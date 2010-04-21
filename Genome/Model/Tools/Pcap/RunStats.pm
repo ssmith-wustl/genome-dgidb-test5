@@ -863,6 +863,8 @@ sub run_contig_stats
 
 #THIS IS NOT NECESSARY NOW BUT MAY NEED TO BE BROUGHT BACK
 
+# if this is brought back change ARGV to a property with shell_args_position
+
 #   my $fosmid_prefix = $ARGV[2];
 #    my $fosmid_prefix;
 

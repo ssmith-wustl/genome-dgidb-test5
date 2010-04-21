@@ -10,6 +10,21 @@ use File::Temp;
 
 class Genome::Model::Tools::Fasta::Diff(
     is => 'Command',
+    has => [  ## kdiff3 supports 3 files, so we only support 3 files.
+        file1 => {
+            shell_args_position => 1,
+            doc => 'fasta file to diff'
+        },
+        file2 => {
+            shell_args_position => 2,
+            doc => 'fasta file to diff'
+        },
+        file3 => {
+            is_optional => 1,
+            shell_args_position => 3,
+            doc => 'fasta file to diff'
+        }
+    ]
 );
 
 sub help_brief {
@@ -27,9 +42,9 @@ sub execute {
     my $self = shift;
 
 $DB::single = $DB::stopper;
-    my $fasta_files = $self->bare_args();
     my @flat_files;
-    foreach my $fasta_name ( @$fasta_files ) {
+    foreach my $fasta_name ( $self->file1, $self->file2, $self->file3 ) {
+        next unless $fasta_name;
         my $fasta = Bio::SeqIO->new(-file => $fasta_name, -format => 'fasta');
         unless ($fasta) {
             $self->error_message("Can't open fasta file $fasta_name");

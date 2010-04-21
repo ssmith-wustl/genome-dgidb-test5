@@ -39,6 +39,8 @@ EOS
 sub execute {      
     my $self = shift;
     print "NOT IMPLEMENTED.  FIX ME\n";   
+    ## when this module is fixed please change $ARGV[0] to use
+    #  a shell_args_position property instead.
     return;
     eval qq|
         use lib '/gsc/scripts/share/ensembl-45/ensembl/modules';

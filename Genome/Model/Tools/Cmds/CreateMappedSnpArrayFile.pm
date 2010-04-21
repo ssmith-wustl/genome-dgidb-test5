@@ -9,33 +9,33 @@ use Getopt::Long;
 class Genome::Model::Tools::Cmds::CreateMappedSnpArrayFile {
     is => 'Command',
     has => [
-    map_file => {
-        type => 'String',
-        is_optional => 0,
-        doc => 'map.csv file giving coordinates of log2 snp array data'
-    },
-    snp_array_files => {
-        type => 'Single-quoted String',
-        is_optional => 0,
-        doc => "A single-quoted string describing the input snp array data files, such as '/dir/*.log2' or '/dir/BRC*'.",
-    },
-    output_file => {
-        type => 'String',
-        is_optional => 0,
-        doc => 'merged snp array data for a group of input files with column headers "CHR POS filename1 filename2..."'
-    },
-    map_headers => {
-        type => 'Number',
-        is_optional => 1,
-        default => 1,
-        doc => 'number of header lines to skip in the map file [1]'
-    },
-    snp_array_headers => {
-        type => 'Number',
-        is_optional => 1,
-        default => 1,
-        doc => 'number of header lines to skip in snp array files [1]'
-    },
+        map_file => {
+            type => 'String',
+            is_optional => 0,
+            doc => 'map.csv file giving coordinates of log2 snp array data'
+        },
+        snp_array_files => {
+            type => 'Single-quoted String',
+            is_optional => 0,
+            doc => "A single-quoted string describing the input snp array data files, such as '/dir/*.log2' or '/dir/BRC*'.",
+        },
+        output_file => {
+            type => 'String',
+            is_optional => 0,
+            doc => 'merged snp array data for a group of input files with column headers "CHR POS filename1 filename2..."'
+        },
+        map_headers => {
+            type => 'Number',
+            is_optional => 1,
+            default => 1,
+            doc => 'number of header lines to skip in the map file [1]'
+        },
+        snp_array_headers => {
+            type => 'Number',
+            is_optional => 1,
+            default => 1,
+            doc => 'number of header lines to skip in snp array files [1]'
+        },
     ]
 };
 
@@ -60,12 +60,6 @@ sub execute {
     @infiles = sort @infiles; #so that files are always read & printed in same order
     
     #error checking:
-    
-    #check for not quoting --snp-array-files
-    if (scalar @{$self->bare_args}) {
-        my @bare_args = @{$self->bare_args};
-        die "\nDid you forget to quote the --snp-array-files? I found these extra arguments in your call:\n@bare_args\n";
-    }
 
     #check file lengths: first, find length of map file
     my $map_file_wc = `wc -l $mapfile`;

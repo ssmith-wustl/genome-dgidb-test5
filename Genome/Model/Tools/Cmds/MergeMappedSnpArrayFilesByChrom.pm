@@ -10,16 +10,16 @@ use List::Util "min","max";
 class Genome::Model::Tools::Cmds::MergeMappedSnpArrayFilesByChrom {
     is => 'Command',
     has => [
-    mapped_snp_array_files => {
-        type => 'Single-quoted String',
-        is_optional => 0,
-        doc => "A single-quoted string describing the list of snp array files with format [Chr \t Pos \t Sample_data], such as '/dir/*.merged'.  There may be more than one sample-data column in this file (see gmt cmds create-mapped-snp-array-file)."
-    },
-    output_file => {
-        type => 'String',
-        is_optional => 0,
-        doc => 'Filename of merged data from all input files for usage in CMDS analysis. 1 file is printed per chromosome with name "output_file.1", for example. This script runs through chromosomes 1-22, X, Y, and MT.'
-    },
+        mapped_snp_array_files => {
+            type => 'Single-quoted String',
+            is_optional => 0,
+            doc => "A single-quoted string describing the list of snp array files with format [Chr \t Pos \t Sample_data], such as '/dir/*.merged'.  There may be more than one sample-data column in this file (see gmt cmds create-mapped-snp-array-file)."
+        },
+        output_file => {
+            type => 'String',
+            is_optional => 0,
+            doc => 'Filename of merged data from all input files for usage in CMDS analysis. 1 file is printed per chromosome with name "output_file.1", for example. This script runs through chromosomes 1-22, X, Y, and MT.'
+        },
     ]
 };
 
@@ -41,13 +41,6 @@ sub execute {
     my @infiles = glob($self->mapped_snp_array_files);
     chomp @infiles;
     @infiles = sort @infiles; #so that the files are always read and printed in the same order
-
-    #make sure --mapped-snp-array-files were quoted
-    if (scalar @{$self->bare_args}) {
-        my @bare_args = @{$self->bare_args};
-        die "\nDid you forget to quote the --mapped-snp-array-files? I found these extra arguments in your call:\n@bare_args\n";
-    } 
-
 
     my %data;
     my %chr_to_index;

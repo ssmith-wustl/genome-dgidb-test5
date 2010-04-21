@@ -6,6 +6,9 @@ use warnings;
 class Genome::Model::Tools::Wiki::DocumentCommands {
     is => ['Genome::Model::Tools::Wiki'],
     has => [
+        base_modules => { is => 'String', is_optional => 1, is_many => 1, shell_args_position => 1,
+            default_value => ['Genome::Command','Workflow::Command','UR::Namespace::Command'],
+            doc => 'Generate documentation for each subclass of these modules' },            
         svn_revision => { is => 'Number', doc => 'SVN revision to link to for command', is_optional => 1 },
         _wiki_basepath => { is => 'Text', is_constant => 1, default => 'Analysis Pipeline/Command Reference/' },
         _svn_basepath => { is => 'Text', is_constant => 1, default => 'http://svn/scm/viewvc/gscpan/perl_modules/trunk/' },
@@ -38,15 +41,8 @@ sub help_detail {
 sub execute {
     my $self = shift;
     
-    my @base_modules = @{ $self->bare_args };
-    unless(@base_modules) {
-        @base_modules = (
-            'Genome::Command',  #includes Genome::Model::Tools
-            'Workflow::Command',
-            'UR::Namespace::Command'
-        ); 
-    }
-    
+    my @base_modules = $self->base_modules;
+        
     my @modules = map( $self->get_all_subclasses($_), @base_modules);
     push @modules, @base_modules; #Do base_modules last in case child is mistaken about name
     

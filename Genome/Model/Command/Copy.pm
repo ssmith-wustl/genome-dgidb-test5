@@ -32,6 +32,11 @@ class Genome::Model::Command::Copy {
             is_optional => 1,     
             default_value => 0,
             doc => 'Skip assigning instrument data'
+        },
+        model_overrides => {
+            is_many => 1,
+            is_optional => 1,
+            shell_args_position => 1,
         }
     ],
   schema_name => 'Main',
@@ -160,7 +165,7 @@ sub execute {
 
 sub _parse_overrides {
     my $self = shift;
-    my @bare_args = @{$self->bare_args};
+    my @bare_args = $self->model_overrides;
     
     my %overrides = ();
     

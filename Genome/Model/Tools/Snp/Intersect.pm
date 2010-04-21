@@ -15,7 +15,11 @@ use UR;
 
 class Genome::Model::Tools::Snp::Intersect {
     is => 'Command',
-    has => [ 
+    has => [
+        file1               => { is => 'FileName', shell_args_position => 1,
+                                    doc => 'first file to intersect' },
+        file2               => { is => 'FileName', shell_args_position => 2, is_optional => 1,
+                                    doc => 'second file to intersect' },
         intersect_output    => { is => 'FileName', is_optional => 1, 
                                     doc => 'instead of stdout, direct the intersection to this file' },
         f1_only_output      => { is => 'FileName', is_optional => 1, 
@@ -114,25 +118,13 @@ sub execute {
 
     # setting a terrible example by using 2 and 3 letter variable names...   
     
-    my $args = $self->bare_args;
+    my $f1 = $self->file1;
     
-    my $f1 = shift(@$args);
-    unless (defined $f1) {
-        $self->error_message("1 files, or 1 file plus STDIN, are required arguments!");
-        $self->usage_message();
-        return;
-    }
-    
-    my $f2 = shift(@$args);
+    my $f2 = $self->file2;
     unless (defined $f2) {
         # when only one file is specified, STDIN becomes the "1st" file
         $f2 = $f1;
         $f1 = '-';
-    }
-
-    if (@$args) {
-        $self->error_message("extra args: @$args");
-        return;
     }
 
     unless ($f1 eq '-' or -e $f1) {
