@@ -9,8 +9,8 @@ use above "Genome";
 
 
 #This test does not check to see if models are successfully defined.
-use Test::More skip_all => "This test was mysteriously broken. I am still tracking down the cause. -rlong";
-#use Test::More tests => 4;
+#use Test::More skip_all => "This test was mysteriously broken. I am still tracking down the cause. -rlong";
+use Test::More tests => 4;
 use File::Temp;
 use Data::Dumper;
 use File::Find;
