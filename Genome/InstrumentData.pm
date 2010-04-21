@@ -68,8 +68,8 @@ class Genome::InstrumentData {
                '1' subset_name,
                NVL(library.value, 'unknown') library_name
           FROM gsc_run\@oltp sanger,
-               mg.misc_attribute sample,
-               mg.misc_attribute library
+               misc_attribute sample,
+               misc_attribute library
          WHERE sanger.run_name = sample.entity_id(+) AND
                sanger.run_name = library.entity_id(+) AND
                sample.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
