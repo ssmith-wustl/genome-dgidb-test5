@@ -270,18 +270,25 @@ sub monitor_allocate_command {
     
     $self->status_message('Allocation process started at ' . UR::Time->now);
     local $ENV{'MONITOR_ALLOCATE_LOCK'} = 1;
-    local $ENV{'DBI_TRACE'} = 5;
+#    local $ENV{'DBI_TRACE'} = 5;   MOVED INTO Allocation::Command.pm
     local $ENV{'UR_DBI_MONITOR_SQL'} = 1;
     local $ENV{'APP_DBI_MONITOR_SQL'} = 1;
     my $cv = Genome::Utility::AsyncFileSystem->shellcmd(
         cmd => $cmd,
-        '>' => $trace_fh,
+        '>' => sub {
+            if (defined $_[0]) {
+                print $trace_fh $_[0];
+                print STDOUT $_[0];
+            }
+        },
+        '3>' => sub {
+            if (defined $_[0]) {
+                print $trace_fh $_[0];
+            }
+        },
         '2>' => on_each_line {
             if (defined $_[0]) {
                 print $trace_fh $_[0];
-                if ($_[0] =~ /^ERROR/) {
-                    print STDERR $_[0];
-                }
                 if ($_[0] =~ /^genome allocate: STATUS: Lock acquired/) {
                     $self->status_message('Allocation lock acquired at ' . UR::Time->now);
                     $w = AnyEvent->timer(
@@ -291,11 +298,12 @@ sub monitor_allocate_command {
                            undef $ow;
                            undef $w;
                     });
-                }
-                if ($_[0] =~ /Committed and released lock/) {
+                } elsif ($_[0] =~ /Committed and released lock/) {
                     $self->status_message('Allocation lock released at ' . UR::Time->now);
                     undef $w;
                     undef $ow;
+                } else {
+                    print STDERR $_[0];
                 }
             }
         },
@@ -306,6 +314,8 @@ sub monitor_allocate_command {
         undef $w;
         $self->status_message('Allocation command ended at ' . UR::Time->now);
         close $trace_fh;
+        undef $trace_fh;  #explicit destroy
+
     });
     
     return $cv->recv;

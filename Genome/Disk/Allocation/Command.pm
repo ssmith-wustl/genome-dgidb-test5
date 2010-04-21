@@ -51,6 +51,15 @@ class Genome::Disk::Allocation::Command {
     doc => 'work with disk allocations',
 };
 
+## this needs to happen at load time
+if ($ENV{MONITOR_ALLOCATE_LOCK}) {
+    if (open my $fh, ">>&=3") {
+        DBI->trace(5,$fh);
+        UR::DBI->sql_fh($fh);
+        App::DBI->sql_fh($fh);
+    }
+}
+
 ############################################
 
 sub command_name {
