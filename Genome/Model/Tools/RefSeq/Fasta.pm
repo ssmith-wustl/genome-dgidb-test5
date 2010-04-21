@@ -63,7 +63,6 @@ sub execute {
 
 }
 
-
 sub parse_header {
     
     my $refseq_header;
@@ -79,8 +78,13 @@ sub parse_header {
 	my ($name) = $line =~ /\>([\S]+)/;
 	my ($orientation,$genomic_coord,$ref_seq_length);
 	
-	my ($fisrt_coord,$second_coord) = $line =~ /Coords[\s]+(\d+)\S(\d+)/;
-	my ($chromosome) = $line =~ /Chr\:([\S]+)\,/;
+	my ($fisrt_coord,$second_coord) = $line =~ /Amplicon\_Coords\:[\s]+(\d+)\S(\d+)/; ## Throw back from irregularly formated headers 
+	unless ($fisrt_coord && $second_coord) {
+	    ($fisrt_coord,$second_coord) = $line =~ /Coords[\s]+(\d+)\S(\d+)/;
+	}
+	my ($chromosome) = $line =~ /Chr\:([\S]+)/;
+	$chromosome =~ s/\,//;
+
 	my $ncbi_build_no = $line =~ /\s+NCBI Build\s(\d+)/;
 	my ($gene) = $line =~ /GeneName:(\S+),/;
 	my ($gene_id) = $line =~ /GeneID:(\S+),/;
