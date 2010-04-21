@@ -18,7 +18,8 @@ my %properties = (
     },
     sample_name => {
         is => 'Text',
-        doc => 'sample name for imported file, like TCGA-06-0188-10B-01D',
+        doc => 'The tool will automagically populate this to multiple',
+        is_optional => 1,
     },
     import_source_name => {
         is => 'Text',
@@ -33,8 +34,9 @@ my %properties = (
     },
     sequencing_platform => {
         is => 'Text',
-        doc => 'sequencing platform of import data, like illumina/affymetrix',
+        doc => 'The tool will automagically populate this to be illumina genotype array',
         valid_values => ['illumina genotype array', 'illumina expression array', 'affymetrix genotype array', '454','sanger','unknown'],
+        is_optional => 1,
     },
     description  => {
         is => 'Text',
@@ -74,13 +76,14 @@ class Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArray
 
 sub execute {
     my $self = shift;
+    $self->sample_name("multiple");
+    $self->sequencing_platform("illumina genotype array");
     $self->process_imported_files;
     return 1;
 }
 
 sub process_imported_files {
     my $self = shift;
-    $self->sequencing_platform("illumina genotype array");
 
     my %excluded_names;
     my %included_names;

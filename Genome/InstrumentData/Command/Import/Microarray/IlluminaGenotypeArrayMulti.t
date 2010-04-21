@@ -45,9 +45,7 @@ no warnings;
 use warnings;
 
 my $cmd = Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArrayMulti->create(
-    sample_name => $sample_name,
     original_data_path => $source_dir,
-    sequencing_platform => 'illumina genotype array',
 );
 
 ok($cmd, "constructed an import command");
