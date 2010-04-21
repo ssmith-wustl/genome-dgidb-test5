@@ -36,15 +36,6 @@ class Genome::Model::Command::InstrumentData::Assign {
         default => 0,
         doc => 'Assign all available unassigned instrument data to the model.'
     },
-    capture => {
-        is => 'Boolean',
-        default => 0,
-        doc => 'Only assign capture data',
-    },
-    capture_target => {
-        is => 'String',
-        doc => 'Only assign capture data with the specified target (implies --capture)',
-    },
     filter => {
         is => 'Text',
         valid_values => ['forward-only','reverse-only'],
@@ -69,14 +60,6 @@ sub create {
 
     my $self = $class->SUPER::create(%params)
         or return;
-
-    if (defined($self->capture_target())) {
-        $self->capture(1);
-    }
-
-    if ($self->capture()) {
-        $self->all(1);
-    }
 
     my @requested_actions = grep { 
         $self->$_ 
@@ -257,7 +240,9 @@ sub _assign_all_instrument_data {
         return;
     }
 
-    my $requested_capture_target = $self->capture_target();
+    my @inputs = Genome::Model::Input->get(model_id => $self->model_id(), name => 'target_region_set_name');
+
+    my %model_capture_targets = map { $_->value_id() => 1 } @inputs;
 
     ID: for my $id ( @unassigned_instrument_data ) {
 
@@ -267,36 +252,14 @@ sub _assign_all_instrument_data {
             $id_capture_target = $id->target_region_set_name();
         }
 
-        if ($self->capture()) {
+        if (defined($id_capture_target)) {
 
-            unless (defined($id_capture_target)) {
+            unless (exists($model_capture_targets{$id_capture_target})) {
                 $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
-                    . " sequencing platform " . $id->sequencing_platform
-                    . ".\nThis instrument data has no capture target and you've requested that only captured data is added.\n"
-                    ."Assign the instrument data explicitly if you want it in the model, or remove the --capture flag."
-                );
-                next ID;
-            }
-
-            if (defined($requested_capture_target)) {
-
-                unless ($id_capture_target eq $requested_capture_target) {
-                    $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
-                        . " sequencing platform " . $id->sequencing_platform
-                        . ".\nThe model and instrument data's capture target do not match, and you've requestied that only matching capture data should be added.\n"
-                        ."Assign the instrument data explicitly if you want it in the model."
-                    );
-                    next ID;
-                }
-            }
-        }
-        else {
-            if (defined($id_capture_target)) {
-                $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
-                        . " sequencing platform " . $id->sequencing_platform
-                        . ".\nThis instrument data has a capture target and you've requested that only uncaptured data is added.\n"
-                        ."Assign the instrument data explicitly if you want it in the model, or use the --capture flag."
-                );                
+                                           . " sequencing platform " . $id->sequencing_platform
+                                               . ".\nThe model and instrument data's capture targets do not match, and you've requestied that only matching capture data should be added.\n"
+                                                   ."Assign the instrument data explicitly if you want it in the model."
+                                               );
                 next ID;
             }
         }
