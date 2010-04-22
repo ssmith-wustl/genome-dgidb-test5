@@ -5,7 +5,9 @@ use warnings;
 use Test::More;
 plan tests => 13;
 
-my $restapp = require 'Rest.psgi';
+use above 'Genome';
+
+my $restapp = require Genome::Model::Command::Services::WebApp->base_dir . '/Rest.psgi';
 
 ok( $restapp, 'loaded Rest.psgi' );
 
