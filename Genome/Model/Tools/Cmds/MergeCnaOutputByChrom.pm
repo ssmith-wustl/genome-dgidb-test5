@@ -41,11 +41,11 @@ sub execute {
     chomp @infiles;
     @infiles = sort @infiles; #so that the files are always read and printed in the same order
 
-    #make sure --bam-to-cna-output-files were quoted
-    if (scalar @{$self->bare_args}) {
-        my @bare_args = @{$self->bare_args};
-        die "\nDid you forget to quote the --bam-to-cna-output-files? I found these extra arguments in your call:\n@bare_args\n";
-    }
+    #make sure --bam-to-cna-output-files were quoted SOMEONE TOOK MY BARE-ARGS AWAY
+    #if (scalar @{$self->bare_args}) {
+    #    my @bare_args = @{$self->bare_args};
+    #    die "\nDid you forget to quote the --bam-to-cna-output-files? I found these extra arguments in your call:\n@bare_args\n";
+    #}
     
     my %data;
     my %chr_to_index;
