@@ -201,9 +201,12 @@
     </td>
 
     <td>
+    <xsl:attribute name="class">
+    <xsl:text>status </xsl:text><xsl:value-of select="event_status"/>
+    </xsl:attribute>
     <a>
     <xsl:attribute name="href">
-    <xsl:value-of select="log_file"/>
+    <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="error_log_file"/>
     </xsl:attribute>
     <xsl:value-of select="event_status"/>
     </a>

@@ -220,7 +220,7 @@
 </tr>
 <tr>
 <td><a href="/gscmnt/sata807/production/100109_HWUSI-EAS1605_100737092_61DTD/Data/Intensities/BaseCalls/GERALD_100829249_1263920180_lims">61DTD</a></td>
-<td><a href="">Succeeded</a></td>
+<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs/solexa/100109_HWUSI-EAS1605_100737092_61DTD/101289768.err">Succeeded</a></td>
 <td>2010-02-28 22:12:06</td>
 <td>2010-02-28 22:36:11</td>
 <td class="last">24:05</td>
@@ -244,14 +244,14 @@
 </tr>
 <tr>
 <td>ReferenceAlignment::DeduplicateLibraries::Picard</td>
-<td><a href="">Succeeded</a></td>
+<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289769.err">Succeeded</a></td>
 <td>2010-02-28 22:36:33</td>
 <td>2010-02-28 23:14:48</td>
 <td class="last">38:15</td>
 </tr>
 <tr>
 <td>ReferenceAlignment::PostDedupReallocate</td>
-<td><a href="">Succeeded</a></td>
+<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289770.err">Succeeded</a></td>
 <td>2010-02-28 23:15:02</td>
 <td>2010-02-28 23:15:10</td>
 <td class="last">00:08</td>
@@ -275,14 +275,14 @@
 </tr>
 <tr>
 <td>ReferenceAlignment::UpdateGenotype::Samtools</td>
-<td><a href="">Succeeded</a></td>
+<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.err">Succeeded</a></td>
 <td>2010-02-28 23:15:26</td>
 <td>2010-02-28 23:15:27</td>
 <td class="last">00:01</td>
 </tr>
 <tr>
 <td>ReferenceAlignment::FindVariations::Samtools</td>
-<td><a href="">Succeeded</a></td>
+<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.err">Succeeded</a></td>
 <td>2010-02-28 23:15:43</td>
 <td>2010-03-01 00:01:48</td>
 <td class="last">46:05</td>
@@ -306,7 +306,7 @@
 </tr>
 <tr>
 <td>ReferenceAlignment::RunReports</td>
-<td><a href="">Succeeded</a></td>
+<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289773.err">Succeeded</a></td>
 <td>2010-03-01 00:02:00</td>
 <td>2010-03-01 07:14:30</td>
 <td class="last">07:12:30</td>

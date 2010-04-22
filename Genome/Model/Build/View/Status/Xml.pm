@@ -12,7 +12,7 @@ use XML::LibXML;
 use XML::LibXSLT;
 
 class Genome::Model::Build::View::Status::Xml {
-    is => 'UR::Object::View::Default::Xml',
+    is => 'Genome::View::Status::Xml',
     has => [
         _doc    => { 
             is_transient => 1, 
