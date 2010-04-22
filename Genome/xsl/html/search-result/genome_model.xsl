@@ -23,7 +23,10 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:call-template name="object_link" />
           </span>
         </h2>
-        <p>
+        <p class="blurb">
+            created on <xsl:value-of select="aspect[@name='creation_date']/value"/> by <xsl:value-of select="aspect[@name='user_name']/value"/>
+        </p>
+        <p class="info">
         <xsl:choose>
           <xsl:when test="aspect[@name='last_succeeded_build']/object">
             <xsl:for-each select="aspect[@name='last_succeeded_build']/object">

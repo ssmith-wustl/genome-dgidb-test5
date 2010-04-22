@@ -3,15 +3,17 @@
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_disk_volume" match="object[./types[./isa[@type='Genome::Disk::Volume']]]">
+    <xsl:variable name="href">
+        <xsl:text>/disk/allocationmonitor/listallocations?dv_id=</xsl:text><xsl:value-of select='@id'/>
+    </xsl:variable>
     <div class="result">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" class="result"><tbody><tr>
       <td>
         <div class="icon">
-          <xsl:call-template name="object_link">
-            <xsl:with-param name="linktext">
-              <img width="32" height="32" src="/resources/report_resources/apipe_dashboard/images/icons/eye_16.png" />
-            </xsl:with-param>
-          </xsl:call-template>
+          <a>
+            <xsl:attribute name="href"><xsl:value-of select="$href"/></xsl:attribute>
+            <img width="32" height="32" src="/resources/report_resources/apipe_dashboard/images/icons/eye_16.png" />
+          </a>
         </div>
       </td><td>
         <div class="description">
@@ -20,9 +22,10 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             Disk Volume:
           </span>
           <span class="title">
-            <xsl:call-template name="object_link">
-              <xsl:with-param name="linktext" select="aspect[@name='mount_path']/value" />
-            </xsl:call-template> 
+            <a>
+              <xsl:attribute name="href"><xsl:value-of select="$href"/></xsl:attribute>
+              <xsl:value-of select="aspect[@name='mount_path']/value" />
+            </a> 
           </span>
         </h2>
         <p class="info">
