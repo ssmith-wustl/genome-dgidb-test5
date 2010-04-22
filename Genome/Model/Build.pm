@@ -115,7 +115,7 @@ sub __extend_namespace__ {
     
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
     my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
-    if ($pp_subclass_meta) {
+    if ($pp_subclass_meta and $pp_subclass_name->isa('Genome::ProcessingProfile')) {
         my $build_subclass_name = 'Genome::Model::Build::' . $ext;
         my $build_subclass_meta = UR::Object::Type->define(
             class_name => $build_subclass_name,
