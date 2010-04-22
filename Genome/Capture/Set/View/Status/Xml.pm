@@ -1,12 +1,12 @@
-package Genome::Capture::Set::View::SearchResult::Xml;
+package Genome::Capture::Set::View::Status::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Capture::Set::View::SearchResult::Xml {
-    is => 'Genome::View::SearchResult::Xml',
+class Genome::Capture::Set::View::Status::Xml {
+    is => 'Genome::View::Status::Xml',
     has_constant => [
         default_aspects => {
             is => 'ARRAY',
