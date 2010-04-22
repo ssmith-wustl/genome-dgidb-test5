@@ -28,13 +28,13 @@ class Genome::Model::Tools::Somatic::IntersectAssembledIndels {
         is_input => 1,
         doc => 'Result of Normal Assembly',
     },
-    input_to_assembly =>
-    {
-        type => 'String',
-        is_optional => 1,
-        is_input => 1,
-        doc => 'Original (Samtools|Pindel) Calls from Tumor',
-    },
+#    input_to_assembly =>
+#    {
+#        type => 'String',
+#        is_optional => 1,
+#        is_input => 1,
+#        doc => 'Original (Samtools|Pindel) Calls from Tumor',
+#    },
     output_somatic_list =>
     {
         type => 'String',
@@ -119,14 +119,14 @@ sub collate_and_output_daterz {
 
     my $output_fh = IO::File->new($self->output_somatic_list, ">");
 
-    unless(-s $self->input_to_assembly) {
-        $self->warning_message("No original calls supplied or file not found. Outputting assembly output"); 
-        $output_fh->print(join("\n", @somatic_events));
-        return;
-    }
+    # unless(-s $self->input_to_assembly) {
+        #    $self->warning_message("No original calls supplied or file not found. Outputting assembly output"); 
+        #    $output_fh->print(join("\n", @somatic_events));
+        # return;
+#    }
     #load original calls
-    my $allelefh = IO::File->new($self->input_to_assembly);
-    my @original_calls = $allelefh->getlines;
+    #my $allelefh = IO::File->new($self->input_to_assembly);
+    #my @original_calls = $allelefh->getlines;
 
 
     my $original_call;
@@ -140,9 +140,9 @@ sub collate_and_output_daterz {
         my $type = $fields[8];
 
 
-
+=pod
         #find ORIGINAL call closest to assembled call we decided was somatic 
-        my @candidates = grep { /^$chr\t/ } @original_calls;
+                my @candidates = grep { /^$chr\t/ } @original_calls;
         for my $candidate (@candidates) {
             my ($cchr, $cpos)  = split /\t/, $candidate;
             if($original_call) {
@@ -157,6 +157,7 @@ sub collate_and_output_daterz {
             }
 
         } 
+=cut
 
 #        my @orig_fields = split /\t/, $original_call;
 #        my $ref = $orig_fields[3];
