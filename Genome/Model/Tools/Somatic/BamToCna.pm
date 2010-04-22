@@ -229,17 +229,34 @@ sub execute {
         print OUT "\n";
     }
     print OUT "CHR\tPOS\tTUMOR\tNORMAL\tDIFF\n";
+#my @included_chrs = ();
+#    for my $chr(1..22,'X'){
+#        next unless (defined $data{tumor}{$chr} && defined $data{normal}{$chr});
+#        if($NReads_CN_neutral{$chr}{tumor} and $NReads_CN_neutral{$chr}{normal}) {
+#            push @included_chrs, $chr;
+#        } else {
+#            $self->warning_message('No reads within specified ratio of median for chromosome ' . $chr . '. Skipping. ');
+#            next;
+#        }
+#        my $cov_ratio=$NReads_CN_neutral{$chr}{tumor}/$NReads_CN_neutral{$chr}{normal};
+
+
 
     my @included_chrs = ();
     for my $chr(1..22,'X'){
         next unless (defined $data{tumor}{$chr} && defined $data{normal}{$chr});
-        if($NReads_CN_neutral{$chr}{tumor} and $NReads_CN_neutral{$chr}{normal}) {
+        my $cov_ratio=1;
+        if($NReads_CN_neutral{$chr}{tumor} && $NReads_CN_neutral{$chr}{normal}) {
+            $cov_ratio=$NReads_CN_neutral{$chr}{tumor}/$NReads_CN_neutral{$chr}{normal};
             push @included_chrs, $chr;
-        } else {
+        } elsif($NReads_CN_neutral{'allchr'}{normal}){
+            $cov_ratio=$NReads_CN_neutral{'allchr'}{tumor}/$NReads_CN_neutral{'allchr'}{normal};
+            push @included_chrs, $chr;
+        }
+        else{
             $self->warning_message('No reads within specified ratio of median for chromosome ' . $chr . '. Skipping. ');
             next;
-        }
-        my $cov_ratio=$NReads_CN_neutral{$chr}{tumor}/$NReads_CN_neutral{$chr}{normal};
+        } 
 
         my $tumor_window_count = $#{$data{tumor}{$chr}};
         my $normal_window_count = $#{$data{normal}{$chr}};
@@ -255,7 +272,7 @@ sub execute {
     }
     close(OUT);
 
-    #clear some memory
+#clear some memory
     undef %data;
     undef %statistics;
     undef %medians;
@@ -263,7 +280,7 @@ sub execute {
     undef %NReads_CN_neutral;
     undef %depth2x;
 
-    #plot output
+#plot output
     if ($self->plot) { 
         $self->plot_output($outfile, \@included_chrs);
     }
@@ -310,8 +327,8 @@ sub plot_output {
         for (i in c($chr_list)) {y=subset(x,CHR==i); plot(y\$POS,y\$DIFF,main=paste('chr.',i),xlab='mb',ylab='cn',type='p',col=rgb(0,0,0),pch='.',ylim=c(-4,4))};
         dev.off();
     });
-    $R->stopR();
-    chdir $cwd; 
+$R->stopR();
+chdir $cwd; 
 }
 
 sub bamwindow_path {
