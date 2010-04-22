@@ -61,7 +61,7 @@ class Genome::Project::View::Status::Xml {
                         {
                             name => 'last_succeeded_build',
                             aspects => [
-                                'id', 'data_directory'
+                                'id', 'data_directory', 'status',
                             ],
                             perspective => 'default',
                             toolkit => 'xml',
@@ -98,7 +98,7 @@ class Genome::Project::View::Status::Xml {
                                 {
                                     name => 'last_succeeded_build',
                                     aspects => [
-                                        'id', 'data_directory'
+                                        'id', 'data_directory', 'status',
                                     ],
                                     perspective => 'default',
                                     toolkit => 'xml',

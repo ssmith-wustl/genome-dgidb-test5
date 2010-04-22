@@ -50,9 +50,9 @@ class Genome::Taxon::View::Status::Xml {
                                         'creation_date',
                                         'user_name',
                                         {
-                                            name => 'last_succeeded_build',
+                                            name => 'builds',
                                             aspects => [
-                                                'id', 'data_directory'
+                                                'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
                                             ],
                                             perspective => 'default',
                                             toolkit => 'xml',
@@ -74,44 +74,45 @@ class Genome::Taxon::View::Status::Xml {
                         'name',
                         'common_name',
                         'gender',
-                        {
-                            name => 'samples',
-                            perspective => 'default',
-                            toolkit => 'xml',
-                            aspects => [
-                                'id',
-                                'name',
-                                {
-                                    name => 'models',
-                                    perspective => 'default',
-                                    toolkit => 'xml',
-                                    aspects => [
-                                        'genome_model_id',
-                                        'name',
-                                        'subject_id',
-                                        'subject_class_name',
-                                        'is_default',
-                                        'data_directory',
-                                        {
-                                            name => 'processing_profile',
-                                            aspects => ['id', 'name'],
-                                            perspective => 'default',
-                                            toolkit => 'xml'
-                                        },
-                                        'creation_date',
-                                        'user_name',
-                                        {
-                                            name => 'last_succeeded_build',
-                                            aspects => [ 'id', 'data_directory' ],
-                                            perspective => 'default',
-                                            toolkit => 'xml',
-                                            subject_class_name => 'Genome::Model::Build',
-                                        }
-                                    ],
-                                    subject_class_name => 'Genome::Model',
-                                }
-                            ]
-                        }
+# In some cases (e.g. human), including these makes the page take > 30 minutes to generate.
+#                        {
+#                            name => 'samples',
+#                            perspective => 'default',
+#                            toolkit => 'xml',
+#                            aspects => [
+#                                'id',
+#                                'name',
+#                                {
+#                                    name => 'models',
+#                                    perspective => 'default',
+#                                    toolkit => 'xml',
+#                                    aspects => [
+#                                        'genome_model_id',
+#                                        'name',
+#                                        'subject_id',
+#                                        'subject_class_name',
+#                                        'is_default',
+#                                        'data_directory',
+#                                        {
+#                                            name => 'processing_profile',
+#                                            aspects => ['id', 'name'],
+#                                            perspective => 'default',
+#                                            toolkit => 'xml'
+#                                        },
+#                                        'creation_date',
+#                                        'user_name',
+#                                        {
+#                                            name => 'builds',
+#                                            aspects => [ 'id', 'data_directory', 'status', 'date_scheduled', 'date_completed', ],
+#                                            perspective => 'default',
+#                                            toolkit => 'xml',
+#                                            subject_class_name => 'Genome::Model::Build',
+#                                        }
+#                                    ],
+#                                    subject_class_name => 'Genome::Model',
+#                                }
+#                            ]
+#                        }
                     ]
                 },
                 {
@@ -122,46 +123,47 @@ class Genome::Taxon::View::Status::Xml {
                         'id',
                         'name',
                         'common_name',
-                        {
-                            name => 'samples',
-                            perspective => 'default',
-                            toolkit => 'xml',
-                            aspects => [
-                                'id',
-                                'name',
-                                {
-                                    name => 'models',
-                                    perspective => 'default',
-                                    toolkit => 'xml',
-                                    aspects => [
-                                        'genome_model_id',
-                                        'name',
-                                        'subject_id',
-                                        'subject_class_name',
-                                        'is_default',
-                                        'data_directory',
-                                        {
-                                            name => 'processing_profile',
-                                            aspects => ['id', 'name'],
-                                            perspective => 'default',
-                                            toolkit => 'xml'
-                                        },
-                                        'creation_date',
-                                        'user_name',
-                                        {
-                                            name => 'last_succeeded_build',
-                                            aspects => [
-                                                'id', 'data_directory'
-                                            ],
-                                            perspective => 'default',
-                                            toolkit => 'xml',
-                                            subject_class_name => 'Genome::Model::Build',
-                                        }
-                                    ],
-                                    subject_class_name => 'Genome::Model',
-                                }
-                            ]
-                        }
+# In some cases (e.g. human), including these makes the page take > 30 minutes to generate.
+#                        {
+#                            name => 'samples',
+#                            perspective => 'default',
+#                            toolkit => 'xml',
+#                            aspects => [
+#                                'id',
+#                                'name',
+#                                {
+#                                    name => 'models',
+#                                    perspective => 'default',
+#                                    toolkit => 'xml',
+#                                    aspects => [
+#                                        'genome_model_id',
+#                                        'name',
+#                                        'subject_id',
+#                                        'subject_class_name',
+#                                        'is_default',
+#                                        'data_directory',
+#                                        {
+#                                            name => 'processing_profile',
+#                                            aspects => ['id', 'name'],
+#                                            perspective => 'default',
+#                                            toolkit => 'xml'
+#                                        },
+#                                        'creation_date',
+#                                        'user_name',
+#                                        {
+#                                            name => 'builds',
+#                                            aspects => [
+#                                                'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
+#                                            ],
+#                                            perspective => 'default',
+#                                            toolkit => 'xml',
+#                                            subject_class_name => 'Genome::Model::Build',
+#                                        }
+#                                    ],
+#                                    subject_class_name => 'Genome::Model',
+#                                }
+#                            ]
+#                        }
                     ]
                 },
             ]

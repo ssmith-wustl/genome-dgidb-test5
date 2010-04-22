@@ -33,9 +33,9 @@ class Genome::Sample::View::Status::Xml {
                         'creation_date',
                         'user_name',
                         {
-                            name => 'last_succeeded_build',
+                            name => 'builds',
                             aspects => [
-                                'id', 'data_directory'
+                                'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
                             ],
                             perspective => 'default',
                             toolkit => 'xml',

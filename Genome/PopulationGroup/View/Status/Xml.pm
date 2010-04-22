@@ -50,7 +50,7 @@ class Genome::PopulationGroup::View::Status::Xml {
                                         'user_name',
                                         {
                                             name => 'last_succeeded_build',
-                                            aspects => [ 'id', 'data_directory' ],
+                                            aspects => [ 'id', 'data_directory', 'status', ],
                                             perspective => 'default',
                                             toolkit => 'xml',
                                             subject_class_name => 'Genome::Model::Build',
@@ -62,46 +62,6 @@ class Genome::PopulationGroup::View::Status::Xml {
                         }
                     ]  
                 },
-                {
-                    name => 'samples',
-                    perspective => 'default',
-                    toolkit => 'xml',
-                    aspects => [
-                        'id',
-                        'name',
-                        {
-                            name => 'models',
-                            perspective => 'default',
-                            toolkit => 'xml',
-                            aspects => [
-                                'genome_model_id',
-                                'name',
-                                'subject_id',
-                                'subject_class_name',
-                                'is_default',
-                                'data_directory',
-                                {
-                                    name => 'processing_profile',
-                                    aspects => ['id', 'name'],
-                                    perspective => 'default',
-                                    toolkit => 'xml'
-                                },
-                                'creation_date',
-                                'user_name',
-                                {
-                                    name => 'last_succeeded_build',
-                                    aspects => [
-                                        'id', 'data_directory'
-                                    ],
-                                    perspective => 'default',
-                                    toolkit => 'xml',
-                                    subject_class_name => 'Genome::Model::Build',
-                                }
-                            ],
-                            subject_class_name => 'Genome::Model',
-                        }
-                    ]
-                }
             ]
         }
     ]

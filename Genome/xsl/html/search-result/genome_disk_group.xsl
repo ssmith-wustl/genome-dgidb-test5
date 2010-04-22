@@ -4,7 +4,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_disk_group" match="object[./types[./isa[@type='Genome::Disk::Group']]]">
     <xsl:variable name="href">
-      <xsl:text>/disk/allocationmonitor/listvolumes?disk_group_name=</xsl:text><xsl:value-of select="aspect[@name='disk_group_name']/value" />
+      <xsl:text>/disk/allocationmonitor/listvolumes?disk_group_name=</xsl:text><xsl:value-of select="normalize-space(aspect[@name='disk_group_name']/value)" />
     </xsl:variable>
     <div class="result">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" class="result"><tbody><tr>

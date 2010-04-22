@@ -47,14 +47,14 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         </p>
         <p class="info">
         Subject:
-		    <xsl:call-template name="object_link">
-		      <xsl:with-param name="type" select="normalize-space(aspect[@name='subject_class_name']/value)"/>
-		      <xsl:with-param name="id" select="normalize-space(aspect[@name='subject_id']/value)"/>
-		      <xsl:with-param name="linktext">
-		        <xsl:value-of select="normalize-space(aspect[@name='subject_class_name']/value)"/>:
+            <xsl:call-template name="object_link">
+              <xsl:with-param name="type" select="normalize-space(aspect[@name='subject_class_name']/value)"/>
+              <xsl:with-param name="id" select="normalize-space(aspect[@name='subject_id']/value)"/>
+              <xsl:with-param name="linktext">
+                <xsl:value-of select="normalize-space(aspect[@name='subject_class_name']/value)"/>:
                 <xsl:value-of select="normalize-space(aspect[@name='subject_id']/value)"/>
-		      </xsl:with-param>
-		    </xsl:call-template>
+              </xsl:with-param>
+            </xsl:call-template>
         </p>
       </div>
       </td></tr></tbody></table>
@@ -70,6 +70,31 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         </td>
       </tr>
     </table>
+  </xsl:template>
+
+  <xsl:template name="genome_model_build_table_row">
+    <tr onmouseover="this.className = 'hover'" onmouseout="this.className=''">
+    <xsl:attribute name="onclick">
+      <xsl:text>javascript:document.location.href='</xsl:text>
+      <xsl:call-template name="object_link_href" />
+        <xsl:text>'</xsl:text>
+      </xsl:attribute>
+      <td>
+        
+      </td>
+      <td>
+        <xsl:value-of select="@id"/>
+      </td>
+      <td><xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="aspect[@name='status']/value"/></xsl:attribute>
+        <xsl:value-of select="aspect[@name='status']/value"/>
+      </td>
+      <td>
+        <xsl:value-of select="aspect[@name='date_scheduled']/value"/>
+      </td>
+      <td>
+        <xsl:value-of select="aspect[@name='date_completed']/value"/>
+      </td>
+    </tr>
   </xsl:template>
 
   <xsl:template name="genome_model_build_table_section">
@@ -93,28 +118,17 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <xsl:choose>
           <xsl:when test="count(aspect[@name='builds']/object) > 0">
             <xsl:for-each select="aspect[@name='builds']/object">
-              <tr onmouseover="this.className = 'hover'" onmouseout="this.className=''">
-                <xsl:attribute name="onclick">
-                  <xsl:text>javascript:document.location.href='</xsl:text>
-                  <xsl:call-template name="object_link_href" />
-                  <xsl:text>'</xsl:text>
-                </xsl:attribute>
-                <td>
-
-                </td>
-                <td>
-                  <xsl:value-of select="@id"/>
-                </td>
-                <td><xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="aspect[@name='status']/value"/></xsl:attribute>
-                  <xsl:value-of select="aspect[@name='status']/value"/>
-                </td>
-                <td>
-                  <xsl:value-of select="aspect[@name='date_scheduled']/value"/>
-                </td>
-                <td>
-                  <xsl:value-of select="aspect[@name='date_completed']/value"/>
-                </td>
-              </tr>
+              <xsl:call-template name="genome_model_build_table_row" />
+            </xsl:for-each>
+          </xsl:when>
+          <xsl:when test="count(aspect[@name='last_succeeded_build']/object) > 0" >
+            <xsl:for-each select="aspect[@name='last_succeeded_build']/object">
+              <xsl:call-template name="genome_model_build_table_row" />
+            </xsl:for-each>
+          </xsl:when>
+          <xsl:when test="count(aspect[@name='last_complete_build']/object) > 0" >
+            <xsl:for-each select="aspect[@name='last_complete_build']/object">
+              <xsl:call-template name="genome_model_build_table_row" />
             </xsl:for-each>
           </xsl:when>
           <xsl:otherwise>

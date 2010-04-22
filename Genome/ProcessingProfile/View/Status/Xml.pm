@@ -14,24 +14,7 @@ class Genome::ProcessingProfile::View::Status::Xml {
                 'id',
                 'name',
                 'type_name',
-                {
-                    name => 'supercedes',
-                    perspective => 'default',
-                    toolkit => 'xml',
-                    aspects => [
-                        'id',
-                        'name',
-                        'type_name',
-                        {
-                            name => 'params',
-                            perspective => 'default',
-                            toolkit => 'xml',
-                            aspects => [
-                                'id', 'name', 'value',
-                            ]
-                        },
-                    ]
-                },
+                'supersedes',
                 {
                     name => 'params',
                     perspective => 'default',
@@ -62,7 +45,7 @@ class Genome::ProcessingProfile::View::Status::Xml {
                         {
                             name => 'last_succeeded_build',
                             aspects => [
-                                'id', 'data_directory'
+                                'id', 'data_directory', 'status',
                             ],
                             perspective => 'default',
                             toolkit => 'xml',
