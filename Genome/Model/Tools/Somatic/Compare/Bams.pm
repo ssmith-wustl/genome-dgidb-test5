@@ -93,6 +93,19 @@ sub pre_execute {
     unless (defined $self->tumor_indelpe_data_directory) {
         $self->tumor_indelpe_data_directory($self->data_directory . "/tumor_indelpe_data");
     }
+
+    # if tumor or normal snp files are provided, we can skip running indelpe on that sample
+    if (defined $self->tumor_snp_file) {
+        $self->skip_tumor_indelpe(1);
+    } else {
+        $self->skip_tumor_indelpe(0);
+    }
+    if (defined $self->normal_snp_file) {
+        $self->skip_normal_indelpe(1);
+    } else {
+        $self->skip_normal_indelpe(0);
+    }
+    
     # Default ref seq
     unless (defined $self->reference_fasta) {
         $self->reference_fasta("/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa");
@@ -198,11 +211,13 @@ __DATA__
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Indelpe Runner Tumor" toProperty="ref_seq_file" />
   <link fromOperation="input connector" fromProperty="tumor_indelpe_data_directory" toOperation="Indelpe Runner Tumor" toProperty="output_dir" />
   <link fromOperation="input connector" fromProperty="tumor_snp_file" toOperation="Indelpe Runner Tumor" toProperty="filtered_snp_file" />
+  <link fromOperation="input connector" fromProperty="skip_tumor_indelpe" toOperation="Indelpe Runner Tumor" toProperty="skip" />
 
   <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Indelpe Runner Normal" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Indelpe Runner Normal" toProperty="ref_seq_file" />
   <link fromOperation="input connector" fromProperty="normal_indelpe_data_directory" toOperation="Indelpe Runner Normal" toProperty="output_dir" />
   <link fromOperation="input connector" fromProperty="normal_snp_file" toOperation="Indelpe Runner Normal" toProperty="filtered_snp_file" />
+  <link fromOperation="input connector" fromProperty="skip_normal_indelpe" toOperation="Indelpe Runner Normal" toProperty="skip" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Snp Filter" toProperty="skip_if_output_present" />
   <link fromOperation="Indelpe Runner Tumor" fromProperty="filtered_snp_file" toOperation="Snp Filter" toProperty="tumor_snp_file" />
@@ -483,6 +498,8 @@ __DATA__
     <inputproperty isOptional="Y">breakdancer_params</inputproperty>
     <inputproperty isOptional="Y">bam2cfg_params</inputproperty>
     <inputproperty isOptional="Y">breakdancer_version</inputproperty>
+    <inputproperty isOptional="Y">skip_tumor_indelpe</inputproperty>
+    <inputproperty isOptional="Y">skip_normal_indelpe</inputproperty>
 
     <inputproperty isOptional="Y">only_tier_1</inputproperty>
     <inputproperty isOptional="Y">skip_sv</inputproperty>

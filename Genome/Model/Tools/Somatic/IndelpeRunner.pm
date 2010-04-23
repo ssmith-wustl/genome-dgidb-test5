@@ -63,7 +63,14 @@ class Genome::Model::Tools::Somatic::IndelpeRunner {
         lsf_queue => {
             is_param => 1,
             default_value => 'long'
-        } 
+        },
+        skip => {
+            is => 'Boolean',
+            default => '0',
+            is_input => 1,
+            is_optional => 1,
+            doc => "If set to true... this will do nothing! Fairly useless, except this is necessary for workflow.",
+        },
     ],
 };
 
@@ -87,6 +94,11 @@ EOS
 sub execute {
     my ($self) = @_;
     $DB::single=1;
+
+    if ($self->skip) {
+        $self->status_message("Skipping execution: Skip flag set");
+        return 1;
+    }
 
     my $bam_file = $self->bam_file();
     
