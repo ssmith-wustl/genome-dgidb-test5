@@ -31,7 +31,7 @@ sub _init_created_dbh {
 
     $self->SUPER::_init_created_dbh($dbh);
 
-    #$dbh->do('alter session set "_hash_join_enabled"=FALSE');
+    $dbh->do('alter session set "_hash_join_enabled"=FALSE');
     return $dbh;
 }
 
