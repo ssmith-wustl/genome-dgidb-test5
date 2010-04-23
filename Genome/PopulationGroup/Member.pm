@@ -14,7 +14,7 @@ use warnings;
 use Genome;
 
 class Genome::PopulationGroup::Member {
-    table_name => '(select pg_id,member_id from MG.population_group_member) pgm',
+    table_name => '(select pg_id,member_id from GSC.population_group_member) pgm',
     id_by => [
         population_group    => { is => 'Genome::PopulationGroup', id_by => 'pg_id' },
         member              => { is => 'Genome::Individual', id_by => 'member_id' },
