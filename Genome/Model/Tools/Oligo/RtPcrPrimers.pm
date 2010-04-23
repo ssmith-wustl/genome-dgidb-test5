@@ -220,9 +220,9 @@ sub execute {
 	    #my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name");
 	    my $info;
 	    if ($self->masked) {
-		($info) = Genome::Model::Tools::Annotate::TranscriptSequence->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name", masked => "1");
+		($info) = Genome::Model::Tools::Annotate::TranscriptSequence->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name", masked => "1", no_stdout => "1");
 	    } else {
-		($info) = Genome::Model::Tools::Annotate::TranscriptSequence->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name");
+		($info) = Genome::Model::Tools::Annotate::TranscriptSequence->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version", output => "$output_name", no_stdout => "1");
 
 		#my @command = ["gmt" , "annotate" , "transcript-sequence" , "-transcript" , "$transcript" , "-trans-pos" , "$target_pos" , "-utr-seq" , "-organism" , "$organism" , "-version" , "$version" , "-output" , "$output_name"];
 		#($info) = &ipc_run(@command);
@@ -250,8 +250,15 @@ sub execute {
 	    #$transcript_info->{$transcript}->{-1}->{trans_pos_in_3utr}=$trans_pos_in_3utr;
 	    #$transcript_info->{$transcript}->{-1}->{trans_posid}=$trans_posid;
 
+	    my $trans_posid = $transcript_info->{$transcript}->{-1}->{trans_posid};
+	    unless ($trans_posid) {$trans_posid = "not_ided";}
+	    if ($trans_posid eq "not_ided") {
+		print qq(Did not Find the coordinate $trans_pos with in the transcript $transcript.\nNo design will be attempted on $transcript targeting $trans_pos.\n);
+		next;
+	    }
 
-	    print qq(\n\n\n);
+
+	    print qq(\n$trans_posid\n\n);
 	    
 	    my $excluded_exon = 0;
 	    
@@ -365,6 +372,8 @@ sub get_transcript_seq {
 
     my ($pause,$resume,$base_count);
     my ($strand,$transcript,$transcript_info,$organism,$chromosome,$target_position,$self) = @_;
+
+
 
     my $screen;
     if ($self->screen_snp_list) {
