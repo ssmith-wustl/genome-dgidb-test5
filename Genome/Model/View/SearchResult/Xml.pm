@@ -26,7 +26,7 @@ class Genome::Model::View::SearchResult::Xml {
                 'creation_date',
                 'user_name',
                 {
-                    name => 'last_succeeded_build',
+                    name => 'last_complete_build',
                     aspects => [
                         'id', 'data_directory'
                     ],

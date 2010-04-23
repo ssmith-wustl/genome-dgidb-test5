@@ -184,18 +184,20 @@ sub _generate_timestamp_field_data {
             
         my $value = $subject->$property;
         
-        my $solr_timestamp_format = qr(\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{1,2}:\d{1,2}Z);
-        
-        if($value =~ $solr_timestamp_format) {
-            $timestamp = $value;
-        } else {
-            my ($a, $b) = split / /, $value;
-            $timestamp = sprintf("%sT%sZ", $a, $b);
-        }
-        
-        unless($timestamp =~ '\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{1,2}:\d{1,2}Z') {
-            $self->error_message('Could not parse timestamp into proper format: yyyy-mm-ddThh:mm:ssZ');
-            die $self->error_message;
+        if($value) {
+            my $solr_timestamp_format = qr(\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{1,2}:\d{1,2}Z);
+            
+            if($value =~ $solr_timestamp_format) {
+                $timestamp = $value;
+            } else {
+                my ($a, $b) = split / /, $value;
+                $timestamp = sprintf("%sT%sZ", $a, $b);
+            }
+            
+            unless($timestamp =~ '\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{1,2}:\d{1,2}Z') {
+                $self->error_message('Could not parse timestamp into proper format: yyyy-mm-ddThh:mm:ssZ');
+                die $self->error_message;
+            }
         }
     }
     

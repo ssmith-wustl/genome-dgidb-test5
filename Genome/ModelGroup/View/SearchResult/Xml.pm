@@ -25,7 +25,7 @@ class Genome::ModelGroup::View::SearchResult::Xml {
                         'id',
                         'name',
                         {
-                            name => 'last_succeeded_build',
+                            name => 'last_complete_build',
                             aspects => [
                                 'id', 'data_directory'
                             ],

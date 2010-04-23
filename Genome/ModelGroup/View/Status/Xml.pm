@@ -51,7 +51,7 @@ class Genome::ModelGroup::View::Status::Xml {
                         'id',
                         'name',
                         {
-                            name => 'last_succeeded_build',
+                            name => 'last_complete_build',
                             aspects => [
                                 'id', 'data_directory'
                             ],

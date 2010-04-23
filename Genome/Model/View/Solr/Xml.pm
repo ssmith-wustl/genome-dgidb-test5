@@ -33,16 +33,17 @@ class Genome::Model::View::Solr::Xml {
                     name => 'data_directory',
                     position => 'content',
                 },
-                {
-                    name => 'instrument_data',
-                    position => 'content',
-                    perspective => 'default',
-                    toolkit => 'text',
-                    aspects => [
-                        'id',
-                        'run_name',
-                    ]
-                }
+# Loading instrument data is *so* slow
+#                {
+#                    name => 'instrument_data',
+#                    position => 'content',
+#                    perspective => 'default',
+#                    toolkit => 'text',
+#                    aspects => [
+#                        'id',
+#                        'run_name',
+#                    ]
+#                }
             ],
         }
     ]

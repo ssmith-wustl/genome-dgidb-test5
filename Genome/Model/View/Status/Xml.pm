@@ -35,7 +35,7 @@ class Genome::Model::View::Status::Xml {
                     subject_class_name => 'Genome::Model::Build',
                 },
                 {
-                    name => 'last_succeeded_build',
+                    name => 'last_complete_build',
                     aspects => [
                         'id', 'data_directory'
                     ],
