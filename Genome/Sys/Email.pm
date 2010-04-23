@@ -86,9 +86,7 @@ sub initialize {
     }
     
     unless($source) {
-        #TODO support looking up the information from the mail server.
-        #Just scrape http://gscsmtp.wustl.edu/pipermail/[list]/[year-month]/[message_id].html to extract subject and body 
-        Carp::confess('No source object passed to initialize() and loading directly from the mail server is not yet implemented');
+        return $self->_initialize_from_server;
     }
     
     if (ref $source eq 'Email::Simple') {
@@ -120,6 +118,38 @@ sub is_initialized {
     my $self = shift;
     
     return $self->_is_initialized();
+}
+
+sub _initialize_from_server {
+    my $self = shift;
+    
+    my $ua = LWP::UserAgent->new();
+    
+    #Just scrape http://gscsmtp.wustl.edu/pipermail/[list]/[year-month]/[message_id].html to extract subject and body 
+    
+    my $response = $ua->get(join('/', $self->mail_server_path, $self->list_name, $self->month, $self->message_id . '.html'));
+    
+    unless ($response->is_success) {
+        Carp::confess('Failed to load message from the mail server.');
+    }
+    
+    my $content = $response->content;
+    
+    my ($subject) = $content =~ m!<TITLE>(.*)</TITLE>!msi;
+    my ($body) = $content =~ m/<!--beginarticle-->(.*)<!--endarticle-->/msi;
+    
+    chomp $subject;
+    chomp $body;
+    
+    $subject =~ s!\n!!g; #Remove newlines
+    $body =~ s!<.*?>!!g; #Remove HTML tags
+    $body =~ s!^\n!!gms; #Remove initial newlines
+    $body =~ s!\n$!!gms; #Remove final newlines
+    
+    $self->_subject($subject);
+    $self->_body($body);
+    
+    return 1;
 }
 
 sub body {
