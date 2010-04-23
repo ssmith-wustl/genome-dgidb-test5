@@ -353,7 +353,7 @@ sub get_summary_information
         $species = $taxon->species_name;
         $species_latin_name = $taxon->species_latin_name;
     } else {
-        $self->warming_message("No taxon found for sample!");
+        $self->warning_message("No taxon found for sample!");
     }
 
     my $ref_seq_name = $self->model->reference_build->name;
