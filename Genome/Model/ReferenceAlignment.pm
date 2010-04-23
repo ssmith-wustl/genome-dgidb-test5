@@ -914,7 +914,7 @@ sub gold_snp_path {
     my $subject_name = $self->subject_name;
     if ($self->subject_type eq 'library_name') {
         my $subject = $self->subject;
-        $subject_name = $subject->sample_name;
+        $subject_name = $self->sample_name;
     }
     my @genotype_models = Genome::Model::GenotypeMicroarray->get(subject_name => $subject_name);
     my $gold_model = pop(@genotype_models);
