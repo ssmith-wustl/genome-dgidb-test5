@@ -119,6 +119,7 @@ sub execute {
         intersect_output => $output_file,
         f1_only_output => '/dev/null', #TODO IntersectChromPos claims this is optional, but dies without it
         f2_only_output => '/dev/null', #TODO IntersectChromPos claims this is optional, but dies without it
+        ignore_sorting => 1,
     );
 
     unless($intersect_cmd) {

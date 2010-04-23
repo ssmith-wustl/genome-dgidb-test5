@@ -21,6 +21,8 @@ class Genome::Model::Tools::Snp::IntersectChromPos {
         headers1            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 1 has n header lines' },
         headers2            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 2 has n header lines' },
         consider_genotype   => { is_optional=>1, default=>0, doc=>'thingy for dave larson he knows what it means' },
+        ignore_sorting      => { is => 'Boolean', is_optional=>1, default=>0, 
+                                 doc=>'Setting this to true causes the tool to ignore any sorting or missing chromosome issues. Use this flag ONLY if you are SURE both files are sorted the same by chromosome and position.' },
     ],
 };
 
@@ -124,7 +126,10 @@ sub execute {
                 ($chr1, $pos1) = split ($self->delimiter1, $line1);
             }
             # If both current chromosomes are NT, or if either previous chromosome is NT, the else will make us die (and shouldnt), so just do a cmp
-            elsif(($chr1 =~ m/NT_/ && $chr2 =~ m/NT_/)||($prev_chrom1 =~ m/NT_/)||($prev_chrom1 =~ m/NT_/)) {
+            # OR if we are ignoring sorting, just do a cmp and continue
+            elsif ( ($self->ignore_sorting) || 
+                    (($chr1 =~ m/NT_/ && $chr2 =~ m/NT_/)||($prev_chrom1 =~ m/NT_/)||($prev_chrom1 =~ m/NT_/))
+                  ) {
                 if (($chr1 cmp $chr2) < 0) {
                     $f1_only_fh->print($line1);
                     $line1 = $file1_fh->getline;
