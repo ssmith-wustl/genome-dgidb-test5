@@ -120,7 +120,7 @@ class Genome::InstrumentData::Solexa {
 
                 --from GSC.solexa_lane_summary s_rev
                 --join read_illumina r2 on r2.sls_seq_id = s_rev.seq_id --and r1.read_number = 1
-                from index_illumina\@dw i
+                from GSC.index_illumina i
                     join GSC.flow_cell_illumina fc on fc.flow_cell_id = i.flow_cell_id
                     join GSC.read_illumina r2
                         on i.seq_id = r2.ii_seq_id

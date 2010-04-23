@@ -25,6 +25,16 @@ sub auth {
 sub owner {
     "MG";}
 
+sub _init_created_dbh {
+    my ($self, $dbh) = @_;
+    return unless defined $dbh;
+
+    $self->SUPER::_init_created_dbh($dbh);
+
+    #$dbh->do('alter session set "_hash_join_enabled"=FALSE');
+    return $dbh;
+}
+
 
 sub _get_sequence_name_for_table_and_column {
     my ($self, $table_name, $column_name) = @_;
