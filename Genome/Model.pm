@@ -98,6 +98,7 @@ class Genome::Model {
     has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
         creation_date                    => { is => 'TIMESTAMP', len => 6 },
+        _last_complete_build_id                   => { is => 'NUMBER', len => 10, column_name => 'last_complete_build_id', doc => 'The last complete build id' },
         builds                           => { is => 'Genome::Model::Build', reverse_as => 'model', is_many => 1 },
         build_statuses                   => { via => 'builds', to => 'master_event_status', is_many => 1 },
         build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
@@ -537,86 +538,45 @@ sub resolve_archive_file {
     return $self->data_directory . '.tbz';
 }
 
-sub succeeded_builds {
-    my $self = shift;
-    my @builds = $self->builds;
-    unless (scalar(@builds)) {
-        return;
-    }
-
-    my @builds_w_status = grep { $_->build_status } @builds;
-    unless (@builds_w_status) {
-        return;
-    }
-    my @succeeded_builds = grep {$_->build_status eq 'Succeeded'} grep { defined($_) } @builds_w_status;
-    unless (@succeeded_builds) {
-        return;
-    }
-    my @builds_wo_date = grep { !$_->date_completed } @succeeded_builds;
-    if (scalar(@builds_wo_date)) {
-        my $error_message = 'Found '. scalar(@builds_wo_date) .' Succeeded builds without date completed.' ."\n";
-        for (@builds_wo_date) {
-            $error_message .= "\t". $_->desc ."\n";
-        }
-        die($error_message);
-    }
-    my @sorted_succeeded_builds = sort {$a->date_completed cmp $b->date_completed} @succeeded_builds;
-    return @sorted_succeeded_builds;
-}
-
-sub last_succeeded_build {
-    my $self = shift;
-
-    my @succeeded_builds = $self->succeeded_builds;
-    my $last_succeeded_build = pop(@succeeded_builds);
-    return $last_succeeded_build;
-}
-
-sub last_succeeded_build_id {
-    my $self = shift;
-
-    my $last_succeeded_build = $self->last_succeeded_build;
-    unless ($last_succeeded_build) {
-        return;
-    }
-    return $last_succeeded_build->id;
-}
-
+#< Completed (also Suceeded) Builds >#
+sub succeeded_builds { return $_[0]->completed_builds; }
 sub completed_builds {
     my $self = shift;
-    my @builds = $self->builds(status => 'Succeeded');
-    unless (@builds) {
-        return;
+
+    my @completed_builds;
+    for my $build ( $self->builds ) {
+        next unless defined $build->build_status and $build->build_status eq 'Succeeded';
+        next unless defined $build->date_completed; # error?
+        push @completed_builds, $build;
     }
-    my @builds_w_status = grep { $_->build_status } @builds;
-    unless (@builds_w_status) {
-        return;
-    }
-    my @completed_builds = grep { $_->date_completed } grep { defined($_) } @builds_w_status;
-    unless (@completed_builds) {
-        return;
-    }
-    my @sorted_completed_builds = sort { $a->date_completed cmp $b->date_completed } @completed_builds;
-    return @sorted_completed_builds;
+    
+    return sort { $a->id <=> $b->id } @completed_builds;
 }
 
-sub last_complete_build {
+sub last_succeeded_build { return $_[0]->resolve_last_complete_build; }
+sub last_complete_build { return $_[0]->resolve_last_complete_build; }
+sub resolve_last_complete_build {
     my $self = shift;
 
     my @completed_builds = $self->completed_builds;
-    my $last_complete_build = pop(@completed_builds);
-    return $last_complete_build;
+    return unless @completed_builds;
+    my $last = pop @completed_builds;
+    unless ( defined $self->_last_complete_build_id 
+            and $self->_last_complete_build_id == $last->id ) {
+        $self->_last_complete_build_id( $last->id );
+    }
+
+    return $last;
 }
 
+sub last_succeeded_build_id { return $_[0]->last_complete_build_id; }
 sub last_complete_build_id {
     my $self = shift;
-
     my $last_complete_build = $self->last_complete_build;
-    unless ($last_complete_build) {
-        return;
-    }
+    return unless $last_complete_build;
     return $last_complete_build->id;
 }
+#<>#
 
 sub running_builds {
     my $self = shift;

@@ -237,6 +237,48 @@ sub test04_subjects : Tests() {
     is(ref($created), $created->subclass_name, 'subclass_name property is correctly filled in');
 }
 
+sub test05_builds : Tests() {
+    my $self = shift;
+
+    my $model = $self->_model;
+    # create these in reverse order because of negative ids
+    my $build2 = $self->add_mock_build_to_model($model);
+    my $build1 = $self->add_mock_build_to_model($model);
+    $build1->build_event->date_completed(undef);
+    $build1->build_event->event_status('Running');
+
+    local *Genome::Model::builds = sub{ return ($build1, $build2); };
+    my @builds = $model->builds;
+
+    my @completed_builds = $model->completed_builds;
+    is($completed_builds[0]->id, $build2->id, 'Got completed builds');
+    is($model->last_complete_build->id, $build2->id, 'Got last completed build');
+    is($model->last_complete_build_id, $build2->id, 'Got last completed build id');
+    is($model->_last_complete_build_id, $build2->id, 'Got _last completed build id');
+    my @succeed_builds = $model->succeeded_builds;
+    is($succeed_builds[0]->id, $build2->id, 'Got succeeded builds');
+    is($model->last_succeeded_build->id, $build2->id, 'Got last succeeded build');
+    is($model->last_succeeded_build_id, $build2->id, 'Got last succeeded build id');
+
+    my @running_builds = $model->running_builds;
+    is($running_builds[0]->id, $build1->id, 'Got running builds');
+
+    $build1->build_event->date_completed(UR::Time->now);
+    $build1->build_event->event_status('Succeeded');
+
+    @completed_builds = $model->completed_builds;
+    is_deeply([ map { $_->id } @completed_builds], [$build1->id, $build2->id], 'Got completed builds after build 1 is succeeded');
+    is($model->last_complete_build->id, $build2->id, 'Got last completed build after build 1 is succeeded');
+    is($model->last_complete_build_id, $build2->id, 'Got last completed build id after build 1 is succeeded');
+    is($model->_last_complete_build_id, $build2->id, 'Got _last completed build id after build 1 is succeeded');
+    @succeed_builds = $model->succeeded_builds;
+    is_deeply([map { $_->id } @succeed_builds], [$build1->id, $build2->id], 'Got succeeded builds after build 1 is succeeded');
+    is($model->last_succeeded_build->id, $build2->id, 'Got last succeeded build after build 1 is succeeded');
+    is($model->last_succeeded_build_id, $build2->id, 'Got last succeeded build id after build 1 is succeeded');
+
+    return 1;
+}
+
 #< MOCK ># 
 sub mock_model_dir_for_type_name {
     confess "No type name given" unless $_[1];
@@ -280,7 +322,8 @@ sub create_basic_mock_model {
         (qw/
             instrument_data
             running_builds current_running_build current_running_build_id
-            completed_builds last_complete_build last_complete_build_id
+            completed_builds last_complete_build last_complete_build_id 
+            resolve_last_complete_build _last_complete_build_id 
             succeeded_builds last_succeeded_build last_succeeded_build_id
             compatible_instrument_data assigned_instrument_data unassigned_instrument_data
             /),

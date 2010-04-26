@@ -9,7 +9,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 42; 
+use Test::More; 
 require Genome::Model::Test;
 
 BEGIN {
@@ -64,21 +64,6 @@ $DB::single = 1;
 my ($workflow) = $build->_initialize_workflow('inline');
 ok($workflow, 'initialized a workflow');
 
-=cut
-
-is_deeply(
-    [ map { $_->{name} } @$stages ],
-    [qw/ prepare assemble /],
-    'Got scheduled stage names',
-);
-is_deeply(
-    [ map { scalar(@{$_->{events}}) } @$stages ],
-    [qw/ 1 3 /],
-    'Got scheduled stage events',
-);
-
-=cut
-
 my $build_event = $build->build_event;
 ok($build_event, 'Got build event');
 is($build_event->event_status, 'Scheduled', 'Build status is Scheduled');
@@ -113,11 +98,12 @@ is($build->build_status, 'Failed', 'Status is Failed');
 ok($build->success, 'Success');
 is($build->build_status, 'Succeeded', 'Status is Succeeded');
 ok(!$model->current_running_build_id, 'Current running build id set to undef in success');
-is($model->last_complete_build_id, $build->id, 'Last complete build id set to build id in success');
+is($model->last_complete_build_id, $build->id, 'Model last complete build is set to this build\'s id in success');
 
 # ABANDON
 ok($build->abandon, 'Abandon');
 is($build->build_status, 'Abandoned', 'Status is Abandoned');
+isnt($model->last_complete_build_id, $build->id, 'Model last complete build is not this build\'s id in abandon');
 is(grep({$_->event_status eq 'Abandoned'} @events), 4, 'Abandoned all events');
 # try to init, fail and succeed a abandoned build
 ok(!$build->initialize, 'Failed to initialize an abandoned build');
@@ -152,6 +138,7 @@ is(
 for my $e ( @events ) { $e->event_status('Running'); }
 ok($build->delete, 'Deleted build');
 
+done_testing();
 exit;
 
 #$HeadURL$
