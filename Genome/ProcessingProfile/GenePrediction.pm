@@ -42,7 +42,7 @@ class Genome::ProcessingProfile::GenePrediction {
             is_optional => 1,
         },
         path => {
-            doc => "base path where data/files land; usually /gscmnt/278/analysis/HGMI",
+            doc => "base path where data/files land; example /gscmnt/278/analysis/HGMI",
         },
 #        brev_orgname => { # input
 #            doc => "abbreviated organism name; aka org_dirname",
@@ -57,7 +57,7 @@ class Genome::ProcessingProfile::GenePrediction {
             doc => "pipeline version",
         },
         minimum_seq_length => {
-            doc => "default 200 bases(?)",
+            doc => "minimum contig sequence length; when in doubt set to 200",
         },
         acedb_version => {
             doc => "version of acedb to load to",
@@ -93,6 +93,11 @@ class Genome::ProcessingProfile::GenePrediction {
             doc => "skip acedb parsing in bap project finish",
             is_optional => 1,
         },
+        dev => {
+            doc => "use development database",
+            is_optional => 1,
+            default => 0,
+        },
 #        seq_file_name => { # input
 #            doc => "usually contigs.bases",
 #        }, 
@@ -123,7 +128,8 @@ sub _execute_build {
     #my $cmd = $self->command_name;
     my $cmd = "gmt hgmi hap";
     # generate a config file here.
-    my $config = $self->config_file;
+    my $config = $self->_create_yaml_file();
+    #my $config = $self->config_file;
 #    my $args = $self->args;
 
     my $dir = $build->data_directory;
@@ -134,7 +140,14 @@ sub _execute_build {
     # instead of nasty system(), we should pull in the stuff from dir build
     # mk prediction models, collect/name sequence, bap gene predict,
     # bap gene merge, bap_project_finish, rrna screen, core gene check
-    my $exit_code = system "$cmd --config $config --skip-protein-annotation  >$dir/output 2>$dir/errors";
+    my $exit_code;
+    if($self->dev) {
+        $exit_code = system "$cmd --dev --config $config --skip-protein-annotation  >$dir/output 2>$dir/errors";
+    }
+    else
+    {
+        $exit_code = system "$cmd --config $config --skip-protein-annotation  >$dir/output 2>$dir/errors";
+    }
     $exit_code /= 256;
     if ($exit_code != 0) {
         $self->error_message("Failed to run $cmd with args !  Exit code: $exit_code.");
@@ -166,15 +179,16 @@ sub _validate_build {
     }
 }
 
-sub _create_yaml_config {
-    my $self = shift;
-    # pop all the params into a hash
-    my $option_hash_ref;
-    my $yaml_config;
-    # dump the yaml file out
-    DumpFile( $yaml_config ,$option_hash_ref);
-    return 1;
-}
+#sub _create_yaml_config {
+#    my $self = shift;
+#    # pop all the params into a hash
+#    my $option_hash_ref;
+#    #
+#    my $yaml_config;
+#    # dump the yaml file out
+#    DumpFile( $yaml_config ,$option_hash_ref);
+#    return 1;
+#}
 
 1;
 
