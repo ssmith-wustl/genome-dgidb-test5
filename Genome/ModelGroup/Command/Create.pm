@@ -14,6 +14,12 @@ class Genome::ModelGroup::Command::Create {
             doc => 'A name for the model-group.', 
         },
     ],
+    has_optional => {
+        model_ids => {
+            is => 'Text',
+            doc => 'IDs of the models to add to the model-group (comma delimited)'
+        },
+    }
 };
 
 sub help_brief {
@@ -47,6 +53,15 @@ sub execute {
     
     $self->status_message('Created model group:');
     $self->status_message('ID: ' . $model_group->id . ', NAME: ' . $model_group->name);
+    
+    if($self->model_ids) {
+        my $add = Genome::ModelGroup::Command::Member::Add->create(
+            model_ids => $self->model_ids,
+            model_group_id => $model_group->id 
+        );
+        
+        return $add->execute;
+    }
     
     return 1;
 }
