@@ -12,7 +12,7 @@ class Genome::Model::Event::Build::RnaSeq::AlignReads::Tophat {
 };
 
 sub bsub_rusage {
-    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=50000:mem=8000]' -M 8000000 -n 4";
+    return "-R 'select[model!=Opteron250 && type==LINUX64 && mem>16000 && tmp>150000] span[hosts=1] rusage[tmp=150000, mem=16000]' -M 16000000 -n 4";
 }
 
 
@@ -51,23 +51,52 @@ sub create_aligner_tool {
         my $left_reads = $fastq_directory.'/'. $instrument_data->read1_fastq_name;
         unless (-s $left_reads) {
             $self->error_message('Failed to find left reads '. $left_reads);
+            die($self->error_message);
         }
         push @left_reads, $left_reads;
         my $right_reads = $fastq_directory.'/'. $instrument_data->read2_fastq_name;
         unless (-s $right_reads) {
             $self->error_message('Failed to find right reads '. $right_reads);
+            die($self->error_message);
         }
         push @right_reads, $right_reads;
         my $median_insert_size = $instrument_data->median_insert_size;
         my $sd_above_insert_size = $instrument_data->sd_above_insert_size;
+        # Use the number of reads to somewhat normalize the averages we will calculate later
+        # This is not the best approach, any ideas?
+        my $clusters = $instrument_data->clusters;
         if ($median_insert_size && $sd_above_insert_size) {
-            $sum_insert_sizes += ($median_insert_size * $instrument_data->clusters);
-            $sum_insert_size_std_dev += ($sd_above_insert_size * $instrument_data->clusters);
-            $reads += $instrument_data->clusters;
+            $sum_insert_sizes += ($median_insert_size * $clusters);
+            $sum_insert_size_std_dev += ($sd_above_insert_size * $clusters);
+        } else {
+            # These seem like reasonable default values....
+            # Could consider the read length and calculate given most libraries are 300-350bp
+            $sum_insert_sizes += (150 * $clusters);
+            $sum_insert_size_std_dev += (20 * $clusters);
         }
+        $reads += $clusters;
     }
+    unless ($reads) {
+        die('Failed to calculate the number of reads across all lanes');
+    }
+    unless ($sum_insert_sizes) {
+        die('Failed to calculate the sum of insert sizes across all lanes');
+    }
+    unless ($sum_insert_size_std_dev) {
+        die('Failed to calculate the sum of insert size standard deviation across all lanes');
+    }
+    # Really the insert size should be the predicted insert size(300) minus the read lengths(2x100=200). Example: 300-200=100
     my $insert_size = int( $sum_insert_sizes / $reads );
+    unless ($insert_size) {
+        die('Failed to get insert size with '. $reads .' reads and a sum insert size of '. $sum_insert_sizes);
+    }
+    # ...and averaging the standard deviations is not statisticlly sound either even by weighting these averages with the number of reads
     my $insert_size_std_dev = int( $sum_insert_size_std_dev / $reads );
+    unless ($insert_size_std_dev) {
+        die('Failed to get insert size with '. $reads .' $reads and a sum insert size standard deviation of '. $sum_insert_size_std_dev);
+    }
+
+    
     my $reference_build = $self->model->reference_build;
     my $aligner_params = $self->model->read_aligner_params || '';
     my $read_1_fastq_list = join(',',@left_reads);
