@@ -35,7 +35,7 @@ sub execute {
     
     my $model_group = $self->model_group;
     
-    my @model_ids = split(',', $self->model_ids); 
+    my @model_ids = split(/,\s?/, $self->model_ids); 
     
     my @new_models = Genome::Model->get(id => \@model_ids);
     my @existing_models = $self->model_group->models;
