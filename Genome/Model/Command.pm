@@ -113,7 +113,6 @@ sub sub_command_classes {
         for my $dir(@dirs) {
             my $name = $dir;
             $name =~ s/$path//;
-            print "$name\n";
             $name =~ s|/|::|g;
             $name =~ s/^:://;
             $name =~ s/::$//;
