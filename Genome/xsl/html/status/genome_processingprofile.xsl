@@ -32,10 +32,12 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         </div>
       </td></tr></tbody></table>
     </div>
-    Last Succeeded Builds for models:
-    <xsl:for-each select="aspect[@name='models']">
-      <xsl:call-template name="genome_model_build_table"/>
-    </xsl:for-each>
+    <xsl:if test="count(aspect[@name='models']) > 0">
+	  Last Succeeded Builds for models:
+	  <xsl:for-each select="aspect[@name='models']">
+	    <xsl:call-template name="genome_model_build_table"/>
+      </xsl:for-each>
+    </xsl:if>
   </xsl:template>
 
 </xsl:stylesheet>
