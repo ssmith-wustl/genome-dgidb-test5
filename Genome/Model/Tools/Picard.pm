@@ -74,7 +74,7 @@ sub path_for_picard_version {
     $version ||= $PICARD_DEFAULT;
     my $path = $PICARD_VERSIONS{$version};
     return $path if defined $path;
-    die 'No path found for samtools version: '.$version;
+    die 'No path found for picard version: '.$version;
 }
 
 sub default_picard_version {
