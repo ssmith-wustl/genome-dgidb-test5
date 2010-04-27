@@ -489,8 +489,8 @@ whole_genome_test_plots=function(all_chr_data_file)
     x$m.p = -log10(x$m.p);
 
     #plot mean test
-    img_filename=paste(all_chr_data_file,".meantest",sep="");
-    plotgenome(x,y="m.p",yscale=c(0,6),pos.col="mid",img=img_filename,chr.col="chromosome",suffix="m.p",cutline=NULL);
+    #img_filename=paste(all_chr_data_file,".meantest",sep="");
+    #plotgenome(x,y="m.p",yscale=c(0,6),pos.col="mid",img=img_filename,chr.col="chromosome",suffix="m.p",cutline=NULL);
 
 
     #plot cmds test
