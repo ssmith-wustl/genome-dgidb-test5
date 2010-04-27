@@ -132,19 +132,19 @@
           <td class="value"><xsl:value-of select="$classified-success * 100"/>%</td>
 				</tr>
 				<tr>
-				  <td class="label">Average Length</td>
+          <td class="label">Average Length w/o Primer</td>
 				  <td class="value"><xsl:value-of select="//stat/length-average"/></td>
 				</tr>
 				<tr>
-          <td class="label">Max Length</td>
+          <td class="label">Max Length w/o Primer</td>
 				  <td class="value"><xsl:value-of select="//stat/length-maximum"/></td>
 				</tr>
 				<tr>
-          <td class="label">Median Length</td>
+          <td class="label">Median Length w/o Primer</td>
 				  <td class="value"><xsl:value-of select="//stat/length-median"/></td>
 				</tr>
 				<tr>
-          <td class="label">Min Length</td>
+          <td class="label">Min Length w/o Primer</td>
 				  <td class="value"><xsl:value-of select="//stat/length-minimum"/></td>
 				</tr>
 			  </table>
