@@ -1,85 +1,132 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Build 101289765 Status</title>
-<link rel="stylesheet" href="https://gscweb.gsc.wustl.edu/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen">
+<title>Status </title>
+<link rel="shortcut icon" href="/resources/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png">
+<link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen">
+<link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen">
+<script type="text/javascript" src="/resources/report_resources/jquery/jquery.js"></script><script type="text/javascript" src="/resources/report_resources/jquery/jquery.tablesorter.min.js"></script>
 </head>
 <body><div class="container"><div class="background">
-<h1 class="page_title">Build 101289765 Status</h1>
+<div class="page_header"><table cellpadding="0" cellspacing="0" border="0"><tr>
+<td><a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/resources/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle"></a></td>
+<td><h1>Analysis Reports v0.2</h1></td>
+</tr></table></div>
 <div class="page_padding">
-<table width="100%" cellpadding="0" cellspacing="0" border="0">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
-<tr>
-<td><table border="0" cellpadding="0" cellspacing="0" class="info_table">
-<tr>
-<td class="label">Status:</td>
-<td class="value">Succeeded</td>
-</tr>
-<tr>
-<td class="label">Build:</td>
-<td class="value">101289765</td>
-</tr>
-<tr>
-<td class="label">Data Directory:</td>
-<td class="value"><a href="/gscmnt/sata427/info/model_data/2851407278/build101289765">/gscmnt/sata427/info/model_data/2851407278/build101289765</a></td>
-</tr>
-</table></td>
-<td><table border="0" cellpadding="0" cellspacing="0" class="info_table">
+<script type="text/javascript">
+          
+              $(document).ready(function() {
+                  $("#alignment").tablesorter({
+                      // sort on first column, ascending
+                      sortList: [[0,0]]
+                  });
+              });
+          
+        </script><script type="text/javascript" src="/resources/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js"></script><link rel="stylesheet" href="/resources/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css">
+<script type="text/javascript">
+          
+                   function event_popup(eventObject) {
+                   // assemble event info into a table
+                   var popup_content = '<table class="boxy_info" cellpadding="0" cellspacing="0" border="0"><tbody>';
+                   for (prop in eventObject) {
+                   if (prop != 'popup_title') {
+                   popup_content += '<tr><td class="label">' + prop.replace(/_/g," ") + ':</td><td class="value">' + eventObject[prop] + '</td></tr>';
+                   }
+                   }
+
+popup_content += '</tbody></table>';
+
+// create popup
+var popup = new Boxy(popup_content, {title:eventObject.popup_title, fixed:false});
+popup.center();
+}
+          
+        </script><h2 class="page_title build_icon">Build 101289765 Status</h2>
+<table cellpadding="0" cellspacing="0" border="0" class="info_table_group"><tr>
+<td><table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
 <tr>
 <td class="label">Model ID:</td>
-<td class="value">2851407278</td>
+<td class="value"><a xmlns:rest="urn:rest" href="/cgi-bin/rest.cgi/Genome/Model/ReferenceAlignment/status.html?id=2851407278">2851407278</a></td>
 </tr>
 <tr>
 <td class="label">Model Name:</td>
 <td class="value">ssmith-test2-realsample-realpp</td>
 </tr>
 <tr>
+<td class="label">Common Name:</td>
+<td class="value">AML51</td>
+</tr>
+<tr>
+<td class="label">LSF Job ID:</td>
+<td class="value">966891</td>
+</tr>
+<tr>
+<td class="label">Workflow Instance ID:</td>
+<td class="value">
+<a xmlns:rest="urn:rest" href="/cgi-bin/rest.cgi/Workflow/Store/Db/Model/Instance/status.html?id=1753513">1753513</a> (done)</td>
+</tr>
+</table></td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
+<tr>
+<td class="label">Status:</td>
+<td class="value">Succeeded <a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/reports/Summary/report.html" class="grey">(view build summary report)</a>
+</td>
+</tr>
+<tr>
 <td class="label">Processing Profile:</td>
 <td class="value">bwa0.5.5 and samtools r453 and picard r107</td>
 </tr>
-</table></td>
+<tr>
+<td class="label">Data Directory:</td>
+<td class="value"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765">/gscmnt/sata427/info/model_data/2851407278/build101289765</a></td>
 </tr>
-</table>
+<tr>
+<td class="label">Disk Space (kbytes):</td>
+<td class="value">4,984,448</td>
+</tr>
+<tr>
+<td class="label">Error File:</td>
+<td class="value"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289767.err">101289767.err</a></td>
+</tr>
+</table></td>
+</tr></table>
 <table border="0" cellpadding="0" cellspacing="0" class="stages" width="100%"><tr>
 <td><table class="stage" border="0" cellpadding="0" cellspacing="0" width="100%">
 <tr><th colspan="2">alignment</th></tr>
 <tr class="ghost">
 <td class="label">
-  Scheduled:
-</td>
+                          Scheduled:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-  Running:
-</td>
+                          Running:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="label">
 <td class="label">
-  Succeeded:
-</td>
+                          Succeeded:
+                        </td>
 <td class="value">1</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-  Abandoned:
-</td>
+                          Abandoned:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-    Crashed/Failed:
-</td>
+                          Crashed/Failed:
+                        </td>
 <td class="value">0</td>
 </tr>
-<tr>
+<tr class="total">
 <td class="label">
-  Total:
-</td>
+                            Total:
+                          </td>
 <td class="value">1</td>
 </tr>
 </table></td>
@@ -87,38 +134,38 @@
 <tr><th colspan="2">deduplication</th></tr>
 <tr class="ghost">
 <td class="label">
-  Scheduled:
-</td>
+                          Scheduled:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-  Running:
-</td>
+                          Running:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="label">
 <td class="label">
-  Succeeded:
-</td>
+                          Succeeded:
+                        </td>
 <td class="value">2</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-  Abandoned:
-</td>
+                          Abandoned:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-    Crashed/Failed:
-</td>
+                          Crashed/Failed:
+                        </td>
 <td class="value">0</td>
 </tr>
-<tr>
+<tr class="total">
 <td class="label">
-  Total:
-</td>
+                            Total:
+                          </td>
 <td class="value">2</td>
 </tr>
 </table></td>
@@ -126,38 +173,38 @@
 <tr><th colspan="2">variant detection</th></tr>
 <tr class="ghost">
 <td class="label">
-  Scheduled:
-</td>
+                          Scheduled:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-  Running:
-</td>
+                          Running:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="label">
 <td class="label">
-  Succeeded:
-</td>
+                          Succeeded:
+                        </td>
 <td class="value">2</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-  Abandoned:
-</td>
+                          Abandoned:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-    Crashed/Failed:
-</td>
+                          Crashed/Failed:
+                        </td>
 <td class="value">0</td>
 </tr>
-<tr>
+<tr class="total">
 <td class="label">
-  Total:
-</td>
+                            Total:
+                          </td>
 <td class="value">2</td>
 </tr>
 </table></td>
@@ -165,45 +212,45 @@
 <tr><th colspan="2">generate reports</th></tr>
 <tr class="ghost">
 <td class="label">
-  Scheduled:
-</td>
+                          Scheduled:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-  Running:
-</td>
+                          Running:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="label">
 <td class="label">
-  Succeeded:
-</td>
+                          Succeeded:
+                        </td>
 <td class="value">1</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-  Abandoned:
-</td>
+                          Abandoned:
+                        </td>
 <td class="value">0</td>
 </tr>
 <tr class="ghost">
 <td class="label">
-    Crashed/Failed:
-</td>
+                          Crashed/Failed:
+                        </td>
 <td class="value">0</td>
 </tr>
-<tr>
+<tr class="total">
 <td class="label">
-  Total:
-</td>
+                            Total:
+                          </td>
 <td class="value">1</td>
 </tr>
 </table></td>
 </tr></table>
 <hr>
-<h3>alignment</h3>
-<table class="alignment_detail" width="100%" cellspacing="0" cellpadding="0" border="0">
+<h2>alignment</h2>
+<table class="list tablesorter" width="100%" cellspacing="0" cellpadding="0" border="0" id="alignment">
 <colgroup>
 <col width="40%">
 <col>
@@ -211,23 +258,23 @@
 <col>
 <col>
 </colgroup>
-<tr>
-<th>Flow Cell</th>
-<th>Status</th>
-<th>Scheduled</th>
-<th>Completed</th>
-<th class="last">Elapsed</th>
-</tr>
-<tr>
-<td><a href="/gscmnt/sata807/production/100109_HWUSI-EAS1605_100737092_61DTD/Data/Intensities/BaseCalls/GERALD_100829249_1263920180_lims">61DTD</a></td>
-<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs/solexa/100109_HWUSI-EAS1605_100737092_61DTD/101289768.err">Succeeded</a></td>
+<thead><tr>
+<th>flow cell</th>
+<th>status</th>
+<th>scheduled</th>
+<th>completed</th>
+<th class="last">elapsed</th>
+</tr></thead>
+<tbody><tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289768",event_status:"Succeeded",instance_id:"1753519",execution_count:"1",instance_status:"done",lsf_job_id:"966892",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 22:12:06",date_completed:"2010-02-28 22:36:11",elapsed_time:"24:05",instrument_data_id:"2849448911",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/solexa/100109_HWUSI-EAS1605_100737092_61DTD/101289768.out\"&gt;101289768.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/solexa/100109_HWUSI-EAS1605_100737092_61DTD/101289768.err\"&gt;101289768.err&lt;/a&gt;",alignment_directory:"&lt;a href=\"http://gscweb/gscmnt/sata912/info/alignment_data/bwa0_5_5/cd6fc20ad94e451c80345e7544d30cc7/NCBI-human-build36/100109_HWUSI-EAS1605_100737092_61DTD/1_2849448911\"&gt;1_2849448911&lt;/a&gt;",project_name:"AML Whole Genome Sequencing",sample_name:"H_KA-943309-S.18828",run_name:"100109_HWUSI-EAS1605_100737092_61DTD",flow_cell_id:"61DTD",read_length:"100",library_name:"H_KA-943309-S.18828-lib1",library_id:"2847322310",subset_name:"1",seq_id:"2849448911",run_type:"Paired",popup_title:"ReferenceAlignment::AlignReads::Bwa #101289768"});'>
+<td>61DTD Lane: 1</td>
+<td class="status succeeded">succeeded</td>
 <td>2010-02-28 22:12:06</td>
 <td>2010-02-28 22:36:11</td>
 <td class="last">24:05</td>
-</tr>
+</tr></tbody>
 </table>
-<h3>deduplication</h3>
-<table class="alignment_detail" width="100%" cellspacing="0" cellpadding="0" border="0">
+<h2>deduplication</h2>
+<table class="list tablesorter" width="100%" cellspacing="0" cellpadding="0" border="0" id="deduplication">
 <colgroup>
 <col width="40%">
 <col>
@@ -235,30 +282,32 @@
 <col>
 <col>
 </colgroup>
-<tr>
-<th>Event</th>
-<th>Status</th>
-<th>Scheduled</th>
-<th>Completed</th>
-<th class="last">Elapsed</th>
-</tr>
-<tr>
+<thead><tr>
+<th>event</th>
+<th>status</th>
+<th>scheduled</th>
+<th>completed</th>
+<th class="last">elapsed</th>
+</tr></thead>
+<tbody>
+<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289769",event_status:"Succeeded",instance_id:"1753524",execution_count:"1",instance_status:"done",lsf_job_id:"966931",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 22:36:33",date_completed:"2010-02-28 23:14:48",elapsed_time:"38:15",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289769.out\"&gt;101289769.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289769.err\"&gt;101289769.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::DeduplicateLibraries::Picard #101289769"});'>
 <td>ReferenceAlignment::DeduplicateLibraries::Picard</td>
-<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289769.err">Succeeded</a></td>
+<td class="status succeeded">succeeded</td>
 <td>2010-02-28 22:36:33</td>
 <td>2010-02-28 23:14:48</td>
 <td class="last">38:15</td>
 </tr>
-<tr>
+<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289770",event_status:"Succeeded",instance_id:"1753525",execution_count:"1",instance_status:"done",lsf_job_id:"966951",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:02",date_completed:"2010-02-28 23:15:10",elapsed_time:"00:08",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289770.out\"&gt;101289770.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289770.err\"&gt;101289770.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::PostDedupReallocate #101289770"});'>
 <td>ReferenceAlignment::PostDedupReallocate</td>
-<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289770.err">Succeeded</a></td>
+<td class="status succeeded">succeeded</td>
 <td>2010-02-28 23:15:02</td>
 <td>2010-02-28 23:15:10</td>
 <td class="last">00:08</td>
 </tr>
+</tbody>
 </table>
-<h3>variant detection</h3>
-<table class="alignment_detail" width="100%" cellspacing="0" cellpadding="0" border="0">
+<h2>variant detection</h2>
+<table class="list tablesorter" width="100%" cellspacing="0" cellpadding="0" border="0" id="variant_detection">
 <colgroup>
 <col width="40%">
 <col>
@@ -266,30 +315,32 @@
 <col>
 <col>
 </colgroup>
-<tr>
-<th>Event</th>
-<th>Status</th>
-<th>Scheduled</th>
-<th>Completed</th>
-<th class="last">Elapsed</th>
-</tr>
-<tr>
+<thead><tr>
+<th>event</th>
+<th>status</th>
+<th>scheduled</th>
+<th>completed</th>
+<th class="last">elapsed</th>
+</tr></thead>
+<tbody>
+<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289771",event_status:"Succeeded",instance_id:"1753530",execution_count:"1",instance_status:"done",lsf_job_id:"966953",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:26",date_completed:"2010-02-28 23:15:27",elapsed_time:"00:01",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.out\"&gt;101289771.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.err\"&gt;101289771.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::UpdateGenotype::Samtools #101289771"});'>
 <td>ReferenceAlignment::UpdateGenotype::Samtools</td>
-<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.err">Succeeded</a></td>
+<td class="status succeeded">succeeded</td>
 <td>2010-02-28 23:15:26</td>
 <td>2010-02-28 23:15:27</td>
 <td class="last">00:01</td>
 </tr>
-<tr>
+<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289772",event_status:"Succeeded",instance_id:"1753531",execution_count:"1",instance_status:"done",lsf_job_id:"966970",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:43",date_completed:"2010-03-01 00:01:48",elapsed_time:"46:05",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.out\"&gt;101289772.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.err\"&gt;101289772.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::FindVariations::Samtools #101289772"});'>
 <td>ReferenceAlignment::FindVariations::Samtools</td>
-<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.err">Succeeded</a></td>
+<td class="status succeeded">succeeded</td>
 <td>2010-02-28 23:15:43</td>
 <td>2010-03-01 00:01:48</td>
 <td class="last">46:05</td>
 </tr>
+</tbody>
 </table>
-<h3>generate reports</h3>
-<table class="alignment_detail" width="100%" cellspacing="0" cellpadding="0" border="0">
+<h2>generate reports</h2>
+<table class="list tablesorter" width="100%" cellspacing="0" cellpadding="0" border="0" id="generate_reports">
 <colgroup>
 <col width="40%">
 <col>
@@ -297,20 +348,20 @@
 <col>
 <col>
 </colgroup>
-<tr>
-<th>Event</th>
-<th>Status</th>
-<th>Scheduled</th>
-<th>Completed</th>
-<th class="last">Elapsed</th>
-</tr>
-<tr>
+<thead><tr>
+<th>event</th>
+<th>status</th>
+<th>scheduled</th>
+<th>completed</th>
+<th class="last">elapsed</th>
+</tr></thead>
+<tbody><tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289773",event_status:"Succeeded",instance_id:"1753536",execution_count:"1",instance_status:"done",lsf_job_id:"966985",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-03-01 00:02:00",date_completed:"2010-03-01 07:14:30",elapsed_time:"07:12:30",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289773.out\"&gt;101289773.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289773.err\"&gt;101289773.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::RunReports #101289773"});'>
 <td>ReferenceAlignment::RunReports</td>
-<td class="status Succeeded"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289773.err">Succeeded</a></td>
+<td class="status succeeded">succeeded</td>
 <td>2010-03-01 00:02:00</td>
 <td>2010-03-01 07:14:30</td>
 <td class="last">07:12:30</td>
-</tr>
+</tr></tbody>
 </table>
 </div>
 </div></div></body>

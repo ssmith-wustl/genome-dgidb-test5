@@ -1,7 +1,12 @@
 <?xml version="1.0"?>
-<build-status generated-at="2010-03-01 21:21:02">
+<build-status generated-at="2010-04-27 10:52:01">
   <build model-name="ssmith-test2-realsample-realpp" model-id="2851407278" common-name="AML51" build-id="101289765" status="Succeeded" kilobytes-requested="4984448" data-directory="/gscmnt/sata427/info/model_data/2851407278/build101289765" lsf-job-id="966891" output-log="/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289767.out" error-log="/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289767.err">
-    <workflow instance-id="1753513" instance-status="done"/>
+    <model id="2851407278" type="Genome::Model::ReferenceAlignment">
+      <aspect name="name">
+        <value>ssmith-test2-realsample-realpp</value>
+      </aspect>
+    </model>
+    <workflow instance-id="1753513" instance-status="done" id="1753513" type="Workflow::Store::Db::Model::Instance"/>
     <stages processing_profile="bwa0.5.5 and samtools r453 and picard r107">
       <stage value="alignment">
         <command_classes>
@@ -89,12 +94,6 @@
           <object value="all_sequences"/>
         </operating_on>
       </stage>
-      <stage value="reference_coverage">
-        <command_classes/>
-        <operating_on>
-          <object value="all_sequences"/>
-        </operating_on>
-      </stage>
       <stage value="variant_detection">
         <command_classes>
           <command_class value="Genome::Model::Event::Build::ReferenceAlignment::UpdateGenotype">
@@ -140,12 +139,6 @@
           <object value="all_sequences"/>
         </operating_on>
       </stage>
-      <stage value="transcript_annotation">
-        <command_classes/>
-        <operating_on>
-          <object value="all_sequences"/>
-        </operating_on>
-      </stage>
       <stage value="generate_reports">
         <command_classes>
           <command_class value="Genome::Model::Event::Build::ReferenceAlignment::RunReports">
@@ -183,4 +176,3 @@
     </reports>
   </build>
 </build-status>
-

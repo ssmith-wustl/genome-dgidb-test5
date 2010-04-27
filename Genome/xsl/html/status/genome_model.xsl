@@ -28,8 +28,8 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         </p>
         <p class="info">
         <xsl:choose>
-          <xsl:when test="aspect[@name='last_succeeded_build']/object">
-            <xsl:for-each select="aspect[@name='last_succeeded_build']/object">
+          <xsl:when test="aspect[@name='last_complete_build']/object">
+            <xsl:for-each select="aspect[@name='last_complete_build']/object">
             <xsl:call-template name="object_link">
               <xsl:with-param name="linktext" select="'last succeeded build'" />
             </xsl:call-template>
