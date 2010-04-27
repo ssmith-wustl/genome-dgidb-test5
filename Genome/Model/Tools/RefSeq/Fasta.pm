@@ -85,7 +85,7 @@ sub parse_header {
 	my ($chromosome) = $line =~ /Chr\:([\S]+)/;
 	$chromosome =~ s/\,//;
 
-	my $ncbi_build_no = $line =~ /\s+NCBI Build\s(\d+)/;
+	my ($ncbi_build_no) = $line =~ /NCBI Build[\s]+(\d+)/;
 	my ($gene) = $line =~ /GeneName:(\S+),/;
 	my ($gene_id) = $line =~ /GeneID:(\S+),/;
 
@@ -124,7 +124,7 @@ sub parse_header {
 	$refseq_header->{ncbi_build_no}=$ncbi_build_no;
 	$refseq_header->{gene}=$gene;
 	$refseq_header->{gene_id}=$gene_id;
-
+	$refseq_header->{header}=$line;
 
 	if ($refseq_header) {
 	    close REF;
