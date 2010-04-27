@@ -11,7 +11,7 @@ my $DEFAULT_SORT_ORDER = 'coordinate';
 my $DEFAULT_MAX_RECORDS_IN_RAM = 500000;
 
 
-class Genome::Model::Tools::Picard::SortSam{
+class Genome::Model::Tools::Picard::SortSam {
     is  => 'Genome::Model::Tools::Picard',
     has_input => [
         input_file => {
@@ -57,7 +57,7 @@ sub execute {
     }
     my $input_file = $self->input_file;
     my $output_file = $self->output_file;
-    my $sort_cmd = $jar_path .' net.sf.picard.sam.SortSam O='. $output_file .' I='. $input_file .' SO='. $self->sort_order;
+    my $sort_cmd = $jar_path .' net.sf.picard.sam.SortSam O='. $output_file .' I='. $input_file .' SO='. $self->sort_order .' MAX_RECORDS_IN_RAM='. $self->max_records_in_ram;
     $self->run_java_vm(
         cmd => $sort_cmd,
         input_files => [$input_file],
