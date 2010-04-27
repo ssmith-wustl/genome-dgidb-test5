@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use File::Compare;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 use above 'Genome';
 
@@ -26,5 +26,6 @@ my $exome_capture_set = Genome::Capture::Set->get(name => 'nimblegen exome versi
 isa_ok($exome_capture_set,'Genome::Capture::Set');
 ok($exome_capture_set->print_bed_file($tmp_file),'dump the bed file to '. $tmp_file);
 ok(!compare($tmp_file,$expected_file),'dumped bed file is identical to expected');
+is($exome_capture_set->barcode,'4k002a','got the correct barcode');
 
 exit;
