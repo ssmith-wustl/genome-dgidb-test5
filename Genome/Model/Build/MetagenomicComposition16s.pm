@@ -178,15 +178,15 @@ sub amplicon_set_for_name {
 
 #< Dirs >#
 sub sub_dirs {
-    return (qw| amplicons classification amplicons fasta reports |), $_[0]->_sub_dirs;
+    return (qw| classification amplicons fasta reports sys |), $_[0]->_sub_dirs;
 }
 
 sub classification_dir {
     return $_[0]->data_directory.'/classification';
 }
 
-sub amplicons_dir {
-    return $_[0]->data_directory.'/amplicons';
+sub amplicon_classifications_dir {
+    return $_[0]->data_directory.'/sys';
 }
 
 sub fasta_dir {
@@ -405,7 +405,7 @@ sub classification_file_for_amplicon_name {
 
     die "No amplicon name given to get classification file for ".$self->description unless defined $name;
 
-    return $self->amplicons_dir."/$name.classification.stor";
+    return $self->amplicon_classifications_dir."/$name.classification.stor";
 }
 
 sub classify_amplicons {

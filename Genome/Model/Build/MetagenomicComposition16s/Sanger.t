@@ -75,9 +75,9 @@ my $classification_dir = $build->classification_dir;
 is($classification_dir, $build->data_directory.'/classification', 'classification_dir');
 ok(-d $classification_dir, 'classification_dir exists');
 
-my $amplicons_dir = $build->amplicons_dir;
-is($amplicons_dir, $build->data_directory.'/amplicons', 'amplicons_dir');
-ok(-d $amplicons_dir, 'amplicons_dir exists');
+my $amplicon_classifications_dir = $build->amplicon_classifications_dir;
+is($amplicon_classifications_dir, $build->data_directory.'/sys', 'amplicon_classifications_dir');
+ok(-d $amplicon_classifications_dir, 'amplicon_classifications_dir exists');
 
 my $fasta_dir = $build->fasta_dir;
 is($fasta_dir, $build->data_directory.'/fasta', 'fasta_dir');
@@ -134,7 +134,7 @@ for my $amplicon ( @amplicons ) {
     my $classification_file = $build->classification_file_for_amplicon_name($amplicon->name);
     is(
         $classification_file,
-        $amplicons_dir.'/'.$amplicon->name.'.classification.stor',
+        $amplicon_classifications_dir.'/'.$amplicon->name.'.classification.stor',
         "classification file for amplicon name: ".$amplicon->name,
     );
     next unless -e $classification_file; # one does not classify cuz it didn't assemble

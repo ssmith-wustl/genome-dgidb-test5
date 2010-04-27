@@ -623,7 +623,7 @@ sub test_class {
     return 'Genome::Model::Event::Build::MetagenomicComposition16s::Orient';
 }
 
-sub _dirs_to_link { return (qw/ chromat_dir edit_dir amplicons_dir /); }
+sub _dirs_to_link { return (qw/ chromat_dir edit_dir amplicon_classifications_dir /); }
 
 sub before_execute {
     my $self = shift;
