@@ -34,23 +34,18 @@ class Genome::ProcessingProfile::View::Status::Xml {
                         'subject_class_name',
                         'is_default',
                         'data_directory',
-                        {
-                            name => 'processing_profile',
-                            aspects => ['id', 'name'],
-                            perspective => 'default',
-                            toolkit => 'xml'
-                        },
                         'creation_date',
                         'user_name',
-                        {
-                            name => 'last_succeeded_build',
-                            aspects => [
-                                'id', 'data_directory', 'status',
-                            ],
-                            perspective => 'default',
-                            toolkit => 'xml',
-                            subject_class_name => 'Genome::Model::Build',
-                        }
+#This is pretty slow. Bring it back if it turns out to be wanted.
+#                        {
+#                            name => 'last_succeeded_build',
+#                            aspects => [
+#                                'id', 'data_directory', 'status',
+#                            ],
+#                            perspective => 'default',
+#                            toolkit => 'xml',
+#                            subject_class_name => 'Genome::Model::Build',
+#                        }
                     ],
                 },
             ]

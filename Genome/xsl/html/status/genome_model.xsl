@@ -153,6 +153,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   </xsl:template>
 
   <xsl:template name="genome_model_build_table">
+    <xsl:param name="want_builds" select="1" />
     <!-- Called on a node containing one or more object nodes of type model -->
     <table id="model_list" class="list" width="100%" cellspacing="0" cellpadding="0" border="0" style="clear:both">
       <colgroup>
@@ -180,11 +181,13 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <td><strong>username: </strong><xsl:value-of select="aspect[@name='user_name']/value"/></td>
             <td class="last"><strong>scheduled: </strong><xsl:value-of select="aspect[@name='creation_date']/value"/></td>
           </tr>
-          <tr>
-            <td colspan="4" class="subtable_cell">
-              <xsl:call-template name="genome_model_build_table_section"/>
-            </td>
-          </tr>
+          <xsl:if test="$want_builds = 1">
+            <tr>
+              <td colspan="4" class="subtable_cell">
+                <xsl:call-template name="genome_model_build_table_section"/>
+              </td>
+            </tr>
+          </xsl:if>
         </xsl:for-each>
       </tbody>
     </table>

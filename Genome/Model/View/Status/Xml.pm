@@ -19,7 +19,7 @@ class Genome::Model::View::Status::Xml {
                 'data_directory',
                 {
                     name => 'processing_profile',
-                    aspects => ['id', 'name'],
+                    aspects => ['id', 'name', 'type_name'],
                     perspective => 'default',
                     toolkit => 'xml'
                 },

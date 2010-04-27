@@ -32,10 +32,22 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         </div>
       </td></tr></tbody></table>
     </div>
-    <xsl:if test="count(aspect[@name='models']) > 0">
-	  Last Succeeded Builds for models:
+    <xsl:if test="count(aspect[@name='params']) > 0 ">
+      <table class="info_table">
+      <xsl:for-each select="aspect[@name='params']/object">
+        <tr>
+          <td class="label"><xsl:value-of select="normalize-space(aspect[@name='name'])"/>:</td>
+          <td class="value"><xsl:value-of select="aspect[@name='value']"/></td>
+        </tr>
+      </xsl:for-each>
+      </table>
+    </xsl:if>
+    <xsl:if test="count(aspect[@name='models']/object) > 0">
+	  Models:
 	  <xsl:for-each select="aspect[@name='models']">
-	    <xsl:call-template name="genome_model_build_table"/>
+	    <xsl:call-template name="genome_model_build_table">
+	      <xsl:with-param name="want_builds" value="0"/>
+	    </xsl:call-template>
       </xsl:for-each>
     </xsl:if>
   </xsl:template>
