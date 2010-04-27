@@ -33,7 +33,7 @@
 				</tr>
 				<tr>
           <td class="label">Data Directory</td>
-				  <td class="value"><a><xsl:attribute name="href">https://<xsl:value-of select="//model-info/data-directory"/></xsl:attribute><xsl:text>View Directory</xsl:text></a></td>
+          <td class="value"><a><xsl:attribute name="href">https://gscweb.gsc.wustl.edu/<xsl:value-of select="//model-info/data-directory"/></xsl:attribute><xsl:text>View Directory</xsl:text></a></td>
 				</tr>
 				<tr>
           <td class="label" width="25%">Model Id</td>
