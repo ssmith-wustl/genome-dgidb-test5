@@ -52,10 +52,10 @@ dispatch {
 
         return $resp;
     },
-      ## send /rest without a trailing slash to /rest/
-      ## although thats probably a 404 as well
+      ## send /view without a trailing slash to /view/
+      ## although thats probably a 404
       sub (/view) {
-        redispatch_to "/rest/";
+        redispatch_to "/view/";
       },
 
       # let Rest.psgi handle this

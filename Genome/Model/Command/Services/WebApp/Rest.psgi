@@ -41,8 +41,13 @@ my $res_path = Genome::Model::Command::Services::WebApp->res_path;
 
 dispatch {
 
-    sub (GET + /static/**/*/* + .*) {
+    sub (GET + /**/*/* + .*) {
         my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
+
+        unless (index($perspective_toolkit,'.') > 0) {
+            # doesn't have a period in it?  probably didnt want us to match
+            return;
+        }
 
         $class = url_to_type($class);
         my ( $perspective, $toolkit ) = split( /\./, $perspective_toolkit );
