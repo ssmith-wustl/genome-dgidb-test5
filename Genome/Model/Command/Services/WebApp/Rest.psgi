@@ -5,6 +5,7 @@ use Web::Simple 'Genome::Model::Command::Services::WebApp::Rest';
 package Genome::Model::Command::Services::WebApp::Rest;
 
 use above 'Genome';
+use Workflow;
 use Plack::MIME;
 use Plack::Util;
 use Cwd;
@@ -40,7 +41,7 @@ my $res_path = Genome::Model::Command::Services::WebApp->res_path;
 
 dispatch {
 
-    sub (GET + /**/*/* + .*) {
+    sub (GET + /static/**/*/* + .*) {
         my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
 
         $class = url_to_type($class);
