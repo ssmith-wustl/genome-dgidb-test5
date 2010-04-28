@@ -247,7 +247,8 @@ SQL
         $query .=  "\nAND e.date_completed > sysdate - ".$self->days;
         $self->_description( $self->_description.'within the past '.$self->days.' days.');
     }
-    $query .= "\nORDER BY e.date_completed DESC";
+    $query .= "\nORDER BY b.build_id DESC";
+    #$query .= "\nORDER BY e.date_completed DESC";
     #$query .= "\nORDER BY m.name ASC";
 
     return $query;

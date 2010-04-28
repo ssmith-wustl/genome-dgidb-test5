@@ -132,7 +132,7 @@ sub valid_param_sets {
                 #$self->_mail_report(@_); # uncommant to see it
                 return 1;
             },
-            processing_profile_id => 2067049, # WashU amplicon assembly
+            work_order_id => 2196657, 
             #save => $_[0]->tmp_dir,
             #email => $ENV{USER}.'@genome.wustl.edu',
             #all_datasets => 1,
@@ -144,17 +144,17 @@ sub valid_param_sets {
                 #$self->_mail_report(@_); # uncommant to see it
                 return 1;
             },
+            work_order_id => 2196657, 
+            most_recent_build_only => 1,
+            #email => $ENV{USER}.'@genome.wustl.edu',
+        },
+        {
             processing_profile_id => 2067049, # WashU amplicon assembly
             most_recent_build_only => 1,
             #email => $ENV{USER}.'@genome.wustl.edu',
         },
         {
             type_name => 'amplicon assembly',
-        },
-        {
-            work_order_id => 2196657, 
-            most_recent_build_only => 1,
-            #email => $ENV{USER}.'@genome.wustl.edu',
         },
         {
             subject_names => 'HMPZ-764083206-700024109,HMPZ-764083206-700037552',
@@ -170,8 +170,7 @@ sub valid_param_sets {
 sub invalid_param_sets {
     return (
         {
-            type_name => undef,
-            processing_profile_id => undef,
+            work_order_id => undef, 
         },
         {
             days => 'pp',
@@ -185,11 +184,11 @@ sub _required_params_for_class {
 
 sub _rows {
     return [
-        [qw| 2816929867 98421139 Succeeded 2009-08-27 |],
-        [qw| 2816929867 98421140 Succeeded 2009-08-28 |],
-        [qw| 2816929867 98421141 Succeeded 2009-12-29 |],
-        [qw| 2816929868 98421142 Succeeded 2009-08-27 |],
         [qw| 2816929868 98421143 Succeeded 2009-08-13 |],
+        [qw| 2816929868 98421142 Succeeded 2009-08-27 |],
+        [qw| 2816929867 98421141 Succeeded 2009-12-29 |],
+        [qw| 2816929867 98421140 Succeeded 2009-08-28 |],
+        [qw| 2816929867 98421139 Succeeded 2009-08-27 |],
     ];
 }
 
