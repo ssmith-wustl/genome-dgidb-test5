@@ -21,7 +21,7 @@ class Genome::Model::Tools::Cmds::CompileCnaOutput {
 };
 
 sub help_brief {
-    'This script checks for the copy number output and the associated .png image in somatic builds, and then generates a symbolic link to them if they exist. If they do not exist, the script will submit jobs to run the bam-to-cna script. Messages will indicate the status of the builds and actions taken, and the std_out of the submitted jobs will be printed in the working directory, so that you will be able to see their status and somatic model_ids associated. You will want to run this script again to create the missing symbolic links when all of your builds have the appropriate copy_number_output files.'
+    'Create links to bam-to-cna files from somatic builds.'
 }
 
 sub help_detail {

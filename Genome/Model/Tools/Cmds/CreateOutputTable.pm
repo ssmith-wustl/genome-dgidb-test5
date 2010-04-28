@@ -28,7 +28,7 @@ class Genome::Model::Tools::Cmds::CreateOutputTable {
 };
 
 sub help_brief {
-    "This script looks at each region call file created by gmt cmds individual-region-calls (except ROIs.txt) and judges the p-value and sd value to make a call of either Amp, Del, or Neutral. If sd > 0 and p-value < cutoff, the call is Amp. If sd < 0 and p-value < cutoff, the call is Del. Any other case: call is Neutral."
+    'Make Amp, Del, or Neutral calls from cmds region calls'
 }
 
 sub help_detail {

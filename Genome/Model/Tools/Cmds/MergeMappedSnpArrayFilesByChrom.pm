@@ -25,7 +25,7 @@ class Genome::Model::Tools::Cmds::MergeMappedSnpArrayFilesByChrom {
 
 
 sub help_brief {
-    "This script takes log2 copy number data with headers [CHR POS Sample1 Sample2... ] and merges the files based on matched positions between different sets of data (originating from different map.csv files. It prints 1 file per chromosome, with headers repeated."
+    'Create per-chromosome file from many log2 ratio data tables'
 }
 
 sub help_detail {

@@ -24,7 +24,7 @@ class Genome::Model::Tools::Cmds::MergeCnaOutputByChrom {
 };
 
 sub help_brief {
-    "This script reads the bam-to-cna outputs of many samples and compiles all of the data from the DIFF columns into a single file (per chromosome) for input into the cmds.R function."
+    'Create per-chromosome files from many bam-to-cna files'
 }
 
 sub help_detail {
@@ -111,7 +111,7 @@ sub execute {
         }
 
         #if we have switched chromosomes, open a new output file and close the old output file
-        if ($cur_max_chr ne $prev_cur_max_chr) {
+        if (defined($prev_cur_max_chr) && $cur_max_chr ne $prev_cur_max_chr) {
             $output_fh->close;
             $output_fh = open_new_output_fh($outfile,$header,$cur_max_chr);
             $prev_cur_max_chr = $cur_max_chr;

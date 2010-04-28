@@ -48,7 +48,7 @@ class Genome::Model::Tools::Cmds::IndividualRegionCalls {
 };
 
 sub help_brief {
-    "This script takes the CMDS results and looks for regions of interest (ROIs) which show significant copy-number alterations. Significance is based on the CMDS test value, -log10(p-value), where the default cutoff = 3. Windows with significant p-values are searched and grouped if within 100,000 bp (default). These ROIs are saved in the output_dir in a file called ROIs.txt. This ROI file is then parsed to create individual region calls using Qunyuan's regioncall.R script. regioncall.R takes each ROI and creates an output file with per-sample CNA information in this region. THese output files are put in the --output-dir."
+    'Look at all individuals in the study set at significant cmds_test regions'
 }
 
 sub help_detail {

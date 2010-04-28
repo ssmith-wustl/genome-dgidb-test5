@@ -40,7 +40,7 @@ class Genome::Model::Tools::Cmds::CreateMappedSnpArrayFile {
 };
 
 sub help_brief {
-    "This script creates a legible data file containing log2 snp array data with chromosome and position information. Can be used to create a mapped file for a single sample or for a group of samples which reference the same map.csv file."
+    'Create table of log2 snp array data [chr pos sample1 sample2...]'
 }
 
 sub help_detail {

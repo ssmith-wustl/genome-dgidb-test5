@@ -25,11 +25,11 @@ class Genome::Model::Tools::Cmds::Execute {
 };
 
 sub help_brief {
-    "This script runs the CMDS tool written by Qunyuan. It submits a job array to parallelize the process by chromosome. The process runs on every file in the data directory, so make sure it is clean. It creates two folders for output in the 'output_directory', one called cmds_test, containing text files of results, and a second caled cmds_plot, containing results in the form of images. DO NOT RUN THIS SCRIPT IN THE DATA DIRECTORY."
+    "Run CMDS analysis"
 }
 
 sub help_detail {
-    "run CMDS analysis"
+    "This script runs the CMDS tool written by Qunyuan. It submits a job array to parallelize the process by chromosome. The process runs on every file in the data directory, so make sure it is clean. It creates two folders for output in the 'output_directory', one called cmds_test, containing text files of results, and a second caled cmds_plot, containing results in the form of images. DO NOT RUN THIS SCRIPT IN THE DATA DIRECTORY."
 }
 
 sub execute {
