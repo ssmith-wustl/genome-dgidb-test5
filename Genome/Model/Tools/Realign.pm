@@ -269,7 +269,8 @@ sub create_mini_bam {
     );
 
     my $cmd = join(' ', 'samtools view -b',
-                        "-o $minibam_filename",
+                        '-o',
+                        $minibam_filename,
                         $self->bam(),
                         $ranges
                 );
@@ -313,6 +314,7 @@ sub get_ranges {
 
         my ($chr, $start, $stop) = split(/\t/,$line);
         my $range = "$chr:$start-$stop";
+        chomp($range);
         push @ranges, $range;
     }
     close($fh);
