@@ -74,7 +74,7 @@ popup.center();
 </tr>
 <tr>
 <td class="label">Processing Profile:</td>
-<td class="value">bwa0.5.5 and samtools r453 and picard r107</td>
+<td class="value">bwa0.5.5 and samtools r453 and picard r107 (reference alignment)</td>
 </tr>
 <tr>
 <td class="label">Data Directory:</td>
