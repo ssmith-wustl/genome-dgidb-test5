@@ -92,7 +92,7 @@ class Genome::Model::Tools::CopyNumber::Graph {
     plot_snp => {
     	type => 'Boolean',
     	is_optional => 1,
-    	default => 1,
+    	default => 0,
     	doc => 'Whether to plot snp.',
     },
     fix_y_limit => {
@@ -167,14 +167,29 @@ sub execute {
     my $table;
 
 	# get the length of the chromosome
-	my $length1 = readChrLength($bam_tumor, $chr);
-	my $length2 = readChrLength($bam_normal, $chr);
 	my $length;
-	if($length1 < $length2){
-		$length = $length1;
+	my $length1;
+	my $length2;
+	if(-e "$bam_tumor"){
+		$length1 = readChrLength($bam_tumor, $chr);
+#		print "$length1";
+	}	
+	if(-e "$bam_normal"){
+		$length2 = readChrLength($bam_normal, $chr);
+	}
+	if(-e "$bam_tumor" && -e "$bam_normal"){
+		if($length1 < $length2){
+			$length = $length1;
+		}
+		else{
+			$length = $length2;
+		}
+	}
+	elsif(-e "$bam_tumor"){
+			$length = $length1;
 	}
 	else{
-		$length = $length2;
+			$length = $length2;
 	}
 	
     # read the neighbors
@@ -188,14 +203,13 @@ sub execute {
     	$neighbor1_right = 0;
     }
     my $neighbor2_left = $end + 1;
-    if($neighbor2_left > $length){
+    if((-e "$bam_tumor" || -e "$bam_normal") && $neighbor2_left > $length){
     	$neighbor2_left = $length;
     }
     my $neighbor2_right = $end + $multiple_neighbor*$interval;
-    if($neighbor2_right > $length){
+    if((-e "$bam_tumor" || -e "$bam_normal") && $neighbor2_right > $length){
     	$neighbor2_right = $length;
     }
-
 
     # Step 2: get samtools and write to a file
 	my $system_tmp = 1;
@@ -475,12 +489,12 @@ sub readChrLength{
     my $length;
 
 	# skip the first two lines (first line: EOF; second line: header of the file)
-	for(my $i = 2; $i < $#command; $i ++ ) {
+	for(my $i = 1; $i < $#command; $i ++ ) {
         my $each_line = $command[$i];
         my ($tmp1, $chromosome_col, $length_col) = split(/\t/, $each_line);
         my ($tmp2, $chromosome) = split(/:/, $chromosome_col);
         if($chromosome eq $chr){
-        	$length_col = substr($length_col, 0, length($length_col)-1);
+        	chomp $length_col;
         	(my $tmp3, $length) = split(/:/, $length_col);
 	        last;
 	    }
