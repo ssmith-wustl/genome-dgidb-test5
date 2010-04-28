@@ -123,6 +123,7 @@ BEGIN: {
 Genome::InstrumentData::Solexa->class;
 *fastq_filenames = \&Genome::InstrumentData::Solexa::fastq_filenames;
 *dump_illumina_fastq_archive = \&Genome::InstrumentData::Solexa::dump_illumina_fastq_archive;
+*validate_fastq_directory = \&Genome::InstrumentData::Solexa::validate_fastq_directory;
 *resolve_fastq_filenames = \&Genome::InstrumentData::Solexa::resolve_fastq_filenames;
 *fragment_fastq_name = \&Genome::InstrumentData::Solexa::fragment_fastq_name;
 *read1_fastq_name = \&Genome::InstrumentData::Solexa::read1_fastq_name;

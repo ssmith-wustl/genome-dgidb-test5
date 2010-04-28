@@ -39,7 +39,7 @@ sub _generate_quality_stats {
     my $self = shift;
 
     my @fastq_suffix = qw/fastq fq txt/;
-    my @fastq_filenames = $self->instrument_data->resolve_fastq_filenames;
+    my @fastq_filenames = @{$self->instrument_data->resolve_fastq_filenames};
     my $tmp_directory = File::Temp::tempdir( CLEANUP => 1 );
 
     my %stats_files;

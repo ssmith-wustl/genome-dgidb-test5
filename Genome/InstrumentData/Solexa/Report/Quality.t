@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use Genome::Utility::FileSystem;
 
@@ -13,6 +13,8 @@ if (-e $tmp .'/Quality/report.xml') {
     unlink $tmp .'/Quality/report.xml';
 }
 my $gerald_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
+my $ori_report_xml   = '/gsc/var/cache/testsuite/data/Genome-InstrumnetData-Solexa-Report-Quality/report.xml';
+
 my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   id => '-123456',
                                                                   sequencing_platform => 'solexa',
@@ -26,9 +28,14 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   gerald_directory => $gerald_directory,
                                                               );
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
-$instrument_data->set_always('dump_illumina_fastq_archive',$instrument_data->gerald_directory);
-$instrument_data->mock('read1_fastq_name', \&Genome::InstrumentData::Solexa::read1_fastq_name);
-$instrument_data->mock('read2_fastq_name', \&Genome::InstrumentData::Solexa::read2_fastq_name);
+
+#comment out following lines for changed codes in G::I::S::resolve_fastq_filenames
+#$instrument_data->set_always('dump_illumina_fastq_archive',$instrument_data->gerald_directory);
+#$instrument_data->mock('read1_fastq_name', \&Genome::InstrumentData::Solexa::read1_fastq_name);
+#$instrument_data->mock('read2_fastq_name', \&Genome::InstrumentData::Solexa::read2_fastq_name);
+
+my @fastq_files = map{$gerald_directory.'/s_'.$instrument_data->lane.'_'.$_.'_sequence.txt'}qw(1 2);
+$instrument_data->set_always('resolve_fastq_filenames',\@fastq_files);
 
 my $r = Genome::InstrumentData::Solexa::Report::Quality->create(
     instrument_data_id => $instrument_data->id,
@@ -47,5 +54,6 @@ $name =~ s/ /_/g;
 ok(-d "$tmp/$name", "report directory $tmp/$name is present");
 ok(-e "$tmp/$name/report.xml", 'xml report is present');
 
-
+my @diff = `diff "$tmp/$name/report.xml" $ori_report_xml`;
+is(scalar @diff, 4, 'report.xml is created as expected'); #Only time stamp is different
 

@@ -308,7 +308,7 @@ sub fastq_filenames {
     if ($self->is_external) {
         @fastqs = $self->resolve_external_fastq_filenames(@_);
     } else {
-        @fastqs = $self->resolve_fastq_filenames(@_);
+        @fastqs = @{$self->resolve_fastq_filenames(@_)};
     }
     return @fastqs;
 }
@@ -341,95 +341,97 @@ sub fragment_fastq_name {
 
 sub resolve_fastq_filenames {
     my $self = shift;
-    my %params = @_;
-
-
-    my $paired_end_as_fragment = delete $params{'paired_end_as_fragment'};
-
-    my $fastq_directory;
-    eval {
-        $fastq_directory = $self->dump_illumina_fastq_archive;
-    };
-
     my $lane = $self->subset_name;
+    my $desc = $self->desc;
+
+    my %params = @_;
+    my $paired_end_as_fragment = delete $params{'paired_end_as_fragment'};
 
     my @illumina_output_paths;
     my @errors;
+    
     # First check the archive directory and second get the gerald directory
-    for my $directory ($fastq_directory, $self->gerald_directory) {
+    for my $dir_type qw(archive_path gerald_directory) {
+        $self->status_message("Now trying to get fastq from $dir_type for $desc");
+        
+        my $directory = $self->$dir_type;
+        $directory = $self->validate_fastq_directory($directory, $dir_type);
+        next unless $directory;
+
+        if ($dir_type eq 'archive_path') {
+            $directory = $self->dump_illumina_fastq_archive; #need eval{} here ?
+            $directory = $self->validate_fastq_directory($directory, 'dump_fastq_dir');
+            next unless $directory;
+        }
+
         eval {
-            unless ($directory) {
-                die('No directory found for '. $self->desc);
-            }
-            unless (-d $directory) {
-                die('No directory on the filesystem for '. $self->desc .' : '. $directory);
-            }
-            # handle fragment or paired-end data
+            #handle fragment or paired-end data
             if ($self->is_paired_end) {
                 if (!$paired_end_as_fragment || $paired_end_as_fragment == 1) {
                     if (-e "$directory/" . $self->read1_fastq_name) {
                         push @illumina_output_paths, "$directory/" . $self->read1_fastq_name;
-                    } elsif (-e "$directory/Temp/" . $self->read1_fastq_name) {
+                    } 
+                    elsif (-e "$directory/Temp/" . $self->read1_fastq_name) {
                         push @illumina_output_paths, "$directory/Temp/" . $self->read1_fastq_name;
-                    } else {
+                    } 
+                    else {
                         die "No illumina forward data in directory for lane $lane! $directory";
                     }
                 }
                 if (!$paired_end_as_fragment || $paired_end_as_fragment == 2) {
                     if (-e "$directory/" . $self->read2_fastq_name) {
                         push @illumina_output_paths, "$directory/" . $self->read2_fastq_name;
-                    } elsif (-e "$directory/Temp/" . $self->read2_fastq_name) {
+                    } 
+                    elsif (-e "$directory/Temp/" . $self->read2_fastq_name) {
                         push @illumina_output_paths, "$directory/Temp/" . $self->read2_fastq_name;
-                    } else {
+                    } 
+                    else {
                         die "No illumina reverse data in directory for lane $lane! $directory";
                     }
                 }
-            } else {
+            } 
+            else {
                 if (-e "$directory/" . $self->fragment_fastq_name) {
                     push @illumina_output_paths, "$directory/" . $self->fragment_fastq_name;
-                } elsif (-e "$directory/Temp/" . $self->fragment_fastq_name) {
+                } 
+                elsif (-e "$directory/Temp/" . $self->fragment_fastq_name) {
                     push @illumina_output_paths, "$directory/Temp/" . $self->fragment_fastq_name;
-                } else {
+                } 
+                else {
                     die "No illumina data in directory for lane $lane! $directory";
                 }
             }
         };
-        if ($@) {
-            push @errors, $@;
-        }
-        if (@illumina_output_paths) {
-            last;
-        }
+            
+        push @errors, $@ if $@;
+        last if @illumina_output_paths;
     }
     unless (@illumina_output_paths) {
-        if (@errors) {
-            die(join("\n",@errors));
-        } else {
-            die('Failed to trap error messages!  However, no fastq files were found for '. $self->desc);
-        }
+        $self->error_message("No fastq files were found for $desc");
+        $self->error_message(join("\n",@errors)) if @errors;
+        die $self->error_message;
     }
-    return @illumina_output_paths;
+    return \@illumina_output_paths;
 }
 
+
 sub dump_illumina_fastq_archive {
-    my $self = shift;
-    my $dir = shift;
+    my ($self, $dir) = @_;
 
     my $archive = $self->archive_path;
-    unless ($dir) {
-        $dir = $self->base_temp_directory;
-    }
+    $dir = $self->base_temp_directory unless $dir;
 
     #Prevent unarchiving multiple times during execution
     #Hopefully nobody passes in a $dir expecting to overwrite another set of FASTQs coincidentally from the same lane number
     my $already_dumped = 0;
-    my $lane = $self->subset_name;
+    
     if($self->is_paired_end) {
-        if(-e $dir . '/' . $self->read1_fastq_name and -e $dir . '/' . $self->read2_fastq_name) {
+        if (-s $dir . '/' . $self->read1_fastq_name and -s $dir . '/' . $self->read2_fastq_name) {
             $already_dumped = 1;
         }
-    } else {
-        if(-e $dir . '/' . $self->fragment_fastq_name) {
+    } 
+    else {
+        if (-s $dir . '/' . $self->fragment_fastq_name) {
             $already_dumped = 1;
         }
     }
@@ -437,17 +439,43 @@ sub dump_illumina_fastq_archive {
     unless($already_dumped) {
         my $cmd = "tar -xzf $archive --directory=$dir";
         unless ($self->shellcmd(
-                                cmd => $cmd,
-                                input_files => [$archive],
-                            ) ) {
+            cmd => $cmd,
+            input_files => [$archive],
+        )) {
             $self->error_message('Failed to run tar command '. $cmd);
-            die($self->error_message);
+            return;
+            #die($self->error_message); Should try to get fastq from gerald_directory instead of dying
+        }
+    }
+    return $dir;
+}
+
+sub validate_fastq_directory {
+    my ($self, $dir, $dir_type) = @_;
+    
+    my $msg_base = "$dir_type : $dir";
+    
+    unless ($dir) {
+        $self->error_message("$msg_base is null");
+        return;
+    }
+
+    unless (-e $dir) {
+        $self->error_message("$msg_base not existing in file system");
+        return;
+    }
+
+    unless ($dir_type eq 'archive_path') {
+        unless (glob("$dir/*")) {
+            $self->error_message("$msg_base is empty");
+            return;
         }
     }
 
     return $dir;
 }
 
+    
 sub resolve_external_fastq_filenames {
     my $self = shift;
 
