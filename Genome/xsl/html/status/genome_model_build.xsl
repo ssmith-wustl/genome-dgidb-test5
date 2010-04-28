@@ -65,7 +65,7 @@ popup.center();
                       </xsl:if>
 
                       </td></tr>
-                      <tr><td class="label">Processing Profile:</td><td class="value"><xsl:value-of select="build/stages/@processing_profile"/></td></tr>
+                      <tr><td class="label">Processing Profile:</td><td class="value"><xsl:value-of select="build/stages/@processing_profile"/> (<xsl:value-of select="build/stages/@processing_profile_type"/>)</td></tr>
                       <tr><td class="label">Data Directory:</td><td class="value"><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@data-directory"/></xsl:attribute><xsl:value-of select="build/@data-directory"/></a></td></tr>
                       <xsl:if test="//build/@kilobytes-requested">
                         <tr>
@@ -368,4 +368,4 @@ popup.center();
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
-</xsl:stylesheet> 
+</xsl:stylesheet>

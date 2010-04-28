@@ -14,9 +14,9 @@ use XML::LibXSLT;
 class Genome::Model::Build::View::Status::Xml {
     is => 'Genome::View::Status::Xml',
     has => [
-        _doc    => { 
-            is_transient => 1, 
-            doc => 'the XML::LibXML document object used to build the content for this view' 
+        _doc    => {
+            is_transient => 1,
+            doc => 'the XML::LibXML document object used to build the content for this view'
         },
     ],
     has_optional => [
@@ -239,26 +239,26 @@ sub get_build_node {
     if (-e $err_log_file) {
         $buildnode->addChild( $doc->createAttribute("error-log",$err_log_file));
     }
-    
+
     $buildnode->addChild($self->get_model_node);
-    
+
     return $buildnode;
 }
 
 sub get_model_node {
     my $self = shift;
     my $doc = $self->_doc;
-    
+
     my $modelnode = $doc->createElement("model");
-    
+
     my $model = $self->subject->model;
-    
+
     #For generating links
     $modelnode->addChild( $doc->createAttribute("id", $model->id));
     $modelnode->addChild( $doc->createAttribute("type", $model->class));
     my $namenode = $modelnode->addChild( $self->anode('aspect', 'name', 'name'));
     $namenode->addChild( $self->tnode('value', $model->name));
-    
+
     return $modelnode;
 }
 
@@ -270,7 +270,7 @@ sub get_workflow_node {
 
     $workflownode->addChild( $doc->createAttribute("instance-id", $self->instance->id));
     $workflownode->addChild( $doc->createAttribute("instance-status", $self->instance->status));
-    
+
     #For generating links
     $workflownode->addChild( $doc->createAttribute("id", $self->instance->id));
     $workflownode->addChild( $doc->createAttribute("type", $self->instance->class));
@@ -325,10 +325,14 @@ sub get_processing_profile_node {
     my $model = $build->model;
     my $doc = $self->_doc;
 
+    $DB::single = 1;
+
     my $pp = $model->processing_profile;
     my $pp_name = $pp->name;
+    my $pp_type = $pp->type_name;
 
     my $stages_node = $self->anode("stages","processing_profile",$pp_name);
+    $stages_node->addChild( $doc->createAttribute("processing_profile_type", $pp_type));
 
     if($pp->can('stages')) {
 
@@ -336,12 +340,12 @@ sub get_processing_profile_node {
             my $stage_node = $self->anode("stage","value",$stage_name);
             my $commands_node = $doc->createElement("command_classes");
             my $operating_on_node = $doc->createElement("operating_on");
-    
+
             my @objects = $pp->objects_for_stage($stage_name,$model);
             foreach my $object (@objects) {
-    
+
                 my $object_node;
-    
+
                 #if we have a full blown object (REF), get the object data
                 if ( ref(\$object) eq "REF" ) {
                     if ($object->class eq 'Genome::InstrumentData::Solexa' or $object->class eq 'Genome::InstrumentData::Imported') {
@@ -354,10 +358,10 @@ sub get_processing_profile_node {
                 } else {
                     $object_node = $self->anode("object","value",$object);
                 }
-    
+
                 $operating_on_node->addChild($object_node);
             }
-    
+
             my @command_classes = $pp->classes_for_stage($stage_name);
             foreach my $classes (@command_classes) {
                 #$commands_node->addChild( $self->anode("command_class","value",$classes ) );
