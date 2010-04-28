@@ -1,6 +1,3 @@
-#:boberkfe this should be able to de-assign a model from a group too
-
-
 package Genome::ModelGroup;
 
 use strict;
