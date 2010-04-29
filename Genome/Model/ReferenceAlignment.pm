@@ -39,16 +39,16 @@ class Genome::Model::ReferenceAlignment {
         variant_filter               => { via => 'processing_profile'},
         multi_read_fragment_strategy => { via => 'processing_profile'},
         prior_ref_seq                => { via => 'processing_profile'},
-        read_aligner_name            => {
-                                         calculate_from => 'processing_profile',
-                                         calculate => q|
-                                             my $read_aligner_name = $processing_profile->read_aligner_name;
-                                             if ($read_aligner_name =~ /^maq/) {
-                                                 return 'maq';
-                                             }
-                                             return $read_aligner_name;
-                                         |,
-                                     },
+        read_aligner_name => {
+            calculate_from => 'processing_profile',
+            calculate => q|
+                my $read_aligner_name = $processing_profile->read_aligner_name;
+                if ($read_aligner_name =~ /^maq/) {
+                    return 'maq';
+                }
+                return $read_aligner_name;
+            |,
+        },
         read_aligner_version         => { via => 'processing_profile'},
         read_aligner_params          => { via => 'processing_profile'},
         read_trimmer_name            => { via => 'processing_profile'},
@@ -58,42 +58,55 @@ class Genome::Model::ReferenceAlignment {
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
         reference_sequence_name      => { via => 'processing_profile'},
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            via => 'inputs',
+            to => 'value',
+            where => [ name => 'reference_sequence_build' ],
+            is_many => 0,
+            is_mutable => 1, # TODO: make this non-optional once backfilling is complete and reference placeholder is deleted
+            is_optional => 1,
+            doc => 'reference sequence to align against'
+        },
         coverage_stats_params        => { via => 'processing_profile'},
         capture_set_name             => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
-        assignment_events   => { is => 'Genome::Model::Event::Build::ReferenceAlignment::AssignRun',
-                                 is_many => 1,
-                                 reverse_id_by => 'model',
-                                 doc => 'each case of an instrument data being assigned to the model',
-                            },
-        alignment_events             => { is => 'Genome::Model::Event::Build::ReferenceAlignment::AlignReads',
-                                          is_many => 1,
-                                          reverse_id_by => 'model',
-                                          doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
-                                     },
-       #this is to get the SNP statistics...
-       filter_variation_events             => { is => 'Genome::Model::Event::Build::ReferenceAlignment::FilterVariations',
-                                                is_many => 1,
-                                                reverse_id_by => 'model',
-                                                doc => 'each case of variations filtered per chromosome',
-                                           },
-        alignment_file_paths         => { via => 'alignment_events' },
-        has_all_alignment_metrics    => { via => 'alignment_events', to => 'has_all_metrics' },
-        has_all_filter_variation_metrics    => { via => 'filter_variation_events', to => 'has_all_metrics' },
-        variant_count                => {
-                                         doc => 'the differences between the genome and the reference',
-                                         calculate => q|
-                                                my @f = $self->_variant_list_files();
-                                                my $c = 0;
-                                                for (@f) {
-                                                    my $fh = IO::File->new($_);
-                                                    while ($fh->getline) {
-                                                        $c++
-                                                    }
-                                                }
-                                                return $c;
-                                            |,
-                                     },
+        assignment_events => {
+            is => 'Genome::Model::Event::Build::ReferenceAlignment::AssignRun',
+            is_many => 1,
+            reverse_id_by => 'model',
+            doc => 'each case of an instrument data being assigned to the model',
+        },
+        alignment_events => {
+            is => 'Genome::Model::Event::Build::ReferenceAlignment::AlignReads',
+            is_many => 1,
+            reverse_id_by => 'model',
+            doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
+        },
+        #this is to get the SNP statistics...
+        filter_variation_events => {
+            is => 'Genome::Model::Event::Build::ReferenceAlignment::FilterVariations',
+            is_many => 1,
+            reverse_id_by => 'model',
+            doc => 'each case of variations filtered per chromosome',
+        },
+        alignment_file_paths => { via => 'alignment_events' },
+        has_all_alignment_metrics => { via => 'alignment_events', to => 'has_all_metrics' },
+        has_all_filter_variation_metrics => { via => 'filter_variation_events', to => 'has_all_metrics' },
+        variant_count => {
+            doc => 'the differences between the genome and the reference',
+            calculate => q|
+                my @f = $self->_variant_list_files();
+                my $c = 0;
+                for (@f) {
+                    my $fh = IO::File->new($_);
+                    while ($fh->getline) {
+                        $c++
+                    }
+                }
+                return $c;
+            |,
+        },
         build_events  => {
             is => 'Genome::Model::Event::Build',
             reverse_id_by => 'model',
@@ -118,8 +131,8 @@ class Genome::Model::ReferenceAlignment {
                 return $latest_build_event;
             |,
         },
-        filter_ruleset_name     => { via => 'processing_profile' },
-        filter_ruleset_params   => { via => 'processing_profile' },
+        filter_ruleset_name   => { via => 'processing_profile' },
+        filter_ruleset_params => { via => 'processing_profile' },
     ],
     doc => 'A genome model produced by aligning DNA reads to a reference sequence.' 
 };

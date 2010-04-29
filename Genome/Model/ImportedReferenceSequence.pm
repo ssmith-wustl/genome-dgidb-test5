@@ -6,7 +6,7 @@ use warnings;
 
 use Genome;
 
-class Genome::Model::ImportedReferenceSequence{
+class Genome::Model::ImportedReferenceSequence {
     is => 'Genome::Model',
     has => [
         fasta_file => {

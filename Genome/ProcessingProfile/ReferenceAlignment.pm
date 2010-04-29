@@ -10,132 +10,129 @@ class Genome::ProcessingProfile::ReferenceAlignment {
     sub_classification_method_name => '_resolve_subclass_name',
     has_param => [
         sequencing_platform => {
-                                doc => 'The sequencing platform from whence the model data was generated',
-                                valid_values => ['454', 'solexa', '3730'],
-                            },
+            doc => 'The sequencing platform from whence the model data was generated',
+            valid_values => ['454', 'solexa', '3730'],
+        },
         dna_type => {
-                     doc => 'the type of dna used in the reads for this model',
-                     valid_values => ['genomic dna', 'cdna']
-                 },
+            doc => 'the type of dna used in the reads for this model',
+            valid_values => ['genomic dna', 'cdna']
+        },
         genotyper_name => {
-                           doc => 'name of the genotyper for this model',
-                           is_optional => 1,
-                       },
+            doc => 'name of the genotyper for this model',
+            is_optional => 1,
+        },
         genotyper_version => {
-                              doc => 'version of the genotyper for this model',
-                              is_optional => 1,
-                       },
+            doc => 'version of the genotyper for this model',
+            is_optional => 1,
+        },
         genotyper_params => {
-                             doc => 'command line args used for the genotyper',
-                             is_optional => 1,
-                         },
+            doc => 'command line args used for the genotyper',
+            is_optional => 1,
+        },
         indel_finder_name => {
-                              doc => 'name of the indel finder for this model',
-                              is_optional => 1,
-                          },
+            doc => 'name of the indel finder for this model',
+            is_optional => 1,
+        },
         indel_finder_version => {
-                                 doc => 'version of the indel finder for this model',
-                                 is_optional => 1,
-                          },
+            doc => 'version of the indel finder for this model',
+            is_optional => 1,
+        },
         indel_finder_params => {
-                                doc => 'command line args for the indel finder',
-                                is_optional => 1,
-                            },
+            doc => 'command line args for the indel finder',
+            is_optional => 1,
+        },
         variant_filter => {
-                           doc => 'variant filter type: VarFilter or SnpFilter',
-                           is_optional => 1,
-                          },
+            doc => 'variant filter type: VarFilter or SnpFilter',
+            is_optional => 1,
+        },
         multi_read_fragment_strategy => {
-                                         doc => '',
-                                         is_optional => 1,
-                                     },
+            doc => '',
+            is_optional => 1,
+        },
         merge_software => {
-                              doc => 'picard or samtools for merging',
-                              is_optional => 1,
-                          },
+            doc => 'picard or samtools for merging',
+            is_optional => 1,
+        },
         picard_version => {
-                              doc => 'picard version for MarkDuplicates, MergeSamfiles, CreateSequenceDictionary...',
-                              is_optional => 1,
+            doc => 'picard version for MarkDuplicates, MergeSamfiles, CreateSequenceDictionary...',
+            is_optional => 1,
         },
         samtools_version => {
-                              doc => 'samtools version for SamToBam, samtools merge, etc...',
-                              is_optional => 1,
+            doc => 'samtools version for SamToBam, samtools merge, etc...',
+            is_optional => 1,
         },
         rmdup_name => {
-                              doc => 'rmdup tool used for this model',
-                              is_optional => 1,
+            doc => 'rmdup tool used for this model',
+            is_optional => 1,
                           },
         rmdup_version => {
-                              doc => 'rmdup tool version used for this model',
-                              is_optional => 1,
-                          },
+            doc => 'rmdup tool version used for this model',
+            is_optional => 1,
+        },
         read_aligner_name => {
-                              doc => 'alignment algorithm/software used for this model',
-                          },
-
+            doc => 'alignment algorithm/software used for this model',
+        },
         read_aligner_version => {
-                                 doc => 'the aligner version used for this model',
-                                 is_optional => 1,
-                             },
+            doc => 'the aligner version used for this model',
+            is_optional => 1,
+        },
         read_aligner_params => {
-                                doc => 'command line args for the aligner',
-                                is_optional => 1,
-                            },
+            doc => 'command line args for the aligner',
+            is_optional => 1,
+        },
         force_fragment => {
-                           is => 'Integer',
-                           #This doesn't seem to work yet because of the create code, can't the valid values logic be removed from create???
-                           #default_value => '0',
-                           #valid_values => ['0', '1'],
-                           doc => 'force all alignments as fragment reads',
-                           is_optional => 1,
+            is => 'Integer',
+            #This doesn't seem to work yet because of the create code, can't the valid values logic be removed from create???
+            #default_value => '0',
+            #valid_values => ['0', '1'],
+            doc => 'force all alignments as fragment reads',
+            is_optional => 1,
         },
         read_trimmer_name => {
-                              doc => 'trimmer algorithm/software used for this model',
-                              is_optional => 1,
-                          },
-
+            doc => 'trimmer algorithm/software used for this model',
+            is_optional => 1,
+        },
         read_trimmer_version => {
-                                 doc => 'the trimmer version used for this model',
-                                 is_optional => 1,
-                             },
+            doc => 'the trimmer version used for this model',
+            is_optional => 1,
+        },
         read_trimmer_params => {
-                                doc => 'command line args for the trimmer',
-                                is_optional => 1,
-                            },
+            doc => 'command line args for the trimmer',
+            is_optional => 1,
+        },
         read_calibrator_name => {
-                                 doc => '',
-                                 is_optional => 1,
-                             },
+            doc => '',
+            is_optional => 1,
+        },
         read_calibrator_params => {
-                                   doc => '',
-                                   is_optional => 1,
-                               },
+            doc => '',
+            is_optional => 1,
+        },
         coverage_stats_params => {
             doc => 'parameters necessary for generating reference coverage in the form of two comma delimited lists split by a colon like 1,5,10,15,20:0,200,500',
             is_optional => 1,
         },
         prior_ref_seq => {
-                          doc => '',
-                          is_optional => 1,
-                      },
+            doc => '',
+            is_optional => 1,
+        },
         reference_sequence_name => {
-                                    doc => 'identifies the reference sequence used in the model(required if no prior_ref_seq)',
-                                    is_optional => 1,
-                                },
+            doc => 'identifies the reference sequence used in the model(required if no prior_ref_seq)',
+            is_optional => 1,
+        },
         capture_set_name => {
             doc => 'The name of the capture set to evaluate coverage and limit variant calls to within the defined target regions',
             is_optional => 1,
         },
         align_dist_threshold => {
-                                 doc => '',
-                                 is_optional => 1,
-                             },
-        annotation_reference_transcripts => {
-                                             doc => 'The reference transcript set used for variant annotation',
-                                             is_optional => 1,
+            doc => '',
+            is_optional => 1,
         },
-
-        ],
+        annotation_reference_transcripts => {
+            doc => 'The reference transcript set used for variant annotation',
+            is_optional => 1,
+        },
+    ],
 };
 
 sub prior {
