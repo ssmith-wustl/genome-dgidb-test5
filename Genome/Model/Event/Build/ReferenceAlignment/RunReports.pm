@@ -94,7 +94,8 @@ sub execute {
     $self->status_message("Using report templates: ". join(",",@templates));
 
     my $summary_report = $r->generate_report;
-    unless ($summary_report->save($build->resolve_reports_directory)) {
+
+    unless ($build->add_report($summary_report)) {
         $self->error_message("Failed to save report: ". $summary_report->name .' to '. $build->resolve_reports_directory);
         return;
     }
