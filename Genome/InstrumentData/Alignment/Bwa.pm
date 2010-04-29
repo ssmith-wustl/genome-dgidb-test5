@@ -642,17 +642,15 @@ sub _verify_bwa_aln_did_happen {
     my %p = @_;
 
     unless (-e $p{sai_file} && -s $p{sai_file}) {
-	$self->error_message("Expected SAI file is $p{sai_file} nonexistent or zero length.");
-	return;
+	    $self->error_message("Expected SAI file is $p{sai_file} nonexistent or zero length.");
+	    return;
     }
     
     unless ($self->_inspect_log_file(log_file=>$p{log_file},
 				     log_regex=>'(\d+) sequences have been processed')) {
-	
-	$self->error_message("Expected to see 'X sequences have been processed' in the log file where 'X' must be a nonzero number.");
-	return 0;
+	    $self->error_message("Expected to see 'X sequences have been processed' in the log file where 'X' must be a nonzero number.");
+	    return 0;
     }
-    
     return 1;
 }
 
@@ -662,6 +660,8 @@ sub process_low_quality_alignments {
     my $unaligned_reads_file = $self->unaligned_reads_list_path;
     my @unaligned_reads_files = $self->unaligned_reads_list_paths;
 
+    my $filter_name = $self->filter_name || 'none';
+    
     my @paths;
     my $result;
     if (-s $unaligned_reads_file . '.fastq' && -s $unaligned_reads_file) {
@@ -669,16 +669,16 @@ sub process_low_quality_alignments {
         return 1;
     }
     elsif (-s $unaligned_reads_file) {
-        if ($self->instrument_data->is_paired_end && !$self->force_fragment) {
+        if ($self->instrument_data->is_paired_end && !$self->force_fragment && $filter_name ne 'forward-only' && $filter_name ne 'reverse-only') {
             $result = Genome::Model::Tools::Bwa::UnalignedDataToFastq->execute(
-                in => $unaligned_reads_file, 
-                fastq => $unaligned_reads_file . '.1.fastq',
+                in            => $unaligned_reads_file, 
+                fastq         => $unaligned_reads_file . '.1.fastq',
                 reverse_fastq => $unaligned_reads_file . '.2.fastq'
             );
         }
         else {
             $result = Genome::Model::Tools::Bwa::UnalignedDataToFastq->execute(
-                in => $unaligned_reads_file, 
+                in    => $unaligned_reads_file, 
                 fastq => $unaligned_reads_file . '.fastq'
             );
         }
@@ -688,16 +688,16 @@ sub process_low_quality_alignments {
     }
     else {
         foreach my $unaligned_reads_files_entry (@unaligned_reads_files){
-            if ($self->instrument_data->is_paired_end && !$self->force_fragment) {
+            if ($self->instrument_data->is_paired_end && !$self->force_fragment && $filter_name ne 'forward-only' && $filter_name ne 'reverse-only') {
                 $result = Genome::Model::Tools::Bwa::UnalignedDataToFastq->execute(
-                    in => $unaligned_reads_files_entry, 
-                    fastq => $unaligned_reads_files_entry . '.1.fastq',
+                    in            => $unaligned_reads_files_entry, 
+                    fastq         => $unaligned_reads_files_entry . '.1.fastq',
                     reverse_fastq => $unaligned_reads_files_entry . '.2.fastq'
                 );
             }
             else {
                 $result = Genome::Model::Tools::Bwa::UnalignedDataToFastq->execute(
-                    in => $unaligned_reads_files_entry, 
+                    in    => $unaligned_reads_files_entry, 
                     fastq => $unaligned_reads_files_entry . '.fastq'
                 );
             }
@@ -720,19 +720,19 @@ sub _verify_bwa_samxe_did_happen {
     my %p = @_;
     
     unless (-e $p{aligned_reads_file} && -e $p{unaligned_reads_file}) {
-	$self->error_message("bwa samXe output incomplete.  Missing an aligned or unaligned reads file, or both");
-	return;
+	    $self->error_message("bwa samXe output incomplete.  Missing an aligned or unaligned reads file, or both");
+	    return;
     }
     
     if (!-s $p{aligned_reads_file} && !-s $p{unaligned_reads_file}) {
-	$self->error_message("bwa samXe output is incorrect.  The aligned and unaligned reads files should not both be zero!");
-	return;
+	    $self->error_message("bwa samXe output is incorrect.  The aligned and unaligned reads files should not both be zero!");
+	    return;
     }
     
     unless ($self->_inspect_log_file(log_file=>$p{log_file},
 				     log_regex=>'print alignments')) {
-	$self->error_message("Did not find expected output in bwa samXe log file output");
-	return;
+	    $self->error_message("Did not find expected output in bwa samXe log file output");
+	    return;
     }
     
     return 1;
@@ -744,8 +744,7 @@ sub _inspect_log_file {
 
     my $aligner_output_fh = IO::File->new($p{log_file});
     unless ($aligner_output_fh) {
-        $self->error_message("Can't open expected log file to verify completion " . $p{log_file} . "$!"
-        );
+        $self->error_message("Can't open expected log file to verify completion " . $p{log_file} . "$!");
         return;
     }
     
@@ -753,8 +752,7 @@ sub _inspect_log_file {
     
     my $log_regex = $p{log_regex};
     if ($log_regex =~ m/\(\\d\+\)/) {
-	
-	$check_nonzero = 1;
+	    $check_nonzero = 1;
     }
 
     while (<$aligner_output_fh>) {
