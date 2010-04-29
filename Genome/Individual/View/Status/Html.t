@@ -11,7 +11,7 @@ use_ok('Genome::Individual::View::Status::Html') or die "test cannot continue...
 
 #2767865381 is OVC1
 my $subject = Genome::Individual->get(2767865381);
-ok($subject, "found expected individual` subject") or die "test cannot continue...";
+ok($subject, "found expected individual subject") or die "test cannot continue...";
 
 my $view_obj = $subject->create_view(
     xsl_root => Genome->base_dir . '/xsl',
