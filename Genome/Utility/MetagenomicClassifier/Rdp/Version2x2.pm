@@ -54,8 +54,7 @@ use Inline(
 END
 
     AUTOSTUDY => 1,
-    #CLASSPATH => '/gsc/scripts/lib/java/rdp_classifier-2.1.jar',
-    CLASSPATH => '/gscuser/ebelter/dev/tasks/2010apr5.download_new_rdp/rdp_classifier_2.2/rdp_classifier-2.2.jar',
+    CLASSPATH => '/gsc/scripts/lib/java/rdp_classifier-2.2.jar',
     STUDY => [
         'edu.msu.cme.rdp.classifier.rrnaclassifier.ClassifierFactory',
         'edu.msu.cme.rdp.classifier.rrnaclassifier.Classifier',
@@ -66,7 +65,7 @@ END
     ],
     PACKAGE => 'main',
     DIRECTORY => Genome::InlineConfig::DIRECTORY(),
-    EXTRA_JAVA_ARGS => '-Xmx1000m',
+    EXTRA_JAVA_ARGS => '-f fixrank -Xmx1000m',
     JNI => 1,
 ) ;
 
