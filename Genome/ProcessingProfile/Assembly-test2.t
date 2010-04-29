@@ -19,8 +19,6 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-#    plan tests => 326;
-    plan tests => 186;
     use_ok( 'Genome::InstrumentData::454');
     use_ok( 'Genome::Model::Assembly');
     use_ok( 'Genome::ProcessingProfile::Assembly');
@@ -227,6 +225,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
   }
     rmtree($model->data_directory);
 }
+done_testing();
 exit;
 
 sub _trap_messages {
