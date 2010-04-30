@@ -99,11 +99,14 @@ sub pre_execute {
     my @splitFiles;
     # Split by line number
     if ($self->split_by_number and not $self->split_by_chromosome) {
+        $self->status_message("Splitting variant file " . $self->variant_file . " into " .
+            $self->split_by_number . " line chunks");
+
         my $inputFileHandler = IO::File->new($self->variant_file, "r");
+        
         my $done = 0;
         until ($done == 1) {
             my $temp = File::Temp->new(DIR => $self->_temp_dir);
-            #my $outputFileHandler = IO::File->new($temp);
             push @splitFiles, $temp;
             for (1..$self->split_by_number) {
                 my $line = $inputFileHandler->getline;
@@ -111,10 +114,8 @@ sub pre_execute {
                     $done = 1;
                     last;
                 }
-                #$outputFileHandler->print($line);
                 $temp->print($line);
             }
-            #$outputFileHandler->close;
             $temp->close;
             $self->variant_file([map { $_->filename } @splitFiles]);
         }
@@ -123,6 +124,8 @@ sub pre_execute {
 
     # Split file by chromosome
     else {
+        $self->status_message("Splitting variant file " . $self->variant_file . " by chromosome");
+
         my @variant_columns = $self->variant_attributes;
         push @variant_columns, split(/,/, $self->extra_columns) if $self->extra_columns;
         my $reader = Genome::Utility::IO::SeparatedValueReader->new (
@@ -142,7 +145,7 @@ sub pre_execute {
         while (my $line = $reader->next) {
             my $chrom = $line->{chromosome_name};
             if ($chrom ne $currChrom and ($chrom !~ /[M|N]T/ or $currChrom !~ /[M|N]T/)) {
-                print "Making new file for $chrom\n";
+                $self->status_message("Making new file for chromosome $chrom");
                 $currChrom = $chrom;
                 $fh->close if $fh;
                 $fh = File::Temp->new (DIR => $self->_temp_dir);
@@ -160,6 +163,8 @@ sub pre_execute {
         $self->variant_file([map { $_->filename } @splitFiles]);
     }
     
+    $self->status_message("Variant file split into " . scalar @splitFiles . " files");
+
     $self->_is_parallel(1);
     $self->no_headers(1);
     $self->_variant_files(\@splitFiles);
