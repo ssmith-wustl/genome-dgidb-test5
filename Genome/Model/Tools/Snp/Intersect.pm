@@ -185,14 +185,6 @@ sub execute {
     my $delimiter1 = $self->delimiter1;
     my $delimiter2 = $self->delimiter2;
 
-    if ($f1 =~ /.csv$/) {
-        $delimiter1 = ',';
-    }
-
-    if ($f2 =~ /.csv$/) {
-        $delimiter2 = ',';
-    }
-
     no warnings;
     my ($v1,$c1,$p1,$r1,$g1,@t1);
     my $getf1 = sub {
