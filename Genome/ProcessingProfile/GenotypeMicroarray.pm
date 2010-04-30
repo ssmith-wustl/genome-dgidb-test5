@@ -37,6 +37,13 @@ sub _execute_build {
     return 1;
 }
 
+sub classes_for_stage {
+    return ();
+}
+sub objects_for_stage {
+    return ();
+}
+
 sub stages {
     return (qw/
             GenotypeMicroarray
