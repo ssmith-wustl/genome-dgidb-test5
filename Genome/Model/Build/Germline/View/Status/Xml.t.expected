@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<build-status generated-at="2010-04-30 13:35:57">
+  <build model-name="tmooney_germline_test" model-id="2855070496" build-id="102002447" status="Succeeded" kilobytes-requested="30144" data-directory="/gscmnt/sata919/info/model_data/2855070496/build102002447" lsf-job-id="1949492" output-log="/gscmnt/sata919/info/model_data/2855070496/build102002447/logs//102002478.out" error-log="/gscmnt/sata919/info/model_data/2855070496/build102002447/logs//102002478.err" base-alignment-path="/gscmnt/sata920/info/model_data/2852955513/build101614583/alignments">
+    <model id="2855070496" type="Genome::Model::Germline">
+      <aspect name="name">
+        <value>tmooney_germline_test</value>
+      </aspect>
+    </model>
+    <stages processing_profile="Metabolic_Disorders" processing_profile_type="germline"/>
+    <reports directory="/gscmnt/sata919/info/model_data/2855070496/build102002447/reports/">
+      <report name="Build Failed" subdirectory="Build_Failed"/>
+      <report name="Build Initialized" subdirectory="Build_Initialized"/>
+      <report name="Build Initialized" subdirectory="Build_Initialized"/>
+      <report name="Build Succeeded" subdirectory="Build_Succeeded"/>
+    </reports>
+  </build>
+</build-status>

@@ -1,0 +1,96 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Status </title>
+<link rel="shortcut icon" href="/resources/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png">
+<link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen">
+<link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen">
+<script type="text/javascript" src="/resources/report_resources/jquery/jquery.js"></script><script type="text/javascript" src="/resources/report_resources/jquery/jquery.tablesorter.min.js"></script>
+</head>
+<body><div class="container"><div class="background">
+<div class="page_header"><table cellpadding="0" cellspacing="0" border="0"><tr>
+<td><a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/resources/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle"></a></td>
+<td><h1>Analysis Reports v0.2</h1></td>
+</tr></table></div>
+<div class="page_padding">
+<script type="text/javascript">
+          
+              $(document).ready(function() {
+                  $("#alignment").tablesorter({
+                      // sort on first column, ascending
+                      sortList: [[0,0]]
+                  });
+              });
+          
+        </script><script type="text/javascript" src="/resources/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js"></script><link rel="stylesheet" href="/resources/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css">
+<script type="text/javascript">
+          
+                   function event_popup(eventObject) {
+                   // assemble event info into a table
+                   var popup_content = '<table class="boxy_info" cellpadding="0" cellspacing="0" border="0"><tbody>';
+                   for (prop in eventObject) {
+                   if (prop != 'popup_title') {
+                   popup_content += '<tr><td class="label">' + prop.replace(/_/g," ") + ':</td><td class="value">' + eventObject[prop] + '</td></tr>';
+                   }
+                   }
+
+popup_content += '</tbody></table>';
+
+// create popup
+var popup = new Boxy(popup_content, {title:eventObject.popup_title, fixed:false});
+popup.center();
+}
+          
+        </script><h2 class="page_title build_icon">Build 102002447 Status</h2>
+<table cellpadding="0" cellspacing="0" border="0" class="info_table_group"><tr>
+<td><table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
+<tr>
+<td class="label">Model ID:</td>
+<td class="value"><a xmlns:rest="urn:rest" href="/cgi-bin/rest.cgi/Genome/Model/Germline/status.html?id=2855070496">2855070496</a></td>
+</tr>
+<tr>
+<td class="label">Model Name:</td>
+<td class="value">tmooney_germline_test</td>
+</tr>
+<tr>
+<td class="label">Base Alignment Path:</td>
+<td class="value"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata920/info/model_data/2852955513/build101614583/alignments" class="grey">(base alignment path)</a></td>
+</tr>
+<tr>
+<td class="label">LSF Job ID:</td>
+<td class="value">1949492</td>
+</tr>
+<tr>
+<td class="label">Workflow Instance ID:</td>
+<td class="value"></td>
+</tr>
+</table></td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
+<tr>
+<td class="label">Status:</td>
+<td class="value">Succeeded <a href="https://gscweb.gsc.wustl.edu//gscmnt/sata919/info/model_data/2855070496/build102002447/reports/Summary/report.html" class="grey">(view build summary report)</a>
+</td>
+</tr>
+<tr>
+<td class="label">Processing Profile:</td>
+<td class="value">Metabolic_Disorders (germline)</td>
+</tr>
+<tr>
+<td class="label">Data Directory:</td>
+<td class="value"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata919/info/model_data/2855070496/build102002447">/gscmnt/sata919/info/model_data/2855070496/build102002447</a></td>
+</tr>
+<tr>
+<td class="label">Disk Space (kbytes):</td>
+<td class="value">30,144</td>
+</tr>
+<tr>
+<td class="label">Error File:</td>
+<td class="value"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata919/info/model_data/2855070496/build102002447/logs//102002478.err">102002478.err</a></td>
+</tr>
+</table></td>
+</tr></table>
+<table border="0" cellpadding="0" cellspacing="0" class="stages" width="100%"><tr></tr></table>
+<hr>
+</div>
+</div></div></body>
+</html>

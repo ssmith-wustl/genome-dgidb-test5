@@ -45,6 +45,11 @@ popup.center();
                       <xsl:if test="build/@common-name">
                         <tr><td class="label">Common Name:</td><td class="value"><xsl:value-of select="build/@common-name"/></td></tr>
                       </xsl:if>
+                      <xsl:if test="build/@base-alignment-path">
+                          <tr><td class="label">Base Alignment Path:</td><td class="value">
+                                <a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@base-alignment-path"/></xsl:attribute><xsl:attribute name="class"><xsl:text>grey</xsl:text></xsl:attribute><xsl:text>(base alignment path)</xsl:text></a>
+                          </td></tr>
+                      </xsl:if>
                       <tr><td class="label">LSF Job ID:</td><td class="value"><xsl:value-of select="build/@lsf-job-id"/></td></tr>
                       <tr><td class="label">Workflow Instance ID:</td><td class="value"><xsl:for-each select="build/workflow"><xsl:call-template name="object_link">
                             <xsl:with-param name="linktext"><xsl:value-of select="./@id"/></xsl:with-param>
