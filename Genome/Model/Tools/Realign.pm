@@ -431,7 +431,7 @@ sub submit_worker_job {
         $max = $num_lines_in_file
     }
 
-    my $cmd = join(' ', 'bsub -u jlolofie@genome.wustl.edu -g /jlolofie/realign -q long -J realign_worker',
+    my $cmd = join(' ', 'bsub -q long -J realign_worker',
                         "gmt realign",
                         '--bam ' . $self->bam(),
                         '--regions-file ' . $self->regions_file(),
@@ -469,8 +469,7 @@ sub submit_master_job {
 
     my $ended_dep = join(' && ', @ended_dep);
     my $ended_cmd = join(' ', 
-                        'bsub -u jlolofie\@genome.wustl.edu',
-                        '-g /jlolofie/realign',
+                        'bsub',
                         '-q long',
                         "-w \"$ended_dep\"",
                         '-J realign_ended_master',
