@@ -498,6 +498,102 @@ whole_genome_test_plots=function(all_chr_data_file)
     plotgenome(x,y="z.p",yscale=c(0,6),pos.col="mid",img=img_filename,chr.col="chromosome",suffix="cmds.p",cutline=NULL);
 }
 
+#####################################################################
+plot_chr_vertical=function(data_file)
+{
+#before plotting, you need to save the whole genome merged data into one file
+#e.g. cmdsAll.rdata,  using data object name "cmds"
+
+output_filename = paste(data_file,".vertchr.png",sep="");
+read.table(data_file,header=TRUE)->cmds;
+#(load("/gscmnt/sata423/info/medseq/llin/aml/copy_number_analysis/all_Jackie/CMDS/cmdsFocalAll.rdata"));
+#cmds=tt;
+#head(cmds)
+
+
+#png("CMDS150_AllinOne.png");
+png(output_filename);
+#y=cmds[,c("primary","met")];y.lab="Log2Ratio";tl="Primary(blue) vs Metastasis(red)";lim=c(-4,4);
+
+#co=c("blue","red");
+y=-log10(cmds[,"z.p"]);y.lab="-log(P)";tl="CMDS test";lim=c(-20,20);coamp="red";codel="blue";
+yamp=y;
+
+ydel=log10(cmds[,"z.p"]);
+
+yamp[yamp>lim[2]]=lim[2];
+ydel[ydel<lim[1]]=lim[1];
+yamp=yamp-3;
+ydel=ydel+3;
+
+yamp[cmds$m<0]="NA";
+ydel[cmds$m>0]="NA";
+
+yamp[yamp<0]="NA";
+ydel[ydel>0]="NA";
+
+
+#y=log2(cmds[,"m"]/2);y.lab="Log2Ratio";tl="Mean";lim=c(-0.5,0.5);co="black";
+##### start .....
+
+chr=as.character(cmds[,"chromosome"])
+mbp=cmds[,"mid"]/1000000
+len=0
+chr.names=intersect(c(1:24),unique(chr))
+aclen=c(1:(length(chr.names)+1))
+names(aclen)=c(0,chr.names)
+for (ci in c(1:length(chr.names)))
+{
+len=c(len,max(mbp[chr==chr.names[ci]]))
+aclen[ci]=sum(len[1:ci])
+mbp[chr==chr.names[ci]]= mbp[chr==chr.names[ci]]+ aclen[ci]
+}
+aclen[length(aclen)]=sum(len[1:length(aclen)])
+#y=y[order(mbp)];
+#y[y>lim[2]]=lim[2];y[y<lim[1]]=lim[1]
+mbp=mbp[order(mbp)]
+
+#### draw ......
+
+
+#matplot(mbp,y,type="l",main=tl,xlab="Chromosomes",ylab=y.lab,ylim=lim,col=co,axes=FALSE,add=0)
+#matplot(mbp,yamp,type="l",main=tl,xlab="Chromosomes",ylab=y.lab,ylim=lim,col=coamp,axes=FALSE,add=0)
+#matplot(mbp,ydel,type="l",main=tl,xlab="Chromosomes",ylab=y.lab,ylim=lim,col=codel,axes=FALSE,add=0)
+##matplot(mbp,cbind(yamp,ydel),type="l",main=tl,xlab="Chromosomes",ylab=y.lab,ylim=lim,col=c("red","blue"),axes=FALSE,add=0)
+matplot(cbind(yamp,ydel),mbp,type="l",main=tl,xlab=y.lab,ylab="",xlim=lim,col=c("red","blue"),axes=FALSE,add=0)
+#lines(c(0,aclen[length(aclen)]),c(0,0))
+#for (i in seq(1,length(chr.names),by=2))
+#{
+#xi=c(aclen[i],aclen[i+1],aclen[i+1],aclen[i])
+#yi=c(lim[1],lim[1],lim[2],lim[2])
+#polygon(xi,yi,border=NA,col=grey(0.9))
+#}
+lim=c(-17,17);
+for (i in seq(1,length(chr.names),by=2))
+{
+yi=c(aclen[i],aclen[i+1],aclen[i+1],aclen[i])
+xi=c(lim[1],lim[1],lim[2],lim[2])
+polygon(xi,yi,border=NA,col=grey(0.9))
+}
+
+
+#matplot(mbp,yamp,type="l",main=tl,xlab="Chromosomes",ylab=y.lab,ylim=lim,col=coamp,axes=FALSE,add=1)
+#matplot(mbp,ydel,type="l",main=tl,xlab="Chromosomes",ylab=y.lab,ylim=lim,col=codel,axes=FALSE,add=1)
+##matplot(mbp,cbind(yamp,ydel),type="l",main=tl,xlab="Chromosomes",ylab=y.lab,ylim=lim,col=c("red","blue"),axes=FALSE,add=1)
+matplot(cbind(yamp,ydel),mbp,type="l",main=tl,ylab="",xlab=y.lab,xlim=lim,col=c("red","blue"),axes=FALSE,add=1)
+#ylbs=seq(lim[1],lim[2],by=(lim[2]-lim[1])/4)
+#ylbs=c(20,10,0,10,20)
+#xlbs=c(20,10,0,10,20)
+xlbs=c(20,10,5,3,5,10,20)
+axis(side=1,at=c(17,7,2,0,-2,-7,-17),labels=xlbs)
+#axis(side=2,at=ylbs,labels=ylbs)
+#axis(side=2,at=c(20,10,0,-10,-20),labels=ylbs)
+#axis(side=1,at=c(20,10,0,-10,-20),labels=xlbs)
+#text(x=((aclen[2:length(aclen)]-aclen[1:length(chr.names)])/2+aclen[1:length(chr.names)]),y=rep((lim[1]-1),times=length(chr.names)),labels=chr.names,cex=0.5)
+text(y=((aclen[2:length(aclen)]-aclen[1:length(chr.names)])/2+aclen[1:length(chr.names)]),x=rep((lim[1]-1),times=length(chr.names)),labels=chr.names,cex=0.5)
+
+dev.off()
+}
 ################################### plotgenome()
 
 plotgenome = function (tt, y="p",cutoff=NULL,cutline=2,img=NULL,yscale=NULL,draw=TRUE,ltype="p",
