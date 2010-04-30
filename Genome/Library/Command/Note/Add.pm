@@ -59,20 +59,9 @@ sub _resolve_and_set_subject {
     }
 
     unless ($subject) {
-        # see if the spec is a name
-        $subject = $subject_class_name->get($spec);
-    }
-   
-    unless ($subject) {
         # see if the spec is the start of a name
-        $subject = $subject_class_name->get('name like' => $spec . '%');
+        $subject = $subject_class_name->get('name like' => $spec);
     }
-
-    unless ($subject) {
-        # see if the spec is in the middle of a name
-        $subject = $subject_class_name->get('name like' => '%' . $spec . '%');
-    }
-
 
     unless ($subject) {
         $self->error_message("Failed to find a $friendly_class_name with the ID, name, or partial name '$spec'!");
