@@ -47,7 +47,7 @@ sub _add_details_result_xml {
         $model_groups_node->addChild( $xml_doc->createTextNode($model_group_text) );
     }
 
-    my $model_url = "/cgi-bin/dashboard/status.cgi?genome-model-id=$model_id";
+    my $model_url = "/view/Genome/Model/status.html?id=$model_id";
     my $model_url_node = $result_node->addChild( $xml_doc->createElement("url") );
     $model_url_node->addChild( $xml_doc->createTextNode($model_url) );
 

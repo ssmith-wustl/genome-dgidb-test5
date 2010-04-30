@@ -26,7 +26,7 @@ sub _add_details_result_xml {
     my $content = $doc->value_for('content');
     my ($model_group_id) = $doc->value_for('id') =~ /(\d+)/;
     
-    my $model_group_url = "/cgi-bin/dashboard/status.cgi?model-group-id=$model_group_id";
+    my $model_group_url = "/view/Genome/ModelGroup/status.html?id=$model_group_id";
     my $model_group_url_node = $result_node->addChild( $xml_doc->createElement("url") );
     $model_group_url_node->addChild( $xml_doc->createTextNode($model_group_url) );
 
