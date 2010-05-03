@@ -24,7 +24,7 @@ class Genome::Library {
     has_optional => [
         sample_id           => { is => 'Number', len => 20 },
         sample              => { is => 'Genome::Sample', id_by => 'sample_id' },
-        sample_name         => { is => 'Text', via => 'sample', to => 'sample_name' },
+        sample_name         => { is => 'Text', via => 'sample', to => 'name' },
         taxon_id            => { is => 'Number', via => 'sample', to => 'taxon_id' },
         taxon               => { is => 'Genome::Taxon', id_by => 'taxon_id' },
         species_name        => { via => 'taxon', to => 'species_name' },
