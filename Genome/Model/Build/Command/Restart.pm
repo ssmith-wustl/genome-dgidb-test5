@@ -63,9 +63,14 @@ sub execute {
         }
     }
 
+    my $build_event = $build->build_event;
+    if($build_event->event_status eq 'Abandoned') {
+        $self->error_message("Can't restart a build that was abandoned.  Start a new build instead.");
+        return 0;
+    }
+
     $build->software_revision(UR::Util::used_libs_perl5lib_prefix());
 
-    my $build_event = $build->build_event;
     $build_event->event_status('Scheduled');
     $build_event->date_completed(undef);
 
