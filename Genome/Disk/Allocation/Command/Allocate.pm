@@ -32,7 +32,7 @@ class Genome::Disk::Allocation::Command::Allocate {
                                  doc => 'The class name for the owner of this allocation',
                              },
             owner_id => {
-                         is => 'Number',
+                         is => 'Text',
                          doc => 'The id for the owner of this allocation',
                      },
         ],
