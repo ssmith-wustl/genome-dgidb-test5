@@ -6,12 +6,13 @@ use warnings;
 
 use Data::Dumper;
 use Genome;
-use Genome::Info::VariantPriorities;
+use Genome::Info::AnnotationPriorities;
 use MG::ConsScore;
 use List::MoreUtils qw/ uniq /;
 use Benchmark;
 use Bio::Tools::CodonTable;
 use DateTime;
+use Carp;
 
 class Genome::Transcript::VariantAnnotator{
     is => 'UR::Object',
@@ -20,7 +21,7 @@ class Genome::Transcript::VariantAnnotator{
             is => 'Genome::Utility::Window::Transcript'
         },
         benchmark => {
-            is => 'boolean',
+            is => 'Boolean',
             is_optional => 1,
         },
         codon_translator => {
@@ -39,267 +40,107 @@ class Genome::Transcript::VariantAnnotator{
     ]
 };
 
-my %variant_priorities = Genome::Info::VariantPriorities->for_annotation;
+my %transcript_source_priorities = Genome::Info::AnnotationPriorities->transcript_source_priorities;
+my %transcript_status_priorities = Genome::Info::AnnotationPriorities->transcript_status_priorities;
+my %variant_priorities = Genome::Info::AnnotationPriorities->variant_priorities;
+my %transcript_error_priorities = Genome::Info::AnnotationPriorities->transcript_error_priorities;
 
-local $SIG{__WARN__} = sub { 
-    __PACKAGE__->save_error_producing_variant(); 
-    warn @_ 
-};
-
-sub warning_message{
-    my $self = shift;
-    $self->save_error_producing_variant();
-    $self->SUPER::warning_message(@_);
-}
-
-sub error_message{
-    my $self = shift;
-    $self->save_error_producing_variant();
-    $self->SUPER::error_message(@_);
-}
-
-sub save_error_producing_variant{
-    my $self=shift;
-    return; #TODO disabling this for now, implement a more elegant solution/storage for file and recommit
-    unless ($Genome::Transcript::VariantAnnotator::error_fh){
-        my $ts = DateTime->now(time_zone => 'America/Chicago')->iso8601();
-        $ts =~ s/[-:]/_/g;
-        $Genome::Transcript::VariantAnnotator::error_fh = IO::File->new(">variant_annotator_error_producing_variants".$ts.".tsv");
-    }
-    my $line = join("\t", map {$Genome::Transcript::VariantAnnotator::current_variant->{$_}} (qw/chromosome_name start stop reference variant/));
-    if ($Genome::Transcript::VariantAnnotator::last_printed_line){
-        unless ($line eq $Genome::Transcript::VariantAnnotator::last_printed_line){
-            if ($Genome::TranscriptVariantAnnotator::error_fh){
-                $Genome::Transcript::VariantAnnotator::error_fh->print($line."\n");
-            }
-            $Genome::Transcript::VariantAnnotator::last_printed_line = $line;
-        }
-    }else{
-        if ($Genome::TranscriptVariantAnnotator::error_fh){
-            $Genome::Transcript::VariantAnnotator::error_fh->print($line."\n");
-        }
-        $Genome::Transcript::VariantAnnotator::last_printed_line = $line;
-    }
-}
-
-#override create and instantiate codon_translators
+# Override create and instantiate codon_translators
 sub create{
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     $self->codon_translator( Bio::Tools::CodonTable->new( -id => 1) );
     $self->mitochondrial_codon_translator( Bio::Tools::CodonTable->new( -id => 2) );
-
     return $self;
 }
 
-#- Transcripts -#
-sub transcripts { # was transcripts_for_snp and transcripts_for_indel
+# Prioritizes a list of annotations and returns the highest priority annotation per gene
+# I.E. If 6 annotations go in, from 3 different genes, it will select the "best" annotation 
+# that each gene has, and return 3 total annotations, one per gene
+# See the _prioritize_annotations method for details of sorting
+sub prioritized_transcripts {
+    my ($self, %variant) = @_;
+    my @annotations = $self->transcripts(%variant) or return;
+    
+    my @prioritized_annotations = $self->_prioritize_annotations(@annotations);
+    my %gene_annotations;
+    for my $annotation (@prioritized_annotations) {
+        unless (exists $gene_annotations{$annotation->{gene_name}}) {
+            $gene_annotations{$annotation->{gene_name}} = $annotation;
+        }
+    }
+    return values %gene_annotations;
+}
+
+# Returns the annotation with highest priority
+# Does not sort the full list of annotations, just does a single pass to find the highest priority annotation,
+# which should have run time O(n) instead of O(nlogn)
+# See the _prioritize_annotations method for details for sorting
+sub prioritized_transcript{
+    my ($self, %variant) = @_;
+    my @annotations = $self->transcripts(%variant) or return;
+
+    my $highest = shift @annotations;
+    for my $anno (@annotations) {
+        my @sorted_list = $self->_prioritize_annotations($highest, $anno);
+        $highest = shift @sorted_list;
+    }
+    return $highest;
+}
+
+# Annotates all transcripts affected by a variant
+sub transcripts {
     my ($self, %variant) = @_;
 
-    $Genome::Transcript::VariantAnnotator::current_variant = \%variant; #for error tracking, we will create a variant file that exposes warnings and errors in the system
-
     # Make sure variant is set properly
-    unless (defined($variant{start}) and defined($variant{stop}) and defined($variant{variant}) and defined($variant{reference}) and defined($variant{type}) and defined($variant{chromosome_name})) {
+    unless (defined($variant{start}) and defined($variant{stop}) and defined($variant{variant}) and defined($variant{reference}) 
+            and defined($variant{type}) and defined($variant{chromosome_name})) {
         print Dumper(\%variant);
-        die "Variant is not fully defined... start, stop, variant, reference, and type must be defined.\n";
+        confess "Variant is not fully defined, check variant file. Start, stop, variant, reference, and type must be defined.\n";
     }
 
-    my $start = new Benchmark;
-
-    my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($variant{start});
-    unless (@transcripts_to_annotate) {
-        return;
-    }
+    my @transcripts_to_annotate = $self->transcript_window->scroll($variant{start});
+    return unless @transcripts_to_annotate;
 
     my @annotations;
-    foreach my $transcript ( @transcripts_to_annotate ) {
-        unless ($self->is_valid_transcript($transcript)){  
+    for my $transcript ( @transcripts_to_annotate ) {
+        # TODO All validity checks should be at import time
+        unless ($transcript->has_valid_strand and $transcript->transcript_status ne 'unknown' and $transcript->has_associated_gene) {
+            #$self->warning_message("Transcript " . $transcript->transcript_name . " on chromosome " . $transcript->chrom_name .
+            #    " at position " . $transcript->transcript_start . " - " . $transcript->transcript_stop .
+            #    " has an invalid strand, unknown status, or no associated gene, skipping");
             next;
         }
-        my %annotation = $self->_transcript_annotation($transcript, \%variant)
-            or next;
+        my %annotation = $self->_transcript_annotation($transcript, \%variant) or next;
         push @annotations, \%annotation;
-    }
-
-    my $stop = new Benchmark;
-
-    my $time = timestr(timediff($stop, $start));
-
-    if ($self->benchmark){
-        print "Annotation Variant: ".$variant{start}."-".$variant{stop}." ".$variant{variant}." ".$variant{reference}." ".$variant{type}." took $time\n"; 
     }
 
     return @annotations;
 }
 
-sub is_valid_transcript{
-    my ($self, $transcript) = @_;
-    my $strand = $transcript->strand;
-    if ($strand eq '+1' or $strand eq '-1'){
-        
-        my $gene = $transcript->gene;
-
-        unless ($gene){
-            $self->warning_message("Transcript ". $transcript->transcript_name."(chrom".$transcript->chrom_name." start-stop:". $transcript->transcript_start."-".$transcript->transcript_stop.") does not have an associated gene! Skipping this transcript");
-            return;
-        }
-
-        return 1;
-
-    }else{
-        $self->warning_message(sprintf("invalid transcript strand($strand)! id:%d pos: %d %d %d", $transcript->transcript_id, $transcript->chrom_name, $transcript->transcript_start, $transcript->transcript_stop));
-        return undef;
-    }
-
-
-}
-
-sub prioritized_transcripts {# was prioritized_transcripts_for_snp and prioritized_transcripts_for_indel
-    my ($self, %variant) = @_;
-
-
-    my @annotations = $self->transcripts(%variant)
-        or return;
-
-    my @prioritized_annotations = $self->_prioritize_annotations_per_gene(@annotations);
-
-    return @prioritized_annotations;
-}
-
-sub prioritized_transcript{
-    my ($self, %variant) = @_;
-    my @annotations = $self->transcripts(%variant)
-        or return;
-
-    my $annotation = $self->_prioritize_annotations_across_genes(@annotations);
-
-    return $annotation;
-}
-
-# Prioritizes annotations on a per gene basis... 
-# Currently the "best" annotation is judged by priority, and then source, and then protein length
-# in that order.
-# I.E. If 6 annotations go in, from 3 different genes, it will select the "best" annotation 
-# that each gene has, and return 3 total annotations, one per gene
-sub _prioritize_annotations_per_gene
-{
+# Takes in a group of annotations and returns them in priority order
+# Sorts on: transcript errors, variant type, status, source, amino acid length, transcript name (descending importance)
+# Rankings for each category can be found in Genome::Info::AnnotationPriorities as hashes, which can be easily switched around
+# and are declared at the top of this module
+sub _prioritize_annotations {
     my ($self, @annotations) = @_;
 
-    my %prioritized_annotations;
-    foreach my $annotation ( @annotations )
-    {
-        # TODO add more priority info in the variant priorities...transcript source, status, etc
-        $annotation->{priority} = $variant_priorities{ lc($annotation->{trv_type}) };
-        # If no annotation exists for this gene yet, set it
-        unless ( exists $prioritized_annotations{ $annotation->{gene_name} } )
-        {
-            $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
-        }
-        # If the priority for this new annotation beats the priority for the current best
-        # Annotation for this gene, replace the current best with the new best
-        elsif ( $annotation->{priority} < $prioritized_annotations{ $annotation->{gene_name} }->{priority} )
-        {
-            $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
-        }
-        # If the priorities are a tie, break the tie with source...
-        # We currently prefer NCBI annotations over ensembl, and ensembl over other annotations
-        elsif ( $annotation->{priority} == $prioritized_annotations{ $annotation->{gene_name} }->{priority} )
-        {
-            my $new_source_priority = $self->_transcript_source_priority($annotation->{transcript_name});
-            my $existing_source_priority = $self->_transcript_source_priority($prioritized_annotations{ $annotation->{gene_name} }->{transcript_name} );
-            if ($new_source_priority < $existing_source_priority) {
-                $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
-            } elsif ($new_source_priority > $existing_source_priority) {
-                next;
-                # Tied for priority based upon source... break the tie with protein length
-            } elsif ($new_source_priority == $existing_source_priority) {
-                next if $annotation->{amino_acid_length} < $prioritized_annotations{ $annotation->{gene_name} }->{amino_acid_length};
+    use sort '_mergesort';  # According to perldoc, performs better than quicksort on large sets with many comparisons
+    my @sorted_annotations = sort {
+        $transcript_error_priorities{$a->{transcript_error}} <=> $transcript_error_priorities{$b->{transcript_error}} ||
+        $variant_priorities{$a->{trv_type}} <=> $variant_priorities{$b->{trv_type}} ||
+        $transcript_status_priorities{$a->{transcript_status}} <=> $transcript_status_priorities{$a->{transcript_status}} ||
+        $transcript_source_priorities{$a->{transcript_source}} <=> $transcript_source_priorities{$b->{transcript_source}} ||
+        $b->{amino_acid_length} <=> $a->{amino_acid_length} ||
+        $a->{transcript_name} cmp $b->{transcript_name}
+    } @annotations;
+    use sort 'defaults';
 
-                if  ( $annotation->{amino_acid_length} == $prioritized_annotations{ $annotation->{gene_name} }->{amino_acid_length} )
-                {
-                    # amino acid length is the same, set the annotation sorted by transcript_name
-                    ($annotation) = sort 
-                    {
-                        $a->{transcript_name} cmp $b->{transcript_name } 
-                    } ($annotation, $prioritized_annotations{ $annotation->{gene_name} })
-                }
-
-                $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
-            }
-        }
-    }
-
-    return values %prioritized_annotations;
+    return @sorted_annotations;
 }
 
-
-#Takes in prioritized transcripts, returns top annotation among all top gene annotations
-sub _prioritize_annotations_across_genes{
-    my ($self, @annotations) = @_;
-    my $top_annotation;
-    for my $annotation (@annotations){
-        $annotation->{priority} = $variant_priorities{lc($annotation->{trv_type})};
-        if (!$top_annotation){
-            $top_annotation = $annotation;
-        }elsif ($annotation->{priority} < $top_annotation->{priority}){
-            $top_annotation = $annotation;
-        }elsif($annotation->{priority} == $top_annotation->{priority}){
-            my $new_source_priority = $self->_transcript_source_priority($annotation->{transcript_name});  
-            my $current_source_priority = $self->_transcript_source_priority($top_annotation->{transcript_name});  
-            if ($new_source_priority < $current_source_priority){
-                $top_annotation = $annotation;
-            }elsif ($new_source_priority > $current_source_priority){
-                next;
-            }elsif($new_source_priority == $current_source_priority){
-                next if $annotation->{amino_acid_length} < $top_annotation->{amino_acid_length};
-
-                if ( $annotation->{amino_acid_length} == $top_annotation->{amino_acid_length} )
-                {
-                    ($top_annotation) = sort {$a->{transcript_name} cmp $b->{transcript_name}}($annotation, $top_annotation);
-                }else{
-                    $top_annotation = $annotation;
-                }
-            }
-        }
-    }
-    return $top_annotation;
-}
-
-# Takes in a transcript name... uses regex to determine if this
-# Transcript is from NCBI, ensembl, etc and returns a priority  number according to which of these we prefer.
-# Currently we prefer NCBI to ensembl, and ensembl over others.  Lower priority is preferred
-sub _transcript_source_priority {
-    my ($self, $transcript) = @_;
-
-    if ($transcript =~ /[nx]m/i) {
-        return 1;
-    } elsif ($transcript =~ /enst/i) {
-        return 2;
-    } elsif ($transcript =~ /otthumt/i) {
-        return 3;
-    }else {
-        return 4;
-    }
-}
-
-#- Private Methods -#
-sub _determine_transcripts_to_annotate {
-    my ($self, $position) = @_;
-
-    my @transcripts_priority_1;
-    foreach my $transcript ( $self->transcript_window->scroll($position) )
-    {
-        if ( $transcript->transcript_status ne 'unknown' and $transcript->source ne 'ccds' )
-        {
-            push @transcripts_priority_1, $transcript;
-        }
-    }
-
-    return @transcripts_priority_1;
-}
-
-sub _transcript_annotation
-{
+# Annotates a single transcript/variant pair
+sub _transcript_annotation {
     my ($self, $transcript, $variant) = @_;
 
     my $main_structure = $transcript->structure_at_position( $variant->{start} )
@@ -315,49 +156,37 @@ sub _transcript_annotation
         }
     }
 
-
     my $method = '_transcript_annotation_for_' . $structure_type;
-
-    my %structure_annotation = $self->$method($transcript, $variant)
-        or return;
-
-    my $source = $transcript->source;
-    my $gene = $transcript->gene;
+    my %structure_annotation = $self->$method($transcript, $variant) or return;
 
     my $conservation = $self->_ucsc_conservation_score($variant);
-    if(!exists($structure_annotation{domain}))
-    {
-        $structure_annotation{domain} = 'NULL';
-    }
     if ($deletion_substructures){
         $structure_annotation{deletion_substructures} = $deletion_substructures;
     }
 
+    $transcript->is_valid;
+
     return (
         %structure_annotation,
+        transcript_error => $transcript->{transcript_error},
         transcript_name => $transcript->transcript_name, 
         transcript_status => $transcript->transcript_status,
-        transcript_source => $source,
+        transcript_source => $transcript->source,
         transcript_species=> $transcript->species,
         transcript_version => $transcript->version,
-        gene_name  => $gene->name(),
+        gene_name  => $transcript->gene->name,
         ucsc_cons => $conservation,
     )
 }
 
-sub _transcript_annotation_for_rna
-{
+sub _transcript_annotation_for_rna {
     my ($self, $transcript, $variant) = @_;
 
-    my $position = $variant->{start};
-    my $strand = $transcript->strand;
-
-    return
-    (
-        strand => $strand,
+    return (
+        strand => $transcript->strand,
         c_position => 'NULL',
         trv_type => 'rna',
-        amino_acid_length => 'NULL',  #no protein for rna transcript
+        amino_acid_length => 'NULL',
         amino_acid_change => 'NULL',
     );
 }
@@ -396,8 +225,7 @@ sub _transcript_annotation_for_utr_exon
     );
 }
 
-sub _transcript_annotation_for_flank
-{
+sub _transcript_annotation_for_flank {
     my ($self, $transcript, $variant) = @_;
 
     my $position = $variant->{start};
@@ -449,8 +277,7 @@ sub _transcript_annotation_for_flank
         $self->warning_message("Invalid strand for transcript: " . $transcript->strand);
     }
 
-    return
-    (
+    return (
         strand => $strand,
         c_position => 'c.' . $c_position,
         trv_type => $trv_type,
@@ -458,16 +285,9 @@ sub _transcript_annotation_for_flank
         amino_acid_change => 'NULL',
         flank_annotation_distance_to_transcript => $distance_to_transcript,
     );
-# From Chapter 8 codon2aa
-    #
-# A subroutine to translate a DNA 3-character codon to an amino acid
-#   Version 3, using hash lookup
-
-
 }
 
-sub _transcript_annotation_for_intron 
-{
+sub _transcript_annotation_for_intron {
     my ($self, $transcript, $variant) = @_;
 
     my $strand = $transcript->strand;
@@ -482,7 +302,6 @@ sub _transcript_annotation_for_intron
         }
     }
 
-
     my ($cds_exon_start, $cds_exon_stop) = $transcript->cds_exon_range;
     $cds_exon_start ||= 0;
     $cds_exon_stop ||= 0;
@@ -490,20 +309,16 @@ sub _transcript_annotation_for_intron
 
     my $main_structure = $transcript->structure_at_position( $variant->{start} );
     #my $main_structure = $transcript->sub_structure_window->main_structure;
-# From Chapter 8 codon2aa
-    #
-# A subroutine to translate a DNA 3-character codon to an amino acid
-#   Version 3, using hash lookup
-
 
     my $structure_start = $main_structure->structure_start;
     my $structure_stop = $main_structure->structure_stop;
     my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
 
     my ($prev_structure, $next_structure) = $transcript->structures_flanking_structure_at_position( $variant->{start} );
-#my ($prev_structure, $next_structure) = $transcript->sub_structure_window->structures_flanking_main_structure;
     unless ($prev_structure and $next_structure) {
-        $self->warning_message("Previous and/or next structures are undefined for variant (very large deletion? These are not handled well currently), skipping: " . Dumper $variant); #TODO, should there ever be an intron without flanking structures?
+        $self->warning_message("Previous and/or next structures are undefined for variant (very large deletion? " .
+            "These are not handled well currently), skipping: " . Dumper $variant); 
+        #TODO, should there ever be an intron without flanking structures?
         return;
     }
     my ($prev_structure_type, $next_structure_type, $position_before, $position_after);
@@ -638,10 +453,6 @@ sub _transcript_annotation_for_intron
 
             if ( abs($diff_stop_start) < abs($diff_stop_end) )
             {
-# From Chapter 8 codon2aa
-                #
-# A subroutine to translate a DNA 3-character codon to an amino acid
-#   Version 3, using hash lookup
 
 
                 $c_position = '-' . $diff_stop_start;
@@ -692,10 +503,6 @@ sub _transcript_annotation_for_intron
         intron_annotation_substructure_size     => $intron_annotation_substructure_size,
         intron_annotation_substructure_position => $intron_annotation_substructure_position,
     );
-# From Chapter 8 codon2aa
-    #
-# A subroutine to translate a DNA 3-character codon to an amino acid
-#   Version 3, using hash lookup
 
 
 }
@@ -861,10 +668,6 @@ sub _transcript_annotation_for_cds_exon
     if ( $strand eq '-1' ) 
     {
         # COMPLEMENTED
-# From Chapter 8 codon2aa
-        #
-# A subroutine to translate a DNA 3-character codon to an amino acid
-#   Version 3, using hash lookup
 
 
         ($oriented_structure_stop, $oriented_structure_start) = ($structure_start, $structure_stop);
@@ -952,12 +755,6 @@ sub _transcript_annotation_for_cds_exon
         $mutated_seq=substr($original_seq,0,$c_position-1).$var.substr($original_seq,$c_position-1+$size2);
     }
     $mutated_seq_translated = $self->translate($variant->{chromosome_name}, $mutated_seq);
-    my $full_protein_anno;
-    $full_protein_anno = "Variant: ".join("\t", ($variant->{chromosome_name}, $variant->{start}, $variant->{stop}, $variant->{reference}, $variant->{variant}))."\n";
-    $full_protein_anno .= "Transcript: ".$transcript->transcript_name."\n";
-    $full_protein_anno .= "exon coords: $structure_start $structure_stop\n";
-    $full_protein_anno .= "Original seq: $original_seq_translated\n";
-    $full_protein_anno .= "Mutated seq:  $mutated_seq_translated\n";
 
 
     my $pro_str = 'NULL';
@@ -1014,11 +811,9 @@ sub _transcript_annotation_for_cds_exon
         ucsc_cons => $conservation,
         domain => $protein_domain,
         all_domains => $all_protein_domains,
-        #full_protein_anno=> $full_protein_anno,
     );
 }
 
-# TODO Clean this up, quite messy
 sub _ucsc_conservation_score {
     my ($self, $variant) = @_;
     return 'NULL' if $variant->{chromosome_name} =~ /^[MN]T/;
@@ -1052,7 +847,7 @@ sub _protein_domain {
     my @all_domain_names;
     for my $domain (@all_domains) {
         if ($protein_position >= $domain->{start} and $protein_position <= $domain->{stop} and
-                $domain->{name} =~ /HMMPfam/) {
+            $domain->{name} =~ /HMMPfam/) {
             push @variant_domains, $domain->{name};
         }
         push @all_domain_names, $domain->{name};
@@ -1180,7 +975,6 @@ sub translate
         last if ($aa eq '*');
     }
     return $translation;
-
 }
 
 1;

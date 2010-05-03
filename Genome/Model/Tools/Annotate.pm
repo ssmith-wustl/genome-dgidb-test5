@@ -41,7 +41,7 @@ sub variant_output_attributes {
 
 sub transcript_attributes {
     my $self = shift;
-    return (qw/ gene_name transcript_name transcript_species transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains deletion_substructures/);
+    return (qw/ gene_name transcript_name transcript_species transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains deletion_substructures transcript_error/);
 }
 
 sub transcript_report_headers {
@@ -106,8 +106,7 @@ sub infer_variation_type {
     }
 }
 
-
-
+# Creates output file, deleting old file if necessary
 sub _create_file {
     my ($self, $output_file) = @_;
     my $output_fh;

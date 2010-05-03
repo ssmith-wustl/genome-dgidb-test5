@@ -5,6 +5,8 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::Info::AnnotationPriorities;
+use Bio::Tools::CodonTable;
 
 class Genome::Transcript {
     type_name => 'genome transcript',
@@ -77,7 +79,8 @@ class Genome::Transcript {
     data_source => 'Genome::DataSource::Transcripts',
 };
 
-sub transcript_start{
+# Returns the start position or a dummy negative value to prevent annotation if not defined
+sub transcript_start {
     my $self = shift;
     my $start = $self->__transcript_start;
     return $start if $start;
@@ -85,7 +88,8 @@ sub transcript_start{
     return -100000;
 }
 
-sub transcript_stop{
+# Returns the stop position or a dummy negative value to prevent annotation if not defined
+sub transcript_stop {
     my $self = shift;
     my $stop = $self->__transcript_stop;
     return $stop if $stop;
@@ -93,24 +97,7 @@ sub transcript_stop{
     return -100000;
 }
 
-sub rename_to_errors_later{  #TODO Not sure what the new valid method is
-    my $self = shift;
-    ########TODO check for:
-    #phase completeness for cds exons
-    #correct bp length for cds exons (length % 3 = 0 for reg, length % 3 = 2 for MT)
-    #contiguous substructures
-    #flank sequences
-    #flank ordinality
-    #substructure ordinality
-    #substructure presence
-    #field completeness
-    #always valid(except for field completeness and ordinality) just change status to unknown
-    #gene strand same as transcript strand
-    #protein seq matches cds exon translation
-    return 1;
-}
-
-
+# Returns the transcript substructure (if any) that are at the given position
 sub structure_at_position {
     my ($self, $position) = @_;
 
@@ -129,30 +116,31 @@ sub structure_at_position {
             and $position <= $struct->structure_stop;
     }
 
+    $self->status_message("No substructure found for transcript " . $self->id . " at position " . $position);
     return;
 }
 
+# Returns the transcript substructures (if any) that are between the given start and stop position
 sub structures_in_range {
     my ($self, $start, $stop) = @_;
 
     my @structures = $self->ordered_sub_structures;
     unless (@structures){
-        $self->status_message("No sub-structures for transcript (chrom\tstart\tid):(". $self->id.") ".$self->transcript_name);
+        $self->status_message("No substructures for transcript (chrom\tstart\tid):(" . $self->id. ") " . $self->transcript_name);
         return;
     }
 
-    if ( ($structures[0]->structure_start > $stop) or ($structures[$#structures]->structure_stop < $start)){
+    if (($structures[0]->structure_start > $stop) or ($structures[$#structures]->structure_stop < $start)){
         return;
     }
 
     my @structures_in_range;
-
     for my $structure (@structures){
         my $ss_start = $structure->structure_start;
         my $ss_stop = $structure->structure_stop;
         if (($ss_start >= $start and $ss_start <= $stop ) or 
-            ( $ss_stop >= $start and $ss_stop <= $stop ) or
-            ( $ss_start <= $start and $ss_stop >=$stop )
+            ($ss_stop >= $start and $ss_stop <= $stop ) or
+            ($ss_start <= $start and $ss_stop >=$stop )
         ){
             push @structures_in_range, $structure;
         }
@@ -160,10 +148,11 @@ sub structures_in_range {
     return @structures_in_range;
 }
 
+# Gets the structure at the specified position and returns the structure(s) on either side of it
 sub structures_flanking_structure_at_position {
     my ($self, $position) = @_;
 
-    # check if in range of the trascript
+    # check if in range of the transcript
     my @structures = $self->ordered_sub_structures;
     return unless $structures[0]->structure_start <= $position
         and $structures[$#structures]->structure_stop >= $position;
@@ -183,17 +172,140 @@ sub structures_flanking_structure_at_position {
     );
 }
 
+# Returns all transcript substrucuters ordered by position
 sub ordered_sub_structures {
     my $self = shift;
 
-    unless (exists $self->{'_ordered_sub_structures'}) {
-
+    unless ($self->{_ordered_sub_structures}) {
         my @subs = sort { $a->structure_start <=> $b->structure_start } $self->sub_structures;
-        $self->{'_ordered_sub_structures'} = \@subs;
+        $self->{_ordered_sub_structures} = \@subs;
     }
-    return @{$self->{'_ordered_sub_structures'}};
+    return @{$self->{_ordered_sub_structures}};
 }
 
+# Returns codon table object 
+sub get_codon_translator {
+    my $self = shift;
+    my $translator;
+    if ($self->chrom_name =~ /^MT/){
+        $translator = $self->{'_mitochondrial_codon_translator'};
+        unless ($translator) {
+            $translator = Bio::Tools::CodonTable->new(-id => 2);
+        }
+    }
+    else {
+        $translator = $self->{'_codon_translator'};
+        unless ($translator) {
+            $translator = Bio::Tools::CodonTable->new(-id => 1);
+        }
+    }
+    
+    unless ($translator) {
+        $self->error_message("Could not get codon table object");
+        die;
+    }
+    
+    return $translator;
+}
+
+# Performs a few checks on the transcript to determine if its valid
+# Sets the error attribute to the number listed in Genome::Info::AnnotationPriorities
+sub is_valid {
+    my $self = shift;
+    unless ($self->check_start_codon) {
+        $self->{transcript_error} = 'no_start_codon';
+        return 0;
+    }
+    unless ($self->internal_stop_codon) {
+        $self->{transcript_error} = 'pseudogene';
+        return 0;
+    }
+    unless ($self->cds_region_has_stop_codon) {
+        $self->{transcript_error} = 'no_stop_codon';
+        return 0;
+    }
+    $self->{transcript_error} = 'no_errors';
+    return 1;
+}
+
+# Checks that the transcript has a coding region
+sub has_cds_region {
+    my $self = shift;
+    return 1 if $self->is_rna;
+    my $seq = $self->cds_full_nucleotide_sequence;
+    return 1 if defined $seq and length $seq > 0;
+    return 0;
+}
+
+# Checks if the transcript represents rna
+sub is_rna {
+    my $self = shift;
+    my @subs = $self->sub_structures;
+    for my $sub (@subs) {
+        return 1 if $sub->structure_type eq 'rna';
+    }
+    return 0;
+}
+
+# Checks that the transcript has an associated gene
+sub has_associated_gene {
+    my $self = shift;
+    my $gene = $self->gene;
+    return 0 unless defined $gene;
+    return 1;
+}
+
+# Checks that the transcript has either +1 or -1 for strand
+sub has_valid_strand {
+    my $self = shift;
+    my $strand = $self->strand;
+    return 1 if $strand eq '+1' or $strand eq '-1';
+    return 0;
+}
+
+# Translates basepair sequence into amino acid sequence
+sub translate_to_aa {
+    my $self = shift;
+    my $seq = shift;
+    my $length = length $seq;
+    my $translator = $self->get_codon_translator;
+    my $translation;
+    for (my $i=0; $i<=$length-2; $i+=3) {
+        my $codon=substr($seq, $i, 3);
+        $codon =~ s/N/X/g;
+        my $aa = $translator->translate($codon);
+        $aa="*" if ($aa eq 'X');
+        $translation.=$aa;
+    }
+    return $translation;
+}
+
+# Compares the protein aa sequence with the transcript's translated aa sequence
+sub transcript_translation_matches_aa_seq {
+    my $self = shift;
+    my $protein_aa_seq = $self->protein->amino_acid_seq;
+    my $transcript_translation = $self->translate_to_aa($self->cds_full_nucleotide_sequence);
+    unless ($protein_aa_seq eq $transcript_translation) {
+        return 0;
+    }
+    return 1;
+}
+
+# Make sure that coding region starts with a start codon
+sub check_start_codon {
+    my $self = shift;
+
+    return 1 if $self->is_rna;                 # Rna doesn't have a coding region, and so doesn't have a start codon
+    return 1 unless $self->species eq 'human'; # Start codon check only works for human
+
+    my $seq = $self->cds_full_nucleotide_sequence;
+    return 1 unless defined $seq;
+
+    my $translator = $self->get_codon_translator;
+    return $translator->is_start_codon(substr($seq, 0, 3))
+}
+
+# Checks that all exons (coding and untranslated) and introns are contiguous
 sub substructures_are_contiguous {
     my $self = shift;
     my @ss = $self->ordered_sub_structures;
@@ -210,8 +322,78 @@ sub substructures_are_contiguous {
     return 1;
 }
 
-#- CDS EXONS -#
+# Ensures that no introns are larger than 900kb
+sub check_intron_size {
+    my $self = shift;
+    my @introns = $self->introns;
+    foreach my $intron (@introns) {
+        return 0 if $intron->length > 900000 
+    } 
+    return 1;
+}
 
+# Checks that each exon's nucleotide sequence matches the reference sequence
+sub exon_seq_matches_genome_seq {
+    my $self = shift;
+    my @exons = $self->cds_exons;
+    foreach my $exon (@exons) {
+        my $ref_seq = Genome::Model::Tools::ImportAnnotation::Genbank->get_seq_slice(
+            $self->chrom_name, $exon->structure_start, $exon->structure_stop
+        );
+        my $exon_seq = $exon->nucleotide_seq;
+        return 0 unless $ref_seq eq $exon_seq;
+    }
+    return 1;
+}
+
+# Ensures that the coding region has a stop codon at the end
+sub cds_region_has_stop_codon {
+    my $self = shift;
+
+    return 1 if $self->is_rna;
+
+    my $seq = $self->cds_full_nucleotide_sequence;
+    return 1 unless defined $seq and length $seq > 0;
+
+    my $aa = $self->translate_to_aa($seq);
+    if (substr($aa, -1) eq "*") {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+# Checks for stop codons in the middle of the coding region
+sub internal_stop_codon {
+    my $self = shift;
+
+    return 1 if $self->is_rna;
+
+    my $seq = $self->cds_full_nucleotide_sequence;
+    return 1 unless defined $seq and length $seq > 0;
+
+    my $aa = $self->translate_to_aa($seq);
+    my $stop = index($aa, "*");
+    unless ($stop == -1 or $stop == length($aa) - 1) {
+        return 0;
+    }
+    return 1;
+}
+
+# Checks that the coding region base pairs are correctly grouped into 3bp codons
+sub correct_bp_length_for_exons {
+    my $self = shift;
+    my $seq = $self->cds_full_nucleotide_sequence;
+    return 1 unless defined $seq;
+    if ($self->chrom_name =~ /^MT/) {
+        return 1 if length $seq % 3 == 2;
+    }
+    return 1 if length $seq % 3 == 0;
+    return 0;
+}
+
+# Returns all coding exons associated with this transcript
 sub cds_exons {
     my $self = shift;
 
@@ -219,6 +401,7 @@ sub cds_exons {
     return @ex;
 }
 
+# Returns all introns associated with this transcript
 sub introns {
     my $self = shift;
 
@@ -226,7 +409,7 @@ sub introns {
     return @int;
 }
 
-
+# Returns the start position of the first exon and the stop position the last exon on the transcript
 sub cds_exon_range {
     my $self = shift;
 
@@ -236,6 +419,7 @@ sub cds_exon_range {
     return ($cds_exons[0]->structure_start, $cds_exons[$#cds_exons]->structure_stop);
 }
 
+# Determines structure at given position and returns the range of coding exons before it
 sub length_of_cds_exons_before_structure_at_position { #TODO, clean this up, shouldn't take strand should use transcript strand and exon ordinality
     my ($self, $position, $strand) = @_;
 
@@ -269,7 +453,7 @@ sub length_of_cds_exons_before_structure_at_position { #TODO, clean this up, sho
     return $length;
 }
 
-
+# Grab only those coding exons that have ordinal defined
 sub cds_exon_with_ordinal {
     my ($self, $ordinal) = @_;
 
@@ -280,6 +464,7 @@ sub cds_exon_with_ordinal {
     return;
 }
 
+# Full base pair sequence of coding regions
 sub cds_full_nucleotide_sequence{
     my $self = shift;
     my $seq;
@@ -290,7 +475,7 @@ sub cds_full_nucleotide_sequence{
 }
 
 
-#- GENE -#
+# Returns name of associated gene
 sub gene_name
 {
     my $self = shift;
@@ -301,6 +486,7 @@ sub gene_name
     return $gene_name;
 }
 
+# Returns strand as either + or - (used for bed string below)
 sub strand_string {
     my $self = shift;
     my $strand = '.';
@@ -312,22 +498,26 @@ sub strand_string {
     return $strand;
 }
 
+# Returns string containing transcript info in bed format
 sub bed_string {
     my $self = shift;
     my $bed_string = $self->chrom_name ."\t". $self->transcript_start ."\t". $self->transcript_stop ."\t". $self->transcript_name ."\t0\t". $self->strand_string;
     return $bed_string ."\n";
 }
 
+# Base string for gff format
 sub _base_gff_string {
     my $self = shift;
     return $self->chrom_name ."\t". $self->source .'_'. $self->version ."\t". 'transcript' ."\t". $self->transcript_start ."\t". $self->transcript_stop ."\t.\t". $self->strand_string ."\t.";
 }
 
+# Returns string containing transcript info in gff file format
 sub gff_string {
     my $self = shift;
     return $self->_base_gff_string ."\t". $self->gene->name ."\n";
 }
 
+# Returns string containing transcript info in gff3 file format
 sub gff3_string {
     my $self = shift;
     return $self->_base_gff_string ."\tID=".$self->transcript_id ."; NAME=". $self->transcript_name ."; PARENT=". $self->gene->gene_id .';' ."\n";
