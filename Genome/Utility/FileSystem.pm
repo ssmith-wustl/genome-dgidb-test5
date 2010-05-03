@@ -991,7 +991,7 @@ sub is_file_ok {
 
     #if the file exists and is ok, return 1
     my $rv;
-    eval{$rv = $self->validate_file_for_reading};
+    eval{$rv = $self->validate_file_for_reading($file)};
     if ($rv) {
         if (-e $ok_file) {
             return 1;
