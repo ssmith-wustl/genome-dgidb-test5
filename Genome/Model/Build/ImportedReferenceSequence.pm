@@ -53,6 +53,7 @@ sub calculate_estimated_kb_usage {
     return $fastaSize;
 }
 
+# ehvatum: Why provide an instance method that uses no information from the class?  Note that $self is not referenced.
 sub sequence {
     my $self = shift;
     my ($file, $start, $stop) = @_;
@@ -147,7 +148,6 @@ sub description {
 }
 
 sub get_sequence_dictionary {
-
     my $self = shift;
     my $file_type = shift;
     my $species = shift;
