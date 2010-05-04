@@ -164,8 +164,8 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       </colgroup>
       <tbody>
         <xsl:for-each select="object[./types[./isa[@type='Genome::Model']]]">
-          <xsl:sort select="aspect/@name='name'" data-type="text" order="ascending"/>
-          <xsl:sort select="aspect/@name='is-default'" data-type="number" order="descending"/>
+          <xsl:sort select="aspect[@name='name']/value" data-type="text" order="ascending"/>
+          <xsl:sort select="aspect[@name='is-default']/value" data-type="number" order="descending"/>
           <xsl:variable name="is_default" select="aspect/@name='is-default'" />
           <tr class="model_row_header">
             <td class="model_name">
