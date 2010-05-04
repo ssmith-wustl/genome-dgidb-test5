@@ -46,6 +46,8 @@ class Genome::Model {
                    return $subject->flow_cell_id;
                 } elsif($subject->class eq 'Genome::Sample') {
                     return $subject->name || $subject->common_name;
+                } elsif($subject->class eq 'Genome::Individual') {
+                    return $subject->name || $subject->common_name;
                 } elsif($subject->isa('GSC::DNA')) {
                     return $subject->dna_name;
                 } elsif($subject->can('name')) {
