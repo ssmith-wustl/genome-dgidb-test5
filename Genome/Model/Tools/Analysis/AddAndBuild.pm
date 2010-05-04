@@ -97,7 +97,7 @@ sub execute {
 
         #TODO need better error handling here
         #Using filt_error_rate_avg since this is properly populated for Standard(fragment) runs and identical to rev_filt_error_rate_avg otherwise
-        my @lines = `genome model instrument-data list solexa --model-id $model_id --unassigned --style=csv --show id,flow_cell_id,subset_name,library_name,filt_error_rate_avg,fwd_filt_error_rate_avg --noheaders`; 
+        my @lines = `genome model instrument-data list --model-id $model_id --unassigned --style=csv --show id,flow_cell_id,subset_name,library_name,filt_error_rate_avg,fwd_filt_error_rate_avg --noheaders`; 
 
         unless(@lines) {
             $self->error_message("Unable to grab unassigned instrument data for $model_name ($model_id) due to error or no available data");
