@@ -16,7 +16,7 @@ class Genome::Sample::View::Solr::Xml {
             is => 'ARRAY',
             default => [
                 {
-                    name => 'extraction_name',
+                    name => 'extraction_label',
                     position => 'content',
                 },
                 {
@@ -24,7 +24,7 @@ class Genome::Sample::View::Solr::Xml {
                     position => 'content',
                 },
                 {
-                    name => 'extraction_notes',
+                    name => 'extraction_desc',
                     position => 'content',
                 },
                 {
