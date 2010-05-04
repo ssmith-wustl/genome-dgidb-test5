@@ -95,7 +95,7 @@ sub execute {                               # replace with real execution logic.
 
 	my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
 	$reference = $self->reference if($self->reference);
-	my $varscan_params = "--min-coverage 6 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.05"; #--min-coverage 8 --verbose 1
+	my $varscan_params = "--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1"; #--min-coverage 8 --verbose 1
 	$varscan_params = $self->varscan_params if($self->varscan_params);
 
 	## Check skip if output present ##
@@ -117,8 +117,11 @@ sub execute {                               # replace with real execution logic.
 	{
 		## Prepare pileup commands ##
 		
-		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
-		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
+#		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
+#		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
+		my $normal_pileup = "samtools view -b -u -q 10 $normal_bam | samtools pileup -f $reference -";
+		my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam | samtools pileup -f $reference -";
+
 		
 		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\"";
 
