@@ -799,7 +799,8 @@ sub _transcript_annotation_for_cds_exon
     }
 
     my $conservation = $self->_ucsc_conservation_score($variant);
-    my ($protein_domain, $all_protein_domains) = $self->_protein_domain($transcript, $variant, $protein_position);
+    #my ($protein_domain, $all_protein_domains) = $self->_protein_domain($transcript, $variant, $protein_position);
+    my ($protein_domain, $all_protein_domains) = $self->_protein_domain($variant, $transcript->gene, $transcript->transcript_name, $amino_acid_change);
 
     return 
     (
@@ -830,31 +831,31 @@ sub _ucsc_conservation_score {
     return join(":",@ret); 
 }
 
-# Returns all protein domains affected by the variant and all protein domains for the transcript
-sub _protein_domain {
-    my ($self, $transcript, $variant, $protein_position) = @_;
-    return 'NULL', 'NULL' unless defined $transcript and defined $variant;
-
-    my @all_domains = Genome::InterproResult->get(
-        transcript_name => $transcript->transcript_name,
-        data_directory => $transcript->data_directory,
-        chrom_name => $variant->{chromosome_name},
-        'setid like' => 'HMMPfam%',
-    );
-    return 'NULL', 'NULL' unless @all_domains;
-
-    my @variant_domains;
-    my @all_domain_names;
-    for my $domain (@all_domains) {
-        if ($protein_position >= $domain->{start} and $protein_position <= $domain->{stop} and
-            $domain->{name} =~ /HMMPfam/) {
-            push @variant_domains, $domain->{name};
-        }
-        push @all_domain_names, $domain->{name};
+sub _protein_domain
+{
+    my ($self, $variant, $gene, $transcript, $amino_acid_change) = @_;
+    #my ($gene,$transcript);
+    unless (defined $gene and defined $transcript){
+        return 'NULL', 'NULL';
     }
+    require SnpDom;
+    my $s = SnpDom->new({'-inc-ts' => 1});
+    $s->add_mutation($gene->name ,$transcript ,$amino_acid_change);
+    my %domlen;
+    $s->mutation_in_dom(\%domlen,"HMMPfam");
+    # by request.... add in all domains on this transcript/protein
+    my @all_domains = $s->get_all_domains($gene->name,$transcript);
+    my $alldoms = join(',', @all_domains);
+    my $mutation_domains = 'NULL';
 
-    return 'NULL', join(",", uniq @all_domain_names) unless @variant_domains;
-    return join(",", uniq @variant_domains), join(",", uniq @all_domain_names);
+    my $obj = $s->get_mut_obj($transcript . "," . $gene->name);
+    return 'NULL',$alldoms unless $obj;
+    my $doms = $obj->get_domain($amino_acid_change);
+    if(defined($doms))
+    {
+        return join(":", uniq @$doms),$alldoms;
+    }
+    return 'NULL',$alldoms;
 }
 
 sub compare_protein_seq   {
