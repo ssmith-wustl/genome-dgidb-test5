@@ -45,30 +45,49 @@ class Genome::ProcessingProfile::PooledAssemblyDecomposition {
 
 sub _execute_build {
     my ($self,$build) = @_;
+$DB::single=1;
+    my $pooled_assembly_model = $build->model->from_models;
     
+    my $pooled_assembly_build = $pooled_assembly_model->last_complete_build;
+    unless ($pooled_assembly_build) {
+        $self->error_message("Underlying model " . $pooled_assembly_model->__display_name__ . " has no complete builds!");
+        return;
+    }
+    
+    unless ($build->add_from_build(from_build => $pooled_assembly_build, role => 'pooled assembly')) {
+        Carp::confess("Failed link pooled assembly build!");
+    }
+    
+    my $pooled_assembly_build_directory = $pooled_assembly_build->data_directory;
+    unless ($pooled_assembly_build_directory && -e $pooled_assembly_build_directory) {
+        my $msg = $self->error_message("Failed to get last complete build directory for the input pooled assembly!");
+        Carp::confess($msg);
+    }
+   
     print "Executing pooled assembly decomposition build.\n";
     
     my @inputs = $build->inputs;
-    my %params = map {$_->name,$_->value_id;} @inputs;
 
     my $data_directory = $build->data_directory;
     my $percent_identity = $self->percent_identity;
     my $percent_overlap = $self->percent_overlap;
-    my $ref_seq_file = $params{ref_seq_file};
-    my $pooled_assembly_dir = $params{pooled_assembly_dir};
+    my $pooled_assembly_dir = $pooled_assembly_build_directory;
     my $blast_params = $self->blast_params;
-    my $ace_file_name = $params{ace_file_name};
-    my $phd_ball_name = $params{phd_ball_name};
     
-    return Genome::Model::Tools::PooledBac::Run->execute(project_dir => $data_directory, 
-                                                                                      pooled_bac_dir => $pooled_assembly_dir, 
-                                                                                      percent_identity => $percent_identity, 
-                                                                                      percent_overlap => $percent_overlap, 
-                                                                                      ref_seq_file => $ref_seq_file, 
-                                                                                      blast_params => $blast_params,
-                                                                                      ace_file_name => $ace_file_name,
-                                                                                      phd_ball_name => $phd_ball_name,
-                                                                                      );
+    my %params = map {$_->name ,$_->value_id;} @inputs;
+    
+    return Genome::Model::Tools::PooledBac::Run->execute(
+        project_dir => $data_directory, 
+        pooled_bac_dir => $pooled_assembly_dir, 
+        percent_identity => $percent_identity, 
+        percent_overlap => $percent_overlap, 
+        blast_params => $blast_params,
+        
+        #ref_seq_file   required, get later from db? 
+        #ace_file_name  optional override
+        #phd_ball_name  optional override
+        %params,
+    );
 }
 
 1;

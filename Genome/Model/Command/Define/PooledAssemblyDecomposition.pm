@@ -91,24 +91,19 @@ sub execute {
     $super->($self,@_);    
 
     my $model = Genome::Model->get($self->result_model_id);    
-    my $pooled_assembly_build_directory = $pooled_assembly->last_complete_build_directory;
-    unless ($pooled_assembly_build_directory && -e $pooled_assembly_build_directory) {
-        $self->error_message("Failed to get last complete build directory for the input pooled assembly");
-        return;
-    }
 
-    $model->add_input(name => 'pooled_assembly_dir', value_class_name => 'UR::Value', value_id => $pooled_assembly_build_directory);
-    $model->add_input(name => 'ref_seq_file', value_class_name => 'UR::Value', value_id => $self->ref_seq_file);
-    unless(!defined $self->ace_file_name) {
-        $model->add_input(name => 'ace_file_name', value_class_name => 'UR::Value', value_id => $self->ace_file_name);
-        return;
-    }
-    unless(!defined $self->phd_ball_name) {
-        $model->add_input(name => 'phd_ball_name', value_class_name => 'UR::Value', value_id => $self->phd_ball_name);
-        return;
-    }
     $model->add_from_model(from_model => $self->pooled_assembly, role => 'pooled_assembly');
 
+    $model->add_input(name => 'ref_seq_file', value_class_name => 'UR::Value', value_id => $self->ref_seq_file);
+    
+    if (defined $self->ace_file_name) {
+        $model->add_input(name => 'ace_file_name', value_class_name => 'UR::Value', value_id => $self->ace_file_name);
+    }
+    
+    if (defined $self->phd_ball_name) {
+        $model->add_input(name => 'phd_ball_name', value_class_name => 'UR::Value', value_id => $self->phd_ball_name);
+    }
+    
     return 1; 
 }
 
