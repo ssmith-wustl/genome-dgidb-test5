@@ -96,9 +96,21 @@ sub execute {
     my $tumor_subject = $self->tumor_model->subject;
     my $normal_subject = $self->normal_model->subject;
 
-    if($tumor_subject->can('source') and $normal_subject->can('source')) {
-        my $tumor_source = $tumor_subject->source;
-        my $normal_source = $normal_subject->source;
+    if(($tumor_subject->can('source') || $tumor_subject->can('sample')) and ($normal_subject->can('source') || $normal_subject->can('sample'))) {
+        
+        my $tumor_source;
+        if($tumor_subject->can('source')) {
+            $tumor_source = $tumor_subject->source; 
+        } else {
+            $tumor_source = $tumor_subject->sample->source;
+        }
+        
+        my $normal_source;
+        if($normal_subject->can('source')) {
+            $normal_source = $normal_subject->source; 
+        } else {
+            $normal_source = $normal_subject->sample->source;
+        }
         
         if($tumor_source eq $normal_source) {
             my $subject = $tumor_source;
