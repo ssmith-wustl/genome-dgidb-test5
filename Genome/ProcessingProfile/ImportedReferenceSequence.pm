@@ -57,7 +57,7 @@ sub _execute_build {
 
     # Copy the original fasta
     my $outDir = $build->data_directory;
-    my $fasta = File::Spec->catfile($outDir, 'all_sequences.fasta');
+    my $fasta = File::Spec->catfile($outDir, 'all_sequences.fa');
     unless(copy($build->fasta_file, $fasta))
     {
         $self->error_message("Failed to copy \"" . $build->fasta_file . "\" to \"$fasta\": $!.");
