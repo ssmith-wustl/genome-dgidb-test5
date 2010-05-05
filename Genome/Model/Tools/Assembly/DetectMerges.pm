@@ -22,10 +22,8 @@ class Genome::Model::Tools::Assembly::DetectMerges {
         stats_file => {
             is => 'Number',
             shell_args_position => 2,
-            is_optional => 0,
+            is_optional => 1,
             doc => 'the name of the output stats file',
-            is_input => 1,
-            #is_output => 1,
         }
     ],
     
@@ -40,6 +38,10 @@ sub execute {
 
     my $ace_file = $self->ace_file;
     my $stats_file = $self->stats_file;
+    unless (defined $stats_file)
+    {
+        $stats_file = $ace_file.'.merge_detector_stats';
+    }
     
     my $ct = Genome::Assembly::Pcap::ContigTools->new;
     my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file,using_db => 1,db_type =>'mysql');
@@ -48,6 +50,7 @@ sub execute {
     my @contig_names = @{$ao->get_contig_names};
 
     my $outfh = IO::File->new(">$stats_file");
+    $self->error_message("Error opening $stats_file for writing.\n") and return unless $outfh;
     my %params = ( statsfh => $outfh, cutoffs => { hqlength => 1000, hq_percent_identity => 90 });
     sort_supercontigs(@contig_names);
     foreach my $super_contig_name (@super_contig_names)
