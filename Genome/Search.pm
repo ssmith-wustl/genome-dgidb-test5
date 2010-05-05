@@ -305,6 +305,7 @@ sub generate_result_xml {
             toolkit => $format,
             solr_doc => $doc,
             subject => $object,
+            rest_variable => '/view',
         );
         
         if($format eq 'xsl' or $format eq 'html') {
