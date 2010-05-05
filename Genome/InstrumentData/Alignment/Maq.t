@@ -246,13 +246,13 @@ ok(-d $dir4, "result is a real directory");
 my $expected_output_dir = "/gsc/var/cache/testsuite/data/Genome-InstrumentData-Alignment-Maq/expected_output";
 ok(-d $expected_output_dir, "found expected output directory");
 my @diff = `diff $expected_output_dir $dir4`;
-is(scalar(@diff), 2, "found 2 difference as expected (the output dir has timings in it)")
+is(scalar(@diff), 3, "found 3 difference as expected (the output dir has timings in it)")
     or do {
         #my $copy = "/tmp/maq-alignment-failed/$ENV{USER}";
         my $copy = "/tmp/maq-alignment-failed.$ENV{USER}.$$";
         system "cp -r $dir4 $copy";
         diag("RUN THIS TO DEBUG: diff $expected_output_dir $copy");
-    }; #leave the old all_sequences.bam (seq_id not equal to id)
+    }; #leave the old all_sequences.bam (seq_id not equal to id, wrong force_fragment bam bit score, bam file should be the same)
 
 ok($alignment4->remove_alignment_directory,'removed alignment directory '. $dir4);
 ok(! -e $dir4, 'alignment directory does not exist');
