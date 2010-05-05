@@ -14,6 +14,7 @@ package Genome::Model::Event::Build::ReferenceAlignment::UpdateGenotype::Samtool
 use strict;
 use warnings;
 
+use File::Spec;
 use Genome;
 
 class Genome::Model::Event::Build::ReferenceAlignment::UpdateGenotype::Samtools {    
@@ -42,7 +43,7 @@ sub execute {
 
     my $consensus_file = $build->bam_pileup_file_path;   
  
-    my $ref_seq_file = sprintf("%s/all_sequences.fasta", $model->reference_sequence_path);
+    my $ref_seq_file = File::Spec->catfile($model->reference_build->data_directory, 'all_sequences.fasta');
     my $assembly_opts = $model->genotyper_params || '';
 
 =cut

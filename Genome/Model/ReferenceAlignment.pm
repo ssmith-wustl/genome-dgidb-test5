@@ -641,22 +641,6 @@ sub reference_build {
     return $self->{reference_build};
 }
 
-
-# TODO: DEPRECATED
-
-sub reference_sequence_path {
-    shift->reference_build->data_directory(@_);
-}
-
-sub get_subreference_paths {
-    return shift->reference_build->subreference_paths(@_);
-}
-
-sub get_subreference_names {
-    return shift->reference_build->subreference_names(@_);
-}
-
-
 # Results data
 # TODO: refactor to not be directly in the model
 

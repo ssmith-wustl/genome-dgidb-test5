@@ -356,7 +356,6 @@ sub get_summary_information
         $self->warning_message("No taxon found for sample!");
     }
 
-    my $ref_seq_name = $self->model->reference_build->name;
     my $ref_seq_dir = $self->model->reference_build->data_directory;
 
     $DB::single = 1;
@@ -392,9 +391,20 @@ sub get_summary_information
 
         taxon_id                                      => $taxon_id,
         species                                       => $species,
-        species_latin_name                            => $species_latin_name,
+        species_latin_name                            => $species_latin_name
+    );
 
-        ref_seq_name                                  => $ref_seq_name,
+    #ehvatum TODO: remove this if statement and always use ref_seq_build_id once ReferencePlaceholder is removed
+    if(defined($model->reference_sequence_build))
+    {
+        push @vars, (ref_seq_build_id                 => $self->model->reference_sequence_build->build_id);
+    }
+    else
+    {
+        push @vars, (ref_seq_name                     => $self->model->reference_build->name);
+    }
+
+    push @vars, (
         ref_seq_dir                                   => $ref_seq_dir,
 
         tissue_sample_label                           => $tissue_label,
