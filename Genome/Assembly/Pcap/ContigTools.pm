@@ -10,8 +10,6 @@ use Cwd;
 use Bio::Seq;
 use Bio::Tools::dpAlign;
 use Genome::Assembly::Pcap::Utility;
-use Gtk;
-use Gtk::ButtonCrate::Radio;
 use Genome::Assembly::Pcap::Ace::Writer;
 use Genome::Assembly::Pcap::Ace::Reader;
 use Genome::Assembly::Pcap::Ace;
@@ -22,6 +20,18 @@ use GSC::Sequence::Assembly::AceAdaptor;
 my $pkg = "Genome::Assembly::Pcap::ContigTools";
 
 my $DEBUG = 0;
+
+our $initialized = 0;
+
+sub init_gtk {
+    return if $initialized;
+    eval {
+        require Gtk;
+        require Gtk::ButtonCrate::Radio;        
+    };
+    die $@ if $@;
+    $initialized = 1;
+}
 
 sub new 
 {
@@ -835,6 +845,7 @@ sub _calculate_split_region
 sub get_user_selected_reads
 {
     my ($ref_reads) = @_;
+    init_gtk() unless $initialized;
     Gtk->set_locale; 
     Gtk->init;
 
