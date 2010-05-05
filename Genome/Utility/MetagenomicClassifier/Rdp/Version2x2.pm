@@ -12,7 +12,6 @@ require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
-#$SIG{__DIE__} = sub{ print "<ERROR>\n".$_[0]->toString."\n</ERROR>\n"; confess(@_); };
 
 class Genome::Utility::MetagenomicClassifier::Rdp::Version2x2{
     is => 'Genome::Utility::MetagenomicClassifier::Rdp',
@@ -29,7 +28,13 @@ use Inline(
          }
 
          public FactoryInstance(String property_path){
-            this(property_path, false);
+            ClassifierFactory.setDataProp(property_path, false);
+            try {
+                f = ClassifierFactory.getFactory();
+            }
+            catch (java.lang.Exception e) {
+                e.printStackTrace(System.out);
+            }
          }
 
          public FactoryInstance(String property_path, boolean relative){
@@ -65,7 +70,7 @@ END
     ],
     PACKAGE => 'main',
     DIRECTORY => Genome::InlineConfig::DIRECTORY(),
-    EXTRA_JAVA_ARGS => '-f fixrank -Xmx1000m',
+    EXTRA_JAVA_ARGS => '-Xmx1000m',
     JNI => 1,
 ) ;
 
