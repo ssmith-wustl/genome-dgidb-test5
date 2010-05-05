@@ -24,7 +24,7 @@ my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/Ali
 
 my $bam_file = $data_dir .'/test.bam';
 my $regions_file = $data_dir .'/test_regions_zero_based_start.bed';
-my $expected_output_file = $data_dir .'/alignment_summary_2.tsv';
+my $expected_output_file = $data_dir .'/alignment_summary_4.tsv';
 
 my $as = Genome::Model::Tools::BioSamtools::AlignmentSummary->create(
     output_file => $tmp_dir .'/alignment_summary.tsv',
