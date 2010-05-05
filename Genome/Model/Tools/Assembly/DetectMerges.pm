@@ -25,7 +25,7 @@ class Genome::Model::Tools::Assembly::DetectMerges {
             is_optional => 0,
             doc => 'the name of the output stats file',
             is_input => 1,
-            is_output => 1,
+            #is_output => 1,
         }
     ],
     
