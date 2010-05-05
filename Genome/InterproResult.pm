@@ -7,25 +7,25 @@ use Genome;
 class Genome::InterproResult {
     type_name => 'genome interpro result',
     id_by => [
-        id => {
+        interpro_id => {
             is => 'Number',
         },
     ],
     has => [
-        data_directory => {
-            is => 'Path',
-        },
         chrom_name => {
             is => 'Text',
+        },
+        transcript_name => { 
+            is => 'Text',
+        },
+        data_directory => {
+            is => 'Path',
         },
         start => {
             is => 'Number',
         },
         stop => {
             is => 'Number',
-        },
-        transcript_name => { 
-            is => 'Text',
         },
         rid => {
             is => 'Number',

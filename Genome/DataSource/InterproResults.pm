@@ -8,11 +8,31 @@ class Genome::DataSource::InterproResults {
     is => [ 'UR::DataSource::FileMux', 'UR::Singleton' ],
 };
 
-sub delimiter { "," }
+sub delimiter { 
+    return "," 
+}
 
 sub column_order {
-   [ 'id', 'start', 'stop', 'transcript_name', 'rid', 'setid', 'parid', 'name', 'inote' ];
+    return [qw(
+        interpro_id
+        start
+        stop
+        transcript_name
+        rid
+        setid
+        parid
+        name 
+        inote
+    )]
 }
+
+sub constant_values { 
+    [ 'data_directory', 'chrom_name' ]; 
+};
+
+#sub sort_order {
+#    [qw/ start stop interpro_id /];
+#}
 
 sub required_for_get { 
     [ 'data_directory', 'chrom_name' ]; 
