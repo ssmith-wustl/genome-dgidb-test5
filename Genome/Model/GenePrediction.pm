@@ -25,6 +25,13 @@ class Genome::Model::GenePrediction {
             where => [ name => 'brev_orgname',value_class_name=>'UR::Value' ],
             is_mutable => 1,
         },
+        assembly_name => {
+#            is => 'String',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'assembly_name',value_class_name=>'UR::Value' ],
+            is_mutable => 1,
+        },
         organism_name => {
 #            is => 'String',
             via => 'inputs',
