@@ -10,7 +10,7 @@ Model Details
                 genome model: [% model_id %] "[% model_name %]"
                      patient: [% patient_upn %]
                      species: [% species %]
-          reference sequence: [% ref_seq_name %]
+          reference sequence: [% IF ref_seq_desc %][% ref_seq_desc %], build id [% ref_seq_build_id %][% ELSE %][% ref_seq_name %][% END %]
                tissue sample: [% tissue_sample_label %]
                   extraction: [% extraction_label %] ([% extraction_name %]) [% extraction_type %] ID: [% extraction_id %]
           processing profile: [% processing_profile_name %] [% processing_profile_type %] ([% processing_profile_id %])

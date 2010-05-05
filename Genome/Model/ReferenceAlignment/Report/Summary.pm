@@ -394,9 +394,16 @@ sub get_summary_information
         species_latin_name                            => $species_latin_name
     );
 
-    #ehvatum TODO: remove this if statement and always use ref_seq_build_id once ReferencePlaceholder is removed
+    # ehvatum TODO: When ReferecePlaceholder is deleted, remove this if statement and always use ref_seq_build_id,
+    # ref_seq_prefix, ref_seq_subject_name, and, if set, ref_seq_version.
     if(defined($model->reference_sequence_build))
     {
+        my $refSeqDesc = $self->model->reference_sequence_build->prefix . '-' . $self->model->reference_sequence_build->subject_name;
+        if(defined($self->model->reference_sequence_build->version))
+        {
+            $refSeqDesc .= '-' . $self->model->reference_sequence_build->version;
+        }
+        push @vars, (ref_seq_desc                     => $refSeqDesc);
         push @vars, (ref_seq_build_id                 => $self->model->reference_sequence_build->build_id);
     }
     else
