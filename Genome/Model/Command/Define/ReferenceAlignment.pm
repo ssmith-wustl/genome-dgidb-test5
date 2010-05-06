@@ -105,7 +105,7 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
     {
         $model->reference_sequence_build($referenceSequenceBuild);
     }
-    else
+    elsif($model->genome_model_id >= 0)
     {
         # Alert ehvatum by email that an appropriate imported reference sequence build could not be found
         my $msender = new Mail::Sender({
