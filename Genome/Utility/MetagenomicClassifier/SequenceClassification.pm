@@ -188,6 +188,7 @@ sub _get_taxon_confidence_for_rank {
     return ($taxon->get_tag_values('confidence'))[0];
 }
 
+
 sub _get_taxon_name_and_confidence {
     my ($self, $rank) = @_;
 
@@ -195,6 +196,10 @@ sub _get_taxon_name_and_confidence {
         or return;
 
     return ($taxon->id, ($taxon->get_tag_values('confidence'))[0]);
+}
+
+sub get_taxon_name_and_confidence_for_rank {
+    return _get_taxon_name_and_confidence(@_);   
 }
 
 #< Root >#
