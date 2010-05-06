@@ -81,7 +81,7 @@ sub execute {                               # replace with real execution logic.
 	## Get reference fasta or use default ##
 	
 	my $reference_file = $self->reference;
-	$reference_file = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa" if(!$self->reference);
+	$reference_file = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa' if(!$self->reference);
 
 	my $dbsnp_file = $self->dbsnp_file;
 #	$dbsnp_file = "/gscuser/dkoboldt/SNPseek/SNPseek2/ucsc/snp130.variants.txt" if(!$dbsnp_file);

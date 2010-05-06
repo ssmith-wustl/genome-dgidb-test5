@@ -462,8 +462,9 @@ sub write_pileup {
 	
 	my $tmp = File::Temp->new();
 	my $tmp_name = $tmp -> filename;
-	        
-	my @command = `samtools view -uh $bam $chr:$neighbor1_left-$neighbor2_right | samtools pileup -cv -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - > $tmp_name`;
+	      
+    my $human_ref = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
+	my @command = `samtools view -uh $bam $chr:$neighbor1_left-$neighbor2_right | samtools pileup -cv -f $human_ref - > $tmp_name`;
 	open FILE_pileup_raw, "<", $tmp_name or die $!;
 	
     open FILE_pileup, ">", $tmp_pileup_name or die $!;

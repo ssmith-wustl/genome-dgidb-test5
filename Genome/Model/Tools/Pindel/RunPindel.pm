@@ -15,7 +15,7 @@ class Genome::Model::Tools::Pindel::RunPindel {
     has => [
         reference_fasta => {
             is  => 'String',
-            default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa',
+            default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa',
             doc => 'the reference fasta',
         },
         reads_file_one_end => {

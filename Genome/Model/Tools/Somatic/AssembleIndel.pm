@@ -46,7 +46,7 @@ class Genome::Model::Tools::Somatic::AssembleIndel {
     {
         type => 'String',
         is_optional => 1,
-        default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fasta',
+        default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fasta',
         doc => "reference sequence to use for reference assembly",
     },
     assembly_indel_list =>

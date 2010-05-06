@@ -65,7 +65,7 @@ sub execute {                               # replace with real execution logic.
 	my $normal_bam = $self->normal_bam;
 	my $tumor_bam = $self->tumor_bam;
 	my $output = $self->output;
-	my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+	my $reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 	$reference = $self->reference if($self->reference);
 	my $varscan_params = "--min-coverage 8 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01 --verbose 1";
 

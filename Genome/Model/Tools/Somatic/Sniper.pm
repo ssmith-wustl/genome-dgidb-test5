@@ -46,7 +46,7 @@ class Genome::Model::Tools::Somatic::Sniper {
             is  => 'String',
             is_input=>1,
             is_optional=>1, 
-           default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa', 
+           default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa', 
             doc => 'The somatic sniper reference file',
         },
         # Make workflow choose 64 bit blades

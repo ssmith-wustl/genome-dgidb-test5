@@ -29,7 +29,7 @@ my $tmp_dir  = File::Temp::tempdir(
 );
 
 my $bam_file  = "$root_dir/test.bam";
-my $ref_seq   = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fasta';
+my $ref_seq   = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fasta';
 my $ori_snp   = "$root_dir/test.bam.snp.varfilter";
 my $ori_indel = "$root_dir/test.bam.indel.varfilter";
 my $snp_out   = "$tmp_dir/snp.varfilter";

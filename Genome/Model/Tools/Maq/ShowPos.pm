@@ -100,10 +100,10 @@ sub _show_pos {
     }
 
     if ($self->cons) {
-        my $cns_dir = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/';
+        my $cns_dir = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/';
         my $cns_filename = $cns_dir . $show_refseq . '.fasta';
         my $result = Genome::Model::Tools::ApplyDiffToFasta->execute(
-            input => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/22.fasta",
+            input => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/22.fasta',
             diff  => "22.pos",
             ref_flank_file => "22.ref.fasta"
         );
@@ -114,7 +114,7 @@ sub _show_pos {
         }
     }  
     # <$show_refseq.refbase >$show_refseq.ref"; 
-    #gmt apply-diff-to-fasta --input /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/22.fasta --diff 22.pos --ref-flank-file 22.refbase
+    #gmt apply-diff-to-fasta --input /path/to/reference_sequences/NCBI-human-build36/22.fasta --diff 22.pos --ref-flank-file 22.refbase
     #perl -e 'while ($h=<>) { chomp $h; ($r,$p) = ($h =~ /^\>(.*?)\|(\d+)/); $b = <>; print join("\t",$r,$p,$b) }' <22.refbase >22.r
     
     while (<$infh>) {

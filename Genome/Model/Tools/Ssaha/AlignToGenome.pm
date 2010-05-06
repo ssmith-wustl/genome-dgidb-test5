@@ -77,7 +77,7 @@ sub execute {                               # replace with real execution logic.
 
 	## Define Ssaha Reference (default to Hs36)
 
-	my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.ssaha2";
+	my $reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.ssaha2';
 
         if(defined($self->reference))
 	{

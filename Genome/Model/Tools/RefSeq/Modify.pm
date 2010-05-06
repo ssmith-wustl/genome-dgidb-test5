@@ -18,7 +18,7 @@ class Genome::Model::Tools::RefSeq::Modify {
     fasta_dir => {
         type => 'String',
         is_optional => 0,
-        default=>"/gscmnt/sata839/info/medseq/reference_sequences/NCBI-human-build36/",
+        default=> Genome::Config::reference_sequences() . '/NCBI-human-build36/',
         doc=>'right now this tool only works with directories that BIO DB FASTA works with',
     },
     mutation_list => {

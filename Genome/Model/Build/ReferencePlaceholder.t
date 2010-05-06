@@ -63,7 +63,7 @@ is($reference_sequence_path,"$BASE/reference_sequences/NCBI-human-build36",'got 
 
 @get_subreference_paths = sort $model->subreference_paths(reference_extension => 'bfa');
 is(scalar(@get_subreference_paths),25,'got get_subreference_paths countn');
-is(scalar($get_subreference_paths[23]),'/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/Y.bfa','got correct get_subreference_paths value');
+is(scalar($get_subreference_paths[23]),Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/Y.bfa','got correct get_subreference_paths value');
 
 @get_subreference_names = sort $model->subreference_names();
 is($get_subreference_names[23],'Y','got get_subreference_names');

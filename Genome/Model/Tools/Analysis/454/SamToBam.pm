@@ -13,8 +13,8 @@ package Genome::Model::Tools::Analysis::454::SamToBam;     # rename this when yo
 #			
 #####################################################################################################################################
 
-my $ref_seq = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
-my $ref_index = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai";
+my $ref_seq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
+my $ref_index = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa.fai';
 
 use strict;
 use warnings;

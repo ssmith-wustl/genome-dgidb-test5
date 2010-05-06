@@ -23,6 +23,10 @@ sub admin_notice_users {
 
 # operating directories
 
+sub reference_sequence_directory {
+    return join('/', Genome::Config::root_directory(), 'reference_sequences');
+}
+
 sub root_directory {
     $ENV{GENOME_MODEL_ROOT} || '/gscmnt/sata420/info/';
 }

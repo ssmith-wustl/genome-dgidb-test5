@@ -131,7 +131,7 @@ sub _run_aligner {
 
     # prepare the refseq
 #    my $ref_seq_file =  $reference_build->full_consensus_path('bowtie');
-    my $ref_seq_file =  "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bowtie"; # Hack - hard-coded Bowtie reference
+    my $ref_seq_file =  Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.bowtie'; # Hack - hard-coded Bowtie reference
     unless ($ref_seq_file && -e "$ref_seq_file.1.ebwt") {
         $self->error_message("Reference build full consensus path '$ref_seq_file' does not exist.");
         die($self->error_message);

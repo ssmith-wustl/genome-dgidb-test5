@@ -31,7 +31,7 @@ my $tmp_dir  = File::Temp::tempdir(
 );
 
 copy "$root_dir/test.map", $tmp_dir;
-my $ref_list = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai';
+my $ref_list = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa.fai';
 my $map_file = "$tmp_dir/test.map";
 my $bam_file = "$tmp_dir/test.bam";
 my $sam_file = $bam_file;

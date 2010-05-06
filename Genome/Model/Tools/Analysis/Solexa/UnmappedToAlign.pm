@@ -22,7 +22,7 @@ my $aligner = "novoalign";
 my $num_cores = 1;
 my $lsf_queue = "long";
 my $bsub_cmd = "bsub -q $lsf_queue -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000] span[hosts=1]\" -n $num_cores -M 8000000";
-my $novoalign_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.05.13";
+my $novoalign_reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.05.13';
 my $path_to_novoalign = "/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.13/novocraft/novoalign";
 #my $novoalign_params = "-c $num_cores -a -l 36 -t 240 -k -s 5 -d $novoalign_reference"; #-o SAM 
 my $novoalign_params = "-c $num_cores -a -l 50 -t 240 -k -d $novoalign_reference"; #-o SAM 

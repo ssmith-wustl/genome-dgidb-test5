@@ -29,7 +29,7 @@ class Genome::Model::Tools::Somatic::ReadCounts {
            is => 'String',
            doc =>'the reference sequence to use, defaults to NCBI-human-build36',
            is_optional=>1,
-           default=> '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa',
+           default=> Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa',
        },
        output_file => {
            is => 'String',

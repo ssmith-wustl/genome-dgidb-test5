@@ -233,7 +233,10 @@ SLEEEP:      sleep 30;
         my $end = $pos +300;
         mkdir ("$line/edit_dir");
         mkdir("$line/phd_dir");
-        my $command = "$gm write ace maq  --ace=$line/edit_dir/$seq"."_$pos.ace --chromosome=$seq --start=$start --end=$end --refseq=/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/$seq.fasta --maq=$line/$seq"."_$pos.map";
+
+        my $ref_seq_dir = Genome::Config::reference_sequence_directory();
+
+        my $command = "$gm write ace maq  --ace=$line/edit_dir/$seq"."_$pos.ace --chromosome=$seq --start=$start --end=$end --refseq=$ref_seq_dir/NCBI-human-build36/$seq.fasta --maq=$line/$seq"."_$pos.map";
         print $command,"\n";
         my %job_params = (
             pp_type => 'lsf',

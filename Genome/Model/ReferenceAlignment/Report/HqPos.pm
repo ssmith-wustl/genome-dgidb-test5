@@ -297,7 +297,7 @@ sub _extract_hq_discrepancies_iterator {
                 my $l = $mapview_data->[13]; 
                 my $s = uc($mapview_data->[14]); 
                 my @bq = map { ord($_) } split(//,$mapview_data->[15]); 
-                my $rh = $rh{$c} ||= IO::File->new("/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36-flat/$c.bases"); 
+                my $rh = $rh{$c} ||= IO::File->new(Genome::Config::reference_sequence_directory() . '/NCBI-human-build36-flat/$c.bases'); 
                 seek($rh,$p-1,0); 
                 my $rs;
                 sysread($rh,$rs,$l*2,0); 
@@ -364,7 +364,7 @@ my $hqp  = hqp($hqds);
         my $s = uc($F[14]); 
         my @bq = map { ord($_) } split(//,$F[15]); 
             
-        my $rh = $rh{$c} ||= IO::File->new("/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36-flat/$c.bases"); 
+        my $rh = $rh{$c} ||= IO::File->new(Genome::Config::reference_sequence_directory() . '/NCBI-human-build36-flat/$c.bases'); 
         seek($rh,$p-1,0); 
         my $rs;
         sysread($rh,$rs,$l*2,0); 

@@ -121,7 +121,7 @@ sub help_synopsis {
 gmt analysis mutation-spectrum --fasta-file --mutation-file --chr-col --start-col --stop-col --ref-col --var-col --type-col --output-trans-file --output-CpGFinder-file --output-CpGSites-file
 
 EXAMPLE:
-gmt analysis mutation-spectrum --fasta-file /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa --mutation-file /gscuser/charris/testing/TSP_Lung_Adenocarcinoma_Mutation_Table2-29aug2008i.tsv --chr-col 3 --start-col 4 --stop-col 5 --ref-col 12 --var-col 14 --type-col 6 --output-trans-file exampleout.transitiontransversion.csv --output-CpGFinder-file exampleout.CpGFinder.csv --output-CpGSites-file exampleout.CpGIsland.csv
+gmt analysis mutation-spectrum --fasta-file /path/to/your/reference_sequences/NCBI-human-build36/all_sequences.fa --mutation-file /gscuser/charris/testing/TSP_Lung_Adenocarcinoma_Mutation_Table2-29aug2008i.tsv --chr-col 3 --start-col 4 --stop-col 5 --ref-col 12 --var-col 14 --type-col 6 --output-trans-file exampleout.transitiontransversion.csv --output-CpGFinder-file exampleout.CpGFinder.csv --output-CpGSites-file exampleout.CpGIsland.csv
 EOS
 }
 

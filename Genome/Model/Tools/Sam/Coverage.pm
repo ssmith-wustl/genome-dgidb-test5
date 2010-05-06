@@ -73,7 +73,7 @@ sub execute {
         $output_file = Genome::Utility::FileSystem->create_temp_file_path('mapcheck_coverage_results');
     }
  
-    #my $cmd = "/gscuser/charris/c-src-BLECH/trunk/samtool2/samtools mapcheck /gscuser/jpeck/bam/map-TESTINGLIBRARY.bam -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+    #my $cmd = "/gscuser/charris/c-src-BLECH/trunk/samtool2/samtools mapcheck /gscuser/jpeck/bam/map-TESTINGLIBRARY.bam -f /path/to/reference_sequences/NCBI-human-build36/all_sequences.fa";
     my $cmd = "$coverage_cmd $aligned_reads -f $reference > $output_file";
 
     $self->status_message("Mapcheck coverage command: ".$cmd);

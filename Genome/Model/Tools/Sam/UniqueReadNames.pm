@@ -23,7 +23,7 @@ class Genome::Model::Tools::Sam::UniqueReadNames {
             is => 'String',
             doc => 'There reference fasta file',
             is_optional => 1,
-            default_value => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai',
+            default_value => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa.fai',
         },
     ],
 };

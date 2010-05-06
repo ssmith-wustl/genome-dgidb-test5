@@ -29,7 +29,7 @@ class Genome::Model::Tools::Tcga::MergePerLaneSamFilesWorker {
             is => 'String',
             is_input => 1,
             doc => 'The ref_list used for SamToBam.',
-            default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai',
+            default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa.fai',
             is_optional => 1,
         },
     ],

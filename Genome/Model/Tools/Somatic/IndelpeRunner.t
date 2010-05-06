@@ -23,7 +23,7 @@ use_ok( 'Genome::Model::Tools::Somatic::IndelpeRunner');
 my $test_input_dir      = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-IndelpeRunner/';
 
 my $bam_file            = $test_input_dir . 'tumor.tiny.bam';
-my $ref_seq_file        = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa'; #The real one
+my $ref_seq_file        = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa'; #The real one
 
 my $test_output_dir     = File::Temp::tempdir('Genome-Model-Tools-Somatic-IndelpeRunner-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 $test_output_dir .= '/';

@@ -58,7 +58,7 @@ sub pre_execute {
 
     # Default ref seq
     unless (defined $self->reference_fasta) {
-        $self->reference_fasta("/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa");
+        $self->reference_fasta(Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa');
     }
 
     # Set (hardcoded) defaults for tools that have defaults that do not agree with somatic pipeline

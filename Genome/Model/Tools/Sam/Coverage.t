@@ -28,7 +28,7 @@ my $compare_to_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-Cove
 my $aligned_file_name = "normal.tiny.bam"; 
 my $output_file_name = "coverage.out";
 
-my $ref_file = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+my $ref_file = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 
 my $aligned_file = $data_dir."/".$aligned_file_name;
 my $output_file = $tmp_dir."/".$output_file_name;

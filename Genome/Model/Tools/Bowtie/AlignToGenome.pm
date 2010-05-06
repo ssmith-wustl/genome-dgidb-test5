@@ -26,7 +26,7 @@ my $lsf_queue = "long";
 my $novoalign_params = "-c $num_cores -a -l 36 -t 240 -k";	# -o SAM
 
 my $path_to_novoalign = "/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.13/novocraft/novoalign";
-my $novoalign_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.05.13";
+my $novoalign_reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.05.13';
 
 
 

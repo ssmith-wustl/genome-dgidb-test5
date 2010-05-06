@@ -93,7 +93,7 @@ sub execute {                               # replace with real execution logic.
 	}
 
 
-	my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+	my $reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 	$reference = $self->reference if($self->reference);
 	my $varscan_params = "--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1"; #--min-coverage 8 --verbose 1
 	$varscan_params = $self->varscan_params if($self->varscan_params);

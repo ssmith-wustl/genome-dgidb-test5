@@ -72,7 +72,7 @@ sub execute {                               # replace with real execution logic.
 
 	## Get reference ##
 
-	my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+	my $reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 	$reference = $self->reference if($self->reference);
 
 	## Get VarScan parameters ##

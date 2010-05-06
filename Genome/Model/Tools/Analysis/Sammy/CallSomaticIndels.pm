@@ -66,7 +66,7 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 #	my $sample_name = $self->sample_name;
 	my $reference_file = $self->reference;
-	$reference_file = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa" if(!$self->reference);
+	$reference_file = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa' if(!$self->reference);
 
 	## Create directory ##
 	mkdir($self->output_dir) if(!(-d $self->output_dir));
