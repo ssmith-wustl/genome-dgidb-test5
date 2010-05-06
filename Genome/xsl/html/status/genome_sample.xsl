@@ -29,6 +29,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:value-of select="aspect[@name='cell_type']/value"/>
           <xsl:value-of select="aspect[@name='tissue_desc']/value"/>
           <xsl:value-of select="aspect[@name='organ_name']/value"/>
+          <xsl:value-of select="aspect[@name='extraction_type']/value"/>
         </p>
       </div>
       </td></tr></tbody></table>
