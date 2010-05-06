@@ -70,7 +70,7 @@ sub _set_input {
     my ($self, $name, $value) = @_;
 
     my $rv = $self->_model->$name($value);
-    print Data::Dumper::Dumper({$name=>$rv});
+    #print Data::Dumper::Dumper({$name=>$rv});
     if ( not defined($rv) or $rv ne $value ) {
         $self->error_message("Can't update $name to '$value'.");
         return;
@@ -83,7 +83,7 @@ sub _undef_input {
     my ($self, $name) =@_;
 
     my $rv = $self->_model->$name(undef); # this returns an empty string and not undef
-    print Data::Dumper::Dumper({$name=>$rv});
+    #print Data::Dumper::Dumper({$name=>$rv});
     if ( defined($rv) and $rv ne '' ) { # have defined here in case this starts working
         $self->error_message("Can't update $name to 'undef'.");
         return;
