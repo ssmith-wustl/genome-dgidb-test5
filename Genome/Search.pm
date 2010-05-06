@@ -312,7 +312,7 @@ sub generate_result_xml {
             $view_args{xsl_root} = Genome->base_dir . '/xsl';
         }
         
-        my $view = $view_class->create_view(%view_args);
+        my $view = $view_class->create(%view_args);
         my $object_content = $view->content;
         
         if($format eq 'xsl' or $format eq 'html') {
