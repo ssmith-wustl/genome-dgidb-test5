@@ -63,7 +63,7 @@ sub create {
         }
     }
 
-    my $path = sprintf('%s/reference_sequences/%s','/gscmnt/sata420/info',$self->name);
+    my $path = join('/',Genome::Config::reference_sequence_directory(),$self->name);
     #my $dna_type = $self->sample_type;
     #if $dna_type contains spaces, replace them with underscores
     #if ( $dna_type =~ m/\s/ ) {
