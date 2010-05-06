@@ -5,6 +5,7 @@ use warnings;
 
 use IO::File;
 use File::Slurp;
+use File::Path qw( make_path );
 use Cwd;
 require "pwd.pl";
 use Bio::SeqIO;
@@ -122,16 +123,20 @@ sub execute
 
     unless (-e $hgmi_acedb_patha)
     {
-        mkdir qq{$hgmi_acedb_patha} 
-	or croak "Can't make $hgmi_acedb_patha: $!\n";
+        make_path($hgmi_acedb_patha, { verbose => 1, mode => 775 })
+            or croak "Can't make path $hgmi_acedb_patha: $!";
+#        mkdir qq{$hgmi_acedb_patha} 
+#	or croak "Can't make $hgmi_acedb_patha: $!\n";
     }
 
     my $newHGMIpath = $hgmi_acedb_patha."/".$self->analysis_version;
 
     unless (-e $newHGMIpath)
     {
-        mkdir qq{$newHGMIpath}
-	or croak "Can't make $newHGMIpath: $!\n";
+        make_path($newHGMIpath, { verbose => 1, mode => 775 })
+            or croak "Can't make path $newHGMIpath: $!";
+#        mkdir qq{$newHGMIpath}
+#	or croak "Can't make $newHGMIpath: $!\n";
     }
 
     my $hgmi_acedb_path = $newHGMIpath;
