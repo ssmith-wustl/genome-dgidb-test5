@@ -273,54 +273,86 @@ sub generate_pager_xml {
 
 sub generate_result_xml {
     my $class = shift;
-    my $doc = shift;
+    my $doc_or_docs = shift;
     my $xml_doc = shift || XML::LibXML->createDocument();
     my $format = shift || 'xml';
+    my $override_cache = shift || 0;
     
-    require Genome; #It is only at this point that we actually need to load other objects
+    my @docs;
+    if(ref $doc_or_docs eq 'ARRAY') {
+        @docs = @$doc_or_docs;
+    } else {
+        @docs = $doc_or_docs;
+    }
     
-    my $object_class = $doc->value_for('class');
-    
-    $object_class->can('isa'); #Force class autoloading
-    
-    if(my $view_class = $class->_resolve_result_xml_view($object_class)) {
-        
+    my %views;
+    my @result_nodes;
+
+    for my $doc (@docs) {
         my $object_id = $doc->value_for('object_id');
+        my $object_class = $doc->value_for('class'); 
         
         unless($object_id) {
             #Older snapshots will create duplicate entries in the index; let's not show them.
             $class->_delete_by_doc($doc);
-            return;
-        } 
+            next;
+        }
         
+        if(!$override_cache and $format eq 'html') {
+            if(my $result_node = $class->_get_cached_result($doc, $xml_doc)) {
+                push @result_nodes, $result_node;
+                next;
+            }
+        }    
+            
+        
+        require Genome; #It is only at this point that we actually need to load other objects
+        
+        $object_class->can('isa'); #Force class autoloading    
         my $object = $object_class->get($object_id);
-        
+            
         unless($object) {
             $class->_delete_by_doc($doc); #Entity in index that no longer exists--clear it out
-        }
-        return unless $object;
-        
-        my %view_args = (
-            perspective => 'search-result',
-            toolkit => $format,
-            solr_doc => $doc,
-            subject => $object,
-            rest_variable => '/view',
-        );
-        
-        if($format eq 'xsl' or $format eq 'html') {
-            $view_args{xsl_root} = Genome->base_dir . '/xsl';
+            next;
         }
         
-        my $view = $view_class->create(%view_args);
+        my $view;
+        
+        if($views{$object_class}) {
+            $view = $views{$object->class};
+            $view->subject($object);
+            $view->_update_view_from_subject();
+        } else {
+            if(my $view_class = $class->_resolve_result_xml_view($object_class)) {
+                my %view_args = (
+                    perspective => 'search-result',
+                    toolkit => $format,
+                    solr_doc => $doc,
+                    subject => $object,
+                    rest_variable => '/view',
+                );
+                
+                if($format eq 'xsl' or $format eq 'html') {
+                    $view_args{xsl_root} = Genome->base_dir . '/xsl';
+                }
+                
+                $view = $view_class->create(%view_args);
+                $views{$object_class} = $view;
+            } else {
+                $class->error_message('No suitable search result view found for ' . $object_class . '.');
+                next;
+            }
+        }
+                
+                
         my $object_content = $view->content;
-        
+                
         if($format eq 'xsl' or $format eq 'html') {
             $object_content =~ s/^<\?.*?\?>//;
         }
-        
+                
         my $result_node = $xml_doc->createElement('result');
-        
+                
         if($format eq 'xml') {
             my $lib_xml = XML::LibXML->new();
             my $content = $lib_xml->parse_string($object_content);
@@ -329,35 +361,15 @@ sub generate_result_xml {
         } else {
             $result_node->addChild($xml_doc->createTextNode($object_content));
         }
+                
+        push @result_nodes, $result_node;
         
-        return $result_node;
-    } else {
-        $class->error_message('No suitable search result view found for ' . $object_class . '.');
-        return;
-    }
-}
-
-sub resolve_result_xml_for_document {
-    my $class = shift;
-    my $doc = shift;
-    my $xml_doc = shift || XML::LibXML->createDocument();
-    my $format = shift; #For views
-    
-    if($format eq 'html') {
-        my $result_node = $class->_get_cached_result($doc, $xml_doc);
-        
-        unless($result_node) {
-            #Cache miss
-            $result_node = $class->generate_result_xml($doc, $xml_doc, $format);
-            return unless $result_node;
-            
-            $class->_cache_result($doc, $result_node)
-                if $result_node;
+        if($format eq 'html') {
+            $class->_cache_result($doc, $result_node);
         }
-        return $result_node;
     }
     
-    return $class->generate_result_xml($doc, $xml_doc, $format);
+    return @result_nodes;
 }
 
 sub _cache_result {
@@ -413,31 +425,31 @@ sub generate_document {
     my $class = shift;
     my @objects = @_;
     
-    @objects = sort { $a->class cmp $b->class } @objects;
+    
     
     my @docs = ();
     
     # Building new instances of View classes is slow as the system has to resolve a large set of information
     # According to NYTProf, recycling the view reduced the time spent here from 457s to 45.5s on a set of 1000 models
     
-    my $previous_view;    
+    my %views;    
     for my $object (@objects) {
         my $view;
         
-        if($previous_view and $object->class eq $previous_view->subject_class_name) {
-            $previous_view->subject($object);
-            $previous_view->_update_view_from_subject();
-            $view = $previous_view;
+        if(defined $views{$object->class}) {
+            $view = $views{$object->class};
+            $view->subject($object);
+            $view->_update_view_from_subject();
         } else {
              if(my $view_class = $class->_resolve_solr_xml_view($object)) {
-                 $view = $view_class->create(subject => $object, perspective => 'solr', toolkit => 'xml');  
+                 $view = $view_class->create(subject => $object, perspective => 'solr', toolkit => 'xml');
+                 $views{$object->class} = $view;
              } else {
                  Carp::confess('To make an object searchable create an appropriate ::View::Solr::Xml that inherits from Genome::View::Solr::Xml.');
              }
         }
         
         push @docs, $view->content_doc;
-        $previous_view = $view;
     }
     
     return @docs;
