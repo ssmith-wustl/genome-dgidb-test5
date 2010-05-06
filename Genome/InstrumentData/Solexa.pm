@@ -70,6 +70,8 @@ class Genome::InstrumentData::Solexa {
                 --(case when r1.seq_id is not null then r2.read_length else null end) rev_read_length,
                 (case when r1.seq_id is not null then r2.read_length else -1 end) rev_read_length,
 
+                (case when r1.seq_id is not null then r2.kilobases_read else -1 end) fwd_kilobases_read,
+                (case when r2.seq_id is not null then r2.kilobases_read else -1 end) rev_kilobases_read,
 
                 --(case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.read_length else null end) fwd_read_length,
                 --r1.read_length fwd_read_length,
@@ -161,6 +163,8 @@ EOS
         read_length                     => { },
         fwd_read_length                 => { },
         rev_read_length                 => { },
+        fwd_kilobases_read              => { },
+        rev_kilobases_read              => { },
         #TODO These three columns will point to "read_length" or whatever name is decided
         #(see also https://gscweb.gsc.wustl.edu/wiki/Software_Development:Illumina_Indexed_Runs_Warehouse_Schema)
         _sls_read_length                => { calculate => q| return $self->read_length + 1| },
