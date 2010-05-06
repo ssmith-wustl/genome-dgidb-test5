@@ -43,6 +43,9 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       </div>
       </td></tr></tbody></table>
     </div>
+    <xsl:for-each select="aspect[@name='taxon']/object">
+      <xsl:call-template name="genome_taxon"/>
+    </xsl:for-each>
     <xsl:for-each select="aspect[@name='samples']/object">
       <xsl:call-template name="genome_sample"/>
     </xsl:for-each>

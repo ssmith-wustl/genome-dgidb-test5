@@ -53,7 +53,21 @@ class Genome::Individual::View::Status::Xml {
                             subject_class_name => 'Genome::Model',
                         }
                     ]
-                }
+                },
+                {
+                    name => 'taxon',
+                    perspective => 'default',
+                    toolkit => 'xml',
+                    aspects => [
+                        'id',
+                        'domain',
+                        'species_name',
+                        'domain',
+                        'species_latin_name',
+                        'strain_name',
+                        'ncbi_taxon_id',
+                    ]
+                },
             ]
         }
     ]
