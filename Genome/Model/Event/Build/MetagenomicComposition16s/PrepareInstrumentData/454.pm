@@ -11,6 +11,10 @@ class Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentD
     is => 'Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData',
 };
 
+sub bsub {
+    return "-R 'span[hosts=1] select[type=LINUX64]'";
+}
+
 sub execute {
     my $self = shift;
 
