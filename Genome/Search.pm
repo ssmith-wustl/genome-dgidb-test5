@@ -159,10 +159,7 @@ sub add {
     }
     
     if($self->refresh_cache_on_add) {
-        for my $doc (@docs) {
-            my $result_node = $self->generate_result_xml($doc, undef, 'html');
-            $self->_cache_result($doc, $result_node);
-        }  
+        my $result_node = $self->generate_result_xml(@docs, undef, 'html', 1);  
     } else {
         for my $doc (@docs) {
             $self->_delete_cached_result($doc);
