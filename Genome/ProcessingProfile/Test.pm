@@ -335,6 +335,7 @@ my %TYPE_NAME_PARAMS = (
         assembler_params => '-vector_bound 0 -trim_qual 0',
         trimmer => 'finishing',
         classifier => 'rdp2-1',
+        classifier_params => '-training_set broad',
     }, 
     'metagenomic composition 16s 454' => {
         class => 'Genome::ProcessingProfile::MetagenomicComposition16s',
@@ -344,6 +345,7 @@ my %TYPE_NAME_PARAMS = (
         sequencing_center => 'gsc',
         sequencing_platform => '454',
         classifier => 'rdp2-1',
+        classifier_params => '-training_set broad',
     }, 
     'reference alignment solexa' => {
         class => 'Genome::ProcessingProfile::ReferenceAlignment::Solexa',
@@ -573,7 +575,7 @@ sub test01_param_hashes : Tests() {
     my %classifier_params = $self->pp->classifier_params_as_hash;
     is_deeply(
         \%classifier_params,
-        {},
+        { training_set => 'broad' },
         'classifier params as hash'
     );
 
