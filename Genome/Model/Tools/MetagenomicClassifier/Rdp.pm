@@ -19,19 +19,34 @@ class Genome::Model::Tools::MetagenomicClassifier::Rdp {
         output_file => { 
             type => 'String',
             is_optional => 1, 
-            doc => "path to output file.  Defaults to STDOUT"
+            doc => "Path to output file.  Defaults to STDOUT."
         },
         training_set => {
             type => 'String',
             is_optional => 1,
             default => '4',
-            doc => 'name of training set (4, 6, broad)',
+            valid_values => [qw/ 4 6 broad /],
+            doc => 'Name of training set.',
         },
         version => {
             type => 'String',
             is_optional => 1,
             default => '2.1',
-            doc => 'Version of rdp to run.  Available versions (2.1, 2.2)',
+            valid_values => [qw/ 2.1 2.2 /],
+            doc => 'Version of rdp to run.',
+        },
+        format => {
+            is => 'Text',
+            is_optional => 1,
+            valid_values => [qw/ hmp_fix_ranks hmp_all_ranks/],
+            default_value => 'hmp_fix_ranks',
+            doc => <<DOC,
+The format of the output.
+  hmp_fix_ranks => name;complemented('-' or ' ');taxon:confidence;[taxon:confidence;]
+    prints only root, domain, phylum, class, order, family, genus from classification
+  hmp_all_ranks => name;complemented('-' or ' ');taxon:confidence;[taxon:confidence;]
+    prints ALL taxa in classification
+DOC
         },
     ],
 };
@@ -87,8 +102,9 @@ sub execute {
         or return;
 
     #< OUT >#
-    my $writer = Genome::Utility::MetagenomicClassifier::Rdp::Writer->new(
+    my $writer = Genome::Utility::MetagenomicClassifier::SequenceClassification::Writer->create(
         output => $self->output_file,
+        format => $self->format,
     )
         or return;
 
