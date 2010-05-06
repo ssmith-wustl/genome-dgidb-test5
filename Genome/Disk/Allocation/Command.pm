@@ -116,7 +116,7 @@ sub _get_all_mount_paths {
 }
 
 sub lock_directory {
-    return '/gscmnt/839/info/medseq/allocation_lock';
+    return ' /gsc/var/lock/genome_disk_allocation/allocation_lock';
 }
 
 sub resource_id {

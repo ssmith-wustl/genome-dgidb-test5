@@ -26,7 +26,7 @@ is($sam_faidx_path, $ref_seq_path.'.fai', 'Got correct ref seq sam fasta index')
 
 my @get_subreference_paths = sort $model->subreference_paths(reference_extension => 'bfa');
 is(scalar(@get_subreference_paths),25,'got get_subreference_paths countn');
-is(scalar($get_subreference_paths[23]),'/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/Y.bfa','got correct get_subreference_paths value');
+is(scalar($get_subreference_paths[23]),'/gscmnt/sata420/info/reference_sequences/NCBI-human-build36/Y.bfa','got correct get_subreference_paths value');
 
 my @get_subreference_names = sort $model->subreference_names();
 is($get_subreference_names[23],'Y','got get_subreference_names');
@@ -47,7 +47,7 @@ is($lims_model->full_consensus_path,'/gsc/var/lib/reference/set/2774911462/maq_b
 $model->delete;
 $model = Genome::Model::Build::ReferencePlaceholder->create(name => 'NCBI-mouse-build37');
 my $seq_dict_file = $model->get_sequence_dictionary("sam","mouse","r104");
-my $result = "/gscmnt/839/info/medseq/reference_sequences/NCBI-mouse-build37/seqdict/seqdict.sam";
+my $result = "/gscmnt/sata420/info/reference_sequences/NCBI-mouse-build37/seqdict/seqdict.sam";
 is($seq_dict_file, $result, 'got correct sequence dictionary.');
 
 exit;

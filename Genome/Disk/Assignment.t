@@ -15,7 +15,7 @@ BEGIN {
 
 my $group = Genome::Disk::Group->get(disk_group_name => 'info_apipe');
 isa_ok($group,'Genome::Disk::Group');
-my $volume = Genome::Disk::Volume->get(mount_path => '/gscmnt/839');
+my $volume = Genome::Disk::Volume->get(mount_path => '/gscmnt/sata820');
 isa_ok($volume,'Genome::Disk::Volume');
 
 my $gva = Genome::Disk::Assignment->get(
