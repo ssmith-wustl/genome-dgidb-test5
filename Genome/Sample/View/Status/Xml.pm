@@ -13,6 +13,14 @@ class Genome::Sample::View::Status::Xml {
             value => [
                 'id',
                 'name',
+                'common_name',
+                'extraction_label',
+                'extraction_type',
+                'extraction_desc',
+                'cell_type',
+                'tissue_label',
+                'tissue_desc',
+                'organ_name',
                 {
                     name => 'models',
                     perspective => 'default',
@@ -53,7 +61,6 @@ class Genome::Sample::View::Status::Xml {
                         'species_name',
                         'species_latin_name',
                         'strain_name',
-                        
                     ]
                 },
                 {
@@ -75,7 +82,6 @@ class Genome::Sample::View::Status::Xml {
                         'name',
                     ]
                 },
-                #TODO include attributes
             ]
         }
     ]

@@ -23,6 +23,14 @@ class Genome::Individual::View::Status::Xml {
                     aspects => [
                         'id',
                         'name',
+                        'common_name',
+                        'extraction_label',
+                        'extraction_type',
+                        'extraction_desc',
+                        'cell_type',
+                        'tissue_label',
+                        'tissue_desc',
+                        'organ_name',
                         {
                             name => 'models',
                             perspective => 'default',
