@@ -35,6 +35,13 @@ class Genome::InstrumentData::Command::Align {
                                         },
     ],
     has_optional_param => [
+        reference_sequence_build        => {
+                                            is => 'Genome::Model::Build::ImportedReferenceSequence',
+                                            id_by => 'reference_sequence_build_id'
+                                        },
+        reference_sequence_build_id     => {
+                                            is => 'Number'
+                                        },
         reference_build                 => {
                                             is => 'Genome::Model::Build::ReferencePlaceholder',
                                             id_by => 'reference_name',
@@ -108,14 +115,23 @@ sub execute {
     my $alignment;
     my %alignment_params = (
         instrument_data_id => $self->instrument_data_id,
-        reference_name     => $self->reference_name,
         aligner_name       => $self->aligner_name,
         aligner_version    => $self->version,
         aligner_params     => $self->params,
         force_fragment     => $self->force_fragment,
-        samtools_version    => $self->samtools_version,
+        samtools_version   => $self->samtools_version,
         picard_version     => $self->picard_version,
     );
+    # ehvatum TODO: remove if statement with ReferencePlaceholder
+    if (defined($self->reference_sequence_build_id)) {
+        $alignment_params{reference_sequence_build_id} = $self->reference_sequence_build_id;
+    }
+    else {
+        $alignment_params{reference_name} = $self->reference_name;
+    }
+    if(defined($self->reference_sequence_build_id) && defined($self->reference_name)) {
+        $self->warning_message('Both reference_sequence_build_id and reference_name were supplied.');
+    }
     if ($self->trimmer_name) {
         $alignment_params{trimmer_name} = $self->trimmer_name;
         if ($self->trimmer_version) {

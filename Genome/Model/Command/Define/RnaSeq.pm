@@ -1,4 +1,4 @@
-package Genome::Model::Command::Define::ReferenceAlignment;
+package Genome::Model::Command::Define::RnaSeq;
 
 use strict;
 use warnings;
@@ -6,18 +6,18 @@ use warnings;
 use Genome;
 use Mail::Sender;
 
-class Genome::Model::Command::Define::ReferenceAlignment {
+class Genome::Model::Command::Define::RnaSeq {
     is => 'Genome::Model::Command::Define',
     has_optional => [
         reference_sequence_build_id => {
             is => 'Number',
             len => 11,
-            doc => 'ID of the reference sequence to align against'
+            doc => 'ID of the reference sequence to use'
         }
     ]
 };
 
-# TODO: remove this with ref seq placeholder package and ref align pp ref seq name attribute
+# TODO: remove this with ref seq placeholder package and rna seq pp ref seq name attribute
 # Attempt to find appropriate imported reference sequence build from processing profile's reference sequence name attribute
 
 sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
@@ -37,13 +37,13 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
     my ($self, $model) = @_;
 
     my $referenceSequenceBuild;
-    my $ppIsRefAlign = ref($model->processing_profile) =~ /^Genome::ProcessingProfile::ReferenceAlignment/;
-    my $ppHasRefSeqName = 
-        $ppIsRefAlign &&
+    my $ppIsRnaSeq = ref($model->processing_profile) =~ /^Genome::ProcessingProfile::RnaSeq/;
+    my $ppHasRefSeqName =
+        $ppIsRnaSeq &&
         defined($model->processing_profile->reference_sequence_name) &&
         length($model->processing_profilereference_sequence_name) > 0;
 
-    if($ppIsRefAlign)
+    if($ppIsRnaSeq)
     {
         my $ppRsName = $model->processing_profile->reference_sequence_name;
         my $rsPrefix;
@@ -127,7 +127,7 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
             else
             {
                 my $sendLine;
-                if($ppIsRefAlign)
+                if($ppIsRnaSeq)
                 {
                     if($ppHasRefSeqName)
                     {
@@ -150,8 +150,9 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
                     $sendLine =
                         'Failed to find a Genome::Model::Build::ImportedReferenceSequence instance for model ' .
                         $model->genome_model_id . ": model's processing profile is not an instance of " .
-                        'Genome::ProcessingProfile::ReferenceAlignment or an instance of a subclass of Genome::ProcessingProfile::ReferenceAlignment.';
+                        'Genome::ProcessingProfile::RnaSeq or an instance of a subclass of Genome::ProcessingProfile::RnaSeq.';
                 }
+                $sendLine .= '  (for RnaSeq model)';
                 $msender->SendLineEnc($sendLine);
                 if(!$msender->Close())
                 {

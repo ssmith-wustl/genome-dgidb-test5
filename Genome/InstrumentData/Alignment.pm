@@ -61,7 +61,14 @@ class Genome::InstrumentData::Alignment {
                                 is => 'Text',
                                 doc => 'any additional params for the aligner in a single string'
                             },
-
+         reference_sequence_build => {
+                                is => 'Genome::Model::Build::ImportedReferenceSequence',
+                                id_by => 'reference_sequence_build_id'
+                            },
+         reference_sequence_build_id => {
+                                is => 'Number'
+                            },
+         # ehvatum TODO: remove reference_build and reference_name when ReferencePlaceholder is deleted
          reference_build    => {
                                 is => 'Genome::Model::Build::ReferencePlaceholder',
                                 id_by => 'reference_name',
@@ -151,7 +158,7 @@ sub create {
     return $self;
 }
 
-# turn a "get" alignmetn into a "created" one
+# turn a "get" alignment into a "created" one
 sub prepare_for_generate {
     my $self = shift;
     
@@ -205,36 +212,24 @@ sub __define__ {
     return $self;
 }
 
-
 sub resolve_reference_build {
 
     my $self = shift;
 
-    unless ($self->reference_build) {
-        unless ($self->reference_name) {
-            $self->error_message('No way to resolve reference build without reference_name or refrence_build');
-            die($self->error_message);
-        }
-        my $ref_build = Genome::Model::Build::ReferencePlaceholder->get($self->reference_name);
-        unless ($ref_build) {
-            my $sample_type = $self->instrument_data->sample_type;
-            if ( defined($sample_type) ) {
-                $self->status_message("Creating ReferencePlaceholder with sample type: $sample_type");
-                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
-                                                                            name => $self->reference_name,
-                                                                            sample_type => $self->instrument_data->sample_type,
-                                                                        );
-            } else {
-                $self->status_message("No sample type is defined.  Creating ReferencePlaceholder without a sample type parameter.");
-                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
-                                                                            name => $self->reference_name,
-                                                                        );
-            }
-        }
-        $self->reference_build($ref_build);
+    if (defined($self->reference_sequence_build)) {
+        return $self->reference_sequence_build;
     }
+    else {
+        unless ($self->reference_build) {
+            unless ($self->reference_name) {
+                $self->error_message('No way to resolve reference build without reference_name or refrence_build');
+                die($self->error_message);
+            }
+            $self->_resolve_reference_placeholder();
+        }
 
-    return $self->reference_build;
+        return $self->reference_build;
+    }
 }
 
 sub obsolete_create {
@@ -261,28 +256,13 @@ sub obsolete_create {
         $self->instrument_data_id($reverse_instrument_data->id);
     }
 
-    unless ($self->reference_build) {
+    unless ($self->reference_build || $self->reference_sequence_build) {
+        $self->error_message('Neither reference_build nor reference_sequence_build are set.');
         unless ($self->reference_name) {
             $self->error_message('No way to resolve reference build without reference_name or refrence_build');
             die($self->error_message);
         }
-        my $ref_build = Genome::Model::Build::ReferencePlaceholder->get($self->reference_name);
-        unless ($ref_build) {
-            my $sample_type = $self->instrument_data->sample_type;
-            if ( defined($sample_type) ) {
-                $self->status_message("Creating ReferencePlaceholder with sample type: $sample_type");
-                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
-                                                                            name => $self->reference_name,
-                                                                            sample_type => $self->instrument_data->sample_type,
-                                                                        );
-            } else {
-                $self->status_message("No sample type is defined.  Creating ReferencePlaceholder without a sample type parameter.");
-                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
-                                                                            name => $self->reference_name,
-                                                                        );
-            }
-        }
-        $self->reference_build($ref_build);
+        $self->_resolve_reference_placeholder();
     }
 
     unless ($self->alignment_directory) {
@@ -296,6 +276,33 @@ sub obsolete_create {
     }
 
     return $self;
+}
+
+sub _resolve_reference_placeholder {
+    my $self = shift;
+    my $ref_build = Genome::Model::Build::ReferencePlaceholder->get($self->reference_name);
+    unless ($ref_build) {
+        my $sample_type = $self->instrument_data->sample_type;
+        my $echo = "echo '" . $self->reference_name;
+        if(defined($sample_type)) {
+            $echo .= "  :  " $sample_type;
+        }
+        $echo .= "' >> /gscuser/ehvatum/REF_PLACEHOLDER_FOR_ALIGNMENT.txt";
+        system($echo);
+        if ( defined($sample_type) ) {
+            $self->status_message("Creating ReferencePlaceholder with sample type: $sample_type");
+            $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
+                                                                        name => $self->reference_name,
+                                                                        sample_type => $self->instrument_data->sample_type,
+                                                                    );
+        } else {
+            $self->status_message("No sample type is defined.  Creating ReferencePlaceholder without a sample type parameter.");
+            $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
+                                                                        name => $self->reference_name,
+                                                                    );
+        }
+    }
+    $self->reference_build($ref_build);
 }
 
 sub estimated_kb_usage {

@@ -18,6 +18,16 @@ class Genome::Model::RnaSeq {
         expression_name              => { via => 'processing_profile'},
         expression_version           => { via => 'processing_profile'},
         expression_params            => { via => 'processing_profile'},
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            via => 'inputs',
+            to => 'value',
+            where => [ name => 'reference_sequence_build' ],
+            is_many => 0,
+            is_mutable => 1, # TODO: make this non-optional once backfilling is complete and reference placeholder is deleted
+            is_optional => 1,
+            doc => 'reference sequence to align against'
+        },
         reference_sequence_name      => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
         alignment_events             => { is => 'Genome::Model::Event::Build::RnaSeq::AlignReads',
@@ -54,26 +64,28 @@ class Genome::Model::RnaSeq {
     doc => 'A genome model produced by aligning cDNA reads to a reference sequence.' 
 };
 
+# ehvatum TODO: remove this function and change everything that calls it to use ->reference_sequence_build directly
 sub reference_build {
-    # we'll eventually have this return a real model build
-    # for now we return an object which handles making some
-    # of this API cleaner
     my $self = shift;
     unless ($self->{reference_build}) {
-        my $name = $self->reference_sequence_name;
-        my $build = Genome::Model::Build::ReferencePlaceholder->get($name);
-        unless ($build) {
-            $build = Genome::Model::Build::ReferencePlaceholder->create(
-                name => $name,
-                sample_type => $self->dna_type,
-            );
+        if(defined($self->reference_sequence_build)) {
+            $self->{reference_build} = $self->reference_sequence_build;
         }
-        return $self->{reference_build} = $build;
+        else {
+            my $cmd = 'echo "' . $self->reference_sequence_name . ' (RnaSeq)" >> /gscuser/ehvatum/REF_SEQ_BY_NAME.txt';
+            system $cmd;
+            my $name = $self->reference_sequence_name;
+            my $build = Genome::Model::Build::ReferencePlaceholder->get($name);
+            unless ($build) {
+                $build = Genome::Model::Build::ReferencePlaceholder->create(
+                    name => $name,
+                    sample_type => $self->dna_type);
+            }
+            $self->{reference_build} = $build;
+        }
     }
     return $self->{reference_build};
 }
-
-
 
 sub build_subclass_name {
     return 'rna seq';

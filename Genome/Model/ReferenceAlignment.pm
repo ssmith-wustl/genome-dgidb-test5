@@ -57,7 +57,6 @@ class Genome::Model::ReferenceAlignment {
         force_fragment               => { via => 'processing_profile'},
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
-        reference_sequence_name      => { via => 'processing_profile'},
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             via => 'inputs',
@@ -68,6 +67,7 @@ class Genome::Model::ReferenceAlignment {
             is_optional => 1,
             doc => 'reference sequence to align against'
         },
+        reference_sequence_name      => { via => 'processing_profile'},
         coverage_stats_params        => { via => 'processing_profile'},
         capture_set_name             => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
@@ -618,7 +618,7 @@ sub capture_set {
     return $self->{capture_set};
 }
 
-# TODO: remove this function and change everything that calls it to use ->reference_sequence_build directly
+# ehvatum TODO: remove this function and change everything that calls it to use ->reference_sequence_build directly
 sub reference_build {
     my $self = shift;
     unless ($self->{reference_build}) {
