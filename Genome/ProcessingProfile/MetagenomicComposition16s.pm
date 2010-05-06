@@ -68,11 +68,18 @@ class Genome::ProcessingProfile::MetagenomicComposition16s {
             doc => 'Classifier name for classifing the amplicons.',
             default_value => 'rdp2-1', 
             valid_values => [qw/ rdp2-1 rdp2-2 kroyer /],
+            #valid_values => [qw/ rdp kroyer /],
+        },
+        classifier_version => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'The version of the classifier to use.',
+            is_optional => 1,
         },
         classifier_params => {
             is => 'Text',
             is_optional => 1,
-            doc => 'A string of parameters to pass to the assembler',
+            doc => 'A string of parameters to pass to the classifier.',
             is_optional => 1,
         },
     ],
@@ -90,6 +97,9 @@ sub create {
         my $method = $type.'_params_as_hash';
         $self->$method; # dies if error
     }
+    
+    # Validate classifier version
+    # TODO
     
     return $self;
 }

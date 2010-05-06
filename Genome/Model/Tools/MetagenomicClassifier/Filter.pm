@@ -50,8 +50,9 @@ sub execute {
         classifier => $rdp_classifier,
     ) or return;
     
-    my $clean_detail_writer = Genome::Utility::MetagenomicClassifier::Rdp::Writer->create(
+    my $clean_detail_writer = Genome::Utility::MetagenomicClassifier::SequenceClassification::Writer->create(
         output => $self->input_file.".clean.detail",
+        format => 'hmp_all_ranks',
     );
 
     my $chimera_detail_writer =  Genome::Utility::MetagenomicClassifier::ChimeraClassification::Writer->create(

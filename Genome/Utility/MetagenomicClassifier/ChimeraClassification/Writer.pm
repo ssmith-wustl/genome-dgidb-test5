@@ -41,13 +41,16 @@ sub write_one {
     return 1;
 }
 
-sub _rdp_writer {
+sub _classification_writer {
     my $self = shift;
-    my $rdp_writer = $self->{rdp_writer};
-    unless ($rdp_writer) {
-        $rdp_writer = Genome::Utility::MetagenomicClassifier::Rdp::Writer->create(output => $self->output)
+    my $writer = $self->{_classification_writer};
+    unless ($writer) {
+        $writer = Genome::Utility::MetagenomicClassifier::SequenceClassification::Writer->create(
+            output => $self->output,
+            format => 'hmp_all_ranks',
+        )
     }
-    return $rdp_writer;
+    return $writer;
 }
 
 sub write_arff_header {
@@ -119,14 +122,14 @@ sub _write_brief {
 sub _write_verbose {
     my ($self, $classification) = @_;
     my $output = $self->output;
-    my $rdp_writer = $self->_rdp_writer;
+    my $classification_writer = $self->_classification_writer;
 
-    $rdp_writer->write_one($classification->classification);
+    $classification_writer->write_one($classification->classification);
 
     my @probes = @{$classification->probe_classifications};
     foreach my $probe (@probes) {
         $output->print("\t");
-        $rdp_writer->write_one($probe);
+        $classification_writer->write_one($probe);
     }
 
     $output->print("\n");

@@ -350,45 +350,6 @@ sub test_class {
 
 #####################################################################################################
 
-package Genome::Utility::MetagenomicClassifier::Rdp::Writer::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Utility::MetagenomicClassifier::TestBase';
-
-use Data::Dumper 'Dumper';
-use File::Compare 'compare';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Utility::MetagenomicClassifier::Rdp::Writer';
-}
-
-sub params_for_test_class {
-    return ( output => $_[0]->tmp_dir.'/classification.rdp' );
-}
-
-sub required_attrs {
-    return;
-}
-
-sub test003_write_and_compare : Test(1) {
-    my $self = shift;
-
-    my $classifications = $self->retrieve_classifications;
-    for my $classification ( @$classifications ) {
-        $self->{_object}->write_one($classification);
-    }
-    is(compare($self->{_object}->get_original_output, $self->rdp_file), 0, 'Generated and expected classification files match');
-    
-    #print Dumper([$self->{_object}->get_original_output, $self->rdp_file]); <STDIN>;
-
-    return 1;
-}
-
-#####################################################################################################
-
 package Genome::Utility::MetagenomicClassifier::Rdp::Reader::Test;
 
 use strict;

@@ -5,8 +5,6 @@ use warnings;
 use Bio::SeqIO;
 use Genome::Utility::MetagenomicClassifier::ChimeraClassifier;
 use IO::File;
-require  Genome::Utility::MetagenomicClassifier::Rdp::Writer;
-
 
 class Genome::Model::Tools::MetagenomicClassifier::DetectChimeras {
     is => 'Command',
