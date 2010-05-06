@@ -17,7 +17,7 @@ my $file_name = 'GENES.tsv';
 my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Fasta-GenerateBackbone-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $backbone_file = $tmp_dir .'/'. $file_name;
 
-my $existing_data_dir = '/gscmnt/839/info/medseq/reference_sequences/new_masked_ccds_ensembl_genbank_utr_nosv_all_transcriptome_quickfix';
+my $existing_data_dir = Genome::Config::reference_sequence_directory() . '/new_masked_ccds_ensembl_genbank_utr_nosv_all_transcriptome_quickfix';
 my $fasta_file = $existing_data_dir .'/new_masked_ccds_ensembl_genbank_utr_nosv_all_transcriptome_quickfix.fa';
 my $expected_backbone = $existing_data_dir .'/'. $file_name;
 

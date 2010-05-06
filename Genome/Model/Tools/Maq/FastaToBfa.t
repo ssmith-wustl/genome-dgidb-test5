@@ -20,7 +20,7 @@ BEGIN {
 
 my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Maq-FastaToBfa-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $file_name = 'all_sequences';
-my $existing_data_dir = '/gscmnt/839/info/medseq/reference_sequences/refseq-for-test';
+my $existing_data_dir = Genome::Config::reference_sequence_directory() . '/refseq-for-test';
 my $fasta_file = $existing_data_dir .'/'. $file_name .'.fa';
 my $existing_bfa_file = $existing_data_dir .'/'. $file_name .'.bfa';
 

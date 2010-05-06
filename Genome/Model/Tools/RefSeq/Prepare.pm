@@ -21,7 +21,7 @@ class Genome::Model::Tools::RefSeq::Prepare {
             },
             reference_base_path => {
                     type => 'String',
-                    default_value=>'/gscmnt/839/info/medseq/reference_sequences',
+                    default_value=> Genome::Config::reference_sequence_directory() . '/',
                     doc => "Optional alternate base path for the reference.",
             },
             sam_version  => {

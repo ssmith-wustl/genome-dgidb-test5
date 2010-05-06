@@ -22,7 +22,7 @@ my $TESTING_THREADS = 1;
 
 my $expected_output = 2;
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Novocraft/Novoalign';
-my $ref_seq = '/gscmnt/839/info/medseq/reference_sequences/human-novoalign-reference-test/all_sequences_k14_s3';
+my $ref_seq = Genome::Config::reference_sequence_directory() . '/human-novoalign-reference-test/all_sequences_k14_s3';
 
 my $fragment_fastq_file = $test_data_dir .'/fragment_100.txt';
 my $pe_fastq_files = $test_data_dir .'/s_1_1_sequence_100.txt '. $test_data_dir .'/s_1_2_sequence_100.txt';

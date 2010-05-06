@@ -30,7 +30,7 @@ SKIP: {
     ok(unlink ($blat_output_path),'remove '. $blat_output_path);
 }
 my $blat_params = '-mask=lower -out=pslx -noHead';
-my $ref_seq_dir = '/gscmnt/839/info/medseq/reference_sequences/refseq-for-test';
+my $ref_seq_dir = Genome::Config::reference_sequence_directory() . '/refseq-for-test';
 
 opendir(DIR,$ref_seq_dir) || die "Failed to open dir $ref_seq_dir";
 my @ref_seq_files = map { $ref_seq_dir .'/'. $_ } grep { !/^all_seq/ } grep { /\.fa$/ } readdir(DIR);

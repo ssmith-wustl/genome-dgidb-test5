@@ -14,7 +14,7 @@ BEGIN {
 my $query_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subject/test.fa';
 ok(-s $query_file,'query file has size');
 
-my $subject_file = '/gscmnt/839/info/medseq/reference_sequences/refseq-for-test/11.fa';
+my $subject_file = Genome::Config::reference_sequence_directory() . '/refseq-for-test/11.fa';
 ok(-s $subject_file,'subject file has size');
 
 my $blat = Genome::Model::Tools::Blat::Subject->create(
