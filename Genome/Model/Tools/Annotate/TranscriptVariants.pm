@@ -46,6 +46,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is => 'Text',
             is_input => 1,
             is_optional => 1,
+            is_input => 1,
             doc => "A comma delimited list of any extra columns that exist after the expected 5 in the input. Use this option if it is desired to preserve additional columns from the input file, which will then appear in output.Preserved columns must be contiguous and in order as they appear in the infile after the mandatory input columns. Any desired naming or number of columns can be specified so long as it does not exceed the actual number of columns in the file."
         },
         # Transcript Params
@@ -61,23 +62,27 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
         },
         flank_range => {
             is => 'Integer', 
+            is_input => 1,
             is_optional => 1,
             default => 50000,
             doc => 'Range to look around for flanking regions of transcripts',
         },
         reference_transcripts => {
             is => 'String',
+            is_input => 1,
             is_optional => 1, 
             doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both). See full help output for a list of available reference transcripts.'
         },
         data_directory => {
             is => 'String',
             is_optional => 1,
+            is_input => 1,
             doc => 'Alternate method to specify imported annotation data used in annotation.  This option allows a directory w/o supporting model and build, not reccomended except for testing purposes',
         },
         build_id =>{
             is => "Number",
             is_optional => 1,
+            is_input => 1,
             doc => 'build id for the imported annotation model to grab transcripts to annotate from.  Use this or --reference-transcripts to specify a non-default annotation db (not both)',
         },
         build => {
@@ -88,12 +93,14 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
         extra_details => {
             is => 'Boolean',
             is_optional => 1,
+            is_input => 1,
             default => 0,
             doc => 'enabling this flag produces an additional four columns: flank_annotation_distance_to_transcript, intron_annotation_substructure_ordinal, intron_annotation_substructure_size, and intron_annotation_substructure_position',
         },
         sloppy => {
             is => 'Boolean',
             is_optional => 1,
+            is_input => 1,
             default => 0,
             doc => 'enable this flag to skip variants on a chromosome where no annotation information exists, as opposed to crashing',
         },
@@ -109,6 +116,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is => 'Boolean',
             is_optional => 1,
             default => 0,
+            is_input => 1,
             doc => 'enable this flag to cache annotation data locally, useful if annotation is being run repeatedly on a pipeline',
         },
         benchmark => {
