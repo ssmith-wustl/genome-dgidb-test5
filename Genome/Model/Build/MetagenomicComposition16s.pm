@@ -432,8 +432,9 @@ sub classify_amplicons {
     for my $amplicon_set ( @amplicon_sets ) {
         my $classification_file = $amplicon_set->classification_file;
         unlink $classification_file if -e $classification_file;
-        my $writer =  Genome::Utility::MetagenomicClassifier::Rdp::Writer->create(
+        my $writer =  Genome::Utility::MetagenomicClassifier::SequenceClassification::Writer->create(
             output => $classification_file,
+            format => 'hmp_fix_ranks',
         );
         unless ( $writer ) {
             $self->error_message("Could not create classification writer for file ($classification_file) for writing.");
