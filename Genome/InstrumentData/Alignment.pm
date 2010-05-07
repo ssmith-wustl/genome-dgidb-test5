@@ -285,7 +285,7 @@ sub _resolve_reference_placeholder {
         my $sample_type = $self->instrument_data->sample_type;
         my $echo = "echo '" . $self->reference_name;
         if(defined($sample_type)) {
-            $echo .= "  :  " $sample_type;
+            $echo .= "  :  " . $sample_type;
         }
         $echo .= "' >> /gscuser/ehvatum/REF_PLACEHOLDER_FOR_ALIGNMENT.txt";
         system($echo);

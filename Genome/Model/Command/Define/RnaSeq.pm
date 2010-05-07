@@ -41,7 +41,7 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
     my $ppHasRefSeqName =
         $ppIsRnaSeq &&
         defined($model->processing_profile->reference_sequence_name) &&
-        length($model->processing_profilereference_sequence_name) > 0;
+        length($model->processing_profile->reference_sequence_name) > 0;
 
     if($ppIsRnaSeq)
     {
