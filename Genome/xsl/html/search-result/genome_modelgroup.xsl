@@ -34,6 +34,10 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                   <xsl:call-template name="object_link">
                     <xsl:with-param name="linktext" select="'last succeeded build'" />
                   </xsl:call-template>
+                  <xsl:variable name="build_directory_url">
+                    <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="normalize-space(aspect[@name='data_directory']/value)" />
+                  </xsl:variable>
+                  | <a><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/><xsl:text>/reports/Summary/report.html</xsl:text></xsl:attribute>summary report</a>
                 </xsl:for-each>
               </xsl:when>
               <xsl:otherwise>
