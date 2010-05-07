@@ -92,7 +92,7 @@ sub initialize {
     if (ref $source eq 'Email::Simple') {
         my $source_id = $source->header('X-Genome-Search-ID');
         unless($source_id eq $self->id) {
-            Carp::confess('Source object identifier ' . $source_id . ' does not appear to match this identifier.');
+            Carp::confess('Source object identifier ' . $source_id . ' does not appear to match this identifier (' . $self->id . ').');
         }
         
         $self->_body($source->body);
@@ -100,7 +100,7 @@ sub initialize {
     } elsif (ref $source eq 'WebService::Solr::Document') {
         my $source_id = $source->value_for('object_id');
         unless($source_id eq $self->id) {
-            Carp::confess('Source object identifier ' . $source_id . ' does not appear to match this identifier.');
+            Carp::confess('Source object identifier ' . $source_id . ' does not appear to match this identifier (' . $self->id . ').');
         }
         
         $self->_body($source->value_for('content'));

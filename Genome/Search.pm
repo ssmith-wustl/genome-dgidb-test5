@@ -318,6 +318,7 @@ sub generate_result_xml {
         if($views{$object_class}) {
             $view = $views{$object->class};
             $view->subject($object);
+            $view->solr_doc($doc);
             $view->_update_view_from_subject();
         } else {
             if(my $view_class = $class->_resolve_result_xml_view($object_class)) {
