@@ -3,7 +3,8 @@
 use strict;
 use warnings;
 
-use Test::More tests => 8;
+#use Test::More tests => 8;
+use Test::More skip_all => 'Obsolete; RemoveAlignmentDirectory.pm will soon be removed.';
 use File::Copy;
 
 use above 'Genome';

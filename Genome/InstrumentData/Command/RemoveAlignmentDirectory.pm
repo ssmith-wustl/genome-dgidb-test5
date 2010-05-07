@@ -46,7 +46,7 @@ class Genome::InstrumentData::Command::RemoveAlignmentDirectory {
 };
 
 sub create {
-    $self->error_message('__PACKAGE__ is thought to be dead code and has been commented out.  Email ehvatum@genome.wustl.edu if you want it back.');
+    shift->error_message(__PACKAGE__ . ' is thought to be dead code and has been commented out in preparation for deletion.  Email ehvatum@genome.wustl.edu if you want it back.');
     return;
 }
 
