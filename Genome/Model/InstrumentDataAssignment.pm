@@ -105,6 +105,7 @@ sub __errors__ {
     my ($self) = shift;
 
     my @tags = $self->SUPER::__errors__(@_);
+
     unless (Genome::Model->get($self->model_id)) {
         push @tags, UR::Object::Tag->create(
                                             type => 'invalid',
@@ -290,7 +291,7 @@ sub delete {
     #   - delete ida 
     my $input = Genome::Model::Input->get(
         model_id => $self->model_id,
-        value_class_name => $self->instrument_data->class,
+        name => 'instrument_data',
         value_id => $self->instrument_data_id,
     );
     if ( $input ) {
