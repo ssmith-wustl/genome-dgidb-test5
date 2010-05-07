@@ -321,7 +321,7 @@ sub execute
         foreach my $cmd (@cmd)
         {
             #mkdir $cmd or croak "can't mkdir $cmd : $!\n";
-            make_path( $cmd ,{verbose => 1, mode => 0775 ) or croak "can't mkdir $cmd : $!\n";
+            make_path( $cmd ,{verbose => 1, mode => 0775} ) or croak "can't mkdir $cmd : $!\n";
         }
         my $readme = $newdir . "/"
             . $assembly_dir
