@@ -55,6 +55,7 @@ sub execute {
     for my $build (@builds) {
         my $return_value = $build->delete(keep_build_directory => $self->keep_build_directory);
         confess "Problem removing build " . $build->build_id . "!" unless $return_value;
+        UR::Context->commit;
         $num++;
         $self->status_message("\n\n$num of $total builds successfully removed!\n\n\n");
     }
