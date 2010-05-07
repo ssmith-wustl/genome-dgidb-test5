@@ -64,14 +64,16 @@ sub _string_for_hmp_fix_ranks_format {
         '',
     );
     my $prev_taxon_id;
+    my $prev_conf;
     for my $rank (qw/ root domain phylum class order family genus /) {
         my ($taxon_id, $conf) = $classification->get_taxon_name_and_confidence_for_rank($rank);
         unless ( $taxon_id ) {
             $taxon_id = $prev_taxon_id.'_no_'.$rank;
-            $conf = '';
+            $conf = $prev_conf || '';
         }
         else {
             $prev_taxon_id = $taxon_id;
+            $prev_conf = $conf;
         }
         $string .= $taxon_id.':'.$conf.';';
     }
