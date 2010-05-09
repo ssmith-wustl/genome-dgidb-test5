@@ -13,33 +13,33 @@ use Data::Dumper 'Dumper';
 class Genome::Model::Command::InstrumentData::Assign {
     is => 'Genome::Model::Event',
     has => [
-    model_id => {
-        is => 'Integer', 
-        doc => 'ID for the genome model to assign instrument data.'
-    },
+        model_id => {
+            is => 'Integer', 
+            doc => 'ID for the genome model to assign instrument data.'
+        },
     ],
     has_optional => [
-    instrument_data_id => {
-        is => 'Number',
-        doc => 'The unique ID of the instrument data to assign.  To assign multiple instrument data, enclose this param in quotes(\'), and separate the IDs by a space.'
-    },
-    flow_cell_id => {
-        is => 'Number',
-        doc => 'Assigns all lanes in the given flowcell whose sample_name matches the model\'s subject name'       
-    },
-    instrument_data_ids => {
-        is => 'Number',
-        doc => 'The unique IDs of the instrument data to assign, enclosed in quotes(\'\'), and separated by a space.'
-    },
-    all => {
-        is => 'Boolean',
-        default => 0,
-        doc => 'Assign all available unassigned instrument data to the model.'
-    },
-    filter => {
-        is => 'Text',
-        valid_values => ['forward-only','reverse-only'],
-    },
+        instrument_data_id => {
+            is => 'Number',
+            doc => 'The unique ID of the instrument data to assign.  To assign multiple instrument data, enclose this param in quotes(\'), and separate the IDs by a space.'
+        },
+        flow_cell_id => {
+            is => 'Number',
+            doc => 'Assigns all lanes in the given flowcell whose sample_name matches the model\'s subject name'       
+        },
+        instrument_data_ids => {
+            is => 'Number',
+            doc => 'The unique IDs of the instrument data to assign, enclosed in quotes(\'\'), and separated by a space.'
+        },
+        all => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Assign all available unassigned instrument data to the model.'
+        },
+        filter => {
+            is => 'Text',
+            valid_values => ['forward-only','reverse-only'],
+        },
     ],
 };
 
