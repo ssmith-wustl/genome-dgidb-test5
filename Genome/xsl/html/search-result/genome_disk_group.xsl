@@ -12,7 +12,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <div class="icon">
           <a>
             <xsl:attribute name="href"><xsl:value-of select="$href"/></xsl:attribute>
-            <img width="32" height="32" src="/resources/report_resources/apipe_dashboard/images/icons/eye_16.png" />
+            <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/eye_16.png" />
           </a>
         </div>
       </td><td>

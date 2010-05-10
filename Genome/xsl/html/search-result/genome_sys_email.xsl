@@ -21,7 +21,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:value-of select="normalize-space(aspect[@name='message_id']/value)" />
               <xsl:text>.html</xsl:text>
             </xsl:attribute>
-            <img width="32" height="32" src="/resources/report_resources/apipe_dashboard/images/icons/mail_32.png" />
+            <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/mail_32.png" />
           </a>
         </div>
       </td><td>

@@ -9,7 +9,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <div class="icon">
           <xsl:call-template name="object_link">
              <xsl:with-param name="linktext">
-              <img width="32" height="32" src="/resources/report_resources/apipe_dashboard/images/icons/modelgroup_32.png" />
+              <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/modelgroup_32.png" />
             </xsl:with-param>
           </xsl:call-template>
         </div>

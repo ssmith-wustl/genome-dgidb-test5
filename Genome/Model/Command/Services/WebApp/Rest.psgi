@@ -141,7 +141,12 @@ dispatch {
             $view_args{'xsl_root'} =
               Genome->base_dir . '/xsl';    ## maybe move this to $res_path?
             $view_args{'xsl_path'}      = '/static/xsl';
-            $view_args{'rest_variable'} = '/view';
+#            $view_args{'rest_variable'} = '/view';
+
+            $view_args{'xsl_variables'} = {
+                rest => '/view',
+                resources => '/view/genome/resource.html'
+            };
         }
 
         my $view;

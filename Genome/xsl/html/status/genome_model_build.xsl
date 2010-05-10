@@ -14,8 +14,8 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               });
           ]]>
         </script>
-        <script type='text/javascript' src='/resources/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js'></script>
-        <link rel="stylesheet" href="/resources/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css" />
+        <script type='text/javascript' src='/res/old/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js'></script>
+        <link rel="stylesheet" href="/res/old/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css" />
         <script type="text/javascript">
           <![CDATA[
                    function event_popup(eventObject) {

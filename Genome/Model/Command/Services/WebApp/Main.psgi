@@ -52,6 +52,9 @@ dispatch {
 
         return $resp;
     },
+    sub (/res/**) {
+      redispatch_to "/view/genome/resource.html/$_[1]";
+    },
       ## send /view without a trailing slash to /view/
       ## although thats probably a 404
       sub (/view) {

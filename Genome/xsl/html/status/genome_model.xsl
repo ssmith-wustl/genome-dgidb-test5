@@ -9,7 +9,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <div class="icon">
           <xsl:call-template name="object_link">
             <xsl:with-param name="linktext">
-              <img width="32" height="32" src="/resources/report_resources/apipe_dashboard/images/icons/model_32.png" />
+              <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/model_32.png" />
             </xsl:with-param>
           </xsl:call-template>
         </div>
@@ -171,7 +171,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <td class="model_name">
               <xsl:if test="$is_default = 1">
                 <!-- if this is the default model, show a nice little star -->
-                <img class="default_report_star" src="/resources/report_resources/apipe_dashboard/images/icons/star_16.png" width="16" height="16" absmiddle="middle" alt="Default Model"/>
+                <img class="default_report_star" src="/res/old/report_resources/apipe_dashboard/images/icons/star_16.png" width="16" height="16" absmiddle="middle" alt="Default Model"/>
               </xsl:if>
               <xsl:call-template name="object_link"/>
             </td>
