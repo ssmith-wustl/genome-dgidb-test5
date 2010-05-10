@@ -52,6 +52,11 @@ sub help_detail {
     To just see the files, use --list. 
     Use --force to overwrite existing files.
 
+    This command is backward compatible for amplicon assembly builds:
+     oriented fasta is the same
+     processed fasta in MC16s is 'assembly' fasta in amplicon assembly
+     classification file does not exist for amplicon assembly
+
 HELP
 }
 
@@ -74,14 +79,24 @@ sub execute {
     my @builds = $self->_builds # errors in this method
         or return;
     for my $build ( @builds ) {
-        my @amplicon_sets = $build->amplicon_sets;
-        unless ( @amplicon_sets ) {
-            $self->error_message("No amplicon sets for ".$build->description);
-            return;
+        # aa backward compatibility
+        if ( $build->type_name eq 'metagenomic composition 16s' ) {
+            my @amplicon_sets = $build->amplicon_sets;
+            unless ( @amplicon_sets ) {
+                $self->error_message("No amplicon sets for ".$build->description);
+                return;
+            }
+            for my $amplicon_set ( @amplicon_sets ) {
+                $self->$method($amplicon_set, $file_method)
+                    or return;
+            }
         }
-        for my $amplicon_set ( @amplicon_sets ) {
-            $self->$method($amplicon_set, $file_method)
+        elsif ( $build->type_name eq 'amplicon assembly' ) {
+            $self->$method($build, $file_method) # the build acts as amplicon set
                 or return;
+        }
+        else {
+            die "Incompatible build type: ".$build->type_name;
         }
     }
 
