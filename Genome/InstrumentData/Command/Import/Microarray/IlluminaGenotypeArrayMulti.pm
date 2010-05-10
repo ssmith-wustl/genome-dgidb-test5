@@ -94,6 +94,7 @@ sub process_imported_files {
     my $processing_profile;
     my $call_file;
     my $genotype;
+    my $sample_map;
     my $illumina_manifest;
     my $forward_strand_report;
 
@@ -115,16 +116,25 @@ sub process_imported_files {
     my $path = $self->original_data_path;
 
     my @files = glob( $path."/*" );
-    
+
+
+    #Find the exact file names of the Final Report and the Sample Map.    
     for (@files) {
         if ($_ =~ /FinalReport/) {
             $genotype = $_;
+            next;
+        }
+        if ($_ =~ /Sample_Map/) {
+            $sample_map = $_;
+            next;
+        }
+        if(defined($sample_map) && defined($genotype)) {
             last;
         }
     }
 
     print "genotype = ".$genotype."\n";
-    my $sample_map= "$path/Sample_Map.csv";
+    #my $sample_map= "$path/Sample_Map.csv";
     print "sample map = ".$sample_map."\n";
 
     my $sample_map_fh;
@@ -139,10 +149,21 @@ sub process_imported_files {
     my %internal;
     my %samples;
     my %sample_names;
+    my $split_char;
 
     #extract sample_name from sample mapping, and include or exclude as directed by parameters
     while(my $line = $sample_map_fh->getline) {
-        my ($index, $sample_name,$internal_name, @junk) = split ',', $line;
+        
+        if((not defined($split_char))&& ($line =~ /\,/)) {
+            $split_char = ',';
+            $self->status_message("Using comma as the delineating character for files.");
+            print $self->status_message;
+        } elsif (not defined($split_char) && ($line =~ /\t/)) {
+            $split_char = "\t";
+        } elsif (not defined($split_char)) {
+            die "couldn't find the proper character used to delineate the Sample_Map file";
+        }
+        my ($index, $sample_name,$internal_name, @junk) = split $split_char, $line;
         if (scalar(keys(%included_names))) {
             unless($included_names{$sample_name}) {
                 next;
@@ -157,12 +178,15 @@ sub process_imported_files {
         $internal{$sample_name} = $internal_name;
         print $sample_name."\n";
     }
+
     unless(scalar(keys(%sample_names))) {
         $self->error_message("Found no samples / excluded all samples");
         die $self->error_message;
     }
-    
+
+    #Grab sample objects and toss them into the samples hash    
     for(sort(keys(%sample_names))) {
+        print "sample_name = ".$_."\n";
         my $local_sample = Genome::Sample->get( name => $sample_names{$_} );
         unless($local_sample) {
             $self->error_message("Could not locate sample by the name of $sample_names{$_}.");
@@ -175,6 +199,9 @@ sub process_imported_files {
 
     my $temp_dir = File::Temp::tempdir('Genome-InstrumentData-Commnd-Import-Microarray-Illumina-Multi-Sample-XXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1); 
 
+    #create genotype files from machine data, store them on tmp disk, to be copied to individual allocations on a per-sample basis.
+    $self->status_message("Now running Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls");
+    print $self->status_message."\n";
     unless(Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls->execute(
         genotype_file => $genotype,
         output_directory => "$temp_dir", 
@@ -182,13 +209,14 @@ sub process_imported_files {
             $self->error_message("Call to Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls failed");
             die $self->error_message;
     }
-    print "finished creating genotypes.\n";   
+    print "finished call to Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls.\n";   
 
 
-    #first_sample is being used to facilitate testing. Specifically, to avoid creating multiple test allocations.
     my $count=0;
     my @model_ids;
 
+    #This loops through the list of samples and creates instrument-data records for each, copies the genotype file into the associated allocation,
+    # and then deposits the goldSNP file, then kicks off a define/build model.
     for my $k (sort(keys(%samples))) {
         my $sample_name = $samples{$k}->name;
         $self->status_message("working on sample ".$sample_name);
@@ -238,6 +266,8 @@ sub process_imported_files {
 
         #create SNP Array Genotype (goldSNP)
         my $genotype_path_and_SNP = $genotype_path."/".$sample_name."_SNPArray.genotype";
+        $self->status_message("Now running Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes");
+        print $self->status_message."\n";
         unless(Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->execute(    
             genotype_file1 => $genotype_path_and_file,
             genotype_file2 => $genotype_path_and_file,
@@ -247,7 +277,7 @@ sub process_imported_files {
             die $self->error_message;
         }
         $self->status_message("finished call to Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes"); 
-
+        print $self->status_message;
         #create genotype model
         my $define = Genome::Model->get( name => "$sample_name/$processing_profile");
 
