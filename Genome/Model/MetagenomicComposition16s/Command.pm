@@ -38,7 +38,7 @@ sub _builds {
         return;
     }
 
-    my @identifiers = split(/,\s+/, $self->build_identifiers);
+    my @identifiers = split(/,\s*/, $self->build_identifiers);
     unless ( @identifiers ) {
         $self->error_message("Could not split out build identifiers from string: $identifiers");
         return;
@@ -52,18 +52,14 @@ sub _builds {
             $build = $self->_get_last_complete_build_for_model_params(name => $identifier)
                 or return; # error in sub
         }
-        elsif ( $identifier =~ /^1/ ) {
-            # build id
+        else { 
+            # build id first
             $build = Genome::Model::Build->get($identifier);
             unless ( $build ) {
-                $self->error_message("Can't get build for ID: $identifier");
-                return;
+                # model id
+                $build = $self->_get_last_complete_build_for_model_params(id => $identifier)
+                    or return; # error in sub
             }
-        }
-        else { 
-            # model id
-            $build = $self->_get_last_complete_build_for_model_params(id => $identifier)
-                or return; # error in sub
         }
         push @builds, $build;
     }
@@ -74,7 +70,7 @@ sub _builds {
 sub _get_last_complete_build_for_model_params {
     my ($self, %params) = @_;
 
-    my $model = Genome::Model::MetagenomicComposition16s->get(%params);
+    my $model = Genome::Model->get(%params);
     unless ( $model ) {
         $self->error_message("Can't get model for ".join(' => ', %params));
         return;
