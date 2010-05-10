@@ -26,11 +26,11 @@ class Genome::Model::Tools::Cmds::IndividualRegionCalls {
         default => getcwd(),
         doc => 'Directory for output of ROI file and individual call files showing per-sample variations. Default: current working directory.',        
     },
-    pval_cutoff => {
+    cmds_test_cutoff => {
         type => 'Number',
         is_optional => 1,
         default => 3,
-        doc => 'CMDS test cutoff value -log10(z_p) = 3 (default)',
+        doc => 'CMDS test cutoff value (-log10(z.p in cmds.test output))',
     },
     window_size => {
         type => 'Number',
@@ -61,9 +61,10 @@ sub execute {
     my $data_dir = $self->cmds_input_data_dir;
     my $output_dir = $self->output_dir;
     my $permutations = $self->permutations;
-    my $pv_cutoff = $self->pval_cutoff;
+    my $cmds_test_cutoff = $self->cmds_test_cutoff;
+    my $pv_cutoff = exp(-log(10)*$cmds_test_cutoff); #used to compare with the z.p column of cmds.test output
     my $window_frame = $self->window_size;
-    my %regions; # to store data a to be used with R calls below
+    my %regions; # to store data to be used with R calls below
     my @chrs; # to store chrs for R calls
 
     #open output file
@@ -85,8 +86,7 @@ sub execute {
             next if ($line =~ /^chromosome/);
             my ($chr,$window,$start,$mid,$end,$m,$z,$m_sd,$m_p,$z_sd,$z_p) = split /\s+/, $line;
             next if ($z_p eq "NA");
-            my $logP = -log($z_p)/log(10);
-            if ($logP >= $pv_cutoff) {
+            if ($z_p <= $pv_cutoff) {
                 if (!defined $cur_reg_start) {
                     $cur_reg_start = $start;
                     $cur_reg_end = $end;
@@ -102,7 +102,7 @@ sub execute {
                     $cur_reg_start = $start;
                     $cur_reg_end = $end;
                 }
-            }#end, logP passes cutoff
+            }#end, z.p passes cutoff
         }#end, parsing cmds_test file
 
         #capture last region left in queue if there was one
