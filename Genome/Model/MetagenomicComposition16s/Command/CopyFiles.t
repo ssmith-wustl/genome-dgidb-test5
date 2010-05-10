@@ -6,20 +6,29 @@ use warnings;
 use above 'Genome';
 
 use Data::Dumper 'Dumper';
+use Genome::Model::Test;
 use Genome::Model::MetagenomicComposition16s::Test;
 use Test::More;
 
-use_ok('Genome::Model::MetagenomicComposition16s::Command::CopyFiles');
+use_ok('Genome::Model::MetagenomicComposition16s::Command::CopyFiles') or die;
 
 # model/build
 my $model = Genome::Model::MetagenomicComposition16s::Test->create_mock_mc16s_model(
     sequencing_platform => 'sanger',
     use_mock_dir => 1,
 );
+ok($model, 'Created mock mc16s sanger model');
 ok(
     Genome::Model::MetagenomicComposition16s::Test->create_mock_build_for_mc16s_model($model),
-    'Added build to model',
+    'Created mock mc16s build',
 );
+# aa model for backward compatibility
+my $aa_model = Genome::Model::Test->create_mock_model(
+    type_name => 'amplicon assembly',
+    use_mock_dir => 1,
+);
+ok($aa_model, 'Created mock amplicon assembly model');
+ok($aa_model->last_complete_build, 'Created mock amplicon assembly build');
 
 my $copy_cmd;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
@@ -36,8 +45,9 @@ ok(
 );
 
 # ok - copy
+#  tests multiple build retrieving methods: model id and build id
 $copy_cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->execute(
-    build_identifiers => $model->id,
+    build_identifiers => $model->id.','.$aa_model->last_complete_build->id,
     file_type => 'processed_fasta',
     destination => $tmpdir,
 );
@@ -46,7 +56,7 @@ ok(
     'Execute copy ok',
 );
 my @files = glob("$tmpdir/*");
-ok(@files, 'Copied files');
+is(scalar @files, 2, 'Copied files');
 
 # fail - copy to existing
 $copy_cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->execute(

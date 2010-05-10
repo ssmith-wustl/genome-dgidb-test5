@@ -306,7 +306,7 @@ sub create_basic_mock_model {
     my $sample = $self->create_mock_sample;
     my $model = $self->create_mock_object(
         class => 'Genome::Model::'.Genome::Utility::Text::string_to_camel_case($pp->type_name),
-        name => 'mr. mock',
+        name => 'mr. mock '.$type_name,
         subject_class_name => 'Genome::Sample',
         subject_id => $sample->id,
         subject_name => $sample->name,
@@ -624,6 +624,8 @@ sub _build_subclass_specifics_for_amplicon_assembly {
         (qw/
             amplicon_assembly
             link_instrument_data 
+            oriented_fasta_file oriented_qual_file
+            processed_fasta_file processed_qual_file
             /),
     );
 
