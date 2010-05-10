@@ -92,6 +92,31 @@ popup.center();
                   </td>
                 </tr>
               </table>
+              View: <a href="#show_events" id="show_events">Events</a> | <a href="#show_workflow" id="show_workflow">Workflow</a>
+              <script type="text/javascript">
+                <![CDATA[
+                  $(document).ready(function() {
+                    $('#show_events').click(function() {
+                      $('#workflowview').hide();
+                      $('#eventview').show();
+                      return false;
+                    });
+
+                    $('#show_workflow').click(function() {
+                      $('#eventview').hide();
+                      if ($('#workflowview').length == 0) {
+                          $('.viewport').append('<div id="workflowview"/>');
+
+                          $('#workflowview').load('/view/workflow/store/db/operation/instance/statuspopup.html?id=]]><xsl:value-of select="//build/workflow/@id"/><![CDATA[');
+                      } 
+                      $('#workflowview').show();
+                      return false;
+                    });
+                  });
+                ]]>
+              </script>
+              <div class="viewport">
+              <div id="eventview">
               <table border="0" cellpadding="0" cellspacing="0" class="stages" width="100%">
                 <tr>
                   <xsl:for-each select="build/stages/stage[count(command_classes/*) > 0]">
@@ -350,6 +375,8 @@ popup.center();
                   </tbody>
                 </table>
               </xsl:for-each>
+              </div>
+              </div>
   </xsl:template>
 
   <!-- function takes input string and returns string after substr  -->
