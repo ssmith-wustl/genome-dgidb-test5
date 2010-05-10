@@ -44,7 +44,20 @@ dispatch {
     sub (GET + /**/*/* + .*) {
         my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
 
-        unless (index($perspective_toolkit,'.') > 0) {
+        if ($class =~ /\./) {
+            # matched on some multi-part path after the perspective_toolkit
+            if ($class =~ s/\/(.+?)$//g) {
+                $filename = $perspective_toolkit . '/' . $filename;
+                $perspective_toolkit = $1;
+
+                if ( $perspective_toolkit =~ s/\/(.+)$//g ) {
+                    $filename = $1 . '/' . $filename;
+                }
+            } else {
+                # let some other handler deal with this, i cant parse it
+                return;
+            }
+        } elsif (index($perspective_toolkit,'.') < 0) {
             # doesn't have a period in it?  probably didnt want us to match
             return;
         }
