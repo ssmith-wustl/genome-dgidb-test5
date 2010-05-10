@@ -106,6 +106,11 @@ dispatch {
 
         Plack::Util::set_io_path( $fh, Cwd::realpath($full_path) );
 
+        ## Plack should have set binmode for us, workaround here because it's dumb.
+        if ($ENV{'GATEWAY_INTERFACE'}) {
+            binmode STDOUT;
+        }
+
         return [
             200,
             [
