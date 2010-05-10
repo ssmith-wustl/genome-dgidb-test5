@@ -2,14 +2,47 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Status </title>
-<link rel="shortcut icon" href="/resources/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png">
-<link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen">
-<link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen">
-<script type="text/javascript" src="/resources/report_resources/jquery/jquery.js"></script><script type="text/javascript" src="/resources/report_resources/jquery/jquery.tablesorter.min.js"></script>
+<link rel="shortcut icon" href="/res/img/gc_favicon.png" type="image/png">
+<link rel="stylesheet" href="/res/css/master.css" type="text/css" media="screen">
+<link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen">
+<script type="text/javascript" src="/res/js/jquery.js"></script><script type="text/javascript" src="/res/old/report_resources/jquery/jquery.tablesorter.min.js"></script><script type="text/javascript">
+          
+            (function($) {
+              var cache = [];
+              // Arguments are image paths relative to the current page.
+              $.preLoadImages = function() {
+                var args_len = arguments.length;
+                for (var i = args_len; i--;) {
+                  var cacheImage = document.createElement('img');
+                  cacheImage.src = arguments[i];
+                  cache.push(cacheImage);
+                }
+              }
+            })(jQuery)
+
+            $(document).ready(function() {
+                $.preLoadImages("/res/img/spinner.gif");
+
+                $("#ajax_status")
+                .addClass('success')
+                .bind("ajaxSend", function(){
+                    $(this).removeClass('success error').addClass('loading').html('Loading').show();
+                })
+                .bind("ajaxSuccess", function(){
+                    $(this).removeClass('loading').addClass('success').html('Success').hide('slow');
+                })
+                .bind("ajaxError", function(){
+                    $(this).removeClass('loading').addClass('error').html('Error');
+                })
+                .hide();
+            });
+          
+        </script>
 </head>
-<body><div class="container"><div class="background">
+<body>
+<div class="container"><div class="background">
 <div class="page_header"><table cellpadding="0" cellspacing="0" border="0"><tr>
-<td><a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/resources/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle"></a></td>
+<td><a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/res/old/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle"></a></td>
 <td><h1>Analysis Reports v0.2</h1></td>
 </tr></table></div>
 <div class="page_padding">
@@ -22,7 +55,7 @@
                   });
               });
           
-        </script><script type="text/javascript" src="/resources/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js"></script><link rel="stylesheet" href="/resources/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css">
+        </script><script type="text/javascript" src="/res/old/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js"></script><link rel="stylesheet" href="/res/old/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css">
 <script type="text/javascript">
           
                    function event_popup(eventObject) {
@@ -90,6 +123,28 @@ popup.center();
 </tr>
 </table></td>
 </tr></table>
+              View: <a href="#show_events" id="show_events">Events</a> | <a href="#show_workflow" id="show_workflow">Workflow</a><script type="text/javascript">
+                
+                  $(document).ready(function() {
+                    $('#show_events').click(function() {
+                      $('#workflowview').hide();
+                      $('#eventview').show();
+                      return false;
+                    });
+
+                    $('#show_workflow').click(function() {
+                      $('#eventview').hide();
+                      if ($('#workflowview').length == 0) {
+                          $('.viewport').append('<div id="workflowview"/>');
+
+                          $('#workflowview').load('/view/workflow/store/db/operation/instance/statuspopup.html?id=1753513');
+                      } 
+                      $('#workflowview').show();
+                      return false;
+                    });
+                  });
+                
+              </script><div class="viewport"><div id="eventview">
 <table border="0" cellpadding="0" cellspacing="0" class="stages" width="100%"><tr>
 <td><table class="stage" border="0" cellpadding="0" cellspacing="0" width="100%">
 <tr><th colspan="2">alignment</th></tr>
@@ -363,6 +418,9 @@ popup.center();
 <td class="last">07:12:30</td>
 </tr></tbody>
 </table>
+</div></div>
 </div>
-</div></div></body>
+</div></div>
+<div id="ajax_status"></div>
+</body>
 </html>
