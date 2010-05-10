@@ -37,7 +37,7 @@ class Genome::Model::Command::InstrumentData::List {
         },
         show => {
             is => 'Text',
-            default => 'id,full_name,full_path,library_name,sample_name,sequencing_platform,subclass_name',
+            default => 'id,full_name,full_path,library_name,sample_name,sequencing_platform,subclass_name,target_region_set_name',
             doc => 'Columns of the instrument data to show in the list'
         },
     ],
