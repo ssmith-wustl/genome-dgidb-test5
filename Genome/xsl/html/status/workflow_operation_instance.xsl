@@ -19,6 +19,7 @@ xmlns:rest="urn:rest">
 
       <table class="list" border="0" width="100%" cellspacing="0" cellpadding="0">
         <colgroup>
+          <col/>
           <col width="40%"/>
           <col/>
           <col/>
@@ -27,6 +28,7 @@ xmlns:rest="urn:rest">
         </colgroup>
         <thead>
           <tr>
+            <th>idx</th>
             <th>operation</th>
             <th>status</th>
             <th>started</th>
@@ -47,7 +49,7 @@ xmlns:rest="urn:rest">
 
   <xsl:template name="inner_woi">
 
-    <xsl:if test="count(aspect[@name='operation_type']/object/types/isa[@type='Workflow::OperationType::Command']) + count(aspect[@name='operation_type']/object/types/isa[@type='Workflow::OperationType::Event']) > 0">
+    <xsl:if test="count(aspect[@name='operation_type']/object/types/isa[@type='Workflow::OperationType::Command']) + count(aspect[@name='operation_type']/object/types/isa[@type='Workflow::OperationType::Event']) > -10">
 
       <xsl:variable name="currentLink">
         <xsl:value-of select="rest:typetourl(aspect[@name='current']/object[1]/@type)" />
@@ -57,6 +59,9 @@ xmlns:rest="urn:rest">
         <xsl:attribute name="onclick">
           <xsl:text>javascript:status_popup('</xsl:text><xsl:value-of select="aspect[@name='name']/value"/><xsl:text>','</xsl:text><xsl:value-of select="$currentLink"/><xsl:text>','</xsl:text><xsl:value-of select="aspect[@name='current']/object[1]/@id"/><xsl:text>');</xsl:text>
         </xsl:attribute>
+        <xsl:for-each select="aspect[@name='parallel_index']">
+          <td><xsl:value-of select="value"/></td>
+        </xsl:for-each>
         <xsl:for-each select="aspect[@name='name']">
           <td><xsl:value-of select="value"/></td>
         </xsl:for-each>
@@ -75,8 +80,8 @@ xmlns:rest="urn:rest">
       </tr>
     </xsl:if>
 
-    <xsl:if test="count(aspect[@name='ordered_child_instances']) > 0">
-      <xsl:for-each select="aspect[@name='ordered_child_instances']">
+    <xsl:if test="count(aspect[@name='related_instances']) > 0">
+      <xsl:for-each select="aspect[@name='related_instances']">
         <xsl:apply-templates/>
       </xsl:for-each>
     </xsl:if>
