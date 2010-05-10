@@ -463,7 +463,7 @@ bitmap(out.image,width=1024,height=768,units="px");cmds.test.plot(smo);dev.off()
 
 ################################## cmds.test.plot()
 
-cmds.test.plot=function(smo)
+cmds.test.plot=function(smo,yscale=NULL)
 {
 par(mfcol=c(2,2))
 plot(smo[,"mid"],smo[,"m.sd"],type="l",lwd=2,main="Mean CN of All Samples",
@@ -478,7 +478,7 @@ xlab="Position", ylab="z.sd")
 abline(0,0,col="red")
 
 plot(smo[,"mid"],-log10(smo[,"z.p"]),type="l",lwd=2,main="CMDS Test (H0:z.sd=0)",
-xlab="Position",ylab="-log(P)")
+xlab="Position",ylab="-log(P)",ylim=yscale)
 #abline(2,0,lty=2,col="red",lwd=2)
 }
 #######################################################################
@@ -496,6 +496,105 @@ whole_genome_test_plots=function(all_chr_data_file)
     #plot cmds test
     img_filename=paste(all_chr_data_file,".cmdstest",sep="");
     plotgenome(x,y="z.p",yscale=c(0,6),pos.col="mid",img=img_filename,chr.col="chromosome",suffix="cmds.p",cutline=NULL);
+}
+#######################################################################
+
+whole_multi_genome_test_plots=function(all_chr_data_files,outfile,chrom=NULL)
+{
+    data=NULL;
+    #all_chr_data_files is a comma-delimited list of files to plot on the same graphs
+    chars=strsplit(as.character(all_chr_data_files),"");
+    files=strsplit(all_chr_data_files,",");
+
+    for(file in c(1:length(files[[1]])))
+    {
+        x=read.table(files[[1]][file],header=T);
+        if (is.null(data)) {
+            data=cbind(as.character(x$chromosome),as.numeric(x$mid));
+            colnames(data)=c("CHR","POS");
+        }
+        z = -log10(x$z.p);
+        data=cbind(data,z);
+        colname=paste("file",file,sep="");
+        colnames(data)[file+2]=colname;
+    }
+    print(tail(data))
+    #stop();
+    save(data,file="testdata_cmds_plotmulti");
+
+    #plot cmds test
+    #img_filename=paste(all_chr_data_file,".cmdstest",sep="");
+    plot_multi_genome(as.matrix(data),y=colnames(data)[3:length(colnames(data))],num_data_cols=length(files[[1]]),yscale=c(0,6),pos.col="POS",img=outfile,chr.col="CHR",suffix="",cutline=NULL,chrom=chrom);
+}
+
+
+
+#####################################################################################
+plot_multi_genome = function (tt,y="p",num_data_cols=1,cutoff=NULL,cutline=2,img=NULL,yscale=NULL,draw=TRUE,ltype="p",
+chrom=NULL,mbp=NULL,chr.col="chromosome",pos.col="position",tombp=T,suffix="")
+{
+#colors: blue, red, green,orange,pink,purple,black,yellow,cyan,brown
+colors_used=1:num_data_cols;
+colnames(tt)[grep(chr.col,colnames(tt))]="chr"
+colnames(tt)[grep(pos.col,colnames(tt))]="mbp"
+tt=as.data.frame(tt);
+tt$mbp=as.numeric(as.character(tt$mbp))
+for (coli in y)
+{
+    tt[,coli] = as.numeric(as.character(tt[,coli]));
+}
+
+if (tombp) tt$mbp=tt$mbp/1000000
+if (is.null(chrom)) {chrom=levels(as.factor(tt[,"chr"]));chrom=intersect(c(1:24,"X","Y","x","y"),chrom)}
+print(chrom)
+if (length(mbp)==2) {tt=tt[(tt[,"mbp"]>=mbp[1] & tt[,"mbp"]<=mbp[2]),]}
+if (!is.null(cutoff)) {tt[,y][tt[,y]<cutoff]=NA}
+if (draw==TRUE)
+{
+#if (length(img)>0) {png(paste(img,"png",sep="."),1200,800)}
+if (length(img)>0) {bitmap(paste(img,"png",sep="."),width=1200,height=800,units="px")}
+
+length(chrom)->chrn
+if (chrn==1){mr=1;mc=1}
+if (chrn==2){mr=2;mc=1}
+if (chrn==3){mr=2;mc=2}
+if (chrn==4){mr=2;mc=2}
+if (chrn==5){mr=2;mc=3}
+if (chrn==6){mr=2;mc=3}
+if (chrn==7){mr=3;mc=3}
+if (chrn==8){mr=3;mc=3}
+if (chrn==9){mr=3;mc=3}
+if (chrn==10){mr=3;mc=4}
+if (chrn==11){mr=3;mc=4}
+if (chrn==12){mr=3;mc=4}
+if (chrn==13){mr=3;mc=5}
+if (chrn==14){mr=3;mc=5}
+if (chrn==15){mr=3;mc=5}
+if (chrn==16){mr=4;mc=4}
+if (chrn==17){mr=4;mc=5}
+if (chrn==18){mr=4;mc=5}
+if (chrn==19){mr=4;mc=5}
+if (chrn==20){mr=4;mc=5}
+if (chrn==21){mr=4;mc=6}
+if (chrn==22){mr=4;mc=6}
+if (chrn==23){mr=4;mc=6}
+if (chrn==24){mr=4;mc=6}
+if (chrn>24){mr=5;mc=6}
+
+par(mfrow=c(mr,mc))
+for (chr in chrom )
+{
+cat(paste("in for chr in chrom",chr))
+tt[,"chr"]==chr->ch
+tl=paste("Chrom.",chr,suffix,sep=" ")
+matplot(tt[ch,"mbp"],tt[ch,y],pch=".",main=tl,xlab="Position (Mbp)",ylab="-log(P)",ylim=yscale,type=ltype,col=colors_used)
+for (ct in cutline)
+{abline(ct,0,col="red")}
+}#chr
+if (length(img)>0) {dev.off()}
+}#draw
+tt=tt[!is.na(tt[,y]),]
+invisible(tt)
 }
 
 #####################################################################
