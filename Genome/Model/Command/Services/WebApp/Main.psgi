@@ -1,5 +1,11 @@
 #!/gsc/bin/perl
 
+BEGIN {
+    unless (grep { /gscuser/ } @INC) {
+        eval "use lib '/gsc/scripts/lib/perl';";
+    }
+}
+
 use Web::Simple 'Genome::Model::Command::Services::WebApp::Main';
 
 package Genome::Model::Command::Services::WebApp::Main;
