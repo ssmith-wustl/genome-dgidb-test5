@@ -49,7 +49,7 @@ xmlns:rest="urn:rest">
 
   <xsl:template name="inner_woi">
 
-    <xsl:if test="count(aspect[@name='operation_type']/object/types/isa[@type='Workflow::OperationType::Command']) + count(aspect[@name='operation_type']/object/types/isa[@type='Workflow::OperationType::Event']) > -10">
+    <xsl:if test="count(aspect[@name='operation_type']/object/types/isa[@type='Workflow::OperationType::Command']) + count(aspect[@name='operation_type']/object/types/isa[@type='Workflow::OperationType::Event']) > 0">
 
       <xsl:variable name="currentLink">
         <xsl:value-of select="rest:typetourl(aspect[@name='current']/object[1]/@type)" />
