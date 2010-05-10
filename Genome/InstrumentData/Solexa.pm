@@ -470,7 +470,8 @@ sub validate_fastq_directory {
     }
 
     unless ($dir_type eq 'archive_path') {
-        unless (glob("$dir/*")) {
+        my @files = glob("$dir/*"); #In scalar context, a glob functions as an iterator--we instead want to check the number of files
+        unless (scalar @files) {
             $self->error_message("$msg_base is empty");
             return;
         }
