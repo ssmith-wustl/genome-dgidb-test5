@@ -316,7 +316,7 @@ td.status {
     text-align: center;
 }
 
-td.succeeded {
+td.done, td.succeeded {
     color: #2c3e15;
     background-color: #d9ffc7;
 }
@@ -326,7 +326,7 @@ td.running {
     background-color: #f8f7a3;
 }
 
-td.scheduled {
+td.new, td.scheduled {
     background-color: #ffac2a;
     color: #5c3e0f;
 }

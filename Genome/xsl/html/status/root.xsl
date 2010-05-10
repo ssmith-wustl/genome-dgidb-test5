@@ -11,7 +11,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <link rel="shortcut icon" href="/res/old/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png" />
         <link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen" />
         <link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen" />
-        <script type="text/javascript" src="/res/old/report_resources/jquery/jquery.js"></script>
+        <script type="text/javascript" src="/res/js/jquery.js"></script>
         <script type="text/javascript" src="/res/old/report_resources/jquery/jquery.tablesorter.min.js"></script>
         <!--
             <script type="text/javascript">
