@@ -13,6 +13,11 @@ class Genome::Model::Command::Define::ReferenceAlignment {
             is => 'Number',
             len => 11,
             doc => 'ID of the reference sequence to align against'
+        },
+        target_region_set_names => {
+            is => 'Text',
+            is_many => 1,
+            doc => 'limit the model to take specific capture or PCR data'
         }
     ]
 };
@@ -164,43 +169,64 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
 
 sub execute {
     my $self = shift;
-    my $referenceSequenceBuild;
-    if(defined($self->reference_sequence_build_id))
-    {
+
+    my $reference_sequence_build;
+    if(defined($self->reference_sequence_build_id)) {
         my $retrieved = Genome::Model::Build->get($self->reference_sequence_build_id);
-        if(!defined($retrieved))
-        {
+        if(!defined($retrieved)) {
             $self->error_message('Failed to find a build for reference_sequence_build_id "' . $self->reference_sequence_build_id . '".');
             return;
         }
-        if(ref($retrieved) ne 'Genome::Model::Build::ImportedReferenceSequence')
-        {
+        if(ref($retrieved) ne 'Genome::Model::Build::ImportedReferenceSequence') {
             $self->error_message('Build found for reference_sequence_build_id "' . $self->reference_sequence_build_id . '" is not a Genome::Model::Build::ImportedReferenceSequence.');
             return;
         }
-        $referenceSequenceBuild = $retrieved;
+        $reference_sequence_build = $retrieved;
     }
-    $self->SUPER::_execute_body(@_) or return;
+
+    my $result = $self->SUPER::_execute_body(@_);
+    return unless $result;
+
+    my $model = Genome::Model->get($self->result_model_id);
+    unless ($model) {
+        $self->error_message("No model generated for " . $self->result_model_id);
+        return;
+    }
+
     # TODO: Stop referring to processing profile reference sequence name & remove it.  Use the reference sequence build
     # supplied via the reference_sequence_build_id parameter to this command and default to NCBI-human-36 if reference_sequence_build_id
     # was not supplied.
     # This code is temporary.  It alerts us to ref seqs that lack proper models and builds as we transition away from ref seq placeholder.
-    my $model = Genome::Model->get($self->result_model_id);
-    if($model)
-    {
-        if(defined($referenceSequenceBuild))
-        {
-            $model->reference_sequence_build($referenceSequenceBuild);
+    if(defined($reference_sequence_build)) {
+        $model->reference_sequence_build($reference_sequence_build);
+    }
+    else {
+        if(defined($model->processing_profile)) {
+            $self->_resolve_imported_reference_sequence_from_pp_ref_seq_name($model);
         }
-        else
-        {
-            if(defined($model->processing_profile))
-            {
-                $self->_resolve_imported_reference_sequence_from_pp_ref_seq_name($model);
+    }
+
+    # LIMS is preparing actual tables for these in the dw, until then we just manage the names.
+    my @target_region_set_names = $self->target_region_set_names;
+    if (@target_region_set_names) {
+        for my $name (@target_region_set_names) {
+            my $i = $model->add_input(value_class_name => 'UR::Value', value_id => $name, name => 'target_region_set_name');
+            if ($i) {
+                $self->status_message("Modeling instrument-data from target region '$name'");
+            }
+            else {
+                $self->error_message("Failed to add target '$name'!");
+                $model->delete;
+                return;
             }
         }
     }
-    return 1;
+    else {
+        $self->status_message("Modeling whole-genome (non-targeted) sequence.");
+    }
+
+
+    return $result;
 }
 
 1;
