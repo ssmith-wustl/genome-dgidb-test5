@@ -202,6 +202,14 @@ sub oriented_qual_file {
     return oriented_qual(@_);
 }
 
+sub processed_fasta_file {
+    return $_[0]->amplicon_assembly->fasta_file_for_type('assembly');
+}
+
+sub processed_qual_file {
+    return $_[0]->amplicon_assembly->qual_file_for_type('assembly');
+}
+
 ############################################
 #< THIS IS OLD...DON'T WANNA (RE)MOVE YET >#
 sub amplicons_and_headers { 
