@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use File::Copy;
+use File::Path;
 use File::Copy::Recursive;
 use File::Basename;
 use IO::Handle;
@@ -117,7 +118,7 @@ sub process_imported_files {
     }
 
     my $instrument_data_id = $import_instrument_data->id;
-    $self->status_message("Instrument data: $instrument_data_id is imported");
+    $self->status_message("Instrument data record $instrument_data_id has been created.");
     print "Intrument data:".$instrument_data_id." is imported.\n";
     my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage * 5;
 
@@ -158,6 +159,10 @@ sub process_imported_files {
     unless ($ssize==$dsize) {
         unless($import_instrument_data->id < 0) {
             $self->error_message("source and distination do not match( source $ssize bytes vs destination $dsize). Copy failed.");
+            $self->status_messsage("Removing failed copy");
+            print $self->status_message."\n";
+            rmtree($target_path);
+            $disk_alloc->deallocate;
             return;
         }
     }

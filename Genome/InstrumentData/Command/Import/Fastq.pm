@@ -196,7 +196,7 @@ sub execute {
     }
 
     my $instrument_data_id = $import_instrument_data->id;
-    $self->status_message("Instrument data: $instrument_data_id is imported");
+    $self->status_message("Instrument data record $instrument_data_id has been created.");
 
     my $ref_name = $self->reference_name;
 
