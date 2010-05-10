@@ -11,6 +11,24 @@ class Genome::Model::Build::MetagenomicComposition16s::454 {
     is => 'Genome::Model::Build::MetagenomicComposition16s',
 };
 
+sub calculate_estimated_kb_usage {
+    # Based on the size of the sff file. The resulting build needs about 10X the size of the sff file
+    #  If we don't keep the classifications around, then we will have to lower this number.
+    my $self = shift;
+
+    my @instrument_data = $self->instrument_data;
+    unless ( @instrument_data ) { # very bad; should be checked when the build is create
+        confess("No instrument data found for build ".$self->description);
+    }
+
+    my $sff_files_size;
+    for my $instrument_data ( @instrument_data ) {
+        $sff_files_size += -s $instrument_data->sff_file;
+    }
+
+    return $sff_files_size * 12; # really 10x, but request a little extra
+}
+
 #< DIRS >#
 sub _sub_dirs {
     return;

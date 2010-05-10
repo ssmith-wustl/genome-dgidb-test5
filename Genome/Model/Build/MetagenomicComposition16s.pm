@@ -21,11 +21,6 @@ class Genome::Model::Build::MetagenomicComposition16s {
                 $_ => { via => 'processing_profile' } 
             } Genome::ProcessingProfile::MetagenomicComposition16s->params_for_class 
         ),
-        length_of_16s_region => {
-            is => 'Integer',
-            default_value => 1542,
-            is_constant => 1,
-        },
         # Metrics
         amplicons_attempted => {
             is => 'Integer',
@@ -69,6 +64,10 @@ class Genome::Model::Build::MetagenomicComposition16s {
         },
     ],
 };
+
+sub length_of_16s_region {
+    return 1542;
+}
 
 #< UR >#
 sub create {
