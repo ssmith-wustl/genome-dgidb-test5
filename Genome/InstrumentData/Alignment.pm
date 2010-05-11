@@ -757,7 +757,16 @@ sub sanger_fastq_filenames {
                             input => $sanger_fastq_pathname,
                             output => $trimmed_sanger_fastq_pathname,
                         );
-                    } 
+                    }
+                    elsif ($self->trimmer_name eq 'quality_trim') {
+                        $trimmer = Genome::Model::Tools::Fastq::QualityTrim->create(
+                            input_fastq_file => $sanger_fastq_pathname,
+                            output_fastq_file => $trimmed_sanger_fastq_pathname,
+                            summary_file => $self->alignment_directory .'/quality_trim-'. $counter .'.tsv',
+                            phred_quality_value => $self->trimmer_params,
+                            input_quality_format => 'sanger',
+                        );
+                    }
                     elsif ($self->trimmer_name eq 'trim5') {
                         $trimmer = Genome::Model::Tools::Fastq::Trim5->create(
                             length => $self->trimmer_params,
