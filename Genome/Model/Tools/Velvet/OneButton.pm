@@ -19,21 +19,12 @@ class Genome::Model::Tools::Velvet::OneButton {
 
         hash_sizes          => {    is => 'Integer', is_many => 1, }, #|h=i{,}" => \@hash_sizes, 
 
-        exp_covs            => {    is => 'Float', is_many => 1, }, #|e=f{,}" => \@exp_covs, 
-
-        cov_cutoff          => {    is => 'Float', is_many => 1, }, #|c=f{,}" => \@cov_cutoffs, 
 
         ins_length          => {    is => 'Integer',
                                     doc => 'fragment length (average/estimated)'
                                 }, #|i=i" => \$ins_length, 
 
-        dev_ins_length      => {    is => 'Integer',
-                                    doc => 'fragment length std deviation'
-                                }, #|d=i" => \$ins_length_sd,  
 
-        bound_enumeration   => {    is => 'Integer',
-                                    doc => 'conduct binary search only if the number of candidates greater than b, or conduct enumeration'
-                                }, #|b=i" => \$enumeration_bound, 
 
         version             => {    is => 'Text',
                                     default_value => '57-64',
@@ -44,6 +35,19 @@ class Genome::Model::Tools::Velvet::OneButton {
                                     doc => 'the input fasta or fastq file'
                                 },
     ],
+    has_optional => [
+        bound_enumeration   => {    is => 'Integer',
+                                    doc => 'conduct binary search only if the number of candidates greater than b, or conduct enumeration'
+                                }, #|b=i" => \$enumeration_bound, 
+
+        dev_ins_length      => {    is => 'Integer',
+                                    doc => 'fragment length std deviation'
+                                }, #|d=i" => \$ins_length_sd,  
+
+        exp_covs            => {    is => 'Float', is_many => 1, }, #|e=f{,}" => \@exp_covs, 
+
+        cov_cutoffs         => {    is => 'Float', is_many => 1, }, #|c=f{,}" => \@cov_cutoffs,
+    ],
     doc => 'run velvet in a smart way (under conversion from initial script)'
 };
 
@@ -52,9 +56,9 @@ sub help_synopsis {
 gmt velvet one-button foo.fast[a|q] \
     [-o output_directory] \ 
     [-g genome_length] \
-    [-h hash_size1 2 ...] \
-    [-e exp_cov1 2...] \
-    [-c cov_cutoff1 2...] \
+    [-h 31,33,35 ] \
+    [-e exp_cov1 2,.. ] \
+    [-c cov_cutoff1 2,.. ] \
     [-i insert_length] \
     [-d ins_length_sd] \
     [-b enumeration_bound] \
@@ -75,9 +79,9 @@ my $velveth = "velveth";
 my $velvetg = "velvetg";
 my $version_path = "/gsc/pkg/bio/velvet/velvet_0.7.";
 
-my $defined_cov_cutoffs = defined(@cov_cutoffs);
-my $defined_exp_covs = defined(@exp_covs);
-my $defined_genome_len = defined($genome_len);                                  
+my $defined_cov_cutoffs;
+my $defined_exp_covs;
+my $defined_genome_len;
 
 # Global variables
 my ($hash_size, $exp_cov, $cov_cutoff);
@@ -98,7 +102,7 @@ my ($read_len, $read_num, $file_format);
 sub execute {
     my $self = shift;
 
-    die "CONVERSION STILL IN PROGRESS!!!!  (contact informatics)";
+    #die "CONVERSION STILL IN PROGRESS!!!!  (contact informatics)";
 
     $output_path    = $self->output_dir;
     $genome_len     = $self->genome_len;
@@ -136,7 +140,6 @@ sub execute {
     
     #$data_fullname or die("Please gave the file name.\n");
     
-    
     # Choose velvet version
     $velveth = $version_path . $version . "/velveth" if $version;
     $velvetg = $version_path . $version . "/velvetg" if $version;
@@ -148,6 +151,9 @@ sub execute {
     $ins_length or $ins_length = 280;
     $ins_length_sd or $ins_length_sd = 0.2*$ins_length;
     $enumeration_bound or $enumeration_bound = 5;
+    $defined_cov_cutoffs = defined(@cov_cutoffs);
+    $defined_exp_covs = defined(@exp_covs);
+    $defined_genome_len = defined($genome_len);                                  
 
     defined($genome_len) or $genome_len = 3000000; #$genome_len = 1000;
     
@@ -227,23 +233,27 @@ sub execute {
     my $last_cmdg = "$velvetg $output_path -exp_cov $best_exp_cov -cov_cutoff $best_cov_cutoff -ins_length $ins_length -ins_length_sd $ins_length_sd -read_trkg yes -min_contig_lgth 100 -amos_file yes";
     system("echo $last_cmdg >> $logfile");
     system("$last_cmdg");
-    
-    ##---------------------------------------------
-    ## Utility Functions 
-    ## run_velvetg to get n50 and total length
-    ## run_velveth 
-    ## enum_hash_size
-    ## pick_best_hash_size
-    ## pick_best_exp_cov
-    ## pick_best_cov_cutoff
-    ## better
-    ## get_read_len_num_and_file_format
-    ## use_date_as_name
-    ## echo_params_to_screen_logfile
-    ##---------------------------------------------
+   
+    return 1;
+
 }
 
 ##############################################################################
+
+##---------------------------------------------
+## Utility Functions 
+## run_velvetg to get n50 and total length
+## run_velveth 
+## enum_hash_size
+## pick_best_hash_size
+## pick_best_exp_cov
+## pick_best_cov_cutoff
+## better
+## get_read_len_num_and_file_format
+## use_date_as_name
+## echo_params_to_screen_logfile
+##---------------------------------------------
+
 
 sub run_velvetg_get_n50total{
 	$#_ > -1 or die("run_velvetg_get_n50total expects one parameter: cov_cutoff\n");
