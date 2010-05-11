@@ -28,7 +28,7 @@ use File::Basename;
 
 class Genome::Model::Tools::Fastq::Trimq2::Simple {
     is  => 'Genome::Model::Tools::Fastq::Trimq2',
-    has => [
+    has_input => [
         fastq_file  => {
             is  => 'Text',
             doc => 'the fastq file name to use for trim',
