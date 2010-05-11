@@ -147,12 +147,16 @@ sub create {
     }
 
     # create
-$DB::single = 1;
     my $self = $class->SUPER::create($bx);
-$DB::single = 1;
     return unless $self;
 
-$DB::single = 1;
+    # instrument data assignments - set first build id
+    my @ida = $self->model->instrument_data_assignments;
+    for my $ida ( @ida ) {
+        next unless defined $ida->first_build_id;
+        $ida->first_build_id( $self->id )
+    }
+    
     # inputs
     unless ( $self->_copy_model_inputs ) {
         $self->delete;
@@ -618,13 +622,20 @@ sub _launch {
             aspect => 'rollback',
             callback => sub {
                 `bkill $job_id`;
-                $rollback_observer->delete;
-                undef $rollback_observer;
-                $commit_observer->delete;
-                undef $commit_observer;
+                # delete and undef observers so they don't persist
+                # they should have been deleted in the rollback, 
+                #  but attempt to delete again just in case
+                if ( $rollback_observer ) {
+                    $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
+                    undef $rollback_observer;
+                }
+                if ( $commit_observer ) {
+                    $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
+                    undef $commit_observer;
+                }
             }
         );
-        
+
         return 1;
     }
 }
@@ -1173,6 +1184,8 @@ sub delete {
     }
     
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
+    #  This works b/c the events are deleted prior to this call, so the model doesn't think this is a completed
+    #  build
     my $last_complete_build = $self->model->resolve_last_complete_build;
     if ( $last_complete_build and $last_complete_build->id eq $self->id ) {
         $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");

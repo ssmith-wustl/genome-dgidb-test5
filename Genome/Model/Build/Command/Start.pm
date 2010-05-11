@@ -79,8 +79,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
-
     # Get model
     my $model = $self->_resolve_model
         or return;
@@ -115,6 +113,10 @@ sub execute {
         $job_dispatch = 'apipe';
     }
 
+    # Lock the model
+    $self->_lock_model_and_create_commit_and_rollback_observers( $model->id )
+        or return;
+    
     # Create the build
     my $build = Genome::Model::Build->create(model_id => $model->id, @p);
     unless ( $build ) {
@@ -190,6 +192,68 @@ sub _verify_no_other_builds_running {
         );
         return;
     } 
+
+    return 1;
+}
+
+sub _lock_model_and_create_commit_and_rollback_observers {
+    my ($self, $model_id) = @_;
+
+    # lock
+    my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
+    my $lock = Genome::Utility::FileSystem->lock_resource(
+        resource_lock => $lock_id, 
+        block_sleep => 3,
+        max_try => 3,
+    );
+    unless ( $lock ) {
+        $self->error_message(
+            "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue."
+        );
+        return;
+    }
+
+    # create observers to unlock
+    my $commit_observer;
+    my $rollback_observer;
+
+    $commit_observer = UR::Context->add_observer(
+        aspect => 'commit',
+        callback => sub {
+            #print "Commit\n";
+            # unlock - no error on failure
+            Genome::Utility::FileSystem->unlock_resource(
+                resource_lock => $lock_id,
+            );
+            # delete and undef observers
+            $commit_observer->delete;
+            undef $commit_observer;
+            $rollback_observer->delete;
+            undef $rollback_observer;
+        }
+    );
+
+    $rollback_observer = UR::Context->add_observer(
+        aspect => 'rollback',
+        callback => sub {
+            #print "Rollback\n";
+            # unlock - no error on failure
+            Genome::Utility::FileSystem->unlock_resource(
+                resource_lock => $lock_id,
+            );
+            # delete and undef observers so they do not persist
+            # they should have been deleted in the rollback, 
+            #  but try to delete again just in case
+            if ( $rollback_observer ) {
+                $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
+                undef $rollback_observer;
+            }
+            if ( $commit_observer ) {
+                $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
+                undef $commit_observer;
+            }
+        }
+    );
 
     return 1;
 }

@@ -85,7 +85,6 @@ sub _dump_and_link_instrument_data {
             );
             return;
         }
-        $ida->first_build_id( $self->build_id );
 
         # link
         unless ( $self->build->link_instrument_data( $ida->instrument_data ) ) {

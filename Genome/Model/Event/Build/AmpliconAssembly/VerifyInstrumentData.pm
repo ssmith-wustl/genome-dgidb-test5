@@ -78,7 +78,6 @@ sub _dump_unbuilt_instrument_data {
         );
         return;
     }
-    $ida->first_build_id( $self->build_id );
 
     return 1;
 }
