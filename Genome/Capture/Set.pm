@@ -50,43 +50,70 @@ sub bed_file_content {
     unless ($fs) {
         return;
     }
-    return $fs->content;
+    #WARNING: It appears both companies are using 1-based coordinates in the start postion.
+    my @lines = split("\n",$fs->content);
+    my $print = 1;
+    my $bed_file_content;
+    for my $line (@lines) {
+        chomp($line);
+        if ($line eq 'track name=tiled_region description="NimbleGen Tiled Regions"') {
+            $print = 0;
+            next;
+        } elsif ($line eq 'track name=target_region description="Target Regions"') {
+            $print = 1;
+            next;
+        }
+        if ($print) {
+            my @entry = split("\t",$line);
+            unless (scalar(@entry) >= 3) {
+                die('At least three fields are required in BED format files.  Error with line: '. $line);
+            }
+            $entry[0] =~ s/chr//g;
+            unless (defined $entry[3] && $entry[3] ne '') {
+                $entry[3] = $entry[0] .':'. $entry[1] .'-'. $entry[2];
+            }
+            $bed_file_content .= join("\t",@entry) ."\n";
+        }
+    }
+    return $bed_file_content;
 }
 
 sub print_bed_file {
     my $self = shift;
     my $bed_file = shift;
 
-    my $bed_fh = Genome::Utility::FileSystem->open_file_for_writing($bed_file);
-    unless ($bed_fh) {
-        die('Failed to open bed file '. $bed_file .' for writing!');
-    }
+    my $one_based_start_position = 1;
     my $bed_file_content = $self->bed_file_content;
-    unless ($bed_file_content) {
-        my $barcode = $self->barcode;
-        unless ($barcode) {
-            $self->error_message('Failed to find BED from file storage or by barcode.');
-            die($self->error_message);
-        }
-        my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path($barcode .'.bed');
+    my $barcode = $self->barcode;
+    unless ($barcode) {
+        $self->error_message('Failed to find barcode.');
+        die($self->error_message);
+    }
+    my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path($barcode .'.bed');
+    if ($bed_file_content) {
+        my $tmp_fh = Genome::Utility::FileSystem->open_file_for_writing($tmp_file);
+        print $tmp_fh $bed_file_content;
+        $tmp_fh->close;
+    } else {
         my $cmd = '/gsc/scripts/bin/capture_file_dumper --barcode='. $barcode .' --output-type=region-bed --output-file='. $tmp_file;
         Genome::Utility::FileSystem->shellcmd(
             cmd => $cmd,
             output_files => [$tmp_file],
         );
-        my $tmp_fh = Genome::Utility::FileSystem->open_file_for_reading($tmp_file);
-        while (my $line = $tmp_fh->getline) {
-            $bed_file_content .= $line;
-        }
-        $tmp_fh->close;
+        $one_based_start_position = 0;
     }
-    #TODO: perform similar parsing/merging that is in Genome::Capture::Set::Command::Import
-    
-    # Remove the chr globally from the files
-    $bed_file_content =~ s/chr//g;
-    print $bed_fh $bed_file_content;
-    $bed_fh->close;
-
+    my %merge_params = (
+        input_file => $tmp_file,
+        output_file => $bed_file,
+        report_names => 1,
+    );
+    if ($one_based_start_position) {
+        $merge_params{maximum_distance} = 1;
+    }
+    #WARNING: A distance of 1 is used only to compensate for the 1-based start position.  see above WARNING
+    unless  (Genome::Model::Tools::BedTools::Merge->execute(%merge_params)) {
+        die('Failed to merge BED file with params '. Data::Dumper::Dumper(%merge_params) );
+    }
     return 1;
 }
 
