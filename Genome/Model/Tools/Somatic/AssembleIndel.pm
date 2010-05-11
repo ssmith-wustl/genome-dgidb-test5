@@ -180,7 +180,7 @@ sub execute {
             }
             $ref_fh->close;
 
-            `~kchen/1000genomes/analysis/scripts/local_var_asm/local_var_asm_wrapper.sh $read_file`; #assemble the reads
+            `/gsc/scripts/pkg/bio/tigra/installed/local_var_asm_wrapper.sh $read_file`; #assemble the reads
             `cross_match $read_file.contigs.fa $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.stat`;
 #            `~kchen/1000genomes/analysis/scripts/hetAtlas.pl -n 100 $read_file.contigs.fa > $read_file.contigs.fa.het`;
 #            `cross_match $read_file.contigs.fa.het $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.het.stat`;
@@ -191,7 +191,10 @@ sub execute {
 #            else {
                 #   print "No assembled indel\n";
                 $DB::single=1;
-                my ($result) = `gmt parse crossmatch --chr-pos ${chr}_${region_start} --crossmatch=$prefix.stat --min-indel-size=1`;
+                
+                my $cmd = "gmt parse crossmatch --chr-pos ${chr}_${region_start} --crossmatch=$prefix.stat --min-indel-size=1";
+                print "$cmd\n";
+                my ($stupid_header1, $stupid_header2, $result) = `$cmd`;
                 if(defined $result && $result =~ /\S+/) {
                     $output_fh->print($result);
                     print $result . "\n";

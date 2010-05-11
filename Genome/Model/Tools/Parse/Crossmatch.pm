@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome::Model::Tools::FisherCrossMatch;
+Genome::Model::Tools::FisherCrossMatch->create(use_version=>'2010-02-10');
 use Bio::SeqIO;
 use Getopt::Std;
 use Genome;
@@ -80,7 +81,7 @@ sub help_detail {
 sub execute{
     my $self = shift;
     my @vars;
-    Genome::Model::Tools::FisherCrossMatch->create(use_version=>'2010-02-10');
+#    Genome::Model::Tools::FisherCrossMatch->create(use_version=>'2010-02-10');
     my $cm=new CrossMatch(fin=>$self->crossmatch_file);
     my @DCposes=keys %{$cm->{dcpos}}; #discrepant position
 

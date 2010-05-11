@@ -35,7 +35,14 @@ class Genome::Model::Tools::Somatic::IntersectAssembledIndels {
 #        is_input => 1,
 #        doc => 'Original (Samtools|Pindel) Calls from Tumor',
 #    },
-    output_somatic_list =>
+    somatic_output_list =>
+    {
+        type => 'String',
+        is_optional => 0,
+        is_input => 1,
+        doc => 'Output File',
+    },
+    germline_output_list => 
     {
         type => 'String',
         is_optional => 0,
@@ -75,6 +82,7 @@ class Genome::Model::Tools::Somatic::IntersectAssembledIndels {
 sub execute {
     my $self = shift;
     my @somatic_events;
+    my @germline_events;
     unless( -s $self->tumor_indel_file && -s $self->normal_indel_file) {
         $self->error_message("Tumor or normal input not found. Aborting\n");
         return;
@@ -92,8 +100,10 @@ sub execute {
         chomp $line;
         my ($chr,$pos) = split "\t", $line;
         if ($chr =~ m/:/) {
+            
             $self->warning_message("Janky tumor output: $line\n");
-            next;
+            my ($new_chr, )  = split ":", $chr;
+            $chr = $new_chr;
         }
         $normal_hash{$chr}{$pos}=1;
     }
@@ -103,21 +113,27 @@ sub execute {
         my ($chr,$pos) = split "\t", $line;
         if ($chr =~ m/:/) {
             $self->warning_message("Janky normal output: $line\n");
-            next;
+            my ($new_chr, )  = split ":", $chr;
+            $chr=$new_chr;
         }
-        unless(exists($normal_hash{$chr}{$pos})) {
+        if(exists($normal_hash{$chr}{$pos})) {
+            push @germline_events, $line;
+        }
+        else {
             push @somatic_events, $line;
         }
     }
-    $self->collate_and_output_daterz(@somatic_events);
+    $self->collate_and_output_daterz($self->somatic_output_list, @somatic_events);
+    $self->collate_and_output_daterz($self->germline_output_list, @germline_events);
 
 }
 
 sub collate_and_output_daterz {
     my $self=shift;
+    my $output_filename= shift;
     my @somatic_events = @_;
 
-    my $output_fh = IO::File->new($self->output_somatic_list, ">");
+    my $output_fh = IO::File->new($output_filename, ">");
 
     # unless(-s $self->input_to_assembly) {
         #    $self->warning_message("No original calls supplied or file not found. Outputting assembly output"); 
@@ -135,6 +151,11 @@ sub collate_and_output_daterz {
         chomp $somatic_event;
         my @fields = split /\t/, $somatic_event;
         my $chr = $fields[0];
+        if($chr =~m /:/) {
+            my ($new_chr, ) = split ":", $chr;
+            $chr = $new_chr;
+            $fields[0]=$chr;
+        }
         my $pos = $fields[1];
         my $size = $fields[7];
         my $type = $fields[8];
@@ -207,8 +228,8 @@ sub generate_alleles {
     if($type =~ /INS/) {
         my ($original_position) = $reference_name =~ m/_(\d+)/;
         $original_position += 100; #regenerate the original position
-
-        my ($contig_filename,@others) = glob($self->tumor_assembly_data_directory . "/$chr/$chr" . "_" . $original_position . "*.reads.fa.contigs.fa");
+        my $glob_pattern = $self->tumor_assembly_data_directory . "/$chr/$chr" . "_" . $original_position . "*.reads.fa.contigs.fa";
+        my ($contig_filename,@others) = glob($glob_pattern);
         if(@others) {
             $self->error_message("Hey, there are multiple contig files this thingy could belong too. Unfortunate :-(");
             return;
@@ -217,7 +238,9 @@ sub generate_alleles {
         my $contig_fh = IO::File->new($contig_filename, "r");
         unless($contig_fh) {
             $self->error_message("Unable to open $contig_filename");
-            return;
+            $self->error_message("Glob Pattern: $glob_pattern");
+            $self->error_message("contig data for event not found: @assembled_event_fields");
+            die;
         }
         while(my $line = $contig_fh->getline) {
             chomp $line;
