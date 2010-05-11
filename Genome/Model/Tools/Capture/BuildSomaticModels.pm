@@ -107,19 +107,19 @@ sub execute {                               # replace with real execution logic.
 		{
 			my $cmd = "genome model define somatic-capture --processing-profile-name \"$processing_profile\" --subject-type \"$subject_type\" --data-directory $data_dir --model-name \"$model_name\" --normal-model-id $normal_model_id --tumor-model-id $tumor_model_id";
 			#--subject-name \"$sample_name\" --subject-type \"$subject_type\" 
-			print "RUN $cmd\n";
-			system($cmd) if(!$self->report_only);
+#			print "RUN $cmd\n";
+			system("bsub -q long $cmd") if(!$self->report_only);
 		
-			$model_id = get_model_id($model_name);
+#			$model_id = get_model_id($model_name);
 		}
 		
-		if($model_id)
-		{
-			print "MODEL ID: $model_id\n";
-			my $cmd = "genome model build start --model-id $model_id";
-			print "RUN: $cmd\n";
-			system($cmd);
-		}
+#		if($model_id)
+#		{
+#			print "MODEL ID: $model_id\n";
+#			my $cmd = "genome model build start --model-id $model_id";
+#			print "RUN: $cmd\n";
+#			system($cmd);
+#		}
 
 	}
 

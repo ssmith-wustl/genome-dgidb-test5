@@ -33,6 +33,8 @@ class Genome::Model::Tools::Capture::BuildModels {
 		sample_list	=> { is => 'Text', doc => "Text file with sample names to include, one per line" , is_optional => 0},
 		subject_type	=> { is => 'Text', doc => "Type of sample name in file (sample_name or library_name)" , is_optional => 1},
 		report_only	=> { is => 'Text', doc => "Flag to skip actual genome model creation" , is_optional => 1},
+		define_only	=> { is => 'Text', doc => "Flag to define models but not add data or build" , is_optional => 1},
+		assign_only	=> { is => 'Text', doc => "Flag to define models, assign data, but not build" , is_optional => 1},
 		restart_failed	=> { is => 'Text', doc => "Restarts failed builds" , is_optional => 1},
 		restart_running	=> { is => 'Text', doc => "Forces restart of running builds" , is_optional => 1},
 		restart_scheduled	=> { is => 'Text', doc => "Forces restart of scheduled builds" , is_optional => 1},
@@ -116,17 +118,22 @@ sub execute {                               # replace with real execution logic.
 		if($existing_models{$model_name})
 		{
 			($model_id) = split(/\,/, $existing_models{$model_name});
-		}
+		}		
 		else
 		{
-			## If we're not just reporting, create the model ##
-			if($self->report_only)
+			$model_id = get_model_id($model_name);
+			
+			if(!$model_id)
 			{
-				print "Define model $model_name\n";
-			}
-			else
-			{
-				$model_id = define_model($model_name, $sample_name, $subject_type, $processing_profile);
+				## If we're not just reporting, create the model ##
+				if($self->report_only)
+				{
+					print "Define model $model_name\n";
+				}
+				else
+				{
+					$model_id = define_model($model_name, $sample_name, $subject_type, $processing_profile);
+				}
 			}
 		}
 
@@ -138,7 +145,7 @@ sub execute {                               # replace with real execution logic.
 
 			## Get instrument data ##
 			my $instrument_data = get_instrument_data($sample_name, $subject_type);
-			if($instrument_data)
+			if($instrument_data && !$self->define_only)
 			{
 				## Parse out the instrument data lines ##
 				
@@ -161,12 +168,18 @@ sub execute {                               # replace with real execution logic.
 				
 
 				## Build the model ##
-				
-				my $cmd = "genome model build start --model-id $model_id";
-				print "RUN: $cmd\n";
-				system($cmd);
+				if(!$self->assign_only)
+				{
+					my $cmd = "genome model build start --model-id $model_id";
+					print "RUN: $cmd\n";
+					system($cmd);
+				}
 	
 			}
+		}
+		else
+		{
+			print "Got no model id for $model_name\n";
 		}
 		
 #		return(0);
@@ -187,7 +200,7 @@ sub get_instrument_data
 {
 	(my $sample_name, my $subject_type) = @_;
 	
-	my $instrument_data = `genome instrument-data list solexa --filter=$subject_type='$sample_name' --noheaders 1 --style=csv --show=id,flow_cell_id,lane,filt_error_rate_avg,clusters,read_length,target_region_set_name 2>/dev/null`;
+	my $instrument_data = `genome instrument-data list solexa --filter=$subject_type='$sample_name' --noheaders --style=csv --show=id,flow_cell_id,lane,filt_error_rate_avg,clusters,read_length,target_region_set_name`;
 	if($instrument_data)
 	{
 #		my @instrument_data = split(/\n/, $instrument_data);
@@ -196,6 +209,7 @@ sub get_instrument_data
 	}
 	else
 	{
+		warn "No instrument data found with genome instrument-data list solexa --filter=$subject_type='$sample_name' --noheaders --style=csv --show=id,flow_cell_id,lane,filt_error_rate_avg,clusters,read_length,target_region_set_name\n";
 		return();
 	}
 }
@@ -255,7 +269,7 @@ sub get_genome_models
 	$stats{'num_matching_models'} = 0;
 	$stats{'num_completed_builds'} = 0;
 
-	my $model_output = `genome model list --filter=processing_profile_name='$pp_name',name~\'$model_basename%\' --show=id,name,subject_name,last_succeeded_build_directory --noheaders 1 --style csv 2>/dev/null`;
+	my $model_output = `genome model list --filter=processing_profile_name='$pp_name',name~\'$model_basename%\' --show=id,name,subject_name,last_succeeded_build_directory --noheaders --style csv 2>/dev/null`;
 	chomp($model_output);
 	my @output_lines = split(/\n/, $model_output);
 	
@@ -337,7 +351,7 @@ sub get_model_id
 	my $model_name = shift(@_);
 	my $model_id = 0;
 
-	my $model_output = `genome model list --filter=name=\'$model_name\' --show=id 2>/dev/null`;
+	my $model_output = `genome model list --filter=name=\'$model_name\' --show=id --noheader 2>/dev/null`;
 	chomp($model_output);
 	my @output_lines = split(/\n/, $model_output);
 	

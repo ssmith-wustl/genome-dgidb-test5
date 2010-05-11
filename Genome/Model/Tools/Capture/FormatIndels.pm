@@ -99,8 +99,30 @@ sub execute {                               # replace with real execution logic.
 			}
 			else
 			{
-				$ref = $lineContents[2];
-				$var = $lineContents[3];
+				if($lineContents[3] =~ '/')
+				{
+					my @tempArray = split(/\//, $lineContents[3]);
+					$var = $tempArray[0];
+					$var = $tempArray[1] if($tempArray[1] ne '*');
+					
+					if(substr($var, 0, 1) eq '+')
+					{
+						$ref = "-";
+						$var =~ s/[^ACGTN]//g;						
+					}
+					elsif(substr($var, 0, 1) eq '-')
+					{
+						$ref = $var;
+						$ref =~ s/[^ACGTN]//g;
+						$var = "-";
+					}
+				}
+				else
+				{
+					$ref = $lineContents[2];
+					$var = $lineContents[3];					
+				}
+
 				$restColumn = 4;
 			}
 
