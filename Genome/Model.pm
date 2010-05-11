@@ -166,6 +166,70 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
+# TODO: this needs a better home
+sub from_cmdline {
+    my $class = shift;
+    my @matches;
+    my %missing;
+    @missing{@_} = @_;
+    eval {
+        my @numbers = grep { $_ !~ /\D/ } @_;
+        if (@numbers) { 
+            @matches = $class->get(\@numbers);
+            return @matches if @matches == @numbers;
+            
+            my @found = map { $_->id } @matches;
+            delete @missing{@found};
+
+            my @builds = Genome::Model::Build->get(\@numbers);
+            my @models = $class->get(builds => \@builds);
+            push @found, @models;
+            @found = map { $_->id } @builds;
+            delete @missing{@found};
+
+            return @matches unless %missing;
+
+        }
+        my @models = $class->get(name => [keys %missing]);
+        my @found;
+        if (@models) {
+            push @matches, @models;
+            @found = map { $_->name } @models;
+            delete @missing{@found};
+            return @matches unless %missing;
+        }
+        my @groups = Genome::ModelGroup->get(name => [keys %missing]);
+        if (@groups) {
+            my @models = map { $_->models } @groups;
+            push @matches, @models;
+            @found = map { $_->name } @groups;
+            delete @missing{@found};
+            return @matches unless %missing;
+        }
+        for my $name (sort keys %missing) {
+            my @models = $class->get("name like" => $name);
+            delete $missing{$name} if @models;
+            push @matches, @models;
+        }
+    };
+    if (%missing) {
+        my @missing = sort keys %missing;
+        die "Failed to find @missing!";
+    }
+    if (wantarray) {
+        return @matches;
+    }
+    elsif (not defined wantarray) {
+        return;
+    }
+    elsif (@matches > 1) {
+        Carp::confess("Multiple matches found for @_!");
+    }
+    else {
+        return $matches[0]
+    }
+}
+
 # auto generate sub-classes for any valid processing profile
 sub __extend_namespace__ {
     my ($self,$ext) = @_;
@@ -235,7 +299,7 @@ sub create {
     # Processing profile - gotta validate here or SUPER::create will fail silently
     my $processing_profile_id = $params->value_for('processing_profile_id');
     $class->_validate_processing_profile_id($processing_profile_id)
-        or return;
+        or Carp::confess();
 
     unless ($params->value_for('subclass_name')) {
         $params = $params->add_filter(subclass_name => $class);
