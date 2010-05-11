@@ -100,9 +100,19 @@ sub process_imported_files {
 
     if(defined($self->exclude_sample_names) and not defined($self->include_sample_names)) {
         %excluded_names = map { $_ => 1} split( ',', $self->exclude_sample_names);
+        $self->status_message("Found exclude-sample-names.");
+        print $self->status_message;
+        for (sort(keys(%excluded_names))) {
+            print "Exclude sample :  ".$_."\n";
+        }
     }
     if(defined($self->include_sample_names) and not defined($self->exclude_sample_names)) {
         %included_names = map { $_ => 1} split( ',', $self->include_sample_names);
+        $self->status_message("Found include-sample-names.");
+        print $self->status_message;
+        for (sort(keys(%included_names))) {
+            print "Include sample :  ".$_."  \$included_names{\$_}=".$included_names{$_}."\n";
+        }
     }
     if(defined($self->include_sample_names) and defined($self->exclude_sample_names)) {
         $self->error_message("You may not simultaneously include and exclude sample names.");
@@ -134,7 +144,6 @@ sub process_imported_files {
     }
 
     print "genotype = ".$genotype."\n";
-    #my $sample_map= "$path/Sample_Map.csv";
     print "sample map = ".$sample_map."\n";
 
     my $sample_map_fh;
@@ -143,40 +152,39 @@ sub process_imported_files {
         die $self->error_message;
     }
 
-    $sample_map_fh->getline;
+    my $line = $sample_map_fh->getline;
     my %names;
     my %normal;
     my %internal;
     my %samples;
     my %sample_names;
     my $split_char;
+    if((not defined($split_char))&& ($line =~ /\,/)) {
+        $split_char = ",";
+        $self->status_message("Using comma as the delineating character for files.");
+        print $self->status_message;
+    } elsif (not defined($split_char) && ($line =~ /\t/)) {
+        $split_char = "\t";
+    } elsif (not defined($split_char)) {
+        die "couldn't find the proper character used to delineate the Sample_Map file";
+    }
 
     #extract sample_name from sample mapping, and include or exclude as directed by parameters
-    while(my $line = $sample_map_fh->getline) {
-        
-        if((not defined($split_char))&& ($line =~ /\,/)) {
-            $split_char = ',';
-            $self->status_message("Using comma as the delineating character for files.");
-            print $self->status_message;
-        } elsif (not defined($split_char) && ($line =~ /\t/)) {
-            $split_char = "\t";
-        } elsif (not defined($split_char)) {
-            die "couldn't find the proper character used to delineate the Sample_Map file";
-        }
-        my ($index, $sample_name,$internal_name, @junk) = split $split_char, $line;
+    while($line = $sample_map_fh->getline) {
+        my @stuff = split $split_char, $line;
+        my $sample_name=$stuff[1];
+        my $internal_name=$stuff[2];
         if (scalar(keys(%included_names))) {
-            unless($included_names{$sample_name}) {
+            unless(defined($included_names{$sample_name})) {
                 next;
             }
         } elsif (scalar(keys(%excluded_names))) {
-            if ($excluded_names{$sample_name}) {
+            if (defined($excluded_names{$sample_name})) {
                 next;
             }
         }
-
         $sample_names{$internal_name} = $sample_name;
         $internal{$sample_name} = $internal_name;
-        print $sample_name."\n";
     }
 
     unless(scalar(keys(%sample_names))) {
