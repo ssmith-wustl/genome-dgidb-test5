@@ -1,11 +1,11 @@
-package Genome::Model::Msi::Command::CreateMergeList; 
+package Genome::Model::Msi::Command::DoMerges; 
 
 use strict;
 use warnings;
 
 use IO::File;
 
-class Genome::Model::Msi::Command::CreateMergeList {
+class Genome::Model::Msi::Command::DoMerges {
     is => 'Command',
     has => [
         assembly_build_id => { 
@@ -14,20 +14,6 @@ class Genome::Model::Msi::Command::CreateMergeList {
             is_optional => 1,
             doc => 'the exact build of denovo assembly, imported assembly, or prior msi to examine' 
         },
-        percent_identity => {
-            is => 'Number',
-            default_value => 90,
-            shell_args_position => 2,
-            is_optional => 1,
-            doc => 'the percentage of bases in the alignment region that are a match',
-        },
-        match_length => {
-            is => 'Number',
-            default_value => 200,
-            shell_args_position => 3,
-            is_optional => 1,
-            doc => 'the length of the aligned region',
-        },
     ],
         
     doc => 'identify possible merges in an assembly (usable in the merge command)'
@@ -35,9 +21,6 @@ class Genome::Model::Msi::Command::CreateMergeList {
 
 sub execute {
     my $self = shift;
-
-    my $percent_identity = $self->percent_identity;
-    my $match_length = $self->match_length;
 
     my $assembly_build_id = $self->assembly_build_id;
     unless ($assembly_build_id) {
@@ -67,14 +50,10 @@ sub execute {
     # get the data directory, run the tool
     my $data_directory = $assembly_build->data_directory;
     my $edit_dir = $data_directory . "/edit_dir";
-   
-	my @stats_files = `ls  $edit_dir/*.merge_detector_stats`;    
-	chomp @stats_files;
 
-    my $stats_files = join ',',@stats_files;
     my $merge_list = $edit_dir."/merge_list";
 
-    return Genome::Model::Tools::Assembly::CreateMergeList->execute(stats_files => $stats_files, merge_list => $merge_list, percent_identity => $percent_identity, match_length => $match_length);    
+    return Genome::Model::Tools::Assembly::DoMerges->execute(merge_list => $merge_list, ace_directory => $edit_dir);
 
 }
 1;

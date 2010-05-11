@@ -78,8 +78,25 @@ sub new {
 		$self->_create_tables; 
 		my $sth = $self->dbh->prepare("select count(id) from ace_files where url = ?");           
         $sth->execute($contig_group_name);
-		
-		if($sth->fetchrow_arrayref->[0] == 0)
+        my $url_count = $sth->fetchrow_arrayref->[0];
+        if($params{cc} && ($url_count>0))
+        {
+            my $delete_url = $self->dbh->prepare("delete from ace_files where id = ?");
+            my $delete_items = $self->dbh->prepare("delete from items where asid = ?");
+            my $get_id = $self->dbh->prepare("select id from ace_files where url = ?");
+            $self->dbh->begin_work;  
+		    while($params{cc} && ($url_count >0))
+            {
+                $get_id->execute($contig_group_name);
+                my $id = $get_id->fetchrow_arrayref->[0];
+                $delete_url->execute($id);
+                $delete_items->execute($id);
+                $sth->execute($contig_group_name);
+                $url_count = $sth->fetchrow_arrayref->[0];
+            }
+            $self->dbh->commit;
+        }
+		if($url_count == 0)
 		{
 			$self->_init_db(1);
 			$sth = $self->dbh->prepare("insert into ace_files (url) VALUES (?)");

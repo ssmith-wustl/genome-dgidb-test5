@@ -6,6 +6,8 @@ use strict;
 use warnings;
 use Genome::Assembly::Pcap::ContigTools;
 use Genome::Assembly::Pcap::Ace;
+use Genome::Assembly::Pcap::PhdDB;
+use Genome::Assembly::Pcap::Phd;
 use Cwd;
 
 class Genome::Model::Tools::Assembly::MergeContigs
@@ -16,6 +18,7 @@ class Genome::Model::Tools::Assembly::MergeContigs
         contigs => {
             type => "String",
             optional => 0,
+            is_input => 1,
             doc => "This is the list of input Contigs, in the format:\n --contigs 'ace_file.ace Contig1 ace_file.ace Contig2 ace_file2.ace Contig6'\n it is required that an ace file is listed before each contig, even in the case where all contigs are in the same ace file"
         }, 
         o => {
@@ -135,7 +138,7 @@ sub execute
     }
 
     my $cwd = cwd();
-    my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $contig_urls[0], using_db => 1);
+    my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $contig_urls[0], using_db => 1,db_type => 'mysql');
     my $phd_object;
     if(-e "../phdball_dir/phd.ball.1")
     {
@@ -147,7 +150,8 @@ sub execute
     }
     else
     {
-        $self->error_message("Need to either have a ../phd_dir or a phdball file named ../phdball_dir/phd.ball.1") and return;
+        $phd_object = Genome::Assembly::Pcap::PhdDB->new;
+        #$self->error_message("Need to either have a ../phd_dir or a phdball file named ../phdball_dir/phd.ball.1") and return;
     }    
     my $ct = Genome::Assembly::Pcap::ContigTools->new;
 
@@ -155,8 +159,16 @@ sub execute
 
     for(my $i=2;$i<@contig_urls;$i+=2)
     {
-	    my $temp_ao = Genome::Assembly::Pcap::Ace->new(input_file => $contig_urls[$i],using_db => 1);
-	    my $next_contig = $temp_ao->get_contig($contig_urls[$i+1],1);
+        my $temp_ao;
+	    if($contig_urls[$i] eq $contig_urls[0])
+        {
+            $temp_ao = $ao;
+        }
+        else
+        {
+           $temp_ao = Genome::Assembly::Pcap::Ace->new(input_file => $contig_urls[$i],using_db => 1,db_type => 'mysql');
+	    }
+        my $next_contig = $temp_ao->get_contig($contig_urls[$i+1],1);
         $temp_ao->remove_contig($contig_urls[$i+1]);
 	    $merge_contig = $ct->merge($merge_contig, $next_contig, $phd_object, %params);	
 
@@ -184,21 +196,15 @@ The cmt takes a single ace file, the name of the "left" contig and "right" conti
 is specified by the user.  
 
 In order for the cmt to work properly it needs quality information for the reads contained in the contigs, either
-in the form of phd files, OR in the of fasta.qual files.  If using phd files, they need to be in a directory named
-phd_dir that is one level below the current directory (just like consed). If using qual files, the cmt expects to 
-find them in a directory named Input.  i.e.
+in the form of phd files.  If using phd files, they need to be in a directory named phd_dir that is one level below 
+the current directory (just like consed).
 
 	project_directory/edit_dir/(this is where are ace file are located)
 	project_directory/phd_dir/(this directory contains phd information)
-	project_directory/Input/(this directory contains qual and tabl files)
 
 The cmt should be run from the directory that contains ace files, in this case edit_dir.  The directory containing ace files does not necesarily need to be called edit_dir.  However,
 it is very important that the directory containing phd files is named phd_dir and the directory containing qual files is named
 Input.  
-
-If using fasta.qual files to obtain read quality information, it is highly recommended to build a tab file first.
-The tab file should be placed in the Input directory.  For more information on how to build .tab files, please
-see the man page for buildtab.
 
 =head1 OPTIONS
 
@@ -232,8 +238,6 @@ i.e. If our input ace file is named testin.ace then our output ace file would be
 The cmt was written and is maintained by Jon Schindler <jschindl@wugsc.wustl.edu>.  It is part of the contig merging and splitting toolkit.  
 
 =head1 SEE ALSO
-
-cst, cet, cvt, cct, ctf, cpf, cmtparse
 
 =cut
 
