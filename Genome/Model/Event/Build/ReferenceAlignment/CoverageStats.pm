@@ -33,20 +33,17 @@ sub execute {
         output_directory => $coverage_dir,
         bed_file => $self->build->capture_set_bed_file,
         bam_file => $self->build->whole_rmdup_bam_file,
+        minimum_depths => $self->build->minimum_depths,
+        wingspan_values => $self->build->wingspan_values,
     );
 
-    my $coverage_stats_params = $self->model->coverage_stats_params;
-    if (defined($coverage_stats_params)) {
-        my ($minimum_depths,$wingspan_values,$quality_filter) = split(':',$coverage_stats_params);
-        if ($minimum_depths && $wingspan_values) {
-            $coverage_stats_params{minimum_depths} = $minimum_depths;
-            $coverage_stats_params{wingspan_values} = $wingspan_values;
-            if (defined($quality_filter)) {
-                $coverage_stats_params{minimum_base_quality} = $quality_filter;
-            }
-        } else {
-            die('Failed to parse coverage_stats_params: '. $coverage_stats_params);
-        }
+    my $minimum_base_quality = $self->build->minimum_base_quality;
+    if (defined($minimum_base_quality)) {
+        $coverage_stats_params{minimum_base_quality} = $minimum_base_quality;
+    }
+    my $minimum_mapping_quality = $self->build->minimum_mapping_quality;
+    if (defined($minimum_mapping_quality)) {
+        $coverage_stats_params{minimum_mapping_quality} = $minimum_mapping_quality;
     }
     unless (Genome::Model::Tools::BioSamtools::CoverageStats->execute(%coverage_stats_params)) {
         $self->error_message('Failed to generate coverage stats with params: '.  Data::Dumper::Dumper(%coverage_stats_params));
