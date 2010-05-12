@@ -23,6 +23,8 @@ my $stats = Genome::Model::Tools::BioSamtools::CoverageStats->create(
     bed_file => $regions_file,
     wingspan_values => join(',',@wingspans),
     minimum_depths => join(',',@minimum_depths),
+    minimum_base_quality => 20,
+    minimum_mapping_quality => 1,
 );
 isa_ok($stats,'Genome::Model::Tools::BioSamtools::CoverageStats');
 ok($stats->execute,'execute CoverageStats command '. $stats->command_name);

@@ -38,6 +38,12 @@ class Genome::Model::Tools::BioSamtools::CoverageStats {
             default_value => 0,
             is_optional => 1,
         },
+        minimum_mapping_quality => {
+            is => 'Text',
+            doc => 'A minimum mapping quality to consider in coverage assesment',
+            default_value => 0,
+            is_optional => 1,
+        },
         output_directory => {
             is => 'Text',
             doc => 'The output directory to generate coverage stats',
@@ -69,6 +75,7 @@ sub execute {
                                   minimum_depth => \@minimum_depths,
                                   output_directory => $self->output_directory,
                                   minimum_base_quality => $self->minimum_base_quality,
+                                  minimum_mapping_quality => $self->minimum_mapping_quality,
                               );
     unless (defined $output) {
         for (@Workflow::Simple::ERROR) {
