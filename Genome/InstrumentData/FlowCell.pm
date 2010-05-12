@@ -1,4 +1,3 @@
-
 package Genome::InstrumentData::FlowCell;
 
 use strict;
@@ -37,7 +36,14 @@ class Genome::InstrumentData::FlowCell {
                     calculate => q(
                        return $self->lane_info();
                     ),
+                },
+                illimina_index => {
+                    is => 'Array',
+                    calculate => q(
+                        return $self->illumina_index();
+                    ),
                 }
+
             ],
                 schema_name => 'GMSchema',
                     data_source => 'Genome::DataSource::GMSchema',
@@ -61,8 +67,6 @@ sub lane_info {
     my @lanes_info;
 
     for my $lane ($self->lanes) {
-
-        $DB::single = 1;
 
         my %lane_info;
 
@@ -89,6 +93,13 @@ sub lane_info {
     return @lanes_info
 }
 
+sub illumina_index {
+    my @idx = Genome::InstrumentData::Solexa->get(flow_cell_id => '617E3');
+
+    $DB::single = 1;
+
+    return @idx;
+}
 1;
 
 

@@ -50,9 +50,6 @@ sub _generate_content {
     if ($subject->lane_info) {
         for my $lane ($subject->lane_info) {
             my $instrument_data_node = $flowcell_node->addChild( $doc->createElement('instrument-data') );
-
-            $DB::single = 1;
-
             $instrument_data_node->addChild( $doc->createAttribute('id', ${$lane}{id}) );
             $instrument_data_node->addChild( $doc->createAttribute('lane', ${$lane}{lane}) );
             my $gerald_directory = ${$lane}{gerald_directory};
@@ -64,6 +61,59 @@ sub _generate_content {
                 $report_node->addChild( $doc->createAttribute('name', $file) );
             }
         }
+    }
+
+    if ($subject->illumina_index) {
+        my @i_index = $subject->illumina_index;
+
+        my $il_index_node = $flowcell_node->addChild( $doc->createElement('illumina-lane-index') );
+        my $kb_report = $il_index_node->addChild( $doc->createElement('report') );
+        $kb_report->addChild( $doc->createAttribute('name', 'kilobases_read' ) );
+
+        my $total_read;
+
+        foreach my $inst_data (@i_index) {
+            $total_read += $inst_data->fwd_kilobases_read;
+        }
+
+        $kb_report->addChild( $doc->createAttribute('total', $total_read ) );
+
+        foreach my $inst_data (sort { $a->lane <=> $b->lane || $a->index_sequence cmp $b->index_sequence } @i_index) {
+            # test if node for lane exists
+            my $lane_n = $inst_data->lane;
+            my $xpath = 'lane[@number="' . $lane_n . '"]';
+
+            my $lane_node;
+            if ($kb_report->exists( $xpath )) {
+                # find and assign lane node
+                my @lane_nodes = $kb_report->findnodes( $xpath );
+                $lane_node = $lane_nodes[0];
+            } else {
+                # add lane node
+                $lane_node = $kb_report->addChild( $doc->createElement('lane') );
+                $lane_node->addChild( $doc->createAttribute('number', $lane_n) );
+            }
+
+            my $index = $lane_node->addChild( $doc->createElement('index') );
+            my $sequence = $index->addChild( $doc->createElement('sequence') );
+            $sequence->addChild( $doc->createTextNode( $inst_data->index_sequence ) );
+
+            my $percent = $index->addChild( $doc->createElement('percent') );
+            $percent->addChild( $doc->createTextNode( sprintf("%.2f", ($inst_data->fwd_kilobases_read / $total_read) * 100)) );
+
+            my $count = $index->addChild( $doc->createElement('count') );
+            $count->addChild( $doc->createTextNode($inst_data->fwd_kilobases_read) );
+        }
+
+
+
+
+        $DB::single = 1;
+
+        $il_index_node->addChild( $doc->createAttribute('flow-cell-id', "flow-cell-id" ) );
+        $il_index_node->addChild( $doc->createAttribute('lane', "lane") );
+
+
     }
 
     #set the build status node to be the root
