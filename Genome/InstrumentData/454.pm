@@ -47,11 +47,6 @@ EOS
         sequencing_platform => { value => '454' },
     ],    
     has_optional => [
-        _sff_file => {
-                      is => 'String',
-                      is_transient => 1,
-                      is_mutable => 1,
-                  },
         _fasta_file => {
                         is => 'String',
                         is_transient => 1,
@@ -118,28 +113,6 @@ sub calculate_alignment_estimated_kb_usage {
 
 sub is_external {
     return;
-}
-
-sub resolve_sff_path {
-    my $self = shift;
-
-    my $sff_file;
-    my $rr_454 = $self->run_region_454;
-    eval {
-        my $sff_file_object = $rr_454->sff_filesystem_location;
-        if ($sff_file_object) {
-            $sff_file = $sff_file_object->stringify;
-            if (my $index_sequence = $self->index_sequence) {
-                $sff_file =~ s|/sff/|/sff/demux/|;
-                $sff_file =~ s|.sff$|.demux.$index_sequence.sff|;
-            }
-        }
-    };
-
-    if ($@ || !defined($sff_file)) {
-        $sff_file = sprintf('%s/%s.sff', $self->resolve_full_path, $self->id);
-    }
-    return $sff_file;
 }
 
 sub resolve_fasta_path {
@@ -226,56 +199,80 @@ sub trimmed_sff_file {
     return $full_path .'/'. $self->sff_basename .'_trimmed.sff';
 }
 
+#< SFF >#
+sub sff_file_for_index_region {
+    return $_[0]->region_index_454->get_index_sff;
+}
+
+sub sff_file_for_run_region {
+    return $_[0]->region_index_454->region_sff;
+}
+
 sub sff_file {
+    # FIXME this was updated, but legacy code automatically dumped the region
+    #  sff if it didn't exist
     my $self = shift;
 
-    unless ($self->_sff_file) {
-        $self->_sff_file($self->resolve_sff_path);
+    # Use the region index first.
+    my $region_index_454 = $self->region_index_454;
+    # If the region index has an index sequence, it's indexed. Use its sff file
+    if ( $region_index_454 and $region_index_454->index_sequence ) {
+        return $region_index_454->get_index_sff;
+        # get_index_sff does 2 checks:
+        #  is there an index sequence?  we know this is true here
+        #  are there reads?
+        #  If there aren't any reads, this method reurns undef, and that is ok.
+        #  If there are reads, the sff file should exist. If it doesn't, it dies
     }
-    unless ($self->dump_to_file_system) {
-        $self->error_message('Failed to dump sff file to filesystem');
+
+    # If no index sequence, this is the 'parent' region
+    my $sff_file;
+    eval {
+        $sff_file = $self->run_region_454->sff_filesystem_location_string;
+    };
+
+    # It this is defined, the file should exist
+    return $sff_file if defined $sff_file;
+
+    # If not defined, the sff does not exist, dump it and 
+    #  return file name on apipe disk
+    $sff_file = sprintf('%s/%s.sff', $self->resolve_full_path, $self->id);
+    return $sff_file if -e $sff_file;
+
+    #FIXME ALLOCATE 
+    unless ( $self->create_data_directory_and_link ) {
+        $self->error_message('Failed to create directory and link');
         return;
     }
-    return $self->_sff_file;
+    my $lock = Genome::Utility::FileSystem->lock_resource(
+        lock_directory => $self->resolve_full_path,
+        resource_id => $self->id,
+        max_try => 60,
+    );
+    unless ( $lock ) {
+        $self->error_message('Failed to lock_resource '. $self->id);
+        return;
+    }
+    unless ( $self->run_region_454->dump_sff(filename => $sff_file) ) {
+        $self->error_message('Failed to dump sff file to '. $sff_file);
+        return;
+    }
+    my $unlock = Genome::Utility::FileSystem->unlock_resource(
+        lock_directory => $self->resolve_full_path,
+        resource_id => $self->id,
+    );
+    unless ( $unlock ) {
+        $self->error_message('Failed to unlock_resource '. $self->id);
+        return;
+    }
+    return $sff_file;
 }
 
 sub sff_basename {
     my $self = shift;
     return File::Basename::basename($self->sff_file,'.sff');
 }
-
-#< Dump to File System >#
-sub dump_to_file_system {
-    my $self = shift;
-
-    unless ( -e $self->_sff_file ) {
-        #FIXME ALLOCATE 
-        unless ($self->create_data_directory_and_link) {
-            $self->error_message('Failed to create directory and link');
-            return;
-        }
-        unless (Genome::Utility::FileSystem->lock_resource(
-                                                           lock_directory => $self->resolve_full_path,
-                                                           resource_id => $self->id,
-                                                           max_try => 60,
-                                                       )) {
-            $self->error_message('Failed to lock_resource '. $self->id);
-            return;
-        }
-        unless ($self->run_region_454->dump_sff(filename => $self->_sff_file)) {
-            $self->error_message('Failed to dump sff file to '. $self->_sff_file);
-            return;
-        }
-        unless (Genome::Utility::FileSystem->unlock_resource(
-                                                             lock_directory => $self->resolve_full_path,
-                                                             resource_id => $self->id,
-                                                         )) {
-            $self->error_message('Failed to unlock_resource '. $self->id);
-            return;
-        }
-    }
-    return 1;
-}
+#<>#
 
 sub amplicon_header_file {
     my $self = shift;
