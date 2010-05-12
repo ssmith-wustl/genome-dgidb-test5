@@ -103,8 +103,7 @@ sub new {
 			$sth->execute($contig_group_name);
 			my $sth = $self->dbh->prepare("select id from ace_files where url = ?");
 			$sth->execute($contig_group_name);
-			$self->{asid} = $sth->fetchrow_arrayref->[0];
-			$self->sth_set( $self->dbh->prepare(qq{ insert into items (name, data, type, count, asid) VALUES (?, ?, ?, ?, $self->{asid}) } ));			
+			$self->{asid} = $sth->fetchrow_arrayref->[0];					
 		}
 		else
 		{
@@ -130,7 +129,10 @@ sub new {
             $self->sth_set->execute("has_changed", 0, 0, 0) if ($self->_init_db);		
 		
 		}
-		#return $self;
+       
+        $self->_build_index($self->_input) if ((defined $self->_input)&&($url_count==0));
+        
+		return $self;
         
     }
     else
