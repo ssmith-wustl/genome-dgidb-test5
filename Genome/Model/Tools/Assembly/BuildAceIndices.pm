@@ -110,6 +110,8 @@ sub execute
     elsif($ace_file && -e $ace_file)
     {
         my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file,using_db => 1,db_type => 'mysql',cc=>1);
+        $ao->dbh->disconnect;
+        $ao=undef;
     }    
 
     return 1;
