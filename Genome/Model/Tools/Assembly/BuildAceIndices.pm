@@ -40,7 +40,7 @@ sub check_multiple_versions
     
     #filter out any non ace files
     
-    my @ace_files = `ls $ace_directory/*scaffold*.ace*`;
+    my @ace_files = `ls $ace_directory/*.ace*`;
     my @versioned_ace_files;
     @versioned_ace_files = grep { /.+\.ace\.\d+$/ } @ace_files;
     @ace_files = grep { /.+\.ace$/ } @ace_files;
