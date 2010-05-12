@@ -8,6 +8,11 @@ use above 'Genome';
 use Carp 'confess';
 use Data::Dumper 'Dumper';
 
+#        dna => { 
+#            is => 'Genome::Model::Build', 
+#            reverse_as => 'model', 
+#            is_many => 1 
+#        },
 class Genome::WorkOrderItem {
     table_name => '(SELECT * FROM work_order_item@oltp) work_order_item',
     id_by => [
@@ -42,6 +47,10 @@ class Genome::WorkOrderItem {
             is => 'Integer',
             len => 20,
         },
+        sample => {
+            is => 'Genome::Sample',
+            id_by => 'dna_id',
+        },
         parent_woi_id => {
             is => 'Integer',
             len => 10,
@@ -64,6 +73,12 @@ sub sequence_products {
     my @seq_items;
     for my $woi_sp ( @woi_sp ) {
         my $seq_item = GSC::Sequence::Item->get(seq_id => $woi_sp->seq_id);
+
+        # woi_sequence_product contains all the info twice right now-
+        # once the old way (solexa run lane) that maps to solexa_lane_summary
+        # second the new way (index illumina) maps to index_illumina
+        next if $seq_item->sequence_item_type eq 'solexa run lane';
+
         unless ( $seq_item ) { # very bad
             confess "Can't get sequence item (".$woi_sp->seq_id.") for work order item (".$self->id.").";
         }
@@ -79,20 +94,12 @@ sub instrument_data {
     my @instrument_data_ids = $self->instrument_data_ids
         or return;
 
-    my @instrument_data;
-    for my $id ( @instrument_data_ids ) {
-        print "$id\n";
-        my $instrument_data = Genome::InstrumentData->get($id);
-        unless ( $instrument_data ) { # bad
-            confess "Can't get instrument data for id ($id) for work order item (".$self->id.")";
-        }
-        push @instrument_data, $instrument_data;
-    }
-    
+    my @instrument_data = Genome::InstrumentData->get(\@instrument_data_ids);
     return @instrument_data;
 }
 
 sub instrument_data_ids {
+
     my $self = shift;
 
     my @sequence_products = $self->sequence_products
@@ -102,8 +109,9 @@ sub instrument_data_ids {
     for my $sequence_product ( @sequence_products ) {
         if ( $sequence_product->isa('GSC::Sequence::Read') ) {
             $instrument_data_ids{ $sequence_product->prep_group_id } = 1;
-        }
-        else {
+        } elsif ($sequence_product->isa('GSC::IndexIllumina')) {
+            $instrument_data_ids{ $sequence_product->analysis_id } = 1;
+        } else {
             $instrument_data_ids{ $sequence_product->seq_id } = 1;
         }
     }
@@ -126,22 +134,20 @@ sub models {
     #  c - get models via inst data assignments (inputs eventually)
     #  
 
-    my @instrument_data_ids = $self->instrument_data_ids;
-    if ( @instrument_data_ids ) {
-        my %model_ids;
-        for my $instrument_data_id ( @instrument_data_ids ) {
-            my $ida = Genome::Model::InstrumentDataAssignment->get(
-                instrument_data_id => $instrument_data_id,
-            );
-            next unless $ida; # ok, not assigned
-            $model_ids{ $ida->model_id } = 1;
-        }
+    my @instrument_data_ids = $self->instrument_data_ids();
 
+    if (@instrument_data_ids) {
+    
+        my @instrument_data_assignments = 
+            Genome::Model::InstrumentDataAssignment->get(instrument_data_id => \@instrument_data_ids);
+        return unless @instrument_data_assignments;
+
+        my %model_ids = map { $_->model_id => 1 } @instrument_data_assignments;
         return unless %model_ids;
 
         return Genome::Model->get(id => [ keys %model_ids ]);
-    }
-    else {
+
+    } else {
         $self->warning_message("No sequence products (instrument data) found for work order item (".$self->id.").  Attempting to get models via dna_id.");
     }
 
@@ -163,6 +169,47 @@ sub models {
         confess "Can't get models for a work order item (".$self->id.") that only has a barcode, and no sequence products or dna_id.";
     }
 }
+
+sub pse_statuses {
+
+    my ($self) = @_;
+
+    my $pses = {};
+
+    for my $sp ($self->sequence_products()) {
+
+        if ($sp->isa('GSC::IndexIllumina')) {
+
+            my $creation_pse = $sp->get_creation_event();
+            my $pidfa_pse = $creation_pse->get_first_active_subsequent_pse_with_process_to('prepare instrument data for analysis');
+            my $queue_pse = $creation_pse->get_first_active_subsequent_pse_with_process_to('queue instrument data for genome modeling');
+            my $setup_pse = $creation_pse->get_first_prior_pse_with_process_to('set up flow cell');
+
+            $pses->{$creation_pse->process_to}->{$creation_pse->pse_status}++;
+            $pses->{$pidfa_pse->process_to}->{$pidfa_pse->pse_status}++;
+            $pses->{$setup_pse->process_to}->{$setup_pse->pse_status}++;
+        } elsif ($sp->isa('GSC::RegionIndex454')) {
+
+        } else {
+
+        }
+    }
+
+    $DB::single = 1;
+    return $pses;
+}
+
+# prepare dna beads
+# setup flow cell
+   
+
+# 454: demux 454 regions
+# illumina: copy sequence files
+# 3730: analyze traces
+
+
+
+
 
 #$HeadURL$
 #$Id$
