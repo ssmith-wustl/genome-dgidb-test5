@@ -5,10 +5,12 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::AmpliconAssembly::Test;
+use Test::More;
 
-Genome::Model::Tools::AmpliconAssembly::ContaminationScreenTest->runtests;
+# This is not used. Need to remove
+use_ok('Genome::Model::Tools::AmpliconAssembly::ContaminationScreen');
 
+done_testing();
 exit;
 
 =pod
