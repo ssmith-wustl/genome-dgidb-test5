@@ -104,8 +104,7 @@ sub new {
 			my $sth = $self->dbh->prepare("select id from ace_files where url = ?");
 			$sth->execute($contig_group_name);
 			$self->{asid} = $sth->fetchrow_arrayref->[0];
-			$self->sth_set( $self->dbh->prepare(qq{ insert into items (name, data, type, count, asid) VALUES (?, ?, ?, ?, $self->{asid}) } ));
-			$self->_build_index($self->_input) if (defined $self->_input);
+			$self->sth_set( $self->dbh->prepare(qq{ insert into items (name, data, type, count, asid) VALUES (?, ?, ?, ?, $self->{asid}) } ));			
 		}
 		else
 		{
@@ -131,7 +130,7 @@ sub new {
             $self->sth_set->execute("has_changed", 0, 0, 0) if ($self->_init_db);		
 		
 		}
-		return $self;
+		#return $self;
         
     }
     else
@@ -320,7 +319,7 @@ sub _build_index
             my $offset = (tell $fh) - length $line;
             $old_hash = undef;            
             $old_contig->{base_segments}{offset} = $offset;
-			foreach(my $i = 0;$i<$old_contig->{base_segments}{line_count};$i++)
+			for(my $i = 0;$i<$old_contig->{base_segments}{line_count};$i++)
 			{
 				my $line = <$fh>;			
 			}            
@@ -342,7 +341,7 @@ sub _build_index
             $old_hash = { name => $tokens[1], offset => $offset };
             $old_contig->{reads}{$tokens[1]}{read_position}= $old_hash;
             $old_contig->{af_start} = $offset;
-			foreach(my $i=1;$i<$old_contig->{read_count};$i++)
+			for(my $i=1;$i<$old_contig->{read_count};$i++)
 			{
 				my $line = <$fh>;
                 my $first_three = substr($line, 0,3);
@@ -664,7 +663,7 @@ sub _build_contig_index
             my $offset = (tell $fh) - length $line;
             $old_hash = undef;            
             $contig->{base_segments}{offset} = $offset;
-			foreach(my $i = 0;$i<$contig->{base_segments}{line_count};$i++)
+			for(my $i = 0;$i<$contig->{base_segments}{line_count};$i++)
 			{
 				my $line = <$fh>;			
 			}            
@@ -686,7 +685,7 @@ sub _build_contig_index
             $old_hash = { name => $tokens[1], offset => $offset };
             $contig->{reads}{$tokens[1]}{read_position}= $old_hash;
             $contig->{af_start} = $offset;
-			foreach(my $i=1;$i<$contig->{read_count};$i++)
+			for(my $i=1;$i<$contig->{read_count};$i++)
 			{
 				my $line = <$fh>;
 				my @tokens = split(/[ {]/,$line);
