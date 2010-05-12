@@ -9,7 +9,7 @@ use File::Compare;
 use above 'Genome';
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 8;
+    plan tests => 11;
 } else{
     plan skip_all => 'Must run on a 64 bit machine';
 }
@@ -59,7 +59,7 @@ my $q20_q1_ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
 );
 isa_ok($q20_q1_ref_cov,'Genome::Model::Tools::BioSamtools::RefCov');
 ok($q20_q1_ref_cov->execute,'execute RefCov command '. $q20_q1_ref_cov->command_name);
-ok(!compare($expected_q20_stats_file,$q20_q1_ref_cov->stats_file),'expected stats file '. $expected_q20_stats_file .' is identical to '. $q20_q1_ref_cov->stats_file);
+ok(!compare($expected_q20_q1_stats_file,$q20_q1_ref_cov->stats_file),'expected stats file '. $expected_q20_q1_stats_file .' is identical to '. $q20_q1_ref_cov->stats_file);
 
 
 exit;
