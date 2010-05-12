@@ -33,6 +33,11 @@ class Genome::Model::Tools::BioSamtools::RefCov {
             default_value => 0,
             is_optional => 1,
         },
+        min_mapping_quality => {
+            doc => 'only consider alignments with minimum mapping quality',
+            default_value => 0,
+            is_optional => 1,
+        }
     ],
     has_output => [
         stats_file => {
@@ -116,8 +121,8 @@ sub execute {
         $self->stats_file($self->final_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
     }
     my $cmd = $self->execute_path .'/bed_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $min_depth_filter .' '. $wingspan;
-    if ($self->min_base_quality) {
-        $cmd .= ' '. $self->min_base_quality;
+    if ($self->min_base_quality || $self->min_mapping_quality) {
+        $cmd .= ' '. $self->min_base_quality .' '. $self->min_mapping_quality;
     }
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
