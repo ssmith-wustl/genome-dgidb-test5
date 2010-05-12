@@ -28,13 +28,19 @@ sub execute {
     my $min_length = $self->processing_profile->amplicon_size;
     my $attempted = 0;
     for my $instrument_data ( @instrument_data ) {
+        $self->status_message('PROCESSING: '.$instrument_data->id);
+        unless ( $instrument_data->total_reads > 0 ) {
+            $self->status_message('SKIPPING: '.$instrument_data->id.'. This instrument data does not have any reads, and will not have a fasta file.');
+            next;
+        }
         my $fasta_file = $instrument_data->fasta_file;
         unless ( -s $fasta_file ) {
-            $self->error_message("No fasta file found for 454 instrument data (".$instrument_data->id.")");
+            $self->error_message('NO FASTA FILE: '.$instrument_data->id.'. This instrument data has reads, but no fasta file.');
             return;
         }
 
         my $reader = Genome::Utility::BioPerl->create_bioseq_reader($fasta_file); # confesses
+        $self->status_message('READING FASTA: '.$instrument_data->id);
         while ( my $fasta = $reader->next_seq ) {
             $attempted++;
             # check length here
@@ -56,6 +62,7 @@ sub execute {
             my $writer = $self->_get_writer_for_set_name($set_name);
             $writer->write_seq($fasta);
         }
+        $self->status_message('DONE PROCESSING: '.$instrument_data->id);
     }
 
     $self->build->amplicons_attempted($attempted);
