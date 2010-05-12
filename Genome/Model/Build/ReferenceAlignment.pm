@@ -130,7 +130,127 @@ sub _resolve_sequencing_platform_for_subclass_name {
     return $sequencing_platform;
 }
 
+#This directory is used by both CDNA and now Capture models as well
+sub reference_coverage_directory {
+    my $self = shift;
+    return $self->data_directory .'/reference_coverage';
+}
+
 ####BEGIN CAPTURE SECTION####
+
+sub alignment_summary_file {
+    my ($self,$wingspan) = @_;
+    unless (defined($wingspan)) {
+        die('Must provide wingspan_value to method alignment_summary_file in '. __PACKAGE__);
+    }
+    my @as_files = glob($self->reference_coverage_directory .'/*wingspan_'. $wingspan .'-alignment_summary.tsv');
+    unless (@as_files) {
+        return;
+    }
+    unless (scalar(@as_files) == 1) {
+        die("Found multiple stats files:\n". join("\n",@as_files));
+    }
+    return $as_files[0];
+}
+
+sub alignment_summary_hash_ref {
+    my ($self,$wingspan) = @_;
+    my $wingspan_array_ref = $self->wingspan_values_array_ref;
+    my %alignment_summary;
+    for my $wingspan( @{$wingspan_array_ref}) {
+        my $as_file = $self->alignment_summary_file($wingspan);
+        my $reader = Genome::Utility::IO::SeparatedValueReader->create(
+            separator => "\t",
+            input => $as_file,
+        );
+        unless ($reader) {
+            $self->error_message('Can not create SeparatedValueReader for input file '. $as_file);
+            return;
+        }
+        my $data = $reader->next;
+        $reader->input->close;
+
+        # Calculate percentages
+
+        # percent aligned
+        $data->{percent_aligned} = sprintf("%.02f",(($data->{total_aligned_bp} / $data->{total_bp}) * 100)) .'%';
+
+        # duplication rate
+        $data->{percent_duplicates} = sprintf("%.03f",(($data->{total_duplicate_bp} / $data->{total_aligned_bp}) * 100)) .'%';
+
+        # on-target alignment
+        $data->{percent_target_aligned} = sprintf("%.02f",(($data->{total_target_aligned_bp} / $data->{total_aligned_bp}) * 100)) .'%';
+
+        # on-target duplicates
+        $data->{percent_target_duplicates} = sprintf("%.02f",(($data->{duplicate_target_aligned_bp} / $data->{total_target_aligned_bp}) * 100)) .'%';
+
+        # off-target alignment
+        $data->{percent_off_target_aligned} = sprintf("%.02f",(($data->{total_off_target_aligned_bp} / $data->{total_aligned_bp}) * 100)) .'%';
+
+        # off-target duplicates
+        $data->{percent_off_target_duplicates} = sprintf("%.02f",(($data->{duplicate_off_target_aligned_bp} / $data->{total_off_target_aligned_bp}) * 100)) .'%';
+
+        $alignment_summary{$wingspan} = $data;
+    }
+    return \%alignment_summary;
+}
+
+sub coverage_stats_directory_path {
+    my ($self,$min_depth,$wingspan) = @_;
+    return $self->reference_coverage_directory .'/min_depth_'. $min_depth .'/wingspan_'. $wingspan;
+}
+
+sub coverage_stats_file {
+    my ($self,$min_depth,$wingspan) = @_;
+    unless (defined($min_depth) && defined($wingspan)) {
+        die('Must provide minimum_depth and wingspan_value to method coverage_stats_file in '. __PACKAGE__);
+    }
+    my @stats_files = glob($self->coverage_stats_directory_path($min_depth,$wingspan) .'/*STATS.tsv');
+    unless (@stats_files) {
+        return;
+    }
+    unless (scalar(@stats_files) > 1) {
+        die("Found multiple stats files:\n". join("\n",@stats_files));
+    }
+    return $stats_files[0];
+}
+
+sub coverage_stats_summary_file {
+    my ($self,$min_depth,$wingspan) = @_;
+    my @stats_files = glob($self->coverage_stats_directory_path($min_depth,$wingspan) .'/*STATS.txt');
+    unless (@stats_files) {
+        return;
+    }
+    unless (scalar(@stats_files) == 1) {
+        die("Found multiple stats summary files:\n". join("\n",@stats_files));
+    }
+    return $stats_files[0];
+}
+
+sub coverage_stats_summary_hash_ref {
+    my $self = shift;
+    my %stats_summary;
+    my $min_depth_array_ref = $self->minimum_depths_array_ref;
+    my $wingspan_array_ref = $self->wingspan_values_array_ref;
+    for my $min_depth (@{$min_depth_array_ref}) {
+        for my $wingspan (@{$wingspan_array_ref}) {
+            my $stats_summary = $self->coverage_stats_summary_file($min_depth,$wingspan);
+            my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($stats_summary);
+            unless ($stats_fh) {
+                die('Failed to get stats file '. $stats_summary);
+            }
+            while (my $line = $stats_fh->getline) {
+                chomp($line);
+                if ($line =~ /(.*):\s+([\d\%\.]+)/) {
+                    my $key = $1;
+                    my $value = $2;
+                    $stats_summary{$min_depth}{$wingspan}{$key} = $value;
+                }
+            }
+        }
+    }
+    return \%stats_summary;
+}
 
 sub capture_set_bed_file {
     my $self = shift;
