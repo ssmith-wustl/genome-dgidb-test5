@@ -5,10 +5,12 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::Model::Event::Build::AmpliconAssembly::Test;
+use Test::More;
 
-Genome::Model::Event::Build::AmpliconAssembly::ContaminationScreen::Test->runtests;
+# I don't believe this is used! Just use_ok - ebelter
+use_ok('Genome::Model::Event::Build::AmpliconAssembly::ContaminationScreen');
 
+done_testing();
 exit;
 
 =pod
