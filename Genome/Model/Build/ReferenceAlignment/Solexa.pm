@@ -371,7 +371,7 @@ sub mark_duplicates_library_metrics_hash_ref {
         if ($line =~ /^LIBRARY/) {
             @keys = split("\t",$line);
         }
-        if ($line =~ /^($subject\S+)/) {
+        if ($line =~ /^($subject\S*)/) {
             unless (@keys) {
                 die('Failed to find header line starting with LIBRARY!');
             }
@@ -385,6 +385,9 @@ sub mark_duplicates_library_metrics_hash_ref {
         }
     }
     $fh->close;
+    unless (keys %library_metrics) {
+        die('Failed to find a library that matches the subject name '. $subject); 
+    }
     return \%library_metrics;
 }
 
@@ -463,13 +466,6 @@ sub generate_tcga_file_name {
     }
 
     return $ex_species_name->name."-".$ex_plate_name->name."-09"; 
-}
-
-
-#This directory is used by both CDNA and now Capture models as well
-sub reference_coverage_directory {
-    my $self = shift;
-    return $self->data_directory .'/reference_coverage';
 }
 
 ####BEGIN CAPTURE SECTION####
