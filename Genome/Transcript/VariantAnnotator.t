@@ -19,13 +19,15 @@ my $tests = 0;
 $tests += 9;                                           # get_test_data()
 $tests += (1 + (1 * $num_variants));                   # output tests
 $tests += (2 * $num_variants * $num_filters);          # prioritization tests
-plan tests => $tests;
 
 # Test annotation output for all provided variants
 check_output($variants, $annotations->{none});
 
 # Ensure that prioritization of annotations behaves correctly
 check_prioritization($variants, $annotations);
+
+done_testing();
+exit;
 
 ################################################################################
 
