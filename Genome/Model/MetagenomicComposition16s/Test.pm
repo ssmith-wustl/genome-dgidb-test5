@@ -85,6 +85,7 @@ sub _create_mock_454_instrument_data {
         region_id => $id,
         analysis_name => 'D_2010_01_10_04_22_16_blade9-2-5_fullProcessing',
         region_number => 2,
+        total_reads => 20,
         total_raw_wells => 1176187,
         total_key_pass => 1169840,
         incoming_dna_name => 'Pooled_Library-2009-12-31_1-1',
