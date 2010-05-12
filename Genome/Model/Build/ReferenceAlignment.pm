@@ -130,6 +130,93 @@ sub _resolve_sequencing_platform_for_subclass_name {
     return $sequencing_platform;
 }
 
+####BEGIN CAPTURE SECTION####
+
+sub capture_set_bed_file {
+    my $self = shift;
+    my $capture_set = $self->model->capture_set;
+    unless ($capture_set) {
+        die('Failed to find capture set!');
+    }
+    my $bed_file_path = $self->reference_coverage_directory .'/'. $capture_set->id .'.bed';
+    unless (-e $bed_file_path) {
+        unless ($capture_set->print_bed_file($bed_file_path)) {
+            die('Failed to print bed file to path '. $bed_file_path);
+        }
+    }
+    return $bed_file_path;
+}
+
+sub _resolve_coverage_stats_params {
+    my $self = shift;
+    my $pp = $self->processing_profile;
+    my $coverage_stats_params = $pp->coverage_stats_params;
+    my ($minimum_depths,$wingspan_values,$base_quality_filter,$mapping_quality_filter) = split(':',$coverage_stats_params);
+    if ($minimum_depths && $wingspan_values) {
+        $self->{_minimum_depths} = $minimum_depths;
+        $self->{_wingspan_values} = $wingspan_values;
+        if (defined($base_quality_filter)) {
+            $self->{_minimum_base_quality} = $base_quality_filter;
+        }
+        if (defined($mapping_quality_filter)) {
+            $self->{_minimum_mapping_quality} = $mapping_quality_filter;
+        }
+    } else {
+        die('minimum_depth and wingspan_values are required values.  Failed to parse coverage_stats_params: '. $coverage_stats_params);
+    }
+    return 1;
+}
+
+sub minimum_depths {
+    my $self = shift;
+    unless ($self->{_minimum_depths}) {
+        $self->_resolve_coverage_stats_params;
+    }
+    return $self->{_minimum_depths};
+}
+
+sub minimum_depths_array_ref {
+    my $self = shift;
+    my $minimum_depths = $self->minimum_depths;
+    return unless $minimum_depths;
+    my @min_depths = split(',',$minimum_depths);
+    return \@min_depths;
+}
+
+sub wingspan_values {
+    my $self = shift;
+    unless ($self->{_wingspan_values}) {
+        $self->_resolve_coverage_stats_params;
+    }
+    return $self->{_wingspan_values};
+}
+
+sub wingspan_values_array_ref {
+    my $self = shift;
+    my $wingspan_values = $self->wingspan_values;
+    return unless $wingspan_values;
+    my @wingspans = split(',',$wingspan_values);
+    return \@wingspans;
+}
+
+
+sub minimum_base_quality {
+    my $self = shift;
+    unless ($self->{_minimum_base_quality}) {
+        $self->_resolve_coverage_stats_params;
+    }
+    return $self->{_minimum_base_quality};
+}
+
+sub minimum_mapping_quality {
+    my $self = shift;
+    unless ($self->{_minimum_mapping_quality}) {
+        $self->_resolve_coverage_stats_params;
+    }
+    return $self->{_minimum_mapping_quality};
+}
+
+####END CAPTURE SECTION####
 
 1;
 
