@@ -356,6 +356,38 @@ sub rmdup_metrics_file {
     return $self->log_directory."/mark_duplicates.metrics";
 }
 
+sub mark_duplicates_library_metrics_hash_ref {
+    my $self = shift;
+    my $subject = $self->model->subject_name;
+    my $mark_duplicates_metrics = $self->rmdup_metrics_file;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($mark_duplicates_metrics);
+    unless ($fh) {
+        die('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
+    }
+    my %library_metrics;
+    my @keys;
+    while (my $line = $fh->getline) {
+        chomp($line);
+        if ($line =~ /^LIBRARY/) {
+            @keys = split("\t",$line);
+        }
+        if ($line =~ /^($subject\S+)/) {
+            unless (@keys) {
+                die('Failed to find header line starting with LIBRARY!');
+            }
+            my $library = $1;
+            my @values = split("\t",$line);
+            for (my $i = 0; $i < scalar(@values); $i++) {
+                my $key = $keys[$i];
+                my $value = $values[$i];
+                $library_metrics{$library}{$key} = $value;
+            }
+        }
+    }
+    $fh->close;
+    return \%library_metrics;
+}
+
 sub rmdup_log_file {
     my $self = shift;
     return $self->log_directory."/mark_duplicates.log";
@@ -441,21 +473,6 @@ sub reference_coverage_directory {
 }
 
 ####BEGIN CAPTURE SECTION####
-
-sub capture_set_bed_file {
-    my $self = shift;
-    my $capture_set = $self->model->capture_set;
-    unless ($capture_set) {
-        die('Failed to find capture set!');
-    }
-    my $bed_file_path = $self->reference_coverage_directory .'/'. $capture_set->id .'.bed';
-    unless (-e $bed_file_path) {
-        unless ($capture_set->print_bed_file($bed_file_path)) {
-            die('Failed to print bed file to path '. $bed_file_path);
-        }
-    }
-    return $bed_file_path;
-}
 
 ####END CAPTURE SECTION####
 
