@@ -18,20 +18,9 @@ sub execute {
     unless ($build) {
         die('Failed to find build by id '. $self->build_id);
     }
-    my $subject = $build->model->subject_name;
-    my $data_directory = $build->data_directory;
-    my $dedup_metrics = $data_directory .'/logs/mark_duplicates.metrics';
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($dedup_metrics);
-    my %library_duplication_ratios;
-    while (my $line = $fh->getline) {
-        chomp($line);
-        if ($line =~ /^$subject/) {
-            my @entry = split("\t",$line);
-            my $duplicate_ratio = $entry[7];
-            $library_duplication_ratios{$subject} = $duplicate_ratio;
-        }
-    }
-    $fh->close;
-    print Data::Dumper::Dumper(%library_duplication_ratios);
+    my $subject = $build->mark_duplicates_library_metrics_hash_ref;
+    print Data::Dumper::Dumper($subject);
     return 1;
 }
+
+1;
