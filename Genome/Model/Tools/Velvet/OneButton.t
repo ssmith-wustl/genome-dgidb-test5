@@ -8,9 +8,6 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
-else {
-    plan tests => 24;
-}
 
 # OLD:
 # oneButtonVelvet-3opt.pl 1k-trimmed.fastq -i 260 -g 4500000 --hash 31 33 35 --version 57-64 -o old
@@ -86,5 +83,8 @@ is(scalar(@stderr_diff), 0, "stderr matches except for the line with a date")
 my @velvetlog_diff = `sdiff -s $expected_dir/*Log $actual_dir/*Log | grep -v -- '$temp_dir'`;
 is(scalar(@velvetlog_diff), 2, "the velvet log matches except the line with a date")
     or diag(@velvetlog_diff);
+
+done_testing();
+exit;
 
 
