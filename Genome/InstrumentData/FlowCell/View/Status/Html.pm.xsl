@@ -195,7 +195,7 @@ window.chartMin = 0;
                           <td>
                             <xsl:choose>
                               <xsl:when test="@gerald-directory">
-								<a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">https://gscweb<xsl:value-of select="@gerald-directory"/></xsl:attribute>gerald directory</a>
+                                <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">https://gscweb<xsl:value-of select="@gerald-directory"/></xsl:attribute>gerald directory</a>
                               </xsl:when>
                               <xsl:otherwise>
                                 <span class="note">No resources found.</span>
@@ -215,44 +215,44 @@ window.chartMin = 0;
                   </xsl:choose>
                 </tbody>
               </table>
+              <xsl:if test="/flow-cell/illumina-lane-index">
+                <h2>lane index report</h2>
+                <div class="legend_block">
+                  <div class="label">
+                    Legend:
+                  </div>
+                  <div class="legend">
+                    <script type="text/javascript+protovis">
+                      var w=700,
+                      h=15,
+                      c = pv.Colors.category10();
 
-              <h2>lane index report</h2>
-              <div class="legend_block">
-                <div class="label">
-                  Legend:
+                      var legend = new pv.Panel()
+                      .width(w)
+                      .height(h);
+
+
+                      legend.add(pv.Dot)
+                      .data(window.indexData[0].sequence)
+                      .top(8)
+                      .left(function() 15 + this.index * 65)
+                      .shape("square")
+                      .size(16)
+                      .strokeStyle(null)
+                      .fillStyle(function(d) c(window.indexData[0].sequence[this.index]))
+                      .anchor("right").add(pv.Label);
+
+                      legend.render();
+                    </script>
+                  </div>
                 </div>
-                <div class="legend">
-                  <script type="text/javascript+protovis">
-                    var w=700,
-                    h=15,
-                    c = pv.Colors.category10();
-
-                    var legend = new pv.Panel()
-                    .width(w)
-                    .height(h);
-
-
-                    legend.add(pv.Dot)
-                    .data(window.indexData[0].sequence)
-                    .top(8)
-                    .left(function() 15 + this.index * 65)
-                    .shape("square")
-                    .size(16)
-                    .strokeStyle(null)
-                    .fillStyle(function(d) c(window.indexData[0].sequence[this.index]))
-                    .anchor("right").add(pv.Label);
-
-                    legend.render();
-                  </script>
+                <div class="charts_block">
+                  <xsl:for-each select="//report">
+                    <xsl:apply-templates select="lane" />
+                  </xsl:for-each>
                 </div>
-              </div>
-              <div class="charts_block">
-                <xsl:for-each select="//report">
-                  <xsl:apply-templates select="lane" />
-                </xsl:for-each>
-              </div>
 
-
+              </xsl:if>
             </div>
           </div>
         </div>

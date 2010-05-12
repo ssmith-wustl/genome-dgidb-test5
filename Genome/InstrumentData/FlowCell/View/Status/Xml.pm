@@ -105,9 +105,6 @@ sub _generate_content {
             $count->addChild( $doc->createTextNode($inst_data->fwd_kilobases_read) );
         }
 
-
-
-
         $DB::single = 1;
 
         $il_index_node->addChild( $doc->createAttribute('flow-cell-id', "flow-cell-id" ) );
