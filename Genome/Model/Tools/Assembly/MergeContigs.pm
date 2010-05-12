@@ -113,6 +113,7 @@ sub execute
 {
     my $self = shift;
     my %cutoffs;
+    $DB::single=1;
     $cutoffs{hq_percent_identity} = $self->hq_percent_identity if defined $self->hq_percent_identity;
     $cutoffs{hq_mismatch} = $self->hq_mismatch if defined $self->hq_mismatch;
     $cutoffs{percent_identity} = $self->percent_identity if defined $self->percent_identity;
@@ -169,8 +170,8 @@ sub execute
            $temp_ao = Genome::Assembly::Pcap::Ace->new(input_file => $contig_urls[$i],using_db => 1,db_type => 'mysql');
 	    }
         my $next_contig = $temp_ao->get_contig($contig_urls[$i+1],1);
-        $temp_ao->remove_contig($contig_urls[$i+1]);
-	    $merge_contig = $ct->merge($merge_contig, $next_contig, $phd_object, %params);	
+        $merge_contig = $ct->merge($merge_contig, $next_contig, $phd_object, %params);
+        $temp_ao->remove_contig($contig_urls[$i+1]);	
 
     }
 
