@@ -50,6 +50,16 @@ class Genome::Model::Tools::Fastq::Trimq2::Simple {
             default => 10,
             is_optional => 1,
         },
+        primer_sequence=> {
+            is => 'String',
+            doc => 'the primer sequence to trim',
+            is_optional => 1,
+        },
+        primer_report_file=> {
+            is => 'Text',
+            doc => 'the primer trim report file name with path, default is primer_trim.report in fastq_file dir',
+            is_optional => 1,
+        },
     ],
 };
 
@@ -75,13 +85,25 @@ sub execute {
         $self->error_message("Fastq file : $fastq_file not existing");
         return;
     }
+
+    my ($primer_sequence, $reverse_sequence);
+    if ($self->primer_sequence)
+    {
+        $primer_sequence = $self->primer_sequence;
+        $reverse_sequence = Bio::Seq->new(-seq => $primer_sequence)->revcom->seq;
+    }
     
     my ($base_name, $base_dir) = fileparse($fastq_file);
     $base_name =~ s/\.fastq$// if $base_name =~ /\.fastq$/;
 
     $out_dir ||= $base_dir;
     my $out_file = $self->out_file || $out_dir."/$base_name.trimq2.fastq";
+    unlink ($out_file) if (-e $out_file); #WARNING:  file gets deleted if it already exist!
+    
     my $report   = $self->report_file || $out_dir . "/trimq2.report";
+
+    my $primer_report = $self->primer_report_file || $out_dir. "/primer_trim.report";
+    unlink ($primer_report) if (-e $primer_report); #WARNING:  file gets deleted if it already exist!
 
     $self->out_file($out_file);
     
@@ -106,6 +128,18 @@ sub execute {
     }
     binmode $report_fh, ":utf8";
 
+    my $primer_trim_count = 0;
+    my $primer_report_fh;
+    if ($primer_sequence)
+    {
+        $primer_report_fh = Genome::Utility::FileSystem->open_file_for_writing($primer_report);
+        unless ($primer_report_fh) {
+        $self->error_message("Failed to open report file " . $primer_report . ": $!");
+        return;
+        }
+        binmode $primer_report_fh, ":utf8";
+    }
+
     my $ori_ct     = 0;
     my $trim_ct    = 0;
     my $rd_ori_ct  = 0;
@@ -117,10 +151,22 @@ sub execute {
         my $seq  = $input_fh->getline;
         my $sep  = $input_fh->getline;
         my $qual = $input_fh->getline;
-        
+
         $ori_ct += (length $seq) - 1;#deduct new line 
         $rd_ori_ct++;
-                
+               
+        #trim primer
+        if ($primer_sequence)
+        {
+            if ($seq=~m/(^$primer_sequence)(.*)/ or $seq=~m/(^$reverse_sequence)(.*)/)
+            {
+                $seq = $2 unless (length($2) < 0 and die("The primer sequence is longer than read '$seq'")); 
+                $qual = substr($qual, length($1));
+                $primer_report_fh->print("$seq\n$qual\n");  
+                $primer_trim_count++;
+            } 
+        }
+ 
         if ($qual =~ /$qual_str/) {
             chomp ($seq, $qual);
             my $seq_length = length $seq;
@@ -184,6 +230,12 @@ sub execute {
     $report_fh->print("\nNumberOfOriginalBases  NumberOfTrimmedBases   NumberOfResultingBases  Percentage  NumberOfTrimmedReads\n");
     $report_fh->printf("%21s%22s%24s%11.1f%%%21s\n", $ori_ct, $trim_ct, $new_ct, $percent, $rd_trim_ct);
     $report_fh->close;
+
+    if ($primer_sequence)
+    {
+        $primer_report_fh->print("$primer_trim_count reads primer-trimmed\n");
+        $primer_report_fh->close;
+    }
     
     return 1;
 }
