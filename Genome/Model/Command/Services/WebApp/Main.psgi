@@ -62,6 +62,8 @@ dispatch {
 
         if ( ref($resp) eq 'ARRAY' && $resp->[0] == 404 ) {
             return redispatch_psgi( $app{'404Handler.psgi'}, $resp->[2] );
+        } elsif ( ref($resp) eq 'ARRAY' && $resp->[0] == 500 ) {
+            return redispatch_psgi( $app{'404Handler.psgi'}, $resp->[2] );
         }
 
         return $resp;
