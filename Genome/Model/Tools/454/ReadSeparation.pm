@@ -16,6 +16,10 @@ class Genome::Model::Tools::454::ReadSeparation {
                          is_input => 1,
                          doc => 'The sff format sequence file to separate reads by primer',
                      },
+            _primer_fasta => {
+                              is => 'String',
+                              doc => 'A private variable to store the tmp path of the created primer db',
+                          },
         ],
     has_many => [
                  primers => {
@@ -42,6 +46,47 @@ Finally, separates the whole reads based on their alignment to the primer fasta.
 The output is an sff format file with the same root name as the input sff and the primer name such as, \$INPUT.\$PRIMER.sff
 EOS
 }
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+
+    my @default_primers = qw(M13 MID1);
+    unless ($self->primers) {
+        $self->warning_message('Using default primers: '. join(' ', @default_primers));
+        $self->primers(\@default_primers);
+    }
+
+    my $primer_dir = '/gscmnt/sata180/info/medseq/biodb/shared/Vector_sequence';
+
+    my @primer_fastas;
+    my $db_name = $self->_tmp_dir .'/';
+
+    for my $primer ($self->primers) {
+        $db_name .= $primer .'-';
+        my $primer_fasta = $primer_dir .'/'. $primer .'-primers.fasta';
+        unless (-s $primer_fasta) {
+            die("Primer fasta file '$primer_fasta' is missing or zero size!");
+        }
+        push @primer_fastas, $primer_fasta;
+    }
+    $db_name .= 'primers.fasta';
+    my $cmd = 'cat ';
+    for my $primer_fasta (@primer_fastas) {
+        $cmd .= $primer_fasta .' ';
+    }
+    $cmd .= '> '. $db_name;
+    my $rv = system($cmd);
+    unless ($rv == 0) {
+        die("Failed to execute system command: '$cmd'");
+    }
+
+    $self->_primer_fasta($db_name);
+
+    return $self;
+}
+
 
 sub execute {
     my $self = shift;
