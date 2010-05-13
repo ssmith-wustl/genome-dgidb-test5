@@ -28,12 +28,14 @@ class Genome::Model::Tools::Capture::BuildSomaticModels {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		processing_profile	=> { is => 'Text', doc => "Processing profile to use [Somatic-Capture-NoSV-AllTiers-Map40-Score40]", is_optional => 1 },
+		processing_profile	=> { is => 'Text', doc => "Processing profile to use [Somatic-Capture-NoSV-Tier1only-Map40-Score40]", is_optional => 1 },
 		data_dir	=> { is => 'Text', doc => "Output directory for comparison files" , is_optional => 0},
 		sample_list	=> { is => 'Text', doc => "Text file of sample, normal-model-id, tumor-model-id" , is_optional => 0},
 		subject_type	=> { is => 'Text', doc => "Subject type, e.g. sample_name, library_name [library_name]" , is_optional => 1},
 		model_basename	=> { is => 'Text', doc => "String to use for naming models; sample will be appended" , is_optional => 0},
 		report_only	=> { is => 'Text', doc => "Flag to skip actual execution" , is_optional => 1},
+		use_bsub	=> { is => 'Text', doc => "If set to 1, will submit define command to short queue" , is_optional => 1},
+		start_models	=> { is => 'Text', doc => "If set to 1, will start models after finding/creating them" , is_optional => 1},
 	],
 };
 
@@ -66,7 +68,7 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
-	my $processing_profile = "Somatic-Capture-NoSV-AllTiers-Map40-Score40";
+	my $processing_profile = "Somatic-Capture-NoSV-Tier1only-Map40-Score40";
 	$processing_profile = $self->processing_profile if($self->processing_profile);
 
 	my $sample_list = $self->sample_list;
@@ -105,21 +107,28 @@ sub execute {                               # replace with real execution logic.
 		## Build the somatic model ##
 		if(!$model_id)
 		{
-			my $cmd = "genome model define somatic-capture --processing-profile-name \"$processing_profile\" --subject-type \"$subject_type\" --data-directory $data_dir --model-name \"$model_name\" --normal-model-id $normal_model_id --tumor-model-id $tumor_model_id";
-			#--subject-name \"$sample_name\" --subject-type \"$subject_type\" 
-#			print "RUN $cmd\n";
-			system("bsub -q long $cmd") if(!$self->report_only);
-		
-#			$model_id = get_model_id($model_name);
+			my $cmd = "genome model define somatic-capture --processing-profile-name \"$processing_profile\" --subject-name \"$sample_name\" --subject-type \"$subject_type\" --data-directory $data_dir --model-name \"$model_name\" --normal-model-id $normal_model_id --tumor-model-id $tumor_model_id";
+			if($self->use_bsub)
+			{
+				system("bsub -q short $cmd") if(!$self->report_only);				
+			}
+			else
+			{
+				system("$cmd") if(!$self->report_only);
+				$model_id = get_model_id($model_name) if(!$self->report_only);
+			}
 		}
-		
-#		if($model_id)
-#		{
-#			print "MODEL ID: $model_id\n";
-#			my $cmd = "genome model build start --model-id $model_id";
-#			print "RUN: $cmd\n";
-#			system($cmd);
-#		}
+
+		if($self->start_models && $model_id)
+		{
+			my $cmd = "genome model build start --model-id $model_id";
+			print "RUN: $cmd\n";
+
+			if(!$self->report_only)
+			{
+				system($cmd);
+			}
+		}
 
 	}
 
