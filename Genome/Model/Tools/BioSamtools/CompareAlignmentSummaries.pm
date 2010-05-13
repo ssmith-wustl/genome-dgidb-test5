@@ -5,6 +5,26 @@ use warnings;
 
 use Genome;
 
+my %sort_order = (
+    label => 1,
+    total_bp => 2,
+    total_aligned_bp => 3,
+    total_unaligned_bp => 4,
+    total_duplicate_bp => 5,
+    paired_end_bp => 6,
+    read_1_bp => 7,
+    read_2_bp => 8,
+    mapped_paired_end_bp => 9,
+    proper_paired_end_bp => 10,
+    singleton_bp => 11,
+    total_target_aligned_bp => 12,
+    unique_target_aligned_bp => 13,
+    duplicate_target_aligned_bp => 14,
+    total_off_target_aligned_bp => 15,
+    unique_off_target_aligned_bp => 16,
+    duplicate_off_target_aligned_bp => 17,
+);
+
 class Genome::Model::Tools::BioSamtools::CompareAlignmentSummaries {
     is => ['Genome::Model::Tools::BioSamtools'],
     has_input => [
@@ -16,7 +36,7 @@ class Genome::Model::Tools::BioSamtools::CompareAlignmentSummaries {
             is => 'Text',
             doc => 'A file path to store tab delimited output',
         },
-        libraries => {
+        labels => {
             is_optional => 1,
         }
     ],
@@ -25,12 +45,12 @@ class Genome::Model::Tools::BioSamtools::CompareAlignmentSummaries {
 sub create {
     my $class = shift;
     my %params = @_;
-    if ($params{libraries}) {
-        my $libraries = delete($params{libraries});
+    if ($params{labels}) {
+        my $labels = delete($params{labels});
         my $input_files = delete($params{input_files});
         my $self = $class->SUPER::create(%params);
         $self->input_files($input_files);
-        $self->libraries($libraries);
+        $self->labels($labels);
         return $self;
     } else {
         return $class->SUPER::create(%params);
@@ -41,16 +61,16 @@ sub execute {
     my $self = shift;
 
     my @data;
-    my @headers;
     my $i = 0;
-    my @libraries;
-    if ($self->libraries) {
-        @libraries = @{$self->libraries};
+    my @labels;
+    if ($self->labels) {
+        @labels = @{$self->labels};
     }
+    my @headers;
     for my $input_file (@{$self->input_files}) {
-        my $library;
-        if ($self->libraries) {
-            $library = $libraries[$i++];
+        my $label;
+        if ($self->labels) {
+            $label = $labels[$i++];
         }
         my $reader = Genome::Utility::IO::SeparatedValueReader->create(
             separator => "\t",
@@ -62,12 +82,12 @@ sub execute {
             return;
         }
         while (my $data = $reader->next) {
-            if ($library) {
-                $data->{library} = $library;
+            if ($label) {
+                $data->{label} = $label;
             }
             push @data, $data;
             unless (@headers) {
-                @headers = keys %{$data};
+                @headers = sort hash_sort_order (keys %{$data});
             }
         }
         $reader->input->close;
@@ -82,6 +102,10 @@ sub execute {
     }
     $writer->output->close;
     return 1;
+}
+
+sub hash_sort_order {
+    $sort_order{$a} <=> $sort_order{$b};
 }
 
 1;
