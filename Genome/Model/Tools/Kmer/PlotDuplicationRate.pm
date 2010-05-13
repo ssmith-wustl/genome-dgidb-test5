@@ -38,7 +38,7 @@ sub execute {
                 x_label         => 'K-mer Size',
                 y_label         => 'Duplication Rate',
                 title           => 'K-mer Based Duplication Rate',
-                x_min_value     => 0,
+                y_max_value     => 1,
                 x_label_position => .5,
                 x_label_skip    => 5,
             )
