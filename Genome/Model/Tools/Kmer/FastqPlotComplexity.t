@@ -8,7 +8,7 @@ use Test::More tests => 4;
 use above 'Genome';
 
 use_ok('Genome::Model::Tools::Kmer::FastqPlotComplexity');
-my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Kmer-FastqPlotComplexity-'. $ENV{USER} .'-XXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
+my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Kmer-FastqPlotComplexity-'. $ENV{USER} .'-XXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Kmer-FastqPlotComplexity';
 my $read_1_fastq = $data_dir .'/s_7_1_sequence.txt';
 my $read_2_fastq = $data_dir .'/s_7_2_sequence.txt';
