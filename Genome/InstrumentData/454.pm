@@ -200,14 +200,6 @@ sub trimmed_sff_file {
 }
 
 #< SFF >#
-sub sff_file_for_index_region {
-    return $_[0]->region_index_454->get_index_sff;
-}
-
-sub sff_file_for_run_region {
-    return $_[0]->region_index_454->region_sff;
-}
-
 sub sff_file {
     # FIXME this was updated, but legacy code automatically dumped the region
     #  sff if it didn't exist
@@ -217,7 +209,9 @@ sub sff_file {
     my $region_index_454 = $self->region_index_454;
     # If the region index has an index sequence, it's indexed. Use its sff file
     if ( $region_index_454 and $region_index_454->index_sequence ) {
-        return $region_index_454->get_index_sff;
+        my $sff_file_object = $region_index_454->get_index_sff;
+        return unless $sff_file_object;
+        return $sff_file_object->stringify;
         # get_index_sff does 2 checks:
         #  is there an index sequence?  we know this is true here
         #  are there reads?
