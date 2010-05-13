@@ -1,5 +1,36 @@
 package Genome::Model::Tools::TechD::SummarizeCaptureBuilds;
 
+use strict;
+use warnings;
+
+use Genome;
+
+my %sort_order = (
+    label => 1,
+    total_bp => 2,
+    total_aligned_bp => 3,
+    percent_aligned => 4,
+    total_unaligned_bp => 5,
+    total_duplicate_bp => 6,
+    percent_duplicates => 7,
+    paired_end_bp => 8,
+    read_1_bp => 9,
+    read_2_bp => 10,
+    mapped_paired_end_bp => 11,
+    proper_paired_end_bp => 12,
+    singleton_bp => 13,
+    total_target_aligned_bp => 14,
+    percent_target_aligned => 15,
+    unique_target_aligned_bp => 16,
+    duplicate_target_aligned_bp => 17,
+    percent_target_duplicates => 18,
+    total_off_target_aligned_bp => 19,
+    percent_off_target_aligned => 20,
+    unique_off_target_aligned_bp => 21,
+    duplicate_off_target_aligned_bp => 22,
+    percent_off_target_duplicates => 23,
+);
+
 class Genome::Model::Tools::TechD::SummarizeCaptureBuilds {
     is => ['Command'],
     has => [
@@ -23,6 +54,7 @@ sub execute {
     }
 
     my @alignment_summaries;
+    my @as_headers;
     my $headers;
     my $depth_fh = Genome::Utility::FileSystem->open_file_for_writing($self->depth_summary);
     for (my $i = 0; $i < scalar(@build_ids); $i++) {
@@ -32,13 +64,18 @@ sub execute {
         unless ($build) {
             die('Failed to find build for id '. $build_id);
         }
-        push @alignment_summaries, $build->alignment_summary_file($self->wingspan);
+        my $as_hash_ref = $build->alignment_summary_hash_ref();
+        $$as_hash_ref{$self->wingspan}{label} = $label;
+        push @alignment_summaries, $$as_hash_ref{$self->wingspan};
+        unless (@as_headers) {
+            @as_headers = sort hash_sort_order (keys %{$$as_hash_ref{$self->wingspan}});
+        }
         my $build_depth_line = $label;
         my $header;
         my $stats_hash_ref = $build->coverage_stats_summary_hash_ref();
-        for my $min_depth (sort {$a <=> $b} keys %{$stats_hash_ref}) {
+        for my $min_depth (sort {$b <=> $a} keys %{$stats_hash_ref}) {
             unless ($headers) {
-                $header .= "\t". $min_depth;
+                $header .= "\t". $min_depth .'X';
             }
             my $depth = $$stats_hash_ref{$min_depth}{$self->wingspan}{'Percent Target Space Covered'};
             $build_depth_line .= "\t". $depth;
@@ -50,12 +87,20 @@ sub execute {
         print $depth_fh $build_depth_line ."\n";
     }
     $depth_fh->close;
-    unless (Genome::Model::Tools::BioSamtools::CompareAlignmentSummaries->execute(
-        input_files => \@alignment_summaries,
-        output_file => $self->alignment_summary,
-        labels => \@labels,
-    )) {
-        die('Failed to generate alignment summary comparison '. $self->alignment_summary);
+    my $writer = Genome::Utility::IO::SeparatedValueWriter->create(
+        separator => "\t",
+        headers => \@as_headers,
+        output => $self->alignment_summary,
+    );
+    for my $data (@alignment_summaries) {
+        $writer->write_one($data);
     }
+    $writer->output->close;
     return 1;
 }
+
+sub hash_sort_order {
+    $sort_order{$a} <=> $sort_order{$b};
+}
+
+1;
