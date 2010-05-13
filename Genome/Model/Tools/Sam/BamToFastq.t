@@ -16,10 +16,8 @@ if (`uname -a` =~ /x86_64/){
 
 use_ok('Genome::Model::Tools::Sam::BamToFastq');
 
-
-my $tmp_dir = File::Temp::tempdir('Sam-BamToFastq-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
-
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam/BamToFastq';
+my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Sam-BamToFastq-'. $ENV{USER});
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-BamToFastq';
 my $bam_file = $data_dir .'/test.bam';
 
 my $i = 0;
@@ -68,7 +66,7 @@ sub run_tests {
     $params{bam_file} = $bam_file;
     my $cmd = Genome::Model::Tools::Sam::BamToFastq->create(%params);
     isa_ok($cmd,'Genome::Model::Tools::Sam::BamToFastq');
-    ok($cmd->execute,'execute BamToFastq command '. $cmd->command_name ." with params\n:". Data::Dumper::Dumper(%params));
+    ok($cmd->execute,'execute BamToFastq command '. $cmd->command_name);
     my $reads = count_reads_in_fastq_file($fastq_file);
     is($reads,$expected_reads,$expected_reads .' reads converted from BAM to FASTQ');
 }
