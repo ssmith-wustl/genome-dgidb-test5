@@ -12,7 +12,7 @@ class Genome::Model::Build::MetagenomicComposition16s::454 {
 };
 
 sub calculate_estimated_kb_usage {
-    # Based on the size of the sff file. The resulting build needs about 10X the size of the sff file
+    # Based on the total reads in the instrument data. The build needs about 3 kb (use 3.5) per read.
     #  If we don't keep the classifications around, then we will have to lower this number.
     my $self = shift;
 
@@ -21,12 +21,13 @@ sub calculate_estimated_kb_usage {
         confess("No instrument data found for build ".$self->description);
     }
 
-    my $sff_files_size;
+    my $total_reads;
     for my $instrument_data ( @instrument_data ) {
-        $sff_files_size += -s $instrument_data->sff_file;
+        $total_reads += $instrument_data->total_reads;
     }
 
-    return $sff_files_size * 12; # really 10x, but request a little extra
+    return $total_reads * 5; # really 3 kb per, but request more to cover the reallocation buffer. 
+                             #  then when we reallocate, we'll be close to what the usage + the buffer
 }
 
 #< DIRS >#

@@ -43,6 +43,9 @@ is(
     ), .75, 'amplicons processed success'
 );
 
+# calculated kb
+is($build->calculate_estimated_kb_usage, 100, 'Estimated kb usage');
+
 # dirs
 my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build';
 ok(-d $existing_build_dir, 'existing build dir exists');
