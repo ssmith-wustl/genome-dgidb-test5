@@ -71,7 +71,7 @@ sub execute {                               # replace with real execution logic.
 	{
 		## Prepare pileup commands ##
 		
-		my $pileup = "samtools pileup -f $reference $bam_file";
+		my $pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
 		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan readcounts <\($pileup\) --variants-file $variants_file --output-file $output_file\"";
 		system($cmd);
 	}
