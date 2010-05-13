@@ -74,7 +74,7 @@ sub new {
     if($params{using_db})
     {
 		$self->using_db(1);
-        $self->_connect;
+        print STDERR "There was an error connecting to the database.\n" and return unless($self->_connect);
 		$self->_create_tables; 
 		my $sth = $self->dbh->prepare("select count(id) from ace_files where url = ?");           
         $sth->execute($contig_group_name);
@@ -215,6 +215,7 @@ sub _create_tables
 	my ($self) = @_;
 	if($self->db_type eq "mysql")
 	{
+        return;#we shouldn't normally create mysql tables
 		$self->sth_create ($self->dbh->prepare(qq{
 			CREATE TABLE IF NOT EXISTS `items`(
   			  #`id` int(11) auto_increment NOT NULL,
@@ -229,6 +230,11 @@ sub _create_tables
 
     	$self->sth_create->execute;
     	$self->sth_create->finish;
+                $self->sth_create ($self->dbh->prepare(qq{ 
+			create index asid_index on items( `asid` )
+		}));
+		$self->sth_create->execute; 
+		$self->sth_create->finish;
 		$self->sth_create ($self->dbh->prepare(qq{ 
 			CREATE TABLE IF NOT EXISTS `ace_files` ( 
 			`id` int(11) auto_increment NOT NULL, 
@@ -835,14 +841,16 @@ sub _connect
 	my $handle;
 	
 	eval { $handle = DBI->connect($self->_db_dsn, $self->{user_name}, $self->{password}); };
-	
-	while(!defined $handle )
+	my $try=0;
+	while(!defined $handle && ($try<5))
     {
         #print $self->dbh->errstr."\n";
-		sleep 30;print STDERR "sleeping for 30 seconds\n";
+		sleep 30;print STDERR "sleeping for 10 seconds\n";
 		eval { $handle = DBI->connect($self->_db_dsn,$self->{user_name},$self->{password}); };
+        $try++;
 		#$self->_sleep2;
     }
+    return if(!defined $handle);
 	$self->dbh($handle);
         
     $self->dbh->{LongReadLen} = 800000000;    
