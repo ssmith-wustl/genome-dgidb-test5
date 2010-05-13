@@ -28,8 +28,9 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 0, is_input => 1 },
 		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
 		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [4]", is_optional => 1, is_input => 1},
-		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [4]", is_optional => 1, is_input => 1},
+		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [8]", is_optional => 1, is_input => 1},
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
+		flip_alleles 	=> { is => 'Text', doc => "If set to 1, try to avoid strand issues by flipping alleles to match", is_optional => 1, is_input => 1},
 		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1}
 	],
 };
@@ -128,8 +129,15 @@ sub execute {                               # replace with real execution logic.
 
 			my $cons_gt = "";			
 
-			if($file_type eq "varscan")
+			if($file_type eq "varscan" && $cns_call ne "A" && $cns_call ne "C" && $cns_call ne "G" && $cns_call ne "T")
 			{
+				## VarScan CNS format ##
+				$depth = $lineContents[4] + $lineContents[5];
+				$cons_gt = code_to_genotype($cns_call);			
+			}
+			elsif($file_type eq "varscan")
+			{
+				## VarScan SNP format ##
 				$depth = $lineContents[4] + $lineContents[5];
 				my $var_freq = $lineContents[6];
 				my $allele1 = $lineContents[2];
@@ -143,8 +151,9 @@ sub execute {                               # replace with real execution logic.
 				{
 					$cons_gt = $allele1 . $allele2;
 					$cons_gt = sort_genotype($cons_gt);
-				}
+				}					
 			}
+			
 			else
 			{
 				$depth = $lineContents[7];
@@ -168,9 +177,15 @@ sub execute {                               # replace with real execution logic.
 					if((is_homozygous($chip_gt) && $depth >= $min_depth_hom) || (is_heterozygous($chip_gt) && $depth >= $min_depth_het))
 					{
 						my $ref_gt = code_to_genotype($ref_base);
-						
 
 						$stats{'num_min_depth'}++;
+					
+						
+						if($self->flip_alleles && $chip_gt ne $cons_gt)
+						{
+							$chip_gt = flip_genotype($chip_gt);
+						}
+					
 					
 						if($chip_gt eq $ref_gt)
 						{
@@ -412,6 +427,55 @@ sub is_homozygous
 }
 
 
+
+################################################################################################
+# Load Genotypes
+#
+################################################################################################
+
+sub flip_genotype
+{
+	my $gt = shift(@_);
+	(my $a1, my $a2) = split(//, $gt);
+
+	if($a1 eq "A")
+	{
+		$a1 = "T";
+	}
+	elsif($a1 eq "C")
+	{
+		$a1 = "G";
+	}
+	elsif($a1 eq "G")
+	{
+		$a1 = "C";
+	}	
+	elsif($a1 eq "T")
+	{
+		$a1 = "A";		
+	}
+
+	if($a2 eq "A")
+	{
+		$a2 = "T";
+	}
+	elsif($a2 eq "C")
+	{
+		$a2 = "G";
+	}
+	elsif($a2 eq "G")
+	{
+		$a2 = "C";
+	}	
+	elsif($a2 eq "T")
+	{
+		$a2 = "A";		
+	}
+	
+	$gt = $a1 . $a2;
+	$gt = sort_genotype($gt);
+	return($gt);
+}
 
 ################################################################################################
 # Load Genotypes
