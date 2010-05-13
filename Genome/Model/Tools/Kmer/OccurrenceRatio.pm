@@ -8,8 +8,13 @@ use Genome;
 class Genome::Model::Tools::Kmer::OccurrenceRatio {
     is => 'Genome::Model::Tools::Kmer',
     has => [
+        output_file => {
+            is => 'Text',
+            doc => 'The output file to print ratios',
+        },
         output_type => {
             is => 'Text',
+            doc => 'Specify what to output by giving at least one of the four keywords: unique, nonunique, nonuniquemulti, relative, and total.',
             default_value => 'nonunique unique relative',
         },
         index_name => {
@@ -37,9 +42,11 @@ sub execute {
     if ($self->maximum_mer_size) {
         $options .= ' -maxmersize '. $self->maximum_mer_size;
     }
-    my $cmd = $gt_path .' tallymer occratio '. $options .' -esa '. $self->index_name;
+    my $cmd = $gt_path .' tallymer occratio '. $options .' -esa '. $self->index_name .' > '. $self->output_file;
+    my @output_files = ($self->output_file);
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
+        output_files => \@output_files,
     );
     return 1;
 }
