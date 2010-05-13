@@ -32,7 +32,7 @@ class Genome::Model::Tools::Bowtie::CombineVariants {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Parse output from Bowtie"                 
+    "Combine variants detected in Bowtie alignments"                 
 }
 
 sub help_synopsis {

@@ -1,8 +1,8 @@
 
-package Genome::Model::Tools::Novoalign::BatchAlign;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Bowtie::BatchAlign;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# BatchAlign.pm - 	Align reads to a reference genome using Novoalign
+# BatchAlign.pm - 	Align reads to a reference genome using Bowtie
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -18,7 +18,7 @@ use warnings;
 
 use FileHandle;
 
-## Novoalign Parameters ##
+## Bowtie Parameters ##
 my $batch_size = 1000000;
 my $num_cores = 1;
 my $lsf_queue = "long";
@@ -34,7 +34,7 @@ my $novoalign_reference = Genome::Config::reference_sequence_directory() . '/NCB
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-class Genome::Model::Tools::Novoalign::BatchAlign {
+class Genome::Model::Tools::Bowtie::BatchAlign {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
@@ -52,7 +52,7 @@ class Genome::Model::Tools::Novoalign::BatchAlign {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Batch-align reads to a reference genome using Novoalign"                 
+    "Batch-align reads to a reference genome using Bowtie"                 
 }
 
 sub help_synopsis {
@@ -90,7 +90,7 @@ sub execute {                               # replace with real execution logic.
 		die "Error: Query file not found!\n";
 	}
 
-	## Define Novoalign Reference (default to Hs36)
+	## Define Bowtie Reference (default to Hs36)
 
 	my $reference = $novoalign_reference;
 

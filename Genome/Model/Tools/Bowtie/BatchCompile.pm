@@ -1,8 +1,8 @@
 
-package Genome::Model::Tools::Novoalign::BatchCompile;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Bowtie::BatchCompile;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# BatchCompile.pm - 	Align reads to a reference genome using Novoalign
+# BatchCompile.pm - 	Align reads to a reference genome using Bowtie
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -18,14 +18,14 @@ use warnings;
 
 use FileHandle;
 
-## Novoalign Parameters ##
+## Bowtie Parameters ##
 my $batch_size = 1000000;
 my $num_cores = 1;
 my $lsf_queue = "long";
 
 my %stats = ();
 
-## Novoalign Parameters ##
+## Bowtie Parameters ##
 my $novoalign_params = "-c $num_cores -a -l 36 -t 240 -k";	# -o SAM
 
 my $path_to_novoalign = "/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.13/novocraft/novoalign";
@@ -36,7 +36,7 @@ my $novoalign_reference = Genome::Config::reference_sequence_directory() . '/NCB
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-class Genome::Model::Tools::Novoalign::BatchCompile {
+class Genome::Model::Tools::Bowtie::BatchCompile {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
@@ -51,7 +51,7 @@ class Genome::Model::Tools::Novoalign::BatchCompile {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Batch-align reads to a reference genome using Novoalign"                 
+    "Batch-align reads to a reference genome using Bowtie"                 
 }
 
 sub help_synopsis {

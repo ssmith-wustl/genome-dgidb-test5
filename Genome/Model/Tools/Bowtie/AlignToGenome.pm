@@ -1,8 +1,8 @@
 
-package Genome::Model::Tools::Novoalign::AlignToGenome;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Bowtie::AlignToGenome;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# AlignToGenome.pm - 	Align reads to a reference genome using Novoalign
+# AlignToGenome.pm - 	Align reads to a reference genome using Bowtie
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -18,7 +18,7 @@ use warnings;
 use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-## Novoalign Parameters ##
+## Bowtie Parameters ##
 my $batch_size = 1000000;
 my $num_cores = 1;
 my $lsf_queue = "long";
@@ -31,12 +31,12 @@ my $novoalign_reference = Genome::Config::reference_sequence_directory() . '/NCB
 
 
 
-class Genome::Model::Tools::Novoalign::AlignToGenome {
+class Genome::Model::Tools::Bowtie::AlignToGenome {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		query_file	=> { is => 'Text', doc => "Illumina/Solexa reads in FASTQ format" },
-		output_file	=> { is => 'Text', doc => "Output file for Novoalign alignments" },
+		output_file	=> { is => 'Text', doc => "Output file for Bowtie alignments" },
                 reference	=> { is => 'Text', doc => "Path to bowtie-indexed reference [Defaults to Hs36]", is_optional => 1 },
 	],
 };
@@ -44,7 +44,7 @@ class Genome::Model::Tools::Novoalign::AlignToGenome {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Align reads to a reference genome using Novoalign"                 
+    "Align reads to a reference genome using Bowtie"                 
 }
 
 sub help_synopsis {
@@ -78,7 +78,7 @@ sub execute {                               # replace with real execution logic.
 		die "Error: Query file not found!\n";
 	}
 
-	## Define Novoalign Reference (default to Hs36)
+	## Define Bowtie Reference (default to Hs36)
 
 	my $reference = $novoalign_reference;
 
