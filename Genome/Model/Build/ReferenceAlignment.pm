@@ -244,6 +244,7 @@ sub coverage_stats_summary_hash_ref {
                 if ($line =~ /(.*):\s+([\d\%\.]+)/) {
                     my $key = $1;
                     my $value = $2;
+                    $key =~ s/^\s*//;
                     $stats_summary{$min_depth}{$wingspan}{$key} = $value;
                 }
             }
