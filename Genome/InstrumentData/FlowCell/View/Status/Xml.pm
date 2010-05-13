@@ -45,7 +45,7 @@ sub _generate_content {
     $production_node->addChild( $doc->createAttribute('run-type', $subject->run_type) );
     $production_node->addChild( $doc->createAttribute('group-name', $subject->group_name) );
     $production_node->addChild( $doc->createAttribute('machine-name', $subject->machine_name) );
-    $production_node->addChild( $doc->createAttribute('team-name', $subject->team_name) );
+    # $production_node->addChild( $doc->createAttribute('team-name', $subject->team_name) );
 
     if ($subject->lane_info) {
         for my $lane ($subject->lane_info) {
@@ -99,7 +99,14 @@ sub _generate_content {
             $sequence->addChild( $doc->createTextNode( $inst_data->index_sequence ) );
 
             my $percent = $index->addChild( $doc->createElement('percent') );
-            $percent->addChild( $doc->createTextNode( sprintf("%.2f", ($inst_data->fwd_kilobases_read / $total_read) * 100)) );
+
+            my $fwd_bases = $inst_data->fwd_kilobases_read;
+
+            if ($fwd_bases) {
+                $percent->addChild( $doc->createTextNode( sprintf("%.2f", ($inst_data->fwd_kilobases_read / $total_read) * 100)) );
+            } else {
+                $percent->addChild( $doc->createTextNode( "0" ) );
+            }
 
             my $count = $index->addChild( $doc->createElement('count') );
             $count->addChild( $doc->createTextNode($inst_data->fwd_kilobases_read) );

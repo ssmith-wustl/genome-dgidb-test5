@@ -279,10 +279,11 @@ window.chartMin = 0;
           </script>
       -->
       <script type="text/javascript+protovis">
-        var w = 200,
-        h = 150,
+        var y_bars = window.indexData[0].sequence.length,
+        w = 200,
+        h = y_bars * 15,
         x = pv.Scale.linear(window.chartMin, window.chartMax).range(0, w),
-        y = pv.Scale.ordinal(pv.range(10)).splitBanded(0, h, 4/5),
+        y = pv.Scale.ordinal(pv.range(y_bars)).splitBanded(0, h, 4/5),
         c = pv.Colors.category10();
 
         var vis =new pv.Panel()
