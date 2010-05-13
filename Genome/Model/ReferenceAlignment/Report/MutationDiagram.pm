@@ -6,7 +6,6 @@ use strict;
 use warnings;
 
 use Genome;
-use MG::MutationDiagram;
 
 class Genome::Model::ReferenceAlignment::Report::MutationDiagram {
     is => 'Command',
@@ -36,6 +35,9 @@ sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
     my $maf_file = $self->maf;
+
+    require MG::MutationDiagram;
+
     my $maf_obj = new MG::MutationDiagram(
         maf_file => $maf_file,
         hugos => $self->genes

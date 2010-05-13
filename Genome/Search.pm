@@ -497,20 +497,39 @@ sub _delete_callback {
     return 1;
 }
 
+my %commit_cb = ();
+my %delete_cb = ();
 #This should be called from Genome.pm, so typically it won't need to be called elsewhere.
 sub register_callbacks {
     my $class = shift;
     my $module_to_observe = shift;
     
+    $commit_cb{$module_to_observe} = sub { $class->_commit_callback(@_); };
     $module_to_observe->create_subscription(
         method => 'commit',
-        callback => sub { $class->_commit_callback(@_); },
+        callback => $commit_cb{$module_to_observe},
     );
-    
+   
+    $delete_cb{$module_to_observe} = sub { $class->_delete_callback(@_); }; 
     $module_to_observe->create_subscription(
         method => 'delete',
-        callback => sub { $class->_delete_callback(@_); }
+        callback => $delete_cb{$module_to_observe} 
     );
+}
+
+sub unregister_callbacks {
+    my $class = shift;
+    my $module_to_observe = shift;
+
+    $module_to_observe->cancel_change_subscription(
+        'commit', $commit_cb{$module_to_observe},
+    ); 
+    delete $commit_cb{$module_to_observe};   
+ 
+    $module_to_observe->cancel_change_subscription(
+        'delete', $delete_cb{$module_to_observe}
+    );
+    delete $delete_cb{$module_to_observe}
 }
 
 #OK!

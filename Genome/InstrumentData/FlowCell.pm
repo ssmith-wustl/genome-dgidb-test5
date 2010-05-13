@@ -97,7 +97,7 @@ sub illumina_index {
     my ($self) = @_;
     my @idx = Genome::InstrumentData::Solexa->get(flow_cell_id => $self->flow_cell_id);
     # if index_sequence of any lane is undef, then this is not an indexed flow cell
-    if (@idx[0]->index_sequence) {
+    if ($idx[0]->index_sequence) {
         return @idx;
     } else {
         return undef;
