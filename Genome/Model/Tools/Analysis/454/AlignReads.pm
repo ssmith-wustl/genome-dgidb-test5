@@ -86,6 +86,7 @@ sub execute {                               # replace with real execution logic.
 		my $sample_output_dir = $output_dir . "/" . $sample_name;
 		my $sff_dir = $sample_output_dir . "/sff";
 		my $fasta_dir = $sample_output_dir . "/fasta_dir";
+		my $sff_file = "$sff_dir/$sample_name.sff";
 		my $fasta_file = "$fasta_dir/$sample_name.fasta";
 		my $quality_file = "$fasta_dir/$sample_name.fasta.qual";
 		my $aligner_output_dir = $sample_output_dir . "/" . $aligner . "_out";
@@ -143,6 +144,23 @@ sub execute {                               # replace with real execution logic.
 				}
 	
 		                $cmd_obj->execute;
+			}
+			elsif($aligner eq "newbler")
+			{
+				## Define reference ##
+				
+				my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+				$reference = $self->reference if($self->reference);
+
+				## Run the runassembly ##
+				my $cmd = "runMapping -o $aligner_output_dir -pairt $reference $sff_file";
+				system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $aligner_output_dir/RunMap.out $cmd");
+#				my $cmd_obj = Genome::Model::Tools::454::Newbler::RunMapping->create(
+#				    sff_dir => $sff_dir,
+#				    mapping_dir => $aligner_output_dir,
+#				    reference => $reference,
+#				    params => "-pairt",
+#				);				
 			}
 		}
 		else
