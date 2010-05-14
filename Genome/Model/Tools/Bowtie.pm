@@ -11,31 +11,19 @@ my $BOWTIE_DEFAULT = '0.12.5';
 
 class Genome::Model::Tools::Bowtie {
     is => ['Command'],
-    has => [
-            arch_os => {
-                        calculate => q|
-                            my $arch_os = `uname -m`;
-                            chomp($arch_os);
-                            return $arch_os;
-                        |
-                    },
-        ],
     has_optional => [
-                     use_version => {
-                                 is    => 'string',
-                                 doc   => 'version of Bowtie application to use',
-                                 default_value => $BOWTIE_DEFAULT
-                             },
-                     _tmp_dir => {
-                                  is => 'string',
-                                  doc => 'a temporary directory for storing files',
-                              },
-                 ]
+        use_version => {
+                    is    => 'string',
+                    doc   => 'version of Bowtie application to use',
+                    default_value => $BOWTIE_DEFAULT
+                },
+        _tmp_dir => {
+                    is => 'string',
+                    doc => 'a temporary directory for storing files',
+                },
+    ],
+    doc => 'tools to work with the Bowtie aliger'
 };
-
-sub help_brief {
-    "tools to work with Bowtie output"
-}
 
 sub help_detail {                           # This is what the user will see with --help <---
     return <<EOS
@@ -57,7 +45,7 @@ sub path_for_bowtie_version {
     $version ||= $BOWTIE_DEFAULT;
     my $path = $BOWTIE_VERSIONS{$version};
     if (defined($path)) {
-        if ($self->arch_os =~ /64/) {
+        if (Genome::Config->arch_os =~ /64/) {
             $path .= '-64';
         }
         return $path;
