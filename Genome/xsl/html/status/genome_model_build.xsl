@@ -38,6 +38,7 @@ popup.center();
               <h2 class="page_title build_icon">Build <xsl:value-of select="build/@build-id"/> Status</h2>
               <table cellpadding="0" cellspacing="0" border="0" class="info_table_group">
                 <tr>
+                  <xsl:variable name="status" select="//build/@status"/>
                   <td>
                     <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
                       <tr><td class="label">Model ID:</td><td class="value"><xsl:for-each select="build/model"><xsl:call-template name="object_link"><xsl:with-param name="linktext"><xsl:value-of select="./@id"/></xsl:with-param></xsl:call-template></xsl:for-each></td></tr>
@@ -55,8 +56,10 @@ popup.center();
                             <xsl:with-param name="linktext"><xsl:value-of select="./@id"/></xsl:with-param>
                           </xsl:call-template></xsl:for-each>
                       <xsl:if test="//build/workflow/@instance-status">
-                        <xsl:text> (</xsl:text>
-                        <xsl:value-of select="build/workflow/@instance-status"/><xsl:text>)</xsl:text>
+                        <xsl:if test="$status = 'Running'">
+                          <xsl:text> (</xsl:text>
+                          <xsl:value-of select="build/workflow/@instance-status"/><xsl:text>)</xsl:text>
+                        </xsl:if>
                       </xsl:if>
                       </td></tr>
                     </table>
@@ -64,7 +67,6 @@ popup.center();
                   <td>
                     <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
                       <tr><td class="label">Status:</td><td class="value"><xsl:value-of select="build/@status" />
-                      <xsl:variable name="status" select="//build/@status"/>
                       <xsl:if test="$status = 'Succeeded'">
                         <xsl:text> </xsl:text><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@data-directory"/><xsl:text>/reports/Summary/report.html</xsl:text></xsl:attribute><xsl:attribute name="class"><xsl:text>grey</xsl:text></xsl:attribute><xsl:text>(view build summary report)</xsl:text></a>
                       </xsl:if>
