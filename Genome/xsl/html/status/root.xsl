@@ -5,9 +5,19 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:strip-space elements="*"/>
 
   <xsl:template match="/">
+  <xsl:variable name="title">
+    <xsl:choose>
+      <xsl:when test="/object">
+        <xsl:value-of select="/object/label_name" />: <xsl:value-of select="/object/display_name" /> - Status
+      </xsl:when>
+      <xsl:otherwise>
+        Status
+      </xsl:otherwise>  
+    </xsl:choose>
+  </xsl:variable>
     <html>
       <head>
-        <title>Status <xsl:value-of select="@type"/> <xsl:value-of select="@id" /></title>
+        <title><xsl:value-of select="normalize-space($title)"/></title>
         <link rel="shortcut icon" href="/res/img/gc_favicon.png" type="image/png" />
         <link rel="stylesheet" href="/res/css/master.css" type="text/css" media="screen" />
         <link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen" />
