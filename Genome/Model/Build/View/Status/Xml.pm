@@ -76,16 +76,11 @@ sub _generate_content {
 
     ## find the latest workflow for this build
     unless ($self->instance) {
-        my @ops = sort { $b->id <=> $a->id } Workflow::Store::Db::Operation::Instance->get(
-            name => $subject->id . ' all stages'
-        );
-
-        if (defined $ops[0]) {
-            $self->instance($ops[0]);
-        }
+        $self->instance($subject->newest_workflow_instance);
     }
 
     if ($self->instance) {
+=pod
         # silly UR tricks to get everything i'm interested in loaded into the cache in 2 queries
 
         #        my @exec_ids = map {
@@ -107,6 +102,7 @@ sub _generate_content {
         my @ex = Workflow::Store::Db::Operation::InstanceExecution->get(
             instance_id => { operator => '[]', value=>\@ids }
         );
+=cut
 
         $buildnode->addChild( $self->get_workflow_node );
     }
@@ -489,6 +485,7 @@ sub get_event_node {
 
     my $lsf_job_id = $event->lsf_job_id;
 
+=pod
     my $root_instance = $self->instance;
     if ($root_instance) {
         my $event_instance;
@@ -527,6 +524,7 @@ sub get_event_node {
             }
         }
     }
+=cut
 
     my $lsf_job_status = $self->get_lsf_job_status($lsf_job_id);
 
