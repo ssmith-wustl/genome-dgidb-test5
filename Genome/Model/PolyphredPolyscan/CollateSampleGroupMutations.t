@@ -106,9 +106,6 @@ SKIP: {
     
     require Workflow::Simple;
     
-    $Workflow::Simple::fork_ur_server = 0;
-    $Workflow::Simple::store_db = 0;
-    
     my $output = Workflow::Simple::run_workflow_lsf(
         $op,
         'parser_type' => 'Polyscan',

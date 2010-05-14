@@ -54,7 +54,6 @@ sub execute {
         }
 
 	require Workflow::Simple;
-        $Workflow::Simple::store_db=0;
 
     my $m = Workflow::Model->create(
         name => 'Container',

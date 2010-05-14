@@ -1184,11 +1184,6 @@ sub annotate_variants {
         
         require Workflow::Simple;
 
-        ## keep the ur stuff in this process, speed optimization
-#        $Workflow::Simple::fork_ur_server = 0;
-        ## dont do any tracking
-#        $Workflow::Simple::store_db = 0;
-       
         my $m = Workflow::Model->create(
             name => 'annotate variants wrapper',
             input_properties => [qw/quality chromosome directory/],

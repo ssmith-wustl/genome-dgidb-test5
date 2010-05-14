@@ -71,7 +71,6 @@ sub execute {
         $self->status_message("Working dir sent to workers: ".$self->working_directory);
 
         require Workflow::Simple;
-        $Workflow::Simple::store_db = 0;
             
         my $op = Workflow::Operation->create(
             name => 'Generate per lane sams',

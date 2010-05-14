@@ -112,7 +112,6 @@ sub execute {
         $self->status_message('Progressions look like: '. Data::Dumper::Dumper($progression_array_ref));
         #parallelization starts here
         require Workflow::Simple;
-        #$Workflow::Simple::store_db=0;
 
         my $op = Workflow::Operation->create(
             name => 'RefCov Progression',
