@@ -77,8 +77,13 @@ sub execute {                               # replace with real execution logic.
 
 	## Run the merge using VarScan ##
 	
-	my $cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file merge $output_file";
-	system($cmd);	
+	my $cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file merge $output_file.unsorted";
+	system($cmd);
+	
+	$cmd = "gmt capture sort-by-chr-pos --input-file $output_file.unsorted --output-file $output_file";
+	system($cmd);
+	
+	system("rm -rf $output_file.unsorted") if(-e "$output_file");
 
 #	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file intersect $output_file.greatest-confidence";
 #	system($cmd);	
