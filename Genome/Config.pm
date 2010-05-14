@@ -6,6 +6,15 @@ package Genome::Config;
 use strict;
 use warnings;
 
+my $arch_os;
+sub arch_os {
+    unless ($arch_os) {
+        $arch_os = `uname -m`;
+        chomp($arch_os);
+    }
+    return $arch_os;
+}
+
 sub user_email {
     my $self = shift;
     my $user = shift;
