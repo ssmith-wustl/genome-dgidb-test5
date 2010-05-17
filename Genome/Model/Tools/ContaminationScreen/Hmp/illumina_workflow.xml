@@ -1,16 +1,16 @@
 <?xml version='1.0' standalone='yes'?>
-<workflow name="human contamination screening" executor="Workflow::Executor::SerialDeferred" logDir="/gscmnt/sata852/research/kwylie/Storch_Illumina_2010_03/2010_03_15_Storch_Illumina_1/copy_fastq_paired/logs">
+<workflow name="human contamination screening" executor="Workflow::Executor::SerialDeferred">
     <link fromOperation="input connector"           fromProperty="fastq_1"                      toOperation="trim primer 1"             toProperty="fastq_file" />
-    <link fromOperation="input connector"           fromProperty="primer_trim_file1"            toOperation="trim primer 1"             toProperty="output"/>
+    <link fromOperation="input connector"           fromProperty="primer_trim_file1"            toOperation="trim primer 1"             toProperty="out_file"/>
+    <link fromOperation="input connector"           fromProperty="primer_sequence"              toOperation="trim primer 1"             toProperty="primer_sequence" />
     <link fromOperation="input connector"           fromProperty="fastq_2"                      toOperation="trim primer 2"             toProperty="fastq_file" />
-    <link fromOperation="input connector"           fromProperty="primer_trim_file2"            toOperation="trim primer 2"             toProperty="output" />
+    <link fromOperation="input connector"           fromProperty="primer_trim_file2"            toOperation="trim primer 2"             toProperty="out_file" />
+    <link fromOperation="input connector"           fromProperty="primer_sequence"              toOperation="trim primer 2"             toProperty="primer_sequence" />
 
     <link fromOperation="input connector"           fromProperty="primer_trim_file1"            toOperation="wait for primer trim"      toProperty="primer_trim_file1"/>
     <link fromOperation="input connector"           fromProperty="primer_trim_file2"            toOperation="wait for primer trim"      toProperty="primer_trim_file2" />
     <link fromOperation="trim primer 1"             fromProperty="result"                       toOperation="wait for primer trim"      toProperty="trim_1_complete" />
-    <link fromOperation="trim primer 1"             fromProperty="trim_count"                   toOperation="penult"                    toProperty="trim_count1" />
     <link fromOperation="trim primer 2"             fromProperty="result"                       toOperation="wait for primer trim"      toProperty="trim_2_complete" />
-    <link fromOperation="trim primer 2"             fromProperty="trim_count"                   toOperation="penult"                    toProperty="trim_count2" />
 
     <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file1"            toOperation="wait for mismatch removal" toProperty="fastq_file1" />
     <link fromOperation="wait for primer trim"      fromProperty="primer_trim_file2"            toOperation="wait for mismatch removal" toProperty="fastq_file2" />
@@ -119,8 +119,6 @@
 
     <link fromOperation="synch fastq with fasta"    fromProperty="result"                       toOperation="penult"                    toProperty="completed" />
 
-    <link fromOperation="penult"                    fromProperty="trim_count1"                  toOperation="output connector"          toProperty="trim_count1" />
-    <link fromOperation="penult"                    fromProperty="trim_count2"                  toOperation="output connector"          toProperty="trim_count2" />
     <link fromOperation="penult"                    fromProperty="paired_end_removed_count1"    toOperation="output connector"          toProperty="paired_end_removed_count1" />
     <link fromOperation="penult"                    fromProperty="paired_end_removed_count2"    toOperation="output connector"          toProperty="paired_end_removed_count2" />
     <link fromOperation="penult"                    fromProperty="deduplicated_count1"          toOperation="output connector"          toProperty="deduplicated_count1" />
@@ -130,11 +128,11 @@
     <link fromOperation="penult"                    fromProperty="completed"                    toOperation="output connector"          toProperty="result" />
 
     <operation name="trim primer 1">
-        <operationtype commandClass="Genome::Model::Tools::Fastq::TrimPrimer" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::Tools::Fastq::Trimq2::Simple" typeClass="Workflow::OperationType::Command" />
     </operation>
 
     <operation name="trim primer 2">
-        <operationtype commandClass="Genome::Model::Tools::Fastq::TrimPrimer" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::Tools::Fastq::Trimq2::Simple" typeClass="Workflow::OperationType::Command" />
     </operation>
 
     <operation name="wait for primer trim">
@@ -258,8 +256,6 @@
 
     <operation name="penult">
         <operationtype typeClass="Workflow::OperationType::Block">
-            <property>trim_count1</property>
-            <property>trim_count2</property>
             <property>paired_end_removed_count1</property>
             <property>paired_end_removed_count2</property>
             <property>deduplicated_count1</property>
@@ -275,6 +271,7 @@
         <inputproperty>primer_trim_file1</inputproperty>
         <inputproperty>fastq_2</inputproperty>
         <inputproperty>primer_trim_file2</inputproperty>
+        <inputproperty>primer_sequence</inputproperty> 
         <inputproperty>align_options_1</inputproperty>
         <inputproperty>aligner_output_file_1</inputproperty>
         <inputproperty>alignment_file_1</inputproperty>
@@ -299,8 +296,6 @@
         <inputproperty>mismatch_removed_file2</inputproperty>
         <inputproperty>mismatch_cutoff</inputproperty>
         <inputproperty>save_screened_reads</inputproperty>
-        <outputproperty>trim_count1</outputproperty>
-        <outputproperty>trim_count2</outputproperty>
         <outputproperty>paired_end_removed_count1</outputproperty>
         <outputproperty>paired_end_removed_count2</outputproperty>
         <outputproperty>deduplicated_count1</outputproperty>

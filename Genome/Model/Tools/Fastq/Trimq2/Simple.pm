@@ -101,6 +101,7 @@ sub execute {
     unlink ($out_file) if (-e $out_file); #WARNING:  file gets deleted if it already exist!
     
     my $report   = $self->report_file || $out_dir . "/trimq2.report";
+    unlink ($report) if (-e $report); #WARNING:  file gets deleted if it already exist!
 
     my $primer_report = $self->primer_report_file || $out_dir. "/primer_trim.report";
     unlink ($primer_report) if (-e $primer_report); #WARNING:  file gets deleted if it already exist!

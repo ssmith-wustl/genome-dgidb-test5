@@ -30,6 +30,13 @@ UR::Object::Type->define(
                            is => 'String',
                            is_input => 1,
                         },
+                        primer_sequence => {
+                            doc => 'primer sequence to trim',
+                            is => 'String',
+                            is_input => 1,
+                            is_optional => 1,
+                            default => 'GTTTCCCAGTCACGATA',
+                        },
                         edit_distance =>  {
                            doc => 'maximum edit distance',
                            is => 'Number',
@@ -112,6 +119,7 @@ sub execute {
                               'fastq_2'                 => $fastq2,
                               'primer_trim_file1'       => $primer_trim_file1,
                               'primer_trim_file2'       => $primer_trim_file2,
+                              'primer_sequence'         => $self->primer_sequence,
                               'align_options_1'         => $align_options,
                               'align_options_2'         => $align_options,
                               'alignment_file_1'        => $alignment_file1, 
@@ -139,7 +147,6 @@ sub execute {
                           );
 
     my $summary =   "Step\t\t\tEnd #1\t\t\t\t\tEnd #2\n"    .
-                    "Primer Trimming\t\t\t\t\t"             . $output->{trim_count1}                . "\t\t\t" . $output->{trim_count2}                 . "\n" . 
                     "Paired End Removal\t\t\t\t\t"          . $output->{paired_end_removed_count1}  . "\t\t\t" . $output->{paired_end_removed_count2}   . "\n" .
                     "Redundancy Removal\t\t\t\t\t"          . $output->{deduplicated_count1}        . "\t\t\t" . $output->{deduplicated_count2}         . "\n" .
                     "N Removal\t\t\t\t\t"                   . $output->{mismatch_removed_count1}    . "\t\t\t" . $output->{mismatch_removed_count2};

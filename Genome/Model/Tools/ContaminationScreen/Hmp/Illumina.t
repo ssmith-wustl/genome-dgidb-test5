@@ -6,15 +6,15 @@ use warnings;
 use above 'Genome';
 use Test::More tests => 2;
 
-
 BEGIN {use_ok('Genome::Model::Tools::ContaminationScreen::Hmp::Illumina');}
 
 my %params;
-$params{dir} = 'Genome::Utility::FileSystem->create_temp_directory';
-$params{fastq1} = '/gscmnt/sata810/info/medseq/chiptest/chiptest2_250k_gbm/chiptest_gbm51_contam/solexa-fastq-contam0'; 
-$params{fastq2} = '/gscmnt/sata810/info/medseq/chiptest/chiptest2_250k_gbm/chiptest_gbm51_contam/solexa-fastq-contam1';
+$params{dir} = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ContaminationScreen-Hmp-Illumina';#
+$params{fastq1} = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ContaminationScreen-Hmp-Illumina/solexa-fastq-contam0'; 
+$params{fastq2} = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ContaminationScreen-Hmp-Illumina/solexa-fastq-contam1';
 
 my $illumina = Genome::Model::Tools::ContaminationScreen::Hmp::Illumina->create(%params);
 
 isa_ok($illumina, 'Genome::Model::Tools::ContaminationScreen::Hmp::Illumina');
 
+#$illumina->execute();
