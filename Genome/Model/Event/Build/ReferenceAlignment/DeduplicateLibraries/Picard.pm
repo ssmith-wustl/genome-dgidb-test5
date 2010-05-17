@@ -218,6 +218,7 @@ sub execute {
         $self->status_message("Deduplicated bam count verified.");
         
         rename($dedup_temp_file, $bam_merged_output_file);
+        rename($dedup_temp_file . '.flagstat', $bam_merged_output_file . '.flagstat');
     }
 
     $now = UR::Time->now;
