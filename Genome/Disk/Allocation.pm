@@ -241,7 +241,7 @@ sub pse_not_complete {
 
 ## warning times in seconds
 our $after_start = 3600;
-our $after_lock_acquired = 60;
+our $after_lock_acquired = 600;
 sub monitor_allocate_command {
     my $self = shift;
     my $cmd = shift;
