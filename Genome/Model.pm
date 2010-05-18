@@ -146,8 +146,6 @@ class Genome::Model {
                                                         grep { !defined $_->first_build_id } 
                                                         $self->instrument_data_assignments;
                                                 ) },
-        instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_as => 'model', 
-                                               doc => 'Each case of an instrument data being assigned to the model' },
         from_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', 
                                                doc => 'bridge table entries where this is the \\\"to\\\" model(used to retrieve models this model is \\\"from\\\")' },
         from_models                       => { is => 'Genome::Model', via => 'from_model_links', to => 'from_model', 

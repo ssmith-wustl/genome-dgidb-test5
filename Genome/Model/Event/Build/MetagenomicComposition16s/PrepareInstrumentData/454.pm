@@ -19,7 +19,7 @@ sub execute {
     my $self = shift;
 
     my @instrument_data = $self->build->instrument_data;
-    unless ( @instrument_data ) {
+    unless ( @instrument_data ) { # should not happen
         $self->error_message("No instrument data found for ".$self->build->description);
         return;
     }

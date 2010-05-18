@@ -59,40 +59,33 @@ sub _dump_and_link_instrument_data {
         return 1;
     }
 
-    my @idas = $self->model->instrument_data_assignments;
-    unless ( @idas ) {
-        $self->error_message(
-            sprintf(
-                'No instrument data assigned to model for model (<Name> %s <Id> %s).',
-                $self->model->name,
-                $self->model->id,
-            )
-        );
+    my @instrument_data = $self->build->instrument_data;
+    unless ( @instrument_data ) { # should not happen
+        $self->error_message('No instrument data found for '.$self->description);
         return;
     }
 
-    for my $ida ( @idas ) {
+    for my $instrument_data ( @instrument_data ) {
         # dump
-        unless ( $ida->instrument_data->dump_to_file_system ) {
+        unless ( $instrument_data->dump_to_file_system ) {
             $self->error_message(
                 sprintf(
                     'Error dumping instrument data (%s <Id> %s) assigned to model (%s <Id> %s)',
-                    $ida->instrument_data->run_name,
-                    $ida->instrument_data->id,
+                    $instrument_data->run_name,
+                    $instrument_data->id,
                     $self->model->name,
                     $self->model->id,
                 )
             );
             return;
         }
-
         # link
-        unless ( $self->build->link_instrument_data( $ida->instrument_data ) ) {
+        unless ( $self->build->link_instrument_data($instrument_data) ) {
             $self->error_message(
                 sprintf(
                     'Error linking instrument data (%s <Id> %s) to model (%s <Id> %s)',
-                    $ida->instrument_data->run_name,
-                    $ida->instrument_data->id,
+                    $instrument_data->run_name,
+                    $instrument_data->id,
                     $self->model->name,
                     $self->model->id,
                 )
