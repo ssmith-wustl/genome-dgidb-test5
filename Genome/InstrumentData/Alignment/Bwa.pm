@@ -49,7 +49,7 @@ sub output_files {
     my @output_files;
     my @methods = qw(alignment_file_paths aligner_output_file_paths unaligned_reads_list_paths);
     push @methods, 'unaligned_reads_fastq_paths' 
-        unless $self->trimmer_name eq 'trimq2_shortfilter';#add for now
+        unless $self->trimmer_name and $self->trimmer_name eq 'trimq2_shortfilter';#add for now
 
     for my $method (@methods) {
         push @output_files, $self->$method;
