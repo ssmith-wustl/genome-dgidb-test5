@@ -49,12 +49,15 @@ sub _execute_build {
 
 
 
-    my $dbsnpSize = -s $build->dbsnp_file;
-    unless(-e $build->dbsnp_file && $dbsnpSize > 0)
+    my $variationSize = -s $build->variation_file;
+    unless(-e $build->variation_file && $variationSize > 0)
     {
-        $self->status_message("DbSNP file \"" . $build->dbsnp_file . "\" is either inaccessible, empty, or non-existent.");
+        $self->status_message("Imported Variation file \"" . $build->variation_file . "\" is either inaccessible, empty, or non-existent.");
         return;
     }
+
+#    $build->
+
 
 =cut
 
