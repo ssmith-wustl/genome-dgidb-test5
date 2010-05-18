@@ -47,6 +47,8 @@ sub _execute_build {
         return;
     }
 
+
+=cut
     my $fastaSize = -s $build->fasta_file;
     unless(-e $build->fasta_file && $fastaSize > 0)
     {
@@ -109,6 +111,8 @@ sub _execute_build {
             return;
         }
     }
+
+=cut
 
     $self->status_message("Done.");
     return 1;
