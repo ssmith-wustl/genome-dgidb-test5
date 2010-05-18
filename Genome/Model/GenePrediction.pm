@@ -17,6 +17,7 @@ class Genome::Model::GenePrediction {
             to => 'value_id',
             where => [ name => 'locus_id' ,value_class_name=>'UR::Value'],
             is_mutable => 1,
+            is_optional => 1,
         },
         brev_orgname => {
 #            is => 'String',
@@ -24,6 +25,7 @@ class Genome::Model::GenePrediction {
             to => 'value_id',
             where => [ name => 'brev_orgname',value_class_name=>'UR::Value' ],
             is_mutable => 1,
+            is_optional => 1,
         },
         assembly_name => {
 #            is => 'String',
@@ -31,6 +33,7 @@ class Genome::Model::GenePrediction {
             to => 'value_id',
             where => [ name => 'assembly_name',value_class_name=>'UR::Value' ],
             is_mutable => 1,
+            is_optional => 1,
         },
         organism_name => {
 #            is => 'String',
@@ -38,6 +41,7 @@ class Genome::Model::GenePrediction {
             to => 'value_id',
             where => [ name => 'organism_name',value_class_name=>'UR::Value' ],
             is_mutable => 1,
+            is_optional => 1,
         },
         ncbi_taxonomy_id => {
 #            is => 'Integer',
@@ -53,6 +57,8 @@ class Genome::Model::GenePrediction {
             to => 'value_id',
             where => [ name => 'seq_file_name',value_class_name=>'UR::Value' ],
             is_mutable => 1,
+            is_optional => 1,
+            default => "contigs.bases",
         },
         seq_file_dir => {
 #            is => 'String',
@@ -60,6 +66,8 @@ class Genome::Model::GenePrediction {
             to => 'value_id',
             where => [ name => 'seq_file_dir',value_class_name=>'UR::Value' ],
             is_mutable => 1,
+            is_optional => 1,
+            # eventually this will be computed via the assembly_model's data_dir
         },
         iteration => {
 #            is => 'Integer',
@@ -84,15 +92,16 @@ class Genome::Model::GenePrediction {
         merge_script_location => { via => 'processing_profile' },
         finish_script_location => { via => 'processing_profile' },
         skip_acedb_parse => { via => 'processing_profile' },
+        dev => { via => 'processing_profile' },
 
     ],
     has_optional => [
          assembly_model_links => { 
              is => 'Genome::Model::Link', 
              reverse_as => 'to_model', 
-             where => [ role => 'assembly'], is_many => 1,
+             where => [ role => 'assembly_model'], is_many => 1,
              doc => '' },
-         assmebly_model => { 
+         assembly_model => { 
              is => 'Genome::Model', 
              via => 'assembly_model_links', to => 'from_model', 
              doc => '' },
@@ -101,6 +110,8 @@ class Genome::Model::GenePrediction {
 
 
 # do we need anything here?
+
+
 
 1;
 

@@ -6,6 +6,7 @@ use Genome;
 use Carp;
 use YAML qw( DumpFile );
 use IPC::Run; # replace system()
+use File::Slurp;
 
 
 # any param marked 'input' will eventually have to be figured out
@@ -105,6 +106,9 @@ class Genome::ProcessingProfile::GenePrediction {
 #            doc => "directory where contigs.bases/seq_file_name is found",
 #        },
 
+        #assembly_model => {
+        #    via => 'assembly_model_links'
+        #}
     ],
     doc => "gene prediction processing profile..."
 };
@@ -112,12 +116,22 @@ class Genome::ProcessingProfile::GenePrediction {
 sub _initialize_model {
     my ($self,$model) = @_;
     carp "defining new model " . $model->__display_name__ . " for profile " . $self->__display_name__ . "\n";
+    # should figure out a few things here - grab the paths for the different files and so on.
+#    $model->add_from_model(from_model => $model->assembly_model, role => 'assembly_model');
+
     return 1;
 }
 
 sub _initialize_build {
     my ($self,$build) = @_;
     carp "defining new build " . $build->__display_name__ . " for profile " . $self->__display_name__ . "\n";
+#    unless( -f $build->yaml_file() )
+#    {
+#        $build->status_message("YAML file exists");
+        $build->status_message("creating yaml file");
+        $build->_create_yaml_file();
+#    }
+
     return 1;
 }
 
@@ -128,30 +142,27 @@ sub _execute_build {
     #my $cmd = $self->command_name;
     my $cmd = "gmt hgmi hap";
     # generate a config file here.
-    my $config = $self->_create_yaml_file();
-    #my $config = $self->config_file;
-#    my $args = $self->args;
+    my $config = $build->yaml_file();
 
     my $dir = $build->data_directory;
 
-    # create the yaml file for now
-
-
-    # instead of nasty system(), we should pull in the stuff from dir build
-    # mk prediction models, collect/name sequence, bap gene predict,
-    # bap gene merge, bap_project_finish, rrna screen, core gene check
     my $exit_code;
     if($self->dev) {
         $exit_code = system "$cmd --dev --config $config --skip-protein-annotation  >$dir/output 2>$dir/errors";
+        write_file("$dir/errors",{append=>1},"exit code: $exit_code\n");
     }
     else
     {
         $exit_code = system "$cmd --config $config --skip-protein-annotation  >$dir/output 2>$dir/errors";
+        write_file("$dir/errors",{append=>1},"exit code: $exit_code\n");
     }
     $exit_code /= 256;
     if ($exit_code != 0) {
         $self->error_message("Failed to run $cmd with args !  Exit code: $exit_code.");
-        return;
+        croak;
+        # problems when we return on non-zero exit code.  builds that should be marked fail
+        # end up getting marked as succeeded.
+        #return;
     }
 
     return 1;
