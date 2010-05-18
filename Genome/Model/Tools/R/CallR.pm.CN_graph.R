@@ -124,22 +124,22 @@ if(isAnnotation == 1){
 
 	################################ annotation #############################
 	############### segmental Duplication
-	tmp <- name$V1[4]
-	Read_Annotation(tmp) -> seg
+#	tmp <- name$V1[4]
+#	Read_Annotation(tmp) -> seg
 
-	if(class(seg)!='try-error' && length(seg$Start)>=1 ){
-		for(i in 1:length(seg$Start)){
-			seg_ = c(seg_, seg$Start[i]:seg$End[i]);
-		}
-	}
+#	if(class(seg)!='try-error' && length(seg$Start)>=1 ){
+#		for(i in 1:length(seg$Start)){
+#			seg_ = c(seg_, seg$Start[i]:seg$End[i]);
+#		}
+#	}
 
 	############### repeat mask
-	tmp <- name$V2[4]
-	Read_Annotation(tmp) -> rep
+#	tmp <- name$V2[4]
+#	Read_Annotation(tmp) -> rep
 
 	############### dgv
-	tmp <- name$V3[4]
-	Read_Annotation(tmp) -> dgv
+#	tmp <- name$V3[4]
+#	Read_Annotation(tmp) -> dgv
 
 	############### gene
 	tmp <- name$V4[4]
@@ -234,7 +234,13 @@ if(isAnnotation == 1){
 	layout.show(nf)
 
 
-	a_axis_all <- cbind(a_axis, aNeighbor_axis)
+	if(tumor == 1){
+		a_axis_all <- c(a_axis, aNeighbor_axis)
+	} else if(normal == 1){
+		a_axis_all <- c(a_axisN, aNeighbor_axisN)
+	} else{
+		a_axis_all <- c(a_axisR, aNeighbor_axisR)
+	}
 
 
 	if(tumor == 1){
@@ -384,11 +390,11 @@ if(isAnnotation == 1){
 		Draw_Annotation_First(seg, a_axis_all, num, "grey", "purple", 1, lwd_, "Segmental Duplication", num-0.4, 0.8)
 		
 		################# repeat Mask
-		Draw_Annotation(rep, a_axis_all, num-1, "grey", "green", 1, lwd_, "Repeat Mask", num-1.4, 0.8)
+    	Draw_Annotation(rep, a_axis_all, num-1, "grey", "green", 1, lwd_, "Repeat Mask", num-1.4, 0.8)
 		
 		################# gene
 		Draw_Annotation(gene, a_axis_all, num-2, "grey", "yellow", 1, lwd_, "Gene", num-2.4, 0.8)
-
+#		Draw_Annotation_First(gene, a_axis_all, num, "grey", "yellow", 1, lwd_, "Gene", num-0.5, 1.2)
 		################# dgv
 		Draw_Annotation(dgv, a_axis_all, num-3, "grey", "black", 1, lwd_, "Database of Genomic Variants", num-3.4, 0.8)
 	}
@@ -421,8 +427,10 @@ normalization = function(x, y, annot)
 {
 	y_ <- y[! x %in% annot]
 	mean_y_ <- mean(y_)
-	sd_y_ <- sd(y_)
-	new_y <- y_[y_ > mean_y_ - sd_y_ & y_ < mean_y_ + sd_y_]
+# no exclusion of those out of the range	
+#	sd_y_ <- sd(y_)
+#	new_y <- y_[y_ > mean_y_ - sd_y_ & y_ < mean_y_ + sd_y_ & y_ != 0]
+	new_y <- y_[y_!=0]
 	median_new_y <- median(new_y)
 	median_new_y
 }
@@ -458,6 +466,7 @@ Draw_Annotation_First = function(data,x,y,col1,col2,lwd1,lwd2,name,height,cex_)
 {
 	test_coords <- xy.coords(min(x):max(x),y,recycle=TRUE)
 	plot(test_coords$x,test_coords$y,col=col1,xlim=c(min(x),max(x)),ylim=c(0,y),axes=FALSE,xlab="",ylab="",type="l",lwd=lwd1)
+#	plot(test_coords$x,test_coords$y,col=col1,xlim=c(min(x),max(x)),ylim=c(-1,y),axes=FALSE,xlab="",ylab="",type="l",lwd=lwd1)
 	if(length(data$Start)>=1){
 		for(i in 1:length(data$Start)){
 			segments(data$Start[i], y, data$End[i], y, col=col2, lwd=lwd2)
