@@ -30,8 +30,8 @@ class Genome::Model::Tools::Blat::AlignToGenome {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		reference_dir	=> { is => 'Text', doc => "Directory containing chromosome files in FASTA format [(Hs_build36_mask1c)/by_chromosome/]", is_optional => 1 },
-		search_string	=> { is => 'Text', doc => "Seach string to identify chromosome files, [chr*.fa]", is_optional => 1 },		
+		reference_dir	=> { is => 'Text', doc => "Directory containing chromosome files in FASTA format /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/", is_optional => 1 },
+		search_string	=> { is => 'Text', doc => "Seach string to identify chromosome files, [*.fasta]", is_optional => 1 },		
 		query_file	=> { is => 'Text', doc => "Query file in FASTA format" },
 		output_dir	=> { is => 'Text', doc => "Directory to store output files" },
 		params		=> { is => 'Text', doc => "BLAT parameters [-mask=lower -out=pslx -noHead]", is_optional => 1 },
@@ -54,7 +54,7 @@ EOS
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
     return <<EOS 
 This command would spawn BLAT alignments between myDeletions.fasta and each of the 24 human chrom refseqs:
- gmt blat align-to-genome --reference-dir /gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/by_chromosome/ --search-string chr*.fa --query-file myDeletions.fasta --output-dir ./ 
+ gmt blat align-to-genome --reference-dir /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/ --search-string *.fasta --query-file myDeletions.fasta --output-dir ./ 
 
 By default, each BLAT alignment will be launched in the LONG queue, and outputs will be in the ./ directory.
 
@@ -77,8 +77,8 @@ sub execute {                               # replace with real execution logic.
 	my $output_dir = $self->output_dir;
 	
 	## Set defaults for optional parameters ##
-	my $dir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/by_chromosome/";
-	my $search_string = "chr*.fa";
+	my $dir = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/";
+	my $search_string = "*.fasta";
 	my $blat_params = "-mask=lower -out=pslx -noHead";
 	my $lsf_queue = "long";
 
@@ -112,7 +112,7 @@ sub execute {                               # replace with real execution logic.
 	{
 		## Retrieve list of ref files ## 
 		
-		my $ref_files = `ls $dir/$search_string`;
+		my $ref_files = `ls $dir/$search_string | grep -v all_sequences`;
 	
 		my $numRefFiles = 0;
 	
