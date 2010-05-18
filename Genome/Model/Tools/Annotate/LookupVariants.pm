@@ -48,7 +48,8 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         },
         dbSNP_path => {
             type     => 'Text',
-            default  => '/gsc/var/lib/import/dbsnp/130/tmp/',
+            #default  => '/gsc/var/lib/import/dbsnp/130/tmp/',
+            is_optional => 1,
             doc      => "path to dbSNP files broken into chromosome",
         },
         report_mode => {
@@ -127,8 +128,19 @@ EOS
 sub execute { 
 
     $DB::single = $DB::stopper;
-
     my ($self) = @_;
+
+    #my $dbsnp_dir = Genome::Model->get( name => 'dbSNP-human-130')->data_directory."/ImportedVariations/tmp";
+    #Genome::Model::ImportedVariations->class;
+    #my $dbsnp_dir = Genome::Model::ImportedVariations->get( name => 'dbSNP-human-130')->imported_variations_directory;
+    my $dbsnp_dir = Genome::Model->get( name => 'dbSNP-human-130')->imported_variations_directory;
+
+    unless($dbsnp_dir) {
+        $self->error_message('Could not locate dbSNP-human-130 model.');
+        die $self->error_message;
+    }
+    $self->dbSNP_path($dbsnp_dir);
+
 
     if (($self->skip_if_output_present)&&(-s $self->output_file)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
