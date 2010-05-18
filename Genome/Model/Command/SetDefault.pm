@@ -10,7 +10,6 @@ class Genome::Model::Command::SetDefault {
     has => [
         model           => { is => 'Genome::Model', id_by => 'model_id' },
         model_id        => { is => 'Integer', doc => 'identifies the genome model by id', shell_args_position => 1 },
-        model_name      => { is => 'String', via => 'model', to => 'name' },
     ],
     has_optional => [
         clear           => { is => 'Boolean', default => '0', doc => 'Indicate the provided model should no longer be considered the default.' },
@@ -28,7 +27,6 @@ sub help_synopsis {
     genome model set-default 12345
     genome model set-default --clear 12345
     genome model set-default --replace 12345
-    genome model set-default --model-name 'example_model_name'
 EOS
 }
 
