@@ -227,44 +227,61 @@ sub execute {
 	    my $tmp_in_tumor_name_normalized = "NA";
 	    my $tmp_in_normal_name_normalized = "NA";
 	    
-	    if($system_tmp == 1){        
-    	    my $tmp_in_tumor_normalized = File::Temp->new();
-   		    $tmp_in_tumor_name_normalized = $tmp_in_tumor_normalized -> filename;
-    	    my $tmp_in_normal_normalized = File::Temp->new();   	    
-   		    $tmp_in_normal_name_normalized = $tmp_in_normal_normalized -> filename;
-    	    my $tmp_in_tumor_ = File::Temp->new();
-   		    $tmp_in_tumor = $tmp_in_tumor_ -> filename;
-    	    my $tmp_outL_tumor_ = File::Temp->new();   	    
-   		    $tmp_outL_tumor = $tmp_outL_tumor_ -> filename;
-       	    my $tmp_outR_tumor_ = File::Temp->new();   	    
-   		    $tmp_outR_tumor = $tmp_outR_tumor_ -> filename;
-       	    my $tmp_in_normal_ = File::Temp->new();
-   		    $tmp_in_normal = $tmp_in_normal_ -> filename;
-    	    my $tmp_outL_normal_ = File::Temp->new();   	    
-   		    $tmp_outL_normal = $tmp_outL_normal_ -> filename;
-       	    my $tmp_outR_normal_ = File::Temp->new();   	    
-   		    $tmp_outR_normal = $tmp_outR_normal_ -> filename;
+	    if($system_tmp == 1){ 
+	    	if($bam_tumor =~ /\S+/){       
+    		    my $tmp_in_tumor_normalized = File::Temp->new();
+   			    $tmp_in_tumor_name_normalized = $tmp_in_tumor_normalized -> filename;
+    		    my $tmp_in_tumor_ = File::Temp->new();
+   			    $tmp_in_tumor = $tmp_in_tumor_ -> filename;
+    		    my $tmp_outL_tumor_ = File::Temp->new();   	    
+   			    $tmp_outL_tumor = $tmp_outL_tumor_ -> filename;
+    	   	    my $tmp_outR_tumor_ = File::Temp->new();   	    
+   			    $tmp_outR_tumor = $tmp_outR_tumor_ -> filename;
+   		    }
+    		if($bam_normal =~ /\S+/){
+	    	    my $tmp_in_normal_normalized = File::Temp->new();   	    
+   			    $tmp_in_normal_name_normalized = $tmp_in_normal_normalized -> filename;
+    	   	    my $tmp_in_normal_ = File::Temp->new();
+   			    $tmp_in_normal = $tmp_in_normal_ -> filename;
+    		    my $tmp_outL_normal_ = File::Temp->new();   	    
+   			    $tmp_outL_normal = $tmp_outL_normal_ -> filename;
+    	   	    my $tmp_outR_normal_ = File::Temp->new();   	    
+   			    $tmp_outR_normal = $tmp_outR_normal_ -> filename;
+   			}
    		}
    		else{
-   			$tmp_in_tumor_name_normalized = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_tumor.csv";
-   			$tmp_in_normal_name_normalized = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_normal.csv";   		
-   			$tmp_in_tumor = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_in.csv";
-    	    $tmp_outL_tumor = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outL.csv";
-    	    $tmp_outR_tumor = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outR.csv";   			
-   			$tmp_in_normal = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_inN.csv";
-    	    $tmp_outL_normal = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outLN.csv";
-    	    $tmp_outR_normal = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outRN.csv";   			
+	    	if($bam_tumor =~ /\S+/){       
+	   			$tmp_in_tumor_name_normalized = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_tumor.csv";
+	   			$tmp_in_tumor = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_in.csv";
+	    	    $tmp_outL_tumor = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outL.csv";
+	    	    $tmp_outR_tumor = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outR.csv";   			
+   		    }
+    		if($bam_normal =~ /\S+/){
+	   			$tmp_in_normal_name_normalized = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_normal.csv";   		
+   				$tmp_in_normal = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_inN.csv";
+    		    $tmp_outL_normal = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outLN.csv";
+    		    $tmp_outR_normal = "/gscuser/xfan/svn/perl_modules/Genome/Model/Tools/Xian/tmp_outRN.csv";   			
+    		}
    		}	
     	     	
-    	$p1 = t_test($bam_tumor, $chr, $start, $end, $neighbor1_left, $neighbor1_right, $neighbor2_left, $neighbor2_right, $slide, $tmp_in_tumor, $tmp_outL_tumor, $tmp_outR_tumor, $tmp_in_tumor_name_normalized, 1-$isTumorNormal);
-    	$p2 = t_test($bam_normal, $chr, $start, $end, $neighbor1_left, $neighbor1_right, $neighbor2_left, $neighbor2_right, $slide, $tmp_in_normal, $tmp_outL_normal, $tmp_outR_normal, $tmp_in_normal_name_normalized, 1-$isTumorNormal);    	
-    	
-    	$p3 = t_test_ROI($bam_tumor, $bam_normal, $tmp_in_tumor_name_normalized, $tmp_in_normal_name_normalized);
+    	if($bam_tumor =~ /\S+/){
+	    	$p1 = t_test($bam_tumor, $chr, $start, $end, $neighbor1_left, $neighbor1_right, $neighbor2_left, $neighbor2_right, $slide, $tmp_in_tumor, $tmp_outL_tumor, $tmp_outR_tumor, $tmp_in_tumor_name_normalized, 1-$isTumorNormal);
+	    }
+    	if($bam_normal =~ /\S+/){
+	    	$p2 = t_test($bam_normal, $chr, $start, $end, $neighbor1_left, $neighbor1_right, $neighbor2_left, $neighbor2_right, $slide, $tmp_in_normal, $tmp_outL_normal, $tmp_outR_normal, $tmp_in_normal_name_normalized, 1-$isTumorNormal);    	
+	    }
+    	if($bam_tumor =~/\S+/ && $bam_normal =~ /\S+/){
+	    	$p3 = t_test_ROI($bam_tumor, $bam_normal, $tmp_in_tumor_name_normalized, $tmp_in_normal_name_normalized);
+	    }
     	
     	# do filtering
-		$mean_tumor = mean_ROI($tmp_in_tumor_name_normalized);
-		$mean_normal = mean_ROI($tmp_in_normal_name_normalized);
-    	if($selectPlot == 1 && $p3 < $tTestThreshold){
+    	if($bam_tumor =~ /\S+/){
+			$mean_tumor = mean_ROI($tmp_in_tumor_name_normalized);
+		}
+		if($bam_normal =~ /\S+/){
+			$mean_normal = mean_ROI($tmp_in_normal_name_normalized);
+		}
+    	if($bam_tumor =~ /\S+/ && $bam_normal =~ /\S+/ && $selectPlot == 1 && $p3 < $tTestThreshold){
 			if(abs($mean_tumor - $mean_normal) > $mean_diff_threshold){
 				$select = 1;
 			}
@@ -272,31 +289,33 @@ sub execute {
     	
     	# if not go through because of R defect, do it again.
     	my $count = 0;
-    	while(($p3 !~/\S+/ || $p1 !~/\S+/ || $p2 !~/\S+/ || $mean_tumor !~/\S+/ || $mean_normal !~/\S+/) && $count < 3){
-    		$select = 0;
-    		$count ++;
-    		if($count == 1){
-    			print "$chr,$start,$end:Missing values, will do it again!\n";
-    		} else {
-    			print "$chr,$start,$end:Missing values again, will do it again!\n";
-    		}
+    	if($bam_tumor =~ /\S+/ && $bam_normal =~ /\S+/){
+	    	while(($p3 !~/\S+/ || $p1 !~/\S+/ || $p2 !~/\S+/ || $mean_tumor !~/\S+/ || $mean_normal !~/\S+/) && $count < 3){
+    			$select = 0;
+    			$count ++;
+    			if($count == 1){
+    				print "$chr,$start,$end:Missing values, will do it again!\n";
+    			} else {
+    				print "$chr,$start,$end:Missing values again, will do it again!\n";
+    			}
     		
-	    	$p1 = t_test($bam_tumor, $chr, $start, $end, $neighbor1_left, $neighbor1_right, $neighbor2_left, $neighbor2_right, $slide, $tmp_in_tumor, $tmp_outL_tumor, $tmp_outR_tumor, $tmp_in_tumor_name_normalized, 1-$isTumorNormal);
-    		$p2 = t_test($bam_normal, $chr, $start, $end, $neighbor1_left, $neighbor1_right, $neighbor2_left, $neighbor2_right, $slide, $tmp_in_normal, $tmp_outL_normal, $tmp_outR_normal, $tmp_in_normal_name_normalized, 1-$isTumorNormal);    	
+		    	$p1 = t_test($bam_tumor, $chr, $start, $end, $neighbor1_left, $neighbor1_right, $neighbor2_left, $neighbor2_right, $slide, $tmp_in_tumor, $tmp_outL_tumor, $tmp_outR_tumor, $tmp_in_tumor_name_normalized, 1-$isTumorNormal);
+    			$p2 = t_test($bam_normal, $chr, $start, $end, $neighbor1_left, $neighbor1_right, $neighbor2_left, $neighbor2_right, $slide, $tmp_in_normal, $tmp_outL_normal, $tmp_outR_normal, $tmp_in_normal_name_normalized, 1-$isTumorNormal);    	
     	
-    		$p3 = t_test_ROI($bam_tumor, $bam_normal, $tmp_in_tumor_name_normalized, $tmp_in_normal_name_normalized);
+    			$p3 = t_test_ROI($bam_tumor, $bam_normal, $tmp_in_tumor_name_normalized, $tmp_in_normal_name_normalized);
     	
-    		# do filtering
-			$mean_tumor = mean_ROI($tmp_in_tumor_name_normalized);
-			$mean_normal = mean_ROI($tmp_in_normal_name_normalized);
-    		if($selectPlot == 1 && $p3 < $tTestThreshold){
-				if(abs($mean_tumor - $mean_normal) > $mean_diff_threshold){
-					$select = 1;
-				}
-    		}
-    	}    	
-    	
-    	if($p3 !~/\S+/ || $p1 !~/\S+/ || $p2 !~/\S+/ || $mean_tumor !~/\S+/ || $mean_normal !~/\S+/){
+    			# do filtering
+				$mean_tumor = mean_ROI($tmp_in_tumor_name_normalized);
+				$mean_normal = mean_ROI($tmp_in_normal_name_normalized);
+    			if($selectPlot == 1 && $p3 < $tTestThreshold){
+					if(abs($mean_tumor - $mean_normal) > $mean_diff_threshold){
+						$select = 1;
+					}
+    			}
+    		}    	
+    	}
+    		
+    	if($bam_tumor =~ /\S+/ && $bam_normal =~ /\S+/ && $p3 !~/\S+/ || $p1 !~/\S+/ || $p2 !~/\S+/ || $mean_tumor !~/\S+/ || $mean_normal !~/\S+/){
     		$select = 0;
     		print "$chr,$start,$end:Still missing values, will leave it like what is the best!\n";
     	}
