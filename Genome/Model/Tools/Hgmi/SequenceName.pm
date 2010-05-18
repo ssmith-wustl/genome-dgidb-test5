@@ -123,7 +123,7 @@ sub execute
 
     unless (-e $hgmi_acedb_patha)
     {
-        make_path($hgmi_acedb_patha, { verbose => 1, mode => 775 })
+        make_path($hgmi_acedb_patha, { verbose => 1, mode => 0775 })
             or croak "Can't make path $hgmi_acedb_patha: $!";
 #        mkdir qq{$hgmi_acedb_patha} 
 #	or croak "Can't make $hgmi_acedb_patha: $!\n";
@@ -133,7 +133,7 @@ sub execute
 
     unless (-e $newHGMIpath)
     {
-        make_path($newHGMIpath, { verbose => 1, mode => 775 })
+        make_path($newHGMIpath, { verbose => 1, mode => 0775 })
             or croak "Can't make path $newHGMIpath: $!";
 #        mkdir qq{$newHGMIpath}
 #	or croak "Can't make $newHGMIpath: $!\n";
