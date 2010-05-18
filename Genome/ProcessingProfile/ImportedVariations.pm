@@ -48,13 +48,16 @@ sub _execute_build {
     }
 
 
-=cut
-    my $fastaSize = -s $build->fasta_file;
-    unless(-e $build->fasta_file && $fastaSize > 0)
+
+    my $dbsnpSize = -s $build->dbsnp_file;
+    unless(-e $build->dbsnp_file && $dbsnpSize > 0)
     {
-        $self->status_message("Reference sequence fasta file \"" . $build->fasta_file . "\" is either inaccessible, empty, or non-existent.");
+        $self->status_message("DbSNP file \"" . $build->dbsnp_file . "\" is either inaccessible, empty, or non-existent.");
         return;
     }
+
+=cut
+
     if($fastaSize >= $num4GiB)
     {
         $self->status_message("Reference sequence fasta file \"". $build->fasta_file . "\" is larger than 4GiB.  In order to accommodate " .
