@@ -166,6 +166,7 @@
                           <td>
                             <xsl:value-of select="@filtered-dbsnp-concordance"/>
                           </td>
+
                         </tr>
                       </xsl:for-each>
                     </tbody>
@@ -200,7 +201,128 @@
                 </script>
               </xsl:if>
               <br clear="all"/>
-              
+
+              <!-- ALIGNMENT FLAGSTAT READ METRICS -->
+              <h2 class="report_section" style="margin-bottom: 0">Alignment Flagstat Read Metrics</h2>
+              <table id="metrics" class="list display" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 0;">
+                <xsl:choose>
+                  <xsl:when test="count(//metrics/build) > 0">
+                    <thead>
+                      <tr>
+                        <th>build id</th>
+                        <th>name</th>
+                        <th>total reads</th>
+                        <th>failing qc</th>
+                        <th>marked duplicates</th>
+                        <th>mapped</th>
+                        <th>mapped %</th>
+                        <th>paired in sequencing</th>
+                        <th>marked as read1</th>
+                        <th>marked as read2</th>
+                        <th>mapped in proper pairs</th>
+                        <th>mapped in proper pairs %</th>
+                        <th>mapped in pair</th>
+                        <th>mapped as singleton</th>
+                        <th>mapped as singleton %</th>
+                        <th>mapped in interchromosomal pairs</th>
+                        <th>hq reads mapped in interchromosomal pairs</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <xsl:for-each select="//metrics/build">
+                        <tr>
+                          <td>
+                           <a><xsl:attribute name="href">https://imp.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=<xsl:value-of select="@build-id"/></xsl:attribute><xsl:value-of select="@build-id"/></a>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@name"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-total_reads"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_marked_failing_qc"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_marked_duplicates"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_mapped"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_mapped_percentage"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_paired_in_sequencing"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_marked_as_read1"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_marked_as_read2"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_mapped_in_proper_pairs"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_mapped_in_proper_pairs_percentage"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_mapped_in_pair"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_mapped_as_singleton"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_mapped_as_singleton_percentage"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-reads_mapped_in_interchromosomal_pairs"/>
+                          </td>
+                          <td>
+                            <xsl:value-of select="@flagstat-hq_reads_mapped_in_interchromosomal_pairs"/>
+                          </td>
+                        </tr>
+                      </xsl:for-each>
+                    </tbody>
+                  </xsl:when>
+                  <xsl:otherwise>
+                    <tr><td><span class="note">None found.</span></td></tr>
+                  </xsl:otherwise>
+                </xsl:choose>
+              </table>
+              <xsl:if test="count(//metrics/build) > 0">
+                <script type="text/javascript" charset="utf-8">
+                  $(document).ready( function() {
+                      $('#metrics').dataTable( {
+                          "aaSorting": [[1, 'asc']],
+                          "bAutoWidth": false,
+                          "bStateSave": true,
+                          "aoColumns": [
+                              null,
+                              null,
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                              { "sClass": "last" },
+                          ]
+                      } );
+                  } );
+                </script>
+              </xsl:if>
+              <br clear="all"/>
+
               <!-- SOMATIC SNP METRICS -->
               <h2 class="report_section" style="margin-bottom: 0">Somatic SNV Metrics</h2>
               <table id="snp-metrics" class="list display" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 0;">
