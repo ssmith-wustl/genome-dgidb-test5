@@ -14,7 +14,19 @@ class Genome::Measurable {
                                     },
     ],
     has => [
-        subject_type                => { is => 'Text', calculate => q|"organism sample"| },
+        subject_type                => { is => 'Text', 
+                                         calculate => q|
+                                            if ($self->isa("Genome::Sample")) {
+                                                return "organism sample"
+                                            }
+                                            elsif ($self->isa("Genome::Taxon")) {
+                                                return "organism taxon"
+                                            }
+                                            else {
+                                                Carp::confess("No subject type specified for " . ref($self) . "!");
+                                            }
+                                         | 
+                                       },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };
