@@ -112,8 +112,17 @@ sub create {
         $class->error_message("Attempt to create an $class but it looks like we already have one with those params " . Dumper(\@_));
         return; 
     }
+    
+    # We need to update the indirect mutable accessor logic for non-nullable
+    # hang-offs to delete the entry instead of setting it to null.  Otherwise
+    # we get SOFTWARE_RESULT_PARAM entries with a NULL, and unsavable PARAM_VALUE.
+    my @remove = grep { not defined $is_param{$_} } keys %is_param;
+    my $bx = $class->define_boolexpr(@_);
+    for my $param (@remove) {
+        $bx = $bx->remove_filter($param);
+    }
 
-    my $self = $class->SUPER::create(@_);
+    my $self = $class->SUPER::create($bx);
     unless ($self) {
         $unlock_callback->();
         return;
