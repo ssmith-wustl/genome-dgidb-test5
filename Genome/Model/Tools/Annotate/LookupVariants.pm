@@ -48,7 +48,6 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         },
         dbSNP_path => {
             type     => 'Text',
-            #default  => '/gsc/var/lib/import/dbsnp/130/tmp/',
             is_optional => 1,
             doc      => "path to dbSNP files broken into chromosome",
         },
@@ -130,10 +129,13 @@ sub execute {
     $DB::single = $DB::stopper;
     my ($self) = @_;
 
-    #my $dbsnp_dir = Genome::Model->get( name => 'dbSNP-human-130')->data_directory."/ImportedVariations/tmp";
-    #Genome::Model::ImportedVariations->class;
-    #my $dbsnp_dir = Genome::Model::ImportedVariations->get( name => 'dbSNP-human-130')->imported_variations_directory;
-    my $dbsnp_dir = Genome::Model->get( name => 'dbSNP-human-130')->imported_variations_directory;
+    my $dbsnp_dir;
+
+    if(defined($self->dbSNP_path)){
+        $dbsnp_dir = $self->dnSNP_path;
+    } else {
+        $dbsnp_dir = Genome::Model->get( name => 'dbSNP-human-130')->imported_variations_directory."/tmp";
+    }
 
     unless($dbsnp_dir) {
         $self->error_message('Could not locate dbSNP-human-130 model.');
