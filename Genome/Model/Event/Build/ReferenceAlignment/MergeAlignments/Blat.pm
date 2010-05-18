@@ -49,8 +49,9 @@ sub execute {
     my @aligner_output_files;
     my @fasta_files;
     my @qual_files;
+    my $build = $self->build;
     for my $instrument_data_assignment (@idas) {
-        my $alignment = $instrument_data_assignment->alignment;
+        my $alignment = $instrument_data_assignment->results($build);
         my $alignment_file = $alignment->alignment_file;
         unless ($alignment_file) {
             $self->error_message('Failed to find alignment_file.');

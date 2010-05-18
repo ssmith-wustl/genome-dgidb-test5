@@ -33,11 +33,15 @@ sub execute {
        return;
     }
 
+    my $build = $self->build;
+    my $model = $build->model;
+    my $processing_profile = $model->processing_profile;
+
     #get the instrument data assignments
     my @bam_files;
     my @idas = $self->build->instrument_data_assignments;
     for my $ida (@idas) {
-        my @alignments = $ida->alignments;
+        my @alignments = $processing_profile->results_for_instrument_data_assignment($ida, $build);
         for my $alignment (@alignments) {
             my @bams = $alignment->alignment_bam_file_paths;
             unless(scalar @bams) {
@@ -286,26 +290,42 @@ sub calculate_required_disk_allocation_kb {
 
     $self->status_message("calculating how many bam files will get incorporated...");
 
-    my @idas = $self->build->instrument_data_assignments;
+    my $build = $self->build;
+    my $model = $build->model;
+    my $processing_profile = $model->processing_profile;
+    my @idas = $model->instrument_data_assignments;
+    $self->status_message("Found " . scalar(@idas) . " assigned instrument data");
+
     my @build_bams;
     for my $ida (@idas) {
-        my @alignments = $ida->alignments;
+        my @alignments = $processing_profile->results_for_instrument_data_assignment($ida,$build);
+        $self->status_message($ida->__display_name__ . " has @alignments\n");
         for my $alignment (@alignments) {
             my @aln_bams = $alignment->alignment_bam_file_paths;
+            unless (@aln_bams) {
+                $self->status_message("alignment $alignment has no bams at " . $alignment->output);
+            }
             push @build_bams, @aln_bams;
         }
     }
     my $total_size;
     
+    unless (@build_bams) {
+        die "No bams?";
+    }
+
     for (@build_bams) {
-        $total_size += stat($_)->size;
+        my $size = stat($_)->size;
+        $self->status_message("BAM has size: " . $size);
+        $total_size += $size;
     }
 
     #take the total size plus a 10% safety margin
     # 2x total size; full build merged bam, full build deduped bam
     $total_size = sprintf("%.0f", ($total_size/1024)*1.1); 
-
     $total_size = ($total_size * 2);
+
+    $self->status_message("Allocating $total_size for the combined BAM file (est. size x 2)");
 
     return $total_size;
 }

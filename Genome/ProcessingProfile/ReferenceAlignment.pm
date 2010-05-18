@@ -83,7 +83,7 @@ class Genome::ProcessingProfile::ReferenceAlignment {
         force_fragment => {
             is => 'Integer',
             #This doesn't seem to work yet because of the create code, can't the valid values logic be removed from create???
-            #default_value => '0',
+            default_value => '0',
             #valid_values => ['0', '1'],
             doc => 'force all alignments as fragment reads',
             is_optional => 1,
@@ -135,6 +135,84 @@ class Genome::ProcessingProfile::ReferenceAlignment {
     ],
 };
 
+# get alignments (generic name)
+sub results_for_instrument_data_assignment {
+    my $self = shift;
+    my $assignment = shift;
+    my $build = shift;
+    #return if $build and $build->id < $assignment->first_build_id;
+    return $self->_fetch_alignment_sets($assignment,'get');
+}
+
+# create alignments (called by Genome::Model::Event::Build::ReferenceAlignment::AlignReads for now...
+sub generate_results_for_instrument_data_assignment {
+    my $self = shift;
+    my $assignment = shift;
+    my $build = shift;
+    #return if $build and $build->id < $assignment->first_build_id;
+    return $self->_fetch_alignment_sets($assignment,'get_or_create');
+}
+
+sub _fetch_alignment_sets {
+    my $self = shift;
+    my $assignment = shift;
+    my $mode = shift;
+
+    my $model = $assignment->model;
+
+    my @param_sets = $self->params_for_alignment($assignment);
+    unless (@param_sets) {
+        $self->error_message('Could not get alignment parameters for this instrument data assignment');
+        return;
+    }
+    my @alignments;    
+    for (@param_sets)  {
+        $DB::single = 1;
+        my $alignment = Genome::InstrumentData::AlignmentSet->$mode(%$_);
+        unless ($alignment) {
+             $self->error_message("Failed to $mode an alignment object");
+             return;
+         }
+        push @alignments, $alignment;
+    }
+    return @alignments;
+}
+
+sub params_for_alignment {
+    my $self = shift;
+    my $assignment = shift;
+
+    my $model = $assignment->model;
+    my $reference_sequence_name = $model->reference_sequence_name;
+
+    unless ($self->type_name eq 'reference alignment') {
+        $self->error_message('Can not create an alignment object for model type '. $self->type_name);
+        return;
+    }
+
+    my %params = (
+                    instrument_data_id => $assignment->instrument_data_id || undef,
+                    aligner_name => $self->read_aligner_name || undef,
+                    reference_name => $reference_sequence_name || undef,
+                    aligner_version => $self->read_aligner_version || undef,
+                    aligner_params => $self->read_aligner_params || undef,
+                    force_fragment => $self->force_fragment || undef,
+                    trimmer_name => $self->read_trimmer_name || undef,
+                    trimmer_version => $self->read_trimmer_version || undef,
+                    trimmer_params => $self->read_trimmer_params || undef,
+                    picard_version => $self->picard_version || undef,
+                    samtools_version => $self->samtools_version || undef,
+                    filter_name => $assignment->filter_desc || undef
+                );
+
+    print Data::Dumper::Dumper(\%params);
+
+    my @param_set = (\%params);
+    return @param_set;
+}
+
+
+# TODO: remove
 sub prior {
     my $self = shift;
     warn("For now prior has been replaced with the actual column name prior_ref_seq");
@@ -144,11 +222,13 @@ sub prior {
     return $self->prior_ref_seq();
 }
 
+# TODO: remove
 sub filter_ruleset_name {
     #TODO: move into the db so it's not constant
     'basic'
 }
 
+# TODO: remove
 sub filter_ruleset_params {
     ''
 }

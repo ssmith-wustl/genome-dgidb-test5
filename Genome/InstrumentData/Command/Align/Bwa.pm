@@ -13,6 +13,9 @@ class Genome::InstrumentData::Command::Align::Bwa {
     has_constant => [
         aligner_name                    => { value => 'bwa' },
     ],
+    has_param => [
+        version                 => { default_value => '0.5.5'}
+    ],
     doc => 'align instrument data using BWA (see http://maq.sourceforge.net)',
 };
 

@@ -3,9 +3,7 @@ package Genome::Model::Tools::ManualReview::AddVariantsToList;
 use strict;
 use warnings;
 use Genome::Utility::VariantReviewListReader;
-
-
-use above 'Genome';
+use Genome;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__, is => 'Command',

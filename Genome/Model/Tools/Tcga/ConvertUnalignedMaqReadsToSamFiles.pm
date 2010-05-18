@@ -103,11 +103,12 @@ sub execute {
 
     my @idas = $model->instrument_data_assignments;
     my $alignment_count = scalar(@idas);
+    my $build = $model->last_complete_build;
 
     my $count = 0;
     for my $ida (@idas) {
 
-        my $alignment = $ida->alignment;
+        my $alignment = $ida->results($build);
         my $seq_id = $ida->instrument_data->seq_id;
         my $unaligned_file = $alignment->unaligned_reads_list_path;
 

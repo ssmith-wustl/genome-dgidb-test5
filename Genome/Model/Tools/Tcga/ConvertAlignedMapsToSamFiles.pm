@@ -51,11 +51,13 @@ sub execute {
     my @idas = $model->instrument_data_assignments;
     $self->status_message("There are ".scalar(@idas)." id assignemnts for model id $model_id\n");
     
+    my $build = $model->last_complete_build;
+
     my $count=0;
     my @alignments;
     for my $ida (@idas) {
         my $seq_id = $ida->instrument_data->seq_id;
-        my $alignment = $ida->alignment;
+        my $alignment = $ida->results($build);
         my $alignment_directory = $alignment->alignment_directory;
         
         #testing data 

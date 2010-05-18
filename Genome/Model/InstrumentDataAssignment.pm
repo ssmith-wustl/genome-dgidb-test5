@@ -48,15 +48,6 @@ class Genome::Model::InstrumentDataAssignment {
         sd_above_insert_size            => { via => 'instrument_data'},
         is_paired_end                   => { via => 'instrument_data' },
     ],
-    has_optional_transient => [
-        _alignment => {
-            is => 'Genome::InstrumentData::Alignment',
-        },
-        _alignments => {
-            is => 'Genome::InstrumentData::Alignment',
-            is_many => 1,
-        },
-    ],
     has_many_optional => [
         events => {
             is => 'Genome::Model::Event',
@@ -71,7 +62,6 @@ class Genome::Model::InstrumentDataAssignment {
 #  inst_data is an input, this (the whole create) can be removed
 sub create {
     my $class = shift;
-
     my $self = $class->SUPER::create(@_)
         or return;
 
@@ -101,6 +91,36 @@ sub create {
     return $self;
 }
 
+# Replace alignments() and alignment_sets() with something generic.
+# The only requirement is that it returns Genome::SoftwareResults objects,
+# so they can be introspected, and have an ->output directory.
+
+# This returns any isolated, per-instrument-data results which
+# are produced for a model across builds, if they exist.
+# This may be alignment data, trimming results, or fully empty 
+# when the instrument data is not processed in isolation at all.
+
+sub results { 
+    my $self = shift;
+    my $build = shift;  # refalign doesn't vary for instdata per build
+                        # but other pipelines might
+ 
+    my $model = $self->model;
+    my $processing_profile = $model->processing_profile;
+    if ($processing_profile->can('results_for_instrument_data_assignment')) {
+        # support for some sort of per-instdata results is present
+        return $processing_profile->results_for_instrument_data_assignment($self, $build);
+    }
+    else {
+        # this profile doesn't have any per-instdata results
+        return;
+    }
+}
+
+# NOTE: code which triggers alignment no longer comes here.
+# It passes the assignment object into the current processing profile
+# which has pipeline-specific alignment logic.
+
 sub __errors__ {
     my ($self) = shift;
 
@@ -124,147 +144,7 @@ sub __errors__ {
     return @tags;
 }
 
-sub params_for_alignment {
-    my $self = shift;
-
-    my $model = $self->model;
-    unless ($model->type_name eq 'reference alignment') {
-        $self->error_message('Can not create an alignment object for model type '. $model->type_name);
-        return;
-    }
-        my %params = (
-                      instrument_data_id => $self->instrument_data_id,
-                      aligner_name => $model->read_aligner_name,
-                      reference_name => $model->reference_sequence_name,
-                  );
-
-        # These are tracked in the alignment identity 
-        if ($model->read_aligner_version) {
-            $params{'aligner_version'} = $model->read_aligner_version;
-        }
-        if ($model->read_aligner_params) {
-            $params{'aligner_params'} = $model->read_aligner_params;
-        }
-
-        # This is tracked in the alignment identity, but has special code.
-        # TODO: merge this with the filter.
-        if ($model->force_fragment) {
-            $params{'force_fragment'} = $model->force_fragment;
-        }
-
-        # These are possibly not tracked, and as such could be breaking things.
-        if ($model->read_trimmer_name) {
-            $params{'trimmer_name'} = $model->read_trimmer_name;
-        }
-        if ($model->read_trimmer_version) {
-            $params{'trimmer_version'} = $model->read_trimmer_version;
-        }
-        if ($model->read_trimmer_params) {
-            $params{'trimmer_params'} = $model->read_trimmer_params;
-        }
-        # These should be given generic names, or merged into the aligner parameters.
-        if ($model->picard_version) {
-            $params{'picard_version'} = $model->picard_version;
-        }
-        if ($model->samtools_version) {
-            $params{'samtools_version'} = $model->samtools_version;
-        }
-
-        # New.  This will probably eventually composite any filters on the processing profile
-        # with explicit, per-data filters.  The former are preferred, but the later are needed
-        # for people to do experiments.
-        if ($self->filter_desc) {
-            $params{'filter_name'} = $self->filter_desc;
-        }
-
-    return %params;
-
-}
-
-sub alignment_directory {
-    my $self = shift;
-    my $alignment = $self->alignment_set;
-    return unless $alignment;
-    return $alignment->alignment_directory;
-}
-
-
-sub alignment_sets {
-    my $self = shift;
-    $self->alignment_set(@_);
-    return $self->_alignments;
-}
-
-sub alignment_set {
-    my $self = shift;
-
-    my $model = $self->model;
-
-    my %params = $self->params_for_alignment;
-    unless (%params) {
-        $self->error_message('Could not get alignment parameters for this instrument data assignment');
-        return;
-    }
-        
-    my @alignments;
-    unless ($self->_alignments) {
-        my $alignment = Genome::InstrumentData::Alignment->get(%params);
-        unless ($alignment) {
-            $self->error_message('Failed to create an alignment object');
-            return;
-        }
-
-        #$self->_alignment($alignment);
-        push @alignments, $alignment;
-        #Now create 'Paired End Read 1' fwd alignment
-        if ($model->force_fragment && $self->instrument_data->is_paired_end) {
-            my $instrument_data = $self->instrument_data;
-            $params{instrument_data_id} = $instrument_data->fwd_seq_id;
-            my $alignment_fwd = Genome::InstrumentData::Alignment->get(%params);
-            unless ($alignment_fwd) {
-                $self->error_message('Failed to create a fwd alignment object');
-                return;
-            }
-            push @alignments, $alignment_fwd;
-        }
-        $self->_alignments(\@alignments);
-    }
-    my @return = $self->_alignments;
-    return $return[0];
-}
-
-#### OBSOLETE  COMPATIBILITY #####
-sub alignment {
-    my $self = shift;
-    $self->warning_message("NOTICE: Using obsolete 'alignment' method...");
-    return $self->generate_alignment_set(@_);
-}
-
-sub alignments {
-    my $self = shift;
-    $self->warning_message("NOTICE: Using obsolete 'alignments' method...");
-    return $self->generate_alignment_sets(@_);
-}   
-#### END OBSOLETE ####
-
-sub generate_alignment_set {
-    my $self = shift;
-    $self->alignment_set(@_);
-    my @return = $self->_alignments;
-    return unless @return;
-    return $return[0]->prepare_for_generate;
-}
-
-sub generate_alignment_sets {
-    my $self = shift;
-    $self->alignment_set(@_);
-    for ($self->_alignments) {
-        $_->prepare_for_generate;
-    } 
-    return $self->_alignments;
-}
-
-
+# TODO: remove this.  There may be multiple read length per instdata.
 sub read_length {
     my $self = shift;
     my $instrument_data = $self->instrument_data;
@@ -277,6 +157,7 @@ sub read_length {
     }
     return $read_length;
 }
+
 sub yaml_string {
     my $self = shift;
     return YAML::Dump($self);

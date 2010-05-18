@@ -82,6 +82,16 @@ class Genome::InstrumentData::Command::Align {
                                             is => 'Text',
                                             doc => 'The version of Samtools to use for sam-to-bam, etc',
                                         },
+        test_name                       => {
+                                            is => 'Text',
+                                            is_optional => 1,
+                                            doc => 'When set, makes alignments not used in pipelines for testing.',
+                                        },
+        output_dir                      => {
+                                            is => 'Text',
+                                            is_optional => 1,
+                                            doc => 'When set, overrides the disk allocation system and uses an explicit path',
+                                        },
 
     ],
     doc => 'align instrument data using one of the available aligners',
@@ -121,7 +131,10 @@ sub execute {
         force_fragment     => $self->force_fragment,
         samtools_version   => $self->samtools_version,
         picard_version     => $self->picard_version,
+        test_name          => $self->test_name,
+        output_dir          => $self->output_dir,
     );
+
     # ehvatum TODO: remove if statement with ReferencePlaceholder
     if (defined($self->reference_sequence_build_id)) {
         $alignment_params{reference_sequence_build_id} = $self->reference_sequence_build_id;
@@ -129,9 +142,11 @@ sub execute {
     else {
         $alignment_params{reference_name} = $self->reference_name;
     }
+
     if(defined($self->reference_sequence_build_id) && defined($self->reference_name)) {
         $self->warning_message('Both reference_sequence_build_id and reference_name were supplied.');
     }
+
     if ($self->trimmer_name) {
         $alignment_params{trimmer_name} = $self->trimmer_name;
         if ($self->trimmer_version) {
@@ -141,17 +156,22 @@ sub execute {
             $alignment_params{trimmer_params} = $self->trimmer_params;
         }
     }
-    eval {
-        $alignment = Genome::InstrumentData::Alignment->create(%alignment_params);
-    };
-    if (!$alignment || $@) {
-        $self->error_message($@);
-        $self->error_message('Failed to create an alignment object with params: '. Data::Dumper::Dumper(%alignment_params) );
-        return;
+
+    $alignment = Genome::InstrumentData::AlignmentSet->get_or_create(%alignment_params);
+    unless ($alignment) {
+        if (Genome::InstrumentData::AlignmentSet->error_message()) {
+            die $self->error_message('Failed to create an alignment object with params: '. Data::Dumper::Dumper(\%alignment_params) );
+        }
+        else {
+            return;
+        }
     }
-    unless ($alignment->find_or_generate_alignment_data) {
-        $self->error_message('Failed to find or generate alignment data');
-        return;
+
+    if ($alignment->{db_committed}) {
+        $self->status_message("Found existing alignment: " . $alignment->__display_name__ . " with results at " . $alignment->output_dir);
+    }
+    else {
+        $self->status_message("Generated new alignment: " . $alignment->__display_name__ . " with results at " . $alignment->output_dir);
     }
 
     return 1;

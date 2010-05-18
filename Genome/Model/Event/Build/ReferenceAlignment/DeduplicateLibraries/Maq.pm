@@ -38,6 +38,8 @@ sub execute {
     my %library_alignments;
     my @all_alignments;
     
+    my $build = $self->build;
+
     #accumulate the maps per library
     for my $ida (@idas) {
         my $library = $ida->library_name;
@@ -46,7 +48,7 @@ sub execute {
             $self->warning_message("Library name: $library contains space. will replace with _. Note the lib_tag in bam file will be changed too");
             $library =~ s/\s+/\_/g;
         }
-        my @alignments = $ida->alignments;
+        my @alignments = $ida->results($build);
         for my $alignment (@alignments) {
             my @maps = $alignment->alignment_file_paths;
             push @{$library_alignments{$library}}, @maps;  #for the dedup step
@@ -291,11 +293,11 @@ sub calculate_required_disk_allocation_kb {
     my $self = shift;
 
     $self->status_message("calculating how many map files will get incorporated");
-
-    my @idas = $self->build->instrument_data_assignments;
+    my $build = $self->build;
+    my @idas = $build->instrument_data_assignments;
     my @build_maps;
     for my $ida (@idas) {
-        my @alignments = $ida->alignments;
+        my @alignments = $ida->results($self->build);
         for my $alignment (@alignments) {
             my @aln_maps = $alignment->alignment_file_paths;
             push @build_maps, @aln_maps;

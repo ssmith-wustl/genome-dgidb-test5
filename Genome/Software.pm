@@ -87,7 +87,8 @@ sub resolve_software_version {
     #TODO: make condition for directory in svn tree that has not been added to svn
 
     #TODO: make condition for uncommited changes in svn tree, currently return zero
-    die('Failed to resolve_software_version for perl module path '. $path);
+    #die('Failed to resolve_software_version for perl module path '. $path);
+    return 0;
 }
 
 sub svn_info {

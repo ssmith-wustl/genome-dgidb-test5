@@ -142,7 +142,8 @@ ok(my $instrument_data = Genome::Model::InstrumentDataAssignment->get(instrument
 isa_ok($instrument_data, "Genome::Model::InstrumentDataAssignment");
 ok(scalar($instrument_data->__errors__) == 0, "Checked invalid, seems valid");
 
-my $real_alignment = $instrument_data->alignment;
+my $build = $model->last_complete_build;
+my $real_alignment = $instrument_data->results($build);
 isa_ok($real_alignment,'Genome::InstrumentData::Alignment');
 
 ok(my $alignment_directory = $instrument_data->alignment_directory, 'Got the alignment_directory');

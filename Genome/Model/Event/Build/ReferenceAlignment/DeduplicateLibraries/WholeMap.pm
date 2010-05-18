@@ -17,7 +17,7 @@ class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Who
                                                  is => 'String',
                                                  doc => 'A whole, non-deduplicated map file.'
                                              },
-                  alignments => {
+                  ignments => {
                                  is => 'Array',
                                  doc => 'Array ref of alignment files.'
                              },

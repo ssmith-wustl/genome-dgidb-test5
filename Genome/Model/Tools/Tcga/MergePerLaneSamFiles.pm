@@ -82,8 +82,10 @@ sub execute {
     my @seq_ids; 
     my @alignments;
     my $count=0;
+    my $build = $model->last_complete_build;
+
     for my $ida (@idas) {
-        my $alignment = $ida->alignment;
+        my $alignment = $ida->results($build);
         my $seq_id = $ida->instrument_data->seq_id;
         push (@seq_ids, $seq_id);
         

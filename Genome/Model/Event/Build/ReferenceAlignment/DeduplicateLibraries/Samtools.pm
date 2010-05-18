@@ -52,7 +52,8 @@ sub execute {
     my @idas = $self->build->instrument_data_assignments;
     my %library_alignments;
     my @all_alignments;
-    
+    my $build = $self->build;
+
     #accumulate the maps per library
     for my $ida (@idas) {
         my $library = $ida->library_name;
@@ -61,7 +62,7 @@ sub execute {
             $self->warning_message("Library name: $library contains space. will replace with _.");
             $library =~ s/\s+/\_/g;
         }
-        my @alignments = $ida->alignments;
+        my @alignments = $ida->results($build);
         for my $alignment (@alignments) {
             my @bams = $alignment->alignment_bam_file_paths;
             $self->status_message("bam file paths: ". @bams);
@@ -219,11 +220,12 @@ sub calculate_required_disk_allocation_kb {
     my $self = shift;
 
     $self->status_message("calculating how many bam files will get incorporated...");
-
+    
+    my $build = $self->build;
     my @idas = $self->build->instrument_data_assignments;
     my @build_bams;
     for my $ida (@idas) {
-        my @alignments = $ida->alignments;
+        my @alignments = $ida->results($build);
         for my $alignment (@alignments) {
             my @aln_bams = $alignment->alignment_bam_file_paths;
             push @build_bams, @aln_bams;
