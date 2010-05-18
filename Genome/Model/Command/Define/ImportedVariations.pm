@@ -174,9 +174,9 @@ sub _execute_try {
         # * We're going to want a new build for an existing model, but first we should see if there are already any builds
         #   of the same version for the existing model.  If so, we ask the user to confirm that they really want to make another.
         $model = $models[0];
-        if($model->type_name ne 'imported reference sequence')
+        if($model->type_name ne 'imported variations')
         {
-            $err->("A model with the name \"" . $self->model_name . "\" already exists and is not an imported reference sequence.");
+            $err->("A model with the name \"" . $self->model_name . "\" already exists and is not of the type - imported variations.");
         }
         if(defined($taxon) && ($model->subject_class_name ne 'Genome::Taxon' || $model->subject_id != $taxon->taxon_id))
         {
