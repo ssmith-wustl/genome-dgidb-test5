@@ -142,13 +142,6 @@ ok(my $instrument_data = Genome::Model::InstrumentDataAssignment->get(instrument
 isa_ok($instrument_data, "Genome::Model::InstrumentDataAssignment");
 ok(scalar($instrument_data->__errors__) == 0, "Checked invalid, seems valid");
 
-my $build = $model->last_complete_build;
-my $real_alignment = $instrument_data->results($build);
-isa_ok($real_alignment,'Genome::InstrumentData::Alignment');
-
-ok(my $alignment_directory = $instrument_data->alignment_directory, 'Got the alignment_directory');
-ok(-d $alignment_directory, 'alignment_directory'. $alignment_directory .' exists');
-
 ok(my $read_length = $instrument_data->read_length, "Got the read length");
 ok(my $total_read_count = $instrument_data->_calculate_total_read_count, "Got total read count");
 ok(my $yaml_string = $instrument_data->yaml_string, "Got the yaml string");

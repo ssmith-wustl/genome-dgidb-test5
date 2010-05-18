@@ -12,36 +12,38 @@ use Data::Dumper;
 class Genome::Model::Command::Define::ImportedAssembly {
     is => 'Genome::Model::Command::Define',
     has_optional => [
-	sff_files => {
-	    is => 'Text',
-	    is_many => 1,
-	    is_optional => 1, 
-	    doc => 'a comma separated list of SFF files',
-	},
-	sff_dir => {
-	    is => 'Text',
-	    is_optional => 1,
-	    doc => 'a newbler sff files directory',
-	},
-	exclude_sff_files => {
-	    is => 'Text',
-	    is_many => 1,
-	    is_optional => 1,
-	    doc => 'a comma separated list of SFF files to ignore in defining model',
-	},
-	model_name => {
-	    is => 'Text',
-	    doc => 'model name',
-	},
+        sff_files => {
+            is => 'Text',
+            is_many => 1,
+            is_optional => 1, 
+            doc => 'a comma separated list of SFF files',
+        },
+        sff_dir => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'a newbler sff files directory',
+        },
+        exclude_sff_files => {
+            is => 'Text',
+            is_many => 1,
+            is_optional => 1,
+            doc => 'a comma separated list of SFF files to ignore in defining model',
+        },
+        model_name => {
+            is => 'Text',
+            doc => 'model name',
+        },
     ],
 };
 
 sub help_synopsis {
     return <<"EOS"
-genome model define imported-assembly --subject-name <human> --subject-type <species_name>
-genome model define imported-assembly --model-name <MY_MODEL_NAME> --subject-name <human> --subject-type <species_name>
-genome model define imported-assembly --subject-name <unknown> --sff-dir <FULL_PATH_TO_SFF_LINKS>
-genome model define imported-assembly --subject-name <unknown> --sff-files <FILE1.SFF,FILE2.SFF>
+genome model define imported-assembly --processing-profile-name 'imported velvet assembly' --subject-name human 
+genome model define imported-assembly --processing-profile-name 'imported velvet assembly' --subject-name "Escherichia coli 185-1" --model-name hmp-ecoli-HMPREF9549
+genome model define imported-assembly --processing-profile-name 'imported velvet assembly' --subject-name H_KT-185-1-0089515594    --model-name hmp-ecoli-HMPREF9549
+genome model define imported-assembly --processing-profile-name 'imported newbler assembly' --subject-name H_KT-185-1-0089515594    
+genome model define imported-assembly --processing-profile-name 'imported newbler assembly' --sff-dir <FULL_PATH_TO_SFF_LINKS>
+genome model define imported-assembly --processing-profile-name 'imported pcap assembly' --subject-name unknown --sff-files <FILE1.SFF,FILE2.SFF>
 EOS
 }
 

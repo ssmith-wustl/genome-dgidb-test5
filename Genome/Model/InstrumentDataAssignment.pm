@@ -117,6 +117,13 @@ sub results {
     }
 }
 
+sub alignment_directory {
+    my $self = shift;
+    my ($results) = $self->results;
+    return unless $results;
+    return $results->output_dir;
+}
+
 # NOTE: code which triggers alignment no longer comes here.
 # It passes the assignment object into the current processing profile
 # which has pipeline-specific alignment logic.

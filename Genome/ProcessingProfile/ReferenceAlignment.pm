@@ -170,7 +170,7 @@ sub _fetch_alignment_sets {
         $DB::single = 1;
         my $alignment = Genome::InstrumentData::AlignmentSet->$mode(%$_);
         unless ($alignment) {
-             $self->error_message("Failed to $mode an alignment object");
+             #$self->error_message("Failed to $mode an alignment object");
              return;
          }
         push @alignments, $alignment;
