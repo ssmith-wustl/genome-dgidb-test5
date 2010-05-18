@@ -10,7 +10,7 @@ use Exception::Class('ImportedVariations');
 
 class Genome::Model::Command::Define::ImportedVariations {
     is => 'Genome::Model::Command::Define',
-    has => variation_file =>
+    has => [variation_file =>
         {
             is => 'Text',
             len => 1000,
@@ -29,8 +29,8 @@ class Genome::Model::Command::Define::ImportedVariations {
             doc => 'The source of the file, such as "dbSNP".  May not have spaces.'
         },
         processing_profile_name => {
-            is_constant => 1,
-            value => 'chromosome-fastas',
+            #is_constant => 1,
+            #value => 'chromosome-fastas',
             doc => 'The processing profile takes no parameters, so all imported reference sequence models share the same processing profile instance.'
         },
         species_name => {
@@ -157,7 +157,8 @@ sub _execute_try {
     {
         my $transformedSpeciesName = $self->species_name;
         $transformedSpeciesName =~ s/\s/_/g;
-        $self->model_name($self->prefix . '-' . $transformedSpeciesName);
+        #$self->model_name($self->prefix . '-' . $transformedSpeciesName);
+        $self->model_name($self->processing_profile_name."-".$self->species_name."-".$self->version);
         $self->status_message('Generated model name "' . $self->model_name . '".');
     }
 
@@ -165,9 +166,11 @@ sub _execute_try {
     #   existing build.
     my @models = Genome::Model->get('name' => $self->model_name);
     my $model;
+    print "before ifins\n\n\n";
     if($#models > 0)
     {
         $err->("More than one model (" . $#models . ") found with the name \"" . $self->model_name . "\".");
+        die "more than one model";
     }
     elsif($#models == 0)
     {
@@ -187,6 +190,9 @@ sub _execute_try {
         {
             $check->("A model of name \"" . $model->name . "\" exists and imported reference version was not specified.");
         }
+
+=cut
+
         my @builds;
         foreach my $build (Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence'))
         {
@@ -223,18 +229,23 @@ sub _execute_try {
         $model->prefix($self->prefix);
         $model->version($self->version);
         $model->fasta_file($self->fasta_file);
+
+=cut
+
+        print "in if\n";
     }
     else
     {
+        print "in else\n";
         # * We need a new model
         # Note: Genome::Model->data_directory is deprecated and therefore not supplied
-        my %modelParams = ('subject_type' => 'species_name',
-                           'subject_name' => $self->species_name,
-                           'subject_class_name' => 'Genome::Taxon',
-                           'subject_id' => $taxon->taxon_id,
+        my %modelParams = ('subject_type' => $self->subject_type,
+                           'subject_name' => $self->subject_name,
+                           'subject_class_name' => $self->subject_class_name,
+                           'subject_id' => $self->subject_id,
                            'processing_profile_id' => $self->_get_processing_profile_id_for_name,
-                           'name' => $self->model_name,
-                           'fasta_file' => $self->fasta_file);
+                           'name' => $self->model_name);
+                           #'fasta_file' => $self->fasta_file);
         if(defined($self->version))
         {
             $modelParams{'version'} = $self->version;
@@ -243,13 +254,23 @@ sub _execute_try {
         {
             $modelParams{'prefix'} = $self->prefix;
         }
-        $model = Genome::Model::ImportedReferenceSequence->create(%modelParams);
+        print "just before model define!\n";
+        #$model = Genome::Model::ImportedVariations->create(%modelParams);
+
+        # let the super class make the model
+        my $super = $self->super_can('_execute_body');
+        $super->($self,@_);
+
+        print "just after model define!\n";
+        $model = $self->result_model_id; 
         if($model)
         {
+            print "created model!\n";
             $self->status_message('Created model of name "' . $model->name . '" and id ' . $model->genome_model_id . '.');
         }
         else
         {
+            print "failed to created model!\n";
             $err->("Failed to create model.");
         }
         push @$news, $model;
@@ -300,7 +321,7 @@ sub _execute_try {
 
 sub execute {
     my $self = shift;
-    die "This model definition is under construction - rlong\@genome.wustl.edu\n";
+#    die "This model definition is under construction - rlong\@genome.wustl.edu\n";
 
     my @news;
     eval
@@ -332,7 +353,7 @@ sub execute {
 
         $self->_execute_try(\@news);
     };
-    if(my $e = Exception::Class->caught('ImportedReferenceSequenceException'))
+    if(my $e = Exception::Class->caught('ImportedVariations'))
     {
         foreach my $dynItem (@news)
         {
