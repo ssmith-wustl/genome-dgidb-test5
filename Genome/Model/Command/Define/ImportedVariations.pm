@@ -14,29 +14,28 @@ class Genome::Model::Command::Define::ImportedVariations {
         {
             is => 'Text',
             len => 1000,
-            doc => "The full path and filename of the dbSNP file to import."
-        }
+            doc => "The full path and filename of the dbSNP file to import.",
+        },
     ],
     has_optional => [
         model_name => {
             is => 'Text',
             len => 255,
-            doc => '$PREFIX-$SPECIES_NAME unless otherwise specified.'
+            doc => '$P-$SPECIES_NAME unless otherwise specified.'
         },
         prefix => {
             is => 'Text',
-            value => 'dbSnp',
+            value => 'dbSNP',
             doc => 'The source of the file, such as "dbSNP".  May not have spaces.'
         },
         processing_profile_name => {
             is_constant => 1,
-            value => 'chromosome-fastas',
-            doc => 'The processing profile takes no parameters, so all imported reference sequence models share the same processing profile instance.'
+            doc => 'The processing profile for the imported variations, possibly dbSNP.'
         },
         species_name => {
             is => 'Text',
             len => 64,
-            doc => 'The species name of the reference.  This value must correspond to a species name found in the gsc.organism_taxon table.'
+            doc => 'The species name of the dbSNP.  This value must correspond to a species name found in the gsc.organism_taxon table.'
         },
         subject_name => {
             is_optional => 1,
@@ -50,13 +49,13 @@ class Genome::Model::Command::Define::ImportedVariations {
         subject_class_name => {
             is_constant => 1,
             value => 'Genome::Taxon',
-            doc => 'All imported reference sequence model subjects are represented by the Genome::Taxon class.'
+            doc => 'All imported variations model subjects are represented by the Genome::Taxon class.'
         },
         version => {
             is => 'Text',
             len => 128,
             doc => 'The version number and/or description of the dbSNP file.  May not have spaces.  This may be, for example '.
-                   '"130" or "130_human".'
+                   '"130".'
         },
         on_warning => {
             valid_values => ['prompt', 'exit', 'continue'],
