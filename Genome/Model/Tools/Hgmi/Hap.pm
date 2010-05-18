@@ -169,7 +169,7 @@ sub execute
 
     # sequence-name
     my $sn = Genome::Model::Tools::Hgmi::SequenceName->create(
-        locus_tag        => $config->{locus_id},
+        locus_tag        => $config->{locus_tag},
         fasta            => $cs->new_ctgs_out,
         analysis_version => $config->{pipe_version},
         acedb_version    => $config->{acedb_version},
@@ -401,6 +401,16 @@ sub execute
         croak "can't set up rrna screen step... Hap.pm\n\n";
     }
 
+    # need to copy over the delete.rrna.ace file, and possibly load the file into
+    # acedb
+    # file seems to land in $config->{path}/$config->{orgname_dir}/$config->{assembly_name}/$config->{assembly_version}/Genbank_submission/Version_1.0/Annotated_submission/
+    my $delete_rrna = $config->{path}."/".$config->{orgname_dir}."/".$config->{assembly_name}."/".$config->{assembly_version}."/Genbank_submission/Version_1.0/Annotated_submission/delete.rrnahits.ace";
+    if( -e $delete_rrna )
+    {
+        my $delete_rrna_dest = $config->{path}."/Acedb/".$config->{acedb_version}."/ace_files/".$self->locus_tag;
+        #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
+        system("cp $delete_rrna $delete_rrna_dest");
+    }
 
     # FIXME:
     # when skipping protein annotation, end here.
