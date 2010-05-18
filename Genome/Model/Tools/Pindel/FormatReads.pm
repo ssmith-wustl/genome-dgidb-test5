@@ -166,22 +166,21 @@ sub parse_one_end {
          #r1 "left" mapped. output right
          if($r2_flag & 0x0010) {
              #forward
-             my $stop_position = ($r2_pos - 1);
+             my $stop_position = ($r1_pos - 1);
              return unless $self->is_valid_read($r2_chr, $stop_position);
-
              $ofh->print("@" . $r2_name . "\n");
              $ofh->print($r2_seq . "\n");
-             $ofh->print("+\t" . $r2_chr . "\t" . $stop_position );
-             $ofh->print("\t" . $r2_ms . "\t" . $self->tag . "\n");
+             $ofh->print("+\t" . $r1_chr . "\t" . $stop_position );
+             $ofh->print("\t" . $r1_ms . "\t" . $self->tag . "\n");
          }
          else {
-             my $stop_position = ($r2_pos - 1 + $r2_is);
+             my $stop_position = ($r1_pos - 1 + $r1_is);
              return unless $self->is_valid_read($r2_chr, $stop_position);
 
              $ofh->print("@" . $r2_name . "\n");
              $ofh->print($self->reverse_complement($r2_seq) . "\n");
-             $ofh->print("-\t" . $r2_chr . "\t" . $stop_position );
-             $ofh->print("\t" . $r2_ms . "\t" . $self->tag . "\n");
+             $ofh->print("-\t" . $r1_chr . "\t" . $stop_position );
+             $ofh->print("\t" . $r1_ms . "\t" . $self->tag . "\n");
              
         }
     }
@@ -194,17 +193,17 @@ sub parse_one_end {
 
              $ofh->print("@" . $r1_name . "\n");
              $ofh->print($r1_seq . "\n");
-             $ofh->print("+\t" . $r1_chr . "\t" . $stop_position );
-             $ofh->print("\t" . $r1_ms . "\t" . $self->tag . "\n");
+             $ofh->print("+\t" . $r2_chr . "\t" . $stop_position );
+             $ofh->print("\t" . $r2_ms . "\t" . $self->tag . "\n");
          }
          else {
-             my $stop_position = ($r1_pos - 1 + $r1_is);
+             my $stop_position = ($r2_pos - 1 + $r2_is);
              return unless $self->is_valid_read($r1_chr, $stop_position);
              
              $ofh->print("@" . $r1_name . "\n");
              $ofh->print($self->reverse_complement($r1_seq) . "\n");
-             $ofh->print("-\t" . $r1_chr . "\t" . $stop_position );
-             $ofh->print("\t" . $r1_ms . "\t" . $self->tag . "\n");
+             $ofh->print("-\t" . $r2_chr . "\t" . $stop_position );
+             $ofh->print("\t" . $r2_ms . "\t" . $self->tag . "\n");
              
         }
     # If the mapped read has mapping score 0, skip it
