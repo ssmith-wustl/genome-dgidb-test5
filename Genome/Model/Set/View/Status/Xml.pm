@@ -33,6 +33,15 @@ class Genome::Model::Set::View::Status::Xml {
                             perspective => 'default',
                             toolkit => 'xml',
                             subject_class_name => 'Genome::Model::Build',
+                        },
+                        {
+                            name => 'last_complete_build',
+                            aspects => [
+                                'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
+                            ],
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            subject_class_name => 'Genome::Model::Build',
                         }
                     ],
                     subject_class_name => 'Genome::Model',

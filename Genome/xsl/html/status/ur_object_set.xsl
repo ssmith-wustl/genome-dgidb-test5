@@ -2,7 +2,7 @@
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-  <xsl:template name="genome_model_set" match="object[./types[./isa[@type='Genome::Model::Set']]]">
+  <xsl:template name="genome_object_set" match="object[./types[./isa[@type='UR::Object::Set']]]">
     <div class="result">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" class="result"><tbody><tr>
       <td>
@@ -23,8 +23,8 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       </td></tr></tbody></table>
     </div>
     <xsl:for-each select="aspect[@name='members']">
-      <xsl:call-template name="genome_model_build_table"/>
+      <xsl:apply-templates />
     </xsl:for-each>
   </xsl:template>
 
-</xsl:stylesheet> 
+</xsl:stylesheet>
