@@ -73,6 +73,14 @@ class Genome::Model::Tools::Somatic::Breakdancer{
             doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
         },
     ],
+    has_param => [ 
+        lsf_resource => {
+            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
+        },
+        lsf_queue => {
+            default_value => 'long'
+        }, 
+    ],
 };
 
 
