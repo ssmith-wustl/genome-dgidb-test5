@@ -258,6 +258,13 @@ sub execute
         runner_count  => $config->{runner_count},
     );
 
+    if (exists($config->{merge_script_location}) && (-x $config->{merge_script_location}) )
+    {
+        $merge->script_location($config->{merge_script_location});
+        $self->status_message("using merge script ". $config->{merge_script_location});
+    }
+
+
     if ( $self->dev )
     {
         $merge->dev(1);
