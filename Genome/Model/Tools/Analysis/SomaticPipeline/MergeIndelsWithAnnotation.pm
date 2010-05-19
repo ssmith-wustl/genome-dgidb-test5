@@ -90,7 +90,7 @@ sub execute {                               # replace with real execution logic.
 		if(!($lineContents[0] =~ "chrom" || $lineContents[0] =~ "ref_name"))
 		{
 			my $chrom = $lineContents[0];
-			$chrom =~ s/[^0-9XYMT]//g;
+			$chrom =~ s/[^0-9XYMTNT\_]//g;
 			my $chr_start = $lineContents[1];
 			my $chr_stop = $lineContents[2];
 			my $allele1 = $lineContents[3];
@@ -186,6 +186,7 @@ sub load_snp_calls
 		
 		if(!($lineContents[0] =~ "chrom" || $lineContents[0] =~ "ref_name"))
 		{
+			$chrom =~ s/[^0-9XYMTNT\_]//g;
 			my $chr_start = $lineContents[1];
 			my $chr_stop = my $allele1 = my $allele2 = "";
 			my $ref = my $var = "";
