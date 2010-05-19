@@ -17,32 +17,56 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => 'the type of dna used in the reads for this model',
             valid_values => ['genomic dna', 'cdna']
         },
+        snp_detector_name => {
+            doc => 'Name of the snp detector',
+            is_optional => 1,
+        },
+        snp_detector_version => {
+            doc => 'version of the snp detector',
+            is_optional => 1,
+        },
+        snp_detector_params => {
+            doc => 'command line args used for the snp detector',  
+            is_optional => 1,
+        },
+        indel_detector_name => {
+            doc => 'Name of the indel detector',
+            is_optional => 1,
+        },
+        indel_detector_version => {
+            doc => 'version of the indel detector',
+            is_optional => 1,
+        },
+        indel_detector_params => {
+            doc => 'command line args used for the indel detector',  
+            is_optional => 1,
+        },
         genotyper_name => {
-            doc => 'name of the genotyper for this model',
+            doc => 'name of the genotyper for this model... deprecated',
             is_optional => 1,
         },
         genotyper_version => {
-            doc => 'version of the genotyper for this model',
+            doc => 'version of the genotyper for this model... deprecated',
             is_optional => 1,
         },
         genotyper_params => {
-            doc => 'command line args used for the genotyper',
+            doc => 'command line args used for the genotyper... deprecated',
             is_optional => 1,
         },
         indel_finder_name => {
-            doc => 'name of the indel finder for this model',
+            doc => 'name of the indel finder for this model... deprecated',
             is_optional => 1,
         },
         indel_finder_version => {
-            doc => 'version of the indel finder for this model',
+            doc => 'version of the indel finder for this model... deprecated',
             is_optional => 1,
         },
         indel_finder_params => {
-            doc => 'command line args for the indel finder',
+            doc => 'command line args for the indel finder... deprecated',
             is_optional => 1,
         },
         variant_filter => {
-            doc => 'variant filter type: VarFilter or SnpFilter',
+            doc => 'variant filter type: VarFilter or SnpFilter... deprecated',
             is_optional => 1,
         },
         multi_read_fragment_strategy => {
