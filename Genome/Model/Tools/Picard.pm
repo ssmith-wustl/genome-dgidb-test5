@@ -60,7 +60,7 @@ EOS
 }
 
 my %PICARD_VERSIONS = (
-    '1.21' => '/gsc/scripts/pkg/bio/picard/picard-1.21',
+    '1.21' => '/gsc/scripts/lib/java/samtools/picard-tools-1.21',
     '1.17' => '/gsc/scripts/lib/java/samtools/picard-tools-1.17',
     # old processing profiles used a different standard
     # this was supposed to be ONLY for things where we work directly from svn instead of released versions, like samtools :(
