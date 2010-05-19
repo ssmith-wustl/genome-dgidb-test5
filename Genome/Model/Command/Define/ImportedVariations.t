@@ -6,7 +6,7 @@ use above "Genome";
 use Genome::Model::Command::Define::ImportedVariations;
 use File::Slurp;
 use File::Temp;
-use Test::More tests => 6;
+use Test::More tests => 3;
 
 # make a model like we do on the cmdline, but with Perl
 # $cmd = Genome::Model::C->
@@ -54,20 +54,20 @@ is($model->name,$test_model_name.".test", 'expected test model name retrieved');
 
 my $model_data_dir = $model->data_directory;
 # check for build
-my $build = Genome::Model::Build->get(model_id => $model->id);
+#my $build = Genome::Model::Build->get(model_id => $model->id);
 
-ok(defined($build), 'we got a build object back');
+#ok(defined($build), 'we got a build object back');
 
 # check the build directory, check the contents for the file...
 
-ok(-d $build->data_directory, 'data directory exists');
-my $orig_contents = read_file($temp_wugc);
-my $dest_contents = read_file($build->data_directory."/formatted_genotype_file_path.genotype");
+#ok(-d $build->data_directory, 'data directory exists');
+#my $orig_contents = read_file($temp_wugc);
+#my $dest_contents = read_file($build->data_directory."/formatted_genotype_file_path.genotype");
 #formatted_genotype_file_path.genotype
-is($dest_contents,$orig_contents,'original and copied files match');
+#is($dest_contents,$orig_contents,'original and copied files match');
 
 # let us nuke the build and model...
-$build->delete;
+#$build->delete;
 $model->delete;
 
 system("rm -rf $model_data_dir");

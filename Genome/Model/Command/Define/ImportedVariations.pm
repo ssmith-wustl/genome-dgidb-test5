@@ -120,14 +120,21 @@ my $check = \&onCheck;
 
 sub _execute_try {
     my ($self, $news) = @_;
+    if(defined($self->species_name) && not defined($self->subject_name)) {
+        $self->subject_name($self->species_name);
+    }elsif(defined($self->subject_name) && not defined($self->species_name)){
+        $self->species_name($self->subject_name);
+    }
+        
     if(defined($self->prefix) && $self->prefix =~ /\s/)
     {
         $err->("The prefix argument value must not contain spaces.");
     }
-
     unless(defined($self->model_name) || defined($self->species_name))
     {
-        $err->("Either model name or species name must be supplied.  For a new model, species name is always required.");
+        print "undefined model_name and species_name\n";
+        $self->error_message("Either model name or species name must be supplied.  For a new model, species name is always required.");
+        die $self->error_message;
     }
 
     # * Verify that species name matches a taxon
@@ -157,7 +164,6 @@ sub _execute_try {
     {
         my $transformedSpeciesName = $self->species_name;
         $transformedSpeciesName =~ s/\s/_/g;
-        #$self->model_name($self->prefix . '-' . $transformedSpeciesName);
         $self->model_name($self->processing_profile_name."-".$self->species_name."-".$self->version);
         $self->status_message('Generated model name "' . $self->model_name . '".');
     }
@@ -166,7 +172,6 @@ sub _execute_try {
     #   existing build.
     my @models = Genome::Model->get('name' => $self->model_name);
     my $model;
-    print "before ifins\n\n\n";
     if($#models > 0)
     {
         $err->("More than one model (" . $#models . ") found with the name \"" . $self->model_name . "\".");
@@ -190,53 +195,9 @@ sub _execute_try {
         {
             $check->("A model of name \"" . $model->name . "\" exists and imported reference version was not specified.");
         }
-
-=cut
-
-        my @builds;
-        foreach my $build (Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence'))
-        {
-            if(defined($self->version))
-            {
-                if(defined($build->version) && $build->version eq $self->version)
-                {
-                    push @builds, $build;
-                }
-            }
-            else
-            {
-                if(!defined($build->version))
-                {
-                    push @builds, $build;
-                }
-            }
-        }
-        if($#builds > -1)
-        {
-            my $errStr = 'The ';
-            if($#builds > 0)
-            {
-                $errStr .= 'builds of ids [' . join(', ', map({$_->build_id()} @builds)) . '] of this model have the same version identifier.';
-            }
-            else
-            {
-                $errStr .= 'build of id ' . $builds[0]->build_id . ' of this model has the same version identifier.';
-            }
-            $check->($errStr);
-        }
-        $self->status_message('Using existing model of name "' . $model->name . '" and id ' . $model->genome_model_id . '.');
-        # Update the model's prefix, version, and fasta_file inputs for the next build of the model
-        $model->prefix($self->prefix);
-        $model->version($self->version);
-        $model->fasta_file($self->fasta_file);
-
-=cut
-
-        print "in if\n";
     }
     else
     {
-        print "in else\n";
         # * We need a new model
         # Note: Genome::Model->data_directory is deprecated and therefore not supplied
         my %modelParams = ('subject_type' => $self->subject_type,
@@ -254,23 +215,17 @@ sub _execute_try {
         {
             $modelParams{'prefix'} = $self->prefix;
         }
-        print "just before model define!\n";
-        #$model = Genome::Model::ImportedVariations->create(%modelParams);
-
         # let the super class make the model
         my $super = $self->super_can('_execute_body');
         $super->($self,@_);
 
-        print "just after model define!\n";
         $model = $self->result_model_id; 
         if($model)
         {
-            print "created model!\n";
             $self->status_message('Created model of name "' . $model->name . '" and id ' . $model->genome_model_id . '.');
         }
         else
         {
-            print "failed to created model!\n";
             $err->("Failed to create model.");
         }
         push @$news, $model;
@@ -350,6 +305,8 @@ sub execute {
         {
             $err->('on_warning parameter value "' . $self->on_warning . '" not supported.');
         }
+        $DB::single=1;
+       
 
         $self->_execute_try(\@news);
     };
