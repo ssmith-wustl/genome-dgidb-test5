@@ -68,8 +68,8 @@ sub execute {
 
 sub process_imported_files {
     my ($self,$sample_name) = @_;
-    unless (-s $self->original_data_path) {
-        $self->error_message('Original data path of import file: '. $self->original_data_path .' is empty');
+    unless ((-s $self->original_data_path)||(-d $self->original_data_path)) {
+        $self->error_message('Original data path to be imported: '. $self->original_data_path .' is empty or is not a directory');
         return;
     }
     my %params = ();
