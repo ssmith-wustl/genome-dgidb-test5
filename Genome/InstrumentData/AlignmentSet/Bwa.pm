@@ -7,14 +7,20 @@ use File::Basename;
 use Genome;
 
 class Genome::InstrumentData::AlignmentSet::Bwa {
-    is => ['Genome::InstrumentData::AlignmentSet'],
+    is => 'Genome::InstrumentData::AlignmentSet',
     has_constant => [
-                     aligner_name => { value => 'bwa', is_param=>1 },
+        aligner_name => { value => 'bwa', is_param=>1 },
     ],
     has_optional => [
-                     _bwa_sam_cmd => { is=>'Text'}
+         _bwa_sam_cmd => { is=>'Text' }
     ]
 };
+
+sub required_arch_os { 'x86_64' }
+
+sub required_rusage { 
+    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>10000] span[hosts=1] rusage[tmp=90000, mem=10000]' -M 10000000 -n 4";
+}
 
 sub _run_aligner {
     my $self = shift;
