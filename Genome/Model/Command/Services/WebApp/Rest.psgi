@@ -122,7 +122,7 @@ dispatch {
         ];
       },
 
-      sub (GET + /**/* + .* + ?*) {
+      sub (GET + /**/* + .* + ?@*) {
         my ( $self, $class, $perspective, $toolkit, $args ) = @_;
 
         $class = url_to_type($class);
