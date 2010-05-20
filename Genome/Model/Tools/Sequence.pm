@@ -7,28 +7,41 @@ use Genome;
 class Genome::Model::Tools::Sequence{
     is => 'Command',
     has =>[
-    chromosome => {
-        is => 'Text',
-        doc => "chromosome for desired sequence",
-    },
-    start => {
-        is => 'Number',
-        doc => 'sequence start position',
-    },
-    stop => {
-        is => 'Number',
-        doc => 'sequence stop position',
-    },
-    build_id => {
-        is => 'Number',
-        is_optional => 1,
-        doc => "build id to grab sequence from, defaults to hb36",
-    },
-    build => {
-        is => 'Genome::Model::Build',
-        id_by => 'build_id',
-        is_optional => 1,
-    },
+        chromosome => {
+            is => 'Text',
+            doc => "chromosome for desired sequence",
+        },
+        start => {
+            is => 'Number',
+            doc => 'sequence start position',
+        },
+        stop => {
+            is => 'Number',
+            doc => 'sequence stop position',
+        },
+        build_id => {
+            is => 'Number',
+            is_optional => 1,
+            doc => "build id to grab sequence from, defaults to hb36",
+        },
+        build => {
+            is => 'Genome::Model::Build',
+            id_by => 'build_id',
+            is_optional => 1,
+        },
+        species => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'use reference for this species',
+            default => 'human',
+            valid_values => ['human', 'mouse'],
+        },
+        version => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'reference version to be used',
+            default => '36',
+        },
     ],
 };
 
@@ -55,23 +68,21 @@ sub execute {
 
     my $build = $self->build;
     unless ($build){
-        $build = Genome::Model::Build->get(93636924); #HB36 default option
-        unless ($build){
-            $self->error_message("couldn't grab default build HB36");
+        my $model = Genome::Model->get(name => "NCBI-" . $self->species);
+        unless ($model) {
+            $self->error_message("Could not get imported reference model for " . $self->species);
+            die;
+        }
+
+        $build = $model->build_by_version($self->version);
+        unless ($build) {
+            $self->error_message("Could not get imported reference version " . $self->version . " for " . $self->species);
             die;
         }
     }
 
-    my $seq_file = $build->get_bases_file($self->chromosome);
-    unless (defined $seq_file){
-        $self->error_message("seq file undefined for chromosome ".$self->chromosome);
-        die;
-    }
-    unless (-e $seq_file){
-        $self->error_message("seq_file $seq_file does not exist!");
-    }
-    my $seq = $build->sequence($seq_file, $self->start, $self->stop);
-    print $seq;
+    my $seq = $build->sequence($self->chromosome, $self->start, $self->stop);
+    print $seq . "\n";
     return 1;
 }
 
