@@ -10,49 +10,31 @@ BEGIN
     use_ok("Genome::Model::ImportedReferenceSequence");
 }
 
-# ehvatum TODO: fix these tests so that they get a recent build by version + prefix + taxon id
+my $model = Genome::Model::ImportedReferenceSequence->get(
+    prefix => 'NCBI',
+    subject_class_name => 'Genome::Taxon',
+    subject_id => Genome::Taxon->get(species_name => 'human')
+);
 
-my $model = Genome::Model::ImportedReferenceSequence->get(2741951221);
 isa_ok( $model, 'Genome::Model::ImportedReferenceSequence' );
-#my $build = $model->build_by_version(36);    # returns a hashref
-# The test wants to retrieve an old build for ncbi-human 36 that does not have
-# a version attribute and that would conflict with a newer build if it did.
-# So, we ensure that it gets the old version.
-my $build = Genome::Model::Build::ImportedReferenceSequence->get(93636924);
 
-#print $build,"\n";
-#print Dumper($build),"\n";
-my $expected_dir
-    = '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924';
+my $build = $model->build_by_version(36);
 
-#print $build->data_directory(),"\n";
+my $expected_dir = '/gscmnt/sata420/info/model_data/2741951221/build101947881';
+
 is( $build->data_directory(), $expected_dir, 'got the right data directory' );
 
-#print $build->get_bases_file(1),"\n";
 my $bases_file = $build->get_bases_file(1);
 my $expected_bases_file
-    = '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/1.bases';
+    = '/gscmnt/sata420/info/model_data/2741951221/build101947881/1.bases';
 is( $bases_file, $expected_bases_file, 'bases file correct' );
 
-#print $build->sequence($bases_file, 1, 10),"\n";
-my $test_seq0 = $build->sequence( $bases_file, 1, 10 );
+my $test_seq0 = $build->sequence( 1, 1, 10 );
 my $expected_seq0 = 'TAACCCTAAC';
 is( $test_seq0, $expected_seq0,
-    'got expected sequence from start of file (via Build...)' );
+    'got expected sequence from start of file' );
 
-#print $build->sequence($bases_file, 247249709, 247249719),"\n";
 my $expected_seq1 = 'NNNNNNNNNNN';
-my $test_seq1 = $build->sequence( $bases_file, 247249709, 247249719 );
+my $test_seq1 = $build->sequence( 1, 247249709, 247249719 );
 is( $test_seq1, $expected_seq1,
     'got expected sequence from end of file (via Build...)' );
-
-# this is from the model, not the build, but seems to work the same.
-#print $model->sequence($bases_file, 1, 10);
-#my $model_seq0 = $model->sequence( $bases_file, 1, 10 );
-#is( $model_seq0, $expected_seq0,
-#    'expected seq from start of file (via Genome::Model::ImportedRefSeq...)'
-#);
-#
-#my $model_seq1 = $model->sequence( $bases_file, 247249709, 247249719 );
-#is( $model_seq1, $expected_seq1,
-#    'expected seq from end of file (via Genome::Model::ImportedRefSeq...)' );
