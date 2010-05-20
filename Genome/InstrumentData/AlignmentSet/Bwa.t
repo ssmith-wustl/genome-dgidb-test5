@@ -41,7 +41,7 @@ $bwa_label =~ s/\./\_/g;
 ###########################################################
 my $sr = Genome::InstrumentData::AlignmentSet::Bwa->__define__(
                  'id' => -8765432,
-                 'output' => "/gscmnt/sata828/info/alignment_data/$bwa_label/refseq-for-test/test_run_name/4_-123456",
+                 'output_dir' => "/gscmnt/sata828/info/alignment_data/$bwa_label/refseq-for-test/test_run_name/4_-123456",
                  'software' =>  'Genome::InstrumentData::Aligner::Bwa' ,
                  'software_version' => $bwa_version,
                  'instrument_data_id' => '-123456',
