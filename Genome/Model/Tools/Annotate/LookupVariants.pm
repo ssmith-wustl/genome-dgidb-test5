@@ -449,12 +449,22 @@ sub reverse_complement {
 sub get_frequencies {
 
     my ($self,$rs_id) = @_;
-
-    my $RsDir = "/gsc/var/lib/import/dbsnp/129/frequencies";
+    my $model;
+    unless($model = Genome::Model::ImportedVariations->get( name => 'dbSNP-human-129')) {
+        $self->error_message("Could not locate the Imported Variations model for dbSNP-human-129");
+        die $self->error_message;
+    }
+    #my $RsDir = "/gsc/var/lib/import/dbsnp/129/frequencies";
+    my $RsDir = $model->data_directory."/ImportedVariations/frequencies";
 
     my $organism = $self->organism;
     if ($organism eq "mouse") {
-	$RsDir = "/gsc/var/lib/import/dbsnp/mouse/10090/frequencies";
+	#$RsDir = "/gsc/var/lib/import/dbsnp/mouse/10090/frequencies";
+        unless($model = Genome::Model::ImportedVariations->get( name => 'dbSNP-mouse-10090')) {
+            $self->error_message("Could not locate the Imported Variations Model for dbSNP-mouse-10090");
+            die $self->error_message;
+        }
+        my $RsDir = $model->data_directory."/ImportedVariations/frequencies";
     }
     my $rsdb = Bio::DB::Fasta->new($RsDir);
     my $freq = $rsdb->seq($rs_id, 1 => 6000);
@@ -630,8 +640,18 @@ sub get_fh_for_chr {
     my $dbSNP_path = $self->dbSNP_path();
 
     my $organism = $self->organism;
-    if ($dbSNP_path eq "/gsc/var/lib/import/dbsnp/130/tmp/" && $organism eq "mouse") {
-	$dbSNP_path = "/gsc/var/lib/import/dbsnp/mouse/10090/";
+    my $model;
+
+    #TODO should this simply check to see if organism eq mouse?
+
+    #if ($dbSNP_path eq "/gsc/var/lib/import/dbsnp/130/tmp/" && $organism eq "mouse") {
+    if ($organism eq "mouse") {
+        unless($model = Genome::Model::ImportedVariations->get(name => 'dbSNP-mouse-10090')){
+            $self->error_message("Could not locate ImportedVariations model with dbSNP-mouse-10090 name");
+            die $self->error_message;
+        }
+	#$dbSNP_path = "/gsc/var/lib/import/dbsnp/mouse/10090/";
+	$dbSNP_path = $model->data_directory."/ImportedVariations/";
     }
 
     my ($fh, $index);
