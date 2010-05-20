@@ -29,12 +29,10 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
     sub get_taxon_id_from_species_name {
         my $name = shift;
         my @taxons = Genome::Taxon->get('species_name' => $name);
-        if($#taxons == 0)
-        {
+        if ($#taxons == 0) {
             return $taxons[0]->taxon_id;
         }
-        else
-        {
+        else {
             return;
         }
     }
@@ -48,57 +46,48 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
         defined($model->processing_profile->reference_sequence_name) &&
         length($model->processing_profile->reference_sequence_name) > 0;
 
-    if($ppIsRefAlign)
-    {
+    if ($ppIsRefAlign) {
         my $ppRsName = $model->processing_profile->reference_sequence_name;
         my $rsPrefix;
         my $rsSpeciesName;
         my $rsVersion;
         my $subjectId;
         # Search by prefix, species name, and version
-        if($ppRsName =~ /^([^-]+)-(.+)-(?:(?:build|version|v)-?)?([^-]+)$/i)
-        {
+        if($ppRsName =~ /^([^-]+)-(.+)-(?:(?:build|version|v)-?)?([^-]+)$/i) {
             $rsPrefix = $1;
             $rsSpeciesName = $2;
             $rsVersion = $3;
             $subjectId = get_taxon_id_from_species_name($rsSpeciesName);
-            if(defined($subjectId))
-            {
+            if (defined($subjectId)) {
                 my @rsms = Genome::Model::ImportedReferenceSequence->get(
                     'subject_class_name' => 'Genome::Taxon',
                     'subject_id' => $subjectId);
-                if($#rsms == 0)
-                {
+                if ($#rsms == 0) {
                     my @rsbs = $rsms[0]->get(
                         'type_name' => 'imported reference sequence',
                         'prefix' => $rsPrefix,
                         'version' => $rsVersion);
-                    if($#rsbs == 0)
-                    {
+                    if ($#rsbs == 0) {
                         $referenceSequenceBuild = $rsbs[0];
                     }
                 }
             }
         }
         # Search by prefix and species name
-        if(!defined($referenceSequenceBuild) && $ppRsName =~ /^([^-]+)-(.+)$/)
-        {
+        if (!defined($referenceSequenceBuild) && $ppRsName =~ /^([^-]+)-(.+)$/) {
             $rsPrefix = $1;
             $rsSpeciesName = $2;
             $subjectId = get_taxon_id_from_species_name($rsSpeciesName);
-            if(defined($subjectId))
-            {
+            if (defined($subjectId)) {
                 my @rsms = Genome::Model::ImportedReferenceSequence->get(
                     'subject_class_name' => 'Genome::Taxon',
                     'subject_id' => $subjectId);
-                if($#rsms == 0)
-                {
+                if ($#rsms == 0) {
                     my @rsbs = $rsms[0]->get(
                         'type_name' => 'imported reference sequence',
                         'prefix' => $rsPrefix,
                         'version' => $rsVersion);
-                    if($#rsbs == 0)
-                    {
+                    if ($#rsbs == 0) {
                         $referenceSequenceBuild = $rsbs[0];
                     }
                 }
@@ -106,60 +95,49 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
         }
     }
 
-    if(defined($referenceSequenceBuild))
-    {
+    if(defined($referenceSequenceBuild)) {
         $model->reference_sequence_build($referenceSequenceBuild);
     }
-    elsif($model->genome_model_id >= 0)
-    {
+    elsif($model->genome_model_id >= 0) {
         # Alert ehvatum by email that an appropriate imported reference sequence build could not be found
         my $msender = new Mail::Sender({
             'smtp' => 'gscsmtp.wustl.edu',
             'from' => 'ehvatum@genome.wustl.edu',
             'replyto' => 'ehvatum@genome.wustl.edu'});
-        if(!$msender)
-        {
+        if(!$msender) {
             $self->warning_message('Failed to create Mail::Sender: ' . Mail::Sender::Error);
         }
-        else
-        {
-            if(!$msender->Open({
+        else {
+            if (!$msender->Open({
                 'to' => 'ehvatum@genome.wustl.edu',
-                'subject' => 'AUTO: no ImportedReferenceSequence build for "' . $model->processing_profile . '"'}))
-            {
+                'subject' => 'AUTO: no ImportedReferenceSequence build for "' . $model->processing_profile . '"'})) {
                 $self->warning_message('Failed to open Mail::Sender message: ' . $msender->{'error_message'});
             }
-            else
-            {
+            else {
                 my $sendLine;
-                if($ppIsRefAlign)
-                {
-                    if($ppHasRefSeqName)
-                    {
+                if ($ppIsRefAlign) {
+                    if ($ppHasRefSeqName) {
                         $sendLine =
                             'Failed to find a Genome::Model::Build::ImportedReferenceSequence instance for model ' .
                             $model->genome_model_id . ' with processing_profile "' . $model->processing_profile->name .
                             '" having reference_sequence_name "' . $model->processing_profile->reference_sequence_name .
                             '".';
                     }
-                    else
-                    {
+                    else {
                         $sendLine =
                             'Failed to find a Genome::Model::Build::ImportedReferenceSequence instance for model ' .
                             $model->genome_model_id . ": model's processing profile's reference_sequence_name " .
                             'attribute is empty or undefined.';
                     }
                 }
-                else
-                {
+                else {
                     $sendLine =
                         'Failed to find a Genome::Model::Build::ImportedReferenceSequence instance for model ' .
                         $model->genome_model_id . ": model's processing profile is not an instance of " .
                         'Genome::ProcessingProfile::ReferenceAlignment or an instance of a subclass of Genome::ProcessingProfile::ReferenceAlignment.';
                 }
                 $msender->SendLineEnc($sendLine);
-                if(!$msender->Close())
-                {
+                if (!$msender->Close()) {
                     $self->warning_message('Failed to send Mail::Sender message: ' . $msender->{'error_message'});
                 }
             }
