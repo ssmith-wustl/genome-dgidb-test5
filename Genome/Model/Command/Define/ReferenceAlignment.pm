@@ -48,47 +48,52 @@ sub _resolve_imported_reference_sequence_from_pp_ref_seq_name {
 
     if ($ppIsRefAlign) {
         my $ppRsName = $model->processing_profile->reference_sequence_name;
-        my $rsPrefix;
-        my $rsSpeciesName;
-        my $rsVersion;
-        my $subjectId;
-        # Search by prefix, species name, and version
-        if($ppRsName =~ /^([^-]+)-(.+)-(?:(?:build|version|v)-?)?([^-]+)$/i) {
-            $rsPrefix = $1;
-            $rsSpeciesName = $2;
-            $rsVersion = $3;
-            $subjectId = get_taxon_id_from_species_name($rsSpeciesName);
-            if (defined($subjectId)) {
-                my @rsms = Genome::Model::ImportedReferenceSequence->get(
-                    'subject_class_name' => 'Genome::Taxon',
-                    'subject_id' => $subjectId);
-                if ($#rsms == 0) {
-                    my @rsbs = $rsms[0]->get(
-                        'type_name' => 'imported reference sequence',
-                        'prefix' => $rsPrefix,
-                        'version' => $rsVersion);
-                    if ($#rsbs == 0) {
-                        $referenceSequenceBuild = $rsbs[0];
+        if ($ppRsName eq 'NCBI-human-build36') {
+            $referenceSequenceBuild = Genome::Model::ImportedReferenceSequence->get(101947881);
+        }
+        else {
+            my $rsPrefix;
+            my $rsSpeciesName;
+            my $rsVersion;
+            my $subjectId;
+            # Search by prefix, species name, and version
+            if($ppRsName =~ /^([^-]+)-(.+)-(?:(?:build|version|v)-?)?([^-]+)$/i) {
+                $rsPrefix = $1;
+                $rsSpeciesName = $2;
+                $rsVersion = $3;
+                $subjectId = get_taxon_id_from_species_name($rsSpeciesName);
+                if (defined($subjectId)) {
+                    my @rsms = Genome::Model::ImportedReferenceSequence->get(
+                        'subject_class_name' => 'Genome::Taxon',
+                        'subject_id' => $subjectId);
+                    if ($#rsms == 0) {
+                        my @rsbs = $rsms[0]->get(
+                            'type_name' => 'imported reference sequence',
+                            'prefix' => $rsPrefix,
+                            'version' => $rsVersion);
+                        if ($#rsbs == 0) {
+                            $referenceSequenceBuild = $rsbs[0];
+                        }
                     }
                 }
             }
-        }
-        # Search by prefix and species name
-        if (!defined($referenceSequenceBuild) && $ppRsName =~ /^([^-]+)-(.+)$/) {
-            $rsPrefix = $1;
-            $rsSpeciesName = $2;
-            $subjectId = get_taxon_id_from_species_name($rsSpeciesName);
-            if (defined($subjectId)) {
-                my @rsms = Genome::Model::ImportedReferenceSequence->get(
-                    'subject_class_name' => 'Genome::Taxon',
-                    'subject_id' => $subjectId);
-                if ($#rsms == 0) {
-                    my @rsbs = $rsms[0]->get(
-                        'type_name' => 'imported reference sequence',
-                        'prefix' => $rsPrefix,
-                        'version' => $rsVersion);
-                    if ($#rsbs == 0) {
-                        $referenceSequenceBuild = $rsbs[0];
+            # Search by prefix and species name
+            if (!defined($referenceSequenceBuild) && $ppRsName =~ /^([^-]+)-(.+)$/) {
+                $rsPrefix = $1;
+                $rsSpeciesName = $2;
+                $subjectId = get_taxon_id_from_species_name($rsSpeciesName);
+                if (defined($subjectId)) {
+                    my @rsms = Genome::Model::ImportedReferenceSequence->get(
+                        'subject_class_name' => 'Genome::Taxon',
+                        'subject_id' => $subjectId);
+                    if ($#rsms == 0) {
+                        my @rsbs = $rsms[0]->get(
+                            'type_name' => 'imported reference sequence',
+                            'prefix' => $rsPrefix,
+                            'version' => $rsVersion);
+                        if ($#rsbs == 0) {
+                            $referenceSequenceBuild = $rsbs[0];
+                        }
                     }
                 }
             }
