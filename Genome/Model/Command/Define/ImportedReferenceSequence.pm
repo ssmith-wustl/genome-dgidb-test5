@@ -65,12 +65,10 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
         },
         job_dispatch => {
             default_value => 'apipe',
-            is_constant => 1,
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
         server_dispatch => {
             default_value => 'long',
-            is_constant => 1,
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
    ],
@@ -183,38 +181,39 @@ sub _execute_try {
             $err->("A model with the name \"" . $self->model_name . "\" already exists but has a different subject class name or a " .
                    "subject ID other than that corresponding to the species name supplied.");
         }
-        unless(defined($self->version))
+        my @builds = $model->builds;
+        if($#builds > -1 && !defined($self->version))
         {
-            $check->("A model of name \"" . $model->name . "\" exists and imported reference version was not specified.");
+            $check->("At least one build already exists for the model of name \"" . $model->name . "\" and imported reference version was not specified.");
         }
-        my @builds;
-        foreach my $build (Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence'))
+        my @conflictingBuilds;
+        foreach my $build (@builds)
         {
             if(defined($self->version))
             {
                 if(defined($build->version) && $build->version eq $self->version)
                 {
-                    push @builds, $build;
+                    push @conflictingBuilds, $build;
                 }
             }
             else
             {
                 if(!defined($build->version))
                 {
-                    push @builds, $build;
+                    push @conflictingBuilds, $build;
                 }
             }
         }
-        if($#builds > -1)
+        if($#conflictingBuilds > -1)
         {
             my $errStr = 'The ';
-            if($#builds > 0)
+            if($#conflictingBuilds > 0)
             {
-                $errStr .= 'builds of ids [' . join(', ', map({$_->build_id()} @builds)) . '] of this model have the same version identifier.';
+                $errStr .= 'builds of ids [' . join(', ', map({$_->build_id()} @conflictingBuilds)) . '] of this model have the same version identifier.';
             }
             else
             {
-                $errStr .= 'build of id ' . $builds[0]->build_id . ' of this model has the same version identifier.';
+                $errStr .= 'build of id ' . $conflictingBuilds[0]->build_id . ' of this model has the same version identifier.';
             }
             $check->($errStr);
         }
