@@ -272,7 +272,8 @@ sub _resolve_subclass_name {
         my @seq_plat_param = grep { $_->name eq 'sequencing_platform' } @params;
         if (scalar(@seq_plat_param) == 1) {
             $sequencing_platform = $seq_plat_param[0]->value;
-        
+        }
+
     }  else {
         my %params = @_;
         $sequencing_platform = $params{sequencing_platform};
