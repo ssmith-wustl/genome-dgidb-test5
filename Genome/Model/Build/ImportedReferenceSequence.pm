@@ -18,7 +18,7 @@ class Genome::Model::Build::ImportedReferenceSequence {
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'fasta_file', value_class_name => 'UR::Value' ],
-            doc => 'fully qualified fasta filename (eg /foo/bar/input.fasta)'
+            doc => "fully qualified fasta filename to copy to all_sequences.fa in the build's data_directory."
         },
     ],
     has_optional => [
@@ -53,17 +53,18 @@ sub calculate_estimated_kb_usage {
     return $fastaSize;
 }
 
-# ehvatum: Why provide an instance method that uses no information from the class?  Note that $self is not referenced.
 sub sequence {
-    my $self = shift;
-    my ($file, $start, $stop) = @_;
+    my ($self, $chromosome, $start, $stop) = @_;
 
     my $f = IO::File->new();
-    $f->open($file);
+    my $basesFileName = $self->get_bases_file($chromosome);
+    if(!$f->open($basesFileName)) {
+        $self->error_message("Failed to open bases file \"$basesFileName\".");
+        return;
+    }
     my $seq = undef;
-    $f->seek($start -1,0);
+    $f->seek($start - 1,0);
     $f->read($seq, $stop - $start + 1);
-    $f->close();
 
     return $seq;
 }
@@ -79,7 +80,7 @@ sub get_bases_file {
 }
 
 sub full_consensus_path {
-    my ($self,$format) = @_;
+    my ($self, $format) = @_;
     $format ||= 'bfa';
     my $file = $self->data_directory . '/all_sequences.'. $format;
     if ( -e $file){
