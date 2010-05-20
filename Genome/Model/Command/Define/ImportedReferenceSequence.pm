@@ -64,13 +64,13 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             doc => 'The action to take when emitting a warning.'
         },
         job_dispatch => {
-#            default_value => 'apipe',
-#            is_constant => 1,
+            default_value => 'apipe',
+            is_constant => 1,
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
         server_dispatch => {
-#            default_value => 'long',
-#            is_constant => 1,
+            default_value => 'long',
+            is_constant => 1,
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
    ],

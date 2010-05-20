@@ -12,20 +12,6 @@ my $num4GiB = 4294967296;
 
 class Genome::ProcessingProfile::ImportedReferenceSequence {
     is => 'Genome::ProcessingProfile',
-    has => [
-        server_dispatch => {
-            is_constant => 1,
-            is_class_wide => 1,
-            value => 'inline',
-            doc => 'lsf queue to submit the launcher or \'inline\''
-        },
-        job_dispatch => {
-            is_constant => 1,
-            is_class_wide => 1,
-            value => 'inline',
-            doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
-        }
-    ],
     doc => "this processing profile does the file copying and indexing required to import a reference sequence fasta file"
 };
 
@@ -55,7 +41,7 @@ sub _execute_build {
         return;
     }
 
-    # Copy the original fasta
+    $self->status_message("Copying fasta");
     my $outDir = $build->data_directory;
     my $fasta = File::Spec->catfile($outDir, 'all_sequences.fa');
     unless(copy($build->fasta_file, $fasta))
@@ -63,6 +49,8 @@ sub _execute_build {
         $self->error_message("Failed to copy \"" . $build->fasta_file . "\" to \"$fasta\": $!.");
         return;
     }
+
+    $self->status_message("Making bases files from fasta.");
 
     $self->status_message("Doing bwa indexing.");
     my $bwaIdxAlg = ($fastaSize < 11000000) ? "is" : "bwtsw";
