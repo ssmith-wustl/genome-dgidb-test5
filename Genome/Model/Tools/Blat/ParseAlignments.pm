@@ -110,7 +110,7 @@ sub execute {                               # replace with real execution logic.
 	
 		## Parse out only lines matching a BLAT-like result pattern ##
 		
-		if($line && $line=~/\d+\t\d+\d+\t\d+\t\d+\d+\t/)	
+		if($line && $line =~ '\,') #$line=~/\d+\t\d+\d+\t\d+\t\d+\d+\t/)	
 		{
 			$pslFormatCounter++;
 			
