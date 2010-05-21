@@ -7,9 +7,8 @@ use Genome;
 
 class Genome::Model::Event::Build::ReferenceAlignment::AlignReads {
     is => ['Genome::Model::Event'],
-    is_abstract => 1,
 	has => [
-            _calculate_total_read_count => { via => 'instrument_data'},
+        _calculate_total_read_count => { via => 'instrument_data'},
         #make accessors for common metrics
         (
             map {
@@ -20,12 +19,20 @@ class Genome::Model::Event::Build::ReferenceAlignment::AlignReads {
     ],
 };
 
-sub command_subclassing_model_property {
-    return 'read_aligner_name';
+sub results_class {
+    my $self = shift;
+    my $model = $self->model;
+    my $processing_profile = $model->processing_profile;
+    my $read_aligner_name = $processing_profile->read_aligner_name;
+    return 'Genome::InstrumentData::AlignmentSet::' . ucfirst(lc($read_aligner_name));
 }
 
-# this is implemented in subclasses
-# sub bsub_rusage { }
+sub bsub_rusage {
+    my $self = shift;
+    my $delegate = $self->results_class;
+    my $rusage = $delegate->required_rusage();
+    return $rusage;
+}
 
 sub metrics_for_class {
     my $class = shift;
@@ -49,8 +56,9 @@ sub metrics_for_class {
                           unaligned_base_pair_count
                           total_base_pair_count
     );
-
-    return @metric_names;
+    my $delegate = $class->results_class;
+    my @extra = $delegate->extra_metrics();
+    return @metric_names, @extra;
 }
 
 sub fwd_reads_passed_quality_filter_count {
@@ -437,6 +445,21 @@ sub execute {
         return 0;
     }
 
+    for my $alignment (@alignments) {
+        my $link = $alignment->add_user(user => $build, label => 'uses');
+        if ($link) {
+            $self->error_message("Linked alignment " . $alignment->id . " to the build");
+        }
+        else {
+            $self->error_message(
+                "Failed to link the build to the alignment " 
+                . $alignment->__display_name__ 
+                . "!"
+            );
+            # TODO: die, but not for now
+        }
+    }
+
     $self->status_message("Generating alignments...");
     $self->generate_metric($self->metrics_for_class);
 
@@ -475,6 +498,43 @@ sub verify_successful_completion {
 
     return 1;
 }
+
+# these were only ever used for maq, and are probably completely obsolete
+
+sub contaminated_read_count {
+    my $self = shift;
+    return $self->get_metric_value('contaminated_read_count');
+}
+
+sub _calculate_contaminated_read_count {
+    my $self = shift;
+ 
+    my $instrument_data_assignment = $self->instrument_data_assignment;
+    my $alignment = $instrument_data_assignment->alignment_set;
+    my @f = $alignment->aligner_output_file_paths;
+    @f = grep($_ !~ 'sanitized', @f);
+    
+    my $contaminated_read_count = 0;
+    for my $f (@f) {
+        my $fh = IO::File->new($f);
+        $fh or die "Failed to open $f to read.  Error returning value for contaminated_read_count.\n";
+        my $n;
+        while (my $row = $fh->getline) {
+            if ($row =~ /\[ma_trim_adapter\] (\d+) reads possibly contains adaptor contamination./) {
+                $n = $1;
+                last;
+            }
+        }
+        unless (defined $n) {
+            #$self->warning_message("No adaptor information found in $f!");
+            next;
+        }
+        $contaminated_read_count += $n;
+    }
+    
+    return $contaminated_read_count;
+}
+
 
   
 1;

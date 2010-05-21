@@ -35,6 +35,7 @@ class Genome::SoftwareResult {
         params              => {is => 'Genome::SoftwareResult::Param', reverse_as => 'software_result'},
         inputs              => {is => 'Genome::SoftwareResult::Input', reverse_as => 'software_result'},
         metrics             => {is => 'Genome::SoftwareResult::Metric', reverse_as => 'software_result'},
+        users               => {is => 'Genome::SoftwareResult::User', reverse_as => 'software_result'},
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -67,7 +68,7 @@ sub get_or_create {
    
     if (@objects > 1) {
         return @objects if wantarray;
-        die "Multiple matches for alignment but get or create was called in scalar context";
+        die "Multiple matches for $class but get or create was called in scalar context!";
     } else {
         return $objects[0];
     }
@@ -103,7 +104,7 @@ sub create {
     # TODO; if an exception occurs before this is assigned to the object, we'll have a stray lock
     # We need to ensure that we get cleanup on die.
 
-    # we might have had to wait on the lock, in which case someone else was probably creating that alignment.
+    # we might have had to wait on the lock, in which case someone else was probably creating that entity
     # do a "reload" here to force another trip back to the database to see if a software result was created
     # while we were waiting on the lock.
     (@previously_existing) = UR::Context->current->reload($class,%is_input,%is_param);
@@ -261,12 +262,16 @@ sub _resolve_lock_name {
         return $class->_resolve_lock_name(%is_input, %is_param);
     }
     my $be = UR::BoolExpr->resolve_normalized($self, @_);
+    
+    no warnings;
     my $params_list=join "___", $be->params_list;
     # sub out dangerous directory separators
     $params_list =~ s/\//\./g;
+    use warnings;
+
     my $params_list_hash = md5_hex($params_list);
     
-    my $resource_lock_name = "/gsc/var/lock/alignments/" .  $params_list_hash;
+    my $resource_lock_name = "/gsc/var/lock/$self/" .  $params_list_hash;
 }
 
 1;

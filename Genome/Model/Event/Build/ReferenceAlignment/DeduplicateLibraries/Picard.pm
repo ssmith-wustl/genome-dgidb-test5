@@ -40,11 +40,19 @@ sub execute {
     #get the instrument data assignments
     my @bam_files;
     my @idas = $self->build->instrument_data_assignments;
+    $self->status_message("Found " . scalar(@idas) . " assigned instrument data");
+    unless (@idas) {
+        $self->error_message("No instrument data assigned to this build!!!???  Quitting...");
+        return;
+    }
+
     for my $ida (@idas) {
         my @alignments = $processing_profile->results_for_instrument_data_assignment($ida, $build);
+        $self->status_message("Found " . scalar(@alignments) . " alignment sets for instrument data " . $ida->__display_name__);
         for my $alignment (@alignments) {
             my @bams = $alignment->alignment_bam_file_paths;
             unless(scalar @bams) {
+                # TODO: change this to not have a special retval.
                 if($alignment->aligner_name eq 'maq' and $alignment->verify_aligner_successful_completion eq 2) {
                     $self->status_message("No bam for alignment of instrument data #" . $ida->instrument_data_id . " due to 'no reasonable reads'");
                 } else {
@@ -60,6 +68,10 @@ sub execute {
         }
     } 
     $self->status_message("Collected files for merge and dedup: ".join("\n",@bam_files));
+    if (@bam_files == 0) {
+        $self->error_message("NO BAM FILES???  Quitting");
+        return;
+    }
     
     $self->status_message('Checking bams...');
     my $individual_flagstat_total = 0;
@@ -122,6 +134,8 @@ sub execute {
     $self->status_message("Using rmdup version $rmdup_name");
     my $pp_name = $self->model->processing_profile_name;
     $self->status_message("Using pp: ".$pp_name);
+
+
 
     Genome::DataSource::GMSchema->disconnect_default_dbh; 
   

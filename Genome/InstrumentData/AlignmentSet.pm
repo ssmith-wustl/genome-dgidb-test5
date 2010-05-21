@@ -22,6 +22,12 @@ class Genome::InstrumentData::AlignmentSet {
                                     is => 'Genome::Model::Build::ReferencePlaceholder',
                                     id_by => 'reference_name',
                                 },
+        
+        _disk_allocation        => { is => 'Genome::Disk::Allocation', is_optional => 1, is_many => 1, reverse_as => 'owner' },
+
+    ],
+    has_transient => [
+
         temp_staging_directory  => {
                                     is => 'Text',
                                     doc => 'A directory to use for staging the alignment data before putting it on allocated disk.',
@@ -33,7 +39,6 @@ class Genome::InstrumentData::AlignmentSet {
                                     is_optional=>1,
                                 },
         _sanger_fastq_pathnames => { is => 'Array', is_optional=>1 },
-        _disk_allocation        => { is => 'Genome::Disk::Allocation', is_optional=>1 },
     ],
     has_input => [
         instrument_data_id      => {
@@ -167,6 +172,18 @@ class Genome::InstrumentData::AlignmentSet {
     ],
 };
 
+sub required_arch_os { 
+    'x86_64' 
+}
+
+sub required_rusage { 
+    #"-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=50000:mem=12000]' -M 1610612736";
+    ''
+}
+
+sub extra_metrics {
+    ()
+}
 
 
 sub _resolve_subclass_name {
@@ -213,20 +230,31 @@ sub create {
         return $class->SUPER::create(@_);
     }
 
-
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-    # STEP 1: PREPARE THE STAGING DIRECTORY
+    # STEP 1: ENSURE WE WILL PROBABLY HAVE DISK SPACE WHEN ALIGNMENT COMPLETES
+    my $estimated_kb_usage = $self->estimated_kb_usage;
+    $self->status_message("Estimated disk for this data set: " . $estimated_kb_usage . " kb");
+    $self->status_message("Check for available disk...");
+    my @available_volumes = Genome::Disk::Volume->get(disk_group_names => "info_alignments"); 
+    $self->status_message("Found " . scalar(@available_volumes) . " disk volumes");
+    my $unallocated_kb = 0;
+    for my $volume (@available_volumes) {
+        $unallocated_kb += $available_volumes[0]->unallocated_kb 
+    }
+    $self->status_message("Available disk: " . $unallocated_kb . " kb");
+    my $factor = 10;
+    unless ($unallocated_kb > ($factor * $estimated_kb_usage)) {
+        $self->error_message("NOT ENOUGH DISK SPACE!  This step requires $factor x as much disk as the job will use to be available before starting.");
+        die $self->error_message();
+    }
+
+    # STEP 2: PREPARE THE STAGING DIRECTORY
     $self->status_message("Prepare working directories...");
     $self->_prepare_working_directories;
     $self->status_message("Staging path is " . $self->temp_staging_directory);
     $self->status_message("Working path is " . $self->temp_scratch_directory);
-
-    # STEP 2: PREPARE THE ALIGNMENT DIRECTORY
-    $self->status_message("Preparing the output directory...");
-    my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
-    $self->status_message("Alignment output path is $output_dir");
 
     # STEP 3: PREPARE REFERENCE SEQUENCES
     $self->status_message("Preparing the reference sequences...");
@@ -312,7 +340,12 @@ sub create {
         die $self->error_message;
     }
 
-    # STEP 8: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
+    # STEP 8: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
+    $self->status_message("Preparing the output directory...");
+    my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
+    $self->status_message("Alignment output path is $output_dir");
+
+    # STEP 9: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
     $self->status_message("Moving results to network disk...");
     my $product_path;
     unless($product_path= $self->_promote_validated_data) {
@@ -320,7 +353,7 @@ sub create {
         die $self->error_message;
     }
     
-    # STEP 9: RESIZE THE DISK
+    # STEP 10: RESIZE THE DISK
     # TODO: do this before promoting???
     $self->status_message("Resizing the disk allocation...");
     if ($self->_disk_allocation) {
@@ -532,7 +565,7 @@ sub _prepare_working_directories {
 
     my $hostname = hostname;
     my $user = $ENV{'USER'};
-    my $basedir = sprintf("alignment-%s-%s-%s", $hostname, $user, $$);
+    my $basedir = sprintf("alignment-%s-%s-%s-%s", $hostname, $user, $$, $self->id);
     my $tempdir = Genome::Utility::FileSystem->create_temp_directory($basedir);
     unless($tempdir) {
         die "failed to create a temp staging directory for completed files";
@@ -549,55 +582,27 @@ sub _prepare_working_directories {
     return 1;
 } 
 
-=cut
-sub _resolve_alignment_directory {
-    my $self = shift;
-   
-    print $self->instrument_data->id; 
-    
-    my %allocation_get_parameters = $self->_resolve_allocation_parameters;
-
-    my $allocation = Genome::Disk::Allocation->get(%allocation_get_parameters);
-
-    if (!$allocation) {
-        if ($self->output_dir) {
-            $self->error_message("our software result has an output: " . $self->output_dir . " but there's no allocation.  " .
-            "cowardly refusing to do anything, because we expected to see an allocation that met these parameters: " . Dumper(\%allocation_get_parameters));
-            die $self->error_message;
-        }
-
-        return;
-    }
-
-    $self->_disk_allocation($allocation);
-    
-    my $output_dir = $allocation->absolute_path;
-    unless (-d $output_dir) {
-        mkpath($output_dir);
-        unless (-d $output_dir) {
-             $self->error_message("Allocation path $output_dir doesn't exist, and it could not be recreated!");
-             die $self->error_message;
-        }
-    }
-    
-    $self->output_dir($output_dir);
-    $self->alignment_container_directory($output_dir);
-    
-    return $output_dir;
-}
-=cut
-
 sub _prepare_alignment_directory {
 
     my $self = shift;
 
-    my %allocation_get_parameters = $self->_resolve_allocation_parameters;
+    my $subdir = $self->resolve_alignment_subdirectory;
+    unless ($subdir) {
+        $self->error_message("failed to resolve subdirectory for instrument data.  cannot proceed.");
+        die $self->error_message;
+    }
+    
+    my %allocation_get_parameters = (
+        disk_group_name => 'info_alignments',
+        allocation_path => $subdir,
+    );
 
-    my %allocation_create_parameters = (%allocation_get_parameters,
-                                        kilobytes_requested => $self->estimated_kb_usage,
-                                        owner_class_name => $self->class,
-                                        owner_id => $self->id
-                              );
+    my %allocation_create_parameters = (
+        %allocation_get_parameters,
+        kilobytes_requested => $self->estimated_kb_usage,
+        owner_class_name => $self->class,
+        owner_id => $self->id
+    );
     
     my $allocation = Genome::Disk::Allocation->allocate(%allocation_create_parameters);
     unless ($allocation) {
@@ -605,8 +610,6 @@ sub _prepare_alignment_directory {
         die($self->error_message);
     }
 
-    $self->_disk_allocation($allocation);
-    
     my $output_dir = $allocation->absolute_path;
     unless (-d $output_dir) {
         $self->error_message("Allocation path $output_dir doesn't exist!");
@@ -618,25 +621,6 @@ sub _prepare_alignment_directory {
     return $output_dir;
 }
 
-sub _resolve_allocation_parameters {
-    my $self = shift;
-    
-    my $subdir = $self->resolve_alignment_subdirectory;
-    
-    unless ($subdir) {
-        $self->error_message("failed to resolve subdirectory for instrument data.  cannot proceed.");
-        die $self->error_message;
-    }
-    
-    my %allocation_get_parameters = (
-                disk_group_name => 'info_alignments',
-                allocation_path => $subdir,
-                );
-
-    return %allocation_get_parameters;
-}
-
-
 sub estimated_kb_usage {
     30000000;
     #die "unimplemented method: please define estimated_kb_usage in your alignment subclass.";
@@ -644,7 +628,38 @@ sub estimated_kb_usage {
 
 sub resolve_alignment_subdirectory {
     my $self = shift;
-    
+    my $date = UR::Time->now();
+    my $directory = join('/', 'alignment_data',$instrument_data->id,$staged_basename);
+    return $directory;
+}
+
+sub old_resolve_alignment_subdirectory {
+    my $self = shift;
+
+    #my $directory;
+    #eval {
+    #    my $reference_sequence_name = $self->reference_name;
+    #    my $instrument_data         = $self->instrument_data;
+    #    my $library                 = $instrument_data->library;
+    #    my $sample                  = $library->sample;
+    #    my $sample_common_name_ext  = $sample->common_name || 'unknown';
+    #    my $source                  = $sample->source;
+    #    my $source_common_name      = $source->common_name || 'unknown';
+    #    
+    #    my $source_dir = $source_common_name . '-' . $source->id;
+    #    my $lib_dir    = $sample_common_name_ext . '-' . $library->name . '-' . $library->id . '-' . $sample->id;
+    #    my $input_dir  = $instrument_data->run_name . '-' . $instrument_data->subset_name . '-' . $instrument_data->id;
+    #    my $refseq_dir = $reference_sequence_name;
+    #    my $params_dir = $self->aligner_label . ($self->trimmer_name ? ('-' . $self->trimmer_label) : '');
+    #    
+    #    my $staged_basename = File::Basename::basename($self->temp_staging_directory);
+    #    
+    #};
+    #if ($@) {
+    #    $self->error_message("Error resolving new-style dirname: $@!!!");
+    #    $directory = $self->old_resolve_alignment_subdirectory();
+    #}
+
     my $reference_sequence_name = $self->reference_name;
     my $instrument_data         = $self->instrument_data;
 
