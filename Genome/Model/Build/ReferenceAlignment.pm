@@ -196,16 +196,16 @@ sub alignment_summary_hash_ref {
 }
 
 sub coverage_stats_directory_path {
-    my ($self,$min_depth,$wingspan) = @_;
-    return $self->reference_coverage_directory .'/min_depth_'. $min_depth .'/wingspan_'. $wingspan;
+    my ($self,$wingspan) = @_;
+    return $self->reference_coverage_directory .'/wingspan_'. $wingspan;
 }
 
 sub coverage_stats_file {
-    my ($self,$min_depth,$wingspan) = @_;
-    unless (defined($min_depth) && defined($wingspan)) {
-        die('Must provide minimum_depth and wingspan_value to method coverage_stats_file in '. __PACKAGE__);
+    my ($self,$wingspan) = @_;
+    unless (defined($wingspan)) {
+        die('Must provide wingspan_value to method coverage_stats_file in '. __PACKAGE__);
     }
-    my @stats_files = glob($self->coverage_stats_directory_path($min_depth,$wingspan) .'/*STATS.tsv');
+    my @stats_files = glob($self->coverage_stats_directory_path($wingspan) .'/*STATS.tsv');
     unless (@stats_files) {
         return;
     }
@@ -216,8 +216,8 @@ sub coverage_stats_file {
 }
 
 sub coverage_stats_summary_file {
-    my ($self,$min_depth,$wingspan) = @_;
-    my @stats_files = glob($self->coverage_stats_directory_path($min_depth,$wingspan) .'/*STATS.txt');
+    my ($self,$wingspan) = @_;
+    my @stats_files = glob($self->coverage_stats_directory_path($wingspan) .'/*STATS.txt');
     unless (@stats_files) {
         return;
     }
@@ -232,23 +232,20 @@ sub coverage_stats_summary_hash_ref {
     my %stats_summary;
     my $min_depth_array_ref = $self->minimum_depths_array_ref;
     my $wingspan_array_ref = $self->wingspan_values_array_ref;
-    for my $min_depth (@{$min_depth_array_ref}) {
-        for my $wingspan (@{$wingspan_array_ref}) {
-            my $stats_summary = $self->coverage_stats_summary_file($min_depth,$wingspan);
-            my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($stats_summary);
-            unless ($stats_fh) {
-                die('Failed to get stats file '. $stats_summary);
-            }
-            while (my $line = $stats_fh->getline) {
-                chomp($line);
-                if ($line =~ /(.*):\s+([\d\%\.]+)/) {
-                    my $key = $1;
-                    my $value = $2;
-                    $key =~ s/^\s*//;
-                    $stats_summary{$min_depth}{$wingspan}{$key} = $value;
-                }
-            }
+    for my $wingspan (@{$wingspan_array_ref}) {
+        my $stats_summary = $self->coverage_stats_summary_file($wingspan);
+        my $reader = Genome::Utility::IO::SeparatedValueReader->create(
+            separator => "\t",
+            input => $stats_summary,
+        );
+        unless ($reader) {
+            $self->error_message('Can not create SeparatedValueReader for file '. $stats_summary);
+            die $self->error_message;
         }
+        while (my $data = $reader->next) {
+            $stats_summary{$wingspan}{$data->{minimum_depth}} = $data;
+        }
+        $reader->input->close;
     }
     return \%stats_summary;
 }
@@ -273,13 +270,13 @@ sub _resolve_coverage_stats_params {
     my $pp = $self->processing_profile;
     my $coverage_stats_params = $pp->coverage_stats_params;
     my ($minimum_depths,$wingspan_values,$base_quality_filter,$mapping_quality_filter) = split(':',$coverage_stats_params);
-    if ($minimum_depths && $wingspan_values) {
+    if (defined($minimum_depths) && defined($wingspan_values)) {
         $self->{_minimum_depths} = $minimum_depths;
         $self->{_wingspan_values} = $wingspan_values;
-        if (defined($base_quality_filter)) {
+        if (defined($base_quality_filter) && ($base_quality_filter ne '')) {
             $self->{_minimum_base_quality} = $base_quality_filter;
         }
-        if (defined($mapping_quality_filter)) {
+        if (defined($mapping_quality_filter) && ($mapping_quality_filter ne '')) {
             $self->{_minimum_mapping_quality} = $mapping_quality_filter;
         }
     } else {
@@ -315,11 +312,10 @@ sub wingspan_values {
 sub wingspan_values_array_ref {
     my $self = shift;
     my $wingspan_values = $self->wingspan_values;
-    return unless $wingspan_values;
+    return unless defined($wingspan_values);
     my @wingspans = split(',',$wingspan_values);
     return \@wingspans;
 }
-
 
 sub minimum_base_quality {
     my $self = shift;
