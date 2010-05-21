@@ -16,20 +16,10 @@ class Genome::Model::Tools::Velvet::OneButton {
                                     doc => 'the directory for the results' 
                                 }, #|o=s" => \$output_path, 
 
-# made this optional like in original code
-#       genome_len          => {    is => 'Integer',
-#                                   doc => 'estimated genome length in bases'
-#                               }, #|g=i" => \$genome_len, 
-
         hash_sizes          => {    is => 'Integer',
 				    is_many => 1,
 #				    default_value => [25,27.29],
 	                        }, #|h=i{,}" => \@hash_sizes, 
-
-# made optional
-#        ins_length          => {    is => 'Integer',
-#                                    doc => 'fragment length (average/estimated)'
-#                                }, #|i=i" => \$ins_length, 
 
         version             => {    is => 'Text',
                                     default_value => '57-64',
@@ -158,13 +148,13 @@ sub _print_best_values {
 	return;
     }
 
-    unless ( @{$self->{best_n50_total}} ) {
+    unless ( $self->_best_n50_total() ) {
 	$self->error_message("Best values to n50 and total are missing");
 	return;
     }
 
     my $txt = "The best result is: (hash_size exp_cov cov_cutoff n50 total)\n";
-    $txt .= join( ' ',( $self->{best_hash_size}, $self->{best_exp_coverage}, $self->{best_coverage_cutoff}, @{$self->{best_n50_total}} ) );
+    $txt .= join( ' ',( $self->{best_hash_size}, $self->{best_exp_coverage}, $self->{best_coverage_cutoff}, $self->_best_n50_total() ) );
     $txt .= "\n".`date`;
 
     print $txt;
@@ -322,8 +312,8 @@ sub _run_velveth_get_opt_expcov_covcutoff {
     #TODO - probably a better way to do this
     my $hbest_exp_coverage = $self->{hbest_exp_coverage};
     my $hbest_coverage_cutoff = $self->{hbest_coverage_cutoff};
-    my @hbest_n50_total = @{$self->{hbest_n50_total}};
-    
+    my @hbest_n50_total = $self->_h_best_n50_total();
+
     my @hbest = ($hash_size, $hbest_exp_coverage, $hbest_coverage_cutoff, @hbest_n50_total);
     
     $self->log_event("@hbest\n");
@@ -504,12 +494,12 @@ sub _run_velvetg_get_n50_total {
 
     print "@n50_total\n"; #needed to pass test stdout check
 
-    my @best_n50_total = ( defined @{$self->{best_n50_total}} ) ? @{$self->{best_n50_total}} : (0, 0);
+    #returns (0,0) if best value not yet set
+    my @best_n50_total = $self->_best_n50_total();
 
     if ($self->_compare(@n50_total, @best_n50_total) == 1) {
-
 	#store best values
-	@{$self->{best_n50_total}} = @n50_total;
+	$self->_best_n50_total(@n50_total);
 	$self->{best_exp_coverage} = $exp_coverage;
 	$self->{best_coverage_cutoff} = $coverage_cutoff;
 	$self->{best_hash_size} = $hash_size;
@@ -526,13 +516,13 @@ sub _run_velvetg_get_n50_total {
 	    return;
 	}
     }
-
-    my @hbest_n50_total = ( defined @{$self->{hbest_n50_total}} ) ? @{$self->{hbest_n50_total}} : (0, 0);
+    #returns (0, 0) if best values haven't been set yet
+    my @hbest_n50_total = $self->_h_best_n50_total();
 
     if ($self->_compare(@n50_total, @hbest_n50_total) == 1) {
 
 	#store best values
-	@{$self->{hbest_n50_total}} = @n50_total;
+	$self->_h_best_n50_total(@n50_total);
 	$self->{hbest_exp_coverage} = $exp_coverage;
 	$self->{hbest_coverage_cutoff} = $coverage_cutoff;
 
@@ -857,6 +847,36 @@ sub _resolve_output_dir {
     }
     #TODO - might have to be careful with this .. if dir changes we don't want it to return `pwd`
     return `pwd`;
+}
+
+sub _h_best_n50_total {
+    my ($self, @hn50_tot) = @_;
+    #set best value
+    if (@hn50_tot) {
+	@{$self->{H_BEST_N50_TOTAL}} = @hn50_tot;
+	return @hn50_tot;
+    }
+    #return existing best value
+    if ( defined @{$self->{H_BEST_N50_TOTAL}} ) {
+	return @{$self->{H_BEST_N50_TOTAL}};
+    }
+    #return min value
+    return (0, 0);
+}
+
+sub _best_n50_total {
+    my ($self, @n50_tot) = @_;
+    #set best value
+    if (@n50_tot) {
+	@{$self->{BEST_N50_TOTAL}} = @n50_tot;
+	return  @n50_tot;
+    }
+    #return existing best value
+    if (defined @{$self->{BEST_N50_TOTAL}}) {
+	return @{$self->{BEST_N50_TOTAL}};
+    }
+    #return min value
+    return (0, 0);
 }
 
 1;
