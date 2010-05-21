@@ -76,8 +76,14 @@ sub assemble_job_classes {
 sub setup_project_objects {
     my $self = shift;
     my $model = shift;
-#    return ($model->unbuilt_instrument_data, $model->built_instrument_data);
-    return $model->unbuilt_instrument_data;
+    # return ($model->unbuilt_instrument_data, $model->built_instrument_data);
+    # WAS:
+    # return $model->unbuilt_instrument_data;
+    my @builds = $self->model->builds;
+    unless ( @builds ) {
+        die "Model (".$self->model->id.") has no builds, and cannot get unbuilt instrument data";
+    }
+    return $builds[$#builds]->instrument_data;
 }
 
 sub assemble_objects {

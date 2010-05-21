@@ -9,6 +9,7 @@ use warnings;
 
 use above 'Genome';
 
+use Data::Dumper 'Dumper';
 use Test::More; 
 require Genome::Model::Test;
 
@@ -24,10 +25,12 @@ my $model = Genome::Model::Test->create_basic_mock_model(
 );
 ok($model, 'Create mock model');
 my $inst_data = Genome::InstrumentData->get('2sep09.934pmaa1');
+my ($ida) = Genome::Model::Test->create_mock_instrument_data_assignments($model, $inst_data);
 ok( # create ida like this, so it doesn't go thru creat of the ida class, which copies it as an input.  Now we can see if previously assigned inst data will be copied into a builds inputs
-    Genome::Model::Test->create_mock_instrument_data_assignments($model, $inst_data),
+    $ida,
     'Create mock inst data assn',
 );
+ok(!$ida->first_build_id, 'first build id is undef');
 my @model_inst_data = $model->instrument_data;
 ok(@model_inst_data, 'Added instrument data to model');
 $model->coolness('moderate'); 
@@ -51,6 +54,7 @@ my @build_inst_data = $build->instrument_data;
 is_deeply(\@build_inst_data, [ $inst_data ], 'Build instrument data');
 is($build->coolness, 'moderate', 'Got coolness'); 
 is($build->instrument_data_count, 1, 'Instrument data count');
+is($ida->first_build_id, $build->id, 'first build id is set');
 #print Data::Dumper::Dumper({bin=>\@build_inputs,bid=>\@build_inst_data,min=>\@model_inputs,mid=>\@model_inst_data,});
 
 #< ACTIONS >#

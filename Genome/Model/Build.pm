@@ -153,7 +153,7 @@ sub create {
     # instrument data assignments - set first build id
     my @ida = $self->model->instrument_data_assignments;
     for my $ida ( @ida ) {
-        next unless defined $ida->first_build_id;
+        next if defined $ida->first_build_id;
         $ida->first_build_id( $self->id )
     }
     

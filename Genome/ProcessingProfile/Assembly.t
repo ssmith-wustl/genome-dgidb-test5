@@ -60,26 +60,34 @@ sub create_successfully {
     my $pp = Genome::ProcessingProfile::Assembly->create(%pp_params);
     isa_ok($pp,'Genome::ProcessingProfile::Assembly');
 
+    $mock_id--;
     my $mock_model = Genome::Model::Assembly->create_mock(
-                                                          id => --$mock_id,
-                                                          genome_model_id => $mock_id,
-                                                          name => $pp->name .'_model',
-                                                          subject_name => $pp->name .'_subject_name',
-                                                          subject_type => $pp->name .'_subject_type',
-                                                          subject_id => --$mock_id,
-                                                          subject_class_name => 'Test::MockObject',
-                                                          processing_profile_id => $pp->id,
-                                                      );
+        id => $mock_id,
+        genome_model_id => $mock_id,
+        name => $pp->name .'_model',
+        subject_name => $pp->name .'_subject_name',
+        subject_type => $pp->name .'_subject_type',
+        subject_id => --$mock_id,
+        subject_class_name => 'Test::MockObject',
+        processing_profile_id => $pp->id,
+    );
+    $mock_id--;
+    my $mock_build = Genome::Model::Build::Assembly->create_mock(
+        id => $mock_id,
+        build_id => $mock_id,
+        model_id => $mock_model->id,
+    );
+    $mock_build->set_list('instrument_data', '1', '2', '3');
+    $mock_model->set_list('builds', ( $mock_build ));
 
-    $mock_model->set_list('unbuilt_instrument_data','1','2','3');
     my %known_classes_for_stage = (
-                                   setup_project => 3,
-                                   assemble => 1,
-                               );
+        setup_project => 3,
+        assemble => 1,
+    );
     my %known_objects_for_stage = (
-                                   setup_project => scalar($mock_model->unbuilt_instrument_data),
-                                   assemble => 1,
-                               );
+        setup_project => scalar($mock_build->instrument_data),
+        assemble => 1,
+    );
     my @stages = $pp->stages;
     is(scalar(@stages),2,'two stages');
 
@@ -91,9 +99,9 @@ sub create_successfully {
         is(scalar(@objects),$known_objects_for_stage{$stage},'Found '. $known_objects_for_stage{$stage} .' objects for stage '. $stage);
     }
     ok(!$pp->instrument_data_is_applicable('invalid_seq_platform',--$mock_id,$mock_model->subject_name),
-       'instrument data with invalid data type is not applicable');
+        'instrument data with invalid data type is not applicable');
     ok($pp->instrument_data_is_applicable('454',--$mock_id,$mock_model->subject_name),
-       'instrument data is applicable');
+        'instrument data is applicable');
     ok($pp->instrument_data_is_applicable('454',--$mock_id,'invalid_subject_name'),
-       'instrument data is applicable');
+        'instrument data is applicable');
 }
