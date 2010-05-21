@@ -910,13 +910,13 @@ sub _h_best_exp_coverage {
     my ($self, $value) = @_;
     #set best value
     if ($value) {
-	$self->{BEST_EXP_COVERAGE} = $value;
+	$self->{H_BEST_EXP_COVERAGE} = $value;
 	#always non zero integer
 	return $value;
     }
     #return existing best value
-    if (exists $self->{BEST_EXP_COVERAGE}) {
-	return $self->{BEST_EXP_COVERAGE};
+    if (exists $self->{H_BEST_EXP_COVERAGE}) {
+	return $self->{H_BEST_EXP_COVERAGE};
     }
     #this method should never be called unless setting best value or accessing existing best value
     #but cutoff value can be zero
