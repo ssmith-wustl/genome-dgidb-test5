@@ -19,7 +19,7 @@ class Genome::Model::Build::Command::RemoveAbandoned {
 };
 
 sub help_brief {
-    return 'Remove all abandoned builds owned by the user executing the command';
+    return 'Remove all abandoned builds owned by the user';
 }
 
 sub help_detail {
