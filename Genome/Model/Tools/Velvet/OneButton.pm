@@ -321,7 +321,7 @@ sub _run_velveth_get_opt_expcov_covcutoff {
     $self->_pick_best_exp_cov($ck, $hash_size);
 
     #TODO - probably a better way to do this
-    my $hbest_exp_coverage = $self->{hbest_exp_coverage};
+    my $hbest_exp_coverage = $self->_h_best_exp_coverage();
     my $hbest_coverage_cutoff = $self->_h_best_coverage_cutoff();
     my @hbest_n50_total = $self->_h_best_n50_total();
 
@@ -533,7 +533,7 @@ sub _run_velvetg_get_n50_total {
 
 	#store best values
 	$self->_h_best_n50_total(@n50_total);
-	$self->{hbest_exp_coverage} = $exp_coverage;
+	$self->_h_best_exp_coverage($exp_coverage);
 	$self->_h_best_coverage_cutoff($coverage_cutoff);
 	#rename contigs.fa file
 	my $fa_file = $self->output_dir.'/contigs.fa';
@@ -840,7 +840,6 @@ sub _get_file_prefix_name {
     return $file_prefix;
 }
 
-
 #TODO this is mandidatory here but optional in original code .. maybe need to change later
 sub _get_output_dir {
     my $self = shift;
@@ -906,6 +905,24 @@ sub _best_coverage_cutoff {
     #but cutoff value can be zero
     return 0;
 }
+
+sub _h_best_exp_coverage {
+    my ($self, $value) = @_;
+    #set best value
+    if ($value) {
+	$self->{BEST_EXP_COVERAGE} = $value;
+	#always non zero integer
+	return $value;
+    }
+    #return existing best value
+    if (exists $self->{BEST_EXP_COVERAGE}) {
+	return $self->{BEST_EXP_COVERAGE};
+    }
+    #this method should never be called unless setting best value or accessing existing best value
+    #but cutoff value can be zero
+    return 0;
+}
+
 
 sub _best_exp_coverage {
     my ($self, $value) = @_;
