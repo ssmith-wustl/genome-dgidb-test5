@@ -130,6 +130,14 @@ dispatch {
 
         my $mime_type = Plack::MIME->mime_type(".$toolkit");
 
+        for my $key (keys %$args) {
+            my $value = $args->{$key};
+            
+            if($value and scalar @$value eq 1) {
+                $args->{$key} = $value->[0];
+            }
+        }
+
         my @matches = $class->get(%$args);
         unless (@matches) {
             return [ 404, [ 'Content-type', 'text/plain' ],
