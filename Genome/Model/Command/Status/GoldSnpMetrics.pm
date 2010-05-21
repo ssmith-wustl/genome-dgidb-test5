@@ -81,7 +81,7 @@ sub _get_model_node {
     my $self = shift;
     my $model = shift;
 
-    my $model_node = $self->anode("model","id",$model->id,"name",$model->name,"processing-profile",$model->processing_profile_name,"username",$model->user_name);
+    my $model_node = $self->anode("model","id",$model->id,"name",$model->name,"processing-profile",$model->processing_profile_name,"username",$model->user_name,"type", $model->class);
 
     my @builds = $model->builds;
     for (@builds) {
