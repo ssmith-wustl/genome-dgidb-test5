@@ -67,12 +67,11 @@ sub execute {
     my $xml_path = $module_path;
     $xml_path =~ s/\.pm/\.xml/;
     my @wingspans = split(',',$self->wingspan_values);
-    my @minimum_depths = split(',',$self->minimum_depths);
     my $output = run_workflow_lsf($xml_path,
                                   bed_file => $self->bed_file,
                                   bam_file => $self->bam_file,
                                   wingspan => \@wingspans,
-                                  minimum_depth => \@minimum_depths,
+                                  minimum_depth => $self->minimum_depths,
                                   output_directory => $self->output_directory,
                                   minimum_base_quality => $self->minimum_base_quality,
                                   minimum_mapping_quality => $self->minimum_mapping_quality,
@@ -87,32 +86,16 @@ sub execute {
         die('Incorrect number of alignment summaries!');
     }
     $self->alignment_summaries($alignment_summaries);
-    my $stats_file_array_ref = $output->{stats_files};
-    my @stats_files;
-    my $j = scalar(@$stats_file_array_ref);
-    unless ($j == scalar(@wingspans)) {
+    my $stats_files_array_ref = $output->{stats_files};
+    my @stats_files = @{$stats_files_array_ref};
+    unless (scalar(@stats_files) == scalar(@wingspans)) {
         die('Incorrect number of wingspan iterations for stats files!');
-    }
-    for (my $i = 0; $i < $j; $i++) {
-        my $stats_files = @$stats_file_array_ref[$i];
-        unless (scalar(@$stats_files) == scalar(@minimum_depths)) {
-            die('Incorrect number of stats files found per wingspan!');
-        }
-        push @stats_files, @$stats_files;
     }
     $self->stats_files(\@stats_files);
     my $stats_sum_array_ref = $output->{stats_summaries};
-    my @stats_sums;
-    my $k = scalar(@$stats_sum_array_ref);
-    unless ($k == scalar(@wingspans)) {
+    my @stats_sums = @{$stats_sum_array_ref};
+    unless (scalar(@stats_sums) == scalar(@wingspans)) {
         die('Incorrect number of wingspan iterations for stats summariess!');
-    }
-    for (my $i = 0; $i < $k; $i++) {
-        my $stats_sums = @$stats_sum_array_ref[$i];
-        unless (scalar(@$stats_sums) == scalar(@minimum_depths)) {
-            die('Incorrect number of stats summaries found per wingspan!');
-        }
-        push @stats_sums, @$stats_sums;
     }
     $self->stats_summaries(\@stats_sums);
     return 1;

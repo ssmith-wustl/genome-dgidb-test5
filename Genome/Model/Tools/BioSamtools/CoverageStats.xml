@@ -17,7 +17,7 @@
     <operation name="Alignment Summary">
       <operationtype commandClass="Genome::Model::Tools::BioSamtools::AlignmentSummary" typeClass="Workflow::OperationType::Command" />
     </operation>
-    <operation name="Coverage" parallelBy="minimum_depth">
+    <operation name="Coverage">
       <link fromOperation="input connector" fromProperty="bed_file" toOperation="RefCov" toProperty="bed_file" />
       <link fromOperation="input connector" fromProperty="bam_file" toOperation="RefCov" toProperty="bam_file" />
       <link fromOperation="input connector" fromProperty="wingspan" toOperation="RefCov" toProperty="wingspan" />

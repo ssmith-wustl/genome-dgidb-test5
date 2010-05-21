@@ -6,6 +6,30 @@ use warnings;
 use Genome;
 use Statistics::Descriptive;
 
+my %sort_order = (
+    targets => 1,
+    minimum_depth => 2,
+    touched => 3,
+    pc_touched => 4,
+    target_base_pair => 5,
+    covered_base_pair => 6,
+    pc_target_space_covered => 7,
+    mean_breadth => 8,
+    stdev_breadth => 9,
+    median_breadth => 10,
+    targets_eighty_pc_breadth => 11,
+    pc_targets_eighty_pc_breadth => 12,
+    mean_depth => 13,
+    stdev_depth => 14,
+    depth_quartile_3 => 15,
+    median_depth => 16,
+    depth_quartile_1 => 17,
+    gaps => 18,
+    mean_gap_length => 19,
+    stdev_gap_length => 20,
+    median_gap_length => 21,
+);
+
 class Genome::Model::Tools::BioSamtools::StatsSummary {
     is => ['Genome::Model::Tools::BioSamtools'],
     has_input => [
@@ -33,7 +57,6 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    
     if ($self->output_directory) {
         unless (-d $self->output_directory){
             unless (Genome::Utility::FileSystem->create_directory($self->output_directory)) {
@@ -52,107 +75,85 @@ sub execute {
     unless ($stats_fh) {
         die('Failed to read file stats file: '. $self->stats_file);
     }
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
-    unless ($out_fh) {
-        die('Failed to open output file: '. $self->output_file);
-    }
-    
-    my %stats;
-    my $targets = 0;
-    my $target_base_pair = 0;
-    my $covered_base_pair = 0;
-    my $touched = 0;
-    my $eighty_pc = 0;
-    my $gaps = 0;
+
     my $min_depth;
-    my @breadth;
-    my @depth;
-    my @gap_length;
+    my %depth_stats;
+    my @headers;
     while (my $line = $stats_fh->getline) {
         chomp($line);
         if ($line =~ /^##/) { next; }
         my @entry = split("\t",$line);
         my $id = $entry[0];
-        $stats{$id}{'breadth'} = $entry[1];
-        $stats{$id}{'base_pair'} = $entry[2];
-        $stats{$id}{'base_pair_covered'} = $entry[3];
-        $stats{$id}{'base_pair_uncovered'} = $entry[4];
-        $stats{$id}{'avg_depth'} = $entry[5];
-        $stats{$id}{'std_depth'} = $entry[6];
-        $stats{$id}{'med_depth'} = $entry[7];
-        $stats{$id}{'num_gaps'} = $entry[8];
-        $stats{$id}{'avg_gap_length'} = $entry[9];
-        $stats{$id}{'std_gap_length'} = $entry[10];
-        $stats{$id}{'med_gap_length'} = $entry[11];
-        $stats{$id}{'min_depth'} = $entry[12];
-
-        push @breadth, $stats{$id}{'breadth'};
-        if ($stats{$id}{'breadth'} >= 80) {
-            $eighty_pc++;
+        my $min_depth = $entry[12];
+        unless (defined($depth_stats{$min_depth}{minimum_depth})) {
+            $depth_stats{$min_depth}{minimum_depth} = $min_depth;
         }
-        $target_base_pair += $stats{$id}{'base_pair'};
-        $covered_base_pair += $stats{$id}{'base_pair_covered'};
-        if ($stats{$id}{'base_pair_covered'}) {
-            $touched++;
+        push @{$depth_stats{$min_depth}{breadth}}, $entry[1];
+        if ($entry[1] >= 80) {
+            $depth_stats{$min_depth}{targets_eighty_pc_breadth}++;
         }
-        push @depth, $stats{$id}{'avg_depth'};
-        if ($stats{$id}{'num_gaps'}) {
-            $gaps += $stats{$id}{'num_gaps'};
-            push @gap_length, $stats{$id}{'avg_gap_length'};
+        $depth_stats{$min_depth}{target_base_pair} += $entry[2];
+        if ($entry[3]) {
+            $depth_stats{$min_depth}{covered_base_pair} += $entry[3];
+            $depth_stats{$min_depth}{touched}++;
         }
-
-        unless (defined($min_depth)) {
-            $min_depth = $stats{$id}{'min_depth'};
-        } else {
-            unless ($min_depth == $stats{$id}{'min_depth'}) {
-                die('Error in '. $self->stats_file .' expected min_depth '. $min_depth .' but found min_depth '. $stats{$id}{'min_depth'} .' for line: '. $line);
-            }
+        push @{$depth_stats{$min_depth}{depth}}, $entry[5];
+        if ($entry[8]) {
+            $depth_stats{$min_depth}{gaps} += $entry[8];
+            push @{$depth_stats{$min_depth}{gap_length}}, $entry[9];
         }
-        $targets++;
+        $depth_stats{$min_depth}{targets}++;
     }
     $stats_fh->close;
-    my $breadth_stat = Statistics::Descriptive::Full->new();
-    $breadth_stat->add_data(@breadth);
+    for my $min_depth (keys %depth_stats) {
+        $depth_stats{$min_depth}{pc_touched} = sprintf("%.03f",(($depth_stats{$min_depth}{touched}/$depth_stats{$min_depth}{targets})*100));
+        $depth_stats{$min_depth}{pc_target_space_covered} = sprintf("%.03f",(($depth_stats{$min_depth}{covered_base_pair}/$depth_stats{$min_depth}{target_base_pair})*100));
+        $depth_stats{$min_depth}{pc_targets_eighty_pc_breadth} = sprintf("%.03f",(( ($depth_stats{$min_depth}{targets_eighty_pc_breadth} || 0) /$depth_stats{$min_depth}{targets})*100));
 
-    my $depth_stat = Statistics::Descriptive::Full->new();
-    $depth_stat->add_data(@depth);
-
-    my $gaps_stat = Statistics::Descriptive::Full->new();
-    $gaps_stat->add_data(@gap_length);
-
-    print $out_fh $self->stats_file ."\n";
-    print $out_fh "-" x 20 ."\n";
-    print $out_fh "Target Summary\n";
-    print $out_fh "\tTargets:\t$targets\n";
-    print $out_fh "\tMinimum Depth:\t$min_depth\n";
-    print $out_fh "\tTargets Touched:\t$touched\n";
-    print $out_fh "\tPercent Targets Touched:\t". sprintf("%.03f",(($touched/$targets)*100)) ."%\n";
-    print $out_fh "-" x 20 ."\n";
-    print $out_fh "Breadth Summary\n";
-    print $out_fh "\tTarget Space(bp):\t". $target_base_pair ."\n";
-    print $out_fh "\tTarget Space Covered(bp):\t". $covered_base_pair ."\n";
-    print $out_fh "\tPercent Target Space Covered:\t". sprintf("%.03f",(($covered_base_pair/$target_base_pair)*100)) ."%\n";
-    print $out_fh "\tAverage Percent Breadth:\t". sprintf("%.03f",$breadth_stat->mean) ."%\n";
-    print $out_fh "\tStd. Deviation Breadth:\t". sprintf("%.10f",$breadth_stat->standard_deviation) ."\n";
-    print $out_fh "\tMedian Breadth:\t". sprintf("%.03f",$breadth_stat->median) ."\n";
-    print $out_fh "\tTargets 80% Breadth:\t". $eighty_pc ."\n";
-    print $out_fh "\tPercent Targets 80% Breadth:\t". sprintf("%.03f",(($eighty_pc/$targets)*100)) ."%\n";
-    print $out_fh "-" x 20 ."\n";
-    print $out_fh "Depth Summary\n";
-    print $out_fh "\tAverage Depth:\t". sprintf("%.03f",$depth_stat->mean) ."\n";
-    print $out_fh "\tStd. Deviation Depth:\t". sprintf("%.10f",$depth_stat->standard_deviation) ."\n";
-    print $out_fh "\tQuartile 3:\t". sprintf("%.03f",$depth_stat->percentile(75)) ."\n";
-    print $out_fh "\tMedian Depth:\t". sprintf("%.03f",$depth_stat->median) ."\n";
-    print $out_fh "\tQuarile 1:\t". sprintf("%.03f",$depth_stat->percentile(25)) ."\n";
-    print $out_fh "-" x 20 ."\n";
-    print $out_fh "Gap Summary\n";
-    print $out_fh "\tTotal Gaps:\t". $gaps ."\n";
-    print $out_fh "\tAverage Gap Length:\t". sprintf("%.03f",$gaps_stat->mean) ."\n";
-    print $out_fh "\tStd. Deviation Gap Length:\t". sprintf("%.10f",$gaps_stat->standard_deviation) ."\n";
-    print $out_fh "\tMedian Gap Length:\t". sprintf("%.03f",$gaps_stat->median) ."\n";
-    print $out_fh "-" x 20 ."\n\n";
-    $out_fh->close;
+        my $breadth_stat = Statistics::Descriptive::Full->new();
+        my @breadth = delete($depth_stats{$min_depth}{breadth});
+        $breadth_stat->add_data(@breadth);
+        $depth_stats{$min_depth}{mean_breadth} = sprintf("%.03f",$breadth_stat->mean);
+        $depth_stats{$min_depth}{stdev_breadth} = sprintf("%.10f",$breadth_stat->standard_deviation);
+        $depth_stats{$min_depth}{median_breadth} = sprintf("%.03f",$breadth_stat->median);
+        my $depth_stat = Statistics::Descriptive::Full->new();
+        my @depth = delete($depth_stats{$min_depth}{depth});
+        $depth_stat->add_data(@depth);
+        $depth_stats{$min_depth}{mean_depth} = sprintf("%.03f",$depth_stat->mean);
+        $depth_stats{$min_depth}{stdev_depth} = sprintf("%.10f",$depth_stat->standard_deviation);
+        $depth_stats{$min_depth}{depth_quartile_3} = sprintf("%.03f",$depth_stat->percentile(75));
+        $depth_stats{$min_depth}{median_depth} = sprintf("%.03f",$depth_stat->median);
+        $depth_stats{$min_depth}{depth_quartile_1} = sprintf("%.03f",$depth_stat->percentile(25));
+        my $gaps_stat = Statistics::Descriptive::Full->new();
+        my @gaps = delete($depth_stats{$min_depth}{gap_length});
+        $gaps_stat->add_data(@gaps);
+        $depth_stats{$min_depth}{mean_gap_length} = sprintf("%.03f",$gaps_stat->mean);
+        $depth_stats{$min_depth}{stdev_gap_length} = sprintf("%.10f",$gaps_stat->standard_deviation);
+        $depth_stats{$min_depth}{median_gap_length} = sprintf("%.03f",$gaps_stat->median);
+        unless (@headers) {
+            @headers = sort hash_sort_order (keys %{$depth_stats{$min_depth}});
+        }
+    }
+    my $writer = Genome::Utility::IO::SeparatedValueWriter->create(
+        separator => "\t",
+        headers => \@headers,
+        output => $self->output_file,
+    );
+    for my $min_depth (keys %depth_stats) {
+        $writer->write_one($depth_stats{$min_depth});
+    }
+    $writer->output->close;
     return 1;
+}
+
+sub hash_sort_order {
+    unless ($sort_order{$a}) {
+        die('sort order not defined for '. $a);
+    }
+    unless ($sort_order{$b}) {
+        die('sort order not defined for '. $b);
+    }
+    $sort_order{$a} <=> $sort_order{$b};
 }
 
 1;

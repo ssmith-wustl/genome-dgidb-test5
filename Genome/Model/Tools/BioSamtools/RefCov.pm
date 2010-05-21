@@ -19,7 +19,7 @@ class Genome::Model::Tools::BioSamtools::RefCov {
             is_optional => 1,
         },
         min_depth_filter => {
-            doc => 'The minimum depth at each position to consider coverage.',
+            doc => 'The minimum depth at each position to consider coverage.  For more than one, supply a comma delimited list(ie. 1,5,10,15,20)',
             default_value => 1,
             is_optional => 1,
         },
@@ -53,7 +53,7 @@ class Genome::Model::Tools::BioSamtools::RefCov {
         lsf_queue => {
             doc => 'When run in parallel, the LSF queue to submit jobs to.',
             is_optional => 1,
-            default_value => 'long',
+            default_value => 'apipe',
         },
         lsf_resource => {
             doc => 'When run in parallel, the resource request necessary to run jobs on LSF.',
@@ -90,12 +90,8 @@ sub execute {
     my $self = shift;
 
     my $output_directory = $self->output_directory;
-    my $min_depth_filter = $self->min_depth_filter;
     my $wingspan = $self->wingspan;
     if ($output_directory) {
-        if (defined($min_depth_filter)) {
-            $output_directory .= '/min_depth_'. $min_depth_filter;
-        }
         if (defined($wingspan)) {
             $output_directory .= '/wingspan_'. $wingspan;
         }
@@ -120,7 +116,7 @@ sub execute {
         }
         $self->stats_file($self->final_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
     }
-    my $cmd = $self->execute_path .'/bed_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $min_depth_filter .' '. $wingspan;
+    my $cmd = $self->execute_path .'/one_pass_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $self->min_depth_filter .' '. $wingspan;
     if ($self->min_base_quality || $self->min_mapping_quality) {
         $cmd .= ' '. $self->min_base_quality .' '. $self->min_mapping_quality;
     }

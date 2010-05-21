@@ -9,7 +9,7 @@ use above 'Genome';
 
 use_ok('Genome::Model::Tools::BioSamtools::CoverageStats');
 
-my $tmp_dir = File::Temp::tempdir('BioSamtools-CoverageStats-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('BioSamtools-CoverageStats-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 0);
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/RefCov';
 
@@ -29,7 +29,7 @@ my $stats = Genome::Model::Tools::BioSamtools::CoverageStats->create(
 isa_ok($stats,'Genome::Model::Tools::BioSamtools::CoverageStats');
 ok($stats->execute,'execute CoverageStats command '. $stats->command_name);
 is(scalar($stats->alignment_summaries),scalar(@wingspans),'found the correcnt number of alignment summaries');
-is(scalar($stats->stats_summaries),(scalar(@wingspans)*scalar(@minimum_depths)),'found the correct number of stats summaries');
-is(scalar($stats->stats_files),(scalar(@wingspans)*scalar(@minimum_depths)),'found the correct number of stats files');
+is(scalar($stats->stats_summaries),(scalar(@wingspans)),'found the correct number of stats summaries');
+is(scalar($stats->stats_files),(scalar(@wingspans)),'found the correct number of stats files');
 
 exit;
