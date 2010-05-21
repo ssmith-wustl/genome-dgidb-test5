@@ -92,9 +92,8 @@ sub execute {
     $self->log_event("\#read length: $read_length\n\#number of reads: $read_count\n");
     
     #print .. to pass test stdout check
-    my $file_format = $self->_resolve_input_file_format();
-    print "read length: $read_length\nnumber of reads: $read_count\nFile format: ".
-	$self->_resolve_input_file_format()."\n";
+    my $input_file_format = $self->_input_file_format();
+    print "read length: $read_length\nnumber of reads: $read_count\nFile format: $input_file_format\n";
 
     my @hash_sizes = $self->_resolve_hash_sizes;
     if (@hash_sizes > $self->bound_enumeration) {
@@ -133,28 +132,28 @@ sub execute {
 sub _print_best_values {
     my $self = shift;
 
-    unless (exists $self->{best_hash_size}) {
+    unless ( defined $self->_best_hash_size() ) {
 	$self->error_message("Best value for best_hash_size is missing");
 	return;
     }
 
-    unless (exists $self->{best_exp_coverage}) {
+    unless ( defined $self->_best_exp_coverage() ) {
 	$self->error_message("Best value for best_exp_coverage is missing");
 	return;
     }
 
-    unless (exists $self->{best_coverage_cutoff}) {
-	$self->error_message("Best value for best coverage cutoff is missing");
+    unless ( defined $self->_best_coverage_cutoff() ) { #could return a valid value of zero
+   	$self->error_message("Best value for best coverage cutoff is missing");
 	return;
     }
 
-    unless ( $self->_best_n50_total() ) {
-	$self->error_message("Best values to n50 and total are missing");
+   unless ( $self->_best_n50_total() ) {
+	$self->error_message("Unable to get best n50 and total values");
 	return;
     }
 
     my $txt = "The best result is: (hash_size exp_cov cov_cutoff n50 total)\n";
-    $txt .= join( ' ',( $self->{best_hash_size}, $self->{best_exp_coverage}, $self->{best_coverage_cutoff}, $self->_best_n50_total() ) );
+    $txt .= join( ' ',( $self->_best_hash_size(), $self->_best_exp_coverage(), $self->_best_coverage_cutoff(), $self->_best_n50_total() ) );
     $txt .= "\n".`date`;
 
     print $txt;
@@ -167,8 +166,8 @@ sub _do_final_velvet_runs {
 
     #params for velvet h
     my $velveth = $self->_version_path . $self->version .'/velveth';
-    my $best_hash_size = $self->{best_hash_size};
-    my $input_file_format = $self->{input_file_type};
+    my $best_hash_size = $self->_best_hash_size();
+    my $input_file_format = $self->_input_file_format();
 
     my $h_cmd = $velveth.' '.$self->output_dir.' '.$best_hash_size.' '.$input_file_format.' -shortPaired '.$self->file;
 
@@ -179,8 +178,8 @@ sub _do_final_velvet_runs {
     
     #params for velvet g
     my $velvetg = $self->_version_path . $self->version . '/velvetg';
-    my $best_exp_cov = $self->{best_exp_coverage};
-    my $best_cov_cf = $self->{best_coverage_cutoff};
+    my $best_exp_cov = $self->_best_exp_coverage();
+    my $best_cov_cf = $self->_best_coverage_cutoff();
     my $ins_length_sd = $self->_resolve_ins_length_sd();
 
     my $g_cmd = $velvetg.' '.$self->output_dir.' -exp_cov '.$best_exp_cov.' -cov_cutoff '.$best_cov_cf.' -ins_length '.$self->ins_length.' -ins_length_sd '.$ins_length_sd.' -read_trkg yes -min_contig_lgth 100 -amos_file yes';
@@ -271,7 +270,7 @@ sub _run_velveth_get_opt_expcov_covcutoff {
     print "Try hash size: $hash_size\n"; #needed for test stdout check
     #run velveth
     my $velveth = $self->_version_path . $self->version .'/velveth';
-    my $input_file_format = $self->_resolve_input_file_format(); #fasta or fastq
+    my $input_file_format = $self->_input_file_format(); #fasta or fastq
     my $cmd = $velveth.' '.$self->output_dir.' '.$hash_size.' '.$input_file_format.' -shortPaired '.$self->file;
 
     print "$cmd\n"; #needed for test stdout check .. before actually executing $cmd
@@ -311,7 +310,7 @@ sub _run_velveth_get_opt_expcov_covcutoff {
 
     #TODO - probably a better way to do this
     my $hbest_exp_coverage = $self->{hbest_exp_coverage};
-    my $hbest_coverage_cutoff = $self->{hbest_coverage_cutoff};
+    my $hbest_coverage_cutoff = $self->_h_best_coverage_cutoff();
     my @hbest_n50_total = $self->_h_best_n50_total();
 
     my @hbest = ($hash_size, $hbest_exp_coverage, $hbest_coverage_cutoff, @hbest_n50_total);
@@ -500,10 +499,9 @@ sub _run_velvetg_get_n50_total {
     if ($self->_compare(@n50_total, @best_n50_total) == 1) {
 	#store best values
 	$self->_best_n50_total(@n50_total);
-	$self->{best_exp_coverage} = $exp_coverage;
-	$self->{best_coverage_cutoff} = $coverage_cutoff;
-	$self->{best_hash_size} = $hash_size;
-
+	$self->_best_exp_coverage($exp_coverage);
+	$self->_best_coverage_cutoff($coverage_cutoff);
+	$self->_best_hash_size($hash_size);
 	#make a copy of contigs.fa file
 	my $file_prefix = $self->_resolve_file_prefix_name();
 	my $fa_file = $self->output_dir.'/contigs.fa';
@@ -524,8 +522,7 @@ sub _run_velvetg_get_n50_total {
 	#store best values
 	$self->_h_best_n50_total(@n50_total);
 	$self->{hbest_exp_coverage} = $exp_coverage;
-	$self->{hbest_coverage_cutoff} = $coverage_cutoff;
-
+	$self->_h_best_coverage_cutoff($coverage_cutoff);
 	#rename contigs.fa file
 	my $fa_file = $self->output_dir.'/contigs.fa';
 	my $file_prefix = $self->_resolve_file_prefix_name();
@@ -618,8 +615,6 @@ sub _print_params_to_screen_and_logfile {
     return 1;
 }
 
-
-
 sub _resolve_genome_length {
     my $self = shift;
     #global .. changes during execution of code
@@ -676,11 +671,11 @@ sub _resolve_hash_sizes {
     return sort {$a <=> $b} @hash_sizes;
 }
 
-sub _resolve_input_file_format {
+sub _input_file_format {
     my $self = shift;
 
     #this method gets called may times to get same value
-    return $self->{input_file_type} if $self->{input_file_type};
+    return $self->{INPUT_FILE_FORMAT} if $self->{INPUT_FILE_FORMAT};
 
     unless (-s $self->file) {
 	$self->error_message("Failed to find file ".$self->file);
@@ -693,10 +688,10 @@ sub _resolve_input_file_format {
 	die "Can not open $input_file\n";
     while (my $line = $fh->getline) {
 	if ($line =~ /^\>/) {
-	    $self->{input_file_type} = '-fasta';
+	    $self->{INPUT_FILE_FORMAT} = '-fasta';
 	    return '-fasta';
 	} elsif ($line =~ /^\@/) {
-	    $self->{input_file_type} = '-fastq';
+	    $self->{INPUT_FILE_FORMAT} = '-fastq';
 	    return '-fastq';
 	} else {
 	    $self->error_message("Can not determine input file type: fasta or fastq");
@@ -727,7 +722,7 @@ sub _get_input_read_count_and_length {
     my $total_read_length = 0;
 
     #fasta or fastq
-    my $file_format = $self->_resolve_input_file_format();
+    my $file_format = $self->_input_file_format();
         
     #TODO can't use bio seqio bec fasta and qual lengths don't seem to match
 
@@ -847,6 +842,74 @@ sub _resolve_output_dir {
     }
     #TODO - might have to be careful with this .. if dir changes we don't want it to return `pwd`
     return `pwd`;
+}
+
+sub _best_hash_size {
+    my ($self, $value) = @_;
+    #set best value
+    if ($value) {
+	$self->{BEST_HASH_SIZE} = $value;
+	#always non zero integer
+	return $value;
+    }
+    #return existing best value
+    if (exists $self->{BEST_HASH_SIZE}) {
+	return $self->{BEST_HASH_SIZE};
+    }
+    #this method should never be called unless setting best value or accessing existing best value
+    #but cutoff value can be zero
+    return 0;  
+}
+
+sub _h_best_coverage_cutoff {
+    my ($self, $value) = @_;
+    #set best value
+    if ($value) {
+	$self->{H_BEST_COVERAGE_CUTOFF} = $value;
+	#always non zero integer
+	return $value;
+    }
+    #return existing best value
+    if (exists $self->{H_BEST_COVERAGE_CUTOFF}) {
+	return $self->{H_BEST_COVERAGE_CUTOFF};
+    }
+    #this method should never be called unless setting best value or accessing existing best value
+    #but cutoff value can be zero
+    return 0;  
+}
+
+sub _best_coverage_cutoff {
+    my ($self, $value) = @_;
+    #set best value
+    if ($value) {
+	$self->{BEST_COVERAGE_CUTOFF} = $value;
+	#always non zero integer
+	return $value;
+    }
+    #return existing best value
+    if (exists $self->{BEST_COVERAGE_CUTOFF}) {
+	return $self->{BEST_COVERAGE_CUTOFF};
+    }
+    #this method should never be called unless setting best value or accessing existing best value
+    #but cutoff value can be zero
+    return 0;
+}
+
+sub _best_exp_coverage {
+    my ($self, $value) = @_;
+    #set best value
+    if ($value) {
+	$self->{BEST_EXP_COVERAGE} = $value;
+	#always non zero integer
+	return $value;
+    }
+    #return existing best value
+    if (exists $self->{BEST_EXP_COVERAGE}) {
+	return $self->{BEST_EXP_COVERAGE};
+    }
+    #this method should never be called unless setting best value or accessing existing best value
+    #but cutoff value can be zero
+    return 0;
 }
 
 sub _h_best_n50_total {
