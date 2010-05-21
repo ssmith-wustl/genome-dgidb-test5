@@ -82,20 +82,18 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
+    #prints general params for the run
     unless ($self->_print_params_to_screen_and_logfile()) {
 	$self->error_message("Failed to print params to screen and logfile");
 	return;
     }
+    #prints info about input data to screen and logfile
+    unless ($self->_print_input_data_info() ) {
+	$self->error_message("Failed to print info about input data");
+	return;
+    }
 
-    #print read length and read count to log file .. that's all
-    my ($read_length, $read_count) = $self->_get_input_read_count_and_length();
-    $self->log_event("\#read length: $read_length\n\#number of reads: $read_count\n");
-    
-    #print .. to pass test stdout check
-    my $input_file_format = $self->_input_file_format();
-    print "read length: $read_length\nnumber of reads: $read_count\nFile format: $input_file_format\n";
-
-    my @hash_sizes = $self->_resolve_hash_sizes;
+    my @hash_sizes = $self->_get_hash_sizes;
     if (@hash_sizes > $self->bound_enumeration) {
 	#method returns array if successful but it's not needed
 	unless ($self->_pick_best_hash_size(@hash_sizes)) {
@@ -125,6 +123,20 @@ sub execute {
 
     #remove screen_g file
     unlink $self->output_dir.'/screen_g';
+
+    return 1;
+}
+
+sub _print_input_data_info {
+    my $self = shift;
+
+    #print read length and read count to log file .. that's all
+    my ($read_length, $read_count) = $self->_get_input_read_count_and_length();
+    $self->log_event("\#read length: $read_length\n\#number of reads: $read_count\n");
+    
+    #print .. to pass test stdout check
+    my $input_file_format = $self->_input_file_format();
+    print "read length: $read_length\nnumber of reads: $read_count\nFile format: $input_file_format\n";
 
     return 1;
 }
@@ -180,7 +192,7 @@ sub _do_final_velvet_runs {
     my $velvetg = $self->_version_path . $self->version . '/velvetg';
     my $best_exp_cov = $self->_best_exp_coverage();
     my $best_cov_cf = $self->_best_coverage_cutoff();
-    my $ins_length_sd = $self->_resolve_ins_length_sd();
+    my $ins_length_sd = $self->_get_ins_length_sd();
 
     my $g_cmd = $velvetg.' '.$self->output_dir.' -exp_cov '.$best_exp_cov.' -cov_cutoff '.$best_cov_cf.' -ins_length '.$self->ins_length.' -ins_length_sd '.$ins_length_sd.' -read_trkg yes -min_contig_lgth 100 -amos_file yes';
 
@@ -282,17 +294,17 @@ sub _run_velveth_get_opt_expcov_covcutoff {
     }
 
     #get read count and avg read length of input file
-    my $genome_length = $self->_resolve_genome_length();
+    my $genome_length = $self->_get_genome_length();
     my ($read_length, $read_count) = $self->_get_input_read_count_and_length();
     #not sure what ck is .. 
     my $ck = $read_count * ( $read_length - $hash_size + 1) / $genome_length;
     
-    my @exp_covs = $self->_resolve_exp_covs(); #return blank array if $self->exp_covs not defined
+    my @exp_covs = $self->_get_exp_covs(); #return blank array if $self->exp_covs not defined
 
     my $exp_coverage;
     @exp_covs ? $exp_coverage = $exp_covs[ POSIX::floor($#exp_covs/2) ] : $exp_coverage = 0.9 * $ck;
     #TODO - make better variable names
-    my @cov_cutoffs = $self->_resolve_cov_cutoffs(); #return blank array if $self->cov_cutoffs is not defined
+    my @cov_cutoffs = $self->_get_cov_cutoffs(); #return blank array if $self->cov_cutoffs is not defined
 
     my $cov_cutoff;
     @cov_cutoffs ? $cov_cutoff = $cov_cutoffs[ POSIX::floor($#cov_cutoffs/2) ] : $cov_cutoff = 0.1 * $exp_coverage;
@@ -319,7 +331,7 @@ sub _run_velveth_get_opt_expcov_covcutoff {
 
     print "@hbest\n"; #needed to pass test stdout check
     
-    my $name_prefix = $self->_resolve_file_prefix_name();
+    my $name_prefix = $self->_get_file_prefix_name();
     my $timing_file = $name_prefix.'-timing';
     my $file_LOG = $self->output_dir.'/Log';
     unless (-s $file_LOG) {
@@ -334,7 +346,7 @@ sub _run_velveth_get_opt_expcov_covcutoff {
 sub _pick_best_exp_cov {
     my ($self, $ck, $hash_size) = @_;
 
-    my @exp_covs = $self->_resolve_exp_covs();
+    my @exp_covs = $self->_get_exp_covs();
     unless (@exp_covs) { #returned blank array if $self->exp_covs not defined
 	@exp_covs = (POSIX::floor(0.8 * $ck) .. POSIX::floor($ck / 0.95));
     }
@@ -396,7 +408,7 @@ sub _pick_best_exp_cov {
 sub _pick_best_cov_cutoff {
     my ($self, $exp_cov, $hash_size) = @_;
 
-    my @cov_cutoffs = $self->_resolve_cov_cutoffs();
+    my @cov_cutoffs = $self->_get_cov_cutoffs();
     unless (@cov_cutoffs) {
 	@cov_cutoffs = (0 .. POSIX::floor(0.3 * $exp_cov));
     }
@@ -465,7 +477,7 @@ sub _run_velvetg_get_n50_total {
 
     my $velvetg = $self->_version_path . $self->version . '/velvetg';
 
-    my $ins_length_sd = $self->_resolve_ins_length_sd();
+    my $ins_length_sd = $self->_get_ins_length_sd();
 
     my $screen_g_file = $self->output_dir.'/screen_g'; #capture velvetg output
 
@@ -503,7 +515,7 @@ sub _run_velvetg_get_n50_total {
 	$self->_best_coverage_cutoff($coverage_cutoff);
 	$self->_best_hash_size($hash_size);
 	#make a copy of contigs.fa file
-	my $file_prefix = $self->_resolve_file_prefix_name();
+	my $file_prefix = $self->_get_file_prefix_name();
 	my $fa_file = $self->output_dir.'/contigs.fa';
 	unless (-s $fa_file) {
 	    $self->error_message("contigs.fa does not exist to rename");
@@ -525,7 +537,7 @@ sub _run_velvetg_get_n50_total {
 	$self->_h_best_coverage_cutoff($coverage_cutoff);
 	#rename contigs.fa file
 	my $fa_file = $self->output_dir.'/contigs.fa';
-	my $file_prefix = $self->_resolve_file_prefix_name();
+	my $file_prefix = $self->_get_file_prefix_name();
 	my $new_file_name = $file_prefix.'-hash_size_'.$hash_size.'-contigs.fa';
 	rename $fa_file, $new_file_name;
     }
@@ -541,7 +553,7 @@ sub _compare {
     }
 
     #genome length
-    my $gl = $self->_resolve_genome_length();
+    my $gl = $self->_get_genome_length();
 
     if (($t1 < 0.95 * $gl or $gl < 0.95 * $t1) and ($t2 < 0.95 * $gl or $gl < 0.95 * $t2)) {
 	return 0; # both wrong length
@@ -569,20 +581,20 @@ sub _print_params_to_screen_and_logfile {
 
     my $params = "#Your parameters:\n";
 
-    my @hash_sizes = $self->_resolve_hash_sizes();
+    my @hash_sizes = $self->_get_hash_sizes();
     $params .= "#hash_sizes: @hash_sizes\n";
 
-    my @exp_covs = $self->_resolve_exp_covs();
+    my @exp_covs = $self->_get_exp_covs();
     $params .= "#exp_covs: @exp_covs\n";
 
-    my @cov_cutoffs = $self->_resolve_cov_cutoffs();
+    my @cov_cutoffs = $self->_get_cov_cutoffs();
     $params .= "#cov_cutoffs: @cov_cutoffs\n";
 
-    my $genome_length = $self->_resolve_genome_length();
+    my $genome_length = $self->_get_genome_length();
     $params .= "#genome length: $genome_length\n";
 
     $params .= "#ins_length: ".$self->ins_length."\n";
-    $params .= "#ins_length_sd: ".$self->_resolve_ins_length_sd()."\n";
+    $params .= "#ins_length_sd: ".$self->_get_ins_length_sd()."\n";
 
     $params .= "#input file: ".$self->file."\n";
     $params .= "#output directory: ".$self->output_dir."\n";
@@ -603,7 +615,7 @@ sub _print_params_to_screen_and_logfile {
     $txt .= "genome length = $genome_length\n" if $self->genome_len;
 
     $txt .= "ins_length = ".$self->ins_length."\n".
-	    "ins_length_sd = ".$self->_resolve_ins_length_sd()."\n".
+	    "ins_length_sd = ".$self->_get_ins_length_sd()."\n".
 	    "input file = ".$self->file."\n".
 	    "output directory = ".$self->output_dir."\n".
 	    "enumeration bound = ".$self->bound_enumeration."\n";
@@ -615,7 +627,7 @@ sub _print_params_to_screen_and_logfile {
     return 1;
 }
 
-sub _resolve_genome_length {
+sub _get_genome_length {
     my $self = shift;
     #global .. changes during execution of code
     return $self->{genome_length} if exists $self->{genome_length};
@@ -627,7 +639,7 @@ sub _version_path {
     return '/gsc/pkg/bio/velvet/velvet_0.7.';
 }
 
-sub _resolve_ins_length_sd {
+sub _get_ins_length_sd {
     my $self = shift;
 
     return $self->dev_ins_length if $self->dev_ins_length;
@@ -635,7 +647,7 @@ sub _resolve_ins_length_sd {
     return $self->ins_length * 0.2;
 }
 
-sub _resolve_exp_covs {
+sub _get_exp_covs {
     my $self = shift;
 
     my @exp_covs;
@@ -648,7 +660,7 @@ sub _resolve_exp_covs {
     return @exp_covs;
 }
 
-sub _resolve_cov_cutoffs {
+sub _get_cov_cutoffs {
     my $self = shift;
 
     my @cov_cutoffs;
@@ -661,7 +673,7 @@ sub _resolve_cov_cutoffs {
     return @cov_cutoffs;
 }
 
-sub _resolve_hash_sizes {
+sub _get_hash_sizes {
     my $self = shift;
 
     return (25, 27, 29) unless $self->hash_sizes;
@@ -791,15 +803,15 @@ sub log_event {
 sub _log_file {
     my $self = shift;
 
-#    my $prefix_name = $self->_resolve_file_prefix_name();
-#    my $output_dir = $self->_resolve_output_dir();
+#    my $prefix_name = $self->_get_file_prefix_name();
+#    my $output_dir = $self->_get_output_dir();
 #    my $data_file_name = File::Basename::basename($self->file);
 #    return $output_dir.'/'.$prefix_name.'-'.$data_file_name.'-logfile';
 
-    return $self->_resolve_file_prefix_name.'-logfile';
+    return $self->_get_file_prefix_name.'-logfile';
 }
 
-sub _resolve_file_prefix_name {
+sub _get_file_prefix_name {
     my $self = shift;
 
     #called multiple times but want consistant name
@@ -830,7 +842,7 @@ sub _resolve_file_prefix_name {
 
 
 #TODO this is mandidatory here but optional in original code .. maybe need to change later
-sub _resolve_output_dir {
+sub _get_output_dir {
     my $self = shift;
 
     if ($self->output_dir) {
