@@ -628,7 +628,7 @@ sub estimated_kb_usage {
 
 sub resolve_alignment_subdirectory {
     my $self = shift;
-    my $self->instrument_data;
+    my $instrument_data = $self->instrument_data;
     my $staged_basename = File::Basename::basename($self->temp_staging_directory);
     my $directory = join('/', 'alignment_data',$instrument_data->id,$staged_basename);
     return $directory;
