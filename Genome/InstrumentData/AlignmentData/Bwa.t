@@ -39,13 +39,13 @@ $bwa_label =~ s/\./\_/g;
 # Define a fake alignment, to test the shortcut feature
 #
 ###########################################################
-my $sr = Genome::InstrumentData::AlignmentSet::Bwa->__define__(
+my $sr = Genome::InstrumentData::AlignmentData::Bwa->__define__(
                  'id' => -8765432,
                  'output_dir' => "/gscmnt/sata828/info/alignment_data/$bwa_label/refseq-for-test/test_run_name/4_-123456",
                  'software' =>  'Genome::InstrumentData::Aligner::Bwa' ,
                  'software_version' => $bwa_version,
                  'instrument_data_id' => '-123456',
-                 'result_class_name' => 'Genome::InstrumentData::AlignmentSet::Bwa',
+                 'result_class_name' => 'Genome::InstrumentData::AlignmentData::Bwa',
                  aligner_name=>'bwa',
                  aligner_version=>$bwa_version,
                  samtools_version=>$samtools_version,
@@ -113,7 +113,7 @@ $instrument_data->set_list('allocations',$fake_allocation);
 ####################################################
 
 my $bad_alignment;
-$bad_alignment = Genome::InstrumentData::AlignmentSet::Bwa->create(
+$bad_alignment = Genome::InstrumentData::AlignmentData::Bwa->create(
                                                           instrument_data_id => $instrument_data->id,
                                                           aligner_name => 'bwa',
                                                           aligner_version => $bwa_version,
@@ -122,14 +122,14 @@ $bad_alignment = Genome::InstrumentData::AlignmentSet::Bwa->create(
                                                           reference_name => 'refseq-for-test',
                                                       );
 ok(!$bad_alignment, "this should have returned undef, for attempting to create an alignment that is already created!");
-ok(Genome::InstrumentData::AlignmentSet::Bwa->error_message =~ m/already have one/, "the exception is what we expect to see");
+ok(Genome::InstrumentData::AlignmentData::Bwa->error_message =~ m/already have one/, "the exception is what we expect to see");
 
 
 #
 # Step 2: Attempt to get an alignment that's already created
 #
 #################################################
-my $alignment = Genome::InstrumentData::AlignmentSet::Bwa->get(
+my $alignment = Genome::InstrumentData::AlignmentData::Bwa->get(
                                                           instrument_data_id => $instrument_data->id,
                                                           aligner_name => 'bwa',
                                                           aligner_version => $bwa_version,
@@ -206,7 +206,7 @@ $instrument_data->set_always('resolve_quality_converter','sol2sanger');
 #
 ##################
 
-$alignment = Genome::InstrumentData::AlignmentSet::Bwa->create(
+$alignment = Genome::InstrumentData::AlignmentData::Bwa->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        samtools_version => $samtools_version,
                                                        picard_version => $picard_version,
@@ -239,7 +239,7 @@ for (glob($base_tempdir . "/*")) {
 $tmp_allocation->allocation_path('alignment_data/'.$bwa_label.'/refseq-for-test/test_run_name/fragment/4_-123458/' . $staging_base);
 mkpath($tmp_allocation->absolute_path);
 $instrument_data->set_list('fastq_filenames',$fastq_files[0]);
-$alignment = Genome::InstrumentData::AlignmentSet::Bwa->create(
+$alignment = Genome::InstrumentData::AlignmentData::Bwa->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'bwa',
                                                        samtools_version => $samtools_version,

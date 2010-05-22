@@ -11,7 +11,7 @@ class Genome::SoftwareResult {
     is_abstract => 1,
     table_name => 'SOFTWARE_RESULT',
     subclass_description_preprocessor => 'Genome::SoftwareResult::_expand_param_and_input_properties',
-    subclassify_by => 'result_class_name',
+    subclassify_by => 'subclass_name',
     id_by => [
         id => { is => 'NUMBER', len => 20 },
     ],
@@ -21,10 +21,8 @@ class Genome::SoftwareResult {
         is_metric => { is => 'Boolean', is_optional=>'1' }
     ],
     has => [
-        software            => { is => 'Genome::Software', is_transient => 1, default_value=>'Genome::Software'},
-        software_class_name => { via => 'software', to => 'class' },
-        software_version    => { is => 'VARCHAR2', len => 64, column_name => 'VERSION', is_optional => 1 },
-        result_class_name   => { is => 'VARCHAR2', len => 255, column_name => 'CLASS_NAME' },
+        module_version      => { is => 'VARCHAR2', len => 64, column_name => 'VERSION', is_optional => 1 },
+        subclass_name       => { is => 'VARCHAR2', len => 255, column_name => 'CLASS_NAME' },
         inputs_bx           => { is => 'UR::BoolExpr', id_by => 'inputs_id', is_optional => 1 },
         inputs_id           => { is => 'VARCHAR2', len => 4000, column_name => 'INPUTS_ID', implied_by => 'inputs_bx', is_optional => 1 },
         params_bx           => { is => 'UR::BoolExpr', id_by => 'params_id', is_optional => 1 },
@@ -156,11 +154,52 @@ sub create {
         }
     }
 
-    my $software = $self->software;
-    $self->inputs_bx($software->inputs_bx) unless defined $self->inputs_bx;
-    $self->software_version($software->resolve_software_version) unless defined $self->software_version;
-    $self->result_class_name($class);
+    $self->module_version($self->resolve_module_version) unless defined $self->module_version;
+    $self->subclass_name($class);
     return $self;
+}
+
+
+sub resolve_module_version {
+    #TODO, this tries to get svn revision info, then snapshot info, then date commited to trunk.  This actually isn't used anywhere to verify versions, so as long as it doesn't die here we are ok for the time being
+    my $self = shift;
+    my $base_dir = $self->base_dir;
+    my $path = $base_dir .'.pm';
+    unless (-f $path) {
+        die('Failed to find expected perl module '. $path);
+    }
+
+    # TODO: move to central place
+    my $info_string = `svn info $path`;
+    chomp($info_string);
+    my @lines = split("\n",$info_string);
+    my %hash;
+    for my $line (@lines) {
+        $line =~ /([\w\s]*)\:\s*(.*)/;
+        $hash{$1} = $2;
+    }
+    my $svn_info_hash_ref = \%hash; 
+
+    if (defined $$svn_info_hash_ref{'Revision'}) {
+        return $$svn_info_hash_ref{'Revision'};
+    }
+    if ($path =~ /\/gsc\/scripts\/opt\/genome-(\d+)\//) {
+        return $1;
+    }
+    if ($path =~ /\/gsc\/scripts\/lib\/perl\//) {
+        my $date = ctime(stat($path)->mtime);
+        return 'app-'. $date;
+    }
+    #TODO: make condition for directory in svn tree that has not been added to svn
+
+    #TODO: make condition for uncommited changes in svn tree, currently return zero
+    #die('Failed to resolve_software_version for perl module path '. $path);
+    return 0;
+}
+
+sub svn_info {
+    my $self = shift;
+    my $path = shift;
 }
 
 sub _expand_param_and_input_properties {
@@ -276,7 +315,4 @@ sub _resolve_lock_name {
 
 1;
 
-#$Rev$:
-#$HeadURL$:
-#$Id$:
     

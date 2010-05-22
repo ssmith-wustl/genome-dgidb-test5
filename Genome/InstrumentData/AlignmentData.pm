@@ -1,4 +1,4 @@
-package Genome::InstrumentData::AlignmentSet;
+package Genome::InstrumentData::AlignmentData;
 
 use Genome;
 use Data::Dumper;
@@ -9,7 +9,7 @@ use File::Path;
 use warnings;
 use strict;
 
-class Genome::InstrumentData::AlignmentSet {
+class Genome::InstrumentData::AlignmentData {
     is_abstract => 1,
     is=>['Genome::SoftwareResult'],
     sub_classification_method_name => '_resolve_subclass_name',   
@@ -26,24 +26,15 @@ class Genome::InstrumentData::AlignmentSet {
         _disk_allocation        => { is => 'Genome::Disk::Allocation', is_optional => 1, is_many => 1, reverse_as => 'owner' },
 
     ],
-    has_transient => [
-
-        temp_staging_directory  => {
-                                    is => 'Text',
-                                    doc => 'A directory to use for staging the alignment data before putting it on allocated disk.',
-                                    is_optional=>1,
-                                },
-        temp_scratch_directory  => {
-                                    is=>'Text',
-                                    doc=>'Temp scratch directory',
-                                    is_optional=>1,
-                                },
-        _sanger_fastq_pathnames => { is => 'Array', is_optional=>1 },
-    ],
     has_input => [
         instrument_data_id      => {
                                     is => 'Number',
                                     doc => 'the local database id of the instrument data (reads) to align',
+                                },
+        reference_name          => {
+                                    default_value => 'NCBI-human-build36',
+                                    is_optional=>1,
+                                    doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
                                 },
     ],
     has_param => [
@@ -95,11 +86,6 @@ class Genome::InstrumentData::AlignmentSet {
                                     is => 'Text',
                                     is_optional=>1,
                                     doc => 'Trimmer parameters',
-                                },
-        reference_name          => {
-                                    default_value => 'NCBI-human-build36',
-                                    is_optional=>1,
-                                    doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
                                 },
         samtools_version        => {
                                     is=>'Text',
@@ -170,18 +156,34 @@ class Genome::InstrumentData::AlignmentSet {
                                         is_optional=>1,
                                 },
     ],
+    has_transient => [
+        temp_staging_directory  => {
+                                    is => 'Text',
+                                    doc => 'A directory to use for staging the alignment data before putting it on allocated disk.',
+                                    is_optional=>1,
+                                },
+        temp_scratch_directory  => {
+                                    is=>'Text',
+                                    doc=>'Temp scratch directory',
+                                    is_optional=>1,
+                                },
+        _sanger_fastq_pathnames => { is => 'Array', is_optional=>1 },
+    ],
 };
 
-sub required_arch_os { 
+sub required_arch_os {
+    # override in subclasses if 64-bit is not required
     'x86_64' 
 }
 
 sub required_rusage { 
-    #"-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=50000:mem=12000]' -M 1610612736";
+    # override in subclasses
+    # e.x.: "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=50000:mem=12000]' -M 1610612736";
     ''
 }
 
 sub extra_metrics {
+    # this will probably go away: override in subclasses if the aligner has custom metrics
     ()
 }
 
@@ -191,23 +193,10 @@ sub _resolve_subclass_name {
 
     if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
         my $aligner_name = $_[0]->aligner_name;
-        return join('::', 'Genome::InstrumentData::AlignmentSet', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
+        return join('::', 'Genome::InstrumentData::AlignmentData', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
     }
     elsif (my $aligner_name = $class->get_rule_for_params(@_)->specified_value_for_property_name('aligner_name')) {
-        return join('::', 'Genome::InstrumentData::AlignmentSet', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
-    }
-    return;
-}
-
-sub _resolve_aligner_software_name {
-    my $class = shift;
-
-    if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-        my $aligner_name = $_[0]->aligner_name;
-        return join('::', 'Genome::InstrumentData::Aligner', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
-    }
-    elsif (my $aligner_name = $class->get_rule_for_params(@_)->specified_value_for_property_name('aligner_name')) {
-        return join('::', 'Genome::InstrumentData::Aligner', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
+        return join('::', 'Genome::InstrumentData::AlignmentData', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
     }
     return;
 }
@@ -230,10 +219,12 @@ sub create {
         return $class->SUPER::create(@_);
     }
 
+    # the base class handles all locking, etc., so it may hang while waiting for a lock
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
     # STEP 1: ENSURE WE WILL PROBABLY HAVE DISK SPACE WHEN ALIGNMENT COMPLETES
+    # TODO: move disk_group, estimated_size, allocation and promotion up into the software result logic
     my $estimated_kb_usage = $self->estimated_kb_usage;
     $self->status_message("Estimated disk for this data set: " . $estimated_kb_usage . " kb");
     $self->status_message("Check for available disk...");
@@ -244,7 +235,7 @@ sub create {
         $unallocated_kb += $available_volumes[0]->unallocated_kb 
     }
     $self->status_message("Available disk: " . $unallocated_kb . " kb");
-    my $factor = 10;
+    my $factor = 20;
     unless ($unallocated_kb > ($factor * $estimated_kb_usage)) {
         $self->error_message("NOT ENOUGH DISK SPACE!  This step requires $factor x as much disk as the job will use to be available before starting.");
         die $self->error_message();
@@ -392,6 +383,9 @@ sub _promote_validated_data {
     }
 
     chmod 02775, $output_dir;
+    for my $subdir (grep { -d $_  } glob("$output_dir/*")) {
+        chmod 02775, $subdir;
+    }
 
     $self->status_message("Files in $output_dir: \n" . join "\n", glob($output_dir . "/*"));
 
@@ -510,23 +504,16 @@ sub _process_sam_files {
 
 sub _gather_params_for_get_or_create {
     my $class = shift;
-    
-    my %params = @_;
+    my $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
 
-    my $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %params);
     my $aligner_name = $bx->value_for('aligner_name');
+    my $subclass = join '::', 'Genome::InstrumentData::AlignmentData', $class->_resolve_subclass_name_for_aligner_name($aligner_name);
 
-    my $aligner_class = join '::', 'Genome::InstrumentData::Aligner', $class->_resolve_subclass_name_for_aligner_name($aligner_name);
-    my $alignment_class = join '::', 'Genome::InstrumentData::AlignmentSet', $class->_resolve_subclass_name_for_aligner_name($aligner_name);
-
-    my $aligner_software = $aligner_class->create();    
-
-
+    my %params = $bx->params_list;
     my %is_input;
     my %is_param;
-
-    my $class_object = $alignment_class->get_class_object;
-    for my $key ($alignment_class->property_names) {
+    my $class_object = $subclass->get_class_object;
+    for my $key ($subclass->property_names) {
         my $meta = $class_object->property_meta_for_name($key);
         if ($meta->{is_input} && exists $params{$key}) {
             $is_input{$key} = $params{$key};
@@ -536,19 +523,17 @@ sub _gather_params_for_get_or_create {
 
     }
     
-    my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($alignment_class, %is_input);
-    my $params_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($alignment_class, %is_param);
+    my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($subclass, %is_input);
+    my $params_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($subclass, %is_param);
 
-    my %software_result_params = (software_version=>$params_bx->value_for('aligner_version'),
+    my %software_result_params = (#software_version=>$params_bx->value_for('aligner_version'),
                                   params_id=>$params_bx->id,
                                   inputs_id=>$inputs_bx->id,
-                                  result_class_name=>$alignment_class);
+                                  subclass_name=>$subclass);
     
     return {
         software_result_params => \%software_result_params,
-        aligner_class => $aligner_class,
-        alignment_class => $alignment_class,
-        aligner_software => $aligner_software,
+        subclass => $subclass,
         inputs=>\%is_input,
         params=>\%is_param,
     };
@@ -630,6 +615,7 @@ sub resolve_alignment_subdirectory {
     my $self = shift;
     my $instrument_data = $self->instrument_data;
     my $staged_basename = File::Basename::basename($self->temp_staging_directory);
+    # TODO: the first subdir is actually specified by the disk management system.
     my $directory = join('/', 'alignment_data',$instrument_data->id,$staged_basename);
     return $directory;
 }
@@ -1206,7 +1192,7 @@ sub construct_groups_file {
 }
 
 sub aligner_params_for_sam_header {
-    die "You must implement aligner_params_for_sam_header in your AlignmentSet subclass. This specifies the parameters used to align the reads";
+    die "You must implement aligner_params_for_sam_header in your AlignmentData subclass. This specifies the parameters used to align the reads";
 }
 
 sub verify_alignment_data {

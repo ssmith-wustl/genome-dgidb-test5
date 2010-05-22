@@ -1,12 +1,12 @@
-package Genome::InstrumentData::AlignmentSet::Maq;
+package Genome::InstrumentData::AlignmentData::Maq;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::InstrumentData::AlignmentSet::Maq {
-    is => 'Genome::InstrumentData::AlignmentSet',
+class Genome::InstrumentData::AlignmentData::Maq {
+    is => 'Genome::InstrumentData::AlignmentData',
     has_constant => [
         aligner_name => { value => 'maq' },
     ],

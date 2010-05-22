@@ -31,6 +31,7 @@ class Genome::InstrumentData::Command::Align {
                                         },
         instrument_data_id              => {
                                             is => 'Number',
+                                            shell_args_position => 1,
                                             doc => 'the local database id of the instrument data (reads) to align'
                                         },
     ],
@@ -157,9 +158,9 @@ sub execute {
         }
     }
 
-    $alignment = Genome::InstrumentData::AlignmentSet->get_or_create(%alignment_params);
+    $alignment = Genome::InstrumentData::AlignmentData->get_or_create(%alignment_params);
     unless ($alignment) {
-        if (Genome::InstrumentData::AlignmentSet->error_message()) {
+        if (Genome::InstrumentData::AlignmentData->error_message()) {
             die $self->error_message('Failed to create an alignment object with params: '. Data::Dumper::Dumper(\%alignment_params) );
         }
         else {
