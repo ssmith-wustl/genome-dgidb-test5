@@ -300,17 +300,20 @@ sub _resolve_lock_name {
 
         return $class->_resolve_lock_name(%is_input, %is_param);
     }
-    my $be = UR::BoolExpr->resolve_normalized($self, @_);
     
-    no warnings;
-    my $params_list=join "___", $be->params_list;
-    # sub out dangerous directory separators
-    $params_list =~ s/\//\./g;
-    use warnings;
+    my $class_string = ref($self) || $self;
+    $class_string =~ s/\:/\-/g;
 
-    my $params_list_hash = md5_hex($params_list);
-    
-    my $resource_lock_name = "/gsc/var/lock/$self/" .  $params_list_hash;
+    my $be = UR::BoolExpr->resolve_normalized($self, @_);
+    no warnings;
+    my $params_and_inputs_list=join "___", $be->params_list;
+    # sub out dangerous directory separators
+    $params_and_inputs_list =~ s/\//\./g;
+    use warnings;
+    my $params_and_inputs_list_hash = md5_hex($params_and_inputs_list);
+   
+
+    my $resource_lock_name = "/gsc/var/lock/genome/$class_string/" .  $params_and_inputs_list_hash;
 }
 
 1;

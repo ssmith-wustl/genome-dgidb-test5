@@ -158,9 +158,9 @@ sub execute {
         }
     }
 
-    $alignment = Genome::InstrumentData::AlignmentData->get_or_create(%alignment_params);
+    $alignment = Genome::InstrumentData::AlignmentResult->get_or_create(%alignment_params);
     unless ($alignment) {
-        if (Genome::InstrumentData::AlignmentData->error_message()) {
+        if (Genome::InstrumentData::AlignmentResult->error_message()) {
             die $self->error_message('Failed to create an alignment object with params: '. Data::Dumper::Dumper(\%alignment_params) );
         }
         else {

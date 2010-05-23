@@ -1,12 +1,12 @@
-package Genome::InstrumentData::AlignmentData::Command::List;
+package Genome::InstrumentData::AlignmentResult::Command::List;
 use strict;
 use warnings;
 use Genome;
 
-class Genome::InstrumentData::AlignmentData::Command::List {
+class Genome::InstrumentData::AlignmentResult::Command::List {
     is => 'UR::Object::Command::List',
     has => [
-        subject_class_name => { is_constant => 1, value => 'Genome::InstrumentData::AlignmentData' },
+        subject_class_name => { is_constant => 1, value => 'Genome::InstrumentData::AlignmentResult' },
         filter => { 
             shell_args_position => 1, 
             default_value => '' 

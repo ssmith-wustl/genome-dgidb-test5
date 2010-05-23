@@ -1,4 +1,4 @@
-package Genome::InstrumentData::AlignmentData::Command;
+package Genome::InstrumentData::AlignmentResult::Command;
 
 #REVIEW fdu 11/17/2009
 #OK
@@ -8,7 +8,7 @@ use warnings;
 
 use Genome;
 
-class Genome::InstrumentData::AlignmentData::Command {
+class Genome::InstrumentData::AlignmentResult::Command {
     is => 'Command',
     is_abstract => 1,
     english_name => 'genome instrument_data command',

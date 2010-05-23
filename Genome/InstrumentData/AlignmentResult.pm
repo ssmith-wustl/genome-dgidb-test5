@@ -1,4 +1,4 @@
-package Genome::InstrumentData::AlignmentData;
+package Genome::InstrumentData::AlignmentResult;
 
 use Genome;
 use Data::Dumper;
@@ -9,7 +9,7 @@ use File::Path;
 use warnings;
 use strict;
 
-class Genome::InstrumentData::AlignmentData {
+class Genome::InstrumentData::AlignmentResult {
     is_abstract => 1,
     is=>['Genome::SoftwareResult'],
     sub_classification_method_name => '_resolve_subclass_name',   
@@ -193,10 +193,10 @@ sub _resolve_subclass_name {
 
     if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
         my $aligner_name = $_[0]->aligner_name;
-        return join('::', 'Genome::InstrumentData::AlignmentData', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
+        return join('::', 'Genome::InstrumentData::AlignmentResult', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
     }
     elsif (my $aligner_name = $class->get_rule_for_params(@_)->specified_value_for_property_name('aligner_name')) {
-        return join('::', 'Genome::InstrumentData::AlignmentData', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
+        return join('::', 'Genome::InstrumentData::AlignmentResult', $class->_resolve_subclass_name_for_aligner_name($aligner_name));
     }
     return;
 }
@@ -219,11 +219,20 @@ sub create {
         return $class->SUPER::create(@_);
     }
 
-    # the base class handles all locking, etc., so it may hang while waiting for a lock
+    # STEP 1: verify the architecture on which we're running
+    my $actual_os = Genome::Config->arch_os();
+    $class->status_message("OS is $actual_os");
+    my $required_os = $class->required_arch_os;
+    $class->status_message("Required OS is $required_os");
+    unless ($required_os eq $actual_os) {
+        die $class->error_message("This logic can only be run on a $required_os machine!  (running on $actual_os)");
+    }
+
+    # STEP 2: the base class handles all locking, etc., so it may hang while waiting for a lock
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-    # STEP 1: ENSURE WE WILL PROBABLY HAVE DISK SPACE WHEN ALIGNMENT COMPLETES
+    # STEP 3: ENSURE WE WILL PROBABLY HAVE DISK SPACE WHEN ALIGNMENT COMPLETES
     # TODO: move disk_group, estimated_size, allocation and promotion up into the software result logic
     my $estimated_kb_usage = $self->estimated_kb_usage;
     $self->status_message("Estimated disk for this data set: " . $estimated_kb_usage . " kb");
@@ -241,20 +250,20 @@ sub create {
         die $self->error_message();
     }
 
-    # STEP 2: PREPARE THE STAGING DIRECTORY
+    # STEP 4: PREPARE THE STAGING DIRECTORY
     $self->status_message("Prepare working directories...");
     $self->_prepare_working_directories;
     $self->status_message("Staging path is " . $self->temp_staging_directory);
     $self->status_message("Working path is " . $self->temp_scratch_directory);
 
-    # STEP 3: PREPARE REFERENCE SEQUENCES
+    # STEP 5: PREPARE REFERENCE SEQUENCES
     $self->status_message("Preparing the reference sequences...");
     unless($self->_prepare_reference_sequences) {
         $self->error_message("Reference sequences are invalid.  We can't proceed:  " . $self->error_message);
         die $self->error_message();
     }
 
-    # STEP 4: UNPACK THE ALIGNMENT FILES
+    # STEP 6: UNPACK THE ALIGNMENT FILES
     $self->status_message("Unpacking reads...");
     my @fastqs = $self->_extract_sanger_fastq_filenames;
     unless (@fastqs) {
@@ -267,7 +276,7 @@ sub create {
         die $self->error_message;
     }
 
-    # STEP 5: DETERMINE HOW MANY PASSES OF ALIGNMENT ARE REQUIRED
+    # STEP 7: DETERMINE HOW MANY PASSES OF ALIGNMENT ARE REQUIRED
     my @passes;
     if (
         defined($self->filter_name) 
@@ -305,7 +314,7 @@ sub create {
         @passes = ( \@fastqs ); 
     }
 
-    # STEP 6: RUN THE ALIGNER, APPEND TO all_sequences.sam IN SCRATCH DIRECTORY
+    # STEP 8: RUN THE ALIGNER, APPEND TO all_sequences.sam IN SCRATCH DIRECTORY
     for my $pass (@passes) {
         $self->status_message("Aligning @$pass...");
         unless ($self->_run_aligner(@$pass)) {
@@ -324,19 +333,19 @@ sub create {
         }
     }
 
-    # STEP 7: CONVERT THE ALL_SEQUENCES.SAM into ALL_SEQUENCES.BAM
+    # STEP 9: CONVERT THE ALL_SEQUENCES.SAM into ALL_SEQUENCES.BAM
     $self->status_message("Building a combined BAM file...");
     unless($self->_process_sam_files) {
         $self->error_message("Failed to process sam files into bam files. " . $self->error_message);
         die $self->error_message;
     }
 
-    # STEP 8: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
+    # STEP 10: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
     $self->status_message("Preparing the output directory...");
     my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
     $self->status_message("Alignment output path is $output_dir");
 
-    # STEP 9: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
+    # STEP 11: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
     $self->status_message("Moving results to network disk...");
     my $product_path;
     unless($product_path= $self->_promote_validated_data) {
@@ -344,8 +353,8 @@ sub create {
         die $self->error_message;
     }
     
-    # STEP 10: RESIZE THE DISK
-    # TODO: do this before promoting???
+    # STEP 12: RESIZE THE DISK
+    # TODO: move this into the actual original allocation so we don't need to do this 
     $self->status_message("Resizing the disk allocation...");
     if ($self->_disk_allocation) {
         unless ($self->_disk_allocation->reallocate) {
@@ -358,6 +367,7 @@ sub create {
 }
 
 sub alignment_directory {
+    # TODO: refactor to just use output_dir.
     my $self = shift;
     return $self->output_dir;
 }
@@ -507,7 +517,7 @@ sub _gather_params_for_get_or_create {
     my $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
 
     my $aligner_name = $bx->value_for('aligner_name');
-    my $subclass = join '::', 'Genome::InstrumentData::AlignmentData', $class->_resolve_subclass_name_for_aligner_name($aligner_name);
+    my $subclass = join '::', 'Genome::InstrumentData::AlignmentResult', $class->_resolve_subclass_name_for_aligner_name($aligner_name);
 
     my %params = $bx->params_list;
     my %is_input;
@@ -1192,7 +1202,7 @@ sub construct_groups_file {
 }
 
 sub aligner_params_for_sam_header {
-    die "You must implement aligner_params_for_sam_header in your AlignmentData subclass. This specifies the parameters used to align the reads";
+    die "You must implement aligner_params_for_sam_header in your AlignmentResult subclass. This specifies the parameters used to align the reads";
 }
 
 sub verify_alignment_data {

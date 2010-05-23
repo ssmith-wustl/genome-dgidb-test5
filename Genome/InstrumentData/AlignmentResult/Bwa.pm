@@ -1,4 +1,4 @@
-package Genome::InstrumentData::AlignmentData::Bwa;
+package Genome::InstrumentData::AlignmentResult::Bwa;
 
 use strict;
 use warnings;
@@ -6,8 +6,8 @@ use File::Basename;
 
 use Genome;
 
-class Genome::InstrumentData::AlignmentData::Bwa {
-    is => 'Genome::InstrumentData::AlignmentData',
+class Genome::InstrumentData::AlignmentResult::Bwa {
+    is => 'Genome::InstrumentData::AlignmentResult',
     has_constant => [
         aligner_name => { value => 'bwa', is_param=>1 },
     ],

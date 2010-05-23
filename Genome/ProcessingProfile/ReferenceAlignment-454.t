@@ -32,7 +32,7 @@ plan tests => 44;
 my $message_flag = 0;
 
 
-my $tmp_dir = File::Temp::tempdir('TestAlignmentDataXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('TestAlignmentResultXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $model_name = "test_454_$ENV{USER}";
 my $subject_name = 'TCAM-090304_gDNA_tube1';
 my $subject_type = 'sample_name';
