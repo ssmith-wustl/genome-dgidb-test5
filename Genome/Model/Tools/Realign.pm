@@ -65,7 +65,17 @@ sub human_ref_path {
 }
 
 sub dbsnp_path {
-    return '/gscmnt/sata420/info/jlolofie/dbsnp_rod/dbsnp_130_final.rod';
+    my $model = Genome::Model->get( name => 'dbSNP-human-130-final-rod');
+    unless($model) {
+        $self->error_message("could not locade model dbSNP-human-130-final-rod which contains the necessary dbSNP file.");
+        die $self->error_message;
+    }
+    my $path = $model->data_directory."/ImportedVariations/dbsnp_130_final.rod";
+    unless(-s $path) {
+        $self->error_message("could not locat dbSNP file");
+        die $self->error_message;
+    }
+    return $path;
 }
 
 sub help_synopsis { 
