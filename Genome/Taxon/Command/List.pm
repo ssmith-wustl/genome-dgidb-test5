@@ -12,7 +12,7 @@ class Genome::Taxon::Command::List {
             is_constant => 1, 
             value => 'Genome::Taxon' 
         },
-        show => { default_value => 'id,species_name,strain_name,ncbi_taxon_id,locus_tag,domain' },
+        show => { default_value => 'id,name,species_latin_name,ncbi_taxon_id,locus_tag,domain' },
     ],
 };
 
