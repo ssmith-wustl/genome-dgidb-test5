@@ -98,7 +98,7 @@
 
           $("#placeholder").bind("plotclick", function (event, pos, item) {
               if (item) {
-                window.open('https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=' + item.datapoint[2]);
+                window.open('https://imp.gsc.wustl.edu/view/Genome/Model/Build/status.html?id=' + item.datapoint[2]);
               }
           });
 
