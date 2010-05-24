@@ -283,6 +283,23 @@ sub execute
     # this needs to get the sequence set name and sequence set id somehow.
     my $ssid = $merge->sequence_set_id();
 
+    # tag 100% overlaps
+
+    my $ovtag = Genome::Model::Tools::Bacterial::TagOverlaps->create( sequence_set_id => $ssid );
+
+    if(defined($self->dev)) {
+        $ovtag->dev(1);
+    }
+    if($ovtag)
+    {
+        $ovtag->execute();
+            or croak "can't tag 100% overlaps in Hap.pm";
+    }
+    else
+    {
+        croak "can't create 100% tag overlapping in Hap.pm";
+    }
+
     my $fin = Genome::Model::Tools::Hgmi::Finish->create(
         sequence_set_id  => $ssid,
         locus_tag        => $config->{locus_tag},
