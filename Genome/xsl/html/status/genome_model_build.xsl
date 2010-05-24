@@ -337,9 +337,10 @@ popup.center();
                         </xsl:attribute>
                         <td>
                           <xsl:variable name="command_class" select="@command_class"/>
+                          <xsl:variable name="containing_command_class" select="../../@value"/>
                           <xsl:choose>
                             <!-- if command_class contains 'AlignReads' there should be instrument data associated -->
-                            <xsl:when test="contains($command_class, 'AlignReads')">
+                            <xsl:when test="contains($command_class, 'AlignReads') or contains($containing_command_class, 'AlignReads')">
                               <xsl:variable name="inst_data_id" select="instrument_data_id" />
                               <xsl:variable name="inst_data_count" select="count(//instrument_data[@id=$inst_data_id])"/>                              <xsl:choose>
                               <!-- if we have instrument data element(s), show flow cell and lane -->
