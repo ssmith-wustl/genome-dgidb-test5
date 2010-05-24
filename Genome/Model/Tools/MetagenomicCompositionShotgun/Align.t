@@ -5,8 +5,7 @@ use warnings;
 
 use File::Path;
 use File::Temp;
-use Test::More;
-#use Test::More skip_all => "This tests depends on files in Josh Pecks's home directory which are now missing.  Like him.";
+use Test::More skip_all => "obsolete workflow";
 use above 'Genome';
 
 my $archos = `uname -a`;
