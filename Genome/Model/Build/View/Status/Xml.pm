@@ -223,6 +223,8 @@ sub get_build_node {
     }
     $buildnode->addChild( $doc->createAttribute("data-directory",$build->data_directory) );
     $buildnode->addChild( $doc->createAttribute("lsf-job-id", $build->build_event->lsf_job_id));
+    
+    $buildnode->addChild( $doc->createAttribute("software-revision", $build->software_revision) );
 
     my $event = $build->build_event;
 

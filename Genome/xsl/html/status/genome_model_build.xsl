@@ -74,6 +74,7 @@ popup.center();
                       </td></tr>
                       <tr><td class="label">Processing Profile:</td><td class="value"><xsl:value-of select="build/stages/@processing_profile"/> (<xsl:value-of select="build/stages/@processing_profile_type"/>)</td></tr>
                       <tr><td class="label">Data Directory:</td><td class="value"><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@data-directory"/></xsl:attribute><xsl:value-of select="build/@data-directory"/></a></td></tr>
+                      <tr><td class="label">Software Revision:</td><td class="value"><xsl:value-of select="build/@software-revision"/></td></tr>
                       <xsl:if test="//build/@kilobytes-requested">
                         <tr>
                           <xsl:variable name="kb_requested" select="//build/@kilobytes-requested"/>
