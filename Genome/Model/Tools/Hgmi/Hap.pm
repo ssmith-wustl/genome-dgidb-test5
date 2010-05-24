@@ -292,7 +292,7 @@ sub execute
     }
     if($ovtag)
     {
-        $ovtag->execute();
+        $ovtag->execute()
             or croak "can't tag 100% overlaps in Hap.pm";
     }
     else
