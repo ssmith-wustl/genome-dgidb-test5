@@ -386,6 +386,13 @@ sub get_events_for_class_node {
     my $events_list_node = $doc->createElement("events");
     my @events = $class->get( model_id => $build->model->id, build_id => $build->id);
 
+    unless(@events) {
+        #Try to find an event for this stage that may not exist anymore
+        my @all_events = $build->events;
+        my $type = $class->command_name;
+        @events = grep($_->event_type =~ /^$type/, @all_events);
+    }
+
     for my $event (@events) {
         my $event_node = $self->get_event_node($event);
         $events_list_node->addChild($event_node);
