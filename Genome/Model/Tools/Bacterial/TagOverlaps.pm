@@ -4,7 +4,11 @@ use warnings;
 use Genome;
 use Command;
 use Carp;
+
+# bap mess
 use BAP::DB::DBI;
+use BAP::DB::Tag;
+use BAP::DB::GeneTag;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -69,7 +73,7 @@ sub execute
         # pct_overlap, other_pct_overlap
         $result_count += 1;
         if($columns[10] == 100.0) {
-            print $columns[0],":",$columns[9]," ",$columns[4],":",$columns[10],"\n";
+            #print $columns[0],":",$columns[9]," ",$columns[4],":",$columns[10],"\n";
             push(@genes2tag,$columns[4]);
         }
     }
@@ -77,6 +81,7 @@ sub execute
     $self->status_message("there are " . scalar(@genes2tag) . " genes found 100% contained in a larger gene.");
 
     # tag 'em and bag 'em.
+    $self->tag_genes(\@genes2tag);
 
     return 1;
 }
@@ -117,6 +122,36 @@ sub query {
         (b.seq_end between a.seq_start and a.seq_end)
        ) ";
     return $query;
+}
+
+
+sub tag_genes {
+    my $self = shift;
+    my $genes = shift;
+    my ($tag) = BAP::DB::Tag->search({tag_name => 'Dead',
+                                      tag_value => 'fully overlapped gene'});
+    foreach my $gene (@$genes) {
+        # put a tag in the appropriate spot.
+        # probably need to grab the coding gene based on the gene name.
+        my $cg = BAP::DB::CodingGene->search({gene_name => $gene});
+        my $coding_gene = $cg->next; 
+        if(!defined($coding_gene) ){
+            next;
+        }
+        my $genetag = BAP::DB::GeneTag->find_or_create({gene_id => $coding_gene,
+                                                tag_id  => $tag});
+    }
+
+    # only do this if we aren't setting certain UR values like nocommit
+    if(exists($ENV{UR_DBI_NO_COMMIT}) && ($ENV{UR_DBI_NO_COMMIT} == 1)) {
+        $self->status_message("UR_DBI_NO_COMMIT set; not commiting changes");
+    }
+    else
+    {
+        $self->status_message("commiting changes");
+        BAP::DB::DBI->dbi_commit();
+    }
+    return 1;
 }
 
 1;
