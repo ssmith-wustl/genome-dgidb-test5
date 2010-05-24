@@ -11,7 +11,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 21;
+        plan tests => 22;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -42,16 +42,20 @@ $bwa_label =~ s/\./\_/g;
 my $sr = Genome::InstrumentData::AlignmentResult::Bwa->__define__(
                  'id' => -8765432,
                  'output_dir' => "/gscmnt/sata828/info/alignment_data/$bwa_label/refseq-for-test/test_run_name/4_-123456",
-                 'software' =>  'Genome::InstrumentData::Aligner::Bwa' ,
-                 'software_version' => $bwa_version,
+                 #'software' =>  'Genome::InstrumentData::Aligner::Bwa' ,
+                 #'software_version' => $bwa_version,
                  'instrument_data_id' => '-123456',
-                 'result_class_name' => 'Genome::InstrumentData::AlignmentResult::Bwa',
+                 #'result_class_name' => 'Genome::InstrumentData::AlignmentResult::Bwa',
+                 subclass_name => 'Genome::InstrumentData::AlignmentResult::Bwa',
+                 module_version => '12345',
                  aligner_name=>'bwa',
                  aligner_version=>$bwa_version,
                  samtools_version=>$samtools_version,
                  picard_version=>$picard_version,
                  reference_name=>'refseq-for-test',
 );
+
+isa_ok($sr, 'Genome::SoftwareResult');
 
 ## Defien the instrument data for it
 
