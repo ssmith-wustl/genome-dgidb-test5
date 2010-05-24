@@ -95,8 +95,7 @@ popup.center();
 </tr>
 <tr>
 <td class="label">Workflow Instance ID:</td>
-<td class="value">
-<a xmlns:rest="urn:rest" href="/cgi-bin/rest.cgi/Workflow/Store/Db/Model/Instance/status.html?id=1753513">1753513</a> (done)</td>
+<td class="value"><a xmlns:rest="urn:rest" href="/cgi-bin/rest.cgi/Workflow/Store/Db/Model/Instance/status.html?id=1753513">1753513</a></td>
 </tr>
 </table></td>
 <td><table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
@@ -112,6 +111,10 @@ popup.center();
 <tr>
 <td class="label">Data Directory:</td>
 <td class="value"><a href="https://gscweb.gsc.wustl.edu//gscmnt/sata427/info/model_data/2851407278/build101289765">/gscmnt/sata427/info/model_data/2851407278/build101289765</a></td>
+</tr>
+<tr>
+<td class="label">Software Revision:</td>
+<td class="value">/gscuser/ssmith/svn/pm-pipetest:</td>
 </tr>
 <tr>
 <td class="label">Disk Space (kbytes):</td>
@@ -320,8 +323,8 @@ popup.center();
 <th>completed</th>
 <th class="last">elapsed</th>
 </tr></thead>
-<tbody><tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289768",event_status:"Succeeded",instance_id:"1753519",execution_count:"1",instance_status:"done",lsf_job_id:"966892",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 22:12:06",date_completed:"2010-02-28 22:36:11",elapsed_time:"24:05",instrument_data_id:"2849448911",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/solexa/100109_HWUSI-EAS1605_100737092_61DTD/101289768.out\"&gt;101289768.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/solexa/100109_HWUSI-EAS1605_100737092_61DTD/101289768.err\"&gt;101289768.err&lt;/a&gt;",alignment_directory:"&lt;a href=\"http://gscweb/gscmnt/sata912/info/alignment_data/bwa0_5_5/cd6fc20ad94e451c80345e7544d30cc7/NCBI-human-build36/100109_HWUSI-EAS1605_100737092_61DTD/1_2849448911\"&gt;1_2849448911&lt;/a&gt;",project_name:"AML Whole Genome Sequencing",sample_name:"H_KA-943309-S.18828",run_name:"100109_HWUSI-EAS1605_100737092_61DTD",flow_cell_id:"61DTD",read_length:"100",library_name:"H_KA-943309-S.18828-lib1",library_id:"2847322310",subset_name:"1",seq_id:"2849448911",run_type:"Paired",popup_title:"ReferenceAlignment::AlignReads::Bwa #101289768"});'>
-<td>61DTD Lane: 1</td>
+<tbody><tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289768",event_status:"Succeeded",lsf_job_id:"966892",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 22:12:06",date_completed:"2010-02-28 22:36:11",elapsed_time:"24:05",instrument_data_id:"2849448911",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/solexa/100109_HWUSI-EAS1605_100737092_61DTD/101289768.out\"&gt;101289768.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/solexa/100109_HWUSI-EAS1605_100737092_61DTD/101289768.err\"&gt;101289768.err&lt;/a&gt;",alignment_directory:"",project_name:"AML Whole Genome Sequencing",sample_name:"H_KA-943309-S.18828",run_name:"100109_HWUSI-EAS1605_100737092_61DTD",flow_cell_id:"61DTD",read_length:"100",library_name:"H_KA-943309-S.18828-lib1",library_id:"2847322310",subset_name:"1",seq_id:"2849448911",run_type:"Paired",popup_title:" #101289768"});'>
+<td></td>
 <td class="status succeeded">succeeded</td>
 <td>2010-02-28 22:12:06</td>
 <td>2010-02-28 22:36:11</td>
@@ -345,14 +348,14 @@ popup.center();
 <th class="last">elapsed</th>
 </tr></thead>
 <tbody>
-<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289769",event_status:"Succeeded",instance_id:"1753524",execution_count:"1",instance_status:"done",lsf_job_id:"966931",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 22:36:33",date_completed:"2010-02-28 23:14:48",elapsed_time:"38:15",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289769.out\"&gt;101289769.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289769.err\"&gt;101289769.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::DeduplicateLibraries::Picard #101289769"});'>
+<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289769",event_status:"Succeeded",lsf_job_id:"966931",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 22:36:33",date_completed:"2010-02-28 23:14:48",elapsed_time:"38:15",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289769.out\"&gt;101289769.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289769.err\"&gt;101289769.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::DeduplicateLibraries::Picard #101289769"});'>
 <td>ReferenceAlignment::DeduplicateLibraries::Picard</td>
 <td class="status succeeded">succeeded</td>
 <td>2010-02-28 22:36:33</td>
 <td>2010-02-28 23:14:48</td>
 <td class="last">38:15</td>
 </tr>
-<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289770",event_status:"Succeeded",instance_id:"1753525",execution_count:"1",instance_status:"done",lsf_job_id:"966951",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:02",date_completed:"2010-02-28 23:15:10",elapsed_time:"00:08",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289770.out\"&gt;101289770.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289770.err\"&gt;101289770.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::PostDedupReallocate #101289770"});'>
+<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289770",event_status:"Succeeded",lsf_job_id:"966951",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:02",date_completed:"2010-02-28 23:15:10",elapsed_time:"00:08",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289770.out\"&gt;101289770.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289770.err\"&gt;101289770.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::PostDedupReallocate #101289770"});'>
 <td>ReferenceAlignment::PostDedupReallocate</td>
 <td class="status succeeded">succeeded</td>
 <td>2010-02-28 23:15:02</td>
@@ -378,14 +381,14 @@ popup.center();
 <th class="last">elapsed</th>
 </tr></thead>
 <tbody>
-<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289771",event_status:"Succeeded",instance_id:"1753530",execution_count:"1",instance_status:"done",lsf_job_id:"966953",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:26",date_completed:"2010-02-28 23:15:27",elapsed_time:"00:01",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.out\"&gt;101289771.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.err\"&gt;101289771.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::UpdateGenotype::Samtools #101289771"});'>
+<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289771",event_status:"Succeeded",lsf_job_id:"966953",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:26",date_completed:"2010-02-28 23:15:27",elapsed_time:"00:01",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.out\"&gt;101289771.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.err\"&gt;101289771.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::UpdateGenotype::Samtools #101289771"});'>
 <td>ReferenceAlignment::UpdateGenotype::Samtools</td>
 <td class="status succeeded">succeeded</td>
 <td>2010-02-28 23:15:26</td>
 <td>2010-02-28 23:15:27</td>
 <td class="last">00:01</td>
 </tr>
-<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289772",event_status:"Succeeded",instance_id:"1753531",execution_count:"1",instance_status:"done",lsf_job_id:"966970",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:43",date_completed:"2010-03-01 00:01:48",elapsed_time:"46:05",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.out\"&gt;101289772.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.err\"&gt;101289772.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::FindVariations::Samtools #101289772"});'>
+<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289772",event_status:"Succeeded",lsf_job_id:"966970",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:43",date_completed:"2010-03-01 00:01:48",elapsed_time:"46:05",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.out\"&gt;101289772.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.err\"&gt;101289772.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::FindVariations::Samtools #101289772"});'>
 <td>ReferenceAlignment::FindVariations::Samtools</td>
 <td class="status succeeded">succeeded</td>
 <td>2010-02-28 23:15:43</td>
@@ -410,7 +413,7 @@ popup.center();
 <th>completed</th>
 <th class="last">elapsed</th>
 </tr></thead>
-<tbody><tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289773",event_status:"Succeeded",instance_id:"1753536",execution_count:"1",instance_status:"done",lsf_job_id:"966985",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-03-01 00:02:00",date_completed:"2010-03-01 07:14:30",elapsed_time:"07:12:30",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289773.out\"&gt;101289773.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289773.err\"&gt;101289773.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::RunReports #101289773"});'>
+<tbody><tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289773",event_status:"Succeeded",lsf_job_id:"966985",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-03-01 00:02:00",date_completed:"2010-03-01 07:14:30",elapsed_time:"07:12:30",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289773.out\"&gt;101289773.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289773.err\"&gt;101289773.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::RunReports #101289773"});'>
 <td>ReferenceAlignment::RunReports</td>
 <td class="status succeeded">succeeded</td>
 <td>2010-03-01 00:02:00</td>
