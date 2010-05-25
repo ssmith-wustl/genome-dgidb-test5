@@ -38,7 +38,8 @@ sub execute {
     my $self = shift;
 
     my $picard_path = $self->picard_path;
-    my $bam_cmp_cmd = sprintf("java  -cp %s/CompareSAMs.jar net.sf.samtools.apps.CompareSAMs VALIDATION_STRINGENCY=SILENT %s %s ", $self->picard_path, $self->file1, $self->file2);
+    my $bam_cmp_cmd = sprintf("java  -cp %s/CompareSAMs.jar net.sf.picard.sam.CompareSAMs VALIDATION_STRINGENCY=SILENT %s %s ", $self->picard_path, $self->file1, $self->file2);
+    print $bam_cmp_cmd, "\n\n\n\n";
 
     my $ret = 0;
     my $response;
