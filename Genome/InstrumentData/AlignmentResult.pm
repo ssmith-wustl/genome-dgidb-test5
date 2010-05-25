@@ -267,7 +267,7 @@ sub create {
     $self->status_message("Unpacking reads...");
     my @fastqs = $self->_extract_sanger_fastq_filenames;
     unless (@fastqs) {
-        $self->error_message("Failed to gather fastq files: " . $self->error_messaage);
+        $self->error_message("Failed to gather fastq files: " . $self->error_message);
         die $self->error_message;
     }
     $self->status_message("Got " . scalar(@fastqs) . " fastq files");
