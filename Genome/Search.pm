@@ -91,6 +91,7 @@ sub _resolve_solr_xml_view {
    
     my $subject_class_name = ref($object) || $object; 
 
+    return if (!$subject_class_name->isa('UR::Object'));
     return if $subject_class_name->isa('UR::Object::Ghost');
     return UR::Object::View->_resolve_view_class_for_params(
         subject_class_name => $subject_class_name,
@@ -103,6 +104,7 @@ sub _resolve_result_xml_view {
     my $class = shift;
     my $subject_class_name = shift;
 
+    return if (!$subject_class_name->isa('UR::Object'));
     return if $subject_class_name->isa('UR::Object::Ghost');
     return UR::Object::View->_resolve_view_class_for_params(
         subject_class_name => $subject_class_name,
