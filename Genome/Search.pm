@@ -88,38 +88,24 @@ sub is_indexable {
 sub _resolve_solr_xml_view {
     my $class = shift;
     my $object = shift;
-    
-    my $type = ref $object || $object;
-    
-    return if $type =~ /::Ghost$/; #Don't try to work with deleted references
-    return unless UNIVERSAL::can($type, 'inheritance');
-    
-    my @possible_object_class_names = ($type,$type->inheritance);
-    
-    my $subclass_name;
-    for my $possible_object_class_name (@possible_object_class_names) {
+   
+    my $subject_class_name = ref($object) || $object; 
 
-        $subclass_name = join("::",
-            $possible_object_class_name,
-            "View::Solr::Xml"
-        );
-        
-        next unless(UR::Object::Type->get($subclass_name)); #Do we have a class?
-        next unless($subclass_name->isa('Genome::View::Solr::Xml')); #Is it the view we want?
-
-        return $subclass_name;
-    }
-    
-    return;
+    return if $subject_class_name->isa('UR::Object::Ghost');
+    return UR::Object::View->_resolve_view_class_for_params(
+        subject_class_name => $subject_class_name,
+        toolkit => 'xml',
+        perspective => 'solr'
+    );
 }
 
 sub _resolve_result_xml_view {
     my $class = shift;
-    my $object = shift;
+    my $subject_class_name = shift;
 
-    return if $object->isa('UR::Object::Ghost');
+    return if $subject_class_name->isa('UR::Object::Ghost');
     return UR::Object::View->_resolve_view_class_for_params(
-        subject_class_name => ref($object),
+        subject_class_name => $subject_class_name,
         toolkit => 'xml',
         perspective => 'search-result'
     );
@@ -363,7 +349,7 @@ sub _cache_result {
     my $html_to_cache = $result_node->childNodes->string_value;
     
     my $memcached = $self->_singleton_object->memcached_server;
-    
+
     return 1 if UR::DBI->no_commit; #Don't try to manipulate the cache with test code
     
     return $memcached->set($self->cache_key_for_doc($doc), $html_to_cache, $self->cache_timeout);
