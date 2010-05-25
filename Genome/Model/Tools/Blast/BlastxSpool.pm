@@ -1,10 +1,10 @@
 
-package Workflow::Command::Example::BlastxSpool;
+package Genome::Model::Tools::Blast::BlastxSpool;
 
 # This is going to be:
 # genome workflow example fasta-to-spool
 # workflow example fasta-to-spool --fasta inputfile
-class Workflow::Command::Example::BlastxSpool {
+class Genome::Model::Tools::Blast::BlastxSpool {
     is => ['Workflow::Operation::Command'],
     workflow => sub { 
         my $file = __FILE__;
