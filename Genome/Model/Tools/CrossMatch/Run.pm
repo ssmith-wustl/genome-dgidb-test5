@@ -25,6 +25,7 @@ class Genome::Model::Tools::CrossMatch::Run {
                      cm_params => {
                                    doc => 'additional command line parameters passed to cross_match execution',
                                    is => 'String',
+                                   is_input => 1,
                                    is_param => 1,
                                },
                      alignment_file => {
@@ -38,11 +39,6 @@ class Genome::Model::Tools::CrossMatch::Run {
                                              is_output => 1,
                                          },
                  ],
-};
-
-operation_io Genome::Model::Tools::CrossMatch::Run {
-    input  => [ 'query_file', 'subject_file', 'cm_params' ],
-    output => [ 'alignment_file','aligner_output_file','result' ],
 };
 
 sub help_brief {

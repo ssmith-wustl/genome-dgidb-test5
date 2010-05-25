@@ -26,6 +26,7 @@ class Genome::Model::Tools::Blat::Subject {
                                      doc => 'additional command line parameters passed to blat execution',
                                      is => 'String',
                                      is_param => 1,
+                                     is_input => 1,
                                  },
                      alignment_file => {
                                         doc => 'the output file to store blat alignments',
@@ -38,11 +39,6 @@ class Genome::Model::Tools::Blat::Subject {
                                         is_output => 1,
                            },
                  ],
-};
-
-operation_io Genome::Model::Tools::Blat::Subject {
-    input  => [ 'query_file', 'subject_file', 'blat_params' ],
-    output => [ 'alignment_file', 'aligner_output_file', 'result' ],
 };
 
 sub help_brief {

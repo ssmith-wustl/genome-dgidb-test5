@@ -15,12 +15,14 @@ class Genome::Model::Tools::Snp::Filters::Dtr3e {
     {
         type => 'String',
         is_optional => 0,
+        is_input => 1,
         doc => 'File of experimental metrics for the model'
     },
     basedir => 
     { 
         type => 'String',
         is_optional =>0,
+        is_input => 1,
         doc => 'Place and prefix for files'
     },
     specificity =>
@@ -32,23 +34,20 @@ class Genome::Model::Tools::Snp::Filters::Dtr3e {
     },
     ref_seq_id => 
     { 
-        is => 'String', 
+        is => 'String',
+        is_input => 1,
         doc => 'Put some docmumentation here' 
     },
     decision_tree_output => 
     {
         doc => ".keep output file for this step.", 
         is => 'String',
+        is_output => 1,
         calculate => q| 
              return $self->basedir . 'chr' . $self->ref_seq_id . '.keep.csv';
         |
     },
     ]
-};
-
-operation_io Genome::Model::Tools::Snp::Filters::Dtr3e {
-    input  => [ 'ref_seq_id', 'basedir', 'experimental_metric_model_file'],
-    output => [ 'decision_tree_output' ],
 };
 
 sub help_synopsis {

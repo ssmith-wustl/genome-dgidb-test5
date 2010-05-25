@@ -30,11 +30,6 @@ class Genome::Model::Tools::Blat::Cat {
              ],
 };
 
-operation_io Genome::Model::Tools::Blat::Cat {
-    input => [ 'psl_path','psl_files','blat_output_path','output_files' ],
-    output => [ 'result'],
-};
-
 sub sub_command_sort_position { 12 }
 
 sub help_brief {

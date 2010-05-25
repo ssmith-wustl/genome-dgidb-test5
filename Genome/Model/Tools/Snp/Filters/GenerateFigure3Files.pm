@@ -14,19 +14,24 @@ class Genome::Model::Tools::Snp::Filters::GenerateFigure3Files
     is => 'Command',
     has => [
         basedir                     => { is => 'String', 
+                                         is_input => 1,
                                          doc => 'Put some docmumentation here' },
         snp_report_file             => { is => 'String',
                                          is_optional=> 1, 
                                          doc => 'Put some docmumentation here' },
         ref_seq_id                  => { is => 'String', 
+                                         is_input => 1,
                                          doc => 'Put some docmumentation here' },
         binomial_output_file        => { is => 'String', 
+                                         is_input => 1,
                                          doc => 'Put some docmumentation here' },
         parent_event                => { is => 'Genome::Model::Event',
-                                         is_optional=>1,   
+                                         is_optional=>1,
+                                         is_input => 1,
                                          doc => 'The parent event' },
         validated_somatic_variants  => { is => 'String', 
                                          is_optional=>1,
+                                         is_output => 1,
                                          doc => 'Put some docmumentation here' },
         log_metric       =>             { is => 'Boolean',
                                          is_optional=>1,
@@ -34,11 +39,6 @@ class Genome::Model::Tools::Snp::Filters::GenerateFigure3Files
                                          doc=>'should this run write to the db about its statistics or not',
                                        },
     ], 
-};
-
-operation_io Genome::Model::Tools::Snp::Filters::GenerateFigure3Files {
-    input  => [ 'parent_event', 'ref_seq_id', 'basedir',  'binomial_output_file' ],
-    output  => [ 'validated_somatic_variants' ],
 };
 
 #----------------------------------

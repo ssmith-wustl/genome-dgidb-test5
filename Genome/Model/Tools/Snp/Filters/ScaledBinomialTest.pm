@@ -17,18 +17,21 @@ class Genome::Model::Tools::Snp::Filters::ScaledBinomialTest
         {
             type => 'String',
             is_optional => 0,
+            is_input => 1,
             doc => 'File of experimental metrics for the model',
         },
         input_other_snp_metrics =>
         {
             type => 'String',
             is_optional => 0,
+            is_input => 1,
             doc => 'File of experimental metrics for the normal',
         },
         basedir => 
         {
             type => 'String',
             is_optional => 0,
+            is_input => 1,
             doc => 'Basename for the output file',
         },
         ratio => 
@@ -42,6 +45,7 @@ class Genome::Model::Tools::Snp::Filters::ScaledBinomialTest
         {
             type => 'String',
             is_optional => 0,
+            is_input => 1,
             doc => 'Chromosome name or something',
         },
         two_sided_p_threshold => 
@@ -74,6 +78,7 @@ class Genome::Model::Tools::Snp::Filters::ScaledBinomialTest
         binomial_output_file =>
         {
             type => 'String',
+            is_output => 1,
             doc => 'the name of the output file',
             calculate => q|
                         return $self->basedir . "/binomial.chr" . $self->ref_seq_id . ".nonskin.csv";
@@ -83,10 +88,6 @@ class Genome::Model::Tools::Snp::Filters::ScaledBinomialTest
     ],
 };
 
-operation_io Genome::Model::Tools::Snp::Filters::ScaledBinomialTest {
-    input  => [ 'ref_seq_id', 'basedir', 'input_other_snp_metrics', 'input_primary_snp_metrics' ],
-    output => [ 'binomial_output_file' ],
-};
 
 #----------------------------------
 sub execute {
