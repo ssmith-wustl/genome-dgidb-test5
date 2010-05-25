@@ -62,6 +62,9 @@ sub execute {                               # replace with real execution logic.
 	## Open outfile ##
 	
 	open(OUTFILE, ">$output_file") or die "Can't open outfile: $!\n";
+
+	my @formatted = ();
+	my $formatCounter = 0;
 	
 	## Parse the indels ##
 
@@ -203,9 +206,12 @@ sub execute {                               # replace with real execution logic.
 			
 			if($chrom && $chr_start && $chr_stop && $allele1 && $allele2)
 			{
-				print OUTFILE "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2";
-				print OUTFILE "\t$rest_of_line" if($rest_of_line);
-				print OUTFILE "\n";
+				$formatted[$formatCounter] = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2\t$rest_of_line";
+				$formatCounter++;
+
+#				print OUTFILE "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2";
+#				print OUTFILE "\t$rest_of_line" if($rest_of_line);
+#				print OUTFILE "\n";
 			}
 
 		}
@@ -213,9 +219,46 @@ sub execute {                               # replace with real execution logic.
 
 	close($input);	
 	
+	
+	## Sort the formatted indels by chr pos ##
+
+	@formatted = sort byChrPos @formatted;
+	
+	foreach my $snv (@formatted)
+	{
+		print OUTFILE "$snv\n";
+	}
+		
+	
 	close(OUTFILE);
 }
 
+
+sub byChrPos
+{
+    (my $chrom_a, my $pos_a) = split(/\t/, $a);
+    (my $chrom_b, my $pos_b) = split(/\t/, $b);
+
+	$chrom_a =~ s/X/23/;
+	$chrom_a =~ s/Y/24/;
+	$chrom_a =~ s/MT/25/;
+	$chrom_a =~ s/M/25/;
+	$chrom_a =~ s/[^0-9]//g;
+
+	$chrom_b =~ s/X/23/;
+	$chrom_b =~ s/Y/24/;
+	$chrom_b =~ s/MT/25/;
+	$chrom_b =~ s/M/25/;
+	$chrom_b =~ s/[^0-9]//g;
+
+    $chrom_a <=> $chrom_b
+    or
+    $pos_a <=> $pos_b;
+    
+#    $chrom_a = 23 if($chrom_a =~ 'X');
+#    $chrom_a = 24 if($chrom_a =~ 'Y');
+    
+}
 
 
 
