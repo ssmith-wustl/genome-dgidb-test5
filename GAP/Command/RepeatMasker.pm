@@ -35,7 +35,7 @@ class GAP::Command::RepeatMasker {
 };
 
 operation_io GAP::Command::RepeatMasker {
-    input  => [ 'input_file' ],
+    input  => [ 'input_file', 'repeat_library', 'species' ],
     output => [ 'output_file' ]
 };
 

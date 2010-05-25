@@ -2,6 +2,7 @@
 <workflow name="inner mask sequences" parallelBy="fasta file" executor="Workflow::Executor::SerialDeferred">
   <link fromOperation="input connector" fromProperty="fasta file"      toOperation="repeatmasker"     toProperty="input_file" />
   <link fromOperation="input connector" fromProperty="repeat library"  toOperation="repeatmasker"     toProperty="repeat_library" />
+  <link fromOperation="input connector" fromProperty="species"         toOperation="repeatmasker"     toProperty="species" />
   <link fromOperation="repeatmasker"    fromProperty="output_file"     toOperation="output connector" toProperty="masked fasta file" />
   <link fromOperation="repeatmasker"    fromProperty="result"          toOperation="output connector" toProperty="result" />
   <operation name="repeatmasker">
@@ -10,6 +11,7 @@
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>fasta file</inputproperty>
     <inputproperty>repeat library</inputproperty>
+    <inputproperty>species</inputproperty>
     <outputproperty>masked fasta file</outputproperty>
     <outputproperty>result</outputproperty>
   </operationtype>

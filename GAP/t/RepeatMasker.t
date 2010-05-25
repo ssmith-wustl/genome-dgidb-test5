@@ -16,7 +16,8 @@ BEGIN {
 
 
 my $command = GAP::Command::RepeatMasker->create(
-                                                 'input_file'  => 'data/BACSTEFNL_Contig694.fasta',
+                                                 'input_file'     => 'data/BACSTEFNL_Contig694.fasta',
+                                                 'repeat_library' => '/gsc/var/lib/repeat/Trichinella_pseudospiralis_1.0_080103.rep', 
                                                 );
 isa_ok($command, 'GAP::Command::RepeatMasker');
 
