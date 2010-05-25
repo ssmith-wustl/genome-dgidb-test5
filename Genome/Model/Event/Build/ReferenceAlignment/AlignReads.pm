@@ -448,7 +448,7 @@ sub execute {
     for my $alignment (@alignments) {
         my $link = $alignment->add_user(user => $build, label => 'uses');
         if ($link) {
-            $self->error_message("Linked alignment " . $alignment->id . " to the build");
+            $self->status_message("Linked alignment " . $alignment->id . " to the build");
         }
         else {
             $self->error_message(
