@@ -9,12 +9,12 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <title><xsl:value-of select="//report-meta/name"/></title> 
     <link href="layout.css" rel="stylesheet" type="text/css"></link>
-    <link rel="shortcut icon" href="/resources/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png"/>
-    <link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen"/>
-    <link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen" />
-    <script src="/resources/report_resources/db_snp_concordance/js/jquery.js" type="text/javascript"></script>
-    <script src="/resources/report_resources/db_snp_concordance/js/jquery.flot.js" type="text/javascript"></script>
-    <script type="text/javascript" src="/resources/report_resources/jquery/jquery.tablesorter.min.js"></script>
+    <link rel="shortcut icon" href="/res/old/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png"/>
+    <link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen"/>
+    <link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen" />
+    <script src="/res/old/report_resources/db_snp_concordance/js/jquery.js" type="text/javascript"></script>
+    <script src="/res/old/report_resources/db_snp_concordance/js/jquery.flot.js" type="text/javascript"></script>
+    <script type="text/javascript" src="/res/old/report_resources/jquery/jquery.tablesorter.min.js"></script>
     <script type="text/javascript">
       $(document).ready(function() {
           $("#model_list").tablesorter({
@@ -175,8 +175,8 @@
       }
 
     </style>
-    <script type="text/javascript" src="/resources/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js"></script>
-    <link rel="stylesheet" href="/resources/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css" />
+    <script type="text/javascript" src="/res/old/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js"></script>
+    <link rel="stylesheet" href="/res/old/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css" />
     <script type="text/javascript">
       <![CDATA[
                function event_popup(eventObject) {
@@ -254,7 +254,7 @@
         <h2 class="report_section">Comparison Graph</h2>
           <table width="100%" cellpadding="5" cellspacing="0">
             <tr>
-              <td valign="middle"><img src="/resources/report_resources/apipe_dashboard/images/axis_label_v_snp_concordance.png" width="21" height="204" alt="SNP Concordance %" style="margin-right: 10px;"/></td>
+              <td valign="middle"><img src="/res/old/report_resources/apipe_dashboard/images/axis_label_v_snp_concordance.png" width="21" height="204" alt="SNP Concordance %" style="margin-right: 10px;"/></td>
               <td align="center" valign="middle" width="100%">
                 <div id="placeholder" class="graph_placeholder"></div>
               </td>
@@ -262,7 +262,7 @@
             </tr>            
             <tr>
               <td><xsl:text disable-output-escaping="yes">&amp;nbsp;</xsl:text></td>
-              <td valign="middle" align="center"><img src="/resources/report_resources/apipe_dashboard/images/axis_label_h_gigabases.png" width="104" height="26" alt="Gigabases" style="margin-top: 10px;"/></td>
+              <td valign="middle" align="center"><img src="/res/old/report_resources/apipe_dashboard/images/axis_label_h_gigabases.png" width="104" height="26" alt="Gigabases" style="margin-top: 10px;"/></td>
               <td><xsl:text disable-output-escaping="yes">&amp;nbsp;</xsl:text></td>
             </tr>
             <tr>

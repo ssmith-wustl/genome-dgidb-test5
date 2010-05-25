@@ -467,3 +467,24 @@ div#ajax_status.error {
 div#ajax_status.success {
 }
 
+div.search_form_container {
+    float: left;
+    width: 640px;
+    background: #e7e7e7;
+    padding: 15px;
+    border-bottom: 1px solid #CCC;
+}
+div.search_form {
+    width: 49%;
+    float: left;
+}
+
+table.form {
+    margin: 0;
+}
+div.search_help {
+    width: 49%;
+    float: right;
+}
+
+

@@ -76,7 +76,7 @@ sub run_starman {
 
     my $runner = Plack::Runner->new(
         server => 'Starman',
-        env    => 'single_user'
+        env    => 'development'
     );
 
     my $psgi_path = $self->psgi_path . '/Main.psgi';

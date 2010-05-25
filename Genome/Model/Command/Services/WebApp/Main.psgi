@@ -102,7 +102,7 @@ dispatch {
 
       ## send the browser to the finder view of Genome
       sub (/) {
-        redirect_to "/view/Genome/default.html";
+        redirect_to "/view/genome/status.html";
       }
 };
 

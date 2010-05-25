@@ -44,20 +44,23 @@ dispatch {
     sub (GET + /**/*/* + .*) {
         my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
 
-        if ($class =~ /\./) {
+        if ( $class =~ /\./ ) {
+
             # matched on some multi-part path after the perspective_toolkit
-            if ($class =~ s/\/(.+?)$//g) {
-                $filename = $perspective_toolkit . '/' . $filename;
+            if ( $class =~ s/\/(.+?)$//g ) {
+                $filename            = $perspective_toolkit . '/' . $filename;
                 $perspective_toolkit = $1;
 
                 if ( $perspective_toolkit =~ s/\/(.+)$//g ) {
                     $filename = $1 . '/' . $filename;
                 }
             } else {
+
                 # let some other handler deal with this, i cant parse it
                 return;
             }
-        } elsif (index($perspective_toolkit,'.') < 0) {
+        } elsif ( index( $perspective_toolkit, '.' ) < 0 ) {
+
             # doesn't have a period in it?  probably didnt want us to match
             return;
         }
@@ -107,7 +110,7 @@ dispatch {
         Plack::Util::set_io_path( $fh, Cwd::realpath($full_path) );
 
         ## Plack should have set binmode for us, workaround here because it's dumb.
-        if ($ENV{'GATEWAY_INTERFACE'}) {
+        if ( $ENV{'GATEWAY_INTERFACE'} ) {
             binmode STDOUT;
         }
 
@@ -130,10 +133,14 @@ dispatch {
 
         my $mime_type = Plack::MIME->mime_type(".$toolkit");
 
-        for my $key (keys %$args) {
+        for my $key ( keys %$args ) {
+            if ( index( $key, '_' ) == 0 ) {
+                delete $args->{$key};
+                next;
+            }
             my $value = $args->{$key};
-            
-            if($value and scalar @$value eq 1) {
+
+            if ( $value and scalar @$value eq 1 ) {
                 $args->{$key} = $value->[0];
             }
         }
@@ -153,11 +160,12 @@ dispatch {
         if ( $toolkit eq 'xsl' || $toolkit eq 'html' ) {
             $view_args{'xsl_root'} =
               Genome->base_dir . '/xsl';    ## maybe move this to $res_path?
-            $view_args{'xsl_path'}      = '/static/xsl';
-#            $view_args{'rest_variable'} = '/view';
+            $view_args{'xsl_path'} = '/static/xsl';
+
+            #            $view_args{'rest_variable'} = '/view';
 
             $view_args{'xsl_variables'} = {
-                rest => '/view',
+                rest      => '/view',
                 resources => '/view/genome/resource.html'
             };
         }
