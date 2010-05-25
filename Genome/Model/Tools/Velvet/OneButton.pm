@@ -448,7 +448,7 @@ sub _pick_best_cov_cutoff {
 		    $mid = $low;
 		    @mid_pair = @low_pair;
 		}elsif( ($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
-		    POSIX::splice(@cov_cutoffs, $low+1, $high-$low);  #TODO need to fix ??
+		    splice(@cov_cutoffs, $low+1, $high-$low);  #TODO need to fix ??
 		    $end -= ($high-$low);
 		    $mid = $low;
 		    @mid_pair = @low_pair;
@@ -669,7 +669,7 @@ sub _get_cov_cutoffs {
 	@cov_cutoffs = $self->cov_cutoffs;
 	return sort {$a <=> $b} @cov_cutoffs;
     }
-
+    #returning empty array
     return @cov_cutoffs;
 }
 
