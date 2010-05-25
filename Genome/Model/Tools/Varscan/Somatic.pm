@@ -32,7 +32,7 @@ class Genome::Model::Tools::Varscan::Somatic {
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
-		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 6 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 1.0e-02]" , is_optional => 1, is_input => 1},
+		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1]" , is_optional => 1, is_input => 1},
 	],	
 
 	has_param => [
