@@ -64,7 +64,6 @@ class Genome::Search {
     ],
 };
 
-
 ###  Index accessors  ###
 
 sub search {
@@ -117,29 +116,13 @@ sub _resolve_solr_xml_view {
 sub _resolve_result_xml_view {
     my $class = shift;
     my $object = shift;
-    
-    my $type = ref $object || $object;
-    
-    return if $type =~ /::Ghost$/; #Don't try to work with deleted references
-    return unless UNIVERSAL::can($type, 'inheritance');
-    
-    my @possible_object_class_names = ($type,$type->inheritance);
-    
-    my $subclass_name;
-    for my $possible_object_class_name (@possible_object_class_names) {
 
-        $subclass_name = join("::",
-            $possible_object_class_name,
-            "View::SearchResult::Xml"
-        );
-        
-        next unless(UR::Object::Type->get($subclass_name)); #Do we have a class?
-        next unless($subclass_name->isa('Genome::View::SearchResult::Xml')); #Is it the view we want?
-
-        return $subclass_name;
-    }
-    
-    return;   
+    return if $object->isa('UR::Object::Ghost');
+    return UR::Object::View->_resolve_view_class_for_params(
+        subject_class_name => ref($object),
+        toolkit => 'xml',
+        perspective => 'search-result'
+    );
 }
 
 

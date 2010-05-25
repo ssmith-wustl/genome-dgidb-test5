@@ -81,7 +81,7 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
 		      <table cellpadding="0" cellspacing="0" border="0">
 		        <tr>
 		          <td>
-		            <a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/res/old/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle" /></a>
+		            <a href="/view/genome/search/status.html" alt="Go to Search Page" title="Go to Search Page"><img src="/res/old/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle" /></a>
 		          </td>
 		          <td>
 		            <h1>Analysis Reports v0.2</h1>

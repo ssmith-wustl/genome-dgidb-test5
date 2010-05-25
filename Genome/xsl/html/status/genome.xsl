@@ -10,7 +10,7 @@
     </script>
     <div class="search_form_container">
       <div class="search_form">
-        <form method="get" action="/cgi-bin/search/index.cgi">
+        <form method="get" action="/view/genome/search/query/status.html">
           <table cellspacing="0" cellpadding="0" border="0" class="form">
             <tr>
               <td style="white-space: nowrap; font-weight: bold;">
@@ -20,7 +20,7 @@
                 <input type="text" size="30" name="query" style="background-color: #FFF; font-size: 120%;"/><br/>
               </td>
               <td>
-                <input type="submit" class="search_button" value="Search"/>
+                <input type="submit" class="_submit" value="Search"/>
               </td>
             </tr>
           </table>
