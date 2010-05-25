@@ -68,7 +68,7 @@ name="value"><xsl:value-of select="//@query"/></xsl:attribute></input><br/>
 
 
     <div class="page_padding">
-      <h1 class="results_header"><xsl:value-of select="count(result)"/> results found:</h1>
+      <h1 class="results_header"><xsl:value-of select="@num-found"/> results found:</h1>
       <xsl:for-each select="result">
         <!-- Pre-generated HTML from a View module -->
         <xsl:value-of disable-output-escaping="yes" select='.'/>

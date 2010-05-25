@@ -35,6 +35,7 @@ sub _generate_content {
     $results_node->addChild( $doc->createAttribute( "generated-at", $time ) );
     $results_node->addChild( $doc->createAttribute( "input-name",   "query" ) );
     $results_node->addChild( $doc->createAttribute( "query",        $query ) );
+    $results_node->addChild( $doc->createAttribute( "num-found", $response->content->{'response'}->{'numFound'} ));
 
     # create query-no-types attribute
     my @params = split /\s+/, $query;
