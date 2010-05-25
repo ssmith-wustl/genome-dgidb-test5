@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Pyroscan::TotalSomatic::OPTS_SPEC = [
-          'dir=s',
-          undef,
-          'lst=s',
-          undef,
-          'help!',
-          undef
-        ];
