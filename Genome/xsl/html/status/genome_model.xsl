@@ -71,6 +71,31 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       <xsl:call-template name="genome_processingprofile"/>
     </xsl:for-each>
     
+    <xsl:if test="count(aspect[@name='inputs']) > 0 ">
+      <table class="info_table">
+      <tr><th colspan="2">Inputs</th></tr>
+      <xsl:for-each select="aspect[@name='inputs']/object">
+        <xsl:sort select="aspect[@name='name']/value" data-type="text" order="ascending"/>
+        <tr>
+          <td class="label"><xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>:</td>
+          <td class="value">
+            <xsl:call-template name="object_link">
+              <xsl:with-param name="linktext">
+                <xsl:value-of select="aspect[@name='value_class_name']/value"/>: <xsl:value-of select="aspect[@name='value_id']/value"/>
+              </xsl:with-param>
+              <xsl:with-param name="id">
+                <xsl:value-of select="aspect[@name='value_id']/value"/>
+              </xsl:with-param>
+              <xsl:with-param name="type">
+                <xsl:value-of select="aspect[@name='value_class_name']/value"/>
+              </xsl:with-param>
+            </xsl:call-template>
+          </td>
+        </tr>
+      </xsl:for-each>
+      </table>
+    </xsl:if>
+    
     <table id="model_list" class="list" width="100%" cellspacing="0" cellpadding="0" border="0" style="clear:both">
       <tr>
         <td class="subtable_cell">

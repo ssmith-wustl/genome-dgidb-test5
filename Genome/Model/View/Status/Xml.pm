@@ -42,6 +42,14 @@ class Genome::Model::View::Status::Xml {
                     perspective => 'default',
                     toolkit => 'xml',
                     subject_class_name => 'Genome::Model::Build',
+                },
+                {
+                    name => 'inputs',
+                    aspects => [
+                        'name', 'value_class_name', 'value_id',
+                    ],
+                    perspective => 'default',
+                    toolkit => 'xml',
                 }
             ]
         }

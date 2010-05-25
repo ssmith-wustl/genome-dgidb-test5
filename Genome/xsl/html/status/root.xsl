@@ -56,6 +56,22 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             });
           ]]>
         </script>
+        <script language="javascript" type="text/javascript">
+          <![CDATA[
+                   $(document).ready(function(){
+
+//Hide (Collapse) the toggle containers on load
+$(".toggle_container").hide();
+
+//Slide up and down on click
+$("span.trigger").click(function(){
+console.log("this: " + $(this));
+$(this).parent().next(".toggle_container").slideToggle("slow");
+});
+
+});
+          ]]>
+        </script>
       </head>
 
       <body>
