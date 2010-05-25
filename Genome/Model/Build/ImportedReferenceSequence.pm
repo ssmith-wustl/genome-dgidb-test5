@@ -39,6 +39,14 @@ class Genome::Model::Build::ImportedReferenceSequence {
     ]
 };
 
+sub name {
+    my $self = shift;
+    my $model = $self->model;
+    my $name = $model->name;
+    $name .= '-build' . $self->version;
+    return $name;
+}
+
 sub calculate_estimated_kb_usage {
     my $self = shift;
     my $fastaSize = -s $self->fasta_file;
