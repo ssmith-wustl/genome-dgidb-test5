@@ -14,42 +14,42 @@ class Genome::Model::Tools::Velvet::OneButton {
     has => [
         output_dir          => {    is => 'Text',
                                     doc => 'the directory for the results' 
-                                }, #|o=s" => \$output_path, 
+                            }, #|o=s" => \$output_path, 
 
         hash_sizes          => {    is => 'Integer',
-				    is_many => 1,
-#				    default_value => [25,27.29],
-	                        }, #|h=i{,}" => \@hash_sizes, 
+                                    is_many => 1,
+                                    # default_value => [25,27.29],
+                                }, #|h=i{,}" => \@hash_sizes, 
 
         version             => {    is => 'Text',
                                     default_value => '57-64',
                                     doc => 'the version of velvet to use'
-                                }, #=s" => \$version
+                            }, #=s" => \$version
 
         file                => {    shell_args_position => 1,
                                     doc => 'the input fasta or fastq file'
-                                },
+                            },
     ],
 
     has_optional => [
-	ins_length          => {    is => 'Integer',
+        ins_length          => {    is => 'Integer',
                                     doc => 'fragment length (average/estimated)',
-				    default_value => 280,
-                                }, #|i=i" => \$ins_length, 
+                                    default_value => 280,
+                            }, #|i=i" => \$ins_length, 
 
         genome_len          => {    is => 'Integer',
                                     doc => 'estimated genome length in bases',
-				    default_value => 3000000,
-                                }, #|g=i" => \$genome_len, 
-	
+                                    default_value => 3000000,
+                            }, #|g=i" => \$genome_len, 
+    
         bound_enumeration   => {    is => 'Integer',
                                     doc => 'conduct binary search only if the number of candidates greater than b, or conduct enumeration',
-				    default_value => 5,
-	                        }, #|b=i" => \$enumeration_bound, 
+                                    default_value => 5,
+                            }, #|b=i" => \$enumeration_bound, 
 
         dev_ins_length      => {    is => 'Integer',
                                     doc => 'fragment length std deviation'
-                                }, #|d=i" => \$ins_length_sd,  
+                            }, #|d=i" => \$ins_length_sd,  
 
         exp_covs            => {    is => 'Float', is_many => 1, }, #|e=f{,}" => \@exp_covs, 
 
@@ -84,41 +84,41 @@ sub execute {
 
     #prints general params for the run
     unless ($self->_print_params_to_screen_and_logfile()) {
-	$self->error_message("Failed to print params to screen and logfile");
-	return;
+        $self->error_message("Failed to print params to screen and logfile");
+        return;
     }
     #prints info about input data to screen and logfile
     unless ($self->_print_input_data_info() ) {
-	$self->error_message("Failed to print info about input data");
-	return;
+        $self->error_message("Failed to print info about input data");
+        return;
     }
 
     my @hash_sizes = $self->_get_hash_sizes;
     if (@hash_sizes > $self->bound_enumeration) {
-	#method returns array if successful but it's not needed
-	unless ($self->_pick_best_hash_size(@hash_sizes)) {
-	    $self->error_message("Failed to run _pick_best_hash_size with hash sizes: @hash_sizes");
-	    return;
-	}
+        #method returns array if successful but it's not needed
+        unless ($self->_pick_best_hash_size(@hash_sizes)) {
+            $self->error_message("Failed to run _pick_best_hash_size with hash sizes: @hash_sizes");
+            return;
+        }
     }
     else {
-	#TODO - need description of what this does
-	unless ($self->_enum_hash_size(@hash_sizes)) {
-	    $self->error_message("Failed to run _enum_hash_size with hash sizes: @hash_sizes");
-	    return;
-	}
+        #TODO - need description of what this does
+        unless ($self->_enum_hash_size(@hash_sizes)) {
+            $self->error_message("Failed to run _enum_hash_size with hash sizes: @hash_sizes");
+            return;
+        }
     }
 
     #print best results .. needed for test stdout check
     unless ($self->_print_best_values()) {
-	$self->error_message("Failed to print best results");
-	return;
+        $self->error_message("Failed to print best results");
+        return;
     }
 
     #final velvet run with the derived best values
     unless ($self->_do_final_velvet_runs()) {
-	$self->error_message("Failed to execute final velvet run with best values");
-	return;
+        $self->error_message("Failed to execute final velvet run with best values");
+        return;
     }
 
     #remove screen_g file
@@ -145,23 +145,23 @@ sub _print_best_values {
     my $self = shift;
 
     unless ( defined $self->_best_hash_size() ) {
-	$self->error_message("Best value for best_hash_size is missing");
-	return;
+        $self->error_message("Best value for best_hash_size is missing");
+        return;
     }
 
     unless ( defined $self->_best_exp_coverage() ) {
-	$self->error_message("Best value for best_exp_coverage is missing");
-	return;
+        $self->error_message("Best value for best_exp_coverage is missing");
+        return;
     }
 
     unless ( defined $self->_best_coverage_cutoff() ) { #could return a valid value of zero
-   	$self->error_message("Best value for best coverage cutoff is missing");
-	return;
+        $self->error_message("Best value for best coverage cutoff is missing");
+        return;
     }
 
    unless ( $self->_best_n50_total() ) {
-	$self->error_message("Unable to get best n50 and total values");
-	return;
+        $self->error_message("Unable to get best n50 and total values");
+        return;
     }
 
     my $txt = "The best result is: (hash_size exp_cov cov_cutoff n50 total)\n";
@@ -184,8 +184,8 @@ sub _do_final_velvet_runs {
     my $h_cmd = $velveth.' '.$self->output_dir.' '.$best_hash_size.' '.$input_file_format.' -shortPaired '.$self->file;
 
     if (system("$h_cmd")) {
-	$self->error_message("Failed to run final velveth with command\n\t$h_cmd");
-	return;
+        $self->error_message("Failed to run final velveth with command\n\t$h_cmd");
+        return;
     }
     
     #params for velvet g
@@ -197,8 +197,8 @@ sub _do_final_velvet_runs {
     my $g_cmd = $velvetg.' '.$self->output_dir.' -exp_cov '.$best_exp_cov.' -cov_cutoff '.$best_cov_cf.' -ins_length '.$self->ins_length.' -ins_length_sd '.$ins_length_sd.' -read_trkg yes -min_contig_lgth 100 -amos_file yes';
 
     if (system("$g_cmd")) {
-	$self->error_message("Failed to run final velvetg with command\n\t$g_cmd");
-	return;
+        $self->error_message("Failed to run final velvetg with command\n\t$g_cmd");
+        return;
     }
 
     $self->log_event("$h_cmd\n$g_cmd\n");
@@ -209,11 +209,11 @@ sub _do_final_velvet_runs {
 sub _enum_hash_size {
     my ($self, @hash_sizes) = @_;
     foreach my $h (@hash_sizes) {
-	#method return an array but it's not needed here
-	unless ($self->_run_velveth_get_opt_expcov_covcutoff($h)) {
-	    $self->error_message("Failed to run _run_velveth_get_opt_expcov_covcutoff with hash_size $h");
-	    return;
-	}
+        #method return an array but it's not needed here
+        unless ($self->_run_velveth_get_opt_expcov_covcutoff($h)) {
+            $self->error_message("Failed to run _run_velveth_get_opt_expcov_covcutoff with hash_size $h");
+            return;
+        }
     }
     return 1;
 }
@@ -236,42 +236,42 @@ sub _pick_best_hash_size { #doesn't actually return a hash size
     @mid_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$mid]);
 
     while ($start < $end) {
-	($start == $mid) ? (@low_pair = @mid_pair) : (@low_pair = (0, 0));
-	($end == $mid) ? (@high_pair = @mid_pair) : (@high_pair = (0, 0));
-	
-	unless ($low_pair[0]) {
-	    @low_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$low]);
-	}
-	if($self->_compare(@low_pair, @mid_pair) == 1) {
-	    $end = $mid-1;
-	    $mid = $low;
-	    @mid_pair = @low_pair;
-	}
-	else {
-	    unless ($high_pair[0]) {
-		@high_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$high]);
-	    }
-	    if( ($self->_compare(@high_pair,@low_pair) == 1) or
-		(($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == -1)) ){
-		$start = $mid+1;
-		$mid = $high;
-		@mid_pair = @high_pair;
-	    }elsif( ($self->_compare(@high_pair,@mid_pair) == -1) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
-		$end = $mid-1;
-		$mid = $low;
-		@mid_pair = @low_pair;
-	    }elsif( ($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
-		splice(@hash_sizes, $low+1, $high-$low);
-		$end -= ($high-$low);
-		$mid = $low;
-		@mid_pair = @low_pair;
-	    }else{	#low < mid, high < mid
-		$start = $low+1;
-		$end = $high-1;
-	    }			
-	}
-	$low = POSIX::floor(0.5*($start+$mid));
-	$high = POSIX::ceil(0.5*($mid+$end));
+        ($start == $mid) ? (@low_pair = @mid_pair) : (@low_pair = (0, 0));
+        ($end == $mid) ? (@high_pair = @mid_pair) : (@high_pair = (0, 0));
+        
+        unless ($low_pair[0]) {
+            @low_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$low]);
+        }
+        if($self->_compare(@low_pair, @mid_pair) == 1) {
+            $end = $mid-1;
+            $mid = $low;
+            @mid_pair = @low_pair;
+        }
+        else {
+            unless ($high_pair[0]) {
+                @high_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$high]);
+            }
+            if( ($self->_compare(@high_pair,@low_pair) == 1) or
+                (($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == -1)) ){
+                $start = $mid+1;
+                $mid = $high;
+                @mid_pair = @high_pair;
+            }elsif( ($self->_compare(@high_pair,@mid_pair) == -1) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
+                $end = $mid-1;
+                $mid = $low;
+                @mid_pair = @low_pair;
+            }elsif( ($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
+                splice(@hash_sizes, $low+1, $high-$low);
+                $end -= ($high-$low);
+                $mid = $low;
+                @mid_pair = @low_pair;
+            }else{	#low < mid, high < mid
+                $start = $low+1;
+                $end = $high-1;
+            }			
+        }
+        $low = POSIX::floor(0.5*($start+$mid));
+        $high = POSIX::ceil(0.5*($mid+$end));
     }
     return @mid_pair;
 }
@@ -289,8 +289,8 @@ sub _run_velveth_get_opt_expcov_covcutoff {
     $self->log_event("$cmd\n");
 
     if (system ("$cmd")) { #return 0 if successful
-	$self->error_message("Failed to run velveth with command\n\t$cmd");
-	return;
+        $self->error_message("Failed to run velveth with command\n\t$cmd");
+        return;
     }
 
     #get read count and avg read length of input file
@@ -335,8 +335,8 @@ sub _run_velveth_get_opt_expcov_covcutoff {
     my $timing_file = $name_prefix.'-timing';
     my $file_LOG = $self->output_dir.'/Log';
     unless (-s $file_LOG) {
-	$self->error_message("File Log does not exist");
-	return;
+        $self->error_message("File Log does not exist");
+        return;
     }
     system("cat $file_LOG >> $timing_file"); #TODO error check
 
@@ -348,7 +348,7 @@ sub _pick_best_exp_cov {
 
     my @exp_covs = $self->_get_exp_covs();
     unless (@exp_covs) { #returned blank array if $self->exp_covs not defined
-	@exp_covs = (POSIX::floor(0.8 * $ck) .. POSIX::floor($ck / 0.95));
+        @exp_covs = (POSIX::floor(0.8 * $ck) .. POSIX::floor($ck / 0.95));
     }
     
     my $start = 0;
@@ -364,43 +364,43 @@ sub _pick_best_exp_cov {
     @mid_pair = $self->_pick_best_cov_cutoff($exp_covs[$mid], $hash_size);
 
     while ($start < $end) {
-	($start == $mid) ? (@low_pair = @mid_pair) : (@low_pair = (0, 0));		#low == mid
-	($end == $mid) ? (@high_pair = @mid_pair) : (@high_pair = (0, 0));		#high == mid
+        ($start == $mid) ? (@low_pair = @mid_pair) : (@low_pair = (0, 0));		#low == mid
+        ($end == $mid) ? (@high_pair = @mid_pair) : (@high_pair = (0, 0));		#high == mid
 
-	unless ($low_pair[0]) {
-	    @low_pair = $self->_pick_best_cov_cutoff($exp_covs[$low], $hash_size);
-	}
+        unless ($low_pair[0]) {
+            @low_pair = $self->_pick_best_cov_cutoff($exp_covs[$low], $hash_size);
+        }
 
-	if($self->_compare(@low_pair, @mid_pair) == 1) {
-	    $end = $mid-1;
-	    $mid = $low;
-	    @mid_pair = @low_pair;
-		}
-	else {	# low <= mid
-	    unless ($high_pair[0]) {
-		@high_pair = $self->_pick_best_cov_cutoff($exp_covs[$high], $hash_size);
-	    }
-	    if( ($self->_compare(@high_pair,@low_pair) == 1) or
-		(($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == -1)) ){
-		$start = $mid+1;
-		$mid = $high;
-		@mid_pair = @high_pair;
-	    }elsif( ($self->_compare(@high_pair,@mid_pair) == -1) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
-		$end = $mid-1;
-		$mid = $low;
-		@mid_pair = @low_pair;
-	    }elsif( ($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
-		splice(@exp_covs, $low+1, $high-$low);
-		$end -= ($high-$low);
-		$mid = $low;
-		@mid_pair = @low_pair;
-	    }else{	#low < mid, high < mid
-		$start = $low+1;
-		$end = $high-1;
-	    }
-	}
-	$low = POSIX::floor(0.5*($start+$mid));
-	$high = POSIX::ceil(0.5*($mid+$end));
+        if($self->_compare(@low_pair, @mid_pair) == 1) {
+            $end = $mid-1;
+            $mid = $low;
+            @mid_pair = @low_pair;
+                }
+        else {	# low <= mid
+            unless ($high_pair[0]) {
+                @high_pair = $self->_pick_best_cov_cutoff($exp_covs[$high], $hash_size);
+            }
+            if( ($self->_compare(@high_pair,@low_pair) == 1) or
+                (($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == -1)) ){
+                $start = $mid+1;
+                $mid = $high;
+                @mid_pair = @high_pair;
+            }elsif( ($self->_compare(@high_pair,@mid_pair) == -1) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
+                $end = $mid-1;
+                $mid = $low;
+                @mid_pair = @low_pair;
+            }elsif( ($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
+                splice(@exp_covs, $low+1, $high-$low);
+                $end -= ($high-$low);
+                $mid = $low;
+                @mid_pair = @low_pair;
+            }else{	#low < mid, high < mid
+                $start = $low+1;
+                $end = $high-1;
+            }
+        }
+        $low = POSIX::floor(0.5*($start+$mid));
+        $high = POSIX::ceil(0.5*($mid+$end));
     }
     return @mid_pair;	
 }
@@ -410,7 +410,7 @@ sub _pick_best_cov_cutoff {
 
     my @cov_cutoffs = $self->_get_cov_cutoffs();
     unless (@cov_cutoffs) {
-	@cov_cutoffs = (0 .. POSIX::floor(0.3 * $exp_cov));
+        @cov_cutoffs = (0 .. POSIX::floor(0.3 * $exp_cov));
     }
 
     my $start = 0;
@@ -423,51 +423,51 @@ sub _pick_best_cov_cutoff {
     my @high_pair = (0,0);
 
     if (@cov_cutoffs > $self->bound_enumeration) {
-	@mid_pair = $self->_run_velvetg_get_n50_total($cov_cutoffs[$mid], $exp_cov, $hash_size);
-	while ($start < $end) {
-	    ($start == $mid) ? (@low_pair = @mid_pair) : (@low_pair = (0, 0));	#low == mid
-	    ($end == $mid) ? (@high_pair = @mid_pair) : (@high_pair = (0, 0));	#high == mid
-	    unless ($low_pair[0]) {
-		@low_pair = $self->_run_velvetg_get_n50_total($cov_cutoffs[$low], $exp_cov, $hash_size);
-	    }
-	    if ($self->_compare (@low_pair,@mid_pair) == 1) {
-		$end = $mid-1;
-		$mid = $low;
-		@mid_pair = @low_pair;
-	    }
-	    else {
-		unless ($high_pair[0]) {
-		    @high_pair = $self->_run_velvetg_get_n50_total($cov_cutoffs[$high], $exp_cov, $hash_size);
-		}
-		if( ($self->_compare(@high_pair, @mid_pair) == 1) or (($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == -1)) ){
-		    $start = $mid+1;
-		    $mid = $high;
-		    @mid_pair = @high_pair;
-		}elsif( ($self->_compare(@high_pair,@mid_pair) == -1) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
-		    $end = $mid-1;
-		    $mid = $low;
-		    @mid_pair = @low_pair;
-		}elsif( ($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
-		    splice(@cov_cutoffs, $low+1, $high-$low);  #TODO need to fix ??
-		    $end -= ($high-$low);
-		    $mid = $low;
-		    @mid_pair = @low_pair;
-		}else{	#low < mid, high < mid
-		    $start = $low+1;
-		    $end = $high-1;
-		}
-	    }
-	    $low = POSIX::floor(0.5*($start+$mid));
-	    $high = POSIX::ceil(0.5*($mid+$end)); 
-	}
+        @mid_pair = $self->_run_velvetg_get_n50_total($cov_cutoffs[$mid], $exp_cov, $hash_size);
+        while ($start < $end) {
+            ($start == $mid) ? (@low_pair = @mid_pair) : (@low_pair = (0, 0));	#low == mid
+            ($end == $mid) ? (@high_pair = @mid_pair) : (@high_pair = (0, 0));	#high == mid
+            unless ($low_pair[0]) {
+                @low_pair = $self->_run_velvetg_get_n50_total($cov_cutoffs[$low], $exp_cov, $hash_size);
+            }
+            if ($self->_compare (@low_pair,@mid_pair) == 1) {
+                $end = $mid-1;
+                $mid = $low;
+                @mid_pair = @low_pair;
+            }
+            else {
+                unless ($high_pair[0]) {
+                    @high_pair = $self->_run_velvetg_get_n50_total($cov_cutoffs[$high], $exp_cov, $hash_size);
+                }
+                if( ($self->_compare(@high_pair, @mid_pair) == 1) or (($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == -1)) ){
+                    $start = $mid+1;
+                    $mid = $high;
+                    @mid_pair = @high_pair;
+                }elsif( ($self->_compare(@high_pair,@mid_pair) == -1) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
+                    $end = $mid-1;
+                    $mid = $low;
+                    @mid_pair = @low_pair;
+                }elsif( ($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
+                    splice(@cov_cutoffs, $low+1, $high-$low);  #TODO need to fix ??
+                    $end -= ($high-$low);
+                    $mid = $low;
+                    @mid_pair = @low_pair;
+                }else{	#low < mid, high < mid
+                    $start = $low+1;
+                    $end = $high-1;
+                }
+            }
+            $low = POSIX::floor(0.5*($start+$mid));
+            $high = POSIX::ceil(0.5*($mid+$end)); 
+        }
     }
     else {
-	foreach my $cov_cutoff (@cov_cutoffs){
-	    @low_pair = $self->_run_velvetg_get_n50_total($cov_cutoff, $exp_cov, $hash_size);
-	    if($self->_compare(@low_pair, @mid_pair) == 1){
-		@mid_pair = @low_pair;
-	    }
-	}
+        foreach my $cov_cutoff (@cov_cutoffs){
+            @low_pair = $self->_run_velvetg_get_n50_total($cov_cutoff, $exp_cov, $hash_size);
+            if($self->_compare(@low_pair, @mid_pair) == 1){
+                @mid_pair = @low_pair;
+            }
+        }
     }
     return @mid_pair;
 }
@@ -486,8 +486,8 @@ sub _run_velvetg_get_n50_total {
     print "$cmd\n"; #needed to pass test stdout check
 
     if (system("$cmd > $screen_g_file")) { #returns 0 if successful
-	$self->error_message("Failed to run velvetg with command\n\t$cmd");
-	return;
+        $self->error_message("Failed to run velvetg with command\n\t$cmd");
+        return;
     }
 
     $self->log_event("$cmd\n");
@@ -496,8 +496,8 @@ sub _run_velvetg_get_n50_total {
     my $line = `tail -1 $screen_g_file`;
 
     unless ($line =~ /n50\s+of\s+(\d+).*total\s+(\d+)/) {
-	$self->error_message("Failed to extract n50 and total from $screen_g_file last line\n\t$line");
-	return;
+        $self->error_message("Failed to extract n50 and total from $screen_g_file last line\n\t$line");
+        return;
     }
 
     my @n50_total = ($1, $2);
@@ -509,37 +509,37 @@ sub _run_velvetg_get_n50_total {
     my @best_n50_total = $self->_best_n50_total();
 
     if ($self->_compare(@n50_total, @best_n50_total) == 1) {
-	#store best values
-	$self->_best_n50_total(@n50_total);
-	$self->_best_exp_coverage($exp_coverage);
-	$self->_best_coverage_cutoff($coverage_cutoff);
-	$self->_best_hash_size($hash_size);
-	#make a copy of contigs.fa file
-	my $file_prefix = $self->_get_file_prefix_name();
-	my $fa_file = $self->output_dir.'/contigs.fa';
-	unless (-s $fa_file) {
-	    $self->error_message("contigs.fa does not exist to rename");
-	    return;
-	}
-	unless (File::Copy::copy($fa_file, $file_prefix.'-contigs.fa')) {
-	    $self->error_message("Failed to copy $fa_file to $file_prefix".'-contigs.fa');
-	    return;
-	}
+        #store best values
+        $self->_best_n50_total(@n50_total);
+        $self->_best_exp_coverage($exp_coverage);
+        $self->_best_coverage_cutoff($coverage_cutoff);
+        $self->_best_hash_size($hash_size);
+        #make a copy of contigs.fa file
+        my $file_prefix = $self->_get_file_prefix_name();
+        my $fa_file = $self->output_dir.'/contigs.fa';
+        unless (-s $fa_file) {
+            $self->error_message("contigs.fa does not exist to rename");
+            return;
+        }
+        unless (File::Copy::copy($fa_file, $file_prefix.'-contigs.fa')) {
+            $self->error_message("Failed to copy $fa_file to $file_prefix".'-contigs.fa');
+            return;
+        }
     }
     #returns (0, 0) if best values haven't been set yet
     my @hbest_n50_total = $self->_h_best_n50_total();
 
     if ($self->_compare(@n50_total, @hbest_n50_total) == 1) {
 
-	#store best values
-	$self->_h_best_n50_total(@n50_total);
-	$self->_h_best_exp_coverage($exp_coverage);
-	$self->_h_best_coverage_cutoff($coverage_cutoff);
-	#rename contigs.fa file
-	my $fa_file = $self->output_dir.'/contigs.fa';
-	my $file_prefix = $self->_get_file_prefix_name();
-	my $new_file_name = $file_prefix.'-hash_size_'.$hash_size.'-contigs.fa';
-	rename $fa_file, $new_file_name;
+        #store best values
+        $self->_h_best_n50_total(@n50_total);
+        $self->_h_best_exp_coverage($exp_coverage);
+        $self->_h_best_coverage_cutoff($coverage_cutoff);
+        #rename contigs.fa file
+        my $fa_file = $self->output_dir.'/contigs.fa';
+        my $file_prefix = $self->_get_file_prefix_name();
+        my $new_file_name = $file_prefix.'-hash_size_'.$hash_size.'-contigs.fa';
+        rename $fa_file, $new_file_name;
     }
     return @n50_total;
 }
@@ -548,30 +548,30 @@ sub _compare {
     my ($self, $n1, $t1, $n2, $t2, $from) = @_;
 
     unless (scalar @_ == 5) {
-	$self->error_message("_compare method requires 4 numerical values");
-	return;
+        $self->error_message("_compare method requires 4 numerical values");
+        return;
     }
 
     #genome length
     my $gl = $self->_get_genome_length();
 
     if (($t1 < 0.95 * $gl or $gl < 0.95 * $t1) and ($t2 < 0.95 * $gl or $gl < 0.95 * $t2)) {
-	return 0; # both wrong length
+        return 0; # both wrong length
     }
     elsif ($t1 < 0.95 * $gl or $gl < 0.95 * $t1) {
-	return -1; # t1 is wrong
+        return -1; # t1 is wrong
     }
     elsif ($t2 < 0.95 * $gl or $gl < 0.95 * $t2) {
-	return 1; # t2 is wrong
+        return 1; # t2 is wrong
     }
     elsif ($n1 > $n2) {
-	return 1; # n1 is better
+        return 1; # n1 is better
     }
     elsif ($n1 < $n2) {
-	return -1; # n2 is better
+        return -1; # n2 is better
     }
     else {
-	return 0; # n1 == n2
+        return 0; # n1 == n2
     }
     return;
 }
@@ -615,10 +615,10 @@ sub _print_params_to_screen_and_logfile {
     $txt .= "genome length = $genome_length\n" if $self->genome_len;
 
     $txt .= "ins_length = ".$self->ins_length."\n".
-	    "ins_length_sd = ".$self->_get_ins_length_sd()."\n".
-	    "input file = ".$self->file."\n".
-	    "output directory = ".$self->output_dir."\n".
-	    "enumeration bound = ".$self->bound_enumeration."\n";
+            "ins_length_sd = ".$self->_get_ins_length_sd()."\n".
+            "input file = ".$self->file."\n".
+            "output directory = ".$self->output_dir."\n".
+            "enumeration bound = ".$self->bound_enumeration."\n";
     
     $txt .= "version = ".$self->_version_path . $self->version."\n" if $self->version;
 
@@ -653,8 +653,8 @@ sub _get_exp_covs {
     my @exp_covs;
 
     if ($self->exp_covs) {
-	@exp_covs = $self->exp_covs;
-	return sort {$a <=> $b} @exp_covs;
+        @exp_covs = $self->exp_covs;
+        return sort {$a <=> $b} @exp_covs;
     }
     
     return @exp_covs;
@@ -666,8 +666,8 @@ sub _get_cov_cutoffs {
     my @cov_cutoffs;
 
     if ($self->cov_cutoffs) {
-	@cov_cutoffs = $self->cov_cutoffs;
-	return sort {$a <=> $b} @cov_cutoffs;
+        @cov_cutoffs = $self->cov_cutoffs;
+        return sort {$a <=> $b} @cov_cutoffs;
     }
     #returning empty array
     return @cov_cutoffs;
@@ -690,25 +690,25 @@ sub _input_file_format {
     return $self->{INPUT_FILE_FORMAT} if $self->{INPUT_FILE_FORMAT};
 
     unless (-s $self->file) {
-	$self->error_message("Failed to find file ".$self->file);
-	return;
+        $self->error_message("Failed to find file ".$self->file);
+        return;
     }
     my $input_file = $self->file;
 
     #TODO - make -file_type command line option?
     my $fh = IO::File->new("< $input_file") ||
-	die "Can not open $input_file\n";
+        die "Can not open $input_file\n";
     while (my $line = $fh->getline) {
-	if ($line =~ /^\>/) {
-	    $self->{INPUT_FILE_FORMAT} = '-fasta';
-	    return '-fasta';
-	} elsif ($line =~ /^\@/) {
-	    $self->{INPUT_FILE_FORMAT} = '-fastq';
-	    return '-fastq';
-	} else {
-	    $self->error_message("Can not determine input file type: fasta or fastq");
-	    return;
-	}
+        if ($line =~ /^\>/) {
+            $self->{INPUT_FILE_FORMAT} = '-fasta';
+            return '-fasta';
+        } elsif ($line =~ /^\@/) {
+            $self->{INPUT_FILE_FORMAT} = '-fastq';
+            return '-fastq';
+        } else {
+            $self->error_message("Can not determine input file type: fasta or fastq");
+            return;
+        }
     }
 
     $fh->close;
@@ -721,12 +721,12 @@ sub _get_input_read_count_and_length {
 
     #this method gets called many times to get same value
     if ($self->{input_read_count} and $self->{avg_read_length}) {
-	return $self->{avg_read_length}, $self->{input_read_count};
+        return $self->{avg_read_length}, $self->{input_read_count};
     }
 
     unless (-s $self->file) {
-	$self->error_message("Failed to find file ".$self->file);
-	return;
+        $self->error_message("Failed to find file ".$self->file);
+        return;
     }
 
     #determine read count and total read lengths
@@ -740,8 +740,8 @@ sub _get_input_read_count_and_length {
 
     #my $io = Bio::SeqIO->new(-format => $file_type, -file => $self->file);
     #while (my $read = $io->next_seq) {
-	#$read_count++;
-	#$total_read_length += length $read->seq;
+        #$read_count++;
+        #$total_read_length += length $read->seq;
     #}
 
     my $data_fullname = $self->file;
@@ -750,26 +750,26 @@ sub _get_input_read_count_and_length {
     my $line = <IN>;
 
     if($file_format =~ /fasta/){
-	$read_count++;
-	while(<IN>) {
-	    if(/^\>/){
-		$read_count++
-	    }
-	    else{
-		$total_read_length += length()-1;
-	    }
-	}#while
+        $read_count++;
+        while(<IN>) {
+            if(/^\>/){
+                $read_count++
+            }
+            else{
+                $total_read_length += length()-1;
+            }
+        }#while
     }#fasta
     elsif($file_format =~ /fastq/){
-	while($line) {
-	    unless($line =~ /^\@/) {
-		exit("Error: more than one line in a single read.");
-	    }
-	    $read_count++;
-	    $line = <IN>;
-	    $total_read_length += length($line)-1;
-	    for my $i (0..2) {$line = <IN>;}   #Escape 2 lines
-	}
+        while($line) {
+            unless($line =~ /^\@/) {
+                exit("Error: more than one line in a single read.");
+            }
+            $read_count++;
+            $line = <IN>;
+            $total_read_length += length($line)-1;
+            for my $i (0..2) {$line = <IN>;}   #Escape 2 lines
+        }
     }
     close IN;
 
@@ -791,7 +791,7 @@ sub log_event {
     my $log_file = $self->_log_file;
     
     my $fh = IO::File->new(">> $log_file") ||
-	die "Can not create file handle for log file\n";
+        die "Can not create file handle for log file\n";
 
     $fh->print("$txt");
 
@@ -829,8 +829,8 @@ sub _get_file_prefix_name {
     $date =~ s/://g;
 
     #unless ($date =~  check correct format) { #TODO
-	#$self->error_message();
-	#return;
+        #$self->error_message();
+        #return;
     #}
 
     my $data_file_name = File::Basename::basename($self->file);
@@ -845,11 +845,11 @@ sub _get_output_dir {
     my $self = shift;
 
     if ($self->output_dir) {
-	unless (-d $self->output_dir) {
-	    $self->error_message("Invalid directory ".$self->output_dir);
-	    return;
-	}
-	return $self->output_dir;
+        unless (-d $self->output_dir) {
+            $self->error_message("Invalid directory ".$self->output_dir);
+            return;
+        }
+        return $self->output_dir;
     }
     #TODO - might have to be careful with this .. if dir changes we don't want it to return `pwd`
     return `pwd`;
@@ -859,13 +859,13 @@ sub _best_hash_size {
     my ($self, $value) = @_;
     #set best value
     if ($value) {
-	$self->{BEST_HASH_SIZE} = $value;
-	#always non zero integer
-	return $value;
+        $self->{BEST_HASH_SIZE} = $value;
+        #always non zero integer
+        return $value;
     }
     #return existing best value
     if (exists $self->{BEST_HASH_SIZE}) {
-	return $self->{BEST_HASH_SIZE};
+        return $self->{BEST_HASH_SIZE};
     }
     #this method should never be called unless setting best value or accessing existing best value
     #but cutoff value can be zero
@@ -876,13 +876,13 @@ sub _h_best_coverage_cutoff {
     my ($self, $value) = @_;
     #set best value
     if ($value) {
-	$self->{H_BEST_COVERAGE_CUTOFF} = $value;
-	#always non zero integer
-	return $value;
+        $self->{H_BEST_COVERAGE_CUTOFF} = $value;
+        #always non zero integer
+        return $value;
     }
     #return existing best value
     if (exists $self->{H_BEST_COVERAGE_CUTOFF}) {
-	return $self->{H_BEST_COVERAGE_CUTOFF};
+        return $self->{H_BEST_COVERAGE_CUTOFF};
     }
     #this method should never be called unless setting best value or accessing existing best value
     #but cutoff value can be zero
@@ -893,13 +893,13 @@ sub _best_coverage_cutoff {
     my ($self, $value) = @_;
     #set best value
     if ($value) {
-	$self->{BEST_COVERAGE_CUTOFF} = $value;
-	#always non zero integer
-	return $value;
+        $self->{BEST_COVERAGE_CUTOFF} = $value;
+        #always non zero integer
+        return $value;
     }
     #return existing best value
     if (exists $self->{BEST_COVERAGE_CUTOFF}) {
-	return $self->{BEST_COVERAGE_CUTOFF};
+        return $self->{BEST_COVERAGE_CUTOFF};
     }
     #this method should never be called unless setting best value or accessing existing best value
     #but cutoff value can be zero
@@ -910,13 +910,13 @@ sub _h_best_exp_coverage {
     my ($self, $value) = @_;
     #set best value
     if ($value) {
-	$self->{H_BEST_EXP_COVERAGE} = $value;
-	#always non zero integer
-	return $value;
+        $self->{H_BEST_EXP_COVERAGE} = $value;
+        #always non zero integer
+        return $value;
     }
     #return existing best value
     if (exists $self->{H_BEST_EXP_COVERAGE}) {
-	return $self->{H_BEST_EXP_COVERAGE};
+        return $self->{H_BEST_EXP_COVERAGE};
     }
     #this method should never be called unless setting best value or accessing existing best value
     #but cutoff value can be zero
@@ -928,13 +928,13 @@ sub _best_exp_coverage {
     my ($self, $value) = @_;
     #set best value
     if ($value) {
-	$self->{BEST_EXP_COVERAGE} = $value;
-	#always non zero integer
-	return $value;
+        $self->{BEST_EXP_COVERAGE} = $value;
+        #always non zero integer
+        return $value;
     }
     #return existing best value
     if (exists $self->{BEST_EXP_COVERAGE}) {
-	return $self->{BEST_EXP_COVERAGE};
+        return $self->{BEST_EXP_COVERAGE};
     }
     #this method should never be called unless setting best value or accessing existing best value
     #but cutoff value can be zero
@@ -945,12 +945,12 @@ sub _h_best_n50_total {
     my ($self, @hn50_tot) = @_;
     #set best value
     if (@hn50_tot) {
-	@{$self->{H_BEST_N50_TOTAL}} = @hn50_tot;
-	return @hn50_tot;
+        @{$self->{H_BEST_N50_TOTAL}} = @hn50_tot;
+        return @hn50_tot;
     }
     #return existing best value
     if ( defined @{$self->{H_BEST_N50_TOTAL}} ) {
-	return @{$self->{H_BEST_N50_TOTAL}};
+        return @{$self->{H_BEST_N50_TOTAL}};
     }
     #return min value
     return (0, 0);
@@ -960,12 +960,12 @@ sub _best_n50_total {
     my ($self, @n50_tot) = @_;
     #set best value
     if (@n50_tot) {
-	@{$self->{BEST_N50_TOTAL}} = @n50_tot;
-	return  @n50_tot;
+        @{$self->{BEST_N50_TOTAL}} = @n50_tot;
+        return  @n50_tot;
     }
     #return existing best value
     if (defined @{$self->{BEST_N50_TOTAL}}) {
-	return @{$self->{BEST_N50_TOTAL}};
+        return @{$self->{BEST_N50_TOTAL}};
     }
     #return min value
     return (0, 0);
