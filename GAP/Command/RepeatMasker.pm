@@ -18,8 +18,14 @@ class GAP::Command::RepeatMasker {
                            },
             repeat_library => {
                                is  => 'SCALAR',
+                               is_optional => 1,
                                doc => 'repeat library to pass to RepeatMasker', 
                               },
+	    species	=> {
+                               is  => 'SCALAR',
+                               is_optional => 1,
+                               doc => 'species inforamtion to pass to RepeatMasker', 
+			   },
             output_file => { 
                             is          => 'SCALAR',
                             is_optional => 1,
@@ -29,7 +35,7 @@ class GAP::Command::RepeatMasker {
 };
 
 operation_io GAP::Command::RepeatMasker {
-    input  => [ 'input_file', 'repeat_library' ],
+    input  => [ 'input_file' ],
     output => [ 'output_file' ]
 };
 
@@ -53,16 +59,18 @@ EOS
 sub execute {
     
     my $self = shift;
+    my %params;
 
     my $input_file = $self->input_file();
-
+    
     if ($input_file =~ /\.bz2$/) {
         $input_file = "bzcat $input_file |";
     }
   
     ##FIXME: The temp dir location should not be hardcoded.  At least not here.
     my $output_fh = File::Temp->new(
-                                    'DIR'      => '/gscmnt/temp212/info/annotation/GAP_tmp',
+                                    #'DIR'      => '/gscmnt/temp212/info/annotation/GAP_tmp',
+                                    'DIR'      => '/gscmnt/temp110/info/annotation/personal_dirs/ssurulir/GAP_tmp',
                                     'SUFFIX'   => '.tmp',
                                     'TEMPLATE' => 'GAP_XXXXXXXX',
                                     'UNLINK'   => 0,
@@ -73,7 +81,13 @@ sub execute {
 
     my $input_seq = $seqin->next_seq();
 
-    my $masker = Bio::Tools::Run::RepeatMasker->new(lib => $self->repeat_library());
+    #my $masker = Bio::Tools::Run::RepeatMasker->new(lib => $self->repeat_library());
+    my $masker;
+    if ($self->repeat_library) {
+    	$masker = Bio::Tools::Run::RepeatMasker->new(lib => $self->repeat_library);
+    } elsif ($self->species) {
+    	$masker = Bio::Tools::Run::RepeatMasker->new(species => $self->species);
+    } 
     
     $masker->run($input_seq);
 
