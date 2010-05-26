@@ -659,6 +659,29 @@ sub die_and_clean_up {
     die($error_message);
 }
 
+sub fasta_files {
+    my $self = shift;
+    my @fasta_files;
+    if ($self->instrument_data->sequencing_platform eq 'solexa') {
+        my @fastqs = $self->sanger_fastq_filenames;
+        for my $fastq (@fastqs) {
+            my $fasta = $fastq .'.fa';
+            unless (Genome::Model::Tools::Fastq::ToFasta->execute(
+                fastq_file => $fastq,
+                fasta_file => $fasta,
+            )) {
+                die('Failed to convert fastq to fasta!');
+            }
+            push @fasta_files, $fasta;
+        }
+    } elsif ($self->instrument_data->sequencing_platform eq '454') {
+        push @fasta_files, $self->instrument_data->fasta_file;
+    } elsif ($self->instrument_data->sequencing_platform eq 'sanger') {
+        die('Please implement method fasta_files for sanger sequence in '. __PACKAGE__);
+    }
+    return @fasta_files;
+}
+
 sub sanger_fastq_filenames {
     my $self = shift;
 
