@@ -148,7 +148,7 @@ sub execute {                               # replace with real execution logic.
 			
 			## Run bsub ##
 #			system("$script_filename");			
-			system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>2000] rusage[mem=2000]\" -oo $script_filename.out $script_filename");
+			system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>2000] rusage[mem=2000]\" -oo $script_filename.out $script_filename");
 		}
 		else
 		{
