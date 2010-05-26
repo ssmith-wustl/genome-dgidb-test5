@@ -105,7 +105,13 @@ sub execute {
         $depth_stats{$min_depth}{targets}++;
     }
     $stats_fh->close;
-    for my $min_depth (keys %depth_stats) {
+    for my $min_depth (sort {$a <=> $b} keys %depth_stats) {
+        unless (defined($depth_stats{$min_depth}{targets_eighty_pc_breadth})) {
+            $depth_stats{$min_depth}{targets_eighty_pc_breadth} = 0;
+        }
+        unless (defined($depth_stats{$min_depth}{touched})) {
+            $depth_stats{$min_depth}{touched} = 0;
+        }
         $depth_stats{$min_depth}{pc_touched} = sprintf("%.03f",(($depth_stats{$min_depth}{touched}/$depth_stats{$min_depth}{targets})*100));
         $depth_stats{$min_depth}{pc_target_space_covered} = sprintf("%.03f",(($depth_stats{$min_depth}{covered_base_pair}/$depth_stats{$min_depth}{target_base_pair})*100));
         $depth_stats{$min_depth}{pc_targets_eighty_pc_breadth} = sprintf("%.03f",(( ($depth_stats{$min_depth}{targets_eighty_pc_breadth} || 0) /$depth_stats{$min_depth}{targets})*100));
@@ -139,8 +145,12 @@ sub execute {
         headers => \@headers,
         output => $self->output_file,
     );
-    for my $min_depth (keys %depth_stats) {
-        $writer->write_one($depth_stats{$min_depth});
+    for my $min_depth (sort {$a <=> $b } keys %depth_stats) {
+        unless ($writer->write_one($depth_stats{$min_depth})) {
+            $writer->output->close;
+            unlink($self->output_file);
+            die('Failed to write data for minimum depth '. $min_depth .' to file '. $self->output_file .'.  Output file removed.');
+        }
     }
     $writer->output->close;
     return 1;
