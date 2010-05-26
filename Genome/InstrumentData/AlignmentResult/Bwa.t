@@ -230,7 +230,9 @@ ok(-d $dir, "result is a real directory");
 ok(-s $dir . "/all_sequences.bam", "result has a bam file");
 
 # clear out the fastqs so we re-unpack them again
-for ($alignment->_sanger_fastq_pathnames) {
+note "Remove sanger_fastq files:\n";
+for (@{$alignment->_sanger_fastq_pathnames}) {
+    print "$_\n";
     unlink($_);
 }
 

@@ -167,7 +167,8 @@ class Genome::InstrumentData::AlignmentResult {
                                     doc=>'Temp scratch directory',
                                     is_optional=>1,
                                 },
-        _sanger_fastq_pathnames => { is => 'Array', is_optional=>1 },
+        _sanger_fastq_pathnames => { is => 'ARRAY', is_optional => 1 },
+        _sanger_bfq_pathnames   => { is => 'ARRAY', is_optional => 1 },
     ],
 };
 
@@ -638,7 +639,7 @@ sub _extract_sanger_fastq_filenames {
 
     my @sanger_fastq_pathnames;
     if ($self->_sanger_fastq_pathnames) {
-        @sanger_fastq_pathnames = $self->_sanger_fastq_pathnames;
+        @sanger_fastq_pathnames = @{$self->_sanger_fastq_pathnames};
         my $errors;
         for my $sanger_fastq (@sanger_fastq_pathnames) {
             unless (-e $sanger_fastq && -f $sanger_fastq && -s $sanger_fastq) {
@@ -796,10 +797,49 @@ sub _extract_sanger_fastq_filenames {
         @sanger_fastq_pathnames = $self->run_trimq2_filter_style(@sanger_fastq_pathnames) 
             if $self->trimmer_name and $self->trimmer_name eq 'trimq2_shortfilter';
 
-        $self->_sanger_fastq_pathnames(@sanger_fastq_pathnames);
+        $self->_sanger_fastq_pathnames(\@sanger_fastq_pathnames);
     }
     return @sanger_fastq_pathnames;
 }
+
+
+sub sanger_bfq_filenames {
+    my $self = shift;
+    my @sanger_fastq_pathnames = @_;
+
+    my @sanger_bfq_pathnames;
+    if ($self->_sanger_bfq_pathnames) {
+        @sanger_bfq_pathnames = @{$self->_sanger_bfq_pathnames};
+        for my $sanger_bfq (@sanger_bfq_pathnames) {
+            unless (-s $sanger_bfq) {
+                $self->error_message('Missing or zero size sanger bfq file: '. $sanger_bfq);
+                die $self->error_message;
+            }
+        }
+    } 
+    else {
+        my $counter = 0;
+        for my $sanger_fastq_pathname (@sanger_fastq_pathnames) {
+            my $sanger_bfq_pathname = Genome::Utility::FileSystem->create_temp_file_path('sanger-bfq-'. $counter++);
+            #Do we need remove sanger fastq here ?
+            unless (Genome::Model::Tools::Maq::Fastq2bfq->execute(
+                fastq_file => $sanger_fastq_pathname,
+                bfq_file   => $sanger_bfq_pathname,
+            )) {
+                $self->error_message('Failed to execute fastq2bfq quality conversion.');
+                die $self->error_message;
+            }
+            unless (-s $sanger_bfq_pathname) {
+                $self->error_message('Failed to validate the conversion of sanger fastq file '. $sanger_fastq_pathname .' to sanger bfq.');
+                die $self->error_message;
+            }
+            push @sanger_bfq_pathnames, $sanger_bfq_pathname;
+        }
+        $self->_sanger_bfq_pathnames(\@sanger_bfq_pathnames);
+    }
+    return @sanger_bfq_pathnames;
+}
+
 
 sub qualify_trimq2 {
     my $self = shift;
