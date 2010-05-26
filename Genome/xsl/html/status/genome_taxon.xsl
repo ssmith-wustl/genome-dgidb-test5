@@ -26,7 +26,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           </span>
         </h2>
         <p class="blurb">
-          <xsl:value-of select="aspect[@name='species_latin_name']/value"/> <xsl:if test="normalize-space(aspect[@name='ncbi_taxon_id']/value)">NCBI Taxon ID: <xsl:value-of select="aspect[@name='ncbi_taxon_id']/value"/></xsl:if>
+          <xsl:value-of select="aspect[@name='species_latin_name']/value"/><xsl:text> </xsl:text><xsl:if test="normalize-space(aspect[@name='ncbi_taxon_id']/value)">NCBI Taxon ID: <xsl:value-of select="aspect[@name='ncbi_taxon_id']/value"/></xsl:if>
         </p>
       </div>
       </td></tr></tbody></table>

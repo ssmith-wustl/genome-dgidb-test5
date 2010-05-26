@@ -24,11 +24,11 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           </span>
         </h2>
         <p class="info">
-          <xsl:value-of select="aspect[@name='common_name']/value"/>
-          <xsl:value-of select="aspect[@name='extraction_name']/value"/>
-          <xsl:value-of select="aspect[@name='cell_type']/value"/>
-          <xsl:value-of select="aspect[@name='tissue_desc']/value"/>
-          <xsl:value-of select="aspect[@name='organ_name']/value"/>
+          <xsl:value-of select="aspect[@name='common_name']/value"/><xsl:text> </xsl:text>
+          <xsl:value-of select="aspect[@name='extraction_name']/value"/><xsl:text> </xsl:text>
+          <xsl:value-of select="aspect[@name='cell_type']/value"/><xsl:text> </xsl:text>
+          <xsl:value-of select="aspect[@name='tissue_desc']/value"/><xsl:text> </xsl:text>
+          <xsl:value-of select="aspect[@name='organ_name']/value"/><xsl:text> </xsl:text>
           <xsl:value-of select="aspect[@name='extraction_type']/value"/>
         </p>
       </div>
