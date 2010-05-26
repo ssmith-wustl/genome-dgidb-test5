@@ -16,15 +16,13 @@ class Genome::Model::Tools::Blat::Cat {
             blat_output_path => {
                                  is => 'String',
                                  is_input => 1,
-                             }
-        ],
-    has_many => [
+                             },
                  psl_files => {
-                               is => 'String',
+                               is => 'ARRAY',
                                is_input => 1,
                            },
                  output_files => {
-                                  is => 'String',
+                                  is => 'ARRAY',
                                   is_input => 1,
                               }
              ],
@@ -70,7 +68,11 @@ sub execute {
         $self->error_message('Could not create a writer for file '. $self->psl_path);
         return;
     }
-    for my $in_file ($self->psl_files) {
+    my @psl_files = flatten(@{$self->psl_files});
+    for my $in_file (@psl_files) {
+        if (ref($in_file)) {
+            die(Data::Dumper::Dumper($self->psl_files));
+        }
         my $reader = Genome::Utility::PSL::Reader->create( file => $in_file);
         unless ($reader) {
             $self->error_message("Could not create a reader for file '$in_file'");
@@ -89,7 +91,8 @@ sub execute {
         $self->error_message('Could not creat filehandle for file '. $self->blat_output_path);
         return;
     }
-    for my $in_file ($self->output_files) {
+    my @output_files = flatten(@{$self->output_files});
+    for my $in_file (@output_files) {
         my $reader = IO::File->new($in_file,'r');
         unless ($reader) {
             $self->error_message("Could not create a reader for file '$in_file'");
@@ -105,6 +108,7 @@ sub execute {
     return 1;
 }
 
+sub flatten { map ref eq q[ARRAY] ? flatten( @$_ ) : $_, @_ }
 
 
 1;

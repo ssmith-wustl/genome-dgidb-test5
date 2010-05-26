@@ -10,35 +10,39 @@ use File::Basename;
 class Genome::Model::Tools::Blat::Subject {
     is => 'Command',
     has => [
-            query_file => {
-                           doc => 'the query file to blat against subject(either .fa, .nib, or .2bit)',
-                           is => 'String',
-                           is_input => 1,
-                       },
-            subject_file => {
-                             doc => 'the subject file to align against(either .fa, .nib, or .2bit)',
-                             is => 'String',
-                             is_input => 1,
-                         },
-        ],
+        query_file => {
+            doc => 'the query file to blat against subject(either .fa, .nib, or .2bit)',
+            is => 'String',
+            is_input => 1,
+        },
+        subject_file => {
+            doc => 'the subject file to align against(either .fa, .nib, or .2bit)',
+            is => 'String',
+            is_input => 1,
+        },
+    ],
     has_optional => [
-                     blat_params => {
-                                     doc => 'additional command line parameters passed to blat execution',
-                                     is => 'String',
-                                     is_param => 1,
-                                     is_input => 1,
-                                 },
-                     alignment_file => {
-                                        doc => 'the output file to store blat alignments',
-                                        is => 'String',
-                                        is_output => 1,
-                           },
-                     aligner_output_file => {
-                                        doc => 'a file path to store blat aligner output',
-                                        is => 'String',
-                                        is_output => 1,
-                           },
-                 ],
+        output_directory => {
+            doc => 'The directory where output alignment files are written',
+            is_input => 1,
+        },
+        blat_params => {
+            doc => 'additional command line parameters passed to blat execution',
+            is => 'String',
+            is_param => 1,
+            is_input => 1,
+        },
+        alignment_file => {
+            doc => 'the output file to store blat alignments',
+            is => 'String',
+            is_output => 1,
+        },
+        aligner_output_file => {
+            doc => 'a file path to store blat aligner output',
+            is => 'String',
+            is_output => 1,
+        },
+    ],
 };
 
 sub help_brief {
@@ -79,11 +83,17 @@ sub create {
         $self->error_message("Expected a .fa, .nib, or .2bit format file and found '$subject_suffix' for subject file.");
         die;
     }
+    my $output_directory;
+    if ($self->output_directory) {
+        $output_directory = $self->output_directory;
+    } else {
+        $output_directory = $query_directory;
+    }
     unless ($self->alignment_file) {
-        $self->alignment_file($query_directory .'/'. $query_basename .'_'. $subject_basename .'.psl');
+        $self->alignment_file($output_directory .'/'. $query_basename .'_'. $subject_basename .'.psl');
     }
     unless ($self->aligner_output_file) {
-        $self->aligner_output_file($query_directory .'/'. $query_basename .'_'. $subject_basename .'.out');
+        $self->aligner_output_file($output_directory .'/'. $query_basename .'_'. $subject_basename .'.out');
     }
     return $self;
 }

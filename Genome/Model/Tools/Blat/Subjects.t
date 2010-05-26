@@ -6,7 +6,7 @@ use warnings;
 use above 'Genome';
 use above 'Workflow';
 
-use Test::More tests => 9;
+use Test::More tests => 5;
 #use Test::More skip_all => 'workflow and lsf issues taking a long time to test this';
 use File::Compare;
 use File::Temp;
@@ -14,21 +14,15 @@ use File::Temp;
 BEGIN {
         use_ok ('Genome::Model::Tools::Blat::Subjects');
 }
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subjects';
+my $query_file = $data_dir .'/test.fa';
+my $expected_psl = $data_dir .'/test.psl';
+# Must use a network dis
+#my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Blat-Subjects-'. $ENV{USER});
+my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Blat-Subjects-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
-my $query_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subjects/test.fa';
-my $expected_psl = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subjects/test.psl';
-my $psl_path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subjects/test_tmp.psl';
-
-SKIP: {
-    skip 'only remove file if it exists with size', 1 unless -s $psl_path;
-    ok(unlink ($psl_path), 'remove '. $psl_path);
-}
-my $blat_output_path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subjects/test_tmp.out';
-
-SKIP: {
-    skip 'only remove file if it exists with size', 1 unless -s $blat_output_path;
-    ok(unlink ($blat_output_path),'remove '. $blat_output_path);
-}
+my $psl_path = $tmp_dir .'/test_tmp.psl';
+my $blat_output_path = $tmp_dir .'/test_tmp.out';
 my $blat_params = '-mask=lower -out=pslx -noHead';
 my $ref_seq_dir = Genome::Config::reference_sequence_directory() . '/refseq-for-test';
 
@@ -48,12 +42,5 @@ my $blat = Genome::Model::Tools::Blat::Subjects->create(
 isa_ok($blat,'Genome::Model::Tools::Blat::Subjects');
 ok($blat->execute,'execute '. $blat->command_name);
 ok(!compare($psl_path,$expected_psl),'psl files are the same');
-SKIP: {
-    skip 'only remove file if it exists with size', 1 unless -s $psl_path;
-    ok(unlink ($psl_path), 'remove '. $psl_path);
-}
-SKIP: {
-    skip 'only remove file if it exists with size', 1 unless -s $blat_output_path;
-    ok(unlink ($blat_output_path), 'remove '. $blat_output_path);
-}
+
 exit;
