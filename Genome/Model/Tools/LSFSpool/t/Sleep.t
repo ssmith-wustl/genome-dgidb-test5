@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More tests => 9;
 use Test::Output;
 use Test::Exception;
 
@@ -47,7 +47,7 @@ sub test_activate_suite {
   my $command = $obj->{suite}->action($dir,$file);
   like($command,qr|^sleep 5|,"comamnd returned ok");
   stdout_like { $obj->{suite}->logger("test\n") } qr/test/, "stdout logs 'test' ok";
-  ok($obj->{suite}->is_complete("$dir/$file") == 1,"is_complete returns true");
+  ok($obj->{suite}->is_complete("$dir/$file") == 0,"is_complete returns false ok");
 }
 
 sub test_submit_job {
@@ -69,6 +69,7 @@ sub test_submit_job {
   my $file = "sample-fasta-1-1";
 
   # bsub job and wait for it.
+
   my $id = $obj->submit_job("$path/$file");
   ok($id > 0,"bsub submits job id $id");
 
@@ -77,4 +78,6 @@ sub test_submit_job {
 
 test_logger();
 test_activate_suite();
-test_submit_job();
+
+# This test is really only useful interactively, not automated
+#test_submit_job();

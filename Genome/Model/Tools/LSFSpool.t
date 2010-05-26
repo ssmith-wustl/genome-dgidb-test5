@@ -12,7 +12,7 @@ use Getopt::Std;
 
 use Class::MOP;
 
-use Test::More tests => 72;
+use Test::More tests => 73;
 use Test::Output;
 use Test::Exception;
 

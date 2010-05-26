@@ -69,7 +69,7 @@ sub create {
   $self->{config} = {};
 
   $self->{stopflag} = "LSFSTOP-$pid";
-  $self->{debug} = 1;
+  $self->{debug} = 0;
   $self->{dryrun} = 0;
   $self->{buildonly} = 0;
 
