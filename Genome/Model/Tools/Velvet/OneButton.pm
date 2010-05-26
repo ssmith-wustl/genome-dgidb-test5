@@ -18,7 +18,9 @@ class Genome::Model::Tools::Velvet::OneButton {
 
         hash_sizes          => {    is => 'Integer',
                                     is_many => 1,
-                                    # default_value => [25,27.29],
+                                    # NOTE: if you use this, setting hash sizes ADDs to the list: BUG
+                                    # default_value => [25,27,29],
+                                    doc => 'the has sizes to test, defaults to 25,27,19',
                                 }, #|h=i{,}" => \@hash_sizes, 
 
         version             => {    is => 'Text',
@@ -79,6 +81,29 @@ sub help_detail {
     return "A wrapper for running velvet based on the original oneButtonVelvet-3opts by Guohui Yao.\n\nCONVERSION STILL IN PROGRESS.  CONTACT INFORMATICS!"
 }
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return unless $self;
+    
+    my @sorted = sort { $a <=> $b } $self->hash_sizes;
+    if (@sorted) {
+        $self->hash_sizes(\@sorted);
+    }
+    else {
+        $self->hash_sizes([25,27,29]);
+    }
+
+    for my $list (qw/exp_covs cov_cutoffs/) {
+        if (my @list = $self->exp_covs) {
+            @list = sort {$a <=> $b} @list;
+            $self->$list(\@list);
+        }
+    }
+
+    return $self;
+}
+
 sub execute {
     my $self = shift;
 
@@ -93,7 +118,7 @@ sub execute {
         return;
     }
 
-    my @hash_sizes = $self->_get_hash_sizes;
+    my @hash_sizes = $self->hash_sizes;
     if (@hash_sizes > $self->bound_enumeration) {
         #method returns array if successful but it's not needed
         unless ($self->_pick_best_hash_size(@hash_sizes)) {
@@ -127,6 +152,59 @@ sub execute {
     return 1;
 }
 
+# TOP LEVEL EXECUTION STEPS
+
+sub _print_params_to_screen_and_logfile {
+    my $self = shift;
+
+    my $params = "#Your parameters:\n";
+
+    my @hash_sizes = $self->hash_sizes();
+    $params .= "#hash_sizes: @hash_sizes\n";
+
+    my @exp_covs = $self->exp_covs();
+    $params .= "#exp_covs: @exp_covs\n";
+
+    my @cov_cutoffs = $self->cov_cutoffs();
+    $params .= "#cov_cutoffs: @cov_cutoffs\n";
+
+    my $genome_length = $self->genome_len();
+    $params .= "#genome length: $genome_length\n";
+
+    $params .= "#ins_length: ".$self->ins_length."\n";
+    $params .= "#ins_length_sd: ".$self->_get_ins_length_sd()."\n";
+
+    $params .= "#input file: ".$self->file."\n";
+    $params .= "#output directory: ".$self->output_dir."\n";
+
+    $params .= "#enumeration_bound: ".$self->bound_enumeration."\n";
+    $params .= "#version: ".$self->_version_path.$self->version."\n";
+
+    $self->log_event("$params");
+
+
+    #print needed to pass stdout test -- should remove this from test
+
+    my $txt = `date`."Your parameters:\n" . "hash sizes = @hash_sizes\n";
+
+    $txt .= "exp_covs = @exp_covs\n" if $self->exp_covs;
+    $txt .= "cov_cutoffs = @cov_cutoffs\n" if $self->cov_cutoffs;
+    #note this will be different than $self->genome_len value
+    $txt .= "genome length = $genome_length\n" if $self->genome_len;
+
+    $txt .= "ins_length = ".$self->ins_length."\n".
+            "ins_length_sd = ".$self->_get_ins_length_sd()."\n".
+            "input file = ".$self->file."\n".
+            "output directory = ".$self->output_dir."\n".
+            "enumeration bound = ".$self->bound_enumeration."\n";
+    
+    $txt .= "version = ".$self->_version_path . $self->version."\n" if $self->version;
+
+    print "$txt";
+
+    return 1;
+}
+
 sub _print_input_data_info {
     my $self = shift;
 
@@ -138,6 +216,76 @@ sub _print_input_data_info {
     my $input_file_format = $self->_input_file_format();
     print "read length: $read_length\nnumber of reads: $read_count\nFile format: $input_file_format\n";
 
+    return 1;
+}
+
+sub _pick_best_hash_size { #doesn't actually return a hash size
+    my ($self, @hash_sizes) = @_;
+
+    #TODO check if hash sizes is always array of 3 numbers
+    my $start = 0;
+    my $end = $#hash_sizes;
+    #for  @hash_sizes = (25,27,29,31,33,35,37,39,41);
+    my $mid = POSIX::floor(0.5 * ($start + $end)); #33
+    my $low = POSIX::floor(0.5 * ($start + $mid)); #29
+    my $high = POSIX::ceil(0.5 * ($mid + $end));   #37
+    
+    my @mid_pair = (0, 0);
+    my @low_pair = (0, 0);
+    my @high_pair = (0, 0);
+
+    @mid_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$mid]);
+
+    while ($start < $end) {
+        ($start == $mid) ? (@low_pair = @mid_pair) : (@low_pair = (0, 0));
+        ($end == $mid) ? (@high_pair = @mid_pair) : (@high_pair = (0, 0));
+        
+        unless ($low_pair[0]) {
+            @low_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$low]);
+        }
+        if($self->_compare(@low_pair, @mid_pair) == 1) {
+            $end = $mid-1;
+            $mid = $low;
+            @mid_pair = @low_pair;
+        }
+        else {
+            unless ($high_pair[0]) {
+                @high_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$high]);
+            }
+            if( ($self->_compare(@high_pair,@low_pair) == 1) or
+                (($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == -1)) ){
+                $start = $mid+1;
+                $mid = $high;
+                @mid_pair = @high_pair;
+            }elsif( ($self->_compare(@high_pair,@mid_pair) == -1) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
+                $end = $mid-1;
+                $mid = $low;
+                @mid_pair = @low_pair;
+            }elsif( ($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
+                splice(@hash_sizes, $low+1, $high-$low);
+                $end -= ($high-$low);
+                $mid = $low;
+                @mid_pair = @low_pair;
+            }else{  #low < mid, high < mid
+                $start = $low+1;
+                $end = $high-1;
+            }           
+        }
+        $low = POSIX::floor(0.5*($start+$mid));
+        $high = POSIX::ceil(0.5*($mid+$end));
+    }
+    return @mid_pair;
+}
+
+sub _enum_hash_size {
+    my ($self, @hash_sizes) = @_;
+    foreach my $h (@hash_sizes) {
+        #method return an array but it's not needed here
+        unless ($self->_run_velveth_get_opt_expcov_covcutoff($h)) {
+            $self->error_message("Failed to run _run_velveth_get_opt_expcov_covcutoff with hash_size $h");
+            return;
+        }
+    }
     return 1;
 }
 
@@ -206,75 +354,9 @@ sub _do_final_velvet_runs {
     return 1;
 }
 
-sub _enum_hash_size {
-    my ($self, @hash_sizes) = @_;
-    foreach my $h (@hash_sizes) {
-        #method return an array but it's not needed here
-        unless ($self->_run_velveth_get_opt_expcov_covcutoff($h)) {
-            $self->error_message("Failed to run _run_velveth_get_opt_expcov_covcutoff with hash_size $h");
-            return;
-        }
-    }
-    return 1;
-}
 
-sub _pick_best_hash_size { #doesn't actually return a hash size
-    my ($self, @hash_sizes) = @_;
+# OTHER METHODS
 
-    #TODO check if hash sizes is always array of 3 numbers
-    my $start = 0;
-    my $end = $#hash_sizes;
-    #for  @hash_sizes = (25,27,29,31,33,35,37,39,41);
-    my $mid = POSIX::floor(0.5 * ($start + $end)); #33
-    my $low = POSIX::floor(0.5 * ($start + $mid)); #29
-    my $high = POSIX::ceil(0.5 * ($mid + $end));   #37
-    
-    my @mid_pair = (0, 0);
-    my @low_pair = (0, 0);
-    my @high_pair = (0, 0);
-
-    @mid_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$mid]);
-
-    while ($start < $end) {
-        ($start == $mid) ? (@low_pair = @mid_pair) : (@low_pair = (0, 0));
-        ($end == $mid) ? (@high_pair = @mid_pair) : (@high_pair = (0, 0));
-        
-        unless ($low_pair[0]) {
-            @low_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$low]);
-        }
-        if($self->_compare(@low_pair, @mid_pair) == 1) {
-            $end = $mid-1;
-            $mid = $low;
-            @mid_pair = @low_pair;
-        }
-        else {
-            unless ($high_pair[0]) {
-                @high_pair = $self->_run_velveth_get_opt_expcov_covcutoff($hash_sizes[$high]);
-            }
-            if( ($self->_compare(@high_pair,@low_pair) == 1) or
-                (($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == -1)) ){
-                $start = $mid+1;
-                $mid = $high;
-                @mid_pair = @high_pair;
-            }elsif( ($self->_compare(@high_pair,@mid_pair) == -1) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
-                $end = $mid-1;
-                $mid = $low;
-                @mid_pair = @low_pair;
-            }elsif( ($self->_compare(@high_pair,@mid_pair) == 0) and ($self->_compare(@low_pair,@mid_pair) == 0) ){
-                splice(@hash_sizes, $low+1, $high-$low);
-                $end -= ($high-$low);
-                $mid = $low;
-                @mid_pair = @low_pair;
-            }else{	#low < mid, high < mid
-                $start = $low+1;
-                $end = $high-1;
-            }			
-        }
-        $low = POSIX::floor(0.5*($start+$mid));
-        $high = POSIX::ceil(0.5*($mid+$end));
-    }
-    return @mid_pair;
-}
 
 sub _run_velveth_get_opt_expcov_covcutoff {
     my ($self, $hash_size) = @_;
@@ -299,12 +381,12 @@ sub _run_velveth_get_opt_expcov_covcutoff {
     #not sure what ck is .. 
     my $ck = $read_count * ( $read_length - $hash_size + 1) / $genome_length;
     
-    my @exp_covs = $self->_get_exp_covs(); #return blank array if $self->exp_covs not defined
+    my @exp_covs = $self->exp_covs(); #return blank array if $self->exp_covs not defined
 
     my $exp_coverage;
     @exp_covs ? $exp_coverage = $exp_covs[ POSIX::floor($#exp_covs/2) ] : $exp_coverage = 0.9 * $ck;
     #TODO - make better variable names
-    my @cov_cutoffs = $self->_get_cov_cutoffs(); #return blank array if $self->cov_cutoffs is not defined
+    my @cov_cutoffs = $self->cov_cutoffs(); #return blank array if $self->cov_cutoffs is not defined
 
     my $cov_cutoff;
     @cov_cutoffs ? $cov_cutoff = $cov_cutoffs[ POSIX::floor($#cov_cutoffs/2) ] : $cov_cutoff = 0.1 * $exp_coverage;
@@ -346,7 +428,7 @@ sub _run_velveth_get_opt_expcov_covcutoff {
 sub _pick_best_exp_cov {
     my ($self, $ck, $hash_size) = @_;
 
-    my @exp_covs = $self->_get_exp_covs();
+    my @exp_covs = $self->exp_covs();
     unless (@exp_covs) { #returned blank array if $self->exp_covs not defined
         @exp_covs = (POSIX::floor(0.8 * $ck) .. POSIX::floor($ck / 0.95));
     }
@@ -408,7 +490,7 @@ sub _pick_best_exp_cov {
 sub _pick_best_cov_cutoff {
     my ($self, $exp_cov, $hash_size) = @_;
 
-    my @cov_cutoffs = $self->_get_cov_cutoffs();
+    my @cov_cutoffs = $self->cov_cutoffs();
     unless (@cov_cutoffs) {
         @cov_cutoffs = (0 .. POSIX::floor(0.3 * $exp_cov));
     }
@@ -576,56 +658,6 @@ sub _compare {
     return;
 }
 
-sub _print_params_to_screen_and_logfile {
-    my $self = shift;
-
-    my $params = "#Your parameters:\n";
-
-    my @hash_sizes = $self->_get_hash_sizes();
-    $params .= "#hash_sizes: @hash_sizes\n";
-
-    my @exp_covs = $self->_get_exp_covs();
-    $params .= "#exp_covs: @exp_covs\n";
-
-    my @cov_cutoffs = $self->_get_cov_cutoffs();
-    $params .= "#cov_cutoffs: @cov_cutoffs\n";
-
-    my $genome_length = $self->_get_genome_length();
-    $params .= "#genome length: $genome_length\n";
-
-    $params .= "#ins_length: ".$self->ins_length."\n";
-    $params .= "#ins_length_sd: ".$self->_get_ins_length_sd()."\n";
-
-    $params .= "#input file: ".$self->file."\n";
-    $params .= "#output directory: ".$self->output_dir."\n";
-
-    $params .= "#enumeration_bound: ".$self->bound_enumeration."\n";
-    $params .= "#version: ".$self->_version_path.$self->version."\n";
-
-    $self->log_event("$params");
-
-
-    #print needed to pass stdout test -- should remove this from test
-
-    my $txt = `date`."Your parameters:\n" . "hash sizes = @hash_sizes\n";
-
-    $txt .= "exp_covs = @exp_covs\n" if $self->exp_covs;
-    $txt .= "cov_cutoffs = @cov_cutoffs\n" if $self->cov_cutoffs;
-    #note this will be different than $self->genome_len value
-    $txt .= "genome length = $genome_length\n" if $self->genome_len;
-
-    $txt .= "ins_length = ".$self->ins_length."\n".
-            "ins_length_sd = ".$self->_get_ins_length_sd()."\n".
-            "input file = ".$self->file."\n".
-            "output directory = ".$self->output_dir."\n".
-            "enumeration bound = ".$self->bound_enumeration."\n";
-    
-    $txt .= "version = ".$self->_version_path . $self->version."\n" if $self->version;
-
-    print "$txt";
-
-    return 1;
-}
 
 sub _get_genome_length {
     my $self = shift;
@@ -641,46 +673,8 @@ sub _version_path {
 
 sub _get_ins_length_sd {
     my $self = shift;
-
     return $self->dev_ins_length if $self->dev_ins_length;
-
     return $self->ins_length * 0.2;
-}
-
-sub _get_exp_covs {
-    my $self = shift;
-
-    my @exp_covs;
-
-    if ($self->exp_covs) {
-        @exp_covs = $self->exp_covs;
-        return sort {$a <=> $b} @exp_covs;
-    }
-    
-    return @exp_covs;
-}
-
-sub _get_cov_cutoffs {
-    my $self = shift;
-
-    my @cov_cutoffs;
-
-    if ($self->cov_cutoffs) {
-        @cov_cutoffs = $self->cov_cutoffs;
-        return sort {$a <=> $b} @cov_cutoffs;
-    }
-    #returning empty array
-    return @cov_cutoffs;
-}
-
-sub _get_hash_sizes {
-    my $self = shift;
-
-    return (25, 27, 29) unless $self->hash_sizes;
-
-    my @hash_sizes = $self->hash_sizes;
-
-    return sort {$a <=> $b} @hash_sizes;
 }
 
 sub _input_file_format {
