@@ -186,7 +186,9 @@ sub get_sequence_dictionary {
 
     my $seqdict_dir_path = $self->data_directory.'/seqdict';
     my $path = "$seqdict_dir_path/seqdict.$file_type";
-    if (-s $path) {
+    if (-s "/opt/fscache/" . $path) {
+        return "/opt/fscache/" . $path;
+    elsif (-s $path) {
        return $path; 
     } else {
 
