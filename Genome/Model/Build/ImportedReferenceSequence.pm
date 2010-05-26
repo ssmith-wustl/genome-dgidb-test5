@@ -43,7 +43,9 @@ sub name {
     my $self = shift;
     my $model = $self->model;
     my $name = $model->name;
-    $name .= '-build' . $self->version;
+    if (defined($self->version)) {
+        $name .= '-' . $self->version;
+    }
     return $name;
 }
 
