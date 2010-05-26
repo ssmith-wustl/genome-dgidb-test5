@@ -13,14 +13,14 @@ class Genome::Search::Query {
         page => { is => 'Number' }
     ],
     has => [
-        result_objects => {
+        results => {
             is => 'Genome::Search::Result',
             reverse_as => 'query',
             is_many => 1,
         },
-        results => {
+        result_subjects => {
             is_many => 1,
-            via => 'result_objects',
+            via => 'results',
             to => 'subject'
         },
         page_size => {
@@ -29,6 +29,9 @@ class Genome::Search::Query {
             value => $PAGE_SIZE
         },
         total_found => {
+            is => 'Number'
+        },
+        page_count => {
             is => 'Number'
         }
     ]
@@ -49,7 +52,7 @@ sub total_found {
     my $self = shift;
 
     unless (exists $self->{executed} && $self->{executed}) {
-        $self->__total_found($self->execute);
+        $self->execute;
     }
     $self->__total_found;
 }
@@ -58,7 +61,7 @@ sub results {
     my $self = shift;
 
     unless (exists $self->{executed} && $self->{executed}) {
-        $self->__total_found($self->execute);
+        $self->execute;
     }
 
     return $self->__results;
@@ -68,7 +71,7 @@ sub result_objects {
     my $self = shift;
 
     unless (exists $self->{executed} && $self->{executed}) {
-        $self->__total_found($self->execute);
+        $self->execute;
     }
 
     return $self->__result_objects;
@@ -98,6 +101,14 @@ sub execute {
         );
     }
 
-    $response->content->{response}->{numFound};
+    my $pages = $response->content->{response}->{numFound} / $self->page_size;
+
+    if ($pages == int($pages)) {
+        $self->page_count($pages);
+    } else {
+        $self->page_count(1 + int($pages));
+    }
+   
+    $self->__total_found($response->content->{response}->{numFound});
 }
 
