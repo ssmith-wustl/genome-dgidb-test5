@@ -75,7 +75,7 @@ sub newest_somatic_workflow_instance {
 
     my @sorted = sort {
         $b->id <=> $a->id
-    } Workflow::Store::Db::Operation::Instance->get(
+    } Workflow::Operation::Instance->get(
         name => 'Somatic Pipeline Build ' . $self->build_id
     );
 

@@ -308,7 +308,7 @@ sub build_event {
 
 sub workflow_instances {
     my $self = shift;
-    my @instances = Workflow::Store::Db::Operation::Instance->get(
+    my @instances = Workflow::Operation::Instance->get(
         name => $self->build_id . ' all stages'
     );
     return @instances;

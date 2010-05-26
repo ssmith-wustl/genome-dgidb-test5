@@ -30,7 +30,7 @@ class Genome::Model::Build::Command::Status {
                     doc => 'Optional id of the workflow operation instance to use.'
                 },
                 instance => {
-                    is => 'Workflow::Store::Db::Operation::Instance',
+                    is => 'Workflow::Operation::Instance',
                     id_by => 'instance_id',
                 },
                 section => {
@@ -104,7 +104,7 @@ sub execute  {
 
     ## find the latest workflow for this build
     unless ($self->instance) {
-        my @ops = sort { $b->id <=> $a->id } Workflow::Store::Db::Operation::Instance->get(
+        my @ops = sort { $b->id <=> $a->id } Workflow::Operation::Instance->get(
             name => $self->build->id . ' all stages'
         );
 
@@ -118,21 +118,21 @@ sub execute  {
 
         #        my @exec_ids = map {
         #            $_->current_execution_id
-        #        } (Workflow::Store::Db::Operation::Instance->get(
+        #        } (Workflow::Operation::Instance->get(
         #            id => $self->instance->id,
         #            -recurse => ['parent_instance_id','instance_id']
         #        ));
 
         my @exec_ids = map {
             $_->current_execution_id
-        } (Workflow::Store::Db::Operation::Instance->get(
+        } (Workflow::Operation::Instance->get(
             sql => 'select workflow_instance.workflow_instance_id
                       from workflow_instance
                      start with workflow_instance.parent_instance_id = ' . $self->instance->id . '
                      connect by workflow_instance.parent_instance_id = prior workflow_instance.workflow_instance_id'
                  ));
 
-        my @ex = Workflow::Store::Db::Operation::InstanceExecution->get(
+        my @ex = Workflow::Operation::InstanceExecution->get(
             instance_id => { operator => '[]', value=>\@exec_ids }
         );
 
@@ -475,7 +475,7 @@ sub get_event_node {
             $event_node->addChild( $self->tnode("instance_id", $event_instance->id));
             #            $event_node->addChild( $self->tnode("instance_status", $event_instance->status));
 
-            my @e = Workflow::Store::Db::Operation::InstanceExecution->get(
+            my @e = Workflow::Operation::InstanceExecution->get(
                 instance_id => $event_instance->id
             );
 

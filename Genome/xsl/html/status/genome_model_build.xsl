@@ -110,7 +110,7 @@ popup.center();
                       if ($('#workflowview').length == 0) {
                           $('.viewport').append('<div id="workflowview"/>');
 
-                          $('#workflowview').load('/view/workflow/store/db/operation/instance/statuspopup.html?id=]]><xsl:value-of select="//build/workflow/@id"/><![CDATA[');
+                          $('#workflowview').load('/view/workflow/operation/instance/statuspopup.html?id=]]><xsl:value-of select="//build/workflow/@id"/><![CDATA[');
                       } 
                       $('#workflowview').show();
                       return false;

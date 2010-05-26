@@ -6,7 +6,7 @@
         <value>ssmith-test2-realsample-realpp</value>
       </aspect>
     </model>
-    <workflow instance-id="1753513" instance-status="done" id="1753513" type="Workflow::Store::Db::Model::Instance"/>
+    <workflow instance-id="1753513" instance-status="done" id="1753513" type="Workflow::Model::Instance"/>
     <stages processing_profile="bwa0.5.5 and samtools r453 and picard r107" processing_profile_type="reference alignment">
       <stage value="alignment">
         <command_classes>
