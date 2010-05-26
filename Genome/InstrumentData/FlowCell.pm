@@ -74,6 +74,7 @@ sub lane_info {
         my @files = GSC::FileStorage->get( file_storage_id => \@fs_ids );
 
         $lane_info{lane} = $lane->lane;
+        $lane_info{subset_name} = $lane->subset_name;
         $lane_info{id} = $lane->id;
         $lane_info{gerald_directory} = $lane->gerald_directory;
 
@@ -96,14 +97,26 @@ sub lane_info {
 sub illumina_index {
     my ($self) = @_;
     my @idx = Genome::InstrumentData::Solexa->get(flow_cell_id => $self->flow_cell_id);
+    my $index_sequences = {};
+    my $indexes = {};
+
     # if index_sequence of any lane is undef, then this is not an indexed flow cell
     if ($idx[0]->index_sequence) {
-        return @idx;
+
+        for my $i (@idx) {
+
+            my $index_sequence = $i->index_sequence();
+            $index_sequences->{$index_sequence} = 1;
+
+            $indexes->{$i->lane()}->{$index_sequence} = $i;
+        }
+
+        # index_sequences is all the sequences that exist in any lane
+        # indexes may contain a lane that is missing an index_sequence
+        return ($index_sequences, $indexes);
     } else {
         return undef;
     }
 
 }
 1;
-
-

@@ -31,6 +31,7 @@
           id = window.indexData;
 
           <xsl:for-each select="//lane">
+
             <xsl:variable name="count" select="position() - 1" />
             id[<xsl:value-of select="$count"/>] = {};
             id[<xsl:value-of select="$count"/>].percent = [
@@ -172,11 +173,11 @@ window.chartMin = 0;
                   <xsl:choose>
                     <xsl:when test="count(//instrument-data) > 0">
                       <xsl:for-each select="//instrument-data">
-                        <xsl:sort select="@lane" data-type="number" order="ascending"/>
+                        <xsl:sort select="@subset_name" data-type="text" order="ascending"/>
                         <xsl:variable name="build-status" select="build_status"/>
                         <tr>
                           <td>
-                            <xsl:value-of select="@lane"/>
+                            <xsl:value-of select="@subset_name"/>
                           </td>
                           <td><xsl:value-of select="@id"/></td>
                           <td>
