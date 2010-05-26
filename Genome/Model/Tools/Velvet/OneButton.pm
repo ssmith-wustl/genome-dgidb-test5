@@ -12,6 +12,10 @@ require File::Copy;
 class Genome::Model::Tools::Velvet::OneButton {
     is => 'Command',
     has => [
+        file                => {    shell_args_position => 1,
+                                    doc => 'the input fasta or fastq file'
+                            },
+
         output_dir          => {    is => 'Text',
                                     doc => 'the directory for the results' 
                             }, #|o=s" => \$output_path, 
@@ -27,12 +31,8 @@ class Genome::Model::Tools::Velvet::OneButton {
                                     default_value => '57-64',
                                     doc => 'the version of velvet to use'
                             }, #=s" => \$version
-
-        file                => {    shell_args_position => 1,
-                                    doc => 'the input fasta or fastq file'
-                            },
     ],
-
+    
     has_optional => [
         ins_length          => {    is => 'Integer',
                                     doc => 'fragment length (average/estimated)',
@@ -56,6 +56,25 @@ class Genome::Model::Tools::Velvet::OneButton {
         exp_covs            => {    is => 'Float', is_many => 1, }, #|e=f{,}" => \@exp_covs, 
 
         cov_cutoffs         => {    is => 'Float', is_many => 1, }, #|c=f{,}" => \@cov_cutoffs,
+    ],
+    
+    has_optional_transient => [
+        _input_file_format              => {    is => 'Text', valid_values => ['fasta','fastq'] },
+        _input_read_count               => {    is => 'Number' },
+        _avg_read_length                => {    is => 'Number' },
+        _output_file_prefix_name        => {    is => 'Text'   },
+
+        _best_estimated_genome_length   => {    is => 'Number' },        
+        _best_hash_size                 => {    is => 'Number', default_value => 0 },
+        _best_exp_coverage              => {    is => 'Number', default_value => 0 },
+        _best_coverage_cutoff           => {    is => 'Number', default_value => 0 },
+        _best_n50                       => {    is => 'Number', default_value => 0 },
+        _best_total                     => {    is => 'Number', default_value => 0 },
+        _h_best_exp_coverage            => {    is => 'Number', default_value => 0 },
+        _h_best_coverage_cutoff         => {    is => 'Number', default_value => 0 },
+        _h_best_n50                     => {    is => 'Number', default_value => 0 },
+        _h_best_total                   => {    is => 'Number', default_value => 0 },
+        
     ],
     doc => 'run velvet in a smart way (under conversion from initial script)'
 };
@@ -83,6 +102,7 @@ sub help_detail {
 
 sub create {
     my $class = shift;
+    
     my $self = $class->SUPER::create(@_);
     return unless $self;
     
@@ -94,6 +114,7 @@ sub create {
         $self->dev_ins_length($self->ins_length * 0.2);
     }
 
+    # ensure these lists of values are sorted
     for my $list (qw/hash_sizes exp_covs cov_cutoffs/) {
         if (my @list = $self->exp_covs) {
             @list = sort {$a <=> $b} @list;
@@ -107,16 +128,29 @@ sub create {
 sub execute {
     my $self = shift;
 
-    #prints general params for the run
-    unless ($self->_print_params_to_screen_and_logfile()) {
-        $self->error_message("Failed to print params to screen and logfile");
-        return;
+    unless (-s $self->file) {
+        die $self->error_message("Failed to find file ".$self->file);
     }
-    #prints info about input data to screen and logfile
-    unless ($self->_print_input_data_info() ) {
-        $self->error_message("Failed to print info about input data");
-        return;
+
+    unless (-d $self->output_dir) {
+        die $self->error_message("Invalid output directory ".$self->output_dir);
     }
+
+    my $output_file_prefix_name = $self->_resolve_output_file_prefix_name;
+    $self->_output_file_prefix_name($output_file_prefix_name);
+
+    $self->_print_params_to_screen_and_logfile();
+        
+    my $format = $self->_resolve_input_file_format();
+    $self->_input_file_format($format);
+    
+    my ($input_read_count, $avg_read_length) = $self->_resolve_input_read_count_and_avg_read_length();
+    $self->_input_read_count($input_read_count);
+    $self->_avg_read_length($avg_read_length);
+    
+    $self->_print_input_info_to_screen_and_logfile();        
+    
+    $self->_best_estimated_genome_length($self->genome_len);
 
     my @hash_sizes = $self->hash_sizes;
     if (@hash_sizes > $self->bound_enumeration) {
@@ -127,10 +161,12 @@ sub execute {
         }
     }
     else {
-        #TODO - need description of what this does
-        unless ($self->_enum_hash_size(@hash_sizes)) {
-            $self->error_message("Failed to run _enum_hash_size with hash sizes: @hash_sizes");
-            return;
+        foreach my $h (@hash_sizes) {
+            #method return an array but it's not needed here
+            unless ($self->_run_velveth_get_opt_expcov_covcutoff($h)) {
+                $self->error_message("Failed to run _run_velveth_get_opt_expcov_covcutoff with hash_size $h");
+                return;
+            }
         }
     }
 
@@ -182,7 +218,6 @@ sub _print_params_to_screen_and_logfile {
 
     $self->log_event("$params");
 
-
     #print needed to pass stdout test -- should remove this from test
 
     my $txt = `date`."Your parameters:\n" . "hash sizes = @hash_sizes\n";
@@ -205,11 +240,123 @@ sub _print_params_to_screen_and_logfile {
     return 1;
 }
 
-sub _print_input_data_info {
+sub _resolve_output_file_prefix_name {
+    my $self = shift;
+
+    #print DateTime->now."\n";
+    #print UR::Time->now."\n";
+    #convert Mon May 17 13:53:47 CDT 2010 to Mon-May-17-1353-2010 as part of log file name
+
+    #use date for part of the name
+    my $date = `date`;
+    chomp $date;
+    $date =~ s/\d\d\s+CDT//;
+    $date =~ s/\s+/-/g;
+    $date =~ s/://g;
+
+    #unless ($date =~  check correct format) { #TODO
+        #$self->error_message();
+        #return;
+    #}
+
+    my $data_file_name = File::Basename::basename($self->file);
+    my $file_prefix = $self->output_dir.'/'.$date.'-'.$data_file_name;
+
+    return $file_prefix;
+}
+
+sub _resolve_input_file_format {
+    my $self = shift;
+
+    unless (-s $self->file) {
+        $self->error_message("Failed to find file ".$self->file);
+        die $self->error_message;
+    }
+    my $input_file = $self->file;
+
+    my $fh = IO::File->new("< $input_file") ||
+        die "Can not open $input_file\n";
+    while (my $line = $fh->getline) {
+        if ($line =~ /^\>/) {
+            return '-fasta';
+        } elsif ($line =~ /^\@/) {
+            return '-fastq';
+        } else {
+            $self->error_message("Can not determine input file type: fasta or fastq");
+            die $self->error_message;
+        }
+    }
+
+    $fh->close;
+    
+    $self->error_message("Failed to resole a file format for $input_file!");
+    die $self->error_message;
+}
+
+sub _resolve_input_read_count_and_avg_read_length {
+    my $self = shift;
+
+    #determine read count and total read lengths
+    my $read_count = 0;
+    my $total_read_length = 0;
+
+    #fasta or fastq
+    my $file_format = $self->_input_file_format();
+    unless ($file_format) {
+        die "No file format set yet?";
+    }
+        
+    #TODO can't use bio seqio bec fasta and qual lengths don't seem to match
+
+    #my $io = Bio::SeqIO->new(-format => $file_type, -file => $self->file);
+    #while (my $read = $io->next_seq) {
+        #$read_count++;
+        #$total_read_length += length $read->seq;
+    #}
+
+    my $data_fullname = $self->file;
+    #TODO -copied from original code .. need to improve
+    my $in = IO::File->new($data_fullname) or die ("Bad file $data_fullname\n");
+    my $line = <$in>;
+
+    if($file_format =~ /fasta/){
+        $read_count++;
+        while(<$in>) {
+            if(/^\>/){
+                $read_count++
+            }
+            else{
+                $total_read_length += length()-1;
+            }
+        }#while
+    }#fasta
+    elsif($file_format =~ /fastq/){
+        while($line) {
+            unless($line =~ /^\@/) {
+                exit("Error: more than one line in a single read.");
+            }
+            $read_count++;
+            $line = <$in>;
+            $total_read_length += length($line)-1;
+            for my $i (0..2) {$line = <$in>;}   #Escape 2 lines
+        }
+    }
+    close $in;
+
+    my $average_read_length = $total_read_length / $read_count;
+
+    #store
+    $self->{input_read_count} = $read_count;
+    $self->{avg_read_length} = $average_read_length;
+
+    return ($read_count, $average_read_length);
+}
+
+sub _print_input_info_to_screen_and_logfile {
     my $self = shift;
 
     #print read length and read count to log file .. that's all
-    my ($read_length, $read_count) = $self->_get_input_read_count_and_length();
+    my ($read_length, $read_count) = ($self->_avg_read_length, $self->_input_read_count);
     $self->log_event("\#read length: $read_length\n\#number of reads: $read_count\n");
     
     #print .. to pass test stdout check
@@ -277,18 +424,6 @@ sub _pick_best_hash_size { #doesn't actually return a hash size
     return @mid_pair;
 }
 
-sub _enum_hash_size {
-    my ($self, @hash_sizes) = @_;
-    foreach my $h (@hash_sizes) {
-        #method return an array but it's not needed here
-        unless ($self->_run_velveth_get_opt_expcov_covcutoff($h)) {
-            $self->error_message("Failed to run _run_velveth_get_opt_expcov_covcutoff with hash_size $h");
-            return;
-        }
-    }
-    return 1;
-}
-
 sub _print_best_values {
     my $self = shift;
 
@@ -307,7 +442,7 @@ sub _print_best_values {
         return;
     }
 
-   unless ( $self->_best_n50_total() ) {
+    unless ( $self->_best_n50_total() ) {
         $self->error_message("Unable to get best n50 and total values");
         return;
     }
@@ -375,8 +510,10 @@ sub _run_velveth_get_opt_expcov_covcutoff {
     }
 
     #get read count and avg read length of input file
-    my $genome_length = $self->_get_genome_length();
-    my ($read_length, $read_count) = $self->_get_input_read_count_and_length();
+    my $genome_length = $self->_best_estimated_genome_length();
+    my $read_count = $self->_input_read_count;
+    my $read_length = $self->_avg_read_length;
+    
     #not sure what ck is .. 
     my $ck = $read_count * ( $read_length - $hash_size + 1) / $genome_length;
     
@@ -393,7 +530,7 @@ sub _run_velveth_get_opt_expcov_covcutoff {
     my $n50;                                              #hash_size just gets passed on and not used
     ($n50, $genome_length) = $self->_run_velvetg_get_n50_total($cov_cutoff, $exp_coverage, $hash_size);
 
-    $self->{genome_length} = $genome_length; #<- global in orig code .. need to retain changes in memory
+    $self->_best_estimated_genome_length($genome_length); #<- global in orig code .. need to retain changes in memory
 
     print "genome length: $genome_length\n"; #needed to pass test stdout check
 
@@ -412,7 +549,7 @@ sub _run_velveth_get_opt_expcov_covcutoff {
 
     print "@hbest\n"; #needed to pass test stdout check
     
-    my $name_prefix = $self->_get_file_prefix_name();
+    my $name_prefix = $self->_output_file_prefix_name();
     my $timing_file = $name_prefix.'-timing';
     my $file_LOG = $self->output_dir.'/Log';
     unless (-s $file_LOG) {
@@ -591,12 +728,13 @@ sub _run_velvetg_get_n50_total {
 
     if ($self->_compare(@n50_total, @best_n50_total) == 1) {
         #store best values
-        $self->_best_n50_total(@n50_total);
+        $self->_best_n50($n50_total[0]);
+        $self->_best_total($n50_total[1]);
         $self->_best_exp_coverage($exp_coverage);
         $self->_best_coverage_cutoff($coverage_cutoff);
         $self->_best_hash_size($hash_size);
         #make a copy of contigs.fa file
-        my $file_prefix = $self->_get_file_prefix_name();
+        my $file_prefix = $self->_output_file_prefix_name();
         my $fa_file = $self->output_dir.'/contigs.fa';
         unless (-s $fa_file) {
             $self->error_message("contigs.fa does not exist to rename");
@@ -613,12 +751,13 @@ sub _run_velvetg_get_n50_total {
     if ($self->_compare(@n50_total, @hbest_n50_total) == 1) {
 
         #store best values
-        $self->_h_best_n50_total(@n50_total);
+        $self->_h_best_n50($n50_total[0]);
+        $self->_h_best_total($n50_total[1]);
         $self->_h_best_exp_coverage($exp_coverage);
         $self->_h_best_coverage_cutoff($coverage_cutoff);
         #rename contigs.fa file
         my $fa_file = $self->output_dir.'/contigs.fa';
-        my $file_prefix = $self->_get_file_prefix_name();
+        my $file_prefix = $self->_output_file_prefix_name();
         my $new_file_name = $file_prefix.'-hash_size_'.$hash_size.'-contigs.fa';
         rename $fa_file, $new_file_name;
     }
@@ -634,7 +773,7 @@ sub _compare {
     }
 
     #genome length
-    my $gl = $self->_get_genome_length();
+    my $gl = $self->_best_estimated_genome_length();
 
     if (($t1 < 0.95 * $gl or $gl < 0.95 * $t1) and ($t2 < 0.95 * $gl or $gl < 0.95 * $t2)) {
         return 0; # both wrong length
@@ -657,305 +796,30 @@ sub _compare {
     return;
 }
 
-
-sub _get_genome_length {
-    my $self = shift;
-    #global .. changes during execution of code
-    return $self->{genome_length} if exists $self->{genome_length};
-    #return default or user input value
-    return $self->genome_len;
-}
-
-sub _version_path {
-    return '/gsc/pkg/bio/velvet/velvet_0.7.';
-}
-
-sub _input_file_format {
-    my $self = shift;
-
-    #this method gets called may times to get same value
-    return $self->{INPUT_FILE_FORMAT} if $self->{INPUT_FILE_FORMAT};
-
-    unless (-s $self->file) {
-        $self->error_message("Failed to find file ".$self->file);
-        return;
-    }
-    my $input_file = $self->file;
-
-    #TODO - make -file_type command line option?
-    my $fh = IO::File->new("< $input_file") ||
-        die "Can not open $input_file\n";
-    while (my $line = $fh->getline) {
-        if ($line =~ /^\>/) {
-            $self->{INPUT_FILE_FORMAT} = '-fasta';
-            return '-fasta';
-        } elsif ($line =~ /^\@/) {
-            $self->{INPUT_FILE_FORMAT} = '-fastq';
-            return '-fastq';
-        } else {
-            $self->error_message("Can not determine input file type: fasta or fastq");
-            return;
-        }
-    }
-
-    $fh->close;
-
-    return;
-}
-
-sub _get_input_read_count_and_length {
-    my $self = shift;
-
-    #this method gets called many times to get same value
-    if ($self->{input_read_count} and $self->{avg_read_length}) {
-        return $self->{avg_read_length}, $self->{input_read_count};
-    }
-
-    unless (-s $self->file) {
-        $self->error_message("Failed to find file ".$self->file);
-        return;
-    }
-
-    #determine read count and total read lengths
-    my $read_count = 0;
-    my $total_read_length = 0;
-
-    #fasta or fastq
-    my $file_format = $self->_input_file_format();
-        
-    #TODO can't use bio seqio bec fasta and qual lengths don't seem to match
-
-    #my $io = Bio::SeqIO->new(-format => $file_type, -file => $self->file);
-    #while (my $read = $io->next_seq) {
-        #$read_count++;
-        #$total_read_length += length $read->seq;
-    #}
-
-    my $data_fullname = $self->file;
-    #TODO -copied from original code .. need to improve
-    open (IN, $data_fullname) or die ("Bad file $data_fullname\n");
-    my $line = <IN>;
-
-    if($file_format =~ /fasta/){
-        $read_count++;
-        while(<IN>) {
-            if(/^\>/){
-                $read_count++
-            }
-            else{
-                $total_read_length += length()-1;
-            }
-        }#while
-    }#fasta
-    elsif($file_format =~ /fastq/){
-        while($line) {
-            unless($line =~ /^\@/) {
-                exit("Error: more than one line in a single read.");
-            }
-            $read_count++;
-            $line = <IN>;
-            $total_read_length += length($line)-1;
-            for my $i (0..2) {$line = <IN>;}   #Escape 2 lines
-        }
-    }
-    close IN;
-
-    my $average_read_length = $total_read_length / $read_count;
-
-    #store
-    $self->{input_read_count} = $read_count;
-    $self->{avg_read_length} = $average_read_length;
-
-    return $average_read_length, $read_count;
-}
+sub _version_path { '/gsc/pkg/bio/velvet/velvet_0.7.' }
 
 sub log_event {
     my $self = shift;
     my $txt = shift;
-    
     #TODO should consider removing log file at start so it doesn't append to existing content
-
-    my $log_file = $self->_log_file;
-    
+    my $log_file = $self->_output_file_prefix_name.'-logfile';
     my $fh = IO::File->new(">> $log_file") ||
         die "Can not create file handle for log file\n";
-
     $fh->print("$txt");
-
     $fh->close;
-
     return 1; #shouldn't return anything
 }
 
-sub _log_file {
-    my $self = shift;
-
-#    my $prefix_name = $self->_get_file_prefix_name();
-#    my $output_dir = $self->_get_output_dir();
-#    my $data_file_name = File::Basename::basename($self->file);
-#    return $output_dir.'/'.$prefix_name.'-'.$data_file_name.'-logfile';
-
-    return $self->_get_file_prefix_name.'-logfile';
-}
-
-sub _get_file_prefix_name {
-    my $self = shift;
-
-    #called multiple times but want consistant name
-    return $self->{files_prefix_name} if exists $self->{files_prefix_name};
-
-    #print DateTime->now."\n";
-    #print UR::Time->now."\n";
-    #convert Mon May 17 13:53:47 CDT 2010 to Mon-May-17-1353-2010 as part of log file name
-
-    #use date for part of the name
-    my $date = `date`;
-    chomp $date;
-    $date =~ s/\d\d\s+CDT//;
-    $date =~ s/\s+/-/g;
-    $date =~ s/://g;
-
-    #unless ($date =~  check correct format) { #TODO
-        #$self->error_message();
-        #return;
-    #}
-
-    my $data_file_name = File::Basename::basename($self->file);
-    my $file_prefix = $self->output_dir.'/'.$date.'-'.$data_file_name;
-    $self->{files_prefix_name} = $file_prefix;
-
-    return $file_prefix;
-}
-
-#TODO this is mandidatory here but optional in original code .. maybe need to change later
-sub _get_output_dir {
-    my $self = shift;
-
-    if ($self->output_dir) {
-        unless (-d $self->output_dir) {
-            $self->error_message("Invalid directory ".$self->output_dir);
-            return;
-        }
-        return $self->output_dir;
-    }
-    #TODO - might have to be careful with this .. if dir changes we don't want it to return `pwd`
-    return `pwd`;
-}
-
-sub _best_hash_size {
-    my ($self, $value) = @_;
-    #set best value
-    if ($value) {
-        $self->{BEST_HASH_SIZE} = $value;
-        #always non zero integer
-        return $value;
-    }
-    #return existing best value
-    if (exists $self->{BEST_HASH_SIZE}) {
-        return $self->{BEST_HASH_SIZE};
-    }
-    #this method should never be called unless setting best value or accessing existing best value
-    #but cutoff value can be zero
-    return 0;  
-}
-
-sub _h_best_coverage_cutoff {
-    my ($self, $value) = @_;
-    #set best value
-    if ($value) {
-        $self->{H_BEST_COVERAGE_CUTOFF} = $value;
-        #always non zero integer
-        return $value;
-    }
-    #return existing best value
-    if (exists $self->{H_BEST_COVERAGE_CUTOFF}) {
-        return $self->{H_BEST_COVERAGE_CUTOFF};
-    }
-    #this method should never be called unless setting best value or accessing existing best value
-    #but cutoff value can be zero
-    return 0;  
-}
-
-sub _best_coverage_cutoff {
-    my ($self, $value) = @_;
-    #set best value
-    if ($value) {
-        $self->{BEST_COVERAGE_CUTOFF} = $value;
-        #always non zero integer
-        return $value;
-    }
-    #return existing best value
-    if (exists $self->{BEST_COVERAGE_CUTOFF}) {
-        return $self->{BEST_COVERAGE_CUTOFF};
-    }
-    #this method should never be called unless setting best value or accessing existing best value
-    #but cutoff value can be zero
-    return 0;
-}
-
-sub _h_best_exp_coverage {
-    my ($self, $value) = @_;
-    #set best value
-    if ($value) {
-        $self->{H_BEST_EXP_COVERAGE} = $value;
-        #always non zero integer
-        return $value;
-    }
-    #return existing best value
-    if (exists $self->{H_BEST_EXP_COVERAGE}) {
-        return $self->{H_BEST_EXP_COVERAGE};
-    }
-    #this method should never be called unless setting best value or accessing existing best value
-    #but cutoff value can be zero
-    return 0;
-}
-
-
-sub _best_exp_coverage {
-    my ($self, $value) = @_;
-    #set best value
-    if ($value) {
-        $self->{BEST_EXP_COVERAGE} = $value;
-        #always non zero integer
-        return $value;
-    }
-    #return existing best value
-    if (exists $self->{BEST_EXP_COVERAGE}) {
-        return $self->{BEST_EXP_COVERAGE};
-    }
-    #this method should never be called unless setting best value or accessing existing best value
-    #but cutoff value can be zero
-    return 0;
-}
-
 sub _h_best_n50_total {
-    my ($self, @hn50_tot) = @_;
-    #set best value
-    if (@hn50_tot) {
-        @{$self->{H_BEST_N50_TOTAL}} = @hn50_tot;
-        return @hn50_tot;
-    }
-    #return existing best value
-    if ( defined @{$self->{H_BEST_N50_TOTAL}} ) {
-        return @{$self->{H_BEST_N50_TOTAL}};
-    }
-    #return min value
-    return (0, 0);
+    my $self = shift;
+    die "bad params" if @_;
+    return ($self->_h_best_n50, $self->_h_best_total);
 }
 
 sub _best_n50_total {
-    my ($self, @n50_tot) = @_;
-    #set best value
-    if (@n50_tot) {
-        @{$self->{BEST_N50_TOTAL}} = @n50_tot;
-        return  @n50_tot;
-    }
-    #return existing best value
-    if (defined @{$self->{BEST_N50_TOTAL}}) {
-        return @{$self->{BEST_N50_TOTAL}};
-    }
-    #return min value
-    return (0, 0);
+    my $self = shift;
+    die "bad params" if @_;
+    return ($self->_best_n50, $self->_best_total);
 }
 
 1;

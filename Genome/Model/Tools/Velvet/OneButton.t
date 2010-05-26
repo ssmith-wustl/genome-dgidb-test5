@@ -63,7 +63,9 @@ foreach my $param (@params) {
     my $actual_stdout = "$temp_dir/actual.stdout";
     my $actual_stderr = "$temp_dir/actual.stderr";
 
-    my $rv = system("chdir $temp_dir; gmt velvet one-button $input_file $param > actual.stdout 2>actual.stderr");
+    my $cmd = "chdir $temp_dir; gmt velvet one-button $input_file $param > actual.stdout 2>actual.stderr";
+    note($cmd);
+    my $rv = system($cmd);
     $rv /= 256;
     ok($rv == 0, "command runs successfully");
 
