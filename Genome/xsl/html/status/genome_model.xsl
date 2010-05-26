@@ -74,9 +74,30 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:if test="count(aspect[@name='inputs']) > 0 ">
       <table class="info_table">
       <tr><th colspan="2">Inputs</th></tr>
-      <xsl:for-each select="aspect[@name='inputs']/object">
+      <xsl:for-each select="aspect[@name='inputs']/object[aspect[@name='name']/value!='instrument_data']">
         <xsl:sort select="aspect[@name='name']/value" data-type="text" order="ascending"/>
-        <tr>
+        <xsl:call-template name="genome_model_input_table_row"/>
+      </xsl:for-each>
+      
+      <!-- It has been decided that instrument_data should be last -->
+      <xsl:for-each select="aspect[@name='inputs']/object[aspect[@name='name']/value='instrument_data']">
+        <xsl:sort select="aspect[@name='name']/value" data-type="text" order="ascending"/>
+        <xsl:call-template name="genome_model_input_table_row"/>
+      </xsl:for-each>
+      </table>
+    </xsl:if>
+    
+    <table id="model_list" class="list" width="100%" cellspacing="0" cellpadding="0" border="0" style="clear:both">
+      <tr>
+        <td class="subtable_cell">
+          <xsl:call-template name="genome_model_build_table_section"/>
+        </td>
+      </tr>
+    </table>
+  </xsl:template>
+  
+  <xsl:template name="genome_model_input_table_row">
+          <tr>
           <td class="label"><xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>:</td>
           <td class="value">
             <xsl:call-template name="object_link">
@@ -92,17 +113,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             </xsl:call-template>
           </td>
         </tr>
-      </xsl:for-each>
-      </table>
-    </xsl:if>
-    
-    <table id="model_list" class="list" width="100%" cellspacing="0" cellpadding="0" border="0" style="clear:both">
-      <tr>
-        <td class="subtable_cell">
-          <xsl:call-template name="genome_model_build_table_section"/>
-        </td>
-      </tr>
-    </table>
   </xsl:template>
 
   <xsl:template name="genome_model_build_table_row">
