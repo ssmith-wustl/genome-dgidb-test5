@@ -65,6 +65,8 @@ sub human_ref_path {
 }
 
 sub dbsnp_path {
+    my $self = shift;
+    
     my $model = Genome::Model->get( name => 'dbSNP-human-130-final-rod');
     unless($model) {
         $self->error_message("could not locade model dbSNP-human-130-final-rod which contains the necessary dbSNP file.");
