@@ -86,15 +86,15 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
     
-    my @sorted = sort { $a <=> $b } $self->hash_sizes;
-    if (@sorted) {
-        $self->hash_sizes(\@sorted);
-    }
-    else {
+    unless ($self->hash_sizes) {
         $self->hash_sizes([25,27,29]);
     }
 
-    for my $list (qw/exp_covs cov_cutoffs/) {
+    unless ($self->dev_ins_length) {
+        $self->dev_ins_length($self->ins_length * 0.2);
+    }
+
+    for my $list (qw/hash_sizes exp_covs cov_cutoffs/) {
         if (my @list = $self->exp_covs) {
             @list = sort {$a <=> $b} @list;
             $self->$list(\@list);
@@ -152,7 +152,7 @@ sub execute {
     return 1;
 }
 
-# TOP LEVEL EXECUTION STEPS
+# TOP LEVEL EXECUTION STEPS (CALLED ONCE, ONLY FROM EXECUTE)
 
 sub _print_params_to_screen_and_logfile {
     my $self = shift;
@@ -172,7 +172,7 @@ sub _print_params_to_screen_and_logfile {
     $params .= "#genome length: $genome_length\n";
 
     $params .= "#ins_length: ".$self->ins_length."\n";
-    $params .= "#ins_length_sd: ".$self->_get_ins_length_sd()."\n";
+    $params .= "#ins_length_sd: ".$self->dev_ins_length()."\n";
 
     $params .= "#input file: ".$self->file."\n";
     $params .= "#output directory: ".$self->output_dir."\n";
@@ -193,7 +193,7 @@ sub _print_params_to_screen_and_logfile {
     $txt .= "genome length = $genome_length\n" if $self->genome_len;
 
     $txt .= "ins_length = ".$self->ins_length."\n".
-            "ins_length_sd = ".$self->_get_ins_length_sd()."\n".
+            "ins_length_sd = ".$self->dev_ins_length()."\n".
             "input file = ".$self->file."\n".
             "output directory = ".$self->output_dir."\n".
             "enumeration bound = ".$self->bound_enumeration."\n";
@@ -340,7 +340,7 @@ sub _do_final_velvet_runs {
     my $velvetg = $self->_version_path . $self->version . '/velvetg';
     my $best_exp_cov = $self->_best_exp_coverage();
     my $best_cov_cf = $self->_best_coverage_cutoff();
-    my $ins_length_sd = $self->_get_ins_length_sd();
+    my $ins_length_sd = $self->dev_ins_length();
 
     my $g_cmd = $velvetg.' '.$self->output_dir.' -exp_cov '.$best_exp_cov.' -cov_cutoff '.$best_cov_cf.' -ins_length '.$self->ins_length.' -ins_length_sd '.$ins_length_sd.' -read_trkg yes -min_contig_lgth 100 -amos_file yes';
 
@@ -356,7 +356,6 @@ sub _do_final_velvet_runs {
 
 
 # OTHER METHODS
-
 
 sub _run_velveth_get_opt_expcov_covcutoff {
     my ($self, $hash_size) = @_;
@@ -559,7 +558,7 @@ sub _run_velvetg_get_n50_total {
 
     my $velvetg = $self->_version_path . $self->version . '/velvetg';
 
-    my $ins_length_sd = $self->_get_ins_length_sd();
+    my $ins_length_sd = $self->dev_ins_length();
 
     my $screen_g_file = $self->output_dir.'/screen_g'; #capture velvetg output
 
@@ -669,12 +668,6 @@ sub _get_genome_length {
 
 sub _version_path {
     return '/gsc/pkg/bio/velvet/velvet_0.7.';
-}
-
-sub _get_ins_length_sd {
-    my $self = shift;
-    return $self->dev_ins_length if $self->dev_ins_length;
-    return $self->ins_length * 0.2;
 }
 
 sub _input_file_format {
