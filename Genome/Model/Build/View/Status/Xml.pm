@@ -239,6 +239,8 @@ sub get_build_node {
     }
 
     $buildnode->addChild($self->get_model_node);
+    
+    $buildnode->addChild($self->get_inputs_node);
 
     return $buildnode;
 }
@@ -439,6 +441,35 @@ sub get_instrument_data_node {
 
     return $id;
 
+}
+
+sub get_inputs_node {
+    my $self = shift;
+    my $doc = $self->_doc;
+    my $build = $self->subject;
+    
+    my $aspect_node = $doc->createElement('aspect');
+    $aspect_node->addChild( $doc->createAttribute('name', 'inputs') );
+
+    my @inputs = $build->inputs;
+    
+    for my $input (@inputs) {
+        my $view = $input->create_view(
+            perspective => 'default',
+            toolkit => 'xml',
+            aspects => [ 'name', 'value_class_name', 'value_id' ],
+            parent_view => $self,
+        );
+        
+        $view->_generate_content;
+        
+        my $delegate_xml_doc = $view->_xml_doc;
+        my $delegate_root = $delegate_xml_doc->documentElement;
+        #cloneNode($deep = 1)
+        $aspect_node->addChild( $delegate_root->cloneNode(1) );
+    }
+    
+    return $aspect_node;
 }
 
 sub get_lsf_job_status {

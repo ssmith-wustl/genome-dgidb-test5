@@ -95,6 +95,13 @@ popup.center();
                   </td>
                 </tr>
               </table>
+              
+              <xsl:if test="count(//build/aspect[@name='inputs']) > 0 ">
+			    <xsl:for-each select="//build/aspect[@name='inputs']">
+			      <xsl:call-template name="genome_model_input_table"/>
+			    </xsl:for-each>
+			  </xsl:if>
+              <br/>
               View: <a href="#show_events" id="show_events">Events</a> | <a href="#show_workflow" id="show_workflow">Workflow</a>
               <script type="text/javascript">
                 <![CDATA[
