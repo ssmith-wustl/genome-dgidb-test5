@@ -42,9 +42,12 @@ sub _run_aligner {
     my $output_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $log_file = $self->temp_staging_directory . "/aligner.log";
 
+    my $temp_aligned_sequences_file = $self->self_scratch_directory . "/temp_aligned_sequences.sam";
+    my $temp_unaligned_sequences_file = $self->self_scratch_directory . "/temp_unaligned_sequences.sam";
+
     if ( @input_pathnames == 1 ) {
 
-        my $cmdline = "$path_to_bowtie $aligner_params $reference_bowtie_index_path $input_pathnames[0] --sam $output_file >>$log_file";
+        my $cmdline = "$path_to_bowtie $aligner_params --sam-nohead --un $temp_unaligned_sequences_file $reference_bowtie_index_path $input_pathnames[0] --sam $output_file >> $log_file && cat $temp_aligned_sequences_file >> $output_file";
 
         $self->status_message( "Attempting to run with 1 arg: " . $cmdline . "\n");
         Genome::Utility::FileSystem->shellcmd(
@@ -57,8 +60,8 @@ sub _run_aligner {
     }
     elsif ( @input_pathnames == 2 ) {
 	
-        my $cmdline = "$path_to_bowtie $aligner_params $reference_bowtie_index_path -1 $input_pathnames[0] -2 $input_pathnames[1] --sam $output_file >>$log_file";
-    
+        my $cmdline = "$path_to_bowtie $aligner_params --sam-nohead --un $temp_unaligned_sequences_file $reference_bowtie_index_path -1 $input_pathnames[0] -2 $input_pathnames[1] --sam $output_file >>$log_file && cat $temp_aligned_sequences_file >> $output_file";
+        # $temp_unaligned_sequences_file still uses original file format.
         
         $self->status_message( "Attempting to run with 2 args: " . $cmdline . "\n");
         Genome::Utility::FileSystem->shellcmd(
