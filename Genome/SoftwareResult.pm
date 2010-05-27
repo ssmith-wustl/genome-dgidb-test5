@@ -115,7 +115,8 @@ sub create {
     # We need to update the indirect mutable accessor logic for non-nullable
     # hang-offs to delete the entry instead of setting it to null.  Otherwise
     # we get SOFTWARE_RESULT_PARAM entries with a NULL, and unsavable PARAM_VALUE.
-    my @remove = grep { not defined $is_param{$_} } keys %is_param;
+    # also remove empty strings because that's equivalent to a NULL to the database
+    my @remove = grep { not (defined $is_param{$_}) || $is_param{$_} eq "" } keys %is_param;
     my $bx = $class->define_boolexpr(@_);
     for my $param (@remove) {
         $bx = $bx->remove_filter($param);

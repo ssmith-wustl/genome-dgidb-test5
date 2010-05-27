@@ -25,6 +25,11 @@ sub _run_aligner {
     my $input_pathnames = join ' ', @_;
 
     my $aligner_params = $self->aligner_params;
+    if ( @_ > 1 && not $aligner_params =~ /-pair/ ){
+        $self->error_message('Multiple FastQs given, but -pair option not set.');
+        return 0;
+    }
+    
     my $ssaha_path = Genome::Model::Tools::Ssaha2->path_for_ssaha2_version($self->aligner_version);
 
     # get refseq info
@@ -55,8 +60,5 @@ sub _run_aligner {
 
 sub aligner_params_for_sam_header {
     my $self = shift;
-
-    #die 'remove this die statement and put the command line use to run the aligner here!';
-    # for bwa this looks like "bwa aln -t4; bwa samse 12345'
     return 'ssaha2 ' . $self->aligner_params;
 }

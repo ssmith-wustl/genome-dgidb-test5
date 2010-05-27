@@ -1174,7 +1174,7 @@ sub get_or_create_sequence_dictionary {
         my $sample = Genome::Sample->get($self->instrument_data->sample_id);
         if ( defined($sample) ) {
             $species =  $sample->species_name;
-            if ( $species eq "" || $species eq undef ) {
+            if ( (not $species) || $species eq "" ) {
                 $species = "unknown";
             }
         }
