@@ -17,7 +17,7 @@ class Genome::Model::Tools::Sam::SamToBam {
         },
         ref_list    => {
             is  => 'String',
-            doc => 'ref list contains ref name and its length',
+            doc => 'path to a tab delimited file containing each contig name in the reference and its length',
         },
     ],
     has_optional => [
