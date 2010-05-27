@@ -13,6 +13,9 @@ class Genome::InstrumentData::Command::Align::Bowtie {
     has_constant => [
         aligner_name => { value => 'Bowtie' },
     ],
+    has => [
+        aligner_version => {is=>'String', default_value=>Genome::Model::Tools::Bowtie->default_bowtie_version}
+    ],
     doc => "align instrument data using Bowtie's novoalign tool (see http://bowtie-bio.sourceforge.net)",
 };
 
