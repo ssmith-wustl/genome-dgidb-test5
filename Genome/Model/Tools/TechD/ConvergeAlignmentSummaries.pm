@@ -31,6 +31,7 @@ sub execute {
         unless ($build) {
             die('Failed to find build for id '. $build_id);
         }
+        # TODO: Eventually use the alignment_summary_hash_ref since percentages are calculated by that method
         my ($alignment_summary) = $build->alignment_summary_file($self->wingspan);
         unless ($alignment_summary && -s $alignment_summary) {
             die('Failed to find alignment summary for build '. $build->id);
