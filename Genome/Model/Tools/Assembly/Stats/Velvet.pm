@@ -76,9 +76,9 @@ sub execute {
     print $content_stats;
 
     #GENE CORE SURVEY STATS
-    my $core_survey = $self->get_core_gene_survey_results();
-    $stats .= $core_survey;
-    print $core_survey;
+    #my $core_survey = $self->get_core_gene_survey_results();
+    #$stats .= $core_survey;
+    #print $core_survey;
 
     #READ DEPTH STATS
     my $ace = `ls -t velvet_asm.ace* | grep -v base_depth | head -1`;
