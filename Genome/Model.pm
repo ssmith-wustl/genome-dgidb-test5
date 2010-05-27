@@ -617,6 +617,17 @@ sub completed_builds {
     return sort { $a->id <=> $b->id } @completed_builds;
 }
 
+sub latest_build {
+
+    # this is the latest build with no filtering on status, etc.
+    
+    my ($self) = @_; 
+
+    my @sorted_builds = sort { $b->id <=> $a->id } $self->builds();
+    return $sorted_builds[0] if @sorted_builds;
+    return;
+}
+
 sub last_succeeded_build { return $_[0]->resolve_last_complete_build; }
 sub last_complete_build { return $_[0]->resolve_last_complete_build; }
 sub resolve_last_complete_build {
