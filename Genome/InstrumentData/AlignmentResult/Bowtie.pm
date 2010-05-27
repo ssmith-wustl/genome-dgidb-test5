@@ -81,6 +81,6 @@ sub _run_aligner {
 sub aligner_params_for_sam_header {
     my $self = shift;
 
-    return "bowtie $self->aligner_params ...";
+    return "bowtie " . $self->aligner_params;
     # for bwa this looks like "bwa aln -t4; bwa samse 12345'
 }
