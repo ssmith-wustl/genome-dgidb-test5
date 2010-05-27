@@ -38,6 +38,10 @@ class Genome::WorkOrder {
             is => 'Integer',
             len => 10,
         },
+        project => { 
+            is => 'Genome::Project', 
+         id_by => 'project_id' 
+        },
         file_storage_id => {
             is => 'Integer',
             len => 20,

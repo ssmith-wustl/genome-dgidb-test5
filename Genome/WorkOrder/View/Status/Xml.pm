@@ -14,6 +14,13 @@ class Genome::WorkOrder::View::Status::Xml {
                 'id',
                 'pipeline',
                 {
+                    name => 'project',
+                    perspective => 'default',
+                    toolkit => 'xml',
+                    subject_class_name => 'Genome::Project',
+                    aspects => ['name', 'status', 'description', 'project_type'],
+                },
+                {
                     name => 'items',
                     perspective => 'Status',
                     toolkit => 'xml',

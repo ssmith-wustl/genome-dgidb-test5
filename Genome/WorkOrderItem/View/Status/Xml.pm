@@ -12,8 +12,7 @@ class Genome::WorkOrderItem::View::Status::Xml {
             is => 'ARRAY',
             value => [
                 'id',
-                'dna_id',
-                'pse_statuses',
+                'event_statuses',
                 {
                     name => 'sample',
                     perspective => 'default',

@@ -34,6 +34,7 @@ class Genome::Project {
         setup_project_id    => { is => 'Number', len => 10 },
     ],
     has_optional => [ 
+        work_orders => { is => 'Genome::WorkOrder', reverse_as => 'project', is_many => 1 },
         external_contact        => { is => 'Genome::Project::Contact', id_by => 'ext_con_id' },
         external_contact_name   => { is => 'Text', via => 'external_contact', to => 'name' }, 
         external_contact_email  => { is => 'Text', via => 'external_contact', to => 'email' }, 

@@ -8,11 +8,6 @@ use above 'Genome';
 use Carp 'confess';
 use Data::Dumper 'Dumper';
 
-#        dna => { 
-#            is => 'Genome::Model::Build', 
-#            reverse_as => 'model', 
-#            is_many => 1 
-#        },
 class Genome::WorkOrderItem {
     table_name => '(SELECT * FROM work_order_item@oltp) work_order_item',
     id_by => [
@@ -145,7 +140,7 @@ sub models {
         my %model_ids = map { $_->model_id => 1 } @instrument_data_assignments;
         return unless %model_ids;
 
-        return Genome::Model->get(id => [ keys %model_ids ]);
+        return Genome::Model->get(genome_model_id => [ keys %model_ids ]);
 
     } else {
         $self->warning_message("No sequence products (instrument data) found for work order item (".$self->id.").  Attempting to get models via dna_id.");
@@ -170,34 +165,115 @@ sub models {
     }
 }
 
-sub pse_statuses {
+sub _summarize {
+
+    my ($process_to) = @_;
+    my @initials;
+
+    if (length($process_to) > 25) {
+        my @words = split(/\s+/,$process_to);
+        push @initials, uc(substr($_, 0, 1)) for @words; 
+        return join('', @initials);
+    }
+
+    return $process_to;
+}
+
+sub _hash_up {
+
+    my ($events, $pse, $sort_order) = @_;
+
+    my $status     = $pse->pse_status;
+    my $process_to = _summarize( $pse->process_to );
+
+    return {
+        count      => $events->{'production'}->{$process_to}->{'count'} + 1,
+        sort_order => $sort_order,
+    };
+}
+
+sub event_statuses {
 
     my ($self) = @_;
 
-    my $pses = {};
-
+    my $events = {};
     for my $sp ($self->sequence_products()) {
 
+        my $status = {};
+
+        # get event statuses from LIMS
         if ($sp->isa('GSC::IndexIllumina')) {
 
             my $creation_pse = $sp->get_creation_event();
+            my $setup_pse = $creation_pse->get_first_prior_pse_with_process_to('set up flow cell');
             my $pidfa_pse = $creation_pse->get_first_active_subsequent_pse_with_process_to('prepare instrument data for analysis');
             my $queue_pse = $creation_pse->get_first_active_subsequent_pse_with_process_to('queue instrument data for genome modeling');
-            my $setup_pse = $creation_pse->get_first_prior_pse_with_process_to('set up flow cell');
 
-            $pses->{$creation_pse->process_to}->{$creation_pse->pse_status}++;
-            $pses->{$pidfa_pse->process_to}->{$pidfa_pse->pse_status}++;
-            $pses->{$setup_pse->process_to}->{$setup_pse->pse_status}++;
+            # put the pses in 3 status buckets- "pending", "completed", "failed"
+            for my $pse ($creation_pse, $setup_pse, $pidfa_pse, $queue_pse) {
+
+                my $pse_status = $pse->pse_status();
+                my @completed = qw(COMPLETED);
+                my @failed = qw(FAILED);
+
+                # default status is "pending"
+#                $status->{$pse->pse_id} = $pse_status;
+                $status->{$pse->pse_id} = 'pending';
+
+                if (grep /^$pse_status$/i, @completed) {
+                    $status->{$pse->pse_id} = 'completed';
+                } elsif (grep /^$pse_status$/i, @failed) {
+                    $status->{$pse->pse_id} = 'failed';
+                }
+            }
+
+            # generate lane summary
+            $events->{'production'}->{_summarize($creation_pse->process_to)}->{$status->{$creation_pse->pse_id}} = _hash_up($events, $creation_pse, 2);
+
+            # set up flow cell
+            $events->{'production'}->{_summarize($setup_pse->process_to)}->{$status->{$setup_pse->pse_id}} = _hash_up($events, $setup_pse, 1);
+
+            # PIDFA
+            $events->{'production'}->{_summarize($pidfa_pse->process_to)}->{$status->{$pidfa_pse->pse_id}} = _hash_up($events, $pidfa_pse, 3);
+
+            # queue inst data
+            $events->{'production'}->{_summarize($queue_pse->process_to)}->{$status->{$queue_pse->pse_id}} = _hash_up($events, $queue_pse, 4);
+
         } elsif ($sp->isa('GSC::RegionIndex454')) {
 
         } else {
 
         }
+
+        # get statuses of latest builds from canonical models
+        my $sample = $self->sample();
+        my $model = $sample->canonical_model();
+
+        if ($model) {
+            my $build = $model->latest_build();
+            my $build_status = $build->master_event_status();
+
+            # same status buckets as pses- pending, completed, failed
+            if ($build_status =~ /SUCCEEDED/i) {
+                $build_status = 'completed';
+            } elsif ($build_status =~ /FAILED/i) {
+                $build_status = 'failed';
+            } else {
+                # default status is same as PSEs- "pending"
+                $build_status = 'pending';
+            }
+
+            $events->{'analysis'}->{'builds'}->{$build_status}->{'count'}++;
+            $events->{'analysis'}->{'builds'}->{$build_status}->{'sort_order'} = 5;
+        }
     }
 
-    $DB::single = 1;
-    return $pses;
+    return $events;
 }
+
+
+
+
 
 # prepare dna beads
 # setup flow cell
