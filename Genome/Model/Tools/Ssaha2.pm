@@ -45,7 +45,7 @@ EOS
 
 
 my %BWA_VERSIONS = (
-	'0.4.2' => '/gscuser/boberkfe/ssaha2/path/to/bin'
+	'0.4.2' => '/gscuser/boberkfe/ssaha2/path/to/bin',
     'ssaha2'   => 'ssaha2',
 );
 
