@@ -14,6 +14,10 @@ class Genome::Model::Tools::TechD::ConvergeAlignmentSummaries {
         },
         output_file => {
         },
+        wingspan => {
+            is_optional => 1,
+            default_value => 0,
+        }
     ],
 };
 
@@ -27,8 +31,8 @@ sub execute {
         unless ($build) {
             die('Failed to find build for id '. $build_id);
         }
-        my ($alignment_summary) = glob($build->data_directory .'/reference_coverage/*wingspan_0-alignment_summary.tsv');
-        unless ($alignment_summary) {
+        my ($alignment_summary) = $build->alignment_summary_file($self->wingspan);
+        unless ($alignment_summary && -s $alignment_summary) {
             die('Failed to find alignment summary for build '. $build->id);
         }
         push @as, $alignment_summary;
@@ -37,7 +41,7 @@ sub execute {
     }
     unless (Genome::Model::Tools::BioSamtools::CompareAlignmentSummaries->execute(
         input_files => \@as,
-        libraries => \@labels,
+        labels => \@labels,
         output_file => $self->output_file,
     )) {
         die('Failed to compare alignment summaries!');
