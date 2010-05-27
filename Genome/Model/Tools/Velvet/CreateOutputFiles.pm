@@ -12,10 +12,9 @@ class Genome::Model::Tools::Velvet::CreateOutputFiles {
 	    is => 'Text',
 	    doc => 'Assembly directory',
 	},
-	input_file => {
+	input_fastq_file => {
 	    is => 'Text',
 	    doc => 'Input fastq file',
-	    is_optional => 1,
 	}
     ],
 };
@@ -26,18 +25,28 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gmt velvet create-assembly-out-files --directory /foo/bar
+gmt velvet create-assembly-out-files --directory /foo/bar --input-fastq-file /foo/bar/file.fastq
 EOS
 }
 
 sub help_detail {
     return <<EOS
-Tool to create assembly output files for velvet assemblies
+Wrapper to run tools to create standard assembly output files
 EOS
 }
 
 sub execute {
     my $self = shift;
+
+    unless (-d $self->directory) {
+	$self->error_message("Invalid directory: ".$self->directory);
+	return;
+    }
+
+    unless (-s $self->input_fastq_file) {
+	$self->error_message("Can not find input file: ".$self->input_fastq_file);
+	return;
+    }
 
     #TODO - validate directory and input file
 
@@ -57,6 +66,10 @@ sub execute {
 #	}
 #    }
 
+    ##########################################################
+    # each of the modules being called have individual tests #
+    ##########################################################
+
     #create gap.txt file
     my $gap = Genome::Model::Tools::Assembly::CreateOutputFiles::Gap->create(
 	directory => $self->directory,
@@ -68,7 +81,7 @@ sub execute {
 
     #create input fasta and qual files
     my $inputs = Genome::Model::Tools::Assembly::CreateOutputFiles::InputFromFastq->create(
-	fastq_file => $self->input_file,
+	fastq_file => $self->input_fastq_file,
 	directory => $self->directory,
 	);
     unless ($inputs->execute) {
