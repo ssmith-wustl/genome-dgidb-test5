@@ -53,7 +53,7 @@ class Genome::InstrumentData::Command::Align {
                                         },
         version                         => {
                                             is => 'Text', default_value => '0.7.1',
-                                            doc => 'the version of maq to use, i.e. 0.6.8, 0.7.1, etc.'
+                                            doc => 'the aligner version to use, i.e. 0.6.8, 0.7.1, etc.'
                                         },
         params                          => {
                                             is => 'Text', default_value => '', 

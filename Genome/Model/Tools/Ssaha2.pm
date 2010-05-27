@@ -4,12 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use File::Basename;
 
-
-#declare a default version here
-##########################################
-my $DEFAULT = '0.5.7';
+my $DEFAULT = '2.5';
 
 class Genome::Model::Tools::Ssaha2 {
     is => 'Command',
@@ -43,12 +39,10 @@ sub help_detail {
 EOS
 }
 
-
-my %BWA_VERSIONS = (
-	'0.4.2' => '/gscuser/boberkfe/ssaha2/path/to/bin',
-    'ssaha2'   => 'ssaha2',
+my %VERSIONS = (
+    '2.5'    => '/gsc/pkg/bio/ssaha2/ssaha2_v2.5_x86_64/ssaha2',
+    'ssaha2' => 'ssaha2',
 );
-
 
 sub ssaha2_path {
     my $self = $_[0];
@@ -57,21 +51,21 @@ sub ssaha2_path {
 
 sub available_ssaha2_versions {
     my $self = shift;
-    return keys %BWA_VERSIONS;
+    return keys %VERSIONS;
 }
 
 sub path_for_ssaha2_version {
     my $class = shift;
     my $version = shift;
 
-    if (defined $BWA_VERSIONS{$version}) {
-        return $BWA_VERSIONS{$version};
+    if (defined $VERSIONS{$version}) {
+        return $VERSIONS{$version};
     }
     die('No path for ssaha2 version '. $version);
 }
 
 sub default_ssaha2_version {
-    die "default samtools version: $DEFAULT is not valid" unless $BWA_VERSIONS{$DEFAULT};
+    die "default samtools version: $DEFAULT is not valid" unless $VERSIONS{$DEFAULT};
     return $DEFAULT;
 }
         

@@ -1,8 +1,5 @@
 package Genome::InstrumentData::Command::Align::Ssaha2;
 
-#REVIEW fdu
-#limited use, removable, see REVIEW in base class Align.pm
-
 use strict;
 use warnings;
 
@@ -14,7 +11,7 @@ class Genome::InstrumentData::Command::Align::Ssaha2 {
         aligner_name                    => { value => 'ssaha2' },
     ],
     has_param => [
-        version                 => { default_value => '0.5.5'},
+        version                 => { default_value => '2.5'},
     ],
     doc => 'align instrument data using SSAHA2'
 };
