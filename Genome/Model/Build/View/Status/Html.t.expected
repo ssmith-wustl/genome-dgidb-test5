@@ -37,12 +37,27 @@
                 .hide();
             });
           
+        </script><script language="javascript" type="text/javascript">
+          
+                   $(document).ready(function(){
+
+//Hide (Collapse) the toggle containers on load
+$(".toggle_container").hide();
+
+//Slide up and down on click
+$("span.trigger").click(function(){
+console.log("this: " + $(this));
+$(this).parent().next(".toggle_container").slideToggle("slow");
+});
+
+});
+          
         </script>
 </head>
 <body>
 <div class="container"><div class="background">
 <div class="page_header"><table cellpadding="0" cellspacing="0" border="0"><tr>
-<td><a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/res/old/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle"></a></td>
+<td><a href="/view/genome/search/status.html" alt="Go to Search Page" title="Go to Search Page"><img src="/res/old/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle"></a></td>
 <td><h1>Analysis Reports v0.2</h1></td>
 </tr></table></div>
 <div class="page_padding">
@@ -95,7 +110,7 @@ popup.center();
 </tr>
 <tr>
 <td class="label">Workflow Instance ID:</td>
-<td class="value"><a xmlns:rest="urn:rest" href="/cgi-bin/rest.cgi/Workflow/Store/Db/Model/Instance/status.html?id=1753513">1753513</a></td>
+<td class="value"><a xmlns:rest="urn:rest" href="/cgi-bin/rest.cgi/Workflow/Model/Instance/status.html?id=1753513">1753513</a></td>
 </tr>
 </table></td>
 <td><table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
@@ -126,6 +141,18 @@ popup.center();
 </tr>
 </table></td>
 </tr></table>
+<table class="info_table">
+<tr><th colspan="2">Inputs</th></tr>
+<tr>
+<td class="label">reference_sequence_build:</td>
+<td class="value"><a xmlns:rest="urn:rest" href="/cgi-bin/rest.cgi/Genome/Model/Build/ImportedReferenceSequence/status.html?id=101947881">Genome::Model::Build::ImportedReferenceSequence: 101947881</a></td>
+</tr>
+<tr>
+<td class="label">instrument_data:</td>
+<td class="value"><a xmlns:rest="urn:rest" href="/cgi-bin/rest.cgi/Genome/InstrumentData/Solexa/status.html?id=2849448911">Genome::InstrumentData::Solexa: 2849448911</a></td>
+</tr>
+</table>
+<br>
               View: <a href="#show_events" id="show_events">Events</a> | <a href="#show_workflow" id="show_workflow">Workflow</a><script type="text/javascript">
                 
                   $(document).ready(function() {
@@ -140,7 +167,7 @@ popup.center();
                       if ($('#workflowview').length == 0) {
                           $('.viewport').append('<div id="workflowview"/>');
 
-                          $('#workflowview').load('/view/workflow/store/db/operation/instance/statuspopup.html?id=1753513');
+                          $('#workflowview').load('/view/workflow/operation/instance/statuspopup.html?id=1753513');
                       } 
                       $('#workflowview').show();
                       return false;
