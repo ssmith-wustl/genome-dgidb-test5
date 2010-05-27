@@ -113,6 +113,9 @@ sub execute {
 }
 
 sub hash_sort_order {
+    if (!defined($sort_order{$a}) || !defined($sort_order{$b})) {
+        die('Failed to find sort order for column A '. $a .' or column B '. $b);
+    }
     $sort_order{$a} <=> $sort_order{$b};
 }
 
