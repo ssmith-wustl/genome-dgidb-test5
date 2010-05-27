@@ -30,12 +30,13 @@ sub _run_aligner {
     # get refseq info
     my $reference_build = $self->reference_build;
     my $ref_pathname = (File::Basename::fileparse($reference_build->full_consensus_path('fa')))[1];
+    my $ref_index = $ref_pathname . 'all_sequences.ssaha2';
     
     my $output_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $log_file = $self->temp_staging_directory . "/aligner.log";
 
     # ex: ssaha2 -skip 3 -kmer 13 -best 1 -outfile ~/alignment-test/ssaha/best.sam -output sam -save ~/reference_human/all_sequences.ssaha2 ~/alignment-test/s21_seq.fq ~/alignment-test/s22_seq.fq
-    my $cmd = "$ssaha_path $aligner_params -outfile $output_file.tmp -output sam -save $ref_pathname/all_sequences.ssaha2 $input_pathnames >>$log_file && cat $output_file.tmp >>$output_file";
+    my $cmd = "$ssaha_path $aligner_params -outfile $output_file.tmp -output sam -save $ref_index $input_pathnames >>$log_file && cat $output_file.tmp >>$output_file";
 
     Genome::Utility::FileSystem->shellcmd(
         cmd          => $cmd,
