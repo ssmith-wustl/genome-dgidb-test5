@@ -46,8 +46,13 @@ sub path_for_bowtie_version {
     my $path = $BOWTIE_VERSIONS{$version};
     if (defined($path)) {
         if (Genome::Config->arch_os =~ /64/) {
-            $path .= '-64';
+            $path .= '-64/bowtie';
         }
+	elsif (Genome::Config->arch_os =~ /i686/) {
+            # There is a x86 version at /gsc/pkg... but memory likely will be insufficient.
+            # In any case, the Genome::InstrumentData::AlignmentResult::Bowtie will enforce X86_64
+            $path .= '/bowtie';
+	}
         return $path;
     }
     die 'No path found for bowtie version: '.$version;
