@@ -9,20 +9,26 @@ my %sort_order = (
     label => 1,
     total_bp => 2,
     total_aligned_bp => 3,
-    total_unaligned_bp => 4,
-    total_duplicate_bp => 5,
-    paired_end_bp => 6,
-    read_1_bp => 7,
-    read_2_bp => 8,
-    mapped_paired_end_bp => 9,
-    proper_paired_end_bp => 10,
-    singleton_bp => 11,
-    total_target_aligned_bp => 12,
-    unique_target_aligned_bp => 13,
-    duplicate_target_aligned_bp => 14,
-    total_off_target_aligned_bp => 15,
-    unique_off_target_aligned_bp => 16,
-    duplicate_off_target_aligned_bp => 17,
+    percent_aligned => 4,
+    total_unaligned_bp => 5,
+    total_duplicate_bp => 6,
+    percent_duplicates => 7,
+    paired_end_bp => 8,
+    read_1_bp => 9,
+    read_2_bp => 10,
+    mapped_paired_end_bp => 11,
+    proper_paired_end_bp => 12,
+    singleton_bp => 13,
+    total_target_aligned_bp => 14,
+    percent_target_aligned => 15,
+    unique_target_aligned_bp => 16,
+    duplicate_target_aligned_bp => 17,
+    percent_target_duplicates => 18,
+    total_off_target_aligned_bp => 19,
+    percent_off_target_aligned => 20,
+    unique_off_target_aligned_bp => 21,
+    duplicate_off_target_aligned_bp => 22,
+    percent_off_target_duplicates => 23,
 );
 
 class Genome::Model::Tools::BioSamtools::CompareAlignmentSummaries {
@@ -37,6 +43,7 @@ class Genome::Model::Tools::BioSamtools::CompareAlignmentSummaries {
             doc => 'A file path to store tab delimited output',
         },
         labels => {
+            doc => 'A list of text strings to be used as labels for each input file.  Must retain same order as input files list.',
             is_optional => 1,
         }
     ],
@@ -45,6 +52,7 @@ class Genome::Model::Tools::BioSamtools::CompareAlignmentSummaries {
 sub create {
     my $class = shift;
     my %params = @_;
+    # retain sort order of input files and labels if provided
     if ($params{labels}) {
         my $labels = delete($params{labels});
         my $input_files = delete($params{input_files});
