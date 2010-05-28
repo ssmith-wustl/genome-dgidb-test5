@@ -122,7 +122,7 @@ sub _get_gap_sizes {
     my $self = shift;
     
     my $gap_file = $self->directory.'/edit_dir/gap.txt';
-    unless (-s $gap_file) {
+    unless (-e $gap_file) { #okay for this file to be blank
 	$self->error_message("You must have gap.txt file to create reads.placed file");
 	return;
     }
@@ -153,7 +153,7 @@ sub _validate_input_files {
 
     my @input_files = $self->_input_files();
     foreach my $file_name (@input_files) {
-	unless (-s $self->directory.'/edit_dir/'.$file_name) {
+	unless (-e $self->directory.'/edit_dir/'.$file_name) {
 	    $self->error_message("Failed to find file: ".$self->directory.'/edit_dir/'.$file_name);
 	    return;
 	}
