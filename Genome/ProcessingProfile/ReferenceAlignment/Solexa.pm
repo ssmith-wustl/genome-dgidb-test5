@@ -44,6 +44,8 @@ sub alignment_job_classes {
 sub reference_coverage_job_classes {
     my $self = shift;
     if ($self->dna_type eq 'cdna' || $self->dna_type eq 'rna') {
+
+        #TODO this needs to be changed to reference build
         if ($self->reference_sequence_name =~ /^XStrans_adapt_smallRNA_ribo/) {
             my @steps = (
                 'Genome::Model::Event::Build::ReferenceAlignment::RefCov',
