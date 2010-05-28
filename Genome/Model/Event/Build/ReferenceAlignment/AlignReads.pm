@@ -37,28 +37,9 @@ sub bsub_rusage {
 sub metrics_for_class {
     my $class = shift;
     return();
-    my @metric_names = qw(
-                          total_read_count
-                          fwd_reads_passed_quality_filter_count
-                          rev_reads_passed_quality_filter_count
-                          total_reads_passed_quality_filter_count
-                          total_bases_passed_quality_filter_count
-                          fwd_poorly_aligned_read_count
-                          rev_poorly_aligned_read_count
-                          poorly_aligned_read_count
-                          fwd_aligned_read_count
-                          rev_aligned_read_count
-                          aligned_read_count
-                          aligned_base_pair_count
-                          fwd_unaligned_read_count
-                          rev_unaligned_read_count
-                          unaligned_read_count
-                          unaligned_base_pair_count
-                          total_base_pair_count
-    );
     my $delegate = $class->results_class;
-    my @extra = $delegate->extra_metrics();
-    return @metric_names, @extra;
+    my @metric_names = $delegate->metric_names();
+    return @metric_names;
 }
 
 sub fwd_reads_passed_quality_filter_count {
