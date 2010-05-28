@@ -66,7 +66,8 @@ sub get_or_create {
    
     if (@objects > 1) {
         return @objects if wantarray;
-        die "Multiple matches for $class but get or create was called in scalar context!";
+        my @ids = map { $_->id } @objects;
+        die "Multiple matches for $class but get or create was called in scalar context!  Found ids: @ids";
     } else {
         return $objects[0];
     }
