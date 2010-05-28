@@ -51,6 +51,7 @@ sub bed_file_content {
         return;
     }
     #WARNING: It appears both companies are using 1-based coordinates in the start postion.
+    # Actually, NimbleGen has confirmed this: jwalker 05-28-2010
     my @lines = split("\n",$fs->content);
     my $print = 1;
     my $bed_file_content;
@@ -102,8 +103,18 @@ sub print_bed_file {
         );
         $one_based_start_position = 0;
     }
+    my $tmp_2_file = Genome::Utility::FileSystem->create_temp_file_path($barcode .'-2.bed');
+    my $tmp_fh = Genome::Utility::FileSystem->open_file_for_reading($tmp_file);
+    my $tmp_2_fh = Genome::Utility::FileSystem->open_file_for_writing($tmp_2_file);
+    while (my $line = $tmp_fh->getline) {
+        my @entry = split("\t", $line);
+        $entry[0] =~ s/chr//g;
+        print $tmp_2_fh join("\t",@entry);
+    }
+    $tmp_fh->close;
+    $tmp_2_fh->close;
     my %merge_params = (
-        input_file => $tmp_file,
+        input_file => $tmp_2_file,
         output_file => $bed_file,
         report_names => 1,
     );
