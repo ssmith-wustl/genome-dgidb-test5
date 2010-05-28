@@ -130,13 +130,13 @@ sub _resolve_sequencing_platform_for_subclass_name {
     return $sequencing_platform;
 }
 
-#This directory is used by both CDNA and now Capture models as well
+#This directory is used by both cDNA and now Capture models as well
 sub reference_coverage_directory {
     my $self = shift;
     return $self->data_directory .'/reference_coverage';
 }
 
-####BEGIN CAPTURE SECTION####
+####BEGIN REGION OF INTEREST SECTION####
 
 sub alignment_summary_file {
     my ($self,$wingspan) = @_;
@@ -217,6 +217,9 @@ sub coverage_stats_file {
 
 sub coverage_stats_summary_file {
     my ($self,$wingspan) = @_;
+    unless (defined($wingspan)) {
+        die('Must provide wingspan_value to method coverage_stats_file in '. __PACKAGE__);
+    }
     my @stats_files = glob($self->coverage_stats_directory_path($wingspan) .'/*STATS.txt');
     unless (@stats_files) {
         return;
@@ -250,15 +253,15 @@ sub coverage_stats_summary_hash_ref {
     return \%stats_summary;
 }
 
-sub capture_set_bed_file {
+sub region_of_interest_set_bed_file {
     my $self = shift;
-    my $capture_set = $self->model->capture_set;
-    unless ($capture_set) {
-        die('Failed to find capture set!');
-    }
-    my $bed_file_path = $self->reference_coverage_directory .'/'. $capture_set->id .'.bed';
+
+    my $roi_set = $self->model->region_of_interest_set;
+    return unless $roi_set;
+
+    my $bed_file_path = $self->reference_coverage_directory .'/'. $roi_set->id .'.bed';
     unless (-e $bed_file_path) {
-        unless ($capture_set->print_bed_file($bed_file_path)) {
+        unless ($roi_set->print_bed_file($bed_file_path)) {
             die('Failed to print bed file to path '. $bed_file_path);
         }
     }
@@ -333,7 +336,7 @@ sub minimum_mapping_quality {
     return $self->{_minimum_mapping_quality};
 }
 
-####END CAPTURE SECTION####
+####END REGION OF INTEREST SECTION####
 
 1;
 
