@@ -28,10 +28,10 @@ sub execute {
         $self->error_message('Failed to create coverage directory '. $coverage_dir .":  $!");
         return;
     }
-    my $bed_file = $self->build->capture_set_bed_file;
+    my $bed_file = $self->build->region_of_interest_set_bed_file;
     my %coverage_stats_params = (
         output_directory => $coverage_dir,
-        bed_file => $self->build->capture_set_bed_file,
+        bed_file => $bed_file,
         bam_file => $self->build->whole_rmdup_bam_file,
         minimum_depths => $self->build->minimum_depths,
         wingspan_values => $self->build->wingspan_values,

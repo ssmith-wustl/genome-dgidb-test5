@@ -113,8 +113,8 @@ sub execute {
     return unless $self->_check_rv("Running samtools indel failed with exit code $rv\nCommand: $indel_cmd", $rv, 0);
 
     #for capture models we need to limit the snps and indels to within the defined target regions
-    if ($self->model->capture_set_name) {
-        my $bed_file = $self->build->capture_set_bed_file;
+    if ($self->model->region_of_interest_set_name) {
+        my $bed_file = $self->build->region_of_interest_set_bed_file;
         for my $var_file ($snp_output_file, $indel_output_file) {
             my $tmp_limited_file = $var_file .'_limited';
             my $no_limit_file = $var_file .'.no_bed_limit';
@@ -123,7 +123,7 @@ sub execute {
                 bed_file => $bed_file,
                 output_file => $tmp_limited_file,
             )) {
-                $self->error_message('Failed to limit samtools variants '. $var_file .' to within capture target regions '. $bed_file);
+                $self->error_message('Failed to limit samtools variants '. $var_file .' to within regions of interest '. $bed_file);
                 die($self->error_message);
             }
             unless (move($var_file,$no_limit_file)) {
@@ -155,7 +155,8 @@ sub execute {
     elsif ($filter_type =~ /^SnpFilter$/i) {
         my %indel_filter_params = ( indel_file => $indel_output_file);
         # for capture data we do not know the proper ceiling for depth
-        if ($self->model->capture_set_name) {
+        if ($self->model->region_of_interest_set_name) {
+            # SHOULD THIS BE A PART OF THE PROCESSING PROFILE THOUGH???
             $indel_filter_params{max_read_depth} = 1000000;
         }
         my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(%indel_filter_params);
