@@ -21,9 +21,9 @@ ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp test_dir");
 foreach my $file_name ('gap.txt', 'contigs.bases', 'readinfo.txt') {
     my $old = $data_dir.'/edit_dir/'.$file_name;
     my $new = $temp_dir.'/edit_dir/'.$file_name;
-    ok (-s $old, "Test $file_name file exists");
+    ok (-e $old, "Test $file_name file exists"); #gap.txt can be blank
     ok(File::Copy::copy($old, $temp_dir.'/edit_dir'),"Copied $file_name to temp dir");
-    ok (-s $new, "New $file_name exists");
+    ok (-e $new, "New $file_name exists");
 }
 
 my $ec = system("chdir $temp_dir; gmt assembly create-output-files reads-placed --directory $temp_dir");
