@@ -127,7 +127,7 @@ sub execute {
         return;
     }
 
-    my ($bam2cfg_params, $breakdancer_params) = split(":", $processing_profile->sv_detector_params);
+    my $sv_params = $processing_profile->sv_detector_params;
     my $breakdancer_version = $processing_profile->sv_detector_version;
     
     my $workflow = Genome::Model::Tools::Somatic::Compare::Bams->create(
@@ -142,8 +142,7 @@ sub execute {
         min_somatic_quality => $min_somatic_quality,
         require_dbsnp_allele_match => $require_dbsnp_allele_match,
         build_id => $build->id,
-        bam2cfg_params => $bam2cfg_params,
-        breakdancer_params => $breakdancer_params,
+        sv_params => $sv_params,
         breakdancer_version => $breakdancer_version,
     );
 

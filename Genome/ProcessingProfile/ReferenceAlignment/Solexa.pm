@@ -64,7 +64,6 @@ sub reference_coverage_job_classes {
 
 sub variant_detection_job_classes {
     my @steps = (
-        'Genome::Model::Event::Build::ReferenceAlignment::UpdateGenotype',
         'Genome::Model::Event::Build::ReferenceAlignment::FindVariations'
     );
     return @steps;
@@ -93,13 +92,10 @@ sub transcript_annotation_job_classes{
 
 sub generate_reports_job_classes {
     my $self = shift;
-    if (defined($self->indel_finder_name)) {
-        my @steps = (
-            'Genome::Model::Event::Build::ReferenceAlignment::RunReports'
-        );
+    my @steps = (
+        'Genome::Model::Event::Build::ReferenceAlignment::RunReports'
+    );
     return @steps;
-    }
-    return;
 }
 
 sub alignment_objects {

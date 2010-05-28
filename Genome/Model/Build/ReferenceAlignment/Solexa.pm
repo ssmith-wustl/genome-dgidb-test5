@@ -95,11 +95,13 @@ sub calculate_input_base_counts_after_trimq2 {
 
 sub consensus_directory {
     my $self = shift;
-    return $self->data_directory .'/consensus';
-}
-
-sub _consensus_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/consensus/%s.cns',@_);
+    
+    my $old_path = $self->data_directory .'/consensus';
+    if(-d $old_path) {
+        return $old_path;
+    } else {
+        return $self->snp_related_metric_directory .'/consensus';
+    }
 }
 
 sub bam_pileup_file_path {
@@ -233,7 +235,8 @@ sub unfiltered_snp_file {
     return shift->snp_related_metric_directory . '/snps_all_sequences';
 }
 
-
+#FIXME this is pretty bad, and hardcoded. Used to be coded only to work for samtools and maq. Tacked on varscan for now. 
+# This should be changed (along with _snp_caller_type) to be very generic for new variant detectors to be added.
 sub filtered_indel_file {
     my $self = shift;
     
@@ -244,6 +247,9 @@ sub filtered_indel_file {
         $self->warning_message('Maq tool was used for indel calling. indelpe.sorted.out is filtered sorted indelpe output');
         return $self->snp_related_metric_directory . '/indelpe.sorted.out';
     }
+    elsif ($self->_snp_caller_type eq 'varscan') {
+        return $self->snp_related_metric_directory . '/varscan.status.indel';
+    }
     else {
         $self->error_message('Unknown snp caller: '.$self->_snp_caller_type);
         return;
@@ -251,6 +257,8 @@ sub filtered_indel_file {
 }
 
 
+#FIXME this is pretty bad, and hardcoded. Used to be coded only to work for samtools and maq. Tacked on varscan for now. 
+# This should be changed (along with _snp_caller_type) to be very generic for new variant detectors to be added.
 sub unfiltered_indel_file {
     my $self =shift;
 
@@ -260,6 +268,9 @@ sub unfiltered_indel_file {
     elsif ($self->_snp_caller_type eq 'maq') {
         $self->warning_message('Maq tool was used for indel calling. indels_all_sequences is the output of indelsoa, not indelpe');
         return $self->snp_related_metric_directory . '/indels_all_sequences';
+    }
+    elsif ($self->_snp_caller_type eq 'varscan') {
+        return $self->snp_related_metric_directory . '/varscan.status.indel';
     }
     else {
         $self->error_message('Unknown snp caller: '.$self->_snp_caller_type);

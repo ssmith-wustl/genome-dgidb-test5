@@ -124,8 +124,11 @@ sub default_filenames{
     my $self = shift;
    
     my %default_filenames = (
+        breakdancer_working_directory       => 'breakdancer/',
+        sniper_working_directory            => 'sniper/',
+                
+
         ## glfSomatic Output Files ##
-        sniper_snp_output                   => 'somaticSniper.output.snp',
         sniper_snp_output_adaptor           => 'somaticSniper.output.snp.adaptor',
         sniper_snp_output_filter            => 'somaticSniper.output.snp.filter',
         sniper_snp_output_filter_hc         => 'somaticSniper.output.snp.filter.hc',
@@ -134,7 +137,6 @@ sub default_filenames{
 
         ## Files formatted for annotation ##
         
-       sniper_indel_output                 => 'somaticSniper.output.indel',
        adaptor_output_indel                => 'somaticSniper.output.indel.formatted',
        filter_indel_output                 => 'somaticSniper.output.indel.formatted.filter',
 
@@ -184,8 +186,6 @@ sub default_filenames{
 
         ## Breakdancer and Copy Number files ##
 
-        breakdancer_config_file             => 'breakdancer_config',
-        breakdancer_output_file             => 'breakdancer.csv',
         copy_number_output                  => 'copy_number.csv',
         circos_graph                        => 'circos_graph.png',
         variant_report_output               => 'cancer_report.html', 
@@ -208,15 +208,14 @@ __DATA__
 
 <!-- SOMATIC SNIPER -->
   <operation name="Somatic Sniper">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::Sniper" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="Genome::Model::Tools::DetectVariants::Somatic::Sniper" typeClass="Workflow::OperationType::Command" />
   </operation>
   
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Somatic Sniper" toProperty="skip_if_output_present" />
-  <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Somatic Sniper" toProperty="normal_bam_file" />
-  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Somatic Sniper" toProperty="tumor_bam_file" />
-  <link fromOperation="input connector" fromProperty="sniper_snp_output" toOperation="Somatic Sniper" toProperty="output_snp_file" />
-  <link fromOperation="input connector" fromProperty="sniper_indel_output" toOperation="Somatic Sniper" toProperty="output_indel_file" />
-  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Somatic Sniper" toProperty="reference_file" />
+  <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Somatic Sniper" toProperty="control_aligned_reads_input" />
+  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Somatic Sniper" toProperty="aligned_reads_input" />
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Somatic Sniper" toProperty="reference_sequence_input" />
+  <link fromOperation="input connector" fromProperty="sniper_working_directory" toOperation="Somatic Sniper" toProperty="working_directory" />
 
 
 <!-- INDEL PE RUNNER -->
@@ -237,7 +236,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Snp Filter" toProperty="skip_if_output_present" />
   <link fromOperation="Indelpe Runner Tumor" fromProperty="filtered_snp_file" toOperation="Snp Filter" toProperty="tumor_snp_file" />
   <link fromOperation="input connector" fromProperty="sniper_snp_output_filter" toOperation="Snp Filter" toProperty="output_file" />
-  <link fromOperation="Somatic Sniper" fromProperty="output_snp_file" toOperation="Snp Filter" toProperty="sniper_snp_file" />
+  <link fromOperation="Somatic Sniper" fromProperty="snp_output" toOperation="Snp Filter" toProperty="sniper_snp_file" />
 
 <!-- FORMAT FILTERED SNIPER SNPS -->
 
@@ -248,7 +247,7 @@ __DATA__
 <!-- FORMAT SNIPER INDELS -->
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Sniper Adaptor Indel" toProperty="skip_if_output_present" />
-  <link fromOperation="Somatic Sniper" fromProperty="output_indel_file" toOperation="Sniper Adaptor Indel" toProperty="somatic_file" />
+  <link fromOperation="Somatic Sniper" fromProperty="indel_output" toOperation="Sniper Adaptor Indel" toProperty="somatic_file" />
   <link fromOperation="input connector" fromProperty="adaptor_output_indel" toOperation="Sniper Adaptor Indel" toProperty="output_file" />
 
 <!-- FILTER SNIPER INDELS -->
@@ -423,11 +422,13 @@ __DATA__
 <!-- RUN BREAKDANCER AND COPYNUMBER -->
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Breakdancer" toProperty="skip_if_output_present" />
-  <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Breakdancer" toProperty="normal_bam_file" />
-  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Breakdancer" toProperty="tumor_bam_file" />
-  <link fromOperation="input connector" fromProperty="breakdancer_output_file" toOperation="Breakdancer" toProperty="breakdancer_output" />
-  <link fromOperation="input connector" fromProperty="breakdancer_config_file" toOperation="Breakdancer" toProperty="config_output" />
+  <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Breakdancer" toProperty="control_aligned_reads_input" />
+  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Breakdancer" toProperty="aligned_reads_input" />
+  <link fromOperation="input connector" fromProperty="breakdancer_working_directory" toOperation="Breakdancer" toProperty="working_directory" />
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Breakdancer" toProperty="reference_sequence_input" />
   <link fromOperation="input connector" fromProperty="skip_sv" toOperation="Breakdancer" toProperty="skip" />
+                
+
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Copy Number Alteration" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Copy Number Alteration" toProperty="normal_bam_file" />
@@ -440,7 +441,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Plot Circos" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="circos_graph" toOperation="Plot Circos" toProperty="output_file" />
   <link fromOperation="Copy Number Alteration" fromProperty="output_file" toOperation="Plot Circos" toProperty="cna_file" />
-  <link fromOperation="Breakdancer" fromProperty="breakdancer_output" toOperation="Plot Circos" toProperty="sv_file" />
+  <link fromOperation="Breakdancer" fromProperty="sv_output" toOperation="Plot Circos" toProperty="sv_file" />
   <link fromOperation="Upload Variants Snp Tier 1" fromProperty="output_file" toOperation="Plot Circos" toProperty="tier1_hclabel_file" />
 
 
@@ -549,7 +550,7 @@ __DATA__
   </operation>
 
   <operation name="Breakdancer">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::Breakdancer" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="Genome::Model::Tools::DetectVariants::Somatic::Breakdancer" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Copy Number Alteration">
@@ -598,16 +599,14 @@ __DATA__
     <inputproperty isOptional="Y">skip_sv</inputproperty>
 
     <inputproperty isOptional="Y">data_directory</inputproperty>
-    <inputproperty isOptional="Y">sniper_snp_output</inputproperty>
-    <inputproperty isOptional="Y">sniper_indel_output</inputproperty>
+    <inputproperty isOptional="Y">sniper_working_directory</inputproperty>
 
     <inputproperty isOptional="Y">normal_indelpe_data_directory</inputproperty>
     <inputproperty isOptional="Y">tumor_indelpe_data_directory</inputproperty>
 
     <inputproperty isOptional="Y">sniper_snp_output_filter</inputproperty>
 
-    <inputproperty isOptional="Y">breakdancer_config_file</inputproperty>
-    <inputproperty isOptional="Y">breakdancer_output_file</inputproperty>
+    <inputproperty isOptional="Y">breakdancer_working_directory</inputproperty>
     
     <inputproperty isOptional="Y">copy_number_output</inputproperty>
     <inputproperty isOptional="Y">circos_graph</inputproperty>

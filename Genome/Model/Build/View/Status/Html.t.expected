@@ -272,7 +272,7 @@ popup.center();
 <td class="label">
                           Succeeded:
                         </td>
-<td class="value">2</td>
+<td class="value">1</td>
 </tr>
 <tr class="ghost">
 <td class="label">
@@ -290,7 +290,7 @@ popup.center();
 <td class="label">
                             Total:
                           </td>
-<td class="value">2</td>
+<td class="value">1</td>
 </tr>
 </table></td>
 <td><table class="stage" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -407,22 +407,13 @@ popup.center();
 <th>completed</th>
 <th class="last">elapsed</th>
 </tr></thead>
-<tbody>
-<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289771",event_status:"Succeeded",lsf_job_id:"966953",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:26",date_completed:"2010-02-28 23:15:27",elapsed_time:"00:01",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.out\"&gt;101289771.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.err\"&gt;101289771.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::UpdateGenotype::Samtools #101289771"});'>
-<td>ReferenceAlignment::UpdateGenotype::Samtools</td>
-<td class="status succeeded">succeeded</td>
-<td>2010-02-28 23:15:26</td>
-<td>2010-02-28 23:15:27</td>
-<td class="last">00:01</td>
-</tr>
-<tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289772",event_status:"Succeeded",lsf_job_id:"966970",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:43",date_completed:"2010-03-01 00:01:48",elapsed_time:"46:05",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.out\"&gt;101289772.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.err\"&gt;101289772.err&lt;/a&gt;",alignment_directory:"",popup_title:"ReferenceAlignment::FindVariations::Samtools #101289772"});'>
-<td>ReferenceAlignment::FindVariations::Samtools</td>
+<tbody><tr onmouseover="this.className = 'hover'" onmouseout="this.className=''" onclick='javascript:event_popup({event_id:"101289772",event_status:"Succeeded",lsf_job_id:"966970",lsf_job_status:"UNAVAILABLE",date_scheduled:"2010-02-28 23:15:43",date_completed:"2010-03-01 00:01:48",elapsed_time:"46:05",instrument_data_id:"",output_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.out\"&gt;101289772.out&lt;/a&gt;",error_log_file:"&lt;a href=\"http://gscweb/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289772.err\"&gt;101289772.err&lt;/a&gt;",alignment_directory:"",popup_title:" #101289772"});'>
+<td></td>
 <td class="status succeeded">succeeded</td>
 <td>2010-02-28 23:15:43</td>
 <td>2010-03-01 00:01:48</td>
 <td class="last">46:05</td>
-</tr>
-</tbody>
+</tr></tbody>
 </table>
 <h2>generate reports</h2>
 <table class="list tablesorter" width="100%" cellspacing="0" cellpadding="0" border="0" id="generate_reports">

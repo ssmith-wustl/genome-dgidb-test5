@@ -26,7 +26,11 @@ class Genome::Model::Tools::Varscan::Germline {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		bam_file	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
 		output_snp	=> { is => 'Text', doc => "Basename for SNP output, eg. varscan.snp" , is_optional => 0, is_input => 1, is_output => 1},
+		#output_snp_filtered   => { is => 'Text', doc => "Name for filtered SNP output" , calculate_from => ['output_snp'], calculate => q{ $output_snp . '.filter' }, is_input => 1, is_output => 1, is_mutable => 0,},
+		output_snp_filtered   => { is => 'Text', doc => "Name for filtered SNP output, (calculated based upon output_snp)", is_input => 1, is_output => 1, is_optional => 1}, 
 		output_indel	=> { is => 'Text', doc => "Basename for indel output, eg. varscan.indel" , is_optional => 0, is_input => 1, is_output => 1},
+		output_indel_filtered   => { is => 'Text', doc => "Name for filtered indel output, (calculated based upon output_indel)", is_input => 1, is_output => 1, is_optional => 1},
+		#output_indel_filtered   => { is => 'Text', doc => "Name for filtered indel output" , calculate_from => ['output_indel'], calculate => q{ $output_indel . '.filter' }, is_input => 1, is_output => 1, is_mutable => 0,}, 
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.05]" , is_optional => 1, is_input => 1},
@@ -77,6 +81,15 @@ sub execute {                               # replace with real execution logic.
 
 	## Get VarScan parameters ##
 
+     #TODO Remove this and replace with the calculated immutable properties above (when these UR changes are out).
+     unless($self->output_snp_filtered) {
+         $self->output_snp_filtered($self->output_snp . '.filter');
+     }
+     
+     unless($self->output_indel_filtered) {
+         $self->output_indel_filtered($self->output_indel . '.filter');
+     }
+
 	my $varscan_params = "--min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01"; #--min-coverage 8 --verbose 1
 	$varscan_params = $self->varscan_params if($self->varscan_params);
 
@@ -102,15 +115,16 @@ sub execute {                               # replace with real execution logic.
 		parse_variants_file("$output_snp.variants", $output_snp, $output_indel);
 
 		## Filter Indels ##
-
-		$cmd = "bash -c \"$path_to_varscan filter $output_indel >$output_indel.filter\"";
+          my $filtered_indel_file = $self->output_indel_filtered;
+		$cmd = "bash -c \"$path_to_varscan filter $output_indel >$filtered_indel_file\"";
 		print "RUN: $cmd\n";
 		system($cmd);
 
 		## Filter SNPs using Indels ##
-		if(-e $output_snp && -e "$output_indel.filter")
+		if(-e $output_snp && -e $filtered_indel_file)
 		{
-			$cmd = "bash -c \"$path_to_varscan filter $output_snp --indel-file $output_indel.filter >$output_snp.filter\"";
+		     my $filtered_snp_file = $self->output_snp_filtered;
+			$cmd = "bash -c \"$path_to_varscan filter $output_snp --indel-file $filtered_indel_file >$filtered_snp_file\"";
 			print "RUN: $cmd\n";
 			system($cmd);
 		}

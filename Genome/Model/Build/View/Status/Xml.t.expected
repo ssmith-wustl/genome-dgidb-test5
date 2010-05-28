@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<build-status generated-at="2010-04-28 16:14:50">
+<build-status generated-at="2010-05-13 14:15:48">
   <build model-name="ssmith-test2-realsample-realpp" model-id="2851407278" common-name="AML51" build-id="101289765" status="Succeeded" kilobytes-requested="4984448" data-directory="/gscmnt/sata427/info/model_data/2851407278/build101289765" lsf-job-id="966891" output-log="/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289767.out" error-log="/gscmnt/sata427/info/model_data/2851407278/build101289765/logs//101289767.err">
     <model id="2851407278" type="Genome::Model::ReferenceAlignment">
       <aspect name="name">
@@ -96,32 +96,10 @@
       </stage>
       <stage value="variant_detection">
         <command_classes>
-          <command_class value="Genome::Model::Event::Build::ReferenceAlignment::UpdateGenotype">
-            <events>
-              <event id="101289771" command_class="Genome::Model::Event::Build::ReferenceAlignment::UpdateGenotype::Samtools">
-                <event_status>Succeeded</event_status>
-                <instance_id>1753530</instance_id>
-                <execution_count>1</execution_count>
-                <instance_status>done</instance_status>
-                <lsf_job_id>966953</lsf_job_id>
-                <lsf_job_status>UNAVAILABLE</lsf_job_status>
-                <date_scheduled>2010-02-28 23:15:26</date_scheduled>
-                <date_completed>2010-02-28 23:15:27</date_completed>
-                <elapsed_time>00:01</elapsed_time>
-                <instrument_data_id/>
-                <output_log_file>/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.out</output_log_file>
-                <error_log_file>/gscmnt/sata427/info/model_data/2851407278/build101289765/logs/all_sequences/101289771.err</error_log_file>
-                <alignment_directory/>
-              </event>
-            </events>
-          </command_class>
           <command_class value="Genome::Model::Event::Build::ReferenceAlignment::FindVariations">
             <events>
-              <event id="101289772" command_class="Genome::Model::Event::Build::ReferenceAlignment::FindVariations::Samtools">
+              <event id="101289772" command_class="Genome::Model::Event::Generic">
                 <event_status>Succeeded</event_status>
-                <instance_id>1753531</instance_id>
-                <execution_count>1</execution_count>
-                <instance_status>done</instance_status>
                 <lsf_job_id>966970</lsf_job_id>
                 <lsf_job_status>UNAVAILABLE</lsf_job_status>
                 <date_scheduled>2010-02-28 23:15:43</date_scheduled>

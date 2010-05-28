@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 15;
+use Test::More tests => 10;
 $ENV{UR_DBI_NO_COMMIT} = 1;
 
 my $m = Genome::Model->get(2771359026); 
@@ -28,19 +28,6 @@ unless ($last_complete_build->id == $build_id) {
 }
 
 my $refseq = 'all_sequences';
-
-#my @f = $m->_consensus_files('X');  New way only contains all_sequences....
-my @cns = $m->_consensus_files($refseq); 
-ok(scalar @cns, "identified " . scalar @cns . " consensus file by $refseq");
-
-#my @f2 = $m->assembly_file_for_refseq('X');
-my @asm = $m->assembly_file_for_refseq($refseq);
-is_deeply(\@cns, \@asm, "old consensus method matches new with $refseq");
-
-my @cns2 = $m->_consensus_files();
-is(scalar @cns2, 1, 'Got only 1 consensus file');
-ok(all_exist(@cns2), "the consensus files exist") or diag('example path: ' . $cns2[0]);
-is_deeply(\@cns, \@cns2, "Giving w/o ref seq filter will return $refseq file");
 
 my @var = $m->_variant_list_files();
 ok(scalar @var, "identified " . scalar @var . " snp files of $refseq");

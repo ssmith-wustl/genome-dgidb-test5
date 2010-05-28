@@ -216,13 +216,25 @@ sub other_snp_related_metric_directory {
     return $self->complete_build_directory . "/other_snp_related_metrics/";
 }
 
+#FIXME this is pretty bad, and hardcoded. Used to be coded only to work for samtools and maq. Tacked on varscan for now. 
+# This should be changed to be very generic for new variant detectors to be added.
 sub _snp_caller_type {
     my $self = shift;
-    if ($self->indel_finder_name) {
-        return substr($self->indel_finder_name, 0, 3);
-    }
-    else {
-        return $self->processing_profile->name =~ /samtools/i ? 'sam' : 'maq';
+
+    if ($self->snp_detector_name) {
+        if ($self->snp_detector_name =~ /samtools/i) {
+            return 'sam';
+        } elsif ($self->snp_detector_name =~ /maq/i) {
+            return 'maq';
+        } elsif ($self->snp_detector_name =~ /var-scan/i) {
+            return 'varscan';
+        } else {
+            $self->error_message("Unrecognized snp_detector_name set for model " . $self->name . " " . $self->genome_model_id);
+            return;
+        }
+    } else {
+        $self->error_message("No snp_detector_name set for model " . $self->name . " " . $self->genome_model_id);
+        return;
     }
 }
 
@@ -661,12 +673,6 @@ sub reference_build {
 # Results data
 # TODO: refactor to not be directly in the model
 
-# TODO: this consensus doesn't have the alignments, so assembly is not a good name
-*assembly_file_for_refseq = \&_consensus_files;
-
-sub _consensus_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/consensus/%s.cns',@_);
-}
 #clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
 sub _variant_list_files {
     return shift->_variant_files('snps', @_);

@@ -52,12 +52,12 @@ sub generate_report_brief {
 sub generate_report_detail {
     my $self = shift;
     
-    my $genotyper_name = $self->model->genotyper_name;
+    my $variant_detector_name = $self->model->read_aligner_name;
 
-    if ($genotyper_name eq 'samtools') { 
-        return $self->get_bam_content;
-    } else {
+    if ($variant_detector_name eq 'maq') { 
         return $self->get_maq_content;
+    } else {
+        return $self->get_bam_content;
     }
 }
 

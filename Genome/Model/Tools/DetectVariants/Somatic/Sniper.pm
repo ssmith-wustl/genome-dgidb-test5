@@ -1,0 +1,185 @@
+package Genome::Model::Tools::DetectVariants::Somatic::Sniper;
+
+use warnings;
+use strict;
+
+use Genome;
+use Workflow;
+
+class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
+    is => ['Genome::Model::Tools::DetectVariants::Somatic'],
+    has => [
+        snp_output => {
+            calculate_from => ["working_directory"],
+            calculate => q{ $working_directory . '/snp_output.csv' },
+            is_output=>1,
+        },
+        indel_output => {
+            calculate_from => ["working_directory"],
+            calculate => q{ $working_directory . '/indel_output.csv' },
+            is_output=>1,
+        },
+        detect_snps => { 
+            default_value => 1,
+            doc => "Whether or not the tool should detect snps.  If set to false, the tool will still discover snps and indels at the same time, but will throw away any snps it detects",
+            is_optional => 1,
+        },
+        detect_indels => { 
+            default_value => 1,
+            doc => "Whether or not the tool should detect indels.  If set to false, the tool will still discover snps and indels at the same time, but will throw away any indels it detects",
+            is_optional => 1,
+        },
+        snp_params => {
+            is => 'Text',
+            default => '-q 1 -Q',
+            doc => "Parameters for running bam-somaticsniper for snps. Since it discovers both snps and indels in one run, providing different parameters for snps and indels causes bam-somatisniper to run twice.",
+        },
+        indel_params => {
+            is => 'Text',
+            default => '-q 1 -Q',
+            doc => "Parameters for running bam-somaticsniper for indels. Since it discovers both snps and indels in one run, providing different parameters for snps and indels causes bam-somatisniper to run twice.",
+        },
+        quality_filter => { #TODO FIXME this should be rolled into snp or indel params, maybe.
+            is => 'Integer',
+            is_input=>1,
+            is_optional=>1, 
+            doc=>'minimum somatic quality to include in the snp output. default is 15.',
+            default=>15,
+        },
+        reference_sequence_input => {
+            is  => 'String',
+            is_input=>1,
+            is_optional=>1, 
+            default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa', 
+            doc => 'The somatic sniper reference file',
+        },
+        skip_if_output_present => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 1,
+            doc => 'enable this flag to skip this step if the output_file is already present. Useful for pipelines.',
+        },
+    ],
+    # Make workflow choose 64 bit blades
+    has_param => [
+        lsf_queue => {
+            default_value => 'long'
+        }, 
+        lsf_resource => {
+            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
+        },
+    ],
+    # These are params from the superclass' standard API that we do not require for this class (dont show in the help)
+    has_constant_optional => [
+        sv_params=>{},
+        capture_set_input=>{},
+    ],
+};
+
+sub help_brief {
+    "Produces a list of high confidence somatic snps and indels.";
+}
+
+sub help_synopsis {
+    my $self = shift;
+    return <<"EOS"
+gmt somatic sniper --aligned-reads-input tumor.bam --control-bam-input normal.bam --working-directory sniper
+gmt somatic sniper --bam tumor.bam --control normal.bam --work sniper --quality 25
+EOS
+}
+
+sub help_detail {                           
+    return <<EOS 
+    Provide a tumor and normal BAM file and get a list of somatic snps.  
+EOS
+}
+
+sub execute {
+    my $self = shift;
+    $DB::single = 1;
+
+    # Skip if both output files exist... not sure if this should be here or not
+    if (($self->skip_if_output_present)&&(-s $self->snp_output)&&(-s $self->indel_output)) {
+        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
+        return 1;
+    }
+
+    unless ($self->detect_snps || $self->detect_indels) {
+        $self->status_message("Both detect_snps and detect_indels are set to false. Skipping execution.");
+        return 1;
+    }
+
+    $self->status_message("beginning execute");
+
+    unless (Genome::Utility::FileSystem->create_directory($self->working_directory) ) {
+        $self->error_message("Could not create working_directory: " . $self->working_directory);
+        return;
+    }
+    
+    # Validate files
+    unless ( Genome::Utility::FileSystem->validate_file_for_reading($self->aligned_reads_input) ) {
+        $self->error_message("Could not validate tumor file:  ".$self->aligned_reads_input );
+        die;
+    } 
+
+    unless ( Genome::Utility::FileSystem->validate_file_for_reading($self->control_aligned_reads_input) ) {
+        $self->error_message("Could not validate normal file:  ".$self->control_aligned_reads_input );
+        die;
+    } 
+
+    # Run sniper C program... run twice if we get different sets of params for snps and indels
+    my $snp_params = $self->snp_params || "";
+    my $indel_params = $self->indel_params || "";
+    my $result;
+    if ( ($self->detect_snps && $self->detect_indels) && ($snp_params eq $indel_params) ) {
+        $result = $self->_run_sniper($snp_params, $self->snp_output, $self->indel_output);
+    } else {
+        # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
+        if ($self->detect_snps && $self->detect_indels) {
+            $self->status_message("Snp and indel params are different. Executing sniper twice: once each for snps and indels with their respective parameters");
+        }
+        my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
+
+        if ($self->detect_snps) {
+            $result = $self->_run_sniper($snp_params, $self->snp_output, $temp_name);
+        }
+        if ($self->detect_indels) {
+            if($self->detect_snps and not $result) {
+                $self->status_message('Sniper did not report success for snp detection. Skipping indel detection.')
+            } else {
+                $result = $self->_run_sniper($indel_params, $temp_name, $self->indel_output);
+            }
+        }
+    }
+    
+    #Manually check for $self->indel_output as there might not be any indels and shellcmd()
+    # chokes unless either all are present or all are empty.
+    #(This means shellcmd() can check for the SNPs file on its own and still work given an empty result.)
+    #Varied the warning text slightly so this message can be disambiguated from shellcmd() output in future debugging
+    unless(-s $self->indel_output) {
+        #Touch the file to make sure it exists
+        my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->indel_output);
+        unless ($fh) {
+            $self->error_message("failed to touch " . $self->indel_output . "!: " . Genome::Utility::FileSystem->error_message);
+            die;
+        }
+        $fh->close;
+        
+        $self->warning_message("ALLOWING zero size output file " . $self->indel_output);
+    }
+
+    $self->status_message("ending execute");
+    return $result; 
+}
+
+sub _run_sniper {
+    my ($self, $params, $snp_output, $indel_output) = @_;
+    
+    my $cmd = "bam-somaticsniper " . $params . " " . $self->quality_filter. " -f ".$self->reference_sequence_input." ".$self->aligned_reads_input." ".$self->control_aligned_reads_input ." " . $snp_output . " " . $indel_output; 
+    my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input], output_files=>[$self->snp_output], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
+
+    return $result;
+}   
+
+1;
