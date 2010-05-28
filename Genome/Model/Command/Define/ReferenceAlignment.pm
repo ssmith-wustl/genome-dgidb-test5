@@ -16,7 +16,12 @@ class Genome::Model::Command::Define::ReferenceAlignment {
             is => 'Text',
             is_optional => 1,
             is_many => 1,
-            doc => 'limit the model to take specific capture or PCR data'
+            doc => 'limit the model to take specific capture or PCR instrument data'
+        },
+        region_of_interest_set_name => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'limit coverage and variant detection to within these regions of interest',
         }
     ]
 };
@@ -109,7 +114,20 @@ sub execute {
     else {
         $self->status_message("Modeling whole-genome (non-targeted) sequence.");
     }
-
+    if ($self->region_of_interest_set_name) {
+        my $name = $self->region_of_interest_set_name;
+        my $i = $model->add_input(value_class_name => 'UR::Value', value_id => $name, name => 'region_of_interest_set_name');
+        if ($i) {
+            $self->status_message("Analysis limited to region of interest set '$name'");
+        }
+        else {
+            $self->error_message("Failed to add region of interest set '$name'!");
+            $model->delete;
+            return;
+        }
+    } else {
+        $self->status_message("Analyzing whole-genome (non-targeted) reference.");
+    }
 
     return $result;
 }
