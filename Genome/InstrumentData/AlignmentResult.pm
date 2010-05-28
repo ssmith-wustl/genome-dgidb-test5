@@ -11,8 +11,8 @@ use strict;
 
 class Genome::InstrumentData::AlignmentResult {
     is_abstract => 1,
-    is=>['Genome::SoftwareResult'],
-    sub_classification_method_name => '_resolve_subclass_name',   
+    is => 'Genome::SoftwareResult',
+    sub_classification_method_name => '_resolve_subclass_name',
     has => [
         instrument_data         => {
                                     is => 'Genome::InstrumentData',
@@ -41,7 +41,7 @@ class Genome::InstrumentData::AlignmentResult {
         test_name               => {
                                     is=>'Text',
                                     is_optional=>1,
-                                    doc=>'Assigns a testing tag to the alignments.  These will not be used in pipelines.',
+                                    doc=>'Assigns a testing tag to the alignments.  Alignments with a value set will not be used by pipelines.  They will shortcut only when the test name is repeated.',
                                 },
         aligner_name            => {
                                     is => 'Text', default_value => 'maq',
@@ -172,6 +172,8 @@ class Genome::InstrumentData::AlignmentResult {
     ],
 };
 
+# OVERRIDE IN SUBCLASSES
+
 sub required_arch_os {
     # override in subclasses if 64-bit is not required
     'x86_64' 
@@ -188,6 +190,13 @@ sub extra_metrics {
     ()
 }
 
+sub _run_aligner {
+    my $self = shift;
+    my $class = $self->class;
+    die "$class does not implement _run_aligner!!!";
+}
+
+# BASE API
 
 sub _resolve_subclass_name {
     my $class = shift;
