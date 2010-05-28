@@ -34,6 +34,9 @@ sub _add_to_report_xml {
     
     my $doc = $self->_xml;
 
+    my $sample = $model->tumor_model->subject;
+    undef $sample unless $sample->isa('Genome::Sample');
+    
     my $individual = $model->subject;
 
     my $individual_node = $doc->createElement('individual');
