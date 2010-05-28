@@ -357,4 +357,3 @@ sub is_validated_status {
 }
 
 1;
-
