@@ -63,6 +63,7 @@ class Genome::Model::ReferenceAlignment {
         force_fragment               => { via => 'processing_profile'},
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
+        capture_set_name             => { via => 'processing_profile'},
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             via => 'inputs',
@@ -75,7 +76,6 @@ class Genome::Model::ReferenceAlignment {
         },
         reference_sequence_name      => { via => 'processing_profile'},
         coverage_stats_params        => { via => 'processing_profile'},
-        capture_set_name             => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events => {
             is => 'Genome::Model::Event::Build::ReferenceAlignment::AssignRun',
@@ -611,17 +611,28 @@ sub _get_sum_of_metric_values_from_events {
     return $sum;
 }
 
-sub capture_set {
+sub region_of_interest_set_name {
     my $self = shift;
-    unless ($self->{capture_set}) {
-        my $name = $self->capture_set_name;
-        my $capture_set = Genome::Capture::Set->get(name => $name);
-        unless ($capture_set) {
-            die('Failed to find capture set by name '. $name);
-        }
-        $self->{capture_set} = $capture_set;
+    if ($self->capture_set_name) {
+        $self->warning_message('Capture set name has been deprecated!  Model input region_of_interest_set_name should be used instead!');
+        return $self->capture_set_name;
     }
-    return $self->{capture_set};
+    my @inputs = Genome::Model::Input->get(model_id => $self->id, name => 'region_of_interest_set_name');
+    unless (@inputs) { return; }
+    if (@inputs > 1) { die('Only expecting one input for region_of_interest_set_name') }
+    return $inputs[0];
+}
+
+sub region_of_interest_set {
+    my $self = shift;
+    # TODO: Refactor Genome::Capture::Set to something more generic that will work for PCR, Transcriptome, etc.
+    my $name = $self->region_of_interest_set_name;
+    return unless $name;
+    my $roi_set = Genome::Capture::Set->get(name => $name);
+    unless ($roi_set) {
+        die('Failed to find capture set with name: '. $name);
+    }
+    return $roi_set;
 }
 
 # ehvatum TODO: remove this function and change everything that calls it to use ->reference_sequence_build directly
