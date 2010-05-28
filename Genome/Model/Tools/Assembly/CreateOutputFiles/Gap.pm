@@ -44,6 +44,7 @@ sub execute {
 	die "Can not create file handle for gap.txt file\n";
     
     my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->directory.'/contigs.fa');
+
     while (my $seq = $io->next_seq) {
 	my @bases = split (/N+/i, $seq->seq);
 	my @n_s = split (/[ACGT]+/i, $seq->seq);
