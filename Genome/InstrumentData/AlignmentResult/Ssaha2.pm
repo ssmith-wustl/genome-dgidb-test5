@@ -17,32 +17,30 @@ sub required_arch_os { 'x86_64' }
 
 # fill me in here with what compute resources you need.
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>10000] span[hosts=1] rusage[tmp=90000, mem=10000]' -M 10000000 -n 4";
+    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>10000] rusage[tmp=90000, mem=10000]' -M 10000000";
 }
 
 sub _run_aligner {
     my $self = shift;
-    my $input_pathnames = join ' ', @_;
 
+    # a little input validation
+    my $input_pathnames = join ' ', @_;
     my $aligner_params = $self->aligner_params;
     if ( @_ > 1 && not $aligner_params =~ /-pair/ ){
         $self->error_message('Multiple FastQs given, but -pair option not set.');
         return 0;
     }
     
+    # collect filepaths
     my $ssaha_path = Genome::Model::Tools::Ssaha2->path_for_ssaha2_version($self->aligner_version);
-
-    # get refseq info
-    my $reference_build = $self->reference_build;
-    my $ref_pathname = (File::Basename::fileparse($reference_build->full_consensus_path('fa')))[1];
-    my $ref_index = $ref_pathname . 'all_sequences.ssaha2';
-    
+    my $ref_index = $self->reference_build->data_directory . '/all_sequences.ssaha2';
     my $output_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $log_file = $self->temp_staging_directory . "/aligner.log";
 
-    # ex: ssaha2 -skip 3 -kmer 13 -best 1 -outfile ~/alignment-test/ssaha/best.sam -output sam -save ~/reference_human/all_sequences.ssaha2 ~/alignment-test/s21_seq.fq ~/alignment-test/s22_seq.fq
-    my $cmd = "$ssaha_path $aligner_params -outfile $output_file.tmp -output sam -save $ref_index $input_pathnames >>$log_file && cat $output_file.tmp >>$output_file";
+    # construct the command (using hacky temp-file to append)
+    my $cmd = "$ssaha_path $aligner_params -best 1 -udiff 1 -align 0 -output sam_soft -outfile $output_file.tmp -save $ref_index $input_pathnames >>$log_file && cat $output_file.tmp >>$output_file";
 
+    $DB::single = 1; # STOP, collaborate && listen
     Genome::Utility::FileSystem->shellcmd(
         cmd          => $cmd,
         input_files  => \@_,
@@ -50,9 +48,11 @@ sub _run_aligner {
         skip_if_output_is_present => 0,
     );
 
+    $DB::single = 1; # STOP, collaborate && listen
+
     unless (-s $output_file){
         $self->error_message('The sam output file is missing or empty.');
-        die $self->error_message;
+        return 0;
     }
     $self->status_message('SSAHA2 alignment finished.');
     return 1;
