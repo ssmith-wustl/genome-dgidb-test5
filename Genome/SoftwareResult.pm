@@ -317,6 +317,72 @@ sub _resolve_lock_name {
     my $resource_lock_name = "/gsc/var/lock/genome/$class_string/" .  $params_and_inputs_list_hash;
 }
 
+sub metric_names {
+    my $class = shift;
+    my $meta = $class->__meta__;
+    my @properties = grep { $_->{is_metric} } $meta->properties();
+    my @names = map { $_->property_name } @properties;
+    return @names;
+}
+
+sub metrics_hash {
+    my $self = shift;
+    my @names = $self->metric_names;
+    my %hash = map { $self->name } @names;
+    return %hash;
+}
+
+sub generate_expected_metrics {
+    my $self = shift;
+    my @names = @_;
+    unless (@names) {
+        @names = $self->metric_names;
+    }
+    
+    # pre-load all metrics
+    my @existing_metrics = $self->metrics;
+    
+    for my $name (@names) {
+        my $metric = $self->metric(name => $name);
+        if ($metric) {
+            $self->status_message(
+                $self->display_name . " has metric "
+                . $metric->name 
+                . " with value "
+                . $metric->value
+            );
+            next;
+        }
+        my $method = "_calculate_$name";
+        unless ($self->can($method)) {
+            $self->error_message("No method $method found!");
+            die $self->error_message;
+        }
+        $self->status_message(
+            $self->display_name . " is generating a value for metric "
+            . $metric->name 
+            . "..."
+        );
+        my $value = $self->$method();
+        unless (defined($value)) {
+            $self->error_message(
+                $self->display_name . " has metric "
+                . $metric->name 
+                . " FAILED TO CALCULATE A DEFINED VALUE"
+            );
+            next;
+        }
+        $self->$metric($value);
+        $self->status_message(
+            $self->display_name . " has metric "
+            . $metric->name 
+            . " with value "
+            . $metric->value
+        );
+    }
+}
+
+
 1;
 
     
