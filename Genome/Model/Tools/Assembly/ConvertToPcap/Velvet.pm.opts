@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Assembly::ConvertToPcap::Velvet::OPTS_SPEC = [
-          'contigs-fa-file=s',
-          undef,
-          'out-file=s',
-          undef,
-          'help!',
-          undef
-        ];
