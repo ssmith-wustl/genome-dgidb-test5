@@ -20,6 +20,10 @@ class Genome::Model::Build::ImportedReferenceSequence {
             where => [ name => 'fasta_file', value_class_name => 'UR::Value' ],
             doc => "fully qualified fasta filename to copy to all_sequences.fa in the build's data_directory."
         },
+        name => {
+            calculate_from => ['model_name','version'],
+            calculate => q| "$model_name-build$version" |,
+        }
     ],
     has_optional => [
         version => {
@@ -35,11 +39,11 @@ class Genome::Model::Build::ImportedReferenceSequence {
             to => 'value_id',
             where => [ name => 'prefix', value_class_name => 'UR::Value' ],
             doc => 'The source of the sequence (such as NCBI).  May not contain spaces.'
-        }
+        }        
     ]
 };
 
-sub name {
+sub Xname {
     my $self = shift;
     my $model = $self->model;
     my $name = $model->name;
