@@ -88,9 +88,11 @@ sub _validate_data_to_write {
         $self->error_message("No data in data hash ref sent to 'write_one'");
         return;
     }
-    
-    unless ( Compare([ sort @{$self->headers} ], [ sort keys %$data ]) ) {
-        $self->error_message("Headers in data do not match headers being written:\n".Dumper($data));
+
+    my @headers = sort @{$self->headers};
+    my @keys = sort keys %$data;
+    unless ( Compare(\@headers,\@keys) ) {
+        $self->error_message("Headers in data do not match headers being written:\n\tHEADERS:\n". Dumper(@headers) ."\tDATA_HASH_KEYS:\n". Dumper(@keys));
         return;
     }
 
