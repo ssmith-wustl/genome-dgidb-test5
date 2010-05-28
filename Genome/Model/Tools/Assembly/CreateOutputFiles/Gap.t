@@ -30,13 +30,13 @@ ok(-d $temp_dir.'/edit_dir', "made edit_dir in temp test_dir");
 my $ec = system("chdir $temp_dir; gmt assembly create-output-files gap --directory $temp_dir");
 ok($ec == 0, "Command ran successfully");
 
-#test gap.txt file
+#test gap.txt file .. this file can be blank
 my $test_gap_file = $data_dir.'/edit_dir/gap.txt';
-ok(-s $test_gap_file, "Test gap.txt file exists");
+ok(-e $test_gap_file, "Test gap.txt file exists");
 
 #new gap.txt file
 my $new_gap_file = $temp_dir.'/edit_dir/gap.txt';
-ok(-s $new_gap_file, "Tew gap.txt file exits");
+ok(-e $new_gap_file, "Tew gap.txt file exits");
 
 #diff
 my @diffs = `sdiff -s $test_gap_file $new_gap_file`;
