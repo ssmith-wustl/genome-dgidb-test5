@@ -34,8 +34,7 @@ sub _add_to_report_xml {
     
     my $doc = $self->_xml;
 
-    my $sample = $model->tumor_model->subject;
-    my $individual = $sample->source;
+    my $individual = $model->subject;
 
     my $individual_node = $doc->createElement('individual');
     
