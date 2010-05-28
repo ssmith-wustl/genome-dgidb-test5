@@ -36,24 +36,13 @@ class Genome::InstrumentData::Command::Align {
                                         },
     ],
     has_optional_param => [
-        reference_sequence_build        => {
-                                            is => 'Genome::Model::Build::ImportedReferenceSequence',
-                                            id_by => 'reference_sequence_build_id'
-                                        },
-        reference_sequence_build_id     => {
-                                            is => 'Number'
-                                        },
-        reference_build                 => {
-                                            is => 'Genome::Model::Build::ReferencePlaceholder',
-                                            id_by => 'reference_name',
-                                        },
         reference_name                  => {
                                             doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
                                             default_value => 'NCBI-human-build36'
                                         },
         version                         => {
                                             is => 'Text', default_value => '0.7.1',
-                                            doc => 'the aligner version to use, i.e. 0.6.8, 0.7.1, etc.'
+                                            doc => 'the version of maq to use, i.e. 0.6.8, 0.7.1, etc.'
                                         },
         params                          => {
                                             is => 'Text', default_value => '', 
@@ -122,7 +111,7 @@ EOS
 
 sub execute {
     my $self = shift;
-
+$DB::single = 1;
     my $alignment;
     my %alignment_params = (
         instrument_data_id => $self->instrument_data_id,
@@ -136,17 +125,35 @@ sub execute {
         output_dir          => $self->output_dir,
     );
 
-    # ehvatum TODO: remove if statement with ReferencePlaceholder
-    if (defined($self->reference_sequence_build_id)) {
-        $alignment_params{reference_sequence_build_id} = $self->reference_sequence_build_id;
+    # turn the reference name into the id
+    my $reference_name = $self->reference_name;
+    unless ($reference_name){
+        $self->error_message("no reference sequence build id or reference name supplied");
+        die;
     }
-    else {
-        $alignment_params{reference_name} = $self->reference_name;
+    my ($model_name,$build_version) = ($reference_name =~ /^(.*)-build(.*?)$/);
+    unless ($model_name and $build_version) {
+        $self->error_message("Failed to parse a model name and build version from reference name $reference_name");
+        die $self->error_message;
     }
+    my $model = Genome::Model->get(name => $model_name);
+    unless ($model) {
+        $self->error_message("Failed to find a model named $model_name");
+        die $self->error_message;
+    }
+    my @builds = $model->build_by_version($build_version);
+    unless (@builds) {
+        die;
+    }
+    if (@builds > 1) {
+        $self->error_message("Multiple builds for version $build_version on model $model_name!");
+        die $self->error_message;
+    }
+    if (@builds == 0) {
+        die;
+    }
+    $alignment_params{reference_build_id} = $builds[0]->id;
 
-    if(defined($self->reference_sequence_build_id) && defined($self->reference_name)) {
-        $self->warning_message('Both reference_sequence_build_id and reference_name were supplied.');
-    }
 
     if ($self->trimmer_name) {
         $alignment_params{trimmer_name} = $self->trimmer_name;
