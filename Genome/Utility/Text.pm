@@ -27,7 +27,7 @@ sub camel_case_to_words {
         Carp::cluck('No camel case to get words');
         return;
     }
-    my @words = split( /(?=[A-Z])|(?=(?<!\d)\d)/, $camel_case); #split on the start of either a new word or the start of a number
+    my @words = split( /(?=(?<![A-Z])[A-Z])|(?=(?<!\d)\d)/, $camel_case); #split on the first capital or the start of a number
     return @words;
 }
 
