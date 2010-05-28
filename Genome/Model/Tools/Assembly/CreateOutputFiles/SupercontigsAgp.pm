@@ -41,7 +41,7 @@ sub execute {
     }
 
     my $gap_file = $self->directory.'/edit_dir/gap.txt';
-    unless ($gap_file) {
+    unless (-e $gap_file) { #okay for this file to be blank
 	$self->error_message("Can not find file: $gap_file");
 	return;
     }
