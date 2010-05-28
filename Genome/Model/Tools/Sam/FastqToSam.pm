@@ -47,8 +47,8 @@ sub execute {
 
     my $picard_path = $self->picard_path;
     
-    my $fastq_to_sam_cmd = sprintf("java  -jar %s/FastqToSam.jar QUALITY_FORMAT=%s SAMPLE_NAME='Hello there' FASTQ=%s OUTPUT=%s ", $self->quality_format, $self->picard_path, $self->fastq_file, $self->sam_file);
-	print "\n\n $fastq_to_sam_cmd \n\n";
+    my $fastq_to_sam_cmd = sprintf("java  -jar %s/FastqToSam.jar QUALITY_FORMAT=%s SAMPLE_NAME='Hello there' FASTQ=%s OUTPUT=%s ", $self->picard_path, $self->quality_format, $self->fastq_file, $self->sam_file);
+
 	Genome::Utility::FileSystem->shellcmd(
 		cmd => $fastq_to_sam_cmd,
 		input_files => [$self->fastq_file],

@@ -73,7 +73,7 @@ sub _run_aligner {
 		# Convert unaligned reads from Fastq to SAM, place in $temp_unaligned_sam_file:
 		# Note: with 2 input fq files, bowtie outputs 2 also. In this case to .../temp_unaligned_sequences_1.fq and .../temp_unaligned_sequences_2.fq
 		# We'll combine these two files so we can convert them to SAM
-		print "Done with primary alignment. Appending unaligned\n";
+		print "Done with primary alignment. Appending unaligned reads. \n";
 		
 		my $temp_fq_1 = $temp_unaligned_fq_file;
 		$temp_fq_1 =~ s/temp_unaligned_sequences/temp_unaligned_sequences_1/g;
@@ -108,6 +108,7 @@ sub _run_aligner {
 			fastq_file => $temp_unaligned_fq_file,
 			sam_file   => $temp_unaligned_sam_file,
 	);
+
 
     my $cat_unaligned_to_output_cmd = "cat $temp_unaligned_sam_file >> $output_file";
     Genome::Utility::FileSystem->shellcmd(
