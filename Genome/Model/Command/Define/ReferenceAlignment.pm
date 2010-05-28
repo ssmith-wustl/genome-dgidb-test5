@@ -10,7 +10,9 @@ class Genome::Model::Command::Define::ReferenceAlignment {
     is => 'Genome::Model::Command::Define',
     has => [
         reference_sequence_build => {
-            doc => 'ID or name of the reference sequence to align against'
+            doc => 'ID or name of the reference sequence to align against',
+            is_optional => 1,
+            default => 'NCBI-human-36'
         },
         target_region_set_names => {
             is => 'Text',
@@ -21,7 +23,7 @@ class Genome::Model::Command::Define::ReferenceAlignment {
         region_of_interest_set_name => {
             is => 'Text',
             is_optional => 1,
-            doc => 'limit coverage and variant detection to within these regions of interest',
+            doc => 'limit coverage and variant detection to within these regions of interest'
         }
     ]
 };
@@ -75,7 +77,6 @@ sub _resolve_imported_reference_sequence_build {
         }
         $self->error_message($error);
     }
-    $self->{reference_sequence_build_object} = $reference_sequence_build;
     return $reference_sequence_build;
 }
 
