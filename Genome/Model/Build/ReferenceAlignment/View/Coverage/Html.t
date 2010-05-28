@@ -1,0 +1,19 @@
+#!/gsc/bin/perl
+
+use strict;
+use warnings;
+
+use Test::More skip_all => 'This does not work yet'; #tests => 3;
+
+use above 'Genome';
+
+use_ok('Genome::Model::Build::ReferenceAlignment::View::Coverage::Html');
+
+my $subject = Genome::Model::Build::ReferenceAlignment->get(102576025);
+ok($subject, 'found expected build subject');
+
+my $view_obj = Genome::Model::Build::ReferenceAlignment::View::Coverage::Html->create(subject_id => 102576025);
+isa_ok($view_obj,'Genome::Model::Build::ReferenceAlignment::View::Coverage::Html');
+my $html = $view_obj->_generate_content;
+print $html ."\n";
+exit;
