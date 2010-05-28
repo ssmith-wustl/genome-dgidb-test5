@@ -337,7 +337,7 @@ sub _resolve_tier_values {
     }
     else {
 	my $est_genome_size = -s 'contigs.bases';
-	$t1 = int ($est_genome_size * 0.4);
+	$t1 = int ($est_genome_size * 0.2);
 	$t2 = int ($est_genome_size * 0.2);
     }
     return ($t1, $t2);
@@ -345,7 +345,7 @@ sub _resolve_tier_values {
 
 sub _resolve_major_contig_length {
     my ($self) = @_;
-    my $major_contig_length = 500;
+    my $major_contig_length = 100;
     if ($self->major_contig_length) {
 	$major_contig_length = $self->major_contig_length;
     }
