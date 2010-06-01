@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 use above 'Genome';
 
@@ -18,5 +18,5 @@ my $view_obj = Genome::Model::Build::ReferenceAlignment::View::Coverage::Xml->cr
 );
 isa_ok($view_obj,'Genome::Model::Build::ReferenceAlignment::View::Coverage::Xml');
 my $xml = $view_obj->_generate_content;
-print $xml ."\n";
+ok($xml,'got xml content');
 exit;
