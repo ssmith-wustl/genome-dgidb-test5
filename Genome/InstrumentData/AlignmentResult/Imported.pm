@@ -23,6 +23,9 @@ sub required_rusage {
     "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>10000] span[hosts=1] rusage[tmp=90000, mem=10000]' -M 10000000";
 }
 
+
+#Overload the creation of BAM's in AlignmentResult
+
 sub create_BAM_in_staging_directory {
     my $self = shift;
     my $tmp_dir = $self->temp_staging_directory;
@@ -41,6 +44,8 @@ sub create_BAM_in_staging_directory {
         my $bam_output_path = $tmp_dir."/all_sequences.bam";
         unless(-e $bam_output_path) {
             $self->status_message("No all_sequences.bam file found at ".$bam_output_path." attempting to create one.");
+
+            #If the source of the imported BAM is broad, apply the debroadifyBam tool to it
             if($instrument_data->import_source_name =~ /broad/i) {
                 $self->status_message("Import source is Broad, attempting to convert the BAM to a SAM, via the DebroadifyBamToSam tool.\n");
                 unless( my $result = Genome::Model::Tools::Sam::DebroadifyBam->execute(
@@ -55,7 +60,7 @@ sub create_BAM_in_staging_directory {
                     die $self->error_message;
                 }   
                 $self->status_message("Successfully created an all_sequences.bam file.");
-            } else {
+            } else {     #otherwise simply copy the bam into the staging directory
                 $self->status_message("Attempting to copy file from import to alignment scratch dir.\n");
                 unless(File::Copy($instrument_data->data_directory."/all_sequences.bam",$bam_output_path)) {
                     $self->error_message("Failed to copy BAM from instrument-data allocation to alignment scratch dir.\n");
