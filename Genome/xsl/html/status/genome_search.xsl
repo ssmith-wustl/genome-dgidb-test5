@@ -19,7 +19,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                 <input type="text" size="30" style="background-color: #FFF; font-size: 120%;" name="query"/><br/>
               </td>
               <td>
-                <input type="submit" class="_submit" value="Search"/>
+                <input type="submit" value="Search"/>
               </td>
             </tr>
           </table>

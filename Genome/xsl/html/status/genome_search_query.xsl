@@ -22,7 +22,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 name="value"><xsl:value-of select="//@query"/></xsl:attribute></input><br/>
               </td>
               <td>
-                <input type="submit" class="submit" value="Search"/>
+                <input type="submit" value="Search"/>
               </td>
             </tr>
           </table>

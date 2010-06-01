@@ -20,7 +20,7 @@
                 <input type="text" size="30" name="query" style="background-color: #FFF; font-size: 120%;"/><br/>
               </td>
               <td>
-                <input type="submit" class="_submit" value="Search"/>
+                <input type="submit" value="Search"/>
               </td>
             </tr>
           </table>
@@ -93,7 +93,7 @@
                 </select>
               </td>
               <td>
-                <input type="submit" name="_submit" value="Search for Models" />
+                <input type="submit" value="Search for Models" />
               </td>
             </tr>
           </tbody>
@@ -113,7 +113,7 @@
                 <input type="text" name="id" value="" />
               </td>
               <td>
-                <input type="submit" name="_submit" value="Search for Build ID" />
+                <input type="submit" value="Search for Build ID" />
               </td>
             </tr>
           </tbody>
@@ -138,7 +138,7 @@
                 </select>
               </td>
               <td>
-                <input type="submit" name="_submit" value="Search for Builds" />
+                <input type="submit" value="Search for Builds" />
               </td>
             </tr>
           </tbody>
@@ -204,7 +204,7 @@
 
               </td>
               <td>
-                <input type="submit" name="_submit" value="Compare Models" />
+                <input type="submit" value="Compare Models" />
               </td>
             </tr>
           </tbody>
