@@ -68,20 +68,19 @@ class Genome::Model::Tools::DetectVariants::VarScan {
 };
 
 sub help_brief {
-    "Run the VarScan germline variant detection (SNPs and indels)"
+    "Use VarScan for variant detection.",
 }
 
 sub help_synopsis {
-    return <<EOS
-Runs VarScan from a BAM file
-EXAMPLE:    gmt detect-variants var-scan --normal-bam [Normal.bam]  ...
+    my $self = shift;
+    return <<"EOS"
+gmt detect-variants var-scan --aligned_reads_input input.bam --reference_sequence_input reference.fa --working-directory ~/example/
 EOS
 }
 
 sub help_detail {
-    return <<EOS
-Runs VarScan from a BAM file
-EXAMPLE:    gmt detect-variants var-scan --normal-bam [Normal.bam]  ...
+    return <<EOS 
+This tool runs VarScan for detection of SNPs and/or indels.
 EOS
 }
 

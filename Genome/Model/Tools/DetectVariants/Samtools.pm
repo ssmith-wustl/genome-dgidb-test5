@@ -46,6 +46,23 @@ class Genome::Model::Tools::DetectVariants::Samtools {
     ],
 };
 
+sub help_brief {
+    "Use samtools for variant detection.",
+}
+
+sub help_synopsis {
+    my $self = shift;
+    return <<"EOS"
+gmt detect-variants samtools --version r453 --aligned_reads_input input.bam --reference_sequence_input reference.fa --working-directory ~/example/
+EOS
+}
+
+sub help_detail {
+    return <<EOS 
+This tool runs samtools for detection of SNPs and/or indels.
+EOS
+}
+
 sub execute {
     my $self = shift;
 

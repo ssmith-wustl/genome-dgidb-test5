@@ -18,4 +18,21 @@ class Genome::Model::Tools::DetectVariants::Somatic {
     ]
 };
 
+sub help_brief {
+    "A selection of somatic variant detectors.",
+}
+
+sub help_synopsis {
+    my $self = shift;
+    return <<"EOS"
+gmt detect-variants somatic ...
+EOS
+}
+
+sub help_detail {
+    return <<EOS 
+Tools to run somatic variant detectors with a common API and output their results in a standard format.
+EOS
+}
+
 1;

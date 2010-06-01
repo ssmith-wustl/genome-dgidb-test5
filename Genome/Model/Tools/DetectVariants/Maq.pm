@@ -94,6 +94,23 @@ class Genome::Model::Tools::DetectVariants::Maq {
     ],
 };
 
+sub help_brief {
+    "Use maq for variant detection.",
+}
+
+sub help_synopsis {
+    my $self = shift;
+    return <<"EOS"
+gmt detect-variants maq --version 0.7.1 --aligned_reads_input input.map --reference_sequence_input reference.bfa --working-directory ~/example/
+EOS
+}
+
+sub help_detail {
+    return <<EOS 
+This tool runs maq for detection of SNPs and/or indels.
+EOS
+}
+
 sub execute {
     my $self = shift;
 
