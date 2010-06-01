@@ -28,8 +28,4 @@ my @diff =
     grep { $_ !~ /generated-at/ }
     grep { /\w/ }
     Genome::Utility::FileSystem->diff_file_vs_text(__FILE__ . '.expected',$html);
-    
-    SKIP: {
-        skip "expected output is broken, will fix by Tuesday 6/1", 1;
-        is("@diff","","HTML has no differences from expected value");
-    }
+is("@diff","","HTML has no differences from expected value");
