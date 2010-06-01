@@ -11,7 +11,6 @@ class Genome::Model::Tools::Fastqc::GenerateReports {
         fastq_files => {
             doc => 'The fastq files to generate quality reports for.',
             is => 'Text',
-            is_many => 1,
         },
         report_directory => {
             is => 'Text',
@@ -22,8 +21,8 @@ class Genome::Model::Tools::Fastqc::GenerateReports {
 
 sub execute {
     my $self = shift;
-    my @fastq_files = $self->fastq_files;
-    my $cmd = $self->fastqc_path .' -Dfastqc.output_dir='. $self->report_directory .' uk.ac.bbsrc.babraham.FastQC.FastQCApplication '. join(' ',@fastq_files) ;
+    my @fastq_files = split(',',$self->fastq_files);
+    my $cmd = $self->fastqc_path .' -Djava.awt.headless=true -Dfastqc.output_dir='. $self->report_directory .' uk.ac.bbsrc.babraham.FastQC.FastQCApplication '. join(' ',@fastq_files) ;
     $self->run_java_vm(
         cmd => $cmd,
         input_files => \@fastq_files,
