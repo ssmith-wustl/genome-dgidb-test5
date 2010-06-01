@@ -36,7 +36,7 @@ class Genome::Model::Tools::Somatic::StrandFilter {
        },
        'min_strandedness' => {
             type => 'String',
-            default => '0.10',
+            default => '0.01',
             is_optional => 1,
             is_input => 1,
             doc => 'Minimum representation of variant allele on each strand',
@@ -54,6 +54,13 @@ class Genome::Model::Tools::Somatic::StrandFilter {
            is_optional => 1,
            is_input => 1,
            doc => 'prepend the string "chr" to chromosome names. This is primarily used for external/imported bam files.',
+       },
+       verbose => {
+           is => 'Boolean',
+           default => '0',
+           is_optional => 1,
+           is_input => 1,
+           doc => 'Print the filtering result for each site.',
        },
        # Make workflow choose 64 bit blades
        lsf_resource => {
@@ -140,8 +147,8 @@ sub execute {
 
     ## Reset counters ##
     
-    my $num_variants = my $num_fail_strand = my $num_fail_pos = my $num_pass_filter = 0;
-
+    my %stats = ();
+    $stats{'num_variants'} = $stats{'num_fail_strand'} = $stats{'num_fail_pos'} = $stats{'num_no_readcounts'} = $stats{'num_pass_filter'} = $stats{'num_no_allele'} = 0;
 
     ## Open the output file ##
     
@@ -175,7 +182,7 @@ sub execute {
             my $line = $_;
             $lineCounter++;
 
-            $num_variants++;
+            $stats{'num_variants'}++;
             
 #            if($lineCounter <= 10)
  #           {
@@ -216,44 +223,61 @@ sub execute {
                             ## Calculate percent-fwd-strand ##
                             (my $ref_count, my $ref_map, my $ref_base, my $ref_semq, my $ref_plus, my $ref_minus, my $ref_pos, my $ref_subs) = split(/\t/, $ref_result);
                             (my $var_count, my $var_map, my $var_base, my $var_semq, my $var_plus, my $var_minus, my $var_pos, my $var_subs) = split(/\t/, $var_result);
-                            			    
+
+			    my $ref_strandedness = my $var_strandedness = 0.50;
+
+			    ## Determine ref strandedness ##
+			    
+			    if($ref_plus || $ref_minus)
+			    {
+				$ref_strandedness = $ref_plus / ($ref_plus + $ref_minus);
+				$ref_strandedness = sprintf("%.2f", $ref_strandedness);
+			    }
+
+			    ## Determine var strandedness ##
+
+			    if($var_plus || $var_minus)
+			    {
+				$var_strandedness = $var_plus / ($var_plus + $var_minus);
+				$var_strandedness = sprintf("%.2f", $var_strandedness);
+			    }
+
                             if($var_count && ($var_plus + $var_minus))
                             {
-    #                            my $ref_pct_plus = $ref_plus / ($ref_plus + $ref_minus);
-     #                           $ref_pct_plus = sprintf("%.2f", $ref_pct_plus);
-            
-                               my $var_pct_plus = $var_plus / ($var_plus + $var_minus);
-                                $var_pct_plus = sprintf("%.2f", $var_pct_plus);
-            
-                                ## Count the failures ##
-                                
-                                $num_fail_pos++ if(!($var_pos >= $min_read_pos && $var_pos <= $max_read_pos));
-                                $num_fail_strand++ if(!($var_pct_plus >= $min_strandedness && $var_pct_plus <= $max_strandedness));
-            
-                                if($var_pct_plus >= $min_strandedness && $var_pct_plus <= $max_strandedness)
-                                {
-                                    if($var_pos >= $min_read_pos && $var_pos <= $max_read_pos)
-                                    {
-                                        print $ofh "$line\n";
-                                        print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tPASS\n";
-                                        $num_pass_filter++;
-                                    }
-                                    else
-                                    {
-					print $ffh "$line\treadpos=$var_pos\n"if ($self->filtered_file);
-                                        print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tFAIL read pos=$var_pos\n";
-                                    }
-                                }
-                                else
-                                {
-				    print $ffh "$line\tstrandedness=$var_pct_plus\n"if ($self->filtered_file);
-                                    print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tFAIL strandedness=$var_pct_plus\n";                            
-                                }
+				## We must obtain variant read counts to proceed ##
+				
+				## FAILURE 1: READ POSITION ##
+				
+				if(($var_pos < $min_read_pos || $var_pos > $max_read_pos))
+				{
+				    print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->filtered_file);
+				    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->verbose);
+				    $stats{'num_fail_pos'}++;
+				}
+				
+				## FAILURE 2: Variant is strand-specific but reference is NOT strand-specific ##
+				
+				elsif(($var_strandedness < $min_strandedness || $var_strandedness > $max_strandedness) && ($ref_strandedness >= $min_strandedness && $ref_strandedness <= $max_strandedness))
+				{
+				    ## Print failure to output file if desired ##
+				    print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness<$min_strandedness\n"if ($self->filtered_file);
+				    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness<$min_strandedness\n"if ($self->verbose);
+				    $stats{'num_fail_strand'}++;
+				}
+				## SUCCESS: Pass Filter ##				
+				else
+				{
+				    $stats{'num_pass_filter'}++;
+				    ## Print output, and append strandedness information ##
+				    print $ofh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\n";
+				    print "$line\t\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tPASS\n" if($self->verbose);
+				}
                             }
                             else
                             {
+				$stats{'num_no_readcounts'}++;
 				print $ffh "$line\tno_reads\n" if($self->filtered_file);
-                                print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tFAIL no reads in $var_result\n";        
+                                print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tFAIL no reads in $var_result\n" if($self->verbose);        
                             }
                     }
                     else
@@ -262,15 +286,21 @@ sub execute {
                         die;                
                     }
                 }
+		else
+		{
+		    $stats{'num_no_allele'}++;
+		}
 #            }
     }
     
     close($input);
 
-    print "$num_variants variants\n";
-    print "$num_fail_strand had strandedness < $min_strandedness\n";
-    print "$num_fail_pos had read position < $min_read_pos\n";
-    print "$num_pass_filter passed the strand filter\n";
+    print $stats{'num_variants'} . " variants\n";
+    print $stats{'num_no_allele'} . " failed to determine variant allele\n";
+    print $stats{'num_no_readcounts'} . " failed to get readcounts for variant allele\n";
+    print $stats{'num_fail_pos'} . " had read position < $min_read_pos\n";
+    print $stats{'num_fail_strand'} . " had strandedness < $min_strandedness\n";
+    print $stats{'num_pass_filter'} . " passed the strand filter\n";
 
     return 1;
 }
