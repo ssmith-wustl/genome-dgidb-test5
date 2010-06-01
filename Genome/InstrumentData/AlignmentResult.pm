@@ -266,6 +266,41 @@ sub create {
     $self->status_message("Staging path is " . $self->temp_staging_directory);
     $self->status_message("Working path is " . $self->temp_scratch_directory);
 
+    #STEPS 5-9: CREATE BAM IN STAGING DIRECTORY
+    unless( $self->create_BAM_in_staging_directory()) {
+        $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
+        die $self->error_message;
+    }
+
+    # STEP 10: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
+    $self->status_message("Preparing the output directory...");
+    my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
+    $self->status_message("Alignment output path is $output_dir");
+
+    # STEP 11: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
+    $self->status_message("Moving results to network disk...");
+    my $product_path;
+    unless($product_path= $self->_promote_validated_data) {
+        $self->error_message("Failed to de-stage data into alignment directory " . $self->error_message);
+        die $self->error_message;
+    }
+    
+    # STEP 12: RESIZE THE DISK
+    # TODO: move this into the actual original allocation so we don't need to do this 
+    $self->status_message("Resizing the disk allocation...");
+    if ($self->_disk_allocation) {
+        unless ($self->_disk_allocation->reallocate) {
+            $self->warning_message("Failed to reallocate my disk allocation: " . $self->_disk_allocation->id);
+        }
+    }
+        
+    $self->status_message("Alignment complete.");
+    return $self;
+}
+
+sub create_BAM_in_staging_directory {
+    my $self = shift;
+    
     # STEP 5: PREPARE REFERENCE SEQUENCES
     $self->status_message("Preparing the reference sequences...");
     unless($self->_prepare_reference_sequences) {
@@ -350,30 +385,9 @@ sub create {
         die $self->error_message;
     }
 
-    # STEP 10: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
-    $self->status_message("Preparing the output directory...");
-    my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
-    $self->status_message("Alignment output path is $output_dir");
 
-    # STEP 11: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
-    $self->status_message("Moving results to network disk...");
-    my $product_path;
-    unless($product_path= $self->_promote_validated_data) {
-        $self->error_message("Failed to de-stage data into alignment directory " . $self->error_message);
-        die $self->error_message;
-    }
-    
-    # STEP 12: RESIZE THE DISK
-    # TODO: move this into the actual original allocation so we don't need to do this 
-    $self->status_message("Resizing the disk allocation...");
-    if ($self->_disk_allocation) {
-        unless ($self->_disk_allocation->reallocate) {
-            $self->warning_message("Failed to reallocate my disk allocation: " . $self->_disk_allocation->id);
-        }
-    }
-        
-    $self->status_message("Alignment complete.");
-    return $self;
+
+    return 1;
 }
 
 sub alignment_directory {
