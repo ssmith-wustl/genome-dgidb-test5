@@ -16,6 +16,7 @@ use Data::Dumper;
 use Cwd;
 use File::Basename;
 
+use above 'Genome';
 BEGIN { use_ok('Genome::Model::Tools::LSFSpool') };
 
 #########################

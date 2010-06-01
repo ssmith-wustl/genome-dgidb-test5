@@ -21,7 +21,8 @@ use Cwd;
 use File::Basename;
 use File::Path;
 
-use Genome::Model::Tools::LSFSpool;
+#use Genome::Model::Tools::LSFSpool;
+use above 'Genome';
 
 my $thisfile = Cwd::abs_path(__FILE__);
 my $cwd = dirname $thisfile;
