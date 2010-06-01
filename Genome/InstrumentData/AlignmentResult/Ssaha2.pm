@@ -15,7 +15,6 @@ class Genome::InstrumentData::AlignmentResult::Ssaha2 {
 
 sub required_arch_os { 'x86_64' }
 
-# fill me in here with what compute resources you need.
 sub required_rusage { 
     "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>10000] rusage[tmp=90000, mem=10000]' -M 10000000";
 }
@@ -40,15 +39,12 @@ sub _run_aligner {
     # construct the command (using hacky temp-file to append)
     my $cmd = "$ssaha_path $aligner_params -best 1 -udiff 1 -align 0 -output sam_soft -outfile $output_file.tmp -save $ref_index $input_pathnames >>$log_file && cat $output_file.tmp >>$output_file";
 
-    $DB::single = 1; # STOP, collaborate && listen
     Genome::Utility::FileSystem->shellcmd(
         cmd          => $cmd,
         input_files  => \@_,
         output_files => [ $output_file, $log_file ],
         skip_if_output_is_present => 0,
     );
-
-    $DB::single = 1; # STOP, collaborate && listen
 
     unless (-s $output_file){
         $self->error_message('The sam output file is missing or empty.');
