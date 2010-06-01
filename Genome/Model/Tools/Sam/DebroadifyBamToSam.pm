@@ -76,7 +76,7 @@ sub execute {
             $_=~s/\@SQ\tSN:chr(\d+)/\@SQ\tSN:$1/;
         }
         print $sam_output $_;
-        print STDOUT $_."\n";
+        #print STDOUT $_."\n";
     }
     close $sam_header_input;
 
