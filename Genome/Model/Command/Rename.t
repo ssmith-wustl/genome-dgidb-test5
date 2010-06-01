@@ -19,8 +19,8 @@ my $old_name = $model->name; # should be 'mr. mock'
 
 # SUCCESS
 my $renamer = Genome::Model::Command::Rename->create(
-    model_id => $model->id,
-    new_name => $new_name,
+    from => $model,
+    to => $new_name,
 );
 ok($renamer->execute, 'Execute renamer');
 is($model->name, $new_name, 'Renamed model');
@@ -29,14 +29,14 @@ $model->name($old_name); # reset for testing below
 
 # FAIL - FYI not testing w/o model id - that should already be covered on other tests
 # no name - fails on create
-ok(!Genome::Model::Command::Rename->create(model_id => $model->id), 'Failed as expected - create w/o new name');
+ok(!Genome::Model::Command::Rename->execute(from => $model), 'Failed as expected - create w/o new name');
 # create w/ name, then undef - fails on execute
-$renamer = Genome::Model::Command::Rename->create(model_id => $model->id, new_name => $new_name);
-$renamer->new_name(undef);
+$renamer = Genome::Model::Command::Rename->create(from => $model, to => $new_name);
+$renamer->to(undef);
 ok(!$renamer->execute, 'Failed as expected - execute w/ undef name');
 $renamer->delete;
 # create and execute w/ old name
-$renamer = Genome::Model::Command::Rename->create(model_id => $model->id, new_name => $old_name);
+$renamer = Genome::Model::Command::Rename->create(from => $model, to => $old_name);
 ok(!$renamer->execute, 'Failed as expected - execute w/ same name');
 $renamer->delete;
 
