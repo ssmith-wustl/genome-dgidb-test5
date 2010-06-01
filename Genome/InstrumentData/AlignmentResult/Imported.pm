@@ -24,41 +24,54 @@ sub required_rusage {
 
 sub _run_aligner {
     my $self = shift;
+    my $tmp_dir = $self->temp_scratch_directory;
+    my $instrument_data_id = $self->instrument_data;
     my $instrument_data;
-    my @instrument_data_ids = $self->instrument_data;
     
-    if(scalar(@instrument_data_ids)==1) {
-        $self->status_message("Found one instrument-data id.\n");
+    if(defined($instrument_data_id)) {
+        $self->status_message("Found instrument-data.\n");
         print $self->status_message;
         
-        $instrument_data = Genome::InstrumentData::Imported->get(id=>$instrument_data_ids[0]);
+        $instrument_data = Genome::InstrumentData::Imported->get(id=>$instrument_data_id);
         unless(defined($instrument_data)) {
-            $self->error_message(" Could not locate an instrument data record with an ID of ".$instrument_data_ids[0]."\n");
+            $self->error_message(" Could not locate an instrument data record with an ID of ".$instrument_data_id."\n");
             die $self->error_message;
         }
-        unless(-e $instrument_data->data_directory."/all_sequences.sam") {
-            $self->status_message("No all_sequences.sam file found at ".$instrument_data->data_directory." attempting to create one.");
+        my $sam_output_path = $tmp_dir."/all_sequences.sam";
+        unless(-e $sam_output_path) {
+            $self->status_message("No all_sequences.sam file found at ".$sam_output_path." attempting to create one.");
             if($instrument_data->import_source_name =~ /broad/i) {
                 $self->status_message("Import source is Broad, attempting to convert the BAM to a SAM, via the DebroadifyBamToSam tool.\n");
                 unless( my $result = Genome::Model::Tools::Sam::DebroadifyBamToSam->execute(
                                 input_bam_file =>   $instrument_data->data_directory."/all_sequences.bam",
-                                output_sam_file =>  $instrument_data->data_directory."/all_sequences.sam". )) {
+                                output_sam_file =>  $sam_output_path, )) {
                     $self->error_message("DebroadifyBamToSam failed to complete.");
                     die $self->error_message;
                 }
-                unless(-e $instrument_data->data_directory."/all_sequences.sam") {
+                unless(-e $sam_output_path) {
                     $self->error_message("Could not find all_sequences.sam after running the DebroadifyBamToSam tool.");
                     die $self->error_message;
                 }   
                 $self->status_message("Successfully created an all_sequences.sam file.");
-                
             } else {
                 $self->status_message("Attempting to convert from BAM to SAM");
-                        
-
+                unless (my $result = Genome::Model::Tools::Sam::BamToSam->execute(
+                                        bam_file => $instrument_data->data_directory."/all_sequences.bam",                     
+                                        sam_file => $sam_output_path,)){
+                    $self->error_message("Failed to convert BAM to SAM.\n");
+                    die $self->error_message;
+                }
+                unless(-e $sam_output_path) {  
+                    $self->error_message("Could not verify completion of BAM to SAM.\n");
+                    die $self->error_message;
+                }
             }
         }
+    } else {
+       $self->error_message("Alignment has no instrument data.\n");
+        die $self->error_message;
     }
+
     return 1;
 }
 
