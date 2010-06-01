@@ -11,7 +11,14 @@
       });
       });
     </script>
-    <script type="text/javascript" src="/resources/report_resources/protovis-3.1/protovis-d3.1.js"></script>
+    <!-- tipsy for rollovers -->
+    <script type="text/javascript" src="/resources/report_resources/tipsy/javascripts/jquery.tipsy.js"></script>
+    <link type="text/css" href="/resources/report_resources/tipsy/stylesheets/tipsy.css"/>
+
+    <!-- protovis and related -->
+    <script type="text/javascript" src="/resources/report_resources/protovis-3.2/protovis-r3.2.js"></script>
+    <script type="text/javascript" src="/resources/report_resources/protovis-3.2/behaviors/tipsy.js"></script>
+
     <!-- set up lane data and chart -->
     <script type="text/javascript">
       window.indexData = [];
@@ -20,17 +27,24 @@
 
       <xsl:for-each select="//lane">
 
-        <xsl:variable name="count" select="position() - 1" />
-        id[<xsl:value-of select="$count"/>] = {};
-        id[<xsl:value-of select="$count"/>].percent = [
+        <xsl:variable name="pos" select="position() - 1" />
+        id[<xsl:value-of select="$pos"/>] = {};
+
+        id[<xsl:value-of select="$pos"/>].percent = [
         <xsl:for-each select="index">
           <xsl:value-of select="percent"/>,
           </xsl:for-each>];
 
-          id[<xsl:value-of select="$count"/>].sequence = [
+          id[<xsl:value-of select="$pos"/>].sequence = [
           <xsl:for-each select="index">
             "<xsl:value-of select="sequence"/>",
             </xsl:for-each>];
+
+
+            id[<xsl:value-of select="$pos"/>].count = [
+            <xsl:for-each select="index">
+              <xsl:value-of select="count"/>,
+              </xsl:for-each>];
 
       </xsl:for-each>
 
@@ -51,6 +65,8 @@ window.pMax = id[i].percent[j];
 
 window.chartMax = Math.ceil(window.pMax);
 window.chartMin = 0;
+
+
       ]]>
     </script>
 
@@ -78,6 +94,7 @@ window.chartMin = 0;
       div.legend_block div.legend {
       float: left;
       width: 800px;
+      background: #CCF;
       }
 
       div.charts_block {
@@ -186,36 +203,37 @@ window.chartMin = 0;
       </tbody>
     </table>
     <xsl:if test="/flow-cell/illumina-lane-index">
-      <h2>lane index report</h2>
-      <div class="legend_block">
-        <div class="label">
-          Legend:
-        </div>
-        <div class="legend">
-          <script type="text/javascript+protovis">
-            var w=700,
-            h=15,
-            c = pv.Colors.category10();
+      <h2 style="border-bottom: 2px solid #CCC;">Lane index report</h2>
+      <!--      <div class="legend_block">
+           <div class="label">
+           Legend:
+           </div>
+           <div class="legend">
+           <script type="text/javascript+protovis">
+           var w=700,
+           h=15,
+           c = pv.Colors.category10();
 
-            var legend = new pv.Panel()
-            .width(w)
-            .height(h);
+var legend = new pv.Panel()
+.width(w)
+.height(h);
 
 
-            legend.add(pv.Dot)
-            .data(window.indexData[0].sequence)
-            .top(8)
-            .left(function() 15 + this.index * 65)
-            .shape("square")
-            .size(16)
-            .strokeStyle(null)
-            .fillStyle(function(d) c(window.indexData[0].sequence[this.index]))
-            .anchor("right").add(pv.Label);
+legend.add(pv.Dot)
+.data(window.indexData[0].sequence)
+.top(8)
+.left(function() 15 + this.index * 65)
+.shape("square")
+.size(16)
+.strokeStyle(null)
+.fillStyle(function(d) c(window.indexData[0].sequence[this.index]))
+.anchor("right").add(pv.Label);
 
-            legend.render();
-          </script>
-        </div>
-      </div>
+legend.render();
+</script>
+</div>
+</div>
+      -->
       <div class="charts_block">
         <xsl:for-each select="//report">
           <xsl:apply-templates select="lane" />
@@ -244,8 +262,9 @@ window.chartMin = 0;
           </script>
       -->
       <script type="text/javascript+protovis">
+
         var y_bars = window.indexData[0].sequence.length,
-        w = 200,
+        w = 150,
         h = y_bars * 15,
         x = pv.Scale.linear(window.chartMin, window.chartMax).range(0, w),
         y = pv.Scale.ordinal(pv.range(y_bars)).splitBanded(0, h, 4/5),
@@ -255,7 +274,7 @@ window.chartMin = 0;
         .width(w)
         .height(h)
         .bottom(20)
-        .left(1)
+        .left(50)
         .right(10)
         .top(5);
 
@@ -265,16 +284,17 @@ window.chartMin = 0;
         .height(y.range().band)
         .left(0)
         .width(x)
-        .fillStyle(function(d) c(window.indexData[<xsl:value-of select="@number  - 1"/>].sequence[this.index]));
+        .fillStyle(function(d) c(window.indexData[<xsl:value-of select="@number  - 1"/>].sequence[this.index]))
+        .title(function() {return "count: " +  window.indexData[<xsl:value-of select="@number  - 1"/>].count[this.index] + " index %: " + window.indexData[<xsl:value-of select="@number  - 1"/>].percent[this.index] + '%'});
 
         bar.anchor("right").add(pv.Label)
         .textStyle("white")
         .text(function(d) d.toFixed(2));
 
-        // bar.anchor("left").add(pv.Label)
-        //     .textMargin(5)
-        //     .textAlign("right")
-        //     .text(function() window.indexData[<xsl:value-of select="@number  - 1"/>].sequence[this.index]);
+        bar.anchor("left").add(pv.Label)
+        .textMargin(5)
+        .textAlign("right")
+        .text(function() window.indexData[<xsl:value-of select="@number  - 1"/>].sequence[this.index]);
 
         vis.add(pv.Rule)
         .data(x.ticks())
@@ -289,6 +309,7 @@ window.chartMin = 0;
         .textStyle("#999");
 
         vis.render();
+
       </script>
       <p class="axis_label_x">Index %</p>
     </div>
