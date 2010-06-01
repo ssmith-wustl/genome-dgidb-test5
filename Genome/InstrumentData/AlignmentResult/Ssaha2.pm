@@ -10,6 +10,9 @@ class Genome::InstrumentData::AlignmentResult::Ssaha2 {
     is => 'Genome::InstrumentData::AlignmentResult',
     has_constant => [
         aligner_name => { value => 'ssaha2', is_param=>1 },
+    ],
+    has_transient => [
+        static_params => { is => 'String', is_optional => 1 }
     ]
 };
 
@@ -25,10 +28,6 @@ sub _run_aligner {
     # a little input validation
     my $input_pathnames = join ' ', @_;
     my $aligner_params = $self->aligner_params;
-    if ( @_ > 1 && not $aligner_params =~ /-pair/ ){
-        $self->error_message('Multiple FastQs given, but -pair option not set.');
-        return 0;
-    }
     
     # collect filepaths
     my $ssaha_path = Genome::Model::Tools::Ssaha2->path_for_ssaha2_version($self->aligner_version);
@@ -37,7 +36,13 @@ sub _run_aligner {
     my $log_file = $self->temp_staging_directory . "/aligner.log";
 
     # construct the command (using hacky temp-file to append)
-    my $cmd = "$ssaha_path $aligner_params -best 1 -udiff 1 -align 0 -output sam_soft -outfile $output_file.tmp -save $ref_index $input_pathnames >>$log_file && cat $output_file.tmp >>$output_file";
+    $self->static_params('-best 1 -udiff 1 -align 0 -output sam_soft');
+    if ( @_ > 1 && not $aligner_params =~ /-pair/ ){
+        my ($lower,$upper) = $self->_derive_insert_size_bounds;
+        $self->static_params($self->static_params . " -pair $lower,$upper");
+    }
+    my $static_params = $self->static_params;
+    my $cmd = "$ssaha_path $aligner_params $static_params -outfile $output_file.tmp -save $ref_index $input_pathnames >>$log_file && cat $output_file.tmp >>$output_file";
 
     Genome::Utility::FileSystem->shellcmd(
         cmd          => $cmd,
@@ -56,5 +61,26 @@ sub _run_aligner {
 
 sub aligner_params_for_sam_header {
     my $self = shift;
-    return 'ssaha2 ' . $self->aligner_params;
+    return 'ssaha2 ' . $self->aligner_params . ' ' . $self->static_params;
 }
+
+# note: this may be completely wrong. fix later!
+sub _derive_insert_size_bounds {
+    my $self = shift;
+    my $median = $self->instrument_data->median_insert_size;
+    my $stddev = $self->instrument_data->sd_above_insert_size;
+    #my $readlen = $self->instrument_data->read_length;
+    my $upper = $median + $stddev*5;
+    my $lower = $median - $stddev*5;
+    if ( $upper <= 0 ) {
+        $self->status_message("Calculated upper bound on insert size is invalid ($upper), defaulting to 600");
+        $upper = 600;
+    }
+    if ( not $median || $lower < 0 || $lower > $upper ) {
+        # alternative default = read_length + rev_read_length
+        $self->status_message("Calculated lower bound on insert size is invalid ($lower), defaulting to 100");
+        $lower = 100;
+    }
+    return ($lower,$upper);
+}
+
