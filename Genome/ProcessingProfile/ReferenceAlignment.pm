@@ -147,6 +147,7 @@ class Genome::ProcessingProfile::ReferenceAlignment {
         capture_set_name => {
             doc => 'The name of the capture set to evaluate coverage and limit variant calls to within the defined target regions',
             is_optional => 1,
+            is_deprecated => 1,
         },
         align_dist_threshold => {
             doc => '',
