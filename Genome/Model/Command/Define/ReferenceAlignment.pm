@@ -12,7 +12,7 @@ class Genome::Model::Command::Define::ReferenceAlignment {
         reference_sequence_build => {
             doc => 'ID or name of the reference sequence to align against',
             is_optional => 1,
-            default => 'NCBI-human-36'
+            default => 'NCBI-human-build36'
         },
         target_region_set_names => {
             is => 'Text',
