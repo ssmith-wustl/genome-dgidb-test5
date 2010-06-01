@@ -266,7 +266,14 @@ sub create {
     $self->status_message("Staging path is " . $self->temp_staging_directory);
     $self->status_message("Working path is " . $self->temp_scratch_directory);
 
-    #STEPS 5-9: CREATE BAM IN STAGING DIRECTORY
+    # STEP 5: PREPARE REFERENCE SEQUENCES
+    $self->status_message("Preparing the reference sequences...");
+    unless($self->_prepare_reference_sequences) {
+        $self->error_message("Reference sequences are invalid.  We can't proceed:  " . $self->error_message);
+        die $self->error_message();
+    }
+
+    #STEPS 6-9: CREATE BAM IN STAGING DIRECTORY
     unless( $self->create_BAM_in_staging_directory()) {
         $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
         die $self->error_message;
@@ -301,13 +308,6 @@ sub create {
 sub create_BAM_in_staging_directory {
     my $self = shift;
     
-    # STEP 5: PREPARE REFERENCE SEQUENCES
-    $self->status_message("Preparing the reference sequences...");
-    unless($self->_prepare_reference_sequences) {
-        $self->error_message("Reference sequences are invalid.  We can't proceed:  " . $self->error_message);
-        die $self->error_message();
-    }
-
     # STEP 6: UNPACK THE ALIGNMENT FILES
     $self->status_message("Unpacking reads...");
     my @fastqs = $self->_extract_sanger_fastq_filenames;

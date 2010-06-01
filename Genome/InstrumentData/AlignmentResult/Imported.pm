@@ -46,7 +46,7 @@ sub create_BAM_in_staging_directory {
                 unless( my $result = Genome::Model::Tools::Sam::DebroadifyBam->execute(
                                 input_bam_file =>   $instrument_data->data_directory."/all_sequences.bam",
                                 output_bam_file =>  $bam_output_path, 
-                                reference_file =>  $self->reference_build->data_directory )) {
+                                reference_file =>   $self->reference_build->full_consensus_sam_index_path($self->samtools_version))){        #$self->reference_build->data_directory )) {
                     $self->error_message("DebroadifyBamToSam failed to complete.");
                     die $self->error_message;
                 }
@@ -71,67 +71,8 @@ sub create_BAM_in_staging_directory {
        $self->error_message("Alignment has no instrument data.\n");
         die $self->error_message;
     }
- 
-
-
+    return 1; 
 }
-
-=cut
-sub _run_aligner {
-    my $self = shift;
-    my $tmp_dir = $self->temp_scratch_directory;
-    my $instrument_data_id = $self->instrument_data;
-    my $instrument_data;
-    
-    if(defined($instrument_data_id)) {
-        $self->status_message("Found instrument-data.\n");
-        print $self->status_message;
-        
-        $instrument_data = Genome::InstrumentData::Imported->get(id=>$instrument_data_id);
-        unless(defined($instrument_data)) {
-            $self->error_message(" Could not locate an instrument data record with an ID of ".$instrument_data_id."\n");
-            die $self->error_message;
-        }
-        my $sam_output_path = $tmp_dir."/all_sequences.sam";
-        unless(-e $sam_output_path) {
-            $self->status_message("No all_sequences.sam file found at ".$sam_output_path." attempting to create one.");
-            if($instrument_data->import_source_name =~ /broad/i) {
-                $self->status_message("Import source is Broad, attempting to convert the BAM to a SAM, via the DebroadifyBamToSam tool.\n");
-                unless( my $result = Genome::Model::Tools::Sam::DebroadifyBamToSam->execute(
-                                input_bam_file =>   $instrument_data->data_directory."/all_sequences.bam",
-                                output_sam_file =>  $sam_output_path, )) {
-                    $self->error_message("DebroadifyBamToSam failed to complete.");
-                    die $self->error_message;
-                }
-                unless(-e $sam_output_path) {
-                    $self->error_message("Could not find all_sequences.sam after running the DebroadifyBamToSam tool.");
-                    die $self->error_message;
-                }   
-                $self->status_message("Successfully created an all_sequences.sam file.");
-            } else {
-                $self->status_message("Attempting to convert from BAM to SAM");
-                unless (my $result = Genome::Model::Tools::Sam::BamToSam->execute(
-                                        bam_file => $instrument_data->data_directory."/all_sequences.bam",                     
-                                        sam_file => $sam_output_path,)){
-                    $self->error_message("Failed to convert BAM to SAM.\n");
-                    die $self->error_message;
-                }
-                unless(-e $sam_output_path) {  
-                    $self->error_message("Could not verify completion of BAM to SAM.\n");
-                    die $self->error_message;
-                }
-            }
-        }
-    } else {
-       $self->error_message("Alignment has no instrument data.\n");
-        die $self->error_message;
-    }
-
-    return 1;
-}
-
-
-=cut
 
 sub _filter_samxe_output {
     my ($self, $sam_cmd, $sam_file_name) = @_;
