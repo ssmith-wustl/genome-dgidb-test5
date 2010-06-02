@@ -50,7 +50,9 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-Run stats on velvet assemblies
+gmt assemby stats velvet --assembly-directory /gscmnt/sata910/assembly/Escherichia_coli_HMPREF9530-1.0_100416.vel
+gmt assemby stats velvet --assembly-directory /gscmnt/sata910/assembly/Escherichia_coli_HMPREF9530-1.0_100416.vel --out-file stats.txt --no-print-to-screen
+gmt assemby stats velvet --assembly-directory /gscmnt/sata910/assembly/Escherichia_coli_HMPREF9530-1.0_100416.vel --out-file stats.txt --first-tier 1000000 --second-tier 1200000 --major-contig-length 2000
 EOS
 }
 
