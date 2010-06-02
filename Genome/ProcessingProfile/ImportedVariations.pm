@@ -47,12 +47,12 @@ sub _execute_build {
         return;
     }
 
-    my $variationSize = -s $build->variation_file;
-    unless(-e $build->variation_file && $variationSize > 0)
-    {
-        $self->status_message("Imported Variation file \"" . $build->variation_file . "\" is either inaccessible, empty, or non-existent.");
-        return;
-    }
+    #my $variationSize = -s $build->variation_file;
+    #unless(-e $build->variation_file && $variationSize > 0)
+    #{
+    #    $self->status_message("Imported Variation file \"" . $build->variation_file . "\" is either inaccessible, empty, or non-existent.");
+    #    return;
+    #}
 
     $self->status_message("Done.");
     return 1;

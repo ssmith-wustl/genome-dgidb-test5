@@ -15,7 +15,18 @@ class Genome::Model::Command::Define::ImportedVariations {
             is => 'Text',
             len => 1000,
             doc => "The full path and filename of the variations file to import."
-        }
+        },
+        species_name => {
+            is => 'Text',
+            len => 64,
+            doc => 'The species name of the reference.  This value must correspond to a species name found in the gsc.organism_taxon table.'
+        },
+        version => {
+            is => 'Text',
+            len => 128,
+            doc => 'The version number and/or description of the dbSNP file.  May not have spaces.  This may be, for example '.
+                   '"130" or "130_human".'
+        },
     ],
     has_optional => [
         model_name => {
@@ -25,18 +36,12 @@ class Genome::Model::Command::Define::ImportedVariations {
         },
         prefix => {
             is => 'Text',
-            value => 'dbSnp',
             doc => 'The source of the file, such as "dbSNP".  May not have spaces.'
         },
         processing_profile_name => {
             #is_constant => 1,
             #value => 'chromosome-fastas',
             doc => 'The processing profile takes no parameters, so all imported reference sequence models share the same processing profile instance.'
-        },
-        species_name => {
-            is => 'Text',
-            len => 64,
-            doc => 'The species name of the reference.  This value must correspond to a species name found in the gsc.organism_taxon table.'
         },
         subject_name => {
             is_optional => 1,
@@ -51,12 +56,6 @@ class Genome::Model::Command::Define::ImportedVariations {
             is_constant => 1,
             value => 'Genome::Taxon',
             doc => 'All imported reference sequence model subjects are represented by the Genome::Taxon class.'
-        },
-        version => {
-            is => 'Text',
-            len => 128,
-            doc => 'The version number and/or description of the dbSNP file.  May not have spaces.  This may be, for example '.
-                   '"130" or "130_human".'
         },
         on_warning => {
             valid_values => ['prompt', 'exit', 'continue'],
@@ -164,7 +163,7 @@ sub _execute_try {
     {
         my $transformedSpeciesName = $self->species_name;
         $transformedSpeciesName =~ s/\s/_/g;
-        $self->model_name($self->processing_profile_name."-".$self->species_name."-".$self->version);
+        $self->model_name($self->processing_profile_name."-".$self->species_name);
         $self->status_message('Generated model name "' . $self->model_name . '".');
     }
 
