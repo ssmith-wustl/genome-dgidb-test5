@@ -154,6 +154,7 @@ sub alignment_summary_file {
 }
 
 sub alignment_summary_hash_ref {
+
     my ($self,$wingspan) = @_;
     my $wingspan_array_ref = $self->wingspan_values_array_ref;
     my %alignment_summary;
@@ -190,8 +191,15 @@ sub alignment_summary_hash_ref {
         # off-target duplicates
         $data->{percent_off_target_duplicates} = sprintf("%.02f",(($data->{duplicate_off_target_aligned_bp} / $data->{total_off_target_aligned_bp}) * 100)) .'%';
 
+        for my $key (keys %$data) {
+            my $metric_key = join('_', 'wingspan', $wingspan, $key);
+            $self->set_metric($metric_key, $data->{$key});
+        }
+
         $alignment_summary{$wingspan} = $data;
     }
+
+
     return \%alignment_summary;
 }
 
@@ -247,9 +255,17 @@ sub coverage_stats_summary_hash_ref {
         }
         while (my $data = $reader->next) {
             $stats_summary{$wingspan}{$data->{minimum_depth}} = $data;
+
+            # record stats as build metrics
+            for my $key (keys %$data) {
+                my $metric_key = join('_', 'wingspan', $wingspan, $data->{'minimum_depth'}, $key);
+                $self->set_metric($metric_key, $data->{$key});
+            }
         }
         $reader->input->close;
     }
+
+
     return \%stats_summary;
 }
 

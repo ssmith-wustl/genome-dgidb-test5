@@ -394,6 +394,9 @@ sub mark_duplicates_library_metrics_hash_ref {
                 my $key = $keys[$i];
                 my $value = $values[$i];
                 $library_metrics{$library}{$key} = $value;
+
+                my $metric_key = join('_', $library, $key);
+                $self->set_metric($metric_key, $value);
             }
         }
     }
