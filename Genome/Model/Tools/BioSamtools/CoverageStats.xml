@@ -1,9 +1,5 @@
 <?xml version='1.0' standalone='yes'?>
-<workflow name="Coverage Stats" logDir="/gsc/var/log/genome/coverage_stats" parallelBy="wingspan">
-    <link fromOperation="input connector" fromProperty="bed_file" toOperation="Alignment Summary" toProperty="bed_file" />
-    <link fromOperation="input connector" fromProperty="bam_file" toOperation="Alignment Summary" toProperty="bam_file" />
-    <link fromOperation="input connector" fromProperty="wingspan" toOperation="Alignment Summary" toProperty="wingspan" />
-    <link fromOperation="input connector" fromProperty="output_directory" toOperation="Alignment Summary" toProperty="output_directory" />
+<workflow name="Coverage Stats" logDir="/gsc/var/log/genome/coverage_stats">
     <link fromOperation="input connector" fromProperty="bed_file" toOperation="Coverage" toProperty="bed_file" />
     <link fromOperation="input connector" fromProperty="bam_file" toOperation="Coverage" toProperty="bam_file" />
     <link fromOperation="input connector" fromProperty="minimum_depth" toOperation="Coverage" toProperty="minimum_depth" />
@@ -11,13 +7,12 @@
     <link fromOperation="input connector" fromProperty="output_directory" toOperation="Coverage" toProperty="output_directory" />
     <link fromOperation="input connector" fromProperty="minimum_base_quality" toOperation="Coverage" toProperty="minimum_base_quality" />
     <link fromOperation="input connector" fromProperty="minimum_mapping_quality" toOperation="Coverage" toProperty="minimum_mapping_quality" />     
-    <link fromOperation="Alignment Summary" fromProperty="output_file" toOperation="output connector" toProperty="alignment_summaries" />
+
+    <link fromOperation="Coverage" fromProperty="alignment_summary" toOperation="output connector" toProperty="alignment_summaries" />
     <link fromOperation="Coverage" fromProperty="stats_file" toOperation="output connector" toProperty="stats_files" />
     <link fromOperation="Coverage" fromProperty="stats_summary" toOperation="output connector" toProperty="stats_summaries" />
-    <operation name="Alignment Summary">
-      <operationtype commandClass="Genome::Model::Tools::BioSamtools::AlignmentSummary" typeClass="Workflow::OperationType::Command" />
-    </operation>
-    <operation name="Coverage">
+
+    <operation name="Coverage" parallelBy="wingspan">
       <link fromOperation="input connector" fromProperty="bed_file" toOperation="RefCov" toProperty="bed_file" />
       <link fromOperation="input connector" fromProperty="bam_file" toOperation="RefCov" toProperty="bam_file" />
       <link fromOperation="input connector" fromProperty="wingspan" toOperation="RefCov" toProperty="wingspan" />
@@ -25,10 +20,25 @@
       <link fromOperation="input connector" fromProperty="minimum_base_quality" toOperation="RefCov" toProperty="min_base_quality" />
       <link fromOperation="input connector" fromProperty="minimum_mapping_quality" toOperation="RefCov" toProperty="min_mapping_quality" />
       <link fromOperation="input connector" fromProperty="output_directory" toOperation="RefCov" toProperty="output_directory" />
+
+      <link fromOperation="input connector" fromProperty="output_directory" toOperation="Alignment Summary" toProperty="output_directory" />
+      <link fromOperation="input connector" fromProperty="bed_file" toOperation="Alignment Summary" toProperty="bed_file" />
+      <link fromOperation="input connector" fromProperty="bam_file" toOperation="Alignment Summary" toProperty="bam_file" />
+      <link fromOperation="input connector" fromProperty="wingspan" toOperation="Alignment Summary" toProperty="wingspan" />
+
       <link fromOperation="RefCov" fromProperty="stats_file" toOperation="Stats Summary" toProperty="stats_file" />
       <link fromOperation="RefCov" fromProperty="final_directory" toOperation="Stats Summary" toProperty="output_directory" />
+
       <link fromOperation="RefCov" fromProperty="stats_file" toOperation="output connector" toProperty="stats_file" />
+
       <link fromOperation="Stats Summary" fromProperty="output_file" toOperation="output connector" toProperty="stats_summary" />
+
+      <link fromOperation="Alignment Summary" fromProperty="output_file" toOperation="output connector" toProperty="alignment_summary" />
+
+      <operation name="Alignment Summary">
+        <operationtype commandClass="Genome::Model::Tools::BioSamtools::AlignmentSummary" typeClass="Workflow::OperationType::Command" />
+      </operation>
+
       <operation name="RefCov">
         <operationtype commandClass="Genome::Model::Tools::BioSamtools::RefCov" typeClass="Workflow::OperationType::Command" />
       </operation>
@@ -43,6 +53,7 @@
         <inputproperty>minimum_base_quality</inputproperty>
         <inputproperty>minimum_mapping_quality</inputproperty>
         <inputproperty>output_directory</inputproperty>
+        <outputproperty>alignment_summary</outputproperty>
         <outputproperty>stats_file</outputproperty>
         <outputproperty>stats_summary</outputproperty>
       </operationtype>
