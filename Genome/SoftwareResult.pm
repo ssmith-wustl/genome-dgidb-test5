@@ -97,8 +97,9 @@ sub create {
     }
     
     my $unlock_callback = sub {
+        $class->status_message("Cleaning up lock $lock...");
         Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock) || die "Failed to unlock after committing software result";
-        print "Cleaning up";
+        $class->status_message("Cleanup completed for lock $lock.");
     };
     # TODO; if an exception occurs before this is assigned to the object, we'll have a stray lock
     # We need to ensure that we get cleanup on die.
