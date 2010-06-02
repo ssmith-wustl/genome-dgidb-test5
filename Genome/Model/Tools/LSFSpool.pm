@@ -495,8 +495,15 @@ sub process_dir {
 
   $self->local_debug("process_dir($dir)\n");
 
+  # Check running first, don't update anything if jobs are running.
+  # Note we may have to check running again later...
+  if ($self->check_running($dir) > 0) {
+    $self->logger("skipping active spool " . basename $dir . "\n");
+    return 0;
+  }
+
   # Ignore completed spools.
-  # Check completeness from cache...
+  # Check completeness from the cache first...
   my @result = $self->{cache}->fetch($dir,'complete');
   my $complete = $result[0];
   return 0 if (defined $complete and $complete == 1);
@@ -504,7 +511,7 @@ sub process_dir {
   my %infiles;
   my @files = $self->{cache}->fetch($dir,'files');
   if (defined $files[0] and scalar @files > 0 and $files[0] =~ /^\w+/ ) {
-    # If we cached incomplete 'files', recheck them.
+    # If we last cached incomplete 'files', recheck them.
     $complete = 0;
     my @infiles = split(",",$files[0]);
     foreach my $file (@infiles) {
@@ -514,13 +521,15 @@ sub process_dir {
     $complete = 1 if (scalar keys %infiles == 0);
     @files = keys %infiles;
   } else {
-    # Check whole dir completeness from filesystem...
+    # Else, check whole dir completeness from filesystem...
     ($complete,@files) = $self->validate($dir);
   }
   $self->local_debug("incomplete files: " . join(",",@files) . "\n");
   $self->{cache}->add($dir,'files',join(",",@files));
 
+  # NOTE: We can mark a spool complete while a job is running here.
   if ($complete == -1) {
+    # Don't update cache if over the retry limit.
     $self->logger("over retry limit $dir\n");
     return 0;
   } elsif ($complete == 1) {
@@ -537,10 +546,7 @@ sub process_dir {
   # if we only want the cache built.
   return 0 if ($self->{buildonly});
 
-  # Check churn before check running...
-  # If check_churn is after validation, then we end up validating
-  # immediately after bsub, which is awkward...
-
+  # Check churn before check running, before bsub...
   # Note we might "churn" here, if the queue is below
   # the ceiling, but has jobs running for incomplete spools.
   # This would happen if we kill this process, but leave jobs
@@ -556,7 +562,7 @@ sub process_dir {
   # Update the time of this check, do so after churn check.
   $self->{cache}->add($dir,'time',time());
 
-  # Check running before queue full and bsub...
+  # Check running before queue full check and bsub, after check_churn sleep...
   # Ignore currently running spools.
   if ($self->check_running($dir) > 0) {
     $self->logger("skipping active spool " . basename $dir . "\n");
@@ -739,11 +745,6 @@ sub is_valid {
   return $retval;
 }
 
-#sub version {
-#  my $self = shift;
-#  print "lsf_spool $VERSION\n";
-#}
-
 sub usage {
   my $self = shift;
   print "lsf_spool [-hbcprsvVw] [-i cachefile] [-S subdir] [-C configfile] [-l logfile] <batch_file|spool_directory>
@@ -762,7 +763,6 @@ Usage:
   -S    for a spool dir, start processing at this subdir
   -r    re-submit the given query (file or dir) (MAX_USER_PRIO)
   -v    validate the given query (file or dir)
-  -V    display version information
   -w    wait for the given query to finish
 
 ";
@@ -986,10 +986,6 @@ sub main {
     $self->usage();
     return 0;
   }
-  if ($opts{'V'}) {
-    $self->version();
-    return 0;
-  }
 
   $self->{debug} = (delete $opts{'d'}) ? 1 : 0;
   $self->{dryrun} = (delete $opts{'n'}) ? 1 : 0;
@@ -1069,6 +1065,26 @@ sub main {
   return $rc;
 }
 
+# Subroutines providing usage documentation in the Genome Model Way.
+sub help_brief {
+  "LSFSpool manages submission of LSF jobs via a spool of input data.",
+}
+
+sub help_synopsis {
+  my $self = shift;
+  return <<"EOS"
+Intended to be used within a Workflow. eg: blastx-spool:
+
+LSFSpool [-hbcprsvVw] [-i cachefile] [-S subdir] [-C configfile] [-l logfile] <batch_file|spool_directory>
+EOS
+}
+
+sub help_detail {
+  return <<EOS
+LSFSpool is intended to be part of a Workflow.  See blastx-spool for an example.
+EOS
+}
+
 1;
 __END__
 
@@ -1096,7 +1112,6 @@ Genome::Model::Tools::LSFSpool - Manage a lsf job spool
   -S    for a spool dir, start processing at this subdir
   -r    re-bsub the given query (file or dir) (MAX_USER_PRIO)
   -v    validate the given query (file or dir)
-  -V    display version information
   -w    wait for the given query to finish
 
 =head1 DESCRIPTION
