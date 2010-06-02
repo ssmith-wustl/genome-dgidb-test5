@@ -192,7 +192,6 @@ sub _fetch_alignment_sets {
     }
     my @alignments;    
     for (@param_sets)  {
-        $DB::single = 1;
         my $alignment = Genome::InstrumentData::AlignmentResult->$mode(%$_);
         unless ($alignment) {
              #$self->error_message("Failed to $mode an alignment object");
@@ -208,7 +207,8 @@ sub params_for_alignment {
     my $assignment = shift;
 
     my $model = $assignment->model;
-    my $reference_sequence_name = $model->reference_sequence_name;
+    my $reference_build = $model->reference_build;
+    my $reference_build_id = $reference_build->id;
 
     unless ($self->type_name eq 'reference alignment') {
         $self->error_message('Can not create an alignment object for model type '. $self->type_name);
@@ -218,7 +218,7 @@ sub params_for_alignment {
     my %params = (
                     instrument_data_id => $assignment->instrument_data_id || undef,
                     aligner_name => $self->read_aligner_name || undef,
-                    reference_name => $reference_sequence_name || undef,
+                    reference_build_id => $reference_build_id || undef,
                     aligner_version => $self->read_aligner_version || undef,
                     aligner_params => $self->read_aligner_params || undef,
                     force_fragment => $self->force_fragment || undef,
