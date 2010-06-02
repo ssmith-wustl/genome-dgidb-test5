@@ -47,30 +47,36 @@ class Genome::Model::Tools::Fasta::FastaToSpool {
         },
         start => {
             is => 'Integer',
+            is_input => 1,
             is_optional => 1,
             doc => 'Skip to the first read of this batch N',
             default => 0,
         },
         end => {
             is => 'Integer',
+            is_input => 1,
             is_optional => 1,
             doc => 'Stop after this batch N',
             default => 0,
         },
         force => {
             is => 'boolean',
+            is_input => 1,
             is_optional => 1,
             doc => 'Overwrite existing files if present',
-            default => 1,
+            default => 0,
         },
         compress => {
             is => 'boolean',
+            is_input => 1,
             is_optional => 1,
             doc => 'Put spools into zip files rather than directories',
             default => 0,
         },
         prefix => {
             is => 'String',
+            is_input => 1,
+            is_optional => 1,
             doc => 'Prefix + fasta = spoolname',
             default => 'spool',
         }
@@ -78,7 +84,7 @@ class Genome::Model::Tools::Fasta::FastaToSpool {
 };
 
 sub help_brief {
-  'Divide a FASTA file into a set of batch files in subdirectories, for use with a Spooler'
+  'Divide a FASTA file into a set of batch files in subdirectories, for use with a Spooler, see LSFSpool and BlastxSpool.'
 }
 
 sub help_detail {
@@ -256,8 +262,8 @@ sub execute {
     }
 
     # Write output
-    # FIXME: Note that this may reformat the output from the input,
-    # changing whitespace.  Do we care?
+    # write_seq defaults width to 60 and cannot be disabled, set long.
+    $ofasta->width( 1000 );
     $ofasta->write_seq( $seq ) or die "Failed to write to $bfilename: $!";
   }
 
