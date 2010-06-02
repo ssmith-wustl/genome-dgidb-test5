@@ -10,7 +10,7 @@ use Exception::Class('ImportedVariations');
 
 class Genome::Model::Command::Define::ImportedVariations {
     is => 'Genome::Model::Command::Define',
-    has => [variation_file =>
+    has => [variations_file =>
         {
             is => 'Text',
             len => 1000,
@@ -141,12 +141,12 @@ sub _execute_try {
     if(defined($self->species_name))
     {
         my @taxons = Genome::Taxon->get('species_name' => $self->species_name);
-        if($#taxons == -1)
+        if(@taxons == 0)
         {
             $err->("No Genome::Taxon found with species name \"" . $self->species_name . "\".");
             return;
         }
-        if($#taxons > 0)
+        if(@taxons > 1)
         {
             $err->("Multiple Genome::Taxon instances found with species name \"" . $self->species_name . "\".  This code was written " .
                    "with the assumption that species name uniquely identifies each Genome::Taxon instance.  If strain name or " .
@@ -171,12 +171,12 @@ sub _execute_try {
     #   existing build.
     my @models = Genome::Model->get('name' => $self->model_name);
     my $model;
-    if($#models > 0)
+    if(@models > 1)
     {
         $err->("More than one model (" . $#models . ") found with the name \"" . $self->model_name . "\".");
         die "more than one model";
     }
-    elsif($#models == 0)
+    elsif(@models == 1)
     {
         # * We're going to want a new build for an existing model, but first we should see if there are already any builds
         #   of the same version for the existing model.  If so, we ask the user to confirm that they really want to make another.
