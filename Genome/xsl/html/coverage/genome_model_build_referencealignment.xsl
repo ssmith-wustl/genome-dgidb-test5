@@ -10,10 +10,12 @@
         <td class="label">Region of Interest Set Name:</td>
         <td class="value"><xsl:value-of select="region_of_interest_set_name"/></td>
       </tr>
-<!--      <tr>
-        <td class="label">Target Regions Set Names:</td>
+     <!--This causes some weird formating issues
+         <tr>
+        <td class="label">Target Region Set Name:</td>
         <td class="value"><xsl:value-of select="target_region_set_names"/></td>
-      </tr> -->
+     </tr>
+         -->
     </table>
 
     <h2>aligned reads</h2>
@@ -91,7 +93,7 @@
       </tbody>
     </table>
 
-    <h2>depth and breadth summary</h2>
+    <h2>depth summary</h2>
     <table class="list" width="100%" cellspacing="0" cellpadding="0" border="0">
       <!-- <colgroup> -->
       <!--   <col width="40%"/> -->
@@ -109,8 +111,6 @@
           <th class="last">target BP</th>
           <th class="last">covered BP</th>
           <th class="last">% target space covered</th>
-          <th class="last">targets 80% breadth</th>
-          <th class="last">% targets 80% breadth</th>
         </tr>
       </thead>
       <tbody>
@@ -122,8 +122,6 @@
           <xsl:variable name="target_base_pair" select="target_base_pair"/>
           <xsl:variable name="covered_base_pair" select="covered_base_pair"/>
           <xsl:variable name="pc_target_space_covered" select="($covered_base_pair div $target_base_pair) * 100"/>
-          <xsl:variable name="targets_eighty_pc_breadth" select="targets_eighty_pc_breadth"/>
-          <xsl:variable name="pc_targets_eighty_pc_breadth" select="($targets_eighty_pc_breadth div $targets) * 100"/>
           <tr>
             <td>
               <xsl:value-of select="@value"/>
@@ -146,16 +144,66 @@
             <td class="last">
               <xsl:value-of select="format-number($pc_target_space_covered,'###.000')"/>%
             </td>
+            
+          </tr>
+        </xsl:for-each>
+      </tbody>
+    </table>
+    <h2>depth with breadth(>=80%) summary</h2>
+    <table class="list" width="100%" cellspacing="0" cellpadding="0" border="0">
+      <!-- <colgroup> -->
+      <!--   <col width="40%"/> -->
+      <!--   <col/> -->
+      <!--   <col/> -->
+      <!--   <col/> -->
+      <!--   <col/> -->
+      <!-- </colgroup> -->
+      <thead>
+        <tr>
+          <th>minimum depth</th>
+          <th class="last">targets</th>
+          <th class="last">targets touched</th>
+          <th class="last">% targets touched</th>
+          <th class="last">target BP</th>
+          <th class="last">covered BP</th>
+          <th class="last">% target space covered</th>
+          
+        </tr>
+      </thead>
+      <tbody>
+        <xsl:for-each select="coverage-stats-summary/wingspan/minimum_depth">
+          <xsl:sort select="@value" data-type="number" order="ascending"/>
+          <xsl:variable name="targets" select="targets"/>
+          <xsl:variable name="targets_eighty_pc_breadth" select="targets_eighty_pc_breadth"/>
+          <xsl:variable name="pc_targets_eighty_pc_breadth" select="($targets_eighty_pc_breadth div $targets) * 100"/>
+          <xsl:variable name="target_base_pair" select="target_base_pair"/>
+          <xsl:variable name="covered_base_pair_eighty_pc_breadth" select="covered_base_pair_eighty_pc_breadth"/>
+          <xsl:variable name="pc_target_covered_base_pair_eighty_pc_breadth" select="($covered_base_pair_eighty_pc_breadth div $target_base_pair) *100"/>
+          <tr>
+            <td>
+              <xsl:value-of select="@value"/>
+            </td>
+            <td class="last">
+              <xsl:value-of select="format-number($targets,'###,###')"/>
+            </td>
             <td class="last">
               <xsl:value-of select="format-number($targets_eighty_pc_breadth,'###,###')"/>
             </td>
             <td class="last">
               <xsl:value-of select="format-number($pc_targets_eighty_pc_breadth,'###.000')"/>%
             </td>
+            <td class="last">
+              <xsl:value-of select="format-number($target_base_pair,'###,###')"/>
+            </td>
+            <td class="last">
+              <xsl:value-of select="format-number($covered_base_pair_eighty_pc_breadth,'###,###')"/>
+            </td>
+            <td class="last">
+              <xsl:value-of select="format-number($pc_target_covered_base_pair_eighty_pc_breadth,'###.000')"/>%
+            </td>
           </tr>
         </xsl:for-each>
       </tbody>
     </table>
-
   </xsl:template>
 </xsl:stylesheet>
