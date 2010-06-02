@@ -109,6 +109,9 @@ sub create {
 
   my $prefix = $self->{prefix};
   my $fasta = Cwd::abs_path $self->{fasta};
+
+  die "--fasta argument is not a file" if (! -f $fasta);
+
   my $filename = basename $fasta;
   my $spooldir = dirname $fasta;
 
@@ -147,6 +150,27 @@ sub compress {
   # Remove the temporary path.
   rmtree($jobname) or die "Cannot rmtree $jobname: $!";
   print "Compressed to $jobname.zip\n";
+}
+
+sub compare_existing {
+  my $inputfile = shift;
+  my $spooldir  = shift;
+  my $inputsize = -s $inputfile;
+  my $spoolsize = 0;
+
+  sub size {
+     my $spoolsize = shift;
+     my $file_size = -s $_;
+     ${$spoolsize} += $file_size;
+  }
+
+  File::Find::Rule->file()
+                  ->not_name('.*')
+                  ->not_name('*-output')
+                  ->exec( sub { size(\$spoolsize,$_); } )
+                  ->in($spooldir);
+
+  return $spoolsize/$inputsize;
 }
 
 sub execute {
@@ -197,6 +221,15 @@ sub execute {
   # Make the base spool
   if (! -d $self->{spooldir} ) {
     mkdir $self->{spooldir} or die "Cannot mkdir spooldir $self->{spooldir}: $!";
+  } else {
+    my $rc = compare_existing( $fasta, $self->{spooldir} );
+    # Bytes in spooldir should be the same as bytes in input file.
+    # However, Bio::SeqIO->write() may wrap lines, adding \n, thus
+    # increasing byte count.  So may not be exactly 1 to 1.
+    if ($rc >= 1) {
+      printf "Spooldir looks to be complete.\n";
+    }
+    return 1 unless ($self->{force});
   }
   chdir $self->{spooldir} or die "Cannot chdir spooldir $self->{spooldir}: $!";
 
@@ -227,7 +260,8 @@ sub execute {
       if ( $self->{end} and
                    $jobcount > $self->{end}) {
         print "Reached maximum number of batch files\n";
-        return;
+        # Return true for execute()
+        return 1;
       }
     }
 
