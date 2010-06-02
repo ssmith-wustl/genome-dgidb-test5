@@ -80,6 +80,7 @@ sub execute {
         for (@Workflow::Simple::ERROR) {
             print STDERR $_->error ."\n";
         }
+        return;
     }
     my $alignment_summaries = $output->{alignment_summaries};
     unless (scalar(@$alignment_summaries) == scalar(@wingspans)) {
