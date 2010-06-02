@@ -19,7 +19,7 @@ class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
             calculate => q{ $working_directory . '/indel_output.csv' },
             is_output=>1,
         },
-        detect_snps => { 
+        detect_snvs => { 
             default_value => 1,
             doc => "Whether or not the tool should detect snps.  If set to false, the tool will still discover snps and indels at the same time, but will throw away any snps it detects",
             is_optional => 1,
@@ -29,7 +29,7 @@ class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
             doc => "Whether or not the tool should detect indels.  If set to false, the tool will still discover snps and indels at the same time, but will throw away any indels it detects",
             is_optional => 1,
         },
-        snp_params => {
+        snv_params => {
             is => 'Text',
             default => '-q 1 -Q',
             doc => "Parameters for running bam-somaticsniper for snps. Since it discovers both snps and indels in one run, providing different parameters for snps and indels causes bam-somatisniper to run twice.",
@@ -105,7 +105,7 @@ sub execute {
         return 1;
     }
 
-    unless ($self->detect_snps || $self->detect_indels) {
+    unless ($self->detect_snvs || $self->detect_indels) {
         $self->status_message("Both detect_snps and detect_indels are set to false. Skipping execution.");
         return 1;
     }
@@ -129,20 +129,20 @@ sub execute {
     } 
 
     # Run sniper C program... run twice if we get different sets of params for snps and indels
-    my $snp_params = $self->snp_params || "";
+    my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
-    if ( ($self->detect_snps && $self->detect_indels) && ($snp_params eq $indel_params) ) {
-        $result = $self->_run_sniper($snp_params, $self->snp_output, $self->indel_output);
+    if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
+        $result = $self->_run_sniper($snv_params, $self->snp_output, $self->indel_output);
     } else {
         # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
-        if ($self->detect_snps && $self->detect_indels) {
+        if ($self->detect_snvs && $self->detect_indels) {
             $self->status_message("Snp and indel params are different. Executing sniper twice: once each for snps and indels with their respective parameters");
         }
         my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
 
-        if ($self->detect_snps) {
-            $result = $self->_run_sniper($snp_params, $self->snp_output, $temp_name);
+        if ($self->detect_snvs) {
+            $result = $self->_run_sniper($snv_params, $self->snp_output, $temp_name);
         }
         if ($self->detect_indels) {
             if($self->detect_snps and not $result) {

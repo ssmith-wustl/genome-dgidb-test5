@@ -114,22 +114,22 @@ EOS
 sub execute {
     my $self = shift;
 
-    unless ($self->detect_snps || $self->detect_indels) {
+    unless ($self->detect_snvs || $self->detect_indels) {
         $self->status_message("Both detect_snps and detect_indels are set to false. Skipping execution.");
         return 1;
     }
 
-    my $snp_params = $self->snp_params || "";
+    my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $genotyper_params;
 
     # make sure the params are the same, or we are only detecting one type of variant
-    if ( ($self->detect_snps && $self->detect_indels) && ($snp_params ne $indel_params) ) {
-        $self->status_message("Snp and indel params are different. This is not supported, as these parameters only affect the update genotype step");
+    if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params ne $indel_params) ) {
+        $self->status_message("Snv and indel params are different. This is not supported, as these parameters only affect the update genotype step");
         die;
     }
-    if ($self->detect_snps) {
-        $genotyper_params = $snp_params;
+    if ($self->detect_snvs) {
+        $genotyper_params = $snv_params;
     } else {
         $genotyper_params = $indel_params;
     }
@@ -166,14 +166,14 @@ sub execute {
     my $indel_output = $self->indel_output;
 
     my $result;
-    if ($self->detect_snps && $self->detect_indels) {
+    if ($self->detect_snvs && $self->detect_indels) {
         $result = $self->_run_maq($snp_output, $filtered_snp_output, $indel_output, $genotyper_params);
     } else {
         # Run just snps or indels if we dont want both. Throw away the other type of variant
         my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
         my ($filtered_temp_fh, $filtered_temp_name) = Genome::Utility::FileSystem->create_temp_file();
 
-        if ($self->detect_snps) {
+        if ($self->detect_snvs) {
             $result = $self->_run_maq($snp_output, $filtered_snp_output, $temp_name, $genotyper_params);
         }
         if ($self->detect_indels) {

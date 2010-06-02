@@ -28,7 +28,7 @@ class Genome::Model::Tools::DetectVariants::Samtools {
     ],
    
     has_optional => [
-        detect_snps => {
+        detect_snvs => {
             default => 1,
         },
         detect_indels => {
@@ -59,7 +59,7 @@ EOS
 
 sub help_detail {
     return <<EOS 
-This tool runs samtools for detection of SNPs and/or indels.
+This tool runs samtools for detection of SNVs and/or indels.
 EOS
 }
 
@@ -95,32 +95,32 @@ sub execute {
         return;
     }
 
-    unless ($self->detect_snps || $self->detect_indels) {
+    unless ($self->detect_snvs || $self->detect_indels) {
         $self->status_message("Both detect_snps and detect_indels are set to false. Skipping execution.");
         return 1;
     }
 
-    my $snp_params = $self->snp_params || "";
+    my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
-    if ( ($self->detect_snps && $self->detect_indels) && ($snp_params eq $indel_params) ) {
-        $result = $self->_run_samtools($ref_seq_file, $bam_file, $self->snp_output, $self->filtered_snp_output, $self->indel_output, $self->filtered_indel_output, $snp_params);
+    if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
+        $result = $self->_run_samtools($ref_seq_file, $bam_file, $self->snp_output, $self->filtered_snp_output, $self->indel_output, $self->filtered_indel_output, $snv_params);
     } else {
         # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
-        if ($self->detect_snps && $self->detect_indels) {
+        if ($self->detect_snvs && $self->detect_indels) {
             $self->status_message("Snp and indel params are different. Executing Samtools twice: once each for snps and indels with their respective parameters");
         }
         my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
         my ($filtered_temp_fh, $filtered_temp_name) = Genome::Utility::FileSystem->create_temp_file();
 
         if ($self->detect_snps) {
-            $result = $self->_run_samtools($ref_seq_file, $bam_file, $self->snp_output, $self->filtered_snp_output, $temp_name, $filtered_temp_name, $snp_params);
+            $result = $self->_run_samtools($ref_seq_file, $bam_file, $self->snp_output, $self->filtered_snp_output, $temp_name, $filtered_temp_name, $snv_params);
         }
         if ($self->detect_indels) {
             if($self->detect_snps and not $result) {
                 $self->status_message('Samtools did not report success for snp detection. Skipping indel detection.')
             } else {
-                $result = $self->_run_samtools($ref_seq_file, $bam_file, $temp_name, $filtered_temp_name, $self->indel_output, $self->filtered_indel_output, $snp_params);
+                $result = $self->_run_samtools($ref_seq_file, $bam_file, $temp_name, $filtered_temp_name, $self->indel_output, $self->filtered_indel_output, $snv_params);
             }
         }
     }
@@ -276,7 +276,7 @@ sub generate_metrics {
 
     my $metrics = {};
     
-    if($self->detect_snps) {
+    if($self->detect_snvs) {
         my $snp_count      = 0;
         my $snp_count_good = 0;
         

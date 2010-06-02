@@ -17,16 +17,16 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => 'the type of dna used in the reads for this model',
             valid_values => ['genomic dna', 'cdna']
         },
-        snp_detector_name => {
-            doc => 'Name of the snp detector',
+        snv_detector_name => {
+            doc => 'Name of the snv detector',
             is_optional => 1,
         },
-        snp_detector_version => {
-            doc => 'version of the snp detector',
+        snv_detector_version => {
+            doc => 'version of the snv detector',
             is_optional => 1,
         },
-        snp_detector_params => {
-            doc => 'command line args used for the snp detector',  
+        snv_detector_params => {
+            doc => 'command line args used for the snv detector',  
             is_optional => 1,
         },
         indel_detector_name => {

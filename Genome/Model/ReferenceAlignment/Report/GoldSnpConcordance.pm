@@ -116,7 +116,7 @@ sub generate_report_detail
     my $build = $self->build;
     my $model = $build->model;
 
-    my $snp_detector_name = $model->snp_detector_name;
+    my $snv_detector_name = $model->snv_detector_name;
     my $gold_snp_path  = $self->gold_snp_path;
 
     my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/GoldSnpConcordance.pm"};
@@ -169,7 +169,7 @@ $DB::single = 1;
             missed_snp_file => $missed_snp_file,
         );
 
-        unless ($snp_detector_name eq "maq") {
+        unless ($snv_detector_name eq "maq") {
             $intersect_params{'snp_format'} = 'sam';
         }
 
@@ -189,7 +189,7 @@ $DB::single = 1;
         my $cmd = "gmt snp gold-snp-intersection " .
             "--gold-snp-file $gold_snp_path " .
             "--snp-file $snp_file";
-        $cmd .= ' --snp-format sam' if $snp_detector_name =~ /samtools/;
+        $cmd .= ' --snp-format sam' if $snv_detector_name =~ /samtools/;
 
         $DB::single = 1;
 

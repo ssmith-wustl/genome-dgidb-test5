@@ -53,21 +53,21 @@ sub execute {
     my $self = shift;
 
     my $model = $self->model;
-    my $snp_detector_name = $model->snp_detector_name;
+    my $snv_detector_name = $model->snv_detector_name;
     my $indel_detector_name = $model->indel_detector_name;
-    my $snp_detector_version = $model->snp_detector_version;
+    my $snv_detector_version = $model->snv_detector_version;
     my $indel_detector_version = $model->indel_detector_version;
 
     # TODO for now just run snps and indels, eventually run sv etc
     my $result;
-    if ( (defined $snp_detector_name && defined $indel_detector_name) and ($snp_detector_name eq $indel_detector_name) and ($snp_detector_version eq $indel_detector_version) ) {
+    if ( (defined $snv_detector_name && defined $indel_detector_name) and ($snv_detector_name eq $indel_detector_name) and ($snv_detector_version eq $indel_detector_version) ) {
         # Snp and indel name and version are the same, so do both at once
-        $result = $self->_run_variant_detector($snp_detector_name, $snp_detector_version, 1, 1);
+        $result = $self->_run_variant_detector($snv_detector_name, $snv_detector_version, 1, 1);
     } else {
         # Detect snps if requested
         $result = 1;
-        if (defined $snp_detector_name) {
-            $result &&= $self->_run_variant_detector($snp_detector_name, $snp_detector_version, 1, 0);
+        if (defined $snv_detector_name) {
+            $result &&= $self->_run_variant_detector($snv_detector_name, $snv_detector_version, 1, 0);
         }
         # detect indels if requested
         if (defined $indel_detector_name) {
@@ -80,7 +80,7 @@ sub execute {
 
 # This method takes a boolean flag for detect_snps and detect_indels, both can be 1
 sub _run_variant_detector {
-    my ($self, $detector_name, $detector_version, $detect_snps, $detect_indels) = @_;
+    my ($self, $detector_name, $detector_version, $detect_snvs, $detect_indels) = @_;
 
     my $detector_class = $self->detector_class($detector_name);
 
@@ -89,7 +89,7 @@ sub _run_variant_detector {
     my $reference_build = $model->reference_build;
     my $reference_sequence = $reference_build->full_consensus_path('fa');
     my $aligned_reads_input = $build->whole_rmdup_bam_file;
-    my $snp_params = $model->snp_detector_params;
+    my $snv_params = $model->snv_detector_params;
     my $indel_params = $model->indel_detector_params;
 
     #TODO Horrbile MAQ hack attack!!
@@ -100,9 +100,9 @@ sub _run_variant_detector {
     }
 
     my $detector = $detector_class->create(
-        snp_params => $snp_params,
+        snv_params => $snv_params,
         indel_params => $indel_params,
-        detect_snps => $detect_snps,
+        detect_snvs => $detect_snvs,
         detect_indels => $detect_indels,
         aligned_reads_input => $aligned_reads_input,
         working_directory => $self->analysis_base_path, 

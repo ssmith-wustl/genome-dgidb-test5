@@ -75,7 +75,7 @@ class Genome::Model::Tools::DetectVariants::Somatic::Breakdancer{
     ],
     # These are params from the superclass' standard API that we do not require for this class (dont show in the help)
     has_constant_optional => [
-        snp_params=>{},
+        snv_params=>{},
         indel_params=>{},
         capture_set_input =>{},
     ],

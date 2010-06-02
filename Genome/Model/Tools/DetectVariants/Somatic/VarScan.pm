@@ -24,13 +24,13 @@ class Genome::Model::Tools::DetectVariants::Somatic::VarScan {
         },
     ],
     has_optional => [
-        detect_snps => {
+        detect_snvs => {
             default => '1',
         },
         detect_indels => {
             default => '1',
         },
-        snp_params => {
+        snv_params => {
             default => "--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1",
         },
         indel_params => {
@@ -85,31 +85,31 @@ sub execute {
         die $self->error_message;
     }
 
-    unless ($self->detect_snps || $self->detect_indels) {
+    unless ($self->detect_snvs || $self->detect_indels) {
         $self->status_message("Both detect_snps and detect_indels are set to false. Skipping execution.");
         return 1;
     }
 
-    my $snp_params = $self->snp_params || "";
+    my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
-    if ( ($self->detect_snps && $self->detect_indels) && ($snp_params eq $indel_params) ) {
-        $result = $self->_run_varscan($reference, $tumor_bam, $normal_bam, $output_snp, $output_indel, $snp_params);
+    if ( ($self->detect_snps && $self->detect_indels) && ($snv_params eq $indel_params) ) {
+        $result = $self->_run_varscan($reference, $tumor_bam, $normal_bam, $output_snp, $output_indel, $snv_params);
     } else {
         # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
-        if ($self->detect_snps && $self->detect_indels) {
+        if ($self->detect_snvs && $self->detect_indels) {
             $self->status_message("Snp and indel params are different. Executing VarScan twice: once each for snps and indels with their respective parameters");
         }
         my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
 
-        if ($self->detect_snps) {
-            $result = $self->_run_varscan($reference, $tumor_bam, $normal_bam, $output_snp, $temp_name, $snp_params);
+        if ($self->detect_snvs) {
+            $result = $self->_run_varscan($reference, $tumor_bam, $normal_bam, $output_snp, $temp_name, $snv_params);
         }
         if ($self->detect_indels) {
-            if($self->detect_snps and not $result) {
+            if($self->detect_snvs and not $result) {
                 $self->status_message('VarScan did not report success for snp detection. Skipping indel detection.')
             } else {
-                $result = $self->_run_varscan($reference, $tumor_bam, $normal_bam, $temp_name, $output_indel, $snp_params);
+                $result = $self->_run_varscan($reference, $tumor_bam, $normal_bam, $temp_name, $output_indel, $snv_params);
             }
         }
     }

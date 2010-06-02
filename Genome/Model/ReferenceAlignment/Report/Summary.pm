@@ -374,7 +374,7 @@ sub get_summary_information
     $filtered_snp_calls =~ s/\s//g;
 
     my $snp_chromosomes = $self->model->reference_build->description;
-    my $snp_caller = $self->model->snp_detector_name;
+    my $snp_caller = $self->model->snv_detector_name;
 
     my @stat = stat($filtered_files[-1]);
     my $time = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime($stat[10]));

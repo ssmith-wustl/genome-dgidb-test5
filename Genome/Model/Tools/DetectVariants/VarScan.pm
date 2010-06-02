@@ -16,13 +16,13 @@ class Genome::Model::Tools::DetectVariants::VarScan {
         },
     ],
     has_optional => [
-        snp_params => {
+        snv_params => {
             default => '--min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01',
         },
         indel_params => {
             default => '--min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01',
         },
-        detect_snps => {
+        detect_snvs => {
             default => '1',
         },
         detect_indels => {
@@ -49,7 +49,7 @@ class Genome::Model::Tools::DetectVariants::VarScan {
     ],
    
     has_optional => [
-        detect_snps => {
+        detect_snvs => {
             default => 1,
         },
         detect_indels => {
@@ -123,16 +123,16 @@ sub execute {
         die $self->error_message;
     }
 
-    unless ($self->detect_snps || $self->detect_indels) {
+    unless ($self->detect_snvs || $self->detect_indels) {
         $self->status_message("Both detect_snps and detect_indels are set to false. Skipping execution.");
         return 1;
     }
 
-    my $snp_params = $self->snp_params || "";
+    my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
-    if ( ($self->detect_snps && $self->detect_indels) && ($snp_params eq $indel_params) ) {
-        $result = $self->_run_varscan($reference, $bam_file, $output_snp, $output_snp_filtered, $output_indel, $output_indel_filtered, $snp_params);
+    if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
+        $result = $self->_run_varscan($reference, $bam_file, $output_snp, $output_snp_filtered, $output_indel, $output_indel_filtered, $snv_params);
     } else {
         # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
         if ($self->detect_snps && $self->detect_indels) {
@@ -141,12 +141,12 @@ sub execute {
         my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
         my ($filtered_temp_fh, $filtered_temp_name) = Genome::Utility::FileSystem->create_filtered_temp_file();
 
-        if ($self->detect_snps) {
-            $result = $self->_run_varscan($reference, $bam_file, $output_snp, $output_snp_filtered, $temp_name, $filtered_temp_name, $snp_params);
+        if ($self->detect_snvs) {
+            $result = $self->_run_varscan($reference, $bam_file, $output_snp, $output_snp_filtered, $temp_name, $filtered_temp_name, $snv_params);
         }
         if ($self->detect_indels) {
-            if($self->detect_snps and not $result) {
-                $self->status_message('VarScan did not report success for snp detection. Skipping indel detection.')
+            if($self->detect_snvs and not $result) {
+                $self->status_message('VarScan did not report success for snv detection. Skipping indel detection.')
             } else {
                 $result = $self->_run_varscan($reference, $bam_file, $temp_name, $filtered_temp_name, $output_indel, $output_indel_filtered, $indel_params);
             }
@@ -183,7 +183,7 @@ sub generate_metrics {
 
     my $metrics = {};
     
-    if($self->detect_snps) {
+    if($self->detect_snvs) {
         my $snp_count      = 0;
         
         my $snp_output = $self->snp_output;

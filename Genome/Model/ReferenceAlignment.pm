@@ -37,9 +37,9 @@ class Genome::Model::ReferenceAlignment {
         indel_finder_version         => { via => 'processing_profile'},
         indel_finder_params          => { via => 'processing_profile'},
         variant_filter               => { via => 'processing_profile'},
-        snp_detector_name            => { via => 'processing_profile'},
-        snp_detector_version         => { via => 'processing_profile'},
-        snp_detector_params          => { via => 'processing_profile'},
+        snv_detector_name            => { via => 'processing_profile'},
+        snv_detector_version         => { via => 'processing_profile'},
+        snv_detector_params          => { via => 'processing_profile'},
         indel_detector_name          => { via => 'processing_profile'},
         indel_detector_version       => { via => 'processing_profile'},
         indel_detector_params        => { via => 'processing_profile'},
@@ -221,19 +221,19 @@ sub other_snp_related_metric_directory {
 sub _snp_caller_type {
     my $self = shift;
 
-    if ($self->snp_detector_name) {
-        if ($self->snp_detector_name =~ /samtools/i) {
+    if ($self->snv_detector_name) {
+        if ($self->snv_detector_name =~ /samtools/i) {
             return 'sam';
-        } elsif ($self->snp_detector_name =~ /maq/i) {
+        } elsif ($self->snv_detector_name =~ /maq/i) {
             return 'maq';
-        } elsif ($self->snp_detector_name =~ /var-scan/i) {
+        } elsif ($self->snv_detector_name =~ /var-scan/i) {
             return 'varscan';
         } else {
-            $self->error_message("Unrecognized snp_detector_name set for model " . $self->name . " " . $self->genome_model_id);
+            $self->error_message("Unrecognized snv_detector_name set for model " . $self->name . " " . $self->genome_model_id);
             return;
         }
     } else {
-        $self->error_message("No snp_detector_name set for model " . $self->name . " " . $self->genome_model_id);
+        $self->error_message("No snv_detector_name set for model " . $self->name . " " . $self->genome_model_id);
         return;
     }
 }

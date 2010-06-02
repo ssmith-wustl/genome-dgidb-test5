@@ -8,10 +8,10 @@ use Genome;
 class Genome::Model::Tools::DetectVariants {
     is => 'Command',
     has_constant => [
-        detect_snps => {
+        detect_snvs => {
             is => 'Boolean',
             value => '0',
-            doc => 'Indicates whether this variant detector should detect SNPs',
+            doc => 'Indicates whether this variant detector should detect SNVs',
         },
         detect_indels => {
             is => 'Boolean',
@@ -43,9 +43,9 @@ class Genome::Model::Tools::DetectVariants {
             doc => 'Location of the file containing the regions of interest (if present, only variants in the set will be reported)',
             is_input => 1,
         },
-        snp_params => {
+        snv_params => {
             is => 'Text',
-            doc => 'Parameters to pass through to SNP detection',
+            doc => 'Parameters to pass through to SNV detection',
             is_input => 1,
         },
         indel_params => {

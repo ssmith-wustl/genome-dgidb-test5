@@ -43,7 +43,7 @@ sub setup_test_build {
         sequencing_platform => 'solexa',
         dna_type => 'cdna',
         read_aligner_name => 'bwa',
-        snp_detector_name => 'samtools',
+        snv_detector_name => 'samtools',
     ); 
     ok($test_profile, 'created test processing profile');
     
