@@ -79,15 +79,6 @@ test_model_from_params(
     },
 );
 
-# test create for a genome model assembly
-test_model_from_params(
-    model_params => {
-        subject_name => $default_subject_name,
-        subject_type => $default_subject_type,
-        processing_profile_name   => '454_newbler_assembly_with_consed_flag',
-    },
-);
-
 exit;
 
 ########################################################3
@@ -136,8 +127,25 @@ sub successful_create_model {
     my $expected_user_name = $ENV{USER};
     my $current_time = UR::Time->now;
     my ($expected_date) = split('\w',$current_time);
-    
-    my $create_command = Genome::Model::Command::Define::ReferenceAlignment->create(%params);
+  
+    my $define_class;
+    my $ppname = $params{processing_profile_ppname};
+    my @pp = Genome::ProcessingProfile->get(name => $ppname);
+    if (@pp > 1) {
+        die "Found multiple profiles for ppname: $ppname";
+    }
+    elsif (@pp == 0) {
+        warn "No profile found with ppname: $ppname";
+        $define_class = 'Genome::Model::Command::Define::ReferenceAlignment';
+    }
+    else {
+        $define_class = $pp[0]->class;
+        $define_class =~ s/Genome::ProcessingProfile:://;
+        $define_class =~ s/::.*//;
+        $define_class = "Genome::Model::Command::Define::$define_class";
+    };
+
+    my $create_command = $define_class->create(%params);
     isa_ok($create_command,'Genome::Model::Command::Define');
 
     $create_command->dump_error_messages(0);
