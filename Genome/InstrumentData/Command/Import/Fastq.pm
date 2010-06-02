@@ -200,14 +200,22 @@ sub execute {
 
     my $ref_name = $self->reference_name;
 
-    my @input_files = split /\,/, $self->source_data_files;
+    my $sources = $self->source_data_files;
 
-    foreach (@input_files) {
+    if( $sources =~ s/\/\//\//g) {
+        $self->source_data_files($sources);            
+        print "new source = ".$self->source_data_files."\n";
+    }
+
+    my @input_files = split /\,/, $self->source_data_files;
+    foreach (sort(@input_files)) {
         unless( -s $_) {
             $self->error_message("Input file(s) were not found $_");
             die $self->error_message;
         }
-    }
+    }        
+    $self->source_data_files(join( ',',sort(@input_files)));
+    print "source data files = ".$self->source_data_files."\n";
     my $tmp_tar_file = File::Temp->new("fastq-archive-XXXX",DIR=>"/tmp");
     my $tmp_tar_filename = $tmp_tar_file->filename;
 
@@ -215,14 +223,14 @@ sub execute {
     my $basename;
     my %basenames;
     my @inputs;
-    for my $file (@input_files) {
+    for my $file (sort(@input_files)) {
         my ($filename,$path,$suffix) = fileparse($file, @suffixes);
         $basenames{$path}++;
         $basename = $path;
         push @inputs,$filename.$suffix;
     }
     unless(scalar(keys(%basenames))==1) {
-        $self->error_message("Found more than on path to imported files.");
+        $self->error_message("Found more than one path to imported files.");
         die $self->error_message;
     }
     my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @inputs);
