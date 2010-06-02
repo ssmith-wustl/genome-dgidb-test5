@@ -22,9 +22,9 @@ use Genome;                                 # using the namespace authorizes Cla
 
 
 my $report_only = 0;
-my $p_value_for_hc = 1.0E-02;
-my $max_normal_freq = 4;
-my $min_tumor_freq = 15;
+my $p_value_for_hc = 0.07; # changed 6/2/2010 #1.0E-02;
+my $max_normal_freq = 5; # changed 6/2/2010
+my $min_tumor_freq = 10;
 
 class Genome::Model::Tools::Varscan::ProcessSomatic {
 	is => 'Command',                       
@@ -219,17 +219,18 @@ sub process_results
 					print STATUS "$line\n" if(!$report_only);
 					
 					## If there's good support in tumor but NO support in normal, call it HC ##
-					if($normal_freq == 0 && $tumor_freq >= $min_tumor_freq) ## Added 5/28/2010
-					{
-						print HICONF "$line\n" if(!$report_only);
-						$numHiConf++;						
-					}
-					elsif($normal_reads2 <= 1 && $tumor_freq >= $min_tumor_freq && $tumor_reads2 >= 2)  ## Added 5/28/2010
-					{
-						print HICONF "$line\n" if(!$report_only);
-						$numHiConf++;
-					}
-					elsif($normal_freq <= $max_normal_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) #1.0E-06)
+					#if($normal_freq == 0 && $tumor_freq >= $min_tumor_freq && $tumor_reads2 >= 2) ## Added 5/28/2010
+					#{
+					#	print HICONF "$line\n" if(!$report_only);
+					#	$numHiConf++;						
+					#}
+					#elsif($normal_reads2 <= 1 && $tumor_freq >= $min_tumor_freq && $tumor_reads2 >= 2)  ## Added 5/28/2010
+					#{
+					#	print HICONF "$line\n" if(!$report_only);
+					#	$numHiConf++;
+					#}
+					#els
+					if($normal_freq <= $max_normal_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc && $tumor_reads2 >= 2) #1.0E-06)
 					{
 						print HICONF "$line\n" if(!$report_only);
 						$numHiConf++;
