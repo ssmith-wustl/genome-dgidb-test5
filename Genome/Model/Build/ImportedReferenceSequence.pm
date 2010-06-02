@@ -162,6 +162,12 @@ sub description {
     return $desc;
 }
 
+sub external_url {
+    my $self = shift;
+    my $url = 'https://genome.wustl.edu/view/genome/model/build/reference-sequence/consensus.fasta?id=' . $self->id;
+    return $url;
+}
+
 sub get_sequence_dictionary {
     my $self = shift;
     my $file_type = shift;
