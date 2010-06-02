@@ -95,6 +95,14 @@ Optionally zip/compress the spool directory into a zip file.
 EOT
 }
 
+sub help_synopsis {
+  return <<EOT
+genome model tools fasta fasta-to-spool [--force] [--reads N] [--batches N] [--start N] [--end N] [--compress] --fasta FILE
+
+genome model tools fasta fasta-to-spool --reads 10 --batches 10 --fasta FILE
+EOT
+}
+
 sub create {
   my $class = shift;
   my $self = $class->SUPER::create(@_);
