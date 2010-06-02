@@ -1,5 +1,4 @@
 package Genome::Model::Build::ImportedReferenceSequence;
-#:adukes This module is used solely for importing annotation and generating sequence for genbank exons.  It needs to be expanded/combined with other reference sequence logic ( refalign models )
 use strict;
 use warnings;
 
@@ -42,16 +41,6 @@ class Genome::Model::Build::ImportedReferenceSequence {
         }        
     ]
 };
-
-sub Xname {
-    my $self = shift;
-    my $model = $self->model;
-    my $name = $model->name;
-    if (defined($self->version)) {
-        $name .= '-' . $self->version;
-    }
-    return $name;
-}
 
 sub calculate_estimated_kb_usage {
     my $self = shift;
