@@ -28,7 +28,7 @@ my @command = ["diff" , "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annota
 my ($out) = &ipc_run(@command);
 ok (! $out);
 
-#ok (! system qq(diff /gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequence/NM_001024809.txt /gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequence/NM_001024809.compare.txt));
+ok (! system qq(diff /gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequence/NM_001024809.txt /gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequence/NM_001024809.compare.txt));
 
 @command = ["rm" , "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptSequence/NM_001024809.txt"];
 &ipc_run(@command);
