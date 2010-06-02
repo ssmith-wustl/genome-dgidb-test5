@@ -40,6 +40,8 @@ xmlns:rest="urn:rest">
           <xsl:call-template name="inner_woi"/>
         </tbody>
       </table>
+
+      <img><xsl:attribute name="src"><xsl:text>/view/workflow/cache/graph.png?id=</xsl:text><xsl:value-of select="aspect[@name='cache_workflow_id']/value"/></xsl:attribute></img>
     </xsl:if>
     <xsl:if test="count(ancestor::aspect) > 0">
       <xsl:call-template name="inner_woi"/>
