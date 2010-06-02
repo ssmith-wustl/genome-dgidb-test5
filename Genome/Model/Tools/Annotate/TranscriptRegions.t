@@ -21,8 +21,8 @@ ok($regions);
 
 ok($regions->execute());
 
-my $diff = `diff $output $expected_output`;
-ok($diff eq '', "output as expected");
+my $diff = `sdiff -s $output $expected_output`;
+ok($diff eq '', "output as expected") or diag($diff);
 
 
 
