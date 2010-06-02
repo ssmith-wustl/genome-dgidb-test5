@@ -18,16 +18,19 @@ my %sort_order = (
     stdev_breadth => 9,
     median_breadth => 10,
     targets_eighty_pc_breadth => 11,
-    pc_targets_eighty_pc_breadth => 12,
-    mean_depth => 13,
-    stdev_depth => 14,
-    depth_quartile_3 => 15,
-    median_depth => 16,
-    depth_quartile_1 => 17,
-    gaps => 18,
-    mean_gap_length => 19,
-    stdev_gap_length => 20,
-    median_gap_length => 21,
+    target_base_pair_eighty_pc_breadth => 12,
+    covered_base_pair_eighty_pc_breadth => 13,
+    pc_targets_eighty_pc_breadth => 14,
+    pc_target_space_covered_eighty_pc_breadth => 15,
+    mean_depth => 16,
+    stdev_depth => 17,
+    depth_quartile_3 => 18,
+    median_depth => 19,
+    depth_quartile_1 => 20,
+    gaps => 21,
+    mean_gap_length => 22,
+    stdev_gap_length => 23,
+    median_gap_length => 24,
 );
 
 class Genome::Model::Tools::BioSamtools::StatsSummary {
@@ -90,6 +93,8 @@ sub execute {
         }
         push @{$depth_stats{$min_depth}{breadth}}, $entry[1];
         if ($entry[1] >= 80) {
+            $depth_stats{$min_depth}{target_base_pair_eighty_pc_breadth} += $entry[2];
+            $depth_stats{$min_depth}{covered_base_pair_eighty_pc_breadth} += $entry[3];
             $depth_stats{$min_depth}{targets_eighty_pc_breadth}++;
         }
         $depth_stats{$min_depth}{target_base_pair} += $entry[2];
@@ -118,10 +123,17 @@ sub execute {
         unless (defined($depth_stats{$min_depth}{gaps})) {
             $depth_stats{$min_depth}{gaps} = 0;
         }
+        unless (defined($depth_stats{$min_depth}{target_base_pair_eighty_pc_breadth})) {
+            $depth_stats{$min_depth}{target_base_pair_eighty_pc_breadth} = 0;
+        }
+        unless (defined($depth_stats{$min_depth}{covered_base_pair_eighty_pc_breadth})) {
+            $depth_stats{$min_depth}{covered_base_pair_eighty_pc_breadth} = 0;
+        }
         $depth_stats{$min_depth}{pc_touched} = sprintf("%.03f",(($depth_stats{$min_depth}{touched}/$depth_stats{$min_depth}{targets})*100));
         $depth_stats{$min_depth}{pc_target_space_covered} = sprintf("%.03f",(($depth_stats{$min_depth}{covered_base_pair}/$depth_stats{$min_depth}{target_base_pair})*100));
         $depth_stats{$min_depth}{pc_targets_eighty_pc_breadth} = sprintf("%.03f",(( ($depth_stats{$min_depth}{targets_eighty_pc_breadth} || 0) /$depth_stats{$min_depth}{targets})*100));
-
+        $depth_stats{$min_depth}{pc_target_space_covered_eighty_pc_breadth} = sprintf("%.03f",(( ($depth_stats{$min_depth}{covered_base_pair_eighty_pc_breadth} || 0) /$depth_stats{$min_depth}{target_base_pair})*100));
+        
         my $breadth_stat = Statistics::Descriptive::Full->new();
         my @breadth = delete($depth_stats{$min_depth}{breadth});
         $breadth_stat->add_data(@breadth);

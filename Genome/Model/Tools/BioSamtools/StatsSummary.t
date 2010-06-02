@@ -15,7 +15,7 @@ my $tmp_dir = File::Temp::tempdir('BioSamtools-StatsSummary-'.$ENV{USER}.'-XXXX'
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/StatsSummary';
 
 my $stats_file = $data_dir .'/test.stats';
-my $expected_file = $data_dir .'/test_stats_summary-2.tsv';
+my $expected_file = $data_dir .'/test_stats_summary-4.tsv';
 
 my $as = Genome::Model::Tools::BioSamtools::StatsSummary->create(
     stats_file => $stats_file,
