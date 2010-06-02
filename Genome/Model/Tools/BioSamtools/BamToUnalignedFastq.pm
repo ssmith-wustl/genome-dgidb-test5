@@ -14,7 +14,7 @@ class Genome::Model::Tools::BioSamtools::BamToUnalignedFastq {
         },
         output_directory => {
             is => 'Text',
-            doc => 'A directory to output s_*_*_sequence.txt files, two for unmapped pairs and one for unmapped mates',
+            doc => 'A directory to output s_*_*_sequence.txt files.  Two files for unmapped pairs and one file for unmapped fragments or unmapped mates whose mate-pair is mapped.',
         },
     ],
 };
