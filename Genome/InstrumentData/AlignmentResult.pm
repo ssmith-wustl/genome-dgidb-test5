@@ -11,17 +11,18 @@ use strict;
 
 class Genome::InstrumentData::AlignmentResult {
     is_abstract => 1,
-    is => 'Genome::SoftwareResult',
-    sub_classification_method_name => '_resolve_subclass_name',
+    is=>['Genome::SoftwareResult'],
+    sub_classification_method_name => '_resolve_subclass_name',   
     has => [
         instrument_data         => {
                                     is => 'Genome::InstrumentData',
                                     id_by => 'instrument_data_id'
                                 },
         reference_build         => {
-                                    is => 'Genome::Model::Build::ReferencePlaceholder',
-                                    id_by => 'reference_name',
+                                    is => 'Genome::Model::Build::ImportedReferenceSequence',
+                                    id_by => 'reference_build_id',
                                 },
+        reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0 },
         
         _disk_allocation        => { is => 'Genome::Disk::Allocation', is_optional => 1, is_many => 1, reverse_as => 'owner' },
 
@@ -31,17 +32,15 @@ class Genome::InstrumentData::AlignmentResult {
                                     is => 'Number',
                                     doc => 'the local database id of the instrument data (reads) to align',
                                 },
-        reference_name          => {
-                                    default_value => 'NCBI-human-build36',
-                                    is_optional=>1,
-                                    doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
+        reference_build_id            => {
+                                    doc => 'the reference to use by id',
                                 },
     ],
     has_param => [
         test_name               => {
                                     is=>'Text',
                                     is_optional=>1,
-                                    doc=>'Assigns a testing tag to the alignments.  Alignments with a value set will not be used by pipelines.  They will shortcut only when the test name is repeated.',
+                                    doc=>'Assigns a testing tag to the alignments.  These will not be used in pipelines.',
                                 },
         aligner_name            => {
                                     is => 'Text', default_value => 'maq',
@@ -172,8 +171,6 @@ class Genome::InstrumentData::AlignmentResult {
     ],
 };
 
-# OVERRIDE IN SUBCLASSES
-
 sub required_arch_os {
     # override in subclasses if 64-bit is not required
     'x86_64' 
@@ -190,13 +187,6 @@ sub extra_metrics {
     ()
 }
 
-sub _run_aligner {
-    my $self = shift;
-    my $class = $self->class;
-    die "$class does not implement _run_aligner!!!";
-}
-
-# BASE API
 
 sub _resolve_subclass_name {
     my $class = shift;
@@ -223,7 +213,7 @@ sub _resolve_subclass_name_for_aligner_name {
 
 sub create { 
     my $class = shift;
-    
+    $DB::single = 1; 
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
@@ -241,6 +231,13 @@ sub create {
     # STEP 2: the base class handles all locking, etc., so it may hang while waiting for a lock
     my $self = $class->SUPER::create(@_);
     return unless $self;
+
+    if (my $output_dir = $self->output_dir) {
+        if (-d $output_dir) {
+            $self->status_message("BACKFILL DIRECTORY: $output_dir!");
+            return $self;
+        }
+    }
 
     # STEP 3: ENSURE WE WILL PROBABLY HAVE DISK SPACE WHEN ALIGNMENT COMPLETES
     # TODO: move disk_group, estimated_size, allocation and promotion up into the software result logic
@@ -550,7 +547,7 @@ sub _gather_params_for_get_or_create {
     my %params = $bx->params_list;
     my %is_input;
     my %is_param;
-    my $class_object = $subclass->get_class_object;
+    my $class_object = $subclass->__meta__;
     for my $key ($subclass->property_names) {
         my $meta = $class_object->property_meta_for_name($key);
         if ($meta->{is_input} && exists $params{$key}) {
@@ -760,9 +757,14 @@ sub _extract_sanger_fastq_filenames {
                             trim_style  => $1,
                         );
                         my ($qual_level, $string) = $self->_get_trimq2_params;
+                 
+                        my $param = $self->trimmer_params;
+                        my ($primer_sequence) = $param =~ /--primer-sequence\s*=?\s*(\S+)/;
                         $params{trim_qual_level} = $qual_level if $qual_level;
                         $params{trim_string}     = $string if $string;
-                        
+                        $params{primer_sequence} = $primer_sequence if $primer_sequence;
+                        $params{primer_report_file} = $self->temp_staging_directory.'/trim_primer.report.'.$counter if $primer_sequence;
+        
                         $trimmer = Genome::Model::Tools::Fastq::Trimq2::Simple->create(%params);
                     } 
                     elsif ($self->trimmer_name eq 'random_subset') {
@@ -898,7 +900,10 @@ sub qualify_trimq2 {
 sub _get_trimq2_params {
     my $self = shift;
 
-    my $param = $self->trimmer_params || '::'; #for trimq2_shortfilter, input something like "32:#" (length:string) in processing profile as trimmer_params, for trimq2_smart1, input "20:#" (quality_level:string)
+    my $param = $self->trimmer_params; #for trimq2_shortfilter, input something like "32:#" (length:string) in processing profile as trimmer_params, for trimq2_smart1, input "20:#" (quality_level:string)
+    if ($param !~ /:/){
+        $param = '::';
+    }
     my ($first_param, $string) = split /\:/, $param;
 
     return ($first_param, $string);
@@ -1136,7 +1141,6 @@ sub trimq2_filtered_to_unaligned_sam {
 
 sub _prepare_reference_sequences {
     my $self = shift;
-    $self->resolve_reference_build;
     my $reference_build = $self->reference_build;
 
     my $ref_basename = File::Basename::fileparse($reference_build->full_consensus_path('fa'));
@@ -1157,37 +1161,6 @@ sub _prepare_reference_sequences {
     return 1;
 }
 
-sub resolve_reference_build {
-
-    my $self = shift;
-
-    unless ($self->reference_build) {
-        unless ($self->reference_name) {
-            $self->error_message('No way to resolve reference build without reference_name or refrence_build');
-            die($self->error_message);
-        }
-        my $ref_build = Genome::Model::Build::ReferencePlaceholder->get($self->reference_name);
-        unless ($ref_build) {
-            my $sample_type = $self->instrument_data->sample_type;
-            if ( defined($sample_type) ) {
-                $self->status_message("Creating ReferencePlaceholder with sample type: $sample_type");
-                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
-                                                                            name => $self->reference_name,
-                                                                            sample_type => $self->instrument_data->sample_type,
-                                                                        );
-            } else {
-                $self->status_message("No sample type is defined.  Creating ReferencePlaceholder without a sample type parameter.");
-                $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
-                                                                            name => $self->reference_name,
-                                                                        );
-            }
-        }
-        $self->reference_build($ref_build);
-    }
-
-    return $self->reference_build;
-}
-
 sub get_or_create_sequence_dictionary {
     my $self = shift;
 
@@ -1197,7 +1170,7 @@ sub get_or_create_sequence_dictionary {
         my $sample = Genome::Sample->get($self->instrument_data->sample_id);
         if ( defined($sample) ) {
             $species =  $sample->species_name;
-            if ( (not $species) || $species eq "" ) {
+            if ( $species eq "" || $species eq undef ) {
                 $species = "unknown";
             }
         }

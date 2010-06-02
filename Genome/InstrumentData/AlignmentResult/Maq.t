@@ -11,7 +11,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 23;
+        plan tests => 25;
     } 
     else {
         plan skip_all => 'Must run on a 64 bit machine';
@@ -24,6 +24,12 @@ BEGIN {
 
 my $samtools_version = Genome::Model::Tools::Sam->default_samtools_version;
 my $picard_version   = Genome::Model::Tools::Sam->default_picard_version;
+
+my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TEST-human');
+ok($reference_model, "got reference model");
+
+my $reference_build = $reference_model->build_by_version('1');
+ok($reference_build, "got reference build");
 
 # The following line is to pretend to add a software-result record to
 # DB and make the codes following this taking it as already existing
@@ -38,7 +44,7 @@ my $sr = Genome::InstrumentData::AlignmentResult::Maq->__define__(
     aligner_version    => '0.7.1',
     samtools_version   => $samtools_version,
     picard_version     => $picard_version,
-    reference_name     => 'refseq-for-test',
+    reference_build    => $reference_build, 
 );
 
 isa_ok($sr, 'Genome::SoftwareResult');
@@ -100,7 +106,7 @@ my %align_param = (
     aligner_version    => '0.7.1',
     samtools_version   => $samtools_version,
     picard_version     => $picard_version,
-    reference_name     => 'refseq-for-test',
+    reference_build    => $reference_build, 
 );
 
 my $bad_alignment;
@@ -153,7 +159,7 @@ my $tmp_allocation = Genome::Disk::Allocation->__define__(
 mkpath($tmp_allocation->absolute_path);
 
 # manage reallocation since we are not actually doing a real allocation
-*Genome::Disk::Allocation::rellocate = sub { print "I would reallocate here!!"};
+*Genome::Disk::Allocation::reallocate = sub { print "I would reallocate here!!"};
 
 isa_ok($tmp_allocation,'Genome::Disk::Allocation');
 
@@ -202,4 +208,3 @@ ok($dir, "alignments found/generated");
 ok(-d $dir, "result is a real directory");
 ok(-s $dir . "/all_sequences.bam", "result has a bam file");
 
-exit;

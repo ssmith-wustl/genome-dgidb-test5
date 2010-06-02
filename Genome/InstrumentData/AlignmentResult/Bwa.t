@@ -11,7 +11,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 22;
+        plan tests => 24;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -34,11 +34,18 @@ my $bwa_version = Genome::Model::Tools::Bwa->default_bwa_version;
 my $bwa_label   = 'bwa'.$bwa_version;
 $bwa_label =~ s/\./\_/g;
 
+my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TEST-human');
+ok($reference_model, "got reference model");
+
+my $reference_build = $reference_model->build_by_version('1');
+ok($reference_build, "got reference build");
 
 #
 # Define a fake alignment, to test the shortcut feature
 #
 ###########################################################
+$DB::single = 1;
+use Genome::InstrumentData::AlignmentResult::Bwa;
 my $sr = Genome::InstrumentData::AlignmentResult::Bwa->__define__(
                  'id' => -8765432,
                  'output_dir' => "/gscmnt/sata828/info/alignment_data/$bwa_label/refseq-for-test/test_run_name/4_-123456",
@@ -52,7 +59,7 @@ my $sr = Genome::InstrumentData::AlignmentResult::Bwa->__define__(
                  aligner_version=>$bwa_version,
                  samtools_version=>$samtools_version,
                  picard_version=>$picard_version,
-                 reference_name=>'refseq-for-test',
+                 reference_build => $reference_build, 
 );
 
 isa_ok($sr, 'Genome::SoftwareResult');
@@ -123,7 +130,7 @@ $bad_alignment = Genome::InstrumentData::AlignmentResult::Bwa->create(
                                                           aligner_version => $bwa_version,
                                                           samtools_version => $samtools_version,
                                                           picard_version => $picard_version,
-                                                          reference_name => 'refseq-for-test',
+                                                          reference_build => $reference_build, 
                                                       );
 ok(!$bad_alignment, "this should have returned undef, for attempting to create an alignment that is already created!");
 ok(Genome::InstrumentData::AlignmentResult::Bwa->error_message =~ m/already have one/, "the exception is what we expect to see");
@@ -139,7 +146,8 @@ my $alignment = Genome::InstrumentData::AlignmentResult::Bwa->get(
                                                           aligner_version => $bwa_version,
                                                           samtools_version => $samtools_version,
                                                           picard_version => $picard_version,
-                                                          reference_name => 'refseq-for-test',);
+                                                          reference_build => $reference_build, 
+                                                          );
 ok($alignment, "got an alignment object");
 
 # TODO: create mock event or use some fake event for logging
@@ -196,7 +204,7 @@ my $tmp_allocation = Genome::Disk::Allocation->__define__(
 mkpath($tmp_allocation->absolute_path);
 
 # manage reallocation since we're not actually doing a real allocation
-*Genome::Disk::Allocation::rellocate = sub { print "I would reallocate here!!"};
+*Genome::Disk::Allocation::reallocate = sub { print "I would reallocate here!!"};
 
 isa_ok($tmp_allocation,'Genome::Disk::Allocation');
 $instrument_data->set_list('fastq_filenames',@fastq_files);
@@ -216,7 +224,7 @@ $alignment = Genome::InstrumentData::AlignmentResult::Bwa->create(
                                                        picard_version => $picard_version,
                                                        aligner_version => $bwa_version,
                                                        aligner_name => 'bwa',
-                                                       reference_name => 'refseq-for-test',
+                                                       reference_build => $reference_build, 
                                                    );
 
 # once to make new data
@@ -251,7 +259,7 @@ $alignment = Genome::InstrumentData::AlignmentResult::Bwa->create(
                                                        samtools_version => $samtools_version,
                                                        picard_version => $picard_version,
                                                        aligner_version => $bwa_version,
-                                                       reference_name => 'refseq-for-test',
+                                                       reference_build => $reference_build, 
                                                        force_fragment => 1,
                                                    );
 
@@ -260,3 +268,5 @@ $dir = $alignment->alignment_directory;
 ok($dir, "alignments found/generated");
 ok(-d $dir, "result is a real directory");
 ok(-s $dir . "/all_sequences.bam", "result has a bam file");
+
+
