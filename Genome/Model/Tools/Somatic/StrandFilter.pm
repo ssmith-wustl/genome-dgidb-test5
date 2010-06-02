@@ -149,6 +149,7 @@ sub execute {
     
     my %stats = ();
     $stats{'num_variants'} = $stats{'num_fail_strand'} = $stats{'num_fail_pos'} = $stats{'num_no_readcounts'} = $stats{'num_pass_filter'} = $stats{'num_no_allele'} = 0;
+    $stats{'num_MT_sites_autopassed'} = 0;
 
     ## Open the output file ##
     
@@ -208,86 +209,100 @@ sub execute {
     
                 if($var =~ /[ACGT]/)
                 {
-                    ## Run Readcounts ##
-                    my $cmd = readcount_program() . " -b 15 " . $self->tumor_bam_file . " $query_string";
-                    my $readcounts = `$cmd`;
-                    chomp($readcounts) if($readcounts);
-        
-                    ## Parse the results for each allele ##
-        
-                    my $ref_result = read_counts_by_allele($readcounts, $ref);
-                    my $var_result = read_counts_by_allele($readcounts, $var);
-                    
-                    if($ref_result && $var_result)
-                    {
-                            ## Calculate percent-fwd-strand ##
-                            (my $ref_count, my $ref_map, my $ref_base, my $ref_semq, my $ref_plus, my $ref_minus, my $ref_pos, my $ref_subs) = split(/\t/, $ref_result);
-                            (my $var_count, my $var_map, my $var_base, my $var_semq, my $var_plus, my $var_minus, my $var_pos, my $var_subs) = split(/\t/, $var_result);
+		    ## Skip MT chromosome sites,w hich almost always pass ##
+	
+		    if($chrom eq "MT" || $chrom eq "chrMT")
+		    {
+			## Auto-pass it to increase performance ##
+			$stats{'num_MT_sites_autopassed'}++;
+			print $ofh "$line\n";
+		    }
+		    else
+		    {
+			## Run Readcounts ##
+			my $cmd = readcount_program() . " -b 15 " . $self->tumor_bam_file . " $query_string";
+			my $readcounts = `$cmd`;
+			chomp($readcounts) if($readcounts);
 
-			    my $ref_strandedness = my $var_strandedness = 0.50;
-
-			    ## Determine ref strandedness ##
-			    
-			    if($ref_plus || $ref_minus)
-			    {
-				$ref_strandedness = $ref_plus / ($ref_plus + $ref_minus);
-				$ref_strandedness = sprintf("%.2f", $ref_strandedness);
-			    }
-
-			    ## Determine var strandedness ##
-
-			    if($var_plus || $var_minus)
-			    {
-				$var_strandedness = $var_plus / ($var_plus + $var_minus);
-				$var_strandedness = sprintf("%.2f", $var_strandedness);
-			    }
-
-                            if($var_count && ($var_plus + $var_minus))
-                            {
-				## We must obtain variant read counts to proceed ##
+			## Parse the results for each allele ##
+	    
+			my $ref_result = read_counts_by_allele($readcounts, $ref);
+			my $var_result = read_counts_by_allele($readcounts, $var);
+			
+			if($ref_result && $var_result)
+			{
+				## Calculate percent-fwd-strand ##
+				(my $ref_count, my $ref_map, my $ref_base, my $ref_semq, my $ref_plus, my $ref_minus, my $ref_pos, my $ref_subs) = split(/\t/, $ref_result);
+				(my $var_count, my $var_map, my $var_base, my $var_semq, my $var_plus, my $var_minus, my $var_pos, my $var_subs) = split(/\t/, $var_result);
+    
+				my $ref_strandedness = my $var_strandedness = 0.50;
+    
+				## Determine ref strandedness ##
 				
-				## FAILURE 1: READ POSITION ##
-				
-				if(($var_pos < $min_read_pos || $var_pos > $max_read_pos))
+				if(($ref_plus + $ref_minus) > 0)
 				{
-				    print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->filtered_file);
-				    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->verbose);
-				    $stats{'num_fail_pos'}++;
+				    $ref_strandedness = $ref_plus / ($ref_plus + $ref_minus);
+				    $ref_strandedness = sprintf("%.2f", $ref_strandedness);
 				}
-				
-				## FAILURE 2: Variant is strand-specific but reference is NOT strand-specific ##
-				
-				elsif(($var_strandedness < $min_strandedness || $var_strandedness > $max_strandedness) && ($ref_strandedness >= $min_strandedness && $ref_strandedness <= $max_strandedness))
+    
+				## Determine var strandedness ##
+    
+				if(($var_plus + $var_minus) > 0)
 				{
-				    ## Print failure to output file if desired ##
-				    print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness<$min_strandedness\n"if ($self->filtered_file);
-				    print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness<$min_strandedness\n"if ($self->verbose);
-				    $stats{'num_fail_strand'}++;
+				    $var_strandedness = $var_plus / ($var_plus + $var_minus);
+				    $var_strandedness = sprintf("%.2f", $var_strandedness);
 				}
-				## SUCCESS: Pass Filter ##				
+    
+				if($var_count && ($var_plus + $var_minus))
+				{
+				    ## We must obtain variant read counts to proceed ##
+				    
+				    ## FAILURE 1: READ POSITION ##
+				    
+				    if(($var_pos < $min_read_pos || $var_pos > $max_read_pos))
+				    {
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->filtered_file);
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->verbose);
+					$stats{'num_fail_pos'}++;
+				    }
+				    
+				    ## FAILURE 2: Variant is strand-specific but reference is NOT strand-specific ##
+				    
+				    elsif(($var_strandedness < $min_strandedness || $var_strandedness > $max_strandedness) && ($ref_strandedness >= $min_strandedness && $ref_strandedness <= $max_strandedness))
+				    {
+					## Print failure to output file if desired ##
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness<$min_strandedness\n"if ($self->filtered_file);
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness<$min_strandedness\n"if ($self->verbose);
+					$stats{'num_fail_strand'}++;
+				    }
+				    ## SUCCESS: Pass Filter ##				
+				    else
+				    {
+					$stats{'num_pass_filter'}++;
+					## Print output, and append strandedness information ##
+					print $ofh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\n";
+					print "$line\t\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tPASS\n" if($self->verbose);
+				    }
+				}
 				else
 				{
-				    $stats{'num_pass_filter'}++;
-				    ## Print output, and append strandedness information ##
-				    print $ofh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\n";
-				    print "$line\t\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tPASS\n" if($self->verbose);
+				    $stats{'num_no_readcounts'}++;
+				    print $ffh "$line\tno_reads\n" if($self->filtered_file);
+				    print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tFAIL no reads in $var_result\n" if($self->verbose);        
 				}
-                            }
-                            else
-                            {
-				$stats{'num_no_readcounts'}++;
-				print $ffh "$line\tno_reads\n" if($self->filtered_file);
-                                print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tFAIL no reads in $var_result\n" if($self->verbose);        
-                            }
-                    }
-                    else
-                    {
-                        $self->error_message("Unable to get read counts for $ref/$var from $readcounts using $cmd: ref was $ref_result var was $var_result");
-                        die;                
-                    }
+			}
+			else
+			{
+			    $self->error_message("Unable to get read counts for $ref/$var from $readcounts using $cmd: ref was $ref_result var was $var_result");
+			    die;                
+			}			
+		    }
+
                 }
 		else
 		{
+		    print $ffh "$line\tno_allele\n" if($self->filtered_file);
+		    print "$line\tFailure: Unable to determine allele!\n" if($self->verbose);        
 		    $stats{'num_no_allele'}++;
 		}
 #            }
@@ -296,6 +311,7 @@ sub execute {
     close($input);
 
     print $stats{'num_variants'} . " variants\n";
+    print $stats{'num_MT_sites_autopassed'} . " MT sites were auto-passed\n";
     print $stats{'num_no_allele'} . " failed to determine variant allele\n";
     print $stats{'num_no_readcounts'} . " failed to get readcounts for variant allele\n";
     print $stats{'num_fail_pos'} . " had read position < $min_read_pos\n";
@@ -374,31 +390,37 @@ sub iupac_to_base
 	{
 		return("C") if($allele1 eq "A");
 		return("A") if($allele1 eq "C");
+		return("A");	## Default for triallelic variant 
 	}
 	elsif($allele2 eq "R")
 	{
 		return("G") if($allele1 eq "A");
-		return("A") if($allele1 eq "G");		
+		return("A") if($allele1 eq "G");
+		return("A"); 	## Default for triallelic variant 
 	}
 	elsif($allele2 eq "W")
 	{
 		return("T") if($allele1 eq "A");
-		return("A") if($allele1 eq "T");		
+		return("A") if($allele1 eq "T");
+		return("A");	## Default for triallelic variant 
 	}
 	elsif($allele2 eq "S")
 	{
 		return("C") if($allele1 eq "G");
-		return("G") if($allele1 eq "C");		
+		return("G") if($allele1 eq "C");
+		return("C");	## Default for triallelic variant 
 	}
 	elsif($allele2 eq "Y")
 	{
 		return("C") if($allele1 eq "T");
-		return("T") if($allele1 eq "C");		
+		return("T") if($allele1 eq "C");
+		return("C");	## Default for triallelic variant 
 	}
 	elsif($allele2 eq "K")
 	{
 		return("G") if($allele1 eq "T");
-		return("T") if($allele1 eq "G");				
+		return("T") if($allele1 eq "G");
+		return("G");	## Default for triallelic variant 
 	}	
 	
 	return($allele2);
