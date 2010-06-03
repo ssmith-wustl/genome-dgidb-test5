@@ -5,6 +5,7 @@ use Data::Dumper;
 use Sys::Hostname;
 use IO::File;
 use File::Path;
+use YAML;
 
 use warnings;
 use strict;
@@ -102,55 +103,91 @@ class Genome::InstrumentData::AlignmentResult {
                                         is=>'Number',
                                         is_optional=>1,
                                 },
-        fwd_reads_passed_quality_filter_count => {
+        total_base_count => {
                                         is=>'Number',
                                         is_optional=>1,
                                 },
-        rev_reads_passed_quality_filter_count => {
+        total_aligned_read_count => {
                                         is=>'Number',
                                         is_optional=>1,
                                 },
-        total_reads_passed_quality_filter_count => {
+        total_aligned_base_count => {
                                         is=>'Number',
                                         is_optional=>1,
                                 },
-        total_bases_passed_quality_filter_count => {
+        total_unaligned_read_count => {
                                         is=>'Number',
                                         is_optional=>1,
                                 },
-        fwd_poorly_aligned_read_count => {
+        total_unaligned_base_count => {
                                         is=>'Number',
                                         is_optional=>1,
                                 },
-        rev_poorly_aligned_read_count => {
+        total_duplicate_read_count => {
                                         is=>'Number',
                                         is_optional=>1,
                                 },
-        poorly_aligned_read_count => {
-                                    is=>'Number',
-                                    is_optional=>1,
-                            },
-        aligned_read_count => {
-                                    is=>'Number',
-                                    is_optional=>1,
-                            },
-        fwd_aligned_read_count => {
-                                    is=>'Number',
-                                    is_optional=>1,
-                            },
-        rev_aligned_read_count => {
-                                    is=>'Number',
-                                    is_optional=>1,
-                            },
-        aligned_base_count => {
-                                    is=>'Number',
-                                    is_optional=>1,
-                            },
-        unaligned_read_count => {
-                                    is=>'Number',
-                                    is_optional=>1,
-                            },
-        unaligned_base_count => {
+        total_duplicate_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        total_inserted_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        total_deleted_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        total_soft_clipped_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        paired_end_read_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        paired_end_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        read_1_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        read_1_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        read_2_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        read_2_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        mapped_paired_end_read_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        mapped_paired_end_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        proper_paired_end_read_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        proper_paired_end_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        singleton_read_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        singleton_base_count => {
                                         is=>'Number',
                                         is_optional=>1,
                                 },
@@ -278,12 +315,15 @@ sub create {
         die $self->error_message;
     }
 
-    # STEP 10: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
+    # STEP 10: COMPUTE ALIGNMENT METRICS
+    $self->_compute_alignment_metrics();
+
+    # STEP 11: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
     $self->status_message("Preparing the output directory...");
     my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
     $self->status_message("Alignment output path is $output_dir");
 
-    # STEP 11: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
+    # STEP 12: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
     $self->status_message("Moving results to network disk...");
     my $product_path;
     unless($product_path= $self->_promote_validated_data) {
@@ -291,7 +331,7 @@ sub create {
         die $self->error_message;
     }
     
-    # STEP 12: RESIZE THE DISK
+    # STEP 13: RESIZE THE DISK
     # TODO: move this into the actual original allocation so we don't need to do this 
     $self->status_message("Resizing the disk allocation...");
     if ($self->_disk_allocation) {
@@ -387,6 +427,45 @@ sub create_BAM_in_staging_directory {
 
 
     return 1;
+}
+
+sub _compute_alignment_metrics {
+    my $self = shift;
+    my $bam = $self->temp_staging_directory . "/all_sequences.bam";
+    my $out = `bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gscuser/ehvatum/repo/alignment_summary_cpp/yaml-cpp/build /gsc/var/tmp/alignment_summary_cpp_v1.2.1 --bam=\"$bam\""`;
+    unless ($? == 0) {
+        $self->error_message("Failed to compute alignment metrics.");
+        die $self->error_message;
+    }
+    my $res = YAML::Load($out);
+    unless (ref($res) eq "HASH") {
+        $self->error_message("Failed to parse YAML hash from alignment_summary_cpp output.");
+        die $self->error_message;
+    }
+    $self->total_read_count             ($res->{total});
+    $self->total_base_count             ($res->{total_bp});
+    $self->total_aligned_read_count     ($res->{total_aligned});
+    $self->total_aligned_base_count     ($res->{total_aligned_bp});
+    $self->total_unaligned_read_count   ($res->{total_unaligned});
+    $self->total_unaligned_base_count   ($res->{total_unaligned_bp});
+    $self->total_duplicate_read_count   ($res->{total_duplicate});
+    $self->total_duplicate_base_count   ($res->{total_duplicate_bp});
+    $self->total_inserted_base_count    ($res->{total_inserted_bp});
+    $self->total_deleted_base_count     ($res->{total_deleted_bp});
+    $self->total_soft_clipped_base_count($res->{total_soft_clipped_bp});
+    $self->paired_end_read_count        ($res->{paired_end});
+    $self->paired_end_base_count        ($res->{paired_end_bp});
+    $self->read_1_count                 ($res->{read_1});
+    $self->read_1_base_count            ($res->{read_1_bp});
+    $self->read_2_count                 ($res->{read_2});
+    $self->read_2_base_count            ($res->{read_2_bp});
+    $self->mapped_paired_end_read_count ($res->{mapped_paired_end});
+    $self->mapped_paired_end_base_count ($res->{mapped_paired_end_bp});
+    $self->proper_paired_end_read_count ($res->{proper_paired_end});
+    $self->proper_paired_end_base_count ($res->{proper_paired_end_bp});
+    $self->singleton_read_count         ($res->{singleton});
+    $self->singleton_base_count         ($res->{singleton_bp});
+    return;
 }
 
 sub alignment_directory {

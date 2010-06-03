@@ -268,5 +268,3 @@ $dir = $alignment->alignment_directory;
 ok($dir, "alignments found/generated");
 ok(-d $dir, "result is a real directory");
 ok(-s $dir . "/all_sequences.bam", "result has a bam file");
-
-
