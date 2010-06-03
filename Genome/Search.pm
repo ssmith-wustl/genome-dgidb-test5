@@ -145,7 +145,7 @@ sub add {
     }
     
     if($self->refresh_cache_on_add) {
-        my $result_node = $self->generate_result_xml(@docs, undef, 'html', 1);  
+        my $result_node = $self->generate_result_xml(\@docs, undef, 'html', 1);  
     } else {
         for my $doc (@docs) {
             $self->_delete_cached_result($doc);
