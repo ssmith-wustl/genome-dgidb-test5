@@ -159,8 +159,11 @@ sub default_filenames{
         merged_snp_output                   => 'merged.somatic.snp',            ## Generated from merge-variants of somaticSniper and varScan
         merged_indel_output                 => 'merged.somatic.indel',          ## Generated from merge-variants of somaticSniper and varScan ##
         
-        ## Filtering files for 1000 Genomes CEU/YRI and dbSNP ##
-        merged_snp_output_novel               => 'merged.somatic.snp.novel',
+        ## Strand Filtering and Lookup Variants Files ##
+        merged_snp_output_filter        => 'merged.somatic.snp.filter',
+        merged_snp_output_filter_fail   => 'merged.somatic.snp.filter.removed',
+        merged_snp_output_novel               => 'merged.somatic.snp.filter.novel',
+
 
         ## Annotation output files ##
         annotate_output_snp                 => 'annotation.somatic.snp.transcript',
@@ -171,16 +174,16 @@ sub default_filenames{
 
         ## Tiered SNP and indel files (all confidence) ##
 
-        tier_1_snp_file                     => 'merged.somatic.snp.novel.tier1',
-        tier_2_snp_file                     => 'merged.somatic.snp.novel.tier2',
-        tier_3_snp_file                     => 'merged.somatic.snp.novel.tier3',
-        tier_4_snp_file                     => 'merged.somatic.snp.novel.tier4',
+        tier_1_snp_file                     => 'merged.somatic.snp.filter.novel.tier1',
+        tier_2_snp_file                     => 'merged.somatic.snp.filter.novel.tier2',
+        tier_3_snp_file                     => 'merged.somatic.snp.filter.novel.tier3',
+        tier_4_snp_file                     => 'merged.somatic.snp.filter.novel.tier4',
         tier_1_indel_file                   => 'merged.somatic.indel.tier1',
 
         ## Tiered SNP/indel files (high and highest conf ) ##
         
-        tier_1_snp_file_high                => 'merged.somatic.snp.novel.tier1.hc',
-        tier_1_snp_file_highest             => 'merged.somatic.snp.novel.tier1.gc',
+        tier_1_snp_file_high                => 'merged.somatic.snp.filter.novel.tier1.hc',
+        tier_1_snp_file_highest             => 'merged.somatic.snp.filter.novel.tier1.gc',
         tier_1_indel_file_high              => 'merged.somatic.indel.novel.tier1.hc',
         tier_1_indel_file_highest           => 'merged.somatic.indel.novel.tier1.gc',
 
@@ -311,13 +314,20 @@ __DATA__
   <link fromOperation="input connector" fromProperty="merged_snp_output" toOperation="Merge SNPs" toProperty="output_file" />
 
 
-<!-- DO NOT RUN CEU/YRI FILTER ON MERGED SOMATIC CALLS --> 
+<!-- RUN STRAND FILTER ON MERGED SNPS -->
 
+  <link fromOperation="Merge SNPs" fromProperty="output_file" toOperation="Strand Filter" toProperty="variant_file" />
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Strand Filter" toProperty="skip_if_output_present" />
+  <link fromOperation="input connector" fromProperty="merged_snp_output_filter" toOperation="Strand Filter" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="merged_snp_output_filter_fail" toOperation="Strand Filter" toProperty="filtered_file" />
+  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Strand Filter" toProperty="tumor_bam_file" />
+
+<!-- DO NOT RUN CEU/YRI FILTER ON MERGED SOMATIC CALLS --> 
   
 <!-- RUN DBSNP FILTER ON MERGED SOMATIC CALLS --> 
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Lookup Variants" toProperty="skip_if_output_present" />
-  <link fromOperation="Merge SNPs" fromProperty="output_file" toOperation="Lookup Variants" toProperty="variant_file" />
+  <link fromOperation="Strand Filter" fromProperty="output_file" toOperation="Lookup Variants" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="lookup_variants_report_mode" toOperation="Lookup Variants" toProperty="report_mode" />
   <link fromOperation="input connector" fromProperty="lookup_variants_filter_out_submitters" toOperation="Lookup Variants" toProperty="filter_out_submitters" />
   <link fromOperation="input connector" fromProperty="merged_snp_output_novel" toOperation="Lookup Variants" toProperty="output_file" />
@@ -330,6 +340,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="annotate_output_snp" toOperation="Annotate Transcript Variants Snp" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Snp" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Snp" toProperty="annotation_filter" />
+
 
 <!-- RUN UCSC ANNOTATION FOR SNPS --> 
 
@@ -516,6 +527,11 @@ __DATA__
   <operation name="Filter Sniper Indel">
     <operationtype commandClass="Genome::Model::Tools::Capture::FilterGlfIndels" typeClass="Workflow::OperationType::Command" />
   </operation>  
+
+  <operation name="Strand Filter">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::StrandFilter" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
   
   <operation name="Lookup Variants">
       <operationtype commandClass="Genome::Model::Tools::Annotate::LookupVariants" typeClass="Workflow::OperationType::Command" />
@@ -626,6 +642,8 @@ __DATA__
 
     <inputproperty isOptional="Y">merged_snp_output</inputproperty>
     <inputproperty isOptional="Y">merged_snp_output_novel</inputproperty>
+    <inputproperty isOptional="Y">merged_snp_output_filter</inputproperty>
+    <inputproperty isOptional="Y">merged_snp_output_filter_fail</inputproperty>
     <inputproperty isOptional="Y">merged_indel_output</inputproperty>
             
     <inputproperty isOptional="Y">sniper_snp_output_adaptor</inputproperty>

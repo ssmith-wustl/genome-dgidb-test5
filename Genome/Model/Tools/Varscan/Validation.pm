@@ -32,7 +32,7 @@ class Genome::Model::Tools::Varscan::Validation {
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
-		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 1.0e-02]" , is_optional => 1, is_input => 1},
+		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 1.0e-02 --validation 1]" , is_optional => 1, is_input => 1},
 	],	
 
 	has_param => [
@@ -120,7 +120,7 @@ sub execute {                               # replace with real execution logic.
 		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
 		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
 		
-		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\"";
+		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\"";	
 #		my $cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params";
 #		open(SCRIPT, ">$output_snp.sh") or die "Can't open output file!\n";
 #		print SCRIPT "#!/gsc/bin/bash\n";

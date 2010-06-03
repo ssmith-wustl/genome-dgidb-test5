@@ -28,6 +28,7 @@ class Genome::Model::Tools::Analysis::454::AlignReads {
 		output_dir	=> { is => 'Text', doc => "Output directory" },
 		aligner		=> { is => 'Text', doc => "Aligner to use" },
 		reference		=> { is => 'Text', doc => "Reference sequence [default=Hs36 ssaha2]", is_optional => 1 },
+		skip_if_output_present	=> { is => 'Text', doc => "Skip if output present", is_optional => 1 },		
 	],
 };
 
@@ -118,7 +119,15 @@ sub execute {                               # replace with real execution logic.
 					);					
 				}
 	
-		                $cmd_obj->execute;
+				if($self->skip_if_output_present && -e $aligner_output_file)
+				{
+					print "Skipping due to existing output...\n";
+				}
+				else
+				{
+			                $cmd_obj->execute;					
+				}
+
 			}
 			elsif($aligner eq "bwasw")
 			{
@@ -143,7 +152,14 @@ sub execute {                               # replace with real execution logic.
 					);					
 				}
 	
-		                $cmd_obj->execute;
+				if($self->skip_if_output_present && -e $aligner_output_file)
+				{
+					print "Skipping due to existing output...\n";
+				}
+				else
+				{
+			                $cmd_obj->execute;					
+				}
 			}
 			elsif($aligner eq "newbler")
 			{

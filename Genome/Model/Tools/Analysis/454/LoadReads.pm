@@ -26,6 +26,7 @@ class Genome::Model::Tools::Analysis::454::LoadReads {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		samples_file	=> { is => 'Text', doc => "Tab-delimited file of sample and SFF file(s)" },
 		output_dir	=> { is => 'Text', doc => "Output directory" },
+		skip_if_present => { is => 'Text', doc => "Skip if SFF/Fasta/Qual files are present", is_optional => 1},
 	],
 };
 
@@ -128,7 +129,7 @@ sub execute {                               # replace with real execution logic.
 		
 		print SAMPLESCRIPT qq{echo "Running initial BLAT alignments..."\n};
 		$cmd = "gmt blat align-to-genome --query-file $fasta_dir/$sample_name.fasta --output-dir $blat_dir/pslx";
-		print SAMPLESCRIPT "$cmd\n";			
+#		print SAMPLESCRIPT "$cmd\n";			
 		
 		## Finish up and close the file ##
 		
@@ -142,7 +143,15 @@ sub execute {                               # replace with real execution logic.
 		## Submit to the blades ##
 
 		print "$sample_name\t$sample_output_dir\n";
-		system(qq{bsub -q long -oo $ScriptFileOut -R "select[type==LINUX64 && model != Opteron250 && mem>2000] rusage[mem=2000]" $ScriptFileName});		
+		if($self->skip_if_present && -e "$sff_dir/$sample_name.sff" && -e "$fasta_dir/$sample_name.fasta" && -e "$fasta_dir/$sample_name.fasta.qual")
+		{
+			print "Skipping because output present...\n";
+		}
+		else
+		{
+			system(qq{bsub -q short -oo $ScriptFileOut -R "select[type==LINUX64 && model != Opteron250 && mem>2000] rusage[mem=2000]" $ScriptFileName});					
+		}
+
 	}
 	
 	close($input);

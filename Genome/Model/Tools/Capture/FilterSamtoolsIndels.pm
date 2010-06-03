@@ -114,28 +114,31 @@ sub execute {                               # replace with real execution logic.
 			$reads2 = $lineContents[11];			
 		}
 
-		my $coverage = $reads1 + $reads2;
-		my $var_freq = $reads2 / ($reads1 + $reads2);
-		
-		$stats{'num_indels'}++;
-		
-		if(($allele1 && $allele1 =~ 'N') || ($allele2 && $allele2 =~ 'N'))
+		if($reads1 || $reads2)
 		{
-			## Filter out N-allele indels ##	
-		}
-		elsif($coverage >= $min_coverage && $var_freq >= $min_var_freq && $reads2 >= $min_reads2 && $indel_score >= $min_indel_score)
-		{
-			if($self->verbose)
+			my $coverage = $reads1 + $reads2;
+			my $var_freq = $reads2 / ($reads1 + $reads2);
+			
+			$stats{'num_indels'}++;
+			
+			if(($allele1 && $allele1 =~ 'N') || ($allele2 && $allele2 =~ 'N'))
 			{
-				$var_freq = sprintf("%.2f", $var_freq * 100) . '%';
-				print "$line\t$var_freq\n"
-	#			print "$chrom\t$chr_start\t$chr_stop\t$indel_type-$var_allele\t$normal_reads1 $normal_reads2\t$tumor_reads1 $tumor_reads2 $tumor_freq\% $p_value $somatic_score\n";
+				## Filter out N-allele indels ##	
 			}
-		
-			print OUTFILE "$line\t$var_freq\n";
+			elsif($coverage >= $min_coverage && $var_freq >= $min_var_freq && $reads2 >= $min_reads2 && $indel_score >= $min_indel_score)
+			{
+				if($self->verbose)
+				{
+					$var_freq = sprintf("%.2f", $var_freq * 100) . '%';
+					print "$line\t$var_freq\n"
+		#			print "$chrom\t$chr_start\t$chr_stop\t$indel_type-$var_allele\t$normal_reads1 $normal_reads2\t$tumor_reads1 $tumor_reads2 $tumor_freq\% $p_value $somatic_score\n";
+				}
 			
-			$stats{'num_pass_filter'}++;
-			
+				print OUTFILE "$line\t$var_freq\n";
+				
+				$stats{'num_pass_filter'}++;
+				
+			}
 		}
 
 

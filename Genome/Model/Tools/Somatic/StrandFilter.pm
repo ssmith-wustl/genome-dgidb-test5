@@ -189,6 +189,9 @@ sub execute {
  #           {
                 (my $chrom, my $chr_start, my $chr_stop, my $ref, my $var) = split(/\t/, $line);
                 
+		$ref = uc($ref);
+		$var = uc($var);
+		
                 my $query_string = "";
                 
                 if($self->prepend_chr)
