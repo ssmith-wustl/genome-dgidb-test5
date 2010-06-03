@@ -21,6 +21,7 @@ use above 'Genome';
 
 ## Genome::Search makes rollback stupidly slow.
 Genome::Search->unregister_callbacks('UR::Object');
+Genome::Search->environment('prod');
 
 my $psgi_path = Genome::Model::Command::Services::WebApp->psgi_path;
 

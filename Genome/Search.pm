@@ -15,6 +15,10 @@ class Genome::Search {
     is => 'UR::Singleton',
     doc => 'This module contains methods for adding and updating objects in the Solr search engine.',
     has => [
+        environment => {
+            is => 'Text',
+            value => UR::DBI->no_commit ? 'dev' : 'prod'
+        },
         solr_server_location => {
             is => 'Text',
             default_value => 'http://solr',
@@ -30,14 +34,15 @@ class Genome::Search {
             is_transient => 1,
         },
         solr_server => {
-            calculate_from => ['_solr_server', 'solr_server_location', '_dev_solr_server_location',],
-            calculate => q{
-                unless(UR::DBI->no_commit) {
-                    return $_solr_server || WebService::Solr->new($solr_server_location);
-                } else {
-                    return WebService::Solr->new($_dev_solr_server_location);
-                }
-            }
+            calculate_from => ['environment', '_solr_server', 'solr_server_location', '_dev_solr_server_location',],
+            calculate => q[
+                return $_solr_server if $_solr_server;
+
+                $self->_solr_server(WebService::Solr->new(
+                    $environment eq 'prod' ? $solr_server_location : $_dev_solr_server_location
+                ));
+                return $self->_solr_server;
+            ]
         },
         memcached_server_location => {
             is => 'Text',
@@ -63,6 +68,16 @@ class Genome::Search {
         }
     ],
 };
+
+sub environment {
+    my $proto = shift;
+    my $self = ref($proto) ? $proto : $proto->_singleton_object;
+
+    if (@_ > 0) {
+        $self->_solr_server(undef);
+    }
+    return $self->__environment(@_);
+}
 
 ###  Index accessors  ###
 
@@ -431,6 +446,10 @@ sub _commit_callback {
     my $object = shift;
     
     return unless $object;
+
+    ## dont cruft up the production solr when no_commit is on, but run through this code
+    ## during test cases
+    return 1 if UR::DBI->no_commit && $class->environment eq 'prod'; 
     
     eval {
         if($class->is_indexable($object)) {
@@ -452,6 +471,8 @@ sub _delete_callback {
     my $object = shift;
     
     return unless $object;
+
+    return 1 if UR::DBI->no_commit && $class->environment eq 'prod'; 
     
     eval {
         if($class->is_indexable($object)) {
