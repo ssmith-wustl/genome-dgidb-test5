@@ -16,7 +16,7 @@ sub get_data {
 
     my $flag_fh = Genome::Utility::FileSystem->open_file_for_reading($flag_file);
     unless($flag_fh) {
-        $self->error_message('Fail to open ' . $flag_file . ' for reading');
+        warn 'Fail to open ' . $flag_file . ' for reading';
         return;
     }
     
