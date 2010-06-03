@@ -159,10 +159,6 @@ sub execute {
         die;
     }
 
-    ## Open the filtered output file ##
-    
-    my $ffh = IO::File->new($self->filtered_file, "w") if($self->filtered_file);
-
 
     ## Open the variants file ##
 
@@ -172,6 +168,63 @@ sub execute {
         $self->error_message("Unable to open " . $self->variant_file . ". $!");
         die;
     }
+
+
+    ## Build temp file for positions where readcounts are needed ##
+
+    my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
+    unless($tfh) {
+        $self->error_message("Unable to create temporary file $!");
+        die;
+    }
+    $temp_path =~ s/\:/\\\:/g;
+
+    ## Print each line to file, prepending chromosome if necessary ##
+    print "Printing variants to temp file...\n";
+    while(my $line = $input->getline) {
+        chomp $line;
+        my ($chr, $start, $stop) = split /\t/, $line;
+        if ($self->prepend_chr) {
+            $chr = "chr$chr";
+            $chr =~ s/MT$/M/;
+        };
+	
+	print $tfh "$chr\t$start\t$stop\n";
+    }
+    $tfh->close;
+
+    close($input);
+
+    ## Run BAM readcounts in batch mode to get read counts for all positions in file ##
+
+    print "Running BAM Readcounts...\n";
+    my $cmd = readcount_program() . " -b 15 " . $self->tumor_bam_file . " -l $temp_path";
+    my $readcounts = `$cmd`;
+    chomp($readcounts) if($readcounts);
+
+    ## Load the results of the readcounts ##
+    
+    my %readcounts_by_position = ();
+
+    my @readcounts = split(/\n/, $readcounts);
+    foreach my $rc_line (@readcounts)
+    {
+	(my $chrom, my $pos) = split(/\t/, $rc_line);
+	$readcounts_by_position{"$chrom\t$pos"} = $rc_line;
+    }
+
+    print "Readcounts loaded\n";
+
+    ## Open the filtered output file ##
+    
+    my $ffh = IO::File->new($self->filtered_file, "w") if($self->filtered_file);
+
+
+
+    ## Reopen file for parsing ##
+
+    $input = new FileHandle ($self->variant_file);
+    
 
     ## Parse the variants file ##
 
@@ -223,9 +276,12 @@ sub execute {
 		    else
 		    {
 			## Run Readcounts ##
-			my $cmd = readcount_program() . " -b 15 " . $self->tumor_bam_file . " $query_string";
-			my $readcounts = `$cmd`;
-			chomp($readcounts) if($readcounts);
+#			my $cmd = readcount_program() . " -b 15 " . $self->tumor_bam_file . " $query_string";
+#			my $readcounts = `$cmd`;
+#			chomp($readcounts) if($readcounts);
+
+			my $readcounts = "";
+			$readcounts = $readcounts_by_position{"$chrom\t$chr_start"} if($readcounts_by_position{"$chrom\t$chr_start"});
 
 			## Parse the results for each allele ##
 	    
