@@ -6,7 +6,7 @@ use warnings;
 use IPC::Run;
 
 use above "Genome";
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 
 use_ok('Genome::Model::Tools::Annotate::TranscriptSequence');
