@@ -54,7 +54,9 @@ sub shellcmd {
         {
             $self->status_message( "SKIP RUN (output is present):     $cmd\n\t"
                   . join( "\n\t", @found_outputs ) );
-            return 1;
+            my $cv = AnyEvent->condvar;
+            $cv->send(1);
+            return $cv;
         }
     }
 
