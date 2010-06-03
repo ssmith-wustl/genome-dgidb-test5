@@ -187,7 +187,7 @@ sub _hash_up {
     my $process_to = _summarize( $pse->process_to );
 
     return {
-        count      => $events->{'production'}->{$process_to}->{'count'} + 1,
+        count      => $events->{'production'}->{$process_to}->{$status}->{'count'} + 1,
         sort_order => $sort_order,
     };
 }
@@ -232,7 +232,7 @@ sub event_statuses {
 
             # set up flow cell
             $events->{'production'}->{_summarize($setup_pse->process_to)}->{$status->{$setup_pse->pse_id}} = _hash_up($events, $setup_pse, 1);
-
+$DB::single = 1;
             # PIDFA
             $events->{'production'}->{_summarize($pidfa_pse->process_to)}->{$status->{$pidfa_pse->pse_id}} = _hash_up($events, $pidfa_pse, 3);
 
