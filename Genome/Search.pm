@@ -367,7 +367,7 @@ sub _cache_result {
     
     my $memcached = $self->_singleton_object->memcached_server;
 
-    return 1 if UR::DBI->no_commit; #Don't try to manipulate the cache with test code
+    return 1 if $class->environment ne 'prod'; #Don't try to manipulate the cache with test code
     
     return $memcached->set($self->cache_key_for_doc($doc), $html_to_cache, $self->cache_timeout);
 }
@@ -379,7 +379,7 @@ sub _delete_cached_result {
     my $self = $class->_singleton_object;
     my $memcached = $self->memcached_server;
     
-    return 1 if UR::DBI->no_commit; #Don't try to manipulate the cache with test code
+    return 1 if $class->environment ne 'prod'; #Don't try to manipulate the cache with test code
     
     $memcached->delete($self->cache_key_for_doc($doc));
 }
