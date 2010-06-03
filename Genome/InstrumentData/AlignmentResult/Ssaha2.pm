@@ -19,13 +19,34 @@ class Genome::InstrumentData::AlignmentResult::Ssaha2 {
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>36000] rusage[tmp=90000, mem=36000]' -M 36000000";
+    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>24000] rusage[tmp=90000, mem=24000]' -M 24000000";
 }
 
 sub _run_aligner {
     my $self = shift;
 
-    # a little input validation
+    if ( (grep { -s $_ > 10000000 } @_) > 0 ){
+        $self->status_message('Large input detected. Splitting into smaller chunks.');
+        opendir(my $scratch_dir, $self->temp_scratch_directory);
+        my @fragments = map {
+            my $input_name = basename($_);
+            my $fragment_prefix = $self->temp_scratch_directory . '/' . $input_name;
+            Genome::Utility::FileSystem->shellcmd(cmd=>"split -l 125000 $_ $fragment_prefix");
+            grep { /^$input_name[a-z]{2}/ } readdir($scratch_dir);
+        } @_;
+        closedir $scratch_dir;
+        if ( @_ > 1 ) {
+            for my $i (0 .. scalar(@{$fragments[0]})){
+                $self->_run_aligner( map $_[$i], @fragments );
+            }
+        } elsif (@_ == 1) {
+            for my $input ($fragments[0]) { 
+                $self->_run_aligner($input) 
+            };
+        }
+        return;
+    }
+
     my $input_pathnames = join ' ', @_;
     my $aligner_params = $self->aligner_params;
     
