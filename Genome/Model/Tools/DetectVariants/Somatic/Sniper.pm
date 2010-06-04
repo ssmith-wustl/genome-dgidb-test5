@@ -31,20 +31,13 @@ class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
         },
         snv_params => {
             is => 'Text',
-            default => '-q 1 -Q',
+            default => '-q 1 -Q 15',
             doc => "Parameters for running bam-somaticsniper for snps. Since it discovers both snps and indels in one run, providing different parameters for snps and indels causes bam-somatisniper to run twice.",
         },
         indel_params => {
             is => 'Text',
-            default => '-q 1 -Q',
+            default => '-q 1 -Q 15',
             doc => "Parameters for running bam-somaticsniper for indels. Since it discovers both snps and indels in one run, providing different parameters for snps and indels causes bam-somatisniper to run twice.",
-        },
-        quality_filter => { #TODO FIXME this should be rolled into snp or indel params, maybe.
-            is => 'Integer',
-            is_input=>1,
-            is_optional=>1, 
-            doc=>'minimum somatic quality to include in the snp output. default is 15.',
-            default=>15,
         },
         reference_sequence_input => {
             is  => 'String',
@@ -176,7 +169,7 @@ sub execute {
 sub _run_sniper {
     my ($self, $params, $snp_output, $indel_output) = @_;
     
-    my $cmd = "bam-somaticsniper " . $params . " " . $self->quality_filter. " -f ".$self->reference_sequence_input." ".$self->aligned_reads_input." ".$self->control_aligned_reads_input ." " . $snp_output . " " . $indel_output; 
+    my $cmd = "bam-somaticsniper " . $params . " -f ".$self->reference_sequence_input." ".$self->aligned_reads_input." ".$self->control_aligned_reads_input ." " . $snp_output . " " . $indel_output; 
     my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input], output_files=>[$self->snp_output], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
 
     return $result;
