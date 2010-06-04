@@ -208,7 +208,6 @@ sub svn_info {
 sub _expand_param_and_input_properties {
     my ($class, $desc) = @_;
 
-    $DB::single = 1;
     for my $t ('input','param','metric') {
         while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
             if (exists $prop_desc->{'is_'.$t} and $prop_desc->{'is_'.$t}) {
