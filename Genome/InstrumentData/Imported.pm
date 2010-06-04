@@ -187,7 +187,13 @@ sub library_name {
 
 sub lane {
     my $self = shift;
-    return $self->subset_name;
+    my $subset_name = $self->subset_name;
+    if ($subset_name =~/-/){
+        my ($lane) = $subset_name =~ /(\d)-/;
+        return $lane;
+    }else{
+        return $subset_name;
+    }
 }
 
 sub run_start_date_formatted {
