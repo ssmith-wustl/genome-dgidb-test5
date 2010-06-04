@@ -78,6 +78,7 @@ sub create {
 
 }
 
+#TODO:put this logic in Genome::Model::assign_instrument_data() and turn this command into a thin wrapper
 sub execute {
     my $self = shift;
     $DB::single=1;
