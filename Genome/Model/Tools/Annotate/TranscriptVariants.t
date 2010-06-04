@@ -22,6 +22,7 @@ my $output_base = "$test_dir/output";
 my $command = Genome::Model::Tools::Annotate::TranscriptVariants->create(
     variant_file => $input,
     output_file => "$output_base.transcript",
+    reference_transcripts => "NCBI-human.ensembl/54_36p_v2",
 );
 is($command->execute(),1, "executed transcript variants w/ return value of 1");
 
@@ -37,7 +38,7 @@ is(compare($transcript, $ref_transcript), 0, "transcript and ref transcript are 
 unlink($transcript);
 
 my $command_reference_transcripts = Genome::Model::Tools::Annotate::TranscriptVariants->create(
-    reference_transcripts => "NCBI-human.ensembl/54_36p",
+    reference_transcripts => "NCBI-human.ensembl/54_36p_v2",
     variant_file => $input,
     output_file => "$output_base.transcript",
 );
@@ -54,14 +55,14 @@ my $command_build_id = Genome::Model::Tools::Annotate::TranscriptVariants->creat
 is($command_build_id->execute(),1, "executed transcript variants with build id w/ return value of 1");
 
 $command_reference_transcripts = Genome::Model::Tools::Annotate::TranscriptVariants->create(
-    reference_transcripts => "NCBI-human.ensembl/54_36p",
+    reference_transcripts => "NCBI-human.ensembl/54_36p_v2",
     variant_file => $input,
     output_file => "$output_base.transcript",
 );
 is($command_reference_transcripts->execute(),1, "executed transcript variants with reference transcripts w/ return value of 1");
 
 $command_reference_transcripts = Genome::Model::Tools::Annotate::TranscriptVariants->create(
-    reference_transcripts => "NCBI-human.ensembl/54_36p",
+    reference_transcripts => "NCBI-human.ensembl/54_36p_v2",
     variant_file => $input,
     output_file => "$output_base.transcript",
 );

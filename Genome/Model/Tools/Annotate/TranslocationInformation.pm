@@ -26,7 +26,7 @@ class Genome::Model::Tools::Annotate::TranslocationInformation {
 	},
 	version => {
 	    type  =>  'String',
-	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p_v2 and for mouse is 54_37g_v2",
 	    is_optional  => 1,
 	},
 
@@ -156,7 +156,7 @@ sub execute {
     
 
     my $version = $self->version;
-    unless ($version) { if ($organism eq "mouse") { $version = "54_37g" ; } else { $version = "54_36p" ; } }
+    unless ($version) { if ($organism eq "mouse") { $version = "54_37g_v2" ; } else { $version = "54_36p_v2" ; } }
     my $references_transcripts = "NCBI-$organism.combined-annotation/$version";
 
     my $annotation_file = "$name.annotated.list.csv";

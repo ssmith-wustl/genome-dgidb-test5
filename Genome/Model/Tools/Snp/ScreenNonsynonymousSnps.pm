@@ -27,9 +27,9 @@ class Genome::Model::Tools::Snp::ScreenNonsynonymousSnps {
 	},
 	version => {
 	    type  =>  'String',
-	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p_v2 and for mouse is 54_37g_v2",
 	    is_optional  => 1,
-	    default => '54_36p',
+	    default => '54_36p_v2',
 	},
 	]
 	    
@@ -70,7 +70,7 @@ sub execute {
 
     my $organism = $self->organism;
     my $version = $self->version;
-    if ($organism eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
+    if ($organism eq "mouse" && $version eq "54_36p_v2") { $version = "54_37g_v2"; }
 
     
 ########################### prep NS input list for sift and polyphen

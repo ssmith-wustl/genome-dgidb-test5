@@ -17,9 +17,9 @@ class Genome::Model::Tools::Fasta::HugoToFasta {
 	},
 	version => {
 	    type  =>  'String',
-	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p_v2 and for mouse is 54_37g_v2",
 	    is_optional  => 1,
-	    default => '54_36p',
+	    default => '54_36p_v2',
 	},
 	gene => {
 	    type  =>  'String',
@@ -54,7 +54,7 @@ EOS
 sub help_detail {
     return <<EOS 
 
-	This tool will return the transcript fasta with the longest coding sequence for your hugo gene name. Currently, gene transcript relations are only seen from version 54_36p from human. 
+	This tool will return the transcript fasta with the longest coding sequence for your hugo gene name. Currently, gene transcript relations are only seen from version 54_36p_v2 from human. 
 
 EOS
 }
@@ -178,6 +178,7 @@ sub get_transcripts {
 
     my ($gene) = @_;
 
+    # bdericks This might need to be changed to point at new 54_36p_v2 version
     my $GTDir = "/gscmnt/200/medseq/biodb/shared/misc/annotation/54_36p";
 
     my $gtdb = Bio::DB::Fasta->new($GTDir);

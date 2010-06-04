@@ -20,9 +20,9 @@ class Genome::Model::Tools::Annotate::GtsReport {
 	},
 	version => {
 	    type  =>  'String',
-	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p_v2 and for mouse is 54_37g_v2",
 	    is_optional  => 1,
-	    default => '54_36p',
+	    default => '54_36p_v2',
 	},
 	order => {
 	    type  =>  'String',
@@ -87,7 +87,7 @@ sub execute {
 	print qq(organism\tversion\tchromosome\tpos\tstop\tref\tvariant_allele\tsample\tvariant_type\tgenotype\tsource\tgene\ttranscript\tstrand\tTraans_stat\ttrv_type\tc_pos\taa\tpolyphen\tsift\tcons_score\tdomain\trs_id\tdbsnp_submittor\tdbsnp_alleles\tdbsnp_allele_match\n);
     }
     
-    if ($organism eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
+    if ($organism eq "mouse" && $version eq "54_36p_v2") { $version = "54_37g_v2"; }
     
     my ($genotypes,$gt_counts) = &parse_gts($self);
     my ($annotation,$dbsnp,$SIFT_Prediction,$PPH_Prediction) = &annotate_variant_alleles($genotypes,$self);
@@ -221,7 +221,7 @@ sub annotate_variant_alleles {
     my $version = $self->version;
     my $organism = $self->organism;
     
-    if ($organism eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
+    if ($organism eq "mouse" && $version eq "54_36p_v2") { $version = "54_37g_v2"; }
     
     my $list = "GTS.annotation.list";
     open(LIST,">$list") || die "couldn't open annotation list";
@@ -279,7 +279,7 @@ sub run_sift_and_poylphen {
 
     my $version = $self->version;
     my $organism = $self->organism;
-    if ($organism eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
+    if ($organism eq "mouse" && $version eq "54_36p_v2") { $version = "54_37g_v2"; }
 
     my $SIFT_Prediction;
     my $PPH_Prediction;

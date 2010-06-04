@@ -15,7 +15,7 @@ class Genome::Model::Tools::Annotate::TranscriptRegions {
 	},
 	version => {
 	    type  =>  'String',
-	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p_v2 and for mouse is 54_37g_v2",
 	    is_optional  => 1,
 	},
 	   output => {
@@ -70,9 +70,9 @@ sub execute {
 
     unless ($version) {	
 	if ($organism eq "mouse") {
-	    $version = "54_37g" ;
+	    $version = "54_37g_v2" ;
 	} elsif ($organism eq "human") { 
-	    $version = "54_36p" ;
+	    $version = "54_36p_v2" ;
 	} else { 
 	    die "organism is restricted to mouse or human\n";
 	}

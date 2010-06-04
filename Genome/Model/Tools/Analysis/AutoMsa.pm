@@ -15,9 +15,9 @@ class Genome::Model::Tools::Analysis::AutoMsa {
 	},
 	ensemblversion => {
 	    type  =>  'String',
-	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g; option under construction",
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p_v2 and for mouse is 54_37g_v2; option under construction",
 	    is_optional  => 1,
-	    default => '54_36p',
+	    default => '54_36p_v2',
 	},
 	ace_fof => {
             type  =>  'String',

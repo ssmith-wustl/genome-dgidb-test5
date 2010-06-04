@@ -12,14 +12,6 @@ use above "Genome";
 # Annotations in each file are sorted according to respective filter
 my ($variants, $annotations) = get_test_data();
 
-# Determine number of tests, depends on number of variants used in test data
-my $num_variants = scalar @$variants;
-my $num_filters = 3;
-my $tests = 0;
-$tests += 9;                                           # get_test_data()
-$tests += (1 + (1 * $num_variants));                   # output tests
-$tests += (2 * $num_variants * $num_filters);          # prioritization tests
-
 # Test annotation output for all provided variants
 check_output($variants, $annotations->{none});
 
@@ -60,13 +52,13 @@ sub get_test_data {
     my @variants = $variant_svr->all;
     ok (scalar @variants > 0, "successfully grabbed variants from file");
 
-    my $none_annotations_file = $test_dir . "/none_annotations.tsv";
+    my $none_annotations_file = $test_dir . "/none_annotations.tsv.new";
     ok (-s $none_annotations_file, "annotations with no filter file exists and has size");
 
-    my $top_annotations_file = $test_dir . "/top_annotations.tsv";
+    my $top_annotations_file = $test_dir . "/top_annotations.tsv.new";
     ok (-s $top_annotations_file, "annotations with top filter file exists and has size");
 
-    my $gene_annotations_file = $test_dir . "/gene_annotations.tsv";
+    my $gene_annotations_file = $test_dir . "/gene_annotations.tsv.new";
     ok (-s $gene_annotations_file, "annotations with gene filter file exists and has size");
 
     my %annotations;
@@ -83,7 +75,7 @@ sub get_test_data {
 
 sub create_annotator {
     my $annotation_model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
-    my $annotation_build = $annotation_model->build_by_version('54_36p');
+    my $annotation_build = $annotation_model->build_by_version('54_36p_v2');
     my $iterator = $annotation_build->transcript_iterator;
     my $window = Genome::Utility::Window::Transcript->create(
         iterator => $iterator,

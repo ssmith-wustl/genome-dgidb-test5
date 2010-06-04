@@ -16,9 +16,9 @@ class Genome::Model::Tools::Annotate::GeneRegions {
 	},
 	version => {
 	    type  =>  'String',
-	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p_v2 and for mouse is 54_37g_v2",
 	    is_optional  => 1,
-	    default => '54_36p',
+	    default => '54_36p_v2',
 	},
 	   output => {
 	    type  =>  'String',
@@ -75,7 +75,7 @@ sub execute {
     my $version = $self->version;
 
     if ($organism eq "mouse") {
-	if ($version eq "54_36p") {$version = "54_37g";}
+	if ($version eq "54_36p_v2") {$version = "54_37g_v2";}
     }
     my $results = 0;
 
@@ -172,6 +172,7 @@ sub get_transcripts {
 
     my ($gene) = @_;
 
+    # bdericks: This might need to be changed to new 54_36p_v2 version
     my $GTDir = "/gscmnt/200/medseq/biodb/shared/misc/annotation/54_36p";
 
     my $gtdb = Bio::DB::Fasta->new($GTDir);
@@ -231,7 +232,7 @@ sub parse_coordinates {
     my $version = $self->version;
 
     if ($organism eq "mouse") {
-	if ($version eq "54_36p") {$version = "54_37g";}
+	if ($version eq "54_36p_v2") {$version = "54_37g_v2";}
     }
     my $list = $self->list;
     my $anno_db = "NCBI-$organism.combined-annotation";

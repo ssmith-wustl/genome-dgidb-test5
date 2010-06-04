@@ -23,10 +23,16 @@ sub column_order {
         species 
         source 
         version
+        gene_name
+        transcript_error
+        coding_region_start
+        coding_region_stop
+        amino_acid_length
     )]
 }
 
 sub constant_values { [qw/ data_directory /] }; 
+
 sub sort_order {
     return [qw(chrom_name transcript_start transcript_stop transcript_id)];
 }

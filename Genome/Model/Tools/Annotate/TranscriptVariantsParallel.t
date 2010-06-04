@@ -16,11 +16,12 @@ my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-Transc
 my $output_dir = '/gsc/var/cache/testsuite/running_testsuites';
 my $test_output_dir = tempdir('/Genome-Model-Tools-Annotate-TranscriptVariantsParallel-XXXXX',
     DIR => $output_dir, CLEANUP => 1);
+chmod(0775,$test_output_dir);
 
 ok (-d $test_dir, "Test data directory exists");
 
 # Check that reference output exists in test directory
-my $reference_output = $test_dir . '/transcript_variants_output.out';
+my $reference_output = $test_dir . '/transcript_variants_output.out.new';
 ok (-e $reference_output, "Reference output file exists");
 
 # Check that the test variants file exists in test directory

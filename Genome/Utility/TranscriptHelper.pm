@@ -15,7 +15,7 @@ class Genome::Utility::TranscriptHelper{
         version => {
             is => 'Text',
             is_optional => 1,
-            default => '54_36p',
+            default => '54_36p_v2',
         }
     ],
 };

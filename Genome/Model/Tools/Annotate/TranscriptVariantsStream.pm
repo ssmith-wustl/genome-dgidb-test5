@@ -32,7 +32,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariantsStream{
         reference_transcripts => {
             is => 'String',
             is_optional => 1, 
-            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/54_36p").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both)'
+            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/54_36p_v2").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both)'
         },
         build_id =>{
             is => "Number",

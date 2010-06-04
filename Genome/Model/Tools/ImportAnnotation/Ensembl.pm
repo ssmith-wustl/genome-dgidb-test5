@@ -47,9 +47,10 @@ This command is used for importing the ensembl based annotation data to the file
 EOS
 }
 
-sub import_objects_from_external_db
+sub execute
 {
     my $self = shift;
+    $self->prepare_for_execution;
 
     my $registry = $self->connect_registry;
     my $ucfirst_species = ucfirst $self->species;
@@ -82,7 +83,7 @@ sub import_objects_from_external_db
     {
         $count++;
         my $ensembl_transcript = $transcript_adaptor->fetch_by_dbID($ensembl_transcript_id);
-        my $biotype = $ensembl_transcript->biotype(); #used in determining rna sub_structures
+        my $biotype = $ensembl_transcript->biotype(); #used in determining rna sub_structures and pseudogene status
 
         my $ensembl_gene  = $gene_adaptor->fetch_by_transcript_id( $ensembl_transcript->dbID );
         my $ensembl_gene_id = $ensembl_gene->dbID;
@@ -90,12 +91,18 @@ sub import_objects_from_external_db
 
         my $transcript_start = $ensembl_transcript->start;
         my $transcript_stop  = $ensembl_transcript->end;
+
+        next unless defined $transcript_start and defined $transcript_stop;
+
         my $strand           = $ensembl_transcript->strand;
-        if ( $strand == 1 )
-        {
+        if ( $strand == 1 ) {
             $strand = "+1";
-        }else{
+        }
+        elsif ($strand == -1) {
             $strand = "-1";
+        }
+        else {
+            $self->warning_message("Invalid strand $strand, skipping!");
         }
 
         my $hugo_gene_name = undef;
@@ -141,6 +148,7 @@ sub import_objects_from_external_db
         my $transcript = Genome::Transcript->create(
             transcript_id => $ensembl_transcript->dbID,
             gene_id => $gene->id,
+            gene_name => $gene->name,
             transcript_start => $transcript_start, 
             transcript_stop => $transcript_stop,
             transcript_name => $ensembl_transcript->stable_id,    
@@ -188,6 +196,7 @@ sub import_objects_from_external_db
 
         my @utr_exons;
         my @cds_exons;
+        my @rna;
 
         foreach my $exon ( @ensembl_exons )
         #Ensembl exons are combined coding region and untranslated region, we need to create both utr and cds exons from these
@@ -308,7 +317,8 @@ sub import_objects_from_external_db
                 if ($biotype =~/RNA/){
                     $structure_type = 'rna';
                 }
-                my $utr_exon = Genome::TranscriptSubStructure->create(
+
+                my $structure = Genome::TranscriptSubStructure->create(
                     transcript_structure_id => $tss_id,
                     transcript => $transcript,
                     structure_type => $structure_type,
@@ -320,9 +330,11 @@ sub import_objects_from_external_db
                     source => $source,
                     version => $version,
                 );
+
+                push @rna, $structure if $structure_type eq 'rna';
+                push @utr_exons, $structure unless $structure_type eq 'rna';
                 $tss_id++;
-                push @utr_exons, $utr_exon;
-                push @sub_structures, $utr_exon;
+                push @sub_structures, $structure;
             }
         }
         if (@utr_exons > 0 or @cds_exons > 0){
@@ -333,7 +345,7 @@ sub import_objects_from_external_db
         }
 
         #create flanks and intron
-        my @flanks_and_introns = $self->create_flanking_sub_structures_and_introns($transcript, \$tss_id, [@cds_exons, @utr_exons]);
+        my @flanks_and_introns = $self->create_flanking_sub_structures_and_introns($transcript, \$tss_id, [@cds_exons, @utr_exons, @rna]);
 
         my $protein;
         my $translation = $ensembl_transcript->translation();
@@ -352,11 +364,25 @@ sub import_objects_from_external_db
             push @proteins, $protein;
         }
 
-        #double check transcripts here for unknown status
+        if ($transcript->cds_full_nucleotide_sequence) {
+            my $transcript_seq = Genome::TranscriptCodingSequence->create(
+                transcript_id => $transcript->id,
+                sequence => $transcript->cds_full_nucleotide_sequence,
+                data_directory => $transcript->data_directory,
+            );
+        }
 
+        # Assign various fields to the transcript
+        my %transcript_info;
+        $transcript_info{pseudogene} = 0;
+        $transcript_info{pseudogene} = 1 if $biotype =~ /pseudogene/;
+        if ($biotype =~ /retrotransposed/ and not $transcript->cds_exons) {
+            $transcript_info{pseudogene} = 1;
+        }
+        $self->calculate_transcript_info($transcript, \%transcript_info);
+
+        # Periodically commit to files so we don't run out of memory
         unless ($count % 1000){
-            #Periodically commit to files so we don't run out of memory
-            
             $self->write_log_entry($count, \@transcripts, \@sub_structures, \@genes, \@proteins);
             
             $self->dump_sub_structures(0); #arg added for pre/post commit notation
@@ -366,7 +392,6 @@ sub import_objects_from_external_db
             $self->status_message("finished commit!\n");
             
             $self->dump_sub_structures(1);
-
             
             #reset logging arrays
             @transcripts = ();

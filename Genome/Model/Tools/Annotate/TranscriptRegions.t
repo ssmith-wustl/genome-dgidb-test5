@@ -4,15 +4,16 @@ use strict;
 use warnings;
 use above "Genome";
 
+use Cwd;
 use Test::More tests => 4;
 
 my $chromosome = "1";	
 my $start = 1;
 my $stop = 10000;
 my $organism = "human";
-my $version = "54_36p";
+my $version = "54_36p_v2";
 my $output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptRegions/TranscriptRegions.t.output.txt";
-my $expected_output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptRegions/TranscriptRegions.t.expected.output.txt";
+my $expected_output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptRegions/TranscriptRegions.t.expected.output.txt.new";
 
 ok(-e $expected_output);
 

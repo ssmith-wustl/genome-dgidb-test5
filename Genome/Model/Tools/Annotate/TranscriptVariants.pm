@@ -126,6 +126,13 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is_input => 1,
             doc => 'if set, run times are displayed as status messages after certain steps are completed (annotation of whole chromosomes, caching times, etc)',
         },
+        check_variants => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            is_input => 1,
+            doc => 'If set, the annotator will check all variant reference sequences against the respective species reference before annotating. Annotation is skipped for those variants with mismatches.',
+        },
     ], 
 };
 
@@ -181,6 +188,16 @@ EOS
 sub execute { 
     my $self = shift;
 
+    $DB::single = 1;
+    
+    if (defined $self->data_directory) {
+        $self->error_message("Due to a recent change to the annotation data file format, allowing " .
+            "user-specified data directories has been deprecated. Specifying a data directory containing " .
+            "data that does not meet the new format will result in some wonky errors, so this is " .
+            "one way to avoid that mess. If you have questions, contact apipe.");
+        die;
+    }
+
     my $total_start = Benchmark->new;
     my $pre_annotation_start = Benchmark->new;
 
@@ -220,49 +237,52 @@ sub execute {
     }
     $self->_transcript_report_fh($output_fh);
 
+
     #check to see if reference_transcripts set name and build_id given
     if ($self->build and $self->reference_transcripts){
         $self->error_message("Please provide a build id OR a reference transcript set name, not both");
         return;
     }
 
-    #if no build is provided, use the v0 of our generic NCBI-human-36 imported annotation model
-    unless ($self->build){
-        if ($self->reference_transcripts){
-            my ($name, $version) = split(/\//, $self->reference_transcripts);
-            my $model = Genome::Model->get(name => $name);
-            unless ($model){
-                $self->error_message("couldn't get reference transcripts set for $name");
-                return;
-            }
-            if (defined($version)){
-                my $build = $model->build_by_version($version);
-                unless ($build){
-                    $self->error_message("couldn't get version $version from reference transcripts set $name");
-                    return;
-                }
-                $self->build($build);
-            }else{ 
-                my $build = $model->last_complete_build;  #TODO latest by version
-                unless ($build){
-                    $self->error_message("couldn't get last complete build from reference transcripts set $name");
-                    return;
-                }
-                $self->build($build);
-            }
-        }else{
-            unless ($self->data_directory){
-                #if data_directory was provided, we will get our transcript_iterator from there, not a build
-                my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
-                my $build = $model->build_by_version('54_36p');
-
-                unless ($build){
-                    $self->error_message("couldn't get build 54_36p from 'NCBI-human.combined-annotation'");
-                    return;
-                }
-                $self->build($build);
-            }
+    if ($self->build) {
+        my $version = $self->build->version;
+        my $name = $self->build->model->name;
+        if ($name =~ /human/i and $version ne "54_36p_v2") {
+            my $model = Genome::Model->get(name => "NCBI-human.combined-annotation");
+            my $build = $model->build_by_version("54_36p_v2");
+            $self->build($build);
         }
+        elsif ($name =~ /mouse/i and $version ne "54_37g_v2") {
+            my $model = Genome::Model->get(name => "NCBI-mouse.combined-annotation");
+            my $build = $model->build_by_version("54_37g_v2");
+            $self->build($build);
+        }
+    }
+    else {
+        my $ref = $self->reference_transcripts;
+        $ref = "NCBI-human.combined-annotation/54_36p_v2" unless defined $ref;
+        my ($name) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
+                                        # This will need to be changed when other versions are available
+
+        my $model = Genome::Model->get(name => $name);
+        unless ($model){
+            $self->error_message("couldn't get reference transcripts set for $name");
+            return;
+        }
+
+        my $version = "54_37g_v2" if $name =~ /mouse/i;
+        $version = "54_36p_v2" if $name =~ /human/i;
+        unless (defined $version) {
+            $self->error_message("Couldn't determine latest version for model $name");
+            return;
+        }
+
+        my $build = $model->build_by_version($version);
+        unless ($build){
+            $self->error_message("couldn't get build from reference transcripts set $name");
+            return;
+        }
+        $self->build($build);
     }
 
     my $pre_annotation_stop = Benchmark->new;
@@ -339,6 +359,7 @@ sub execute {
 
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
+                check_variants => $self->check_variants,
             );
             unless ($annotator){
                 $self->error_message("Couldn't create iterator for chromosome $chromosome_name!");
@@ -384,6 +405,7 @@ sub execute {
             die Genome::Utility::Window::Transcript->error_message unless $transcript_window;
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
+                check_variants => $self->check_variants,
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
 

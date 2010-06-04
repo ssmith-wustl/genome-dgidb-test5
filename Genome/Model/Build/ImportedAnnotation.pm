@@ -9,22 +9,24 @@ class Genome::Model::Build::ImportedAnnotation {
     is => 'Genome::Model::Build',
     has => [
         version => { 
-            via => 'inputs', 
+            via => 'inputs',
+            is => 'Text',
             to => 'value_id', 
-            where => [ name => 'version'], 
+            where => [ name => 'version', value_class_name => 'UR::Value'], 
             is_mutable => 1 
         },
         annotation_data_source_directory => {
             via => 'inputs',
+            is => 'Text',
             to => 'value_id',
-            where => [ name => 'annotation_data_source_directory' ],
+            where => [ name => 'annotation_data_source_directory', value_class_name => 'UR::Value' ],
             is_mutable => 1 
         },
         species_name => {
-            is => 'UR::Value',
+            is => 'Text',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'species_name' ],
+            where => [ name => 'species_name', value_class_name => 'UR::Value' ],
             is_mutable => 1,
         },
     ],
@@ -69,7 +71,8 @@ sub cache_annotation_data {
     }
     else {
         if (-d $self->_cache_copying_directory) {
-            $self->status_message("Caching in progress (".$self->_cache_copying_directory."), using annotation data dir at " . $self->_annotation_data_directory);
+            $self->status_message("Caching in progress (" . $self->_cache_copying_directory.
+                "), using annotation data dir at " . $self->_annotation_data_directory);
             return $self->_annotation_data_directory;
         }
         elsif (-d $self->_cache_directory) {
@@ -79,23 +82,29 @@ sub cache_annotation_data {
             return $self->_cache_directory;
         }
         else {
-            $self->status_message("No local cache found at " . $self->_cache_directory . ", copying files from " . $self->_annotation_data_directory);
+            $self->status_message("No local cache found at " . $self->_cache_directory .
+                ", copying files from " . $self->_annotation_data_directory);
             my $mkdir_rv = Genome::Utility::FileSystem->shellcmd(cmd => "mkdir -p " . $self->_cache_copying_directory);
             unless ($mkdir_rv) {
                 $self->error_message("Error encountered while making directory at " . $self->_cache_copying_directory);
                 die;
             }
 
-            my $cp_rv = Genome::Utility::FileSystem->shellcmd(cmd => "cp -Lr " . $self->_annotation_data_directory . "/* " . $self->_cache_copying_directory);
+            my $cp_rv = Genome::Utility::FileSystem->shellcmd(
+                cmd => "cp -Lr " . $self->_annotation_data_directory . "/* " . $self->_cache_copying_directory
+            );
             unless ($cp_rv) {
                 $self->error_message("Error encountered while copying data into " . $self->_cache_copying_directory);
                 $self->_caching_cleanup;
                 die;
             }
 
-            my $mv_rv = Genome::Utility::FileSystem->shellcmd(cmd => "mv " . $self->_cache_copying_directory . " " . $self->_cache_directory);
+            my $mv_rv = Genome::Utility::FileSystem->shellcmd(
+                cmd => "mv " . $self->_cache_copying_directory . " " . $self->_cache_directory
+            );
             unless ($mv_rv) {
-                $self->error_message("Error encountered while moving data from " . $self->_cache_copying_direcory . " to " . $self->_cache_directory);
+                $self->error_message("Error encountered while moving data from " . $self->_cache_copying_direcory .
+                    " to " . $self->_cache_directory);
                 $self->_caching_cleanup;
                 die;
             }
@@ -116,22 +125,25 @@ sub transcript_iterator{
     my @composite_builds = $self->from_builds;
     if (@composite_builds){
         my @iterators = map {$_->transcript_iterator(chrom_name => $chrom_name)} @composite_builds;
-        my @cached_transcripts;
-        for my $i (@iterators) {
-            push @cached_transcripts, $i->next;
+        my %cached_transcripts;
+        for (my $i = 0; $i < @iterators; $i++) {
+            my $next = $iterators[$i]->next;
+            $cached_transcripts{$i} = $next if defined $next;
         }
+
         my $iterator = sub {
+            $DB::single = 1;
             my $index;
             my $lowest;
             for (my $i = 0; $i < @iterators; $i++) {
-                next unless $cached_transcripts[$i];
+                next unless exists $cached_transcripts{$i} and $cached_transcripts{$i} ne '';
                 unless ($lowest){
-                    $lowest = $cached_transcripts[$i];
+                    $lowest = $cached_transcripts{$i};
                     $index = $i;
                 }
-                if ($self->transcript_cmp($cached_transcripts[$i], $lowest) < 0) {
+                if ($self->transcript_cmp($cached_transcripts{$i}, $lowest) < 0) {
                     $index = $i;
-                    $lowest = $cached_transcripts[$index];
+                    $lowest = $cached_transcripts{$index};
                 }
             }
             unless (defined $index){
@@ -140,7 +152,7 @@ sub transcript_iterator{
             }
             my $next_cache =  $iterators[$index]->next();
             $next_cache ||= '';
-            $cached_transcripts[$index] = $next_cache;
+            $cached_transcripts{$index} = $next_cache;
             return $lowest;
         };
 

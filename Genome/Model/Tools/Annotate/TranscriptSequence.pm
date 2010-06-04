@@ -19,9 +19,9 @@ class Genome::Model::Tools::Annotate::TranscriptSequence {
 	},
 	version => {
 	    type  =>  'String',
-	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p_v2 and for mouse is 54_37g_v2",
 	    is_optional  => 1,
-	    default => '54_36p',
+	    default => '54_36p_v2',
 	},
 	trans_pos => {
 	    type  =>  'String',
@@ -81,7 +81,7 @@ sub help_detail {
 	
 	-trans_pos option will locate the given coordinate in the transcript and print a line of information at the bottom of your screen 
 	-organism use this option if your transcript is from mouse otherwise, human will be assumed
-	-version if you would prefer something other than the default for human is 54_36p and for mouse is 54_37g
+	-version if you would prefer something other than the default for human is 54_36p_v2 and for mouse is 54_37g_v2
 	-utr_seq will display the utr sequence for human build 36 or mouse build 37
 
 	gmt annotate transcript-sequence -transcript ENSMUST00000102781 -organism mouse -utr-seq -trans-pos 100857095
@@ -168,7 +168,7 @@ sub get_transcript {
     my $organism = $self->organism;
 
     my $version = $self->version;
-    if ($organism eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
+    if ($organism eq "mouse" && $version eq "54_36p_v2") { $version = "54_37g_v2"; }
 
     my $utr_seq = $self->utr_seq;
     if ($utr_seq && $organism eq "human") { unless ($version =~ /\_36/) { print qq(can only get utr seq for human build 36);$utr_seq = 0; } }
@@ -377,7 +377,7 @@ sub get_transcript_info {
     my $organism = $self->organism;
 
     my $version = $self->version;
-    if ($organism eq "mouse") { if ($version eq "54_36p") { $version = "54_37g";}}
+    if ($organism eq "mouse") { if ($version eq "54_36p_v2") { $version = "54_37g_v2";}}
     my $genome;
     if ($self->masked) {
 	if ($organism eq "human") {

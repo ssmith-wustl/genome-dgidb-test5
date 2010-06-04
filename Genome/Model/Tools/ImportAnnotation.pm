@@ -6,6 +6,7 @@ use warnings;
 use Genome;            
 use IO::File;
 use Data::Dumper;
+use Carp;
 
 my $low=100000;
 my $high=200000;
@@ -59,19 +60,19 @@ sub help_detail {
 EOS
 }
 
-sub execute{
+sub prepare_for_execution {
     my $self = shift;
-    if (-e $self->log_file){
+    if (defined $self->log_file and -e $self->log_file){
         unlink $self->log_file;
     }
-    if (-e $self->dump_file){
+    if (defined $self->dump_file and -e $self->dump_file){
         unlink $self->dump_file;
     }
+
     $self->{cumulative_transcripts} = 0;
     $self->{cumulative_sub_structures} = 0;
     $self->{cumulative_genes} = 0;
     $self->{cumulative_proteins} = 0;
-    $self->import_objects_from_external_db;
 
     return 1;
 }
@@ -156,7 +157,181 @@ sub assign_phase{
     return 1;
 }
 
-sub create_flanking_sub_structures_and_introns{
+# Calls several other methods in this module that calculate particular fields for the transcript
+sub calculate_transcript_info {
+    my ($self, $transcript, $transcript_info) = @_;
+
+    my @methods = qw/
+    phase_nucleotides
+    coding_bases_before_and_after_substructures
+    coding_exons_before_and_after_substructures
+    calculate_transcript_coding_region
+    calculate_transcript_amino_acid_length 
+    determine_error_status /;
+
+    for my $method (@methods) {
+        my $rv = $self->$method($transcript);
+        confess "Problem exectuting $method during annotation import!" unless $rv;
+    }
+
+    return 1 unless defined $transcript_info;
+
+    # Handle various params passed in transcript info hash
+    # Allows data available to the importer to be used to calculate and store transcript info
+    if (exists $transcript_info->{pseudogene}) {
+        if ($transcript_info->{pseudogene} and $transcript->internal_stop_codon == 1) {
+            my $error = $transcript->transcript_error;
+            $error = "" if $error eq 'no_errors';
+            $transcript->transcript_error($error . ":pseudogene") unless $error eq "";
+            $transcript->transcript_error("pseudogene") if $error eq "";
+        }
+    }
+
+    return 1;
+}
+
+# Exons that use nucleotides from previous/next exons to complete a codon (ie, have nonzero phase)
+# have those nucleotides stored so they don't have to pull the full sequence from neighbors
+sub phase_nucleotides {
+    my ($self, $transcript) = @_;
+    my @ss = $transcript->ordered_sub_structures;
+
+    my $previous_exon;
+    while (my $s = shift @ss) {
+        unless ($s->{structure_type} eq 'cds_exon') {
+            $s->{phase_bases_before} = 'NULL';
+            $s->{phase_bases_after} = 'NULL';
+            next;
+        }
+
+        if ($s->phase != 0) {
+            unless (defined $previous_exon) {
+                $self->error_message("Phase of exon " . $s->{transcript_structure_id} . " on transcript " .
+                    $transcript->{transcript_name} . " indicates that bases from previous exon needed to " .
+                    "complete first codon, but there is no previous exon!");
+                confess;
+            }
+
+            $s->{phase_bases_before} = substr($previous_exon->nucleotide_seq, -1 * $s->phase);
+        }
+        else {
+            $s->{phase_bases_before} = 'NULL';
+        }
+
+        my $next_exon;
+        for my $next (@ss) { $next_exon = $next and last if $next->{structure_type} eq 'cds_exon' }
+
+        if ($next_exon and $next_exon->phase != 0) {
+            $s->{phase_bases_after} = substr($next_exon->nucleotide_seq, 0, 3 - $next_exon->phase);
+        }
+        else {
+            $s->{phase_bases_after} = 'NULL';
+        }
+        $previous_exon = $s;
+
+        # Construct sequence and make sure it contains no partial codons (should be divisible by 3)
+        my $seq;
+        unless ($s->{phase_bases_before} eq 'NULL') {
+            $seq .= $s->{phase_bases_before};
+        }
+        $seq .= $s->nucleotide_seq;
+        unless ($s->{phase_bases_after} eq 'NULL') {
+            $seq .= $s->{phase_bases_after};
+        }
+
+        unless ((length $seq) % 3 == 0) {
+            $self->warning_message("Sequence constructed using phase bases for exon " . $s->{transcript_structure_id} .
+                " from transcript " . $transcript->{transcript_name} . " contains an incomplete codon!");
+        }
+    }
+
+    return 1;
+}
+
+# All substructures need to know how many coding basepairs exist both before and after them in the transcript
+# to ease calculation of the coding sequence position during annotation
+sub coding_bases_before_and_after_substructures {
+    my ($self, $transcript) = @_;
+
+    my @ss = $transcript->ordered_sub_structures;
+    for my $s (@ss) {
+        my $coding_bases_before = $transcript->length_of_cds_exons_before_structure_at_position(
+            $s->structure_start,
+        );
+        unless (defined $coding_bases_before) {
+            $self->error_message("Could not calculate previous coding basepairs for substructure " 
+                . $s->transcript_structure_id . " on transcript " . $transcript->{transcript_name});
+            confess;
+        }
+
+        my $coding_bases_after = $transcript->length_of_cds_exons_after_structure_at_position(
+            $s->structure_start,
+        );
+        unless (defined $coding_bases_after) {
+            $self->error_message("Could not calculate following coding basepairs for substructure " . 
+                $s->transcript_structure_id . " on transcript " . $transcript->{transcript_name});
+            confess;
+        }
+
+        $s->{coding_bases_before} = $coding_bases_before;
+        $s->{coding_bases_after} = $coding_bases_after;
+    }
+
+    return 1;
+}
+
+# All substructures need to know how many coding exons exists before and after them in the transcript
+# to further ease annotation
+sub coding_exons_before_and_after_substructures {
+    my ($self, $transcript) = @_;
+    my @ss = $transcript->ordered_sub_structures;
+    my $exons_passed = 0;
+    my $unreached_exons = scalar $transcript->cds_exons;
+
+    for my $s (@ss) {
+        $unreached_exons-- if $s->{structure_type} eq 'cds_exon';
+        $s->{cds_exons_before} = $exons_passed;
+        $s->{cds_exons_after} = $unreached_exons;
+        $exons_passed++ if $s->{structure_type} eq 'cds_exon';
+    }
+
+    return 1;
+}
+
+# Assigns the start and stop position of the transcript's coding region
+sub calculate_transcript_coding_region {
+    my ($self, $transcript) = @_;
+    my ($coding_region_start, $coding_region_stop) = $transcript->cds_exon_range;
+    unless (defined $coding_region_start and defined $coding_region_stop) {
+        $transcript->{coding_region_start} = 'NULL';
+        $transcript->{coding_region_stop} = 'NULL';
+        return 1;
+    }
+
+    $transcript->{coding_region_start} = $coding_region_start;
+    $transcript->{coding_region_stop} = $coding_region_stop;
+    return 1;
+}
+
+# Assigns the length of the amino acid to the transcript
+sub calculate_transcript_amino_acid_length {
+    my ($self, $transcript) = @_;
+    my $amino_acid_length = 0;
+    my $protein = $transcript->protein;
+    $amino_acid_length = length $protein->amino_acid_seq if $protein;
+
+    $transcript->{amino_acid_length} = $amino_acid_length;
+    return 1;
+}
+
+# Set transcript error field
+sub determine_error_status {
+    my ($self, $transcript) = @_;
+    $transcript->is_valid;
+    return 1;
+}
+
+sub create_flanking_sub_structures_and_introns {
     my ($self, $transcript, $tss_id_ref, $ss_array) = @_;
     return unless @$ss_array;
 
@@ -231,6 +406,7 @@ sub create_flanking_sub_structures_and_introns{
 
 sub write_log_entry{
     my $self = shift;
+    return unless defined $self->log_file;
     my ($count, $transcripts, $sub_structures, $genes, $proteins) = @_;
     my $log_fh = IO::File->new(">> ". $self->log_file);
     return unless $log_fh;

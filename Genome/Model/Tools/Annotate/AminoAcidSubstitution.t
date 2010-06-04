@@ -17,7 +17,7 @@ my $output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-AminoAci
 my @command = ["rm" , "$output.txt"];
 &ipc_run(@command);
 
-my $AminoAcidSubstitution = Genome::Model::Tools::Annotate::AminoAcidSubstitution->create(transcript => "ENST00000269305", amino_acid_substitution => "S166C", organism => "human", version => "54_36p", output => $output);
+my $AminoAcidSubstitution = Genome::Model::Tools::Annotate::AminoAcidSubstitution->create(transcript => "ENST00000269305", amino_acid_substitution => "S166C", organism => "human", version => "54_36p_v2", output => $output);
 ok ($AminoAcidSubstitution);
 my ($amino_acid_substitution) = $AminoAcidSubstitution->execute();
 ok ($amino_acid_substitution);

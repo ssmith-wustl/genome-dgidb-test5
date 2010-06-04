@@ -21,6 +21,12 @@ sub column_order { [ qw(
     species 
     source 
     version
+    coding_bases_before
+    coding_bases_after
+    cds_exons_before
+    cds_exons_after
+    phase_bases_before
+    phase_bases_after
     )]}
 
 sub sort_order {[qw( transcript_id structure_start transcript_structure_id )] }

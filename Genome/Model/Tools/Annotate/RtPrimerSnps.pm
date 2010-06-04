@@ -45,9 +45,9 @@ class Genome::Model::Tools::Annotate::RtPrimerSnps {
 	},
 	version => {
 	    type  =>  'String',
-	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p_v2 and for mouse is 54_37g_v2",
 	    is_optional  => 1,
-	    default => '54_36p',
+	    default => '54_36p_v2',
 	},
 
     ]
@@ -97,7 +97,7 @@ sub execute {
     my $version = $self->version;
     my $transcript = $self->transcript;
     
-    if ($organism eq "mouse") { if ($version eq "54_36p") { $version = "54_37g";}}
+    if ($organism eq "mouse") { if ($version eq "54_36p_v2") { $version = "54_37g_v2";}}
     
     my ($ncbi_reference) = $version =~ /\_([\d]+)/;
     my $eianame = "NCBI-" . $organism . ".ensembl";
@@ -128,12 +128,7 @@ sub execute {
     my %transcript_coords;
 
     my @substructures = grep {$_->structure_type eq 'cds_exon' || $_->structure_type eq 'utr_exon'} $t->ordered_sub_structures;
-
-
     my $total_substructures = @substructures;
-    if($t->strand == -1) {
-        @substructures = reverse @substructures; #put in transcript order. I'm not trusting the ordinals here as some are wonky (probably only in introns though)  
-    }
     my $current_transcript_position = 1;
     my $tseq = "";
     for my $structure (@substructures) {

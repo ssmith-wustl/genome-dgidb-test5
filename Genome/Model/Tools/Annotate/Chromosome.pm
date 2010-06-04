@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 my $DEFAULT_OUTPUT_FORMAT = 'gtf';
-my $DEFAULT_VERSION = '54_36p';
+my $DEFAULT_VERSION = '54_36p_v2';
 my $DEFAULT_ANNO_DB = 'NCBI-human.combined-annotation';
 
 class Genome::Model::Tools::Annotate::Chromosome {

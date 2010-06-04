@@ -15,7 +15,7 @@ class Genome::Model::Tools::Annotate::ChromosomeRegions {
             default_value => 'NCBI-human.combined-annotation',
         },
         version => {
-            default_value => '54_36p',
+            default_value => '54_36p_v2',
         },
         bed_file => {
         },

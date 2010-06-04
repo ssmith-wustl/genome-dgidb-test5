@@ -6,6 +6,7 @@ use GSC::ImportExport::GenBank;
 use GSC::ImportExport::GenBank::Gene;
 use GSC::ImportExport::GenBank::Transcript;
 use Genome;
+use Carp;
 
 use Bio::SeqIO;
 use Storable;
@@ -16,14 +17,17 @@ class Genome::Model::Tools::ImportAnnotation::Genbank {
     has => [
         flatfile => {
             is  => 'Text',
+            is_input => 1,
             doc => "path to asn.1 flat file",
         },
         genbank_file => {
             is  => 'Text',
+            is_input => 1,
             doc => "path to genbank format file",
         },
         status_file => {
             is => 'Text',
+            is_input => 1,
             doc => "path to storable hash of transcript statuses",
             is_optional => 1,
         },
@@ -54,10 +58,10 @@ EOS
 }
 
 
-sub import_objects_from_external_db
-{
+sub execute {
     my $self = shift;
-    
+    $self->prepare_for_execution;
+
     my $transcript_status;
     if($self->status_file)
     {
@@ -85,21 +89,28 @@ sub import_objects_from_external_db
     my $tss_id        = 1;
 
     my $count = 0;
-    my $current_thousand = 0;  #since genbank is imported per gene, we use this to commit roughly every thousand instead of exactly
+    my $current_thousand = 0;  #since genbank is imported per gene, 
+                               #we use this to commit roughly every thousand instead of exactly
     $self->status_message("importing ". scalar @$lines. " transcripts");
 
     #species, source and version are id properties on all items
     my $source = 'genbank';
     my $version = $self->version;
     my $species = $self->species;
-    
+
+    # Grab sequence id using species name
+    my $taxon = Genome::Taxon->get(species_name => $species);
+    confess "Could not get taxon for $species" unless $taxon;
+    my $seq_id = $taxon->current_genome_refseq_id;
+    confess "Could not get refseq id from taxon" unless defined $seq_id;
+
     #for logging purposes
     my @transcripts;
     my @sub_structures;
     my @proteins;
     my @genes;
 
-    foreach my $record (@unique_lines)
+    RECORD: foreach my $record (@unique_lines)
     {
         my $locus_id = $record->[0];
         my $hugo     = $record->[1]; 
@@ -110,10 +121,12 @@ sub import_objects_from_external_db
         # to remove it...  I changed that little bit, so hopefully that won't
         # happen again.
         my $genbank_gene = GSC::ImportExport::GenBank::Gene->retrieve(
-            species_name => $species,
-            version      => $version,
-            locus_id     => $locus_id,  #locus id is entrez id
+            genome_seq_id => $seq_id, 
+            version       => $version,
+            locus_id      => $locus_id,  #locus id is entrez id
         );
+
+        my $is_pseudogene = GSC::ImportExport::GenBank::Gene->is_pseudogene($genbank_gene);
 
         my @genbank_transcripts = GSC::ImportExport::GenBank::Transcript->retrieve( gene => $genbank_gene);
 
@@ -131,7 +144,16 @@ sub import_objects_from_external_db
         }
 
         my $strand = GSC::ImportExport::GenBank::Gene->resolve_strand(gene=>$genbank_gene);
-        $strand = $strand eq '+' ? '+1' : '-1';
+        if ($strand eq '+') {
+            $strand = '+1';
+        }
+        elsif ($strand eq '-') {
+            $strand = '-1';
+        }
+        else {
+            $self->warning_message("Invalid strand $strand, not importing");
+            next RECORD;
+        }
 
         my $gene = Genome::Gene->create(
             gene_id => $gene_id,
@@ -145,7 +167,7 @@ sub import_objects_from_external_db
         $gene_id++;
         push @genes, $gene; #logging
         
-        my $external_gene_id = Genome::ExternalGeneId->create(  #TODO, is this necessary
+        my $external_gene_id = Genome::ExternalGeneId->create(  
             egi_id => $egi_id,
             gene_id => $gene->id,
             id_type => 'entrez',
@@ -180,9 +202,9 @@ sub import_objects_from_external_db
             my $transcript_stop  = undef;
             my $transcript_name  = $genbank_transcript->{accession};
             my $status           = 'unknown';  #this gets filled out later from the status hash
-            
-            ( $transcript_start, $transcript_stop )
-            = $self->transcript_bounds($genbank_transcript);
+
+            ($transcript_start, $transcript_stop)
+                = $self->transcript_bounds($genbank_transcript);
             unless (defined $transcript_start and defined $transcript_stop){
                 next;
             }
@@ -191,14 +213,20 @@ sub import_objects_from_external_db
             {
                 $status = lc($transcript_status->{$transcript_name}->{status});
             }
-
+            
+            next if $status eq 'unknown';
+            
+            my $rna_transcript = GSC::ImportExport::GenBank::Gene->is_rna($genbank_gene);
+            $rna_transcript = 1 if $transcript_name =~ /^[NX]R/;
+            
             my $transcript = Genome::Transcript->create(
                 transcript_id => $transcript_id,
                 gene_id => $gene->id,
+                gene_name => $gene->name,
                 transcript_start => $transcript_start, 
                 transcript_stop => $transcript_stop,
                 transcript_name => $transcript_name,
-                transcript_status => $status,   #TODO valid statuses (unknown, known, novel) #TODO verify sub_structures and change status if necessary
+                transcript_status => $status,
                 strand => $strand,
                 chrom_name => $chromosome,
                 data_directory => $self->data_directory,
@@ -220,6 +248,7 @@ sub import_objects_from_external_db
 
             my @cds_exons;
             my @utr_exons;
+            my @rna;
 
             # split out all the exons
             my @seqs;
@@ -231,7 +260,15 @@ sub import_objects_from_external_db
                 my $cds_sequence = $self->get_seq_slice(  $chromosome, $structure_start, $structure_stop );
                 if ( $strand eq "-1" )
                 {
-                    $cds_sequence = $self->revcom_slice($cds_sequence);
+                    unless ($cds_sequence) {
+                        $self->warning_message("Attempted to reverse complement empty sequence string!");
+                        $self->warning_message("Sequence originated from chromosome $chromosome between " .
+                            " positions $structure_start and $structure_stop for transcript " .
+                            $transcript->transcript_name . " and structure $tss_id");
+                    }
+                    else {
+                        $cds_sequence = $self->revcom_slice($cds_sequence);
+                    }
                 }
                 my $cds_exon = Genome::TranscriptSubStructure->create(
                     transcript_structure_id => $tss_id,
@@ -254,30 +291,41 @@ sub import_objects_from_external_db
             # utr stuff
             foreach my $genbank_exon (@genbank_utr)
             {
+                my $structure_type = 'utr_exon';
+                $structure_type = 'rna' if $rna_transcript;
+
                 my $structure_start   = $genbank_exon->{begin_position};  #TODO these are different than above
                 my $structure_stop    = $genbank_exon->{end_position};
-                my $utr_sequence = $self->get_seq_slice( $chromosome, $structure_start, $structure_stop );
-                if ( $strand eq "-1" )
-                {
-                    $utr_sequence = $self->revcom_slice($utr_sequence);
+
+                my $sequence = $self->get_seq_slice( $chromosome, $structure_start, $structure_stop );
+                if ($strand eq '-1') {
+                    unless ($sequence) {
+                        $self->warning_message("Attempted to reverse complement empty sequence string!");
+                        $self->warning_message("Sequence originated from chromosome $chromosome between " .
+                            " positions $structure_start and $structure_stop for transcript " .
+                            $transcript->transcript_name . " and structure $tss_id");
+                    }
+                    else {
+                        $sequence = $self->revcom_slice($sequence);
+                    }
                 }
 
-                my $utr_exon = Genome::TranscriptSubStructure->create(
+                my $structure = Genome::TranscriptSubStructure->create(
                     transcript_structure_id => $tss_id,
                     transcript => $transcript,
-                    structure_type => 'utr_exon',
+                    structure_type => $structure_type,
                     structure_start => $structure_start,
                     structure_stop => $structure_stop,
-                    nucleotide_seq => $utr_sequence,
+                    nucleotide_seq => $sequence,
                     data_directory => $self->data_directory,
                     species => $species,
                     source => $source,
                     version => $version,
                 );
                 $tss_id++;
-                push @utr_exons, $utr_exon;
-                push @sub_structures, $utr_exon; #logging
-
+                push @utr_exons, $structure if $structure_type eq 'utr_exon';
+                push @rna, $structure if $structure_type eq 'rna';
+                push @sub_structures, $structure; #logging
             }
 
             if (@utr_exons > 0 or @cds_exons > 0){
@@ -288,10 +336,13 @@ sub import_objects_from_external_db
             }
 
             #create flanks and intron
-            my @flanks_and_introns = $self->create_flanking_sub_structures_and_introns($transcript, \$tss_id, [@cds_exons, @utr_exons]);
+            my @flanks_and_introns = $self->create_flanking_sub_structures_and_introns(
+                $transcript, \$tss_id, [@cds_exons, @utr_exons, @rna]
+            );
 
             my $protein_name = $genbank_transcript->{products}->[0]->{accession};
-            # create aa seq, if we're on negative strand, need to reverse the revcomed array of seqs so cds seq is assembled properly for translation
+            # create aa seq, if we're on negative strand, need to reverse the revcomed array of seqs
+            # so cds seq is assembled properly for translation
             if ($transcript->strand eq '-1'){
                 @seqs = reverse @seqs;
             }
@@ -311,10 +362,24 @@ sub import_objects_from_external_db
                 $protein_id++;
                 push @proteins, $protein;
             }
-        }
-        if (int($count/1000) >  $current_thousand){
-            #Periodically commit to files so we don't run out of memory
+
+            if ($transcript->cds_full_nucleotide_sequence) {
+                my $transcript_seq = Genome::TranscriptCodingSequence->create(
+                    transcript_id => $transcript->id,
+                    sequence => $transcript->cds_full_nucleotide_sequence,
+                    data_directory => $transcript->data_directory,
+                );
+            }
             
+            # Assign various fields of the transcript
+            my %transcript_info;
+            $transcript_info{pseudogene} = $is_pseudogene;
+            $transcript_info{rna} = $rna_transcript;
+            $self->calculate_transcript_info($transcript, \%transcript_info);
+        }
+
+        # Periodically commit to files so we don't run out of memory
+        if (int($count/1000) >  $current_thousand){
             $current_thousand = int($count/1000);
             $self->write_log_entry($count, \@transcripts, \@sub_structures, \@genes, \@proteins);
 
@@ -332,7 +397,7 @@ sub import_objects_from_external_db
             @proteins = ();
             @sub_structures = ();
 
-            #exit; #uncomment for testing
+            #return 1; #uncomment for testing
         }
     }
     $self->status_message("committing...($count)");
@@ -344,13 +409,10 @@ sub import_objects_from_external_db
 
 # need to grab the genbank format rna file  (status, maybe peptides)
 # start going thru the asn.1 flat file...
-#
-#
 
 # read asn.1 file for all the genes, transcripts, tss's, protein names,
 # start going thru genbank flat file for transcript statuses (could do
 # before or after?)
-
 sub cache_transcript_status
 {
     my $self = shift;
@@ -416,7 +478,6 @@ sub cache_transcript_status
     \%ts_status_hash;   # should this just be stored in part of the class?
 }
 
-
 #TODO, unused
 sub get_llids_hugo_names
 {
@@ -479,6 +540,10 @@ sub transcript_bounds
 sub revcom_slice
 {
     my ( $self, $seq ) = @_;
+    unless ($seq) {
+        $self->warning_message("Cannot reverse complement an empty sequence string, returning undef");
+        return;
+    }
     my $s = Bio::Seq->new( -display_id => "blah", -seq => $seq );
     return $s->revcom()->seq;
 }
@@ -522,24 +587,25 @@ sub get_seq_slice
 {
     my ( $self, $chrom, $start, $stop ) = @_;
     my $slice = undef;
-    my $reference_build = $self->reference_build;
-
-    my $file = $reference_build->get_bases_file($chrom);
-    $slice = $reference_build->sequence( $file, $start, $stop );
+    my $reference_build = $self->reference_build();
+    $slice = $reference_build->sequence($chrom, $start, $stop);
     return $slice;
 }
 
+# TODO This needs to be cleaned up... badly
 sub reference_build
 {
     my $self = shift;
     unless ($self->{reference_build}){
         my $species = $self->species;
-        my ($reference_build_version) = $self->version =~ /^\d+_(\d+)[a-z]$/; #currently only supports versions in familiar formats(54_36p, 54_37g) possible these will get more complicated later
-        my $build = Genome::Model::ImportedReferenceSequence->get(name => "NCBI-$species")->build_by_version($reference_build_version);
-        unless ($build){
-            $self->error_message("Couldn't find reference sequence build version $reference_build_version for species $species");
-            die;
-        }
+        # Currently only supports versions in familiar formats(54_36p, 54_37g) 
+        # Possible these will get more complicated later
+        my ($reference_build_version) = $self->version =~ /^\d+_(\d+)[a-z]$/; 
+        my $model = Genome::Model::ImportedReferenceSequence->get(name => "NCBI-$species");
+        confess "Couldn't get imported reference sequence for $species!" unless $model;
+
+        my $build = $model->build_by_version($reference_build_version);
+        confess "Couldn't get build version $reference_build_version for $species!" unless $build;
         $self->{reference_build} = $build;
     }
     return $self->{reference_build};
