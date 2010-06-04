@@ -118,6 +118,17 @@ EOS
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub from_cmdline {
+    my $class = shift;
+    my @obj;
+    while (my $txt = shift) {
+        my $bx = UR::BoolExpr->resolve_for_string($class,$txt);
+        my @matches = $class->get($bx);
+        push @obj, @matches;
+    }
+    return @obj;
+}
+
 #< UR Methods >#
 sub delete {
     my $self = shift;

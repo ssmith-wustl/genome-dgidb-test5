@@ -12,7 +12,7 @@ class Genome::InstrumentData::AlignmentResult::Command::List {
             default_value => '' 
         },
         show => {
-            default_value => 'id,instrument_data_id,reference_name,aligner_name,aligner_version,aligner_params,trimmer_name,trimmer_version,trimmer_params,filter_name,test_name,output_dir'
+            default_value => 'id,instrument_data_id,reference_name,aligner,trimmer,filter,module_version,test_name,output_dir'
         },
     ],
     doc => 'list alignment data sets'

@@ -24,7 +24,22 @@ class Genome::InstrumentData::AlignmentResult {
                                     id_by => 'reference_build_id',
                                 },
         reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0 },
+
+        aligner                 => { 
+                                    calculate_from => [qw/aligner_name aligner_version aligner_params/], 
+                                    calculate => q|no warnings; "$aligner_name $aligner_version $aligner_params"| 
+                                },
         
+        trimmer                 => { 
+                                    calculate_from => [qw/trimmer_name trimmer_version trimmer_params/], 
+                                    calculate => q|no warnings; "$trimmer_name $trimmer_version $trimmer_params"| 
+                                },
+
+        filter                 => { 
+                                    calculate_from => [qw/filter_name filter_params force_fragment/], 
+                                    calculate => q|no warnings; "$filter_name $filter_params $force_fragment"| 
+                                },
+
         _disk_allocation        => { is => 'Genome::Disk::Allocation', is_optional => 1, is_many => 1, reverse_as => 'owner' },
 
     ],

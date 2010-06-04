@@ -115,6 +115,25 @@ sub create {
     return $self;
 }
 
+sub delete {
+    my $self = shift;
+    my @allocations = Genome::Disk::Allocation->get(owner => $self);
+    if (@allocations) {
+        my @ids = map { $_->id } @allocations;
+        UR::Context->create_subscription(
+            method => 'commit', 
+            callback => sub {
+                for my $id (@ids) {
+                    warn "deallocating disk $id...\n";
+                    eval { Genome::Disk::Allocation::Command::Deallocate->execute(allocator_id => $id); };
+                }
+                return 1;
+            }
+        );
+    }
+    return $self->SUPER::delete(@_);
+}
+
 ################## Solexa Only ###################
 # aliasing these methods before loading Genome::InstrumentData::Solexa causes it to 
 # believe Genome::InstrumentData::Solexa is already loaded.  So we load it first...
