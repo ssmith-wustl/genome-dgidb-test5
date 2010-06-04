@@ -310,12 +310,14 @@ sub create {
     }
 
     #STEPS 6-9: CREATE BAM IN STAGING DIRECTORY
+    $self->status_message("Constructing a BAM file...");
     unless( $self->create_BAM_in_staging_directory()) {
         $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
         die $self->error_message;
     }
 
     # STEP 10: COMPUTE ALIGNMENT METRICS
+    $self->status_message("Computing alignment metrics...");
     $self->_compute_alignment_metrics();
 
     # STEP 11: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
