@@ -122,9 +122,15 @@ sub from_cmdline {
     my $class = shift;
     my @obj;
     while (my $txt = shift) {
-        my $bx = UR::BoolExpr->resolve_for_string($class,$txt);
-        my @matches = $class->get($bx);
-        push @obj, @matches;
+        eval {
+            my $bx = UR::BoolExpr->resolve_for_string($class,$txt);
+            my @matches = $class->get($bx);
+            push @obj, @matches;
+        };
+        if ($@) {
+            my @matches = $class->get($txt);
+            push @obj, @matches;
+        }
     }
     return @obj;
 }
