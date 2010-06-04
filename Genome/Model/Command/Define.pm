@@ -25,7 +25,7 @@ class Genome::Model::Command::Define {
     is_abstract => 1,
     has => [
         processing_profile_name => {
-            is => 'Integer', 
+            is => 'Text', 
             is_optional => 0,
             is_input => 1,
             doc => 'identifies the processing profile by name' 
