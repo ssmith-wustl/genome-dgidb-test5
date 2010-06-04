@@ -88,10 +88,9 @@ sub execute {
         
     	my $rv_cat = Genome::Utility::FileSystem->cat(input_files=>\@unaligned_files,output_file=>"$unaligned_combined.cat");
     	if ($rv_cat) {
-    		Genome::Utility::FileSystem->mark_file_ok($unaligned_combined);
+    		Genome::Utility::FileSystem->mark_file_ok("$unaligned_combined.cat");
     	} else {
-    		$self->error_message("There was a problem generating the combined unaligned file: $unaligned_combined");
-    		#may want to return here.
+    		$self->error_message("There was a problem generating the combined unaligned file: $unaligned_combined.cat");
             return;
     	}
 
@@ -152,7 +151,14 @@ sub execute {
                 $unaligned_ofh->print($line_pair);
             }
         }
-
+        #finish out file handle 2 after
+        while ($_ = $unaligned_fh_1->getline and defined $_){
+            $unaligned_ofh->print($_);
+        }
+    
+        $unaligned_ofh->close;
+        Genome::Utility::FileSystem->mark_file_ok($unaligned_combined);
+        
         if (scalar(@alignment_files) < 2) {
             $self->error_message("*** Invalid number of files to merge: ".scalar(@alignment_files).". Must have 2 or more.  Quitting.");
             return;

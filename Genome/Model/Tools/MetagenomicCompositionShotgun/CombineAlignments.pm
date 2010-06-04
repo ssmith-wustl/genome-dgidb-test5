@@ -1,5 +1,7 @@
 package Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments;
 
+
+use strict;
 use warnings;
 
 use Genome;
@@ -35,9 +37,8 @@ class Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments {
             is => 'String',
             is_input => 1,
             doc => '',
-            is_optional => 1,
         },
-        bwa_edit_distance => {
+        mismatch_cutoff => {
             is => 'String',
             is_input => 1,
             doc => '',
@@ -56,6 +57,13 @@ class Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments {
             is_optional => 1, 
             doc => '',
         },
+        sam_unaligned_output_file => {
+            is => 'String',
+            is_input => '1', 
+            is_output => '1',
+            is_optional => 1,
+            doc => '',
+        },
         bam_combined_output_file => {
             is => 'String',
             is_input => '1',
@@ -64,6 +72,13 @@ class Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments {
             doc => '',
         },
         read_count_output_file => {
+            is => 'String',
+            is_input => '1',
+            is_output => '1',
+            is_optional =>1,
+            doc => '',
+        },
+        species_output_file => {
             is => 'String',
             is_input => '1',
             is_output => '1',
@@ -102,7 +117,7 @@ class Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments {
             is => 'String',
             is_input => '1',
             is_output => '1',
-            is_optional =>1,
+            is_optional =>'1',
             doc => '',
         },
         viral_species_output_file => {
@@ -113,9 +128,9 @@ class Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments {
             doc => '',
         },
         lsf_resource => {
-                is_param => 1,
-                value => "-R 'select[mem>4000 && model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=4000]' -M 4000000",
-                #default_value => "-R 'select[mem>30000 && model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=30000]' -M 30000000",
+            is_param => 1,
+            value => "-R 'select[mem>4000 && model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=4000]' -M 4000000",
+            #default_value => "-R 'select[mem>30000 && model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=30000]' -M 30000000",
         },
         _first_of_batch => {
             is => 'String',
@@ -204,6 +219,7 @@ sub execute {
     }
 
     $self->read_count_output_file("$report_directory/reads_per_contig.txt") if (!defined($self->read_count_output_file));
+    $self->species_output_file("$report_directory/species.txt") if (!defined($self->species_output_file));
     $self->genus_output_file("$report_directory/genus.txt") if (!defined($self->genus_output_file));
     $self->phyla_output_file("$report_directory/phyla.txt") if (!defined($self->phyla_output_file));
     $self->viral_species_output_file("$report_directory/viral_species.txt") if (!defined($self->viral_species_output_file));
@@ -213,13 +229,11 @@ sub execute {
     
     $self->sam_combined_output_file("$working_directory/combined.sam") if (!defined($self->sam_combined_output_file));
     $self->sam_low_priority_output_file("$working_directory/low_priority.sam") if (!defined($self->sam_low_priority_output_file));
+    $self->sam_unaligned_output_file("$working_directory/unaligned.sam") if (!defined($self->sam_unaligned_output_file));
     my $bam_combined_output_file = "$working_directory/combined.bam";
     my $warn_file = $self->sam_combined_output_file.".warn";
 
-    my @expected_output_files = ($warn_file,$self->read_count_output_file,$self->genus_output_file,$self->phyla_output_file,$bam_combined_output_file);
-    if ($self->viral_taxonomy_file){
-        push @expected_output_files, ($self->viral_family_output_file, $self->viral_subfamily_output_file, $self->viral_genus_output_file, $self->viral_species_output_file);
-    }
+    my @expected_output_files = ($warn_file,$self->read_count_output_file,$self->genus_output_file,$self->phyla_output_file,$bam_combined_output_file, $self->viral_family_output_file, $self->viral_subfamily_output_file, $self->viral_genus_output_file, $self->viral_species_output_file, $self->sam_low_priority_output_file, $self->sam_unaligned_output_file);
     
     my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
     if ($rv_check) {
@@ -231,13 +245,10 @@ sub execute {
 
     my $sam_i=Genome::Utility::FileSystem->open_file_for_reading($self->sam_input_file);
     my $tax=Genome::Utility::FileSystem->open_file_for_reading($self->taxonomy_file);
-    my $v_tax;
-    if ($self->viral_taxonomy_file){
-        $v_tax = Genome::Utility::FileSystem->open_file_for_reading($self->viral_taxonomy_file);
-    }
+    my $v_tax = Genome::Utility::FileSystem->open_file_for_reading($self->viral_taxonomy_file);
     my $sam_header_i = Genome::Utility::FileSystem->open_file_for_reading($self->sam_header_file);
 
-    if ( !defined($sam_i) || !defined($tax) || ($self->viral_taxonomy_file and !defined($v_tax)) ) {
+    if ( !defined($sam_i) || !defined($tax) || !defined($v_tax) ) {
         $self->error_message("Failed to open a required file for reading.");
         return;
     }
@@ -245,25 +256,20 @@ sub execute {
     #Output files
     my $sam_o=Genome::Utility::FileSystem->open_file_for_writing($self->sam_combined_output_file);
     my $sam_lp_o = Genome::Utility::FileSystem->open_file_for_writing($self->sam_low_priority_output_file);
+    my $sam_u_o = Genome::Utility::FileSystem->open_file_for_writing($self->sam_unaligned_output_file);
     my $sam_warn=Genome::Utility::FileSystem->open_file_for_writing($warn_file);
     my $read_cnt_o=Genome::Utility::FileSystem->open_file_for_writing($self->read_count_output_file);
+    my $species_o=Genome::Utility::FileSystem->open_file_for_writing($self->species_output_file);
     my $phyla_o=Genome::Utility::FileSystem->open_file_for_writing($self->phyla_output_file);
     my $genus_o=Genome::Utility::FileSystem->open_file_for_writing($self->genus_output_file);
-
-    my ($viral_family_o, $viral_subfamily_o, $viral_genus_o, $viral_species_o);
-    if ($self->viral_taxonomy_file){
-        $viral_family_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_family_output_file);
-        $viral_subfamily_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_subfamily_output_file);
-        $viral_genus_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_genus_output_file);
-        $viral_species_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_species_output_file);
+    my $viral_family_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_family_output_file);
+    my $viral_subfamily_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_subfamily_output_file);
+    my $viral_genus_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_genus_output_file);
+    my $viral_species_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_species_output_file);
+    if (!defined($sam_o) || !defined($read_cnt_o) || !defined($phyla_o) || !defined($genus_o) || !defined($species_o) || !defined($viral_family_o) || !defined($viral_subfamily_o) || !defined($viral_genus_o) || !defined($viral_species_o) ){
+        $self->error_message("Failed to open a taxonomy report file for writing");
     }
-
-
-    if ( !defined($sam_o) || !defined($read_cnt_o) || !defined($phyla_o) || !defined($genus_o) ) {
-        $self->error_message("Failed to open an output file for writing.");
-        return;
-    } 
-
+   
     #Read taxonomy
     my $taxonomy;
     while(<$tax>){
@@ -282,21 +288,18 @@ sub execute {
     }
 
     my $viral_taxonomy;
-    if ($v_tax){
-        while(<$v_tax>){
-            chomp;
-            my $line=$_;
-            next if ($line =~ /^gi/);
-            my ($gi, $species, $genus,$subfamily, $family, $infraorder, $suborder, $superorder) = split(/\t/,$line);
-            $viral_taxonomy->{$gi}->{species} = $species;
-            $viral_taxonomy->{$gi}->{genus} = $genus;
-            $viral_taxonomy->{$gi}->{subfamily} = $subfamily;
-            $viral_taxonomy->{$gi}->{family} = $family;
-            $viral_taxonomy->{$gi}->{infraorder} = $infraorder;
-            $viral_taxonomy->{$gi}->{suborder} = $suborder;
-            $viral_taxonomy->{$gi}->{superorder} = $superorder;
-        }
-
+    while(<$v_tax>){
+        chomp;
+        my $line=$_;
+        next if ($line =~ /^gi/);
+        my ($gi, $species, $genus,$subfamily, $family, $infraorder, $suborder, $superorder) = split(/\t/,$line);
+        $viral_taxonomy->{$gi}->{species} = $species;
+        $viral_taxonomy->{$gi}->{genus} = $genus;
+        $viral_taxonomy->{$gi}->{subfamily} = $subfamily;
+        $viral_taxonomy->{$gi}->{family} = $family;
+        $viral_taxonomy->{$gi}->{infraorder} = $infraorder;
+        $viral_taxonomy->{$gi}->{suborder} = $suborder;
+        $viral_taxonomy->{$gi}->{superorder} = $superorder;
     }
 
     my $first = 1;
@@ -304,11 +307,12 @@ sub execute {
     my $selected;
     my $last_read_name = "";
     my %ref_counts_hash; 
+    my %same_ref_mate_pairs;
 
     my $done = 0;
 
     while (my $header_line = $sam_header_i->getline){
-        $sam_o->print($header_line);
+        $sam_o->print($header_line)
     }
 
     my $line = $sam_i->getline;
@@ -324,7 +328,7 @@ sub execute {
 
             my $bitflag = $fields[1];
 
-            my $unmapped = $bitflag & 0x0040;
+            my $unmapped_flag = $bitflag & 0x0004;
 
             my ($ref, $null, $gi)= split(/\|/,$fields[2]);
             if ($ref eq "VIRL"){
@@ -332,13 +336,25 @@ sub execute {
             }
 
             my $cigar_string = $fields[5];
+
+            my $unmapped = 0;
+            if ($unmapped_flag){
+                if ($cigar_string eq '*'){
+                    $unmapped = 1;
+                }else{
+                    $self->error_message("Bit flag indicates $current_read_name is unmapped but cigar string is $cigar_string!");
+                }
+            }elsif($cigar_string eq '*'){
+                $self->error_message("Bit flag indicates $current_read_name is mapped but cigar string is $cigar_string!");
+            }
+
             my ($start_clip, $stop_clip) = $cigar_string =~ /^(\d)[HS].*(\d)[HS]/;
             $start_clip ||= 0;
             $stop_clip ||= 0;
             my $clipping_errors = $start_clip + $stop_clip;
 
             my $seq = $fields[9];
-            
+
             my $rg;
             if ($current_record =~ /RG\:Z\:(\d+)\s/){
                 $rg = $1; 
@@ -351,13 +367,13 @@ sub execute {
 
             my $length = length $seq;
             my $percent_mismatch = (($clipping_errors + $mismatches)/$length)*100;
-            
+
             if (defined $data->{$rg}->{ref}){
                 $data->{$rg}->{ref} = ($ref eq $data->{$rg}->{ref}) ? 1 : 0;
             }else{
                 $data->{$rg}->{ref} = $ref;
             }
-            
+
             $data->{$rg}->{mismatches}+= $mismatches + $clipping_errors; 
             $data->{$rg}->{records}->{$current_record} = [$percent_mismatch, $unmapped];
             $data->{$rg}->{ref_names} ||= {};
@@ -372,30 +388,76 @@ sub execute {
             $data->{$rg}->{unique_references} = scalar (keys %{$data->{$rg}->{ref_names}});
         }
 
-        my @selection = sort { $data->{$b}->{ref} <=> $data->{$a}->{ref} 
+        my @selection = sort { $data->{$b}->{ref} cmp $data->{$a}->{ref} 
                 or $data->{$a}->{unique_references} <=> $data->{$b}->{unique_references}
                 or $data->{$a}->{mismatches} <=> $data->{$b}->{mismatches} } keys %$data;
 
         my $selected_rg = shift @selection;
 
+        my $unmapped_mate;
+        my $mate_ref;
         foreach my $selected_record (keys %{$data->{$selected_rg}->{records}})  {
+
             my ($percent_mismatch, $unmapped) = @{$data->{$selected_rg}->{records}->{$selected_record}};
 
-            if ($percent_mismatch <= $self->bwa_edit_distance and !$unmapped){
+            if (!defined $unmapped_mate){
+                if ( $percent_mismatch <= $self->mismatch_cutoff and !$unmapped ){
 
-                print $sam_o $selected_record."\n";
-                my @selected_fields=split(/\t/,$selected_record);
-                my ($selected_ref, $null, $gi) = split(/\|/,$selected_fields[2]);
-                if ($selected_ref eq "VIRL"){
-                    $selected_ref .= "_$gi";
+                    print $sam_o $selected_record."\n";
+                    my @selected_fields=split(/\t/,$selected_record);
+                    my ($selected_ref, $null, $gi) = split(/\|/,$selected_fields[2]);
+                    if ($selected_ref eq "VIRL"){
+                        $selected_ref .= "_$gi";
+                    }
+                    $ref_counts_hash{$selected_ref}++;
+                    $unmapped_mate = 0;
+                    $mate_ref = $selected_ref;
+                }else{
+                    $unmapped_mate = $selected_record;
                 }
-                $ref_counts_hash{$selected_ref}++;
+            }elsif ( $unmapped_mate eq '0' ){ #previous mate is mapped
+                if  ($percent_mismatch <= $self->mismatch_cutoff and !$unmapped ){
+                    print $sam_o $selected_record."\n";
+                    my @selected_fields=split(/\t/,$selected_record);
+                    my ($selected_ref, $null, $gi) = split(/\|/,$selected_fields[2]);
+                    if ($selected_ref eq "VIRL"){
+                        $selected_ref .= "_$gi";
+                    }
+                    $ref_counts_hash{$selected_ref}++;
+                    $same_ref_mate_pairs{$selected_ref}++ if defined $mate_ref and $mate_ref eq $selected_ref;
+                }else{
+                    print $sam_lp_o $selected_record."\n";
+                }
+                $mate_ref = undef;
+            } else { #previous mate is unmapped
+                if ($percent_mismatch <= $self->mismatch_cutoff and !$unmapped){
+                    print $sam_o $selected_record."\n";
+                    my @selected_fields=split(/\t/,$selected_record);
+                    my ($selected_ref, $null, $gi) = split(/\|/,$selected_fields[2]);
+                    if ($selected_ref eq "VIRL"){
+                        $selected_ref .= "_$gi";
+                    }
+                    $ref_counts_hash{$selected_ref}++;
+                    print $sam_lp_o $unmapped_mate."\n";
 
-            }else{
-                print $sam_lp_o $selected_record."\n";
+                }else{
+                    print $sam_u_o $unmapped_mate."\n";
+                    print $sam_u_o $selected_record."\n";
+                }
             }
         } 
     }
+    $sam_o->close;
+    $sam_lp_o->close;
+    $sam_u_o->close;
+
+
+    my $mate_pair_count_fh = IO::File->new(">$report_directory/mate_pairs_matching_same_reference.txt");
+    $mate_pair_count_fh->print("Mate pairs mapped per reference:\n");
+    my $total = 0;
+    $mate_pair_count_fh->print(join("\n", map {$total+= $same_ref_mate_pairs{$_}; $_ ." : ".$same_ref_mate_pairs{$_} } sort {$a cmp $b} keys %same_ref_mate_pairs)."\n");
+    $mate_pair_count_fh->print("$total pairs overall mapped to an identical reference\n");
+    
 
     #convert sam to bam
     my $bam_combined_output_file_unsorted = $working_directory."/combined_unsorted.bam";
@@ -411,7 +473,7 @@ sub execute {
     }
 
     unless (unlink $self->sam_combined_output_file){
-        $self->warning_message("<<<Failed to remove combined sam file ". $self->sam_combined_output_file);
+    $self->warning_message("<<<Failed to remove combined sam file ". $self->sam_combined_output_file);
     }
 
     $self->status_message("Starting bam sort.");
@@ -435,8 +497,8 @@ sub execute {
     my %viral_subfamily_counts_hash;
     my %viral_genus_counts_hash;
     my %viral_species_counts_hash;
-    print $read_cnt_o "Reference Name\t#Reads with hits\tPhyla\tHMP genome\n";
-    foreach my $ref_id (keys %ref_counts_hash){
+    print $read_cnt_o "Reference Name\t#Reads with hits\tSpecies\tPhyla\tHMP genome\n";
+    foreach my $ref_id (sort keys %ref_counts_hash){
         #print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$g\t$p\n";
         if (($ref_id =~ /^BACT/) or ($ref_id =~ /^ARCH/) or ($ref_id =~ /^EUKY/)){
             my $species= $taxonomy->{$ref_id}->{species};
@@ -446,7 +508,7 @@ sub execute {
             my $genus=$taxonomy->{$ref_id}->{genus};
             $genus_counts_hash{$genus}+=$ref_counts_hash{$ref_id};
             my $hmp_flag=$taxonomy->{$ref_id}->{hmp};	
-            print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$phyla\t$hmp_flag\n";
+            print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t$phyla\t$hmp_flag\n";
         }elsif ($ref_id =~ /^VIRL/){ #produce reports for viral taxonomy if available
             my ($gi) = $ref_id =~/^VIRL_(\d+)$/;
             if ($viral_taxonomy->{$gi}){
@@ -458,14 +520,23 @@ sub execute {
                 $viral_family_counts_hash{$family}+=$ref_counts_hash{$ref_id};
                 my $subfamily = $viral_taxonomy->{$gi}->{subfamily};
                 $viral_subfamily_counts_hash{$subfamily}+=$ref_counts_hash{$ref_id};
-                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t\n";
+                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t\t\n";
             }else{
-                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\n";
+                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\t\n";
             }
+        }else{
+            print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\t\n";
         }
-
     }
+    
     $read_cnt_o->close;
+
+    print $species_o "Species Name\t#Reads with hits\n";
+    foreach my $name (keys%species_counts_hash){
+        next if (($name eq "") or ($name =~ /^\s+$/));
+        print $species_o "$name\t$species_counts_hash{$name}\n";
+    }
+    $species_o->close;
 
     print $phyla_o "Phyla Name\t#Reads with hits\n";
     foreach my $phy (keys%phyla_counts_hash){
@@ -481,28 +552,28 @@ sub execute {
     }
     $genus_o->close;
 
-    print $viral_species_o "Species Name\t#Reads with hits\n";
+    print $viral_species_o "Viral Species Name\t#Reads with hits\n";
     foreach my $name (keys%viral_species_counts_hash){
         next if (($name eq "") or ($name =~ /^\s+$/));
         print $viral_species_o "$name\t$viral_species_counts_hash{$name}\n";
     }
     $viral_species_o->close;
 
-    print $viral_genus_o "Genus Name\t#Reads with hits\n";
+    print $viral_genus_o "Viral Genus Name\t#Reads with hits\n";
     foreach my $name (keys%viral_genus_counts_hash){
         next if (($name eq "") or ($name =~ /^\s+$/));
         print $viral_genus_o "$name\t$viral_genus_counts_hash{$name}\n";
     }
     $viral_genus_o->close;
 
-    print $viral_family_o "Family Name\t#Reads with hits\n";
+    print $viral_family_o "Viral Family Name\t#Reads with hits\n";
     foreach my $name (keys%viral_family_counts_hash){
         next if (($name eq "") or ($name =~ /^\s+$/));
         print $viral_family_o "$name\t$viral_family_counts_hash{$name}\n";
     }
     $viral_family_o->close;
 
-    print $viral_subfamily_o "Subfamily Name\t#Reads with hits\n";
+    print $viral_subfamily_o "Viral Subfamily Name\t#Reads with hits\n";
     foreach my $name (keys%viral_subfamily_counts_hash){
         next if (($name eq "") or ($name =~ /^\s+$/));
         print $viral_subfamily_o "$name\t$viral_subfamily_counts_hash{$name}\n";

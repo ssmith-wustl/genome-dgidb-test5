@@ -164,25 +164,6 @@ sub execute {
               return;
     }
    
-    #my $sorted_file = $working_directory."/aligned_coord_sorted.bam";
-    #my $sorter = Genome::Model::Tools::Sam::SortBam->create(file_name=>$alignment_file,
-#							    name_sort=>0,
-    #							output_file=>$sorted_file);
-   	
-   #my $rv_sort = $sorter->execute;
-   #if ($rv_sort != 1) {
-   #		$self->error_message("Sort failed.  Return value: $rv_sort");
-   # 	return;
-   #}
-
-#	$self->status_message("Moving $sorted_file into $alignment_file.");
-#   	my $mv_cmd = "mv $sorted_file $alignment_file";
-#   	my $rv_mv = Genome::Utility::FileSystem->shellcmd(cmd=>$mv_cmd);
-#   	if ($rv_mv != 1) {
-#   		$self->error_message("Move of sorted file failed.  Return value: $rv_sort");
-#   	return;	
-#   	}
-    	
     $self->aligned_file($alignment_file);
     $self->working_directory($parent_directory);
     Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);

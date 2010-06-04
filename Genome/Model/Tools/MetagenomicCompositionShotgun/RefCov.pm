@@ -75,7 +75,7 @@ sub execute {
     my $readcount_file = $self->read_count_file;
     my $combined_file = $self->working_directory."/reports/combined_refcov.txt";
     
-    #$self->combined_file($combined_file);
+    $self->combined_file($combined_file);
     
     my @expected_refcov_output_files = ($stats_file);
     
@@ -111,20 +111,24 @@ sub execute {
     	unlink($combined_file);
     }
     
-    #$self->status_message("Now counting reads per contig.");    
-    #my $cmd_count = "/gscuser/jwalker/svn/TechD/bio_db_sam/count_read_per_contig.pl ".$self->aligned_bam_file." > ".$readcount_file;
-    #my $rv_count = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_count);
-    #$self->status_message("Done counting reads per contig.");
-    
     $self->status_message("Now combining ref cov stats at ".UR::Time->now);
     
-    my $refcov_headers_file = "/gscmnt/sata409/research/mmitreva/databases/Bacterial_assemblies.Dec2009.headers_for_refcov.txt";
+    my $taxonomy_file = "/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt";
+    my $viral_headers_file = "/gscmnt/sata421/research/mmitreva/adukes/viruses_nuc.updated.len_50.fasta.headers";
     
-    my $cmd_combine = "perl /gscmnt/sata409/research/mmitreva/sabubuck/HMP_CLINICAL_SAMPLES_JAN_2010/SCRIPTS/combine_refcov_results.pl ".
-    					"-refcov $stats_file -db_headers  $refcov_headers_file " .
-    					"-ref_counts $readcount_file  -output $combined_file ";
-    
-    my $rv_combine = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_combine);
+    my $combine = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovCombine->create(
+        refcov_output_file => $stats_file,
+        reference_counts_file => $readcount_file,
+        taxonomy_file =>  $taxonomy_file,
+        viral_headers_file => $viral_headers_file,
+        output => $combined_file,
+    );
+    $self->status_message(Data::Dumper::Dumper $combine);
+    my $rv_combine = eval{$combine->execute};
+    unless($rv_combine){
+        $self->error_message("Failed to execute RefCovCombine! $@");
+        return;
+    }
     
     $self->status_message("Done combining ref cov stats with read counts at ".UR::Time->now);
     

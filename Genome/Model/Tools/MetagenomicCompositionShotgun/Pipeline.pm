@@ -114,7 +114,7 @@ __DATA__
 
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="AlignTopHit" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="reads_and_references"	        toOperation="AlignTopHit" toProperty="reads_and_references" />
-  <link fromOperation="input connector" fromProperty="bwa_edit_distance"	            toOperation="AlignTopHit" toProperty="bwa_edit_distance" />
+  <link fromOperation="input connector" fromProperty="bwa_edit_distance"	        toOperation="AlignTopHit" toProperty="bwa_edit_distance" />
   <link fromOperation="AlignTopHit"     fromProperty="aligned_file"                 toOperation="MergeAlignments" toProperty="alignment_files" />
   <link fromOperation="AlignTopHit"     fromProperty="unaligned_file"               toOperation="MergeAlignments" toProperty="unaligned_files" />
   <link fromOperation="AlignTopHit"     fromProperty="working_directory"            toOperation="MergeAlignments" toProperty="working_directory" />
@@ -125,7 +125,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="working_directory"            toOperation="FilterResults" toProperty="working_directory" /> 
   <link fromOperation="input connector" fromProperty="taxonomy_file"                toOperation="FilterResults" toProperty="taxonomy_file" /> 
   <link fromOperation="input connector" fromProperty="viral_taxonomy_file"          toOperation="FilterResults" toProperty="viral_taxonomy_file" /> 
-  <link fromOperation="input connector" fromProperty="bwa_edit_distance"	            toOperation="FilterResults" toProperty="bwa_edit_distance" />
+  <link fromOperation="input connector" fromProperty="mismatch_cutoff"	            toOperation="FilterResults" toProperty="mismatch_cutoff" />
   <link fromOperation="FilterResults"   fromProperty="bam_combined_output_file"     toOperation="RefCov" toProperty="aligned_bam_file" /> 
   <link fromOperation="FilterResults"   fromProperty="read_count_output_file"       toOperation="RefCov" toProperty="read_count_file" /> 
 
@@ -164,11 +164,13 @@ __DATA__
     <inputproperty>reference_directory</inputproperty>
     <inputproperty>reads_and_references</inputproperty>
     <inputproperty>bwa_edit_distance</inputproperty>
+    <inputproperty>mismatch_cutoff</inputproperty>
     <inputproperty>taxonomy_file</inputproperty>
     <inputproperty>viral_taxonomy_file</inputproperty>
     <inputproperty>regions_file</inputproperty>
     <inputproperty>sam_header</inputproperty>
     <outputproperty>final_file</outputproperty>
+
 </operationtype>
 
 </workflow>
