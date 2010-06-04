@@ -163,11 +163,13 @@ sub _add_model_info {
     );
     for my $object ( keys %objects_attrs ) {
         for my $attr ( @{$objects_attrs{$object}} ) {
-            my $value = $self->$object->$attr;
-            $attr =~ s#\_#\-#g;
-            my $element = $build_node->addChild( $self->_xml->createElement($attr) )
-                or return;
-            $element->appendTextNode( defined $value ? $value : '' );
+            if ($self->$object->can($attr)){
+                my $value = $self->$object->$attr;
+                $attr =~ s#\_#\-#g;
+                my $element = $build_node->addChild( $self->_xml->createElement($attr) )
+                    or return;
+                $element->appendTextNode( defined $value ? $value : '' );
+            }
         }
     }
 
