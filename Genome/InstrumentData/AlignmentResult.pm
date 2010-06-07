@@ -1065,7 +1065,7 @@ sub run_trimq2_filter_style {
 
     my $tmp_dir = File::Temp::tempdir(
         'Trimq2_filter_styleXXXXXX',
-        DIR     => $self->temp_staging_directory,
+        DIR     => $self->temp_scratch_directory,
         CLEANUP => 1,
     );
 
