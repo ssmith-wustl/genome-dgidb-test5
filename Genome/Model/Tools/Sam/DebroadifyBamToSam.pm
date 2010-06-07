@@ -74,6 +74,7 @@ sub execute {
     while (<$sam_header_input>) {
         if (m/^\@SQ/) {
             $_=~s/\@SQ\tSN:chr(\d+)/\@SQ\tSN:$1/;
+            $_=~s/\@SQ\tSN:chrM/\@SQ\tSN:MT/;
         }
         print $sam_output $_;
         #print STDOUT $_."\n";
@@ -98,6 +99,8 @@ sub execute {
 
         $sam_fields[2] =~ s/^chr(\d+)$/$1/;
         $sam_fields[6] =~ s/^chr(\d+)$/$1/;
+        $sam_fields[2] =~ s/^chrM$/MT/;
+        $sam_fields[6] =~ s/^chrM$/MT/;
     
         print $sam_output join "\t", @sam_fields;
     }
