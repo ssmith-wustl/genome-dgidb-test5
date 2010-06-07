@@ -1144,7 +1144,7 @@ sub run_trimq2_filter_style {
 
 sub trimq2_filtered_to_unaligned_sam {
     my $self = shift;
-    my $alignment_directory = shift || $self->staging_directory;
+    my $alignment_directory = shift || $self->temp_scratch_directory;
 
     unless ($self->trimmer_name eq 'trimq2_shortfilter') {
         $self->error_message('trimq2_filtered_to_unaligned method only applies to trimq2_shortfilter as trimmer');
