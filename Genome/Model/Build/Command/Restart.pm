@@ -16,6 +16,7 @@ class Genome::Model::Build::Command::Restart {
         restart => {
             is => 'Boolean',
             is_optional => 1,
+            default_value => 1,
             doc => 'Restart with a new workflow, overrides the default of resuming an old workflow'
         }
     ]
