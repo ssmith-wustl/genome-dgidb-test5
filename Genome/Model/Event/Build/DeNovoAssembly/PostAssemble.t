@@ -5,10 +5,11 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::Model::Event::Build::DeNovoAssembly::Test;
+use Test::More;
 
-Genome::Model::Event::Build::DeNovoAssembly::PreprocessTest->runtests;
+use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble');
 
+done_testing();
 exit;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Command/Build/DeNovoAssembly/PrepareInstrumentData.t $

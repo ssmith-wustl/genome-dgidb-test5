@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 use Genome::ProcessingProfile::DeNovoAssembly;
 
-
 class Genome::Model::DeNovoAssembly {
     is => 'Genome::Model',
     has => [

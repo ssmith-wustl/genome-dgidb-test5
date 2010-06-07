@@ -68,7 +68,8 @@ sub module_to_class {
 
 #< Params as String and Hash >#
 sub param_string_to_hash {
-    my $param_string = shift;
+    my ($param_string, $value_split) = @_;
+    #my $param_string = shift;
 
     unless ( $param_string ) {
         Carp::cluck('No param string to convert to hash');
@@ -88,9 +89,18 @@ sub param_string_to_hash {
         $key =~ s/^\-{1,2}//;
         Carp::cluck("Malformed param string ($param_string).  Found empty dash (-).") if $key eq '';
         my $value = $params[$i + 1];
-        $params{$key} = ( $value ne '' ? $value : 1 );
+        #$params{$key} = ( $value ne '' ? $value : 1 );
+        if ( $value eq '' ) {
+            $params{$key} = 1;
+        }
+        elsif ( defined $value_split ) { 
+            $params{$key} = [ split($value_split, $value) ];
+        }
+        else {
+            $params{$key} = $value;
+        }
     }
-    
+
     #print Dumper(\@params, \%params);
     return %params;
 }

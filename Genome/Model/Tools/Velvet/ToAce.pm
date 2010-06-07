@@ -83,7 +83,8 @@ sub create {
     my $class = shift;
     my $self  = $class->SUPER::create(@_);
 
-    my $file = $self->afg_file;    
+    my $file = $self->afg_file;
+
     return $self->error_handle("Input velvet afg file: $file must NOT be valid or existing")
         unless -s $file and $file =~ /\.afg/;
            

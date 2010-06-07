@@ -13,14 +13,17 @@ use Test::More;
 use_ok('Genome::Model::MetagenomicComposition16s::Command::CopyFiles') or die;
 
 # model/build
-my $model = Genome::Model::MetagenomicComposition16s::Test->create_mock_mc16s_model(
+my $model = Genome::Model::MetagenomicComposition16s::Test->get_mock_model(
     sequencing_platform => 'sanger',
-    use_mock_dir => 1,
 );
-ok($model, 'Created mock mc16s sanger model');
+ok($model, 'Got mock mc16s sanger model');
 ok(
-    Genome::Model::MetagenomicComposition16s::Test->create_mock_build_for_mc16s_model($model),
-    'Created mock mc16s build',
+    Genome::Model::MetagenomicComposition16s::Test->get_mock_build(
+        model => $model,
+        use_example_directory => 1,
+
+    ),
+    'Got mock mc16s build',
 );
 # aa model for backward compatibility
 my $aa_model = Genome::Model::Test->create_mock_model(

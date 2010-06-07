@@ -288,14 +288,22 @@ sub mock_model_dir_for_type_name {
 sub create_basic_mock_model {
     my ($self, %params) = @_;
 
-    my $type_name = delete $params{type_name};
-    unless ( $type_name ) {
-        confess "No type name given to create mock model";
-    }
-    
     # Processing profile
-    my $pp = Genome::ProcessingProfile::Test->create_mock_processing_profile($type_name)
-        or confess "Can't create mock $type_name processing profile";    
+    my ($pp, $type_name);
+    if ( exists $params{type_name} ) {
+        $type_name = $params{type_name};
+        $pp = Genome::ProcessingProfile::Test->create_mock_processing_profile($type_name)
+            or confess "Can't create mock $type_name processing profile";    
+    }
+    elsif ( exists $params{processing_profile} ) {
+        $pp = $params{processing_profile};
+        $type_name = $pp->type_name;
+    }
+    else {
+        confess "No processing profile or type name given to create mock model";
+    }
+
+    # Dir
     my $model_data_dir = ( delete $params{use_mock_dir} ) 
     ? $self->mock_model_dir_for_type_name($type_name)
     : File::Temp::tempdir(CLEANUP => 1);
@@ -366,7 +374,7 @@ sub create_mock_sample {
         species_name => 'Homo sapiens',
         current_default_prefix => 'H_',
         legacy_org_id => 17,
-        estimated_orgainsm_genome_size => 3200000000,
+        estimated_genome_size => 4500000,#3200000000,
         current_genome_refseq_id => 2817463805,
         ncbi_taxon_id => 9606,
     ) or confess "Can't create mock taxon";
@@ -405,7 +413,8 @@ sub add_mock_build_to_model {
     my $data_directory = $model->data_directory.'/build';
     my $build_class = 'Genome::Model::Build::'.Genome::Utility::Text::string_to_camel_case($model->type_name);
     if ( grep { $model->type_name eq $_ } ('metagenomic composition 16s', 'reference alignment') ) { # TODO add ref align too?
-        $build_class .= '::'.Genome::Utility::Text::string_to_camel_case($model->sequencing_platform);
+        print Dumper([$model, $model->processing_profile]);
+        $build_class .= '::'.Genome::Utility::Text::string_to_camel_case($model->processing_profile->sequencing_platform);
     }
     
     # Build
@@ -791,6 +800,168 @@ sub copy_test_dir {
         return 1;
 }
 
+#################################################################
+# NEW STUFF - MOVING MOCK OBJECTS INTO THEIR RESPECTIVE MODULES #
+#  PUTTING BASE PP MODEL BUILD CREATION HERE                    #
+#################################################################
+
+sub get_mock_processing_profile {
+    my ($self, %params) = @_;
+
+    Carp::confess("No params to get mock processing profile.") unless %params;
+    my $name = delete $params{name};
+    Carp::confess("No name to get mock processing profile.") unless $name;
+    my $class = delete $params{class};
+    Carp::confess("No class to get mock processing profile.") unless $class;
+    my $type_name = delete $params{type_name};
+    Carp::confess("No type name to get mock processing profile.") unless $type_name;
+    
+    my $pp = Genome::Utility::TestBase->create_mock_object(
+        name => $name,
+        class => $class,
+        type_name => $type_name,
+        %params,
+    ) or Carp::confess("Can't get mock $type_name processing profile.");
+
+    # Methods 
+    $self->mock_methods(
+        $pp,
+        (qw/
+            _initialize_model
+            _initialize_build 
+            _generate_events_for_build
+            _generate_events_for_build_stage
+            _generate_events_for_object
+            _resolve_workflow_for_build
+            _workflow_for_stage
+            _merge_stage_workflows
+            _resolve_log_resource
+            _resolve_disk_group_name_for_build
+            params_for_class
+            stages objects_for_stage classes_for_stage
+            delete
+            /),
+    );
+
+    # PP Params
+    for my $param ( $pp->params_for_class ) {
+        $self->mock_accessors($pp, $param);
+        $pp->$param( delete $params{$param} );
+    }
+
+    # Left over params
+    Carp::confess("Unknown params for mock $type_name processing profile:\n".Dumper(\%params)) if %params;
+
+    # Stages
+    for my $stage ( $pp->stages ) {
+        $self->mock_methods(
+            $pp,
+            $stage.'_objects', $stage.'_job_classes',
+        );
+    }
+
+    return $pp;
+}
+
+sub get_mock_model {
+    my ($self, %params) = @_;
+
+    Carp::confess("No params to get mock model.") unless %params;
+    my $class = delete $params{class};
+    Carp::confess("No class to get mock model.") unless $class;
+    my $pp = delete $params{processing_profile};
+    Carp::confess("No processing profile to get mock model.") unless $pp;
+    # ceate subject
+    my $subject = delete $params{subject};
+    Carp::confess("No subject to get mock model.") unless $subject;
+    
+    # Create mock
+    my $model = $self->create_mock_object(
+        class => 'Genome::Model::'.Genome::Utility::Text::string_to_camel_case($pp->type_name),
+        name => 'mr. mock '.$pp->type_name,
+        subject_class_name => $subject->class,
+        subject_id => $subject->id,
+        subject_name => $subject->name,
+        subject_type => 'sample_name',
+        processing_profile_id => $pp->id,
+        data_directory => File::Temp::tempdir(CLEANUP => 1),
+    )
+        or confess "Can't create mock model ($class)";
+
+    # Methods in base Genome::Model
+    $self->mock_methods(
+        $model, # added inst data until it gets back into the class def
+        (qw/
+            instrument_data
+            running_builds current_running_build current_running_build_id
+            completed_builds last_complete_build last_complete_build_id 
+            resolve_last_complete_build _last_complete_build_id 
+            succeeded_builds last_succeeded_build last_succeeded_build_id
+            compatible_instrument_data assigned_instrument_data unassigned_instrument_data
+            /),
+    ) or confess "Can't add mock methods to model ($class)";
+
+    return $model;
+}
+
+sub get_mock_build {
+    my ($self, %params) = @_;
+
+    my $class = delete $params{class};
+    Carp::confess("No class given to get mock build.") unless $class;
+    my $model = delete $params{model};
+    Carp::confess("No model given to get mock build.") unless $model;
+    my $data_directory = delete $params{data_directory};
+    unless ( $data_directory ) { # TODO use build id??
+        $data_directory = $model->data_directory.'/build';
+    }
+
+    # Create
+    my $build = $self->create_mock_object(
+        class => $class,
+        model => $model,
+        model_id => $model->id,
+        data_directory => $data_directory,
+        type_name => $model->type_name,
+    ) or confess "Can't create mock ".$model->type_name." build";
+    mkdir $data_directory unless -d $data_directory;
+
+    # Methods
+    $self->mock_methods(
+        $build,
+        (qw/
+            reports_directory resolve_reports_directory
+            build_event build_events build_status
+            date_completed date_scheduled
+            add_report get_report reports 
+            start initialize success fail abandon delete
+            metrics
+            /),
+    ) or confess "Can't add methods to mock build";
+
+    # Inst Data
+    $build->mock('instrument_data', sub{ return $_[0]->model->instrument_data; });
+    
+    # Event
+    my $event = $self->create_mock_object(
+        class => 'Genome::Model::Event::Build',
+        model_id => $build->model_id,
+        build_id => $build->id,
+        event_type => 'genome model build',
+        event_status => 'Succeeded',
+        user_name => $ENV{USER},
+        date_scheduled => UR::Time->now,
+        date_completed => UR::Time->now,
+    ) or confess "Can't create mock build event for ".$build->type_name." build";
+
+    $self->mock_methods(
+        $event,
+        (qw/ desc /),
+    ) or confess "Can't add methods to mock build";
+
+    return $build;
+}
+
 #######################
 # Type Name Test Base #
 #######################
@@ -875,7 +1046,6 @@ use base 'Genome::Model::TestBase';
 
 ###################################################
 ###################################################
-
 1;
 
 #$HeadURL$

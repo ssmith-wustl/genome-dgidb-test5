@@ -219,33 +219,39 @@ sub execute {
 	    $self->error_message("Failed to find contigs.fa file: $contigs_fa_file");
 	    return;
 	}
-	my $gap_out_file = $self->directory.'/edit_dir/velvet.gap.txt';
-	my $convert = Genome::Model::Tools::Assembly::ConvertToPcap::Velvet->execute(
-										    contigs_fa_file => $contigs_fa_file,
-										    out_file => $gap_out_file,
-										    );
-	unless ($convert) {
-	    $self->error_message("Failed to complete convert to pcap format");
-	    return;
-	}
 
-	my $ec = Genome::Model::Tools::Assembly::CreateSubmissionFiles::Velvet->execute(
-									       fastq_file => $self->file_name,
-									       directory => $self->directory,
-									       );
+	#this is done in Velvet::CreateAsmStdoutFiles
+
+#	my $gap_out_file = $self->directory.'/edit_dir/velvet.gap.txt';
+#	my $convert = Genome::Model::Tools::Assembly::ConvertToPcap::Velvet->execute(
+#										    contigs_fa_file => $contigs_fa_file,
+#										    out_file => $gap_out_file,
+#										    );
+#	unless ($convert) {
+#	    $self->error_message("Failed to complete convert to pcap format");
+#	    return;
+#	}
+
+#	my $ec = Genome::Model::Tools::Assembly::CreateSubmissionFiles::Velvet->execute(
+	my $ec = Genome::Model::Tools::Velvet::CreateAsmStdoutFiles->execute(
+	    input_fastq_file => $self->file_name,
+	    directory => $self->directory,
+	    );
 	unless ($ec) {
 	    $self->error_message("Failed to create submission files");
 	    return;
 	}
 
-	$ec = Genome::Model::Tools::Assembly::Stats::Velvet->execute(
-							    assembly_directory => $self->directory.'/edit_dir',
-							    out_file => 'stats.txt',
-							    );
-	unless ($ec) {
-	    $self->error_message("Failed to create stats");
-	    return;
-	}
+	#this is done in Velvet::CreateAsmStdoutFiles
+
+#	$ec = Genome::Model::Tools::Assembly::Stats::Velvet->execute(
+#							    assembly_directory => $self->directory.'/edit_dir',
+#							    out_file => 'stats.txt',
+#							    );
+#	unless ($ec) {
+#	    $self->error_message("Failed to create stats");
+#	    return;
+#	}
 
     }
     else {

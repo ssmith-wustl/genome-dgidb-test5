@@ -5,123 +5,148 @@ use warnings;
 
 use Genome;
 
-use Bio::SeqIO::fastq;
+require Carp;
+use Data::Dumper 'Dumper';
+require File::Temp;
 
 class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData::Velvet {
     is => 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
 };
 
-sub execute {
-    my $self = shift;
-    my $data_type = $self->model->processing_profile->sequencing_platform;
-    my $method = '_prepare_'.$data_type.'_data';
-    unless ($self->can($method)) {
-	$self->error_message("Invalid sequencing platform name: $data_type");
-	return;
-    }
-
-    unless ($self->$method()) {
-	$self->error_message("Failed to execute prepare instrument data");
-	return;
-    }
-
-    return 1;
-}
-
-sub _prepare_solexa_data {
+sub _tempdir {
     my $self = shift;
 
-    my @instrument_data = $self->model->instrument_data;
-    unless (@instrument_data) {
-        $self->error_message(sprintf('No instrument data assigned to model (<Name> %s <Id> %s)', $self->model_name, $self->model_id));
-        return
-    }
-    if (@instrument_data > 1) {
-        $self->error_message(sprintf('Muliple instrument data was assigned to model (<Name> %s <Id> %s).  This is not yet supported for velvet de novo assemblies.', $self->model_name, $self->model_id));
-        return;
-    }
-
-    my @fastqs = $instrument_data[0]->fastq_filenames;
-    unless (@fastqs) {
-        $self->error_message(sprintf('No fastqs found for model', $self->model_name, $self->model_id));
-        return;
-    }
-    unless (@fastqs == 2) {
-        $self->error_message(sprintf('Velvet de novo assemblies currently require exactly two fastq files, but found %s', $self->model_name, $self->model_id, scalar @fastqs));
-        return;
-    }
-
-    my $fq1;
-    eval { 
-        $fq1 = Bio::SeqIO::fastq->new(-file => $fastqs[0]);
-    };
-    unless ( $fq1 ) {
-        $self->error_message("Can't open fastq input $fastqs[0]: $!");
-        return;
-    }
-    my $fq2;
-    eval {
-        $fq2 = Bio::SeqIO::fastq->new(-file => $fastqs[1]);
-    };
-    unless ( $fq2 ) {
-        $self->error_message("Can't open fastq input $fastqs[1]: $!");
-        return;
-    }
-    my $fq_out = Bio::SeqIO::fastq->new(-file => '>'.$self->build->velvet_fastq_file);
-    unless ( $fq_out ) {
-        $self->error_message("Can't open fastq output: ".$self->build->velvet_fastq_file.": $!");
-        return;
-    }
-
-    my $limit = $self->get_read_limit_count;
-    my $cnt = 0;
-    while ( my $seq1 = $fq1->next_seq ) {
-        last if ++$cnt > $limit;
-        my $seq2 = $fq2->next_seq;
-        unless ( $seq2 ) {
-            $self->error_message("Odd number of fastqs in files: ".join(', ', @fastqs));
-            # TODO unlink fastq output file?
-            return;
-        }
-        my $pcap_id = $self->_convert_to_pcap_id($seq1->id);
-        $seq1->id($pcap_id);
-        $fq_out->write_fastq($seq1);
-
-        $pcap_id = $self->_convert_to_pcap_id($seq2->id);
-        $seq2->id($pcap_id);
-        $fq_out->write_fastq($seq2);
-    }
-
-    unless ( -s $self->build->velvet_fastq_file ) {
-        $self->error_message("Did not write any fastqs (unknown reason)");
-        return;
+    unless ( $self->{_tempdir} ) {
+        $self->{_tempdir} = File::Temp::tempdir(CLEANUP => 1 );
+        Genome::Utility::FileSystem->validate_existing_directory( $self->{_tempdir} )
+            or die;
     }
     
+    return $self->{_tempdir};
+}
+
+sub execute {
+    my $self = shift;
+    
+    # Filters
+    my $filter = $self->processing_profile->create_read_filter; # undef ok, dies on error
+
+    # Trimers
+    my $trimmer = $self->processing_profile->create_read_trimmer; # undef ok, dies on error
+
+    # Readers
+    my @fastq_readers = $self->_get_fastq_readers
+        or return; # error in sub
+
+    # Writer
+    my $collated_fastq_file = $self->build->collated_fastq_file;
+    unlink $collated_fastq_file if -e $collated_fastq_file;
+    my $fastq_writer = Genome::Utility::BioPerl->create_bioseq_writer(
+        $collated_fastq_file, 'fastq'
+    ); # confess on error
+
+    # Go thru readers, each seq
+    my $read_count = 0;
+    my $reads_length = 0;
+    my $read_limit = $self->build->calculate_read_limit_from_read_coverage;
+    FASTQ: while ( 1 ) { 
+        my @seqs;
+        for my $fastq_reader ( @fastq_readers ) { 
+            my $seq = $fastq_reader->next_seq;
+	    next unless $seq;
+            push @seqs, $seq;
+        }
+        last FASTQ unless @seqs;
+        for my $seq ( @seqs ) {
+            $trimmer->trim($seq) if $trimmer;
+            if ( $filter ) {
+                next unless $filter->filter($seq);
+            }
+            my $read_name = $seq->id;
+            $read_name =~ s/\#.*\/1$/\.b1/; # for ace files
+            $read_name =~ s/\#.*\/2$/\.g1/; # for ace files
+            $seq->id($read_name);
+            my $rv;
+            eval{ $rv = $fastq_writer->write_fastq($seq); };
+            unless ( $rv ) {
+                $self->error_message("Can't write fastq to file ($collated_fastq_file): $@");
+                return;
+            }
+
+            $read_count++;
+	    $reads_length += $seq->length;
+
+            last FASTQ if defined $read_limit and $read_count >= $read_limit;
+        }
+    }
+    $fastq_writer->flush(1);
+
+    unless ( -s $collated_fastq_file ) {
+        $self->error_message("Did not write any fastqs for ".$self->build->description.". This probably occurred because the reads did not pass the filter requirements");
+        return;
+    }
+
+    $self->build->reads_attempted($read_count);
+    $self->build->read_length( int($reads_length/$read_count) );
+
     return 1;
 }
 
-sub _convert_to_pcap_id {
-    my ($self, $read_name) = @_;
-    $read_name =~ s/\#0\/1/\.b1/;
-    $read_name =~ s/\#0\/2/\.g1/;
-    return $read_name;
-}
-
-sub get_read_limit_count {
+sub _get_fastq_readers {
     my $self = shift;
 
-    my $prepare_instrument_data_params = $self->model->processing_profile->get_prepare_instrument_data_params;
-    unless ( $prepare_instrument_data_params ) {
-        $self->error_message("Problem getting prepare instrument data params");
+    my @instrument_data = $self->build->instrument_data;
+    unless ( @instrument_data ) {
+        $self->error_message("No instrument data found for ".$self->build->description);
         return;
     }
 
-    unless ( exists $prepare_instrument_data_params->{reads_cutoff} ) {
-        $self->error_message("No reads cutoff found in prepare instrument data params");
+    my $fastq_file_method = '_fastq_files_from_'.$self->processing_profile->sequencing_platform;
+    my @fastq_readers;
+    for my $inst_data ( $self->build->instrument_data ) {
+        my @fastq_files = $self->$fastq_file_method($inst_data)
+            or return; # error in sub
+        for my $fastq_file ( @fastq_files ) {
+            my $fastq_reader = Genome::Utility::BioPerl->create_bioseq_reader(
+                $fastq_file, 'fastq'
+            ); # confess on error
+            push @fastq_readers, $fastq_reader;
+        }
+    }
+
+    return @fastq_readers;
+}
+
+sub _fastq_files_from_solexa {
+    my ($self, $inst_data) = @_;
+
+    # zipped fastqs
+    my $archive_path = $inst_data->archive_path;
+    unless ( -s $archive_path ) {
+        $self->error_message(
+            "No archive path for instrument data (".$inst_data->id.")"
+        );
         return;
     }
 
-    return $prepare_instrument_data_params->{reads_cutoff};
+    # tar to tempdir
+    my $tempdir = $self->_tempdir;
+    my $inst_data_tempdir = $tempdir.'/'.$inst_data->id;
+    Genome::Utility::FileSystem->create_directory($inst_data_tempdir)
+        or die;
+    my $tar_cmd = "tar zxf $archive_path -C $inst_data_tempdir";
+    Genome::Utility::FileSystem->shellcmd(
+        cmd => $tar_cmd,
+    ) or Carp::confess "Can't extract archive file $archive_path with command '$tar_cmd'";
+
+    # glob files
+    my @fastq_files = glob $inst_data_tempdir .'/*';
+    unless ( @fastq_files ) {
+        $self->error_message("Extracted archive path ($archive_path), but no fastqs found.");
+        return;
+    }
+
+    return @fastq_files;
 }
 
 sub valid_params {

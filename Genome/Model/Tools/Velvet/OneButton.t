@@ -10,10 +10,10 @@ if ($archos !~ /64/) {
 }
 
 # OLD:
-# oneButtonVelvet-3opt.pl 1k-trimmed.fastq -i 260 -g 4500000 --hash 31 33 35 --version 57-64 -o old
+# oneButtonVelvet-3opt.pl 1k-trimmed.fastq -i 260 -g 4500000 --hash 31 33 35 --version 0.7.57-64 -o old
 
 # NEW:
-# gmt velvet one-button 1k-trimmed.fastq -i 260 -g 4500000 --hash 31,33,35 --version 57-64 -o new
+# gmt velvet one-button 1k-trimmed.fastq -i 260 -g 4500000 --hash 31,33,35 --version 0.7.57-64 -o new
  
 use Genome::Model::Tools::Velvet::OneButton;
 
@@ -21,9 +21,9 @@ my $module = 'Genome::Model::Tools::Velvet::OneButton';
 #use_ok($module, "used $module without errors");
 
 my @data_sub_dirs = ('v1-a', 'v1-b');#'v1-c');
-my @params = ('-i 260 -g 4500000 --hash 31,33,35 --version 57-64 -o output-dir',
-	      '-i 260 -g 4500000 --hash 31,33,35  --bound-enumeration 2 --version 57-64 -o output-dir');
-	      #'-i 260 -g 4500000 --hash 31,33,35 --c 18,20,22 --bound-enumeration 2 --version 57-64 -o output-dir');
+my @params = ('-i 260 -g 4500000 --hash 31,33,35 --version 0.7.57-64 -o output-dir',
+	      '-i 260 -g 4500000 --hash 31,33,35  --bound-enumeration 2 --version 0.7.57-64 -o output-dir');
+	      #'-i 260 -g 4500000 --hash 31,33,35 --c 18,20,22 --bound-enumeration 2 --version 0.7.57-64 -o output-dir');
 
 #last test param causes test to fail .. will check to make sure --c 18,20,22 are reasonible values before debugging
 #make sure @data_sub_dirs and @params contain same # of elements

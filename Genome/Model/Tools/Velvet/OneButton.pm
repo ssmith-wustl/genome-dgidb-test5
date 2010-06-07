@@ -28,7 +28,7 @@ class Genome::Model::Tools::Velvet::OneButton {
                                 }, #|h=i{,}" => \@hash_sizes, 
 
         version             => {    is => 'Text',
-                                    default_value => '57-64',
+                                    default_value => '0.7.57-64',
                                     doc => 'the version of velvet to use'
                             }, #=s" => \$version
     ],
@@ -59,7 +59,7 @@ class Genome::Model::Tools::Velvet::OneButton {
     ],
     
     has_optional_transient => [
-        _input_file_format              => {    is => 'Text', valid_values => ['fasta','fastq'] },
+        _input_file_format              => {    is => 'Text' },# valid_values => ['fasta','fastq'] },
         _input_read_count               => {    is => 'Number' },
         _avg_read_length                => {    is => 'Number' },
         _output_file_prefix_name        => {    is => 'Text'   },
@@ -90,7 +90,7 @@ gmt velvet one-button foo.fast[a|q] \
     [-i insert_length] \
     [-d ins_length_sd] \
     [-b enumeration_bound] \
-    [--version 57-64 #for velvet_0.7.57-64, only input the part behind velvet_0.7.);
+    [--version 0.7.57-64 #for velvet_0.7.57-64, only input the part behind velvet_0.7.);
 
 ADD MORE EXAMPLES HERE!!!!
 EOS
@@ -796,7 +796,7 @@ sub _compare {
     return;
 }
 
-sub _version_path { '/gsc/pkg/bio/velvet/velvet_0.7.' }
+sub _version_path { '/gsc/pkg/bio/velvet/velvet_' }
 
 sub log_event {
     my $self = shift;
