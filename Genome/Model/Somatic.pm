@@ -16,6 +16,12 @@ class Genome::Model::Somatic {
        require_dbsnp_allele_match => { via => 'processing_profile'},
        sv_detector_params => { via => 'processing_profile'},
        sv_detector_version => { via => 'processing_profile'},
+       bam_window_params => { via => 'processing_profile'},
+       bam_window_version => { via => 'processing_profile'},
+       sniper_params => { via => 'processing_profile'},
+       sniper_version => { via => 'processing_profile'},
+       bam_readcount_params => { via => 'processing_profile'},
+       bam_readcount_version => { via => 'processing_profile'},
     ],
     has_optional => [
          tumor_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', where => [ role => 'tumor'], is_many => 1,
