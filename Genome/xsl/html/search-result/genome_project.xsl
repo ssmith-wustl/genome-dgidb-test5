@@ -24,8 +24,8 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           </span>
         </h2>
         <p class="info">
-          <xsl:value-of select="aspect[@name='status']/value"/>
           <xsl:value-of select="aspect[@name='project_type']/value"/>
+          (<xsl:value-of select="aspect[@name='status']/value"/>)<br/>
           <xsl:value-of select="aspect[@name='description']/value"/>
         </p>
       </div>
