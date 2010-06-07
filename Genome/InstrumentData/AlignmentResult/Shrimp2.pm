@@ -25,32 +25,24 @@ sub required_rusage {
 sub _run_aligner {
     my $self = shift;
 
-    my $aligner_params = $self->aligner_params;
+    my $aligner_params = $self->aligner_params || '';
     
     # collect filepaths
     my $shrimp_path = Genome::Model::Tools::Shrimp2->path_for_shrimp2_version($self->aligner_version);
     my $ref_index = $self->reference_build->data_directory . '/all_sequences.fa';
     my $output_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $log_file = $self->temp_staging_directory . "/aligner.log";
-
-    my @inputs = map ($self->fastq_to_fasta, @_);
+    my @inputs = map { $self->fastq_to_fasta($_) } @_;
     my $input_path = $inputs[0];
 
     # special things for paired data
     $self->static_params('-E');
     if ( @inputs == 2 ) {
-        if (not $aligner_params =~ /-p/ ){
+        unless ( $aligner_params =~ /-p/ ){
             my ($lower,$upper) = $self->_derive_insert_size_bounds;
             $self->static_params($self->static_params . " -p opp-in -I $lower,$upper");
         }
-        # interleave inputs with $SHRIMP/utils/mergepairfiles.py
-        $input_path =~ s/\.fa/_merged\.fa/;
-        Genome::Utility::FileSystem->shellcmd(
-            cmd => "mergepairfiles.py ".(join ' ',@inputs)." >$input_path",
-            input_files => \@inputs,
-            output_files => [$input_path],
-            skip_if_output_is_present => 1
-        );
+        $input_path = $self->merge_pairs(@inputs);
     }
 
     # construct command and run it
@@ -80,13 +72,21 @@ sub aligner_params_for_sam_header {
 sub fastq_to_fasta {
     my $self = shift;
     my $input = shift;
-    my $output = ($input =~ s/\.fq$/\.fa/);
-    Genome::Utility::FileSystem->shellcmd(
-        cmd => "fastq_to_fasta <$input >$output",
-        inputs  => [$input],
-        outputs => [$output],
-        skip_if_output_is_present => 1
-    );
+    my $output = $input . ".fa";
+    $self->status_message("Converting $input (FastQ) to $output (FastA).");
+    my $fastq_fh = IO::File->new($input);
+    my $fasta_fh = IO::File->new(">$output");
+    my $line_type;
+    while (<$fastq_fh>){
+        $line_type = $. % 4;
+        if ($line_type == 1) {
+            $fasta_fh->print(">",substr($_,1));
+        } elsif ($line_type == 2) {
+            $fasta_fh->print($_);
+        }
+    }
+    $fasta_fh->close();
+    $fastq_fh->close();
     return $output;
 }
 
@@ -110,3 +110,26 @@ sub _derive_insert_size_bounds {
     return ($lower,$upper);
 }
 
+sub merge_pairs {
+    my $self = shift;
+    my @inputs = @_;
+    my $merged = $inputs[0];
+    $merged =~ s/\.fa/_merged\.fa/;
+    
+    $self->status_message("Interleaving $inputs[0] and $inputs[1] into one file.");
+    my ($infh1,$infh2) = map { IO::File->new($_) } @inputs;
+    my $merged_fh = IO::File->new(">$merged");
+    my $line_type;
+    while (<$infh1>){
+        $line_type = $. % 2;
+        if ($line_type == 1) {
+            $merged_fh->print($_);
+        } elsif ($line_type == 0) {
+            $merged_fh->print($_,scalar(<$infh2>),scalar(<$infh2>));
+        }
+    }
+    $infh1->close();
+    $infh2->close();
+    $merged_fh->close();
+    return $merged;
+}
