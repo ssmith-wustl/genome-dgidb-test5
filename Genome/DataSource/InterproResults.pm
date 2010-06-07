@@ -30,9 +30,9 @@ sub constant_values {
     [ 'data_directory', 'chrom_name' ]; 
 };
 
-#sub sort_order {
-#    [qw/ start stop interpro_id /];
-#}
+sub sort_order {
+    [qw/ chrom_name start stop interpro_id /];
+}
 
 sub required_for_get { 
     [ 'data_directory', 'chrom_name' ]; 
