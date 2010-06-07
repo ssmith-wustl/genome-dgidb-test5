@@ -190,7 +190,7 @@ sub resolve_module_version {
         return $1;
     }
     if ($path =~ /\/gsc\/scripts\/lib\/perl\//) {
-        my $date = ctime(stat($path)->mtime);
+        my $date = (stat($path))[9]; #mtime
         return 'app-'. $date;
     }
     #TODO: make condition for directory in svn tree that has not been added to svn
