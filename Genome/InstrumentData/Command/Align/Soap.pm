@@ -13,19 +13,18 @@ class Genome::InstrumentData::Command::Align::Soap {
     has => [
         version => {is=>'String', default_value=>Genome::Model::Tools::Soap->default_soap_version}
     ],
-    doc => "align instrument data using Bowtie's novoalign tool (see http://bowtie-bio.sourceforge.net)",
+    doc => "align instrument data using the SOAP aligner tool (see http://soap.genomics.org.cn/soapaligner.html)",
 };
 
 sub help_synopsis {
-# TODO: Make these actual examples of valid run arguments.
-return <<EOS
+    return <<EOS
 genome instrument-data align soap
 
-genome instrument-data align soap
+genome instrument-data align soap --params='-p NUM_CORES'
 
-genome instrument-data align soap
+genome instrument-data align soap --params='-l SEED_LENGTH'
 
-genome instrument-data align soap
+genome instrument-data align soap --params='-m MIN_INSERT -x MAX_INSERT'
 EOS
 }
 
