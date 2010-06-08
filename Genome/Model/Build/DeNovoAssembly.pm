@@ -13,11 +13,13 @@ class Genome::Model::Build::DeNovoAssembly {
 	reads_attempted => {
 	    is => 'Integer',
 	    is_mutable => 1,
+	    is_optional => 1,
 	    doc => 'Number of reads attempted to assemble',
 	},
 	read_length => {
 	    is => 'Integer',
 	    is_mutable => 1,
+	    is_optional=> 1,
 	    doc => 'Average read length or reads attempted',
 	},
     ],
@@ -55,6 +57,10 @@ sub create {
     mkdir $self->data_directory unless -d $self->data_directory;
     
     return $self;
+}
+
+sub calculate_estimated_kb_usage {
+    return 51_200_000; # 50 Gb
 }
 
 sub genome_size {

@@ -22,7 +22,7 @@ my $build = Genome::Model::Build::DeNovoAssembly->create(
 ok($build, 'Created de novo assembly build') or die;
 isa_ok($build, 'Genome::Model::Build::DeNovoAssembly');
 
-# genome size and read limit
+is($build->calculate_estimated_kb_usage, (50_000_000 * 1.024), 'Kb usage');
 is($build->genome_size, 4500000, 'Genome size');
 is($build->calculate_read_limit_from_read_coverage, 25000, 'Calculated read limit');
 

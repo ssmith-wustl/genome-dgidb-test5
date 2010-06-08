@@ -9,6 +9,10 @@ class Genome::Model::Event::Build::DeNovoAssembly::Assemble::Velvet {
     is => 'Genome::Model::Event::Build::DeNovoAssembly::Assemble',
 };
 
+sub bsub_rusage {
+    return "-R 'select[type==LINUX64 && mem>30000 && tmp>30000] rusage[mem=30000, tmp=30000] span[hosts=1]' -M 30000000"
+}
+
 sub execute { 
     my $self = shift;
     

@@ -35,6 +35,9 @@ is(
     'Generated and example fastq files match!',
 );
 
+is ($build->reads_attempted, 25000, "Reads attempted");
+is ($build->read_length, 90, "Read length");
+
 #print $build->data_directory."\n";<STDIN>;
 done_testing();
 exit;
