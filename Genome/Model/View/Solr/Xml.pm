@@ -20,6 +20,10 @@ class Genome::Model::View::Solr::Xml {
                     position => 'timestamp',
                 },
                 {
+                    name => 'build_ids',
+                    position => 'content',
+                },
+                {
                     name => 'processing_profile',
                     position => 'content',
                     perspective => 'default',
