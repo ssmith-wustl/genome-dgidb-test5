@@ -16,6 +16,14 @@ class Genome::WorkOrder::View::Solr::Xml {
             is => 'ARRAY',
             default => [
                 {
+                    name => 'barcode',
+                    position => 'content',
+                },
+                {
+                    name => 'setup_name',
+                    position => 'content',
+                },
+                {
                     name => 'project',
                     position => 'content',
                     perspective => 'default',
@@ -23,9 +31,8 @@ class Genome::WorkOrder::View::Solr::Xml {
                     aspects => [
                         'id',
                         'name',
-                        'description'
                     ]
-                },
+                }
         ]
     }
 ]};
