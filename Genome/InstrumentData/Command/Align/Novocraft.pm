@@ -13,6 +13,9 @@ class Genome::InstrumentData::Command::Align::Novocraft {
     has_constant => [
         aligner_name => { value => 'novocraft' },
     ],
+    has => [
+        version => {is=>'String', default_value=>Genome::Model::Tools::Novocraft->default_novocraft_version}
+    ],
     doc => "align instrument data using novocraft's novoalign tool (see http://novocraft.com)",
 };
 
