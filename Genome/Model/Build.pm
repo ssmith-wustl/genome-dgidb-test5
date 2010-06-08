@@ -776,7 +776,12 @@ sub success {
     # FIXME subclass this!
     if($self->type_name !~ /convergence/) {
         for my $model_group ($self->model->model_groups) {
-            $model_group->launch_convergence_rebuild;
+            eval {
+                $model_group->launch_convergence_rebuild;
+            };
+            if($@) {
+                $self->error_message('Could not launch convergence build for model group ' . $model_group->id . '.  Continuing anyway.');
+            }
         }
     }
 
