@@ -38,6 +38,10 @@ class Genome::Individual {
 
         gender          => { is => 'Text',
                             doc => 'when the gender of the individual is known, this value is set to male/female/...' },
+        ethnicity       => { is => 'Text',
+                            doc => 'the "ethnicity" of the individual, Hispanic/Non-Hispanic/...'},
+        race            => { is => 'Text',
+                            doc => 'the "race" of the individual, African American/Caucasian/...'},
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };
