@@ -28,6 +28,12 @@ class Genome::Model::Tools::Kmer::OccurrenceRatio {
             is => 'Integer',
             default_value => 32,
         },
+        scan => {
+            is => 'Boolean',
+            is_optional => 1,
+            default_value => 0,
+            doc => 'When set the suffix arrary/tables are not loaded into memory but rather scanned reducing the memory requirements',
+        },
     ],
 };
 
@@ -41,6 +47,9 @@ sub execute {
     }
     if ($self->maximum_mer_size) {
         $options .= ' -maxmersize '. $self->maximum_mer_size;
+    }
+    if ($self->scan) {
+        $options .= ' -scan';
     }
     my $cmd = $gt_path .' tallymer occratio '. $options .' -esa '. $self->index_name .' > '. $self->output_file;
     my @output_files = ($self->output_file);
