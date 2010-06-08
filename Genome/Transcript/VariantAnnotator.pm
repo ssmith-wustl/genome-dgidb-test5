@@ -183,17 +183,17 @@ sub transcripts {
 }
 
 # Takes in a group of annotations and returns them in priority order
-# Sorts on: transcript errors, variant type, status, source, amino acid length, transcript name (descending importance)
+# Sorts on: variant type, transcript error, source, status, amino acid length, transcript name (descending importance)
 # Rankings for each category can be found in Genome::Info::AnnotationPriorities
 sub _prioritize_annotations {
     my ($self, @annotations) = @_;
 
     use sort '_mergesort';  # According to perldoc, performs better than quicksort on large sets with many comparisons
     my @sorted_annotations = sort {
-        $self->_highest_priority_error($a) <=> $self->_highest_priority_error($b) ||
         $variant_priorities{$a->{trv_type}} <=> $variant_priorities{$b->{trv_type}} ||
-        $transcript_status_priorities{$a->{transcript_status}} <=> $transcript_status_priorities{$b->{transcript_status}} ||
+        $self->_highest_priority_error($a) <=> $self->_highest_priority_error($b) ||
         $transcript_source_priorities{$a->{transcript_source}} <=> $transcript_source_priorities{$b->{transcript_source}} ||
+        $transcript_status_priorities{$a->{transcript_status}} <=> $transcript_status_priorities{$b->{transcript_status}} ||
         $b->{amino_acid_length} <=> $a->{amino_acid_length} ||
         $a->{transcript_name} cmp $b->{transcript_name}
     } @annotations;
