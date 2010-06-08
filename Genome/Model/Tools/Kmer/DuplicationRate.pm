@@ -65,10 +65,12 @@ sub execute {
     for my $fasta_file (@fasta_files) {
         unlink $fasta_file || die('Failed to remove fasta file '. $fasta_file);
     }
+    #TODO: Make scan a variable that will do the right thing for really large index files
     unless (Genome::Model::Tools::Kmer::OccurrenceRatio->execute(
         index_name => $index_name,
         minimum_mer_size => 1,
         maximum_mer_size => $max_read_length,
+        scan => 1,
         output_file => $self->output_file,
         output_type => 'nonuniquemulti relative',
     )) {
