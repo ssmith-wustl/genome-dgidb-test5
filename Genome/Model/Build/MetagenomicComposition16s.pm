@@ -138,17 +138,16 @@ sub amplicon_sets {
 
     my @amplicon_sets;
     for my $set_name ( $self->amplicon_set_names ) {
-        unless ( push @amplicon_sets, $self->amplicon_set_for_name($set_name) ) {
-            $self->error_message("Unable to get amplicon set ($set_name) for ".$self->description);
-            return;
-        }
+        my $amplicon_set = $self->amplicon_set_for_name($set_name);
+        next unless $amplicon_set; # undef ok, dies on error
+        push @amplicon_sets, $amplicon_set;
     }
 
-    unless ( @amplicon_sets ) {
+    unless ( @amplicon_sets ) { # bad
         $self->error_message("No amplicon sets found for ".$self->description);
         return;
     }
-    
+
     return @amplicon_sets;
 }
 
