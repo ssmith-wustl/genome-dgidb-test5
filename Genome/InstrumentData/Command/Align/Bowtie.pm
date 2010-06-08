@@ -20,6 +20,7 @@ class Genome::InstrumentData::Command::Align::Bowtie {
 };
 
 sub help_synopsis {
+# TODO: Make these actually reflect real examples.
 return <<EOS
 genome instrument-data align bowtie -r NCBI-human-build36 -i 2761701954
 
