@@ -21,7 +21,7 @@ class Genome::Model::Build::ImportedReferenceSequence {
         },
         name => {
             calculate_from => ['model_name','version'],
-            calculate => q| "$model_name-build$version" |,
+            calculate => q| my $s = "$model_name-build$version"; $s =~ s/\s/-/g; return $s; |,
         }
     ],
     has_optional => [
