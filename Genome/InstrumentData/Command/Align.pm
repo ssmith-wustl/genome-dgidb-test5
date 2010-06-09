@@ -111,7 +111,7 @@ EOS
 
 sub execute {
     my $self = shift;
-$DB::single = 1;
+
     my $alignment;
     my %alignment_params = (
         instrument_data_id => $self->instrument_data_id,
