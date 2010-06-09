@@ -281,7 +281,15 @@ sub execute {
 #			chomp($readcounts) if($readcounts);
 
 			my $readcounts = "";
-			$readcounts = $readcounts_by_position{"$chrom\t$chr_start"} if($readcounts_by_position{"$chrom\t$chr_start"});
+			if($self->prepend_chr)
+			{
+	   			$readcounts = $readcounts_by_position{"chr$chrom\t$chr_start"} if($readcounts_by_position{"chr$chrom\t$chr_start"});			    
+			}
+			else
+			{
+	   			$readcounts = $readcounts_by_position{"$chrom\t$chr_start"} if($readcounts_by_position{"$chrom\t$chr_start"});			    
+			}
+ 
 
 			## Parse the results for each allele ##
 	    
@@ -352,7 +360,7 @@ sub execute {
 			}
 			else
 			{
-			    $self->error_message("Unable to get read counts for $ref/$var from $readcounts using $cmd: ref was $ref_result var was $var_result");
+			    $self->error_message("Unable to get read counts for $ref/$var at position $chrom\t$chr_start\t$chr_stop");
 			    die;                
 			}			
 		    }
