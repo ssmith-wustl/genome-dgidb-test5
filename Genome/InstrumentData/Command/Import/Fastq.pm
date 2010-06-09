@@ -250,7 +250,7 @@ sub execute {
 
     
     my %alloc_params = (
-    disk_group_name     => 'info_alignments',     #'info_apipe',          #changed to info_alignments disk due to problems with info_apipe
+        disk_group_name     => 'info_alignments',     #'info_apipe',          #changed to info_alignments disk due to problems with info_apipe
         allocation_path     => $alloc_path,
         kilobytes_requested => $kb_usage,
         owner_class_name    => $import_instrument_data->class,
@@ -288,9 +288,6 @@ sub execute {
         $disk_alloc->deallocate;
         return;
     }
-
-
-
 
     return 1;
 
