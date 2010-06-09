@@ -37,25 +37,25 @@ sub _run_aligner {
     #} els
     my $insert = '';
     if ( @inputs == 2 ) {
-        $insert = "-b $inputs[1]"
+        $insert = "-b $inputs[1] -2 $output_aligned.unpaired.soap"
     } elsif ( @inputs != 1 ) {
         $self->error_message("Wrong number of file inputs.");
         return 0;
     }
 
-    my $cmd = "$soap_path $aligner_params -a $inputs[0] $insert -D $ref_index -o $output_aligned.soap -u $output_unaligned.soap -2 $output_aligned.unpaired.soap >>$log_file 2>&1";
+    my $cmd = "$soap_path $aligner_params -a $inputs[0] $insert -D $ref_index -o $output_aligned.soap -u $output_unaligned.soap >>$log_file 2>&1";
 
     Genome::Utility::FileSystem->shellcmd(
         cmd          => $cmd,
         input_files  => [ $ref_index, @inputs ],
-        output_files => [ "$output_aligned.soap", "$output_aligned.unpaired.soap","$output_unaligned.soap", $log_file ],
+        output_files => [ "$output_aligned.soap","$output_unaligned.soap", $log_file ],
         skip_if_output_is_present => 0
     );
 
     # convert soap outputs to sam
     my $is_paired = (@inputs == 2);
     _soap2sam($output_aligned . ".soap", $output_aligned, $is_paired);
-    _soap2sam($output_aligned . ".unpaired.soap", $output_aligned, $is_paired);
+    _soap2sam($output_aligned . ".unpaired.soap", $output_aligned, $is_paired) if $is_paired;
     _soap2sam($output_unaligned . ".soap", $output_unaligned, $is_paired);
     
 
