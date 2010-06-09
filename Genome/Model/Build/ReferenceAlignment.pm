@@ -154,53 +154,54 @@ sub alignment_summary_file {
 }
 
 sub alignment_summary_hash_ref {
-
     my ($self,$wingspan) = @_;
-    my $wingspan_array_ref = $self->wingspan_values_array_ref;
-    my %alignment_summary;
-    for my $wingspan( @{$wingspan_array_ref}) {
-        my $as_file = $self->alignment_summary_file($wingspan);
-        my $reader = Genome::Utility::IO::SeparatedValueReader->create(
-            separator => "\t",
-            input => $as_file,
-        );
-        unless ($reader) {
-            $self->error_message('Can not create SeparatedValueReader for input file '. $as_file);
-            return;
+
+    unless ($self->{_alignment_summary_hash_ref}) {
+        my $wingspan_array_ref = $self->wingspan_values_array_ref;
+        my %alignment_summary;
+        for my $wingspan( @{$wingspan_array_ref}) {
+            my $as_file = $self->alignment_summary_file($wingspan);
+            my $reader = Genome::Utility::IO::SeparatedValueReader->create(
+                separator => "\t",
+                input => $as_file,
+            );
+            unless ($reader) {
+                $self->error_message('Can not create SeparatedValueReader for input file '. $as_file);
+                return;
+            }
+            my $data = $reader->next;
+            $reader->input->close;
+            
+            # Calculate percentages
+            
+            # percent aligned
+            $data->{percent_aligned} = sprintf("%.02f",(($data->{total_aligned_bp} / $data->{total_bp}) * 100)) .'%';
+            
+            # duplication rate
+            $data->{percent_duplicates} = sprintf("%.03f",(($data->{total_duplicate_bp} / $data->{total_aligned_bp}) * 100)) .'%';
+            
+            # on-target alignment
+            $data->{percent_target_aligned} = sprintf("%.02f",(($data->{total_target_aligned_bp} / $data->{total_aligned_bp}) * 100)) .'%';
+            
+            # on-target duplicates
+            $data->{percent_target_duplicates} = sprintf("%.02f",(($data->{duplicate_target_aligned_bp} / $data->{total_target_aligned_bp}) * 100)) .'%';
+            
+            # off-target alignment
+            $data->{percent_off_target_aligned} = sprintf("%.02f",(($data->{total_off_target_aligned_bp} / $data->{total_aligned_bp}) * 100)) .'%';
+            
+            # off-target duplicates
+            $data->{percent_off_target_duplicates} = sprintf("%.02f",(($data->{duplicate_off_target_aligned_bp} / $data->{total_off_target_aligned_bp}) * 100)) .'%';
+            
+            for my $key (keys %$data) {
+                my $metric_key = join('_', 'wingspan', $wingspan, $key);
+                $self->set_metric($metric_key, $data->{$key});
+            }
+            
+            $alignment_summary{$wingspan} = $data;
         }
-        my $data = $reader->next;
-        $reader->input->close;
-
-        # Calculate percentages
-
-        # percent aligned
-        $data->{percent_aligned} = sprintf("%.02f",(($data->{total_aligned_bp} / $data->{total_bp}) * 100)) .'%';
-
-        # duplication rate
-        $data->{percent_duplicates} = sprintf("%.03f",(($data->{total_duplicate_bp} / $data->{total_aligned_bp}) * 100)) .'%';
-
-        # on-target alignment
-        $data->{percent_target_aligned} = sprintf("%.02f",(($data->{total_target_aligned_bp} / $data->{total_aligned_bp}) * 100)) .'%';
-
-        # on-target duplicates
-        $data->{percent_target_duplicates} = sprintf("%.02f",(($data->{duplicate_target_aligned_bp} / $data->{total_target_aligned_bp}) * 100)) .'%';
-
-        # off-target alignment
-        $data->{percent_off_target_aligned} = sprintf("%.02f",(($data->{total_off_target_aligned_bp} / $data->{total_aligned_bp}) * 100)) .'%';
-
-        # off-target duplicates
-        $data->{percent_off_target_duplicates} = sprintf("%.02f",(($data->{duplicate_off_target_aligned_bp} / $data->{total_off_target_aligned_bp}) * 100)) .'%';
-
-        for my $key (keys %$data) {
-            my $metric_key = join('_', 'wingspan', $wingspan, $key);
-            $self->set_metric($metric_key, $data->{$key});
-        }
-
-        $alignment_summary{$wingspan} = $data;
+        $self->{_alignment_summary_hash_ref} = \%alignment_summary;
     }
-
-
-    return \%alignment_summary;
+    return $self->{_alignment_summary_hash_ref};
 }
 
 sub coverage_stats_directory_path {
@@ -240,33 +241,34 @@ sub coverage_stats_summary_file {
 
 sub coverage_stats_summary_hash_ref {
     my $self = shift;
-    my %stats_summary;
-    my $min_depth_array_ref = $self->minimum_depths_array_ref;
-    my $wingspan_array_ref = $self->wingspan_values_array_ref;
-    for my $wingspan (@{$wingspan_array_ref}) {
-        my $stats_summary = $self->coverage_stats_summary_file($wingspan);
-        my $reader = Genome::Utility::IO::SeparatedValueReader->create(
-            separator => "\t",
-            input => $stats_summary,
-        );
-        unless ($reader) {
-            $self->error_message('Can not create SeparatedValueReader for file '. $stats_summary);
-            die $self->error_message;
-        }
-        while (my $data = $reader->next) {
-            $stats_summary{$wingspan}{$data->{minimum_depth}} = $data;
-
-            # record stats as build metrics
-            for my $key (keys %$data) {
-                my $metric_key = join('_', 'wingspan', $wingspan, $data->{'minimum_depth'}, $key);
-                $self->set_metric($metric_key, $data->{$key});
+    unless ($self->{_coverage_stats_summary_hash_ref}) {
+        my %stats_summary;
+        my $min_depth_array_ref = $self->minimum_depths_array_ref;
+        my $wingspan_array_ref = $self->wingspan_values_array_ref;
+        for my $wingspan (@{$wingspan_array_ref}) {
+            my $stats_summary = $self->coverage_stats_summary_file($wingspan);
+            my $reader = Genome::Utility::IO::SeparatedValueReader->create(
+                separator => "\t",
+                input => $stats_summary,
+            );
+            unless ($reader) {
+                $self->error_message('Can not create SeparatedValueReader for file '. $stats_summary);
+                die $self->error_message;
             }
+            while (my $data = $reader->next) {
+                $stats_summary{$wingspan}{$data->{minimum_depth}} = $data;
+                
+                # record stats as build metrics
+                for my $key (keys %$data) {
+                    my $metric_key = join('_', 'wingspan', $wingspan, $data->{'minimum_depth'}, $key);
+                    $self->set_metric($metric_key, $data->{$key});
+                }
+            }
+            $reader->input->close;
         }
-        $reader->input->close;
+        $self->{_coverage_stats_summary_hash_ref} = \%stats_summary;
     }
-
-
-    return \%stats_summary;
+    return $self->{_coverage_stats_summary_hash_ref};
 }
 
 sub region_of_interest_set_bed_file {
