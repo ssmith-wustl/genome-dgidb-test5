@@ -266,8 +266,6 @@ sub _resolve_subclass_name_for_aligner_name {
 sub create { 
     my $class = shift;
     
-    $DB::single = 1; 
-    
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
