@@ -18,7 +18,7 @@ $DB::single=1;
     my @stages = (
         alignment             => 1,
         deduplication         => 1,
-        reference_coverage    => 0,
+        reference_coverage    => 1,
         variant_detection     => 1,
         transcript_annotation => 0,
         generate_reports      => 0,
@@ -44,7 +44,6 @@ sub alignment_job_classes {
 sub reference_coverage_job_classes {
     my $self = shift;
     if ($self->dna_type eq 'cdna' || $self->dna_type eq 'rna') {
-
         #TODO this needs to be changed to reference build
         if ($self->reference_sequence_name =~ /^XStrans_adapt_smallRNA_ribo/) {
             my @steps = (
@@ -53,13 +52,10 @@ sub reference_coverage_job_classes {
             return @steps;
         }
     }
-    if (defined($self->capture_set_name)) {
-        my @steps = (
-            'Genome::Model::Event::Build::ReferenceAlignment::CoverageStats',
-        );
-        return @steps;
-    }
-    return;
+    my @steps = (
+        'Genome::Model::Event::Build::ReferenceAlignment::CoverageStats',
+    );
+    return @steps;
 }
 
 sub variant_detection_job_classes {
@@ -126,6 +122,11 @@ sub alignment_objects {
 sub reference_coverage_objects {
     my $self = shift;
     my $model = shift;
+    if ($self->reference_sequence_name =~ /^XStrans_adapt_smallRNA_ribo/) {
+        return 'all_sequences';
+    }
+    my @inputs = Genome::Model::Input->get(model_id => $model->id, name => 'region_of_interest_set_name');
+    unless (@inputs) { return; }
     return 'all_sequences';
 }
 
