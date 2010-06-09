@@ -46,6 +46,13 @@ class Genome::InstrumentData::Imported {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+# Other InstrumentData types define an optional UR field target_region_set_name.
+# target_region_set_name is likely undefined for imported data, so this sub will resolve issues
+# with queries that include Imported.
+sub target_region_set_name {
+    return ;
+}
+
 sub data_directory {
     my $self = shift;
 
