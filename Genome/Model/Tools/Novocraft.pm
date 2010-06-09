@@ -65,7 +65,7 @@ my %NOVOCRAFT_VERSIONS = (
                     '2.03.12' => '/gsc/pkg/bio/novocraft/novocraft-2.03.12',
                     '2.04.02' => '/gsc/pkg/bio/novocraft/novocraft-2.04.02',
                     '2.05.20' => '/gsc/pkg/bio/novocraft/novocraft-2.05.20',
-                    '2.05.32' => '/gscuser/pkimmey/alignment-test/novo/novocraft_2_05_33',
+                    '2.05.32' => '/gsc/pkg/bio/novocraft/novocraft-2.05.33',
                     'novocraft'   => 'novoalign',
                 );
 
@@ -79,7 +79,7 @@ sub path_for_novocraft_version {
     my $version = shift;
 
     if (defined $NOVOCRAFT_VERSIONS{$version}) {
-        return $NOVOCRAFT_VERSIONS{$version} . '/novoalign';
+        return $NOVOCRAFT_VERSIONS{$version};
     }
     die('No path for novocraft version '. $version);
 }
