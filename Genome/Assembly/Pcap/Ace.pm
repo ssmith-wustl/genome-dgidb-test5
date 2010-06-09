@@ -140,7 +140,7 @@ sub new {
         $self->using_db(0);
     }   
         
-    if(defined $self->_input && defined $self->_input_file && -e $self->_input_file.".index")
+    if(defined $self->_input && defined $self->_input_file && -f $self->_input_file.".index" )
     {
         $self->_load_index_from_file($self->_input_file.".index");
     }
