@@ -632,7 +632,7 @@ sub region_of_interest_set_name {
     my @inputs = Genome::Model::Input->get(model_id => $self->id, name => 'region_of_interest_set_name');
     unless (@inputs) { return; }
     if (@inputs > 1) { die('Only expecting one input for region_of_interest_set_name') }
-    return $inputs[0];
+    return $inputs[0]->value_id;
 }
 
 sub region_of_interest_set {
