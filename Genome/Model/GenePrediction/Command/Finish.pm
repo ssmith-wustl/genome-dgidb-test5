@@ -85,6 +85,29 @@ class Genome::Model::GenePrediction::Command::Finish {
 
 };
 
+
+sub sub_command_sort_position {40}
+
+sub help_synopsis
+{
+return <<"EOS"
+genome model gene-prediction finish [options]
+EOS
+}
+
+sub help_brief
+{
+    "BAP project finish steps";
+
+}
+
+sub help_detail
+{
+return <<"EOS"
+runs project finishing steps for bacterial prediction pipeline
+EOS
+}
+
 sub execute
 {
     my $self = shift;

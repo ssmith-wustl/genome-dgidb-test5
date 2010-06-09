@@ -104,13 +104,20 @@ sub sub_command_sort_position {20}
 
 sub help_brief
 {
-    "bap_predict_genes.pl  --sequence-set-id --glimmer3-model --glimmer3-pwm --genemark-model --domain ";
+    "run bacterial gene prediction";
+}
+
+sub help_synopsis
+{
+return <<"EOS"
+genome model gene-prediction predict [options]
+EOS
 }
 
 sub help_detail
 {
     return <<EOS
-bap_predict_genes.pl - Used to run Rfam, RNAmmer, GeneMark and Glimmer3 in BAP/MGAP
+Used to run Rfam, RNAmmer, GeneMark and Glimmer3 in BAP/MGAP
 
 This script is intented to be used with the HGMI/bacterial annotation pipeline (bap/mgap).  This program runs  Rfam, RNAmmer, Glimmer3 and GeneMark gene predictors and stores the output into our oracle database.
 

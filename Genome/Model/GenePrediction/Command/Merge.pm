@@ -149,6 +149,28 @@ class Genome::Model::GenePrediction::Command::Merge {
 
 $File::Temp::KEEP_ALL = 1;
 
+
+sub sub_command_sort_position {30}
+
+sub help_brief
+{
+"perform gene merging operations on predicted bacterial genes";
+}
+
+sub help_synopsis
+{
+return <<"EOS"
+genome model gene-prediction merge [options]
+EOS
+}
+
+sub help_detail
+{
+return <<"EOS"
+runs gene merging on predicted genes for the specified sequence set id.
+EOS
+}
+
 sub execute
 {
     my $self = shift;
