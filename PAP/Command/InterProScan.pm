@@ -92,6 +92,8 @@ sub execute {
     my @iprscan_command = (
                            '/gsc/scripts/bin/iprscan',
                            '-cli',
+                           '-appl hmmpfam',
+                           '-appl  hmmtigr',
                            '-goterms',
                            '-verbose',
                            '-iprlookup',
