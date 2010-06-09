@@ -7,6 +7,7 @@ use Genome;
 
 my $DEFAULT_ASSUME_SORTED = 1;
 my $DEFAULT_REMOVE_DUPLICATES = 0;
+my $DEFAULT_MAX_RECORDS_IN_RAM = 500000;
 
 class Genome::Model::Tools::Picard::MarkDuplicates {
     is  => 'Genome::Model::Tools::Picard',
@@ -35,6 +36,12 @@ class Genome::Model::Tools::Picard::MarkDuplicates {
             valid_values => [1, 0],
             doc => 'Merge the seqeunce dictionaries. default_value='. $DEFAULT_REMOVE_DUPLICATES,
             default_value => $DEFAULT_REMOVE_DUPLICATES,
+            is_optional => 1,
+        },
+        max_records_in_ram => {
+            doc => 'When writing SAM files that need to be sorted, this will specify the number of records stored in RAM before spilling to disk. Increasing this number reduces the number of file handles needed to sort a SAM file, and increases the amount of RAM needed.',
+            is_optional => 1,
+            default_value => $DEFAULT_MAX_RECORDS_IN_RAM,
             is_optional => 1,
         },
     ],
@@ -69,6 +76,9 @@ sub execute {
         $dedup_cmd .= ' ASSUME_SORTED=false';
     }
     $dedup_cmd .= ' OUTPUT='. $self->output_file .' METRICS_FILE='. $self->metrics_file .' INPUT='. $self->input_file;
+    if ($self->max_records_in_ram) {
+        $dedup_cmd .= ' MAX_RECORDS_IN_RAM='. $self->max_records_in_ram;
+    }
     $self->run_java_vm(
         cmd => $dedup_cmd,
         input_files => [$self->input_file],
