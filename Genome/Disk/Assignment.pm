@@ -4,12 +4,23 @@ use strict;
 use warnings;
 
 class Genome::Disk::Assignment {
-    table_name => "(select * from disk_volume_group\@oltp) assignment",
+    table_name => "( 
+                        select 
+                            dvg.*, 
+                            (
+                                select min(date_scheduled) 
+                                from disk_volume_pse\@oltp dvp 
+                                join process_step_executions\@oltp p on p.pse_id = dvp.pse_id
+                                where dvp.dv_id = dvg.dv_id
+                            ) assignment_date
+                        from disk_volume_group\@oltp dvg 
+                   ) assignment",
     id_by => [
               dg_id => {is => 'Number'},
               dv_id => {is => 'Number'},
           ],
     has => [
+            assignment_date => {},
             group => {
                       is => 'Genome::Disk::Group',
                       id_by => 'dg_id',
