@@ -23,38 +23,21 @@ sub _add_to_report_xml {
     my $build = $self->build
         or return;
 
-    my $stats_file = $build->stats_file;
-    my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($stats_file);
-    unless ( $stats_fh ) {
-        $self->error_message("Can't open stats file ($stats_file)");
+    my %metrics = $build->set_metrics;
+    unless ( %metrics ) {
+        $self->error_message("Can't set metrics on ".$build->description);
         return;
-    }
-    
-    my @interesting_metric_names = $build->interesting_metric_names;
-    while ( my $line = $stats_fh->getline ) {
-        next unless $line =~ /\:/;
-        chomp $line;
-        my ($metric, $value) = split(/\:\s+/, $line);
-        $metric = lc $metric;
-        next unless grep { $metric eq $_ } @interesting_metric_names;
-        $value =~ s/\s.*$//;
-        unless ( defined $value ) {
-            $self->error_message("Found metric ($metric) in stats file, but it does not have a vlue ($line)");
-            return;
-        }
-        my $metric_method = join('_', split(/\s/, $metric));
-        $build->$metric_method($value);
     }
     
     $self->_add_dataset(
         name => 'metrics',
         row_name => 'metric',
         headers => [ 
-            (map { join('-', split(/\s/)) } @interesting_metric_names), 
+            (grep { s/_/\-/g } sort { $a cmp $b } keys %metrics), 
             'estimated-read-length',
         ],
         rows => [[ 
-            (map { $build->$_ } map { join('_', split(/\s/)) } @interesting_metric_names), 
+            (map { $metrics{$_} } sort { $a cmp $b } keys %metrics),
             $build->estimate_average_read_length,
         ]],
     ) or return;

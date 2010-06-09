@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;            
 
+use Regexp::Common;
+
 class Genome::Model::Tools::Assembly::ReadFilter::Trim {
     is => 'UR::Object',
     has => 
@@ -16,6 +18,29 @@ class Genome::Model::Tools::Assembly::ReadFilter::Trim {
         }    
      ],
 };
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+    
+    # Validate trim length
+    my $trim_length = $self->trim_length;
+    unless ( defined $trim_length ) {
+        $self->error_message();
+        $self->delete;
+        return;
+    }
+
+    unless ( $trim_length =~ /^$RE{num}{int}$/ and $trim_length > 1 ) {
+        $self->error_message();
+        $self->delete;
+        return;
+    }
+
+    return $self;
+}
 
 sub trim
 {
@@ -35,9 +60,7 @@ sub trim
     
 }
 
-#sub sub_command_sort_position { 15 }
-
-
-
 1;
 
+#$HeadURL$
+#$Id$

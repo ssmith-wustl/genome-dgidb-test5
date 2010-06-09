@@ -3,16 +3,20 @@
 use strict;
 use warnings;
 
-use File::Temp;
 use above "Genome";
-use Genome::Model::Tools::Assembly::ReadFilter::Trim;
-use IO::File;
+
 use Bio::SeqIO;
-use Bio::Seq::Quality;
+use Test::More;
 
-#use Test::More skip_all => "Does not play nice with the test harness";
-use Test::More tests => 1;
+# use
+use_ok('Genome::Model::Tools::Assembly::ReadFilter::Trim') or die;
 
+# create failures
+ok(!Genome::Model::Tools::Assembly::ReadFilter::Trim->create(), 'Create w/o trim length');
+ok(!Genome::Model::Tools::Assembly::ReadFilter::Trim->create(trim_length => 'all'), 'Create w/ trim length => all');
+ok(!Genome::Model::Tools::Assembly::ReadFilter::Trim->create(trim_length => 0), 'Create w/ trim length => 0');
+
+# valid create and execution
 my $trimmer = Genome::Model::Tools::Assembly::ReadFilter::Trim->create(trim_length => 10);
 my $io = Bio::SeqIO->new(-file => "/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build/collated.fastq", -format => 'fastq');
 my $ok = 1;
@@ -32,3 +36,9 @@ while ((my $fq = $io->next_seq) && ($count++<500)) {
 }
 
 ok($ok, "Reads trimmed successfully");
+
+done_testing();
+exit;
+
+#HeadURL$
+#$Id$

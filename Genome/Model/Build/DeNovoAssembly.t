@@ -1,4 +1,9 @@
 #! /gsc/bin/perl
+#
+#
+# Tests base Genome::Model::Build::DeNovoAssembly w/ velvet solexa model
+#
+#
 
 use strict;
 use warnings;
@@ -8,7 +13,7 @@ use above 'Genome';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
-use_ok('Genome::Model::Event::Build::DeNovoAssembly');
+use_ok('Genome::Model::Build::DeNovoAssembly');
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
@@ -29,47 +34,16 @@ is($build->genome_size, 4500000, 'Genome size');
 is($build->estimate_average_read_length, 90, 'Estimate average read length');
 is($build->calculate_read_limit_from_read_coverage, 25000, 'Calculated read limit');
 
-# file in main dir
-_test_files_and_values(
-    $build->data_directory,
-    collated_fastq_file => 'collated.fastq',
-    assembly_afg_file => 'velvet_asm.afg',
-    contigs_fasta_file => 'contigs.fa',
-    sequences_file => 'Sequences',
-);
-
-# files in edit dir
-my $edit_dir = $build->edit_dir;
-is($edit_dir, $build->data_directory.'/edit_dir', 'edit_dir');
-_test_files_and_values(
-    $edit_dir,
-    ace_file => 'velvet_asm.ace',
-    gap_file => 'gap.txt',
-    contigs_bases_file => 'contigs.bases',
-    contigs_quals_file => 'contigs.quals',
-    read_info_file => 'readinfo.txt',
-    reads_placed_file => 'reads.placed',
-    supercontigs_agp_file => 'supercontigs.agp',
-    supercontigs_fasta_file => 'supercontigs.fasta',
-    stats_file => 'stats.txt',
-);
-
-can_ok($build, 'total_input_reads');
+# metrics
+my @interesting_metric_names = $build->interesting_metric_names;
+ok(@interesting_metric_names, 'Interesting metric names');
+for my $metric_name ( @interesting_metric_names ) {
+    $metric_name =~ s/\s/_/g;
+    can_ok('Genome::Model::Build::DeNovoAssembly', $metric_name);
+}
 
 done_testing();
 exit;
-
-sub _test_files_and_values {
-    my ($dir, %files_and_values) = @_;
-
-    for my $file ( keys %files_and_values ) {
-        my $value = $build->$file or die;
-        is($value, $dir.'/'.$files_and_values{$file}, $file);
-        ok(-e $value, "$file exists");
-    }
-
-    return 1;
-}
 
 =pod
 

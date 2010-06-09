@@ -30,7 +30,8 @@ sub processing_profile_params_for_assembler_and_platform {
             read_trimmer_name => 'basic',
             read_trimmer_params => '-trim_length 10',
         },
-        #newbler_454 => {},
+        newbler_454 => {
+        },
     );
 
     my $specific_params = $assembler_sequencing_paltorm_params{ $assembler_name.'_'.$sequencing_platform };
@@ -178,7 +179,7 @@ sub get_mock_build {
     Carp::confess("Unknown params to get mock build:\n".Dumper(\%params)) if %params;
     
     my $build = Genome::Model::Test->get_mock_build(
-        class => 'Genome::Model::Build::DeNovoAssembly',
+        class => 'Genome::Model::Build::DeNovoAssembly::'.Genome::Utility::Text::string_to_camel_case($model->assembler_name),
         model => $model,
         data_directory => ( 
             $use_example_directory
@@ -194,7 +195,10 @@ sub get_mock_build {
         $build,
         (qw/
             description
+
             interesting_metric_names
+            set_metrics
+
             genome_size
             estimate_average_read_length
             calculate_read_limit_from_read_coverage
@@ -310,13 +314,12 @@ sub _get_mock_solexa_instrument_data {
 }
 
 sub _get_mock_454_instrument_data {
-    # TODO
-    Carp::confess "Not implemented to get mock 454 instrument data";
+    # FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     my $self = shift;
 
     my $id = 222;
     my $full_path = $self->_instrument_data_dir('454').'/'.$id;
-    Carp::confess "Mock instrument data directory ($full_path) does not exist" unless -d $full_path;
+    #Carp::confess "Mock instrument data directory ($full_path) does not exist" unless -d $full_path;
     my $inst_data = Genome::Utility::TestBase->create_mock_object(
         class => 'Genome::InstrumentData::454',
         id => $id,

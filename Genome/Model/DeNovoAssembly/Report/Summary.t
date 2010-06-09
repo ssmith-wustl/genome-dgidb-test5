@@ -28,6 +28,9 @@ ok($generator, 'Created generator');
 my $report = $generator->generate_report;
 ok($report, 'Generated report');
 
+
+=pod Save report, html
+die;
 $report->save($build->reports_directory, 1);
 my $xslt = Genome::Report::XSLT->transform_report(
     report => $report,
@@ -41,6 +44,7 @@ unless ( $fh ) {
 }
 $fh->print( $xslt->{content} );
 $fh->close;
+=cut
 
 done_testing();
 exit;

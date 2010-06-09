@@ -46,15 +46,22 @@ ok(
     'Failed as expected - create w/ invalid seq paltform/assembler combo',
 );
 
-# valid 
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
+# valid velvet solexa
+my $velvet_model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     assembler_name => 'velvet',
     sequencing_platform => 'solexa',
 );
-ok($model, 'Got mock DNA model') or die;
-my @inst_data = $model->instrument_data;
+ok($velvet_model, 'Got mock DNA model for velvet solexa') or die;
+my @inst_data = $velvet_model->instrument_data;
 ok(@inst_data, 'Model instrument data');
 ok(-s $inst_data[0]->archive_path, 'Solexa archive path exists');
+
+# valid newbler 454
+my $newbler_model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
+    assembler_name => 'newbler',
+    sequencing_platform => 454,
+);
+ok($newbler_model, 'Got mock DNA model for newbler 454') or die;
 
 done_testing();
 exit;

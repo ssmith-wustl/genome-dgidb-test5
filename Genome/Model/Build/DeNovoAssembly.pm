@@ -11,6 +11,8 @@ use Regexp::Common;
 
 class Genome::Model::Build::DeNovoAssembly {
     is => 'Genome::Model::Build',
+    is_abstract => 1,
+    sub_classification_method_name => '_resolve_subclass_name',
     has => [
         (
             map { 
@@ -38,7 +40,7 @@ sub description {
 
 sub create {
     my $class = shift;
-
+    
     my $self = $class->SUPER::create(@_)
         or return;
 
@@ -56,6 +58,11 @@ sub create {
     mkdir $self->data_directory unless -d $self->data_directory;
     
     return $self;
+}
+
+sub _resolve_subclass_name {
+    my $class = shift;
+    return __PACKAGE__->_resolve_subclass_name_by_assembler_name(@_);
 }
 
 sub calculate_estimated_kb_usage {
