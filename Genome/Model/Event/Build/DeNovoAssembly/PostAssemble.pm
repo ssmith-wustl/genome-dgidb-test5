@@ -10,6 +10,47 @@ class Genome::Model::Event::Build::DeNovoAssembly::PostAssemble {
     is_abstract => 1,
 };
 
+sub _generate_summary_report {
+    my $self = shift;
+
+    # generate
+    my $generator = Genome::Model::DeNovoAssembly::Report::Summary->create(
+        build_id => $self->build_id,
+    );
+    unless ( $generator ) {
+        $self->error_message("Can't create summary report generator");
+        return;
+    }
+
+    my $report = $generator->generate_report;
+    unless ( $report ) {
+        $self->error_message("Can't generate summary report");
+        return;
+    }
+
+    # save
+    unless ( $self->build->add_report($report) ) {
+        $self->error_message();
+    }
+
+    # save html
+    my $xsl_file = $generator->get_xsl_file_for_html;
+    my $xslt = Genome::Report::XSLT->transform_report(
+        report => $report,
+        xslt_file => $xsl_file,
+    );
+    unless ( $xslt ) {
+        $self->error_message("Can't transform report to html.");
+        return;
+    }
+    my $html_file = $report->directory.'/report.html';
+    my $fh = Genome::Utility::FileSystem->open_file_for_writing($html_file); # dies
+    $fh->print( $xslt->{content} );
+    $fh->close;
+
+    return 1;
+}
+
 1;
 
 #$HeadURL$

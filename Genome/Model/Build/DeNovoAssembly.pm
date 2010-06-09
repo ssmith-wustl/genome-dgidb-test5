@@ -5,23 +5,22 @@ use warnings;
 
 use Genome;
 
+require Carp;
 use Data::Dumper 'Dumper';
+use Regexp::Common;
 
 class Genome::Model::Build::DeNovoAssembly {
     is => 'Genome::Model::Build',
     has => [
-	reads_attempted => {
-	    is => 'Integer',
-	    is_mutable => 1,
-	    is_optional => 1,
-	    doc => 'Number of reads attempted to assemble',
-	},
-	read_length => {
-	    is => 'Integer',
-	    is_mutable => 1,
-	    is_optional=> 1,
-	    doc => 'Average read length or reads attempted',
-	},
+        (
+            map { 
+                join('_', split(m#\s#)) => {
+                    is => 'Integer',
+                    is_mutable => 1,
+                    is_optional => 1,
+                }
+            } __PACKAGE__->interesting_metric_names
+        )
     ],
 };
 
@@ -97,16 +96,66 @@ sub genome_size {
     Carp::confess('Cannot determine genom size for De Novo Assembly model\'s ('.$self->model->id.' '.$self->model->name.') associated taxon ('.$taxon->id.')');
 }
 
+sub estimate_average_read_length {
+    my $self = shift;
+
+    my @instrument_data = $self->instrument_data;
+    unless ( @instrument_data ) {
+        Carp::confess("No instruemnt data found for ".$self->description);
+    }
+    
+    my $read_length = 0;
+    my $instrument_data_cnt = 0;
+    for my $instrument_data ( $self->instrument_data ) {
+        $read_length += $instrument_data->read_length;
+        $instrument_data_cnt++;
+    }
+
+    unless ( $read_length ) {
+        Carp::confess("No read length found in instrument data (".join(', ', map { $_->id } @instrument_data).')');
+    }
+
+    if ( defined $self->processing_profile->read_trimmer_name ) {
+        return int($read_length / $instrument_data_cnt * .9);
+    }
+
+    return $read_length;
+}
+
 sub calculate_read_limit_from_read_coverage {
     my $self = shift;
 
     my $read_coverage = $self->processing_profile->read_coverage;
     return unless defined $read_coverage;
     
+    my $estimated_read_length = $self->estimate_average_read_length; # dies
     my $genome_size = $self->genome_size;
     
-    return int($genome_size * $read_coverage / 90);
+    return int($genome_size * $read_coverage / $estimated_read_length);
+
 }
+
+#< Metrics >#
+sub interesting_metric_names {
+    return (
+        # contig
+        'total contig number',
+        'average contig length',
+        'n50 contig length',
+        # supercontig
+        'total supercontig number',
+        'average supercontig length',
+        'n50 supercontig length',
+        # reads
+        'total input reads',
+        'average read length',
+        'placed reads',
+        'chaff rate',
+        # bases
+        'total contig bases',
+    );
+}
+#<>#
 
 #< FIXME  subclass for velvet specific file names >#
 sub collated_fastq_file {
@@ -131,6 +180,10 @@ sub velvet_fastq_file {
 
 sub velvet_ace_file {
     return $_[0]->data_directory.'/edit_dir/velvet_asm.ace';
+}
+
+sub stats_file { 
+    return $_[0]->edit_dir.'/stats.txt';
 }
 
 #<>#

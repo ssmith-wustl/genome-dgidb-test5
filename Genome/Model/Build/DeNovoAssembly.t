@@ -24,6 +24,9 @@ isa_ok($build, 'Genome::Model::Build::DeNovoAssembly');
 
 is($build->calculate_estimated_kb_usage, (50_000_000 * 1.024), 'Kb usage');
 is($build->genome_size, 4500000, 'Genome size');
+
+# read length/limit
+is($build->estimate_average_read_length, 90, 'Estimate average read length');
 is($build->calculate_read_limit_from_read_coverage, 25000, 'Calculated read limit');
 
 # file in main dir
@@ -48,7 +51,10 @@ _test_files_and_values(
     reads_placed_file => 'reads.placed',
     supercontigs_agp_file => 'supercontigs.agp',
     supercontigs_fasta_file => 'supercontigs.fasta',
+    stats_file => 'stats.txt',
 );
+
+can_ok($build, 'total_input_reads');
 
 done_testing();
 exit;

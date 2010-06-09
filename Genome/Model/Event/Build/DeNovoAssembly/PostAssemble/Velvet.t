@@ -46,17 +46,10 @@ ok($velvet, 'Created post assemble velvet');
 #velvet_asm.afg file should not exist
 ok($velvet->execute, 'Execute post assemble velvet');
 
-# TODO make sure it worked!
-
-#TODO make accessor methods of each of these??
-
-#TODO - ace files do not match because phd time stamp will be different
-
 my @file_names_to_test = qw/ reads.placed readinfo.txt
                         gap.txt contigs.quals contigs.bases
                         supercontigs.fasta supercontigs.agp stats.txt
                          /;
-
 #skipping input fasta.gz and qual.gz files for now
 
 my $test_data_dir = '/gscmnt/sata420/info/testsuite_data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
@@ -66,6 +59,12 @@ foreach my $file (@file_names_to_test) {
     ok(-e $build->data_directory."/edit_dir/$file", "Tmp test dir $file file exists");
     ok(File::Compare::compare($build->data_directory."/edit_dir/$file", $test_data_dir."/$file") == 0, "$file files match");
 }
+
+my $reports_directory = $build->reports_directory;
+ok(-d $reports_directory, 'Reports directory');
+ok(-s $reports_directory.'Summary/report.xml', 'Summary report XML');
+ok(-s $reports_directory.'Summary/report.html', 'Summary report HTML');
+
 
 #TODO - this is bit of a hack but test can't clean itself up because it's running in the /tmp dir
 #ok(system("chdir $test_data_dir") == 1, "Switched back to test data_dir");

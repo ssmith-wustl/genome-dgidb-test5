@@ -47,7 +47,6 @@ sub execute {
 
     # Go thru readers, each seq
     my $read_count = 0;
-    my $reads_length = 0;
     my $read_limit = $self->build->calculate_read_limit_from_read_coverage;
     FASTQ: while ( 1 ) { 
         my @seqs;
@@ -74,8 +73,6 @@ sub execute {
             }
 
             $read_count++;
-	    $reads_length += $seq->length;
-
             last FASTQ if defined $read_limit and $read_count >= $read_limit;
         }
     }
@@ -85,9 +82,6 @@ sub execute {
         $self->error_message("Did not write any fastqs for ".$self->build->description.". This probably occurred because the reads did not pass the filter requirements");
         return;
     }
-
-    $self->build->reads_attempted($read_count);
-    $self->build->read_length( int($reads_length/$read_count) );
 
     return 1;
 }

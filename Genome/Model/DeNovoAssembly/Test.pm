@@ -188,13 +188,19 @@ sub get_mock_build {
     )
         or Carp::confess("Can't add mock build to model");
 
+    $build->mock('instrument_data', sub{ return $model->instrument_data; });
+
     Genome::Utility::TestBase->mock_methods(
         $build,
         (qw/
             description
+            interesting_metric_names
             genome_size
+            estimate_average_read_length
             calculate_read_limit_from_read_coverage
 
+            edit_dir
+            
             collated_fastq_file
             assembly_afg_file
             sequences_file
@@ -211,10 +217,15 @@ sub get_mock_build {
             reads_placed_file
             supercontigs_agp_file
             supercontigs_fasta_file
+            stats_file
+
             /)
     );
 
-    $build->mock('instrument_data', sub{ return $model->instrument_data; });
+    Genome::Utility::TestBase->mock_methods(
+        $build,
+        map { join('_', split(m#\s#)) } $build->interesting_metric_names,
+    );
 
     return $build;
 }
