@@ -25,6 +25,16 @@ class Genome::Model::Build::ReferenceAlignment {
     ],
 };
 
+sub start {
+    my $self = $_[0];
+    unless (defined($self->model->reference_sequence_build)) {
+        my $msg = 'The model you are trying to build does not have reference_sequence_build set.  Please redefine the model or set this value manually.';
+        $self->error_message($msg);
+        croak $msg;
+    }
+    return $self->SUPER::start(@_);
+}
+
 sub accumulated_alignments_directory {
     my $self = shift;
     return $self->data_directory . '/alignments';
