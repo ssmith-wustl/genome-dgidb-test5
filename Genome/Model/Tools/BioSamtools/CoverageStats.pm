@@ -77,10 +77,12 @@ sub execute {
                                   minimum_mapping_quality => $self->minimum_mapping_quality,
                               );
     unless (defined $output) {
+        my @error;
         for (@Workflow::Simple::ERROR) {
-            print STDERR $_->error ."\n";
+            push @error, $_->error;
         }
-        return;
+        $self->error_message(join("\n",@error));
+        die($self->error_message);
     }
     my $alignment_summaries = $output->{alignment_summaries};
     unless (scalar(@$alignment_summaries) == scalar(@wingspans)) {
