@@ -42,6 +42,60 @@ class Genome::Model::Build::ImportedReferenceSequence {
     ]
 };
 
+sub from_cmdline {
+    my $class = shift;
+    my $text = shift;
+
+    my $build = eval {
+        if ( my ($model_name,$build_version) = ($text =~ /^(.+)-build(.+?)$/) ) {
+            my $model = Genome::Model->get(name => $model_name);
+            unless ($model) {
+                $class->warning_message("No model found for name $model_name...");
+                return;
+            }
+
+            my @builds = $model->builds;
+            unless (@builds) {
+                $class->warning_message("No builds found for model $model_name");
+                return;
+            };
+
+            no warnings;
+            @builds = grep { $_->version eq $build_version } @builds;
+            unless (@builds) {
+                $class->warning_message("No build found with version $build_version on model " . $model->__display_name__);
+                return;
+            }
+
+            if (@builds > 1) {
+                $class->warning_message("Multiple builds found with version $build_version on model " . $model->__display_name__);
+            }
+            
+            return $builds[0];
+        }
+    };
+
+    return $build if $build;
+
+    # fall back to the default
+    return Genome::Command::OO->resolve_objects_from_cmdline_text($class,$text);
+}
+
+sub __display_name__ {
+    my $self = shift;
+    my $txt = $self->name . " (" . $self->id . ")";
+    return $txt;
+}
+
+sub sequence_path {
+    my $self = shift;
+    my $format = shift || 'fasta';
+    my $dir = $self->data_directory;
+    my $path = $dir . '/' . 'all_sequences.' . $format;
+    return $path if -e $path;
+    Carp::confess("No $path found for build " . $self->__display_name__);
+}
+
 sub calculate_estimated_kb_usage {
     my $self = shift;
     my $fastaSize = -s $self->fasta_file;

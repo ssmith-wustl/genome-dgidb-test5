@@ -112,6 +112,25 @@ sub resolve_class_and_params_for_argv {
 }
 
 
+sub resolve_objects_from_cmdline_text {
+    my $class = shift;
+    my $subject_class = shift;    
+    my @obj;
+    while (my $txt = shift) {
+        eval {
+            my $bx = UR::BoolExpr->resolve_for_string($subject_class,$txt);
+            my @matches = $subject_class->get($bx);
+            push @obj, @matches;
+        };
+        if ($@) {
+            my @matches = $subject_class->get($txt);
+            push @obj, @matches;
+        }
+    }
+    return @obj;
+}
+
+
 sub X_shell_arg_getopt_specification_from_property_meta {
     my ($self,$property_meta) = @_;
     my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
