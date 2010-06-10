@@ -52,6 +52,7 @@ sub bed_file_content {
     }
     #WARNING: It appears both companies are using 1-based coordinates in the start postion.
     # Actually, NimbleGen has confirmed this: jwalker 05-28-2010
+    # Possibly Broad to, but this is yet to be confirmed
     my @lines = split("\n",$fs->content);
     my $print = 1;
     my $bed_file_content;
@@ -70,6 +71,8 @@ sub bed_file_content {
                 die('At least three fields are required in BED format files.  Error with line: '. $line);
             }
             $entry[0] =~ s/chr//g;
+            #Correct for 1-based start positions in imported BED files
+            $entry[1]--;
             unless (defined $entry[3] && $entry[3] ne '') {
                 $entry[3] = $entry[0] .':'. $entry[1] .'-'. $entry[2];
             }
@@ -83,7 +86,6 @@ sub print_bed_file {
     my $self = shift;
     my $bed_file = shift;
 
-    my $one_based_start_position = 1;
     my $bed_file_content = $self->bed_file_content;
     my $barcode = $self->barcode;
     unless ($barcode) {
@@ -101,7 +103,6 @@ sub print_bed_file {
             cmd => $cmd,
             output_files => [$tmp_file],
         );
-        $one_based_start_position = 0;
     }
     my $tmp_2_file = Genome::Utility::FileSystem->create_temp_file_path($barcode .'-2.bed');
     my $tmp_fh = Genome::Utility::FileSystem->open_file_for_reading($tmp_file);
@@ -117,11 +118,9 @@ sub print_bed_file {
         input_file => $tmp_2_file,
         output_file => $bed_file,
         report_names => 1,
+        #All files should have zero-based start postitions at this point
+        maximum_distance => 0,
     );
-    if ($one_based_start_position) {
-        $merge_params{maximum_distance} = 1;
-    }
-    #WARNING: A distance of 1 is used only to compensate for the 1-based start position.  see above WARNING
     unless  (Genome::Model::Tools::BedTools::Merge->execute(%merge_params)) {
         die('Failed to merge BED file with params '. Data::Dumper::Dumper(%merge_params) );
     }
