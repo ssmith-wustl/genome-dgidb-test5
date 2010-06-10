@@ -54,11 +54,12 @@
       <thead>
         <tr>
           <th>subject</th>
-          <th>20X</th>
-          <th>15X</th>
-          <th>10X</th>
-          <th>5X</th>
-          <th>1X</th>
+          <xsl:for-each select="coverage-summary/minimum_depth_header">
+            <xsl:sort select="@value" data-type="number" order="descending"/>
+            <th>
+              <xsl:value-of select="@value"/>X
+            </th>
+          </xsl:for-each>
         </tr>
       </thead>
       <tbody>
@@ -83,11 +84,12 @@
       <thead>
         <tr>
           <th>subject</th>
-          <th>20X</th>
-          <th>15X</th>
-          <th>10X</th>
-          <th>5X</th>
-          <th>1X</th>
+          <xsl:for-each select="coverage-summary/minimum_depth_header">
+            <xsl:sort select="@value" data-type="number" order="descending"/>
+            <th>
+              <xsl:value-of select="@value"/>X
+            </th>
+          </xsl:for-each>
         </tr>
       </thead>
       <tbody>
