@@ -176,16 +176,23 @@ sub _run_aligner {
 sub _filter_samxe_output {
     my ($self, $sam_cmd, $sam_file_name) = @_;
 
+#    my $cmd = "$sam_cmd | grep -v ^@ >> $sam_file_name";
+#    print $cmd,"\n\n";
+#    $DB::single = 1;
+#    Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
+#    return 1;
+
     $DB::single = 1;
     my $sam_run_output_fh = IO::File->new( $sam_cmd . "|" );
+    binmode $sam_run_output_fh;
     $self->status_message("Running $sam_cmd");
     if ( !$sam_run_output_fh ) {
             $self->error_message("Error running $sam_cmd $!");
             return;
     }
 
-
     my $sam_map_output_fh = IO::File->new(">>$sam_file_name");
+    binmode $sam_map_output_fh;
     if ( !$sam_map_output_fh ) {
             $self->error_message("Error opening sam file for writing $!");
             return;
