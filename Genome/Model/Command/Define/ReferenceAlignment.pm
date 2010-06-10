@@ -10,9 +10,8 @@ class Genome::Model::Command::Define::ReferenceAlignment {
     is => 'Genome::Model::Command::Define',
     has => [
         reference_sequence_build => {
-            doc => 'ID or name of the reference sequence to align against',
-            is_optional => 1,
-            default => 'NCBI-human-build36'
+            doc => 'ID or name of the reference sequence to align against (defaults to NCBI-human-build36)',
+            is_optional => 1
         },
         target_region_set_names => {
             is => 'Text',
@@ -30,16 +29,22 @@ class Genome::Model::Command::Define::ReferenceAlignment {
 
 sub _resolve_imported_reference_sequence_build {
     my $self = shift;
+    my $processing_profile = shift;
     my $error = "";
     my $mail_error;
     my $reference_sequence_build;
     if (!defined($self->reference_sequence_build)) {
-        $error = "Please supply the reference-sequence-build parameter.";
-        $mail_error = "Reference_sequence_build parameter omitted."
+        if (defined($processing_profile->reference_sequence_name) && $processing_profile->reference_sequence_name ne "") {
+            $error = "Please supply the reference-sequence-build parameter.";
+            $mail_error = "Reference_sequence_build parameter omitted and processing profile has reference sequence name."
+        }
+        else {
+            $self->reference_sequence_build('NCBI-human-build36');
+        }
     }
     else {
         if ($self->reference_sequence_build =~ /^\s*(\d+)\s*$/) {
-            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', $1);
+            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', id => $1);
         }
         if (!defined($reference_sequence_build)) {
             # This is not the most efficient thing as it instantiates all imported reference sequences to query the name of each;
@@ -83,9 +88,6 @@ sub _resolve_imported_reference_sequence_build {
 sub execute {
     my $self = shift;
     
-    my $reference_sequence_build = $self->_resolve_imported_reference_sequence_build();
-    defined($reference_sequence_build) or return;
-
     my $result = $self->SUPER::_execute_body(@_);
     return unless $result;
 
@@ -95,6 +97,8 @@ sub execute {
         return;
     }
 
+    my $reference_sequence_build = $self->_resolve_imported_reference_sequence_build($model->processing_profile);
+    defined($reference_sequence_build) or return;
     $model->reference_sequence_build($reference_sequence_build);
 
     # LIMS is preparing actual tables for these in the dw, until then we just manage the names.

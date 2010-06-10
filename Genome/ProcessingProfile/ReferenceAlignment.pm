@@ -140,6 +140,7 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => '',
             is_optional => 1,
         },
+        # ehvatum: TODO remove this attribute or make it derive from reference alignment model -> imported reference sequence -> name
         reference_sequence_name => {
             doc => 'identifies the reference sequence used in the model(required if no prior_ref_seq)',
             is_optional => 1,
