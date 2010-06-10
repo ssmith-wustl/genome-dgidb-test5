@@ -57,7 +57,7 @@ sub execute {
     my @alignments;
     for my $ida (@idas) {
         my $seq_id = $ida->instrument_data->seq_id;
-        my $alignment = $ida->results($build);
+        my $alignment = $ida->results;
         my $alignment_directory = $alignment->alignment_directory;
         
         #testing data 

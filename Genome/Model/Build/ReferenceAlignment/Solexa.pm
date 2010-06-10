@@ -81,7 +81,7 @@ sub calculate_input_base_counts_after_trimq2 {
     my ($total_ct, $total_trim_ct) = (0, 0);
     
     for my $ida (@idas) {
-        for my $res ($ida->results($self)) {
+        for my $res ($ida->results) {
             my ($ct, $trim_ct) = $res->calculate_base_counts_after_trimq2;
             return unless $ct and $trim_ct;
             $total_ct += $ct;
@@ -464,6 +464,31 @@ sub whole_rmdup_bam_file {
     }
 }
 
+
+sub whole_rmdup_bam_flagstat_file {
+    my $self = shift;
+
+    my $bam_file  = $self->whole_rmdup_bam_file;
+    my $flag_file = $bam_file . '.flagstat';
+
+    unless (-s $flag_file) {
+        $self->status_message("Create bam flagstat file: $flag_file");
+        my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
+            bam_file       => $bam_file,
+            output_file    => $flag_file,
+            include_stderr => 1,
+        );
+
+        unless ($cmd and $cmd->execute) {
+            $self->error_message('Failed to create or execute flagstat command for '. $bam_file);
+            return;
+        }
+    }
+
+    return $flag_file;
+}
+
+    
 sub generate_tcga_file_name {
     my $self = shift;
     my $model = $self->model;

@@ -37,7 +37,7 @@ sub sorted_instrument_data_ids {
     my $build = $self->build;
     
     for my $idas (@sorted_idas) {
-        my @alignments = $idas->results($build);
+        my @alignments = $idas->results;
         unless (@alignments) {
             $self->error_message('No alignments found for instrument data '. $idas->instrument_data_id);
             return;
@@ -62,7 +62,7 @@ sub sorted_bam_files {
     unless (defined($self->_sorted_bams)) {
         my @sorted_idas = $self->sorted_instrument_data_assignments;
         for my $idas (@sorted_idas) {
-            my @alignments = $idas->results($build);
+            my @alignments = $idas->results;
             unless (@alignments) {
                 $self->error_message('No alignments found for instrument data '. $idas->instrument_data_id);
                 return;

@@ -101,7 +101,7 @@ sub create {
 # when the instrument data is not processed in isolation at all.
 
 sub results { 
-    my $self = shift;
+    my $self  = shift;
     my $build = shift;  # refalign doesn't vary for instdata per build
                         # but other pipelines might
  
@@ -109,7 +109,7 @@ sub results {
     my $processing_profile = $model->processing_profile;
     if ($processing_profile->can('results_for_instrument_data_assignment')) {
         # support for some sort of per-instdata results is present
-        return $processing_profile->results_for_instrument_data_assignment($self, $build);
+        return $processing_profile->results_for_instrument_data_assignment($self);
     }
     else {
         # this profile doesn't have any per-instdata results

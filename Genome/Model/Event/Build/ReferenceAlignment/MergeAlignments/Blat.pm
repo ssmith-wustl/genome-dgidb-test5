@@ -51,7 +51,7 @@ sub execute {
     my @qual_files;
     my $build = $self->build;
     for my $instrument_data_assignment (@idas) {
-        my $alignment = $instrument_data_assignment->results($build);
+        my $alignment = $instrument_data_assignment->results;
         my $alignment_file = $alignment->alignment_file;
         unless ($alignment_file) {
             $self->error_message('Failed to find alignment_file.');

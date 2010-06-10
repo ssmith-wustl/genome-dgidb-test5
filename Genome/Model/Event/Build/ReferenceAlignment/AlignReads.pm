@@ -414,7 +414,7 @@ sub execute {
     my $processing_profile = $model->processing_profile;
 
     $self->status_message("Finding or generating alignments for " . $instrument_data_assignment->__display_name__);
-    my @alignments = $processing_profile->generate_results_for_instrument_data_assignment($instrument_data_assignment, $build); 
+    my @alignments = $processing_profile->generate_results_for_instrument_data_assignment($instrument_data_assignment); 
     
     my @errors;
     unless (@alignments) {

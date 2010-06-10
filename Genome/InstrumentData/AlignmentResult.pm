@@ -1,6 +1,7 @@
 package Genome::InstrumentData::AlignmentResult;
 
 use Genome;
+use Genome::Info::BamFlagstat;
 use Data::Dumper;
 use Sys::Hostname;
 use IO::File;
@@ -322,10 +323,24 @@ sub create {
         die $self->error_message();
     }
 
-    #STEPS 6-9: CREATE BAM IN STAGING DIRECTORY
+    #STEPS 6-7: CREATE BAM IN STAGING DIRECTORY
     $self->status_message("Constructing a BAM file...");
     unless( $self->create_BAM_in_staging_directory()) {
         $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
+        die $self->error_message;
+    }
+
+    #STEPS 8:  CREATE BAM.FLAGSTAT
+    $self->status_message("Creating all_sequences.bam.flagstat ...");
+    unless ($self->_create_bam_flagstat) {
+        $self->error_message('Fail to create bam flagstat');
+        die $self->error_message;
+    }
+
+    #STEPS 9: VERIFY BAM IS NOT TRUNCATED BY FLAGSTAT
+    $self->status_message("Verifying the bam...");
+    unless ($self->_verify_bam) {
+        $self->error_message('Fail to verify the bam');
         die $self->error_message;
     }
 
@@ -439,10 +454,9 @@ sub create_BAM_in_staging_directory {
         die $self->error_message;
     }
 
-
-
     return 1;
 }
+
 
 sub _compute_alignment_metrics {
     my $self = shift;
@@ -487,6 +501,65 @@ sub alignment_directory {
     # TODO: refactor to just use output_dir.
     my $self = shift;
     return $self->output_dir;
+}
+
+
+sub _create_bam_flagstat {
+    my $self = shift;
+    
+    my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam'; 
+    my $output_file = $bam_file . '.flagstat';
+
+    unless (-s $bam_file) {
+        $self->error_message('BAM file ' . $bam_file . ' does not exist or is empty');
+        return;
+    }
+
+    if (-e $output_file) {
+        $self->warning_message('Flagstat file '.$output_file.' exists. Now overwrite');
+        unlink $output_file;
+    }
+
+    my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
+        bam_file       => $bam_file,
+        output_file    => $output_file,
+        include_stderr => 1,
+    );
+
+    unless ($cmd and $cmd->execute) {
+        $self->error_message('Failed to create or execute flagstat command.');
+        return;
+    }
+    return 1;
+}
+
+
+sub _verify_bam {
+    my $self = shift;
+    
+    my $bam_file  = $self->temp_staging_directory . '/all_sequences.bam';
+    my $flag_file = $bam_file . '.flagstat';
+    my $flag_stat = Genome::Info::BamFlagstat->get_data($flag_file);
+    
+    unless($flag_stat) {
+        $self->status_message('Fail to get flagstat data from '.$flag_file);
+        return;
+    }
+    
+    if (exists $flag_stat->{errors}) {
+        my @errors = @{$flag_stat->{errors}};
+        
+        for my $error (@errors) {
+            if ($error =~ 'Truncated file') {
+                $self->error_message('Bam file: ' . $bam_file . ' appears to be truncated');
+                return;
+            } 
+            else {
+                $self->status_message('Continuing despite error messages from flagstat: ' . $error);
+            }
+        }
+    }
+    return 1;
 }
 
 sub _promote_validated_data {
@@ -541,7 +614,7 @@ sub _process_sam_files {
         $self->error_message("$sam_input_file is nonexistent.  Can't convert!");
         die $self->error_message;
     }
-
+        
     # things which don't produce sam natively must provide an unaligned reads file.
     my $unaligned_input_file = $self->temp_scratch_directory . "/all_sequences_unaligned.sam";
 
@@ -601,6 +674,30 @@ sub _process_sam_files {
     $self->status_message("Removing non-read-group combined sam file: " . $per_lane_sam_file);
     unlink($per_lane_sam_file);
 
+    #For the sake of new bam flagstat that need MD tags added. Some
+    #aligner like maq doesn't output MD tag in sam file, now add it
+    my $final_sam_file;
+    
+    if ($self->fillmd_for_sam) {
+        my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
+        my $ref_seq  = $self->reference_build->full_consensus_path('fa');
+        $final_sam_file = $self->temp_scratch_directory . '/all_sequences.fillmd.sam';
+       
+        my $cmd = "$sam_path fillmd -S $per_lane_sam_file_rg $ref_seq 1> $final_sam_file 2>/dev/null";
+
+        my $rv  = Genome::Utility::FileSystem->shellcmd(
+            cmd                          => $cmd, 
+            input_files                  => [$per_lane_sam_file_rg, $ref_seq],
+            output_files                 => [$final_sam_file],
+            skip_if_output_is_present    => 0,
+        ); 
+        $self->error_message("Fail to run: $cmd") and return unless $rv == 1;
+        unlink $per_lane_sam_file_rg;
+    }
+    else {
+        $final_sam_file = $per_lane_sam_file_rg;
+    }
+    
     my $ref_list  = $self->reference_build->full_consensus_sam_index_path($self->samtools_version);
     unless ($ref_list) {
         $self->error_message("Failed to get MapToBam ref list: $ref_list");
@@ -615,7 +712,7 @@ sub _process_sam_files {
 
     my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(
         bam_file => $per_lane_bam_file,
-        sam_file => $per_lane_sam_file_rg,
+        sam_file => $final_sam_file,
         keep_sam => 0,
         fix_mate => 1,
         index_bam => 1,
@@ -632,6 +729,7 @@ sub _process_sam_files {
     return 1;
 
 }
+
 
 sub _gather_params_for_get_or_create {
     my $class = shift;
@@ -1339,6 +1437,11 @@ sub construct_groups_file {
 
 sub aligner_params_for_sam_header {
     die "You must implement aligner_params_for_sam_header in your AlignmentResult subclass. This specifies the parameters used to align the reads";
+}
+
+sub fillmd_for_sam {
+    #Maybe this can be set to return 0 as default.
+    die 'Must implement fillmd_for_sam in AlignmentResult subclass. return either 1 or 0';
 }
 
 sub verify_alignment_data {

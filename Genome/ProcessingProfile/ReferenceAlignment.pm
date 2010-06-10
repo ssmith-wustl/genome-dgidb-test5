@@ -162,18 +162,14 @@ class Genome::ProcessingProfile::ReferenceAlignment {
 
 # get alignments (generic name)
 sub results_for_instrument_data_assignment {
-    my $self = shift;
-    my $assignment = shift;
-    my $build = shift;
+    my ($self, $assignment) = @_;
     #return if $build and $build->id < $assignment->first_build_id;
     return $self->_fetch_alignment_sets($assignment,'get');
 }
 
 # create alignments (called by Genome::Model::Event::Build::ReferenceAlignment::AlignReads for now...
 sub generate_results_for_instrument_data_assignment {
-    my $self = shift;
-    my $assignment = shift;
-    my $build = shift;
+    my ($self, $assignment) = @_;
     #return if $build and $build->id < $assignment->first_build_id;
     return $self->_fetch_alignment_sets($assignment,'get_or_create');
 }

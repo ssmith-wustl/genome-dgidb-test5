@@ -589,12 +589,11 @@ sub get_event_node {
         # find the events with matching instrument_data_ids
         my @adirs;
 
-        my $build = $event->build;
         my $processing_profile = $event->model->processing_profile;
         for my $ida (@idas) {
             if ((defined $ida->instrument_data_id && $event->instrument_data_id) && $ida->instrument_data_id == $event->instrument_data_id) {
                 my $alignment;
-                eval{ ($alignment) = $processing_profile->results_for_instrument_data_assignment($ida, $build)};
+                eval{ ($alignment) = $processing_profile->results_for_instrument_data_assignment($ida)};
 
                 if ($@) {
                     chomp($@);

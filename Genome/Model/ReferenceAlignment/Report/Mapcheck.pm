@@ -50,13 +50,13 @@ sub generate_report_brief {
 }
 
 sub generate_report_detail {
-    my $self = shift;
-    
-    my $variant_detector_name = $self->model->read_aligner_name;
+    my $self       = shift;
+    my $dedup_name = $self->model->rmdup_name;
 
-    if ($variant_detector_name eq 'maq') { 
+    if ($dedup_name eq 'maq') { 
         return $self->get_maq_content;
-    } else {
+    } 
+    else {
         return $self->get_bam_content;
     }
 }
@@ -100,7 +100,7 @@ sub get_maq_content {
     my $accumulated_alignments_file = $build->whole_rmdup_map_file;
     unless (Genome::Model::Tools::Maq::Mapcheck->execute(
                                                          use_version => $build->maq_version_for_pp_parameter,
-                                                         bfa_file => $model->reference_build->full_consensus_path,
+                                                         bfa_file => $model->reference_build->full_consensus_path('bfa'),
                                                          map_file => $accumulated_alignments_file,
                                                          output_file => $mapcheck_output,
                                                      ) ) {

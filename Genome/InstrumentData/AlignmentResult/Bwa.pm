@@ -275,3 +275,7 @@ sub aligner_params_for_sam_header {
 
     return "bwa aln $aln_params; $sam_cmd ";
 }
+
+sub fillmd_for_sam {
+    return 0;
+}

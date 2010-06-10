@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::Info::BamFlagstat;
 
 class Genome::Model::Convergence::Report::Summary{
     is => 'Genome::Model::Report',
@@ -61,9 +62,8 @@ sub _add_to_report_xml {
         $build_node->addChild( $doc->createAttribute('unfiltered-diploid-heterozygous-percentage', $data->{unfiltered_diploid_heterozygous_percentage} || '-'));
         $build_node->addChild( $doc->createAttribute('filtered-diploid-heterozygous-percentage', $data->{filtered_diploid_heterozygous_percentage} || '-'));
         
-        my $bam = $subbuild->whole_rmdup_bam_file;
-        
-        my $flagstat_stats = Genome::InstrumentData::Alignment->get_bam_flagstat_statistics(bam_file => $bam);
+        my $bam_flag_file  = $subbuild->whole_rmdup_bam_flagstat_file;
+        my $flagstat_stats = Genome::Info::BamFlagstat->get_data($bam_flag_file);
         
         for my $key (keys %$flagstat_stats) {
             $build_node->addChild( $doc->createAttribute('flagstat-' . $key, $flagstat_stats->{$key}) );

@@ -395,4 +395,9 @@ sub aligner_params_for_sam_header {
     return shift->_maq_cmd;
 }
 
+
+sub fillmd_for_sam {
+    return 1;
+}
+
 1;

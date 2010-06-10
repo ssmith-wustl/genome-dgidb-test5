@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::Info::BamFlagstat;
 use File::Basename;
 use File::Copy;
 use IO::File;
@@ -47,7 +48,7 @@ sub execute {
     }
 
     for my $ida (@idas) {
-        my @alignments = $processing_profile->results_for_instrument_data_assignment($ida, $build);
+        my @alignments = $processing_profile->results_for_instrument_data_assignment($ida);
         $self->status_message("Found " . scalar(@alignments) . " alignment sets for instrument data " . $ida->__display_name__);
         for my $alignment (@alignments) {
             my @bams = $alignment->alignment_bam_file_paths;
@@ -258,13 +259,25 @@ sub execute {
 }
 
 sub _bam_flagstat_total {
-    my $self = shift;
-    my $bam_file = shift;
+    my $self      = shift;
+    my $bam_file  = shift;
+    my $flag_file = $bam_file . '.flagstat';
     
-    my $flagstat_data = Genome::InstrumentData::Alignment->get_bam_flagstat_statistics(
-        bam_file => $bam_file
-    );
+    unless (-s $flag_file) {
+        my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
+            bam_file       => $bam_file,
+            output_file    => $flag_file,
+            include_stderr => 1,
+        );
+        
+        unless($cmd and $cmd->execute) {
+            $self->error_message("Fail to create or execute flagstat command on bam file: $bam_file");
+            return;
+        }
+    }
     
+    my $flagstat_data = Genome::Info::BamFlagstat->get_data($flag_file);
+        
     unless($flagstat_data) {
         $self->error_message('No output from samtools flagstat');
         return;
@@ -280,8 +293,7 @@ sub _bam_flagstat_total {
     
     my $total = $flagstat_data->{total_reads};
     
-    $self->status_message('flagstat for ' . $bam_file . ' reports ' . $total . ' in total');
-    
+    $self->status_message('flagstat for ' . $bam_file . ' reports ' . $total . ' in total');    
     return $total;
 }
 
@@ -312,7 +324,7 @@ sub calculate_required_disk_allocation_kb {
 
     my @build_bams;
     for my $ida (@idas) {
-        my @alignments = $processing_profile->results_for_instrument_data_assignment($ida,$build);
+        my @alignments = $processing_profile->results_for_instrument_data_assignment($ida);
         $self->status_message($ida->__display_name__ . " has @alignments\n");
         for my $alignment (@alignments) {
             my @aln_bams = $alignment->alignment_bam_file_paths;

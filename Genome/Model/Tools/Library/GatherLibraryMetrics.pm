@@ -135,7 +135,7 @@ sub execute {
             next;
         }
         my $lane_name = $ida->short_name."_".$ida->subset_name;
-        my $alignment = $ida->results($last_complete_build);
+        my $alignment = $ida->results;
         my @aligner_output = $alignment->aligner_output_file_paths;
         if(@aligner_output > 1) {
             $self->error_message("More than one aligner_output_file! WTF!");

@@ -62,7 +62,7 @@ sub execute {
             $self->warning_message("Library name: $library contains space. will replace with _.");
             $library =~ s/\s+/\_/g;
         }
-        my @alignments = $ida->results($build);
+        my @alignments = $ida->results;
         for my $alignment (@alignments) {
             my @bams = $alignment->alignment_bam_file_paths;
             $self->status_message("bam file paths: ". @bams);
@@ -225,7 +225,7 @@ sub calculate_required_disk_allocation_kb {
     my @idas = $self->build->instrument_data_assignments;
     my @build_bams;
     for my $ida (@idas) {
-        my @alignments = $ida->results($build);
+        my @alignments = $ida->results;
         for my $alignment (@alignments) {
             my @aln_bams = $alignment->alignment_bam_file_paths;
             push @build_bams, @aln_bams;

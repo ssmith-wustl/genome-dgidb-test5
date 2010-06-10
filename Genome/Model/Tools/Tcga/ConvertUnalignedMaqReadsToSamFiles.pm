@@ -108,7 +108,7 @@ sub execute {
     my $count = 0;
     for my $ida (@idas) {
 
-        my $alignment = $ida->results($build);
+        my $alignment = $ida->results;
         my $seq_id = $ida->instrument_data->seq_id;
         my $unaligned_file = $alignment->unaligned_reads_list_path;
 

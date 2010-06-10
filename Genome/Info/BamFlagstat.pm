@@ -4,7 +4,8 @@ package Genome::Info::BamFlagstat;
 use strict;
 use warnings;
 
-use Genome::Utility::FileSystem;
+use Genome;
+
 
 sub get_data {
     my ($class, $flag_file) = @_;

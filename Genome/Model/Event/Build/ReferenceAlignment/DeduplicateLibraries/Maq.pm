@@ -48,7 +48,7 @@ sub execute {
             $self->warning_message("Library name: $library contains space. will replace with _. Note the lib_tag in bam file will be changed too");
             $library =~ s/\s+/\_/g;
         }
-        my @alignments = $ida->results($build);
+        my @alignments = $ida->results;
         for my $alignment (@alignments) {
             my @maps = $alignment->alignment_file_paths;
             push @{$library_alignments{$library}}, @maps;  #for the dedup step
@@ -297,7 +297,7 @@ sub calculate_required_disk_allocation_kb {
     my @idas = $build->instrument_data_assignments;
     my @build_maps;
     for my $ida (@idas) {
-        my @alignments = $ida->results($self->build);
+        my @alignments = $ida->results;
         for my $alignment (@alignments) {
             my @aln_maps = $alignment->alignment_file_paths;
             push @build_maps, @aln_maps;
