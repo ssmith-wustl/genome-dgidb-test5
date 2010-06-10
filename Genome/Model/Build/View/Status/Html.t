@@ -1,31 +1,35 @@
-#!/usr/bin/env perl
+#!/gsc/bin/perl
+
 use strict;
 use warnings;
 
 use above "Genome";
-use Genome::Model::Build::View::Status::Html; 
 
-use Test::More tests => 4;
+use Test::More tests => 6;
 
-# TODO: use one of the test builds
+use_ok('Genome::Model::Build::View::Status::Html') or die "test cannot continue...";
+
 my $subject = Genome::Model::Build->get(101289765);
 ok($subject, "found expected build subject") or die "test cannot continue...";
 
-my $view_obj = Genome::Model::Build::View::Status::Html->create(
-    subject_id => 101289765,
-    #use_lsf_file => 1,
+my $view_obj = $subject->create_view(
     xsl_root => Genome->base_dir . '/xsl',
     rest_variable => '/cgi-bin/rest.cgi',
     toolkit => 'html',
     perspective => 'status',
 ); 
 ok($view_obj, "created a view") or die "test cannot continue...";
+isa_ok($view_obj, 'Genome::Model::Build::View::Status::Html');
 
 my $html = $view_obj->_generate_content();
 ok($html, "view returns HTML") or die "test cannot continue...";
 
-my @diff =
-    grep { $_ !~ /generated-at/ }
-    grep { /\w/ }
-    Genome::Utility::FileSystem->diff_file_vs_text(__FILE__ . '.expected',$html);
-is("@diff","","HTML has no differences from expected value");
+SKIP: {
+    skip "No Html.t.expected in place.",1;
+    my @diff =
+        grep { $_ !~ /generated-at/ }
+        grep { /\w/ }
+        Genome::Utility::FileSystem->diff_file_vs_text(__FILE__ . '.expected',$html);
+    
+    is("@diff","","HTML has no differences from expected value");
+}
