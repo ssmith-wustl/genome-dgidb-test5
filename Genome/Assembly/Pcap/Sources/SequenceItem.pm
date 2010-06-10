@@ -20,27 +20,6 @@ sub new {
     return $self;
 }
 
-sub freeze
-{
-	my ($self) = @_;
-	$self->{fh} = undef;
-	$self->{reader}->{'input'} = undef;
-}
-
-sub thaw
-{
-	my ($self, $obj, $file_name, $fh) = @_;
-	if(defined $file_name && $file_name eq $self->{file_name})
-	{
-		$self->{fh} = $fh;
-	}
-	else
-	{
-		$self->{fh} = $obj->get_fh($self->{file_name});
-	}
-	$self->{reader}->{'input'} = $self->{fh};
-}
-
 sub get_map {
 	my $name = (caller(0))[3];
     croak "$name is an abstract base method!\n";

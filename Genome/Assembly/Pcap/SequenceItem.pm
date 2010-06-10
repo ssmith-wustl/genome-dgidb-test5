@@ -92,8 +92,8 @@ sub freeze
 
 sub thaw
 {
-	my ($self, $obj,$file_name, $fh) = @_;
-	$self->SUPER::thaw($obj,$file_name, $fh);
+	my ($self)  = @_;
+	$self->SUPER::thaw;
 	#if($self->already_loaded("sequence"))
 	#{
 	#	$self->thaw($obj,$file_name, $fh);

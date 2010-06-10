@@ -8,7 +8,7 @@ use Carp;
 
 use Genome::Assembly::Pcap::Sources::Ace::Read;
 use Storable;
-use base (qw(Genome::Assembly::Pcap::Sources::SequenceItem));
+use base (qw(Genome::Assembly::Pcap::Sources::Ace::SequenceItem));
 
 =cut
 Contig Data Structure
@@ -353,7 +353,7 @@ sub children
     foreach my $read_index (values %{$self->_index->{reads}} )
     {
         my $read_callback = Genome::Assembly::Pcap::Sources::Ace::Read->new(name => $read_index->{read}{name},
-        index => $self->_index, reader => $self->{reader}, fh => $self->{fh}, file_name => $self->{file_name} );
+        index => $self->_index, reader => $self->{reader} );
         my $read = Genome::Assembly::Pcap::Read->new(callbacks => $read_callback);
         $children{$read_index->{read}{name}} = $read;        
     }
@@ -366,177 +366,11 @@ sub children
 sub _index
 {
 	my ($self) = @_;
-	#if($self->{index}{contig_indexed})
-	#{
-		return $self->{index};
-	#}
-	#else
-	#{
-	#	$self->{index} = $self->_build_contig_index($self->{fh},$self->{index}{offset});
-	#	$self->{index}{contig_indexed} = 1;
-	#	return $self->{index};
-	#}
-}
-
-sub _build_contig_index
-{
-	my ($self, $fh, $file_offset) = @_;
-	my %contigs;
-	my @assembly_tag_indexes;
-    my $old_hash = undef;
-    my $contig = undef;
-    my $first_bs = 1;
-    my $found_bq = 0;
-    my $found_qa = 0;
-    my $found_af = 0;
-    my $found_rd = 0;
-	my $co_count = 0;
-	my $line = <$fh>;
-    $fh->seek($file_offset,0) if defined $file_offset;
-	
-	#build contig data structures
-	my @tokens = split(/[ {]/,$line);
-	my $offset = (tell $fh) - CORE::length( $line);            
-
-	$old_hash = { offset => $offset,
-                      name => $tokens[1],
-                      read_count => $tokens[3],
-                      base_segments => {line_count => $tokens[4]},#\@base_segments,
-                      contig_tags => [] ,
-                      contig_loaded => 0 ,
-					  contig_indexed => 1,
-                      length => CORE::length($line),
-					  sequence_length => $tokens[2],
-                      contig_length => CORE::length($line)};
-    $contig = $old_hash;    
-    $found_af = 0;
-    $found_rd = 0;
-	$fh->seek($tokens[2],1);            							  
-		
-	while(my $line = <$fh>)
-	{
-		my $first_three = substr($line, 0,3);        
-		if($first_three eq "BS ")
-		{           
-            my $offset = (tell $fh) - CORE::length $line;
-            $old_hash = undef;            
-            $contig->{base_segments}{offset} = $offset;
-			foreach(my $i = 0;$i<$contig->{base_segments}{line_count};$i++)
-			{
-				my $line = <$fh>;			
-			}            
-			
-			my $offset2 = tell $fh;
-	        $contig->{base_segments}{length} = $offset2 - $contig->{base_segments}{offset};
-            
-		}
-		elsif($first_three eq "AF ")
-		{
-			if($found_bq == 1)
-            {
-                $contig->{base_qualities}{length} = (tell $fh) - CORE::length($line) - $contig->{base_qualities}{offset};
-                $found_bq = 0;
-            }
-			my @tokens = split(/[ {]/,$line);
-            my $end = (tell $fh);			
-			my $offset = $end - CORE::length $line;            
-            $old_hash = { name => $tokens[1], offset => $offset };
-            $contig->{reads}{$tokens[1]}{read_position}= $old_hash;
-            $contig->{af_start} = $offset;
-			foreach(my $i=1;$i<$contig->{read_count};$i++)
-			{
-				my $line = <$fh>;
-				my @tokens = split(/[ {]/,$line);
-            	my $end = (tell $fh);			
-				my $offset = $end - CORE::length $line;            
-            	$old_hash = { name => $tokens[1], offset => $offset };
-            	$contig->{reads}{$tokens[1]}{read_position}= $old_hash;				
-            }		
-			
-            $contig->{af_end} = (tell $fh);
-            
-		}
-		elsif($first_three eq "RD ")
-		{
-			my @tokens = split(/[ {]/,$line);
-			my $offset = (tell $fh) - CORE::length $line;
-			if(!$found_rd)
-			{
-				$contig->{rd_start} = $offset ;			
-            	$found_rd = 1;
-			}
-			$old_hash = { offset => $offset,
-                          name => $tokens[1],
-                          read_tags => [],
-                          length => CORE::length($line)};
-                        
-                        
-            $old_hash->{sequence}{offset} = (tell $fh)+1;
-			$fh->seek($tokens[2],1);
-			$contig->{reads}{$tokens[1]}{read} = $old_hash;			
-			
-		}        
-		elsif($first_three eq "CO ")
-		{
-			$contig->{contig_length} = $offset - $contig->{offset};
-			$contig->{rd_end} = $offset;
-			$fh->seek(- CORE::length($line),1);
-			last;
-		
-		}		
-		elsif(substr($first_three,0,2) eq "BQ")
-        {
-            my $offset = (tell $fh) - CORE::length $line;
-            $contig->{base_qualities}{offset} = $offset; 
-            $contig->{base_sequence}{length} = ($offset-1)-$contig->{offset};
-			$found_bq = 1;
-			$fh->seek($contig->{sequence_length}*2,1);
-			
-        }
-		elsif($first_three eq "WA ")
-		{
-			my $offset = (tell $fh) - CORE::length $line;
-            $fh->seek(-CORE::length($line),1);
-			last;
-		}
-		elsif($first_three eq "CT{")
-		{
-			my $offset = (tell $fh) - CORE::length $line;
-			$fh->seek(-CORE::length ($line),1);
-			last;
-			
-		}
-		elsif(substr($line,0,3) eq "DS ")
-		{
-			my $offset = (tell $fh) - CORE::length $line;
-        	$old_hash->{ds}{offset} = $offset;  
-        	$old_hash->{length} = $offset - $old_hash->{offset};							
-		}
-		elsif(substr($line,0,3) eq "QA ")
-		{
-        	my $offset = (tell $fh) - CORE::length $line;
-        	$old_hash->{qa}{offset} = $offset;
-        	$old_hash->{sequence}{length} = ($offset - 1) - $old_hash->{sequence}{offset};
-		    $old_hash->{length} = $offset - $old_hash->{offset};
-        }
-		elsif($first_three eq "RT{")
-		{
-			my $offset = (tell $fh) - CORE::length $line;
-			my $first_length = CORE::length $line;
-			$line = <$fh>;
-			my @tokens = split(/[ {]/,$line);            
-			$old_hash = {offset => $offset, length => (CORE::length($line)+ $first_length)};
-			push (@{$contig->{reads}{$tokens[0]}{read}{read_tags}} ,$old_hash );	
-			
-		}		        
-        else
-        {            
-            $old_hash->{length} += CORE::length($line) if(defined($old_hash));
-        }
-	}    
-	return $contig;
+    return $self->{index};
 
 }
+
+
 
 
 1;

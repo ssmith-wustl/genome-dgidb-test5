@@ -8,7 +8,6 @@ use Genome::Assembly::Pcap::ContigTools;
 use Genome::Assembly::Pcap::Ace;
 use Genome::Assembly::Pcap::PhdDB;
 use Genome::Assembly::Pcap::Phd;
-use Cwd;
 
 class Genome::Model::Tools::Assembly::MergeContigs
 {
@@ -19,13 +18,8 @@ class Genome::Model::Tools::Assembly::MergeContigs
             type => "String",
             optional => 0,
             is_input => 1,
-            doc => "This is the list of input Contigs, in the format:\n --contigs 'ace_file.ace Contig1 ace_file.ace Contig2 ace_file2.ace Contig6'\n it is required that an ace file is listed before each contig, even in the case where all contigs are in the same ace file"
+            doc => "This is the list of input Contigs, in the format:\n --contigs 'Contig1 Contig2 Contig6'\n it is required that an ace file is listed before each contig, even in the case where all contigs are in the same ace file"
         }, 
-        o => {
-            type => "String",
-            optional => 1,
-            doc => "If this optional argument is set, the contig is written to the designated output file",
-        },
 	    gext => {
             type => "String",
             optional => 1,
@@ -87,10 +81,39 @@ class Genome::Model::Tools::Assembly::MergeContigs
             optional => 1,
 		    doc => "alignment region length cutoff",
 	    },
-        cc => {
-            type => "Boolean",
+        input_ace_file => {
+            type => "String",
             optional => 1,
-            doc => "set this to 1 if you wish to rebuild the .db cache for each ace file"
+		    doc => "use this param to specify a single input ace file",
+	    },
+        cache_dir => {
+            type => "String",
+            optional => 1,
+            is_input => 1,
+		    doc => "the cache dir used.  This is a requirement for doing merges with more than one input ace file",
+	    },
+        output_ace_file => {
+            type => "String",
+            optional => 1,
+		    doc => "the single ace file to write, this is only recommened for either small assemblies, or where a single ace file was used as input",
+	    },
+        output_ace_dir => 
+        {
+            type => "String",
+            optional => 1,
+		    doc => "output directory to write ace files to",
+	    },
+        output_ace_prefix =>
+        {
+            type => "String",
+            optional => 1,
+		    doc => "prefix of each ace file in the output dir, otherwise, ace files will be named 0.ace, 1.ace, etc",        
+        },
+        output_file_number =>
+        {
+            type => "Number",
+            optional => 1,
+            doc => "number of output files to create"
         }
     ]
 };
@@ -104,8 +127,8 @@ sub help_synopsis {
 }
 sub help_detail {
     return <<EOS 
-    merge-contigs --contigs 'acefile1.ace contig1 acefile1.ace contig2 acefile2.ace contig3' --o output.ace
-    merge-contigs --contigs 'acefile1.ace contig1 acefile1.ace contig2 acefile2.ace contig3'    
+    merge-contigs --contigs 'contig1 contig2 contig3' 
+    merge-contigs --contigs 'contig1 contig2 contig3'    
 EOS
 }
 
@@ -127,19 +150,31 @@ sub execute
 			      use_global_align => $self->ug,
 			      quiet => $self->q,
 			      cutoffs => \%cutoffs);
-    my $output_file_name = $self->o;
+    my $output_ace_dir = $self->output_ace_dir;
+    my $output_ace_file = $self->output_ace_file;
+    my $input_ace_file = $self->input_ace_file;
+    my $cache_dir = $self->cache_dir;
+    my $output_file_number = $self->output_file_number;
+    my $output_ace_prefix = $self->output_ace_prefix;
     
     my $contigs = $self->contigs;
-    my @contig_urls = split /\s+/,$contigs;
-    for (my $i=0;$i<@contig_urls;$i+=2)
+    my @contigs = split /\s+/,$contigs;
+    my $ao;
+    if(defined $input_ace_file)
     {
-        $self->error_message("contig_urls[$i] is not a valide ace file, contig string $contigs is not formatted properly, there needs to be a valid ace file specified before each contig. i.e.\n merge-contigs -contigs 'acefile1.ace contig acefile2.ace'\n")
-        and return unless (-e $contig_urls[$i]);
-        unlink $contig_urls[$i].'.db' if defined $self->cc;
+        $self->error_message("$input_ace_file is not a valid ace file, contig string $contigs is not formatted properly, there needs to be a valid ace file specified before each contig. i.e.\n merge-contigs -contigs 'contig1 contig2\n")
+        and return unless (-e $input_ace_file);
+        $ao = Genome::Assembly::Pcap::Ace->new(input_file => $input_ace_file, cache_dir => $cache_dir);
+    }
+    elsif(defined $cache_dir)
+    {
+        $self->error_message("$cache_dir is not a valid ace file, contig string $contigs is not formatted properly, there needs to be a valid ace file specified before each contig. i.e.\n merge-contigs -contigs 'contig1 contig2 '\n")
+        and return unless (-e $cache_dir);
+        $ao = Genome::Assembly::Pcap::Ace->new(cache_dir => $cache_dir);    
     }
 
-    my $cwd = cwd();
-    my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $contig_urls[0], using_db => 1,db_type => 'mysql');
+    
+
     my $phd_object;
     if(-e "../phdball_dir/phd.ball.1")
     {
@@ -156,31 +191,28 @@ sub execute
     }    
     my $ct = Genome::Assembly::Pcap::ContigTools->new;
 
-    my $merge_contig = $ao->get_contig($contig_urls[1],1);
+    my $merge_contig = $ao->get_contig($contigs[0],1);
 
-    for(my $i=2;$i<@contig_urls;$i+=2)
+    for(my $i=1;$i<@contigs;$i++)
     {
-        my $temp_ao;
-	    if($contig_urls[$i] eq $contig_urls[0])
-        {
-            $temp_ao = $ao;
-        }
-        else
-        {
-           $temp_ao = Genome::Assembly::Pcap::Ace->new(input_file => $contig_urls[$i],using_db => 1,db_type => 'mysql');
-	    }
-        my $next_contig = $temp_ao->get_contig($contig_urls[$i+1],1);
+        my $next_contig = $ao->get_contig($contigs[$i],1);
         $merge_contig = $ct->merge($merge_contig, $next_contig, $phd_object, %params);
-        $temp_ao->remove_contig($contig_urls[$i+1]);	
-
+        $ao->remove_contig($contigs[$i]);        
     }
 
     $ao->add_contig($merge_contig);
-    if(defined $output_file_name)
+    if(defined $output_ace_file)
     {
-        print "Writing to output file: $output_file_name\n";
-        $ao->write_file(output_file => $output_file_name);
+        print "Writing to output file: $output_ace_file\n";
+        $ao->write_file(output_file => "$output_ace_dir/$output_ace_file");	        
     }
+    elsif(defined $output_ace_dir)
+    {
+        `mkdir -p $output_ace_dir` if -d $output_ace_dir;
+        print "Writing to output file: $output_ace_dir\n";
+        $ao->write_directory(output_directory => "$output_ace_dir", prefix => $output_ace_prefix, number => $output_file_number);
+    }
+    
     return 1;
 }
 =head1 NAME

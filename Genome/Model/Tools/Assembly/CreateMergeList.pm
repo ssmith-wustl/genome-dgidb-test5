@@ -45,8 +45,8 @@ sub execute {
     my $stats_files = $self->stats_files;
     my @stats_files = split (/,/,$stats_files);
     my $merge_list = $self->merge_list;
-    my $percent_identity = $self->percent_identity;
-    my $match_length = $self->match_length;
+    my $percent_identity = $self->percent_identity||90;
+    my $match_length = $self->match_length||200;
     my $ml_fh = IO::File->new(">$merge_list");
     $self->error_message("Could not open $merge_list for writing.\n") and return unless (defined $ml_fh);
     foreach my $file (@stats_files)
@@ -66,7 +66,7 @@ sub execute {
 		    if(/Merging /)
 		    {
 			    my @tokens = split;
-			    if($hqi > $percent_identity && $hqb > $match_length)
+			    if($hqi >= $percent_identity && $hqb >= $match_length && $left_contig && $right_contig)
 			    {
 				    print $ml_fh "$left_contig $right_contig $hqi $hqb\n";
 			    }
@@ -79,7 +79,7 @@ sub execute {
 			    $hqi = $tokens[5];
 		    }		
 	    }
-	    if($hqi > $percent_identity && $hqb > $match_length)
+	    if($hqi >= $percent_identity && $hqb >= $match_length && $left_contig && $right_contig)
 	    {
 		    print $ml_fh "$left_contig $right_contig $hqi $hqb\n";
 	    }	

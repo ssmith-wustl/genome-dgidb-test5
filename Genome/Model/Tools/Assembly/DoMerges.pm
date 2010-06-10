@@ -20,6 +20,12 @@ class Genome::Model::Tools::Assembly::DoMerges {
             is_optional => 0,
             doc => 'the list of joins',
         },
+        cache_dir => {
+            is => 'String',
+            shell_args_position => 3,
+            is_optional => 1,
+            doc => 'the directory that will be used for caching changes to the ace files, a pre-existing cache can also serve as an input (or output)',
+        }  
     ],    
     doc => 'Takes a merge list as input and performs joins'
 };
@@ -44,17 +50,41 @@ sub check_multiple_versions
 sub execute
 {
     my $self = shift;
+    $DB::single=1;
     my $ace_directory = $self->ace_directory; 
     my $merge_list = $self->merge_list;
+    my $cache_dir = $self->cache_dir;
+    if(!defined $cache_dir)
+    {
+        print "Cache dir not defined, creating one.\n";
+        my $temp_cache = File::Temp->newdir("$ace_directory/temp_ace_cacheXXXXX");
+        $cache_dir =$temp_cache->dirname;
+        if(defined $cache_dir and -d $cache_dir)
+        {
+            print "Successfully created cache dir at $cache_dir\n";            
+        }
+        else
+        {
+            Carp::confess "Failed to create cache dir, please specify an writeable, nfs directory for the cache\n";
+        }
+    }
+    
+    
     
     $self->warning_message("Versioned ace files detected.  The merging toolkit only works on files ending in .*.ace, other ace files will be ignored\n") if($self->check_multiple_versions($ace_directory));
     my $fh = IO::File->new($merge_list);
     my @ace_files = `ls $ace_directory/*scaffold*.ace`;
     #filter out singleton acefiles
     @ace_files = grep { !/singleton/ } @ace_files;  
-    
-    $self->error_message( "There are no valid ace files in $ace_directory\n") and return unless (scalar @ace_files);  
     chomp @ace_files;
+    
+    if(! -d $cache_dir)
+    {
+        my $ace_file_string = join ',',@ace_files;
+        my $ret = Genome::Model::Tools::Assembly::BuildAceIndices->execute(ace_directory => $ace_directory, cache_dir => $cache_dir, ace_file => $ace_file_string);
+        $self->error_message("Failed to initialized assembly cache\n") and return unless defined $ret;
+    }
+    $self->error_message( "There are no valid ace files in $ace_directory\n") and return unless (scalar @ace_files);  
     my $mod = scalar @ace_files;
     my ($prefix) = $ace_files[0] =~ /(.*)\d+\.ace/;
     sub get_num
@@ -97,12 +127,10 @@ sub execute
 	    my $args;
 	    foreach (@contigs)
 	    {
-		    $args.= $prefix.get_num($_)%$mod.".ace $_ ";
+		    $args.= "$_ ";
 	    }
-	    my $cmd = "cmt.pl $args";
         print $args,"\n";
         push @contigs_list,$args;
-
     }
     
     
@@ -123,7 +151,8 @@ sub execute
       
     my $result = Workflow::Simple::run_workflow_lsf(
         $w,
-        'contigs' => \@contigs_list,        
+        'contigs' => \@contigs_list,
+        'cache_dir' => $cache_dir,        
     );
     
     unless($result)

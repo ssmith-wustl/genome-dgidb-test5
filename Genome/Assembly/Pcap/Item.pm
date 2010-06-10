@@ -233,14 +233,14 @@ sub freeze
 
 sub thaw
 {
-	my ($self, $obj,$file_name, $fh) = @_;
-	$self->SUPER::thaw($obj, $file_name, $fh);
+	my ($self, $obj) = @_;
+	$self->SUPER::thaw($obj);
 	if($self->already_loaded("children"))
 	{
 		my $children = $self->children;
 		foreach my $child (values %{$children})
 		{
-			$child->thaw($obj,$file_name, $fh);
+			$child->thaw($obj);
 		}
 	}
 }

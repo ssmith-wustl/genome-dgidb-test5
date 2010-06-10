@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 
 use Storable;
-use base (qw(Genome::Assembly::Pcap::Sources::SequenceItem));
+use base (qw(Genome::Assembly::Pcap::Sources::Ace::SequenceItem));
 
 =cut
 Contig Data Structure
@@ -459,5 +459,11 @@ sub qual_clip_end
     return 1;		
 }
 
+sub _index
+{
+	my ($self) = @_;
+    return $self->{index};
+
+}
 
 1;

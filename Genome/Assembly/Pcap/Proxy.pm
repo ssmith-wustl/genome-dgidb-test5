@@ -152,11 +152,11 @@ sub freeze {
 }
 
 sub thaw {
-	my ($self, $obj, $file_name,$fh) = @_;	
+	my ($self) = @_;	
 	my @callbacks = ($self->{callbacks});
 	foreach(@callbacks)
 	{
-		can($_,thaw)&&$_->thaw($obj,$file_name,$fh);
+		can($_,thaw)&&$_->thaw;
 	}
 }
 

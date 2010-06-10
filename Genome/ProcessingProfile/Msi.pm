@@ -59,8 +59,8 @@ sub _execute_build {
     }
     warn "executing build logic for " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
         
-    my $percent_identity = $self->percent_identity;
-    my $match_length = $self->match_length;
+    my $percent_identity = $self->percent_identity||90;
+    my $match_length = $self->match_length||200;
     
     warn "Detecting Merges....\n";
     $self->error_message("There was an error detecting merges") and return unless 
@@ -72,7 +72,7 @@ sub _execute_build {
     
     warn "Merging Contigs...\n";
     $self->error_message("There was an error executing the merges") and return unless 
-        Genome::Model::Msi::Command::DoMerges->execute(assembly_build_id => $assembly_build->id);
+        Genome::Model::Msi::Command::DoMerges->execute(assembly_build_id => $assembly_build->id, output_build_id => $build->id);
     
     warn "Writing changes to Build Directory ",$build->data_directory,"\n";
     $self->error_message("There was an error writing the changes to the build directory") and return unless 

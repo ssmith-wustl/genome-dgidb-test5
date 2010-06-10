@@ -89,66 +89,25 @@ sub execute {
     my $output_data_directory = $output_build->data_directory;
     my $output_edit_dir = $output_data_directory . "/edit_dir";
     if(! (-e $output_edit_dir)) { `mkdir -p $output_edit_dir`;}
+    my $cache_dir = $output_data_directory . "/cache_dir";
 
 
     my @input_ace_files = `ls $input_edit_dir/*scaffold*.ace`;
+    my $prefix;
+    ($prefix) = $input_ace_files[0] =~ /$input_edit_dir\/(.*)scaffold.*/;
+
     #filter out singleton acefiles
     @input_ace_files = grep { !/singleton/ } @input_ace_files;  
     
-    $self->error_message( "There are no valid ace files in $output_edit_dir\n") and return unless (scalar @input_ace_files);  
-    chomp @input_ace_files;
+    #use count of input ace files to figure out a count of the output ace files
+    my $number = @input_ace_files;
     
-    my @output_ace_files;
-    foreach(@input_ace_files)
-    {
-        my $ace_file_name = basename($_);
-        push @output_ace_files, $output_edit_dir."/$ace_file_name";
-    }
-    my $input_ace_files = join ',',@input_ace_files;
-    my $output_ace_files = join ',',@output_ace_files;
-    
-    my $w = Workflow::Operation->create(
-        name => 'write changes to directory',
-        operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::Assembly::WriteChangesToDirectory'),
+    Genome::Model::Tools::Assembly::WriteChangesToDirectory->execute(
+        number => $number,
+        cache_dir => $cache_dir,
+        output_directory => $output_edit_dir,
+        prefix => $prefix,
     );
-    
-    $w->parallel_by('index');
-    
-    #$w->log_dir('/gscmnt/936/info/jschindl/MISCEL/wflogs');
-    
-    $w->validate;
-    if(!$w->is_valid)
-    {
-        $self->error_message("There was an error while validating merge detection workflow.\n") and return;
-    }
-    my @index;my $i=0;
-    @index = map { $i++; } @input_ace_files;  
-    my $result = Workflow::Simple::run_workflow_lsf(
-        $w,
-        index => \@index,
-        'input_ace_files' => $input_ace_files,        
-        'output_ace_files' => $output_ace_files,
-    );
-    
-    unless($result)
-    {
-        # is this bad?
-        foreach my $error (@Workflow::Simple::ERROR) {
-
-            $self->error_message( join("\t", $error->dispatch_identifier(),
-                                             $error->name(),
-                                             $error->start_time(),
-                                             $error->end_time(),
-                                             $error->exit_code(),
-                                            ) );
-
-            $self->error_message($error->stdout());
-            $self->error_message($error->stderr());
-
-        }
-        return;
-
-    }
 	return 1;
     
 

@@ -17,25 +17,15 @@ sub new
 	return $self;
 }
 
+#TODO: ace specific, the two methods below need to be moved to Genome::Assembly::Pcap::Sources::Ace
 sub freeze
 {
-	my ($self) = @_;
-	$self->{fh} = undef;
-	$self->{reader}->{'input'} = undef;
+	
 }
 
 sub thaw
 {
-	my ($self, $obj, $file_name, $fh) = @_;
-	if(defined $file_name && $file_name eq $self->{file_name})
-	{
-		$self->{fh} = $fh;
-	}
-	else
-	{
-		$self->{fh} = $obj->get_fh($self->{file_name});
-	}
-	$self->{reader}->{'input'} = $self->{fh};
+	
 }
 
 sub get_map {

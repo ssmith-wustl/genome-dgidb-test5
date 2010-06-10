@@ -16,17 +16,19 @@ use Genome::Assembly::Pcap::Tag;
 use Genome::Assembly::Pcap::TagParser;
 use Genome::Assembly::Pcap::Sources::Ace::Contig;
 use Genome::Assembly::Pcap::Config;
+use Genome::Assembly::Pcap::FHManager;
+use File::Temp;
 use IO::File;
 use IO::String;
 use Storable;
-use DBI;
+
 use File::Basename;
 use Cwd 'abs_path';
 $Storable::Deparse = 1;
 $Storable::Eval = 1;
 #$Storable::forgive_me = 1;
 
-Genome::Assembly::Pcap::Ace->mk_accessors(qw(_reader _writer _input _output _input_file _output_file dbh sth_create sth_rem sth_set sth_get sth_getcount db_type _init_db _keep_changes _db_dsn _assembly_name _db_file config _show_progress));
+Genome::Assembly::Pcap::Ace->mk_accessors(qw(_reader _writer _input_files _show_progress _cache_dir _output _output_file)); #_input removed, ability to parse stream to a index/db will be a future feature, as needed
 
 
 
@@ -37,547 +39,101 @@ sub new {
     my $class = $caller_is_obj || $caller;
     my $self = {};
     bless ($self, $class);
-	$self->_set_config( Genome::Assembly::Pcap::Config->new);
-	$params{input_file} = abs_path( $params{input_file}) if exists $params{input_file};	
-	$self->_input(delete $params{input});
-    $self->_input_file(delete $params{input_file});
-	$self->_input(IO::File->new($self->_input_file)) if(defined $self->_input_file);
-	$self->_output(delete $params{output});
-    $self->_output_file(delete $params{output_file});
-	$self->_output(IO::File->new(">".$self->_output_file)) if(defined $self->_output_file);
-    $self->_db_file($params{db_file});
-		
-	$self->_init_db(delete $params{init_db});
-	$self->_keep_changes(delete $params{keep_changes});	
-    $self->_show_progress(delete $params{show_progress});
-    $self->_process_params(%params);	
-	
-	
-	my $contig_group_name;
-	if(defined $self->_input_file)
-	{
-		$contig_group_name = $self->_input_file;#allows for partitioning of data
-	}
-	elsif(defined $self->_assembly_name)
-	{
-		$contig_group_name = $self->_assembly_name;
-	}
-	else
-	{
-		$contig_group_name = $self->config->{default_assembly};
-	}
-    $self->{contigs} = {};
-    $self->{assembly_tags} = {};
-    $self->{sleep} = 1;
-    $self->_reader ( Genome::Assembly::Pcap::Ace::Reader->new($self->_input));
-	
-    if($params{using_db})
+    if( exists $params{input_file})
     {
-		$self->using_db(1);
-        print STDERR "There was an error connecting to the database.\n" and return unless($self->_connect);
-		$self->_create_tables; 
-		my $sth = $self->dbh->prepare("select count(id) from ace_files where url = ?");           
-        $sth->execute($contig_group_name);
-        my $url_count = $sth->fetchrow_arrayref->[0];
-        if($params{cc} && ($url_count>0))
-        {
-            my $delete_url = $self->dbh->prepare("delete from ace_files where id = ?");
-            my $delete_items = $self->dbh->prepare("delete from items where asid = ?");
-            my $get_id = $self->dbh->prepare("select id from ace_files where url = ?");
-            $self->dbh->begin_work;  
-		    while($params{cc} && ($url_count >0))
-            {
-                $get_id->execute($contig_group_name);
-                my $id = $get_id->fetchrow_arrayref->[0];
-                $delete_url->execute($id);
-                $delete_items->execute($id);
-                $sth->execute($contig_group_name);
-                $url_count = $sth->fetchrow_arrayref->[0];
-            }
-            $self->dbh->commit;
-        }
-		if($url_count == 0)
-		{
-			$self->_init_db(1);
-			$sth = $self->dbh->prepare("insert into ace_files (url) VALUES (?)");
-			$sth->execute($contig_group_name);
-			my $sth = $self->dbh->prepare("select id from ace_files where url = ?");
-			$sth->execute($contig_group_name);
-			$self->{asid} = $sth->fetchrow_arrayref->[0];					
-		}
-		else
-		{
-			my $sth = $self->dbh->prepare("select id from ace_files where url = ?");
-			$sth->execute($contig_group_name);
-			$self->{asid} = $sth->fetchrow_arrayref->[0];           
-		}        
-		
-        if($self->db_type eq "SQLite")
-        {		
-            $self->sth_get( $self->dbh->prepare(qq{ select data from items where name = ? and asid = $self->{asid}}));
-            $self->sth_getcount( $self->dbh->prepare(qq{ select count (name) from items where name = ? and asid = $self->{asid}}));              
-            $self->sth_set( $self->dbh->prepare(qq{ insert or replace into items (name, data, type, count, asid) VALUES (?, ?, ?, ?, $self->{asid})}));
-            $self->sth_rem( $self->dbh->prepare(qq{ delete from items where name = ? and asid = $self->{asid}}));
-            $self->sth_set->execute("has_changed", 0, 0, 0) if($self->_init_db);           
-        }
-		elsif($self->db_type eq "mysql")
-		{			
-            $self->sth_get( $self->dbh->prepare(qq{ select data from items where name = ?}));
-            $self->sth_getcount( $self->dbh->prepare(qq{ select count from items where name = ?}));              
-            $self->sth_set( $self->dbh->prepare(qq{ insert into items (name, data, type, count, asid) VALUES (?, ?, ?, ?, $self->{asid}) on duplicate key update data = values(data), count = values(count)}));
-            $self->sth_rem( $self->dbh->prepare(qq{ delete from items where name = ? and asid = $self->{asid}}));
-            $self->sth_set->execute("has_changed", 0, 0, 0) if ($self->_init_db);		
-		
-		}
-       
-        $self->_build_index($self->_input) if ((defined $self->_input)&&($url_count==0));
-        
-		return $self;
-        
+        push @{$params{input_files}}, $params{input_file};
     }
-    else
+    if (exists $params{input_files})
     {
-        $self->using_db(0);
-    }   
-        
-    if(defined $self->_input && defined $self->_input_file && -f $self->_input_file.".index" )
-    {
-        $self->_load_index_from_file($self->_input_file.".index");
-    }
-    else
-    {
-        $self->_build_index($self->_input) if defined $self->_input;
-    }
+        @{$params{input_files}} = map { abs_path($_); } @{$params{input_files}};
+	}    
+    $self->_reader ( Genome::Assembly::Pcap::Ace::Reader->new);
+
+#TODO:make it check for dir before building index
+    $self->_init_cache_dir(%params);
     
     return $self;
 }
 
-sub _derive_db_type_from_dsn
+sub _init_cache_dir
 {
-	my ($self) = @_;
-	my ($db_type) = $self->_db_dsn =~ /.?:(.?):.+/;
-	$self->db_type($db_type);
-}
-
-sub _process_params
-{
-	my ($self, %params) = @_;
-	if(defined $params{db_dsn})
-	{
-		#if the user passed in a db_dsn, then that will be used regardless of what
-		#db_type they specify
-		$self->_db_dsn($params{db_dsn});
-		$self->db_type($self->_derive_db_type_from_dsn);
-		return;
-	}
-	elsif(defined $params{db_type})
-	{
-		$self->{db_type} = $params{db_type};	
-	}
-	
-	if($self->{db_type} eq "SQLite")
-	{
-        if(defined $self->_db_file )
+    my ($self,%params) = @_;
+    if(defined $params{cache_dir})
+    {
+        $self->_cache_dir($params{cache_dir});
+        return 1 if(-d $self->_cache_dir);
+        #since the cache dir does not exist, we'll need to create it and initialize it below
+        `mkdir -p $params{cache_dir}`;
+    }
+    else
+    {        
+        $self->{temp_cache} = File::Temp->newdir('/tmp/temp_ace_cacheXXXXX');
+        $self->_cache_dir($self->{temp_cache}->dirname);
+    }
+    my $cache_dir = $self->_cache_dir;   
+    `touch $cache_dir/VERSION_1_0`;
+    if(defined $params{input_files})
+    {
+        foreach my $input_file (@{$params{input_files}})
         {
-            $self->_db_dsn("dbi:SQLite:".$self->_db_file);        
+            if (! -d $input_file.'.idx')
+            {
+                my $result;
+                #TODO: make the index either go to a temp location, or derive itself from the acefile
+                $result = $self->_build_ace_index(file_name => $input_file, dir => $input_file.'.idx') ;
+                print "There was an error indexing the ace file\n" and return unless $result;
+            }
+            #now add the ace file's index to the cache
+            my @files = `ls $input_file.idx/*.ci`;
+            chomp @files;
+            foreach my $contig_index (@files)
+            {
+                `ln -s $contig_index $cache_dir/.`;
+            }
+            `touch $input_file.idx/assembly_tags` if (! -e "$input_file.idx/assembly_tags");
+            `cat $input_file.idx/assembly_tags >> $cache_dir/assembly_tags`;            
         }
-		elsif(defined $self->_input_file )
-		{
-			$self->_db_dsn("dbi:SQLite:".$self->_input_file.".db");
-		}
-		else
-		{
-            warn "You probably don't want to use the default sqlite DSN, $self->{sqlite_def_dsn}.\n  if there are issues try deleting assembly.db\n";
-			$self->_db_dsn( $self->{sqlite_def_dsn});
-		}	
-	}
-	elsif($self->{db_type} eq "mysql")
-	{
-		$self->_db_dsn( $self->{mysql_def_dsn});
-	}
-	
-	
-}
-sub _set_config
-{
-	my ($self,$config_obj) = @_;
-	$self->{config_obj} = $config_obj;
-	$self->{config} = $config_obj->{config};
-	my $config = $self->{config};
-	foreach my $key (keys %{$config})
-	{
-		$self->{$key} = $config->{$key};	
-	}		
-}
-
-sub _create_tables
-{
-	my ($self) = @_;
-	if($self->db_type eq "mysql")
-	{
-        return;#we shouldn't normally create mysql tables
-		$self->sth_create ($self->dbh->prepare(qq{
-			CREATE TABLE IF NOT EXISTS `items`(
-  			  #`id` int(11) auto_increment NOT NULL,
-			  `name` varchar(50) NOT NULL default '',
-        	  `count` int, 
-			  `type` char(10), 
-			  `data` longblob, 
-			  `asid` int(11) NOT NULL,
-			  #PRIMARY KEY  (`id`),
-			  PRIMARY KEY (`name`,`asid`)			  
-			) ENGINE = InnoDB}));
-
-    	$self->sth_create->execute;
-    	$self->sth_create->finish;
-                $self->sth_create ($self->dbh->prepare(qq{ 
-			create index asid_index on items( `asid` )
-		}));
-		$self->sth_create->execute; 
-		$self->sth_create->finish;
-		$self->sth_create ($self->dbh->prepare(qq{ 
-			CREATE TABLE IF NOT EXISTS `ace_files` ( 
-			`id` int(11) auto_increment NOT NULL, 
-			`url` varchar(256) NOT NULL default '',  
-			PRIMARY KEY  (`id`),
-			KEY `url` (`url`) #should probably be assembly name?
-		) ENGINE = InnoDB}));
-		$self->sth_create->execute; 
-		$self->sth_create->finish;
-	}
-	elsif($self->db_type eq "SQLite")
-	{
-		$self->sth_create ($self->dbh->prepare(qq{
-			CREATE TABLE if not exists `items` (  			  
-			  `name` varchar(50) NOT NULL default '',
-        	  `count` int, 
-			  `type` char(10), 
-			  `data` longblob, 
-			  `asid` int(11) NOT NULL,			  
-			  PRIMARY KEY (`name`,`asid`)			  
-			) }));
-
-    	$self->sth_create->execute;
-    	$self->sth_create->finish;
-		$self->sth_create ($self->dbh->prepare(qq{ 
-			CREATE TABLE if not exists ace_files ( 
-			`id` integer primary key autoincrement, 
-			`url` varchar(256) NOT NULL default ''			
-		) }));
-		$self->sth_create->execute; 
-		$self->sth_create->finish;
-		$self->sth_create ($self->dbh->prepare(qq{ 
-			create index if not exists url_index on ace_files( `url` )
-		}));
-		$self->sth_create->execute; 
-		$self->sth_create->finish;
-	
-	}
+    }       
 }
 
 sub _build_index
 {
-	my ($self, $fh) = @_;
-	my %contigs;
-	my @assembly_tag_indexes;
-    my $old_hash = undef;
-    my $old_contig = undef;
-    my $first_bs = 1;
-    my $found_bq = 0;
-    my $found_qa = 0;
-    my $found_af = 0;
-    my $found_rd = 0;
-	my $co_count = 0;
-    $fh = $self->_input if (!defined $fh && defined $self->_input);
-	
-    if($self->using_db)
-    {
-		$self->dbh->begin_work;       
-	}
-	my %tag_hash;
-	while(my $line = <$fh>)
-	{
-		if($line =~ /CT{/)
-		{
-			my $offset = (tell $fh) - length $line;
-			my $first_length = length $line;
-			$line = <$fh>;
-			$line =~ s/^\s*// if $line =~ /\w/;
-			my @tokens = split(/[ {]/,$line);			
-            
-			$old_hash = {offset => $offset, length => (length($line) + $first_length)};
-						
-			if(!defined $tag_hash{$tokens[0]}) {$tag_hash{$tokens[0]} = [];}
-            push (@{$tag_hash{$tokens[0]}}, $old_hash); 
-			
-		}
-		else
-        {            
-            $old_hash->{length} += length($line) if(defined($old_hash));
-        }
-	}
-	$fh->seek(0,0);
-	$old_hash = undef;
-	
-	while(my $line = <$fh>)
-	{
-		my $first_three = substr($line, 0,3);        
-		if($first_three eq "BS ")
-		{           
-            my $offset = (tell $fh) - length $line;
-            $old_hash = undef;            
-            $old_contig->{base_segments}{offset} = $offset;
-			for(my $i = 0;$i<$old_contig->{base_segments}{line_count};$i++)
-			{
-				my $line = <$fh>;			
-			}            
-			
-			my $offset2 = tell $fh;
-	        $old_contig->{base_segments}{length} = $offset2 - $old_contig->{base_segments}{offset};
-            
-		}
-		elsif($first_three eq "AF ")
-		{
-			if($found_bq == 1)
-            {
-                $old_contig->{base_qualities}{length} = (tell $fh) - length($line) - $old_contig->{base_qualities}{offset};
-                $found_bq = 0;
-            }
-			my @tokens = split(/[ {]/,$line);
-            my $end = (tell $fh);			
-			my $offset = $end - length $line;            
-            $old_hash = { name => $tokens[1], offset => $offset };
-            $old_contig->{reads}{$tokens[1]}{read_position}= $old_hash;
-            $old_contig->{af_start} = $offset;
-			for(my $i=1;$i<$old_contig->{read_count};$i++)
-			{
-				my $line = <$fh>;
-                my $first_three = substr($line, 0,3);
-                 if($first_three ne 'AF ')
-                 {
-                    print "Expected an AF but instead got $line";
-                    $fh->seek(- length $line,1);
-                    last;
-                 }
-				my @tokens = split(/[ {]/,$line);
-            	my $end = (tell $fh);			
-				my $offset = $end - length $line;            
-            	$old_hash = { name => $tokens[1], offset => $offset };
-            	$old_contig->{reads}{$tokens[1]}{read_position}= $old_hash;				
-            }		
-			
-            $old_contig->{af_end} = (tell $fh);
-            
-		}
-		elsif($first_three eq "RD ")
-		{
-			my @tokens = split(/[ {]/,$line);
-			my $offset = (tell $fh) - length $line;
-			if(!$found_rd)
-			{
-				$old_contig->{rd_start} = $offset ;			
-            	$found_rd = 1;
-			}
-			$old_hash = { offset => $offset,
-                          name => $tokens[1],
-                          read_tags => [],
-                          length => length($line)};
-                        
-                        
-            $old_hash->{sequence}{offset} = (tell $fh);
-			$fh->seek($tokens[2],1);
-			$old_contig->{reads}{$tokens[1]}{read} = $old_hash;			
-			
-		}        
-		elsif($first_three eq "CO ")
-		{
-			my @tokens = split(/[ {]/,$line);
-            print "Indexing $tokens[1]...\n" if ($self->_show_progress);
-			my $offset = (tell $fh) - length $line;			
-            $old_contig->{contig_length} = $offset - $old_contig->{offset} if (defined $old_contig);
-            $old_contig->{rd_end} = $offset if (defined $old_contig);
-			if(defined $old_contig&&$self->using_db)
-			{								
-				$self->sth_set->execute($old_contig->{name}, Storable::freeze($old_contig), "Contig", scalar keys %{$old_contig->{reads}});    
-            	$co_count++;
-				if($co_count > 1000)
-				{
-					$self->dbh->commit;
-					$self->dbh->begin_work;
-					$co_count = 0;									
-				}
-			}
-			$old_hash = { offset => $offset,
-                              name => $tokens[1],
-                              read_count => $tokens[3],
-                              base_segments => {line_count => $tokens[4]},#\@base_segments,
-                              contig_tags => [] ,
-                              contig_loaded => 0 ,
-                              length => length($line),
-							  sequence_length => $tokens[2],
-                              contig_length => length($line)};
-			$old_hash->{contig_tags} = $tag_hash{$tokens[1]} if (exists $tag_hash{$tokens[1]});				  
-            $old_contig = $old_hash;
-            $contigs{$tokens[1]} = $old_hash if (!$self->using_db);
-            $found_af = 0;
-            $found_rd = 0;
-			$fh->seek($tokens[2],1);
-            							  
-		}
-		elsif(substr($first_three,0,2) eq "BQ")
-        {
-            my $offset = (tell $fh) - length $line;
-            $old_contig->{base_qualities}{offset} = $offset; 
-            $old_contig->{base_sequence}{length} = ($offset-1)-$old_contig->{offset};
-			$found_bq = 1;
-			$fh->seek($old_contig->{sequence_length}*2,1);
-			
-        }
-		elsif($first_three eq "WA ")
-		{
-			my $offset = (tell $fh) - length $line;
-            $old_hash = { offset => $offset, length => length($line) };
-            $old_contig->{contig_length} = $offset - $old_contig->{offset} if (defined $old_contig);
-			$old_contig = undef;
-			push (@assembly_tag_indexes, $old_hash);
-		}
-		elsif($first_three eq "CT{")
-		{
-			my $offset = (tell $fh) - length $line;						
-            if(defined $old_contig)
-            {
-				
-                $old_contig->{contig_length} = $offset - $old_contig->{offset};
-                $old_contig->{rd_end} = $offset;
-				if($self->using_db)
-				{
-					$self->sth_set->execute($old_contig->{name}, Storable::freeze($old_contig), "Contig", scalar keys %{$old_contig->{reads}});    
-			    }
-				else
-				{
-					$contigs{$old_contig->{name}} = $old_contig;
-				}
-				$old_contig = undef;
-            }
-			$old_hash = {offset => $offset, length => length($line)};			
-		}
-		elsif(substr($line,0,3) eq "DS ")
-		{
-			my $offset = (tell $fh) - length $line;
-        	$old_hash->{ds}{offset} = $offset;  
-        	$old_hash->{length} = (tell $fh) - $old_hash->{offset};							
-		}
-		elsif(substr($line,0,3) eq "QA ")
-		{
-        	my $offset = (tell $fh) - length $line;
-            if(!defined $offset|| !defined $old_hash->{offset})
-            {
-                print $old_hash->{name},"\n";
-                print $line,"\n";
-            }            
-        	$old_hash->{qa}{offset} = $offset;
-        	$old_hash->{sequence}{length} = ($offset - 1) - $old_hash->{sequence}{offset};
-		    $old_hash->{length} = (tell $fh) - $old_hash->{offset};
-        }
-		elsif($first_three eq "RT{")
-		{
-			my $offset = (tell $fh) - length $line;
-			my $first_length = length $line;
-			$line = <$fh>;
-			my @tokens = split(/[ {]/,$line);            
-			$old_hash = {offset => $offset, length => (length($line)+ $first_length)};
-			push (@{$old_contig->{reads}{$tokens[0]}{read}{read_tags}} ,$old_hash );	
-			
-		}		        
-        else
-        {            
-            $old_hash->{length} += length($line) if(defined($old_hash));
-        }
-	}
-    $old_contig->{rd_end} = ($fh->stat)[7] if (defined $old_contig);    
-	$old_contig->{contig_length} = ($fh->stat)[7] - $old_contig->{offset} if (defined $old_contig);
-    if($self->using_db)
-    {
-		if(defined $old_contig)
-        {
-			$self->sth_set->execute($old_contig->{name}, Storable::freeze($old_contig), "Contig", scalar keys %{$old_contig->{reads}});    						
-        }
-	    $self->sth_set->execute("assembly_tags", Storable::freeze({tags_loaded => 0, tag_indexes => \@assembly_tag_indexes}), "a_tags", 0);
-        $self->dbh->commit;      
-    }
-    else
-    {
-        $self->{contigs} = \%contigs;
-        $self->{assembly_tags} = {};
-        $self->{assembly_tags}{tags_loaded} = 0;
-        $self->{assembly_tags}{tag_indexes} = \@assembly_tag_indexes;   
-    }    
+    _build_ace_index(@_);
 }
 
-sub _build_index_new
+sub _build_ace_index
 {
-	my ($self, $fh) = @_;
+	my ($self, %params) = @_;
+    #TODO: get this working with file handles too
+    my $file_name = $params{file_name};
+    my $fh = Genome::Assembly::Pcap::FHManager->get_fh($file_name);
 	my %contigs;
 	my @assembly_tag_indexes;
     my $old_hash = undef;
     my $contig = undef;
-    my $first_bs = 1;
-    my $found_bq = 0;
-    my $found_qa = 0;
-    my $found_af = 0;
-    my $found_rd = 0;
 	my $co_count = 0;
-    if($self->using_db)
-    {
-        while(! defined $self->dbh->begin_work)
-        {
-            print $self->dbh->errstr."\n";
-            $self->_sleep;
-        }
-	}
-	
+	my $index_dir;
+    my $get_assembly_tags = $params{get_assembly_tags};
+    $index_dir = $params{dir};
+    if(! -d $index_dir) { `mkdir -p $index_dir`;}
+    my $reader = $self->_reader;
+    $reader->{input} =$fh;
+    `touch $index_dir/VERSION_1_0`;
+    
+    my %tag_hash;
 	while(my $line = <$fh>)
 	{
 		my $first_three = substr($line, 0,3);        
 		if($first_three eq "CO ")
 		{
-			if(1)
-			{
-				$contig = $self->_build_contig_index($fh,$line);
-			}
-			else
-			{
-				$contig = $self->_build_empty_contig_index($fh,$line);
-			}
-			if($self->using_db)
-			{
-				$self->sth_set->execute($contig->{name}, Storable::freeze($contig), "Contig", scalar keys %{$contig->{reads}});    
-            	$co_count++;
-				if($co_count > 1000)
-				{
-					while(! defined $self->dbh->commit)
-			        {
-        			    print $self->dbh->errstr."\n";
-        			    $self->_sleep;
-        			}
-					while(! defined $self->dbh->begin_work)
-        			{
-			            print $self->dbh->errstr."\n";
-        			    $self->_sleep;
-        			}
-					$co_count = 0;									
-				}
-			}
-			else
-			{
-            	$contigs{$contig->{name}} = $contig;
-			}
+			$contig = $self->_build_contig_index($file_name,$line);
+            store $contig, "$index_dir/$contig->{name}.ci";
 		}
-		
 		elsif($first_three eq "WA ")
 		{
 			my $offset = (tell $fh) - length $line;
-            $old_hash = { offset => $offset, length => length($line) };            
+            $old_hash = { offset => $offset, length => length($line) };
+            next unless $get_assembly_tags;            
 			push (@assembly_tag_indexes, $old_hash);
 		}
 		elsif($first_three eq "CT{")
@@ -589,49 +145,42 @@ sub _build_index_new
 			my @tokens = split(/[ {]/,$line);	            
 			$old_hash = {offset => $offset, length => (length($line) + $first_length)};
 			my $contig;
-			if($self->using_db)
-			{
-				$self->sth_get->execute($tokens[0]);
-				my $temp = $self->sth_get->fetchrow_arrayref->[0];
-				$contig = Storable::thaw($temp, );
-			}
-			else
-			{
-				$contig = $contigs{$tokens[0]};
-			}	
-			
-            push (@{$contig->{contig_tags}}, $old_hash); 
-			if($self->using_db)
-			{
-				$self->sth_set->execute($contig->{name}, Storable::freeze($contig), "Contig", scalar keys %{$contig->{reads}});       
-			}
+			$contig = $contigs{$tokens[0]};
+
+			if(!defined $tag_hash{$tokens[0]}) {$tag_hash{$tokens[0]} = [];}
+            push (@{$tag_hash{$tokens[0]}}, $old_hash); 
 		}				        
         else
         {            
             $old_hash->{length} += length($line) if(defined($old_hash));
         }
-	}    
-    if($self->using_db)
+	}
+    
+    #TODO: add contig tags to contigs
+    foreach my $contig_name (keys %tag_hash)
     {
-        $self->sth_set->execute("assembly_tags", Storable::freeze({tags_loaded => 0, tag_indexes => \@assembly_tag_indexes}), "a_tags", 0);
-        while(! defined $self->dbh->commit)
-        {
-            print $self->dbh->errstr."\n";
-            $self->_sleep;
-        }       
+        my $ci = retrieve "$index_dir/$contig_name.ci";
+        push @{$ci->{tags}},@{$tag_hash{$contig_name}};
+        delete $tag_hash{$contig_name};
+        store $ci, "$index_dir/$contig_name.ci";
     }
-    else
-    {
-        $self->{contigs} = \%contigs;
-        $self->{assembly_tags} = {};
-        $self->{assembly_tags}{tags_loaded} = 0;
-        $self->{assembly_tags}{tag_indexes} = \@assembly_tag_indexes;   
-    }    
+    
+    #write assembly tags to file
+    my $fh_assembly_tags = IO::File->new(">>$index_dir");
+	foreach my $assembly_tag_index (@assembly_tag_indexes)
+	{		
+		$fh->seek($assembly_tag_index->{offset},0);
+		my $tag_string;
+        $fh->read($tag_string, $assembly_tag_index->{length});
+        print $fh_assembly_tags $tag_string;
+	}
+    
+    return 1;    
 }
 
 sub _build_contig_index
 {
-	my ($self, $fh, $line, $file_offset) = @_;
+	my ($self, $file_name, $line, $file_offset) = @_;
 	my %contigs;
 	my @assembly_tag_indexes;
     my $old_hash = undef;
@@ -642,7 +191,9 @@ sub _build_contig_index
     my $found_af = 0;
     my $found_rd = 0;
 	my $co_count = 0;
+    my $fh = Genome::Assembly::Pcap::FHManager->get_fh($file_name);
     $fh->seek($file_offset,0) if defined $file_offset;
+    
 	
 	#build contig data structures
 	my @tokens = split(/[ {]/,$line);
@@ -657,7 +208,9 @@ sub _build_contig_index
 					  contig_indexed => 1,
                       length => length($line),
 					  sequence_length => $tokens[2],
-                      contig_length => length($line)};
+                      contig_length => length($line),
+                      file_name => $file_name
+                      };
     $contig = $old_hash;    
     $found_af = 0;
     $found_rd = 0;
@@ -668,7 +221,7 @@ sub _build_contig_index
 		my $first_three = substr($line, 0,3);        
 		if($first_three eq "BS ")
 		{           
-            my $offset = (tell $fh) - length $line;
+            $offset = (tell $fh) - length $line;
             $old_hash = undef;            
             $contig->{base_segments}{offset} = $offset;
 			for(my $i = 0;$i<$contig->{base_segments}{line_count};$i++)
@@ -689,7 +242,7 @@ sub _build_contig_index
             }
 			my @tokens = split(/[ {]/,$line);
             my $end = (tell $fh);			
-			my $offset = $end - length $line;            
+			$offset = $end - length $line;            
             $old_hash = { name => $tokens[1], offset => $offset };
             $contig->{reads}{$tokens[1]}{read_position}= $old_hash;
             $contig->{af_start} = $offset;
@@ -709,7 +262,7 @@ sub _build_contig_index
 		elsif($first_three eq "RD ")
 		{
 			my @tokens = split(/[ {]/,$line);
-			my $offset = (tell $fh) - length $line;
+			$offset = (tell $fh) - length $line;
 			if(!$found_rd)
 			{
 				$contig->{rd_start} = $offset ;			
@@ -728,6 +281,7 @@ sub _build_contig_index
 		}        
 		elsif($first_three eq "CO ")
 		{
+            $offset = (tell $fh) - length $line;
 			$contig->{contig_length} = $offset - $contig->{offset};
 			$contig->{rd_end} = $offset;
 			$fh->seek(- length($line),1);
@@ -736,7 +290,7 @@ sub _build_contig_index
 		}		
 		elsif(substr($first_three,0,2) eq "BQ")
         {
-            my $offset = (tell $fh) - length $line;
+            $offset = (tell $fh) - length $line;
             $contig->{base_qualities}{offset} = $offset; 
             $contig->{base_sequence}{length} = ($offset-1)-$contig->{offset};
 			$found_bq = 1;
@@ -745,33 +299,37 @@ sub _build_contig_index
         }
 		elsif($first_three eq "WA ")
 		{
-			my $offset = (tell $fh) - length $line;
+			$offset = (tell $fh) - length $line;
+            $contig->{contig_length} = $offset - $contig->{offset};
+			$contig->{rd_end} = $offset;
             $fh->seek(-length($line),1);
 			last;
 		}
-		elsif($first_three eq "CT{")
+		elsif($first_three eq "CT{"  )
 		{
-			my $offset = (tell $fh) - length $line;
+			$offset = (tell $fh) - length $line;
+            $contig->{contig_length} = $offset - $contig->{offset};
+			$contig->{rd_end} = $offset;
 			$fh->seek(-length ($line),1);
 			last;
 			
 		}
-		elsif(substr($line,0,3) eq "DS ")
+		elsif($first_three eq "DS ")
 		{
-			my $offset = (tell $fh) - length $line;
+			$offset = (tell $fh) - length $line;
         	$old_hash->{ds}{offset} = $offset;  
         	$old_hash->{length} = $offset - $old_hash->{offset};							
 		}
-		elsif(substr($line,0,3) eq "QA ")
+		elsif($first_three eq "QA ")
 		{
-        	my $offset = (tell $fh) - length $line;
+        	$offset = (tell $fh) - length $line;
         	$old_hash->{qa}{offset} = $offset;
         	$old_hash->{sequence}{length} = ($offset - 1) - $old_hash->{sequence}{offset};
 		    $old_hash->{length} = $offset - $old_hash->{offset};
         }
 		elsif($first_three eq "RT{")
 		{
-			my $offset = (tell $fh) - length $line;
+			$offset = (tell $fh) - length $line;
 			my $first_length = length $line;
 			$line = <$fh>;
 			my @tokens = split(/[ {]/,$line);            
@@ -783,127 +341,26 @@ sub _build_contig_index
         {            
             $old_hash->{length} += length($line) if(defined($old_hash));
         }
-	}    
+	}
+    
+
+    $offset =  (stat($fh))[7] if eof $fh;        
+    $contig->{contig_length} = $offset - $contig->{offset};
+	$contig->{rd_end} = $offset;
 	return $contig;
-
-}
-
-sub _build_empty_contig_index
-{
-	my ($self, $fh, $line, $file_offset) = @_;
-	my %contigs;
-	my @assembly_tag_indexes;
-    my $old_hash = undef;
-    my $contig = undef;
-    my $first_bs = 1;
-    my $found_bq = 0;
-    my $found_qa = 0;
-    my $found_af = 0;
-    my $found_rd = 0;
-	my $co_count = 0;
-    $fh->seek($file_offset,0) if defined $file_offset;
-	
-	#build contig data structures
-	my @tokens = split(/[ {]/,$line);
-	my $offset = (tell $fh) - length $line;            
-
-	$contig = { offset => $offset,
-                  name => $tokens[1],
-                      read_count => $tokens[3],
-                      base_segments => {line_count => $tokens[4]},#\@base_segments,
-                      contig_tags => [] ,
-                      contig_loaded => 0 ,
-					  contig_indexed => 0,
-                      length => length($line),
-					  sequence_length => $tokens[2],
-                      contig_length => length($line)}; 	            							  
-		
-	while(my $line = <$fh>)
-	{
-		my $first_three = substr($line, 0,3);	
-		        
-		if($first_three eq "CO "||$first_three eq "WA "||$first_three eq "CT{")
-		{
-			my $offset = (tell $fh) - length $line;
-			$contig->{contig_length} = $offset - $contig->{offset};
-			$fh->seek(- length($line),1);
-			last;		
-		}
-		
-		
-	}    
-	return $contig;
-}
-
-sub _connect
-{   
-    my ($self) = @_;
-	my $handle;
-	
-	eval { $handle = DBI->connect($self->_db_dsn, $self->{user_name}, $self->{password}); };
-	my $try=0;
-	while(!defined $handle && ($try<5))
-    {
-        #print $self->dbh->errstr."\n";
-		sleep 30;print STDERR "sleeping for 10 seconds\n";
-		eval { $handle = DBI->connect($self->_db_dsn,$self->{user_name},$self->{password}); };
-        $try++;
-		#$self->_sleep2;
-    }
-    return if(!defined $handle);
-	$self->dbh($handle);
-        
-    $self->dbh->{LongReadLen} = 800000000;    
-}
-
-sub _sleep2
-{
-    my ($self) = @_;
-    sleep($self->{sleep});
-    print "Sleeping for ".$self->{sleep}." seconds\n";
-    #if($self->{sleep}<60)
-    #{
-    #    $self->{sleep}++;
-    #}
-
-}
-
-sub _sleep
-{
-    my ($self) = @_;
-    #$self->_disconnect;
-    sleep($self->{sleep});
-    print "Sleeping for ".$self->{sleep}." seconds\n";
-    #$self->_connect;
-    #if($self->{sleep}<60)
-    #{
-    #    $self->{sleep}++;
-    #}
 
 }
 
 sub get_contig_names
 {
     my $self = shift;
-    if($self->using_db)
-    {
-        #$self->_connect;
-        my $sth = $self->dbh->prepare(qq{ select name from items where type = "Contig" and asid = $self->{asid} }); 
-        while(! defined $sth->execute())
-        {
-            print $sth->errstr."\n";
-            $self->_sleep;
-        }
-        my @contig_names;
-        while (my $temp = $sth->fetchrow_arrayref)
-        {
-            push @contig_names, $temp->[0]; 
-        }
-        #$self->_disconnect;
-		@contig_names = sort { _cmptemp($a, $b) } @contig_names;
-        return \@contig_names;
-    }   
-    return [sort { _cmptemp($a, $b) } keys %{$self->{contigs}}] ;
+    
+    my $cache_dir = $self->_cache_dir;
+    my @contig_names = `ls $cache_dir/*.ci`;
+    chomp @contig_names;
+    @contig_names = map { /.*(Contig.*)\.ci/ } @contig_names;
+       
+    return [sort { _cmptemp($a, $b) } @contig_names ] ;
 }
 
 sub get_contig
@@ -911,46 +368,26 @@ sub get_contig
     my ($self, $contig_name, $load) = @_;
     
     confess "No contig name given.\n" unless defined $contig_name;    
-    
-    my %contigs = %{ $self->{contigs} };
+        
     my $contig_index;
-    my $contig_found = 0;
-    if($self->using_db)
-    {        
-        #$self->_connect;        
-        while(! defined $self->sth_get->execute($contig_name))
-        {
-            print $self->sth_get->errstr."\n";
-            $self->_sleep;
-        }
-        my $ref = $self->sth_get->fetchrow_arrayref;
-        if(!defined $ref)
-        {
-            die "Failed to fetch contig $contig_name\n";
-        }
-        if(my $temp = $ref->[0] )
-        {
-			$contig_index = Storable::thaw($temp, );
-            $contig_found = 1;
-        }
-        $self->sth_get->finish;
-        #$self->_disconnect;        
-    }
+    my $cache_dir = $self->_cache_dir;
+    my $contig_file = "$cache_dir/$contig_name.ci";
+        
+    if(-e $contig_file)
+    {
+        $contig_index = retrieve $contig_file;        
+    }                
     else
     {
-        if(exists $contigs{$contig_name})
-        {
-            $contig_index = $contigs{$contig_name};
-            $contig_found = 1;
-        }                
+        confess "Could not get contig for name: $contig_name\n";
     }
     
-    confess "Could not get contig for name: $contig_name\n" unless $contig_found;
     if($contig_index->{contig_loaded})
     {          
         #my $contig = Storable::dclone($contig_index->{contig_object});
 		my $contig = $contig_index->{contig_object};
-        $contig->thaw($self, $self->_input_file, $self->_input);
+        #TODO: make sure that the contig is able to get a handle to it's input file from the contig index, add the path to the ace file to the contig index when indexing the ace file
+        $contig->thaw($self);
         return $contig;       
     }
     else 
@@ -961,10 +398,10 @@ sub get_contig
 		}
 		else
 		{    
-        	my $input = $self->_input;
         	my $reader = $self->_reader;
         	my $contig_callback = Genome::Assembly::Pcap::Sources::Ace::Contig->new(name => $contig_index->{name},
-        	index => $contig_index, reader => $self->_reader, fh => $self->_input, file_name => $self->_input_file);    
+        	index => $contig_index, reader => $self->_reader); 
+            $contig_callback->thaw;#TODO: Figure out a less hacky way to do this   
         	return Genome::Assembly::Pcap::Contig->new(callbacks => $contig_callback);   
     	}
     }
@@ -974,8 +411,9 @@ sub get_contig_old
 {
 	my ($self, $contig_index) = @_;    		
     
-    my $input = $self->_input;
+    my $input = Genome::Assembly::Pcap::FHManager->get_fh($contig_index->{file_name});
     my $reader = $self->_reader;
+    $reader->{input} = $input;
     my $ace_contig;
     my %reads; #contins read_positions and read_tags
     my @base_segments;
@@ -1026,163 +464,103 @@ sub get_contig_old
 	return $contig;	
 }
 
-sub using_db
-{
-    my ($self, $using_db) = @_;
-    
-    if(@_>1)
-    {
-        $self->{using_db} = $using_db;
-    }
-    return $self->{using_db};
-}
-
-sub get_fh
-{
-	my ($self, $file_name) = @_;
-	if(!defined $self->{file_handles}{$file_name})
-	{
-		$self->{file_handles}{$file_name} = IO::File->new($file_name);
-	}
-	return $self->{file_handles}{$file_name};
-}
-
 sub add_contig
 {
 	my ($self, $contig) = @_;
 	
 	my $contig_index;
-	my $contig_found = 0;
     $contig->freeze;
-	if($self->using_db)
-    {
-        $contig_index = { offset => -1, contig_loaded => 1, name => $contig->name, contig_object => $contig};
-        #$self->_connect;        
-        while(! defined $self->sth_set->execute($contig->name, Storable::freeze($contig_index), "Contig", scalar keys %{$contig->reads}))
-        {
-            print $self->sth_set->errstr."\n";
-			#my $tmp = IO::File->new(">/tmp/tmpdump");
-			#print $tmp Storable::freeze($contig_index);
-			#$tmp->close;
-            $self->_sleep;
-        }
-        while(! defined $self->sth_set->execute("has_changed",0, 0, 1))
-        {
-            print $self->sth_set->errstr."\n";
-            $self->_sleep;
-        }
-        #$self->_disconnect;      
-        
-    }
-	else
-    {
-        my %contigs = %{ $self->{contigs} };      
-    
-        if(exists $contigs{$contig->name})
-        {
-            $contig_index = $contigs{$contig->name};
-            $contig_found = 1;
-        }
-        if($contig_found)
-        {
-            $contig_index->{offset} = -1;
-            $contig_index->{contig_loaded} = 1;     
-            $contig_index->{contig_object} = $contig->copy($contig);        
-        }
-        else
-        {
-            $contig_index = { offset => -1, contig_loaded => 1, name => $contig->name, contig_object => $contig->copy($contig) };
-            $self->{contigs}{$contig->name} = $contig_index;           
-        }                
-    }
-    $contig->thaw($self,$self->_input_file, $self->_input);
+    my $cache_dir = $self->_cache_dir;
+    my $contig_name = $contig->name;
+    my $contig_file = "$cache_dir/$contig_name.ci";
+#TODO: check to see if copy is still necessary, probably not
+#TODO: add option to flush all data to a new ace file, and re-index it
+#TODO: the cache should store frozen contig objects, not their indices alone
+    $contig_index = { offset => -1, contig_loaded => 1, name => $contig->name, contig_object => $contig->copy($contig) };
+    unlink $contig_file if(-e $contig_file);
+    store $contig_index, $contig_file;
+
+    $contig->thaw($self);
 }
 
 sub remove_contig
 {
     my ($self, $contig_name) = @_;
-    if($self->using_db)
+#TODO: delete contig ace file and delete ci file
+    my $cache_dir = $self->_cache_dir;
+    my $contig_index_file = "$cache_dir/$contig_name.ci";
+    if(-e $contig_index_file)
     {
-        #$self->_connect;        
-        while(! defined $self->sth_rem->execute($contig_name))
-        {
-            print $self->sth_rem->errstr."\n";      
-            $self->_sleep;
-        }
-        while(! defined $self->sth_set->execute("has_changed",0,0,1))
-        {
-            print $self->sth_set->errstr."\n";      
-            $self->_sleep;
-        }
-        #$self->_disconnect;        
-        return;     
+        unlink $contig_index_file;    
     }
-    delete $self->{contigs}{$contig_name} if (exists $self->{contigs}{$contig_name});   
+    my $contig_data_file = "$cache_dir/$contig_name.ace";
+    if(-e $contig_data_file)
+    {
+        unlink $contig_data_file;
+    }
 }
 
 sub get_assembly_tags
 {
     my ($self) = @_;
-    my $input = $self->_input;
     my $reader = $self->_reader;
-    if($self->using_db)
-    {
-        #$self->_connect;        
-        while(! defined $self->sth_get->execute("assembly_tags"))
-        {
-            print $self->sth_get->errstr."\n";      
-            $self->_sleep;
-        }
-		my $temp = $self->sth_get->fetchrow_arrayref->[0];
-		$self->{assembly_tags} = Storable::thaw($temp);
-        $self->sth_get->finish;
-        #$self->_disconnect;
-    }
+#TODO:  parse tags file
+    my $cache_directory = $self->_cache_dir;
+    my $assembly_tags_file = $cache_directory."/assembly_tags";
+
+    $reader->{input} = IO::File->new("$assembly_tags_file");
     
-    if(!($self->{assembly_tags}{tags_loaded}))
-    {
-        my @assembly_tags;
-        foreach my $assembly_tag_index (@{$self->{assembly_tags}{tag_indexes}})
-        {       
-            $input->seek($assembly_tag_index->{offset},0);
-            my $assembly_tag = $self->_build_assembly_tag($reader->next_object);
-            push @assembly_tags, $assembly_tag;
-        }
-        $self->{assembly_tags}{tags} = \@assembly_tags;
-        $self->{assembly_tags}{tags_loaded} = 1; 
+    my @assembly_tags;
+    while(my $obj=$reader->next_object)
+    {       
+        my $assembly_tag = $self->_build_assembly_tag($obj);
+        push @assembly_tags, $assembly_tag;
     }
-    return [ map {$self->_copy_assembly_tag($_)} @{$self->{assembly_tags}{tags}} ]; 
+    $reader->{input} = undef;
+    return \@assembly_tags; 
     
 }
 
 sub set_assembly_tags
 {
-    my ($self, $assembly_tags) = @_;    
-    $self->{assembly_tags}{tags} = [ map {$self->_copy_assembly_tag($_)} @{$assembly_tags}];
-    $self->{assembly_tags}{tags_loaded} = 1;
-    if($self->using_db)
+    my ($self, $assembly_tags) = @_;
+    
+    my $cache_directory = $self->_cache_dir;
+    my $assembly_tags_file = $cache_directory."/assembly_tags";
+    my $writer = Genome::Assembly::Pcap::Ace::Writer->new(IO::File->new(">$assembly_tags_file"));
+    foreach my $obj (@{$assembly_tags})
     {
-        #$self->_connect;        
-        while(! defined $self->sth_set->execute("assembly_tags", Storable::freeze($self->{assembly_tags}), "Contig", 0))
-        {
-            print $self->sth_set->errstr."\n";  
-            $self->_sleep;
-        }
-        while(! defined $self->sth_set->execute("has_changed",0,0,1))
-        {
-            print $self->sth_set->errstr."\n";  
-            $self->_sleep;
-        }
-        $self->sth_set->finish;
-        #$self->_disconnect;
-    }
-    else
-    {
-        $self->{assembly_tags}{tags} = [ map {$self->_copy_assembly_tag($_)} @{$assembly_tags}];
-        $self->{assembly_tags}{tags_loaded} = 1;    
+        $writer->write_obj($obj);
     }
 }
 
+#TODO: need to create different version of write_file
+#1.  writes cache to ace file(s)
+#2.  writes contig to ace file
+#3.  writes
+
+sub write_directory
+{
+    my ($self, %params) = @_;
+    my $output_directory = $params{output_directory};
+    Carp::confess("output_directory not defined\n") and return unless defined $output_directory;
+    `mkdir -p $output_directory` unless -d $output_directory;
+    my $prefix = $params{prefix}||'';
+    my $number = $params{number}||1;
+    my $contig_names =$self->get_contig_names;
+    if($number > 1)
+    {
+        for(my $i=0;$i<$number;$i++)
+        {
+        #TODO: come up with better names for the confusing index/number params below
+            $self->write_file(output_file => "$output_directory/$prefix$i.ace", index => $i, number => $number);
+        }
+    }
+    else
+    {
+        $self->write_file(output_file => "$output_directory/$prefix".'0.ace');
+    }    
+}
 sub write_file
 {
     my ($self, %params) = @_;
@@ -1205,51 +583,51 @@ sub write_file
     {
         die "Could not find find file to write to.\n";
     }
+    my $index = $params{index};
+    my $number = $params{number};
     $self->_writer (Genome::Assembly::Pcap::Ace::Writer->new($self->_output));
     #first, come up with a list of read and contig counts
     my $read_count=0;
     my $contig_count=0;
     my @contig_names;
-    my @contigs;
-    if($self->using_db)
-    {
-        #$self->_connect;
-        my $sth = $self->dbh->prepare(qq{ select name, count from items where type = "Contig" and asid = $self->{asid}}); 
-        while(! defined $sth->execute())
-        {
-            print $sth->errstr."\n";        
-            $self->_sleep;
-        }
-
-        while (my $temp = $sth->fetchrow_arrayref)
-        {
-            push @contig_names, $temp->[0];
-            $read_count += $temp->[1]; 
-        }       
-        
-        @contig_names = sort { _cmptemp($a, $b) } @contig_names; #sort { $a =~ /Contig(\d+)/ <=> $b =~ /Contig(\d+)/ }@contig_names;
-        
-        $contig_count = @contig_names;
-        #$self->_disconnect;
-    }
-    else
-    {
-        @contigs = sort { $a->{name} =~ /Contig(\d+)/ <=> $b->{name} =~ /Contig(\d+)/ } values %{$self->{contigs}};
-        $contig_count = @contigs;
     
-        foreach my $contig (@contigs)
+    my @contig_index_files;
+    my $cache_dir = $self->_cache_dir;
+    @contig_index_files = `ls $cache_dir/*.ci`;
+    chomp @contig_index_files;
+    @contig_index_files = map { /(.*)\.ci/ } @contig_index_files;#chop off ci extension for sorting       
+    @contig_index_files = sort { _cmptemp($a, $b) } @contig_index_files ;#sort by scaffold_num.contig_num
+    @contig_index_files = map { $_.'.ci' } @contig_index_files ;#re-add extension
+    
+    if(defined $index && defined $number)
+    {
+        my @temp_ci;
+        foreach my $ci_file (@contig_index_files)
         {
-            if($contig->{offset} != -1)
-            {
-                $read_count += scalar keys %{$contig->{reads}}; 
-            }
-            else
-            {
-                $contig->{contig_object}->thaw($self,$self->_input_file, $self->_input);
-                $read_count += $contig->{contig_object}->read_count;                
-            }
+            my ($contig_num) = $ci_file =~ /.*Contig(\d+).*/;
+            #print "writing $contig_num\n";
+            next unless (($contig_num%$number) == $index);
+            push @temp_ci,$ci_file;
         }
-    }   
+        @contig_index_files = @temp_ci;
+    }
+    $contig_count = @contig_index_files;
+#TODO: continue to work on ace file writing code
+    foreach my $ci_file (@contig_index_files)
+    {
+        my $contig = retrieve $ci_file;
+        
+        if($contig->{offset} != -1)
+        {
+            $read_count += scalar keys %{$contig->{reads}}; 
+        }
+        else
+        {
+            $contig->{contig_object}->thaw;
+            $read_count += $contig->{contig_object}->read_count;
+        }
+    }
+      
     my $ace_assembly = { type => 'assembly', 
                           contig_count => $contig_count,
                           read_count => $read_count };
@@ -1257,45 +635,20 @@ sub write_file
     #initialize contig tags array
     $self->{contig_tags} = [];
     #write out contigs
-    if($self->using_db)
+    #my $ci_files =     
+    foreach my $ci_file (@contig_index_files)
     {
-        #$self->_connect;
-        foreach my $contig_name (@contig_names)
+        my $contig_index = retrieve $ci_file;
+        if($contig_index->{offset} == -1)
         {
-            
-            while(! defined $self->sth_get->execute($contig_name))
-            {
-                print $self->sth_get->errstr."\n";          
-                $self->_sleep;
-            }
-			my $temp = $self->sth_get->fetchrow_arrayref->[0];
-			my $contig_index = Storable::thaw($temp, );
-            if($contig_index->{offset} == -1)
-            {
-                $self->_write_contig_from_object($contig_index->{contig_object});           
-            }
-            else
-            {
-                $self->_write_contig_from_file($contig_index);
-            }
+            $self->_write_contig_from_object($contig_index->{contig_object});           
         }
-        $self->sth_get->finish;
-        
-    }
-    else
-    {
-        foreach my $contig_index (@contigs)
+        else
         {
-            if($contig_index->{offset} == -1)
-            {
-                $self->_write_contig_from_object($contig_index->{contig_object});           
-            }
-            else
-            {
-                $self->_write_contig_from_file($contig_index);
-            }   
-        }
+            $self->_write_contig_from_file($contig_index);
+        }   
     }
+    
     #write out contig tags
     if(defined $self->{contig_tags})
     {
@@ -1306,56 +659,16 @@ sub write_file
         $self->{contig_tags} = undef;   
     }
     
-    if($self->using_db)
-    {        
-        while(! defined $self->sth_get->execute("assembly_tags"))
-        {
-            print $self->sth_get->errstr."\n";      
-            $self->_sleep;
-        }
-        if(my $temp = $self->sth_get->fetchrow_arrayref)
-        {
-			$self->{assembly_tags}{tags} = Storable::thaw($temp->[0], );
-            $self->{assembly_tags}{tags_loaded} = 1;
-			while(! defined $self->sth_getcount( $self->dbh->prepare(qq{ select count from items where name = ? and asid = $self->{asid}})))
-    		{
-        		print $self->dbh->errstr."\n";
-        		$self->_sleep2;
-    		}
-			$self->sth_getcount->execute("assembly_tags");
-			if(!$self->sth_getcount->fetchrow_arrayref->[0])
-			{
-				$self->{assembly_tags}{tags} = [];
-			}
-			$self->sth_getcount->finish;
-        }
-        #else
-        #{
-        #   $self->{assembly_tags} = {assembly_tags => 0, tags => []}
-        #}
-        $self->sth_get->finish;
-        #$self->_disconnect;     
-        
-    }
+
     
     #write out assembly tags
-    if($self->{assembly_tags}{tags_loaded})
-    {
-        foreach my $assembly_tag (@{$self->{assembly_tags}{tags}})
-        {
-            $self->_write_assembly_tag($assembly_tag);
-        }   
-    }
-    else
-    {
-        foreach my $assembly_tag_index (@{$self->{assembly_tags}{tag_indexes}})
-        {
-            $self->_input->seek($assembly_tag_index->{offset},0);
-            my $assembly_tag = $self->_reader->next_object;
-            $self->_write_assembly_tag($assembly_tag);  
-        }
-    }
+    #TODO: copy assembly tags from cache to output file
     #$self->_output->close; 
+    my $assembly_tags = $self->get_assembly_tags;
+    foreach my $assembly_tag (@{$assembly_tags})
+    {
+        $self->_writer->write_object($assembly_tag);
+    }
     $self->_output->autoflush(1);
 }
 
@@ -1367,17 +680,11 @@ sub _write_contig_from_object
 	#my %reads = %{$contig->reads}; #contins read_positions and read_tags
 	my @contig_tags = @{$contig->{tags}||[]} ;
     my $contig_index = $contig->{callbacks}{index};
-    my $input = $self->_input;
-	my $input_file = $self->_input_file;
 	
     my $reader = $self->_reader;
-	$contig->thaw($self, $self->_input_file, $self->_input);
-    $DB::single = 1;
-	if(!defined $input||(exists $contig->{callbacks}{file_name}&&($input_file ne $contig->{callbacks}{file_name})))
-	{
-		$input = $contig->{callbacks}{fh};
-	}
-	$reader->{input} = $input;
+	$contig->thaw();
+    my $input = $contig->{callbacks}{fh};
+    $reader->{input} = $input;
 	#first write contig	hash
     if($contig->loaded||$contig->check_data_changed("contig")||$contig->check_data_changed("padded_base_string"))
     {
@@ -1409,6 +716,7 @@ sub _write_contig_from_object
         print $output $consensus;
         
     }
+    #write contig base qualities
 	if($contig->loaded||$contig->check_data_changed("padded_base_quality"))
     {
         print $output "\n\nBQ";
@@ -1431,6 +739,7 @@ sub _write_contig_from_object
         $input->read($string, $contig_index->{base_qualities}{length});
         print $output $string;      
     }
+    #write out the contig's read positions
 	my @reads;
     if($contig->loaded||$contig->check_data_loaded("children"))
     {
@@ -1472,18 +781,12 @@ sub _write_contig_from_object
     }
     else
     {
-        #my %reads = %{$contig_index->{reads}};
-        #foreach my $read (values %{reads})
-        #{            
-        #        $input->seek($contig_index->{reads}{$read->name}{read_position}{offset},0);
-        #        my $line = <$input>;
-        #        print $output $line;                  
-        #}
         my $string;
         $input->seek($contig_index->{af_start},0);
         $input->read($string,$contig_index->{af_end}-$contig_index->{af_start});
         print $output $string;
     }
+    #write out the contigs base segments
     if($contig->loaded||$contig->check_data_changed("base_segments"))
     {	
 		my @base_segments = @{$contig->base_segments};
@@ -1500,6 +803,7 @@ sub _write_contig_from_object
         $input->read($string, $contig_index->{base_segments}{length});
         print $output $string;    
     }
+    #write out the contig's read lines
     if($contig->loaded||$contig->check_data_loaded("children"))
     {
         #if it's been loaded, we need to check each read to see if it's changed
@@ -1583,15 +887,7 @@ sub _write_contig_from_object
         my $string;
         $input->seek($contig_index->{rd_start},0);
         $input->read($string,$contig_index->{rd_end}-$contig_index->{rd_start});
-        print $output $string;
-        #my %reads = %{$contig_index->{reads}};
-        #foreach my $read (values %{reads})
-        #{            
-        #        my $string;
-        #        $input->seek($contig_index->{reads}{$read->{name}}{read}{offset},0);
-        #        $input->read($string, $contig_index->{reads}{$read->name}{read}{length});
-        #       print $output $string;                  
-        #}    
+        print $output $string;    
     }
     if($contig->loaded||$contig->check_data_changed("tags"))
     {
@@ -1627,19 +923,19 @@ sub _write_contig_from_object
             push @{$self->{contig_tags}},
             map
             {
-            {
-                type => 'contig_tag',
-                tag_type => $_->type,
-                date => $_->date,
-                program => $_->source,
-                contig_name => $_->parent,
-                scope => 'ACE',
-                start_pos => $_->start,
-                end_pos => $_->stop,
-                data => $_->text,
-                no_trans => $_->no_trans,
-            }
-                }       
+                {
+                    type => 'contig_tag',
+                    tag_type => $_->type,
+                    date => $_->date,
+                    program => $_->source,
+                    contig_name => $_->parent,
+                    scope => 'ACE',
+                    start_pos => $_->start,
+                    end_pos => $_->stop,
+                    data => $_->text,
+                    no_trans => $_->no_trans,
+                }
+            }       
             Genome::Assembly::Pcap::TagParser->new()->parse($input);
         }    
     }
@@ -1648,17 +944,13 @@ sub _write_contig_from_object
 sub _write_contig_from_file
 {
 	my ($self, $contig_index) = @_;
-	my $input = $self->_input;
+	
     my $output = $self->_output;
 	my $writer = $self->_writer;
-	my $reader = $self->_reader;
 	my @contig_tags_index = @{$contig_index->{contig_tags}};
-	
-	if(exists $contig_index->{fh})
-	{
-		$input = $contig_index->{fh};
-		$reader = $contig_index->{reader};
-	}   
+	my $input_file = $contig_index->{file_name};
+    my $input = Genome::Assembly::Pcap::FHManager->get_fh($input_file);
+
     #write out contig
     my $contig_string;
     $input->seek($contig_index->{offset},0);
@@ -1671,46 +963,21 @@ sub _write_contig_from_file
 	    push @{$self->{contig_tags}},
 	    map
 	    {
-		{
-		    type => 'contig_tag',
-		    tag_type => $_->type,
-		    date => $_->date,
-		    program => $_->source,
-		    contig_name => $_->parent,
-		    scope => 'ACE',
-		    start_pos => $_->start,
-		    end_pos => $_->stop,
-		    data => $_->text,
-		    no_trans => $_->no_trans,
-		}
-            }		
+		    {
+		        type => 'contig_tag',
+		        tag_type => $_->type,
+		        date => $_->date,
+		        program => $_->source,
+		        contig_name => $_->parent,
+		        scope => 'ACE',
+		        start_pos => $_->start,
+		        end_pos => $_->stop,
+		        data => $_->text,
+		        no_trans => $_->no_trans,
+		    }
+        }		
 	    Genome::Assembly::Pcap::TagParser->new()->parse($input);
 	}
-}
-
-sub _write_index_to_file
-{
-    my ($self, $file_name) = @_;
-    
-    my $hindex = {};
-    $hindex->{contigs} = $self->{contigs};
-    $hindex->{assembly_tags} = $self->{assembly_tags};
-    
-    store $hindex, $file_name;
-    return;   
-    
-}
-
-sub _load_index_from_file
-{
-    my ($self, $file_name) = @_;
-    
-    my $hindex = retrieve $file_name;
-    
-    $self->{contigs} = $hindex->{contigs};
-    $self->{assembly_tags} = $hindex->{assembly_tags};
-    return;    
-    
 }
 
 sub _build_assembly_tag {
@@ -1803,92 +1070,6 @@ sub _write_contig_tag
     return;
 }
 
-sub get_read_order
-{
-	my ($self, $contig) = @_;
-	my @contigs = @{ $self->{contigs} };
-	my $contig_index;
-	my $contig_found = 0;
-	
-    foreach my $temp_contig_index (@contigs)
-	{
-		if ($temp_contig_index->{name} eq $contig->name)
-		{
-            $contig_index = $temp_contig_index;
-			$contig_found = 1;
-			last;	
-		}
-	}	
-	
-	return [map {$_->{name}} @{$contig_index->{reads}}];
-}   
-
-sub has_changed
-{
-    my ($self) = @_;
-    #$self->_connect;    
-    while(! defined $self->sth_getcount->execute("has_changed"))
-    {
-        print $self->sth_getcount->errstr."\n"; 
-        $self->_sleep;
-    }
-    my $temp = $self->sth_getcount->fetchrow_arrayref;
-    $self->sth_getcount->finish;    
-    #$self->_disconnect;
-    return $temp->[0] if defined $temp;
-    return 0;
-}
-sub _disconnect
-{
-    my ($self) = @_;
-    #while(! defined $self->dbh->begin_work)
-    #{
-    #   print $self->dbh->errstr."\n";
-    #   $self->_sleep2;
-    #}
-    #while(! defined $self->sth_get->execute(""))
-    #{
-    #   print $self->sth_get->errstr."\n";
-    #   $self->_sleep2;
-    #}
-    #while(! defined $self->sth_getcount->execute(""))
-    #{
-    #   print $self->sth_getcount->errstr."\n";     
-    #   $self->_sleep2;
-    #}
-    #while(! defined $self->sth_set->execute("","",""))
-    #{
-    #   print $self->sth_set->errstr."\n";      
-    #   $self->_sleep2;
-    #}
-    #while(! defined $self->sth_rem->execute(""))
-    #{
-    #   print $self->sth_rem->errstr."\n";      
-    #   $self->_sleep2;
-    #}
-    #while(! defined $self->dbh->commit)
-    #{
-    #   print $self->dbh->errstr."\n";
-    #   $self->_sleep2;
-    #}      
-    #$self->sth_get->finish; 
-    #$self->sth_getcount->finish; 
-    #$self->sth_set->finish; 
-    #$self->sth_rem->finish;
-    $self->sth_create (undef);
-
-
-
-    $self->sth_get( undef );
-    $self->sth_getcount( undef );
-    $self->sth_set( undef );
-    $self->sth_rem( undef );
-    $self->dbh->disconnect;
-    $self->dbh(undef);
-
-
-}
-
 sub get_num
 {
     my ($name) = @_;
@@ -1933,14 +1114,7 @@ sub _cmptemp
 
 
 
-sub DESTROY 
-{
-    my ($self) = @_;
-    if($self->using_db)
-    {
-        $self->_disconnect;
-    }
-}
+
 
 1;
 
@@ -1974,10 +1148,6 @@ input_file - required, the name of the input ace file.
 
 output_file - option, the name of output ace file.  You can give ace_object the file handle when you create it, or later when you write it.  If you are reading, then you don't need to specify the file handle.
 
-using_db - optional, lets ace ojbect know whether it should store cached data on the file system or keep it in memory for fast access.
-
-load_index_from_file - optional, tells Ace to load the index from the file, and the user is required to specify the index file name.
-
 =head1  get_contig_names 
 
 my @contig_names = $ace_object->get_contig_names();
@@ -1988,7 +1158,7 @@ returns a list of contig names in the ace file.
 
 my $contig = $ace_object->get_contig("Contig0.1");
     
-returns a Bio::ContigUtilites::Contig object to the user.
+returns a Contig object to the user.
 
 =head1 add_contig 
 
@@ -2028,5 +1198,5 @@ This function will write the ace object in it's current state to the output ace 
 
 =cut
 
-#$HeadURL$
-#$Id$
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Assembly/Pcap/Ace.pm $
+#$Id: Ace.pm 58706 2010-05-13 17:55:53Z jschindl $
