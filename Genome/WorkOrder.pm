@@ -6,7 +6,14 @@ use warnings;
 use Genome;
 
 class Genome::WorkOrder {
-    table_name => '(SELECT * FROM setup_work_order@oltp) work_order',
+    table_name => '(SELECT swo.*, 
+                           s.*, 
+                           s.setup_name as name,
+                           s.setup_description as description
+                      FROM setup_work_order@oltp swo
+                      JOIN setup@oltp s
+                        ON s.setup_id = swo.setup_wo_id
+                    ) work_order',
     id_by => [
         id => {
             is => 'Integer',
@@ -15,6 +22,14 @@ class Genome::WorkOrder {
         },
     ],    
     has => [
+        name => {
+             is => 'Text',
+            len => 32,
+        },
+        description => {
+             is => 'Text',
+            len => 255,
+        },
         acct_id => {
             is => 'Integer',
             len => 10,
@@ -41,6 +56,16 @@ class Genome::WorkOrder {
         project => { 
             is => 'Genome::Project', 
          id_by => 'project_id' 
+        },
+        project_name => {
+                via => 'project',
+                to => 'name',
+            is_many => 0
+        },
+        collaborator => {
+                via => 'project',
+                to => 'external_contact_name',
+            is_many => 0
         },
         file_storage_id => {
             is => 'Integer',
@@ -79,6 +104,7 @@ class Genome::WorkOrder {
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+#        build_statuses                   => { via => 'builds', to => 'master_event_status', is_many => 1 },
 
 sub items {
     return Genome::WorkOrderItem->get(setup_wo_id => $_[0]->id);
