@@ -49,12 +49,32 @@ sub get_coverage_summary_node {
     my $xml_doc = $self->_xml_doc;
     my @models = $self->subject->models;
     my $cs_node = $xml_doc->createElement('coverage-summary');
+    my @min_depths;
     for my $model (@models) {
-        my $model_node = $cs_node->addChild( $xml_doc->createElement('model') );
-        $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
-        $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
         my $build = $model->last_succeeded_build;
         if ($build) {
+            unless (@min_depths) {
+                @min_depths = sort{ $a <=> $b } @{$build->minimum_depths_array_ref};
+                for my $min_depth (@min_depths) {
+                    my $header_node = $cs_node->addChild( $xml_doc->createElement('minimum_depth_header') );
+                    $header_node->addChild( $xml_doc->createAttribute('value',$min_depth) );
+                }
+            } else {
+                my @other_min_depths = sort{ $a <=> $b } @{$build->minimum_depths_array_ref};
+                unless (scalar(@min_depths) == scalar(@other_min_depths)) {
+                    die('Model '. $model->name .' has '. scalar(@other_min_depths) .' minimum_depth filters expecting '. scalar(@min_depths) .' minimum_depth filters');
+                }
+                for (my $i = 0; $i < scalar(@min_depths); $i++) {
+                    my $expected_min_depth = $min_depths[$i];
+                    my $other_min_depth = $other_min_depths[$i];
+                    unless ($expected_min_depth == $other_min_depth) {
+                        die('Model '. $model->name .' has '. $other_min_depth .' minimum_depth filter expecting '. $expected_min_depth .' minimum_depth filter');
+                    }
+                }
+            }
+            my $model_node = $cs_node->addChild( $xml_doc->createElement('model') );
+            $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
+            $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
             my $coverage_stats_summary_hash_ref = $build->coverage_stats_summary_hash_ref;
             for my $min_depth (keys %{$coverage_stats_summary_hash_ref->{0}}) {
                 my $min_depth_node = $model_node->addChild( $xml_doc->createElement('minimum_depth') );
