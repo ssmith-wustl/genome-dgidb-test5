@@ -134,5 +134,15 @@ sub models {
     return @m;
 }
 
+sub canonical_model {
+
+    # TODO: maybe this should use model is_default?
+
+    my ($self) = @_;
+
+    my @models = sort { $a->id <=> $b->id } $self->models();
+    return $models[0];
+}
+
 1;
 
