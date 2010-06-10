@@ -117,12 +117,6 @@ my %properties = (
         doc => '------',
         is_optional => 1,
     },
-    library_id => {
-        is => 'Number',
-        doc => '------',
-        is_optional => 1,
-    },
-
 );
     
 
@@ -134,6 +128,8 @@ class Genome::InstrumentData::Command::Import::Fastq {
 
 sub execute {
     my $self = shift;
+
+$DB::single = 1;
 
     #TODO put logic to set sample_name and library_name
     my $library = Genome::Library->get(name => $self->library_name);
@@ -148,7 +144,6 @@ sub execute {
         die $self->error_message;
     }
     my $sample_name  = $genome_sample->name; #$self->sample_name;
-    $self->library_id($library->id);
     if ($genome_sample) {
         $self->status_message("Sample with full_name: $sample_name is found in database");
     }
@@ -162,7 +157,6 @@ sub execute {
         $self->error_message("Sample $sample_name is not found in database");
         die $self->error_message;
     }
-    
     my $sample_id = $genome_sample->id;
     $self->status_message("genome sample $sample_name has id: $sample_id");
     $self->sample_name($genome_sample->name);
@@ -171,7 +165,9 @@ sub execute {
     my %params = ();
     for my $property_name (keys %properties) {
         unless ($properties{$property_name}->{is_optional}) {
+            # required
             unless ($self->$property_name) {
+                # null
                 $self->error_message ("Required property: $property_name is not given");
                 return;
             }
@@ -186,6 +182,8 @@ sub execute {
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "fastq";
     $params{sample_id} = $sample_id;
+    $params{library_id} = $library->id;
+    $params{library_name} = $library->name;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
@@ -193,6 +191,11 @@ sub execute {
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
        return;
+    }
+
+    unless ($import_instrument_data->library_id) {
+        $DB::single = 1;
+        Carp::confess("No library on new instrument data?"); 
     }
 
     my $instrument_data_id = $import_instrument_data->id;
