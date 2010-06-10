@@ -15,8 +15,8 @@ class Genome::WorkOrder::View::SearchResult::Xml {
                 'barcode',
                 'pipeline',
                 'project_name',
-                'setup_name',
-                'setup_description',
+                'name',
+                'description',
                 {
                     name => 'project',
                     aspects => ['id', 'name'],
