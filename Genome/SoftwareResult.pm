@@ -235,9 +235,26 @@ sub delete {
         }
     }
 
+    #creating an anonymous sub to delete allocations when commit happens
+    my $upon_delete_callback = sub { 
+        $self->status_message("Now Deleting Allocation with owner_id = ".$self->id."\n");
+        print $self->status_message;
+        my $allocation = Genome::Disk::Allocation->get(owner_id=>$self->id, owner_class_name=>ref($self));
+        if ($allocation) {
+            my $path = $allocation->absolute_path;
+            unless (rmtree($path)) {
+                $self->error_message("could not rmtree $path");
+                return;
+           }
+           $allocation->deallocate; 
+        }
+    };
+
+    #hook our anonymous sub into the commit callback
+    $self->create_subscription(method=>'commit', callback=>$upon_delete_callback);
+    
     return $self->SUPER::delete(@_); 
 }
-
 
 sub lock {
     my $self = shift;
