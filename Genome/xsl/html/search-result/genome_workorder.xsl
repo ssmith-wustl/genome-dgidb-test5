@@ -17,16 +17,40 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <div class="description">
         <h2 class="name">
           <span class="label">
-            WorkOrder:
+          WorkOrder:
           </span>
           <span class="title"> 
-            <xsl:value-of select="aspect[@name='setup_name']/value"/>
+
+            <xsl:call-template name="object_link">
+                <xsl:with-param name="linktext">
+                    <xsl:value-of select="aspect[@name='name']/value"/>
+                </xsl:with-param>
+            </xsl:call-template>
+
           </span>
         </h2>
         <p class="info">
-            <xsl:value-of select="aspect[@name='barcode']/value"/> - 
-            <xsl:value-of select="aspect[@name='project_name']/value"/>
-            <br/><xsl:value-of select="aspect[@name='setup_description']/value"/>
+
+            <a>
+                <xsl:attribute name="href">
+                    https://gscweb.gsc.wustl.edu/wiki/<xsl:value-of select="aspect[@name='name']"/>
+                </xsl:attribute>
+                wiki page
+            </a>
+
+            | 
+
+            <a>
+                <xsl:attribute name="href">
+                    http://linus222:8090/view/genome/search/query/status.html?query=<xsl:value-of select="aspect[@name='barcode']/value"/>
+                </xsl:attribute>
+                <xsl:value-of select="aspect[@name='barcode']/value"/> 
+            </a>
+
+            | 
+
+            <xsl:value-of select="aspect[@name='project_name']/value"/><br/>
+            <xsl:value-of select="aspect[@name='description']/value"/>
         </p>
       </div>
       </td></tr></tbody></table>
