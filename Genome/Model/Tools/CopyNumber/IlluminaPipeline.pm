@@ -19,13 +19,18 @@ class Genome::Model::Tools::CopyNumber::IlluminaPipeline {
     },
     annotation_file => {
         is => 'String',
-        is_optional => 0,
+        is_optional => 1,
         doc => 'Illumina annotation.txt file',
     },
     copy_number_file => {
         is => 'String',
-        is_optional => 0,
+        is_optional => 1,
         doc => 'Illumina copy number output file, typically "...pairedcopynumber.txt".',
+    },
+    map_file => {
+        is => 'String',
+        is_optional => 1,
+        doc => 'Named map.csv typically. format is [CHR  POS].',
     },
     ]
 };
@@ -40,21 +45,20 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    my $output_dir = $self->output_dir;
-    my $anno_file = $self->annotation_file;
-    my $cn_file = $self->copy_number_file;
-    unless ($cn_file) {
-        $self->error_message("Could not resolve the copy number file from the inputs.");
-        return;
-    }
     my $rlibrary = "cn_lib.R";
-
-    my $mapfile = $output_dir . "/map.csv";
+    my $output_dir = $self->output_dir;
+    my $mapfile = $self->map_file;
     if (-s $mapfile) {
-        $self->status_message("A map.csv file was found in the output dir. Skipping the creation of map.csv and per-sample cn files.\n");
+        $self->status_message("A map.csv file was input. Skipping the creation of map.csv and per-sample cn files.\n");
     }
     else {
         ## Step 1) Create map.csv file and per-sample copy number file for many-sample datasets
+        my $anno_file = $self->annotation_file;
+        my $cn_file = $self->copy_number_file;
+        unless ($cn_file) {
+            $self->error_message("Could not resolve the copy number file from the inputs.");
+            return;
+        }
         my $create_illumina_cn_files_command = Genome::Model::Tools::CopyNumber::CreateIlluminaCnFiles->create(
             output_dir => $output_dir,
             annotation_file => $anno_file,
