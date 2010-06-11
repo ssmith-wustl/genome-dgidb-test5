@@ -20,7 +20,11 @@ class Genome::WorkOrder::View::Solr::Xml {
                     position => 'content',
                 },
                 {
-                    name => 'setup_name',
+                    name => 'name',
+                    position => 'content',
+                },
+                {
+                    name => 'pipeline',
                     position => 'content',
                 },
                 {
