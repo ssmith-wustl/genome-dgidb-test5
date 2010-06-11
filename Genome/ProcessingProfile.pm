@@ -66,11 +66,35 @@ sub _resolve_workflow_for_build {
         # Instead the runner will detect it and just execute the Perl code.
         #
         # Need to wrap _execution_build in a command class to make it work.
-        my $workflow = Workflow::Operation->create(
+
+        my $workflow = Workflow::Model->create(
             name => $build->id . ' all stages',
+            input_properties => [ 'build_id' ],
+            output_properties => [ 'result' ]
+        );
+        
+        my $operation = $workflow->add_operation(
+            name => '_execute_build',
             operation_type => Workflow::OperationType::Command->get('Genome::Model::Event::Build::ProcessingProfileMethodWrapper')
         );
         
+        $workflow->add_link(
+            left_operation => $workflow->get_input_connector,
+            left_property => 'build_id',
+            right_operation => $operation,
+            right_property => 'build_id'
+        );
+
+        $workflow->add_link(
+            left_operation => $operation,
+            left_property => 'result',
+            right_operation => $workflow->get_output_connector,
+            right_property => 'result'
+        );
+
+        my @e = $workflow->validate;
+        die @e unless $workflow->is_valid;
+
         return $workflow;
     }
 

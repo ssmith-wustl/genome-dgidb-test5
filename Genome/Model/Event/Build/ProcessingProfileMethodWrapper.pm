@@ -29,7 +29,10 @@ sub execute {
 
     my $pp = $build->processing_profile;
 
-    return $pp->_execute_build($build);
+    my $rv = $pp->_execute_build($build);
+    die '_execute_build returned undef' if !defined $rv;
+
+    return $rv;
 }
 
 1;
