@@ -132,7 +132,9 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         
       </td>
       <td>
-        <xsl:value-of select="@id"/>
+        <xsl:call-template name="object_link">
+          <xsl:with-param name="linktext"><xsl:value-of select="@id"/></xsl:with-param>
+        </xsl:call-template>
       </td>
       <td><xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="aspect[@name='status']/value"/></xsl:attribute>
         <xsl:value-of select="aspect[@name='status']/value"/>
