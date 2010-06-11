@@ -7,27 +7,10 @@ use Genome;
 use File::Basename;
 use Sys::Hostname;
 
+our $UNALIGNED_TEMPDIR = '/gscmnt/sata844/info/hmp-mgs-test-temp';
+
 class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
     is => 'Genome::ProcessingProfile',
-    has => [
-        _contamination_screen_pp => {
-            is => 'Genome::ProcessingProfile::ReferenceAlignment',
-            id_by => 'contamination_screen_pp_id',
-            doc => 'processing profile to use for contamination screen',
-        },
-        _metagenomic_alignment_pp => {
-            is => 'Genome::ProcessingProfile::ReferenceAlignment',
-            id_by => 'metagenomic_alignment_pp_id',
-            doc => 'processing profile to use for metagenomic alignment',
-        },
-        sequencing_platform => {
-            doc => 'The sequencing platform from whence the model data was generated',
-            calculate_from => ['_contamination_screen_pp'], 
-            calculate => q|
-                        $_contamination_screen_pp->sequencing_platform;
-                        |,
-        },
-    ],
     has_param => [
         contamination_screen_pp_id => {
             is => 'Integer',
@@ -53,7 +36,27 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             doc => "Reads with this amount of n's will be removed from unaligned reads from contamination screen step before before optional dusting",
         },
     ],
+    has => [
+        _contamination_screen_pp => {
+            is => 'Genome::ProcessingProfile::ReferenceAlignment',
+            id_by => 'contamination_screen_pp_id',
+            doc => 'processing profile to use for contamination screen',
+        },
+        _metagenomic_alignment_pp => {
+            is => 'Genome::ProcessingProfile::ReferenceAlignment',
+            id_by => 'metagenomic_alignment_pp_id',
+            doc => 'processing profile to use for metagenomic alignment',
+        },
+        sequencing_platform => {
+            doc => 'The sequencing platform from whence the model data was generated',
+            calculate_from => ['_contamination_screen_pp'], 
+            calculate => q|
+                        $_contamination_screen_pp->sequencing_platform;                        |,
+        },
+    ],
 };
+
+my $log_model_name;
 
 sub status_message{
     my ($self, $message, @args) = @_;
@@ -74,7 +77,7 @@ sub log_message{
     unless ($fh){
         my $pid = $$;
         my $hostname = hostname();
-        my $fn = "/gscuser/adukes/MCS_log/${pid}_${hostname}";
+        my $fn = "/gscuser/adukes/MCS_log/${log_model_name}_${pid}_${hostname}";
         my $log_fh = IO::File->new("> $fn");
         unless ($log_fh){
             die "couldn't create new logfile for $fn";
@@ -89,42 +92,39 @@ sub log_message{
 sub _execute_build{
     my ($self, $build) = @_;
 
-    $DB::single = 1;
-    my $model = $build->model;
+$DB::single = 1;
 
-    if (!$model){
-        $self->error_message("Couldn't find model for build id");
-        return;
-    }
+    my $model = $build->model;
+    $log_model_name = $model->name;
+
+    $self->status_message("Starting build for model $log_model_name");
 
     my $screen_model = $model->_contamination_screen_alignment_model;
-
-    unless ($screen_model){
+    unless ($screen_model) {
         $self->error_message("couldn't grab contamination screen underlying model!");
         return;
     }
-    #ASSIGN ANY NEW ID TO UNDERLYING MODELS
-    $self->status_message("Checking for new instrument data to add to contamination screen model");
 
+    #ASSIGN ANY NEW INSTRUMENT DATA TO THE CONTAMINATION SCREENING MODEL
+    $self->status_message("Checking for new instrument data to add to contamination screen model");
     my @id = $model->inst_data;
     my %screen_id = map { $_->id => $_ }$screen_model->instrument_data;
-
-    #get a list of instrument data on the model that has not yet been assigned to
     my @to_add = grep {! $screen_id{$_->id}} @id;
+    if (@to_add) {
+        $self->add_instrument_data_to_model($screen_model, \@to_add);
+    }
+    else {
+        $self->status_message("No new instrument data to add to contamination screen model");
+    }
 
-    $self->add_instrument_data_to_model($screen_model, \@to_add);
-
-#BUILD HUMAN CONTAMINATION SCREEN MODEL
+    #BUILD HUMAN CONTAMINATION SCREEN MODEL
     $self->status_message("Building contamination screen model if necessary");
+    my $screen_build = $self->build_if_necessary_and_wait($screen_model,$build);
 
-    my $screen_build = $self->build_if_necessary_and_wait($screen_model);
-
-#IMPORT INSTRUMENT DATA
+    # TRANSFORM AND IMPORT INSTRUMENT DATA
     $self->status_message("Importing instrument data for any new unaligned reads");
-
     my @screened_assignments = $screen_model->instrument_data_assignments;
     my @to_add2;
-
     for my $assignment (@screened_assignments) {
         my @alignments = $assignment->results($screen_build);
         if (@alignments > 1) {
@@ -148,7 +148,7 @@ sub _execute_build{
             return;
         }
 
-        my $tmp_dir = "/tmp/unaligned_reads";
+        my $tmp_dir = "$UNALIGNED_TEMPDIR/unaligned_reads";
         unless ( -d $tmp_dir or mkdir $tmp_dir ) {
             die "Failed to create temp directory $tmp_dir : $!";
         }
@@ -159,7 +159,6 @@ sub _execute_build{
 
         # TODO: dust, n-remove and set the sub-dir based on the formula
         # and use a subdir name built from that formula
-
         my $subdir = 'n-remove_'.$self->n_removal_cutoff;
         unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
             die "Failed to create temp directory $subdir : $!";
@@ -194,6 +193,7 @@ sub _execute_build{
             bam_file => $bam,
             output_directory =>$tmp_dir,
         );
+        $self->status_message("Extracting unaligned reads: " . Data::Dumper::Dumper($extract_unaligned));
         my $rv = $extract_unaligned->execute;
         unless ($rv){
             $self->error_message("Couldn't extract unaligned reads from bam file $bam");
@@ -208,7 +208,7 @@ sub _execute_build{
         my $reverse_unaligned_data_path     = glob("$tmp_dir/*/$reverse_basename");
         my $fragment_unaligned_data_path    = glob("$tmp_dir/*/$fragment_basename");
 
-        my @missing = grep {! -e $_} ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path);
+        my @missing = grep {! -e $_} grep { defined($_) and length($_) } ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path);
         if (@missing){
             $self->error_message(join(", ", @missing)." unaligned files missing after bam extraction");
             return;
@@ -250,14 +250,23 @@ sub _execute_build{
         $DB::single = 1;
 
         my @properties_from_prior = qw/
-        run_name subset_name sequencing_platform 
-        library_id 
-        library_name
-        sample_name 
-        median_insert_size 
-        sd_above_insert_size
+            run_name 
+            subset_name 
+            sequencing_platform 
+            median_insert_size 
+            sd_above_insert_size
+            library_name
+            sample_name
         /;
-        my %properties_from_prior = map { $_ => $instrument_data->$_ } @properties_from_prior;
+
+        my @errors;
+        my %properties_from_prior;
+        for my $property_name (@properties_from_prior) {
+            my $value = $instrument_data->$property_name;
+            no warnings;
+            $self->status_message("Value for $property_name is $value");
+            $properties_from_prior{$property_name} = $value;
+        }
 
         for my $original_data_path (@expected_original_paths) {
             if ($original_data_path =~ /,/){
@@ -273,21 +282,42 @@ sub _execute_build{
                 push @to_add2, $previous;
                 next;
             }
-            my $result = Genome::InstrumentData::Command::Import::Fastq->execute(
+            my %params = (
                 %properties_from_prior,
                 source_data_files => $original_data_path,
             );
-            unless ($result) {
-                $self->error_message( "Error importing data from $original_data_path!");
-                return;
+            $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
+            
+            if (0) {
+
             }
-            my $instrument_iata = Genome::InstrumentData::Imported->get(
+            else {
+                my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
+                unless ($command) {
+                    $self->error_message( "Couldn't create command to import unaligned fastq instrument data!");
+                };
+                my $result = $command->execute();
+                unless ($result) {
+                    $self->error_message( "Error importing data from $original_data_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
+                    return;
+                }            
+                $self->status_message("committing newly created imported instrument data");
+                $DB::single = 1;
+                $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
+                UR::Context->commit();
+            }
+
+            my $instrument_data = Genome::InstrumentData::Imported->get(
                 original_data_path => $original_data_path
             );
             unless ($instrument_data) {
                 $self->error_message( "Failed to find new instrument data $original_data_path!");
                 return;
             }
+            if ($instrument_data->__changes__) {
+                die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
+            }
+            
             push @to_add2, $instrument_data;
         }        
     }
@@ -297,12 +327,16 @@ sub _execute_build{
     for my $metagenomic_model (@metagenomic_models){
         my %current_instrument_data = map { $_->id => $_ } $metagenomic_model->instrument_data;
         my @to_add_meta = grep {! $current_instrument_data{$_->id}} @to_add2;
-        $self->add_instrument_data_to_model($metagenomic_model, \@to_add_meta);
+        if (@to_add_meta){
+            $self->add_instrument_data_to_model($metagenomic_model, \@to_add_meta);
+        }else{
+            $self->status_message("No new imported instrument data to add to ".$metagenomic_model->name);
+        }
     } 
 
 #RUN METAGENOMIC REF-ALIGN-BUILD
     foreach my $metagenomic_model (@metagenomic_models){
-        $self->build_if_necessary_and_wait($metagenomic_model);
+        $self->build_if_necessary_and_wait($metagenomic_model,$build);
     }
 #MERGE ALIGNMENTS
 #REPORTING
@@ -327,17 +361,20 @@ sub add_instrument_data_to_model{
             return 0;
         }
     }
+    $self->status_message("Committing new instrument data assignment");
+    UR::Context->commit();
+    $self->status_message("instrument data added");
     return 1;
 }
 
 sub build_if_necessary_and_wait{
-    my ($self, $model) = @_;
+    my ($self, $model, $parent_build) = @_;
     unless ($model and $model->isa("Genome::Model::ReferenceAlignment")){
         $self->error_message("No ImportedReferenceSequence model passed to build_if_necessary_and_wait()");
         return;
     }
 
-    if ($self->need_to_build($model)){
+    if ($self->need_to_build($model)) {
 
         $self->status_message("Running build for model ".$model->name);
         my $build = $self->run_ref_align_build($model);
@@ -353,56 +390,89 @@ sub build_if_necessary_and_wait{
             return;
         }
         return $build;
-    }else{
+    }
+    else {
         $self->status_message("Skipping redundant build");
         my $build = $model->last_succeeded_build;
         return $build;
     }
 }
 
-sub run_ref_align_build{
+sub run_ref_align_build {
     my ($self, $model) = @_;
     unless ($model and $model->isa("Genome::Model::ReferenceAlignment")){
         $self->error_message("No ImportedReferenceSequence model passed to run_ref_align_build()");
         return;
     }
 
-    my $sub_build = Genome::Model::Build->create(
-        model_id => $model->id
-    );
-    unless ($sub_build){
-        $self->error_message("Couldn't create build for underlying ref-align model " . $model->name);
-        return;
+    my @builds1 = $model->builds;
+
+    my $cmd = "genome model build start -m " . $model->id;
+    Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
+
+    my $sub_build;
+    if (0) {
+        $self->status_message("  creating build");
+        my $sub_build = Genome::Model::Build->create(
+            model_id => $model->id
+        );
+        unless ($sub_build){
+            $self->error_message("Couldn't create build for underlying ref-align model " . $model->name);
+            return;
+        }
+    
+        $self->status_message("  starting build");
+        #TODO update these params to use pp values or wahtevers passes in off command line
+        my $rv = $sub_build->start(
+            job_dispatch => 'apipe',
+            server_dispatch=>'long'
+        );
+
+        if ($rv){
+            $self->status_message("Created and started build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
+        }else{
+            $self->error_message("Failed to start build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
+        }
+
+        $self->status_message("Committing after starting build");
+        UR::Context->commit();
     }
-
-    #TODO update these params to use pp values or wahtevers passes in off command line
-    my $rv = $sub_build->start(
-        job_dispatch => 'apipe',
-        server_dispatch=>'long'
-    );
-
-    UR::Context->commit();
-
-    if ($rv){
-        $self->status_message("Created and started build for underlying ref-align model " .  $model->name);
+    my @builds2 = UR::Context->current->query("Genome::Model::Build", Genome::Model::Build->define_boolexpr(model_id => $model->id), 1);
+    
+    if (@builds2 == @builds1) {
+        $self->error_message("Failed to start build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
     }
+    else {
+        $sub_build = $builds2[-1];
+        $self->status_message("Created and started build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
+    }
+    
+
     return $sub_build;
 }
 
 sub wait_for_build{
     my ($self, $build) = @_;
+    my $last_status = '';
+    my $time = 0;
+    my $inc = 30;
     while (1){
         UR::Context->current->reload($build->the_master_event);
         my $status = $build->status;
         if ($status and !($status eq 'Running' or $status eq 'Scheduled')){
             return 1;
         }
-        $self->status_message("Waiting for build, status: $status");
-        sleep 30;
+        
+        if ($last_status ne $status or !($time % 300)){
+            $self->status_message("Waiting for build(~$time sec) ".$build->id.", status: $status");
+        }
+        sleep $inc;
+        $time += 30;
+        $last_status = $status;
     }
 }
 
-sub need_to_build{
+sub need_to_build {
     my ($self, $model) = @_;
     my $build = $model->last_succeeded_build;
     return 1 unless $build;
@@ -414,6 +484,7 @@ sub need_to_build{
         return;
     }
 }
+
 
 sub process_unaligned_fastq {
     my $self = shift;
@@ -487,7 +558,12 @@ sub process_unaligned_fastq {
             my $sep  = $fastq_input_fh->getline;
             my $qual = $fastq_input_fh->getline;
 
-            $fasta_output_fh->print(">$header", $seq);
+            unless (substr($header,0,1) eq '@') {
+                die "Unexpected header in fastq! $header";
+            }
+            substr($header,0,1) = '>';
+
+            $fasta_output_fh->print($header, $seq);
             $sep_output_fh->print($sep);
             $qual_output_fh->print($qual);
         }
@@ -537,6 +613,9 @@ sub process_unaligned_fastq {
         {
             if ($line=~/^>.*/) #found a header
             {
+                # this only grabs the header on the first sequence
+                # other sequences in the file will have their header pre-caught below
+                # confusing :(
                 $header = $line;
             }
             else
@@ -561,6 +640,10 @@ sub process_unaligned_fastq {
             $sep = $sep_input_fh->getline;
             $qual = $qual_input_fh->getline;
 
+            unless (substr($header,0,1) eq '>') {
+                die "Unexpected fasta header: $header";
+            }
+            substr($header,0,1) = '@';
             $processed_fh->print("$header$seq\n$sep$qual");
 
             #reset

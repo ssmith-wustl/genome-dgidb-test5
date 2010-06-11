@@ -8,7 +8,6 @@ use Genome;
 class Genome::Model::MetagenomicCompositionShotgun {
     is => 'Genome::Model',
     has => [
-
         contamination_screen_pp => {
             via => 'processing_profile',
             to => '_contamination_screen_pp',
@@ -67,45 +66,48 @@ sub build_subclass_name {
     return 'metagenomic-composition-shotgun';
 }
 
+sub delete {
+    my $self = shift;
+    for my $sub_model ($self->_contamination_screen_alignment_model, $self->_metagenomic_alignment_models) {
+        next unless $sub_model;
+        $sub_model->delete;
+    }
+    return $self->SUPER::delete(@_);
+}
+
 sub create{
     my $class = shift;
     
     $class->status_message("Beginning creation of metagenomic-composition-shotgun model");
     
-    my @new_objects;
-   
-    my $self = $class->SUPER::create(@_); 
-    
+    my $self = $class->SUPER::create(@_);    
     
     #DETECT OR SET REFERENCE DEFAULTS
-    unless($self->contamination_screen_reference){
+    unless ($self->contamination_screen_reference) {
         my $contamination_screen_reference = Genome::Model->get(name => $default_contamination_screen_reference_name);
         unless ($contamination_screen_reference){
             $self->error_message("Couldn't grab imported-reference-sequence model $default_contamination_screen_reference_name to set default contamination_screen_reference");
-            $self->cleanup(@new_objects);
             return;
         }
         my $build = $contamination_screen_reference->last_complete_build;
         unless($build){
             $self->error_message("Couldn't grab latest complete build from $default_contamination_screen_reference_name the default contamination_screen_reference");
-            $self->cleanup(@new_objects);
             return;
         }
         $self->contamination_screen_reference($build);
         $self->status_message("Set contamination_reference build to $default_contamination_screen_reference_name model's latest build");
     }
     
-    unless($self->metagenomic_references){
-        my @metagenomic_references = map {Genome::Model->get(name => $_) } @default_metagenomic_reference_names;
+    my @metagenomic_references;
+    unless(@metagenomic_references = $self->metagenomic_references) {
+        @metagenomic_references = map { Genome::Model->get(name => $_) } @default_metagenomic_reference_names;
         unless ( (scalar @default_metagenomic_reference_names) == grep { $_->isa('Genome::Model::ImportedReferenceSequence') }@metagenomic_references ){
             $self->error_message("Couldn't grab imported-reference-sequence models (".join(",", @default_metagenomic_reference_names).") to set default metagenomic_screen_references");
-            $self->cleanup(@new_objects);
             return;
         }
         my @builds = map { $_->last_complete_build } @metagenomic_references;
         unless ( (scalar @default_metagenomic_reference_names) == grep { $_->isa('Genome::Model::Build::ImportedReferenceSequence') } @builds){
             $self->error_message("Couldn't grab imported-reference-sequence builds (".join(",", @default_metagenomic_reference_names).") to set default metagenomic_screen_references");
-            $self->cleanup(@new_objects);
             return;
         }
         for (@builds){
@@ -113,6 +115,28 @@ sub create{
         }
         $self->status_message("Set metagenomic reference builds to ".join(", ", @default_metagenomic_reference_names)." models latest builds");
     }
+
+    my $contamination_screen_model = $self->_create_underlying_contamination_screen_model();
+    unless ($contamination_screen_model) {
+        $self->error_message("Error creating contamination screening model!");
+        $self->delete;
+        return;
+    }
+
+    my @metagenomic_models = $self->_create_underlying_metagenomic_models();
+    unless (@metagenomic_models == @metagenomic_references) {
+        $self->error_message("Error creating metagenomic models!" . scalar(@metagenomic_models) . " " . scalar(@metagenomic_references));
+        $self->delete;
+        return;
+    }
+
+    $self->status_message("Metagenomic composition shotgun model ".$self->name." created successfully");
+    return $self;
+}
+
+
+sub _create_underlying_contamination_screen_model {
+    my $self = shift;
 
     #CREATE UNDERLYING REFERENCE ALIGNMENT MODELS
     my %contamination_screen_model_params = (
@@ -124,7 +148,6 @@ sub create{
 
     unless ($contamination_screen_model){
         $self->error_message("Couldn't create contamination screen model with params ".join(", ", map {$_ ."=>". $contamination_screen_model_params{$_}} keys %contamination_screen_model_params) );
-        $self->cleanup(@new_objects);
         return;
     }
     
@@ -132,14 +155,19 @@ sub create{
         $self->status_message("updated reference sequence build on contamination model ".$contamination_screen_model->name);
     }else{
         $self->error_message("failed to update reference sequence build on contamination model ".$contamination_screen_model->name);
-        $self->cleanup(@new_objects);
         return;
     }
 
-    push @new_objects, $contamination_screen_model;
     $self->add_from_model(from_model=> $contamination_screen_model, role=>'contamination_screen_alignment_model');
     $self->status_message("Created contamination screen alignment model ".$contamination_screen_model->name);
 
+    return $contamination_screen_model
+}
+
+sub _create_underlying_metagenomic_models {
+    my $self = shift;
+    
+    my @new_objects;
     my $metagenomic_counter = 0;
     for my $metagenomic_reference ($self->metagenomic_references){ 
         $metagenomic_counter++;
@@ -153,7 +181,9 @@ sub create{
      
         unless ($metagenomic_alignment_model){
             $self->error_message("Couldn't create metagenomic reference model with params ".join(", " , map {$_ ."=>". $metagenomic_alignment_model_params{$_}} keys %metagenomic_alignment_model_params) );
-            $self->cleanup(@new_objects);
+            for (@new_objects){
+                $_->delete;
+            }
             return;
         }
     
@@ -161,7 +191,9 @@ sub create{
             $self->status_message("updated reference sequence build on metagenomic alignment model ".$metagenomic_alignment_model->name);
         }else{
             $self->error_message("failed to update reference sequence build on metagenomic alignment model ".$metagenomic_alignment_model->name);
-            $self->cleanup(@new_objects);
+            for (@new_objects){
+                $_->delete;
+            }
             return;
         }
 
@@ -169,16 +201,8 @@ sub create{
         $self->add_from_model(from_model=>$metagenomic_alignment_model, role=>'metagenomic_alignment_model');
         $self->status_message("Created metagenomic alignment model ".$metagenomic_alignment_model->name);
     }
-
-    $self->status_message("Metagenomic composition shotgun model ".$self->name." created successfully");
-    return $self;
-}
-
-sub cleanup{
-    my ($self, @objs_to_delete) = @_;
-    for (@objs_to_delete){
-        $_->delete;
-    }
+    
+    return @new_objects;
 }
 
 1;
