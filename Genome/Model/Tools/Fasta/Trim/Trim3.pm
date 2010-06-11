@@ -7,6 +7,7 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 require File::Copy;
+use Regexp::Common;
 
 class Genome::Model::Tools::Fasta::Trim::Trim3 {
     is  => 'Genome::Model::Tools::Fasta::Trim',
@@ -31,6 +32,29 @@ sub executable {
 sub help_detail { 
     return <<EOS 
 EOS
+}
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    for my $param (qw/ min_trim_length min_trim_quality /) {
+        my $value = $self->$param;
+        unless ( defined $value ) {
+            $self->error_message("No value for $param");
+            $self->delete;
+            return;
+        }
+        unless ( $value =~ /^$RE{num}{int}$/ ) {
+            $self->error_message("Invalid value ($value) for $param");
+            $self->delete;
+            return;
+        }
+    }
+
+    return $self;
 }
 
 sub execute {
