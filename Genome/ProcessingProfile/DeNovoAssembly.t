@@ -122,9 +122,10 @@ my @stage_classes = $pp->assemble_job_classes;
 is_deeply(
     \@stage_classes, 
     [ 
-        map { 
+        (map { 
             'Genome::Model::Event::Build::DeNovoAssembly::'.$_.'::Velvet'
-        } (qw/ PrepareInstrumentData Assemble PostAssemble /)
+        } (qw/ PrepareInstrumentData Assemble PostAssemble /)),
+        'Genome::Model::Event::Build::DeNovoAssembly::Report',
     ], 
     'Stage classes'
 );

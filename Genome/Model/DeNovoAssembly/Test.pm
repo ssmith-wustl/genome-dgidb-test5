@@ -80,6 +80,7 @@ sub get_mock_processing_profile {
             _validate_read_filter_and_params
             _validate_read_trimmer_and_params
             
+            status_message
             /),
     );
 
@@ -222,6 +223,7 @@ sub get_mock_build {
             supercontigs_agp_file
             supercontigs_fasta_file
             stats_file
+            status_message
 
             /)
     );
@@ -279,8 +281,17 @@ sub example_contigs_fasta_file_for_model {
 
     my $dir = $self->example_directory_for_model($pp);
 
-    return $dir.'/contigs.fa'
+    return $dir.'/contigs.fa';
 }
+
+sub example_stats_file_for_model {
+    my ($self, $model) = @_;
+
+    my $dir = $self->example_directory_for_model($model);
+
+    return $dir.'/edit_dir/stats.txt';
+}
+
 #<>#
 
 #< Instrument Data >#

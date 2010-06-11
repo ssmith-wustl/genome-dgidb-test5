@@ -45,7 +45,7 @@ sub execute {
         return;
     }
 
-    return $self->_generate_summary_report;
+    return 1;
 }
 
 1;

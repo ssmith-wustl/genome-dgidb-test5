@@ -10,7 +10,7 @@ class Genome::Model::Event::Build::DeNovoAssembly::Assemble::Velvet {
 };
 
 sub bsub_rusage {
-    return "-R 'select[type==LINUX64 && mem>30000 && tmp>30000] rusage[mem=30000, tmp=30000] span[hosts=1]' -M 30000000"
+    return "-R 'select[type==LINUX64 && mem>20000] rusage[mem=20000] span[hosts=1]' -M 20000000"
 }
 
 sub execute { 

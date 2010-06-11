@@ -10,8 +10,6 @@ use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 require File::Compare;
 
-use Cwd;
-
 use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Velvet') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
@@ -59,15 +57,6 @@ foreach my $file (@file_names_to_test) {
     ok(-e $build->data_directory."/edit_dir/$file", "Tmp test dir $file file exists");
     ok(File::Compare::compare($build->data_directory."/edit_dir/$file", $test_data_dir."/$file") == 0, "$file files match");
 }
-
-my $reports_directory = $build->reports_directory;
-ok(-d $reports_directory, 'Reports directory');
-ok(-s $reports_directory.'Summary/report.xml', 'Summary report XML');
-ok(-s $reports_directory.'Summary/report.html', 'Summary report HTML');
-
-
-#TODO - this is bit of a hack but test can't clean itself up because it's running in the /tmp dir
-#ok(system("chdir $test_data_dir") == 1, "Switched back to test data_dir");
 
 #print $build->data_directory."\n";<STDIN>;
 done_testing();

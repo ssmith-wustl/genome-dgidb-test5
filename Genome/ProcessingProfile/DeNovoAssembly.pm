@@ -318,12 +318,17 @@ sub assemble_job_classes {
     my $self = shift;
 
     my $assembler_subclass = Genome::Utility::Text::string_to_camel_case($self->assembler_name);
-    return map { $_.'::'.$assembler_subclass }
+
+    my @classes = map { $_.'::'.$assembler_subclass }
     (qw/
         Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData
         Genome::Model::Event::Build::DeNovoAssembly::Assemble
         Genome::Model::Event::Build::DeNovoAssembly::PostAssemble
-        /);  
+
+        /);
+    push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::Report';
+
+    return @classes;
 }
 
 sub assemble_objects {
