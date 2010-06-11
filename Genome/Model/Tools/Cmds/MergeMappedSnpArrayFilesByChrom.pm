@@ -69,7 +69,7 @@ sub execute {
 
     #populate hashes with first line of data
     for my $file (@infiles) {
-        ($data) = read_row_of_data($file,$data);
+        ($data) = $self->read_row_of_data($file,$data);
     }
 
     #Print data
@@ -85,7 +85,7 @@ sub execute {
         #read data until all files are at max chr
         for my $file (@infiles) {
             while ($data{$file}{"cur_chr"} ne $cur_max_chr) {
-                ($data) = read_row_of_data($file,$data);
+                ($data) = $self->read_row_of_data($file,$data);
                 next MASTER if ($chr_to_index{$data{$file}{"cur_chr"}} > $cur_max_chr_index);
             }
         }
@@ -100,7 +100,7 @@ sub execute {
         #read data until all files are now also at max position
         for my $file (@infiles) {
             while ($data{$file}{"cur_pos"} ne $cur_max_pos) {
-                ($data) = read_row_of_data($file,$data);
+                ($data) = $self->read_row_of_data($file,$data);
                 next MASTER if ($chr_to_index{$data{$file}{"cur_chr"}} > $cur_max_chr_index);
                 next MASTER if ($data{$file}{"cur_pos"} > $cur_max_pos);
             }
@@ -122,7 +122,14 @@ sub execute {
             if ($cur_chr_this_file eq $cur_max_chr) {
                 if ($cur_pos_this_file eq $cur_max_pos) {
                     $output_fh->print("\t$data{$file}{'cur_data'}");
-                    ($data) = read_row_of_data($file,$data);
+                    unless($data->{$file}{"eof"}) {
+                        ($data) = $self->read_row_of_data($file,$data);
+                    }
+                    if ($file eq $infiles[$#infiles] && $data->{$file}{"eof"}) {
+                        $output_fh->print("\n");
+                        $self->status_message("Reached the end of all files.");
+                        return;
+                    }
                 }
                 else {
                     die "some problem occured - there's no data where it was supposedly matched above";
@@ -169,10 +176,10 @@ sub fill_chr_hashes {
 }
 
 sub read_row_of_data {
-    my $file = shift;
-    my $data = shift;
+    my ($self,$file,$data) = @_;
     if ($data->{$file}{"eof"} == 1) {
-        die "Reached the end of $file.\n";
+        $self->error_message("Reached the end of $file.");
+        return;
     }
     my $line = $data->{$file}{"filehandle"}->getline;
     chomp $line;
