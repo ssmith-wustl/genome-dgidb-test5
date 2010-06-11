@@ -132,7 +132,6 @@ sub transcript_iterator{
         }
 
         my $iterator = sub {
-            $DB::single = 1;
             my $index;
             my $lowest;
             for (my $i = 0; $i < @iterators; $i++) {

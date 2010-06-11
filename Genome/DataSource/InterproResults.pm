@@ -31,7 +31,7 @@ sub constant_values {
 };
 
 sub sort_order {
-    [qw/ chrom_name start stop interpro_id /];
+    [qw/ start stop interpro_id /];
 }
 
 sub required_for_get { 
