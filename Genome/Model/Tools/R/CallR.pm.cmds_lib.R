@@ -758,7 +758,7 @@ Region_calls = function(datafile,chr,start,end,permun=NA,output_dir=".")
 start=as.numeric(start);
 end=as.numeric(end)
 
-read.table(datafile,header=T,sep="\t",colClasses="numeric",comment.char="")->x
+read.table(datafile,header=T,sep="\t",comment.char="")->x
 head(x)
 dim(x)
 
