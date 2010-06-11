@@ -99,16 +99,24 @@ $DB::single = 1;
 
     $self->status_message("Starting build for model $log_model_name");
 
+    $build->status_message("TEST BUILD STATUS: Starting build for model $log_model_name");
+
     my $screen_model = $model->_contamination_screen_alignment_model;
     unless ($screen_model) {
         $self->error_message("couldn't grab contamination screen underlying model!");
         return;
     }
+    
+    # ENSURE WE HAVE INSTRUMENT DATA
+    my @id = $model->inst_data;
+    if (@id == 0) {
+        $self->error_message("NO INSTRUMENT DATA ASSIGNED!");
+        die $self->error_message();
+    }
 
     #ASSIGN ANY NEW INSTRUMENT DATA TO THE CONTAMINATION SCREENING MODEL
     $self->status_message("Checking for new instrument data to add to contamination screen model");
-    my @id = $model->inst_data;
-    my %screen_id = map { $_->id => $_ }$screen_model->instrument_data;
+    my %screen_id = map { $_->id => $_ } $screen_model->instrument_data;
     my @to_add = grep {! $screen_id{$_->id}} @id;
     if (@to_add) {
         $self->add_instrument_data_to_model($screen_model, \@to_add);
@@ -407,46 +415,48 @@ sub run_ref_align_build {
 
     my @builds1 = $model->builds;
 
-    my $cmd = "genome model build start -m " . $model->id;
-    Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
-
     my $sub_build;
     if (0) {
+        my $cmd = "genome model build start --force -m " . $model->id;
+        Genome::Utility::FileSystem->shellcmd(cmd => $cmd); 
+        my @builds2 = UR::Context->current->reload("Genome::Model::Build", model_id => $model->id);
+        
+        if (@builds2 == @builds1) {
+            $self->error_message("Failed to start build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
+        }
+        else {
+            $sub_build = $builds2[-1];
+            $self->status_message("Created and started build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
+        }
+
+    }
+    else {
         $self->status_message("  creating build");
-        my $sub_build = Genome::Model::Build->create(
+        $sub_build = Genome::Model::Build->create(
             model_id => $model->id
         );
         unless ($sub_build){
-            $self->error_message("Couldn't create build for underlying ref-align model " . $model->name);
+            $self->error_message("Couldn't create build for underlying ref-align model " . $model->name. ": " . Genome::Model::Build->error_message);
             return;
         }
-    
+        
         $self->status_message("  starting build");
         #TODO update these params to use pp values or wahtevers passes in off command line
         my $rv = $sub_build->start(
             job_dispatch => 'apipe',
             server_dispatch=>'long'
         );
-
+        
         if ($rv){
             $self->status_message("Created and started build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
         }else{
             $self->error_message("Failed to start build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
         }
-
+        
         $self->status_message("Committing after starting build");
         UR::Context->commit();
     }
-    my @builds2 = UR::Context->current->query("Genome::Model::Build", Genome::Model::Build->define_boolexpr(model_id => $model->id), 1);
-    
-    if (@builds2 == @builds1) {
-        $self->error_message("Failed to start build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
-    }
-    else {
-        $sub_build = $builds2[-1];
-        $self->status_message("Created and started build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
-    }
-    
+
 
     return $sub_build;
 }

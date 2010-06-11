@@ -20,7 +20,7 @@ class Genome::Model::Command::Define::MetagenomicCompositionShotgun {
             is => 'Text',
             is_optional => 1,
             is_input => 1,
-            default_value => 'human microbiome metagenomic alignment',
+            default_value => 'human microbiome metagenomic alignment with new picard',
             doc => 'identifies the processing profile by name',
         },
         # TODO: move these up, and make this subclass default to true for both values        
