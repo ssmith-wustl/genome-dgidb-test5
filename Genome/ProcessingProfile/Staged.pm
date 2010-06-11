@@ -20,11 +20,12 @@ sub stages {
 sub classes_for_stage {
     my $self = shift;
     my $stage_name = shift;
+    my $model = shift;
     my $classes_method_name = $stage_name .'_job_classes';
     #unless (defined $self->can('$classes_method_name')) {
     #    die('Please implement '. $classes_method_name .' in class '. $self->class);
     #}
-    return $self->$classes_method_name;
+    return $self->$classes_method_name($model);
 }
 
 sub objects_for_stage {
@@ -131,7 +132,7 @@ sub _generate_events_for_build_stage {
         } else {
             $build->status_message('Scheduling for '. $object_class .' with id '. $object_id);
         }
-        my @command_classes = $self->classes_for_stage($stage_name);
+        my @command_classes = $self->classes_for_stage($stage_name, $build->model);
         push @events, $self->_generate_events_for_object($build,$object,\@command_classes);
     }
 
