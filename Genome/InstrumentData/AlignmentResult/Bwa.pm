@@ -30,12 +30,7 @@ sub _run_aligner {
 
     # get refseq info
     my $reference_build = $self->reference_build;
-    my $ref_basename = File::Basename::fileparse($reference_build->full_consensus_path('fa'));
-    my $reference_fasta_path = sprintf("%s/%s", $reference_build->data_directory, $ref_basename);
-
-    if (-e "/opt/fscache/" . $reference_fasta_path) {
-        $reference_fasta_path = "/opt/fscache/" . $reference_fasta_path
-    }
+    my $reference_fasta_path = $reference_build->full_consensus_path('fa');
 
     # decompose aligner params for each stage of bwa alignment
     my %aligner_params = $self->decomposed_aligner_params;

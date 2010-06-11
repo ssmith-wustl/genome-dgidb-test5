@@ -60,11 +60,6 @@ sub _run_aligner {
     #If your flavor of aligner uses a different file extension for its index, put it here.
     my $reference_fasta_path = $reference_build->full_consensus_path('fa');
     
-    # Check the local cache on the blade for the fasta if it exists.
-    if (-e "/opt/fscache/" . $reference_fasta_path) {
-        $reference_fasta_path = "/opt/fscache/" . $reference_fasta_path
-    }
-
     # This is your scratch directory.  Whatever you put here will be wiped when the alignment
     # job exits.
     my $scratch_directory = $self->temp_scratch_directory;

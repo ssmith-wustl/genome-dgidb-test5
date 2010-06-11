@@ -23,30 +23,18 @@ sub required_rusage {
     "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>4000] span[hosts=1] rusage[tmp=90000, mem=4000]' -M 24000000 -n 8";
 }
 
-### here is something that does not work
-#    # TODO this could be totally invalid and unkosher
-#    my $self = shift;
-#    my %aligner_params = $self->decomposed_aligner_params;
-#    if ($aligner_params{mosaik_align_params} =~ /\-p\s([0-9])+/) {
-#        "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>24000] span[hosts=1] rusage[tmp=90000, mem=24000]' -M 24000000 -n $1";
-#    } else {
-#            $self->error_message("number of processors used incorrectly specified.");
-#            $self->die_and_clean_up($self->error_message);
-#    }
-
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
     
     my $tmp_dir = $self->temp_scratch_directory;
-    my $tmp_reads_file = $tmp_dir . "/" . "reads.dat"; 
-    my $tmp_align_file = $tmp_dir . "/" . "aligned.dat";
-    my $tmp_unalign_fq_file = $tmp_dir . "/" . "unaligned.fastq";
-    my $tmp_unalign_sam_file = $tmp_dir . "/" . "unaligned.sam";
-    my $tmp_sort_file = $tmp_dir . "/" . "sorted.dat";
-    my $tmp_sam_file = $tmp_dir . "/" . "aligned_mosaik.sam";
-
-    my $staging_sam_file = $tmp_dir . "/" . "all_sequences.sam";
+    my $tmp_reads_file = "$tmp_dir/reads.dat"; 
+    my $tmp_align_file = "$tmp_dir/aligned.dat";
+    my $tmp_unalign_fq_file = "$tmp_dir/unaligned.fastq";
+    my $tmp_unalign_sam_file = "$tmp_dir/unaligned.sam";
+    my $tmp_sort_file = "$tmp_dir/sorted.dat";
+    my $tmp_sam_file = "$tmp_dir/aligned_mosaik.sam";
+    my $staging_sam_file = "$tmp_dir/all_sequences.sam";
     
     # get refseq info
     my $reference_build = $self->reference_build;

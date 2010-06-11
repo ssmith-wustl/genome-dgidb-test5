@@ -29,7 +29,7 @@ sub _run_aligner {
     
     # collect filepaths
     my $shrimp_path = Genome::Model::Tools::Shrimp2->path_for_shrimp2_version($self->aligner_version);
-    my $ref_index = $self->reference_build->data_directory . '/all_sequences.fa';
+    my $ref_index = $self->reference_build->full_consensus_path('fa');
     my $output_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $log_file = $self->temp_staging_directory . "/aligner.log";
     my @inputs = map { $self->fastq_to_fasta($_) } @_;
@@ -44,6 +44,13 @@ sub _run_aligner {
         }
         $input_path = $self->merge_pairs(@inputs);
     }
+
+    # split up the reference (because we don't have 48 GB of RAM to play with)
+    my $utils_dir = dirname(dirname($shrimp_path)) . "/utils";
+    my $split_prefix = $self->temp_scratch_directory . "/all_sequences";
+    my $splitdb_cmd = "$utils_dir/split-db.py --ram-size 22 --prefix $split_prefix $ref_index";
+    my $project_cmd = "$utils_dir/project-db.py --shrimp-mode ls $split_prefix-22gb-*.fa";
+    #TODO: finish this. See the README for details
 
     # construct command and run it
     my $static_params = $self->static_params;

@@ -168,13 +168,8 @@ sub _run_aligner {
     my $aligner_params  = $self->aligner_params;
 
     my $reference_build = $self->reference_build;
-    my $ref_basename    = File::Basename::fileparse($reference_build->full_consensus_path('bfa'));
-    my $ref_seq_file    = sprintf("%s/%s", $reference_build->data_directory, $ref_basename);
+    my $ref_seq_file    = $reference_build->full_consensus_path('bfa');
 
-    if (-e "/opt/fscache/" . $ref_seq_file) {
-       $ref_seq_file = "/opt/fscache/" . $ref_seq_file; 
-    }
-    
     unless ($ref_seq_file && -e $ref_seq_file) {
         $self->error_message("Reference build full consensus path '$ref_seq_file' does not exist.");
         die $self->error_message;

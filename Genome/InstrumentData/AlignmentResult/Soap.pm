@@ -26,15 +26,14 @@ sub _run_aligner {
     
     # collect filepaths
     my $soap_path = Genome::Model::Tools::Soap->path_for_soap_version($self->aligner_version);
-    my $ref_index = $self->reference_build->data_directory . '/all_sequences.fa.index';
+    my $ref_index = $self->reference_build->full_consensus_path('fa.index.amb');
+    $ref_index =~ s/\.amb$//; # need the .fa.index ending
     my $output_aligned = $self->temp_scratch_directory . "/all_sequences.sam";
     my $output_unaligned = $self->temp_scratch_directory . "/all_sequences_unaligned.sam";
     my $log_file = $self->temp_staging_directory . "/aligner.log";
     my @inputs = @_;
 
     # construct command and run it
-    #if ( @inputs == 1 ) {
-    #} els
     my $insert = '';
     if ( @inputs == 2 ) {
         $insert = "-b $inputs[1] -2 $output_aligned.unpaired.soap"
