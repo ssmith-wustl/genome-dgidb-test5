@@ -120,7 +120,7 @@ sub execute {
             if($self->detect_snps and not $result) {
                 $self->status_message('Samtools did not report success for snp detection. Skipping indel detection.')
             } else {
-                $result = $self->_run_samtools($ref_seq_file, $bam_file, $temp_name, $filtered_temp_name, $self->indel_output, $self->filtered_indel_output, $snv_params);
+                $result = $self->_run_samtools($ref_seq_file, $bam_file, $temp_name, $filtered_temp_name, $self->indel_output, $self->filtered_indel_output, $indel_params);
             }
         }
     }
