@@ -169,17 +169,9 @@
     <xsl:param name="perspective" select="'status'"/>
     <xsl:param name="toolkit" select="'html'"/>
     
-    <xsl:variable name="typeLink">
-      <xsl:call-template name="string-replace-all">
-        <xsl:with-param name="text" select="$type"/>
-        <xsl:with-param name="replace" select="'::'"/>
-        <xsl:with-param name="by" select="'/'"/>
-      </xsl:call-template>
-    </xsl:variable>
-    
     <xsl:value-of select="$rest"/>
     <xsl:text>/</xsl:text>
-    <xsl:value-of select="$typeLink"/>
+    <xsl:value-of select="rest:typetourl($type)"/>
     <xsl:text>/</xsl:text>
     <xsl:value-of select="$perspective"/>
     <xsl:text>.</xsl:text>

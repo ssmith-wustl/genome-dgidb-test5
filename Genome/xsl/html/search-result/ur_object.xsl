@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <xsl:stylesheet version="1.0"
-xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+xmlns:rest="urn:rest">
 
   <xsl:template name="ur_object" match="object">
     <div class="result">
@@ -36,18 +37,11 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:param name="perspective" select="'status'"/>
     <xsl:param name="toolkit" select="'html'"/>
     <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
-    <xsl:variable name="typeLink">
-      <xsl:call-template name="string-replace-all">
-        <xsl:with-param name="text" select="$type"/>
-        <xsl:with-param name="replace" select="'::'"/>
-        <xsl:with-param name="by" select="'/'"/>
-      </xsl:call-template>
-    </xsl:variable>
     <a>
       <xsl:attribute name="href">
         <xsl:value-of select="$rest"/>
         <xsl:text>/</xsl:text>
-        <xsl:value-of select="$typeLink"/>
+        <xsl:value-of select="rest:typetourl($type)"/>
         <xsl:text>/</xsl:text>
         <xsl:value-of select="$perspective"/>
         <xsl:text>.</xsl:text>
