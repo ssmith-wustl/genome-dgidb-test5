@@ -32,6 +32,7 @@ test_model_from_params(
         subject_type            => $default_subject_type,
         processing_profile_name => $default_pp_name,
         data_directory          => $tmp_dir,
+        reference_sequence_build => '93636924', #NCBI-human build 36
     },
 );
 
@@ -42,6 +43,7 @@ test_model_from_params(
         subject_type            => $default_subject_type,
         processing_profile_name => $default_pp_name,
         data_directory          => $tmp_dir ."/test_model_complete_data_dir_$ENV{USER}",
+        reference_sequence_build => '93636924', #NCBI-human build 36
     },
 );
 
@@ -53,6 +55,7 @@ test_model_from_params(
         subject_name            => $default_subject_name,
         subject_type            => $default_subject_type,
         processing_profile_name => $default_pp_name,
+        reference_sequence_build => '93636924', #NCBI-human build 36
     },
 );
 
@@ -63,6 +66,7 @@ test_model_from_params(
         subject_type => $default_subject_type,
         processing_profile_name   => $default_pp_name,
         bare_args => [],
+        reference_sequence_build => '93636924', #NCBI-human build 36
     },
 );
 
@@ -76,6 +80,7 @@ test_model_from_params(
         subject_type => $default_subject_type,
         processing_profile_name   => $default_pp_name,
         bare_args => [ 'bogus_param' ],
+        reference_sequence_build => '93636924', #NCBI-human build 36
     },
 );
 
@@ -157,6 +162,7 @@ sub successful_create_model {
 
     ok($create_command->execute, 'create command execution successful');
     my @error_messages = $create_command->error_messages();
+    print @error_messages, "\n";
     my @warning_messages = $create_command->warning_messages();
     my @status_messages = $create_command->status_messages();
     ok(! scalar(@error_messages), 'no error messages');
@@ -167,7 +173,7 @@ sub successful_create_model {
         like($warning_messages[0], qr(model symlink.*already exists), 'Warning message complains about the model link already existing');
         }
     } else {
-        ok(!scalar(grep { not /already exists/ } @warning_messages), 'no warning messages');
+        ok(!scalar(grep { not m/already exists/ } @warning_messages), 'no warning messages');
         if (@warning_messages) {
             print join("\n",@warning_messages);
         }
@@ -180,6 +186,7 @@ sub successful_create_model {
     delete($params{data_directory});
     delete($params{bare_args});
     delete($params{model_name});
+    delete($params{reference_sequence_build}); #This property will be the build, not the name/ID
     my $model = Genome::Model->get(name => $expected_model_name,);
     isa_ok($model,'Genome::Model::'. $subclass);
     ok($model, 'creation worked for '. $expected_model_name .' model');
