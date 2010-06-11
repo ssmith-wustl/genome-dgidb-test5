@@ -60,6 +60,7 @@ EOS
 }
 
 my %PICARD_VERSIONS = (
+    'r436' => '/gsc/scripts/lib/java/samtools/picard-tools-r436',
     '1.22' => '/gsc/scripts/lib/java/samtools/picard-tools-1.22',
     '1.21' => '/gsc/scripts/lib/java/samtools/picard-tools-1.21',
     '1.17' => '/gsc/scripts/lib/java/samtools/picard-tools-1.17',
