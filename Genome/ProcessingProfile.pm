@@ -67,7 +67,7 @@ sub _resolve_workflow_for_build {
         #
         # Need to wrap _execution_build in a command class to make it work.
         my $workflow = Workflow::Operation->create(
-            name => $self->__display_name__,
+            name => $build->id . ' all stages',
             operation_type => Workflow::OperationType::Command->get('Genome::Model::Event::Build::ProcessingProfileMethodWrapper')
         );
         
