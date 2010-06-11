@@ -26,7 +26,7 @@ class Genome::Model::Build::ReferenceAlignment {
 };
 
 sub start {
-    my $self = $_[0];
+    my $self = shift;
     unless (defined($self->model->reference_sequence_build)) {
         my $msg = 'The model you are trying to build does not have reference_sequence_build set.  Please redefine the model or set this value manually.';
         $self->error_message($msg);
