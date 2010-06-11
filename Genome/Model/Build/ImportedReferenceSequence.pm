@@ -140,15 +140,17 @@ sub full_consensus_path {
     my ($self, $format) = @_;
     $format ||= 'bfa';
     my $file = $self->data_directory . '/all_sequences.'. $format;
-    if ( -e $file){
-        return $file;
+    unless (-e $file){
+        $file = $self->data_directory . '/ALL.'. $format;
+        unless (-e $file){
+            $self->error_message("Failed to find all_sequences.$format");
+            return;
+        }
     }
-    $file = $self->data_directory . '/ALL.'. $format;
-    if ( -e $file){
-        return $file;
-    }
-    $self->error_message("Failed to find all_sequences.$format");
-    return;
+    # check local cache for file
+    my $localfile = "/opt/fscache$file";
+    return $localfile if (-e $localfile);
+    return $file;
 }
 
 #This is for samtools faidx output that can be used as ref_list for
