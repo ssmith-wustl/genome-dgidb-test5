@@ -234,13 +234,13 @@ sub _run_samtools {
         die($self->error_message);
     }
     
-    return $self->verify_successful_completion;
+    return $self->verify_successful_completion($snp_output_file, $filtered_snp_output_file, $indel_output_file);
 }
 
 sub verify_successful_completion {
     my $self = shift;
 
-    for my $file ($self->snp_output, $self->filtered_snp_output, $self->indel_output) {
+    for my $file (@_) {
         unless (-e $file) {
             $self->error_message("$file was not successfully created. Failure in verify_successful_completion.");
             return;
