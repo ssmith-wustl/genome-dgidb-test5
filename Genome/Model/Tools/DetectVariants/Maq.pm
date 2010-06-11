@@ -285,14 +285,14 @@ sub _run_maq {
         return;
     }
 
-    return $self->verify_successful_completion;
+    return $self->verify_successful_completion($snp_output, $pileup_output, $filtered_snp_output, $indel_output);
 }
 
 
 sub verify_successful_completion {
     my $self = shift;
 
-    for my $file ($self->snp_output, $self->pileup_output, $self->filtered_snp_output, $self->indel_output) {
+    for my $file (@_) {
         unless (-e $file) {
             $self->error_message("File $file doesn't exist or has no data");
             return;
