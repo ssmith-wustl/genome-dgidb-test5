@@ -31,6 +31,7 @@ sub execute {
 
     my $rv = $pp->_execute_build($build);
     die '_execute_build returned undef' if !defined $rv;
+    die '_execute_build returned false' if !$rv;
 
     return $rv;
 }
