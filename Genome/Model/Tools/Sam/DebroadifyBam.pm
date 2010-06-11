@@ -52,8 +52,9 @@ sub execute {
     print "successfully opened bam header input pipe.\n";
     while (<$sam_header_input>) {
         if (m/^\@SQ/) {
-            $_=~s/\@SQ\tSN:chr(\d+)/\@SQ\tSN:$1/;
             $_=~s/\@SQ\tSN:chrM/\@SQ\tSN:MT/;
+            $_=~s/\@SQ\tSN:chr(X|Y)/\@SQ\tSN:$1/;
+            $_=~s/\@SQ\tSN:chr(.*)\w/\@SQ\tSN:$1/;
         }
         print $bam_output $_;
     }
@@ -69,9 +70,11 @@ sub execute {
         my @sam_fields = split /\t/;
 
         $sam_fields[2] =~ s/^chr(\d+)$/$1/;
-        $sam_fields[6] =~ s/^chr(\d+)$/$1/;
         $sam_fields[2] =~ s/^chrM$/MT/;
+        $sam_fields[2] =~ s/^chr(X|Y)$/$1/;
+        $sam_fields[6] =~ s/^chr(\d+)$/$1/;
         $sam_fields[6] =~ s/^chrM$/MT/;
+        $sam_fields[6] =~ s/^chr(X|Y)$/$1/;
     
         print $bam_output join "\t", @sam_fields;
     }
