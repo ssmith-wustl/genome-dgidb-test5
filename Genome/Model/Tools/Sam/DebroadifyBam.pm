@@ -69,12 +69,10 @@ sub execute {
     while (<$sam_input>) {
         my @sam_fields = split /\t/;
 
-        $sam_fields[2] =~ s/^chr(\d+)$/$1/;
         $sam_fields[2] =~ s/^chrM$/MT/;
-        $sam_fields[2] =~ s/^chr(X|Y)$/$1/;
-        $sam_fields[6] =~ s/^chr(\d+)$/$1/;
+        $sam_fields[2] =~ s/^chr(.*)(_|\w)/$1$2/;
         $sam_fields[6] =~ s/^chrM$/MT/;
-        $sam_fields[6] =~ s/^chr(X|Y)$/$1/;
+        $sam_fields[6] =~ s/^chr(.*)(_|\w)/$1$2/;
     
         print $bam_output join "\t", @sam_fields;
     }
