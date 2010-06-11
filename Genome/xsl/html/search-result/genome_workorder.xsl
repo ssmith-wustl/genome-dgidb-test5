@@ -49,6 +49,10 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
             | 
 
+            <xsl:value-of select="aspect[@name='pipeline']/value"/>
+
+            |
+
             <xsl:value-of select="aspect[@name='project_name']/value"/><br/>
             <xsl:value-of select="aspect[@name='description']/value"/>
         </p>
