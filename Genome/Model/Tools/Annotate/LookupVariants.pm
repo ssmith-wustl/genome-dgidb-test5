@@ -132,7 +132,7 @@ sub execute {
     my $dbsnp_dir;
 
     if(defined($self->dbSNP_path)){
-        $dbsnp_dir = $self->dnSNP_path;
+        $dbsnp_dir = $self->dbSNP_path;
     } else {
         $dbsnp_dir = Genome::Model->get( name => 'dbSNP-human-130')->imported_variations_directory."/tmp";
     }
