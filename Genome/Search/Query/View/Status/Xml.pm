@@ -68,7 +68,22 @@ sub sort_solr_docs {
     my @docs = @_;
 
     my @ordered_doc_classes =
-      qw(Genome::Individual Genome::Taxon Genome::Library Genome::PopulationGroup Genome::Sample Genome::ModelGroup Genome::ProcessingProfile Genome::Model GSC::Equipment::Solexa::Run Genome::Capture::Set Genome::Disk::Group Genome::Disk::Volume Email::Simple Genome::Project);
+      qw(Genome::Individual 
+         Genome::Taxon 
+         Genome::Library 
+         Genome::PopulationGroup 
+         Genome::Sample 
+         Genome::ModelGroup 
+         Genome::Model 
+         Genome::ProcessingProfile 
+         GSC::Equipment::Solexa::Run 
+         Genome::Capture::Set 
+         Genome::WorkOrder
+         Genome::Project
+         Genome::Disk::Group 
+         Genome::Disk::Volume 
+         Email::Simple 
+    );
 
     my %ordered_docs;
     my @everything_else_docs;
