@@ -72,6 +72,9 @@ class Genome::Model::Build {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+use Genome::Command::OO;
+*from_cmdline = \&Genome::Command::OO::default_cmdline_selector;
+
 sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass will soon be stored
     my $class = shift;
 
