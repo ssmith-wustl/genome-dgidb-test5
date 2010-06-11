@@ -11,7 +11,6 @@ require Genome::Utility::FileSystem;
 class Genome::Model::Command::Copy {
     class_name => __PACKAGE__,    
     is => 'Command',
-    
     has => [
         from_model_id => {
             is => 'Integer',
@@ -85,6 +84,8 @@ sub execute {
     
     my $self = shift;
     
+    $DB::single = 1;
+
     my $src_model = Genome::Model->get($self->from_model_id);
     unless ($src_model) {
         $self->error_message("Source model by id " . $self->from_model_id . " couldn't be fetched");
