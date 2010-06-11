@@ -207,7 +207,7 @@ sub _run_samtools {
     }
 
 
-    my %indel_filter_params = ( indel_file => $indel_output_file);
+    my %indel_filter_params = ( indel_file => $indel_output_file, out_file => $filtered_indel_file );
     # for capture data we do not know the proper ceiling for depth
     if ($self->capture_set_input) {
         $indel_filter_params{max_read_depth} = 1000000;
