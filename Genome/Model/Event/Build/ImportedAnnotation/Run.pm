@@ -128,10 +128,6 @@ sub execute {
         }
     }
 
-    # TODO This is a temp hack to get around the versioning issue. Remove me before committing this!
-    #$build->version("54_36p_v2") if $model->species_name eq 'human';
-    #$build->version("54_37g_v2") if $model->species_name eq 'mouse';
-
     return 1;
 }
 
