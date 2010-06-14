@@ -50,7 +50,23 @@ class Genome::Model::View::Status::Xml {
                     ],
                     perspective => 'default',
                     toolkit => 'xml',
-                }
+                },
+                {
+                    name => 'to_models',
+                    aspects => [
+                        'name', 'id',
+                    ],
+                    perspective => 'default',
+                    toolkit => 'xml',
+                },
+                                {
+                    name => 'from_models',
+                    aspects => [
+                        'name', 'id',
+                    ],
+                    perspective => 'default',
+                    toolkit => 'xml',
+                },
             ]
         }
     ]
