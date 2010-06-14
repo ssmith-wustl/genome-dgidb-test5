@@ -67,6 +67,23 @@ sub execute {
         }
     } while ($job && ($job->{Status} ne 'EXIT' && $job->{Status} ne 'DONE'));
 
+    $build = Genome::Model::Build->load($build->id);
+
+    my $build_event = $build->build_event;
+    my $error = Genome::Model::Build::Error->create(
+        build_event_id => $build_event->id,
+        stage_event_id => $build_event->id,
+        stage => 'all stages',
+        step_event_id => $build_event->id,
+        step => 'main',
+        error => 'Killed by user',
+    );
+
+    unless ( $build->fail($error) ) {
+        $self->error_message('Failed to fail build');
+
+        return;
+    }
 
     $self->status_message(sprintf(
         "Build (ID: %s DIR: %s) killed.\n",
