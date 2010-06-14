@@ -67,23 +67,7 @@ sub _generate_content {
 sub sort_solr_docs {
     my @docs = @_;
 
-    my @ordered_doc_classes =
-      qw(Genome::Individual 
-         Genome::Taxon 
-         Genome::Library 
-         Genome::PopulationGroup 
-         Genome::Sample 
-         Genome::ModelGroup 
-         Genome::Model 
-         Genome::ProcessingProfile 
-         GSC::Equipment::Solexa::Run 
-         Genome::Capture::Set 
-         Genome::WorkOrder
-         Genome::Project
-         Genome::Disk::Group 
-         Genome::Disk::Volume 
-         Email::Simple 
-    );
+    my @ordered_doc_classes = Genome::Search->searchable_classes();
 
     my %ordered_docs;
     my @everything_else_docs;

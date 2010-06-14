@@ -69,6 +69,32 @@ class Genome::Search {
     ],
 };
 
+sub searchable_classes {
+
+    my ($class) = @_;
+
+    # order of this array determines sort order of search results
+
+    my @ordered_searchable_classes =
+      qw(Genome::Individual 
+         Genome::Taxon 
+         Genome::Library 
+         Genome::PopulationGroup 
+         Genome::Sample 
+         Genome::ModelGroup 
+         Genome::Model 
+         Genome::ProcessingProfile 
+         GSC::Equipment::Solexa::Run 
+         Genome::Capture::Set 
+         Genome::WorkOrder
+         Genome::Project
+         Genome::Disk::Group 
+         Genome::Disk::Volume 
+         Email::Simple );
+
+    return @ordered_searchable_classes;
+}
+
 sub environment {
     my $proto = shift;
     my $self = ref($proto) ? $proto : $proto->_singleton_object;
