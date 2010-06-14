@@ -116,7 +116,7 @@ sub _run_aligner {
             output_files               => [$output_file],
             skip_if_output_is_present  => 0,
     );    
-    
+
     return 1;
 }
 
@@ -126,3 +126,5 @@ sub aligner_params_for_sam_header {
     return "bowtie " . $self->aligner_params;
     # for bwa this looks like "bwa aln -t4; bwa samse 12345'
 }
+
+sub fillmd_for_sam { return 0; }
