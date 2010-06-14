@@ -12,20 +12,20 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/eye_16.png" />
             </xsl:with-param>
           </xsl:call-template>
-          
+
         </div>
-      </td><td>
+      </td><td width="100%">
         <div class="description">
         <h2 class="name">
           <span class="label">
             Capture Set:
           </span>
-          <span class="title"> 
-            <xsl:call-template name="object_link" />            
+          <span class="title">
+            <xsl:call-template name="object_link" />
           </span>
         </h2>
         <p class="blurb">
-          <xsl:value-of select="aspect[@name='status']/value"/> -- 
+          <xsl:value-of select="aspect[@name='status']/value"/> --
           <xsl:value-of select="aspect[@name='description']/value"/>
         </p>
       </div>

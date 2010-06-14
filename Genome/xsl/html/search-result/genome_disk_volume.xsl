@@ -15,7 +15,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/eye_16.png" />
           </a>
         </div>
-      </td><td>
+      </td><td width="100%">
         <div class="description">
         <h2 class="name">
           <span class="label">
@@ -25,7 +25,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <a>
               <xsl:attribute name="href"><xsl:value-of select="$href"/></xsl:attribute>
               <xsl:value-of select="aspect[@name='mount_path']/value" />
-            </a> 
+            </a>
           </span>
         </h2>
         <p class="info">

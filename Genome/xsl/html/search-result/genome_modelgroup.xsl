@@ -13,13 +13,13 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             </xsl:with-param>
           </xsl:call-template>
         </div>
-      </td><td>
+      </td><td width="100%">
         <div class="description">
         <h2 class="name">
           <span class="label">
             Model Group:
           </span>
-          <span class="title"> 
+          <span class="title">
             <xsl:call-template name="object_link" />
           </span>
         </h2>
@@ -46,7 +46,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             </xsl:choose>)
           </xsl:for-each>
         </p>
-        <p class="blurb"> 
+        <p class="blurb">
           Members: <xsl:for-each select="aspect[@name='models']/object">
             <xsl:value-of select="aspect[@name='name']/value"/>
           </xsl:for-each>
@@ -56,4 +56,4 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     </div>
   </xsl:template>
 
-</xsl:stylesheet> 
+</xsl:stylesheet>

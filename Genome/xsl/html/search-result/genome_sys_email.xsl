@@ -24,13 +24,13 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/mail_32.png" />
           </a>
         </div>
-      </td><td>
+      </td><td width="100%">
         <div class="description">
         <h2 class="name">
           <span class="label">
             Mail:
           </span>
-          <span class="title"> 
+          <span class="title">
             <a>
               <xsl:attribute name="href">
                 <xsl:value-of select="$message_url_base"/>
