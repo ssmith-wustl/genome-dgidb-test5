@@ -62,13 +62,11 @@ sub _resolve_workflow_for_build {
     # and hopefully pp-subclass specific.
 
     if ($self->can('_execute_build')) {
-        # NOTE: this workflow doesn't actually run yet.
-        # Instead the runner will detect it and just execute the Perl code.
-        #
-        # Need to wrap _execution_build in a command class to make it work.
+        my $logdir = $build->log_directory;
 
         my $workflow = Workflow::Model->create(
             name => $build->id . ' all stages',
+            log_dir => $logdir,
             input_properties => [ 'build_id' ],
             output_properties => [ 'result' ]
         );

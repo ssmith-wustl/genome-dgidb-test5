@@ -132,6 +132,15 @@ popup.center();
                   });
                 ]]>
               </script>
+              <xsl:if test="count(build/stages/stage) = 0">
+                <script type="text/javascript">
+                  <![CDATA[
+                    $(document).ready(function() {
+                      $('#show_workflow').click();
+                    });
+                  ]]>
+                </script>
+              </xsl:if>
               <div class="viewport">
               <div id="eventview">
               <table border="0" cellpadding="0" cellspacing="0" class="stages" width="100%">
