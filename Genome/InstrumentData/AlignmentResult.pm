@@ -576,6 +576,12 @@ sub _verify_bam {
             }
         }
     }
+
+    if (!exists $flag_stat->{total_reads} || $flag_stat->{total_reads} == 0) {
+        $self->error_message("Bam file $bam_file has no reads reported (neither aligned nor unaligned).");
+        return;
+    } 
+
     return 1;
 }
 
