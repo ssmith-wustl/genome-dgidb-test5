@@ -52,14 +52,34 @@ sub execute {
 
     my $total = scalar @builds;
     my $num = 0;
+    my @failed_builds;
     for my $build (@builds) {
         my $return_value = $build->delete(keep_build_directory => $self->keep_build_directory);
-        confess "Problem removing build " . $build->build_id . "!" unless $return_value;
-        UR::Context->commit;
+        unless ($return_value) {
+            $self->error_message("Problem removing build " . $build->build_id . ", skipping!");
+            UR::Context->rollback;
+            push @failed_builds, $build->build_id;
+            next;
+        }
+        
+        my $commit_rv = UR::Context->commit;
+        unless ($commit_rv) {
+            $self->error_message("Could not commit deletion of build " . $build->build_id . ", rolling back and skipping!");
+            UR::Context->rollback;
+            push @failed_builds, $build->build_id;
+            next;
+        }
+
         $num++;
         $self->status_message("\n\n$num of $total builds successfully removed!\n\n\n");
     }
 
+    if (@failed_builds) {
+        $self->error_message("Could not remove " . scalar @failed_builds . " builds:\n " . join("\n", @failed_builds));
+    }
+    else {
+        $self->status_message("All builds successfully removed!");
+    }
     return 1;
 }
 
