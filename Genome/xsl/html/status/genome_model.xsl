@@ -78,9 +78,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     </xsl:if>
     
     <xsl:if test="count(aspect[@name='to_models'] | aspect[@name='from_models']) > 0">
-      <xsl:for-each select="aspect[@name='to_models'] | aspect[@name='from_models']">
-        <xsl:call-template name="genome_model_link_table"/>
-      </xsl:for-each>
+      <xsl:call-template name="genome_model_link_table"/>
     </xsl:if>
     
     <table id="model_list" class="list" width="100%" cellspacing="0" cellpadding="0" border="0" style="clear:both">
@@ -96,12 +94,12 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <table class="info_table">
       <tr><th colspan="2">Model Links</th></tr>
       
-      <xsl:for-each select="../aspect[@name='to_models']/object">
+      <xsl:for-each select="aspect[@name='to_models']/object | aspect[@name='to_builds']/object">
         <xsl:call-template name="genome_model_link_table_row">
           <xsl:with-param name="type">to</xsl:with-param>
         </xsl:call-template>
       </xsl:for-each>
-      <xsl:for-each select="../aspect[@name='from_models']/object">
+      <xsl:for-each select="aspect[@name='from_models']/object | aspect[@name='from_builds']/object">
         <xsl:call-template name="genome_model_link_table_row">
           <xsl:with-param name="type">from</xsl:with-param>
         </xsl:call-template>          
@@ -116,7 +114,15 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
        <td class="value">
          <xsl:call-template name="object_link">
            <xsl:with-param name="linktext">
-             <xsl:value-of select="@type"/>: <xsl:value-of select="aspect[@name='name']/value"/> (#<xsl:value-of select="@id"/>)
+             <xsl:value-of select="@type"/><xsl:text>: </xsl:text>
+             <xsl:choose>
+               <xsl:when test="aspect[@name='name']/value">
+                 <xsl:value-of select="aspect[@name='name']/value"/> (#<xsl:value-of select="@id"/>)
+               </xsl:when>
+               <xsl:otherwise>
+                 <xsl:value-of select="@id"/>
+               </xsl:otherwise>
+             </xsl:choose>
            </xsl:with-param>
          </xsl:call-template>
        </td>

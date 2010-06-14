@@ -241,6 +241,7 @@ sub get_build_node {
     $buildnode->addChild($self->get_model_node);
     
     $buildnode->addChild($self->get_inputs_node);
+    $buildnode->addChild($self->get_links_node);
 
     return $buildnode;
 }
@@ -470,6 +471,56 @@ sub get_inputs_node {
     }
     
     return $aspect_node;
+}
+
+sub get_links_node {
+    my $self = shift;
+    my $doc = $self->_doc;
+    my $build = $self->subject;
+    
+    my $links_node = $doc->createElement('links');
+    
+    my $to_aspect_node = $doc->createElement('aspect');
+    $to_aspect_node->addChild( $doc->createAttribute('name', 'to_builds'));
+    $links_node->addChild($to_aspect_node);
+    
+    for my $to_build ( $build->to_builds ) {
+        my $view = $to_build->create_view(
+            perspective => 'default',
+            toolkit => 'xml',
+            aspects => ['id'],
+            parent_view => $self,
+        );
+        
+        $view->_generate_content;
+        
+        my $delegate_xml_doc = $view->_xml_doc;
+        my $delegate_root = $delegate_xml_doc->documentElement;
+        #cloneNode($deep = 1)
+        $to_aspect_node->addChild( $delegate_root->cloneNode(1) );
+    }
+    
+    my $from_aspect_node = $doc->createElement('aspect');
+    $from_aspect_node->addChild( $doc->createAttribute('name', 'from_builds'));
+    $links_node->addChild($from_aspect_node);
+    
+    for my $from_build ( $build->from_builds ) {
+        my $view = $from_build->create_view(
+            perspective => 'default',
+            toolkit => 'xml',
+            aspects => ['id'],
+            parent_view => $self,
+        );
+        
+        $view->_generate_content;
+        
+        my $delegate_xml_doc = $view->_xml_doc;
+        my $delegate_root = $delegate_xml_doc->documentElement;
+        #cloneNode($deep = 1)
+        $from_aspect_node->addChild( $delegate_root->cloneNode(1) );
+    }
+    
+    return $links_node;
 }
 
 sub get_lsf_job_status {

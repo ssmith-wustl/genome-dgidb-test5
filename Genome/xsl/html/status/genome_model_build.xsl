@@ -96,11 +96,18 @@ popup.center();
                 </tr>
               </table>
               
-              <xsl:if test="count(//build/aspect[@name='inputs']) > 0 ">
+              <xsl:if test="count(//build/aspect[@name='inputs']/object) > 0 ">
 			    <xsl:for-each select="//build/aspect[@name='inputs']">
 			      <xsl:call-template name="genome_model_input_table"/>
 			    </xsl:for-each>
 			  </xsl:if>
+			  
+			  <xsl:if test="count(//links/aspect[@name='to_builds']/object | //links/aspect[@name='from_builds']/object) > 0">
+                <xsl:for-each select="//links">
+                  <xsl:call-template name="genome_model_link_table"/>
+                </xsl:for-each>
+              </xsl:if>
+			  
               <br/>
               View: <a href="#show_events" id="show_events">Events</a> | <a href="#show_workflow" id="show_workflow">Workflow</a>
               <script type="text/javascript">
