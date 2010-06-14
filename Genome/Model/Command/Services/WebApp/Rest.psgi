@@ -10,32 +10,8 @@ use Plack::MIME;
 use Plack::Util;
 use Cwd;
 use HTTP::Date;
-use XML::LibXSLT;
 
-sub type_to_url {
-    join(
-        '/',
-        map {
-            s/(?<!^)([[:upper:]]{1})/-$1/g;
-            lc;
-          } split( '::', $_[0] )
-    );
-}
-
-sub url_to_type {
-    join(
-        '::',
-        map {
-            $_ = ucfirst;
-            s/-(\w{1})/\u$1/g;
-            $_;
-          } split( '/', $_[0] )
-    );
-}
-
-## register a helper function for xslt
-#  this translates Genome::InstrumentData to genome/instrument-data
-XML::LibXSLT->register_function( 'urn:rest', 'typetourl', \&type_to_url );
+use UR::Object::View::Default::Xsl qw/type_to_url url_to_type/;
 
 my $res_path = Genome::Model::Command::Services::WebApp->res_path;
 
