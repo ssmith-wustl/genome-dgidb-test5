@@ -228,7 +228,7 @@ sub _run_samtools {
         return;
     }
 
-    $rv = $self->generate_genotype_detail_file;
+    $rv = $self->generate_genotype_detail_file($snp_output_file);
     unless($rv) {
         $self->error_message('Generating genotype detail file errored out');
         die($self->error_message);
@@ -252,8 +252,8 @@ sub verify_successful_completion {
 
 sub generate_genotype_detail_file {
     my $self = shift; 
-
-    my $snp_output_file = $self->snp_output;
+    my $snp_output_file = shift;
+    
     unless(-f $snp_output_file and -s $snp_output_file) {
         $self->error_message("SNP output File: $snp_output_file is invalid.");
         die($self->error_message);

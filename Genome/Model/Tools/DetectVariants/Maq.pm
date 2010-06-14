@@ -280,7 +280,7 @@ sub _run_maq {
         return;
     }
 
-    unless ($self->generate_genotype_detail_file) {
+    unless ($self->generate_genotype_detail_file($snp_output, $pileup_output)) {
         $self->error_message('Generating genotype detail file errored out');
         return;
     }
@@ -304,9 +304,8 @@ sub verify_successful_completion {
 
 sub generate_genotype_detail_file {
     my $self  = shift;
-
-    my $snp_output    = $self->snp_output;
-    my $pileup_output = $self->pileup_output;
+    my ($snp_output, $pileup_output) = @_;
+    
     my $report_input_file = $self->report_output;
 
     for my $file ($snp_output, $pileup_output) {
