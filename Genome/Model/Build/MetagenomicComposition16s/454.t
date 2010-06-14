@@ -60,7 +60,9 @@ is($file_base, $build->subject_name, 'file base');
 
 #< CLASSIFY >#
 ok($build->classify_amplicons, 'classify amplicons');
+is($build->amplicons_classified, '14', 'amplicons classified');
 is($build->amplicons_classified_success, '0.93', 'amplicons classified success');
+is($build->amplicons_classification_error, 1, 'amplicons classified error');
 
 #< ORIENT >#
 ok($build->orient_amplicons, 'orient amplicons');

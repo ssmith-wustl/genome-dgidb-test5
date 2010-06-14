@@ -55,12 +55,20 @@ class Genome::Model::Build::MetagenomicComposition16s {
             doc => 'Number of amplicons that were classified in this build.'
         },
         amplicons_classified_success => {
-            is => 'Integer',
+            is => 'Number',
             via => 'metrics',
             is_mutable => 1,
             where => [ name => 'amplicons classified success' ],
             to => 'value',
             doc => 'Number of amplicons that were successfully classified in this build.'
+        },
+        amplicons_classification_error => {
+            is => 'Integer',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'amplicons classification error' ],
+            to => 'value',
+            doc => 'Number of amplicons that had a classification error, and did not classify.'
         },
     ],
 };
@@ -427,6 +435,7 @@ sub classify_amplicons {
 
     my $processed = 0;
     my $classified = 0;
+    my $classification_error = 0;
     for my $amplicon_set ( @amplicon_sets ) {
         my $classification_file = $amplicon_set->classification_file;
         unlink $classification_file if -e $classification_file;
@@ -449,7 +458,8 @@ sub classify_amplicons {
             unless ( $classification ) { # try again
                 $classification = $classifier->classify($bioseq);
                 unless ( $classification ) { # warn , go on
-                    $self->error_message('Amplicon '.$amplicon->name.' did not classify for '.$self->description);
+                    $self->error_message('Amplicon '.$amplicon->name.' length ('.$bioseq->length.') did not classify for '.$self->description."\n".$bioseq->seq."\n");
+                    $classification_error++;
                     next;
                 }
             }
@@ -478,6 +488,7 @@ sub classify_amplicons {
     $self->amplicons_processed_success( sprintf('%.2f', $processed / $self->amplicons_attempted) );
     $self->amplicons_classified($classified);
     $self->amplicons_classified_success( sprintf('%.2f', $classified / $processed) );
+    $self->amplicons_classification_error($classification_error);
 
     return 1;
 }

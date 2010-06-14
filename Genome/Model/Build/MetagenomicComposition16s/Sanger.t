@@ -129,6 +129,7 @@ for my $amplicon ( @amplicons ) {
 }
 is($build->amplicons_classified, 4, 'amplicons classified');
 is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
+is($build->amplicons_classification_error, 0, 'amplicons classified error');
 
 #< ORIENT ># rm files, orient, check
 ok(unlink($build->oriented_fasta_file), 'unlinked oriented fasta file');
