@@ -187,6 +187,8 @@ sub gather_details
 	chdir($fastadirpath)  or croak "Failed to change to '$fastadirpath', from BerRunBlastphmmpfam.pm: $OS_ERROR";
     }
 
+    # FIXME: this sort of hard codes the path.  should test if 
+    # proteinnamefile is a full path to valid file.
     $proteinnamefile = qq{$fastadirpath/$proteinnamefile};
     unless ( -e $proteinnamefile ) {
       croak qq{\n\n NO, $proteinnamefile file found, from BerRunBlastphmmpfam.pm : $OS_ERROR \n\n};
