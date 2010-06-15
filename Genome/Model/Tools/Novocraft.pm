@@ -89,5 +89,7 @@ sub default_novocraft_version {
     return $DEFAULT_VERSION;
 }
 
+sub default_version { return default_novocraft_version; }
+
 1;
 

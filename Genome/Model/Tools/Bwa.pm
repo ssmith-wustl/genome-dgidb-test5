@@ -83,6 +83,7 @@ sub default_bwa_version {
     return $DEFAULT;
 }
         
+sub default_version { return default_bwa_version; }
 
 1;
 

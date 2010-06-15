@@ -50,6 +50,8 @@ sub default_soap_version {
     return $SOAP_DEFAULT;
 }
 
+sub default_version { return default_soap_version; }
+
 # Is the create sub needed?
 #sub create {
 #    my $class = shift;
