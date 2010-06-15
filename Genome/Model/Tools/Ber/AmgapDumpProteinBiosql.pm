@@ -171,6 +171,10 @@ GENE:      foreach my $f (@feat) {
     my $protname_fh = IO::File->new();
 
     my $basketfile = qq{$locus_tag.proteinname.fof};
+    if($self->outputdir)
+    {
+        $basketfile = $self->outputdir."/".$basketfile;
+    }
 
     $self->proteinnamefile($basketfile);
 
