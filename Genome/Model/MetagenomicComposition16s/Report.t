@@ -5,10 +5,11 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::Model::MetagenomicComposition16s::Test;
+use Test::More;
 
-Genome::Model::MetagenomicComposition16s::Report::Test->runtests;
+use_ok('Genome::Model::MetagenomicComposition16s::Report');
 
+done_testing();
 exit;
 
 =pod

@@ -132,6 +132,10 @@
           <td class="value"><xsl:value-of select="$classified-success * 100"/>%</td>
 				</tr>
 				<tr>
+          <td class="label">Classification Error</td>
+          <td class="value"><xsl:value-of select="//stat/amplicons-classification-error"/></td>
+				</tr>
+				<tr>
           <td class="label">Average Length w/o Primer</td>
 				  <td class="value"><xsl:value-of select="//stat/length-average"/></td>
 				</tr>

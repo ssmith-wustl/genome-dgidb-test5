@@ -115,6 +115,7 @@ sub get_summary_stats {
         'amplicons-processed-success' => $processed_success,
         'amplicons-classified' => $build->amplicons_classified,
         'amplicons-classified-success' => $build->amplicons_classified_success,
+        'amplicons-classification-error' => $build->amplicons_classification_error,
         # Lengths
         'length-minimum' => $lengths[0],
         'length-maximum' => $lengths[$#lengths],

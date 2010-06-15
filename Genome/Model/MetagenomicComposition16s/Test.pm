@@ -211,6 +211,7 @@ sub get_mock_build {
             amplicons_attempted 
             amplicons_processed amplicons_processed_success 
             amplicons_classified amplicons_classified_success
+            amplicons_classification_error
 
             /)
     );
@@ -260,6 +261,7 @@ sub get_mock_build {
     $build->amplicons_processed_success( $build->amplicons_processed / $build->amplicons_attempted );
     $build->amplicons_classified(4);
     $build->amplicons_classified_success( $build->amplicons_classified / $build->amplicons_processed );
+    $build->amplicons_classification_error(0);
 
     return $build;
 }
@@ -955,6 +957,7 @@ sub after_execute {
     my ($self, $summary, $params, $report) = @_;
 
     #$report->save($self->_build->reports_directory, 1);
+    print $report->xml_string."\n";
     my $existing_report = Genome::Report->create_report_from_directory(
         $self->_build->reports_directory.'/'.$report->name_to_subdirectory($report->name)
     );
@@ -970,37 +973,6 @@ sub after_execute {
 }
 
 sub _verify {
-    return 1;
-}
-
-######
-
-package Genome::Model::MetagenomicComposition16s::Report::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::Report::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-# Since the test class is abstract, make a class to inherit from it, and use that for testing
-class Genome::Model::MetagenomicComposition16s::Report::Tester {
-    is => 'Genome::Model::MetagenomicComposition16s::Report',
-    has => [
-    description => { default_value => 'DESC', },
-    ],
-};
-sub Genome::Model::MetagenomicComposition16s::Report::Tester::_add_to_report_xml {
-    return 1;
-}
-
-sub test_class {
-    return 'Genome::Model::MetagenomicComposition16s::Report::Tester';
-}
-
-sub after_execute {
     return 1;
 }
 
