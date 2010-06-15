@@ -63,6 +63,8 @@ sub default_bowtie_version {
     return $BOWTIE_DEFAULT;
 }
 
+sub default_version { return default_bowtie_version; }
+
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);

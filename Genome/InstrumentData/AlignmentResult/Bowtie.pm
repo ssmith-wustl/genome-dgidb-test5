@@ -32,7 +32,14 @@ sub _run_aligner {
 
     # get refseq info
     my $reference_build = $self->reference_build;
+    # This will search for something along the lines of all_sequences.bowtie. 
+    # all_sequences.bowtie should be a symlink to all_sequences.fa
     my $reference_bowtie_index_path = $reference_build->full_consensus_path('bowtie');
+
+    unless (-s $reference_bowtie_index_path) {
+        $self->error_message("Bowtie index file not found or is empty at $reference_bowtie_index_path or " . $reference_build->data_directory);
+        die;
+    }
 
     my $aligner_params = $self->aligner_params;
 

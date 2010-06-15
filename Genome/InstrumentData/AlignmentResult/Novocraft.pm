@@ -28,7 +28,8 @@ sub _run_aligner {
     # get refseq info
     my $reference_build = $self->reference_build;
     my $reference_novocraft_index_path = $reference_build->full_consensus_path('novocraft');
-
+    
+    # check index file exists and is non-zero sized.
     unless (-s $reference_novocraft_index_path) {
         $self->error_message("Index file not found or empty at $reference_novocraft_index_path");
         die; 
