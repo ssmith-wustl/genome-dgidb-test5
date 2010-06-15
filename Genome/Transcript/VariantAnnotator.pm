@@ -149,6 +149,13 @@ sub transcripts {
         confess "Variant is not fully defined: chromosome name, start, stop, variant, reference, and type must be defined.\n";
     }
 
+    # Make sure the sequence on the variant is valid. If not, display a warning and set transcript error
+    unless ($self->is_valid_variant(\%variant)) {
+        $self->warning_message("The sequence on this variant is not valid! Reference: $variant{reference} Variant: $variant{variant}");
+
+        return { transcript_error => 'invalid_sequence_on_variant' }
+    }
+
     # TODO Change to use range variant start <-> variant stop
     my @transcripts_to_annotate = $self->transcript_window->scroll($variant{start});
     return unless @transcripts_to_annotate;
@@ -180,6 +187,19 @@ sub transcripts {
         push @annotations, \%annotation;
     }
     return @annotations;
+}
+
+# Checks that the sequence on the variant is valid
+sub is_valid_variant {
+    my ($self, $variant) = @_;
+    unless ($variant->{type} =~ /del/i) {
+        return 0 if $variant->{variant} =~ /\d/ or $variant->{variant} =~ /[a-z]/; 
+    }
+
+    unless ($variant->{type} =~ /ins/i) {
+        return 0 if $variant->{reference} =~ /\d/ or $variant->{reference} =~ /[a-z]/;
+    }
+    return 1;
 }
 
 # Takes in a group of annotations and returns them in priority order
