@@ -31,6 +31,12 @@ sub _run_aligner {
     # collect filepaths
     my $ssaha_path = Genome::Model::Tools::Ssaha2->path_for_ssaha2_version($self->aligner_version);
     my $ref_index = $self->reference_build->full_consensus_path('ssaha2');
+    
+    unless (defined $ref_index && -s $ref_index) {
+      $self->error_message("Ssaha2 index file either doesn't exist or is empty at $ref_index or " . $self->reference_build->data_directory);  
+      die;
+    };
+    
     my $output_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $log_file = $self->temp_staging_directory . "/aligner.log";
 
