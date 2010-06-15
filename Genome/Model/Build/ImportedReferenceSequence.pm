@@ -78,7 +78,13 @@ sub from_cmdline {
     return $build if $build;
 
     # fall back to the default
-    return $class->SUPER::from_cmdline($text);
+
+    my @builds = $class->SUPER::from_cmdline($text);
+    if (@builds > 1) {
+        $class->warning_message("Multiple builds found for cmdline string: $text");
+    }
+
+    return $builds[0] if @builds;
 }
 
 sub __display_name__ {
