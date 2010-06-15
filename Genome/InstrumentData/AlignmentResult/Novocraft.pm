@@ -45,8 +45,9 @@ sub _run_aligner {
     
     # Format command
     $DB::single = 1;
-    my $cmdline = sprintf('%s -r A 1 -d %s -f %s -o SAM 1>> %s 2>> %s',
+    my $cmdline = sprintf('%s %s -d %s -f %s -o SAM 1>> %s 2>> %s',
         $path_to_novoalign,
+        $aligner_params,
         $reference_novocraft_index_path,
         join(' ', @input_pathnames),
         $novocraft_output,
@@ -73,10 +74,7 @@ sub _run_aligner {
     );
     
     $sam_to_bam_object->execute;
-    #Debugging... At this point a look at the $cleaned_with_headers file via ValidateSamFile will say:
-    #"ERROR: Read groups is empty"
-    #
-    $DB::single = 1;
+
     # Convert Bam from fix mates to Sam
     Genome::Model::Tools::Sam::BamToSam->execute(
         bam_file    => $intermediate_bam_file,
