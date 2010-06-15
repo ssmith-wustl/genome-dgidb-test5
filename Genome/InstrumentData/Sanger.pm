@@ -52,19 +52,70 @@ class Genome::InstrumentData::Sanger {
     ],
 };
 
-    #FIXME ALLOCATE 
-sub _data_base_path {
-    return '/gscmnt/402/core/16S/info/instrument_data/';
+sub disk_allocation {
+    my $self = shift;
+
+    return Genome::Disk::Allocation->get(
+        owner_id => $self->id,
+        owner_class_name => $self->class,
+    );
 }
 
-#< Dump to File System >#
+sub full_path {
+    my $self = shift;
+
+    # FIXME Legacy that would dump data to unallocated space. Need to get
+    #  list of full_paths from the db, then rm from db, then rm from
+    #  file system. Then dump to file system will put them on allocated
+    #  space.
+    #  1 - disk allocation
+    #  2 - full path from attributes
+    my $disk_allocation = $self->disk_allocation;
+    if ( $disk_allocation ) {
+        return $disk_allocation->absolute_path;
+    }
+
+    return $self->_full_path;
+}
+
+sub _full_path {
+    my $self = shift;
+
+    my ($full_path_attr) = grep { $_->property_name eq 'full_path' } $self->attributes;
+    return unless $full_path_attr;
+    
+    my $full_path = $full_path_attr->value;
+    return $full_path if -d $full_path;
+    
+    return;
+}
+
+sub resolve_full_path {
+    return full_path(@_);
+}
+
 sub dump_to_file_system {
     my $self = shift;
 
-    #FIXME ALLOCATE 
-    my $data_dir = $self->create_data_directory_and_link 
-        or return;
-        
+    my $disk_allocation = $self->disk_allocation;
+    unless ( $disk_allocation ) {
+        $disk_allocation = Genome::Disk::Allocation->allocate(
+            disk_group_name => 'info_alignments',
+            allocation_path => '/instrument_data/sanger'.$self->id,
+            kilobytes_requested => 10240, # 10 Mb
+            owner_class_name => $self->class,
+            owner_id => $self->id
+        );
+        unless ($disk_allocation) {
+            die $self->error_message('Failed to create disk allocation for sanger instrument data '.$self->id);
+        }
+    }
+
+    my $data_dir = $disk_allocation->absolute_path;
+    unless ( Genome::Utility::FileSystem->validate_existing_directory($data_dir) ) {
+        die $self->error_message('Absolute path from disk allocation does not exist for sanger instrument data '.$self->id);
+    }
+
     my $read_cnt = 0;
     my $reads = $self->_get_read_iterator
         or return;
@@ -73,9 +124,9 @@ sub dump_to_file_system {
         $read_cnt++;
         my $scf_name = $read->default_file_name('scf');
         my $scf_file = sprintf('%s/%s.gz', $data_dir, $scf_name);
-        # FIXME Actually verify scf
-        next if -s $scf_file;
-        unlink $scf_file if -e $scf_file; # remove empty file
+        my $size = -s $scf_file;
+        next if $size and $size > 1000; # if small retry dump
+        unlink $scf_file if -e $scf_file; 
         my $scf_fh = IO::File->new($scf_file, 'w');
         unless ( $scf_fh ) {
             $self->error_message("Can't open scf ($scf_file)\n$!");

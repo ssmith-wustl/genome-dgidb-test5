@@ -43,9 +43,12 @@ sub link_instrument_data {
     my $dh = Genome::Utility::FileSystem->open_directory($instrument_data_dir)
         or return;
 
+    for (1..2) {  # . and ..
+        my $dot_dir = $dh->read;
+        confess("Expecting one of the dot directories, but got $dot_dir for ".$self->description) unless $dot_dir =~ /^\.{1,2}$/;
+    }
     my $cnt = 0;
     while ( my $trace = $dh->read ) {
-        next if $trace =~ m#^\.#;
         $cnt++;
         my $target = sprintf('%s/%s', $instrument_data_dir, $trace);
         my $link = sprintf('%s/%s', $chromat_dir, $trace);
