@@ -28,6 +28,11 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             default => "STDOUT",
         },
     ],
+    has_param => [
+        lsf_queue => {
+            value => $ENV{'LSB_QUEUE'} || 'long',
+        }
+    ],
     has_optional => [
         # IO Params
         _is_parallel => {
@@ -133,6 +138,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is_input => 1,
             doc => 'If set, the annotator will check all variant reference sequences against the respective species reference before annotating. Annotation is skipped for those variants with mismatches.',
         },
+        
     ], 
 };
 
@@ -176,7 +182,7 @@ The mutation type will be inferred based upon start, stop, reference, and varian
 Any number of additional columns may be in the input following these columns, but they will be disregarded.
 
 OUTPUT COLUMNS (COMMMA SEPARATED)
-chromosome_name start stop reference variant type gene_name transcript_name transcript_species transcript_source trnascript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains
+chromosome_name start stop reference variant type gene_name transcript_name transcript_species transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains deletion_substructures transcript_error
 
 CURRENTLY AVAILABLE REFERENCE TRANSCRIPTS WITH VERSIONS
 $currently_available_builds
