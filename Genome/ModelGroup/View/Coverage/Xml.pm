@@ -29,11 +29,11 @@ sub get_alignment_summary_node {
     my @models = $self->subject->models;
     my $as_node = $xml_doc->createElement('alignment-summary');
     for my $model (@models) {
-        my $model_node = $as_node->addChild( $xml_doc->createElement('model') );
-        $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
-        $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
         my $build = $model->last_succeeded_build;
         if ($build) {
+            my $model_node = $as_node->addChild( $xml_doc->createElement('model') );
+            $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
+            $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
             my $alignment_summary_hash_ref = $build->alignment_summary_hash_ref;
             for my $key (keys %{$alignment_summary_hash_ref->{0}}) {
                 my $key_node = $model_node->addChild( $xml_doc->createElement($key) );
