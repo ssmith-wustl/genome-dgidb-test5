@@ -79,7 +79,7 @@ sub path_for_novocraft_version {
     my $version = shift;
 
     if (defined $NOVOCRAFT_VERSIONS{$version}) {
-        return $NOVOCRAFT_VERSIONS{$version};
+        return $NOVOCRAFT_VERSIONS{$version} . '/novoalign';
     }
     die('No path for novocraft version '. $version);
 }
