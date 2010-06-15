@@ -25,12 +25,15 @@ BEGIN {
 ###############################################################################
 
 # this ought to match the name as seen in the processing profile
-my $aligner_name = "bwa";
+my $aligner_name = "novocraft";
 
 
 # End aligner-specific configuration,
 # everything below here ought to be generic.
-#
+# First run should uncomment test_alignment(generate_shortcut_data => 1) line below.
+# Also, make sure your aligner tool->default_version will return a valid value.
+# Finally, make sure an index for your aligner exists for the test sequence.
+# (You should test for that in your aligner code anyway)
 
 #
 # Gather up versions for the tools used herein
@@ -91,7 +94,6 @@ sub test_alignment {
 
     ok($alignment, "Created Alignment");
     my $dir = $alignment->alignment_directory;
-    $DB::single = 1;
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
     ok(-s $dir . "/all_sequences.bam", "result has a bam file");
