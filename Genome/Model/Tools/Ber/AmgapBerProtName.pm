@@ -32,6 +32,12 @@ UR::Object::Type->define(
 							      is => 'String',
 							      doc => "YAML file for reading.  This is the same config file used to start hgmi tools.",
 							     },
+                    'ber_directory' => {
+                                  is => 'String',
+                                  doc => "base directory to use for BER; use this to specify different releases of BER",
+                                  is_optional => 1,
+                                  default => "/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate",
+                    },
 					'internalhash'    => {
 							      is => 'HashRef',
 							      doc => "internal",
@@ -88,6 +94,7 @@ sub execute
     ################################################
     my $cwd        = getcwd();
     my $berbasedir = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate};
+    $berbasedir = $self->ber_directory; # let us change the ber directory at will.
     my $configdir  = qq{$berbasedir/data/db/CSV};
 
     unless ( -d $configdir ){
@@ -126,9 +133,11 @@ sub execute
     my $berdir      = qq{$locustagdir/ber};
     my $hmmdir      = qq{$locustagdir/hmm};
     my $bsubfiledir = qq{$locustagdir/bsubERRfiles};
-    my $blpqf       = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/data/panda/AllGroup/AllGroup.niaa};
+#    my $blpqf       = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/data/panda/AllGroup/AllGroup.niaa};
+    my $blpqf       = qq{$berbasedir/data/panda/AllGroup/AllGroup.niaa};
     #my $hmmdb       = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/data/ALL_LIB.20081108.HMM};
-    my $hmmdb       = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/data/ALL_LIB.HMM};
+    #my $hmmdb       = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/data/ALL_LIB.HMM};
+    my $hmmdb       = qq{$berbasedir/data/ALL_LIB.HMM};
 
 
     chdir($genomesdir) or croak  "\nFailed to change directories to '$genomesdir' ... from AmgapBerProtName.pm: $OS_ERROR\n\n";
@@ -197,7 +206,8 @@ sub execute
     #Ber Run Btap Htab
     ################################################
     $cwd = getcwd();
-    my $srcdir = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/src};
+    #my $srcdir = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/src};
+    my $srcdir = qq{$berbasedir/src};
     unless ($cwd eq $srcdir) {
 	chdir($srcdir) or die "Failed to change to '$srcdir'...  from AmgapBerProtName.pm: $OS_ERROR\n\n";
     }
@@ -225,7 +235,8 @@ sub execute
     }
     warn qq{Running anno-sqlite.bash \n\n};
 
-    my $outdir = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/out};
+    #my $outdir = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/out};
+    my $outdir = qq{$berbasedir/out};
 
     my $bras =  Genome::Model::Tools::Ber::BerRunAnnoSqlite->create(
                                                                     'locus_tag'       => $config->{locus_tag},
