@@ -79,13 +79,15 @@ sub execute {                               # replace with real execution logic.
 
 		my @lineContents = split(/\t/, $line);
 		my $chrom = $lineContents[0];
-	
+
 		if(substr(uc($chrom), 0, 5) eq "CHROM" || substr(uc($chrom), 0, 3) eq "REF")
 		{
 			## Ignore header lines ##	
 		}
 		else
 		{
+			$chrom = fix_chrom($chrom);
+			
 			my $chr_start = $lineContents[1];
 			my $chr_stop = my $allele1 = my $allele2 = "";
 			my $ref = my $var = "";
@@ -260,6 +262,19 @@ sub byChrPos
     
 }
 
+#############################################################
+# ParseBlocks - takes input file and parses it
+#
+#############################################################
+
+sub fix_chrom
+{
+	my $chrom = shift(@_);
+	$chrom =~ s/chr// if(substr($chrom, 0, 3) eq "chr");
+	$chrom =~ s/[^0-9XYMNT\_random]//g;	
+
+	return($chrom);
+}
 
 
 

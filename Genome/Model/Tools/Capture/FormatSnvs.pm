@@ -82,7 +82,7 @@ sub execute {                               # replace with real execution logic.
 		if(!(lc($lineContents[0]) =~ "chrom" || lc($lineContents[0]) =~ "ref_name"))
 		{
 			my $chrom = $lineContents[0];
-			$chrom =~ s/[^0-9XYMNT\_]//g;
+			$chrom = fix_chrom($chrom);
 			my $chr_start = $lineContents[1];
 			my $chr_stop = my $allele1  = my $allele2 = "";
 
@@ -141,6 +141,20 @@ sub execute {                               # replace with real execution logic.
 	close(OUTFILE);
 }
 
+
+#############################################################
+# ParseBlocks - takes input file and parses it
+#
+#############################################################
+
+sub fix_chrom
+{
+	my $chrom = shift(@_);
+	$chrom =~ s/chr// if(substr($chrom, 0, 3) eq "chr");
+	$chrom =~ s/[^0-9XYMNT\_random]//g;	
+
+	return($chrom);
+}
 
 
 #############################################################

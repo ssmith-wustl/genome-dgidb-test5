@@ -29,7 +29,7 @@ class Genome::Model::Tools::Capture::BuildModels {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		model_basename	=> { is => 'Text', doc => "Project string for model naming, e.g. \"TCGA-OV-6K-Capture-bwa\"", is_optional => 0 },
-		processing_profile	=> { is => 'Text', doc => "Processing profile to use, e.g. \"bwa0.5.5 and samtools r510 and picard r107\"", is_optional => 1 },
+		processing_profile	=> { is => 'Text', doc => "Processing profile to use", is_optional => 1, default =>"bwa0.5.5 and samtools r544 and picard 1.17 and -q 5" },
 		sample_list	=> { is => 'Text', doc => "Text file with sample names to include, one per line" , is_optional => 0},
 		subject_type	=> { is => 'Text', doc => "Type of sample name in file (sample_name or library_name)" , is_optional => 1},
 		report_only	=> { is => 'Text', doc => "Flag to skip actual genome model creation" , is_optional => 1},
@@ -70,8 +70,8 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
-	my $processing_profile = "bwa0.5.5 and samtools r510 and picard r107";
-	$processing_profile = $self->processing_profile if($self->processing_profile);
+#	my $processing_profile = "bwa0.5.5 and samtools r544 and picard 1.17 and -q 5";
+	my $processing_profile = $self->processing_profile;# if($self->processing_profile);
 	my $model_basename = $self->model_basename;
 	my $sample_list = $self->sample_list;
 	my $subject_type = "sample_name";
