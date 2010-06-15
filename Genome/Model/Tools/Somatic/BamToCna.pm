@@ -19,11 +19,19 @@ my $BAMWINDOW_COMMAND = 'bam-window';
 class Genome::Model::Tools::Somatic::BamToCna {
     is => 'Command',
     has => [
-    use_version => {
+    bam_window_version => {
+        is_input=>1, 
         is => 'Version',
         is_optional => 1,
         default_value => $DEFAULT_VERSION,
-        doc => "Version of bam-window to use, default is $DEFAULT_VERSION"
+        doc => "Version of bam-window to use"
+    },
+    bam_window_params => {
+        type => 'String',
+        is_input => 1,
+        is_optional => 1,
+        default_value => "-q 35 -s -p",
+        doc => "Parameters to pass to bam-window, except for -w (window size). Please provide window size via the window size parameter."
     },
     tumor_bam_file => {
         type => 'String',
@@ -49,12 +57,6 @@ class Genome::Model::Tools::Somatic::BamToCna {
         is_optional => 1,
         default => 10000,
         doc => 'Window size (bp) for counting reads contributing to copy number in that window (resolution, default = 10000 bp).'
-    },
-    maq_quality_cutoff => {
-        type => 'Number',
-        is_optional => 1,
-        default => 35,
-        doc => 'MAQ mapping quality cutoff for contributing reads (default = 35).'
     },
     ratio => {
         type => 'Number',
@@ -151,7 +153,8 @@ sub execute {
     my %statistics;
 
     for my $sample (@samples){
-        my $cmd = sprintf("%s -w %d -q %d -s -p -d %f %s |", $self->bamwindow_path, $self->window_size, $self->maq_quality_cutoff, $downratios{$sample}, $maps{$sample});
+        # the -d param needs to stay here, since it is calculated and not user-provided. The -w param must unfortunately come from $self->window_size, since it is used later
+        my $cmd = sprintf("%s -w %s %s -d %f %s |", $self->bamwindow_path, $self->window_size, $self->bam_window_params, $downratios{$sample}, $maps{$sample});
         open(MAP,$cmd) || die "unable to open $maps{$sample}\n";
         $statistics{$sample} = Statistics::Descriptive::Sparse->new();
 
@@ -333,7 +336,7 @@ chdir $cwd;
 
 sub bamwindow_path {
     my $self = $_[0];
-    return $self->path_for_bamwindow_version($self->use_version);
+    return $self->path_for_bamwindow_version($self->bam_window_version);
 }
 
 sub available_bamwindow_versions {

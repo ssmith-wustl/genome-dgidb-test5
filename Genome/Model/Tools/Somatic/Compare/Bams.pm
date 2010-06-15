@@ -193,6 +193,9 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Somatic Sniper" toProperty="aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Somatic Sniper" toProperty="reference_sequence_input" />
   <link fromOperation="input connector" fromProperty="sniper_working_directory" toOperation="Somatic Sniper" toProperty="working_directory" />
+  <link fromOperation="input connector" fromProperty="sniper_version" toOperation="Somatic Sniper" toProperty="version" />
+  <link fromOperation="input connector" fromProperty="sniper_params" toOperation="Somatic Sniper" toProperty="snv_params" />
+  <link fromOperation="input connector" fromProperty="sniper_params" toOperation="Somatic Sniper" toProperty="indel_params" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Breakdancer" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="sv_params" toOperation="Breakdancer" toProperty="sv_params" />
@@ -207,6 +210,8 @@ __DATA__
   <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Copy Number Alteration" toProperty="normal_bam_file" />
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Copy Number Alteration" toProperty="tumor_bam_file" />
   <link fromOperation="input connector" fromProperty="copy_number_output" toOperation="Copy Number Alteration" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="bam_window_version" toOperation="Copy Number Alteration" toProperty="bam_window_version" />
+  <link fromOperation="input connector" fromProperty="bam_window_params" toOperation="Copy Number Alteration" toProperty="bam_window_params" />
 
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Indelpe Runner Tumor" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Indelpe Runner Tumor" toProperty="ref_seq_file" />
@@ -275,6 +280,8 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="High Confidence Snp Tier 1" toProperty="tumor_bam_file" />
   <link fromOperation="input connector" fromProperty="tier_1_snp_high_confidence_file" toOperation="High Confidence Snp Tier 1" toProperty="output_file" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="High Confidence Snp Tier 1" toProperty="sniper_file" />
+  <link fromOperation="input connector" fromProperty="bam_readcount_version" toOperation="High Confidence Snp Tier 1" toProperty="bam_readcount_version" />
+  <link fromOperation="input connector" fromProperty="bam_readcount_params" toOperation="High Confidence Snp Tier 1" toProperty="bam_readcount_params" />
 
   <link fromOperation="input connector" fromProperty="imported_bams" toOperation="High Confidence Snp Tier 2" toProperty="prepend_chr" />
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="High Confidence Snp Tier 2" toProperty="skip_if_output_present" />
@@ -284,6 +291,8 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tier_2_snp_high_confidence_file" toOperation="High Confidence Snp Tier 2" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="High Confidence Snp Tier 2" toProperty="skip" /> 
   <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="High Confidence Snp Tier 2" toProperty="sniper_file" />
+  <link fromOperation="input connector" fromProperty="bam_readcount_version" toOperation="High Confidence Snp Tier 2" toProperty="bam_readcount_version" />
+  <link fromOperation="input connector" fromProperty="bam_readcount_params" toOperation="High Confidence Snp Tier 2" toProperty="bam_readcount_params" />
 
   <link fromOperation="input connector" fromProperty="imported_bams" toOperation="High Confidence Snp Tier 3" toProperty="prepend_chr" />
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="High Confidence Snp Tier 3" toProperty="skip_if_output_present" />
@@ -293,6 +302,8 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tier_3_snp_high_confidence_file" toOperation="High Confidence Snp Tier 3" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="High Confidence Snp Tier 3" toProperty="skip" /> 
   <link fromOperation="Tier Variants Snp" fromProperty="tier3_file" toOperation="High Confidence Snp Tier 3" toProperty="sniper_file" />
+  <link fromOperation="input connector" fromProperty="bam_readcount_version" toOperation="High Confidence Snp Tier 3" toProperty="bam_readcount_version" />
+  <link fromOperation="input connector" fromProperty="bam_readcount_params" toOperation="High Confidence Snp Tier 3" toProperty="bam_readcount_params" />
 
   <link fromOperation="input connector" fromProperty="imported_bams" toOperation="High Confidence Snp Tier 4" toProperty="prepend_chr" />
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="High Confidence Snp Tier 4" toProperty="skip_if_output_present" />
@@ -302,6 +313,8 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tier_4_snp_high_confidence_file" toOperation="High Confidence Snp Tier 4" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="High Confidence Snp Tier 4" toProperty="skip" /> 
   <link fromOperation="Tier Variants Snp" fromProperty="tier4_file" toOperation="High Confidence Snp Tier 4" toProperty="sniper_file" />
+  <link fromOperation="input connector" fromProperty="bam_readcount_version" toOperation="High Confidence Snp Tier 4" toProperty="bam_readcount_version" />
+  <link fromOperation="input connector" fromProperty="bam_readcount_params" toOperation="High Confidence Snp Tier 4" toProperty="bam_readcount_params" />
 
   <link fromOperation="High Confidence Snp Tier 1" fromProperty="output_file" toOperation="Upload Variants Snp Tier 1" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Upload Variants Snp Tier 1" toProperty="annotation_file" />
@@ -502,6 +515,12 @@ __DATA__
     <inputproperty isOptional="Y">breakdancer_version</inputproperty>
     <inputproperty isOptional="Y">skip_tumor_indelpe</inputproperty>
     <inputproperty isOptional="Y">skip_normal_indelpe</inputproperty>
+    <inputproperty>sniper_version</inputproperty>
+    <inputproperty>sniper_params</inputproperty>
+    <inputproperty>bam_window_version</inputproperty>
+    <inputproperty>bam_window_params</inputproperty>
+    <inputproperty>bam_readcount_version</inputproperty>
+    <inputproperty>bam_readcount_params</inputproperty>
 
     <inputproperty isOptional="Y">sniper_working_directory</inputproperty>
 

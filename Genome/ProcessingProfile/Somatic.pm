@@ -35,27 +35,21 @@ class Genome::ProcessingProfile::Somatic{
         },
         bam_window_version => {
             doc => "Version to use for bam-window in the copy number variation step.",
-            is_optional => 1,
         },
         bam_window_params => {
             doc => "Parameters to pass to bam-window in the copy number variation step.",
-            is_optional => 1,
         },
         sniper_version => {
             doc => "Version to use for bam-somaticsniper for detecting snps and indels.",
-            is_optional => 1,
         },
         sniper_params => {
             doc => "Parameters to pass to bam-somaticsniper for detecting snps and indels",
-            is_optional => 1,
         },
         bam_readcount_version => {
             doc => "Version to use for bam-readcount in the high confidence step.",
-            is_optional => 1,
         },
         bam_readcount_params=> {
             doc => "Parameters to pass to bam-readcount in the high confidence step",
-            is_optional => 1,
         },
         require_dbsnp_allele_match => {
             doc => "If set to true, the pipeline will require the allele to match during Lookup Variants"  

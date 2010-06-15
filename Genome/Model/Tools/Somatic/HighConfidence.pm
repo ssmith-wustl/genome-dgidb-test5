@@ -9,9 +9,26 @@ use IO::File;
 use Readonly;
 use Genome::Info::IUB;
 
+my $DEFAULT_VERSION = '0.2';
+my $READCOUNT_COMMAND = 'bam-readcount';
+
 class Genome::Model::Tools::Somatic::HighConfidence {
     is => 'Command',
     has => [
+        bam_readcount_version => {
+            is => 'Version',
+            is_input=>1, 
+            is_optional => 1,
+            default_value => $DEFAULT_VERSION,
+            doc => "Version of bam-readcount to use, default is $DEFAULT_VERSION"
+        },
+        bam_readcount_params => {
+            is => 'String',
+            is_optional => 1,
+            is_input=>1, 
+            default_value => "-q 1",
+            doc => "Parameters to pass to bam-readcount"
+        },
        'sniper_file' => {
            type => 'String',
            is_input => 1,
@@ -74,6 +91,10 @@ class Genome::Model::Tools::Somatic::HighConfidence {
         },
     ]
 };
+
+my %READCOUNT_VERSIONS = (
+    '0.2' => '/gsc/pkg/bio/samtools/readcount/readcount-v0.2/' . $READCOUNT_COMMAND,
+);
 
 sub help_brief {
     return "This module takes in somatic sniper output and filters it to high confidence variants";
@@ -165,7 +186,7 @@ sub execute {
     return 1 unless scalar @sniper_lines;
 
     #Run readcount program 
-    my $readcount_command = sprintf("%s -q 1 -l %s %s |",$self->readcount_program, $temp_path, $self->tumor_bam_file);
+    my $readcount_command = sprintf("%s %s -l %s %s |",$self->readcount_path, $self->bam_readcount_params, $temp_path, $self->tumor_bam_file);
     $self->status_message("Running: $readcount_command");
     my $readcounts = IO::File->new($readcount_command);
 
@@ -205,15 +226,36 @@ sub execute {
     }
 
     unless($readcounts->close()) {
-        $self->error_message("Error running " . $self->readcount_program);
+        $self->error_message("Error running " . $self->readcount_path);
         die;
     }
     
     return 1;
 }
 
-sub readcount_program {
-    return "bam-readcount";
+sub readcount_path {
+    my $self = $_[0];
+    return $self->path_for_readcount_version($self->bam_readcount_version);
+}
+
+sub available_readcount_versions {
+    my $self = shift;
+    return keys %READCOUNT_VERSIONS;
+}
+
+sub path_for_readcount_version {
+    my $class = shift;
+    my $version = shift;
+
+    if (defined $READCOUNT_VERSIONS{$version}) {
+        return $READCOUNT_VERSIONS{$version};
+    }
+    die('No path for bam-readcount version '. $version);
+}
+
+sub default_readcount_version {
+    die "default bam-readcount version: $DEFAULT_VERSION is not valid" unless $READCOUNT_VERSIONS{$DEFAULT_VERSION};
+    return $DEFAULT_VERSION;
 }
 
 1;

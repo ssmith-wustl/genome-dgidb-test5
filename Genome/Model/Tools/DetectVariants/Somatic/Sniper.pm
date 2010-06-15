@@ -6,9 +6,19 @@ use strict;
 use Genome;
 use Workflow;
 
+my $DEFAULT_VERSION = '0.7.2';
+my $SNIPER_COMMAND = 'bam-somaticsniper';
+
 class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
     is => ['Genome::Model::Tools::DetectVariants::Somatic'],
     has => [
+        version => {
+            is => 'Version',
+            is_optional => 1,
+            is_input => 1,
+            default_value => $DEFAULT_VERSION,
+            doc => "Version of sniper to use",
+        },
         snp_output => {
             calculate_from => ["working_directory"],
             calculate => q{ $working_directory . '/snp_output.csv' },
@@ -32,11 +42,13 @@ class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
         snv_params => {
             is => 'Text',
             default => '-q 1 -Q 15',
+            is_input=>1, 
             doc => "Parameters for running bam-somaticsniper for snps. Since it discovers both snps and indels in one run, providing different parameters for snps and indels causes bam-somatisniper to run twice.",
         },
         indel_params => {
             is => 'Text',
             default => '-q 1 -Q 15',
+            is_input=>1, 
             doc => "Parameters for running bam-somaticsniper for indels. Since it discovers both snps and indels in one run, providing different parameters for snps and indels causes bam-somatisniper to run twice.",
         },
         reference_sequence_input => {
@@ -69,6 +81,12 @@ class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
         capture_set_input=>{},
     ],
 };
+
+my %SNIPER_VERSIONS = (
+    '0.7' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7/' . $SNIPER_COMMAND,
+    '0.7.1' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.1/' . $SNIPER_COMMAND,
+    '0.7.2' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.2/' . $SNIPER_COMMAND,
+);
 
 sub help_brief {
     "Produces a list of high confidence somatic snps and indels.";
@@ -169,10 +187,36 @@ sub execute {
 sub _run_sniper {
     my ($self, $params, $snp_output, $indel_output) = @_;
     
-    my $cmd = "bam-somaticsniper " . $params . " -f ".$self->reference_sequence_input." ".$self->aligned_reads_input." ".$self->control_aligned_reads_input ." " . $snp_output . " " . $indel_output; 
+    my $cmd = $self->sniper_path . " " . $params . " -f ".$self->reference_sequence_input." ".$self->aligned_reads_input." ".$self->control_aligned_reads_input ." " . $snp_output . " " . $indel_output; 
     my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input], output_files=>[$self->snp_output], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
 
     return $result;
-}   
+}
+
+sub sniper_path {
+    my $self = $_[0];
+    return $self->path_for_sniper_version($self->version);
+}
+
+sub available_sniper_versions {
+    my $self = shift;
+    return keys %SNIPER_VERSIONS;
+}
+
+sub path_for_sniper_version {
+    my $class = shift;
+    my $version = shift;
+
+    if (defined $SNIPER_VERSIONS{$version}) {
+        return $SNIPER_VERSIONS{$version};
+    }
+    die('No path for bam-somaticsniper version '. $version);
+}
+
+sub default_sniper_version {
+    die "default bam-somaticsniper version: $DEFAULT_VERSION is not valid" unless $SNIPER_VERSIONS{$DEFAULT_VERSION};
+    return $DEFAULT_VERSION;
+}
+
 
 1;

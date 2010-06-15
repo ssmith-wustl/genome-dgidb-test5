@@ -59,6 +59,7 @@ class Genome::Model::Tools::DetectVariants {
             is_input => 1,
         },
         version => {
+            is_input => 1,
             is => 'Version',
             doc => 'The version of the variant detector to use.',
         },

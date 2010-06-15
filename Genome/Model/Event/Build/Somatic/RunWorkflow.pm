@@ -129,6 +129,12 @@ sub execute {
 
     my $sv_params = $processing_profile->sv_detector_params;
     my $breakdancer_version = $processing_profile->sv_detector_version;
+    my $sniper_version = $processing_profile->sniper_version;
+    my $sniper_params = $processing_profile->sniper_params;
+    my $bam_window_version = $processing_profile->bam_window_version;
+    my $bam_window_params = $processing_profile->bam_window_params;
+    my $bam_readcount_version = $processing_profile->bam_readcount_version;
+    my $bam_readcount_params = $processing_profile->bam_readcount_params;
     
     my $workflow = Genome::Model::Tools::Somatic::Compare::Bams->create(
         normal_bam_file => $normal_bam,
@@ -144,6 +150,12 @@ sub execute {
         build_id => $build->id,
         sv_params => $sv_params,
         breakdancer_version => $breakdancer_version,
+        sniper_version => $sniper_version,
+        sniper_params => $sniper_params,
+        bam_window_version => $bam_window_version,
+        bam_window_params => $bam_window_params,
+        bam_readcount_version => $bam_readcount_version,
+        bam_readcount_params => $bam_readcount_params,
     );
 
     Genome::DataSource::GMSchema->disconnect_default_dbh;
