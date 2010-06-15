@@ -21,7 +21,6 @@ ok($model, 'Got mock de novo assembly model') or die;
 my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
 ok($build, 'Got mock de novo assembly build') or die;
 
-# FIXME link needed files!
 my $example_fastq = Genome::Model::DeNovoAssembly::Test->example_fastq_file_for_model($model);
 symlink($example_fastq, $build->collated_fastq_file);
 ok(-s $build->collated_fastq_file, 'Linked fastq file') or die;
@@ -50,7 +49,7 @@ my @file_names_to_test = qw/ reads.placed readinfo.txt
                          /;
 #skipping input fasta.gz and qual.gz files for now
 
-my $test_data_dir = '/gscmnt/sata420/info/testsuite_data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
 
 foreach my $file (@file_names_to_test) {
     ok(-e $test_data_dir."/$file", "Test data dir $file file exists");
@@ -59,6 +58,7 @@ foreach my $file (@file_names_to_test) {
 }
 
 #print $build->data_directory."\n";<STDIN>;
+
 done_testing();
 exit;
 
