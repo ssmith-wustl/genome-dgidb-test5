@@ -59,7 +59,7 @@ sub base_temp_directory {
         $prefix ||= $class;
         my $time = UR::Time->now;
 
-        $time =~ s/\s\: /_/g;
+        $time =~ s/[\s\: ]/_/g;
         $template = "/gm-$prefix-$time-$id-XXXX";
         $template =~ s/ /-/g;
     }
