@@ -62,15 +62,20 @@ sub _resolve_workflow_for_build {
     # and hopefully pp-subclass specific.
 
     if ($self->can('_execute_build')) {
-        my $logdir = $build->log_directory;
 
-        my $workflow = Workflow::Model->create(
+        my %opts = (
             name => $build->id . ' all stages',
-            log_dir => $logdir,
             input_properties => [ 'build_id' ],
             output_properties => [ 'result' ]
         );
-        
+
+        my $logdir = $build->log_directory;
+        if ($logdir =~ /^\/gscmnt/) {
+            $opts{log_dir} = $logdir;
+        }
+ 
+        my $workflow = Workflow::Model->create(%opts);
+
         my $operation = $workflow->add_operation(
             name => '_execute_build',
             operation_type => Workflow::OperationType::Command->get('Genome::Model::Event::Build::ProcessingProfileMethodWrapper')
