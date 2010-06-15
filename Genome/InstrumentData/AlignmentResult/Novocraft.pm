@@ -29,6 +29,11 @@ sub _run_aligner {
     my $reference_build = $self->reference_build;
     my $reference_novocraft_index_path = $reference_build->full_consensus_path('novocraft');
 
+    unless (-s $reference_novocraft_index_path) {
+        $self->error_message("Index file not found or empty at $reference_novocraft_index_path");
+        die; 
+    };
+
     my $aligner_params = $self->aligner_params;
 
     my $path_to_novoalign = Genome::Model::Tools::Novocraft->path_for_novocraft_version($self->aligner_version);
