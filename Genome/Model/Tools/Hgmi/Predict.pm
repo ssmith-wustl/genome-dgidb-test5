@@ -43,7 +43,7 @@ UR::Object::Type->define(
 						       },
                                  'gram_stain'       => {is => 'String',
 							doc => "",
-							valid_values => ['positive','negative'],
+							valid_values => ['positive','negative','none'],
 						       },
                                  'ncbi_taxonomy_id' => {is => 'String',
                                                         doc => "",
@@ -196,30 +196,36 @@ sub gather_details
 
     my ($sequence_set_name, $analysis_version_num, $hgmi_sequence_dir);
 
+    # FIXME:
     # these below are dangerous
+    # most of this looks like it is easy to index from the end of the string.
     if (($project_type =~ /HGMI/x)  )
     {
         # these need to be based on the directory structure,
         # instead of just a 'raw' split.
-        unless($#cwd == 9)
-        {
-            croak "directory structure is wrong or broken\n$cwd\n$#cwd  Predict.pm \n";
-        }
-        $sequence_set_name = $cwd[6]; #HGMI projects
-        $analysis_version_num = $cwd[9]; #HGMI projects
-        $hgmi_sequence_dir = join("\/", @cwd[0..9],'Sequence',$locus_tag); #HGMI projects
-        
+#        unless($#cwd == 9)
+#        {
+#            croak "directory structure is wrong or broken\n$cwd\n$#cwd  Predict.pm \n";
+#        }
+        #$sequence_set_name = $cwd[6]; #HGMI projects
+        $sequence_set_name = $cwd[-4]; #HGMI projects
+        #$analysis_version_num = $cwd[9]; #HGMI projects
+        $analysis_version_num = $cwd[-1]; #HGMI projects
+        $hgmi_sequence_dir = join("\/", $cwd, 'Sequence',$locus_tag);
+#        $hgmi_sequence_dir = join("\/", @cwd[0..9],'Sequence',$locus_tag); #HGMI projects
+        $self->status_message("hgmi seq dir: ". $hgmi_sequence_dir); 
     }
     else # HMPP/Enterobacter
     {
         unless($#cwd == 10)
         {
+            $self->error_message("directory structure is too long or short? ".$#cwd . " components");
             croak "directory structure is wrong or broken in Predict.pm\n";
         }
         $sequence_set_name = $cwd[7];
         $analysis_version_num = $cwd[10];
         $hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$locus_tag); 
-        
+        $self->status_message("sequence dir: ". $hgmi_sequence_dir); 
     }
 
     unless (defined($sequence_set_name)) 

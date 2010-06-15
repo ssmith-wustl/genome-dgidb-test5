@@ -159,13 +159,15 @@ sub gather_details
     {
         # these need to be based on the directory structure,
         # instead of just a 'raw' split.
-        unless($#cwd == 9)
-        {
-            croak "directory structure is wrong in HGMI!?!? Merge.pm";
-        }
-        $sequence_set_name    = $cwd[6]; #HGMI projects
-        $analysis_version_num = $cwd[9]; #HGMI projects
-        $hgmi_sequence_dir    = join("\/", @cwd[0..9],'Sequence',$locus_tag); #HGMI projects
+        #unless($#cwd == 9)
+        #{
+        #    croak "directory structure is wrong in HGMI!?!? Merge.pm";
+        #}
+        #$sequence_set_name    = $cwd[6]; #HGMI projects
+        $sequence_set_name    = $cwd[-4]; #HGMI projects
+        #$analysis_version_num = $cwd[9]; #HGMI projects
+        $analysis_version_num = $cwd[-1]; #HGMI projects
+        $hgmi_sequence_dir    = join("\/", @cwd,'Sequence',$locus_tag); #HGMI projects
         
     }
     else # HMPP/Enterobacter

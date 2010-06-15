@@ -147,10 +147,19 @@ sub execute
     # @cwd[0..8] for CORE projects
     if($self->project_type eq 'HGMI')
     {
-        $Intergenic = join("\/",@cwd[0..7],'Gene_merging',$self->analysis_version,'Hybrid','intergenic');
-        $BAPseq = join("\/", @cwd[0..7],'BAP',$self->analysis_version,'Sequence');
-        $Ensemblseq = join("\/", @cwd[0..7],'Ensembl_pipeline',$self->analysis_version,'Sequence');
-        $Rfamseq = join("\/", @cwd[0..7],'Rfam',$self->analysis_version);
+        # $self->path / org_dirname / assembly name /assembly version / Sequence / Unmasked
+        my $dirbase = $cwd;
+        $dirbase =~ s/Sequence\/Unmasked//;
+        my $testval = join("\/",@cwd[0..7]);
+        $self->status_message("is this $testval better\nthan $dirbase ?");
+        #$Intergenic = join("\/",@cwd[0..7],'Gene_merging',$self->analysis_version,'Hybrid','intergenic');
+        $Intergenic = join("\/",$dirbase,'Gene_merging',$self->analysis_version,'Hybrid','intergenic');
+        #$BAPseq = join("\/", @cwd[0..7],'BAP',$self->analysis_version,'Sequence');
+        $BAPseq = join("\/", $dirbase ,'BAP',$self->analysis_version,'Sequence');
+        #$Ensemblseq = join("\/", @cwd[0..7],'Ensembl_pipeline',$self->analysis_version,'Sequence');
+        $Ensemblseq = join("\/", $dirbase,'Ensembl_pipeline',$self->analysis_version,'Sequence');
+        #$Rfamseq = join("\/", @cwd[0..7],'Rfam',$self->analysis_version);
+        $Rfamseq = join("\/", $dirbase,'Rfam',$self->analysis_version);
     }
     elsif($self->project_type eq 'CORE')
     {
