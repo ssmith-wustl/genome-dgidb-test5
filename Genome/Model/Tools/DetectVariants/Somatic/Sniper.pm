@@ -6,7 +6,7 @@ use strict;
 use Genome;
 use Workflow;
 
-my $DEFAULT_VERSION = '0.7.2';
+my $DEFAULT_VERSION = '0.7.3';
 my $SNIPER_COMMAND = 'bam-somaticsniper';
 
 class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
@@ -86,6 +86,7 @@ my %SNIPER_VERSIONS = (
     '0.7' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7/' . $SNIPER_COMMAND,
     '0.7.1' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.1/' . $SNIPER_COMMAND,
     '0.7.2' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.2/' . $SNIPER_COMMAND,
+    '0.7.3' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.3/' . $SNIPER_COMMAND,
 );
 
 sub help_brief {

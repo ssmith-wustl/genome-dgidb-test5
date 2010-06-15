@@ -21,7 +21,7 @@ my $normal = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants-So
 
 my $tmpdir = File::Temp::tempdir('SomaticSniperXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
-my $sniper = Genome::Model::Tools::DetectVariants::Somatic::Sniper->create(aligned_reads_input=>$tumor, control_aligned_reads_input=>$normal, working_directory => $tmpdir);
+my $sniper = Genome::Model::Tools::DetectVariants::Somatic::Sniper->create(aligned_reads_input=>$tumor, control_aligned_reads_input=>$normal, working_directory => $tmpdir, version => '0.7.2');
 ok($sniper, 'sniper command created');
 my $rv = $sniper->execute;
 is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
