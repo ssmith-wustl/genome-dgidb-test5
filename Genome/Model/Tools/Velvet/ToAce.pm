@@ -13,6 +13,8 @@ use File::Basename;
 
 use GSC::IO::Assembly::Ace::Writer;
 
+use Data::Dumper;
+
 #Notes from Feiyu (Mar 2009):
 #velvet 7.30 change RED id naming for iid(internal) and eid(external): eid = iid + 1, so iid is 0-based and eid is 1-based.
 #Sequences file lists reads 0-based.
@@ -97,9 +99,11 @@ sub create {
     }
         
     my $out_file = $self->out_acefile;
-    $self->warning_message("out_acefile: $out_file exists and will be overwritten") 
-        if -s $out_file;
-        
+    if (-s $out_file) {
+	$self->warning_message("out_acefile: $out_file exists and will be overwritten"); 
+	unlink $out_file;
+    }
+    
     if ($self->sqlite_yes) {
         my $rv = $self->get_sqlite_dbh;
         return unless $rv;
@@ -234,29 +238,28 @@ sub execute {
                     $dbh->commit if $self->sqlite_yes;
                     
                     my $sequence = $self->get_seq($pos, $read_id, $ori_read_id);
+
                     return unless $sequence;
                     
-                    my ($asml, $asmr) = split /,/, $sfields->{clr};
+                    my ($asml, $asmr) = split (/\,/, $sfields->{clr});
 
-                    ($asml, $asmr) = $asml < $asmr 
-                                   ? (0, $asmr - $asml)
-                                   : ($asml - $asmr, 0);
-                        
+                    ($asml, $asmr) = $asml < $asmr ? (0, $asmr - $asml) : ($asml - $asmr, 0);
+		    
                     my ($seql, $seqr) = ($asml, $asmr);
 
                     my $ori = ($seql > $seqr) ? 'C' : 'U';
                     $asml += $sfields->{off};
-		            $asmr += $sfields->{off};
+		    $asmr += $sfields->{off};
 
                     if ($asml > $asmr){
                         $sequence = reverseComplement($sequence);
                         my $tmp = $asmr;
-			            $asmr = $asml;
-			            $asml = $tmp;
+			$asmr = $asml;
+			$asml = $tmp;
 			
-			            $tmp  = $seqr;
-			            $seqr = $seql;
-			            $seql = $tmp;
+			$tmp  = $seqr;
+			$seqr = $seql;
+			$seql = $tmp;
                     }
                         
                     my $off = $sfields->{off} + 1;
@@ -296,7 +299,7 @@ sub execute {
             }
                         
             my @base_segments = get_base_segments(\%left_pos, \%right_pos, $ctg_length);
-                
+	    
             my $nBS = scalar @base_segments;
             my $nRd = scalar @read_pos;
 
@@ -310,7 +313,9 @@ sub execute {
                 consensus      => $ctg_seq,
                 base_qualities => \@ctg_quals,
             };
-                
+	    
+	    #print Dumper $contig;
+
             map{$writer->write_object($_)}($contig, @read_pos, @base_segments, @reads);
             $nReads += $nRd;
             $self->status_message("$nContigs contigs are done") if $nContigs % 100 == 0;
@@ -409,16 +414,13 @@ sub get_seq {
 
 sub get_base_segments {
     my ($left_pos, $right_pos, $ctg_length) = @_;
-    my $prev;
+
+    my $prev; 
     my @base_segs;
     
-    for my $seq (sort{($left_pos->{$a} == $left_pos->{$b}) ?
-        ($right_pos->{$b} <=> $right_pos->{$a}):
-        ($left_pos->{$a} <=> $left_pos->{$b})
-    } (keys %$left_pos)) {
+    for my $seq (sort { ($left_pos->{$a} == $left_pos->{$b}) ? ($right_pos->{$b} <=> $right_pos->{$a}) : ($left_pos->{$a} <=> $left_pos->{$b}) } (keys %$left_pos)) {
         if (defined $prev) {
-            if ($left_pos->{$seq} -1 < $left_pos->{$prev} ||
-                $right_pos->{$seq} < $right_pos->{$prev}){
+            if ($left_pos->{$seq} -1 < $left_pos->{$prev} || $right_pos->{$seq} < $right_pos->{$prev}) {
                 next;
             }
             push @base_segs, {
