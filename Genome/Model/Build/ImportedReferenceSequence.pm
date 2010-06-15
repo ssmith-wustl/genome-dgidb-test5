@@ -78,7 +78,7 @@ sub from_cmdline {
     return $build if $build;
 
     # fall back to the default
-    return Genome::Command::OO->resolve_objects_from_cmdline_text($class,$text);
+    return $class->SUPER::from_cmdline($text);
 }
 
 sub __display_name__ {
