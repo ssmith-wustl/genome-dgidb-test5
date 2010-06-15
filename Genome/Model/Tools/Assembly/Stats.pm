@@ -9,6 +9,8 @@ use IO::File;
 use Bio::SeqIO;
 use Bio::Seq::Quality;
 use Bio::Seq::SequenceTrace;
+use Finishing::Assembly::Factory;
+use Finishing::Assembly::ContigTools;
 use Data::Dumper;
 
 class Genome::Model::Tools::Assembly::Stats {
@@ -522,9 +524,9 @@ sub create_contiguity_stats {
 
     my $average_contig_length = int ($cumulative_length / $total_contig_number + 0.50);
     my $average_major_contig_length = int ($major_contig_length / $major_contig_number + 0.50);
-    my $average_t1_contig_length = int ($total_t1_bases/$t1_count + 0.5);
-    my $average_t2_contig_length = int ($total_t2_bases/$t2_count + 0.5);
-    my $average_t3_contig_length = int ($total_t3_bases/$t3_count + 0.5);
+    my $average_t1_contig_length = ($t1_count > 0) ? int ($total_t1_bases/$t1_count + 0.5) : 0;
+    my $average_t2_contig_length = ($t2_count > 0) ? int ($total_t2_bases/$t2_count + 0.5) : 0;
+    my $average_t3_contig_length = ($t3_count > 0) ? int ($total_t3_bases/$t3_count + 0.5) : 0;
 
     my $q20_ratio = 0;                  my $t1_q20_ratio = 0;
     my $t2_q20_ratio = 0;               my $t3_q20_ratio = 0;
@@ -614,76 +616,65 @@ sub create_contiguity_stats {
 }
 
 sub get_read_depth_stats {
-    my ($self, $ace) = @_;
-    my $major_contig_length = $self->_resolve_major_contig_length();
-    #GRAB THE LATEST velvet_asm.ace* ACE FILE
-    my $depth_file = $ace.'_base_depth';
-    my $depth_fh = IO::File->new("> $depth_file") || return;
-    my $ace_fh = IO::File->new("< $ace") || return;
-    my $ace_obj = ChimpaceObjects->new ( -acefilehandle => $ace_fh );
-    my %cover_depth;
-    my @contig_names = $ace_obj->get_all_contigNames();
-    foreach my $contig (@contig_names) {
-	my $contig_length = $ace_obj->Contig_Length ( -contig => $contig );
-	next unless $contig_length >= $major_contig_length;
-	my @reads = $ace_obj->ReadsInContig(-contig => $contig);
-	foreach my $read (@reads) {
-	    my $align_unpadded_clip_start = $ace_obj->getAlignUnpadedClipStart ( -read => $read );
-	    my $align_unpadded_clip_end = $ace_obj->getAlignUnpadedClipEnd ( -read => $read );
-	    next if (! defined $align_unpadded_clip_end or ! defined $align_unpadded_clip_start);
-	    my $start = $align_unpadded_clip_start - 1;
-	    my $end = $align_unpadded_clip_end - 1;
-	    #IF READ HAS A LEFT END OVERHANG, START VALUE IS NEGATIVE
-	    #AND THIS CAUSES THE ARRAY ASSIGNMENT BELOW TO CRASH
-	    $start = 0 if $start < 0;
-	    for my $i ( $start .. $end )
-	    {
-		$cover_depth{$contig}[$i]++;
+    my ($self, $acefile) = @_;
+
+    my $fo = Finishing::Assembly::Factory->connect('ace', $acefile);
+    my $assembly_obj = $fo->get_assembly;
+    my $contigs= $assembly_obj->contigs;
+
+    my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $total_covered_pos) = 0;
+
+    while (my $contig = $contigs->next) {
+	my %coverage_depths; #consensus positions covered by reads
+	my $reads = $contig->assembled_reads;
+
+	while (my $read = $reads->next) {
+	    #error unless read start and stop positions are defined
+	    unless (defined $read->start and defined $read->stop) {
+		$self->error_message("Reads start and/or stop position not defined\n\t".
+				     "start was: ".$read->start." stop was: ".$read->stop);
+		return;
+	    }
+	    #start postion can be < 0 due to low qual areas that don't allign
+	    my $start = ($read->start <= 0) ? 1 : $read->start;
+	    $start = $contig->pad_position_to_unpad_position($read->start) unless
+		$start == 1;
+	    #stop position can exceed contig length due to unaligned or low qual regions
+	    my $stop = ($read->stop > $contig->unpadded_length) ? $contig->unpadded_length : $read->stop;
+	    $stop = $contig->pad_position_to_unpad_position($read->stop) unless
+		$stop == $contig->unpadded_length;
+	    #increment each read position
+	    for ($start .. $stop) {
+		$coverage_depths{$_}++;
 	    }
 	}
-	$depth_fh->print (">$contig\n");
-	for (my $i = 0; $i < $contig_length; $i++) {
-	    $depth_fh->print ("$cover_depth{$contig}[$i] ")
-		if defined $cover_depth{$contig}[$i];
-	    $depth_fh->print ("\n") if ( ($i % 50) == 49);
+	#check to see if # of covered bases == contig length
+	unless (scalar (keys %coverage_depths) == $contig->unpadded_length) {
+	    $self->warning_message("Contig region covered by reads is not the same as contig length for contig: ".$contig->name."\n\t".
+				   "covered consensus bases are: ".scalar (keys %coverage_depths)." contig length is: ".$contig->unpadded_length);
+	    #this sometimes happens with velvet assemblies where not all consensus positions are covered by reads .. this is an error
+	    #with velvet not assigned proper base segments to reads
 	}
-	$depth_fh->print("\n");
-	delete $cover_depth{$contig};
-    }
-    $depth_fh->close;
-    $ace_fh->close;
-
-    my $total_read_bases = 0;
-    my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov) = 0;
-    my $fh = IO::File->new("<$depth_file");
-    while (my $line = $fh->getline)
-    {
-	next if $line =~ /^>/;
-	next if $line =~ /^\s+$/;
-	chomp $line;
-	my @numbers = split (/\s+/, $line);
-	$total_read_bases += scalar @numbers;
-	foreach my $depth_num (@numbers)
-	{
-	    $one_x_cov++ if $depth_num >= 1;
-	    $two_x_cov++ if $depth_num >= 2;
-	    $three_x_cov++ if $depth_num >= 3;
-	    $four_x_cov++ if $depth_num >= 4;
-	    $five_x_cov++ if $depth_num >= 5;
+	#total up positions of up to 5x coverages
+	$total_covered_pos += scalar (keys %coverage_depths);
+	foreach my $depth_num (keys %coverage_depths) {
+	    $one_x_cov++ if $coverage_depths{$depth_num} >= 1;
+	    $two_x_cov++ if $coverage_depths{$depth_num} >= 2;
+	    $three_x_cov++ if $coverage_depths{$depth_num} >= 3;
+	    $four_x_cov++ if $coverage_depths{$depth_num} >= 4;
+	    $five_x_cov++ if $coverage_depths{$depth_num} >= 5;
 	}
     }
-    $fh->close;
 
     my $text = "\n*** Read Depth Info ***\n".
-	       "Total consensus bases: $total_read_bases\n".
-	       "Depth >= 5: $five_x_cov\t". $five_x_cov/$total_read_bases."\n".
-	       "Depth >= 4: $four_x_cov\t". $four_x_cov/$total_read_bases."\n".
-	       "Depth >= 3: $three_x_cov\t". $three_x_cov/$total_read_bases."\n".
-	       "Depth >= 2: $two_x_cov\t". $two_x_cov/$total_read_bases."\n".
-	       "Depth >= 1: $one_x_cov\t". $one_x_cov/$total_read_bases."\n\n";
-
-    unlink $depth_file;
-    return $text;
+	       "Total covered bases: $total_covered_pos\n".
+	       "Depth >= 5: $five_x_cov\t". $five_x_cov/$total_covered_pos."\n".
+	       "Depth >= 4: $four_x_cov\t". $four_x_cov/$total_covered_pos."\n".
+	       "Depth >= 3: $three_x_cov\t". $three_x_cov/$total_covered_pos."\n".
+	       "Depth >= 2: $two_x_cov\t". $two_x_cov/$total_covered_pos."\n".
+	       "Depth >= 1: $one_x_cov\t". $one_x_cov/$total_covered_pos."\n\n";
+  
+    return $text; 
 }
 
 sub get_core_gene_survey_results {
