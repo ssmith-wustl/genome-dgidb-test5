@@ -11,6 +11,8 @@ class Genome::Model::GenePrediction::Command {
     doc => "Modularization of gene prediction scripts",
 };
 
+sub sub_command_sort_position { 11 }
+
 sub command_name {
     my $class = ref($_[0]) || $_[0];
     return $class->SUPER::command_name unless $class eq __PACKAGE__;
