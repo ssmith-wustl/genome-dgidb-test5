@@ -251,8 +251,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       <tbody>
         <xsl:for-each select="object[./types[./isa[@type='Genome::Model']]]">
           <xsl:sort select="aspect[@name='name']/value" data-type="text" order="ascending"/>
-          <xsl:sort select="aspect[@name='is-default']/value" data-type="number" order="descending"/>
-          <xsl:variable name="is_default" select="aspect/@name='is-default'" />
+          <xsl:variable name="is_default" select="aspect[@name='is_default']/value" />
           <tr class="model_row_header">
             <td class="model_name">
               <xsl:if test="$is_default = 1">
