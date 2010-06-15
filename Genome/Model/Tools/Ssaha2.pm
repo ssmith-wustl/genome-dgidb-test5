@@ -68,6 +68,8 @@ sub default_ssaha2_version {
     die "default samtools version: $DEFAULT is not valid" unless $VERSIONS{$DEFAULT};
     return $DEFAULT;
 }
+
+sub default_version { return default_ssaha2_version; }
         
 
 1;
