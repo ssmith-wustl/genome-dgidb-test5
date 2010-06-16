@@ -112,13 +112,19 @@ sub execute {
     
     my $old_chr = 0;
     my $old_pos = 0;
-    while (1) {
+    MAIN: while (1) {
         # sort in position order
         @data = sort { $a->{'chr'} <=> $b->{'chr'} || $a->{'pos'} <=> $b->{'pos'} } @data;
         my $entry = shift @data;
         # check for a unanimous alignment, else write out to the 'out' fh
         if (alignments_agree($entry,\@data)) {
             for my $e (@data){ read_line($e,\%chr2idx); }
+            for my $e (@data){ 
+                unless ($e->{'chr'}){ 
+                    push @data, $entry;
+                    last MAIN;
+                }
+            }
         } else {
             my $outfh = $entry->{'out'};
             $outfh->print($entry->{'line'});
