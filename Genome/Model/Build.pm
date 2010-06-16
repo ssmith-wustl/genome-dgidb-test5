@@ -821,7 +821,7 @@ sub success {
     }
 
     # reallocate - always returns true (legacy behavior)
-    return $self->reallocate; 
+    $self->reallocate; 
 
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
     my $last_complete_build = $self->model->resolve_last_complete_build;

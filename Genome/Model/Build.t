@@ -99,10 +99,11 @@ ok($build->fail([]), 'Fail');
 is($build->build_status, 'Failed', 'Status is Failed');
 
 # SUCCESS
+isnt($model->_last_complete_build_id, $build->id, 'Model last complete build is not this build\'s id');
 ok($build->success, 'Success');
 is($build->build_status, 'Succeeded', 'Status is Succeeded');
 ok(!$model->current_running_build_id, 'Current running build id set to undef in success');
-is($model->last_complete_build_id, $build->id, 'Model last complete build is set to this build\'s id in success');
+is($model->_last_complete_build_id, $build->id, 'Model last complete build is set to this build\'s id in success');
 
 # ABANDON
 ok($build->abandon, 'Abandon');
