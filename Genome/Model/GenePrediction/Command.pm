@@ -11,15 +11,15 @@ class Genome::Model::GenePrediction::Command {
     doc => "Modularization of gene prediction scripts",
 };
 
-sub sub_command_sort_position { 11 }
+sub sub_command_category { 'type specific' }
 
-sub command_name {
+sub Xcommand_name {
     my $class = ref($_[0]) || $_[0];
     return $class->SUPER::command_name unless $class eq __PACKAGE__;
     return 'genome model gene-prediction';
 }
 
-sub command_name_brief {
+sub Xcommand_name_brief {
     my $class = ref($_[0]) || $_[0];
     return $class->SUPER::command_name_brief unless $class eq __PACKAGE__;
     return 'gene-prediction';
