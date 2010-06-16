@@ -85,7 +85,8 @@ sub _create_yaml_file
     my $seq_file_dir = $directory;
     #$self->assembly_name($imported_assembly->name.".amgap");  
     my $assembly_name = $imported_assembly->name.".amgap";  
-    $config->{path}             = $model->path; 
+    #$config->{path}             = $model->path; 
+    $config->{path}             = $self->data_directory;
     $config->{org_dirname}      = $model->brev_orgname; 
     $config->{assembly_name}    = $assembly_name; 
     $config->{assembly_version} = $model->assembly_version; 
