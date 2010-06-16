@@ -13,9 +13,7 @@ class Genome::Model::Tools::Bmr::CalculateBmr {
     refseq => {
         is => 'Genome::Model::Build::ImportedReferenceSequence',
         id_by => 'refseq_id',
-        is_optional => 1,
-        default => 'NCBI-human-build36',
-        doc => 'The reference sequence build, used to gather and generate bitmask files for base masking and sample coverage.',
+        doc => 'The reference sequence build, used to gather and generate bitmask files for base masking and sample coverage. Enter "NCBI-human-build36" for this parameter or else.',
     },
     roi_bitmask => {
         type => 'String',
@@ -62,12 +60,12 @@ sub help_detail {
 sub execute {
     my $self = shift;
     $DB::single = 1;
-
     #load ROIs into a hash %ROIs -> chr -> gene -> start = stop;
     my %ROIs;
     my $roi_bedfile = $self->roi_bedfile;
     my $bed_fh = new IO::File $roi_bedfile,"r";
     while (my $line = $bed_fh->getline) {
+        chomp $line;
         my ($chr,$start,$stop,$exon_id) = split /\t/,$line;
         (my $gene = $exon_id) =~ s/^(\w+)\..+$/$1/;
         if (exists $ROIs{$chr}{$gene}{$start}) {
@@ -77,13 +75,18 @@ sub execute {
     }
     $bed_fh->close;
 
+    #temporary
+
     #load bitmasks
-    my $at_bitmask_file = $self->refseq->data_directory . "all_sequences.AT_bitmask";
-    my $cpg_bitmask_file = $self->refseq->data_directory . "all_sequences.CpG_bitmask";
-    my $cg_bitmask_file = $self->refseq->data_directory . "all_sequences.CG_bitmask";
-    my $at_bitmask = read_genome_bitmask($at_bitmask_file);
-    my $cpg_bitmask = read_genome_bitmask($cpg_bitmask_file);
-    my $cg_bitmask = read_genome_bitmask($cg_bitmask_file);
+    my $at_bitmask_file = $self->refseq->data_directory . "/all_sequences.AT_bitmask";
+    my $cpg_bitmask_file = $self->refseq->data_directory . "/all_sequences.CpG_bitmask";
+    my $cg_bitmask_file = $self->refseq->data_directory . "/all_sequences.CG_bitmask";
+    #my $at_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.AT_bitmask";
+    #my $cg_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CG_bitmask";
+    #my $cpg_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CpG_bitmask";
+    my $at_bitmask = $self->read_genome_bitmask($at_bitmask_file);
+    my $cpg_bitmask = $self->read_genome_bitmask($cpg_bitmask_file);
+    my $cg_bitmask = $self->read_genome_bitmask($cg_bitmask_file);
 
     #make sure bitmasks were loaded
     unless ($at_bitmask) {
@@ -103,12 +106,12 @@ sub execute {
     my $roi_bitmask; #hashref
     if ($self->roi_bitmask) {
         my $roi_file = $self->roi_bitmask;
-        $roi_bitmask = read_genome_bitmask($roi_file);        
+        $roi_bitmask = $self->read_genome_bitmask($roi_file);        
     }
 
     #if ROI bitmask is not found, create one
     else {
-        $roi_bitmask = create_empty_genome_bitmask();
+        $roi_bitmask = $self->create_empty_genome_bitmask();
         for my $chr (keys %ROIs) {
             for my $gene (keys %{$ROIs{$chr}}) {
                 for my $start (keys %{$ROIs{$chr}{$gene}}) {
@@ -136,7 +139,15 @@ sub execute {
             wtf_file => $file,
             reference_index => $self->refseq->full_consensus_sam_index_path,
         );
+        unless ($bitmask_conversion) {
+            $self->error_message("Not seeing a bitmask object for file $file.");
+            return;
+        }
         my $cov_bitmask = $bitmask_conversion->bitmask;
+        unless ($cov_bitmask) {
+            $self->error_message("Not seeing cov_bitmask from bitmask_cov->bitmask.");
+            return;
+        }
 
         #find intersection of ROIs and sample's coverage
         for my $chr (keys %$cov_bitmask) {
@@ -151,7 +162,7 @@ sub execute {
 
             for my $gene (keys %{$ROIs{$chr}}) {
 
-                unless (exists $BMR{$gene}) {
+                unless (grep {/^$gene$/} keys %BMR) {
                     for my $class (@classes) {
                         $BMR{$gene}{$class}{'coverage'} = 0;
                         $BMR{$gene}{$class}{'mutations'} = 0;
@@ -159,29 +170,29 @@ sub execute {
                 }
 
                 for my $start (keys %{$ROIs{$chr}{$gene}}) {
-                    
+
                     my $stop = $ROIs{$chr}{$gene}{$start};
                     my $bits;
-                    
+
                     #indels
-                    $bits = count_bits($cov_bitmask->{$chr},$start,$stop);
+                    $bits = $self->count_bits($cov_bitmask->{$chr},$start,$stop);
                     $BMR{$gene}{'Indels'}{'coverage'} += $bits;
 
                     #AT
                     $testvector->And($cov_bitmask->{$chr},$at_bitmask->{$chr});
-                    $bits = count_bits($testvector,$start,$stop);
+                    $bits = $self->count_bits($testvector,$start,$stop);
                     $BMR{$gene}{'AT.transit'}{'coverage'} += $bits;
                     $BMR{$gene}{'AT.transver'}{'coverage'} += $bits;
 
                     #CG
-                    $testvector->AND($cov_bitmask->{$chr},$cg_bitmask->{$chr});
-                    $bits = count_bits($testvector,$start,$stop);
+                    $testvector->And($cov_bitmask->{$chr},$cg_bitmask->{$chr});
+                    $bits = $self->count_bits($testvector,$start,$stop);
                     $BMR{$gene}{'CG.transit'}{'coverage'} += $bits;
                     $BMR{$gene}{'CG.transver'}{'coverage'} += $bits;
 
                     #CpG
-                    $testvector->AND($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
-                    $bits = count_bits($testvector,$start,$stop);
+                    $testvector->And($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
+                    $bits = $self->count_bits($testvector,$start,$stop);
                     $BMR{$gene}{'CpG.transit'}{'coverage'} += $bits;
                     $BMR{$gene}{'CpG.transver'}{'coverage'} += $bits;
                 }
@@ -191,17 +202,17 @@ sub execute {
     }
 
     #Loop through mutations, assign them to a gene and class in %BMR
-    my $mutation_file = $self->mutation_file;
+    my $mutation_file = $self->mutation_maf_file;
     my $mut_fh = new IO::File $mutation_file,"r";
     while (my $line = $mut_fh->getline) {
-        
+        chomp $line;
         my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
         #highly-mutated genes to ignore
         next if $gene =~ /TP53|BRCA1|BRCA2/;
         #using WU only for the initial test set
         next if $center !~ /wustl/;
         #make sure mutation is inside the ROIs
-        next unless (count_bits($roi_bitmask->{$chr},$start,$stop));
+        next unless ($self->count_bits($roi_bitmask->{$chr},$start,$stop));
 
 
         #SNVs
@@ -209,7 +220,7 @@ sub execute {
             #if this mutation is non-synonymous
             if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
-                if (exists $BMR{$gene}) {
+                if (grep { /^$gene$/ } keys %BMR) {
 
                     #determine the classification for ref A's and T's
                     if ($ref eq 'A') {
@@ -249,7 +260,7 @@ sub execute {
                         #is it a transition?
                         if ($var1 eq 'T' || $var2 eq 'T') {
                             #is it inside a CpG island?
-                            if (count_bits($cpg_bitmask->{$chr},$start,$stop)) {
+                            if ($self->count_bits($cpg_bitmask->{$chr},$start,$stop)) {
                                 $BMR{$gene}{'CpG.transit'}{'mutations'}++;
                             }
                             else {
@@ -259,7 +270,7 @@ sub execute {
                         #if not a transition, is it a transversion?
                         elsif ($var1 =~ /G|A/ || $var2 =~ /G|A/) {
                             #is it inside a CpG island?
-                            if (count_bits($cpg_bitmask->{$chr},$start,$stop)) {
+                            if ($self->count_bits($cpg_bitmask->{$chr},$start,$stop)) {
                                 $BMR{$gene}{'CpG.transver'}{'mutations'}++;
                             }
                             else {
@@ -277,7 +288,7 @@ sub execute {
                         #is it a transition?
                         if ($var1 eq 'A' || $var2 eq 'A') {
                             #is it inside a CpG island?
-                            if (count_bits($cpg_bitmask->{$chr},$start,$stop)) {
+                            if ($self->count_bits($cpg_bitmask->{$chr},$start,$stop)) {
                                 $BMR{$gene}{'CpG.transit'}{'mutations'}++;
                             }
                             else {
@@ -287,7 +298,7 @@ sub execute {
                         #if not a transition, is it a transversion?
                         elsif ($var1 =~ /T|C/ || $var2 =~ /T|C/) {
                             #is it inside a CpG island?
-                            if (count_bits($cpg_bitmask->{$chr},$start,$stop)) {
+                            if ($self->count_bits($cpg_bitmask->{$chr},$start,$stop)) {
                                 $BMR{$gene}{'CpG.transver'}{'mutations'}++;
                             }
                             else {
@@ -313,7 +324,7 @@ sub execute {
         #Indels
         if ($mutation_type =~ /ins|del/i) {
             #verify this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
-            if (exists $BMR{$gene}) {
+            if (grep { /^$gene$/ } keys %BMR) {
                 $BMR{$gene}{'Indels'}{'mutations'}++;
             }
             else {
@@ -369,7 +380,7 @@ sub create_empty_genome_bitmask {
 
 sub read_genome_bitmask {
     my ($self,$filename) = @_;
-    unless(-z $filename) {
+    unless($filename) {
         $self->error_message("File $filename not found.");
         return;
     }
