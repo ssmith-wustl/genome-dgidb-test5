@@ -62,7 +62,7 @@ fixedStep chrom=chr1 start=100099616 step=1
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
+    #$DB::single = 1;
     #check inputs
     my $reference_index = $self->reference_index;
     if(-z $reference_index) {
@@ -111,6 +111,9 @@ sub execute {
             unless($chromosome && $starting_origin && $step) {
                 $self->error_message("Invalid fixedStep declaration.");
                 return;
+            }
+            if ($chromosome =~ /^chr/) {
+                $chromosome =~ s/^chr(.+)$/$1/;
             }
             ($span) = $line =~ /\s+span=(\d+)$/;
             $span = 1 unless $span;
