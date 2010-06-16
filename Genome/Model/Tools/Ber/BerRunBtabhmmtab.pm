@@ -21,7 +21,7 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is         => 'Command',
     has        => [
-        'locus_tag' => { # is locus_tag used at all here???
+        'locus_tag' => {    # is locus_tag used at all here???
             is  => 'String',
             doc => "Locus tag for project, containing DFT/FNL postpended",
         },
@@ -72,39 +72,47 @@ sub execute
     my $self = shift;
 
     my @sequence_names = $self->get_sequence_names();
+
     # FIXME: use tempfile
-    my ($btab_fh, $btabxml) = File::Temp::tempfile("ber-btab-XXXXXX", SUFFIX => '.xml', DIR => $self->berdirpath);
-    write_file($btabxml, $self->workflowxml() );
-#    # this way is causing problems.... ?
-#    my $w = Workflow::Model->create_from_xml(\*DATA);
-#    my $result = $w->execute( 'locus tag'       => $self->locus_tag,
-#                              'fastadir'        => $self->fastadirpath,
-#                              'berdirpath'      => $self->berdirpath,
-#                              'hmmdirpath'      => $self->hmmdirpath,
-#                              'srcdirpath'      => $self->srcdirpath,
-#                              'bsubfiledirpath' => $self->bsubfiledirpath,
-#                              'seq names'       => \@sequence_names, );
+    my ( $btab_fh, $btabxml ) = File::Temp::tempfile(
+        "ber-btab-XXXXXX",
+        SUFFIX => '.xml',
+        DIR    => $self->berdirpath
+    );
+    write_file( $btabxml, $self->workflowxml() );
+
+   #    # this way is causing problems.... ?
+   #    my $w = Workflow::Model->create_from_xml(\*DATA);
+   #    my $result = $w->execute( 'locus tag'       => $self->locus_tag,
+   #                              'fastadir'        => $self->fastadirpath,
+   #                              'berdirpath'      => $self->berdirpath,
+   #                              'hmmdirpath'      => $self->hmmdirpath,
+   #                              'srcdirpath'      => $self->srcdirpath,
+   #                              'bsubfiledirpath' => $self->bsubfiledirpath,
+   #                              'seq names'       => \@sequence_names, );
 
     $self->status_message("starting btab/htab jobs...");
-    my $result = run_workflow_lsf( $btabxml,
-                              'locus tag'       => $self->locus_tag,
-                              'fastadir'        => $self->fastadirpath,
-                              'berdirpath'      => $self->berdirpath,
-                              'hmmdirpath'      => $self->hmmdirpath,
-                              'srcdirpath'      => $self->srcdirpath,
-                              'bsubfiledirpath' => $self->bsubfiledirpath,
-                              'seq names'       => \@sequence_names, );
+    my $result = run_workflow_lsf(
+        $btabxml,
+        'locus tag'       => $self->locus_tag,
+        'fastadir'        => $self->fastadirpath,
+        'berdirpath'      => $self->berdirpath,
+        'hmmdirpath'      => $self->hmmdirpath,
+        'srcdirpath'      => $self->srcdirpath,
+        'bsubfiledirpath' => $self->bsubfiledirpath,
+        'seq names'       => \@sequence_names,
+    );
 
-    unless(defined($result))
+    unless ( defined($result) )
     {
-        foreach my $error (@Workflow::Simple::ERROR) {
-            $self->error_message( join("\t", 
-                                       $error->dispatch_identifier(),
-                                       $error->name(),
-                                       $error->start_time(),
-                                       $error->end_time(),
-                                       $error->exit_code(),)
-                                );
+        foreach my $error (@Workflow::Simple::ERROR)
+        {
+            $self->error_message(
+                join( "\t",
+                    $error->dispatch_identifier(), $error->name(),
+                    $error->start_time(),          $error->end_time(),
+                    $error->exit_code(), )
+            );
 
             $self->error_message( $error->stdout() );
             $self->error_message( $error->stderr() );
@@ -113,6 +121,7 @@ sub execute
     }
 
     my $i = 0;
+
     # do a File::Find type deal here and grab the existing btab
     # and htab files for the $i count (and prehaps rename $i to
     # something more descriptive).
@@ -122,26 +131,38 @@ sub execute
     # in case we want to count the numbers of each type of file.
     my @storageber = ();
     my @storagehmm = ();
-    find(sub { if($_ =~ /\.btab$/) { push(@storageber,$_); } },
-         $self->berdirpath);
-    find(sub { if($_ =~ /\.htab$/) { push(@storagehmm,$_); }  },
-         $self->hmmdirpath);
+    find(
+        sub {
+            if ( $_ =~ /\.btab$/ ) { push( @storageber, $_ ); }
+        },
+        $self->berdirpath
+    );
+    find(
+        sub {
+            if ( $_ =~ /\.htab$/ ) { push( @storagehmm, $_ ); }
+        },
+        $self->hmmdirpath
+    );
     $i = scalar(@storageber) + scalar(@storagehmm);
+
     # are the extra newlines needed????
-    print "\n\nTotal for Btab/Htab: ",$i,"\n\n";
+    print "\n\nTotal for Btab/Htab: ", $i, "\n\n";
 
     return 1;
 }
 
-
 # not sure if I need this or not yet.
 sub get_sequence_names
 {
-    my $self = shift;
+    my $self     = shift;
     my $fastadir = $self->fastadirpath;
     my @sequence_names;
-    find(sub { if(-f $_) { push(@sequence_names,$_); } },
-         $fastadir);
+    find(
+        sub {
+            if ( -f $_ ) { push( @sequence_names, $_ ); }
+        },
+        $fastadir
+    );
     return @sequence_names;
 }
 
@@ -179,7 +200,6 @@ sub workflowxml
 );
 
 }
-
 
 1;
 
