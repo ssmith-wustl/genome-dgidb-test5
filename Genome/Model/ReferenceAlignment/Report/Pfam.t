@@ -6,7 +6,10 @@ use warnings;
 use Test::More tests => 8;
 use above "Genome";
 use File::Slurp;
-use FindBin qw/ $Bin /;
+use File::Temp;
+use File::Basename;
+
+my $Bin = File::Temp::tempdir(CLEANUP => 1);
 
 BEGIN {
     use_ok("Genome::Model::ReferenceAlignment::Report::Pfam");
@@ -33,7 +36,9 @@ is(ref($p), 'Genome::Model::ReferenceAlignment::Report::Pfam');
 my $snpstestfile = "snpfiletest.pfam.dat";
 my $testoutput = "testoutput.snps.dat";
 my $readonly_testfile = "readonly.snps.dat";
-my @lines = read_file($Bin."/".$snpstestfile);
+
+my $test_dir = File::Basename::dirname(__FILE__); 
+my @lines = read_file($test_dir."/".$snpstestfile);
 
 # test creating the snps dat list file
 ok($p->_create_snpsdat_file(\@lines, $Bin."/".$testoutput), 'can write out file');
