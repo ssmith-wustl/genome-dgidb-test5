@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 
+require Carp;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Build::MetagenomicComposition16s::454 {
@@ -18,12 +19,16 @@ sub calculate_estimated_kb_usage {
 
     my @instrument_data = $self->instrument_data;
     unless ( @instrument_data ) { # very bad; should be checked when the build is create
-        confess("No instrument data found for build ".$self->description);
+        Carp::confess("No instrument data found for ".$self->description);
     }
 
-    my $total_reads;
+    my $total_reads = 0;
     for my $instrument_data ( @instrument_data ) {
         $total_reads += $instrument_data->total_reads;
+    }
+
+    unless ( $total_reads > 0 ) {
+        Carp::confess('No reads were found in instrument data('.join(', ', map { $_->id } @instrument_data).') for '.$self->description);
     }
 
     return $total_reads * 5; # really 3 kb per, but request more to cover the reallocation buffer. 
