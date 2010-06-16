@@ -10,7 +10,7 @@ class Genome::WorkOrder::View::Solr::Xml {
     has_constant => [
         type => {
             is => 'Text',
-            default => 'model'
+            default => 'work-order'
         },
         default_aspects => {
             is => 'ARRAY',
