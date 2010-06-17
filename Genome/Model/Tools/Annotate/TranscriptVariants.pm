@@ -28,11 +28,11 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             default => "STDOUT",
         },
     ],
-    has_param => [
-        lsf_queue => {
-            value => $ENV{'LSB_QUEUE'} || 'long',
-        }
-    ],
+    #has_param => [
+    #    lsf_queue => {
+    #       value => $ENV{'LSB_QUEUE'} || 'long',
+    #   }
+    #],
     has_optional => [
         # IO Params
         _is_parallel => {
