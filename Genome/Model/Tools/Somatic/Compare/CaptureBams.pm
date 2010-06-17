@@ -190,7 +190,7 @@ sub default_filenames{
         ## Breakdancer and Copy Number files ##
 
         copy_number_output                  => 'copy_number.csv',
-        circos_graph                        => 'circos_graph.png',
+        circos_graph                        => 'circos_graph',
         variant_report_output               => 'cancer_report.html', 
         file_summary_report_output          => 'file_summary_report.html',
         
