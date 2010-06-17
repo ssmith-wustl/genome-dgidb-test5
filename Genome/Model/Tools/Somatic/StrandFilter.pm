@@ -199,7 +199,7 @@ sub execute {
 
     print "Running BAM Readcounts...\n";
     my $cmd = readcount_program() . " -b 15 " . $self->tumor_bam_file . " -l $temp_path";
-    my $readcounts = `$cmd`;
+    my $readcounts = `$cmd 2>/dev/null`;
     chomp($readcounts) if($readcounts);
 
     ## Load the results of the readcounts ##
@@ -273,6 +273,11 @@ sub execute {
 			$stats{'num_MT_sites_autopassed'}++;
 			print $ofh "$line\n";
 		    }
+#		    elsif($self->prepend_chr && $chrom =~ "random")
+#		    {
+#			$stats{'num_random_sites_autopassed'}++;
+#			print $ofh "$line\n";			
+#		    }
 		    else
 		    {
 			## Run Readcounts ##
@@ -360,8 +365,8 @@ sub execute {
 			}
 			else
 			{
-			    $self->error_message("Unable to get read counts for $ref/$var at position $chrom\t$chr_start\t$chr_stop");
-			    die;                
+#			    $self->error_message("Unable to get read counts for $ref/$var at position $chrom\t$chr_start\t$chr_stop");
+#			    die;                
 			}			
 		    }
 
@@ -379,6 +384,7 @@ sub execute {
 
     print $stats{'num_variants'} . " variants\n";
     print $stats{'num_MT_sites_autopassed'} . " MT sites were auto-passed\n";
+    print $stats{'num_random_sites_autopassed'} . " chrN_random sites were auto-passed\n" if($stats{'num_random_sites_autopassed'});
     print $stats{'num_no_allele'} . " failed to determine variant allele\n";
     print $stats{'num_no_readcounts'} . " failed to get readcounts for variant allele\n";
     print $stats{'num_fail_pos'} . " had read position < $min_read_pos\n";

@@ -83,7 +83,7 @@ sub execute {                               # replace with real execution logic.
 
 	## Print the header ##
 	
-	print "TUMOR_SAMPLE_NAME\tMODEL_ID\tBUILD_ID\tSTATUS\tVSCAN\tSNIPER\tMERGED\tFILTER\tNOVEL\tTIER1\n";
+	print "TUMOR_SAMPLE_NAME\tMODEL_ID\tBUILD_ID\tSTATUS\tVSCAN\tSNIPER\tMERGED\tFILTER\tNOVEL\tTIER1\tINDELS\tTIER1\n";
 
 
 	my $input = new FileHandle ($sample_list);
@@ -127,6 +127,9 @@ sub execute {                               # replace with real execution logic.
 				my $filter_file = "$build_dir/merged.somatic.snp.filter";
 				my $novel_file = "$build_dir/merged.somatic.snp.filter.novel";
 				my $tier1_file = "$build_dir/merged.somatic.snp.filter.novel.tier1";
+
+				my $indel_file = "$build_dir/merged.somatic.indel";
+				my $indel_tier1_file = "$build_dir/merged.somatic.indel.tier1";
 
 				my $varscan_file = "$build_dir/varScan.output.snp";
 				my $varscan_somatic_file = "$build_dir/varScan.output.snp.formatted.Somatic.hc";
@@ -177,6 +180,20 @@ sub execute {                               # replace with real execution logic.
 				my $build_status = "New";
 				my %build_stats = ();
 				
+				## Count Indels ##
+				
+				if(-e $indel_file)
+				{
+					$build_stats{'indels_merged'} = `cat $indel_file | wc -l`;
+					chomp($build_stats{'indels_merged'});
+					
+					if(-e $indel_tier1_file)
+					{
+						$build_stats{'indels_tier1'} = `cat $indel_tier1_file | wc -l`;
+						chomp($build_stats{'indels_tier1'});						
+					}
+				}
+				
 				if(-e $merged_file)
 				{
 					$build_status = "Merged";
@@ -225,6 +242,8 @@ sub execute {                               # replace with real execution logic.
 				$model_status .= "\t" . $build_stats{'snps_filtered'} if($build_stats{'snps_filtered'});
 				$model_status .= "\t" . $build_stats{'snps_novel'} if($build_stats{'snps_novel'});
 				$model_status .= "\t" . $build_stats{'snps_tier1'} if($build_stats{'snps_tier1'});
+				$model_status .= "\t" . $build_stats{'indels_merged'} if($build_stats{'indels_merged'});
+				$model_status .= "\t" . $build_stats{'indels_tier1'} if($build_stats{'indels_tier1'});
 				print "$sample_name\t$model_id\t$model_status\n";#\t$build_dir\n";
 			}
 

@@ -32,6 +32,8 @@ class Genome::Model::Tools::Capture::ModelGroup {
 		output_bam_files	=> { is => 'Text', doc => "Optional output file for BAMs of completed samples" , is_optional => 1},
 		output_snp_files	=> { is => 'Text', doc => "Optional output file for SNP calls for completed samples" , is_optional => 1},
 		output_model_pairs	=> { is => 'Text', doc => "Optional output file for paired normal-tumor model ids" , is_optional => 1},
+		show_builds	=> { is => 'Text', doc => "Show build IDs and statuses" , is_optional => 1},
+		show_lanes	=> { is => 'Text', doc => "Show lane details for instrument data" , is_optional => 1},
 	],
 };
 
@@ -104,8 +106,45 @@ sub execute {                               # replace with real execution logic.
 		my $subject_name = $model->subject_name;
 		my $build_dir = my $bam_file = my $snp_file = "";
 		my $model_status = "New";
-		
+
+
+		my $num_builds = 0;		
+
+		my $build_ids = my $build_statuses = "";
 		my @builds = $model->builds;
+
+		if($self->show_builds)
+		{
+			foreach my $build (@builds)
+			{
+				$num_builds++;
+				$build_ids .= "," if($build_ids);
+				$build_statuses .= "," if($build_statuses);
+				$build_ids .= $build->id;
+				$build_statuses .= $build->status;
+			}
+		}
+		
+		my $num_lanes = 0;
+		my $lane_details = "";
+
+		if($self->show_lanes)
+		{
+			## Get Assigned Instrument Data ##
+			my @instrument_data = $model->assigned_instrument_data;
+			
+			foreach my $instrument_data (@instrument_data)
+			{
+				$num_lanes++;
+				if($self->show_lanes)
+				{
+					## Show lane details ##
+					$lane_details .= ", " if($lane_details);
+					$lane_details .= join(":", $instrument_data->flow_cell_id, $instrument_data->lane);
+				}
+			}
+		}
+		
 		
 		if(@builds)
 		{
@@ -138,7 +177,14 @@ sub execute {                               # replace with real execution logic.
 				{
 					my $search_string = "ls " . $model->last_succeeded_build_directory . "/sam*/filtered.indelpe.snps 2>/dev/null | tail -1";
 					my $snp_list_result = `$search_string`;
-					chomp($snp_list_result);
+					chomp($snp_list_result) if($snp_list_result);
+					if(!$snp_list_result)
+					{
+						$search_string = "ls " . $model->last_succeeded_build_directory . "/maq*/filtered.indelpe.snps 2>/dev/null | tail -1";
+						$snp_list_result = `$search_string`;
+						chomp($snp_list_result) if($snp_list_result);						
+					}
+
 					if($snp_list_result && -e $snp_list_result)
 					{
 						$snp_file = $snp_list_result;
@@ -152,7 +198,7 @@ sub execute {                               # replace with real execution logic.
 			}
 		}
 
-		print join("\t", $model_id, $subject_name, $model_status, $build_dir) . "\n";
+		print join("\t", $model_id, $subject_name, $model_status, $num_builds, $build_ids, $build_statuses, $build_dir, $num_lanes, $lane_details) . "\n";
 
 	}	
 	
@@ -160,60 +206,61 @@ sub execute {                               # replace with real execution logic.
 	close(SNPLIST) if($self->output_snp_files);	
 
 	## Determine normal-tumor pairing and completed models ##
-
-	my %tumor_sample_names = my %tumor_model_ids = my %normal_model_ids = ();
-
-	foreach my $sample_name (keys %succeeded_models_by_sample)
+	if($self->output_model_pairs)
 	{
-		my $model_id = $succeeded_models_by_sample{$sample_name};
-		## Determine patient ID ##
-		
-		my @tempArray = split(/\-/, $sample_name);
-		my $patient_id = join("-", $tempArray[0], $tempArray[1], $tempArray[2]);
-		
-		## Determine if this sample is normal or tumor ##
-		
-		my $sample_type = "tumor";
-		$sample_type = "normal" if(substr($tempArray[3], 0, 1) eq "1");
-
-		if($sample_type eq "tumor")
-		{
-			$tumor_model_ids{$patient_id} = $model_id;
-			$tumor_sample_names{$patient_id} = $sample_name;
-		}
-		elsif($sample_type eq "normal")
-		{
-			$normal_model_ids{$patient_id} = $model_id;
-		}
-		
-		print "$sample_name\t$patient_id\t$sample_type\n";
-	}
+		my %tumor_sample_names = my %tumor_model_ids = my %normal_model_ids = ();
 	
-	foreach my $patient_id (sort keys %tumor_model_ids)
-	{
-		$stats{'num_patients'}++;
-		
-		if($normal_model_ids{$patient_id})
+		foreach my $sample_name (keys %succeeded_models_by_sample)
 		{
-			$stats{'num_completed_patients'}++;
-
-			my $tumor_sample_name = $tumor_sample_names{$patient_id};
-			my $tumor_model_id = $tumor_model_ids{$patient_id};
-			my $normal_model_id = $normal_model_ids{$patient_id};
-
-			if($self->output_model_pairs)
+			my $model_id = $succeeded_models_by_sample{$sample_name};
+			## Determine patient ID ##
+			
+			my @tempArray = split(/\-/, $sample_name);
+			my $patient_id = join("-", $tempArray[0], $tempArray[1], $tempArray[2]);
+			
+			## Determine if this sample is normal or tumor ##
+			
+			my $sample_type = "tumor";
+			$sample_type = "normal" if(substr($tempArray[3], 0, 1) eq "1");
+	
+			if($sample_type eq "tumor")
 			{
-				print MODELPAIRS "$tumor_sample_name\t$normal_model_id\t$tumor_model_id\n";
+				$tumor_model_ids{$patient_id} = $model_id;
+				$tumor_sample_names{$patient_id} = $sample_name;
 			}
-
-			print "$patient_id\t$tumor_sample_name\t$normal_model_id\t$tumor_model_id\n";
+			elsif($sample_type eq "normal")
+			{
+				$normal_model_ids{$patient_id} = $model_id;
+			}
+			
+	#		print "$sample_name\t$patient_id\t$sample_type\n";
 		}
-
+		
+		foreach my $patient_id (sort keys %tumor_model_ids)
+		{
+			$stats{'num_patients'}++;
+			
+			if($normal_model_ids{$patient_id})
+			{
+				$stats{'num_completed_patients'}++;
+	
+				my $tumor_sample_name = $tumor_sample_names{$patient_id};
+				my $tumor_model_id = $tumor_model_ids{$patient_id};
+				my $normal_model_id = $normal_model_ids{$patient_id};
+	
+				if($self->output_model_pairs)
+				{
+					print MODELPAIRS "$tumor_sample_name\t$normal_model_id\t$tumor_model_id\n";
+				}
+	
+	#			print "$patient_id\t$tumor_sample_name\t$normal_model_id\t$tumor_model_id\n";
+			}
+	
+		}
+		
+		close(MODELPAIRS) if($self->output_model_pairs);
+		
 	}
-	
-	close(MODELPAIRS) if($self->output_model_pairs);
-	
-
 
 	print $stats{'models_in_group'} . " models in group\n" if($stats{'models_in_group'});
 	print $stats{'models_running'} . " models running\n" if($stats{'models_running'});
