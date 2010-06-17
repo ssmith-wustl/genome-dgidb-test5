@@ -185,22 +185,22 @@ sub alignment_summary_hash_ref {
             # Calculate percentages
             
             # percent aligned
-            $data->{percent_aligned} = sprintf("%.02f",(($data->{total_aligned_bp} / $data->{total_bp}) * 100)) .'%';
+            $data->{percent_aligned} = sprintf("%.02f",(($data->{total_aligned_bp} / $data->{total_bp}) * 100));
             
             # duplication rate
-            $data->{percent_duplicates} = sprintf("%.03f",(($data->{total_duplicate_bp} / $data->{total_aligned_bp}) * 100)) .'%';
+            $data->{percent_duplicates} = sprintf("%.03f",(($data->{total_duplicate_bp} / $data->{total_aligned_bp}) * 100));
             
             # on-target alignment
-            $data->{percent_target_aligned} = sprintf("%.02f",(($data->{total_target_aligned_bp} / $data->{total_aligned_bp}) * 100)) .'%';
+            $data->{percent_target_aligned} = sprintf("%.02f",(($data->{total_target_aligned_bp} / $data->{total_aligned_bp}) * 100));
             
             # on-target duplicates
-            $data->{percent_target_duplicates} = sprintf("%.02f",(($data->{duplicate_target_aligned_bp} / $data->{total_target_aligned_bp}) * 100)) .'%';
+            $data->{percent_target_duplicates} = sprintf("%.02f",(($data->{duplicate_target_aligned_bp} / $data->{total_target_aligned_bp}) * 100));
             
             # off-target alignment
-            $data->{percent_off_target_aligned} = sprintf("%.02f",(($data->{total_off_target_aligned_bp} / $data->{total_aligned_bp}) * 100)) .'%';
+            $data->{percent_off_target_aligned} = sprintf("%.02f",(($data->{total_off_target_aligned_bp} / $data->{total_aligned_bp}) * 100));
             
             # off-target duplicates
-            $data->{percent_off_target_duplicates} = sprintf("%.02f",(($data->{duplicate_off_target_aligned_bp} / $data->{total_off_target_aligned_bp}) * 100)) .'%';
+            $data->{percent_off_target_duplicates} = sprintf("%.02f",(($data->{duplicate_off_target_aligned_bp} / $data->{total_off_target_aligned_bp}) * 100));
             
             for my $key (keys %$data) {
                 my $metric_key = join('_', 'wingspan', $wingspan, $key);
@@ -219,19 +219,52 @@ sub coverage_stats_directory_path {
     return $self->reference_coverage_directory .'/wingspan_'. $wingspan;
 }
 
-sub coverage_stats_file {
-    my ($self,$wingspan) = @_;
+sub stats_file {
+    my $self = shift;
+    my $wingspan = shift;
     unless (defined($wingspan)) {
         die('Must provide wingspan_value to method coverage_stats_file in '. __PACKAGE__);
     }
-    my @stats_files = glob($self->coverage_stats_directory_path($wingspan) .'/*STATS.tsv');
+    my $coverage_stats_directory = $self->coverage_stats_directory_path($wingspan);
+    my @stats_files = glob($coverage_stats_directory.'/*STATS.tsv');
     unless (@stats_files) {
         return;
     }
-    unless (scalar(@stats_files) > 1) {
+    unless (scalar(@stats_files) == 1) {
         die("Found multiple stats files:\n". join("\n",@stats_files));
     }
     return $stats_files[0];
+}
+
+
+sub coverage_stats_hash_ref {
+    my $self = shift;
+    unless ($self->{_coverage_stats_hash_ref}) {
+        my @headers = qw/name pc_covered length covered_bp uncovered_bp mean_depth stdev_mean_depth median_depth gaps mean_gap_length stdev_gap_length median_gap_length minimum_depth minimum_depth_discarded_bp pc_minimum_depth_discarded_bp/;
+
+        my %stats;
+        my $min_depth_array_ref = $self->minimum_depths_array_ref;
+        my $wingspan_array_ref = $self->wingspan_values_array_ref;
+        for my $wingspan (@{$wingspan_array_ref}) {
+            my $stats_file = $self->stats_file($wingspan);
+            my $reader = Genome::Utility::IO::SeparatedValueReader->create(
+                separator => "\t",
+                input => $stats_file,
+                #TODO: Add headers to the stats file
+                headers => \@headers,
+            );
+            unless ($reader) {
+                $self->error_message('Can not create SeparatedValueReader for file '. $stats_file);
+                die $self->error_message;
+            }
+            while (my $data = $reader->next) {
+                push @{$stats{$wingspan}{$data->{name}}}, $data;
+            }
+            $reader->input->close;
+        }
+        $self->{_coverage_stats_hash_ref} = \%stats;
+    }
+    return $self->{_coverage_stats_hash_ref};
 }
 
 sub coverage_stats_summary_file {
