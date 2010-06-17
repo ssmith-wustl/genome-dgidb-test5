@@ -10,27 +10,17 @@ use Bit::Vector;
 class Genome::Model::Tools::Bmr::CalculateBmr {
     is => 'Genome::Command::OO',
     has_input => [
-    refseq => {
-        is => 'Genome::Model::Build::ImportedReferenceSequence',
-        id_by => 'refseq_id',
-        doc => 'The reference sequence build, used to gather and generate bitmask files for base masking and sample coverage. Enter "NCBI-human-build36" for this parameter or else.',
-    },
-    roi_bitmask => {
-        type => 'String',
+    refseq_build_name => {
+        is => 'String',
         is_optional => 1,
-        doc => 'Bitmask file used to limit background regions of interest when calculating background mutation rate',
+        default => 'NCBI-human-build36',
+        doc => 'The reference sequence build, used to gather and generate bitmask files for base masking and sample coverage.',
     },
     roi_bedfile => {
         type => 'String',
         is_optional => 0,
         doc => 'BED file used to limit background regions of interest when calculating background mutation rate',
     },
-    save_roi_bitmask => {
-        type => 'Boolean',
-        is_optional => 1,
-        doc => 'If ROI bitmask is not input, whether or not to save the ROI Bedfile as a bitmask for future use. Defaults to NO. Bitmask filesize is 369MB.',
-        default => 0,
-    },        
     mutation_maf_file => {
         type => 'String',
         is_optional => 0,
@@ -59,7 +49,13 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
+
+    #resolve refseq
+    my $ref_build_name = $self->refseq_build_name;
+    my ($ref_model_name,$ref_build_version) = $ref_build_name =~ /^(\S+)-build(\S*)$/;
+    my $ref_model = Genome::Model->get(name=>$ref_model_name);
+    my $ref_build = $ref_model->build_by_version($ref_build_version);
+    
     #load ROIs into a hash %ROIs -> chr -> gene -> start = stop;
     my %ROIs;
     my $roi_bedfile = $self->roi_bedfile;
@@ -68,6 +64,7 @@ sub execute {
         chomp $line;
         my ($chr,$start,$stop,$exon_id) = split /\t/,$line;
         (my $gene = $exon_id) =~ s/^(\w+)\..+$/$1/;
+        if ($chr eq "M") { $chr = "MT"; } #for broad roi lists
         if (exists $ROIs{$chr}{$gene}{$start}) {
             next if $stop < $ROIs{$chr}{$gene}{$start};
         }
@@ -75,15 +72,10 @@ sub execute {
     }
     $bed_fh->close;
 
-    #temporary
-
     #load bitmasks
-    my $at_bitmask_file = $self->refseq->data_directory . "/all_sequences.AT_bitmask";
-    my $cpg_bitmask_file = $self->refseq->data_directory . "/all_sequences.CpG_bitmask";
-    my $cg_bitmask_file = $self->refseq->data_directory . "/all_sequences.CG_bitmask";
-    #my $at_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.AT_bitmask";
-    #my $cg_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CG_bitmask";
-    #my $cpg_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CpG_bitmask";
+    my $at_bitmask_file = $ref_build->data_directory . "/all_sequences.AT_bitmask";
+    my $cpg_bitmask_file = $ref_build->data_directory . "/all_sequences.CpG_bitmask";
+    my $cg_bitmask_file = $ref_build->data_directory . "/all_sequences.CG_bitmask";
     my $at_bitmask = $self->read_genome_bitmask($at_bitmask_file);
     my $cpg_bitmask = $self->read_genome_bitmask($cpg_bitmask_file);
     my $cg_bitmask = $self->read_genome_bitmask($cg_bitmask_file);
@@ -102,22 +94,13 @@ sub execute {
         return;
     }
 
-    #look for an ROI bitmask
-    my $roi_bitmask; #hashref
-    if ($self->roi_bitmask) {
-        my $roi_file = $self->roi_bitmask;
-        $roi_bitmask = $self->read_genome_bitmask($roi_file);        
-    }
-
-    #if ROI bitmask is not found, create one
-    else {
-        $roi_bitmask = $self->create_empty_genome_bitmask();
-        for my $chr (keys %ROIs) {
-            for my $gene (keys %{$ROIs{$chr}}) {
-                for my $start (keys %{$ROIs{$chr}{$gene}}) {
-                    my $stop = $ROIs{$chr}{$gene}{$start};
-                    $roi_bitmask->{$chr}->Interval_Fill($start,$stop);
-                }
+    #Create an ROI bitmask
+    my $roi_bitmask = $self->create_empty_genome_bitmask($ref_build);
+    for my $chr (keys %ROIs) {
+        for my $gene (keys %{$ROIs{$chr}}) {
+            for my $start (keys %{$ROIs{$chr}{$gene}}) {
+                my $stop = $ROIs{$chr}{$gene}{$start};
+                $roi_bitmask->{$chr}->Interval_Fill($start,$stop);
             }
         }
     }
@@ -132,13 +115,19 @@ sub execute {
 
     #Loop through samples to build BMR hash %BMR -> gene -> class -> coverage, mutations, bmr
     my %BMR;
+    my $bitmask_conversion = Genome::Model::Tools::Bmr::WtfToBitmask->create(
+        reference_index => $ref_build->full_consensus_sam_index_path,
+    );
+
     for my $file (@wiggle_files) {
 
         #create sample coverage bitmask;
-        my $bitmask_conversion = Genome::Model::Tools::Bmr::WtfToBitmask->execute(
-            wtf_file => $file,
-            reference_index => $self->refseq->full_consensus_sam_index_path,
-        );
+        $bitmask_conversion->wtf_file($file);
+        if ($bitmask_conversion->is_executed) {
+            $bitmask_conversion->is_executed('0');
+        }
+        $bitmask_conversion->execute;
+
         unless ($bitmask_conversion) {
             $self->error_message("Not seeing a bitmask object for file $file.");
             return;
@@ -195,11 +184,17 @@ sub execute {
                     $bits = $self->count_bits($testvector,$start,$stop);
                     $BMR{$gene}{'CpG.transit'}{'coverage'} += $bits;
                     $BMR{$gene}{'CpG.transver'}{'coverage'} += $bits;
-                }
-            }
-        }
+                }#end, for my $start
+            }#end, for my $gene
+        }#end, for my $chr
 
-    }
+        undef $cov_bitmask; #clean up any memory
+
+    }#end, for my wiggle file
+
+    #clean up the object memory
+    $bitmask_conversion->delete;
+    undef $bitmask_conversion;
 
     #Loop through mutations, assign them to a gene and class in %BMR
     my $mutation_file = $self->mutation_maf_file;
@@ -216,7 +211,7 @@ sub execute {
 
 
         #SNVs
-        if ($mutation_type =~ /snp/i) {
+        if ($mutation_type =~ /snp|dnp/i) {
             #if this mutation is non-synonymous
             if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
@@ -366,8 +361,9 @@ sub execute {
 
 sub create_empty_genome_bitmask {
     my $self = shift;
+    my $ref_build = shift;
     my %genome;
-    my $ref_index_file = $self->refseq->full_consensus_sam_index_path;
+    my $ref_index_file = $ref_build->full_consensus_sam_index_path;
     my $ref_fh = new IO::File $ref_index_file,"r";
     while (my $line = $ref_fh->getline) {
         chomp $line;
@@ -424,8 +420,10 @@ sub count_bits {
 }
 
 1;
-#hash structure
-#
+
+
+
+#more specific hash structure
 #%BMR->gene->class->(coverage,#mutations,BMR)
 #
 #classes
@@ -443,10 +441,3 @@ sub count_bits {
 #AT.A.transver.C AT.T.transver.G
 #
 #and Indels
-#
-#less specific classes
-#
-#CG.transit,CG.transver
-#AT.transit,AT.transver
-#CpG.transit,CpG.transver
-#Indel
