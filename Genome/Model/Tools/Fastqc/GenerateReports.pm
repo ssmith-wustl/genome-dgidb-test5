@@ -9,7 +9,7 @@ class Genome::Model::Tools::Fastqc::GenerateReports {
     is => 'Genome::Model::Tools::Fastqc',
     has => [
         fastq_files => {
-            doc => 'The fastq files to generate quality reports for.',
+            doc => 'The fastq files to generate quality reports for. Comma delimited list.',
             is => 'Text',
         },
         report_directory => {
