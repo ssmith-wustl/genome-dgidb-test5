@@ -26,7 +26,7 @@ BEGIN {
 ###############################################################################
 
 # this ought to match the name as seen in the processing profile
-my $aligner_name = "ssaha2";
+my $aligner_name = "smalt";
 
 
 # End aligner-specific configuration,
@@ -155,7 +155,6 @@ sub test_shortcutting {
     # This ought to fail to return anything, and set the error_message property to include
     # some info about why we failed.  
     ####################################################
-
     no warnings;
     open OLDERR, '>&STDERR' or die "Can't dup STDERR: $!";
     use warnings;
