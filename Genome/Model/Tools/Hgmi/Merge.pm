@@ -108,7 +108,8 @@ sub execute
     my @merge = $self->gather_details();
 
     my ($merge_out, $merge_err); 
-    IPC::Run::run(@merge,
+    IPC::Run::run(\@merge,
+                  \undef,
                   '>',
                   \$merge_out,
                   '2>',
