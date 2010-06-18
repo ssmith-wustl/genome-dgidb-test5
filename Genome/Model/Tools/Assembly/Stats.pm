@@ -122,6 +122,7 @@ sub get_simple_read_stats {
     $stats .= "Chaff rate: ".$chaff_rate."%\n".
 	      "Q20 base redundancy: ".$q20_redundancy."X\n";
 
+    #TODO - remove prefin stuff ..
     #PREFINISH READS DATA
     my $prefin_input_reads = (exists $counts->{prefin_read_count}) ?
 	$counts->{prefin_read_count} : 0 ;
@@ -197,7 +198,7 @@ sub parse_input_qual_files {
 	while (my $q = $qio->next_seq) {
 	    my $read_name = $q->primary_id;
 	    $counts->{read_count}++;
-	    $counts->{prefin_read_count}++ if $read_name =~ /_t/;
+	    $counts->{prefin_read_count}++ if $read_name =~ /_t/; #remove this .. no more prefin reads
 	    foreach my $qual_value (@{$q->qual}) {
 		$counts->{base_count}++;
 		$counts->{q20_base_count}++ if $qual_value >= $q_cutoff;
@@ -618,6 +619,12 @@ sub create_contiguity_stats {
 sub get_read_depth_stats {
     my ($self, $acefile) = @_;
 
+    my $text = "\n*** Read Depth Info ***\n"; #string to store stats text
+    if (-s $acefile > 500000000) {
+	$text .= "Ace file size exceeds 500Mb and is too large to determine read depth info \n\n";
+	return $text;
+    }
+
     my $fo = Finishing::Assembly::Factory->connect('ace', $acefile);
     my $assembly_obj = $fo->get_assembly;
     my $contigs= $assembly_obj->contigs;
@@ -625,7 +632,7 @@ sub get_read_depth_stats {
     my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $total_covered_pos) = 0;
 
     while (my $contig = $contigs->next) {
-	my %coverage_depths; #consensus positions covered by reads
+	my @coverage_depths; #consensus positions covered by reads
 	my $reads = $contig->assembled_reads;
 
 	while (my $read = $reads->next) {
@@ -645,34 +652,36 @@ sub get_read_depth_stats {
 		$stop == $contig->unpadded_length;
 	    #increment each read position
 	    for ($start .. $stop) {
-		$coverage_depths{$_}++;
+		$coverage_depths[$_]++;
 	    }
 	}
 	#check to see if # of covered bases == contig length
-	unless (scalar (keys %coverage_depths) == $contig->unpadded_length) {
+	shift @coverage_depths; #remove $coverage_depths[0] which is never incremented
+	unless (scalar (@coverage_depths) == $contig->unpadded_length) {
 	    $self->warning_message("Contig region covered by reads is not the same as contig length for contig: ".$contig->name."\n\t".
-				   "covered consensus bases are: ".scalar (keys %coverage_depths)." contig length is: ".$contig->unpadded_length);
+				   "covered consensus bases are: ".scalar (@coverage_depths)." contig length is: ".$contig->unpadded_length);
 	    #this sometimes happens with velvet assemblies where not all consensus positions are covered by reads .. this is an error
 	    #with velvet not assigned proper base segments to reads
 	}
 	#total up positions of up to 5x coverages
-	$total_covered_pos += scalar (keys %coverage_depths);
-	foreach my $depth_num (keys %coverage_depths) {
-	    $one_x_cov++ if $coverage_depths{$depth_num} >= 1;
-	    $two_x_cov++ if $coverage_depths{$depth_num} >= 2;
-	    $three_x_cov++ if $coverage_depths{$depth_num} >= 3;
-	    $four_x_cov++ if $coverage_depths{$depth_num} >= 4;
-	    $five_x_cov++ if $coverage_depths{$depth_num} >= 5;
+	$total_covered_pos += scalar (@coverage_depths);
+	foreach my $depth_num (@coverage_depths) {
+	    next unless $depth_num; #can be undef if read base segments are off .. see two comments above
+	    $one_x_cov++ if $depth_num >= 1;
+	    $two_x_cov++ if $depth_num >= 2;
+	    $three_x_cov++ if $depth_num >= 3;
+	    $four_x_cov++ if $depth_num >= 4;
+	    $five_x_cov++ if $depth_num >= 5;
 	}
     }
 
-    my $text = "\n*** Read Depth Info ***\n".
-	       "Total covered bases: $total_covered_pos\n".
-	       "Depth >= 5: $five_x_cov\t". $five_x_cov/$total_covered_pos."\n".
-	       "Depth >= 4: $four_x_cov\t". $four_x_cov/$total_covered_pos."\n".
-	       "Depth >= 3: $three_x_cov\t". $three_x_cov/$total_covered_pos."\n".
-	       "Depth >= 2: $two_x_cov\t". $two_x_cov/$total_covered_pos."\n".
-	       "Depth >= 1: $one_x_cov\t". $one_x_cov/$total_covered_pos."\n\n";
+    $text = "\n*** Read Depth Info ***\n".
+	"Total covered bases: $total_covered_pos\n".
+	"Depth >= 5: $five_x_cov\t". $five_x_cov/$total_covered_pos."\n".
+	"Depth >= 4: $four_x_cov\t". $four_x_cov/$total_covered_pos."\n".
+	"Depth >= 3: $three_x_cov\t". $three_x_cov/$total_covered_pos."\n".
+	"Depth >= 2: $two_x_cov\t". $two_x_cov/$total_covered_pos."\n".
+	"Depth >= 1: $one_x_cov\t". $one_x_cov/$total_covered_pos."\n\n";
   
     return $text; 
 }
