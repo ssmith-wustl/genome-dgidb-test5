@@ -140,9 +140,9 @@ sub execute {
         
         my ($clean_header) = $header =~ /^@(\S+)\s+/;
 	    $output_fh->print($header, $trim_seq."\n", $sep, $trim_qual."\n"); 
-        $report_fh->print($clean_header."\tT\t".$trimmed_length."\n") if $report;  #In report T for trimmed
+        $report_fh->print($clean_header."\tT\t".$trimmed_length."\n") if $report and $trimmed_length;  #In report T for trimmed
         $trim_ct += $trimmed_length;
-        $rd_trim_ct++;
+        $rd_trim_ct++ if $trimmed_length;
     }
     
     $input_fh->close;
