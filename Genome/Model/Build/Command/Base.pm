@@ -84,7 +84,7 @@ sub _get_build_for_id {
 
     my $build = Genome::Model::Build->get($build_id);
     unless ( $build ) {
-        $self->error_message("Can't get build fo id ($build_id).");
+        $self->error_message("Can't get build for id ($build_id).");
         return;
     }
 
