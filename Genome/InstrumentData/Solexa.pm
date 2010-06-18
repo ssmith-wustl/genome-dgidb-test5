@@ -246,17 +246,95 @@ EOS
     ],
 };
 
+sub _calculate_paired_end_kb_usage {
+    my $self = shift;
+    my $HEADER_LENGTH = shift;
+    $HEADER_LENGTH = $HEADER_LENGTH + 5; # Adding 5 accounts for newlines in the FQ file.
+    # If data is paired_end fwd_read_length, rev_read_length, fwd_clusters and rev_clusters
+    # should all be defined.
+    if (!defined($self->fwd_read_length) or $self->fwd_read_length <= 0) {
+        $self->error_message("Instrument data fwd_read_length is either undefined or less than 0.");
+        die;
+    } elsif (!defined($self->rev_read_length) or $self->rev_read_length <= 0) {
+        $self->error_message("Instrument data rev_read_length is either undefined or less than 0.");
+        die;
+    } elsif (!defined($self->fwd_clusters) or $self->fwd_clusters <= 0) {
+        $self->error_message("Instrument data fwd_clusters is either undefined or less than 0.");
+        die;
+    } elsif (!defined($self->rev_clusters) or $self->rev_clusters <= 0) {
+        $self->error_message("Instrument data rev_clusters is either undefined or less than 0.");
+        die;
+    }
+    
+    my $fwd = (($self->fwd_read_length + $HEADER_LENGTH) * $self->fwd_clusters)*2;
+    my $rev = (($self->rev_read_length + $HEADER_LENGTH) * $self->rev_clusters)*2;
+    my $total = ($fwd + $rev) / 1024.0;
+    return $total;
+}
+
+sub _calculate_non_paired_end_kb_usage {
+    my $self = shift;
+    my $HEADER_LENGTH = shift;
+    $HEADER_LENGTH = $HEADER_LENGTH + 5; # adding 5 accounts for newlines in the FQ file.
+    # We will take the max of fwd_read_length or rev_read_length and the max of fwd_clusters and rev_clusters
+    # to make sure that even strange data won't cause overly low space allocation
+    # Get the max read length.
+    my $max_read_length;
+    if ( defined($self->read_length) and $self->read_length > 0 ) {
+        $max_read_length = $self->read_length;
+    } elsif ( defined($self->fwd_read_length) and defined($self->rev_read_length) ) {
+        if ( $self->fwd_read_length > $self->rev_read_length ) {
+            $max_read_length = $self->fwd_read_length;
+        } else {
+            $max_read_length = $self->rev_read_length;
+        }
+    } elsif ( defined($self->fwd_read_length) and $self->fwd_read_length > 0) {
+        $max_read_length = $self->fwd_read_length;
+    } elsif ( defined($self->rev_read_length) and $self->rev_read_length > 0) {
+        $max_read_length = $self->rev_read_length;
+    } else {
+        $self->error_message("No valid read length value found in instrument data");
+        die;
+    }
+    # Get the max cluster length.
+    my $max_clusters;
+    if ( defined($self->clusters) and $self->clusters > 0 ) {
+        $max_clusters = $self->clusters;
+    } elsif ( defined($self->fwd_clusters) and defined($self->rev_clusters) ) {
+        if ( $self->fwd_clusters > $self->rev_clusters ) {
+            $max_clusters = $self->fwd_clusters;
+        } else {
+            $max_clusters = $self->rev_clusters;
+        }
+    } elsif ( defined($self->fwd_clusters) and $self->fwd_clusters > 0) {
+        $max_clusters = $self->fwd_clusters;
+    } elsif ( defined($self->rev_clusters) and $self->rev_clusters > 0) {
+        $max_clusters = $self->rev_clusters;
+    } else {
+        $self->error_message("No valid number of clusters value found in instrument data");
+        die;
+    }
+    
+    my $total_b = (($max_read_length + $HEADER_LENGTH) * $max_clusters)*2;
+    my $total = $total_b / 1024.0;
+    return $total;
+}
+
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
-    # These default values should be replaced with an equation that takes into account:
-    # 1.) read_length
-    # 2.) reference sequence size
-    # 3.) clusters
-    # 4.) paired end
+    # Different aligners will require different levels of overhead, so this should return
+    # approximately the total size of the instrument data files.
+    # In a FQ file, every read means 4 lines, 2 of length $self->read_length,
+    # and 2 of read identifier data. Therefore we can expect the total file size to be 
+    # about (($self->read_length + header_size) * $self->fwd_clusters)*2 / 1024
+    
+    # This is length of the id tag in the FQ file, it looks something like: @HWUSI-EAS712_6171L:2:1:1817:12676#TGACCC/1
+    my $HEADER_LENGTH = 45;
+    
     if ($self->is_paired_end) {
-        return 30000000;
+        return int $self->_calculate_paired_end_kb_usage($HEADER_LENGTH);
     } else {
-        return 15000000;
+        return int $self->_calculate_non_paired_end_kb_usage($HEADER_LENGTH);
     }
 }
 
