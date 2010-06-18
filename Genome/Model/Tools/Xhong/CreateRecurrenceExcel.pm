@@ -12,20 +12,22 @@ use Sort::Naturally qw( nsort );
 # example: perl -I /gscuser/xhong/svn/perl_modules `which gmt` xhong create-recurrence-excel -model-group "PCGP-somatic" --analysis-dir /gscuser/xhong/SJC/recurrent > /gscuser/xhong/SJC/recurrent/bam_file_list.tx
 
 class Genome::Model::Tools::Xhong::CreateRecurrenceExcel {
-    is => 'Command',
-    has => [
-    model_group => { 
-        type => 'String',
-        is_optional => 0,
-        doc => "name of the model group to process",
-    },
-        analysis_dir => {
-        type => 'String',
-        is_optional => 0,
-        doc => "Directory to use for maplists and mapcheck output",
-    },
-    ]
+	is => 'Command',
+	has => [
+    	model_group => { type => 'String', is_optional => 0, doc => "name of the model group to process", },
+        	analysis_dir => { type => 'String', is_optional => 0, doc => "Directory to use for maplists and mapcheck output", },
+    	]
 };
+
+sub help_brief {
+    	"Generates tier1 hc SNV table for model-groups, and found recurrent events"
+}
+
+sub help_detail {
+    	<<'HELP';
+Hopefully this script will run the ucsc annotator on indels and then tier them for an already completed somatic model. Since this is done in the data directory, the model is then reallocated.
+HELP
+}
 
 
 sub execute {
@@ -70,6 +72,8 @@ sub execute {
         	my $tumor_type = $build->tumor_build->model->subject->common_name;
         	my $normal_common_name = $build->normal_build->model->subject->source_common_name;
         	my $normal_type = $build->normal_build->model->subject->common_name;
+
+
 
 		$tumor_bam{$tumor_common_name}=$tumor_wgs_bam;
 		$normal_bam{$normal_common_name}=$normal_wgs_bam;
@@ -216,7 +220,7 @@ sub execute {
 1;
 
 sub help_brief {
-    "Generates tier1 hc SNV table"
+    "Generates tier1 hc SNV table for model-groups, and found recurrent events"
 }
 
 sub help_detail {
