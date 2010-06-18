@@ -45,6 +45,11 @@ sub execute {
     my $fasta_file = $self->directory.'/edit_dir/'.$root_name.'.fasta';
     my $qual_file = $self->directory.'/edit_dir/'.$root_name.'.fasta.qual';
 
+    #if this re-runs in automated pipline, previously created zipped files
+    #must be removed for newly created files to zip
+    unlink $fasta_file.'.gz';
+    unlink $qual_file.'.gz';
+
     my $f_out = Bio::SeqIO->new(-format => 'fasta', file => ">$fasta_file");
     my $q_out = Bio::SeqIO->new(-format => 'qual', file => ">$qual_file");
 
