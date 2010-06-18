@@ -17,6 +17,11 @@ class Genome::Model::Tools::Cmds::CompileCnaOutput {
         is_optional => 1,
         doc => "The name of the Model Group to use.",
     },
+    window_size=> {
+        type => 'String',
+        is_optional => 1,
+        doc => "The window size is how far away one sample position is picked",
+    },
     ]
 };
 
@@ -31,6 +36,11 @@ sub help_detail {
 sub execute {
     my $self = shift;
     my @somatic_models;
+
+    my $window_size = 10000;
+    if ($self->window_size){
+	$window_size = $self->window_size;
+    }
 
     if($self->model_ids) {
         my @model_ids = split /\s+/, $self->model_ids;
@@ -84,7 +94,7 @@ sub execute {
             my $normal_bam = $normal_build->whole_rmdup_bam_file or die "Cannot find normal .bam.\n";
 
             #run bam-2-cna
-            my $job = "gmt somatic bam-to-cna --tumor-bam-file $tumor_bam --normal-bam-file $normal_bam --output-file $cn_data_file";
+            my $job = "gmt somatic bam-to-cna --tumor-bam-file $tumor_bam --normal-bam-file $normal_bam --output-file $cn_data_file --window-size $window_size";
             my $job_name = $somatic_model_id . "_bam2cna";
             my $oo = $job_name . "_stdout"; #print job's STDOUT in the current directory
             $self->status_message("Submitting job $job_name (bam-to-cna).\n");
