@@ -138,11 +138,20 @@ sub execute {
         return;
     }
 
-    printf(
+    my $msg = sprintf(
         "Build (ID: %s DIR: %s) created, scheduled and launched to LSF.\nAn initialization email will be sent once the build begins running.\n",
         $build->id,
         $build->data_directory,
     );
+    $self->status_message($msg);
+
+    my $uri = sprintf('%s/genome/model/build/status.html?id=%s',
+        Genome::Config->base_web_uri(), 
+        $build->id,
+    );
+    my $browser = $ENV{BROWSER} || 'firefox';
+    $self->status_message("Monitor from the web at $uri\n");
+    system "$browser $uri";
 
     return 1;
 }
