@@ -5,21 +5,17 @@ use above "Genome";
 use Test::More tests => 6;
 use Data::Dumper;
 
-BEGIN
-{
+# NOTE this module tests the API accessors, and tests the data behind human build 36
+# It does not appear to test model creation, building, etc. -ss
+
+BEGIN {
     use_ok("Genome::Model::ImportedReferenceSequence");
 }
 
-my $model = Genome::Model::ImportedReferenceSequence->get(
-    prefix => 'NCBI',
-    subject_class_name => 'Genome::Taxon',
-    subject_id => Genome::Taxon->get(species_name => 'human')
-);
-
+my $model = Genome::Model::ImportedReferenceSequence->get(name => 'NCBI-human');
 isa_ok( $model, 'Genome::Model::ImportedReferenceSequence' );
 
 my $build = $model->build_by_version(36);
-
 my $expected_dir = '/gscmnt/sata420/info/model_data/2741951221/build101947881';
 
 is( $build->data_directory(), $expected_dir, 'got the right data directory' );
