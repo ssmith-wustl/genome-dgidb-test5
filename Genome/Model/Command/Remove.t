@@ -1,80 +1,124 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
-
 use above 'Genome';
-
-use Test::More tests => 11;
+use Test::More tests => 19;
 
 BEGIN {
-        use_ok('Genome::Model::Command::Remove');
+    use_ok('Genome::Model::Command::Remove');
 }
+
 my $archive_dir = File::Temp::tempdir(CLEANUP => 1);
 my $data_dir = File::Temp::tempdir(CLEANUP => 1);
 my $template = 'Genome-Model-Command-Remove-'. $ENV{USER} .'-XXXX';
-my (undef,$archive_file) = File::Temp::tempfile(
-                                                $template,
-                                                SUFFIX => '.tgz',
-                                                UNLINK => 1,
-                                                DIR => $archive_dir
-                                            );
 
-my $mock_id = 0;
-my $pp = Genome::ProcessingProfile->create_mock(id => --$mock_id);
-my $model = Genome::Model->create_mock(
-                                       id => --$mock_id,
-                                       genome_model_id => $mock_id,
-                                       subject_type => 'mock_subject_type',
-                                       subject_name => 'mock_subject_name',
-                                       subject_id   => --$mock_id,
-                                       subject_class_name => 'Test::MockObject',
-                                       name => 'mock_genome_model_name',
-                                       processing_profile_id => $pp->id,
-                                       data_directory => $data_dir,
-                                   );
-$model->set_always('yaml_string', 'I am a yaml string of this model.');
-$model->set_always('resolve_archive_file', $archive_file );
-$model->mock('delete',sub { return; });
-my $remove_cmd;
+my (undef,$archive_file) = 
+    File::Temp::tempfile(
+        $template,
+        SUFFIX => '.tgz',
+        UNLINK => 1,
+        DIR => $archive_dir
+    );
 
-#This should not create
-eval {
-    $remove_cmd = Genome::Model::Command::Remove->create();
-};
-ok(!$remove_cmd,'no model defined');
+#
+# make the test data 
+#
 
-#This should create
-$remove_cmd = Genome::Model::Command::Remove->create(model_id => $model->id);
+my $s = Genome::Sample->create(id => -888, name => 'TEST-' . __FILE__ . "-$$");
+ok($s, "made a test sample");
+
+my $p = Genome::ProcessingProfile::TestPipeline->create(
+    id => -999, 
+    name => "test " . __FILE__ . " on host $ENV{HOSTNAME} process $$", 
+    some_command_name => 'ls',
+);
+ok($p, "made a test processing profile");
+
+my $mname = "test-$$-$ENV{HOSTNAME}";
+my $m = Genome::Model::TestPipeline->create(
+    id => -1, 
+    name => $mname,
+    processing_profile_id => -999,
+    subject_class_name => ref($s),
+    subject_id => $s->id,
+);
+ok($m, "made a test model");
+
+#my $b1 = $m->add_build();
+#ok($b1, "made test build 1");
+
+# run the command, and capture the exit code
+# this way invokes the command right in this process, with an array of command-line arguments
+# to test that we parse correctly
+sub ok_run {
+    note("running with params @_");
+    my $exit_code1 = eval { Genome::Model::Command::Remove->_execute_with_shell_params_and_return_exit_code(@_); };
+    ok(!$@, "the command did not crash") or diag($@);
+    is($exit_code1, 0, "command believes it succeeded");
+}
+
+sub ok_fail {
+    note("running with params @_");
+    my $exit_code1 = eval { Genome::Model::Command::Remove->_execute_with_shell_params_and_return_exit_code(@_); };
+    ok(!$@, "the command did not crash") or diag($@);
+    ok($exit_code1 != 0, "command returned failed exit code $exit_code1 as expected");
+}
+
+sub ok_crash {
+    note("running with params @_");
+    my $exit_code1 = eval { Genome::Model::Command::Remove->_execute_with_shell_params_and_return_exit_code(@_); };
+    ok($@, "the command did crash with error $@");
+    is($exit_code1, undef, "command exit code is undef as expected") or diag($exit_code1); 
+}
+
+# attempting to delete nothing will raise an error
+ok_fail();
+
+# disable real deletions, and get control over the return value
+my $delete_retval = 1;
+my $old_delete = \&Genome::Model::delete;
+my $new_delete = sub { return $delete_retval };
+*Genome::Model::delete = $new_delete;
+
+# check defaults
+my $remove_cmd = Genome::Model::Command::Remove->create(models => [$m]);
 ok($remove_cmd,'Model remove command created');
 ok(!$remove_cmd->archive,'Do not archive model');
 ok(!$remove_cmd->force_delete,'Do not force delete model');
 $remove_cmd->force_delete(1);
 ok($remove_cmd->force_delete,'force delete model');
 
-#The model delete will cause this to fail
+# the model delete will cause this to fail
+$delete_retval = undef;
 my $rv;
-eval {
-    $rv = $remove_cmd->execute
-};
+eval { $rv = $remove_cmd->execute };
 ok(!$rv,'remove model did not work because model delete failed');
 
-#The model delete should work this time
-$model->mock('delete',sub { return 1; });
+# but this will work
+$delete_retval = 1;
 $remove_cmd = Genome::Model::Command::Remove->create(
-                                                     model_id => $model->id,
+                                                     models => [$m],
                                                      force_delete => 1,
                                                  );
-
 ok($remove_cmd->execute,'delete model did work');
 
-#No lets try archiving
+# now lets try archiving
 $remove_cmd = Genome::Model::Command::Remove->create(
-                                                     model_id => $model->id,
+                                                     models => [$m],
                                                      force_delete => 1,
                                                      archive => 1,
                                                  );
 ok($remove_cmd->archive,'archive model is on');
 ok($remove_cmd->execute,'archive and remove model');
-ok(-s $archive_file,'archive file exists with size');
-exit;
+ok(-e $archive_file,'archive file exists');
+ok(-e $archive_file,'archive file exists with size') or diag($archive_file . "\n" . `ls -l $archive_file`);
+
+# restore the original delete logic
+*Genome::Model::delete = $old_delete;
+
+# delete the model made above using the command-line pattern match interface
+ok_run($mname,'--force-delete');
+isa_ok($m,"UR::DeletedRef", "model object is deleted");
+#isa_ok($b1,"UR::DeletedRef", "build object is deleted");
+
