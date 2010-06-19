@@ -61,6 +61,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
 
 my $default_contamination_screen_reference_name = "contamination-human";
 my @default_metagenomic_reference_names = ('microbial reference part 1 of 2', 'microbial reference part 2 of 2');
+#my @default_metagenomic_reference_names = ('NCBI-human', 'contamination-human');
 
 sub build_subclass_name {
     return 'metagenomic-composition-shotgun';
@@ -77,11 +78,12 @@ sub delete {
 
 sub create{
     my $class = shift;
-    
+
     $class->status_message("Beginning creation of metagenomic-composition-shotgun model");
-    
-    my $self = $class->SUPER::create(@_);    
-    
+
+    my $self = $class->SUPER::create(@_);
+    return unless $self;
+
     #DETECT OR SET REFERENCE DEFAULTS
     unless ($self->contamination_screen_reference) {
         my $contamination_screen_reference = Genome::Model->get(name => $default_contamination_screen_reference_name);
@@ -97,7 +99,7 @@ sub create{
         $self->contamination_screen_reference($build);
         $self->status_message("Set contamination_reference build to $default_contamination_screen_reference_name model's latest build");
     }
-    
+
     my @metagenomic_references;
     unless(@metagenomic_references = $self->metagenomic_references) {
         @metagenomic_references = map { Genome::Model->get(name => $_) } @default_metagenomic_reference_names;
@@ -150,7 +152,7 @@ sub _create_underlying_contamination_screen_model {
         $self->error_message("Couldn't create contamination screen model with params ".join(", ", map {$_ ."=>". $contamination_screen_model_params{$_}} keys %contamination_screen_model_params) );
         return;
     }
-    
+
     if ($contamination_screen_model->reference_sequence_build($self->contamination_screen_reference)){
         $self->status_message("updated reference sequence build on contamination model ".$contamination_screen_model->name);
     }else{
@@ -166,19 +168,19 @@ sub _create_underlying_contamination_screen_model {
 
 sub _create_underlying_metagenomic_models {
     my $self = shift;
-    
+
     my @new_objects;
     my $metagenomic_counter = 0;
     for my $metagenomic_reference ($self->metagenomic_references){ 
         $metagenomic_counter++;
-        
+
         my %metagenomic_alignment_model_params = (
             processing_profile => $self->metagenomic_alignment_pp,
             subject_name => $self->subject_name, 
             name => $self->name.".metagenomic alignment model $metagenomic_counter",
         );
         my $metagenomic_alignment_model = Genome::Model::ReferenceAlignment->create( %metagenomic_alignment_model_params );
-     
+
         unless ($metagenomic_alignment_model){
             $self->error_message("Couldn't create metagenomic reference model with params ".join(", " , map {$_ ."=>". $metagenomic_alignment_model_params{$_}} keys %metagenomic_alignment_model_params) );
             for (@new_objects){
@@ -186,7 +188,7 @@ sub _create_underlying_metagenomic_models {
             }
             return;
         }
-    
+
         if ($metagenomic_alignment_model->reference_sequence_build($metagenomic_reference)){
             $self->status_message("updated reference sequence build on metagenomic alignment model ".$metagenomic_alignment_model->name);
         }else{
@@ -201,7 +203,7 @@ sub _create_underlying_metagenomic_models {
         $self->add_from_model(from_model=>$metagenomic_alignment_model, role=>'metagenomic_alignment_model');
         $self->status_message("Created metagenomic alignment model ".$metagenomic_alignment_model->name);
     }
-    
+
     return @new_objects;
 }
 
