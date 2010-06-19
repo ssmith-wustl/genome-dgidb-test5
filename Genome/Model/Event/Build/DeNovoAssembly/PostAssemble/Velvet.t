@@ -52,9 +52,11 @@ my @file_names_to_test = qw/ reads.placed readinfo.txt
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
 
 foreach my $file (@file_names_to_test) {
+    my $data_directory = $build->data_directory;
     ok(-e $test_data_dir."/$file", "Test data dir $file file exists");
-    ok(-e $build->data_directory."/edit_dir/$file", "Tmp test dir $file file exists");
-    ok(File::Compare::compare($build->data_directory."/edit_dir/$file", $test_data_dir."/$file") == 0, "$file files match");
+    ok(-e $data_directory."/edit_dir/$file", "Tmp test dir $file file exists");
+    ok(File::Compare::compare($data_directory."/edit_dir/$file", $test_data_dir."/$file") == 0, "$file files match")
+        or diag("Failed to compare $data_directory/edit_dir/$file with $test_data_dir/$file");
 }
 
 #print $build->data_directory."\n";<STDIN>;
