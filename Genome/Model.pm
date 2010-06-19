@@ -164,7 +164,9 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
-# TODO: this needs a better home
+
+
+# TODO: improve the logic in Genome::Command::OO to handle more of this
 sub from_cmdline {
     my $class = shift;
     my @matches;
@@ -226,6 +228,11 @@ sub from_cmdline {
     else {
         return $matches[0]
     }
+}
+
+sub __display_name__ {
+    my $self = shift;
+    return $self->name . ' (' . $self->id . ')';
 }
 
 # auto generate sub-classes for any valid processing profile
@@ -891,7 +898,7 @@ sub delete {
         # Make a list of commands to run for each model group to which the model being removed belongs
         my $deletion_commands = join ("", map("\tgenome model-group member remove --model-group-id " . $_->model_group_id . " --model-id " . $self->genome_model_id . "\n", @model_bridges) );
         $self->error_message("Cannot delete this model because it is a member of one or more model groups. If you are sure you wish you delete this model, you may do so after removing the model from these group(s) by running the following command(s):\n$deletion_commands");
-        return;
+        die $self->error_message(); 
     }
 
     # This may not be the way things are working but here is the order of operations for removing db events
@@ -916,14 +923,14 @@ sub delete {
         
         unless ($status) {
             $self->error_message('Failed to remove object '. $object->class .' '. $object->id);
-            return;
+            die $self->error_message(); 
         }
     }
     # Get the remaining events like create and assign instrument data
     for my $event ($self->events) {
         unless ($event->delete) {
             $self->error_message('Failed to remove event '. $event->class .' '. $event->id);
-            return;
+            die $self->error_message(); 
         }
     }
     #make sure the model directory doesn't contain any builds if we are saving them
@@ -938,9 +945,7 @@ sub delete {
         }
     }
     
-    $self->SUPER::delete;
-    return 1;
-
+    return $self->SUPER::delete;
 }
 
 sub _build_model_filesystem_paths {
