@@ -4,11 +4,7 @@ version : ""
 language : C
 language_id : C
 installed : 0
-<<<<<<< .mine
-date_compiled : Fri May 28 11:11:56 2010
-=======
-date_compiled : Wed Jun  9 10:35:04 2010
->>>>>>> .r59853
+date_compiled : Sat Jun 19 16:35:27 2010
 inline_version : 0.44
 ILSM : %
     module : Inline::C
