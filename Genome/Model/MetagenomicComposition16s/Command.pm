@@ -25,10 +25,6 @@ sub _command_name_brief {
     return 'metagenomic-composition-16s';
 }
 
-sub help_brief { 
-    return 'Operate on MC16s models';
-}
-
 sub _builds {
     my $self = shift;
 
