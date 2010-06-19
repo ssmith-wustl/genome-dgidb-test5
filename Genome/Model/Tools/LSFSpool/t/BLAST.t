@@ -61,7 +61,7 @@ sub test_count_query {
   $file = $dir . "/blast-spool-1-1-output";
   ok($obj->{suite}->count_query("Query=",$file) == 10,"count Query= query ok");
 
-  chmod 0000,$file or die "Failed to set mode to 0000\n";;
+  chmod 0000,$file or die "Failed to set mode to 0000 for $file: $! ...you must own the test data to run this test, do you own it?\n";;
   # return 0, not an exception.
   ok( $obj->{suite}->count_query("Query=",$file) == 0);
   chmod 0644,$file or die "Failed to reset mode to 0644\n";
