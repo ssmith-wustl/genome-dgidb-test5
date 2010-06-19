@@ -64,6 +64,7 @@ sub generate_report_detail {
 sub get_bam_content {
     my $self = shift;
     my $build = $self->build;
+    $DB::single = 1;
 
     #my $pileup_file = $build->bam_pileup_file;
     #$self->status_message("Using pileup file $pileup_file to generate Bam coverage.");
@@ -71,22 +72,60 @@ sub get_bam_content {
     my $ref_build = $build->model->reference_build;
     my $reference_file = $ref_build->full_consensus_path('fa');
     my $aligned_reads = $build->whole_rmdup_bam_file;
-    $self->status_message("Using:  Reference File: $reference_file, Aligned Reads File: $aligned_reads");
-    my $coverage = Genome::Model::Tools::Sam::Coverage->create( aligned_reads_file=>$aligned_reads,
-                                                                reference_file =>$reference_file,
-                                                                return_output =>1,
-                                                                coverage_command => '/gsc/bin/bam-check -q 1',
-                                                                #use_version => 'r350wu1', #lift this once set default to r350wu1 in G::M::T::Sam
-                                                                );
-    my $bam_coverage_report = $coverage->execute;
-    if (defined($bam_coverage_report) ) {
-        $self->status_message("Bam coverage report successfully generated.");
-        $self->status_message("Bam coverage report string: \n".$bam_coverage_report);
-        return $bam_coverage_report;
-    }  else {
-        $self->error_message("Could not generate Bam coverage report.");  
+    unless (-s $aligned_reads){
+        $self->error_message("aligned reads file $aligned_reads doesn't exist!");
+    }
+    unless (-s $reference_file){
+        $self->error_message("reference file $reference_file doesn't exist!");
+    }
+
+    my $flagstat_file = "$aligned_reads.flagstat";
+    unless (-s $flagstat_file){
+        $self->warning_message("No flagstat file found for merged file $aligned_reads, proceeding w/o checking aligned_reads count");
+    }
+
+    my $flagstat_data = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat_file);
+        
+    unless($flagstat_data) {
+        $self->error_message('No output from samtools flagstat');
         return;
-    }                                                                                                            
+    }
+    
+    my $skip;
+    if(exists $flagstat_data->{errors}) {
+        for my $error (@{ $flagstat_data->{errors} }) {
+            if($error =~ m/Truncated file/) {
+                $self->error_message('Flagstat output for ' . $aligned_reads . ' indicates possible truncation.');
+            }
+        }
+    }else{
+        if ($flagstat_data->{reads_mapped} == 0){
+            $self->status_message("0 mapped reads in merged bam, skipping bam-check");
+            $skip = 1;
+        }
+    }
+
+    if ($skip){
+        $self->status_message("No bam coverage report generated due to no aligned reads");
+        return;
+    }else{
+        $self->status_message("Using:  Reference File: $reference_file, Aligned Reads File: $aligned_reads");
+        my $coverage = Genome::Model::Tools::Sam::Coverage->create( aligned_reads_file=>$aligned_reads,
+            reference_file =>$reference_file,
+            return_output =>1,
+            coverage_command => '/gsc/bin/bam-check -q 1',
+            #use_version => 'r350wu1', #lift this once set default to r350wu1 in G::M::T::Sam
+        );
+        my $bam_coverage_report = $coverage->execute;
+        if (defined($bam_coverage_report) ) {
+            $self->status_message("Bam coverage report successfully generated.");
+            $self->status_message("Bam coverage report string: \n".$bam_coverage_report);
+            return $bam_coverage_report;
+        }  else {
+            $self->error_message("Could not generate Bam coverage report.");  
+            return;
+        }
+    }
 }
 
 sub get_maq_content {
@@ -99,11 +138,11 @@ sub get_maq_content {
     #my $accumulated_alignments_file = $build->accumulate_maps;
     my $accumulated_alignments_file = $build->whole_rmdup_map_file;
     unless (Genome::Model::Tools::Maq::Mapcheck->execute(
-                                                         use_version => $build->maq_version_for_pp_parameter,
-                                                         bfa_file => $model->reference_build->full_consensus_path('bfa'),
-                                                         map_file => $accumulated_alignments_file,
-                                                         output_file => $mapcheck_output,
-                                                     ) ) {
+            use_version => $build->maq_version_for_pp_parameter,
+            bfa_file => $model->reference_build->full_consensus_path('bfa'),
+            map_file => $accumulated_alignments_file,
+            output_file => $mapcheck_output,
+        ) ) {
         $self->error_message();
         die($self->error_message);
     }
@@ -129,13 +168,13 @@ sub get_ref_seq_iterator {
     if ($self->ref_seq_name)
     {
         $i = Genome::Model::RefSeq->create_iterator(where => [ model_id=> $self->model_id,
-                                                               ref_seq_name => $self->ref_seq_name,
-                                                               variation_position_read_depths => 2 ]);
+            ref_seq_name => $self->ref_seq_name,
+            variation_position_read_depths => 2 ]);
     }
     else
     {
         $i = Genome::Model::RefSeq->create_iterator(where => [ model_id=> $self->model_id,
-                                                                  variation_position_read_depths => 2 ]);
+            variation_position_read_depths => 2 ]);
     }
     return $i;
 }
@@ -166,7 +205,7 @@ sub format_maq_report
             $cell = $table[$row];
             #trim leading & trailing
             $cell=~ s/^\s+//;
-	    $cell=~ s/\s+$//;
+            $cell=~ s/\s+$//;
 
             #wrap cells
             if ($row == 0) #header
@@ -198,11 +237,11 @@ sub format_maq_report
         $table = "\n<table border=1 id=\"data\">$table</table>";
 
         return "<!--\n$content\n-->\n" . 
-               "<div id=\"maq_report\">" .
-               $stats . 
-               $table . 
-               "</div>" .   
-               $self->get_style;
+        "<div id=\"maq_report\">" .
+        $stats . 
+        $table . 
+        "</div>" .   
+        $self->get_style;
     }
     else
     {
@@ -236,7 +275,7 @@ sub format_maq_content
                 $cell=~s/\s*:\s/ /g;
                 $cell=~s/\s+/<\/th><th>/g;
                 $formatted_cell="<tr><td id=\"corner\"></td><th>$cell</th></tr>";
-            
+
             }
             else
             {
@@ -255,7 +294,7 @@ sub format_maq_content
                     $formatted_cell = "<tr>$formatted_cell</tr>";
                 }
             } 
-        
+
             $table[$row] = $formatted_cell;
         }
     }
@@ -263,24 +302,24 @@ sub format_maq_content
     $table = "\n<table border=1 id=\"data\">$table</table>";
 
     return "<!--\n$content\n-->\n" . 
-           "<div id=\"maq_report\">" .
-           $stats .
-           $table . 
-           "</div>" . 
-           $self->get_css;
+    "<div id=\"maq_report\">" .
+    $stats .
+    $table . 
+    "</div>" . 
+    $self->get_css;
 }
 
 sub get_css
 {    
     return
-"    <style>
+    "    <style>
 
     #maq_report #data #corner
     {
-        border-bottom: 2px solid #6699CC;
-        border-right: 1px solid #6699CC;
-        border-top, border-left:#000000;
-        background-color: #BEC8D1;
+    border-bottom: 2px solid #6699CC;
+    border-right: 1px solid #6699CC;
+    border-top, border-left:#000000;
+    background-color: #BEC8D1;
     }
 
     th
@@ -293,7 +332,7 @@ sub get_css
     font-size: 16px;
     color: #404040; }
 
- td
+    td
     { border-bottom: 1px solid #000;
     border-top: 0px;
     border-left: 1px solid #000;
@@ -302,15 +341,15 @@ sub get_css
     font-weight: normal;
     font-size: 14px;
     padding: 0 0 0 0;
-    
+
     background-color: #fafafa;
     border-spacing: 0px;
     margin-top: 0px;
-}
+    }
 
 
-table
-{
+    table
+    {
     text-align: center;
     font-family: Verdana;
     font-weight: normal;
@@ -320,26 +359,26 @@ table
     border: 1px #000 solid;
     border-collapse: collapse;
     border-spacing: 0px;
-}
+    }
 
-tr td{
+    tr td{
     background-color: #fafafa;
-}
+    }
 
-tr.row0 td{
+    tr.row0 td{
     background-color: #fafafa;
-}
+    }
 
-tr.row1 td{
+    tr.row1 td{
     background-color: #eeeeee;
-}
-a img {
+    }
+    a img {
     border: medium none;
     border-collapse: collapse;
-}
-.drag_it {
-}
-.sec0
+    }
+    .drag_it {
+    }
+    .sec0
     { border-bottom: 2px solid #6699CC;
     border-right: 1px solid #6699CC;
     background-color: #BEC8D1;
@@ -348,23 +387,23 @@ a img {
     font-weight: bold;
     font-size: 16px;
     color: #404040; }
-.sec1
-{
+    .sec1
+    {
     background-color:#CCFFFF;
-}
-.sec2
-{
+    }
+    .sec2
+    {
     background-color:#FFFF99;
-}
-.sec3
-{
+    }
+    .sec3
+    {
     background-color:#FF9999;
-}
-.sec4
-{
+    }
+    .sec4
+    {
     background-color:#CCFFCC;
-}
+    }
 
-</style>";
+    </style>";
 }
 1;

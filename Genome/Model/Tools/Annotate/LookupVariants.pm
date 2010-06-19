@@ -126,7 +126,6 @@ EOS
 
 sub execute { 
 
-    $DB::single = $DB::stopper;
     my ($self) = @_;
 
     my $dbsnp_dir;

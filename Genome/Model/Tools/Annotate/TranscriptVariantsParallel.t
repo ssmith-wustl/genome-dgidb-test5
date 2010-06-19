@@ -35,11 +35,12 @@ my $number_cmd_obj = Genome::Model::Tools::Annotate::TranscriptVariantsParallel-
     output_file => $number_output,
     split_by_number => 50,
     annotation_filter => 'top',
+    cache_annotation_data_directory => 1,
 );
 
 $number_cmd_obj->execute() if $number_cmd_obj;
 
-ok (compare($number_output, $reference_output) == 0, "Output of transcript variants and transcript variants parallel (split by line number) are the same");
+ok (compare($number_output, $reference_output) == 0, "Output of transcript variants and transcript variants parallel (split by line number) are the same($number_output, $reference_output)");
 #system("cp $number_output /gscuser/bdericks/test_output.tsv");
 unlink $number_output;
 #die;
@@ -51,9 +52,10 @@ my $chrom_cmd_obj = Genome::Model::Tools::Annotate::TranscriptVariantsParallel->
     output_file => $chrom_output,
     split_by_chromosome => 1,
     annotation_filter => "top",
+    cache_annotation_data_directory => 1,
 );
 
 $chrom_cmd_obj->execute() if $chrom_cmd_obj;
 
-ok (compare($chrom_output, $reference_output) == 0,  "Output of transcript variants and transcript variants parallel (split by chromosome) are the same");
+ok (compare($chrom_output, $reference_output) == 0,  "Output of transcript variants and transcript variants parallel (split by chromosome) are the same($chrom_output, $reference_output)");
 unlink $chrom_output;
