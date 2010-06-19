@@ -15,6 +15,10 @@ sub arch_os {
     return $arch_os;
 }
 
+sub base_web_uri {
+    'https://imp/view';
+}
+
 sub user_email {
     my $self = shift;
     my $user = shift;
