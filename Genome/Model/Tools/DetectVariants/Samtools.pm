@@ -159,32 +159,42 @@ sub _run_samtools {
         return;
     }
 
-    my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snp_output_file);
-    $rv = $snp_sanitizer->execute;
-
-    unless($rv and $rv == 1) {
-        $self->error_message("Running samtools snp-sanitizer failed with exit code $rv");
-        return;
+    if (-e $snp_output_file and not -s $snp_output_file) {
+        $self->warning_message("No SNVs detected.");
+    }
+    else {
+        my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snp_output_file);
+        $rv = $snp_sanitizer->execute;
+        unless($rv and $rv == 1) {
+            $self->error_message("Running samtools snp-sanitizer failed with exit code $rv");
+            return;
+        }
     }
 
     my $indel_cmd = sprintf($samtools_cmd, '-i', $indel_output_file);
-
     $rv = Genome::Utility::FileSystem->shellcmd(
         cmd => $indel_cmd,
         input_files => [$bam_file, $ref_seq_file],
         output_files => [$indel_output_file],
         allow_zero_size_output_files => 1,
     );
-
     unless($rv) {
         $self->error_message("Running samtools indel failed.\nCommand: $indel_cmd");
         return;
+    }
+
+    if (-e $indel_output_file and not -s $indel_output_file) {
+        $self->warning_message("No indels detected.");
     }
 
     #for capture models we need to limit the snps and indels to within the defined target regions
     if ($self->capture_set_input) {
         my $bed_file = $self->capture_set_input;
         for my $var_file ($snp_output_file, $indel_output_file) {
+            unless (-s $var_file) {
+                $self->warning_message("Skip limiting $var_file to target regions because it is empty.");
+                next;
+            }
             my $tmp_limited_file = $var_file .'_limited';
             my $no_limit_file = $var_file .'.no_bed_limit';
             unless (Genome::Model::Tools::Sam::LimitVariants->execute(
@@ -207,25 +217,35 @@ sub _run_samtools {
     }
 
 
-    my %indel_filter_params = ( indel_file => $indel_output_file, out_file => $filtered_indel_file );
-    # for capture data we do not know the proper ceiling for depth
-    if ($self->capture_set_input) {
-        $indel_filter_params{max_read_depth} = 1000000;
+    if (-s $indel_output_file) {
+        my %indel_filter_params = ( indel_file => $indel_output_file, out_file => $filtered_indel_file );
+        # for capture data we do not know the proper ceiling for depth
+        if ($self->capture_set_input) {
+            $indel_filter_params{max_read_depth} = 1000000;
+        }
+        my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(%indel_filter_params);
+        unless($indel_filter->execute) {
+            $self->error_message("Running sam indel-filter failed.");
+            return;
+        }
     }
-    my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(%indel_filter_params);
-    unless($indel_filter->execute) {
-        $self->error_message("Running sam indel-filter failed.");
-        return;
+    else {
+        Genome::Utility::FileSystem->write_file($filtered_indel_file);
     }
 
-    my $snp_filter = Genome::Model::Tools::Sam::SnpFilter->create(
-        snp_file   => $snp_output_file,
-        out_file   => $filtered_snp_output_file,
-        indel_file => $filtered_indel_file,
-    );
-    unless($snp_filter->execute) {
-        $self->error_message("Running sam snp-filter failed.");
-        return;
+    if (-s $snp_output_file) {
+        my $snp_filter = Genome::Model::Tools::Sam::SnpFilter->create(
+            snp_file   => $snp_output_file,
+            out_file   => $filtered_snp_output_file,
+            indel_file => $filtered_indel_file,
+        );
+        unless($snp_filter->execute) {
+            $self->error_message("Running sam snp-filter failed.");
+            return;
+        }
+    }
+    else {
+        Genome::Utility::FileSystem->write_file($filtered_snp_output_file);
     }
 
     $rv = $self->generate_genotype_detail_file($snp_output_file);
@@ -254,9 +274,14 @@ sub generate_genotype_detail_file {
     my $self = shift; 
     my $snp_output_file = shift;
     
-    unless(-f $snp_output_file and -s $snp_output_file) {
-        $self->error_message("SNP output File: $snp_output_file is invalid.");
+    unless(-f $snp_output_file) { # and -s $snp_output_file) {
+        $self->error_message("SNV output File: $snp_output_file is invalid.");
         die($self->error_message);
+    }
+
+    if (not -s $snp_output_file) {
+        $self->warning_message("No report input file generated for SNVs because no SNVs were detected.");
+        return 1;
     }
     
     my $report_input_file = $self->working_directory . '/report_input_all_sequences';
