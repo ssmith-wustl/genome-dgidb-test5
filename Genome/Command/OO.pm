@@ -148,5 +148,30 @@ sub X_shell_arg_getopt_specification_from_property_meta {
     );
 }
 
+sub _ask_user_question {
+    my $self = shift;
+    my $question = shift;
+    my $timeout = shift || 60;
+    my $input;
+    eval {
+        local $SIG{ALRM} = sub { die "Failed to reply to question '$question' with in '$timeout' seconds\n" };
+        $self->status_message($question);
+        $self->status_message("Please reply: 'yes' or 'no'");
+        alarm($timeout);
+        chomp($input = <STDIN>);
+        alarm(0);
+    };
+    if ($@) {
+        $self->warning_message($@);
+        return;
+    }
+    unless ($input =~ m/yes|no/) {
+        $self->error_message("'$input' is an invalid answer to question '$question'");
+        return;
+    }
+    return $input;
+}
+
+
 1;
 
