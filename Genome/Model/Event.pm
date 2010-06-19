@@ -536,8 +536,10 @@ sub abandon {
     }
     if ($self->event_status =~ /Scheduled|Running/) {
         unless ($self->user_name eq $ENV{USER}) {
-            $self->error_message('Attempted to abandon '. $self->event_status .' event '. $self->id .' owned by '. $self->user_name);
-            die($self->error_message);
+            my $build_id = $self->build_id || '';
+            my $model_id = $self->model_id || '';
+            $self->error_message('Attempted to abandon '. $self->event_status .' event '. $self->id ."(model_id:$model_id, build_id:$build_id) owned by ". $self->user_name);
+            Carp::confess($self->error_message);
         }
         my $lsf_job_id = $self->lsf_job_id;
         if ($lsf_job_id) {
