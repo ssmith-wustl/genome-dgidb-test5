@@ -121,24 +121,7 @@ sub _unassign_by_instrument_data_id {
                 )
             )
         );
-        if (my $first_build = $existing_ida->first_build) {
-            my @subsequent_builds = Genome::Model::Build->get(
-                model_id => $first_build->model_id,
-                "id >" => $first_build->id, 
-            );
-            for my $build ($first_build, @subsequent_builds) {
-                $self->status_message(
-                    sprintf(
-                        'Abandoning build %d for model %s (%d)',
-                        $build->id,
-                        $build->model->name,
-                        $build->model->id
-                    )
-                );
-                # Throws exceptions, which will prevent db commit if there are errors
-                $build->abandon;
-            }
-        }
+        # logic to abandon builds using this assignment is now in the assignment delete
         $existing_ida->delete;
         return 1;
     }

@@ -173,6 +173,26 @@ sub yaml_string {
 sub delete {
     my $self = shift;
 
+    # ensure we are unassigned from models
+    if (my $first_build = $self->first_build) {
+        my @subsequent_builds = Genome::Model::Build->get(
+            'model_id'  => $first_build->model_id,
+            'id >'      => $first_build->id, 
+        );
+        for my $build ($first_build, @subsequent_builds) {
+            $self->status_message(
+                sprintf(
+                    'Abandoning build %d for model %s (%d)',
+                    $build->id,
+                    $build->model->name,
+                    $build->model->id
+                )
+            );
+            # Throws exceptions, which will prevent db commit if there are errors
+            $build->abandon;
+        }
+    }
+
     #< Temp - remove input, if exists.
     #   - get input that matches this ida
     #   - delete input
