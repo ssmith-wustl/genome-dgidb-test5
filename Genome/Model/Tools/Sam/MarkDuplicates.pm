@@ -74,7 +74,12 @@ sub execute {
     
     $self->status_message("Attempting to mark duplicates." );
    
-    if (-s $result )  {
+    unless (-e $input_file)  {
+       $self->error_message("Source file $input_file not found!");
+       return;
+    }
+    
+    if (-e $result )  {
        $self->error_message("The target file already exists at: $result . Please remove this file and rerun to generate a new merged file.");
        return;
     }
@@ -111,11 +116,12 @@ sub execute {
 
 	$self->status_message("Picard mark duplicates command: $mark_duplicates_cmd");
 	
-	my $md_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$mark_duplicates_cmd,
-								 input_files=>[$input_file],
-								 output_files=>[$result],
-								 skip_if_output_is_present=>0
-								);
+	my $md_rv = Genome::Utility::FileSystem->shellcmd(
+        cmd                         => $mark_duplicates_cmd,
+        input_files                 => [$input_file],
+        output_files                => [$result],
+        skip_if_output_is_present   => 0,
+    );
 
 	$self->status_message("Mark duplicates return value: $md_rv");
 	if ($md_rv != 1) {
