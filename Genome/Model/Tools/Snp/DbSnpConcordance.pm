@@ -103,7 +103,6 @@ sub help_detail {
 
 sub calculate_metrics {
     my ($self,$snp_fh,$dbsnp_hash_ref,) = @_;
-    $DB::single = $DB::stopper;
     my $exclude_y = $self->exclude_y;
     
     my %concordance; #with an eye to doing multiple dbs/samples in the future. Do a hash
