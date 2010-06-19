@@ -154,10 +154,9 @@ sub execute {
     ); 
 
     my $merge_rv = $merge_cmd->execute();
-
     $self->status_message("Merge return value:".$merge_rv);
 
-    if ($merge_rv ne 1)  {
+    if ($merge_rv != 1)  {
         $self->error_message("Error merging: ".join("\n", @bam_files));
         $self->error_message("Output target: $merged_file");
         $self->error_message("Using software: ".$merge_software);
@@ -165,85 +164,88 @@ sub execute {
         $self->error_message("You may want to check permissions on the files you are trying to merge.");
         return;
     } 
-    else {
 
-        $self->status_message("Checking that merged bam contains expected alignment count.");
-        
-        my $merged_flagstat_total = $self->_bam_flagstat_total($merged_file);
-        
-        unless($merged_flagstat_total == $individual_flagstat_total) {
-            $self->error_message("Alignment counts of individual bams and merged bam don't match!");
-            $self->error_message("(Individual sumtotal: " . $individual_flagstat_total . ", Merged total: " . $merged_flagstat_total);
-            return;
-        }
-        
-        $self->status_message("Merge of aligned bam files successful.");
-    }
-   
-   # these are already sorted coming out of the initial merge, so don't bother re-sorting
-
-    my $metrics_file = $self->build->rmdup_metrics_file;
-    my $markdup_log_file = $self->build->rmdup_log_file; 
-
-    my $tmp_dir = File::Temp->newdir( 
-        "tmp_XXXXX",
-        DIR     => $alignments_dir, 
-        CLEANUP => 1,
-    );
-    
-    my $result_tmp_dir = File::Temp->newdir( 
-        "tmp_XXXXX",
-        DIR     => $alignments_dir, 
-        CLEANUP => 1,
-    );
-   
-    # fix permissions on this temp dir so others can clean it up later if need be
-    chmod(0775,$tmp_dir);
-    chmod(0775,$result_tmp_dir);
-    
-    my $dedup_temp_file = $result_tmp_dir . '/dedup.bam';
-
-    my $mark_dup_cmd = Genome::Model::Tools::Sam::MarkDuplicates->create(
-       file_to_mark => $merged_file,
-       marked_file => $dedup_temp_file,
-       metrics_file => $metrics_file,
-       remove_duplicates => 0,
-       tmp_dir => $tmp_dir->dirname,
-       log_file => $markdup_log_file, 
-       use_picard_version => $rmdup_version,
-       max_jvm_heap_size => 6,
-
-    ); 
-
-    my $mark_dup_rv = $mark_dup_cmd->execute;
-
-    if ($mark_dup_rv ne 1)  {
-        $self->error_message("Error Marking Duplicates!");
-        $self->error_message("Return value: ".$mark_dup_rv);
-        $self->error_message("Check parameters and permissions in the RUN command above.");
+    $self->status_message("Checking that merged bam contains expected alignment count.");
+    my $merged_flagstat_total = $self->_bam_flagstat_total($merged_file);
+    unless($merged_flagstat_total == $individual_flagstat_total) {
+        $self->error_message("Alignment counts of individual bams and merged bam don't match!");
+        $self->error_message("(Individual sumtotal: " . $individual_flagstat_total . ", Merged total: " . $merged_flagstat_total);
         return;
-    } else {
+    }    
+    $self->status_message("Merge of aligned bam files successful.");
+
+    my $flagstat_file = $merged_file . '.flagstat';
+    my $flagstat_hashref = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat_file);
+    $self->status_message("Flagstat results: " . Data::Dumper::Dumper($flagstat_hashref));
+    my $reads_mapped = $flagstat_hashref->{reads_mapped};
+    $self->status_message("Mapped read count after merge is " . $reads_mapped);
+   
+    if ($reads_mapped == 0) {
+        # all reads are unmapped
+        $self->status_message("Skipping marking duplicates since no reads aligned, and the tool crashes in this case.");
+        rename($merged_file, $bam_merged_output_file);
+        rename($merged_file . '.flagstat', $bam_merged_output_file . '.flagstat');
+    }
+    else {
+        # some reads mapped, mark duplicates within a library
+        my $metrics_file = $self->build->rmdup_metrics_file;
+        my $markdup_log_file = $self->build->rmdup_log_file; 
+    
+        my $tmp_dir = File::Temp->newdir( 
+            "tmp_XXXXX",
+            DIR     => $alignments_dir, 
+            CLEANUP => 1,
+        );
+        
+        my $result_tmp_dir = File::Temp->newdir( 
+            "tmp_XXXXX",
+            DIR     => $alignments_dir, 
+            CLEANUP => 1,
+        );
+       
+        # fix permissions on this temp dir so others can clean it up later if need be
+        chmod(0775,$tmp_dir);
+        chmod(0775,$result_tmp_dir);
+        
+        my $dedup_temp_file = $result_tmp_dir . '/dedup.bam';
+    
+        my $mark_dup_cmd = Genome::Model::Tools::Sam::MarkDuplicates->create(
+           file_to_mark => $merged_file,
+           marked_file => $dedup_temp_file,
+           metrics_file => $metrics_file,
+           remove_duplicates => 0,
+           tmp_dir => $tmp_dir->dirname,
+           log_file => $markdup_log_file, 
+           use_picard_version => $rmdup_version,
+           max_jvm_heap_size => 6,
+    
+        ); 
+    
+        my $mark_dup_rv = $mark_dup_cmd->execute;
+        if ($mark_dup_rv != 1)  {
+            $self->error_message("Error Marking Duplicates!");
+            $self->error_message("Return value: ".$mark_dup_rv);
+            $self->error_message("Check parameters and permissions in the RUN command above.");
+            return;
+        } 
+    
         $self->status_message("Checking that deduplicated bam contains expected alignment count.");
-        
-        
         my $dedup_flagstat_total = $self->_bam_flagstat_total($dedup_temp_file);
-        
         unless($individual_flagstat_total == $dedup_flagstat_total) {
             $self->error_message("Alignment counts of dedup bam and individual bams don't match!");
             $self->error_message("(Dedup total: " . $dedup_flagstat_total . ", Individual total: " . $individual_flagstat_total);
             return;
         }
-        
         $self->status_message("Deduplicated bam count verified.");
         
         rename($dedup_temp_file, $bam_merged_output_file);
         rename($dedup_temp_file . '.flagstat', $bam_merged_output_file . '.flagstat');
+    
+        $now = UR::Time->now;
+        $self->status_message("<<< Completing MarkDuplicates at $now.");
     }
-
-    $now = UR::Time->now;
-    $self->status_message("<<< Completing MarkDuplicates at $now.");
-
-    #generate the bam index file
+    
+    $self->status_message("Indexing the final BAM file...");
     my $index_cmd = Genome::Model::Tools::Sam::IndexBam->create(
         bam_file => $bam_merged_output_file
     );
@@ -276,7 +278,7 @@ sub _bam_flagstat_total {
         }
     }
     
-    my $flagstat_data = Genome::Info::BamFlagstat->get_data($flag_file);
+    my $flagstat_data = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flag_file);
         
     unless($flagstat_data) {
         $self->error_message('No output from samtools flagstat');
