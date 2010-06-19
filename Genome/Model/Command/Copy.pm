@@ -10,19 +10,21 @@ require Genome::Utility::FileSystem;
 
 class Genome::Model::Command::Copy {
     class_name => __PACKAGE__,    
-    is => 'Command',
+    is => 'Genome::Command::OO',
     has => [
-        from_model_id => {
-            is => 'Integer',
-            is_optional => 0,
+        from => {
+            is => 'Genome::Model',
+            id_by => '_from_model_id',
             is_input => 1,
+            shell_args_position => 1,
             doc => 'The source model to copy from'
         },
-        new_model_name => {
+        to => {
             is => 'Text',
             len => 255,
             is_input => 1,
             is_optional => 0,
+            shell_args_position => 2,
             doc => 'The name of the new model that will be created'
         },
         skip_instrument_data_assignments => {
@@ -35,7 +37,7 @@ class Genome::Model::Command::Copy {
         model_overrides => {
             is_many => 1,
             is_optional => 1,
-            shell_args_position => 1,
+            shell_args_position => 3,
         }
     ],
   schema_name => 'Main',
@@ -86,11 +88,7 @@ sub execute {
     
     $DB::single = 1;
 
-    my $src_model = Genome::Model->get($self->from_model_id);
-    unless ($src_model) {
-        $self->error_message("Source model by id " . $self->from_model_id . " couldn't be fetched");
-        return;
-    }
+    my $src_model = $self->from; 
     
     my $model_class = $src_model->class;
     $self->status_message("Source model class is a " . $src_model->class ."\n");
@@ -126,7 +124,7 @@ sub execute {
         $cmd_params{$key} = $property_overrides{$key};
     }
     
-    $cmd_params{'model_name'} = $self->new_model_name;
+    $cmd_params{'model_name'} = $self->to;
     
     # kick off the command to build it
     my $define_cmd = $define_cmd_class_name->create(%cmd_params);
