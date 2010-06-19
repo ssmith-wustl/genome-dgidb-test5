@@ -15,7 +15,7 @@ sub execute {
     my $self = shift;
     
     my $ret = $self->create;
-    my $self->error_message("There was an error in object creation") and return unless $ret;
+    $self->error_message("There was an error in object creation") and return unless $ret;
 
 
     my $model = $self->model;
