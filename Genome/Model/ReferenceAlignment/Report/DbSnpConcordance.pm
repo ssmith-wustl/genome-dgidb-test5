@@ -231,7 +231,7 @@ sub generate_report_detail
         }
         else {
             my $cc_output = $self->create_temp_file_path();
-            $self->status_message("Output file for DbSnpConcordance: ".$cc_output.",".-s $cc_output);
+            $self->status_message("Output file for DbSnpConcordance: ".$cc_output);
             $self->status_message("snp_file for DbSnpConcordance: ".$snp_file.",".-s $snp_file);
             $self->status_message("dbsnp_file for DbSnpConcordance: ".$db_snp_path.",".-s $db_snp_path);
             unless (
@@ -299,7 +299,10 @@ sub generate_report_detail
 
             ## extract snp positions, dbsnp positions, and concordance data so we can display them in a nice table
             ## TODO: create a sub for this so we're not doing it twice in a row
-            if ($cqr_unfiltered_summary =~ m/(\d+) .* (\d+) .* (\d+\.\d+\%)/s) {
+            if($cqr_unfiltered_summary eq 'There were 0 in the snp file.  No output was generated.'){
+                $total_unfiltered_snps = $dbsnp_unfiltered_positions = $unfiltered_concordance = 0;
+                print("No snps to generate concordance, setting metrics to 0");
+            } elsif ($cqr_unfiltered_summary =~ m/(\d+) .* (\d+) .* (\d+\.\d+\%)/s) {
                 $total_unfiltered_snps = $1;
                 $dbsnp_unfiltered_positions = $2;
                 $unfiltered_concordance = $3;
@@ -309,14 +312,16 @@ sub generate_report_detail
                 $self->status_message("Could not extract unfiltered summary report data from dbSNP concordance report!");
             }
 
-            $DB::single = 1;
         }
         elsif ($list eq 'variant_filtered_list_files') {
             @cqr_filtered = @concordance_quality_report;
             $cqr_filtered_summary = $concordance_report;
 
             ## extract snp positions, dbsnp positions, and concordance data so we can display them in a nice table            
-            if ($cqr_filtered_summary =~ m/(\d+) .* (\d+) .* (\d+\.\d+\%)/s) {
+            if($cqr_unfiltered_summary eq 'There were 0 in the snp file.  No output was generated.'){
+                $total_unfiltered_snps = $dbsnp_unfiltered_positions = $unfiltered_concordance = 0;
+                print("No snps to generate concordance, setting metrics to 0");
+            }elsif ($cqr_filtered_summary =~ m/(\d+) .* (\d+) .* (\d+\.\d+\%)/s) {
                 $total_filtered_snps = $1;
                 $dbsnp_filtered_positions = $2;
                 $filtered_concordance = $3;
@@ -325,7 +330,6 @@ sub generate_report_detail
                 $self->status_message("Could not extract filtered summary report data from dbSNP concordance report!");
             }
 
-            $DB::single = 1;
         }
         else {
             die "unknown SNV list $list!.  Cannot properly assign graph data strings!";
@@ -333,7 +337,6 @@ sub generate_report_detail
     }
 
     # let's make sure that the reports made it out of the loop:
-    $DB::single = $DB::stopper;
 
     #
     # BUILD GRAPH
