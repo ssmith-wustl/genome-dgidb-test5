@@ -8,7 +8,7 @@ use Genome;
 
 class Genome::Model::GenePrediction::Command {
     is => ['Command','Genome::Utility::FileSystem'],
-    doc => "Modularization of gene prediction scripts",
+    doc => "tools to work with gene prediction data sets",
 };
 
 sub sub_command_category { 'type specific' }
