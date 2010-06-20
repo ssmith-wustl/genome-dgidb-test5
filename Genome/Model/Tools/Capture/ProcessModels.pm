@@ -2,12 +2,12 @@
 package Genome::Model::Tools::Capture::ProcessModels;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# ProcessModels - Compare tumor versus normal models to find somatic events
+# ProcessModels - Compare germline reference models to find germline events
 #					
-#	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
+#	AUTHOR:		Will Schierding (wschierd@genome.wustl.edu)
 #
-#	CREATED:	12/09/2009 by D.K.
-#	MODIFIED:	12/09/2009 by D.K.
+#	CREATED:	6/19/2009 by W.S.
+#	MODIFIED:	6/19/2009 by W.S.
 #
 #	NOTES:	
 #			
@@ -29,8 +29,7 @@ class Genome::Model::Tools::Capture::ProcessModels {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		output_dir	=> { is => 'Text', doc => "Output directory for comparison files" , is_optional => 0},
-		model_list	=> { is => 'Text', doc => "Text file normal-tumor sample pairs to include, one pair per line" , is_optional => 0},
-		report_only	=> { is => 'Text', doc => "Flag to skip actual execution" , is_optional => 1},
+		model_list	=> { is => 'Text', doc => "Text file id,subject_name,build_ids,build_statuses,last_succeeded_build_directory, one per line - space delim" , is_optional => 0},
 		regions_file	=> { is => 'Text', doc => "Optional limit to regions file" , is_optional => 1},
 		skip_if_output_present => { is => 'Text', doc => "Do not attempt to run pipeline if output present" , is_optional => 1},
 	],
@@ -78,21 +77,14 @@ sub execute {                               # replace with real execution logic.
 		chomp;
 		my $line = $_;
 		$lineCounter++;
-		
-		(my $model_id, my $sample_name) = split(/\t/, $line);
+		$line =~ s/\s+/\t/g;
+		my ($model_id, $sample_name, $build_id, $build_status, $build_dir) = split(/\t/, $line);
 		$stats{'num_pairs'}++;
 		
 		## Establish sample output dir ##
 		
 		my $sample_output_dir = $output_dir . "/" . $sample_name;
 		mkdir($sample_output_dir) if(!(-d $sample_output_dir));
-		
-		my $model_status = get_model_status($model_id);
-		my @statusContents = split(/\t/, $model_status);
-		my $build_id = $statusContents[1];
-		my $build_status = $statusContents[2];
-		my $model_dir = $statusContents[3];
-		my $build_dir = $model_dir . "/build" . $build_id;
 		
 		print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
 
@@ -145,61 +137,6 @@ sub execute {                               # replace with real execution logic.
 	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
-
-
-
-#############################################################
-# ParseFile - takes input file and parses it
-#
-#############################################################
-
-sub get_model_status
-{
-	my $model_id = shift(@_);
-	my $status_xml = `genome model status --genome-model-id $model_id 2>/dev/null`;
-	my $build_id = my $build_status = "";
-	my $build_dir = "";
-
-	my @statusLines = split(/\n/, $status_xml);
-	
-	foreach my $line (@statusLines)
-	{
-		if($line =~ 'data-directory')
-		{
-			my @lineContents = split(/\"/, $line);
-			my $numContents = @lineContents;
-			for(my $colCounter = 0; $colCounter < $numContents; $colCounter++)
-			{
-				if($lineContents[$colCounter] && $lineContents[$colCounter] =~ 'data-directory')
-				{
-					$build_dir = $lineContents[$colCounter + 1];
-				}
-			}
-		}
-		
-		if($line =~ 'builds' && !$build_status)
-		{
-			$build_status = "Unbuilt";
-		}
-		
-		if($line =~ 'build id')
-		{
-			my @lineContents = split(/\"/, $line);
-			$build_id = $lineContents[1];
-		}
-		
-		if($line =~ 'build-status')
-		{
-			my @lineContents = split(/[\<\>]/, $line);
-			$build_status = $lineContents[2];
-		}
-		
-
-	}
-	
-	return("$model_id\t$build_id\t$build_status\t$build_dir");
-}
-
 
 
 1;
