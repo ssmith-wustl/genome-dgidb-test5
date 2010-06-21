@@ -34,6 +34,7 @@ class Genome::Model::Tools::Capture::ModelGroup {
 		output_model_pairs	=> { is => 'Text', doc => "Optional output file for paired normal-tumor model ids" , is_optional => 1},
 		show_builds	=> { is => 'Text', doc => "Show build IDs and statuses" , is_optional => 1},
 		show_lanes	=> { is => 'Text', doc => "Show lane details for instrument data" , is_optional => 1},
+		tcga_fix	=> { is => 'Text', doc => "Shorten/simplify TCGA sample names" , is_optional => 1},
 	],
 };
 
@@ -104,6 +105,13 @@ sub execute {                               # replace with real execution logic.
 		
 		my $model_id = $model->genome_model_id;
 		my $subject_name = $model->subject_name;
+
+		## TCGA FIX ##	
+		if($self->tcga_fix)
+		{
+			$subject_name = substr($subject_name, 0, 19) . "-1";		
+		}
+		
 		my $build_dir = my $bam_file = my $snp_file = "";
 		my $model_status = "New";
 
