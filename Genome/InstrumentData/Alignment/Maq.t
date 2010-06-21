@@ -9,6 +9,7 @@ use Test::More;
 use above 'Genome';
 
 BEGIN {
+    plan skip_all => 'THIS IS OBSOLETE, USE ALIGNMENT RESULT INSTEAD!';
     if (`uname -a` =~ /x86_64/) {
         plan tests => 32;
     } else {
