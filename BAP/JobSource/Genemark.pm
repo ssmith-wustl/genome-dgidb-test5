@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 use English;
 
+use BAP;
 use BAP::Job::Genemark;
 
 use base qw(GAP::JobSource);
