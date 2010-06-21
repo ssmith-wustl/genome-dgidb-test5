@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 #use Test::More tests => 73;
-use Test::More skip_all => 'This test no longer runs, and its module has been replaced by ::AlignmentResult.  It will be deleted with that module in an upcoming release.' 
+use Test::More skip_all => 'This test no longer runs, and its module has been replaced by ::AlignmentResult.  It will be deleted with that module in an upcoming release.'; 
 
 use above 'Genome';
 
