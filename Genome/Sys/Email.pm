@@ -112,8 +112,6 @@ sub initialize {
         Carp::confess('Invalid source object ' . $source . ' passed to initialize().');
     }
     
-    $self->_is_initialized(1);
-    
     return 1;
 }
 
