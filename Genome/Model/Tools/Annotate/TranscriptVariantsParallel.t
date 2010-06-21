@@ -6,7 +6,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More skip_all => 'Test is too slow and not thorough';
 use File::Temp qw/ tempdir /;
 use File::Compare;
 use above "Genome";
