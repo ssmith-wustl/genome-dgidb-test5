@@ -68,7 +68,7 @@ popup.center();
                     <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
                       <tr><td class="label">Status:</td><td class="value"><xsl:value-of select="build/@status" />
                       <xsl:if test="$status = 'Succeeded'">
-                        <xsl:text> </xsl:text><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@data-directory"/><xsl:text>/reports/Summary/report.html</xsl:text></xsl:attribute><xsl:attribute name="class"><xsl:text>grey</xsl:text></xsl:attribute><xsl:text>(view build summary report)</xsl:text></a>
+                        <xsl:text> </xsl:text><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@summary-report"/></xsl:attribute><xsl:attribute name="class"><xsl:text>grey</xsl:text></xsl:attribute><xsl:text>(view build summary report)</xsl:text></a>
                       </xsl:if>
 
                       </td></tr>

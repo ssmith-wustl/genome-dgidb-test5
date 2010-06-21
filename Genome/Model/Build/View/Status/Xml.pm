@@ -237,6 +237,8 @@ sub get_build_node {
     if (-e $err_log_file) {
         $buildnode->addChild( $doc->createAttribute("error-log",$err_log_file));
     }
+    
+    $buildnode->addChild( $doc->createAttribute("summary-report", $self->get_summary_report_location) );
 
     $buildnode->addChild($self->get_model_node);
     
@@ -244,6 +246,15 @@ sub get_build_node {
     $buildnode->addChild($self->get_links_node);
 
     return $buildnode;
+}
+
+#Separate method to make it easy to override in subclasses
+sub get_summary_report_location {
+    my $self = shift;
+    my $build = $self->subject;
+    
+    #A default value equivalent to what was previously hardcoded in the XSL.
+    return $build->reports_directory . '/Summary/report.html';
 }
 
 sub get_model_node {
