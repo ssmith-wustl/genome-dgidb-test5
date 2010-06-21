@@ -30,17 +30,12 @@ class Genome::Sys::Email {
             calculate => q{ ($self->_parse_id($id))[2]; },
             doc => 'The id of the message in the mailing list system',
         },    
-        _is_initialized => {
-            is => 'Boolean',
-            doc => 'Has the data for this email been retrieved/filled in?',
-            is_transient => 1,
-        },
-        _body => {
+        body => {
             is => 'Text',
             doc => 'The body of the message',
             is_transient => 1,
         },
-        _subject => {
+        subject => {
             is => 'Text',
             doc => 'The subject of the message',
             is_transient => 1,
@@ -55,6 +50,17 @@ class Genome::Sys::Email {
         },
     ],
 };
+
+__PACKAGE__->add_observer(
+    aspect   => 'load',
+    callback => sub {
+        my ($self) = @_;
+
+        $self->initialize();
+    
+    }
+);
+
 
 sub get {
     my $class = shift;
@@ -77,13 +83,10 @@ sub get {
     return $class->SUPER::get(@_);
 }
 
+
 sub initialize {
     my $self = shift;
     my $source = shift;
-    
-    if($self->_is_initialized) {
-        Carp::confess('Duplicate initialize!');
-    }
     
     unless($source) {
         return $self->_initialize_from_server;
@@ -95,16 +98,16 @@ sub initialize {
             Carp::confess('Source object identifier ' . $source_id . ' does not appear to match this identifier (' . $self->id . ').');
         }
         
-        $self->_body($source->body);
-        $self->_subject($source->header('Subject'));
+        $self->body($source->body);
+        $self->subject($source->header('Subject'));
     } elsif (ref $source eq 'WebService::Solr::Document') {
         my $source_id = $source->value_for('object_id');
         unless($source_id eq $self->id) {
             Carp::confess('Source object identifier ' . $source_id . ' does not appear to match this identifier (' . $self->id . ').');
         }
         
-        $self->_body($source->value_for('content'));
-        $self->_subject($source->value_for('title')); 
+        $self->body($source->value_for('content'));
+        $self->subject($source->value_for('title')); 
     } else {
         Carp::confess('Invalid source object ' . $source . ' passed to initialize().');
     }
@@ -112,12 +115,6 @@ sub initialize {
     $self->_is_initialized(1);
     
     return 1;
-}
-
-sub is_initialized {
-    my $self = shift;
-    
-    return $self->_is_initialized();
 }
 
 sub _initialize_from_server {
@@ -146,30 +143,10 @@ sub _initialize_from_server {
     $body =~ s!^\n!!gms; #Remove initial newlines
     $body =~ s!\n$!!gms; #Remove final newlines
     
-    $self->_subject($subject);
-    $self->_body($body);
+    $self->subject($subject);
+    $self->body($body);
     
     return 1;
-}
-
-sub body {
-    my $self = shift;
-    
-    unless($self->_is_initialized) {
-        $self->initialize();
-    }
-    
-    return $self->_body;
-}
-
-sub subject {
-    my $self = shift;
-    
-    unless($self->_is_initialized) {
-        $self->initialize();
-    }
-    
-    return $self->_subject;
 }
 
 sub _parse_id {
