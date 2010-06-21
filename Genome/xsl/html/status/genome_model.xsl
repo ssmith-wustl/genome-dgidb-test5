@@ -3,6 +3,14 @@
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   
   <xsl:template name="genome_model" match="object[./types[./isa[@type='Genome::Model']]]">
+    <!-- These parameters are only valid when there is a last_complete_build; they are here for overriding by subclasses -->
+    <xsl:param name="build_directory_url">
+        <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="normalize-space(aspect[@name='last_complete_build']/object/aspect[@name='data_directory']/value)" />
+    </xsl:param>
+    <xsl:param name="summary_report_url">
+        <xsl:value-of select="$build_directory_url"/><xsl:text>/reports/Summary/report.html</xsl:text>
+    </xsl:param>
+
     <div class="result">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" class="result"><tbody><tr>
       <td>
@@ -33,11 +41,8 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:call-template name="object_link">
               <xsl:with-param name="linktext" select="'last succeeded build'" />
             </xsl:call-template>
-            <xsl:variable name="build_directory_url">
-              <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="normalize-space(aspect[@name='data_directory']/value)" />
-            </xsl:variable>
             | <a><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute>data directory</a>
-            | <a><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/><xsl:text>/reports/Summary/report.html</xsl:text></xsl:attribute>summary report</a>
+            | <a><xsl:attribute name="href"><xsl:value-of select="$summary_report_url"/></xsl:attribute>summary report</a>
             </xsl:for-each>
           </xsl:when>
           <xsl:otherwise>
