@@ -166,6 +166,17 @@ sub _store_coding_gene {
 
     my $exon_start = $exons[0]->start();
     my $exon_end   = $exons[0]->end();
+
+    my $missing_start = 0;
+    my $missing_stop  = 0;
+
+    if ($feature->has_tag('start_not_found')) {
+        $missing_start = 1;
+    }
+
+    if ($feature->has_tag('end_not_found')) {
+        $missing_stop = 1;
+    }
     
     my $gene = EGAP::CodingGene->create(
         gene_name       => $gene_name,
@@ -175,8 +186,8 @@ sub _store_coding_gene {
         strand          => $feature->strand(),
         source          => $source,
         internal_stops  => 0,
-        missing_start   => 0,
-        missing_stop    => 0,
+        missing_start   => $missing_start,
+        missing_stop    => $missing_stop,
         fragment        => 0,
         wraparound      => 0,
         blastp_evidence => 0,
