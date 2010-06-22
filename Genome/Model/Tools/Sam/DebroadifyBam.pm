@@ -38,8 +38,21 @@ class Genome::Model::Tools::Sam::DebroadifyBam {
 
 sub execute {
     my $self = shift;
+   
+    #Do some checks before we get going to ensure all the inputs are available and things will work.
+
+    unless(defined($self->output_sam)){
+        unless(defined($self->reference_file)){
+            $self->error_message("In order to output a BAM file, a reference_file must be provided.");
+            die $self->error_message;
+        }
+        unless(-e $self->reference_file) {
+            $self->error_message("Couldn't find reference file located at: $self->reference_file");
+            die $self->error_message;
+        }
+    }
     unless(-e $self->input_bam_file) {
-        $self->error_message("could not locate input file ".$self->input_bam_file);
+        $self->error_message("could not locate input file located at: ".$self->input_bam_file);
         die $self->error_message;
     }
 
