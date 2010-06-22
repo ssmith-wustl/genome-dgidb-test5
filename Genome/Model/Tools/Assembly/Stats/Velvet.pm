@@ -95,13 +95,7 @@ sub execute {
     #print $core_survey unless $self->no_print_to_screen;
 
     #READ DEPTH STATS
-    my $ace = `ls -t velvet_asm.ace* | grep -v base_depth | head -1`;
-    chomp $ace;
-    unless ($ace) {
-	$self->error_message("Can not find any velvet_asm.ace ace files");
-	return;
-    }
-    my $depth_stats = $self->get_read_depth_stats($ace);
+    my $depth_stats = $self->get_read_depth_stats_from_afg();
     $stats .= $depth_stats;
     print $depth_stats unless $self->no_print_to_screen;
 
