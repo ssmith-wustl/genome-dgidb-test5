@@ -676,7 +676,7 @@ sub get_read_depth_stats {
     }
 
     $text = "\n*** Read Depth Info ***\n".
-	"Total covered bases: $total_covered_pos\n".
+	"Total consensus bases: $total_covered_pos\n".
 	"Depth >= 5: $five_x_cov\t". $five_x_cov/$total_covered_pos."\n".
 	"Depth >= 4: $four_x_cov\t". $four_x_cov/$total_covered_pos."\n".
 	"Depth >= 3: $three_x_cov\t". $three_x_cov/$total_covered_pos."\n".
