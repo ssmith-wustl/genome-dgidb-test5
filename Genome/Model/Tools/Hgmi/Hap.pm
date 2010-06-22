@@ -251,12 +251,18 @@ sub execute
         croak "can't set up bap_predict_genes.pl step.... from Hap.pm\n\n";
     }
 
-    my $merge = Genome::Model::Tools::Hgmi::Merge->create(
+    my %merge_params = (
         organism_name => $config->{organism_name},
         locus_tag     => $config->{locus_tag},
         project_type  => $config->{project_type},
         runner_count  => $config->{runner_count},
     );
+
+    if (exists($config->{nr_db})) {
+        $merge_params{nr_db} = $config->{nr_db};
+    }
+    
+    my $merge = Genome::Model::Tools::Hgmi::Merge->create(%merge_params);
 
     if (exists($config->{merge_script_location}) && (-x $config->{merge_script_location}) )
     {
@@ -300,7 +306,7 @@ sub execute
         croak "can't create 100% tag overlapping in Hap.pm";
     }
 
-    my $fin = Genome::Model::Tools::Hgmi::Finish->create(
+    my %finish_params = (
         sequence_set_id  => $ssid,
         locus_tag        => $config->{locus_tag},
         organism_name    => $config->{organism_name},
@@ -312,6 +318,12 @@ sub execute
         pipe_version     => $config->{pipe_version},
         path             => $config->{path},
     );
+
+    if (exists($config->{nr_db})) {
+        $finish_params{nr_db} = $config->{nr_db};
+    }
+    
+    my $fin = Genome::Model::Tools::Hgmi::Finish->create(%finish_params);
 
     if ( $self->dev )
     {
