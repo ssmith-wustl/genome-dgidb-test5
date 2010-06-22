@@ -80,5 +80,3 @@ sub execute {
     close $sam_input;
     close $bam_output;
 
-    return 1;
-}
