@@ -115,6 +115,11 @@ class Genome::InstrumentData::AlignmentResult {
                                 },
     ],
     has_metric => [
+        cigar_md_error_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                        doc=>'The number of alignments with CIGAR / MD strings that failed to be parsed completely.'
+                                },
         total_read_count => {
                                         is=>'Number',
                                         is_optional=>1,
@@ -477,7 +482,7 @@ sub create_BAM_in_staging_directory {
 sub _compute_alignment_metrics {
     my $self = shift;
     my $bam = $self->temp_staging_directory . "/all_sequences.bam";
-    my $out = `bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/alignment_summary_cpp_v1.2.2 --bam=\"$bam\""`;
+    my $out = `bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/alignment-summary-v1.2.4 --bam=\"$bam\" --ignore-cigar-md-errors"`;
     unless ($? == 0) {
         $self->error_message("Failed to compute alignment metrics.");
         die $self->error_message;
@@ -487,6 +492,9 @@ sub _compute_alignment_metrics {
         $self->error_message("Failed to parse YAML hash from alignment_summary_cpp output.");
         die $self->error_message;
     }
+    # ehvatum TODO: stop using samtools flagstat to detect truncation
+#   $self->alignment_file_truncated     ($res->{truncated});
+    $self->cigar_md_error_count         ($res->{cigar_md_error});
     $self->total_read_count             ($res->{total});
     $self->total_base_count             ($res->{total_bp});
     $self->total_aligned_read_count     ($res->{total_aligned});
