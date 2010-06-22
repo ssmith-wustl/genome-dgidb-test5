@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use Cwd;
 use IO::File;
+use AMOS::AmosLib;
 use Bio::SeqIO;
 use Bio::Seq::Quality;
 use Bio::Seq::SequenceTrace;
@@ -169,8 +170,12 @@ sub get_input_qual_files {
 
 sub resolve_data_directory {
     my ($self) = @_;
-    my $dir = ($self->assembly_directory) ?
-	$self->assembly_directory : cwd();
+    my $dir = ($self->assembly_directory) ? $self->assembly_directory : cwd();
+    #TODO - make assembly_dir main project dir and not edit_dir
+    #unless (-d $dir.'/edit_dir') {
+        #$self->error_message ("Assembly directory ".$self->assembly_directory." must have an edit_dir");
+	#return;
+    #}
     unless ($dir =~ /edit_dir$/) {
 	$self->error_message ("You must be in edit_dir");
 	return;
@@ -213,6 +218,7 @@ sub get_reads_placed_counts {
     my ($self) = @_;
     my $counts = {};
     my $uniq_reads = {};
+    #TODO - create a method to get these files
     my $fh = IO::File->new("< reads.placed") || return;
     while (my $line = $fh->getline) {
 	$counts->{reads_in_scaffolds}++;
@@ -288,6 +294,7 @@ sub get_contigs_bases_counts {
     #RETURNS TOTAL CONTIG LENGTH, GC AT NX COUNTS, 
     my ($self) = @_;
     my $counts = {};
+    #TODO - create a method to get these files
     unless (-s 'contigs.bases') {
 	$self->error_message("You must have a contigs.bases file");
 	return;
@@ -359,6 +366,7 @@ sub parse_contigs_quals_file {
     my ($self) = @_;
     my ($supercontig_number, $contig_number);
     my $counts = {}; my $q20_counts = {};
+    #TODO - create a method to get these files
     unless (-s 'contigs.quals') {
 	$self->error_message ("You must have a contigs.quals files");
 	return;
@@ -616,7 +624,83 @@ sub create_contiguity_stats {
     return $text;
 }
 
-sub get_read_depth_stats {
+sub get_read_depth_stats_from_afg {
+    my $self = shift;
+
+    #TODO - use get method to get this file
+    my $velvet_afg_file = $self->assembly_directory.'/../velvet_asm.afg';
+
+    unless (-s $velvet_afg_file) {
+	$self->error_message("Can't find velvet_asm.afg file to calculate read depth stats");
+	return;
+    }
+
+    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($velvet_afg_file)
+	or return;
+
+    my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $total_covered_pos) = 0;
+
+    while (my $record = getRecord($afg_fh)) {
+	my ($rec, $fields, $recs) = parseRecord($record);
+	if ($rec eq 'CTG') {  #contig
+	    my $seq = $fields->{seq}; #fasta
+	    $seq =~ s/\n//g; #contig seq is written in multiple lines
+	    my $contig_length = length $seq;
+	    my @consensus_positions;
+	    for my $r (0..$#$recs) { #reads
+		my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
+		
+		#sfields
+		#'src' => '19534',  #read id number
+		#'clr' => '0,90',   #read start, stop 0,90 = uncomp 90,0 = comp
+		#'off' => '75'      #read off set .. contig start position
+
+		my ($left_pos, $right_pos) = split(',', $sfields->{clr});
+		#disregard complementation .. set lower values as left_pos and higher value as right pos
+		($left_pos, $right_pos) = $left_pos < $right_pos ? ($left_pos, $right_pos) : ($right_pos, $left_pos);
+		#left pos has to be incremented by one since it started at zero
+		$left_pos += 1;
+		#account for read off set
+		$left_pos += $sfields->{off};
+		$right_pos += $sfields->{off};
+		#limit left and right position to within the boundary of the contig
+		$left_pos = 1 if $left_pos < 1;  #read overhangs to left
+		$right_pos = $contig_length if $right_pos > $contig_length; #to right
+		#
+		for ($left_pos .. $right_pos) {
+		    $consensus_positions[$_]++;
+		}
+	    }
+	    $total_covered_pos += $#consensus_positions;
+	    shift @consensus_positions; #remove [0] position 
+	    unless (scalar @consensus_positions == $contig_length) {
+		$self->warning_message ("Covered consensus bases does not equal contig length\n\t".
+		    "got ".scalar (@consensus_positions)." covered bases but contig length is $contig_length\n");
+	    }
+	    foreach (@consensus_positions) {
+		next unless $_; #could be undef if not covered
+		$one_x_cov++ if $_ >= 1;
+		$two_x_cov++ if $_ >= 2;
+		$three_x_cov++ if $_ >= 3;
+		$four_x_cov++ if $_ >= 4;
+		$five_x_cov++ if $_ >= 5;
+	    }
+	}
+    }
+    $afg_fh->close;
+
+    my $text = "\n*** Read Depth Info ***\n".
+	"Total consensus bases: $total_covered_pos\n".
+	"Depth >= 5: $five_x_cov\t". $five_x_cov/$total_covered_pos."\n".
+	"Depth >= 4: $four_x_cov\t". $four_x_cov/$total_covered_pos."\n".
+	"Depth >= 3: $three_x_cov\t". $three_x_cov/$total_covered_pos."\n".
+	"Depth >= 2: $two_x_cov\t". $two_x_cov/$total_covered_pos."\n".
+	"Depth >= 1: $one_x_cov\t". $one_x_cov/$total_covered_pos."\n\n";
+
+    return $text;
+}
+
+sub get_read_depth_stats_from_ace {
     my ($self, $acefile) = @_;
 
     my $text = "\n*** Read Depth Info ***\n"; #string to store stats text
@@ -689,6 +773,7 @@ sub get_read_depth_stats {
 sub get_core_gene_survey_results {
     my ($self) = @_;
     my $text = "\n*** Core Gene survey Result ***\n";
+    #TODO - use getter method to get this file
     if (-s 'Cov_30_PID_30.out.gz') {
 	my $fh = IO::File->new("zcat Cov_30_PID_30.out.gz |");
 	while (my $line = $fh->getline) {
@@ -722,6 +807,42 @@ sub get_constraint_stats {
 	
     }
     return $text;
+}
+
+#TODO - use methods to get to files
+sub contigs_quals_file {
+    my $self = shift;
+    return $self->assembly_directory.'/edit_dir/contigs.quals';
+}
+
+sub contigs_bases_file {
+    my $self = shift;
+    return $self->assembly_directory.'/edit_dir/contigs.bases';
+}
+
+sub reads_placed_file {
+    my $self = shift;
+    return $self->assembly_directory.'/edit_dir/reads.placed';
+}
+
+sub velvet_afg_file {
+    my $self = shift;
+    return $self->assembly_directory.'/velvet_asm.afg';
+}
+
+sub velvet_ace_file {
+    my $self = shift;
+    return $self->assembly_directory.'/edit_dir/velvet_asm.ace';
+}
+
+sub velvet_sequences_file {
+    my $self = shift;
+    return $self->assembly_directory.'/Sequences';
+}
+
+sub core_gene_survey_file {
+    my $self = shift;
+    return $self->assembly_directory.'/edit_dir/Cov_30_PID_30.out.gz';
 }
 
 1;
