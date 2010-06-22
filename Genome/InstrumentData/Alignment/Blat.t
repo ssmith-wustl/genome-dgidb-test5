@@ -8,6 +8,7 @@ use above 'Genome';
 use Test::More;
 
 BEGIN {
+    plan skip_all => 'THIS IS OBSOLETE, USE ALIGNMENT RESULT INSTEAD!';
     my $archos = `uname -a`;
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
