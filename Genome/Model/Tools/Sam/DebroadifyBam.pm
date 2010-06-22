@@ -23,6 +23,16 @@ class Genome::Model::Tools::Sam::DebroadifyBam {
             is => 'Text',
             doc => 'fill path to the reference to build the output bam against',
         },
+        use_fillmd => {
+            is => 'Text',
+            is_optional => '1',
+            doc => 'Pass any value to this if fillmd should be run on the bam.',
+        }, 
+        output_sam => {
+            is => 'Text',
+            is_optional => '1',
+            doc => 'Pass any value to this if you wish to output a SAM rather than a BAM to output_file',
+        },
     ],
 };
 
@@ -80,3 +90,5 @@ sub execute {
     close $sam_input;
     close $bam_output;
 
+    return 1;
+}
