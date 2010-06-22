@@ -11,13 +11,9 @@
       });
       });
     </script>
-    <!-- tipsy for rollovers -->
-    <script type="text/javascript" src="/resources/report_resources/tipsy/javascripts/jquery.tipsy.js"></script>
-    <link type="text/css" href="/resources/report_resources/tipsy/stylesheets/tipsy.css"/>
 
     <!-- protovis and related -->
-    <script type="text/javascript" src="/resources/report_resources/protovis-3.2/protovis-r3.2.js"></script>
-    <script type="text/javascript" src="/resources/report_resources/protovis-3.2/behaviors/tipsy.js"></script>
+    <script type="text/javascript" src="/res/js/protovis.js"></script>
 
     <!-- set up lane data and chart -->
     <script type="text/javascript">
@@ -54,7 +50,6 @@
 // so that all charts have the same x scale
 
 window.pMax = 0;
-console.log("id.length: " + id.length);
 for (var i=0,len=id.length;i<len;i++) {
 for (j in id[i].percent) {
 if (id[i].percent[j] > window.pMax) {
@@ -285,7 +280,7 @@ legend.render();
         .left(0)
         .width(x)
         .fillStyle(function(d) c(window.indexData[<xsl:value-of select="@number  - 1"/>].sequence[this.index]))
-        .title(function() {return "count: " +  window.indexData[<xsl:value-of select="@number  - 1"/>].count[this.index] + " index %: " + window.indexData[<xsl:value-of select="@number  - 1"/>].percent[this.index] + '%'});
+        .title(function() {return "count: " +  addCommas(window.indexData[<xsl:value-of select="@number  - 1"/>].count[this.index]) + " index %: " + window.indexData[<xsl:value-of select="@number  - 1"/>].percent[this.index] + '%'});
 
         bar.anchor("right").add(pv.Label)
         .textStyle("white")
@@ -309,6 +304,18 @@ legend.render();
         .textStyle("#999");
 
         vis.render();
+
+        function addCommas(nStr) {
+        nStr += '';
+        var x = nStr.split('.');
+        var x1 = x[0];
+        var x2 = x.length > 1 ? '.' + x[1] : '';
+        var rgx = /(\d+)(\d{3})/;
+        while (rgx.test(x1)) {
+        x1 = x1.replace(rgx, '$1' + ',' + '$2');
+        }
+        return x1 + x2;
+        }
 
       </script>
       <p class="axis_label_x">Index %</p>
