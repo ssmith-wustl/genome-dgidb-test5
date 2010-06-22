@@ -85,6 +85,29 @@ sub execute {
                                                          -source_tag => $exons[0]->source_tag(),
                                                      );
 
+        if (@exons > 1) {
+
+            unless (
+                    $exons[0]->primary_tag() eq 'InitialExon' or 
+                    $exons[$#exons]->primary_tag() eq 'InitialExon'
+                   ) {
+                
+                $new_gene->add_tag_value('start_not_found' => 1);
+                
+            }
+
+            unless (
+                    $exons[0]->primary_tag() eq 'TerminalExon' or 
+                    $exons[$#exons]->primary_tag() eq 'TerminalExon'
+                   ) {
+                
+                $new_gene->add_tag_value('end_not_found' => 1);
+                
+            }
+            
+            
+        }
+        
         foreach my $exon (@exons) {
             $new_gene->add_exon($exon);
         }
