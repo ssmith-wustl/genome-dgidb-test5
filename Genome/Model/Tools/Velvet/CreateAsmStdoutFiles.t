@@ -19,7 +19,7 @@ mkdir $temp_dir.'/edit_dir';
 ok(-d $temp_dir.'/edit_dir', "made edit_dir in temp test_dir");
 
 #copy needed input files to temp dir
-foreach my $file ('contigs.fa', 'test.fastq') {
+foreach my $file ('contigs.fa', 'test.fastq', 'Sequences', 'velvet_asm.afg') {
     my $test_file = $data_dir.'/'.$file;
     ok(-s $test_file, "Test $file file exists");
     my $new_file = $temp_dir.'/'.$file;
