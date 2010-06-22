@@ -477,7 +477,7 @@ sub create_BAM_in_staging_directory {
 sub _compute_alignment_metrics {
     my $self = shift;
     my $bam = $self->temp_staging_directory . "/all_sequences.bam";
-    my $out = `bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/alignment-summary-v1.2.1 --bam=\"$bam\""`;
+    my $out = `bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/alignment_summary_cpp_v1.2.2 --bam=\"$bam\""`;
     unless ($? == 0) {
         $self->error_message("Failed to compute alignment metrics.");
         die $self->error_message;
