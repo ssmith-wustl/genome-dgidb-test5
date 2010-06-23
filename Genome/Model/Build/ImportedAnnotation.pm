@@ -46,6 +46,7 @@ sub determine_data_directory {
     }
     else {
         if (-d $self->_cache_directory) {
+            $self->_update_cache;
             push @directories, $self->_cache_directory; 
         }
         elsif (-d $self->_annotation_data_directory) { 
