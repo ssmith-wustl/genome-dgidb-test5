@@ -69,6 +69,7 @@ my %SAMTOOLS_VERSIONS = (
 );
 
 my %PICARD_VERSIONS = (
+    '1.24'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.24',
     '1.22'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.22',
     '1.21'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.21',
     '1.17'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.17',
