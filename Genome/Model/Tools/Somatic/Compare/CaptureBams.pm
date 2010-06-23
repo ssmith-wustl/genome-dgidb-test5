@@ -18,6 +18,8 @@ package Genome::Model::Tools::Somatic::Compare::CaptureBams;
 use strict;
 use warnings;
 
+use Genome;
+
 class Genome::Model::Tools::Somatic::Compare::CaptureBams {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }

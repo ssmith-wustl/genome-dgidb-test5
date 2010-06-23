@@ -3,6 +3,8 @@ package Genome::Model::Tools::Somatic::Compare::Bams;
 use strict;
 use warnings;
 
+use Genome;
+
 class Genome::Model::Tools::Somatic::Compare::Bams {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
