@@ -74,6 +74,11 @@ sub execute {
     close($temp_fh);
    
     my $core_num = $self->{_core_num};
+
+    # FIXME: need to check for local copy of blastdb, 
+    # and copy over if not present.
+    # Genome::Utility::FileSystem::copy_file($src,$dest) or copy_directory(source,dest)
+    # dest should be /tmp/apipe-cache/blastdb
     
     my @cmd = (
                'blastp',

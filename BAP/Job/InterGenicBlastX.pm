@@ -89,6 +89,12 @@ sub execute {
 
     my $core_num = $self->{_core_num};
 
+    # FIXME: add in logic to check for a local copy of the blastdb, 
+    # and copy over a version of that if missing
+    # Genome::Utility::FileSystem::copy_file($src,$dest) or copy_directory(source,dest)
+    # dest should be /tmp/apipe-cache/blastdb
+
+
     my $factory = Bio::Tools::Run::StandAloneBlast->new(
                                                         -database => $self->{_db},
                                                         -expect   => '1e-6',
