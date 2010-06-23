@@ -6,7 +6,6 @@ use warnings;
 use Workflow;
 
 use Bio::SeqIO;
-use Bio::Tools::GFF;
 use Bio::Tools::Prediction::Exon;
 use Bio::Tools::Prediction::Gene;
 
@@ -64,7 +63,6 @@ sub execute {
     
     my @cmd = (
 	       'snap',
-	       '-gff',
 	       '-quiet',
 	       $self->hmm_file(),
 	       $self->fasta_file(),
@@ -91,65 +89,55 @@ sub execute {
     $snap_fh->open($temp_filename)
         or die "Can't open '$temp_filename': $OS_ERROR";
     
-    my $gff = Bio::Tools::GFF->new(-file => $temp_filename, -gff_version => 1);
-    
     my %exons = ( );
+
+    my $current_seq_id;
     
-    while (my $feature = $gff->next_feature()) {
-	
-	my $seq_id      = $feature->seq_id();
-	my $primary_tag = $feature->primary_tag();
-	my $source      = $feature->source_tag();
-	
-	my ($prediction) = $feature->get_tag_values('group');
-	
-	if ( $source eq 'SNAP') {
-	    
-	    push @{$exons{$prediction}}, $feature;
-	    
-	}
+    while (my $line = <$snap_fh>) {
+
+	chomp $line;
+
+        if ($line =~ /^>(.+)$/) {
+            $current_seq_id = $1;
+        }
+        
+	else {
+
+            my (
+                $label,
+                $begin,
+                $end,
+                $strand,
+                $score,
+                $five_prime_overhang,
+                $three_prime_overhang,
+                $frame,
+                $group
+            ) = split /\t/, $line;
+
+            my $feature = Bio::SeqFeature::Generic->new(
+                -seq_id     => $current_seq_id,
+                -start      => $begin,
+                -end        => $end,
+                -primary    => $label,
+                -source_tag => 'SNAP',
+                -score      => $score,
+            );
+            
+	    push @{$exons{$group}}, $feature;
+            
+        }
         
     }
     
     foreach my $prediction (keys %exons) {
 	
-	my $tag = undef;
-	
 	my ($strand, $start, $end);
 	
 	my @exons =  sort { $a->start <=> $b->start } @{$exons{$prediction}};
-	
-	if (@exons == 1){
 	    
-	    ( $start, $end ) = ( $exons[0]->start(), $exons[0]->end() );
-	    
-	}
-	elsif ( @exons > 1 ){
-	    
-	    $start = $exons[0]->start();
-	    $end   = $exons[$#exons]->end(); 
-	    
-	    unless ( $exons[0]->primary_tag() eq 'Einit' or 
-		     $exons[$#exons]->primary_tag() eq 'Einit' ){
-		
-		$tag = 0;
-		
-	    }
-	    unless ( $exons[0]->primary_tag() eq 'Eterm' or
-		     $exons[$#exons]->primary_tag() eq 'Eterm' ) {
-		
-		$tag = 1;
-		
-	    }
-	    unless ( $exons[0]->primary_tag() eq 'Eterm' or
-		     $exons[$#exons]->primary_tag() eq 'Eterm' or
-		     $exons[0]->primary_tag() eq 'Einit' or 
-		     $exons[$#exons]->primary_tag() eq 'Einit') {
-		
-		$tag = 2;
-		
-	    }
-	}
+        $start = $exons[0]->start();
+        $end   = $exons[$#exons]->end(); 
 	
 	my $gene = Bio::Tools::Prediction::Gene->new(
 						     -seq_id       => $exons[0]->seq_id,
@@ -157,23 +145,30 @@ sub execute {
 						     -end          => $end,
 						     -strand       => $strand,
 						     -source_tag   => $exons[0]->source_tag(),
-						     -tag          => { 'Sequence' => $prediction },
-						     );
-	if (defined($tag)) {
-	    
-	    if ($tag eq '0'){
+                                                     -tag          => { 'Sequence' => $prediction },
+                                                 );
+
+        if (@exons > 1) {
+            
+            unless (
+                    $exons[0]->primary_tag() eq 'Einit' or 
+                    $exons[$#exons]->primary_tag() eq 'Einit'
+                ) {
 		
-		$gene->add_tag_value('tag' => "Start_not_found");    
-	    }
-	    elsif ($tag eq '1') {
-		
-		$gene->add_tag_value('tag' => "End_not_found");
-	    }
-	    elsif ($tag eq '2') {
-		
-		$gene->add_tag_value('tag' => "Start_not_found, End_not_found");
-	    }
-	}
+                $gene->add_tag_value('start_not_found' => 1);
+                
+            }
+            
+            unless (
+                    $exons[0]->primary_tag() eq 'Eterm' or
+                    $exons[$#exons]->primary_tag() eq 'Eterm'
+                ) {
+                
+                $gene->add_tag_value('end_not_found' => 1);
+                
+            }
+
+        }
     	
 	foreach my $e (@exons){
 	    
@@ -189,12 +184,6 @@ sub execute {
 	    $gene->add_exon($exon);
 	    
 	    $exon->add_tag_value('Sequence' => $gene->get_tag_values('Sequence'));
-            
-	    if (defined($tag)){
-                
-		$exon->add_tag_value('tag' => $gene->get_tag_values('tag'));
-                
-	    }
             
 	    $exon->primary_tag('Exon');
 	    
