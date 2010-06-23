@@ -176,10 +176,10 @@ sub from_cmdline {
         my @numbers = grep { $_ !~ /\D/ } @_;
         if (@numbers) { 
             @matches = $class->get(\@numbers);
-            return @matches if @matches == @numbers;
             
             my @found = map { $_->id } @matches;
             delete @missing{@found};
+            return @matches if @matches == @numbers;
 
             my @builds = Genome::Model::Build->get(\@numbers);
             my @models = $class->get(builds => \@builds);
