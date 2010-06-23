@@ -9,6 +9,13 @@ use Sys::Hostname;
 use AnyEvent;
 use AnyEvent::Util;
 use Plack::Runner;
+use IO::Socket;
+
+# "Unassigned" ports from iana.org
+my @AVAILABLE_PORTS = (8089, 8090, 8092, 8093, 8094, 8095, 
+                        9096, 8098, 8099, 8102, 8103, 8104, 
+                        8105, 8106, 8107, 8108, 8109, 8110, 
+                        8111, 8112, 8113, 8114);
 
 class Genome::Model::Command::Services::WebApp {
     is  => 'Command',
@@ -20,16 +27,8 @@ class Genome::Model::Command::Services::WebApp {
         },
         port => {
             is    => 'Number',
-            value => '8090',
+            default_value => '8090',
             doc   => 'tcp port for internal server to listen'
-        },
-        url => {
-            is             => 'Text',
-            calculate_from => 'port',
-            calculate      => q(
-                my $hostname = Sys::Hostname::hostname;
-                return "http://$hostname:$port/";
-            )
         }
     ],
 };
@@ -37,13 +36,16 @@ class Genome::Model::Command::Services::WebApp {
 sub execute {
     my $self = shift;
 
-    print $self->browser . "\n";
-    print $self->url . "\n";
+    $self->determine_port;
+    
+    $self->status_message( sprintf( "Using browser: %s", $self->browser ) );
+    $self->status_message( sprintf( "Local server accessible at %s", $self->url ) );
 
     $self->fork_and_call_browser
       if ( $ENV{DISPLAY} && !( $ENV{SSH_CLIENT} || $ENV{SSH_CONNECTION} ) );
-
+    
     $self->run_starman;
+
 }
 
 sub fork_and_call_browser {
@@ -69,6 +71,31 @@ sub psgi_path {
 
 sub res_path {
     $_[0]->psgi_path . '/resource';
+}
+
+sub determine_port {
+    my ($self) = @_;
+    
+    unshift ( @AVAILABLE_PORTS, $self->port );
+    $self->port(undef);
+    foreach ( @AVAILABLE_PORTS ) {
+        $self->status_message( sprintf ( "Checking port %d to ensure it is unused.\n", $_ ) );
+        my $open_socket = IO::Socket::INET->new(
+            LocalAddr => 'localhost',
+            LocalPort => $_,
+            Proto => 'tcp'
+        );
+        if ( defined $open_socket ) {
+            $open_socket->close();
+            $self->port($_);
+            $self->status_message( sprintf( "Selected port: %d\n", $self->port ) );
+            last;
+        } else {
+            $self->status_message( sprintf( "Port %d in use. Trying next choice.\n", $_) );
+        }
+    }
+    die "None of the offered ports are available. Add more ports to Genome::Model::Command::Service::WebApp or specify a different port." unless ( $self->port );
+    
 }
 
 sub run_starman {
@@ -107,6 +134,14 @@ sub help_brief {
 
 sub is_sub_command_delegator {
     return;
+}
+
+sub url {
+    $DB::single = 1;
+    my $self = shift;
+    my $hostname = Sys::Hostname::hostname;
+    my $url = sprintf ( "http://%s:%d/", $hostname, $self->port );
+    return $url;
 }
 
 1;
