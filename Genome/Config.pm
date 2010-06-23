@@ -16,7 +16,7 @@ sub arch_os {
 }
 
 sub base_web_uri {
-    'https://imp/view';
+    'https://imp.gsc.wustl.edu/view';
 }
 
 sub user_email {
