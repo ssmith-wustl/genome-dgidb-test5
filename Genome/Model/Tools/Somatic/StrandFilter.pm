@@ -43,7 +43,7 @@ class Genome::Model::Tools::Somatic::StrandFilter {
        },
        'min_read_pos' => {
             type => 'String',
-            default => '0.05',
+            default => '0.10',
             is_optional => 1,
             is_input => 1,
             doc => 'Minimum average relative distance from start/end of read',
@@ -331,7 +331,7 @@ sub execute {
 				    
 				    ## FAILURE 1: READ POSITION ##
 				    
-				    if(($var_pos < $min_read_pos || $var_pos > $max_read_pos))
+				    if(($var_pos < $min_read_pos)# || $var_pos > $max_read_pos))
 				    {
 					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->filtered_file);
 					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->verbose);
