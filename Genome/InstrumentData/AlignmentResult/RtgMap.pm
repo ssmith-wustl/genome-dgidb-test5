@@ -14,7 +14,6 @@ class Genome::InstrumentData::AlignmentResult::RtgMap{
         aligner_name => { value => 'rtg map', is_param=>1 },
     ],
     has => [
-        _max_read_id_seen =>    { default_value => 0, is_optional => 1},
         _file_input_option =>   { default_value => 'fastq', is_optional => 1},
     ]
 };
@@ -144,9 +143,7 @@ sub _run_aligner {
     my $sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $sam_file_fh = IO::File->new("> $sam_file");
 
-    my $previous_max_id = $self->_max_read_id_seen;
-    my $max_id_seen = 0;
-    foreach my $file_to_append (@output_files)
+    foreach my $file_to_append (@rr_files)
     {
         my $file_to_append_fh = IO::File->new( $file_to_append);
         while (<$file_to_append_fh>)
@@ -157,23 +154,12 @@ sub _run_aligner {
                 my @line = split ("\t", $_);
                 $line[5]=~s/=/M/g;
 
-                #track max id 
-                if ($line[0] > $max_id_seen) {
-                    $max_id_seen = $line[0];
-                }
-                # are we in a subsequent pass of alignment and need to offset read ids?
-                if ($previous_max_id != 0) {
-                    $line[0] += $previous_max_id;
-                }
                 $sam_file_fh->print (join("\t", @line));
             }
         }
         $file_to_append_fh->close;
     }
     $sam_file_fh->close;
-
-    # save back the max id for the next pass
-    $self->_max_read_id_seen($max_id_seen);
 
     # confirm that at the end we have a nonzero sam file, this is what'll get turned into a bam and copied out.
     unless (-s $sam_file) {
