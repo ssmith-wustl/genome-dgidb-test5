@@ -80,7 +80,7 @@ sub execute {                               # replace with real execution logic.
 		$line =~ s/\s+/\t/g;
 		my ($model_id, $sample_name, $build_id, $build_status, $build_dir) = split(/\t/, $line);
 		$stats{'num_pairs'}++;
-		
+
 		## Establish sample output dir ##
 		
 		my $sample_output_dir = $output_dir . "/" . $sample_name;
@@ -100,32 +100,66 @@ sub execute {                               # replace with real execution logic.
 			my $varscan_snps = "";
 			$varscan_snps = `cat $sample_output_dir/varScan.output.snp | wc -l` if(-e "$sample_output_dir/varScan.output.snp");
 			chomp($varscan_snps) if($varscan_snps);
-			if($self->skip_if_output_present && $varscan_snps)
+
+			my $final_snp_file = "$sample_output_dir/merged.germline.snp.ROI.tier1.out";
+			my $final_snp_file2 = "$sample_output_dir/merged.germline.snp.ROI.tier2.out";
+			my $final_snp_file3 = "$sample_output_dir/merged.germline.snp.ROI.tier3.out";
+			my $final_snp_file4 = "$sample_output_dir/merged.germline.snp.ROI.tier4.out";
+
+			my $final_indel_file = "$sample_output_dir/merged.germline.indel.ROI.tier1.out";
+			my $final_indel_file2 = "$sample_output_dir/merged.germline.indel.ROI.tier2.out";
+			my $final_indel_file3 = "$sample_output_dir/merged.germline.indel.ROI.tier3.out";
+			my $final_indel_file4 = "$sample_output_dir/merged.germline.indel.ROI.tier4.out";
+
+
+			my $snpexists = 0;
+			my $indelexists = 0;
+			if (-s $final_snp_file || -s $final_snp_file2) {
+				$snpexists = 1;
+			}
+			elsif (-s $final_snp_file3 || -s $final_snp_file4) {
+				$snpexists = 1;
+				print "SHIT! ONLY TIER 3 OR 4!\n";
+			}
+
+			if (-s $final_indel_file || -s $final_indel_file2) {
+				$indelexists = 1;
+			}
+			elsif (-s $final_indel_file3 || -s $final_indel_file4) {
+				$indelexists = 1;
+				print "SHIT! ONLY TIER 3 OR 4!\n";
+			}
+
+#			print "$snpexists\t$indelexists\n";
+
+			if($self->skip_if_output_present && $snpexists && $indelexists)
 			{
 				## Skip because valid output ##
+				print "skipped $sample_name for already having valid output\n";
 			}
 			else
 			{
-				#print "$sample_name\t$model_id\t$build_id\n";
+				print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
+				my @outfile_list = qw(annotation.germline.indel.ucsc merged.germline.indel merged.germline.indel.ROI.tier4.out merged.germline.snp.ROI samtools.output.indel.formatted varScan.output.snp annotation.germline.indel.unannot-ucsc merged.germline.indel.ROI merged.germline.indel.shared merged.germline.snp.ROI.tier1.out samtools.output.snp.adaptor varScan.output.snp.filter annotation.germline.snp.transcript merged.germline.indel.ROI.tier1.out merged.germline.indel.sniper-only merged.germline.snp.ROI.tier2.out varScan.output.indel varScan.output.snp.formatted annotation.germline.snp.ucsc merged.germline.indel.ROI.tier2.out merged.germline.indel.varscan-only merged.germline.snp.ROI.tier3.out varScan.output.indel.filter varScan.output.snp.variants annotation.germline.indel.transcript annotation.germline.snp.unannot-ucsc merged.germline.indel.ROI.tier3.out merged.germline.snp merged.germline.snp.ROI.tier4.out varScan.output.indel.formatted );
+				foreach my $file (@outfile_list) {
+					my $del_file = "$sample_output_dir/$file";
+					unlink("$del_file");
+				}
+
 				my $cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file";
 				print "$cmd\n";
 				my $job_name = "$sample_output_dir/$sample_name";
 				my $output_name = "$sample_output_dir/$sample_name.output";
 				my $error_name = "$sample_output_dir/$sample_name.err";
+				unlink("$output_name");
+				unlink("$error_name");
 				system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$cmd\"");
 				sleep(1);
-
-				## Figure out a way to run this on bsub! ##
-	#			my $cmd_obj = Genome::Model::Tools::Germline::CaptureBams->create(
-	#				build_id => $build_id,
-	#				germline_bam_file => $bam_file,
-	#				filtered_indelpe_snps => $snp_file,
-	#				indels_all_sequences_filtered => $indel_file,
-	#				data_directory => $sample_output_dir,
-	#			);					
-	#				
-	#			$cmd_obj->execute;
 			}
+		}
+		else {
+			print "-e bam_file && -e snp_file && -e indel_file failed";
+			exit;
 		}
 		my $count = $i%15;
 		if ($count == 1) {
