@@ -43,16 +43,18 @@ Need documenation here.
 EOS
 }
 
-sub get_unique_id()
-{
-    my $i = rand;
-    return substr ($i,2,5) . 'XXXX';
-}
-
 sub execute {
     my $self = shift;
-    my $input_file      = $self->fasta_file();     ##FIXME:  Should verify input_file is not empty
-    my $chunk_size      = $self->chunk_size();     ##FIXME:  Should verify chunk_size > 0
+    my $input_file      = $self->fasta_file();
+    unless (-s $input_file)
+    {
+        return $self->error_message("$input_file cannot be chunked (file is missing or empty)");
+    }
+    my $chunk_size      = int($self->chunk_size());     
+    unless ($chunk_size > 0)
+    {
+       return $self->error_message("Integer value required for chunk size ($chunk_size)");
+    }
     my $tmp_dir         = $self->tmp_dir();
     my $unique_template = $self->get_unique_id();
     my @output_files = ( );
@@ -72,7 +74,6 @@ sub execute {
         
             $seq_count = 1;
 
-            ##FIXME: The temp dir location should not be hardcoded.  At least not here.
             $chunk_fh = File::Temp->new(
                                         'DIR'      => $tmp_dir,
                                         'SUFFIX'   => '.tmp',
@@ -95,4 +96,10 @@ sub execute {
 
 }
  
+sub get_unique_id()
+{
+    my $i = rand;
+    return substr ($i,2,5) . 'XXXX';
+}
+
 1;
