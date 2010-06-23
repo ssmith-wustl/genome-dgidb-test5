@@ -60,6 +60,7 @@ EOS
 }
 
 my %PICARD_VERSIONS = (
+    '1.24' => '/gsc/scripts/lib/java/samtools/picard-tools-1.24',
     '1.23' => '/gsc/scripts/lib/java/samtools/picard-tools-1.23',
     'r436' => '/gsc/scripts/lib/java/samtools/picard-tools-r436', #contains a fix for when a whole library is unmapped
     '1.22' => '/gsc/scripts/lib/java/samtools/picard-tools-1.22',
