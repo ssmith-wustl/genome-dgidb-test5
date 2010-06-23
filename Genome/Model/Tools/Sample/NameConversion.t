@@ -7,16 +7,16 @@ use Test::More tests => 5;
 
 
 my $input = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/test.in";
-ok(-e $input);
+ok(-e $input, 'Input file exists');
 
 my $output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/test.out";
 my $expected_output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/expected.test.out";
-ok(-e $expected_output);
+ok(-e $expected_output, 'Expected output file exists');
 
 my $conversion = Genome::Model::Tools::Sample::NameConversion->execute(input=>$input,output=>$output,short_to_long=>"1");
-ok($conversion);
+ok($conversion, 'Executed a NameConversion object');
 
-ok(-e $output);
+ok(-e $output, 'Output file exists');
 
 my $diff = `diff $output $expected_output`;
 ok($diff eq '', "output as expected");
