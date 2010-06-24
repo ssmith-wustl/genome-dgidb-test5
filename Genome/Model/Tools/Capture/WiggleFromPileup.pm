@@ -69,6 +69,11 @@ sub execute {                               # replace with real execution logic.
 	#Call Samtools pileup for normal
 	my $out_normal = ">temppileup_normal.txt";
 	my $cmd1 = "samtools pileup -f $bam_ref $normal_bam $out_normal";
+
+	my $pileupfh = new FileHandle (`samtools pileup -f $bam_ref $normal_bam`);
+	
+	
+	
 	#system ($cmd1);
 	#Call Samtools pileup for tumor
 	my $out_tumor = ">temppileup_tumor.txt";
