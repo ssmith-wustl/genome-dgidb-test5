@@ -24,6 +24,7 @@ class Genome::Taxon {
         ncbi_taxon_id                   => { is => "Number", len => 10 },
         ncbi_taxon_species_name         => { is => "Text",   len => 128 },
         locus_tag                       => { is => "Text",   len => 200 },
+        gram_stain_category             => { is => "Text",   len => 32, column_name => 'GRAM_STAIN_CATEGORY' },
         estimated_genome_size           => { is => "Number", len => 12, column_name => 'ESTIMATED_ORGANISM_GENOME_SIZE' },
         current_default_org_prefix      => { is => "Text",   len => 2 },
         current_genome_refseq_id        => { is => "Number", len => 15 },
