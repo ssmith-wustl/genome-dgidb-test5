@@ -41,7 +41,7 @@ sub execute {
 	$build_id = $self->build_id;
     	my $dir = $self->analysis_dir;
 	my $login = getlogin || getpwuid($<); #get current user name	 
-	print "reference: $reference_file User: $login";
+#	print "reference: $reference_file User: $login";
     	my $tumorornormal_model_id = $self->model_id;
 #    print "$somatic_model_id, $somatic_model, $build_status";
 #    return;
@@ -138,8 +138,6 @@ sub execute {
 # find reference sequences
 #	my $reference_file="/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa"; 
 	my $reference_file=$model->reference_sequence_build->full_consensus_path('fa') ;
-	my $dir = $self->analysis_dir;
-	my $login = getlogin || getpwuid($<); #get current user name	 
 	print "reference: $reference_file User: $login";
 	return;
 	for my $ida (@idas) {
