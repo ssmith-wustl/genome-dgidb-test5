@@ -66,20 +66,6 @@ sub execute {                               # replace with real execution logic.
 	# reference genome for samtools pileup
 	my $bam_ref = $self->reference_fasta;
 
-	#Call Samtools pileup for normal
-	my $out_normal = ">temppileup_normal.txt";
-	my $cmd1 = "samtools pileup -f $bam_ref $normal_bam $out_normal";
-
-	my $pileupfh = new FileHandle (`samtools pileup -f $bam_ref $normal_bam`);
-	
-	
-	
-	#system ($cmd1);
-	#Call Samtools pileup for tumor
-	my $out_tumor = ">temppileup_tumor.txt";
-	my $cmd2 = "samtools pileup -f $bam_ref $tumor_bam $out_tumor";
-	#system ($cmd2);
-
 	#set coverage at q20
 	my $min_base_qual = 20;
 	my $min_coverage = 0;
@@ -99,9 +85,17 @@ sub execute {                               # replace with real execution logic.
 	my $lineCounter_tumor = 0;
 	my %normal_coverage = ();
 	my %tumor_coverage = ();
+
 	print "Loading normal coverage...\n";
-	my $input1 = new FileHandle ($out_normal);
-	while (<$input1>) {
+
+	#Call Samtools pileup for normal
+#	my $out_normal = ">temppileup_normal.txt";
+#	my $cmd1 = "samtools pileup -f $bam_ref $normal_bam $out_normal";
+	#system ($cmd1);
+#	my $input1 = new FileHandle ($out_normal);
+	my $pileupfh = new FileHandle (`samtools pileup -f $bam_ref $normal_bam`);
+
+	while (<$pileupfh>) {
 		chomp;
 		my $line = $_;
 		$lineCounter_normal++;		
@@ -138,12 +132,17 @@ sub execute {                               # replace with real execution logic.
 			$normal_coverage{$key} = $qual_coverage;
 		}
 	}
-
-	close($input1);
+	close($pileupfh);
 
 	print "Loading tumor coverage...\n";
-	my $input2 = new FileHandle ($out_tumor);
-	while (<$input2>) {
+
+	#Call Samtools pileup for tumor
+	#my $out_tumor = ">temppileup_tumor.txt";
+	#my $cmd2 = "samtools pileup -f $bam_ref $tumor_bam $out_tumor";
+	#system ($cmd2);
+	my $pileupfh2 = new FileHandle (`samtools pileup -f $bam_ref $tumor_bam`);
+	#my $input2 = new FileHandle ($out_tumor);
+	while (<$pileupfh2>) {
 		chomp;
 		my $line = $_;
 		$lineCounter_tumor++;		
@@ -180,7 +179,7 @@ sub execute {                               # replace with real execution logic.
 			$tumor_coverage{$key} = $qual_coverage;
 		}
 	}
-	close($input2);
+	close($pileupfh2);
 
 	## Get required parameters ##
 	my $regions_file = $self->regions_file;
