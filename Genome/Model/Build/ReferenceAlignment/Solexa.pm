@@ -227,7 +227,20 @@ sub _snv_file_filtered {
 
 sub filtered_snp_file {
     my ($self) = @_;
-    return join('/', $self->snp_related_metric_directory(), '/filtered.indelpe.snps');
+    
+    my $expected_name = $self->unfiltered_snp_file . '.filtered';
+    
+    if(Genome::Utility::FileSystem->check_for_path_existence($expected_name)) {
+        return $expected_name;
+    }
+    
+    my $old_name = join('/', $self->snp_related_metric_directory(), 'filtered.indelpe.snps');
+    if(Genome::Utility::FileSystem->check_for_path_existence($old_name)) {
+        return $old_name;
+    }
+    
+    #Hasn't been created yet--if we're on this snapshot it would use this name
+    return $expected_name;
 }
 
 
@@ -235,47 +248,57 @@ sub unfiltered_snp_file {
     return shift->snp_related_metric_directory . '/snps_all_sequences';
 }
 
-#FIXME this is pretty bad, and hardcoded. Used to be coded only to work for samtools and maq. Tacked on varscan for now. 
-# This should be changed (along with _snp_caller_type) to be very generic for new variant detectors to be added.
 sub filtered_indel_file {
     my $self = shift;
+
+    #Current standard location--if this file exists it's the right one
+    my $expected_location = $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
+
+    #Current standard location
+    return $expected_location if Genome::Utility::FileSystem->check_for_path_existence($expected_location);
     
+    #Old standard varied by detector type
+    my $old_location;
     if ($self->_snp_caller_type eq 'sam') {
-        return $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
+        $old_location = $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
     }
     elsif ($self->_snp_caller_type eq 'maq') {
         $self->warning_message('Maq tool was used for indel calling. indelpe.sorted.out is filtered sorted indelpe output');
-        return $self->snp_related_metric_directory . '/indelpe.sorted.out';
+        $old_location = $self->snp_related_metric_directory . '/indelpe.sorted.out';
     }
     elsif ($self->_snp_caller_type eq 'varscan') {
-        return $self->snp_related_metric_directory . '/varscan.status.indel';
+        $old_location = $self->snp_related_metric_directory . '/varscan.status.indel';
     }
-    else {
-        $self->error_message('Unknown snp caller: '.$self->_snp_caller_type);
-        return;
-    }
+
+    return $old_location if $old_location and Genome::Utility::FileSystem->check_for_path_existence($old_location);
+    
+    #If we didn't find it anywhere, it might not have been generated yet--which makes it a new build and should use current standard
+    return $expected_location;
 }
 
-
-#FIXME this is pretty bad, and hardcoded. Used to be coded only to work for samtools and maq. Tacked on varscan for now. 
-# This should be changed (along with _snp_caller_type) to be very generic for new variant detectors to be added.
 sub unfiltered_indel_file {
     my $self =shift;
-
+    
+    my $expected_location = $self->snp_related_metric_directory . '/indels_all_sequences';
+    return $expected_location if Genome::Utility::FileSystem->check_for_path_existence($expected_location);
+    
+    #Old standard varied by detector type
+    my $old_location;
     if ($self->_snp_caller_type eq 'sam') {
-        return $self->snp_related_metric_directory . '/indels_all_sequences';
+        $old_location = $self->snp_related_metric_directory . '/indels_all_sequences';
     }
     elsif ($self->_snp_caller_type eq 'maq') {
         $self->warning_message('Maq tool was used for indel calling. indels_all_sequences is the output of indelsoa, not indelpe');
-        return $self->snp_related_metric_directory . '/indels_all_sequences';
+        $old_location = $self->snp_related_metric_directory . '/indels_all_sequences';
     }
     elsif ($self->_snp_caller_type eq 'varscan') {
-        return $self->snp_related_metric_directory . '/varscan.status.indel';
+        $old_location = $self->snp_related_metric_directory . '/varscan.status.indel';
     }
-    else {
-        $self->error_message('Unknown snp caller: '.$self->_snp_caller_type);
-        return;
-    }
+
+    return $old_location if $old_location and Genome::Utility::FileSystem->check_for_path_existence($old_location);
+    
+    #If we didn't find it anywhere, it might not have been generated yet--which makes it a new build and should use current standard
+    return $expected_location;
 }
 
 #clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
@@ -320,7 +343,18 @@ sub other_snp_related_metric_directory {
 
 sub snp_related_metric_directory {
     my $self = shift;
-    return $self->data_directory . '/' . $self->_snp_caller_type . '_snp_related_metrics';
+    
+    my $expected_directory = $self->data_directory . '/snp_related_metrics';
+    
+    return $expected_directory if Genome::Utility::FileSystem->check_for_path_existence($expected_directory);
+    
+    #if it doesn't exist, try falling back to the "old" way of doing it
+    my $old_directory = $self->data_directory . '/' . $self->_snp_caller_type . '_snp_related_metrics';
+    
+    return $old_directory if Genome::Utility::FileSystem->check_for_path_existence($old_directory);
+    
+    #if neither exist, then assume we're a new build where it hasn't been created yet
+    return $expected_directory;
 }
 
 sub _snp_caller_type {

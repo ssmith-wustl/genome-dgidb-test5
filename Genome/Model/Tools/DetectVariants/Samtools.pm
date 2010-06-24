@@ -8,25 +8,6 @@ use IO::File;
 
 class Genome::Model::Tools::DetectVariants::Samtools {
     is => ['Genome::Model::Tools::DetectVariants'],
-    has_constant => [
-        snp_output => {
-            calculate_from => ["working_directory"],
-            calculate => q{ $working_directory . '/snps_all_sequences' },
-        },
-        indel_output => {
-            calculate_from => ["working_directory"],
-            calculate => q{ $working_directory . '/indels_all_sequences' },
-        },
-        filtered_snp_output => {
-            calculate_from => ["working_directory"],
-            calculate => q{ join('/', $working_directory, 'filtered.indelpe.snps') },
-        },
-        filtered_indel_output => {
-            calculate_from => ["indel_output"],
-            calculate => q{ $indel_output. '.filtered'},
-        },
-    ],
-   
     has_optional => [
         detect_snvs => {
             default => 1,
@@ -38,12 +19,29 @@ class Genome::Model::Tools::DetectVariants::Samtools {
 
     has_param => [
         lsf_resource => {
-            default => "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=16000]' -M 1610612736",
+            default => "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>1000 && mem>16000] span[hosts=1] rusage[tmp=1000:mem=16000]' -M 1610612736",
         }
     ],
     has_constant_optional => [
         sv_params=>{},
+        detect_svs=>{},
     ],
+    has => [
+        _genotype_detail_base_name => {
+            is => 'Text',
+            default_value => 'report_input_all_sequences',
+            is_input => 1,
+        },
+        genotype_detail_output => {
+            calculate_from => ['_genotype_detail_base_name', 'output_directory'],
+            calculate => q{ join("/", $output_directory, $_genotype_detail_base_name); },
+            is_output => 1,
+        },
+        _genotype_detail_staging_output => {
+            calculate_from => ['output_directory', '_genotype_detail_base_name'],
+            calculate => q{ join("/", $output_directory, $_genotype_detail_base_name); },
+        },
+    ]
 };
 
 sub help_brief {
@@ -63,64 +61,30 @@ This tool runs samtools for detection of SNVs and/or indels.
 EOS
 }
 
-sub execute {
+sub _detect_variants {
     my $self = shift;
-
-    # ensure the reference sequence exists.
-    my $ref_seq_file = $self->reference_sequence_input;
-    unless(Genome::Utility::FileSystem->check_for_path_existence($ref_seq_file)) {
-        $self->error_message("reference sequence file $ref_seq_file does not exist");
-        return;
-    }
-
-    # Create the working directory
-    my $working_directory = $self->working_directory;
-    unless (-d $working_directory) {
-        eval {
-            Genome::Utility::FileSystem->create_directory($working_directory);
-        };
-        
-        if($@) {
-            $self->error_message($@);
-            return;
-        }
-
-        $self->status_message("Created directory: $working_directory");
-        chmod 02775, $working_directory;
-    }
-
-    my $bam_file = $self->aligned_reads_input;
-    unless(Genome::Utility::FileSystem->check_for_path_existence($bam_file)) {
-        $self->error_message("Bam input file $bam_file was not found.");
-        return;
-    }
-
-    unless ($self->detect_snvs || $self->detect_indels) {
-        $self->status_message("Both detect_snps and detect_indels are set to false. Skipping execution.");
-        return 1;
-    }
 
     my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
     if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
-        $result = $self->_run_samtools($ref_seq_file, $bam_file, $self->snp_output, $self->filtered_snp_output, $self->indel_output, $self->filtered_indel_output, $snv_params);
+        $result = $self->_run_samtools($self->_snv_staging_output, $self->_filtered_snv_staging_output, $self->_indel_staging_output, $self->_filtered_indel_staging_output, $snv_params);
     } else {
-        # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
+        # Run twice, since we have different parameters. Detect snvs and throw away indels, then detect indels and throw away snvs
         if ($self->detect_snvs && $self->detect_indels) {
-            $self->status_message("Snp and indel params are different. Executing Samtools twice: once each for snps and indels with their respective parameters");
+            $self->status_message("Snv and indel params are different. Executing Samtools twice: once each for snvs and indels with their respective parameters");
         }
         my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
         my ($filtered_temp_fh, $filtered_temp_name) = Genome::Utility::FileSystem->create_temp_file();
 
-        if ($self->detect_snps) {
-            $result = $self->_run_samtools($ref_seq_file, $bam_file, $self->snp_output, $self->filtered_snp_output, $temp_name, $filtered_temp_name, $snv_params);
+        if ($self->detect_snvs) {
+            $result = $self->_run_samtools($self->_snv_staging_output, $self->_filtered_snv_staging_output, $temp_name, $filtered_temp_name, $snv_params);
         }
         if ($self->detect_indels) {
-            if($self->detect_snps and not $result) {
-                $self->status_message('Samtools did not report success for snp detection. Skipping indel detection.')
+            if($self->detect_snvs and not $result) {
+                $self->status_message('Samtools did not report success for snv detection. Skipping indel detection.')
             } else {
-                $result = $self->_run_samtools($ref_seq_file, $bam_file, $temp_name, $filtered_temp_name, $self->indel_output, $self->filtered_indel_output, $indel_params);
+                $result = $self->_run_samtools($temp_name, $filtered_temp_name, $self->_indel_staging_output, $self->_filtered_indel_staging_output, $indel_params);
             }
         }
     }
@@ -130,40 +94,42 @@ sub execute {
 
 sub _run_samtools {
     my $self = shift;
-    my ($ref_seq_file, $bam_file, $snp_output_file, $filtered_snp_output_file, $indel_output_file, $filtered_indel_file, $parameters) = @_;
-
+    my ($snv_output_file, $filtered_snv_output_file, $indel_output_file, $filtered_indel_file, $parameters) = @_;
+    
+    my $ref_seq_file = $self->reference_sequence_input;
+    my $bam_file = $self->aligned_reads_input;
     my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($self->version);
 
     # Remove the result files from any previous run
-    unlink($snp_output_file, $filtered_snp_output_file, $indel_output_file, $filtered_indel_file);
+    unlink($snv_output_file, $filtered_snv_output_file, $indel_output_file, $filtered_indel_file);
 
     
-    #two %s are switch to indicate snps or indels and output file name
+    #two %s are switch to indicate snvs or indels and output file name
     my $samtools_cmd = "$sam_pathname pileup -c $parameters -f $ref_seq_file %s $bam_file > %s";
 
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
-    #$rv = system "$samtools_cmd -S $bam_file > $snp_output_file"; 
+    #$rv = system "$samtools_cmd -S $bam_file > $snv_output_file"; 
     
     
-    my $snp_cmd = sprintf($samtools_cmd, '-v', $snp_output_file);
+    my $snv_cmd = sprintf($samtools_cmd, '-v', $snv_output_file);
     
     my $rv = Genome::Utility::FileSystem->shellcmd(
-        cmd => $snp_cmd,
+        cmd => $snv_cmd,
         input_files => [$bam_file, $ref_seq_file],
-        output_files => [$snp_output_file],
+        output_files => [$snv_output_file],
         allow_zero_size_output_files => 1,
     );
     unless($rv) {
-        $self->error_message("Running samtools SNP failed.\nCommand: $snp_cmd");
+        $self->error_message("Running samtools SNP failed.\nCommand: $snv_cmd");
         return;
     }
 
-    if (-e $snp_output_file and not -s $snp_output_file) {
+    if (-e $snv_output_file and not -s $snv_output_file) {
         $self->warning_message("No SNVs detected.");
     }
     else {
-        my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snp_output_file);
+        my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snv_output_file);
         $rv = $snp_sanitizer->execute;
         unless($rv and $rv == 1) {
             $self->error_message("Running samtools snp-sanitizer failed with exit code $rv");
@@ -187,10 +153,10 @@ sub _run_samtools {
         $self->warning_message("No indels detected.");
     }
 
-    #for capture models we need to limit the snps and indels to within the defined target regions
+    #for capture models we need to limit the snvs and indels to within the defined target regions
     if ($self->capture_set_input) {
         my $bed_file = $self->capture_set_input;
-        for my $var_file ($snp_output_file, $indel_output_file) {
+        for my $var_file ($snv_output_file, $indel_output_file) {
             unless (-s $var_file) {
                 $self->warning_message("Skip limiting $var_file to target regions because it is empty.");
                 next;
@@ -233,10 +199,10 @@ sub _run_samtools {
         Genome::Utility::FileSystem->write_file($filtered_indel_file);
     }
 
-    if (-s $snp_output_file) {
+    if (-s $snv_output_file) {
         my $snp_filter = Genome::Model::Tools::Sam::SnpFilter->create(
-            snp_file   => $snp_output_file,
-            out_file   => $filtered_snp_output_file,
+            snp_file   => $snv_output_file,
+            out_file   => $filtered_snv_output_file,
             indel_file => $filtered_indel_file,
         );
         unless($snp_filter->execute) {
@@ -245,16 +211,16 @@ sub _run_samtools {
         }
     }
     else {
-        Genome::Utility::FileSystem->write_file($filtered_snp_output_file);
+        Genome::Utility::FileSystem->write_file($filtered_snv_output_file);
     }
 
-    $rv = $self->generate_genotype_detail_file($snp_output_file);
+    $rv = $self->generate_genotype_detail_file($snv_output_file);
     unless($rv) {
         $self->error_message('Generating genotype detail file errored out');
         die($self->error_message);
     }
     
-    return $self->verify_successful_completion($snp_output_file, $filtered_snp_output_file, $indel_output_file);
+    return $self->verify_successful_completion($snv_output_file, $filtered_snv_output_file, $indel_output_file);
 }
 
 sub verify_successful_completion {
@@ -272,23 +238,22 @@ sub verify_successful_completion {
 
 sub generate_genotype_detail_file {
     my $self = shift; 
-    my $snp_output_file = shift;
+    my $snv_output_file = shift;
     
-    unless(-f $snp_output_file) { # and -s $snp_output_file) {
-        $self->error_message("SNV output File: $snp_output_file is invalid.");
+    unless(-f $snv_output_file) { # and -s $snv_output_file) {
+        $self->error_message("SNV output File: $snv_output_file is invalid.");
         die($self->error_message);
     }
 
-    if (not -s $snp_output_file) {
+    if (not -s $snv_output_file) {
         $self->warning_message("No report input file generated for SNVs because no SNVs were detected.");
         return 1;
     }
     
-    my $report_input_file = $self->working_directory . '/report_input_all_sequences';
-    unlink $report_input_file if -e $report_input_file;
+    my $report_input_file = $self->_genotype_detail_staging_output;
 
     my $snp_gd = Genome::Model::Tools::Snp::GenotypeDetail->create(
-        snp_file   => $snp_output_file,
+        snp_file   => $snv_output_file,
         out_file   => $report_input_file,
         snp_format => 'sam',
     );
@@ -305,9 +270,9 @@ sub generate_metrics {
         my $snp_count      = 0;
         my $snp_count_good = 0;
         
-        my $snp_output = $self->snp_output;
-        my $snp_fh = Genome::Utility::FileSystem->open_file_for_reading($snp_output);
-        while (my $row = $snp_fh->getline) {
+        my $snv_output = $self->_snv_staging_output;
+        my $snv_fh = Genome::Utility::FileSystem->open_file_for_reading($snv_output);
+        while (my $row = $snv_fh->getline) {
             $snp_count++;
             my @columns = split /\s+/, $row;
             $snp_count_good++ if $columns[4] >= 15 and $columns[7] > 2;
@@ -319,7 +284,7 @@ sub generate_metrics {
     if($self->detect_indels) {
         my $indel_count    = 0;
         
-        my $indel_output = $self->indel_output;
+        my $indel_output = $self->_indel_staging_output;
         my $indel_fh = Genome::Utility::FileSystem->open_file_for_reading($indel_output);
         while (my $row = $indel_fh->getline) {
             $indel_count++;
@@ -331,4 +296,3 @@ sub generate_metrics {
 }
 
 1;
-

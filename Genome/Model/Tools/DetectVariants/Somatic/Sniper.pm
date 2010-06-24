@@ -19,16 +19,6 @@ class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
             default_value => $DEFAULT_VERSION,
             doc => "Version of sniper to use",
         },
-        snp_output => {
-            calculate_from => ["working_directory"],
-            calculate => q{ $working_directory . '/snp_output.csv' },
-            is_output=>1,
-        },
-        indel_output => {
-            calculate_from => ["working_directory"],
-            calculate => q{ $working_directory . '/indel_output.csv' },
-            is_output=>1,
-        },
         detect_snvs => { 
             default_value => 1,
             doc => "Whether or not the tool should detect snps.  If set to false, the tool will still discover snps and indels at the same time, but will throw away any snps it detects",
@@ -96,8 +86,8 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt somatic sniper --aligned-reads-input tumor.bam --control-bam-input normal.bam --working-directory sniper
-gmt somatic sniper --bam tumor.bam --control normal.bam --work sniper --quality 25
+gmt somatic sniper --aligned-reads-input tumor.bam --control-aligned-reads-input normal.bam --output-directory sniper
+gmt somatic sniper --aligned-reads tumor.bam --control normal.bam --out sniper --quality 25
 EOS
 }
 
@@ -107,28 +97,23 @@ sub help_detail {
 EOS
 }
 
-sub execute {
+sub _should_skip_execution {
     my $self = shift;
-    $DB::single = 1;
-
-    # Skip if both output files exist... not sure if this should be here or not
-    if (($self->skip_if_output_present)&&(-s $self->snp_output)&&(-s $self->indel_output)) {
+    
+    if (($self->skip_if_output_present)&&(-s $self->snv_output)&&(-s $self->indel_output)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
         return 1;
     }
+    
+    return $self->SUPER::_should_skip_execution;
+}
 
-    unless ($self->detect_snvs || $self->detect_indels) {
-        $self->status_message("Both detect_snps and detect_indels are set to false. Skipping execution.");
-        return 1;
-    }
+sub _detect_variants {
+    my $self = shift;
+    $DB::single = 1;
 
     $self->status_message("beginning execute");
 
-    unless (Genome::Utility::FileSystem->create_directory($self->working_directory) ) {
-        $self->error_message("Could not create working_directory: " . $self->working_directory);
-        return;
-    }
-    
     # Validate files
     unless ( Genome::Utility::FileSystem->validate_file_for_reading($self->aligned_reads_input) ) {
         $self->error_message("Could not validate tumor file:  ".$self->aligned_reads_input );
@@ -145,7 +130,7 @@ sub execute {
     my $indel_params = $self->indel_params || "";
     my $result;
     if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
-        $result = $self->_run_sniper($snv_params, $self->snp_output, $self->indel_output);
+        $result = $self->_run_sniper($snv_params, $self->_snv_staging_output, $self->_indel_staging_output);
     } else {
         # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
         if ($self->detect_snvs && $self->detect_indels) {
@@ -154,31 +139,31 @@ sub execute {
         my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
 
         if ($self->detect_snvs) {
-            $result = $self->_run_sniper($snv_params, $self->snp_output, $temp_name);
+            $result = $self->_run_sniper($snv_params, $self->_snv_staging_output, $temp_name);
         }
         if ($self->detect_indels) {
             if($self->detect_snps and not $result) {
                 $self->status_message('Sniper did not report success for snp detection. Skipping indel detection.')
             } else {
-                $result = $self->_run_sniper($indel_params, $temp_name, $self->indel_output);
+                $result = $self->_run_sniper($indel_params, $temp_name, $self->_indel_staging_output);
             }
         }
     }
     
-    #Manually check for $self->indel_output as there might not be any indels and shellcmd()
+    #Manually check for $self->_indel_staging_output as there might not be any indels and shellcmd()
     # chokes unless either all are present or all are empty.
     #(This means shellcmd() can check for the SNPs file on its own and still work given an empty result.)
     #Varied the warning text slightly so this message can be disambiguated from shellcmd() output in future debugging
-    unless(-s $self->indel_output) {
+    unless(-s $self->_indel_staging_output) {
         #Touch the file to make sure it exists
-        my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->indel_output);
+        my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->_indel_staging_output);
         unless ($fh) {
-            $self->error_message("failed to touch " . $self->indel_output . "!: " . Genome::Utility::FileSystem->error_message);
+            $self->error_message("failed to touch " . $self->_indel_staging_output . "!: " . Genome::Utility::FileSystem->error_message);
             die;
         }
         $fh->close;
         
-        $self->warning_message("ALLOWING zero size output file " . $self->indel_output);
+        $self->warning_message("ALLOWING zero size output file " . $self->_indel_staging_output);
     }
 
     $self->status_message("ending execute");
@@ -189,7 +174,7 @@ sub _run_sniper {
     my ($self, $params, $snp_output, $indel_output) = @_;
     
     my $cmd = $self->sniper_path . " " . $params . " -f ".$self->reference_sequence_input." ".$self->aligned_reads_input." ".$self->control_aligned_reads_input ." " . $snp_output . " " . $indel_output; 
-    my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input], output_files=>[$self->snp_output], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
+    my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input], output_files=>[$snp_output], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
 
     return $result;
 }

@@ -23,7 +23,7 @@ sub bsub_rusage {
     my $self = shift;
     
     #TODO Eventually this will be replaced by a mini-workflow and then won't need to reserve all these resources itself.
-    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=16000]' -M 1610612736";
+    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>1000 && mem>16000] span[hosts=1] rusage[tmp=1000:mem=16000]' -M 1610612736";
     
     #my $detector_class = $self->detector_class([NAME HERE]);
     #

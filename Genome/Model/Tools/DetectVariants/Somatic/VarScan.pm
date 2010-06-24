@@ -13,16 +13,6 @@ class Genome::Model::Tools::DetectVariants::Somatic::VarScan {
             default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa",
         }
     ],
-    has_constant => [
-        snp_output => {
-            calculate_from => ["working_directory"],
-            calculate => q{ $working_directory . '/varscan.status.snp' },
-        },
-        indel_output => {
-            calculate_from => ["working_directory"],
-            calculate => q{ $working_directory . '/varscan.status.indel' },
-        },
-    ],
     has_optional => [
         detect_snvs => {
             default => '1',
@@ -68,33 +58,18 @@ sub help_detail {
 EOS
 }
 
-sub execute {
+sub _detect_variants {
     my $self = shift;
 
     ## Get required parameters ##
-    my $normal_bam = $self->control_aligned_reads_input;
-    my $tumor_bam = $self->aligned_reads_input;
-
-    my $output_snp = $self->snp_output;
-    my $output_indel = $self->indel_output;
-
-    my $reference = $self->reference_sequence_input;
-
-    unless(-e $normal_bam && -e $tumor_bam) {
-        $self->error_message('One of the specified BAM files does not exist.');
-        die $self->error_message;
-    }
-
-    unless ($self->detect_snvs || $self->detect_indels) {
-        $self->status_message("Both detect_snps and detect_indels are set to false. Skipping execution.");
-        return 1;
-    }
+    my $output_snp = $self->_snv_staging_output;
+    my $output_indel = $self->_indel_staging_output;
 
     my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
-    if ( ($self->detect_snps && $self->detect_indels) && ($snv_params eq $indel_params) ) {
-        $result = $self->_run_varscan($reference, $tumor_bam, $normal_bam, $output_snp, $output_indel, $snv_params);
+    if ( ($self->detect_svps && $self->detect_indels) && ($snv_params eq $indel_params) ) {
+        $result = $self->_run_varscan($output_snp, $output_indel, $snv_params);
     } else {
         # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
         if ($self->detect_snvs && $self->detect_indels) {
@@ -103,13 +78,13 @@ sub execute {
         my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
 
         if ($self->detect_snvs) {
-            $result = $self->_run_varscan($reference, $tumor_bam, $normal_bam, $output_snp, $temp_name, $snv_params);
+            $result = $self->_run_varscan($output_snp, $temp_name, $snv_params);
         }
         if ($self->detect_indels) {
             if($self->detect_snvs and not $result) {
                 $self->status_message('VarScan did not report success for snp detection. Skipping indel detection.')
             } else {
-                $result = $self->_run_varscan($reference, $tumor_bam, $normal_bam, $temp_name, $output_indel, $snv_params);
+                $result = $self->_run_varscan($temp_name, $output_indel, $indel_params);
             }
         }
     }
@@ -119,7 +94,11 @@ sub execute {
 
 sub _run_varscan {
     my $self = shift;
-    my ($reference, $tumor_bam, $normal_bam, $output_snp, $output_indel, $varscan_params) = @_;
+    my ($output_snp, $output_indel, $varscan_params) = @_;
+    my $normal_bam = $self->control_aligned_reads_input;
+    my $tumor_bam = $self->aligned_reads_input;
+    my $reference = $self->reference_sequence_input;
+
 
     my $varscan = Genome::Model::Tools::Varscan::Somatic->create(
         normal_bam => $normal_bam,

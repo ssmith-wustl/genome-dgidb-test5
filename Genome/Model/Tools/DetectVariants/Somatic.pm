@@ -35,4 +35,16 @@ Tools to run somatic variant detectors with a common API and output their result
 EOS
 }
 
+sub _verify_inputs {
+    my $self = shift;
+    
+    my $control_aligned_reads_file = $self->control_aligned_reads_input;
+    unless(Genome::Utility::FileSystem->check_for_path_existence($control_aligned_reads_file)) {
+        $self->error_message("control aligned reads input $control_aligned_reads_file was not found.");
+        return;
+    }
+    
+    return $self->SUPER::_verify_inputs;
+}
+
 1;

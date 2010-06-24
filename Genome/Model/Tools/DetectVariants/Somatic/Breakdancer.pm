@@ -12,14 +12,19 @@ my $BREAKDANCER_COMMAND = 'BreakDancerMax.pl';
 class Genome::Model::Tools::DetectVariants::Somatic::Breakdancer{
     is => 'Genome::Model::Tools::DetectVariants::Somatic',
     has => [
-        sv_output => {
-            calculate_from => ["working_directory"],
-            calculate => q{ $working_directory . '/sv_output.csv' },
-            is_output=>1,
+        _config_base_name => {
+            is => 'Text',
+            default_value => 'breakdancer_config',
+            is_input => 1,
         },
         config_output => {
-            calculate_from => ["working_directory"],
-            calculate => q{ $working_directory . '/breakdancer.config' },
+            calculate_from => ['_config_base_name', 'output_directory'],
+            calculate => q{ join("/", $output_directory, $_config_base_name); },
+            is_output => 1,
+        },
+        _config_staging_output => {
+            calculate_from => ['_temp_staging_directory', '_config_base_name'],
+            calculate => q{ join("/", $_temp_staging_directory, $_config_base_name); },
         },
         version => {
             is => 'Version',
@@ -29,7 +34,6 @@ class Genome::Model::Tools::DetectVariants::Somatic::Breakdancer{
             doc => "Version of breakdancer to use"
         },
         detect_svs => { value => 1, is_constant => 1, },
-        #TODO FIXME how to handle command line interface? with the public/private as we used to? This is pretty dumb but works for now since most people arent running breakdancer by itself with this tool.
         sv_params => {
             is => 'Text',
             is_input => 1,
@@ -78,6 +82,8 @@ class Genome::Model::Tools::DetectVariants::Somatic::Breakdancer{
         snv_params=>{},
         indel_params=>{},
         capture_set_input =>{},
+        detect_snvs=>{},
+        detect_indels=>{},
     ],
 };
 
@@ -86,6 +92,7 @@ class Genome::Model::Tools::DetectVariants::Somatic::Breakdancer{
 # workflow passes in an empty string for use version if the value is undef
 # but empty string can't resolve to a version, so stuff the default one in 
 # while creating.
+# FIXME we should not need this hack anymore, should just force versioning in somatic processing profiles and backfill
 ################################################
 sub create {
     my $class = shift;
@@ -111,8 +118,8 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt somatic breakdancer -t tumor.bam -n normal.bam --working-dir breakdancer_dir
-gmt somatic breakdancer -t tumor.bam -n normal.bam --working-dir breakdancer_dir --use-version 0.0.1r59 --skip-if-output-present 
+gmt somatic breakdancer -t tumor.bam -n normal.bam --output-dir breakdancer_dir
+gmt somatic breakdancer -t tumor.bam -n normal.bam --output-dir breakdancer_dir --version 0.0.1r59 --skip-if-output-present 
 EOS
 }
 
@@ -123,9 +130,9 @@ the input BAM files and then uses that configuration to run breakdancer.
 EOS
 }
 
-sub execute {
+sub _should_skip_execution {
     my $self = shift;
-
+    
     if ($self->skip) {
         $self->status_message("Skipping execution: Skip flag set");
         return 1;
@@ -134,12 +141,13 @@ sub execute {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
         return 1;
     }
+    
+    return $self->SUPER::_should_skip_execution;
+}
 
-    unless (Genome::Utility::FileSystem->create_directory($self->working_directory) ) {
-        $self->error_message("Could not create working_directory: " . $self->working_directory);
-        return;
-    }
-
+sub _detect_variants {
+    my $self = shift;
+    
     $self->run_config;
 
     $self->run_breakdancer;
@@ -151,12 +159,12 @@ sub run_config {
     my $self = shift;
 
     my $config_path = $self->breakdancer_path . "/$CONFIG_COMMAND";
-    my $cmd = "$config_path " . $self->aligned_reads_input . " " . $self->control_aligned_reads_input . " " . $self->_bam2cfg_params . " > "  . $self->config_output;
+    my $cmd = "$config_path " . $self->aligned_reads_input . " " . $self->control_aligned_reads_input . " " . $self->_bam2cfg_params . " > "  . $self->_config_staging_output;
     $self->status_message("EXECUTING CONFIG STEP: $cmd");
     my $return = Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
         input_files => [$self->aligned_reads_input, $self->control_aligned_reads_input],
-        output_files => [$self->config_output],
+        output_files => [$self->_config_staging_output],
     );
 
     unless ($return) {
@@ -164,8 +172,8 @@ sub run_config {
         die;
     }
 
-    unless (-s $self->config_output) {
-        $self->error_message("$CONFIG_COMMAND output " . $self->config_output . " does not exist or has zero size");
+    unless (-s $self->_config_staging_output) {
+        $self->error_message("$CONFIG_COMMAND output " . $self->_config_staging_output . " does not exist or has zero size");
         die;
     }
 
@@ -177,12 +185,12 @@ sub run_breakdancer {
     my $self = shift;
 
     my $breakdancer_path = $self->breakdancer_path . "/$BREAKDANCER_COMMAND";
-    my $cmd = "$breakdancer_path " . $self->config_output . " " . $self->_breakdancer_params . " > "  . $self->sv_output;
+    my $cmd = "$breakdancer_path " . $self->_config_staging_output . " " . $self->_breakdancer_params . " > "  . $self->_sv_staging_output;
     $self->status_message("EXECUTING BREAKDANCER STEP: $cmd");
     my $return = Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
-        input_files => [$self->config_output],
-        output_files => [$self->sv_output],
+        input_files => [$self->_config_staging_output],
+        output_files => [$self->_sv_staging_output],
         allow_zero_size_output_files => 1,
     );
 
@@ -191,8 +199,8 @@ sub run_breakdancer {
         die;
     }
 
-    unless (-s $self->sv_output) {
-        $self->error_message("$BREAKDANCER_COMMAND output " . $self->sv_output . " does not exist or has zero size");
+    unless (-s $self->_sv_staging_output) {
+        $self->error_message("$BREAKDANCER_COMMAND output " . $self->_sv_staging_output . " does not exist or has zero size");
         die;
     }
  
