@@ -138,9 +138,9 @@ sub _detect_variants {
             
             #TODO We should really use a temporary directory and copy the results to the working subdirectory after they're completed
             #TODO When we enable the boolean expressions, the directory name will need to take into account parameters as well
-            my $command_working_directory = $self->calculate_detector_working_directory($detector, $version, '');
-            Genome::Utility::FileSystem->create_directory($command_working_directory);
-            $run_parameters{working_directory} = $command_working_directory;
+            my $command_output_directory = $self->calculate_detector_output_directory($detector, $version, '');
+            Genome::Utility::FileSystem->create_directory($command_output_directory);
+            $run_parameters{output_directory} = $command_output_directory;
             
             
             #TODO Make a workflow out of all these? (This requires the individual tools to be responsible for temporary file handling, etc.
@@ -173,8 +173,8 @@ sub _detect_variants {
             
             my $final_files = $self->combine_results($detector_tree, $variant_type, $versions, $params);
             
-            my $output_file_property = $variant_type . '_output';
-            my $filtered_output_file_property = 'filtered_' . $output_file_property;
+            my $output_file_property = '_' . $variant_type . '_staging_output';
+            my $filtered_output_file_property = '_filtered' . $output_file_property;
             
             Genome::Utility::FileSystem->copy_file($final_files->[0], $self->$output_file_property);
             Genome::Utility::FileSystem->copy_file($final_files->[1], $self->$filtered_output_file_property);
@@ -191,13 +191,13 @@ sub _verify_inputs {
     return $self->Genome::Model::Tools::DetectVariants::_verify_inputs;
 }
 
-sub calculate_detector_working_directory {
+sub calculate_detector_output_directory {
     my $self = shift;
     my ($detector, $version, $param_list) = @_;
     
     my $subdirectory = join('-', $detector, $version, $param_list);
     
-    return $self->working_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
+    return $self->output_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
 
 sub parse_detector_string {
@@ -331,7 +331,7 @@ sub combine_results {
         my ($detector_name, $index, $branch_case, $leaf_case, $detector_type, $versions, $params) = @_;
         
         #TODO When we enable the boolean expressions, the directory name will need to take into account parameters as well
-        my $command_working_directory = $self->calculate_detector_working_directory($detector_name, $versions->[$index], '');
+        my $command_output_directory = $self->calculate_detector_output_directory($detector_name, $versions->[$index], '');
         
         #Somewhere down the line filtering should perhaps be separated from the actual detection?
         my $output_file_property = $detector_type . '_output';
@@ -341,8 +341,8 @@ sub combine_results {
         my $output_file = $self->$output_file_property;
         my $filtered_output_file = $self->$filtered_output_file_property;
         
-        $output_file =~ s/$_temp_staging_directory/$command_working_directory/;
-        $filtered_output_file =~ s/$_temp_staging_directory/$command_working_directory/;
+        $output_file =~ s/$_temp_staging_directory/$command_output_directory/;
+        $filtered_output_file =~ s/$_temp_staging_directory/$command_output_directory/;
         
         return [$output_file, $filtered_output_file];
     };
