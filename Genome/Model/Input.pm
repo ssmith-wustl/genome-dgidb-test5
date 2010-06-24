@@ -33,6 +33,12 @@ class Genome::Model::Input {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    my $self = shift;
+
+    return $self->value_class_name . ': ' . $self->value_id;
+}
+
 1;
 
 #$HeadURL$

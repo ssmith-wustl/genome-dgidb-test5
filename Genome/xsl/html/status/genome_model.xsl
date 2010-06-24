@@ -156,7 +156,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <td class="value">
             <xsl:call-template name="object_link">
               <xsl:with-param name="linktext">
-                <xsl:value-of select="aspect[@name='value_class_name']/value"/>: <xsl:value-of select="aspect[@name='value_id']/value"/>
+                <xsl:value-of select="display_name"/>
               </xsl:with-param>
               <xsl:with-param name="id">
                 <xsl:value-of select="aspect[@name='value_id']/value"/>
