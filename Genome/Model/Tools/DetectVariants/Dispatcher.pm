@@ -44,7 +44,11 @@ class Genome::Model::Tools::DetectVariants::Dispatcher {
         variant_types => {
             is => 'ARRAY',
             value => [('snv', 'indel', 'sv')],
-        }
+        },
+        #These can't be turned off--just pass no detector name to skip
+        detect_snvs => { value => 1 },
+        detect_indels => { value => 1 },
+        detect_svs => { value => 1 },
     ],
     doc => 'This tool is used to handle delegating variant detection to one or more specified tools and combining the results',
 };
@@ -66,6 +70,19 @@ A variant detector(s) specified under snv-detector, indel-detector, or sv-detect
 
 In a future version, the parameter may be a boolean expression such as "(samtools && var-scan) || maq". Not in this one, however.
 EOS
+}
+
+sub _should_skip_execution {
+    my $self = shift;
+    
+    for my $variant_type (@{ $self->variant_types }) {
+        my $name_property = $variant_type . '_detector_name';
+        
+        return if defined $self->$name_property;
+    }
+    
+    $self->status_message('No variant detectors specified.');
+    return $self->SUPER::_should_skip_execution;
 }
 
 sub _detect_variants {
