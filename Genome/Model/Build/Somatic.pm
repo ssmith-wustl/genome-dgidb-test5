@@ -70,6 +70,7 @@ sub create {
 
 # Returns the newest somatic workflow instance associated with this build
 # Note: Only somatic builds launched since this code was added will have workflows associated in a queryable manner
+# TODO No longer used by somatic_workflow_inputs method... can probably remove
 sub newest_somatic_workflow_instance {
     my $self = shift;
 
@@ -91,21 +92,35 @@ sub newest_somatic_workflow_instance {
 sub somatic_workflow_inputs {
     my $self = shift;
 
-    my $instance = $self->newest_somatic_workflow_instance;
+    # TODO Switched to doing a direct database query to find inputs, since if we go through the object layer, workflows with steps which have at some point changed class paths 
+    # will crash, with no good solution. The best solution is probably not to query the workflow at all, and instead log it elsewherorkflow_instance_namee
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Workflow::Operation::Instance->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    $dbh->{LongReadLen} = 1024*1024;
 
-    unless ($instance) {
-        $self->warning_message("No somatic workflow instance found for build " . $self->id . ". It is possible this build is too old to have been associated with a workflow.");
-        return;
+    my $workflow_instance_name = "Somatic Pipeline Build " . $self->build_id;
+
+    my $input_stored = $dbh->selectrow_arrayref("SELECT input_stored FROM workflow_instance WHERE name = ?", {}, $workflow_instance_name)->[0];
+
+    unless ($input_stored) {
+        $self->error_message("Could not find a workflow instance associated with this build with the name: $workflow_instance_name");
+        die;
+    }
+
+    my $input = Storable::thaw($input_stored);
+    unless ($input) {
+        $self->error_message("Could not thaw input hash for workflow instance named: $workflow_instance_name");
+        die;
     }
 
     # returns hashref of workflow params like { input => value }
-    return $instance->input;  
+    return $input;  
 }
 
 # Input: the name of the somatic workflow input you'd like to know
 # Returns: value of one input of the latest somatic workflow instance.
-# FIXME this will break if the build allocations have moved...so... if we ask the workflow for file locations perhaps we should strip off the path and instead use the build's current data_dir
-# FIXME we could check to see if it changed, and if it did warn and return
+# TODO this will break if the build allocations have moved...so... if we ask the workflow for file locations perhaps we should strip off the path and instead use the build's current data_dir
+# we could check to see if it changed, and if it did warn and return
 sub somatic_workflow_input {
     my $self = shift;
     my $input_name = shift;
@@ -135,6 +150,7 @@ sub somatic_workflow_input {
             return;
         }
     }
+
 }
 
 # The intent of this method is to be capable of providing file names for older somatic builds which do not have an associated workflow
