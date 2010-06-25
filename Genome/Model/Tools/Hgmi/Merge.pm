@@ -263,8 +263,8 @@ sub gather_details
                $bapmergegenes_output,
            );
     
-    return @ipc;
-    
+#    return @ipc;
+    return @command;     
 }
 
 sub _cwd {
