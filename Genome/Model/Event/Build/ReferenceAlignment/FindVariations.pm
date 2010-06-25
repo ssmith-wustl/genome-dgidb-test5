@@ -105,7 +105,7 @@ sub _run_variant_detector {
         detect_snvs => $detect_snvs,
         detect_indels => $detect_indels,
         aligned_reads_input => $aligned_reads_input,
-        working_directory => $self->analysis_base_path, 
+        output_directory => $self->analysis_base_path, 
         reference_sequence_input => $reference_sequence,
         version => $detector_version,
     );

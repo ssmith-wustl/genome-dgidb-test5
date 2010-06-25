@@ -220,7 +220,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Somatic Sniper" toProperty="control_aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Somatic Sniper" toProperty="aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Somatic Sniper" toProperty="reference_sequence_input" />
-  <link fromOperation="input connector" fromProperty="sniper_working_directory" toOperation="Somatic Sniper" toProperty="working_directory" />
+  <link fromOperation="input connector" fromProperty="sniper_working_directory" toOperation="Somatic Sniper" toProperty="output_directory" />
 
 
 <!-- INDEL PE RUNNER -->
@@ -437,7 +437,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Breakdancer" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Breakdancer" toProperty="control_aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Breakdancer" toProperty="aligned_reads_input" />
-  <link fromOperation="input connector" fromProperty="breakdancer_working_directory" toOperation="Breakdancer" toProperty="working_directory" />
+  <link fromOperation="input connector" fromProperty="breakdancer_working_directory" toOperation="Breakdancer" toProperty="output_directory" />
   <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Breakdancer" toProperty="reference_sequence_input" />
   <link fromOperation="input connector" fromProperty="skip_sv" toOperation="Breakdancer" toProperty="skip" />
                 
