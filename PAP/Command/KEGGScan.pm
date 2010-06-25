@@ -96,8 +96,7 @@ sub execute {
                              File::Temp::tempdir(
                                                  'PAP_keggscan_XXXXXXXX',
                                                  DIR     => '/gscmnt/temp212/info/annotation/PAP_tmp',
-                                                 #CLEANUP => 1,
-                                                 CLEANUP => 0,
+                                                 CLEANUP => 1,
                                              )
                          );
 
