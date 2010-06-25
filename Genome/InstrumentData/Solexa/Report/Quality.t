@@ -12,8 +12,10 @@ my $tmp = Genome::Utility::FileSystem->create_temp_directory();
 if (-e $tmp .'/Quality/report.xml') {
     unlink $tmp .'/Quality/report.xml';
 }
-my $gerald_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
-my $ori_report_xml   = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Solexa-Report-Quality/report.xml';
+
+my $base_dir         = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Solexa-Report-Quality/';
+my $gerald_directory = $base_dir .'/test_sample_name';
+my $ori_report_xml   = $base_dir .'/report.xml';
 
 my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   id => '-123456',
