@@ -56,6 +56,14 @@ class Genome::Model::Tools::Velvet::OneButton {
         exp_covs            => {    is => 'Float', is_many => 1, }, #|e=f{,}" => \@exp_covs, 
 
         cov_cutoffs         => {    is => 'Float', is_many => 1, }, #|c=f{,}" => \@cov_cutoffs,
+        read_type => 
+        { 
+            is => 'string', 
+            default_value => 'shortPaired', 
+            doc => 'The read type that velvet is run on, default is shortPaired',
+            valid_values => ['short', 'shortPaired', 'short2', 'shortPaired2', 'long','longPaired'],
+        }
+        
     ],
     
     has_optional_transient => [
@@ -463,8 +471,9 @@ sub _do_final_velvet_runs {
     my $velveth = $self->_version_path . $self->version .'/velveth';
     my $best_hash_size = $self->_best_hash_size();
     my $input_file_format = $self->_input_file_format();
-
-    my $h_cmd = $velveth.' '.$self->output_dir.' '.$best_hash_size.' '.$input_file_format.' -shortPaired '.$self->file;
+    my $read_type = $self->read_type;
+    
+    my $h_cmd = $velveth.' '.$self->output_dir.' '.$best_hash_size.' '.$input_file_format." -$read_type ".$self->file;
 
     if (system("$h_cmd")) {
         $self->error_message("Failed to run final velveth with command\n\t$h_cmd");
@@ -494,12 +503,13 @@ sub _do_final_velvet_runs {
 
 sub _run_velveth_get_opt_expcov_covcutoff {
     my ($self, $hash_size) = @_;
+    my $read_type = $self->read_type;
 
     print "Try hash size: $hash_size\n"; #needed for test stdout check
     #run velveth
     my $velveth = $self->_version_path . $self->version .'/velveth';
     my $input_file_format = $self->_input_file_format(); #fasta or fastq
-    my $cmd = $velveth.' '.$self->output_dir.' '.$hash_size.' '.$input_file_format.' -shortPaired '.$self->file;
+    my $cmd = $velveth.' '.$self->output_dir.' '.$hash_size.' '.$input_file_format." -$read_type ".$self->file;
 
     print "$cmd\n"; #needed for test stdout check .. before actually executing $cmd
     $self->log_event("$cmd\n");
