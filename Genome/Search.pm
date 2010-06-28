@@ -20,7 +20,7 @@ class Genome::Search {
     has => [
         environment => {
             is => 'Text',
-            value => defined(Genome::Config->dev_mode()) ? 'dev' : 'prod'
+            value => Genome::Config->dev_mode() ? 'dev' : 'prod'
         },
         _solr_server_location => {
             is => 'Text',
