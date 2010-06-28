@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Bio::SeqIO;
 use AMOS::AmosLib;
 
 class Genome::Model::Tools::Velvet::CreateReadsFiles {
@@ -35,7 +36,7 @@ EOS
 
 sub help_detail {
     return <<EOS
-gmt velvet create-reads-files --sequences-file /gscmnt/111/velvet_assembly/Sequences --afg-file /gscmnt/111/velvet_assembly/velvet_asm.afg --directory /gscmnt/111/velvet_assembly
+gmt velvet create-reads-files --sequences-file /gscmnt/111/velvet_assembly/Sequences --contigs-fasta-file /gscmnt/111/velvet_assembly/contigs.fa --directory /gscmnt/111/velvet_assembly
 EOS
 }
 
@@ -53,6 +54,7 @@ sub execute {
     unlink $self->read_info_file;
     my $ri_fh = Genome::Utility::FileSystem->open_file_for_writing($self->read_info_file) ||
 	return;
+
     #reads.placed file
     unlink $self->reads_placed_file;
     my $rp_fh = Genome::Utility::FileSystem->open_file_for_writing($self->reads_placed_file) ||
@@ -262,10 +264,11 @@ sub _read_length_from_sequences_file {
     my $seq_fh = Genome::Utility::FileSystem->open_file_for_reading($self->sequences_file) or return;
     $seq_fh->seek($seek_pos, 0);
     my $io = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta');
+
     my $read_length = length ($io->next_seq->seq);
 
     unless ($read_length > 0) {
-	$self->error_message("Read length must be a number great than zero and not ".$read_length);
+	$self->error_message("Read length must be a number greater than zero and not ".$read_length);
 	return;
     }
     $seq_fh->close;
