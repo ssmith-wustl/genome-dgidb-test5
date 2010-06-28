@@ -61,7 +61,6 @@ sub execute {
 
             print "just added: " . $doc->title();
         }
-    last;
     }
 }
 
