@@ -27,7 +27,7 @@ sub arch_os {
 }
 
 # in dev mode we use dev search, dev wiki, dev memcache, etc, but production database still ;)
-my $dev_mode = $ENV{GENOME_DEV_MODE} ? 1 : (UR::DBI->no_commit ? 1 : 0);
+my $dev_mode = exists $ENV{GENOME_DEV_MODE} ? $ENV{GENOME_DEV_MODE} : (UR::DBI->no_commit ? 1 : 0);
 
 sub dev_mode {
     shift;
