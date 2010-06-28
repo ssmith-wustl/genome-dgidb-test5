@@ -76,6 +76,10 @@ sub supercontigs_agp_file {
 sub supercontigs_fasta_file {
     return $_[0]->edit_dir.'/supercontigs.fasta';
 }
+
+sub assembly_fasta_file {
+    return contigs_bases_file(@_);
+}
 #<>#
 
 #< Metrics >#

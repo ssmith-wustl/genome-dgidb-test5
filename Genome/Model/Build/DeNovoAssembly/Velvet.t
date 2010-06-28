@@ -42,6 +42,7 @@ _test_files_and_values(
     contigs_quals_file => 'contigs.quals',
     read_info_file => 'readinfo.txt',
     reads_placed_file => 'reads.placed',
+    assembly_fasta_file => 'contigs.bases',
     supercontigs_agp_file => 'supercontigs.agp',
     supercontigs_fasta_file => 'supercontigs.fasta',
     stats_file => 'stats.txt',
