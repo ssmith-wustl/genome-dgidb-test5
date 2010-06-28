@@ -63,7 +63,7 @@ sub execute {
             Genome::Search->add($doc) || die 'Error: failed to add doc with title ' . $doc->title();
 
             # mark as done
-            $cache->set($key, $now, $timeout );     
+            $cache->set($key, $now, $timeout ) || die "cant set cache for key=$key value=$now timeout=$timeout";
 
             printf("added\t%s\t%s\n", $doc->title, $key);
         }
