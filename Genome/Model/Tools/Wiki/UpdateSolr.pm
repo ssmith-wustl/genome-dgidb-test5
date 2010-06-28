@@ -30,6 +30,11 @@ sub execute {
 
     my ($self) = @_;
 
+    my $resource_lock = '/gsc/var/lock/gcsearch/wiki_loader';
+    my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock, max_try => 1);
+    die 'someone else has the wiki_loader lock' if !$lock;
+
+
     my $cache = Genome::Memcache->server();
     my $now = UR::Time->now();
     my $timeout = 60 * 60 * 24; # this is just storing which changes we've notified solr about
@@ -62,6 +67,9 @@ sub execute {
             print "just added: " . $doc->title();
         }
     }
+
+
+    Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
 }
 
 
