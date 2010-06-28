@@ -19,7 +19,9 @@
             <td width="100%">
               <div class="description">
                 <h2 class="name">
-                  <span class="label">WorkOrder:</span>
+                  <span class="label">
+                    WorkOrder:
+                  </span>
                   <span class="title">
                     <xsl:call-template name="object_link">
                       <xsl:with-param name="linktext">
