@@ -38,6 +38,7 @@ sub execute {
     my $cache = Genome::Memcache->server();
     my $now = UR::Time->now();
     my $timeout = 60 * 60 * 24; # this is just storing which changes we've notified solr about
+    print "inserting wiki pages to solr index at $now\n";
 
     # get/parse recent changes from wiki rss feed
     my $url = $self->url();
@@ -64,7 +65,7 @@ sub execute {
             # mark as done
             $cache->set($key, $now, $timeout );     
 
-            print "just added: " . $doc->title();
+            printf("added\t%s\t%s\n", $doc->title, $key);
         }
     }
 
