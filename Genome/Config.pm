@@ -15,8 +15,24 @@ sub arch_os {
     return $arch_os;
 }
 
+# in dev mode we use dev search, dev wiki, dev memcache, etc, but production database still ;)
+my $dev_mode = $ENV{GENOME_DEV_MODE} ? 1 : (UR::DBI->no_commit ? 1 : 0);
+
+sub dev_mode {
+    shift;
+    if (@_ && !$ENV{GENOME_DEV_MODE}) {
+        $dev_mode = shift;
+    }
+    return $dev_mode;
+}
+
 sub base_web_uri {
-    'https://imp.gsc.wustl.edu/view';
+
+    if (defined(Genome::Config::dev_mode())) {
+        return 'https://aims-dev.gsc.wustl.edu/view';
+    } else {
+        return 'https://imp.gsc.wustl.edu/view';
+    }
 }
 
 sub user_email {
