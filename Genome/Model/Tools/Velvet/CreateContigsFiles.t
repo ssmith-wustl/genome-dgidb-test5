@@ -27,7 +27,7 @@ ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp dir");
 symlink($data_dir.'/velvet_asm.afg', $temp_dir.'/velvet_asm.afg');
 ok (-s $temp_dir.'/velvet_asm.afg', "Linked afg file in tmp dir");
 
-my $ec = system("chdir $temp_dir; gmt assembly create-output-files fasta-and-qual-from-velvet-afg --directory $temp_dir");
+my $ec = system("chdir $temp_dir; gmt velvet create-contigs-files --afg-file $temp_dir/velvet_asm.afg --directory $temp_dir");
 ok($ec == 0, "Command ran successfully");
 
 foreach ('contigs.bases', 'contigs.quals') {
