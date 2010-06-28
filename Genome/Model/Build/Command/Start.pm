@@ -151,7 +151,8 @@ sub execute {
     );
     my $browser = $ENV{BROWSER} || 'firefox';
     $self->status_message("Monitor from the web at $uri\n");
-    system "$browser $uri";
+    #If we did want to do this, shouldn't launch until after we commit.  But even still it may not be a good idea.
+    #system "$browser $uri";
 
     return 1;
 }
