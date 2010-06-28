@@ -17,9 +17,9 @@ class Genome::Search {
     has => [
         environment => {
             is => 'Text',
-            value => UR::DBI->no_commit ? 'dev' : 'prod'
+            value => defined(Genome::Config->dev_mode()) ? 'dev' : 'prod'
         },
-        solr_server_location => {
+        _solr_server_location => {
             is => 'Text',
             default_value => 'http://solr',
             doc => 'Location of the Solr server',
@@ -27,20 +27,20 @@ class Genome::Search {
         _dev_solr_server_location => {
             is => 'Text',
             default_value => 'http://solr-dev/solr',
-            doc => 'Location of the Solr development server (Used instead of solr_server_location when UR::DBI->no_commit is on.)',
+            doc => 'Location of the Solr development server',
         },
         _solr_server => {
             is => 'WebService::Solr',
             is_transient => 1,
         },
         solr_server => {
-            calculate_from => ['environment', '_solr_server', 'solr_server_location', '_dev_solr_server_location',],
+            calculate_from => ['environment', '_solr_server', '_solr_server_location', '_dev_solr_server_location',],
             calculate => q[
                 return $_solr_server if $_solr_server;
-
                 $self->_solr_server(WebService::Solr->new(
-                    $environment eq 'prod' ? $solr_server_location : $_dev_solr_server_location
+                    $environment eq 'prod' ? $_solr_server_location : $_dev_solr_server_location
                 ));
+
                 return $self->_solr_server;
             ]
         },
@@ -97,7 +97,7 @@ sub searchable_classes {
 
 sub environment {
     my $proto = shift;
-    my $self = ref($proto) ? $proto : $proto->_singleton_object;
+    my $self = $proto->_singleton_object;
 
     if (@_ > 0) {
         $self->_solr_server(undef);
