@@ -21,7 +21,9 @@ use above 'Genome';
 
 ## Genome::Search makes rollback stupidly slow.
 Genome::Search->unregister_callbacks('UR::Object');
-Genome::Search->environment('prod');
+
+# running web server in no_commit, but NOT in dev mode so we get production solr, wiki, memcache
+Genome::Config->dev_mode(0);
 
 my $psgi_path = Genome::Model::Command::Services::WebApp->psgi_path;
 
