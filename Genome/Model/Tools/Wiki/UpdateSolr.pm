@@ -83,6 +83,8 @@ sub cache_key {
     my $date = $item->{'pubDate'} || die "couldnt make key- no pubDate for item $title";
 
     my $key = join('---', 'wiki', $date, $title);
+    $key =~ s/\s//g; # memcache doesnt like whitespace
+
     return $key;
 }
 
