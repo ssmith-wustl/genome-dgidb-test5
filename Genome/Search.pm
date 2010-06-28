@@ -10,6 +10,7 @@ use warnings;
 use WebService::Solr;
 use MRO::Compat;
 use Cache::Memcached;
+use Genome::Config;
 
 class Genome::Search { 
     is => 'UR::Singleton',
