@@ -10,6 +10,8 @@ use warnings;
 use WebService::Solr;
 use MRO::Compat;
 use Cache::Memcached;
+
+use UR::DBI;
 use Genome::Config;
 
 class Genome::Search { 
