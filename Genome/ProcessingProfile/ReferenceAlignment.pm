@@ -7,7 +7,19 @@ use Genome;
 
 class Genome::ProcessingProfile::ReferenceAlignment {
     is => 'Genome::ProcessingProfile::Staged',
-    sub_classification_method_name => '_resolve_subclass_name',
+    is_abstract => 1,
+    subclassify_by => 'subclass_name',
+    has => [
+        subclass_name => { is_mutable => 0,
+                           calculate_from => ['sequencing_platform'],
+                           calculate => sub {
+                                            my($sequencing_platform) = @_;
+                                            Carp::confess "No sequencing platform given to resolve subclass name" unless $sequencing_platform;
+                                            return 'Genome::ProcessingProfile::ReferenceAlignment::'.Genome::Utility::Text::string_to_camel_case($sequencing_platform);
+                                          }
+                         },
+    ],
+
     has_param => [
         sequencing_platform => {
             doc => 'The sequencing platform from whence the model data was generated',
@@ -261,7 +273,7 @@ sub filter_ruleset_params {
 # This is called by the infrastructure to appropriately classify abstract processing profiles
 # according to their type name because of the "sub_classification_method_name" setting
 # in the class definiton...
-sub _resolve_subclass_name {
+sub _X_resolve_subclass_name {
     my $class = shift;
 
     my $sequencing_platform;

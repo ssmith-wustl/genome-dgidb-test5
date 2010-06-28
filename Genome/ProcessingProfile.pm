@@ -15,8 +15,8 @@ class Genome::ProcessingProfile {
     attributes_have => [
         is_param => { is => 'Boolean', is_optional => 1 },
     ],
-    sub_classification_method_name => '_resolve_subclass_name',
     subclass_description_preprocessor => 'Genome::ProcessingProfile::_expand_param_properties',
+    subclassify_by => 'subclass_name',
     id_by => [
         id => { is => 'NUMBER', len => 11 },
     ],
@@ -27,14 +27,18 @@ class Genome::ProcessingProfile {
                            doc => 'The type of processing profile' },
         supersedes    => { via => 'params', to => 'value', is_mutable => 1, where => [ name => 'supersedes' ], is_optional => 1, 
                            doc => 'The processing profile replaces the one named here.' },
-        subclass_name => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        subclass_name => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
+                           calculate_from => ['type_name'],
+                           calculate => sub { 
+                                            my($type_name) = @_;
+                                            confess "No type name given to resolve subclass name" unless $type_name;
+                                            return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($type_name);
+                                          }
+                          },
     ],
     has_many_optional => [
         params => { is => 'Genome::ProcessingProfile::Param', reverse_as => 'processing_profile' },
         models => { is => 'Genome::Model', reverse_as => 'processing_profile' },
-    ],
-    unique_constraints => [
-        { properties => [qw/subclass_name/], sql => 'PP_SN_I' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -133,6 +137,7 @@ sub create {
     if ($class eq __PACKAGE__) {
         return $class->SUPER::create(@_);
     }
+$DB::single=1;
 
     my $bx = $class->define_boolexpr(@_);
     my %params = $bx->params_list;
@@ -200,9 +205,9 @@ sub create {
     $subclass->_validate_no_existing_processing_profiles_with_idential_params(%params)
         or return;
 
-    unless ($params{'subclass_name'}) {
-        $params{'subclass_name'} = $class;
-    }
+    #unless ($params{'subclass_name'}) {
+    #    $params{'subclass_name'} = $class;
+    #}
 
     # Create
     my $self = $class->SUPER::create(%params)
@@ -383,7 +388,7 @@ sub param_summary {
 # This is called by the infrastructure to appropriately classify abstract processing profiles
 # according to their type name because of the "sub_classification_method_name" setting
 # in the class definiton...
-sub _resolve_subclass_name {
+sub _X_resolve_subclass_name {
     my $class = shift;
 
     my $type_name;

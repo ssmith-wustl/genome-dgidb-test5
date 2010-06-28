@@ -12,8 +12,20 @@ use Regexp::Common;
 class Genome::Model::Build::DeNovoAssembly {
     is => 'Genome::Model::Build',
     is_abstract => 1,
-    sub_classification_method_name => '_resolve_subclass_name',
+    subclassify_by => 'subclass_name',
     has => [
+        subclass_name => { is => 'String', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
+                           calculate_from => ['model_id'],
+                           calculate => sub {
+                                            my($model_id) = @_;
+                                            return unless $model_id;
+                                            my $model = Genome::Model->get($model_id);
+                                            Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
+                                            my $assembler_name = $model->assembler_name;
+                                            Carp::croak("Can't subclass Build: Genome::Model id $model_id has no assembler_name") unless $assembler_name;
+                                            return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($assembler_name);
+                                          },
+                         },
         (
             map { 
                 join('_', split(m#\s#)) => {
@@ -60,7 +72,7 @@ sub create {
     return $self;
 }
 
-sub _resolve_subclass_name {
+sub _X_resolve_subclass_name {
     my $class = shift;
     return __PACKAGE__->_resolve_subclass_name_by_assembler_name(@_);
 }

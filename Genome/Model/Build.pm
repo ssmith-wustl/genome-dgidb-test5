@@ -16,11 +16,23 @@ class Genome::Model::Build {
     type_name => 'genome model build',
     table_name => 'GENOME_MODEL_BUILD',
     is_abstract => 1,
-    sub_classification_method_name => '_resolve_subclass_name',
+    subclassify_by => 'subclass_name',
     id_by => [
         build_id => { is => 'NUMBER', len => 10 },
     ],
     has => [
+        subclass_name           => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
+                                     calculate_from => ['model_id'],
+                                     # We subclass via our model's type_name (which is via it's processing profile's type_name)
+                                     calculate => sub {
+                                                      my($model_id) = @_;
+                                                      return unless $model_id;
+                                                      my $model = Genome::Model->get($model_id);
+                                                      Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
+                                                      return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($model->type_name);
+                                                  },
+
+                                   },
         data_directory          => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         model                   => { is => 'Genome::Model', id_by => 'model_id' },
         model_id                => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
@@ -36,7 +48,6 @@ class Genome::Model::Build {
         run_by                  => { via => 'the_master_event', to => 'user_name' },
         status                  => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
         master_event_status     => { via => 'the_master_event', to => 'event_status' },
-        subclass_name           => { is => 'VARCHAR2', len => 255, is_optional => 1 },
     ],
     has_optional => [
         disk_allocation   => { is => 'Genome::Disk::Allocation', calculate_from => [ 'class', 'id' ],
@@ -177,9 +188,9 @@ sub create {
         return;
     }
 
-    unless ($bx->value_for('subclass_name')) {
-        $bx = $bx->add_filter(subclass_name => $class);
-    }
+    #unless ($bx->value_for('subclass_name')) {
+    #    $bx = $bx->add_filter(subclass_name => $class);
+    #}
 
     # create
     my $self = $class->SUPER::create($bx);

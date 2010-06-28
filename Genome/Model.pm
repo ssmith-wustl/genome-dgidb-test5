@@ -27,12 +27,22 @@ class Genome::Model {
     type_name => 'genome model',
     table_name => 'GENOME_MODEL',
     is_abstract => 1,
-    first_sub_classification_method_name => '_resolve_subclass_name',
-    sub_classification_method_name => '_resolve_subclass_name',
+    subclassify_by => 'subclass_name',
     id_by => [
         genome_model_id => { is => 'Number', len => 11 },
     ],
     has => [
+        subclass_name           => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
+                                     calculate_from => ['processing_profile_id'],
+                                     # We subclass via our processing profile's type_name
+                                     calculate => sub {
+                                                      my($pp_id) = @_;
+                                                      return unless $pp_id;
+                                                      my $pp = Genome::ProcessingProfile->get($pp_id);
+                                                      Carp::croak("Can't find Processing Profile with ID $pp_id while resolving subclass for Model") unless $pp;
+                                                      return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
+                                                  },
+                                },
         name                    => { is => 'Text', len => 255 },
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         subject_name            => { is => 'Text', len => 255, calculate_from => 'subject',
@@ -95,7 +105,6 @@ class Genome::Model {
         is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
         model_bridges           => { is => 'Genome::ModelGroupBridge', reverse_as => 'model', is_many => 1 },
         model_groups            => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group', is_many => 1 },
-        subclass_name           => { is => 'VARCHAR2', len => 255, is_optional => 1 },
     ],
     has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
@@ -306,9 +315,9 @@ sub create {
     $class->_validate_processing_profile_id($processing_profile_id)
         or Carp::confess();
 
-    unless ($params->value_for('subclass_name')) {
-        $params = $params->add_filter(subclass_name => $class);
-    }
+    #unless ($params->value_for('subclass_name')) {
+    #    $params = $params->add_filter(subclass_name => $class);
+    #}
 
     my $self = $class->SUPER::create($params)
         or return;
@@ -741,7 +750,7 @@ sub available_reports {
 # This is called by the infrastructure to appropriately classify abstract processing profiles
 # according to their type name because of the "sub_classification_method_name" setting
 # in the class definiton...
-sub _resolve_subclass_name {
+sub _X_resolve_subclass_name {
     my $class = shift;
     my $proper_subclass_name;
     if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {

@@ -13,6 +13,8 @@ use above 'Genome';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
+plan tests => 20;
+
 use_ok('Genome::Model::Build::DeNovoAssembly');
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
