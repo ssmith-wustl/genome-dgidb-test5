@@ -8,8 +8,6 @@ use above 'Genome';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
-plan tests => 6;
-
 use_ok('Genome::Model::Build::DeNovoAssembly::Newbler');
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
