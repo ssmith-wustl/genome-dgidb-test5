@@ -1,11 +1,11 @@
-package Genome::Wiki::Document::View::SearchResult::Html;
+package Genome::WorkOrder::View::SearchResult::Html;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Wiki::Document::View::SearchResult::Html {
+class Genome::WorkOrder::View::SearchResult::Html {
     is => 'Genome::View::SearchResult::Html',
 };
 
