@@ -3,8 +3,6 @@ package BAP::Job::Glimmer;
 use strict;
 use warnings;
 
-use BAP;
-use GAP;
 use GAP::Job;
 use Bio::Tools::Run::Glimmer;
 use Carp;

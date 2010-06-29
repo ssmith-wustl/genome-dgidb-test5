@@ -3,8 +3,6 @@ package BAP::Job::Genemark;
 use strict;
 use warnings;
 
-use BAP;
-use GAP;
 use GAP::Job;
 use Bio::Tools::Run::Genemark;
 use Carp;
