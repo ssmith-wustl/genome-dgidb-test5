@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;            
 
-class Genome::Model::Tools::Snp {
+class Genome::Model::Tools::Bmr {
     is => 'Command',
     has => [ ],
 };
