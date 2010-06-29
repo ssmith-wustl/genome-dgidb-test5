@@ -21,7 +21,15 @@ class Genome::Memcache {
         },
         memcache_server => {
             calculate_from => ['_memcache_server', 'memcache_server_location'],
-            calculate => q{ return $_memcache_server || new Cache::Memcached {'servers' => [$memcache_server_location], 'debug' => 0, 'compress_threshold' => 10_000,} }
+            calculate => q{
+                 return $_memcache_server if $_memcache_server;
+                 
+                 $self->_memcache_server(
+                    new Cache::Memcached {'servers' => [$memcache_server_location], 'debug' => 0, 'compress_threshold' => 10_000,}
+                 );
+                 
+                 return $self->_memcache_server
+            }
         },
     }
 };
@@ -39,7 +47,3 @@ sub server {
 
 
 1;
-
-
-
-
