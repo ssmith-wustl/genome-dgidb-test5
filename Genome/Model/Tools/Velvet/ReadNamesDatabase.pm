@@ -33,7 +33,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<EOS
-gmt velvet read-names-database --afg-file <AFG_FILE> --seq-file <SEQ_FILE>
+gmt velvet read-names-database --seq-file /gscmnt/111/velvet_assembly/Sequences --directory /gscmnt/111/velvet_assembly
 EOS
 }
 
@@ -44,13 +44,9 @@ EOS
 
 sub create {
     my $class = shift;
+
     my $self = $class->SUPER::create(@_);
 
-    #TODO - should these be derived since file names will always be same
-    #unless (-s $self->afg_file) {
-	#$self->error_message("Can't fine afg file: ".$self->afg_file);
-	#return;
-    #}
     unless ($self->sequences_file and -s $self->sequences_file) {
 	my $sequences_file = $self->directory.'/Sequences';
 	unless (-s $sequences_file) {
@@ -95,11 +91,6 @@ sub execute {
 sub create_db {
     my $self = shift;
 
-    #create db
-    #my $db_file = $self->directory.'/velvet_reads.sqlite';
-    #my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file", '', '', { AutoCommit => 0, RaiseError => 1 })
-        #or return $self->error_message("Failed to connect to db ($db_file): " . $DBI::errstr);
-
     my $dbh = $self->_get_dbh();
 
     my $sth = $dbh->prepare('create table read_info (id integer, name string, position integer)');
@@ -141,7 +132,6 @@ sub create_db {
 sub get_read_name_from_afg_index {
     my ($self, $read_id) = @_;
 
-    #unless (-s $self->directory.'/velvet_reads.sqlite') {
     unless (-s $self->read_names_sqlite) {
 	$self->error_message("Can't find reads sqlite database: ".$self->read_names_sqlite);
 	return;
@@ -163,8 +153,7 @@ sub get_read_name_from_afg_index {
 sub _get_dbh {
     my $self = shift;
 
-    #my $db_file = $self->directory.'/velvet_reads.sqlite';
-    my $db_file = $self->read_names_sqlite;
+    my $db_file = $self->read_names_sqlite; #name it with a file ending??
 
     my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file", '', '', { AutoCommit => 0, RaiseError => 1 })
         or return $self->error_message("Failed to connect to db ($db_file): " . $DBI::errstr);
