@@ -16,7 +16,7 @@ class Genome::Memcache {
                             : 'aims-dev:11211',
         },
         _memcache_server => {
-            is => 'Cache::memcache',
+            is => 'Cache::Memcached',
             is_transient => 1,
         },
         memcache_server => {
