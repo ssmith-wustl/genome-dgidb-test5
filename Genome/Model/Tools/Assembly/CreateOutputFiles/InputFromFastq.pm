@@ -47,6 +47,7 @@ sub execute {
 
     #if this re-runs in automated pipline, previously created zipped files
     #must be removed for newly created files to zip
+
     unlink $fasta_file.'.gz';
     unlink $qual_file.'.gz';
 
@@ -63,9 +64,6 @@ sub execute {
     }
 
     #if zipped version of files exist remove them first
-
-    unlink $fasta_file.'.gz';
-    unlink $qual_file.'.gz';
 
     if (system("gzip $fasta_file $qual_file")) {
 	$self->error_message("Failed to zip files: $fasta_file $qual_file");
