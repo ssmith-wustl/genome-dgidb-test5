@@ -40,6 +40,11 @@ class Genome::Model::Command::InstrumentData::Assign {
             is => 'Text',
             valid_values => ['forward-only','reverse-only'],
         },
+        force => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Allow assignment of data even if the subject does not match the model',
+        }
     ],
 };
 
@@ -193,6 +198,22 @@ sub _assign_by_instrument_data_id {
 
     # Get it 
     my $instrument_data = $self->_get_instrument_data_for_id( $self->instrument_data_id );
+
+    # Check subject
+    unless ($self->force()) {
+        my $model = $self->model();
+        if ($model->subject_type() eq 'library_name') { 
+            if ($model->subject_id() ne $instrument_data->library_id()) {
+                my $model_subject_name = $self->model->subject_name();
+                my $id_library_name     = $instrument_data->library_name();
+                my $msg = "Mismatch between instrument data library ($id_library_name) ".
+                          "and model subject ($model_subject_name), " .
+                          "use --force to assign anyway";
+                $self->error_message($msg);
+                return; 
+            }
+        } 
+    }
 
     # Assign it
     return $self->_assign_instrument_data($instrument_data)
