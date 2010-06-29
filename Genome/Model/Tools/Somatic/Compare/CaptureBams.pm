@@ -241,7 +241,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Snp Filter" toProperty="skip_if_output_present" />
   <link fromOperation="Indelpe Runner Tumor" fromProperty="filtered_snp_file" toOperation="Snp Filter" toProperty="tumor_snp_file" />
   <link fromOperation="input connector" fromProperty="sniper_snp_output_filter" toOperation="Snp Filter" toProperty="output_file" />
-  <link fromOperation="Somatic Sniper" fromProperty="snp_output" toOperation="Snp Filter" toProperty="sniper_snp_file" />
+  <link fromOperation="Somatic Sniper" fromProperty="snv_output" toOperation="Snp Filter" toProperty="sniper_snp_file" />
 
 <!-- FORMAT FILTERED SNIPER SNPS -->
 
