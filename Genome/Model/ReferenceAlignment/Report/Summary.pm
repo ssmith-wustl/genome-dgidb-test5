@@ -346,14 +346,17 @@ sub get_summary_information
     my $taxon_id;
     my $species = $na;
     my $species_latin_name = $na;
-    $taxon = $sample->taxon;
+    
+    if($sample) {
+        $taxon = $sample->taxon;
 
-    if ($taxon) {
-        $taxon_id = $taxon->taxon_id;
-        $species = $taxon->species_name;
-        $species_latin_name = $taxon->species_latin_name;
-    } else {
-        $self->warning_message("No taxon found for sample!");
+        if ($taxon) {
+            $taxon_id = $taxon->taxon_id;
+            $species = $taxon->species_name;
+            $species_latin_name = $taxon->species_latin_name;
+        } else {
+            $self->warning_message("No taxon found for sample!");
+        }
     }
 
     my $ref_seq_dir = $self->model->reference_build->data_directory;
