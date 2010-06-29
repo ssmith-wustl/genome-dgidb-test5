@@ -18,7 +18,6 @@ sub execute {
         return;
     }
 
-    #TODO - use G::util
     Genome::Utility::FileSystem->create_directory($self->build->edit_dir);
     chomp (my $time = `date "+%a %b %e %T %Y"`);
 
@@ -29,6 +28,7 @@ sub execute {
         afg_file => $self->build->assembly_afg_file,
         time => $time,
         out_acefile => $self->build->velvet_ace_file,
+	sqlite_yes => 1,  #<-----
     );
     unless ($to_ace->execute) {
         $self->error_message("Failed to run velvet-to-ace");
@@ -36,15 +36,76 @@ sub execute {
     }
 
     #create standard assembly output files
-    my $ec = Genome::Model::Tools::Velvet::CreateAsmStdoutFiles->execute(
-        input_fastq_file => $self->build->collated_fastq_file,
+    #my $ec = Genome::Model::Tools::Velvet::CreateAsmStdoutFiles->execute(
+    #    input_fastq_file => $self->build->collated_fastq_file,
+    #    directory => $self->build->data_directory,
+    #);
+    #unless ($ec) {
+    #    $self->error_message("Failed to run create asm stdout files");
+    #    return;
+    #}
+
+    #create gap.txt file
+    my $gap = Genome::Model::Tools::Assembly::CreateOutputFiles::Gap->create(
         directory => $self->build->data_directory,
-    );
-    unless ($ec) {
-        $self->error_message("Failed to run create asm stdout files");
+        );
+    unless ($gap->execute) {
+        $self->error_message("Execute failed to to create gap.txt file");
         return;
     }
 
+    #create input fasta and qual files #TODO - move this to tools/velvet
+    my $inputs = Genome::Model::Tools::Assembly::CreateOutputFiles::InputFromFastq->create(
+        fastq_file => $self->build->collated_fastq_file,
+        directory => $self->build->data_directory,
+        );
+    unless ($inputs->execute) {
+        $self->error_message("Execute failed to create input files");
+        return;
+    }
+
+    #create contigs.bases and contigs.quals files
+    my $contigs = Genome::Model::Tools::Velvet::CreateContigsFiles->create (
+	afg_file => $self->build->assembly_afg_file,
+	directory => $self->build->data_directory,
+	);
+    unless ($contigs->execute) {
+	$self->error_message("Failed to execute creating contigs.bases and quals files");
+	return;
+    }
+
+    #create reads.placed and readinfo.txt files
+    my $reads = Genome::Model::Tools::Velvet::CreateReadsFiles->create (
+	sequences_file => $self->build->sequences_file,
+	afg_file => $self->build->assembly_afg_file,
+	directory => $self->build->data_directory,
+	);
+    unless ($reads->execute) {
+	$self->error_message("Failed to execute creating reads files");
+	return;
+    }
+
+    #create supercontigs.fasta and supercontigs.agp file
+    my $supercontigs = Genome::Model::Tools::Velvet::CreateSupercontigsFiles->create (
+	contigs_fasta_file => $self->build->contigs_fasta_file,
+	directory => $self->build->data_directory,
+	);
+    unless ($supercontigs->execute) {
+	$self->error_message("Failed execute creating of supercontigs files");
+	return;
+    }
+
+    #create stats;
+    my $stats = Genome::Model::Tools::Assembly::Stats::Velvet->execute (
+        assembly_directory => $self->build->data_directory.'/edit_dir',
+        out_file => 'stats.txt',
+        no_print_to_screen => 1,
+        );
+    unless ($stats) {
+        $self->error_message("Failed to create stats");
+        return;
+    }
+    
     return 1;
 }
 

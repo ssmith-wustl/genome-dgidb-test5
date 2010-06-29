@@ -22,6 +22,7 @@ my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model)
 ok($build, 'Got mock de novo assembly build') or die;
 
 my $example_fastq = Genome::Model::DeNovoAssembly::Test->example_fastq_file_for_model($model);
+
 symlink($example_fastq, $build->collated_fastq_file);
 ok(-s $build->collated_fastq_file, 'Linked fastq file') or die;
 
@@ -33,7 +34,7 @@ my $example_sequences_file = Genome::Model::DeNovoAssembly::Test->example_sequen
 symlink($example_sequences_file, $build->sequences_file);
 ok(-s $build->sequences_file, 'Linked sequences file') or die;
 
-my $example_contigs_fasta_file = Genome::Model::DeNovoAssembly::Test->example_sequences_file_for_model($model);
+my $example_contigs_fasta_file = Genome::Model::DeNovoAssembly::Test->example_contigs_fasta_file_for_model($model);
 symlink($example_contigs_fasta_file, $build->contigs_fasta_file);
 ok(-s $build->contigs_fasta_file, 'Linked contigs.fa file') or die;
 
@@ -43,13 +44,14 @@ ok($velvet, 'Created post assemble velvet');
 #velvet_asm.afg file should not exist
 ok($velvet->execute, 'Execute post assemble velvet');
 
+#my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_tmp/edit_dir';
+
+#skipping input fasta.gz and qual.gz files for now
 my @file_names_to_test = qw/ reads.placed readinfo.txt
                         gap.txt contigs.quals contigs.bases
                         supercontigs.fasta supercontigs.agp stats.txt
                          /;
-#skipping input fasta.gz and qual.gz files for now
-
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
 
 foreach my $file (@file_names_to_test) {
     my $data_directory = $build->data_directory;
