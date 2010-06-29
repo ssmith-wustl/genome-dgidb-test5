@@ -24,7 +24,7 @@ sub results_class {
     my $model = $self->model;
     my $processing_profile = $model->processing_profile;
     my $read_aligner_name = $processing_profile->read_aligner_name;
-    return 'Genome::InstrumentData::AlignmentResult::' . ucfirst(lc($read_aligner_name));
+    return 'Genome::InstrumentData::AlignmentResult::' . Genome::InstrumentData::AlignmentResult->resolve_subclass_name_for_aligner_name($read_aligner_name);
 }
 
 sub bsub_rusage {
