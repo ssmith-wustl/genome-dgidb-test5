@@ -138,7 +138,12 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is_input => 1,
             doc => 'If set, the annotator will check all variant reference sequences against the respective species reference before annotating. Annotation is skipped for those variants with mismatches.',
         },
-        
+        get_frame_shift_sequence => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'If set, the annotator will get all coding region sequence after a frame shift',
+        },
     ], 
 };
 
@@ -366,6 +371,7 @@ sub execute {
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
                 check_variants => $self->check_variants,
+                get_frame_shift_sequence => $self->get_frame_shift_sequence,
             );
             unless ($annotator){
                 $self->error_message("Couldn't create iterator for chromosome $chromosome_name!");
@@ -412,6 +418,7 @@ sub execute {
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
                 check_variants => $self->check_variants,
+                get_frame_shift_sequence => $self->get_frame_shift_sequence,
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
 

@@ -39,6 +39,12 @@ class Genome::Transcript::VariantAnnotator{
             default => 0,
             doc => 'If set, the reference sequence on variants is checked against our reference',
         },
+        get_frame_shift_sequence => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'If set, the entire original sequence of a transcript is placed in the output file for frameshift mutations',
+        },
     ]
 };
 
@@ -476,23 +482,32 @@ sub _transcript_annotation_for_cds_exon {
             # MT and mutated is MRPT, then original sequence is reduced to nothing). The first changed amino acid should
             # be set to the first original amino acid that does not occur in the mutated sequence moving 5' to 3'. 
             # In the above example, first changed amino acid would be T.
-            if ($reduced_original_aa eq "") {
-                $protein_position -= $offset;
-                for (my $i = 0; $i < (length $original_aa); $i++) {
-                    my $original = substr($original_aa, $i, 1);
-                    my $mutated = substr($mutated_aa, $i, 1);
-                    $protein_position++ and next if $original eq $mutated;
-                    $reduced_original_aa = $original;
-                    last;
-                }
-                # If the original sequence is STILL reduced to nothing (insertion could occur after original amino acids),
-                # then just use the last amino acid in the unreduced original sequence
-                $reduced_original_aa = substr($original_aa, -1) if $reduced_original_aa eq "";
-            }
-
             $trv_type = "frame_shift_" . lc $variant->{type};
-            $reduced_original_aa = substr($reduced_original_aa, 0, 1);
-            $protein_string = "p." . $reduced_original_aa . $protein_position . "fs";
+            if ($self->{get_frame_shift_sequence}) {
+                $DB::single = 1;
+                my $original_bases_after_indel = $self->_coding_bases_after_position($transcript, $structure, $variant->{start});
+                my $original_aa_after_indel = $self->translate($original_bases_after_indel, $transcript->{chrom_name});
+                $protein_string = "p." . $original_aa_after_indel . $protein_position . "fs";
+            }
+            else {
+                if ($reduced_original_aa eq "") {
+                    $protein_position -= $offset;
+                    for (my $i = 0; $i < (length $original_aa); $i++) {
+                        my $original = substr($original_aa, $i, 1);
+                        my $mutated = substr($mutated_aa, $i, 1);
+                        $protein_position++ and next if $original eq $mutated;
+                        $reduced_original_aa = $original;
+                        last;
+                    }
+                    
+                    # If the original sequence is STILL reduced to nothing (insertion could occur after original amino acids),
+                    # then just use the last amino acid in the unreduced original sequence
+                    $reduced_original_aa = substr($original_aa, -1) if $reduced_original_aa eq "";
+                }
+
+                $reduced_original_aa = substr($reduced_original_aa, 0, 1);
+                $protein_string = "p." . $reduced_original_aa . $protein_position . "fs";
+            }
         }
     }
     elsif ($variant->{type} =~ /del/i) {
@@ -507,8 +522,15 @@ sub _transcript_annotation_for_cds_exon {
         }
         else {
             $trv_type = "frame_shift_" . lc $variant->{type};
-            $reduced_original_aa = substr($reduced_original_aa, 0, 1); 
-            $protein_string = "p." . $reduced_original_aa . $protein_position . "fs";
+            if ($self->{get_frame_shift_sequence}) {
+                my $original_bases_after_indel = $self->_coding_bases_after_position($transcript, $structure, $variant->{start});
+                my $original_aa_after_indel = $self->translate($original_bases_after_indel, $transcript->{chrom_name});
+                $protein_string = "p." . $original_aa_after_indel . $protein_position . "fs";
+            }
+            else {
+                $reduced_original_aa = substr($reduced_original_aa, 0, 1); 
+                $protein_string = "p." . $reduced_original_aa . $protein_position . "fs";
+            }
         }
     }
     elsif ($variant->{type} =~ /dnp/i or $variant->{type} =~ /snp/i) {
@@ -534,27 +556,43 @@ sub _transcript_annotation_for_cds_exon {
     }
     else {
         $self->warning_message("Unknown variant type " . $variant->{type} .
-            " for variant between " . $variant->{start} . " and " . $variant->{stop} . 
-            " on transcript " . $transcript->{transcript_name} . 
-            ", cannot continue annotation of coding exon");
+                " for variant between " . $variant->{start} . " and " . $variant->{stop} . 
+                " on transcript " . $transcript->{transcript_name} . 
+                ", cannot continue annotation of coding exon");
         return;
     }
 
-    # Need to create an amino acid change string for the protein domain method
+# Need to create an amino acid change string for the protein domain method
     my $amino_acid_change = "p." . substr($original_aa, 0, 1) . $protein_position;
     my ($protein_domain, $all_protein_domains) = $self->_protein_domain(
-        $variant, $transcript->gene_name, $transcript->transcript_name, $amino_acid_change
-    );
-    
+            $variant, $transcript->gene_name, $transcript->transcript_name, $amino_acid_change
+            );
+
     return (
-        c_position => "c." . $coding_position,
-        trv_type => $trv_type,
-        amino_acid_change => $protein_string,
-        domain => $protein_domain,
-        all_domains => $all_protein_domains,
-    );
+            c_position => "c." . $coding_position,
+            trv_type => $trv_type,
+            amino_acid_change => $protein_string,
+            domain => $protein_domain,
+            all_domains => $all_protein_domains,
+           );
 }
 
+# Given a transcript, structure, and position, returns all of the bases in the
+# coding region of the transcript 3' of the position
+sub _coding_bases_after_position {
+    my ($self, $transcript, $structure, $position) = @_;
+    my ($sequence_position, $codon_position) = $structure->sequence_position($position);
+    my $coding_bases_before = $structure->coding_bases_before;
+    
+    my $coding_sequence = Genome::TranscriptCodingSequence->get(
+        transcript_id => $transcript->id,
+        data_directory => $transcript->data_directory,
+    );
+
+    my $sequence = substr($coding_sequence->sequence, $coding_bases_before + $sequence_position - $codon_position - 1);
+    return $sequence;
+}       
+    
 # Find the UCSC conservation score for a piece of chromosome
 sub _ucsc_conservation_score {
     my ($self, $variant) = @_;
@@ -585,7 +623,7 @@ sub _protein_domain {
     $s->add_mutation($gene_name ,$transcript_name ,$amino_acid_change);
     my %domlen;
     $s->mutation_in_dom(\%domlen,"HMMPfam");
-    # by request.... add in all domains on this transcript/protein
+# by request.... add in all domains on this transcript/protein
     my @all_domains = $s->get_all_domains($gene_name,$transcript_name);
     my $alldoms = join(',', @all_domains);
     my $mutation_domains = 'NULL';
@@ -629,7 +667,7 @@ sub _determine_coding_position {
     my $c_position = 'NULL';
     my $coding_bases_before = $structure->coding_bases_before;
     my $strand = $transcript->strand;
-    
+
     if ($structure_type eq 'rna') {
         $c_position = 'NULL';
     }
@@ -664,10 +702,10 @@ sub _determine_coding_position {
             }
         }
         else {
-            # I have found no documentation for this particular case and am coding this to match the old output.
-            # If transcript strand is +1, then utr exon is always 3' and prefixed with a '*'. Otherwise, the
-            # utr exon is considered 5' and prefixed with a '-'. The position is simply the variant start position
-            # TODO ... why is the logic like this? Is this what we want?
+# I have found no documentation for this particular case and am coding this to match the old output.
+# If transcript strand is +1, then utr exon is always 3' and prefixed with a '*'. Otherwise, the
+# utr exon is considered 5' and prefixed with a '-'. The position is simply the variant start position
+# TODO ... why is the logic like this? Is this what we want?
             if ($transcript->strand eq '+1') {
                 $c_position = "*" . $start;
             }
@@ -722,7 +760,7 @@ sub _determine_coding_position {
     }
     else {
         $self->error_message("Unexpected substructure type $structure_type, " .
-            "cannot calculate coding sequence position. Returning NULL!");
+                "cannot calculate coding sequence position. Returning NULL!");
         $c_position = 'NULL';
     }
 
@@ -734,17 +772,17 @@ sub _determine_coding_position {
 sub _get_affected_sequence {
     my ($self, $transcript, $structure, $variant) = @_;
 
-    # Occasionally, the first amino acid changed by a variation occurs beyond the codons actually changed. For example,
-    # CCC CTG CTG codes for PLL. If the last base of the first codon to the last base of the middle codon are deleted 
-    # (CCTG removed, leaving CC CTG), then the first amino acid expressed is still P. The remaining bases TG aren't 
-    # enough to see what the next amino acid would be so we still don't know what the first changed amino acid is! 
-    # Looking a little further helps prevent this, but the below number is arbitrary. Extra codons are placed before
-    # and after the variant so the extra sequence is available for both forward and reverse stranded transcript
+# Occasionally, the first amino acid changed by a variation occurs beyond the codons actually changed. For example,
+# CCC CTG CTG codes for PLL. If the last base of the first codon to the last base of the middle codon are deleted 
+# (CCTG removed, leaving CC CTG), then the first amino acid expressed is still P. The remaining bases TG aren't 
+# enough to see what the next amino acid would be so we still don't know what the first changed amino acid is! 
+# Looking a little further helps prevent this, but the below number is arbitrary. Extra codons are placed before
+# and after the variant so the extra sequence is available for both forward and reverse stranded transcript
     my $indel_extra_codons = 3;
     my $dnp_extra_codons = 1;
 
-    # Determine protein position of amino acid at variant start. This will be modified below for indels to account
-    # for extra codons placed at the beginning of the original sequence and further modified during reduction
+# Determine protein position of amino acid at variant start. This will be modified below for indels to account
+# for extra codons placed at the beginning of the original sequence and further modified during reduction
     my ($variant_position, $phase_bases);
     if ($transcript->strand eq '-1') {
         ($variant_position, $phase_bases) = $structure->sequence_position($variant->{stop});
@@ -759,30 +797,30 @@ sub _get_affected_sequence {
     if ($variant->{type} =~ /snp/i) {
         ($orig_seq, $orig_codon_pos) = $structure->codon_at_position($variant->{start});
         $mutated_seq = substr($orig_seq, 0, $orig_codon_pos) .
-                       $variant->{variant} . 
-                       substr($orig_seq, $orig_codon_pos + 1);
+            $variant->{variant} . 
+            substr($orig_seq, $orig_codon_pos + 1);
     }
     elsif ($variant->{type} =~ /dnp/i) {
         ($orig_seq, $relative_start, $relative_stop) = $structure->codons_in_range($variant->{start}, $variant->{stop}, $dnp_extra_codons);
-        
+
         my $codon_position = ($relative_start - 1) % 3;
         my $bases_before = $relative_start - $codon_position;
         my $codons_before = int($bases_before / 3);
         $protein_position -= $codons_before;
 
         $mutated_seq = substr($orig_seq, 0, $relative_start - 1) .
-                       $variant->{variant} .
-                       substr($orig_seq, $relative_stop);
+            $variant->{variant} .
+            substr($orig_seq, $relative_stop);
     }
     else {
-        # Get codons between variant start and stop as well as extra codons to either side.
+# Get codons between variant start and stop as well as extra codons to either side.
         ($orig_seq, $relative_start, $relative_stop) = $structure->codons_in_range($variant->{start}, $variant->{stop}, $indel_extra_codons);
 
-        # Adjusting the protein position to point at the first amino acid in the original sequence requires more than just
-        # using the extra_codons value. The biggest example of this is when the variation occurs at the beginning of the
-        # exon. If there are fewer than 3 codons before the variation, then only what's available is concatenated. 
-        # In addition, sequence from the end of the previous exon is also added (unless there are no previous exons!). 
-        # So, the best way to determine what's been added is to see how much sequence exists before the variation.
+# Adjusting the protein position to point at the first amino acid in the original sequence requires more than just
+# using the extra_codons value. The biggest example of this is when the variation occurs at the beginning of the
+# exon. If there are fewer than 3 codons before the variation, then only what's available is concatenated. 
+# In addition, sequence from the end of the previous exon is also added (unless there are no previous exons!). 
+# So, the best way to determine what's been added is to see how much sequence exists before the variation.
         my $codon_position = ($relative_start - 1) % 3;
         my $bases_before = $relative_start - $codon_position;
         my $codons_before = int($bases_before / 3);
@@ -790,23 +828,23 @@ sub _get_affected_sequence {
 
         if ($variant->{type} =~ /del/i) {
             $mutated_seq = substr($orig_seq, 0, $relative_start - 1) .
-                           substr($orig_seq, $relative_stop);
+                substr($orig_seq, $relative_stop);
         }
         elsif ($variant->{type} =~ /ins/i) {
             $protein_position-- if $codon_position == 2;  # This little fix is due to the variant start of insertions being
-                                                          # the base before the insertion instead of the first base of variation
-                                                          # as is the case with deletions. 
-            $mutated_seq = substr($orig_seq, 0, $relative_start) .
-                           $variant->{variant} .
-                           substr($orig_seq, $relative_start);
+# the base before the insertion instead of the first base of variation
+# as is the case with deletions. 
+                $mutated_seq = substr($orig_seq, 0, $relative_start) .
+                $variant->{variant} .
+                substr($orig_seq, $relative_start);
         }
     }
 
     return (
-        $orig_seq,
-        $mutated_seq,
-        $protein_position
-    );
+            $orig_seq,
+            $mutated_seq,
+            $protein_position
+           );
 }
 
 # Takes two amino acid sequences, one an original and the other mutated, and removes
@@ -823,17 +861,17 @@ sub _reduce {
     return ($orig, $mutated, 0) unless defined $orig and defined $mutated;
 
     my ($front_orig, $front_mutated) = ("", ""); # Holds aa sequence after screening forward
-    my $offset = 0;
+        my $offset = 0;
     my $differ = 0;
 
-    # Compare sequences forward to back, updating protein position until first difference is found
-    # Since protein position should point to first changed amino acid, it shouldn't be updated
-    # after a difference is found. 
-    # The tricky bit is stop codons. If a stop codon is found in the mutated sequence, the loop 
-    # stops because all sequence after that point wouldn't be translated. However, original sequence
-    # from that point forward still needs to be kept.
-    # Also, if the lengths of mutated sequence and original sequence differ, the extra will need
-    # to be kept as well.
+# Compare sequences forward to back, updating protein position until first difference is found
+# Since protein position should point to first changed amino acid, it shouldn't be updated
+# after a difference is found. 
+# The tricky bit is stop codons. If a stop codon is found in the mutated sequence, the loop 
+# stops because all sequence after that point wouldn't be translated. However, original sequence
+# from that point forward still needs to be kept.
+# Also, if the lengths of mutated sequence and original sequence differ, the extra will need
+# to be kept as well.
     my $i;
     my $last_mutated_aa = "";
     for ($i = 0; $i < length $orig and $i < length $mutated; $i++) {
@@ -857,8 +895,8 @@ sub _reduce {
         $front_mutated .= substr($mutated, $i);
     }
 
-    # Now need to compare sequences starting from the end, removing amino acids that are the same until
-    # a difference is found. In this case, no updating of the protein position is required.
+# Now need to compare sequences starting from the end, removing amino acids that are the same until
+# a difference is found. In this case, no updating of the protein position is required.
     $differ = 0;
     my @orig_backward = ();
     my @mutated_backward= ();
@@ -873,7 +911,7 @@ sub _reduce {
     }
 
     $front_orig = "" unless $front_orig;       # Prevents warnings about undefined strings
-    $front_mutated = "" unless $front_mutated;
+        $front_mutated = "" unless $front_mutated;
     my $new_orig = $front_orig . join("", reverse @orig_backward);
     my $new_mutated = $front_mutated . join("", reverse @mutated_backward);
 
@@ -898,22 +936,22 @@ Given a variant, all transcripts affected by that variant are annotated and retu
 my $variant_file = variants.tsv;
 my @headers = qw/ chromosome_name start stop reference variant /;
 my $reader = Genome::Utility::IO::SeparatedValueReader->create(
-    input => $variant_file,
-    headers => \@headers,
-    separator => "\t",
-    is_regex => 1,
-);
+        input => $variant_file,
+        headers => \@headers,
+        separator => "\t",
+        is_regex => 1,
+        );
 
 my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
 my $build = $model->build_by_version('54_36p');
 my $iterator = $build->transcript_iterator;
 my $window = Genome::Utility::Window::Transcript->create(
-    iterator => $iterator,
-    range => 50000,
-);
+        iterator => $iterator,
+        range => 50000,
+        );
 my $annotator = Genome::Transcript::VariantAnnotator->create(
-   transcript_window => $window
-);
+        transcript_window => $window
+        );
 
 while (my $variant = $reader->next) {
     my @annotations = annotator->transcripts($variant);
@@ -939,101 +977,101 @@ while (my $variant = $reader->next) {
 
 =item I<Synopsis>   Gets one prioritized annotation per gene for a variant(snp or indel)
 
-=item I<Arguments>  variant (hash; see 'Variant properties' below)
+    =item I<Arguments>  variant (hash; see 'Variant properties' below)
 
-=item I<Returns>    annotations (array of hash refs; see 'Annotation' below)
+    =item I<Returns>    annotations (array of hash refs; see 'Annotation' below)
 
-=back
+    =back
 
-=head2 prioritized_transcript
+    =head2 prioritized_transcript
 
-=over
+    =over
 
-=item I<Snynopsis>  Gets the highest priority transcript affected by variant
+    =item I<Snynopsis>  Gets the highest priority transcript affected by variant
 
-=item I<Arguments>  variant (hash, see 'Variant properties' below)
+    =item I<Arguments>  variant (hash, see 'Variant properties' below)
 
-=item I<Returns>    annotations (array of hash refs; see 'Annotation' below)
+    =item I<Returns>    annotations (array of hash refs; see 'Annotation' below)
 
-=back
+    =back
 
-=head1 Variant Properties
+    =head1 Variant Properties
 
-=over
+    =over
 
-=item I<chromosome_name>  The chromosome of the variant
+    =item I<chromosome_name>  The chromosome of the variant
 
-=item I<start>            The start position of the variant
+    =item I<start>            The start position of the variant
 
-=item I<stop>             The stop position of the variant
+    =item I<stop>             The stop position of the variant
 
-=item I<variant>          The snp base
+    =item I<variant>          The snp base
 
-=item I<reference>        The reference base at the position
+    =item I<reference>        The reference base at the position
 
-=item I<type>             snp, dnp, ins, or del
+    =item I<type>             snp, dnp, ins, or del
 
-=back
+    =back
 
-=head1 Annotation Properties
+    =head1 Annotation Properties
 
-=over
+    =over
 
-=item I<transcript_name>    Name of the transcript
+    =item I<transcript_name>    Name of the transcript
 
-=item I<transcript_source>  Source of the transcript
+    =item I<transcript_source>  Source of the transcript
 
-=item I<strand>             Strand of the transcript
+    =item I<strand>             Strand of the transcript
 
-=item I<c_position>         Relative position of the variant
+    =item I<c_position>         Relative position of the variant
 
-=item I<trv_type>           Called Classification of variant
+    =item I<trv_type>           Called Classification of variant
 
 =item I<priority>           Priority of the trv_type (only from get_prioritized_annotations)
 
-=item I<gene_name>          Gene name of the transcript
+    =item I<gene_name>          Gene name of the transcript
 
-=item I<intensity>          Gene intenstiy
+    =item I<intensity>          Gene intenstiy
 
-=item I<detection>          Gene detection
+    =item I<detection>          Gene detection
 
-=item I<amino_acid_length>  Amino acid length of the protein
+    =item I<amino_acid_length>  Amino acid length of the protein
 
-=item I<amino_acid_change>  Resultant change in amino acid in snp is in cds_exon
+    =item I<amino_acid_change>  Resultant change in amino acid in snp is in cds_exon
 
-=item I<variations>         Hashref w/ keys of known variations at the variant position
+    =item I<variations>         Hashref w/ keys of known variations at the variant position
 
-=item I<type>               snp, ins, or del
+    =item I<type>               snp, ins, or del
 
-=back
+    =back
 
-=head1 See Also
+    =head1 See Also
 
-B<Genome::Model::Command::Report>
+    B<Genome::Model::Command::Report>
 
-=head1 Disclaimer
+    =head1 Disclaimer
 
-Copyright (C) 2008 Washington University Genome Sequencing Center
+    Copyright (C) 2008 Washington University Genome Sequencing Center
 
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+    This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 =head1 Author(s)
 
-Core Logic:
+    Core Logic:
 
-B<Xiaoqi Shi> I<xshi@genome.wustl.edu>
+    B<Xiaoqi Shi> I<xshi@genome.wustl.edu>
 
-Optimization:
+    Optimization:
 
-B<Eddie Belter> I<ebelter@watson.wustl.edu>
+    B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
-B<Gabe Sanderson> l<gsanders@genome.wustl.edu>
+    B<Gabe Sanderson> l<gsanders@genome.wustl.edu>
 
-B<Adam Dukes l<adukes@genome.wustl.edu>
+    B<Adam Dukes l<adukes@genome.wustl.edu>
 
-B<Brian Derickson l<bdericks@genome.wustl.edu>
+    B<Brian Derickson l<bdericks@genome.wustl.edu>
 
-=cut
+    =cut
 
 #$HeadURL$
 #$Id$
