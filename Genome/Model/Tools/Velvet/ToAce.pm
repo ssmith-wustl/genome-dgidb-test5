@@ -370,13 +370,15 @@ sub execute {
 sub get_sqlite_dbh {
     my $self = shift;
     
-    my (undef, $db_file) = File::Temp::tempfile(
-        'velvet_reads_XXXXXX', 
-        UNLINK => 1,
-        SUFFIX => '.sqlite',
-        DIR    => dirname $self->afg_file,
-    );
-    
+#    my (undef, $db_file) = File::Temp::tempfile(
+#        'velvet_reads_XXXXXX', 
+#        UNLINK => 1,
+#        SUFFIX => '.sqlite',
+#        DIR    => dirname $self->afg_file,
+#    );
+ 
+    my $db_file = (dirname $self->afg_file) .'/velvet_reads.sqlite';
+    unlink $db_file;
     my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file", '', '', { AutoCommit => 0, RaiseError => 1 })
         or return $self->error_handle("Failed to connect to db ($db_file): " . $DBI::errstr);
 
