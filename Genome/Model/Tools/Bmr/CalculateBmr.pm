@@ -36,6 +36,11 @@ class Genome::Model::Tools::Bmr::CalculateBmr {
         is_optional => 0,
         doc => 'File to contain results table.',
     },
+    rejected_mutations => {
+        type => 'String',
+        is_optional => 1,
+        doc => 'File to catch mutations that fall in the ROI list location-wise, but have a gene name which does not match any of the genes in the ROI list. Default operation is to print to STDOUT.',
+    },
     ]
 };
 
@@ -63,7 +68,7 @@ sub execute {
     while (my $line = $bed_fh->getline) {
         chomp $line;
         my ($chr,$start,$stop,$exon_id) = split /\t/,$line;
-        (my $gene = $exon_id) =~ s/^(\w+)\..+$/$1/;
+        (my $gene = $exon_id) =~ s/^([^\.]+)\..+$/$1/;
         if ($chr eq "M") { $chr = "MT"; } #for broad roi lists
         if (exists $ROIs{$chr}{$gene}{$start}) {
             next if $stop < $ROIs{$chr}{$gene}{$start};
@@ -199,6 +204,17 @@ sub execute {
     #Loop through mutations, assign them to a gene and class in %BMR
     my $mutation_file = $self->mutation_maf_file;
     my $mut_fh = new IO::File $mutation_file,"r";
+    
+    #print rejected mutations to a file or to STDOUT
+    my $rejects_file = $self->rejected_mutations;
+    my $rejects_fh;
+    if ($rejects_file) {
+        $rejects_fh = new IO::File $rejects_file,"w";
+    }
+    else {
+        open $rejects_fh, ">&STDOUT";
+    }
+
     while (my $line = $mut_fh->getline) {
         chomp $line;
         my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
@@ -310,8 +326,8 @@ sub execute {
 
                 #if the ROI list and MAF file do not match, quit.
                 else {
-                    $self->error_message("Seems to be a mismatch between ROI list genes and MAF file genes. Died on mutation $line");
-                    return;
+                    print $rejects_fh "Cannot find this mutation's gene in the ROI hash:\n$line\n";
+                    next;
                 }
             }#end, if mutation is non-synonymous
         }#end, if mutation is a SNV
@@ -323,8 +339,8 @@ sub execute {
                 $BMR{$gene}{'Indels'}{'mutations'}++;
             }
             else {
-                $self->error_message("Seems to be a mismatch between ROI list genes and MAF file genes. Died on mutation $line");
-                return;
+                print $rejects_fh "Cannot find this mutation's gene in the ROI hash:\n$line\n";
+                next;
             }
         }#end, if mutation is an indel
     }#end, loop through MAF
