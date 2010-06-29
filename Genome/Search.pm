@@ -47,18 +47,6 @@ class Genome::Search {
                 return $self->_solr_server;
             ]
         },
-        memcached_server_location => {
-            is => 'Text',
-            default_value => 'imp:11211',
-        },
-        _memcached_server => {
-            is => 'Cache::Memcached',
-            is_transient => 1,
-        },
-        memcached_server => {
-            calculate_from => ['_memcached_server', 'memcached_server_location',],
-            calculate => q{ return $_memcached_server || new Cache::Memcached {'servers' => [$memcached_server_location], 'debug' => 0, 'compress_threshold' => 10_000,} }
-        },
         cache_timeout => {
             is => 'Integer',
             default_value => 0,
@@ -72,6 +60,8 @@ class Genome::Search {
     ],
 };
 
+#What classes are searchable is actually determined automatically by the existence of the relevant views.
+#This just lists the order by which the results are typically sorted.
 sub searchable_classes {
 
     my ($class) = @_;
@@ -87,13 +77,13 @@ sub searchable_classes {
          Genome::ModelGroup 
          Genome::Model 
          Genome::ProcessingProfile 
-         GSC::Equipment::Solexa::Run 
+         Genome::InstrumentData::FlowCell
          Genome::Capture::Set 
          Genome::WorkOrder
          Genome::Project
          Genome::Disk::Group 
          Genome::Disk::Volume 
-         Email::Simple );
+         Genome::Sys::Email );
 
     return @ordered_searchable_classes;
 }
@@ -221,7 +211,7 @@ sub _delete_by_doc {
     
     my $self = $class->_singleton_object;
     my $solr = $self->solr_server;
-    my $memcached = $self->_memcached_server;
+    my $memcached = Genome::Memcache->server;
     
     my $error_count = 0;
     for my $doc (@docs) {
@@ -394,9 +384,7 @@ sub _cache_result {
     
     my $html_to_cache = $result_node->childNodes->string_value;
     
-    my $memcached = $self->_singleton_object->memcached_server;
-
-    return 1 if $class->environment ne 'prod'; #Don't try to manipulate the cache with test code
+    my $memcached = Genome::Memcache->server;
     
     return $memcached->set($self->cache_key_for_doc($doc), $html_to_cache, $self->cache_timeout);
 }
@@ -405,12 +393,9 @@ sub _delete_cached_result {
     my $class = shift;
     my $doc = shift;
     
-    my $self = $class->_singleton_object;
-    my $memcached = $self->memcached_server;
+    my $memcached = Genome::Memcache->server;
     
-    return 1 if $class->environment ne 'prod'; #Don't try to manipulate the cache with test code
-    
-    $memcached->delete($self->cache_key_for_doc($doc));
+    $memcached->delete($class->cache_key_for_doc($doc));
 }
 
 sub _get_cached_result {
@@ -418,7 +403,7 @@ sub _get_cached_result {
     my $doc = shift;
     my $xml_doc = shift;
     
-    my $memcached = $class->_singleton_object->memcached_server;
+    my $memcached = Genome::Memcache->server;
     
     my $cache_key = $class->cache_key_for_doc($doc);
     my $html_snippet = $memcached->get($cache_key);
