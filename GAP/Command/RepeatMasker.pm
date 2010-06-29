@@ -69,8 +69,7 @@ sub execute {
   
     ##FIXME: The temp dir location should not be hardcoded.  At least not here.
     my $output_fh = File::Temp->new(
-                                    #'DIR'      => '/gscmnt/temp212/info/annotation/GAP_tmp',
-                                    'DIR'      => '/gscmnt/temp110/info/annotation/personal_dirs/ssurulir/GAP_tmp',
+                                    'DIR'      => '/gscmnt/temp212/info/annotation/GAP_tmp',
                                     'SUFFIX'   => '.tmp',
                                     'TEMPLATE' => 'GAP_XXXXXXXX',
                                     'UNLINK'   => 0,
