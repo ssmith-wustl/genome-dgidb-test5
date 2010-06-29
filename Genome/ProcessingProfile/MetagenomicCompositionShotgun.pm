@@ -90,12 +90,6 @@ sub Xlog_message{
     print STDERR $message,"\n";
 }
 
-#sub _execute_build {
-#    my ($self, $build) = @_;
-#print 'Run this: perl -I ~ssmith/git/ur/lib -I ~adukes/svn/perl_modules -d:ptkdb ~adukes/svn/perl_modules/run-mgc-build.pl ' . $build->id . "\n";
-#return 1;
-#}
-
 sub _execute_build {
     my ($self, $build) = @_;
 
@@ -212,7 +206,7 @@ sub _execute_build {
                 if ($instrument_data) {
                     $self->error_message(
                         "Odd assignment found on model " 
-                        . $model->__display_name__ 
+                        . $metagenomic_model->__display_name__ 
                         . " for instrument data " 
                         . $instrument_data->__display_name__
                     );
