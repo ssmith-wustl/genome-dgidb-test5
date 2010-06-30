@@ -67,7 +67,7 @@ sub execute {
 	    afg_file => $self->directory.'/velvet_asm.afg',
 	    time => $time,
 	    out_acefile => $self->directory.'/edit_dir/velvet_asm.ace',
-	    sqlite_yes => 1,  #<-----
+	    # sqlite_yes => 1,  #<-----
 	    );
 	unless ($to_ace->execute) {
 	    $self->error_message("Failed to run velvet-to-ace");
@@ -128,12 +128,12 @@ sub execute {
     }
 
     #create stats;
-    my $stats = Genome::Model::Tools::Assembly::Stats::Velvet->execute (
+    my $stats = Genome::Model::Tools::Assembly::Stats::Velvet->create (
         assembly_directory => $self->directory.'/edit_dir',
         out_file => 'stats.txt',
         no_print_to_screen => 1,
         );
-    unless ($stats) {
+    unless ($stats->execute) {
         $self->error_message("Failed to create stats");
         return;
     }
@@ -152,6 +152,7 @@ sub _submit_to_lsf {
         command => "gmt velvet create-stdout-files --input-fastq-file $input_fastq --directory $directory",
         J => 'Velvet_std_out',
 	R => "'select[type==LINUX64] span[hosts=1]'",
+	u => $ENV{USER}.'@watson.wustl.edu',
 	);
     unless ($job) {
 	return;
