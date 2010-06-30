@@ -59,7 +59,7 @@ for my $target ( glob("$pp_path/*pm") ) {
         die "$@\n" if $@;
         $target_meta = $target_class->get_class_object;
     }
-    next if $target_class->get_class_object->is_abstract;
+    #next if $target_class->get_class_object->is_abstract;
     my $subclass = 'Genome::ProcessingProfile::Command::Create::' . $target;
     #print Dumper({mod=>$module, path=>$pp_path, target=>$target, target_class=>$target_class,subclass=>$subclass});
 
