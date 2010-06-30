@@ -26,18 +26,17 @@ class Genome::Model::Tools::Fastq::TrimBwaStyle {
             default => 10,
             is_optional => 1,
         },
-        trim_report => {
-            is  => 'Boolean',
-            doc => 'Output trim.reprot in the same dir as out_file',
-            default => 0,
-            is_optional => 1,
-        },
         qual_type   => {
             is  => 'Text',
             doc => 'The fastq quality type, must be either sanger(Qphred+33) or illumina(Qphred+64)',
             valid_values  => ['sanger', 'illumina'],
             default_value => 'sanger',
             is_optional   => 1,
+        },
+        report_file => {
+            is  => 'Text',
+            doc => 'the file path of the trim report file, default is trim.report in the same dir as out_file',
+            is_optional => 1,
         },
     ],
 };
@@ -76,13 +75,10 @@ sub execute {
         unlink $out_file;
     }
     
-    my $report;
-    if ($self->trim_report) {
-        $report = $out_dir . '/trim.report';
-        if (-e $report) {
-            $self->warning_message("Reprot file: $report existing. Overwrite it");
-            unlink $report;
-        }
+    my $report = $self->report_file || $out_dir . '/trim.report';
+    if (-e $report) {
+        $self->warning_message("Reprot file: $report existing. Overwrite it");
+        unlink $report;
     }
 
     my $input_fh  = Genome::Utility::FileSystem->open_file_for_reading($fastq_file);
@@ -99,16 +95,13 @@ sub execute {
     }
     binmode $output_fh, ":utf8";
 
-    my $report_fh;
-    if ($report) {
-        $report_fh = Genome::Utility::FileSystem->open_file_for_writing($report);
-        unless ($report_fh) {
-            $self->error_message("Failed to open report file " . $report . ": $!");
-            return;
-        }
-        binmode $report_fh, ":utf8";
+    my $report_fh = Genome::Utility::FileSystem->open_file_for_writing($report);
+    unless ($report_fh) {
+        $self->error_message("Failed to open report file " . $report . ": $!");
+        return;
     }
-
+    binmode $report_fh, ":utf8";
+    
     my ($qual_str, $qual_thresh) = $self->qual_type eq 'sanger' ? ('#', 33) : ('B', 64);
     
     my $ori_ct     = 0;
@@ -153,7 +146,7 @@ sub execute {
         if ($trimmed_length) {
             $trim_ct += $trimmed_length;
             $rd_trim_ct++;
-            $report_fh->print($clean_header."\tT\t".$trimmed_length."\n") if $report; #In report T for trimmed
+            $report_fh->print($clean_header."\tT\t".$trimmed_length."\n"); #In report T for trimmed
         }
     }
     
@@ -163,11 +156,9 @@ sub execute {
     my $new_ct  = $ori_ct - $trim_ct;
     my $percent = 100*$new_ct/$ori_ct;
         
-    if ($report) {
-        $report_fh->print("\nNumberOfOriginalBases  NumberOfTrimmedBases   NumberOfResultingBases  Percentage  NumberOfTrimmedReads\n");
-        $report_fh->printf("%21s%22s%24s%11.1f%%%21s\n", $ori_ct, $trim_ct, $new_ct, $percent, $rd_trim_ct);
-        $report_fh->close;
-    }
+    $report_fh->print("\nNumberOfOriginalBases  NumberOfTrimmedBases   NumberOfResultingBases  Percentage  NumberOfTrimmedReads\n");
+    $report_fh->printf("%21s%22s%24s%11.1f%%%21s\n", $ori_ct, $trim_ct, $new_ct, $percent, $rd_trim_ct);
+    $report_fh->close;
     
     return 1;
 }
