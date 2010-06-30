@@ -22,7 +22,7 @@ class Genome::Model::Tools::Fastq::TrimBwaStyle {
         },
         trim_qual_level => {
             is  => 'Integer',
-            doc => 'trim quality level, default is 10',
+            doc => 'trim quality level',
             default => 10,
             is_optional => 1,
         },
@@ -31,7 +31,14 @@ class Genome::Model::Tools::Fastq::TrimBwaStyle {
             doc => 'Output trim.reprot in the same dir as out_file',
             default => 0,
             is_optional => 1,
-        }
+        },
+        qual_type   => {
+            is  => 'Text',
+            doc => 'The fastq quality type, must be either sanger(Qphred+33) or illumina(Qphred+64)',
+            valid_values  => ['sanger', 'illumina'],
+            default_value => 'sanger',
+            is_optional   => 1,
+        },
     ],
 };
 
@@ -102,6 +109,8 @@ sub execute {
         binmode $report_fh, ":utf8";
     }
 
+    my ($qual_str, $qual_thresh) = $self->qual_type eq 'sanger' ? ('#', 33) : ('B', 64);
+    
     my $ori_ct     = 0;
     my $trim_ct    = 0;
     my $rd_ori_ct  = 0;
@@ -122,7 +131,7 @@ sub execute {
         my ($pos, $maxPos, $area, $maxArea) = ($seq_length, $seq_length, 0, 0);
 
         while ($pos > 0 and $area >= 0) {
-		    $area += $self->trim_qual_level - (ord(substr($qual, $pos-1, 1)) - 33);
+		    $area += $self->trim_qual_level - (ord(substr($qual, $pos-1, 1)) - $qual_thresh);
 		    if ($area > $maxArea) {
 			    $maxArea = $area;
 			    $maxPos = $pos;
@@ -131,7 +140,7 @@ sub execute {
         }
     
 	    if ($pos == 0) { 
-            ($trim_seq, $trim_qual) = ('N', '#');# scanned whole read and didn't integrate to zero?  replace with "empty" read ...
+            ($trim_seq, $trim_qual) = ('N', $qual_str);# scanned whole read and didn't integrate to zero?  replace with "empty" read ...
         }
 	    else {  # integrated to zero?  trim before position where area reached a maximum (~where string of qualities were still below 20 ...)
 		    ($trim_seq, $trim_qual) = (substr($seq, 0, $maxPos),  substr($qual, 0, $maxPos));
