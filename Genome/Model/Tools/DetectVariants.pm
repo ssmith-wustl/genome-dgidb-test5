@@ -209,10 +209,10 @@ sub execute {
         return;
     }
     
-    unless($self->_generate_standard_files) {
-        $self->error_message('Failed to generate standard files from detector-specific files');
-        return;
-    }
+#    unless($self->_generate_standard_files) {
+#        $self->error_message('Failed to generate standard files from detector-specific files');
+#        return;
+#    }
     
     unless($self->_promote_staged_data) {
         $self->error_message('Failed to promote staged data.');
