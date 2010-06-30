@@ -139,6 +139,8 @@ sub process_imported_files {
         $self->error_message("SNP Array Genotype creation failed");
         die $self->error_message;
     }
+
+    $disk_alloc->reallocate;
     
     #create genotype model
 

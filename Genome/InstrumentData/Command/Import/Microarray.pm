@@ -120,14 +120,16 @@ sub process_imported_files {
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data record $instrument_data_id has been created.");
     print "Intrument data:".$instrument_data_id." is imported.\n";
-    my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage * 5;
+
+    #Copying a minimum of 2x original file size into this allocation, after this finishes.
+    my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage *4;
 
     my $alloc_path = sprintf('microarray_data/imported/%s', $instrument_data_id);
 
     my %alloc_params = (
         disk_group_name     => 'info_alignments',
         allocation_path     => $alloc_path,
-        kilobytes_requested => $kb_usage * 5,
+        kilobytes_requested => $kb_usage,
         owner_class_name    => $import_instrument_data->class,
         owner_id            => $import_instrument_data->id,
     );

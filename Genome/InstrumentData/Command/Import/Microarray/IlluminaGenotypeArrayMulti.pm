@@ -286,6 +286,12 @@ sub process_imported_files {
         }
         $self->status_message("finished call to Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes"); 
         print $self->status_message;
+        my @disks = $imported_instrument_data->disk_allocations;
+        unless(scalar(@disks)==1){
+            $self->error_message("found multiple disk allocations for the instrument data " . $imported_instrument_data->id);
+            die $self->error_message;
+        }
+        $disks[0]->reallocate;
         #create genotype model
         my $define = Genome::Model->get( name => "$sample_name/$processing_profile");
 

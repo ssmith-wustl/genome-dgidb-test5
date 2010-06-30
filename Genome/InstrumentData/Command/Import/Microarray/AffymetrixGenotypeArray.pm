@@ -93,6 +93,7 @@ sub process_imported_files {
     }
     $self->status_message("SNP Array Genotype  file created at ".$genotype_path_and_SNP."\n");
     print $self->status_message."\n";
+    $disk_alloc->reallocate;
     
     #create genotype model
 
