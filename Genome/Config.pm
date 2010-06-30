@@ -6,6 +6,8 @@ package Genome::Config;
 use strict;
 use warnings;
 
+use UR;
+
 # This module potentially conflicts to the perl-supplied Config.pm if you've
 # set up your @INC or -I options incorrectly.  For example, you used -I /path/to/modules/Genome/
 # instead of -I /path/to/modules/.  Many modules use the real Config.pm to get info and

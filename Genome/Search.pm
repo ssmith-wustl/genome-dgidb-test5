@@ -3,14 +3,13 @@ package Genome::Search;
 use strict;
 use warnings;
 
-use Genome;
-
 use WebService::Solr;
 use MRO::Compat;
-use Cache::Memcached;
 
-use UR::DBI;
+#Don't "use Genome;" here or we introduce a circular dependency.
+use UR;
 use Genome::Config;
+use Genome::Memcache;
 
 class Genome::Search { 
     is => 'UR::Singleton',

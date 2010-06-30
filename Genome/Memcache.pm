@@ -1,9 +1,13 @@
-
 package Genome::Memcache;
 
 use strict;
 use warnings;
 
+use Cache::Memcached;
+
+#Don't "use Genome;" here or we introduce a circular dependency.
+use UR;
+use Genome::Config;
 
 class Genome::Memcache {
      is => 'UR::Singleton',
