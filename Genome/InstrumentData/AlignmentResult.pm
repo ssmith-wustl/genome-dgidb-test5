@@ -971,6 +971,16 @@ sub _extract_sanger_fastq_filenames {
                             output => $trimmed_sanger_fastq_pathname,
                         );
                     } 
+                    elsif ($self->trimmer_name eq 'bwa_style') {
+                        my ($trim_qual) = $self->trimmer_params =~ /--trim-qual-level\s*=?\s*(\S+)/;
+                        $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
+                            trim_qual_level => $trim_qual,
+                            fastq_file      => $sanger_fastq_pathname,
+                            out_file        => $trimmed_sanger_fastq_pathname,
+                            qual_type       => 'sanger',  #hardcoded for now
+                            report_file     => $self->temp_staging_directory.'/trim_bwa_style.report.'.$counter,
+                        );
+                    }
                     elsif ($self->trimmer_name =~ /trimq2_(\S+)/) {
                         #This is for trimq2 no_filter style
                         #move trimq2.report to alignment directory
