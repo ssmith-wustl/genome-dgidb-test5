@@ -164,21 +164,23 @@ sub diff_text_vs_text {
     my $p2 = $self->create_temp_file_path();
     $self->write_file($p2, $t2);
     
-    my $diff_fh = IO::File->new("sdiff -s $p1 $p2 |");
-    unless ($diff_fh) {
-        Carp::croak("Can't run 'sdiff -s $p1 $p2' for diff_text_vs_text(): $!");
-    }
-    my $diff_output = do { local( $/ ) ; <$diff_fh> };
-    return $diff_output;
+    return $self->diff_file_vs_file($p1, $p2);
 }
 
 sub diff_file_vs_text {
     my ($self,$f1,$t2) = @_;
     my $p2 = $self->create_temp_file_path();
     $self->write_file($p2, $t2);
-    my $diff_fh = IO::File->new("sdiff -s $f1 $p2 |");
+    
+    return $self->diff_file_vs_file($f1, $p2);
+}
+
+sub diff_file_vs_file {
+    my ($self,$f1,$f2) = @_;
+    
+    my $diff_fh = IO::File->new("sdiff -s $f1 $f2 |");
     unless ($diff_fh) {
-        Carp::croak("Can't run 'sdiff -s $f1 $p2' for diff_file_vs_text(): $!");
+        Carp::croak("Can't run 'sdiff -s $f1 $f2' for diff_file_vs_file(): $!");
     }
     my $diff_output = do { local( $/ ) ; <$diff_fh> };
     return $diff_output;

@@ -313,14 +313,19 @@ sub generate_result_xml {
         $object_class->can('isa'); #Force class autoloading    
         my $object = $object_class->get($object_id);
             
-        unless($object) {
-            $class->_delete_by_doc($doc); #Entity in index that no longer exists--clear it out
+        unless($object and ($object_class eq $object->class)) {
+            #Either
+            # (1) the entity in the index no longer exists
+            # (2) the entity has a different class than was indexed(!) so index is wrong
+            #so remove the object from the index
+            #(in the case of #2 the correct class will be indexed by the cron later)
+            $class->_delete_by_doc($doc);
             next;
         }
         
         my $view;
         
-        if($views{$object_class}) {
+        if($views{$object->class}) {
             $view = $views{$object->class};
             $view->subject($object);
             $view->solr_doc($doc);

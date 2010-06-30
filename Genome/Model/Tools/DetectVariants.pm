@@ -209,6 +209,11 @@ sub execute {
         return;
     }
     
+    unless($self->_generate_standard_files) {
+        $self->error_message('Failed to generate standard files from detector-specific files');
+        return;
+    }
+    
     unless($self->_promote_staged_data) {
         $self->error_message('Failed to promote staged data.');
         return;
@@ -274,6 +279,19 @@ sub _detect_variants {
     my $self = shift;
     
     die('To implement a variant detector to this API, the _detect_variants method needs to be implemented.');
+}
+
+sub _generate_standard_files {
+    my $self = shift;
+    
+    my $class = ref $self || $self;
+    my @words = split('::', $class);
+    
+    unless(scalar(@words) > 2 and $words[0] eq 'Genome') {
+        die('Could not determine detector class automatically.  Please implement _generate_standard_files in the subclass.');
+    }
+    
+    my $detector = $words[-1];
 }
 
 sub _promote_staged_data {
