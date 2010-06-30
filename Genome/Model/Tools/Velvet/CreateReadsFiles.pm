@@ -81,12 +81,20 @@ sub execute {
     }
 
     #load read names db for look up
-    my $read_names_db = Genome::Model::Tools::Velvet::ReadNamesDatabase->create (
-	sequences_file => $self->sequences_file,
-	directory => $self->directory,
-	);
-    unless ($read_names_db->execute) {
-	$self->error_message("Failed to execute creating/loading of velvet read names db");
+    #this can't store all the reads for assemblies with > 2.5M reads
+    #my $read_names_db = Genome::Model::Tools::Velvet::ReadNamesDatabase->create (
+	#sequences_file => $self->sequences_file,
+	#directory => $self->directory,
+	#);
+    #unless ($read_names_db->execute) {
+	#$self->error_message("Failed to execute creating/loading of velvet read names db");
+	#return;
+    #}
+
+    #stores read names and seek pos in hash or array indexed by read index #
+    my $names_and_positions;
+    unless ($names_and_positions = $self->_load_read_names_and_seek_pos()) {
+	$self->error_message("Failed to load read names and seek pos from Sequences file");
 	return;
     }
 
@@ -131,13 +139,20 @@ sub execute {
 		    my ($ctg_start, $ctg_stop, $c_or_u) = $self->_read_start_stop_positions($sfields); 
 
 		    #look up read name from read_names sqlite db
-		    my ($read_name, $seek_pos) = $read_names_db->get_read_name_from_afg_index($sfields->{src});
+		    #this won't work for assemblies with > 2.5M assembled reads
+		    #my ($read_name, $seek_pos) = $read_names_db->get_read_name_from_afg_index($sfields->{src});
+
+		    my $seek_pos = @{$names_and_positions->{$sfields->{src}}}[0];
+		    my $read_name = @{$names_and_positions->{$sfields->{src}}}[1];
+		    #TODO - make this happen if RAM is not overloaded by it
+#		    my $read_length = @{$names_and_postions->{$sfields->{src}}}[3];
+
 		    unless ($read_name and defined $seek_pos) {
 			$self->error_message("Failed to get read name and/or seek position for read id: ".$sfields->{src});
 			return;
 		    }
 
-		    #TODO - look into storing read length too so this can be avoided??
+		    #TODO - look into storing read length too so this can be avoided
 		    my $read_length = $self->_read_length_from_sequences_file($seek_pos);
 
 		    #print to readinfo.txt file
@@ -273,6 +288,29 @@ sub _read_length_from_sequences_file {
     }
     $seq_fh->close;
     return $read_length;
+}
+
+sub _load_read_names_and_seek_pos {
+    my $self = shift;
+    my %seek_positions;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->sequences_file) ||
+	return;
+    my $seek_pos = $fh->tell;
+    my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
+    while (my $seq = $io->next_seq) {
+	my ($read_index) = $seq->desc =~ /^(\d+)\s+\d+$/;
+	unless ($read_index) {
+            $self->error_message("Failed to get read index number from seq->desc: ".$seq->desc);
+            return;
+        }
+	push @{$seek_positions{$read_index}}, $seek_pos;
+        push @{$seek_positions{$read_index}}, $seq->primary_id;
+	#TODO - add read length if this doesn't over load the RAM
+#	push @{$seek_positions{$read_indes}}, length $seq->seq;
+        $seek_pos = $fh->tell;
+    }
+    $fh->close;
+    return \%seek_positions;
 }
 
 1;
