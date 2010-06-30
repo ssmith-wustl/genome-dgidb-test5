@@ -61,7 +61,7 @@ sub _merge_command {
     my $out_file = shift;
     my $out_format = shift;
 
-    my $cmd = 'bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/merge-split-reference-alignments-v1.1.0';
+    my $cmd = 'bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/merge-split-reference-alignments-v1.1.1';
     foreach my $in_file (@$in_files) {
         $cmd .= ' ' . _make_bamsam_arg('split', $in_file, $in_format);
     }
