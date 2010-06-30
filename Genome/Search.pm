@@ -3,9 +3,7 @@ package Genome::Search;
 use strict;
 use warnings;
 
-#When loading objects this has already been done (or how did we get the objects?)
-#When pulling out of the cache, don't need this either.  There's a require below for when we need it.
-#use Genome;
+use Genome;
 
 use WebService::Solr;
 use MRO::Compat;
