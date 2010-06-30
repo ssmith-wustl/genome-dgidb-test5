@@ -79,6 +79,7 @@ sub test_02_assign_single_id : Tests {
     my $assign = $self->test_class->create(
         $self->params_for_test_class,
         instrument_data_id => $self->instrument_data->[0]->id,
+        force => 1,
     );
     ok($assign->execute, 'Assign single instrument data');
 
@@ -95,6 +96,7 @@ sub test_03_assign_multiple_id : Tests {
             $self->instrument_data->[1]->id,
             $self->instrument_data->[2]->id,
         ),
+        force => 1,
     );
     ok($assign->execute, 'Assign multiple instrument data');
 
@@ -111,6 +113,7 @@ sub test_04_assign_flow_cell_id : Tests {
     my $assign = $self->test_class->create(
         $self->params_for_test_class,
         flow_cell_id => $self->solexa_instrument_data->[0]->flow_cell_id,
+        force => 1,
     );
     ok($assign->execute, 'Assign multiple instrument data by flow_cell_id');
     $self->model->subject_name($old_subject_name);

@@ -201,20 +201,22 @@ sub _assign_by_instrument_data_id {
 
     # Check subject
     unless ($self->force()) {
+        
         my $model = $self->model();
-        if ($model->subject_type() eq 'library_name') { 
-            if ($model->subject_id() ne $instrument_data->library_id()) {
-                my $model_subject_name = $self->model->subject_name();
-                my $id_library_name     = $instrument_data->library_name();
-                my $msg = "Mismatch between instrument data library ($id_library_name) ".
-                          "and model subject ($model_subject_name), " .
-                          "use --force to assign anyway";
-                $self->error_message($msg);
-                return; 
+        
+        if ($model->subject_type() eq 'library_name') {
+            unless ($self->_check_instrument_data_library($instrument_data)) {
+                return;
             }
-        } 
+        }
+        elsif ($model->subject_type() eq 'sample_name') {
+            unless ($self->_check_instrument_data_sample($instrument_data)) {
+                return;
+            }
+        }
+        
     }
-
+    
     # Assign it
     return $self->_assign_instrument_data($instrument_data)
 }
@@ -242,6 +244,19 @@ sub _assign_by_instrument_data_ids {
 
     # Assign 'em
     for my $instrument_data ( @instrument_data ) {
+        unless ($self->force()) {   
+            my $model = $self->model();
+            if ($model->subject_type() eq 'library_name') {
+                unless ($self->_check_instrument_data_library($instrument_data)) {
+                    return;
+                }
+            }
+            elsif ($model->subject_type() eq 'sample_name') {
+                unless ($self->_check_instrument_data_sample($instrument_data)) {
+                    return;
+                }
+            }   
+        }
         $self->_assign_instrument_data($instrument_data)
             or return;
     }
@@ -306,7 +321,7 @@ sub _list_compatible_instrument_data {
     my $self = shift;
 
     my @compatible_instrument_data = $self->model->compatible_instrument_data;
-    my @assigned_instrument_data = $self->model->assigned_instrument_data;
+    my @assigned_instrument_data   = $self->model->assigned_instrument_data;
     my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
 
     $self->status_message(
@@ -330,6 +345,62 @@ sub _list_compatible_instrument_data {
     }
 
     return 1;
+}
+
+# This logic probably really belongs somewhere else,
+# maybe up in the model?
+#
+# RT #58368
+sub _check_instrument_data_library {
+
+    my $self            = shift;
+    my $instrument_data = shift;
+    
+    my $model              = $self->model();
+    my $model_subject_name = $self->model->subject_name();
+
+    if ($model->subject_id() ne $instrument_data->library_id()) {
+            
+        my $id_library_name = $instrument_data->library_name();
+        
+        my $msg = "Mismatch between instrument data library ($id_library_name) ".
+                  "and model subject ($model_subject_name), " .
+                  "use --force to assign anyway";
+
+        $self->error_message($msg);
+        
+        return 0;
+        
+    }
+
+    return 1;
+    
+}
+
+sub _check_instrument_data_sample {
+
+    my $self            = shift;
+    my $instrument_data = shift;
+    
+    my $model              = $self->model();
+    my $model_subject_name = $self->model->subject_name();
+    
+    if ($model->subject_id() ne $instrument_data->sample_id()) {
+        
+        my $id_sample_name = $instrument_data->sample_name();
+
+        my $msg = "Mismatch between instrument data sample ($id_sample_name) ".
+                  "and model subject ($model_subject_name), " .
+                  "use --force to assign anyway";
+
+        $self->error_message($msg);
+
+        return 0;
+        
+    }
+
+    return 1;
+    
 }
 
 1;
