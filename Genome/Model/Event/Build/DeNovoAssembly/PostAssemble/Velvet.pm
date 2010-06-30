@@ -28,7 +28,7 @@ sub execute {
         afg_file => $self->build->assembly_afg_file,
         time => $time,
         out_acefile => $self->build->velvet_ace_file,
-	sqlite_yes => 1,  #<-----
+	#sqlite_yes => 1,  #<-----
     );
     unless ($to_ace->execute) {
         $self->error_message("Failed to run velvet-to-ace");
