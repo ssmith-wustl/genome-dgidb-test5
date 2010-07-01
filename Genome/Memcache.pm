@@ -16,8 +16,8 @@ class Genome::Memcache {
         memcache_server_location => {
             is => 'Text',
             default_value => Genome::Config::dev_mode()
-                            ? 'imp:11211'
-                            : 'aims-dev:11211',
+                            ? 'aims-dev:11211'
+                            : 'imp:11211',
         },
         _memcache_server => {
             is => 'Cache::Memcached',
