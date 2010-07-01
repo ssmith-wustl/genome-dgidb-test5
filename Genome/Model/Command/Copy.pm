@@ -54,8 +54,8 @@ EOS
 sub help_synopsis {
     return <<"EOS"
 genome model copy
-  --from-model-id 123456789
-  --new-model-name copy_of_my_model
+  --from-model-id=123456789
+  --new-model-name='copy_of_my_model'
   processing_profile_name="use this processing profile instead"
   ...
 EOS
