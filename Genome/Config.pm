@@ -41,7 +41,7 @@ sub dev_mode {
 
 sub base_web_uri {
 
-    if (defined(Genome::Config::dev_mode())) {
+    if (Genome::Config::dev_mode()) {
         return 'https://aims-dev.gsc.wustl.edu/view';
     } else {
         return 'https://imp.gsc.wustl.edu/view';
