@@ -45,7 +45,7 @@ sub execute {
     }
 
     unlink $self->gap_sizes_file;
-    my $fh = Genome::Utility::FileSystem->open_for_writing($self->gap_sizes_file) ||
+    my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->gap_sizes_file) ||
 	return;
 
     my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->contigs_fasta_file);
