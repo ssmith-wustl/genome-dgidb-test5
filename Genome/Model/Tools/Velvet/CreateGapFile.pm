@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Velvet::GapFile;
+package Genome::Model::Tools::Velvet::CreateGapFile;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use Bio::SeqIO;
 use IO::File;
 
-class Genome::Model::Tools::Velvet::GapFile {
+class Genome::Model::Tools::Velvet::CreateGapFile {
     is => 'Genome::Model::Tools::Velvet',
     has => [
 	contigs_fasta_file => {
