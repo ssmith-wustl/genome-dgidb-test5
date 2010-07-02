@@ -1,6 +1,6 @@
 #######SMG Test Library###############################
 
-smg_test=function(in.file,out.file)
+smg_test=function(in.file,test.file,fdr.file)
 {
 source("/gscuser/qzhang/gstat/stat.lib");
 
@@ -18,6 +18,16 @@ mutgi=mut[mut$Gene==gene,]
 mut_class_test(mutgi[,3:5])->z
 tt=rbind(tt,cbind(mutgi,z$x[,-(1:3)]))
 }
-write.csv(tt,file=out.file,quote=F,row.names=F)
+write.table(tt,file=test.file,quote=FALSE,row.names=F,sep="\t")
+
+#Calculate FDR measure and write FDR output
+x=tt[,c(1,11:13)]
+x=unique(x)
+p.adjust(x[,2],method="BH")->fdr.fisher
+p.adjust(x[,3],method="BH")->fdr.lr
+p.adjust(x[,4],method="BH")->fdr.convol
+x=cbind(x,fdr.fisher,fdr.lr,fdr.convol)
+write.table(x,file=fdr.file,sep="\t",quote=FALSE,row.names=F)
+
 }
 ######################################################
