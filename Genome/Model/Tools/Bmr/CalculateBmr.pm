@@ -41,6 +41,11 @@ class Genome::Model::Tools::Bmr::CalculateBmr {
         is_optional => 1,
         doc => 'File to catch mutations that fall in the ROI list location-wise, but have a gene name which does not match any of the genes in the ROI list. Default operation is to print to STDOUT.',
     },
+    genes_to_exclude => {
+        type => 'Comma-Delimited String',
+        is_optional => 1,
+        doc => 'Genes known to be highly mutated whose mutations will not go into the calculation of the group\'s background mutation rate.',
+    },
     ]
 };
 
@@ -54,6 +59,7 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+    $DB::single=1;
 
     #resolve refseq
     my $ref_build_name = $self->refseq_build_name;
@@ -118,8 +124,8 @@ sub execute {
     @wiggle_files = grep { !/^(\.|\.\.)$/ } @wiggle_files;
     @wiggle_files = map { $_ = "$wiggle_dir/" . $_ } @wiggle_files;
 
-    #Loop through samples to build BMR hash %BMR -> gene -> class -> coverage, mutations, bmr
-    my %BMR;
+    #Loop through samples to build COVMUTS hash %COVMUTS -> gene -> class -> coverage, mutations
+    my %COVMUTS;
     my $bitmask_conversion = Genome::Model::Tools::Bmr::WtfToBitmask->create(
         reference_index => $ref_build->full_consensus_sam_index_path,
     );
@@ -156,10 +162,10 @@ sub execute {
 
             for my $gene (keys %{$ROIs{$chr}}) {
 
-                unless (grep {/^$gene$/} keys %BMR) {
+                unless (grep {/^$gene$/} keys %COVMUTS) {
                     for my $class (@classes) {
-                        $BMR{$gene}{$class}{'coverage'} = 0;
-                        $BMR{$gene}{$class}{'mutations'} = 0;
+                        $COVMUTS{$gene}{$class}{'coverage'} = 0;
+                        $COVMUTS{$gene}{$class}{'mutations'} = 0;
                     }
                 }
 
@@ -170,25 +176,25 @@ sub execute {
 
                     #indels
                     $bits = $self->count_bits($cov_bitmask->{$chr},$start,$stop);
-                    $BMR{$gene}{'Indels'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'Indels'}{'coverage'} += $bits;
 
                     #AT
                     $testvector->And($cov_bitmask->{$chr},$at_bitmask->{$chr});
                     $bits = $self->count_bits($testvector,$start,$stop);
-                    $BMR{$gene}{'AT.transit'}{'coverage'} += $bits;
-                    $BMR{$gene}{'AT.transver'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'AT.transit'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'AT.transver'}{'coverage'} += $bits;
 
                     #CG
                     $testvector->And($cov_bitmask->{$chr},$cg_bitmask->{$chr});
                     $bits = $self->count_bits($testvector,$start,$stop);
-                    $BMR{$gene}{'CG.transit'}{'coverage'} += $bits;
-                    $BMR{$gene}{'CG.transver'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'CG.transit'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'CG.transver'}{'coverage'} += $bits;
 
                     #CpG
                     $testvector->And($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
                     $bits = $self->count_bits($testvector,$start,$stop);
-                    $BMR{$gene}{'CpG.transit'}{'coverage'} += $bits;
-                    $BMR{$gene}{'CpG.transver'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'CpG.transit'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'CpG.transver'}{'coverage'} += $bits;
                 }#end, for my $start
             }#end, for my $gene
         }#end, for my $chr
@@ -201,7 +207,7 @@ sub execute {
     $bitmask_conversion->delete;
     undef $bitmask_conversion;
 
-    #Loop through mutations, assign them to a gene and class in %BMR
+    #Loop through mutations, assign them to a gene and class in %COVMUTS
     my $mutation_file = $self->mutation_maf_file;
     my $mut_fh = new IO::File $mutation_file,"r";
     
@@ -219,7 +225,7 @@ sub execute {
         chomp $line;
         my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
         #highly-mutated genes to ignore
-        next if $gene =~ /TP53|BRCA1|BRCA2/;
+        #next if $gene =~ /TP53|BRCA1|BRCA2/;
         #using WU only for the initial test set
         next if $center !~ /wustl/;
         #make sure mutation is inside the ROIs
@@ -231,17 +237,17 @@ sub execute {
             #if this mutation is non-synonymous
             if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
-                if (grep { /^$gene$/ } keys %BMR) {
+                if (grep { /^$gene$/ } keys %COVMUTS) {
 
                     #determine the classification for ref A's and T's
                     if ($ref eq 'A') {
                         #is it a transition?
                         if ($var1 eq 'G' || $var2 eq 'G') {
-                            $BMR{$gene}{'AT.transit'}{'mutations'}++;
+                            $COVMUTS{$gene}{'AT.transit'}{'mutations'}++;
                         }
                         #else, it must be a transversion
                         elsif ($var1 =~ /C|T/ || $var2 =~ /C|T/) {
-                            $BMR{$gene}{'AT.transver'}{'mutations'}++;
+                            $COVMUTS{$gene}{'AT.transver'}{'mutations'}++;
                         }
                         #otherwise, classification is impossible - quit.
                         else {
@@ -253,11 +259,11 @@ sub execute {
                     if ($ref eq 'T') {
                         #is it a transition?
                         if ($var1 eq 'C' || $var2 eq 'C') {
-                            $BMR{$gene}{'AT.transit'}{'mutations'}++;
+                            $COVMUTS{$gene}{'AT.transit'}{'mutations'}++;
                         }
                         #else, it must be a transversion
                         elsif ($var1 =~ /G|A/ || $var2 =~ /G|A/) {
-                            $BMR{$gene}{'AT.transver'}{'mutations'}++;
+                            $COVMUTS{$gene}{'AT.transver'}{'mutations'}++;
                         }
                         #otherwise, classification is impossible - quit.
                         else {
@@ -272,20 +278,20 @@ sub execute {
                         if ($var1 eq 'T' || $var2 eq 'T') {
                             #is it inside a CpG island?
                             if ($self->count_bits($cpg_bitmask->{$chr},$start,$stop)) {
-                                $BMR{$gene}{'CpG.transit'}{'mutations'}++;
+                                $COVMUTS{$gene}{'CpG.transit'}{'mutations'}++;
                             }
                             else {
-                                $BMR{$gene}{'CG.transit'}{'mutations'}++;
+                                $COVMUTS{$gene}{'CG.transit'}{'mutations'}++;
                             }
                         }
                         #if not a transition, is it a transversion?
                         elsif ($var1 =~ /G|A/ || $var2 =~ /G|A/) {
                             #is it inside a CpG island?
                             if ($self->count_bits($cpg_bitmask->{$chr},$start,$stop)) {
-                                $BMR{$gene}{'CpG.transver'}{'mutations'}++;
+                                $COVMUTS{$gene}{'CpG.transver'}{'mutations'}++;
                             }
                             else {
-                                $BMR{$gene}{'CG.transver'}{'mutations'}++;
+                                $COVMUTS{$gene}{'CG.transver'}{'mutations'}++;
                             }
                         }
                         #otherwise, classification is impossible - quit.
@@ -300,20 +306,20 @@ sub execute {
                         if ($var1 eq 'A' || $var2 eq 'A') {
                             #is it inside a CpG island?
                             if ($self->count_bits($cpg_bitmask->{$chr},$start,$stop)) {
-                                $BMR{$gene}{'CpG.transit'}{'mutations'}++;
+                                $COVMUTS{$gene}{'CpG.transit'}{'mutations'}++;
                             }
                             else {
-                                $BMR{$gene}{'CG.transit'}{'mutations'}++;
+                                $COVMUTS{$gene}{'CG.transit'}{'mutations'}++;
                             }
                         }
                         #if not a transition, is it a transversion?
                         elsif ($var1 =~ /T|C/ || $var2 =~ /T|C/) {
                             #is it inside a CpG island?
                             if ($self->count_bits($cpg_bitmask->{$chr},$start,$stop)) {
-                                $BMR{$gene}{'CpG.transver'}{'mutations'}++;
+                                $COVMUTS{$gene}{'CpG.transver'}{'mutations'}++;
                             }
                             else {
-                                $BMR{$gene}{'CG.transver'}{'mutations'}++;
+                                $COVMUTS{$gene}{'CG.transver'}{'mutations'}++;
                             }
                         }
                         #otherwise, classification is impossible - quit.
@@ -335,8 +341,8 @@ sub execute {
         #Indels
         if ($mutation_type =~ /ins|del/i) {
             #verify this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
-            if (grep { /^$gene$/ } keys %BMR) {
-                $BMR{$gene}{'Indels'}{'mutations'}++;
+            if (grep { /^$gene$/ } keys %COVMUTS) {
+                $COVMUTS{$gene}{'Indels'}{'mutations'}++;
             }
             else {
                 print $rejects_fh "Cannot find this mutation's gene in the ROI hash:\n$line\n";
@@ -345,30 +351,55 @@ sub execute {
         }#end, if mutation is an indel
     }#end, loop through MAF
 
-    #Loop through BMR hash and calculate BMRs (recall %BMR -> gene -> class -> coverage, mutations, bmr)
-    for my $gene (keys %BMR) {
-        for my $class (keys %{$BMR{$gene}}) {
-            my $rate;
-            if ($BMR{$gene}{$class}{'coverage'}) {
-                $rate = $BMR{$gene}{$class}{'mutations'} / $BMR{$gene}{$class}{'coverage'};
+    #Loop through COVMUTS hash and tabulate group coverage and mutations
+    my %BMR; #(%BMR -> class -> coverage,mutations)
+    my @excluded_genes;
+    if (defined $self->genes_to_exclude) {
+        my $genes_to_exclude = $self->genes_to_exclude;
+        @excluded_genes = split /,/,$genes_to_exclude;
+    }
+    for my $gene (keys %COVMUTS) {
+        for my $class (keys %{$COVMUTS{$gene}}) {
+
+            unless ($BMR{$class}{'coverage'}) {
+                $BMR{$class}{'coverage'} = 0;
             }
-            else {
-                $rate = "No Coverage";
+            unless ($BMR{$class}{'mutations'}) {
+                $BMR{$class}{'mutations'} = 0;
             }
-            $BMR{$gene}{$class}{'bmr'} = $rate;
+
+            
+            $BMR{$class}{'coverage'} += $COVMUTS{$gene}{$class}{'coverage'};
+
+            #remember to exclude mutations in known highly-mutated genes
+            unless (grep { /^$gene$/ } @excluded_genes) {
+                $BMR{$class}{'mutations'} += $COVMUTS{$gene}{$class}{'mutations'};
+            }
         }
+    }
+
+    #Loop through %BMR to calculate group bmrs
+    for my $class (keys %BMR) {
+        my $rate;
+        if ($BMR{$class}{'coverage'}) {
+            $rate = $BMR{$class}{'mutations'} / $BMR{$class}{'coverage'};
+        }
+        else {
+            $rate = 'No Coverage';
+        }
+        $BMR{$class}{'bmr'} = $rate;
     }
 
     #Print results
     my $output_file = $self->output_file;
     my $out_fh = new IO::File $output_file,"w";
     print $out_fh "Gene\tClass\tBases_Covered\tNon-Syn_Mutations\tBMR\n";
-    for my $gene (keys %BMR) {
-        for my $class (keys %{$BMR{$gene}}) {
+    for my $gene (keys %COVMUTS) {
+        for my $class (keys %{$COVMUTS{$gene}}) {
             print $out_fh "$gene\t$class\t";
-            print $out_fh $BMR{$gene}{$class}{'coverage'} . "\t";
-            print $out_fh $BMR{$gene}{$class}{'mutations'} . "\t";
-            print $out_fh $BMR{$gene}{$class}{'bmr'} . "\n";
+            print $out_fh $COVMUTS{$gene}{$class}{'coverage'} . "\t";
+            print $out_fh $COVMUTS{$gene}{$class}{'mutations'} . "\t";
+            print $out_fh $BMR{$class}{'bmr'} . "\n";
         }
     }
 
@@ -440,7 +471,7 @@ sub count_bits {
 
 
 #more specific hash structure
-#%BMR->gene->class->(coverage,#mutations,BMR)
+#%COVMUTS->gene->class->(coverage,#mutations)
 #
 #classes
 #
