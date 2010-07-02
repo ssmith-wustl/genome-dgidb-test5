@@ -134,11 +134,12 @@ sub estimate_average_read_length {
         Carp::confess("No read length found in instrument data (".join(', ', map { $_->id } @instrument_data).')');
     }
 
+    my $avg_read_length = $read_length / $instrument_data_cnt;
     if ( defined $self->processing_profile->read_trimmer_name ) {
-        return int($read_length / $instrument_data_cnt * .9);
+        return int($avg_read_length * .9);
     }
 
-    return $read_length;
+    return $avg_read_length;
 }
 
 sub calculate_read_limit_from_read_coverage {

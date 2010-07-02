@@ -13,7 +13,8 @@ use above 'Genome';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
-plan tests => 20;
+my $test_cnt = 22;
+plan tests => $test_cnt;
 
 use_ok('Genome::Model::Build::DeNovoAssembly');
 
@@ -33,6 +34,13 @@ is($build->calculate_estimated_kb_usage, (50_000_000 * 1.024), 'Kb usage');
 is($build->genome_size, 4500000, 'Genome size');
 
 # read length/limit
+#  w/o trimmer
+my $read_trimmer_name = $build->processing_profile->read_trimmer_name;
+$build->processing_profile->read_trimmer_name(undef);
+is($build->estimate_average_read_length, 100, 'Estimate average read length w/o trimmer');
+is($build->calculate_read_limit_from_read_coverage, 22500, 'Calculated read limit w/o trimmer');
+#  w/ trimmer
+$build->processing_profile->read_trimmer_name($read_trimmer_name);
 is($build->estimate_average_read_length, 90, 'Estimate average read length');
 is($build->calculate_read_limit_from_read_coverage, 25000, 'Calculated read limit');
 
@@ -44,7 +52,7 @@ for my $metric_name ( @interesting_metric_names ) {
     can_ok('Genome::Model::Build::DeNovoAssembly', $metric_name);
 }
 
-done_testing();
+done_testing($test_cnt);
 exit;
 
 =pod
