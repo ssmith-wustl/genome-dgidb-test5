@@ -17,14 +17,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
         variant_file => {
             is => 'Text',   
             is_input => 1,
-            is_optional => 1,
             doc => "File of variants. Tab separated columns: chromosome_name start stop reference variant",
-        },
-        bed_file => {
-            is => 'Text',   
-            is_input => 1,
-            is_optional => 1,
-            doc => "File of variants in BED4. Tab separated columns: chromosome_name start stop reference/variant",
         },
         output_file => {
             is => 'Text',
@@ -34,11 +27,6 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             default => "STDOUT",
         },
     ],
-    #has_param => [
-    #    lsf_queue => {
-    #       value => $ENV{'LSB_QUEUE'} || 'long',
-    #   }
-    #],
     has_optional => [
         # IO Params
         _is_parallel => {
@@ -207,12 +195,7 @@ sub execute {
 
     $DB::single = 1;
 
-    unless (defined $self->variant_file xor defined $self->bed_file){
-        $self->error_message("Please specify a variant-file OR a bed-file");
-        return;
-    }
-    
-    my $variant_file = (defined $self->variant_file ? $self->variant_file : $self->bed_file);
+    my $variant_file = $self->variant_file;
     
     
     if (defined $self->data_directory) {
