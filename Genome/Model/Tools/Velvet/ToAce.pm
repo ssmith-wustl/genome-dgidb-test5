@@ -119,7 +119,8 @@ sub execute {
     my $time   = $self->time || localtime;
     my $dbh    = $self->_dbh if $self->sqlite_yes;
     
-    my $seqinfo  = {};
+    #my $seqinfo  = {};
+    my @seqinfo;
     my %read_dup = ();
     my $nReads   = 0;
     my $nContigs = 0;
@@ -141,8 +142,10 @@ sub execute {
             $sth->execute or return $self->error_handle("Failed to insert for $name : ".$DBI::errstr);
         }
         else {
-            $seqinfo->{$ct}->{name} = $name;
-            $seqinfo->{$ct}->{pos}  = $seekpos;
+            #$seqinfo->{$ct}->{name} = $name;
+	    push @{$seqinfo[$ct]}, $seekpos;
+            #$seqinfo->{$ct}->{pos}  = $seekpos;
+	    push @{$seqinfo[$ct]}, $name;
         }
         $seekpos = $seq_fh->tell;
     }
@@ -210,7 +213,7 @@ sub execute {
                                         
                     my ($read_id, $pos, $itr);
 
-                    if ($self->sqlite_yes) {
+                    if ($self->sqlite_yes) { #<--------------------
                         my $sth = $dbh->prepare(
                             qq(
                                 select name, position 
@@ -227,13 +230,15 @@ sub execute {
                         $read_dup{$ori_read_id}++;
                     }
                     else {
-                        my $info = $seqinfo->{$ori_read_id};
-                        return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless $info;
-                                               
-                        $read_id = $info->{name};
-                        $pos     = $info->{pos};
-                        $read_id .= '-' . $info->{ct} if exists $info->{ct};
-                        $seqinfo->{$ori_read_id}->{ct}++;
+                        #my $info = $seqinfo->{$ori_read_id};
+                        #return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless $info;
+			return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless $seqinfo[$ori_read_id];
+                        #$read_id = $info->{name};
+			$read_id = @{$seqinfo[$ori_read_id]}[1];
+                        #$pos     = $info->{pos};
+			$pos = @{$seqinfo[$ori_read_id]}[0];
+			#$read_id .= '-' . $info->{ct} if exists $info->{ct}; #this seems to be never defined
+                        #$seqinfo->{$ori_read_id}->{ct}++;
                     }
                     $dbh->commit if $self->sqlite_yes;
                     
