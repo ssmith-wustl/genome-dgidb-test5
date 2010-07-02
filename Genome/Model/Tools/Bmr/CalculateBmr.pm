@@ -233,7 +233,7 @@ sub execute {
 
 
         #SNVs
-        if ($mutation_type =~ /snp|dnp/i) {
+        if ($mutation_type =~ /snp|dnp|onp|tnp/i) {
             #if this mutation is non-synonymous
             if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
@@ -368,7 +368,6 @@ sub execute {
                 $BMR{$class}{'mutations'} = 0;
             }
 
-            
             $BMR{$class}{'coverage'} += $COVMUTS{$gene}{$class}{'coverage'};
 
             #remember to exclude mutations in known highly-mutated genes
@@ -390,10 +389,19 @@ sub execute {
         $BMR{$class}{'bmr'} = $rate;
     }
 
-    #Print results
+    #Loop through %BMR to print summary file
     my $output_file = $self->output_file;
+    my $summary_file = $output_file . ".class_summary";
+    my $summaryfh = new IO::File $summary_file,"w";
+    print $summaryfh "Class\tBMR\tCoverage(Bases)\tNon_Syn_Mutations\n";
+    for my $class (sort keys %BMR) {
+        print $summaryfh "$class\t$BMR{$class}{'bmr'}\t$BMR{$class}{'coverage'}\t$BMR{$class}{'mutations'}\n";
+    }
+    $summaryfh->close;
+
+    #Print all results
     my $out_fh = new IO::File $output_file,"w";
-    print $out_fh "Gene\tClass\tBases_Covered\tNon-Syn_Mutations\tBMR\n";
+    print $out_fh "Gene\tClass\tBases_Covered\tNon_Syn_Mutations\tBMR\n";
     for my $gene (keys %COVMUTS) {
         for my $class (keys %{$COVMUTS{$gene}}) {
             print $out_fh "$gene\t$class\t";
