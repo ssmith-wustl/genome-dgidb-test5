@@ -16,6 +16,8 @@ use English;
 use File::Temp;
 use IO::File;
 use IPC::Run;
+use File::Slurp;
+use Data::UUID;
 
 
 class PAP::Command::InterProScan {
@@ -90,7 +92,7 @@ sub execute {
     $self->iprscan_output($tmp_fh);
     
     my @iprscan_command = (
-                           '/gsc/scripts/bin/iprscan',
+                           '/gscmnt/temp212/info/annotation/InterProScan/Version_4.5/iprscan/bin/iprscan',
                            '-cli',
                            '-appl', 'hmmpfam',
                            '-appl', 'hmmtigr',
@@ -109,31 +111,25 @@ sub execute {
 
     my ($iprscan_stdout, $iprscan_stderr);
    
-    IPC::Run::run(
+    my $rv = IPC::Run::run(
                   \@iprscan_command, 
                   \undef, 
                   '>', 
                   \$iprscan_stdout, 
                   '2>', 
                   \$iprscan_stderr, 
-                 ) || die "iprscan failed: $CHILD_ERROR";
+                 );
 
+    write_file($self->report_save_dir."/debug.err.".$$,
+               $iprscan_stdout."\n====\n".$iprscan_stderr);
+    unless($rv) {
+        die "iprscan failed: $CHILD_ERROR";
+    }
 
     # FIXME:
     # need to check thru the $iprscan_stdout and $iprscan_stderr for
     # SUBMITTED iprscan-<YYYYMMDD>-<HHMMSSSS>
     # and any other error values.
-    my $jobname = $iprscan_stderr;
-    $jobname =~ s/SUBMITTED (iprscan-\d{8}-\d{8}).+$/$1/; 
-    $jobname =~ /-(\d{8})-/;
-    my $date = $1;
-    
-    my $ipr_rundir = "/gsc/scripts/pkg/bio/iprscan/iprscan/tmp/".$date."/".$jobname;
-    if(-e $ipr_rundir."/".$jobname.".errors")
-    {
-        # we have an error condition here.
-        die "iprscan failed: check ".$ipr_rundir."/".$jobname.".errors";
-    }
 
     my ($sort_stderr);
    
