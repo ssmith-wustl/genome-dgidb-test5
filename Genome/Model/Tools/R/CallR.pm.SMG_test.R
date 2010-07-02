@@ -10,7 +10,7 @@ source("/gscuser/qzhang/gstat/stat.lib");
 read.table(in.file,header=T,sep="\t")->mut
 mut$BMR=as.numeric(as.character(mut$BMR))
 #select the rows with BMR data
-mut=mut[mut$BMR>0 & !is.na(mut$BMR),]
+mut=mut[mut$BMR>0 & !is.na(mut$BMR) & mut$Bases>0,]
 tt=NULL
 for (gene in unique(as.character(mut$Gene)))
 {
