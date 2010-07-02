@@ -17,8 +17,14 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
         variant_file => {
             is => 'Text',   
             is_input => 1,
-            is_optional => 0,
+            is_optional => 1,
             doc => "File of variants. Tab separated columns: chromosome_name start stop reference variant",
+        },
+        bed_file => {
+            is => 'Text',   
+            is_input => 1,
+            is_optional => 1,
+            doc => "File of variants in BED4. Tab separated columns: chromosome_name start stop reference/variant",
         },
         output_file => {
             is => 'Text',
@@ -200,6 +206,14 @@ sub execute {
     my $self = shift;
 
     $DB::single = 1;
+
+    unless (defined $self->variant_file xor defined $self->bed_file){
+        $self->error_message("Please specify a variant-file OR a bed-file");
+        return;
+    }
+    
+    my $variant_file = (defined $self->variant_file ? $self->variant_file : $self->bed_file);
+    
     
     if (defined $self->data_directory) {
         $self->error_message("Due to a recent change to the annotation data file format, allowing " .
@@ -213,7 +227,7 @@ sub execute {
     my $pre_annotation_start = Benchmark->new;
 
     if ($self->_is_parallel) {
-        $self->output_file($self->variant_file . ".out");
+        $self->output_file($variant_file . ".out");
     }
 
     if (($self->skip_if_output_present)&&(-s $self->output_file)) {
@@ -222,14 +236,14 @@ sub execute {
     }
 
     # generate an iterator for the input list of variants
-    my $variant_file = $self->variant_file;
 
     # preserve additional columns from input if desired 
     my @columns = (($self->variant_attributes), $self->get_extra_columns);
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $variant_file,
         headers => \@columns,
-        separator => "\t",
+        separator => "\t|\/", #separate on tabs and '/' in the case of the bed file
+        is_regex => 1,
         ignore_extra_columns => 1,
     );
     unless ($variant_svr) {
@@ -325,6 +339,11 @@ sub execute {
     my $sloppy_skip = 0; #This var is set when we can't annotate a chromosome and want to skip the rest of the variants on that chromosome
 
     while ( my $variant = $variant_svr->next ) {
+
+        #if the variants came from a bed file, change the start coordinate to be 1 based 
+        if($self->bed_file){
+            $variant->{'start'} = $variant->{'start'} + 1;        
+        }
 
         $variant->{type} = $self->infer_variant_type($variant);
         # make a new annotator when we begin and when we switch chromosomes
