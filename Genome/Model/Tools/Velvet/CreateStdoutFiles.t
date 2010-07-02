@@ -44,11 +44,11 @@ my @dir_diff = `diff -r --brief $dir_test $dir_temp | grep -v Log | grep -v timi
 is(scalar(@dir_diff), 2, "Directory contents match except for 2 zipped files and extra contigs files") or diag(@dir_diff);
 
 #check two zipped files separately
-my $test_fasta = $data_dir.'/edit_dir/test.fasta.gz';
-my $test_qual = $data_dir.'/edit_dir/test.fasta.qual.gz';
+my $test_fasta = $data_dir.'/edit_dir/input.fasta.gz';
+my $test_qual = $data_dir.'/edit_dir/input.fasta.qual.gz';
 
-my $temp_fasta = $temp_dir.'/edit_dir/test.fasta.gz';
-my $temp_qual = $temp_dir.'/edit_dir/test.fasta.qual.gz';
+my $temp_fasta = $temp_dir.'/edit_dir/input.fasta.gz';
+my $temp_qual = $temp_dir.'/edit_dir/input.fasta.qual.gz';
 
 my @fasta_diff = `zdiff $test_fasta $temp_fasta`;
 is(scalar (@fasta_diff), 0, "Zipped fasta files match") or diag(@fasta_diff);
