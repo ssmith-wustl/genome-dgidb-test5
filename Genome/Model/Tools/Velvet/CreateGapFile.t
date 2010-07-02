@@ -27,7 +27,7 @@ ok(File::Copy::copy($test_contigs_file, $temp_dir),"Copied input contigs file");
 mkdir $temp_dir.'/edit_dir';
 ok(-d $temp_dir.'/edit_dir', "made edit_dir in temp test_dir");
 
-my $ec = system("chdir $temp_dir; gmt assembly create-output-files gap --directory $temp_dir");
+my $ec = system("chdir $temp_dir; gmt velvet create-gap-file --contigs-fasta-file $test_contigs_file --directory $temp_dir");
 ok($ec == 0, "Command ran successfully");
 
 #test gap.txt file .. this file can be blank
@@ -36,7 +36,7 @@ ok(-e $test_gap_file, "Test gap.txt file exists");
 
 #new gap.txt file
 my $new_gap_file = $temp_dir.'/edit_dir/gap.txt';
-ok(-e $new_gap_file, "Tew gap.txt file exits");
+ok(-e $new_gap_file, "New gap.txt file exits");
 
 #diff
 my @diffs = `sdiff -s $test_gap_file $new_gap_file`;
