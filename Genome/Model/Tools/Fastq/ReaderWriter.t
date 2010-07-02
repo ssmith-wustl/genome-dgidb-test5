@@ -15,7 +15,7 @@ use_ok('Genome::Model::Tools::Fastq::Writer') or die;
 
 #< Files >#
 my $input_fastq = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-ReaderWriter/in.fastq';
-ok($input_fastq, 'Input fastq exists');
+ok(-s $input_fastq, 'Input fastq exists');
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok(-d $tmpdir, 'Created temp dir.');
 my $output_fastq = $tmpdir.'/fastq';
