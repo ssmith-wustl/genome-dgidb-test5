@@ -10,6 +10,7 @@ use File::Temp;
 use Date::Format;
 use AMOS::AmosLib;
 use File::Basename;
+require File::Temp;
 
 use GSC::IO::Assembly::Ace::Writer;
 
@@ -88,37 +89,38 @@ sub create {
     my $file = $self->afg_file;
 
     return $self->error_handle("Input velvet afg file: $file must NOT be valid or existing")
-        unless -s $file and $file =~ /\.afg/;
-           
+    unless -s $file and $file =~ /\.afg/;
+
     my $seq_file = $self->seq_file;
     unless ($seq_file and -s $seq_file) {
         $seq_file = (dirname $file) . '/Sequences';
         return $self->error_handle("Failed to find valid Sequences file to be index")
-            unless -s $seq_file;
+        unless -s $seq_file;
         $self->seq_file($seq_file);
     }
-        
+
     my $out_file = $self->out_acefile;
     if (-s $out_file) {
-	$self->warning_message("out_acefile: $out_file exists and will be overwritten"); 
-	unlink $out_file;
+        $self->warning_message("out_acefile: $out_file exists and will be overwritten"); 
+        unlink $out_file;
     }
-    
+
     if ($self->sqlite_yes) {
         my $rv = $self->get_sqlite_dbh;
         return unless $rv;
     }
-        
+
     return $self;
 }
 
 
 sub execute {
     my $self = shift;
-    
+
+    print Cwd::cwd()."\n";
     my $time   = $self->time || localtime;
     my $dbh    = $self->_dbh if $self->sqlite_yes;
-    
+
     #my $seqinfo  = {};
     my @seqinfo;
     my %read_dup = ();
@@ -131,7 +133,7 @@ sub execute {
 
     my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $seq_fh);
     my $ct = 0;
-        
+
     #%seqinfo is 1-based.
     while (my $seq = $io->next_seq) {
         $ct++;
@@ -150,7 +152,7 @@ sub execute {
         $seekpos = $seq_fh->tell;
     }
     $self->status_message('Finished storing read info');
-    
+
     if ($self->sqlite_yes) {
         my $sth = $dbh->prepare('create unique index ids on read_info(id)');
         $sth->execute or return $self->error_handle('Failed to create index ids : '.$DBI::errstr);
@@ -158,12 +160,25 @@ sub execute {
     }
 
     $seq_fh->close;
-    
+
     my $afg_file = $self->afg_file;
     my $afg_fh   = Genome::Utility::FileSystem->open_file_for_reading($afg_file) or return;
     my $out_ace  = $self->out_acefile;
     my $out      = Genome::Utility::FileSystem->open_file_for_writing($out_ace) or return;
     my $writer   = GSC::IO::Assembly::Ace::Writer->new($out);
+
+    # Tmp writer for reads and read positions
+    my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+    my $reads_file = $tmpdir.'/reads';
+    my $reads_fh = Genome::Utility::FileSystem->open_file_for_writing($reads_file)
+        or return;
+    my $read_writer = GSC::IO::Assembly::Ace::Writer->new($reads_fh)
+        or return;
+    my $read_pos_file = $tmpdir.'/read_positions';
+    my $read_pos_fh = Genome::Utility::FileSystem->open_file_for_writing($read_pos_file)
+        or return;
+    my $read_pos_writer = GSC::IO::Assembly::Ace::Writer->new($read_pos_fh)
+        or return;
 
     while (my $record = getRecord($afg_fh)){
         my ($rec, $fields, $recs) = parseRecord($record);
@@ -174,7 +189,7 @@ sub execute {
             my $ctg_seq = $fields->{seq};
             $ctg_seq =~ s/\n//g;
             $ctg_seq =~ s/-/*/g;
-                
+
             my $ctg_id = $fields->{eid};
             if ($ctg_id =~ /\-/) {
                 my ($scaf_num, $ctg_num) = split /\-/, $ctg_id;
@@ -185,46 +200,44 @@ sub execute {
             else {
                 $ctg_id = 'Contig'.$ctg_id;
             }
-            
+
             my $ctg_length = length $ctg_seq;
-                
+
             my $ctg_qual = $fields->{qlt};
             $ctg_qual =~ s/\n//g;
-                
+
             my @ctg_quals;
             for my $i (0..length($ctg_qual)-1) {
                 unless (substr($ctg_seq, $i, 1) eq '*') {
                     push @ctg_quals, ord(substr($ctg_qual, $i, 1)) - ord('0');
                 }
             }
-                                
-            my @read_pos;
-            my @reads;
+
             my %left_pos;
             my %right_pos;
-                
+            my $nRd = 0;
             for my $r (0..$#$recs) {
                 my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
-                                        
+
                 if ($srec eq 'TLE') {
                     my $ori_read_id = $sfields->{src};
                     return $self->error_handle('TLE record contains no src: field')
-                        unless defined $ori_read_id;
-                                        
+                    unless defined $ori_read_id;
+
                     my ($read_id, $pos, $itr);
 
                     if ($self->sqlite_yes) { #<--------------------
                         my $sth = $dbh->prepare(
                             qq(
-                                select name, position 
-                                from read_info 
-                                where id = '$ori_read_id'
+                            select name, position 
+                            from read_info 
+                            where id = '$ori_read_id'
                             )
                         );
                         $sth->execute or return $self->error_handle("Failed to select for read: $ori_read_id ".$DBI::errstr);
                         my @out = $sth->fetchrow_array;
                         return $self->error_handle("Got nothing from sqlite select for read: $ori_read_id") unless @out;
-                        
+
                         ($read_id, $pos) = @out;
                         $read_id .= '-'.$read_dup{$ori_read_id} if exists $read_dup{$ori_read_id};
                         $read_dup{$ori_read_id}++;
@@ -232,130 +245,175 @@ sub execute {
                     else {
                         #my $info = $seqinfo->{$ori_read_id};
                         #return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless $info;
-			return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless $seqinfo[$ori_read_id];
+                        return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless $seqinfo[$ori_read_id];
                         #$read_id = $info->{name};
-			$read_id = @{$seqinfo[$ori_read_id]}[1];
+                        $read_id = @{$seqinfo[$ori_read_id]}[1];
                         #$pos     = $info->{pos};
-			$pos = @{$seqinfo[$ori_read_id]}[0];
-			#$read_id .= '-' . $info->{ct} if exists $info->{ct}; #this seems to be never defined
+                        $pos = @{$seqinfo[$ori_read_id]}[0];
+                        #$read_id .= '-' . $info->{ct} if exists $info->{ct}; #this seems to be never defined
                         #$seqinfo->{$ori_read_id}->{ct}++;
                     }
                     $dbh->commit if $self->sqlite_yes;
-                    
+
                     my $sequence = $self->get_seq($pos, $read_id, $ori_read_id);
 
                     return unless $sequence;
-                    
+
                     my ($asml, $asmr) = split (/\,/, $sfields->{clr});
 
                     ($asml, $asmr) = $asml < $asmr ? (0, $asmr - $asml) : ($asml - $asmr, 0);
-		    
+
                     my ($seql, $seqr) = ($asml, $asmr);
 
                     my $ori = ($seql > $seqr) ? 'C' : 'U';
                     $asml += $sfields->{off};
-		    $asmr += $sfields->{off};
+                    $asmr += $sfields->{off};
 
                     if ($asml > $asmr){
                         $sequence = reverseComplement($sequence);
                         my $tmp = $asmr;
-			$asmr = $asml;
-			$asml = $tmp;
-			
-			$tmp  = $seqr;
-			$seqr = $seql;
-			$seql = $tmp;
+                        $asmr = $asml;
+                        $asml = $tmp;
+
+                        $tmp  = $seqr;
+                        $seqr = $seql;
+                        $seql = $tmp;
                     }
-                        
+
                     my $off = $sfields->{off} + 1;
 
                     $asml = 0 if $asml < 0;
-		            $left_pos{$read_id}  = $asml + 1;
-		            $right_pos{$read_id} = $asmr;
-                       
+                    $left_pos{$read_id}  = $asml + 1;
+                    $right_pos{$read_id} = $asmr;
+
                     my $end5 = $seql + 1;
                     my $end3 = $seqr;
-                        
-                    push @read_pos, {
-                        type      => 'read_position',
-                        read_name => $read_id,
-                        u_or_c    => $ori,
-                        position  => $off,
-                    };
-                        
-                    push @reads, {
-                        type              => 'read',
-                        name              => $read_id,
-                        padded_base_count => length $sequence,
-                        info_count        => 0, 
-                        tag_count         => 0,
-                        sequence          => $sequence,
-                        qual_clip_start   => $end5,
-                        qual_clip_end     => $end3,
-                        align_clip_start  => $end5,
-                        align_clip_end    => $end3,
-                        description       => {
-                            CHROMAT_FILE => $read_id,
-                            PHD_FILE     => $read_id.'.phd.1',
-                            TIME         => $time,
-                        },
-                    }
+
+                    # Write read position to tmp file
+                    $read_pos_writer->write_object(
+                        {
+                            type      => 'read_position',
+                            read_name => $read_id,
+                            u_or_c    => $ori,
+                            position  => $off,
+                        }
+                    );
+
+                    # Write read to tmp file
+                    $read_writer->write_object(
+                        {
+                            type              => 'read',
+                            name              => $read_id,
+                            padded_base_count => length $sequence,
+                            info_count        => 0, 
+                            tag_count         => 0,
+                            sequence          => $sequence,
+                            qual_clip_start   => $end5,
+                            qual_clip_end     => $end3,
+                            align_clip_start  => $end5,
+                            align_clip_end    => $end3,
+                            description       => {
+                                CHROMAT_FILE => $read_id,
+                                PHD_FILE     => $read_id.'.phd.1',
+                                TIME         => $time,
+                            },
+                        }
+                    );
+                    $nRd++; # read count
                 }         
             }
-                        
+
+            # Write contig
+            # WAS: map{$writer->write_object($_)}($contig, @read_pos, @base_segments, @reads);
+            
+            # Get base segments to get count - may have to write to tmp file
             my @base_segments = get_base_segments(\%left_pos, \%right_pos, $ctg_length);
-	    
-            my $nBS = scalar @base_segments;
-            my $nRd = scalar @read_pos;
 
-            my $contig = {
-                type           => 'contig',
-                name           => $ctg_id,
-                base_count     => $ctg_length,
-                read_count     => $nRd,
-                base_seg_count => $nBS,
-                u_or_c         => 'U',
-                consensus      => $ctg_seq,
-                base_qualities => \@ctg_quals,
-            };
-	    
-	    #print Dumper $contig;
-
-            map{$writer->write_object($_)}($contig, @read_pos, @base_segments, @reads);
+            # Contig - use ace writer
+            $writer->write_object(
+                {
+                    type           => 'contig',
+                    name           => $ctg_id,
+                    base_count     => $ctg_length,
+                    read_count     => $nRd,
+                    base_seg_count => scalar(@base_segments),
+                    u_or_c         => 'U',
+                    consensus      => $ctg_seq,
+                    base_qualities => \@ctg_quals,
+                }
+            );
             $nReads += $nRd;
+
+            # Read positions - use tmp read positions file to write to ace fh
+            $read_pos_fh->close;
+            my $read_pos_rfh = Genome::Utility::FileSystem->open_file_for_reading(
+                $read_pos_file
+            ) or return;
+            while ( my $line  = $read_pos_rfh->getline ) {
+                $out->print($line);
+            }
+            $read_pos_rfh->close;
+            unlink $read_pos_file;
+            $read_pos_fh = Genome::Utility::FileSystem->open_file_for_writing(
+                $read_pos_file
+            ) or return;
+            $read_pos_writer = GSC::IO::Assembly::Ace::Writer->new($read_pos_fh)
+                or return;
+
+            # Base segments - use ace writer
+            for my $base_segment ( @base_segments ) {
+                $writer->write_object($base_segment);
+            }
+
+            # Reads - use tmp reads file to write to ace fh
+            $reads_fh->close;
+            my $reads_rfh = Genome::Utility::FileSystem->open_file_for_reading(
+                $reads_file
+            ) or return;
+            while ( my $line = $reads_rfh->getline ) {
+                $out->print($line);
+            }
+            $reads_rfh->close;
+            unlink $reads_file;
+            $reads_fh = Genome::Utility::FileSystem->open_file_for_writing(
+                $reads_file
+            ) or return;
+            $read_writer = GSC::IO::Assembly::Ace::Writer->new($reads_fh)
+                or return;
+
             $self->status_message("$nContigs contigs are done") if $nContigs % 100 == 0;
         }#if 'CTG'
     }#While loop
     $afg_fh->close;
     #$seq_fh->close;
     $self->status_message("There are total $nContigs contigs and $nReads reads processed");
-    
+
     $writer->write_object({
-        type     => 'assembly_tag',
-        tag_type => 'comment',
-        program  => 'VelvetToAce',
-        date     => time2str('%y%m%d:%H%M%S', time),
-        data     => "Run by $ENV{USER}\n",
-    });
+            type     => 'assembly_tag',
+            tag_type => 'comment',
+            program  => 'VelvetToAce',
+            date     => time2str('%y%m%d:%H%M%S', time),
+            data     => "Run by $ENV{USER}\n",
+        });
     $out->close;
 
     my $tmp_ace = $out_ace . '.tmp';
-    
+
     my $rv = Genome::Utility::FileSystem->shellcmd(
         cmd => "mv $out_ace $tmp_ace",
         output_files => [$tmp_ace],
         skip_if_output_is_present => 0,
     );
-    
+
     unless ($rv == 1) {
         $self->error_message('Failed to mv ace file to ace.tmp');
         return;
     }
-    
+
     my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($out_ace) or return;
     $out_fh->print("AS $nContigs $nReads\n");
     $out_fh->close;
-    
+
     $rv = Genome::Utility::FileSystem->shellcmd(
         cmd => "cat $tmp_ace >> $out_ace",
         output_files => [$out_ace],
@@ -374,14 +432,7 @@ sub execute {
 
 sub get_sqlite_dbh {
     my $self = shift;
-    
-#    my (undef, $db_file) = File::Temp::tempfile(
-#        'velvet_reads_XXXXXX', 
-#        UNLINK => 1,
-#        SUFFIX => '.sqlite',
-#        DIR    => dirname $self->afg_file,
-#    );
- 
+
     my $db_file = (dirname $self->afg_file) .'/velvet_reads.sqlite';
     unlink $db_file;
     my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file", '', '', { AutoCommit => 0, RaiseError => 1 })
@@ -394,37 +445,37 @@ sub get_sqlite_dbh {
     $self->{_dbh} = $dbh;
     return 1;
 }
-   
-    
+
+
 sub get_seq {
     my ($self, $seekpos, $name, $id) = @_;
-    
+
     my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->seq_file) or return;
     $fh->seek($seekpos, 0);
     my $fa_bio = Bio::SeqIO->new(-fh => $fh, -format => 'fasta');
     my $fasta  = $fa_bio->next_seq;
 
     return $self->error_handle("Failed to get fasta bio obj from $name, $seekpos, $id")
-        unless $fasta;
+    unless $fasta;
 
     my $sequence = $fasta->seq;
     my $seq_name = $fasta->display_id;
-    
+
     return $self->error_handle("Failed to get fasta seq for read $name, $id") 
-        unless $sequence;
+    unless $sequence;
     return $self->error_handle("Failed to match seq name: $name => $seq_name")
-        unless $name =~ /$seq_name/;
-   
+    unless $name =~ /$seq_name/;
+
     return $sequence;
 }
-    
+
 
 sub get_base_segments {
     my ($left_pos, $right_pos, $ctg_length) = @_;
 
     my $prev; 
     my @base_segs;
-    
+
     for my $seq (sort { ($left_pos->{$a} == $left_pos->{$b}) ? ($right_pos->{$b} <=> $right_pos->{$a}) : ($left_pos->{$a} <=> $left_pos->{$b}) } (keys %$left_pos)) {
         if (defined $prev) {
             if ($left_pos->{$seq} -1 < $left_pos->{$prev} || $right_pos->{$seq} < $right_pos->{$prev}) {
@@ -449,7 +500,6 @@ sub get_base_segments {
     return @base_segs;
 }
 
-
 sub error_handle {
     my ($self, $msg) = @_;
     $self->error_message($msg);
@@ -461,7 +511,7 @@ sub _dbh {
     return shift->{_dbh};
 }
 
-    
+
 1;
 #$HeadURL$
 #$Id$
