@@ -135,9 +135,26 @@ sub execute {
             $chr2,
             $chr2_pos,
             $type,
-            $size,
-            $orientation,
-        ) = @fields; 
+        );
+        if($fields[0] =~ /\./) {
+            #probably is HQfiltered input
+            $self->status_message("First column contains a period. Assuming Ken Chen's HQFiltered file format.");
+            ($chr1,
+                $chr1_pos,
+                $chr2,
+                $chr2_pos,
+                $type,
+            ) = @fields[1,2,4,6,7];
+        }
+        else {
+            ($chr1,
+                $chr1_pos,
+                $chr2,
+                $chr2_pos,
+                $type,
+            ) = @fields[0,1,3,4,6];
+        }
+
         if(exists($types{$type})) {
             if($start) {
                 #handle the initial search operation if requested

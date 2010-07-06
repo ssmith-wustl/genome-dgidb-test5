@@ -10,7 +10,7 @@ use IO::File;
 class Genome::Model::Tools::Sv::Yenta {
     is => 'Command',
     has => [
-    primer_design_file => 
+    input_file => 
     { 
         type => 'String',
         is_optional => 0,
@@ -105,14 +105,14 @@ sub execute {
     my %types = map {$_ => 1} @types; #create types hash
 
 
-    unless(-f $self->primer_design_file) {
-        $self->error_message("primer design file is not a file: " . $self->primer_design_file);
+    unless(-f $self->input_file) {
+        $self->error_message("primer design file is not a file: " . $self->input_file);
         return;
     }
 
-    my $indel_fh = IO::File->new($self->primer_design_file);
+    my $indel_fh = IO::File->new($self->input_file);
     unless($indel_fh) {
-        $self->error_message("Failed to open filehandle for: " .  $self->primer_design_file );
+        $self->error_message("Failed to open filehandle for: " .  $self->input_file );
         return;
     }
 
@@ -166,35 +166,50 @@ sub execute {
     while ( my $line = $indel_fh->getline) {
         chomp $line;
         $line =~ s/"//g; #kill any quotes that may have snuck in
+        my @fields = split /\s+/, $line; #assuming tab separated
         my ($chr1,
             $chr1_pos,
             $chr2,
             $chr2_pos,
             $type,
-            $size,
-            $orientation,
-        ) = split /\s+/, $line; 
+        ); 
+        if($fields[0] =~ /\./) {
+            #probably is HQfiltered input
+            $self->status_message("First column contains a period. Assuming Ken Chen's HQFiltered file format.");
+            ($chr1,
+                $chr1_pos,
+                $chr2,
+                $chr2_pos,
+                $type,
+            ) = @fields[1,2,4,6,7];
+        }
+        else {
+            ($chr1,
+                $chr1_pos,
+                $chr2,
+                $chr2_pos,
+                $type,
+            ) = @fields[0,1,3,4,6];
+        }
+
+
         #skip headers
         next if $line =~ /^#|START|TYPE/i;
         #validate columns
         unless($chr1 =~ /^[0-9XYNMT_]+$/i) {
-            $self->error_message("First column contains invalid chromosome name $chr1 at line " . $indel_fh->input_line_number);
-            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            $self->error_message("First chromosome name $chr1 is invalid at line " . $indel_fh->input_line_number);
             return;
         }
         unless($chr2 =~ /^[0-9XYNMT_]+$/i) {
-            $self->error_message("Fourth column contains invalid chromosome name $chr2 at line " . $indel_fh->input_line_number);
-            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            $self->error_message("Second chromosome name $chr2 is invalid at line " . $indel_fh->input_line_number);
             return;
         }
         unless($chr1_pos =~ /^\d+$/) {
-            $self->error_message("Second column contains non-digit characters $chr1_pos at line " . $indel_fh->input_line_number);
-            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            $self->error_message("First breakpoint coordinate contains non-digit characters $chr1_pos at line " . $indel_fh->input_line_number);
             return;
         }
         unless($chr2_pos =~ /^\d+$/) {
-            $self->error_message("Fifth column contains non-digit characters $chr2_pos at line " . $indel_fh->input_line_number);
-            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	dummy	chr2	pos2	dummy	type");
+            $self->error_message("Second breakpoint coordinate contains non-digit characters $chr2_pos at line " . $indel_fh->input_line_number);
             return;
         }
         if(exists($types{$type})) {
@@ -241,7 +256,6 @@ sub execute {
         unless(exists($allowed_types->{$type})) {
             $self->error_message("Type $type invalid");
             $self->error_message("Valid types are " . join("\t",keys %{$allowed_types}));
-            $self->error_message("Please confirm your file is formatted as follows: chr1	pos1	chr2	pos2	type");
             return;
         }
 
@@ -274,6 +288,14 @@ The naming convention of the files produced is as follows:
 
 The input file must be formatted as follows:
 chr1	position1	chr2	position2	type
+
+or
+
+ID	CHR1	OUTER_START	INNER_START	CHR2	INNER_END	OUTER_END	TYPE
+
+Please note that the second format is identified by the presence of a period in the id. If this assumption is wrong for some reason then this script may break.
+
+Problems or questions? Email dlarson\@genome.wustl.edu
 
 HELP
 
