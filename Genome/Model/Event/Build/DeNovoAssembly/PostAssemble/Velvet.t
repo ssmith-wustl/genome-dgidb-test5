@@ -41,13 +41,10 @@ ok(-s $build->contigs_fasta_file, 'Linked contigs.fa file') or die;
 my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Velvet->create( build_id => $build->id);
 ok($velvet, 'Created post assemble velvet');
 
-#velvet_asm.afg file should not exist
 ok($velvet->execute, 'Execute post assemble velvet');
 
-#my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_tmp/edit_dir';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
 
-#skipping input fasta.gz and qual.gz files for now
 my @file_names_to_test = qw/ reads.placed readinfo.txt
                         gap.txt contigs.quals contigs.bases
                         supercontigs.fasta supercontigs.agp stats.txt
@@ -59,6 +56,18 @@ foreach my $file (@file_names_to_test) {
     ok(-e $data_directory."/edit_dir/$file", "Tmp test dir $file file exists");
     ok(File::Compare::compare($data_directory."/edit_dir/$file", $test_data_dir."/$file") == 0, "$file files match")
         or diag("Failed to compare $data_directory/edit_dir/$file with $test_data_dir/$file");
+}
+
+#test zipped files
+foreach ('collated.fasta.gz', 'collated.fasta.qual.gz') {
+    my $test_file = $test_data_dir."/$_";
+    my $temp_file = $build->data_directory."/edit_dir/$_";
+
+    ok(-e $test_file, "Test data dir $_ file exists");
+    ok(-s $temp_file, "Tmp test dire $_ file exists");
+    
+    my @diff = `zdiff $test_file $temp_file`;
+    is(scalar (@diff), 0, "Zipped $_ file matches");
 }
 
 #print $build->data_directory."\n";<STDIN>;
