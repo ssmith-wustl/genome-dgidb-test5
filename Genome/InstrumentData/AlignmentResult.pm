@@ -160,6 +160,18 @@ class Genome::InstrumentData::AlignmentResult {
                                         is=>'Number',
                                         is_optional=>1,
                                 },
+        total_hard_clipped_read_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        total_hard_clipped_base_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
+        total_soft_clipped_read_count => {
+                                        is=>'Number',
+                                        is_optional=>1,
+                                },
         total_soft_clipped_base_count => {
                                         is=>'Number',
                                         is_optional=>1,
@@ -482,7 +494,7 @@ sub create_BAM_in_staging_directory {
 sub _compute_alignment_metrics {
     my $self = shift;
     my $bam = $self->temp_staging_directory . "/all_sequences.bam";
-    my $out = `bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/alignment-summary-v1.2.4 --bam=\"$bam\" --ignore-cigar-md-errors"`;
+    my $out = `bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/alignment-summary-v1.2.6 --bam=\"$bam\" --ignore-cigar-md-errors"`;
     unless ($? == 0) {
         $self->error_message("Failed to compute alignment metrics.");
         die $self->error_message;
@@ -505,6 +517,9 @@ sub _compute_alignment_metrics {
     $self->total_duplicate_base_count   ($res->{total_duplicate_bp});
     $self->total_inserted_base_count    ($res->{total_inserted_bp});
     $self->total_deleted_base_count     ($res->{total_deleted_bp});
+    $self->total_hard_clipped_read_count($res->{total_hard_clipped});
+    $self->total_hard_clipped_base_count($res->{total_hard_clipped_bp});
+    $self->total_soft_clipped_read_count($res->{total_soft_clipped});
     $self->total_soft_clipped_base_count($res->{total_soft_clipped_bp});
     $self->paired_end_read_count        ($res->{paired_end});
     $self->paired_end_base_count        ($res->{paired_end_bp});
