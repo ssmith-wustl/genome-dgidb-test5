@@ -193,9 +193,9 @@ sub get_edit_dir_file_names {
 sub parse_input_qual_files {
     my ($self, $files) = @_;
     my $q_cutoff = 20;
-    if ($self->assembler eq 'Velvet') {
-	$q_cutoff += 31;
-    }
+#    if ($self->assembler eq 'Velvet') {
+#	$q_cutoff += 31;
+#    }
     my $counts = {};
     foreach my $file (@$files) {
 	my $fh = IO::File->new("zcat $file |")|| return;
@@ -355,7 +355,8 @@ sub _resolve_tier_values {
 
 sub _resolve_major_contig_length {
     my ($self) = @_;
-    my $major_contig_length = 100;
+    #my $major_contig_length = 100;
+    my $major_contig_length = 500;
     if ($self->major_contig_length) {
 	$major_contig_length = $self->major_contig_length;
     }
@@ -532,7 +533,8 @@ sub create_contiguity_stats {
     }
 
     my $average_contig_length = int ($cumulative_length / $total_contig_number + 0.50);
-    my $average_major_contig_length = int ($major_contig_length / $major_contig_number + 0.50);
+    my $average_major_contig_length = ($major_contig_number > 0) ?
+	int ($major_contig_length / $major_contig_number + 0.50) : 0;
     my $average_t1_contig_length = ($t1_count > 0) ? int ($total_t1_bases/$t1_count + 0.5) : 0;
     my $average_t2_contig_length = ($t2_count > 0) ? int ($total_t2_bases/$t2_count + 0.5) : 0;
     my $average_t3_contig_length = ($t3_count > 0) ? int ($total_t3_bases/$t3_count + 0.5) : 0;
