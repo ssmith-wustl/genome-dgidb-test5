@@ -35,18 +35,9 @@ sub execute {
         return;
     }
 
-    #create standard assembly output files
-    #my $ec = Genome::Model::Tools::Velvet::CreateAsmStdoutFiles->execute(
-    #    input_fastq_file => $self->build->collated_fastq_file,
-    #    directory => $self->build->data_directory,
-    #);
-    #unless ($ec) {
-    #    $self->error_message("Failed to run create asm stdout files");
-    #    return;
-    #}
-
     #create gap.txt file
-    my $gap = Genome::Model::Tools::Assembly::CreateOutputFiles::Gap->create(
+    my $gap = Genome::Model::Tools::Velvet::CreateGapFile->create(
+	contigs_fasta_file => $self->build->contigs_fasta_file,
         directory => $self->build->data_directory,
         );
     unless ($gap->execute) {
