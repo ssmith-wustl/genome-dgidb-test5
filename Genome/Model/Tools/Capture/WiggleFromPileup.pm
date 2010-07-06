@@ -76,21 +76,41 @@ sub execute {                               # replace with real execution logic.
 	#set coverage at q20
 	my $min_base_qual = 20;
 	my $min_coverage = 0;
-	
-	my $q20_normal_file = $output_dir.'/q20_coverage_normal.txt';
-	my $q20_tumor_file = $output_dir.'/q20_coverage_tumor.txt';
-	# Open Output
-	unless (open(NORMAL_Q20,">$q20_normal_file")) {
-		die "Could not open output file '$q20_normal_file' for writing";
-	  }
-	# Open Output
-	unless (open(TUMOR_Q20,">$q20_tumor_file")) {
-		die "Could not open output file '$q20_tumor_file' for writing";
-	  }
+
+	unless (-e $bam_ref) {
+		die "No reference fasta file\n";
+	    }
+
+#	my $q20_normal_file = $output_dir.'/q20_coverage_normal.txt';
+#	my $q20_tumor_file = $output_dir.'/q20_coverage_tumor.txt';
+#	# Open Output
+#	unless (open(NORMAL_Q20,">$q20_normal_file")) {
+#		die "Could not open output file '$q20_normal_file' for writing";
+#	  }
+#	# Open Output
+#	unless (open(TUMOR_Q20,">$q20_tumor_file")) {
+#		die "Could not open output file '$q20_tumor_file' for writing";
+#	  }
 	## Open outfile ##
 	my $outfile = $output_dir."/".$output_file;
 	open(OUTFILE, ">$outfile") or die "Can't open outfile: $!\n";
 
+	print "Checking for bam index file...\n";
+
+	my $normal_bam_index = $output_dir."/".$normal_bam.'.bai';
+	my $tumor_bam_index = $output_dir."/".$tumor_bam.'.bai';
+	unless (-e $normal_bam_index) {
+		print "No normal bam index file\n";
+		my $cmd_bam_bai = "samtools index $normal_bam";
+		system($cmd_bam_bai);
+	    }
+	unless (-e $tumor_bam_index) {
+		print "No tumor bam index file\n";
+		my $cmd_bam_bai = "samtools index $tumor_bam";
+		system($cmd_bam_bai);
+	    }
+
+	print "Bam indexing complete, checking bam file...\n";
 	#get chromosome lengths
 	my $tmp_name = "$output_dir/tempbamheader.txt";
 	my @command = `samtools view -H $normal_bam > $tmp_name`;
@@ -113,14 +133,15 @@ sub execute {                               # replace with real execution logic.
 
 	my $lineCounter_normal = 0;
 	my $lineCounter_tumor = 0;
-	my %normal_coverage = ();
-	my %tumor_coverage = ();
-	my $out_normal = "$output_dir/temppileup_normal.txt";
-	my $out_tumor = "$output_dir/temppileup_tumor.txt";
+	my $tempdir = "/tmp/$output_file/";
+	mkdir($tempdir);
+	my $out_normal = "$tempdir/temppileup_normal.txt";
+	my $out_tumor = "$tempdir/temppileup_tumor.txt";
 	my $pileupfh;
-	my %stats = ();
-	$stats{'bases'} = $stats{'covered'} = $stats{'not_covered'} = 0;
+#	my %stats = ();
+#	$stats{'bases'} = $stats{'covered'} = $stats{'not_covered'} = 0;
 	my @chromes = (sort keys %chr_len);
+	print "Starting pileup and wiggle file creation...\n";
 	for my $chr (@chromes) {
 		my $length = $chr_len{$chr};
 		my $num_div = ($length / 25000000);
@@ -183,7 +204,7 @@ sub execute {                               # replace with real execution logic.
 				}
 			
 				if($qual_coverage >= $min_coverage) {
-					print NORMAL_Q20 "$chrom\t$position\t$qual_coverage\n";			
+#					print NORMAL_Q20 "$chrom\t$position\t$qual_coverage\n";			
 					my $wiggle_chr = $chrom;
 					$wiggle_chr =~ s/chr//;
 					$wiggle_chr = "MT" if($chrom eq "M");
@@ -232,7 +253,7 @@ sub execute {                               # replace with real execution logic.
 				}
 				
 				if($qual_coverage >= $min_coverage) {
-					print TUMOR_Q20 "$chrom\t$position\t$qual_coverage\n";			
+#					print TUMOR_Q20 "$chrom\t$position\t$qual_coverage\n";			
 					my $wiggle_chr = $chrom;
 					$wiggle_chr =~ s/chr//;
 					$wiggle_chr = "MT" if($chrom eq "M");
@@ -254,7 +275,7 @@ sub execute {                               # replace with real execution logic.
 				my $line = $_;
 				$lineCounter++;		
 		
-				(my $chrom, my $chr_start, my $chr_stop, my $region_name) = split(/\t/, $line);
+				(my $chrom, my $chr_start, my $chr_stop) = split(/\t/, $line);
 
 				#set and test coverage for only coverage within the current iteration loop ==> $region (@reg_divides)
 				if ($chrom ne $chr) {
@@ -294,19 +315,19 @@ sub execute {                               # replace with real execution logic.
 				for(my $position = $chr_start; $position <= $chr_stop; $position++)
 				{
 					my $key = "$chrom\t$position";
-					$stats{'bases'}++;
+#					$stats{'bases'}++;
 		
 					## Determine if coverage is met ##
 					
 					if($normal_coverage{$key} && $tumor_coverage{$key} && $normal_coverage{$key} >= $min_depth_normal && $tumor_coverage{$key} >= $min_depth_tumor)
 					{				
 						print OUTFILE "1\n";
-						$stats{'covered'}++;
+#						$stats{'covered'}++;
 					}
 					else
 					{
 						print OUTFILE "0\n";
-						$stats{'not_covered'}++;
+#						$stats{'not_covered'}++;
 					}
 				}
 			}
@@ -315,19 +336,19 @@ sub execute {                               # replace with real execution logic.
 	}
 
 	close(OUTFILE);
-
-	print $stats{'bases'} . " bases in ROI\n";
-	print $stats{'covered'} . " bases covered >= " . $min_depth_normal . "x in normal and >= " . $min_depth_tumor . "x in tumor\n";
-	print $stats{'not_covered'} . " bases NOT covered >= " . $min_depth_normal . "x in normal and >= " . $min_depth_tumor . "x in tumor\n";
+	rmdir($tempdir);
+#	print $stats{'bases'} . " bases in ROI\n";
+#	print $stats{'covered'} . " bases covered >= " . $min_depth_normal . "x in normal and >= " . $min_depth_tumor . "x in tumor\n";
+#	print $stats{'not_covered'} . " bases NOT covered >= " . $min_depth_normal . "x in normal and >= " . $min_depth_tumor . "x in tumor\n";
 
 	if($self->gzip_after)
 	{
 		print "Compressing $outfile...\n";
 		system("gzip $outfile");
-		print "Compressing $q20_normal_file...\n";
-		system("gzip $q20_normal_file"); 
-		print "Compressing $q20_tumor_file...\n";
-		system("gzip $q20_tumor_file");  
+#		print "Compressing $q20_normal_file...\n";
+#		system("gzip $q20_normal_file"); 
+#		print "Compressing $q20_tumor_file...\n";
+#		system("gzip $q20_tumor_file");  
 	}
 	
 	return 1;
