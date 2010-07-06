@@ -7,7 +7,7 @@ use Cwd;
 use above "Genome";
 use Test::More;
 
-my $module = 'Genome-Model-Tools-Velvet-CreateStdoutFiles';
+my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles2';
 my $data_dir = "/gsc/var/cache/testsuite/data/$module";
 
 ok(-d $data_dir, "Found data directory: $data_dir");
@@ -55,8 +55,6 @@ is(scalar (@fasta_diff), 0, "Zipped fasta files match") or diag(@fasta_diff);
 
 my @qual_diff = `zdiff $test_qual $temp_qual`;
 is(scalar (@qual_diff), 0, "Zipped qual files match") or diag(@qual_diff);
-
-#sleep(300);
 
 done_testing();
 
