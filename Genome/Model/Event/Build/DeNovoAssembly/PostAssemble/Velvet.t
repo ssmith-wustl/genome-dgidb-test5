@@ -44,8 +44,8 @@ ok($velvet, 'Created post assemble velvet');
 #velvet_asm.afg file should not exist
 ok($velvet->execute, 'Execute post assemble velvet');
 
-#my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_tmp/edit_dir';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble/edit_dir';
+#my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_tmp/edit_dir';
 
 #skipping input fasta.gz and qual.gz files for now
 my @file_names_to_test = qw/ reads.placed readinfo.txt
