@@ -92,7 +92,7 @@ sub execute {
     $self->iprscan_output($tmp_fh);
     
     my @iprscan_command = (
-                           '/gscmnt/temp212/info/annotation/InterProScan/Version_4.5/iprscan/bin/iprscan',
+                           '/gsc/scripts/pkg/bio/iprscan/iprscan-4.5/bin/iprscan',
                            '-cli',
                            '-appl', 'hmmpfam',
                            '-appl', 'hmmtigr',
