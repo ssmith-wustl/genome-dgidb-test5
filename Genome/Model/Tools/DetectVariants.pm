@@ -209,10 +209,10 @@ sub execute {
         return;
     }
     
-#    unless($self->_generate_standard_files) {
-#        $self->error_message('Failed to generate standard files from detector-specific files');
-#        return;
-#    }
+    unless($self->_generate_standard_files) {
+        $self->error_message('Failed to generate standard files from detector-specific files');
+        return;
+    }
     
     unless($self->_promote_staged_data) {
         $self->error_message('Failed to promote staged data.');
@@ -287,11 +287,56 @@ sub _generate_standard_files {
     my $class = ref $self || $self;
     my @words = split('::', $class);
     
+    my $retval = 1;
+    
     unless(scalar(@words) > 2 and $words[0] eq 'Genome') {
         die('Could not determine detector class automatically.  Please implement _generate_standard_files in the subclass.');
     }
     
     my $detector = $words[-1];
+    my $module_base = 'Genome::Model::Tools::Bed::Convert';
+    
+    if($self->detect_snvs) {
+        my $snv_module = join('::', $module_base, 'Snv', $detector . 'ToBed'); 
+        
+        for my $variant_file ($self->_snv_staging_output, $self->_filtered_snv_staging_output) {
+            if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+                $retval &&= $self->_run_converter($snv_module, $variant_file);
+            }  
+        }
+    }
+    
+    if($self->detect_indels) {
+        my $snv_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
+        
+        for my $variant_file ($self->_indel_staging_output, $self->_filtered_indel_staging_output) {
+            if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+                $retval &&= $self->_run_converter($snv_module, $variant_file);
+            }  
+        }
+    }
+    
+    return $retval;
+}
+
+sub _run_converter {
+    my $self = shift;
+    my $converter = shift;
+    my $source = shift;
+    
+    my $output = $source . '.bed'; #shift; #TODO Possibly create accessors for the bed files instead of hard-coding this
+    
+    my $command = $converter->create(
+        source => $source,
+        output => $output, 
+    );
+    
+    unless($command->execute) {
+        $self->error_message('Failed to convert ' . $source . ' to the standard format.');
+        return;
+    }
+
+    return 1;
 }
 
 sub _promote_staged_data {

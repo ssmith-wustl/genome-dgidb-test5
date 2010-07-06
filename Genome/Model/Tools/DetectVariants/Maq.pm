@@ -278,6 +278,39 @@ sub _run_maq {
     return $self->verify_successful_completion($snv_output, $pileup_output, $filtered_snv_output, $indel_output);
 }
 
+#This is being overwritten just so the indelpe output can be used instead of the indelsoa output
+#(There may be more elegant approaches than this...)
+sub _generate_standard_files {
+    my $self = shift;
+    
+    my $detector = 'Maq';
+    my $module_base = 'Genome::Model::Tools::Bed::Convert';
+    
+    my $retval = 1;
+    
+    if($self->detect_snvs) {
+        my $snv_module = join('::', $module_base, 'Snv', $detector . 'ToBed'); 
+        
+        for my $variant_file ($self->_snv_staging_output, $self->_filtered_snv_staging_output) {
+            if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+                $retval &&= $self->_run_converter($snv_module, $variant_file);
+            }  
+        }
+    }
+    
+    if($self->detect_indels) {
+        my $snv_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
+        
+        for my $variant_file ($self->_indelpe_staging_output, $self->_sorted_indelpe_staging_output) {
+            if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+                $retval &&= $self->_run_converter($snv_module, $variant_file);
+            }  
+        }
+    }
+    
+    return $retval;
+}
+
 
 sub verify_successful_completion {
     my $self = shift;

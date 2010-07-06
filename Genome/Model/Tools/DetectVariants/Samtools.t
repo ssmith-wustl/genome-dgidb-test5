@@ -19,7 +19,7 @@ my $test_working_dir = File::Temp::tempdir('DetectVariants-SamtoolsXXXXX', DIR =
 
 my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 
-my $expected_dir = $test_dir . '/expected/';
+my $expected_dir = $test_dir . '/expected.v2/'; #Updated to .v2 when BED files added to output
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
 ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
