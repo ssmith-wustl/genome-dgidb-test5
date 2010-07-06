@@ -35,6 +35,11 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             default_value => 0,
             doc => "Reads with this amount of n's will be removed from unaligned reads from contamination screen step before before optional dusting",
         },
+        mismatch_cutoff => {
+            is => 'Integer',
+            default_value=> 0,
+            doc => 'mismatch cutoff (including softclip) for post metagenomic alignment processing',
+        },
     ],
     has => [
         _contamination_screen_pp => {
@@ -94,7 +99,7 @@ sub _execute_build {
     my ($self, $build) = @_;
 
     my $model = $build->model;
-    
+
     # temp hack for debugging
     $log_model_name = $model->name;
     $self->status_message("Starting build for model $log_model_name");
