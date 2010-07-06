@@ -42,6 +42,21 @@ class Genome::InstrumentData::Imported {
         subset_name          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         library_id           => { is => 'NUMBER', len => 20, is_optional => 1 },
     ],
+    has_optional =>[
+        reference_sequence_build_id => { 
+            via => 'attributes', 
+            to => 'value', 
+            is_mutable => 1, 
+            where => [ 
+                property_name => 'reference_sequence_build', 
+                entity_class_name => 'Genome::InstrumentData::Imported', 
+            ],
+        },
+    ],
+    has_many_optional => [
+        attributes => { is => 'Genome::MiscAttribute', reverse_as => '_instrument_data', where => [ entity_class_name => 'Genome::InstrumentData::Imported' ] },
+    ],
+
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };

@@ -2,7 +2,6 @@ package Genome::InstrumentData::AlignmentResult::Imported;
 
 use strict;
 use warnings;
-use File::Copy;
 use File::Basename;
 
 use Genome;
@@ -62,7 +61,7 @@ sub create_BAM_in_staging_directory {
                 $self->status_message("Successfully created an all_sequences.bam file.");
             } else {     #otherwise simply copy the bam into the staging directory
                 $self->status_message("Attempting to copy file from import to alignment scratch dir.\n");
-                unless(File::Copy($instrument_data->data_directory."/all_sequences.bam",$bam_output_path)) {
+                unless(Genome::Utility::FileSystem->copy_file($instrument_data->data_directory."/all_sequences.bam",$bam_output_path)) {
                     $self->error_message("Failed to copy BAM from instrument-data allocation to alignment scratch dir.\n");
                     die $self->errror_message;
                 }
