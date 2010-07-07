@@ -9,10 +9,15 @@ use Cwd;
 class Genome::Model::Tools::Bmr::SmgTest {
     is => 'Command',
     has => [
-    bmr_file => {
+    gene_summary => {
         is => 'String',
         is_optional => 0,
-        doc => 'File containing per-gene BMR info.',
+        doc => 'File containing per-gene BMR info from \'gmt bmr gene-summary\'.',
+    },
+    class_summary => {
+        is => 'String',
+        is_optional => 0,
+        doc => 'File containing per-class BMR info from \'gmt bmr class-summary\'.',
     },
     ]
 };
@@ -22,7 +27,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    "Takes as input output from gmt bmr calculate-bmr, and run's Qunyuan's SMG test which is coded in R."
+    "Takes as input output from gmt bmr gene-summary, and run's Qunyuan's SMG test which is coded in R."
 }
 
 sub execute {
@@ -31,35 +36,35 @@ sub execute {
     my $rlibrary = "SMG_test.R";
 
     #Parse input
-    my $infile = $self->bmr_file;
-    unless (-s $infile) {
+    my $genefile = $self->gene_summary;
+    unless (-s $genefile) {
         $self->status_message("BMR file not found.");
         return;
     }
-    my $testfile = $infile . ".smgtest";
-    my $summary = $infile . ".class_summary";
-    my $outfile = $testfile . ".final_results";
-    my $fdrfile = $testfile . ".fdr";
+    my $test_output = $genefile . ".smgtest";
+    my $outfile = $test_output . ".final_results";
+    my $fdrfile = $test_output . ".fdr";
 
     #Call R for smg test
-    my $smg_test_cmd = "smg_test(in.file='$infile',test.file='$testfile',fdr.file='$fdrfile');";
+    my $smg_test_cmd = "smg_test(in.file='$genefile',test.file='$test_output',fdr.file='$fdrfile');";
     my $smg_test_rcall = Genome::Model::Tools::R::CallR->create(command=>$smg_test_cmd,library=>$rlibrary);
     $smg_test_rcall->execute;
 
     #Print final output file
     my $outfh = new IO::File $outfile,"w";
     
-    #Print class summary
+    #grab classes from the bmr file
     my @classes;
     my $classesref = \@classes;
-    my $summaryfh = new IO::File $summary,"r";
-    while (my $line = $summaryfh->getline) {
+    my $class_file = $self->class_summary;
+    my $classfh = new IO::File $class_file,"r";
+    while (my $line = $classfh->getline) {
         print $outfh $line;
         next if $line =~ /Class/;
         my ($class) = split /\t/,$line;
         push @classes,$class;
     }
-    $summaryfh->close;
+    $classfh->close;
     @classes = sort @classes;
     
 
@@ -90,8 +95,8 @@ sub execute {
     my %COVMUTS;
     my $covmuts = \%COVMUTS;
     
-    my $bmrfh = new IO::File $infile,"r";
-    while (my $line = $bmrfh->getline) {
+    my $genefh = new IO::File $genefile,"r";
+    while (my $line = $genefh->getline) {
         next if $line =~ /Class/;
         my ($nextgene,$class,$cov,$muts) = split /\t/,$line;
         unless (defined $COVMUTS{'gene'}) {
