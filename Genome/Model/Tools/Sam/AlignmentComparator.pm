@@ -64,6 +64,7 @@ sub alignments_agree {
 sub execute {
     my $self = shift;
 
+    $DB::single = 1;
     my @files = $self->files_to_compare;
     my $fai_file = $self->fai_file;
     my $out_dir = $self->output_dir;
@@ -107,6 +108,7 @@ sub execute {
     } @files;
     
     for my $entry (@data) {
+        die("Encountered a file with no alignment data") if eof $entry->{'in'};
         redo unless read_line($entry,\%chr2idx); # read until the first real line of data
     }
     
