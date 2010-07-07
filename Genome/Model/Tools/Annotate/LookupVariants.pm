@@ -51,6 +51,12 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             is_optional => 1,
             doc      => "path to dbSNP files broken into chromosome",
         },
+        dbSNP_version => {
+            type    => 'Int',
+            is_optional => 1,
+            default => 130,
+            doc     => 'Version of dbSNP to use. Defaults to 130.',
+        },
         report_mode => {
             type     => 'Text',
             is_input => 1,
@@ -63,8 +69,10 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         },
         index_fixed_width => {
             type     => 'Int',
-            default  => 10,
-            doc      => "look, dont change this, ok?"
+            calculate_from  => ['dbSNP_version'],
+            calculate      => sub { # if we want to use a more efficient index file, this will be easy to change.
+                                    return 10;
+                                },
         },
         skip_if_output_present => {
             is => 'Boolean',
@@ -133,11 +141,13 @@ sub execute {
     if(defined($self->dbSNP_path)){
         $dbsnp_dir = $self->dbSNP_path;
     } else {
-        $dbsnp_dir = Genome::Model->get( name => 'dbSNP-human-130')->imported_variations_directory."/tmp";
+        # note: this crashes when using v. 131, because the 'get' returns undef
+        my $model = Genome::Model->get( name => "dbSNP-human-".$self->dbSNP_version);
+        $dbsnp_dir = $model->imported_variations_directory . "/tmp"; # TODO: use Model to represent this data set
     }
 
     unless($dbsnp_dir) {
-        $self->error_message('Could not locate dbSNP-human-130 model.');
+        $self->error_message('Count not locate dbSNP model.');
         die $self->error_message;
     }
     $self->dbSNP_path($dbsnp_dir);
