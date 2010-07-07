@@ -121,7 +121,8 @@ sub execute {
     my $time   = $self->time || localtime;
     my $dbh    = $self->_dbh if $self->sqlite_yes;
 
-    my $seqinfo  = {};
+    #my $seqinfo  = {};
+    my @seqinfo;
     my %read_dup = ();
     my $nReads   = 0;
     my $nContigs = 0;
@@ -143,8 +144,10 @@ sub execute {
             $sth->execute or return $self->error_handle("Failed to insert for $name : ".$DBI::errstr);
         }
         else {
-            $seqinfo->{$ct}->{name} = $name;
-            $seqinfo->{$ct}->{pos}  = $seekpos;
+            #$seqinfo->{$ct}->{name} = $name;
+	    push @{$seqinfo[$ct]}, $name;
+            #$seqinfo->{$ct}->{pos}  = $seekpos;
+	    push @{$seqinfo[$ct]}, $seekpos;
         }
         $seekpos = $seq_fh->tell;
     }
@@ -240,13 +243,20 @@ sub execute {
                         $read_dup{$ori_read_id}++;
                     }
                     else {
-			my $info = $seqinfo->{$ori_read_id};
-                        return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless $info;
-			$read_id = $info->{name};
-                        $pos     = $info->{pos};
-                        $read_id .= '-' . $info->{ct} if exists $info->{ct};
-                        $seqinfo->{$ori_read_id}->{ct}++;
-                    }
+			#my $info = $seqinfo->{$ori_read_id};
+                        #return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless $info;
+			#$read_id = $info->{name};
+                        #$pos     = $info->{pos};
+                        #$read_id .= '-' . $info->{ct} if exists $info->{ct};
+                        #$seqinfo->{$ori_read_id}->{ct}++;
+			#converted hash of hash to array or array to reduce foot print
+			return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless
+			    defined $seqinfo[$ori_read_id];
+			$read_id = ${$seqinfo[$ori_read_id]}[0];
+			$pos = ${$seqinfo[$ori_read_id]}[1];
+			$read_id .= '-' . ${$seqinfo[$ori_read_id]}[2] if defined ${$seqinfo[$ori_read_id]}[2];
+			${$seqinfo[$ori_read_id]}[2]++;
+		    }
                     $dbh->commit if $self->sqlite_yes;
 
                     my $sequence = $self->get_seq($pos, $read_id, $ori_read_id);
