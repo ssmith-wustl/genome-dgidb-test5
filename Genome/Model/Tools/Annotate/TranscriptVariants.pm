@@ -225,7 +225,7 @@ sub execute {
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $variant_file,
         headers => \@columns,
-        separator => "\t|\/", #separate on tabs and '/' in the case of the bed file
+        separator => "\t",
         is_regex => 1,
         ignore_extra_columns => 1,
     );
@@ -322,12 +322,6 @@ sub execute {
     my $sloppy_skip = 0; #This var is set when we can't annotate a chromosome and want to skip the rest of the variants on that chromosome
 
     while ( my $variant = $variant_svr->next ) {
-
-        #if the variants came from a bed file, change the start coordinate to be 1 based 
-        if($self->bed_file){
-            $variant->{'start'} = $variant->{'start'} + 1;        
-        }
-
         $variant->{type} = $self->infer_variant_type($variant);
         # make a new annotator when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
