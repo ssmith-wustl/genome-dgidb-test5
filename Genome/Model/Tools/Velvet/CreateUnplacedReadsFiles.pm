@@ -102,7 +102,8 @@ sub _print_unplaced_reads {
 	$seq_fh->seek($seek_pos, 0);
 	my $io = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta');
 	#$fasta_out->write_seq($io->next_seq);
-	my $seq_obj = Bio::Seq->new(-display_id => $io->next_seq->primary_id, -seq => $io->next_seq->seq);
+	my $seq = $io->next_seq;
+	my $seq_obj = Bio::Seq->new(-display_id => $seq->primary_id, -seq => $seq->seq);
 	$fasta_out->write_seq($seq_obj);
 	$seq_fh->close;
     }
