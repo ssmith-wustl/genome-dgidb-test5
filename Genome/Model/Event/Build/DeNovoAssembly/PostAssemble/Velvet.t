@@ -47,6 +47,7 @@ my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/v
 
 my @file_names_to_test = qw/ reads.placed readinfo.txt
                         gap.txt contigs.quals contigs.bases
+                        reads.unplaced reads.unplaced.fasta
                         supercontigs.fasta supercontigs.agp stats.txt
                          /;
 
