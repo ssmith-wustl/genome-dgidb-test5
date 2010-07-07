@@ -51,7 +51,7 @@ Output file format(stats_file):
 
 sub execute {
     my $self = shift;
-    unless ($self->arch_os =~ /64/) {
+    unless (Genome::Config->arch_os =~ /64/) {
         die('Failed to run on 64-bit architecture');
     }
     my $cmd = $self->execute_path .'/refcov-w_bias-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $self->bias_file;

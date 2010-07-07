@@ -56,7 +56,7 @@ sub default_version { return default_soap_version; }
 #sub create {
 #    my $class = shift;
 #    my $self = $class->SUPER::create(@_);
-#    unless ($self->arch_os =~ /64/) {
+#    unless (Genome::Config->arch_os =~ /64/) {
 #        $self->error_message('Soap2 tools must be run from 64-bit architecture');
 #        return;
 #    }

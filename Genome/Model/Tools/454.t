@@ -8,16 +8,13 @@ use Test::More;
 #use Test::More skip_all => "The new installed version of newbler has a new directory name/structure.  Update me to work with it!";
 
 BEGIN {
-    my $archos = `uname -a`;
+    my $archos = Genome::Config->arch_os;
     if ( $archos !~ /64/ ) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 11;
+    plan tests => 9;
     use_ok('Genome::Model::Tools::454');
 }
-
-my $arch_os = `uname -m`;
-chomp($arch_os);
 
 my @installed_links = qw/ installed newbler /;
 foreach my $link (@installed_links) {
@@ -27,7 +24,6 @@ foreach my $link (@installed_links) {
     my $tool_454 = Genome::Model::Tools::454->create( test_link => $link );
     isa_ok( $tool_454, 'Genome::Model::Tools::454' )
         or diag(Genome::Model::Tools::454->error_message());
-    is( $tool_454->arch_os, $arch_os, 'arch_os' );
     my $app_bin_name;
     if ( $link =~ /installed/ ) {
 	if ($installed_path =~ /offInstrumentApps/) {

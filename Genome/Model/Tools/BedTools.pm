@@ -11,13 +11,6 @@ class Genome::Model::Tools::BedTools {
     is  => 'Command',
     is_abstract => 1,
     has_input => [
-        arch_os => {
-            calculate => q|
-                my $arch_os = `uname -m`;
-                chomp($arch_os);
-                return $arch_os;
-            |
-        },
         use_version => {
             is  => 'Version', 
             doc => 'BEDTools version to be used.  default_value='. $BEDTOOLS_DEFAULT,
@@ -55,7 +48,7 @@ sub path_for_bedtools_version {
     my ($class, $version) = @_;
     $version ||= $BEDTOOLS_DEFAULT;
     my $path = $BEDTOOLS_VERSIONS{$version};
-    if ($class->arch_os =~ /64/) {
+    if (Genome::Config->arch_os =~ /64/) {
         if ($path) {
             $path .= '-64';
         }

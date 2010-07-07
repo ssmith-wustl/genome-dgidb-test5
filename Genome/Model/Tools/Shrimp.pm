@@ -20,15 +20,6 @@ class Genome::Model::Tools::Shrimp {
             valid_values => ['ls','cs','hs'],
         },
     ],
-    has => [
-        arch_os => {
-            calculate => q|
-                            my $arch_os = `uname -m`;
-                            chomp($arch_os);
-                            return $arch_os;
-                        |
-                    },
-    ],
 };
 
 sub sub_command_sort_position { 12 }

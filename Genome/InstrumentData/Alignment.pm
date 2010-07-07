@@ -27,13 +27,6 @@ class Genome::InstrumentData::Alignment {
                                             is => 'Text', default_value => 'maq',
                                             doc => 'the name of the aligner to use, maq, blat, newbler etc.'
                                         },
-        arch_os                         => {
-                                            calculate => q|
-                                                my $arch_os = `uname -m`;
-                                                chomp($arch_os);
-                                                return $arch_os;
-                                            |
-                                        },
     ],
     has_optional => [
          filter_name        => {

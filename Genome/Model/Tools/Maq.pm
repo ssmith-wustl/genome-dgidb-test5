@@ -10,13 +10,6 @@ class Genome::Model::Tools::Maq {
     is => 'Command',
     has => [
         use_version => { is => 'Version', is_optional => 1, default_value => '0.6.3', doc => "Version of maq to use" },
-        arch_os => {
-                    calculate => q|
-                            my $arch_os = `uname -m`;
-                            chomp($arch_os);
-                            return $arch_os;
-                        |
-                },
     ],
 };
 

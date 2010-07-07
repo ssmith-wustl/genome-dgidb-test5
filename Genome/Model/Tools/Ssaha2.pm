@@ -11,13 +11,6 @@ class Genome::Model::Tools::Ssaha2 {
     is => 'Command',
     has => [
         use_version => { is => 'Version', is_optional => 1, default_value => $DEFAULT, doc => "Version of ssaha2 to use, default is $DEFAULT" },
-        arch_os => {
-                    calculate => q|
-                            my $arch_os = `uname -m`;
-                            chomp($arch_os);
-                            return $arch_os;
-                        |
-                },
     ],
 };
 

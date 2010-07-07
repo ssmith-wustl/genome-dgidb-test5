@@ -378,7 +378,7 @@ sub verify_alignment_data {
     return unless $alignment_dir;
     return unless -d $alignment_dir;
 
-    unless ( $self->arch_os =~ /64/ ) {
+    unless ( Genome::Config->arch_os =~ /64/ ) {
         die('Failed to verify_alignment_data.  Must run from 64-bit architecture.');
     }
 
