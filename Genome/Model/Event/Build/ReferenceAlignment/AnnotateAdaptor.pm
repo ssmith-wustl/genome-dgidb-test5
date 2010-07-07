@@ -7,6 +7,7 @@ use File::Copy;
 use DateTime;
 
 use Genome;
+use Carp;
 
 class Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor{
     is => ['Genome::Model::Event'],
@@ -23,14 +24,21 @@ class Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor{
         doc => "",
         calculate_from => ['analysis_base_path'],
         calculate      => q|
-        return $analysis_base_path .'/filtered.indelpe.snps';
+        return $analysis_base_path .'/snps_all_sequences.filtered.bed';
         |,
     },
-    pre_annotation_filtered_snp_file => {
-        doc => "",
+    filtered_indel_output_file => {
+        doc => "Location of filtered indels from variant detection",
+        calculate_from => ['analysis_base_path'],
+        calculate => q|
+        return $analysis_base_path . '/indels_all_sequences.filtered.bed';
+        |,
+    },
+    pre_annotation_filtered_variant_file => {
+        doc => "Adapted variants fit for use by the annotator",
         calculate_from => ['analysis_base_path'],
         calculate      => q|
-        return $analysis_base_path .'/filtered.indelpe.snps.pre_annotation';
+        return $analysis_base_path .'/filtered.variants.pre_annotation';
         |,
     },  
     ],
@@ -39,37 +47,28 @@ class Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor{
 sub execute{
     my $self = shift;
 
-    my $fh = IO::File->new(">> /gscuser/adukes/build/status");
-    my $dt = DateTime->now();
-    $fh->print("####################\n$dt\nExecuting Annotate Adaptor");
-    $fh->print('analysis_base_path: '.$self->analysis_base_path."\n");
-    $fh->print('filtered_snp_output_file: '. $self->filtered_snp_output_file."\n");
-    $fh->print('pre_annotation_filtered_snp_file '. $self->pre_annotation_filtered_snp_file."\n");
+    my $model = $self->model;
+
+    my $adaptor = Genome::Model::Tools::Bed::Convert::BedToAnnotation->create(
+        snv_file => $self->filtered_snp_output_file,
+        indel_file => $self->filtered_indel_output_file,
+        output => $self->pre_annotation_filtered_variant_file,
+    );
+    unless ($adaptor) {
+        confess "Could not create annotation adaptor object!";
+    }
+
+    my $rv = $adaptor->execute;
+    unless ($rv == 1) {
+        confess "Problem executing annotation adaptor!";
+    }
     
-    
-    unless( $self->check_for_existence($self->filtered_snp_output_file) ){
-        $self->error_message("filtered snp output file from find variations step doesn't exist");
+    unless( $self->check_for_existence($self->pre_annotation_filtered_variant_file) ){
+        $self->error_message("filtered variant output file from find variations step doesn't exist");
         return;
     } 
 
-    unless(-s $self->filtered_snp_output_file) {
-        copy($self->filtered_snp_output_file, $self->pre_annotation_filtered_snp_file);
-    } else {
-        my $adaptor = Genome::Model::Tools::Annotate::Adaptor::Sniper->create(
-            somatic_file => $self->filtered_snp_output_file,
-            output_file => $self->pre_annotation_filtered_snp_file,
-            skip_if_output_present => 1,
-        );
-    
-        my $rv = $adaptor->execute;
-        unless ($rv){
-            $self->error_message("Adapting filtered snp output file for annotation failed");
-            return;
-        }
-    }
-    
     return 1;
-
 }
 
 1;
