@@ -132,6 +132,14 @@ sub reads_placed_file {
     return $_[0]->directory.'/edit_dir/reads.placed';
 }
 
+sub reads_unplaced_file {
+    return $_[0]->directory.'/edit_dir/reads.unplaced';
+}
+
+sub reads_unplaced_fasta_file {
+    return $_[0]->directory.'/edit_dir/reads.unplaced.fasta';
+}
+
 sub stats_file {
     return $_[0]->directory.'/edit_dir/stats.txt';
 }
