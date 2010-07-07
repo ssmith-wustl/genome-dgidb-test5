@@ -64,7 +64,6 @@ sub alignments_agree {
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
     my @files = $self->files_to_compare;
     my $fai_file = $self->fai_file;
     my $out_dir = $self->output_dir;
