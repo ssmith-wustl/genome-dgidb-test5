@@ -19,7 +19,7 @@ my $test_working_dir = File::Temp::tempdir('DetectVariants-VarScanXXXXX', DIR =>
 
 my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 
-my $expected_dir = $test_dir . '/expected.v2/'; #Updated to .v2 when BED files added to output
+my $expected_dir = $test_dir . '/expected.v3/'; #Updated to .v3 to correct off-by-one in var-scan output base to first base of deletion
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
 ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');

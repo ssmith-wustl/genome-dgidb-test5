@@ -53,7 +53,7 @@ sub process_source {
         
             my ($reference, $variant, $start, $stop);
             
-            $start = $position - 1;
+            $start = $position; #per mail from dkoboldt, the 1-based position in the var-scan output is the base before the deletion
             
             if(substr($indel,0,1) eq '+') {
                 $reference = '*';
