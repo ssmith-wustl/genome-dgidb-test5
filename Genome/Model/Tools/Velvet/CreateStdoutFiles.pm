@@ -117,6 +117,17 @@ sub execute {
         return;
     }
 
+    #create reads.unplaced and reads.unplaced.fasta files
+    my $unplaced = Genome::Model::Tools::Velvet::CreateUnplacedReadsFiles->create (
+	sequences_file => $self->directory.'/Sequences',
+	afg_file => $self->directory.'/velvet_asm.afg',
+	directory => $self->directory,
+	);
+    unless ($unplaced->execute) {
+	$self->error_message("Failed to execute creating unplaced reads files");
+	return;
+    }
+
     #create supercontigs.fasta and supercontigs.agp file
     my $supercontigs = Genome::Model::Tools::Velvet::CreateSupercontigsFiles->create (
         contigs_fasta_file => $self->directory.'/contigs.fa',
