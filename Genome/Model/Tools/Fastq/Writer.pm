@@ -29,9 +29,10 @@ sub write {
 
     $self->_fh->print(
         join(
-            "\n", '@'.$seq->{id},#.( $seq->{desc} ? ' '.$seq->{desc} : '' ),
+            "\n",
+            '@'.$seq->{id},#.( $seq->{desc} ? ' '.$seq->{desc} : '' ),
             $seq->{seq},
-            '+'.$seq->{id},
+            '+',
             $seq->{qual},
         )."\n"
     );

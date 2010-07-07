@@ -15,13 +15,13 @@ use_ok('Genome::Model::Tools::Fastq::SetReader') or die;
 use_ok('Genome::Model::Tools::Fastq::SetWriter') or die;
 
 #< Files >#
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-SetReaderWriter';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-SetReaderWriter/v0.2';
 my $collated_fastq = $dir.'/collated.fastq';
-ok(-s $collated_fastq, 'Colated fastq exists');
+ok(-s $collated_fastq, 'Colated fastq exists') or die;
 my $forward_fastq = $dir.'/forward.fastq';
-ok(-s $forward_fastq, 'Forward fastq exists');
+ok(-s $forward_fastq, 'Forward fastq exists') or die;
 my $reverse_fastq = $dir.'/reverse.fastq';
-ok(-s $reverse_fastq, 'Reverse fastq exists');
+ok(-s $reverse_fastq, 'Reverse fastq exists') or die;
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok(-d $tmpdir, 'Created temp dir.');
@@ -99,7 +99,6 @@ while ( my $fastqs = $reader->next ) {
 $writer->flush;
 is($count, 12, 'Read/write 12 fastq sets');
 is(File::Compare::compare($collated_fastq, $out_collated_fastq), 0, 'Reverse in/output files match');
-
 #print "$tmpdir\n"; <STDIN>;
 
 done_testing();
