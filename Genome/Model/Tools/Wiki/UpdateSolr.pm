@@ -34,8 +34,7 @@ sub execute {
     my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock, max_try => 1);
     die 'someone else has the wiki_loader lock' if !$lock;
 
-
-    my $cache = Genome::Memcache->server();
+    my $cache = Genome::Memcache->server() || die 'cant get memcache server';
     my $now = UR::Time->now();
     my $timeout = 60 * 60 * 24; # this is just storing which changes we've notified solr about
     print "inserting wiki pages to solr index at $now\n";
@@ -63,12 +62,13 @@ sub execute {
             Genome::Search->add($doc) || die 'Error: failed to add doc with title ' . $doc->title();
 
             # mark as done
-            $cache->set($key, $now, $timeout ) || die "cant set cache for key=$key value=$now timeout=$timeout";
+#            $cache->set($key, $now, $timeout ) || die "couldnt set cache for key=$key value=$now timeout=$timeout";
+            # old version of Cache::Memcached was returning undef despite success
+            $cache->set($key, $now, $timeout );
 
             printf("added\t%s\t%s\n", $doc->title, $key);
         }
     }
-
 
     Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
 }
@@ -80,9 +80,9 @@ sub cache_key {
     my ($item) = @_;
 
     my $title = $item->{'title'} || die 'couldnt make key- no title';
-    my $date = $item->{'pubDate'} || die "couldnt make key- no pubDate for item $title";
+#    my $date = $item->{'pubDate'} || die "couldnt make key- no pubDate for item $title";
 
-    my $key = join('---', 'wiki', $date, $title);
+    my $key = join('---', 'wiki', $title);
     $key =~ s/\s//g; # memcache doesnt like whitespace
 
     return $key;
