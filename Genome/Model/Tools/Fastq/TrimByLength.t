@@ -31,7 +31,7 @@ while ((my $fq = $reader->next) && ($count++<500)) {
     my $length  = length($fq->{seq});
     my $qlength = length($fq->{qual});
     
-    $fq = $trimmer->trim($fq);
+    $trimmer->trim([$fq]);
     my $new_length = length($fq->{seq});
     my $new_qlength = length ($fq->{qual});
     if($length != ($new_length+10)||$qlength != ($new_qlength+10)) {

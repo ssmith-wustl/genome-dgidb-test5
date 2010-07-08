@@ -45,40 +45,30 @@ sub create {
 
 sub trim {
     my ($self, $seq) = @_;
+    my $trim_length = $self->trim_length;
     
     if (ref $seq eq 'ARRAY') {
-        my $trim_seq = [];
-
         for my $s (@$seq) {
-            push @$trim_seq, $self->_trim_seq($s);
+            my $bases = $s->{seq};
+            my $quals = $s->{qual};
+
+            my $length = length($bases) - $trim_length;
+            $length = 0 if $length < 0;
+
+            $quals = substr($quals,0,$length);
+            $bases = substr($bases,0,$length);
+    
+            $s->{seq}  = $bases;
+            $s->{qual} = $quals;
         }
-        return $trim_seq;
+        return $seq;
     }
     else {
-        return $self->_trim_seq($seq);
+        $self->error_message('Wrong fastq input type, must be array ref');
+        return;
     }
 }
 
-
-sub _trim_seq {
-    my ($self, $seq) = @_;
-    my $bases = $seq->{seq};
-    my $quals = $seq->{qual};
-    
-    my $trim_length = $self->trim_length;
-
-    my $length = length($bases) - $trim_length;
-    $length = 0 if $length < 0;
-    
-    $quals = substr($quals,0,$length);
-    $bases = substr($bases,0,$length);
-    
-    $seq->{seq}  = $bases;
-    $seq->{qual} = $quals;
-    
-    return $seq;
-    
-}
 
 1;
 

@@ -56,12 +56,12 @@ sub filter {
             }
         }
         return $seq if $test;
+        return;
     }
     else {
-        return $seq if length ($seq->{seq}) > $filter_length;
+        $self->error_message('Wrong fastq input type, must be array ref');
+        return;
     }
-
-    return;
 }
 
 1;
