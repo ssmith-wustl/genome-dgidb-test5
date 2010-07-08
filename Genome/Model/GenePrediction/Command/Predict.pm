@@ -134,9 +134,11 @@ sub execute
     my $circular_dna_flag = $self->circular_dna;
     my $tmp_usage = $self->tmp_usage;
     my $runner_count = $self->runner_count;
-    my $skip_mail_flag = $self->skip_mail;
+    my $skip_mail_flag = $self->no_mail;
     my $user = $ENV{USER};
     my $dt_started = mark_time();
+
+    $DB::Single = 1;
 
     if ($self->dev) { $BAP::DB::DBI::db_env = 'dev'; }
 
@@ -170,7 +172,7 @@ sub execute
 
     }
 
-    local $SIG{INT} = \&{ $self->handle_sigint };
+    #local $SIG{INT} = \&{ $self->handle_sigint };
 
     my %gene_count = ();
 

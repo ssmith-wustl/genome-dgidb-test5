@@ -178,11 +178,13 @@ sub execute
 
     my $runner_count = $self->runner_count;
 
-    $self->_network_temp_args( (
+    my %temp_args = {
                        'TEMPLATE' => 'mgap_XXXXXXXX',
                        'DIR'      => '/gscmnt/temp212/info/annotation/BAP_tmp',
                        'SUFFIX'   => '.temp',
-                              ) );
+                    };
+
+    $self->_network_temp_args( \%temp_args );
     my $dt_started = mark_time();
 
     if ( $self->dev ) { $BAP::DB::DBI::db_env = 'dev'; }
@@ -249,7 +251,7 @@ sub execute
     $self->_debug_fh($debug_fh);
 
 ## Try not to hork the database file if we catch a signal.
-    local $SIG{INT} = \&{ $self->handle_sigint };
+    #local $SIG{INT} = \&{ $self->handle_sigint };
     my $rpc_queue    = $self->rpc_queue;
     my $rpc_core_num = $self->rpc_core_number;
     my $tmp_usage    = $self->tmp_usage;
@@ -296,13 +298,14 @@ sub execute
 
     {
 
-        my %code_ref = (
-            1 => \&phase1,
-            2 => \&phase2,
-            3 => \&phase3,
-            4 => \&phase4,
-            5 => \&phase5,
-        );
+# this stuff should be eliminated.
+#        my %code_ref = (
+#            1 => \&phase1,
+#            2 => \&phase2,
+#            3 => \&phase3,
+#            4 => \&phase4,
+#            5 => \&phase5,
+#        );
 
         my @run_phases = ();
 
@@ -312,20 +315,40 @@ sub execute
         }
         else
         {
-            @run_phases = ( sort { $a <=> $b } keys %code_ref );
+#            @run_phases = ( sort { $a <=> $b } keys %code_ref );
+            @run_phases = ( 1, 2, 3, 4, 5 );
         }
         foreach my $phase (@run_phases)
         {
-
+            $self->status_message("running phase ". $phase);
             unless ( defined( $self->skip_blastx )
                 && ( $phase == 3 ) )
             {
 
-                my $code_ref = $code_ref{$phase};
-                &$code_ref();
+#                my $code_ref = $code_ref{$phase};
+                $self->status_message("before phase ". $phase);
+                # using the code refs in the module is really a pain in the ass.
+                #&{$self->$code_ref()};
+                if($phase == 1) {
+                    $self->phase1();
+                }
+                elsif( $phase == 2 ) {
+                    $self->phase2();
+                }
+                elsif( $phase == 3 ) {
+                    $self->phase3();
+                }
+                elsif( $phase == 4 ) {
+                    $self->phase4();
+                }
+                elsif( $phase == 5 ) {
+                    $self->phase5();
+                }
+                $self->status_message("after phase ".$phase);
                 BAP::DB::DBI->dbi_commit();
                 BAP::DB::DBI->db_Main->disconnect();
             }
+            $self->status_message("completed phase ". $phase);
 
         }
 
@@ -451,15 +474,16 @@ sub check_failed_jobs
 
 sub phase1
 {
-
-    best_per_locus( 'phase_1', 'phase_0' );
+    my $self = shift;
+    $self->status_message("in phase1");
+    $self->best_per_locus( 'phase_1', 'phase_0' );
 
 }
 
 sub phase2
 {
-
-    check_overlapping( 'phase_2', 'phase_1' );
+    my $self = shift;
+    $self->check_overlapping( 'phase_2', 'phase_1' );
 
 }
 
@@ -485,7 +509,7 @@ sub phase3
         my @sequences = $sequence_set->sequences();
         my @sequence_names = map { $_->sequence_name() } @sequences;
 
-        sanity_check_sequences( 'phase_3', \@sequence_names );
+        $self->sanity_check_sequences( 'phase_3', \@sequence_names );
 
         my @fetched_gene_names = ();
 
@@ -558,7 +582,7 @@ sub phase3
                 }
 
                 my $gene_feature
-                    = gene_to_feature( $sequence->sequence_name(), $gene );
+                    = $self->gene_to_feature( $sequence->sequence_name(), $gene );
 
                 $gene_feature->attach_seq($seq);
 
@@ -575,7 +599,7 @@ sub phase3
 
         }
 
-        sanity_check_genes( 'phase_3', 'phase_2', \@fetched_gene_names );
+        $self->sanity_check_genes( 'phase_3', 'phase_2', \@fetched_gene_names );
 
         $seqstream->close();
         close($fasta_fh);
@@ -592,7 +616,7 @@ sub phase3
 
     my $job_source
         = BAP::JobSource::InterGenicBlastX->new( $seqstream, $featstream,
-        $self->nr_db, $self->rpc_core_num, );
+        $self->nr_db, $self->rpc_core_number, );
 
     local $rpc_args{job_source} = $job_source;
 
@@ -695,11 +719,11 @@ sub phase4
     my $self = shift;
     if ( defined( $self->skip_blastx ) )
     {
-        best_per_locus( 'phase_4', 'phase_2' );
+        $self->best_per_locus( 'phase_4', 'phase_2' );
     }
     else
     {
-        best_per_locus( 'phase_4', 'phase_3' );
+        $self->best_per_locus( 'phase_4', 'phase_3' );
     }
 
 }
@@ -707,7 +731,7 @@ sub phase4
 sub phase5
 {
     my $self = shift;
-    check_overlapping( 'phase_5', 'phase_4' );
+    $self->check_overlapping( 'phase_5', 'phase_4' );
 
 }
 
@@ -715,7 +739,7 @@ sub tag_redundant
 {
     my $self = shift;
     my ($feature_ref) = @_;
-
+    #$self->status_message("inside tag_redundant");
     my $is_redundant = sub {
 
         my ( $f, $g ) = @_;
@@ -740,8 +764,9 @@ sub tag_redundant
         }
 
     };
-
-    find_overlaps( $is_redundant, $feature_ref );
+    #$self->status_message("sending code ref to find_overlaps");
+    $self->find_overlaps( $is_redundant, $feature_ref );
+    #$self->status_message("find_overlaps has been run");
 
 }
 
@@ -868,7 +893,7 @@ sub tag_overlapping
 
     };
 
-    find_overlaps( $overlap, $feature_ref );
+    $self->find_overlaps( $overlap, $feature_ref );
 
 }
 
@@ -983,7 +1008,7 @@ sub blastp
 
     my $job_source
         = BAP::JobSource::Phase2BlastP->new( $blast_db, $fasta_file,
-        $self->rpc_core_num, );
+        $self->rpc_core_number, );
     local $rpc_args{'job_source'} = $job_source;
     my $server = PP::RPC->new(%rpc_args);
 
@@ -999,16 +1024,32 @@ sub iprscan
 {
     my $self = shift;
     my ($fasta_file) = @_;
+    #my %network_temp_args = %{$self->_network_temp_args};
     my %network_temp_args = %{$self->_network_temp_args};
     my %evidence = ();
+    %network_temp_args = {
+                       'TEMPLATE' => 'mgap_XXXXXXXX',
+                       'DIR'      => '/gscmnt/temp212/info/annotation/BAP_tmp',
+                       'SUFFIX'   => '.temp',
+                    };
 
-    my $temp_fh = File::Temp->new( %network_temp_args, );
+#???    $self->_
+    #my $temp_fh = File::Temp->new( %network_temp_args, );
+    my $temp_fh = File::Temp->new( 
+                       'TEMPLATE' => 'mgap_XXXXXXXX',
+                       'DIR'      => '/gscmnt/temp212/info/annotation/BAP_tmp',
+                       'SUFFIX'   => '.temp',);
     my $temp_fn = $temp_fh->filename();
     $temp_fh->close();
-
-    my $err_fh = File::Temp->new( %network_temp_args, );
+    $self->status_message("temp filename: $temp_fn");
+    #my $err_fh = File::Temp->new( %network_temp_args, );
+    my $err_fh = File::Temp->new( 
+                       'TEMPLATE' => 'mgap_XXXXXXXX',
+                       'DIR'      => '/gscmnt/temp212/info/annotation/BAP_tmp',
+                       'SUFFIX'   => '.temp',);
     my $err_fn = $err_fh->filename();
     $err_fh->close();
+    $self->status_message("err fn: $err_fn");
 
     my @cmd = (
 
@@ -1026,19 +1067,23 @@ sub iprscan
         "-o $temp_fn",
     );
 
+    $self->status_message("about to run interproscan");
     my $cmd = join( ' ', @cmd );
+    $self->status_message("ipr cmd: $cmd");
     my $pp = PP->run(
         pp_type => 'lsf',
         command => $cmd,
         q       => $self->rpc_queue,
         R       => "'rusage[mem=1024]'",
         e       => $err_fn,
+#        o       => "iprscan-debug.out", # we should probably try to store this somewhere.
     );
 
     $pp->wait_on();
     $pp->update_stats();
 
     my $exit_status = $pp->stats->[2];
+    $self->status_message("iprscan done $exit_status");
     if ( $exit_status eq 'EXIT' )
     {
         carp "exit status returned as 'EXIT'. Sleeping";
@@ -1081,7 +1126,11 @@ sub iprscan
 sub best_per_locus
 {
     my $self = shift;
-    my %selected_genes = %{$self->_selected_genes};
+    #$self->status_message("starting best per locus");
+    my %selected_genes ;
+    if(defined($self->_selected_genes)) {
+        %selected_genes = %{$self->_selected_genes};
+    }
     my $debug_fh = $self->_debug_fh;
     my ( $current_phase, $previous_phase ) = @_;
 
@@ -1090,11 +1139,12 @@ sub best_per_locus
 
     my @sequences = $sequence_set->sequences();
     my @sequence_names = map { $_->sequence_name() } @sequences;
-
-    sanity_check_sequences( $current_phase, \@sequence_names );
+    #$self->status_message("sequences retrieved, sanity checking...");
+    $self->sanity_check_sequences( $current_phase, \@sequence_names );
 
     my @fetched_gene_names = ();
 
+    #$self->status_message("sanity checked, pulling genes out...");
     foreach my $sequence (@sequences)
     {
 
@@ -1158,7 +1208,7 @@ sub best_per_locus
             }
 
             my $gene_feature
-                = gene_to_feature( $sequence->sequence_name(), $coding_gene );
+                = $self->gene_to_feature( $sequence->sequence_name(), $coding_gene );
             unless ( $gene_feature->length() >= $self->min_gene_length )
             {
                 print $debug_fh
@@ -1184,8 +1234,9 @@ sub best_per_locus
 
         foreach my $source ( keys %predicted_by )
         {
-
-            tag_redundant( \@{ $predicted_by{$source} } );
+            #$self->status_message("tagging redundant");
+            $self->tag_redundant( \@{ $predicted_by{$source} } );
+            #$self->status_message("tagged redundant");
 
         }
 
@@ -1201,7 +1252,7 @@ sub best_per_locus
 
         @gene_features
             = grep { !( $_->has_tag('redundant') ); } @gene_features;
-
+        #$self->status_message("tagging preferred gene features");
         tag_preferred( \@gene_features );
 
         @gene_features = grep { $_->has_tag('preferred'); } @gene_features;
@@ -1234,8 +1285,10 @@ sub best_per_locus
     }
     $self->_selected_genes(\%selected_genes);
     #$self->_rfam_special(\%rfam_special);
-    sanity_check_genes( $current_phase, $previous_phase,
+    $self->sanity_check_genes( $current_phase, $previous_phase,
         \@fetched_gene_names );
+
+    #$self->status_message("finished best per locus");
 
     return 1;
 }
@@ -1248,6 +1301,11 @@ sub check_overlapping
     my %network_temp_args = %{$self->_network_temp_args};
     my %rfam_special = %{$self->_rfam_special};
     my ( $current_phase, $previous_phase ) = @_;
+    %network_temp_args = {
+                       'TEMPLATE' => 'mgap_XXXXXXXX',
+                       'DIR'      => '/gscmnt/temp212/info/annotation/BAP_tmp',
+                       'SUFFIX'   => '.temp',
+                    };
 
     my $sequence_set
         = BAP::DB::SequenceSet->retrieve( $self->sequence_set_id );
@@ -1266,7 +1324,7 @@ sub check_overlapping
 
     my @fetched_gene_names = ();
 
-    sanity_check_sequences( $current_phase, \@sequence_names );
+    $self->sanity_check_sequences( $current_phase, \@sequence_names );
 
     foreach my $sequence (@sequences)
     {
@@ -1299,7 +1357,7 @@ sub check_overlapping
             $coding_gene->update();
 
             my $gene_feature
-                = gene_to_feature( $sequence->sequence_name(), $coding_gene );
+                = $self->gene_to_feature( $sequence->sequence_name(), $coding_gene );
 
             $gene_feature->attach_seq($seq);
 
@@ -1338,7 +1396,7 @@ sub check_overlapping
                 "\n";
 
             my $gene_feature
-                = gene_to_feature( $sequence->sequence_name(), $rna_gene );
+                = $self->gene_to_feature( $sequence->sequence_name(), $rna_gene );
 
             $gene_feature->attach_seq($seq);
 
@@ -1383,7 +1441,7 @@ sub check_overlapping
                 "\n";
 
             my $gene_feature
-                = gene_to_feature( $sequence->sequence_name(), $trna_gene );
+                = $self->gene_to_feature( $sequence->sequence_name(), $trna_gene );
 
             $gene_feature->attach_seq($seq);
 
@@ -1461,7 +1519,11 @@ sub check_overlapping
         || (@trna_overlaps) )
     {
 
-        my $fasta_fh = File::Temp->new( %network_temp_args, );
+        #my $fasta_fh = File::Temp->new( %network_temp_args, );
+        my $fasta_fh = File::Temp->new( 
+                       'TEMPLATE' => 'mgap_XXXXXXXX',
+                       'DIR'      => '/gscmnt/temp212/info/annotation/BAP_tmp',
+                       'SUFFIX'   => '.temp',);
         my $fasta_fn = $fasta_fh->filename();
         my $seqio = Bio::SeqIO->new( -fh => $fasta_fh, -format => 'Fasta' );
 
@@ -1505,8 +1567,8 @@ sub check_overlapping
         }
 
         $fasta_fh->close();
-        $blastp_evidence = blastp( $fasta_fn, $self->nr_db );
-        $iprscan_evidence = iprscan($fasta_fn);
+        $blastp_evidence = $self->blastp( $fasta_fn, $self->nr_db );
+        $iprscan_evidence = $self->iprscan($fasta_fn);
 
         unlink $fasta_fn;
 
@@ -1706,7 +1768,7 @@ sub check_overlapping
         }
 
     }
-    sanity_check_genes( $current_phase, $previous_phase,
+    $self->sanity_check_genes( $current_phase, $previous_phase,
         \@fetched_gene_names );
     return 1
 }
