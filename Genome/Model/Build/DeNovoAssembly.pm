@@ -151,8 +151,14 @@ sub calculate_read_limit_from_read_coverage {
     my $estimated_read_length = $self->estimate_average_read_length; # dies
     my $genome_size = $self->genome_size;
     
-    return int($genome_size * $read_coverage / $estimated_read_length);
+    my $read_max = int($genome_size * $read_coverage / $estimated_read_length);
 
+    unless ( $read_max % 2 == 0 ) {
+        # make it an even number
+        $read_max++;
+    }
+
+    return $read_max;
 }
 
 #< Metrics >#
@@ -174,121 +180,6 @@ sub interesting_metric_names {
         # bases
         'total contig bases',
     );
-}
-#<>#
-
-#< FIXME  subclass for velvet specific file names >#
-sub collated_fastq_file {
-    return $_[0]->data_directory.'/collated.fastq';
-}
-
-sub assembly_afg_file {
-    return $_[0]->data_directory.'/velvet_asm.afg';
-}
-
-sub contigs_fasta_file {
-    return $_[0]->data_directory.'/contigs.fa';
-}
-
-sub sequences_file {
-    return $_[0]->data_directory.'/Sequences';
-}
-
-sub velvet_fastq_file {
-    return $_[0]->data_directory.'/velvet.fastq';
-}
-
-sub velvet_ace_file {
-    return $_[0]->data_directory.'/edit_dir/velvet_asm.ace';
-}
-
-sub stats_file { 
-    return $_[0]->edit_dir.'/stats.txt';
-}
-
-#<>#
-
-#< FIXME subclass for newbler specific file names >#
-sub assembly_directory {
-    return $_[0]->data_directory.'/assembly';
-}
-
-sub sff_directory {
-    return $_[0]->data_directory.'/sff';
-}
-
-#ASSEMBLY OUTPUT FILES
-sub edit_dir {
-    return $_[0]->data_directory.'/edit_dir';
-}
-
-sub ace_file {
-    return $_[0]->edit_dir.'/velvet_asm.ace';
-}
-
-sub gap_file {
-    return $_[0]->edit_dir.'/gap.txt';
-}
-
-sub contigs_bases_file {
-    return $_[0]->edit_dir.'/contigs.bases';
-}
-
-sub contigs_quals_file {
-    return $_[0]->edit_dir.'/contigs.quals';
-}
-
-sub read_info_file {
-    return $_[0]->edit_dir.'/readinfo.txt';
-}
-
-sub reads_placed_file {
-    return $_[0]->edit_dir.'/reads.placed';
-}
-
-sub supercontigs_agp_file {
-    return $_[0]->edit_dir.'/supercontigs.agp';
-}
-
-sub supercontigs_fasta_file {
-    return $_[0]->edit_dir.'/supercontigs.fasta';
-}
-
-sub input_fastas {
-    my $self = shift;
-    my @files;
-    foreach (glob($self->data_directory."/*fasta.gz")) {
-	#make sure qual file exists for the fasta
-	my ($qual_file) = $_ =~ s/\.gz$/\.qual\.gz/;
-	next unless -s $qual_file;
-	push @files, $_;
-    }
-    
-    return @files;
-}
-
-#NEWBLER SPECIFIC
-sub fasta_file {
-    my $self = shift;
-    my @instrument_data = $self->model->instrument_data;
-    #SINGULAR FOR NOW .. NEED TO GET IT TO WORK FOR MULTIPLE INPUTS
-    my $fasta = $instrument_data[0]->fasta_file;
-    unless ($fasta) {
-	$self->error_message("Instrument data does not have a fasta file");
-	return;
-    }
-    #COPY THIS FASTA TO BUILD INPUT_DATA_DIRECTORY
-    File::Copy::copy ($fasta, $self->input_data_directory);
-    #RENAME THIS FASTA TO SFF_NAME.FA ??
-    #RETURN TO PREPARE-INSTRUMENT DATA FOR CLEANING
-    return 1;
-}
-
-sub input_data_directory {
-    my $self = shift;
-    mkdir $self->data_directory.'/input_data' unless
-	-d $self->data_directory.'/input_data';
-    return $self->data_directory.'/input_data';
 }
 #<>#
 

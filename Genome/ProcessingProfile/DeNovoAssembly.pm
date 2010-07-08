@@ -69,11 +69,20 @@ my %supported_operations = (
         },
     },
     read_trimmer => {
-        'basic' => {
-            class => 'Genome::Model::Tools::Assembly::ReadFilter::Trim',
+        basic => {
+            class => 'Genome::Model::Tools::Fastq::TrimByLength',
+        },
+        by_length => {
+            class => 'Genome::Model::Tools::Fastq::TrimByLength',
+        },
+        bwa_style => {
+            class => 'Genome::Model::Tools::Fastq::TrimBwaStyle',
         },
     },
     read_filter => {
+        by_length => {
+            class => 'Genome::Model::Tools::Fastq::FilterByLength',
+        },
     },
 );
 

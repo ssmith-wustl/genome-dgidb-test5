@@ -8,6 +8,8 @@ use Genome;
 require Carp;
 use Data::Dumper 'Dumper';
 require File::Temp;
+require Genome::Model::Tools::Fastq::SetReader;
+require Genome::Model::Tools::Fastq::SetWriter;
 
 class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData::Velvet {
     is => 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
@@ -45,42 +47,47 @@ sub execute {
     # Writer
     my $collated_fastq_file = $self->build->collated_fastq_file;
     unlink $collated_fastq_file if -e $collated_fastq_file;
-    my $fastq_writer = Genome::Utility::BioPerl->create_bioseq_writer(
-        $collated_fastq_file, 'fastq'
-    ); # confess on error
+    my $fastq_writer;
+    eval{
+        $fastq_writer = Genome::Model::Tools::Fastq::SetWriter->create(
+            fastq_files => $collated_fastq_file
+        );
+    };
+    unless ( $fastq_writer ) {
+        $self->error_message("Can't create writer for collated fastq file ($collated_fastq_file): $@");
+        return;
+    }
 
     # Go thru readers, each seq
     my $read_count = 0;
     my $read_limit = $self->build->calculate_read_limit_from_read_coverage;
-    FASTQ: while ( 1 ) { 
-        my @seqs;
+    FASTQ: while ( 1 ) {
         for my $fastq_reader ( @fastq_readers ) { 
-            my $seq = $fastq_reader->next_seq;
-	    next unless $seq;
-            push @seqs, $seq;
-        }
-        last FASTQ unless @seqs;
-        for my $seq ( @seqs ) {
-            $trimmer->trim($seq) if $trimmer;
-            if ( $filter ) {
-                next unless $filter->filter($seq);
+            my $fastqs = $fastq_reader->next;
+            if ( $trimmer ) {
+                $trimmer->trim($fastqs);
             }
-            my $read_name = $seq->id;
-            $read_name =~ s/\#.*\/1$/\.b1/; # for ace files
-            $read_name =~ s/\#.*\/2$/\.g1/; # for ace files
-            $seq->id($read_name);
-            my $rv;
-            eval{ $rv = $fastq_writer->write_fastq($seq); };
-            unless ( $rv ) {
-                $self->error_message("Can't write fastq to file ($collated_fastq_file): $@");
-                return;
+            if ( $filter ) {
+                next unless $filter->filter($fastqs);
             }
 
-            $read_count++;
+            for my $fastq ( @$fastqs ) {
+                my $read_name = $fastq->{id};
+                $read_name =~ s/\#.*\/1$/\.b1/; # for ace files
+                $read_name =~ s/\#.*\/2$/\.g1/; # for ace files
+                $fastq->{id} = $read_name;
+                $read_count++;
+            }
+            my $rv;
+            eval{ $rv = $fastq_writer->write($fastqs); };
+            unless ( $rv ) {
+                $self->error_message("Can't write fastqs to file ($collated_fastq_file): $@");
+                return;
+            }
             last FASTQ if defined $read_limit and $read_count >= $read_limit;
         }
     }
-    $fastq_writer->flush(1);
+    $fastq_writer->flush();
 
     unless ( -s $collated_fastq_file ) {
         $self->error_message("Did not write any fastqs for ".$self->build->description.". This probably occurred because the reads did not pass the filter requirements");
@@ -104,12 +111,17 @@ sub _get_fastq_readers {
     for my $inst_data ( $self->build->instrument_data ) {
         my @fastq_files = $self->$fastq_file_method($inst_data)
             or return; # error in sub
-        for my $fastq_file ( @fastq_files ) {
-            my $fastq_reader = Genome::Utility::BioPerl->create_bioseq_reader(
-                $fastq_file, 'fastq'
-            ); # confess on error
-            push @fastq_readers, $fastq_reader;
+        my $reader;
+        eval{
+            $reader = Genome::Model::Tools::Fastq::SetReader->create(
+                fastq_files => \@fastq_files,
+            );
+        };
+        unless ( $reader ) { 
+            $self->error_message("Can't create fastq set reader for fastq files (".join(',', @fastq_files)."):$@");
+            return;
         }
+        push @fastq_readers, $reader;
     }
 
     return @fastq_readers;
@@ -145,14 +157,6 @@ sub _fastq_files_from_solexa {
     }
 
     return @fastq_files;
-}
-
-sub valid_params {
-    return {
-        reads_cutoff => {
-            is => 'Number',
-        },
-    };
 }
 
 1;

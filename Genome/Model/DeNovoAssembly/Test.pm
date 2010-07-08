@@ -241,12 +241,17 @@ sub base_directory {
     return '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 }
 
+my %dirs_versions = (
+    velvet_solexa => '0.2',
+    newbler_454 => '0.1',
+);
 sub example_directory_for_model {
     my ($self, $model) = @_;
 
     Carp::confess "No model to get example directory" unless $model;
     
-    my $dir = $self->base_directory.'/'.$model->assembler_name.'_'.$model->sequencing_platform.'_build';
+    my $assembler_platform = $model->assembler_name.'_'.$model->sequencing_platform;
+    my $dir = $self->base_directory.'/'.$assembler_platform.'_build_v'.$dirs_versions{$assembler_platform};
     Carp::confess("Example directory ($dir) for de novo assembly model does not exist.") unless -d $dir;
     
     return $dir;
