@@ -58,6 +58,7 @@ EOS
 
 
 my %SAMTOOLS_VERSIONS = (
+    r599    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar599/samtools',
     r544    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar544/samtools',
     r510    => '/gsc/pkg/bio/samtools/samtools-0.1.7a/samtools',
     r453    => '/gsc/pkg/bio/samtools/samtools-0.1.6/samtools',
@@ -69,6 +70,7 @@ my %SAMTOOLS_VERSIONS = (
 );
 
 my %PICARD_VERSIONS = (
+    '1.25'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.25',
     '1.24'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.24',
     '1.22'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.22',
     '1.21'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.21',
