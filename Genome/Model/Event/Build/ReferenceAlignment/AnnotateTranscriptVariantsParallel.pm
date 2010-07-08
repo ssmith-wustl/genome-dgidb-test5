@@ -19,14 +19,14 @@ class Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariant
             doc => "",
             calculate_from => ['analysis_base_path'],
             calculate      => q|
-            return $analysis_base_path .'/filtered.indelpe.snps.pre_annotation';
+            return $analysis_base_path .'/filtered.variants.pre_annotation';
             |,
         },  
         post_annotation_filtered_snp_file => {
             doc => "",
             calculate_from => ['analysis_base_path'],
             calculate      => q|
-            return $analysis_base_path .'/filtered.indelpe.snps.post_annotation';
+            return $analysis_base_path .'/filtered.variants.post_annotation';
             |,
         }, 
         annotation_log_directory => {
