@@ -39,7 +39,7 @@ my %properties = (
     import_format => {
         is => 'Text',
         doc => 'format of import data, like bam',
-        valid_values => ['fastq'],
+        valid_values => ['fastq','solexa fastq','illumina fastq'],
         is_optional => 1,
     },
     sequencing_platform => {
