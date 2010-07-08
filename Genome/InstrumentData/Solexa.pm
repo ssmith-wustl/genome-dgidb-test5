@@ -480,7 +480,7 @@ sub resolve_fastq_filenames {
                     push @illumina_output_paths, "$directory/Temp/" . $self->fragment_fastq_name;
                 } 
                 else {
-                    die "No illumina data in directory for lane $lane! $directory";
+                    die "No fragment illumina data in directory for lane $lane! $directory";
                 }
             }
         };
