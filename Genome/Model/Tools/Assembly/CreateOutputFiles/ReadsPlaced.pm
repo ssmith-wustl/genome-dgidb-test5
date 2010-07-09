@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use IO::File;
 
 class Genome::Model::Tools::Assembly::CreateOutputFiles::ReadsPlaced {
     is => 'Genome::Model::Tools::Assembly::CreateOutputFiles',
@@ -12,6 +11,28 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::ReadsPlaced {
 	directory => {
 	    is => 'Text',
 	    doc => 'Assembly directory',
+	},
+    ],
+    has_optional => [
+	read_info_file => {
+	    is => 'Text',
+	    doc => 'Assembly readinfo.txt file',
+	    is_mutable => 1,
+	},
+	gap_file => {
+	    is => 'Text',
+	    doc => 'Assembly gap.txt file',
+	    is_mutable => 1,
+	},
+	contigs_bases_file => {
+	    is => 'Text',
+	    doc => 'Assembly contigs.bases file',
+	    is_mutable => 1,
+	},
+	output_file => {
+	    is => 'Text',
+	    doc => 'Output file name',
+	    is_mutable => 1,
 	},
     ],
 };
@@ -51,12 +72,11 @@ sub execute {
 	$self->error_message("Failed to get contig lengths");
 	return;
     }
-    
-    my $in = IO::File->new("<" . $self->directory.'/edit_dir/readinfo.txt') ||
-	die "Can not create file handle for readinfo.txt file\n";
-
-    my $out = IO::File->new(">" . $self->directory.'/edit_dir/reads.placed') ||
-	die "Can not create file handle for reads.placed file\n";
+    my $in = Genome::Utility::FileSystem->open_file_for_reading($self->read_info_file) ||
+	return;
+    unlink $self->output_file;
+    my $out = Genome::Utility::FileSystem->open_file_for_writing($self->output_file) ||
+	return;
 
     while (my $line = $in->getline) {
 	chomp $line;
@@ -98,13 +118,7 @@ sub execute {
 sub _get_contig_lengths {
     my $self = shift;
     
-    my $bases_file = $self->directory.'/edit_dir/contigs.bases';
-    unless (-s $bases_file) {
-	$self->error_message("You must have contigs.bases file to create reads.placed file");
-	return;
-    }
-
-    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $bases_file);
+    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $self->contigs_bases_file);
     my $lengths = {};
     while (my $seq = $in->next_seq) {
 	my ($sctg, $ctg) = $seq->primary_id =~ /(Contig\d+)\.(\d+)/;
@@ -121,15 +135,9 @@ sub _get_contig_lengths {
 sub _get_gap_sizes {
     my $self = shift;
     
-    my $gap_file = $self->directory.'/edit_dir/gap.txt';
-    unless (-e $gap_file) { #okay for this file to be blank
-	$self->error_message("You must have gap.txt file to create reads.placed file");
-	return;
-    }
-
     my $gaps = {};
-    my $fh = IO::File->new("< $gap_file") ||
-	die "Can not create file handle for $gap_file";
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->gap_file) ||
+	return;
     while (my $line = $fh->getline) {
 	chomp $line;
 	my ($sctg, $ctg, $gap) = $line =~ /(Contig\d+)\.(\d+)\s+(\d+)/;
@@ -144,19 +152,57 @@ sub _get_gap_sizes {
     return $gaps;
 }
 
-sub _input_files {
-    return ('gap.txt', 'contigs.bases', 'readinfo.txt');
-}
-
 sub _validate_input_files {
     my $self = shift;
 
-    my @input_files = $self->_input_files();
-    foreach my $file_name (@input_files) {
-	unless (-e $self->directory.'/edit_dir/'.$file_name) {
-	    $self->error_message("Failed to find file: ".$self->directory.'/edit_dir/'.$file_name);
+    #probably better way to do this
+    if ($self->read_info_file) {
+	unless (-s $self->read_info_file) {
+	    $self->error_message("Failed to find file: ".$self->read_info_file);
 	    return;
 	}
+    } else {
+	if (-s $self->directory.'/edit_dir/readinfo.txt') {
+	    $self->read_info_file($self->directory.'/edit_dir/readinfo.txt');
+	}
+	else {
+	    $self->error_message("Failed to file file: ".$self->directory.'/edit_dir/readinfo.txt');
+	    return;
+	}
+    }
+    #gap file
+    if ($self->gap_file) {
+	unless (-s $self->gap_file) {
+	    $self->error_message("Failed to find file: ".$self->gap_file);
+	    return;
+	}
+    } else {
+	if (-s $self->directory.'/edit_dir/gap.txt') {
+	    $self->gap_file($self->directory.'/edit_dir/gap.txt');
+	}
+	else {
+	    $self->error_message("Failed to file file: ".$self->directory.'/edit_dir/gap.txt');
+	    return;
+	}
+    }
+    #contigs.bases file
+    if ($self->contigs_bases_file) {
+	unless (-s $self->contigs_bases_file) {
+	    $self->error_message("Failed to find file: ".$self->contigs_bases_file);
+	    return;
+	}
+    } else {
+	if (-s $self->directory.'/edit_dir/contigs.bases') {
+	    $self->contigs_bases_file($self->directory.'/edit_dir/contigs.bases');
+	}
+	else {
+	    $self->error_message("Failed to file file: ".$self->directory.'/edit_dir/contigs.bases');
+	    return;
+	}
+    }
+    #output file
+    unless ($self->output_file) {
+	$self->output_file($self->directory.'/edit_dir/reads.placed');
     }
 
     return 1;
