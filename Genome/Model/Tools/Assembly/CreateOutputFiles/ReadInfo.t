@@ -22,7 +22,7 @@ ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp test_dir");
 
 ok(File::Copy::copy($test_ace, $temp_dir.'/edit_dir'),"Copied input ace file to temp dir");
 
-my $ec = system("chdir $temp_dir; gmt assembly create-output-files read-info --directory $temp_dir");
+my $ec = system("chdir $temp_dir; gmt assembly create-output-files read-info --acefile $temp_dir/edit_dir/velvet_asm.ace --directory $temp_dir");
 ok($ec == 0, "Command ran successfully");
 
 my $test_file = $data_dir.'/edit_dir/readinfo.txt';
