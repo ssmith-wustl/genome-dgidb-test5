@@ -182,7 +182,7 @@ sub delete {
         for my $build ($first_build, @subsequent_builds) {
             $self->status_message(
                 sprintf(
-                    'Abandoning build %d for model %s (%d)',
+                    'Abandoning build %s for model %s (%s)',
                     $build->id,
                     $build->model->name,
                     $build->model->id
