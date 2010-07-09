@@ -75,6 +75,11 @@ class Genome::Model::GenePrediction::Command::Finish {
             doc     => "skip acedb",
             default => 0,
         },
+        no_mail => {
+            is => 'Boolean',
+            doc => "disable sending results email",
+            default => 0,
+        },
         _tace_location => {
             is      => 'String',
             doc     => "location of tace/acedb terminal interface",
@@ -367,7 +372,7 @@ sub execute
 
     if ( $cwd ne $acedb_scripts_path )
     {
-        &chdir($acedb_scripts_path);
+        chdir($acedb_scripts_path);
     }
 
     opendir( ACEDIR, "$acedb_acefile_path" )
@@ -419,7 +424,7 @@ sub execute
 
     if ( $cwd3 ne $acedb_path )
     {
-        &chdir($acedb_path);
+        chdir($acedb_path);
     }
 
     my $parse_ACEDB = qq{$acedb_scripts_path/$parsefile_name};
@@ -441,8 +446,7 @@ sub execute
     my $phase5       = qq{_phase_5_ssid};
     my $file         = $self->locus_id . $phase5;
 
-    #unless ($skip_acedb_flag)
-    unless ($self->skip_acedb)
+    unless ($self->no_acedb)
     {
         my $locus_id = $self->locus_id;
 
@@ -593,7 +597,7 @@ sub execute
 
     if ( $cwd2 ne $acedb_scripts_HGMI_files )
     {
-        &chdir($acedb_scripts_HGMI_files);
+        chdir($acedb_scripts_HGMI_files);
     }
     my $rtfile_name
         = $self->project_type . "_rt_let_" . $self->locus_id . "_" . $version . ".txt";
@@ -690,7 +694,7 @@ sub execute
         print RTFILE "$acefile\n";
     }
     #if ($skip_acedb_flag)
-    if ($self->skip_acedb)
+    if ($self->no_acedb)
     {
         $ace_file2             = $file;
         $acefilecount          = 0;
@@ -745,7 +749,9 @@ sub execute
     my $user              = $ENV{USER};
     my $sequence_set_name = $sequence_set->sequence_set_name();
 
-    send_mail( $ssid, $sequence_set_name, $user, );
+    unless ($self->no_mail) {
+        send_mail( $ssid, $sequence_set_name, $user, );
+    }
 
     return 1;
 }
