@@ -9,6 +9,7 @@ use Carp;
 use English;
 use File::Temp;
 use IO::File;
+use Sys::Hostname;
 
 use IPC::Run;
 
@@ -18,7 +19,6 @@ use base qw(GAP::Job);
 sub new {
 
     my ($class, $seq, $db, $job_id, $core_num) = @_;
-
     
     my $self = { };
     bless $self, $class;
@@ -43,28 +43,29 @@ sub new {
         croak 'missing db!';
     }
 
+    $self->{_db} = $db;
+
     unless (defined($core_num)) {
         croak 'missing number of cores to run blast in Job!';
     }
 
     $self->{_core_num} = $core_num;
-                    
-
-    $self->{_db} = $db;
     
     return $self;
-    
 }
 
 sub execute {
     
     my ($self) = @_;
 
+    my $local_db = "/opt/databases/bacterial_nr/bacterial_nr";
+    if (-e $local_db) {
+        $self->{_db} = $local_db;
+    }
+
     $self->SUPER::execute(@_);
 
-
     my $seq = $self->{_seq};
-
 
     my $seq_fh = $self->_write_seqfile($seq);
     
@@ -75,11 +76,6 @@ sub execute {
    
     my $core_num = $self->{_core_num};
 
-    # FIXME: need to check for local copy of blastdb, 
-    # and copy over if not present.
-    # Genome::Utility::FileSystem::copy_file($src,$dest) or copy_directory(source,dest)
-    # dest should be /tmp/apipe-cache/blastdb
-    
     my @cmd = (
                'blastp',
                $self->{_db},

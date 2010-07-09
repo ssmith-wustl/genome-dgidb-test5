@@ -5,14 +5,12 @@ use warnings;
 
 use Bio::Tools::Run::StandAloneBlast;
 use Carp;
-
+use Sys::Hostname;
 use base qw(GAP::Job);
-
 
 sub new {
 
     my ($class, $job_id, $seq, $mask_ref, $db, $core_num, $expansion, $mask_char, $bit_score) = @_;
-
     
     my $self = { };
     bless $self, $class;
@@ -85,14 +83,14 @@ sub execute {
  
     $self->SUPER::execute(@_);
 
+    my $local_db = "/opt/databases/bacterial_nr/bacterial_nr";
+    if (-e $local_db) {
+        $self->{_db} = $local_db;
+    }
+
     $self->_mask_seq();
 
     my $core_num = $self->{_core_num};
-
-    # FIXME: add in logic to check for a local copy of the blastdb, 
-    # and copy over a version of that if missing
-    # Genome::Utility::FileSystem::copy_file($src,$dest) or copy_directory(source,dest)
-    # dest should be /tmp/apipe-cache/blastdb
 
 
     my $factory = Bio::Tools::Run::StandAloneBlast->new(
