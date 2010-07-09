@@ -95,10 +95,12 @@ class Genome::Model::GenePrediction::Command::Merge {
         overlap_percent => {
             is  => 'Integer',
             doc => "gene over lap percentage",
+            default => 30,
         },
         overlap_bp => {
             is  => 'Integer',
             doc => "number of bp genes may over lap",
+            default => 300,
         },
         rpc_queue => {
             is      => 'String',
@@ -178,11 +180,11 @@ sub execute
 
     my $runner_count = $self->runner_count;
 
-    my %temp_args = {
+    my %temp_args = (
                        'TEMPLATE' => 'mgap_XXXXXXXX',
                        'DIR'      => '/gscmnt/temp212/info/annotation/BAP_tmp',
                        'SUFFIX'   => '.temp',
-                    };
+                    );
 
     $self->_network_temp_args( \%temp_args );
     my $dt_started = mark_time();
@@ -295,17 +297,8 @@ sub execute
     $self->_fetched_sequences(\%fetched_sequences); 
 
     my %selected_genes = ();
-
+    # is it necessary to have a local block?
     {
-
-# this stuff should be eliminated.
-#        my %code_ref = (
-#            1 => \&phase1,
-#            2 => \&phase2,
-#            3 => \&phase3,
-#            4 => \&phase4,
-#            5 => \&phase5,
-#        );
 
         my @run_phases = ();
 
@@ -315,7 +308,7 @@ sub execute
         }
         else
         {
-#            @run_phases = ( sort { $a <=> $b } keys %code_ref );
+
             @run_phases = ( 1, 2, 3, 4, 5 );
         }
         foreach my $phase (@run_phases)
@@ -325,10 +318,8 @@ sub execute
                 && ( $phase == 3 ) )
             {
 
-#                my $code_ref = $code_ref{$phase};
                 $self->status_message("before phase ". $phase);
-                # using the code refs in the module is really a pain in the ass.
-                #&{$self->$code_ref()};
+
                 if($phase == 1) {
                     $self->phase1();
                 }
@@ -370,7 +361,7 @@ sub execute
         log_run( $dt_started, $dt_finished, $sequence_set );
     }
 
-    unless ( $self->skip_mail )
+    unless ( $self->no_mail )
     {
 
         send_mail( $self->sequence_set_id, $sequence_set_name, $dt_started,
@@ -475,7 +466,7 @@ sub check_failed_jobs
 sub phase1
 {
     my $self = shift;
-    $self->status_message("in phase1");
+    $self->status_message("in phase_1");
     $self->best_per_locus( 'phase_1', 'phase_0' );
 
 }
@@ -483,6 +474,7 @@ sub phase1
 sub phase2
 {
     my $self = shift;
+    $self->status_message("in phase_2");
     $self->check_overlapping( 'phase_2', 'phase_1' );
 
 }
@@ -1027,11 +1019,11 @@ sub iprscan
     #my %network_temp_args = %{$self->_network_temp_args};
     my %network_temp_args = %{$self->_network_temp_args};
     my %evidence = ();
-    %network_temp_args = {
+    %network_temp_args = (
                        'TEMPLATE' => 'mgap_XXXXXXXX',
                        'DIR'      => '/gscmnt/temp212/info/annotation/BAP_tmp',
                        'SUFFIX'   => '.temp',
-                    };
+                    );
 
 #???    $self->_
     #my $temp_fh = File::Temp->new( %network_temp_args, );
@@ -1301,11 +1293,11 @@ sub check_overlapping
     my %network_temp_args = %{$self->_network_temp_args};
     my %rfam_special = %{$self->_rfam_special};
     my ( $current_phase, $previous_phase ) = @_;
-    %network_temp_args = {
+    %network_temp_args = (
                        'TEMPLATE' => 'mgap_XXXXXXXX',
                        'DIR'      => '/gscmnt/temp212/info/annotation/BAP_tmp',
                        'SUFFIX'   => '.temp',
-                    };
+                    );
 
     my $sequence_set
         = BAP::DB::SequenceSet->retrieve( $self->sequence_set_id );
