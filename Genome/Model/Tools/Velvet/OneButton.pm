@@ -98,7 +98,7 @@ gmt velvet one-button foo.fast[a|q] \
     [-i insert_length] \
     [-d ins_length_sd] \
     [-b enumeration_bound] \
-    [--version 0.7.57-64 #for velvet_0.7.57-64, only input the part behind velvet_0.7.);
+    [--version 0.7.57-64 ];
 
 ADD MORE EXAMPLES HERE!!!!
 EOS
@@ -113,6 +113,17 @@ sub create {
 
     my $self = $class->SUPER::create(@_);
     return unless $self;
+
+    # validate version
+    my $version = $self->version; 
+    for my $type (qw/ g h /) {
+        my $velvet = $self->_version_path.$self->version.'/velvet'.$type;
+        unless ( -x $velvet ) {
+            $self->error_message("Invalid version ($version) of velvet. Please look in directory /gsc/pkg/bio/velvet/ for valid versions.");
+            $self->delete;
+            return;
+        }
+    }
 
     unless ($self->hash_sizes) {
         $self->hash_sizes([25,27,29]);

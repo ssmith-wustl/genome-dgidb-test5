@@ -15,10 +15,12 @@ if ($archos !~ /64/) {
 # NEW:
 # gmt velvet one-button 1k-trimmed.fastq -i 260 -g 4500000 --hash 31,33,35 --version 0.7.57-64 -o new
  
-use Genome::Model::Tools::Velvet::OneButton;
-
 my $module = 'Genome::Model::Tools::Velvet::OneButton';
-#use_ok($module, "used $module without errors");
+use_ok($module) or die;
+
+# invalid version (checked first)
+ok(!Genome::Model::Tools::Velvet::OneButton->create(version => 2), 'Failed to create as expectred w/ invalid version');
+
 # CHANGE THIS WHENEVER WE INTENTIONALLY SWITCH OUTPUT 
 my $version = 'v2';
 
