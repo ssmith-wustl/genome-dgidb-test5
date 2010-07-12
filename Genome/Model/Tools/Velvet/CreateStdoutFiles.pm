@@ -140,8 +140,7 @@ sub execute {
 
     #create stats;
     my $stats = Genome::Model::Tools::Assembly::Stats::Velvet->create (
-        assembly_directory => $self->directory.'/edit_dir',
-        out_file => 'stats.txt',
+	assembly_directory => $self->directory,
         no_print_to_screen => 1,
         );
     unless ($stats->execute) {
