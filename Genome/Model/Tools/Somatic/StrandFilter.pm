@@ -48,6 +48,13 @@ class Genome::Model::Tools::Somatic::StrandFilter {
             is_input => 1,
             doc => 'Minimum average relative distance from start/end of read',
        },
+       'max_mm_qualsum_diff' => {
+            type => 'String',
+            default => '100',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)',
+       },
        prepend_chr => {
            is => 'Boolean',
            default => '0',
@@ -145,10 +152,12 @@ sub execute {
     my $min_strandedness = $self->min_strandedness;
     my $max_strandedness = 1 - $min_strandedness;
 
+    my $max_mm_qualsum_diff = $self->max_mm_qualsum_diff;
+
     ## Reset counters ##
     
     my %stats = ();
-    $stats{'num_variants'} = $stats{'num_fail_strand'} = $stats{'num_fail_pos'} = $stats{'num_no_readcounts'} = $stats{'num_pass_filter'} = $stats{'num_no_allele'} = 0;
+    $stats{'num_variants'} = $stats{'num_fail_strand'} = $stats{'num_fail_pos'} = $stats{'num_no_readcounts'} = $stats{'num_pass_filter'} = $stats{'num_no_allele'} = $stats{'num_fail_mmqs'} = 0;
     $stats{'num_MT_sites_autopassed'} = 0;
 
     ## Open the output file ##
@@ -304,10 +313,15 @@ sub execute {
 			if($ref_result && $var_result)
 			{
 				## Calculate percent-fwd-strand ##
-				(my $ref_count, my $ref_map, my $ref_base, my $ref_semq, my $ref_plus, my $ref_minus, my $ref_pos, my $ref_subs) = split(/\t/, $ref_result);
-				(my $var_count, my $var_map, my $var_base, my $var_semq, my $var_plus, my $var_minus, my $var_pos, my $var_subs) = split(/\t/, $var_result);
+				(my $ref_count, my $ref_map, my $ref_base, my $ref_semq, my $ref_plus, my $ref_minus, my $ref_pos, my $ref_subs, my $ref_mismatch_qual) = split(/\t/, $ref_result);
+				(my $var_count, my $var_map, my $var_base, my $var_semq, my $var_plus, my $var_minus, my $var_pos, my $var_subs, my $var_mismatch_qual) = split(/\t/, $var_result);
     
 				my $ref_strandedness = my $var_strandedness = 0.50;
+
+				## Use conservative defaults if we can't get mismatch quality sums ##
+				$ref_mismatch_qual = 50 if(!$ref_mismatch_qual);
+				$var_mismatch_qual = 0 if(!$var_mismatch_qual);
+				my $mismatch_qualsum_diff = $var_mismatch_qual - $ref_mismatch_qual;
     
 				## Determine ref strandedness ##
 				
@@ -347,12 +361,22 @@ sub execute {
 					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness<$min_strandedness\n"if ($self->verbose);
 					$stats{'num_fail_strand'}++;
 				    }
+				    
+				    ## FAILURE 3: Paralog filter for sites where variant allele mismatch-quality-sum is significantly higher than reference allele mmqs
+				    
+				    elsif($mismatch_qualsum_diff> $max_mm_qualsum_diff)
+				    {
+					## Print failure to output file if desired ##
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mismatch_qual-$ref_mismatch_qual>$max_mm_qualsum_diff\n" if ($self->filtered_file);
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mismatch_qual-$ref_mismatch_qual>$max_mm_qualsum_diff" if ($self->verbose);
+					$stats{'num_fail_mmqs'}++;					
+				    }
 				    ## SUCCESS: Pass Filter ##				
 				    else
 				    {
 					$stats{'num_pass_filter'}++;
 					## Print output, and append strandedness information ##
-					print $ofh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\n";
+					print $ofh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\t$ref_mismatch_qual\t$var_mismatch_qual\t$mismatch_qualsum_diff\n";
 					print "$line\t\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tPASS\n" if($self->verbose);
 				    }
 				}
@@ -389,20 +413,31 @@ sub execute {
     print $stats{'num_no_readcounts'} . " failed to get readcounts for variant allele\n";
     print $stats{'num_fail_pos'} . " had read position < $min_read_pos\n";
     print $stats{'num_fail_strand'} . " had strandedness < $min_strandedness\n";
+    print $stats{'num_fail_mmqs'} . " had mismatch qualsum difference > $max_mm_qualsum_diff\n";
     print $stats{'num_pass_filter'} . " passed the strand filter\n";
 
     return 1;
 }
 
+
+
+#############################################################
+# Readcount_Program - the path to BAM-readcounts
+#
+#############################################################
+
 sub readcount_program {
-    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount-test2 -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+#    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
 }
 
 
 
 
+
+
 #############################################################
-# ParseFile - takes input file and parses it
+# Read_Counts_By_Allele - parse out readcount info for an allele
 #
 #############################################################
 
