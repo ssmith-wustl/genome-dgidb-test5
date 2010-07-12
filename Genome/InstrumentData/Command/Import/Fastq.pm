@@ -39,7 +39,7 @@ my %properties = (
     import_format => {
         is => 'Text',
         doc => 'format of import data, like bam',
-        valid_values => ['fastq','solexa fastq','illumina fastq'],
+        valid_values => ['sanger fastq','solexa fastq','illumina fastq'],
         is_optional => 1,
     },
     sequencing_platform => {
@@ -180,7 +180,7 @@ $DB::single = 1;
     }
 
     $params{sequencing_platform} = "solexa";
-    $params{import_format} = "fastq";
+    $params{import_format} = "sanger fastq";
     $params{sample_id} = $sample_id;
     $params{library_id} = $library->id;
     $params{library_name} = $library->name;
