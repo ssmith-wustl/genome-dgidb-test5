@@ -17,7 +17,7 @@ my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
 mkdir $temp_dir.'/edit_dir';
 ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp test_dir");
 
-foreach my $file_name ('contigs.bases', 'supercontigs.agp') {
+foreach my $file_name ('contigs.bases', 'gap.txt') {
     my $old = $data_dir.'/edit_dir/'.$file_name;
     my $new = $temp_dir.'/edit_dir/'.$file_name;
     ok (-s $old, "Test $file_name exists");
