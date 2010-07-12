@@ -346,14 +346,16 @@ sub execute
         if ( $self->dev == 0 )
         {
             $dump_cmd
-                = qq{/gsc/scripts/gsc/annotation/bap_dump_gene_predictions_ace --sequence-set-id $ssid --phase $phase > $dump_output};
-            $dump_dumper = `$dump_cmd`;
+                = qq{gmt bacterial ace-dump-genes --sequence-set-id $ssid --phase $phase > $dump_output};
+#            $dump_dumper = `$dump_cmd`;
+            system($dump_cmd);
         }
         else
         {
             $dump_cmd
-                = qq{/gsc/scripts/gsc/annotation/bap_dump_gene_predictions_ace --dev --sequence-set-id $ssid --phase $phase > $dump_output};
-            $dump_dumper = `$dump_cmd`;
+                = qq{gmt bacterial ace-dump-genes --dev --sequence-set-id $ssid --phase $phase > $dump_output};
+#            $dump_dumper = `$dump_cmd`;
+            system($dump_cmd);
         }
 
         my $newACEfilelink = qq{$acedb_acefile_path/$dump_output};
