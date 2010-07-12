@@ -17,6 +17,16 @@ use Data::Dumper;
 class Genome::Model::Tools::Assembly::Stats {
     is => 'Command',
     has => [],
+    has_optional_transient => [
+	#generic files
+	contigs_bases_file => { is => 'Text', doc => 'Assembly contigs.bases file', },
+	contigs_quals_file => { is => 'Text', doc => 'Assembly contigs.quals file', },
+	reads_placed_file => { is => 'Text', doc => 'Assembly contigs.quals file', },
+	#velvet specific files
+	velvet_ace_file => { is => 'Text', doc => 'Velvet ace file', },
+	velvet_afg_file => { is => 'Text', doc => 'Velvet afg file', },
+	velvet_sequences_file => { is => 'Text', doc => 'Velvet sequences file', },
+    ],
 };
 
 sub help_brief {
@@ -176,26 +186,27 @@ sub resolve_data_directory {
         #$self->error_message ("Assembly directory ".$self->assembly_directory." must have an edit_dir");
 	#return;
     #}
-    unless ($dir =~ /edit_dir$/) {
-	$self->error_message ("You must be in edit_dir");
-	return;
-    }
-    chdir "$dir";
+    #unless ($dir =~ /edit_dir$/) {
+	#$self->error_message ("You must be in edit_dir");
+	#return;
+    #}
+    #chdir "$dir";
     return 1;
 }
 
 sub get_edit_dir_file_names {
-    my ($self) = @_;
-    my @files = glob ("*");
+    #my ($self) = @_;
+    my $self = shift;
+    
+    my @files = glob($self->assembly_directory."/edit_dir/*");
+
+    #my @files = glob ("*");
     return \@files;
 }
 
 sub parse_input_qual_files {
     my ($self, $files) = @_;
     my $q_cutoff = 20;
-#    if ($self->assembler eq 'Velvet') {
-#	$q_cutoff += 31;
-#    }
     my $counts = {};
     foreach my $file (@$files) {
 	my $fh = IO::File->new("zcat $file |")|| return;
@@ -219,7 +230,8 @@ sub get_reads_placed_counts {
     my $counts = {};
     my $uniq_reads = {};
     #TODO - create a method to get these files
-    my $fh = IO::File->new("< reads.placed") || return;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->reads_placed_file) ||
+	return;
     while (my $line = $fh->getline) {
 	$counts->{reads_in_scaffolds}++;
 	my ($read_name) = $line =~ /^\*\s+(\S+)\s+/;
@@ -294,12 +306,12 @@ sub get_contigs_bases_counts {
     #RETURNS TOTAL CONTIG LENGTH, GC AT NX COUNTS, 
     my ($self) = @_;
     my $counts = {};
-    #TODO - create a method to get these files
-    unless (-s 'contigs.bases') {
+    unless (-s $self->contigs_bases_file) {
 	$self->error_message("You must have a contigs.bases file");
 	return;
     }
-    my $fh = IO::File->new("< contigs.bases") || return;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->contigs_bases_file) ||
+	return;
     my $fio = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
     while (my $f_seq = $fio->next_seq) {
 	my $contig_length = length $f_seq->seq;
@@ -346,7 +358,11 @@ sub _resolve_tier_values {
 	$t2 = $self->second_tier;
     }
     else {
-	my $est_genome_size = -s 'contigs.bases';
+	#my $est_genome_size = -s 'contigs.bases';
+	unless (-s $self->contigs_bases_file) {
+	    $self->error_message("Failed to find file: ".$self->contigs_bases_file);
+	}
+	my $est_genome_size = -s $self->contigs_bases_file;
 	$t1 = int ($est_genome_size * 0.2);
 	$t2 = int ($est_genome_size * 0.2);
     }
@@ -355,7 +371,6 @@ sub _resolve_tier_values {
 
 sub _resolve_major_contig_length {
     my ($self) = @_;
-    #my $major_contig_length = 100;
     my $major_contig_length = 500;
     if ($self->major_contig_length) {
 	$major_contig_length = $self->major_contig_length;
@@ -367,13 +382,12 @@ sub parse_contigs_quals_file {
     my ($self) = @_;
     my ($supercontig_number, $contig_number);
     my $counts = {}; my $q20_counts = {};
-    #TODO - create a method to get these files
-    unless (-s 'contigs.quals') {
+
+    unless (-s $self->contigs_quals_file) {
 	$self->error_message ("You must have a contigs.quals files");
 	return;
     }
-    my $fh = IO::File->new("< contigs.quals") || return;
-    my $qio = Bio::SeqIO->new(-format => 'qual', -fh => $fh);
+    my $qio = Bio::SeqIO->new(-format => 'qual', -file => $self->contigs_quals_file);
     while (my $q = $qio->next_seq) {
 	$counts->{total_contig_number}++;
 	my $contig_name = $q->primary_id;
@@ -390,7 +404,6 @@ sub parse_contigs_quals_file {
 	    $counts->{supercontig}->{$supercontig_number}++;
 	}
     }
-    $fh->close;
     return ($counts, $q20_counts);
 }
 
@@ -629,15 +642,12 @@ sub create_contiguity_stats {
 sub get_read_depth_stats_from_afg {
     my $self = shift;
 
-    #TODO - use get method to get this file
-    my $velvet_afg_file = $self->assembly_directory.'/../velvet_asm.afg';
-
-    unless (-s $velvet_afg_file) {
+    unless (-s $self->velvet_afg_file) {
 	$self->error_message("Can't find velvet_asm.afg file to calculate read depth stats");
 	return;
     }
 
-    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($velvet_afg_file)
+    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($self->velvet_afg_file)
 	or return;
 
     my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $total_covered_pos) = 0;
@@ -811,40 +821,53 @@ sub get_constraint_stats {
     return $text;
 }
 
-#TODO - use methods to get to files
-sub contigs_quals_file {
+sub validate_assembly_out_files {
     my $self = shift;
-    return $self->assembly_directory.'/edit_dir/contigs.quals';
+
+    my $file_name = ($self->msi_assembly) ? 'msi.contigs.quals' : 'contigs.quals';
+    $self->contigs_quals_file($self->assembly_directory."/edit_dir/$file_name");
+    unless (-s $self->contigs_quals_file) {
+	$self->error_message("Failed to find file: ".$self->contigs_quals_file);
+	return;
+    }
+    
+    $file_name = ($self->msi_assembly) ? 'msi.contigs.bases' : 'contigs.bases';
+    $self->contigs_bases_file($self->assembly_directory."/edit_dir/$file_name");
+    unless (-s $self->contigs_bases_file) {
+	$self->error_message("Failed to find file: ".$self->contigs_bases_file);
+	return;
+    }
+
+    $file_name = ($self->msi_assembly) ? 'msi.reads.placed' : 'reads.placed';
+    $self->reads_placed_file($self->assembly_directory."/edit_dir/$file_name");
+    unless (-s $self->reads_placed_file) {
+	$self->error_message("Failed to find file: ".$self->reads_placed_file);
+	return;
+    }
+    
+    return 1;
 }
 
-sub contigs_bases_file {
+sub validate_velvet_assembly_files {
     my $self = shift;
-    return $self->assembly_directory.'/edit_dir/contigs.bases';
-}
 
-sub reads_placed_file {
-    my $self = shift;
-    return $self->assembly_directory.'/edit_dir/reads.placed';
-}
+    $self->velvet_afg_file($self->assembly_directory.'/velvet_asm.afg');
+    unless (-s $self->velvet_afg_file) {
+	$self->error_message("Failed to find file: ".$self->velvet_afg_file);
+	return;
+    }
+    $self->velvet_ace_file($self->assembly_directory.'/edit_dir/velvet_asm.ace');
+    unless (-s $self->velvet_ace_file) {
+	$self->error_message("Failed to find file: ".$self->velvet_ace_file);
+	return;
+    }
+    $self->velvet_sequences_file($self->assembly_directory.'/Sequences');
+    unless (-s $self->velvet_sequences_file) {
+	$self->error_message("Failed to find file: ".$self->velvet_sequences_file);
+	return;
+    }
 
-sub velvet_afg_file {
-    my $self = shift;
-    return $self->assembly_directory.'/velvet_asm.afg';
-}
-
-sub velvet_ace_file {
-    my $self = shift;
-    return $self->assembly_directory.'/edit_dir/velvet_asm.ace';
-}
-
-sub velvet_sequences_file {
-    my $self = shift;
-    return $self->assembly_directory.'/Sequences';
-}
-
-sub core_gene_survey_file {
-    my $self = shift;
-    return $self->assembly_directory.'/edit_dir/Cov_30_PID_30.out.gz';
+    return 1;
 }
 
 1;
