@@ -71,7 +71,7 @@ sub classify {
         return;
     }
 
-    if ($seq->length < 200) {
+    if ($seq->length < 50) {
         #$self->error_message("Sequence to short");
         return;
     }
