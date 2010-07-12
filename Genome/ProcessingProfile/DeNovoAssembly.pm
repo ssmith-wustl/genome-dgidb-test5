@@ -76,7 +76,7 @@ my %supported_operations = (
             class => 'Genome::Model::Tools::Fastq::TrimByLength',
         },
         bwa_style => {
-            class => 'Genome::Model::Tools::Fastq::TrimBwaStyle',
+            class => 'Genome::Model::Tools::Fastq::TrimBwaStyle2',
         },
     },
     read_filter => {
