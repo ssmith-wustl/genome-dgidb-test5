@@ -197,6 +197,7 @@ sub transcript_cmp {
 # Recopies any files from the remote directory that are newer or different than local cache
 sub _update_cache {
     my $self = shift;
+    $self->status_message("Updating cache...");
     my @composite_builds = $self->from_builds;
     if (@composite_builds) {
         for (@composite_builds) { $_->_update_cache }
