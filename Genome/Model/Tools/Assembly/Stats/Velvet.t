@@ -39,7 +39,7 @@ foreach my $file (@files_to_link) {
 }
 
 #create stats
-ok(system ("gmt assembly stats velvet --assembly-directory $edit_dir --out-file stats.txt --no-print-to-screen") == 0, "Command ran successfully");
+ok(system ("gmt assembly stats velvet --assembly-directory $temp_dir --out-file $temp_dir/edit_dir/stats.txt --no-print-to-screen") == 0, "Command ran successfully");
 
 #check for stats files
 ok(-s $temp_dir.'/edit_dir/stats.txt', "Tmp test dir stats.txt file exists");

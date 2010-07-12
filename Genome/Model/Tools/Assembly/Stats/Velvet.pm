@@ -33,6 +33,7 @@ class Genome::Model::Tools::Assembly::Stats::Velvet {
 	out_file => { #TODO - rename this output_file
 	    type => 'Text',
 	    is_optional => 1,
+	    is_mutable => 1,
 	    doc => "Stats output file name",
 	},
 	no_print_to_screen => {
@@ -40,6 +41,12 @@ class Genome::Model::Tools::Assembly::Stats::Velvet {
 	    is_optional => 1,
 	    default_value => 0,
 	    doc => 'Prevent printing of stats to screen',
+	},
+	msi_assembly => {
+	    is => 'Boolean',
+	    is_optional => 1,
+	    default_value => 0,
+	    doc => 'Denote msi assemblies',
 	},
     ],
 };
@@ -57,16 +64,16 @@ EOS
 }
 
 sub execute {
-    my ($self) = @_;
-    my $stats;
+    my $self = shift;
 
-    #TODO - just have one print and one print to stats file statement
+    my $stats; #holds streams of incoming stats text
 
-    #TODO - fix so this doesn't run in edit_dir .. tests can not clean up
-    my $dir = cwd();
-
-    unless ($self->resolve_data_directory()) {
-	$self->error_message("Unable to resolve data directory");
+    unless ($self->validate_assembly_out_files) {
+	$self->error_message("Failed to validate assembly out files");
+	return;
+    }
+    unless ($self->validate_velvet_assembly_files) {
+	$self->error_message("Failed to validate velvet assembly files");
 	return;
     }
 
@@ -89,7 +96,7 @@ sub execute {
     $stats .= $content_stats;
     print $content_stats unless $self->no_print_to_screen;
 
-    #GENE CORE SURVEY STATS
+    #GENE CORE SURVEY STATS - THIS IS NO LONGER BEING SUPPLIED
     #my $core_survey = $self->get_core_gene_survey_results();
     #$stats .= $core_survey;
     #print $core_survey unless $self->no_print_to_screen;
@@ -103,9 +110,16 @@ sub execute {
     $stats .= $five_k_stats;
     print $five_k_stats unless $self->no_print_to_screen;
 
+    unless ($self->out_file) {
+	$self->out_file($self->assembly_directory.'/edit_dir/stats.txt');
+    }
+
     if ($self->out_file) {
 	my $out_file = $self->out_file;
-	my $fh = IO::File->new(">$out_file") || die;
+	#my $fh = IO::File->new(">$out_file") || die;
+	unlink $self->out_file;
+	my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->out_file) ||
+	    return;
 	$fh->print($stats);
 	$fh->close;
     }
@@ -113,7 +127,7 @@ sub execute {
     print "############\n##  DONE  ##\n############\n" unless $self->no_print_to_screen;
 
     #returning to original dir so tests can clean up
-    chdir $dir;
+    #chdir $dir;
 
     return 1;
 }
