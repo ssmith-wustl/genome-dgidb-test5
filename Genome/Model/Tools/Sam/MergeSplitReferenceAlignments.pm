@@ -33,9 +33,9 @@ class Genome::Model::Tools::Sam::MergeSplitReferenceAlignments {
         type => {
             is => 'Text',
             is_optional => 1,
-            valid_values => ['unsorted', 'fragment', 'paired_end'],
-            default => 'paired_end',
-            doc => 'note that fragment and paired_end require that input be sorted by read name'
+            valid_values => ['unsorted', 'fragment', 'paired_end', 'paired_end_and_fragment'],
+            default => 'paired_end_and_fragment',
+            doc => 'note that fragment, paired_end, and paired_end_and_fragment require that input be sorted by read name'
         }
     ],
 };
@@ -61,7 +61,7 @@ sub _merge_command {
     my $out_file = shift;
     my $out_format = shift;
 
-    my $cmd = 'bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/merge-split-reference-alignments-v1.1.1';
+    my $cmd = 'bash -c "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/gsc/var/tmp/genome/lib:/gsc/pkg/boost/boost_1_42_0/lib /gsc/var/tmp/genome/bin/merge-split-reference-alignments-v1.1.2';
     foreach my $in_file (@$in_files) {
         $cmd .= ' ' . _make_bamsam_arg('split', $in_file, $in_format);
     }
@@ -73,6 +73,9 @@ sub _merge_command {
     }
     elsif($type eq 'paired_end') {
         $cmd .= ' --select-best-pair';
+    }
+    elsif($type eq 'paired_end_and_fragment') {
+        $cmd .= ' --select-best-pair-and-fragment';
     }
     else {
         die;
