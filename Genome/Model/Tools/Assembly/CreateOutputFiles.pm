@@ -28,6 +28,38 @@ sub help_detail {
 EOS
 }
 
+sub seek_pos_from_contigs_file {
+    my ($self, $file, $type) = @_;
+
+    unless (-s $file) {
+	$self->error_message("Can't find file: $file");
+	return;
+    }
+    unless ($type eq 'fasta' or $type eq 'qual') {
+	$self->error_message("File type must be fasta or qual and not $type");
+	return;
+    }
+    my %contig_infos;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file) ||
+        return;
+    my $seek_pos = $fh->tell;
+    my $io = Bio::SeqIO->new(-format => $type, -fh => $fh);
+    while (my $seq = $io->next_seq) {
+	my ($contig_number) = $seq->primary_id =~ /contig(\S+)/i;
+	unless (defined $contig_number) {
+	    $self->error_message("Expected header or id to like Contig1.1 or contig9 but got ".$seq->primary_id);
+	    return;
+	}
+	#purpose of indexing by contig number is to be able
+	#to sort by contig number and allow quicker access to seq or qual
+	push @{$contig_infos{$contig_number}}, $seek_pos;
+	#push @{$contig_infos{$contig_number}}, $seq->primary_id;
+        $seek_pos = $fh->tell;
+    }
+    $fh->close;
+    return \%contig_infos;
+}
+
 sub get_gap_sizes {
     my $self = shift;
     
