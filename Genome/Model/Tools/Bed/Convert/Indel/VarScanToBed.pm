@@ -53,13 +53,14 @@ sub process_source {
         
             my ($reference, $variant, $start, $stop);
             
-            $start = $position; #per mail from dkoboldt, the 1-based position in the var-scan output is the base before the deletion
+            $start = $position - 1; #Convert to 0-based coordinate
             
             if(substr($indel,0,1) eq '+') {
                 $reference = '*';
                 $variant = substr($indel,1);
                 $stop = $start + 2; #Two positions are included--the base preceding and the base following the insertion event
             } elsif(substr($indel,0,1) eq '-') {
+                $start += 1; #varscan reports the position before the first deleted base
                 $reference = substr($indel,1);
                 $variant = '*';
                 $stop = $start + length($reference);

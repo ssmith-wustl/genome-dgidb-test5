@@ -43,13 +43,14 @@ sub process_source {
         
         my ($reference, $variant, $start, $stop);
         
-        $start = $position - 1;
+        $start = $position - 1; #Convert to 0-based coordinate
         
         if($minus) {
             $reference = $bases;
             $variant = '*';
             $stop = $start + $length;
         } else {
+            $start -= 1; #Want to output the base before the insertion
             $reference = '*';
             $variant = $bases;
             $stop = $start + 2; #Two positions are included--the base preceding and the base following the insertion event
