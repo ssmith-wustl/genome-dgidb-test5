@@ -34,7 +34,7 @@ class Genome::Model::Tools::Fastq::TrimBwaStyle2 {
             is  => 'Boolean',
             doc => 'flag to output trim report or not',
             is_optional   => 1,
-            default_value => 1,
+            default_value => 0,
         },
     ],
 };
@@ -133,7 +133,7 @@ sub trim {
         if ($trimmed_length) {
             $trim_ct += $trimmed_length;
             $rd_trim_ct++;
-            $report_fh->print($seq->{id}."\tT\t".$trimmed_length."\n") if $self->trim_report; #In report T for trimmed
+            $report_fh->print($seq->{id}."\tT\t".$trimmed_length."\n") if $report_fh; #In report T for trimmed
         }
     }
     return $seqs;

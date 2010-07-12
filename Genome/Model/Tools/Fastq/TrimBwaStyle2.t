@@ -24,6 +24,7 @@ my $fastq_file = "$base_dir/test.fastq";
 my $trim = Genome::Model::Tools::Fastq::TrimBwaStyle2->create(
     input_files  => [$fastq_file],
     output_files => [$tmp_dir.'/test.trimmed.fastq'],
+    trim_report  => 1,
 );
 isa_ok($trim,'Genome::Model::Tools::Fastq::TrimBwaStyle2');
 
