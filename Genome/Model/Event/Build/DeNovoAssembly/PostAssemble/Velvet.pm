@@ -122,8 +122,7 @@ sub execute {
     #create stats;
     $self->status_message("Creating stats. TIME: ".UR::Time->now);
     my $stats = Genome::Model::Tools::Assembly::Stats::Velvet->execute (
-        assembly_directory => $self->build->data_directory.'/edit_dir',
-        out_file => 'stats.txt',
+	assembly_directory => $self->build->data_directory,
         no_print_to_screen => 1,
         );
     unless ($stats) {
