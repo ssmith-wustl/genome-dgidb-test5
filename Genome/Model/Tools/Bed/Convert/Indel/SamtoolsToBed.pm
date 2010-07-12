@@ -46,8 +46,7 @@ sub process_source {
             
             my ($reference, $variant, $start, $stop);
             
-            $start = $position - 1;
-            
+            $start = $position; #samtools reports position before indel so +1 then -1 to switch to 0-based.            
             if(substr($indel,0,1) eq '+') {
                 $reference = '*';
                 $variant = substr($indel,1);
