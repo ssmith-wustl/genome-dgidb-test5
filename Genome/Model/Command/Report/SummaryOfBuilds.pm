@@ -362,7 +362,13 @@ sub _resolve_properties_and_data_to_show {
             my $build = Genome::Model::Build->get($build_id); 
             confess "Can't get build for id ($build_id)" unless $build; # should not happen!
             for my $prop ( @build_properties ) {
-                my $value = $build->$prop;
+                my $value;
+                if ( $build->can($prop) ) {
+                    $value = $build->$prop;
+                }
+                else {
+                    $value = 'NA';
+                }
                 push @data_for_row, ( defined $value ? $value : '' );
             }
         }
