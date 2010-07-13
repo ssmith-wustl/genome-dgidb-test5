@@ -61,9 +61,8 @@ sub execute {
     # Go thru readers, each seq
     my $read_count = 0;
     my $read_limit = $self->build->calculate_read_limit_from_read_coverage;
-    FASTQ: while ( 1 ) {
-        for my $fastq_reader ( @fastq_readers ) { 
-            my $fastqs = $fastq_reader->next;
+    READER: for my $fastq_reader ( @fastq_readers ) { 
+        FASTQ: while ( my $fastqs = $fastq_reader->next) {
             if ( $trimmer ) {
                 $trimmer->trim($fastqs);
             }
@@ -84,7 +83,7 @@ sub execute {
                 $self->error_message("Can't write fastqs to file ($collated_fastq_file): $@");
                 return;
             }
-            last FASTQ if defined $read_limit and $read_count >= $read_limit;
+            last READER if defined $read_limit and $read_count >= $read_limit;
         }
     }
     $fastq_writer->flush();
