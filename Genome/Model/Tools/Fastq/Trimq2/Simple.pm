@@ -197,6 +197,7 @@ sub execute {
 	            }
 	            if ($pos == 0) { 
                     ($trim_seq, $trim_qual) = ('N', $qual_str);# scanned whole read and didn't integrate to zero?  replace with "empty" read ...
+                    $maxPos = 1; #reset to leave 1 base/qual
                 }
 	            else {  # integrated to zero?  trim before position where area reached a maximum (~where string of qualities were still below 20 ...)
                     $maxPos-- if $qual =~ /$qual_str$/;  #if last base is qual_str, need trim it. qual_str is observed left untrimmed when trim_qual_level is 10
