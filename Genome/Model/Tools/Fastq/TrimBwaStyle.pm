@@ -107,14 +107,16 @@ sub execute {
 
             if ($pos == 0) { 
                 # scanned whole read and didn't integrate to zero?  replace with "empty" read ...
-                $seq->{seq} = 'N';
+                $seq->{seq}  = 'N';
                 $seq->{qual} = $qual_str;
+                $maxPos = 1;  # reset to leave 1 base/qual as N/# there
                 #($trim_seq, $trim_qual) = ('N', $qual_str);# scanned whole read and didn't integrate to zero?  replace with "empty" read ...
             }
             else {  # integrated to zero?  trim before position where area reached a maximum (~where string of qualities were still below 20 ...)
-                $seq->{seq} = substr($seq->{seq}, 0, $maxPos);
+                $seq->{seq}  = substr($seq->{seq},  0, $maxPos);
                 $seq->{qual} = substr($seq->{qual}, 0, $maxPos);
             }
+            
             $trimmed_length = $seq_length - $maxPos;
 
             if ($trimmed_length) {
