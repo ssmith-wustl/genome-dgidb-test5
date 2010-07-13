@@ -265,6 +265,18 @@ sub execute {
                           next PP;
                       }
                       
+                      #By default the "region of interest" for analysis is the same as the capture target in sequencing
+                      my $roi_input = $model->add_input(
+                          name             => "region_of_interest_set_name",
+                          value_class_name => "UR::Value", value_id => $capture_target
+                      );
+                  
+                      unless (defined($roi_input)) {
+                          $self->error_message('Failed to set region of instrument input for model ' . $model->id . ' and instrument data '. $instrument_data_id);
+                          push @process_errors, $self->error_message;
+                          $model->delete();
+                          next PP;
+                      }
                   }
                   
 		  # does this processing profile replace another one? check to see if we need to pull in 
