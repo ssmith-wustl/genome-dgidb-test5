@@ -54,22 +54,36 @@ sub execute {
     my $num = 0;
     my @failed_builds;
     for my $build (@builds) {
-        my $return_value = $build->delete(keep_build_directory => $self->keep_build_directory);
-        unless ($return_value) {
-            $self->error_message("Problem removing build " . $build->build_id . ", skipping!");
-            UR::Context->rollback;
-            push @failed_builds, $build->build_id;
-            next;
-        }
+        # Using a transaction for committing/rolling back is necessary to prevent problems when rolling back the
+        # UR context... In that case, this command object (which has been created and uncommitted) gets removed and any
+        # further access to $self results in a "Attempt to use a reference to an object which has been deleted" error message
+        my $trans = UR::Context::Transaction->begin;
         
-        my $commit_rv = UR::Context->commit;
-        unless ($commit_rv) {
-            $self->error_message("Could not commit deletion of build " . $build->build_id . ", rolling back and skipping!");
-            UR::Context->rollback;
+        my $trans_rv;
+        eval { 
+            my $trans = UR::Context::Transaction->begin;
+            $trans_rv = $build->delete(keep_build_directory => $self->keep_build_directory);
+            $trans->commit if $trans_rv;
+        };
+
+        # If a commit either doesn't happen or dies in the above eval, a rollback is automagically performed. Also, trans_rv
+        # won't get a value back, so it can be checked to determine if there were any problems
+        unless (defined $trans_rv and $trans_rv) {
+            $self->error_message("Problem removing build! Rolling back changes and skipping this build!");
             push @failed_builds, $build->build_id;
             next;
         }
 
+        # The __errors__ method on changed objects is not called when a transaction is committed. Committing to the UR context
+        # performs this check (which is what fails if any of the instrument data assignments messes with expunged data)
+        my $commit_rv = eval { UR::Context->commit };
+        unless (defined $commit_rv and $commit_rv) {
+            $self->error_message("Problem committing build removal! Rolling back and skipping this build!");
+            $trans->rollback;
+            push @failed_builds, $build->build_id;
+            next;
+        }
+        
         $num++;
         $self->status_message("\n\n$num of $total builds successfully removed!\n\n\n");
     }

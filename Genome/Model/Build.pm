@@ -1223,8 +1223,22 @@ sub delete {
     }
 
     if ($self->data_directory && -e $self->data_directory && !$keep_build_directory) {
-        unless (rmtree $self->data_directory) {
-            $self->warning_message('Failed to rmtree build data directory '. $self->data_directory);
+        unless (rmtree($self->data_directory, { error => \my $remove_errors })) {
+            if (@$remove_errors) {
+                my $error_summary;
+                for my $error (@$remove_errors) {
+                    my ($file, $error_message) = %$error;
+                    if ($file eq '') {
+                        $error_summary .= "General error removing build directory: $error_message\n";
+                    }
+                    else {
+                        $error_summary .= "Error removing file $file : $error_message\n";
+                    }
+                }
+                $self->error_message($error_summary);
+            }
+
+            confess "Failed to remove build directory tree at " . $self->data_directory . ", cannot remove build!";
         }
     }
     my $disk_allocation = $self->disk_allocation;
