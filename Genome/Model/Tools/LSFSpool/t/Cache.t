@@ -31,7 +31,7 @@ sub test_start {
   # We need an LSFSpool object for logger, debug, and config.
   my $spooler = create Genome::Model::Tools::LSFSpool;
   $spooler->{configfile} = $cwd . "/data/lsf_spool_good_1.cfg";
-  $spooler->{cachefile} = $test_data_dir . "test.cache";
+  $spooler->{cachefile} = $test_data_dir . "/test.cache";
   $spooler->{debug} = 0;
   $spooler->read_config();
   $spooler->prepare_logger();
@@ -175,7 +175,7 @@ sub test_retry {
   # We need an LSFSpool object for logger, debug, and config.
   my $spooler = create Genome::Model::Tools::LSFSpool;
   $spooler->{configfile} = $cwd . "/data/lsf_spool_good_1.cfg";
-  $spooler->{cachefile} = $cwd . "/data/test.cache";
+  $spooler->{cachefile} = $test_data_dir . "/test.cache";
   $spooler->{debug} = 0;
   $spooler->read_config();
   $spooler->prepare_logger();
@@ -219,7 +219,7 @@ sub test_retry_fail {
   # We need an LSFSpool object for logger, debug, and config.
   my $spooler = create Genome::Model::Tools::LSFSpool;
   $spooler->{configfile} = $cwd . "/data/lsf_spool_good_3.cfg";
-  $spooler->{cachefile} = $cwd . "/data/test.cache";
+  $spooler->{cachefile} = $test_data_dir . "/test.cache";
   $spooler->{debug} = 0;
   $spooler->read_config();
   $spooler->prepare_logger();
