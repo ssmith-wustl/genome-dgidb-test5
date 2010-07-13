@@ -13,6 +13,7 @@ use Test::Exception;
 use Data::Dumper;
 use Cwd;
 use File::Basename;
+use File::Temp;
 
 use above 'Genome';
 BEGIN { use_ok('Genome::Model::Tools::LSFSpool'); use_ok('Genome::Model::Tools::LSFSpool::Cache'); };
@@ -24,12 +25,13 @@ BEGIN { use_ok('Genome::Model::Tools::LSFSpool'); use_ok('Genome::Model::Tools::
 
 my $thisfile = Cwd::abs_path(__FILE__);
 my $cwd = dirname $thisfile;
+my $test_data_dir = File::Temp::tempdir('LSFSpool-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 sub test_start {
   # We need an LSFSpool object for logger, debug, and config.
   my $spooler = create Genome::Model::Tools::LSFSpool;
   $spooler->{configfile} = $cwd . "/data/lsf_spool_good_1.cfg";
-  $spooler->{cachefile} = $cwd . "/data/test.cache";
+  $spooler->{cachefile} = $test_data_dir . "test.cache";
   $spooler->{debug} = 0;
   $spooler->read_config();
   $spooler->prepare_logger();
@@ -105,7 +107,7 @@ sub test_prep_good {
   my $cachefile;
 
   # Now do it right
-  $cache->{parent}->{cachefile} = $cwd . "/data/test.cache";
+  $cache->{parent}->{cachefile} = $test_data_dir . "/test.cache";
   $cachefile = $cache->{parent}->{cachefile};
   unlink($cachefile) if (-f $cachefile);
 
@@ -133,7 +135,7 @@ sub test_methods {
   my ($res,@res);
   my $spoolname = "sample-spool-1";
 
-  $cache->{parent}->{cachefile} = $cwd . "/data/test.cache";
+  $cache->{parent}->{cachefile} = $test_data_dir . "/test.cache";
   my $cachefile = $cache->{parent}->{cachefile};
   $cache->prep();
 
