@@ -8,7 +8,8 @@ use above "Genome";
 use Test::More;
 require File::Compare;
 
-my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles';
+#my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles';
+my $module = 'Genome-Model-Tools-Assembly-Stats/Velvet';
 my $data_dir = "/gsc/var/cache/testsuite/data/$module";
 
 ok(-d $data_dir, "Found data directory: $data_dir");
@@ -31,7 +32,7 @@ foreach (@files_to_link) {
 
 #link assembly/edit_dir files needed to run stats
 @files_to_link = qw/ velvet_asm.ace test.fasta.gz test.fasta.qual.gz
-                        contigs.bases contigs.quals reads.placed /;
+                        contigs.bases contigs.quals reads.placed readinfo.txt /;
 foreach my $file (@files_to_link) {
     ok(-s $data_dir."/edit_dir/$file", "Test data file $file file exists");
     symlink($data_dir."/edit_dir/$file", $edit_dir."/$file");
