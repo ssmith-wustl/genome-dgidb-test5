@@ -22,6 +22,7 @@ class Genome::Model::Tools::Assembly::Stats {
 	contigs_bases_file => { is => 'Text', doc => 'Assembly contigs.bases file', },
 	contigs_quals_file => { is => 'Text', doc => 'Assembly contigs.quals file', },
 	reads_placed_file => { is => 'Text', doc => 'Assembly contigs.quals file', },
+	read_info_file => {is => 'Text', doc => 'Assembly readinfo.txt file',},
 	#velvet specific files
 	velvet_ace_file => { is => 'Text', doc => 'Velvet ace file', },
 	velvet_afg_file => { is => 'Text', doc => 'Velvet afg file', },
@@ -74,6 +75,7 @@ sub get_simple_read_stats {
 
     #READS PLACED DATA
     my $rp_counts = $self->get_reads_placed_counts();
+    #print Dumper $rp_counts;
 
     my $scaf_reads = (exists $rp_counts->{reads_in_scaffolds}) ?
 	$rp_counts->{reads_in_scaffolds} : 0 ;
@@ -88,11 +90,11 @@ sub get_simple_read_stats {
 	      "  (reads in scaffolds: $scaf_reads)\n";
 
     #OPTIONAL UNIQUE READS STATS FOR VELVET AND NEWBLER
-    if ($self->assembler eq 'Velvet' or $self->assembler eq 'Newbler') {
+    #if ($self->assembler eq 'Velvet' or $self->assembler eq 'Newbler') {
 	$stats .= "  (unique reads: $uniq_scaf_reads)\n".
 	          "  (duplicate reads: $duplicate_reads)\n".
 		  "Unplaced reads: $unplaced_reads\n";
-    }
+    #}
 
     #GENOME CONTENTS STATS FROM CONTIGS.BASES (CB) FILES
     my $cb_counts = $self->get_contigs_bases_counts();
@@ -178,29 +180,9 @@ sub get_input_qual_files {
     return \@input_quals;
 }
 
-sub resolve_data_directory {
-    my ($self) = @_;
-    my $dir = ($self->assembly_directory) ? $self->assembly_directory : cwd();
-    #TODO - make assembly_dir main project dir and not edit_dir
-    #unless (-d $dir.'/edit_dir') {
-        #$self->error_message ("Assembly directory ".$self->assembly_directory." must have an edit_dir");
-	#return;
-    #}
-    #unless ($dir =~ /edit_dir$/) {
-	#$self->error_message ("You must be in edit_dir");
-	#return;
-    #}
-    #chdir "$dir";
-    return 1;
-}
-
 sub get_edit_dir_file_names {
-    #my ($self) = @_;
     my $self = shift;
-    
     my @files = glob($self->assembly_directory."/edit_dir/*");
-
-    #my @files = glob ("*");
     return \@files;
 }
 
@@ -229,7 +211,6 @@ sub get_reads_placed_counts {
     my ($self) = @_;
     my $counts = {};
     my $uniq_reads = {};
-    #TODO - create a method to get these files
     my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->reads_placed_file) ||
 	return;
     while (my $line = $fh->getline) {
@@ -238,11 +219,11 @@ sub get_reads_placed_counts {
 	if ($read_name =~ /_t/) {
 	    $counts->{prefin_reads_in_scaffolds}++
 	}
-	if ($self->assembler eq 'Velvet') {
+	if ($self->assembler =~ /Velvet/i) {
 	    $read_name =~ s/\-\d+$//;
 	    $uniq_reads->{$read_name}++;
 	}
-	elsif ($self->assembler eq 'Newbler') {
+	elsif ($self->assembler =~ /newbler/i) {
 	    $read_name =~ s/[\.|\_].*$//;
 	    $uniq_reads->{$read_name}++;
 	}
@@ -250,6 +231,7 @@ sub get_reads_placed_counts {
 	    next;
 	}
     }
+
     my $uniq_read_count = scalar (keys %$uniq_reads);
     $uniq_reads = '';
     $counts->{uniq_reads_in_scaffolds} = $uniq_read_count;
@@ -257,7 +239,6 @@ sub get_reads_placed_counts {
     return $counts;
 }
 
-#THIS NEEDED IN CREATE FILES CODES
 sub get_fastq_read_base_counts {
     my ($self, $fastq) = @_;
     my $read_count = 0;
@@ -269,50 +250,40 @@ sub get_fastq_read_base_counts {
     }
     return $read_count, $base_count;
 }
-#THIS NEEDED IN CREATE FILES CODES
+
 sub create_input_from_fastq {
     my ($self, $fastq) = @_;
-    #THIS NEEDS TO BE MOVED ABOVE BASE CLASS
+
     unless ($fastq =~ /\.fastq$/) {
 	$self->error_message("Fastq file must be named with .fastq extension");
 	return
     }
     my ($root_name) = $fastq =~ /(\S+)\.fastq/;
 
-    my $f_fh = IO::File->new(">> $root_name".'.fasta');
-    my $f_io = Bio::SeqIO->new(-format => 'fasta', -fh => $f_fh);
+    my $f_io = Bio::SeqIO->new(-format => 'fasta', -file => ">> $root_name".'.fasta');
+    my $q_io = Bio::SeqIO->new(-format => 'qual', -file => ">> $root_name".'.fasta.qual');
+    my $fq_io = Bio::SeqIO->new(-format => 'fastq', -file => $fastq);
 
-    my $q_fh = IO::File->new(">> $root_name".'.fasta.qual');
-    my $q_io = Bio::SeqIO->new(-format => 'qual', -fh => $q_fh);
-
-    my $fh = IO::File->new("<$fastq") || return;
-    my $fio = Bio::SeqIO->new(-format => 'fastq', -fh => $fh);
-
-    while (my $fq = $fio->next_seq) {
+    while (my $fq = $fq_io->next_seq) {
 	$f_io->write_seq ($fq);
 	#SUBTRACE 31 FROM VELVET QUAL
+	#TODO - need to see about illumina/solexa
 	my @new_qual = map {$_ - 31} @{$fq->qual};
 	$fq->qual(\@new_qual);
 	$q_io->write_seq($fq);
     }
-    $fh->close;
-    $f_fh->close;
-    $q_fh->close;
     return 1;
 }
 
 sub get_contigs_bases_counts {
-    #ACCEPTS CONTIGS.BASES FILE
-    #RETURNS TOTAL CONTIG LENGTH, GC AT NX COUNTS, 
-    my ($self) = @_;
+    my $self = shift;
     my $counts = {};
     unless (-s $self->contigs_bases_file) {
 	$self->error_message("You must have a contigs.bases file");
 	return;
     }
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->contigs_bases_file) ||
-	return;
-    my $fio = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
+
+    my $fio = Bio::SeqIO->new(-format => 'fasta', -file => $self->contigs_bases_file);
     while (my $f_seq = $fio->next_seq) {
 	my $contig_length = length $f_seq->seq;
 	$counts->{total_contig_bases} += $contig_length;
@@ -334,7 +305,7 @@ sub get_contigs_bases_counts {
 	    }
 	}
     }
-    $fh->close;
+
     return $counts;
 }
 
@@ -358,7 +329,6 @@ sub _resolve_tier_values {
 	$t2 = $self->second_tier;
     }
     else {
-	#my $est_genome_size = -s 'contigs.bases';
 	unless (-s $self->contigs_bases_file) {
 	    $self->error_message("Failed to find file: ".$self->contigs_bases_file);
 	}
@@ -409,6 +379,7 @@ sub parse_contigs_quals_file {
 
 sub create_contiguity_stats {
     my ($self, $counts, $q20_counts, $type, $t1, $t2) = @_;
+
     #TYPE IS CONTIG OR SUPERCONTIG
     my $major_contig_length = $self->_resolve_major_contig_length();
     my $t3 = $counts->{total_contig_length} - ($t1 + $t2);
@@ -441,12 +412,12 @@ sub create_contiguity_stats {
 
     foreach my $c (sort {$counts->{$type}->{$b} <=> $counts->{$type}->{$a}} keys %{$counts->{$type}}) {
 	$total_contig_number++;
-	$total_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
+	$total_q20_bases += $q20_counts->{$c}->{q20_bases};# if exists $q20_counts->{$c};
 	$cumulative_length += $counts->{$type}->{$c};
 
 	if ($counts->{$type}->{$c} >= $major_contig_length) {
 	    $major_contig_bases += $counts->{$type}->{$c};
-	    $major_contig_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
+	    $major_contig_q20_bases += $q20_counts->{$c}->{q20_bases};# if exists $q20_counts->{$c};
 	    $major_contig_number++;
 	}
 	if ($not_reached_n50) {
@@ -462,7 +433,7 @@ sub create_contiguity_stats {
 	#TIER 1
 	if ($total_t1_bases < $t1) {
 	    $total_t1_bases += $counts->{$type}->{$c};
-	    $total_t1_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
+	    $total_t1_q20_bases += $q20_counts->{$c}->{q20_bases};# if exists $q20_counts->{$c};
 	    if ($t1_not_reached_n50) {
 		$t1_n50_contig_number++;
 		if ($cumulative_length >= ($t1 * 0.50)) {
@@ -478,7 +449,7 @@ sub create_contiguity_stats {
 	#TIER 2
 	elsif ($total_t2_bases < $t2) {
 	    $total_t2_bases += $counts->{$type}->{$c};
-	    $total_t2_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
+	    $total_t2_q20_bases += $q20_counts->{$c}->{q20_bases};# if exists $q20_counts->{$c};
 	    if ($t2_not_reached_n50) {
 		$t2_n50_contig_number++;
 		if ($cumulative_length >= ($t2 * 0.50)) {
@@ -494,7 +465,7 @@ sub create_contiguity_stats {
 	#TIER 3
 	else {
 	    $total_t3_bases += $counts->{$type}->{$c};
-	    $total_t3_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
+	    $total_t3_q20_bases += $q20_counts->{$c}->{q20_bases};# if exists $q20_counts->{$c};
 	    if ($t3_not_reached_n50) {
 		$t3_n50_contig_number++;
 		if ($cumulative_length >= ($t3 * 0.50)) {
@@ -570,9 +541,7 @@ sub create_contiguity_stats {
     }
     else {
 	$q20_ratio = int ($total_q20_bases * 1000 / $cumulative_length) / 10;
-	$major_contig_q20_ratio = int ($total_q20_bases * 1000 / $major_contig_number) / 10;
-
-	print "T1 $total_t1_bases T2 $total_t2_bases T3 $total_t3_bases\n";
+	$major_contig_q20_ratio = int ($major_contig_q20_bases * 1000 / $major_contig_bases) / 10;
 
 	$t1_q20_ratio = int ($total_t1_q20_bases * 1000 / $total_t1_bases) / 10;
 	$t2_q20_ratio = int ($total_t2_q20_bases * 1000 / $total_t2_bases) / 10;
@@ -639,7 +608,7 @@ sub create_contiguity_stats {
     return $text;
 }
 
-sub get_read_depth_stats_from_afg {
+sub get_read_depth_stats_from_afg { #for velvet assemblies
     my $self = shift;
 
     unless (-s $self->velvet_afg_file) {
@@ -678,7 +647,7 @@ sub get_read_depth_stats_from_afg {
 		#limit left and right position to within the boundary of the contig
 		$left_pos = 1 if $left_pos < 1;  #read overhangs to left
 		$right_pos = $contig_length if $right_pos > $contig_length; #to right
-		#
+
 		for ($left_pos .. $right_pos) {
 		    $consensus_positions[$_]++;
 		}
@@ -712,10 +681,76 @@ sub get_read_depth_stats_from_afg {
     return $text;
 }
 
-sub get_read_depth_stats_from_ace {
-    my ($self, $acefile) = @_;
+sub get_read_depth_stats_from_readinfo {
+    my $self = shift;
+    #load contig names and lengths from contigs.bases file
+    my %contig_lengths;
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->contigs_bases_file);
+    while (my $seq = $io->next_seq) {
+	$contig_lengths{$seq->primary_id} = length $seq->seq;
+    }
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->read_info_file) ||
+	return;
+    my %contig_coverages;
+    while (my $line = $fh->getline) {
+	next if $line =~ /^\s+$/;
+	my @ar = split (/\s+/, $line);
+	unless (scalar @ar == 5) {
+	    $self->error_message("Expected readinfo line like this: HWI-EAS404:5:3:686:158.b1 Contig0.1 U 828 75 but got $line");
+	    return;
+	}
 
-    my $text = "\n*** Read Depth Info ***\n"; #string to store stats text
+	#$ar[1] = contig name
+	#$ar[3] = start pos
+	#$ar[4] = read length
+
+	unless (exists $contig_lengths{$ar[1]}) {
+	    $self->error_message("Failed to find $ar[1] in list of contig lengths");
+	    return;
+	}
+
+	my $start = ($ar[3] > 1) ? $ar[3] : 1;
+	my $stop = $start + $ar[4] - 1; #start + read length - 1
+	$stop = ($stop > $contig_lengths{$ar[1]}) ? $contig_lengths{$ar[1]} : $stop;
+	#TODO - this maybe too much to store in memory for really big assemblies
+	for ($start .. $stop) {
+	    @{$contig_coverages{$ar[1]}}[$_]++;
+	}
+    }
+    $fh->close;
+
+    my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $total_covered_pos) = 0;
+
+    foreach my $contig (keys %contig_coverages) {
+	shift @{$contig_coverages{$contig}}; #[0] element is never incremented
+	$total_covered_pos += scalar @{$contig_coverages{$contig}};
+	foreach my $depth_num (@{$contig_coverages{$contig}}) {
+            #by error it's possible for a consensus position not to be covered .. seen this in velvet assemblies
+	    next unless defined $depth_num;
+	    $one_x_cov++ if $depth_num >= 1;
+	    $two_x_cov++ if $depth_num >= 2;
+	    $three_x_cov++ if $depth_num >= 3;
+	    $four_x_cov++ if $depth_num >= 4;
+	    $five_x_cov++ if $depth_num >= 5;
+	}
+    }
+    my $text = "\n*** Read Depth Info ***\n".
+	"Total covered bases: $total_covered_pos\n".
+        "Depth >= 5: $five_x_cov\t". $five_x_cov/$total_covered_pos."\n".
+        "Depth >= 4: $four_x_cov\t". $four_x_cov/$total_covered_pos."\n".
+        "Depth >= 3: $three_x_cov\t". $three_x_cov/$total_covered_pos."\n".
+        "Depth >= 2: $two_x_cov\t". $two_x_cov/$total_covered_pos."\n".
+	"Depth >= 1: $one_x_cov\t". $one_x_cov/$total_covered_pos."\n\n";
+    
+    undef %contig_coverages;
+    return $text;
+}
+
+#this can go away
+sub get_read_depth_stats_from_ace {
+    my $self = shift;
+    my $acefile = $self->assembly_directory.'/edit_dir/ace.msi';
+    my $text;
     if (-s $acefile > 500000000) {
 	$text .= "Ace file size exceeds 500Mb and is too large to determine read depth info \n\n";
 	return $text;
@@ -747,6 +782,10 @@ sub get_read_depth_stats_from_ace {
 	    $stop = $contig->pad_position_to_unpad_position($read->stop) unless
 		$stop == $contig->unpadded_length;
 	    #increment each read position
+
+	    my $length = $stop - $start;
+	    print $contig->unpadded_length.' '.$stop.' '.$start.' '.$length."\n";
+
 	    for ($start .. $stop) {
 		$coverage_depths[$_]++;
 	    }
@@ -845,6 +884,12 @@ sub validate_assembly_out_files {
 	return;
     }
     
+    $file_name = ($self->msi_assembly) ? 'msi.readinfo.txt' : 'readinfo.txt';
+    $self->read_info_file($self->assembly_directory."/edit_dir/$file_name");
+    unless (-s $self->read_info_file) {
+	$self->error_message("Failed to find file: ".$self->read_info_file);
+	return;
+    }
     return 1;
 }
 
