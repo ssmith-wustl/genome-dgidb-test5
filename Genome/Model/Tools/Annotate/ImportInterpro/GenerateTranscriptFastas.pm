@@ -11,7 +11,7 @@ class Genome::Model::Tools::Annotate::ImportInterpro::GenerateTranscriptFastas{
             is => 'Genome::Model::Build',
             is_input => 1,
             is_optional => 0,
-        }
+        },
         chunk_size => {
             is => 'Number',
             is_input => 1,
