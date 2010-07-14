@@ -9,6 +9,8 @@ use BAP::DB::SequenceSet;
 use BAP::DB::CodingGene;
 use BAP::DB::Sequence;
 use Data::Dumper;
+use IO::File;
+use IO::Handle;
 
 use Carp;
 
@@ -32,7 +34,11 @@ UR::Object::Type->define(
             doc => "use development database",
             default => 0,
                },
-
+        ace_file => {
+            is => 'Scalar',
+            doc => "optional output file;defaults to STDOUT",
+            default => undef,
+        },
     ],
 );
 
@@ -60,6 +66,18 @@ sub execute
     my $phase = $self->phase;
     my $sequence_set_id = $self->sequence_set_id;
     my $dev_flag = $self->dev;
+
+    my $fh;
+    if(defined($self->ace_file)) {
+        $self->status_message("writing ace file to". $self->ace_file);
+        $fh = IO::File->new(">".$self->ace_file);
+    }
+    else
+    {
+        $self->status_message("ace data will be written to stdout");
+        $fh = IO::Handle->new;
+        $fh->fdopen(fileno(STDOUT),"w");
+    }
 if ($dev_flag) { $BAP::DB::DBI::db_env = 'dev'; }
 
 my $gene_phase_name = join '', 'p', $phase, '_hybrid';
@@ -68,14 +86,20 @@ $phase = "phase_$phase";
 
 my $sequence_set = BAP::DB::SequenceSet->retrieve($sequence_set_id);
 
+unless($sequence_set) {
+    $self->status_message("can't retrieve anything for sequence set $sequence_set_id");
+    croak;
+}
+
+
 my $software_version = $sequence_set->software_version();
 my $data_version     = $sequence_set->data_version();
 
 my $svn_version = '$Revision: 60465 $';
 $svn_version    =~ s/\D+//g;
 
-print qq{//BAP/MGAP Version $software_version ($svn_version)}, "\n";
-print qq{//Data Version $data_version}, "\n";
+print $fh qq{//BAP/MGAP Version $software_version ($svn_version)}, "\n";
+print $fh qq{//Data Version $data_version}, "\n";
 
 if ($software_version eq 'unknown') {
     $software_version = 'v0.0';
@@ -118,9 +142,9 @@ foreach my $i (0..$#sequences) {
         next;
     }
    
-    print qq{Sequence $sequence_name}, "\n";
-    print qq{Database $software_version $data_version $svn_version}, "\n\n";
-    print qq{Sequence : "$sequence_name"}, "\n";
+    print $fh qq{Sequence $sequence_name}, "\n";
+    print $fh qq{Database $software_version $data_version $svn_version}, "\n\n";
+    print $fh qq{Sequence : "$sequence_name"}, "\n";
 
     foreach my $gene (@coding_genes, @trna_genes, @rna_genes) {
 
@@ -147,11 +171,11 @@ foreach my $i (0..$#sequences) {
             
         }
 
-        print qq{Subsequence "$gene_name" $start $end}, "\n";
+        print $fh qq{Subsequence "$gene_name" $start $end}, "\n";
         
     }
     
-    if (@coding_genes) { print "\n"; }
+    if (@coding_genes) { print $fh "\n"; }
     
     my %method_fixup = (
                         'glimmer2' => 'Glimmer2',
@@ -184,39 +208,39 @@ foreach my $i (0..$#sequences) {
             $method = $method_fixup{$method};
         }
         
-        print qq{Sequence : "$gene_name"}, "\n";
-        print qq{Source "$source"}, "\n";
-        print qq{Method "$method"}, "\n";
-        print qq{Source_Exons\t$exon}, "\n";
-        print qq{CDS\t$cds}, "\n";
+        print $fh qq{Sequence : "$gene_name"}, "\n";
+        print $fh qq{Source "$source"}, "\n";
+        print $fh qq{Method "$method"}, "\n";
+        print $fh qq{Source_Exons\t$exon}, "\n";
+        print $fh qq{CDS\t$cds}, "\n";
 
         if ($coding_gene->missing_start()) {
-            print qq{Start_not_found}, "\n";
+            print $fh qq{Start_not_found}, "\n";
         }
         if ($coding_gene->missing_stop()) {
-            print qq{End_not_found}, "\n";
+            print $fh qq{End_not_found}, "\n";
         }
 
         if (
             $coding_gene->blastp_evidence() &&
             $coding_gene->pfam_evidence()
         ) {
-            print qq{Protein_evidence "blastp and pfam"}, "\n";
+            print $fh qq{Protein_evidence "blastp and pfam"}, "\n";
         }
         elsif ($coding_gene->blastp_evidence()) {
-            print qq{Protein_evidence "blastp"}, "\n";
+            print $fh qq{Protein_evidence "blastp"}, "\n";
         }
         elsif ($coding_gene->pfam_evidence()) {
-            print qq{Protein_evidence "pfam"},"\n";
+            print $fh qq{Protein_evidence "pfam"},"\n";
         }
         
         unless ($i == $#coding_genes) {
-            print "\n";
+            print $fh "\n";
         }
         
     }
     
-    if (@trna_genes) { print "\n"; }
+    if (@trna_genes) { print $fh "\n"; }
     
     foreach my $i (0..$#trna_genes) {
         
@@ -232,18 +256,18 @@ foreach my $i (0..$#sequences) {
         my $remark     = "tRNA-$aa Sc=$score";
         my $transcript = qq{tRNA "$codon $aa $aa_code"}; 
         
-        print qq{Sequence : "$gene_name"}, "\n";
-        print qq{Source "$source"}, "\n";
-        print qq{Method "$method"}, "\n";
-        print qq{Remark "$remark"}, "\n";
-        print qq{Transcript $transcript}, "\n";
+        print $fh qq{Sequence : "$gene_name"}, "\n";
+        print $fh qq{Source "$source"}, "\n";
+        print $fh qq{Method "$method"}, "\n";
+        print $fh qq{Remark "$remark"}, "\n";
+        print $fh qq{Transcript $transcript}, "\n";
 
         unless ($i == $#trna_genes) {
-            print "\n";
+            print $fh "\n";
         }
     }
 
-    if (@rna_genes) { print "\n"; }
+    if (@rna_genes) { print $fh "\n"; }
     
     foreach my $i (0..$#rna_genes) {
 
@@ -281,36 +305,36 @@ foreach my $i (0..$#sequences) {
         
         my $locus = "$desc";
         
-        print qq{Sequence : "$gene_name"}, "\n";
-        print qq{Source "$source"}, "\n";
-        print qq{Method "$method"}, "\n";
+        print $fh qq{Sequence : "$gene_name"}, "\n";
+        print $fh qq{Source "$source"}, "\n";
+        print $fh qq{Method "$method"}, "\n";
 
     if ($method eq 'RNAmmer') {
 
-        print qq{Source_Exons\t$exon}, "\n";
+        print $fh qq{Source_Exons\t$exon}, "\n";
 
     }
 
-        print qq{Remark "$remark"}, "\n";
-        print qq{Locus $locus}, "\n";
+        print $fh qq{Remark "$remark"}, "\n";
+        print $fh qq{Locus $locus}, "\n";
 
     if ($method eq 'Rfam') {
 
-    print qq{Rfam_product "$rfam_prod"}, "\n";
+    print $fh qq{Rfam_product "$rfam_prod"}, "\n";
 
     }
 
-        print qq{$score}, "\n";
+        print $fh qq{$score}, "\n";
         
         unless ($i == $#rna_genes) {
-            print "\n";
+            print $fh "\n";
         }
     }
     
     # Sprinkle a little bit of whitespace in between contigs
     # (unless this is the last contig)
     unless ($i == $#sequences) {
-        print "\n";
+        print $fh "\n";
     }
     
 }
