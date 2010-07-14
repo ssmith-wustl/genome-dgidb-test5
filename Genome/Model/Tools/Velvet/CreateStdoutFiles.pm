@@ -57,23 +57,6 @@ sub execute {
 	return 1;
     }
 
-    #check for ace file .. it not run velvet to-ace
-    chomp (my $time = `date "+%a %b %e %T %Y"`);
-    unless (-s $self->directory.'/edit_dir/velvet_asm.ace') {
-	$self->status_message("Running velvet to ace to create ace file");
-	my $to_ace = Genome::Model::Tools::Velvet::ToAce->create(
-	    #these files are validated in ToAce mod
-	    seq_file => $self->directory.'/Sequences',
-	    afg_file => $self->directory.'/velvet_asm.afg',
-	    time => $time,
-	    out_acefile => $self->directory.'/edit_dir/velvet_asm.ace',
-	    # sqlite_yes => 1,  #<-----
-	    );
-	unless ($to_ace->execute) {
-	    $self->error_message("Failed to run velvet-to-ace");
-	    return;
-	}
-    }
 
     #check for gap.txt which maybe be there with ace file
     unless (-s $self->directory.'/edit_dir/gap.txt') {
@@ -146,6 +129,24 @@ sub execute {
     unless ($stats->execute) {
         $self->error_message("Failed to create stats");
         return;
+    }
+
+    #check for ace file .. it not run velvet to-ace
+    chomp (my $time = `date "+%a %b %e %T %Y"`);
+    unless (-s $self->directory.'/edit_dir/velvet_asm.ace') {
+	$self->status_message("Running velvet to ace to create ace file");
+	my $to_ace = Genome::Model::Tools::Velvet::ToAce->create(
+	    #these files are validated in ToAce mod
+	    seq_file => $self->directory.'/Sequences',
+	    afg_file => $self->directory.'/velvet_asm.afg',
+	    time => $time,
+	    out_acefile => $self->directory.'/edit_dir/velvet_asm.ace',
+	    # sqlite_yes => 1,  #<----- #will cause it to fail if # reads > 2.5 million
+	    );
+	unless ($to_ace->execute) {
+	    $self->error_message("Failed to run velvet-to-ace");
+	    return;
+	}
     }
 
     return 1;
