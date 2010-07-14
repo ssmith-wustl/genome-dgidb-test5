@@ -71,15 +71,17 @@ sub execute
     #my $sequences = $self->sequences;
 
     # bap_export_proteins should be deployed.
-    my @pep_export = ('/gsc/scripts/gsc/annotation/bap_export_proteins',
-                      '-sequence-set-id', 
+    my @pep_export = (
+                     # '/gsc/scripts/gsc/annotation/bap_export_proteins',
+                      'gmt','bacterial','export-proteins',
+                      '--sequence-set-id', 
                       $self->sequence_set_id(),
 
         );
 
     if($self->dev)
     {
-        push(@pep_export,'-dev');
+        push(@pep_export,'--dev');
     }
     my ($stdout,$stderr);
     IPC::Run::run(
@@ -98,13 +100,15 @@ sub execute
     my ($typeflag,$percent_id,$coverage);
     if($self->cell_type =~ /BACTER/)
     {
-        $typeflag = '-bact';
+        #$typeflag = '-bact';
+        $typeflag = 'bact';
         $percent_id  = 30;
         $coverage = 0.3;
     }
     else
     {
-        $typeflag = '-archaea';
+        #$typeflag = '-archaea';
+        $typeflag = 'archaea';
         $percent_id  = 50;
         $coverage = 0.7;
     }
@@ -115,6 +119,14 @@ sub execute
                       '-geneset',
                       $typeflag,
         );
+
+    # eventually change this to a module call.
+    @core_genes = ('gmt','bacterial','core-gene-coverage',
+                   '--fasta-file', $tempfasta,
+                   '--pid' , $percent_id,
+                   '--option', 'geneset',
+                   '--fol', $coverage,
+                   '--genome',$typeflag );
 
     my $results;
     IPC::Run::run(
