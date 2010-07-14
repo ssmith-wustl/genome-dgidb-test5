@@ -24,7 +24,7 @@ class Genome::Model::Tools::Assembly::Stats {
 	reads_placed_file => { is => 'Text', doc => 'Assembly contigs.quals file', },
 	read_info_file => {is => 'Text', doc => 'Assembly readinfo.txt file',},
 	#velvet specific files
-	velvet_ace_file => { is => 'Text', doc => 'Velvet ace file', },
+	#velvet_ace_file => { is => 'Text', doc => 'Velvet ace file', },
 	velvet_afg_file => { is => 'Text', doc => 'Velvet afg file', },
 	velvet_sequences_file => { is => 'Text', doc => 'Velvet sequences file', },
     ],
@@ -901,11 +901,11 @@ sub validate_velvet_assembly_files {
 	$self->error_message("Failed to find file: ".$self->velvet_afg_file);
 	return;
     }
-    $self->velvet_ace_file($self->assembly_directory.'/edit_dir/velvet_asm.ace');
-    unless (-s $self->velvet_ace_file) {
-	$self->error_message("Failed to find file: ".$self->velvet_ace_file);
-	return;
-    }
+    #$self->velvet_ace_file($self->assembly_directory.'/edit_dir/velvet_asm.ace');
+    #unless (-s $self->velvet_ace_file) {
+	#$self->error_message("Failed to find file: ".$self->velvet_ace_file);
+	#return;
+    #}
     $self->velvet_sequences_file($self->assembly_directory.'/Sequences');
     unless (-s $self->velvet_sequences_file) {
 	$self->error_message("Failed to find file: ".$self->velvet_sequences_file);
