@@ -21,24 +21,6 @@ sub execute {
     Genome::Utility::FileSystem->create_directory($self->build->edit_dir);
     chomp (my $time = `date "+%a %b %e %T %Y"`);
 
-
-    #make ace file .. 
-    $self->status_message("Writing ace file. TIME: ".UR::Time->now);
-    my $to_ace = Genome::Model::Tools::Velvet::ToAce->create(
-        #these files are validated in ToAce mod
-        seq_file => $self->build->sequences_file,
-        afg_file => $self->build->assembly_afg_file,
-        time => $time,
-        out_acefile => $self->build->velvet_ace_file,
-	#sqlite_yes => 1,  #<-----
-    );
-    unless ($to_ace->execute) {
-        $self->error_message("Failed to run velvet-to-ace");
-        return;
-    }
-    $self->status_message("Completed writing ace file. TIME: ".UR::Time->now);
-
-
     #create gap.txt file
     $self->status_message("Creating gap.txt file. TIME: ".UR::Time->now);
     my $gap = Genome::Model::Tools::Velvet::CreateGapFile->create(
@@ -50,6 +32,7 @@ sub execute {
         return;
     }
     $self->status_message("Completed creating gap.txt file. TIME: ".UR::Time->now);
+
 
 
     #create input fasta and qual files #TODO - move this to tools/velvet
@@ -130,6 +113,24 @@ sub execute {
         return;
     }
     $self->status_message("Completed creating stats. TIME: ".UR::Time->now);
+
+
+    #make ace file .. 
+    $self->status_message("Writing ace file. TIME: ".UR::Time->now);
+    my $to_ace = Genome::Model::Tools::Velvet::ToAce->create(
+        #these files are validated in ToAce mod
+        seq_file => $self->build->sequences_file,
+        afg_file => $self->build->assembly_afg_file,
+        time => $time,
+        out_acefile => $self->build->velvet_ace_file,
+	#sqlite_yes => 1,  #<----- can't do if # reads gt 2,500,000
+    );
+    unless ($to_ace->execute) {
+        $self->error_message("Failed to run velvet-to-ace");
+        return;
+    }
+    $self->status_message("Completed writing ace file. TIME: ".UR::Time->now);
+
 
     return 1;
 }
