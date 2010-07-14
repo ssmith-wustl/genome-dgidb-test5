@@ -24,20 +24,40 @@ class Genome::InstrumentData::Sanger {
                         where => [
                                   entity_class_name => 'Genome::InstrumentData::Sanger',
                                   property_name     => 'sample_name',
-                              ],
+                                 ],
                         is_optional => 1,
                         is_mutable  => 1,
-                    },     
+                    },
+        sample_id => {
+                      via   => 'attributes',
+                      to    => 'value',
+                      where => [
+                                entity_class_name => 'Genome::InstrumentData::Sanger',
+                                property_name     => 'sample_id',
+                               ],
+                      is_optional => 1,
+                      is_mutable  => 1,
+                     },     
         library_name => {
                          via   => 'attributes',
                          to    => 'value',
                          where => [
                                    entity_class_name => 'Genome::InstrumentData::Sanger',
                                    property_name     => 'library_name',
-                               ],
+                                  ],
                          is_optional => 1,
                          is_mutable  => 1,
                      },
+        library_id => {
+                       via   => 'attributes',
+                       to    => 'value',
+                       where => [
+                                 entity_class_name => 'Genome::InstrumentData::Sanger',
+                                 property_name     => 'library_id',
+                                ],
+                       is_optional => 1,
+                       is_mutable  => 1,
+                      },
         research_project => {
                  via   => 'attributes',
                  to    => 'value',
