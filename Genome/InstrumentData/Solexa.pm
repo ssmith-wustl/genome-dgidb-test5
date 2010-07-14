@@ -384,7 +384,86 @@ sub dump_to_file_system {
     return 1;
 }
 
-sub fastq_filenames {
+sub dump_illumina_fastq_files {
+    my $self = shift;
+
+    unless ($self->resolve_quality_converter eq 'sol2phred') {
+        $self->error_message("This instrument data is not natively Illumina formatted, cannot dump");
+        die $self->error_message;
+    }
+
+    return $self->_unprocessed_fastq_filenames(@_);
+}
+
+sub dump_solexa_fastq_files {
+    my $self = shift;
+
+    unless ($self->resolve_quality_converter eq 'sol2sanger') {
+        $self->error_message("This instrument data is not natively Solexa formatted, cannot dump");
+        die $self->error_message;
+    }
+
+    return $self->_unprocessed_fastq_filenames(@_);
+}
+
+sub dump_sanger_fastq_files {
+    my $self = shift;
+    my @illumina_fastq_pathnames = $self->_unprocessed_fastq_filenames(@_);
+
+    my %params = @_;
+
+    my $requested_directory = delete $params{directory} || Genome::Utility::FileSystem->base_temp_directory;
+
+    my @converted_pathnames;
+    my $counter = 1;
+    $DB::single = 1;
+    for my $illumina_fastq_pathname (@illumina_fastq_pathnames) {
+        my $converted_fastq_pathname;
+        if ($self->resolve_quality_converter eq 'sol2sanger') {
+            $self->status_message("Applying sol2sanger quality conversion.");
+            $converted_fastq_pathname = $requested_directory . '/' . 'sanger-fastq-'. $counter . ".fastq";
+            unless (Genome::Model::Tools::Maq::Sol2sanger->execute( use_version       => '0.7.1',
+                                                                    solexa_fastq_file => $illumina_fastq_pathname,
+                                                                    sanger_fastq_file => $converted_fastq_pathname)) {
+                $self->error_message('Failed to execute sol2sanger quality conversion $illumina_fastq_pathname $converted_fastq_pathname.');
+                $self->die($self->error_message);
+            }
+        } elsif ($self->resolve_quality_converter eq 'sol2phred') {
+            $self->status_message("Applying sol2phred quality conversion.");
+            $converted_fastq_pathname = $requested_directory . '/' . 'sanger-fastq-'. $counter . ".fastq";
+
+            unless (Genome::Model::Tools::Fastq::Sol2phred->execute(fastq_file => $illumina_fastq_pathname,
+                                                                    phred_fastq_file => $converted_fastq_pathname)) {
+                $self->error_message('Failed to execute sol2phred quality conversion.');
+                $self->die($self->error_message);
+            }
+        } elsif ($self->resolve_quality_converter eq 'none') {
+            $self->status_message("No quality conversion required.");
+            $converted_fastq_pathname = $illumina_fastq_pathname;
+        } else {
+            $self->error_message("Undefined quality converter requested, I can't proceed");
+            die $self->error_message;
+        }
+        unless (-e $converted_fastq_pathname && -f $converted_fastq_pathname && -s $converted_fastq_pathname) {
+            $self->error_message('Failed to validate the conversion of solexa fastq file '. $illumina_fastq_pathname .' to sanger quality scores');
+            $self->die($self->error_message);
+        }
+        $counter++;
+
+        if (($converted_fastq_pathname ne $illumina_fastq_pathname ) &&
+            ($illumina_fastq_pathname =~ m/\/tmp\//)) {
+
+            $self->status_message("Removing original unconverted file from temp space to save disk space:  $illumina_fastq_pathname");
+            unlink $illumina_fastq_pathname;
+        }
+        push @converted_pathnames, $converted_fastq_pathname;
+    }    
+
+    return @converted_pathnames;
+
+}
+
+sub _unprocessed_fastq_filenames {
     my $self = shift;
     my @fastqs;
     if ($self->is_external) {
@@ -428,6 +507,7 @@ sub resolve_fastq_filenames {
 
     my %params = @_;
     my $paired_end_as_fragment = delete $params{'paired_end_as_fragment'};
+    my $requested_directory = delete $params{'directory'} || $self->base_temp_directory;
 
     my @illumina_output_paths;
     my @errors;
@@ -441,7 +521,7 @@ sub resolve_fastq_filenames {
         next unless $directory;
 
         if ($dir_type eq 'archive_path') {
-            $directory = $self->dump_illumina_fastq_archive; #need eval{} here ?
+            $directory = $self->dump_illumina_fastq_archive($requested_directory); #need eval{} here ?
             $directory = $self->validate_fastq_directory($directory, 'dump_fastq_dir');
             next unless $directory;
         }
@@ -641,7 +721,7 @@ sub create_mock {
     return unless $self;
 
     for my $method (qw/
-        fastq_filenames
+        dump_sanger_fastq_files
         resolve_fastq_filenames
         _calculate_total_read_count
         resolve_adaptor_file

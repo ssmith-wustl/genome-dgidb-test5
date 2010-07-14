@@ -95,6 +95,7 @@ sub test_alignment {
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
     ok(-s $dir . "/all_sequences.bam", "result has a bam file");
+    print "DIR is $dir\n";
 
     if ($generate_shortcut) {
         print "*** Using this data to generate shortcut data! ***\n";
@@ -107,19 +108,11 @@ sub test_alignment {
         system("rsync -a $dir/* $expected_shortcut_path");
     } 
 
-    # clear out the fastqs so we re-unpack them again
-    note "Remove sanger_fastq files:\n";
-    for (@{$alignment->_sanger_fastq_pathnames}) {
-        print "$_\n";
-        unlink($_);
-    }
-
     # clear out the temp scratch/staging paths since these normally would be auto cleaned up at completion
     my $base_tempdir = Genome::Utility::FileSystem->base_temp_directory;
     for (glob($base_tempdir . "/*")) {
         File::Path::rmtree($_);
     }
-
 
 
 }
@@ -214,7 +207,7 @@ sub generate_fake_instrument_data {
 
     # confirm there are fastq files here, and fake the fastq_filenames method to return them
     my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
-    $instrument_data->set_list('fastq_filenames',@in_fastq_files);
+    $instrument_data->set_list('dump_sanger_fastq_files',@in_fastq_files);
 
     # fake out some properties on the instrument data
     isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
@@ -225,6 +218,8 @@ sub generate_fake_instrument_data {
     $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
     $instrument_data->set_always('resolve_quality_converter','sol2sanger');
     $instrument_data->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
+    $instrument_data->mock('status_message',sub {print "STATUS: " . $_[1], "\n"});
+    $instrument_data->mock('error_message',sub {print STDERR "ERROR: " . $_[1], "\n"});
 
     $FAKE_INSTRUMENT_DATA_ID--;
 

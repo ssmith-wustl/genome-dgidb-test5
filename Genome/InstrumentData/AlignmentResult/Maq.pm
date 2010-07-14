@@ -161,7 +161,7 @@ sub _run_aligner {
     my $self = shift;
     
     my @input_pathnames = @_;
-    @input_pathnames    = $self->sanger_bfq_filenames(@input_pathnames);
+    @input_pathnames    = $self->input_bfq_filenames(@input_pathnames);
 
     my $tmp_dir         = $self->temp_scratch_directory;
     my $instrument_data = $self->instrument_data;

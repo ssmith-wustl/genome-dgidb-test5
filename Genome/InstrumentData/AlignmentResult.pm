@@ -236,8 +236,8 @@ class Genome::InstrumentData::AlignmentResult {
                                     doc=>'Temp scratch directory',
                                     is_optional=>1,
                                 },
-        _sanger_fastq_pathnames => { is => 'ARRAY', is_optional => 1 },
-        _sanger_bfq_pathnames   => { is => 'ARRAY', is_optional => 1 },
+        _input_fastq_pathnames => { is => 'ARRAY', is_optional => 1 },
+        _input_bfq_pathnames   => { is => 'ARRAY', is_optional => 1 },
     ],
 };
 
@@ -412,7 +412,7 @@ sub create_BAM_in_staging_directory {
     
     # STEP 6: UNPACK THE ALIGNMENT FILES
     $self->status_message("Unpacking reads...");
-    my @fastqs = $self->_extract_sanger_fastq_filenames;
+    my @fastqs = $self->_extract_input_fastq_filenames;
     unless (@fastqs) {
         $self->error_message("Failed to gather fastq files: " . $self->error_message);
         die $self->error_message;
@@ -896,18 +896,18 @@ sub resolve_alignment_subdirectory {
 }
 
 
-sub _extract_sanger_fastq_filenames {
+sub _extract_input_fastq_filenames {
     my $self = shift;
 
     my $instrument_data = $self->instrument_data;
 
-    my @sanger_fastq_pathnames;
-    if ($self->_sanger_fastq_pathnames) {
-        @sanger_fastq_pathnames = @{$self->_sanger_fastq_pathnames};
+    my @input_fastq_pathnames;
+    if ($self->_input_fastq_pathnames) {
+        @input_fastq_pathnames = @{$self->_input_fastq_pathnames};
         my $errors;
-        for my $sanger_fastq (@sanger_fastq_pathnames) {
-            unless (-e $sanger_fastq && -f $sanger_fastq && -s $sanger_fastq) {
-                $self->error_message('Missing or zero size sanger fastq file: '. $sanger_fastq);
+        for my $input_fastq (@input_fastq_pathnames) {
+            unless (-e $input_fastq && -f $input_fastq && -s $input_fastq) {
+                $self->error_message('Missing or zero size sanger fastq file: '. $input_fastq);
                 $self->die_and_clean_up($self->error_message);
             }
         }
@@ -930,68 +930,37 @@ sub _extract_sanger_fastq_filenames {
         else {
             die 'Unsupported filter: "' . $self->filter_name . '"!';
         }
-
-        my @illumina_fastq_pathnames = $instrument_data->fastq_filenames(%params);
+    
+        $DB::single = 1;
+        my @illumina_fastq_pathnames = $instrument_data->dump_sanger_fastq_files(%params);
         my $counter = 0;
-        for my $illumina_fastq_pathname (@illumina_fastq_pathnames) {
-            my $sanger_fastq_pathname = Genome::Utility::FileSystem->create_temp_file_path('sanger-fastq-'. $counter);
-            if ($instrument_data->resolve_quality_converter eq 'sol2sanger') {
-                my $aligner_version;
-                if ($self->aligner_name eq 'maq') {
-                    $aligner_version = $self->aligner_version;
-                } 
-                else {
-                    $aligner_version = '0.7.1', ### default to most recent
-                }
-                unless (Genome::Model::Tools::Maq::Sol2sanger->execute(
-                    use_version       => $aligner_version,
-                    solexa_fastq_file => $illumina_fastq_pathname,
-                    sanger_fastq_file => $sanger_fastq_pathname,
-                )) {
-                    $self->error_message('Failed to execute sol2sanger quality conversion.');
-                    $self->die_and_clean_up($self->error_message);
-                }
-            } 
-            elsif ($instrument_data->resolve_quality_converter eq 'sol2phred') {
-                unless (Genome::Model::Tools::Fastq::Sol2phred->execute(
-                    fastq_file => $illumina_fastq_pathname,
-                    phred_fastq_file => $sanger_fastq_pathname,
-                )) {
-                    $self->error_message('Failed to execute sol2phred quality conversion.');
-                    $self->die_and_clean_up($self->error_message);
-                }
-            }
-            unless (-e $sanger_fastq_pathname && -f $sanger_fastq_pathname && -s $sanger_fastq_pathname) {
-                $self->error_message('Failed to validate the conversion of solexa fastq file '. $illumina_fastq_pathname .' to sanger quality scores');
-                $self->die_and_clean_up($self->error_message);
-            }
-
+        for my $input_fastq_pathname (@illumina_fastq_pathnames) {
             if ($self->trimmer_name) {
                 unless ($self->trimmer_name eq 'trimq2_shortfilter') {
-                    my $trimmed_sanger_fastq_pathname = Genome::Utility::FileSystem->create_temp_file_path('trimmed-sanger-fastq-'. $counter);
+                    my $trimmed_input_fastq_pathname = Genome::Utility::FileSystem->create_temp_file_path('trimmed-sanger-fastq-'. $counter);
                     my $trimmer;
                     if ($self->trimmer_name eq 'fastx_clipper') {
                         #THIS DOES NOT EXIST YET
                         $trimmer = Genome::Model::Tools::Fastq::Clipper->create(
                             params => $self->trimmer_params,
                             version => $self->trimmer_version,
-                            input => $sanger_fastq_pathname,
-                            output => $trimmed_sanger_fastq_pathname,
+                            input => $input_fastq_pathname,
+                            output => $trimmed_input_fastq_pathname,
                         );
                     } 
                     elsif ($self->trimmer_name eq 'trim5') {
                         $trimmer = Genome::Model::Tools::Fastq::Trim5->create(
                             length => $self->trimmer_params,
-                            input => $sanger_fastq_pathname,
-                            output => $trimmed_sanger_fastq_pathname,
+                            input => $input_fastq_pathname,
+                            output => $trimmed_input_fastq_pathname,
                         );
                     } 
                     elsif ($self->trimmer_name eq 'bwa_style') {
                         my ($trim_qual) = $self->trimmer_params =~ /--trim-qual-level\s*=?\s*(\S+)/;
                         $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
                             trim_qual_level => $trim_qual,
-                            fastq_file      => $sanger_fastq_pathname,
-                            out_file        => $trimmed_sanger_fastq_pathname,
+                            fastq_file      => $input_fastq_pathname,
+                            out_file        => $trimmed_input_fastq_pathname,
                             qual_type       => 'sanger',  #hardcoded for now
                             report_file     => $self->temp_staging_directory.'/trim_bwa_style.report.'.$counter,
                         );
@@ -1001,8 +970,8 @@ sub _extract_sanger_fastq_filenames {
                         #move trimq2.report to alignment directory
                         
                         my %params = (
-                            fastq_file  => $sanger_fastq_pathname,
-                            out_file    => $trimmed_sanger_fastq_pathname,
+                            fastq_file  => $input_fastq_pathname,
+                            out_file    => $trimmed_input_fastq_pathname,
                             report_file => $self->temp_staging_directory.'/trimq2.report.'.$counter,
                             trim_style  => $1,
                         );
@@ -1020,8 +989,8 @@ sub _extract_sanger_fastq_filenames {
                     elsif ($self->trimmer_name eq 'random_subset') {
                         my $seed_phrase = $instrument_data->run_name .'_'. $instrument_data->id;
                         $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
-                            input_read_1_fastq_files => [$sanger_fastq_pathname],
-                            output_read_1_fastq_file => $trimmed_sanger_fastq_pathname,
+                            input_read_1_fastq_files => [$input_fastq_pathname],
+                            output_read_1_fastq_file => $trimmed_input_fastq_pathname,
                             limit_type => 'reads',
                             limit_value => $self->trimmer_params,
                             seed_phrase => $seed_phrase,
@@ -1033,21 +1002,21 @@ sub _extract_sanger_fastq_filenames {
                         my $trim = Genome::Model::Tools::Fastq::Trim->execute(
                             read_length => $read_length,
                             orientation => 3,
-                            input => $sanger_fastq_pathname,
-                            output => $trimmed_sanger_fastq_pathname,
+                            input => $input_fastq_pathname,
+                            output => $trimmed_input_fastq_pathname,
                         );
                         unless ($trim) {
                             die('Failed to trim reads using test_trim_and_random_subset');
                         }
-                        my $random_sanger_fastq_pathname = Genome::Utility::FileSystem->create_temp_file_path('random-sanger-fastq-'. $counter);
+                        my $random_input_fastq_pathname = Genome::Utility::FileSystem->create_temp_file_path('random-sanger-fastq-'. $counter);
                         $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
-                            input_read_1_fastq_files => [$trimmed_sanger_fastq_pathname],
-                            output_read_1_fastq_file => $random_sanger_fastq_pathname,
+                            input_read_1_fastq_files => [$trimmed_input_fastq_pathname],
+                            output_read_1_fastq_file => $random_input_fastq_pathname,
                             limit_type  => 'reads',
                             limit_value => $reads,
                             seed_phrase => $instrument_data->run_name .'_'. $instrument_data->id,
                         );
-                        $trimmed_sanger_fastq_pathname = $random_sanger_fastq_pathname;
+                        $trimmed_input_fastq_pathname = $random_input_fastq_pathname;
                     } 
                     else {
                         $self->error_message('Unknown read trimmer_name '. $self->trimmer_name);
@@ -1065,58 +1034,58 @@ sub _extract_sanger_fastq_filenames {
                         my @empty = ();
                         $trimmer->_index(\@empty);
                     }
-                    $sanger_fastq_pathname = $trimmed_sanger_fastq_pathname;
+                    $input_fastq_pathname = $trimmed_input_fastq_pathname;
                 }
             }
-            push @sanger_fastq_pathnames, $sanger_fastq_pathname;
+            push @input_fastq_pathnames, $input_fastq_pathname;
             $counter++;
         }
 
         # this previously happened at the beginning of _run_aligner
-        @sanger_fastq_pathnames = $self->run_trimq2_filter_style(@sanger_fastq_pathnames) 
+        @input_fastq_pathnames = $self->run_trimq2_filter_style(@input_fastq_pathnames) 
             if $self->trimmer_name and $self->trimmer_name eq 'trimq2_shortfilter';
 
-        $self->_sanger_fastq_pathnames(\@sanger_fastq_pathnames);
+        $self->_input_fastq_pathnames(\@input_fastq_pathnames);
     }
-    return @sanger_fastq_pathnames;
+    return @input_fastq_pathnames;
 }
 
 
-sub sanger_bfq_filenames {
+sub input_bfq_filenames {
     my $self = shift;
-    my @sanger_fastq_pathnames = @_;
+    my @input_fastq_pathnames = @_;
 
-    my @sanger_bfq_pathnames;
-    if ($self->_sanger_bfq_pathnames) {
-        @sanger_bfq_pathnames = @{$self->_sanger_bfq_pathnames};
-        for my $sanger_bfq (@sanger_bfq_pathnames) {
-            unless (-s $sanger_bfq) {
-                $self->error_message('Missing or zero size sanger bfq file: '. $sanger_bfq);
+    my @input_bfq_pathnames;
+    if ($self->_input_bfq_pathnames) {
+        @input_bfq_pathnames = @{$self->_input_bfq_pathnames};
+        for my $input_bfq (@input_bfq_pathnames) {
+            unless (-s $input_bfq) {
+                $self->error_message('Missing or zero size sanger bfq file: '. $input_bfq);
                 die $self->error_message;
             }
         }
     } 
     else {
         my $counter = 0;
-        for my $sanger_fastq_pathname (@sanger_fastq_pathnames) {
-            my $sanger_bfq_pathname = Genome::Utility::FileSystem->create_temp_file_path('sanger-bfq-'. $counter++);
+        for my $input_fastq_pathname (@input_fastq_pathnames) {
+            my $input_bfq_pathname = Genome::Utility::FileSystem->create_temp_file_path('sanger-bfq-'. $counter++);
             #Do we need remove sanger fastq here ?
             unless (Genome::Model::Tools::Maq::Fastq2bfq->execute(
-                fastq_file => $sanger_fastq_pathname,
-                bfq_file   => $sanger_bfq_pathname,
+                fastq_file => $input_fastq_pathname,
+                bfq_file   => $input_bfq_pathname,
             )) {
                 $self->error_message('Failed to execute fastq2bfq quality conversion.');
                 die $self->error_message;
             }
-            unless (-s $sanger_bfq_pathname) {
-                $self->error_message('Failed to validate the conversion of sanger fastq file '. $sanger_fastq_pathname .' to sanger bfq.');
+            unless (-s $input_bfq_pathname) {
+                $self->error_message('Failed to validate the conversion of sanger fastq file '. $input_fastq_pathname .' to sanger bfq.');
                 die $self->error_message;
             }
-            push @sanger_bfq_pathnames, $sanger_bfq_pathname;
+            push @input_bfq_pathnames, $input_bfq_pathname;
         }
-        $self->_sanger_bfq_pathnames(\@sanger_bfq_pathnames);
+        $self->_input_bfq_pathnames(\@input_bfq_pathnames);
     }
-    return @sanger_bfq_pathnames;
+    return @input_bfq_pathnames;
 }
 
 
@@ -1237,7 +1206,7 @@ sub run_trimq2_filter_style {
             return;
         }
         my ($p1, $p2);
-        #The names of temp files return from above method sanger_fastq_filenames
+        #The names of temp files return from above method input_fastq_filenames
         #will end as either 0 or 1
         for my $file (@fq_files) {
             if ($file =~ /\-0$/) {   #hard coded fastq file name for now
@@ -1443,7 +1412,7 @@ sub construct_groups_file {
     my $aligner_command_line = $self->aligner_params_for_sam_header;
 
     my $insert_size_for_header;
-    if ($self->instrument_data->median_insert_size) {
+    if ($self->instrument_data->can('median_insert_size') && $self->instrument_data->median_insert_size) {
         $insert_size_for_header= $self->instrument_data->median_insert_size;
     }
     else {
@@ -1468,9 +1437,12 @@ sub construct_groups_file {
     my $aligner_version_tag = $self->aligner_version;
     my $aligner_cmd =  $aligner_command_line;
 
+    my $platform = $self->instrument_data->sequencing_platform;
+    $platform = ($platform eq 'solexa' ? 'illumina' : $platform);
+
                  #@RG     ID:2723755796   PL:illumina     PU:30945.1      LB:H_GP-0124n-lib1      PI:0    DS:paired end   DT:2008-10-03   SM:H_GP-0124n   CN:WUGSC
                  #@PG     ID:0    VN:0.4.9        CL:bwa aln -t4
-    my $rg_tag = "\@RG\tID:$id_tag\tPL:illumina\tPU:$pu_tag\tLB:$lib_tag\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_tag\tSM:$sample_tag\tCN:WUGSC\n";
+    my $rg_tag = "\@RG\tID:$id_tag\tPL:$platform\tPU:$pu_tag\tLB:$lib_tag\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_tag\tSM:$sample_tag\tCN:WUGSC\n";
     my $pg_tag = "\@PG\tID:$id_tag\tVN:$aligner_version_tag\tCL:$aligner_cmd\n";
 
     $self->status_message("RG: $rg_tag");

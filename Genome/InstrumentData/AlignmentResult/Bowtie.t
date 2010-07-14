@@ -109,13 +109,6 @@ sub test_alignment {
         system("rsync -a $dir/* $expected_shortcut_path");
     } 
 
-    # clear out the fastqs so we re-unpack them again
-    note "Remove sanger_fastq files:\n";
-    for (@{$alignment->_sanger_fastq_pathnames}) {
-        print "$_\n";
-        unlink($_);
-    }
-
     # clear out the temp scratch/staging paths since these normally would be auto cleaned up at completion
     my $base_tempdir = Genome::Utility::FileSystem->base_temp_directory;
     for (glob($base_tempdir . "/*")) {
@@ -216,7 +209,7 @@ sub generate_fake_instrument_data {
 
     # confirm there are fastq files here, and fake the fastq_filenames method to return them
     my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
-    $instrument_data->set_list('fastq_filenames',@in_fastq_files);
+    $instrument_data->set_list('dump_sanger_fastq_files',@in_fastq_files);
 
     # fake out some properties on the instrument data
     isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
