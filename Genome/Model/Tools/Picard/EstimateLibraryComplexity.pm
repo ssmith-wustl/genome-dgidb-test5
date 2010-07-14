@@ -12,6 +12,7 @@ class Genome::Model::Tools::Picard::EstimateLibraryComplexity {
         input_file => {
             is  => 'String',
             doc => 'The SAM/BAM files to merge.  File type is determined by suffix.',
+            is_many => 1,
         },
         output_file => {
             is  => 'String',
@@ -61,7 +62,9 @@ sub execute {
     my $self = shift;
 
     my $complexity_cmd = $self->picard_path .'/EstimateLibraryComplexity.jar net.sf.picard.sam.EstimateLibraryComplexity';
-    $complexity_cmd .= ' OUTPUT='. $self->output_file  .' INPUT='. $self->input_file;
+    $complexity_cmd .= ' OUTPUT=' . $self->output_file;
+    $complexity_cmd
+        .= ' ' . join( ' ', map { "INPUT=$_" } $self->input_file );
     if ($self->min_identical_bases) {
         $complexity_cmd .= ' MIN_IDENTICAL_BASES='. $self->min_identical_bases;
     }
