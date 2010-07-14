@@ -11,11 +11,11 @@ use Text::CSV_XS;
 class Genome::Model::Tools::Sv::Peruse {
     is => 'Command',
     has => [
-    primer_design_file => 
+    input_file => 
     { 
         type => 'String',
         is_optional => 0,
-        doc => "Input file of svs in primer design input format",
+        doc => "Input file of svs in primer design input format or HQfiltered input format",
     },
     dir =>
     {
@@ -75,14 +75,14 @@ sub execute {
     }
     my %types = map {$_ => 1} @types; #create types hash
 
-    unless(-f $self->primer_design_file) {
-        $self->error_message("primer design file is not a file: " . $self->primer_design_file);
+    unless(-f $self->input_file) {
+        $self->error_message("input file " . $self->input_file . " is not a file");
         return;
     }
 
-    my $indel_fh = IO::File->new($self->primer_design_file);
+    my $indel_fh = IO::File->new($self->input_file);
     unless($indel_fh) {
-        $self->error_message("Failed to open filehandle for: " .  $self->primer_design_file );
+        $self->error_message("Failed to open file: " .  $self->input_file );
         return;
     }
 
@@ -91,7 +91,7 @@ sub execute {
     my $viewer = $self->viewer_program;
     my $start = $self->start_from;
 
-    my $csv = Text::CSV_XS->new({ sep_char => "\t"});   #set up CSV parser to use tabs. This way quotes are allowed and well handled
+    my $csv = Text::CSV_XS->new({ sep_char => "\t", binary => 1});   #set up CSV parser to use tabs. This way quotes are allowed and well handled
     unless($csv) {
         $self->error_message("Couldn't create CSV file parser");
         return;
@@ -107,7 +107,7 @@ sub execute {
             #report what we chunked off in case this is unexpected
             $self->status_message("Identified $start_prefix from the beginning of $start as a prefix");
         }
-        $start_prefix =~ s/\.//;
+        $start_prefix =~ s/\.// if $start_prefix;
         
         ($start_chr1, $start_chr1_pos, $start_chr2,$start_chr2_pos,$start_type) = split /\_/, $start;
         unless(defined $start_chr1 && defined $start_chr1_pos && defined $start_chr2_pos && defined $start_type) {
