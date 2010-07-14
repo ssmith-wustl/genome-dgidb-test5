@@ -4,9 +4,10 @@ use strict;
 use warnings;
 use Genome;
 
+use BAP::DB::DBI;
+use BAP::DB::SequenceSet;
 use BAP::DB::CodingGene;
 use BAP::DB::Sequence;
-use BAP::DB::SequenceSet;
 use Data::Dumper;
 
 use Carp;
@@ -59,7 +60,7 @@ sub execute
     my $phase = $self->phase;
     my $sequence_set_id = $self->sequence_set_id;
     my $dev_flag = $self->dev;
-if (defined($dev_flag)) { $BAP::DB::DBI::db_env = 'dev'; }
+if ($dev_flag) { $BAP::DB::DBI::db_env = 'dev'; }
 
 my $gene_phase_name = join '', 'p', $phase, '_hybrid';
 
