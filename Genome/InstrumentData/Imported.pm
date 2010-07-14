@@ -162,8 +162,11 @@ sub delete {
 ##################################################
 BEGIN: {
 Genome::InstrumentData::Solexa->class;
-*fastq_filenames = \&Genome::InstrumentData::Solexa::fastq_filenames;
+*dump_sanger_fastq_files= \&Genome::InstrumentData::Solexa::dump_sanger_fastq_files;
+*dump_illumina_fastq_files= \&Genome::InstrumentData::Solexa::dump_illumina_fastq_files;
+*dump_solexa_fastq_files= \&Genome::InstrumentData::Solexa::dump_solexa_fastq_files;
 *dump_illumina_fastq_archive = \&Genome::InstrumentData::Solexa::dump_illumina_fastq_archive;
+*_unprocessed_fastq_filenames= \&Genome::InstrumentData::Solexa::_unprocessed_fastq_filenames;
 *validate_fastq_directory = \&Genome::InstrumentData::Solexa::validate_fastq_directory;
 *resolve_fastq_filenames = \&Genome::InstrumentData::Solexa::resolve_fastq_filenames;
 *fragment_fastq_name = \&Genome::InstrumentData::Solexa::fragment_fastq_name;
@@ -252,7 +255,18 @@ sub instrument_data_id {
 }
 
 sub resolve_quality_converter {
-    'sol2phred'
+    my $self = shift;
+
+    if ($self->import_format eq "solexa fastq") {
+        return 'sol2sanger';
+    } elsif ($self->import_format eq "illumina fastq") {
+        return 'sol2phred';
+    } elsif ($self->import_format eq 'sanger fastq') {
+        return 'none';
+    } else {
+        $self->error_message("cannot resolve quality convertor for import format of type " . $self->import_format);
+        die $self->error_message;
+    }
 }
 
 sub gerald_directory {
