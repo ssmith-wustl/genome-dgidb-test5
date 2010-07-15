@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 use IO::File;
+use Bio::Seq::Quality;
+use Bio::SeqIO::fastq;
 use Cwd;
 
 
@@ -31,7 +33,14 @@ class Genome::Model::Tools::Assembly::GetCloneReads {
 	    doc => 'Directory to output data to',
 	    is_mutable => 1,
 	    is_optional => 1,
-	}
+	},
+	get => {
+	    is => 'Text',
+	    doc => 'Types of data to get, fasta, qual, trace, phd',
+	    is_many => 1,
+	    is_optional => 1,
+	    valid_values => ['fasta', 'qual', 'trace', 'phd'],
+	},
     ],
 };
 
@@ -69,15 +78,15 @@ sub execute {
 	    next;
 	}
 	#get clone id
-	my $id;
-	unless ($id = $self->_get_id($co)) {
+	my $clone_id;
+	unless ($clone_id = $self->_get_id($co)) {
 	    $self->status_message("Failed get get id .. skipping");
 	    next;
 	}
 
 	#get reads
 	my $reads;
-	unless ($reads = $self->_get_reads($id)) {
+	unless ($reads = $self->_get_reads($clone_id)) {
 	    $self->status_message("Failed to get any reads .. skipping");
 	    next;
 	}
@@ -90,10 +99,17 @@ sub execute {
 	    return;
 	}
 
-	#dump fasta/quals
-	unless ($self->_dump_data($clone_name)) {
-	    $self->error_message("Failed to dump fasta/qual");
-	    return;
+	#use seq_dump to dump fasta/quals
+	#running into some errors
+#	unless ($self->_dump_data($clone_name)) {
+#	    $self->error_message("Failed to dump fasta/qual");
+#	    return;
+#	}
+
+	#use gsc::sequence::item to dump fasta/qual individually
+	unless ($self->_dump_reads_individually($clone_name)) {
+	    $self->error_message("Failed to dump read individually");
+	    return
 	}
     }
 
@@ -122,7 +138,7 @@ sub _get_id { #not sure what id this is ..
 
 sub _get_reads {
     my ($self, $id) = @_;
-
+    #TODO - just get passed reads
     my @reads;
     if ($self->read_type eq 'all') {
 	@reads = GSC::Sequence::Read->get(
@@ -147,8 +163,17 @@ sub _write_read_ids_to_file {
     unlink $self->output_dir.'/'.$clone_name.'.re_ids';
     my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_dir.'/'.$clone_name.'.re_ids') ||
 	return;
-    $fh->print(map {$_->seq_id."\n"} @$re_ids);
+
+    #$fh->print(map {$_->seq_id."\n"} @$re_ids);
+    #$fh->close;
+   
+    foreach (@$re_ids) {
+	next unless ($_->pass_fail_tag eq 'PASS');
+	$fh->print ($_->seq_id."\n");
+    }
+
     $fh->close;
+
     unless (-s $self->output_dir.'/'.$clone_name.'.re_ids') {
 	$self->error_message("Failed to write $clone_name.re_ids file or file is blank");
 	return;
@@ -183,7 +208,6 @@ sub _get_clones {
     my @clones;
 
     if ($self->list_of_clones) {
-	#unless -s $self->list_of_clones ....
 	my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->list_of_clones) ||
 	    return;
 	while (my $line = $fh->getline) {
@@ -198,6 +222,40 @@ sub _get_clones {
     push @clones, $self->clone if $self->clone;
 
     return @clones;
+}
+
+sub _dump_reads_individually {
+    my ($self, $clone_name) = @_;
+
+    $self->status_message("Dumping fasta and qual for $clone_name");
+
+    my $fasta_out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->output_dir.'/'.$clone_name.'.fasta');
+    my $qual_out = Bio::SeqIO->new(-format => 'qual', -file => '>'.$self->output_dir.'/'.$clone_name.'.qual');
+
+    my $re_ids_file = $self->output_dir.'/'.$clone_name.'.re_ids';
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($re_ids_file) ||
+	return;
+    while (my $re_id = $fh->getline) {
+	chomp $re_id;
+	my $seq = GSC::Sequence::Item->get(seq_id =>$re_id);
+	unless ($seq) {
+	    $self->status_message("Failed to get sequence object for re_id: $re_id");
+	    next;
+	}
+	unless ($seq->sequence_base_string ge 10) {
+	    $self->status_message("Skipping, read is under 10 bases: ".$seq->gsc_trace_name);
+	    next;
+	}
+
+	my $seq_obj = Bio::Seq->new(-display_id => $seq->gsc_trace_name, -seq => $seq->sequence_base_string);
+	$fasta_out->write_seq($seq_obj);
+
+	my $qual_obj = Bio::Seq::Quality->new(-display_id => $seq->gsc_trace_name, -seq => $seq->sequence_base_string, -qual => $seq->sequence_quality_string);
+	$qual_out->write_seq($qual_obj);
+    }
+    $fh->close;
+
+    return 1;
 }
 
 1;
