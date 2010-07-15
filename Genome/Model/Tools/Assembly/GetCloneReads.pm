@@ -91,7 +91,11 @@ sub execute {
 	    next;
 	}
 
-	$self->status_message("Found ".scalar @$reads." reads to dump");
+	#$self->status_message("Found ".scalar @$reads." reads to dump");
+	unless (scalar @$reads > 0) {
+	    $self->status_message("Found 0 reads to dump .. skipping");
+	    next;
+	}
 
 	#print re_ids to file
 	unless ($self->_write_read_ids_to_file($clone_name, $reads)) {
