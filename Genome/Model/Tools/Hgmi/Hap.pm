@@ -125,6 +125,9 @@ sub execute
         $self->skip_core_check(1);
     }
 
+    # this is where we might drop items for validity
+    my $base_path - $config->{path};
+
     # dir-builder
     my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
         path                  => $config->{path},
@@ -161,6 +164,7 @@ sub execute
     if ($cs)
     {
         $cs->execute() or croak "can't run collect-sequence Hap.pm\n\n";
+        
     }
     else
     {
@@ -395,26 +399,6 @@ sub execute
         $self->status_message("Skipping core genes... Hap.pm\n\n");
     }
 
-    if($self->skip_protein_annotation)
-    {
-        $self->status_message("run complete, skipping protein annotation");
-        my ($dump_out,$dump_err); 
-        #need to specify output path, and filename(s)
-        #my $outputdir = $config->{path} . "/" . $config->{org_dirname} . "/"
-        #. $config->{assembly_name} . "/"
-        #. $config->{assembly_version} . "/" . "Sequence/Unmasked/";
-        #my $acedb_version = acedb_version_lookup($config->{acedb_version});
-        #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
-        ## change this to spit out sequence from oracle.
-        #IPC::Run::run(['ace2seq-dump', $acedbpath, $config->{locus_tag}, '-n', '--output', $outputdir,
-        #                '--seqfile', $config->{assembly_name}.".cds.fa" ],
-        #              '>',
-        #              \$dump_out,
-        #              '2>',
-        #              \$dump_err,) or croak "can't dump sequence from acedb: $CHILD_ERROR";
-        ##dna dump here????
-        return 1;
-    }
 
     warn qq{\n\nRunning rRNA screening step ... Hap.pm\n\n};
 #    $self->status_message("Running rRNA screening");
@@ -448,8 +432,26 @@ sub execute
         system("cp $delete_rrna $delete_rrna_dest");
     }
 
-    # FIXME:
-    # when skipping protein annotation, end here.
+    if($self->skip_protein_annotation)
+    {
+        $self->status_message("run complete, skipping protein annotation");
+        my ($dump_out,$dump_err); 
+        #need to specify output path, and filename(s)
+        #my $outputdir = $config->{path} . "/" . $config->{org_dirname} . "/"
+        #. $config->{assembly_name} . "/"
+        #. $config->{assembly_version} . "/" . "Sequence/Unmasked/";
+        #my $acedb_version = acedb_version_lookup($config->{acedb_version});
+        #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
+        ## change this to spit out sequence from oracle.
+        #IPC::Run::run(['ace2seq-dump', $acedbpath, $config->{locus_tag}, '-n', '--output', $outputdir,
+        #                '--seqfile', $config->{assembly_name}.".cds.fa" ],
+        #              '>',
+        #              \$dump_out,
+        #              '2>',
+        #              \$dump_err,) or croak "can't dump sequence from acedb: $CHILD_ERROR";
+        ##dna dump here????
+        return 1;
+    }
 
     warn qq{\n\nBeginning to run SendToPap.pm(workflow) ... from Hap.pm\n\n};
 #    $self->status_message("starting send-to-pap/PAP workflow...");

@@ -10,6 +10,7 @@ use Carp;
 use DateTime;
 use List::MoreUtils qw/ uniq /;
 use IPC::Run qw/ run /;
+use Data::Dumper;
 
 use BAP::DB::Organism;
 use BAP::DB::SequenceSet;
@@ -115,10 +116,13 @@ sub execute
 {
     my $self = shift;
 
-    my @finish_command = $self->gather_details();
+    my %params = $self->gather_details();
 
-    IPC::Run::run( @finish_command ) || croak "can't run finish : $OS_ERROR  Finish.pm\n\n";
-
+    my $rv = Genome::Model::GenePrediction::Command::Finish->execute(%params);
+    unless($rv) {
+        $self->error_message("can't run finish project step");
+        return 0;
+    }
     return 1;
 }
 
@@ -189,44 +193,23 @@ sub gather_details
 
     my $bapfinish_output = $cwd."/".$locus_tag."_bfp_BAP_screenoutput".$sequence_set_id.".txt";
 
-    print "\nbap_finish_project.pl\n";
-
-    my @command_list = (
-                        #'/gscmnt/277/analysis/personal_dirs/wnash/Work/Scripts/BAP_TEST/bap_finish_project.pl',
-	         $self->script_location,
-			'--sequence-set-id',
-                        $sequence_set_id,
-                        '--locus-id',
-                        $locus_tag,
-                        '--project-type',
-                        $self->project_type,
-                        '--acedb-version',
-                        $self->acedb_version,
-			'--assembly-name',
-			$assembly_name,
-			'--org-dirname',
-			$org_dirname,
-			'--assembly-version',
-			$assembly_version,
-			'--pipe-version',
-			$pipe_version,
-			'--path-base',
-			$path,
+    my %params = (
+        'sequence_set_id' =>  $sequence_set_id,
+        'locus_id' => $locus_tag,
+        'project_type' => $self->project_type,
+        'acedb_version' => $self->acedb_version,
+		'assembly_name' => $assembly_name,
+		'org_dirname' => $org_dirname,
+		'assembly_version' => $assembly_version,
+		'pipe_version' => $pipe_version,
+		'path_base' => $path,
                         );
 
-    if(defined($self->dev)) { push(@command_list,"--dev"); }
-    if(defined($self->skip_acedb_parse)) { push(@command_list, "--no-acedb");}
+    if(defined($self->dev)) { $params{dev} = 1; }
+    if(defined($self->skip_acedb_parse)) { $params{no_acedb} = 1;}
 
-    print "\n", join(' ', @command_list), "\n";
-
-    my @ipc = (
-               \@command_list,
-               \undef,
-               '2>&1',
-               $bapfinish_output,
-           );
-
-    return @ipc;
+    print Dumper(\%params),"\n";
+    return %params;
 }
 
 

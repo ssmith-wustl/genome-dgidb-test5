@@ -12,6 +12,7 @@ use IO::Dir;
 use DateTime;
 use List::MoreUtils qw/ uniq /;
 use IPC::Run qw/ run /;
+use Data::Dumper;
 
 use BAP::DB::Organism;
 use BAP::DB::SequenceSet;
@@ -102,14 +103,19 @@ sub execute
 {
     my $self = shift;
 
-    my @predict_command = $self->gather_details();
+    #my @predict_command = $self->gather_details();
+    my %params = $self->gather_details();
+    #IPC::Run::run( @predict_command ) || croak "can't run Predict.pm : $CHILD_ERROR";
 
-    IPC::Run::run( @predict_command ) || croak "can't run Predict.pm : $CHILD_ERROR";
-
-    if($@)
-    {
-        carp "uh, we should have quit by now";
-        exit 1;
+    #if($@)
+    #{
+    #    carp "uh, we should have quit by now";
+    #    exit 1;
+    #}
+    my $rv = Genome::Model::GenePrediction::Command::Predict->execute(%params);
+    unless($rv) {
+        $self->error_message("can't run prediction step");
+        return 0;
     }
 
     return 1;
@@ -217,14 +223,15 @@ sub gather_details
     }
     else # HMPP/Enterobacter
     {
-        unless($#cwd == 10)
-        {
-            $self->error_message("directory structure is too long or short? ".$#cwd . " components");
-            croak "directory structure is wrong or broken in Predict.pm\n";
-        }
-        $sequence_set_name = $cwd[7];
-        $analysis_version_num = $cwd[10];
-        $hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$locus_tag); 
+#        unless($#cwd == 10)
+#        {
+#            $self->error_message("directory structure is too long or short? ".$#cwd . " components");
+#            croak "directory structure is wrong or broken in Predict.pm\n";
+#        }
+        $sequence_set_name = $cwd[-4];
+        $analysis_version_num = $cwd[-1];
+        #$hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$locus_tag); 
+        $hgmi_sequence_dir = join("\/", $cwd,'Sequence',$locus_tag); 
         $self->status_message("sequence dir: ". $hgmi_sequence_dir); 
     }
 
@@ -339,45 +346,32 @@ sub gather_details
     {
         croak "genemark_model $genemark_model doesn't exist! Predict.pm \n";
     }
-    $runner_count   = 50;
+    # wow; were we hard coding this value all this time?
+    #$runner_count   = 50;
+    $runner_count   = $self->runner_count;
 
     my $bpg_job_stdout         = $cwd."/".$locus_tag."_bpg_BAP_job_".$sequence_set_id.".txt";
     my $bpg_job_stderr         = $cwd."/".$locus_tag."_bpg_BAP_job_err_".$sequence_set_id.".txt";
     my $bappredictgenes_output = $cwd."/".$locus_tag."_bpg_BAP_screenoutput_".$sequence_set_id.".txt";
 
-    print qq{\nbap_predict_genes.pl\n};
-    my $script_location = $self->script_location;
-    my @command_list = ($script_location,
-                        '--sequence-set-id',
-                        $sequence_set_id,
-                        '--domain',
-                        'bacteria',
-                        '--glimmer3-model',
-                        $glimmer3_model,
-                        '--glimmer3-pwm',
-                        $glimmer3_pwm,
-                        '--genemark-model',
-                        $genemark_model,
-                        '--runner-count',
-                        $runner_count,
-                        '--job-stdout',
-                        $bpg_job_stdout,
-                        '--job-stderr',
-                        $bpg_job_stderr
-                        );
+    #print qq{\nbap_predict_genes.pl\n};
+    # not execing script anymore
 
-    if(defined($self->dev)) { push(@command_list,"--dev"); }
+    my %params = (
+                  'sequence_set_id' => $sequence_set_id,
+                  'domain' => 'bacteria',
+                  'glimmer3_model' => $glimmer3_model,
+                  'glimmer3_pwm' => $glimmer3_pwm,
+                  'genemark_model' => $genemark_model,
+                  'runner_count' => $runner_count,
+                  'job_stdout' => $bpg_job_stdout,
+                  'job_stderr' => $bpg_job_stderr
+                  );
 
-     print "\n", join(' ', @command_list), "\n";
+    if(defined($self->dev)) { $params{dev} = 1; }
+    print Dumper(\%params),"\n";
 
-    my @ipc = (
-               \@command_list,
-               \undef,
-               '2>&1',
-               $bappredictgenes_output,
-           );
-
-    return @ipc;
+    return %params;
 }
 
 

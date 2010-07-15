@@ -69,6 +69,8 @@ UR::Object::Type->define(
 							 default => 10,
 							 is_optional => 1,
 						       },
+                 # do we need to add option for rfam_seed file?
+                 # possibly useless now.
                  'script_location'  => { is => 'String',
                                          doc => "default location for merge genes script",
                                          is_optional => 1,
@@ -105,31 +107,15 @@ sub execute
 {
     my $self = shift;
 
-    my @merge = $self->gather_details();
+    my %params = $self->gather_details();
 
-    my ($merge_out, $merge_err); 
-    $self->status_message("about to run merge");
-
-#    IPC::Run::run(\@merge,
-#                  \undef,
-#                  '>',
-#                  \$merge_out,
-#                  '2>',
-#                  \$merge_err) || croak "can't run Merge.pm : $CHILD_ERROR : ".$merge[$#merge]."\n$merge_out\n===\n$merge_err\n";
-
-    my $rv = IPC::Run::run(\@merge,
-                  \undef,
-                  '>',
-                  \$merge_out,
-                  '2>',
-                  \$merge_err) ;
-
-    $self->status_message("out: $merge_out");
-    $self->status_message("err: $merge_err");
+    $self->status_message("running merge now");
+    my $rv = Genome::Model::GenePrediction::Command::Merge->execute(%params);
 
     unless($rv) {
-
-        croak "can't run Merge.pm : $CHILD_ERROR : ".$merge[$#merge]."\n$merge_out\n===\n$merge_err\n";
+        $self->error_message("can't run merge step");
+        # do we need to croak or exit here? or just a return 0?
+        return 0;
     }
 
     return 1;
@@ -194,6 +180,8 @@ sub gather_details
     }
     else # HMPP/Enterobacter
     {
+        # this might be wrong and should be changed to something similar
+        # to the above...
         unless($#cwd == 10)
         {
             croak "directory structure is wrong in HMPP !?!?!? Merge.pm";
@@ -250,38 +238,20 @@ sub gather_details
     my $debug_file           = $cwd."/".$locus_tag."_bmg_debug_file_".$sequence_set_id.".txt";
     my $bapmergegenes_output = $cwd."/".$locus_tag."_bmg_BAP_screenoutput_".$sequence_set_id.".txt";
     
-    print "\nbap_merge_genes.pl\n";
-    
-    my $script_location = $self->script_location;
-    my @command = (
-                   $script_location,
-                   '--sequence-set-id',
-                   $sequence_set_id,
-                   '--job-stdout',
-                   $bmg_job_stdout,
-                   '--job-stderr',
-                   $bmg_job_stderr,
-                   '--runner-count',
-                   $runner_count,
-                   '--debug-file',
-                   $debug_file,
-                   '--nr-db',
-                   $self->nr_db,
-               );
+    my %params = (
+                   'sequence_set_id' => $sequence_set_id,
+                   'job_stdout' => $bmg_job_stdout,
+                   'job_stderr' => $bmg_job_stderr,
+                   'runner_count' => $runner_count,
+                   'debug_file' => $debug_file,
+                   'nr_db' => $self->nr_db,
+                   #'no_mail' => 1,
+                   );
 
-    if(defined($self->dev)) { push(@command,"--dev"); }
+    if(defined($self->dev)) { $params{dev} = 1; }
     
-    print "\n", join(' ', @command), "\n";
-    
-    my @ipc = (
-               \@command,
-               \undef,
-               '2>&1',
-               $bapmergegenes_output,
-           );
-    
-#    return @ipc;
-    return @command;     
+    print Dumper(\%params),"\n";
+    return %params;
 }
 
 sub _cwd {
