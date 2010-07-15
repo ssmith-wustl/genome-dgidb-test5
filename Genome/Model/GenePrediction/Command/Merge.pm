@@ -1,5 +1,8 @@
 package Genome::Model::GenePrediction::Command::Merge;
 
+# probably don't need this anymore
+#use lib '/gsc/scripts/opt/bacterial-bioperl';
+
 use strict;
 use warnings;
 use Genome;
@@ -117,6 +120,11 @@ class Genome::Model::GenePrediction::Command::Merge {
             doc     => "minimum gene length; default 60 bp",
             default => 60,
         },
+        rfam_seed => {
+            is => 'Scalar',
+            doc => "path to Rfam.seed file",
+            default => "/gsc/pkg/bio/rfam/rfam-8.1/Rfam.seed",
+        },
         _debug_fh => {
             is  => 'Scalar',
             doc => "",
@@ -217,7 +225,8 @@ sub execute
 
         # FIXME: this should not be hard-coded
         my $rfam_io = Bio::AlignIO->new(
-            -file => '/gsc/pkg/bio/rfam/installed/Rfam.seed' );
+#            -file => '/gsc/pkg/bio/rfam/installed/Rfam.seed' ); # config opt
+            -file => $self->rfam_seed );
 
         while ( my $aln = $rfam_io->next_aln )
         {
@@ -358,13 +367,13 @@ sub execute
 
     unless ( $self->dev )
     {
-        log_run( $dt_started, $dt_finished, $sequence_set );
+        $self->log_run( $dt_started, $dt_finished, $sequence_set );
     }
 
     unless ( $self->no_mail )
     {
 
-        send_mail( $self->sequence_set_id, $sequence_set_name, $dt_started,
+        $self->send_mail( $self->sequence_set_id, $sequence_set_name, $dt_started,
             $dt_finished, $bap_version, $svn_version, $user, );
 
     }
@@ -391,7 +400,7 @@ sub mark_time
 
 sub send_mail
 {
-
+    my $self = shift;
     my ( $ss_id, $ss_name, $started, $finished, $bap_version, $svn_version,
         $user )
         = @_;
