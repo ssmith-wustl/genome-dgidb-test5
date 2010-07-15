@@ -117,6 +117,7 @@ sub execute
 {
     my $self = shift;
     my $ssid = $self->sequence_set_id;
+
     if ( $self->dev ) { $BAP::DB::DBI::db_env = 'dev'; }
 
     my $program = $self->_tace_location;
@@ -342,20 +343,31 @@ sub execute
         }
         my ( $dump_cmd, $dump_dumper );
 
-        # FIXME: remove backtics!
         if ( $self->dev == 0 )
         {
             $dump_cmd
                 = qq{gmt bacterial ace-dump-genes --sequence-set-id $ssid --phase $phase > $dump_output};
+            $self->status_message("running dump from prod");
+            $self->status_message($dump_cmd);
 #            $dump_dumper = `$dump_cmd`;
-            system($dump_cmd);
+            my $rv = system($dump_cmd);
+            unless($rv == 0) {
+                $self->error_message("ace dumping failed from prod with sequence set id $ssid");
+                croak;
+            }
         }
         else
         {
             $dump_cmd
                 = qq{gmt bacterial ace-dump-genes --dev --sequence-set-id $ssid --phase $phase > $dump_output};
+            $self->status_message("running dump from dev");
+            $self->status_message($dump_cmd);
 #            $dump_dumper = `$dump_cmd`;
-            system($dump_cmd);
+            my $rv = system($dump_cmd);
+            unless($rv == 0) {
+                $self->error_message("ace dumping failed from dev with sequence set id $ssid");
+                croak;
+            }
         }
 
         my $newACEfilelink = qq{$acedb_acefile_path/$dump_output};
@@ -752,7 +764,7 @@ sub execute
     my $sequence_set_name = $sequence_set->sequence_set_name();
 
     unless ($self->no_mail) {
-        send_mail( $ssid, $sequence_set_name, $user, );
+        $self->send_mail( $ssid, $sequence_set_name, $user, );
     }
 
     return 1;
