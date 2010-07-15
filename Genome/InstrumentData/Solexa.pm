@@ -421,7 +421,7 @@ sub dump_sanger_fastq_files {
         my $converted_fastq_pathname;
         if ($self->resolve_quality_converter eq 'sol2sanger') {
             $self->status_message("Applying sol2sanger quality conversion.");
-            $converted_fastq_pathname = $requested_directory . '/' . 'sanger-fastq-'. $counter . ".fastq";
+            $converted_fastq_pathname = $requested_directory . '/' . $self->id . '-sanger-fastq-'. $counter . ".fastq";
             unless (Genome::Model::Tools::Maq::Sol2sanger->execute( use_version       => '0.7.1',
                                                                     solexa_fastq_file => $illumina_fastq_pathname,
                                                                     sanger_fastq_file => $converted_fastq_pathname)) {
@@ -430,7 +430,7 @@ sub dump_sanger_fastq_files {
             }
         } elsif ($self->resolve_quality_converter eq 'sol2phred') {
             $self->status_message("Applying sol2phred quality conversion.");
-            $converted_fastq_pathname = $requested_directory . '/' . 'sanger-fastq-'. $counter . ".fastq";
+            $converted_fastq_pathname = $requested_directory . '/' . $self->id . '-sanger-fastq-'. $counter . ".fastq";
 
             unless (Genome::Model::Tools::Fastq::Sol2phred->execute(fastq_file => $illumina_fastq_pathname,
                                                                     phred_fastq_file => $converted_fastq_pathname)) {
