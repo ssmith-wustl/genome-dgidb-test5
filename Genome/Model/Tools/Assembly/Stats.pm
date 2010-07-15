@@ -106,8 +106,8 @@ sub get_simple_read_stats {
     my $total_contig_length = $cb_counts->{total_contig_bases};
 
     my $gc_ratio = int (1000 * $gc_count / $total_contig_length + 0.5) / 10;
-    my $at_ratio = int (1000 * $gc_count / $total_contig_length + 0.5) / 10;
-    my $nx_ratio = int (1000 * $gc_count / $total_contig_length + 0.5) / 10;
+    my $at_ratio = int (1000 * $at_count / $total_contig_length + 0.5) / 10;
+    my $nx_ratio = int (1000 * $nx_count / $total_contig_length + 0.5) / 10;
 
     my $genome_contents_stats = "\n*** Genome Contents ***\n".
 	                        "Total GC count: $gc_count, (".$gc_ratio."%)\n".
