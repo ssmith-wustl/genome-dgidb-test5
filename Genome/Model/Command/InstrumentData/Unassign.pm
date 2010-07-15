@@ -199,7 +199,7 @@ sub _unassign_all_instrument_data {
                 next ID;
             }
         }
-        $self->_unassign_instrument_data_by_id($id)
+        $self->_unassign_by_instrument_data_id($id)
             or return;
     }
 
