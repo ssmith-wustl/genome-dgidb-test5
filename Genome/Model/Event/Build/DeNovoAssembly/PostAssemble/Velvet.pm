@@ -114,23 +114,30 @@ sub execute {
     }
     $self->status_message("Completed creating stats. TIME: ".UR::Time->now);
 
+    #ACE FILES NO LONGER WANTED
 
     #make ace file .. 
-    $self->status_message("Writing ace file. TIME: ".UR::Time->now);
-    my $to_ace = Genome::Model::Tools::Velvet::ToAce->create(
-        #these files are validated in ToAce mod
-        seq_file => $self->build->sequences_file,
-        afg_file => $self->build->assembly_afg_file,
-        time => $time,
-        out_acefile => $self->build->velvet_ace_file,
-	#sqlite_yes => 1,  #<----- can't do if # reads gt 2,500,000
-    );
-    unless ($to_ace->execute) {
-        $self->error_message("Failed to run velvet-to-ace");
-        return;
-    }
-    $self->status_message("Completed writing ace file. TIME: ".UR::Time->now);
-
+    #$self->status_message("Writing ace file. TIME: ".UR::Time->now);
+    #eval {
+	#my $to_ace = Genome::Model::Tools::Velvet::ToAce->create(
+	    #these files are validated in ToAce mod
+	    #seq_file => $self->build->sequences_file,
+	    #afg_file => $self->build->assembly_afg_file,
+	    #time => $time,
+	    #out_acefile => $self->build->velvet_ace_file,
+	    #sqlite_yes => 1,  #<----- can't do if # reads gt 2,500,000
+	    #);
+	#unless ($to_ace->execute) {
+	    #$self->error_message("Failed to run velvet-to-ace");
+	    #return;
+	#}
+    #};
+    #if ($@) {
+	#$self->error_message("Failed to create ace file .. probably ran out of memory");
+	#return;
+    #} else {
+	#$self->status_message("Completed writing ace file. TIME: ".UR::Time->now);
+    #}
 
     return 1;
 }
