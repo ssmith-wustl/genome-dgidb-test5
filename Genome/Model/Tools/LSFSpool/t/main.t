@@ -24,6 +24,7 @@ BEGIN { use_ok('Genome::Model::Tools::LSFSpool') };
 
 my $thisfile = Cwd::abs_path(__FILE__);
 my $cwd = dirname $thisfile;
+my $test_data_dir = File::Temp::tempdir('LSFSpool-main-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 sub test_start {
   # Instantiate an LSFSpool object to test.
@@ -73,7 +74,7 @@ sub test_debug_dryrun_opts {
 
 sub test_set_cache {
   my $obj = test_start();
-  my $opts = "-i $cwd/data/test.cache -v -d $cwd/data/spool/sample-fasta-1";
+  my $opts = "-i $test_data_dir/test.cache -v -d $cwd/data/spool/sample-fasta-1";
   ok($obj->main(ostr($opts)) == 0,"test run went ok");
   ok(-f $obj->{cachefile} == 1,"cache file present ok");
   unlink($obj->{cachefile});
