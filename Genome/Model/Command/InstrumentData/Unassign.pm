@@ -19,7 +19,7 @@ class Genome::Model::Command::InstrumentData::Unassign {
         },
     ],
     has_optional => [
-        instrument_data_id => {
+       instrument_data_id => {
             is => 'Number',
             doc => 'The unique ID of the instrument data to assign.  To assign multiple instrument data, enclose this param in quotes(\'), and separate the IDs by a space.'
         },
@@ -199,7 +199,7 @@ sub _unassign_all_instrument_data {
                 next ID;
             }
         }
-        $self->_unassign_instrument_data($id)
+        $self->_unassign_instrument_data_by_id($id)
             or return;
     }
 
