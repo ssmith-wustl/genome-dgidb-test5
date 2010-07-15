@@ -36,6 +36,11 @@ sub dev_mode {
     if (@_ && !$ENV{GENOME_DEV_MODE}) {
         $dev_mode = shift;
     }
+
+    if ($dev_mode) {
+        warn "***** GENOME_DEV_MODE *****";
+    }
+
     return $dev_mode;
 }
 
