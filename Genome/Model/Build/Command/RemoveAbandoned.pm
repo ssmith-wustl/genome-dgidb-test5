@@ -115,10 +115,10 @@ sub print_error_summary {
     my ($self, $failed_builds) = @_;
     
     if (@$failed_builds) {
-        $self->error_message("\n\n\nCould not remove " . scalar @$failed_builds . " builds:\n" . join("\n", @$failed_builds));
+        $self->status_message("Could not remove " . scalar @$failed_builds . " builds:\n" . join("\n", @$failed_builds));
     }
     else {
-        $self->status_message("\n\n\nAll builds successfully removed!");
+        $self->status_message("All builds successfully removed!");
     }
     return 1;
 }
