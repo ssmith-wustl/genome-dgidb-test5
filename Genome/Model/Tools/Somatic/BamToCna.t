@@ -15,25 +15,29 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     } else {
-        plan tests => 11;
+        plan tests => 21;
     }
 };
 
 use_ok( 'Genome::Model::Tools::Somatic::BamToCna');
 
-my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-BamToCna/54616/'; #bug in 54616 was corrected
+my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-BamToCna/61005/'; #Switched to whole genome normalization right around rev 61005
 
 my $tumor_bam_file  = $test_input_dir . 'tumor.sparse.bam';
 my $normal_bam_file = $test_input_dir . 'normal.sparse.bam';
 
 my $expected_output_file_1 = $test_input_dir . 'cna.1.expected';
 my $expected_output_file_2 = $test_input_dir . 'cna.2.expected';
+my $expected_output_file_3 = $test_input_dir . 'cna.3.expected';
+my $expected_output_file_4 = $test_input_dir . 'cna.4.expected';
 
-my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-Somatic-BamToCna-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-Somatic-BamToCna-XXXXX', '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 $test_output_dir .= '/';
 
 my $output_file_1     = $test_output_dir . 'cna.1.out';
 my $output_file_2     = $test_output_dir . 'cna.2.out';
+my $output_file_3     = $test_output_dir . 'cna.3.out';  
+my $output_file_4     = $test_output_dir . 'cna.4.out';  
 
 #This window size and ratio are atypical, but allow the test to generate all data given a sparse BAM file.
 my $bam_to_cna_1 = Genome::Model::Tools::Somatic::BamToCna->create(
@@ -41,7 +45,8 @@ my $bam_to_cna_1 = Genome::Model::Tools::Somatic::BamToCna->create(
     normal_bam_file => $normal_bam_file,
     output_file     => $output_file_1,
     window_size     => 10000000,
-    ratio           => 4.0
+    ratio           => 4.0,
+    normalize_by_genome => 0,
 );
 
 ok($bam_to_cna_1, 'created BamToCna object with ratio of 4.0');
@@ -58,7 +63,8 @@ my $bam_to_cna_2 = Genome::Model::Tools::Somatic::BamToCna->create(
     normal_bam_file => $normal_bam_file,
     output_file     => $output_file_2,
     window_size     => 10000000,
-    ratio           => 0.25
+    ratio           => 0.25,
+    normalize_by_genome => 0,
 );
 
 ok($bam_to_cna_2, 'created BamToCna object with ratio of 0.25');
@@ -68,3 +74,38 @@ ok(-s $output_file_2, 'generated output for ratio of 0.25');
 is(compare($output_file_2, $expected_output_file_2), 0, 'output for ratio of 0.25 matched expected results');
 
 ok(-s $output_file_2 . ".png", 'generated copy number graphs for ratio of 0.25');
+
+#This window size and ratio are atypical, but allow the test to generate all data given a sparse BAM file. This file is with whole genome normalization
+my $bam_to_cna_3 = Genome::Model::Tools::Somatic::BamToCna->create(
+    tumor_bam_file  => $tumor_bam_file,
+    normal_bam_file => $normal_bam_file,
+    output_file     => $output_file_3,
+    window_size     => 10000000,
+    ratio           => 4.0
+);
+
+ok($bam_to_cna_3, 'created BamToCna object with ratio of 4.0 and whole genome normalization');
+ok($bam_to_cna_3->execute(), 'executed BamToCna object with ratio of 4.0 and whole genome normalization');
+
+ok(-s $output_file_3, 'generated output for ratio of 4.0');
+is(compare($output_file_3, $expected_output_file_3), 0, 'output for ratio of 4.0 and whole genome normalization matched expected results');
+
+ok(-s $output_file_3 . ".png", 'generated copy number graphs for ratio of 4.0 and whole genome normalization');
+
+#A more normal ratio should result in missing some chromosomes in the output. Whole genome normalized
+my $bam_to_cna_4 = Genome::Model::Tools::Somatic::BamToCna->create(
+    tumor_bam_file  => $tumor_bam_file,
+    normal_bam_file => $normal_bam_file,
+    output_file     => $output_file_4,
+    window_size     => 10000000,
+    ratio           => 0.25
+
+);
+
+ok($bam_to_cna_4, 'created BamToCna object with ratio of 0.25 and whole genome normalization');
+ok($bam_to_cna_4->execute(), 'executed BamToCna object with ratio of 0.25 and whole genome normalization');
+
+ok(-s $output_file_4, 'generated output for ratio of 0.25 and whole genome normalization');
+is(compare($output_file_4, $expected_output_file_4), 0, 'output for ratio of 0.25 matched expected results and whole genome normalization');
+
+ok(-s $output_file_4 . ".png", 'generated copy number graphs for ratio of 0.25 and whole genome normalization');

@@ -95,6 +95,13 @@ class Genome::Model::Tools::Somatic::BamToCna {
         default => 0,
         doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
     },
+    normalize_by_genome => {
+        is => 'Boolean',
+        is_optional => 1,
+        is_input => 1,
+        default => 1,
+        doc => 'enable this flag to normalize by the whole genome median.',
+    },
     # Make workflow choose 64 bit blades
     lsf_resource => {
         is_param => 1,
@@ -163,7 +170,7 @@ sub execute {
             chomp;
             my ($chr,$pos,$nread) = split /\t/;
             $window = 0 if($chr ne $previous_chr);
-            $data{$sample}{$chr}[$window++]=$nread;
+            $data{$sample}{$chr}[$window++]=$nread; #store each window's result as an entry in the array.
             $previous_chr = $chr;
             $statistics{$sample}->add_data($nread);
         }
@@ -184,8 +191,8 @@ sub execute {
         my $median=Statistics::Descriptive::Full->new();
         foreach my $chr(@chrs){
             next unless (defined $data{$sample}{$chr});
-            my $md = $self->get_median($data{$sample}{$chr});
-            $median->add_data($md);
+            my $md = $self->get_median($data{$sample}{$chr});   #calculate the chromosomal median
+            $median->add_data($md); #calculate the median of the chromosomal medians
         }
         $medians{$sample} = $median->median();
     }
@@ -201,8 +208,9 @@ sub execute {
 
         for my $window (0..$window_count){
             my $f2x=1;
-            next unless (defined $data{tumor}{$chr}[$window] && defined $data{normal}{$chr}[$window]);
+            next unless (defined $data{tumor}{$chr}[$window] && defined $data{normal}{$chr}[$window]); 
             for my $sample (@samples){
+                #test whether or not this particular window is close enough to the median to be considered neutral
                 $f2x=0 if($data{$sample}{$chr}[$window]<$medians{$sample}*(1-$self->ratio) || $data{$sample}{$chr}[$window]>$medians{$sample}*(1+$self->ratio));
             }
             next if(! $f2x);
@@ -221,11 +229,11 @@ sub execute {
     foreach my $chr(@chrs,'allchr'){
         printf OUT "#Chr%s median read count",$chr;
         for my $sample (@samples){
-            if($num_CN_neutral_pos{$chr} && $num_CN_neutral_pos{$chr} > 10){
-                $depth2x{$chr}{$sample}=$NReads_CN_neutral{$chr}{$sample}/$num_CN_neutral_pos{$chr};
+            if($num_CN_neutral_pos{$chr} && $num_CN_neutral_pos{$chr} > 10 && !$self->normalize_by_genome){
+                $depth2x{$chr}{$sample}=$NReads_CN_neutral{$chr}{$sample}/$num_CN_neutral_pos{$chr}; #select average depth of CN neutral regions of chromosome
             }
             else{  # Sample < 10, backoff to genome-wide estimation
-                $depth2x{$chr}{$sample}=$NReads_CN_neutral{'allchr'}{$sample}/$num_CN_neutral_pos{'allchr'};
+                $depth2x{$chr}{$sample}=$NReads_CN_neutral{'allchr'}{$sample}/$num_CN_neutral_pos{'allchr'}; #select genome wide average depth of CN neutral regions of chromosomes
             }
             printf OUT "\t%s\:%d",$sample,$depth2x{$chr}{$sample};
         }
@@ -249,10 +257,10 @@ sub execute {
     for my $chr(1..22,'X'){
         next unless (defined $data{tumor}{$chr} && defined $data{normal}{$chr});
         my $cov_ratio=1;
-        if($NReads_CN_neutral{$chr}{tumor} && $NReads_CN_neutral{$chr}{normal}) {
-            $cov_ratio=$NReads_CN_neutral{$chr}{tumor}/$NReads_CN_neutral{$chr}{normal};
+        if($NReads_CN_neutral{$chr}{tumor} && $NReads_CN_neutral{$chr}{normal} && !$self->normalize_by_genome) {
+            $cov_ratio=$NReads_CN_neutral{$chr}{tumor}/$NReads_CN_neutral{$chr}{normal}; #calculate the degree by which tumor is greater than normal
             push @included_chrs, $chr;
-        } elsif($NReads_CN_neutral{'allchr'}{normal}){
+        } elsif($NReads_CN_neutral{'allchr'}{normal} && $NReads_CN_neutral{'allchr'}{tumor}){ #check both normal and tumor
             $cov_ratio=$NReads_CN_neutral{'allchr'}{tumor}/$NReads_CN_neutral{'allchr'}{normal};
             push @included_chrs, $chr;
         }
@@ -267,7 +275,14 @@ sub execute {
 
         for my $window (0..$window_count){
             next unless (defined $data{tumor}{$chr}[$window] && defined $data{normal}{$chr}[$window]);
-            my $cna_unadjusted=($data{tumor}{$chr}[$window]-$cov_ratio*$data{normal}{$chr}[$window])*2/$depth2x{$chr}{tumor};
+            my $cna_unadjusted;
+            if($cov_ratio > 1) {
+                #tumor had more coverage so downsample it to avoid increasing the normal variance unnecessarily
+                $cna_unadjusted=($data{tumor}{$chr}[$window]*(1/$cov_ratio)-$data{normal}{$chr}[$window])*2/$depth2x{$chr}{normal};
+            }
+            else {
+                $cna_unadjusted=($data{tumor}{$chr}[$window]-$cov_ratio*$data{normal}{$chr}[$window])*2/$depth2x{$chr}{tumor};
+            }
             my $poschr=$window*$self->window_size;
             #printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,${$data{tumor}{$chr}}[$window]*2/$depth2x{$chr}{normal},${$data{normal}{$chr}}[$window]*2/$depth2x{$chr}{normal},$diff_copy;
             printf OUT "%s\t%d\t%d\t%d\t%.6f\n",$chr,$poschr,$data{tumor}{$chr}[$window],$data{normal}{$chr}[$window],$cna_unadjusted;
