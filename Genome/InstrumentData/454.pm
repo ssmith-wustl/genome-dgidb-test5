@@ -115,6 +115,37 @@ sub is_external {
     return;
 }
 
+sub dump_sanger_fastq_files {
+    my $self = shift;
+    
+    my %params = @_;
+    
+    unless (-s $self->sff_file) {
+        $self->error_message(sprintf("SFF file %s doesn't exist for 454 instrument data %s", $self->sff_file, $self->id));
+        die $self->error_message;
+    }
+    
+    my $dump_directory = delete $params{'directory'} || Genome::Utility::FileSystem->base_temp_directory();
+    
+    my $output_file = sprintf("%s/%s-output.fastq", $dump_directory, $self->id);
+    
+    my $cmd = Genome::Model::Tools::454::Sff2Fastq->create(sff_file => $self->sff_file,
+                                                           fastq_file => $output_file);
+    
+    unless ($cmd->execute) {
+        $self->error_message("Sff2Fastq failed while dumping fastq file for instrument data " . $self->id);
+        die $self->error_message;
+    }
+    
+    unless (-s $output_file) {
+        $self->error_message("Sff2Fastq claims it worked, but the output file was gone or empty length while dumping fastq file for instrument data "
+                             . $self->id . " expected output file was $output_file");
+        die $self->error_message;
+    }
+    
+    return ($output_file);
+}
+
 sub resolve_fasta_path {
     my $self = shift;
     my $full_path = $self->full_path;

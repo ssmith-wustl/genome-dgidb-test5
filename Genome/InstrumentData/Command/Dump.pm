@@ -29,7 +29,7 @@ sub execute {
     }
 
     my $instrument_data = $self->instrument_data;
-    if ($instrument_data->sequencing_platform eq 'solexa') {
+    if ($instrument_data->sequencing_platform eq 'solexa' || $instrument_data->sequencing_platform eq '454') {
         my @files = $instrument_data->dump_sanger_fastq_files(directory=>$self->directory);
         $self->status_message(sprintf("Finished dumping data to '%s'", $self->directory));
     } else {
