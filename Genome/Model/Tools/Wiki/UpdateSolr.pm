@@ -31,6 +31,11 @@ sub execute {
     my ($self) = @_;
 
     my $resource_lock = '/gsc/var/lock/gcsearch/wiki_loader';
+
+    if (Genome::Config->dev_mode()) {
+        $resource_lock .= '_dev';
+    }
+
     my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock, max_try => 1);
     die 'someone else has the wiki_loader lock' if !$lock;
 
