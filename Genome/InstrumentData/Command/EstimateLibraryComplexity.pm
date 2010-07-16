@@ -42,7 +42,24 @@ sub execute {
 
 
     my $instrument_data = $self->instrument_data;
-    my @fastq_filenames = $instrument_data->fastq_filenames;
+    
+    my $quality_format;
+    my @fastq_filenames;
+    
+    my $quality_converter = $instrument_data->resolve_quality_converter;
+    
+    if($quality_converter eq 'sol2sanger') {
+        $quality_format = 'Solexa';
+        @fastq_filenames = $instrument_data->dump_solexa_fastq_files;
+    } elsif ($quality_converter eq 'sol2phred') {
+        $quality_format = 'Illumina';
+        @fastq_filenames = $instrument_data->dump_illumina_fastq_files;
+    } elsif ($quality_converter eq 'none') {
+        $quality_format = 'Sanger';
+        @fastq_filenames = $instrument_data->dump_sanger_fastq_files;
+    }
+    
+    #my @fastq_filenames = $instrument_data->fastq_filenames;
     my $tmp_bam = $instrument_data->base_temp_directory .'/'. $instrument_data->id .'.bam';
     unless (Genome::Model::Tools::Picard::FastqToSam->execute(
         fastq => $instrument_data->base_temp_directory.'/'. $instrument_data->read1_fastq_name,
@@ -50,7 +67,7 @@ sub execute {
         sample_name => $instrument_data->sample_name,
         library_name => $instrument_data->library_name,
         platform => 'illumina',
-        quality_format => 'Illumina',
+        quality_format => $quality_format,
         use_version => $self->picard_version,
         output => $tmp_bam,
     )) {
@@ -58,7 +75,7 @@ sub execute {
     }
     unless (Genome::Model::Tools::Picard::EstimateLibraryComplexity->execute(
         use_version => $self->picard_version,
-        input_file => $tmp_bam,
+        input_file => [$tmp_bam],
         output_file => $self->output_file,
     )) {
         die('Failed to generate library complexity for instrument data id '. $instrument_data->id);
