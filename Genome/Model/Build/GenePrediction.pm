@@ -6,155 +6,63 @@ use warnings;
 use Genome;
 use YAML;
 use Carp;
+use File::Basename;
 
 class Genome::Model::Build::GenePrediction {
     is => 'Genome::Model::Build',
 };
 
-
-sub yaml_file
-{
+# Returns the location of the yaml file
+sub yaml_file_path {
     my $self = shift;
-    #$self->status_message(" brev orgname " . $self->model->brev_orgname);
-    return $self->data_directory."/". $self->model->brev_orgname.".yaml";
-
+    return $self->data_directory . "/config.yaml";
 }
 
-sub _create_yaml_file
-{
-    # build out the yaml file that 'gmt hgmi hap' consumes.
+# Creates a yaml file containing all the various parameters needed by gene prediction
+sub create_yaml_file {
     my $self = shift;
-    my $config;
     my $model = $self->model;
+    my $config_file_path = $self->yaml_file_path;
+    $self->status_message("Creating yaml configuration file at $config_file_path");
 
-#    $self->status_message("using imported assembly model id " . $model->assembly_model);
-#    my $imported_assembly = Genome::Model->get($model->assembly_model);
-    # most of this stuff could probably be moved else where
-    my $imported_assembly_link = Genome::Model::Link->get(to_model_id => $model->id);
-    unless($imported_assembly_link) {
-        $self->error_message("can't get assembly model link for ". $model->id);
-        croak;
-    }
-    my $imported_assembly = $imported_assembly_link->from_model;
+    my ($contigs_file_name, $contigs_dir) = fileparse($model->contigs_file_location);
+    my $locus_tag = $model->locus_id . $model->run_type;
+    # TODO Could we just use the assembly model's name?
+    my $assembly_name = ucfirst($model->organism_name) . '_' . $locus_tag . '.velv.amgap';
+    # TODO What is this used for?
+    my $org_dirname = substr(ucfirst($model->organism_name), 0, 1) .
+                      substr($model->organism_name, index($model->organism_name, "_"));
 
-    unless($imported_assembly) {
-        $self->error_message("can't get model for imported assembly model");
-        croak;
-    }
-    $self->status_message("using imported assembly model id " . $imported_assembly->id);
-    my $sample = Genome::Sample->get($imported_assembly->subject_id);
-    unless($sample) {
-        $self->error_message("can't get sample for subject id \"" . $imported_assembly->subject_id . "\"");
-        croak;
-    }
-    my $taxon = Genome::Taxon->get($sample->taxon_id);
-    unless($taxon) {
-        $self->error_message("can't get taxon for taxon id \"" . $sample->taxon_id . "\"");
-        croak;
+    my %params = (
+        acedb_version    => $model->acedb_version,
+        assembly_name    => $assembly_name,
+        assembly_version => $model->assembly_version,
+        cell_type        => uc($model->cell_type),
+        gram_stain       => $model->gram_stain,
+        locus_id         => $model->locus_id,
+        locus_tag        => $locus_tag,
+        minimum_length   => $model->minimum_sequence_length,
+        ncbi_taxonomy_id => $model->ncbi_taxonomy_id,
+        nr_db            => $model->nr_database_location,
+        org_dirname      => $org_dirname,
+        organism_name    => ucfirst($model->organism_name),
+        path             => $self->data_directory,
+        pipe_version     => $model->pipeline_version,
+        project_type     => $model->project_type,
+        runner_count     => $model->runner_count,
+        seq_file_dir     => $contigs_dir,
+        seq_file_name    => $contigs_file_name,
+        skip_acedb_parse => $model->skip_acedb_parse,
+        use_local_nr     => $model->use_local_nr,
+    );
+
+    my $rv = YAML::DumpFile($config_file_path, %params);
+    unless ($rv) {
+        $self->error_message("Could not create config file at $config_file_path!");
+        return;
     }
 
-    if(!defined($taxon->locus_tag)) 
-    {
-        $self->error_message("locus tag is NULL in gsc.organism_taxon.  please update.");
-        croak;
-    }
-    # locus_tag/id
-    #$self->locus_id = ($taxon->locus_tag);
-    my $locus_id = $taxon->locus_tag;
-    # organism name and
-    # org dir name.
-    #$self->organism_name( join('_',(split(/ /,$taxon->species_name))[0,1]) );
-    my $organism_name = join('_',(split(/ /,$taxon->species_name))[0,1]) ;
-    my @org_slices = (split(/ /,$taxon->species_name))[0,1];
-    $org_slices[0] = substr($org_slices[0],0,1);
-    #my $self->brev_orgname( $org_slices[0]."_".$org_slices[1]);
-    my $brev_orgname = $org_slices[0]."_".$org_slices[1];
-    $self->model->brev_orgname($brev_orgname);
-    # seq dir and
-    # assembly name
-    my $directory = undef;
-    my $ia_build = $imported_assembly->last_succeeded_build;
-#    my $wanted = sub { if($_ eq 'contigs.bases') { $directory = $File::Find::dir;
-#                                                   print STDERR $directory,"\n"; } };
-    File::Find::find(sub { if($_ eq 'contigs.bases') {$directory = $File::Find::dir;} },
-                     $ia_build->data_directory);
-    if(!defined($directory)) {
-        croak "can't find contigs.bases in imported assembly's datadirectory ". $ia_build->data_directory;
-    }
-    #$self->seq_file_dir($directory);
-    my $seq_file_dir = $directory;
-    #$self->assembly_name($imported_assembly->name.".amgap");  
-    my $assembly_name = $imported_assembly->name.".amgap";  
-    #$config->{path}             = $model->path; 
-    $config->{path}             = $self->data_directory;
-    $config->{org_dirname}      = $model->brev_orgname; 
-    $config->{assembly_name}    = $assembly_name; 
-    $config->{assembly_version} = $model->assembly_version; 
-    $config->{pipe_version}     = $model->pipeline_version; 
-    $config->{cell_type}        = $model->cell_type; 
-    #$config->{seq_file_name}    = $model->seq_file_name; 
-    $config->{seq_file_name}    = "contigs.bases";
-    $config->{seq_file_dir}     = $seq_file_dir; 
-    $config->{minimum_length}   = $model->minimum_seq_length; 
-
-    # add on the DFT/FNL/MSI...
-    $config->{locus_tag} = $locus_id . $model->draft;
-
-    $config->{acedb_version}           = $model->acedb_version; 
-    $config->{locus_id}                = $locus_id;
-    $config->{organism_name}           = $organism_name; 
-    $config->{runner_count}            = $model->runner_count; 
-    $config->{project_type}            = $model->project_type; 
-    $config->{gram_stain}              = $model->gram_stain; 
-    $config->{ncbi_taxonomy_id}        = $model->ncbi_taxonomy_id; 
-    $config->{predict_script_location} = $model->predict_script_location; 
-    $config->{merge_script_location}   = $model->merge_script_location; 
-    $config->{skip_acedb_parse}        = $model->skip_acedb_parse; 
-    $config->{finish_script_location}  = $model->finish_script_location; 
-
-    my $yaml_file = $self->yaml_file; # how should this be named?
-    my $rv = YAML::DumpFile($yaml_file, $config);
-    unless($rv)
-    {
-        $self->error_message("couldn't write out YAML file: ". $yaml_file);
-        croak;
-    }
-    return $yaml_file;
+    return $config_file_path;
 }
-
-
-#sub get_taxon_details
-#{
-#    my $self = shift;
-#    my $model = $self->model;
-#    my $imported_assembly = Genome::Model->get($model->assembly_model);
-#    my $sample = Genome::Sample->get($imported_assembly->subject_id);
-#    my $taxon = Genome::Taxon->get($sample->taxon_id);
-#    if(!defined($taxon->locus_tag)) 
-#    {
-#        $self->error_message("locus tag is NULL in gsc.organism_taxon.  please update.");
-#        croak;
-#    }
-#    # locus_tag/id
-#    $self->locus_id = ($taxon->locus_tag);
-#
-#    # organism name and
-#    # org dir name.
-#    $self->organism_name( join('_',(split(/ /,$taxon->species_name))[0,1]) );
-#    my @org_slices = (split(/ /,$taxon->species_name))[0,1];
-#    $org_slices[0] = substr($org_slices[0],0,1);
-#    $self->brev_orgname( $org_slices[0]."_".$org_slices[1]);
-#    # seq dir and
-#    # assembly name
-#    my $directory = undef;
-#    my $wanted = sub { if($_ eq 'contigs.bases') { $directory = $File::Find::dir; } };
-#    find($wanted, $self->data_directory);
-#    if(!defined($directory)) {
-#        croak "can't find contigs.bases in imported assembly's datadirectory";
-#    }
-#    $self->seq_file_dir($directory);
-#    $self->assembly_name($imported_assembly->name.".amgap");  
-#    return 1;
-#}
 
 1;
