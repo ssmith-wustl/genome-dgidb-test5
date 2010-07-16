@@ -8,15 +8,18 @@ use File::Path qw/make_path/;
 use File::Spec;
 use Genome;
 
-my $num4GiB = 4294967296;
-
-# Define a custom exception that may be caught specifically so that any other type of exception falls through.
-use Exception::Class('ImportedReferenceSequencePPException');
-
 class Genome::ProcessingProfile::ImportedReferenceSequence {
     is => 'Genome::ProcessingProfile',
     doc => "this processing profile does the file copying and indexing required to import a reference sequence fasta file"
 };
+
+# Define a custom exception that may be caught specifically so that any other type of exception falls through
+use Exception::Class('Genome::ProcessingProfile::ImportedReferenceSequence::LocalException');
+
+sub _die {
+    my $error = shift;
+    Genome::ProcessingProfile::ImportedReferenceSequence::LocalException->throw(error => $error);
+}
 
 sub _resolve_disk_group_name_for_build {
     return 'info_apipe_ref';
@@ -28,7 +31,7 @@ sub _execute_build {
     eval {
         $self->_execute_build_try(@_);
     };
-    if (my $e = Exception::Class->caught('ImportedReferenceSequencePPException')) {
+    if (my $e = Exception::Class->caught('Genome::ProcessingProfile::ImportedReferenceSequence::LocalException')) {
         $self->error_message($e->error);
         return;
     }
@@ -37,30 +40,31 @@ sub _execute_build {
 }
 
 sub _execute_build_try {
+    my $num_4_GiB = 4294967296;
     my ($self, $build) = @_;
     my $model = $build->model;
 
     if(!$model) {
-        ImportedReferenceSequencePPException->throw(error => "Couldn't find model for build id " . $build->build_id . ".");
+        _die("Couldn't find model for build id " . $build->build_id . ".");
     }
 
     my $fastaSize = -s $build->fasta_file;
     unless(-e $build->fasta_file && $fastaSize > 0) {
-        ImportedReferenceSequencePPException->throw(error => "Reference sequence fasta file \"" . $build->fasta_file . "\" is either inaccessible, empty, or non-existent.");
+        _die("Reference sequence fasta file \"" . $build->fasta_file . "\" is either inaccessible, empty, or non-existent.");
     }
-    if($fastaSize >= $num4GiB) {
+    if($fastaSize >= $num_4_GiB) {
         my $error = "Reference sequence fasta file \"". $build->fasta_file . "\" is larger than 4GiB.  In order to accommodate " .
                     "BWA, reference sequence fasta files > 4GiB are not supported.  Such sequences must be broken up and each chunk must " .
                     "have its own build and model(s).  Support for associating multiple fastas with a single reference model is " .
                     "desired but will require modifying the alignment code.";
-        ImportedReferenceSequencePPException->throw(error => $error);
+        _die($error);
     }
 
     $self->status_message("Copying fasta");
     my $out_dir = $build->data_directory;
     my $fasta_file_name = File::Spec->catfile($out_dir, 'all_sequences.fa');
     unless (copy($build->fasta_file, $fasta_file_name)) {
-        ImportedReferenceSequencePPException->throw(error => "Failed to copy \"" . $build->fasta_file . "\" to \"$fasta_file_name\": $!.");
+        _die("Failed to copy \"" . $build->fasta_file . "\" to \"$fasta_file_name\": $!.");
     }
 
     $self->status_message("Making bases files from fasta.");
@@ -69,18 +73,18 @@ sub _execute_build_try {
     $self->status_message("Doing bwa indexing.");
     my $bwaIdxAlg = ($fastaSize < 11000000) ? "is" : "bwtsw";
     if (system("bwa index -a $bwaIdxAlg $fasta_file_name") != 0) {
-        ImportedReferenceSequencePPException->throw(error => 'bwa indexing failed.');
+        _die('bwa indexing failed.');
     }
 
     $self->status_message("Doing maq fasta2bfa.");
     my $bfa = File::Spec->catfile($out_dir, 'all_sequences.bfa');
     if (system("maq fasta2bfa $fasta_file_name $bfa") != 0) {
-        ImportedReferenceSequencePPException->throw(error => 'maq fasta2bfa failed.');
+        _die('maq fasta2bfa failed.');
     }
 
     $self->status_message("Doing samtools faidx.");
     if (system("samtools faidx $fasta_file_name") != 0) {
-        ImportedReferenceSequencePPException->throw(error => 'samtools faidx failed.');
+        _die('samtools faidx failed.');
     }
 
     # Reallocate to amount of space actually consumed if the build has an associated allocation and that allocation
@@ -95,7 +99,7 @@ sub _execute_build_try {
             $build->disk_allocation->reallocate('kilobytes_requested' => $1);
         }
         else {
-            ImportedReferenceSequencePPException->throw(error => "Failed to determine the amount of space actually consumed by \"$out_dir\" and therefore can not reallocate.");
+            _die("Failed to determine the amount of space actually consumed by \"$out_dir\" and therefore can not reallocate.");
         }
     }
 
@@ -110,7 +114,7 @@ sub _make_bases_files {
     my ($self, $fasta_file_name, $out_dir) = @_;
     my $fasta = IO::File->new();
     if(!$fasta->open($fasta_file_name, '<')) {
-        ImportedReferenceSequencePPException->throw(error => "Failed to open \"$fasta_file_name\".");
+        _die("Failed to open \"$fasta_file_name\".");
     }
     my $prepend_return = 1;
     my $chunk_len = 2**20;
@@ -153,7 +157,7 @@ sub _make_bases_files {
                     $self->status_message("$chrom");
                     $bases_file_name = File::Spec->catfile($out_dir, "$chrom.bases");
                     if(!$bases->open($bases_file_name, '>')) {
-                        ImportedReferenceSequencePPException->throw(error => "Failed to open \"$bases_file_name\".");
+                        _die("Failed to open \"$bases_file_name\".");
                     }
                 }
                 else {
@@ -177,7 +181,7 @@ sub _make_bases_files {
             }
             else {
                 if (!$bases->opened()) {
-                    ImportedReferenceSequencePPException->throw(error => "First line of fasta file must begin with '>'.");
+                    _die("First line of fasta file must begin with '>'.");
                 }
                 if (substr($buff, -1, -1) eq "\n") {
                     $prepend_return = 1;
