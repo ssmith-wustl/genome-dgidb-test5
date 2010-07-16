@@ -34,6 +34,10 @@ UR::Object::Type->define(
                    'outputdir' => { is => 'String',
                                     doc => 'output directory files are to be written in',
                                   },
+                   'dev' => { is => 'Boolean',
+                              doc => 'dump from development',
+                              default => 0,
+                    },
                    ],
 			);
 
@@ -63,13 +67,28 @@ sub execute
     my @basket = ( );
     my $locus_tag = $self->locus_tag;
 
-    my $dbadp = Bio::DB::BioDB->new(
+    my $dbadp;
+    unless($self->dev) {
+        $dbadp = Bio::DB::BioDB->new(
 				    -database => 'biosql',
 				    -user     => 'sg_user',
 				    -pass     => 'sg_us3r',
 				    -dbname   => 'DWRAC',
 				    -driver   => 'Oracle'
 				   );
+    }
+    else
+    {
+        $self->status_message("using development biosql");
+        $dbadp = Bio::DB::BioDB->new(
+            -database => 'biosql',
+            -user     => 'sg_user',
+            -pass     => 'sgus3r',
+            -dbname   => 'DWDEV',
+            -driver   => 'Oracle',
+        );
+
+    }
 
     my $adp = $dbadp->get_object_adaptor("Bio::SeqI");
 

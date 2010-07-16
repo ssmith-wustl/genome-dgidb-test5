@@ -49,6 +49,12 @@ UR::Object::Type->define(
 							    default     => 5,
 							    is_optional => 1,
 							   },
+                     'dev' => {
+                           is => 'Boolean',
+                           doc => "use dev databases",
+                           default => 0,
+                           is_optional => 1,
+                     },
 				       ]
 			);
 
@@ -171,6 +177,11 @@ sub execute
     my $adpb = Genome::Model::Tools::Ber::AmgapDumpProteinBiosql->create(
 									 'locus_tag'  => $config->{locus_tag},
 									);
+
+    # get from dev???
+    if($self->dev) {
+        $adpb->dev(1);
+    }
 
     if ($adpb) {
       $adpb->execute() or croak "\nCan't run AmgapDumpProteinBiosql.pm ... from AmgapBerProtName.pm\n\n";
