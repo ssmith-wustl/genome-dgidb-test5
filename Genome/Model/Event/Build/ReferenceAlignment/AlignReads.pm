@@ -54,7 +54,7 @@ sub _calculate_fwd_reads_passed_quality_filter_count {
     unless($self->instrument_data->is_paired_end) {
         $fwd_reads_passed_quality_filter_count = 0;
     } else {
-        my ($fwd_fastq) = $self->instrument_data->fastq_filenames(paired_end_as_fragment => 1);
+        my ($fwd_fastq) = $self->instrument_data->dump_sanger_fastq_files(paired_end_as_fragment => 1);
         unless(-f $fwd_fastq) {
             $self->error_message("Problem calculating metric (didn't find forward FASTQ)...this doesn't mean the step failed");
             return 0;
@@ -76,7 +76,7 @@ sub _calculate_rev_reads_passed_quality_filter_count {
     unless($self->instrument_data->is_paired_end) {
         $rev_reads_passed_quality_filter_count = 0;
     } else {
-        my ($rev_fastq) = $self->instrument_data->fastq_filenames(paired_end_as_fragment => 2);
+        my ($rev_fastq) = $self->instrument_data->dump_sanger_fastq_files(paired_end_as_fragment => 2);
         unless(-f $rev_fastq) {
             $self->error_message("Problem calculating metric (didn't find reverse FASTQ)...this doesn't mean the step failed");
             return 0;
@@ -98,7 +98,7 @@ sub _calculate_total_reads_passed_quality_filter_count {
     if($self->instrument_data->is_paired_end) {
         $total_reads_passed_quality_filter_count = $self->fwd_reads_passed_quality_filter_count + $self->rev_reads_passed_quality_filter_count;
     } else {
-        my @f = grep {-f $_ } $self->instrument_data->fastq_filenames;
+        my @f = grep {-f $_ } $self->instrument_data->dump_sanger_fastq_files;
         unless (@f) {
             $self->error_message("Problem calculating metric (didn't find FASTQ(s))...this doesn't mean the step failed");
             return 0;
