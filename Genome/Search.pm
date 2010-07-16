@@ -26,7 +26,7 @@ class Genome::Search {
         },
         _dev_solr_server_location => {
             is => 'Text',
-            default_value => 'http://solr-dev/solr',
+            default_value => 'http://solr-dev:8080/solr',
             doc => 'Location of the Solr development server',
         },
         _solr_server => {
@@ -37,11 +37,9 @@ class Genome::Search {
             calculate_from => ['environment', '_solr_server', '_solr_server_location', '_dev_solr_server_location',],
             calculate => q[
                 return $_solr_server if $_solr_server;
-                $self->_solr_server(WebService::Solr->new(
-                    $environment eq 'prod' ? $_solr_server_location : $_dev_solr_server_location
-                ));
-
-                return $self->_solr_server;
+                my $location = $environment eq 'prod' ? $_solr_server_location : $_dev_solr_server_location;
+                $self->_solr_server(WebService::Solr->new($location));
+                return $self->_solr_server();
             ]
         },
         cache_timeout => {
