@@ -114,7 +114,7 @@ sub execute {
             $writer->write_one($classification);
         }
         else {
-            warn "failed to classify ". $seq->id;
+            print STDERR "Failed to classify ". $seq->id;
         }
     }
 
