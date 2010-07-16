@@ -1430,7 +1430,7 @@ sub construct_groups_file {
 
     # build the header
     my $id_tag = $self->instrument_data->id;
-    my $pu_tag = sprintf("%s.%s",$self->instrument_data->flow_cell_id,$self->instrument_data->lane);
+    my $pu_tag = sprintf("%s.%s",$self->instrument_data->run_identifier,$self->instrument_data->lane);
     my $lib_tag = $self->instrument_data->library_name;
     my $date_run_tag = $self->instrument_data->run_start_date_formatted;
     my $sample_tag = $self->instrument_data->sample_name;

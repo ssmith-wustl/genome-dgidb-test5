@@ -271,6 +271,11 @@ sub create_mock {
     return $class->SUPER::create_mock(subclass_name => 'Genome::InstrumentData', @_);
 }
 
+sub run_identifier  {
+    die "run_identifier not defined in instrument data subclass.  please define this. this method should " . 
+         "provide a unique identifier for the experiment/run (eg flow_cell_id, ptp barcode, etc).";
+}
+
 
 1;
 

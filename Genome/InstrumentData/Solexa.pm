@@ -725,6 +725,7 @@ sub create_mock {
         resolve_fastq_filenames
         _calculate_total_read_count
         resolve_adaptor_file
+        run_identifier
     /) {
         my $ref = $class->can($method);
         die "Unknown method $method on " . $class . ".  Cannot make a pass-through for mock object!" unless $ref;
@@ -775,6 +776,11 @@ sub summary_xml_content {
     my $rls = $self->_run_lane_solexa;
     unless ($rls) { return; }
     return $rls->summary_xml_content;
+}
+
+sub run_identifier {
+    my $self = shift;
+    return $self->flow_cell_id;
 }
 
 1;

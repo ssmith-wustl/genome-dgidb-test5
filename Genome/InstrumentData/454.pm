@@ -322,6 +322,17 @@ sub amplicon_header_file {
     return $amplicon_header_file;
 }
 
+sub run_identifier {
+    my $self = shift;
+
+    my $ar_454 = $self->run_region_454->get_analysis_run_454;
+
+    my $pse = GSC::PSE->get($ar_454->pse_id);
+    my $loadpse = $pse->get_load_pse;
+    my $barcode = $loadpse->picotiter_plate;
+    
+    return $barcode->barcode->barcode;
+}
 
 1;
 
