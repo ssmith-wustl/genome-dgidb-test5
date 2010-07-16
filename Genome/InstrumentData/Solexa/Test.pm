@@ -28,7 +28,7 @@ sub create_mock_instrument_data {
 
     $mock->set_always('flow_cell_id', '302M2');
     $mock->set_always('lane', '3');
-    $mock->set_list('fastq_filenames', glob($self->dir.'/*.fastq'));
+    $mock->set_list('dump_sanger_fastq_files', glob($self->dir.'/*.fastq'));
 
     return $mock;
 }

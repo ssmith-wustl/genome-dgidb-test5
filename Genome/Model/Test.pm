@@ -585,7 +585,7 @@ sub create_mock_solexa_instrument_data {
             lane => $i,
             flow_cell_id => 13651,
         ) or confess "Can't create mock solexa id #$cnt";
-        $id->mock('fastq_filenames', sub{ return glob($_[0]->full_path.'/*.fastq'); });
+        $id->mock('dump_sanger_fastq_files', sub{ return glob($_[0]->full_path.'/*.fastq'); });
         $id->mock('resolve_full_path', sub{ return $full_path; });
         $id->mock('dump_to_file_system', sub{ return 1; });
         $id->mock('total_bases_read', sub{ return '-1, an inaccurate count but true value'; });
