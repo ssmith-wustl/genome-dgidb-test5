@@ -67,20 +67,33 @@ sub classify {
     my ($self, $seq) = @_;
 
     unless ( $seq ) {
-        #$self->error_message("No sequence to classify");
+        # Should die
         return;
     }
 
     if ($seq->length < 50) {
-        #$self->error_message("Sequence to short");
+        # Error?
         return;
     }
     
-    my $parsed_seq = new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
-    my $complemented = $self->_is_seq_reversed($parsed_seq);
-    my $classification_result = $self->{'classifier'}->classify($parsed_seq);
+    my $parsed_seq;
+    eval{
+        $parsed_seq = new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
+    };
+    unless ( $parsed_seq ) {
+        return;
+    }
 
-    return unless $classification_result;
+    my $classification_result;
+    eval{
+        $classification_result = $self->{'classifier'}->classify($parsed_seq);
+    };
+    unless ( $classification_result ) {
+        return;
+    }
+
+    my $complemented = $self->_is_seq_reversed($parsed_seq);
+
     my $taxon = $self->_build_taxon_from_classification_result($classification_result);
 
     return Genome::Utility::MetagenomicClassifier::SequenceClassification->new(
