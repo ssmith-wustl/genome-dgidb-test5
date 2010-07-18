@@ -23,7 +23,7 @@ sub required_rusage {
     
     # If the appropriate methods aren't defined, still use 90GB of tmp space.
     unless (defined($instrument_data) and $instrument_data->can("calculate_alignment_estimated_kb_usage")) {
-        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>10000] span[hosts=1] rusage[tmp=90000, mem=10000]' -M 10000000 -n 4";
+        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>10000] span[hosts=1] rusage[tmp=90000, mem=10000]' -M 10000000 -n 4 -q alignment -m alignment ";
     }
     my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
     # Estimate 6 times instrument_data size + 100 should be sufficient with some breathing room. 
