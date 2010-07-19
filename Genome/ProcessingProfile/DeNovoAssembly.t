@@ -133,7 +133,7 @@ is_deeply(
 # Assembler, Read Trimmer and Read Filter classes
 is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
 #is($pp->class_for_read_filter, '??');
-is($pp->class_for_read_trimmer, 'Genome::Model::Tools::Fastq::TrimByLength', 'Read trimmer class');
+is($pp->class_for_read_trimmer, 'Genome::Model::Tools::FastQual::Trimmer::ByLength', 'Read trimmer class');
 
 done_testing();
 exit;

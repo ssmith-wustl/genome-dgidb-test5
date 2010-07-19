@@ -58,34 +58,6 @@ class Genome::ProcessingProfile::DeNovoAssembly{
    ],
 };
 
-my %supported_operations = (
-    assembler => {
-        newbler => {
-            platforms => [qw/ 454 /],
-        },
-        velvet => {
-            platforms => [qw/ solexa /],
-            class => 'Genome::Model::Tools::Velvet::OneButton',
-        },
-    },
-    read_trimmer => {
-        basic => {
-            class => 'Genome::Model::Tools::Fastq::TrimByLength',
-        },
-        by_length => {
-            class => 'Genome::Model::Tools::Fastq::TrimByLength',
-        },
-        bwa_style => {
-            class => 'Genome::Model::Tools::Fastq::TrimBwaStyle2',
-        },
-    },
-    read_filter => {
-        by_length => {
-            class => 'Genome::Model::Tools::Fastq::FilterByLength',
-        },
-    },
-);
-
 sub create {
     my $class = shift;
 
@@ -132,97 +104,34 @@ sub create {
     return $self;
 }
 
-#< Operations Shared Methods >#
-sub _name_for_operation {
-    my ($self, $operation) = @_;
-    Carp::confess("No operation given to get name.") unless defined $operation;
-    my $name_method = $operation.'_name';
-    unless ( $self->can($name_method) ) { 
-        Carp::confess("Invalid operation ($operation)");
-    }
-    return $self->$name_method;
-}
-
-sub _class_for_operation {
-    my ($self, $operation) = @_;
-
-    my $name = $self->_name_for_operation($operation) # undef ok, dies onn error
-        or return;
-    my $class = $supported_operations{$operation}->{$name}->{class};
-    unless ( $class ) {
-        Carp::confess("No class found for $operation");
-    }
-
-    return $class;
-}
-
-sub _params_as_hash_for_operation {
-    my ($self, $operation) = @_;
-
-    my $method = $operation.'_params';
-    my $params_string = $self->$method;
-    return unless $params_string; # ok 
-
-    my %params = Genome::Utility::Text::param_string_to_hash($params_string);
-    unless ( %params ) { # not ok
-        die $self->error_message("Malformed $operation params: $params_string");
-    }
-
-    return %params;
-}
-
-sub _object_for_operation {
-    my ($self, $operation) = @_;
-
-    my $name = $self->_name_for_operation($operation); # dies on error
-    my %params = $self->_params_as_hash_for_operation($operation); # undef ok
-    unless ( $name ) { # ok
-        if ( %params ) { # not ok
-            Carp::confess("No $operation name, but params we're given. Please indicate a name for $operation, or do not indicate it's params.");
-        }
-        return;
-    }
-
-    my $class = $self->_class_for_operation($operation); # dies on error
-    my $obj = $class->create(%params);
-    unless ( $obj ){ 
-        Carp::confess("Could not validate $operation params:\n".Dumper(\%params));
-        return;
-    }
- 
-    return $obj;
-}
-
-sub _validate_operation_and_params {
-    my ($self, $operation) = @_;
-
-    my $obj;
-    eval{ $obj = $self->_object_for_operation($operation); }; # dies on error
-    
-    if ( $@ ) {
-        $self->error_message($@);
-        return;
-    }
-
-    $obj->delete if $obj;
-
-    return 1;
-}
-
 #< Assembler >#
+my %supported_assemblers = (
+    newbler => {
+        platforms => [qw/ 454 /],
+    },
+    velvet => {
+        platforms => [qw/ solexa /],
+        class => 'Genome::Model::Tools::Velvet::OneButton',
+    },
+);
 sub supported_sequencing_platforms_for_assembler {
     my $self = shift;
-    
+
     my $assembler_name = $self->assembler_name;
     unless ( defined $assembler_name ) {
-        Carp::confess("No assembler name given.");
+        Carp::confess(
+            $self->error_message("Can't get supported sequencing platforms: No assembler name set.")
+        );
     }
 
-    unless ( exists $supported_operations{assembler}->{$assembler_name}->{platforms} ) {
-        Carp::confess("Unsupported assembler ($assembler_name)");
+    my $platforms = $supported_assemblers{$assembler_name}->{platforms};
+    unless ( $platforms ) {
+        Carp::confess(
+            $self->error_message("Can't get supported sequencing platforms: Unsupported assembler ($assembler_name).")
+        );
     }
 
-    return $supported_operations{assembler}->{$assembler_name}->{platforms};
+    return $platforms;
 }
 
 sub class_for_assembler {
@@ -230,14 +139,19 @@ sub class_for_assembler {
     
     my $assembler_name = $self->assembler_name;
     unless ( defined $assembler_name ) {
-        Carp::confess("No assembler name given.");
+        Carp::confess(
+            $self->error_message("Can't get class for assembler: No assembler name set.")
+        );
     }
 
-    unless ( $supported_operations{assembler}->{$assembler_name}->{class} ) {
-        Carp::confess("Unsupported assembler ($assembler_name)");
+    my $class = $supported_assemblers{$assembler_name}->{class};
+    unless ( $class ) {
+        Carp::confess(
+            $self->error_message("Unsupported assembler ($assembler_name)")
+        );
     }
 
-    return $supported_operations{assembler}->{$assembler_name}->{class};
+    return $class;
 }
 
 sub assembler_params_as_hash {
@@ -278,6 +192,96 @@ sub _validate_assembler_and_params {
     }
 
     $assembler->delete;
+
+    return 1;
+}
+
+#< Shared Operation Methods for Read Filter and Trimmer >#
+sub _name_for_operation {
+    my ($self, $operation) = @_;
+
+    Carp::confess("No operation given to get name.") unless defined $operation;
+    my $name_method = $operation.'_name';
+    unless ( $self->can($name_method) ) { 
+        Carp::confess("Invalid operation ($operation)");
+    }
+    return $self->$name_method;
+}
+
+sub _class_for_operation {
+    my ($self, $operation) = @_;
+
+    my $name = $self->_name_for_operation($operation) # undef ok, dies onn error
+        or return;
+    
+    $operation =~ s/^read_//;
+    my $class = 'Genome::Model::Tools::FastQual::'.
+    Genome::Utility::Text::string_to_camel_case($operation).'::'.
+    Genome::Utility::Text::string_to_camel_case($name);
+    eval("use $class");
+    if ( $@ ) {
+        Carp::confess(
+            $self->error_message("Can't find class ($class) for read $operation ($name)")
+        );
+    }
+
+    return $class;
+}
+
+sub _params_as_hash_for_operation {
+    my ($self, $operation) = @_;
+
+    my $method = $operation.'_params';
+    my $params_string = $self->$method;
+    return unless $params_string; # ok 
+
+    my %params = Genome::Utility::Text::param_string_to_hash($params_string);
+    unless ( %params ) { # not ok
+        Carp::confess(
+            $self->error_message("Malformed $operation params: $params_string")
+        );
+    }
+
+    return %params;
+}
+
+sub _object_for_operation {
+    my ($self, $operation) = @_;
+
+    my $name = $self->_name_for_operation($operation); # dies on error
+    my %params = $self->_params_as_hash_for_operation($operation); # undef ok
+    unless ( $name ) { # ok
+        if ( %params ) { # not ok
+            Carp::confess(
+                $self->error_message("No $operation name, but params we're given. Please indicate a name for $operation, or do not indicate it's params.")
+            );
+        }
+        return;
+    }
+
+    my $class = $self->_class_for_operation($operation); # dies on error
+    my $obj = $class->create(%params);
+    unless ( $obj ){ 
+        Carp::confess(
+            $self->error_message("Could not validate $operation params:\n".Dumper(\%params))
+        );
+    }
+ 
+    return $obj;
+}
+
+sub _validate_operation_and_params {
+    my ($self, $operation) = @_;
+
+    my $obj;
+    eval{ $obj = $self->_object_for_operation($operation); }; # dies on error
+    
+    if ( $@ ) {
+        $self->error_message($@);
+        return;
+    }
+
+    $obj->delete if $obj;
 
     return 1;
 }
