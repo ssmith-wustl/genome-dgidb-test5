@@ -16,6 +16,12 @@ my %properties = (
         is => 'Text',
         doc => 'original data path of import data file(s): all files in path will be used as input',
     },
+    sample_name_list => {
+        is => 'Text',
+        doc => 'The list of samples associated with the FinalReport file.',
+        is_many => 1,
+        is_optional => 1,
+    },
     sample_name => {
         is => 'Text',
         doc => 'The tool will automagically populate this to multiple',
