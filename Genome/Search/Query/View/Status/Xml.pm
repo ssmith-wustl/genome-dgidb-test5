@@ -62,7 +62,7 @@ sub _generate_content {
             my $field = $doc->createElement('field');
             $field->addChild( $doc->createAttribute('name', $field_name) );
             $field->addChild( $doc->createAttribute('label', make_label($field_name)) );
-            $field->addChild( $doc->createAttribute('icon_prefix', icon_prefix($field_name)) );
+            $field->addChild( $doc->createAttribute('icon-prefix', icon_prefix($field_name)) );
             $field->addChild( $doc->createAttribute('count', $count) );
             $facets_node->addChild($field);
         }
