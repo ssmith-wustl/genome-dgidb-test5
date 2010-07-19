@@ -55,12 +55,13 @@ sub _generate_content {
         for (my $i = 0; $i < scalar(@raw_fields); $i+=2) {
             $facets->{ $raw_fields[$i] } = $raw_fields[$i + 1];
         }
-
+$DB::single = 1;
         for my $field_name (sort keys %$facets) {
             my $count = $facets->{$field_name};
             next if ! $count;
             my $field = $doc->createElement('field');
             $field->addChild( $doc->createAttribute('name', $field_name) );
+            $field->addChild( $doc->createAttribute('label', make_label($field_name)) );
             $field->addChild( $doc->createAttribute('count', $count) );
             $facets_node->addChild($field);
         }
@@ -99,6 +100,20 @@ sub _generate_content {
     $doc->setDocumentElement($results_node);
 
     $doc->toString(1);
+}
+
+sub make_label {
+
+    my ($text) = @_;
+
+    $text =~ s/[-_]/ /g;
+
+    my @words;
+    for my $w (split(/\s+/,$text)) {
+        push @words, ucfirst($w);
+    }
+
+    return join(' ',@words);
 }
 
 sub sort_solr_docs {
