@@ -27,7 +27,7 @@ sub processing_profile_params_for_assembler_and_platform {
             read_coverage => 0.5,#25000,
             assembler_version => '0.7.57-64',
             assembler_params => '-hash_sizes 31 33 35 -ins_length 260',
-            read_trimmer_name => 'basic',
+            read_trimmer_name => 'by_length',
             read_trimmer_params => '-trim_length 10',
         },
         newbler_454 => {
