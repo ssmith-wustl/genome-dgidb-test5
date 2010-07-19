@@ -124,6 +124,13 @@ sub execute
     }
 
     my $sqlitedatafile = qq{$outdirpath/$sqlitedata};
+    # recent versions of BER try to be helpful and append '.dat' to dat files
+    # then we get .dat.dat on the ends of the files.
+    if(-f $sqlitedatafile.".dat") {
+        # rename file.
+        rename($sqlitedatafile.".dat",$sqlitedatafile);
+    }
+
     my $sqliteoutfile  = qq{$outdirpath/$sqliteout};
     unless ( ( -e $sqlitedatafile ) and ( !-z $sqlitedatafile ) )
     {
