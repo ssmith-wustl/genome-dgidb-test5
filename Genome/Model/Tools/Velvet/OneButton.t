@@ -1,6 +1,11 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
+
+BEGIN {
+    $ENV{UR_DBI_NO_COMMIT} = 1;
+};
+
 use above "Genome";
 use Test::More;
 
@@ -22,7 +27,7 @@ use_ok($module) or die;
 ok(!Genome::Model::Tools::Velvet::OneButton->create(version => 2), 'Failed to create as expectred w/ invalid version');
 
 # CHANGE THIS WHENEVER WE INTENTIONALLY SWITCH OUTPUT 
-my $version = 'v2';
+my $version = 'v3';
 
 my @data_sub_dirs_orig = ("v1-a", "v1-b",);#"v1-c");
 
@@ -40,7 +45,7 @@ foreach my $param (@params) {
     $data_dir = "/gsc/var/cache/testsuite/data/$data_dir";
     
     #UNCOMMENT THE FOLLOWING TWO LINES WHEN BUILD NEW TEST DATA
-    # `mkdir -p $data_dir/$data_sub_dirs[0]`;
+    #`mkdir -p $data_dir/$data_sub_dirs[0]`;
     #`cp -rf $data_dir/$data_sub_dirs_orig[0]/input.fastq $data_dir/$data_sub_dirs[0]/.`;
 
     ok(-d $data_dir, "found data directory $data_dir");
