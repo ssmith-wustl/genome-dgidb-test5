@@ -9,7 +9,7 @@ class Genome::Search::Query::View::Status::Xml {
     has_constant => [ perspective => { value => 'status', }, ],
 };
 
-my $RESULTS_PER_PAGE = 50;
+my $RESULTS_PER_PAGE = 20;
 
 sub _generate_content {
     my $self    = shift;
@@ -55,13 +55,14 @@ sub _generate_content {
         for (my $i = 0; $i < scalar(@raw_fields); $i+=2) {
             $facets->{ $raw_fields[$i] } = $raw_fields[$i + 1];
         }
-$DB::single = 1;
+
         for my $field_name (sort keys %$facets) {
             my $count = $facets->{$field_name};
             next if ! $count;
             my $field = $doc->createElement('field');
             $field->addChild( $doc->createAttribute('name', $field_name) );
             $field->addChild( $doc->createAttribute('label', make_label($field_name)) );
+            $field->addChild( $doc->createAttribute('icon_prefix', icon_prefix($field_name)) );
             $field->addChild( $doc->createAttribute('count', $count) );
             $facets_node->addChild($field);
         }
@@ -100,6 +101,35 @@ $DB::single = 1;
     $doc->setDocumentElement($results_node);
 
     $doc->toString(1);
+}
+
+sub icon_prefix {
+
+    # "type" field in solr index needs to be cleaned up;
+    # for now, we have this hash to map to icon url
+    
+    my ($type) = @_;
+
+    my $icon_prefix = {
+        'work-order'         => 'genome_wiki_document',
+        'project'            => 'genome_project',
+        'mail'               => 'genome_sys_email',
+        'wiki-page'          => 'genome_wiki_document',
+        'model'              => 'genome_model',
+        'modelgroup'         => 'genome_modelgroup',
+        'population_group'   => 'genome_populationgroup',
+        'disk_group'         => 'genome_disk_group',
+        'disk_volume'        => 'genome_disk_volume',
+        'illumina_run'       => 'genome_instrumentdata_flowcell',
+        'individual'         => 'genome_individual',
+        'library'            => 'genome_library',
+        'processing_profile' => 'genome_processingprofile',
+        'sample'             => 'genome_sample',
+        'taxon'              => 'genome_taxon',
+    };
+
+    return $icon_prefix->{$type};
+
 }
 
 sub make_label {
