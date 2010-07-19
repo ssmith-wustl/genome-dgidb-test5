@@ -37,6 +37,40 @@ sub _generate_content {
     $results_node->addChild( $doc->createAttribute( "query",        $query ) );
     $results_node->addChild( $doc->createAttribute( "num-found", $response->content->{'response'}->{'numFound'} ));
 
+#   FACET XML
+
+#    facet_dates
+#    facet_fields
+#    facet_queries
+
+    my $f = $response->facet_counts();
+        
+    if ($f) {
+    
+        my $facets_node = $doc->createElement('facets');
+
+        my @raw_fields = @{ $f->{'facet_fields'}->{'type'} };
+        my $facets = {};
+
+        for (my $i = 0; $i < scalar(@raw_fields); $i+=2) {
+            $facets->{ $raw_fields[$i] } = $raw_fields[$i + 1];
+        }
+
+        for my $field_name (sort keys %$facets) {
+            my $count = $facets->{$field_name};
+            next if ! $count;
+            my $field = $doc->createElement('field');
+            $field->addChild( $doc->createAttribute('name', $field_name) );
+            $field->addChild( $doc->createAttribute('count', $count) );
+            $facets_node->addChild($field);
+        }
+
+        $results_node->addChild($facets_node);
+    }
+
+
+#   END OF FACET XML GENERATION
+
     # create query-no-types attribute
     my @params = split /\s+/, $query;
     for ( my $i = $#params ; $i >= 0 ; --$i ) {
@@ -50,7 +84,10 @@ sub _generate_content {
     $results_node->addChild(
         Genome::Search->generate_pager_xml( $response->pager, $doc ) );
 
-    my @ordered_docs = sort_solr_docs( $response->docs );
+    # if using sort_solr_docs(), each page is sorted but overall
+    # the results are not sorted
+#    my @ordered_docs = sort_solr_docs( $response->docs );
+    my @ordered_docs = $response->docs();
 
     my @result_nodes =
       Genome::Search->generate_result_xml( \@ordered_docs, $doc, $format );
