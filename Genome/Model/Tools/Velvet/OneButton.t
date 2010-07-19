@@ -104,8 +104,8 @@ foreach my $param (@params) {
     is(scalar(@stdout_diff), 0, "stdout matches")
 	or diag(@stdout_diff);
 
-    my @stderr_diff = `sdiff -s $expected_stderr $actual_stderr | grep -v -- '$temp_dir'`;
-    is(scalar(@stderr_diff), 0, "stderr matches except for the line with a date")
+    my @stderr_diff = `sdiff -s $expected_stderr $actual_stderr | grep -v -- '$temp_dir' | grep -v GENOME_DEV_MODE`;
+    is(scalar(@stderr_diff), 0, "stderr matches except for the line with a date and DEV_MODE notice")
 	or diag(@stderr_diff);
 
     # we skipped looking at the velvet log when diffing the whole dir b/c we know it has differences
