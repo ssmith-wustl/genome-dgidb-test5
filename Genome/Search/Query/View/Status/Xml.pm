@@ -111,7 +111,7 @@ sub icon_prefix {
     my ($type) = @_;
 
     my $icon_prefix = {
-        'work-order'         => 'genome_wiki_document',
+        'work-order'         => 'genome_workorder',
         'project'            => 'genome_project',
         'mail'               => 'genome_sys_email',
         'wiki-page'          => 'genome_wiki_document',
