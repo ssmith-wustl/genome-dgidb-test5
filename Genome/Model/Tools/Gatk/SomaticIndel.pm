@@ -30,6 +30,7 @@ class Genome::Model::Tools::Gatk::SomaticIndel {
 		somatic_file => { is => 'Text', doc => "Optional output file for Somatic indels parsed from formatted file", is_optional => 1, is_input => 1, is_output => 1 },
 		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --verbose --somatic --window_size 300" },
 		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "java -jar /gscuser/dshen/scripts/gatk/dist/GenomeAnalysisTK.jar" },
+		skip_if_output_present => { is => 'Text', doc => "Skip if output is present", is_optional => 1, is_input => 1},
 	],
 };
 
@@ -69,37 +70,68 @@ sub execute {                               # replace with real execution logic.
 	#-O gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.tsv -o gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.out 
 	
 	my $output_file = $self->output_file;
-	my $cmd = join(" ", $path_to_gatk, $gatk_params, "-I", $self->normal_bam, "-I", $self->tumor_bam, "-O", $output_file);
+	my $cmd = join(" ", $path_to_gatk, $gatk_params, "-I", $self->normal_bam, "-I", $self->tumor_bam, "-o", $output_file);
+
+	my $bed_output_file = $self->output_file . ".bed";
 
 	if($self->bed_output_file)
 	{
-		my $bed_output_file = $self->bed_output_file;
-		$cmd .= " -o $bed_output_file";
+		$bed_output_file = $self->bed_output_file;
+
 	}
+
+	$cmd .= " -O $bed_output_file";
 
 	## Run GATK Command ##
 
-	print "$cmd\n";
+	if($self->skip_if_output_present && -e $output_file)
+	{
+		
+	}
+	else
+	{
+		print "RUN: $cmd\n";
+		system($cmd);
+	}
+
 
 	if($self->formatted_file)
 	{
-		print "Formatting indels for annotation...\n";
-		
 		my $formatted_output_file = $self->formatted_file;
-		## Format GATK Indels ##
-	
-		my $cmd_obj = Genome::Model::Tools::Gatk::FormatIndels->create(
-		    variants_file => $output_file,
-		    output_file => $formatted_output_file,
-		);
 
-		$cmd_obj->execute;			
+		## Format GATK Indels ##
+
+		if($self->skip_if_output_present && -e $formatted_output_file)
+		{
+			
+		}
+		else
+		{
+			print "Formatting indels for annotation...\n";
+			
+			my $cmd_obj = Genome::Model::Tools::Gatk::FormatIndels->create(
+			    variants_file => $output_file,
+			    output_file => $formatted_output_file,
+			);
+			
+			$cmd_obj->execute;			
+		}
+
+
 
 		if($self->somatic_file)
 		{
-			print "Parsing out Somatic indels...\n";
-			## Parse the results to the somatic output file ##
-			parse_somatic($formatted_output_file, $self->somatic_file);			
+			if($self->skip_if_output_present && -e $self->somatic_file)
+			{
+				
+			}
+			else
+			{
+				print "Parsing out Somatic indels...\n";
+				## Parse the results to the somatic output file ##
+				parse_somatic($formatted_output_file, $self->somatic_file);							
+			}
+
 		}
 
 	}
