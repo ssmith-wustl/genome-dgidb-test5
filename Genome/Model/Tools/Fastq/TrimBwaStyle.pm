@@ -36,6 +36,12 @@ class Genome::Model::Tools::Fastq::TrimBwaStyle {
             default_value => 'sanger',
             is_optional   => 1,
         },
+        _qual_str => {
+            is => 'Text',
+        },
+        _qual_thresh => {
+            is => 'Number',
+        },
         report_file => {
             is  => 'Text',
             doc => 'the file path of the trim report file, default is trim.report in the same dir as out_file',
@@ -56,6 +62,23 @@ Trims fastq reads with BWA trimming style aka bwa aln -q
 EOS
 }
 
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+   if ( $self->qual_type eq 'sanger' ) {
+        $self->_qual_str('#');
+        $self->_qual_thresh(33);
+    }
+    else {
+        $self->_qual_str('B');
+        $self->_qual_thresh(64);
+    }
+    
+    return $self;
+}
 
 sub execute {
     my $self = shift;
@@ -80,8 +103,6 @@ sub execute {
     }
     binmode $report_fh, ":utf8";
     
-    my ($qual_str, $qual_thresh) = $self->qual_type eq 'sanger' ? ('#', 33) : ('B', 64);
-    
     my $ori_ct     = 0;
     my $trim_ct    = 0;
     my $rd_ori_ct  = 0;
@@ -93,31 +114,7 @@ sub execute {
             $ori_ct += $seq_length;
             $rd_ori_ct++;
 
-            my ($trim_seq, $trim_qual, $trimmed_length);
-            my ($pos, $maxPos, $area, $maxArea) = ($seq_length, $seq_length, 0, 0);
-
-            while ($pos > 0 and $area >= 0) {
-                $area += $self->trim_qual_level - (ord(substr($seq->{qual}, $pos-1, 1)) - $qual_thresh);
-                if ($area > $maxArea) {
-                    $maxArea = $area;
-                    $maxPos = $pos;
-                }
-                $pos--;
-            }
-
-            if ($pos == 0) { 
-                # scanned whole read and didn't integrate to zero?  replace with "empty" read ...
-                $seq->{seq}  = 'N';
-                $seq->{qual} = $qual_str;
-                $maxPos = 1;  # reset to leave 1 base/qual as N/# there
-                #($trim_seq, $trim_qual) = ('N', $qual_str);# scanned whole read and didn't integrate to zero?  replace with "empty" read ...
-            }
-            else {  # integrated to zero?  trim before position where area reached a maximum (~where string of qualities were still below 20 ...)
-                $seq->{seq}  = substr($seq->{seq},  0, $maxPos);
-                $seq->{qual} = substr($seq->{qual}, 0, $maxPos);
-            }
-            
-            $trimmed_length = $seq_length - $maxPos;
+            my $trimmed_length = $self->_trim($seq);
 
             if ($trimmed_length) {
                 $trim_ct += $trimmed_length;
@@ -184,6 +181,53 @@ sub _open_writer {
     }
 
     return $writer;
+}
+
+sub trim {
+    my ($self, $seqs) = @_;
+
+    unless ( $seqs and ref $seqs eq 'ARRAY' and @$seqs ) {
+        Carp::confess(
+            $self->error_message("Expected array ref of sequences, but got: ".Dumper($seqs))
+        );
+    }
+
+    for my $seq ( @$seqs ) {
+        $self->_trim($seq);
+    }
+
+    return $seqs;
+}
+
+sub _trim {
+    my ($self, $seq) = @_;
+
+    my $seq_length = length $seq->{seq};
+
+    my $trimmed_length;
+    my ($pos, $maxPos, $area, $maxArea) = ($seq_length, $seq_length, 0, 0);
+
+    while ($pos > 0 and $area >= 0) {
+        $area += $self->trim_qual_level - (ord(substr($seq->{qual}, $pos-1, 1)) - $self->_qual_thresh);
+        if ($area > $maxArea) {
+            $maxArea = $area;
+            $maxPos = $pos;
+        }
+        $pos--;
+    }
+
+    if ($pos == 0) { 
+        # scanned whole read and didn't integrate to zero?  replace with "empty" read ...
+        $seq->{seq}  = 'N';
+        $seq->{qual} = $self->_qual_str;
+        $maxPos = 1;  # reset to leave 1 base/qual as N/# there
+    }
+    else {  # integrated to zero?  trim before position where area reached a maximum (~where string of qualities were still below 20 ...)
+        $seq->{seq}  = substr($seq->{seq},  0, $maxPos);
+        $seq->{qual} = substr($seq->{qual}, 0, $maxPos);
+    }
+
+    return $seq_length - $maxPos; # trimmed length - may be 0
 }
 
 1;
