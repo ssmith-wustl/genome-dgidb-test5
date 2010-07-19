@@ -10,6 +10,7 @@ use Data::Dumper;
 use IO::File;
 use Genome::Info::IUB;
 use Benchmark;
+use Genome::Info::UCSCConservation;
 
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
@@ -364,11 +365,16 @@ sub execute {
                 die;
             }
 
+            my $full_version = $self->build->version; 
+            my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
+            my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
                 check_variants => $self->check_variants,
                 get_frame_shift_sequence => $self->get_frame_shift_sequence,
+                ucsc_conservation_directory => $ucsc_versions{$version},
             );
+             
             unless ($annotator){
                 $self->error_message("Couldn't create iterator for chromosome $chromosome_name!");
                 die;
@@ -411,10 +417,15 @@ sub execute {
                 range => $self->flank_range
             );
             die Genome::Utility::Window::Transcript->error_message unless $transcript_window;
+            
+            my $full_version = $self->build->version; 
+            my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
+            my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
                 check_variants => $self->check_variants,
                 get_frame_shift_sequence => $self->get_frame_shift_sequence,
+                ucsc_conservation_directory => $ucsc_versions{$version},
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
 

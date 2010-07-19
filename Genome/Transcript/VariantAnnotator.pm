@@ -31,7 +31,7 @@ class Genome::Transcript::VariantAnnotator{
         ucsc_conservation_directory => {
             is => 'Path',
             is_optional => 1,
-            default => '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/ucsc_conservation/',
+#            default => '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/ucsc_conservation/',
         },
         check_variants => {
             is => 'Boolean',

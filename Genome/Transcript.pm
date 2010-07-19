@@ -629,7 +629,7 @@ sub _get_reference_build {
         return $self->{_reference_build};
     }
     else {
-        my ($version) = $self->version =~ /^\d+_(\d+)[a-z]$/;
+        my ($version) = $self->version =~ /^\d+_(\d+)[a-z]/;
         my $species = $self->species;
 
         my $model = Genome::Model::ImportedReferenceSequence->get(name => "NCBI-$species");

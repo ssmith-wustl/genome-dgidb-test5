@@ -5,6 +5,7 @@ use warnings;
 use Test::More;
 use Storable 'retrieve';
 use above "Genome";
+use Genome::Info::UCSCConservation;
 
 # The test variants file can hold 1..n variants
 # Each variant must have a corresponding annotation
@@ -81,8 +82,11 @@ sub create_annotator {
         iterator => $iterator,
         range => 50000,
     );
+    my %conservation_dirs = Genome::Info::UCSCConservation->ucsc_conservation_directories;
+    my $ucsc_conservation_directory = $conservation_dirs{'36'};
     my $annotator = Genome::Transcript::VariantAnnotator->create(
         transcript_window => $window,
+        ucsc_conservation_directory => $ucsc_conservation_directory, 
     );
     return $annotator;
 }
