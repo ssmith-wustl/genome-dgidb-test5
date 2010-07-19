@@ -67,8 +67,9 @@ class Genome::Model::Command::Define::GenePrediction {
         },
         use_local_nr => {
             is => 'Boolean',
-            default => 1,
-            doc => 'If set, local NR databases are used by blast jobs instead of accessing the default location over the network',
+            default => 0,
+            doc => 'If set, local NR databases are used by blast jobs instead of accessing ' .
+                   'the default location over the network',
         },
     ],
 };

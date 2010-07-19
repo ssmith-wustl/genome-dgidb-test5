@@ -127,6 +127,7 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_) or return;
 
+    # Perform checks on the taxon
     my $base_error_msg = "Taxon with ID " . $self->subject_id; 
     unless (defined $self->gram_stain) {
         $self->error_message($base_error_msg . " does not have gram stain defined!");
@@ -140,6 +141,16 @@ sub create {
 
     unless (defined $self->organism_name) {
         $self->error_message($base_error_msg . " does not have organism name defined!");
+        return;
+    }
+
+    # Perform checks on various other parameters
+    unless (-e $self->nr_database_location) {
+        $self->error_message("No NR database found at " . $self->nr_database_location);
+        return;
+    }
+    unless (-e $self->contigs_file_location) {
+        $self->error_message("No contigs file found at " . $self->contigs_file_location);
         return;
     }
 
