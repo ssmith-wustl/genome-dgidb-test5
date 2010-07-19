@@ -107,7 +107,6 @@ sub execute {
         }
         $normal_hash{$chr}{$pos}=1;
     }
-    $DB::single=1;
     while (my $line = $tumorfh->getline) {
         chomp $line;
         my ($chr,$pos) = split "\t", $line;
@@ -228,10 +227,13 @@ sub generate_alleles {
     if($type =~ /INS/) {
         my ($original_position) = $reference_name =~ m/_(\d+)/;
         $original_position += 100; #regenerate the original position
-        my $glob_pattern = $self->tumor_assembly_data_directory . "/$chr/$chr" . "_" . $original_position . "*.reads.fa.contigs.fa";
+        my $glob_pattern = $self->tumor_assembly_data_directory . "/$chr/$chr" . "_" . $original_position . "_*.reads.fa.contigs.fa";
         my ($contig_filename,@others) = glob($glob_pattern);
         if(@others) {
+            $DB::single=1;
             $self->error_message("Hey, there are multiple contig files this thingy could belong too. Unfortunate :-(");
+            $self->error_message("Glob Pattern: $glob_pattern");
+            $self->error_message("contig data for event not found: @assembled_event_fields");
             return;
         }
                 
