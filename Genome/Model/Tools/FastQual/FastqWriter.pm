@@ -1,52 +1,49 @@
-package Genome::Model::Tools::Fastq::Reader;
+package Genome::Model::Tools::FastQual::FastqWriter;
 
 use strict;
 use warnings;
 
 use base 'Class::Accessor';
 
-__PACKAGE__->mk_accessors(qw/ fastq_file _io /);
+__PACKAGE__->mk_accessors(qw/ fastq_file _fh /);
 
-require Carp;
 use Data::Dumper 'Dumper';
-require Genome::Utility::FileSystem;
+require IO::File;
 
 sub create {
     my ($class, %params) = @_;
 
     my $self = bless \%params, $class;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->fastq_file );
+    my $fh = Genome::Utility::FileSystem->open_file_for_writing( $self->fastq_file );
     unless ( $fh ) {
         Carp::Confess("Can't open fastq file.");
     }
-    $self->_io($fh);
+    $self->_fh($fh);
     
     return $self;
 }
 
-sub next {
+sub write {
+    my ($self, $seq) = @_;
+
+    $self->_fh->print(
+        join(
+            "\n",
+            '@'.$seq->{id},#.( $seq->{desc} ? ' '.$seq->{desc} : '' ),
+            $seq->{seq},
+            '+',
+            $seq->{qual},
+        )."\n"
+    );
+
+    return 1;
+}
+
+sub flush {
     my $self = shift;
 
-    my $fh = $self->_io;
-    my $line = $fh->getline
-        or return; #ok
-    my ($id, $desc) = split(/\s/, $line, 2);
-    $id =~ s/^@//;
-
-    my $seq = $fh->getline;
-    chomp $seq; 
-
-    $fh->getline; 
-    
-    my $qual = $fh->getline;
-    chomp $qual;
-
-    return {
-        id => $id,
-        seq => $seq,
-        qual => $qual,
-    };
+    return $self->_fh->flush;
 }
 
 1;
@@ -67,7 +64,7 @@ ModuleTemplate
 
 =over
 
-=item I<Synopsis>
+=item I<Synopsis
 
 =item I<Arguments>
 

@@ -10,8 +10,8 @@ require File::Temp;
 require File::Compare;
 
 #< Use >#
-use_ok('Genome::Model::Tools::Fastq::Reader') or die;
-use_ok('Genome::Model::Tools::Fastq::Writer') or die;
+use_ok('Genome::Model::Tools::FastQual::FastqReader') or die;
+use_ok('Genome::Model::Tools::FastQual::FastqWriter') or die;
 
 #< Files >#
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-ReaderWriter/v0.2';
@@ -22,12 +22,12 @@ ok(-d $tmpdir, 'Created temp dir.');
 my $output_fastq = $tmpdir.'/fastq';
 
 #< Create Reader/Writer >#
-my $reader = Genome::Model::Tools::Fastq::Reader->create(
+my $reader = Genome::Model::Tools::FastQual::FastqReader->create(
     fastq_file => $input_fastq,
 );
 ok($reader, 'Create reader.');
 
-my $writer = Genome::Model::Tools::Fastq::Writer->create(
+my $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
     fastq_file => $output_fastq,
 );
 ok($writer, 'Create writer.');

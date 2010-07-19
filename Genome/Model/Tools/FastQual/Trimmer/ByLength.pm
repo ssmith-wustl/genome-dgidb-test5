@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Fastq::TrimByLength;
+package Genome::Model::Tools::FastQual::Trimmer::ByLength;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Regexp::Common;
 
-class Genome::Model::Tools::Fastq::TrimByLength {
+class Genome::Model::Tools::FastQual::Trimmer::ByLength {
     is => 'UR::Object',
     has => 
     [

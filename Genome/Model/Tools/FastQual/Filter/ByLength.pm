@@ -1,20 +1,20 @@
-package Genome::Model::Tools::Fastq::FilterByLength;
+package Genome::Model::Tools::FastQual::Filter::ByLength;
 
 use strict;
 use warnings;
 
 use Genome;            
 
+require Carp;
+use Data::Dumper 'Dumper';
 use Regexp::Common;
 
-class Genome::Model::Tools::Fastq::FilterByLength {
-    is => 'UR::Object',
-    has => 
-    [
+class Genome::Model::Tools::FastQual::Filter::ByLength {
+    is => 'Genome::Model::Tools::FastQual::Filter',
+    has => [
         filter_length => {
             is => 'Number',
             doc => 'the number of bases to filter',
-            #default_value => 20,
         }    
     ],
 };
@@ -28,13 +28,13 @@ sub create {
     # Validate filter length
     my $filter_length = $self->filter_length;
     unless ( defined $filter_length ) {
-        $self->error_message();
+        $self->error_message("No filter length given.");
         $self->delete;
         return;
     }
 
     unless ( $filter_length =~ /^$RE{num}{int}$/ and $filter_length > 1 ) {
-        $self->error_message();
+        $self->error_message("Invalid filter length ($filter_length) given.");
         $self->delete;
         return;
     }
@@ -43,25 +43,23 @@ sub create {
 }
 
 sub filter {
-    my ($self, $seq) = @_;
+    my ($self, $seqs) = @_;
+
     my $filter_length = $self->filter_length;
-    #TODO: check for sane filter length
     
-    if (ref $seq eq 'ARRAY') {  # hardcode for now
-        my $test = 1;
-        for my $s (@$seq) {
-            unless (length ($s->{seq}) > $filter_length) {
-                $test = 0;
-                last;
-            }
+    unless ( $seqs and ref($seqs) eq 'ARRAY' and @$seqs ) {
+        Carp::confess(
+            $self->error_message("Expecting array ref of sequences, but got ".Dumper($seqs))
+        );
+    }
+
+    for my $seq ( @$seqs ) {
+        unless ( length $seq->{seq} > $filter_length ) {
+            return;
         }
-        return $seq if $test;
-        return;
     }
-    else {
-        $self->error_message('Wrong fastq input type, must be array ref');
-        return;
-    }
+
+    return 1;
 }
 
 1;

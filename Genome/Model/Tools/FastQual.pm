@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Fastq::Base;
+package Genome::Model::Tools::FastQual;
 
 use strict;
 use warnings;
@@ -12,24 +12,24 @@ require Genome::Model::Tools::Fastq::SetWriter;
 #require Genome::Utility::IO::StdinRefReader;
 #require Genome::Utility::IO::StdoutRefWriter;
 
-class Genome::Model::Tools::Fastq::Base {
+class Genome::Model::Tools::FastQual {
     is  => 'Command',
     has_input => [
         input_files => {
             is  => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => 'Input fastq filesthe input fastq file path',
+            doc => 'Input files. If multiple files are given, they will be handled as a set and evaluated as set.',
         }, 
         output_files => {
             is  => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => 'Input fastq filesthe input fastq file path',
+            doc => 'Output files. If multiple files are given, each sequence of the set will be written to the file.',
         },
         type => {
             is  => 'Text',
-            valid_values  => [qw/ sanger illumina /],
+            valid_values  => [qw/ sanger illumina fasta /],
             default_value => 'sanger',
             is_optional => 1,
             doc => 'The fastq quality type.',
