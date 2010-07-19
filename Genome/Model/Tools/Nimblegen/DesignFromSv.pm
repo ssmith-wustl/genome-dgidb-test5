@@ -28,7 +28,7 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
         default => 1,
         doc => "whether or not to remove sites on the mitochondria or non-chromosomal contigs",
     },
-    inlcude_y => {
+    include_y => {
         type => 'Bool',
         is_optional => 1,
         default => 1,
@@ -82,10 +82,10 @@ sub execute {
     }
 
     my $input_fh;
-    if(defined $self->annotation_file) {
-        $input_fh = IO::File->new($self->annotation_file,"r");
+    if(defined $self->sv_file) {
+        $input_fh = IO::File->new($self->sv_file,"r");
         unless($input_fh) {
-            $self->error_message("Unable to open file ". $self->annotation_file . " for reading.");
+            $self->error_message("Unable to open file ". $self->sv_file . " for reading.");
             return;
         }
     }
@@ -104,7 +104,7 @@ sub execute {
         if($self->exclude_non_canonical_sites && ($chr1 =~ /^[MN]T/ || $chr2 =~ /^[MN]T/)) {
             next;
         }
-        if(!$self->inlcude_y && ($chr1 =~ /^Y/ || $chr2 =~ /^Y/)) {
+        if(!$self->include_y && ($chr1 =~ /^Y/ || $chr2 =~ /^Y/)) {
             next;
         }
         if($outer_start - 100 < 1 || $outer_start - 100 > $chromosome_lengths{$chr1} - 1) {

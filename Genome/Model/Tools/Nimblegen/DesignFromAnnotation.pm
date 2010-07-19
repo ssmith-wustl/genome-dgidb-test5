@@ -28,7 +28,7 @@ class Genome::Model::Tools::Nimblegen::DesignFromAnnotation {
         default => 1,
         doc => "whether or not to remove sites on the mitochondria or non-chromosomal contigs",
     },
-    inlcude_y => {
+    include_y => {
         type => 'Bool',
         is_optional => 1,
         default => 1,
@@ -101,7 +101,7 @@ sub execute {
         if($self->exclude_non_canonical_sites && $line =~ /^[MN]T/) {
             next;
         }
-        if(!$self->inlcude_y && $line =~ /^Y/) {
+        if(!$self->include_y && $line =~ /^Y/) {
             next;
         }
         chomp $line;
