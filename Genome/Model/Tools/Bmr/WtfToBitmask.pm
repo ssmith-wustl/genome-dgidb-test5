@@ -106,6 +106,7 @@ sub execute {
         chomp $line;
         next if $line =~ /^#/;  #support comments
         next if $line =~ /^$/;  #skip blank lines
+        next if $line =~ /^track/; #Broad's wiggle header
         if($line =~ /fixedStep/) {
             ($chromosome,$starting_origin, $step) = $line =~ /^fixedStep\s+chrom=(\S+)\s+start=(\d+)\s+step=(\d+)/;
             unless($chromosome && $starting_origin && $step) {
