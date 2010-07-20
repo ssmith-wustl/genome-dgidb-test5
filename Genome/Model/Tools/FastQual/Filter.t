@@ -21,7 +21,7 @@ my $filter = Genome::Model::Tools::FastQual::Filter::Tester->create();
 ok($filter, 'create filter');
 can_ok($filter, 'execute'); # test execute?? others under filter already do...
 
-# Trim fail
+# Filter fail
 eval{ # undef
     $filter->filter();
 };
@@ -37,6 +37,9 @@ eval{ # empty ary ref
 };
 diag($@);
 like($@, qr/Expecting array ref of sequences/, 'failed as expected to filter w/ empty array');
+
+# Filter OK
+ok($filter->filter([{}]), 'filter');
 
 done_testing();
 exit;

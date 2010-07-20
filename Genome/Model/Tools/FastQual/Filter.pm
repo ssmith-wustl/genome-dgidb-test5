@@ -48,7 +48,7 @@ sub filter {
         );
     }
 
-    return $self->_trim($sequences);
+    return $self->_filter($sequences);
 }
 
 1;

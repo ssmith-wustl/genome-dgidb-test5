@@ -38,6 +38,9 @@ eval{ # empty ary ref
 diag($@);
 like($@, qr/Expecting array ref of sequences/, 'failed as expected to trim w/ empty array');
 
+# Trim OK
+ok($trimmer->trim([{}]), 'trim');
+
 done_testing();
 exit;
 
