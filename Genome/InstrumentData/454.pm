@@ -73,6 +73,7 @@ EOS
         region_id           => { },
         region_number       => { },
         total_reads         => { column_name => "NUM_READS" },
+        total_bases_read    => { column_name => "NUM_BASES" },
         is_paired_end       => { column_name => "PAIRED_END" },
         index_sequence      => { },
 
@@ -332,6 +333,19 @@ sub run_identifier {
     my $barcode = $loadpse->picotiter_plate;
     
     return $barcode->barcode->barcode;
+}
+
+sub run_start_date_formatted {
+    my $self = shift;
+
+    my ($y, $m, $d) = $self->run_name =~ m/R_(\d{4})_(\d{2})_(\d{2})/;
+
+    my $dt_format = UR::Time->config('datetime');
+    UR::Time->config(datetime=>'%Y-%m-%d');
+    my $dt = UR::Time->numbers_to_datetime(0, 0, 0, $d, $m, $y);
+    UR::Time->config(datetime=>$dt_format);
+
+    return $dt; 
 }
 
 1;
