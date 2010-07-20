@@ -99,6 +99,24 @@ sub make_report {
 
     my $transform = Genome::Report::XSLT->transform_report(report => $report, xslt_file => $xslt_file);
     my $html = $transform->{content};
+    
+    if(Genome::Utility::FileSystem->check_for_path_existence($output)) {
+        $self->status_message("Report html $output exists!   Moving it out of the way...");
+        my $n = 1;
+        my $max = 20;
+        while ($n < $max and Genome::Utility::FileSystem->check_for_path_existence($output . '.' . $n)) {
+            $n++;
+        }
+        if ($n == $max) {
+            $self->error_message("Too many re-runs of this report!  Clean up old ones first.");
+            die $self->error_message;
+        }
+        rename $output, "$output.$n";
+        if (Genome::Utility::FileSystem->check_for_path_existence($output)) {
+            $self->error_message("failed to move old report dir $output to $output.$n!: $!");
+            die $self->error_message;
+        }
+    }
 
     my $fh = Genome::Utility::FileSystem->open_file_for_writing($output)
         or confess;
