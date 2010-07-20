@@ -96,7 +96,7 @@
           <col width="70%"/>
 				</colgroup>
 				<tr>
-          <td class="label">Total Input Reads</td>
+          <td class="label">Reads Processed</td>
           <td class="value"><xsl:value-of select="//metric/total-input-reads"/></td>
 				</tr>
 				<tr>
@@ -104,7 +104,7 @@
           <td class="value"><xsl:value-of select="//model-info/read-coverage"/></td>
 				</tr>
 				<tr>
-          <td class="label">Placed Reads</td>
+          <td class="label">Reads Assembled</td>
           <td class="value"><xsl:value-of select="//metric/placed-reads"/></td>
 				</tr>
 				<tr>
@@ -120,11 +120,11 @@
           <td class="value"><xsl:value-of select="//metric/average-read-length"/></td>
 				</tr>
 				<tr>
-          <td class="label">Total Contig Number</td>
+          <td class="label">Contigs</td>
           <td class="value"><xsl:value-of select="//metric/total-contig-number"/></td>
 				</tr>
 				<tr>
-          <td class="label">Total Contig Bases</td>
+          <td class="label">Assembly Length</td>
           <td class="value"><xsl:value-of select="//metric/total-contig-bases"/></td>
 				</tr>
 				<tr>
@@ -132,11 +132,11 @@
           <td class="value"><xsl:value-of select="//metric/average-contig-length"/></td>
 				</tr>
 				<tr>
-          <td class="label">N50 Contig Length</td>
+          <td class="label">Median Contig Length</td>
           <td class="value"><xsl:value-of select="//metric/n50-contig-length"/></td>
 				</tr>
 				<tr>
-          <td class="label">Total Supercontig Number</td>
+          <td class="label">Supercontigs</td>
           <td class="value"><xsl:value-of select="//metric/total-supercontig-number"/></td>
 				</tr>
 				<tr>
@@ -144,7 +144,7 @@
           <td class="value"><xsl:value-of select="//metric/average-supercontig-length"/></td>
 				</tr>
 				<tr>
-          <td class="label">N50 Supercontig Length</td>
+          <td class="label">Median Supercontig Length</td>
           <td class="value"><xsl:value-of select="//metric/n50-supercontig-length"/></td>
 				</tr>
 			  </table>
