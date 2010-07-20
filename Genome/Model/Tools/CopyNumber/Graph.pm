@@ -212,7 +212,7 @@ sub execute {
     }
 
     # Step 2: get samtools and write to a file
-	my $system_tmp = 0;
+	my $system_tmp = 1;
 	my $pileup_threshold = 30;
 
     # tumor
