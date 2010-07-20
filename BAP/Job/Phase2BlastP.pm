@@ -18,7 +18,7 @@ use base qw(GAP::Job);
 
 sub new {
 
-    my ($class, $seq, $db, $job_id, $core_num) = @_;
+    my ($class, $seq, $db, $job_id, $core_num, $use_local_nr) = @_;
     
     my $self = { };
     bless $self, $class;
@@ -26,30 +26,30 @@ sub new {
     unless (defined($job_id)) {
         croak 'missing job id';
     }
-
     $self->job_id($job_id);
 
     unless (defined($seq)) {
         croak 'missing seq object!';
     }
-
     unless ($seq->isa('Bio::PrimarySeqI')) {
         croak 'seq object is not a Bio::PrimaySeqI!';
     }
-    
     $self->{_seq} = $seq;
 
     unless (defined($db)) {
         croak 'missing db!';
     }
-
     $self->{_db} = $db;
 
     unless (defined($core_num)) {
         croak 'missing number of cores to run blast in Job!';
     }
-
     $self->{_core_num} = $core_num;
+
+    unless (defined $use_local_nr) {
+        $use_local_nr = 1;
+    }
+    $self->{_use_local_nr} = $use_local_nr;
     
     return $self;
 }
@@ -59,8 +59,31 @@ sub execute {
     my ($self) = @_;
 
     my $local_db = "/opt/databases/bacterial_nr/bacterial_nr";
-    if (-e $local_db) {
-        $self->{_db} = $local_db;
+    if ($self->{_use_local_nr}) {
+        my $fh = IO::File->new("/gscuser/bdericks/using_local_nr", "a");
+        $fh->print("local NR flag set!\n");
+
+        if (-e $local_db) {
+            $self->{_db} = $local_db;
+        }
+        else {
+            warn "Could not find local NR database, using default at " . $self->{_db} . "!";
+            my $host = hostname;
+            my $email_msg = "User: $ENV{USER}\n" .
+                            "Host: $host\n" .
+                            "Could not find local NR database at $local_db!\n";
+
+            App::Mail->mail(
+                To => 'bdericks@genome.wustl.edu',
+                From => $ENV{USER} . '@genome.wustl.edu',
+                Subject => 'Could not find local NR database!',
+                Message => $email_msg,
+            );
+        } 
+    }
+    else {
+        my $fh = IO::File->new("/gscuser/bdericks/not_using_local_nr", "a");
+        $fh->print("use_local_nr flag NOT set\n");
     }
 
     $self->SUPER::execute(@_);

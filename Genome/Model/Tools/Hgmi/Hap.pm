@@ -229,7 +229,6 @@ sub execute
         ncbi_taxonomy_id => $config->{ncbi_taxonomy_id},
         gram_stain       => $config->{gram_stain},
         locus_id         => $config->{locus_id},
-
     );
 
     if ( $self->dev )
@@ -260,6 +259,7 @@ sub execute
         locus_tag     => $config->{locus_tag},
         project_type  => $config->{project_type},
         runner_count  => $config->{runner_count},
+        use_local_nr  => $config->{use_local_nr},
     );
 
     if (exists($config->{nr_db})) {

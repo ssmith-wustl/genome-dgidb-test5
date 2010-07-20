@@ -21,85 +21,82 @@ use Data::Dumper;
 
 use Bio::SeqIO;
 
-
 UR::Object::Type->define(
-                         class_name => __PACKAGE__,
-                         is => 'Command',
-                         has => [
-                                 'organism_name'    => {is => 'String',
-							doc => "Organism's latin name" ,
-						       },
-                                 'locus_tag'        => {is => 'String',
-							doc => "Locus tag for project, containing DFT/FNL postpended",
-						       },
-                                 'project_type'     => {is => 'String',
-							doc => "Type of project" ,
-						       },
-                                 'nr_db'            => {is => 'String',
-							doc => "path to nr seq db",
-							is_optional => 1,
-							default => "/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr",
-						       },
-                                 'locus_id'         => {is => 'String',
-							doc => "locus_tag with OUT DFT/FNL postpended",
-							is_optional => 1,
-						       },
-                                 'gram_stain'       => {is => 'String',
-							doc => "gram stain for bacteria (positive or negative)",
-							is_optional => 1,
-						       },
-                                 'ncbi_taxonomy_id' => {is => 'String',
-                                                        doc => "NCBI taxonomy id",
-                                                        is_optional =>1,
-						       },
-                                 'dev'              => {is => 'Boolean',
-							doc => "use development db",
-							is_optional => 1,
-						       },
-                                 'work_directory'   => {is => 'String',
-							doc => "work directory",
-							is_optional => 1,
-						       },
-                                 'sequence_set_id'  => { is => 'Integer',
-							 doc => "sequence set id",
-							 is_optional => 1,
-						       },
-				 'runner_count'     => { is => 'Integer',
-							 doc => "runner_count",
-							 default => 10,
-							 is_optional => 1,
-						       },
-                 # do we need to add option for rfam_seed file?
-                 # possibly useless now.
-                 'script_location'  => { is => 'String',
-                                         doc => "default location for merge genes script",
-                                         is_optional => 1,
-                                         default => '/gsc/scripts/gsc/annotation/bap_merge_genes',
-                                        },
-                                 ]
-                         );
+    class_name => __PACKAGE__,
+    is => 'Command',
+    has => [
+        organism_name => {
+            is => 'String',
+			doc => 'Organism\'s latin name',
+		},
+        locus_tag => {
+            is => 'String',
+			doc => 'Locus tag for project, containing DFT/FNL postpended',
+        },
+        project_type => {
+            is => 'String',
+			doc => 'Type of project',
+		},
+    ],
+    has_optional => [
+        nr_db => {
+            is => 'String',
+			doc => 'Path to the default non-redundant sequence database, only used if local copy unavailable',
+			default => '/gscmnt/gpfstest2/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr',
+		},
+        use_local_nr => {
+            is => 'Boolean',
+            doc => 'If set, use local copies of the NR database instead of the default held in nr_db parameter',
+            default => 1,
+        },
+        locus_id => {
+            is => 'String',
+			doc => 'locus_tag with OUT DFT/FNL postpended',
+        },
+        gram_stain => {
+            is => 'String',
+			doc => 'gram stain for bacteria (positive or negative)',
+		},
+        ncbi_taxonomy_id => {
+            is => 'String',
+            doc => 'NCBI taxonomy id',
+		},
+        dev => {
+            is => 'Boolean',
+			doc => 'use development db',
+		},
+        work_directory => {
+            is => 'String',
+			doc => 'work directory',
+		},
+        sequence_set_id => { 
+            is => 'Integer',
+			doc => 'sequence set id',
+		},
+		runner_count => { 
+            is => 'Integer',
+			doc => 'Number of job runners created',
+			default => 50,
+		},
+    ],
+);
 
-sub help_brief
-{
-    "tool for running the merge step (bap_merge_genes)."
+sub help_brief {
+    return 'Runs the gene merging step of the gene prediction process';
 }
 
-sub help_synopsis
-{
+sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-Runs the merge step (bap_merge_genes).
+Runs the gene merging step of the gene prediction process.
 EOS
-
 }
 
-sub help_detail
-{
+sub help_detail {
     my $self = shift;
     return <<"EOS"
-Runs the merge step (bap_merge_genes).
+Runs the gene merging step of the gene prediction process.
 EOS
-
 }
 
 
@@ -121,7 +118,6 @@ sub execute
     return 1;
     
 }
-
 
 sub gather_details
 {
@@ -161,6 +157,10 @@ sub gather_details
     my @cwd = split(/\//x,$cwd);
 
     my ($sequence_set_name, $analysis_version_num, $hgmi_sequence_dir);
+
+    # FIXME This REALLY needs to go away... a seemlingly minor change somewhere else to directory
+    # structure could totally screw this up. There's no reason this information can't just be passed
+    # to this tool instead of trying to deduce it in this manner.
 
     # these below are dangerous, should be altered.
     if ($project_type =~ /HGMI/x )
@@ -245,6 +245,7 @@ sub gather_details
                    'runner_count' => $runner_count,
                    'debug_file' => $debug_file,
                    'nr_db' => $self->nr_db,
+                   'use_local_nr' => $self->use_local_nr,
                    #'no_mail' => 1,
                    );
 

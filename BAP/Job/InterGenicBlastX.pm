@@ -10,7 +10,7 @@ use base qw(GAP::Job);
 
 sub new {
 
-    my ($class, $job_id, $seq, $mask_ref, $db, $core_num, $expansion, $mask_char, $bit_score) = @_;
+    my ($class, $job_id, $seq, $mask_ref, $db, $core_num, $use_local_nr, $expansion, $mask_char, $bit_score) = @_;
     
     my $self = { };
     bless $self, $class;
@@ -18,45 +18,42 @@ sub new {
     unless (defined($job_id)) {
         croak 'missing job id';
     }
-
     $self->job_id($job_id);
 
     unless (defined($seq)) {
         croak 'missing seq object!';
     }
-    
     unless ($seq->isa('Bio::PrimarySeqI')) {
         croak 'seq object is not a Bio::PrimaySeqI!';
     }
-
     $self->{_seq} = $seq;
 
     unless (defined($mask_ref)) {
         croak 'missing mask ref!';
     }
-
     unless (ref($mask_ref) eq 'ARRAY') {
         croak 'mask ref is not an array ref!'
     }
-    
     $self->{_masks} = $mask_ref;
     
     unless (defined($db)) {
         croak 'missing db!';
     }
-
     $self->{_db} = $db;
 
     unless (defined($core_num)) {
-	croak 'missing number of cores to run blast in Job!';
+	    croak 'missing number of cores to run blast in Job!';
     }
-
     $self->{_core_num} = $core_num;
 
+    unless (defined $use_local_nr) {
+        $use_local_nr = 1;
+    }
+    $self->{_use_local_nr} = $use_local_nr;
+    
     unless (defined($expansion)) {
         $expansion = 300;
     }
-
     $self->{_expansion} = $expansion;
     
     unless (defined($mask_char)) {
@@ -82,10 +79,26 @@ sub execute {
     my ($self) = @_;
  
     $self->SUPER::execute(@_);
-
+    
     my $local_db = "/opt/databases/bacterial_nr/bacterial_nr";
-    if (-e $local_db) {
-        $self->{_db} = $local_db;
+    if ($self->{_use_local_nr}) {
+        if (-e $local_db) {
+            $self->{_db} = $local_db;
+        }
+        else {
+            warn "Could not find local NR database, using default at " . $self->{_db} . "!";
+            my $host = hostname;
+            my $email_msg = "User: $ENV{USER}\n" .
+                            "Host: $host\n" .
+                            "Could not find local NR database at $local_db!\n";
+
+            App::Mail->mail(
+                To => 'bdericks@genome.wustl.edu',
+                From => $ENV{USER} . '@genome.wustl.edu',
+                Subject => 'Could not find local NR database!',
+                Message => $email_msg,
+            );
+        } 
     }
 
     $self->_mask_seq();

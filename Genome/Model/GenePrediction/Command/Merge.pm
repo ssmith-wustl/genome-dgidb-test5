@@ -49,9 +49,13 @@ class Genome::Model::GenePrediction::Command::Merge {
             is  => 'String',
             doc => "path to non-redundant protein database",
         },
-
     ],
     has_optional => [
+        use_local_nr => {
+            is => 'Boolean',
+            default => 1,
+            doc => 'If set, blast jobs use a locally installed copy of the NR database',
+        },
         runner_count => {
             is  => 'Integer',
             doc => "number of runner jobs to spawn off to LSF; default 10",
@@ -268,7 +272,6 @@ sub execute
     my $tmp_usage    = $self->tmp_usage;
 
     my %rpc_args = (
-
         runner_count => $runner_count,
         app_init     => 0,
         port         => 7654 + $PID,
@@ -277,7 +280,18 @@ sub execute
         n            => "$rpc_core_num",
         R            => "'span[hosts=1] rusage[mem=4096, tmp=$tmp_usage]'",
         maxmessage   => 81920000,
+        lib_paths    => [ UR::Util::used_libs ],
     );
+
+    # Selecting blades that have NR cached locally only makes sense if we are actually 
+    # gonna use the local database. However, the leading single quote of the arguments 
+    # to R needs to be removed before prepending the select localdata bit.
+    if ($self->use_local_nr) {
+        my $r_arg = $rpc_args{'R'};
+        $r_arg = substr($r_arg, 1);  # Removing leading single quote
+        $r_arg = "'select[localdata] " . $r_arg;
+        $rpc_args{'R'} = $r_arg;
+    }
 
     if ( defined( $self->job_stdout ) ) {
         $rpc_args{'o'} = $self->job_stdout;
@@ -617,7 +631,7 @@ sub phase3
 
     my $job_source
         = BAP::JobSource::InterGenicBlastX->new( $seqstream, $featstream,
-        $self->nr_db, $self->rpc_core_number, );
+        $self->nr_db, $self->rpc_core_number, $self->use_local_nr );
 
     local $rpc_args{job_source} = $job_source;
 
@@ -1007,9 +1021,8 @@ sub blastp
     my %rpc_args = %{$self->_rpc_args};
     my ( $fasta_file, $blast_db ) = @_;
 
-    my $job_source
-        = BAP::JobSource::Phase2BlastP->new( $blast_db, $fasta_file,
-        $self->rpc_core_number, );
+    my $job_source = BAP::JobSource::Phase2BlastP->new( $blast_db, $fasta_file,
+        $self->rpc_core_number, $self->use_local_nr);
     local $rpc_args{'job_source'} = $job_source;
     my $server = PP::RPC->new(%rpc_args);
 

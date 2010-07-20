@@ -21,24 +21,26 @@ sub new {
     my $self = $class->SUPER::new(@args);
     
     my $db = shift @args;
-    
     unless (defined($db)) {
         croak 'missing db!';
     }
 
     my $fasta_file = shift @args;
-
     unless (defined($fasta_file)) {
         croak 'missing fasta file!';
     }
    
        
     my $core_num = shift @args;
-
     unless (defined($core_num)) {
         croak 'missing number of cores to run blast in JobSource!';
     }
     
+    my $use_local_nr = shift @args;
+    unless (defined $use_local_nr) {
+        $use_local_nr = 1;
+    }
+
     $self->{_evidence} = { };
     
     my $seqio = Bio::SeqIO->new(-file => $fasta_file, -format => 'Fasta');
@@ -49,6 +51,7 @@ sub new {
                                                             $db,
                                                             $self->next_job_id(),
                                                             $core_num,
+                                                            $use_local_nr,
                                                         );
     }
     
