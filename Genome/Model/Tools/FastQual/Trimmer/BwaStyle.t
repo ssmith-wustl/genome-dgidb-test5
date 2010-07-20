@@ -3,35 +3,47 @@
 use strict;
 use warnings;
 
-use Test::More;
-use File::Compare;
-
 use above 'Genome';
 
+require File::Compare;
+use Test::More;
+
+# Use
 use_ok('Genome::Model::Tools::FastQual::Trimmer::BwaStyle') or die;
 
-my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-TrimBwaStyle';
+# Create fails
+ok(
+    !Genome::Model::Tools::FastQual::Trimmer::BwaStyle->create(trim_qual_level => 'pp'),
+    'create w/ trim_qual_level => pp'
+);
+ok(
+    !Genome::Model::Tools::FastQual::Trimmer::BwaStyle->create(trim_qual_level => -1),
+    'create w/ trim_qual_level => -1'
+);
+
+# Files
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
+my $in_fastq = $dir.'/trimmer.in.fastq';
+ok(-s $in_fastq, 'in fastq');
+my $example_fastq = $dir.'/trimmer_bwa_style.example.fastq';
+ok(-s $example_fastq, 'example fastq');
 
 my $tmp_dir = File::Temp::tempdir(
     'Fastq-Trimming::BwaStyle-XXXXX', 
     DIR => '/gsc/var/cache/testsuite/running_testsuites', 
     CLEANUP => 1
 );
-my $fastq_file = "$base_dir/test.fastq";
+my $out_fastq = $tmp_dir.'/out.fastq';
 
-my $trim = Genome::Model::Tools::FastQual::Trimmer::BwaStyle->create(
-    input_files  => [$fastq_file],
-    output_files => [$tmp_dir.'/test.trimmed.fastq'],
+# Ok
+my $trimmer = Genome::Model::Tools::FastQual::Trimmer::BwaStyle->create(
+    input_files  => [ $in_fastq ],
+    output_files => [ $out_fastq ],
 );
-isa_ok($trim,'Genome::Model::Tools::FastQual::Trimmer::BwaStyle');
-
-ok($trim->execute,'execute command '. $trim->command_name);
-
-for my $file qw(test.trimmed.fastq) {
-    my $output_file = $tmp_dir."/$file";
-    my $expect_file = $base_dir."/$file";
-    ok(compare($output_file, $expect_file) == 0, "Output: $file is created as expected");
-}
+ok($trimmer, 'create trimmer');
+isa_ok($trimmer, 'Genome::Model::Tools::FastQual::Trimmer::BwaStyle');
+ok($trimmer->execute, 'execute trimmer');
+is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq trimmed as expected");
 
 done_testing();
 exit;

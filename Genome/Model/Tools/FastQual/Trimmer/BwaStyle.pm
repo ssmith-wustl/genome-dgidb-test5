@@ -5,6 +5,9 @@ use warnings;
 
 use Genome;
 
+use Data::Dumper 'Dumper';
+use Regexp::Common;
+
 class Genome::Model::Tools::FastQual::Trimmer::BwaStyle {
     is  => 'Genome::Model::Tools::FastQual::Trimmer',
     has_input => [
@@ -12,7 +15,12 @@ class Genome::Model::Tools::FastQual::Trimmer::BwaStyle {
             is  => 'Integer',
             is_optional => 1,
             default => 10,
-            doc => 'trim quality level',
+            doc => 'Trim quality level.',
+        },
+    ],
+    has => [
+        _trimmer => {
+            is => 'Genome::Model::Tools::Fastq::TrimBwaStyle',
         },
     ],
 };
@@ -27,25 +35,34 @@ sub help_detail {
 EOS
 }
 
-sub execute {
-    my $self = shift;
-        
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+    
+    my $trim_qual_level = $self->trim_qual_level;
+    unless ( $trim_qual_level =~ /^$RE{num}{int}$/ and $trim_qual_level > 0 ) {
+        $self->error_message("Trim qual level ($trim_qual_level) must be an integer.");
+        $self->delete;
+        return;
+    }
     my $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
         trim_qual_level => $self->trim_qual_level,
         qual_type => $self->type,
-    ) or return;
-
-    my $reader = $self->_open_reader
-        or return;
-    my $writer = $self->_open_writer
-        or return;
-
-    while ( my $seqs = $reader->next ) {
-        $trimmer->trim($seqs);
-        $writer->write($seqs);
+    );
+    unless ( $trimmer ) {
+        $self->error_message("Can't create BWA trimmer.");
+        $self->delete;
+        return;
     }
+    $self->_trimmer($trimmer);
 
-    return 1;
+    return $self;
+}
+
+sub _trim {
+    return $_[0]->_trimmer->trim($_[1]);
 }
 
 1;

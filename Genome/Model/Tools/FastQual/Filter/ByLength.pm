@@ -19,6 +19,12 @@ class Genome::Model::Tools::FastQual::Filter::ByLength {
     ],
 };
 
+sub help_synopsis {
+    return <<HELP
+    Filter fastq sequences by length. Considers all sequences in the set.
+HELP
+}
+
 sub create {
     my $class = shift;
 
@@ -42,19 +48,11 @@ sub create {
     return $self;
 }
 
-sub filter {
+sub _filter {
     my ($self, $seqs) = @_;
 
-    my $filter_length = $self->filter_length;
-    
-    unless ( $seqs and ref($seqs) eq 'ARRAY' and @$seqs ) {
-        Carp::confess(
-            $self->error_message("Expecting array ref of sequences, but got ".Dumper($seqs))
-        );
-    }
-
     for my $seq ( @$seqs ) {
-        unless ( length $seq->{seq} > $filter_length ) {
+        unless ( length $seq->{seq} > $self->filter_length ) {
             return;
         }
     }

@@ -9,10 +9,12 @@ use Data::Dumper 'Dumper';
 
 class Genome::Model::Tools::FastQual::Filter {
     is  => 'Genome::Model::Tools::FastQual',
+    is_abstract => 1,
 };
 
 sub help_synopsis {
     return <<HELP
+    Filter fastq sequences
 HELP
 }
 
@@ -35,6 +37,18 @@ sub execute {
     }
 
     return 1;
+}
+
+sub filter {
+    my ($self, $sequences) = @_;
+
+    unless ( $sequences and ref($sequences) eq 'ARRAY' and @$sequences ) {
+        Carp::confess(
+            $self->error_message("Expecting array ref of sequences, but got ".Dumper($sequences))
+        );
+    }
+
+    return $self->_trim($sequences);
 }
 
 1;

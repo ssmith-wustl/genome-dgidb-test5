@@ -5,6 +5,7 @@ use warnings;
 
 use above 'Genome';
 
+require File::Compare;
 use Test::More;
 
 # use
@@ -16,43 +17,27 @@ ok(!Genome::Model::Tools::FastQual::Filter::ByLength->create(), 'Create w/o filt
 ok(!Genome::Model::Tools::FastQual::Filter::ByLength->create(filter_length => 'all'), 'Create w/ filter length => all');
 ok(!Genome::Model::Tools::FastQual::Filter::ByLength->create(filter_length => 0), 'Create w/ filter length => 0');
 
-my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-FilterByLength';
-my $fastq1 = $base_dir.'/1.fastq';
-my $fastq2 = $base_dir.'/2.fastq';
+# Files
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
+my $in_fastq = $dir.'/trimmer_bwa_style.example.fastq';
+ok(-s $in_fastq, 'in fastq');
+my $example_fastq = $dir.'/filter_by_length.example.fastq';
+ok(-s $example_fastq, 'example fastq');
 
-# valid create and execution
-my $filter = Genome::Model::Tools::FastQual::Filter::ByLength->create(filter_length => 50);
-ok($filter, 'Create 50bp filter ok');
+my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
+my $out_fastq = $tmp_dir.'/out.fastq';
 
-# filter fail
-eval{ # undef
-    $filter->filter();
-};
-diag($@);
-like($@, qr/Expecting array ref of sequences/, 'failed as expected to filter w/o array ref');
-eval{ # string
-    $filter->filter('aryref');
-};
-diag($@);
-like($@, qr/Expecting array ref of sequences/, 'failed as expected to filter w/o array ref');
-eval{ # empty ary ref
-    $filter->filter([]);
-};
-diag($@);
-like($@, qr/Expecting array ref of sequences/, 'failed as expected to filter w/ empty array');
-
-my $reader = Genome::Model::Tools::Fastq::SetReader->create(
-    fastq_files => [ $fastq1, $fastq2 ],
+# Ok
+my $filter = Genome::Model::Tools::FastQual::Filter::ByLength->create(
+    input_files  => [ $in_fastq ],
+    output_files => [ $out_fastq ],
+    filter_length => 10,
 );
+ok($filter, 'create filter');
+isa_ok($filter, 'Genome::Model::Tools::FastQual::Filter::ByLength');
+ok($filter->execute, 'execute filter');
+is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq filtered as expected");
 
-my $ct = 0;
-while (my $pairfq = $reader->next ) {
-    my $filter_pairfq = $filter->filter($pairfq);
-    $ct++ if $filter_pairfq;
-}
-
-is($ct, 9, '9 pairs are filtered ok as expected');
-    
 done_testing();
 exit;
 

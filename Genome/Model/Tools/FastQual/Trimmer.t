@@ -9,6 +9,35 @@ use Test::More;
 
 use_ok('Genome::Model::Tools::FastQual::Trimmer') or die;
 
+# Class for testing
+class Genome::Model::Tools::FastQual::Trimmer::Tester {
+    is => 'Genome::Model::Tools::FastQual::Trimmer',
+};
+sub Genome::Model::Tools::FastQual::Trimmer::Tester::_trim {
+    return 1;
+}
+
+my $trimmer = Genome::Model::Tools::FastQual::Trimmer::Tester->create();
+ok($trimmer, 'create trimmer');
+can_ok($trimmer, 'execute'); # test execute?? others under trimmer already do...
+
+# Trim fail
+eval{ # undef
+    $trimmer->trim();
+};
+diag($@);
+like($@, qr/Expecting array ref of sequences/, 'failed as expected to trim w/o array ref');
+eval{ # string
+    $trimmer->trim('aryref');
+};
+diag($@);
+like($@, qr/Expecting array ref of sequences/, 'failed as expected to trim w/o array ref');
+eval{ # empty ary ref
+    $trimmer->trim([]);
+};
+diag($@);
+like($@, qr/Expecting array ref of sequences/, 'failed as expected to trim w/ empty array');
+
 done_testing();
 exit;
 
