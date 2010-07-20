@@ -60,9 +60,6 @@ sub execute {
 
     my $local_db = "/opt/databases/bacterial_nr/bacterial_nr";
     if ($self->{_use_local_nr}) {
-        my $fh = IO::File->new("/gscuser/bdericks/using_local_nr", "a");
-        $fh->print("local NR flag set!\n");
-
         if (-e $local_db) {
             $self->{_db} = $local_db;
         }
@@ -80,10 +77,6 @@ sub execute {
                 Message => $email_msg,
             );
         } 
-    }
-    else {
-        my $fh = IO::File->new("/gscuser/bdericks/not_using_local_nr", "a");
-        $fh->print("use_local_nr flag NOT set\n");
     }
 
     $self->SUPER::execute(@_);
