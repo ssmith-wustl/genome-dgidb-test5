@@ -118,7 +118,16 @@ sub execute {
 
     while (my $line = $mut_fh->getline) {
         chomp $line;
+
+        #skip header
+        next if ($line =~ /^Hugo/);
+
         my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
+
+        #fix broad chromosome name
+        if ($chr =~ /^chr/) {
+            $chr =~ s/^chr(.+$)/$1/;
+        }
 
         #using WU only for now
         #next if $center !~ /wustl/i;
@@ -283,8 +292,14 @@ sub execute {
 =cut
 
     while (my $line = $mut_fh->getline) {
+        next if ($line =~ /^Hugo/);
         chomp $line;
         my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
+
+        #fix broad chromosome name
+        if ($chr =~ /^chr/) {
+            $chr =~ s/^chr(.+$)/$1/;
+        }
         #highly-mutated genes to ignore
         next if (scalar grep { /^$gene$/ } @to_ignore);
         #using WU only for the initial test set
