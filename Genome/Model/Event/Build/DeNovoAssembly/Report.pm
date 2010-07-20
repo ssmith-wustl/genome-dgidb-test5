@@ -30,7 +30,7 @@ sub execute {
 
     # save
     unless ( $self->build->add_report($report) ) {
-        $self->error_message();
+        $self->error_message("Can't save summary report");
     }
 
     # save html
