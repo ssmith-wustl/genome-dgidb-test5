@@ -124,22 +124,22 @@ if(isAnnotation == 1){
 
 	################################ annotation #############################
 	############### segmental Duplication
-#	tmp <- name$V1[4]
-#	Read_Annotation(tmp) -> seg
+	tmp <- name$V1[4]
+	Read_Annotation(tmp) -> seg
 
-#	if(class(seg)!='try-error' && length(seg$Start)>=1 ){
-#		for(i in 1:length(seg$Start)){
-#			seg_ = c(seg_, seg$Start[i]:seg$End[i]);
-#		}
-#	}
+	if(class(seg)!='try-error' && length(seg$Start)>=1 ){
+		for(i in 1:length(seg$Start)){
+			seg_ = c(seg_, seg$Start[i]:seg$End[i]);
+		}
+	}
 
 	############### repeat mask
-#	tmp <- name$V2[4]
-#	Read_Annotation(tmp) -> rep
+	tmp <- name$V2[4]
+	Read_Annotation(tmp) -> rep
 
 	############### dgv
-#	tmp <- name$V3[4]
-#	Read_Annotation(tmp) -> dgv
+	tmp <- name$V3[4]
+	Read_Annotation(tmp) -> dgv
 
 	############### gene
 	tmp <- name$V4[4]
