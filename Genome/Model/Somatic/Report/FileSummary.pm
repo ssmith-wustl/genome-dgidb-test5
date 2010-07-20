@@ -37,9 +37,15 @@ sub _add_to_report_xml {
 sub get_file_counts {
     my $self = shift;
     my $line_counts;
+    
+    my $can_get_files = $self->build->can('somatic_workflow_input');
 
     for my $property_name ($self->files_to_report) {
-        my $file_name = $self->build->somatic_workflow_input($property_name);
+        
+        my $file_name;
+        if($can_get_files) {
+            $file_name = $self->build->somatic_workflow_input($property_name);
+        }
 
         if ($file_name) {
             if (-e $file_name) {
