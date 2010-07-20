@@ -198,6 +198,7 @@ sub get_mock_build {
             description
 
             interesting_metric_names
+            meaningful_metric_names
             set_metrics
 
             genome_size
