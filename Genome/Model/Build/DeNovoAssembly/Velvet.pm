@@ -94,6 +94,10 @@ sub set_metrics {
     }
     
     my @interesting_metric_names = $self->interesting_metric_names;
+
+    #more meaningful metric names look up
+    my $meaningful_names = $self->meaningful_metric_names;
+
     my %metrics;
     while ( my $line = $stats_fh->getline ) {
         next unless $line =~ /\:/;
@@ -108,11 +112,16 @@ sub set_metrics {
         }
         my $metric_method = join('_', split(/\s/, $metric));
         $self->$metric_method($value);
+
+	#return the more meaning fule name
+	$metric_method = (exists $meaningful_names->{$metric_method}) ? $meaningful_names->{$metric_method} : $metric_method;
+
         $metrics{$metric_method} = $value;
     }
 
     return %metrics;
 }
+
 #<>#
 
 1;
