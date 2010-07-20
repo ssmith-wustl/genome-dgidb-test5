@@ -32,12 +32,6 @@ class Genome::ProcessingProfile::DeNovoAssembly{
            doc => 'A string of parameters to pass to the assembler.',
            is_optional => 1,
        },
-       #NEWBLER SPECIFIC PARAMS
-       version_subdirectory => {
-           doc => '454 version subdirectory name',
-           valid_values => ['offInstrumentApps','mapasm454_source'],
-           is_optional => 1,
-       },
        # Read Coverage, Trimmer and Filter
        read_trimmer_name => {
            doc => 'The name of the read trimmer.',
