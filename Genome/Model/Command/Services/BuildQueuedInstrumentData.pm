@@ -304,7 +304,7 @@ sub execute {
                     value_id         => $capture_target
                 );
 
-les                unless ( defined($target_input) ) {
+                unless ( defined($target_input) ) {
                     $self->error_message(
                             'Failed to set capture target input for model '
                           . $model->id
@@ -339,14 +339,14 @@ les                unless ( defined($target_input) ) {
             
             my $assign_all =
                 Genome::Model::Command::InstrumentData::Assign->create(
-                    model_id => $model_id,
+                    model_id => $model->id,
                     all      => 1,
                 );
             
             unless ( $assign_all->execute ) {
                 $self->error_message(
                     'Failed to execute instrument-data assign --all for model '
-                    . $model_id );
+                    . $model->id );
                 push @process_errors, $self->error_message;
                 $model->delete();
                 next PP;
