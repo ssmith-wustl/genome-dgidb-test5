@@ -181,7 +181,25 @@ sub interesting_metric_names {
         'total contig bases',
     );
 }
+
+sub meaningful_metric_names {
+    return {
+	# contig
+	'total_contig_number' => 'contigs',
+	'n50_contig_length' => 'median_contig_length',
+	# supercontig
+	'total_supercontig_number' => 'supercontigs',
+	'n50_supercontig_length' => 'median_supercontig_length',
+	# reads
+	'total_input_reads' => 'reads_processed',
+	'placed_reads' => 'reads_assembled',
+	# bases
+	'total_contig_bases' => 'assembly_length',
+	};
+}
+
 #<>#
+
 
 1;
 
