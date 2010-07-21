@@ -561,9 +561,14 @@ sub execute {
     for my $model (values %possibly_build) {
         my @builds = $model->builds;
 
+        my %last_build_instdata = ( );
+
         my $last_build = $builds[-1];
-        my @last_build_inputs = $last_build->inputs;
-        my %last_build_instdata = map { $_->instrument_data_id => 1 } @last_build_inputs;
+
+        if (defined($last_build)) {
+            my @last_build_inputs = $last_build->inputs;
+            %last_build_instdata = map { $_->instrument_data_id => 1 } @last_build_inputs;
+        }
 
         my @assignments = $model->instrument_data_assignments;
         my @missing_assignments_in_last_build = grep { not $last_build_instdata{$_->instrument_data_id} } @assignments;
