@@ -471,7 +471,7 @@ sub create_directory {
         my $message = "create_directory for path $directory failed:\n";
         foreach my $err ( @$errors ) {
             my($path, $err_str) = %$err;
-            $message .= "Pathname " . $path || 'General error' . ": $err_str\n";
+            $message .= "Pathname " . $path ."\n".'General error' . ": $err_str\n";
         }
         Carp::croak($message);
     }
