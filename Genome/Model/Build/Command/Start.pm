@@ -25,7 +25,7 @@ class Genome::Model::Build::Command::Start {
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
         server_dispatch => {
-#            default_value => 'long',
+#            default_value => 'workflow',
 #            is_constant => 1,
             doc => 'dispatch specification: an LSF queue or "inline"',
         },
@@ -54,11 +54,11 @@ sub help_synopsis {
 genome model build start 1234
 
 genome model build start somename
-# default values for dispatching will be either -s long -j apipe
+# default values for dispatching will be either -s workflow -j apipe
 # or come from the processing profile if available as a param
 
-genome model build start somename -s long -j apipe
-# run the server in the long queue, and jobs in the apipe queue
+genome model build start somename -s workflow -j apipe
+# run the server in the workflow queue, and jobs in the apipe queue
 
 genome model build start somename -s inline -j inline
 # run the server inline, and the jobs inline
@@ -102,7 +102,7 @@ sub execute {
     } elsif ($model->processing_profile->can('server_dispatch') && defined $model->processing_profile->server_dispatch) {
         $server_dispatch = $model->processing_profile->server_dispatch;
     } else {
-        $server_dispatch = 'long';
+        $server_dispatch = 'workflow';
     }
 
     if (defined $self->job_dispatch) {
