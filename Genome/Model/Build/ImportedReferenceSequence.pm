@@ -149,7 +149,7 @@ sub full_consensus_path {
     unless (-e $file){
         $file = $self->data_directory . '/ALL.'. $format;
         unless (-e $file){
-            $self->error_message("Failed to find all_sequences.$format");
+            $self->error_message("Failed to find " . $self->data_directory . "/all_sequences.$format");
             return;
         }
     }
