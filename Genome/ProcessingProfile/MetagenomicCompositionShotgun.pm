@@ -97,6 +97,10 @@ sub Xlog_message{
 
 sub _execute_build {
     my ($self, $build) = @_;
+    $DB::single = 1;
+
+    # when running in the debugger always stop here
+    $DB::single = 1;
 
     my $model = $build->model;
 
@@ -228,6 +232,7 @@ sub _execute_build {
             }
         }
     }
+    #EXTRACT READS FROM IMPORTED INSTRUMENT DATA ASSIGNED TO METAGENOMIC ALIGNMENT MODELS
 
 
     # BUILD THE METAGENOMIC REFERENCE ALIGNMENT MODELS
@@ -337,12 +342,13 @@ sub run_ref_align_build {
         return;
     }
 
-    $self->status_message("...starting build");
+    $self->status_message("...starting build (w/o job group)");
     UR::Context->commit();
     #TODO update these params to use pp values or wahtevers passes in off command line
     my $rv = $sub_build->start(
         job_dispatch    => 'apipe',
-        server_dispatch => 'long'
+        server_dispatch => 'workflow',
+        job_group => undef, # this will not take up one of the 50 slots available to a user
     );
 
     if ($rv) {
@@ -415,207 +421,226 @@ sub _process_unaligned_reads {
         die "Failed to create temp directory $tmp_dir : $!";
     }
     $tmp_dir .= "/".$alignment->id;
-    unless (-d $tmp_dir or mkdir $tmp_dir) {
+
+    if (-e $tmp_dir) {
+        $self->error_message("Temp directory $tmp_dir already exists?!?!");
+        die $self->error_message;
+    }
+
+    unless (mkdir $tmp_dir) {
         die "Failed to create temp directory $tmp_dir : $!";
     }
 
-    # TODO: dust, n-remove and set the sub-dir based on the formula
-    # and use a subdir name built from that formula
-    my $subdir = 'n-remove_'.$self->n_removal_cutoff;
-    unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
-        die "Failed to create temp directory $subdir : $!";
-    }
+    my @instrument_data = eval {
 
-    if ($self->dust_unaligned_reads){
-        $subdir.='/dusted';
-    }
-
-    unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
-        die "Failed to create temp directory $subdir : $!";
-    }
-
-    # skip uploading if we've already uploaded this alignment data post-processed the same way
-    # TODO getting db ORA 00600 errors with this like matching multiple rows, going to skip
-    #my @unaligned = Genome::InstrumentData::Imported->get(
-    #    "original_data_path like" => "$tmp_dir/$subdir%",
-    #
-    #if (@unaligned) {
-    #    for my $unaligned (@unaligned) {
-    #        push @to_add2, $unaligned;
-    #    }
-    #    $self->status_message("Found previously imported instrument data under generated path \"$tmp_dir/$subdir\"");
-    #    next; #SKIP PROCESSING
-    #}else{
-
-    $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
-
-    # proceed extracting and uploading unaligned reads into $tmp_dir/$subdir....
-
-    # resolve the paths at which we will place processed instrument data
-    # we're currently using these paths to find previous unaligned reads processed the same way
-
-    my $forward_basename = "s_${lane}_1_sequence.txt";
-    my $reverse_basename = "s_${lane}_2_sequence.txt";
-    my $fragment_basename = "s_${lane}_sequence.txt";
-
-    my $forward_unaligned_data_path     = "$tmp_dir/$instrument_data_id/$forward_basename";
-    my $reverse_unaligned_data_path     = "$tmp_dir/$instrument_data_id/$reverse_basename";
-    my $fragment_unaligned_data_path    = "$tmp_dir/$instrument_data_id/$fragment_basename";
-
-    my @expected_original_paths;
-    my $expected_data_path0 = $tmp_dir . '/' . $subdir . "/$fragment_basename";
-    my $expected_data_path1 = $tmp_dir . '/' . $subdir . "/$forward_basename";
-    my $expected_data_path2 = $tmp_dir . '/' . $subdir . "/$reverse_basename";
-
-    my $expected_se_path = $expected_data_path0;
-    my $expected_pe_path = $expected_data_path1 . ',' . $expected_data_path2;
-
-    my @upload_paths;
-
-    # check for previous unaligned reads
-    $self->status_message("Checking for previously imported unaligned and post-processed reads from: $tmp_dir/$subdir");
-    my $se_instdata = Genome::InstrumentData::Imported->get(original_data_path => $expected_se_path);
-    if ($se_instdata) {
-        $self->status_message("imported instrument data already found for path $expected_se_path, skipping");
-    }
-    else {
-        push @upload_paths, $expected_se_path;
-    }
-
-    my $pe_instdata = Genome::InstrumentData::Imported->get(original_data_path => $expected_pe_path);
-    if ($pe_instdata) {
-        $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
-    }
-    else {
-        push @upload_paths, $expected_pe_path;
-    }
-
-    unless (@upload_paths) {
-        $self->status_message("skipping read processing since all data is already processed and uploaded");
-        return ($se_instdata, $pe_instdata);
-    }
-
-    for my $path (@upload_paths) {
-        $self->status_message("planning to upload for $path");
-    }
-
-    # extract
-    $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
-    my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
-        bam_file => $bam,
-        output_directory =>$tmp_dir,
-    );
-    $self->status_message("Extracting unaligned reads: " . Data::Dumper::Dumper($extract_unaligned));
-    my $rv = $extract_unaligned->execute;
-    unless ($rv){
-        $self->error_message("Couldn't extract unaligned reads from bam file $bam");
-        return;
-    }
-    my @missing = grep {! -e $_} grep { defined($_) and length($_) } ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path);
-    if (@missing){
-        $self->error_message(join(", ", @missing)." unaligned files missing after bam extraction");
-        return;
-    }
-    $self->status_message("Extracted unaligned reads from bam file(".join(", ", ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path)));
-
-    # process the fragment data
-    if (-e $fragment_unaligned_data_path) {
-        $self->status_message("processind single-end reads...");
-        my $processed_fastq = $self->_process_unaligned_fastq($fragment_unaligned_data_path, $expected_data_path0);
-        unless (-e $expected_data_path0){
-            $self->error_message("Expected data path does not exist after fastq processing: $expected_data_path0");
-            return;
+        # TODO: dust, n-remove and set the sub-dir based on the formula
+        # and use a subdir name built from that formula
+        my $subdir = 'n-remove_'.$self->n_removal_cutoff;
+        unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
+            die "Failed to create temp directory $subdir : $!";
         }
-    }
 
-    # process the paired data
-    if (-e $forward_unaligned_data_path or -e $reverse_unaligned_data_path) {
-        $self->status_message("processind paired-end reads...");
-        unless (-e $forward_unaligned_data_path and -e $reverse_unaligned_data_path) {
-            die;
+        if ($self->dust_unaligned_reads){
+            $subdir.='/dusted';
         }
-        my $processed_fastq1 = $self->_process_unaligned_fastq($forward_unaligned_data_path, $expected_data_path1);
-        my $processed_fastq2 = $self->_process_unaligned_fastq($reverse_unaligned_data_path, $expected_data_path2);
-        my @missing = grep {! -e $_} ($expected_data_path1, $expected_data_path2);
+
+        unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
+            die "Failed to create temp directory $subdir : $!";
+        }
+
+        # skip uploading if we've already uploaded this alignment data post-processed the same way
+        # TODO getting db ORA 00600 errors with this like matching multiple rows, going to skip
+        #my @unaligned = Genome::InstrumentData::Imported->get(
+        #    "original_data_path like" => "$tmp_dir/$subdir%",
+        #
+        #if (@unaligned) {
+        #    for my $unaligned (@unaligned) {
+        #        push @to_add2, $unaligned;
+        #    }
+        #    $self->status_message("Found previously imported instrument data under generated path \"$tmp_dir/$subdir\"");
+        #    next; #SKIP PROCESSING
+        #}else{
+
+        $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
+
+        # proceed extracting and uploading unaligned reads into $tmp_dir/$subdir....
+
+        # resolve the paths at which we will place processed instrument data
+        # we're currently using these paths to find previous unaligned reads processed the same way
+
+        my $forward_basename = "s_${lane}_1_sequence.txt";
+        my $reverse_basename = "s_${lane}_2_sequence.txt";
+        my $fragment_basename = "s_${lane}_sequence.txt";
+
+        my $forward_unaligned_data_path     = "$tmp_dir/$instrument_data_id/$forward_basename";
+        my $reverse_unaligned_data_path     = "$tmp_dir/$instrument_data_id/$reverse_basename";
+        my $fragment_unaligned_data_path    = "$tmp_dir/$instrument_data_id/$fragment_basename";
+
+        my @expected_original_paths;
+        my $expected_data_path0 = $tmp_dir . '/' . $subdir . "/$fragment_basename";
+        my $expected_data_path1 = $tmp_dir . '/' . $subdir . "/$forward_basename";
+        my $expected_data_path2 = $tmp_dir . '/' . $subdir . "/$reverse_basename";
+
+        my $expected_se_path = $expected_data_path0;
+        my $expected_pe_path = $expected_data_path1 . ',' . $expected_data_path2;
+
+        my @upload_paths;
+
+        # check for previous unaligned reads
+        $self->status_message("Checking for previously imported unaligned and post-processed reads from: $tmp_dir/$subdir");
+        my $se_instdata = Genome::InstrumentData::Imported->get(original_data_path => $expected_se_path);
+        if ($se_instdata) {
+            $self->status_message("imported instrument data already found for path $expected_se_path, skipping");
+        }
+        else {
+            push @upload_paths, $expected_se_path;
+        }
+
+        my $pe_instdata = Genome::InstrumentData::Imported->get(original_data_path => $expected_pe_path);
+        if ($pe_instdata) {
+            $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
+        }
+        else {
+            push @upload_paths, $expected_pe_path;
+        }
+
+        unless (@upload_paths) {
+            $self->status_message("skipping read processing since all data is already processed and uploaded");
+            return ($se_instdata, $pe_instdata);
+        }
+
+        for my $path (@upload_paths) {
+            $self->status_message("planning to upload for $path");
+        }
+
+        # extract
+        $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
+        my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
+            bam_file => $bam,
+            output_directory =>$tmp_dir,
+        );
+        $self->status_message("Extracting unaligned reads: " . Data::Dumper::Dumper($extract_unaligned));
+        my $rv = $extract_unaligned->execute;
+        unless ($rv){
+            $self->error_message("Couldn't extract unaligned reads from bam file $bam");
+            die $self->error_message; 
+        }
+        my @missing = grep {! -e $_} grep { defined($_) and length($_) } ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path);
         if (@missing){
-            $self->error_message("Expected data paths do not exist after fastq processing: ".join(", ", @missing));
-            Carp::confess($self->error_message);
+            $self->error_message(join(", ", @missing)." unaligned files missing after bam extraction");
+            die $self->error_message;
         }
-    }
+        $self->status_message("Extracted unaligned reads from bam file(".join(", ", ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path)));
 
-    $DB::single = 1;
-
-    # upload
-    $self->status_message("uploading new instrument data from the post-processed unaligned reads...");    
-    my @properties_from_prior = qw/
-    run_name 
-    subset_name 
-    sequencing_platform 
-    median_insert_size 
-    sd_above_insert_size
-    library_name
-    sample_name
-    /;
-    my @errors;
-    my %properties_from_prior;
-    for my $property_name (@properties_from_prior) {
-        my $value = $instrument_data->$property_name;
-        no warnings;
-        $self->status_message("Value for $property_name is $value");
-        $properties_from_prior{$property_name} = $value;
-    }
-
-    my @instrument_data;
-    for my $original_data_path (@upload_paths) {
-        if ($original_data_path =~ /,/){
-            $properties_from_prior{is_paired_end} = 1;
-        }else{
-            $properties_from_prior{is_paired_end} = 0;
+        # process the fragment data
+        if (-e $fragment_unaligned_data_path) {
+            $self->status_message("processind single-end reads...");
+            my $processed_fastq = $self->_process_unaligned_fastq($fragment_unaligned_data_path, $expected_data_path0);
+            unless (-e $expected_data_path0){
+                $self->error_message("Expected data path does not exist after fastq processing: $expected_data_path0");
+                die $self->error_message;
+            }
         }
-        #my $previous = Genome::InstrumentData::Imported->get(
-        #    original_data_path => $original_data_path,
-        #);
-        my $previous;
-        if ($previous){
-            $self->error_message("imported instrument data already found for path $original_data_path????");
-            Carp::confess($self->error_message);
-            #push @instrument_data, $previous;
-            #next;
+
+        # process the paired data
+        if (-e $forward_unaligned_data_path or -e $reverse_unaligned_data_path) {
+            $self->status_message("processind paired-end reads...");
+            unless (-e $forward_unaligned_data_path and -e $reverse_unaligned_data_path) {
+                die "Missing forward and reverse unaligned data?";
+            }
+            my $processed_fastq1 = $self->_process_unaligned_fastq($forward_unaligned_data_path, $expected_data_path1);
+            my $processed_fastq2 = $self->_process_unaligned_fastq($reverse_unaligned_data_path, $expected_data_path2);
+            my @missing = grep {! -e $_} ($expected_data_path1, $expected_data_path2);
+            if (@missing){
+                $self->error_message("Expected data paths do not exist after fastq processing: ".join(", ", @missing));
+                Carp::confess($self->error_message);
+            }
         }
-        my %params = (
-            %properties_from_prior,
-            source_data_files => $original_data_path,
-        );
-        $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
 
-
-        my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
-        unless ($command) {
-            $self->error_message( "Couldn't create command to import unaligned fastq instrument data!");
-        };
-        my $result = $command->execute();
-        unless ($result) {
-            $self->error_message( "Error importing data from $original_data_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
-            return;
-        }            
-        $self->status_message("committing newly created imported instrument data");
         $DB::single = 1;
-        $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
-        UR::Context->commit();
 
-        my $instrument_data = Genome::InstrumentData::Imported->get(
-            original_data_path => $original_data_path
-        );
-        unless ($instrument_data) {
-            $self->error_message( "Failed to find new instrument data $original_data_path!");
-            return;
-        }
-        if ($instrument_data->__changes__) {
-            die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
+        # upload
+        $self->status_message("uploading new instrument data from the post-processed unaligned reads...");    
+        my @properties_from_prior = qw/
+            run_name 
+            subset_name 
+            sequencing_platform 
+            median_insert_size 
+            sd_above_insert_size
+            library_name
+            sample_name
+        /;
+        my @errors;
+        my %properties_from_prior;
+        for my $property_name (@properties_from_prior) {
+            my $value = $instrument_data->$property_name;
+            no warnings;
+            $self->status_message("Value for $property_name is $value");
+            $properties_from_prior{$property_name} = $value;
         }
 
-        push @instrument_data, $instrument_data;
-    }        
+        my @instrument_data;
+        for my $original_data_path (@upload_paths) {
+            if ($original_data_path =~ /,/){
+                $properties_from_prior{is_paired_end} = 1;
+            }else{
+                $properties_from_prior{is_paired_end} = 0;
+            }
+            #my $previous = Genome::InstrumentData::Imported->get(
+            #    original_data_path => $original_data_path,
+            #);
+            my $previous;
+            if ($previous){
+                $self->error_message("imported instrument data already found for path $original_data_path????");
+                Carp::confess($self->error_message);
+                #push @instrument_data, $previous;
+                #next;
+            }
+            my %params = (
+                %properties_from_prior,
+                source_data_files => $original_data_path,
+                import_format => 'illumina fastq',
+            );
+            $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
+
+
+            my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
+            unless ($command) {
+                $self->error_message( "Couldn't create command to import unaligned fastq instrument data!");
+            };
+            my $result = $command->execute();
+            unless ($result) {
+                $self->error_message( "Error importing data from $original_data_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
+                die $self->error_message; 
+            }            
+            $self->status_message("committing newly created imported instrument data");
+            $DB::single = 1;
+            $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
+            UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
+
+            my $instrument_data = Genome::InstrumentData::Imported->get(
+                original_data_path => $original_data_path
+            );
+            unless ($instrument_data) {
+                $self->error_message( "Failed to find new instrument data $original_data_path!");
+                die $self->error_message; 
+            }
+            if ($instrument_data->__changes__) {
+                die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
+            }
+
+            push @instrument_data, $instrument_data;
+        }        
+        return @instrument_data;
+    };
+
+    # TODO: add directory removal to Genome::Utility::FileSystem
+    if ($@) {
+        $self->error_message("Error processing unaligned reads! $@");
+        system "/bin/rm -rf '$tmp_dir'";
+        die $self->error_message;
+    }
+    system "/bin/rm -rf '$tmp_dir'";
 
     return @instrument_data;
 }
