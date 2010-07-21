@@ -567,7 +567,8 @@ sub execute {
 
         if (defined($last_build)) {
             my @last_build_inputs = $last_build->inputs;
-            %last_build_instdata = map { $_->instrument_data => 1 } @last_build_inputs;
+            @last_build_inputs   = grep { $_->name eq 'instrument_data' } @last_build_inputs;
+            %last_build_instdata = map  { $_->value_id => 1 }             @last_build_inputs;
         }
 
         my @assignments = $model->instrument_data_assignments;
