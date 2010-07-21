@@ -6,6 +6,7 @@ use warnings;
 use Test::More tests => 49;
 
 use Bio::SeqIO;
+use above "BAP";
 
 BEGIN {
     use_ok('GAP::JobSource::Composite');
@@ -67,11 +68,13 @@ my $intergenic_blastx_job_source =
                                                                -file => 'data/BACSTEFNL_Contig26.1.gff',
                                                            ),
                                           $blast_db,
+                                          1,
                                       );
 
 my $phase2_blastp_job_source = BAP::JobSource::Phase2BlastP->new(
                                                                  $blast_db,
                                                                  'data/BACSTEFNL_Contig694.pep.fasta',
+                                                                1, 
                                                              );
 
 isa_ok($intergenic_blastx_job_source, 'BAP::JobSource::InterGenicBlastX');

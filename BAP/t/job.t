@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use above "BAP";
 
 use Test::More tests => 122;
 
@@ -70,7 +71,9 @@ my @jobs = ( );
         push @features, $feature;
     }
     
-    my $blast_db = '/gscmnt/temp110/analysis/blast_nr/nr';
+    #my $blast_db = '/gscmnt/temp110/analysis/blast_nr/nr';
+    #my $blast_db = '/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr';
+    my $blast_db = '/gscmnt/gpfstest2/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr';
     
     push @jobs, BAP::Job::InterGenicBlastX->new(
                                                 2112,
