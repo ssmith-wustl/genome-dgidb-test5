@@ -1,4 +1,0 @@
-$Genome::Model::Tools::Assembly::AutoJoin::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

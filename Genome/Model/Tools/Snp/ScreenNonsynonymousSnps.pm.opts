@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Snp::ScreenNonsynonymousSnps::OPTS_SPEC = [
-          'list=s',
-          undef,
-          'transcript=s',
-          undef,
-          'help!',
-          undef
-        ];

@@ -1,8 +1,0 @@
-$Genome::Model::Tools::RepeatMasker::MergeOutput::OPTS_SPEC = [
-          'input-files=s',
-          undef,
-          'output-file=s',
-          undef,
-          'help!',
-          undef
-        ];

@@ -1,8 +1,0 @@
-$Genome::Model::Tools::RepeatMasker::CompareTables::OPTS_SPEC = [
-          'input-tables=s',
-          undef,
-          'output-table=s',
-          undef,
-          'help!',
-          undef
-        ];

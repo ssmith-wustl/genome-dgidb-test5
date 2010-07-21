@@ -1,8 +1,0 @@
-$Genome::Model::Command::Services::OPTS_SPEC = [
-          '>build-queued-instrument-data',
-          \'Genome::Model::Command::Services::BuildQueuedInstrumentData',
-          '>postprocess-cron',
-          \'Genome::Model::Command::Services::PostprocessCron',
-          'help!',
-          undef
-        ];

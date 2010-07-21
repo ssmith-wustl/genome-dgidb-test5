@@ -1,6 +1,0 @@
-$Genome::Sample::Command::OPTS_SPEC = [
-          '>list',
-          \'Genome::Sample::Command::List',
-          'help!',
-          undef
-        ];

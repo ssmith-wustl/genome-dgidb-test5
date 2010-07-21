@@ -1,6 +1,0 @@
-$Genome::Library::Command::OPTS_SPEC = [
-          '>list',
-          \'Genome::Library::Command::List',
-          'help!',
-          undef
-        ];

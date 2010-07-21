@@ -1,4 +1,0 @@
-$Genome::Model::Command::Write::Ace::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

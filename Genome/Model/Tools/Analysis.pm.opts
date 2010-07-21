@@ -1,6 +1,0 @@
-$Genome::Model::Tools::Analysis::OPTS_SPEC = [
-          '>limit-snps',
-          \'Genome::Model::Tools::Analysis::LimitSnps',
-          'help!',
-          undef
-        ];

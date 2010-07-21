@@ -1,8 +1,0 @@
-$Genome::InstrumentData::Command::Summary1::OPTS_SPEC = [
-          'sample-pattern=s',
-          undef,
-          'date-of-run=s',
-          undef,
-          'help!',
-          undef
-        ];

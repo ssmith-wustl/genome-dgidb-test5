@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Annotate::Adaptor::SamPileup::OPTS_SPEC = [
-          'output-file=s',
-          undef,
-          'pileup-file=s',
-          undef,
-          'help!',
-          undef
-        ];

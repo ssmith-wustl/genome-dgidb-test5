@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Analysis::454::LoadReads::OPTS_SPEC = [
-          'output-dir=s',
-          undef,
-          'samples-file=s',
-          undef,
-          'help!',
-          undef
-        ];

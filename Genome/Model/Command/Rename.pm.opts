@@ -1,8 +1,0 @@
-$Genome::Model::Command::Rename::OPTS_SPEC = [
-  'model-id=s',
-  undef,
-  'new-name=s',
-  undef,
-  'help!',
-  undef
-];

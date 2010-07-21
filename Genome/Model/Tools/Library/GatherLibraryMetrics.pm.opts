@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Library::GatherLibraryMetrics::OPTS_SPEC = [
-          'model-id=s',
-          undef,
-          'all-events=s',
-          undef,
-          'help!',
-          undef
-        ];

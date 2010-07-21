@@ -1,8 +1,0 @@
-$Genome::Model::Command::Report::OPTS_SPEC = [
-          '>list',
-          \'Genome::Model::Command::Report::List',
-          '>summary-of-builds',
-          \'Genome::Model::Command::Report::SummaryOfBuilds',
-          'help!',
-          undef
-        ];

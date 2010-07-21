@@ -1,8 +1,0 @@
-$Genome::Model::Command::InstrumentData::OPTS_SPEC = [
-  '>assign',
-  \'Genome::Model::Command::InstrumentData::Assign',
-  '>list',
-  \'Genome::Model::Command::InstrumentData::List',
-  'help!',
-  undef
-];

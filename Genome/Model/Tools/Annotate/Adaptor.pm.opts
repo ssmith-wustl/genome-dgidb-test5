@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Annotate::Adaptor::OPTS_SPEC = [
-          '>sam-pileup',
-          \'Genome::Model::Tools::Annotate::Adaptor::SamPileup',
-          '>sniper',
-          \'Genome::Model::Tools::Annotate::Adaptor::Sniper',
-          'help!',
-          undef
-        ];

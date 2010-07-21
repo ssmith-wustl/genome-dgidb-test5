@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Snp::Sort::OPTS_SPEC = [
-          'snp-file=s',
-          undef,
-          'output-file=s',
-          undef,
-          'help!',
-          undef
-        ];

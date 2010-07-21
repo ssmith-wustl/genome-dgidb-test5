@@ -1,4 +1,0 @@
-$Genome::Model::Tools::WuBlast::Xdformat::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

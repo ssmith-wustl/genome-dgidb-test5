@@ -1,6 +1,0 @@
-$Genome::ProcessingProfile::Command::Remove::OPTS_SPEC = [
-          'processing-profile-id=s',
-          undef,
-          'help!',
-          undef
-        ];

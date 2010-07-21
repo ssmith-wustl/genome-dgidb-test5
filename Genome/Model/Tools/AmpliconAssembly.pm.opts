@@ -1,4 +1,0 @@
-$Genome::Model::Tools::AmpliconAssembly::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

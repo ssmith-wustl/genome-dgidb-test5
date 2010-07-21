@@ -1,4 +1,0 @@
-$Genome::Model::Tools::AutoBuild::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

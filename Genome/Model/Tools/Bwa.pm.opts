@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Bwa::OPTS_SPEC = [
-          '>align-step',
-          \'Genome::Model::Tools::Bwa::AlignStep',
-          '>unaligned-data-to-fastq',
-          \'Genome::Model::Tools::Bwa::UnalignedDataToFastq',
-          'help!',
-          undef
-        ];

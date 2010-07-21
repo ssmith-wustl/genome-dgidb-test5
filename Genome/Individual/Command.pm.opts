@@ -1,6 +1,0 @@
-$Genome::Individual::Command::OPTS_SPEC = [
-          '>list',
-          \'Genome::Individual::Command::List',
-          'help!',
-          undef
-        ];

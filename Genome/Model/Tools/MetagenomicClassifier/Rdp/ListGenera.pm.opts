@@ -1,8 +1,0 @@
-$Genome::Model::Tools::MetagenomicClassifier::Rdp::ListGenera::OPTS_SPEC = [
-          'training-path=s',
-          undef,
-          'training-set=s',
-          undef,
-          'help!',
-          undef
-        ];

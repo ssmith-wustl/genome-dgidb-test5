@@ -1,6 +1,0 @@
-$Genome::Disk::Group::Command::OPTS_SPEC = [
-  '>list',
-  \'Genome::Disk::Group::Command::List',
-  'help!',
-  undef
-];

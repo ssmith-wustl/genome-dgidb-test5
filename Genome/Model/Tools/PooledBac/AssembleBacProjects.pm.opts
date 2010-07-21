@@ -1,6 +1,0 @@
-$Genome::Model::Tools::PooledBac::AssembleBacProjects::OPTS_SPEC = [
-          'project-dir=s',
-          undef,
-          'help!',
-          undef
-        ];

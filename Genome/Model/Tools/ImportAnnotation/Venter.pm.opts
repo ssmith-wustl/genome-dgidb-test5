@@ -1,8 +1,0 @@
-$Genome::Model::Tools::ImportAnnotation::Venter::OPTS_SPEC = [
-          'files=s@',
-          'files',
-          'outputdir=s',
-          undef,
-          'help!',
-          undef
-        ];

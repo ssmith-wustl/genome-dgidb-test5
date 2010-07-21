@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Velvet::ToReadFasta::OPTS_SPEC = [
-          'ace-file=s',
-          undef,
-          'out-file=s',
-          undef,
-          'help!',
-          undef
-        ];

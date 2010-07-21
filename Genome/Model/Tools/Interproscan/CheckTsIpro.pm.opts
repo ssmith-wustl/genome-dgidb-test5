@@ -1,6 +1,0 @@
-$Genome::Model::Tools::Interproscan::CheckTsIpro::OPTS_SPEC = [
-          'list=s',
-          undef,
-          'help!',
-          undef
-        ];

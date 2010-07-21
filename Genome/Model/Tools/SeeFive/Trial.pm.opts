@@ -1,6 +1,0 @@
-$Genome::Model::Tools::SeeFive::Trial::OPTS_SPEC = [
-          'n=s',
-          undef,
-          'help!',
-          undef
-        ];

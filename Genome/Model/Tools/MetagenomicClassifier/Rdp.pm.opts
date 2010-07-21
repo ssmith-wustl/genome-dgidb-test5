@@ -1,6 +1,0 @@
-$Genome::Model::Tools::MetagenomicClassifier::Rdp::OPTS_SPEC = [
-          '>list-genera',
-          \'Genome::Model::Tools::MetagenomicClassifier::Rdp::ListGenera',
-          'help!',
-          undef
-        ];

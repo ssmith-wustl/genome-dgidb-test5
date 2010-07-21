@@ -1,8 +1,0 @@
-$Genome::Model::Tools::ManualReview::DeleteVariantReviewList::OPTS_SPEC = [
-          'db-list-id=s',
-          undef,
-          'db-list-name=s',
-          undef,
-          'help!',
-          undef
-        ];

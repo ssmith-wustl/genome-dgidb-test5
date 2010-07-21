@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Analysis::Sammy::OPTS_SPEC = [
-          '>call-somatic',
-          \'Genome::Model::Tools::Analysis::Sammy::CallSomatic',
-          '>compile-somatic',
-          \'Genome::Model::Tools::Analysis::Sammy::CompileSomatic',
-          'help!',
-          undef
-        ];

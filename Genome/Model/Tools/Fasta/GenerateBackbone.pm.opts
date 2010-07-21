@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Fasta::GenerateBackbone::OPTS_SPEC = [
-          'fasta-file=s',
-          undef,
-          'output-file=s',
-          undef,
-          'help!',
-          undef
-        ];

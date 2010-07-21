@@ -1,8 +1,0 @@
-$Genome::Model::Tools::BioDbFasta::Build::OPTS_SPEC = [
-          'dir=s',
-          undef,
-          'rebuild!',
-          undef,
-          'help!',
-          undef
-        ];

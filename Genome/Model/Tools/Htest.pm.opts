@@ -1,6 +1,0 @@
-$Genome::Model::Tools::Htest::OPTS_SPEC = [
-          '>diff',
-          \'Genome::Model::Tools::Htest::Diff',
-          'help!',
-          undef
-        ];

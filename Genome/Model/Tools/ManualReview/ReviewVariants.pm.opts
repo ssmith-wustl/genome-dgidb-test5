@@ -1,6 +1,0 @@
-$Genome::Model::Tools::ManualReview::ReviewVariants::OPTS_SPEC = [
-          'project-file=s',
-          undef,
-          'help!',
-          undef
-        ];

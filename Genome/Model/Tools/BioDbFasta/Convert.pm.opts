@@ -1,8 +1,0 @@
-$Genome::Model::Tools::BioDbFasta::Convert::OPTS_SPEC = [
-          'infile=s',
-          undef,
-          'outfile=s',
-          undef,
-          'help!',
-          undef
-        ];

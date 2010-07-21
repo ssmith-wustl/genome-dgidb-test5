@@ -1,8 +1,0 @@
-$Genome::Model::Command::Copy::OPTS_SPEC = [
-          'genome-model-id=s',
-          undef,
-          'new-model-name=s',
-          undef,
-          'help!',
-          undef
-        ];

@@ -1,6 +1,0 @@
-$Genome::Model::Tools::Library::GatherBuildMetrics::OPTS_SPEC = [
-          'build-id=s',
-          undef,
-          'help!',
-          undef
-        ];

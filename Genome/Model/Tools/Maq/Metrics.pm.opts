@@ -1,4 +1,0 @@
-$Genome::Model::Tools::Maq::Metrics::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

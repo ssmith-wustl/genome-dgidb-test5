@@ -1,8 +1,0 @@
-$Genome::Model::Tools::SeeFive::OPTS_SPEC = [
-          '>rule',
-          \'Genome::Model::Tools::SeeFive::Rule',
-          '>trial',
-          \'Genome::Model::Tools::SeeFive::Trial',
-          'help!',
-          undef
-        ];

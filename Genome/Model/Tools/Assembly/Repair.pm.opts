@@ -1,4 +1,0 @@
-$Genome::Model::Tools::Assembly::Repair::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

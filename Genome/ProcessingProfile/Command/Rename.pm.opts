@@ -1,8 +1,0 @@
-$Genome::ProcessingProfile::Command::Rename::OPTS_SPEC = [
-          'new-name=s',
-          undef,
-          'processing-profile-id=s',
-          undef,
-          'help!',
-          undef
-        ];

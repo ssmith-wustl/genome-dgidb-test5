@@ -1,4 +1,0 @@
-$Genome::Model::Tools::Fasta::To::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

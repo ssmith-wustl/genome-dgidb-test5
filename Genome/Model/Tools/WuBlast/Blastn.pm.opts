@@ -1,4 +1,0 @@
-$Genome::Model::Tools::WuBlast::Blastn::OPTS_SPEC = [
-  'help!',
-  undef
-];

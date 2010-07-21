@@ -1,6 +1,0 @@
-$Genome::Model::Tools::Library::CreateLibraryMapFiles::OPTS_SPEC = [
-          'model-id=s',
-          undef,
-          'help!',
-          undef
-        ];

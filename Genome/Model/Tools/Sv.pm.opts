@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Sv::OPTS_SPEC = [
-          '>peruse',
-          \'Genome::Model::Tools::Sv::Peruse',
-          '>yenta',
-          \'Genome::Model::Tools::Sv::Yenta',
-          'help!',
-          undef
-        ];

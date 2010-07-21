@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Consed::ExternalNavigation::OPTS_SPEC = [
-          'acenav=s',
-          undef,
-          'break=s',
-          undef,
-          'help!',
-          undef
-        ];

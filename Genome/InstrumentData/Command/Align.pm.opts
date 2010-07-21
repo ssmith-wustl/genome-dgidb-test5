@@ -1,4 +1,0 @@
-$Genome::InstrumentData::Command::Align::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

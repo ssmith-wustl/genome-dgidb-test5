@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Db::ImportAlleleFreq::OPTS_SPEC = [
-          'dir=s',
-          undef,
-          'group=s',
-          undef,
-          'help!',
-          undef
-        ];

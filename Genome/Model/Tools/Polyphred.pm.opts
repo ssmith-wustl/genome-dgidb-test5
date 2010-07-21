@@ -1,6 +1,0 @@
-$Genome::Model::Tools::Polyphred::OPTS_SPEC = [
-          '>to-tsv',
-          \'Genome::Model::Tools::Polyphred::ToTsv',
-          'help!',
-          undef
-        ];

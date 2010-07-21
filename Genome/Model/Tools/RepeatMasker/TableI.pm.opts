@@ -1,6 +1,0 @@
-$Genome::Model::Tools::RepeatMasker::TableI::OPTS_SPEC = [
-          'output-table=s',
-          undef,
-          'help!',
-          undef
-        ];

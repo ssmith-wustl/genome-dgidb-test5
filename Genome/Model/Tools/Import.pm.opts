@@ -1,6 +1,0 @@
-$Genome::Model::Tools::Import::OPTS_SPEC = [
-          '>solexa',
-          \'Genome::Model::Tools::Import::Solexa',
-          'help!',
-          undef
-        ];

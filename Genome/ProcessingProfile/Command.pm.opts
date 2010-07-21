@@ -1,8 +1,0 @@
-$Genome::ProcessingProfile::Command::OPTS_SPEC = [
-          '>list',
-          \'Genome::ProcessingProfile::Command::List',
-          '>report',
-          \'Genome::ProcessingProfile::Command::Report',
-          'help!',
-          undef
-        ];

@@ -1,6 +1,0 @@
-$Genome::Model::Command::Export::OPTS_SPEC = [
-  '>review-directory',
-  \'Genome::Model::Command::Export::ReviewDirectory',
-  'help!',
-  undef
-];

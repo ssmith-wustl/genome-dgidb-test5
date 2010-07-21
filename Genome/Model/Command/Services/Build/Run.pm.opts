@@ -1,8 +1,0 @@
-$Genome::Model::Command::Services::Build::Run::OPTS_SPEC = [
-          'model-id=s',
-          undef,
-          'build-id=s',
-          undef,
-          'help!',
-          undef
-        ];

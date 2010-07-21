@@ -1,4 +1,0 @@
-$Genome::Model::Command::Define::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

@@ -1,8 +1,0 @@
-$Genome::Model::Tools::Blat::MergeAmplicons::OPTS_SPEC = [
-          'amplicon-files=s@',
-          'amplicon-files',
-          'output-file=s',
-          undef,
-          'help!',
-          undef
-        ];

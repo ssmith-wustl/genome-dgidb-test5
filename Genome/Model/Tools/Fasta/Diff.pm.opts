@@ -1,4 +1,0 @@
-$Genome::Model::Tools::Fasta::Diff::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

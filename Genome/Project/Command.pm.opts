@@ -1,6 +1,0 @@
-$Genome::Project::Command::OPTS_SPEC = [
-          '>list',
-          \'Genome::Project::Command::List',
-          'help!',
-          undef
-        ];

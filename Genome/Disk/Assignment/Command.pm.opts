@@ -1,6 +1,0 @@
-$Genome::Disk::Assignment::Command::OPTS_SPEC = [
-  '>list',
-  \'Genome::Disk::Assignment::Command::List',
-  'help!',
-  undef
-];
