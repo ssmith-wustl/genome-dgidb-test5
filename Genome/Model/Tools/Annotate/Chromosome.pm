@@ -55,10 +55,14 @@ sub execute {
     my %gene_strings;
     while (my $t = $ti->next) {
         my $gene = $t->gene;
-        unless ($gene_strings{$gene->gene_id}) {
-            $gene_strings{$gene->gene_id} = $gene->$format_string;
+        unless (defined($gene_strings{$gene->gene_id})) {
             my $gene_string = $gene->$format_string;
-            print $fh $gene_string;
+            if ($gene_string) {
+                $gene_strings{$gene->gene_id} = $gene_string;
+                print $fh $gene_string;
+            } else {
+                $gene_strings{$gene->gene_id} = 0;
+            }
         }
         print $fh $t->$format_string;
         my @sub_structure = grep {$_->structure_type ne 'flank'} $t->ordered_sub_structures;
