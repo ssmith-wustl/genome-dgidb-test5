@@ -10,6 +10,7 @@ use Carp;
 use DateTime;
 use List::MoreUtils qw/ uniq /;
 use IPC::Run qw/ run /;
+use File::Slurp;
 use Cwd;
 require "pwd.pl";
 use English;
@@ -18,6 +19,7 @@ use BAP::DB::Organism;
 use BAP::DB::SequenceSet;
 use BAP::DB::Sequence;
 use Data::Dumper;
+use YAML qw( DumpFile LoadFile );
 
 use Bio::SeqIO;
 
@@ -114,6 +116,9 @@ sub execute
         # do we need to croak or exit here? or just a return 0?
         return 0;
     }
+
+    # executed successfully
+    $self->validate(\%params);
 
     return 1;
     
@@ -270,6 +275,64 @@ sub _cwd {
 
     return $cwd;
     
+}
+
+sub validate {
+    my $self = shift;
+    my $params = shift;
+    my %valid = ();
+    %valid = $self->cmdline_to_hash();
+    $valid{params} = %$params;
+    my $cwd = getcwd();
+    if(-f "$cwd/merge_valid") {
+        unlink("$cwd/merge_valid");
+    }
+    #DumpFile("$cwd/merge_valid", $params);
+    DumpFile("$cwd/merge_valid", \%valid);
+    #write_file("$cwd/merge_valid","merge successful");
+    return 1;
+}
+
+
+sub is_valid {
+    my $self = shift;
+    use Data::Compare;
+    my $cwd = getcwd();
+    if (-f "$cwd/merge_valid" ) {
+        my %params = $self->gather_details();
+        my %cmdline = $self->cmdline_to_hash();
+        my %to_compare = %cmdline;
+        $to_compare{params} = %params;
+        my %validation = %{LoadFile("$cwd/merge_valid")};
+        print Dumper(\%to_compare,\%validation),"\n";
+        if(Compare(\%to_compare,\%validation)) {
+            $self->status_message("previous merge run successful");
+            return 1;
+        }
+        else
+        {
+            $self->status_message("$cwd/merge_valid exists, but doesn't match params");
+            return 0;
+        }
+
+    }
+    return 0;
+}
+
+sub cmdline_to_hash {
+    my $self = shift;
+    my %cmdline = ( );
+    $cmdline{locus_tag} = $self->locus_tag;
+    $cmdline{organism_name} = $self->organism_name;
+    $cmdline{project_type} = $self->project_type;
+    $cmdline{dev} = $self->dev;
+    $cmdline{gram_stain} = $self->gram_stain;
+    $cmdline{locus_id} = $self->locus_id;
+    $cmdline{ncbi_taxonomy_id} = $self->ncbi_taxonomy_id;
+    $cmdline{nr_db} = $self->nr_db;
+    $cmdline{runner_count} = $self->runner_count;
+    $cmdline{sequence_set_id} = $self->sequence_set_id;
+    return %cmdline;
 }
 
 1;

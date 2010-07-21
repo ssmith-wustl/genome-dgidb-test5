@@ -126,7 +126,7 @@ sub execute
     }
 
     # this is where we might drop items for validity
-    my $base_path - $config->{path};
+    #my $base_path = $config->{path};
 
     # dir-builder
     my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
@@ -245,9 +245,18 @@ sub execute
 
     if ($predict)
     {
-        $predict->execute()
-            or croak
-            "can't run bap_predict_genes.pl step.... from Hap.pm\n\n";
+        # check if there is already a valid run.
+        unless($predict->is_valid()) {
+            $self->status_message("running predict step");
+            $predict->execute()
+                or croak
+                "can't run bap_predict_genes.pl step.... from Hap.pm\n\n";
+        }
+        else
+        {
+
+            $self->status_message("there is a pre-existing valid run for prediction, continuing");
+        }
     }
     else
     {
@@ -268,11 +277,11 @@ sub execute
     
     my $merge = Genome::Model::Tools::Hgmi::Merge->create(%merge_params);
 
-    if (exists($config->{merge_script_location}) && (-x $config->{merge_script_location}) )
-    {
-        $merge->script_location($config->{merge_script_location});
-        $self->status_message("using merge script ". $config->{merge_script_location});
-    }
+#    if (exists($config->{merge_script_location}) && (-x $config->{merge_script_location}) )
+#    {
+#        $merge->script_location($config->{merge_script_location});
+#        $self->status_message("using merge script ". $config->{merge_script_location});
+#    }
 
 
     if ( $self->dev )
@@ -282,8 +291,16 @@ sub execute
 
     if ($merge)
     {
-        $merge->execute()
-            or croak "can't run bap_merge_genes.pl step... from Hap.pm\n\n";
+        unless($merge->is_valid() ) {
+            $self->status_message("running merge step");
+            $merge->execute()
+                or croak "can't run bap_merge_genes.pl step... from Hap.pm\n\n";
+        }
+        else
+        {
+
+            $self->status_message("there is a pre-existing valid run for merge, continuing");
+        }
     }
     else
     {
@@ -425,11 +442,15 @@ sub execute
     # acedb
     # file seems to land in $config->{path}/$config->{orgname_dir}/$config->{assembly_name}/$config->{assembly_version}/Genbank_submission/Version_1.0/Annotated_submission/
     my $delete_rrna = $config->{path}."/".$config->{orgname_dir}."/".$config->{assembly_name}."/".$config->{assembly_version}."/Genbank_submission/Version_1.0/Annotated_submission/delete.rrnahits.ace";
+    $self->status_message("dead genes from rrna screen $delete_rrna");
     if( -e $delete_rrna )
     {
         my $delete_rrna_dest = $config->{path}."/Acedb/".$config->{acedb_version}."/ace_files/".$self->locus_tag;
         #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
-        system("cp $delete_rrna $delete_rrna_dest");
+        my $rv = system("cp $delete_rrna $delete_rrna_dest");
+        unless($rv) {
+            $self->error_message("could not copy $delete_rrna , $delete_rrna_dest");
+        }
     }
 
     if($self->skip_protein_annotation)

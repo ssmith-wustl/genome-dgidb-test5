@@ -24,6 +24,7 @@ use Cwd;
 #require "pwd.pl";
 use Data::Dumper;
 use English;
+use YAML qw( LoadFile DumpFile );
 
 
 UR::Object::Type->define(
@@ -117,6 +118,8 @@ sub execute
         $self->error_message("can't run prediction step");
         return 0;
     }
+
+    $self->validate(\%params);
 
     return 1;
 }
@@ -374,7 +377,57 @@ sub gather_details
     return %params;
 }
 
+sub validate {
+    my $self = shift;
+    my $params = shift;
+    my $cwd = getcwd();
+    my %valid = ( );
+    %valid = $self->cmdline_to_hash();
+    $valid{params} = %{$params};
+    # do we need to unlink any existing files?
+    DumpFile("$cwd/prediction_valid",\%valid);
+#    write_file("$cwd/prediction_valid","step valid\n"); 
 
+    return 1
+}
+
+sub is_valid {
+    my $self = shift;
+    my %params = $self->gather_details();
+    my %to_compare = $self->cmdline_to_hash();
+    $to_compare{params} = %params;
+    use Data::Compare;
+    my $cwd = getcwd();
+    # check for valid previous run file?
+    if(-f "$cwd/prediction_valid") {
+        my %validation = %{ LoadFile("$cwd/prediction_valid")} ;
+        # compare %validation and %params
+        print Dumper(\%to_compare,\%validation),"\n";
+        if(Compare(\%to_compare,\%validation) ) {
+        $self->status_message("previous valid prediction run exists");
+        return 1;
+        }
+        else {
+            $self->status_message("$cwd/prediction_valid exists, but contents do not match params");
+            return 0;
+        }
+    }
+    return 0;
+}
+
+sub cmdline_to_hash {
+    my $self = shift;
+    my %cmdline;
+    $cmdline{gram_stain} = $self->gram_stain;
+    $cmdline{locus_id} = $self->locus_id;
+    $cmdline{locus_tag} = $self->locus_tag;
+    $cmdline{organism_name} = $self->organism_name;
+    $cmdline{project_type} = $self->project_type;
+    $cmdline{dev} = $self->dev;
+    $cmdline{ncbi_taxonomy_id} = $self->ncbi_taxonomy_id;
+    $cmdline{runner_count} = $self->runner_count;
+    return %cmdline;
+}
 
 1;
 
