@@ -44,6 +44,12 @@ class Genome::Model::Tools::Picard::CollectGcBiasMetrics {
             default_value => '1.0E-5',
             is_optional   => 1,
         },
+        max_records_in_ram => {
+            is => 'Integer',
+            doc => 'The number of alignment records to store in RAM before spilling to disk.',
+            default_value => 500000,
+            is_optional => 1,
+        },
     ],
 };
 
