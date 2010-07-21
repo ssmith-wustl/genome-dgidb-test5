@@ -89,7 +89,7 @@ sub _generate_events_for_build {
             $self->error_message(
                     'WARNING: Stage '. $stage_name .' for build ('
                     . $build->build_id .") failed to schedule objects for classes:\n"
-                    . join("\n",$self->classes_for_stage($stage_name))
+                    . join("\n",$self->classes_for_stage($stage_name, $build->model))
             );
             next;
         }

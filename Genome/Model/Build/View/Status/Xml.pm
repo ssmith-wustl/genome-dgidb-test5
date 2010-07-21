@@ -374,7 +374,7 @@ sub get_processing_profile_node {
                 $operating_on_node->addChild($object_node);
             }
 
-            my @command_classes = $pp->classes_for_stage($stage_name);
+            my @command_classes = $pp->classes_for_stage($stage_name, $model);
             foreach my $classes (@command_classes) {
                 #$commands_node->addChild( $self->anode("command_class","value",$classes ) );
                 my $command_node =  $self->anode("command_class","value",$classes );

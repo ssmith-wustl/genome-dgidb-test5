@@ -43,15 +43,17 @@ sub alignment_job_classes {
 
 sub reference_coverage_job_classes {
     my $self = shift;
+    my $model = shift;
     if ($self->dna_type eq 'cdna' || $self->dna_type eq 'rna') {
-        #TODO this needs to be changed to reference build
-        if ($self->reference_sequence_name =~ /^XStrans_adapt_smallRNA_ribo/) {
+        my $reference_sequence_build = $model->reference_sequence_build;
+        if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/) {
             my @steps = (
                 'Genome::Model::Event::Build::ReferenceAlignment::RefCov',
             );
             return @steps;
         }
     }
+    
     my @steps = (
         'Genome::Model::Event::Build::ReferenceAlignment::CoverageStats',
     );
@@ -122,9 +124,12 @@ sub alignment_objects {
 sub reference_coverage_objects {
     my $self = shift;
     my $model = shift;
-    if ($self->reference_sequence_name =~ /^XStrans_adapt_smallRNA_ribo/) {
+    
+    my $reference_sequence_build = $model->reference_sequence_build;
+    if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/) {
         return 'all_sequences';
     }
+    
     my @inputs = Genome::Model::Input->get(model_id => $model->id, name => 'region_of_interest_set_name');
     unless (@inputs) { return; }
     return 'all_sequences';
