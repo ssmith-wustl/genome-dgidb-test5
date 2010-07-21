@@ -46,6 +46,9 @@ sub execute {
         pse_status => 'inprogress',
     );
 
+    # Don't bite off more than we can process in a couple hours
+    @pses = splice(@pses, 0, 100);
+
     my @cached_pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
     my %skip = map { ( ($_->param_value =~ /genotyper/) ? ($_->pse_id => 1) : () ) } @cached_pse_params;
     #my @pses = GSC::PSE->get(id => [keys %skip]);
@@ -440,13 +443,16 @@ sub execute {
 
             for my $check (@check) {
                 my $subject = $genome_instrument_data->$check;
-                my @some_models= Genome::Model->get(
-                    subject_id         => $subject->id,
-                    subject_class_name => $subject->class,
-                    auto_assign_inst_data => 1,
-                );
-                @some_models = grep { not $new_models{$_->id} } @some_models;
-                push @found_models,@some_models;
+                # Should we just hoise this check out of the loop and skip to next PSE?
+                if (defined($subject)) {
+                    my @some_models= Genome::Model->get(
+                        subject_id         => $subject->id,
+                        subject_class_name => $subject->class,
+                        auto_assign_inst_data => 1,
+                    );
+                    @some_models = grep { not $new_models{$_->id} } @some_models;
+                    push @found_models,@some_models;
+                }
             }           
  
             @found_models =
