@@ -80,9 +80,13 @@ sub _resolve_workflow_for_build {
  
         my $workflow = Workflow::Model->create(%opts);
 
+        my $operation_type = Workflow::OperationType::Command->get('Genome::Model::Event::Build::ProcessingProfileMethodWrapper');
+        #$operation_type->lsf_rusage("-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1]'");
+        $operation_type->lsf_resource("-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=90000:mem=16000]' -M 16000000");
+
         my $operation = $workflow->add_operation(
             name => '_execute_build',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::Event::Build::ProcessingProfileMethodWrapper')
+            operation_type => $operation_type, 
         );
         
         $workflow->add_link(
