@@ -5,7 +5,6 @@ package PAP::Command::InterProScan;
 use strict;
 use warnings;
 
-use Workflow;
 
 use Bio::Seq;
 use Bio::SeqFeature::Generic;
@@ -26,6 +25,7 @@ class PAP::Command::InterProScan {
                 fasta_file => {  
                                is  => 'SCALAR', 
                                doc => 'fasta file name',
+                               is_input => 1,
                            },
                 iprscan_output => {
                                    is          => 'SCALAR',
@@ -40,23 +40,22 @@ class PAP::Command::InterProScan {
                 bio_seq_feature => { 
                                     is          => 'ARRAY',
                                     is_optional => 1,
-                                    doc         => 'array of Bio::Seq::Feature' 
+                                    doc         => 'array of Bio::Seq::Feature',
+                                    is_output => 1,
                                 },
                 report_save_dir => {
                                     is          => 'ARRAY',
                                     is_optional => 1,
-                                    doc         => 'directory to save a copy of the raw output to'
+                                    doc         => 'directory to save a copy of the raw output to',
+                                    is_input => 1,
                                 },
+                lsf_queue => { is_param => 1, 
+                               default_value => 'long',},
+                lsf_resource => { is_param => 1,
+                                  default_value => 'rusage[tmp=100]' },
             ],
 };
 
-operation PAP::Command::InterProScan {
-    input        => [ 'fasta_file', 'report_save_dir' ],
-    output       => [ 'bio_seq_feature' ],
-    lsf_queue    => 'long',
-    lsf_resource => 'rusage[tmp=100]',
-    
-};
 
 sub sub_command_sort_position { 10 }
 

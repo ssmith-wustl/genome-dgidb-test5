@@ -5,7 +5,7 @@ package PAP::Command::PsortB;
 use strict;
 use warnings;
 
-use Workflow;
+#use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
@@ -23,26 +23,22 @@ class PAP::Command::PsortB {
         fasta_file      => { 
                             is  => 'SCALAR', 
                             doc => 'fasta file name' ,
+                            is_input => 1,
                            },
         gram_stain      => {
                             is  => 'SCALAR',
                             doc => 'gram stain (positive/negative)',
+                            is_input => 1,
                            },
         bio_seq_feature => { 
                             is          => 'ARRAY', 
                             is_optional => 1,
                             doc         => 'array of Bio::Seq::Feature', 
+                            is_output => 1,
                            },
+        lsf_queue => { is_param => 1, default_value => 'short', },
+        lsf_resource => { is_param => 1, default_value => "-R 'select[type==LINUX86] rusage[tmp=100]'", },
     ],
-};
-
-# need to select only 32 bit hosts - psort-b calls pfscan
-# which is linked to 32bit libg2c... :\
-operation PAP::Command::PsortB {
-    input        => [ 'fasta_file', 'gram_stain' ],
-    output       => [ 'bio_seq_feature' ],
-    lsf_queue    => 'short',
-    lsf_resource => "-R 'select[type==LINUX86] rusage[tmp=100]'",
 };
 
 sub sub_command_sort_position { 10 }

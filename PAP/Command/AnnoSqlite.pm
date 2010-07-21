@@ -5,7 +5,7 @@ package PAP::Command::AnnoSqlite;
 use strict;
 use warnings;
 
-use Workflow;
+#use Workflow;
 
 use Compress::Bzip2;
 use English;
@@ -22,27 +22,32 @@ class PAP::Command::AnnoSqlite {
     has => [
             locus_tag => { 
                            is => 'SCALAR',
+                           is_input => 1,
                            doc => 'locus tag name',
                          },
             datecode => { is => 'SCALAR',
                           doc => 'date stamp code',
+                          is_input => 1,
                         },
             workdir => { is => 'SCALAR',
                          doc => 'working directory that execution should take place in',
+                         is_input => 1,
                        },
             success => { is => 'SCALAR',
                          doc => 'success flag',
+                         is_output => 1,
                          is_optional => 1,
                        },
+            lsf_queue => { is_param => 1,
+                           default_value => 'long',
+                         },
+            lsf_resource => {
+                is_param => 1,
+                default_value => '-R \'select[mem>8192 && type==LINUX64] rusage[mem=8192,tmp=100]\' -M 8192000 ',
+            },
         ],
 };
 
-operation PAP::Command::AnnoSqlite {
-    input        => ['locus_tag','datecode','workdir' ],
-    output       => [ 'success' ],
-    lsf_queue    => 'long',
-    lsf_resource => '-R \'select[mem>8192 && type==LINUX64] rusage[mem=8192,tmp=100]\' -M 8192000 ',
-};
 
 sub sub_command_sort_position { 10 }
 
@@ -52,6 +57,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
+add in synopsis here.
 EOS
 }
 

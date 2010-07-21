@@ -5,7 +5,7 @@ package PAP::Command::FastaChunker;
 use strict;
 use warnings;
 
-use Workflow;
+#use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
@@ -17,18 +17,21 @@ use File::Temp;
 class PAP::Command::FastaChunker {
     is  => ['PAP::Command'],
     has => [
-        fasta_file  => { is => 'SCALAR', doc => 'fasta file name'                             },
-        chunk_size  => { is => 'SCALAR', doc => 'number of sequences per output file'         },
-        fasta_files => { is => 'ARRAY',  doc => 'array of fasta file names', is_optional => 1 },
+        fasta_file  => { is => 'SCALAR', doc => 'fasta file name',
+                         is_input => 1,
+                       },
+        chunk_size  => { is => 'SCALAR', doc => 'number of sequences per output file',
+                         is_input => 1,
+                        },
+        fasta_files => { is => 'ARRAY',  doc => 'array of fasta file names',
+                         is_optional => 1,
+                         is_output => 1,
+                       },
+        lsf_queue => { is_param => 1, default_value => 'short',},
+        lsf_resource => { is_param => 1, default_value => 'rusage[tmp=100]',},
     ],
 };
 
-operation PAP::Command::FastaChunker {
-    input        => [ 'fasta_file', 'chunk_size' ],
-    output       => [ 'fasta_files'],
-    lsf_queue    => 'short',
-    lsf_resource => 'rusage[tmp=100]',
-};
 
 sub sub_command_sort_position { 10 }
 

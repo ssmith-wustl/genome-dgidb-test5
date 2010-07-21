@@ -5,7 +5,7 @@ package PAP::Command::BerBlastp;
 use strict;
 use warnings;
 
-use Workflow;
+#use Workflow;
 
 use Bio::Annotation::DBLink;
 use Bio::Seq;
@@ -28,29 +28,40 @@ class PAP::Command::BerBlastp {
 
         sequence_names => { is => 'ARRAY',
                             doc => 'array of sequence names',
+                            is_input => 1,
                           },
         fastadir => { is => 'SCALAR',
                       doc => 'location of fasta files',
+                      is_input => 1,
                     },
         blastp_query => { is => 'SCALAR',
                           doc => 'queryfile for blastp',
+                          is_input => 1,
                         },
         berdirpath => { is => 'SCALAR',
                         doc => 'directory where blastp output lands',
+                        is_input => 1,
                       },
         success => { is => 'SCALAR',
                      doc => 'successful execution flag',
                      is_optional => 1,
+                     is_output => 1,
                    },
+        lsf_queue => { is_param => 1,
+                       default_value => 'long',
+        },
+        lsf_resource => { is_param => 1,
+                          default_value => 'rusage[tmp=100]',
+        },
     ],
 };
 
-operation PAP::Command::BerBlastp {
-    input        => [ 'sequence_names', 'fastadir','blastp_query', 'berdirpath' ],
-    output       => [ 'success'],
-    lsf_queue    => 'long',
-    lsf_resource => 'rusage[tmp=100]'
-};
+#operation PAP::Command::BerBlastp {
+#    input        => [ 'sequence_names', 'fastadir','blastp_query', 'berdirpath' ],
+#    output       => [ 'success'],
+#    lsf_queue    => 'long',
+#    lsf_resource => 'rusage[tmp=100]'
+#};
 
 sub sub_command_sort_position { 10 }
 

@@ -5,7 +5,6 @@ package PAP::Command::UploadResult;
 use strict;
 use warnings;
 
-use Workflow;
 
 use Bio::DB::BioDB;
 use Bio::DB::Query::BioQuery;
@@ -17,24 +16,23 @@ class PAP::Command::UploadResult {
         dev_flag         => {
                              is  => 'SCALAR',
                              doc => 'if true, connect to dev biosql',
+                             is_input => 1,
                             },
         biosql_namespace => { 
                              is  => 'SCALAR', 
-                             doc => 'biosql namespace'           
+                             doc => 'biosql namespace',
+                             is_input => 1,
                             },
         bio_seq_features => { 
                               is  => 'ARRAY',
-                              doc => 'array of Bio::Seq::Feature' 
+                              doc => 'array of Bio::Seq::Feature' ,
+                             is_input => 1,
                             },
+        lsf_queue => { is_param => 1, default_value => 'long' ,},
+        lsf_resource => {is_param => 1, default_value => 'rusage[tmp=100]',},
     ],
 };
 
-operation PAP::Command::UploadResult {
-    input        => [ 'bio_seq_features', 'dev_flag', 'biosql_namespace' ],
-    output       => [ ],
-    lsf_queue    => 'long',
-    lsf_resource => 'rusage[tmp=100]'
-};
 
 sub sub_command_sort_position { 10 }
 

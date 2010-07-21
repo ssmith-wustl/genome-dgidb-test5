@@ -5,21 +5,18 @@ package PAP::Command::DeleteFiles;
 use strict;
 use warnings;
 
-use Workflow;
+#use Workflow;
 
 use English;
 
 class PAP::Command::DeleteFiles {
     is  => ['PAP::Command'],
     has => [
-        files => { is => 'ARRAY', doc => 'array of files to delete' },
+        files => { is => 'ARRAY', doc => 'array of files to delete',
+                   is_input => 1, },
     ],
 };
 
-operation PAP::Command::DeleteFiles {
-    input  => [ 'files' ],
-    output => [ ],
-};
 
 sub sub_command_sort_position { 10 }
 

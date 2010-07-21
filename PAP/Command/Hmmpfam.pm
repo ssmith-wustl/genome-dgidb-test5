@@ -5,8 +5,6 @@ package PAP::Command::Hmmpfam;
 use strict;
 use warnings;
 
-use Workflow;
-
 use English;
 use File::Basename;
 use File::chdir;
@@ -21,34 +19,41 @@ class PAP::Command::Hmmpfam {
     has => [
         hmmdirpath => {
             is  => 'SCALAR',
-            doc => '',
+            doc => 'path to hmm output files',
+            is_input => 1,
         },
         hmm_database => {
             is  => 'SCALAR',
             doc => 'hmmpfam database file',
+            is_input => 1,
         },
         fasta_dir => {
             is  => 'SCALAR',
             doc => 'directory containing fasta files',
+            is_input => 1,
         },
         sequence_names => {
             is  => 'ARRAY',
             doc => 'a list of sequence names for running hmmpfam on',
+            is_input => 1,
         },
         success => {
             is          => 'SCALAR',
             doc         => 'success flag',
             is_optional => 1,
+            is_output => 1,
+        },
+        lsf_queue => { 
+            is_param => 1, 
+            default_value => 'long',
+        },
+        lsf_resource => { 
+            is_param => 1,
+            default_value => '-R "rusage[tmp=100]" ',
         },
     ],
 };
 
-operation PAP::Command::Hmmpfam {
-    input     => [  'hmmdirpath', 'hmm_database', 'fasta_dir', 'sequence_names' ],
-    output    => ['success'],
-    lsf_queue => 'long',
-    lsf_resource => '-R "rusage[tmp=100]" ',
-};
 
 sub sub_command_sort_position {10}
 

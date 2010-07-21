@@ -17,7 +17,8 @@ class PAP::Command::ListChunker {
     has => [
         list  => { is => 'ARRAY', doc => 'list to split up'                             },
         chunk_number  => { is => 'SCALAR', doc => 'number of sequences per output file'         },
-        list_of_lists  => { is => 'ARRAY', doc => 'list of lists/array of arrays that are split out'         },
+        list_of_lists  => { is => 'ARRAY', doc => 'list of lists/array of arrays that are split out',
+                            is_optional => 1,         },
     ],
 };
 
@@ -50,17 +51,31 @@ sub execute {
     my $self = shift;
 
 
-    my @list   = $self->list();
+    my @list   = @{$self->list()};
     unless(@list) {
         croak "list is empty!";
     }
+    print STDERR "I've got ". scalar(@list) . 
+                 " sequence names to move around\n";
     my $chunk_number   = $self->chunk_number();
     unless($chunk_number > 0) {
         croak "chunk number is bad: $chunk_number";
     }
-    my @lol =  ( );
+    my @lol;
 
-    @lol = part { int(rand($chunk_number)); } @list;
+    # this doesn't appear to f-ing work.
+#    @lol = part { int(rand($chunk_number)); } @list;
+    my $counter = 0;
+    while(my $item = pop(@list) ) {
+        push(@{$lol[$counter]}, $item);
+        $counter += 1;
+        if($counter >= $chunk_number)
+        {
+            $counter = 0;
+        }
+    }
+        
+    print STDERR "I've got ". scalar(@lol) . " lists of lists now\n";
     $self->list_of_lists(\@lol);
 
     return 1;

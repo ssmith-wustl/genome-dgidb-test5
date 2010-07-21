@@ -5,7 +5,6 @@ package PAP::Command::BtabHmmtab;
 use strict;
 use warnings;
 
-use Workflow;
 
 use English;
 use File::Basename;
@@ -22,48 +21,56 @@ class PAP::Command::BtabHmmtab {
     has => [
         locus_tag => {
             is  => 'SCALAR',
-            doc => 'hmm result files path',
+            doc => 'locus tag name',
+            is_input => 1,
         },
         hmmdirpath => {
             is  => 'SCALAR',
             doc => 'hmm result files path',
+            is_input => 1,
         },
         berdirpath => {
             is  => 'SCALAR',
             doc => 'ber/blastp result files path',
+            is_input => 1,
         },
         srcdirpath => {
             is  => 'SCALAR',
             doc => 'ber annotation base path (scripts/libs located here)',
+            is_input => 1,
         },
         bsubfiledirpath => {
             is  => 'SCALAR',
             doc => 'bsub error files path',
+            is_input => 1,
         },
         fastadir => {
             is  => 'SCALAR',
             doc => 'directory containing fasta files',
+            is_input => 1,
         },
         sequence_names => {
             is  => 'ARRAY',
             doc => 'a list of sequence names for running hmmpfam on',
+            is_input => 1,
         },
         success => {
             is          => 'SCALAR',
             doc         => 'success flag',
             is_optional => 1,
+            is_output => 1,
+        },
+        lsf_queue => {
+            is_param => 1,
+            default_value => 'short',
+        },
+        lsf_resource => {
+            is_param => 1,
+            default_value => '-R "rusage[tmp=100]" -n 1'
         },
     ],
 };
 
-# should this be in the short queue? all we really do is convert output files
-# into a tabular format for later loading in anno-sqlite...
-operation PAP::Command::BtabHmmtab {
-    input     => [ 'locus_tag','hmmdirpath','fastadir','berdirpath','srcdirpath','bsubfiledirpath' ,'sequence_names' ],
-    output    => ['success'],
-    lsf_queue => 'short',
-    lsf_resource => '-R "rusage[tmp=100]" -n 1',
-};
 
 sub sub_command_sort_position {10}
 
