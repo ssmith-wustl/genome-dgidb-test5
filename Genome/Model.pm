@@ -567,8 +567,19 @@ sub compatible_instrument_data {
     my @compatible_instrument_data = $subject_type_class->get(%params);
     
     if($params{sequencing_platform} and $params{sequencing_platform} eq 'solexa') {
-        #FASTQs with 0 reads crash in alignment.  Don't assign them.
-        @compatible_instrument_data = grep($_->total_bases_read, @compatible_instrument_data);
+        # FASTQs with 0 reads crash in alignment.  Don't assign them. -??
+        # TODO: move this into the assign logic, not here. -ss
+        my @filtered_compatible_instrument_data;
+        for my $idata (@compatible_instrument_data) {
+            if ($idata->total_bases_read == 0) {
+                $self->warning_message(sprintf("ignoring %s because it has zero bases read",$idata->__display_name__));
+                next;
+            }
+            else {
+                push @filtered_compatible_instrument_data, $idata;
+            }
+        }
+        @compatible_instrument_data = @filtered_compatible_instrument_data;
     }
     
     return @compatible_instrument_data;
