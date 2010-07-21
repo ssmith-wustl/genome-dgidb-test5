@@ -51,7 +51,11 @@ class Genome::Model::Tools::Sam::MarkDuplicates {
             doc => 'The temporary working directory.  Provide this if you are marking duplicates on a whole genome bam file.',
 	    is_optional => 1
         },
-
+        max_sequences_for_disk_read_ends_map => {
+            is => 'Integer',
+            doc => 'The maximum number of sequences allowed in SAM file.  If this value is exceeded, the program will not spill to disk (used to avoid situation where there are not enough file handles',
+            is_optional => 1,
+        }
 
     ],
 };
@@ -112,7 +116,11 @@ sub execute {
         $assume_sorted_param = 'false';
     }
     
-    my $mark_duplicates_cmd = "java -Xmx".$self->max_jvm_heap_size."g -cp $classpath net.sf.picard.sam.MarkDuplicates VALIDATION_STRINGENCY=SILENT metrics_file=".$self->metrics_file." I=$input_file O=$result remove_duplicates=$rm_option assume_sorted=$assume_sorted_param $tmp_dir_param $log_file_param";  
+    my $mark_duplicates_cmd = "java -Xmx".$self->max_jvm_heap_size."g -cp $classpath net.sf.picard.sam.MarkDuplicates VALIDATION_STRINGENCY=SILENT metrics_file=".$self->metrics_file." I=$input_file O=$result remove_duplicates=$rm_option assume_sorted=$assume_sorted_param $tmp_dir_param $log_file_param";
+
+    if (defined($self->max_sequences_for_disk_read_ends_map)) {
+        $mark_duplicates_cmd .= ' MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP='. $self->max_sequences_for_disk_read_ends_map;
+    }
 
 	$self->status_message("Picard mark duplicates command: $mark_duplicates_cmd");
 	
