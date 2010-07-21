@@ -3,6 +3,10 @@ package Genome::Model::Tools::Annotate::ImportInterpro::GenerateTranscriptFastas
 use strict;
 use warnings;
 use Genome;
+use Benchmark qw(:all) ;
+use Bio::Seq;
+use Bio::SeqIO;
+use File::Temp;
 
 class Genome::Model::Tools::Annotate::ImportInterpro::GenerateTranscriptFastas{
     is => 'Genome::Model::Tools::Annotate',
@@ -17,7 +21,7 @@ class Genome::Model::Tools::Annotate::ImportInterpro::GenerateTranscriptFastas{
             is_input => 1,
             is_optional => 1,
             default => 25000,
-            doc => 'Number of sequences submitted to interpro at a time.  Defaults to 25000',
+            doc => 'Number of sequences per fasta. Cannot exceed 50000. Defaults to 25000',
         },
         benchmark => {
             is => 'Boolean',
@@ -99,3 +103,4 @@ sub execute{
     $self->status_message('.fasta generation: ' . timestr($fasta_generation_time, 'noc')) if $self->benchmark;
     return 1;
 }
+1;
