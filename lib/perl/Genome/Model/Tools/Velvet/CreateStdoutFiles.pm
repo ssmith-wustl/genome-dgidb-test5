@@ -16,6 +16,17 @@ class Genome::Model::Tools::Velvet::CreateStdoutFiles {
 	    is => 'Text',
 	    doc => 'Input fastq file',
 	},
+	run_core_gene_survey => {
+	    is => 'Boolean',
+	    doc => 'Runs core gene survey',
+	    is_optional => 1,
+	},
+	core_gene_option => {
+	    is => 'Text',
+	    doc => 'Core gene survey option: either bact or archaea',
+	    valid_values => ['bact', 'archaea'],
+	    is_optional => 1,
+	},
 	queue => {
 	    is => 'Boolean',
 	    doc => 'Submits job to lsf queue',
@@ -57,19 +68,18 @@ sub execute {
 	return 1;
     }
 
-
-    #check for gap.txt which maybe be there with ace file
-    unless (-s $self->directory.'/edit_dir/gap.txt') {
-	my $gap = Genome::Model::Tools::Assembly::CreateOutputFiles::Gap->create(
-	    directory => $self->directory,
-	    );
-	unless ($gap->execute) {
-	    $self->error_message("Execute failed to to create gap.txt file");
-	    return;
-	}
+    #create gap.txt file
+    $self->status_message("Creating gap.txt file");
+    my $gap = Genome::Model::Tools::Assembly::CreateOutputFiles::Gap->create(
+	directory => $self->directory,
+	);
+    unless ($gap->execute) {
+	$self->error_message("Execute failed to to create gap.txt file");
+	return;
     }
-
+    
     #create input fasta and qual files #TODO - move this to tools/velvet
+    $self->status_message("Creating input fasta and qual from input fastq");
     my $inputs = Genome::Model::Tools::Assembly::CreateOutputFiles::InputFromFastq->create(
         fastq_file => $self->input_fastq_file,
         directory => $self->directory,
@@ -80,6 +90,7 @@ sub execute {
     }
 
     #create contigs.bases and contigs.quals files
+    $self->status_message("Creating contigs.bases and contigs.qual files");
     my $contigs = Genome::Model::Tools::Velvet::CreateContigsFiles->create (
         afg_file => $self->directory.'/velvet_asm.afg',
         directory => $self->directory,
@@ -90,6 +101,7 @@ sub execute {
     }
 
     #create reads.placed and readinfo.txt files
+    $self->status_message("Creating reads.placed and readinfo.txt files");
     my $reads = Genome::Model::Tools::Velvet::CreateReadsFiles->create (
         sequences_file => $self->directory.'/Sequences',
         afg_file => $self->directory.'/velvet_asm.afg',
@@ -101,6 +113,7 @@ sub execute {
     }
 
     #create reads.unplaced and reads.unplaced.fasta files
+    $self->status_message("Creating reads.unplaced and reads.unplaced.fasta files");
     my $unplaced = Genome::Model::Tools::Velvet::CreateUnplacedReadsFiles->create (
 	sequences_file => $self->directory.'/Sequences',
 	afg_file => $self->directory.'/velvet_asm.afg',
@@ -112,6 +125,7 @@ sub execute {
     }
 
     #create supercontigs.fasta and supercontigs.agp file
+    $self->status_message("Creating supercontigs.fasta and supercontigs.agp files");
     my $supercontigs = Genome::Model::Tools::Velvet::CreateSupercontigsFiles->create (
         contigs_fasta_file => $self->directory.'/contigs.fa',
         directory => $self->directory,
@@ -121,10 +135,33 @@ sub execute {
         return;
     }
 
+    #run core gene survey WARNING: This system calls deployed script 
+    if ($self->run_core_gene_survey) {
+	$self->status_message("Running core gene survey");
+	my $gene_option = ($self->core_gene_option) ? $self->core_gene_option : 'bact';
+	my $survey = Genome::Model::Tools::Assembly::CreateOutputFiles::CoreGeneSurvey->create (
+	    core_gene_option => $gene_option,
+	    subject_file => $self->directory.'/edit_dir/contigs.bases',
+	    );
+	unless ($survey->execute) {
+	    $self->error_message("Failed to execute core gene survey");
+	    return;
+	}
+    }
+
     #create stats;
-    my $stats = Genome::Model::Tools::Assembly::Stats::Velvet->create (
+    $self->status_message("Creating stats.txt file");
+    my %params = (
 	assembly_directory => $self->directory,
         no_print_to_screen => 1,
+        #report_core_gene_survey => 1,
+	);
+    $params{'report_core_gene_survey'} = 1 if $self->run_core_gene_survey;
+    my $stats = Genome::Model::Tools::Assembly::Stats::Velvet->create (
+	%params
+	#assembly_directory => $self->directory,
+        #no_print_to_screen => 1,
+	#report_core_gene_survey => 1,
         );
     unless ($stats->execute) {
         $self->error_message("Failed to create stats");
@@ -148,6 +185,7 @@ sub execute {
 	    return;
 	}
     }
+    $self->status_message("Finished creating all files");
 
     return 1;
 }
