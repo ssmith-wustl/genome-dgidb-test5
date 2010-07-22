@@ -17,6 +17,7 @@ class Genome::Model::Tools::Fastq::TrimBwaStyle {
         fastq_file  => {
             is  => 'Text',
             doc => 'the input fastq file path',
+            is_optional => 1,
         }, 
         out_file    => {
             is  => 'Text',
