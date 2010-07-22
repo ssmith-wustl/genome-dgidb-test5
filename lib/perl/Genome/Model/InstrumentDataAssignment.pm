@@ -46,6 +46,7 @@ class Genome::Model::InstrumentDataAssignment {
         duplicate_reads_across_library  => { via => 'instrument_data' },
         median_insert_size              => { via => 'instrument_data'},
         sd_above_insert_size            => { via => 'instrument_data'},
+        sd_below_insert_size            => { via => 'instrument_data'},
         is_paired_end                   => { via => 'instrument_data' },
     ],
     has_many_optional => [
