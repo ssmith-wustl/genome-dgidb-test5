@@ -34,11 +34,9 @@ sub _add_to_report_xml {
         row_name => 'metric',
         headers => [ 
             (map { s/_/\-/g; $_; } sort { $a cmp $b } keys %metrics), 
-            'estimated-read-length',
         ],
         rows => [[ 
             (map { $metrics{$_} } sort { $a cmp $b } keys %metrics),
-            $build->estimate_average_read_length,
         ]],
     ) or return;
 
