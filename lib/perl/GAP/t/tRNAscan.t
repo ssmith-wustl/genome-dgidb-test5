@@ -4,6 +4,7 @@ use warnings;
 use above 'Workflow';
 
 use File::Temp;
+use File::Basename;
 use Test::More tests => 42;
 
 BEGIN {
@@ -12,7 +13,7 @@ BEGIN {
 }
 
 my $command = GAP::Command::GenePredictor::tRNAscan->create(
-                                                            'fasta_file' => 'data/HPAG1.fasta',
+                                                            'fasta_file' => File::Basename::dirname(__FILE__).'/data/HPAG1.fasta',
                                                             'domain'     => 'bacteria',
                                                            );
 

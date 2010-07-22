@@ -55,16 +55,16 @@ ok(
     ),
     'Failed as expected - create w/ invalid assembler',
 );
-# Create fail - invalid reads limit
+# Create fail - invalid coverage
 ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
         sequencing_platform => 'solexa',
         assembler_name => 'velvet',
         assembler_version => '7.0.57-64',
-        read_coverage => -1,
+        coverage => -1,
     ),
-    'Failed as expected - create w/ invalid read coverage',
+    'Failed as expected - create w/ invalid coverage',
 );
 # Create fail - invalid assembler/platform combo
 ok(

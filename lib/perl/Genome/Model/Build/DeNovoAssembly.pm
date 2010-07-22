@@ -113,50 +113,15 @@ sub genome_size {
     Carp::confess('Cannot determine genom size for De Novo Assembly model\'s ('.$self->model->id.' '.$self->model->name.') associated taxon ('.$taxon->id.')');
 }
 
-sub estimate_average_read_length {
+sub calculate_base_limit_from_coverage {
     my $self = shift;
 
-    my @instrument_data = $self->instrument_data;
-    unless ( @instrument_data ) {
-        Carp::confess("No instruemnt data found for ".$self->description);
-    }
+    my $coverage = $self->processing_profile->coverage;
+    return unless defined $coverage; # ok
     
-    my $read_length = 0;
-    my $instrument_data_cnt = 0;
-    for my $instrument_data ( $self->instrument_data ) {
-        $read_length += $instrument_data->read_length;
-        $instrument_data_cnt++;
-    }
-
-    unless ( $read_length ) {
-        Carp::confess("No read length found in instrument data (".join(', ', map { $_->id } @instrument_data).')');
-    }
-
-    my $avg_read_length = $read_length / $instrument_data_cnt;
-    if ( defined $self->processing_profile->read_trimmer_name ) {
-        return int($avg_read_length * .9);
-    }
-
-    return $avg_read_length;
-}
-
-sub calculate_read_limit_from_read_coverage {
-    my $self = shift;
-
-    my $read_coverage = $self->processing_profile->read_coverage;
-    return unless defined $read_coverage;
+    my $genome_size = $self->genome_size; # dies on error
     
-    my $estimated_read_length = $self->estimate_average_read_length; # dies
-    my $genome_size = $self->genome_size;
-    
-    my $read_max = int($genome_size * $read_coverage / $estimated_read_length);
-
-    unless ( $read_max % 2 == 0 ) {
-        # make it an even number
-        $read_max++;
-    }
-
-    return $read_max;
+    return $genome_size * $coverage;
 }
 
 #< Metrics >#

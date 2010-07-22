@@ -5,7 +5,9 @@ use warnings;
 use lib '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-live';
 use lib '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-run';
 
-use Test::More tests => 40;
+use File::Basename;
+#use Test::More tests => 40;
+use Test::More tests => 42;
 
 use Bio::SeqIO;
 
@@ -23,7 +25,7 @@ my @jobs = ( );
 {
     
     my $fasta = Bio::SeqIO->new(
-                                -file   => 'data/BACSTEFNL_Contig694.fasta',
+                                -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.fasta',
                                 -format => 'Fasta',
                             );
     
