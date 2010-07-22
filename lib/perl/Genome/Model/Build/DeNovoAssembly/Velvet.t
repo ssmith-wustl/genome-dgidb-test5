@@ -5,10 +5,11 @@ use warnings;
 
 use above 'Genome';
 
+use Data::Dumper 'Dumper';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
-use_ok('Genome::Model::Build::DeNovoAssembly::Velvet');
+use_ok('Genome::Model::Build::DeNovoAssembly::Velvet') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
@@ -50,7 +51,24 @@ _test_files_and_values(
 
 # metrics
 my %metrics = $build->set_metrics;
-ok(%metrics, 'Set metrics');
+#print Dumper(\%metrics);
+my $expected_metrics = {
+    'reads_processed_success' => '0.71',
+    'reads_not_assembled_pct' => '0.7016',
+    'supercontigs' => '2424',
+    'reads_assembled_success' => '0.30',
+    'reads_assembled' => '7459',
+    'contigs' => '2424',
+    'assembly_length' => '354779',
+    'median_supercontig_length' => '141',
+    'reads_processed' => '25000',
+    'reads_attempted' => 35000,
+    'median_contig_length' => '141',
+};
+is_deeply(\%metrics, $expected_metrics, 'metrics match');
+for my $name ( keys %metrics ) {
+    is($build->$name, $metrics{$name}, "set $name metric");
+}
 
 done_testing();
 exit;
@@ -86,5 +104,5 @@ sub _test_files_and_values {
 
 =cut
 
-#$HeadURL$
-#$Id$
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Build/DeNovoAssembly/Velvet.t $
+#$Id: Velvet.t 60453 2010-06-28 22:19:48Z ebelter $

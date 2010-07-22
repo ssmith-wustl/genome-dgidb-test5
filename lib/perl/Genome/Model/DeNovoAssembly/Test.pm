@@ -175,7 +175,7 @@ sub get_mock_build {
     my ($self, %params) = @_;
 
     my $model = delete $params{model};
-    Carp::confess "No mc116s model given to create mock build" unless $model;
+    Carp::confess "No de noe novo model given to create mock build" unless $model;
     my $use_example_directory = delete $params{use_example_directory};
     Carp::confess("Unknown params to get mock build:\n".Dumper(\%params)) if %params;
     
@@ -198,8 +198,9 @@ sub get_mock_build {
             description
 
             interesting_metric_names
-            meaningful_metric_names
+            calculate_metrics
             set_metrics
+            calculate_reads_attempted
 
             genome_size
             estimate_average_read_length
@@ -325,6 +326,7 @@ sub _get_mock_solexa_instrument_data {
         library_id => '2852968107',
         library_name => 'H_KT-185-1-0089515594-lib1',
         sample_name => 'H_KT-185-1-0089515594',
+        clusters => 35000,
     ) or Carp::confess "Can't create mock solexa instrument data";
 
     return $inst_data;

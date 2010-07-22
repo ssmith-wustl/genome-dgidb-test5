@@ -60,7 +60,7 @@ sub input_data_directory {
 #<>#
 
 #< Metrics >#
-sub set_metrcs {
+sub calculate_metrics {
     my  $self = shift;
 
     # FIXME
@@ -72,5 +72,5 @@ sub set_metrcs {
 
 1;
 
-#$HeadURL$
-#$Id$
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Build/DeNovoAssembly/Newbler.pm $
+#$Id: Newbler.pm 59774 2010-06-09 23:46:44Z ebelter $

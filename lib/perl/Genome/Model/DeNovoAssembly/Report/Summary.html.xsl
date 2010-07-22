@@ -97,7 +97,7 @@
 				</colgroup>
 				<tr>
           <td class="label">Reads Processed</td>
-          <td class="value"><xsl:value-of select="//metric/total-input-reads"/></td>
+          <td class="value"><xsl:value-of select="//metric/reads-processed"/></td>
 				</tr>
 				<tr>
           <td class="label">Read Coverage Used</td>
@@ -105,15 +105,11 @@
 				</tr>
 				<tr>
           <td class="label">Reads Assembled</td>
-          <td class="value"><xsl:value-of select="//metric/placed-reads"/></td>
+          <td class="value"><xsl:value-of select="//metric/reads-assembled"/></td>
 				</tr>
 				<tr>
           <td class="label">Chaff Rate</td>
           <td class="value"><xsl:value-of select="//metric/chaff-rate"/></td>
-				</tr>
-				<tr>
-          <td class="label">Estimated Read Length</td>
-          <td class="value"><xsl:value-of select="//metric/estimated-read-length"/></td>
 				</tr>
 				<tr>
           <td class="label">Average Read Length</td>
@@ -121,11 +117,11 @@
 				</tr>
 				<tr>
           <td class="label">Contigs</td>
-          <td class="value"><xsl:value-of select="//metric/total-contig-number"/></td>
+          <td class="value"><xsl:value-of select="//metric/contigs"/></td>
 				</tr>
 				<tr>
           <td class="label">Assembly Length</td>
-          <td class="value"><xsl:value-of select="//metric/total-contig-bases"/></td>
+          <td class="value"><xsl:value-of select="//metric/assembly-length"/></td>
 				</tr>
 				<tr>
           <td class="label">Average Contig Length</td>
@@ -133,11 +129,11 @@
 				</tr>
 				<tr>
           <td class="label">Median Contig Length</td>
-          <td class="value"><xsl:value-of select="//metric/n50-contig-length"/></td>
+          <td class="value"><xsl:value-of select="//metric/median-contig-length"/></td>
 				</tr>
 				<tr>
           <td class="label">Supercontigs</td>
-          <td class="value"><xsl:value-of select="//metric/total-supercontig-number"/></td>
+          <td class="value"><xsl:value-of select="//metric/supercontigs"/></td>
 				</tr>
 				<tr>
           <td class="label">Average Supercontig Length</td>
@@ -145,7 +141,7 @@
 				</tr>
 				<tr>
           <td class="label">Median Supercontig Length</td>
-          <td class="value"><xsl:value-of select="//metric/n50-supercontig-length"/></td>
+          <td class="value"><xsl:value-of select="//metric/median-supercontig-length"/></td>
 				</tr>
 			  </table>
 			</td>

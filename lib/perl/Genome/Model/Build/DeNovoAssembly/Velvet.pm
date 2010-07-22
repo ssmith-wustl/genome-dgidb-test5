@@ -83,7 +83,7 @@ sub assembly_fasta_file {
 #<>#
 
 #< Metrics >#
-sub set_metrics {
+sub calculate_metrics {
     my  $self = shift;
 
     my $stats_file = $self->stats_file;
@@ -93,38 +93,54 @@ sub set_metrics {
         return;
     }
     
-    my @interesting_metric_names = $self->interesting_metric_names;
-
-    #more meaningful metric names look up
-    my $meaningful_names = $self->meaningful_metric_names;
+    my %stat_to_metric_names = ( # old names to new
+        # contig
+        'total contig number' => 'contigs',
+        'n50 contig length' => 'median_contig_length',
+        # supercontig
+        'total supercontig number' => 'supercontigs',
+        'n50 supercontig length' => 'median_supercontig_length',
+        # reads
+        'total input reads' => 'reads_processed',
+        'placed reads' => 'reads_assembled',
+        'chaff rate' => 'reads_not_assembled_pct',
+        # bases
+        'total contig bases' => 'assembly_length',
+    );
 
     my %metrics;
     while ( my $line = $stats_fh->getline ) {
         next unless $line =~ /\:/;
         chomp $line;
-        my ($metric, $value) = split(/\:\s+/, $line);
-        $metric = lc $metric;
-        next unless grep { $metric eq $_ } @interesting_metric_names;
+        my ($stat, $value) = split(/\:\s+/, $line);
+        $stat = lc $stat;
+        next unless grep { $stat eq $_ } keys %stat_to_metric_names;
         $value =~ s/\s.*$//;
         unless ( defined $value ) {
-            $self->error_message("Found metric ($metric) in stats file, but it does not have a vlue ($line)");
+            $self->error_message("Found '$stat' in stats file, but it does not have a value on line ($line)");
             return;
         }
-        my $metric_method = join('_', split(/\s/, $metric));
-        $self->$metric_method($value);
-
-	#return the more meaning fule name
-	$metric_method = (exists $meaningful_names->{$metric_method}) ? $meaningful_names->{$metric_method} : $metric_method;
-
-        $metrics{$metric_method} = $value;
+        my $metric = delete $stat_to_metric_names{$stat};
+        $metrics{$metric} = $value;
     }
 
+    $metrics{reads_not_assembled_pct} =~ s/%//;
+    $metrics{reads_not_assembled_pct} /= 100;
+
+    $metrics{reads_attempted} = $self->calculate_reads_attempted
+        or return;
+    $metrics{reads_processed_success} =  sprintf(
+        '%0.2f', $metrics{reads_processed} / $metrics{reads_attempted}
+    );
+    $metrics{reads_assembled_success} = sprintf(
+        '%0.2f', $metrics{reads_assembled} / $metrics{reads_processed}
+    );
+    
     return %metrics;
 }
-
 #<>#
 
 1;
 
-#$HeadURL$
-#$Id$
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Build/DeNovoAssembly/Velvet.pm $
+#$Id: Velvet.pm 61146 2010-07-20 21:19:56Z kkyung $

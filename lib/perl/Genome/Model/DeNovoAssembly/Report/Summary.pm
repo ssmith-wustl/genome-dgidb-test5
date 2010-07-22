@@ -33,7 +33,7 @@ sub _add_to_report_xml {
         name => 'metrics',
         row_name => 'metric',
         headers => [ 
-            (grep { s/_/\-/g } sort { $a cmp $b } keys %metrics), 
+            (map { s/_/\-/g; $_; } sort { $a cmp $b } keys %metrics), 
             'estimated-read-length',
         ],
         rows => [[ 
@@ -47,5 +47,5 @@ sub _add_to_report_xml {
 
 1;
 
-#$HeadURL$
-#$Id$
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/DeNovoAssembly/Report/Summary.pm $
+#$Id: Summary.pm 59774 2010-06-09 23:46:44Z ebelter $

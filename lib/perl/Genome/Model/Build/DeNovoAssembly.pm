@@ -25,13 +25,16 @@ class Genome::Model::Build::DeNovoAssembly {
                                             Carp::croak("Can't subclass Build: Genome::Model id $model_id has no assembler_name") unless $assembler_name;
                                             return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($assembler_name);
                                           },
-                         },
+        },
         (
             map { 
                 join('_', split(m#\s#)) => {
-                    is => 'Integer',
-                    is_mutable => 1,
+                    is => 'Number',
                     is_optional => 1,
+                    is_mutable => 1,
+                    via => 'metrics',
+                    where => [ name => $_ ],
+                    to => 'value',
                 }
             } __PACKAGE__->interesting_metric_names
         )
@@ -70,11 +73,6 @@ sub create {
     mkdir $self->data_directory unless -d $self->data_directory;
     
     return $self;
-}
-
-sub _X_resolve_subclass_name {
-    my $class = shift;
-    return __PACKAGE__->_resolve_subclass_name_by_assembler_name(@_);
 }
 
 sub calculate_estimated_kb_usage {
@@ -164,42 +162,50 @@ sub calculate_read_limit_from_read_coverage {
 #< Metrics >#
 sub interesting_metric_names {
     return (
-        # contig
-        'total contig number',
-        'average contig length',
-        'n50 contig length',
-        # supercontig
-        'total supercontig number',
-        'average supercontig length',
-        'n50 supercontig length',
-        # reads
-        'total input reads',
-        'average read length',
-        'placed reads',
-        'chaff rate',
-        # bases
-        'total contig bases',
+        'assembly length',
+        'contigs', 'median contig length',
+        'supercontigs', 'median supercontig length',
+        'reads attempted', 
+        'reads processed', 'reads processed success',
+        'reads assembled', 'reads assembled success', 'reads not assembled pct',
     );
 }
 
-sub meaningful_metric_names {
-    return {
-	# contig
-	'total_contig_number' => 'contigs',
-	'n50_contig_length' => 'median_contig_length',
-	# supercontig
-	'total_supercontig_number' => 'supercontigs',
-	'n50_supercontig_length' => 'median_supercontig_length',
-	# reads
-	'total_input_reads' => 'reads_processed',
-	'placed_reads' => 'reads_assembled',
-	# bases
-	'total_contig_bases' => 'assembly_length',
-	};
+sub set_metrics {
+    my $self = shift;
+
+    my %metrics = $self->calculate_metrics
+        or return;
+    for my $name ( keys %metrics ) {
+        $self->$name( $metrics{$name} );
+    }
+    
+    return %metrics;
+}
+
+sub calculate_reads_attempted {
+    my $self = shift;
+
+    my @instrument_data = $self->instrument_data;
+    unless ( @instrument_data ) {
+        $self->error_message("Can't calculate reads attempted, because no instrument data found for ".$self->description);
+        return;
+    }
+
+    my $reads_attempted = 0;
+    if ( $self->processing_profile->sequencing_platform eq 'solexa' ) {
+        for my $inst_data ( @instrument_data ) {
+            $reads_attempted += $inst_data->clusters;
+        }
+    }
+    else {
+        Carp::confess("Unknown sequencing platform: ".$self->sequencing_platform);
+    }
+
+    return $reads_attempted;
 }
 
 #<>#
-
 
 1;
 

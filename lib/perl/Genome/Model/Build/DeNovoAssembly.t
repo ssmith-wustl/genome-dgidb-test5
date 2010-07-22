@@ -13,9 +13,6 @@ use above 'Genome';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
-my $test_cnt = 22;
-plan tests => $test_cnt;
-
 use_ok('Genome::Model::Build::DeNovoAssembly');
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
@@ -46,13 +43,13 @@ is($build->calculate_read_limit_from_read_coverage, 25000, 'Calculated read limi
 
 # metrics
 my @interesting_metric_names = $build->interesting_metric_names;
-ok(@interesting_metric_names, 'Interesting metric names');
+is(scalar(@interesting_metric_names), 11, 'interesting metric names');
 for my $metric_name ( @interesting_metric_names ) {
     $metric_name =~ s/\s/_/g;
     can_ok('Genome::Model::Build::DeNovoAssembly', $metric_name);
 }
 
-done_testing($test_cnt);
+done_testing();
 exit;
 
 =pod
