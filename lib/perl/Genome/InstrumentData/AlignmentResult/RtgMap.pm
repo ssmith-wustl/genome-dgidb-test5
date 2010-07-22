@@ -40,9 +40,13 @@ sub _run_aligner {
 
     # get refseq info
     my $reference_build = $self->reference_build;
-    print $reference_build->data_directory . "\n";
     
     my $reference_sdf_path = $reference_build->full_consensus_path('sdf');
+
+    unless (-e $reference_sdf_path) {
+        $self->error_message("sdf path not found in " . $reference_build->data_directory);
+        die $self->error_message;
+    }
     
     # Check the local cache on the blade for the fasta if it exists.
     if (-e "/opt/fscache/" . $reference_sdf_path) {
