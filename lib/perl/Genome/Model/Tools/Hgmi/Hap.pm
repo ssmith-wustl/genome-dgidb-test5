@@ -105,7 +105,7 @@ sub execute {
     }
 
     if (-f $self->config) {
-        $config = LoadFile($self->config));
+        $config = LoadFile($self->config);
     }
     else {
         my $file = $self->config;
