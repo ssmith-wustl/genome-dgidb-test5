@@ -43,7 +43,7 @@ is($build->calculate_read_limit_from_read_coverage, 25000, 'Calculated read limi
 
 # metrics
 my @interesting_metric_names = $build->interesting_metric_names;
-is(scalar(@interesting_metric_names), 11, 'interesting metric names');
+is(scalar(@interesting_metric_names), 14, 'interesting metric names');
 for my $metric_name ( @interesting_metric_names ) {
     $metric_name =~ s/\s/_/g;
     can_ok('Genome::Model::Build::DeNovoAssembly', $metric_name);

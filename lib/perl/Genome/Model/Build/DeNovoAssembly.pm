@@ -163,8 +163,9 @@ sub calculate_read_limit_from_read_coverage {
 sub interesting_metric_names {
     return (
         'assembly length',
-        'contigs', 'median contig length',
-        'supercontigs', 'median supercontig length',
+        'contigs', 'median contig length', 'average contig length',
+        'supercontigs', 'median supercontig length', 'average supercontig length',
+        'average read length',
         'reads attempted', 
         'reads processed', 'reads processed success',
         'reads assembled', 'reads assembled success', 'reads not assembled pct',

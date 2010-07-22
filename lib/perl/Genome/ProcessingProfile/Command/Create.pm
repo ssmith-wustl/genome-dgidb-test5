@@ -221,7 +221,7 @@ sub _properties_for_class {
         }
         my $property_name = $property->property_name;
         $properties{ $property_name } = {
-            is => 'Text',
+            is => exists $property->{data_type} ? $property->{data_type} : 'Text',
             is_optional => $property->is_optional,
             doc => $property->doc,
         };
