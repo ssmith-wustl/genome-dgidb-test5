@@ -419,13 +419,13 @@ sub dump_sanger_fastq_files {
     my $requested_directory = delete $params{directory} || Genome::Utility::FileSystem->base_temp_directory;
 
     my @converted_pathnames;
-    my $counter = 1;
+    my $counter = 0;
     $DB::single = 1;
     for my $illumina_fastq_pathname (@illumina_fastq_pathnames) {
         my $converted_fastq_pathname;
         if ($self->resolve_quality_converter eq 'sol2sanger') {
-            $self->status_message("Applying sol2sanger quality conversion.");
             $converted_fastq_pathname = $requested_directory . '/' . $self->id . '-sanger-fastq-'. $counter . ".fastq";
+            $self->status_message("Applying sol2sanger quality conversion.  Converting to $converted_fastq_pathname");
             unless (Genome::Model::Tools::Maq::Sol2sanger->execute( use_version       => '0.7.1',
                                                                     solexa_fastq_file => $illumina_fastq_pathname,
                                                                     sanger_fastq_file => $converted_fastq_pathname)) {
@@ -433,8 +433,8 @@ sub dump_sanger_fastq_files {
                 $self->die($self->error_message);
             }
         } elsif ($self->resolve_quality_converter eq 'sol2phred') {
-            $self->status_message("Applying sol2phred quality conversion.");
             $converted_fastq_pathname = $requested_directory . '/' . $self->id . '-sanger-fastq-'. $counter . ".fastq";
+            $self->status_message("Applying sol2phred quality conversion.  Converting to $converted_fastq_pathname");
 
             unless (Genome::Model::Tools::Fastq::Sol2phred->execute(fastq_file => $illumina_fastq_pathname,
                                                                     phred_fastq_file => $converted_fastq_pathname)) {
