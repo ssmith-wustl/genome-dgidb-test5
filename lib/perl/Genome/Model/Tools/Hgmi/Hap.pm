@@ -91,42 +91,31 @@ for the HGMI pipeline.
 EOS
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
 
-    if ( defined( $self->gen_example ) )
-    {
-        if ( -f $self->config )
-        {
-            croak "cowardly refusing to overwrite existing file! Hap.pm \n\n";
+    my $config;
+    if (defined($self->gen_example)) {
+        if (-f $self->config) {
+            croak "Cowardly refusing to overwrite existing file! Hap.pm \n\n";
         }
 
         $self->build_empty_config();
         return 1;
     }
 
-    if ( -f $self->config )
-    {
-        $self->internalhash( LoadFile( $self->config ) );
+    if (-f $self->config) {
+        $config = LoadFile($self->config));
     }
-    else
-    {
-
-        # blow up...
+    else {
         my $file = $self->config;
-        carp "non-existent file $file Hap.pm\n\n";
-        return 0;
+        croak "Non-existent config file $file Hap.pm\n\n";
     }
 
-    my $config = $self->internalhash;
-    if($config->{cell_type} eq 'VIRAL')
-    {
+    # Core gene check only relevant to bacteria
+    if($config->{cell_type} eq 'VIRAL') {
         $self->skip_core_check(1);
     }
-
-    # this is where we might drop items for validity
-    #my $base_path = $config->{path};
 
     # dir-builder
     my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
@@ -517,12 +506,6 @@ sub execute
         'Hybrid',
         join( '.', 'KS-OUTPUT', $config->{locus_tag}, 'CDS', 'pep', ),
     );
-
-    foreach my $archive_dir ( $blastp_archive_dir, $interpro_archive_dir,
-        $keggscan_archive_dir )
-    {
-        mkpath($archive_dir);
-    }
 
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
         'locus_tag'            => $config->{locus_tag},

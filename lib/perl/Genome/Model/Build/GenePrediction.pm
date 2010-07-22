@@ -75,7 +75,7 @@ sub create_config_file {
         use_local_nr     => $model->use_local_nr,
     );
 
-    my $rv = YAML::DumpFile($config_file_path, %params);
+    my $rv = YAML::DumpFile($config_file_path, \%params);
     unless ($rv) {
         $self->error_message("Could not create config file at $config_file_path!");
         return;
