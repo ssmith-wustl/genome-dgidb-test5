@@ -273,8 +273,8 @@ sub _assign_all_instrument_data {
     my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
 
     unless ( @unassigned_instrument_data ){
-        $self->error_message("Attempted to assign all instrument data that was unassigned for model, but found none");
-        return;
+        $self->status_message("No unassigned instrument data for model");
+        return 1;
     }
 
     my @inputs = Genome::Model::Input->get(model_id => $self->model_id(), name => 'target_region_set_name');
