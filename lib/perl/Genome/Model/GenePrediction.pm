@@ -144,16 +144,6 @@ sub create {
         return;
     }
 
-    # Perform checks on various other parameters
-    unless (-e $self->nr_database_location) {
-        $self->error_message("No NR database found at " . $self->nr_database_location);
-        return;
-    }
-    unless (-e $self->contigs_file_location) {
-        $self->error_message("No contigs file found at " . $self->contigs_file_location);
-        return;
-    }
-
     return $self;
 }
 
