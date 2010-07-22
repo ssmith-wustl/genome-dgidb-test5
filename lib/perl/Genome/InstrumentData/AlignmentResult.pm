@@ -1209,10 +1209,10 @@ sub run_trimq2_filter_style {
         #The names of temp files return from above method input_fastq_filenames
         #will end as either 0 or 1
         for my $file (@fq_files) {
-            if ($file =~ /\-0$/) {   #hard coded fastq file name for now
+            if ($file =~ /\-0.fastq$/) {   #hard coded fastq file name for now
                 $p1 = $file;
             }
-            elsif ($file =~ /\-1$/) {
+            elsif ($file =~ /\-1.fastq$/) {
                 $p2 = $file;
             }
             else {
