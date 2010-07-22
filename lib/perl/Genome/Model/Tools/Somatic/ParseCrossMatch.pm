@@ -35,7 +35,7 @@ class Genome::Model::Tools::Somatic::ParseCrossMatch {
            type => 'HASH',
        },
     ],
-}
+};
 
            
 sub create{
@@ -49,20 +49,6 @@ sub create{
     return $self;
 }
 
-  my ($class, %arg) = @_;
-  my $self={
-	    fin=>$arg{fin} || undef,
-	    mmr=>$arg{mmr} || 0.02,
-	    dcpos=>undef,
-	    align=>undef,
-	    readpos=>undef,
-	    min_base_qual=>$arg{MinBaseQual} || 15,
-	    homopolymer_size=>$arg{HomoPolymerIndelSize} || 2
-	   };
-  bless($self, $class || ref($class));
-  ($self->{align},$self->{dcpos})=$self->Read($self->{fin},$self->{mmr});
-  return $self;
-}
 
 sub Read {
     my $self = shift;
@@ -225,13 +211,14 @@ sub Read {
 sub _Indel_454_homopolymerErr{
   #Test find if a 1bp indel is caused by upstream homopolymer errors
     my ($string, $comp) = @_;
-    my @bases = split //, $string;
+    my @bases  = split //, $string;
     my $midpos = int($#bases/2);
     my $maxlen_homopolymer = 0;
 
-    for my $start($midpos, $midpos+1){
+    for my $start ($midpos, $midpos+1) {
         my $pbase = $bases[$start];
-        for my $end ($start+1..$#bases) {
+        my $end;
+        for ($end=$start+1;$end<=$#bases;$end++) {
             last if $bases[$end] ne $pbase;
         }
         my $len = $end - $start;
