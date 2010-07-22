@@ -30,20 +30,12 @@ isa_ok($build, 'Genome::Model::Build::DeNovoAssembly');
 is($build->calculate_estimated_kb_usage, (50_000_000 * 1.024), 'Kb usage');
 is($build->genome_size, 4500000, 'Genome size');
 
-# read length/limit
-#  w/o trimmer
-my $read_trimmer_name = $build->processing_profile->read_trimmer_name;
-$build->processing_profile->read_trimmer_name(undef);
-is($build->estimate_average_read_length, 100, 'Estimate average read length w/o trimmer');
-is($build->calculate_read_limit_from_read_coverage, 22500, 'Calculated read limit w/o trimmer');
-#  w/ trimmer
-$build->processing_profile->read_trimmer_name($read_trimmer_name);
-is($build->estimate_average_read_length, 90, 'Estimate average read length');
-is($build->calculate_read_limit_from_read_coverage, 25000, 'Calculated read limit');
+# base limit
+is($build->calculate_base_limit_from_coverage, 2250000, 'Calculated base limit');
 
 # metrics
 my @interesting_metric_names = $build->interesting_metric_names;
-is(scalar(@interesting_metric_names), 11, 'interesting metric names');
+is(scalar(@interesting_metric_names), 14, 'interesting metric names');
 for my $metric_name ( @interesting_metric_names ) {
     $metric_name =~ s/\s/_/g;
     can_ok('Genome::Model::Build::DeNovoAssembly', $metric_name);

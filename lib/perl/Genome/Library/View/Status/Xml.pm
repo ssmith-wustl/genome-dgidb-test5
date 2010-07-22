@@ -31,6 +31,7 @@ class Genome::Library::View::Status::Xml {
                         'species_name',
                         'species_latin_name',
                         'strain_name',
+                        'ncbi_taxon_id',
                     ]
                 },
             ]

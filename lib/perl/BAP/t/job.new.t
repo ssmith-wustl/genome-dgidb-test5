@@ -3,9 +3,9 @@
 use strict;
 use warnings;
 
-use Test::More tests => 122;
-use lib '/gscmnt/temp212/info/annotation/bioperl-svn/bioperl-live';
-use lib '/gscmnt/temp212/info/annotation/bioperl-svn/bioperl-run';
+use above "BAP";
+use File::Basename;
+use Test::More qw(no_plan);  # odd, seems to bounce between 192 and 196
 
 use Bio::SeqIO;
 
@@ -23,7 +23,7 @@ my @jobs = ( );
 {
     
     my $fasta = Bio::SeqIO->new(
-                                -file   => 'data/BACSTEFNL_Contig694.fasta',
+                                -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.fasta',
                                 -format => 'Fasta',
                             );
     
@@ -31,14 +31,14 @@ my @jobs = ( );
  
     push @jobs, BAP::Job::Genemark->new(
                                         $seq,
-                                        'data/heu_11_46.mod',
+                                        File::Basename::dirname(__FILE__).'/data/heu_11_46.mod',
                                         2112,
                                     );
     
     push @jobs, BAP::Job::Glimmer->new(
                                        'glimmer2',
                                        $seq,
-                                       'data/glimmer2.icm',
+                                       File::Basename::dirname(__FILE__).'/data/glimmer2.icm',
                                        undef,
                                        0,
                                        2112,
@@ -47,8 +47,8 @@ my @jobs = ( );
     push @jobs, BAP::Job::Glimmer->new(
                                        'glimmer3',
                                        $seq,
-                                       'data/glimmer3.icm',
-                                       'data/glimmer3.pwm',
+                                       File::Basename::dirname(__FILE__).'/data/glimmer3.icm',
+                                       File::Basename::dirname(__FILE__).'/data/glimmer3.pwm',
                                        0,
                                        2112,
                                    );
@@ -58,13 +58,13 @@ my @jobs = ( );
 {
 
     my $fasta = Bio::SeqIO->new(
-                                -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                 -format => 'Fasta',
                             );
     
     my $seq = $fasta->next_seq();
     my $fasta2 = Bio::SeqIO->new(
-                                 -file   => 'data/BACSTEFNL_Contig694.fasta',
+                                 -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.fasta',
                                  -format => 'fasta',
                                 );
     my $seq2 = $fasta2->next_seq();
@@ -72,14 +72,15 @@ my @jobs = ( );
     my @features = ( );
     
     my $gff = Bio::Tools::GFF->new(
-                                   -file => 'data/BACSTEFNL_Contig26.1.gff',
+                                   -file => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.gff',
                                );
     
     while (my $feature = $gff->next_feature()) {
         push @features, $feature;
     }
     
-    my $blast_db = '/gscmnt/temp110/analysis/blast_nr/nr';
+    #my $blast_db = '/gscmnt/temp110/analysis/blast_nr/nr';
+    my $blast_db = '/gscmnt/gpfstest2/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr';
     my $rrna_db = '/gscmnt/278/analysis/HGMI/rRNA_testing/16s_23srnadb';
     
     push @jobs, BAP::Job::InterGenicBlastX->new(
@@ -100,7 +101,7 @@ my @jobs = ( );
    
     
     my $pep_fasta = Bio::SeqIO->new(
-                                    -file   => 'data/BACSTEFNL_Contig694.pep.fasta',
+                                    -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.pep.fasta',
                                     -format => 'Fasta',
                                 );
     
@@ -172,4 +173,5 @@ foreach my $job (@jobs) {
 
 }
 
+done_testing();
 unlink('error.log');

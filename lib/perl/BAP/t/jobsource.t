@@ -3,7 +3,9 @@
 use strict;
 use warnings;
 
-use Test::More tests => 49;
+#use Test::More tests => 49; # or 25? or 37?
+use Test::More qw(no_plan);
+use File::Basename;
 
 use Bio::SeqIO;
 use above "BAP";
@@ -18,34 +20,35 @@ BEGIN {
 }
 
 
-my $blast_db = '/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr'; 
+#my $blast_db = '/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr'; 
+my $blast_db = '/gscmnt/gpfstest2/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr';
 
 my @job_sources = ( );
 
 
 my $genemark_job_source = BAP::JobSource::Genemark->new(
                                                         Bio::SeqIO->new(
-                                                                        -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                                                        -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                                                         -format => 'Fasta',
                                                                     ),
-                                                        'data/heu_11_46.mod',
+                                                        File::Basename::dirname(__FILE__).'/data/heu_11_46.mod',
                                                     );
 
 my $glimmer2_job_source = BAP::JobSource::Glimmer2->new(
                                                         Bio::SeqIO->new(
-                                                                        -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                                                        -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                                                         -format => 'Fasta',
                                                                     ),
-                                                        'data/glimmer2.icm',
+                                                        File::Basename::dirname(__FILE__).'/data/glimmer2.icm',
                                                     );
 
 my $glimmer3_job_source = BAP::JobSource::Glimmer3->new(
                                                         Bio::SeqIO->new(
-                                                                        -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                                                        -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                                                         -format => 'Fasta',
                                                                     ),
-                                                        'data/glimmer3.icm',
-                                                        'data/glimmer3.pwm',
+                                                        File::Basename::dirname(__FILE__).'/data/glimmer3.icm',
+                                                        File::Basename::dirname(__FILE__).'/data/glimmer3.pwm',
                                                     );
 
 isa_ok($genemark_job_source, 'BAP::JobSource::Genemark');
@@ -61,11 +64,11 @@ push @job_sources, GAP::JobSource::Composite->new(
 my $intergenic_blastx_job_source =
     BAP::JobSource::InterGenicBlastX->new(
                                           Bio::SeqIO->new(
-                                                          -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                                          -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                                           -format => 'Fasta',
                                                       ),
                                           Bio::Tools::GFF->new(
-                                                               -file => 'data/BACSTEFNL_Contig26.1.gff',
+                                                               -file => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.gff',
                                                            ),
                                           $blast_db,
                                           1,
@@ -73,7 +76,7 @@ my $intergenic_blastx_job_source =
 
 my $phase2_blastp_job_source = BAP::JobSource::Phase2BlastP->new(
                                                                  $blast_db,
-                                                                 'data/BACSTEFNL_Contig694.pep.fasta',
+                                                                 File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.pep.fasta',
                                                                 1, 
                                                              );
 
@@ -143,5 +146,6 @@ foreach my $job_source (@job_sources) {
     
 }
 
+done_testing();
 unlink('error.log');
 

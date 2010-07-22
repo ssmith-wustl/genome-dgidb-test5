@@ -22,11 +22,13 @@ class Genome::ProcessingProfile::GenePrediction {
             default => 200,
         },
         runner_count => {
+            is => 'Number',
             doc => 'Number of runners for the gene prediction step',
             is_optional => 1,
             default => 50,
         }, 
         skip_acedb_parse => {
+            is => 'Boolean',
             doc => 'If set, skip aceDB parsing in bap project finish',
             is_optional => 1,
             default => 0,
