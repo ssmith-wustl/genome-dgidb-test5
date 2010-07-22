@@ -94,6 +94,9 @@ class Genome::InstrumentData::Solexa {
 
                 --s_rev.sd_above_insert_size,
                 i.sd_above_insert_size,
+                
+                --s_rev.sd_below_insert_size,
+                i.sd_below_insert_size,
 
                 --s_rev.is_external,
                 0 is_external,
@@ -177,6 +180,7 @@ EOS
         gerald_directory                => { },
         median_insert_size              => { },
         sd_above_insert_size            => { },
+        sd_below_insert_size            => { },
         is_external                     => { },
         adaptor_path                    => { },
         archive_path                    => { },
@@ -786,4 +790,4 @@ sub run_identifier {
 1;
 
 #$HeaderURL$
-#$Id$
+#$Id: Solexa.pm 61055 2010-07-16 19:30:48Z boberkfe $
