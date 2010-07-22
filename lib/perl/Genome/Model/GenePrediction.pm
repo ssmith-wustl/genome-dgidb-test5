@@ -105,12 +105,16 @@ class Genome::Model::GenePrediction {
             via => 'subject',
             to => 'ncbi_taxon_id',
         },
+        # The species latin name on some taxons includes a strain name, which needs to be removed
         organism_name => {
             calculate_from => ['subject'],
             calculate => q( 
                 my $latin_name = $subject->species_latin_name;
-                $latin_name =~ s/\s+/_/; 
-                return $latin_name
+                $latin_name =~ s/\s+/_/g; 
+                my $first = index($latin_name, "_");
+                my $second = index($latin_name, "_", $first + 1);
+                return $latin_name if $second == -1;
+                return substr($latin_name, 0, $second);
             ),
         },
         locus_id => {
