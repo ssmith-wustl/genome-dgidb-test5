@@ -13,6 +13,7 @@ use Bio::DB::BioDB;
 use Bio::DB::Query::BioQuery;
 
 use File::Slurp;
+use File::Path qw/ mkpath /;
 use File::Temp qw/ tempfile tempdir /;
 use DateTime;
 use List::MoreUtils qw/ uniq /;
@@ -23,86 +24,79 @@ use Data::Dumper;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is         => 'Command',
-    has        => [
-        'locus_tag' => {
+    is => 'Command',
+    has => [
+        locus_tag => {
             is  => 'String',
-            doc => "taxonomy name"
+            doc => 'Taxonomy name',
         },
-        'sequence_set_id' => {
+        sequence_set_id => {
             is  => 'Integer',
-            doc => "Sequence set id in MGAP database",
+            doc => 'Sequence set id in MGAP database',
         },
-	'sequence_name' => {
-	    is  => 'String',
-	    doc => "assembly name in MGAP database",
-	},
-	'organism_name' => {
-	    is  => 'String',
-	    doc => 'organism name in MGAP database',
-	},
-        'taxon_id' => {
-            is  => 'Integer',
-            doc => "NCBI Taxonomy id",
-            is_optional => 1,
-        },
-        'workflow_xml' => {
-            is => 'String',
-            doc => "Workflow xml file",
-            is_optional => 1,
-        },
-        'keep_pep' => {
-            is          => 'Boolean',
-            doc         => "keep temporary fasta file of gene proteins",
-            is_optional => 1,
-            default     => 0
-        },
-        'pep_file' => {
-            is          => 'String',
-            doc         => "fasta file of gene proteins",
-            is_optional => 1,
-        },
-        'dev' => {
-            is => 'Boolean',
-            doc => "use development databases",
-            is_optional => 1,
-        },
-        'chunk_size' => {
-            is => 'Integer',
-            doc => "Chunk size parameter for PAP (default 10)",
-            is_optional => 1,
-            default => 10,
-        },
-        'gram_stain' => {
+	    sequence_name => {
+	        is  => 'String',
+	        doc => 'Assembly name in MGAP database',
+	    },
+	    organism_name => {
+	        is  => 'String',
+	        doc => 'Organism name in MGAP database',
+	    },
+        gram_stain => {
             is => 'String',
             doc => 'Gram Stain',
             valid_values => ['positive','negative']
         },
-        'blastp_archive_dir' => {
-                                 is  => 'String',
-                                 doc => 'blastp raw output archive directory',
-                             },
-        'interpro_archive_dir' => {
-                                   is  => 'String',
-                                   doc => 'intepro raw output archive directory',
-                               },
-        'keggscan_archive_dir' => {
-                                   is  => 'String',
-                                   doc => 'keggscan raw output archive directory',
-                               },
-        'resume_workflow' => { 
-                              is => 'String',
-                              doc => 'resume (crashed) workflow from previous invocation',
-			      is_optional => 1,
-                             },
-        'no_load_biosql' => {
-                             is => 'Boolean',
-                             doc => 'Skip loading biosql',
-                             is_optional => 1,
-                             default => 0,
-                            },
-
-    ]
+        blastp_archive_dir => {
+            is  => 'String',
+            doc => 'blastp raw output archive directory',
+        },
+        interpro_archive_dir => {
+            is  => 'String',
+            doc => 'Intepro raw output archive directory',
+        },
+        keggscan_archive_dir => {
+            is  => 'String',
+            doc => 'keggscan raw output archive directory',
+        },
+    ],
+    has_optional => [
+        taxon_id => {
+            is  => 'Integer',
+            doc => 'NCBI Taxonomy id',
+        },
+        workflow_xml => {
+            is => 'String',
+            doc => 'Workflow xml file',
+        },
+        keep_pep => {
+            is => 'Boolean',
+            doc => 'Keep temporary fasta file of gene proteins',
+            default => 0
+        },
+        pep_file => {
+            is => 'String',
+            doc => 'Fasta file of gene proteins',
+        },
+        dev => {
+            is => 'Boolean',
+            doc => 'Use development databases',
+        },
+        chunk_size => {
+            is => 'Integer',
+            doc => 'Chunk size parameter',
+            default => 10,
+        },
+        resume_workflow => { 
+            is => 'String',
+            doc => 'resume (crashed) workflow from previous invocation',
+        },
+        no_load_biosql => {
+            is => 'Boolean',
+            doc => 'Skip loading biosql',
+            default => 0,
+        },
+    ],
 );
 
 sub help_brief
@@ -126,24 +120,29 @@ biosql, pulls data from biosql, then initializes and runs the PAP workflow.
 EOS
 }
 
-sub execute
-{
+sub execute {
     my $self = shift;
 
-    my $gram_stain = $self->gram_stain();
-
-    unless (($gram_stain eq 'positive') || ($gram_stain eq 'negative')) {
-        die "gram_stain must be 'positive' or 'negative', not '$gram_stain'";
+    # Check if each archive directory exists and create it if it doesn't
+    for my $archive_path ($self->blastp_archive_dir, $self->interpro_archive_dir, $self->keggscan_archive_dir) {
+        unless (-d $archive_path) {
+            my $rv = mkpath($archive_path);
+            unless ($rv) {
+                $self->error_message("Could not make archive directory at $archive_path!");
+                croak;
+            }
+        }
     }
-    
+
     my $previous_workflow_id = $self->resume_workflow();
-    # start timer here
+
+    # Start timer here
     my $starttime = DateTime->now(time_zone => 'America/Chicago');
     unless (defined($previous_workflow_id)) {
-        print STDERR "moving data from mgap to biosql SendToPap.pm\n";
+        $self->status_message("Moving data from mgap to biosql SendToPap.pm");
         $self->mgap_to_biosql();
 
-        print STDERR "creating peptide file SendToPap.pm\n";
+        $self->status_message("Creating peptide file SendToPap.pm");
         $self->get_gene_peps();
     }
     

@@ -518,12 +518,6 @@ sub execute
         join( '.', 'KS-OUTPUT', $config->{locus_tag}, 'CDS', 'pep', ),
     );
 
-    foreach my $archive_dir ( $blastp_archive_dir, $interpro_archive_dir,
-        $keggscan_archive_dir )
-    {
-        mkpath($archive_dir);
-    }
-
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
         'locus_tag'            => $config->{locus_tag},
         'sequence_set_id'      => $ssid,
