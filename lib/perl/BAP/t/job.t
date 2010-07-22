@@ -3,8 +3,10 @@
 use strict;
 use warnings;
 use above "BAP";
+use File::Basename;
 
-use Test::More tests => 122;
+use Test::More tests => 191;
+#use Test::More tests => 122;
 
 use Bio::SeqIO;
 
@@ -20,7 +22,7 @@ my @jobs = ( );
 {
     
     my $fasta = Bio::SeqIO->new(
-                                -file   => 'data/BACSTEFNL_Contig694.fasta',
+                                -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.fasta',
                                 -format => 'Fasta',
                             );
     
@@ -28,14 +30,14 @@ my @jobs = ( );
  
     push @jobs, BAP::Job::Genemark->new(
                                         $seq,
-                                        'data/heu_11_46.mod',
+                                        File::Basename::dirname(__FILE__).'/data/heu_11_46.mod',
                                         2112,
                                     );
     
     push @jobs, BAP::Job::Glimmer->new(
                                        'glimmer2',
                                        $seq,
-                                       'data/glimmer2.icm',
+                                       File::Basename::dirname(__FILE__).'/data/glimmer2.icm',
                                        undef,
                                        0,
                                        2112,
@@ -44,8 +46,8 @@ my @jobs = ( );
     push @jobs, BAP::Job::Glimmer->new(
                                        'glimmer3',
                                        $seq,
-                                       'data/glimmer3.icm',
-                                       'data/glimmer3.pwm',
+                                       File::Basename::dirname(__FILE__).'/data/glimmer3.icm',
+                                       File::Basename::dirname(__FILE__).'/data/glimmer3.pwm',
                                        0,
                                        2112,
                                    );
@@ -55,7 +57,7 @@ my @jobs = ( );
 {
 
     my $fasta = Bio::SeqIO->new(
-                                -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                 -format => 'Fasta',
                             );
     
@@ -64,7 +66,7 @@ my @jobs = ( );
     my @features = ( );
     
     my $gff = Bio::Tools::GFF->new(
-                                   -file => 'data/BACSTEFNL_Contig26.1.gff',
+                                   -file => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.gff',
                                );
     
     while (my $feature = $gff->next_feature()) {
@@ -85,7 +87,7 @@ my @jobs = ( );
    
     
     my $pep_fasta = Bio::SeqIO->new(
-                                    -file   => 'data/BACSTEFNL_Contig694.pep.fasta',
+                                    -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.pep.fasta',
                                     -format => 'Fasta',
                                 );
     
