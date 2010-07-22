@@ -219,10 +219,14 @@ sub _properties_for_class {
             $self->error_message("Can't get property for processing profile param ($param)");
             return;
         }
-        $properties{ $property->property_name } = {
+        my $property_name = $property->property_name;
+        $properties{ $property_name } = {
             is => 'Text',
             is_optional => $property->is_optional,
             doc => $property->doc,
+        };
+        if (defined $property->default_value) {
+            $properties{ $property_name }->{'default_value'} = $property->default_value;
         }
     }
 

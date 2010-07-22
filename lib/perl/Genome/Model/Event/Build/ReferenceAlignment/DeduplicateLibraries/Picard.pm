@@ -15,7 +15,7 @@ class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Pic
 };
 
 sub bsub_rusage {
-    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=90000:mem=8000]' -M 8000000";
+    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=90000:mem=16000]' -M 16000000";
 }
 
 sub execute {
@@ -140,7 +140,7 @@ sub execute {
 
     Genome::DataSource::GMSchema->disconnect_default_dbh; 
   
-    my $merged_fh = File::Temp->new(SUFFIX => ".bam", DIR => $alignments_dir);
+    my $merged_fh = File::Temp->new(SUFFIX => ".bam", DIR => $alignments_dir );
     my $merged_file = $merged_fh->filename;
 
     my $merge_cmd = Genome::Model::Tools::Sam::Merge->create(
@@ -217,7 +217,7 @@ sub execute {
            tmp_dir => $tmp_dir->dirname,
            log_file => $markdup_log_file, 
            use_picard_version => $rmdup_version,
-           max_jvm_heap_size => 6,
+           max_jvm_heap_size => 12,
     
         ); 
     

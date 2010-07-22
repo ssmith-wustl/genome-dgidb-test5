@@ -27,6 +27,8 @@ class Genome::Model::Tools::Assembly::Stats {
 	#velvet_ace_file => { is => 'Text', doc => 'Velvet ace file', },
 	velvet_afg_file => { is => 'Text', doc => 'Velvet afg file', },
 	velvet_sequences_file => { is => 'Text', doc => 'Velvet sequences file', },
+	#optional core gene survey run file
+	core_gene_survey_file => {is => 'Text', doc => 'Core gene survey result file', },
     ],
 };
 
@@ -827,22 +829,23 @@ sub get_read_depth_stats_from_ace {
 }
 
 sub get_core_gene_survey_results {
-    my ($self) = @_;
+    my $self = shift;
+
+    unless (-s $self->core_gene_survey_file) {
+	$self->error_message("Can't find core gene survey file: ".$self->core_gene_survey_file);
+	return;
+    }
+    
     my $text = "\n*** Core Gene survey Result ***\n";
-    #TODO - use getter method to get this file
-    if (-s 'Cov_30_PID_30.out.gz') {
-	my $fh = IO::File->new("zcat Cov_30_PID_30.out.gz |");
-	while (my $line = $fh->getline) {
-	    $text .= $line if $line =~ /^Perc/;
-	    $text .= $line if $line =~ /^Number/;
-	    $text .= $line if $line =~ /^Core/;
-	}
-	$text .= "\n";
-	$fh->close;
+    my $fh = IO::File->new("zcat " . $self->core_gene_survey_file . " |");
+    while (my $line = $fh->getline) {
+	$text .= $line if $line =~ /^Perc/;
+	$text .= $line if $line =~ /^Number/;
+	$text .= $line if $line =~ /^Core/;
     }
-    else {
-	$text .= "Cov_30_PID_30.out.gz missing .. unable to create core gene survey results\n\n";
-    }
+    $text .= "\n";
+    $fh->close;
+
     return $text;
 }
 
@@ -868,6 +871,7 @@ sub get_constraint_stats {
 sub validate_assembly_out_files {
     my $self = shift;
 
+    #mandidatory files
     my $file_name = ($self->msi_assembly) ? 'msi.contigs.quals' : 'contigs.quals';
     $self->contigs_quals_file($self->assembly_directory."/edit_dir/$file_name");
     unless (-s $self->contigs_quals_file) {
@@ -895,6 +899,11 @@ sub validate_assembly_out_files {
 	$self->error_message("Failed to find file: ".$self->read_info_file);
 	return;
     }
+    #optional files
+    if (-s $self->assembly_directory.'/edit_dir/Cov_30_PID_30.out.gz') {
+	$self->core_gene_survey_file($self->assembly_directory.'/edit_dir/Cov_30_PID_30.out.gz');
+    }
+
     return 1;
 }
 

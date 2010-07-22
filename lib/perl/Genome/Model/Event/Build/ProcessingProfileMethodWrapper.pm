@@ -23,6 +23,10 @@ class Genome::Model::Event::Build::ProcessingProfileMethodWrapper {
     ]
 };
 
+sub bsub_rusage {
+    return "-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=90000:mem=16000]' -M 16000000";
+}
+
 sub execute {
     my $self = shift;
 
