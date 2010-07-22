@@ -583,7 +583,9 @@ sub execute {
         }        
     }
 
-    $self->status_message("Starting builds...");   
+    $self->status_message("Starting builds...");
+
+    MODEL:   
     for my $model_id (sort keys %definitely_build) {
         my $model = Genome::Model->get($model_id); 
         eval {
