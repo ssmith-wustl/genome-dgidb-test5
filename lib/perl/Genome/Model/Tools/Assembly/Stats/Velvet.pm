@@ -48,6 +48,12 @@ class Genome::Model::Tools::Assembly::Stats::Velvet {
 	    default_value => 0,
 	    doc => 'Denote msi assemblies',
 	},
+	report_core_gene_survey => {
+	    is => 'Boolean',
+	    is_optional => 1,
+	    default_value => 0,
+	    doc => 'Reports core gene survey results',
+	},
     ],
 };
 
@@ -96,10 +102,12 @@ sub execute {
     $stats .= $content_stats;
     print $content_stats unless $self->no_print_to_screen;
 
-    #GENE CORE SURVEY STATS - THIS IS NO LONGER BEING SUPPLIED
-    #my $core_survey = $self->get_core_gene_survey_results();
-    #$stats .= $core_survey;
-    #print $core_survey unless $self->no_print_to_screen;
+    #GENE CORE SURVEY STATS - This is optional
+    if ($self->report_core_gene_survey) {
+	my $core_survey = $self->get_core_gene_survey_results();
+	$stats .= $core_survey;
+	print $core_survey unless $self->no_print_to_screen;
+    }
 
     #READ DEPTH STATS
     my $depth_stats = $self->get_read_depth_stats_from_afg();
