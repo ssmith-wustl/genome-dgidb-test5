@@ -1,13 +1,15 @@
 use strict;
 use warnings;
 
+use above "MGAP";
 use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 1615;
+use File::Basename;
+use Test::More tests => 1525; # orig 1615?
 
 BEGIN {
     use_ok('MGAP::Command');
@@ -15,7 +17,7 @@ BEGIN {
 }
 
 my $command = MGAP::Command::GenePredictor::Genemark->create(
-                                                             'fasta_file' => 'data/HPAG1.fasta',
+                                                             'fasta_file' => File::Basename::dirname(__FILE__).'/data/HPAG1.fasta',
                                                              'gc_percent' => 39.1, 
                                                             );
 

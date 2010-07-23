@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 
+use above "MGAP";
 use Workflow;
 
 use Bio::SeqFeature::Generic;

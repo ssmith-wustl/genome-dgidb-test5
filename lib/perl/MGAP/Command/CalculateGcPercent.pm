@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 
-use Workflow;
 use MGAP::Command;
 
 use Bio::Seq;
@@ -14,15 +13,13 @@ use Bio::SeqIO;
 class MGAP::Command::CalculateGcPercent {
     is => ['MGAP::Command'],
     has => [
-        fasta_files => { is => 'ARRAY', doc => 'array of fasta file names' },
-        gc_percent => { is => 'Float', is_optional => 1, doc => 'GC content' }
+        fasta_files => { is => 'ARRAY', doc => 'array of fasta file names',
+                         is_input => 1, },
+        gc_percent => { is => 'Float', is_optional => 1, doc => 'GC content',
+                        is_output => 1, }
     ],
 };
 
-operation_io MGAP::Command::CalculateGcPercent {
-    input  => [ 'fasta_files' ],
-    output => [ 'gc_percent' ],
-};
 
 sub sub_command_sort_position { 10 }
 

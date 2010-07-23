@@ -3,7 +3,6 @@ package MGAP::Command::BuildGlimmerInput;
 use strict;
 use warnings;
 
-use Workflow;
 use MGAP::Command;
 
 use Bio::Seq;
@@ -18,16 +17,20 @@ use IPC::Run;
 class MGAP::Command::BuildGlimmerInput {
     is => ['MGAP::Command'],
     has => [
-        fasta_files => { is => 'ARRAY', doc => 'array of fasta file names' },
-        model_file => { is => 'SCALAR', is_optional => 1, doc => 'absolute path to the model file for this fasta' },
-        pwm_file => { is => 'SCALAR' , is_optional => 1, doc => 'absolute path to the pwm file for this fasta' }
+        fasta_files => { is => 'ARRAY',
+                         doc => 'array of fasta file names',
+                         is_input => 1, },
+        model_file => { is => 'SCALAR',
+                        is_optional => 1,
+                        doc => 'absolute path to the model file for this fasta',
+                        is_output => 1, },
+        pwm_file => { is => 'SCALAR' ,
+                      is_optional => 1,
+                      doc => 'absolute path to the pwm file for this fasta',
+                      is_output => 1, }
     ],
 };
 
-operation_io MGAP::Command::BuildGlimmerInput {
-    input  => [ 'fasta_files' ],
-    output => [ 'model_file', 'pwm_file' ],
-};
 
 sub sub_command_sort_position { 10 }
 
