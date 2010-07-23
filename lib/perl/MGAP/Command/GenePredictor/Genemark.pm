@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Bio::SeqIO;
-use Workflow;
 use BAP::Job::Genemark;
 
 use IO::Dir;
@@ -12,15 +11,13 @@ use IO::Dir;
 class MGAP::Command::GenePredictor::Genemark {
     is => ['MGAP::Command::GenePredictor'],
     has => [
-            gc_percent => { is => 'Float', doc => 'GC content' },
-            model_file => { is => 'SCALAR', is_optional => 1, doc => 'Genemark model file' },
+            gc_percent => { is => 'Float', doc => 'GC content',
+                            is_input => 1, },
+            model_file => { is => 'SCALAR', is_optional => 1, doc => 'Genemark model file',
+                             },
     ],
 };
 
-operation_io MGAP::Command::GenePredictor::Genemark {
-    input => [ 'gc_percent', 'fasta_file' ],
-    output => [ 'bio_seq_feature' ]
-};
 
 sub sub_command_sort_position { 10 }
 

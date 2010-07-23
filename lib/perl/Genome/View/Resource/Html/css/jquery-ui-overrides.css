@@ -1,0 +1,28 @@
+/* get anchor buttons to match blueprint baseline grid (18px) */
+a.ui-button-text-only .ui-button-text {
+    padding: 0.2em 0.5em;
+    font-size: .7em;
+    line-height: 0 !important;
+}
+
+td.buttons .ui-button {
+    margin-right: 0 !important;
+    line-height: 0 !important;
+}
+
+td.buttons a.ui-button-text-only .ui-button-text {
+    padding: 0 !important;
+    font-size: .7em;
+    line-height: 0 !important;
+
+}
+
+td.buttons .ui-button-text {
+    line-height: 0 !important;
+}
+
+td.buttons a.ui-button-text-only {
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 0 !important;
+}

@@ -3,21 +3,17 @@ package MGAP::Command::DeleteFiles;
 use strict;
 use warnings;
 
-use Workflow;
 
 use English;
 
 class MGAP::Command::DeleteFiles {
     is => ['MGAP::Command'],
     has => [
-        files => { is => 'ARRAY', doc => 'array of files to delete' },
+        fasta_files => { is => 'ARRAY', doc => 'array of files to delete',
+                   is_input => 1, },
     ],
 };
 
-operation_io MGAP::Command::DeleteFiles {
-    input  => [ 'files' ],
-    output => [ ],
-};
 
 sub sub_command_sort_position { 10 }
 
@@ -41,7 +37,7 @@ sub execute {
     my $self = shift;
 
     
-    my @files = @{$self->files()};
+    my @files = @{$self->fasta_files()};
 
     foreach my $file (@files) {
 

@@ -53,11 +53,11 @@ EOS
 
 sub help_synopsis {
     return <<"EOS"
-genome model copy
-  123456789
-  'new model name'
-  processing_profile_name="use this processing profile instead"
-  ...
+    genome model copy --from 123456789 --to "copy_of_my_model" --model-overrides 
+    processing_profile_name="use this processing profile instead"
+    or
+    genome model copy 123456789 "copy_of_my_model" 
+    processing_profile_name="use this processing profile instead"   
 EOS
 }
 
