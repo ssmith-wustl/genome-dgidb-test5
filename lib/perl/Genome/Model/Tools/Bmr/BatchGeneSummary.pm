@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Bmr::BatchGeneSummaryFast;
+package Genome::Model::Tools::Bmr::BatchGeneSummary;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use IO::File;
 use Bit::Vector;
 
-class Genome::Model::Tools::Bmr::BatchGeneSummaryFast {
+class Genome::Model::Tools::Bmr::BatchGeneSummary {
     is => 'Genome::Command::OO',
     has_input => [
     refseq_build_name => {
