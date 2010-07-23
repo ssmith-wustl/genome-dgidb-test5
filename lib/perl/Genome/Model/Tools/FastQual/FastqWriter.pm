@@ -30,7 +30,7 @@ sub write {
     $self->_fh->print(
         join(
             "\n",
-            '@'.$seq->{id},#.( $seq->{desc} ? ' '.$seq->{desc} : '' ),
+            '@'.$seq->{id}.( defined $seq->{desc} ? ' '.$seq->{desc} : '' ),
             $seq->{seq},
             '+',
             $seq->{qual},
