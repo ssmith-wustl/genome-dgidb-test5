@@ -136,12 +136,9 @@ sub execute {
         die $self->error_message;
     }
 
-    if (defined $reference_name && $reference_build_id) {
-        $self->error_message("ambiguous params, both a reference name and reference build id provided.  please use only one or the other");
-        die $self->error_message;
-    }
-
-    if (defined $reference_name) {
+    if (defined $reference_build_id) {
+        $alignment_params{reference_build_id} = $reference_build_id;
+    } else {
         my ($model_name,$build_version) = ($reference_name =~ /^(.*)-build(.*?)$/);
         unless ($model_name and $build_version) {
             $self->error_message("Failed to parse a model name and build version from reference name $reference_name");
@@ -164,9 +161,7 @@ sub execute {
             die;
         }
         $alignment_params{reference_build_id} = $builds[0]->id;
-    } else {
-        $alignment_params{reference_build_id} = $reference_build_id;
-    }
+    } 
 
     if ($self->trimmer_name) {
         $alignment_params{trimmer_name} = $self->trimmer_name;
