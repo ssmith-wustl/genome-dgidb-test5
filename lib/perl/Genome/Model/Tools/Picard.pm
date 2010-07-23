@@ -6,7 +6,7 @@ use warnings;
 use Genome; 
 use File::Basename;
 
-my $PICARD_DEFAULT = '1.17';
+my $PICARD_DEFAULT = '1.22';
 my $DEFAULT_MEMORY = 2;
 my $DEFAULT_VALIDATION_STRINGENCY = 'SILENT';
 
