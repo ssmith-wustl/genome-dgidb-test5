@@ -27,7 +27,7 @@ class Genome::Model::Event {
     ],
     has_optional => [
         instrument_data_id => { is => 'VARCHAR2', len => 100, implied_by => 'instrument_data' },
-        instrument_data    => { is => 'Genome::InstrumentData', id_by => 'instrument_data_id', 
+        instrument_data    => { is => 'Genome::InstrumentData', id_by => 'instrument_data_id',
                                 doc => 'The id of the instrument data on which to operate' },
         instrument_data_assignment => {
                                        is => 'Genome::Model::InstrumentDataAssignment',
@@ -50,10 +50,10 @@ class Genome::Model::Event {
                                      return 0;
                                  }
                                  return 1;
-                             ), 
+                             ),
                          doc => 'a flag to determine metric calculations' },
         build_directory    => { calculate_from => 'build',
-                         calculate => q( return $build->data_directory ), 
+                         calculate => q( return $build->data_directory ),
                          doc => 'the directory where this step should put data' },
     ],
     has_many_optional => [
@@ -167,7 +167,7 @@ sub delete {
         print Data::Dumper::Dumper($next_event);
         $self->warning_message('Setting event '.$next_event->id.' to undef to remove prior_event_id constraint.');
     }
-    
+
     if ($self->{db_committed}) {
         $self->warning_message('deleting ' . $self->class . ' with id  ' . $self->id);
     }
@@ -176,7 +176,7 @@ sub delete {
     return 1;
 }
 
-#TODO: fix the way this method is called an either inherit from G:U:F 
+#TODO: fix the way this method is called an either inherit from G:U:F
 #      or call class method directly like below
 sub shellcmd {
     my $self = shift;
@@ -190,7 +190,7 @@ sub log_directory {
     my $log_directory = sprintf('%s/logs/',
                                 $self->build_directory,
                             );
-    if (defined $self->instrument_data_id) {
+    if (defined $self->instrument_data_assignment) {
         $log_directory .= $self->instrument_data_assignment->sequencing_platform .'/'. $self->instrument_data_assignment->run_name
     }
     if (defined $self->ref_seq_id) {
@@ -272,7 +272,7 @@ sub create_file {
     }
     else {
         my $fh = IO::File->new('>'.$path);
-        die "Failed to make file $path! $?" unless $fh;    
+        die "Failed to make file $path! $?" unless $fh;
         unless ($self->add_output(name => $output_name, value => $path)) {
             die "Error adding ouput $output_name $path!";
         }
@@ -306,7 +306,7 @@ sub open_file {
 
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
-    return grep { 
+    return grep {
             (
                 $_->class_name eq __PACKAGE__
                     ? ($_->property_name eq 'model_id' ? 1 : 0)
@@ -365,7 +365,7 @@ sub _resolve_subclass_name_for_event_type {
 
     foreach my $type ('Event','Command') {
         $class_name = join('::', 'Genome::Model::' . $type, @command_parts);
-    
+
         # TEMP
         $class_name =~ s/AddReads::/Build::ReferenceAlignment::/;
 
@@ -376,13 +376,13 @@ sub _resolve_subclass_name_for_event_type {
             }
         }
     }
-    
+
     unless ($loaded_class) {
         $class_name = 'Genome::Model::Event::Generic';
     }
-    
+
 #    print "resolved $class_name\n";
-    
+
     return $class_name;
 }
 
@@ -482,7 +482,7 @@ sub execute_with_bsub {
     for my $log_file ( $err_log_file, $out_log_file )
     {
         $DB::single = $DB::stopper;
-        if(-e $log_file && (stat($log_file))[2] != 0100664) { 
+        if(-e $log_file && (stat($log_file))[2] != 0100664) {
             unless ( chmod(0664, $log_file) )
             {
                 $self->error_message("Can't chmod log file ($log_file)");
@@ -603,7 +603,7 @@ sub get_metric_value {
     return $metric->value;
 }
 
-#this method is like gimme that metric from the database or fail if it doesn't exist. 
+#this method is like gimme that metric from the database or fail if it doesn't exist.
 #Its public for those that want to generate a view without impyling an hour computation for unknown values
 sub get_metric {
     my $self = shift;
@@ -615,7 +615,7 @@ sub get_metric {
 
     if (@metric_names == 1) {
         # A hack to make a cgi script faster.  It preloads all the metrics, but the UR
-        # cache system isn't able to find them because of the in-clause.  
+        # cache system isn't able to find them because of the in-clause.
         return Genome::Model::Event::Metric->get(name => $metric_names[0], event_id => $self->id);
     } else {
         return Genome::Model::Event::Metric->get(
@@ -791,13 +791,13 @@ sub lsf_state {
     my $spool = `bjobs -l $lsf_job_id 2>&1`;
     return if ($spool =~ /Job <$lsf_job_id> is not found/);
 
-    # this regex nukes the indentation and line feed    
-    $spool =~ s/\s{22}//gm; 
+    # this regex nukes the indentation and line feed
+    $spool =~ s/\s{22}//gm;
 
     my @eventlines = split(/\n/, $spool);
     shift @eventlines;  # first line is white space
     my %jobinfo = ();
-    
+
     my $jobinfoline = shift @eventlines;
     if (defined $jobinfoline) {
         # sometimes the prior regex nukes the white space between Key <Value>
