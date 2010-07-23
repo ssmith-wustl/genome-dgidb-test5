@@ -31,6 +31,7 @@ sub next {
     my $fh = $self->_io;
     my $line = $fh->getline
         or return; #ok
+    chomp $line;
     my ($id, $desc) = split(/\s/, $line, 2);
     $id =~ s/^@//;
 
@@ -44,6 +45,7 @@ sub next {
 
     return {
         id => $id,
+        desc => $desc,
         seq => $seq,
         qual => $qual,
     };

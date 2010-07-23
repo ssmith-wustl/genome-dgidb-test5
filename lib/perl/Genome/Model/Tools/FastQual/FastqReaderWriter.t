@@ -5,17 +5,18 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More 'no_plan';
+use Data::Dumper 'Dumper';
 require File::Temp;
 require File::Compare;
+use Test::More 'no_plan';
 
 #< Use >#
 use_ok('Genome::Model::Tools::FastQual::FastqReader') or die;
 use_ok('Genome::Model::Tools::FastQual::FastqWriter') or die;
 
 #< Files >#
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-ReaderWriter/v0.2';
-my $input_fastq = $dir.'/in.fastq';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
+my $input_fastq = $dir.'/reader_writer.fastq';
 ok(-s $input_fastq, 'Input fastq exists') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok(-d $tmpdir, 'Created temp dir.');
