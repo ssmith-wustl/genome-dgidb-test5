@@ -1,12 +1,14 @@
 use strict;
 use warnings;
 
+use above "MGAP";
 use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
+use File::Basename;
 use Test::More tests => 15;
 
 BEGIN {
@@ -14,7 +16,7 @@ BEGIN {
     use_ok('MGAP::Command::BuildGlimmerInput');
 }
 
-my $command = MGAP::Command::BuildGlimmerInput->create('fasta_files' => [ 'data/HPAG1.fasta' ]);
+my $command = MGAP::Command::BuildGlimmerInput->create('fasta_files' => [ File::Basename::dirname(__FILE__).'/data/HPAG1.fasta' ]);
 isa_ok($command, 'MGAP::Command::BuildGlimmerInput');
 
 ok($command->execute());
@@ -30,7 +32,7 @@ ok(-e $pwm_file);
 ok(unlink($model_file)==1);
 ok(unlink($pwm_file)==1);
 
-$command = MGAP::Command::BuildGlimmerInput->create('fasta_files' => ['data/BIFCATDFT.fasta' ]);
+$command = MGAP::Command::BuildGlimmerInput->create('fasta_files' => [ File::Basename::dirname(__FILE__).'/data/BIFCATDFT.fasta' ]);
 
 ok($command->execute());
 

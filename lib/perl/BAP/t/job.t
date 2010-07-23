@@ -5,8 +5,7 @@ use warnings;
 use above "BAP";
 use File::Basename;
 
-use Test::More tests => 191;
-#use Test::More tests => 122;
+use Test::More qw(no_plan); # 191 or 122?
 
 use Bio::SeqIO;
 
@@ -150,4 +149,5 @@ foreach my $job (@jobs) {
 
 }
 
+#done_testing();
 unlink('error.log');

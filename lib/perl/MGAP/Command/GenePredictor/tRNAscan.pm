@@ -4,17 +4,19 @@ use strict;
 use warnings;
 
 use Bio::SeqIO;
-use Workflow;
 use GAP::Job::tRNAscan;
 
 class MGAP::Command::GenePredictor::tRNAscan {
     is => ['MGAP::Command::GenePredictor'],
+    has => [
+        domain => { is => 'Scalar',
+                    doc => 'domain of the sequence',
+                    valid_values => ['bacteria', 'archaea','eukaryota'],
+                    is_input => 1,
+                   },
+    ],
 };
 
-operation_io MGAP::Command::GenePredictor::tRNAscan {
-    input => [ 'fasta_file' ],
-    output => [ 'bio_seq_feature' ]
-};
 
 sub sub_command_sort_position { 10 }
 
@@ -45,6 +47,7 @@ sub execute {
     ##       a rather lame fashion.
     my $legacy_job = GAP::Job::tRNAscan->new(
                                              $seq,
+                                             $self->domain,
                                              2112,
                                          );
     
