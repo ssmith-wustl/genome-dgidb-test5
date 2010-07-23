@@ -15,10 +15,10 @@ class Genome::ProcessingProfile::DeNovoAssembly{
            doc => 'The sequencing platform used to produce the reads.',
            valid_values => [qw/ 454 solexa /],
        },
-       read_coverage => {
+       coverage => {
            is => 'Integer',
            is_optional => 1,
-           doc => 'Use genome size to limit the number of reads used in the assembly t oobtain this coverage.',
+           doc => 'Use genome size to limit the number of reads used in the assembly to obtain this coverage.',
        },
        # Assembler
        assembler_name => {
@@ -60,14 +60,15 @@ sub create {
 
  
     # Read coverage
-    if ( defined $self->read_coverage ) {
+    if ( defined $self->coverage ) {
         # Gotta be an int, gt 0 and even
-        unless ( $self->read_coverage =~ /^$RE{num}{real}$/ 
-                and $self->read_coverage > 0 
+        unless ( $self->coverage =~ /^$RE{num}{real}$/ 
+                and $self->coverage > 0
+                and $self->coverage <= 500
         ) { 
             # TODO pick a better number??
             $self->error_message(
-                "Invalid read coverage (".$self->read_coverage."). Read coverage must be an integer greater than 0."
+                "Invalid coverage (".$self->coverage."). Coverage must be an integer greater than 0 and less than  501."
             );
             $self->delete;
             return;

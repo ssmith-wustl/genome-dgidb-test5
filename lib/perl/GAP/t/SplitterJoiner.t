@@ -8,6 +8,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
+use File::Basename;
 use Test::More tests => 15;
 
 BEGIN {
@@ -17,7 +18,7 @@ BEGIN {
 }
 
 my $splitter = GAP::Command::FastaSplitter->create(
-                                                   'fasta_file' => 'data/C_elegans.ws184.fasta.bz2',
+                                                   'fasta_file' => File::Basename::dirname(__FILE__).'/data/C_elegans.ws184.fasta.bz2',
                                                    'chunk_size' => 1,
                                                   );
 isa_ok($splitter, 'GAP::Command::FastaSplitter');

@@ -7,7 +7,9 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 12;
+use File::Basename;
+#use Test::More tests => 12;
+use Test::More tests => 5;
 
 BEGIN {
     use_ok('GAP::Command');
@@ -16,7 +18,7 @@ BEGIN {
 
 
 my $command = GAP::Command::RepeatMasker->create(
-                                                 'input_file'     => 'data/BACSTEFNL_Contig694.fasta',
+                                                 'input_file'     => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.fasta',
                                                  'repeat_library' => '/gsc/var/lib/repeat/Trichinella_pseudospiralis_1.0_080103.rep', 
                                                 );
 isa_ok($command, 'GAP::Command::RepeatMasker');
