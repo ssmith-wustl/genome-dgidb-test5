@@ -9,6 +9,11 @@ use Carp;
 class Genome::Model::Command::Define::GenePrediction {
     is => 'Genome::Model::Command::Define',
     has_optional => [
+        assemble => {
+            is => 'Boolean',
+            default => 1,
+            doc => 'If set, an assembly build is started if a completed build is not found on the assembly model',
+        },
         subject_name => {
             is => 'Text',
             doc => 'The name of the subject all the reads originate from',
@@ -22,13 +27,14 @@ class Genome::Model::Command::Define::GenePrediction {
             id_by => 'assembly_model_id', 
             doc => 'imported assembly model to get assembly from',
         },
-        contigs_file_location => {
-            is => 'Path',
-            doc => 'Path to the contigs file, can be derived from the assembly model',
-        },
         taxon_id => {
             is => 'Number',
             doc => 'ID of taxon to be used, this can be derived from the assembly model',
+        },
+        taxon => {
+            is => 'Genome::Taxon',
+            id_by => 'taxon_id',
+            doc => 'Taxon that will be used as the subject of this model',
         },
         dev => {
             is => 'Boolean',
@@ -84,64 +90,121 @@ EOS
 
 sub help_detail {
     return <<"EOS"
-This defines a new genome model representing gene prediction.
+There are lots of ways to define a gene prediction model. If given just a taxon ID, this
+command looks for DeNovoAssembly and ImportedAssembly models that have that taxon as 
+their subject. The most recent model is used, with DeNovoAssembly models taking precedence
+over ImportedAssembly. If no model is found, then print out the commands the user would have
+to execute to create the assembly model and assign instrument data to it.
+
+If given an assembly model ID, get that model and get its taxon. If given both an assembly
+model and a taxon ID, get the model and make sure that its taxon matches the supplied one.
+
+Once an assembly model has been found and selected, look for a successful build. If one is not
+found, kick off a build if the --assemble option is set. If that option is not set, output the
+commands the user would have to execute to get a build started.
+
+With a successful assembly build, all the information needed to create the new gene prediction
+model is available. Once the model is created, set up model links so all further builds of the
+assembly model will kick off a build of this gene prediction model. 
 EOS
 }
 
 sub execute {
     my $self = shift;
 
-    # Gene prediction models require two things: the contigs file from the assembly and a Genome::Taxon object
-    # These can either be derived from a supplied DeNovoAssembly model, or explicitly given
+    # Need to find an assembly model that has this taxon as its subject. If one can't be found, then
+    # tell the user how to make one and how to rerun this tool appropriately
+    if (defined $self->taxon and not defined $self->assembly_model) {
+        my @denovo = Genome::Model::DeNovoAssembly->get(
+            subject_name => $self->taxon->name,
+            subject_class_name => 'Genome::Taxon',
+        );
+        my @imported = Genome::Model::ImportedAssembly->get(
+            subject_name => $self->taxon->name,
+            subject_class_name => 'Genome::Taxon',
+        );
     
-    if (defined $self->assembly_model) {
-        # Grab taxon from assembly model and set it as this model's subject
-        my $taxon = $self->assembly_model->subject;
-        unless ($taxon->isa('Genome::Taxon')) {
-            $self->error_message("Subject of assembly model not a Genome::Taxon object as expected!");
-            croak;
+        my $assembly_model;
+        if (@denovo) {
+            $assembly_model = $self->get_most_recent_model(\@denovo);
         }
-        $self->subject_id($taxon->id);
-        $self->subject_class_name('Genome::Taxon');
-
-        # Determine the path to the contigs file... requires a successful build of the assembly model
-        my $build = $self->assembly_model->last_succeeded_build;
-        unless ($build) {
-            $self->error_message("Could not find successful build of assembly model " . $self->assembly_model_id);
-            croak;
-        }
-
-        if ($build->can('contigs_bases_file')) {
-            my $file = $build->contigs_bases_file;
-            unless (-e $file) {
-                $self->error_message("No file found at $file!");
-                croak;
-            }
-            $self->contigs_file_location($file);
+        elsif (@imported) {
+            $assembly_model = $self->get_most_recent_model(\@imported);
         }
         else {
-            $self->error_message("Could not determine contigs.bases file location from assembly model!");
-            croak;
+            $self->status_message(
+                "Could not find any assembly models with the taxon you provided. If you would like to create an " .
+                "assembly model for use with this gene prediction model, run the following command\n" .
+                "genome model define de-novo-assembly --processing-profile-name ??? --subject-name " . $self->taxon->name . "\n\n" .
+                "That command should give you a model ID. Use it to assign instrument data to the assembly model:\n" .
+                "genome instrument-data assign --model-id <MODEL_ID> --all\n\n" .
+                "Now you have an assembly model with instrument data! Rerun this define command with the " .
+                "--assemble option, which will start a build of that assembly model and kick off gene prediction " .
+                "once that build has completed!"
+            );
+            die "Could not find any assemblies for taxon " . $self->taxon_id;
         }
+
+        $self->assembly_model_id($assembly_model->genome_model_id);
+        $self->assembly_model($assembly_model);
     }
-    elsif (defined $self->contigs_file_location and $self->taxon_id) {
-        unless (-e $self->contigs_file_location) {
-            $self->error_message("No file found at " . $self->contigs_file_location);
-            croak;
-        }
+    # Sorry, can't do any magic without a minimum amount of given information
+    elsif (not defined $self->taxon and not defined $self->assembly_model) {
+        $self->error_message("Must be supplied with an assembly model ID and/or a taxon ID!");
+        croak;
+    }
 
-        my $taxon = Genome::Taxon->get($self->taxon_id);
-        unless ($taxon) {
-            $self->error_message("Could not get taxon object with ID " . $self->taxon_id);
-            croak;
-        }
-
-        $self->subject_id($self->taxon_id);
-        $self->subject_class_name('Genome::Taxon');
+    # Alright, if we've reached this point we have an assembly model (though it may not have a successful build)
+    # First, get that model's taxon and, if this command was given a taxon ID, compare. If the given taxon does not
+    # match the one on the assembly model, emit an error message and exit since its not clear if the model ID
+    # or the taxon ID is in error
+    my $taxon = $self->assembly_model->subject;
+    unless ($taxon->isa('Genome::Taxon')) {
+        $self->error_message("Assembly model does not have a taxon as its subject!");
+        croak;
+    }
+    
+    if (defined $self->taxon_id and $self->taxon_id ne $taxon->id) {
+        $self->error_message("Given taxon " . $self->taxon_id . " does not match taxon " . $taxon->id . " on assembly model!");
+        croak;
     }
     else {
-        $self->error_message("Must provide either an assembly model ID or a taxon ID and a contigs file path!");
-        croak;
+        $self->taxon_id($taxon->id);
+        $self->taxon($taxon);
+    }
+
+    # Now check for a successful build of the assembly model. If one does not exist, kick off a build if the --assemble
+    # flag has been set, otherwise tell the user how to kick off a build and exit
+    my $build = $self->assembly_model->last_succeeded_build;
+    $build = $self->assembly_model->current_running_build unless $build;
+    unless ($build) {
+        $self->warning_message("No successful or running build of assembly model " . $self->assembly_model_id . " found!");
+
+        if ($self->assemble) {
+            $self->status_message("Assemble flag is set! Starting a build of the assembly model!");
+            my $start_command = Genome::Model::Build::Command::Start->create(
+                model_identifier => $self->assembly_model_id,
+            );
+            unless ($start_command) {
+                $self->error_message("Could not create the build start command object!");
+                croak;
+            }
+
+            my $rv = $start_command->execute;
+            unless (defined $rv and $rv == 1) {
+                $self->error_message("Could not start build of assembly model!");
+                croak;
+            }
+
+            $self->status_message("Started build " . $start_command->build->id . "!");
+        }
+        else {
+            $self->status_message(
+                "The assemble option is not set, so automatic build of the assembly model will not occur. " .
+                "Either rerun this command with the --assemble flag or manually kick off a build by running:\n" .
+                "genome model build start --model " . $self->assembly_model_id);
+            die "No assembly build found and assemble flag not set";
+        }
     }
 
     my $rv = $self->SUPER::_execute_body(@_);
@@ -152,10 +215,24 @@ sub execute {
 
     my $model = Genome::Model->get($self->result_model_id);
 
+    # Make a link from the assembly model to this model and vice versa
+    my $to_rv = $self->assembly_model->add_to_model(
+        to_model => $model,
+        role => 'gene_prediction_model',
+    );
+    my $from_rv = $model->add_from_model(
+        from_model => $self->assembly_model,
+        role => 'assembly_model',
+    );
+    unless ($to_rv and $from_rv) {
+        $self->error_message("Could not create a link from the assembly model to the gene prediction model! Cannot create model!");
+        croak;
+    }
+
     # Add inputs to the model
     $model->add_input(
         value_class_name => 'UR::Value',
-        value_id => $self->contigs_file_location,
+        value_id => $self->get_contigs_file($build),
         name => 'contigs_file_location',
     );
     $model->add_input(
@@ -200,6 +277,26 @@ sub execute {
     );
 
     return 1;
+}
+
+# Calculates the path to the contigs file within the assembly build directory,
+# check that the file is there, and returns the path
+sub get_contigs_file {
+    my ($self, $assembly_build) = @_;
+    my $path = $assembly_build->data_directory . "/edit_dir/contigs.bases";
+    unless (-e $path) {
+        $self->warning_message("Could not find contigs.bases file at $path!");
+        return;
+    }
+    return $path;
+}
+
+# Given a list of models, return the most recent. This is determined using the model ID,
+# which is assumed to be larger for new models.
+sub get_most_recent_model {
+    my ($self, $assembly_models) = @_;
+    my @sorted_models = sort {$b->genome_model_id <=> $a->genome_model_id} @$assembly_models;
+    return shift @sorted_models;
 }
 
 1;
