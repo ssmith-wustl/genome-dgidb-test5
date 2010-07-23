@@ -3,44 +3,20 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_wiki_document" match="object[./types[./isa[@type='Genome::Wiki::Document']]]">
-    <div class="result">
-      <table width="100%" cellpadding="0" cellspacing="0" border="0" class="result">
-        <tbody>
-          <tr>
-            <td>
-              <div class="icon">
-                <xsl:call-template name="object_link">
-                  <xsl:with-param name="linktext">
-                    <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/wiki_32.png" />
-                  </xsl:with-param>
-                </xsl:call-template>
-              </div>
-            </td>
-            <td width="100%">
-              <div class="description">
-                <h2 class="name">
-                  <span class="label">
-                        Wiki:
-                 </span>
-                  <span class="title">
+    <div class="search_result">
+      <div class="result_icon genome_wiki_document_32">
+        <br/>
+      </div>
+      <div class="result">
+        <h3>Wiki: <a><xsl:attribute name="href">https://gscweb.gsc.wustl.edu/wiki/<xsl:value-of select="aspect[@name='title']"/></xsl:attribute><xsl:value-of select="aspect[@name='title']/value"/></a></h3>
+        <p class="result_summary">
+          <strong>Author: </strong><xsl:value-of select="aspect[@name='user']/value"/>
+          <xsl:text>; </xsl:text>
+          <strong>Timestamp: </strong><xsl:value-of select="aspect[@name='timestamp']/value"/>
+        </p>
+      </div>
+    </div> <!-- end search_result -->
 
-                  <a>
-                    <xsl:attribute name="href">https://gscweb.gsc.wustl.edu/wiki/<xsl:value-of select="aspect[@name='title']"/></xsl:attribute>
-                    <xsl:value-of select="aspect[@name='title']/value"/>
-                  </a>
-
-                  </span>
-                </h2>
-                <p class="info">
-                  <xsl:value-of select="aspect[@name='user']/value"/>
-                  | <xsl:value-of select="aspect[@name='timestamp']/value"/>
-                </p>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </xsl:template>
 
 </xsl:stylesheet>
