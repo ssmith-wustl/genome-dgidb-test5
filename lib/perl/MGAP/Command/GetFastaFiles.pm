@@ -8,7 +8,6 @@ use Bio::Seq;
 
 use BAP::DB::Sequence;
 use BAP::DB::SequenceSet;
-use Workflow;
 
 use File::Temp;
 
@@ -16,16 +15,15 @@ use File::Temp;
 class MGAP::Command::GetFastaFiles {
     is => ['MGAP::Command'],
     has => [
-        dev        => { is => 'SCALAR', doc => "if true set $BAP::DB::DBI::db_env = 'dev'" },
-        seq_set_id => { is => 'SCALAR', doc => 'identifies a whole assembly' },
-        fasta_files => { is => 'ARRAY', is_optional => 1, doc => 'array of fasta file names' }
+        dev        => { is => 'SCALAR', doc => "if true set $BAP::DB::DBI::db_env = 'dev'",
+                        is_input => 1, },
+        seq_set_id => { is => 'SCALAR', doc => 'identifies a whole assembly',
+                        is_input => 1, },
+        fasta_files => { is => 'ARRAY', is_optional => 1, doc => 'array of fasta file names',
+                         is_output => 1, }
     ],
 };
 
-operation_io MGAP::Command::GetFastaFiles {
-    input  => [ 'dev', 'seq_set_id' ],
-    output => [ 'fasta_files' ],
-};
 
 sub sub_command_sort_position { 10 }
 

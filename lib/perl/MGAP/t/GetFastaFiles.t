@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 
+use above "MGAP";
 use Workflow;
 
 use Test::More tests => 7;

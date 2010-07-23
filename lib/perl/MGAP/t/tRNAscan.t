@@ -1,12 +1,15 @@
 use strict;
 use warnings;
 
+use above "MGAP";
 use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
+use File::Basename;
+#use Test::More tests => 42;
 use Test::More tests => 42;
 
 BEGIN {
@@ -15,7 +18,8 @@ BEGIN {
 }
 
 my $command = MGAP::Command::GenePredictor::tRNAscan->create(
-                                                             'fasta_file' => 'data/HPAG1.fasta',
+                                                             'fasta_file' => File::Basename::dirname(__FILE__).'/data/HPAG1.fasta',
+                                                             'domain' => 'bacteria',
                                                             );
 
 isa_ok($command, 'MGAP::Command::GenePredictor');
@@ -30,3 +34,5 @@ ok(@features > 0);
 foreach my $feature (@features) {
     isa_ok($feature, 'Bio::SeqFeature::Generic');
 }
+
+#done_testing();

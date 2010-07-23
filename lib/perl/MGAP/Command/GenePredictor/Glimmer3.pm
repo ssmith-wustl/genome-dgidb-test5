@@ -4,21 +4,18 @@ use strict;
 use warnings;
 
 use Bio::SeqIO;
-use Workflow;
 use BAP::Job::Glimmer;
 
 class MGAP::Command::GenePredictor::Glimmer3 {
     is => ['MGAP::Command::GenePredictor'],
     has => [
-            model_file => { is => 'SCALAR', doc => 'absolute path to the model file for this fasta' },
-            pwm_file => { is => 'SCALAR' , doc => 'absolute path to the pwm file for this fasta' },
+            model_file => { is => 'SCALAR', doc => 'absolute path to the model file for this fasta',
+                            is_input => 1, },
+            pwm_file => { is => 'SCALAR' , doc => 'absolute path to the pwm file for this fasta', 
+                          is_input => 1, },
     ],
 };
 
-operation_io MGAP::Command::GenePredictor::Glimmer3 {
-    input => [ 'model_file', 'pwm_file', 'fasta_file' ],
-    output => [ 'bio_seq_feature' ]
-};
 
 sub sub_command_sort_position { 10 }
 
