@@ -31,12 +31,12 @@ class PAP::Command::BlastP {
         blast_report => {
                          is          => 'SCALAR',
                          is_optional => 1,
-                         doc         => 'instance of File::Temp pointing to raw blast output'
+                         doc         => 'instance of File::Temp pointing to raw blast output',
                         },
         bio_seq_feature => { 
                             is          => 'ARRAY',  
                             is_optional => 1,
-                            doc         => 'array of Bio::Seq::Feature' 
+                            doc         => 'array of Bio::Seq::Feature' ,
                             is_output => 1,
                            },
         report_save_dir => {
