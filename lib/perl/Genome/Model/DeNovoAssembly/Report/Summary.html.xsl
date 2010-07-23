@@ -96,8 +96,16 @@
           <col width="70%"/>
 				</colgroup>
 				<tr>
+          <td class="label">Reads Attempted</td>
+          <td class="value"><xsl:value-of select="//metric/reads-attempted"/></td>
+				</tr>
+				<tr>
           <td class="label">Reads Processed</td>
           <td class="value"><xsl:value-of select="//metric/reads-processed"/></td>
+				</tr>
+				<tr>
+          <td class="label">Reads Processed Success</td>
+          <td class="value"><xsl:value-of select="//metric/reads-processed-success * 100"/><xsl:text>&#37;</xsl:text></td>
 				</tr>
 				<tr>
           <td class="label">Read Coverage Used</td>
@@ -108,20 +116,24 @@
           <td class="value"><xsl:value-of select="//metric/reads-assembled"/></td>
 				</tr>
 				<tr>
-          <td class="label">Chaff Rate</td>
-          <td class="value"><xsl:value-of select="//metric/chaff-rate"/></td>
+          <td class="label">Reads Assembled Success</td>
+          <td class="value"><xsl:value-of select="//metric/reads-assembled-success * 100"/><xsl:text>&#37;</xsl:text></td>
+				</tr>
+				<tr>
+          <td class="label">Reads Not Assembled (Chaff rate)</td>
+          <td class="value"><xsl:value-of select="//metric/reads-not-assembled-pct * 100"/><xsl:text>&#37;</xsl:text></td>
 				</tr>
 				<tr>
           <td class="label">Average Read Length</td>
           <td class="value"><xsl:value-of select="//metric/average-read-length"/></td>
 				</tr>
 				<tr>
-          <td class="label">Contigs</td>
-          <td class="value"><xsl:value-of select="//metric/contigs"/></td>
-				</tr>
-				<tr>
           <td class="label">Assembly Length</td>
           <td class="value"><xsl:value-of select="//metric/assembly-length"/></td>
+				</tr>
+				<tr>
+          <td class="label">Contigs</td>
+          <td class="value"><xsl:value-of select="//metric/contigs"/></td>
 				</tr>
 				<tr>
           <td class="label">Average Contig Length</td>
