@@ -135,15 +135,15 @@ sub calculate_metrics {
     }
 
     $metrics{reads_not_assembled_pct} =~ s/%//;
-    $metrics{reads_not_assembled_pct} = sprintf('%0.2f', $metrics{reads_not_assembled_pct} / 100);
+    $metrics{reads_not_assembled_pct} = sprintf('%0.3f', $metrics{reads_not_assembled_pct} / 100);
 
     $metrics{reads_attempted} = $self->calculate_reads_attempted
-        or return;
+        or return; # error in sub
     $metrics{reads_processed_success} =  sprintf(
-        '%0.2f', $metrics{reads_processed} / $metrics{reads_attempted}
+        '%0.3f', $metrics{reads_processed} / $metrics{reads_attempted}
     );
     $metrics{reads_assembled_success} = sprintf(
-        '%0.2f', $metrics{reads_assembled} / $metrics{reads_processed}
+        '%0.3f', $metrics{reads_assembled} / $metrics{reads_processed}
     );
     
     return %metrics;

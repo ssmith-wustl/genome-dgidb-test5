@@ -160,8 +160,9 @@ sub calculate_reads_attempted {
 
     my $reads_attempted = 0;
     if ( $self->processing_profile->sequencing_platform eq 'solexa' ) {
-        for my $inst_data ( @instrument_data ) {
-            $reads_attempted += $inst_data->clusters;
+        for my $inst_data ( @instrument_data ) { 
+            $reads_attempted += $inst_data->fwd_clusters;
+            $reads_attempted += $inst_data->rev_clusters;
         }
     }
     else {

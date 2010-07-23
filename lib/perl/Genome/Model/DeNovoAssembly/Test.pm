@@ -325,7 +325,9 @@ sub _get_mock_solexa_instrument_data {
         library_id => '2852968107',
         library_name => 'H_KT-185-1-0089515594-lib1',
         sample_name => 'H_KT-185-1-0089515594',
-        clusters => 35000,
+        clusters => 17500,
+        fwd_clusters => 17500,
+        rev_clusters => 17500,
     ) or Carp::confess "Can't create mock solexa instrument data";
 
     return $inst_data;
