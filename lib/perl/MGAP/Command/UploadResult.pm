@@ -12,9 +12,12 @@ use Workflow;
 class MGAP::Command::UploadResult {
     is => ['MGAP::Command'],
     has => [
-        dev => { is => 'SCALAR', doc => "if true set $BAP::DB::DBI::db_env = 'dev'" },
-        seq_set_id => { is => 'SCALAR', doc => 'identifies a whole assembly' },
-        bio_seq_features => { is => 'ARRAY', doc => 'array of Bio::Seq::Feature' },
+        dev => { is => 'SCALAR', doc => "if true set $BAP::DB::DBI::db_env = 'dev'",
+                 is_input => 1, },
+        seq_set_id => { is => 'SCALAR', doc => 'identifies a whole assembly',
+                        is_input => 1, },
+        bio_seq_features => { is => 'ARRAY', doc => 'array of Bio::Seq::Feature',
+                              is_input => 1, },
     ],
 };
 

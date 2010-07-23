@@ -53,11 +53,11 @@ _test_files_and_values(
 my %metrics = $build->set_metrics;
 #print Dumper(\%metrics);
 my $expected_metrics = {
-    'reads_processed_success' => '0.71',
-    'reads_not_assembled_pct' => '0.70',
+    'reads_processed_success' => '0.714',
+    'reads_not_assembled_pct' => '0.702',
     'supercontigs' => '2424',
     'average_supercontig_length' => '146',
-    'reads_assembled_success' => '0.30',
+    'reads_assembled_success' => '0.298',
     'reads_assembled' => '7459',
     'contigs' => '2424',
     'average_read_length' => '90',

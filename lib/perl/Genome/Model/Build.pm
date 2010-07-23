@@ -652,11 +652,9 @@ sub _launch {
  
         # bsub into the queue specified by the dispatch spec
         my $lsf_command = sprintf(
-            'bsub -N -H -q %s %s %s %s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
-            $server_dispatch,
+            'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
+            $server_dispatch, ## lsf queue
             $host_group,
-            '',
-            #"-R 'select[type==LINUX86]'",
             $job_group_spec,
             $ENV{USER}, 
             $build_event->output_log_file,

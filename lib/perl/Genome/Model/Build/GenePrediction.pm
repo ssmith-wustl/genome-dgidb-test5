@@ -46,6 +46,20 @@ sub config_file_name {
     return "config.yaml";
 }
 
+sub sequence_file_directory {
+    my $self = shift;
+    my $model = $self->model;
+    my ($name, $path) = fileparse($model->contigs_file_location);
+    return $path;
+}
+
+sub sequence_file_name {
+    my $self = shift;
+    my $model = $self->model;
+    my ($name, $path) = fileparse($model->contigs_file_location);
+    return $name;
+}
+
 sub create_config_file {
     my $self = shift;
     my $model = $self->model;
@@ -69,13 +83,13 @@ sub create_config_file {
         pipe_version     => $model->pipeline_version,
         project_type     => $model->project_type,
         runner_count     => $model->runner_count,
-        seq_file_dir     => $self->data_directory,
-        seq_file_name    => $self->config_file_name,
+        seq_file_dir     => $self->sequence_file_directory,
+        seq_file_name    => $self->sequence_file_name,
         skip_acedb_parse => $model->skip_acedb_parse,
         use_local_nr     => $model->use_local_nr,
     );
 
-    my $rv = YAML::DumpFile($config_file_path, %params);
+    my $rv = YAML::DumpFile($config_file_path, \%params);
     unless ($rv) {
         $self->error_message("Could not create config file at $config_file_path!");
         return;

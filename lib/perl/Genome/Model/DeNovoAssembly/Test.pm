@@ -24,7 +24,7 @@ sub processing_profile_params_for_assembler_and_platform {
 
     my %assembler_sequencing_paltorm_params = (
         velvet_solexa =>  { 
-            read_coverage => 0.5,#25000,
+            coverage => 0.5,#25000,
             assembler_version => '0.7.57-64',
             assembler_params => '-hash_sizes 31 33 35 -ins_length 260',
             read_trimmer_name => 'by_length',
@@ -203,8 +203,7 @@ sub get_mock_build {
             calculate_reads_attempted
 
             genome_size
-            estimate_average_read_length
-            calculate_read_limit_from_read_coverage
+            calculate_base_limit_from_coverage
 
             edit_dir
             
@@ -326,7 +325,9 @@ sub _get_mock_solexa_instrument_data {
         library_id => '2852968107',
         library_name => 'H_KT-185-1-0089515594-lib1',
         sample_name => 'H_KT-185-1-0089515594',
-        clusters => 35000,
+        clusters => 17500,
+        fwd_clusters => 17500,
+        rev_clusters => 17500,
     ) or Carp::confess "Can't create mock solexa instrument data";
 
     return $inst_data;

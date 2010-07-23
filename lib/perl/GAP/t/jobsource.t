@@ -5,6 +5,7 @@ use warnings;
 use lib '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-live';
 use lib '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-run';
 
+use File::Basename;
 use Test::More tests => 23;
 
 use Bio::SeqIO;
@@ -18,14 +19,15 @@ BEGIN {
    
 }
 
-my $blast_db = '/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr'; 
+#my $blast_db = '/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr'; 
+my $blast_db = '/gscmnt/gpfstest2/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr';
 
 my @job_sources = ( );
 
 
 my $trnascan_job_source = GAP::JobSource::tRNAscan->new(
                                                         Bio::SeqIO->new(
-                                                                        -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                                                        -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                                                         -format => 'Fasta',
                                                                     ),
                                                         'bacteria',
@@ -33,14 +35,14 @@ my $trnascan_job_source = GAP::JobSource::tRNAscan->new(
 
 my $rfamscan_job_source =  GAP::JobSource::RfamScan->new(
                                                          Bio::SeqIO->new(
-                                                                         -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                                                         -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                                                          -format => 'Fasta',
                                                                      ),
                                                      );
 
 my $rnammer_job_source  = GAP::JobSource::RNAmmer->new(
                                                        Bio::SeqIO->new(
-                                                                       -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                                                       -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                                                        -format => 'Fasta',
                                                                    ),
                                                        'bacteria',
@@ -48,7 +50,7 @@ my $rnammer_job_source  = GAP::JobSource::RNAmmer->new(
 
 my $metarna_job_source  = GAP::JobSource::MetaRna->new(
                                                        Bio::SeqIO->new(
-                                                                       -file   => 'data/BACSTEFNL_Contig26.1.fasta',
+                                                                       -file   => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig26.1.fasta',
                                                                        -format => 'Fasta',
                                                                    ),
                                                        'bacteria',
