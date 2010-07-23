@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Bmr::BatchGeneSummary;
+package Genome::Model::Tools::Bmr::BatchGeneSummaryFast;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use IO::File;
 use Bit::Vector;
 
-class Genome::Model::Tools::Bmr::BatchGeneSummary {
+class Genome::Model::Tools::Bmr::BatchGeneSummaryFast {
     is => 'Genome::Command::OO',
     has_input => [
     refseq_build_name => {
@@ -26,15 +26,15 @@ class Genome::Model::Tools::Bmr::BatchGeneSummary {
         is_optional => 0,
         doc => 'List of mutations used to calculate background mutation rate',
     },
-    wiggle_file_dir => {
-        type => 'String',
+    wiggle_file_dirs => {
+        type => 'Comma-delimited String',
         is_optional => 0,
-        doc => 'Wiggle files detailing genome-wide coverage of each sample in dataset',
+        doc => 'directories containing wiggle files detailing genome-wide coverage of each sample in dataset (comma-delimited)',
     },
-    group_summary_file => {
+    class_summary_file => {
         type => 'String',
         is_optional => 0,
-        doc => 'Background Mutation Rates for each class of mutation from this sample set, found using \'gmt bmr group-summary\'.',
+        doc => 'Background Mutation Rates for each class of mutation from this sample set, found using \'gmt bmr class-summary\'.',
     },
     output_file => {
         type => 'String',
@@ -67,7 +67,7 @@ sub execute {
 #    my $ref_model = Genome::Model->get(name=>$ref_model_name);
 #    my $ref_build = $ref_model->build_by_version($ref_build_version);
     my $ref_index = "/opt/fscache/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa.fai";
-    
+
     #load ROIs into a hash %ROIs -> chr -> gene -> start = stop;
     my %ROIs;
     my $roi_bedfile = $self->roi_bedfile;
@@ -122,12 +122,17 @@ sub execute {
     }
 
     #Parse wiggle file directory to obtain the path to wiggle files
-    my $wiggle_dir = $self->wiggle_file_dir;
-    opendir(WIG,$wiggle_dir) || die "Cannot open directory $wiggle_dir";
-    my @wiggle_files = readdir(WIG);
-    closedir(WIG);
-    @wiggle_files = grep { !/^(\.|\.\.)$/ } @wiggle_files;
-    @wiggle_files = map { $_ = "$wiggle_dir/" . $_ } @wiggle_files;
+    my @wiggle_files;
+    my $wiggle_dirs = $self->wiggle_file_dirs;
+    my @wiggle_dirs = split ",",$wiggle_dirs;
+    for my $wiggle_dir (@wiggle_dirs) {
+        opendir(WIG,$wiggle_dir) || die "Cannot open directory $wiggle_dir";
+        my @files = readdir(WIG);
+        closedir(WIG);
+        @files = grep { !/^(\.|\.\.)$/ } @files;
+        @files = map { $_ = "$wiggle_dir/" . $_ } @files;
+        push @wiggle_files,@files;
+    }
 
 
     #Loop through samples to build COVMUTS hash %COVMUTS -> gene -> class -> coverage, mutations
@@ -164,7 +169,13 @@ sub execute {
         my @classes = ('CG.transit','CG.transver','AT.transit','AT.transver','CpG.transit','CpG.transver','Indels');
         for my $chr (keys %ROIs) {
 
-            my $testvector = $cov_bitmask->{$chr}->Shadow();
+            my $chr_length_test_vec = $cov_bitmask->{$chr}->Shadow();
+            my $temp_at_cov_vec = $cov_bitmask->{$chr}->Shadow();
+            my $temp_cg_cov_vec = $cov_bitmask->{$chr}->Shadow();
+            my $temp_cpg_cov_vec = $cov_bitmask->{$chr}->Shadow();
+            $temp_at_cov_vec->And($cov_bitmask->{$chr},$at_bitmask->{$chr});
+            $temp_cg_cov_vec->And($cov_bitmask->{$chr},$cg_bitmask->{$chr});
+            $temp_cpg_cov_vec->And($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
 
             for my $gene (keys %{$ROIs{$chr}}) {
 
@@ -181,24 +192,21 @@ sub execute {
                     my $bits;
 
                     #indels
-                    $bits = $self->count_bits($cov_bitmask->{$chr},$start,$stop);
+                    $bits = $self->count_interval($cov_bitmask->{$chr},$chr_length_test_vec,$start,$stop);
                     $COVMUTS{$gene}{'Indels'}{'coverage'} += $bits;
 
                     #AT
-                    $testvector->And($cov_bitmask->{$chr},$at_bitmask->{$chr});
-                    $bits = $self->count_bits($testvector,$start,$stop);
+                    $bits = $self->count_interval($temp_at_cov_vec,$chr_length_test_vec,$start,$stop);
                     $COVMUTS{$gene}{'AT.transit'}{'coverage'} += $bits;
                     $COVMUTS{$gene}{'AT.transver'}{'coverage'} += $bits;
 
                     #CG
-                    $testvector->And($cov_bitmask->{$chr},$cg_bitmask->{$chr});
-                    $bits = $self->count_bits($testvector,$start,$stop);
+                    $bits = $self->count_interval($temp_cg_cov_vec,$chr_length_test_vec,$start,$stop);
                     $COVMUTS{$gene}{'CG.transit'}{'coverage'} += $bits;
                     $COVMUTS{$gene}{'CG.transver'}{'coverage'} += $bits;
 
                     #CpG
-                    $testvector->And($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
-                    $bits = $self->count_bits($testvector,$start,$stop);
+                    $bits = $self->count_interval($temp_cpg_cov_vec,$chr_length_test_vec,$start,$stop);
                     $COVMUTS{$gene}{'CpG.transit'}{'coverage'} += $bits;
                     $COVMUTS{$gene}{'CpG.transver'}{'coverage'} += $bits;
                 }#end, for my $start
@@ -361,9 +369,9 @@ sub execute {
         }#end, if mutation is an indel
     }#end, loop through MAF
 
-    #Parse group-summary file and load %BMR hash (%BMR -> class = bmr)
+    #Parse class-summary file and load %BMR hash (%BMR -> class = bmr)
     my %BMR; # %class_bmr -> class = b.m.r.
-    my $summary_file = $self->group_summary_file;
+    my $summary_file = $self->class_summary_file;
     my $summaryfh = new IO::File $summary_file,"r";
     while (my $line = $summaryfh->getline) {
         next if ($line =~ /Class/);
@@ -435,7 +443,14 @@ sub read_genome_bitmask {
     return \%genome;
 }
 
-
+sub count_interval {
+    my ($self,$cov_vec,$test_vec,$start,$stop) = @_;
+    $test_vec->Empty();
+    my $roi_length = $stop - $start + 1;
+    $test_vec->Interval_Copy($cov_vec,0,$start,$roi_length);
+    my $count = $test_vec->Norm();
+    return $count;
+}
 
 sub count_bits {
     my ($self,$vector,$start,$stop) = @_;
