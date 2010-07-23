@@ -40,6 +40,9 @@ class Genome::InstrumentData::Command::Align {
                                             doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
                                             default_value => 'NCBI-human-build36'
                                         },
+        reference_build_id              => {
+                                            doc => 'an explicit reference build id to use instead of passing by name',
+                                        },
         version                         => {
                                             is => 'Text', default_value => '0.7.1',
                                             doc => 'the version of maq to use, i.e. 0.6.8, 0.7.1, etc.'
@@ -127,33 +130,38 @@ sub execute {
 
     # turn the reference name into the id
     my $reference_name = $self->reference_name;
-    unless ($reference_name){
+    my $reference_build_id = $self->reference_build_id;
+    unless ($reference_name || $reference_build_id){
         $self->error_message("no reference sequence build id or reference name supplied");
-        die;
-    }
-    my ($model_name,$build_version) = ($reference_name =~ /^(.*)-build(.*?)$/);
-    unless ($model_name and $build_version) {
-        $self->error_message("Failed to parse a model name and build version from reference name $reference_name");
         die $self->error_message;
     }
-    my $model = Genome::Model->get(name => $model_name);
-    unless ($model) {
-        $self->error_message("Failed to find a model named $model_name");
-        die $self->error_message;
-    }
-    my @builds = $model->build_by_version($build_version);
-    unless (@builds) {
-        die;
-    }
-    if (@builds > 1) {
-        $self->error_message("Multiple builds for version $build_version on model $model_name!");
-        die $self->error_message;
-    }
-    if (@builds == 0) {
-        die;
-    }
-    $alignment_params{reference_build_id} = $builds[0]->id;
 
+    if (defined $reference_build_id) {
+        $alignment_params{reference_build_id} = $reference_build_id;
+    } else {
+        my ($model_name,$build_version) = ($reference_name =~ /^(.*)-build(.*?)$/);
+        unless ($model_name and $build_version) {
+            $self->error_message("Failed to parse a model name and build version from reference name $reference_name");
+            die $self->error_message;
+        }
+        my $model = Genome::Model->get(name => $model_name);
+        unless ($model) {
+            $self->error_message("Failed to find a model named $model_name");
+            die $self->error_message;
+        }
+        my @builds = $model->build_by_version($build_version);
+        unless (@builds) {
+            die;
+        }
+        if (@builds > 1) {
+            $self->error_message("Multiple builds for version $build_version on model $model_name!");
+            die $self->error_message;
+        }
+        if (@builds == 0) {
+            die;
+        }
+        $alignment_params{reference_build_id} = $builds[0]->id;
+    } 
 
     if ($self->trimmer_name) {
         $alignment_params{trimmer_name} = $self->trimmer_name;
