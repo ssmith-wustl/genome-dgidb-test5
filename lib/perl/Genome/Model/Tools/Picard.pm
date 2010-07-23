@@ -15,13 +15,13 @@ class Genome::Model::Tools::Picard {
     has_input => [
         use_version => { 
             is  => 'Version', 
-            doc => 'Picard version to be used.  default_value='. $PICARD_DEFAULT,
+            doc => 'Picard version to be used.',
             is_optional   => 1, 
             default_value => $PICARD_DEFAULT,
         },
         maximum_memory => {
             is => 'Integer',
-            doc => 'the maximum memory (Gb) to use when running Java VM. default_value='. $DEFAULT_MEMORY,
+            doc => 'the maximum memory (Gb) to use when running Java VM.',
             is_optional => 1,
             default_value => $DEFAULT_MEMORY,
         },
