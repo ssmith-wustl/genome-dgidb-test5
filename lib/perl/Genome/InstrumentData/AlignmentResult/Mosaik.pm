@@ -20,7 +20,13 @@ sub required_arch_os { 'x86_64' }
 
 # fill me in here with what compute resources you need.
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>4000] span[hosts=1] rusage[tmp=90000, mem=4000]' -M 24000000 -n 8";
+    my %params = $self->decomposed_aligner_params;
+    if ($params{mosaik_align_params} =~ /-p\s+([0-9]+)/) { 
+        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>4000] span[hosts=1] rusage[tmp=90000, mem=4000]' -M 24000000 -n $1";
+    } else {
+        print "Could not determine number of cores to use from params! Defaulting to 4."
+        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>4000] span[hosts=1] rusage[tmp=90000, mem=4000]' -M 24000000 -n 4";
+    }
 }
 
 sub _run_aligner {
@@ -42,7 +48,7 @@ sub _run_aligner {
     #my $ref_basename = File::Basename::fileparse("/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference.dat"
     #my $ref_jump_basename = File::Basename::fileparse("/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference_15"
     #my $reference_fasta_path = sprintf("%s/%s", $reference_build->data_directory, $ref_basename);
-
+    # TODO TODO TODO this is bad. remove these hard-coded paths when finished
     my $ref_file = "/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference.dat";
     my $jump_file = "/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference_15";
      
@@ -146,11 +152,11 @@ sub _run_aligner {
     
     {
         my $cmdline = $mosaik_text_path . sprintf(' -in %s -sam %s %s',
-            $tmp_align_file, $tmp_sam_file, $aligner_params{mosaik_text_params});
+            $tmp_sort_file, $tmp_sam_file, $aligner_params{mosaik_text_params});
 
         Genome::Utility::FileSystem->shellcmd(
             cmd             => $cmdline." && gunzip -d ".$tmp_sam_file.".gz",
-            input_files     => [ $tmp_align_file ],
+            input_files     => [ $tmp_sort_file ],
             output_files    => [ $tmp_sam_file ],
             skip_if_output_is_present => 0,
         );
@@ -169,6 +175,11 @@ sub _run_aligner {
 
     # TODO something to do with log files
 
+    return 1;
+}
+
+sub fillmd_for_sam {
+    # it appears that mosaik does not put in MD string, so...
     return 1;
 }
 
@@ -231,7 +242,7 @@ sub decomposed_aligner_params {
     my $self = shift;
     # TODO i think this comparison is unecessary if we push on the defaults like below
     #my $params = $self->aligner_params || "-st illumina:-hs 15 -mm 4 -mhp 100 -act 20 -p 8::";
-    my $params = $self->aligner_params || "-st illumina:-hs 15 -mm 12 -mhp 100 -act 35 -p 8 -bw 29::";
+    my $params = $self->aligner_params || "-st illumina:-hs 15 -mm 12 -mhp 100 -act 35 -p 4 -bw 29::";
     # TODO SHOULD NOT BE FORCING BUT SHIT IS BROKEN.
     #my $params = "-st illumina:-hs 15 -mm 12 -mhp 100 -act 35 -p 8 -bw 29::";
     
@@ -244,7 +255,7 @@ sub decomposed_aligner_params {
     if ($spar[1] !~ /-act/) { $spar[1] .= "-act 35"; }
     if ($spar[1] !~ /-bw/) { $spar[1] .= "-bw 29"; }
     # this one seems pretty necessary, though. TODO if only there was a way to influence required_rusage based off of this
-    if ($spar[1] !~ /-p/) { $spar[1] .= "-p 8"; }
+    if ($spar[1] !~ /-p/) { $spar[1] .= "-p 4"; }
 
     # TODO this is useless? since it doesn't check via aligner_params_for_sam_header anyways...
     # sort variables
@@ -276,7 +287,7 @@ sub aligner_params_for_sam_header {
     
     my %params = $self->decomposed_aligner_params;
     
-    return "MosaikBuild $params{mosaik_build_params}; MosaikAlign $params{mosaik_align_params}; MosaikSort $params{mosaik_sort_params}; MosaikText $params{mosaik_sort_params}";
+    return "MosaikBuild $params{mosaik_build_params}; MosaikAlign $params{mosaik_align_params}; MosaikSort $params{mosaik_sort_params}; MosaikText $params{mosaik_text_params}";
 
     # for bwa this looks like "bwa aln -t4; bwa samse 12345'
 }
