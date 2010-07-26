@@ -22,6 +22,7 @@ class Genome::Model::Tools::Sam::R3 {
         },
         rand_seed => {
             is_optional => 1,
+            default_value => 12345,
             is => 'Number',
             doc => 'Random number generator seed.  When multiple alignments or alignment pairs for the same read exist and have the same quality, one is randomly selected.  ' .
                    'If this random selection must be reproducable, specify a value for this argument.'
@@ -65,45 +66,50 @@ sub help_detail {
 
 sub open_bamsam_in {
     my $in_filename = shift;
-    my $file_struct = {file => undef, name => $in_filename, type => ($in_filename =~ /\.bam\s*$/i ? 'BAM' : 'SAM'), at_eof => 0};
-    if($file_struct->{type} eq 'BAM') {
-        $file_struct->{file} = new IO::File;
-        $file_struct->{file}->open('samtools view -h "' . $file_struct->{name} . '" |');
+    my ($type) = ($in_filename =~ /\.([^\.\s]+)\s*$/i);
+    $type = uc($type);
+    my $fh;
+    if($type eq 'BAM') {
+        $fh = new IO::File;
+        $fh->open('samtools view -h "' . $in_filename . '" | head -n 2000000 |');
     }
-    elsif($file_struct->{type} eq 'SAM') {
-        $file_struct->{file} = new IO::File($file_struct->{name});
+    elsif($type eq 'SAM') {
+        $fh = new IO::File($in_filename);
     }
     else {
-        die 'Unknown type specified for "' . $file_struct->{name} . "\".\n";
+        die 'Unknown type specified for "' . $in_filename . "\".\n";
     }
-    unless($file_struct->{file}) {
-        die 'Failed to open "' . $file_struct->{name} . "\"\n.";
+    unless($fh) {
+        die 'Failed to open "' . $in_filename . "\"\n.";
     }
-    return $file_struct;
+    return $fh;
 }
 
 sub open_bamsam_out {
     my $out_filename = shift;
-    my $file_struct = { file => undef, name => $out_filename, type => ($out_filename =~ /\.bam\s*$/i ? 'BAM' : 'SAM') };
-    if($file_struct->{type} eq 'BAM') {
-        $file_struct->{file} = new IO::File;
-        $file_struct->{file}->open('| samtools view -S -b /dev/stdin > "' . $file_struct->{name} . '"');
+    my ($type) = ($out_filename =~ /\.([^\.\s]+)\s*$/i);
+    $type = uc($type);
+    my $fh;
+    if($type eq 'BAM') {
+        $fh = new IO::File;
+        $fh->open('| samtools view -S -b /dev/stdin > "' . $out_filename . '"');
     }
-    elsif($file_struct->{type} eq 'SAM') {
-        $file_struct->{file} = new IO::File($file_struct->{name} eq '-' ? stdout : '> ' . $file_struct->{name});
+    elsif($type eq 'SAM') {
+        $fh = new IO::File($out_filename eq '-' ? stdout : '> ' . $out_filename);
     }
     else {
-        die 'Unknown type specified for "' . $file_struct->{name} . "\".\n";
+        die 'Unknown type specified for "' . $out_filename . "\".\n";
     }
-    unless($file_struct->{file}) {
-        die 'Failed to open "' . $file_struct->{name} . "\"\n.";
+    unless($fh) {
+        die 'Failed to open "' . $out_filename . "\"\n.";
     }
-    return $file_struct;
+    return $fh;
 }
 
 sub execute {
     my $self = shift;
-$DB::single = 1;
+    $DB::single = 1;
+
     $self->dump_status_messages(1);
     $self->dump_error_messages(1);
 
@@ -114,26 +120,18 @@ $DB::single = 1;
         die "Please supply at least two input files.\n";
     }
 
-    if(defined($self->rand_seed)) {
-        srand($self->rand_seed);
-    }
-    else {
-        srand(12345);
-    }
+    srand($self->rand_seed);
 
     # Open input files and output file
 
-    my @in_files;
     my @in_fh;
     foreach my $in_filename (@in_filenames) {
-        my $in_file = open_bamsam_in($in_filename);
-        die "failed to open file $in_filename! $!\n" unless $in_file;
-        push @in_files, $in_file;
-        push @in_fh, $in_file->{file};
+        my $in_fh = open_bamsam_in($in_filename);
+        die "failed to open file $in_filename! $!\n" unless $in_fh;
+        push @in_fh, $in_fh;
     }
 
-    my $out_file = open_bamsam_out($out_filename);
-    my $out_fh = $out_file->{file};
+    my $out_fh = open_bamsam_out($out_filename);
 
     my $in_count = @in_filenames;
 
@@ -143,11 +141,9 @@ $DB::single = 1;
     my $ref_pos_col  = 3;
     my $tag_pos_col  = 4;
 
-    
-    my $last_name = '';
-
     my $name_count = 0;
     my $read_count = 0;
+    my $last_name = '';
     
     READ_NAME:
     for (;;) {
@@ -170,7 +166,9 @@ $DB::single = 1;
             
             FILE:
             for (my $in_num=0; $in_num<$in_count; $in_num++) {
-                my $line = $in_fh[$in_num]->getline;
+                my $fh = $in_fh[$in_num];
+                my $line = <$fh>;
+
                 last READ_NAME if not defined $line;
                 
                 # skip headers (pass through to output)
@@ -179,17 +177,11 @@ $DB::single = 1;
                     redo;
                 }
                 
-                # pass through blank lines ????
-                #if($line =~ /^\s*$/) {
-                #    print STDERR "blank line in file $in_filenames[$in_num] after read $last_name!\n$line";
-                #    die "blank line in file $in_filenames[$in_num] after read $last_name!\n";
-                #}
-                
                 # parse columns
                 chomp $line;
                 my @s = split(/\t/,$line);
                 if(scalar(@s) < 10) {
-                    die "Less than 10 columns in alignment record from $in_files[$in_num]: $line\n";
+                    die "Less than 10 columns in alignment record from $in_filenames[$in_num]: $line\n";
                 }
                 
                 # ensure we are sorted by name
@@ -198,9 +190,6 @@ $DB::single = 1;
                     if ($name eq $last_name) {
                         die "read $name appears in alignments after it is believed we are done processing that read's alignments!:\n$line";
                     }
-                    #if ($name lt $last_name) {
-                    #    warn 'Alignment index ' . $s[$name_col] . ' in "' . $in_filenames[$in_num] . " seems to have improper read name order, last was $last_name!.\n";
-                    #}
                     # save this for the next read to ensure we are sorted and nothing odd is happening in the file
                     $last_name = $name;
                 }
@@ -218,7 +207,6 @@ $DB::single = 1;
                         $nm_pos = index($tag,'NM:i:');
                         if ($nm_pos != -1) {
                             $nm = substr($tag,$nm_pos+5);
-                            #die "bad nm $nm on $line!" unless $nm =~ /\s*^\d+\s*/; # TODO: remove after ensuring this works
                             last;
                         }
                     }
@@ -251,13 +239,19 @@ $DB::single = 1;
             
         } # done getting each read for a given fragment
 
-        $name_count++;
 
+        #
+        # process the read or pair across all files..        
+        #
+        
+
+        # this is entirely to provide progress message.
+        $name_count++;
         if ($name_count % 10_000 == 0) {
             print STDERR "fragments: $name_count, reads: $read_count\n";
         }        
 
-        # process the name/pair across all files..        
+        # sanity check
         if (
             ($paired_end1_count and $single_end_count)
             or
@@ -268,17 +262,6 @@ $DB::single = 1;
 
         # find the best alignment, or the list of best alignments if there is a tie among several
         my @best = ();
-        
-        # this sanity check seems to fail, and is not needed with the above
-        #if ($paired_end1_count) {        
-        #    for (my $in_num=0; $in_num<$in_count; $in_num++) {
-        #        if (
-        #            ($a[$in_num][0][$flag_col] ^ $a[$in_num][1][$flag_col]) != 192
-        #        ) {
-        #            die "Read unmatched pair from from \"" . $in_filenames[$in_num] . "\": pair does not consist of a read1 and read2 (eg it may be two read1s or two read2s).\n";
-        #        }
-        #    }
-        #}
         
         # we may have a clear winner just by looking at number of reads mapped
         my $best_n_reads_mapped = 0;
@@ -344,13 +327,12 @@ $DB::single = 1;
         # output the alignment or alignment pair
         for my $alignment (@{$best[0]}) {
             pop @$alignment;
-            $out_fh->print(join("\t",@$alignment),"\n");    
+            print $out_fh join("\t",@$alignment),"\n";    
         }
         
     } # done handling a given read name
 
     for my $fh ($out_fh,@in_fh) { $fh->close };
-
     return 1;
 }
 
