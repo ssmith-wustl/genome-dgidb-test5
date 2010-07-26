@@ -3,8 +3,7 @@
 use strict;
 use warnings;
 
-#use Test::More tests => 49; # or 25? or 37?
-use Test::More qw(no_plan);
+use Test::More qw(no_plan); # or 49, or 25, or 37?
 use File::Basename;
 
 use Bio::SeqIO;
@@ -146,6 +145,6 @@ foreach my $job_source (@job_sources) {
     
 }
 
-done_testing();
+#done_testing();
 unlink('error.log');
 

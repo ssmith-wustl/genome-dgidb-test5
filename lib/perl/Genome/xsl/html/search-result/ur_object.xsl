@@ -30,7 +30,7 @@ xmlns:rest="urn:rest">
       </td></tr></tbody></table>
     </div>
   </xsl:template>
-  
+
   <xsl:template name="object_link">
     <xsl:param name="type" select="./@type"/>
     <xsl:param name="id" select="./@id"/>
@@ -49,10 +49,10 @@ xmlns:rest="urn:rest">
         <xsl:text>?id=</xsl:text>
         <xsl:value-of select="$id"/>
       </xsl:attribute>
-      <xsl:copy-of select="$linktext"/>
+      <xsl:value-of select="$linktext"/>
     </a>
   </xsl:template>
-  
+
   <xsl:template name="string-replace-all">
     <xsl:param name="text" />
     <xsl:param name="replace" />
@@ -73,4 +73,4 @@ xmlns:rest="urn:rest">
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
-</xsl:stylesheet> 
+</xsl:stylesheet>

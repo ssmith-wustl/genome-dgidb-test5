@@ -38,8 +38,8 @@ class Genome::Model::Tools::DetectVariants::Samtools {
             is_output => 1,
         },
         _genotype_detail_staging_output => {
-            calculate_from => ['output_directory', '_genotype_detail_base_name'],
-            calculate => q{ join("/", $output_directory, $_genotype_detail_base_name); },
+            calculate_from => ['_temp_staging_directory', '_genotype_detail_base_name'],
+            calculate => q{ join("/", $_temp_staging_directory, $_genotype_detail_base_name); },
         },
     ]
 };

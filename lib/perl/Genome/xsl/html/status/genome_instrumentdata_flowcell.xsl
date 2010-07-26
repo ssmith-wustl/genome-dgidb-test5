@@ -2,18 +2,13 @@
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
+  <!-- full page display for a instrumentdata flowcell -->
   <xsl:template name="genome_instrumentdata_flowcell" match="//flow-cell">
-    <script type="text/javascript">
-      $(document).ready(function() {
-      $("#lane_list").tablesorter({
-      // sort on first column, ascending
-      sortList: [[0,0]]
-      });
-      });
-    </script>
+    <!-- currently uses some old styles, include legacy css -->
+    <link rel="stylesheet" href="/res/css/legacy.css" type="text/css" media="screen, projection"/>
 
     <!-- protovis and related -->
-    <script type="text/javascript" src="/res/js/protovis.js"></script>
+    <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
 
     <!-- set up lane data and chart -->
     <script type="text/javascript">
@@ -43,7 +38,7 @@
               </xsl:for-each>];
 
       </xsl:for-each>
-
+<xsl:text disable-output-escaping="yes">
       <![CDATA[
 
 // determine max value of index percentages
@@ -61,8 +56,10 @@ window.pMax = id[i].percent[j];
 window.chartMax = Math.ceil(window.pMax);
 window.chartMin = 0;
 
+console.log("window.chartMax: " + window.chartMax);
 
       ]]>
+</xsl:text>
     </script>
 
     <style type="text/css">
@@ -106,158 +103,136 @@ window.chartMin = 0;
 
     </style>
 
-    <h2 class="page_title icon_instrument_data">Flow Cell <xsl:value-of select="//flow-cell/@id"/> Status</h2>
-    <table cellpadding="0" cellspacing="0" border="0" class="info_table_group">
-      <tr>
-        <td>
-          <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-            <colgroup>
-              <col/>
-              <col width="100%"/>
-            </colgroup>
-            <tr><td class="label">Flow Cell ID:</td><td class="value"><xsl:value-of select="//flow-cell/@id"/></td></tr>
 
-            <tr><td class="label">Run Type:</td><td class="value"><xsl:value-of select="//production/@run-type"/></td></tr>
-            <tr><td class="label">Machine:</td><td class="value"><xsl:value-of select="//production/@machine-name"/></td></tr>
-          </table>
-        </td>
-        <td>
-          <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-            <colgroup>
-              <col/>
-              <col width="100%"/>
-            </colgroup>
-            <tr><td class="label">Run Name:</td><td class="value"><xsl:value-of select="//production/@run-name"/></td></tr>
-            <tr><td class="label">Date Started:</td><td class="value"><xsl:value-of select="//production/@date-started"/></td></tr>
-            <tr><td class="label">Group:</td><td class="value"><xsl:value-of select="//production/@group-name"/></td></tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-    <hr/>
+    <xsl:call-template name="view_header">
+      <xsl:with-param name="label_name" select="'Flow Cell'" />
+      <xsl:with-param name="display_name" select="//flow-cell/@id" />
+      <xsl:with-param name="icon" select="'genome_instrumentdata_flowcell_32'" />
+    </xsl:call-template>
 
-    <h2>lanes</h2>
-    <table id="lane_list" class="list tablesorter" width="100%" cellspacing="0" cellpadding="0" border="0">
-      <colgroup>
-        <col />
-        <col />
-      </colgroup>
-      <thead>
-        <tr>
-          <th>lane</th>
-          <th>id</th>
-          <th>reports</th>
-          <th>resources</th>
-        </tr>
-      </thead>
-      <tbody>
-        <xsl:choose>
-          <xsl:when test="count(//instrument-data) > 0">
-            <xsl:for-each select="//instrument-data">
-              <xsl:sort select="@subset_name" data-type="text" order="ascending"/>
-              <xsl:variable name="build-status" select="build_status"/>
-              <tr>
-                <td>
-                  <xsl:value-of select="@subset_name"/>
-                </td>
-                <td><xsl:value-of select="@id"/></td>
-                <td>
-                  <xsl:choose>
-                    <xsl:when test="report">
-                      <xsl:for-each select="report">
-                        <xsl:variable select="@name" name="report_name_full"/>
-                        <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">/cgi-bin/dashboard/flow_cell_report.cgi?instrument-data-id=<xsl:value-of select="../@id"/>&amp;report-name=<xsl:value-of select="@name"/></xsl:attribute><xsl:value-of select="substring-before($report_name_full,'.')"/></a><xsl:text> </xsl:text>
-                      </xsl:for-each>
-                    </xsl:when>
-                    <xsl:otherwise>
-                      <span class="note">No reports available for this lane.</span>
-                    </xsl:otherwise>
-                  </xsl:choose>
-                </td>
-                <td>
-                  <xsl:choose>
-                    <xsl:when test="@gerald-directory">
-                      <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">https://gscweb<xsl:value-of select="@gerald-directory"/></xsl:attribute>gerald directory</a>
-                    </xsl:when>
-                    <xsl:otherwise>
-                      <span class="note">No resources found.</span>
-                    </xsl:otherwise>
-                  </xsl:choose>
-                </td>
-              </tr>
-            </xsl:for-each>
-          </xsl:when>
-          <xsl:otherwise>
+    <div class="content rounded shadow">
+      <div class="container">
+
+        <table cellpadding="0" cellspacing="0" border="0" class="info_table_group">
+          <tr>
+            <td>
+              <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
+                <colgroup>
+                  <col/>
+                  <col width="100%"/>
+                </colgroup>
+                <tr><td class="label">Flow Cell ID:</td><td class="value"><xsl:value-of select="//flow-cell/@id"/></td></tr>
+
+                <tr><td class="label">Run Type:</td><td class="value"><xsl:value-of select="//production/@run-type"/></td></tr>
+                <tr><td class="label">Machine:</td><td class="value"><xsl:value-of select="//production/@machine-name"/></td></tr>
+              </table>
+            </td>
+            <td>
+              <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
+                <colgroup>
+                  <col/>
+                  <col width="100%"/>
+                </colgroup>
+                <tr><td class="label">Run Name:</td><td class="value"><xsl:value-of select="//production/@run-name"/></td></tr>
+                <tr><td class="label">Date Started:</td><td class="value"><xsl:value-of select="//production/@date-started"/></td></tr>
+                <tr><td class="label">Group:</td><td class="value"><xsl:value-of select="//production/@group-name"/></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <hr/>
+
+        <h2>lanes</h2>
+        <table id="lane_list" class="list tablesorter" width="100%" cellspacing="0" cellpadding="0" border="0">
+          <colgroup>
+            <col />
+            <col />
+          </colgroup>
+          <thead>
             <tr>
-              <td colspan="5">
-                <strong>No available lanes for this flow cell.</strong>
-              </td>
+              <th>lane</th>
+              <th>id</th>
+              <th>reports</th>
+              <th>resources</th>
             </tr>
-          </xsl:otherwise>
-        </xsl:choose>
-      </tbody>
-    </table>
-    <xsl:if test="/flow-cell/illumina-lane-index">
-      <h2 style="border-bottom: 2px solid #CCC;">Lane index report</h2>
-      <!--      <div class="legend_block">
-           <div class="label">
-           Legend:
-           </div>
-           <div class="legend">
-           <script type="text/javascript+protovis">
-           var w=700,
-           h=15,
-           c = pv.Colors.category10();
+          </thead>
+          <tbody>
+            <xsl:choose>
+              <xsl:when test="count(//instrument-data) > 0">
+                <xsl:for-each select="//instrument-data">
+                  <xsl:sort select="@subset_name" data-type="text" order="ascending"/>
+                  <xsl:variable name="build-status" select="build_status"/>
+                  <tr>
+                    <td>
+                      <xsl:value-of select="@subset_name"/>
+                    </td>
+                    <td><xsl:value-of select="@id"/></td>
+                    <td>
+                      <xsl:choose>
+                        <xsl:when test="report">
+                          <xsl:for-each select="report">
+                            <xsl:variable select="@name" name="report_name_full"/>
+                            <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">/cgi-bin/dashboard/flow_cell_report.cgi?instrument-data-id=<xsl:value-of select="../@id"/>&amp;report-name=<xsl:value-of select="@name"/></xsl:attribute><xsl:value-of select="substring-before($report_name_full,'.')"/></a><xsl:text> </xsl:text>
+                          </xsl:for-each>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          <span class="note">No reports available for this lane.</span>
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </td>
+                    <td>
+                      <xsl:choose>
+                        <xsl:when test="@gerald-directory">
+                          <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">https://gscweb<xsl:value-of select="@gerald-directory"/></xsl:attribute>gerald directory</a>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          <span class="note">No resources found.</span>
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </td>
+                  </tr>
+                </xsl:for-each>
+              </xsl:when>
+              <xsl:otherwise>
+                <tr>
+                  <td colspan="5">
+                    <strong>No available lanes for this flow cell.</strong>
+                  </td>
+                </tr>
+              </xsl:otherwise>
+            </xsl:choose>
+          </tbody>
+        </table>
+        <xsl:if test="/flow-cell/illumina-lane-index">
+          <h2 style="border-bottom: 2px solid #CCC;">Lane index report</h2>
 
-var legend = new pv.Panel()
-.width(w)
-.height(h);
+          <div class="charts_block">
+            <xsl:for-each select="//report">
+              <xsl:apply-templates select="lane" />
+            </xsl:for-each>
+          </div>
 
+        </xsl:if>
 
-legend.add(pv.Dot)
-.data(window.indexData[0].sequence)
-.top(8)
-.left(function() 15 + this.index * 65)
-.shape("square")
-.size(16)
-.strokeStyle(null)
-.fillStyle(function(d) c(window.indexData[0].sequence[this.index]))
-.anchor("right").add(pv.Label);
+      </div> <!-- end container -->
+    </div> <!-- end content -->
 
-legend.render();
-</script>
-</div>
-</div>
-      -->
-      <div class="charts_block">
-        <xsl:for-each select="//report">
-          <xsl:apply-templates select="lane" />
-        </xsl:for-each>
-      </div>
+    <xsl:call-template name="footer">
+      <xsl:with-param name="footer_text">
+        <br/>
+      </xsl:with-param>
+    </xsl:call-template>
 
-    </xsl:if>
 
   </xsl:template>
+
   <xsl:template match="lane">
     <div class="lane_chart">
       <h3>Lane <xsl:value-of select="@number"/></h3>
 
-      <!--
-          <script type="text/javascript+protovis">
-          new pv.Panel()
-          .width(150)
-          .height(150)
-          .add(pv.Bar)
-          .data(window.indexData.lane<xsl:value-of select="@number"/>.percent)
-          .bottom(0)
-          .width(20)
-          .height(function(d) d * 80)
-          .left(function() this.index * 25)
-          .root.render();
-          </script>
-      -->
       <script type="text/javascript+protovis">
-
+        <xsl:text disable-output-escaping="yes">
+        console.log("executing lane index chart.");
         var y_bars = window.indexData[0].sequence.length,
         w = 150,
         h = y_bars * 15,
@@ -274,13 +249,13 @@ legend.render();
         .top(5);
 
         var bar = vis.add(pv.Bar)
-        .data(window.indexData[<xsl:value-of select="@number  - 1"/>].percent)
+        .data(window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/>]<xsl:text disable-output-escaping="yes">.percent)
         .top(function() y(this.index))
         .height(y.range().band)
         .left(0)
         .width(x)
-        .fillStyle(function(d) c(window.indexData[<xsl:value-of select="@number  - 1"/>].sequence[this.index]))
-        .title(function() {return "count: " +  addCommas(window.indexData[<xsl:value-of select="@number  - 1"/>].count[this.index]) + " index %: " + window.indexData[<xsl:value-of select="@number  - 1"/>].percent[this.index] + '%'});
+        .fillStyle(function(d) c(window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/>]<xsl:text disable-output-escaping="yes">.sequence[this.index]))
+        .title(function() {return "count: " +  addCommas(window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/><xsl:text disable-output-escaping="yes">].count[this.index]) + " index %: " + window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/><xsl:text disable-output-escaping="yes">].percent[this.index] + '%'});
 
         bar.anchor("right").add(pv.Label)
         .textStyle("white")
@@ -289,7 +264,7 @@ legend.render();
         bar.anchor("left").add(pv.Label)
         .textMargin(5)
         .textAlign("right")
-        .text(function() window.indexData[<xsl:value-of select="@number  - 1"/>].sequence[this.index]);
+        .text(function() window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/><xsl:text disable-output-escaping="yes">].sequence[this.index]);
 
         vis.add(pv.Rule)
         .data(x.ticks())
@@ -316,9 +291,10 @@ legend.render();
         }
         return x1 + x2;
         }
-
+      </xsl:text>
       </script>
       <p class="axis_label_x">Index %</p>
     </div>
+
   </xsl:template>
 </xsl:stylesheet>

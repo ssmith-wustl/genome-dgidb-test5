@@ -1,12 +1,14 @@
 use strict;
 use warnings;
 
+use above "PAP";
 use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
+use File::Basename;
 use Test::More tests => 532;
 
 BEGIN {
@@ -21,12 +23,14 @@ my $tempdir = File::Temp::tempdir(
                                  );
 
 my $command = PAP::Command::BlastP->create(
-                                           'fasta_file'      => 'data/B_coprocola.chunk.fasta', 
+                                           'fasta_file'      => File::Basename::dirname(__FILE__).'/data/B_coprocola.chunk.fasta', 
                                            'report_save_dir' => $tempdir, 
                                           );
                                           
 isa_ok($command, 'PAP::Command::BlastP');
 
+SKIP: {
+    skip "long test; run manually setting RUNBLASTP=1", 529 unless $ENV{RUNBLASTP};
 ok($command->execute());
 
 my $ref = $command->bio_seq_feature();
@@ -88,4 +92,5 @@ my $blast_report_fh = $command->blast_report();
 isa_ok($blast_report_fh, 'File::Temp');
 ok($blast_report_fh->opened());
 
+}
 
