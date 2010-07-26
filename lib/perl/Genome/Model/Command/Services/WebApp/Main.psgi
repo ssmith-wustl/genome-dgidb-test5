@@ -6,9 +6,6 @@ BEGIN {
     if (!exists $ENV{GENOME_DEV_MODE}) {
         $ENV{GENOME_DEV_MODE} = 0;
     }
-    unless (grep { /gscuser/ } @INC) {
-        eval "use lib '/gsc/scripts/lib/perl';";
-    }
 }
 
 use Web::Simple 'Genome::Model::Command::Services::WebApp::Main';
