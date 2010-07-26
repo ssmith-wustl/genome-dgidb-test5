@@ -3,7 +3,7 @@ package Genome::InstrumentData::Command::EstimateLibraryComplexity;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 class Genome::InstrumentData::Command::EstimateLibraryComplexity {
     is => 'Genome::InstrumentData::Command',

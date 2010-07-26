@@ -587,21 +587,18 @@ sub execute {
 
     MODEL:   
     for my $model_id (sort keys %definitely_build) {
-        my $model = Genome::Model->get($model_id); 
+        my $model = Genome::Model->get($model_id);
+        $self->status_message("Building model '$model_id'..."); 
         eval {
-            Genome::Model::Build::Command::Start->execute(
-                model_identifier => $model_id,
-                force            => 1,
-            ) or die 'Failed to start a build for model ' . $model_id;
+            my $cmd = qq{genome model build start --force --model $model_id};
+            Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
         };
     
         if ($@) {
             warn $@;
-            UR::Context->rollback();
-            next MODEL;
+            $self->status_message("Build failed for model '$model_id'");
         }
         
-        UR::Context->commit();
     }
     
     $self->status_message("Completing PSEs...");
