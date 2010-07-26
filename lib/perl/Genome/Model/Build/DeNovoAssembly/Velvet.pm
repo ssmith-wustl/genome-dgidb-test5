@@ -97,13 +97,16 @@ sub calculate_metrics {
         # contig
         'total contig number' => 'contigs',
         'n50 contig length' => 'median_contig_length',
+        'average contig length' => 'average_contig_length',
         # supercontig
         'total supercontig number' => 'supercontigs',
         'n50 supercontig length' => 'median_supercontig_length',
+        'average supercontig length' => 'average_supercontig_length',
         # reads
         'total input reads' => 'reads_processed',
         'placed reads' => 'reads_assembled',
         'chaff rate' => 'reads_not_assembled_pct',
+        'average read length' => 'average_read_length',
         # bases
         'total contig bases' => 'assembly_length',
     );
@@ -124,16 +127,23 @@ sub calculate_metrics {
         $metrics{$metric} = $value;
     }
 
+    if ( %stat_to_metric_names ) {
+        $self->error_message(
+            'Missing these metrics ('.join(', ', keys %stat_to_metric_names).') in stats file ($stats_file)'
+        );
+        return;
+    }
+
     $metrics{reads_not_assembled_pct} =~ s/%//;
-    $metrics{reads_not_assembled_pct} /= 100;
+    $metrics{reads_not_assembled_pct} = sprintf('%0.3f', $metrics{reads_not_assembled_pct} / 100);
 
     $metrics{reads_attempted} = $self->calculate_reads_attempted
-        or return;
+        or return; # error in sub
     $metrics{reads_processed_success} =  sprintf(
-        '%0.2f', $metrics{reads_processed} / $metrics{reads_attempted}
+        '%0.3f', $metrics{reads_processed} / $metrics{reads_attempted}
     );
     $metrics{reads_assembled_success} = sprintf(
-        '%0.2f', $metrics{reads_assembled} / $metrics{reads_processed}
+        '%0.3f', $metrics{reads_assembled} / $metrics{reads_processed}
     );
     
     return %metrics;

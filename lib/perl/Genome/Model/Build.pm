@@ -607,7 +607,7 @@ sub _launch {
     if (exists $params{job_group}) {
         my $job_group = delete $params{job_group};
         if ($job_group) {
-            $job_group_spec = " -q $job_group";
+            $job_group_spec = " -g $job_group";
         }
         else {
             $job_group_spec = "";
@@ -645,21 +645,16 @@ sub _launch {
             $add_args .= ' --restart';
         }
 
-	my $host_group;
-	if ($server_dispatch eq 'workflow') {
-            $host_group = 'workflow';
-	}   
-	else {
-            $host_group = 'blades';
+	my $host_group = '';
+	if ($server_dispatch ne 'workflow') {
+            $host_group = '-m blades';
 	}
  
         # bsub into the queue specified by the dispatch spec
         my $lsf_command = sprintf(
-            'bsub -N -H -q %s -m %s %s %s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
-            $server_dispatch,
+            'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
+            $server_dispatch, ## lsf queue
             $host_group,
-            '',
-            #"-R 'select[type==LINUX86]'",
             $job_group_spec,
             $ENV{USER}, 
             $build_event->output_log_file,

@@ -53,17 +53,20 @@ _test_files_and_values(
 my %metrics = $build->set_metrics;
 #print Dumper(\%metrics);
 my $expected_metrics = {
-    'reads_processed_success' => '0.71',
-    'reads_not_assembled_pct' => '0.7016',
+    'reads_processed_success' => '0.714',
+    'reads_not_assembled_pct' => '0.702',
     'supercontigs' => '2424',
-    'reads_assembled_success' => '0.30',
+    'average_supercontig_length' => '146',
+    'reads_assembled_success' => '0.298',
     'reads_assembled' => '7459',
     'contigs' => '2424',
-    'assembly_length' => '354779',
+    'average_read_length' => '90',
+    'average_contig_length' => '146',
     'median_supercontig_length' => '141',
     'reads_processed' => '25000',
+    'assembly_length' => '354779',
     'reads_attempted' => 35000,
-    'median_contig_length' => '141',
+    'median_contig_length' => '141'
 };
 is_deeply(\%metrics, $expected_metrics, 'metrics match');
 for my $name ( keys %metrics ) {

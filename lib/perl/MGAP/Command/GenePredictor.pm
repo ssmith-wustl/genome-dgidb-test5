@@ -6,8 +6,9 @@ use warnings;
 class MGAP::Command::GenePredictor {
     is => ['MGAP::Command'],
     has => [
-        fasta_file => { is => 'TEXT', doc => 'single fasta file' },
-        bio_seq_feature => { is => 'ARRAY', doc => 'array of Bio::Seq::Feature' },
+        fasta_file => { is => 'TEXT', doc => 'single fasta file', is_input => 1, },
+        bio_seq_feature => { is => 'ARRAY', doc => 'array of Bio::Seq::Feature',
+                             is_output => 1, is_optional => 1, },
     ],
 };
 

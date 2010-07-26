@@ -1,12 +1,14 @@
 use strict;
 use warnings;
 
+use above "MGAP";
 use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
+use File::Basename;
 use Test::More tests => 12;
 
 BEGIN {
@@ -15,7 +17,8 @@ BEGIN {
 }
 
 my $command = MGAP::Command::GenePredictor::RNAmmer->create(
-                                                            'fasta_file' => 'data/HPAG1.fasta',
+                                                            'fasta_file' => File::Basename::dirname(__FILE__).'/data/HPAG1.fasta',
+                                                            'domain' => 'bacteria',
                                                            );
 
 isa_ok($command, 'MGAP::Command::GenePredictor');

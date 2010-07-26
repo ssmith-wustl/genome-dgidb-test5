@@ -105,12 +105,16 @@ class Genome::Model::GenePrediction {
             via => 'subject',
             to => 'ncbi_taxon_id',
         },
+        # The species latin name on some taxons includes a strain name, which needs to be removed
         organism_name => {
             calculate_from => ['subject'],
             calculate => q( 
                 my $latin_name = $subject->species_latin_name;
-                $latin_name =~ s/\s+/_/; 
-                return $latin_name
+                $latin_name =~ s/\s+/_/g; 
+                my $first = index($latin_name, "_");
+                my $second = index($latin_name, "_", $first + 1);
+                return $latin_name if $second == -1;
+                return substr($latin_name, 0, $second);
             ),
         },
         locus_id => {
@@ -141,16 +145,6 @@ sub create {
 
     unless (defined $self->organism_name) {
         $self->error_message($base_error_msg . " does not have organism name defined!");
-        return;
-    }
-
-    # Perform checks on various other parameters
-    unless (-e $self->nr_database_location) {
-        $self->error_message("No NR database found at " . $self->nr_database_location);
-        return;
-    }
-    unless (-e $self->contigs_file_location) {
-        $self->error_message("No contigs file found at " . $self->contigs_file_location);
         return;
     }
 

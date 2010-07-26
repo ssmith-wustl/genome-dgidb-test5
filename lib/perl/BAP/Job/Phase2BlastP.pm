@@ -65,17 +65,6 @@ sub execute {
         }
         else {
             warn "Could not find local NR database, using default at " . $self->{_db} . "!";
-            my $host = hostname;
-            my $email_msg = "User: $ENV{USER}\n" .
-                            "Host: $host\n" .
-                            "Could not find local NR database at $local_db!\n";
-
-            App::Mail->mail(
-                To => 'bdericks@genome.wustl.edu',
-                From => $ENV{USER} . '@genome.wustl.edu',
-                Subject => 'Could not find local NR database!',
-                Message => $email_msg,
-            );
         } 
     }
 

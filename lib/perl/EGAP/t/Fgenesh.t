@@ -7,6 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
+use File::Basename;
 use Test::More tests => 858;
 
 BEGIN {
@@ -16,7 +17,7 @@ BEGIN {
 
 ##FIXME:  Note that the EGAP::Job will fail in a bizarre fashion if the parameter file arg is garbage - sanity check should be added
 my $command = EGAP::Command::GenePredictor::Fgenesh->create(
-                                                            'fasta_file'     => 'data/Contig0a.masked.fasta',
+                                                            'fasta_file'     => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
                                                             'parameter_file' => '/gsc/pkg/bio/softberry/installed/sprog/C_elegans',
                                                             );
 

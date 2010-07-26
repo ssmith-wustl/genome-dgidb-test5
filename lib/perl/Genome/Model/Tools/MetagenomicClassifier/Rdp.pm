@@ -109,12 +109,9 @@ sub execute {
         or return;
 
     while ( my $seq = $bioseq_in->next_seq ) {
-        my $classification = $classifier->classify($seq);
+        my $classification = $classifier->classify($seq); # error is in sub
         if ($classification) {
             $writer->write_one($classification);
-        }
-        else {
-            print STDERR "Failed to classify ". $seq->id;
         }
     }
 
@@ -123,14 +120,19 @@ sub execute {
 
 #< HELP >#
 sub help_brief {
-    "rdp classifier",
+    "Classify sequences with rdp",
 }
 
-sub help_synopsis {
-    my $self = shift;
-    return <<"EOS"
-genome-model tools metagenomic-classifier rdp    
-EOS
+sub help_detail {
+    return <<HELP;
+   This tool will take a fasta file and output RDP classifications. An attempt will be made to classify each sequence. If it cannot be classified, an error will be displayed, and the classifier will contiue on to the next sequence.
+
+   RDP Version Notes:
+   2.1 None
+
+   2.2 Sequences must be at least 50 bp long AND contain 42, N-free 8-mers to be classified.
+
+HELP
 }
 
 1;
