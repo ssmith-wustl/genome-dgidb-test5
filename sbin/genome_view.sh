@@ -13,6 +13,8 @@ INC=/gsc/scripts/opt/genome-webapp/lib/perl
 if [ $hostname == 'vm45' ]
 then
   INC=/gsc/scripts/opt/genome-webapp-dev/lib/perl
+  GENOME_DEV_MODE=1
+  export GENOME_DEV_MODE
 fi
 
 ## change the symlink to the real path
