@@ -71,7 +71,8 @@ sub open_bamsam_in {
     my $fh;
     if($type eq 'BAM') {
         $fh = new IO::File;
-        $fh->open('samtools view -h "' . $in_filename . '" | head -n 2000000 |');
+        #$fh->open('samtools view -h "' . $in_filename . '" | head -n 2000000 |');
+        $fh->open('samtools view -h "' . $in_filename . '" |');
     }
     elsif($type eq 'SAM') {
         $fh = new IO::File($in_filename);
