@@ -125,6 +125,7 @@ sub get_valid_input_acefiles {
 #selectively print contig lines for exported contigs
 sub filter_ace_files {
     my ($self, $acefiles, $contigs, $action) = @_;
+
     my @new_aces; #return ary ref of new ace names
     foreach my $acefile (@$acefiles) {
 	my $ace_name = File::Basename::basename($acefile);
@@ -175,6 +176,9 @@ sub filter_ace_files {
 #cats multiple ace files together
 sub merge_acefiles {
     my ($self, $acefiles) = @_;
+
+    #print Dumper $acefiles;
+
     my $int_file = $self->intermediate_file_name('merge');
     my $int_fh = IO::File->new("> $int_file") ||
 	die "Can not create file handle for $int_file";
@@ -227,7 +231,16 @@ sub rewrite_ace_file {
 	$self->error_message("Can't find int ace file or file is zero size: ".$ace_in);
 	return;
     }
-    my $ace_out = $self->directory.'/'.$name.'.ace';
+
+    #if final output is a single ace file, allow users to defined own final ace name
+    my $ace_out;
+    if ($self->ace) {
+	$ace_out = ($self->ace_out) ? $self->ace_out : $self->directory.'/'.$name.'.ace';
+    }
+    else {
+	$ace_out = $self->directory.'/'.$name.'.ace';
+    }
+
     my $fh = IO::File->new("> $ace_out") ||
 	die "Can not create file handle for final ace file\n";
     $fh->write("AS $contig_count $read_count\n\n");
