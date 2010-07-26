@@ -72,6 +72,7 @@
               <td style="vertical-align: top; padding-right: 10px;">
                 <h2>coverage</h2>
                 <script type="text/javascript+protovis">
+                  <xsl:text disable-output-escaping="yes">
                   <![CDATA[
                            /* get chart data into nice arrays */
                            var models = pv.keys(cSummary);
@@ -199,11 +200,13 @@ function round(rnum, rlength) {
 return Math.round(rnum*Math.pow(10,rlength))/Math.pow(10,rlength);
 }
                   ]]>
+                </xsl:text>
                 </script>
               </td>
               <td style="vertical-align: top;">
                 <h2>alignment</h2>
                 <script type="text/javascript+protovis">
+                  <xsl:text disable-output-escaping="yes">
                   <![CDATA[
 
 var metrics = [
@@ -337,6 +340,7 @@ function round(rnum, rlength) {
 return Math.round(rnum*Math.pow(10,rlength))/Math.pow(10,rlength);
 }
                   ]]>
+                  </xsl:text>
                 </script>
               </td>
             </tr>
