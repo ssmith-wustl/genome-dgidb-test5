@@ -28,4 +28,4 @@ OPTIONS="--app $PSGI -s FCGI -E development -I $INC -M Genome::Model::Command::S
 PERL5LIB=/gsc/scripts/lib/perl
 export PERL5LIB
 
-exec /gsc/bin/plackup $OPTIONS
+exec /gsc/bin/plackup $OPTIONS >>/var/log/kom/genome_view.log 2>&1 
