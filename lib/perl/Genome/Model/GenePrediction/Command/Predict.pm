@@ -295,8 +295,8 @@ sub execute
         q            => 'long',
         maxmessage   => 16384000,
         lib_paths    => [
-            '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-live',
-            '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-run',
+#            '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-live',
+#            '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-run',
             '/gsc/scripts/opt/bacterial-bioperl',
         ],
     );
