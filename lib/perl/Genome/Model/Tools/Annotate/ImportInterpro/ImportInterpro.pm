@@ -119,7 +119,7 @@ sub execute {
         benchmark => $self->benchmark,
         tmp_dir => $tmp_dir,
     );
-    #die "Could not generate .fasta files: $!" unless $fasta_success;
+    die "Could not generate .fasta files: $!" unless $fasta_success;
     my $interpro_success = Genome::Model::Tools::Annotate::ImportInterpro::ExecuteIprscan->execute(
         benchmark => $self->benchmark,
         tmp_dir => $tmp_dir,

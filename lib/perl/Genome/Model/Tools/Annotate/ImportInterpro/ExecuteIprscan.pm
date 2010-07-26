@@ -87,7 +87,7 @@ sub execute{
     #TODO: This appends the results to the existing file, correct?
     my @restart_commands = $self->_find_restart_commands($output_text->filename, $iprscan_dir); 
     for my $cmd (@restart_commands){
-        my $self->status_message("Restarting job with command: $cmd");
+        $self->status_message("Restarting job with command: $cmd");
         Genome::Utility::FileSystem->shellcmd(cmd => $cmd) or die "iprscan restart failed for:\n $cmd\n $!"; 
     }
 
