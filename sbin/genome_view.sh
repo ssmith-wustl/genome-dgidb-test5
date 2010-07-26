@@ -5,7 +5,20 @@
 # can update it to change options.
 #
 
+hostname=`hostname -s`
+
 INC=/gsc/scripts/opt/genome-webapp/lib/perl
+
+# TODO make this less dependent on the real hostname, check aims-dev cname?
+if [ $hostname == 'vm45' ]
+then
+  INC=/gsc/scripts/opt/genome-webapp-dev/lib/perl
+fi
+
+echo $INC
+
+exit
+
 ## change the symlink to the real path
 INC=`cd $INC; pwd -P`
 
