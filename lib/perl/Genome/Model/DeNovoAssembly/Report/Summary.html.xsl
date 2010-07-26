@@ -109,7 +109,7 @@
 				</tr>
 				<tr>
           <td class="label">Read Coverage Used</td>
-          <td class="value"><xsl:value-of select="//model-info/read-coverage"/></td>
+          <td class="value"><xsl:value-of select="//model-info/coverage"/></td>
 				</tr>
 				<tr>
           <td class="label">Reads Assembled</td>
