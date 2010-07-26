@@ -8,6 +8,7 @@ use Bio::SeqFeature::Generic;
 use Bio::Tools::Prediction::Gene;
 use Bio::Tools::Prediction::Exon;
 
+use File::Basename;
 use Test::More tests => 4;
 use Storable;
 
@@ -19,12 +20,12 @@ BEGIN {
     use_ok('EGAP::Command::UploadResult');
 }
 
-my $seqio = Bio::SeqIO->new(-file => 'data/SCTG6.a.dna.masked.fasta', -format => 'Fasta');
+my $seqio = Bio::SeqIO->new(-file => File::Basename::dirname(__FILE__).'/data/SCTG6.a.dna.masked.fasta', -format => 'Fasta');
 
 my $seq = $seqio->next_seq();
 
-my $ab_initio_features = Storable::retrieve('bsf-snap-fgenesh.storable');
-my $rna_features       = Storable::retrieve('bsf-trnascan-rfam_scan.storable');
+my $ab_initio_features = Storable::retrieve(File::Basename::dirname(__FILE__).'/bsf-snap-fgenesh.storable');
+my $rna_features       = Storable::retrieve(File::Basename::dirname(__FILE__).'/bsf-trnascan-rfam_scan.storable');
 
 my $features = [ @{$ab_initio_features}, @{$rna_features} ];
 

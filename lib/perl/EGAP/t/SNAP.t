@@ -7,6 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
+use File::Basename;
 use Test::More tests => 1122;
 
 BEGIN {
@@ -15,7 +16,7 @@ BEGIN {
 }
 
 my $command = EGAP::Command::GenePredictor::SNAP->create(
-                                                         'fasta_file' => 'data/Contig0a.masked.fasta',
+                                                         'fasta_file' => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
                                                          'hmm_file'   => '/gsc/pkg/bio/snap/installed/HMM/C.elegans.hmm' 
                                                         );
 
