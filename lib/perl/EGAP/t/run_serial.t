@@ -4,12 +4,23 @@ use strict;
 use warnings;
 
 use above 'Workflow';
+use above 'EGAP';
 use Data::Dumper;
+use File::Basename;
+use Test::More qw(no_plan);
 
-my $w = Workflow::Model->create_from_xml($ARGV[0] || 'data/egap.xml');
 
+SKIP: {
+    skip "run manually by setting RUNEGAP=1", 1 unless $ENV{RUNEGAP};
+my $w = Workflow::Model->create_from_xml($ARGV[0] || File::Basename::dirname(__FILE__).'/data/egap.xml');
+
+ok($w, 'workflow object is defined');
+#$w->is_valid();
 my @errors = $w->validate;
-die 'Too many problems: ' . join("\n", @errors) unless $w->is_valid();
+#die 'Too many problems: ' . join("\n", @errors) unless $w->is_valid();
+unless($w->is_valid() ){
+    diag('too many problems: ' . join("\n",@errors));
+}
 
 my $out = $w->execute(
                       'input ' => {
@@ -22,4 +33,5 @@ my $out = $w->execute(
 $w->wait();
 
 print Data::Dumper->new([$out])->Dump;
+}
 
