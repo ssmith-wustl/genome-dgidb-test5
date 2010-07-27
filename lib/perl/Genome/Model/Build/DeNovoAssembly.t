@@ -13,7 +13,7 @@ use above 'Genome';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
-use_ok('Genome::Model::Build::DeNovoAssembly');
+use_ok('Genome::Model::Build::DeNovoAssembly') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
@@ -32,6 +32,10 @@ is($build->genome_size, 4500000, 'Genome size');
 
 # base limit
 is($build->calculate_base_limit_from_coverage, 2250000, 'Calculated base limit');
+
+# insert size/sd
+my $avg_insert_size = $build->calculate_average_insert_size;
+is($avg_insert_size, 260, 'average insert size');
 
 # metrics
 my @interesting_metric_names = $build->interesting_metric_names;

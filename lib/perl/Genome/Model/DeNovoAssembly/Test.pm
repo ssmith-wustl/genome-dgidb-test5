@@ -26,7 +26,7 @@ sub processing_profile_params_for_assembler_and_platform {
         velvet_solexa =>  { 
             coverage => 0.5,#25000,
             assembler_version => '0.7.57-64',
-            assembler_params => '-hash_sizes 31 33 35 -ins_length 260',
+            assembler_params => '-hash_sizes 31 33 35',
             read_trimmer_name => 'by_length',
             read_trimmer_params => '-trim_length 10',
         },
@@ -201,6 +201,7 @@ sub get_mock_build {
             calculate_metrics
             set_metrics
             calculate_reads_attempted
+            calculate_average_insert_size
 
             genome_size
             calculate_base_limit_from_coverage
@@ -328,6 +329,10 @@ sub _get_mock_solexa_instrument_data {
         clusters => 17500,
         fwd_clusters => 17500,
         rev_clusters => 17500,
+        median_insert_size => 260,# 181, but 260 was used to generate assembly
+        sd_above_insert_size => 62,
+        sd_below_insert_size => 38,
+
     ) or Carp::confess "Can't create mock solexa instrument data";
 
     return $inst_data;
