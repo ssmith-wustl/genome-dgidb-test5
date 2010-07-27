@@ -170,7 +170,7 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
 
     <div class="footer rounded shadow span-24 last gradient-grey">
       <div class="container">
-        <p class="small"><xsl:copy-of select="$footer_text"/></p>
+        <p class="small">version 1.0b<xsl:copy-of select="$footer_text"/></p>
       </div>
     </div>
   </xsl:template>
