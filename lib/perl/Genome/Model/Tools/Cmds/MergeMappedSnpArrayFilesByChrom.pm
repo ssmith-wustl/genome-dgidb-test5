@@ -13,12 +13,15 @@ class Genome::Model::Tools::Cmds::MergeMappedSnpArrayFilesByChrom {
         mapped_snp_array_files => {
             type => 'Single-quoted String',
             is_optional => 0,
+            is_input => 1,
             doc => "A single-quoted string describing the list of snp array files with format [Chr \t Pos \t Sample_data], such as '/dir/*.merged'.  There may be more than one sample-data column in this file (see gmt cmds create-mapped-snp-array-file)."
         },
-        output_file => {
+        output_dir => {
             type => 'String',
             is_optional => 0,
-            doc => 'Filename of merged data from all input files for usage in CMDS analysis. 1 file is printed per chromosome with name "output_file.1", for example. This script runs through chromosomes 1-22, X, Y, and MT.'
+            is_input => 1,
+            is_output => 1,
+            doc => 'Directory which will contain Files of merged data from all input files for usage in CMDS analysis. 1 file is printed per chromosome with name "merged_out.1", for example. This script runs through chromosomes 1-22, X, Y, and MT.'
         },
     ]
 };
@@ -36,7 +39,6 @@ sub execute {
     my $self = shift;
 
     #process input arguments
-    my $outfile = $self->output_file;
     my $output_fh = new IO::File;
     my @infiles = glob($self->mapped_snp_array_files);
     chomp @infiles;
@@ -109,7 +111,7 @@ sub execute {
         #if we have switched chromosomes, open a new output file and close the old output file
         if ($cur_max_chr ne $prev_cur_max_chr) {
             $output_fh->close;
-            $output_fh = open_new_output_fh($outfile,$header,$cur_max_chr);
+            $output_fh = $self->open_new_output_fh($header,$cur_max_chr);
             $prev_cur_max_chr = $cur_max_chr;
         }
 
@@ -151,10 +153,11 @@ sub execute {
 
 #sub to open output filehandle and print headers
 sub open_new_output_fh {
-    my $outfile = shift;
+    my $self = shift;
     my $header = shift;
     my $chr = shift;
-    my $output_filename = $outfile.".".$chr;
+    my $output_dir = $self->output_dir;
+    my $output_filename = $output_dir. "/merged_output" . ".$chr";
     my $output_fh = new IO::File $output_filename,"w";
     $output_fh->print($header);
     return $output_fh;

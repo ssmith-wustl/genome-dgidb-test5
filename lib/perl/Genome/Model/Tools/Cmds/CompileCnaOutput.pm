@@ -3,6 +3,7 @@ package Genome::Model::Tools::Cmds::CompileCnaOutput;
 use warnings;
 use strict;
 use Genome;
+use Cwd;
 
 class Genome::Model::Tools::Cmds::CompileCnaOutput {
     is => 'Command',
@@ -10,12 +11,14 @@ class Genome::Model::Tools::Cmds::CompileCnaOutput {
     model_ids => {
         type => 'String',
         is_optional => 1,
+        is_input => 1,
         doc => 'Space-delimited somatic build ids to check for CNA output.'
     },
     model_group => {
         type => 'String',
         is_optional => 1,
-        doc => "The name of the Model Group to use.",
+        is_input => 1,
+        doc => "The name or id of the Model Group to use.",
     },
     window_size=> {
         type => 'String',
@@ -24,9 +27,18 @@ class Genome::Model::Tools::Cmds::CompileCnaOutput {
     },
     output_dir=> {
         type => 'String',
+        is_input => 1,
+        is_output => 1,
         is_optional => 1,
+        default => getcwd(),
         doc => "Where the bam-to-cna file will be created, when window-size is not 10K, default is current working directory",
     },
+    regenerate_missing_output => {
+        type => 'Boolean',
+        is_optional => 1,
+        default => 0,
+        doc => "If set to true, any missing copy number output files will be regenerated.",
+    }
     ]
 };
 
@@ -39,23 +51,15 @@ sub help_detail {
 }
 
 sub execute {
-$DB::single=1;
+    $DB::single=1;
     my $self = shift;
     my @somatic_models;
 
     my $window_size = 10000;
     if ($self->window_size){
-	$window_size = $self->window_size;
+        $window_size = $self->window_size;
     }
-    my $output_dir = "./";
-    if ($window_size != 10000){
-    	if ($self->output_dir){
-    	    $output_dir= $self->output_dir;
-	}else{
-	    $self->error_message("When window size is not 10K, the output_dir is necessary to be given");
-	    return;
-	}
-    }
+    my $output_dir = $self->output_dir;
 
     if($self->model_ids) {
         my @model_ids = split /\s+/, $self->model_ids;
@@ -69,9 +73,14 @@ $DB::single=1;
         }
     }
     elsif($self->model_group) {
+        # Try to get model group by name or id
         my $group = Genome::ModelGroup->get(name => $self->model_group);
+        unless ($group) {
+            $group = Genome::ModelGroup->get($self->model_group);
+        }
+
         unless($group) {
-            $self->error_message("Unable to find a model group named " . $self->model_group);
+            $self->error_message("Unable to find a model group with name or id: " . $self->model_group);
             return;
         }
         push @somatic_models, $group->models;
@@ -90,47 +99,58 @@ $DB::single=1;
         ## must changed in the new version
         my $cn_data_file = $somatic_build->somatic_workflow_input("copy_number_output") or die "Could not query somatic build for copy number output.\n";
         my $cn_png_file = $cn_data_file.".png";
-	print "$cn_data_file\n";
-        #if files are found (bam-to-cna has been run correctly already), create link to the data in current folder
-	my $check_point = 0; # create symbolic link and do nothing OR
-        # $check_point =1; # need to regenerate CNV and PNG file in output_dir
+        print "$cn_data_file\n";
         
+        #if files are found (bam-to-cna has been run correctly already), create link to the data in current folder
         if (-s $cn_data_file && -s $cn_png_file) {
-		if ($window_size == 10000){       
-	            	my $link_name = $somatic_model_id.".copy_number.csv";
-        	    	if (-e $link_name) {
-                		$self->status_message("Link $link_name already found in dir.\n");
-            		} else {
-                		`ln -s $cn_data_file $link_name`;
-                		$self->status_message("Link to copy_number_output created.\n");
-            		}
-            	}else{
-            		$check_point=1;
-            	print "$check_point..$somatic_model_id\n";
-            	}
-        }else{
-            $check_point=1;
+            if ($window_size == 10000){       
+                my $link_name = "$output_dir/$somatic_model_id.copy_number.csv";
+                if (-e $link_name) {
+                    $self->status_message("Link $link_name already found in dir.\n");
+                } else {
+                    `ln -s $cn_data_file $link_name`;
+                    $self->status_message("Link to copy_number_output created.\n");
+                }
+            } else{
+                $self->status_message("Window size is not 10000... this necessitates regeneration of copy number output for somatic model id $somatic_model_id");
+                if($self->regenerate_missing_output) {
+                    $self->regenerate_cnv_output($somatic_build);
+                }
+            }
+        } else{
             $self->status_message("Copy number output not found for build $somatic_build_id. ");
+            if($self->regenerate_missing_output) {
+                $self->regenerate_cnv_output($somatic_build);
+            }
         }
-            
-        if($check_point ==1){
-            #get tumor and normal bam files
-            $self->status_message("Build new copy number output file in $output_dir. ");
-            my $tumor_build = $somatic_build->tumor_build or die "Cannot find tumor model.\n";
-            my $normal_build = $somatic_build->normal_build or die "Cannot find normal model.\n";
-            my $tumor_bam = $tumor_build->whole_rmdup_bam_file or die "Cannot find tumor .bam.\n";
-            my $normal_bam = $normal_build->whole_rmdup_bam_file or die "Cannot find normal .bam.\n";
-	    my $cn_data_file=$output_dir."/".$somatic_model_id.".cno_copy_number.csv";
-	    my $cn_png_file=$cn_png_file.".png";
-            print "$cn_data_file\n";
-            #run bam-2-cna
-            my $job = "gmt somatic bam-to-cna --tumor-bam-file $tumor_bam --normal-bam-file $normal_bam --output-file $cn_data_file --window-size $window_size";
-            my $job_name = $somatic_model_id . "_bam2cna";
-            my $oo = $job_name . "_stdout"; #print job's STDOUT in the current directory
-            $self->status_message("Submitting job $job_name (bam-to-cna): $job \n");
-            LSF::Job->submit(-q => 'long', -J => $job_name, -R => 'select[type==LINUX64]', -oo => $oo, "$job");
-        }
+
     }   
     return 1;
 }
+
+sub regenerate_cnv_output {
+    my $self = shift;
+    my $somatic_build_object = shift;
+    my $output_dir = $self->output_dir;
+
+    #get tumor and normal bam files
+    $self->status_message("Build new copy number output file in $output_dir. ");
+    my $tumor_build = $somatic_build_object->tumor_build or die "Cannot find tumor model.\n";
+    my $normal_build = $somatic_build_object->normal_build or die "Cannot find normal model.\n";
+    my $tumor_bam = $tumor_build->whole_rmdup_bam_file or die "Cannot find tumor .bam.\n";
+    my $normal_bam = $normal_build->whole_rmdup_bam_file or die "Cannot find normal .bam.\n";
+    my $somatic_model_id = $somatic_build_object->model->genome_model_id;
+
+    my $cn_data_file=$output_dir."/$somatic_model_id.cno_copy_number.csv";
+    my $cn_png_file = $cn_data_file.".png";
+    
+    #run bam-2-cna
+    my $job = "gmt somatic bam-to-cna --tumor-bam-file $tumor_bam --normal-bam-file $normal_bam --output-file $cn_data_file --window-size " . $self->window_size;
+    my $job_name = $somatic_model_id . "_bam2cna";
+    my $oo = $job_name . "_stdout"; #print job's STDOUT in the current directory
+    $self->status_message("Submitting job $job_name (bam-to-cna): $job \n");
+    LSF::Job->submit(-q => 'long', -J => $job_name, -R => 'select[type==LINUX64]', -oo => $oo, "$job");
+
+}
+
 1;
