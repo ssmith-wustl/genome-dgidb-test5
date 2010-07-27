@@ -655,8 +655,6 @@ sub reference_build {
             $self->{reference_build} = $self->reference_sequence_build;
         }
         else {
-            my $cmd = 'echo "' . $self->reference_sequence_name . '" >> /gscuser/ehvatum/REF_SEQ_BY_NAME.txt';
-            system $cmd;
             my $name = $self->reference_sequence_name;
             my $build = Genome::Model::Build::ReferencePlaceholder->get($name);
             unless ($build) {
