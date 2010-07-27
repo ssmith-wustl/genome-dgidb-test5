@@ -66,7 +66,7 @@ my $subject_type = 'sample_name';
 my $align_params = '-t4::';
 my $sam_version  = Genome::Model::Tools::Sam->default_samtools_version;
 my $bwa_version = Genome::Model::Tools::Bwa->default_bwa_version;
-my $picard_version = Genome::Model::Tools::Sam->default_picard_version;
+my $picard_version = Genome::Model::Tools::Picard->default_picard_version;
 my $bwa_label = 'bwa'.$bwa_version;
 
 $bwa_label =~ s/\./\_/g;

@@ -13,6 +13,8 @@ INC=/gsc/scripts/opt/genome-webapp/lib/perl
 if [ $hostname == 'vm45' ]
 then
   INC=/gsc/scripts/opt/genome-webapp-dev/lib/perl
+  GENOME_DEV_MODE=1
+  export GENOME_DEV_MODE
 fi
 
 ## change the symlink to the real path
@@ -28,4 +30,4 @@ OPTIONS="--app $PSGI -s FCGI -E development -I $INC -M Genome::Model::Command::S
 PERL5LIB=/gsc/scripts/lib/perl
 export PERL5LIB
 
-exec /gsc/bin/plackup $OPTIONS
+exec /gsc/bin/plackup $OPTIONS >>/var/log/kom/genome_view.log 2>&1 

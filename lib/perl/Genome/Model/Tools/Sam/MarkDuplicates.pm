@@ -35,11 +35,24 @@ class Genome::Model::Tools::Sam::MarkDuplicates {
             default_value => 2,
 	    is_optional => 1,
         },
+        max_permgen_size => {
+            is => 'Integer',
+            doc => 'the maximum memory (Mbytes) to use for the "permanent generation" of the Java heap (e.g., for interned Strings)',
+            is_optional => 1,
+            default_value => 256,
+        },
         assume_sorted => {
             is  => 'Integer',
             doc => 'Assume the input file is coordinate order sorted.  Default is 1, true.',
 	    default_value => 1,
 	    is_optional => 1,
+        },
+        validation_stringency => {
+            is => 'String',
+            doc => 'Controls how strictly to validate a SAM file being read.',
+            is_optional => 1,
+            default_value => 'SILENT',
+            valid_values => Genome::Model::Tools::Picard->__meta__->property('validation_stringency')->valid_values,
         },
         log_file => {
             is  => 'String',
@@ -55,9 +68,14 @@ class Genome::Model::Tools::Sam::MarkDuplicates {
             is => 'Integer',
             doc => 'The maximum number of sequences allowed in SAM file.  If this value is exceeded, the program will not spill to disk (used to avoid situation where there are not enough file handles',
             is_optional => 1,
-        }
-
+        },
+        use_picard_version => {
+            is => 'String',
+            doc => 'The version of picard to use for deduplication',
+            is_optional => 1,
+        },
     ],
+    doc => 'This module is now just a wrapper for `gmt picard mark-duplicates` but preserves the interface and outputs of this tool, which provided duplicate functionality',
 };
 
 sub help_brief {
@@ -66,7 +84,7 @@ sub help_brief {
 
 sub help_detail {
     return <<EOS
-    Tool to mark or remove duplicates from BAM or SAM files.
+    Tool to mark or remove duplicates from BAM or SAM files used by the pipeline.  This is just another interface to `gmt picard mark-duplicates`.
 EOS
 }
 
@@ -91,58 +109,33 @@ sub execute {
     #merge those Bam files...BAM!!!
     my $now = UR::Time->now;
     $self->status_message(">>> Beginning mark duplicates at $now");
-    my $picard_path = $self->picard_path;
-    #This is a temporary fix until release 1.04
-    my $mark_duplicates_jar = $picard_path."/MarkDuplicates.jar";
-    my $classpath = "$mark_duplicates_jar";
-
-    my $rm_option = 'true';
-    if ($self->remove_duplicates ne '1') {
-        $rm_option = 'false';
-    }
-
-    my $log_file_param;
-    if (defined($self->log_file) ) {
-        $log_file_param = ">> ".$self->log_file;
-    }
     
-    my $tmp_dir_param;
-    if (defined($self->tmp_dir) ) {
-        $tmp_dir_param = " tmp_dir=".$self->tmp_dir;
-    }
-
-    my $assume_sorted_param = 'true';
-    if ($self->assume_sorted ne '1') {
-        $assume_sorted_param = 'false';
-    }
-    
-    my $mark_duplicates_cmd = "java -Xmx".$self->max_jvm_heap_size."g -XX:MaxPermSize=256m -cp $classpath net.sf.picard.sam.MarkDuplicates VALIDATION_STRINGENCY=SILENT metrics_file=".$self->metrics_file." I=$input_file O=$result remove_duplicates=$rm_option assume_sorted=$assume_sorted_param $tmp_dir_param $log_file_param";  
-
-    if (defined($self->max_sequences_for_disk_read_ends_map)) {
-        $mark_duplicates_cmd .= ' MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP='. $self->max_sequences_for_disk_read_ends_map;
-    }
-
-	$self->status_message("Picard mark duplicates command: $mark_duplicates_cmd");
-	
-	my $md_rv = Genome::Utility::FileSystem->shellcmd(
-        cmd                         => $mark_duplicates_cmd,
-        input_files                 => [$input_file],
-        output_files                => [$result],
-        skip_if_output_is_present   => 0,
+    my $picard_cmd = Genome::Model::Tools::Picard::MarkDuplicates->create(
+        input_file => $self->file_to_mark,
+        output_file => $self->marked_file,
+        metrics_file => $self->metrics_file,
+        remove_duplicates => $self->remove_duplicates,
+        maximum_memory => $self->max_jvm_heap_size,
+        maximum_permgen_memory => $self->max_permgen_size,
+        assume_sorted => $self->assume_sorted,
+        log_file => $self->log_file,
+        temp_directory => $self->tmp_dir,
+        max_sequences_for_disk_read_ends_map => $self->max_sequences_for_disk_read_ends_map,
+        use_version => $self->use_picard_version,
     );
-
-	$self->status_message("Mark duplicates return value: $md_rv");
-	if ($md_rv != 1) {
-		$self->error_message("Mark duplicates error!  Return value: $md_rv");
-	} else {
-		#merging success
-		$self->status_message("Success.  Duplicates marked in file: $result");
-	}
+    
+    my $md_rv = $picard_cmd->execute();
+    
+    $self->status_message("Mark duplicates return value: $md_rv");
+    if ($md_rv != 1) {
+        $self->error_message("Mark duplicates error!  Return value: $md_rv");
+    } else {
+        $self->status_message("Success.  Duplicates marked in file: $result");
+    }
 
     $now = UR::Time->now;
     $self->status_message("<<< Completing mark duplicates at $now.");
-
- 
+    
     return 1;
 }
 

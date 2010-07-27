@@ -21,5 +21,9 @@ class Genome::Model::Build::MetagenomicCompositionShotgun{
     ],
 };
 
+sub calculate_estimated_kb_usage {
+    return 50_000_000;
+}
+
 1;
 

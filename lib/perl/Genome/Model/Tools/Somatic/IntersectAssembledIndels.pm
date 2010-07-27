@@ -40,7 +40,7 @@ class Genome::Model::Tools::Somatic::IntersectAssembledIndels {
         type => 'String',
         is_optional => 0,
         is_input => 1,
-        doc => 'Output File',
+        doc => 'Output file',
     },
     germline_output_list => 
     {
@@ -122,22 +122,29 @@ sub execute {
             push @somatic_events, $line;
         }
     }
-    $self->collate_and_output_daterz($self->somatic_output_list, @somatic_events);
-    $self->collate_and_output_daterz($self->germline_output_list, @germline_events);
+
+    #a hash to record what has been collated and ouput
+    my %DONE;
+    my $DONE = \%DONE;
+    
+    $self->collate_and_output_daterz($self->somatic_output_list, $DONE, @somatic_events);
+    $self->collate_and_output_daterz($self->germline_output_list, $DONE, @germline_events);
 
 }
 
 sub collate_and_output_daterz {
     my $self=shift;
     my $output_filename= shift;
+    my $DONE = shift;
     my @somatic_events = @_;
+
 
     my $output_fh = IO::File->new($output_filename, ">");
 
     # unless(-s $self->input_to_assembly) {
-        #    $self->warning_message("No original calls supplied or file not found. Outputting assembly output"); 
-        #    $output_fh->print(join("\n", @somatic_events));
-        # return;
+    #    $self->warning_message("No original calls supplied or file not found. Outputting assembly output"); 
+    #    $output_fh->print(join("\n", @somatic_events));
+    # return;
 #    }
     #load original calls
     #my $allelefh = IO::File->new($self->input_to_assembly);
@@ -188,7 +195,7 @@ sub collate_and_output_daterz {
         my $stop;
         #compare the original call we found to the call we have.
 #        if ($original_pos != $pos) {
-            #    print "$original_pos\t$pos\n";
+        #    print "$original_pos\t$pos\n";
 #            $comments = "POSITION SHIFTED:" . abs($original_pos - $pos);
 #        }
 #        if($otype ne $type) {
@@ -199,29 +206,39 @@ sub collate_and_output_daterz {
 #            $stop  = $pos+1;
 #        }
 #        else{
-            if ($type =~ m/DEL/) {
-                $start=$pos; 
-                $stop= $pos + $size;
+        if ($type =~ m/DEL/) {
+            $start=$pos; 
+            $stop= $pos + $size;
 #                if (length($ref) != $size) {
 #                    $comments .= " SIZE SHIFTED:" . abs($size - length($ref));
 #                }
-            }
-            elsif($type =~ m/INS/ ) {
-                $start=$pos;
-                $stop=$pos+1;
+        }
+        elsif($type =~ m/INS/ ) {
+            $start=$pos;
+            $stop=$pos+1;
 #                if (length($var) != $size) {
 #                    $comments .= " SIZE SHIFTED:" . abs($size - length($var));
 #                }
-            }
+        }
 #        }
-        my ($ref, $var) = $self->generate_alleles(@fields);
-        $output_fh->print("$chr\t$start\t$stop\t$ref\t$var\n");
+        my ($ref, $var) = $self->generate_alleles($DONE, @fields);
+        my $output_line = join("\t",$chr,$start,$stop,$ref,$var);
+
+        #if line has already been printed, go to next event
+        if ($DONE->{$output_line}) {
+            next;
+        }
+        #else, record printed event
+        else {
+            $DONE->{$output_line} = 1;
+            $output_fh->print("$output_line\n");
+        }
     }
 }
 
 #returns a list of the reference allele and the variant allele in that order 
 sub generate_alleles {
-    my ($self, @assembled_event_fields) = @_;
+    my ($self, $DONE, @assembled_event_fields) = @_;
     my ($chr,$pos,$contig_pos,$size,$type,$contig_name,$reference_name) = @assembled_event_fields[0,1,5,7,8,9,11];
 
     if($type =~ /INS/) {
@@ -229,14 +246,37 @@ sub generate_alleles {
         $original_position += 100; #regenerate the original position
         my $glob_pattern = $self->tumor_assembly_data_directory . "/$chr/$chr" . "_" . $original_position . "_*.reads.fa.contigs.fa";
         my ($contig_filename,@others) = glob($glob_pattern);
+
+        #if there is more than one glob_pattern found
         if(@others) {
             $DB::single=1;
-            $self->error_message("Hey, there are multiple contig files this thingy could belong too. Unfortunate :-(");
-            $self->error_message("Glob Pattern: $glob_pattern");
-            $self->error_message("contig data for event not found: @assembled_event_fields");
-            return;
+
+            #if any of the filenames have already been used, find one which hasn't been used
+            if (exists($DONE->{'glob'}{$chr}{$original_position})) {
+                #roll through the filenames
+                for my $filename ($contig_filename, @others) {
+                    #if it's been used, go to the next one
+                    if (scalar grep { m/^$filename$/ } @{$DONE->{'glob'}{$chr}{$original_position}}) {
+                        next;
+                    }
+                    #if it hasn't been used, push it on the array of used filenames and use it
+                    else {
+                        push @{$DONE->{'glob'}{$chr}{$original_position}},$filename;
+                        $contig_filename = $filename;
+                        last;
+                    }
+                }
+            }
+            #if the hash key doesn't exist, none of the filenames have been used, so record this first one
+            else {
+                $DONE->{'glob'}{$chr}{$original_position} = [$contig_filename];
+            }               
+
+            $self->error_message("Hey, there are multiple contig files this thingy could belong too. Choosing the first filename and logging its use so that it is avoided if glob'ed again.");
+            $self->error_message("Glob Pattern: $glob_pattern; Used file $contig_filename");
+            #$self->error_message("Choosing first file in the hope that the calls ended up identical.");
         }
-                
+
         my $contig_fh = IO::File->new($contig_filename, "r");
         unless($contig_fh) {
             $self->error_message("Unable to open $contig_filename");

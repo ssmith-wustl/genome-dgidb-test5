@@ -225,7 +225,7 @@ sub get_sequence_dictionary {
     my $species = shift;
     my $picard_version = shift;
 
-    my $picard_path = Genome::Model::Tools::Sam->path_for_picard_version($picard_version); 
+    my $picard_path = Genome::Model::Tools::Picard->path_for_picard_version($picard_version);
 
     my $seqdict_dir_path = $self->data_directory.'/seqdict';
     my $path = "$seqdict_dir_path/seqdict.$file_type";
