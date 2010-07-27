@@ -107,7 +107,7 @@
             <tr>
               <td class="name">ID:
               </td>
-              <td class="value"><xsl:value-of select="aspect[@name='creation_date']/value"/>
+              <td class="value"><xsl:value-of select="@id"/>
               </td>
             </tr>
 
