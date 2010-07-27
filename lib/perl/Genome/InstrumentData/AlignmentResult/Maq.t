@@ -23,7 +23,7 @@ BEGIN {
 }
 
 my $samtools_version = Genome::Model::Tools::Sam->default_samtools_version;
-my $picard_version   = Genome::Model::Tools::Sam->default_picard_version;
+my $picard_version   = Genome::Model::Tools::Picard->default_picard_version;
 
 my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TEST-human');
 ok($reference_model, "got reference model");

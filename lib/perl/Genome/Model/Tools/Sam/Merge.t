@@ -9,7 +9,7 @@ use Test::More;
 use File::Compare;
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 11;
+    plan tests => 8;
 } else{
     plan skip_all => 'Must run on a 64 bit machine';
 }
@@ -50,38 +50,4 @@ is(compare($bam_index, $out_2_file->filename.'.bai'), 0, 'The bam index is gener
 
 unlink $out_2_file->filename.'.bai';
 
-## email test
-SKIP: {
-    skip 'monitor_shellcmd test can be annoying', 3 unless($ENV{'MONITOR_SHELLCMD_TEST'});
-
-    my $test_subcmd;
-
-    ok($test_subcmd = File::Temp->new(SUFFIX => ".pl"), 'opening temp pl');
-    $test_subcmd->autoflush(1);
-    ok($test_subcmd->print(q|
-#!/gsc/bin/perl
-
-use strict;
-use warnings;
-
-use IO::Handle;
-
-STDOUT->autoflush(1);
-
-for (0..6) {
-    sleep 1;
-
-    if ($_ && $_ % 5 == 0) {
-        sleep 7;
-    }
-    print $_ . "\n";
-}
-|),'writing temp pl');
-
-    my $rv;
-    ok($rv = Genome::Model::Tools::Sam::Merge->monitor_shellcmd({
-        cmd => 'perl ' . $test_subcmd->filename
-    }, 1, 5),'run temp pl');
-
-};
 

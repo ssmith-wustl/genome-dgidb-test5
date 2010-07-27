@@ -22,7 +22,7 @@ BEGIN {
 }
 
 my $samtools_version = Genome::Model::Tools::Sam->default_samtools_version;
-my $picard_version = Genome::Model::Tools::Sam->default_picard_version;
+my $picard_version = Genome::Model::Tools::Picard->default_picard_version;
 
 my $gerald_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
 
