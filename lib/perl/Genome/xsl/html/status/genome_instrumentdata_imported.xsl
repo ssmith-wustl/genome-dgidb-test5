@@ -3,10 +3,10 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <!-- full page display for a instrumentdata flowcell -->
-  <xsl:template name="genome_instrumentdata_solexa" match="object[./types[./isa[@type='Genome::InstrumentData::Solexa']]]">
+  <xsl:template name="genome_instrumentdata_solexa" match="object[./types[./isa[@type='Genome::InstrumentData::Imported']]]">
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'Instrument Data Solexa:'" />
+      <xsl:with-param name="label_name" select="'Instrument Data Imported:'" />
       <xsl:with-param name="display_name" select="@id" />
       <xsl:with-param name="icon" select="'genome_instrumentdata_32'" />
     </xsl:call-template>
@@ -77,9 +77,44 @@
             </tr>
 
             <tr>
-              <td class="name">Project Name:
+              <td class="name">Full Name:
               </td>
-              <td class="value"><xsl:value-of select="aspect[@name='project_name']/value"/>
+              <td class="value"><xsl:value-of select="aspect[@name='full_name']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">User Name:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='user_name']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">Import Date:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='import_date']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">Import Format:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='import_format']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">Import Source Name:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='import_source_name']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">Library Name:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='library_name']/value"/>
               </td>
             </tr>
 
