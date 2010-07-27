@@ -276,12 +276,6 @@ sub _resolve_reference_placeholder {
     my $ref_build = Genome::Model::Build::ReferencePlaceholder->get($self->reference_name);
     unless ($ref_build) {
         my $sample_type = $self->instrument_data->sample_type;
-        my $echo = "echo '" . $self->reference_name;
-        if(defined($sample_type)) {
-            $echo .= "  :  " . $sample_type;
-        }
-        $echo .= "' >> /gscuser/ehvatum/REF_PLACEHOLDER_FOR_ALIGNMENT.txt";
-        system($echo);
         if ( defined($sample_type) ) {
             $self->status_message("Creating ReferencePlaceholder with sample type: $sample_type");
             $ref_build = Genome::Model::Build::ReferencePlaceholder->create(

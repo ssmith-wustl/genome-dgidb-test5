@@ -186,7 +186,7 @@ sub find_or_generate_alignment_data {
     }
     unless ($self->picard_version) {
         $self->status_message('Picard version is not defined, the default version will be used');
-        $self->picard_version(Genome::Model::Tools::Sam->default_picard_version);
+        $self->picard_version(Genome::Model::Tools::Picard->default_picard_version);
     }
     
     $self->status_message('Samtools version: '.$self->samtools_version);

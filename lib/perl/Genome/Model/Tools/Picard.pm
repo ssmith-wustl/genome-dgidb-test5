@@ -5,9 +5,12 @@ use warnings;
 
 use Genome; 
 use File::Basename;
+use Sys::Hostname;
+use Genome::Utility::AsyncFileSystem qw(on_each_line);
 
-my $PICARD_DEFAULT = '1.17';
+my $PICARD_DEFAULT = '1.22';
 my $DEFAULT_MEMORY = 2;
+my $DEFAULT_PERMGEN_SIZE = 64; #Mbytes
 my $DEFAULT_VALIDATION_STRINGENCY = 'SILENT';
 
 class Genome::Model::Tools::Picard {
@@ -15,15 +18,21 @@ class Genome::Model::Tools::Picard {
     has_input => [
         use_version => { 
             is  => 'Version', 
-            doc => 'Picard version to be used.  default_value='. $PICARD_DEFAULT,
+            doc => 'Picard version to be used.',
             is_optional   => 1, 
             default_value => $PICARD_DEFAULT,
         },
         maximum_memory => {
             is => 'Integer',
-            doc => 'the maximum memory (Gb) to use when running Java VM. default_value='. $DEFAULT_MEMORY,
+            doc => 'the maximum memory (Gb) to use when running Java VM.',
             is_optional => 1,
             default_value => $DEFAULT_MEMORY,
+        },
+        maximum_permgen_memory => {
+            is => 'Integer',
+            doc => 'the maximum memory (Mbytes) to use for the "permanent generation" of the Java heap (e.g., for interned Strings)',
+            is_optional => 1,
+            default_value => $DEFAULT_PERMGEN_SIZE,
         },
         temp_directory => {
             is => 'String',
@@ -32,11 +41,44 @@ class Genome::Model::Tools::Picard {
         },
         validation_stringency => {
             is => 'String',
-            doc => 'Controls how strictly to validate a SAM file being read. default_value='. $DEFAULT_VALIDATION_STRINGENCY,
+            doc => 'Controls how strictly to validate a SAM file being read.',
             is_optional => 1,
             default_value => $DEFAULT_VALIDATION_STRINGENCY,
             valid_values => ['SILENT','STRICT','LENIENT'],
         },
+        log_file => {
+            is => 'String',
+            doc => 'If provided, redirect stdout to this file.',
+            is_optional => 1,
+        },
+        additional_jvm_options => {
+            is => 'String',
+            doc => 'Any additional parameters to pass to the JVM',
+            is_optional => 1,
+        },
+        
+        #These parameters are mainly for use in pipelines
+        _monitor_command => {
+            is => 'Boolean',
+            doc => 'Monitor output from command and warn via email if slow going',
+            is_optional => 1,
+            default_value => 0,
+        },
+        _monitor_mail_to => {
+            is => 'String',
+            doc => 'List of usernames to send mail to if triggered by monitor, separated by spaces (enclose list in quotes)',
+            is_optional => 1,
+        },
+        _monitor_check_interval => {
+            is => 'Integer',
+            doc => 'Checks for new output each time this many seconds have elapsed',
+            is_optional => 1,
+        },
+        _monitor_stdout_interval => {
+            is => 'Integer',
+            doc => 'Send the warning mail if no output detected for this many seconds',
+            is_optional => 1,
+        }
     ],
 };
 
@@ -100,11 +142,25 @@ sub run_java_vm {
     unless ($cmd) {
         die('Must pass cmd to run_java_vm');
     }
-    my $java_vm_cmd = 'java -Xmx'. $self->maximum_memory .'g -cp '. $cmd;
+    
+    my $jvm_options = $self->additional_jvm_options || '';
+    
+    my $java_vm_cmd = 'java -Xmx'. $self->maximum_memory .'g -XX:MaxPermSize=' . $self->maximum_permgen_memory . 'm ' . $jvm_options . ' -cp '. $cmd;
     $java_vm_cmd .= ' VALIDATION_STRINGENCY='. $self->validation_stringency;
     $java_vm_cmd .= ' TMP_DIR='. $self->temp_directory;
+    
+    if($self->log_file) {
+        $java_vm_cmd .= ' >> ' . $self->log_file;
+    }
+    
     $params{'cmd'} = $java_vm_cmd;
-    Genome::Utility::FileSystem->shellcmd(%params);
+    
+    if($self->_monitor_command) {
+        $self->monitor_shellcmd(\%params);
+    } else {
+        my $result = Genome::Utility::FileSystem->shellcmd(%params);
+    }
+    
     return 1;
 }
 
@@ -118,6 +174,76 @@ sub create {
         $self->temp_directory($temp_dir);
     }
     return $self;
+}
+
+sub monitor_shellcmd {
+    my ($self,$shellcmd_args) = @_;
+    my $check_interval = $self->_monitor_check_interval;
+    my $max_stdout_interval = $self->_monitor_stdout_interval;
+
+    unless($check_interval and $max_stdout_interval) {
+        $self->error_message("Must specify a check interval ($check_interval) and a stdout interval ($max_stdout_interval) in order to monitor the command");
+        die($self->error_message);
+    }
+
+    my $cmd = $shellcmd_args->{cmd};
+    my $last_update = time;
+    my $pid;
+    my $w;
+    $w = AnyEvent->timer(
+        interval => $check_interval,
+        cb => sub {
+            if ( time - $last_update >= $max_stdout_interval) {
+                my $message = <<MESSAGE;
+To whom it may concern,
+
+This command:
+
+$cmd
+
+Has not produced output on STDOUT in at least $max_stdout_interval seconds.
+
+Host: %s
+Perl Pid: %s 
+Java Pid: %s
+LSF Job: %s
+User: %s
+
+This is the last warning you will receive about this process.
+MESSAGE
+
+                undef $w;
+                my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', $ENV{USER});
+
+                my @to = split(' ', $self->_monitor_mail_to);
+                my $to = join(', ', map { "$_\@genome.wustl.edu" } @to);
+                my $subject = 'Slow ' . $self->class . ' happening right now';
+                my $data = sprintf($message,
+                    hostname,$$,$pid,$ENV{LSB_JOBID},$ENV{USER});
+
+                my $msg = MIME::Lite->new(
+                    From => $from,
+                    To => $to,
+                    Cc => 'apipe-run@genome.wustl.edu',
+                    Subject => $subject,
+                    Data => $data
+                );
+                $msg->send();
+            }
+        }
+    );
+
+    my $cv = Genome::Utility::AsyncFileSystem->shellcmd(
+        %$shellcmd_args,
+        '>' => on_each_line {
+            $last_update = time;
+            print $_[0] if defined $_[0];
+        },
+        '$$' => \$pid
+    );
+    $cv->cb(sub { undef $w });
+
+    return $cv->recv;
 }
 
 1;

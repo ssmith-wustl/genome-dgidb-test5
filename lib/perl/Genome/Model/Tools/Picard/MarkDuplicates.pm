@@ -38,6 +38,11 @@ class Genome::Model::Tools::Picard::MarkDuplicates {
             default_value => $DEFAULT_REMOVE_DUPLICATES,
             is_optional => 1,
         },
+        max_sequences_for_disk_read_ends_map => {
+            is => 'Integer',
+            doc => 'The maximum number of sequences allowed in SAM file.  If this value is exceeded, the program will not spill to disk (used to avoid situation where there are not enough file handles',
+            is_optional => 1,
+        },
         max_records_in_ram => {
             doc => 'When writing SAM files that need to be sorted, this will specify the number of records stored in RAM before spilling to disk. Increasing this number reduces the number of file handles needed to sort a SAM file, and increases the amount of RAM needed.',
             is_optional => 1,
@@ -76,6 +81,9 @@ sub execute {
         $dedup_cmd .= ' ASSUME_SORTED=false';
     }
     $dedup_cmd .= ' OUTPUT='. $self->output_file .' METRICS_FILE='. $self->metrics_file .' INPUT='. $self->input_file;
+    if ($self->max_sequences_for_disk_read_ends_map) {
+        $dedup_cmd .= ' MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP='. $self->max_sequences_for_disk_read_ends_map;
+    }
     if ($self->max_records_in_ram) {
         $dedup_cmd .= ' MAX_RECORDS_IN_RAM='. $self->max_records_in_ram;
     }
