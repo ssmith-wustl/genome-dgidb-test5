@@ -76,6 +76,7 @@ sub setup_test_models {
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
         data_directory => $test_data_dir,
+        reference_sequence_name => 'NCBI-human-build36',
     );
     ok($test_model, 'created test model');
      
@@ -85,6 +86,7 @@ sub setup_test_models {
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
         data_directory => $test_data_dir,
+        reference_sequence_name => 'NCBI-human-build36'
     );
     ok($test_model_two, 'created second test model');
 
