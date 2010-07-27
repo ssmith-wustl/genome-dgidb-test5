@@ -7,7 +7,7 @@ use above "Genome";
 use Test::More;
 require File::Compare;
 
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/MsiNewbler_v2';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/MsiNewbler_v3';
 ok(-d $data_dir, "Data dir exists");
 
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
