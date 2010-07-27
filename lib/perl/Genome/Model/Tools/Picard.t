@@ -19,7 +19,7 @@ ok(-e $picard->path_for_picard_version($picard_version), "picard version ($picar
 
 ## email test
 SKIP: {
-    #skip 'monitor_shellcmd test can be annoying', 3 unless($ENV{'MONITOR_SHELLCMD_TEST'});
+    skip 'monitor_shellcmd test can be annoying', 3 unless($ENV{'MONITOR_SHELLCMD_TEST'});
 
     my $test_subcmd;
 
