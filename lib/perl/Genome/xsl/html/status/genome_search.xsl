@@ -238,7 +238,7 @@
           </div> <!-- end .box_content -->
           <div class="box_content rounded span-24 last" style="margin: 0;">
             <div class="padding10">
-              Please direct questions and comments regarding Analysis Search to <a href="mailto:jlolofie@genome.wustl.edu">Justin Lolofie</a> or <a href="mailto:jmcmicha@genome.wustl.edu">Joshua McMichael</a>.
+              Please direct questions and comments regarding Analysis Search to the <a href="mailto:apipe@genome.wustl.edu">Analysis Pipeline</a> group.
             </div>
           </div>
         </div><!-- end .main_search_hints -->
