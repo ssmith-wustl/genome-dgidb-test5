@@ -9,7 +9,7 @@ __PACKAGE__->mk_accessors(qw/ fastq_files _readers /);
 
 require Carp;
 use Data::Dumper 'Dumper';
-require Genome::Model::Tools::Fastq::Reader;
+require Genome::Model::Tools::FastQual::FastqReader;
 
 sub create {
     my ($class, %params) = @_;
@@ -36,7 +36,7 @@ sub create {
     # Readers
     my  @readers;
     for my $fastq_file ( @$fastq_files ) {
-        my $reader = Genome::Model::Tools::Fastq::Reader->create(
+        my $reader = Genome::Model::Tools::FastQual::FastqReader->create(
             fastq_file => $fastq_file,
         );
         unless ( $reader ) {

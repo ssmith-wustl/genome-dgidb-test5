@@ -7,7 +7,7 @@ use Workflow;
 use Bio::Seq;
 use Bio::SeqIO;
 
-use File::Temp;
+use File::Temp qw(tempdir);
 use File::Find;
 use Test::More tests => 26;
 
@@ -20,15 +20,30 @@ my @seqs = ( );
 our @files;
 my $locus_tag = 'SHORTTESTDFT2';
 
-# dirs need to be moved somewhere else...
-my $fastadir = '/gscuser/josborne/btabhtab-test/fasta';
-my $berdirpath = '/gscuser/josborne/btabhtab-test/ber';
-my $hmmdirpath = '/gscuser/josborne/btabhtab-test/hmm';
-#my $fastadir = '/gsc/var/cache/testsuite/data/PAP-Command-BtabHmmtab/btabhtab-test/fasta';
-#my $berdirpath = '/gsc/var/cache/testsuite/data/PAP-Command-BtabHmmtab/btabhtab-test/ber';
-#my $hmmdirpath = '/gsc/var/cache/testsuite/data/PAP-Command-BtabHmmtab/btabhtab-test/hmm';
+# original location
+my $ofastadir = '/gsc/var/cache/testsuite/data/PAP-Command-BtabHmmtab/btabhtab-test/fasta';
+my $oberdirpath = '/gsc/var/cache/testsuite/data/PAP-Command-BtabHmmtab/btabhtab-test/ber';
+my $ohmmdirpath = '/gsc/var/cache/testsuite/data/PAP-Command-BtabHmmtab/btabhtab-test/hmm';
 my $srcdirpath = '/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/src/';
-my $bsubfilepath = '';
+
+my $dir = tempdir('/tmp/pap-test-XXXXXXX', CLEANUP => 1);
+#my $dir = tempdir('/tmp/pap-test-XXXXXXX');
+diag($dir);
+my $fastadir = $dir."/btabhtab-test/fasta";
+my $berdirpath = $dir."/btabhtab-test/ber";
+my $hmmdirpath = $dir."/btabhtab-test/hmm";
+my $bsubfilepath = $dir.'/btabhtab-test/bsubERRfiles';
+unless(-d $dir) {
+    mkdir($dir);
+    mkdir($fastadir);
+    mkdir($berdirpath);
+    mkdir($hmmdirpath);
+    mkdir($bsubfilepath);
+}
+my $rv = system("cp -pr /gsc/var/cache/testsuite/data/PAP-Command-BtabHmmtab/btabhtab-test/ $dir");
+
+
+
 
 my $b = PAP::Command::BtabHmmtab->create(
         locus_tag => $locus_tag,

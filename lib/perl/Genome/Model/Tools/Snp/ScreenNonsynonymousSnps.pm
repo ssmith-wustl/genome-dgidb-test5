@@ -31,6 +31,12 @@ class Genome::Model::Tools::Snp::ScreenNonsynonymousSnps {
 	    is_optional  => 1,
 	    default => '54_36p_v2',
 	},
+    nr_db => {
+        type => 'String',
+        doc => "use a different non-redundant protein db",
+        is_optional => 1,
+        default => "/gscmnt/sata847/info/genome-apipe/nr/nr",
+    },
 	]
 	    
 };
@@ -148,7 +154,7 @@ sub execute {
 	print PFA qq(>$transcript $transcript\n$protein\n);
 	close (PFA);
 	
-	my $db_location = "~josborne/work/medseq/snp-misc/egfr/nr";
+	my $db_location = $self->nr_db;
 
 	if (-f "$transcript.protein.time.error") {system qq(rm $transcript.protein.time.error);}
 

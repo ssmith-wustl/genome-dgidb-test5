@@ -31,7 +31,7 @@ sub process_source {
     
     my $input_fh = $self->_input_fh;
     
-    for my $line (<$input_fh>) {
+    while(my $line = <$input_fh>) {
         my ($chromosome, $position, $star, $_score, $indel_call_1, $indel_call_2, $indel_length_1, $indel_length_2, @extra) = split("\t", $line);
 
         $self->_process_indel($chromosome, $position, $indel_call_1, $indel_length_1)

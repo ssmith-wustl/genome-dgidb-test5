@@ -4,11 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
-use IO::File;
-use File::Basename;
-use Sys::Hostname;
-use Genome::Utility::AsyncFileSystem qw(on_each_line);
 
 my $QUALITY_FORMAT_DEFAULT = "Standard";
 
@@ -43,17 +38,21 @@ EOS
 }
 
 sub execute {
-	my $self = shift;
-
-    my $picard_path = $self->picard_path;
+    my $self = shift;
     
-    my $fastq_to_sam_cmd = sprintf("java  -jar %s/FastqToSam.jar QUALITY_FORMAT=%s SAMPLE_NAME='Hello there' FASTQ=%s OUTPUT=%s ", $self->picard_path, $self->quality_format, $self->fastq_file, $self->sam_file);
-
-	Genome::Utility::FileSystem->shellcmd(
-		cmd => $fastq_to_sam_cmd,
-		input_files => [$self->fastq_file],
-		output_files => [$self->sam_file],
-	);
+    my $fastq_to_sam_cmd = Genome::Model::Tools::Picard::FastqToSam->create(
+        fastq => $self->fastq_file,
+        output => $self->sam_file,
+        quality_format => $self->quality_format,
+        
+        #These parameters are hardcoded in this tool.
+        sample_name => 'Hello there', #Dutifully copied from previous command line string, but why is this here?
+    );
+    
+    unless($fastq_to_sam_cmd->execute) {
+        $self->error_message('Failed to execute command.');
+        die $self->error_message;
+    }
 
     # Picard leaves 2 lines of garbage at the top. This sed will strip all lines beginning with @, which are header lines
     my $sed_cmd = sprintf("sed -i '/^@/d' %s", $self->sam_file);

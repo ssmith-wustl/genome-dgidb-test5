@@ -40,7 +40,7 @@ my $aligner_tools_class_name = "Genome::Model::Tools::Rtg";
 my $alignment_result_class_name = "Genome::InstrumentData::AlignmentResult::" . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($aligner_name);
 
 my $samtools_version = Genome::Model::Tools::Sam->default_samtools_version;
-my $picard_version = Genome::Model::Tools::Sam->default_picard_version;
+my $picard_version = Genome::Model::Tools::Picard->default_picard_version;
 
 my $aligner_version_method_name = sprintf("default_%s_version", $aligner_name);
 

@@ -72,6 +72,21 @@ is_deeply(\%metrics, $expected_metrics, 'metrics match');
 for my $name ( keys %metrics ) {
     is($build->$name, $metrics{$name}, "set $name metric");
 }
+#old
+my %old_to_new_metrics = (
+    total_contig_number => 'contigs',
+    n50_contig_length => 'median_contig_length',
+    total_supercontig_number => 'supercontigs',
+    n50_supercontig_length => 'median_supercontig_length',
+    total_input_reads => 'reads_processed',
+    placed_reads => 'reads_assembled',
+    chaff_rate => 'reads_not_assembled_pct',
+    total_contig_bases => 'assembly_length',
+);
+for my $old ( keys %old_to_new_metrics ) {
+    my $new = $old_to_new_metrics{$old};
+    is($build->$old, $build->$new, "$old matches $new");
+}
 
 done_testing();
 exit;

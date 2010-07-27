@@ -67,7 +67,7 @@ my $subject_type = 'sample_name';
 my @instrument_data = setup_test_data($subject_name);
 
 my $sam_version = Genome::Model::Tools::Sam->default_samtools_version;
-my $picard_version = Genome::Model::Tools::Sam->default_picard_version;
+my $picard_version = Genome::Model::Tools::Picard->default_picard_version;
 
 print "\n\nTest on maq-maq pipeline with maq version: 0.7.1, samtools version: $sam_version, picard version: $picard_version\n\n";
 

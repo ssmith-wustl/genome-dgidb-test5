@@ -44,7 +44,7 @@
                       <div class="category">
                         <a>
                           <xsl:attribute name="href">
-                            /view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/>+type:"<xsl:value-of select="@name"/>"
+                            /view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/>&amp;fq=type:"<xsl:value-of select="@name"/>"
                           </xsl:attribute>
                           <xsl:value-of select="@label"/>
                         </a>
