@@ -126,13 +126,6 @@
             </tr>
 
             <tr>
-              <td class="name">Index Sequence:
-              </td>
-              <td class="value"><xsl:value-of select="aspect[@name='index_sequence']/value"/>
-              </td>
-            </tr>
-
-            <tr>
               <td class="name">Read Length:
               </td>
               <td class="value"><xsl:value-of select="aspect[@name='read_length']/value"/>
