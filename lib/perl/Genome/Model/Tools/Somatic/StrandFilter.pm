@@ -26,6 +26,7 @@ class Genome::Model::Tools::Somatic::StrandFilter {
        'filtered_file' => {
            type => 'String',
            is_input => 1,
+	   is_optional => 1,
            is_output => 1,
            doc => 'File name in which to write variants that were filtered',
        },       
@@ -41,6 +42,20 @@ class Genome::Model::Tools::Somatic::StrandFilter {
             is_input => 1,
             doc => 'Minimum representation of variant allele on each strand',
        },
+       'min_var_freq' => {
+            type => 'String',
+            default => '0.05',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Minimum variant allele frequency',
+       },
+       'min_var_count' => {
+            type => 'String',
+            default => '4',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Minimum number of variant-supporting reads',
+       },
        'min_read_pos' => {
             type => 'String',
             default => '0.10',
@@ -55,6 +70,27 @@ class Genome::Model::Tools::Somatic::StrandFilter {
             is_input => 1,
             doc => 'Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)',
        },
+       'max_mapqual_diff' => {
+            type => 'String',
+            default => '30',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Maximum difference of mapping quality between variant and reference reads',
+       },
+       'max_readlen_diff' => {
+            type => 'String',
+            default => '25',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Maximum difference of average supporting read length between variant and reference reads (paralog filter)',
+       },
+       'min_var_dist_3' => {
+            type => 'String',
+            default => '0.20',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads',
+       },       
        prepend_chr => {
            is => 'Boolean',
            default => '0',
@@ -148,16 +184,22 @@ sub execute {
     
     my $min_read_pos = $self->min_read_pos;
     my $max_read_pos = 1 - $min_read_pos;
+    my $min_var_freq = $self->min_var_freq;
+    my $min_var_count = $self->min_var_count;
     
     my $min_strandedness = $self->min_strandedness;
     my $max_strandedness = 1 - $min_strandedness;
 
     my $max_mm_qualsum_diff = $self->max_mm_qualsum_diff;
+    my $max_mapqual_diff = $self->max_mapqual_diff;
+    my $max_readlen_diff = $self->max_readlen_diff;
+    my $min_var_dist_3 = $self->min_var_dist_3;
 
     ## Reset counters ##
     
     my %stats = ();
-    $stats{'num_variants'} = $stats{'num_fail_strand'} = $stats{'num_fail_pos'} = $stats{'num_no_readcounts'} = $stats{'num_pass_filter'} = $stats{'num_no_allele'} = $stats{'num_fail_mmqs'} = 0;
+    $stats{'num_variants'}  = $stats{'num_no_readcounts'} = $stats{'num_pass_filter'} = $stats{'num_no_allele'} = 0;
+    $stats{'num_fail_varcount'} = $stats{'num_fail_varfreq'} = $stats{'num_fail_strand'} = $stats{'num_fail_pos'} = $stats{'num_fail_mmqs'} = $stats{'num_fail_mapqual'} = $stats{'num_fail_readlen'} = $stats{'num_fail_dist3'} = 0;
     $stats{'num_MT_sites_autopassed'} = 0;
 
     ## Open the output file ##
@@ -168,6 +210,8 @@ sub execute {
         die;
     }
 
+    my $filtered_file = $self->output_file . ".removed";
+    $filtered_file = $self->filtered_file if($self->filtered_file);
 
     ## Open the variants file ##
 
@@ -224,10 +268,11 @@ sub execute {
 
     print "Readcounts loaded\n";
 
+    
+
     ## Open the filtered output file ##
     
-    my $ffh = IO::File->new($self->filtered_file, "w") if($self->filtered_file);
-
+    my $ffh = IO::File->new($filtered_file, "w") if($filtered_file);
 
 
     ## Reopen file for parsing ##
@@ -312,16 +357,27 @@ sub execute {
 			
 			if($ref_result && $var_result)
 			{
-				## Calculate percent-fwd-strand ##
-				(my $ref_count, my $ref_map, my $ref_base, my $ref_semq, my $ref_plus, my $ref_minus, my $ref_pos, my $ref_subs, my $ref_mismatch_qual) = split(/\t/, $ref_result);
-				(my $var_count, my $var_map, my $var_base, my $var_semq, my $var_plus, my $var_minus, my $var_pos, my $var_subs, my $var_mismatch_qual) = split(/\t/, $var_result);
+				## Parse out the bam-readcounts details for each allele. The fields should be: ##
+				# num_reads : avg_mapqual : avg_basequal : avg_semq : reads_plus : reads_minus : avg_clip_read_pos : avg_mmqs : reads_q2 : avg_dist_to_q2 : avgRLclipped : avg_eff_3'_dist
+				my ($ref_count, $ref_map_qual, $ref_base_qual, $ref_semq, $ref_plus, $ref_minus, $ref_pos, $ref_subs, $ref_mmqs, $ref_q2_reads, $ref_q2_dist, $ref_avg_rl, $ref_dist_3) = split(/\t/, $ref_result);
+				my ($var_count, $var_map_qual, $var_base_qual, $var_semq, $var_plus, $var_minus, $var_pos, $var_subs, $var_mmqs, $var_q2_reads, $var_q2_dist, $var_avg_rl, $var_dist_3) = split(/\t/, $var_result);
     
 				my $ref_strandedness = my $var_strandedness = 0.50;
 
 				## Use conservative defaults if we can't get mismatch quality sums ##
-				$ref_mismatch_qual = 50 if(!$ref_mismatch_qual);
-				$var_mismatch_qual = 0 if(!$var_mismatch_qual);
-				my $mismatch_qualsum_diff = $var_mismatch_qual - $ref_mismatch_qual;
+				$ref_mmqs = 50 if(!$ref_mmqs);
+				$var_mmqs = 0 if(!$var_mmqs);
+				my $mismatch_qualsum_diff = $var_mmqs - $ref_mmqs;
+
+				## Determine map qual diff ##
+				
+				my $mapqual_diff = $ref_map_qual - $var_map_qual;
+
+
+				## Determine difference in average supporting read length ##
+				
+				my $readlen_diff = $ref_avg_rl - $var_avg_rl;
+
     
 				## Determine ref strandedness ##
 				
@@ -342,6 +398,8 @@ sub execute {
 				if($var_count && ($var_plus + $var_minus))
 				{
 				    ## We must obtain variant read counts to proceed ##
+
+				    my $var_freq = $var_count / ($ref_count + $var_count);
 				    
 				    ## FAILURE 1: READ POSITION ##
 				    
@@ -357,26 +415,68 @@ sub execute {
 				    elsif(($var_strandedness < $min_strandedness || $var_strandedness > $max_strandedness) && ($ref_strandedness >= $min_strandedness && $ref_strandedness <= $max_strandedness))
 				    {
 					## Print failure to output file if desired ##
-					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness<$min_strandedness\n"if ($self->filtered_file);
-					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness<$min_strandedness\n"if ($self->verbose);
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness: Ref=$ref_strandedness Var=$var_strandedness\n";
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness: Ref=$ref_strandedness Var=$var_strandedness\n"if ($self->verbose);
 					$stats{'num_fail_strand'}++;
 				    }
+
+				    ## FAILURE : Variant allele count does not meet minimum ##    
+
+				    elsif($var_count < $min_var_count)
+				    {
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarCount:$var_count\n";
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarCount:$var_count\n" if ($self->verbose);
+					$stats{'num_fail_varcount'}++;					
+				    }
+
+				    ## FAILURE : Variant allele frequency does not meet minimum ##    
+
+				    elsif($var_freq < $min_var_freq)
+				    {
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarFreq:$var_freq\n";
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarFreq:$var_freq\n" if ($self->verbose);
+					$stats{'num_fail_varfreq'}++;					
+				    }
+
 				    
 				    ## FAILURE 3: Paralog filter for sites where variant allele mismatch-quality-sum is significantly higher than reference allele mmqs
 				    
 				    elsif($mismatch_qualsum_diff> $max_mm_qualsum_diff)
 				    {
 					## Print failure to output file if desired ##
-					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mismatch_qual-$ref_mismatch_qual>$max_mm_qualsum_diff\n" if ($self->filtered_file);
-					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mismatch_qual-$ref_mismatch_qual>$max_mm_qualsum_diff" if ($self->verbose);
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff\n";
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff" if ($self->verbose);
 					$stats{'num_fail_mmqs'}++;					
+				    }
+				    
+				    ## FAILURE 4: Mapping quality difference exceeds allowable maximum ##
+				    elsif($mapqual_diff > $max_mapqual_diff)
+				    {
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMapQual:$ref_map_qual-$var_map_qual=$mapqual_diff\n";
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMapQual:$ref_map_qual-$var_map_qual=$mapqual_diff" if ($self->verbose);
+					$stats{'num_fail_mapqual'}++;
+				    }
+				    
+				    ## FAILURE 5: Read length difference exceeds allowable maximum ##
+				    elsif($readlen_diff > $max_readlen_diff)
+				    {
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff\n";
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff" if ($self->verbose);
+					$stats{'num_fail_readlen'}++;
+				    }
+				    ## FAILURE 5: Read length difference exceeds allowable maximum ##
+				    elsif($var_dist_3 < $min_var_dist_3)
+				    {
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n";
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n" if ($self->verbose);
+					$stats{'num_fail_dist3'}++;
 				    }
 				    ## SUCCESS: Pass Filter ##				
 				    else
 				    {
 					$stats{'num_pass_filter'}++;
 					## Print output, and append strandedness information ##
-					print $ofh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\t$ref_mismatch_qual\t$var_mismatch_qual\t$mismatch_qualsum_diff\n";
+					print $ofh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\t$ref_mmqs\t$var_mmqs\t$mismatch_qualsum_diff\n";
 					print "$line\t\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tPASS\n" if($self->verbose);
 				    }
 				}
@@ -413,7 +513,14 @@ sub execute {
     print $stats{'num_no_readcounts'} . " failed to get readcounts for variant allele\n";
     print $stats{'num_fail_pos'} . " had read position < $min_read_pos\n";
     print $stats{'num_fail_strand'} . " had strandedness < $min_strandedness\n";
+    print $stats{'num_fail_varcount'} . " had var_count < $min_var_count\n";
+    print $stats{'num_fail_varfreq'} . " had var_freq < $min_var_freq\n";
+
     print $stats{'num_fail_mmqs'} . " had mismatch qualsum difference > $max_mm_qualsum_diff\n";
+    print $stats{'num_fail_mapqual'} . " had mapping quality difference > $max_mapqual_diff\n";
+    print $stats{'num_fail_readlen'} . " had read length difference > $max_readlen_diff\n";	
+    print $stats{'num_fail_dist3'} . " had var_distance_to_3' < $min_var_dist_3\n";
+
     print $stats{'num_pass_filter'} . " passed the strand filter\n";
 
     return 1;

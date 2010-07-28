@@ -41,6 +41,8 @@
           </xsl:choose>
         </p>
         <p class="result_summary">
+          <strong>ID: </strong><xsl:value-of select="aspect[@name='genome_model_id']/value"/>
+          <xsl:text>; </xsl:text>
           <strong>Date created: </strong><xsl:value-of select="aspect[@name='creation_date']/value"/>
           <xsl:text>; </xsl:text>
           <strong>Created by: </strong><xsl:value-of select="aspect[@name='user_name']/value"/>

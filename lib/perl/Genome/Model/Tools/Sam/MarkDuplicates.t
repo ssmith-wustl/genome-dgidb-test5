@@ -4,8 +4,9 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Genome::Model::Tools::Sam::Merge;
-use Test::More tests => 3;
+use Test::More tests => 4;
+
+use_ok('Genome::Model::Tools::Sam::MarkDuplicates');
 
 my $input = '/gsc/var/cache/testsuite/data/Genome-Tools-Sam-MarkDuplicates/sample.bam';
 

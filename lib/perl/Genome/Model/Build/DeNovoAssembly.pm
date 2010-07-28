@@ -7,6 +7,7 @@ use Genome;
 
 require Carp;
 use Data::Dumper 'Dumper';
+require List::Util;
 use Regexp::Common;
 
 class Genome::Model::Build::DeNovoAssembly {
@@ -149,6 +150,7 @@ sub set_metrics {
     return %metrics;
 }
 
+#< Inst Data Info >#
 sub calculate_reads_attempted {
     my $self = shift;
 
@@ -166,12 +168,48 @@ sub calculate_reads_attempted {
         }
     }
     else {
-        Carp::confess("Unknown sequencing platform: ".$self->sequencing_platform);
+        Carp::confess( 
+            $self->error_message("Unsupported sequencing platform (".$self->sequencing_platform."). Can't calculate reads attempted.")
+        );
     }
 
     return $reads_attempted;
 }
 
+sub calculate_average_insert_size {
+    my $self = shift;
+
+    my @instrument_data = $self->instrument_data;
+    unless ( @instrument_data ) {
+        Carp::confess(
+            $self->error_message("No instrument data found for ".$self->description.". Can't calculate insert size and standard deviation.")
+        );
+        return;
+    }
+
+    my @insert_sizes;
+    for my $inst_data ( @instrument_data ) { 
+        if ( $inst_data->sequencing_platform eq 'solexa' ) {
+            my $median_insert_size = $inst_data->median_insert_size;
+            next unless defined $median_insert_size;
+            push @insert_sizes, $median_insert_size;
+        }
+        else {
+            Carp::confess( 
+                $self->error_message("Unsupported sequencing platform (".$self->sequencing_platform."). Can't calculate insert size and standard deviation.")
+            );
+        }
+    }
+
+    unless ( @insert_sizes ) {
+        $self->status_message("No insert sizes found in instrument data for ".$self->description);
+        return;
+    }
+
+    my $sum = List::Util::sum(@insert_sizes);
+
+    return $sum / scalar(@insert_sizes);
+}
 #<>#
 
 1;

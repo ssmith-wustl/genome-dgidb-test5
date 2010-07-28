@@ -208,9 +208,8 @@ sub execute {
         chmod(0775,$result_tmp_dir);
         
         my $dedup_temp_file = $result_tmp_dir . '/dedup.bam';
-    
-        my $mark_dup_cmd = Genome::Model::Tools::Sam::MarkDuplicates->create(
-           file_to_mark => $merged_file,
+        my %mark_duplicates_params = (
+            file_to_mark => $merged_file,
            marked_file => $dedup_temp_file,
            metrics_file => $metrics_file,
            remove_duplicates => 0,
@@ -218,8 +217,11 @@ sub execute {
            log_file => $markdup_log_file, 
            use_picard_version => $rmdup_version,
            max_jvm_heap_size => 12,
-    
-        ); 
+        );
+        if (defined($processing_profile->picard_max_sequences_for_disk_read_ends_map)) {
+            $mark_duplicates_params{max_sequences_for_disk_read_ends_map} = $processing_profile->picard_max_sequences_for_disk_read_ends_map;
+        }
+        my $mark_dup_cmd = Genome::Model::Tools::Sam::MarkDuplicates->create(%mark_duplicates_params);
     
         my $mark_dup_rv = $mark_dup_cmd->execute;
         if ($mark_dup_rv != 1)  {

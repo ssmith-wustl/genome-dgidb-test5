@@ -31,7 +31,7 @@ sub process_source {
     
     my $input_fh = $self->_input_fh;
     
-    for my $line (<$input_fh>) {
+    while(my $line = <$input_fh>) {
         my ($chromosome, $position, $reference, $genotype, @extra) = split("\t", $line);
         
         #position => 1-based position of the SNV

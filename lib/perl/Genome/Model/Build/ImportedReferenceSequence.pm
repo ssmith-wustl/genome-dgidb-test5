@@ -21,7 +21,12 @@ class Genome::Model::Build::ImportedReferenceSequence {
         },
         name => {
             calculate_from => ['model_name','version'],
-            calculate => q| my $s = "$model_name-build$version"; $s =~ s/\s/-/g; return $s; |,
+            calculate => q{
+                my $name = "$model_name-build";
+                $name .= $version if defined $version;
+                $name =~ s/\s/-/g;
+                return $name;
+            },
         }
     ],
     has_optional => [
@@ -46,45 +51,91 @@ sub from_cmdline {
     my $class = shift;
     my $text = shift;
 
-    my $build = eval {
-        if ( my ($model_name,$build_version) = ($text =~ /^(.+)-build(.+?)$/) ) {
-            my $model = Genome::Model->get(name => $model_name);
-            unless ($model) {
-                $class->warning_message("No model found for name $model_name...");
-                return;
-            }
-
-            my @builds = $model->builds;
-            unless (@builds) {
-                $class->warning_message("No builds found for model $model_name");
-                return;
-            };
-
-            no warnings;
-            @builds = grep { $_->version eq $build_version } @builds;
-            unless (@builds) {
-                $class->warning_message("No build found with version $build_version on model " . $model->__display_name__);
-                return;
-            }
-
-            if (@builds > 1) {
-                $class->warning_message("Multiple builds found with version $build_version on model " . $model->__display_name__);
-            }
-            
-            return $builds[0];
+    my $build;
+    if ( my ($model_name,$build_version) = ($text =~ /^(.+)-build(.+?)$/) ) {
+        my $model = Genome::Model->get(name => $model_name);
+        unless ($model) {
+            $class->error_message("No model found for name $model_name...");
+            return;
         }
-    };
 
-    return $build if $build;
+        my @builds = $model->builds;
+        unless (@builds) {
+            $class->error_message("No builds found for model $model_name");
+            return;
+        };
 
-    # fall back to the default
+        no warnings;
+        @builds = grep { $_->version eq $build_version } @builds;
+        unless (@builds) {
+            $class->error_message("No build found with version $build_version on model " . $model->__display_name__);
+            return;
+        }
 
-    my @builds = $class->SUPER::from_cmdline($text);
-    if (@builds > 1) {
-        $class->warning_message("Multiple builds found for cmdline string: $text");
+        if (@builds > 1) {
+            $class->warning_message("Multiple builds found with version $build_version on model " . $model->__display_name__ . '. Using #' . $builds[0]->id);
+        }
+
+        $build = $builds[0];
     }
 
-    return $builds[0] if @builds;
+    # Next, try loading a model with the given name and, if it only has one build, assume that's the one.
+    unless ($build) {
+        my @models = Genome::Model->get(type_name => 'imported reference sequence', name => $text);
+
+        if(scalar(@models) eq 1) {
+            my @builds = $models[0]->builds;
+            
+            if(scalar(@builds) eq 1) {
+                $build = $builds[0];
+            } elsif(scalar(@builds) > 1) {
+                $class->error_message(
+                    'Found multiple possible reference sequence builds for model matching name: ' .
+                    join(', ', map($_->name, @builds))
+                );
+                return;
+            }
+        } elsif(scalar(@models) > 1) {
+            $class->error_message(
+                'Found multiple possible reference sequence models matching name: ' .
+                join(', ', map($_->__display_name__, @models))
+            );
+        }
+    }
+
+    # failing that, try to match anything we have (should this be moved into the above method?)
+    unless ($build) {
+        # This is not the most efficient thing as it instantiates all imported reference sequences to query the name of each;
+        # Genome::Model::Build::ImportedReferenceSequence->name should perhaps be cached if it remains calculated
+        my @builds = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => $text);
+        if(scalar(@builds) eq 1) {
+            $build = $builds[0];
+        } elsif( scalar(@builds > 1) ) {
+            $class->error_message(
+                'Found multiple possible reference sequence builds matching name: ' .
+                join(', ', map($_->name, @builds))
+            );
+            return;
+        }
+    }
+
+    # fall back to the default
+    unless($build) {
+        eval { #from_cmdline can crash when it tries to use a string in a numeric field
+            my @builds = $class->SUPER::from_cmdline($text);
+            if (@builds > 1) {
+                $class->error_message("Multiple builds found for cmdline string: $text");
+                return;
+            }
+
+            if(scalar(@builds) eq 1) {
+                $build = $builds[0];
+            }
+        };
+
+    }
+
+    return $build;
 }
 
 sub __display_name__ {
@@ -225,7 +276,7 @@ sub get_sequence_dictionary {
     my $species = shift;
     my $picard_version = shift;
 
-    my $picard_path = Genome::Model::Tools::Sam->path_for_picard_version($picard_version); 
+    my $picard_path = Genome::Model::Tools::Picard->path_for_picard_version($picard_version);
 
     my $seqdict_dir_path = $self->data_directory.'/seqdict';
     my $path = "$seqdict_dir_path/seqdict.$file_type";

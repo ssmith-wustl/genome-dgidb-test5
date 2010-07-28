@@ -36,20 +36,31 @@ EOS
 
 sub execute {
     my $self = shift;
-
-    my $picard_path = $self->picard_path;
-    my $bam_cmp_cmd = sprintf("java  -cp %s/CompareSAMs.jar net.sf.picard.sam.CompareSAMs VALIDATION_STRINGENCY=SILENT %s %s ", $self->picard_path, $self->file1, $self->file2);
-    print $bam_cmp_cmd, "\n\n\n\n";
+    
+    my $output_file = Genome::Utility::FileSystem->create_temp_file_path();
+    
+    my $compare_cmd = Genome::Model::Tools::Picard::CompareSams->create(
+        input_file_1 => $self->file1,
+        input_file_2 => $self->file2,
+        output_file  => $output_file,
+        
+        validation_stringency => 'SILENT',
+    );
+    
+    unless($compare_cmd->execute()) {
+        $self->error_message('Failed to execute command');
+        die($self->error_message);
+    }
 
     my $ret = 0;
     my $response;
 
-    open(CMP, "$bam_cmp_cmd|");
-    while (<CMP>) {
+    my $output_fh = Genome::Utility::FileSystem->open_file_for_reading($output_file);
+    while (<$output_fh>) {
         $ret = 1 if (m/Differ\s*0$/); 
         $response .= $_;
     }
-    close(CMP);
+    close($output_fh);
 
     print $response;
 
