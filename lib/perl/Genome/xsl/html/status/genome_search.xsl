@@ -11,13 +11,11 @@
       </xsl:call-template>
 
       <div class="container">
-        <div class="span-6">
-          <br/>
-        </div>
         <div class="span-12">
           <div class="main_search">
             <form method="get" action="/view/genome/search/query/status.html">
               <h4>Please enter your search, then press Return:</h4>
+
               <table cellpadding="0" cellspacing="0" border="0" class="search_elements">
                 <tr>
                   <td>
@@ -31,52 +29,220 @@
             </form>
           </div>
 
-          <div class="main_search_hints clearfix">
-            <div class="box_header span-8 last rounded-top">
-              <div class="box_title"><h3 class="nontyped span-7 last">Advanced Search Techniques</h3></div>
-              <div class="box_button">
+        </div> <!-- end .span-12 -->
+        <div class="span-12 last">
+          <br/>
+        </div>
+        <hr class="space"/>
+        <div class="main_search_hints clearfix">
+          <div class="box_header span-8 last rounded-top">
+            <div class="box_title"><h3 class="nontyped span-7 last">Indexed Pipeline Artifacts</h3></div>
+            <div class="box_button">
 
-              </div>
             </div>
+          </div>
 
-            <div class="box_content rounded-bottom span-8 last">
+          <div class="box_content rounded-bottom span-24 last">
+            <div style="width: 50%; float: left;">
               <div class="padding10">
-                <p>The search engine that drives Analysis Search, Lucene/Solr, provides the following advanced methods to improve your searches. For more detailed instructions, please <a href="http://lucene.apache.org/java/2_4_0/queryparsersyntax.html">consult the documentation</a>.</p>
+
+                <div class="search_result">
+                  <div class="result_icon genome_disk_group_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Disk Groups</h3>
+                    <p class="result_summary">
+                      Disk groups are collections of disk volumes grouped together according to their usage (e.g. illumina sequencing, alignment).
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
+
+                <div class="search_result">
+                  <div class="result_icon genome_disk_volume_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Disk Volumes</h3>
+                    <p class="result_summary">
+                      A single filesystem, assigned to a group.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
 
 
-                <p><strong>Wildcard Searches</strong><br/>
-                To perform a single character wildcard search use the "?" symbol. To perform a multiple character wildcard search use the "*" symbol. These wildcard characters only function within and at the end of words.<br/>
-                <strong>Example: </strong> <span style="font-family: monospace;">bacter*</span> will match "bacteria", "bacterial", "bacterias", etc.</p>
+                <div class="search_result">
+                  <div class="result_icon genome_sys_email_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Email</h3>
+                    <p class="result_summary">
+                      The Email index contains messages from the archived Mailman mailing lists.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
 
-                <p><strong>Fields</strong><br/>
-                Narrow your search by using fields. The current schema contains the fields title, class, label_name, and description. <strong>[more?]</strong>
-                <br/>
-                <strong>Example:</strong> including <span style="font-family: monospace;">class:"Genome::Model"</span> will limit your search to models.</p>
+                <div class="search_result">
+                  <div class="result_icon genome_instrumentdata_flowcell_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Illumina Runs</h3>
+                    <p class="result_summary">
+                      A single run from the Illumina sequencer.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
 
-                <p><strong>Fuzzy Search</strong><br/>
-                By adding a tilde (~) to the end of a word, you instruct the seach engine to return results containing strings that are "close to" the word.
-                <br/>
-                <strong>Example:</strong> searching for <span style="font-family: monospace;">roam~</span> will return results containing "foam" and "roams".</p>
+                <div class="search_result">
+                  <div class="result_icon genome_individual_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Individuals</h3>
+                    <p class="result_summary">
+                      Individuals are subjects whose samples are being sequenced and analyzed.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
 
-                <p><strong>Proximity Search</strong><br/>
-                To search for proximal words, append a tilde and a number indicating the range of the proximal search to a quoted string containing the words you're searching for.
-                <br/>
-                <strong>Example:</strong> searching for <span style="font-family: monospace;">"BWA samtools"~10</span> will return results in which "BWA" occurs within 10 words of "samtools".</p>
+                <div class="search_result">
+                  <div class="result_icon genome_library_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Libraries</h3>
+                    <p class="result_summary">
+                      Libraries are samples that have been prepared for sequencing.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
 
-                <p><strong>Boosting a Term</strong><br/>
-                You may "boost" a search term to make it more relevant to your search by appending a caret (^) and a boost factor to the end of the term. The boost syntax works with words or phrases.
-                <br/>
-                <strong>Example: </strong> <span style="font-family: monospace;">BWA^4 samtools</span> will return results with "BWA" weighted 4 times more relevant than "samtools".</p>
+                <div class="search_result">
+                  <div class="result_icon genome_model_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Models</h3>
+                    <p class="result_summary">
+                      Models organize the history, analyzed data, and reports generated by the processing of instrument data from a sample or sample group.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
 
+                <div class="search_result">
+                  <div class="result_icon genome_modelgroup_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Model Groups</h3>
+                    <p class="result_summary">
+                      A group... of Models!
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
 
 
               </div><!-- end .padding10 -->
-            </div> <!-- end .box_content -->
-          </div><!-- end .main_search_hints -->
-        </div> <!-- end .span-12 -->
-        <div class="span-6 last">
-          <br/>
-        </div>
+            </div>
+            <div style="width: 50%; float: right;">
+              <div class="padding10">
+
+                <div class="search_result">
+                  <div class="result_icon genome_populationgroup_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Population Groups</h3>
+                    <p class="result_summary">
+                      Population Groups are subjects containing genetic material from more than one species.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
+
+                <div class="search_result">
+                  <div class="result_icon genome_processingprofile_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Processing Profiles</h3>
+                    <p class="result_summary">
+                      Processing profiles organize the set of software tools and parameters that a model uses to analyze it's data into a reusable package.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
+
+                <div class="search_result">
+                  <div class="result_icon genome_project_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Projects</h3>
+                    <p class="result_summary">
+                      A big bucket.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
+
+                <div class="search_result">
+                  <div class="result_icon genome_sample_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Samples</h3>
+                    <p class="result_summary">
+                      Samples are genetic material from collaborators that will be sequenced and anlayzed.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
+
+                <div class="search_result">
+                  <div class="result_icon genome_taxon_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Taxons</h3>
+                    <p class="result_summary">
+                      A Taxon is a group of (one or more) organisms, which a taxonomist adjudges to be a unit.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
+
+                <div class="search_result">
+                  <div class="result_icon genome_wiki_document_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Wiki Pages</h3>
+                    <p class="result_summary">
+                      Pages from the GC Wiki.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
+
+                <div class="search_result">
+                  <div class="result_icon genome_workorder_32">
+                    <br/>
+                  </div>
+                  <div class="result">
+                    <h3>Work Orders</h3>
+                    <p class="result_summary">
+                      Work Orders initiate, collect and record the progress of sample preparation and sequencing.
+                    </p>
+                  </div>
+                </div> <!-- end search_result -->
+
+              </div><!-- end .padding10 -->
+            </div>
+          </div> <!-- end .box_content -->
+          <div class="box_content rounded span-24 last" style="margin: 0;">
+            <div class="padding10">
+              Please direct questions and comments regarding Analysis Search to the <a href="mailto:apipe@genome.wustl.edu">Analysis Pipeline</a> group.
+            </div>
+          </div>
+        </div><!-- end .main_search_hints -->
+
       </div> <!-- end .container  -->
     </div> <!-- end .content  -->
 

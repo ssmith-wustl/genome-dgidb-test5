@@ -13,7 +13,13 @@ INC=/gsc/scripts/opt/genome-webapp/lib/perl
 if [ $hostname == 'vm45' ]
 then
   INC=/gsc/scripts/opt/genome-webapp-dev/lib/perl
+  GENOME_DEV_MODE=1
+  export GENOME_DEV_MODE
 fi
+
+  # using dev solr instance until hardware clones solr-dev -> solr
+  GENOME_DEV_MODE=1
+  export GENOME_DEV_MODE
 
 ## change the symlink to the real path
 INC=`cd $INC; pwd -P`

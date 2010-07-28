@@ -9,7 +9,7 @@ __PACKAGE__->mk_accessors(qw/ fastq_files _writers _write_strategy /);
 
 require Carp;
 use Data::Dumper 'Dumper';
-require Genome::Model::Tools::Fastq::Writer;
+require Genome::Model::Tools::FastQual::FastqWriter;
 
 sub create {
     my ($class, %params) = @_;
@@ -37,7 +37,7 @@ sub create {
     # Writers
     my  @writers;
     for my $fastq_file ( @$fastq_files ) {
-        my $writer = Genome::Model::Tools::Fastq::Writer->create(
+        my $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
             fastq_file => $fastq_file,
         );
         unless ( $writer ) {

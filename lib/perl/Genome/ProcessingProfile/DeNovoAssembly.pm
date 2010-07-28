@@ -174,6 +174,13 @@ sub _validate_assembler_and_params {
 
     my $assembler_class = $self->class_for_assembler;
     my %assembler_params = $self->assembler_params_as_hash;
+
+    for my $calculated_param (qw/ genome_len ins_length /) { # only for velvet, may need a method
+        next unless exists $assembler_params{$calculated_param};
+        $self->error_message("Assembler param ($calculated_param) is a calculated parameter, and cannot be set on the processing profile.");
+        return;
+    }
+
     my $assembler;
     eval{
         $assembler = $assembler_class->create(

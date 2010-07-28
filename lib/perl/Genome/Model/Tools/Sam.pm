@@ -7,7 +7,6 @@ use Genome;
 use File::Basename;
 
 my $DEFAULT = 'r544';
-my $PICARD_DEFAULT = '1.22';
 #3Gb
 my $DEFAULT_MEMORY = 402653184;
 
@@ -19,12 +18,6 @@ class Genome::Model::Tools::Sam {
             doc => "samtools version to be used, default is $DEFAULT. ", 
             is_optional   => 1, 
             default_value => $DEFAULT,   
-        },
-        use_picard_version => { 
-            is  => 'Version', 
-            doc => "picard version to be used, default is $PICARD_DEFAULT",
-            is_optional   => 1, 
-            default_value => $PICARD_DEFAULT,   
         },
         maximum_memory => {
             is => 'Integer',
@@ -70,19 +63,6 @@ my %SAMTOOLS_VERSIONS = (
     r350wu1 => '/gscuser/dlarson/samtools/r350wu1/samtools',
 );
 
-my %PICARD_VERSIONS = (
-    '1.25'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.25',
-    '1.24'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.24',
-    '1.22'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.22',
-    '1.21'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.21',
-    '1.17'  => '/gsc/scripts/lib/java/samtools/picard-tools-1.17',
-    r116    => '/gsc/scripts/lib/java/samtools/picard-tools-1.16',
-    r107    => '/gsc/scripts/lib/java/samtools/picard-tools-1.07/',
-    r104    => '/gsc/scripts/lib/java/samtools/picard-tools-1.04/',
-    r103wu0 => '/gsc/scripts/lib/java/samtools/picard-tools-1.03/',
-);
-
-
 sub path_for_samtools_version {
     my ($class, $version) = @_;
     $version ||= $DEFAULT;
@@ -91,35 +71,15 @@ sub path_for_samtools_version {
     die 'No path found for samtools version: '.$version;
 }
 
-sub path_for_picard_version {
-    my ($class, $version) = @_;
-    $version ||= $PICARD_DEFAULT;
-    my $path = $PICARD_VERSIONS{$version};
-    return $path if defined $path;
-    die 'No path found for samtools version: '.$version;
-}
-
 sub default_samtools_version {
     die "default samtools version: $DEFAULT is not valid" unless $SAMTOOLS_VERSIONS{$DEFAULT};
     return $DEFAULT;
-}
- 
-sub default_picard_version {
-    die "default picard version: $PICARD_DEFAULT is not valid" unless $PICARD_VERSIONS{$PICARD_DEFAULT};
-    return $PICARD_DEFAULT;
-}
-        
+}    
     
 sub samtools_path {
     my $self = shift;
     return $self->path_for_samtools_version($self->use_version);
 }
-
-sub picard_path {
-    my $self = shift;
-    return $self->path_for_picard_version($self->use_picard_version);
-}
-
 
 sub samtools_pl_path {
     my $self = shift;
@@ -154,4 +114,3 @@ $DB::single = $DB::stopper;
 }
 
 1;
-

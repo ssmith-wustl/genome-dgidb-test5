@@ -10,7 +10,8 @@ class Genome::Search::Query {
     is => 'UR::Value',
     id_by => [
         query => { is => 'Text' },
-        page => { is => 'Number' }
+        page => { is => 'Number' },
+        fq   => { is => 'Text' }
     ],
     has => [
         results => {
@@ -41,7 +42,8 @@ sub get {
     my $class = shift;
     if (@_ > 1 && @_ % 2 == 0) {
         my %args = (@_);
-        $args{page} = 1 unless exists $args{page};
+        $args{'fq'} ||= '';
+        $args{'page'} = 1 unless exists $args{page};
         @_ = %args;
     }
 
