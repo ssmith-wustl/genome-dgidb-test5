@@ -39,6 +39,12 @@ ok(-s $temp_contigs_list, "Temp dir export_contigs list linked");
 my $cmd = "gmt assembly ace remove-contigs --ace-list $temp_ace_list --contigs-list $temp_contigs_list --directory $temp_dir";
 ok(! system("$cmd"),"Ran successfully command:\n\ $cmd");
 
+foreach (qw/ test_asm1.ace.contigs_removed.ace test_asm2.ace.contigs_removed.ace test_asm3.ace.contigs_removed.ace/) {
+    ok(-s $data_dir."/$_", "Test $_ file exists");
+    ok(-s $temp_dir."/$_", "$_ file get created");
+    my @diff = `sdiff -s $data_dir/$_ $temp_dir/$_`;
+    is(scalar @diff, 0, "$_ files match");
+}
 
 done_testing();
 
