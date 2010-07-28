@@ -175,17 +175,16 @@ sub filter_ace_files {
 }
 #cats multiple ace files together
 sub merge_acefiles {
-    my ($self, $acefiles) = @_;
-
-    #print Dumper $acefiles;
+    my ($self, %params) = @_;
 
     my $int_file = $self->intermediate_file_name('merge');
     my $int_fh = IO::File->new("> $int_file") ||
 	die "Can not create file handle for $int_file";
     my $contig_count = 0;     my $read_count = 0;
     #incrementing contigs numbering by 1M for each acefile
-    my $increment = 1000000;  my $inc_count = 0;
-    foreach my $ace_in (@$acefiles) {
+    my $increment = ( defined $params{increment} ? $params{increment} : 1000000 );
+    my $inc_count = 0;
+    foreach my $ace_in (@{$params{acefiles}}) {
 	my $fh = IO::File->new("< $ace_in") ||
 	    die "Can not create file handle to read $ace_in\n";
 	while (my $line = $fh->getline) {

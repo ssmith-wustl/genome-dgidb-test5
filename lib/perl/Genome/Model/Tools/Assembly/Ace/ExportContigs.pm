@@ -85,7 +85,7 @@ sub execute {
     }
 
     if ($self->merge) {
-	unless ($self->merge_acefiles($new_aces)) {
+	unless ($self->merge_acefiles(acefiles => $new_aces)) {
 	    $self->error_message("Failed to merge ace files");
 	    return;
 	}
