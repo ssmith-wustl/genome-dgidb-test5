@@ -27,11 +27,6 @@ class Genome::Model::Tools::Assembly::Ace::Merge {
 	    is_optional => 1,
 	    doc => 'file of list of ace files to export contigs from',
 	},
-	merge => {
-	    type => 'Boolean',
-	    is_optional => 1,
-	    doc => 'merge exported contigs into a single ace file',
-	},
 	directory => {
 	    type => 'Text',
 	    is_optional => 1,
@@ -63,13 +58,10 @@ sub execute {
 	return;
     }
 
-    if ($self->merge) {
-	unless ($self->merge_acefiles($acefiles)) {
-	    $self->error_message("Failed to merge ace files");
-	    return;
-	}
+    unless ($self->merge_acefiles($acefiles)) {
+	$self->error_message("Failed to merge ace files");
+	return;
     }
-
     return 1;
 }
 
