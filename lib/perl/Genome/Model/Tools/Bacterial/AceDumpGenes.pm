@@ -233,6 +233,12 @@ foreach my $i (0..$#sequences) {
         elsif ($coding_gene->pfam_evidence()) {
             print $fh qq{Protein_evidence "pfam"},"\n";
         }
+        my @coding_gene_tags = $coding_gene->tag_names;
+        if(@coding_gene_tags) {
+            foreach my $tag (@coding_gene_tags) {
+                print $fh $tag->tag_name," \"", $tag->tag_value,"\"\n";
+            }
+        }
         
         unless ($i == $#coding_genes) {
             print $fh "\n";
@@ -367,8 +373,9 @@ sub purge_dead_genes {
     my $dead_tag = 0;
     my @tags = $gene_id->tag_names;
     foreach my $t (@tags) {
-        if ( $t->tag_name eq 'Dead') {
+        if ( ($t->tag_name eq 'Dead') && ($t->tag_value eq 'rrna hit')) {
         $dead_tag = 1;
+        last;
         }
     }
     unless ($dead_tag == 1) {
