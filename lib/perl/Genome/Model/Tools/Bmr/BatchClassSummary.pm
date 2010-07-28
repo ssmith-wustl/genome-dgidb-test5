@@ -36,6 +36,11 @@ class Genome::Model::Tools::Bmr::BatchClassSummary {
         is_optional => 0,
         doc => 'Output file containing BMR for 7 classes for this group of regions, mutations, and wiggle files.',
     },
+    genes_to_exclude => {
+        type => 'Comma-delimited String',
+        is_optional => 1,
+        doc => 'Comma-delimited list of genes to exclude in BMR calculation.',
+    },
 #    rejected_mutations => {
 #        type => 'String',
 #        is_optional => 1,
@@ -55,7 +60,14 @@ sub help_detail {
 sub execute {
     my $self = shift;
     $DB::single=1;
-
+    
+    #parse gene exclusion list
+    my $gene_exclusion_list = $self->genes_to_exclude;
+    my @genes_to_exclude;
+    if (defined $gene_exclusion_list) {
+        @genes_to_exclude = split ",",$gene_exclusion_list;
+    }
+    
     #resolve refseq
     #my $ref_build_name = $self->refseq_build_name;
     #my ($ref_model_name,$ref_build_version) = $ref_build_name =~ /^(\S+)-build(\S*)$/;
@@ -88,7 +100,7 @@ sub execute {
         return;
     }
 
-    #load ROIs into a hash %ROIs -> chr -> gene -> start = stop;
+    #load ROIs into a new ROI hash %ROIs -> chr -> gene -> start = stop;
     my %ROIs;
     my $roi_bedfile = $self->roi_bedfile;
     my $bed_fh = new IO::File $roi_bedfile,"r";
@@ -97,89 +109,7 @@ sub execute {
         my ($chr,$start,$stop,$exon_id) = split /\t/,$line;
         #(my $gene = $exon_id) =~ s/^([^\.]+)\..+$/$1/;
         my $gene = $exon_id;
-        if ($chr eq "M") { $chr = "MT"; } #for broad roi lists
-        if (exists $ROIs{$chr}{$gene}{$start}) {
-            next if $stop < $ROIs{$chr}{$gene}{$start};
-        }
-        $ROIs{$chr}{$gene}{$start} = $stop;
-    }
-    $bed_fh->close;
-
-    #Create an initial ROI bitmask
-    my $roi_bitmask = $self->create_empty_genome_bitmask($ref_index);
-    for my $chr (keys %ROIs) {
-        for my $gene (keys %{$ROIs{$chr}}) {
-            for my $start (keys %{$ROIs{$chr}{$gene}}) {
-                my $stop = $ROIs{$chr}{$gene}{$start};
-                $roi_bitmask->{$chr}->Interval_Fill($start,$stop);
-            }
-        }
-    }
-
-    #quickly scan through MAF to count mutations per gene
-    my $mutation_file = $self->mutation_maf_file;
-    my $mut_fh = new IO::File $mutation_file,"r";
-    my %mutation_counts;
-
-    while (my $line = $mut_fh->getline) {
-        chomp $line;
-
-        #skip header
-        next if ($line =~ /^Hugo/);
-
-        my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
-
-        #fix broad chromosome name
-        if ($chr =~ /^chr/) {
-            $chr =~ s/^chr(.+$)/$1/;
-        }
-
-        #using WU only for now
-        #next if $center !~ /wustl/i;
-        #make sure mutation is inside the ROIs
-        next unless ($self->count_bits($roi_bitmask->{$chr},$start,$stop));
-        #make sure gene is listed in the roi list
-        unless (grep { /^$gene$/ } keys %{$ROIs{$chr}}) {
-            $self->status_message("Gene $gene not found in ROI hash. Check this mutation's gene in ROI list:\n$line");
-            next;
-        }
-
-        #make sure mutation is a correct type (if SNV)
-        if ($mutation_type =~ /snp|dnp|onp|tnp/i) {
-            #if this mutation is non-synonymous
-            if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
-                $mutation_counts{$gene}++;
-                next;
-            }
-        }
-        #make sure mutation is a correct type (if Indel)
-        if ($mutation_type =~ /ins|del/i) {
-            $mutation_counts{$gene}++;
-            next;
-        }
-    }
-    undef $mut_fh;
-
-    #loop through mutation_count hash to see which genes to ignore (>5 mutations)
-    my @to_ignore;
-    for my $gene (keys %mutation_counts) {
-        if ($mutation_counts{$gene} eq "not doing this test anymore") {
-            push @to_ignore,$gene;
-        }
-    }
-
-    #now that we know which genes to ignore, create a new, more accurate ROI info
-    undef %ROIs;
-    undef $roi_bitmask;
-
-    #load ROIs into a new ROI hash %ROIs -> chr -> gene -> start = stop;
-    $bed_fh = new IO::File $roi_bedfile,"r";
-    while (my $line = $bed_fh->getline) {
-        chomp $line;
-        my ($chr,$start,$stop,$exon_id) = split /\t/,$line;
-        #(my $gene = $exon_id) =~ s/^([^\.]+)\..+$/$1/;
-        my $gene = $exon_id;
-        next if (scalar grep { /^$gene$/ } @to_ignore);
+        next if (scalar grep { /^$gene$/ } @genes_to_exclude);
         if ($chr eq "M") { $chr = "MT"; } #for broad roi lists
         if (exists $ROIs{$chr}{$gene}{$start}) {
             next if $stop < $ROIs{$chr}{$gene}{$start};
@@ -189,11 +119,11 @@ sub execute {
     $bed_fh->close;
 
     #Create an new ROI bitmask
-    $roi_bitmask = $self->create_empty_genome_bitmask($ref_index);
+    my $roi_bitmask = $self->create_empty_genome_bitmask($ref_index);
     for my $chr (keys %ROIs) {
         for my $gene (keys %{$ROIs{$chr}}) {
             #juse in case...
-            next if (scalar grep { /^$gene$/ } @to_ignore);
+            next if (scalar grep { /^$gene$/ } @genes_to_exclude);
             for my $start (keys %{$ROIs{$chr}{$gene}}) {
                 my $stop = $ROIs{$chr}{$gene}{$start};
                 $roi_bitmask->{$chr}->Interval_Fill($start,$stop);
@@ -283,7 +213,8 @@ sub execute {
     undef $bitmask_conversion;
 
     #Loop through mutations, assign them to a gene and class in %COVMUTS
-    $mut_fh = new IO::File $mutation_file,"r";
+    my $mutation_file = $self->mutation_maf_file;
+    my $mut_fh = new IO::File $mutation_file,"r";
 
 =cut
     #print rejected mutations to a file or to STDOUT
@@ -307,7 +238,7 @@ sub execute {
             $chr =~ s/^chr(.+$)/$1/;
         }
         #highly-mutated genes to ignore
-        next if (scalar grep { /^$gene$/ } @to_ignore);
+        next if (scalar grep { /^$gene$/ } @genes_to_exclude);
         #using WU only for the initial test set
         #next if $center !~ /wustl/i;
         #make sure mutation is inside the ROIs
