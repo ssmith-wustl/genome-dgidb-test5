@@ -137,7 +137,6 @@ sub execute {
     die "Could not generate Interpro results: $!" unless $results_success;
     
     #TODO: clean up
-
     #CLEAN UP File handles
     close(STDOUT);
     close(STDERR);
