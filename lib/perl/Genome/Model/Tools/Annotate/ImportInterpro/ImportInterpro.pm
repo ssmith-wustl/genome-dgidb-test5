@@ -87,12 +87,15 @@ sub execute {
    
     my $total_start = Benchmark->new;
    
-    #my $log_file = $self->log_file; #TODO: sanity check this
-    #open (OLDOUT, ">&STDOUT");
-    #open (OLDERR, ">&STDERR");
+    my $log_file = $self->log_file; #TODO: sanity check this
+    open (OLDOUT, ">&STDOUT");
+    open (OLDERR, ">&STDERR");
 
-    #open(STDOUT, "> $log_file") or die "Can't redirect STDOUT: $!";
-    #open(STDERR, "> $log_file") or die "Can't redirect STDERR: $!";
+    close(STDOUT);
+    close(STDERR);
+
+    open(STDOUT, "> $log_file") or die "Can't redirect STDOUT: $!";
+    open(STDERR, "> $log_file") or die "Can't redirect STDERR: $!";
    
     my ($model_name, $build_version) = split("/", $self->reference_transcripts);
     my $model = Genome::Model->get(name => $model_name);
@@ -135,7 +138,15 @@ sub execute {
     
     #TODO: clean up
 
+    #CLEAN UP File handles
+    close(STDOUT);
+    close(STDERR);
 
+    open (STDOUT, ">&OLDOUT");
+    open (STDERR, ">&OLDERR");
+
+    close (OLDOUT);
+    close (OLDERR);
     
     my $total_finish = Benchmark->new;
     my $total_time = timediff($total_finish, $total_start);
