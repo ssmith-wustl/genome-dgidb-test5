@@ -163,7 +163,7 @@ sub execute {
     #loop through mutation_count hash to see which genes to ignore (>5 mutations)
     my @to_ignore;
     for my $gene (keys %mutation_counts) {
-        if ($mutation_counts{$gene} > 5) {
+        if ($mutation_counts{$gene} eq "not doing this test anymore") {
             push @to_ignore,$gene;
         }
     }
