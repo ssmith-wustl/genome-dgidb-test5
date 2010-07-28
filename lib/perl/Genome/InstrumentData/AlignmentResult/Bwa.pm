@@ -19,18 +19,21 @@ class Genome::InstrumentData::AlignmentResult::Bwa {
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage {
-    my $instrument_data = shift;
+    my $class = shift;
+    my %p = @_;
+    my $instrument_data = delete $p{instrument_data};
     
     # If the appropriate methods aren't defined, still use 90GB of tmp space.
-    unless (defined($instrument_data) and $instrument_data->can("calculate_alignment_estimated_kb_usage")) {
+    unless (defined($instrument_data) && $instrument_data->can("calculate_alignment_estimated_kb_usage")) {
         return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>10000] span[hosts=1] rusage[tmp=90000, mem=10000]' -M 10000000 -n 4 -q alignment -m alignment ";
     }
     my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
+    print "$kb_usage\n";
     # Estimate 6 times instrument_data size + 100 should be sufficient with some breathing room. 
     # I refuse to be the intern that gets the sombrero, but somebody else is welcome to lower this if they feel comfortable.
     # In my tests, output SAM file is about 1.33 times the size of this returned estimated calculated size. Therefore *3 is probably sufficient.
     my $estimated_usage_mb = int(($kb_usage * 6) / 1024)+100;
-    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>" . $estimated_usage_mb . " && mem>10000] span[hosts=1] rusage[tmp=" . $estimated_usage_mb . ", mem=10000]' -M 10000000 -n 4";
+    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>" . $estimated_usage_mb . " && mem>10000] span[hosts=1] rusage[tmp=" . $estimated_usage_mb . ", mem=10000]' -M 10000000 -n 4 -q alignment -m alignment";
 }
 
 sub _run_aligner {
