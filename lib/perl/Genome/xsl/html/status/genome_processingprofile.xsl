@@ -1,55 +1,124 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <xsl:stylesheet version="1.0"
-xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+                xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+  <!-- full page display for a processing profile -->
 
   <xsl:template name="genome_processingprofile" match="object[./types[./isa[@type='Genome::ProcessingProfile']]]">
-    <div class="result">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="result"><tbody><tr>
-      <td>
-        <div class="icon">
-           <xsl:call-template name="object_link">
-             <xsl:with-param name="linktext">
-              <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/eye_16.png" />
-            </xsl:with-param>
+    <xsl:comment>template: status/genome_taxon.xsl match: object[./types[./isa[@type='Genome::Taxon']]]</xsl:comment>
+    <xsl:call-template name="view_header">
+      <xsl:with-param name="label_name" select="'Processing Profile:'" />
+      <xsl:with-param name="display_name" select="aspect[@name='name']/value" />
+      <xsl:with-param name="icon" select="'genome_processingprofile_32'" />
+    </xsl:call-template>
+
+    <div class="content rounded shadow">
+      <div class="container">
+        <div id="objects" class="span-24 last">
+
+          <!-- details for this taxon -->
+          <div class="span_8_box_masonry">
+            <div class="box_header span-8 last rounded-top">
+              <div class="box_title"><h3 class="nontyped span-7 last">Processing Profile Attributes</h3></div>
+              <div class="box_button">
+
+              </div>
+            </div>
+
+            <div class="box_content rounded-bottom span-8 last">
+              <table class="name-value">
+                <tbody>
+                  <tr>
+                    <td class="name">Type:
+                    </td>
+                    <td class="value"><xsl:value-of select="aspect[@name='type_name']/value"/>
+
+                    </td>
+                  </tr>
+
+                  <xsl:if test="normalize-space(aspect[@name='supersedes']/value)">
+                    <tr>
+                      <td class="name">Supercedes:
+                      </td>
+                      <td class="value"><xsl:value-of select="aspect[@name='supersedes']/value"/>
+                      </td>
+                    </tr>
+                  </xsl:if>
+
+                  <xsl:if test="count(aspect[@name='params']) > 0 ">
+                    <xsl:for-each select="aspect[@name='params']/object">
+                      <tr>
+                        <td class="name"><xsl:value-of select="normalize-space(aspect[@name='name'])"/>:</td>
+                        <td class="value"><xsl:value-of select="aspect[@name='value']"/></td>
+                      </tr>
+                    </xsl:for-each>
+                  </xsl:if>
+
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div> <!-- end .objects -->
+        <xsl:if test="count(aspect[@name='models']/object) > 0">
+          <br class="space"/>
+          <h2>models</h2>
+          <xsl:for-each select="aspect[@name='models']">
+            <xsl:call-template name="genome_model_build_table">
+              <xsl:with-param name="want_builds" select="0"/>
+            </xsl:call-template>
+          </xsl:for-each>
+        </xsl:if>
+
+      </div> <!-- end container -->
+    </div> <!-- end content -->
+
+    <xsl:call-template name="footer">
+      <xsl:with-param name="footer_text">
+        <br/>
+      </xsl:with-param>
+    </xsl:call-template>
+
+  </xsl:template>
+
+  <!-- box element for processing profile, intended for display in a jquery masonry layout -->
+  <xsl:template name="genome_processingprofile_box">
+
+    <xsl:comment>template: status/genome_processingprofile.xsl:genome_processingprofile_box</xsl:comment>
+
+    <div class="span_8_box_masonry">
+      <div class="box_header span-8 last rounded-top">
+        <div class="box_title"><h3 class="genome_processingprofile_16 span-7 last">Processing Profile</h3></div>
+        <div class="box_button">
+          <xsl:call-template name="object_link_button_tiny">
+            <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
           </xsl:call-template>
         </div>
-      </td><td>
-        <div class="description">
-        <h2 class="name">
-          <span class="label">
-            Processing Profile:
-          </span>
-          <span class="title"> 
-            <xsl:call-template name="object_link" />
-          </span>
-        </h2>
-        <p class="info">
-          <xsl:value-of select="aspect[@name='type_name']/value"/>
-          <xsl:if test="normalize-space(aspect[@name='supersedes']/value)">
-            (supersedes <xsl:value-of select="aspect[@name='supersedes']/value"/>)
-          </xsl:if>
-        </p>
-        </div>
-      </td></tr></tbody></table>
+      </div>
+
+      <div class="box_content rounded-bottom span-8 last">
+        <table class="name-value">
+          <tbody>
+            <tr>
+              <td class="name">Name:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='name']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">Type:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='type_name']/value"/>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <xsl:if test="count(aspect[@name='params']) > 0 ">
-      <table class="info_table">
-      <xsl:for-each select="aspect[@name='params']/object">
-        <tr>
-          <td class="label"><xsl:value-of select="normalize-space(aspect[@name='name'])"/>:</td>
-          <td class="value"><xsl:value-of select="aspect[@name='value']"/></td>
-        </tr>
-      </xsl:for-each>
-      </table>
-    </xsl:if>
-    <xsl:if test="count(aspect[@name='models']/object) > 0">
-	  Models:
-	  <xsl:for-each select="aspect[@name='models']">
-	    <xsl:call-template name="genome_model_build_table">
-	      <xsl:with-param name="want_builds" value="0"/>
-	    </xsl:call-template>
-      </xsl:for-each>
-    </xsl:if>
+
   </xsl:template>
+
 
 </xsl:stylesheet>

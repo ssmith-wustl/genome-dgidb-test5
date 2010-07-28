@@ -59,6 +59,17 @@ test_model_from_params(
     },
 );
 
+# test create with a different reference_sequence_build name
+test_model_from_params(
+    model_params => {
+        model_name              => "test_model_$ENV{USER}",
+        subject_name            => $default_subject_name,
+        subject_type            => $default_subject_type,
+        processing_profile_name => $default_pp_name,
+        reference_sequence_build => 'TechD_hs36_plus_contaminants_Wylie'
+    },
+);
+
 # test when bare args empty array_ref is passed
 test_model_from_params(
     model_params => {

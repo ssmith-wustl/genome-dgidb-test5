@@ -61,7 +61,6 @@ sub execute {
         file_name => $self->input_bam_file,
         name_sort => 1,
         output_file => $name_sorted_bam_file,
-        use_picard_version => $self->use_picard_version,
         use_version => $self->use_version,
     )) {
         die('Failed to name sort bam file '. $self->input_bam_file .' to '. $name_sorted_bam_file);
@@ -108,7 +107,6 @@ sub execute {
         ref_list => $self->reference_faidx,
         is_sorted => 0,
         index_bam => 1,
-        use_picard_version => $self->use_picard_version,
         use_version => $self->use_version,
     )) {
         die('Failed to convert sam file '. $unique_name_sorted_sam_file .' to bam file '. $self->output_bam_file);

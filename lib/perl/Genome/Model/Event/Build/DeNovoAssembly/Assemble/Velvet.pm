@@ -25,6 +25,12 @@ sub execute {
 
     # Run OBV
     my %assembler_params = $self->processing_profile->assembler_params_as_hash();
+
+    my $avg_insert_size = $self->build->calculate_average_insert_size;
+    if ( defined $avg_insert_size ) {
+        $assembler_params{ins_length} = $avg_insert_size;
+    }
+    
     my $run = Genome::Model::Tools::Velvet::OneButton->create(
         file => $collated_fastq_file,
         output_dir => $self->build->data_directory,

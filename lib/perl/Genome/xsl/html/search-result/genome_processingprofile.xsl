@@ -3,32 +3,18 @@
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_processingprofile" match="object[./types[./isa[@type='Genome::ProcessingProfile']]]">
-    <div class="result">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="result"><tbody><tr>
-      <td>
-        <div class="icon">
-          <xsl:call-template name="object_link">
-            <xsl:with-param name="linktext">
-              <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/eye_16.png" />
-            </xsl:with-param>
-          </xsl:call-template>
-        </div>
-      </td><td width="100%">
-        <div class="description">
-        <h2 class="name">
-          <span class="label">
-            Processing Profile:
-          </span>
-          <span class="title">
-            <xsl:call-template name="object_link" />
-          </span>
-        </h2>
-        <p class="info">
-          <xsl:value-of select="aspect[@name='type_name']/value"/>
+    <div class="search_result">
+      <div class="result_icon genome_processingprofile_32">
+        <br/>
+      </div>
+      <div class="result">
+        <h3>Processing Profile: <xsl:call-template name="object_link"/></h3>
+        <p class="result_summary">
+          <strong>Type: </strong><xsl:value-of select="aspect[@name='type_name']/value"/>
         </p>
       </div>
-      </td></tr></tbody></table>
-    </div>
+    </div> <!-- end search_result -->
+
   </xsl:template>
 
 </xsl:stylesheet>

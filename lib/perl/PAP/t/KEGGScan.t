@@ -8,7 +8,9 @@ use Bio::SeqIO;
 
 use Cwd;
 use File::Temp;
-use Test::More tests => 81;
+use File::Basename;
+#use Test::More tests => 81;
+use Test::More qw(no_plan);
 
 BEGIN {
     use_ok('PAP::Command');
@@ -22,7 +24,7 @@ my $tempdir = File::Temp::tempdir(
                                  );
 
 my $command = PAP::Command::KEGGScan->create(
-                                             'fasta_file'      => 'data/B_coprocola.chunk.fasta',
+                                             'fasta_file'      => File::Basename::dirname(__FILE__).'/data/B_coprocola.chunk.fasta',
                                              'report_save_dir' => $tempdir,
                                             );
 isa_ok($command, 'PAP::Command::KEGGScan');
@@ -62,3 +64,5 @@ ok(-e "$tempdir/REPORT-full.ks.bz2", "archive KEGGScan full output exists");
 ok(! -z "$tempdir/REPORT-full.ks.bz2", "archive KEGGScan full output is not zero byte");
 is(system("bzcat $tempdir/REPORT-top.ks.bz2 > /dev/null"), 0, 'bzcat can read archived raw top output');
 is(system("bzcat $tempdir/REPORT-full.ks.bz2 > /dev/null"), 0, 'bzcat can read archived raw full output');
+
+#done_testing();

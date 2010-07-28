@@ -69,7 +69,7 @@ sub execute {
     $self->status_message('Using ' . $summary_report);
 
     unless(-e $summary_report and -f $summary_report) {
-        $self->error_message('Summary report file does not exist or is not a file.');
+        $self->error_message('Summary report file ' . $summary_report . ' does not exist or is not a file.');
         return;   
     }
     

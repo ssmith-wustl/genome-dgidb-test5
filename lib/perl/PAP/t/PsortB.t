@@ -7,7 +7,9 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 230;
+use File::Basename;
+#use Test::More tests => 230;
+use Test::More;
 
 BEGIN {
     use_ok('PAP::Command');
@@ -15,7 +17,7 @@ BEGIN {
 }
 
 my $command = PAP::Command::PsortB->create(
-                                           'fasta_file' => 'data/B_coprocola.chunk.fasta',
+                                           'fasta_file' => File::Basename::dirname(__FILE__).'/data/B_coprocola.chunk.fasta',
                                            'gram_stain' => 'negative',
                                           );
 isa_ok($command, 'PAP::Command::PsortB');
@@ -44,3 +46,5 @@ foreach my $feature (@{$ref}) {
     like($scores[0], qr/\d+\.\d+/, 'score is floating point');
     
 }
+
+done_testing();

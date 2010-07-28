@@ -3,34 +3,45 @@
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_taxon" match="object[./types[./isa[@type='Genome::Taxon']]]">
-    <div class="result">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" class="result"><tbody><tr>
-      <td>
-        <div class="icon">
-          <xsl:call-template name="object_link">
-            <xsl:with-param name="linktext">
-              <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/eye_16.png" />
-            </xsl:with-param>
-          </xsl:call-template>
-        </div>
-      </td><td width="100%">
-        <div class="description">
-        <h2 class="name">
-          <span class="label">
-            Taxon:
-          </span>
-          <span class="title">
-            <xsl:call-template name="object_link">
-              <xsl:with-param name="linktext" select="aspect[@name='species_name']/value"/>
-            </xsl:call-template>
-          </span>
-        </h2>
-        <p class="blurb">
-          <xsl:value-of select="aspect[@name='species_latin_name']/value"/> <xsl:if test="normalize-space(aspect[@name='ncbi_taxon_id']/value)">NCBI Taxon ID: <xsl:value-of select="aspect[@name='ncbi_taxon_id']/value"/></xsl:if>
+    <div class="search_result">
+      <div class="result_icon genome_taxon_32">
+        <br/>
+      </div>
+      <div class="result">
+        <h3>Taxon:
+        <xsl:call-template name="object_link">
+          <xsl:with-param name="linktext" select="aspect[@name='species_name']/value"/>
+        </xsl:call-template>
+        </h3>
+
+        <p class="result_summary">
+          <strong>Latin Species Name: </strong>
+          <xsl:choose>
+            <xsl:when test="string(aspect[@name='species_latin_name']/value)">
+              <xsl:value-of select="aspect[@name='species_latin_name']/value"/>
+              <xsl:text>; </xsl:text>
+            </xsl:when>
+            <xsl:otherwise>
+              --
+              <xsl:text> ; </xsl:text>
+            </xsl:otherwise>
+          </xsl:choose>
+
+          <strong>NCBI Taxon ID: </strong>
+          <xsl:choose>
+            <xsl:when test="string(normalize-space(aspect[@name='ncbi_taxon_id']/value))">
+              <xsl:value-of select="normalize-space(aspect[@name='ncbi_taxon_id']/value)"/>
+              <xsl:text>; </xsl:text>
+            </xsl:when>
+            <xsl:otherwise>
+              --
+              <xsl:text> ; </xsl:text>
+            </xsl:otherwise>
+          </xsl:choose>
         </p>
       </div>
-      </td></tr></tbody></table>
-    </div>
+    </div> <!-- end search_result -->
+
   </xsl:template>
 
 </xsl:stylesheet>

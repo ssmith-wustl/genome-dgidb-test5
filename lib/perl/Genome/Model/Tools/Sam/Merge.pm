@@ -43,7 +43,12 @@ class Genome::Model::Tools::Sam::Merge {
             doc => 'flag to create bam index or not',
             is_optional   => 1,
             default_value => 1,
-        }
+        },
+        use_picard_version => {
+            is => 'String',
+            doc => 'version of picard to use if "picard" was used for the --software option',
+            is_optional => 1,
+        },
     ],
 };
 
@@ -64,11 +69,28 @@ sub merge_command {
     my $merged_file = $self->merged_file;
     my $bam_merge_cmd;
     if ($self->software eq 'picard') {
-        my $picard_path = $self->picard_path;
-        my $bam_merge_tool = "java -Xmx2g -Dcom.sun.management.jmxremote -cp $picard_path/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles MSD=true SO=coordinate AS=true VALIDATION_STRINGENCY=SILENT O=$merged_file ";
-        my $list_of_files = join(' I=',@input_files);
+        $bam_merge_cmd = Genome::Model::Tools::Picard::MergeSamFiles->create(
+            input_files => \@input_files, #file_type is determined automatically by picard
+            output_file => $self->merged_file,
+            use_version => $self->use_picard_version,
+
+            #If $self->is_sorted is false, we sort before merging
+            assume_sorted => 1,
+
+            #Settings that have been hard-coded in this tool
+            merge_sequence_dictionary => 1,
+            sort_order => 'coordinate',
+            validation_stringency => 'SILENT',
+            maximum_memory => 2,
+            additional_jvm_options => '-Dcom.sun.management.jmxremote', #for monitoring
+            _monitor_command => 1,
+            _monitor_mail_to => 'eclark ssmith boberkfe jeldred abrummet',
+            _monitor_check_interval => 60, #seconds
+            _monitor_stdout_interval => 900, #seconds
+        );
+        
+        my $list_of_files = join(' ',@input_files);
         $self->status_message('Files to merge: '. $list_of_files);
-	$bam_merge_cmd = "$bam_merge_tool I=$list_of_files";
     } elsif ($self->software eq 'samtools') {
         my $sam_path = $self->samtools_path;
         my $bam_merge_tool = $sam_path .' merge ';
@@ -160,16 +182,7 @@ sub execute {
         my $bam_merge_rv;
 
         if ($self->software eq 'picard') {
-            $bam_merge_rv = $self->monitor_shellcmd(
-                {
-                    cmd=>$bam_merge_cmd,
-                    input_files=>\@input_files,
-                    output_files=>[$result],
-                    skip_if_output_is_present=>0
-                },
-                60,
-                900
-            );
+            $bam_merge_rv = $bam_merge_cmd->execute();
         } else {
             $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(
                 cmd=>$bam_merge_cmd,
@@ -220,69 +233,6 @@ sub execute {
 
  
     return 1;
-}
-
-sub monitor_shellcmd {
-    my ($self,$shellcmd_args,$check_interval,$max_stdout_interval) = @_;
-
-    my $cmd = $shellcmd_args->{cmd};
-    my $last_update = time;
-    my $pid;
-    my $w;
-    $w = AnyEvent->timer(
-        interval => $check_interval,
-        cb => sub {
-            if ( time - $last_update >= $max_stdout_interval) {
-                my $message = <<MESSAGE;
-To whom it may concern,
-
-This command:
-
-$cmd
-
-Has not produced output on STDOUT in at least $max_stdout_interval seconds.
-
-Host: %s
-Perl Pid: %s 
-Java Pid: %s
-LSF Job: %s
-User: %s
-
-This is the last warning you will receive about this process.
-MESSAGE
-
-                undef $w;
-                my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', $ENV{USER});
-
-                my @to = qw/eclark ssmith boberkfe jeldred abrummet/;
-                my $to = join(', ', map { "$_\@genome.wustl.edu" } @to);
-                my $subject = 'Slow bam merge happening right now';
-                my $data = sprintf($message,
-                    hostname,$$,$pid,$ENV{LSB_JOBID},$ENV{USER});
-
-                my $msg = MIME::Lite->new(
-                    From => $from,
-                    To => $to,
-                    Cc => 'apipe-run@genome.wustl.edu',
-                    Subject => $subject,
-                    Data => $data
-                );
-                $msg->send();
-            }
-        }
-    );
-
-    my $cv = Genome::Utility::AsyncFileSystem->shellcmd(
-        %$shellcmd_args,
-        '>' => on_each_line {
-            $last_update = time;
-            print $_[0] if defined $_[0];
-        },
-        '$$' => \$pid
-    );
-    $cv->cb(sub { undef $w });
-
-    return $cv->recv;
 }
 
 1;

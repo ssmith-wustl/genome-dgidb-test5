@@ -96,6 +96,17 @@ ok(
     ),
     'Failed as expected - create w/ invalid assembler params',
 );
+# Create fail - calculated assembler params
+ok(
+    !Genome::ProcessingProfile::DeNovoAssembly->create(
+        name => 'DNA Test',
+        sequencing_platform => 'solexa',
+        assembler_name => 'velvet',
+        assembler_version => '7.0.57-64',
+        assembler_params => '-ins_length 260',
+    ),
+    'Failed as expected - create w/ calculated assembler params',
+);
 
 # Valid create
 my %valid_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
@@ -106,7 +117,7 @@ ok(%valid_params, 'Got valid pp params');
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_params);
 ok($pp, 'Create DNA pp') or die;
 my %operation_params = (
-    assembler => { hash_sizes => [qw/ 31 33 35 /], ins_length => 260, },
+    assembler => { hash_sizes => [qw/ 31 33 35 /], },
     read_trimmer => { trim_length => 10 },
 );
 for my $operation ( keys %operation_params ) {

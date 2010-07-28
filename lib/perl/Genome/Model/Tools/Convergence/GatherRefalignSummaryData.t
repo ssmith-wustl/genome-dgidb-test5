@@ -62,6 +62,7 @@ sub setup_test_build {
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
         data_directory => TEST_DATA_DIR,
+        reference_sequence_name => 'NCBI-human-build36',
     );
     ok($test_model, 'created test model');
     

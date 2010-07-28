@@ -93,6 +93,10 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => 'picard version for MarkDuplicates, MergeSamfiles, CreateSequenceDictionary...',
             is_optional => 1,
         },
+        picard_max_sequences_for_disk_read_ends_map => {
+            doc => 'picard paremeter for MarkDuplicates',
+            is_optional => 1,
+        },
         samtools_version => {
             doc => 'samtools version for SamToBam, samtools merge, etc...',
             is_optional => 1,
