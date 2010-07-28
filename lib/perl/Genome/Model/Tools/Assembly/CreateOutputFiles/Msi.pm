@@ -11,7 +11,6 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::Msi {
         acefile => {
             is => 'Text',
             doc => 'Ace file to get fasta and qual from',
-            is_optional => 1,
         },
         assembly_directory => {
             is => 'Text',
@@ -42,13 +41,16 @@ sub help_brief {
 
 sub help_synopsis {
     return <<EOS
-gmt assembly create-output-file msi ..	
+gmt assembly create-output-file msi --assembler newbler --acefile /gscmnt/111/newbler_assembly/edit_dir/ace.msi --assembly-directory /gscmnt/111/newbler_assembly
 EOS
 }
 
 sub help_detail {
     return <<EOS
-
+Tool to create assembly output files from modified newbler, pcap or
+velvet assemblies.  It will need msi.gap.txt file to get gap info
+for scaffold contigs.  If get size is not provided, it will use 100 bp
+which is default value for unknown gap sizes
 EOS
 }
 
