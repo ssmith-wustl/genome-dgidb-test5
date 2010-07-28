@@ -23,12 +23,26 @@ foreach (@test_aces) {
     ok(-s $temp_dir."/$_", "Linked $_");
 }
 
-my $ace_list_fh = IO::File->new(">".$temp_dir.'/ace_list') ||
+my $temp_ace_list = $temp_dir.'/ace_list';
+my $ace_list_fh = IO::File->new(">".$temp_ace_list) ||
     die "Can not create file handle to write ace list\n";
 $ace_list_fh->print(map {$_."\n"} @test_aces);
 $ace_list_fh->close;
 
 ok(-s $temp_dir.'/ace_list', "Created temp ace list");
+my $cmd = "gmt assembly ace merge --ace-list $temp_ace_list --directory $temp_dir";
+ok(! system("$cmd"),"Ran successfully command:\n\ $cmd");
+
+my $test_ace = $data_dir.'/edit_dir/merged.final.ace';
+my $temp_ace = $temp_dir.'/merged.final.ace';
+
+ok(-s $temp_ace, "Created merged ace file");
+ok(-s $test_ace, "Test merged ace fiel exists");
+
+my @diff = `sdiff -s $temp_ace $test_ace`;
+is (scalar @diff, 0, "New merged ace file matches test merged ace file");
+
+<STDIN>;
 
 done_testing();
 
