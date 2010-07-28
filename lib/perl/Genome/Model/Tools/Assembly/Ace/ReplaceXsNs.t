@@ -9,7 +9,7 @@ require File::Compare;
 require File::Temp;
 use Test::More;
 
-use_ok('Genome::Model::Tools::Assembly::ReplaceXsNs') or die;
+use_ok('Genome::Model::Tools::Assembly::Ace::ReplaceXsNs') or die;
 
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-ReplaceXsNs/v1';
 my $in_acefile = $dir.'/in.ace';
