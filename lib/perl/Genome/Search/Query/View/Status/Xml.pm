@@ -27,6 +27,7 @@ sub _generate_content {
     my $response  = Genome::Search->search(
         $solrQuery,
         {
+              qs  => 1,
               fq  => $fq,
             rows  => $RESULTS_PER_PAGE,
             start => $RESULTS_PER_PAGE * ( $page - 1 )

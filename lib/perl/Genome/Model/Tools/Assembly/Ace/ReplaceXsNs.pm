@@ -1,11 +1,11 @@
-package Genome::Model::Tools::Assembly::ReplaceXsNs;
+package Genome::Model::Tools::Assembly::Ace::ReplaceXsNs;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::Assembly::ReplaceXsNs {
+class Genome::Model::Tools::Assembly::Ace::ReplaceXsNs {
     is => 'Command',
     has => [
         acefile => {
