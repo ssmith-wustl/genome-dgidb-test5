@@ -42,8 +42,6 @@ ok(-s $test_ace, "Test merged ace fiel exists");
 my @diff = `sdiff -s $temp_ace $test_ace`;
 is (scalar @diff, 0, "New merged ace file matches test merged ace file");
 
-<STDIN>;
-
 done_testing();
 
 exit;
