@@ -21,11 +21,11 @@ my $out_acefile = $tmpdir.'/out.ace';
 
 # fails
 my $failed_replacer;
-$failed_replacer = Genome::Model::Tools::Assembly::ReplaceXsNs->execute();
+$failed_replacer = Genome::Model::Tools::Assembly::Ace::ReplaceXsNs->execute();
 ok(!$failed_replacer, 'failed to execute w/o acefile');
 
 # success
-my $replacer = Genome::Model::Tools::Assembly::ReplaceXsNs->create(
+my $replacer = Genome::Model::Tools::Assembly::Ace::ReplaceXsNs->create(
     acefile => $in_acefile,
     output_acefile => $out_acefile,
 );
