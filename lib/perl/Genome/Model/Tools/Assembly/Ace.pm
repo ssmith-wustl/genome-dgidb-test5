@@ -204,7 +204,11 @@ sub merge_acefiles {
 		#first ace file will retain same contig numbering
 		#following ace files will have contig numbers incremented by 1,000,000
 		#TODO - need intelligent way of doing this
-		my $new_contig_number = ($increment * $inc_count) + $contig_number;
+        my ($sc_num, $ct_num) = split(/\./, $contig_number);
+		my $new_contig_number = (($increment * $inc_count) + $sc_num);
+        if ( $ct_num ) {
+            $new_contig_number .= '.'.$ct_num;
+        }
 		$line =~ /^CO\s+(\S+)/; #just to capture $'
 		$int_fh->print("CO Contig".$new_contig_number."$'"."\n");
 		next;
