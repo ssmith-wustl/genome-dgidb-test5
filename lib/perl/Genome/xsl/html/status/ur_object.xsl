@@ -3,9 +3,7 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:rest="urn:rest">
   <xsl:template name="ur_object_header" match="/object">
-    <xsl:comment>
-      name: ur_object_header  match: /object[1]
-    </xsl:comment>
+    <xsl:comment>template: status/ur_object.xsl:ur_object_header  match: /object</xsl:comment>
     <div class="object">
       <div class="header_object">
         <div class="display_name">
@@ -44,9 +42,7 @@
   </xsl:template>
 
   <xsl:template name="header_display_name">
-    <xsl:comment>
-      match: header_display_name
-    </xsl:comment>
+    <xsl:comment>template: status/ur_object.xsl:header_display_name match: header_display_name</xsl:comment>
     <span style="font-weight: bold;">
       <h1>
         <xsl:value-of select="@type"/><span class="id"> (<xsl:value-of select="display_name"/>)</span>
@@ -55,9 +51,7 @@
   </xsl:template>
 
   <xsl:template name="ur_object" match="object">
-    <xsl:comment>
-      name: ur_object  match: object
-    </xsl:comment>
+    <xsl:comment>template: status/ur_object.xsl:ur_object match: object</xsl:comment>
     <p>
       <xsl:apply-templates select="display_name"/>
     </p>
@@ -81,7 +75,7 @@
 
   <xsl:template match="display_name">
     <xsl:comment>
-      match: display_name
+      template: status/ur_object.xsl:display_name match: display_name
     </xsl:comment>
     <xsl:variable name="typeLink">
       <xsl:value-of select="rest:typetourl(../@type)" />
@@ -106,7 +100,7 @@
 
   <xsl:template match="exception">
     <xsl:comment>
-      match: exception
+      template: status/ur_object.xsl:exception match: exception
     </xsl:comment>
     <p class="exception">
       Exception <span class="trigger">[toggle view]</span>
@@ -162,13 +156,13 @@
       </table>
     </div>
   </xsl:template>
-  
+
   <xsl:template name="object_link_href">
     <xsl:param name="type" select="./@type"/>
     <xsl:param name="id" select="./@id"/>
     <xsl:param name="perspective" select="'status'"/>
     <xsl:param name="toolkit" select="'html'"/>
-    
+
     <xsl:value-of select="$rest"/>
     <xsl:text>/</xsl:text>
     <xsl:value-of select="rest:typetourl($type)"/>
@@ -179,14 +173,14 @@
     <xsl:text>?id=</xsl:text>
     <xsl:value-of select="$id"/>
   </xsl:template>
-  
+
   <xsl:template name="object_link">
     <xsl:param name="type" select="./@type"/>
     <xsl:param name="id" select="./@id"/>
     <xsl:param name="perspective" select="'status'"/>
     <xsl:param name="toolkit" select="'html'"/>
     <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
-    
+
     <a>
       <xsl:attribute name="href">
         <xsl:call-template name="object_link_href">
@@ -199,7 +193,7 @@
       <xsl:copy-of select="$linktext"/>
     </a>
   </xsl:template>
-  
+
   <xsl:template name="string-replace-all">
     <xsl:param name="text" />
     <xsl:param name="replace" />

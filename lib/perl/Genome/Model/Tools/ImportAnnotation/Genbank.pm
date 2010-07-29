@@ -2,28 +2,32 @@ package Genome::Model::Tools::ImportAnnotation::Genbank;
 
 use strict;
 use warnings;
-use GSC::ImportExport::GenBank;
-use GSC::ImportExport::GenBank::Gene;
-use GSC::ImportExport::GenBank::Transcript;
 use Genome;
 use Carp;
 
 use Bio::SeqIO;
 use Storable;
 use File::Slurp qw/ write_file /;
+use File::Basename qw/ fileparse /;
+use Storable qw/ dclone /;
 
 class Genome::Model::Tools::ImportAnnotation::Genbank {
     is  => 'Genome::Model::Tools::ImportAnnotation',
     has => [
         flatfile => {
-            is  => 'Text',
+            is  => 'Path',
             is_input => 1,
-            doc => "path to asn.1 flat file",
+            doc => 'Path to the .agc genbank flat file',
         },
         genbank_file => {
-            is  => 'Text',
+            is  => 'Path',
             is_input => 1,
-            doc => "path to genbank format file",
+            doc => 'Path to the .gbff genbank file',
+        },
+        idx_file => {
+            is => 'Path',
+            is_input => 1,
+            doc => 'Path to the genbank idx index file',
         },
         status_file => {
             is => 'Text',
@@ -61,6 +65,11 @@ EOS
 sub execute {
     my $self = shift;
     $self->prepare_for_execution;
+
+    # If the index file does not exist, we need to generate one
+    unless (-e $self->idx_file) {
+        $self->generate_idx_file;
+    }
 
     my $transcript_status;
     if($self->status_file)
@@ -120,15 +129,15 @@ sub execute {
         # has this odd notion that it wants to rebuild the index, and tries
         # to remove it...  I changed that little bit, so hopefully that won't
         # happen again.
-        my $genbank_gene = GSC::ImportExport::GenBank::Gene->retrieve(
-            genome_seq_id => $seq_id, 
-            version       => $version,
-            locus_id      => $locus_id,  #locus id is entrez id
-        );
+        my $genbank_gene = $self->retrieve_gene($locus_id); 
+        unless ($genbank_gene) {
+            $self->error_message("Could not retrieve gene with ID $locus_id, exiting!");
+            croak;
+        }
 
-        my $is_pseudogene = GSC::ImportExport::GenBank::Gene->is_pseudogene($genbank_gene);
+        my $is_pseudogene = $self->is_pseudogene($genbank_gene);
 
-        my @genbank_transcripts = GSC::ImportExport::GenBank::Transcript->retrieve( gene => $genbank_gene);
+        my @genbank_transcripts = $self->retrieve_transcripts($genbank_gene);
 
         my $chromosome = undef;
         {
@@ -143,14 +152,8 @@ sub execute {
             }
         }
 
-        my $strand = GSC::ImportExport::GenBank::Gene->resolve_strand(gene=>$genbank_gene);
-        if ($strand eq '+') {
-            $strand = '+1';
-        }
-        elsif ($strand eq '-') {
-            $strand = '-1';
-        }
-        else {
+        my $strand = $self->resolve_strand($genbank_gene);
+        unless($strand eq '+1' or $strand eq '-1'){
             $self->warning_message("Invalid strand $strand, not importing");
             next RECORD;
         }
@@ -216,7 +219,7 @@ sub execute {
             
             next if $status eq 'unknown';
             
-            my $rna_transcript = GSC::ImportExport::GenBank::Gene->is_rna($genbank_gene);
+            my $rna_transcript = $self->is_rna($genbank_gene);
             $rna_transcript = 1 if $transcript_name =~ /^[NX]R/;
             
             my $transcript = Genome::Transcript->create(
@@ -241,10 +244,8 @@ sub execute {
             # usually for clone sequences that are associated with a gene
             # ....
             # these both come in sorted
-            my @genbank_cds = GSC::ImportExport::GenBank::CDS->retrieve(
-                transcript => $genbank_transcript, );
-            my @genbank_utr = GSC::ImportExport::GenBank::UTR->convert_to_gsc_params(
-                transcript => $genbank_transcript, );
+            my @genbank_cds = $self->retrieve_CDS($genbank_transcript);
+            my @genbank_utr = $self->retrieve_UTR($genbank_transcript);
 
             my @cds_exons;
             my @utr_exons;
@@ -379,7 +380,8 @@ sub execute {
         }
 
         # Periodically commit to files so we don't run out of memory
-        if (int($count/1000) >  $current_thousand){
+        #if (int($count/1000) >  $current_thousand){
+        if (int($count/10) >  $current_thousand){
             $current_thousand = int($count/1000);
             $self->write_log_entry($count, \@transcripts, \@sub_structures, \@genes, \@proteins);
 
@@ -413,6 +415,304 @@ sub execute {
 # read asn.1 file for all the genes, transcripts, tss's, protein names,
 # start going thru genbank flat file for transcript statuses (could do
 # before or after?)
+sub retrieve_gene {
+    my ($self, $locus_id) = @_;
+    my $idx = $self->get_idx_file;
+    my $gene = $idx->fetch_hash($locus_id);
+    unless ($gene) {
+        $self->error_message("Failed to fetch gene with locus ID $locus_id");
+        return;
+    }
+    return $gene;
+}
+
+sub get_idx_file {
+    my $self = shift;
+    my $idx_file = $self->idx_file;
+
+    my $idx;
+    if (-e $idx_file) {
+        my $rv = eval { $idx = Bio::ASN1::EntrezGene::Indexer->new(-filename => $idx_file) };
+        if ($rv != 1 or $@) {
+            unlink($idx_file);
+            return $self->generate_idx_file;
+        }
+        return $idx;
+    }
+    else {
+        return $self->generate_idx_file;
+    }
+
+    return $idx;
+}
+
+sub generate_idx_file {
+    my $self = shift;
+    my $idx_file = $self->idx_file;
+    my $agc_file = $self->flatfile;
+    my ($name, $path) = fileparse($agc_file);
+    my $name_without_suffix = substr($name, 0, rindex($name, "."));
+
+    my $idx = Bio::ASN1::EntrezGene::Indexer->new(
+        -filename => "$path/$name_without_suffix.idx",
+        -write_flag => 'WRITE'
+    );
+    $idx->make_index($agc_file);
+    return $idx
+}
+
+sub is_pseudogene {
+    my ($self, $gene) = @_;
+    if ($gene->[0]->{type} =~ /pseudo/) {
+        return 1;
+    }
+    return 0;
+}
+
+sub is_rna{
+    my ($self, $gene) = @_;
+    if ($gene->[0]->{gene}->[0]->{desc} =~ /non-protein coding/) {
+        return 1;
+    }
+
+    if ($gene->[0]->{type} =~ /RNA/) {
+        return 1;
+    }
+
+    return 0;
+}
+
+sub resolve_strand {
+    my ($self, $gene) = @_;
+    unless ($gene && ref $gene eq 'ARRAY') {
+        $self->error_message("resolve_strand needs an NCBI gene object");
+        return;
+    }
+
+    my @transcripts  = $self->retrieve_transcripts($gene); 
+    return unless @transcripts;
+
+    my @exons = $self->retrieve_exons($transcripts[0]);
+    return unless @exons;
+
+    return $exons[0]->{strand} eq 'plus' ? '+1' : '-1';
+}
+
+sub retrieve_exons{
+    my ($self, $transcript) = @_;
+    unless ($transcript){
+        $self->error_message("No transcript specified, exiting");
+        return;
+    }
+
+    my $acc = $transcript->{accession};
+    my @exons = ();
+    if (exists($transcript->{'genomic-coords'}->[0]->{int})) {
+        @exons = @{ dclone($transcript->{'genomic-coords'}->[0]->{int}) };
+    }
+    elsif (exists($transcript->{'genomic-coords'}->[0]->{mix}->[0]->{int})) {
+        @exons = @{ dclone($transcript->{'genomic-coords'}->[0]->{mix}->[0]->{int}) };
+    }
+    else {
+        $self->error_message('mRNA ' . $acc . ' has no exons!');
+        return;
+    }
+    
+    ## GenBank seems to start couting at 0, but GFF counts from 1
+    foreach my $e (@exons) {
+        ( $e->{from}, $e->{to} ) = map  { $_ + 1 }    ( $e->{from}, $e->{to} );
+    }
+    return $self->sort_tags(\@exons, 'from', 'to');
+}
+
+sub sort_tags{
+    my ($self, $tags_ref, $start, $end) = @_;
+    my @tags = @$tags_ref;
+    unless (@tags){
+        $self->error_message("No exons, exiting");
+        return;
+    }
+
+    # default the keys to 'start' and 'end' if not provided
+    $start = 'start' unless (defined $start);
+    $end   = 'end'   unless (defined $end);
+
+    # sort
+    foreach my $t (@tags) {
+    # make sure all start coords are less than the corresponding end coord
+        ($t->{$start}, $t->{$end}) = sort { $a <=> $b } ($t->{$start}, $t->{$end});
+    }
+    # then sort the entire list by start coordinate
+    @tags = sort { $a->{$start} <=> $b->{$start} } @tags;
+
+    return @tags;
+}
+
+sub retrieve_CDS{
+    my ($self, $transcript) = @_;
+    unless ($transcript){
+        $self->error_message("No transcript specified, exiting");
+        return;
+    }
+
+    my $acc = $transcript->{accession};
+         
+    my @cds = ();
+    unless (exists($transcript->{products})) {
+        warn ("Found no CDS info in magic genbank hash!");
+        return;
+    }
+
+    my $protein = @{ $transcript->{products} }[0];
+
+    if ( exists( $protein->{'genomic-coords'}->[0]->{int} ) ) {
+        @cds = @{ dclone( $protein->{'genomic-coords'}->[0]->{int} ) };
+    }  
+    elsif ( exists( $protein->{'genomic-coords'}->[0]->{'packed-int'} ) ) {
+        @cds = @{ dclone( $protein->{'genomic-coords'}->[0]->{'packed-int'} ) };
+    }
+    elsif (exists( $protein->{'genomic-coords'}->[0]->{mix}->[0]->{int} ) ) {
+        @cds = @{ dclone( $protein->{'genomic-coords'}->[0]->{mix}->[0]->{int} ) };
+    } 
+
+
+    unless (@cds) {
+        warn ("Found no CDS info in magic genbank hash!");
+    return;
+    }
+
+    ## GenBank seems to start couting at 0, but GFF counts from 1
+    foreach my $c (@cds) {
+        ( $c->{from}, $c->{to} ) = map  { $_ + 1 }    ( $c->{from}, $c->{to} );
+    }
+    @cds = $self->sort_tags(\@cds, 'from', 'to');
+}
+
+#TODO: This was essentially copied from /lims/lib/GSC/ImportExport.pm, and badly needs refactoring
+sub retrieve_UTR{
+    my ($self, $transcript) = @_;
+    unless ($transcript){
+        $self->error_message("No transcript specified, exiting");
+        return;
+    }
+
+    my $acc = $transcript->{accession};
+
+    my @exons = $self->retrieve_exons($transcript);
+    return unless @exons;
+
+    my @utr = ();
+
+    my %common_params = (
+        ref_class_name => "Bio::DNA::UTR",
+        text           => "mRNA $acc",
+    );
+
+    my $count = 1;
+    if (!exists($transcript->{'products'}) || @{ $transcript->{'products'}} == 0) {
+        ## Thar be no protein!  Okay, boys and girls, we're going to make some stuff up...
+        foreach my $exon (@exons) {
+            push @utr,
+                {
+                begin_position => $exon->{from},
+                end_position   => $exon->{to},
+                ref_id         => "$acc.cdsutr.$count",
+                strand         => $exon->{strand} eq 'plus' ? '+1' : '-1',
+                %common_params
+                };
+            $count++;
+        }
+    }
+    else {
+        my $protein = @{ $transcript->{'products'} }[0];
+
+        my @cds = $self->retrieve_CDS($transcript);
+        return unless @cds;
+        my $cds_start = $cds[0]->{from};
+        my $cds_stop  = $cds[-1]->{to};
+
+        foreach my $exon (@exons) {
+            last if ( $exon->{from} == $cds_start );
+            
+            if ( $exon->{to} < $cds_start ) {
+                push @utr,
+                    {
+                     begin_position => $exon->{from},
+                     end_position   => $exon->{to},
+                     ref_id         => "$acc.cdsutr.$count",
+                     strand         => $exon->{strand} eq 'plus' ? '+1' : '-1',
+                     %common_params
+                    };
+                $count++;
+                next;
+            }
+            else {
+                push @utr,
+                    {
+                     begin_position => $exon->{from},
+                     end_position   => $cds_start - 1,
+                     ref_id         => "$acc.cdsutr.$count",
+                     strand         => $exon->{strand} eq 'plus' ? '+1' : '-1',
+                     %common_params
+                    };
+               $count++;
+               last;
+           }
+       }
+
+       foreach my $exon ( reverse @exons ) {
+           last if ( $exon->{to} == $cds_stop );
+            
+           if ( $exon->{from} > $cds_stop ) {
+               push @utr,
+                   {
+                    begin_position => $exon->{from},
+                    end_position   => $exon->{to},
+                    ref_id         => "$acc.cdsutr.$count",
+                    strand         => $exon->{strand} eq 'plus' ? '+1' : '-1',
+                    %common_params
+                   };
+               $count++;
+               next;
+           }
+           else {
+               push @utr,
+                   {
+                    begin_position => $cds_stop + 1,
+                    end_position   => $exon->{to},
+                    ref_id         => "$acc.cdsutr.$count",
+                    strand         => $exon->{strand} eq 'plus' ? '+1' : '-1',
+                    %common_params
+                   };
+               $count++;
+               last;
+           }
+       }
+   }
+   return @utr;
+}
+
+sub retrieve_transcripts {
+    my ($self, $gene_hash) = @_;
+    my ($locus) = @{$gene_hash->[0]->{'locus'}};
+    unless (defined $locus) {
+        $locus = @{$gene_hash->[0]->{'locus'}}[0];
+    }
+
+    my @products;
+    if (exists $locus->{'products'}) {
+        push @products, @{$locus->{'products'}};
+    }
+    
+    unless (@products){
+        # TODO Make this more descriptive
+        $self->warning_message("No transcripts found for gene!");
+    }
+
+    my @transcripts = grep {$_->{'type'} = 'mRNA'} @products;
+    return @transcripts;
+}
+
 sub cache_transcript_status
 {
     my $self = shift;
@@ -514,8 +814,7 @@ sub transcript_bounds
     my ( $self, $transcript ) = @_;
 
     # go thru the exons here to get the start and stop.
-    my @exons = GSC::ImportExport::GenBank::Exon->retrieve(
-        transcript => $transcript );
+    my @exons = $self->retrieve_exons($transcript );
     my $strand = undef;
     my $max    = undef;
     my $min    = undef;

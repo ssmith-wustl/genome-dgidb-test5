@@ -174,6 +174,7 @@ sub execute {
         subject_class_name => $subject_class_name,
         auto_assign_inst_data => $self->auto_assign_inst_data,
         auto_build_alignments => $self->auto_build_alignments,
+        $self->type_specific_parameters_for_create,
     );
     if ($self->data_directory) {
         my $model_name = File::Basename::basename($self->data_directory);
@@ -212,6 +213,12 @@ sub execute {
     $self->result_model_id($model->id);
 
     return 1;
+}
+
+sub type_specific_parameters_for_create {
+    my $self = shift;
+
+    return (); #This exists to be overwritten by subclasses
 }
 
 sub _get_processing_profile_id_for_name {

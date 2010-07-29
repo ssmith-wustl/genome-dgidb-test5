@@ -53,11 +53,11 @@ EOS
 
 sub help_synopsis {
     return <<"EOS"
-genome model copy
-  --from-model-id=123456789
-  --new-model-name='copy_of_my_model'
-  processing_profile_name="use this processing profile instead"
-  ...
+    genome model copy --from 123456789 --to "copy_of_my_model" --model-overrides 
+    processing_profile_name="use this processing profile instead"
+    or
+    genome model copy 123456789 "copy_of_my_model" 
+    processing_profile_name="use this processing profile instead"   
 EOS
 }
 
@@ -110,13 +110,6 @@ sub execute {
           map {$cmd_class_object->property_meta_for_name($_)} @cmd_props;
     
     my %cmd_params = map {$_, $src_model->$_} @usable_props;
-
-    # This is a complete and total hack for copying somatic models
-    # I'd like to make this something smarter or more generic, but that is an order of magnitude more trouble
-    if ($define_cmd_class_name eq "Genome::Model::Command::Define::Somatic") {
-        $cmd_params{'tumor_model_id'} = $src_model->tumor_model->id;
-        $cmd_params{'normal_model_id'} = $src_model->normal_model->id;
-    }    
     
     # grab overridden properties and overlay them on top of the
     # parameters from the original model

@@ -18,6 +18,7 @@ sub _generate_content {
 
     my $query = $subject->query;
     my $page  = $subject->page;
+    my $fq    = $subject->fq; # facet query -- see dismax docs
 
     my $doc          = XML::LibXML->createDocument();
     my $results_node = $doc->createElement('solr-results');
@@ -26,6 +27,8 @@ sub _generate_content {
     my $response  = Genome::Search->search(
         $solrQuery,
         {
+              qs  => 1,
+              fq  => $fq,
             rows  => $RESULTS_PER_PAGE,
             start => $RESULTS_PER_PAGE * ( $page - 1 )
         }

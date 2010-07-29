@@ -125,6 +125,7 @@ sub get_valid_input_acefiles {
 #selectively print contig lines for exported contigs
 sub filter_ace_files {
     my ($self, $acefiles, $contigs, $action) = @_;
+
     my @new_aces; #return ary ref of new ace names
     foreach my $acefile (@$acefiles) {
 	my $ace_name = File::Basename::basename($acefile);
@@ -174,14 +175,16 @@ sub filter_ace_files {
 }
 #cats multiple ace files together
 sub merge_acefiles {
-    my ($self, $acefiles) = @_;
+    my ($self, %params) = @_;
+
     my $int_file = $self->intermediate_file_name('merge');
     my $int_fh = IO::File->new("> $int_file") ||
 	die "Can not create file handle for $int_file";
     my $contig_count = 0;     my $read_count = 0;
     #incrementing contigs numbering by 1M for each acefile
-    my $increment = 1000000;  my $inc_count = 0;
-    foreach my $ace_in (@$acefiles) {
+    my $increment = ( defined $params{increment} ? $params{increment} : 1000000 );
+    my $inc_count = 0;
+    foreach my $ace_in (@{$params{acefiles}}) {
 	my $fh = IO::File->new("< $ace_in") ||
 	    die "Can not create file handle to read $ace_in\n";
 	while (my $line = $fh->getline) {
@@ -200,7 +203,11 @@ sub merge_acefiles {
 		#first ace file will retain same contig numbering
 		#following ace files will have contig numbers incremented by 1,000,000
 		#TODO - need intelligent way of doing this
-		my $new_contig_number = ($increment * $inc_count) + $contig_number;
+        my ($sc_num, $ct_num) = split(/\./, $contig_number);
+		my $new_contig_number = (($increment * $inc_count) + $sc_num);
+        if ( $ct_num ) {
+            $new_contig_number .= '.'.$ct_num;
+        }
 		$line =~ /^CO\s+(\S+)/; #just to capture $'
 		$int_fh->print("CO Contig".$new_contig_number."$'"."\n");
 		next;
@@ -227,7 +234,16 @@ sub rewrite_ace_file {
 	$self->error_message("Can't find int ace file or file is zero size: ".$ace_in);
 	return;
     }
-    my $ace_out = $self->directory.'/'.$name.'.ace';
+
+    #if final output is a single ace file, allow users to defined own final ace name
+    my $ace_out;
+    if ($self->ace) {
+	$ace_out = ($self->ace_out) ? $self->ace_out : $self->directory.'/'.$name.'.ace';
+    }
+    else {
+	$ace_out = $self->directory.'/'.$name.'.ace';
+    }
+
     my $fh = IO::File->new("> $ace_out") ||
 	die "Can not create file handle for final ace file\n";
     $fh->write("AS $contig_count $read_count\n\n");

@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 require Bio::Taxon;
+require Carp;
 use Data::Dumper 'Dumper';
 use Genome::InlineConfig;
 require Genome::Utility::FileSystem;
@@ -67,12 +68,12 @@ sub classify {
     my ($self, $seq) = @_;
 
     unless ( $seq ) {
-        # Should die
+        Carp::confess("No sequence given to classify");
         return;
     }
 
     if ($seq->length < 50) {
-        # Error?
+        print STDERR "Can't classify sequence (".$seq->id."). Sequence length must be at least 50 bps.\n";
         return;
     }
     
@@ -81,6 +82,7 @@ sub classify {
         $parsed_seq = new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
     };
     unless ( $parsed_seq ) {
+        print STDERR "Can't classify sequence (".$seq->id."). Can't create rdp parsed sequence.\n";
         return;
     }
 
@@ -89,6 +91,7 @@ sub classify {
         $classification_result = $self->{'classifier'}->classify($parsed_seq);
     };
     unless ( $classification_result ) {
+        print STDERR "Can't classify sequence (".$seq->id."). No classification result was returned from the classifier.\n";
         return;
     }
 

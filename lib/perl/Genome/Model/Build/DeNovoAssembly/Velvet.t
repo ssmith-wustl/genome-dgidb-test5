@@ -53,11 +53,11 @@ _test_files_and_values(
 my %metrics = $build->set_metrics;
 #print Dumper(\%metrics);
 my $expected_metrics = {
-    'reads_processed_success' => '0.71',
-    'reads_not_assembled_pct' => '0.70',
+    'reads_processed_success' => '0.714',
+    'reads_not_assembled_pct' => '0.702',
     'supercontigs' => '2424',
     'average_supercontig_length' => '146',
-    'reads_assembled_success' => '0.30',
+    'reads_assembled_success' => '0.298',
     'reads_assembled' => '7459',
     'contigs' => '2424',
     'average_read_length' => '90',
@@ -71,6 +71,21 @@ my $expected_metrics = {
 is_deeply(\%metrics, $expected_metrics, 'metrics match');
 for my $name ( keys %metrics ) {
     is($build->$name, $metrics{$name}, "set $name metric");
+}
+#old
+my %old_to_new_metrics = (
+    total_contig_number => 'contigs',
+    n50_contig_length => 'median_contig_length',
+    total_supercontig_number => 'supercontigs',
+    n50_supercontig_length => 'median_supercontig_length',
+    total_input_reads => 'reads_processed',
+    placed_reads => 'reads_assembled',
+    chaff_rate => 'reads_not_assembled_pct',
+    total_contig_bases => 'assembly_length',
+);
+for my $old ( keys %old_to_new_metrics ) {
+    my $new = $old_to_new_metrics{$old};
+    is($build->$old, $build->$new, "$old matches $new");
 }
 
 done_testing();

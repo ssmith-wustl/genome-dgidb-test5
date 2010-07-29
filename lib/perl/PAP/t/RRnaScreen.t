@@ -9,6 +9,8 @@ BEGIN {
     use_ok('PAP::Command::RRnaScreen');
 }
 
+SKIP: {
+    skip "this module will probably be remove; it's not used", 3 unless 0;
 my $tempdir = File::Temp::tempdir(
                                   'PAP_RRnaScreen_test_XXXXXXXX',
                                   DIR     => '/tmp',
@@ -30,7 +32,7 @@ my @query_names = @{$command->dead_genes()};
 #print $#query_names, "\n"; # should be an array with 5 items...
 is($#query_names, 4, 'number of results from parsed output');
 
-
+}
 
 
 

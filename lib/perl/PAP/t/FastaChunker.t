@@ -1,12 +1,14 @@
 use strict;
 use warnings;
 
+use above "PAP";
 use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
+use File::Basename;
 use Test::More tests => 464;
 
 BEGIN {
@@ -15,7 +17,7 @@ BEGIN {
 }
 
 my $command = PAP::Command::FastaChunker->create(
-                                                'fasta_file' => 'data/B_coprocola.fasta',
+                                                'fasta_file' => File::Basename::dirname(__FILE__).'/data/B_coprocola.fasta',
                                                 'chunk_size' => 10,
                                                 );
 isa_ok($command, 'PAP::Command::FastaChunker');

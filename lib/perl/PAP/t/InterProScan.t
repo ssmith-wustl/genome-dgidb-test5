@@ -1,13 +1,16 @@
 use strict;
 use warnings;
 
+use above "PAP";
 use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 289;
+use File::Basename;
+#use Test::More tests => 289;
+use Test::More;
 
 BEGIN {
     use_ok('PAP::Command');
@@ -21,7 +24,7 @@ my $tempdir = File::Temp::tempdir(
                                  );
 
 my $command = PAP::Command::InterProScan->create(
-                                                 'fasta_file'      => 'data/B_coprocola.chunk.fasta',
+                                                 'fasta_file'      => File::Basename::dirname(__FILE__).'/data/B_coprocola.chunk.fasta',
                                                  'report_save_dir' => $tempdir,
                                                 );
 isa_ok($command, 'PAP::Command::InterProScan');
@@ -65,3 +68,4 @@ my $interpro_output_fh = $command->iprscan_output();
 
 isa_ok($interpro_output_fh, 'File::Temp');
 ok($interpro_output_fh->opened());
+done_testing();

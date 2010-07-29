@@ -135,19 +135,29 @@ sub calculate_metrics {
     }
 
     $metrics{reads_not_assembled_pct} =~ s/%//;
-    $metrics{reads_not_assembled_pct} = sprintf('%0.2f', $metrics{reads_not_assembled_pct} / 100);
+    $metrics{reads_not_assembled_pct} = sprintf('%0.3f', $metrics{reads_not_assembled_pct} / 100);
 
     $metrics{reads_attempted} = $self->calculate_reads_attempted
-        or return;
+        or return; # error in sub
     $metrics{reads_processed_success} =  sprintf(
-        '%0.2f', $metrics{reads_processed} / $metrics{reads_attempted}
+        '%0.3f', $metrics{reads_processed} / $metrics{reads_attempted}
     );
     $metrics{reads_assembled_success} = sprintf(
-        '%0.2f', $metrics{reads_assembled} / $metrics{reads_processed}
+        '%0.3f', $metrics{reads_assembled} / $metrics{reads_processed}
     );
     
     return %metrics;
 }
+
+# Old metrics
+sub total_contig_number { return $_[0]->contigs; }
+sub n50_contig_length { return $_[0]->median_contig_length; }
+sub total_supercontig_number { return $_[0]->supercontigs; }
+sub n50_supercontig_length { return $_[0]->median_supercontig_length; }
+sub total_input_reads { return $_[0]->reads_processed; }
+sub placed_reads { return $_[0]->reads_assembled; }
+sub chaff_rate { return $_[0]->reads_not_assembled_pct; }
+sub total_contig_bases { return $_[0]->assembly_length; }
 #<>#
 
 1;

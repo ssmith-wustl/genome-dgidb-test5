@@ -41,6 +41,7 @@ class Genome::Model::Tools::Picard::FastqToSam {
         platform => {
             is  => 'String',
             doc => 'The platform type (e.g. illumina, solid) to insert into the read group header.',
+            is_optional => 1,
         },
         sort_order => {
             is  => 'String',
@@ -93,7 +94,7 @@ sub execute {
     my $args = join( ' ',
         map {
             my $value = $self->$_;
-            defined($value) ? ( uc($_) . "=$value" ) : ()
+            defined($value) ? ( uc($_) . "='$value'" ) : ()
         } sort qw(
             fastq fastq2 output platform_unit quality_format platform
             sort_order sample_name library_name read_group_name max_records_in_ram

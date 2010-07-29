@@ -234,6 +234,40 @@ sub execute {
                 }
 
                 if (@models) {
+
+                    MODEL_REF1:
+                    foreach my $model (@models) {
+
+                        if ($model->can('reference_sequence_build')) {
+                 
+                            unless (defined($model->reference_sequence_build())) {
+ 
+                                my $reference_sequence_build;
+                                
+                                eval { 
+                                    $reference_sequence_build = $self->_resolve_imported_reference_sequence_build($pp);
+                                };
+
+                                if ($@) {
+                                    $self->error_message("_resolve_imported_reference_sequence_build blew up: $@");
+                                    push @process_errors, $self->error_message;
+                                    next MODEL_REF1;
+                                }
+
+                                unless (defined($reference_sequence_build)) { 
+                                    $self->error_message("failed to resolve reference sequence build");
+                                    push @process_errors, $self->error_message;
+                                    next MODEL_REF1;
+                                }
+
+                                $model->reference_sequence_build($reference_sequence_build);
+
+                            }
+
+                        }
+
+                    }
+
                     MODEL_IDA: 
                     foreach my $model (@models) {
                         
@@ -326,12 +360,35 @@ sub execute {
                     auto_assign_inst_data => 1,
                 );
 
-
                 unless ( defined($model) ) {
                     $self->error_message(
                         "Failed to create model '$model_name'");
                     push @process_errors, $self->error_message;
                     next PP;
+                }
+
+                if ($model->can('reference_sequence_build')) {
+                  
+                    my $reference_sequence_build;
+
+                    eval {
+                        $reference_sequence_build = $self->_resolve_imported_reference_sequence_build($pp);
+                    };
+                    
+                    if ($@) {
+                        $self->error_message("_resolve_imported_reference_sequence_build blew up: $@");
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                    unless (defined($reference_sequence_build)) { 
+                        $self->error_message("failed to resolve reference sequence build");
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                    $model->reference_sequence_build($reference_sequence_build);
+
                 }
 
                 if ( defined($capture_target) ) {                
@@ -469,6 +526,7 @@ sub execute {
             # we don't want to (automagically) assign capture and non-capture data to the same model.
             my @models = @found_models;
             if ( @models and $genome_instrument_data->can('target_region_set_name') ) {
+
                 my $id_capture_target =
                     $genome_instrument_data->target_region_set_name();                 
                 
@@ -587,21 +645,18 @@ sub execute {
 
     MODEL:   
     for my $model_id (sort keys %definitely_build) {
-        my $model = Genome::Model->get($model_id); 
+        my $model = Genome::Model->get($model_id);
+        $self->status_message("Building model '$model_id'..."); 
         eval {
-            Genome::Model::Build::Command::Start->execute(
-                model_identifier => $model_id,
-                force            => 1,
-            ) or die 'Failed to start a build for model ' . $model_id;
+            my $cmd = qq{genome model build start --force --model $model_id};
+            Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
         };
     
         if ($@) {
             warn $@;
-            UR::Context->rollback();
-            next MODEL;
+            $self->status_message("Build failed for model '$model_id'");
         }
         
-        UR::Context->commit();
     }
     
     $self->status_message("Completing PSEs...");
@@ -615,5 +670,33 @@ sub execute {
     $self->status_message("Saving completed PSEs.");
     return 1;    
 }
+
+sub _resolve_imported_reference_sequence_build {
+
+    my $self               = shift;
+    my $processing_profile = shift;
+
+
+    my $name;
+  
+    if (defined($processing_profile->reference_sequence_name) && ($processing_profile->reference_sequence_name ne "")) {
+        $name = $processing_profile->reference_sequence_name;
+        $self->status_message("Using reference sequence name '$name' from processing profile");
+    }    
+    else {
+        $name = 'NCBI-human-build36';
+        $self->status_message("Using default reference sequence name '$name' since processing profile does not specify one");
+    }
+    
+    my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->from_cmdline($name);
+
+    unless (defined($reference_sequence_build)) {
+        $self->warning_message("failed to resolve reference sequence name");    
+    }   
+
+    return $reference_sequence_build;
+
+}
+
 
 1;
