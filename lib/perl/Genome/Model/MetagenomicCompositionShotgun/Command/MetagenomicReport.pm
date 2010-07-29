@@ -11,19 +11,19 @@ $|=1;
 
 class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
     is => 'Genome::Command::OO',
-    doc => 'Generate reports for a MetagenomicCompositionShotgun build.',
+    doc => 'Generate metagenomic report for a MetagenomicCompositionShotgun build.',
     has => [
-        model => {
-            is => 'Genome::Model::Build::MetagenomicCompositionShotgun', # we're going to remove "Imported" soon
-            is_optional => 1,
-        },
-        model_id => {
+        build_id => {
             is => 'Int',
-            is_optional => 1,
         },
-        model_name => {
+        base_output_dir => {
             is => 'Text',
-            is_optional => 1,
+        },
+        taxonomy_file => {
+            is => 'Parh',
+        },
+        viral_taxonomy_file => {
+            is => 'Path',
         },
         overwrite => {
             is => 'Boolean',
@@ -38,44 +38,15 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
 			is => 'Text',
 			is_optional => 1,
 		},
-        base_output_dir => {
-            is => 'Text',
-            is_optional => 1,
-            default => '/gscmnt/sata835/info/medseq/hmp-july2010',
-        },
-        taxonomy_file => {
-            is => 'Parh',
-            is_optional => 1,
-            default => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
-        },
-        viral_taxonomy_file => {
-            is => 'Path',
-            is_optional => 1,
-            default => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
-        },
     ],
 };
 
 
 sub execute {
     my ($self) = @_;
-    my $model;
-    if ($self->model_id and $self->model_name){
-        die 'error';
-    }elsif ($self->model_id){
-        $model = Genome::Model->get($self->model_id);
-        die 'no model' unless $model;
-        $self->model($model);
-    }elsif ($self->model_name){
-        $model = Genome::Model->get(name => $self->model_id);
-        die 'no model' unless $model;
-        $self->model($model);
-    }else{
-        die 'provide model id or name';
-    };
 
-    my $build = $model->last_succeeded_build;
-    die 'no build' unless $build;
+    my $build = Genome::Model::Build->get($self->build_id);
+    my $model = $build->model;
 
     unless ($self->report_path){
         my $sample_name = $model->subject_name;
