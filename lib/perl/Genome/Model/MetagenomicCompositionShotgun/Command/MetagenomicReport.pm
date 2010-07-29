@@ -61,7 +61,7 @@ sub execute {
     unless ($self->log_path){
         $self->log_path($self->report_path . '/log');
     }
-    $self->log("Report path: " . $self->report_path);
+    $self->status_message("Report path: " . $self->report_path);
 
 
     my $dir = $build->data_directory;
@@ -74,11 +74,11 @@ sub execute {
 
     my $merged_bam = $self->report_path."/merged_metagenomic_alignment.bam";
     if (-e $merged_bam and -e $merged_bam.".OK"){
-        $self->log("metagenomic merged bam already produced, skipping");
+        $self->status_message("metagenomic merged bam already produced, skipping");
     }else{
         my $rv;
 
-        $self->log("starting sort and merge");
+        $self->status_message("starting sort and merge");
 
         eval{
             $rv = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->execute(
@@ -101,10 +101,10 @@ sub execute {
         system ("touch $merged_bam.OK");
     }
 
-    $self->log("Finished sort and merge, compiling metagenomic reports");
+    $self->status_message("Finished sort and merge, compiling metagenomic reports");
 
 
-    $self->log("Starting taxonomy count...\n");
+    $self->status_message("Starting taxonomy count...\n");
     $DB::single = 1;
 
     # Load Taxonomy From Taxonomy Files
@@ -163,8 +163,8 @@ sub execute {
         $ref_counts_hash{$ref_name}++;
     }
     
-    $self->log("skipping $ignore_unmapped reads without a metagenomic mapping");
-    $self->log("skipping $ignore_singleton fragment reads(mate mapped to human)");
+    $self->status_message("skipping $ignore_unmapped reads without a metagenomic mapping");
+    $self->status_message("skipping $ignore_singleton fragment reads(mate mapped to human)");
 
     # Count And Record Taxonomy Hits
     my $read_count_output_file = $self->report_path . '/read_count_output';
@@ -180,7 +180,7 @@ sub execute {
     my %viral_species_counts_hash;
 
 
-    $self->log('creating metagenomic count files');
+    $self->status_message('creating metagenomic count files');
 
     print $read_cnt_o "Reference Name\t#Reads with hits\tSpecies\tPhyla\tHMP genome\n";
     do {
@@ -233,23 +233,8 @@ sub execute {
     $self->_write_count_and_close($viral_subfamily_output_file, "Viral Subfamily", \%viral_subfamily_counts_hash);
 
     system("touch ".$self->report_path."/FINISHED");
-    $self->log("metagenomic report successfully completed");
+    $self->status_message("metagenomic report successfully completed");
     return 1;
-}
-
-sub log {
-    my $self = shift;
-    my $str = shift;
-    my @time_data = localtime(time);
-
-    $time_data[1] = '0' . $time_data[1] if (length($time_data[1]) == 1);
-    $time_data[2] = '0' . $time_data[2] if (length($time_data[2]) == 1);
-
-    my $time = join(":", @time_data[2, 1]);
-
-    print $time . " - $str\n";
-    my $log_fh = IO::File->new('>>' . $self->log_path);
-    print $log_fh $time . " - $str\n";
 }
 
 sub _load_taxonomy {
