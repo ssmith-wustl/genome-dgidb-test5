@@ -297,22 +297,32 @@ sub _execute_build {
     
     print "DEBUG: Validating merge/sort...\n";
     unless ($rv){
-        print "Failed to sort and merge bams\n";
         $self->error_message("Failed to sort and merge bams");
         die;
     }
     
-#    # re-sort merged file by position
-#    my $combined_pos_sorted_sam = $build->data_directory."/combined_sorted.sam";
-#    Genome::Model::Tools::Sam::SortBam->execute(
-#            file_name => $combined_name_sorted_sam,
-#            output_file => $combined_pos_sorted_sam,
-#            maximum_memory => 1500000000,
-#        );
-
-    # TODO:
-    # call Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport
-    # but change the above to take this exact build instead of the model
+    # TODO: Where should these go? build directory or /gscmnt/sata835/info/medseq/hmp-july2010?
+    $rv = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->execute(
+        build_id => $build->id,
+        base_output_dir => $build->data_directory
+    );
+    unless($rv) {
+        $self->error_message("QC report execution did not return 1");
+        die;
+    }
+    
+    # TODO: Where should these go? build directory or /gscmnt/sata835/info/medseq/hmp-july2010?
+    # TODO: Should we move the taxonomy files into the repo?
+    $rv = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->execute(
+        build_id => $build->id,
+        base_output_dir => $build->data_directory,
+        taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
+        viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
+    );
+    unless($rv) {
+        $self->error_message("metagenomic report execution did not return 1");
+        die;
+    }
     
 
     return 1;
