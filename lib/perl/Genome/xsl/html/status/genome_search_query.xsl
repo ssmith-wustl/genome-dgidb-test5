@@ -36,24 +36,26 @@
             <xsl:when test="/solr-results/@num-found &gt; 0">
               <div class="sidebar_search rounded-right">
                 <h4>Show:</h4>
+                  <xsl:variable name="selected_facet" select="//@facet-name"/>
                 <ul>
 
                   <li>
+                    <xsl:if test="not(//@facet-name)">
+                      <xsl:attribute name="class">current</xsl:attribute>
+                    </xsl:if>
                     <div class="category">
                       <a>
-                        <xsl:attribute name="href">
-                          /view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/>
-                        </xsl:attribute>
+                        <xsl:attribute name="href">/view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/></xsl:attribute>
                         All
                       </a>
-                    (<xsl:value-of select="@num-found"/>)</div>
+                    </div>
                   </li>
-                  <xsl:variable name="selected_facet" select="//@facet-name"/>
+
                   <xsl:for-each select="facets/field">
 
                     <xsl:variable name="current_facet" select="@name"/>
                     <li>
-                      <xsl:if test="$selected_facet = $current_facet">
+                      <xsl:if test="($selected_facet = $current_facet)">
                         <xsl:attribute name="class">current</xsl:attribute>
                       </xsl:if>
 
