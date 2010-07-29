@@ -7,7 +7,7 @@ use Cwd;
 use above "Genome";
 use Test::More;
 
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-CreateOutputFiles_v3';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-CreateOutputFiles_v4';
 
 ok(-d $data_dir, "Found data directory: $data_dir");
 

@@ -105,15 +105,17 @@ sub execute {
 	}
 	else { #append with next contig/gap
 	    unless (exists $gap_sizes->{$seq_obj->primary_id}) {
-		$self->error_message("Didn't find gap size for contig: ".$seq_obj->primary_id."\n\t".
-				     "Expected on becase next contig in scaffold exists: $next_ctg_in_scaf");
-		return;
+		$self->warning_message("Didn't find gap size for contig ".$seq_obj->primary_id."\n\t".
+				       "Expected one becase $next_ctg_in_scaf exists .. setting it to default: 100 bp");
+		#return;
 	    }
+	    my $gap_size = (exists $gap_sizes->{$seq_obj->primary_id}) ? $gap_sizes->{$seq_obj->primary_id} : 100;
+
 	    $fasta .= $seq_obj->seq;
-	    $fasta .= 'N' x $gap_sizes->{$seq_obj->primary_id};
+	    $fasta .= 'N' x $gap_size;#$gap_sizes->{$seq_obj->primary_id};
 	    $fasta_length += length $seq_obj->seq;
 	    $fasta_and_gap_length += length $seq_obj->seq;
-	    $fasta_and_gap_length += $gap_sizes->{$seq_obj->primary_id};
+	    $fasta_and_gap_length += $gap_size;#$gap_sizes->{$seq_obj->primary_id};
 	}
     }
     
