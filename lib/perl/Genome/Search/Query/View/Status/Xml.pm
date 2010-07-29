@@ -46,10 +46,6 @@ sub _generate_content {
         $params
     );
 
-    use Data::Dumper;
-    warn Dumper "QUERY: $solrQuery";
-    warn Dumper $params;
-
     my $time = UR::Time->now();
     $results_node->addChild( $doc->createAttribute( "generated-at", $time ) );
     $results_node->addChild( $doc->createAttribute( "input-name",   "query" ) );
