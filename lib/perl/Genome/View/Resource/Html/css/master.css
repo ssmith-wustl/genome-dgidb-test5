@@ -559,6 +559,11 @@ td.stage_name {
     line-height: 14px;
 }
 
+.sidebar_search ul li.current {
+
+    font-weight: bold;
+}
+
 .sidebar_search ul li a:hover {
     text-decoration: underline;
 }

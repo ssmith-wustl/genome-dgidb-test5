@@ -18,21 +18,37 @@ sub _generate_content {
 
     my $query = $subject->query;
     my $page  = $subject->page;
-    my $fq    = $subject->fq; # facet query -- see dismax docs
 
     my $doc          = XML::LibXML->createDocument();
     my $results_node = $doc->createElement('solr-results');
 
+    my $params = {   
+        rows         => $RESULTS_PER_PAGE,
+        start        => $RESULTS_PER_PAGE * ( $page - 1 )
+    };
+
+    my $fq = $subject->fq;    # facet query -- see dismax docs
+    if ($fq) {
+        # during drill down, still show all facet counts
+        $params->{'facet.field'} = '{!ex=tt}type';
+        $params->{'fq'} = '{!tag=tt}' . $fq;
+   
+        my ($facet_name) = $fq =~ /type:(.*)/;
+        $facet_name =~ s/"//g;
+        $results_node->addChild( $doc->createAttribute( "facet-name", $facet_name ));
+    }
+
+    $params->{'qs'} = 1;
+
     my $solrQuery = $query;
-    my $response  = Genome::Search->search(
+    my $response = Genome::Search->search(
         $solrQuery,
-        {
-              qs  => 1,
-              fq  => $fq,
-            rows  => $RESULTS_PER_PAGE,
-            start => $RESULTS_PER_PAGE * ( $page - 1 )
-        }
+        $params
     );
+
+    use Data::Dumper;
+    warn Dumper "QUERY: $solrQuery";
+    warn Dumper $params;
 
     my $time = UR::Time->now();
     $results_node->addChild( $doc->createAttribute( "generated-at", $time ) );
@@ -41,7 +57,6 @@ sub _generate_content {
     $results_node->addChild( $doc->createAttribute( "num-found", $response->content->{'response'}->{'numFound'} ));
 
 #   FACET XML
-
 #    facet_dates
 #    facet_fields
 #    facet_queries

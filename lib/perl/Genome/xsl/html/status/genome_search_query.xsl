@@ -38,13 +38,29 @@
                 <h4>Show:</h4>
                 <ul>
 
+                  <li>
+                    <div class="category">
+                      <a>
+                        <xsl:attribute name="href">
+                          /view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/>
+                        </xsl:attribute>
+                        All
+                      </a>
+                    (<xsl:value-of select="@num-found"/>)</div>
+                  </li>
+                  <xsl:variable name="selected_facet" select="//@facet-name"/>
                   <xsl:for-each select="facets/field">
+
+                    <xsl:variable name="current_facet" select="@name"/>
                     <li>
+                      <xsl:if test="$selected_facet = $current_facet">
+                        <xsl:attribute name="class">current</xsl:attribute>
+                      </xsl:if>
+
                       <div><xsl:attribute name="class">icon16 <xsl:value-of select="@icon-prefix"/>_16</xsl:attribute><br/></div>
                       <div class="category">
                         <a>
-                          <xsl:attribute name="href">
-                            /view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/>&amp;fq=type:"<xsl:value-of select="@name"/>"
+                          <xsl:attribute name="href">/view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/>&amp;fq=type:"<xsl:value-of select="@name"/>"
                           </xsl:attribute>
                           <xsl:value-of select="@label"/>
                         </a>
@@ -74,7 +90,7 @@
                 <xsl:choose>
                   <xsl:when test="string(page-info/@previous-page)">
                     <a class="mini btn">
-                      <xsl:attribute name="href"><xsl:text>/view/genome/search/query/status.html?query=</xsl:text><xsl:value-of select="@query"/>&amp;fq=type:"<xsl:value-of select="//facets/field/@name"/>"<xsl:text>&amp;page=</xsl:text><xsl:value-of select="page-info/@previous-page" /></xsl:attribute><span class="sm-icon sm-icon-triangle-1-w"><br/></span>
+                      <xsl:attribute name="href"><xsl:text>/view/genome/search/query/status.html?query=</xsl:text><xsl:value-of select="@query"/>&amp;fq=type:"<xsl:value-of select="//@facet-name"/>"<xsl:text>&amp;page=</xsl:text><xsl:value-of select="page-info/@previous-page" /></xsl:attribute><span class="sm-icon sm-icon-triangle-1-w"><br/></span>
                     </a>
                   </xsl:when>
                   <xsl:otherwise>
@@ -89,7 +105,7 @@
                 <xsl:choose>
                   <xsl:when test="string(page-info/@next-page)">
                     <a class="mini btn">
-                      <xsl:attribute name="href"><xsl:text>/view/genome/search/query/status.html?query=</xsl:text><xsl:value-of select="@query"/>&amp;fq=type:"<xsl:value-of select="//facets/field/@name"/>"<xsl:text>&amp;page=</xsl:text><xsl:value-of select="page-info/@next-page" /></xsl:attribute>
+                      <xsl:attribute name="href"><xsl:text>/view/genome/search/query/status.html?query=</xsl:text><xsl:value-of select="@query"/>&amp;fq=type:"<xsl:value-of select="//@facet-name"/>"<xsl:text>&amp;page=</xsl:text><xsl:value-of select="page-info/@next-page" /></xsl:attribute>
                       <span class="sm-icon sm-icon-triangle-1-e"><br/></span>
                     </a>
                   </xsl:when>
