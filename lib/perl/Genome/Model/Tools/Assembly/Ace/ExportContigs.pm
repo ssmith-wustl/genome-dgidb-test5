@@ -16,7 +16,7 @@ class Genome::Model::Tools::Assembly::Ace::ExportContigs {
 	    is_optional => 1,
 	    doc => 'ace file to export contigs from',
 	},
-	acefile_names => {
+	acefile_names => { #TODO remove this
 	    type => 'Text',
 	    is_optional => 1,
 	    is_many => 1,
@@ -40,6 +40,11 @@ class Genome::Model::Tools::Assembly::Ace::ExportContigs {
 	    type => 'Text',
 	    is_optional => 1,
 	    doc => 'directory where ace files are located',
+	},
+	ace_out => {
+	    type => 'Text',
+	    is_optional => 1,
+	    doc => 'allow user to define ace file name if input is a single ace',
 	},
     ],
 };
@@ -80,7 +85,7 @@ sub execute {
     }
 
     if ($self->merge) {
-	unless ($self->merge_acefiles($new_aces)) {
+	unless ($self->merge_acefiles(acefiles => $new_aces)) {
 	    $self->error_message("Failed to merge ace files");
 	    return;
 	}

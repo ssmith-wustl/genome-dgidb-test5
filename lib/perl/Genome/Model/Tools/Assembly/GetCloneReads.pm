@@ -34,12 +34,11 @@ class Genome::Model::Tools::Assembly::GetCloneReads {
 	    is_mutable => 1,
 	    is_optional => 1,
 	},
-	get => {
-	    is => 'Text',
-	    doc => 'Types of data to get, fasta, qual, trace, phd',
-	    is_many => 1,
+	dump_separately => {
+	    is => 'Boolean',
+	    doc => 'Option create separate fasta and quals for each clone',
 	    is_optional => 1,
-	    valid_values => ['fasta', 'qual', 'trace', 'phd'],
+	    default_value => 0,
 	},
     ],
 };
@@ -51,12 +50,17 @@ sub help_brief {
 sub help_synopsis {
     return <<"EOS"
 gmt assembly get-clone-reads --list-of-clones /gscmnt/111/my_assembly/list --read-type end --output-dir /gscmnt/111/my_assembly
+gmt assembly get-clone-reads --list-of-clones /gscmnt/111/my_assembly/list --read-type end --output-dir /gscmnt/111/my_assembly --dump-separately
 gmt assembly get-clone-reads --clone H_GY-34H03 --read-type all
 EOS
 }
 
 sub help_detail {
     return <<EOS
+Tools to dump fasta and qual for a clone or list of clones.  Use --read-type end to dump CLONEEND
+sequences and --read-type all to dump all reads.  Use --dump-separately option to create separate
+fasta and qual for each clone; otherwise, tool will dump all fasta and qual into
+combined_clone.fasta/qual files
 EOS
 }
 
@@ -69,109 +73,119 @@ sub execute {
 	return;
     }
 
+    my @seq_ids;
+
     foreach my $clone_name (@clones) {
+	$clone_name =~ s/\s+$//;
 	$self->status_message("Getting reads for clone: $clone_name\n");
-	
-	my $co = GSC::Clone->get(clone_name => $clone_name);
-	unless ($co) {
-	    $self->status_message("Failed to get GSC::Clone object for $clone_name .. skipping");
-	    next;
-	}
-	#get clone id
-	my $clone_id;
-	unless ($clone_id = $self->_get_id($co)) {
-	    $self->status_message("Failed get get id .. skipping");
+
+	#get seq_ids
+	my @ids;
+	unless (@ids = $self->_get_seq_ids($clone_name)) {
+	    $self->status_message("Failed to find any reads for clone: $clone_name");
 	    next;
 	}
 
-	#get reads
-	my $reads;
-	unless ($reads = $self->_get_reads($clone_id)) {
-	    $self->status_message("Failed to get any reads .. skipping");
-	    next;
-	}
+	$self->status_message("Found ".scalar @ids." reads");
 
-	#$self->status_message("Found ".scalar @$reads." reads to dump");
-	unless (scalar @$reads > 0) {
-	    $self->status_message("Found 0 reads to dump .. skipping");
-	    next;
-	}
+	@seq_ids = (@seq_ids, @ids);
 
-	#print re_ids to file
-	unless ($self->_write_read_ids_to_file($clone_name, $reads)) {
-	    $self->error_message("Failed to write read ids to file $clone_name.re_ids");
-	    return;
-	}
-
-	#use seq_dump to dump fasta/quals
-	#running into some errors
-#	unless ($self->_dump_data($clone_name)) {
-#	    $self->error_message("Failed to dump fasta/qual");
-#	    return;
-#	}
-
-	#use gsc::sequence::item to dump fasta/qual individually
-	unless ($self->_dump_reads_individually($clone_name)) {
-	    $self->error_message("Failed to dump read individually");
-	    return
+	#create separate fasta and quals for each clone 
+	if ($self->dump_separately) {
+	    #create re_ids file for seq_dump input
+	    unless ($self->_write_read_ids_to_file($clone_name, @ids)) {
+		$self->error_message("Failed to write read ids to file $clone_name.re_ids");
+		return;
+	    }
+	    #usee seq_dump to dump fasta and quals
+	    unless ($self->_dump_data ($clone_name)) {
+		$self->error_message("Failed to dump fasta and qual for $clone_name");
+		return;
+	    }
 	}
     }
+    #dump all fasta and qual into combined fasta and qual files
+    unless ($self->dump_separately) {
+	#make re_ids file
+	unless ($self->_write_read_ids_to_file('combined_clones', @seq_ids)) {
+	    $self->error_message("Failed to write read ids to file combined_clones.re_ids");
+	    return;
+	}
+	#dump fasta and quals
+	unless ($self->_dump_data ('combined_clones')) {
+	    $self->error_message("Failed to dump fasta and qual for combined_clones");
+	    return;
+	}
+    }
+
+    #use gsc::sequence::item to dump fasta/qual individually
+    #TODO - seems to convert Ns in seq to dashes .. will look into it
+    #unless ($self->_dump_reads_individually($clone_name)) {
+	#$self->error_message("Failed to dump read individually");
+	#return
+    #}
 
     return 1;
 }
 
-sub _get_id { #not sure what id this is .. 
-    my ($self, $co) = @_;
-    #TODO - this seems to never be defined
-    my $dna_ext_name = GSC::DNAExternalName->get (
-	name_type => 'ncbi clone id',
-	dna_id => $co->id,
-	);
-    my $id;
-    if ($dna_ext_name) {
-	$id = $dna_ext_name->name;
-    }
-    else {
-	$id = $co->convert_name(output => 'agi');
-	if (! $id) {
-	    $id = $co->convert_name(output => 'ncbi');
-	}
-    }
-    return $id;
-}
+sub _get_seq_ids {
+    my ($self, $clone_name) = @_;
 
-sub _get_reads {
-    my ($self, $id) = @_;
-    #TODO - just get passed reads
-    my @reads;
-    if ($self->read_type eq 'all') {
-	@reads = GSC::Sequence::Read->get(
-	    clone_id => $id,
-	    );
-    }
-    else {
-	@reads = GSC::Sequence::Read->get(
-	    clone_id => $id,
-	    trace_type_code => 'CLONEEND',
-	    );
-    }
+    my $clone = GSC::Clone->get(clone_name => $clone_name);
+
+    my @clone_ids_ncbi;
+    my $dna_ext_name = GSC::DNAExternalName->get(name_type  => 'ncbi clone id',
+						 dna_id     => $clone->id,
+	);
+    my $external_id_ncbi = $dna_ext_name->name if($dna_ext_name);
+    push @clone_ids_ncbi, $external_id_ncbi if $external_id_ncbi;
     
-    return \@reads;
+    my $agi_id_ncbi = $clone->convert_name(output => 'agi');
+    push @clone_ids_ncbi, $agi_id_ncbi if $agi_id_ncbi;
+
+    my $clone_id_ncbi = $clone->convert_name(output => 'ncbi');
+    push @clone_ids_ncbi, $clone_id_ncbi if $clone_id_ncbi;
+    push @clone_ids_ncbi, $clone_name;
+    
+    #try clone_id and trace_type_code to get reads
+    my %params = (
+	'clone_id' => [@clone_ids_ncbi],
+	);
+    $params{'trace_type_code'} = 'CLONEEND' if $self->read_type eq 'end';
+
+    my @srs = GSC::Sequence::Read->get( %params	);
+
+    #try clone_id and stratege
+    unless (@srs) {
+	delete $params{'trace_type_code'} if exists $params{'trace_type_code'};
+	$params{'strategy'} = 'CLONEEND' if $self->read_type eq 'end';
+	my @srs2 = GSC::Sequence::Read->get( %params );
+	push @srs,@srs2;
+    }
+
+    #try template_id adn trace_type_code
+    unless (@srs) {
+	delete $params{'clone_id'};
+	$params{'template_id'} = [@clone_ids_ncbi];
+	delete $params{'strategy'} if exists $params{'strategy'};
+	$params{'trace_type_code'} = 'CLONEEND' if $self->read_type eq 'end';
+	my @srs2 = GSC::Sequence::Read->get( %params );
+	push @srs,@srs2;
+    }
+
+    return @srs;
 }
 
 sub _write_read_ids_to_file {
-    my ($self, $clone_name, $re_ids) = @_;
+    my ($self, $clone_name, @seq_reads) = @_;
 
     $self->output_dir(cwd()) unless $self->output_dir;
 
     unlink $self->output_dir.'/'.$clone_name.'.re_ids';
     my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_dir.'/'.$clone_name.'.re_ids') ||
 	return;
-
-    #$fh->print(map {$_->seq_id."\n"} @$re_ids);
-    #$fh->close;
    
-    foreach (@$re_ids) {
+    foreach (@seq_reads) {
 	next unless ($_->pass_fail_tag eq 'PASS');
 	$fh->print ($_->seq_id."\n");
     }
@@ -182,6 +196,7 @@ sub _write_read_ids_to_file {
 	$self->error_message("Failed to write $clone_name.re_ids file or file is blank");
 	return;
     }
+
     return 1;
 }
 
@@ -190,7 +205,7 @@ sub _dump_data {
 
     my $re_ids_file = $self->output_dir.'/'.$clone_name.'.re_ids';
     my $fasta_out = $self->output_dir.'/'.$clone_name.'.fasta';
-    my $qual_out = $self->output_dir.'/'.$clone_name.'.qual';
+    my $qual_out = $self->output_dir.'/'.$clone_name.'.fasta.qual';
 
     unlink $fasta_out, $qual_out;
     $self->status_message("Dumping fasta\n");
@@ -234,14 +249,15 @@ sub _dump_reads_individually {
     $self->status_message("Dumping fasta and qual for $clone_name");
 
     my $fasta_out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->output_dir.'/'.$clone_name.'.fasta');
-    my $qual_out = Bio::SeqIO->new(-format => 'qual', -file => '>'.$self->output_dir.'/'.$clone_name.'.qual');
+    my $qual_out = Bio::SeqIO->new(-format => 'qual', -file => '>'.$self->output_dir.'/'.$clone_name.'.fasta.qual');
 
     my $re_ids_file = $self->output_dir.'/'.$clone_name.'.re_ids';
     my $fh = Genome::Utility::FileSystem->open_file_for_reading($re_ids_file) ||
 	return;
     while (my $re_id = $fh->getline) {
 	chomp $re_id;
-	my $seq = GSC::Sequence::Item->get(seq_id =>$re_id);
+	my $seq = GSC::Sequence::Item->get($re_id);
+
 	unless ($seq) {
 	    $self->status_message("Failed to get sequence object for re_id: $re_id");
 	    next;
@@ -261,5 +277,3 @@ sub _dump_reads_individually {
 
     return 1;
 }
-
-1;

@@ -13,12 +13,22 @@ class Genome::Model::Command::Define::Somatic {
         tumor_model => { 
             is => 'Genome::Model',
             id_by => 'tumor_model_id', 
-            doc => 'The tumor model id being analyzed' 
+            doc => 'The tumor model id being analyzed',
+            is_input => 1,
+        },
+        tumor_model_id => {
+            is => 'Integer',
+            is_input => 1,
         },
         normal_model => { 
             is => 'Genome::Model', 
             id_by => 'normal_model_id', 
-            doc => 'The normal model id being analyzed' 
+            doc => 'The normal model id being analyzed',
+            is_input => 1,
+        },
+        normal_model_id => {
+            is => 'Integer',
+            is_input => 1,
         },
         processing_profile_name => {
             is => 'Text',
@@ -51,6 +61,18 @@ sub create {
         or return;
 
     return $self;
+}
+
+sub type_specific_parameters_for_create {
+    my $self = shift;
+
+    my @params = ();
+
+    push @params,
+        tumor_model => $self->tumor_model,
+        normal_model => $self->normal_model;
+
+    return @params;
 }
 
 sub execute {
@@ -90,16 +112,7 @@ sub execute {
 
     # run Genome::Model::Command::Define execute
     my $super = $self->super_can('_execute_body');
-    $super->($self,@_);
-
-    # get the model created by the super
-    my $model = Genome::Model->get($self->result_model_id);
-
-    # Link this somatic model to the normal and tumor models  
-    $model->add_from_model(from_model => $self->normal_model, role => 'normal');
-    $model->add_from_model(from_model => $self->tumor_model, role => 'tumor');
-
-    return 1;
+    return $super->($self,@_);
 }
 
 1;

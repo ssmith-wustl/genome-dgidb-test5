@@ -69,8 +69,11 @@ sub get_simple_read_stats {
 	      "Total input bases: $total_input_bases bp\n".
 	      "Total Q20 bases: $total_Q20_bases bp\n";
 
-    my $avg_Q20_per_read = int ($total_Q20_bases / $total_input_reads + 0.5);
-    my $avg_read_length = int ($total_input_bases / $total_input_reads + 0.5);
+    
+    #my $avg_Q20_per_read = int ($total_Q20_bases / $total_input_reads + 0.5);
+    my  $avg_Q20_per_read = ($total_input_reads > 0) ? int ($total_Q20_bases / $total_input_reads + 0.5) : 0;
+    #my $avg_read_length = int ($total_input_bases / $total_input_reads + 0.5);
+    my $avg_read_length = ($total_input_reads > 0) ? int ($total_input_bases / $total_input_reads + 0.5) : 0;
 
     $stats .= "Average Q20 bases per read: $avg_Q20_per_read bp\n".
 	      "Average read length: $avg_read_length bp\n";
@@ -185,6 +188,12 @@ sub get_input_qual_files {
 sub get_edit_dir_file_names {
     my $self = shift;
     my @files = glob($self->assembly_directory."/edit_dir/*");
+    my @input_dir_files;
+    #get input files possibly in input dir
+    if (-d $self->assembly_directory."/input") {
+	my @input_dir_files = glob($self->assembly_directory."/input/*");
+	@files = (@files, @input_dir_files);
+    }
     return \@files;
 }
 
@@ -198,7 +207,7 @@ sub parse_input_qual_files {
 	while (my $q = $qio->next_seq) {
 	    my $read_name = $q->primary_id;
 	    $counts->{read_count}++;
-	    $counts->{prefin_read_count}++ if $read_name =~ /_t/; #remove this .. no more prefin reads
+	    #$counts->{prefin_read_count}++ if $read_name =~ /_t/; #remove this .. no more prefin reads
 	    foreach my $qual_value (@{$q->qual}) {
 		$counts->{base_count}++;
 		$counts->{q20_base_count}++ if $qual_value >= $q_cutoff;
@@ -218,9 +227,9 @@ sub get_reads_placed_counts {
     while (my $line = $fh->getline) {
 	$counts->{reads_in_scaffolds}++;
 	my ($read_name) = $line =~ /^\*\s+(\S+)\s+/;
-	if ($read_name =~ /_t/) {
-	    $counts->{prefin_reads_in_scaffolds}++
-	}
+	#if ($read_name =~ /_t/) { #no more prefin reads??
+	#    $counts->{prefin_reads_in_scaffolds}++
+	#}
 	if ($self->assembler =~ /Velvet/i) {
 	    $read_name =~ s/\-\d+$//;
 	    $uniq_reads->{$read_name}++;
@@ -229,8 +238,8 @@ sub get_reads_placed_counts {
 	    $read_name =~ s/[\.|\_].*$//;
 	    $uniq_reads->{$read_name}++;
 	}
-	else {
-	    next;
+	else { #self->assembler =~ /pcap/i #no duplicate
+	    $uniq_reads->{$read_name}++;
 	}
     }
 
@@ -548,9 +557,15 @@ sub create_contiguity_stats {
 	$q20_ratio = int ($total_q20_bases * 1000 / $cumulative_length) / 10;
 	$major_contig_q20_ratio = int ($major_contig_q20_bases * 1000 / $major_contig_bases) / 10;
 
-	$t1_q20_ratio = int ($total_t1_q20_bases * 1000 / $total_t1_bases) / 10;
-	$t2_q20_ratio = int ($total_t2_q20_bases * 1000 / $total_t2_bases) / 10;
-	$t3_q20_ratio = int ($total_t3_q20_bases * 1000 / $total_t3_bases) / 10;
+	#$t1_q20_ratio = int ($total_t1_q20_bases * 1000 / $total_t1_bases) / 10 if $total_t1_bases > 0; #else 0
+	$t1_q20_ratio = sprintf ("%0.1f", $total_t1_q20_bases * 100 / $total_t1_bases)
+	    if $total_t1_bases > 0; #else 0
+	#$t2_q20_ratio = int ($total_t2_q20_bases * 1000 / $total_t2_bases) / 10 if $total_t2_bases > 0;
+	$t2_q20_ratio = sprintf ("%0.1f", $total_t2_q20_bases * 100 / $total_t2_bases)
+	    if $total_t2_bases > 0;
+	#$t3_q20_ratio = int ($total_t3_q20_bases * 1000 / $total_t3_bases) / 10 if $total_t3_bases > 0;
+ 	$t3_q20_ratio = sprintf ("%0.1f", $total_t3_q20_bases * 100 / $total_t3_bases)
+	    if $total_t3_bases > 0;
     }
 
 
@@ -853,16 +868,17 @@ sub get_constraint_stats {
     my ($self) = @_;
     my $assembler = $self->assembler;
     my $text = "\n*** Constraints ***\n";
-    if ($assembler eq 'pcap') {
+    if ($assembler eq 'pcap' and ! $self->msi_assembly) {
 	my @files = glob ("*con.pcap.results");
 	unless (scalar @files == 1) {
-	    $self->error_message("None or multiple possible pcap results file found");
-	    return;
+	    $self->warning_message("None or multiple possible pcap results file found");
+	    $text .= "No pcap.results file found to get constraint info from\n";
+	    return $text;
 	}
 	$text .= `tail -12 *.results`."\n";
     }
     else {
-	$text .= "Not applicable for $assembler assemblies\n\n";
+	$text .= "Not applicable for Newbler, Velvet and Msi assemblies\n\n";
 	
     }
     return $text;

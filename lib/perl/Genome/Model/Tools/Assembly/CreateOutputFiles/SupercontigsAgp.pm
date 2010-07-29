@@ -112,14 +112,15 @@ sub execute {
 	#check .. if not last contig in scaffold, gap must exist
 	my $next_contig = $sctg_num.'.'.++$ctg_num;
 	if (exists $seek_positions->{$next_contig} and  ! exists $gap_sizes->{$seq->primary_id}) {
-	    $self->error_message("Next contig in scaffold: Contig$next_contig exists but ". $seq->primary_id ." gap size does not");
-	    return;
+	    $self->warning_message("Next contig in scaffold Contig$next_contig exists but ". $seq->primary_id ." gap size does not".
+				   "\n\tSetting gap size to default value of 100 bp");
+	    #return;
 	}
 
 	#check .. if next contig does not exist gap size must not exist
 	if (! exists $seek_positions->{$next_contig} and  exists $gap_sizes->{$seq->primary_id}) {
-	    $self->error_message($seq->primary_id ." is last contig in scaffold so gap size should not exist but does");
-	    return;
+	    $self->warning_message($seq->primary_id ." is last contig in scaffold so gap size should not exist but does");
+	    #return;
 	}
 
 	next unless exists $gap_sizes->{$seq->primary_id};
@@ -128,16 +129,19 @@ sub execute {
 	#sctg    start   stop    order   N       length  fragment        yes
 	#Contig1 381     453     2       N       73      fragment        yes
 
+	my $gap_size = (exists $gap_sizes->{$seq->primary_id}) ? $gap_sizes->{$seq->primary_id} : 100;
+
 	$start = $scaffold_data[$sctg_num][1];
 	$start++;
-	$stop = $start + $gap_sizes->{$seq->primary_id};
+	$stop = $start + $gap_size; #$gap_sizes->{$seq->primary_id};
+
 	$stop--;
 	$order = $scaffold_data[$sctg_num][0];
 	$out_fh->print ("$sctg_name\t$start\t$stop\t$order\tN\t". $gap_sizes->{$seq->primary_id}. "\tfragment\tyes\n");
 
 	#Increment fo next contig/gap position/order
 	$scaffold_data[$sctg_num][0]++;
-	$scaffold_data[$sctg_num][1] += $gap_sizes->{$seq->primary_id};
+	$scaffold_data[$sctg_num][1] += $gap_size; #$gap_sizes->{$seq->primary_id};
     }
 
     $out_fh->close;

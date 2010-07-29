@@ -81,7 +81,7 @@ sub execute {
         $dedup_cmd .= ' ASSUME_SORTED=false';
     }
     $dedup_cmd .= ' OUTPUT='. $self->output_file .' METRICS_FILE='. $self->metrics_file .' INPUT='. $self->input_file;
-    if ($self->max_sequences_for_disk_read_ends_map) {
+    if (defined($self->max_sequences_for_disk_read_ends_map)) {
         $dedup_cmd .= ' MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP='. $self->max_sequences_for_disk_read_ends_map;
     }
     if ($self->max_records_in_ram) {
