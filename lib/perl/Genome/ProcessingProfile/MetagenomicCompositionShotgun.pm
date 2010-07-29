@@ -266,41 +266,8 @@ sub _execute_build {
         Genome::Utility::FileSystem->create_symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat") unless(-e "$data_directory/metagenomic_alignment$counter.bam.flagstat");
     }
 
-    # MERGE ALIGNMENTS
-    
-    my $combined_name_sorted_sam = $build->data_directory."/combined_name_sorted.bam";
+    # REPORTS
 
-    print "DEBUG: Starting sort...\n";
-    # sort bam files by name for merge
-    my @meta_bams_sorted;
-    for my $bam (@meta_bams) {
-        my $sorted_bam = (split('/', $bam))[-1];
-        $sorted_bam =~ s/\.bam$//;
-        $sorted_bam = '/tmp/' . $sorted_bam . '_sorted';
-        Genome::Model::Tools::Sam::SortBam->execute(
-            file_name => $bam,
-            name_sort => 1,
-            output_file => $sorted_bam,
-            maximum_memory => 1500000000,
-        );
-        push @meta_bams_sorted, $sorted_bam . '.bam';
-    }
-    
-    print "DEBUG: Starting merge...\n";
-    # merge bam files
-    my $rv = Genome::Model::Tools::Sam::MergeSplitReferenceAlignments->execute(
-        input_files => \@meta_bams_sorted,
-        input_format => 'BAM',
-        output_file => $combined_name_sorted_sam,
-        output_format => 'BAM',
-    );
-    
-    print "DEBUG: Validating merge/sort...\n";
-    unless ($rv){
-        $self->error_message("Failed to sort and merge bams");
-        die;
-    }
-    
     # TODO: Where should these go? build directory or /gscmnt/sata835/info/medseq/hmp-july2010?
     $rv = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->execute(
         build_id => $build->id,
