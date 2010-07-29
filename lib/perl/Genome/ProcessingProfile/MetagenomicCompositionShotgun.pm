@@ -105,6 +105,7 @@ sub _execute_build {
     my ($self, $build) = @_;
 
     my $model = $build->model;
+    my $rv;
 
     # temp hack for debugging
     $log_model_name = $model->name;
