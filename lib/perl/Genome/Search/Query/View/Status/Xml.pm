@@ -70,6 +70,8 @@ sub _generate_content {
             $facets->{ $raw_fields[$i] } = $raw_fields[$i + 1];
         }
 
+        my $facet_total = 0;
+
         for my $field_name (sort keys %$facets) {
             my $count = $facets->{$field_name};
             next if ! $count;
@@ -79,8 +81,11 @@ sub _generate_content {
             $field->addChild( $doc->createAttribute('icon-prefix', icon_prefix($field_name)) );
             $field->addChild( $doc->createAttribute('count', $count) );
             $facets_node->addChild($field);
-        }
 
+            $facet_total += $count;
+        }
+        
+        $results_node->addChild($doc->createAttribute('facet-total', $facet_total));
         $results_node->addChild($facets_node);
     }
 
