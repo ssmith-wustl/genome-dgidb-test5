@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Sv::Yenta;
+package Genome::Model::Tools::Sv::Pairoscope;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use Command;
 use IO::File;
 
-class Genome::Model::Tools::Sv::Yenta {
+class Genome::Model::Tools::Sv::Pairoscope {
     is => 'Command',
     has => [
     input_file => 
@@ -46,10 +46,10 @@ class Genome::Model::Tools::Sv::Yenta {
         is_optional => 1,
         default => {INV => 1,INS => 1,DEL => 1,ITX => 1,CTX => 1,},
     },
-    yenta_program => {
+    pairoscope_program => {
         type => "String",
-        default => "/gscuser/dlarson/yenta/trunk/yenta",
-        doc => "executable of yenta to use", 
+        default => "/gscuser/dlarson/src/pairoscope/tags/pairoscope-0.2/pairoscope",
+        doc => "executable of pairoscope to use", 
         is_optional => 1,
     },
     exon_bam => {
@@ -64,10 +64,10 @@ class Genome::Model::Tools::Sv::Yenta {
         doc => "number of bases to include on either side of the predicted breakpoint(s)",
         is_optional => 1,
     },
-    yenta_options => {
+    pairoscope_options => {
         type => "String",
         default => "",
-        doc => "option string to pass through to yenta for experimental options etc",
+        doc => "option string to pass through to pairoscope for experimental options etc",
         is_optional => 1,
     },
     output_prefix => {
@@ -85,7 +85,7 @@ sub execute {
     my $self=shift;
     $DB::single = 1; 
 
-    #test architecture to make sure we can run yenta program
+    #test architecture to make sure we can run pairoscope program
     #copied from G::M::T::Maq""Align.t 
     unless (`uname -a` =~ /x86_64/) {
         $self->error_message(`uname -a`); #FIXME remove
@@ -135,13 +135,13 @@ sub execute {
         return;
     }
 
-    my $grapher = $self->yenta_program;
+    my $grapher = $self->pairoscope_program;
     unless(-e $grapher && -x $grapher) {
         $self->error_message("$grapher does not exists or is not an executable");
         return;
     }
 
-    my $additional_opts = $self->yenta_options;
+    my $additional_opts = $self->pairoscope_options;
     my $exon_file = $self->exon_bam;
     if($exon_file) {
         unless(-e $exon_file) {
@@ -271,7 +271,7 @@ sub execute {
 
 sub help_detail {
     my $help = <<HELP;
-Ken Chen's BreakDancer predicts large structural variations by examining read pairs. This module uses the yenta program to graph read pairs for a given set of regions. yenta operates by scanning a maq map file for reads in the regions and matches up pairs across those regions. The output consists of a set of tracks for each region. One track is the read depth across the region (excluding gapped reads) the other is a so called barcode output. For multiple regions, the regions are displayed in order listed in the filename. Read depth tracks first, then the barcode graphs. Reads are represented as lines and pairs are joined by arcs. These are color coded by abnormal read pair type as follows:
+Ken Chen's BreakDancer predicts large structural variations by examining read pairs. This module uses the pairoscope program to graph read pairs for a given set of regions. pairoscope operates by scanning a maq map file for reads in the regions and matches up pairs across those regions. The output consists of a set of tracks for each region. One track is the read depth across the region (excluding gapped reads) the other is a so called barcode output. For multiple regions, the regions are displayed in order listed in the filename. Read depth tracks first, then the barcode graphs. Reads are represented as lines and pairs are joined by arcs. These are color coded by abnormal read pair type as follows:
 
 Mapping status                                      Color
 Forward-Reverse, abnormal insert size               magenta
@@ -281,7 +281,7 @@ Reverse-Forward                                     green
 One read unmapped                                   yellow
 One read mapped to a different chromosome           cyan
 
-Yenta.pm generates 4 PNG images for each predicted SV, 2 for tumor and 2 for normal. There is a q0 file showing reads of all mapping qualities and a q1 file showing reads of mapping quality 1 or more. A maq mapping quality of zero indicates a repeat region that mapped multiple places in the genome equally well.
+Pairoscope.pm generates 4 PNG images for each predicted SV, 2 for tumor and 2 for normal. There is a q0 file showing reads of all mapping qualities and a q1 file showing reads of mapping quality 1 or more. A maq mapping quality of zero indicates a repeat region that mapped multiple places in the genome equally well.
 
 The naming convention of the files produced is as follows:
 (prefix.)chr_pos_chr_pos_tumor/normal_type.q#.png
@@ -302,7 +302,7 @@ HELP
 }
 
 sub help_brief {
-    return "This module takes a sv primer design file and uses the rudimentary graphical tool yenta to graph the read pairs.";
+    return "This module takes a sv primer design file and uses the rudimentary graphical tool pairoscope to graph the read pairs.";
 }
 
 

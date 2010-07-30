@@ -25,7 +25,7 @@ BEGIN { use_ok('Genome::Model::Tools::LSFSpool'); use_ok('Genome::Model::Tools::
 
 my $thisfile = Cwd::abs_path(__FILE__);
 my $cwd = dirname $thisfile;
-my $test_data_dir = File::Temp::tempdir('LSFSpool-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_data_dir = File::Temp::tempdir('LSFSpool-Cache-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 sub test_start {
   # We need an LSFSpool object for logger, debug, and config.

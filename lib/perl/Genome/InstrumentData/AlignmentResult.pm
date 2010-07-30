@@ -480,6 +480,12 @@ sub create_BAM_in_staging_directory {
         }
     }
 
+    for (@fastqs) {
+       if ($_ =~ m/^\/tmp\//) {
+        $self->status_message("Unlinking fastq file to save space now that we've aligned: $_");
+       } 
+    }
+
     # STEP 9: CONVERT THE ALL_SEQUENCES.SAM into ALL_SEQUENCES.BAM
     $self->status_message("Building a combined BAM file...");
     unless($self->_process_sam_files) {

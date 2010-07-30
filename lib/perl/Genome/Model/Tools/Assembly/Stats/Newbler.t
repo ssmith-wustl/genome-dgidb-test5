@@ -7,7 +7,7 @@ use above "Genome";
 use Test::More;
 require File::Compare;
 
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/MsiNewbler_v3';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/Newbler';
 ok(-d $data_dir, "Data dir exists");
 
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
@@ -17,7 +17,7 @@ my $edit_dir = $temp_dir.'/edit_dir';
 mkdir $edit_dir;
 ok(-d $edit_dir, "Temp edit_dir made");
 
-my @files = qw/ msi.contigs.bases msi.contigs.quals msi.reads.placed msi.readinfo.txt 
+my @files = qw/ contigs.bases contigs.quals reads.placed readinfo.txt 
                 newbler.ace GABJJ9O01.fasta.qual.gz GABJJ9O01.fasta.gz /;
 
 foreach (@files) {
@@ -25,7 +25,7 @@ foreach (@files) {
     ok(-s $temp_dir."/edit_dir/$_", "Linked $_ in temp dir");
 }
 
-ok(system("gmt assembly stats msi-newbler --assembly-directory $temp_dir --no-print-to-screen") == 0, "Command ran successfully");
+ok(system("gmt assembly stats newbler --assembly-directory $temp_dir --no-print-to-screen") == 0, "Command ran successfully");
 
 my $temp_stats = $temp_dir.'/edit_dir/stats.txt';
 my $data_stats = $data_dir.'/edit_dir/stats.txt';

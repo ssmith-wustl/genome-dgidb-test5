@@ -43,7 +43,7 @@ ok($velvet, 'Created post assemble velvet');
 
 ok($velvet->execute, 'Execute post assemble velvet');
 
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_v2/edit_dir';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_v3/edit_dir';
 
 my @file_names_to_test = qw/ reads.placed readinfo.txt
                         gap.txt contigs.quals contigs.bases
@@ -70,8 +70,6 @@ foreach ('collated.fasta.gz', 'collated.fasta.qual.gz') {
     my @diff = `zdiff $test_file $temp_file`;
     is(scalar (@diff), 0, "Zipped $_ file matches");
 }
-
-#print $build->data_directory."\n";<STDIN>;
 
 done_testing();
 exit;

@@ -13,7 +13,7 @@
       <xsl:text disable-output-escaping="yes">
       <![CDATA[
                function event_popup(eventObject) {
-                 console.log("eventObject: " + JSON.stringify(eventObject));
+
                  // assemble event info into a table
                  var popup_content = '<table class="boxy_info" cellpadding="0" cellspacing="0" border="0" width="300"><tbody>';
                  for (prop in eventObject) {
@@ -24,7 +24,7 @@
 
                popup_content += '</tbody></table>';
 
-               console.log("popup_content: " + popup_content);
+
 
                // create popup
                var popup = new Boxy(popup_content, {title:eventObject.popup_title, fixed:false});
