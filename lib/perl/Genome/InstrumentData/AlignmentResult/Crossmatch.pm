@@ -6,12 +6,13 @@ use File::Basename;
 
 use Bio::SeqIO;
 use Bio::Seq::Quality;
-use Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::SeqCM;
-use Genome::InstrumentData::AlignmentResult::Crossmatch::GTB::Sequencing::ReadIO;
-use Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::Alignment;
 use Carp;
  
 use Genome;
+
+use Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::SeqCM;
+use Genome::InstrumentData::AlignmentResult::Crossmatch::GTB::Sequencing::ReadIO;
+use Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::Alignment;
 
 class Genome::InstrumentData::AlignmentResult::Crossmatch {
     is => 'Genome::InstrumentData::AlignmentResult',
@@ -57,6 +58,13 @@ sub _run_aligner {
     my $nonmatching = 0;
 
     my %aligner_params = $self->decomposed_aligner_params;
+    my $cores_to_use = $aligner_params{'cores_to_use'};
+    if ($cores_to_use =~ /(\d+)/) {
+        $cores_to_use = $1;
+    } else {
+        print "Could not determine number of cores to use from params! Defaulting to 4.";
+    }
+
 
     # TODO (iferguso) i don't believe cross_match handles paired end reads. if it does then this needs to be changed:
     # TODO (iferguso) should do something to handle the log files
@@ -84,7 +92,7 @@ sub _run_aligner {
         # as long as we still have fq to read in OR jobs still executing OR not every job finished
         while ($reached_end == 0 || @cvs > 0 || $started_jobs != $finished_jobs) {
             # now, as long as there are open jobs slots AND we have fq to read in...
-            while (scalar @cvs < 6 && $reached_end == 0) {
+            while (scalar @cvs < $cores_to_use && $reached_end == 0) {
                 my %chunk;
 
                 #### STEP 1: Convert fastq files into fasta+qual files
