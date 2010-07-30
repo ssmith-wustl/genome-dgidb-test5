@@ -30,6 +30,11 @@ class Genome::Model::Tools::Library::CheckLibs {
         is_optional => 1,
         default => 0.3,
     },
+    output_file => {
+        type => 'String',
+        is_optional => 1,
+        doc => "file to write output to",
+    },
 
     ]
 };
@@ -63,8 +68,25 @@ sub execute {
         return;
     }
 
-    print "Lanes indicating bad libraries\n";
-    print join("\t",qw(Common_Name Name Library Insert_Size SD_Below SD_Above)), "\n";
+    #set up output file here
+    my $output_fh;
+    if($self->output_file) {
+        $output_fh = IO::File->new($self->output_file,"w");
+        unless($output_fh) {
+            $self->error_message("Couldn't open " . $self->output_file . " for writing");
+            return;
+        }
+    }
+    else {
+        $output_fh = IO::File->new_from_fd(1,"w");
+        unless($output_fh) {
+            $self->error_message("Couldn't open STDOUT for output");
+            return;
+        }
+    }
+        
+    print $output_fh "Lanes indicating bad libraries\n";
+    print $output_fh join("\t",qw(Common_Name Name Library Insert_Size SD_Below SD_Above)), "\n";
     foreach my $build (@builds) {
         my $model = $build->model;
         unless(defined($model)) {
@@ -116,13 +138,13 @@ sub execute {
             my $sd_above_insert_size = $ida->sd_above_insert_size;
             my $sd_below_insert_size = $ida->sd_below_insert_size;
             if(!$median_insert_size || ($sd_below_insert_size/$median_insert_size) > 0.3 || ($sd_above_insert_size/$median_insert_size) > 0.2) {
-                printf "%s\t%s\t%s\t%0.2f\t%0.2f\t%0.2f\n","$common_name.$type",$lane_name,$library,$median_insert_size, $median_insert_size ? $sd_below_insert_size/$median_insert_size : undef, $median_insert_size ? $sd_above_insert_size/$median_insert_size : undef;
+                printf $output_fh "%s\t%s\t%s\t%0.2f\t%0.2f\t%0.2f\n","$common_name.$type",$lane_name,$library,$median_insert_size, $median_insert_size ? $sd_below_insert_size/$median_insert_size : undef, $median_insert_size ? $sd_above_insert_size/$median_insert_size : undef;
                 $bad_lanes{$library}++;
             }
         }
         foreach my $lib (keys %total_lanes) {
                 
-            printf "%0.2f%% lanes bad for %s %s library %s\n",$bad_lanes{$lib}/$total_lanes{$lib}*100,$common_name,$type,$lib;
+            printf $output_fh "%0.2f%% lanes bad for %s %s library %s\n",$bad_lanes{$lib}/$total_lanes{$lib}*100,$common_name,$type,$lib;
         }
     }
     return 1;
