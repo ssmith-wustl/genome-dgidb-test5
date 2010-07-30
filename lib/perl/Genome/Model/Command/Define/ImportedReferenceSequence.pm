@@ -257,13 +257,23 @@ sub _create_build {
     my $self = shift;
     my $model = shift;
 
-    my $build = Genome::Model::Build->create(
+    my @build_parameters = (
         model_id => $model->id,
         data_directory => $self->data_directory,
         fasta_file => $self->fasta_file,
-        version => $self->version,
-        prefix => $self->prefix,
     );
+
+    if($self->version) {
+        push @build_parameters,
+            version => $self->version;
+    }
+
+    if($self->prefix) {
+        push @build_parameters,
+            prefix => $self->prefix;
+    }
+
+    my $build = Genome::Model::Build->create(@build_parameters);
     if($build) {
         $self->status_message('Created build of id ' . $build->build_id . ' with data directory "' . $build->data_directory . '".');
     } else {
