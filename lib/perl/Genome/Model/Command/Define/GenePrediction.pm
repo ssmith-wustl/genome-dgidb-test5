@@ -115,8 +115,8 @@ found, kick off a build if the --start-assembly-build option is set. If that opt
 output the commands the user would have to execute to get a build started.
 
 With a successful assembly build, all the information needed to create the new gene prediction
-model is available. Once the model is created, set up model links so all further builds of the
-assembly model will kick off a build of this gene prediction model. 
+model is available. Once the model is created, model links are set up so all further builds of 
+the assembly model will kick off a build of this gene prediction model. 
 EOS
 }
 
@@ -139,14 +139,17 @@ sub execute {
         my $assembly_model;
         if (@denovo) {
             $assembly_model = $self->get_most_recent_model(\@denovo);
+            $self->status_message("Using de novo assembly model " . $assembly_model->id);
         }
         elsif (@imported) {
             $assembly_model = $self->get_most_recent_model(\@imported);
+            $self->status_message("Using imported assembly model " . $assembly_model->id);
         }
         else {
             if ($self->create_assembly_model) {
-                $self->status_message("Create assembly model flag is set, creating a new assembly model " .
-                    "using processing profile with name " . $self->assembly_processing_profile_name);
+                $self->status_message("Did not find any de novo or imported assemblies and create " .
+                    "assembly model flag is set, creating a new assembly model using processing " .
+                    "profile with name " . $self->assembly_processing_profile_name);
 
                 my $assembly_define_obj = Genome::Model::Command::Define::DeNovoAssembly->create(
                     processing_profile_name => $self->assembly_processing_profile_name,
@@ -193,15 +196,15 @@ sub execute {
                 $self->status_message(
                     "Could not find any assembly models with the taxon you provided. If you would like to create an " .
                     "assembly model for use with this gene prediction model, run the following command\n" .
-                    "genome model define de-novo-assembly --processing-profile-name " . $self->assembly_processing_profile_name . 
-                    " --subject-name " . $self->taxon->name . "\n\n" .
+                    "genome model define de-novo-assembly --processing-profile-name " . 
+                    $self->assembly_processing_profile_name . " --subject-name " . $self->taxon->name . "\n\n" .
                     "That command should give you a model ID. Use it to assign instrument data to the assembly model:\n" .
                     "genome instrument-data assign --model-id <MODEL_ID> --all\n\n" .
                     "Now you have an assembly model with instrument data! Rerun this define command with the " .
                     "--assemble option, which will start a build of that assembly model and kick off gene prediction " .
                     "once that build has completed!"
                 );
-                die "Could not find any assemblies for taxon " . $self->taxon_id;
+                croak "Could not find any assemblies for taxon " . $self->taxon_id;
             }
         }
 
@@ -224,13 +227,16 @@ sub execute {
         croak;
     }
     
+    $self->validate_taxon($taxon);
+
     if (defined $self->taxon_id and $self->taxon_id ne $taxon->id) {
         $self->error_message("Given taxon " . $self->taxon_id . " does not match taxon " . $taxon->id . " on assembly model!");
         croak;
     }
     else {
-        $self->taxon_id($taxon->id);
-        $self->taxon($taxon);
+        $self->subject_name($taxon->name);
+        $self->subject_type('species_name');
+        $self->subject_class_name('Genome::Taxon');
     }
 
     # Now check for a successful build of the assembly model. If one does not exist, kick off a build if the --assemble
@@ -240,7 +246,7 @@ sub execute {
     unless ($build) {
         $self->warning_message("No successful or running build of assembly model " . $self->assembly_model_id . " found!");
 
-        if ($self->assemble) {
+        if ($self->start_assembly_build) {
             $self->status_message("Assemble flag is set! Starting a build of the assembly model!");
             my $start_command = Genome::Model::Build::Command::Start->create(
                 model_identifier => $self->assembly_model_id,
@@ -256,22 +262,25 @@ sub execute {
                 croak;
             }
 
-            $self->status_message("Started build " . $start_command->build->id . "!");
+            $build = $start_command->build;
+            $self->status_message("Started build " . $build->id . "!");
         }
         else {
             $self->status_message(
-                "The assemble option is not set, so automatic build of the assembly model will not occur. " .
+                "The assemble option is not set, so automatic build of the assembly model will not occur.\n" .
                 "Either rerun this command with the --assemble flag or manually kick off a build by running:\n" .
                 "genome model build start --model " . $self->assembly_model_id);
-            die "No assembly build found and assemble flag not set";
+            croak "No assembly build found and assemble flag not set";
         }
     }
 
+    $self->status_message("Using assembly build " . $build->id);
+    
     # Now create the gene prediction model!
-    my $rv = $self->SUPER::_execute_body(@_);
+    my $rv = $self->SUPER::_execute_body();
     unless ($rv) {
         $self->error_message("Could not create new gene prediction model!");
-        return;
+        croak;
     }
 
     my $model = Genome::Model->get($self->result_model_id);
@@ -280,17 +289,16 @@ sub execute {
         croak;
     }
 
-    # Make a link from the assembly model to this model and vice versa. This link will be used to kick off a new build
+    $self->status_message("Gene prediction model created but not saved, creating links and inputs.");
+
+    # Make a link from the assembly model to this model. This link will be used to kick off a new build
     # of the gene prediction model every time its linked assembly model completes a build.
+    $DB::single = 1;
     my $to_rv = $self->assembly_model->add_to_model(
         to_model => $model,
-        role => 'gene_prediction_model',
+        role => 'gene_prediction',
     );
-    my $from_rv = $model->add_from_model(
-        from_model => $self->assembly_model,
-        role => 'assembly_model',
-    );
-    unless ($to_rv and $from_rv) {
+    unless ($to_rv) {
         $self->error_message("Could not create a link from the assembly model to the gene prediction model! Cannot create model!");
         croak;
     }
@@ -342,6 +350,7 @@ sub execute {
         name => 'use_local_nr',
     );
 
+    $self->status_message("Links and inputs created, model creation successful!");
     return 1;
 }
 
@@ -363,6 +372,25 @@ sub get_most_recent_model {
     my ($self, $assembly_models) = @_;
     my @sorted_models = sort {$b->genome_model_id <=> $a->genome_model_id} @$assembly_models;
     return shift @sorted_models;
+}
+
+# Checks that the necessary fields on the taxon are defined and croaks if any aren't
+sub validate_taxon {
+    my ($self, $taxon) = @_;
+
+    my @missing_fields;
+    push @missing_fields, "gram stain" unless defined $taxon->gram_stain_category;
+    push @missing_fields, "domain" unless defined $taxon->domain;
+    push @missing_fields, "locus id" unless defined $taxon->locus_tag;
+    push @missing_fields, "estimated genome size" unless defined $taxon->estimated_genome_size;
+
+    if (@missing_fields) {
+        $self->error_message("These fields on taxon " . $taxon->id .
+            " need to be defined!\n" . join("\n", @missing_fields));
+        croak;
+    }
+
+    return 1;
 }
 
 1;
