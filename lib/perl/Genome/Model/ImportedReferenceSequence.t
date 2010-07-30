@@ -6,7 +6,7 @@ use Test::More tests => 6;
 use Data::Dumper;
 
 # NOTE this module tests the API accessors, and tests the data behind human build 36
-# It does not appear to test model creation, building, etc. -ss
+# Creation/building of ImportedReferenceSequence models are tested in Genome/Model/Command/Define/ImportedReferenceSequence.t
 
 BEGIN {
     use_ok("Genome::Model::ImportedReferenceSequence");
