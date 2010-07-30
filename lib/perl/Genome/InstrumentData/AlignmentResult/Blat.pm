@@ -36,10 +36,7 @@ sub _run_aligner {
     
     # get refseq info
     my $reference_build = $self->reference_build;
-    my $ref_basename = File::Basename::fileparse($reference_build->full_consensus_path('fa'));
     my $ref_path = $reference_build->full_consensus_path('fa');
-    #my $ref_basename = File::Basename::fileparse("/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference.dat"
-    #my $ref_jump_basename = File::Basename::fileparse("/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference_15"
     #my $reference_fasta_path = sprintf("%s/%s", $reference_build->data_directory, $ref_basename);
 
     my $blat_path = Genome::Model::Tools::Blat->path_for_blat_version($self->aligner_version);
@@ -51,7 +48,7 @@ sub _run_aligner {
     foreach my $cur_input (@input_pathnames) {
 
         my $cur_input_fa = $cur_input.".fa";
-# TODO IT DONT WORK RIGHT
+# TODO this doesn't work right:
 #        $self->status_message("Converting $cur_input (FastQ) to $cur_input_fa (FastA).");
 #        Genome::Utility::FileSystem->shellcmd(
 #            cmd             => "fastq_to_fasta <$cur_input >$cur_input_fa",
@@ -59,6 +56,7 @@ sub _run_aligner {
 #            output_files    => [ $cur_input_fa ],
 #            skip_if_output_is_present => 0,
 #        );
+# using this instead:
         my $fastq_fh = IO::File->new($cur_input);
         my $fasta_fh = IO::File->new(">$cur_input_fa");
         my $line_type;
@@ -83,7 +81,7 @@ $DB::single=1;
             skip_if_output_is_present => 0,
         );
 
-        # TODO is this kosher?
+        # TODO (iferguso) is this kosher? blast2sam.pl refers to /gsc/bin/blast2sam.pl
         my $convert_cmd = "blast2sam.pl" . sprintf(' %s > %s',
             $tmp_blastn_file, $tmp_sam_file);
 
@@ -94,15 +92,12 @@ $DB::single=1;
             skip_if_output_is_present => 0,
         );
 
-        # TODO uhhh is this totally right?
         die "Failed to process sam command line, error_message is ".$self->error_message unless $self->_filter_sam_output($tmp_sam_file, $staging_sam_file);
-
-        # TODO so I don't need to sort the sam files after this amirite? because they won't be sorted.
     }
 
     #### STEP 2: There is no step 2
     
-    # TODO something to do with log files
+    # TODO (iferguso) should do something to handle the log files
 
     return 1;
 }
@@ -145,15 +140,6 @@ sub decomposed_aligner_params {
     my $self = shift;
     my $params = $self->aligner_params || "-out=blast";
     
-#    my @spar = split /\:/, $params;
-#    # TODO this forcing of these default parameters (unless they're otherwise specified) could be... bad...
-#    if ($spar[0] !~ /-st/) { $spar[0] .= "-st illumina"; }
-#    if ($spar[1] !~ /-hs/) { $spar[1] .= "-hs 15"; }
-#    if ($spar[1] !~ /-mm/) { $spar[1] .= "-mm 12"; }
-#    if ($spar[1] !~ /-mhp/) { $spar[1] .= "-mhp 100"; }
-#    if ($spar[1] !~ /-act/) { $spar[1] .= "-act 35"; }
-#    if ($spar[1] !~ /-bw/) { $spar[1] .= "-bw 29"; }
-
     return ($params);
 }
 
@@ -162,7 +148,7 @@ sub aligner_params_for_sam_header {
     
     my $params = $self->decomposed_aligner_params;
     
-    # TODO i don't think it's necessary to include the actual file paths used amirite?
+    # TODO (iferguso) i don't think it's necessary to include the actual file paths used amirite?
     return "blat $params";
 
     # for bwa this looks like "bwa aln -t4; bwa samse 12345'

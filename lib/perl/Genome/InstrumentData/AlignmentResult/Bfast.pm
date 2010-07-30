@@ -23,7 +23,22 @@ sub required_arch_os { 'x86_64' }
 
 # fill me in here with what compute resources you need.
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>24000] span[hosts=1] rusage[tmp=90000, mem=24000]' -M 24000000 -n 4";
+    my $self = shift;
+    my %params = $self->decomposed_aligner_params;
+    my $max = 0;
+    foreach my $cmd (keys %params) {
+        if ($params{$cmd} =~ /-n\s+([0-9]+)/) {
+            if ($1 > $max) {
+                $max = $1;
+            }
+        }
+    }
+    if ($max > 0) { 
+        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>24000] span[hosts=1] rusage[tmp=90000, mem=24000]' -M 24000000 -n $max";
+    } else {
+        print "Could not determine number of cores to use from params! Defaulting to 4.";
+        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>24000] span[hosts=1] rusage[tmp=90000, mem=24000]' -M 24000000 -n 4";
+    }
 }
 
 sub _run_aligner {
@@ -39,13 +54,12 @@ sub _run_aligner {
     
     # get refseq info
     my $reference_build = $self->reference_build;
-    #my $ref_basename = File::Basename::fileparse($reference_build->full_consensus_path('fa'));
-    #my $ref_basename = File::Basename::fileparse("/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference.dat"
-    #my $ref_jump_basename = File::Basename::fileparse("/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference_15"
+    my $ref_file = $reference_build->full_consensus_path('fa');
+    #my $ref_basename = File::Basename::dirname($ref_file);
     #my $reference_fasta_path = sprintf("%s/%s", $reference_build->data_directory, $ref_basename);
 
-    # TODO TODO TODO remove these hard-coded paths
-    my $ref_file = "/gscmnt/sata820/info/medseq/alignment-test/bfast/reference/all_sequences.fa";
+    # original hard coded path
+    #my $ref_file = "/gscmnt/sata820/info/medseq/alignment-test/bfast/reference/all_sequences.fa";
     my @ref_files = (
         $ref_file,
         $ref_file.".nt.1.1.bif",
@@ -60,6 +74,13 @@ sub _run_aligner {
         $ref_file.".nt.10.1.bif",
         $ref_file.".nt.brg"
     );
+
+    foreach my $bif (@ref_files) {
+        unless (-e $bif) {
+            $self->error_message("Index $bif does not exist. Please create Bfast indexes in the correct location, or implement Genome::InstrumentData::Alignment->resolve_reference_build() in this module.");
+            $self->die_and_clean_up($self->error_message);
+        }
+    }
      
     my $bfast_path = Genome::Model::Tools::Bfast->path_for_bfast_version($self->aligner_version);
 
@@ -67,7 +88,6 @@ sub _run_aligner {
 
     #### STEP 1: If there are paired end reads, merge them into $fq_file. otherwise,
     ####    set $fq_file to the one given pathname from @input_pathnames
-    #### TODO needs support for fasta?
     
     print "Merging $input_pathnames[0] and $input_pathnames[1] into $fq_file\n";
 
@@ -104,7 +124,8 @@ sub _run_aligner {
             chop($id2);
             chop($id2);
             if ($id1 ne $id2) {
-                die "reads at position $read_count $id1 and $id2 have different ids";
+                $self->error_message("reads at position $read_count $id1 and $id2 have different ids");
+                $self->die_and_clean_up($self->error_message);
             }
 
             $fastq_obj1->id($id1);
@@ -185,16 +206,16 @@ sub _run_aligner {
 
         # put your output file here, append to this file!
             #my $output_file = $self->temp_staging_directory . "/all_sequences.sam"
-        # TODO uhhh is this totally right?
 
-        print $cmdline;
-        <STDIN>;
+        # cowboy debugging
+        #print $cmdline;
+        #<STDIN>;
         die "Failed to process sam command line, error_message is ".$self->error_message unless $self->_filter_sam_output($tmp_reported_file, $staging_sam_file);
 
-        <STDIN>;
+        #<STDIN>;
     }
 
-    # TODO something to do with log files
+    # TODO (iferguso) should do something to handle the log files
 
     return 1;
 }
@@ -234,36 +255,14 @@ sub _filter_sam_output {
 
 sub decomposed_aligner_params {
     my $self = shift;
-    # TODO i think this comparison is unecessary if we push on the defaults like below
+    # TODO this may be redundant considering the conditionals below
     my $params = $self->aligner_params || "-n 4:-n 4:-n 4";
     
     my @spar = split /\:/, $params;
-    # TODO this forcing of these default parameters (unless they're otherwise specified) could be... bad...
-    if ($spar[0] !~ /-n/) { $spar[0] .= "-n 8"; }
-    if ($spar[1] !~ /-n/) { $spar[1] .= "-n 8"; }
-    if ($spar[2] !~ /-n/) { $spar[2] .= "-n 8"; }
-
-    # TODO this is useless? since it doesn't check via aligner_params_for_sam_header anyways...
-    # sort variables
-    # TODO while on the one hand this ensures that specifiying the same params in a different order
-    #   looks the same to aligner_params_for_sam_header, this could screw things up if the binaries
-    #   expect things in a certain order.
-#    foreach (@spar) {
-#        # split by argument
-#        $_ = [split /\s?\-/, $_];
-#        # the first element should be empty, so drop it
-#        shift @{$_};
-#        # sort
-#        @{$_} = sort @{$_};
-#        # holder
-#        my $ordered;
-#        # push ordered args on
-#        foreach (@{$_}) { $ordered .= "-$_ "; }
-#        # set
-#        $_ = $ordered;
-#        # chop single trailing whitespace from loop
-#        chop;
-#    }
+    # TODO this could potentially be a problem if we don't want to, say, force 4 cores when not otherwise specified
+    if ($spar[0] !~ /-n/) { $spar[0] .= "-n 4"; }
+    if ($spar[1] !~ /-n/) { $spar[1] .= "-n 4"; }
+    if ($spar[2] !~ /-n/) { $spar[2] .= "-n 4"; }
 
     return ('match_params' => $spar[0], 'localalign_params' => $spar[1], 'postprocess_params' => $spar[2]);
 }

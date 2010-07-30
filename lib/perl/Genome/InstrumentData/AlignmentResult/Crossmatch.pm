@@ -27,7 +27,15 @@ sub required_arch_os { 'x86_64' }
 
 # fill me in here with what compute resources you need.
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>16000] span[hosts=1] rusage[tmp=90000, mem=16000]' -M 16000000 -n 4";
+    my $self = shift;
+    my %params = $self->decomposed_aligner_params;
+    my $cores_to_use = $params{'cores_to_use'};
+    if ($cores_to_use =~ /(\d+)/) { 
+        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>16000] span[hosts=1] rusage[tmp=90000, mem=16000]' -M 16000000 -n $1";
+    } else {
+        print "Could not determine number of cores to use from params! Defaulting to 4.";
+        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>16000] span[hosts=1] rusage[tmp=90000, mem=16000]' -M 16000000 -n 4";
+    }
 }
 
 sub _run_aligner {
@@ -45,33 +53,45 @@ sub _run_aligner {
     #my $ref_file = reference_build->full_consensus_path('fa');
 
     my $crossmatch_path = Genome::Model::Tools::Crossmatch->path_for_crossmatch_version($self->aligner_version);
-    # TODO figure out how to get nonmatching to work correctly
+    # TODO (iferguso) figure out how to get nonmatching to work correctly. it currently seems to cause crashes.
     my $nonmatching = 0;
 
     my %aligner_params = $self->decomposed_aligner_params;
 
-    # TODO i don't believe cross_match handles paired end reads. if it does then this needs to be changed:
-    # TODO stuff with log files
+    # TODO (iferguso) i don't believe cross_match handles paired end reads. if it does then this needs to be changed:
+    # TODO (iferguso) should do something to handle the log files
     foreach my $input_file (@input_pathnames) {
         my $in_seq_obj = Bio::SeqIO->new(
             -file   => $input_file,
             -format => 'fastq',
         );
 
+        # reached end indicates whether we have anything left in the input fq
         my $reached_end = 0;
+        # these two make sure we've finished every job before moving on
+        my $started_jobs = 0;
+        my $finished_jobs = 0;
+        # this is a counter of how many fa/qual files (chunks) we've split off of the input fq
         my $minor = 0;
-        my %chunks;
+        # now just pushing running chunks onto an array, that get removed after completion
         my @cvs;
-        while ($reached_end == 0) {
-            while (scalar @cvs < 4) {
-                $self->status_message("Iteration $minor of splitting fq '$input_file' into '".$chunk{'qual_infile'}."' and '".$chunk{'fasta_infile'}."'.");
+        # originally was going to store chunks in a hash
+        # my %chunks;
 
+
+        # yes "jobs still executing" is the same as "not every job finished", but i want
+        #   to be absolutely sure that everything is done and finished before we move on
+        # as long as we still have fq to read in OR jobs still executing OR not every job finished
+        while ($reached_end == 0 || @cvs > 0 || $started_jobs != $finished_jobs) {
+            # now, as long as there are open jobs slots AND we have fq to read in...
+            while (scalar @cvs < 6 && $reached_end == 0) {
                 my %chunk;
 
                 #### STEP 1: Convert fastq files into fasta+qual files
-                # TODO i'm just assuming the input is fq and using the whole filename. none of this regex shenanigans
+                # TODO (iferguso) instead of testing the filetype by looking at the extension, i'm just assuming it is a .fq file
                 #if ($input_file =~ /(.+)\.fq$/) {
                 if ($input_file =~ /(.+)/) {
+                    $chunk{'fastq_infile'} = $input_file;
                     $chunk{'fasta_infile'} = $1.".".$minor.".fa";
                     $chunk{'qual_infile'} = $1.".".$minor.".fa.qual";
                     $chunk{'align_output'} = $1.".".$minor.".cm.aligned.out";
@@ -79,13 +99,16 @@ sub _run_aligner {
                     $chunk{'nonmatching_fa_output'} = $1.".".$minor.".fa.nonmatching";
                     $chunk{'nonmatching_qual_output'} = $1.".".$minor.".fa.nonmatching.qual";
                     $chunk{'log_output'} = $1.".".$minor.".fa.log";
+                    $chunk{'stdout_file'} = $1.".".$minor.".cm.stdout";
+                    $chunk{'stderr_file'} = $1.".".$minor.".cm.stderr";
                 } else {
                     $self->error_message(
                         "Problem parsing filename of input fq $input_file.\n".
                         "Possibly didn't end with .fq so couldn't extract name?");
                     $self->die_and_clean_up($self->error_message);
                 }
-    
+                $self->status_message("Iteration $minor of splitting fq '$input_file' into '".$chunk{'qual_infile'}."' and '".$chunk{'fasta_infile'}."'.");
+
                 my $out_seq_obj = Bio::SeqIO->new(
                     -file   => ">".$chunk{'fasta_infile'},
                     -format => 'fasta'
@@ -97,7 +120,7 @@ sub _run_aligner {
                 );
                          
                 my $counter = 0;
-                while ($counter < 10000 && $reached_end == 0) {
+                while ($counter < 25000 && $reached_end == 0) {
                     #my $fastq_obj = $in_seq_obj->next_seq || $reached_end=1;
                     my $fastq_obj = $in_seq_obj->next_seq;
                     if ($fastq_obj) {
@@ -106,178 +129,183 @@ sub _run_aligner {
                         $counter++;
                     } else { $reached_end = 1; }
                 }
-    
+
+                my $cv; 
+
+                # start our job
                 if ($nonmatching) {
                     my $cmdline = $crossmatch_path . sprintf(' %s %s %s -output_nonmatching_queries > %s',
-                        $chunk{'fasta_infile'}, $ref_file, $aligner_params->{align_params}, $chunk{'align_output'});
+                        $chunk{'fasta_infile'}, $ref_file, $aligner_params{align_params}, $chunk{'align_output'});
 
-                    push @cvs, Genome::Utility::AsyncFileSystem->shellcmd(
+                    $cv = Genome::Utility::AsyncFileSystem->shellcmd(
                         cmd             => $cmdline,
+                        '>'             => $chunk{'stdout_file'},
+                        '2>'            => $chunk{'stderr_file'},
                         input_files     => [ $chunk{'fasta_infile'}, $chunk{'qual_infile'}, $ref_file ],
                         output_files    => [ $chunk{'align_output'}, $chunk{'nonmatching_fa_output'}, $chunk{'nonmatching_qual_output'}, $chunk{'log_output'} ],
                         skip_if_output_is_present => 0,
                     );
                 } else {
                     my $cmdline = $crossmatch_path . sprintf(' %s %s %s > %s',
-                        $chunk{'fasta_infile'}, $ref_file, $aligner_params->{align_params}, $chunk{'align_output'});
+                        $chunk{'fasta_infile'}, $ref_file, $aligner_params{align_params}, $chunk{'align_output'});
 
-                    push @cvs, Genome::Utility::AsyncFileSystem->shellcmd(
+                    $cv = Genome::Utility::AsyncFileSystem->shellcmd(
                         cmd             => $cmdline,
+                        '>'             => $chunk{'stdout_file'},
+                        '2>'            => $chunk{'stderr_file'},
                         input_files     => [ $chunk{'fasta_infile'}, $chunk{'qual_infile'}, $ref_file ],
                         output_files    => [ $chunk{'align_output'}, $chunk{'log_output'} ],
                         skip_if_output_is_present => 0,
                     );
                 }
-
-                $chunks{$input_file}{$minor} = \%chunk;
+                
+                # save the actual async shellcmd object in the hash as well
+                $chunk{'cv'} = $cv;
+                # push this chunk's hash to the big list
+                push @cvs, \%chunk;
+                print "\n$cv\n";
+                #$chunks{$input_file}{$minor} = \%chunk;
+                # increase our counter by one for naming purposes
                 $minor++;
+                # increase the number of jobs we've started
+                $started_jobs++;
             }
             my @finished = _select_cv(@cvs);
             # remove finished from @cvs
             foreach my $f (@finished) {
-                @cv = grep { $_ != $f } @cv;
+                @cvs = grep { $_ != $f } @cvs;
             }
+
             foreach my $cv (@finished) {
-                if ($cv->recv) {
-                    foreach my $ma (keys %chunks) {
-                        foreach my $mi (keys %chunks) {
-                            if ($chunks{$ma}{$mi}->{'cv'} == $cv) {
-                                #### STEP 3: Parse outputs in SAM
-                                {
-                                    my $sam_output_fh = IO::File->new(">".$chunks{$ma}{$mi}->{'sam_output'});
-                                    if ( !$sam_output_fh ) {
-                                        $self->error_message("Error opening sam output file for writing $!");
-                                        return;
-                                    }
-                                    $self->status_message("Opened ".$chunks{$ma}{$mi}->{'sam_output'});
-                                    ### The following was adapted from code by Nancy Hansen <nhansen@mail.nih.gov>
+                #### STEP 3: Parse outputs in SAM
+                {
+                    my $sam_output_fh = IO::File->new(">".$cv->{'sam_output'});
+                    if ( !$sam_output_fh ) {
+                        $self->error_message("Error opening sam output file for writing $!");
+                        return;
+                    }
+                    $self->status_message("For converting, opened ".$cv->{'sam_output'});
+                    ### The following was adapted from code by Nancy Hansen <nhansen@mail.nih.gov>
 
-                                    ##########################################################
-                                    # Author:	Nancy Hansen
-                                    # Date:		3/27/09
-                                    # Function:	Parse a cross_match file, and output the
-                                    #               alignments in SAM format.
-                                    ##########################################################
+                    ##########################################################
+                    # Author:	Nancy Hansen
+                    # Date:		3/27/09
+                    # Function:	Parse a cross_match file, and output the
+                    #               alignments in SAM format.
+                    ##########################################################
 
-                                    #my $Id = q$Id: pulse_cm2sam.pl 3649 2010-04-22 19:34:59Z nhansen $;
-                                    #$VERSION = sprintf "%.4f", substr(q$Rev: 3649 $, 4)/10000;
+                    #my $Id = q$Id: pulse_cm2sam.pl 3649 2010-04-22 19:34:59Z nhansen $;
+                    #$VERSION = sprintf "%.4f", substr(q$Rev: 3649 $, 4)/10000;
 
-                                    #my $Usage = "pulse_cm2sam.pl <fastq file> <cons_fasta_offset>\nNote: crossmatch is STDIN\n";
+                    #my $Usage = "pulse_cm2sam.pl <fastq file> <cons_fasta_offset>\nNote: crossmatch is STDIN\n";
 
-                                    #$| = 1;
+                    #$| = 1;
 
-                                    my $paired; # option to specify that reads are paired
-                                    my $fastq_offset = 33; # offset for fastq read objects
-                                    my $hard_clip; # option to hard clip read sequences (i.e., not include unaligned ends)
-                                    my $norm_score = 40; # maximum score to normalize to
-                                    my $sq_file; # optional file containing the "SQ" sequence dictionary for the alignments
-                                    my $no_header; # option to not write a header to the file
-                                    my $max_bases; # option to use only first max_bases bases of each read
+                    my $paired; # option to specify that reads are paired
+                    my $fastq_offset = 33; # offset for fastq read objects
+                    my $hard_clip; # option to hard clip read sequences (i.e., not include unaligned ends)
+                    my $norm_score = 40; # maximum score to normalize to
+                    my $sq_file; # optional file containing the "SQ" sequence dictionary for the alignments
+                    my $no_header; # option to not write a header to the file
+                    my $max_bases; # option to use only first max_bases bases of each read
 
-                                    # TODO could be useful. might want to integrate into params from pipeline
-                                    #GetOptions("no_header" => \$no_header, "paired" => \$paired, 
-                                    #           "offset=i" => \$fastq_offset, "hard_clip" => \$hard_clip,
-                                    #           "sq_file=s" => \$sq_file, "max_bases=i" => \$max_bases );
+                    # TODO could be useful. might want to integrate into params from pipeline
+                    #GetOptions("no_header" => \$no_header, "paired" => \$paired, 
+                    #           "offset=i" => \$fastq_offset, "hard_clip" => \$hard_clip,
+                    #           "sq_file=s" => \$sq_file, "max_bases=i" => \$max_bases );
 
-                                    #($#ARGV == 1)
-                                    #  or die "$Usage";
+                    #($#ARGV == 1)
+                    #  or die "$Usage";
 
-                                    #my $fastq_file = $ARGV[0];
-                                    #my $cons_fasta_offset = $ARGV[1];
-                                    # TODO this is obtuse and not logical. it's $ma because that's the "$input_file" (fq) that the finished job came from
-                                    my $fastq_file = $ma;
-                                    my $cons_fasta_offset = 0;
+                    #my $fastq_file = $ARGV[0];
+                    #my $cons_fasta_offset = $ARGV[1];
+                    # TODO this is obtuse and not logical. it's $ma because that's the "$input_file" (fq) that the finished job came from
+                    my $fastq_file = $cv->{'fastq_infile'};
+                    my $cons_fasta_offset = 0;
 
-                                    my $rh_read_seqs = {};
-                                    if ($fastq_file) # read in quality values
-                                    {
-                                        my $read_io = Genome::InstrumentData::AlignmentResult::Crossmatch::GTB::Sequencing::ReadIO->new(-file => $fastq_file,
-                                                                                   -format => 'fastq', 
-                                                                                   -qual_offset => $fastq_offset);
+                    my $rh_read_seqs = {};
+                    if ($fastq_file) # read in quality values
+                    {
+                        my $read_io = Genome::InstrumentData::AlignmentResult::Crossmatch::GTB::Sequencing::ReadIO->new(-file => $fastq_file,
+                                                                   -format => 'fastq', 
+                                                                   -qual_offset => $fastq_offset);
 
-                                        while (my $read_obj = $read_io->next_read())
-                                        {
-                                            my $name = $read_obj->name();
-                                            $rh_read_seqs->{$name} = $read_obj;
-                                        }
-                                    }
+                        while (my $read_obj = $read_io->next_read())
+                        {
+                            my $name = $read_obj->name();
+                            $rh_read_seqs->{$name} = $read_obj;
+                        }
+                    }
 
-                                    #my $cm_obj = Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::SeqCM->new();
-                                    my $cm_obj = Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::SeqCM->new(-file => $align_output);
-                                    my @sam_strings = ();
-                                    # divide into different hits:
-                                    my $rh_hit_length = {}; # store names of hits and their lengths
+                    #my $cm_obj = Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::SeqCM->new();
+                    my $cm_obj = Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::SeqCM->new(-file => $cv->{'align_output'});
+                    my @sam_strings = ();
+                    # divide into different hits:
+                    my $rh_hit_length = {}; # store names of hits and their lengths
 
-                                    while (my $align_obj = $cm_obj->next_alignment())
-                                    {
-                                        my $hit = $align_obj->hit();
-                                        my $hit_length = $align_obj->hit_length();
-                                        $rh_hit_length->{$hit} = $hit_length;
-                                        push @sam_strings, _sam_string($align_obj, $cons_fasta_offset, $paired, $hard_clip, $max_bases, $rh_read_seqs);
-                                    }
+                    while (my $align_obj = $cm_obj->next_alignment())
+                    {
+                        my $hit = $align_obj->hit();
+                        my $hit_length = $align_obj->hit_length();
+                        $rh_hit_length->{$hit} = $hit_length;
+                        push @sam_strings, _sam_string($align_obj, $cons_fasta_offset, $paired, $hard_clip, $max_bases, $rh_read_seqs);
+                    }
 
-                                    # write header:
+                    # write header:
 
-                                    $sam_output_fh->print(qq!\@HD\tVN:1.0\n!) if (!$no_header);
+                    $sam_output_fh->print(qq!\@HD\tVN:1.0\n!) if (!$no_header);
 
-                                    if ($sq_file)
-                                    {
-                                        my $sq_lines = `cat $sq_file`;
-                                        foreach my $sq_line (split /\n/, $sq_lines)
-                                        {
-                                            if ($sq_line =~ /^\@SQ/)
-                                            {
-                                                $sam_output_fh->print("$sq_line\n");
-                                            }
-                                            else
-                                            {
-                                                croak "Invalid SQ line in $sq_file:\n$sq_line\n";
-                                            }
-                                        }
-                                    }
-
-                                    my $max_score = 0;
-                                    foreach my $hit (keys %{$rh_hit_length})
-                                    {
-                                        my $hit_length = $rh_hit_length->{$hit};
-                                        $sam_output_fh->print(qq!\@SQ\tSN:$hit\tLN:$hit_length\n!) if ((!$sq_file) && (!$no_header));
-                                    }
-
-                                    my $score_factor = ($max_score) ? $norm_score/$max_score : 'NA';
-
-                                    $sam_output_fh->print(qq!\@PG\tID:cross_match\tVN:1.080812\n!) if (!$no_header);
-
-                                    foreach my $sam_string (@sam_strings)
-                                    {
-                                        $sam_output_fh->print($sam_string);
-                                    }
-
-                                #        $input_file, $cons_fasta_offset, $align_output, $sam_output);
-                                }
-
-                                #### STEP 4: Filter alignments
-                                {
-                                    unless (-s $chunk{$ma}{$mi}->{'sam_output'}) {
-                                        $self->error_message("Unable to filter alignments. Sam file ".$chunk{$ma}{$mi}->{'sam_output'}." is zero length, so something went wrong.");
-                                        $self->die_and_clean_up($self->error_message);
-                                    }
-
-                                    # put your output file here, append to this file!
-                                        #my $output_file = $self->temp_staging_directory . "/all_sequences.sam"
-                                    # TODO uhhh is this totally right?
-                                    die "Failed to process sam command line, error_message is ".$self->error_message unless $self->_filter_sam_output($chunk{$ma}{$mi}->{'sam_output'}, $staging_sam_file);
-                                }
+                    if ($sq_file)
+                    {
+                        my $sq_lines = `cat $sq_file`;
+                        foreach my $sq_line (split /\n/, $sq_lines)
+                        {
+                            if ($sq_line =~ /^\@SQ/)
+                            {
+                                $sam_output_fh->print("$sq_line\n");
+                            }
+                            else
+                            {
+                                croak "Invalid SQ line in $sq_file:\n$sq_line\n";
                             }
                         }
                     }
+
+                    my $max_score = 0;
+                    foreach my $hit (keys %{$rh_hit_length})
+                    {
+                        my $hit_length = $rh_hit_length->{$hit};
+                        $sam_output_fh->print(qq!\@SQ\tSN:$hit\tLN:$hit_length\n!) if ((!$sq_file) && (!$no_header));
+                    }
+
+                    my $score_factor = ($max_score) ? $norm_score/$max_score : 'NA';
+
+                    $sam_output_fh->print(qq!\@PG\tID:cross_match\tVN:1.080812\n!) if (!$no_header);
+
+                    foreach my $sam_string (@sam_strings)
+                    {
+                        $sam_output_fh->print($sam_string);
+                    }
+
+                #        $input_file, $cons_fasta_offset, $align_output, $sam_output);
                 }
+
+                #### STEP 4: Filter alignments
+                {
+                    unless (-s $cv->{'sam_output'}) {
+                        $self->error_message("Unable to filter alignments. Sam file ".$cv->{'sam_output'}." is zero length, so something went wrong.");
+                        $self->die_and_clean_up($self->error_message);
+                    }
+
+                    # put your output file here, append to this file!
+                        #my $output_file = $self->temp_staging_directory . "/all_sequences.sam"
+                    die "Failed to process sam command line, error_message is ".$self->error_message unless $self->_filter_sam_output($cv->{'sam_output'}, $staging_sam_file);
+                }
+
+                $finished_jobs++;
             }
         }
-        $minor = 0;
     }
-    return 1;
-    print "Oh hai now you debug";
-    $DB::single = 1;
 
     return 1;
 }
@@ -315,52 +343,14 @@ sub _filter_sam_output {
     return 1;
 }
 
-sub _write_msg {
-            my $message_out = "\nWe are now be running on:\n\t$fasta_infile\n\t$qual_infile\n\t$align_output\n\t$sam_output\n\t$nonmatching_fa_output\n\t$nonmatching_qual_output\n\t$log_output\n\n";
-            print $message_out;
-
-            my $progress_fh = IO::File->new(">>/gscuser/iferguso/xmtemp/progress");
-            if ( !$progress_fh ) {
-                $self->error_message("Can't open progress file for writing $!");
-            } else {
-                $progress_fh->print($message_out);
-                $progress_fh->close;
-            }
-}
-
 sub decomposed_aligner_params {
     my $self = shift;
     my $params = $self->aligner_params || "-raw -tags -bandwidth 3 -penalty -1 -gap_init -1 -gap_ext -1 -masklevel 0 -minscore 70";
     
     my @spar = split /\:/, $params;
-    # TODO this forcing of these default parameters (unless they're otherwise specified) could be... bad...
-    #if ($spar[0] !~ /-n/) { $spar[0] .= "-n 8"; }
-    #if ($spar[1] !~ /-n/) { $spar[1] .= "-n 8"; }
-    #if ($spar[2] !~ /-n/) { $spar[2] .= "-n 8"; }
 
-    # TODO this is useless? since it doesn't check via aligner_params_for_sam_header anyways...
-    # sort variables
-    # TODO while on the one hand this ensures that specifiying the same params in a different order
-    #   looks the same to aligner_params_for_sam_header, this could screw things up if the binaries
-    #   expect things in a certain order.
-#    foreach (@spar) {
-#        # split by argument
-#        $_ = [split /\s?\-/, $_];
-#        # the first element should be empty, so drop it
-#        shift @{$_};
-#        # sort
-#        @{$_} = sort @{$_};
-#        # holder
-#        my $ordered;
-#        # push ordered args on
-#        foreach (@{$_}) { $ordered .= "-$_ "; }
-#        # set
-#        $_ = $ordered;
-#        # chop single trailing whitespace from loop
-#        chop;
-#    }
-
-    return ('align_params' => $spar[0]);
+    # TODO (iferguso) this could be changed: we currently specify number of cores to use right here:
+    return ('align_params' => $spar[0], 'cores_to_use' => 4);
 }
 
 sub aligner_params_for_sam_header {
@@ -368,141 +358,13 @@ sub aligner_params_for_sam_header {
     
     my %params = $self->decomposed_aligner_params;
     
-    return "cross_match $params{aligner_params}";
+    return "cross_match $params{alig_params}";
 }
-
-#sub _align_chunk {
-#    (my $chunks, my $input_file, my $minor, my $in_seq_obj, my $crossmatch_path, my $ref_file, my $aligner_params) = (shift, shift, shift, shift, shift, shift, shift);
-#    my %chunk;
-##	my $fasta_infile;
-##	my $qual_infile;
-##	my $nonmatching_fa_output;
-##	my $nonmatching_qual_output;
-##	my $log_output;
-##	my $align_output;
-##	my $sam_output;
-#		 
-#	#### STEP 1: Convert fastq files into fasta+qual files
-#	{
-#		# TODO i'm just assuming the input is fq and using the whole filename. none of this regex shenanigans
-#		#if ($input_file =~ /(.+)\.fq$/) {
-#		if ($input_file =~ /(.+)/) {
-#			$chunk{'fasta_infile'} = $1.".".$minor.".fa";
-#			$chunk{'qual_infile'} = $1.".".$minor.".fa.qual";
-#			$chunk{'align_output'} = $1.".".$minor.".cm.aligned.out";
-#			$chunk{'sam_output'} = $1.".".$minor.".sam.aligned.out";
-#			$chunk{'nonmatching_fa_output'} = $1.".".$minor.".fa.nonmatching";
-#			$chunk{'nonmatching_qual_output'} = $1.".".$minor.".fa.nonmatching.qual";
-#			$chunk{'log_output'} = $1.".".$minor.".fa.log";
-#		} else {
-#			$self->error_message(
-#				"Problem parsing filename of input fq $input_file.\n".
-#				"Possibly didn't end with .fq so couldn't extract name?");
-#			$self->die_and_clean_up($self->error_message);
-#		}
-#
-##		print "Iteration $split_iter of splitting fq '$input_file' into '$qual_infile' and '$fasta_infile'.";
-#		print "Iteration $minor of splitting fq '$input_file' into '".$chunk{'qual_infile'}."' and '".$chunk{'fasta_infile'}."'.";
-#
-#		my $out_seq_obj = Bio::SeqIO->new(
-#			-file   => ">".$chunk{'fasta_infile'},
-#			-format => 'fasta'
-#		);
-#		 
-#		my $out_qual_obj = Bio::SeqIO->new(
-#			-file   => ">".$chunk{'qual_infile'},
-#			-format => 'qual',
-#		);
-#		 
-#		my $counter = 0;
-#		while ($counter < 10000 && $reached_end == 0) {
-#			#my $fastq_obj = $in_seq_obj->next_seq || $reached_end=1;
-#			my $fastq_obj = $in_seq_obj->next_seq;
-#			if ($fastq_obj) {
-#				$out_seq_obj->write_seq($fastq_obj);
-#				$out_qual_obj->write_seq($fastq_obj);
-#				$counter++;
-#			} else { $reached_end = 1; }
-#		}
-#	}
-#
-#	#### STEP 2: Perform alignment
-#    $chunks->{$input_file}->{$minor} = \%chunk;
-#
-#	if ($nonmatching) {
-#		my $cmdline = $crossmatch_path . sprintf(' %s %s %s -output_nonmatching_queries > %s',
-#			$chunk{'fasta_infile'}, $ref_file, $aligner_params->{align_params}, $chunk{'align_output'});
-#
-#        return Genome::Utility::AsyncFileSystem->shellcmd(
-#			cmd             => $cmdline,
-#			input_files     => [ $chunk{'fasta_infile'}, $chunk{'qual_infile'}, $ref_file ],
-#			output_files    => [ $chunk{'align_output'}, $chunk{'nonmatching_fa_output'}, $chunk{'nonmatching_qual_output'}, $chunk{'log_output'} ],
-#			skip_if_output_is_present => 0,
-#        );
-##		Genome::Utility::FileSystem->shellcmd(
-##			cmd             => $cmdline,
-##			input_files     => [ $fasta_infile, $qual_infile, $ref_file ],
-##			output_files    => [ $align_output, $nonmatching_fa_output, $nonmatching_qual_output, $log_output ],
-##			skip_if_output_is_present => 0,
-##		);
-#	} else {
-#		my $cmdline = $crossmatch_path . sprintf(' %s %s %s > %s',
-#			$chunk{'fasta_infile'}, $ref_file, $aligner_params->{align_params}, $chunk{'align_output'});
-#
-#        return Genome::Utility::AsyncFileSystem->shellcmd(
-#			cmd             => $cmdline,
-#			input_files     => [ $chunk{'fasta_infile'}, $chunk{'qual_infile'}, $ref_file ],
-#			output_files    => [ $chunk{'align_output'}, $chunk{'log_output'} ],
-#			skip_if_output_is_present => 0,
-#		);
-##		Genome::Utility::FileSystem->shellcmd(
-##			cmd             => $cmdline,
-##			input_files     => [ $fasta_infile, $qual_infile, $ref_file ],
-##			output_files    => [ $align_output, $log_output ],
-##			skip_if_output_is_present => 0,
-##		);
-#	}
-#
-#        
-#
-##	my @cv;
-##	for (1..4) {
-##		push @cv, Genome::Utility::AsyncFileSystem->shellcmd(
-##			cmd => 'genome model whatever',
-##			'<' => '/dev/null',
-##			'>' => \*STDOUT,
-##			'2>' => \*STDERR
-##		);
-##	}
-#
-#	my $totalcount = 100;
-#	my $finished = 0;
-#	while ($finished < $totalcount) {
-#		my @finished = select_cv(@cv);
-#		foreach my $f (@finished) {
-#			@cv = grep { $_ != $f } @cv;
-#		}
-#
-#		for (@finished) {
-#			if ($cv->recv) {
-#				print "whatever succeeded";
-#			}
-#		}
-#
-#		for (1..scalar @finished) {
-#			push @cv, Genome::Utility::AsyncFileSystem->shellcmd(
-#			   cmd => 'genome model whatever',
-#			   '<' => '/dev/null',
-#			   '>' => \*STDOUT,
-#			   '2>' => \*STDERR
-#			);
-#		}
-#	} 
-#}
 
 sub _select_cv {
     while (1) {
-        my @done = grep { $_->ready } @_;
+        my @done = grep { $_->{'cv'}->ready } @_;
+#        my @done = grep { $_->ready } @_;
 
         if (@done) {
             return @done;
