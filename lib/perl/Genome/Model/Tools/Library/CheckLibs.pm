@@ -135,10 +135,11 @@ sub execute {
             my $instrument_data_id = $ida->instrument_data_id;
             my $lane_name = $ida->short_name."_".$ida->subset_name;
             my $median_insert_size = $ida->median_insert_size;
+            $median_insert_size ||= 0;
             my $sd_above_insert_size = $ida->sd_above_insert_size;
             my $sd_below_insert_size = $ida->sd_below_insert_size;
             if(!$median_insert_size || ($sd_below_insert_size/$median_insert_size) > 0.3 || ($sd_above_insert_size/$median_insert_size) > 0.2) {
-                printf $output_fh "%s\t%s\t%s\t%0.2f\t%0.2f\t%0.2f\n","$common_name.$type",$lane_name,$library,$median_insert_size, $median_insert_size ? $sd_below_insert_size/$median_insert_size : undef, $median_insert_size ? $sd_above_insert_size/$median_insert_size : undef;
+                printf $output_fh "%s\t%s\t%s\t%0.2f\t%0.2f\t%0.2f\n","$common_name.$type",$lane_name,$library,$median_insert_size, $median_insert_size ? $sd_below_insert_size/$median_insert_size : 0, $median_insert_size ? $sd_above_insert_size/$median_insert_size : 0;
                 $bad_lanes{$library}++;
             }
         }
@@ -160,6 +161,6 @@ sub help_brief {
 
 sub help_detail {
     <<'HELP';
-This script uses the Genome Model API to grab out all alignment events for a model and checks the GERALD insert size metrics for each library. Outliers are flagged and the number of "bad" lanes per library is reported. This program ignores lanes which do not have a library name. Be aware that occasionally, the insert size metrics do not get loaded into the database and thus will have 0's. This is not necessarily an indication that the lane or flowcell is bad. Standard deviations are reported as percents of the median insert size.
+This script uses the Genome Model API to grab out all alignment events for a model and checks the GERALD insert size metrics for each library. Outliers are flagged and the number of "bad" lanes per library is reported. This program ignores lanes which do not have a library name. Be aware that occasionally, the insert size metrics do not get loaded into the database and thus will have 0's. This is not necessarily an indication that the lane or flowcell is bad. Standard deviations are reported as fractions of the median insert size. Please note that this only queries the GERALD metrics and thus it may report as "bad" lanes which were aligned as fragment.
 HELP
 }
