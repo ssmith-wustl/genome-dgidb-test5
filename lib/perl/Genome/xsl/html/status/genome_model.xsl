@@ -406,7 +406,7 @@
         <div class="box_content rounded-bottom span-23 last" style="margin-bottom: 20px;">
 
           <xsl:if test="$num_builds &gt; 0">
-            <table cellpadding="0" cellspacing="0" border="0" class="lister" style="margin-bottom: 5px;">
+            <table cellpadding="0" cellspacing="0" border="0" class="lister" style="margin-bottom: 8px;">
               <thead>
                 <tr>
                   <th class="rounded-left">build</th>
