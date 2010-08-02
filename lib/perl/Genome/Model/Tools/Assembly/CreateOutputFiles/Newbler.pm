@@ -188,7 +188,7 @@ sub _set_transients {
     $self->_read_info_file("$edit_dir/readinfo.txt");
     $self->_supercontigs_agp_file("$edit_dir/supercontigs.agp");
     $self->_supercontigs_fasta_file("$edit_dir/supercontigs.fasta");
-    $self->_stats_file("$edit_dir/ststs.txt");
+    $self->_stats_file("$edit_dir/stats.txt");
     
     return 1;
 }
