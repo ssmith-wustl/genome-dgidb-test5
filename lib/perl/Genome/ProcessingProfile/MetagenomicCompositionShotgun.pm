@@ -269,7 +269,8 @@ sub _execute_build {
 
     # REPORTS
 
-    # TODO: Where should these go? build directory or /gscmnt/sata835/info/medseq/hmp-july2010?
+    # TODO: Where should these go? build directory or /gscmnt/sata849/info/hmp-july2010?
+    # Sounds like Craig would like these to go in the database.
     $rv = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->execute(
         build_id => $build->id,
         base_output_dir => $build->data_directory
@@ -563,6 +564,7 @@ sub _process_unaligned_reads {
     my $expected_pe_path = $expected_data_path1 . ',' . $expected_data_path2;
 
     my @upload_paths;
+    my ($se_lock, $pe_lock);
 
     # check for previous unaligned reads
     $self->status_message("Checking for previously imported unaligned and post-processed reads from: $tmp_dir/$subdir");
@@ -571,6 +573,17 @@ sub _process_unaligned_reads {
         $self->status_message("imported instrument data already found for path $expected_se_path, skipping");
     }
     else {
+        my $lock = basename($expected_se_path);
+        $lock = '/gsc/var/lock/' . $lock;
+
+        $se_lock = Genome::Utility::FileSystem->lock_resource(
+            resource_lock => $lock,
+            max_try => 2,
+        );
+        unless ($se_lock) {
+            $self->error_message("Failed to lock $expected_se_path.");
+            die $self->error_message;
+        }
         push @upload_paths, $expected_se_path;
     }
 
@@ -579,6 +592,17 @@ sub _process_unaligned_reads {
         $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
     }
     else {
+        my $lock = basename($expected_pe_path);
+        $lock = '/gsc/var/lock/' . $lock;
+
+        $pe_lock = Genome::Utility::FileSystem->lock_resource(
+            resource_lock => "$lock",
+            max_try => 2,
+        );
+        unless ($pe_lock) {
+            $self->error_message("Failed to lock $expected_pe_path.");
+            die $self->error_message;
+        }
         push @upload_paths, $expected_pe_path;
     }
 
@@ -707,6 +731,15 @@ sub _process_unaligned_reads {
         }
         if ($instrument_data->__changes__) {
             die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
+        }
+
+        unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
+            $self->error_message("Failed to unlock $expected_se_path.");
+            die $self->error_message;
+        }
+        unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
+            $self->error_message("Failed to unlock $expected_pe_path.");
+            die $self->error_message;
         }
 
         push @instrument_data, $instrument_data;
