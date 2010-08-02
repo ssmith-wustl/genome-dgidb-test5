@@ -169,7 +169,7 @@ sub _set_transients {
     $self->_read_info_file("$edit_dir/msi.readinfo.txt");
     $self->_supercontigs_agp_file("$edit_dir/msi.supercontigs.agp");
     $self->_supercontigs_fasta_file("$edit_dir/msi.supercontigs.fasta");
-    $self->_stats_file("$edit_dir/msi.ststs.txt");
+    $self->_stats_file("$edit_dir/msi.stats.txt");
     
     return 1;
 }
