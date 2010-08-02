@@ -47,7 +47,7 @@ sub execute {
             die('Failed to create output_directory: '. $self->output_directory);
         }
     }
-    my $cmd = $self->execute_path .'/cluster_refcov-64.pl '. $self->bam_file .' '. $self->output_directory .' '. $self->min_depth_filter;
+    my $cmd = $self->execute_path .'/cluster_refcov-64.pl '. $self->bam_file .' '. $self->output_directory .' '. $self->minimum_depths;
     #if ($self->min_base_quality || $self->min_mapping_quality) {
     #    $cmd .= ' '. $self->min_base_quality .' '. $self->min_mapping_quality;
     #}
