@@ -85,7 +85,7 @@ sub execute {
         my $stdout_file = $stdout_dir . $wigfile . ".stdout";
         my $wiggle = "/opt/fscache/" . $wiggle_files{$wigfile};
         $self->status_message("$wiggle");
-        print `bsub -q tcga -M 4000000 -R 'select[localdata && mem>4000] rusage[mem=4000]' -oo $stdout_file -J $jobname gmt bmr batch-class-summary --mutation-maf-file $maf --output-file $outfile --roi-bedfile $roi_bed --wiggle-file $wiggle --genes-to-exclude $genes_to_exclude`;
+        print `bsub -q tcga -M 4000000 -R 'select[localdata && mem>4000] rusage[mem=4000]' -oo $stdout_file -J $jobname gmt bmr batch-class-summary --mutation-maf-file $maf --output-file $outfile --roi-bedfile $roi_bed --wiggle-file $wiggle --genes-to-exclude "$genes_to_exclude"`;
     }
 
     return 1;
