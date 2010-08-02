@@ -14,8 +14,9 @@ my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastqc-Generate
 my @fastq_files = ($data_dir .'/s_2_1_sequence.txt',  $data_dir .'/s_2_2_sequence.txt');
 my $fastq_files = join(',',@fastq_files);
 my $fastqc = Genome::Model::Tools::Fastqc::GenerateReports->create(
-    fastq_files => $fastq_files,
+    fastq_files      => $fastq_files,
     report_directory => $tmp_dir,
+    use_version      => '0.4.3',
 );
 isa_ok($fastqc,'Genome::Model::Tools::Fastqc::GenerateReports');
 ok($fastqc->execute,'execute command '. $fastqc->command_name);

@@ -13,17 +13,21 @@ class Genome::InstrumentData::Command::Align::Blat {
     has_constant => [
         aligner_name                    => { value => 'blat' },
     ],
-    doc => 'align instrument data using blat (see #TODO)',
+    has_param => [
+        version                 => { default_value => '34'},
+    ],
+    doc => 'align instrument data using Blat'
 };
 
 sub help_synopsis {
 return <<EOS
-
+FIXME
 EOS
 }
 
 sub help_detail {
 return <<EOS
+Launch the Blat aligner in a standard way and produce results ready for the genome modeling pipeline.
 
 EOS
 }

@@ -17,7 +17,9 @@ class Genome::Model::Build::ImportedReferenceSequence {
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'fasta_file', value_class_name => 'UR::Value' ],
-            doc => "fully qualified fasta filename to copy to all_sequences.fa in the build's data_directory."
+            doc => "fully qualified fasta filename to copy to all_sequences.fa in the build's data_directory.",
+            is_mutable => 1,
+            is_many => 0,
         },
         name => {
             calculate_from => ['model_name','version'],
@@ -35,14 +37,18 @@ class Genome::Model::Build::ImportedReferenceSequence {
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'version', value_class_name => 'UR::Value' ],
-            doc => 'Identifies the version of the reference sequence.  This string may not contain spaces.'
+            doc => 'Identifies the version of the reference sequence.  This string may not contain spaces.',
+            is_mutable => 1,
+            is_many => 0,
         },
         prefix => {
             is => 'UR::Value',
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'prefix', value_class_name => 'UR::Value' ],
-            doc => 'The source of the sequence (such as NCBI).  May not contain spaces.'
+            doc => 'The source of the sequence (such as NCBI).  May not contain spaces.',
+            is_mutable => 1,
+            is_many => 0,
         }        
     ]
 };
