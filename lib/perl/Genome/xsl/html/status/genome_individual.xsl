@@ -90,7 +90,13 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           </xsl:for-each>
 
         </div> <!-- end .masonry -->
+
+        <xsl:for-each select="aspect[@name='samples']/object/aspect[@name='models']/object[./types[./isa[@type='Genome::Model']]]">
+          <xsl:call-template name="genome_model_builds_list_table"/>
+        </xsl:for-each>
+
       </div> <!-- end container -->
+
     </div> <!-- end content -->
 
     <xsl:call-template name="footer">
