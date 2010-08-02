@@ -266,13 +266,6 @@ sub execute {
     
     my $merge = Genome::Model::Tools::Hgmi::Merge->create(%merge_params);
 
-#    if (exists($config->{merge_script_location}) && (-x $config->{merge_script_location}) )
-#    {
-#        $merge->script_location($config->{merge_script_location});
-#        $self->status_message("using merge script ". $config->{merge_script_location});
-#    }
-
-
     if ( $self->dev )
     {
         $merge->dev(1);
@@ -300,20 +293,41 @@ sub execute {
     my $ssid = $merge->sequence_set_id();
 
     # tag 100% overlaps
-
     my $ovtag = Genome::Model::Tools::Bacterial::TagOverlaps->create( sequence_set_id => $ssid );
+    if ($ovtag) {
+        $ovtag->dev(1) if $self->dev;
+        $ovtag->execute or croak "Can't execute tag overlaps tools from Hap.pm!";
+    }
+    else {
+        croak "Can't create tag overlaps tools from Hap.pm!";
+    }
 
-    if(defined($self->dev)) {
-        $ovtag->dev(1);
+    # Running rrna screen. Previously, this would not get run if protein annotation was skipped,
+    # so it's been moved to prevent this
+    warn qq{\n\nRunning rRNA screening step ... Hap.pm\n\n};
+
+    my $rrnascreen = Genome::Model::Tools::Hgmi::RrnaScreen->create(sequence_set_id => $ssid);
+    if ($rrnascreen) {
+        $rrnascreen->dev(1) if $self->dev;
+        $rrnascreen->execute or croak "Can't execute rrna screen!";
     }
-    if($ovtag)
-    {
-        $ovtag->execute()
-            or croak "can't tag 100% overlaps in Hap.pm";
+    else {
+        croak "Can't set up rrna screen from Hap.pm!";
     }
-    else
+
+    # need to copy over the delete.rrna.ace file, and possibly load the file into
+    # acedb
+    # file seems to land in $config->{path}/$config->{orgname_dir}/$config->{assembly_name}/$config->{assembly_version}/Genbank_submission/Version_1.0/Annotated_submission/
+    my $delete_rrna = $config->{path}."/".$config->{orgname_dir}."/".$config->{assembly_name}."/".$config->{assembly_version}."/Genbank_submission/Version_1.0/Annotated_submission/delete.rrnahits.ace";
+    $self->status_message("dead genes from rrna screen $delete_rrna");
+    if( -e $delete_rrna )
     {
-        croak "can't create 100% tag overlapping in Hap.pm";
+        my $delete_rrna_dest = $config->{path}."/Acedb/".$config->{acedb_version}."/ace_files/".$self->locus_tag;
+        #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
+        my $rv = system("cp $delete_rrna $delete_rrna_dest");
+        unless($rv) {
+            $self->error_message("could not copy $delete_rrna , $delete_rrna_dest");
+        }
     }
 
     my %finish_params = (
@@ -406,41 +420,6 @@ sub execute {
     }
 
 
-    warn qq{\n\nRunning rRNA screening step ... Hap.pm\n\n};
-#    $self->status_message("Running rRNA screening");
-
-    # rrna screen step
-    my $rrnascreen = Genome::Model::Tools::Hgmi::RrnaScreen->create(
-        sequence_set_id => $ssid, );
-
-    if ( $self->dev )
-    {
-        $rrnascreen->dev(1);
-    }
-
-    if ($rrnascreen)
-    {
-        $rrnascreen->execute() or croak "can't execute rrna screen";
-    }
-    else
-    {
-        croak "can't set up rrna screen step... Hap.pm\n\n";
-    }
-
-    # need to copy over the delete.rrna.ace file, and possibly load the file into
-    # acedb
-    # file seems to land in $config->{path}/$config->{orgname_dir}/$config->{assembly_name}/$config->{assembly_version}/Genbank_submission/Version_1.0/Annotated_submission/
-    my $delete_rrna = $config->{path}."/".$config->{orgname_dir}."/".$config->{assembly_name}."/".$config->{assembly_version}."/Genbank_submission/Version_1.0/Annotated_submission/delete.rrnahits.ace";
-    $self->status_message("dead genes from rrna screen $delete_rrna");
-    if( -e $delete_rrna )
-    {
-        my $delete_rrna_dest = $config->{path}."/Acedb/".$config->{acedb_version}."/ace_files/".$self->locus_tag;
-        #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
-        my $rv = system("cp $delete_rrna $delete_rrna_dest");
-        unless($rv) {
-            $self->error_message("could not copy $delete_rrna , $delete_rrna_dest");
-        }
-    }
 
     if($self->skip_protein_annotation)
     {
