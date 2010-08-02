@@ -239,8 +239,8 @@ sub execute {
         $self->subject_class_name('Genome::Taxon');
     }
 
-    # Now check for a successful build of the assembly model. If one does not exist, kick off a build if the --assemble
-    # flag has been set, otherwise tell the user how to kick off a build and exit.
+    # Now check for a successful build of the assembly model. If one does not exist, kick off a build if the 
+    # --start-assembly-build flag has been set, otherwise tell the user how to kick off a build and exit.
     my $build = $self->assembly_model->last_succeeded_build;
     $build = $self->assembly_model->current_running_build unless $build;
     unless ($build) {
@@ -293,7 +293,6 @@ sub execute {
 
     # Make a link from the assembly model to this model. This link will be used to kick off a new build
     # of the gene prediction model every time its linked assembly model completes a build.
-    $DB::single = 1;
     my $to_rv = $self->assembly_model->add_to_model(
         to_model => $model,
         role => 'gene_prediction',
