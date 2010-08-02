@@ -5,9 +5,7 @@ use strict;
 
 use Genome;
 
-my $DEFAULT_VERSION = '2010_03_02';
-my $CONFIG_COMMAND = 'bam2cfg.pl';
-my $BREAKDANCER_COMMAND = 'BreakDancerMax.pl';
+my $DEFAULT_VERSION = '2010_06_24';
 
 class Genome::Model::Tools::DetectVariants::Somatic::Breakdancer{
     is => 'Genome::Model::Tools::DetectVariants::Somatic',
@@ -87,28 +85,25 @@ class Genome::Model::Tools::DetectVariants::Somatic::Breakdancer{
     ],
 };
 
+my %BREAKDANCER_BASE_DIRS = (
+    '0.0.1r59' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-0.0.1r59',
+    '2010_02_17' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_02_17/bin',
+    '2010_03_02' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_03_02/bin',
+    '2010_06_24' => '/gsc/pkg/bio/breakdancermax/breakdancer-20100624',
+);
 
-# HACK HACK HACK HACK WARNING THIS IS A HORRIBLE HACK 
-# workflow passes in an empty string for use version if the value is undef
-# but empty string can't resolve to a version, so stuff the default one in 
-# while creating.
-# FIXME we should not need this hack anymore, should just force versioning in somatic processing profiles and backfill
-################################################
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
+my %BREAKDANCER_CONFIG_COMMAND = (
+    '0.0.1r59' => 'bam2cfg.pl',
+    '2010_02_17' => 'bam2cfg.pl',
+    '2010_03_02' => 'bam2cfg.pl',
+    '2010_06_24' => 'perl/bam2cfg.pl',
+);
 
-    if ($self->version eq "") {
-        $self->version($DEFAULT_VERSION);
-    }
-
-    return $self; 
-}
-
-my %BREAKDANCER_VERSIONS = (
-	'0.0.1r59' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-0.0.1r59',
-	'2010_02_17' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_02_17/bin',
-	'2010_03_02' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_03_02/bin',
+my %BREAKDANCER_MAX_COMMAND = (
+    '0.0.1r59' => 'BreakDancerMax.pl',
+    '2010_02_17' => 'BreakDancerMax.pl',
+    '2010_03_02' => 'BreakDancerMax.pl',
+    '2010_06_24' => 'cpp/breakdancer_max',
 );
 
 sub help_brief {
@@ -158,7 +153,7 @@ sub _detect_variants {
 sub run_config {
     my $self = shift;
 
-    my $config_path = $self->breakdancer_path . "/$CONFIG_COMMAND";
+    my $config_path = $self->breakdancer_config_command;
     my $cmd = "$config_path " . $self->aligned_reads_input . " " . $self->control_aligned_reads_input . " " . $self->_bam2cfg_params . " > "  . $self->_config_staging_output;
     $self->status_message("EXECUTING CONFIG STEP: $cmd");
     my $return = Genome::Utility::FileSystem->shellcmd(
@@ -168,12 +163,12 @@ sub run_config {
     );
 
     unless ($return) {
-        $self->error_message("Running breakdancer config failed using command: $CONFIG_COMMAND");
+        $self->error_message("Running breakdancer config failed using command: $cmd");
         die;
     }
 
     unless (-s $self->_config_staging_output) {
-        $self->error_message("$CONFIG_COMMAND output " . $self->_config_staging_output . " does not exist or has zero size");
+        $self->error_message("$cmd output " . $self->_config_staging_output . " does not exist or has zero size");
         die;
     }
 
@@ -184,7 +179,7 @@ sub run_config {
 sub run_breakdancer {
     my $self = shift;
 
-    my $breakdancer_path = $self->breakdancer_path . "/$BREAKDANCER_COMMAND";
+    my $breakdancer_path = $self->breakdancer_max_command;
     my $cmd = "$breakdancer_path " . $self->_config_staging_output . " " . $self->_breakdancer_params . " > "  . $self->_sv_staging_output;
     $self->status_message("EXECUTING BREAKDANCER STEP: $cmd");
     my $return = Genome::Utility::FileSystem->shellcmd(
@@ -195,12 +190,12 @@ sub run_breakdancer {
     );
 
     unless ($return) {
-        $self->error_message("Running breakdancer failed using command: $BREAKDANCER_COMMAND ");
+        $self->error_message("Running breakdancer failed using command: $cmd");
         die;
     }
 
     unless (-s $self->_sv_staging_output) {
-        $self->error_message("$BREAKDANCER_COMMAND output " . $self->_sv_staging_output . " does not exist or has zero size");
+        $self->error_message("$cmd output " . $self->_sv_staging_output . " does not exist or has zero size");
         die;
     }
  
@@ -213,23 +208,53 @@ sub breakdancer_path {
     return $self->path_for_breakdancer_version($self->version);
 }
 
+sub breakdancer_max_command { 
+    my $self = $_[0];
+    return $self->breakdancer_max_command_for_version($self->version);
+}
+
+sub breakdancer_config_command { 
+    my $self = $_[0];
+    return $self->breakdancer_config_command_for_version($self->version);
+}
+
 sub available_breakdancer_versions {
     my $self = shift;
-    return keys %BREAKDANCER_VERSIONS;
+    return keys %BREAKDANCER_BASE_DIRS;
 }
 
 sub path_for_breakdancer_version {
     my $class = shift;
     my $version = shift;
 
-    if (defined $BREAKDANCER_VERSIONS{$version}) {
-        return $BREAKDANCER_VERSIONS{$version};
+    if (defined $BREAKDANCER_BASE_DIRS{$version}) {
+        return $BREAKDANCER_BASE_DIRS{$version};
     }
     die('No path for breakdancer version '. $version);
 }
 
+sub breakdancer_max_command_for_version {
+    my $class = shift;
+    my $version = shift;
+
+    if (defined $BREAKDANCER_MAX_COMMAND{$version}) {
+        return $class->path_for_breakdancer_version($version) . "/" .  $BREAKDANCER_MAX_COMMAND{$version};
+    }
+    die('No breakdancer max command for breakdancer version '. $version);
+}
+
+sub breakdancer_config_command_for_version {
+    my $class = shift;
+    my $version = shift;
+
+    if (defined $BREAKDANCER_CONFIG_COMMAND{$version}) {
+        return $class->path_for_breakdancer_version($version) . "/" .  $BREAKDANCER_CONFIG_COMMAND{$version};
+    }
+    die('No breakdancer config command for breakdancer version '. $version);
+}
+
 sub default_breakdancer_version {
-    die "default breakdancer version: $DEFAULT_VERSION is not valid" unless $BREAKDANCER_VERSIONS{$DEFAULT_VERSION};
+    die "default breakdancer version: $DEFAULT_VERSION is not valid" unless $BREAKDANCER_BASE_DIRS{$DEFAULT_VERSION};
     return $DEFAULT_VERSION;
 }
  

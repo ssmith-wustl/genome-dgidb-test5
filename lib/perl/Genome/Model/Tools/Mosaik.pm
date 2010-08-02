@@ -63,7 +63,7 @@ sub path_for_mosaik_version {
     die('No path for Mosaik version '. $version);
 }
 
-sub default_ssaha2_version {
+sub default_mosaik_version {
     die "default samtools version: $DEFAULT is not valid" unless $MOSAIK_VERSIONS{$DEFAULT};
     return $DEFAULT;
 }

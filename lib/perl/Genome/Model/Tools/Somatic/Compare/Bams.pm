@@ -89,12 +89,6 @@ sub pre_execute {
     unless (defined $self->skip_sv) {
         $self->skip_sv(0);
     }
-    unless (defined $self->breakdancer_params) {
-        $self->breakdancer_params("");
-    }
-    unless (defined $self->bam2cfg_params) {
-        $self->bam2cfg_params("");
-    }
     unless (defined $self->breakdancer_version) {
         $self->breakdancer_version("");
     }
@@ -137,11 +131,6 @@ sub pre_execute {
         $self->require_dbsnp_allele_match(1);
     }
 
-    # This is kinda hacky, but we need to join the breakdancer and breakdancer config params into one sv_params to pass
-    # to breakdancer, since it has to follow a generic API with only one set of params
-    my $sv_params = join(":", ($self->breakdancer_params || '', $self->bam2cfg_params || '') );
-
-    $self->sv_params($sv_params);
     # Set the operation name so we can later easily access workflow properties by build id
     $self->_operation->name($self->_operation->name . ' Build ' . $self->build_id); 
 
@@ -525,8 +514,6 @@ __DATA__
     <inputproperty isOptional="Y">normal_snp_file</inputproperty>
     <inputproperty isOptional="Y">reference_fasta</inputproperty>
     <inputproperty isOptional="Y">imported_bams</inputproperty>
-    <inputproperty isOptional="Y">breakdancer_params</inputproperty>
-    <inputproperty isOptional="Y">bam2cfg_params</inputproperty>
     <inputproperty isOptional="Y">sv_params</inputproperty>
     <inputproperty isOptional="Y">breakdancer_version</inputproperty>
     <inputproperty isOptional="Y">skip_tumor_indelpe</inputproperty>

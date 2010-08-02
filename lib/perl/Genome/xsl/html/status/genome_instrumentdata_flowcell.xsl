@@ -56,7 +56,7 @@ window.pMax = id[i].percent[j];
 window.chartMax = Math.ceil(window.pMax);
 window.chartMin = 0;
 
-console.log("window.chartMax: " + window.chartMax);
+
 
       ]]>
 </xsl:text>
@@ -232,7 +232,7 @@ console.log("window.chartMax: " + window.chartMax);
 
       <script type="text/javascript+protovis">
         <xsl:text disable-output-escaping="yes">
-        console.log("executing lane index chart.");
+
         var y_bars = window.indexData[0].sequence.length,
         w = 150,
         h = y_bars * 15,

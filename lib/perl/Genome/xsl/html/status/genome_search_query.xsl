@@ -27,7 +27,7 @@
                 </tr>
               </table>
             </form>
-            <p class="small" style="margin: 0 0 0 5px;">Found <xsl:value-of select="@num-found"/> records.</p>
+            <p class="small" style="margin: 0 0 0 5px;"> <br/> </p>
           </div>
         </div>
 
@@ -36,15 +36,34 @@
             <xsl:when test="/solr-results/@num-found &gt; 0">
               <div class="sidebar_search rounded-right">
                 <h4>Show:</h4>
+                  <xsl:variable name="selected_facet" select="//@facet-name"/>
                 <ul>
 
+                  <li>
+                    <xsl:if test="not(//@facet-name)">
+                      <xsl:attribute name="class">current</xsl:attribute>
+                    </xsl:if>
+                    <div class="category">
+                      <a>
+                        <xsl:attribute name="href">/view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/></xsl:attribute>
+                        All 
+                      </a>
+                        (<xsl:value-of select="//@facet-total"/>)
+                    </div>
+                  </li>
+
                   <xsl:for-each select="facets/field">
+
+                    <xsl:variable name="current_facet" select="@name"/>
                     <li>
+                      <xsl:if test="($selected_facet = $current_facet)">
+                        <xsl:attribute name="class">current</xsl:attribute>
+                      </xsl:if>
+
                       <div><xsl:attribute name="class">icon16 <xsl:value-of select="@icon-prefix"/>_16</xsl:attribute><br/></div>
                       <div class="category">
                         <a>
-                          <xsl:attribute name="href">
-                            /view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/>&amp;fq=type:"<xsl:value-of select="@name"/>"
+                          <xsl:attribute name="href">/view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/>&amp;fq=type:"<xsl:value-of select="@name"/>"
                           </xsl:attribute>
                           <xsl:value-of select="@label"/>
                         </a>
@@ -69,12 +88,19 @@
               <xsl:value-of disable-output-escaping="yes" select='.'/>
             </xsl:for-each>
 
+
             <div class="pager">
               <div class="nav">
+
                 <xsl:choose>
                   <xsl:when test="string(page-info/@previous-page)">
                     <a class="mini btn">
-                      <xsl:attribute name="href"><xsl:text>/view/genome/search/query/status.html?query=</xsl:text><xsl:value-of select="@query"/>&amp;fq=type:"<xsl:value-of select="//facets/field/@name"/>"<xsl:text>&amp;page=</xsl:text><xsl:value-of select="page-info/@previous-page" /></xsl:attribute><span class="sm-icon sm-icon-triangle-1-w"><br/></span>
+                      <xsl:attribute name="href">
+                            <xsl:text>/view/genome/search/query/status.html?query=</xsl:text>
+                            <xsl:value-of select="@query"/><xsl:if test="//@facet-name">&amp;fq=type:<xsl:value-of select="//@facet-name"/></xsl:if>
+                            <xsl:text>&amp;page=</xsl:text><xsl:value-of select="page-info/@previous-page" />
+                      </xsl:attribute>
+                      <span class="sm-icon sm-icon-triangle-1-w"><br/></span>
                     </a>
                   </xsl:when>
                   <xsl:otherwise>
@@ -89,8 +115,12 @@
                 <xsl:choose>
                   <xsl:when test="string(page-info/@next-page)">
                     <a class="mini btn">
-                      <xsl:attribute name="href"><xsl:text>/view/genome/search/query/status.html?query=</xsl:text><xsl:value-of select="@query"/>&amp;fq=type:"<xsl:value-of select="//facets/field/@name"/>"<xsl:text>&amp;page=</xsl:text><xsl:value-of select="page-info/@next-page" /></xsl:attribute>
-                      <span class="sm-icon sm-icon-triangle-1-e"><br/></span>
+                        <xsl:attribute name="href">
+                            <xsl:text>/view/genome/search/query/status.html?query=</xsl:text>
+                            <xsl:value-of select="@query"/><xsl:if test="//@facet-name">&amp;fq=type:<xsl:value-of select="//@facet-name"/></xsl:if>
+                            <xsl:text>&amp;page=</xsl:text><xsl:value-of select="page-info/@next-page" />
+                        </xsl:attribute>
+                        <span class="sm-icon sm-icon-triangle-1-e"><br/></span>
                     </a>
                   </xsl:when>
                   <xsl:otherwise>
