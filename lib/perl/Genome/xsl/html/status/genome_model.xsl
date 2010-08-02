@@ -57,6 +57,63 @@
 
   </xsl:template>
 
+  <xsl:template name="genome_model_set_header" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_header">
+    <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_header</xsl:comment>
+    <tr>
+      <th>
+        name
+      </th>
+      <th>
+        ID
+      </th>
+      <th>
+        creation date
+      </th>
+      <th>
+        user name
+      </th>
+      <th>
+        builds
+      </th>
+      <th>
+        <br/>
+      </th>
+    </tr>
+  </xsl:template>
+
+
+  <xsl:template name="genome_model_set_row" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_row">
+    <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_row</xsl:comment>
+
+    <xsl:variable name="total_builds" select="count(aspect[@name='builds']/object)"/>
+<!--    <xsl:variable name="failed_builds" select="count(aspect[@name='builds']/object/aspect[@name='status']/value = 'Failed')"/>-->
+    <tr>
+      <td>
+        <xsl:value-of select="aspect[@name='name']"/>
+      </td>
+      <td>
+        <xsl:value-of select="aspect[@name='genome_model_id']"/>
+      </td>
+      <td>
+        <xsl:value-of select="aspect[@name='creation_date']"/>
+      </td>
+      <td>
+        <xsl:value-of select="aspect[@name='user_name']"/>
+      </td>
+      <td>
+        <xsl:value-of select="$total_builds"/>
+<!--        <xsl:if test="$failed_builds">
+          <span style="color: red;">(<xsl:value-of select="$failed_builds"/>)</span>
+        </xsl:if> -->
+      </td>
+      <td class="buttons">
+        <xsl:call-template name="object_link_button_tiny">
+          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+        </xsl:call-template>
+      </td>
+    </tr>
+  </xsl:template>
+
   <xsl:template name="genome_model_build_lister">
     <xsl:comment>template: genome_model.xsl:genome_model_build_lister</xsl:comment>
 
