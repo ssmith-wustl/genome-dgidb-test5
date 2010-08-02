@@ -58,6 +58,8 @@
   </xsl:template>
 
   <xsl:template name="genome_model_build_lister">
+    <xsl:comment>template: genome_model.xsl:genome_model_build_lister</xsl:comment>
+
     <div class="generic_lister">
       <div class="box_header span-24 last rounded-top">
         <div class="box_title"><h3 class="genome_model_build_16 span-24 last">Builds</h3></div>
@@ -267,7 +269,7 @@
   </xsl:template>
 
   <xsl:template name="genome_model_link_table">
-    <xsl:comment>template: status/genome_model.xsl:genome_ model_link_table</xsl:comment>
+    <xsl:comment>template: status/genome_model.xsl:genome_model_link_table</xsl:comment>
     <div class="generic_lister">
       <div class="box_header span-24 last rounded-top">
         <div class="box_title"><h3 class="genome_model_16 span-24 last">Model Links</h3></div>
@@ -360,7 +362,7 @@
       </div> <!-- end box header -->
       <xsl:variable name="num_builds" select="count(aspect[@name='builds']/object)"/>
 
-      <div class="box_header_details rounded-bottom">
+      <div class="box_header_details rounded-bottom-left">
         <table class="name-value-row" cellpadding="0" cellspacing="0" border="0" style="margin-left: 27px;">
           <tr>
             <tr>
@@ -394,11 +396,17 @@
           </tr>
         </table>
       </div>
+
       <div class="span-23 prepend-1 last">
-        <div class="box_content rounded span-23 last" style="margin-bottom: 20px; margin-top: 5px;">
+        <div style="margin-left: -5px; background-color: #e5e5e3; width: 5px; height:5px; float: left;">
+          <div class="rounded-top-right" style="background-color: #f7f7f7; width: 5px; height: 5px;">
+            <br/>
+          </div>
+        </div>
+        <div class="box_content rounded-bottom span-23 last" style="margin-bottom: 20px;">
 
           <xsl:if test="$num_builds &gt; 0">
-            <table cellpadding="0" cellspacing="0" border="0" class="lister">
+            <table cellpadding="0" cellspacing="0" border="0" class="lister" style="margin-bottom: 8px;">
               <thead>
                 <tr>
                   <th class="rounded-left">build</th>

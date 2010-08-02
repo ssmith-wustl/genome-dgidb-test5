@@ -69,6 +69,11 @@ sub aligner_params_for_sam_header {
     return 'soap ' . $self->aligner_params;
 }
 
+sub fillmd_for_sam {
+    # soap appears to already fill in the MD string... so...
+    return 0;
+}
+
 #                                      _______
 ###################################   /______/|
 ### Taken from the Soap package ###   |     | |
