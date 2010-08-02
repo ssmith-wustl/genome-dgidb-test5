@@ -75,37 +75,40 @@ sub execute {
 
     foreach my $ida (@idas) {
         my $lane_name = $ida->short_name."_".$ida->subset_name;
-        my $alignment = $ida->alignment_set;
-        my $reference = $alignment->reference_build->full_consensus_path('fasta');
-        unless($alignment) {
-            $self->error_message("No alignment object for $lane_name");
-            return;
-        }
-        my $instrument_data_id = $alignment->instrument_data_id;    
-        my @alignments = $alignment->alignment_bam_file_paths;
+        my @alignments = $ida->results;
         unless(@alignments) {
-            $self->error_message("No alignment bam for $lane_name");
+            $self->error_message("No alignment objects for $lane_name");
             return;
         }
-        else {
-            my $alignment_count = @alignments;
-            my $path = $alignments[0];
-            $self->status_message("Found $alignment_count for $lane_name with default path $path\n");
-        }
-        my $alignment_file = $alignments[0];
-        unless(-e $alignment_file) {
-            $self->error_message("$alignment_file does not exist");
-            return;
-        }
-        my $dir = $self->analysis_dir;
-        my $user = $ENV{USER};
-        if(-z "$dir/$lane_name.var" || !-e "$dir/$lane_name.var") {
-            my $command .= <<"COMMANDS";
+        for my $alignment (@alignments) {
+            my $reference = $alignment->reference_build->full_consensus_path('fasta');
+            my $instrument_data_id = $alignment->instrument_data_id;    
+            my @bams = $alignment->alignment_bam_file_paths;
+            unless(@bams) {
+                $self->error_message("No alignment bam for $lane_name");
+                return;
+            }
+            else {
+                my $alignment_count = @bams;
+                my $path = $bams[0];
+                $self->status_message("Found $alignment_count for $lane_name with default path $path\n");
+            }
+            my $alignment_file = $bams[0];
+            unless(-e $alignment_file) {
+                $self->error_message("$alignment_file does not exist");
+                return;
+            }
+            my $dir = $self->analysis_dir;
+            my $user = $ENV{USER};
+            if(-z "$dir/$lane_name.var" || !-e "$dir/$lane_name.var") {
+                my $command .= <<"COMMANDS";
 samtools pileup -vc -f $reference $alignment_file | perl -pe '\@F = split /\\t/; \\\$_=q{} unless(\\\$F[7] > 2);' > $dir/$lane_name.var
 gmt analysis lane-qc compare-snps --genotype-file $genotype_file --variant-file $dir/$lane_name.var > $dir/$lane_name.var.compare_snps
 COMMANDS
-            print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' "$command"`;
-    }
+                #print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' "$command"`;
+                print $command,"\n";
+            }
+        }
 
     }
     return 1;
@@ -121,6 +124,6 @@ sub help_brief {
 
 sub help_detail {
     <<'HELP';
-This is a relatively crummy script to aid in running per-lane SNP QC until it is integrated into the pipeline. For evey lane aligned in a build, it will produce a .var file of SNP calls and a .compare_snps file containing the output of gmt analysis lane-qc compare-snps. Each file will be named by the convention FlowCellId_Lane
+This is a relatively crummy script to aid in running per-lane SNP QC until it is integrated into the pipeline. For every lane aligned in a build, it will produce a .var file of SNP calls and a .compare_snps file containing the output of gmt analysis lane-qc compare-snps. Each file will be named by the convention FlowCellId_Lane
 HELP
 }
