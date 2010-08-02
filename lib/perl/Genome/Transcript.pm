@@ -502,7 +502,7 @@ sub check_intron_size {
 sub exon_seq_matches_genome_seq {
     my $self = shift;
     my @exons = $self->cds_exons;
-    my $ref_build = $self->_get_reference_build;
+    my $ref_build = $self->get_reference_build;
 
     foreach my $exon (@exons) {
         my $ref_seq = $ref_build->sequence(
@@ -622,7 +622,7 @@ sub reverse_complement {
 }
 
 # Given a version and species, find the imported reference sequence build
-sub _get_reference_build {
+sub get_reference_build {
     my $self = shift;
 
     if ($self->{_reference_build}) {

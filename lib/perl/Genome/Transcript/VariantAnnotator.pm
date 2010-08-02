@@ -7,7 +7,9 @@ use warnings;
 use Data::Dumper;
 use Genome;
 use Genome::Info::AnnotationPriorities;
+use File::Temp;
 use MG::ConsScore;
+use List::Util qw/ max /;
 use List::MoreUtils qw/ uniq /;
 use Bio::Tools::CodonTable;
 use DateTime;
@@ -147,6 +149,7 @@ sub prioritized_transcript{
 # Corresponds to none filter in Genome::Model::Tools::Annotate::TranscriptVariants
 sub transcripts {
     my ($self, %variant) = @_;
+    #$DB::single = 1; #TODO: remove me
 
     # Make sure variant is set properly
     unless (defined($variant{start}) and defined($variant{stop}) and defined($variant{variant}) and defined($variant{reference}) 
@@ -484,10 +487,11 @@ sub _transcript_annotation_for_cds_exon {
             # In the above example, first changed amino acid would be T.
             $trv_type = "frame_shift_" . lc $variant->{type};
             if ($self->{get_frame_shift_sequence}) {
-                $DB::single = 1;
-                my $original_bases_after_indel = $self->_coding_bases_after_position($transcript, $structure, $variant->{start});
-                my $original_aa_after_indel = $self->translate($original_bases_after_indel, $transcript->{chrom_name});
-                $protein_string = "p." . $original_aa_after_indel . $protein_position . "fs";
+                #$DB::single = 1; #TODO: remove me
+                my $sequence_with_indel = $self->_apply_indel($transcript, $structure, $variant);
+                my $aa_after_indel = $self->translate($sequence_with_indel, $transcript->{chrom_name});
+                $aa_after_indel =~ s/\*.*/\*/; #remove everything after the amino_acid stop
+                $protein_string = "p." . $aa_after_indel . $protein_position . "fs";
             }
             else {
                 if ($reduced_original_aa eq "") {
@@ -523,9 +527,10 @@ sub _transcript_annotation_for_cds_exon {
         else {
             $trv_type = "frame_shift_" . lc $variant->{type};
             if ($self->{get_frame_shift_sequence}) {
-                my $original_bases_after_indel = $self->_coding_bases_after_position($transcript, $structure, $variant->{start});
-                my $original_aa_after_indel = $self->translate($original_bases_after_indel, $transcript->{chrom_name});
-                $protein_string = "p." . $original_aa_after_indel . $protein_position . "fs";
+                my $sequence_with_indel = $self->_apply_indel($transcript, $structure, $variant);
+                my $aa_after_indel = $self->translate($sequence_with_indel, $transcript->{chrom_name});
+                $aa_after_indel =~ s/\*.*/\*/; #remove everything after the amino_acid stop
+                $protein_string = "p." . $aa_after_indel . $protein_position . "fs";
             }
             else {
                 $reduced_original_aa = substr($reduced_original_aa, 0, 1); 
@@ -575,6 +580,40 @@ sub _transcript_annotation_for_cds_exon {
             domain => $protein_domain,
             all_domains => $all_protein_domains,
            );
+}
+
+#given a transcript, structure, and variant, returns all of the bases after and including the indel 
+#plus a number of bases before the indel to create correct, complete codons
+sub _apply_indel{
+    my ($self, $transcript, $structure, $variant) = @_;
+    #my ($start_sequence_position) = $structure->sequence_position($variant->{start});
+    #my ($stop_sequence_position) = $structure->sequence_position($variant->{stop});
+    my $temp_file = File::Temp->new();
+    die "Could not get temp file" unless $temp_file; 
+    my ($codon, $codon_position) = $structure->codon_at_position($variant->{start}); #we aren't really interested in the codon, just the codon_position (0-2)
+    $DB::single = 1 if $transcript->transcript_name eq 'XM_001717859'; #TODO: delete me
+    my $sequence_command = Genome::Model::Tools::Sequence->execute(
+        chromosome => $transcript->chrom_name,
+        start => $variant->{start} - $codon_position,
+        stop => $variant->{start} - $codon_position + 1000, 
+        build => $transcript->get_reference_build, 
+        output_file => $temp_file->filename,
+    ); #TODO: this assumes there's a stop codon in the next 1000 bp, which isn't guaranteed.  This should be smart about that
+    die "Unsuccessfully executed sequence fetch" unless $sequence_command;
+    my $sequence = <$temp_file>; #the sequence should be the only line in the temp file
+    
+    #apply the indel to the coding sequence
+    my $sequence_with_indel;
+    if ($variant->{type} =~ /ins/i){
+        #insertion, yay!
+        $sequence_with_indel = substr($sequence, 0, $codon_position + 1) . $variant->{variant} . substr($sequence, $codon_position + 1); #TODO: make this formula work 
+    }
+    else{
+        #deletion, boo!
+        $sequence_with_indel = substr($sequence, 0, $codon_position) . substr($sequence, $codon_position + $variant->{stop} - $variant->{start} + 1); 
+    }
+
+    return $sequence_with_indel;
 }
 
 # Given a transcript, structure, and position, returns all of the bases in the
