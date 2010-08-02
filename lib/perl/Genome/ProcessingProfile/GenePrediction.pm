@@ -42,6 +42,8 @@ sub _execute_build {
     my $model = $build->model;
     $self->status_message("Executing build logic for " . $self->__display_name__ . ":" . $build->__display_name__);
 
+    # TODO Make explicit build links between this build and the assembly build for tracking
+
     my $config_file_path = $build->create_config_file;
     unless (-s $config_file_path) {
         $self->error_message("Configuration file not found at expected location: $config_file_path");
