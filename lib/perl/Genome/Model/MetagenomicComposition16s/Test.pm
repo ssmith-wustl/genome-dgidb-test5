@@ -332,7 +332,7 @@ sub _get_mock_454_instrument_data {
         sequencing_platform => '454',
         full_path => $full_path,
     ) or Carp::confess "Unable to create mock 454 id #";
-    $inst_data->mock('fasta_file', sub {  #FIXME
+    $inst_data->mock('dump_fasta_file', sub {
             return $full_path.'/zymo4_pool7_DNA_extract.fasta';
         }
     );

@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+require Carp;
+
 class Genome::InstrumentData::454 {
     is  => 'Genome::InstrumentData',
     table_name => <<'EOS'
@@ -122,7 +124,7 @@ sub dump_sanger_fastq_files {
     my %params = @_;
     
     unless (-s $self->sff_file) {
-        $self->error_message(sprintf("SFF file %s doesn't exist for 454 instrument data %s", $self->sff_file, $self->id));
+        $self->error_message(sprintf("SFF file (%s) doesn't exist for 454 instrument data %s", $self->sff_file, $self->id));
         die $self->error_message;
     }
     
@@ -145,6 +147,81 @@ sub dump_sanger_fastq_files {
     }
     
     return ($output_file);
+}
+
+sub dump_fasta_file {
+    my ($self, %params) = @_;
+    $params{type} = 'fasta';
+    return $self->_run_sffinfo(%params);
+}
+
+sub dump_qual_file {
+    my ($self, %params) = @_;
+    $params{type} = 'qual';
+    return $self->_run_sffinfo(%params);
+}
+
+sub _run_sffinfo {
+    my ($self, %params) = @_;
+
+    # Type 
+    my $type = delete $params{type};
+    my %types_params = (
+        fasta => '-s',
+        qual => '-q',
+    );
+    unless ( defined $type and grep { $type eq $_ } keys %types_params ) { # should not happen
+        Carp::confess("No or invalid type (".($type || '').") to run sff info.");
+    }
+
+    # Verify 64 bit
+    unless ( Genome::Config->arch_os =~ /x86_64/ ) {
+        Carp::confess(
+            $self->error_message('Dumping $type file must be run on 64 bit machine.')
+        );
+    }
+    
+    # SFF
+    my $sff_file = $self->sff_file;
+    unless ( -s $sff_file ) {
+        Carp::confess(
+            $self->error_message(
+                "SFF file ($sff_file) doesn't exist for 454 instrument data (".$self->id.")"
+            )
+        );
+    }
+
+    # File
+    my $directory = delete $params{'directory'} 
+        || Genome::Utility::FileSystem->base_temp_directory();
+    my $file = sprintf("%s/%s.%s", $directory, $self->id, $type);
+    unlink $file if -e $file;
+    
+    # SFF Info
+    my $sffinfo = Genome::Model::Tools::454::Sffinfo->create(
+        sff_file => $sff_file,
+        output_file => $file,
+        params => $types_params{$type},
+    );
+    unless ( $sffinfo ) {
+        Carp::confess(
+            $self->error_message("Can't create SFF Info command.")
+        );
+    }
+    unless ( $sffinfo->execute ) {
+        Carp::confess(
+            $self->error_message("SFF Info command failed to dump $type file for instrument data (".$self->id.")")
+        );
+    }
+
+    # Verify
+    unless ( -s $file ) {
+        Carp::confess(
+            $self->error_message("SFF info executed, but a fasta was not produced for instrument data (".$self->id.")")
+        );
+    }
+
+    return $file;
 }
 
 sub resolve_fasta_path {
