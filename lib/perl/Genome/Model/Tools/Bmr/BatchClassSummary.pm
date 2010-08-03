@@ -63,7 +63,7 @@ sub execute {
     
     #parse gene exclusion list
     my $gene_exclusion_list = $self->genes_to_exclude;
-    my @genes_to_exclude;
+    my @genes_to_exclude = ();
     if (defined $gene_exclusion_list) {
         @genes_to_exclude = split ",",$gene_exclusion_list;
     }
