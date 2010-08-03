@@ -488,9 +488,6 @@ sub _transcript_annotation_for_cds_exon {
             $trv_type = "frame_shift_" . lc $variant->{type};
             if ($self->{get_frame_shift_sequence}) {
                 #$DB::single = 1; #TODO: remove me
-                #my $sequence_with_indel = $self->_apply_indel_and_translate($transcript, $structure, $variant);
-                #my $aa_after_indel = $self->translate($sequence_with_indel, $transcript->{chrom_name});
-                #$aa_after_indel =~ s/\*.*/\*/; #remove everything after the amino_acid stop
                 my $aa_after_indel = $self->_apply_indel_and_translate($transcript, $structure, $variant);
                 $protein_string = "p." . $aa_after_indel . $protein_position . "fs";
             }
@@ -528,9 +525,6 @@ sub _transcript_annotation_for_cds_exon {
         else {
             $trv_type = "frame_shift_" . lc $variant->{type};
             if ($self->{get_frame_shift_sequence}) {
-                #my $sequence_with_indel = $self->_apply_indel_and_translate($transcript, $structure, $variant);
-                #my $aa_after_indel = $self->translate($sequence_with_indel, $transcript->{chrom_name});
-                #$aa_after_indel =~ s/\*.*/\*/; #remove everything after the amino_acid stop
                 my $aa_after_indel = $self->_apply_indel_and_translate($transcript, $structure, $variant);
                 $protein_string = "p." . $aa_after_indel . $protein_position . "fs";
             }
