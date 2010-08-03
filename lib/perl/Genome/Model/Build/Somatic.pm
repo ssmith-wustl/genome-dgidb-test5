@@ -100,17 +100,22 @@ sub somatic_workflow_inputs {
 
     my $workflow_instance_name = "Somatic Pipeline Build " . $self->build_id;
 
-    my $input_stored = $dbh->selectrow_arrayref("SELECT input_stored FROM workflow_instance WHERE name = ?", {}, $workflow_instance_name)->[0];
+    my $results = $dbh->selectrow_arrayref("SELECT input_stored FROM workflow_instance WHERE name = ?", {}, $workflow_instance_name);
+    unless ($results) {
+        $self->error_message("Could not find a workflow instance associated with this build with the name: $workflow_instance_name");
+        return;
+    }
+    my $input_stored = $results->[0];
 
     unless ($input_stored) {
         $self->error_message("Could not find a workflow instance associated with this build with the name: $workflow_instance_name");
-        die;
+        return;
     }
 
     my $input = Storable::thaw($input_stored);
     unless ($input) {
         $self->error_message("Could not thaw input hash for workflow instance named: $workflow_instance_name");
-        die;
+        return;
     }
 
     # returns hashref of workflow params like { input => value }
