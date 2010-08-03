@@ -2,40 +2,53 @@
 
 use strict;
 use warnings;
-use IPC::Run;
-
 
 use above "Genome";
-use Test::More tests => 6;
 
-use_ok('Genome::Model::Tools::Consed::TracesToNav');
+require File::Temp;
+use IPC::Run;
+use Test::More;
 
-my $refseq = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.c1.refseq.fasta";
-my $ace = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.ace.1";
+use_ok('Genome::Model::Tools::Consed::TracesToNav') or die;
 
-my $list = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToNav/Nav.list";
+# Files
+my $dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToNav",
+my $file_base = '10_126008345_126010576';
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+my $refseq = $tmpdir."/$file_base.c1.refseq.fasta";
+symlink(
+    "$dir/$file_base.c1.refseq.fasta",
+    $refseq,
+);
+ok (-s $refseq, 'linked refseq');
 
-ok (-s $refseq);
-ok (-s $ace);
-ok (-s $list);
+my $ace = $tmpdir."/10_126008345_126010576.ace.1";
+symlink(
+    "$dir/$file_base.ace.1",
+    $ace,
+);
+ok(-s $ace, 'linked ace');
 
-#my @command = ["gmt" , "consed" , "traces-to-nav" , "--ace" , "$ace" , "--convert-coords" , "$refseq" , "--unpaired" , "--name-nav" , "test.traces.to.nav" , "--list" , "$list"];
-my @command = ["gmt" , "consed" , "traces-to-nav" , "--ace" , "$ace" , "--convert-coords" , "$refseq" , "--input-type" , "simple" , "--name-nav" , "test.traces.to.nav" , "--list" , "$list"];
-#system qq(gmt consed traces-to-nav --ace $ace --convert-coords $refseq --input-type simple --name-nav test.traces.to.nav --list $list);
+my $list = $tmpdir."/Nav.list";
+symlink(
+    "$dir/Nav.list",
+    $list,
+);
+ok(-s $list, 'linked list');
 
+# Run
+my @command = ["gmt" , "consed" , "traces-to-nav" , "--ace" , "$ace" , "--convert-coords" , "$refseq" , "--input-type" , "simple" , "--name-nav" , "$file_base" , "--list" , "$list"];
 &ipc_run(@command);
 
-
+# Verify
 my $date = &get_date_tag;
+ok (-s $tmpdir."/$file_base.$date.nav", 'created navigator');
+ok (-s $tmpdir."/$file_base.$date.csv", 'created spreadsheet');
 
-my $navigator = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/test.traces.to.nav.$date.nav";
-my $spreadsheet = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/test.traces.to.nav.$date.csv";
+done_testing();
+exit;
 
-
-ok (-s $navigator);
-ok (-s $spreadsheet);
-
-
+###
 
 sub ipc_run {
 

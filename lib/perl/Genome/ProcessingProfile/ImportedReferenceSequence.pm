@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use File::Spec;
+use File::Temp;
 use Genome;
 
 class Genome::ProcessingProfile::ImportedReferenceSequence {
@@ -40,8 +41,15 @@ sub _execute_build {
         return;
     }
 
+    my $build_directory = $build->data_directory;
+    my $output_directory = File::Temp->newdir(
+        "tmp_XXXXX",
+        DIR     => $build_directory,
+        CLEANUP => 1,
+    );
+    chmod(0775, $output_directory); #so can be manually cleaned up by others if need be
+
     $self->status_message("Copying fasta");
-    my $output_directory = $build->data_directory;
     my $fasta_file_name = File::Spec->catfile($output_directory, 'all_sequences.fa');
     
     #If an error occurs here about refusing to write to an existing file, that was most likely on a re-run of the build
@@ -106,6 +114,13 @@ sub _execute_build {
     unless($rv) {
         $self->error_message('samtools faidx failed.');
         return;
+    }
+
+    $self->status_message('Promoting files to final location.');
+    for my $staged_file (glob($output_directory . '/*')) {
+        my ($vol, $dir, $file_base) = File::Spec->splitpath($staged_file);
+        my $final_file = join('/', $build_directory, $file_base);
+        rename($staged_file, $final_file);
     }
 
     # Reallocate to amount of space actually consumed if the build has an associated allocation and that allocation

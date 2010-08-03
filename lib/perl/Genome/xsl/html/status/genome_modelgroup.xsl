@@ -11,8 +11,18 @@
 
     <div class="content rounded shadow">
       <div class="container">
+        <div id="objects" class="span-24 last">
+          <xsl:call-template name="genome_modelgroup_attributes_box"/>
+
+          <xsl:for-each select="aspect[@name='convergence_model']/object">
+            <xsl:call-template name="genome_model_convergence_box"/>
+          </xsl:for-each>
+
+        </div>
 
         <xsl:for-each select="aspect[@name='models']/object[./types[./isa[@type='Genome::Model']]]">
+          <xsl:sort select="aspect[@name='is_default']" order="descending"/>
+          <xsl:sort select="aspect[@name='name']"/>
           <xsl:call-template name="genome_model_builds_list_table"/>
         </xsl:for-each>
 
@@ -26,5 +36,47 @@
     </xsl:call-template>
 
   </xsl:template>
+
+
+  <xsl:template name="genome_modelgroup_attributes_box" match="object[./types[./isa[@type='Genome::ModelGroup']]]" mode="attributes_box">
+    <xsl:comment>template: genome_modelgroup.xsl:genome_model_attributes_box match: object[./types[./isa[@type='Genome::ModelGroup']]]  mode: box</xsl:comment>
+    <div class="span_8_box_masonry">
+      <div class="box_header span-8 last rounded-top">
+        <div class="box_title"><h3 class="nontyped span-7 last">Model Group Attributes</h3></div>
+        <div class="box_button">
+
+        </div>
+      </div>
+
+      <div class="box_content rounded-bottom span-8 last">
+        <table class="name-value">
+          <tbody>
+            <tr>
+              <td class="name">ID:
+              </td>
+              <td class="value"><xsl:value-of select="@id"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">Name:
+              </td>
+              <td class="value">
+                <xsl:choose>
+                  <xsl:when test="string(normalize-space(aspect[@name='name']/value))">
+                    <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
+                  </xsl:when>
+                  <xsl:otherwise>
+                    --
+                  </xsl:otherwise>
+                </xsl:choose>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </xsl:template>
+
 
 </xsl:stylesheet>
