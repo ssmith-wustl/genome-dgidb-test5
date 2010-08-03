@@ -40,9 +40,9 @@ sub execute {
 	my $build_id = "";
 	$build_id = $self->build_id;
     	my $dir = $self->analysis_dir;
-	my $login = getlogin || getpwuid($<); #get current user name	 
+	my $user = getlogin || getpwuid($<); #get current user name	 
 #	print "reference: $reference_file User: $login";
-    	my $tumorornormal_model_id = $self->model_id;
+    	my $wgs_model_id = $self->model_id;
 #    print "$somatic_model_id, $somatic_model, $build_status";
 #    return;
     
@@ -86,11 +86,11 @@ sub execute {
     # can be improved to use somatic model-id and grap the last succeed build to fine the alignment files
     
     # Step2: to get the somatic model and its last succeed build
-    	my $tumorornormal_model;
+     	my $wgs_model;
     	my $build;
     	unless ( $build_id ne ""){
-		$tumorornormal_model = Genome::Model-> get(genome_model_id =>$tumorornormal_model_id);
-		$build= $tumorornormal_model->last_succeeded_build;
+		$wgs_model = Genome::Model-> get(genome_model_id =>$wgs_model_id);
+		$build= $wgs_model->last_succeeded_build;
 		$build_id=$build->build_id;
     	}
     
@@ -103,12 +103,13 @@ sub execute {
     #find model
 
 #    my $model = $build->model;
-    	my $model=$tumorornormal_model;
+    	my $model=$wgs_model;
     	unless(defined($model)) {
         	$self->error_message("Somehow this build does not have a model");
         	return;
     	}
-    
+  
+      print "model:$model\n build:$build\n build_id:$build_id\n model_id:$wgs_model_id\n";
     	printf STDERR "Grabbing information for model %s (build %s)\n", $model->name, $build->build_id;       
     #Grab all alignment events so we can filter out ones that are still running or are abandoned
     # get all align events for the current running build
@@ -138,9 +139,9 @@ sub execute {
 # find reference sequences
 #	my $reference_file="/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa"; 
 	my $reference_file=$model->reference_sequence_build->full_consensus_path('fa') ;
-	print "reference: $reference_file User: $login";
-	return;
-	for my $ida (@idas) {
+	print "reference: $reference_file User: $user";
+	print "Number of idas:$#idas\n";
+        for my $ida (@idas) {
 		my @alignments = $ida->results($build);
 		for my $alignment (@alignments) {
      		        my $instrument_data = $alignment->instrument_data;
@@ -156,11 +157,11 @@ sub execute {
 					$self->error_message("$alignment_file does not exist");
 					return;
 		        	}
-		        	my $command .= <<"COMMANDS";
+                                 	my $command .= <<"COMMANDS";
 samtools pileup -vc -f $reference_file $alignment_file | perl -pe '\@F = split /\\t/; \\\$_=q{} unless(\\\$F[7] > 2);' > $dir/$lane_name.var
 gmt analysis lane-qc compare-snps --genotype-file $genotype_file --variant-file $dir/$lane_name.var > $dir/$lane_name.var.compare_snps
 COMMANDS
-print `bsub -N -u xhong\@genome.wustl.edu -R 'select[type==LINUX64]' "$command"`;
+print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' "$command"`;
 			}else{
 				$self->error_message("No alignment object for $lane_name");
 				return;
