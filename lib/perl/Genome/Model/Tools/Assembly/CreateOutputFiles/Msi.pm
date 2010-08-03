@@ -42,7 +42,9 @@ sub help_brief {
 sub help_synopsis {
     return <<EOS
 gmt assembly create-output-file msi --assembler newbler --acefile /gscmnt/111/newbler_assembly/edit_dir/ace.msi --assembly-directory /gscmnt/111/newbler_assembly
+gmt assembly create-output-file msi --assembler pcap --acefile /gscmnt/111/pcap_assembly/edit_dir/ace.msi --assembly-directory /gscmnt/111/pcap_assembly
 EOS
+
 }
 
 sub help_detail {
