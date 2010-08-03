@@ -8,9 +8,8 @@ use Sys::Hostname;
 use above 'Genome';
 
 BEGIN {
-    plan skip_all => 'Work on test cases still ongoing. Fails after about number 23.';
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25;
+        plan tests => 25; # will be 31 if new shortcut data is generated
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -65,10 +64,12 @@ eval "use $alignment_result_class_name";
 my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TEST-human');
 ok($reference_model, "got reference model");
 
+$DB::single = 1;
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
 
 # Uncomment this to create the dataset necessary for shorcutting to work
+# note: successfully generating the shortcut data will run 31 tests
 #test_alignment(generate_shortcut_data => 1);
 
 
@@ -83,6 +84,8 @@ sub test_alignment {
 
     my $instrument_data = generate_fake_instrument_data();
 
+    #note: a smalt index (.sma, .smi) should exist here: /gscmnt/sata420/info/model_data/2857679400/build102640309/
+    # if not, run `smalt index all_sequences.fa all_sequences.fa` to create (should take ~7 seconds)
     my $alignment = Genome::InstrumentData::AlignmentResult->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        samtools_version => $samtools_version,
@@ -94,7 +97,7 @@ sub test_alignment {
                                                    );
 
     ok($alignment, "Created Alignment");
-    my $dir = $alignment->alignment_directory;
+    my $dir = $alignment->alignment_directory; #/gscmnt/sata420/info/model_data/2741951221/build101947881/
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
     ok(-s $dir . "/all_sequences.bam", "result has a bam file");
@@ -184,7 +187,7 @@ sub test_shortcutting {
     # once to find old data
     my $adir = $alignment->alignment_directory;
     my @list = <$adir/*>;
-
+$DB::single=1;
     ok($alignment, "Created Alignment");
     my $dir = $alignment->alignment_directory;
     ok($dir, "alignments found/generated");
