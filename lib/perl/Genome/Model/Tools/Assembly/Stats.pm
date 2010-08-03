@@ -16,7 +16,14 @@ use Data::Dumper;
 
 class Genome::Model::Tools::Assembly::Stats {
     is => 'Command',
-    has => [],
+    has => [
+	major_contig_length => {
+	    is => 'Number',
+	    is_optional => 1,
+	    default_value => 500,
+	    doc => 'Cutoff value for major contig length',
+	},
+    ],
     has_optional_transient => [
 	#generic files
 	contigs_bases_file => { is => 'Text', doc => 'Assembly contigs.bases file', },
@@ -24,7 +31,6 @@ class Genome::Model::Tools::Assembly::Stats {
 	reads_placed_file => { is => 'Text', doc => 'Assembly contigs.quals file', },
 	read_info_file => {is => 'Text', doc => 'Assembly readinfo.txt file',},
 	#velvet specific files
-	#velvet_ace_file => { is => 'Text', doc => 'Velvet ace file', },
 	velvet_afg_file => { is => 'Text', doc => 'Velvet afg file', },
 	velvet_sequences_file => { is => 'Text', doc => 'Velvet sequences file', },
 	#optional core gene survey run file
@@ -69,10 +75,7 @@ sub get_simple_read_stats {
 	      "Total input bases: $total_input_bases bp\n".
 	      "Total Q20 bases: $total_Q20_bases bp\n";
 
-    
-    #my $avg_Q20_per_read = int ($total_Q20_bases / $total_input_reads + 0.5);
     my  $avg_Q20_per_read = ($total_input_reads > 0) ? int ($total_Q20_bases / $total_input_reads + 0.5) : 0;
-    #my $avg_read_length = int ($total_input_bases / $total_input_reads + 0.5);
     my $avg_read_length = ($total_input_reads > 0) ? int ($total_input_bases / $total_input_reads + 0.5) : 0;
 
     $stats .= "Average Q20 bases per read: $avg_Q20_per_read bp\n".
@@ -350,15 +353,6 @@ sub _resolve_tier_values {
     return ($t1, $t2);
 }
 
-sub _resolve_major_contig_length {
-    my ($self) = @_;
-    my $major_contig_length = 500;
-    if ($self->major_contig_length) {
-	$major_contig_length = $self->major_contig_length;
-    }
-    return $major_contig_length;
-}
-
 sub parse_contigs_quals_file {
     my ($self) = @_;
     my ($supercontig_number, $contig_number);
@@ -392,7 +386,7 @@ sub create_contiguity_stats {
     my ($self, $counts, $q20_counts, $type, $t1, $t2) = @_;
 
     #TYPE IS CONTIG OR SUPERCONTIG
-    my $major_contig_length = $self->_resolve_major_contig_length();
+    my $major_contig_length = $self->major_contig_length;
     my $t3 = $counts->{total_contig_length} - ($t1 + $t2);
     #TOTAL CONTIG VARIABLES
     my $total_contig_number = 0;    my $cumulative_length = 0;
@@ -521,8 +515,8 @@ sub create_contiguity_stats {
     foreach my $c (sort {$counts->{$type}->{$b} <=> $counts->{$type}->{$a}} keys %{$counts->{$type}}) {
 	next unless $counts->{$type}->{$c} > $major_contig_length;
 	$n50_cumulative_length += $counts->{$type}->{$c};
-	$n50_major_contig_number++ if $not_reached_major_n50;
 	if ($not_reached_major_n50) {
+	    $n50_major_contig_number++;
 	    if ($n50_cumulative_length >= $major_contig_bases * 0.50) {
 		$not_reached_major_n50 = 0;
 		$n50_major_contig_length = $counts->{$type}->{$c};
@@ -557,13 +551,12 @@ sub create_contiguity_stats {
 	$q20_ratio = int ($total_q20_bases * 1000 / $cumulative_length) / 10;
 	$major_contig_q20_ratio = int ($major_contig_q20_bases * 1000 / $major_contig_bases) / 10;
 
-	#$t1_q20_ratio = int ($total_t1_q20_bases * 1000 / $total_t1_bases) / 10 if $total_t1_bases > 0; #else 0
 	$t1_q20_ratio = sprintf ("%0.1f", $total_t1_q20_bases * 100 / $total_t1_bases)
 	    if $total_t1_bases > 0; #else 0
-	#$t2_q20_ratio = int ($total_t2_q20_bases * 1000 / $total_t2_bases) / 10 if $total_t2_bases > 0;
+
 	$t2_q20_ratio = sprintf ("%0.1f", $total_t2_q20_bases * 100 / $total_t2_bases)
 	    if $total_t2_bases > 0;
-	#$t3_q20_ratio = int ($total_t3_q20_bases * 1000 / $total_t3_bases) / 10 if $total_t3_bases > 0;
+
  	$t3_q20_ratio = sprintf ("%0.1f", $total_t3_q20_bases * 100 / $total_t3_bases)
 	    if $total_t3_bases > 0;
     }
@@ -931,11 +924,6 @@ sub validate_velvet_assembly_files {
 	$self->error_message("Failed to find file: ".$self->velvet_afg_file);
 	return;
     }
-    #$self->velvet_ace_file($self->assembly_directory.'/edit_dir/velvet_asm.ace');
-    #unless (-s $self->velvet_ace_file) {
-	#$self->error_message("Failed to find file: ".$self->velvet_ace_file);
-	#return;
-    #}
     $self->velvet_sequences_file($self->assembly_directory.'/Sequences');
     unless (-s $self->velvet_sequences_file) {
 	$self->error_message("Failed to find file: ".$self->velvet_sequences_file);
