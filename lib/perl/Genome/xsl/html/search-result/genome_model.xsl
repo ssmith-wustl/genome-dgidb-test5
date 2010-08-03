@@ -43,13 +43,42 @@
         <p class="result_summary">
           <strong>ID: </strong><xsl:value-of select="aspect[@name='genome_model_id']/value"/>
           <xsl:text>; </xsl:text>
-          <strong>Date created: </strong><xsl:value-of select="aspect[@name='creation_date']/value"/>
-          <xsl:text>; </xsl:text>
+
+          <xsl:variable name="model_type">
+                <xsl:call-template name="substring-after-last">
+                <xsl:with-param name="input" select="@type"/>
+                <xsl:with-param name="substr" select="':'"/>
+                </xsl:call-template>
+          </xsl:variable>
+
           <strong>Created by: </strong><xsl:value-of select="aspect[@name='user_name']/value"/>
+          <xsl:text>; </xsl:text>
+          <strong>Type: </strong><xsl:value-of select="$model_type"/>
         </p>
       </div>
     </div> <!-- end search_result -->
 
+  </xsl:template>
+
+  <xsl:template name="substring-after-last">
+    <xsl:param name="input"/>
+    <xsl:param name="substr"/>
+
+    <!-- Extract the string which comes after the first occurrence -->
+    <xsl:variable name="temp" select="substring-after($input,$substr)"/>
+
+    <xsl:choose>
+      <!-- If it still contains the search string the recursively process -->
+      <xsl:when test="$substr and contains($temp,$substr)">
+        <xsl:call-template name="substring-after-last">
+          <xsl:with-param name="input" select="$temp"/>
+          <xsl:with-param name="substr" select="$substr"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="$temp"/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
 </xsl:stylesheet>

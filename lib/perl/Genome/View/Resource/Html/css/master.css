@@ -24,6 +24,13 @@ table {
 
 }
 
+/* TEXT
+ ****************************************/
+
+.subheader {
+    margin-bottom: .25em;
+}
+
 /* LAYOUT
  ****************************************/
 body {
@@ -115,11 +122,39 @@ body {
     border-bottom-right-radius: 5px;
 }
 
+.rounded-top-right {
+    -webkit-border-top-right-radius: 5px;
+    -khtml-border-radius-topright: 5px;
+    -moz-border-radius-topright: 5px;
+    border-top-right-radius: 5px;
+}
+
+.rounded-bottom-right {
+    -webkit-border-bottom-right-radius: 5px;
+    -khtml-border-radius-bottomright: 5px;
+    -moz-border-radius-bottomright: 5px;
+    border-bottom-right-radius: 5px;
+}
+
 .rounded-left {
     -webkit-border-top-left-radius: 5px;
     -khtml-border-radius-topleft: 5px;
     -moz-border-radius-topleft: 5px;
     border-top-left-radius: 5px;
+    -webkit-border-bottom-left-radius: 5px;
+    -khtml-border-radius-bottomleft: 5px;
+    -moz-border-radius-bottomleft: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+.rounded-top-left {
+    -webkit-border-top-left-radius: 5px;
+    -khtml-border-radius-topleft: 5px;
+    -moz-border-radius-topleft: 5px;
+    border-top-left-radius: 5px;
+}
+
+.rounded-bottom-left {
     -webkit-border-bottom-left-radius: 5px;
     -khtml-border-radius-bottomleft: 5px;
     -moz-border-radius-bottomleft: 5px;
@@ -270,6 +305,14 @@ a.breadcrumb:hover {
 a.divider:after {
     content: "  >  "
 }
+
+/* FORMS
+ ****************************************/
+form td.label {
+    font-weight: bold;
+    text-align: right;
+}
+
 
 /* TABLES
  ****************************************/

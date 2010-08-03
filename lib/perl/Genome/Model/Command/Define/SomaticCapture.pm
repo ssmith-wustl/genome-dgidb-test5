@@ -13,42 +13,31 @@ class Genome::Model::Command::Define::SomaticCapture {
         tumor_model => { 
             is => 'Genome::Model',
             id_by => 'tumor_model_id', 
-            doc => 'The tumor model id being analyzed' 
+            doc => 'The tumor model being analyzed'
+        },
+        tumor_model_id => {
+            is => 'Integer',
+            is_input => 1,
+            doc => 'The tumor model id being analyzed'
         },
         normal_model => { 
             is => 'Genome::Model', 
             id_by => 'normal_model_id', 
-            doc => 'The normal model id being analyzed' 
+            doc => 'The normal model being analyzed'
         },
-        data_directory => {
-            is => 'Text',
-            len => 255,
-            doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
-        },
-        subject_name => {
-            is => 'Text',
-            len => 255,
-            doc => 'The name of the subject all the reads originate from',
+        normal_model_id => {
+            is => 'Integer',
+            is_input => 1,
+            doc => 'The normal model id being analyzed'
         },
     ],
     has_optional => [
-        model_name => {
-            is => 'Text',
-            len => 255,
-            doc => 'User meaningful name for this model (default value: $SUBJECT_NAME.$PP_NAME)'
-        },
         subject_type => {
             is => 'Text',
             len => 255,
-            doc => 'The type of subject all the reads originate from, defaults to sample_name',
+            doc => 'The type of subject all the reads originate from',
             default => 'sample_group',
         },
-        processing_profile_name => {
-            is => 'Text',
-            doc => 'identifies the processing profile by name',
-            default => 'default',
-        },
-
    ],
 };
 
@@ -75,6 +64,18 @@ sub create {
         or return;
 
     return $self;
+}
+
+sub type_specific_parameters_for_create {
+    my $self = shift;
+
+    my @params = ();
+
+    push @params,
+        tumor_model => $self->tumor_model,
+        normal_model => $self->normal_model;
+
+    return @params;
 }
 
 sub execute {
@@ -130,16 +131,7 @@ sub execute {
 
     # run Genome::Model::Command::Define execute
     my $super = $self->super_can('_execute_body');
-    $super->($self,@_);
-
-    # get the model created by the super
-    my $model = Genome::Model->get($self->result_model_id);
-
-    # Link this somatic model to the normal and tumor models  
-    $model->add_from_model(from_model => $self->normal_model, role => 'normal');
-    $model->add_from_model(from_model => $self->tumor_model, role => 'tumor');
-
-    return 1;
+    return $super->($self,@_);
 }
 
 1;

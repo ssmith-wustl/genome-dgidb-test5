@@ -8,6 +8,11 @@ use Genome;
 class Genome::Model::GenePrediction {
     is => 'Genome::Model',
     has => [
+        assembly_model => {
+            via => 'from_model_links',
+            where => [ role => 'assembly_model' ],
+        },
+
         # Processing profile parameters
         minimum_sequence_length => { 
             via => 'processing_profile', 
