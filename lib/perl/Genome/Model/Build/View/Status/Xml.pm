@@ -360,7 +360,7 @@ sub get_processing_profile_node {
 
                 #if we have a full blown object (REF), get the object data
                 if ( ref(\$object) eq "REF" ) {
-                    if ($object->class eq 'Genome::InstrumentData::Solexa' or $object->class eq 'Genome::InstrumentData::Imported') {
+                    if ($object->isa('Genome::InstrumentData')) {
                         my $id_node = $self->get_instrument_data_node($object);
                         $object_node = $self->anode("object","value","instrument_data");
                         $object_node->addChild($id_node);
@@ -422,34 +422,14 @@ sub get_instrument_data_node {
     my $self = shift;
     my $object = shift;
 
-    #print Dumper($object);
-    my $test = $object->class eq 'Genome::InstrumentData::Imported' ? 0 : 1;
-
-    my $project_name = $test ? $object->project_name : 'N/A';
-    my $run_name     = $test ? $object->run_name : 'N/A';
-    my $flow_cell_id = $test ? $object->flow_cell_id : 'N/A';
-    my $read_length  = $test ? $object->read_length : 'N/A';
-    my $library_name = $test ? $object->library_name : 'N/A';
-    my $library_id   = $test ? $object->library_id : 'N/A';
-    my $lane         = $test ? $object->lane : 'N/A';
-    my $subset_name  = $test ? $object->subset_name : 'N/A';
-    my $run_type     = $test ? $object->run_type : 'N/A';
-    my $gerald_dir   = $test ? $object->gerald_directory : 'N/A';
-    my $seq_id       = $test ? $object->seq_id : 'N/A';
-
     my $id = $self->anode("instrument_data","id", $object->id);
-    $id->addChild( $self->tnode("project_name", $project_name) );
-    $id->addChild( $self->tnode("sample_name", $object->sample_name) );
-    $id->addChild( $self->tnode("run_name", $run_name) );
-    $id->addChild( $self->tnode("flow_cell_id", $flow_cell_id) );
-    $id->addChild( $self->tnode("read_length", $read_length) );
-    $id->addChild( $self->tnode("library_name", $library_name) );
-    $id->addChild( $self->tnode("library_id", $library_id) );
-    $id->addChild( $self->tnode("lane", $lane) );
-    $id->addChild( $self->tnode("subset_name", $subset_name) );
-    $id->addChild( $self->tnode("seq_id", $seq_id) );
-    $id->addChild( $self->tnode("run_type", $run_type) );
-    $id->addChild( $self->tnode("gerald_directory", $gerald_dir) );
+    for (qw/project_name run_name run_identifier read_length library_name library_id lane subset_name run_type gerald_directory seq_id/) {
+        if ($object->class ne 'Genome::InstrumentData::Imported' && $object->can($_)) {
+            $id->addChild($self->tnode($_, $object->$_));
+        } else {
+            $id->addChild($self->tnode($_, "N/A")); 
+        }     
+    }
 
     return $id;
 
