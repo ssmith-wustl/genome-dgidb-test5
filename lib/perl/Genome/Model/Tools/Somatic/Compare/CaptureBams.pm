@@ -599,8 +599,8 @@ __DATA__
   </operation>
 
   <operation name="Generate Reports">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::RunReports" typeClass="Workflow::OperationType::Command" />
-  </operation>  
+    <operationtype commandClass="Genome::Model::SomaticCapture::Command::RunReports" typeClass="Workflow::OperationType::Command" />
+  </operation>
 
 
   <operationtype typeClass="Workflow::OperationType::Model">
