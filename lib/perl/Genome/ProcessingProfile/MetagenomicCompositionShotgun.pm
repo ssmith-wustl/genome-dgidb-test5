@@ -61,45 +61,6 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
     ],
 };
 
-my $log_model_name;
-
-sub Xstatus_message{
-    my ($self, $message, @args) = @_;
-    $self->SUPER::status_message($message,@args);
-    $self->log_message("STATUS:".$message);
-}
-
-sub Xerror_message{
-    my ($self, $message, @args) = @_;
-    $self->SUPER::error_message($message, @args);
-    $self->log_message("ERROR:".$message);
-    die $message;
-}
-
-sub Xlog_message{
-    my ($self, $message) = @_;
-    my $fh = $self->{log_fh};
-    unless ($fh){
-        my $pid = $$;
-        my $hostname = hostname();
-        my $fn = "/gscuser/adukes/MCS_log/${log_model_name}_${pid}_${hostname}";
-        my $log_fh = IO::File->new("> $fn");
-        unless ($log_fh){
-            die "couldn't create new logfile for $fn";
-        }
-        $self->{log_fh} = $log_fh;
-        $fh = $self->{log_fh};
-    }
-    chomp $message;
-    $fh->print($message."\n");
-    print STDERR $message,"\n";
-}
-
-sub x_execute_build {
-    my ($self, $build) = @_;
-    $self->status_message("DEATH");
-    die 'dying for test purposes';
-}
 
 sub _execute_build {
     my ($self, $build) = @_;
@@ -108,7 +69,7 @@ sub _execute_build {
     my $rv;
 
     # temp hack for debugging
-    $log_model_name = $model->name;
+    my $log_model_name = $model->name;
     $self->status_message("Starting build for model $log_model_name");
 
     my $screen_model = $model->_contamination_screen_alignment_model;
@@ -249,10 +210,10 @@ sub _execute_build {
         $self->error_message("Bam or flagstat doesn't exist for contamination screen build");
         die;
     }
-    
-    Genome::Utility::FileSystem->create_symlink($screen_bam, "$data_directory/contamination_screen.bam") unless(-e "$data_directory/contamination_screen.bam");
-    Genome::Utility::FileSystem->create_symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat") unless(-e "$data_directory/contamination_screen.bam.flagstat");
-    
+
+    symlink($screen_bam, "$data_directory/contamination_screen.bam");
+    symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
+
     my $counter;
     my @meta_bams;
     for my $meta_build (@metagenomic_builds){
@@ -263,8 +224,8 @@ sub _execute_build {
             $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter");
             die;
         }
-        Genome::Utility::FileSystem->create_symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam") unless(-e "$data_directory/metagenomic_alignment$counter.bam");
-        Genome::Utility::FileSystem->create_symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat") unless(-e "$data_directory/metagenomic_alignment$counter.bam.flagstat");
+        symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam");
+        symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat");
     }
 
     # REPORTS
@@ -297,33 +258,15 @@ sub _execute_build {
     return 1;
 }
 
-sub _load_taxonomy {
-    my ($filename, $header_ignore_str, $taxon_map_ref) = @_;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($filename);
-    my $taxonomy;
-    while(<$fh>) {
-        chomp;
-        next if ("/^$header_ignore_str/");
-        my @fields = split(/\t/, $_);
-        @fields = map { s/^\s+//; s/\s+$//; $_ } @fields;
-        my $ref_id = $taxon_map_ref->{'id'};
-        delete $taxon_map_ref->{'id'};
-        for my $taxon (keys %$taxon_map_ref =! /^id$/) {
-            $taxonomy->{$ref_id}{$taxon} = $fields[$taxon_map_ref->{$taxon}];
-        }
+sub symlink {
+    my ($source, $target) = @_;
+    if(-l $target && readlink($target) ne $source) {
+        $self->error_message("$target already exists but points to " . readlink($target));
+        die $self->error_message();
     }
-    return $taxonomy;
-}
-
-sub _write_count_and_close {
-	my($filename, $title, $counts_ref) = @_;
-	my $file_o=Genome::Utility::FileSystem->open_file_for_writing($filename);
-	print $file_o "$title Name\t#Reads with hits\n";
-	for my $name (keys %$counts_ref){
-        next if (($name eq "") or ($name =~ /^\s+$/));
-        print $file_o "$title\t$counts_ref->{$name}\n";
-	}
-	$file_o->close;
+    elsif(! -l $target) {
+        Genome::Utility::FileSystem->create_symlink($source, $target);
+    }
 }
 
 sub get_bam_and_flagstat_from_build{
@@ -397,7 +340,9 @@ sub run_ref_align_build {
     #TODO update these params to use pp values or wahtevers passes in off command line
     my $rv = $sub_build->start(
         job_dispatch    => 'apipe',
-        server_dispatch => 'long'
+        server_dispatch => 'workflow',
+        job_group => undef, # this will not take up one of the 50 slots available to a user
+
     );
 
     if ($rv) {
@@ -453,7 +398,7 @@ sub need_to_build {
 
 sub record_unaligned_reads_for_instrument_data {
     my ($self, $instrument_data_id, $files) = @_;
-    
+
     my $path = self->build->data_directory . '/' . $instrument_data_id;
     my $record = Genome::Utility::FileSystem->open_file_for_writing($path);
 
@@ -464,29 +409,6 @@ sub record_unaligned_reads_for_instrument_data {
         next unless $read_name;
         $record->print("$read_name\n");
     }
-}
-
-sub filter_unaligned_reads_from_instrument_data {
-    my ($self, $instrument_data_id, $files) = @_;
-    my $unaligned_reads_path = self->build->data_directory . '/' . $instrument_data_id;
-    my $unaligned_reads_fh = Genome::Utility::FileSystem->open_file_for_reading($unaligned_reads_path);
-     
-    my $filtered_data_path = self->build->data_directory . '/' . $instrument_data_id . '-human-filter-untrimmed';
-    my $filtered_data_fh = Genome::Utility::FileSystem->open_file_for_writing($filtered_data_path);
-    
-    my %unaligned_reads;
-    while (<$unaligned_reads_fh>) {
-        chomp;
-        $unaligned_reads{$_} = 1;
-    }
-    
-    for my $file (@$files) {
-        my $line = $file->getline;
-        my $read_name = (split(/\s/, $line, 2))[0];
-        $read_name =~ s/^@//;
-        $filtered_data_fh->print($line) if $unaligned_reads{$read_name};
-    }
-    
 }
 
 sub _process_unaligned_reads {
