@@ -134,7 +134,7 @@ sub generate_report_detail
            $lane_kb = sprintf("%d",$instrument_data->total_bases_read()/1000);
         }
         $total_kb += $lane_kb;
-        push @lane_data, [$instrument_data->flow_cell_id, $instrument_data->lane, commify($lane_kb), $instrument_data->read_length];
+        push @lane_data, [$instrument_data->run_identifier, $instrument_data->subset_name, commify($lane_kb), ($instrument_data->can('read_length') ? $instrument_data->read_length : 'NA')];
     }
 
     my $total_gb = sprintf("%.03f", $total_kb/1000000);
