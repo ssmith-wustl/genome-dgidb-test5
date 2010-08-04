@@ -156,15 +156,24 @@ sub default_filenames{
         varscan_indel_germline              => 'varScan.output.indel.formatted.Germline',
         varscan_indel_loh                   => 'varScan.output.indel.formatted.LOH',
         varscan_indel_somatic               => 'varScan.output.indel.formatted.Somatic',
+
+        ## GATK Files ##
+
+        gatk_output                         => 'gatk.output.indel',
+        gatk_output_formatted               => 'gatk.output.indel.formatted',
+        gatk_output_somatic                 => 'gatk.output.indel.formatted.Somatic',
+        annotate_output_gatk_indel   => 'annotation.somatic.gatk-indel.transcript',        
+        gatk_output_tier1                   => 'gatk.output.indel.formatted.Somatic.tier1',
         
         ## Combined glfSomatic+VarScan Output files ##
         merged_snp_output                   => 'merged.somatic.snp',            ## Generated from merge-variants of somaticSniper and varScan
         merged_indel_output                 => 'merged.somatic.indel',          ## Generated from merge-variants of somaticSniper and varScan ##
+        merged_indel_output_filter          => 'merged.somatic.indel.filter',          ## The homopolymer-filtered list of indels ##
         
         ## Strand Filtering and Lookup Variants Files ##
         merged_snp_output_filter        => 'merged.somatic.snp.filter',
         merged_snp_output_filter_fail   => 'merged.somatic.snp.filter.removed',
-        merged_snp_output_novel               => 'merged.somatic.snp.filter.novel',
+        merged_snp_output_novel         => 'merged.somatic.snp.filter.novel',
 
 
         ## Annotation output files ##
@@ -180,14 +189,14 @@ sub default_filenames{
         tier_2_snp_file                     => 'merged.somatic.snp.filter.novel.tier2',
         tier_3_snp_file                     => 'merged.somatic.snp.filter.novel.tier3',
         tier_4_snp_file                     => 'merged.somatic.snp.filter.novel.tier4',
-        tier_1_indel_file                   => 'merged.somatic.indel.tier1',
+        tier_1_indel_file                   => 'merged.somatic.indel.filter.tier1',
 
         ## Tiered SNP/indel files (high and highest conf ) ##
         
         tier_1_snp_file_high                => 'merged.somatic.snp.filter.novel.tier1.hc',
         tier_1_snp_file_highest             => 'merged.somatic.snp.filter.novel.tier1.gc',
-        tier_1_indel_file_high              => 'merged.somatic.indel.novel.tier1.hc',
-        tier_1_indel_file_highest           => 'merged.somatic.indel.novel.tier1.gc',
+        tier_1_indel_file_high              => 'merged.somatic.indel.filter.tier1.hc',
+        tier_1_indel_file_highest           => 'merged.somatic.indel.filter.tier1.gc',
 
         ## Breakdancer and Copy Number files ##
 
@@ -309,6 +318,33 @@ __DATA__
   <link fromOperation="input connector" fromProperty="varscan_indel_somatic" toOperation="Varscan ProcessSomatic Indel" toProperty="somatic_out" />
 
 
+<!-- RUN GATK SOMATIC INDEL -->
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Gatk Somatic Indel" toProperty="skip_if_output_present" />
+  <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Gatk Somatic Indel" toProperty="normal_bam" />
+  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Gatk Somatic Indel" toProperty="tumor_bam" />
+  <link fromOperation="input connector" fromProperty="gatk_output" toOperation="Gatk Somatic Indel" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="gatk_output_formatted" toOperation="Gatk Somatic Indel" toProperty="formatted_file" />
+  <link fromOperation="input connector" fromProperty="gatk_output_somatic" toOperation="Gatk Somatic Indel" toProperty="somatic_file" />
+
+<!-- RUN ANNOTATION ON GATK SOMATIC INDELS -->
+
+  <link fromOperation="Gatk Somatic Indel" fromProperty="somatic_file" toOperation="Annotate Transcript Variants Gatk Indel" toProperty="variant_file" />
+  <link fromOperation="input connector" fromProperty="annotate_output_gatk_indel" toOperation="Annotate Transcript Variants Gatk Indel" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate Transcript Variants Gatk Indel" toProperty="skip_if_output_present" />
+  <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Gatk Indel" toProperty="no_headers" />
+  <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Gatk Indel" toProperty="annotation_filter" />
+
+<!-- ISOLATE TIER 1 GATK SOMATIC INDELS -->
+
+  <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Tier Variants Gatk Indel" toProperty="skip_if_output_present" />
+  <link fromOperation="input connector" fromProperty="only_tier_1_indel" toOperation="Tier Variants Gatk Indel" toProperty="only_tier_1" />
+  <link fromOperation="Gatk Somatic Indel" fromProperty="somatic_file" toOperation="Tier Variants Gatk Indel" toProperty="variant_file" />
+  <link fromOperation="Annotate Transcript Variants Gatk Indel" fromProperty="output_file" toOperation="Tier Variants Gatk Indel" toProperty="transcript_annotation_file" />
+  <link fromOperation="input connector" fromProperty="gatk_output_tier1" toOperation="Tier Variants Gatk Indel" toProperty="tier1_file" />
+
+  <link fromOperation="Tier Variants Gatk Indel" fromProperty="tier1_file" toOperation="output connector" toProperty="tier1_gatk_indel_file" />
+
+
 <!-- MERGE FILTERED SNIPER SNPS AND VARSCAN SNPS -->
 
   <link fromOperation="Varscan ProcessSomatic SNP" fromProperty="somatic_out" toOperation="Merge SNPs" toProperty="varscan_file" />
@@ -370,10 +406,16 @@ __DATA__
   <link fromOperation="Filter Sniper Indel" fromProperty="output_file" toOperation="Merge Indels" toProperty="glf_file" />
   <link fromOperation="input connector" fromProperty="merged_indel_output" toOperation="Merge Indels" toProperty="output_file" />
 
+<!-- RUN HOMOPOLYMER FILTER ON MERGED INDELS -->
+
+  <link fromOperation="Merge Indels" fromProperty="output_file" toOperation="Monorun Filter Indel" toProperty="variant_file" />
+  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Monorun Filter Indel" toProperty="tumor_bam_file" />
+  <link fromOperation="input connector" fromProperty="merged_indel_output_filter" toOperation="Monorun Filter Indel" toProperty="output_file" />
+
 <!-- RUN TRANSCRIPT ANNOTATION FOR INDELS -->
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate Transcript Variants Indel" toProperty="skip_if_output_present" />
-  <link fromOperation="Merge Indels" fromProperty="output_file" toOperation="Annotate Transcript Variants Indel" toProperty="variant_file" />
+  <link fromOperation="Monorun Filter Indel" fromProperty="output_file" toOperation="Annotate Transcript Variants Indel" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_indel" toOperation="Annotate Transcript Variants Indel" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Indel" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Indel" toProperty="annotation_filter" />
@@ -500,6 +542,14 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Capture::FormatSnvs" typeClass="Workflow::OperationType::Command" />
   </operation>
 
+  <operation name="Gatk Somatic Indel">
+    <operationtype commandClass="Genome::Model::Tools::Gatk::SomaticIndel" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Annotate Transcript Variants Gatk Indel">
+    <operationtype commandClass="Genome::Model::Tools::Annotate::TranscriptVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
   <operation name="Merge SNPs">
     <operationtype commandClass="Genome::Model::Tools::Capture::MergeVariantCalls" typeClass="Workflow::OperationType::Command" />
   </operation>  
@@ -528,6 +578,10 @@ __DATA__
 
   <operation name="Filter Sniper Indel">
     <operationtype commandClass="Genome::Model::Tools::Capture::FilterGlfIndels" typeClass="Workflow::OperationType::Command" />
+  </operation>  
+
+  <operation name="Monorun Filter Indel">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::MonorunFilter" typeClass="Workflow::OperationType::Command" />
   </operation>  
 
   <operation name="Strand Filter">
@@ -561,6 +615,9 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Annotate::TranscriptVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="Tier Variants Indel">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Tier Variants Gatk Indel">
     <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="Confidence Groups Indel Tier 1">
@@ -600,7 +657,7 @@ __DATA__
 
   <operation name="Generate Reports">
     <operationtype commandClass="Genome::Model::SomaticCapture::Command::RunReports" typeClass="Workflow::OperationType::Command" />
-  </operation>
+  </operation>  
 
 
   <operationtype typeClass="Workflow::OperationType::Model">
@@ -642,11 +699,20 @@ __DATA__
     <inputproperty isOptional="Y">varscan_adaptor_snp</inputproperty>
     <inputproperty isOptional="Y">varscan_adaptor_indel</inputproperty>
 
+    <inputproperty isOptional="Y">gatk_output</inputproperty>
+    <inputproperty isOptional="Y">gatk_output_formatted</inputproperty>
+    <inputproperty isOptional="Y">gatk_output_somatic</inputproperty>
+    <inputproperty isOptional="Y">gatk_output_tier1</inputproperty>
+    <inputproperty isOptional="Y">annotate_output_gatk_indel</inputproperty>
+    
+    
+
     <inputproperty isOptional="Y">merged_snp_output</inputproperty>
     <inputproperty isOptional="Y">merged_snp_output_novel</inputproperty>
     <inputproperty isOptional="Y">merged_snp_output_filter</inputproperty>
     <inputproperty isOptional="Y">merged_snp_output_filter_fail</inputproperty>
     <inputproperty isOptional="Y">merged_indel_output</inputproperty>
+    <inputproperty isOptional="Y">merged_indel_output_filter</inputproperty>
             
     <inputproperty isOptional="Y">sniper_snp_output_adaptor</inputproperty>
     <inputproperty isOptional="Y">adaptor_output_indel</inputproperty>
@@ -703,7 +769,7 @@ __DATA__
     <outputproperty>tier_2_snp</outputproperty>
     <outputproperty>tier_3_snp</outputproperty>
     <outputproperty>tier_4_snp</outputproperty>
-
+    <outputproperty>tier1_gatk_indel_file</outputproperty>
 
 
   </operationtype>
