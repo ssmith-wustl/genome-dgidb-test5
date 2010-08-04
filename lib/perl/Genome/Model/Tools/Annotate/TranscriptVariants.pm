@@ -49,7 +49,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is_input => 1,
             doc => "A comma delimited list of any extra columns that exist after the expected 5 in the input. Use this option if it is desired to preserve additional columns from the input file, which will then appear in output.Preserved columns must be contiguous and in order as they appear in the infile after the mandatory input columns. Any desired naming or number of columns can be specified so long as it does not exceed the actual number of columns in the file."
         },
-        # Transcript Params
+        # Transcript params
         annotation_filter => {
             is => 'String',
             is_optional => 1,

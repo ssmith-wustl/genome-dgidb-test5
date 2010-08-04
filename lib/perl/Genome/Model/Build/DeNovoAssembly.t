@@ -27,11 +27,22 @@ my $build = Genome::Model::Build::DeNovoAssembly->create(
 ok($build, 'Created de novo assembly build') or die;
 isa_ok($build, 'Genome::Model::Build::DeNovoAssembly');
 
-is($build->calculate_estimated_kb_usage, (50_000_000 * 1.024), 'Kb usage');
 is($build->genome_size, 4500000, 'Genome size');
 
 # base limit
 is($build->calculate_base_limit_from_coverage, 2250000, 'Calculated base limit');
+
+#test disk reserve based on coverage
+is($build->calculate_estimated_kb_usage, (5_056_250), 'Kb usage based on coverage');
+
+#test disk reserve based on processed read count
+my $coverage = $model->processing_profile->coverage;
+$model->processing_profile->coverage(undef); #undef this to allow calc by proc reads coverage
+$build->processed_reads_count(1_250_000);
+is($build->calculate_estimated_kb_usage, (5_070_000), 'Kb usage based on processed read count');
+
+#reset coverage values .. necessary ?? test passes w/o it
+$model->processing_profile->coverage($coverage);
 
 # insert size/sd
 my $avg_insert_size = $build->calculate_average_insert_size;
@@ -39,7 +50,7 @@ is($avg_insert_size, 260, 'average insert size');
 
 # metrics
 my @interesting_metric_names = $build->interesting_metric_names;
-is(scalar(@interesting_metric_names), 14, 'interesting metric names');
+is(scalar(@interesting_metric_names), 19, 'interesting metric names');
 for my $metric_name ( @interesting_metric_names ) {
     $metric_name =~ s/\s/_/g;
     can_ok('Genome::Model::Build::DeNovoAssembly', $metric_name);
