@@ -149,7 +149,6 @@ sub prioritized_transcript{
 # Corresponds to none filter in Genome::Model::Tools::Annotate::TranscriptVariants
 sub transcripts {
     my ($self, %variant) = @_;
-    #$DB::single = 1; #TODO: remove me
 
     # Make sure variant is set properly
     unless (defined($variant{start}) and defined($variant{stop}) and defined($variant{variant}) and defined($variant{reference}) 
@@ -487,7 +486,6 @@ sub _transcript_annotation_for_cds_exon {
             # In the above example, first changed amino acid would be T.
             $trv_type = "frame_shift_" . lc $variant->{type};
             if ($self->{get_frame_shift_sequence}) {
-                #$DB::single = 1; #TODO: remove me
                 my $aa_after_indel = $self->_apply_indel_and_translate($transcript, $structure, $variant);
                 $protein_string = "p." . $aa_after_indel . $protein_position . "fs";
             }
@@ -580,11 +578,12 @@ sub _transcript_annotation_for_cds_exon {
 
 #given a transcript, structure, and variant, calculate all of the bases after and including the indel 
 #plus a number of bases before the indel to create correct, complete codons.  Then translate to an 
-#amino acid sequence and return it 
+#amino acid sequence and return it. 
+#If this is used near the centromere or at the end of a chromosome, it will be unpredictable.  Use this at those positions at your own risk!
+#TODO: This could be simplified and improved
 sub _apply_indel_and_translate{
     my ($self, $transcript, $structure, $variant) = @_;
     my ($codon, $codon_position) = $structure->codon_at_position($variant->{start}); #we aren't really interested in the codon, just the codon_position (0-2)
-    $DB::single = 1 if $transcript->transcript_name eq 'XM_001717859'; #TODO: delete me
     my $aa_sequence = "";
     my $dna_sequence = "";
     my $first_fetch = 1;
@@ -594,8 +593,8 @@ sub _apply_indel_and_translate{
         my $temp_file = File::Temp->new();
         die "Could not get temp file" unless $temp_file; 
         unless ($first_fetch){
-            $fetch_start_position += 1000;
-            $fetch_stop_position += 1000;
+            $fetch_start_position += 1001;
+            $fetch_stop_position = $fetch_start_position + 1000;
         }
         my $sequence_command = Genome::Model::Tools::Sequence->execute(
             chromosome => $transcript->chrom_name,
@@ -612,7 +611,7 @@ sub _apply_indel_and_translate{
             my $sequence_with_indel;
             if ($variant->{type} =~ /ins/i){
                 #insertion, yay!
-                $sequence_with_indel = substr($sequence, 0, $codon_position + 1) . $variant->{variant} . substr($sequence, $codon_position + 1); #TODO: make this formula work 
+                $sequence_with_indel = substr($sequence, 0, $codon_position + 1) . $variant->{variant} . substr($sequence, $codon_position + 1); 
                 if($codon_position == 2){
                     #For insertions with codon position two, the sequence formula 
                     #grabs all of the effected codons and one unaffected codon before.
