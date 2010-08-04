@@ -35,13 +35,26 @@ sub help_brief {
 
 sub help_synopsis {
     return <<EOS
-gmt assembly re-scaffold-msi-ace --
+gmt assembly re-scaffold-msi-ace --acefile /gscmnt/111/assembly/edit_dir/newbler.ace --scaffold-file /gscmnt/111/assembly/edit_dir/scaffolds --assembly-directory /gscmnt/111/assembly
+gmt assembly re-scaffold-msi-ace --acefile /gscmnt/111/assembly/edit_dir/newbler.ace --assembly-directory /gscmnt/111/assembly --auto-report
 EOS
 }
 
 sub help_detail {
     return <<EOS
-      
+Tool to re-scaffold manually edited ace files.  It will read in
+a text file of scaffolding info and re-name contigs to form
+pcap style scaffolds, eg, line 8.9-7,15-1.2-1.3 will create the
+following scaffolds:
+
+Contig0.1-Contig0.2           (from Contigs8.9 and 7)
+Contig1.1-Contig1.2-Contig1.3 (from Contigs15, 1.2 and 1.3)
+
+Tool will also create msi.gap.txt file which is later used
+to determine gap sizes between scaffold contigs.  Each gap
+will be assigned default, unknown value of 100 bp.
+
+This tool will work with any acefiles from any assembler.
 EOS
 }
 

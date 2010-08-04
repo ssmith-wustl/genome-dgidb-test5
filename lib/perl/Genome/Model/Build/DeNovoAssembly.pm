@@ -109,7 +109,7 @@ sub calculate_estimated_kb_usage {
     } 
 
     #limit disk reserve to 50G .. 
-    return 51_200_000 if $kb_usage > 51_200_000;
+    return 60_000_000 if $kb_usage > 60_000_000;
 
     return $kb_usage;
 }
