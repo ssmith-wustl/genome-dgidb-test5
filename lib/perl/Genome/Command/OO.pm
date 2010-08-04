@@ -79,7 +79,7 @@ sub resolve_class_and_params_for_argv {
             }
             else { 
                 eval { $obj[0] = $type->from_cmdline($value); };
-                if ($@ and $@ =~ /Multiple results/) {
+                if ($@ and $@ =~ /Multiple (?:results|matches)/) {
                     $self->error_message("$param matches multiple values!");
                     @obj = $type->from_cmdline($value);
                     $self->error_message(
@@ -125,7 +125,19 @@ sub default_cmdline_selector {
             push @obj, @matches;
         }
     }
-    return @obj;
+
+    if (wantarray) {
+        return @obj;
+    }
+    elsif (not defined wantarray) {
+        return;
+    }
+    elsif (@obj > 1) {
+        Carp::confess("Multiple matches found!");
+    }
+    else {
+        return $obj[0];
+    }
 }
 
 sub X_shell_arg_getopt_specification_from_property_meta {

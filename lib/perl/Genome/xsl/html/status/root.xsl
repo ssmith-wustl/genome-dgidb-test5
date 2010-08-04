@@ -162,6 +162,23 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
 
   </xsl:template>
 
+  <!-- page header for sets -->
+  <xsl:template name="set_header">
+    <xsl:param name="display_name"/>
+
+    <xsl:comment>template: status/root.xsl:view_header</xsl:comment>
+
+    <div class="header rounded-bottom gradient-grey shadow">
+      <div class="container">
+        <div><xsl:attribute name="class">title span-24 last</xsl:attribute>
+        <h1 class="no_icon" style="margin-left: 0;"><xsl:value-of select="$display_name"/></h1>
+        </div>
+      </div>
+    </div>
+
+  </xsl:template>
+
+
   <!-- basic footer -->
   <xsl:template name="footer">
     <xsl:param name="footer_text"/>
