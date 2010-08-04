@@ -45,7 +45,7 @@ class Genome::Transcript::VariantAnnotator{
             is => 'Boolean',
             is_optional => 1,
             default => 0,
-            doc => 'If set, the entire original sequence of a transcript is placed in the output file for frameshift mutations',
+            doc => 'If set, the entire modifed sequence of the transcript is placed in the output file for frameshift mutations, even if the modification is silent',
         },
     ]
 };
