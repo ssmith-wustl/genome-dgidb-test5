@@ -211,8 +211,8 @@ sub _execute_build {
         die;
     }
 
-    symlink($screen_bam, "$data_directory/contamination_screen.bam");
-    symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
+    $self->symlink($screen_bam, "$data_directory/contamination_screen.bam");
+    $self->symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
 
     my $counter;
     my @meta_bams;
@@ -224,8 +224,8 @@ sub _execute_build {
             $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter");
             die;
         }
-        symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam");
-        symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat");
+        $self->symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam");
+        $self->symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat");
     }
 
     # REPORTS
@@ -259,6 +259,7 @@ sub _execute_build {
 }
 
 sub symlink {
+    my $self = shift;
     my ($source, $target) = @_;
     if(-l $target && readlink($target) ne $source) {
         $self->error_message("$target already exists but points to " . readlink($target));
