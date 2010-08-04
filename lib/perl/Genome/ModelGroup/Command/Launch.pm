@@ -54,7 +54,7 @@ sub execute {
     for my $m (@inactive_models) {
         if (($running_count  + 1 ) <= $self->max) {
             print "Starting " . $m->name . "...\n";
-            system("bsub 'genome model build start --model-identifier=" . $m->id . "'");
+            system("genome model build start --model-identifier=" . $m->id);
             $running_count++;
         }
         else {
