@@ -145,6 +145,7 @@ sub _create_underlying_contamination_screen_model {
         processing_profile => $self->contamination_screen_pp,
         subject_name => $self->subject_name,
         name => $self->name.".contamination screen alignment model",
+        reference_sequence_build=>$self->contamination_screen_reference
     );
     my $contamination_screen_model = Genome::Model::ReferenceAlignment->create( %contamination_screen_model_params );
 
@@ -178,6 +179,7 @@ sub _create_underlying_metagenomic_models {
             processing_profile => $self->metagenomic_alignment_pp,
             subject_name => $self->subject_name, 
             name => $self->name.".metagenomic alignment model $metagenomic_counter",
+            reference_sequence_build => $metagenomic_reference
         );
         my $metagenomic_alignment_model = Genome::Model::ReferenceAlignment->create( %metagenomic_alignment_model_params );
 
