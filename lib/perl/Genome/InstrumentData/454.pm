@@ -104,6 +104,10 @@ EOS
     ],
 };
 
+sub full_path {
+    Carp::confess("Full path is not valid for 454 instrument data");
+}
+
 sub _default_full_path {
     my $self = shift;
     return sprintf('%s/%s/%s', $self->_data_base_path, $self->run_name, $self->region_id);
@@ -118,6 +122,7 @@ sub is_external {
     return;
 }
 
+#< Fastq, Fasta, Qual ... >#
 sub dump_sanger_fastq_files {
     my $self = shift;
     
@@ -224,90 +229,6 @@ sub _run_sffinfo {
     return $file;
 }
 
-sub resolve_fasta_path {
-    my $self = shift;
-    my $full_path = $self->full_path;
-    unless ($full_path) {
-        $full_path = $self->resolve_full_path;
-    }
-    unless (Genome::Utility::FileSystem->create_directory($full_path)) {
-        $self->error_message("Failed to create instrument data directory '$full_path'");
-        return;
-    }
-    return $full_path .'/'. $self->subset_name .'.fa';
-}
-
-sub resolve_qual_path {
-    my $self = shift;
-    my $full_path = $self->full_path;
-    unless ($full_path) {
-        $full_path = $self->resolve_full_path;
-    }
-    unless (Genome::Utility::FileSystem->create_directory($full_path)) {
-        $self->error_message("Failed to create instrument data directory '$full_path'");
-        return;
-    }
-    return $full_path .'/'. $self->subset_name .'.qual';
-}
-
-sub qual_file {
-    my $self = shift;
-
-    unless ($self->_qual_file) {
-        $self->_qual_file($self->resolve_qual_path);
-    }
-    unless (-s $self->_qual_file) {
-        unless (-e $self->sff_file) {
-            $self->error_message('Failed to find sff_file: '. $self->sff_file);
-            die($self->error_message);
-        }
-        #FIXME ALLOCATE 
-        unless (Genome::Model::Tools::454::Sffinfo->execute(
-                                                            sff_file => $self->sff_file,
-                                                            output_file => $self->_qual_file,
-                                                            params => '-q',
-                                                        )) {
-            $self->error_message('Failed to convert sff to qual file');
-            die($self->error_message);
-        }
-    }
-    return $self->_qual_file;
-}
-
-sub fasta_file {
-    my $self = shift;
-
-    unless ($self->_fasta_file) {
-        $self->_fasta_file($self->resolve_fasta_path);
-    }
-    unless (-s $self->_fasta_file) {
-        unless (-e $self->sff_file) {
-            $self->error_message('Failed to find sff_file: '. $self->sff_file);
-            die($self->error_message);
-        }
-        #FIXME ALLOCATE 
-        unless (Genome::Model::Tools::454::Sffinfo->execute(
-                                                            sff_file => $self->sff_file,
-                                                            output_file => $self->_fasta_file,
-                                                            params => '-s',
-                                                        )) {
-            $self->error_message('Failed to convert sff to fasta file');
-            die($self->error_message);
-        }
-    }
-    return $self->_fasta_file;
-}
-
-#FIXME MOVE TO BUILD 
-sub trimmed_sff_file {
-    my $self = shift;
-    my $full_path = $self->resolve_full_path;
-    unless (-d $full_path) {
-        Genome::Utility::FileSystem->create_directory($full_path);
-    }
-    return $full_path .'/'. $self->sff_basename .'_trimmed.sff';
-}
-
 #< SFF >#
 sub sff_file {
     # FIXME this was updated, but legacy code automatically dumped the region
@@ -337,79 +258,81 @@ sub sff_file {
     # It this is defined, the file should exist
     return $sff_file if defined $sff_file;
 
-    # If not defined, the sff does not exist, dump it and 
-    #  return file name on apipe disk
-    $sff_file = sprintf('%s/%s.sff', $self->resolve_full_path, $self->id);
-    return $sff_file if -e $sff_file;
-
-    #FIXME ALLOCATE 
-    unless ( $self->create_data_directory_and_link ) {
-        $self->error_message('Failed to create directory and link');
-        return;
+    # Check if it is dumped
+    my $disk_allocation = Genome::Disk::Allocation->get(
+        owner_id => $self->id,
+        owner_class_name => $self->class,
+    );
+    if ( $disk_allocation ) {
+        $sff_file = $disk_allocation->absolute_path.'/'.$self->id.'.sff';
+        return $sff_file if -s $sff_file;
     }
+
+    # Gotta dump...lock, creat allocation (if needed), dump, unlock
+    # lock
+    my $lock_id = '/gsc/var/lock/inst_data_454/'.$self->id;
     my $lock = Genome::Utility::FileSystem->lock_resource(
-        lock_directory => $self->resolve_full_path,
-        resource_id => $self->id,
-        max_try => 60,
+        resource_lock => $lock_id, 
+        max_try => 1,
     );
     unless ( $lock ) {
-        $self->error_message('Failed to lock_resource '. $self->id);
+        $self->error_message(
+            "Failed to get a lock for 454 instrument data ".$self->id.". This means someone|thing else is already attempting to dump the sff file. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue."
+        );
         return;
     }
+
+    # create disk allocation if needed
+    unless ( $disk_allocation ) {
+        $disk_allocation = Genome::Disk::Allocation->allocate(
+            disk_group_name => 'info_alignments',
+            allocation_path => '/instrument_data/454_'.$self->id,
+            kilobytes_requested => 10240, # 10 Mb TODO
+            owner_class_name => $self->class,
+            owner_id => $self->id
+        );
+        unless ( $disk_allocation ) {
+            Carp::confess(
+                $self->error_message('Failed to create disk allocation for 454 instrument data '.$self->id)
+            );
+        }
+    }
+
+    # dump
+    $sff_file = $disk_allocation->absolute_path.'/'.$self->id.'.sff';
     unless ( $self->run_region_454->dump_sff(filename => $sff_file) ) {
-        $self->error_message('Failed to dump sff file to '. $sff_file);
+        $self->error_message('Failed to dump sff file to '. $sff_file.' for 454 instrument data '.$self->id);
         return;
     }
+    unless ( -s $sff_file ) {
+        $self->error_message("Successfully dumped sff from run region 454, but sff file ($sff_file) is empty for 454 instrument data ".$self->id);
+        return;
+    }
+
+    # unlock
     my $unlock = Genome::Utility::FileSystem->unlock_resource(
-        lock_directory => $self->resolve_full_path,
-        resource_id => $self->id,
+        resource_lock => $lock_id,
     );
     unless ( $unlock ) {
-        $self->error_message('Failed to unlock_resource '. $self->id);
+        $self->error_message('Failed to unlock resource '. $self->id);
         return;
     }
-    return $sff_file;
-}
 
-sub sff_basename {
-    my $self = shift;
-    return File::Basename::basename($self->sff_file,'.sff');
+    return $sff_file;
 }
 #<>#
 
-sub amplicon_header_file {
-    my $self = shift;
-    my $amplicon_header_file = $self->full_path .'/amplicon_headers.txt';
-    unless (-e $amplicon_header_file) {
-        my $fh = $self->create_file('amplicon_header_file',$amplicon_header_file);
-        $fh->close;
-        unlink($amplicon_header_file);
-        my $amplicon = Genome::Model::Command::Report::Amplicons->create(
-                                                                         sample_name => $self->sample_name,
-                                                                         output_file => $amplicon_header_file,
-                                                                     );
-        unless ($amplicon) {
-            $self->error_message('Failed to create amplicon report tool');
-            return;
-        }
-        unless ($amplicon->execute) {
-            $self->error_message('Failed to execute command '. $amplicon->command_name);
-            return;
-        }
-    }
-    return $amplicon_header_file;
-}
-
+#< Run Info >#
 sub run_identifier {
-    my $self = shift;
+my $self = shift;
 
-    my $ar_454 = $self->run_region_454->get_analysis_run_454;
+my $ar_454 = $self->run_region_454->get_analysis_run_454;
 
-    my $pse = GSC::PSE->get($ar_454->pse_id);
-    my $loadpse = $pse->get_load_pse;
-    my $barcode = $loadpse->picotiter_plate;
-    
-    return $barcode->barcode->barcode;
+my $pse = GSC::PSE->get($ar_454->pse_id);
+my $loadpse = $pse->get_load_pse;
+my $barcode = $loadpse->picotiter_plate;
+
+return $barcode->barcode->barcode;
 }
 
 sub run_start_date_formatted {
@@ -424,8 +347,7 @@ sub run_start_date_formatted {
 
     return $dt; 
 }
+#<>#
 
 1;
 
-#$HeadURL$
-#$Id$
