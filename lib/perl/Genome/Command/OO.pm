@@ -133,7 +133,7 @@ sub default_cmdline_selector {
         return;
     }
     elsif (@obj > 1) {
-        Carp::confess("Multiple matches found for @_!");
+        Carp::confess("Multiple matches found!");
     }
     else {
         return $obj[0];
