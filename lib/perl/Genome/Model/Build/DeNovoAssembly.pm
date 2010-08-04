@@ -27,6 +27,11 @@ class Genome::Model::Build::DeNovoAssembly {
                                             return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($assembler_name);
                                           },
         },
+
+	#TODO - best place for this??
+	processed_reads_count => { is => 'Integer', is_optional => 1, is_mutable => 1, doc => 'Number of reads processed for assembling',
+	},
+
         (
             map { 
                 join('_', split(m#\s#)) => {
@@ -77,7 +82,36 @@ sub create {
 }
 
 sub calculate_estimated_kb_usage {
-    return 51_200_000; # 50 Gb
+    my $self = shift;
+
+    my $kb_usage;
+
+    if (defined $self->model->processing_profile->coverage) {
+	#estimate usage by 0.025kb per base and 5GB for logs/error output
+	my $bases;
+	unless ($bases = $self->calculate_base_limit_from_coverage()) {
+	    $self->error_message("Failed to get calculated base limit from coverage");
+	    return;
+	}
+
+	$kb_usage = 0.025 * $bases + 5_000_000;
+    }
+    else {
+	#estimate usage = reads attempted * 2KB
+	my $reads_attempted;
+
+	unless ($reads_attempted = $self->calculate_reads_attempted()) {
+	    $self->error_message("Failed to get reads attempted");
+	    return;
+	}
+
+	$kb_usage = $reads_attempted * 2 + 5_000_000;
+    } 
+
+    #limit disk reserve to 50G .. 
+    return 51_200_000 if $kb_usage > 51_200_000;
+
+    return $kb_usage;
 }
 
 sub genome_size {
@@ -130,11 +164,14 @@ sub interesting_metric_names {
     return (
         'assembly length',
         'contigs', 'median contig length', 'average contig length',
+        'average contig length gt 500', 'median_contig_length_gt_500',
         'supercontigs', 'median supercontig length', 'average supercontig length',
+        'average supercontig length gt 500', 'median_supercontig_length_gt_500',
         'average read length',
         'reads attempted', 
         'reads processed', 'reads processed success',
         'reads assembled', 'reads assembled success', 'reads not assembled pct',
+        'read_depths_ge_5x',
     );
 }
 
@@ -143,6 +180,7 @@ sub set_metrics {
 
     my %metrics = $self->calculate_metrics
         or return;
+
     for my $name ( keys %metrics ) {
         $self->$name( $metrics{$name} );
     }
