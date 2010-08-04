@@ -90,7 +90,7 @@
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_row</xsl:comment>
 
     <xsl:variable name="total_builds" select="count(aspect[@name='builds']/object)"/>
-<!--    <xsl:variable name="failed_builds" select="count(aspect[@name='builds']/object/aspect[@name='status']/value = 'Failed')"/> -->
+    <xsl:variable name="failed_builds" select="count(aspect[@name='builds']/object/aspect[@name='status'][value = 'Failed'])"/>
     <tr>
       <td>
         <xsl:value-of select="aspect[@name='name']"/>
@@ -106,9 +106,9 @@
       </td>
       <td>
         <xsl:value-of select="$total_builds"/>
-        <!--        <xsl:if test="$failed_builds">
-             <span style="color: red;">(<xsl:value-of select="$failed_builds"/>)</span>
-             </xsl:if> -->
+        <xsl:if test="$failed_builds">
+          <span style="color: red;"> (<xsl:value-of select="$failed_builds"/>)</span>
+        </xsl:if>
       </td>
 
       <td>
