@@ -57,6 +57,26 @@
 
   </xsl:template>
 
+  <!-- initializes the dataTable plugin for model set views -->
+  <xsl:template name="genome_model_set_table_init" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_table_init">
+    <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_table_init</xsl:comment>
+    <script type="text/javascript">
+      <xsl:text disable-output-escaping="yes">
+      <![CDATA[
+               $(document).ready(
+                 window.setTable = $('#set').dataTable({
+                   "bJQueryUI": true,
+                   "sPaginationType": "full_numbers",
+                   "bStateSave": true,
+                   "iDisplayLength": 25
+                 })
+               );
+      ]]>
+      </xsl:text>
+    </script>
+  </xsl:template>
+
+  <!-- describes the columns for model set views -->
   <xsl:template name="genome_model_set_header" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_header">
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_header</xsl:comment>
     <tr>
@@ -85,7 +105,7 @@
     </tr>
   </xsl:template>
 
-
+  <!-- describes the row for model set views -->
   <xsl:template name="genome_model_set_row" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_row">
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_row</xsl:comment>
 
