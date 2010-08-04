@@ -10,21 +10,27 @@
 
     <div class="content rounded shadow">
       <div class="container">
+        <div class="set_query rounded span-24 last">
+          <div class="padding10">
+            <strong>Query: </strong> <xsl:value-of select="aspect[@name='rule_display']/value" />
+          </div>
+        </div>
 
-        <!--
-            <xsl:value-of select="aspect[@name='rule']/object/display_name"/>
-        -->
-        <p><strong>Query: </strong> <xsl:value-of select="aspect[@name='rule_display']/value" /></p>
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" class="lister">
-          <thead>
-            <xsl:apply-templates select="aspect[@name='members']/object[1]" mode="set_header" />
-          </thead>
-          <tbody>
-            <xsl:for-each select="aspect[@name='members']">
-              <xsl:apply-templates mode="set_row" />
-            </xsl:for-each>
-          </tbody>
-        </table>
+        <hr class="space" style="height: 10px; margin: 0;"/>
+
+        <div class="span-24 last">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" id="set" class="dataTable">
+            <thead>
+              <xsl:apply-templates select="aspect[@name='members']/object[1]" mode="set_header" />
+            </thead>
+            <tbody>
+              <xsl:for-each select="aspect[@name='members']">
+                <xsl:apply-templates mode="set_row" />
+              </xsl:for-each>
+            </tbody>
+          </table>
+        </div>
+        <xsl:apply-templates select="aspect[@name='members']/object[1]" mode="set_table_init" />
       </div> <!-- end container -->
     </div> <!-- end content -->
 
