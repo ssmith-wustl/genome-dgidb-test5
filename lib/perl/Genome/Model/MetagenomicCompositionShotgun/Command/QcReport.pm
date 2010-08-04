@@ -71,12 +71,21 @@ sub execute {
     my @imported_data = map {$_->instrument_data} $meta_model->instrument_data_assignments;
     my @original_data = map {$_->instrument_data} $build->instrument_data_assignments;
 
+    $DB::single = 1;
+    # Get any existing metrics
+    my @build_metrics = $build->metrics;
+    my %metric;
+    for my $build_metric (@build_metrics) {
+        $metric{$build_metric->name} = $build_metric;
+    }
+    my $metric_name;
+
     # POST TRIMMING STATS
     # Pulled from the $contamination_bam including:
     #   number of quality trimmed bases per lane
     #   average length of quality trimmed reads per lane
     my $cs_stats_output_path = $self->report_path . '/post_trim_stats_report.tsv';
-    unless (-f $cs_stats_output_path && ! $self->overwrite) {
+    #unless (-f $cs_stats_output_path && ! $self->overwrite) {
         $self->status_message("Generating post trimming stats...");
         unlink($cs_stats_output_path) if (-f $cs_stats_output_path);
         my $cs_stats_output = Genome::Utility::FileSystem->open_file_for_writing($cs_stats_output_path);
@@ -85,11 +94,35 @@ sub execute {
         print $cs_stats_output "lane\taverage_read_length\ttotal_bases\ttotal_reads\n";
         for my $lane (keys %cs_stats) {
             print $cs_stats_output $lane . "\t" . $cs_stats{$lane}{average_length} . "\t" . $cs_stats{$lane}{total_bases} . "\t" . $cs_stats{$lane}{total_reads} . "\n";
+
+            $metric_name = "$lane\_average_read_length";
+            print "$metric_name\n";
+            $metric{$metric_name}->delete() if($metric{$metric_name});
+            unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $cs_stats{$lane}{average_length})) {
+                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $lane\_average_read_length)");
+                die $self->error_message;
+            }
+
+            $metric_name = "$lane\_total_bases";
+            print "$metric_name\n";
+            $metric{$metric_name}->delete() if($metric{$metric_name});
+            unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $cs_stats{$lane}{total_bases})) {
+                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $lane\_total_bases)");
+                die $self->error_message;
+            }
+            
+            $metric_name = "$lane\_total_reads";
+            print "$metric_name\n";
+            $metric{$metric_name}->delete() if($metric{$metric_name});
+            unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $cs_stats{$lane}{total_reads})) {
+                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $lane\_total_reads)");
+                die $self->error_message;
+            }
         }
-    }
-    else {
-        $self->status_message("Skipping post trimming stats, use --overwrite to replace...");
-    }
+        #}
+        #else {
+        #$self->status_message("Skipping post trimming stats, use --overwrite to replace...");
+        #}
 
     # COLLECTING UNTRIMMED SEQUENCES OF NON-HUMAN READS
     # count of unique, non-human bases per lane
@@ -348,7 +381,7 @@ sub execute {
     #   unique, non-human bases
     #   percent duplication of raw data
     my $other_stats_output_path = $self->report_path . '/other_stats_report.txt';
-    unless (-f $other_stats_output_path && ! $self->overwrite) {
+    #unless (-f $other_stats_output_path && ! $self->overwrite) {
         $self->status_message("Generating other stats...");
         unlink($other_stats_output_path) if (-f $other_stats_output_path);
         my $percent_mapped_to_contamination_ref;
@@ -362,6 +395,20 @@ sub execute {
         my $other_stats_output= Genome::Utility::FileSystem->open_file_for_writing($other_stats_output_path);
         print $other_stats_output "Human Contamination Rate: $percent_mapped_to_contamination_ref\n";
         print $other_stats_output "Contamination Picard MarkDuplicates: $picard_mark_duplicates\n";
+
+        $metric_name = "human_contamination_rate";
+        $metric{$metric_name}->delete() if($metric{$metric_name});
+        unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $percent_mapped_to_contamination_ref)) {
+            $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", human_contamination_rate)");
+            die $self->error_message;
+        }
+
+        $metric_name = "contamination_picard_mark_duplicates";
+        $metric{$metric_name}->delete() if($metric{$metric_name});
+        unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $picard_mark_duplicates)) {
+            $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", contamination_picard_mark_duplicates)");
+            die $self->error_message;
+        }
 
         for my $id (keys %fastq_files) {
             my $humanfree_report_path = $self->report_path . '/' . $id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
@@ -378,6 +425,14 @@ sub execute {
                         $unique_bases_count += $count if $count;
                     }
                     print $other_stats_output "$id: Unique, non-human bases: $unique_bases_count\n";
+
+                    $metric_name = "unique_humanfree_bases_$id";
+                    print "$metric_name\n";
+                    $metric{$metric_name}->delete() if($metric{$metric_name});
+                    unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $unique_bases_count)) {
+                        $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", unique_humanfree_bases_$id)");
+                        die $self->error_message;
+                    }
                 }
             }
             while (<$original_report_fh>) {
@@ -389,15 +444,22 @@ sub execute {
                     my %metrics;
                     @metrics{@keys} = @values;
                     print $other_stats_output "$id: Percent Duplication: " . $metrics{percent_duplication} . "\n";
-                }
 
+                    $metric_name = "percent_duplication_$id";
+                    print "$metric_name\n";
+                    $metric{$metric_name}->delete() if($metric{$metric_name});
+                    unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $metrics{percent_duplication})) {
+                        $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", percent_duplication_$id)");
+                        die $self->error_message;
+                    }
+                }
             }
 
         }
-    }
-    else {
-        $self->status_message("Skipping other stats, use --overwrite to replace...");
-    }
+#    }
+#    else {
+#        $self->status_message("Skipping other stats, use --overwrite to replace...");
+#    }
 
     $self->status_message("Removing unneeded FastQ files...");
     for my $id (keys %fastq_files) {
@@ -496,6 +558,10 @@ sub bam_stats_per_lane {
     my $self = shift;
     my $bam = shift;
     my $bam_fh = IO::File->new("samtools view $bam |");
+    unless($bam_fh) {
+        $self->error_message("Failed to open $bam for reading.");
+        die $self->error_message;
+    }
 
     my %stats;
     while (<$bam_fh>){
