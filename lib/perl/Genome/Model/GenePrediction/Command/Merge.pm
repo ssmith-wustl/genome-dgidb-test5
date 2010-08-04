@@ -1,7 +1,5 @@
 package Genome::Model::GenePrediction::Command::Merge;
 
-# probably don't need this anymore
-#use lib '/gsc/scripts/opt/bacterial-bioperl';
 
 use strict;
 use warnings;
@@ -51,6 +49,11 @@ class Genome::Model::GenePrediction::Command::Merge {
         },
     ],
     has_optional => [
+        iprpath => {
+            is => 'Scalar',
+            doc => "alternative path to iprscan",
+            default => "/gsc/scripts/bin/iprscan",
+        },
         use_local_nr => {
             is => 'Boolean',
             default => 1,
@@ -189,6 +192,8 @@ sub execute
 {
     my $self = shift;
     my $user = $ENV{USER};
+
+    $self->status_message("iprpath : ".$self->iprpath);
 
     my $runner_count = $self->runner_count;
 
@@ -1064,12 +1069,13 @@ sub iprscan
     my $err_fn = $err_fh->filename();
     $err_fh->close();
     $self->status_message("err fn: $err_fn");
-
-    my @cmd = (
-
+    # originally hardcoded to these at various points in the past.
      #'/gscmnt/974/analysis/iprscan16.1/iprscan/bin/iprscan',
      #          '/gscmnt/974/analysis/iprscan16.1/iprscan/bin/iprscan.hacked',
-        '/gsc/scripts/bin/iprscan',
+     #   '/gsc/scripts/bin/iprscan',
+     #   '/gscmnt/temp212/info/annotation/InterProScan/iprscan16.1/iprscan/bin/iprscan.hacked',    
+    my @cmd = (
+        $self->iprpath,
         '-cli',
         '-appl hmmpfam',
         '-goterms',

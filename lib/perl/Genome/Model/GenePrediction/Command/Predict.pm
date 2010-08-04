@@ -1,6 +1,6 @@
 package Genome::Model::GenePrediction::Command::Predict;
 
-use lib '/gsc/scripts/opt/bacterial-bioperl';
+#use lib '/gsc/scripts/opt/bacterial-bioperl';
 
 use strict;
 use warnings;
@@ -297,6 +297,7 @@ sub execute
         lib_paths    => [
 #            '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-live',
 #            '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-run',
+            UR::Util::used_libs,
             '/gsc/scripts/opt/bacterial-bioperl',
         ],
     );
