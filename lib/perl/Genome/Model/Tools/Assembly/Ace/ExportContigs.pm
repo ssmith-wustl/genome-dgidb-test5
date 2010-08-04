@@ -53,11 +53,22 @@ sub help_brief {
     'Tool to export contig(s) from ace file(s)'
 }
 
-sub help_detail {
+sub help_synopsis {
     return <<"EOS"
 gmt assembly ace export-contigs --ace Felis_catus-3.0.pcap.ace --contigs-list contigs.txt
 gmt assembly ace export-contigs --ace-list acefiles.txt --contigs-list contigs.txt --merge
-gmt assembly ace export-contigs --acefile-names file.ace.0,file.ace.2,file.ace.3 --contigs-list contigs.txt --directory /gscmnt/999/assembly/my_assembly
+gmt assembly ace export-contigs --acefile-names file.ace.0,file.ace.2,file.ace.3 --contigs-list contigs.txt --directory /gscmnt/999/assembly/my_assembly --ace-out awollam.exported.ace
+EOS
+}
+
+sub help_detail {
+    return <<EOS
+This tool reads in a text file of contig names and creates
+a new ace file from those contigs.  If there are multiple
+input acefiles, one ace file will be created from contigs
+exported from that ace file.  If a single output acefile
+is needed, --merge option will merge all exported contigs
+together into a single ace file.
 EOS
 }
 

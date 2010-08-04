@@ -76,6 +76,10 @@
         builds
       </th>
       <th>
+        last complete build
+      </th>
+
+      <th>
         <br/>
       </th>
     </tr>
@@ -86,7 +90,7 @@
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_row</xsl:comment>
 
     <xsl:variable name="total_builds" select="count(aspect[@name='builds']/object)"/>
-    <!--    <xsl:variable name="failed_builds" select="count(aspect[@name='builds']/object/aspect[@name='status']/value = 'Failed')"/>-->
+    <xsl:variable name="failed_builds" select="count(aspect[@name='builds']/object/aspect[@name='status'][value = 'Failed'])"/>
     <tr>
       <td>
         <xsl:value-of select="aspect[@name='name']"/>
@@ -102,10 +106,27 @@
       </td>
       <td>
         <xsl:value-of select="$total_builds"/>
-        <!--        <xsl:if test="$failed_builds">
-             <span style="color: red;">(<xsl:value-of select="$failed_builds"/>)</span>
-             </xsl:if> -->
+        <xsl:if test="$failed_builds">
+          <span style="color: red;"> (<xsl:value-of select="$failed_builds"/>)</span>
+        </xsl:if>
       </td>
+
+      <td>
+        <xsl:choose>
+          <xsl:when test="aspect[@name='last_complete_build']/object">
+            <xsl:for-each select="aspect[@name='last_complete_build']/object">
+              <xsl:call-template name="object_link_button">
+                <xsl:with-param name="linktext" select="@id" />
+                <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+              </xsl:call-template>
+            </xsl:for-each>
+          </xsl:when>
+          <xsl:otherwise>
+            --
+          </xsl:otherwise>
+        </xsl:choose>
+      </td>
+
       <td class="buttons">
         <xsl:call-template name="object_link_button_tiny">
           <xsl:with-param name="icon" select="'sm-icon-extlink'" />
