@@ -60,6 +60,7 @@ sub execute {
 
     # Go thru readers, each seq
     my $base_count = 0;
+    my $read_count = 0;
     my $base_limit = $self->build->calculate_base_limit_from_coverage;
     READER: for my $fastq_reader ( @fastq_readers ) { 
         FASTQ: while ( my $fastqs = $fastq_reader->next) {
@@ -76,6 +77,7 @@ sub execute {
                 $read_name =~ s/\#.*\/2$/\.g1/; # for ace files
                 $fastq->{id} = $read_name;
                 $base_count += length( $fastq->{seq});
+		$read_count++;
             }
             my $rv;
             eval{ $rv = $fastq_writer->write($fastqs); };
@@ -86,7 +88,10 @@ sub execute {
             last READER if defined $base_limit and $base_count >= $base_limit;
         }
     }
+
     $fastq_writer->flush();
+    #store number of read processed for assembling
+    $self->build->processed_reads_count($read_count);
 
     unless ( -s $collated_fastq_file ) {
         $self->error_message("Did not write any fastqs for ".$self->build->description.". This probably occurred because the reads did not pass the filter requirements");
