@@ -97,11 +97,15 @@ sub calculate_metrics {
         # contig
         'total contig number' => 'contigs',
         'n50 contig length' => 'median_contig_length',
+        'major_contig n50 contig length' => 'median_contig_length_gt_500',			 
         'average contig length' => 'average_contig_length',
+        'major_contig avg contig length' => 'average_contig_length_gt_500',			 
         # supercontig
         'total supercontig number' => 'supercontigs',
         'n50 supercontig length' => 'median_supercontig_length',
+        'major_supercontig n50 contig length' => 'median_supercontig_length_gt_500',
         'average supercontig length' => 'average_supercontig_length',
+        'major_supercontig avg contig length' => 'average_supercontig_length_gt_500',
         # reads
         'total input reads' => 'reads_processed',
         'placed reads' => 'reads_assembled',
@@ -109,21 +113,38 @@ sub calculate_metrics {
         'average read length' => 'average_read_length',
         # bases
         'total contig bases' => 'assembly_length',
+	# read depths			 
+	'depth >= 5' => 'read_depths_ge_5x',
     );
 
     my %metrics;
     while ( my $line = $stats_fh->getline ) {
         next unless $line =~ /\:/;
         chomp $line;
-        my ($stat, $value) = split(/\:\s+/, $line);
+        my ($stat, $values) = split(/\:\s+/, $line);
         $stat = lc $stat;
         next unless grep { $stat eq $_ } keys %stat_to_metric_names;
-        $value =~ s/\s.*$//;
-        unless ( defined $value ) {
+
+	unless ( defined $values ) {
             $self->error_message("Found '$stat' in stats file, but it does not have a value on line ($line)");
             return;
         }
-        my $metric = delete $stat_to_metric_names{$stat};
+	my @tmp = split (/\s+/, $values);
+
+	#in most value we want is $tmp[0]
+	my $value = $tmp[0];
+
+	# need value other than $temp[1[;
+	if ($stat eq 'depth >= 5') {
+	    unless (defined $tmp[1]) {
+		$self->error_message("Failed to derive >= 5x depth from line: $values\n\t".
+				     "Expected line like: 3760	0.0105987146239711");
+		return;
+	    }
+	    $value = $tmp[1];#sprintf("%.1f", $tmp[1] * 100);
+	}
+
+	my $metric = delete $stat_to_metric_names{$stat};
         $metrics{$metric} = $value;
     }
 
@@ -145,7 +166,8 @@ sub calculate_metrics {
     $metrics{reads_assembled_success} = sprintf(
         '%0.3f', $metrics{reads_assembled} / $metrics{reads_processed}
     );
-    
+    $metrics{read_depths_ge_5x} = sprintf ('%0.1f', $metrics{read_depths_ge_5x} * 100);
+
     return %metrics;
 }
 

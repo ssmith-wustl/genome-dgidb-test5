@@ -4,8 +4,7 @@ use strict;
 use warnings;
 use above "Genome";
 use IPC::Run;
-use Test::More tests => 7;
-
+use Test::More tests => 8;
 
 use_ok('Genome::Model::Tools::Annotate::AminoAcidSubstitution');
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-AminoAcidSubstitution";
@@ -17,8 +16,18 @@ my $output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-AminoAci
 my @command = ["rm" , "$output.txt"];
 &ipc_run(@command);
 
-my $AminoAcidSubstitution = Genome::Model::Tools::Annotate::AminoAcidSubstitution->create(transcript => "ENST00000269305", amino_acid_substitution => "S166C", organism => "human", version => "54_36p_v2", output => $output);
+my $AminoAcidSubstitution = Genome::Model::Tools::Annotate::AminoAcidSubstitution->create(
+    transcript => "ENST00000269305", 
+    amino_acid_substitution => "S166C", 
+    organism => "human", 
+    output => $output
+);
+
 ok ($AminoAcidSubstitution);
+
+my $gt_dir = "/gscmnt/200/medseq/biodb/shared/misc/annotation/" . $AminoAcidSubstitution->version;
+ok(-d $gt_dir, "Gene/Transcript directory exists at $gt_dir");
+
 my ($amino_acid_substitution) = $AminoAcidSubstitution->execute();
 ok ($amino_acid_substitution);
 ok (-e "$output.txt");
