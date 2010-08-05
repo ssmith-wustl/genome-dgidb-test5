@@ -583,12 +583,21 @@ div.box {
 	background-color: #E5E5FF;
 }
 
-/* OVERRIDES
+/* OVERRIDES / EDITS
 **************************************************/
 table.dataTable {
     margin-bottom: 0;
 }
 
+table.dataTable th {
+    white-space: nowrap;
+}
+
 table.dataTable thead th span.ui-icon {
     float: left !important;
+}
+
+table.dataTable td.buttons {
+    text-align: right;
+    vertical-align: middle;
 }
