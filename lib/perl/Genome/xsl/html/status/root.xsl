@@ -196,7 +196,6 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
     </div>
   </xsl:template>
 
-
   <!-- creates a button with a jQueryUI icon -->
   <xsl:template name="object_link_button">
     <xsl:param name="type" select="./@type"/>
