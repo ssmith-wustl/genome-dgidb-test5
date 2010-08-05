@@ -33,7 +33,7 @@ sub execute {
             $self->status_message('SKIPPING: '.$instrument_data->id.'. This instrument data does not have any reads, and will not have a fasta file.');
             next;
         }
-        my $fasta_file = $instrument_data->fasta_file;
+        my $fasta_file = $instrument_data->dump_fasta_file;
         unless ( -s $fasta_file ) {
             $self->error_message('NO FASTA FILE: '.$instrument_data->id.'. This instrument data has reads, but no fasta file.');
             return;
