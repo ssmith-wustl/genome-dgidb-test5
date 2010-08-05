@@ -397,20 +397,20 @@ sub need_to_build {
     }
 }
 
-sub record_unaligned_reads_for_instrument_data {
-    my ($self, $instrument_data_id, $files) = @_;
-
-    my $path = $self->build->data_directory . '/' . $instrument_data_id;
-    my $record = Genome::Utility::FileSystem->open_file_for_writing($path);
-
-    for my $file (@$files) {
-        my $fh = Genome::Utility::FileSystem->open_file_for_read($file);
-        my $line = $fh->getline;
-        my ($read_name) = $line =~ /^@(\S)+/;
-        next unless $read_name;
-        $record->print("$read_name\n");
-    }
-}
+#sub record_unaligned_reads_for_instrument_data {
+#    my ($self, $build, $instrument_data_id, $files) = @_;
+#
+#    my $path = $build->data_directory . '/' . $instrument_data_id;
+#    my $record = Genome::Utility::FileSystem->open_file_for_writing($path);
+#
+#    for my $file (@$files) {
+#        my $fh = Genome::Utility::FileSystem->open_file_for_read($file);
+#        my $line = $fh->getline;
+#        my ($read_name) = $line =~ /^@(\S)+/;
+#        next unless $read_name;
+#        $record->print("$read_name\n");
+#    }
+#}
 
 sub _process_unaligned_reads {
     my ($self, $alignment) = @_;
@@ -557,7 +557,7 @@ sub _process_unaligned_reads {
     }
     $self->status_message("Extracted unaligned reads from bam file(".join(", ", ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path)));
 
-    $self->record_unaligned_reads_for_instrument_data($instrument_data->id,[$forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path]);
+    #$self->record_unaligned_reads_for_instrument_data($build, $instrument_data->id, [$forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path]);
 
 
     # process the fragment data
