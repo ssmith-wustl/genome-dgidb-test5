@@ -400,7 +400,7 @@ sub need_to_build {
 sub record_unaligned_reads_for_instrument_data {
     my ($self, $instrument_data_id, $files) = @_;
 
-    my $path = self->build->data_directory . '/' . $instrument_data_id;
+    my $path = $self->build->data_directory . '/' . $instrument_data_id;
     my $record = Genome::Utility::FileSystem->open_file_for_writing($path);
 
     for my $file (@$files) {
