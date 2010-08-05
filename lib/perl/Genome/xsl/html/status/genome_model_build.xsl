@@ -487,16 +487,16 @@ return false;
         completed
       </th>
       <th>
-        user
+        run by
       </th>
 
       <th>
         <br/>
       </th>
 
-      <th>
-        <br/>
-      </th>
+      <!-- <th> -->
+      <!--   <br/> -->
+      <!-- </th> -->
     </tr>
   </xsl:template>
 
@@ -512,8 +512,12 @@ return false;
 
     <tr>
       <td>
-        <xsl:value-of select="display_name"/>
-        <!-- (<xsl:value-of select="label_name"/>) -->
+        <xsl:call-template name="object_link_button">
+          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+          <xsl:with-param name="linktext">
+            <xsl:value-of select="display_name" />
+          </xsl:with-param>
+        </xsl:call-template>
       </td>
 
       <td>
@@ -553,18 +557,18 @@ return false;
       </td>
 
       <td class="buttons">
-        <xsl:value-of select="aspect[@name='model']/object/aspect[@name='user_name']/value"/>
+        <xsl:value-of select="aspect[@name='run_by']/value"/>
       </td>
 
       <td class="buttons">
         <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>data directory</a>
       </td>
 
-      <td class="buttons">
-        <xsl:call-template name="object_link_button_tiny">
-          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
-        </xsl:call-template>
-      </td>
+      <!-- <td class="buttons"> -->
+      <!--   <xsl:call-template name="object_link_button_tiny"> -->
+      <!--     <xsl:with-param name="icon" select="'sm-icon-extlink'" /> -->
+      <!--   </xsl:call-template> -->
+      <!-- </td> -->
     </tr>
 
   </xsl:template>
