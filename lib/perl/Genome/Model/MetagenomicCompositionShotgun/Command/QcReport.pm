@@ -99,7 +99,7 @@ sub execute {
             print "$metric_name\n";
             $metric{$metric_name}->delete() if($metric{$metric_name});
             unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $cs_stats{$lane}{average_length})) {
-                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $lane\_average_read_length)");
+                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
                 die $self->error_message;
             }
 
@@ -107,7 +107,7 @@ sub execute {
             print "$metric_name\n";
             $metric{$metric_name}->delete() if($metric{$metric_name});
             unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $cs_stats{$lane}{total_bases})) {
-                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $lane\_total_bases)");
+                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
                 die $self->error_message;
             }
             
@@ -115,7 +115,7 @@ sub execute {
             print "$metric_name\n";
             $metric{$metric_name}->delete() if($metric{$metric_name});
             unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $cs_stats{$lane}{total_reads})) {
-                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $lane\_total_reads)");
+                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
                 die $self->error_message;
             }
         }
@@ -213,6 +213,7 @@ sub execute {
 #        }
 #    }
 
+    my %humanfree_base_count;
     $self->status_message("Generating human-free, untrimmed data...");
     for my $id (keys %fastq_files) {
         my $humanfree_fwd_path = $self->report_path . '/data/' . $id . '_1_humanfree_untrimmed';
@@ -265,6 +266,8 @@ sub execute {
                 $fwd_read =~ /$readname_re/;
                 my $fwd_readname = $1;
                 if ($read_names{$fwd_readname}) {
+                    my $bases = (split('\n', $fwd_read))[1];
+                    $humanfree_base_count{$id} += length($bases);
                     print $humanfree_fwd_file $fwd_read ;
                 }
             }
@@ -273,7 +276,11 @@ sub execute {
             while (my $rev_read = read_and_join_lines($original_rev_file)) {
                 $rev_read =~ /$readname_re/;
                 my $rev_readname = $1;
-                print $humanfree_rev_file $rev_read if ($read_names{$rev_readname});
+                if ($read_names{$rev_readname}) {
+                    my $bases = (split('\n', $rev_read))[1];
+                    $humanfree_base_count{$id} += length($bases);
+                    print $humanfree_rev_file $rev_read ;
+                }
             }
         }
     }
@@ -399,14 +406,14 @@ sub execute {
         $metric_name = "human_contamination_rate";
         $metric{$metric_name}->delete() if($metric{$metric_name});
         unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $percent_mapped_to_contamination_ref)) {
-            $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", human_contamination_rate)");
+            $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
             die $self->error_message;
         }
 
         $metric_name = "contamination_picard_mark_duplicates";
         $metric{$metric_name}->delete() if($metric{$metric_name});
         unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $picard_mark_duplicates)) {
-            $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", contamination_picard_mark_duplicates)");
+            $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
             die $self->error_message;
         }
 
@@ -415,22 +422,37 @@ sub execute {
             my $original_report_path = $self->report_path . '/' . $id . '_original_untrimmed_estimate_library_complexity_report.txt';
             my $humanfree_report_fh = Genome::Utility::FileSystem->open_file_for_reading($humanfree_report_path);
             my $original_report_fh = Genome::Utility::FileSystem->open_file_for_reading($original_report_path);
-            while (<$humanfree_report_fh>) {
-                if (/^##\ HISTOGRAM/) {
-                    my $line = $humanfree_report_fh->getline();
-                    my $unique_bases_count = 0;
-                    while (<$humanfree_report_fh>) {
-                        $line = $_;
-                        my $count = (split("\t", $line))[1];
-                        $unique_bases_count += $count if $count;
-                    }
-                    print $other_stats_output "$id: Unique, non-human bases: $unique_bases_count\n";
 
-                    $metric_name = "unique_humanfree_bases_$id";
+            my $imported_data = Genome::InstrumentData::Imported->get($id);
+            (my $alignment_id = $imported_data->original_data_path) =~ s/.*\/([0-9]*)\/.*/$1/;
+            my $alignment_instrument_data = Genome::InstrumentData::AlignmentResult->get($alignment_id)->instrument_data;
+            my $original_data = Genome::InstrumentData::Solexa->get($alignment_instrument_data);
+            my $lane = $original_data->flow_cell_id . '_' . $original_data->lane;
+
+            while (<$humanfree_report_fh>) {
+                if (/^##\ METRICS/) {
+                    my $keys = $humanfree_report_fh->getline();
+                    my $values = $humanfree_report_fh->getline();
+                    my @keys = split("\t", lc($keys));
+                    my @values = split("\t", $values);
+                    my %metrics;
+                    @metrics{@keys} = @values;
+                    print $other_stats_output "$lane: Human-free Percent Duplication: " . $metrics{percent_duplication} . "\n";
+
+                    $metric_name = "humanfree_percent_duplication_$lane";
                     print "$metric_name\n";
                     $metric{$metric_name}->delete() if($metric{$metric_name});
+                    unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $metrics{percent_duplication})) {
+                        $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
+                        die $self->error_message;
+                    }
+
+                    $metric_name = "unique_humanfree_bases_$lane";
+                    print "$metric_name\n";
+                    $metric{$metric_name}->delete() if($metric{$metric_name});
+                    my $unique_bases_count = $humanfree_base_count{$id} * (1 - $metric{percent_duplication});
                     unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $unique_bases_count)) {
-                        $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", unique_humanfree_bases_$id)");
+                        $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
                         die $self->error_message;
                     }
                 }
@@ -443,13 +465,13 @@ sub execute {
                     my @values = split("\t", $values);
                     my %metrics;
                     @metrics{@keys} = @values;
-                    print $other_stats_output "$id: Percent Duplication: " . $metrics{percent_duplication} . "\n";
+                    print $other_stats_output "$lane: Original Percent Duplication: " . $metrics{percent_duplication} . "\n";
 
-                    $metric_name = "percent_duplication_$id";
+                    $metric_name = "original_percent_duplication_$lane";
                     print "$metric_name\n";
                     $metric{$metric_name}->delete() if($metric{$metric_name});
                     unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $metrics{percent_duplication})) {
-                        $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", percent_duplication_$id)");
+                        $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
                         die $self->error_message;
                     }
                 }
@@ -461,128 +483,133 @@ sub execute {
 #        $self->status_message("Skipping other stats, use --overwrite to replace...");
 #    }
 
-    $self->status_message("Removing unneeded FastQ files...");
-    for my $id (keys %fastq_files) {
-        unlink(@{$fastq_files{$id}{original}}[0]) if (-f @{$fastq_files{$id}{original}}[0]);
-        unlink(@{$fastq_files{$id}{original}}[1]) if (-f @{$fastq_files{$id}{original}}[1]);
-        unlink(@{$fastq_files{$id}{imported}}[0]) if (-f @{$fastq_files{$id}{imported}}[0]);
-        unlink(@{$fastq_files{$id}{imported}}[1]) if (-f @{$fastq_files{$id}{imported}}[1]);
+        $self->status_message("Removing unneeded FastQ files...");
+        for my $id (keys %fastq_files) {
+            unlink(@{$fastq_files{$id}{original}}[0]) if (-f @{$fastq_files{$id}{original}}[0]);
+            unlink(@{$fastq_files{$id}{original}}[1]) if (-f @{$fastq_files{$id}{original}}[1]);
+            unlink(@{$fastq_files{$id}{imported}}[0]) if (-f @{$fastq_files{$id}{imported}}[0]);
+            unlink(@{$fastq_files{$id}{imported}}[1]) if (-f @{$fastq_files{$id}{imported}}[1]);
 
-        my $humanfree_fwd_path = $self->report_path . '/data/' . $id . '_1_humanfree_untrimmed';
-        my $humanfree_rev_path = $self->report_path . '/data/' . $id . '_2_humanfree_untrimmed';
-        unlink($humanfree_fwd_path) if (-f $humanfree_fwd_path);
-        unlink($humanfree_rev_path) if (-f $humanfree_rev_path);
+            my $humanfree_fwd_path = $self->report_path . '/data/' . $id . '_1_humanfree_untrimmed';
+            my $humanfree_rev_path = $self->report_path . '/data/' . $id . '_2_humanfree_untrimmed';
+            unlink($humanfree_fwd_path) if (-f $humanfree_fwd_path);
+            unlink($humanfree_rev_path) if (-f $humanfree_rev_path);
+        }
+
+
+        print "\n\n";
+        $self->status_message('Model: ' . $model->name);
+        $self->status_message('Build: ' . $build->id);
+        $self->status_message('Reports: ' . $self->report_path);
+        $self->status_message('Report Data: ' . $self->report_path . '/data');
+        my $done = system("touch ".$self->report_path."/FINISHED");
+        return 1;
     }
 
+    sub read_and_join_lines {
+        my ($fh, $num) = @_;
+        $num = 4 unless ($num);
 
-    print "\n\n";
-    $self->status_message('Model: ' . $model->name);
-    $self->status_message('Build: ' . $build->id);
-    $self->status_message('Reports: ' . $self->report_path);
-    $self->status_message('Report Data: ' . $self->report_path . '/data');
-    my $done = system("touch ".$self->report_path."/FINISHED");
-    return 1;
-}
-
-sub read_and_join_lines {
-    my ($fh, $num) = @_;
-    $num = 4 unless ($num);
-
-    my @lines;
-    for (my $count = 0; $count < 4; $count++) {
-        my $line = $fh->getline;
-        return undef unless $line;
-        push @lines, $line;
+        my @lines;
+        for (my $count = 0; $count < 4; $count++) {
+            my $line = $fh->getline;
+            return undef unless $line;
+            push @lines, $line;
+        }
+        return join('', @lines);
     }
-    return join('', @lines);
-}
 
-sub sort_bams_by_name {
-    my $self = shift;
-    my @bams = @_;
-    my @sorted_bams;
-    my $sorted_output_dir = $self->base_output_dir . '/bams';
-    mkpath($sorted_output_dir) unless -d $sorted_output_dir;
-    for my $bam (@bams) {
-        my $sorted_bam = (split('/', $bam))[-1];
-        $sorted_bam =~ s/\.bam$//; # strip off .bam because samtools adds it
-        $sorted_bam = $sorted_output_dir . '/' . $sorted_bam . '_name_sorted';
+    sub sort_bams_by_name {
+        my $self = shift;
+        my @bams = @_;
+        my @sorted_bams;
+        my $sorted_output_dir = $self->base_output_dir . '/bams';
+        mkpath($sorted_output_dir) unless -d $sorted_output_dir;
+        for my $bam (@bams) {
+            my $sorted_bam = (split('/', $bam))[-1];
+            $sorted_bam =~ s/\.bam$//; # strip off .bam because samtools adds it
+            $sorted_bam = $sorted_output_dir . '/' . $sorted_bam . '_name_sorted';
 
-        Genome::Model::Tools::Sam::SortBam->execute(
-            file_name => $bam,
-            name_sort => 1,
-            output_file => $sorted_bam,
-            maximum_memory => 1250000000,
+            Genome::Model::Tools::Sam::SortBam->execute(
+                file_name => $bam,
+                name_sort => 1,
+                output_file => $sorted_bam,
+                maximum_memory => 1250000000,
+            );
+            push @sorted_bams, $sorted_bam . '.bam';
+        }
+        return @sorted_bams;
+    }
+
+    sub merge_bams {
+        my $self = shift;
+        my $output_file = shift;
+        my @input_files = @_;
+        my $rv = Genome::Model::Tools::Sam::MergeSplitReferenceAlignments->execute(
+            input_files => \@input_files,
+            input_format => 'BAM',
+            output_file => $output_file,
+            output_format => 'BAM',
         );
-        push @sorted_bams, $sorted_bam . '.bam';
-    }
-    return @sorted_bams;
-}
-
-sub merge_bams {
-    my $self = shift;
-    my $output_file = shift;
-    my @input_files = @_;
-    my $rv = Genome::Model::Tools::Sam::MergeSplitReferenceAlignments->execute(
-        input_files => \@input_files,
-        input_format => 'BAM',
-        output_file => $output_file,
-        output_format => 'BAM',
-    );
-    unless ($rv){
-        $self->error_message("Failed to sort and merge bams");
-        die;
-    }
-}
-
-sub sort_fastq {
-    my $file = shift;
-    my $file_fh = IO::File->new($file);
-    my $sort_fh = IO::File->new(' | sort -z -n | tr -d \'\000\' > ' . $file . '_sorted');
-
-    my @records;
-    my @record_lines;
-    my $count = 1;
-    while (<$file_fh>) {
-        push @record_lines, $_;
-        unless ($count % 4) {
-            push @records, join('', @record_lines) . "\0";
-            print $sort_fh join('', @record_lines) . "\0";
-            @record_lines = ();
+        unless ($rv){
+            $self->error_message("Failed to sort and merge bams");
+            die;
         }
-        $count++;
-    }
-}
-
-sub bam_stats_per_lane {
-    my $self = shift;
-    my $bam = shift;
-    my $bam_fh = IO::File->new("samtools view $bam |");
-    unless($bam_fh) {
-        $self->error_message("Failed to open $bam for reading.");
-        die $self->error_message;
     }
 
-    my %stats;
-    while (<$bam_fh>){
-        my @fields = split("\t", $_);
-        my $seq = $fields[9];
-        (my $solexa_id = $fields[11]) =~ s/.*://;
-        my $lane = Genome::InstrumentData::Solexa->get($solexa_id)->flow_cell_id;
-        $lane .= '-' . Genome::InstrumentData::Solexa->get($solexa_id)->lane;
-        if ($seq eq '*'){
-            $self->status_message("invalid sequence for read in bam: $_");
-            next;
-        }else{
-            $stats{$lane}{total_bases} += length($seq);
+    sub sort_fastq {
+        my $file = shift;
+        my $file_fh = IO::File->new($file);
+        my $sort_fh = IO::File->new(' | sort -z -n | tr -d \'\000\' > ' . $file . '_sorted');
+
+        my @records;
+        my @record_lines;
+        my $count = 1;
+        while (<$file_fh>) {
+            push @record_lines, $_;
+            unless ($count % 4) {
+                push @records, join('', @record_lines) . "\0";
+                print $sort_fh join('', @record_lines) . "\0";
+                @record_lines = ();
+            }
+            $count++;
         }
-        $stats{$lane}{total_reads}++;
     }
-    for my $lane (keys %stats) {
-        $stats{$lane}{average_length} = $stats{$lane}{total_bases}/$stats{$lane}{total_reads};
-    }
-    return %stats;
-}
 
-1;
+    sub bam_stats_per_lane {
+        my $self = shift;
+        my $bam = shift;
+        my $uname = `uname -a`;
+        unless ($uname =~ /x86_64/) {
+            $self->error_message("Samtools requires a 64-bit operating system.");
+            die $self->error_message;
+        }
+        my $bam_fh = IO::File->new("samtools view $bam |");
+        unless($bam_fh) {
+            $self->error_message("Failed to open $bam for reading.");
+            die $self->error_message;
+        }
+
+        my %stats;
+        while (<$bam_fh>){
+            my @fields = split("\t", $_);
+            my $seq = $fields[9];
+            (my $solexa_id = $fields[11]) =~ s/.*://;
+            my $lane = Genome::InstrumentData::Solexa->get($solexa_id)->flow_cell_id;
+            $lane .= '-' . Genome::InstrumentData::Solexa->get($solexa_id)->lane;
+            if ($seq eq '*'){
+                $self->status_message("invalid sequence for read in bam: $_");
+                next;
+            }else{
+                $stats{$lane}{total_bases} += length($seq);
+            }
+            $stats{$lane}{total_reads}++;
+        }
+        for my $lane (keys %stats) {
+            $stats{$lane}{average_length} = $stats{$lane}{total_bases}/$stats{$lane}{total_reads};
+        }
+        return %stats;
+    }
+
+    1;
 
