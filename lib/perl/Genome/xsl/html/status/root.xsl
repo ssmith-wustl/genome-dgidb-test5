@@ -47,13 +47,17 @@
         <link rel="stylesheet" href="/res/css/forms.css" type="text/css" media="screen, projection"/>
 
         <!-- jquery and jquery UI -->
-        <link type="text/css" href="/res/css/jquery-ui.css" rel="stylesheet" />
+        <link type="text/css" href="/res/js/pkg/jquery-ui-1.8.1.custom/css/gsc-theme/jquery-ui-1.8.1.custom.css" rel="stylesheet" />
         <link href="/res/css/jquery-ui-overrides.css" type="text/css" rel="stylesheet" media="screen, projection"/>
         <script type="text/javascript" src="/res/js/pkg/jquery.js"></script>
         <script type="text/javascript" src="/res/js/pkg/jquery-ui.js"></script>
 
         <!-- jquery.masonry to arrange the object info boxes-->
         <script type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
+
+        <!-- jquery.dataTables for spiffy feature-laden lists -->
+        <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
+        <link rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection"/>
 
         <!-- fire up spiffy UI scripts-->
         <script type="text/javascript" src="/res/js/app/ui-init.js"></script>
