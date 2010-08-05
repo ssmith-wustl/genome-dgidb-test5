@@ -21,7 +21,7 @@ class Genome::Individual::View::Solr::Xml {
                 },
                 {
                     name => 'name',
-                    position => 'title',
+                    position => 'content',
                 },
                 {
                     name => 'gender',
