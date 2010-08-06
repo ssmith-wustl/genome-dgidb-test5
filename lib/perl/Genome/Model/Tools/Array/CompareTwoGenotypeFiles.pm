@@ -54,6 +54,10 @@ sub execute {
     my $geno1fh = new IO::File $geno1,"r";
     while (my $line = $geno1fh->getline) {
         chomp $line;
+
+        #remove extraneous control characters
+        $line =~ s/\s+$//;
+
         my ($chr,$pos,$alleles) = split /\t/,$line;
         $alleles = sort_alleles($alleles);
         $geno1{$chr}{$pos} = $alleles;
@@ -63,7 +67,7 @@ sub execute {
 #if printing details, prepare to print
     my $det_rep_fh;
     if ($print_details) {
-        $det_rep_fh = new IO::File $detailed_report,"w";
+        $det_rep_fh = new IO::File ">$detailed_report";
         print $det_rep_fh "Chr\tPos\tGeno_file1\tGeno_file2\tStatus\n";
     }
 
@@ -71,6 +75,10 @@ sub execute {
     my $geno2fh = new IO::File $geno2,"r";
     while (my $line = $geno2fh->getline) {
         chomp $line;
+
+        #remove extraneous control characters
+        $line =~ s/\s+$//;
+
         my ($chr,$pos,$alleles) = split /\t/,$line;
 
         #proceed with comparison if this chr and pos exists in geno1
@@ -81,7 +89,8 @@ sub execute {
             $rev_comp_alleles = sort_alleles($rev_comp_alleles);
             
             if ($print_details) {
-                print $det_rep_fh "$chr\t$pos\t" . $geno1{$chr}{$pos} . "\t$alleles\t";
+                my $file_line = $chr . "\t" . $pos . "\t" . $geno1{$chr}{$pos} . "\t" . $alleles;
+                print $det_rep_fh $file_line;
             }
 
             if ($geno1{$chr}{$pos} eq $alleles) {
@@ -172,6 +181,9 @@ sub rev_comp {
 
 sub sort_alleles {
     my $alleles = shift;
+    if($alleles =~ m/NoCall/) {
+        return "--";
+    }
     my @alleles = split(//,$alleles);
     @alleles = sort @alleles;
     my $sorted_alleles = join("",sort @alleles);
