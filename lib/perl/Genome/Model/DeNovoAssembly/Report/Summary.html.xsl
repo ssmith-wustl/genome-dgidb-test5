@@ -96,40 +96,60 @@
           <col width="70%"/>
 				</colgroup>
 				<tr>
+          <td class="label">Reads Attempted</td>
+          <td class="value"><xsl:value-of select="//metric/reads-attempted"/></td>
+				</tr>
+				<tr>
           <td class="label">Reads Processed</td>
           <td class="value"><xsl:value-of select="//metric/reads-processed"/></td>
 				</tr>
 				<tr>
+          <td class="label">Reads Processed Success</td>
+          <td class="value"><xsl:value-of select="//metric/reads-processed-success * 100"/><xsl:text>&#37;</xsl:text></td>
+				</tr>
+				<tr>
           <td class="label">Read Coverage Used</td>
-          <td class="value"><xsl:value-of select="//model-info/read-coverage"/></td>
+          <td class="value"><xsl:value-of select="//model-info/coverage"/></td>
 				</tr>
 				<tr>
           <td class="label">Reads Assembled</td>
           <td class="value"><xsl:value-of select="//metric/reads-assembled"/></td>
 				</tr>
 				<tr>
-          <td class="label">Chaff Rate</td>
-          <td class="value"><xsl:value-of select="//metric/chaff-rate"/></td>
+          <td class="label">Reads Assembled Success</td>
+          <td class="value"><xsl:value-of select="//metric/reads-assembled-success * 100"/><xsl:text>&#37;</xsl:text></td>
+				</tr>
+				<tr>
+          <td class="label">Reads Not Assembled (Chaff rate)</td>
+          <td class="value"><xsl:value-of select="//metric/reads-not-assembled-pct * 100"/><xsl:text>&#37;</xsl:text></td>
 				</tr>
 				<tr>
           <td class="label">Average Read Length</td>
           <td class="value"><xsl:value-of select="//metric/average-read-length"/></td>
 				</tr>
 				<tr>
-          <td class="label">Contigs</td>
-          <td class="value"><xsl:value-of select="//metric/contigs"/></td>
-				</tr>
-				<tr>
           <td class="label">Assembly Length</td>
           <td class="value"><xsl:value-of select="//metric/assembly-length"/></td>
+				</tr>
+				<tr>
+          <td class="label">Contigs</td>
+          <td class="value"><xsl:value-of select="//metric/contigs"/></td>
 				</tr>
 				<tr>
           <td class="label">Average Contig Length</td>
           <td class="value"><xsl:value-of select="//metric/average-contig-length"/></td>
 				</tr>
 				<tr>
+          <td class="label">Average Major Contig Length (>500)</td>
+          <td class="value"><xsl:value-of select="//metric/average-contig-length-gt-500"/></td>
+				</tr>
+				<tr>
           <td class="label">Median Contig Length</td>
           <td class="value"><xsl:value-of select="//metric/median-contig-length"/></td>
+				</tr>
+				<tr>
+          <td class="label">Median Major Contig Length (>500)</td>
+          <td class="value"><xsl:value-of select="//metric/median-contig-length-gt-500"/></td>
 				</tr>
 				<tr>
           <td class="label">Supercontigs</td>
@@ -140,8 +160,20 @@
           <td class="value"><xsl:value-of select="//metric/average-supercontig-length"/></td>
 				</tr>
 				<tr>
+          <td class="label">Average Major Supercontig Length (>500)</td>
+          <td class="value"><xsl:value-of select="//metric/average-supercontig-length-gt-500"/></td>
+				</tr>
+				<tr>
           <td class="label">Median Supercontig Length</td>
           <td class="value"><xsl:value-of select="//metric/median-supercontig-length"/></td>
+				</tr>
+				<tr>
+          <td class="label">Median Major Supercontig Length (>500)</td>
+          <td class="value"><xsl:value-of select="//metric/median-supercontig-length-gt-500"/></td>
+				</tr>
+				<tr>
+          <td class="label">Read Coverage (>= 5x)</td>
+          <td class="value"><xsl:value-of select="//metric/read-depths-ge-5x"/><xsl:text>&#37;</xsl:text></td>
 				</tr>
 			  </table>
 			</td>

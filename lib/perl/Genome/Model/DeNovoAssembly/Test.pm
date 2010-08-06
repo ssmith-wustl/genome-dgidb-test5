@@ -205,6 +205,7 @@ sub get_mock_build {
 
             genome_size
             calculate_base_limit_from_coverage
+            processed_reads_count
 
             edit_dir
             

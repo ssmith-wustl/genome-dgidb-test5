@@ -57,7 +57,101 @@
 
   </xsl:template>
 
+  <!-- initializes the dataTable plugin for model set views -->
+  <xsl:template name="genome_model_set_table_init" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_table_init">
+    <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_table_init</xsl:comment>
+    <script type="text/javascript">
+      <xsl:text disable-output-escaping="yes">
+      <![CDATA[
+               $(document).ready(
+                 window.setTable = $('#set').dataTable({
+                   "bJQueryUI": true,
+                   "sPaginationType": "full_numbers",
+                   "bStateSave": true,
+                   "iDisplayLength": 25
+                 })
+               );
+      ]]>
+      </xsl:text>
+    </script>
+  </xsl:template>
+
+  <!-- describes the columns for model set views -->
+  <xsl:template name="genome_model_set_header" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_header">
+    <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_header</xsl:comment>
+    <tr>
+      <th>
+        name
+      </th>
+      <th>
+        ID
+      </th>
+      <th>
+        creation date
+      </th>
+      <th>
+        user name
+      </th>
+      <th>
+        builds
+      </th>
+      <th>
+        last complete build
+      </th>
+    </tr>
+  </xsl:template>
+
+  <!-- describes the row for model set views -->
+  <xsl:template name="genome_model_set_row" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_row">
+    <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_row</xsl:comment>
+
+    <xsl:variable name="total_builds" select="count(aspect[@name='builds']/object)"/>
+    <xsl:variable name="failed_builds" select="count(aspect[@name='builds']/object/aspect[@name='status'][value = 'Failed'])"/>
+    <tr>
+      <td>
+        <xsl:value-of select="aspect[@name='name']"/>
+      </td>
+      <td>
+        <xsl:call-template name="object_link_button">
+          <xsl:with-param name="linktext" select="aspect[@name='genome_model_id']"/>
+          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+        </xsl:call-template>
+      </td>
+      <td>
+        <xsl:value-of select="aspect[@name='creation_date']"/>
+      </td>
+      <td>
+        <xsl:value-of select="aspect[@name='user_name']"/>
+      </td>
+      <td>
+        <xsl:value-of select="$total_builds"/>
+        <xsl:if test="$failed_builds">
+          <span style="color: red;"> (<xsl:value-of select="$failed_builds"/>)</span>
+        </xsl:if>
+      </td>
+
+      <td>
+        <xsl:choose>
+          <xsl:when test="aspect[@name='last_complete_build']/object">
+            <xsl:for-each select="aspect[@name='last_complete_build']/object">
+              <xsl:call-template name="object_link_button">
+                <xsl:with-param name="linktext" select="@id" />
+                <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+              </xsl:call-template>
+            </xsl:for-each>
+          </xsl:when>
+          <xsl:otherwise>
+            --
+          </xsl:otherwise>
+        </xsl:choose>
+      </td>
+
+    </tr>
+  </xsl:template>
+
   <xsl:template name="genome_model_build_lister">
+    <xsl:comment>template: genome_model.xsl:genome_model_build_lister</xsl:comment>
+
     <div class="generic_lister">
       <div class="box_header span-24 last rounded-top">
         <div class="box_title"><h3 class="genome_model_build_16 span-24 last">Builds</h3></div>
@@ -212,6 +306,102 @@
 
   </xsl:template>
 
+  <!-- box element for convergence model, intended for display in a jquery masonry layout -->
+  <xsl:template name="genome_model_convergence_box" match="object[./types[./isa[@type='Genome::Model::Convergence']]]" mode="box">
+    <xsl:param name="last_complete_build_directory_url">
+      <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="normalize-space(aspect[@name='last_complete_build']/object/aspect[@name='data_directory']/value)" />
+    </xsl:param>
+
+    <xsl:param name="last_complete_build_summary_report_url">
+      <xsl:value-of select="$last_complete_build_directory_url"/><xsl:text>/reports/Summary/report.html</xsl:text>
+    </xsl:param>
+
+    <xsl:comment>template: status/genome_model.xsl:genome_model_box; match: object[./types[./isa[@type='Genome::Model']]]; mode: box</xsl:comment>
+
+    <div class="span_8_box_masonry">
+      <div class="box_header span-8 last rounded-top">
+        <div class="box_title"><h3 class="genome_model_16 span-7 last">Convergence Model</h3></div>
+        <div class="box_button">
+          <xsl:call-template name="object_link_button_tiny">
+            <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+          </xsl:call-template>
+        </div>
+      </div>
+
+      <div class="box_content rounded-bottom span-8 last">
+        <table class="name-value">
+          <tbody>
+            <tr>
+              <td class="name">ID:
+              </td>
+              <td class="value"><xsl:value-of select="@id"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">Name:
+              </td>
+              <td class="value">
+                <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
+              </td>
+            </tr>
+
+            <xsl:choose>
+              <xsl:when test="aspect[@name='last_complete_build']/object">
+
+                <tr>
+                  <td class="name">Last Complete Build:
+                  </td>
+                  <td class="value">
+                    <xsl:for-each select="aspect[@name='last_complete_build']/object">
+                      <xsl:call-template name="object_link_button">
+
+                        <xsl:with-param name="linktext" select="@id" />
+                        <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                      </xsl:call-template>
+                    </xsl:for-each>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="name"><br/>
+                  </td>
+                  <td class="value">
+
+                    <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$last_complete_build_directory_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>data directory</a>
+
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="name"><br/>
+                  </td>
+                  <td class="value">
+
+                    <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$last_complete_build_summary_report_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>summary report</a>
+
+                  </td>
+                </tr>
+
+              </xsl:when>
+              <xsl:otherwise>
+                <tr>
+                  <td class="name">Last Complete Build:
+                  </td>
+                  <td class="value">
+                    --
+                  </td>
+                </tr>
+              </xsl:otherwise>
+            </xsl:choose>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </xsl:template>
+
+
 
   <xsl:template name="genome_model_input_table">
     <xsl:comment>template: status/genome_model.xsl:genome_model_input_table</xsl:comment>
@@ -267,7 +457,7 @@
   </xsl:template>
 
   <xsl:template name="genome_model_link_table">
-    <xsl:comment>template: status/genome_model.xsl:genome_ model_link_table</xsl:comment>
+    <xsl:comment>template: status/genome_model.xsl:genome_model_link_table</xsl:comment>
     <div class="generic_lister">
       <div class="box_header span-24 last rounded-top">
         <div class="box_title"><h3 class="genome_model_16 span-24 last">Model Links</h3></div>
@@ -360,7 +550,7 @@
       </div> <!-- end box header -->
       <xsl:variable name="num_builds" select="count(aspect[@name='builds']/object)"/>
 
-      <div class="box_header_details rounded-bottom">
+      <div class="box_header_details rounded-bottom-left">
         <table class="name-value-row" cellpadding="0" cellspacing="0" border="0" style="margin-left: 27px;">
           <tr>
             <tr>
@@ -394,11 +584,17 @@
           </tr>
         </table>
       </div>
+
       <div class="span-23 prepend-1 last">
-        <div class="box_content rounded span-23 last" style="margin-bottom: 20px; margin-top: 5px;">
+        <div style="margin-left: -5px; background-color: #e5e5e3; width: 5px; height:5px; float: left;">
+          <div class="rounded-top-right" style="background-color: #f7f7f7; width: 5px; height: 5px;">
+            <br/>
+          </div>
+        </div>
+        <div class="box_content rounded-bottom span-23 last" style="margin-bottom: 20px;">
 
           <xsl:if test="$num_builds &gt; 0">
-            <table cellpadding="0" cellspacing="0" border="0" class="lister">
+            <table cellpadding="0" cellspacing="0" border="0" class="lister" style="margin-bottom: 8px;">
               <thead>
                 <tr>
                   <th class="rounded-left">build</th>

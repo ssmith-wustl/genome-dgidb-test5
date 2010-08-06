@@ -8,7 +8,7 @@ use above "Genome";
 use Test::More;
 
 
-my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/Velvet_v2";
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/Velvet_v3";
 ok(-d $data_dir, "Found data directory: $data_dir");
 
 #create temp test dir

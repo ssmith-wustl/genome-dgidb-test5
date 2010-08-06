@@ -13,7 +13,7 @@
       <xsl:text disable-output-escaping="yes">
       <![CDATA[
                function event_popup(eventObject) {
-                 console.log("eventObject: " + JSON.stringify(eventObject));
+
                  // assemble event info into a table
                  var popup_content = '<table class="boxy_info" cellpadding="0" cellspacing="0" border="0" width="300"><tbody>';
                  for (prop in eventObject) {
@@ -24,7 +24,7 @@
 
                popup_content += '</tbody></table>';
 
-               console.log("popup_content: " + popup_content);
+
 
                // create popup
                var popup = new Boxy(popup_content, {title:eventObject.popup_title, fixed:false});
@@ -442,6 +442,134 @@ return false;
         <br/>
       </xsl:with-param>
     </xsl:call-template>
+
+  </xsl:template>
+
+  <!-- initializes the dataTable plugin for model set views -->
+  <xsl:template name="genome_model_build_set_table_init" match="object[./types[./isa[@type='Genome::Model::Build']]]" mode="set_table_init">
+    <xsl:comment>template: status/genome_model_build.xsl match: object[./types[./isa[@type='Genome::Model::Build']]] mode: set_table_init</xsl:comment>
+    <script type="text/javascript">
+      <xsl:text disable-output-escaping="yes">
+        <![CDATA[
+                 $(document).ready(
+                 window.setTable = $('#set').dataTable({
+                 "bJQueryUI": true,
+                 "sPaginationType": "full_numbers",
+                 "bStateSave": true,
+                 "iDisplayLength": 25
+                 })
+                 );
+        ]]>
+      </xsl:text>
+    </script>
+  </xsl:template>
+
+  <!-- describes the columns for build set views -->
+  <xsl:template name="genome_model_build_set_header" match="object[./types[./isa[@type='Genome::Model::Build']]]" mode="set_header">
+    <xsl:comment>template: status/genome_model_build.xsl match: object[./types[./isa[@type='Genome::Model::Build']]] mode: set_header</xsl:comment>
+    <tr>
+      <th>
+        build
+      </th>
+      <th>
+        status
+      </th>
+      <th>
+        model
+      </th>
+      <th>
+        model id
+      </th>
+      <th>
+        scheduled
+      </th>
+      <th>
+        completed
+      </th>
+      <th>
+        run by
+      </th>
+
+      <th>
+        <br/>
+      </th>
+
+      <!-- <th> -->
+      <!--   <br/> -->
+      <!-- </th> -->
+    </tr>
+  </xsl:template>
+
+  <!-- describes the row for build set views -->
+  <xsl:template name="genome_model_build_set_row" match="object[./types[./isa[@type='Genome::Model::Build']]]" mode="set_row">
+    <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model::Build']]] mode: set_row</xsl:comment>
+    <xsl:variable name="b_status" select="aspect[@name='status']/value"/>
+    <xsl:variable name="lc_b_status" select="translate($b_status,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')"/>
+
+    <xsl:variable name="build_directory_url">
+      <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="normalize-space(aspect[@name='data_directory']/value)" />
+    </xsl:variable>
+
+    <tr>
+      <td>
+        <xsl:call-template name="object_link_button">
+          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+          <xsl:with-param name="linktext">
+            <xsl:value-of select="display_name" />
+          </xsl:with-param>
+        </xsl:call-template>
+      </td>
+
+      <td>
+        <xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="$lc_b_status"/></xsl:attribute><xsl:value-of select="$lc_b_status"/>
+      </td>
+
+      <td>
+        <xsl:for-each select="aspect[@name='model']/object">
+          <xsl:value-of select="aspect[@name='name']/value" />
+        </xsl:for-each>
+      </td>
+
+      <td>
+        <xsl:for-each select="aspect[@name='model']/object">
+          <xsl:call-template name="object_link_button">
+            <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+            <xsl:with-param name="linktext">
+              <xsl:value-of select="@id" />
+            </xsl:with-param>
+          </xsl:call-template>
+        </xsl:for-each>
+      </td>
+
+      <td>
+        <xsl:value-of select="aspect[@name='date_scheduled']"/>
+      </td>
+
+      <td>
+        <xsl:choose>
+          <xsl:when test="normalize-space(aspect[@name='date_completed'])">
+            <xsl:value-of select="aspect[@name='date_completed']"/>
+          </xsl:when>
+          <xsl:otherwise>
+            --
+          </xsl:otherwise>
+        </xsl:choose>
+      </td>
+
+      <td class="buttons">
+        <xsl:value-of select="aspect[@name='run_by']/value"/>
+      </td>
+
+      <td class="buttons">
+        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>data directory</a>
+      </td>
+
+      <!-- <td class="buttons"> -->
+      <!--   <xsl:call-template name="object_link_button_tiny"> -->
+      <!--     <xsl:with-param name="icon" select="'sm-icon-extlink'" /> -->
+      <!--   </xsl:call-template> -->
+      <!-- </td> -->
+    </tr>
 
   </xsl:template>
 

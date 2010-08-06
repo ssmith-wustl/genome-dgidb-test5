@@ -15,6 +15,43 @@ use Genome::Config;
 # linkage to certain GC LIMS classes
 use GSCApp;
 
+# account for a perl bug in pre-5.10 by applying a runtime patch to Carp::Heavy
+use Carp;
+use Carp::Heavy;
+if ($] < 5.01) {
+no warnings;
+    *Carp::caller_info = sub {
+      package Carp;
+      our $MaxArgNums;
+      my $i = shift(@_) + 1;
+      package DB;
+      my %call_info;
+      @call_info{
+        qw(pack file line sub has_args wantarray evaltext is_require)
+      } = caller($i);
+      
+      unless (defined $call_info{pack}) {
+        return ();
+      }
+
+      my $sub_name = Carp::get_subname(\%call_info);
+      if ($call_info{has_args}) {
+        # SEE IF WE CAN GET AROUND THE BIZARRE ARRAY COPY ERROR...
+        my @args = ();
+        if ($MaxArgNums and @args > $MaxArgNums) { # More than we want to show?
+          $#args = $MaxArgNums;
+          push @args, '...';
+        }
+        # Push the args onto the subroutine
+        $sub_name .= '(' . join (', ', @args) . ')';
+      }
+      $call_info{sub_name} = $sub_name;
+      return wantarray() ? %call_info : \%call_info;
+    };
+use warnings;
+
+}
+
 # ensure our access to the GSC schema is rw, and that our special env variables match up
 unless (App::Init->initialized) {
     App::DB->db_access_level('rw');

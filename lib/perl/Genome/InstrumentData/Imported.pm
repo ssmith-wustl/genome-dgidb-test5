@@ -286,6 +286,11 @@ sub resolve_adaptor_file {
  return '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
 }
 
+sub run_identifier {
+ my $self = shift;
+ return $self->id;
+}
+
 # okay for first test, before committing switch to getting the allocation and returning the path under it
 sub archive_path {
     my $self = shift;

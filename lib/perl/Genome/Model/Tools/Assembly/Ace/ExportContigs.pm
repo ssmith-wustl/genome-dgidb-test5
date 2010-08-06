@@ -16,7 +16,7 @@ class Genome::Model::Tools::Assembly::Ace::ExportContigs {
 	    is_optional => 1,
 	    doc => 'ace file to export contigs from',
 	},
-	acefile_names => {
+	acefile_names => { #TODO remove this
 	    type => 'Text',
 	    is_optional => 1,
 	    is_many => 1,
@@ -41,6 +41,11 @@ class Genome::Model::Tools::Assembly::Ace::ExportContigs {
 	    is_optional => 1,
 	    doc => 'directory where ace files are located',
 	},
+	ace_out => {
+	    type => 'Text',
+	    is_optional => 1,
+	    doc => 'allow user to define ace file name if input is a single ace',
+	},
     ],
 };
 
@@ -48,11 +53,22 @@ sub help_brief {
     'Tool to export contig(s) from ace file(s)'
 }
 
-sub help_detail {
+sub help_synopsis {
     return <<"EOS"
 gmt assembly ace export-contigs --ace Felis_catus-3.0.pcap.ace --contigs-list contigs.txt
 gmt assembly ace export-contigs --ace-list acefiles.txt --contigs-list contigs.txt --merge
-gmt assembly ace export-contigs --acefile-names file.ace.0,file.ace.2,file.ace.3 --contigs-list contigs.txt --directory /gscmnt/999/assembly/my_assembly
+gmt assembly ace export-contigs --acefile-names file.ace.0,file.ace.2,file.ace.3 --contigs-list contigs.txt --directory /gscmnt/999/assembly/my_assembly --ace-out awollam.exported.ace
+EOS
+}
+
+sub help_detail {
+    return <<EOS
+This tool reads in a text file of contig names and creates
+a new ace file from those contigs.  If there are multiple
+input acefiles, one ace file will be created from contigs
+exported from that ace file.  If a single output acefile
+is needed, --merge option will merge all exported contigs
+together into a single ace file.
 EOS
 }
 
@@ -80,7 +96,7 @@ sub execute {
     }
 
     if ($self->merge) {
-	unless ($self->merge_acefiles($new_aces)) {
+	unless ($self->merge_acefiles(acefiles => $new_aces)) {
 	    $self->error_message("Failed to merge ace files");
 	    return;
 	}

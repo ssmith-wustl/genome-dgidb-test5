@@ -20,8 +20,9 @@ class Genome::Model::Build::Set::View::Status::Xml {
                         'id',
                         'data_directory',
                         'status',
-                        'date_scheduled', 
+                        'date_scheduled',
                         'date_completed',
+                        'run_by',
                         {
                             name => 'model',
                             aspects => [

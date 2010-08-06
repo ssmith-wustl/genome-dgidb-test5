@@ -11,7 +11,7 @@ use Path::Class qw(file);
 
 
 class Genome::Model::Tools::Realign {
-    is  => 'Genome::Model::Tools',
+    is  => 'Command',
     has => [
         regions_file => {
             type     => 'Text',

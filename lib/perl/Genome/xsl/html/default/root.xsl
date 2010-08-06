@@ -21,7 +21,7 @@ $(".toggle_container").hide();
 
 //Slide up and down on click
 $("span.trigger").click(function(){
-console.log("this: " + $(this));
+
 $(this).parent().next(".toggle_container").slideToggle("slow");
 });
 

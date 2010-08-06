@@ -47,13 +47,17 @@
         <link rel="stylesheet" href="/res/css/forms.css" type="text/css" media="screen, projection"/>
 
         <!-- jquery and jquery UI -->
-        <link type="text/css" href="/res/css/jquery-ui.css" rel="stylesheet" />
+        <link type="text/css" href="/res/js/pkg/jquery-ui-1.8.1.custom/css/gsc-theme/jquery-ui-1.8.1.custom.css" rel="stylesheet" />
         <link href="/res/css/jquery-ui-overrides.css" type="text/css" rel="stylesheet" media="screen, projection"/>
         <script type="text/javascript" src="/res/js/pkg/jquery.js"></script>
         <script type="text/javascript" src="/res/js/pkg/jquery-ui.js"></script>
 
         <!-- jquery.masonry to arrange the object info boxes-->
         <script type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
+
+        <!-- jquery.dataTables for spiffy feature-laden lists -->
+        <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
+        <link rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection"/>
 
         <!-- fire up spiffy UI scripts-->
         <script type="text/javascript" src="/res/js/app/ui-init.js"></script>
@@ -100,7 +104,7 @@ $(".toggle_container").hide();
 
 //Slide up and down on click
 $("span.trigger").click(function(){
-console.log("this: " + $(this));
+
 $(this).parent().next(".toggle_container").slideToggle("slow");
 });
 
@@ -162,6 +166,23 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
 
   </xsl:template>
 
+  <!-- page header for sets -->
+  <xsl:template name="set_header">
+    <xsl:param name="display_name"/>
+
+    <xsl:comment>template: status/root.xsl:view_header</xsl:comment>
+
+    <div class="header rounded-bottom gradient-grey shadow">
+      <div class="container">
+        <div><xsl:attribute name="class">title span-24 last</xsl:attribute>
+        <h1 class="no_icon" style="margin-left: 0;"><xsl:value-of select="$display_name"/></h1>
+        </div>
+      </div>
+    </div>
+
+  </xsl:template>
+
+
   <!-- basic footer -->
   <xsl:template name="footer">
     <xsl:param name="footer_text"/>
@@ -175,7 +196,6 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
     </div>
   </xsl:template>
 
-
   <!-- creates a button with a jQueryUI icon -->
   <xsl:template name="object_link_button">
     <xsl:param name="type" select="./@type"/>
@@ -185,19 +205,20 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
     <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
     <xsl:param name="icon"/>
 
+    <xsl:variable name="button_href">
+      <xsl:call-template name="object_link_href">
+        <xsl:with-param name="type" select="$type"/>
+        <xsl:with-param name="id" select="$id"/>
+        <xsl:with-param name="perspective" select="$perspective"/>
+        <xsl:with-param name="toolkit" select="$toolkit"/>
+      </xsl:call-template>
+    </xsl:variable>
+
     <xsl:comment>template: status/root.xsl:object_link_button</xsl:comment>
 
     <a class="mini btn">
       <xsl:attribute name="href">
-        <xsl:value-of select="$rest"/>
-        <xsl:text>/</xsl:text>
-        <xsl:value-of select="rest:typetourl($type)"/>
-        <xsl:text>/</xsl:text>
-        <xsl:value-of select="$perspective"/>
-        <xsl:text>.</xsl:text>
-        <xsl:value-of select="$toolkit"/>
-        <xsl:text>?id=</xsl:text>
-        <xsl:value-of select="$id"/>
+        <xsl:value-of select="$button_href"/>
       </xsl:attribute>
       <span class="sm-icon sm-icon-extlink"><xsl:attribute name="class"><xsl:text>sm-icon </xsl:text><xsl:value-of select="$icon"/></xsl:attribute><br/></span><xsl:value-of select="$linktext"/>
     </a>
@@ -212,19 +233,20 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
     <xsl:param name="toolkit" select="'html'"/>
     <xsl:param name="icon"/>
 
+    <xsl:variable name="button_href">
+      <xsl:call-template name="object_link_href">
+        <xsl:with-param name="type" select="$type"/>
+        <xsl:with-param name="id" select="$id"/>
+        <xsl:with-param name="perspective" select="$perspective"/>
+        <xsl:with-param name="toolkit" select="$toolkit"/>
+      </xsl:call-template>
+    </xsl:variable>
+
     <xsl:comment>template: status/root.xsl:object_link_button_tiny</xsl:comment>
 
     <a class="mini-icon btn">
       <xsl:attribute name="href">
-        <xsl:value-of select="$rest"/>
-        <xsl:text>/</xsl:text>
-        <xsl:value-of select="rest:typetourl($type)"/>
-        <xsl:text>/</xsl:text>
-        <xsl:value-of select="$perspective"/>
-        <xsl:text>.</xsl:text>
-        <xsl:value-of select="$toolkit"/>
-        <xsl:text>?id=</xsl:text>
-        <xsl:value-of select="$id"/>
+        <xsl:value-of select="$button_href"/>
       </xsl:attribute>
       <span><xsl:attribute name="class"><xsl:text>sm-icon </xsl:text><xsl:value-of select="$icon"/></xsl:attribute><br/></span>
     </a>

@@ -39,6 +39,7 @@ EOS
 }
 
 my %BEDTOOLS_VERSIONS = (
+    '2.8.3' => '/gsc/pkg/bio/bedtools/BEDTools-2.8.3',
     '2.6.1' => '/gsc/pkg/bio/bedtools/BEDTools-2.6.1',
     '2.5.4' => '/gsc/pkg/bio/bedtools/BEDTools-2.5.4',
     '2.3.2' => '/gsc/pkg/bio/bedtools/BEDTools-2.3.2',
