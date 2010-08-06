@@ -241,3 +241,14 @@
     background-position: left center;
 }
 
+.app_error_32 {
+    background-image: url("../img/icons/app_error_32.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.app_error_16 {
+    background-image: url("../img/icons/app_error_16.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
