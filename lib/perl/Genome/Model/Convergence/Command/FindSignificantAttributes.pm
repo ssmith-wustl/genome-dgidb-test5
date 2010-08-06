@@ -5,8 +5,6 @@ use warnings;
 
 use Genome;
 
-use Carp::Always;
-
 class Genome::Model::Convergence::Command::FindSignificantAttributes {
     is => 'Genome::Command::OO',
     has => [
