@@ -98,10 +98,6 @@
       <th>
         last complete build
       </th>
-
-      <th>
-        <br/>
-      </th>
     </tr>
   </xsl:template>
 
@@ -116,7 +112,10 @@
         <xsl:value-of select="aspect[@name='name']"/>
       </td>
       <td>
-        <xsl:value-of select="aspect[@name='genome_model_id']"/>
+        <xsl:call-template name="object_link_button">
+          <xsl:with-param name="linktext" select="aspect[@name='genome_model_id']"/>
+          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+        </xsl:call-template>
       </td>
       <td>
         <xsl:value-of select="aspect[@name='creation_date']"/>
@@ -147,11 +146,6 @@
         </xsl:choose>
       </td>
 
-      <td class="buttons">
-        <xsl:call-template name="object_link_button_tiny">
-          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
-        </xsl:call-template>
-      </td>
     </tr>
   </xsl:template>
 

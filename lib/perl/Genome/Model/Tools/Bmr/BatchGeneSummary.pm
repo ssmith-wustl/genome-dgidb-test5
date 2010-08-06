@@ -66,7 +66,7 @@ sub execute {
 #    my ($ref_model_name,$ref_build_version) = $ref_build_name =~ /^(\S+)-build(\S*)$/;
 #    my $ref_model = Genome::Model->get(name=>$ref_model_name);
 #    my $ref_build = $ref_model->build_by_version($ref_build_version);
-    my $ref_index = "/opt/fscache/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa.fai";
+    my $ref_index = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa.fai";
 
     #load ROIs into a hash %ROIs -> chr -> gene -> start = stop;
     my %ROIs;
@@ -89,9 +89,9 @@ sub execute {
 #    my $at_bitmask_file = $ref_build->data_directory . "/all_sequences.AT_bitmask";
 #    my $cpg_bitmask_file = $ref_build->data_directory . "/all_sequences.CpG_bitmask";
 #    my $cg_bitmask_file = $ref_build->data_directory . "/all_sequences.CG_bitmask";
-    my $at_bitmask_file = "/opt/fscache/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.AT_bitmask";
-    my $cpg_bitmask_file = "/opt/fscache/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CpG_bitmask";
-    my $cg_bitmask_file = "/opt/fscache/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CG_bitmask";
+    my $at_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.AT_bitmask";
+    my $cpg_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CpG_bitmask";
+    my $cg_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CG_bitmask";
     my $at_bitmask = $self->read_genome_bitmask($at_bitmask_file);
     my $cpg_bitmask = $self->read_genome_bitmask($cpg_bitmask_file);
     my $cg_bitmask = $self->read_genome_bitmask($cg_bitmask_file);
