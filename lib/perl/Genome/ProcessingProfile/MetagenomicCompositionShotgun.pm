@@ -497,7 +497,7 @@ sub _process_unaligned_reads {
     }
     else {
         my $lock = basename($expected_se_path);
-        $lock = '/gsc/var/lock/' . $lock;
+        $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
         $se_lock = Genome::Utility::FileSystem->lock_resource(
             resource_lock => $lock,
@@ -516,7 +516,7 @@ sub _process_unaligned_reads {
     }
     else {
         my $lock = basename($expected_pe_path);
-        $lock = '/gsc/var/lock/' . $lock;
+        $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
         $pe_lock = Genome::Utility::FileSystem->lock_resource(
             resource_lock => "$lock",
