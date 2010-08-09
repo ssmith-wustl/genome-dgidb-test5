@@ -129,6 +129,41 @@ sub execute {                               # replace with real execution logic.
 				}
 
 			}
+			elsif($aligner eq "ssaha2cdna")
+			{
+				my $aligner_output_file = "$aligner_output_dir/$sample_name.$aligner.sam";
+
+				## Declare command object ##
+				my $cmd_obj;
+
+				if($self->reference)
+				{
+					$cmd_obj = Genome::Model::Tools::Ssaha::AlignToGenome->create(
+					    query_file => $fasta_file,
+					    output_file => $aligner_output_file,
+					    reference => $self->reference,
+					    cdna => 1,
+					);					
+				}
+				else
+				{
+					$cmd_obj = Genome::Model::Tools::Ssaha::AlignToGenome->create(
+					    query_file => $fasta_file,
+					    output_file => $aligner_output_file,
+					    cdna => 1,
+					);					
+				}
+	
+				if($self->skip_if_output_present && -e $aligner_output_file)
+				{
+					print "Skipping due to existing output...\n";
+				}
+				else
+				{
+			                $cmd_obj->execute;					
+				}
+
+			}			
 			elsif($aligner eq "bwasw")
 			{
 				my $aligner_output_file = "$aligner_output_dir/$sample_name.$aligner.sam";
