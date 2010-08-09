@@ -68,7 +68,7 @@ sub create {
 
     my @requested_actions = grep { 
         $self->$_ 
-    } (qw/ flow_cell_id instrument_data_id instrument_data_ids all /);
+    } qw(flow_cell_id instrument_data_id instrument_data_ids all);
 
     if ( @requested_actions > 1 ) {
         $self->error_message('Multiple actions requested: '.join(', ', @requested_actions));
