@@ -59,50 +59,36 @@ sub execute {
         $self->status_message("\n\n\nAttempting to remove build $build_id");
 
         # Builds containing expunged data cannot be changed since any changes that try to be committed
-        # will result in problems when the __errors__ method determines that the instrument data assignments
-        # point to instrument data that's been blown away. If problems are found, inform the user and skip the build
+        # will result in problems when the __errors__ method determines that the instrument data 
+        # assignments point to instrument data that's been blown away. If problems are found, inform 
+        # the user and skip the build
         $self->status_message("Checking the build and its instrument data assignments for problems...");
         my @errors = $build->__errors__;
         push @errors, map { $_->__errors__ } $build->instrument_data_assignments;
 
         if (@errors) {
             push @failed_builds, $build_id;
-            $self->warning_message("Errors found on build and/or instrument data assignments, cannot remove this build!\n" .
-                "Errors like \"There is no instrument data...\" mean the build deals with expunged data. Contact apipe!\n" .
-                join("\n", map { $_->desc } @errors));
+            $self->warning_message("Errors found on build and/or instrument data assignments, cannot " . 
+                "remove this build!\nErrors like \"There is no instrument data...\" mean the build " .
+                "deals with expunged data. Contact apipe!\n" . join("\n", map { $_->desc } @errors));
             next;
         }
 
-        # Using a transaction for committing/rolling back is necessary to prevent problems when rolling back the
-        # UR context... In that case, this command object (which has been created and uncommitted) gets removed and any
-        # further access to $self results in a "Attempt to use a reference to an object which has been deleted" error message
-        my $trans_rv;
-        eval { 
-            my $trans = UR::Context::Transaction->begin;
-            $trans_rv = $build->delete(keep_build_directory => $self->keep_build_directory);
-            $trans->commit if $trans_rv;
-        };
+        # If there is a problem committing the build removal, there is no way to directly recover from 
+        # it. As a workaround, run the existing build removal tool in an eval wrapped system call.
+        $self->status_message("No problems found, attempting removal...");
 
-        # If a commit either doesn't happen or dies in the above eval, a rollback is automagically performed. Also, trans_rv
-        # won't get a value back, so it can be checked to determine if there were any problems
-        unless (defined $trans_rv and $trans_rv) {
+        my $cmd = "genome model build remove ";
+        $cmd .= "--keep-build-directory " if $self->keep_build_directory;
+        $cmd .= "--ITEMS $build_id";
+        my $rv = eval { system($cmd) };
+
+        unless (defined $rv and $rv == 0) {
             push @failed_builds, $build_id;
-            $self->error_message("Problem removing build! Rolling back changes and skipping this build!");
+            $self->warning_message("Could not remove build $build_id!");
             next;
         }
 
-        # Finally, perform a UR::Context->commit. The transaction's commit above does not call the __errors__ method on changed
-        # objects, so there a chance this commit will fail (though I've tried to cover my bases as best as I can). If the commit
-        # fails, a rollback of the UR::Context is NOT possible, since that would delete this command object. So an error summary
-        # is printed and the command blows up... :(
-        my $commit_rv = eval { UR::Context->commit };
-        unless (defined $commit_rv and $commit_rv) {
-            push @failed_builds, $build_id;
-            $self->error_message("Cannot perform a UR::Context->commit and cannot rollback changes! Printing summary and bailing out!");
-            $self->print_error_summary(\@failed_builds);
-            croak;
-        }
-        
         $num++;
         $self->status_message("\n\n$num of $total builds successfully removed!");
     }
@@ -115,7 +101,8 @@ sub print_error_summary {
     my ($self, $failed_builds) = @_;
     
     if (@$failed_builds) {
-        $self->status_message("Could not remove " . scalar @$failed_builds . " builds:\n" . join("\n", @$failed_builds));
+        $self->status_message("Could not remove " . scalar @$failed_builds . 
+            " builds:\n" . join("\n", @$failed_builds));
     }
     else {
         $self->status_message("All builds successfully removed!");
