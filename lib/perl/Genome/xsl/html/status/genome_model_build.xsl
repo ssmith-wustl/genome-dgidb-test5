@@ -4,35 +4,27 @@
 
 
   <xsl:template name="genome_model_build" match="build-status">
+    <!-- global object for data, uses YUI Module Pattern -->
+    <script type="text/javascript">
+      window.page_data = function(){
+        return {
+          workflow: {
+            "id": <xsl:value-of select="//build/workflow/@id"/>
+          },
+          stages: {
+            "count": <xsl:value-of select="count(build/stages/stage)"/>
+          }
+        }
+      }();
+    </script>
+
     <script type="text/javascript" src="/res/js/pkg/json2.js"></script>
     <link rel="stylesheet" href="/res/css/legacy.css" type="text/css" media="screen, projection"/>
 
-    <script type='text/javascript' src='/res/old/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js'></script>
-    <link rel="stylesheet" href="/res/old/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css" />
-    <script type="text/javascript">
-      <xsl:text disable-output-escaping="yes">
-      <![CDATA[
-               function event_popup(eventObject) {
+    <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
+    <link rel="stylesheet" href="/res/js/pkg/boxy/stylesheets/boxy.css" type="text/css" />
 
-                 // assemble event info into a table
-                 var popup_content = '<table class="boxy_info" cellpadding="0" cellspacing="0" border="0" width="300"><tbody>';
-                 for (prop in eventObject) {
-                   if (prop != 'popup_title') {
-                   popup_content += '<tr><td class="label">' + prop.replace(/_/g," ") + ':</td><td class="value">' + eventObject[prop] + '</td></tr>';
-                 }
-               }
-
-               popup_content += '</tbody></table>';
-
-
-
-               // create popup
-               var popup = new Boxy(popup_content, {title:eventObject.popup_title, fixed:false});
-                 popup.center();
-               }
-      ]]>
-      </xsl:text>
-    </script>
+    <script type='text/javascript' src='/res/js/app/genome_model_build.js'></script>
 
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Build:'" />
@@ -118,38 +110,7 @@
         <br/>
 
         View: <a href="#show_events" id="show_events">Events</a> | <a href="#show_workflow" id="show_workflow">Workflow</a>
-        <script type="text/javascript">
-          <xsl:text disable-output-escaping="yes">
-          <![CDATA[
-                   $(document).ready(function() {
-                   $('#show_events').click(function() {
-                   $('#workflowview').hide();
-                   $('#eventview').show();
-                   return false;
-                   });
 
-$('#show_workflow').click(function() {
-$('#eventview').hide();
-if ($('#workflowview').length == 0) {
-$('.viewport').append('<div id="workflowview"></div>');
-
-$('#workflowview').load('/view/workflow/operation/instance/statuspopup.html?id=]]></xsl:text><xsl:value-of select="//build/workflow/@id"/><xsl:text disable-output-escaping="yes"><![CDATA[');
-}
-$('#workflowview').show();
-return false;
-});
-});
-]]></xsl:text>
-        </script>
-        <xsl:if test="count(build/stages/stage) = 0">
-          <script type="text/javascript">
-            <![CDATA[
-                     $(document).ready(function() {
-                     $('#show_workflow').click();
-                     });
-            ]]>
-          </script>
-        </xsl:if>
         <div class="viewport">
           <div id="eventview">
             <table border="0" cellpadding="0" cellspacing="0" class="stages" width="100%">
