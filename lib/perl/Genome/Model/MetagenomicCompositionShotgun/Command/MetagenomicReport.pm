@@ -83,9 +83,7 @@ sub execute {
         eval{
             $rv = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->execute(
                 input_files => [$meta1_bam, $meta2_bam],
-                input_format=> "BAM",
                 output_file => $merged_bam,
-                output_format => "BAM",
             );
         };
         if ($@ or !$rv){
