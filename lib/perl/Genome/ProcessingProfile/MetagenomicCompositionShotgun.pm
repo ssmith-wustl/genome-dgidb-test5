@@ -234,7 +234,6 @@ sub _execute_build {
     # Sounds like Craig would like these to go in the database.
     $rv = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->execute(
         build_id => $build->id,
-        base_output_dir => $build->data_directory
     );
     unless($rv) {
         $self->error_message("QC report execution did not return 1");
@@ -245,7 +244,6 @@ sub _execute_build {
     # TODO: Should we move the taxonomy files into the repo?
     $rv = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->execute(
         build_id => $build->id,
-        base_output_dir => $build->data_directory,
         taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
         viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
     );
