@@ -34,66 +34,12 @@
 
     <div class="content rounded shadow">
       <div class="container">
+        <div id="objects" class="span-24 last">
+          <xsl:call-template name="genome_model_build_attributes_box"/>
 
-        <table cellpadding="0" cellspacing="0" border="0" class="info_table_group">
-          <tr>
-            <xsl:variable name="status" select="//build/@status"/>
-            <td>
-              <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-                <tr><td class="label">Model ID:</td><td class="value"><xsl:for-each select="build/model"><xsl:call-template name="object_link"><xsl:with-param name="linktext"><xsl:value-of select="./@id"/></xsl:with-param></xsl:call-template></xsl:for-each></td></tr>
-                <tr><td class="label">Model Name:</td><td class="value"><xsl:value-of select="build/@model-name"/></td></tr>
-                <xsl:if test="build/@common-name">
-                  <tr><td class="label">Common Name:</td><td class="value"><xsl:value-of select="build/@common-name"/></td></tr>
-                </xsl:if>
-                <xsl:if test="build/@base-alignment-path">
-                  <tr><td class="label">Base Alignment Path:</td><td class="value">
-                  <a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@base-alignment-path"/></xsl:attribute><xsl:attribute name="class"><xsl:text>grey</xsl:text></xsl:attribute><xsl:text>(base alignment path)</xsl:text></a>
-                  </td></tr>
-                </xsl:if>
-                <tr><td class="label">LSF Job ID:</td><td class="value"><xsl:value-of select="build/@lsf-job-id"/></td></tr>
-                <tr><td class="label">Workflow Instance ID:</td><td class="value"><xsl:for-each select="build/workflow"><xsl:call-template name="object_link">
-                <xsl:with-param name="linktext"><xsl:value-of select="./@id"/></xsl:with-param>
-              </xsl:call-template></xsl:for-each>
-              <xsl:if test="//build/workflow/@instance-status">
-                <xsl:if test="$status = 'Running'">
-                  <xsl:text> (</xsl:text>
-                  <xsl:value-of select="build/workflow/@instance-status"/><xsl:text>)</xsl:text>
-                </xsl:if>
-              </xsl:if>
-                </td></tr>
-              </table>
-            </td>
-            <td>
-              <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-                <tr><td class="label">Status:</td><td class="value"><xsl:value-of select="build/@status" />
-                <xsl:if test="$status = 'Succeeded'">
-                  <xsl:text> </xsl:text><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@summary-report"/></xsl:attribute><xsl:attribute name="class"><xsl:text>grey</xsl:text></xsl:attribute><xsl:text>(view build summary report)</xsl:text></a>
-                </xsl:if>
+          <xsl:call-template name="genome_model_build_attributes_box2"/>
 
-                </td></tr>
-                <tr><td class="label">Processing Profile:</td><td class="value"><xsl:value-of select="build/stages/@processing_profile"/> (<xsl:value-of select="build/stages/@processing_profile_type"/>)</td></tr>
-                <tr><td class="label">Data Directory:</td><td class="value"><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@data-directory"/></xsl:attribute><xsl:value-of select="build/@data-directory"/></a></td></tr>
-                <tr><td class="label">Software Revision:</td><td class="value"><xsl:value-of select="build/@software-revision"/></td></tr>
-                <xsl:if test="//build/@kilobytes-requested">
-                  <tr>
-                    <xsl:variable name="kb_requested" select="//build/@kilobytes-requested"/>
-                    <td class="label">Disk Space (kbytes):</td>
-                    <td class="value"><xsl:value-of select="format-number($kb_requested, '#,##0')"/></td>
-                  </tr>
-                </xsl:if>
-                <xsl:if test="build/@error-log">
-                  <tr><td class="label">Error File:</td><td class="value"><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@error-log"/></xsl:attribute>
-                  <xsl:call-template name="substring-after-last">
-                    <xsl:with-param name="input" select="build/@error-log"/>
-                    <xsl:with-param name="substr" select="'/'"/>
-                  </xsl:call-template>
-                </a></td>
-                  </tr>
-                </xsl:if>
-              </table>
-            </td>
-          </tr>
-        </table>
+        </div>
 
         <xsl:if test="count(//build/aspect[@name='inputs']/object) > 0 ">
           <xsl:for-each select="//build/aspect[@name='inputs']">
@@ -412,6 +358,209 @@
     </xsl:call-template>
 
   </xsl:template>
+
+  <xsl:template name="genome_model_build_attributes_box">
+    <xsl:variable name="build_directory_url">
+      <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="normalize-space(aspect[@name='data_directory']/value)" />
+    </xsl:variable>
+
+    <xsl:variable name="summary_report_url">
+      <xsl:value-of select="$build_directory_url"/><xsl:text>/reports/Summary/report.html</xsl:text>
+    </xsl:variable>
+
+    <xsl:variable name="status" select="build/@status"/>
+
+    <xsl:comment>template: genome_model_build.xsl:genome_model_build_attributes_box</xsl:comment>
+    <!-- details for this model -->
+    <div class="span_8_box_masonry">
+      <div class="box_header rounded-top span-8 last">
+        <div class="box_title"><h3 class="nontyped span-7 last">Build Attributes</h3></div>
+        <div class="box_button">
+
+        </div>
+      </div>
+
+      <div class="box_content rounded-bottom span-8 last">
+        <table class="name-value">
+          <tbody>
+            <tr>
+              <td class="name">status:
+              </td>
+              <td class="value">
+                <xsl:value-of select="$status" />
+              </td>
+            </tr>
+
+            <xsl:if test="$status = 'Succeeded'">
+              <tr>
+                <td class="name"><br/></td>
+                <td class="value">
+                  <a class="mini btn"><xsl:attribute name="href">
+                    <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@summary-report"/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>summary report</xsl:text>
+                  </a>
+                </td>
+              </tr>
+            </xsl:if>
+
+            <tr>
+              <td class="name"><br/>
+              </td>
+              <td class="value">
+                <a class="mini btn"><xsl:attribute name="href">
+                  <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@data-directory"/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>data directory</xsl:text>
+                </a>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name"><br/>
+              </td>
+              <td class="value">
+                <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@error-log"/></xsl:attribute>
+                <span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>error log</xsl:text>
+                </a>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">model:
+              </td>
+              <td class="value">
+                <xsl:value-of select="build/@model-name"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name"><br/></td>
+              <td class="value">
+                <xsl:for-each select="build/model">
+                  <xsl:call-template name="object_link_button">
+                    <xsl:with-param name="linktext">
+                      <xsl:value-of select="./@id"/>
+                    </xsl:with-param>
+                    <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                  </xsl:call-template>
+                </xsl:for-each>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </xsl:template>
+
+  <xsl:template name="genome_model_build_attributes_box2">
+    <xsl:variable name="build_directory_url">
+      <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="normalize-space(aspect[@name='data_directory']/value)" />
+    </xsl:variable>
+
+    <xsl:variable name="summary_report_url">
+      <xsl:value-of select="$build_directory_url"/><xsl:text>/reports/Summary/report.html</xsl:text>
+    </xsl:variable>
+
+    <xsl:variable name="status" select="build/@status"/>
+
+    <xsl:comment>template: genome_model_build.xsl:genome_model_build_attributes_box2</xsl:comment>
+    <!-- details for this model -->
+    <div class="span_8_box_masonry">
+      <div class="box_header rounded-top span-8 last">
+        <div class="box_title"><h3 class="nontyped span-7 last"><br/></h3></div>
+        <div class="box_button">
+
+        </div>
+      </div>
+
+      <div class="box_content rounded-bottom span-8 last">
+        <table class="name-value">
+          <tbody>
+
+            <tr>
+              <td class="name">LSF job id:
+              </td>
+              <td class="value">
+                <xsl:value-of select="build/@lsf-job-id"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">workflow instance id:
+              </td>
+              <td class="value">
+                <xsl:for-each select="build/workflow">
+                  <xsl:call-template name="object_link_button">
+                    <xsl:with-param name="linktext">
+                      <xsl:value-of select="./@id"/>
+                    </xsl:with-param>
+                    <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                  </xsl:call-template>
+                </xsl:for-each>
+
+              </td>
+            </tr>
+
+            <xsl:choose>
+              <xsl:when test="build/@common-name">
+                <tr>
+                  <td class="name">common name:</td>
+                  <td class="value">
+                    <xsl:value-of select="build/@common-name"/>
+                  </td>
+                </tr>
+              </xsl:when>
+              <xsl:otherwise>
+                <tr>
+                  <td class="name">common name:</td>
+                  <td class="value">
+                    --
+                  </td>
+                </tr>
+              </xsl:otherwise>
+            </xsl:choose>
+
+            <tr>
+              <td class="name">processing profile:</td>
+              <td class="value">
+                <xsl:value-of select="build/stages/@processing_profile"/> (<xsl:value-of select="build/stages/@processing_profile_type"/>)
+              </td>
+            </tr>
+
+            <xsl:choose>
+              <xsl:when test="build/@software-revision">
+                <tr>
+                  <td class="name">software revision:</td>
+                  <td class="value">
+                    <xsl:value-of select="build/@software-revision"/>
+                  </td>
+                </tr>
+              </xsl:when>
+              <xsl:otherwise>
+                <tr>
+                  <td class="name">software revision:</td>
+                  <td class="value">
+                    --
+                  </td>
+                </tr>
+              </xsl:otherwise>
+            </xsl:choose>
+
+            <tr>
+              <td class="name">kB requested:</td>
+              <td class="value">
+                <xsl:variable name="kb_requested" select="//build/@kilobytes-requested"/>
+                <xsl:value-of select="format-number($kb_requested, '#,##0')"/>
+              </td>
+            </tr>
+
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </xsl:template>
+
 
   <!-- initializes the dataTable plugin for model set views -->
   <xsl:template name="genome_model_build_set_table_init" match="object[./types[./isa[@type='Genome::Model::Build']]]" mode="set_table_init">
