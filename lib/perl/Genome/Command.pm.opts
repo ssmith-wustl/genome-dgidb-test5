@@ -1075,37 +1075,6 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
-      '>assembly',
-      [
-        'assembler-name=s',
-        undef,
-        'assembler-version=s',
-        undef,
-        'name=s',
-        undef,
-        'sequencing-platform=s',
-        undef,
-        'version-subdirectory=s',
-        undef,
-        'assembler-params=s',
-        undef,
-        'based-on=s',
-        undef,
-        'describe!',
-        undef,
-        'read-filter-name=s',
-        undef,
-        'read-filter-params=s',
-        undef,
-        'read-trimmer-name=s',
-        undef,
-        'read-trimmer-params=s',
-        undef,
-        'supersedes=s',
-        undef,
-        'help!',
-        undef
-      ],
       '>combine-variants',
       [
         'name=s',
@@ -1734,19 +1703,6 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
-      '>assembly',
-      [
-        'show=s',
-        'files',
-        'filter=s',
-        undef,
-        'noheaders!',
-        undef,
-        'style=s',
-        undef,
-        'help!',
-        undef
-      ],
       '>combine-variants',
       [
         'show=s',
@@ -2161,41 +2117,6 @@ $Genome::Command::OPTS_SPEC = [
     '>define',
     [
       '>amplicon-assembly',
-      [
-        'processing-profile-name=s',
-        undef,
-        'subject-name=s',
-        undef,
-        'auto-assign-inst-data!',
-        undef,
-        'auto-build-alignments!',
-        undef,
-        'data-directory=s',
-        undef,
-        'model-name=s',
-        undef,
-        'result-model-id=s',
-        undef,
-        'subject-class-name=s',
-        undef,
-        'subject-id=s',
-        undef,
-        'subject-type=s',
-        [
-          'species_name',
-          'sample_group',
-          'flow_cell_id',
-          'genomic_dna',
-          'library_name',
-          'sample_name',
-          'dna_resource_item_name'
-        ],
-        'bare-args=s@',
-        'files',
-        'help!',
-        undef
-      ],
-      '>assembly',
       [
         'processing-profile-name=s',
         undef,
@@ -3762,6 +3683,24 @@ $Genome::Command::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>convergence',
+    [
+      '>find-significant-attributes',
+      [
+        'data-file=s',
+        undef,
+        'output-file=s',
+        undef,
+        'annotation-build=s',
+        undef,
+        'build=s',
+        undef,
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
     '>gene-prediction',
     [
       '>finish',
@@ -3903,22 +3842,26 @@ $Genome::Command::OPTS_SPEC = [
       [
         'base-output-dir=s',
         undef,
-        'build-id=s',
-        undef,
-        'taxonomy-file=s',
-        undef,
-        'viral-taxonomy-file=s',
-        undef,
         'log-path=s',
+        undef,
+        'model=s',
+        undef,
+        'model-id=s',
+        undef,
+        'model-name=s',
         undef,
         'overwrite!',
         undef,
         'report-path=s',
         undef,
+        'taxonomy-file=s',
+        undef,
+        'viral-taxonomy-file=s',
+        undef,
         'help!',
         undef
       ],
-      '>qc-report',
+      '>ref-cov-report',
       [
         'base-output-dir=s',
         undef,
@@ -3933,16 +3876,21 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
-      '>ref-cov',
+      '>report',
       [
-        'build=s',
+        'base-output-dir=s',
         undef,
-        'help!',
-        undef
-      ],
-      '>ref-cov-2',
-      [
-        'build=s',
+        'log-path=s',
+        undef,
+        'model=s',
+        undef,
+        'model-id=s',
+        undef,
+        'model-name=s',
+        undef,
+        'overwrite!',
+        undef,
+        'report-path=s',
         undef,
         'help!',
         undef
@@ -7770,6 +7718,17 @@ $Genome::Command::OPTS_SPEC = [
         'wiggle-file-dirs=s',
         undef,
         'genes-to-exclude=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>wig-to-bitmask',
+      [
+        'output-file=s',
+        undef,
+        'wig-file=s',
+        undef,
+        'reference-index=s',
         undef,
         'help!',
         undef
@@ -12265,6 +12224,24 @@ $Genome::Command::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>methlab',
+    [
+      '>pre-process-gff',
+      [
+        'gff-directory=s',
+        undef,
+        'flanking-probes=s',
+        undef,
+        'min-difference=s',
+        undef,
+        'min-logratio=s',
+        undef,
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
     '>mosaik',
     [
       'use-version=s',
@@ -14384,66 +14361,6 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
-      '>r-1',
-      [
-        'input-files=s@',
-        undef,
-        'input-format=s',
-        [
-          'SAM',
-          'BAM'
-        ],
-        'output-file=s',
-        undef,
-        'output-format=s',
-        [
-          'SAM',
-          'BAM'
-        ],
-        'maximum-memory=s',
-        undef,
-        'type=s',
-        [
-          'unsorted',
-          'fragment',
-          'paired_end',
-          'paired_end_and_fragment'
-        ],
-        'use-version=s',
-        undef,
-        'help!',
-        undef
-      ],
-      '>r-2',
-      [
-        'input-files=s@',
-        undef,
-        'output-file=s',
-        undef,
-        'maximum-memory=s',
-        undef,
-        'rand-seed=s',
-        undef,
-        'use-version=s',
-        undef,
-        'help!',
-        undef
-      ],
-      '>r-3',
-      [
-        'input-files=s@',
-        undef,
-        'output-file=s',
-        undef,
-        'maximum-memory=s',
-        undef,
-        'rand-seed=s',
-        undef,
-        'use-version=s',
-        undef,
-        'help!',
-        undef
-      ],
       '>remove-paired-ends',
       [
         'lsf-resource=s',
@@ -14552,38 +14469,6 @@ $Genome::Command::OPTS_SPEC = [
         'snp-file=s',
         undef,
         'out-file=s',
-        undef,
-        'help!',
-        undef
-      ],
-      '>sort-and-merge-split-reference-alignments',
-      [
-        'input-files=s@',
-        undef,
-        'input-format=s',
-        [
-          'SAM',
-          'BAM'
-        ],
-        'keep-sorted-files!',
-        undef,
-        'output-file=s',
-        undef,
-        'output-format=s',
-        [
-          'SAM',
-          'BAM'
-        ],
-        'maximum-memory=s',
-        undef,
-        'type=s',
-        [
-          'unsorted',
-          'fragment',
-          'paired_end',
-          'paired_end_and_fragment'
-        ],
-        'use-version=s',
         undef,
         'help!',
         undef
@@ -15879,6 +15764,15 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>ks-filter',
+      [
+        'output-data-dir=s',
+        undef,
+        'somatic-build-id=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>library-support-filter',
       [
         'indel-file=s',
@@ -16161,6 +16055,8 @@ $Genome::Command::OPTS_SPEC = [
         'output-file=s',
         undef,
         'query-file=s',
+        undef,
+        'cdna=s',
         undef,
         'reference=s',
         undef,
@@ -17254,6 +17150,81 @@ $Genome::Command::OPTS_SPEC = [
           'help!',
           undef
         ],
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
+    '>xhong',
+    [
+      '>break-dancer',
+      [
+        'build-id=s',
+        undef,
+        'dir=s',
+        undef,
+        'force!',
+        undef,
+        'help!',
+        undef
+      ],
+      '>break-dancer-cpp',
+      [
+        'build-id=s',
+        undef,
+        'dir=s',
+        undef,
+        'force!',
+        undef,
+        'help!',
+        undef
+      ],
+      '>compare-snps-build-lanes',
+      [
+        'analysis-dir=s',
+        undef,
+        'model-id=s',
+        undef,
+        'sample-name=s',
+        undef,
+        'genotype-file=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>create-recurrence-excel',
+      [
+        'analysis-dir=s',
+        undef,
+        'model-group=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>dump-bams',
+      [
+        'build-ids=s',
+        undef,
+        'model-group-name=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>recurrence-gene-list',
+      [
+        'all-tier1=s',
+        undef,
+        'analysis-dir=s',
+        undef,
+        'bamfile-list=s',
+        undef,
+        'model-group=s',
+        undef,
+        'nonsilent-recurrent-gene=s',
+        undef,
+        'recurrent-list=s',
+        undef,
         'help!',
         undef
       ],
