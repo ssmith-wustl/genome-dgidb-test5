@@ -18,19 +18,11 @@ class Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments {
         input_files => {
             is => 'Text',
             is_many => 1,
-            doc => 'SAM or BAM input files to merge'
-        },
-        input_format => {
-            is => 'Text',
-            valid_values => ['SAM', 'BAM']
+            doc => 'BAM input files to merge'
         },
         output_file => {
             is => 'Text',
-            doc => 'merged SAM or BAM file to write'
-        },
-        output_format => {
-            is => 'Text',
-            valid_values => ['SAM', 'BAM']
+            doc => 'merged BAM file to write'
         },
         keep_sorted_files => {
             is => 'Boolean',
@@ -62,13 +54,6 @@ sub execute {
 
     $self->dump_status_messages(1);
     $self->dump_error_messages(1);
-    if ($self->input_format eq 'SAM'){
-        $self->error_message("only bams supported");
-        die;
-    }
-    if ($self->output_format eq "SAM"){
-        $self->error_message("only bams supported");
-    }
 
     my @in_files = $self->input_files;
     my $out_file = $self->output_file;
@@ -102,11 +87,9 @@ sub execute {
     # merge bam files
     my $rv;
     eval{ 
-        $rv = Genome::Model::Tools::Sam::MergeSplitReferenceAlignments->execute(
+        $rv = Genome::Model::Tools::Sam::R3->execute(
             input_files => \@bams_sorted,
-            input_format => 'BAM',
             output_file => $out_file,
-            output_format => 'BAM',
         );
     };
     if ($@ or !$rv){
