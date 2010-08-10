@@ -75,7 +75,8 @@ sub default_crossmatch_version {
     die "default samtools version: $DEFAULT is not valid" unless $CROSSMATCH_VERSIONS{$DEFAULT};
     return $DEFAULT;
 }
-        
+
+sub default_version { return default_crossmatch_version; }
 
 1;
 
