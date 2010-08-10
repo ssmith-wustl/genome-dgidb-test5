@@ -37,7 +37,8 @@ sub input_fastas {
 
 sub fasta_file {
     my $self = shift;
-    my @instrument_data = $self->model->instrument_data;
+    # FIXME
+    my @instrument_data = $self->instrument_data;
     #SINGULAR FOR NOW .. NEED TO GET IT TO WORK FOR MULTIPLE INPUTS
     my $fasta = $instrument_data[0]->fasta_file;
     unless ($fasta) {
