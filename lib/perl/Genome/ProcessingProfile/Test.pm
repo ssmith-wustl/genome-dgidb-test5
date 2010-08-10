@@ -605,30 +605,6 @@ sub test02_stages : Tests() {
     return 1;
 }
 
-#######################
-# Reference Alignment #
-#######################
-
-package Genome::ProcessingProfile::ReferenceAlignment::454::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::ProcessingProfile::TestBase';
-
-# TODO 
-# sub invalid_params_for_test_class { }
-
-package Genome::ProcessingProfile::ReferenceAlignment::Solexa::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::ProcessingProfile::TestBase';
-
-# TODO 
-# sub invalid_params_for_test_class { }
-
 ############
 # Commands #
 ############
