@@ -16,9 +16,6 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::QcReport{
         build_id => {
             is => 'Int',
         },
-        base_output_dir => {
-            is => 'Text',
-        },
         overwrite => {
             is => 'Boolean',
             is_optional => 1,
@@ -42,14 +39,9 @@ sub execute {
     my $model = $build->model;
 
     unless ($self->report_path){
-        my $sample_name = $model->subject_name;
-        my ($hmp, $patient, $site) = split(/-/, $sample_name);
-        $patient = $hmp . '-' . $patient;
-        my $build_id = $build->id;
-        my $output_dir = $self->base_output_dir . "/" . $patient . "/" . $site . "/" . $build_id;
-        mkpath $output_dir unless -d $output_dir;
-        # TODO: check and warn if dir for different successful build id is present
-        $self->report_path($output_dir);
+        my $report_dir = $build->data_directory . "/reports";
+        mkpath $report_dir unless -d $report_dir;
+        $self->report_path($report_dir);
     }
     unless ($self->log_path){
         $self->log_path($self->report_path . '/log');
@@ -87,7 +79,6 @@ sub execute {
     #   number of quality trimmed bases per lane
     #   average length of quality trimmed reads per lane
     my $stats_output_path = $self->report_path . '/post_trim_stats_report.tsv';
-    #unless (-f $stats_output_path && ! $self->overwrite) {
         $self->status_message("Generating post trimming stats...");
         unlink($stats_output_path) if (-f $stats_output_path);
         my $stats_output = Genome::Utility::FileSystem->open_file_for_writing($stats_output_path);
@@ -118,10 +109,6 @@ sub execute {
             }
             print $stats_output "\n";
         }
-        #}
-        #else {
-        #$self->status_message("Skipping post trimming stats, use --overwrite to replace...");
-        #}
 
         # COLLECTING UNTRIMMED SEQUENCES OF NON-HUMAN READS
         # count of unique, non-human bases per lane
@@ -365,7 +352,6 @@ sub execute {
         #   unique, non-human bases
         #   percent duplication of raw data
         my $other_stats_output_path = $self->report_path . '/other_stats_report.txt';
-        #unless (-f $other_stats_output_path && ! $self->overwrite) {
         $self->status_message("Generating other stats...");
         unlink($other_stats_output_path) if (-f $other_stats_output_path);
         my $other_stats_output = Genome::Utility::FileSystem->open_file_for_writing($other_stats_output_path);
@@ -427,10 +413,6 @@ sub execute {
             }
 
         }
-#    }
-#    else {
-#        $self->status_message("Skipping other stats, use --overwrite to replace...");
-#    }
 
         $self->status_message("Removing unneeded FastQ files...");
         for my $id (keys %fastq_files) {
@@ -474,63 +456,6 @@ sub execute {
             push @lines, $line;
         }
         return join('', @lines);
-    }
-
-    sub sort_bams_by_name {
-        my $self = shift;
-        my @bams = @_;
-        my @sorted_bams;
-        my $sorted_output_dir = $self->base_output_dir . '/bams';
-        mkpath($sorted_output_dir) unless -d $sorted_output_dir;
-        for my $bam (@bams) {
-            my $sorted_bam = (split('/', $bam))[-1];
-            $sorted_bam =~ s/\.bam$//; # strip off .bam because samtools adds it
-            $sorted_bam = $sorted_output_dir . '/' . $sorted_bam . '_name_sorted';
-
-            Genome::Model::Tools::Sam::SortBam->execute(
-                file_name => $bam,
-                name_sort => 1,
-                output_file => $sorted_bam,
-                maximum_memory => 1250000000,
-            );
-            push @sorted_bams, $sorted_bam . '.bam';
-        }
-        return @sorted_bams;
-    }
-
-    sub merge_bams {
-        my $self = shift;
-        my $output_file = shift;
-        my @input_files = @_;
-        my $rv = Genome::Model::Tools::Sam::MergeSplitReferenceAlignments->execute(
-            input_files => \@input_files,
-            input_format => 'BAM',
-            output_file => $output_file,
-            output_format => 'BAM',
-        );
-        unless ($rv){
-            $self->error_message("Failed to sort and merge bams");
-            die;
-        }
-    }
-
-    sub sort_fastq {
-        my $file = shift;
-        my $file_fh = IO::File->new($file);
-        my $sort_fh = IO::File->new(' | sort -z -n | tr -d \'\000\' > ' . $file . '_sorted');
-
-        my @records;
-        my @record_lines;
-        my $count = 1;
-        while (<$file_fh>) {
-            push @record_lines, $_;
-            unless ($count % 4) {
-                push @records, join('', @record_lines) . "\0";
-                print $sort_fh join('', @record_lines) . "\0";
-                @record_lines = ();
-            }
-            $count++;
-        }
     }
 
     sub expect64 {
