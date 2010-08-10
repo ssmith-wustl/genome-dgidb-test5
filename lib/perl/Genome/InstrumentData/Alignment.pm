@@ -1154,8 +1154,6 @@ sub generate_tcga_bam_file {
 
     $self->status_message("Cat-ing together: ".join("\n",@files_to_merge). "\n to output file ".$per_lane_sam_file);
 
-    #$DB::single = 1;
-    
     my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@files_to_merge,output_file=>$per_lane_sam_file);
     if ($cat_rv ne 1) {
         $self->error_message("Error during cat of alignment sam files! Return value $cat_rv");
@@ -1172,7 +1170,6 @@ sub generate_tcga_bam_file {
     } 
     else {
     
-        $DB::single = 1; 
         my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_file     => $per_lane_sam_file,
             output_file    => $per_lane_sam_file_rg,

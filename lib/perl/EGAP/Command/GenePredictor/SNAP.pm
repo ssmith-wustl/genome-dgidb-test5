@@ -13,24 +13,46 @@ use English;
 use IO::Dir;
 use IPC::Run;
 use File::Temp;
-
+use Carp;
 
 class EGAP::Command::GenePredictor::SNAP {
-    is  => ['EGAP::Command::GenePredictor'],
+    is  => 'EGAP::Command::GenePredictor',
     has => [
-            hmm_file => {
-                         is          => 'SCALAR',
-                         doc         => 'SNAP HMM (model) file'
-                        },
-           ],
+        hmm_file => {
+            is => 'Path',
+            doc => 'SNAP HMM (model) file'
+        },
+        fasta_file => {
+            is_input => 1,
+            is => 'Path',
+            doc => 'SNAP fasta file',
+        },
+        snap_output_file => {
+            is => 'Path',
+            doc => 'SNAP raw output file',
+        },
+        snap_error_file => {
+            is => 'Path',
+            doc => 'SNAP raw error file',
+        },
+    ],
+    has_optional => [
+        snap_version => {
+            is => 'String',
+            valid_values => ['2004-06-17', '2007-12-18', '2010-07-28'],
+            default => '2010-07-28',
+        },
+        bio_seq_feature => {
+            is => 'ARRAY',
+            doc => 'List of Bio::SeqFeatures representing predicted genes',
+        },
+    ],
 };
 
 operation_io EGAP::Command::GenePredictor::SNAP {
-    input  => [ 'hmm_file', 'fasta_file' ],
-    output => [ 'bio_seq_feature' ]
+    input  => [ 'hmm_file', 'fasta_file', 'snap_output_file', 'snap_error_file', 'snap_version' ],
+    output => [ 'bio_seq_feature', 'snap_output_file', 'snap_error_file' ]
 };
-
-sub sub_command_sort_position { 10 }
 
 sub help_brief {
     "Write a set of fasta files for an assembly";
@@ -48,61 +70,48 @@ EOS
 }
 
 sub execute {
-    
     my $self = shift;
 
-    
-    my ($snap_stdout, $snap_stderr);
-
-    my $temp_fh       = File::Temp->new();
-    my $temp_filename = $temp_fh->filename();
-
-    close($temp_fh);
-
-    my @features = ();
-    
+    # Use full path to snap executable, with version, instead of the symlink.
+    # This prevents the symlink being changed silently and affecting our output!
+    my $snap_path = "/gsc/pkg/bio/snap/snap-" . $self->snap_version . "/snap";
     my @cmd = (
-	       'snap',
-	       '-quiet',
-	       $self->hmm_file(),
-	       $self->fasta_file(),
-	       );
-    eval {
-        
+	    $snap_path,
+	    '-quiet',
+	    $self->hmm_file,
+	    $self->fasta_file,
+	);
+
+    eval {    
         IPC::Run::run(
-                      \@cmd,
-		      \undef,
-                      '>',
-                      $temp_filename,
-                      '2>',
-                      \$snap_stderr, 
-		      ) || die $CHILD_ERROR;
-	  
-      };
+            \@cmd,
+		    \undef,
+            '>',
+            $self->snap_output_file,
+            '2>',
+            $self->snap_error_file, 
+		) || die $CHILD_ERROR;
+    };
     
     if ($EVAL_ERROR) {
-        die "Failed to exec snap: $EVAL_ERROR";
+        croak "Failed to execute snap: $EVAL_ERROR";
     }
 
-    my $snap_fh = IO::File->new();
+    my $snap_fh = IO::File->new($self->snap_output_file, "r");
+    unless ($snap_fh) {
+        croak "Could not open " . $self->snap_output_file . ": $OS_ERROR";
+    }
     
-    $snap_fh->open($temp_filename)
-        or die "Can't open '$temp_filename': $OS_ERROR";
-    
-    my %exons = ( );
-
+    my %exons;
     my $current_seq_id;
     
     while (my $line = <$snap_fh>) {
-
-	chomp $line;
+	    chomp $line;
 
         if ($line =~ /^>(.+)$/) {
             $current_seq_id = $1;
         }
-        
-	else {
-
+	    else {
             my (
                 $label,
                 $begin,
@@ -122,81 +131,74 @@ sub execute {
                 -primary    => $label,
                 -source_tag => 'SNAP',
                 -score      => $score,
+                -strand     => $strand,
+                -tag        => {
+                    'five_prime_overhang'  => $five_prime_overhang,
+                    'three_prime_overhang' => $three_prime_overhang },
             );
             
-	    push @{$exons{$group}}, $feature;
-            
+	        push @{$exons{$group}}, $feature;
         }
-        
     }
     
+    my @features;
     foreach my $prediction (keys %exons) {
-	
-	my ($strand, $start, $end);
-	
-	my @exons =  sort { $a->start <=> $b->start } @{$exons{$prediction}};
-	    
+	    my ($strand, $start, $end);	
+    	my @exons =  sort { $a->start <=> $b->start } @{$exons{$prediction}};
         $start = $exons[0]->start();
-        $end   = $exons[$#exons]->end(); 
+        $end   = $exons[$#exons]->end();
+        $strand = $exons[0]->strand();
 	
-	my $gene = Bio::Tools::Prediction::Gene->new(
-						     -seq_id       => $exons[0]->seq_id,
-						     -start        => $start,
-						     -end          => $end,
-						     -strand       => $strand,
-						     -source_tag   => $exons[0]->source_tag(),
-                                                     -tag          => { 'Sequence' => $prediction },
-                                                 );
+	    my $gene = Bio::Tools::Prediction::Gene->new(
+		    -seq_id       => $exons[0]->seq_id,
+			-start        => $start,
+			-end          => $end,
+			-strand       => $strand,
+			-source_tag   => $exons[0]->source_tag(),
+            -tag          => { 'Sequence' => $prediction },
+        );
 
-        if (@exons > 1) {
-            
-            unless (
-                    $exons[0]->primary_tag() eq 'Einit' or 
-                    $exons[$#exons]->primary_tag() eq 'Einit'
-                ) {
-		
+        if (@exons > 1) {    
+            unless ($exons[0]->primary_tag() eq 'Einit' or $exons[$#exons]->primary_tag() eq 'Einit') {
                 $gene->add_tag_value('start_not_found' => 1);
-                
+                $gene->add_tag_value('fragment' => 1);
             }
             
-            unless (
-                    $exons[0]->primary_tag() eq 'Eterm' or
-                    $exons[$#exons]->primary_tag() eq 'Eterm'
-                ) {
-                
+            unless ($exons[0]->primary_tag() eq 'Eterm' or $exons[$#exons]->primary_tag() eq 'Eterm') {
                 $gene->add_tag_value('end_not_found' => 1);
-                
+                $gene->add_tag_value('fragment' => 1);
             }
-
         }
-    	
-	foreach my $e (@exons){
-	    
-	    my $exon = Bio::Tools::Prediction::Exon->new(
-							 -seq_id       => $e->seq_id(),
-							 -start        => $e->start(),
-							 -end          => $e->end(),
-							 -strand       => $e->strand(),
-							 -score        => $e->score(),
-							 -source_tag   => $e->source_tag(),
-                                                     );
-	    
-	    $gene->add_exon($exon);
-	    
-	    $exon->add_tag_value('Sequence' => $gene->get_tag_values('Sequence'));
-            
-	    $exon->primary_tag('Exon');
-	    
-	}
+        elsif (@exons == 1) {
+            if ($exons[0]->primary_tag() ne 'Esngl') {
+                $gene->add_tag_value('start_not_found' => 1);
+                $gene->add_tag_value('end_not_found' => 1);
+                $gene->add_tag_value('fragment' => 1);
+            }
+        }
+
+	    foreach my $e (@exons) {
+	        my $exon = Bio::Tools::Prediction::Exon->new(
+			    -seq_id       => $e->seq_id(),
+				-start        => $e->start(),
+				-end          => $e->end(),
+				-strand       => $e->strand(),
+				-score        => $e->score(),
+				-source_tag   => $e->source_tag(),
+            );
+	        $exon->add_tag_value('five_prime_overhang' => $e->get_tag_values('five_prime_overhang'));
+            $exon->add_tag_value('three_prime_overhang' => $e->get_tag_values('three_prime_overhang'));
+
+	        $gene->add_exon($exon);
+	        $exon->add_tag_value('Sequence' => $gene->get_tag_values('Sequence'));
+	        $exon->primary_tag('Exon');
+	    }
 
         push @features, $gene;
-
     }
     
     $self->bio_seq_feature(\@features);
-           
     return 1;
-    
 }
 
 1;

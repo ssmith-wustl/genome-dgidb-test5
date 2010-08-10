@@ -420,7 +420,6 @@ sub dump_sanger_fastq_files {
 
     my @converted_pathnames;
     my $counter = 0;
-    $DB::single = 1;
     for my $illumina_fastq_pathname (@illumina_fastq_pathnames) {
         my $converted_fastq_pathname;
         if ($self->resolve_quality_converter eq 'sol2sanger') {

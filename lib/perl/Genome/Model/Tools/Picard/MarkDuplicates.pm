@@ -85,7 +85,12 @@ sub execute {
         $dedup_cmd .= ' MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP='. $self->max_sequences_for_disk_read_ends_map;
     }
     if ($self->max_records_in_ram) {
-        $dedup_cmd .= ' MAX_RECORDS_IN_RAM='. $self->max_records_in_ram;
+        my $version = $self->use_version;
+        if( grep($_ eq $version, ('r107', 'r104', 'r103wu0')) ) {
+            $self->warning_message('Max. records in RAM parameter is not supported in this version of Picard (first available in 1.16).  Ignoring.');
+        } else {
+            $dedup_cmd .= ' MAX_RECORDS_IN_RAM='. $self->max_records_in_ram;
+        }
     }
     $self->run_java_vm(
         cmd => $dedup_cmd,
@@ -95,6 +100,5 @@ sub execute {
     );
     return 1;
 }
-
 
 1;

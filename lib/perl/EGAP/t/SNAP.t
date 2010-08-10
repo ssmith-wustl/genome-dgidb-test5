@@ -15,10 +15,24 @@ BEGIN {
     use_ok('EGAP::Command::GenePredictor::SNAP');
 }
 
+my $test_output_dir = "/gsc/var/cache/testsuite/running_testsuites/";
+
+my $output_file = File::Temp->new(
+    TEMPLATE => "EGAP-Command-GenePrediction-SNAP-XXXXXX",
+    DIR => $test_output_dir
+);
+
+my $error_file = File::Temp->new(
+    TEMPLATE => "EGAP-Command-GenePrediction-SNAP-XXXXXX",
+    DIR => $test_output_dir
+);
+
 my $command = EGAP::Command::GenePredictor::SNAP->create(
-                                                         'fasta_file' => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
-                                                         'hmm_file'   => '/gsc/pkg/bio/snap/installed/HMM/C.elegans.hmm' 
-                                                        );
+    fasta_file => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
+    hmm_file => '/gsc/pkg/bio/snap/installed/HMM/C.elegans.hmm',
+    snap_output_file => $output_file->filename,
+    snap_error_file => $error_file->filename,
+);
 
 isa_ok($command, 'EGAP::Command::GenePredictor');
 isa_ok($command, 'EGAP::Command::GenePredictor::SNAP');

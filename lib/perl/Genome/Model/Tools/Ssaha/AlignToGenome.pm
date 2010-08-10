@@ -28,6 +28,7 @@ class Genome::Model::Tools::Ssaha::AlignToGenome {
 		output_file	=> { is => 'Text', doc => "Output file for Ssaha2 alignments" },
                 reference	=> { is => 'Text', doc => "Path to ssaha-indexed reference [Defaults to Hs36]", is_optional => 1 },
                 ssaha2_params	=> { is => 'Text', doc => "Options for ssaha2 [-454 -best 1 -udiff 1 -output sam]", is_optional => 1 },
+                cdna	=> { is => 'Text', doc => "If set to 1, applies Conrad parameters for cDNA alignment [-454 -seeds 2 -diff -1 -kmer 12 -skip 5]", is_optional => 1 },		
 	],
 };
 
@@ -78,6 +79,7 @@ sub execute {                               # replace with real execution logic.
 	## Define Ssaha Reference (default to Hs36)
 
 	my $reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.ssaha2';
+	my $reference_fasta = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 
         if(defined($self->reference))
 	{
@@ -105,9 +107,21 @@ sub execute {                               # replace with real execution logic.
 
 	print "SSAHA FQ file: $fq_file\n";
 
-	print "Aligning $fq_file to $reference\n";
-	system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file -save $reference $fq_file");
-#	system("ssaha2 $ssaha2_params -outfile $output_file -save $reference $fq_file");
+	if($self->cdna)
+	{
+		print "Aligning $fq_file to $reference\n";
+		$ssaha2_params = "-454 -seeds 2 -diff -1 -kmer 12 -skip 5 -output sam";
+		system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file $reference_fasta $fq_file");				
+	}
+	else
+	{
+		print "Aligning $fq_file to $reference\n";
+		system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file -save $reference $fq_file");		
+	}
+
+
+
+
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
