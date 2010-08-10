@@ -25,10 +25,6 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::QcReport{
             is => 'Text',
             is_optional => 1,
         },
-		log_path => {
-			is => 'Text',
-			is_optional => 1,
-		},
     ],
 };
 
@@ -42,9 +38,6 @@ sub execute {
         my $report_dir = $build->data_directory . "/reports";
         mkpath $report_dir unless -d $report_dir;
         $self->report_path($report_dir);
-    }
-    unless ($self->log_path){
-        $self->log_path($self->report_path . '/log');
     }
     $self->status_message("Report path: " . $self->report_path);
 
