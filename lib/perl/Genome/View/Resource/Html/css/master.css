@@ -24,6 +24,10 @@ table {
 
 }
 
+tr.even td {
+    background: none;
+}
+
 /* TEXT
  ****************************************/
 
@@ -196,6 +200,10 @@ body {
 
 .padding10 {
     padding: 10px;
+}
+
+.error_box {
+    background: #FAA;
 }
 
 /* OBJECT BOXES
@@ -665,7 +673,7 @@ td.stage_name {
     margin-right: 5px;
 }
 
-/* PAGER */
+/* SEARCH PAGER */
 .pager {
     width: 100%;
     padding-top: 8px;
@@ -732,4 +740,17 @@ table.boxy_info td {
 table.boxy_info td.label {
     font-weight:bold;
     text-align:right;
+}
+
+/* SET VIEWS */
+
+div.set_query {
+    background: #e5e5e3;
+}
+
+div#set_filter input {
+    -webkit-border-radius: 3px;
+    -khtml-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
 }

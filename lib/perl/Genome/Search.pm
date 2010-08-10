@@ -229,8 +229,8 @@ sub clear {
     
     my $solr = $self->solr_server;
     
-    $solr->delete_by_query('*:*'); #Optimized by solr for fast index clearing
-    $solr->optimize(); #Prevent former entries from influencing future index
+    $solr->delete_by_query('*:*') || return; #Optimized by solr for fast index clearing
+    $solr->optimize() || return; #Prevent former entries from influencing future index
     
     #$self->status_message('Solr index cleared.');
     

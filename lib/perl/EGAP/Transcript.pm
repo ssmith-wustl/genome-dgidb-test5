@@ -5,7 +5,6 @@ use warnings;
 
 use EGAP;
 
-
 class EGAP::Transcript {
     type_name => 'transcript',
     table_name => 'TRANSCRIPT',

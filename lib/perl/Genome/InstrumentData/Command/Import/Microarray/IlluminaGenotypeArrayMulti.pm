@@ -136,7 +136,7 @@ sub process_imported_files {
 
     #Find the exact file names of the Final Report and the Sample Map.    
     for (@files) {
-        if ($_ =~ /FinalReport/) {
+        if ($_ =~ /FinalReport\.(txt|csv)/) {
             $genotype = $_;
             next;
         }

@@ -57,6 +57,26 @@
 
   </xsl:template>
 
+  <!-- initializes the dataTable plugin for model set views -->
+  <xsl:template name="genome_model_set_table_init" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_table_init">
+    <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_table_init</xsl:comment>
+    <script type="text/javascript">
+      <xsl:text disable-output-escaping="yes">
+      <![CDATA[
+               $(document).ready(
+                 window.setTable = $('#set').dataTable({
+                   "bJQueryUI": true,
+                   "sPaginationType": "full_numbers",
+                   "bStateSave": true,
+                   "iDisplayLength": 25
+                 })
+               );
+      ]]>
+      </xsl:text>
+    </script>
+  </xsl:template>
+
+  <!-- describes the columns for model set views -->
   <xsl:template name="genome_model_set_header" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_header">
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_header</xsl:comment>
     <tr>
@@ -78,14 +98,10 @@
       <th>
         last complete build
       </th>
-
-      <th>
-        <br/>
-      </th>
     </tr>
   </xsl:template>
 
-
+  <!-- describes the row for model set views -->
   <xsl:template name="genome_model_set_row" match="object[./types[./isa[@type='Genome::Model']]]" mode="set_row">
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_row</xsl:comment>
 
@@ -96,7 +112,10 @@
         <xsl:value-of select="aspect[@name='name']"/>
       </td>
       <td>
-        <xsl:value-of select="aspect[@name='genome_model_id']"/>
+        <xsl:call-template name="object_link_button">
+          <xsl:with-param name="linktext" select="aspect[@name='genome_model_id']"/>
+          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+        </xsl:call-template>
       </td>
       <td>
         <xsl:value-of select="aspect[@name='creation_date']"/>
@@ -127,11 +146,6 @@
         </xsl:choose>
       </td>
 
-      <td class="buttons">
-        <xsl:call-template name="object_link_button_tiny">
-          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
-        </xsl:call-template>
-      </td>
     </tr>
   </xsl:template>
 

@@ -46,10 +46,18 @@ sub _generate_content {
         $params
     );
 
+    my @p;
+    for my $k (keys %$params) {
+        push @p, join('', $k, '=', $params->{$k});
+    }
+
+    my $param_str = join(',', @p);
+
     my $time = UR::Time->now();
     $results_node->addChild( $doc->createAttribute( "generated-at", $time ) );
     $results_node->addChild( $doc->createAttribute( "input-name",   "query" ) );
     $results_node->addChild( $doc->createAttribute( "query",        $query ) );
+    $results_node->addChild( $doc->createAttribute( "params",        $param_str) );
     $results_node->addChild( $doc->createAttribute( "num-found", $response->content->{'response'}->{'numFound'} ));
 
 #   FACET XML

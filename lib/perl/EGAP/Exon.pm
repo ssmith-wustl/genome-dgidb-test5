@@ -14,11 +14,39 @@ class EGAP::Exon {
         exon_id => { is => 'NUMBER', len => 12 },
     ],
     has => [
-        end         => { is => 'NUMBER', len => 10, column_name => 'SEQ_END' },
-        start       => { is => 'NUMBER', len => 10, column_name => 'SEQ_START' },
-        sequence_string => { is => 'BLOB', len => 2147483647 },
-        transcript      => { is => 'EGAP::Transcript', id_by => 'transcript_id', constraint_name => 'EXON_TRANSCRIPT_ID_FK' },
-        transcript_id   => { is => 'NUMBER', len => 11 },
+        end => { 
+            is => 'NUMBER',
+            len => 10, 
+            column_name => 'SEQ_END' 
+        },
+        start => { 
+            is => 'NUMBER', 
+            len => 10, 
+            column_name => 'SEQ_START' 
+        },
+        five_prime_overhang => {
+            is => 'NUMBER',
+            len => 1,
+            column_name => 'FIVE_PRIME_OVERHANG',
+        },
+        three_prime_overhang => {
+            is => 'NUMBER',
+            len => 1,
+            column_name => 'THREE_PRIME_OVERHANG',
+        },
+        sequence_string => { 
+            is => 'BLOB', 
+            len => 2147483647 
+        },
+        transcript => { 
+            is => 'EGAP::Transcript', 
+            id_by => 'transcript_id', 
+            constraint_name => 'EXON_TRANSCRIPT_ID_FK'
+        },
+        transcript_id => { 
+            is => 'NUMBER', 
+            len => 11 
+        },
     ],
     schema_name => 'EGAPSchema',
     data_source => 'EGAP::DataSource::EGAPSchema',
