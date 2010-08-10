@@ -91,8 +91,6 @@ sub get_disk_allocation {
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
     my $answer;
-    return 30_000_000 if (! -e $self->original_data_path);
-
     if($self->original_data_path !~ /\,/ ) {
         if (-d $self->original_data_path) {
             my $source_size = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);

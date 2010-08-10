@@ -3,10 +3,6 @@
 use strict;
 use warnings;
 
-BEGIN {
-    eval "use Getopt::Complete::Cache class => 'Genome::Command', above => 1;";
-};
-
 # do a smart "use lib" for developers
 # this only has an effect when your pwd is under Genome/
 use above "Genome"; 
