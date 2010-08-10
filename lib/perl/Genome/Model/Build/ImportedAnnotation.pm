@@ -32,20 +32,21 @@ class Genome::Model::Build::ImportedAnnotation {
     ],
 };
 
-# Checks if data is cached. Returns the cache location if found, otherwise returns default location
+# Checks if data is cached. Returns the cache location if found and use_cache
+# is true, otherwise returns default location
 sub determine_data_directory {
-    my $self = shift;
+    my ($self, $use_cache) = @_;
     my @directories;
     my @composite_builds = $self->from_builds;
     if (@composite_builds) {
         for (@composite_builds) { 
-            my @data_dirs = $_->determine_data_directory;
+            my @data_dirs = $_->determine_data_directory($use_cache);
             return unless @data_dirs;
             push @directories, @data_dirs;
         }
     }
     else {
-        if (-d $self->_cache_directory) {
+        if (-d $self->_cache_directory and $use_cache) {
             $self->_update_cache;
             push @directories, $self->_cache_directory; 
         }
@@ -160,7 +161,7 @@ sub transcript_iterator{
         return $iterator;
     }else{
         # Since this is not a composite build, don't have to worry about multiple results from determine data directory
-        my ($data_dir) = $self->determine_data_directory;
+        my ($data_dir) = $self->determine_data_directory($p{cache_annotation_data_directory});
         unless (defined $data_dir) {
             $self->error_message("Could not determine data directory for transcript iterator");
             return;
