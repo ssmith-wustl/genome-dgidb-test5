@@ -67,6 +67,8 @@ sub execute {
         "metagenomic_alignment2.bam.flagstat",
     );
 
+    my $temp_dir = Genome::Utility::FileSystem->base_temp_directory;
+
     my ($meta_model) = $model->_metagenomic_alignment_models;
     my @imported_data = map {$_->instrument_data} $meta_model->instrument_data_assignments;
     my @original_data = map {$_->instrument_data} $build->instrument_data_assignments;
@@ -135,22 +137,12 @@ sub execute {
             my $imported_id = $imported_data->id;
             my $original_data = $self->original_data_from_imported_id($imported_id);
 
-            my @imported_data_files;
-            find(sub {push @imported_data_files, "$File::Find::name" if (/^$imported_id\D/)}, $data_path);
-            my $already_extracted = scalar(@imported_data_files);
-            if ($already_extracted && ! $self->overwrite) {
-                $self->status_message("\tSkipping FastQ extraction for " . $imported_data->id . ", data already exists. Use --overwrite to replace...");
-                next;
-            }
-
             my $humanfree_bam_path = $self->report_path . '/data/' . $imported_id . '_humanfree_untrimmed.bam';
             my $original_bam_path = $self->report_path . '/data/' . $imported_id . '_original_untrimmed.bam';
             if (! $self->overwrite && -f $humanfree_bam_path && -f $original_bam_path) {
                 $self->status_message("\t$imported_id: Skipping FastQ extraction for " . $imported_id . ", bam files already exists. Use --overwrite to replace...");
                 next;
             }
-
-            unlink(@imported_data_files);
 
             # untar both imported and original fastq files, only keeping paired files
             my @imported_fastq_filenames = $imported_data->dump_sanger_fastq_files;
@@ -159,14 +151,14 @@ sub execute {
                 for my $file (@imported_fastq_filenames) {
                     my $name = (split('/', $file))[-1];
                     $name =~ s/\.txt$//;
-                    my $output_filename = $data_path . '/' . $name . '_imported_trimmed';
+                    my $output_filename = $temp_dir . '/' . $name . '_imported_trimmed';
                     Genome::Utility::FileSystem->copy_file($file, $output_filename);
                     push @imported_fastq, $output_filename;
                 }
                 for my $file (@original_fastq_filenames) {
                     my $name = (split('/', $file))[-1];
                     $name =~ s/\.txt$//;
-                    my $output_filename = $data_path . '/' . $imported_id . '_' . $name . '_original';
+                    my $output_filename = $temp_dir . '/' . $imported_id . '_' . $name . '_original';
                     Genome::Utility::FileSystem->copy_file($file, $output_filename);
                     push @original_fastq, $output_filename;
                 }
@@ -175,6 +167,7 @@ sub execute {
                 $self->status_message("\tSkipping unpaired fastq...");
             }
         }
+
         my %imported_data_ids;
         for my $imported_data (@imported_data) {
             my $imported_id = $imported_data->id;
@@ -187,46 +180,21 @@ sub execute {
             my @original_files = grep {/_original$/} @imported_data_files;
             $fastq_files{$imported_id}{imported} = \@trimmed_files if (@trimmed_files > 0);
             $fastq_files{$imported_id}{original} = \@original_files if (@original_files > 0);
-            # $self->status_message("ID: $imported_id");
-            # $self->status_message("Original files: " . join(" -- ", @original_files));
-            # $self->status_message("Trimmed files: " . join(" -- ", @trimmed_files));
+
         }
         my @imported_data_ids = keys(%imported_data_ids);
 
-        # convert quality
-        # nnutter: only convert imported or original as well?
-        # nnutter: think we can skip this now with dump_sanger_fastq_files instead of fastq_filenames
-#    $self->status_message("Converting quality of FastQ files...");
-#    for my $id (keys %fastq_files) {
-#        for my $fastq (@{$fastq_files{$id}{imported}}) {
-#            unless (-f $fastq . '_qc' && ! $self->overwrite) {
-#                $self->status_message("\tConverting: " . (split('/', $fastq))[-1] . "...");
-#                Genome::Model::Tools::Fastq::Sol2phred->execute(fastq_file => $fastq);
-#                rename($fastq . '.phred', $fastq . '_qc');
-#            }
-#            else {
-#                $self->status_message("\tSkipping " . (split('/', $fastq))[-1] . "_qc file already exists...");
-#            }
-#            $fastq .= '_qc';
-#        }
-#    }
-
         $self->status_message("Generating human-free, untrimmed data...");
         for my $id (@imported_data_ids) {
-            my $humanfree_fwd_path = $self->report_path . '/data/' . $id . '_1_humanfree_untrimmed';
-            my $humanfree_rev_path = $self->report_path . '/data/' . $id . '_2_humanfree_untrimmed';
-            if (! $self->overwrite && -f $humanfree_rev_path && -f $humanfree_fwd_path) {
-                $self->status_message("\tSkipping $id, humanfree files already exists. Use --overwrite to replace...");
-                next;
-            }
-
             my $humanfree_bam_path = $self->report_path . '/data/' . $id . '_humanfree_untrimmed.bam';
             if (! $self->overwrite && -f $humanfree_bam_path) {
                 $self->status_message("\t$id: Skipping humanfree creation, humanfree bam file already exists. Use --overwrite to replace...");
                 next;
             }
-            unlink($humanfree_fwd_path) if (-f $humanfree_fwd_path);
-            unlink($humanfree_rev_path) if (-f $humanfree_rev_path);
+
+            my $humanfree_fwd_path = $temp_dir . '/' . $id . '_1_humanfree_untrimmed';
+            my $humanfree_rev_path = $temp_dir . '/' . $id . '_2_humanfree_untrimmed';
+
             $self->status_message("\tGenerating hash of read names for instrument data: $id...");
 
             my $imported_path = (@{$fastq_files{$id}{imported}})[0];
@@ -281,8 +249,8 @@ sub execute {
         # Write human-free, untrimmed bam
         $self->status_message("Creating bams...");
         for my $id (@imported_data_ids) {
-            my $humanfree_fwd_path = $self->report_path . '/data/' . $id . '_1_humanfree_untrimmed';
-            my $humanfree_rev_path = $self->report_path . '/data/' . $id . '_2_humanfree_untrimmed';
+            my $humanfree_fwd_path = $temp_dir . '/' . $id . '_1_humanfree_untrimmed';
+            my $humanfree_rev_path = $temp_dir . '/' . $id . '_2_humanfree_untrimmed';
             my $humanfree_bam_path = $self->report_path . '/data/' . $id . '_humanfree_untrimmed.bam';
             my $original_bam_path = $self->report_path . '/data/' . $id . '_original_untrimmed.bam';
             my $original_fwd_path = @{$fastq_files{$id}{original}}[0];
@@ -472,8 +440,8 @@ sub execute {
             unlink(@{$fastq_files{$id}{imported}}[0]) if (-f @{$fastq_files{$id}{imported}}[0]);
             unlink(@{$fastq_files{$id}{imported}}[1]) if (-f @{$fastq_files{$id}{imported}}[1]);
 
-            my $humanfree_fwd_path = $self->report_path . '/data/' . $id . '_1_humanfree_untrimmed';
-            my $humanfree_rev_path = $self->report_path . '/data/' . $id . '_2_humanfree_untrimmed';
+            my $humanfree_fwd_path = $temp_dir . '/' . $id . '_1_humanfree_untrimmed';
+            my $humanfree_rev_path = $temp_dir . '/' . $id . '_2_humanfree_untrimmed';
             unlink($humanfree_fwd_path) if (-f $humanfree_fwd_path);
             unlink($humanfree_rev_path) if (-f $humanfree_rev_path);
         }
