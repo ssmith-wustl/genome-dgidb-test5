@@ -391,6 +391,31 @@ sub generate_expected_metrics {
     }
 }
 
+sub _available_cpu_count {
+    my $self = shift; 
+
+    # Not running on LSF, allow only one CPU
+    if (!exists $ENV{LSB_MCPU_HOSTS}) {
+        return 1;
+    }
+
+    my $mval = $ENV{LSB_MCPU_HOSTS};
+    my @c = split /\s+/, $mval;
+
+    if (scalar @c != 2) {
+        $self->error_message("LSB_MCPU_HOSTS environment variable doesn't specify just one host and one CPU count. (value is '$mval').  Is the span[hosts=1] value set in your resource request?");
+        die $self->error_message;
+    }
+
+    if ($mval =~ m/(\.*?) (\d+)/) {
+        return $2; 
+    } else {
+        $self->error_message("Couldn't parse the LSB_MCPU_HOSTS environment variable (value is '$mval'). "); 
+        die $self->error_message;
+    }
+    
+}
+
 
 1;
 

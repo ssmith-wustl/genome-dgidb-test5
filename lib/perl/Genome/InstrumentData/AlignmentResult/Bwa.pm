@@ -36,6 +36,7 @@ sub required_rusage {
     return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>" . $estimated_usage_mb . " && mem>10000] span[hosts=1] rusage[tmp=" . $estimated_usage_mb . ", mem=10000]' -M 10000000 -n 4 -q alignment -m alignment";
 }
 
+
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
@@ -276,9 +277,25 @@ sub decomposed_aligner_params {
     my $params = $self->aligner_params || ":::";
     
     my @spar = split /\:/, $params;
+
+    my $bwa_aln_params = $spar[0] || ""; 
+
+    my $cpu_count = $self->_available_cpu_count;    
+
+    $self->status_message("[decomposed_aligner_params] cpu count is $cpu_count");
+  
+    $self->status_message("[decomposed_aligner_params] bwa aln params are: $bwa_aln_params");
+
+    if (!$bwa_aln_params || $bwa_aln_params !~ m/-t/) {
+        $bwa_aln_params .= "-t$cpu_count";
+    } elsif ($bwa_aln_params =~ m/-t/) {
+        $bwa_aln_params =~ s/-t ?\d/-t$cpu_count/;
+    }
+
+    $self->status_message("[decomposed_aligner_params] autocalculated CPU requirement, bwa aln params modified: $bwa_aln_params");
+
     
-    
-    return ('bwa_aln_params' => $spar[0], 'bwa_samse_params' => $spar[1], 'bwa_sampe_params' => $spar[2]);
+    return ('bwa_aln_params' => $bwa_aln_params, 'bwa_samse_params' => $spar[1], 'bwa_sampe_params' => $spar[2]);
 }
 
 sub aligner_params_for_sam_header {
