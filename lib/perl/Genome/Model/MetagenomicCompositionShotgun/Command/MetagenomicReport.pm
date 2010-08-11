@@ -16,28 +16,27 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
         build_id => {
             is => 'Int',
         },
-        base_output_dir => {
-            is => 'Text',
-        },
         taxonomy_file => {
             is => 'Parh',
+            is_optional=>1,
         },
         viral_taxonomy_file => {
             is => 'Path',
+            is_optional=>1,
+        },
+        viral_headers_file => {
+            is => 'Path',
+            is_optional => 1,
         },
         overwrite => {
             is => 'Boolean',
             is_optional => 1,
             default => 0,
         },
-        report_path => {
+        report_dir => {
             is => 'Text',
             is_optional => 1,
         },
-		log_path => {
-			is => 'Text',
-			is_optional => 1,
-		},
     ],
 };
 
@@ -48,20 +47,10 @@ sub execute {
     my $build = Genome::Model::Build->get($self->build_id);
     my $model = $build->model;
 
-    unless ($self->report_path){
-        my $sample_name = $model->subject_name;
-        my ($hmp, $patient, $site) = split(/-/, $sample_name);
-        $patient = $hmp . '-' . $patient;
-        my $build_id = $build->id;
-        my $output_dir = $self->base_output_dir . "/" . $patient . "/" . $site . "/" . $build_id."/metagenomic";
-        mkpath $output_dir unless -d $output_dir;
-        # TODO: check and warn if dir for different successful build id is present
-        $self->report_path($output_dir);
+    unless ($self->report_dir){
+        $self->report_dir($build->data_directory . "/reports");
     }
-    unless ($self->log_path){
-        $self->log_path($self->report_path . '/log');
-    }
-    $self->status_message("Report path: " . $self->report_path);
+    $self->status_message("Report path: " . $self->report_dir);
 
 
     my $dir = $build->data_directory;
@@ -72,7 +61,7 @@ sub execute {
         "metagenomic_alignment2.bam.flagstat",
     );
 
-    my $merged_bam = $self->report_path."/merged_metagenomic_alignment.bam";
+    my $merged_bam = $self->report_dir."/metagenomic_alignment.combined.bam";
     if (-e $merged_bam and -e $merged_bam.".OK"){
         $self->status_message("metagenomic merged bam already produced, skipping");
     }else{
@@ -136,8 +125,6 @@ sub execute {
         die $self->error_message;
     }
 
-    $DB::single = 1;
-
     # Count Reference Hits
     my %ref_counts_hash;
     my $ignore_unmapped;
@@ -165,7 +152,7 @@ sub execute {
     $self->status_message("skipping $ignore_singleton fragment reads(mate mapped to human)");
 
     # Count And Record Taxonomy Hits
-    my $read_count_output_file = $self->report_path . '/read_count_output';
+    my $read_count_output_file = $self->report_dir . '/read_count_output';
     unlink $read_count_output_file if -e $read_count_output_file;
     my $read_cnt_o = Genome::Utility::FileSystem->open_file_for_writing($read_count_output_file);
 
@@ -215,13 +202,13 @@ sub execute {
     };
     $read_cnt_o->close;
 
-    my $species_output_file = $self->report_path . '/species_count';
-    my $phyla_output_file = $self->report_path . '/phyla_count';
-    my $genus_output_file = $self->report_path . '/genus_count';
-    my $viral_family_output_file = $self->report_path . '/viral_family_count';
-    my $viral_subfamily_output_file = $self->report_path . '/viral_subfamily_count';
-    my $viral_genus_output_file = $self->report_path . '/viral_genus_count';
-    my $viral_species_output_file = $self->report_path . '/viral_species_count';
+    my $species_output_file = $self->report_dir . '/species_count';
+    my $phyla_output_file = $self->report_dir . '/phyla_count';
+    my $genus_output_file = $self->report_dir . '/genus_count';
+    my $viral_family_output_file = $self->report_dir . '/viral_family_count';
+    my $viral_subfamily_output_file = $self->report_dir . '/viral_subfamily_count';
+    my $viral_genus_output_file = $self->report_dir . '/viral_genus_count';
+    my $viral_species_output_file = $self->report_dir . '/viral_species_count';
     $self->_write_count_and_close($species_output_file, "Species", \%species_counts_hash);
     $self->_write_count_and_close($phyla_output_file, "Phyla", \%phyla_counts_hash);
     $self->_write_count_and_close($genus_output_file, "Genus", \%genus_counts_hash);
@@ -230,8 +217,62 @@ sub execute {
     $self->_write_count_and_close($viral_family_output_file, "Viral Family", \%viral_family_counts_hash);
     $self->_write_count_and_close($viral_subfamily_output_file, "Viral Subfamily", \%viral_subfamily_counts_hash);
 
-    system("touch ".$self->report_path."/FINISHED");
+    
+    $self->status_message("classification summary reports and reference hit report finished");
+
+    $self->status_message("running refcov on combined metagenomic alignment bam");
+#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO#TODO
+    #TODO get all the taxonomy file stuff up at the top and use them as class vars all the way through
+    my $metagenomic_reference_part1 = map { $_->name=~/part 1 of/ } $model->metagenomic_references;
+    my $metagenomic_ref_build = $metagenomic_reference_part1->build_by_version->(1);
+    unless ($metagenomic_ref_build){
+        $self->error_message("couldn't get build for metagenomic reference part 1 model");
+        return;
+    }
+    my $metagenomic_ref_hmp_dir = $build->data_directory;
+    unless (-d $metagenomic_ref_hmp_dir){
+        $self->error_message("Couldn't find hmp dir in latest build of metagenomic reference part 1: $metagenomic_ref_hmp_dir");
+        return;
+    }
+    #TODO these names are bad and should be improved as this pipeline becomes more generic, don't know if taxonomy files will always be available when this is done again.
+    my $viral_headers_file = "$metagenomic_ref_hmp_dir/viruses_nuc.fasta.headers";
+    unless (-s $viral_headers_file){
+        $self->error_message("viral headers file doesn't exist or have size: $viral_headers_file");
+    }
+    my $regions_bed_file = "$metagenomic_ref_hmp_dir/combined_refcov_regions_file.bed";
+    unless (-s $regions_bed_file){
+        $self->error_message("refcov regions bed file doesn't exist or have size: $regions_bed_file");
+    }
+    my $taxonomy_file = "$metagenomic_ref_hmp_dir/Bact_Arch_Euky.taxonomy.txt";
+    unless (-s $taxonomy_file){
+        $self->error_message("taxonomy file doesn't exist or have size: $taxonomy_file");
+    }
+
+    my $refcov = Genome::Model::Tools::BioSamtools::ParallelRefCov->create(
+        output_directory => $self->report_dir,
+        bam_file => $merged_bam,
+        bed_file => $regions_bed_file,
+        regions => 50000,
+    );
+    
+    $self->status_message("Executing RefCov command ". $refcov->command_name);
+    my $rv;
+    eval{$rv=$refcov->execute};
+    if($@ or !$rv){
+        $self->error_message("failed to execute refcov: $@");
+        return;
+    }
+    my $refcov_output = $refcov->stats_file;
+    unless (-s $refcov_output){
+        $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
+    }
+    $self->status_message("refcov completed successfully, stats file: $refcov_output");
+
+    $self->status_message("Combining refcov results with taxonomy reports for final summary file");
+
     $self->status_message("metagenomic report successfully completed");
+
+    system("touch ".$self->report_dir."/FINISHED");
     return 1;
 }
 
