@@ -21,7 +21,7 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::QcReport{
             is_optional => 1,
             default => 0,
         },
-        report_path => {
+        report_dir => {
             is => 'Text',
             is_optional => 1,
         },
@@ -34,12 +34,11 @@ sub execute {
     my $build = Genome::Model::Build->get($self->build_id);
     my $model = $build->model;
 
-    unless ($self->report_path){
-        my $report_dir = $build->data_directory . "/reports";
-        mkpath $report_dir unless -d $report_dir;
-        $self->report_path($report_dir);
+    unless ($self->report_dir){
+        $self->report_dir($build->data_directory . "/reports");
     }
-    $self->status_message("Report path: " . $self->report_path);
+    mkpath $self->report_dir unless (-d $self->report_dir);
+    $self->status_message("Report path: " . $self->report_dir);
 
 
     my $dir = $build->data_directory;
@@ -71,7 +70,7 @@ sub execute {
     # Pulled from the $contamination_bam including:
     #   number of quality trimmed bases per lane
     #   average length of quality trimmed reads per lane
-    my $stats_output_path = $self->report_path . '/post_trim_stats_report.tsv';
+    my $stats_output_path = $self->report_dir . '/post_trim_stats_report.tsv';
         $self->status_message("Generating post trimming stats...");
         unlink($stats_output_path) if (-f $stats_output_path);
         my $stats_output = Genome::Utility::FileSystem->open_file_for_writing($stats_output_path);
@@ -106,7 +105,7 @@ sub execute {
         # COLLECTING UNTRIMMED SEQUENCES OF NON-HUMAN READS
         # count of unique, non-human bases per lane
         # human-filtered, untrimmed bam
-        my $data_path = $self->report_path . '/data';
+        my $data_path = $self->report_dir . '/data';
         mkpath($data_path);
         my @imported_fastq;
         my @original_fastq;
@@ -117,8 +116,8 @@ sub execute {
             my $imported_id = $imported_data->id;
             my $original_data = $self->original_data_from_imported_id($imported_id);
 
-            my $humanfree_bam_path = $self->report_path . '/data/' . $imported_id . '_humanfree_untrimmed.bam';
-            my $original_bam_path = $self->report_path . '/data/' . $imported_id . '_original_untrimmed.bam';
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $imported_id . '_humanfree_untrimmed.bam';
+            my $original_bam_path = $self->report_dir . '/data/' . $imported_id . '_original_untrimmed.bam';
             if (! $self->overwrite && -f $humanfree_bam_path && -f $original_bam_path) {
                 $self->status_message("\t$imported_id: Skipping FastQ extraction for " . $imported_id . ", bam files already exists. Use --overwrite to replace...");
                 next;
@@ -166,7 +165,7 @@ sub execute {
 
         $self->status_message("Generating human-free, untrimmed data...");
         for my $id (@imported_data_ids) {
-            my $humanfree_bam_path = $self->report_path . '/data/' . $id . '_humanfree_untrimmed.bam';
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
             if (! $self->overwrite && -f $humanfree_bam_path) {
                 $self->status_message("\t$id: Skipping humanfree creation, humanfree bam file already exists. Use --overwrite to replace...");
                 next;
@@ -231,8 +230,8 @@ sub execute {
         for my $id (@imported_data_ids) {
             my $humanfree_fwd_path = $temp_dir . '/' . $id . '_1_humanfree_untrimmed';
             my $humanfree_rev_path = $temp_dir . '/' . $id . '_2_humanfree_untrimmed';
-            my $humanfree_bam_path = $self->report_path . '/data/' . $id . '_humanfree_untrimmed.bam';
-            my $original_bam_path = $self->report_path . '/data/' . $id . '_original_untrimmed.bam';
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
+            my $original_bam_path = $self->report_dir . '/data/' . $id . '_original_untrimmed.bam';
             my $original_fwd_path = @{$fastq_files{$id}{original}}[0];
             my $original_rev_path = @{$fastq_files{$id}{original}}[1];
 
@@ -296,7 +295,7 @@ sub execute {
         $self->status_message("Counting human-free, untrimmed bases per lane...");
         my %humanfree_base_count;
         for my $id (@imported_data_ids) {
-            my $humanfree_bam_path = $self->report_path . '/data/' . $id . '_humanfree_untrimmed.bam';
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
 
             $self->expect64();
             my $bam_fh = IO::File->new("samtools view $humanfree_bam_path |");
@@ -311,10 +310,10 @@ sub execute {
         # Genome::Model::Tools::Picard::EstimateLibraryComplexity
         $self->status_message("Running Picard EstimateLibraryComplexity report...");
         for my $id (@imported_data_ids) {
-            my $humanfree_bam_path = $self->report_path . '/data/' . $id . '_humanfree_untrimmed.bam';
-            my $original_bam_path = $self->report_path . '/data/' . $id . '_original_untrimmed.bam';
-            my $humanfree_report_path = $self->report_path . '/' . $id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
-            my $original_report_path = $self->report_path . '/' . $id . '_original_untrimmed_estimate_library_complexity_report.txt';
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
+            my $original_bam_path = $self->report_dir . '/data/' . $id . '_original_untrimmed.bam';
+            my $humanfree_report_path = $self->report_dir . '/' . $id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
+            my $original_report_path = $self->report_dir . '/' . $id . '_original_untrimmed_estimate_library_complexity_report.txt';
 
             if (! $self->overwrite && -f $humanfree_report_path && -f $original_report_path) {
                 $self->status_message("\t$id: Skipping EstimateLibraryComplexity, files already exists. Use --overwrite to replace...");
@@ -344,14 +343,14 @@ sub execute {
         #   duplicate count
         #   unique, non-human bases
         #   percent duplication of raw data
-        my $other_stats_output_path = $self->report_path . '/other_stats_report.txt';
+        my $other_stats_output_path = $self->report_dir . '/other_stats_report.txt';
         $self->status_message("Generating other stats...");
         unlink($other_stats_output_path) if (-f $other_stats_output_path);
         my $other_stats_output = Genome::Utility::FileSystem->open_file_for_writing($other_stats_output_path);
 
         for my $id (@imported_data_ids) {
-            my $humanfree_report_path = $self->report_path . '/' . $id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
-            my $original_report_path = $self->report_path . '/' . $id . '_original_untrimmed_estimate_library_complexity_report.txt';
+            my $humanfree_report_path = $self->report_dir . '/' . $id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
+            my $original_report_path = $self->report_dir . '/' . $id . '_original_untrimmed_estimate_library_complexity_report.txt';
             my $humanfree_report_fh = Genome::Utility::FileSystem->open_file_for_reading($humanfree_report_path);
             my $original_report_fh = Genome::Utility::FileSystem->open_file_for_reading($original_report_path);
 
@@ -375,8 +374,6 @@ sub execute {
                         die $self->error_message;
                     }
 
-                    print $other_stats_output "$lane: Unique, human-free bases: $unique_bases_count\n";
-
                     $metric_name = "$lane\_unique_humanfree_bases";
                     $metric{$metric_name}->delete() if($metric{$metric_name});
                     my $unique_bases_count = $humanfree_base_count{$id} * (1 - $metrics{percent_duplication});
@@ -384,6 +381,7 @@ sub execute {
                         $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
                         die $self->error_message;
                     }
+                    print $other_stats_output "$lane: Unique, human-free bases: $unique_bases_count\n";
                 }
             }
             while (my $line = $original_report_fh->getline) {
@@ -425,9 +423,9 @@ sub execute {
         print "\n\n";
         $self->status_message('Model: ' . $model->name);
         $self->status_message('Build: ' . $build->id);
-        $self->status_message('Reports: ' . $self->report_path);
-        $self->status_message('Report Data: ' . $self->report_path . '/data');
-        my $done = system("touch ".$self->report_path."/FINISHED");
+        $self->status_message('Reports: ' . $self->report_dir);
+        $self->status_message('Report Data: ' . $self->report_dir . '/data');
+        my $done = system("touch ".$self->report_dir."/FINISHED");
         return 1;
     }
 
