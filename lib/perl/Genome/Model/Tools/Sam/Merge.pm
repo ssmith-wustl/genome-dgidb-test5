@@ -92,8 +92,9 @@ sub merge_command {
         my $list_of_files = join(' ',@input_files);
         $self->status_message('Files to merge: '. $list_of_files);
     } elsif ($self->software eq 'samtools') {
+        my $combined_headers_file = $self->combine_headers();
         my $sam_path = $self->samtools_path;
-        my $bam_merge_tool = $sam_path .' merge ';
+        my $bam_merge_tool = $sam_path . " merge -h $combined_headers_file ";
         my $list_of_files = join(' ',@input_files);
         $self->status_message("Files to merge: ". $list_of_files);
 	$bam_merge_cmd = "$bam_merge_tool $merged_file $list_of_files";
@@ -103,6 +104,64 @@ sub merge_command {
     return $bam_merge_cmd
 }
 
+
+sub combine_headers {
+    my $self = shift;
+    my @files = @{$self->files_to_merge};
+
+    my $tmp_dir = Genome::Utility::FileSystem->base_temp_dir;
+    my $combined_headers_file = "$tmp_dir/combined_headers.sam";
+    my $combined_headers_hd_fh = IO::File->new("> $combined_headers_file.hd");
+    my $combined_headers_sq_fh = IO::File->new("> $combined_headers_file.sq");
+    my $combined_headers_rg_fh = IO::File->new("> $combined_headers_file.rg");
+    my $combined_headers_pg_fh = IO::File->new("> $combined_headers_file.pg");
+    my $combined_headers_co_fh = IO::File->new("> $combined_headers_file.co");
+
+    # read in header lines of all type
+    for $file (@files) {
+        my $header_fh = IO::File->new($self->samtools_path . " view -H $file |");
+        while (my $line = $header_fh->getline) {
+            print $combined_headers_hd_fh $line if ($line =~ /^\@HD/);
+            print $combined_headers_sq_fh $line if ($line =~ /^\@SQ/);
+            print $combined_headers_rg_fh $line if ($line =~ /^\@RG/);
+            print $combined_headers_pg_fh $line if ($line =~ /^\@PG/);
+            print $combined_headers_co_fh $line if ($line =~ /^\@CO/);
+        }
+    }
+    $combined_headers_hd_fh->close();
+    $combined_headers_sq_fh->close();
+    $combined_headers_rg_fh->close();
+    $combined_headers_pg_fh->close();
+    $combined_headers_co_fh->close();
+
+    my @combined_headers_files;
+    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.hq");
+    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.sq");
+    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.rg");
+    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.pg");
+    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.co");
+
+    my $rv = Genome::Utility::FileSystem->cat(
+        input_files => \@combined_headers_files,
+        output_file => $combined_headers_file,
+    );
+    unless ($rv) {
+        $self->error_message("Failed to cat " . join(" ", @combined_headers_files) . " > $combined_headers_file.");
+        die $self->error_message;
+    }
+    return $combined_headers_file;
+}
+
+sub unix_sort_unique {
+    my ($self, $file) = @_;
+    my $out_file = "$file.sorted.uniq";
+    my $rv = system("sort -u $file -o $out_file");
+    if ($rv) {
+        $self->error_message("Failed to sort -u $file -o $out_file.");
+        die $self->error_message;
+    }
+    return $out_file;
+}
 
 sub execute {
     my $self = shift;
