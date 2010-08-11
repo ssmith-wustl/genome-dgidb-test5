@@ -27,6 +27,14 @@ class Genome::Model::Tools::Annotate::PrioritizedTranscripts {
             default => 'NCBI-human.combined-annotation/54_36p_v2',
             doc => 'Annotation version to use, format is <annotation model name>/<version>',
         },
+        filter => {
+            is => 'String',
+            default => 'none',
+            valid_values => ['none', 'gene', 'top'],
+            doc => 'Similar to filters for annotator. If none, then all transcripts are put in output. ' .
+                   'If set to gene, only the highest priority transcript per gene is placed in output. ' .
+                   'If set to top, only the top transcript per given region is placed in output.',
+        },
     ],
 };
 
@@ -84,8 +92,6 @@ sub execute {
     }
 
     my $output_fh = IO::File->new($self->output_file, "w");
-    my %transcript_source_priorities = Genome::Info::AnnotationPriorities->transcript_source_priorities;
-    my %transcript_status_priorities = Genome::Info::AnnotationPriorities->transcript_status_priorities;
 
     while (my $line = $reader->next) {
         my @transcripts = Genome::Transcript->get(
@@ -94,16 +100,9 @@ sub execute {
             transcript_stop => {operator => '>=', value => $line->{start}},
             data_directory => \@data_dirs,
         );
-
         next unless @transcripts;
 
-        my @prioritized_transcripts = sort {
-            $self->highest_priority_error($a) <=> $self->highest_priority_error($b) ||
-            $transcript_source_priorities{$a->{source}} <=> $transcript_source_priorities{$b->{source}} ||
-            $transcript_status_priorities{$a->{transcript_status}} <=> $transcript_status_priorities{$b->{transcript_status}} ||
-            $b->{amino_acid_length} <=> $a->{amino_acid_length} ||
-            $a->{transcript_name} cmp $b->{transcript_name} } @transcripts;
-
+        my @prioritized_transcripts = $self->prioritize_by_filter(@transcripts);
         for my $t (@prioritized_transcripts) {
             $output_fh->print(join("\t", $line->{chrom_name}, $line->{start}, $line->{stop}, $t->transcript_start, 
                     $t->transcript_stop, $t->gene_name, $t->transcript_name) . "\n");
@@ -123,4 +122,44 @@ sub highest_priority_error {
     return $sorted_errors[0];
 }
 
+sub prioritize_by_filter {
+    my ($self, @transcripts) = @_;
+    my $filter = $self->filter;
+
+    my @prioritized_transcripts = $self->prioritize_transcripts(@transcripts);
+    if ($filter eq 'none') {
+        return @prioritized_transcripts;
+    }
+    elsif ($filter eq 'top') {
+        return shift @prioritized_transcripts;
+    }
+    elsif ($filter eq 'gene') {
+        my %top_per_gene;
+        for my $t (@prioritized_transcripts) {
+            $top_per_gene{$t->gene_name} = $t unless exists $top_per_gene{$t->gene_name};
+        }
+        return values %top_per_gene;
+    }
+    else {
+        confess "Invalid filter value $filter!";
+    }
+}
+
+sub prioritize_transcripts {
+    my ($self, @transcripts) = @_;
+
+    my %transcript_source_priorities = Genome::Info::AnnotationPriorities->transcript_source_priorities;
+    my %transcript_status_priorities = Genome::Info::AnnotationPriorities->transcript_status_priorities;
+
+    my @prioritized_transcripts = sort {
+        $self->highest_priority_error($a) <=> $self->highest_priority_error($b) ||
+        $transcript_source_priorities{$a->{source}} <=> $transcript_source_priorities{$b->{source}} ||
+        $transcript_status_priorities{$a->{transcript_status}} <=> $transcript_status_priorities{$b->{transcript_status}} ||
+        $b->{amino_acid_length} <=> $a->{amino_acid_length} ||
+        $a->{transcript_name} cmp $b->{transcript_name} } @transcripts;
+    
+    return @prioritized_transcripts;
+}
+
 1;
+
