@@ -55,14 +55,15 @@
 
         <br/>
 
-        <h2 class="subheader">build process</h2>
-        <div id="process_tabs">
+        <div id="process_tabs" class="span-24 last">
           <ul>
+            <li class="tab_header"><h3 class="genome_processingprofile_16">Build Process</h3></li>
+            <li><a><xsl:attribute name="href">/view/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="//build/workflow/@id"/></xsl:attribute><span class="spinner"><xsl:text> </xsl:text></span>workflow</a></li>
+
             <li><a href="#events">events</a></li>
-            <li><a><xsl:attribute name="href">/view/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="//build/workflow/@id"/></xsl:attribute><span>workflow</span></a></li>
           </ul>
-          <div id="events">
-            <div class="viewport">
+          <div class="tab_content">
+            <div id="events">
               <div id="eventview">
                 <table border="0" cellpadding="0" cellspacing="0" class="stages" width="100%">
                   <tr>
@@ -344,9 +345,11 @@
                     </tbody>
                   </table>
                 </xsl:for-each>
-              </div> <!-- end eventview -->
-            </div> <!-- end viewport -->
+              </div> <!-- end .events -->
+            </div> <!-- end tab_content -->
+
           </div>
+
         </div>
       </div> <!-- end container -->
     </div> <!-- end content -->
