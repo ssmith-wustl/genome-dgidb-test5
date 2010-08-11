@@ -68,7 +68,7 @@ sub create {
 
     my @requested_actions = grep { 
         $self->$_ 
-    } (qw/ flow_cell_id instrument_data_id instrument_data_ids all /);
+    } qw(flow_cell_id instrument_data_id instrument_data_ids all);
 
     if ( @requested_actions > 1 ) {
         $self->error_message('Multiple actions requested: '.join(', ', @requested_actions));
@@ -95,15 +95,38 @@ sub execute {
     }
     elsif ( $self->flow_cell_id ) { #assign all instrument data ids whose sample name matches the models subject name and flow_cell_id matches the flow_cell_id given by the user
         my $flow_cell_id = $self->flow_cell_id;
-        my $sample_name = $self->model->subject_name;
-        my @instrument_data_ids = `sqlrun "select seq_id from solexa_lane_summary WHERE SAMPLE_NAME ='$sample_name' AND FLOW_CELL_ID = '$flow_cell_id' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;
-        chomp @instrument_data_ids;
-        unless ( @instrument_data_ids ){
+
+        my $flow_cell = Genome::InstrumentData::FlowCell->get($flow_cell_id);
+        unless($flow_cell) {
+            $self->error_message('Flow cell not found: ' . $flow_cell_id);
+            return;
+        }
+
+        my @instrument_data;
+        if($self->force) {
+            #Just get all lanes
+            @instrument_data = $flow_cell->lanes();
+        } else {
+            #Subject must match
+            my $subject = $self->model->subject;
+            unless($subject and $subject->isa('Genome::Sample')) {
+                $self->error_message('Adding instrument data by flow cell id is only set up to handle models with samples as subjects. Use --force to add all lanes regardless of sample.');
+                return;
+            }
+            @instrument_data = $flow_cell->lanes(sample_id => $subject->id);
+        }
+
+        unless ( scalar @instrument_data ){
             $self->error_message("Found no matching instrument data for flowcell id $flow_cell_id");
             return;
         }
-        $self->instrument_data_ids( join (' ',@instrument_data_ids));
-        return $self->_assign_by_instrument_data_ids;        
+
+        for my $instrument_data (@instrument_data) {
+            unless($self->_assign_instrument_data($instrument_data)) {
+                return;
+            }
+        }
+        return 1;
     }
     elsif ( $self->all ) { # assign all
         return $self->_assign_all_instrument_data;

@@ -401,7 +401,8 @@ sub execute {
             my $transcript_iterator;
             if ($self->build){
                 my $iter_start = Benchmark->new;
-                $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+                $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name, 
+                                                                         cache_annotation_data_directory => $self->cache_annotation_data_directory); 
                 my $iter_stop = Benchmark->new;
                 my $iter_time = timediff($iter_stop, $iter_start);
                 if ($self->benchmark) {

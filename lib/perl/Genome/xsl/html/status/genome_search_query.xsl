@@ -27,7 +27,7 @@
                 </tr>
               </table>
             </form>
-            <p class="small" style="margin: 0 0 0 5px;"> <br/> </p>
+            <p class="small" style="margin: 0 0 0 5px;"> Found <xsl:value-of select="//@facet-total"/> records. <br/> </p>
           </div>
         </div>
 
@@ -46,7 +46,7 @@
                     <div class="category">
                       <a>
                         <xsl:attribute name="href">/view/genome/search/query/status.html?query=<xsl:value-of select="/solr-results/@query-no-types"/></xsl:attribute>
-                        All 
+                        All
                       </a>
                         (<xsl:value-of select="//@facet-total"/>)
                     </div>
