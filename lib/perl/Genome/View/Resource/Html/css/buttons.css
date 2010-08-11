@@ -1,7 +1,7 @@
 .btn, .btn:visited {
     background: #3a3a2d url(../img/components/buttons/btn_overlay.png) repeat-x;
     border-bottom: 1px solid rgba(0,0,0,0.25);
-    color: #fff;
+    color: #fff !important;
     cursor: pointer;
     display: inline-block;
     -moz-border-radius: 5px;
@@ -18,7 +18,7 @@
 
 .btn:hover {
     background-color: #686851;
-    color: #fff;
+    color: #fff !important;
 }
 
 .btn:active {
