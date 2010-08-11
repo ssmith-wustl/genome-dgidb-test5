@@ -118,7 +118,7 @@ sub combine_headers {
     my $combined_headers_co_fh = IO::File->new("> $combined_headers_file.co");
 
     # read in header lines of all type
-    for $file (@files) {
+    for my $file (@files) {
         my $header_fh = IO::File->new($self->samtools_path . " view -H $file |");
         while (my $line = $header_fh->getline) {
             print $combined_headers_hd_fh $line if ($line =~ /^\@HD/);
@@ -135,11 +135,11 @@ sub combine_headers {
     $combined_headers_co_fh->close();
 
     my @combined_headers_files;
-    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.hq");
-    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.sq");
-    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.rg");
-    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.pg");
-    push @combined_headers_file, $self->unix_sort_unique("$combined_headers_file.co");
+    push @combined_headers_files, $self->unix_sort_unique("$combined_headers_file.hq");
+    push @combined_headers_files, $self->unix_sort_unique("$combined_headers_file.sq");
+    push @combined_headers_files, $self->unix_sort_unique("$combined_headers_file.rg");
+    push @combined_headers_files, $self->unix_sort_unique("$combined_headers_file.pg");
+    push @combined_headers_files, $self->unix_sort_unique("$combined_headers_file.co");
 
     my $rv = Genome::Utility::FileSystem->cat(
         input_files => \@combined_headers_files,
