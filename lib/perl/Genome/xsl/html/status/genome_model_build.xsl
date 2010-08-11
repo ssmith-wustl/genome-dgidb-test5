@@ -58,7 +58,7 @@
         <div id="process_tabs" class="span-24 last">
           <ul>
             <li class="tab_header"><h3 class="genome_processingprofile_16">Build Process</h3></li>
-            <li><a><xsl:attribute name="href">/view/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="//build/workflow/@id"/></xsl:attribute>workflow<span class="spinner"><xsl:text> </xsl:text></span></a></li>
+            <li><a><xsl:attribute name="href">/view/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="//build/workflow/@id"/></xsl:attribute><span class="spinner"><xsl:text> </xsl:text></span>workflow</a></li>
 
             <li><a href="#events">events</a></li>
           </ul>
