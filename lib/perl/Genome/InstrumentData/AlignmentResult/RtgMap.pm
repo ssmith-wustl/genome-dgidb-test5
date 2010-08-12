@@ -146,7 +146,10 @@ sub _run_aligner {
         );
 
         push(@rr_files, $rr_file);
+        $self->status_message("Removing old file $file_to_rr after samrename");
+        unlink($file_to_rr);
     }
+
 
     #STEP 3.1 - Collate, Format and Append sam files 
     my $sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
