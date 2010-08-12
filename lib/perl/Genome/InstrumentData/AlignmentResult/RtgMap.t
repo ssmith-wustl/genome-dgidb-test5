@@ -6,6 +6,7 @@ use Test::More;
 use Sys::Hostname;
 
 use above 'Genome';
+$ENV{'TEST_MODE'} = 1;
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
