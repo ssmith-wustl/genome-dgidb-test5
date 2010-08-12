@@ -27,9 +27,15 @@ sub required_rusage {
 sub _decomposed_aligner_params {
     my $self = shift;
 
-    #   -U produce unmapped sam
-    #   -Z do not zip sam
-    my $aligner_params = ($self->aligner_params || '') . " -U -Z -T 4"; #append core & space
+    # -U = report unmapped reads
+    # -Z = don't zip output
+
+    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '15G');
+    $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
+    my $aligner_params = ($self->aligner_params || '') . " -U -Z "; 
+
+    my $cpu_count = $self->_available_cpu_count;
+    $aligner_params .= " -T $cpu_count";
     
     return ('rtg_aligner_params' => $aligner_params);
 }
@@ -351,6 +357,10 @@ sub fillmd_for_sam
     return 1;
 }
 
+sub input_chunk_size {
+    return 3_000_000;
+}
+
 =pod
 sub sam_to_rtg
 {
@@ -420,6 +430,7 @@ sub _strip_tag
     $str=~/(.+:)(.*)/;
     return $2;
 }
+
 
 
 
