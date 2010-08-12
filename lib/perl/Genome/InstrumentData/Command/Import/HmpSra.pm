@@ -7,15 +7,21 @@ use Cwd;
 
 class Genome::InstrumentData::Command::Import::HmpSra {
     is  => 'Command',
-    has => [
-        path => {},
+    has_input => [
+        run_ids => { 
+            is_many => 1, 
+            doc => 'the SRR ids of the data',
+        },
     ],
+    doc => 'download an import short read archive HMP data',
 };
-
 
 sub execute {
     my $self = shift;
     
+    my @srr_ids = $self->run_ids;
+    $self->status_message("SRR ids are: @srr_ids");
+
     my $tmp = '/gscuser/jmartin/ttmp'; 
     #my $tmp = Genome::Utility::FileSystem->create_temp_directory();
     $self->status_message("Temp data is in $tmp");
@@ -28,6 +34,7 @@ sub execute {
     my $errfile;
     my $cmd;
 
+    # build the SRA index
     $outfile = $tmp . '/SRA-index.txt';
     $errfile = $outfile . '.err';
     $cmd = "cd $tmp; $scripts_dir/build_public_SRA_run_index.pl --reuse_files "
