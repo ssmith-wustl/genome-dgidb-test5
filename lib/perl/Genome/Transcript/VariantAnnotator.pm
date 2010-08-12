@@ -587,14 +587,30 @@ sub _apply_indel_and_translate{
     my $aa_sequence = "";
     my $dna_sequence = "";
     my $first_fetch = 1;
-    my $fetch_start_position = $variant->{start} - $codon_position;
-    my $fetch_stop_position = $fetch_start_position + 1000 ;
+    my $fetch_start_position; 
+    my $fetch_stop_position;
+    if($transcript->strand eq "+1"){
+        $fetch_start_position = $variant->{start} - $codon_position;
+        $fetch_stop_position = $fetch_start_position + 1000 ;
+    }
+    else{
+        $fetch_stop_position = $variant->{stop} + $codon_position;
+        $fetch_start_position = max($fetch_stop_position - 1000, 0); #avoid going negative
+    }
+    $DB::single = 1; #TODO: delete this test statement
     until($aa_sequence =~ m/\*/){
         my $temp_file = File::Temp->new();
         die "Could not get temp file" unless $temp_file; 
         unless ($first_fetch){
-            $fetch_start_position += 1001;
-            $fetch_stop_position = $fetch_start_position + 1000;
+            #adjust $fetch_start_position and $fetch_stop_position for the next 1000 bases
+            if ($transcript->strand eq '+1'){
+                $fetch_start_position += 1001;
+                $fetch_stop_position = $fetch_start_position + 1000;
+            }else{
+                $fetch_stop_position = $fetch_start_position - 1;
+                $fetch_start_position = $fetch_stop_position - 1000;
+                last if $fetch_start_position < 0; #if we hit the front end of the chromosome, we're done
+            }
         }
         my $sequence_command = Genome::Model::Tools::Sequence->execute(
             chromosome => $transcript->chrom_name,
@@ -604,16 +620,20 @@ sub _apply_indel_and_translate{
             output_file => $temp_file->filename,
         ); 
         die "Unsuccessfully executed sequence fetch" unless $sequence_command;
-        my $sequence = <$temp_file>; #the sequence should be the only line in the temp file
+        chomp(my $sequence = <$temp_file>); #the sequence should be the only line in the temp file
+        if ($transcript->strand eq '-1'){
+            $sequence = $self->reverse_complement($sequence);
+        }
         
         if($first_fetch){
             #apply the indel to the coding sequence
+            #the indel sequence has already been reverse complimented if negative stranded at this point
             my $sequence_with_indel;
             if ($variant->{type} =~ /ins/i){
                 #insertion, yay!
                 $sequence_with_indel = substr($sequence, 0, $codon_position + 1) . $variant->{variant} . substr($sequence, $codon_position + 1); 
-                if($codon_position == 2){
-                    #For insertions with codon position two, the sequence formula 
+                if($codon_position == 2 and $transcript->strand eq '+1'){
+                    #For positive strand insertions with codon position two, the sequence formula 
                     #grabs all of the effected codons and one unaffected codon before.
                     #This block strips that leading, unchanged codon so that
                     #all output begins with the first codon effected by the
@@ -624,6 +644,14 @@ sub _apply_indel_and_translate{
             else{
                 #deletion, boo!
                 $sequence_with_indel = substr($sequence, 0, $codon_position) . substr($sequence, $codon_position + $variant->{stop} - $variant->{start} + 1); 
+                if($codon_position == 2 and $transcript->strand eq '-1'){
+                    #For negative strand deletions with codon position two, the sequence formula 
+                    #grabs all of the effected codons and one unaffected codon before.
+                    #This block strips that leading, unchanged codon so that
+                    #all output begins with the first codon effected by the
+                    #shift (this might be a silent frame shift on that codon).
+                    $sequence_with_indel = substr($sequence_with_indel, 3); 
+                }
             }
             $sequence = $sequence_with_indel;
         }
