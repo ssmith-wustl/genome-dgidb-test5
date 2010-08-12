@@ -88,7 +88,7 @@
 //$(this).removeClass('loading').addClass('error').html('Error');
 //})
 //.hide();
-});
+//});
           ]]>
         </script>
         <script language="javascript" type="text/javascript">

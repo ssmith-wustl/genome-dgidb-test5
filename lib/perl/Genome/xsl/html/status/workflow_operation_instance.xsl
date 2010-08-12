@@ -17,7 +17,7 @@ xmlns:rest="urn:rest">
         ]]>
       </script>
 
-      <table class="list" border="0" width="100%" cellspacing="0" cellpadding="0">
+      <table class="lister" border="0" width="100%" cellspacing="0" cellpadding="0">
         <colgroup>
           <col/>
           <col width="40%"/>
