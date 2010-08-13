@@ -51,6 +51,9 @@
         <!-- jquery.masonry to arrange the object info boxes-->
         <script type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
 
+        <!-- jquery.spinner for easy creation of loading spinners -->
+        <script type="text/javascript" src="/res/js/pkg/spinner/jquery.spinner.js"></script>
+
         <!-- jquery.dataTables for spiffy feature-laden lists -->
         <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
         <link rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection"/>
