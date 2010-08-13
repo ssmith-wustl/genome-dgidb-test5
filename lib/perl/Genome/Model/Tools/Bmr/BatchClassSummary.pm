@@ -270,7 +270,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = A
@@ -286,7 +286,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = T
@@ -315,7 +315,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = C
@@ -343,7 +343,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = G
@@ -351,7 +351,7 @@ sub execute {
 
                 #if the ROI list and MAF file do not match, record this with a status message.
                 else {
-                    $self->status_message("Cannot find this mutation's gene in the ROI hash:\n$line");
+                    $self->status_message("Gene not in the ROI list: $gene, chr$chr:$start-$stop");
                     next;
                 }
             }#end, if mutation is non-synonymous
@@ -364,7 +364,7 @@ sub execute {
                 $COVMUTS{'Indels'}{'mutations'}++;
             }
             else {
-                $self->status_message("Cannot find this mutation's gene in the ROI hash:\n$line");
+                $self->status_message("Gene not in the ROI list: $gene, chr$chr:$start-$stop");
                 next;
             }
         }#end, if mutation is an indel

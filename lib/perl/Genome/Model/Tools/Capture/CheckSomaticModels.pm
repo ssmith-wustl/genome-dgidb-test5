@@ -7,7 +7,7 @@ package Genome::Model::Tools::Capture::CheckSomaticModels;     # rename this whe
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
 #	CREATED:	12/09/2009 by D.K.
-#	MODIFIED:	12/09/2009 by D.K.
+#	MODIFIED:	08/13/2010 by D.K.
 #
 #	NOTES:	
 #			
@@ -35,7 +35,7 @@ class Genome::Model::Tools::Capture::CheckSomaticModels {
 		model_basename	=> { is => 'Text', doc => "String to use for naming models; sample will be appended" , is_optional => 0},
 		report_only	=> { is => 'Text', doc => "Flag to skip actual execution" , is_optional => 1},
 		use_bsub	=> { is => 'Text', doc => "If set to 1, will submit define command to short queue" , is_optional => 1},
-		start_models	=> { is => 'Text', doc => "If set to 1, will start models after finding/creating them" , is_optional => 1},
+		build_mafs	=> { is => 'Text', doc => "If set to 1, will build MAF files for completed models" , is_optional => 1},
 	],
 };
 
@@ -95,17 +95,26 @@ sub execute {                               # replace with real execution logic.
 		my $line = $_;
 		$lineCounter++;
 		
-		(my $sample_name, my $normal_model_id, my $tumor_model_id) = split(/\t/, $line);
+		(my $sample_name, my $normal_sample_name) = split(/\t/, $line);
 		$stats{'num_pairs'}++;
 
 		my $model_name = $model_basename . "-" . $sample_name;
 		my $model_id = get_model_id($model_name);
+		
+		if(!$model_id)
+		{
+			print "Didn't find $model_name\n";
+			$model_name = substr($model_name, 0, length($model_name) - 2);
+			$model_id = get_model_id($model_name);
+			print "Didn't find $model_name\n";
+		}
+		
 		my $model_status = "Unknown";
 
 		## Build the somatic model ##
 		if(!$model_id)
 		{
-			print "$sample_name\tNo Model\n";
+			print "$sample_name\tNo Model Named $model_name\n";
 		}
 		else
 		{
@@ -123,13 +132,17 @@ sub execute {                               # replace with real execution logic.
 				
 				## Determine paths to key files ##
 				
+				my $server_status_file = "$build_dir/server_location.txt";
 				my $merged_file = "$build_dir/merged.somatic.snp";
 				my $filter_file = "$build_dir/merged.somatic.snp.filter";
 				my $novel_file = "$build_dir/merged.somatic.snp.filter.novel";
 				my $tier1_file = "$build_dir/merged.somatic.snp.filter.novel.tier1";
 
 				my $indel_file = "$build_dir/merged.somatic.indel";
-				my $indel_tier1_file = "$build_dir/merged.somatic.indel.tier1";
+				my $indel_tier1_file = "$build_dir/merged.somatic.indel.filter.tier1";
+
+				my $gatk_indel_file = "$build_dir/gatk.output.indel.formatted.Somatic";
+				my $gatk_indel_tier1_file = "$build_dir/gatk.output.indel.formatted.Somatic.tier1";
 
 				my $varscan_file = "$build_dir/varScan.output.snp";
 				my $varscan_somatic_file = "$build_dir/varScan.output.snp.formatted.Somatic.hc";
@@ -180,6 +193,8 @@ sub execute {                               # replace with real execution logic.
 				my $build_status = "New";
 				my %build_stats = ();
 				
+				
+				
 				## Count Indels ##
 				
 				if(-e $indel_file)
@@ -190,7 +205,20 @@ sub execute {                               # replace with real execution logic.
 					if(-e $indel_tier1_file)
 					{
 						$build_stats{'indels_tier1'} = `cat $indel_tier1_file | wc -l`;
-						chomp($build_stats{'indels_tier1'});						
+						chomp($build_stats{'indels_tier1'});
+						$stats{'indels_completed'}++;
+					}
+				}
+				
+				if(-e $gatk_indel_file)
+				{
+					$build_stats{'gatk_indels'} = `cat $gatk_indel_file | wc -l`;
+					chomp($build_stats{'gatk_indels'});
+					
+					if(-e $gatk_indel_tier1_file)
+					{
+						$build_stats{'gatk_indels_tier1'} = `cat $gatk_indel_tier1_file | wc -l`;
+						chomp($build_stats{'gatk_indels_tier1'});
 					}
 				}
 				
@@ -220,7 +248,17 @@ sub execute {                               # replace with real execution logic.
 							
 							if(-e $tier1_file)
 							{
-								$build_status = "Done";
+								$stats{'snvs_completed'}++;
+								
+								if(-e $server_status_file)
+								{
+									$build_status = "Running";
+								}
+								else
+								{
+									$build_status = "Done";
+								}
+									
 								
 								## Count Tier 1 SNPs ##
 								$build_stats{'snps_tier1'} = `cat $tier1_file | wc -l`;
@@ -236,23 +274,53 @@ sub execute {                               # replace with real execution logic.
 
 				}
 				
+				
+				## If we build the MAFs ##
+				if($self->build_mafs && -e $tier1_file)# && -e $indel_tier1_file)
+				{
+					## Build the MAF file ##
+					
+					my $cmd = "gmt capture build-maf-file --data-dir $build_dir --normal-sample $normal_sample_name --tumor-sample $sample_name --output-file $build_dir/tcga-maf.tsv";
+					system("bsub -q long $cmd");
+				}
+				
+				$build_stats{'snps_merged'} = "-" if(!$build_stats{'snps_merged'});
+				$build_stats{'snps_filtered'} = "-" if(!$build_stats{'snps_filtered'});
+				$build_stats{'snps_novel'} = "-" if(!$build_stats{'snps_novel'});
+				$build_stats{'snps_tier1'} = "-" if(!$build_stats{'snps_tier1'});
+				$build_stats{'indels_merged'} = "-" if(!$build_stats{'indels_merged'});
+				$build_stats{'indels_tier1'} = "-" if(!$build_stats{'indels_tier1'});
+				$build_stats{'gatk_indels'} = "-" if(!$build_stats{'gatk_indels'});
+				$build_stats{'gatk_indels_tier1'} = "-" if(!$build_stats{'gatk_indels_tier1'});
+				
 				## Update model status for this build ##
 				$model_status = "$build_id\t$build_status\t$varscan_status\t$sniper_status";
-				$model_status .= "\t" . $build_stats{'snps_merged'} if($build_stats{'snps_merged'});
-				$model_status .= "\t" . $build_stats{'snps_filtered'} if($build_stats{'snps_filtered'});
-				$model_status .= "\t" . $build_stats{'snps_novel'} if($build_stats{'snps_novel'});
-				$model_status .= "\t" . $build_stats{'snps_tier1'} if($build_stats{'snps_tier1'});
-				$model_status .= "\t" . $build_stats{'indels_merged'} if($build_stats{'indels_merged'});
-				$model_status .= "\t" . $build_stats{'indels_tier1'} if($build_stats{'indels_tier1'});
+				$model_status .= "\t" . $build_stats{'snps_merged'};
+				$model_status .= "\t" . $build_stats{'snps_filtered'};
+				$model_status .= "\t" . $build_stats{'snps_novel'};
+				$model_status .= "\t" . $build_stats{'snps_tier1'};
+				$model_status .= "\t" . $build_stats{'indels_merged'};
+				$model_status .= "\t" . $build_stats{'indels_tier1'};
+				$model_status .= "\t" . $build_stats{'gatk_indels'};
+				$model_status .= "\t" . $build_stats{'gatk_indels_tier1'};
+				
 				print "$sample_name\t$model_id\t$model_status\n";#\t$build_dir\n";
+				
+				$stats{$build_status}++;
 			}
 
 			## End of build iteration
+			
+			
 		}
 
 	}
 
 	close($input);
+
+
+	print $stats{'snvs_completed'} . " patients have SNVs completed\n";
+	print $stats{'indels_completed'} . " patients have indels completed\n";
 	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }

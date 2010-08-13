@@ -101,7 +101,7 @@ sub execute {
         my $wiggle = $wiggle_files{$wigfile};
         #my $wiggle = "/opt/fscache/" . $wiggle_files{$wigfile};
         $self->status_message("$wiggle");
-        sleep(0.2); #Pause for 1/5th of a second to avoid overloading LDAP
+        sleep(5); #Pause for a short while to avoid overloading LDAP, and for the disk's sake
         print `bsub -q tcga -M 2500000 -R 'select[localdata && mem>2500] rusage[mem=2500]' -oo $stdout_file -J $jobname gmt bmr batch-class-summary --mutation-maf-file $maf --output-file $outfile --roi-bedfile $roi_bed --wiggle-file $wiggle $genes_to_exclude_arg`;
     }
 
