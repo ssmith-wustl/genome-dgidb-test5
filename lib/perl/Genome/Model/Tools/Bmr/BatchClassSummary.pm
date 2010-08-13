@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use IO::File;
 use Bit::Vector;
+use Benchmark;
 
 class Genome::Model::Tools::Bmr::BatchClassSummary {
     is => 'Genome::Command::OO',
@@ -14,7 +15,7 @@ class Genome::Model::Tools::Bmr::BatchClassSummary {
         is => 'String',
         is_optional => 1,
         default => 'NCBI-human-build36',
-        doc => 'The reference sequence build, used to gather and generate bitmask files for base masking and sample coverage.',
+        doc => 'The reference sequence build, used to gather and generate bitmask files for base masking and sample coverage',
     },
     roi_bedfile => {
         type => 'String',
@@ -24,22 +25,22 @@ class Genome::Model::Tools::Bmr::BatchClassSummary {
     mutation_maf_file => {
         type => 'String',
         is_optional => 0,
-        doc => 'List of mutations used to calculate background mutation rate',
+        doc => 'List of mutations needed to calculate background mutation rate',
     },
     wiggle_file => {
         type => 'String',
         is_optional => 0,
-        doc => 'Wiggle files detailing genome-wide coverage of each sample in dataset',
+        doc => 'A wiggle track format file detailing genome-wide coverage of a sample',
     },
     output_file => {
         type => 'String',
         is_optional => 0,
-        doc => 'Output file containing BMR for 7 classes for this group of regions, mutations, and wiggle files.',
+        doc => 'Output file containing BMR for 7 classes for this group of regions, mutations, and a wiggle file',
     },
     genes_to_exclude => {
         type => 'Comma-delimited String',
         is_optional => 1,
-        doc => 'Comma-delimited list of genes to exclude in BMR calculation.',
+        doc => 'Comma-delimited list of genes to exclude in BMR calculation',
     },
 #    rejected_mutations => {
 #        type => 'String',
@@ -54,20 +55,30 @@ sub help_brief {
 }
 
 sub help_detail {
-    "This script calculates and prints the background mutation rate for transitions, transversions, and indel classes given a single wiggle file - (results from many files to be combined afterwards; results denote specific coverage regions), given a specific set of mutations, and given specific regions of interest. The input mutation list provides the number of non-synonomous mutations (missense, nonsense, nonstop, splice-site) found in the sample set for each mutation class. Then, this number of mutations is divided by the total coverage across each base category (A&T, CpG islands, C&G not in CpG islands) that could lead to that mutation type in each ROI. Data output is of this format: [Mutation_Class  BMR  Coverage  #_of_Mutations]."
+    return <<HELP;
+This script calculates and prints the background mutation rate for transitions, transversions, and
+indel classes given a single wiggle file - (results from many files to be combined afterwards;
+results denote specific coverage regions), given a specific set of mutations, and given specific
+regions of interest. The input mutation list provides the number of non-synonomous mutations
+(missense, nonsense, nonstop, splice-site) found in the sample set for each mutation class. Then,
+this number of mutations is divided by the total coverage across each base category (A&T, CpG
+islands, C&G not in CpG islands) that could lead to that mutation type in each ROI. Data output is
+of this format: [Mutation_Class  BMR  Coverage  #_of_Mutations].
+HELP
 }
 
 sub execute {
     my $self = shift;
     $DB::single=1;
-    
+    my $t0 = Benchmark->new;
+
     #parse gene exclusion list
     my $gene_exclusion_list = $self->genes_to_exclude;
     my @genes_to_exclude = ();
     if (defined $gene_exclusion_list) {
         @genes_to_exclude = split ",",$gene_exclusion_list;
     }
-    
+
     #resolve refseq
     #my $ref_build_name = $self->refseq_build_name;
     #my ($ref_model_name,$ref_build_version) = $ref_build_name =~ /^(\S+)-build(\S*)$/;
@@ -75,18 +86,23 @@ sub execute {
     #my $ref_build = $ref_model->build_by_version($ref_build_version);
     my $ref_index = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa.fai";
 
-    #load bitmasks
+    #WigToBitmask.pm contains some useful functions for handling bitmasks
+    my $bitmasker = Genome::Model::Tools::Bmr::WigToBitmask->create(
+        reference_index => $ref_index,
+    );
+
+    #Load bitmasks
     #my $at_bitmask_file = $ref_build->data_directory . "/all_sequences.AT_bitmask";
     #my $cpg_bitmask_file = $ref_build->data_directory . "/all_sequences.CpG_bitmask";
     #my $cg_bitmask_file = $ref_build->data_directory . "/all_sequences.CG_bitmask";
     my $at_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.AT_bitmask";
     my $cpg_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CpG_bitmask";
     my $cg_bitmask_file = "/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.CG_bitmask";
-    my $at_bitmask = $self->read_genome_bitmask($at_bitmask_file);
-    my $cpg_bitmask = $self->read_genome_bitmask($cpg_bitmask_file);
-    my $cg_bitmask = $self->read_genome_bitmask($cg_bitmask_file);
+    my $at_bitmask = $bitmasker->read_genome_bitmask($at_bitmask_file);
+    my $cpg_bitmask = $bitmasker->read_genome_bitmask($cpg_bitmask_file);
+    my $cg_bitmask = $bitmasker->read_genome_bitmask($cg_bitmask_file);
 
-    #make sure bitmasks were loaded
+    #Make sure bitmasks were loaded successfully
     unless ($at_bitmask) {
         $self->error_message("AT bitmask was not loaded.");
         return;
@@ -101,7 +117,7 @@ sub execute {
     }
 
     #load ROIs into a new ROI hash %ROIs -> chr -> gene -> start = stop;
-    my %ROIs;
+    my %ROIs = ();
     my $roi_bedfile = $self->roi_bedfile;
     my $bed_fh = new IO::File $roi_bedfile,"r";
     while (my $line = $bed_fh->getline) {
@@ -118,12 +134,10 @@ sub execute {
     }
     $bed_fh->close;
 
-    #Create an new ROI bitmask
+    #Create a new ROI bitmask
     my $roi_bitmask = $self->create_empty_genome_bitmask($ref_index);
     for my $chr (keys %ROIs) {
         for my $gene (keys %{$ROIs{$chr}}) {
-            #juse in case...
-            next if (scalar grep { /^$gene$/ } @genes_to_exclude);
             for my $start (keys %{$ROIs{$chr}{$gene}}) {
                 my $stop = $ROIs{$chr}{$gene}{$start};
                 $roi_bitmask->{$chr}->Interval_Fill($start,$stop);
@@ -131,86 +145,79 @@ sub execute {
         }
     }
 
-    #Parse wiggle file directory to obtain the paths to wiggle files
-    my @wiggle_files = ($self->wiggle_file);
-    #opendir(WIG,$wiggle_dir) || die "Cannot open directory $wiggle_dir";
-    #my @wiggle_files = readdir(WIG);
-    #closedir(WIG);
-    #@wiggle_files = grep { !/^(\.|\.\.)$/ } @wiggle_files;
-    #@wiggle_files = map { $_ = "$wiggle_dir/" . $_ } @wiggle_files;
-
-    #Initiate COVMUTS hash for recording coverage and mutations: %COVMUTS -> class -> coverage,mutations
-    my %COVMUTS;
-    my @classes = ('CG.transit','CG.transver','AT.transit','AT.transver','CpG.transit','CpG.transver','Indels');
+    #Initialize a hash for recording coverage and mutations: %COVMUTS -> class -> coverage,mutations
+    my %COVMUTS = ();
+    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Indels);
     for my $class (@classes) {
         $COVMUTS{$class}{'coverage'} = 0;
         $COVMUTS{$class}{'mutations'} = 0;
     }
 
-    #loop through samples to calculate class coverages
-    my $bitmask_conversion = Genome::Model::Tools::Bmr::WtfToBitmask->create(
-        reference_index => $ref_index,
-    );
+    #Create or load a bitmask with the coverage data of this sample
+    my $t1 = Benchmark->new;
+    my $wiggle_file = $self->wiggle_file;
+    $bitmasker->wig_file($wiggle_file);
+    $bitmasker->output_file("$wiggle_file.bitmask");
+    if ($bitmasker->is_executed) { #This shouldn't have been executed, but just in case
+        $bitmasker->is_executed('0');
+    }
+    #If the bitmask was already created, then don't re-create it, just load it
+    if( -e "$wiggle_file.bitmask" ) {
+        $bitmasker->read_genome_bitmask("$wiggle_file.bitmask");
+    }
+    else {
+        $bitmasker->execute;
+    }
+    my $t2 = Benchmark->new;
 
-    for my $file (@wiggle_files) {
+    unless ($bitmasker) {
+        $self->error_message("Not seeing a bitmask object for file $wiggle_file.");
+        return;
+    }
+    my $cov_bitmask = $bitmasker->bitmask;
+    unless ($cov_bitmask) {
+        $self->error_message("Not seeing a hashref to the bitmask.");
+        return;
+    }
 
-        #create sample coverage bitmask;
-        $bitmask_conversion->wtf_file($file);
-        if ($bitmask_conversion->is_executed) {
-            $bitmask_conversion->is_executed('0');
-        }
-        $bitmask_conversion->execute;
+    #find intersection of ROIs and sample's coverage
+    for my $chr (keys %$cov_bitmask) {
+        $cov_bitmask->{$chr}->And($cov_bitmask->{$chr},$roi_bitmask->{$chr});
+    }
 
-        unless ($bitmask_conversion) {
-            $self->error_message("Not seeing a bitmask object for file $file.");
-            return;
-        }
-        my $cov_bitmask = $bitmask_conversion->bitmask;
-        unless ($cov_bitmask) {
-            $self->error_message("Not seeing cov_bitmask from bitmask_cov->bitmask.");
-            return;
-        }
+    #find intersection of sample's coverage in ROIs and mutation class regions
+    for my $chr (keys %$cov_bitmask) {
 
-        #find intersection of ROIs and sample's coverage
-        for my $chr (keys %$cov_bitmask) {
-            $cov_bitmask->{$chr}->And($cov_bitmask->{$chr},$roi_bitmask->{$chr});
-        }
+        my $tempvector = $cov_bitmask->{$chr}->Clone();
+        my $bits_on = $tempvector->Norm();
 
-        #find intersection of sample's coverage in ROIs and mutation class regions
-        for my $chr (keys %$cov_bitmask) {
+        #Indels
+        $COVMUTS{'Indels'}{'coverage'} += $bits_on;
 
-            my $tempvector = $cov_bitmask->{$chr}->Clone();
-            my $bits_on = $tempvector->Norm();
+        #AT
+        $tempvector->And($cov_bitmask->{$chr},$at_bitmask->{$chr});
+        $bits_on = $tempvector->Norm();
+        $COVMUTS{'AT.transit'}{'coverage'} += $bits_on;
+        $COVMUTS{'AT.transver'}{'coverage'} += $bits_on;
 
-            #Indels
-            $COVMUTS{'Indels'}{'coverage'} += $bits_on;
+        #CG
+        $tempvector->And($cov_bitmask->{$chr},$cg_bitmask->{$chr});
+        $bits_on = $tempvector->Norm();
+        $COVMUTS{'CG.transit'}{'coverage'} += $bits_on;
+        $COVMUTS{'CG.transver'}{'coverage'} += $bits_on;
 
-            #AT
-            $tempvector->And($cov_bitmask->{$chr},$at_bitmask->{$chr});
-            $bits_on = $tempvector->Norm();
-            $COVMUTS{'AT.transit'}{'coverage'} += $bits_on;
-            $COVMUTS{'AT.transver'}{'coverage'} += $bits_on;
+        #CpG
+        $tempvector->And($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
+        $bits_on = $tempvector->Norm();
+        $COVMUTS{'CpG.transit'}{'coverage'} += $bits_on;
+        $COVMUTS{'CpG.transver'}{'coverage'} += $bits_on;
+    }
 
-            #CG
-            $tempvector->And($cov_bitmask->{$chr},$cg_bitmask->{$chr});
-            $bits_on = $tempvector->Norm();
-            $COVMUTS{'CG.transit'}{'coverage'} += $bits_on;
-            $COVMUTS{'CG.transver'}{'coverage'} += $bits_on;
-
-            #CpG
-            $tempvector->And($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
-            $bits_on = $tempvector->Norm();
-            $COVMUTS{'CpG.transit'}{'coverage'} += $bits_on;
-            $COVMUTS{'CpG.transver'}{'coverage'} += $bits_on;
-        }
-
-        undef $cov_bitmask; #clean up any memory
-
-    }#end, for my wiggle file
+    undef $cov_bitmask; #clean up any memory
 
     #clean up the object memory
-    $bitmask_conversion->delete;
-    undef $bitmask_conversion;
+    $bitmasker->delete;
+    undef $bitmasker;
 
     #Loop through mutations, assign them to a gene and class in %COVMUTS
     my $mutation_file = $self->mutation_maf_file;
@@ -263,7 +270,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = A
@@ -279,7 +286,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = T
@@ -308,7 +315,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = C
@@ -336,7 +343,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = G
@@ -344,7 +351,7 @@ sub execute {
 
                 #if the ROI list and MAF file do not match, record this with a status message.
                 else {
-                    $self->status_message("Cannot find this mutation's gene in the ROI hash:\n$line");
+                    $self->status_message("Gene not in the ROI list: $gene, chr$chr:$start-$stop");
                     next;
                 }
             }#end, if mutation is non-synonymous
@@ -357,7 +364,7 @@ sub execute {
                 $COVMUTS{'Indels'}{'mutations'}++;
             }
             else {
-                $self->status_message("Cannot find this mutation's gene in the ROI hash:\n$line");
+                $self->status_message("Gene not in the ROI list: $gene, chr$chr:$start-$stop");
                 next;
             }
         }#end, if mutation is an indel
@@ -386,7 +393,9 @@ sub execute {
         print $out_fh "$class\t$BMR{$class}\t$COVMUTS{$class}{'coverage'}\t$COVMUTS{$class}{'mutations'}\n";
     }
     $out_fh->close;
-
+    my $t3 = Benchmark->new;
+    print STDERR " Total Time: ", timestr(timediff($t3,$t0)), "\n";
+    print STDERR "Load Wiggle: ", timestr(timediff($t2,$t1)), "\n";
     return 1;
 }
 
@@ -404,40 +413,6 @@ sub create_empty_genome_bitmask {
     return \%genome;
 }
 
-sub read_genome_bitmask {
-    my ($self,$filename) = @_;
-    unless($filename) {
-        $self->error_message("File $filename not found.");
-        return;
-    }
-    #do some stuff to read this from a file without making it suck
-    my $in_fh = IO::File->new($filename,"<:raw");
-    unless($in_fh) {
-        $self->error_message("Unable to read from " . $filename);
-        return;
-    }
-    my $read_string;
-    sysread $in_fh, $read_string, 4;
-    my $header_length = unpack "N", $read_string;
-    sysread $in_fh, $read_string, $header_length;
-    my $header_string = unpack "a*",$read_string;
-    my %genome = split /\t/, $header_string; #each key is the name, each value is the size in bits
-
-    #now read in each one
-    foreach my $chr (sort keys %genome) {
-        $genome{$chr} = Bit::Vector->new($genome{$chr}); #this throws an exception if it fails. Probably should be trapped at some point in the future
-        sysread $in_fh, $read_string, 4;
-        my $chr_byte_length = unpack "N", $read_string;
-        my $chr_read_string;
-        sysread $in_fh, $chr_read_string, $chr_byte_length;
-        $genome{$chr}->Block_Store($chr_read_string);
-    }
-    $in_fh->close;
-    return \%genome;
-}
-
-
-
 sub count_bits {
     my ($self,$vector,$start,$stop) = @_;
     my $count = 0;
@@ -450,8 +425,6 @@ sub count_bits {
 }
 
 1;
-
-
 
 #more specific hash structure
 #%COVMUTS->gene->class->(coverage,#mutations)

@@ -41,7 +41,7 @@ sub _run_aligner {
         die;
     }
 
-    my $aligner_params = $self->aligner_params;
+    my $aligner_params = $self->aligner_params || '';
 
     my $path_to_bowtie = Genome::Model::Tools::Bowtie->path_for_bowtie_version($self->aligner_version);
 

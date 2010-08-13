@@ -6,7 +6,6 @@ use Test::More;
 use Sys::Hostname;
 
 use above 'Genome';
-$ENV{'TEST_MODE'} = 1;
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
@@ -26,18 +25,14 @@ BEGIN {
 ###############################################################################
 
 # this ought to match the name as seen in the processing profile
-my $aligner_name = "rtg map";
+my $aligner_name = "multi aligner";
 
-
-# End aligner-specific configuration,
-# everything below here ought to be generic.
-#
 
 #
 # Gather up versions for the tools used herein
 #
 ###############################################################################
-my $aligner_tools_class_name = "Genome::Model::Tools::Rtg";
+my $aligner_tools_class_name = "Genome::Model::Tools::" . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($aligner_name);
 my $alignment_result_class_name = "Genome::InstrumentData::AlignmentResult::" . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($aligner_name);
 
 my $samtools_version = Genome::Model::Tools::Sam->default_samtools_version;
@@ -45,9 +40,9 @@ my $picard_version = Genome::Model::Tools::Picard->default_picard_version;
 
 my $aligner_version_method_name = sprintf("default_%s_version", $aligner_name);
 
-my $aligner_version = $aligner_tools_class_name->default_rtg_version;
+my $aligner_version = $aligner_tools_class_name->default_version;
 my $aligner_label   = $aligner_name.$aligner_version;
-$aligner_label =~ s/\.|\s/\_/g;
+$aligner_label =~ s/\.|\s/\_/g; # important! needs to sub out whitespace too
 
 my $expected_shortcut_path = "/gscmnt/sata828/info/alignment_data/$aligner_label/TEST-human/test_run_name/4_-123456",
 
@@ -79,21 +74,24 @@ sub test_alignment {
     my $generate_shortcut = delete $p{generate_shortcut_data};
 
     my $instrument_data = generate_fake_instrument_data();
+
     my $alignment = Genome::InstrumentData::AlignmentResult->create(
-                                                       instrument_data_id => $instrument_data->id,
-                                                       samtools_version => $samtools_version,
-                                                       picard_version => $picard_version,
-                                                       aligner_version => $aligner_version,
-                                                       aligner_name => $aligner_name,
-                                                       reference_build => $reference_build, 
-                                                       %p,
-                                                   );
+                       instrument_data_id => $instrument_data->id,
+                       samtools_version => $samtools_version,
+                       picard_version => $picard_version,
+                       aligner_version => $aligner_version,
+                       aligner_name => $aligner_name,
+                       aligner_params => 'bwa } bowtie',
+                       reference_build => $reference_build, 
+                       %p,
+            );
 
     ok($alignment, "Created Alignment");
     my $dir = $alignment->alignment_directory;
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
     ok(-s $dir . "/all_sequences.bam", "result has a bam file");
+    print "DIR is $dir\n";
 
     if ($generate_shortcut) {
         print "*** Using this data to generate shortcut data! ***\n";
@@ -113,7 +111,6 @@ sub test_alignment {
     }
 
 
-
 }
 
 sub test_shortcutting {
@@ -128,6 +125,7 @@ sub test_shortcutting {
                  module_version => '12345',
                  aligner_name=>$aligner_name,
                  aligner_version=>$aligner_version,
+                 aligner_params => 'bwa } bowtie',
                  samtools_version=>$samtools_version,
                  picard_version=>$picard_version,
                  reference_build => $reference_build, 
@@ -146,13 +144,14 @@ sub test_shortcutting {
     ####################################################
 
     my $bad_alignment = Genome::InstrumentData::AlignmentResult->create(
-                                                              instrument_data_id => $fake_instrument_data->id,
-                                                              aligner_name => $aligner_name,
-                                                              aligner_version => $aligner_version,
-                                                              samtools_version => $samtools_version,
-                                                              picard_version => $picard_version,
-                                                              reference_build => $reference_build, 
-                                                          );
+                           instrument_data_id => $fake_instrument_data->id,
+                           aligner_name => $aligner_name,
+                           aligner_version => $aligner_version,
+                           aligner_params => 'bwa } bowtie',
+                           samtools_version => $samtools_version,
+                           picard_version => $picard_version,
+                           reference_build => $reference_build, 
+            );
     ok(!$bad_alignment, "this should have returned undef, for attempting to create an alignment that is already created!");
     ok($alignment_result_class_name->error_message =~ m/already have one/, "the exception is what we expect to see");
 
@@ -165,6 +164,7 @@ sub test_shortcutting {
                                                               instrument_data_id => $fake_instrument_data->id,
                                                               aligner_name => $aligner_name,
                                                               aligner_version => $aligner_version,
+                                                              aligner_params => 'bwa } bowtie',
                                                               samtools_version => $samtools_version,
                                                               picard_version => $picard_version,
                                                               reference_build => $reference_build, 
@@ -217,6 +217,8 @@ sub generate_fake_instrument_data {
     $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
     $instrument_data->set_always('resolve_quality_converter','sol2sanger');
     $instrument_data->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
+    $instrument_data->mock('status_message',sub {print "STATUS: " . $_[1], "\n"});
+    $instrument_data->mock('error_message',sub {print STDERR "ERROR: " . $_[1], "\n"});
 
     $FAKE_INSTRUMENT_DATA_ID--;
 
