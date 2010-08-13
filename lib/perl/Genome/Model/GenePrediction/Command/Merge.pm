@@ -338,11 +338,14 @@ sub execute
         {
 
             @run_phases = ( 1, 2, 3, 4, 5 );
+            if($self->skip_blastx) {
+                @run_phases = ( 1,2,4,5);
+            }
         }
         foreach my $phase (@run_phases)
         {
             $self->status_message("running phase ". $phase);
-            unless ( defined( $self->skip_blastx )
+            unless (  $self->skip_blastx 
                 && ( $phase == 3 ) )
             {
 
@@ -514,7 +517,21 @@ sub phase3
     my $fasta_file = $fasta_fh->filename();
     my %selected_genes = %{$self->_selected_genes};
     my $debug_fh = $self->_debug_fh;
-    my %rpc_args = $self->_rpc_args;
+    #my %rpc_args = $self->_rpc_args; # not use this.
+    my $rpc_queue    = $self->rpc_queue;
+    my $rpc_core_num = $self->rpc_core_number;
+    my $tmp_usage    = $self->tmp_usage;
+    my %rpc_args = (
+        runner_count => $self->runner_count,
+        app_init     => 0,
+        port         => 7654 + $PID,
+        pp_type      => 'lsf',
+        q            => "'$rpc_queue'",
+        n            => "$rpc_core_num",
+        R            => "'span[hosts=1] rusage[mem=4096, tmp=$tmp_usage]'",
+        maxmessage   => 81920000,
+        lib_paths    => [ UR::Util::used_libs ],
+    );
 
     my $feature_fh   = File::Temp->new();
     my $feature_file = $feature_fh->filename();
