@@ -70,7 +70,7 @@
     <xsl:comment>
       match: value
     </xsl:comment>
-    <p><xsl:value-of select="."/></p>
+    <xsl:value-of select="."/>
   </xsl:template>
 
   <xsl:template match="perldata/scalar">

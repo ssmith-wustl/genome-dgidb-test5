@@ -19,6 +19,7 @@ use Pod::Usage;
 use English;
 use IO::File;
 
+# FIXME: add output directory parameter so we can execute this wherever we want to.
 UR::Object::Type->define(
 			 class_name => __PACKAGE__,
 			 is         => 'Command',
@@ -67,6 +68,9 @@ sub execute
     my $self = shift;
     my $locus_tag      = $self->locus_tag;
 
+    # FIXME: files opened here require you to be in the correct directory.
+    # this probably isn't a good idea.
+
     my $asm_feature_fh = IO::File->new();
     my $asm_feature    = qq{$locus_tag\_asm_feature};
     $asm_feature_fh->open("> $asm_feature") 
@@ -113,7 +117,8 @@ sub execute
     my $iscurrent      = 1;
     my $genecountcheck = 1;
 
-    foreach my $i (0..$#sequences) {
+# some fixes to filter out the rrna hits...
+GENE:    foreach my $i (0..$#sequences) {
       my $sequence      = $sequences[$i];
       my $sequence_name = $sequence->sequence_name();
       my @coding_genes  = $sequence->coding_genes($phase => 1);
@@ -137,6 +142,15 @@ sub execute
 	my $coding_gene = $coding_genes[$i];
 	my $gene_name = $coding_gene->gene_name();
 
+    # rrna hits don't get pulled.  other dead genes or anything else tagged,
+    # may pass.
+    my @tags = $coding_gene->tag_names();
+    foreach my $tag (@tags) {
+        if($tag->tag_value eq 'rrna hits') {
+            next GENE;
+        }
+    }
+    
 	if ($phase ne 'phase_0') { 
 	  $gene_name = rename_gene($gene_name,$gene_phase_name);
 	}
@@ -190,8 +204,6 @@ sub execute
     
   }
 
-################################################
-################################################
 sub rename_gene {
 
     my ($old_name, $gene_phase_name) = @_;
