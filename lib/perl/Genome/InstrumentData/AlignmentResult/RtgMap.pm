@@ -31,7 +31,7 @@ sub _decomposed_aligner_params {
     #   -Z do not zip sam
     $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '15G');
     $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
-    my $aligner_params = ($self->aligner_params || '') . " -U -Z "; #append core & space
+    my $aligner_params = ($self->aligner_params || '') . " -U -Z --read-names"; #append core & space
 
     my $cpu_count = $self->_available_cpu_count;
     $aligner_params .= " -T $cpu_count";
@@ -128,34 +128,11 @@ sub _run_aligner {
         skip_if_output_is_present => 0,
     );
 
-    #STEP 3.0 - rename reads
-    my @rr_files;
-    foreach my $file_to_rr (@output_files)
-    {
-        my $rr_file = "$file_to_rr.rr";
-        $cmd = sprintf('rtg samrename -i %s -o %s %s', 
-                        $input_sdf, 
-                        $rr_file,
-                        $file_to_rr);
-
-        Genome::Utility::FileSystem->shellcmd(
-            cmd             => $cmd,
-            input_files     => [$input_sdf, $file_to_rr],
-            output_files    => [$rr_file],
-            skip_if_output_is_present => 0,
-        );
-
-        push(@rr_files, $rr_file);
-        $self->status_message("Removing old file $file_to_rr after samrename");
-        unlink($file_to_rr);
-    }
-
-
     #STEP 3.1 - Collate, Format and Append sam files 
     my $sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $sam_file_fh = IO::File->new("> $sam_file");
 
-    foreach my $file_to_append (@rr_files)
+    foreach my $file_to_append (@output_files)
     {
         my $file_to_append_fh = IO::File->new( $file_to_append);
         while (<$file_to_append_fh>)
