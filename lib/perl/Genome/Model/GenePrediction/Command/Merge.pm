@@ -337,9 +337,9 @@ sub execute
         foreach my $phase (@run_phases)
         {
             $self->status_message("running phase ". $phase);
-            unless ( defined( $self->skip_blastx )
-                && ( $phase == 3 ) )
-            {
+#            unless ( defined( $self->skip_blastx )
+#                && ( $phase == 3 ) )
+#            {
 
                 $self->status_message("before phase ". $phase);
 
@@ -361,7 +361,7 @@ sub execute
                 $self->status_message("after phase ".$phase);
                 BAP::DB::DBI->dbi_commit();
                 BAP::DB::DBI->db_Main->disconnect();
-            }
+#            }
             $self->status_message("completed phase ". $phase);
 
         }
