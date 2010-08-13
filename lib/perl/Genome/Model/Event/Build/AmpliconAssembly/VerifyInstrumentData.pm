@@ -31,52 +31,46 @@ sub execute {
 sub _link_instrument_data {
     my $self = shift;
 
-    my @idas = $self->model->instrument_data_assignments;
-    unless ( @idas ) {
+    my @instrument_data = $self->build->instrument_data;
+    unless ( @instrument_data ) {
         $self->error_message(
             sprintf(
-                'No instrument data assigned to model for model (<Name> %s <Id> %s).',
+                'No instrument data found for amplicon assembly build (<Id> %s <Model Name> %s <Model Id> %s).',
+                $self->build->id,
                 $self->model->name,
                 $self->model->id,
             )
         );
-        return;
     }
 
-    for my $ida ( @idas ) {
-        $self->_dump_unbuilt_instrument_data($ida) # error is in sub
-            or return;
-        unless ( $self->build->link_instrument_data( $ida->instrument_data ) ) {
+    for my $instrument_data ( @instrument_data ) {
+        unless ( $instrument_data->dump_to_file_system ) {
             $self->error_message(
                 sprintf(
-                    'Error linking instrument data (%s <Id> %s) to model (%s <Id> %s)',
-                    $ida->instrument_data->run_name,
-                    $ida->instrument_data->id,
+                    'Error dumping instrument data (%s <Id> %s) for amplicon assembly build (<Id> %s <Model Name> %s <Model Id> %s).',
+                    $instrument_data->run_name,
+                    $instrument_data->id,
+                    $self->build->id,
                     $self->model->name,
                     $self->model->id,
                 )
             );
             return;
         }
-    }
 
-    return 1;
-}
-
-sub _dump_unbuilt_instrument_data {
-    my ($self, $ida) = @_;
-
-    unless ( $ida->instrument_data->dump_to_file_system ) {
-        $self->error_message(
-            sprintf(
-                'Error dumping instrument data (%s <Id> %s) assigned to model (%s <Id> %s)',
-                $ida->instrument_data->run_name,
-                $ida->instrument_data->id,
-                $self->model->name,
-                $self->model->id,
-            )
-        );
-        return;
+        unless ( $self->build->link_instrument_data( $instrument_data ) ) {
+            $self->error_message(
+                sprintf(
+                    'Error linking instrument data (%s <Id> %s) for amplicon assembly build (<Id> %s <Model Name> %s <Model Id> %s).',
+                    $instrument_data->run_name,
+                    $instrument_data->id,
+                    $self->build->id,
+                    $self->model->name,
+                    $self->model->id,
+                )
+            );
+            return;
+        }
     }
 
     return 1;

@@ -58,7 +58,7 @@ sub execute {
     opendir(GENESUM,$gene_sum_dir);
     my @files = readdir(GENESUM);
     closedir(GENESUM);
-    @files = grep { !/^(\.|\.\.)$/ } @files;
+    @files = grep { /\.gene_summary$/ } @files;
     @files = map {$_ = "$gene_sum_dir/" . $_ } @files;
 
     #open output file and print header

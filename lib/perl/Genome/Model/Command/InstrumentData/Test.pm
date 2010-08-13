@@ -40,7 +40,7 @@ sub required_params_for_class {
 sub model { return $_[0]->{_model}; }
 sub model_id { return $_[0]->{_model}->id; }
 sub instrument_data { return $_[0]->{_instrument_data}; }
-sub solexa_instrument_data { return $_[0]->{_solexa_instrument_data};}
+sub solexa_flow_cell_id { return $_[0]->{_solexa_flow_cell_id};}
 
 sub create_mock_model_and_instrument_data : Test(startup => 2) {
     my $self = shift;
@@ -55,13 +55,8 @@ sub create_mock_model_and_instrument_data : Test(startup => 2) {
     is(scalar(@instrument_data), 4, 'Created 4 instrument data');
     $self->{_instrument_data} = \@instrument_data;
 
-    # solexa instrument data, needed for testing assignment by flowcell-id, which only works with solexa data ATM
-    my @solexa_instrument_data = Genome::Model::Test->create_mock_solexa_instrument_data(8);
-    is(scalar(@solexa_instrument_data), 8, 'Created 8 solexa instrument data');
-    $self->{_solexa_instrument_data} = \@solexa_instrument_data;
+    $self->{_solexa_flow_cell_id} = 13651; #The flow_cell_id mentioned in Genome::Model::Test
 
-    $model->set_list('compatible_instrument_data', @instrument_data,@solexa_instrument_data);
-    
     return 1;
 }
 
@@ -112,7 +107,7 @@ sub test_04_assign_flow_cell_id : Tests {
     $self->model->subject_name('H_GV-933124G-S.9017');
     my $assign = $self->test_class->create(
         $self->params_for_test_class,
-        flow_cell_id => $self->solexa_instrument_data->[0]->flow_cell_id,
+        flow_cell_id => $self->solexa_flow_cell_id,
         force => 1,
     );
     ok($assign->execute, 'Assign multiple instrument data by flow_cell_id');

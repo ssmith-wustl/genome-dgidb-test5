@@ -7,6 +7,7 @@ use Sys::Hostname;
 use IO::File;
 use File::Path;
 use YAML;
+use POSIX qw(ceil);
 
 use warnings;
 use strict;
@@ -356,24 +357,25 @@ sub create {
         die $self->error_message();
     }
 
-    #STEPS 6-7: CREATE BAM IN STAGING DIRECTORY
-    $self->status_message("Constructing a BAM file...");
+    # STEP 6: RUN THE ALIGNER
+    $self->status_message("Running aligner...");
+    unless ($self->extract_fastqs_and_run_aligner ) {
+        $self->error_message("Failed to extract fastqs and/or run the aligner!");
+        die $self->error_message
+        
+    }
+
+    # STEP 7: CREATE BAM IN STAGING DIRECTORY
+    $self->status_message("Constructing a BAM file (if necessary)...");
     unless( $self->create_BAM_in_staging_directory()) {
         $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
         die $self->error_message;
     }
 
-    #STEPS 8:  CREATE BAM.FLAGSTAT
-    $self->status_message("Creating all_sequences.bam.flagstat ...");
-    unless ($self->_create_bam_flagstat) {
-        $self->error_message('Fail to create bam flagstat');
-        die $self->error_message;
-    }
-
-    #STEPS 9: VERIFY BAM IS NOT TRUNCATED BY FLAGSTAT
-    $self->status_message("Verifying the bam...");
-    unless ($self->_verify_bam) {
-        $self->error_message('Fail to verify the bam');
+    # STEP 8-9, validate BAM file (if necessary)
+    $self->status_message("Postprocessing & Sanity Checking BAM file (if necessary)...");
+    unless ($self->postprocess_bam_file()) {
+        $self->error_message("Postprocess BAM file failed");
         die $self->error_message;
     }
 
@@ -407,7 +409,7 @@ sub create {
     return $self;
 }
 
-sub create_BAM_in_staging_directory {
+sub extract_fastqs_and_run_aligner {
     my $self = shift;
     
     # STEP 6: UNPACK THE ALIGNMENT FILES
@@ -464,7 +466,7 @@ sub create_BAM_in_staging_directory {
     # STEP 8: RUN THE ALIGNER, APPEND TO all_sequences.sam IN SCRATCH DIRECTORY
     for my $pass (@passes) {
         $self->status_message("Aligning @$pass...");
-        unless ($self->_run_aligner(@$pass)) {
+        unless ($self->_run_aligner_chunked(@$pass)) {
             if (@$pass == 2) {
                 $self->error_message("Failed to run aligner on first PE pass");
                 die $self->error_message;
@@ -486,14 +488,142 @@ sub create_BAM_in_staging_directory {
        } 
     }
 
+    
+
+    return 1;
+}
+
+sub create_BAM_in_staging_directory {
+    my $self = shift;
     # STEP 9: CONVERT THE ALL_SEQUENCES.SAM into ALL_SEQUENCES.BAM
     $self->status_message("Building a combined BAM file...");
     unless($self->_process_sam_files) {
         $self->error_message("Failed to process sam files into bam files. " . $self->error_message);
         die $self->error_message;
     }
-
+    
     return 1;
+}
+
+sub postprocess_bam_file {
+    my $self = shift;
+    
+    #STEPS 8:  CREATE BAM.FLAGSTAT
+    $self->status_message("Creating all_sequences.bam.flagstat ...");
+    unless ($self->_create_bam_flagstat) {
+        $self->error_message('Fail to create bam flagstat');
+        die $self->error_message;
+    }
+
+    #STEPS 9: VERIFY BAM IS NOT TRUNCATED BY FLAGSTAT
+    $self->status_message("Verifying the bam...");
+    unless ($self->_verify_bam) {
+        $self->error_message('Fail to verify the bam');
+        die $self->error_message;
+    }
+    
+    return 1;
+}
+
+sub _run_aligner_chunked {
+    my $self = shift;
+
+    unless ($self->can('input_chunk_size')) {
+        return $self->_run_aligner(@_);
+    }
+
+    my @reads = @_;
+
+    if (@reads > 2 || @reads == 0) {
+        $self->error_message("Chunker can only accept one or two read sets, but it got " . scalar @reads . ". aborting");
+        die $self->error_message;
+    }
+
+    my $chunk_size = $self->input_chunk_size;
+
+    $self->status_message("Running in chunked mode.  Each pass will be in $chunk_size read chunks.");
+    if (@reads == 2) {
+        $chunk_size = ceil($chunk_size/2);
+        $self->status_message("Chunking paired end reads.  Taking $chunk_size per pass.");
+    }
+    
+    
+    my @read_fhs;
+    for my $read (@reads) {
+        my $fh = IO::File->new("<" . $read);
+        unless ($fh) {
+            $self->error_message("Failed to open read file $read for chunking");
+            die $self->error_message;
+        }
+        push @read_fhs, $fh;
+    }
+
+    my $successful_passes = 0;
+
+    while(1) {
+        my @chunks;
+        my $cnt = 0;
+        
+        for my $i (0..$#read_fhs) {
+            my $lines_read = 0;
+            my $in_fh = $read_fhs[$i];
+            my $chunk_path = Genome::Utility::FileSystem->base_temp_directory . "/chunked-read-" . $i . ".fastq";
+            $self->status_message("Prepping chunk: $chunk_path");
+            my $chunk_fh = IO::File->new(">" . $chunk_path);
+            unless($chunk_fh) {
+                $self->error_message("Failed to open for writing the chunked read file: $chunk_path ...  Aborting");
+                die $self->error_message;
+            }
+            push @chunks, $chunk_path;
+            while (my $row = <$in_fh>) { 
+                print $chunk_fh $row; 
+                $lines_read++; 
+                $cnt++;
+
+                # stop when we hit chunk size
+                last if ($lines_read >= ($chunk_size*4));
+            }
+            $chunk_fh->close;
+            if ($lines_read %4 != 0) {
+                $self->error_message("Failed to read lines in multiples of 4, is the input file truncated?");
+                die $self->error_message;
+            }
+            $self->status_message("Read " . $lines_read/4 . " reads for file $chunk_path");
+
+        }
+
+        # If we're done reading, return if we successfully aligned anything in previous passes
+        # This covers the case where we happened to read up to the very end of the file and stopped without getting an EOF
+        # that is, the file is an exact multiple of the chunk size
+        if ($cnt == 0) {
+            return ($successful_passes > 0);
+        }
+
+        my @remaining_fhs = grep {eof $_} @read_fhs;
+        print scalar(@remaining_fhs) .  " is the remaining set\n";
+        if (@remaining_fhs > 0 && @remaining_fhs < @reads) {
+            $self->error_message("It looks like the read files are not the same length.  We've exhausted one but not the other.");
+            die $self->error_message;
+        }
+
+        my $res = $self->_run_aligner(@chunks);
+        if (!$res) {
+            $self->error_message("Failed to run aligner!");
+            die $self->error_message;
+        }
+        $successful_passes++;
+        for (@chunks) {
+            unlink($_);
+        }
+
+        # if we hit the EOF in this pass, then stop
+        if (@remaining_fhs == 0) {
+            $self->status_message("Done chunking and aligning read chunks.");
+            last;
+        }
+    }
+
+    1;
 }
 
 

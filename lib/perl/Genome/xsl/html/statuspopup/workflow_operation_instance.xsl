@@ -11,13 +11,13 @@ xmlns:rest="urn:rest">
       <script type="text/javascript">
         <![CDATA[
           function status_popup(title,typeurl,id) {
-            Boxy.load("/view/" + typeurl + "/statuspopup.html?id=" + id, {cache: true, title: title, afterShow: function() { this.center; this.resize(400,400); this.getContent().css('overflow','auto'); } });
-            return false;
+            var popup = new Boxy.load("/view/" + typeurl + "/statuspopup.html?id=" + id, {cache: true, title: title, afterShow: function() { this.center; this.resize(400,400); this.getContent().css('overflow','auto'); } });
+            popup.center();
           }
         ]]>
       </script>
 
-      <table class="list" border="0" width="100%" cellspacing="0" cellpadding="0">
+      <table class="lister" border="0" width="100%" cellspacing="0" cellpadding="0">
         <colgroup>
           <col/>
           <col width="40%"/>
@@ -30,10 +30,11 @@ xmlns:rest="urn:rest">
           <tr>
             <th>idx</th>
             <th>operation</th>
-            <th>status</th>
-            <th>started</th>
-            <th>ended</th>
-            <th class="last">elapsed</th>
+            <th class="center">status</th>
+            <th class="right">start time</th>
+            <th class="right">end time</th>
+            <th class="right">elapsed</th>
+            <th><br/></th>
           </tr>
         </thead>
         <tbody>
@@ -66,17 +67,23 @@ xmlns:rest="urn:rest">
           <td><xsl:value-of select="value"/></td>
         </xsl:for-each>
         <xsl:for-each select="aspect[@name='status']">
-          <td><xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="value"/></xsl:attribute><xsl:value-of select="value"/></td>
+          <td class="center"><xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="value"/></xsl:attribute><xsl:value-of select="value"/></td>
         </xsl:for-each>
         <xsl:for-each select="aspect[@name='start_time']">
-          <td><xsl:value-of select="value"/></td>
+          <td class="right"><xsl:value-of select="value"/></td>
         </xsl:for-each>
         <xsl:for-each select="aspect[@name='end_time']">
-          <td><xsl:value-of select="value"/></td>
+          <td class="right"><xsl:value-of select="value"/></td>
         </xsl:for-each>
         <xsl:for-each select="aspect[@name='elapsed_time']">
-          <td class="last"><xsl:value-of select="value"/></td>
+          <td class="right"><xsl:value-of select="value"/></td>
         </xsl:for-each>
+        <td class="buttons">
+          <a class="mini btn"><xsl:attribute name="href">
+            <xsl:text>javascript:status_popup('</xsl:text><xsl:value-of select="aspect[@name='name']/value"/><xsl:text>','</xsl:text><xsl:value-of select="$currentLink"/><xsl:text>','</xsl:text><xsl:value-of select="aspect[@name='current']/object[1]/@id"/><xsl:text>');</xsl:text></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>info</xsl:text>
+          </a>
+
+        </td>
       </tr>
     </xsl:if>
 
