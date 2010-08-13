@@ -104,3 +104,15 @@ td.buttons a.ui-button-text-only {
     padding: 0 5px !important;
     margin: 0 !important;
 }
+
+/* dialog */
+.ui-dialog {
+    -moz-box-shadow: 5px 5px 20px rgba(0,0,0,0.3);
+    -webkit-box-shadow: 5px 5px 20px rgba(0,0,0,0.3);
+    box-shadow: 5px 5px 20px rgba(0,0,0,0.3);
+    border: 1px solid #7d7e71 !important;
+}
+
+.ui-dialog-titlebar {
+    border-bottom: 1px solid #acaca3 !important;
+}

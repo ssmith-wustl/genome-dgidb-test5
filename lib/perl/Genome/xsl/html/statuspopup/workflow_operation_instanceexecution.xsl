@@ -7,16 +7,12 @@ xmlns:rest="urn:rest">
 
     <xsl:if test="count(aspect) > 0">
       <div class="aspects">
-        <table class="aspects" cellpadding="0" cellspacing="0" border="0">
-          <colgroup>
-           <col width="40%"/>
-           <col/>
-          </colgroup>
+        <table class="name-value" cellpadding="0" cellspacing="0" border="0">
           <tbody>
             <xsl:for-each select="aspect">
               <tr>
                 <td class="name">
-                  <strong><xsl:value-of select="@name"/></strong>
+                  <xsl:value-of select="@name"/>:
                 </td>
                 <xsl:if test="@name='stderr' or @name='stdout'">
                   <xsl:variable name="path" select="."/>
