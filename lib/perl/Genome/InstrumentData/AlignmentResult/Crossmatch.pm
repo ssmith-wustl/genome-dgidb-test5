@@ -48,10 +48,7 @@ sub _run_aligner {
     my $staging_sam_file = "$tmp_dir/all_sequences.sam";
     
     # get refseq info
-    my $reference_build = $self->reference_build;
-    my $ref_basename = File::Basename::fileparse($reference_build->full_consensus_path('fa'));
-    my $ref_file = sprintf("%s/%s", $reference_build->data_directory, $ref_basename);
-    #my $ref_file = reference_build->full_consensus_path('fa');
+    my $ref_file = $self->reference_build->full_consensus_path('fa');
 
     my $crossmatch_path = Genome::Model::Tools::Crossmatch->path_for_crossmatch_version($self->aligner_version);
     # TODO (iferguso) figure out how to get nonmatching to work correctly. it currently seems to cause crashes.
@@ -81,10 +78,8 @@ sub _run_aligner {
         my $finished_jobs = 0;
         # this is a counter of how many fa/qual files (chunks) we've split off of the input fq
         my $minor = 0;
-        # now just pushing running chunks onto an array, that get removed after completion
+        # just pushing running chunks onto an array, that get removed after completion
         my @cvs;
-        # originally was going to store chunks in a hash
-        # my %chunks;
 
 
         # yes "jobs still executing" is the same as "not every job finished", but i want
@@ -100,15 +95,15 @@ sub _run_aligner {
                 #if ($input_file =~ /(.+)\.fq$/) {
                 if ($input_file =~ /(.+)/) {
                     $chunk{'fastq_infile'} = $input_file;
-                    $chunk{'fasta_infile'} = $1.".".$minor.".fa";
-                    $chunk{'qual_infile'} = $1.".".$minor.".fa.qual";
-                    $chunk{'align_output'} = $1.".".$minor.".cm.aligned.out";
-                    $chunk{'sam_output'} = $1.".".$minor.".sam.aligned.out";
-                    $chunk{'nonmatching_fa_output'} = $1.".".$minor.".fa.nonmatching";
-                    $chunk{'nonmatching_qual_output'} = $1.".".$minor.".fa.nonmatching.qual";
-                    $chunk{'log_output'} = $1.".".$minor.".fa.log";
-                    $chunk{'stdout_file'} = $1.".".$minor.".cm.stdout";
-                    $chunk{'stderr_file'} = $1.".".$minor.".cm.stderr";
+                    $chunk{'fasta_infile'} = "$1.$minor.fa";
+                    $chunk{'qual_infile'}  = "$1.$minor.fa.qual";
+                    $chunk{'align_output'} = "$1.$minor.cm.aligned.out";
+                    $chunk{'sam_output'}   = "$1.$minor.sam.aligned.out";
+                    $chunk{'nonmatching_fa_output'}   = "$1.$minor.fa.nonmatching";
+                    $chunk{'nonmatching_qual_output'} = "$1.$minor.fa.nonmatching.qual";
+                    $chunk{'log_output'}  = "$1.$minor.fa.log";
+                    $chunk{'stdout_file'} = "$1.$minor.cm.stdout";
+                    $chunk{'stderr_file'} = "$1.$minor.cm.stderr";
                 } else {
                     $self->error_message(
                         "Problem parsing filename of input fq $input_file.\n".
@@ -129,7 +124,6 @@ sub _run_aligner {
                          
                 my $counter = 0;
                 while ($counter < 25000 && $reached_end == 0) {
-                    #my $fastq_obj = $in_seq_obj->next_seq || $reached_end=1;
                     my $fastq_obj = $in_seq_obj->next_seq;
                     if ($fastq_obj) {
                         $out_seq_obj->write_seq($fastq_obj);
@@ -172,7 +166,6 @@ sub _run_aligner {
                 # push this chunk's hash to the big list
                 push @cvs, \%chunk;
                 print "\n$cv\n";
-                #$chunks{$input_file}{$minor} = \%chunk;
                 # increase our counter by one for naming purposes
                 $minor++;
                 # increase the number of jobs we've started
@@ -202,13 +195,6 @@ sub _run_aligner {
                     #               alignments in SAM format.
                     ##########################################################
 
-                    #my $Id = q$Id: pulse_cm2sam.pl 3649 2010-04-22 19:34:59Z nhansen $;
-                    #$VERSION = sprintf "%.4f", substr(q$Rev: 3649 $, 4)/10000;
-
-                    #my $Usage = "pulse_cm2sam.pl <fastq file> <cons_fasta_offset>\nNote: crossmatch is STDIN\n";
-
-                    #$| = 1;
-
                     my $paired; # option to specify that reads are paired
                     my $fastq_offset = 33; # offset for fastq read objects
                     my $hard_clip; # option to hard clip read sequences (i.e., not include unaligned ends)
@@ -222,9 +208,6 @@ sub _run_aligner {
                     #           "offset=i" => \$fastq_offset, "hard_clip" => \$hard_clip,
                     #           "sq_file=s" => \$sq_file, "max_bases=i" => \$max_bases );
 
-                    #($#ARGV == 1)
-                    #  or die "$Usage";
-
                     #my $fastq_file = $ARGV[0];
                     #my $cons_fasta_offset = $ARGV[1];
                     # TODO this is obtuse and not logical. it's $ma because that's the "$input_file" (fq) that the finished job came from
@@ -232,27 +215,24 @@ sub _run_aligner {
                     my $cons_fasta_offset = 0;
 
                     my $rh_read_seqs = {};
-                    if ($fastq_file) # read in quality values
-                    {
-                        my $read_io = Genome::InstrumentData::AlignmentResult::Crossmatch::GTB::Sequencing::ReadIO->new(-file => $fastq_file,
-                                                                   -format => 'fastq', 
-                                                                   -qual_offset => $fastq_offset);
+                    if ($fastq_file){ # read in quality values
+                        my $read_io = Genome::InstrumentData::AlignmentResult::Crossmatch::GTB::Sequencing::ReadIO->new(
+                            -file => $fastq_file,
+                            -format => 'fastq', 
+                            -qual_offset => $fastq_offset);
 
-                        while (my $read_obj = $read_io->next_read())
-                        {
+                        while (my $read_obj = $read_io->next_read()){
                             my $name = $read_obj->name();
                             $rh_read_seqs->{$name} = $read_obj;
                         }
                     }
 
-                    #my $cm_obj = Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::SeqCM->new();
                     my $cm_obj = Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::SeqCM->new(-file => $cv->{'align_output'});
                     my @sam_strings = ();
                     # divide into different hits:
                     my $rh_hit_length = {}; # store names of hits and their lengths
 
-                    while (my $align_obj = $cm_obj->next_alignment())
-                    {
+                    while (my $align_obj = $cm_obj->next_alignment()){
                         my $hit = $align_obj->hit();
                         my $hit_length = $align_obj->hit_length();
                         $rh_hit_length->{$hit} = $hit_length;
@@ -263,25 +243,19 @@ sub _run_aligner {
 
                     $sam_output_fh->print(qq!\@HD\tVN:1.0\n!) if (!$no_header);
 
-                    if ($sq_file)
-                    {
+                    if ($sq_file){
                         my $sq_lines = `cat $sq_file`;
-                        foreach my $sq_line (split /\n/, $sq_lines)
-                        {
-                            if ($sq_line =~ /^\@SQ/)
-                            {
+                        foreach my $sq_line (split /\n/, $sq_lines){
+                            if ($sq_line =~ /^\@SQ/){
                                 $sam_output_fh->print("$sq_line\n");
-                            }
-                            else
-                            {
+                            } else {
                                 croak "Invalid SQ line in $sq_file:\n$sq_line\n";
                             }
                         }
                     }
 
                     my $max_score = 0;
-                    foreach my $hit (keys %{$rh_hit_length})
-                    {
+                    foreach my $hit (keys %{$rh_hit_length}){
                         my $hit_length = $rh_hit_length->{$hit};
                         $sam_output_fh->print(qq!\@SQ\tSN:$hit\tLN:$hit_length\n!) if ((!$sq_file) && (!$no_header));
                     }
@@ -290,12 +264,10 @@ sub _run_aligner {
 
                     $sam_output_fh->print(qq!\@PG\tID:cross_match\tVN:1.080812\n!) if (!$no_header);
 
-                    foreach my $sam_string (@sam_strings)
-                    {
+                    foreach my $sam_string (@sam_strings){
                         $sam_output_fh->print($sam_string);
                     }
 
-                #        $input_file, $cons_fasta_offset, $align_output, $sam_output);
                 }
 
                 #### STEP 4: Filter alignments
@@ -325,18 +297,19 @@ sub fillmd_for_sam {
 
 sub _filter_sam_output {
     my ($self, $aligned_sam_file, $all_sequences_sam_file) = @_;
+    # ccarey: bfast?! I assume this is a copypasta
     # some aligners output unaligned reads to a separate file. bfast appears to put them in the same file
 
     my $aligned_fh = IO::File->new( $aligned_sam_file );
     if ( !$aligned_fh ) {
-            $self->error_message("Error opening bfast output sam file for reading $!");
+            $self->error_message("Error opening output sam file for reading: $!");
             return;
     }
     $self->status_message("Opened $aligned_sam_file");
 
     my $all_seq_fh = IO::File->new(">>$all_sequences_sam_file");
     if ( !$all_seq_fh ) {
-        $self->error_message("Error opening all seq sam file for writing $!");
+        $self->error_message("Error opening all seq sam file for writing: $!");
         return;
     }
     $self->status_message("Opened $all_sequences_sam_file");
@@ -366,13 +339,12 @@ sub aligner_params_for_sam_header {
     
     my %params = $self->decomposed_aligner_params;
     
-    return "cross_match $params{alig_params}";
+    return 'cross_match' . $params{align_params};
 }
 
 sub _select_cv {
     while (1) {
         my @done = grep { $_->{'cv'}->ready } @_;
-#        my @done = grep { $_->ready } @_;
 
         if (@done) {
             return @done;
@@ -383,8 +355,7 @@ sub _select_cv {
 } 
 
 ### Following adapted from code by Nancy Hansen <nhansen@mail.nih.gov>
-sub _sam_string
-{
+sub _sam_string {
     my $align = shift;
 
     #added
@@ -409,22 +380,17 @@ sub _sam_string
 
     my $qual_string = ($rh_read_seqs->{$query}) ? $rh_read_seqs->{$query}->qual_string() : '';
     my $sequence = ($rh_read_seqs->{$query}) ? $rh_read_seqs->{$query}->seq() : '';
-    if ($comp eq 'C')
-    {
+    if ($comp eq 'C') {
         $sequence = reverse $sequence;
         $sequence =~ tr/ATGCatgc/TACGtacg/;
         $qual_string = reverse $qual_string;
     }
 
-    if ($max_bases) # clip cigar sequence, qual string, and adjust left end
-    {
-        if ($comp eq 'U') # clip from end
-        {
+    if ($max_bases){ # clip cigar sequence, qual string, and adjust left end
+        if ($comp eq 'U'){ # clip from end
             $sequence =~ s:^(.{$max_bases}).*$:$1:;
             $qual_string =~ s:^(.{$max_bases}).*$:$1:;
-        }
-        else
-        {
+        } else {
             my $orig_length = length $sequence; 
             my $query_remaining = $align->query_remaining();
             my $number_clipped = ($orig_length - $query_remaining - $max_bases > 0) ? $orig_length - $query_remaining - $max_bases : 0;
@@ -438,8 +404,7 @@ sub _sam_string
             $unclipped_cigar =~ s:^(.*)(.{$clipped_cigar_length})$:$1:; # take only the cigar for the portion clipped off
 
             my ($clipped_insertions, $clipped_deletions) = (0,0);
-            while (my $new_op = ($unclipped_cigar =~ s:^(\d+[MIDNSHP])::) ? $1 : undef)
-            {
+            while (my $new_op = ($unclipped_cigar =~ s:^(\d+[MIDNSHP])::) ? $1 : undef){
                 my ($no_bases, $op) = ($new_op =~ /^(\d+)([MIDNSHP])$/) ? ($1, $2) : (0,0);
                 $clipped_insertions += $no_bases if ($op eq 'I');
                 $clipped_deletions += $no_bases if ($op eq 'D');

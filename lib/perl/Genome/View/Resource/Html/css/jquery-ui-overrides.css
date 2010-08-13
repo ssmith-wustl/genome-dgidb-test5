@@ -26,3 +26,7 @@ td.buttons a.ui-button-text-only {
     margin: 0 !important;
     line-height: 0 !important;
 }
+
+div.ui-tabs {
+    margin-bottom: 1em;
+}

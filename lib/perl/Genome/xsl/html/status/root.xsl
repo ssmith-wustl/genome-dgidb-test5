@@ -11,11 +11,7 @@
 
   <xsl:strip-space elements="*"/>
 
-  <!--
-      #############################################
-      BASE PAGE TEMPLATE
-      #############################################
-  -->
+  <!-- BASE PAGE TEMPLATE -->
 
   <xsl:template match="/">
     <xsl:comment>template: status/root.xsl:match "/"</xsl:comment>
@@ -77,21 +73,21 @@
                    }
                    })(jQuery)
 
-$(document).ready(function() {
-$.preLoadImages("/res/img/spinner.gif");
+// $(document).ready(function() {
+//$.preLoadImages("/res/img/spinner.gif");
 
-$("#ajax_status")
-.addClass('success')
-.bind("ajaxSend", function(){
-$(this).removeClass('success error').addClass('loading').html('Loading').show();
-})
-.bind("ajaxSuccess", function(){
-$(this).removeClass('loading').addClass('success').html('Success').hide('slow');
-})
-.bind("ajaxError", function(){
-$(this).removeClass('loading').addClass('error').html('Error');
-})
-.hide();
+//$("#ajax_status")
+//.addClass('success')
+//.bind("ajaxSend", function(){
+//$(this).removeClass('success error').addClass('loading').html('Loading').show();
+//})
+//.bind("ajaxSuccess", function(){
+//$(this).removeClass('loading').addClass('success').html('Success').hide('slow');
+//})
+//.bind("ajaxError", function(){
+//$(this).removeClass('loading').addClass('error').html('Error');
+//})
+//.hide();
 });
           ]]>
         </script>
@@ -119,7 +115,6 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
           <xsl:apply-templates/>
 
         </div> <!-- end of .page -->
-        <div id="ajax_status"/>
       </body>
     </html>
 
