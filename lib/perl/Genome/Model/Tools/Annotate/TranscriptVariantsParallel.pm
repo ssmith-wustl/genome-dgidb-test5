@@ -10,6 +10,8 @@ use Genome::Utility::IO::SeparatedValueReader;
 use Workflow;
 use File::Basename;
 use Cwd 'abs_path';
+use Sys::Hostname;
+use DateTime;
 
 class Genome::Model::Tools::Annotate::TranscriptVariantsParallel{
     is => ['Workflow::Operation::Command','Genome::Model::Tools::Annotate::TranscriptVariants'],
@@ -69,6 +71,14 @@ sub pre_execute {
     unless (-s $self->variant_file) {
         $self->error_message($self->variant_file . " does not exist or has no size, exiting") and die;
     }
+
+    # Useful information for debugging...
+    my $dt = DateTime->now;
+    $dt->set_time_zone('America/Chicago');
+    my $date = $dt->ymd;
+    my $time = $dt->hms;
+    my $host = hostname;
+    $self->status_message("Executing on host $host on $date at $time");
 
     # Make log directory and have workflow put child process output there
     if (defined $self->log_directory) {

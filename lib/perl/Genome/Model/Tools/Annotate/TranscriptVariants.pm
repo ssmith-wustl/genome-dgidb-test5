@@ -11,6 +11,8 @@ use IO::File;
 use Genome::Info::IUB;
 use Benchmark;
 use Genome::Info::UCSCConservation;
+use DateTime;
+use Sys::Hostname;
 
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
@@ -206,6 +208,14 @@ sub execute {
             "one way to avoid that mess. If you have questions, contact apipe.");
         die;
     }
+
+    # Useful information for debugging...
+    my $dt = DateTime->now;
+    $dt->set_time_zone('America/Chicago');
+    my $date = $dt->ymd;
+    my $time = $dt->hms;
+    my $host = hostname;
+    $self->status_message("Executing on host $host on $date at $time");
 
     my $total_start = Benchmark->new;
     my $pre_annotation_start = Benchmark->new;

@@ -299,7 +299,8 @@ sub execute {
 
     # tag 100% overlaps
 
-    my %overlap_params = { sequence_set_id => $ssid };
+    my %overlap_params ;
+    $overlap_params{sequence_set_id} = $ssid ;
     if($self->dev) { 
         $overlap_params{dev} = 1;
     }
