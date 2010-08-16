@@ -37,7 +37,7 @@ EOS
 
 my %RTG_VERSIONS = (
 	'v2.0.1-build-28762' => '/gsc/bin',
-	'EAP-2010-08-03-30243' => '/gscuser/sabubuck/rtg-EAP-2010-08-03-30243',
+	'EAP-2010-08-03-30243' => '/gsc/pkg/bio/rtg/rtg-EAP-2010-08-03-30243',
         'rtg'   => 'rtg',
 );
 
