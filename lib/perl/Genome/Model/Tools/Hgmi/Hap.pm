@@ -20,6 +20,7 @@ use Cwd;
 use File::Path qw(mkpath);
 use File::Spec;
 use YAML qw( LoadFile DumpFile );
+use Data::Dumper;
 
 # should have a crap load of options.
 UR::Object::Type->define(
@@ -260,8 +261,12 @@ sub execute {
         use_local_nr  => $config->{use_local_nr},
     );
 
+    # should also check if these exist.
     if (exists($config->{nr_db})) {
         $merge_params{nr_db} = $config->{nr_db};
+    }
+    if (exists($config->{iprpath})) {
+        $merge_params{iprpath} = $config->{iprpath};
     }
     
     my $merge = Genome::Model::Tools::Hgmi::Merge->create(%merge_params);
@@ -293,41 +298,58 @@ sub execute {
     my $ssid = $merge->sequence_set_id();
 
     # tag 100% overlaps
-    my $ovtag = Genome::Model::Tools::Bacterial::TagOverlaps->create( sequence_set_id => $ssid );
-    if ($ovtag) {
-        $ovtag->dev(1) if $self->dev;
-        $ovtag->execute or croak "Can't execute tag overlaps tools from Hap.pm!";
+
+    my %overlap_params ;
+    $overlap_params{sequence_set_id} = $ssid ;
+    if($self->dev) { 
+        $overlap_params{dev} = 1;
     }
-    else {
-        croak "Can't create tag overlaps tools from Hap.pm!";
+#    print "overlap_params:\n";
+#    print Data::Dumper::Dumper(\%overlap_params),"\n";
+    my $ovtag = Genome::Model::Tools::Bacterial::TagOverlaps->execute(%overlap_params);
+    unless($ovtag) {
+        $self->error_message("can't run overlaps tagging");
     }
+    # old way of executing this:
+    #my $ovtag = Genome::Model::Tools::Bacterial::TagOverlaps->create( sequence_set_id => $ssid );
+#    if ($ovtag) {
+#        $ovtag->dev(1) if $self->dev;
+#        $ovtag->execute() or croak "Can't execute tag overlaps tools from Hap.pm!";
+#    }
+#    else {
+#        croak "Can't create tag overlaps tools from Hap.pm!";
+#    }
 
     # Running rrna screen. Previously, this would not get run if protein annotation was skipped,
     # so it's been moved to prevent this
     warn qq{\n\nRunning rRNA screening step ... Hap.pm\n\n};
 
-    my $rrnascreen = Genome::Model::Tools::Hgmi::RrnaScreen->create(sequence_set_id => $ssid);
-    if ($rrnascreen) {
-        $rrnascreen->dev(1) if $self->dev;
-        $rrnascreen->execute or croak "Can't execute rrna screen!";
-    }
-    else {
-        croak "Can't set up rrna screen from Hap.pm!";
+    # core genes and rrna screens
+    $next_dir = $config->{path} . "/"
+        . $config->{org_dirname} . "/"
+        . $config->{assembly_name} . "/"
+        . $config->{assembly_version} . "/"
+        . "Genbank_submission/"
+        . $config->{pipe_version}
+        . "/Annotated_submission";
+
+    chdir($next_dir);
+    # rrna screen step
+    my $rrnascreen = Genome::Model::Tools::Hgmi::RrnaScreen->create(
+        sequence_set_id => $ssid, );
+
+    if ( $self->dev )
+    {
+        $rrnascreen->dev(1);
     }
 
-    # need to copy over the delete.rrna.ace file, and possibly load the file into
-    # acedb
-    # file seems to land in $config->{path}/$config->{orgname_dir}/$config->{assembly_name}/$config->{assembly_version}/Genbank_submission/Version_1.0/Annotated_submission/
-    my $delete_rrna = $config->{path}."/".$config->{orgname_dir}."/".$config->{assembly_name}."/".$config->{assembly_version}."/Genbank_submission/Version_1.0/Annotated_submission/delete.rrnahits.ace";
-    $self->status_message("dead genes from rrna screen $delete_rrna");
-    if( -e $delete_rrna )
+    if ($rrnascreen)
     {
-        my $delete_rrna_dest = $config->{path}."/Acedb/".$config->{acedb_version}."/ace_files/".$self->locus_tag;
-        #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
-        my $rv = system("cp $delete_rrna $delete_rrna_dest");
-        unless($rv) {
-            $self->error_message("could not copy $delete_rrna , $delete_rrna_dest");
-        }
+        $rrnascreen->execute() or croak "can't execute rrna screen";
+    }
+    else
+    {
+        croak "can't set up rrna screen step... Hap.pm\n\n";
     }
 
     my %finish_params = (
@@ -421,24 +443,11 @@ sub execute {
 
 
 
+
     if($self->skip_protein_annotation)
     {
         $self->status_message("run complete, skipping protein annotation");
         my ($dump_out,$dump_err); 
-        #need to specify output path, and filename(s)
-        #my $outputdir = $config->{path} . "/" . $config->{org_dirname} . "/"
-        #. $config->{assembly_name} . "/"
-        #. $config->{assembly_version} . "/" . "Sequence/Unmasked/";
-        #my $acedb_version = acedb_version_lookup($config->{acedb_version});
-        #my $acedbpath = $config->{path} . "/Acedb/". $acedb_version ;
-        ## change this to spit out sequence from oracle.
-        #IPC::Run::run(['ace2seq-dump', $acedbpath, $config->{locus_tag}, '-n', '--output', $outputdir,
-        #                '--seqfile', $config->{assembly_name}.".cds.fa" ],
-        #              '>',
-        #              \$dump_out,
-        #              '2>',
-        #              \$dump_err,) or croak "can't dump sequence from acedb: $CHILD_ERROR";
-        ##dna dump here????
         return 1;
     }
 

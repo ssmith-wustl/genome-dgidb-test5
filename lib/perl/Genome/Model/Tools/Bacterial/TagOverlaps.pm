@@ -84,11 +84,13 @@ sub execute
         }
         elsif($columns[10] == 100.0)  
         {
-            push(@genes4manual_review,$columns[4]);
+            #push(@genes4manual_review,$columns[4]);
+            push(@genes2tag,$columns[4]);
         }
         elsif($columns[9] == 100.0)  
         {
-            push(@genes4manual_review,$columns[0]);
+            #push(@genes4manual_review,$columns[0]);
+            push(@genes2tag,$columns[0]);
         }
     }
     $self->status_message("there are ". $result_count ." overlaps found");
@@ -97,7 +99,7 @@ sub execute
 
     # tag 'em and bag 'em.
     $self->tag_genes(\@genes2tag);
-    $self->tag_manual_review(\@genes4manual_review);
+    #$self->tag_manual_review(\@genes4manual_review);
 
     return 1;
 }
