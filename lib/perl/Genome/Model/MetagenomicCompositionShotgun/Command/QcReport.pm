@@ -141,7 +141,7 @@ sub execute {
                 my $output_filename = $temp_dir . '/' . $imported_id . '_' . $name . '_original';
                 Genome::Utility::FileSystem->copy_file($file, $output_filename);
                 push @original_fastq, $output_filename;
-                $fastq_files{$imported_id}{original} = $output_filename;
+                push @{$fastq_files{$imported_id}{original}}, $output_filename;
             }
         }
         else {
@@ -456,6 +456,7 @@ sub bam_stats_per_lane {
     my $self = shift;
     my $bam = shift;
 
+    #$self->status_message("Opening $bam with samtools...");
     $self->expect64();
     my $bam_fh = IO::File->new("samtools view $bam |");
     unless($bam_fh) {
@@ -471,13 +472,7 @@ sub bam_stats_per_lane {
 
         my $seq = $fields[9];
         (my $id = $fields[11]) =~ s/.*://;
-
-        if ($seq eq '*'){
-            $self->status_message("invalid sequence for read in bam: $_");
-            next;
-        }else{
-            $stats{$flow_lane{$id}}{total_bases} += length($seq);
-        }
+        #print "$total_reads_all_lanes: $id: $seq...";
 
         # cache the flow_lane -> ID mapping
         unless($flow_lane{$id}) {
@@ -491,6 +486,12 @@ sub bam_stats_per_lane {
             }
             $flow_lane{$id} = $data->flow_cell_id . '_' . $data->lane;
         }
+
+        if ($seq eq '*'){
+            $self->status_message("invalid sequence for read in bam: $_");
+            next;
+        }
+        $stats{$flow_lane{$id}}{total_bases} += length($seq);
 
         # percent mapped and duplication
         my $flag = $fields[1];
@@ -507,6 +508,7 @@ sub bam_stats_per_lane {
         $total_reads_all_lanes++;
         $stats{$flow_lane{$id}}{total_reads}++;
         $self->status_message("\t\tProcessed " . $total_reads_all_lanes/1e6 . "M reads so far...") unless ($total_reads_all_lanes % 1e6);
+        #print " done\n";
     }
 
     for my $id (keys %flow_lane) {
