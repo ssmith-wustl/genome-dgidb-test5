@@ -18,6 +18,17 @@ use GSCApp;
 # account for a perl bug in pre-5.10 by applying a runtime patch to Carp::Heavy
 use Carp;
 use Carp::Heavy;
+
+BEGIN {
+    my $prefix = "(" . system("hostname -s") . ") ";
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    $prefix .= "$hour:$min";
+    *Command::status_message_orig = \&Command::status_message;
+    *Command::status_message = sub { my $self = shift; $self->status_message_orig("$prefix\:" . shift)};
+    *UR::ModuleBase::status_message_orig = \&UR::ModuleBase::status_message;
+    *UR::ModuleBase::status_message = sub { my $self = shift; $self->status_message_orig("$prefix\:" . shift)};
+}
+
 if ($] < 5.01) {
 no warnings;
     *Carp::caller_info = sub {
