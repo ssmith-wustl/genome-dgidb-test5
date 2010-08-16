@@ -165,7 +165,7 @@ sub combine_headers {
     my @bams_in_tmp;
     for (my $i = 0; $i <= @files; $i++) {
         my $file = $files[$i];
-        my $tmp_file = "$tmp_dir/$i_" . basename($file);
+        my $tmp_file = "$tmp_dir/$i\_" . basename($file);
         my $perl_rv = Genome::Utility::FileSystem->copy_file($file, $tmp_file);
         if ($perl_rv) {
             push @bams_in_tmp, $tmp_file;
