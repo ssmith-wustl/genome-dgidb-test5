@@ -48,7 +48,7 @@ sub _run_aligner {
     if (@input_pathnames == 1) {
         $self->status_message("_run_aligner called in single-ended mode.");
     } elsif (@input_pathnames == 2) {
-        $self->status_message("_run_aligner called in paired-end mode.");
+        $self->status_message("_run_aligner called in paired-end mode.  We don't actually do paired alignment with MapX though; running two passes.");
     } else {
         $self->error_message("_run_aligner called with " . scalar @input_pathnames . " files.  It should only get 1 or 2!");
         die $self->error_message;
