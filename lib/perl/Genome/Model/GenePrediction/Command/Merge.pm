@@ -345,15 +345,9 @@ sub execute
         foreach my $phase (@run_phases)
         {
             $self->status_message("running phase ". $phase);
-<<<<<<< HEAD
-            unless (  $self->skip_blastx 
-                && ( $phase == 3 ) )
-            {
-=======
 #            unless ( defined( $self->skip_blastx )
 #                && ( $phase == 3 ) )
 #            {
->>>>>>> 697d83aecbccfd7d4aa574f8fa96033a243cdce1
 
                 $self->status_message("before phase ". $phase);
 
