@@ -20,7 +20,7 @@ use Carp;
 use Carp::Heavy;
 
 BEGIN {
-    use Sys::Hostname
+    use Sys::Hostname;
     my $hostname = hostname;
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
     my $prefix = "($hostname) $hour:$min";
