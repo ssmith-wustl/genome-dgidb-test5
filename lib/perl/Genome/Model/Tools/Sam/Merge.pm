@@ -109,8 +109,11 @@ sub combine_headers {
     my $self = shift;
     my @files = @{$self->files_to_merge};
 
+    my $time = time;
+    $self->use_version('r613');
+
     my $tmp_dir = Genome::Utility::FileSystem->base_temp_directory;
-    my $combined_headers_path = "$tmp_dir/combined_headers.sam";
+    my $combined_headers_path = "$tmp_dir/$time\_combined_headers.sam";
     my $combined_headers_hd_fh = IO::File->new("> $combined_headers_path.hd") || die;
     my $combined_headers_sq_fh = IO::File->new("> $combined_headers_path.sq") || die;
     my $combined_headers_rg_fh = IO::File->new("> $combined_headers_path.rg") || die;
@@ -163,9 +166,9 @@ sub combine_headers {
 
     $self->status_message("\nCopying original alignment bams to temp...\n");
     my @bams_in_tmp;
-    for (my $i = 0; $i <= @files; $i++) {
+    for (my $i = 0; $i < @files; $i++) {
         my $file = $files[$i];
-        my $tmp_file = "$tmp_dir/$i\_" . basename($file);
+        my $tmp_file = "$tmp_dir/$time\_$i\_" . basename($file);
         my $perl_rv = Genome::Utility::FileSystem->copy_file($file, $tmp_file);
         if ($perl_rv) {
             push @bams_in_tmp, $tmp_file;
@@ -181,7 +184,7 @@ sub combine_headers {
     my $sam_path = $self->samtools_path;
     my $sam_tool = "$sam_path reheader";
     for my $bam (@bams_in_tmp) {
-        my $perl_rv = Genome::Utility::FileSystem->shellcmd(cmd => $sam_tool, input_files => $combined_headers_path, output_files => $bam);
+        my $perl_rv = Genome::Utility::FileSystem->shellcmd(cmd => "$sam_tool $combined_headers_path $bam", input_files => [$combined_headers_path], output_files => [$bam], skip_if_output_is_present => 0);
         if ($perl_rv) {
             push @reheadered_files, $bam;
         }
