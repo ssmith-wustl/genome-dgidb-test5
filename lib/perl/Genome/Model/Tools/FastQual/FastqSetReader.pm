@@ -1,11 +1,11 @@
-package Genome::Model::Tools::Fastq::SetReader;
+package Genome::Model::Tools::FastQual::FastqSetReader;
 
 use strict;
 use warnings;
 
 use base 'Class::Accessor';
 
-__PACKAGE__->mk_accessors(qw/ fastq_files _readers /);
+__PACKAGE__->mk_accessors(qw/ files _readers /);
 
 require Carp;
 use Data::Dumper 'Dumper';
@@ -17,27 +17,27 @@ sub create {
     my $self = bless \%params, $class;
 
     # Fastq files
-    my $fastq_files = $self->fastq_files;
-    unless ( defined $fastq_files ) {
+    my $files = $self->files;
+    unless ( defined $files ) {
         Carp::confess("No fastq files given");
     }
-    unless ( ref $fastq_files ) {
+    unless ( ref $files ) {
         # be nice, set to aryref
-        $fastq_files = $self->fastq_files([ $fastq_files ]);
+        $files = $self->files([ $files ]);
     }
 
-    if ( @$fastq_files == 0 ) {
+    if ( @$files == 0 ) {
         Carp::confess('No fastq files given to read');
     }
-    elsif ( @$fastq_files > 2 ) {
+    elsif ( @$files > 2 ) {
         Carp::confess('Too many fastq files given to read');
     }
 
     # Readers
     my  @readers;
-    for my $fastq_file ( @$fastq_files ) {
+    for my $file ( @$files ) {
         my $reader = Genome::Model::Tools::FastQual::FastqReader->create(
-            fastq_file => $fastq_file,
+            file => $file,
         );
         unless ( $reader ) {
             Carp::Confess("Can't open fastq file.");

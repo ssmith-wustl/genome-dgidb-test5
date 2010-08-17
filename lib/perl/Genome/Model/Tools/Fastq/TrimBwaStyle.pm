@@ -8,8 +8,8 @@ use warnings;
 use Genome;
 
 use File::Basename;
-require Genome::Model::Tools::Fastq::SetReader;
-require Genome::Model::Tools::Fastq::SetWriter;
+require Genome::Model::Tools::FastQual::FastqSetReader;
+require Genome::Model::Tools::FastQual::FastqSetWriter;
 
 class Genome::Model::Tools::Fastq::TrimBwaStyle {
     is  => 'Command',
@@ -143,8 +143,8 @@ sub _open_reader {
     my $fastq_file = $self->fastq_file;
     my $reader;
     eval{
-        $reader = Genome::Model::Tools::Fastq::SetReader->create(
-            fastq_files => $fastq_file,
+        $reader = Genome::Model::Tools::FastQual::FastqSetReader->create(
+            files => $fastq_file,
         );
     };
     unless ( $reader ) {
@@ -172,8 +172,8 @@ sub _open_writer {
 
     my $writer;
     eval{
-        $writer = Genome::Model::Tools::Fastq::SetWriter->create(
-            fastq_files => $out_file,
+        $writer = Genome::Model::Tools::FastQual::FastqSetWriter->create(
+            files => $out_file,
         );
     };
     unless ( $writer ) {
