@@ -73,6 +73,16 @@ sub path_for_rtg_format {
     die('No path for rtg version '. $version);
 }
 
+sub path_for_rtg_sdfsplit {
+    my ($self,$version) = @_;
+
+    if (defined $RTG_VERSIONS{$version}) {
+        return $self->path_for_rtg_version . '/rtg sdfsplit';
+    }
+ 
+    die('No path for rtg version '. $version);
+}
+
 sub path_for_rtg_map {
     my ($self,$version) = @_;
 
