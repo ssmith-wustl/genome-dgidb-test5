@@ -11,15 +11,10 @@ $|=1;
 
 class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
     is => 'Genome::Command::OO',
-    doc => 'Generate reports for a MetagenomicCompositionShotgun build.',
+    doc => 'Generate metagenomic reports for a MetagenomicCompositionShotgun build.',
     has => [
-        model => {
-            is => 'Genome::Model::Build::MetagenomicCompositionShotgun', # we're going to remove "Imported" soon
-            is_optional => 1,
-        },
-        model_id => {
+        build_id => {
             is => 'Int',
-            is_optional => 1,
         },
         taxonomy_file => {
             is => 'Parh',
@@ -52,23 +47,9 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
 
 sub execute {
     my ($self) = @_;
-    my $model;
-    if ($self->model_id and $self->model_name){
-        die 'error';
-    }elsif ($self->model_id){
-        $model = Genome::Model->get($self->model_id);
-        die 'no model' unless $model;
-        $self->model($model);
-    }elsif ($self->model_name){
-        $model = Genome::Model->get(name => $self->model_id);
-        die 'no model' unless $model;
-        $self->model($model);
-    }else{
-        die 'provide model id or name';
-    };
 
-    my $build = $model->last_succeeded_build;
-    die 'no build' unless $build;
+    my $build = Genome::Model::Build->get($self->build_id);
+    my $model = $build->model;
 
     unless ($self->report_dir){
         $self->report_dir($build->data_directory . "/reports");
@@ -132,9 +113,7 @@ sub execute {
         eval{
             $rv = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->execute(
                 input_files => [$meta1_bam, $meta2_bam],
-                input_format=> "BAM",
                 output_file => $merged_bam,
-                output_format => "BAM",
             );
         };
         if ($@ or !$rv){
@@ -279,7 +258,9 @@ sub execute {
     $self->_write_count_and_close($viral_family_output_file, "Viral Family", \%viral_family_counts_hash);
     $self->_write_count_and_close($viral_subfamily_output_file, "Viral Subfamily", \%viral_subfamily_counts_hash);
 
+    
     $self->status_message("classification summary reports and reference hit report finished");
+
     $self->status_message("running refcov on combined metagenomic alignment bam");
 
     my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
