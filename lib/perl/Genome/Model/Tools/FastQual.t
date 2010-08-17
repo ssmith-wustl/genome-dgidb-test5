@@ -40,9 +40,9 @@ my $pipe_tester = Genome::Model::Tools::FastQual::Tester->create(
     output_files => [qw/ PIPE /], 
 );
 ok($pipe_tester, 'create w/ pipes');
-my $pipe_writer = $pipe_tester->_open_writer;
-ok($pipe_writer, 'opened writer for pipes') or die;
-isa_ok($pipe_writer, 'Genome::Utility::IO::StdoutRefWriter');
+#my $pipe_writer = $pipe_tester->_open_writer;
+#ok($pipe_writer, 'opened writer for pipes') or die;
+#isa_ok($pipe_writer, 'Genome::Utility::IO::StdoutRefWriter');
 my $pipe_reader;
 eval{
     $pipe_reader = $pipe_tester->_open_reader;
