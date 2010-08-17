@@ -12,14 +12,9 @@ class Genome::Model::Tools::FastQual::Filter {
     is_abstract => 1,
 };
 
-sub help_synopsis {
+sub help_brief {
     return <<HELP
-    Filter fastq sequences
-HELP
-}
-
-sub help_detail {
-    return <<HELP 
+    Filter fastq and fasta/quality sequences
 HELP
 }
 

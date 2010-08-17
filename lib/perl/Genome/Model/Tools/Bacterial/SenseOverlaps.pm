@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Bacterial::TagOverlaps;
+package Genome::Model::Tools::Bacterial::SenseOverlaps;
 use strict;
 use warnings;
 use Genome;
@@ -73,7 +73,8 @@ sub execute
         # gene_name, seq_start, seq_end, strand(1/-1), other_gene_name, other_gene_start, other_gene_end, other_gene_strand, overlap,
         # pct_overlap, other_pct_overlap
         $result_count += 1;
-        $self->status_message(" overlap ". $columns[0]."/".$columns[4]." pct ".$columns[9].":".$columns[10]);
+        $self->status_message(" overlap ". $columns[0]."/".$columns[4]." pct ".
+                             sprintf("%.02f : %.02f",$columns[9],$columns[10]));
         if(($columns[10] == 100.0) && ( $columns[3] == $columns[7])) {
             #print $columns[0],":",$columns[9]," ",$columns[4],":",$columns[10],"\n";
             push(@genes2tag,$columns[4]);
@@ -84,13 +85,11 @@ sub execute
         }
         elsif($columns[10] == 100.0)  
         {
-            #push(@genes4manual_review,$columns[4]);
-            push(@genes2tag,$columns[4]);
+            push(@genes4manual_review,$columns[4]);
         }
         elsif($columns[9] == 100.0)  
         {
-            #push(@genes4manual_review,$columns[0]);
-            push(@genes2tag,$columns[0]);
+            push(@genes4manual_review,$columns[0]);
         }
     }
     $self->status_message("there are ". $result_count ." overlaps found");
@@ -98,8 +97,8 @@ sub execute
     $self->status_message("there are " . scalar(@genes4manual_review) . " genes (diff strand) found 100% contained in a larger gene.");
 
     # tag 'em and bag 'em.
-    $self->tag_genes(\@genes2tag);
-    #$self->tag_manual_review(\@genes4manual_review);
+#    $self->tag_genes(\@genes2tag);
+#    $self->tag_manual_review(\@genes4manual_review);
 
     return 1;
 }
@@ -129,6 +128,8 @@ sub query {
        a.gene_id < b.gene_id AND
        a.pfam_evidence = 1 AND
        b.pfam_evidence = 1 AND
+       a.phase_5 = 1 AND
+       b.phase_5 = 1 AND
        a.seq_start != b.seq_start AND
        a.seq_end != b.seq_end AND
        a.seq_start != b.seq_end AND
@@ -143,64 +144,5 @@ sub query {
 }
 
 
-sub tag_genes {
-    my $self = shift;
-    my $genes = shift;
-    my ($tag) = BAP::DB::Tag->search({tag_name => 'Dead',
-                                      tag_value => 'fully overlapped gene'});
-    foreach my $gene (@$genes) {
-        # put a tag in the appropriate spot.
-        # probably need to grab the coding gene based on the gene name.
-        $self->status_message("gene ".$gene." selected for dead");
-        my $cg = BAP::DB::CodingGene->search({gene_name => $gene});
-        my $coding_gene = $cg->next; 
-        if(!defined($coding_gene) ){
-            next;
-        }
-        my $genetag = BAP::DB::GeneTag->find_or_create({gene_id => $coding_gene,
-                                                tag_id  => $tag});
-    }
-
-    # only do this if we aren't setting certain UR values like nocommit
-    if(exists($ENV{UR_DBI_NO_COMMIT}) && ($ENV{UR_DBI_NO_COMMIT} == 1)) {
-        $self->status_message("UR_DBI_NO_COMMIT set; not commiting changes");
-    }
-    else
-    {
-        $self->status_message("commiting changes");
-        BAP::DB::DBI->dbi_commit();
-    }
-    return 1;
-}
-
-sub tag_manual_review {
-    my $self = shift;
-    my $genes = shift;
-    my ($tag) = BAP::DB::Tag->search({tag_name => 'ManualReview',
-                                      tag_value => 'fully overlapped gene'});
-    foreach my $gene (@$genes) {
-        # put a tag in the appropriate spot.
-        # probably need to grab the coding gene based on the gene name.
-        $self->status_message("gene ".$gene." selected for manual rev");
-        my $cg = BAP::DB::CodingGene->search({gene_name => $gene});
-        my $coding_gene = $cg->next; 
-        if(!defined($coding_gene) ){
-            next;
-        }
-        my $genetag = BAP::DB::GeneTag->find_or_create({gene_id => $coding_gene,
-                                                tag_id  => $tag});
-    }
-
-    # only do this if we aren't setting certain UR values like nocommit
-    if(exists($ENV{UR_DBI_NO_COMMIT}) && ($ENV{UR_DBI_NO_COMMIT} == 1)) {
-        $self->status_message("UR_DBI_NO_COMMIT set; not commiting changes");
-    }
-    else
-    {
-        $self->status_message("commiting changes");
-        BAP::DB::DBI->dbi_commit();
-    }
-    return 1;
-}
 
 1;

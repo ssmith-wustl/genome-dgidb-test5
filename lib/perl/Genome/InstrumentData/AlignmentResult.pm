@@ -7,6 +7,7 @@ use Sys::Hostname;
 use IO::File;
 use File::Path;
 use YAML;
+use Time::HiRes;
 use POSIX qw(ceil);
 
 use warnings;
@@ -599,18 +600,26 @@ sub _run_aligner_chunked {
             return ($successful_passes > 0);
         }
 
-        my @remaining_fhs = grep {eof $_} @read_fhs;
+        my @remaining_fhs = grep {!eof $_} @read_fhs;
         print scalar(@remaining_fhs) .  " is the remaining set\n";
         if (@remaining_fhs > 0 && @remaining_fhs < @reads) {
             $self->error_message("It looks like the read files are not the same length.  We've exhausted one but not the other.");
             die $self->error_message;
         }
 
+        my $start_time = [Time::HiRes::gettimeofday()];
+        $self->status_message("Beginning alignment of " . $cnt/4 . " reads");
         my $res = $self->_run_aligner(@chunks);
         if (!$res) {
             $self->error_message("Failed to run aligner!");
             die $self->error_message;
         }
+        my ($user, $system, $child_user, $child_system) = times;
+        $self->status_message("wall clock time was ". Time::HiRes::tv_interval($start_time). "\n".
+        "user time for $$ was $user\n".
+        "system time for $$ was $system\n".
+        "user time for all children was $child_user\n".
+        "system time for all children was $child_system\n");
         $successful_passes++;
         for (@chunks) {
             unlink($_);
