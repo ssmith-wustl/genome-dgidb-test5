@@ -11,11 +11,7 @@
 
   <xsl:strip-space elements="*"/>
 
-  <!--
-      #############################################
-      BASE PAGE TEMPLATE
-      #############################################
-  -->
+  <!-- BASE PAGE TEMPLATE -->
 
   <xsl:template match="/">
     <xsl:comment>template: status/root.xsl:match "/"</xsl:comment>
@@ -55,6 +51,9 @@
         <!-- jquery.masonry to arrange the object info boxes-->
         <script type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
 
+        <!-- jquery.spinner for easy creation of loading spinners -->
+        <script type="text/javascript" src="/res/js/pkg/spinner/jquery.spinner.js"></script>
+
         <!-- jquery.dataTables for spiffy feature-laden lists -->
         <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
         <link rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection"/>
@@ -77,22 +76,22 @@
                    }
                    })(jQuery)
 
-$(document).ready(function() {
-$.preLoadImages("/res/img/spinner.gif");
+// $(document).ready(function() {
+//$.preLoadImages("/res/img/spinner.gif");
 
-$("#ajax_status")
-.addClass('success')
-.bind("ajaxSend", function(){
-$(this).removeClass('success error').addClass('loading').html('Loading').show();
-})
-.bind("ajaxSuccess", function(){
-$(this).removeClass('loading').addClass('success').html('Success').hide('slow');
-})
-.bind("ajaxError", function(){
-$(this).removeClass('loading').addClass('error').html('Error');
-})
-.hide();
-});
+//$("#ajax_status")
+//.addClass('success')
+//.bind("ajaxSend", function(){
+//$(this).removeClass('success error').addClass('loading').html('Loading').show();
+//})
+//.bind("ajaxSuccess", function(){
+//$(this).removeClass('loading').addClass('success').html('Success').hide('slow');
+//})
+//.bind("ajaxError", function(){
+//$(this).removeClass('loading').addClass('error').html('Error');
+//})
+//.hide();
+//});
           ]]>
         </script>
         <script language="javascript" type="text/javascript">
@@ -119,7 +118,6 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
           <xsl:apply-templates/>
 
         </div> <!-- end of .page -->
-        <div id="ajax_status"/>
       </body>
     </html>
 

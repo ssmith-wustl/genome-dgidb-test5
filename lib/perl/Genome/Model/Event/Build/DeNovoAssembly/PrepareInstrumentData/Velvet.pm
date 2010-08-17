@@ -8,8 +8,8 @@ use Genome;
 require Carp;
 use Data::Dumper 'Dumper';
 require File::Temp;
-require Genome::Model::Tools::Fastq::SetReader;
-require Genome::Model::Tools::Fastq::SetWriter;
+require Genome::Model::Tools::FastQual::FastqSetReader;
+require Genome::Model::Tools::FastQual::FastqSetWriter;
 
 class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData::Velvet {
     is => 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
@@ -49,8 +49,8 @@ sub execute {
     unlink $collated_fastq_file if -e $collated_fastq_file;
     my $fastq_writer;
     eval{
-        $fastq_writer = Genome::Model::Tools::Fastq::SetWriter->create(
-            fastq_files => $collated_fastq_file
+        $fastq_writer = Genome::Model::Tools::FastQual::FastqSetWriter->create(
+            files => $collated_fastq_file
         );
     };
     unless ( $fastq_writer ) {
@@ -93,6 +93,10 @@ sub execute {
     #store number of read processed for assembling
     $self->build->processed_reads_count($read_count);
 
+    # Temp - delete so it doesn't try to save
+    $filter->delete if $filter;
+    $trimmer->delete if $trimmer;
+
     unless ( -s $collated_fastq_file ) {
         $self->error_message("Did not write any fastqs for ".$self->build->description.". This probably occurred because the reads did not pass the filter requirements");
         return;
@@ -117,8 +121,8 @@ sub _get_fastq_readers {
             or return; # error in sub
         my $reader;
         eval{
-            $reader = Genome::Model::Tools::Fastq::SetReader->create(
-                fastq_files => \@fastq_files,
+            $reader = Genome::Model::Tools::FastQual::FastqSetReader->create(
+                files => \@fastq_files,
             );
         };
         unless ( $reader ) { 

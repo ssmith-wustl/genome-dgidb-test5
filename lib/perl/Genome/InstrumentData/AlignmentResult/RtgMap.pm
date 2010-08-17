@@ -21,7 +21,7 @@ class Genome::InstrumentData::AlignmentResult::RtgMap{
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>40000] span[hosts=1] rusage[tmp=90000, mem=40000]' -M 40000000 -n 4";
+    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>16000] span[hosts=1] rusage[tmp=90000, mem=16000]' -M 16000000 -n 4";
 }
 
 sub _decomposed_aligner_params {
@@ -29,7 +29,12 @@ sub _decomposed_aligner_params {
 
     #   -U produce unmapped sam
     #   -Z do not zip sam
-    my $aligner_params = ($self->aligner_params || '') . " -U -Z -T 4"; #append core & space
+    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '15G');
+    $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
+    my $aligner_params = ($self->aligner_params || '') . " -U -Z --read-names"; #append core & space
+
+    my $cpu_count = $self->_available_cpu_count;
+    $aligner_params .= " -T $cpu_count";
     
     return ('rtg_aligner_params' => $aligner_params);
 }
@@ -97,10 +102,10 @@ sub _run_aligner {
     );
 
     #check sdf output was created
-    $DB::single=1;
     my @idx_files = glob("$input_sdf/*");
     if (!@idx_files > 0) {
-        die("rtg formatting of [@input_pathnames] failed  with $cmd");
+        $self->error_message(sprintf("rtg formatting of [%s] failed  with %s", join " ", @input_pathnames, $cmd ));
+        die $self->error_message;
     }
         
     #STEP 2 - run rtg map aligner  
@@ -123,31 +128,11 @@ sub _run_aligner {
         skip_if_output_is_present => 0,
     );
 
-    #STEP 3.0 - rename reads
-    my @rr_files;
-    foreach my $file_to_rr (@output_files)
-    {
-        my $rr_file = "$file_to_rr.rr";
-        $cmd = sprintf('rtg samrename -i %s -o %s %s', 
-                        $input_sdf, 
-                        $rr_file,
-                        $file_to_rr);
-
-        Genome::Utility::FileSystem->shellcmd(
-            cmd             => $cmd,
-            input_files     => [$input_sdf, $file_to_rr],
-            output_files    => [$rr_file],
-            skip_if_output_is_present => 0,
-        );
-
-        push(@rr_files, $rr_file);
-    }
-
     #STEP 3.1 - Collate, Format and Append sam files 
     my $sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $sam_file_fh = IO::File->new("> $sam_file");
 
-    foreach my $file_to_append (@rr_files)
+    foreach my $file_to_append (@output_files)
     {
         my $file_to_append_fh = IO::File->new( $file_to_append);
         while (<$file_to_append_fh>)
@@ -196,6 +181,10 @@ sub aligner_params_for_sam_header {
     my $aln_params = $params{rtg_aligner_params};
     
     return "$cmd $aln_params"; 
+}
+
+sub input_chunk_size {
+    return 3_000_000;
 }
 
 sub fillmd_for_sam

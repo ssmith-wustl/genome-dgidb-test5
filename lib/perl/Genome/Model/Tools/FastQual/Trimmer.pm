@@ -12,9 +12,9 @@ class Genome::Model::Tools::FastQual::Trimmer {
     is_abstract => 1,
 };
 
-sub help_synopsis {
+sub help_brief {
     return <<HELP
-    Trim fastq sequences
+    Trim fastq and fasta/quality sequences
 HELP
 }
 

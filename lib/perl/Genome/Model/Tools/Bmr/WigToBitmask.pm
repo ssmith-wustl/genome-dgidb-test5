@@ -15,7 +15,7 @@ class Genome::Model::Tools::Bmr::WigToBitmask
   wig_file => {
     type => 'String',
     is_optional => 0,
-    doc => 'The wiggle file to convert. Must be fixedstep with step=1 and span=1',
+    doc => 'The wiggle file to convert. Must be the fixedstep format with step=1 and span=1',
   },
   output_file => {
     type => 'String',
@@ -36,10 +36,33 @@ class Genome::Model::Tools::Bmr::WigToBitmask
   ]
 };
 
+sub help_brief
+{
+  return 'This reads in a WIG format file and converts it to a bitmask representation of the whole genome.';
+}
+
+sub help_detail
+{
+  return <<HELP;
+This script takes a file in WIG format, and uses it to set bits in a bit vector representation of
+the genome. This may be useful for quickly querying whether locations or regions overlap with
+others on a genome wide basis. By default, the bitmask is stored on the object. Thus calling this
+script with no --output-file option from the command line will result in no output. Very sad. This
+script was designed for coverage files, Thus non-zero values in the WIG file are flipped on in the
+bitmask and 0 values are left off. If you want the reverse behavior, use the --exclude-regions
+option. This script does not support track definitions nor the variableStep specification. See
+https://gscweb.gsc.wustl.edu/wiki/File_Format/Wiggle_Track_Format_(WIG_-_WTF) for more information
+on the wiggle format.
+The bitmask itself is a hash reference to a hash with chromosome names as keys and the value a
+Bit::Vector object where each position in the chromosome is represented by a bit. The length of
+each chromosome is determined from the provided index file.
+HELP
+}
+
 sub execute
 {
   my $self = shift;
-  #$DB::single = 1;
+  $DB::single = 1;
   #check inputs
   my $reference_index = $self->reference_index;
   my $wig_file = $self->wig_file;
@@ -61,6 +84,7 @@ sub execute
 
   my $wig_fh = IO::File->new($wig_file) or die "Couldn't open $wig_file. $!\n";
   my ($chromosome, $starting_origin, $block_idx) = (0, 0, 0);
+
   #Check the first line for Broad's "track" header to avoid having to check every line for it
   my $line = $wig_fh->getline;
   if( $line !~ m/^track/ )
@@ -94,12 +118,10 @@ sub execute
   }
   $wig_fh->close;
   $self->_bitmask(\%genome);
-
   if($self->output_file)
   {
     $self->write_genome_bitmask($self->output_file, $self->_bitmask);
   }
-
   return 1;
 }
 
@@ -153,16 +175,11 @@ sub read_genome_bitmask
   my ($self, $filename) = @_;
   unless($filename)
   {
-    $self->error_message("No filename of file to write to");
+    $self->error_message("No filename provided.");
     return;
   }
   #do some stuff to read this from a file without making it suck
-  my $in_fh = IO::File->new($filename,"<:raw");
-  unless($in_fh)
-  {
-    $self->error_message("Unable to read from " . $filename);
-    return;
-  }
+  my $in_fh = IO::File->new($filename,"<:raw")or die "Unable to read from $filename. $!";
   my $read_string;
   sysread $in_fh, $read_string, 4;
   my $header_length = unpack "N", $read_string;
@@ -173,7 +190,7 @@ sub read_genome_bitmask
   #now read in each one
   foreach my $chr (sort keys %genome)
   {
-    $genome{$chr} = Bit::Vector->new($genome{$chr}); #this throws an exception if it fails. Probably should be trapped at some point in the future
+    $genome{$chr} = Bit::Vector->new($genome{$chr}) or die "Failed to create bitmask $!\n";
     sysread $in_fh, $read_string, 4;
     my $chr_byte_length = unpack "N", $read_string;
     my $chr_read_string;
@@ -181,20 +198,8 @@ sub read_genome_bitmask
     $genome{$chr}->Block_Store($chr_read_string);
   }
   $in_fh->close;
+  $self->_bitmask(\%genome);
   return \%genome;
-}
-
-sub help_brief
-{
-  return 'This reads in a WIG format file and converts it to a bitmask representation of the whole genome.';
-}
-
-sub help_detail
-{
-  <<'HELP';
-This script takes a file in WIG format, and uses it to set bits in a bit vector representation of the genome. This may be useful for quickly querying whether locations or regions overlap with others on a genome wide basis. By default, the bitmask is stored on the object. Thus calling this script with no --output-file option from the command line will result in no output. Very sad. This script was designed for coverage files, Thus non-zero values in the WIG file are flipped on in the bitmask and 0 values are left off. If you want the reverse behavior, use the --exclude-regions option. This script does not support track definitions nor the variableStep specification. See https://gscweb.gsc.wustl.edu/wiki/File_Format/Wiggle_Track_Format_(WIG_-_WTF) for more information on the wiggle format.
-The bitmask itself is a hash reference to a hash with chromosome names as keys and the value a Bit::Vector object where each position in the chromosome is represented by a bit. The length of each chromosome is determined from the provided index file. 
-HELP
 }
 
 1;

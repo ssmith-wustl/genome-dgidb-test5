@@ -7,6 +7,7 @@ use Sys::Hostname;
 use IO::File;
 use File::Path;
 use YAML;
+use Time::HiRes;
 use POSIX qw(ceil);
 
 use warnings;
@@ -357,24 +358,25 @@ sub create {
         die $self->error_message();
     }
 
-    #STEPS 6-7: CREATE BAM IN STAGING DIRECTORY
-    $self->status_message("Constructing a BAM file...");
+    # STEP 6: RUN THE ALIGNER
+    $self->status_message("Running aligner...");
+    unless ($self->extract_fastqs_and_run_aligner ) {
+        $self->error_message("Failed to extract fastqs and/or run the aligner!");
+        die $self->error_message
+        
+    }
+
+    # STEP 7: CREATE BAM IN STAGING DIRECTORY
+    $self->status_message("Constructing a BAM file (if necessary)...");
     unless( $self->create_BAM_in_staging_directory()) {
         $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
         die $self->error_message;
     }
 
-    #STEPS 8:  CREATE BAM.FLAGSTAT
-    $self->status_message("Creating all_sequences.bam.flagstat ...");
-    unless ($self->_create_bam_flagstat) {
-        $self->error_message('Fail to create bam flagstat');
-        die $self->error_message;
-    }
-
-    #STEPS 9: VERIFY BAM IS NOT TRUNCATED BY FLAGSTAT
-    $self->status_message("Verifying the bam...");
-    unless ($self->_verify_bam) {
-        $self->error_message('Fail to verify the bam');
+    # STEP 8-9, validate BAM file (if necessary)
+    $self->status_message("Postprocessing & Sanity Checking BAM file (if necessary)...");
+    unless ($self->postprocess_bam_file()) {
+        $self->error_message("Postprocess BAM file failed");
         die $self->error_message;
     }
 
@@ -408,7 +410,7 @@ sub create {
     return $self;
 }
 
-sub create_BAM_in_staging_directory {
+sub extract_fastqs_and_run_aligner {
     my $self = shift;
     
     # STEP 6: UNPACK THE ALIGNMENT FILES
@@ -487,13 +489,40 @@ sub create_BAM_in_staging_directory {
        } 
     }
 
+    
+
+    return 1;
+}
+
+sub create_BAM_in_staging_directory {
+    my $self = shift;
     # STEP 9: CONVERT THE ALL_SEQUENCES.SAM into ALL_SEQUENCES.BAM
     $self->status_message("Building a combined BAM file...");
     unless($self->_process_sam_files) {
         $self->error_message("Failed to process sam files into bam files. " . $self->error_message);
         die $self->error_message;
     }
+    
+    return 1;
+}
 
+sub postprocess_bam_file {
+    my $self = shift;
+    
+    #STEPS 8:  CREATE BAM.FLAGSTAT
+    $self->status_message("Creating all_sequences.bam.flagstat ...");
+    unless ($self->_create_bam_flagstat) {
+        $self->error_message('Fail to create bam flagstat');
+        die $self->error_message;
+    }
+
+    #STEPS 9: VERIFY BAM IS NOT TRUNCATED BY FLAGSTAT
+    $self->status_message("Verifying the bam...");
+    unless ($self->_verify_bam) {
+        $self->error_message('Fail to verify the bam');
+        die $self->error_message;
+    }
+    
     return 1;
 }
 
@@ -571,18 +600,26 @@ sub _run_aligner_chunked {
             return ($successful_passes > 0);
         }
 
-        my @remaining_fhs = grep {eof $_} @read_fhs;
+        my @remaining_fhs = grep {!eof $_} @read_fhs;
         print scalar(@remaining_fhs) .  " is the remaining set\n";
         if (@remaining_fhs > 0 && @remaining_fhs < @reads) {
             $self->error_message("It looks like the read files are not the same length.  We've exhausted one but not the other.");
             die $self->error_message;
         }
 
+        my $start_time = [Time::HiRes::gettimeofday()];
+        $self->status_message("Beginning alignment of " . $cnt/4 . " reads");
         my $res = $self->_run_aligner(@chunks);
         if (!$res) {
             $self->error_message("Failed to run aligner!");
             die $self->error_message;
         }
+        my ($user, $system, $child_user, $child_system) = times;
+        $self->status_message("wall clock time was ". Time::HiRes::tv_interval($start_time). "\n".
+        "user time for $$ was $user\n".
+        "system time for $$ was $system\n".
+        "user time for all children was $child_user\n".
+        "system time for all children was $child_system\n");
         $successful_passes++;
         for (@chunks) {
             unlink($_);

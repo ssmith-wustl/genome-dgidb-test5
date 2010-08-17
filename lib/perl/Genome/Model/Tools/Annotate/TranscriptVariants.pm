@@ -11,6 +11,8 @@ use IO::File;
 use Genome::Info::IUB;
 use Benchmark;
 use Genome::Info::UCSCConservation;
+use DateTime;
+use Sys::Hostname;
 
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
@@ -207,6 +209,14 @@ sub execute {
         die;
     }
 
+    # Useful information for debugging...
+    my $dt = DateTime->now;
+    $dt->set_time_zone('America/Chicago');
+    my $date = $dt->ymd;
+    my $time = $dt->hms;
+    my $host = hostname;
+    $self->status_message("Executing on host $host on $date at $time");
+
     my $total_start = Benchmark->new;
     my $pre_annotation_start = Benchmark->new;
 
@@ -401,7 +411,8 @@ sub execute {
             my $transcript_iterator;
             if ($self->build){
                 my $iter_start = Benchmark->new;
-                $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+                $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name, 
+                                                                         cache_annotation_data_directory => $self->cache_annotation_data_directory); 
                 my $iter_stop = Benchmark->new;
                 my $iter_time = timediff($iter_stop, $iter_start);
                 if ($self->benchmark) {

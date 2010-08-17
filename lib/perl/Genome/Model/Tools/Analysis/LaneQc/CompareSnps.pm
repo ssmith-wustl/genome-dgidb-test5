@@ -97,8 +97,6 @@ sub execute {                               # replace with real execution logic.
 
 	my $file_type = "samtools";
 
-
-
 	while (<$input>)
 	{
 		chomp;
@@ -162,7 +160,7 @@ sub execute {                               # replace with real execution logic.
 	
 			## Only check SNP calls ##
 	
-			if($ref_base ne $cns_call && $ref_base ne "*" && length($ref_base) == 1 && length($cns_call) == 1)
+			if($ref_base ne "*" && length($ref_base) == 1 && length($cns_call) == 1) #$ref_base ne $cns_call
 			{
 				$stats{'num_snps'}++;
 	
@@ -252,7 +250,8 @@ sub execute {                               # replace with real execution logic.
 					}
 				}
 			
-			}			
+			}
+
 		}
 		
 
@@ -396,6 +395,7 @@ sub load_genotypes
 	
 	return(%genotypes);                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
+
 
 
 ################################################################################################

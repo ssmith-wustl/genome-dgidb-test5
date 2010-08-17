@@ -173,19 +173,10 @@ sub resolve_module_version {
     }
 
     # TODO: move to central place
-    my $info_string = `svn info $path`;
-    chomp($info_string);
-    my @lines = split("\n",$info_string);
-    my %hash;
-    for my $line (@lines) {
-        $line =~ /([\w\s]*)\:\s*(.*)/;
-        $hash{$1} = $2;
-    }
-    my $svn_info_hash_ref = \%hash; 
-
-    if (defined $$svn_info_hash_ref{'Revision'}) {
-        return $$svn_info_hash_ref{'Revision'};
-    }
+    my $commit = `git --no-pager log --max-count=1 $path | head -1 | cut -f2 -d' '`;
+    chomp($commit);
+    return $commit if $commit;
+    
     if ($path =~ /\/gsc\/scripts\/opt\/genome-(\d+)\//) {
         return $1;
     }
@@ -398,6 +389,31 @@ sub generate_expected_metrics {
             . $metric->value
         );
     }
+}
+
+sub _available_cpu_count {
+    my $self = shift; 
+
+    # Not running on LSF, allow only one CPU
+    if (!exists $ENV{LSB_MCPU_HOSTS}) {
+        return 1;
+    }
+
+    my $mval = $ENV{LSB_MCPU_HOSTS};
+    my @c = split /\s+/, $mval;
+
+    if (scalar @c != 2) {
+        $self->error_message("LSB_MCPU_HOSTS environment variable doesn't specify just one host and one CPU count. (value is '$mval').  Is the span[hosts=1] value set in your resource request?");
+        die $self->error_message;
+    }
+
+    if ($mval =~ m/(\.*?) (\d+)/) {
+        return $2; 
+    } else {
+        $self->error_message("Couldn't parse the LSB_MCPU_HOSTS environment variable (value is '$mval'). "); 
+        die $self->error_message;
+    }
+    
 }
 
 

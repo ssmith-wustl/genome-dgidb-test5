@@ -3,18 +3,32 @@ package Genome::Model::Command::Services::BuildQueuedInstrumentData;
 use strict;
 use warnings;
 
-use Genome;
 use Data::Dumper;
+
+use Genome;
 
 
 class Genome::Model::Command::Services::BuildQueuedInstrumentData {
     is  => 'Command',
     has => [
         test => {
-            is => 'String',
-            doc => "This parameter, if set true, will only process pses with negative id's, allowing your test to complete in a reasonable time frame.",
+            is          => 'String',
+            doc         => "This parameter, if set true, will only process pses with negative id's, allowing your test to complete in a reasonable time frame.",
             is_optional => 1,
             default     => 0,
+        },
+        max_pses => {
+            is          => 'Number',
+            is_optional => 1,
+            len         => 5,
+            default     => 200,
+            doc         => 'Max # of PSEs to process in one invocation',   
+        },
+        newest_first => {
+            is          => 'Boolean',
+            is_optional => 1,
+            default     => 0,
+            doc         => 'Process newest PSEs first',
         }
     ],
 };
@@ -37,17 +51,30 @@ sub execute {
     $DB::single = 1;
     my $self = shift;
     
+    my $pse_sorter;
+
+    if ($self->newest_first()) {
+        $pse_sorter = sub { $b->id <=> $a->id };
+    }
+    else {
+        $pse_sorter = sub { $a->id <=> $b->id };
+    }
+
     my $ps =
         GSC::ProcessStep->get(
             process_to => 'queue instrument data for genome modeling' );
 
-    my @pses = sort { $a->id <=> $b->id } GSC::PSE->get(
+    my @pses = sort $pse_sorter GSC::PSE->get(
         ps_id      => $ps->ps_id,
         pse_status => 'inprogress',
     );
 
     # Don't bite off more than we can process in a couple hours
-    @pses = splice(@pses, 0, 100);
+    my $max_pses = $self->max_pses;
+
+    if (@pses > $max_pses) {
+        @pses = splice(@pses, 0, $max_pses);
+    }
 
     my @cached_pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
     my %skip = map { ( ($_->param_value =~ /genotyper/) ? ($_->pse_id => 1) : () ) } @cached_pse_params;
@@ -235,39 +262,6 @@ sub execute {
 
                 if (@models) {
 
-                    MODEL_REF1:
-                    foreach my $model (@models) {
-
-                        if ($model->can('reference_sequence_build')) {
-                 
-                            unless (defined($model->reference_sequence_build())) {
- 
-                                my $reference_sequence_build;
-                                
-                                eval { 
-                                    $reference_sequence_build = $self->_resolve_imported_reference_sequence_build($pp);
-                                };
-
-                                if ($@) {
-                                    $self->error_message("_resolve_imported_reference_sequence_build blew up: $@");
-                                    push @process_errors, $self->error_message;
-                                    next MODEL_REF1;
-                                }
-
-                                unless (defined($reference_sequence_build)) { 
-                                    $self->error_message("failed to resolve reference sequence build");
-                                    push @process_errors, $self->error_message;
-                                    next MODEL_REF1;
-                                }
-
-                                $model->reference_sequence_build($reference_sequence_build);
-
-                            }
-
-                        }
-
-                    }
-
                     MODEL_IDA: 
                     foreach my $model (@models) {
                         
@@ -365,30 +359,6 @@ sub execute {
                         "Failed to create model '$model_name'");
                     push @process_errors, $self->error_message;
                     next PP;
-                }
-
-                if ($model->can('reference_sequence_build')) {
-                  
-                    my $reference_sequence_build;
-
-                    eval {
-                        $reference_sequence_build = $self->_resolve_imported_reference_sequence_build($pp);
-                    };
-                    
-                    if ($@) {
-                        $self->error_message("_resolve_imported_reference_sequence_build blew up: $@");
-                        push @process_errors, $self->error_message;
-                        next PP;
-                    }
-
-                    unless (defined($reference_sequence_build)) { 
-                        $self->error_message("failed to resolve reference sequence build");
-                        push @process_errors, $self->error_message;
-                        next PP;
-                    }
-
-                    $model->reference_sequence_build($reference_sequence_build);
-
                 }
 
                 if ( defined($capture_target) ) {                
@@ -669,33 +639,6 @@ sub execute {
 
     $self->status_message("Saving completed PSEs.");
     return 1;    
-}
-
-sub _resolve_imported_reference_sequence_build {
-
-    my $self               = shift;
-    my $processing_profile = shift;
-
-
-    my $name;
-  
-    if (defined($processing_profile->reference_sequence_name) && ($processing_profile->reference_sequence_name ne "")) {
-        $name = $processing_profile->reference_sequence_name;
-        $self->status_message("Using reference sequence name '$name' from processing profile");
-    }    
-    else {
-        $name = 'NCBI-human-build36';
-        $self->status_message("Using default reference sequence name '$name' since processing profile does not specify one");
-    }
-    
-    my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->from_cmdline($name);
-
-    unless (defined($reference_sequence_build)) {
-        $self->warning_message("failed to resolve reference sequence name");    
-    }   
-
-    return $reference_sequence_build;
-
 }
 
 
