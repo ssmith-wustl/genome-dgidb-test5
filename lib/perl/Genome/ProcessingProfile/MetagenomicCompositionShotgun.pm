@@ -61,51 +61,15 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
     ],
 };
 
-my $log_model_name;
-
-sub Xstatus_message{
-    my ($self, $message, @args) = @_;
-    $self->SUPER::status_message($message,@args);
-    $self->log_message("STATUS:".$message);
-}
-
-sub Xerror_message{
-    my ($self, $message, @args) = @_;
-    $self->SUPER::error_message($message, @args);
-    $self->log_message("ERROR:".$message);
-    die $message;
-}
-
-sub Xlog_message{
-    my ($self, $message) = @_;
-    my $fh = $self->{log_fh};
-    unless ($fh){
-        my $pid = $$;
-        my $hostname = hostname();
-        my $fn = "/gscuser/adukes/MCS_log/${log_model_name}_${pid}_${hostname}";
-        my $log_fh = IO::File->new("> $fn");
-        unless ($log_fh){
-            die "couldn't create new logfile for $fn";
-        }
-        $self->{log_fh} = $log_fh;
-        $fh = $self->{log_fh};
-    }
-    chomp $message;
-    $fh->print($message."\n");
-    print STDERR $message,"\n";
-}
 
 sub _execute_build {
     my ($self, $build) = @_;
-    $DB::single = 1;
-
-    # when running in the debugger always stop here
-    $DB::single = 1;
 
     my $model = $build->model;
+    my $rv;
 
     # temp hack for debugging
-    $log_model_name = $model->name;
+    my $log_model_name = $model->name;
     $self->status_message("Starting build for model $log_model_name");
 
     my $screen_model = $model->_contamination_screen_alignment_model;
@@ -232,7 +196,6 @@ sub _execute_build {
             }
         }
     }
-    #EXTRACT READS FROM IMPORTED INSTRUMENT DATA ASSIGNED TO METAGENOMIC ALIGNMENT MODELS
 
 
     # BUILD THE METAGENOMIC REFERENCE ALIGNMENT MODELS
@@ -247,33 +210,61 @@ sub _execute_build {
         $self->error_message("Bam or flagstat doesn't exist for contamination screen build");
         die;
     }
-    unless(Genome::Utility::FileSystem->create_symlink($screen_bam, "$data_directory/contamination_screen.bam")){
-        $self->error_message("Couldn't create symlink for contamination screen bam $screen_bam");
-    }
-    unless(Genome::Utility::FileSystem->create_symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat")){
-        $self->error_message("Couldn't create symlink for contamination screen flagstat $screen_flagstat");
-    }
+    $self->symlink($screen_bam, "$data_directory/contamination_screen.bam");
+    $self->symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
+
     my $counter;
+    my @meta_bams;
     for my $meta_build (@metagenomic_builds){
         $counter++;
         my ($meta_bam, $meta_flagstat) =  $self->get_bam_and_flagstat_from_build($meta_build);
+        push @meta_bams, $meta_bam;
         unless ($meta_bam and $meta_flagstat and -e $meta_bam and -e $meta_flagstat){
             $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter");
             die;
         }
-        unless(Genome::Utility::FileSystem->create_symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam")){
-            $self->error_message("Couldn't create symlink for metagenomic alignment $counter bam $meta_bam");
-        }
-        unless(Genome::Utility::FileSystem->create_symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat")){
-            $self->error_message("Couldn't create symlink for metagenomic alignment $counter flagstat $meta_flagstat");
-        }
+        $self->symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam");
+        $self->symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat");
     }
 
-    # MERGE ALIGNMENTS
+    # REPORTS
 
-    # LAUNCH REPORTS
+    # TODO: Where should these go? build directory or /gscmnt/sata849/info/hmp-july2010?
+    # Sounds like Craig would like these to go in the database.
+    $rv = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->execute(
+        build_id => $build->id,
+    );
+    unless($rv) {
+        $self->error_message("QC report execution did not return 1");
+        die;
+    }
+    
+    # TODO: Where should these go? build directory or /gscmnt/sata835/info/medseq/hmp-july2010?
+    # TODO: Should we move the taxonomy files into the repo?
+    $rv = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->execute(
+        build_id => $build->id,
+        taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
+        viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
+    );
+    unless($rv) {
+        $self->error_message("metagenomic report execution did not return 1");
+        die;
+    }
+    
 
     return 1;
+}
+
+sub symlink {
+    my $self = shift;
+    my ($source, $target) = @_;
+    if(-l $target && readlink($target) ne $source) {
+        $self->error_message("$target already exists but points to " . readlink($target));
+        die $self->error_message();
+    }
+    elsif(! -l $target) {
+        Genome::Utility::FileSystem->create_symlink($source, $target);
+    }
 }
 
 sub get_bam_and_flagstat_from_build{
@@ -481,10 +472,14 @@ sub _process_unaligned_reads {
         my $expected_data_path1 = $tmp_dir . '/' . $subdir . "/$forward_basename";
         my $expected_data_path2 = $tmp_dir . '/' . $subdir . "/$reverse_basename";
 
+        
         my $expected_se_path = $expected_data_path0;
         my $expected_pe_path = $expected_data_path1 . ',' . $expected_data_path2;
 
+
         my @upload_paths;
+        my ($se_lock, $pe_lock);
+
 
         # check for previous unaligned reads
         $self->status_message("Checking for previously imported unaligned and post-processed reads from: $tmp_dir/$subdir");
@@ -493,6 +488,17 @@ sub _process_unaligned_reads {
             $self->status_message("imported instrument data already found for path $expected_se_path, skipping");
         }
         else {
+			my $lock = basename($expected_se_path);
+        	$lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
+
+        	$se_lock = Genome::Utility::FileSystem->lock_resource(
+            	resource_lock => $lock,
+            	max_try => 2,
+        	);
+        	unless ($se_lock) {
+            	$self->error_message("Failed to lock $expected_se_path.");
+            	die $self->error_message;
+        	}
             push @upload_paths, $expected_se_path;
         }
 
@@ -501,6 +507,17 @@ sub _process_unaligned_reads {
             $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
         }
         else {
+			my $lock = basename($expected_pe_path);
+        	$lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
+
+        	$pe_lock = Genome::Utility::FileSystem->lock_resource(
+            	resource_lock => "$lock",
+            	max_try => 2,
+        	);
+        	unless ($pe_lock) {
+            	$self->error_message("Failed to lock $expected_pe_path.");
+            	die $self->error_message;
+        	}
             push @upload_paths, $expected_pe_path;
         }
 
@@ -628,7 +645,14 @@ sub _process_unaligned_reads {
             if ($instrument_data->__changes__) {
                 die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
             }
-
+			unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
+            	$self->error_message("Failed to unlock $expected_se_path.");
+            	die $self->error_message;
+        	}
+        	unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
+            	$self->error_message("Failed to unlock $expected_pe_path.");
+            	die $self->error_message;
+        	}
             push @instrument_data, $instrument_data;
         }        
         return @instrument_data;
