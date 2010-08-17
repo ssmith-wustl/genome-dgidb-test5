@@ -10,7 +10,6 @@ use Test::More;
 
 # use
 use_ok('Genome::Model::Tools::FastQual::Filter::ByLength') or die;
-use_ok('Genome::Model::Tools::Fastq::SetReader') or die;
 
 # create fail
 ok(!Genome::Model::Tools::FastQual::Filter::ByLength->create(), 'Create w/o filter length');

@@ -12,14 +12,9 @@ class Genome::Model::Tools::FastQual::Sorter {
     is_abstract => 1,
 };
 
-sub help_synopsis {
+sub help_brief {
     return <<HELP
-    Sort fastq sequences
-HELP
-}
-
-sub help_detail {
-    return <<HELP 
+    Sort fastq and fasta/quality sequences
 HELP
 }
 
