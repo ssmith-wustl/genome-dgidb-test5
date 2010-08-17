@@ -33,7 +33,7 @@ sub _decomposed_aligner_params {
 
     $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '15G');
     $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
-    my $aligner_params = ($self->aligner_params || '') . " -U --read-names "; 
+    my $aligner_params = ($self->aligner_params || '') . " -U --read-names -Z "; 
 
     my $cpu_count = $self->_available_cpu_count;
     $aligner_params .= " -T $cpu_count";
@@ -155,7 +155,7 @@ sub _run_aligner {
 
     for my $input_sdf (@chunks) {
         my $output_dir = File::Temp::tempnam($scratch_directory, "output-XXX") . ".sdf";  
-        my %output_files = (aligned_file =>"$output_dir/alignments.txt.gz", unaligned_file => "$output_dir/unmapped.txt.gz"); 
+        my %output_files = (aligned_file =>"$output_dir/alignments.txt", unaligned_file => "$output_dir/unmapped.txt"); 
 
         #STEP 2 - run rtg mapx aligner  
         my %aligner_params = $self->_decomposed_aligner_params;
