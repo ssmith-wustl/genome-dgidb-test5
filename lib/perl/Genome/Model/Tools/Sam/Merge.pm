@@ -164,32 +164,19 @@ sub combine_headers {
         die $self->error_message;
     }
 
-    $self->status_message("\nCopying original alignment bams to temp...\n");
-    my @bams_in_tmp;
+    $self->status_message("\nReheadering alignment bams...\n");
+    my $sam_path = $self->samtools_path;
+    my $sam_tool = "$sam_path reheader";
+    my @reheadered_files;
     for (my $i = 0; $i < @files; $i++) {
         my $file = $files[$i];
         my $tmp_file = "$tmp_dir/$time\_$i\_" . basename($file);
-        my $perl_rv = Genome::Utility::FileSystem->copy_file($file, $tmp_file);
+        my $perl_rv = Genome::Utility::FileSystem->shellcmd(cmd => "$sam_tool $combined_headers_path $file > $tmp_file", input_files => [$combined_headers_path, $file], output_files => [$tmp_file], skip_if_output_is_present => 0);
         if ($perl_rv) {
-            push @bams_in_tmp, $tmp_file;
+            push @reheadered_files, $tmp_file;
         }
         else {
-            $self->error_message("Failed to copy $file to $tmp_dir.");
-            die $self->error_message;
-        }
-    }
-
-    $self->status_message("\nReheadering copied alignment bams...\n");
-    my @reheadered_files;
-    my $sam_path = $self->samtools_path;
-    my $sam_tool = "$sam_path reheader";
-    for my $bam (@bams_in_tmp) {
-        my $perl_rv = Genome::Utility::FileSystem->shellcmd(cmd => "$sam_tool $combined_headers_path $bam", input_files => [$combined_headers_path], output_files => [$bam], skip_if_output_is_present => 0);
-        if ($perl_rv) {
-            push @reheadered_files, $bam;
-        }
-        else {
-            $self->error_message("Unable to reheader $bam.");
+            $self->error_message("Unable to reheader $file to $tmp_file.");
             die $self->error_message;
         }
     }
