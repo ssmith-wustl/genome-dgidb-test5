@@ -28,7 +28,7 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
             is => 'Path',
             is_optional => 1,
         },
-        regions_bed_file => {
+        regions_file => {
             is => 'Path',
             is_optional => 1,
         },
@@ -74,10 +74,10 @@ sub execute {
             $self->error_message("viral headers file doesn't exist or have size: ".$self->viral_headers_file);
         }
     }
-    unless ($self->regions_bed_file){
-        $self->regions_bed_file("$metagenomic_ref_hmp_dir/combined_refcov_regions_file.bed");
-        unless (-s $self->regions_bed_file){
-            $self->error_message("refcov regions bed file doesn't exist or have size: ".$self->regions_bed_file);
+    unless ($self->regions_file){
+        $self->regions_file("$metagenomic_ref_hmp_dir/combined_refcov_regions_file.regions.txt");
+        unless (-s $self->regions_file){
+            $self->error_message("refcov regions bed file doesn't exist or have size: ".$self->regions_file);
         }
     }
     unless ($self->taxonomy_file){
@@ -263,11 +263,10 @@ sub execute {
 
     $self->status_message("running refcov on combined metagenomic alignment bam");
 
-    my $refcov = Genome::Model::Tools::BioSamtools::ParallelRefCov->create(
-        output_directory => $self->report_dir,
-        bam_file => $merged_bam,
-        bed_file => $self->regions_bed_file,
-        regions => 50000,
+    my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
+        working_directory => $self->report_dir,
+        aligned_bam_file => $merged_bam,
+        regions_file => $self->regions_file,
     );
 
     $self->status_message("Executing RefCov command ". $refcov->command_name);
@@ -275,9 +274,9 @@ sub execute {
     eval{$rv=$refcov->execute};
     if($@ or !$rv){
         $self->error_message("failed to execute refcov: $@");
-        return;
+        return 0;
     }
-    my $refcov_output = $refcov->stats_file;
+    my $refcov_output = $refcov->report_file;
     unless (-s $refcov_output){
         $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
     }
