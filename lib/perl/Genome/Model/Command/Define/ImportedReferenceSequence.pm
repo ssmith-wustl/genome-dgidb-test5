@@ -104,6 +104,11 @@ sub _prompt_to_continue {
 sub execute {
     my $self = shift;
 
+    unless (-s $self->fasta_file) {
+        $self->error_message('Input fasta file: '.$self->fasta_file.' is not valid.');
+        return;
+    }
+    
     if(defined($self->prefix) && $self->prefix =~ /\s/) {
         $self->error_message("The prefix argument value must not contain spaces.");
         return;
