@@ -59,12 +59,12 @@ sub execute {
     my ($metagenomic_ref_build) = grep { $_->model_name=~/part 1 of/ } $model->metagenomic_references;
     unless ($metagenomic_ref_build){
         $self->error_message("couldn't get build for metagenomic reference part 1 model");
-        return;
+        die $self->error_message;
     }
     my $metagenomic_ref_hmp_dir = $metagenomic_ref_build->data_directory."/hmp";
     unless (-d $metagenomic_ref_hmp_dir){
         $self->error_message("Couldn't find hmp dir in latest build of metagenomic reference part 1: $metagenomic_ref_hmp_dir");
-        return;
+        die $self->error_message;
     }
     #TODO these names are bad and should be improved as this pipeline becomes more generic, don't know if taxonomy files will always be available when this is done again.
     
@@ -274,7 +274,7 @@ sub execute {
     eval{$rv=$refcov->execute};
     if($@ or !$rv){
         $self->error_message("failed to execute refcov: $@");
-        return 0;
+        die $self->error_message;
     }
     my $refcov_output = $refcov->report_file;
     unless (-s $refcov_output){
