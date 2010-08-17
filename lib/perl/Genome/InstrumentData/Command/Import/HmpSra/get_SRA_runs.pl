@@ -87,8 +87,9 @@ foreach my $srr (@$srr_list) {
 
 #modified for WUGC use ... jmartin 100812
     ####my $cmd = "$ascp_path -QT -i $key_file '$fasp_locn' ./$accn &>$accn.log";
-    my $cmd = "$ascp_path -T -l 100M -i $key_file '$fasp_locn' ./$accn";
+    #my $cmd = "$ascp_path -T -l 100M -i $key_file '$fasp_locn' ./$accn";
     #my $cmd = "$ascp_path -T -l 20M -i $key_file '$fasp_locn' ./$accn";
+    my $cmd = "$ascp_path -T -l 90M -i $key_file '$fasp_locn' ./$accn";
 
     #print STDERR "cmd=$cmd\n";
 
