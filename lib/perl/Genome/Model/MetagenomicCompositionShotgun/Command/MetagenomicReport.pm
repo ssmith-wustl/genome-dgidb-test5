@@ -73,11 +73,7 @@ sub execute {
     unless ($self->report_dir){
         $self->report_dir($build->data_directory . "/reports");
     }
-<<<<<<< HEAD
     $self->status_message("Report path: " . $self->report_dir);
-=======
-    $self->log("Report path: " . $self->report_path);
->>>>>>> 93f1577c19ec974b9461437a6040519b6d04de56
 
     my ($metagenomic_ref_build) = grep { $_->model_name=~/part 1 of/ } $model->metagenomic_references;
     unless ($metagenomic_ref_build){
@@ -127,11 +123,11 @@ sub execute {
 
     my $merged_bam = $self->report_dir."/metagenomic_alignment.combined.bam";
     if (-e $merged_bam and -e $merged_bam.".OK"){
-        $self->log("metagenomic merged bam already produced, skipping");
+        $self->status_message("metagenomic merged bam already produced, skipping");
     }else{
         my $rv;
 
-        $self->log("starting sort and merge");
+        $self->status_message("starting sort and merge");
 
         eval{
             $rv = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->execute(
@@ -154,10 +150,10 @@ sub execute {
         system ("touch $merged_bam.OK");
     }
 
-    $self->log("Finished sort and merge, compiling metagenomic reports");
+    $self->status_message("Finished sort and merge, compiling metagenomic reports");
 
 
-    $self->log("Starting taxonomy count...\n");
+    $self->status_message("Starting taxonomy count...\n");
     $DB::single = 1;
 
     # Load Taxonomy From Taxonomy Files
@@ -213,15 +209,9 @@ sub execute {
         }
         $ref_counts_hash{$ref_name}++;
     }
-<<<<<<< HEAD
 
     $self->status_message("skipping $ignore_unmapped reads without a metagenomic mapping");
     $self->status_message("skipping $ignore_singleton fragment reads(mate mapped to human)");
-=======
-    
-    $self->log("skipping $ignore_unmapped reads without a metagenomic mapping");
-    $self->log("skipping $ignore_singleton fragment reads(mate mapped to human)");
->>>>>>> 93f1577c19ec974b9461437a6040519b6d04de56
 
     # Count And Record Taxonomy Hits
     my $read_count_output_file = $self->report_dir . '/read_count_output';
@@ -237,7 +227,7 @@ sub execute {
     my %viral_species_counts_hash;
 
 
-    $self->log('creating metagenomic count files');
+    $self->status_message('creating metagenomic count files');
 
     print $read_cnt_o "Reference Name\t#Reads with hits\tSpecies\tPhyla\tHMP genome\n";
     do {
@@ -289,10 +279,7 @@ sub execute {
     $self->_write_count_and_close($viral_family_output_file, "Viral Family", \%viral_family_counts_hash);
     $self->_write_count_and_close($viral_subfamily_output_file, "Viral Subfamily", \%viral_subfamily_counts_hash);
 
-<<<<<<< HEAD
-
     $self->status_message("classification summary reports and reference hit report finished");
-
     $self->status_message("running refcov on combined metagenomic alignment bam");
 
     my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
@@ -415,26 +402,7 @@ sub execute {
 
     system("touch ".$self->report_dir."/FINISHED");
     
-=======
-    system("touch ".$self->report_path."/FINISHED");
-    $self->log("metagenomic report successfully completed");
->>>>>>> 93f1577c19ec974b9461437a6040519b6d04de56
     return 1;
-}
-
-sub log {
-    my $self = shift;
-    my $str = shift;
-    my @time_data = localtime(time);
-
-    $time_data[1] = '0' . $time_data[1] if (length($time_data[1]) == 1);
-    $time_data[2] = '0' . $time_data[2] if (length($time_data[2]) == 1);
-
-    my $time = join(":", @time_data[2, 1]);
-
-    print $time . " - $str\n";
-    my $log_fh = IO::File->new('>>' . $self->log_path);
-    print $log_fh $time . " - $str\n";
 }
 
 sub _load_taxonomy {
