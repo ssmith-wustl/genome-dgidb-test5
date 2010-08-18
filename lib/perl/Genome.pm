@@ -21,46 +21,59 @@ use Carp::Heavy;
 
 BEGIN {
     use Sys::Hostname;
-    my $hostname = hostname;
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-    my $prefix = "($hostname) $hour:$min";
     *Command::status_message_orig = \&Command::status_message;
-    *Command::status_message = sub { my $self = shift; $self->status_message_orig("$prefix -- " . shift)};
+    *Command::status_message = sub { 
+        my $self = shift; 
+        my $hostname = hostname;
+        ($hostname) = $hostname =~/(.*)\.gsc\.wustl\.edu/;
+        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+        $year+=1900;
+        my $prefix = "($hostname) $mon/$mday/$year [$hour:$min]";
+        $self->status_message_orig("$prefix -- " . shift)
+    };
     *UR::ModuleBase::status_message_orig = \&UR::ModuleBase::status_message;
-    *UR::ModuleBase::status_message = sub { my $self = shift; $self->status_message_orig("$prefix -- " . shift)};
+    *UR::ModuleBase::status_message = sub { 
+        my $self = shift; 
+        my $hostname = hostname;
+        ($hostname) = $hostname =~/(.*)\.gsc\.wustl\.edu/;
+        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+        $year+=1900;
+        my $prefix = "($hostname) $mon/$mday/$year [$hour:$min]";
+        $self->status_message_orig("$prefix -- " . shift)
+    };
 }
 
 if ($] < 5.01) {
-no warnings;
+    no warnings;
     *Carp::caller_info = sub {
-      package Carp;
-      our $MaxArgNums;
-      my $i = shift(@_) + 1;
-      package DB;
-      my %call_info;
-      @call_info{
-        qw(pack file line sub has_args wantarray evaltext is_require)
-      } = caller($i);
-      
-      unless (defined $call_info{pack}) {
-        return ();
-      }
+        package Carp;
+        our $MaxArgNums;
+        my $i = shift(@_) + 1;
+        package DB;
+        my %call_info;
+        @call_info{
+            qw(pack file line sub has_args wantarray evaltext is_require)
+        } = caller($i);
 
-      my $sub_name = Carp::get_subname(\%call_info);
-      if ($call_info{has_args}) {
-        # SEE IF WE CAN GET AROUND THE BIZARRE ARRAY COPY ERROR...
-        my @args = ();
-        if ($MaxArgNums and @args > $MaxArgNums) { # More than we want to show?
-          $#args = $MaxArgNums;
-          push @args, '...';
+        unless (defined $call_info{pack}) {
+            return ();
         }
-        # Push the args onto the subroutine
-        $sub_name .= '(' . join (', ', @args) . ')';
-      }
-      $call_info{sub_name} = $sub_name;
-      return wantarray() ? %call_info : \%call_info;
+
+        my $sub_name = Carp::get_subname(\%call_info);
+        if ($call_info{has_args}) {
+            # SEE IF WE CAN GET AROUND THE BIZARRE ARRAY COPY ERROR...
+            my @args = ();
+            if ($MaxArgNums and @args > $MaxArgNums) { # More than we want to show?
+                $#args = $MaxArgNums;
+                push @args, '...';
+            }
+            # Push the args onto the subroutine
+            $sub_name .= '(' . join (', ', @args) . ')';
+        }
+        $call_info{sub_name} = $sub_name;
+        return wantarray() ? %call_info : \%call_info;
     };
-use warnings;
+    use warnings;
 
 }
 
