@@ -279,6 +279,7 @@ sub execute {
     my $refcov_output = $refcov->report_file;
     unless (-s $refcov_output){
         $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
+        die $self->error_message;
     }
     $self->status_message("refcov completed successfully, stats file: $refcov_output");
 
