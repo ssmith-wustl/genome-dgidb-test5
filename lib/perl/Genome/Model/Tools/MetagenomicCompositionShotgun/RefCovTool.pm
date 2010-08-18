@@ -63,7 +63,7 @@ sub execute {
     my ($basename,$dirname) = File::Basename::fileparse($self->regions_file);
 
     #put a tmp dir here
-    my $stats_file = $self->working_directory."/reports/report_".$basename;
+    my $stats_file = $self->working_directory."/report_".$basename;
     $self->report_file($stats_file);
     my @expected_refcov_output_files = ($stats_file);
     $self->status_message("Output stats file: ".$stats_file);
