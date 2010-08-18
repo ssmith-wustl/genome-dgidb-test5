@@ -25,7 +25,7 @@ BEGIN {
     *Command::status_message = sub { 
         my $self = shift; 
         my $hostname = hostname;
-        ($hostname) = $hostname =~/(.*)\.gsc\.wustl\.edu/;
+        $hostname =~s/\.gsc\.wustl\.edu//;
         my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
         $year+=1900;
         my $prefix = "($hostname) $mon/$mday/$year [$hour:$min]";
@@ -35,7 +35,7 @@ BEGIN {
     *UR::ModuleBase::status_message = sub { 
         my $self = shift; 
         my $hostname = hostname;
-        ($hostname) = $hostname =~/(.*)\.gsc\.wustl\.edu/;
+        $hostname =~s/\.gsc\.wustl\.edu//;
         my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
         $year+=1900;
         my $prefix = "($hostname) $mon/$mday/$year [$hour:$min]";
