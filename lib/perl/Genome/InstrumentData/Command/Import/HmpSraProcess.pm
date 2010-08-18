@@ -40,6 +40,11 @@ sub execute {
     $scripts_dir =~ s/\.pm//;
     $self->status_message("Scripts are in: $scripts_dir");
 
+    #Set current path so that it can see the script 'trimBWAstyle.usingBAM.pl'
+    my $current_dir = `pwd`;
+    chomp ($current_dir);
+    my $path_to_scripts_dir = $current_dir . "/" . $scripts_dir;
+    $ENV{'PATH'} = $ENV{'PATH'} . ":" $path_to_scripts_dir;
 
     #Run BROAD's processing script
     my $cmd;
