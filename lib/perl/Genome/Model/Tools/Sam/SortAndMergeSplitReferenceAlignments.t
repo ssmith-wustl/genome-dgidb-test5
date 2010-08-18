@@ -19,9 +19,7 @@ $output_file = "/tmp/merged_bam.bam";
 print join("\n", @INC)."\n";
 ok(Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->execute(
         input_files => \@bams,
-        input_format => 'BAM',
         output_file => $output_file,
-        output_format => "BAM",
     ), 'executed sort and merge bam');
 
 ok (-s $output_file, "output file has size");

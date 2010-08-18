@@ -87,7 +87,7 @@ sub execute {
     # merge bam files
     my $rv;
     eval{ 
-        $rv = Genome::Model::Tools::Sam::R3->execute(
+        $rv = Genome::Model::Tools::Sam::MergeSplitReferenceAlignments->execute(
             input_files => \@bams_sorted,
             output_file => $out_file,
         );
