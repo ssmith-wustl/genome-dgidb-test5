@@ -10,13 +10,9 @@ class Genome::Taxon {
     ],
     has => [
         taxon_id                        => { calculate => q|$self->id| }, 
-        name                            => { is => "Text", len => 99, column_name => 'SPECIES_NAME' },
+        species_name                    => { is => "Text", len => 99, column_name => 'SPECIES_NAME' },
         domain                          => { is => "Text",   len => 9 },
-        species_name                    => { is => "Text",   len => 64, 
-                                                calculate => q|$name|, 
-                                                calculate_from => ['name'],
-                                                #TODO: this actually embeds the strain name, parse it away
-                                            },
+        name                            => { via => '__self__', to => 'species_name' },
     ],
     has_optional => [
         strain_name                     => { is => "Text",   len => 32 },
