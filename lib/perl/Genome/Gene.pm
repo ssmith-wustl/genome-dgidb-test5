@@ -156,7 +156,10 @@ sub strand_string {
 
 sub bed_string {
     my $self = shift;
-    my $bed_string = $self->chrom_name ."\t". $self->gene_start ."\t". $self->gene_stop ."\t". $self->name ."\t0\t". $self->strand_string;
+    # BED entries should only be written per sub-structure unless BED12 format is adopted, even then it should be per transcript
+    return;
+    # BED format uses zero-based start positions
+    my $bed_string = $self->chrom_name ."\t". ($self->gene_start - 1) ."\t". $self->gene_stop ."\t". $self->name ."\t0\t". $self->strand_string;
     return $bed_string ."\n";
 }
 
