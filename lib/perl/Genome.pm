@@ -23,8 +23,14 @@ BEGIN {
     no warnings 'redefine';
     use Sys::Hostname;
     *Command::status_message_orig = \&Command::status_message;
-    *Command::status_message = sub { 
-        my $self = shift; 
+    *Command::status_message = sub {
+        my $self = shift;
+
+        unless(scalar @_) {
+            #called as accessor--no message to which to add prefix
+            return $self->status_message_orig;
+        }
+
         my $hostname = hostname;
         $hostname =~s/\.gsc\.wustl\.edu//;
         my $time = UR::Time->now_local;
@@ -33,7 +39,13 @@ BEGIN {
     };
     *UR::ModuleBase::status_message_orig = \&UR::ModuleBase::status_message;
     *UR::ModuleBase::status_message = sub { 
-        my $self = shift; 
+        my $self = shift;
+
+        unless(scalar @_) {
+            #called as accessor--no message to which to add prefix
+            return $self->status_message_orig;
+        }
+
         my $hostname = hostname;
         $hostname =~s/\.gsc\.wustl\.edu//;
         my $time = UR::Time->now_local;
