@@ -131,7 +131,7 @@ sub execute {
                 my $name = (split('/', $file))[-1];
                 $name =~ s/\.txt$//;
                 my $output_filename = $temp_dir . '/' . $name . '_imported_trimmed';
-                Genome::Utility::FileSystem->copy_file($file, $output_filename);
+                die "failed to rename $file to $output_filename" unless rename($file, $output_filename);
                 push @imported_fastq, $output_filename;
                 push @{$fastq_files{$imported_id}{imported}}, $output_filename; 
             }
@@ -139,7 +139,7 @@ sub execute {
                 my $name = (split('/', $file))[-1];
                 $name =~ s/\.txt$//;
                 my $output_filename = $temp_dir . '/' . $imported_id . '_' . $name . '_original';
-                Genome::Utility::FileSystem->copy_file($file, $output_filename);
+                die "failed to rename $file to $output_filename" unless rename($file, $output_filename);
                 push @original_fastq, $output_filename;
                 push @{$fastq_files{$imported_id}{original}}, $output_filename;
             }

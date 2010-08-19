@@ -66,7 +66,6 @@ sub _execute_build {
     my ($self, $build) = @_;
 
     my $model = $build->model;
-    my $rv;
 
     # temp hack for debugging
     my $log_model_name = $model->name;
@@ -231,26 +230,32 @@ sub _execute_build {
 
     # TODO: Where should these go? build directory or /gscmnt/sata849/info/hmp-july2010?
     # Sounds like Craig would like these to go in the database.
-    $rv = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->execute(
-        build_id => $build->id,
-    );
-    unless($rv) {
-        $self->error_message("QC report execution did not return 1");
+    my $qc_rv;
+    eval{
+        $qc_rv = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->execute(
+            build_id => $build->id,
+        );
+    };
+    if ($@ or !$qc_rv) {
+        $self->error_message("QC report execution died or did not return 1: $@");
         die;
     }
-    
+
     # TODO: Where should these go? build directory or /gscmnt/sata835/info/medseq/hmp-july2010?
     # TODO: Should we move the taxonomy files into the repo?
-    $rv = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->execute(
-        build_id => $build->id,
-        taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
-        viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
-    );
-    unless($rv) {
-        $self->error_message("metagenomic report execution did not return 1");
+    my $m_rv;
+
+    eval{$m_rv = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->execute(
+            build_id => $build->id,
+            taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
+            viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
+        );
+    };
+    if ($@ or !$m_rv) {
+        $self->error_message("metagenomic report execution died or did not return 1:$@");
         die;
     }
-    
+
 
     return 1;
 }
@@ -472,7 +477,7 @@ sub _process_unaligned_reads {
         my $expected_data_path1 = $tmp_dir . '/' . $subdir . "/$forward_basename";
         my $expected_data_path2 = $tmp_dir . '/' . $subdir . "/$reverse_basename";
 
-        
+
         my $expected_se_path = $expected_data_path0;
         my $expected_pe_path = $expected_data_path1 . ',' . $expected_data_path2;
 
@@ -488,17 +493,17 @@ sub _process_unaligned_reads {
             $self->status_message("imported instrument data already found for path $expected_se_path, skipping");
         }
         else {
-			my $lock = basename($expected_se_path);
-        	$lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
+            my $lock = basename($expected_se_path);
+            $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
-        	$se_lock = Genome::Utility::FileSystem->lock_resource(
-            	resource_lock => $lock,
-            	max_try => 2,
-        	);
-        	unless ($se_lock) {
-            	$self->error_message("Failed to lock $expected_se_path.");
-            	die $self->error_message;
-        	}
+            $se_lock = Genome::Utility::FileSystem->lock_resource(
+                resource_lock => $lock,
+                max_try => 2,
+            );
+            unless ($se_lock) {
+                $self->error_message("Failed to lock $expected_se_path.");
+                die $self->error_message;
+            }
             push @upload_paths, $expected_se_path;
         }
 
@@ -507,17 +512,17 @@ sub _process_unaligned_reads {
             $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
         }
         else {
-			my $lock = basename($expected_pe_path);
-        	$lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
+            my $lock = basename($expected_pe_path);
+            $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
-        	$pe_lock = Genome::Utility::FileSystem->lock_resource(
-            	resource_lock => "$lock",
-            	max_try => 2,
-        	);
-        	unless ($pe_lock) {
-            	$self->error_message("Failed to lock $expected_pe_path.");
-            	die $self->error_message;
-        	}
+            $pe_lock = Genome::Utility::FileSystem->lock_resource(
+                resource_lock => "$lock",
+                max_try => 2,
+            );
+            unless ($pe_lock) {
+                $self->error_message("Failed to lock $expected_pe_path.");
+                die $self->error_message;
+            }
             push @upload_paths, $expected_pe_path;
         }
 
@@ -579,13 +584,13 @@ sub _process_unaligned_reads {
         # upload
         $self->status_message("uploading new instrument data from the post-processed unaligned reads...");    
         my @properties_from_prior = qw/
-            run_name 
-            subset_name 
-            sequencing_platform 
-            median_insert_size 
-            sd_above_insert_size
-            library_name
-            sample_name
+        run_name 
+        subset_name 
+        sequencing_platform 
+        median_insert_size 
+        sd_above_insert_size
+        library_name
+        sample_name
         /;
         my @errors;
         my %properties_from_prior;
@@ -645,14 +650,14 @@ sub _process_unaligned_reads {
             if ($instrument_data->__changes__) {
                 die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
             }
-			unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
-            	$self->error_message("Failed to unlock $expected_se_path.");
-            	die $self->error_message;
-        	}
-        	unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
-            	$self->error_message("Failed to unlock $expected_pe_path.");
-            	die $self->error_message;
-        	}
+            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
+                $self->error_message("Failed to unlock $expected_se_path.");
+                die $self->error_message;
+            }
+            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
+                $self->error_message("Failed to unlock $expected_pe_path.");
+                die $self->error_message;
+            }
             push @instrument_data, $instrument_data;
         }        
         return @instrument_data;
