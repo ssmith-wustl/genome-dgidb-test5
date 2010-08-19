@@ -644,10 +644,8 @@
       <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="aspect[@name='data_directory']/value" />
     </xsl:variable>
 
-
     <xsl:variable name="b_status" select="aspect[@name='status']/value"/>
     <xsl:variable name="lc_b_status" select="translate($b_status,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')"/>
-
 
     <tr>
       <td>
@@ -660,10 +658,10 @@
       <td>
         <xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="$lc_b_status"/></xsl:attribute><xsl:value-of select="$lc_b_status"/>
       </td>
-      <td class="right">
+      <td>
         <xsl:value-of select="aspect[@name='date_scheduled']/value"/>
       </td>
-      <td class="right">
+      <td>
         <xsl:value-of select="aspect[@name='date_completed']/value"/>
       </td>
       <td class="buttons">
