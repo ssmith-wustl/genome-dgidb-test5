@@ -385,7 +385,8 @@ sub first_codons_of_next_exon {
 
 sub bed_string {
     my $self = shift;
-    my $bed_string = $self->chrom_name ."\t". $self->structure_start ."\t". $self->structure_stop ."\t". $self->gene_name
+    # BED format uses zero-based start positions
+    my $bed_string = $self->chrom_name ."\t". ($self->structure_start - 1) ."\t". $self->structure_stop ."\t". $self->gene_name .':'. $self->transcript_name
     .':'. $self->structure_type .":". $self->ordinal ."\t0\t". $self->strand ."\n";
     return $bed_string;
 }
