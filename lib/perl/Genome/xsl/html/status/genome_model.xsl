@@ -62,16 +62,16 @@
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_table_init</xsl:comment>
     <script type="text/javascript">
       <xsl:text disable-output-escaping="yes">
-      <![CDATA[
-               $(document).ready(
+        <![CDATA[
+                 $(document).ready(
                  window.setTable = $('#set').dataTable({
-                   "bJQueryUI": true,
-                   "sPaginationType": "full_numbers",
-                   "bStateSave": true,
-                   "iDisplayLength": 25
+                 "bJQueryUI": true,
+                 "sPaginationType": "full_numbers",
+                 "bStateSave": true,
+                 "iDisplayLength": 25
                  })
-               );
-      ]]>
+                 );
+        ]]>
       </xsl:text>
     </script>
   </xsl:template>
@@ -588,13 +588,11 @@
 
           <xsl:if test="$num_builds &gt; 0">
             <table cellpadding="0" cellspacing="0" border="0" class="lister" style="margin-bottom: 8px;">
-              <cols>
-                <col width="10%" />
-                <col width="10%" />
-                <col/>
-                <col/>
-                <col/>
-              </cols>
+              <col width="10%" />
+              <col width="10%" />
+              <col/>
+              <col/>
+              <col/>
               <thead>
                 <tr>
                   <th>build</th>
