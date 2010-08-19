@@ -413,9 +413,9 @@
         <table class="lister">
           <thead>
             <tr>
+              <th>id</th>
               <th>type</th>
               <th>object</th>
-              <th><br/></th>
             </tr>
           </thead>
           <tbody>
@@ -440,10 +440,8 @@
   <xsl:template name="genome_model_input_table_row">
     <xsl:comment>template: status/genome_model.xsl:genome_model_input_table_row</xsl:comment>
     <tr>
-      <td><xsl:value-of select="normalize-space(aspect[@name='name']/value)"/></td>
-      <td><xsl:value-of select="display_name"/></td>
-      <td class="buttons">
-        <xsl:call-template name="object_link_button_tiny">
+      <td>
+        <xsl:call-template name="object_link_button">
           <xsl:with-param name="icon" select="'sm-icon-extlink'" />
           <xsl:with-param name="id">
             <xsl:value-of select="aspect[@name='value_id']/value"/>
@@ -451,8 +449,14 @@
           <xsl:with-param name="type">
             <xsl:value-of select="aspect[@name='value_class_name']/value"/>
           </xsl:with-param>
+          <xsl:with-param name="linktext">
+            <xsl:value-of select="aspect[@name='value_id']/value"/>
+          </xsl:with-param>
         </xsl:call-template>
       </td>
+      <td><xsl:value-of select="normalize-space(aspect[@name='name']/value)"/></td>
+      <td><xsl:value-of select="aspect[@name='value_class_name']/value"/></td>
+
     </tr>
   </xsl:template>
 
