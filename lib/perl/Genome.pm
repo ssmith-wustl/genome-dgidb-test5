@@ -20,6 +20,7 @@ use Carp;
 use Carp::Heavy;
 
 BEGIN {
+    no warnings 'redefine';
     use Sys::Hostname;
     *Command::status_message_orig = \&Command::status_message;
     *Command::status_message = sub { 
