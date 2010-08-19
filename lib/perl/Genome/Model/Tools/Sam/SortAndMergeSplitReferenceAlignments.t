@@ -1,7 +1,7 @@
 #!/gsc/bin/perl
 
 use above "Genome";
-use Test::More; 
+use Test::More skip_all => 'needs to have more reasonably sized test data before this runs in the suite, yell at adukes if you see this message a lot';
 
 
 my $model = Genome::Model->get(name => "HMPZ-764224817-700024417.HMP_mWGS_100702_v1.0");
@@ -16,6 +16,7 @@ for (@bams){
 
 $output_file = "/tmp/merged_bam.bam";
 
+SKIP{
 print join("\n", @INC)."\n";
 ok(Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->execute(
         input_files => \@bams,
@@ -23,3 +24,4 @@ ok(Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->execute(
     ), 'executed sort and merge bam');
 
 ok (-s $output_file, "output file has size");
+}
