@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = 'EAP-2010-08-03-30243';
+my $DEFAULT = 'EAP-2010-08-13-30504';
 
 class Genome::Model::Tools::Rtg {
     is => 'Command',
@@ -37,7 +37,8 @@ EOS
 
 my %RTG_VERSIONS = (
 	'v2.0.1-build-28762' => '/gsc/bin',
-	'EAP-2010-08-03-30243' => '/gscuser/sabubuck/rtg-EAP-2010-08-03-30243',
+	'EAP-2010-08-03-30243' => '/gsc/pkg/bio/rtg/rtg-EAP-2010-08-03-30243',
+        'EAP-2010-08-13-30504' => '/gscuser/sabubuck/rtg-EAP-2010-08-13-30504',
         'rtg'   => 'rtg',
 );
 
@@ -68,6 +69,16 @@ sub path_for_rtg_format {
 
     if (defined $RTG_VERSIONS{$version}) {
         return $self->path_for_rtg_version . '/rtg format';
+    }
+ 
+    die('No path for rtg version '. $version);
+}
+
+sub path_for_rtg_sdfsplit {
+    my ($self,$version) = @_;
+
+    if (defined $RTG_VERSIONS{$version}) {
+        return $self->path_for_rtg_version . '/rtg sdfsplit';
     }
  
     die('No path for rtg version '. $version);

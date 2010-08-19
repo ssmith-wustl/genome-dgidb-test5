@@ -8,7 +8,7 @@ use Genome;
 class Genome::InstrumentData::Command::Align::RtgMapX {
     is => ['Genome::InstrumentData::Command::Align'],
     has_constant => [
-        aligner_name                    => { value => 'rtg mapx' },
+        aligner_name                    => { value => 'rtg map x' },
     ],
     has_param => [
         version                 => { default_value => 'v2.0.1-build-28762'},
