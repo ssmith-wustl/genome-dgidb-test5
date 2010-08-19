@@ -27,9 +27,8 @@ BEGIN {
         my $self = shift; 
         my $hostname = hostname;
         $hostname =~s/\.gsc\.wustl\.edu//;
-        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-        $year+=1900;
-        my $prefix = "($hostname) $mon/$mday/$year [$hour:$min]";
+        my $time = UR::Time->now_local;
+        my $prefix = "($hostname) [$time]";
         $self->status_message_orig("$prefix -- " . shift)
     };
     *UR::ModuleBase::status_message_orig = \&UR::ModuleBase::status_message;
@@ -37,9 +36,8 @@ BEGIN {
         my $self = shift; 
         my $hostname = hostname;
         $hostname =~s/\.gsc\.wustl\.edu//;
-        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-        $year+=1900;
-        my $prefix = "($hostname) $mon/$mday/$year [$hour:$min]";
+        my $time = UR::Time->now_local;
+        my $prefix = "($hostname) [$time]";
         $self->status_message_orig("$prefix -- " . shift)
     };
 }
