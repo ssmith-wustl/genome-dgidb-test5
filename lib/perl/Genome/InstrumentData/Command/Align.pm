@@ -183,7 +183,6 @@ sub execute {
         $alignment_params{n_remove_threshold} = $self->n_remove_threshold;
     }
 
-    print Data::Dumper::Dumper(\%alignment_params);
     $alignment = Genome::InstrumentData::AlignmentResult->get_or_create(%alignment_params);
     unless ($alignment) {
         if (Genome::InstrumentData::AlignmentResult->error_message()) {
