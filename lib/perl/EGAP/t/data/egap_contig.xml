@@ -1,23 +1,27 @@
 <?xml version='1.0' standalone='yes'?>
-<workflow name="contig predict genes" parallelBy="fasta file" executor="Workflow::Executor::SerialDeferred" logDir="/gscuser/mjohnson/egap_testing">
-  <link fromOperation="input connector" fromProperty="fasta file"    toOperation="trnascan" toProperty="fasta_file" />
-  <link fromOperation="input connector" fromProperty="fasta file"    toOperation="rnamer"   toProperty="fasta_file" />
-  <link fromOperation="input connector" fromProperty="fasta file"    toOperation="rfamscan" toProperty="fasta_file" />
-  <link fromOperation="input connector" fromProperty="fasta file"    toOperation="mask RNA" toProperty="fasta_file" />
+<workflow name="contig predict genes" parallelBy="fasta file" executor="Workflow::Executor::SerialDeferred" logDir="/gscuser/bdericks/egap_testing">
+  <link fromOperation="input connector" fromProperty="snap_output_directory"          toOperation="SNAP"     toProperty="output_directory" />
+  <link fromOperation="input connector" fromProperty="fgenesh_output_directory"       toOperation="fgenesh"  toProperty="output_directory" />
+  <link fromOperation="input connector" fromProperty="trnascan_output_directory"      toOperation="trnascan" toProperty="output_directory" />
+  <link fromOperation="input connector" fromProperty="rnammer_output_directory"       toOperation="rnammer"  toProperty="output_directory" />
+  <link fromOperation="input connector" fromProperty="rfamscan_output_directory"      toOperation="rfamscan" toProperty="output_directory" />
+  <link fromOperation="input connector" fromProperty="masked_fastas_output_directory" toOperation="mask RNA" toProperty="output_directory" />
+  <link fromOperation="input connector" fromProperty="snap version"                   toOperation="SNAP"     toProperty="version" />
+  <link fromOperation="input connector" fromProperty="snap model"                     toOperation="SNAP"     toProperty="model_file" />
+  <link fromOperation="input connector" fromProperty="fasta file"                     toOperation="trnascan" toProperty="fasta_file" />
+  <link fromOperation="input connector" fromProperty="fasta file"                     toOperation="rnammer"   toProperty="fasta_file" />
+  <link fromOperation="input connector" fromProperty="fasta file"                     toOperation="rfamscan" toProperty="fasta_file" />
+  <link fromOperation="input connector" fromProperty="fasta file"                     toOperation="mask RNA" toProperty="fasta_file" />
+  <link fromOperation="input connector" fromProperty="domain"                         toOperation="rnammer"   toProperty="domain" />
+  <link fromOperation="input connector" fromProperty="domain"                         toOperation="trnascan" toProperty="domain" />
+  <link fromOperation="input connector" fromProperty="fgenesh model"                  toOperation="fgenesh"  toProperty="model_file" />
 
-  <link fromOperation="input connector" fromProperty="domain"        toOperation="rnamer"   toProperty="domain" />
-  <link fromOperation="input connector" fromProperty="domain"        toOperation="trnascan" toProperty="domain" />
-
-  <link fromOperation="input connector" fromProperty="fgenesh model" toOperation="fgenesh"  toProperty="parameter_file" />
-  <link fromOperation="input connector" fromProperty="SNAP model"    toOperation="SNAP"     toProperty="hmm_file" />
-
-  
   <link fromOperation="trnascan"        fromProperty="bio_seq_feature" toOperation="cat seq feature"  toProperty="trnascan feature" />
-  <link fromOperation="rnamer"          fromProperty="bio_seq_feature" toOperation="cat seq feature"  toProperty="rnamer feature" />
+  <link fromOperation="rnammer"         fromProperty="bio_seq_feature" toOperation="cat seq feature"  toProperty="rnammer feature" />
   <link fromOperation="rfamscan"        fromProperty="bio_seq_feature" toOperation="cat seq feature"  toProperty="rfamscan feature" />
  
   <link fromOperation="trnascan"        fromProperty="bio_seq_feature" toOperation="cat RNA seq feature"  toProperty="trnascan feature" />
-  <link fromOperation="rnamer"          fromProperty="bio_seq_feature" toOperation="cat RNA seq feature"  toProperty="rnamer feature" />
+  <link fromOperation="rnammer"         fromProperty="bio_seq_feature" toOperation="cat RNA seq feature"  toProperty="rnammer feature" />
   <link fromOperation="rfamscan"        fromProperty="bio_seq_feature" toOperation="cat RNA seq feature"  toProperty="rfamscan feature" />
 
   <link fromOperation="cat RNA seq feature" fromProperty="all features" toOperation="mask RNA" toProperty="bio_seq_feature" />
@@ -38,13 +42,13 @@
     <operationtype commandClass="EGAP::Command::GenePredictor::SNAP" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="trnascan">
-    <operationtype commandClass="GAP::Command::GenePredictor::tRNAscan" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="EGAP::Command::GenePredictor::tRNAscan" typeClass="Workflow::OperationType::Command" />
   </operation>
-  <operation name="rnamer">
-    <operationtype commandClass="GAP::Command::GenePredictor::RNAmmer" typeClass="Workflow::OperationType::Command" />
+  <operation name="rnammer">
+    <operationtype commandClass="EGAP::Command::GenePredictor::RNAmmer" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="rfamscan">
-    <operationtype commandClass="GAP::Command::GenePredictor::RfamScan" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="EGAP::Command::GenePredictor::RfamScan" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="mask RNA">
     <operationtype commandClass="EGAP::Command::MaskFeatures" typeClass="Workflow::OperationType::Command" />
@@ -54,7 +58,7 @@
       <inputproperty>fgenesh feature</inputproperty>
       <inputproperty>SNAP feature</inputproperty>
       <inputproperty>trnascan feature</inputproperty>
-      <inputproperty>rnamer feature</inputproperty>
+      <inputproperty>rnammer feature</inputproperty>
       <inputproperty>rfamscan feature</inputproperty>
       <outputproperty>all features</outputproperty>
       <outputproperty>result</outputproperty>
@@ -63,16 +67,23 @@
   <operation name="cat RNA seq feature">
       <operationtype typeClass="Workflow::OperationType::Converge">
         <inputproperty>trnascan feature</inputproperty>
-        <inputproperty>rnamer feature</inputproperty>
+        <inputproperty>rnammer feature</inputproperty>
         <inputproperty>rfamscan feature</inputproperty>
         <outputproperty>all features</outputproperty>
         <outputproperty>result</outputproperty>
       </operationtype>
   </operation>
   <operationtype typeClass="Workflow::OperationType::Model">
+    <inputproperty>snap_output_directory</inputproperty>
+    <inputproperty>masked_fastas_output_directory</inputproperty>
+    <inputproperty>fgenesh_output_directory</inputproperty>
+    <inputproperty>rnammer_output_directory</inputproperty>
+    <inputproperty>rfamscan_output_directory</inputproperty>
+    <inputproperty>trnascan_output_directory</inputproperty>
     <inputproperty>fasta file</inputproperty>
+    <inputproperty>snap model</inputproperty>
+    <inputproperty>snap version</inputproperty>
     <inputproperty>fgenesh model</inputproperty>
-    <inputproperty>SNAP model</inputproperty>
     <inputproperty>domain</inputproperty>
     <outputproperty>bio seq features</outputproperty>
     <outputproperty>result</outputproperty>
