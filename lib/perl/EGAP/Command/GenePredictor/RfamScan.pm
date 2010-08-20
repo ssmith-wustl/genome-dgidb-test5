@@ -3,23 +3,14 @@ package EGAP::Command::GenePredictor::RfamScan;
 use strict;
 use warnings;
 
+use EGAP;
 use Bio::SeqIO;
-use Workflow;
 use GAP::Job::RfamScan;
-
-
+use File::Path qw(make_path);
 
 class EGAP::Command::GenePredictor::RfamScan {
-    is => ['EGAP::Command::GenePredictor'],
+    is => 'EGAP::Command::GenePredictor',
 };
-
-operation_io EGAP::Command::GenePredictor::RfamScan {
-    input => [ 'fasta_file' ],
-    output => [ 'bio_seq_feature' ]
-};
-
-
-sub sub_command_sort_position { 10 }
 
 sub help_brief {
     "Write a set of fasta files for an assembly";
@@ -37,16 +28,17 @@ EOS
 }
 
 sub execute {
-    
     my $self = shift;
 
+    # TODO Put raw output into output directory
 
     my $seqio = Bio::SeqIO->new(-file => $self->fasta_file(), -format => 'Fasta');
 
     my $seq = $seqio->next_seq();
     
-    ##FIXME: The last arg is the job_id, which is hardcoded here in 
-    ##       a rather lame fashion.
+    # TODO Remove this dependency on GAP
+    # TODO Also, raw output capture will be much easier to do if I just rewrite
+    # the whole tool as a genome model tool
     my $legacy_job = GAP::Job::RfamScan->new(
                                              $seq,
                                              2112,

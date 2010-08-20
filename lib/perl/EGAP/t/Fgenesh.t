@@ -17,9 +17,9 @@ BEGIN {
 
 ##FIXME:  Note that the EGAP::Job will fail in a bizarre fashion if the parameter file arg is garbage - sanity check should be added
 my $command = EGAP::Command::GenePredictor::Fgenesh->create(
-                                                            'fasta_file'     => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
-                                                            'parameter_file' => '/gsc/pkg/bio/softberry/installed/sprog/C_elegans',
-                                                            );
+    fasta_file => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
+    model_file => '/gsc/pkg/bio/softberry/installed/sprog/C_elegans',
+);
 
 isa_ok($command, 'EGAP::Command::GenePredictor');
 isa_ok($command, 'EGAP::Command::GenePredictor::Fgenesh');
