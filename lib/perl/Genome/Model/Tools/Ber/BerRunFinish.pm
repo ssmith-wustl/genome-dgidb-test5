@@ -24,6 +24,8 @@ use DateTime;
 use MIME::Lite;
 
 use File::Slurp;    # to replace IO::File access...
+use File::Copy;
+use File::Basename;
 
 use Cwd;
 
@@ -112,10 +114,16 @@ sub execute
     my $assembly_name = $self->assembly_name;
     my $ssid          = $self->sequence_set_id;
 
+    my $anno_submission = $amgap_path . "/"
+        . $org_dirname . "/"
+        . $assembly_name . "/"
+        . $pipe_version . "/"
+	. "Genbank_submission/Version_1.0/Annotated_submission/";
+
     my $program = "/gsc/scripts/bin/tace";
     my $cwd     = getcwd();
     my $outdir
-        = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/out};
+		= qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/out};
     unless ( $cwd eq $outdir )
     {
         chdir($outdir)
@@ -130,6 +138,15 @@ sub execute
         # rename file.
         rename($sqlitedatafile.".dat",$sqlitedatafile);
     }
+    
+    ## get the latest filename
+    (my $sqlitedatafilename, $outdirpath) = fileparse($sqlitedatafile);
+
+    ## Copy sqlite.dat file Annotated_submission directory
+    ## Before copying sqlite file we will need to delete sqlite*.dat file in the Annotated_submission directory if already exists
+	print "Found file\n" if -e $anno_submission.$sqlitedatafilename;
+# 	unlink($anno_submission.$sqlitedatafilename) || croak qq{\n\n Cannot delete $anno_submission.$sqlitedatafilename ... from BerRunFinish.pm: $OS_ERROR\n\n} if -e $anno_submission.$sqlitedatafilename;
+    copy($sqlitedatafile, $anno_submission.$sqlitedatafilename) || croak qq{\n\n Copying of $sqlitedatafile failed ...  from BerRunFinish.pm: $OS_ERROR\n\n };
 
     my $sqliteoutfile  = qq{$outdirpath/$sqliteout};
     unless ( ( -e $sqlitedatafile ) and ( !-z $sqlitedatafile ) )
@@ -503,6 +520,9 @@ sub execute
     print $rtfile_fh
         qq{\n$assembly_name, $locus_tag, a $project_type project has finished processing in AMGAP, BER product naming and now ready to be processed for submissions\n\n};
 
+    print $rtfile_fh qq{\nA copy of BER naming file $sqlitedatafilename has been placed in $anno_submission$sqlitedatafilename\n\n};
+
+
     my $sequence_set     = BAP::DB::SequenceSet->retrieve($ssid);
     my $software_version = $sequence_set->software_version();
     my $data_version     = $sequence_set->data_version();
@@ -615,7 +635,7 @@ sub execute
     }
     print $rtfile_fh qq{Location of this file:\n};
     print $rtfile_fh qq{\n$rtfullname\n\n};
-    print $rtfile_fh qq{I am transferring ownership to Veena.\n\n};
+    print $rtfile_fh qq{I am transferring ownership to Veena/Joanne.\n\n};
     print $rtfile_fh qq{Thanks,\n\n};
     print $rtfile_fh qq{Sasi\n};
 
