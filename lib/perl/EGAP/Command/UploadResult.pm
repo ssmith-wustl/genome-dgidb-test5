@@ -3,7 +3,7 @@ package EGAP::Command::UploadResult;
 use strict;
 use warnings;
 
-use Workflow;
+use EGAP;
 
 use Bio::SeqIO;
 use Bio::SeqFeature::Generic;
@@ -14,75 +14,67 @@ use Data::Dumper;
 use Carp;
 
 class EGAP::Command::UploadResult {
-    is  => ['MGAP::Command'],
+    is  => 'EGAP::Command',
     has => [
         seq_set_id => {
-            is  => 'SCALAR',
-            doc => 'identifies a whole assembly'
+            is  => 'Number',
+            is_input => 1,
+            doc => 'Identifies an assembly in the EGAP database',
         },
         bio_seq_features => {
             is  => 'ARRAY',
+            is_input => 1,
             doc => 'array of Bio::Seq::Feature'
         },
     ],
 };
 
-operation_io EGAP::Command::UploadResult {
-    input  => [ 'bio_seq_features', 'seq_set_id' ],
-    output => [],
-};
-
 sub help_brief {
-    "Store input gene predictions in the EGAP schema";
+    return "Uploads predictions from EGAP to the database";
 }
 
 sub help_synopsis {
-    return <<"EOS"
+    return <<EOS
+Takes a list of features (predictions made by EGAP), converts them to EGAP
+objects, and commits those objects to the EGAP database.
 EOS
 }
 
 sub help_detail {
-    return <<"EOS"
-Need documenation here.
+    return <<EOS
+Takes a list of features (predictions made by EGAP), converts them to EGAP
+objects, and commits those objects to the EGAP database.
 EOS
 }
 
 sub execute {
-
     my $self = shift;
 
     my $sequence_set_id = $self->seq_set_id();
     my $sequence_set    = EGAP::SequenceSet->get($sequence_set_id);
-
     my @sequences = $sequence_set->sequences();
 
     # All previous predictions are wiped out
-    foreach my $sequence (@sequences) {
-        my @coding_genes = $sequence->coding_genes();
-        my @trna_genes   = $sequence->trna_genes();
-        my @rna_genes    = $sequence->rna_genes();
-
-        foreach my $gene ( @coding_genes, @trna_genes, @rna_genes ) {
-            $gene->delete();
-        }
-
+    $self->warning_message("Removing all prior predictions in the database for sequence set id $sequence_set_id!");
+    for my $sequence (@sequences) {
+        $self->_delete_predictions_for_sequence($sequence);
     }
+    $self->status_message("All previous predictions successfully removed!");
 
     $self->{_gene_count} = {};
     my %features;
 
     # Group features by sequence id
-    foreach my $ref (@{$self->bio_seq_features()}) {
+    for my $ref (@{$self->bio_seq_features()}) {
         my @fixup;
         if (ref($ref) eq 'ARRAY') {
             @fixup = @{$ref};
         }
         else {
             push @fixup, $ref;
-            
         }
         
-        foreach my $feature (@fixup) {
+        for my $feature (@fixup) {
             if (defined($feature)) {
                 push @{$features{$feature->seq_id()}}, $feature;
             }
@@ -90,7 +82,7 @@ sub execute {
     }
 
     # Iterate through seq ids, create transcript/gene/exon/protein objects
-    foreach my $seq_id ( keys %features ) {
+    for my $seq_id ( keys %features ) {
         $self->{_gene_count}{$seq_id}{fgenesh}  = 0;
         $self->{_gene_count}{$seq_id}{snap}     = 0;
         $self->{_gene_count}{$seq_id}{trnascan} = 0;
@@ -111,7 +103,7 @@ sub execute {
 
         my @features = @{ $features{$seq_id} };
 
-        foreach my $feature (@features) {
+        for my $feature (@features) {
             my $source = $feature->source_tag();
 
             if ( $source eq 'Fgenesh' ) {
@@ -138,13 +130,49 @@ sub execute {
     }
 
     UR::Context->commit();
+    return 1;
+}
+
+sub _delete_predictions_for_sequence {
+    my ($self, $sequence) = @_;
+
+    my @coding_genes = $sequence->coding_genes();
+    my @trna_genes = $sequence->trna_genes();
+    my @rna_genes = $sequence->rna_genes();
+
+    for my $gene (@coding_genes) {
+        my @transcripts = $gene->transcripts;
+
+        for my $transcript (@transcripts) {
+            my @proteins = EGAP::Protein->get(transcript => $transcript);
+            my @exons = $transcript->exons;
+
+            for my $protein (@proteins) {
+                my $protein_id = $protein->id;
+                my $rv = $protein->delete();
+                confess "Could not remove protein $protein_id!" unless $rv;
+            }
+            for my $exon (@exons) {
+                my $exon_id = $exon->id;
+                my $rv = $exon->delete();
+                confess "Could not remove exon $exon_id!" unless $rv;
+            }
+
+            my $transcript_id = $transcript->id;
+            my $rv = $transcript->delete();
+            confess "Could not remove transcript $transcript_id!" unless $rv;
+        }
+    }
+
+    for my $gene (@trna_genes, @rna_genes ) {
+        $gene->delete();
+    }
 
     return 1;
-
 }
 
 sub _store_coding_gene {
-    my ( $self, $sequence_id, $feature, $seq_obj ) = @_;
+    my ($self, $sequence_id, $feature, $seq_obj) = @_;
 
     my $source = lc($feature->source_tag());
     
@@ -191,7 +219,7 @@ sub _store_coding_gene {
         sequence_string => $seq_obj->subseq($start, $end),
     );
     unless ($gene) {
-        confess "Could not create gene object!";
+        confess "Could not create gene object with name $gene_name!";
     }   
 
     my $transcript = EGAP::Transcript->create(
@@ -204,7 +232,7 @@ sub _store_coding_gene {
         sequence_string => $seq_obj->subseq($cds_start, $cds_end),
     );
     unless ($transcript) {
-        confess "Could not create transcript object!";
+        confess "Could not create transcript object for gene $gene_name!";
     }
 
     my $exon_seq_string;
@@ -226,7 +254,7 @@ sub _store_coding_gene {
             three_prime_overhang => $three_prime_overhang,
         );
         unless ($exon) {
-            confess "Could not create exon object!";
+            confess "Could not create exon object for transcript " . $transcript->transcript_id() . "!";
         }
     }
 
@@ -234,20 +262,20 @@ sub _store_coding_gene {
         -id  => $transcript->transcript_name(),
         -seq => $exon_seq_string,
     );
-
     if ($strand eq '-1') {
         $transcript_seq = $transcript_seq->revcom();
     }
 
+    # If this is a fragment, need to figure out how many bases to cut off the front before translating
     if ($fragment) {
         my $first_exon_overhang = $exons[0]->get_tag_values('five_prime_overhang');
         $first_exon_overhang = $exons[-1]->get_tag_values('five_prime_overhang') if $strand eq '-1';
-        $transcript_seq = $transcript_seq->trunc($first_exon_overhang);
+        $transcript_seq = $transcript_seq->trunc($first_exon_overhang, $transcript_seq->length());
     }
         
     my $protein_seq = $transcript_seq->translate();
     
-    # Check if the translated sequence contains a stop codon somewhere other than the end
+    # Check if the translated sequence contains an internal stop codon
     my $internal_stops = 0;
     my $stop = index($protein_seq, '*');
     unless ($stop == -1 or $stop == (length($protein_seq) - 1)) {
@@ -261,7 +289,7 @@ sub _store_coding_gene {
         sequence_string => $protein_seq->seq(),
     );
     unless ($protein) {
-        confess "Could not create protein object!";
+        confess "Could not create protein object for transcript " . $transcript->transcript_name() . "!";
     }
     
     $gene->internal_stops($internal_stops);
@@ -270,21 +298,19 @@ sub _store_coding_gene {
 }
 
 sub _store_trnascan {
+    my ($self, $sequence_id, $feature, $seq_obj) = @_;
 
-    my ( $self, $sequence_id, $feature, $seq_obj ) = @_;
-
-    my $gene_name = join(
-        '.',
+    my $gene_name = join('.',
         $feature->seq_id(),
-        (   join( '',
-                't', $self->{_gene_count}{ $feature->seq_id() }{'trnascan'} )
+        (join( '',
+            't', $self->{_gene_count}{ $feature->seq_id() }{'trnascan'} )
         )
     );
     
     my ($codon) = $feature->each_tag_value('Codon');
     my ($aa)    = $feature->each_tag_value('AminoAcid');
 
-    EGAP::tRNAGene->create(
+    my $trna_gene = EGAP::tRNAGene->create(
         gene_name   => $gene_name,
         sequence_id => $sequence_id,
         start       => $feature->start(),
@@ -295,12 +321,15 @@ sub _store_trnascan {
         codon       => $codon,
         aa          => $aa,
     );
+    unless ($trna_gene) {
+        confess "Could not create tRNAGene object for gene $gene_name!";
+    }
 
+    return 1;
 }
 
 sub _store_rnammer {
-
-    my ( $self, $sequence_id, $feature ) = @_;
+    my ($self, $sequence_id, $feature) = @_;
 
     my $gene_name = join '.',
         $feature->seq_id(),
@@ -310,7 +339,7 @@ sub _store_rnammer {
     my $score         = $feature->score();
     my ($description) = $feature->each_tag_value('group');
 
-    EGAP::RNAGene->create(
+    my $rna_gene = EGAP::RNAGene->create(
         gene_name   => $gene_name,
         sequence_id => $sequence_id,
         start       => $feature->start(),
@@ -321,37 +350,43 @@ sub _store_rnammer {
         source      => 'rnammer',
         score       => $score,
     );
+    unless ($rna_gene) {
+        confess "Could not create RNAGene object for gene $gene_name!";
+    }
 
+    return 1;
 }
 
 sub _store_rfamscan {
-
     my ( $self, $sequence_id, $feature ) = @_;
 
-    my $gene_name = join '.', $feature->seq_id(), 'rfam',
-        $self->{_gene_count}{ $feature->seq_id() }{'rfam'};
+    my $gene_name = join '.', 
+        $feature->seq_id(), 
+        'rfam',
+        $self->{_gene_count}{$feature->seq_id()}{'rfam'};
 
     my $score              = $feature->score();
     my ($rfam_accession)   = $feature->each_tag_value('acc');
     my ($rfam_description) = $feature->each_tag_value('id');
 
-    unless ( ( $score <= 50 ) || ( $rfam_description =~ /tRNA/i ) ) {
-
-        EGAP::RNAGene->create(
-            {   gene_name   => $gene_name,
-                sequence_id => $sequence_id,
-                start       => $feature->start(),
-                end         => $feature->end(),
-                acc         => $rfam_accession,
-                description => $rfam_description,
-                strand      => $feature->strand(),
-                source      => 'rfam',
-                score       => $score,
-            }
+    unless (($score <= 50) or ($rfam_description =~ /tRNA/i)) {
+        my $rna_gene = EGAP::RNAGene->create(
+            gene_name   => $gene_name,
+            sequence_id => $sequence_id,
+            start       => $feature->start(),
+            end         => $feature->end(),
+            acc         => $rfam_accession,
+            description => $rfam_description,
+            strand      => $feature->strand(),
+            source      => 'rfam',
+            score       => $score,
         );
-
+        unless ($rna_gene) {
+            confess "Could not create RNAGene for gene $gene_name!";
+        }
     }
 
+    return 1;
 }
 
 1;

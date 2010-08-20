@@ -107,9 +107,9 @@ td.buttons a.ui-button-text-only {
 
 /* dialog */
 .ui-dialog {
-    -moz-box-shadow: 5px 5px 20px rgba(0,0,0,0.3);
-    -webkit-box-shadow: 5px 5px 20px rgba(0,0,0,0.3);
-    box-shadow: 5px 5px 20px rgba(0,0,0,0.3);
+    -moz-box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    -webkit-box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
     border: 1px solid #7d7e71 !important;
 }
 
