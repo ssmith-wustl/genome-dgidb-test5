@@ -115,6 +115,7 @@ sub execute {
                 input_files => [$meta1_bam, $meta2_bam],
                 output_file => $merged_bam,
             );
+            $rv = $rv->{result};
         };
         if ($@ or !$rv){
             $self->error_message("Failed to sort and merge metagenomic bams: $@");
@@ -127,6 +128,35 @@ sub execute {
         }
 
         system ("touch $merged_bam.OK");
+    }
+
+    my $sorted_bam = $self->report_dir."/metagenomic_alignment.combined.sorted.bam";
+    if (-e $sorted_bam and -e $sorted_bam.".OK"){
+        $self->status_message("sorted metagenomic merged bam already produced, skipping");
+    }else{
+        my $rv;
+
+        $self->status_message("starting position sort of merged bam");
+
+        eval{
+
+            $rv = Genome::Model::Tools::Sam::SortBam->execute(
+                file_name => $merged_bam,
+                output_file => $sorted_bam,
+            );
+            $rv = $rv->{result};
+        };
+        if ($@ or !$rv){
+            $self->error_message("Failed to position sort merged metagenomic bam: $@");
+            die;
+        }
+
+        unless (-s $sorted_bam){
+            $self->error_message("Sorted bam has no size!");
+            die;
+        }
+
+        system ("touch $sorted_bam.OK");
     }
 
     $self->status_message("Finished sort and merge, compiling metagenomic reports");
@@ -265,7 +295,7 @@ sub execute {
 
     my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
         working_directory => $self->report_dir,
-        aligned_bam_file => $merged_bam,
+        aligned_bam_file => $sorted_bam,
         regions_file => $self->regions_file,
     );
 
@@ -290,7 +320,7 @@ sub execute {
     my $taxonomy_fh         =IO::File->new($self->taxonomy_file);
     my $viral_taxonomy_fh   =IO::File->new($self->viral_headers_file);
     my $read_counts_fh      =IO::File->new($read_count_output_file);
-    my $summary_report_fh   =IO::File->new("> ".$self->report_dir."metagenomic_refcov_summary.txt");
+    my $summary_report_fh   =IO::File->new("> ".$self->report_dir."/metagenomic_refcov_summary.txt");
 
     my $data;
     my %print_hash;
@@ -353,7 +383,7 @@ sub execute {
     }
     $refcov_fh->close;
 
-    print $summary_report_fh "Reference Name\tPhyla\tHMP flag\tAvg coverage\tPercent Covered\tTotal reference bases\tBases not covered\t#Reads\n";
+    print $summary_report_fh "Reference Name\tPhyla\tHMP flag\tDepth\tBreadth\tTotal reference bases\tBases not covered\t#Reads\n";
     #foreach my $s (keys%{$data}){
     for my $s (sort {$a cmp $b} keys%{$data}){
         my $desc=$header_hash{$s};
