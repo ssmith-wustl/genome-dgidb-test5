@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Command::Merge;
+package Genome::Model::BacterialGeneAnnotation::Command::Merge;
 
 
 use strict;
@@ -35,7 +35,7 @@ use IPC::Run;
 use MIME::Lite;
 use XML::DOM::XPath;
 
-class Genome::Model::GenePrediction::Command::Merge {
+class Genome::Model::BacterialGeneAnnotation::Command::Merge {
     is  => 'Command',
     doc => "",
     has => [

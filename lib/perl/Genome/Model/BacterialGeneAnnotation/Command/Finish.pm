@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Command::Finish;
+package Genome::Model::BacterialGeneAnnotation::Command::Finish;
 
 use strict;
 use warnings;
@@ -21,7 +21,7 @@ use Carp;
 use File::Path;
 use MIME::Lite;
 
-class Genome::Model::GenePrediction::Command::Finish {
+class Genome::Model::BacterialGeneAnnotation::Command::Finish {
     is  => 'Command',
     doc => "BAP finish project",
     has => [
