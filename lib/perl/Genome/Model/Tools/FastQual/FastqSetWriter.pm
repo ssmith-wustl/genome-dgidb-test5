@@ -1,11 +1,11 @@
-package Genome::Model::Tools::Fastq::SetWriter;
+package Genome::Model::Tools::FastQual::FastqSetWriter;
 
 use strict;
 use warnings;
 
 use base 'Class::Accessor';
 
-__PACKAGE__->mk_accessors(qw/ fastq_files _writers _write_strategy /);
+__PACKAGE__->mk_accessors(qw/ files _writers _write_strategy /);
 
 require Carp;
 use Data::Dumper 'Dumper';
@@ -17,28 +17,28 @@ sub create {
     my $self = bless \%params, $class;
 
     # Fastq files
-    my $fastq_files = $self->fastq_files;
+    my $files = $self->files;
     my $write_strategy;
-    unless ( defined $fastq_files ) {
+    unless ( defined $files ) {
         Carp::confess("No fastq files given");
     }
-    unless ( ref $fastq_files ) {
+    unless ( ref $files ) {
         # be nice, set to aryref
-        $fastq_files = $self->fastq_files([ $fastq_files ]);
+        $files = $self->files([ $files ]);
     }
 
-    if ( @$fastq_files == 0 ) {
+    if ( @$files == 0 ) {
         Carp::confess('No fastq files given to write');
     }
-    elsif ( @$fastq_files > 2 ) {
+    elsif ( @$files > 2 ) {
         Carp::confess('Too many fastq files given to write');
     }
 
     # Writers
     my  @writers;
-    for my $fastq_file ( @$fastq_files ) {
+    for my $file ( @$files ) {
         my $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
-            fastq_file => $fastq_file,
+            file => $file,
         );
         unless ( $writer ) {
             Carp::Confess("Can't open fastq file.");

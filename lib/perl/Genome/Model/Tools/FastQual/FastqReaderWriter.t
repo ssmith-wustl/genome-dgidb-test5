@@ -24,12 +24,12 @@ my $output_fastq = $tmpdir.'/fastq';
 
 #< Create Reader/Writer >#
 my $reader = Genome::Model::Tools::FastQual::FastqReader->create(
-    fastq_file => $input_fastq,
+    file => $input_fastq,
 );
 ok($reader, 'Create reader.');
 
 my $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
-    fastq_file => $output_fastq,
+    file => $output_fastq,
 );
 ok($writer, 'Create writer.');
 

@@ -215,4 +215,61 @@
     </xsl:choose>
   </xsl:template>
 
+  <!-- creates a button with a jQueryUI icon -->
+  <xsl:template name="object_link_button">
+    <xsl:param name="type" select="./@type"/>
+    <xsl:param name="id" select="./@id"/>
+    <xsl:param name="perspective" select="'status'"/>
+    <xsl:param name="toolkit" select="'html'"/>
+    <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
+    <xsl:param name="icon"/>
+
+    <xsl:comment>template: search/ur_object.xsl; name: object_link_button</xsl:comment>
+
+    <a class="mini btn">
+      <xsl:attribute name="href">
+        <xsl:value-of select="$rest"/>
+        <xsl:text>/</xsl:text>
+        <xsl:value-of select="rest:typetourl($type)"/>
+        <xsl:text>/</xsl:text>
+        <xsl:value-of select="$perspective"/>
+        <xsl:text>.</xsl:text>
+        <xsl:value-of select="$toolkit"/>
+        <xsl:text>?id=</xsl:text>
+        <xsl:value-of select="$id"/>
+      </xsl:attribute>
+      <span class="sm-icon sm-icon-extlink"><xsl:attribute name="class"><xsl:text>sm-icon </xsl:text><xsl:value-of select="$icon"/></xsl:attribute><br/></span><xsl:value-of select="$linktext"/>
+    </a>
+
+  </xsl:template>
+
+  <!-- creates a tiny button with no label -->
+  <xsl:template name="object_link_button_tiny">
+    <xsl:param name="type" select="./@type"/>
+    <xsl:param name="id" select="./@id"/>
+    <xsl:param name="perspective" select="'status'"/>
+    <xsl:param name="toolkit" select="'html'"/>
+    <xsl:param name="icon"/>
+
+    <xsl:variable name="button_href">
+      <xsl:call-template name="object_link_href">
+        <xsl:with-param name="type" select="$type"/>
+        <xsl:with-param name="id" select="$id"/>
+        <xsl:with-param name="perspective" select="$perspective"/>
+        <xsl:with-param name="toolkit" select="$toolkit"/>
+      </xsl:call-template>
+    </xsl:variable>
+
+    <xsl:comment>template: status/ur_object.xsl:object_link_button_tiny</xsl:comment>
+
+    <a class="mini-icon btn">
+      <xsl:attribute name="href">
+        <xsl:value-of select="$button_href"/>
+      </xsl:attribute>
+      <span><xsl:attribute name="class"><xsl:text>sm-icon </xsl:text><xsl:value-of select="$icon"/></xsl:attribute><br/></span>
+    </a>
+
+  </xsl:template>
+
+
 </xsl:stylesheet>

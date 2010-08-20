@@ -11,6 +11,8 @@ use UR;
 use Genome::Config;
 use Genome::Memcache;
 
+# old server: default_value => 'http://solr',
+
 class Genome::Search { 
     is => 'UR::Singleton',
     doc => 'This module contains methods for adding and updating objects in the Solr search engine.',
@@ -21,7 +23,7 @@ class Genome::Search {
         },
         _solr_server_location => {
             is => 'Text',
-            default_value => 'http://solr',
+            default_value => 'http://solr-dev:8080/solr',
             doc => 'Location of the Solr server',
         },
         _dev_solr_server_location => {
@@ -152,7 +154,7 @@ sub add {
     my $self = $class->_singleton_object;
     
     my @docs = $class->generate_document(@objects);
-    
+
     unless($self->solr_server->add(\@docs)) {
         $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to Solr.');
         return;

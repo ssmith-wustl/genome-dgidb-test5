@@ -600,7 +600,7 @@ sub _run_aligner_chunked {
             return ($successful_passes > 0);
         }
 
-        my @remaining_fhs = grep {eof $_} @read_fhs;
+        my @remaining_fhs = grep {!eof $_} @read_fhs;
         print scalar(@remaining_fhs) .  " is the remaining set\n";
         if (@remaining_fhs > 0 && @remaining_fhs < @reads) {
             $self->error_message("It looks like the read files are not the same length.  We've exhausted one but not the other.");

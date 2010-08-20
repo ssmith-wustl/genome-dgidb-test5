@@ -4,14 +4,19 @@ use strict;
 use warnings;
 use Genome;
 use Cwd;
+use IO::File;
 
 class Genome::InstrumentData::Command::Import::HmpSra {
     is  => 'Command',
     has_input => [
-        run_ids => { 
-            is_many => 1, 
-            doc => 'the SRR ids of the data',
-        },
+#        run_ids => { 
+#            is_many => 1, 
+##            doc => 'the SRR ids of the data',
+#        },
+	run_ids => { 
+	    is_optional => 1, 
+            doc => 'a file of SRR ids',
+	},
         tmp_dir => {
             is_optional => 1,
             doc => 'override the temp dir used during processing (no auto cleanup)',
@@ -28,10 +33,18 @@ class Genome::InstrumentData::Command::Import::HmpSra {
 sub execute {
     my $self = shift;
 
-    # force the debugger to stop here
-    $DB::single = 1;
+    #### jmartin 100813
+    ####my @srr_ids = $self->run_ids;
+    my @srr_ids;
+    my $fh = new IO::File $self->run_ids;
+    while (<$fh>) {
+	chomp;
+	my $line = $_;
+	next if ($line =~ /^\s*$/);
+	push(@srr_ids,$line);
+    }
+    $fh->close;
 
-    my @srr_ids = $self->run_ids;
     $self->status_message("SRR ids are: @srr_ids");
 
     my $tmp = $self->tmp_dir;

@@ -232,7 +232,12 @@ $DB::single = 1;
         my ($filename,$path,$suffix) = fileparse($file, @suffixes);
         $basenames{$path}++;
         $basename = $path;
-        push @inputs,$filename.$suffix;
+        my $fastq_name = $filename.$suffix;
+        unless(($fastq_name=~m/^s_[1-8]_sequence.txt$/)||($fastq_name=~m/^s_[1-8]_[1-2]_sequence.txt$/)){
+            $self->error_message("File basename - $fastq_name - did not have the form: \n\t\t\t\t s_[1-8]_sequence.txt or s_[1-8]_[1-2]_sequence.txt\n");
+            die $self->error_message;
+        }
+        push @inputs,$fastq_name;
     }
     unless(scalar(keys(%basenames))==1) {
         $self->error_message("Found more than one path to imported files.");

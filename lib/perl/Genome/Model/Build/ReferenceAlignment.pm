@@ -866,8 +866,11 @@ sub alignment_summary_hash_ref {
             $data->{percent_target_aligned} = sprintf("%.02f",(($data->{total_target_aligned_bp} / $data->{total_aligned_bp}) * 100));
             
             # on-target duplicates
-            $data->{percent_target_duplicates} = sprintf("%.02f",(($data->{duplicate_target_aligned_bp} / $data->{total_target_aligned_bp}) * 100));
-            
+            if ($data->{total_target_aligned_bp}) {
+                $data->{percent_target_duplicates} = sprintf("%.02f",(($data->{duplicate_target_aligned_bp} / $data->{total_target_aligned_bp}) * 100));
+            } else {
+                $data->{percent_target_duplicates} = 0;
+            }
             # off-target alignment
             $data->{percent_off_target_aligned} = sprintf("%.02f",(($data->{total_off_target_aligned_bp} / $data->{total_aligned_bp}) * 100));
             
