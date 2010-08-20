@@ -88,6 +88,7 @@ sub test_alignment {
                                                        aligner_version => $aligner_version,
                                                        aligner_name => $aligner_name,
                                                        reference_build => $reference_build, 
+                                                       n_remove_threshold => 5,
                                                        %p,
                                                    );
 
