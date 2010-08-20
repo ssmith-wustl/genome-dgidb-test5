@@ -44,7 +44,7 @@ sub execute {
     my $current_dir = `pwd`;
     chomp ($current_dir);
     my $path_to_scripts_dir = $current_dir . "/" . $scripts_dir;
-    $ENV{'PATH'} = $ENV{'PATH'} . ":" $path_to_scripts_dir;
+    $ENV{'PATH'} = $ENV{'PATH'} . ":" . $path_to_scripts_dir;
 
     #Run BROAD's processing script
     my $cmd;
