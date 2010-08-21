@@ -250,7 +250,7 @@ sub execute {
     }
 
     while (my $line = $mut_fh->getline) {
-        next if ($line =~ /^Hugo/);
+        next if (( $line =~ /^Hugo\_Symbol/ ) || ( $line =~ /^#/ ));
         chomp $line;
         my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
 
