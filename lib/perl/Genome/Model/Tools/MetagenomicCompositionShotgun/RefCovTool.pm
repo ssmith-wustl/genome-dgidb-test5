@@ -68,7 +68,7 @@ sub execute {
     my @expected_refcov_output_files = ($stats_file);
     $self->status_message("Output stats file: ".$stats_file);
 
-    my $cmd = "/gscuser/jwalker/svn/TechD/RefCov/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
+    my $cmd = "/gsc/var/tmp/Bio-SamTools/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
 
     $self->status_message("Running ref cov report at ".UR::Time->now);
     my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
