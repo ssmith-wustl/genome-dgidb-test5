@@ -42,11 +42,6 @@ class Genome::Model::Tools::Bmr::BatchClassSummary {
         is_optional => 1,
         doc => 'Comma-delimited list of genes to exclude in BMR calculation',
     },
-#    rejected_mutations => {
-#        type => 'String',
-#        is_optional => 1,
-#        doc => 'File to catch mutations that fall in the ROI list location-wise, but have a gene name which does not match any of the genes in the ROI list. Default operation is to print to STDOUT.',
-#    },
     ]
 };
 
@@ -394,8 +389,8 @@ sub execute {
     }
     $out_fh->close;
     my $t3 = Benchmark->new;
-    print STDERR " Total Time: ", timestr(timediff($t3,$t0)), "\n";
-    print STDERR "Load Wiggle: ", timestr(timediff($t2,$t1)), "\n";
+    print " Total Time: ", timestr(timediff($t3,$t0)), "\n";
+    print "Load Wiggle: ", timestr(timediff($t2,$t1)), "\n";
     return 1;
 }
 

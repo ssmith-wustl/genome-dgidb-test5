@@ -243,7 +243,7 @@ sub execute {
     my $rejects_file = $self->rejected_mutations;
     my $rejects_fh;
     if ($rejects_file) {
-        $rejects_fh = new IO::File $rejects_file,"w";
+        $rejects_fh = IO::File->( $rejects_file, ">" );
     }
     else {
         open $rejects_fh, ">&STDOUT";
@@ -282,7 +282,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = A
@@ -298,7 +298,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = T
@@ -327,7 +327,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = C
@@ -355,7 +355,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = G
@@ -363,7 +363,7 @@ sub execute {
 
                 #if the ROI list and MAF file do not match, quit.
                 else {
-                    print $rejects_fh "Cannot find this mutation's gene in the ROI hash:\n$line\n";
+                    print $rejects_fh "Gene not in the ROI list: $gene, chr$chr:$start-$stop";
                     next;
                 }
             }#end, if mutation is non-synonymous
@@ -376,7 +376,7 @@ sub execute {
                 $COVMUTS{$gene}{'Indels'}{'mutations'}++;
             }
             else {
-                print $rejects_fh "Cannot find this mutation's gene in the ROI hash:\n$line\n";
+                print $rejects_fh "Gene not in the ROI list: $gene, chr$chr:$start-$stop";
                 next;
             }
         }#end, if mutation is an indel
@@ -407,7 +407,7 @@ sub execute {
         }
     }
     my $t3 = Benchmark->new;
-    print STDERR " Total Time: ", timestr(timediff($t3,$t0)), "\n";
+    print " Total Time: ", timestr(timediff($t3,$t0)), "\n";
     return 1;
 }
 
