@@ -46,6 +46,7 @@ Options:
 my @vars;
 my $cm=new CrossMatch(fin=>$ARGV[0],mmr=>$opts{m});
 my @DCposes=keys %{$cm->{dcpos}}; #discrepant position
+#my $swap_chrom=0;
 my $refseq; my @refbases;
 if(defined $opts{r}){
   my $refseq_stream = Bio::SeqIO->newFh(-file =>$opts{r}, -format => 'Fasta');
@@ -292,29 +293,62 @@ foreach my $read(keys %{$cm->{align}}){
       else{  #inter-chromosomal
 	$size=1;
 	$type='CTX';
-	if($aln1->{orientation} eq 'U'){
-	  if(($aln2->{orientation} eq 'U')){
-	    $orientation='+-';
-	    $refpos1=$aln1->{ref_end}-$overlap+1;
-	    $refpos2=$aln2->{ref_start}+$overlap-1;
+	if(&GLess($aln1->{refseq}, $aln2->{refseq})){ #keep the repeat in the lower chromosome
+	  if($aln1->{orientation} eq 'U'){
+	    if(($aln2->{orientation} eq 'U')){
+	      $orientation='+-';
+	      $refpos1=$aln1->{ref_end}-$overlap+1;
+	      $refpos2=$aln2->{ref_start}+$overlap-1;
+	    }
+	    else{
+	      $orientation='++';
+	      $refpos1=$aln1->{ref_end}-$overlap+1;
+	      $refpos2=$aln2->{ref_start}-$overlap+1;
+	    }
 	  }
 	  else{
-	    $orientation='++';
-	    $refpos1=$aln1->{ref_end}-$overlap+1;
-	    $refpos2=$aln2->{ref_start}-$overlap+1;
+	    if(($aln2->{orientation} eq 'U')){
+	      $orientation='--';
+	      $refpos1=$aln1->{ref_end}+$overlap-1;
+	      $refpos2=$aln2->{ref_start}+$overlap-1;
+	    }
+	    else{
+	      $orientation='-+';
+	      $refpos1=$aln1->{ref_end}+$overlap-1;
+	      $refpos2=$aln2->{ref_start}-$overlap+1;
+	    }
+	    #$refpos1=$refpos1+$overlap-1;
 	  }
 	}
 	else{
-	  if(($aln2->{orientation} eq 'U')){
-	    $orientation='--';
-	    $refpos1=$aln1->{ref_end}+$overlap-1;
-	    $refpos2=$aln2->{ref_start}+$overlap-1;
+	  if($aln1->{orientation} eq 'U'){
+	    if($aln2->{orientation} eq 'U'){
+	      $orientation='-+';
+	      $refpos1=$aln1->{ref_end}-$overlap+1;
+	      $refpos2=$aln2->{ref_start}+$overlap-1;
+	    }
+	    else{
+	      $orientation='++';
+	      $refpos1=$aln1->{ref_end}-$overlap+1;
+	      $refpos2=$aln2->{ref_start}-$overlap+1;
+	    }
 	  }
 	  else{
-	    $orientation='-+';
-	    $refpos1=$aln1->{ref_end}+$overlap-1;
-	    $refpos2=$aln2->{ref_start}-$overlap+1;
+	    if($aln2->{orientation} eq 'U'){
+	      $orientation='--';
+	      $refpos1=$aln1->{ref_end}+$overlap-1;
+	      $refpos2=$aln2->{ref_start}+$overlap-1;
+	    }
+	    else{
+	      $orientation='+-';
+	      $refpos1=$aln1->{ref_end}+$overlap-1;
+	      $refpos2=$aln2->{ref_start}-$overlap+1;
+	    }
+	    #$refpos1=$refpos1+($overlap-1);
 	  }
+	  my $tmp=$refpos1;$refpos1=$refpos2;$refpos2=$tmp;
+	  $tmp=$aln1;$aln1=$aln2;$aln2=$tmp;
+#	  $swap_chrom=1;
 	}
       }
 
@@ -342,6 +376,9 @@ my $mindist=1e10;
 my ($chr1,$refpos1,$chr2,$refpos2,$pretype,$presize,$preori);
 if(defined $opts{x}){
   ($chr1,$refpos1,$chr2,$refpos2,$pretype,$presize,$preori)=split /\_/, $opts{x};
+#  if($swap_chrom){
+#    my $tmp=$chr1;$chr1=$chr2;$chr2=$tmp;
+#  }
 }
 
 foreach my $var(@vars){
@@ -436,6 +473,21 @@ if(defined $bestvar){
       }
     }
   }
+}
+
+sub GLess{
+  my @chroms=@_;
+  #resolve chromosome naming ambiguity
+  for(my $i=0;$i<=$#chroms;$i++){
+    my $chrom=$chroms[$i];
+    if($chrom=~/\.([\w\d]+)\.fa*/){
+      $chroms[$i]=$1;
+      $chroms[$i]=23 if($chroms[$i] eq 'X');
+      $chroms[$i]=24 if($chroms[$i] eq 'Y');
+    }
+  }
+  my $less=($chroms[0]<$chroms[1])?1:0;
+  return $less;
 }
 
 sub AlnStrand{
