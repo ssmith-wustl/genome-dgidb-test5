@@ -109,7 +109,6 @@ sub combine_headers {
     my @files = @{$self->files_to_merge};
 
     my $time = time;
-    $self->use_version('r613');
 
     my $tmp_dir = Genome::Utility::FileSystem->base_temp_directory;
     my $combined_headers_path = "$tmp_dir/$time\_combined_headers.sam";
@@ -181,6 +180,31 @@ sub combine_headers {
 
     #return @reheadered_files;
     return $combined_headers_path;
+}
+
+sub fix_headers {
+    my $self = shift;
+    my $bam_file = shift;
+    my $headers_file = shift;
+
+    (my $base_file = $bam_file) =~ s/\.bam$/.sam/;
+    my $sam_file = "$base_file.sam";
+    my $tmp_sam_file = "$base_file.sam.tmp";
+
+    # convert bam to sam
+    my $bam_to_sam = Genome::Model::Tools::Sam::BamToSam->create(bam_file => $bam_file, sam_file => $tmp_sam_file);
+    die "Failed to convert BAM to SAM ($bam_file)." unless($bam_to_sam->execute());
+
+    # strip off headers
+    my $strip_headers = system("sed -i -e '/^\@/d'");
+    die "Failed to strip off headers from SAM file ($tmp_sam_file)" unless(!$strip_headers);
+
+    # inject new headers
+    my $inject_headers = Genome::Utility::FileSystem->cat(input_files => [$headers_file, $tmp_sam_file], output_file => $sam_file);
+    die "Failed to inject headers into SAM file ($tmp_sam_file)" unless($inject_headers);
+
+    # convert sam to bam
+    #my $sam_to_bam = Genome::Model::Tools::Sam::SamToBam->create();
 }
 
 sub unix_sort_unique {
@@ -291,37 +315,37 @@ sub execute {
             $self->status_message("Success.  Files merged to: $result");
         }
 
-        # Samtools only preserves headers from first bam in merge so we'll fix
-        if ($self->software eq 'samtools') {
-            $self->status_message("Fixing headers on $result.");
+        ## Samtools only preserves headers from first bam in merge so we'll fix
+        #if ($self->software eq 'samtools') {
+        #    $self->status_message("Fixing headers on $result.");
 
-            my $combined_headers_file = $self->combine_headers();
+        #    my $combined_headers_file = $self->combine_headers();
 
-            my $perl_rv = rename($result, "$result\_missing_headers");
-            if ($perl_rv) {
-                $self->status_message("Renamed $result to $result\_missing_headers, creating $result with correct headers...");
-            }
-            else {
-                $self->error_message("Failed to renamed $result to $result\_missing_headers.");
-                die $self->error_message;
-            }
+        #    my $perl_rv = rename($result, "$result\_missing_headers");
+        #    if ($perl_rv) {
+        #        $self->status_message("Renamed $result to $result\_missing_headers, creating $result with correct headers...");
+        #    }
+        #    else {
+        #        $self->error_message("Failed to renamed $result to $result\_missing_headers.");
+        #        die $self->error_message;
+        #    }
 
-            my $sam_path = $self->samtools_path;
-            my $reheader_cmd = "$sam_path reheader $combined_headers_file $result\_missing_headers > $result";
-            $perl_rv = Genome::Utility::FileSystem->shellcmd(
-                cmd => $reheader_cmd,
-                input_files => [$combined_headers_file],
-                output_files => [$result],
-                skip_if_output_is_present => 0,
-            );
-            if ($perl_rv) {
-                $self->status_message("Fixed headers on $result.");
-            }
-            else {
-                $self->error_message("Failed to fix headers on $result.");
-            }
+        #    my $sam_path = $self->samtools_path;
+        #    my $reheader_cmd = "$sam_path reheader $combined_headers_file $result\_missing_headers > $result";
+        #    $perl_rv = Genome::Utility::FileSystem->shellcmd(
+        #        cmd => $reheader_cmd,
+        #        input_files => [$combined_headers_file],
+        #        output_files => [$result],
+        #        skip_if_output_is_present => 0,
+        #    );
+        #    if ($perl_rv) {
+        #        $self->status_message("Fixed headers on $result.");
+        #    }
+        #    else {
+        #        $self->error_message("Failed to fix headers on $result.");
+        #    }
 
-        }
+        #}
 
     }
 
