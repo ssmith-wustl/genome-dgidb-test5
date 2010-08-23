@@ -336,9 +336,9 @@
 
 
                               </script>
-                              <a class="mini btn">
-                                <xsl:attribute name="href">
-                                  javascript:event_popup(window.obj<xsl:value-of select="@id"/>);
+                              <a class="mini btn popup">
+                                <xsl:attribute name="title">
+                                  <xsl:value-of select="@id"/>
                                 </xsl:attribute>
                               <span class="sm-icon sm-icon-newwin"><br/></span>event details</a>
                             </td>
