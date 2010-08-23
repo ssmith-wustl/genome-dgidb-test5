@@ -82,7 +82,7 @@ sub param_string_to_hash {
     }
 
     my %params;
-    my @params = split(/\s?(\-{1,2}\D[\w\d]*)\s?/, $param_string);
+    my @params = split(/\s?(\-{1,2}\D[\w\d\-]*)\s?/, $param_string);
     shift @params;
     for ( my $i = 0; $i < @params; $i += 2 ) {
         my $key = $params[$i];
@@ -90,6 +90,7 @@ sub param_string_to_hash {
         Carp::cluck("Malformed param string ($param_string).  Found empty dash (-).") if $key eq '';
         my $value = $params[$i + 1];
         #$params{$key} = ( $value ne '' ? $value : 1 );
+        $value =~ s/\s*$//;
         if ( $value eq '' ) {
             $params{$key} = 1;
         }

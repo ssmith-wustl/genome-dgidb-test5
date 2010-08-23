@@ -47,6 +47,7 @@ class Genome::Model::Tools::FastQual {
     ],
 };
 
+#< Helps >#
 sub help_brief {
     return <<HELP
     Process fastq and fasta/quality sequences
@@ -57,9 +58,45 @@ sub help_detail { # empty ok
     return <<HELP 
 HELP
 }
+#<>#
 
+#< Types and Formats >#
+my %supported_types = (
+    sanger => { format => 'fastq', },
+    illumina => { format => 'fastq', },
+    phred => { format => 'fasta', file_exts => [qw/ fna fa /], },
+);
 sub valid_types {
-    return (qw/ sanger illumina phred /);
+    return keys %supported_types;
+}
+
+sub validate_type {
+    my ($self, $type) = @_;
+
+    unless ( defined $type ) {
+        Carp::confess("Cannot validate type. It is not defined");
+    }
+
+    my @valid_types = $self->valid_types;
+    unless ( grep { $type eq $_ } @valid_types ) {
+        Carp::confess("Cannot validate type ($type). It must be: ".join(', ', @valid_types));
+    }
+
+    return $type;
+}
+
+sub format_for_type {
+    my ($self, $type) = @_;
+
+    unless ( defined $type ) {
+        Carp::confess("Cannot get format for type. It is not defined");
+    }
+
+    unless ( exists $supported_types{$type} ) {
+        Carp::confess("Cannot get format for type ($type). It must be: ".join(', ', $self->valid_types));
+    }
+
+    return $supported_types{$type}->{format};
 }
 
 sub _enforce_type {
@@ -76,7 +113,9 @@ sub _enforce_type {
 
     return $type;
 }
+#<>#
 
+#< Reader Writer >#
 sub _open_reader {
     my $self = shift;
 
