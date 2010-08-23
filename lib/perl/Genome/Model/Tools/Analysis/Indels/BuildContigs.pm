@@ -28,6 +28,7 @@ class Genome::Model::Tools::Analysis::Indels::BuildContigs {
 		contig_size	=> { is => 'Text', doc => "Size of reference/variant contigs to generate", is_optional => 1, default => 150 },
 		reference	=> { is => 'Text', doc => "Size of reference/variant contigs to generate", is_optional => 1, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fasta" },
 		output_file	=> { is => 'Text', doc => "Output of reference/variant contig FASTAs", is_optional => 1 },
+        output_reference => { is => 'Boolean', doc => 'Whether or not to output the reference contigs' },
 	],
 };
 
@@ -143,9 +144,10 @@ sub execute {                               # replace with real execution logic.
 						$end = 1;
 					}
 				}
-
-				print OUTFILE ">" . $indel_name . "_ref\n";
-				print OUTFILE $reference_contig . "\n";
+                if($self->output_reference) {
+    				print OUTFILE ">" . $indel_name . "_ref\n";
+	    			print OUTFILE $reference_contig . "\n";
+                }
 
 				print OUTFILE ">" . $indel_name . "_var\n";
 				print OUTFILE $variant_contig . "\n";
