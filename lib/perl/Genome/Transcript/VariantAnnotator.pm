@@ -9,7 +9,7 @@ use Genome;
 use Genome::Info::AnnotationPriorities;
 use File::Temp;
 use MG::ConsScore;
-use List::Util qw/ max /;
+use List::Util qw/ max min /;
 use List::MoreUtils qw/ uniq /;
 use Bio::Tools::CodonTable;
 use DateTime;
@@ -583,82 +583,74 @@ sub _transcript_annotation_for_cds_exon {
 #TODO: This could be simplified and improved
 sub _apply_indel_and_translate{
     my ($self, $transcript, $structure, $variant) = @_;
-    my ($codon, $codon_position) = $structure->codon_at_position($variant->{start}); #we aren't really interested in the codon, just the codon_position (0-2)
+
+    my ($codon, $codon_position) = $structure->codon_at_position($variant->{start}); 
     my $aa_sequence = "";
-    my $dna_sequence = "";
-    my $first_fetch = 1;
-    my $fetch_start_position; 
-    my $fetch_stop_position;
-    if($transcript->strand eq "+1"){
-        $fetch_start_position = $variant->{start} - $codon_position;
-        $fetch_stop_position = $fetch_start_position + 1000 ;
+    my $sequence = $transcript->cds_full_nucleotide_sequence; 
+    $DB::single = 1 if $transcript->transcript_name eq 'XM_001717859' and $variant->{reference} eq 'TGAGG'; #TODO: delete me
+    #Determine the variant start and stop relative to the
+    #cds_full_nucleotide_sequence
+    my ($relative_variant_start, $borrowed_bases_start) = $structure->sequence_position($variant->{start});
+    $relative_variant_start -= $borrowed_bases_start;
+    $relative_variant_start += $transcript->length_of_cds_exons_before_structure_at_position($variant->{start});
+    my ($relative_variant_stop, $borrowed_bases_stop) = $structure->sequence_position($variant->{stop});
+    $relative_variant_stop -= $borrowed_bases_stop;
+    $relative_variant_stop += $transcript->length_of_cds_exons_before_structure_at_position($variant->{stop});
+    #$DB::single = 1 if $transcript->transcript_name eq 'NM_001002295'; #TODO: delete me
+    my $sequence_with_indel;
+    if ($variant->{type} =~ /ins/i){
+        $sequence_with_indel = substr($sequence, 0, $relative_variant_start + 1) . $variant->{variant} . substr($sequence, $relative_variant_stop); 
     }
     else{
-        $fetch_stop_position = $variant->{stop} + $codon_position;
-        $fetch_start_position = max($fetch_stop_position - 1000, 0); #avoid going negative
+        $sequence_with_indel = substr($sequence, 0, $relative_variant_start) . substr($sequence, $relative_variant_stop + 1); 
     }
-    $DB::single = 1; #TODO: delete this test statement
-    until($aa_sequence =~ m/\*/){
+    
+    #cut off codons before the first changed codon
+    if ($variant->{type} =~ /ins/i and $codon_position == 2){
+        $sequence = substr($sequence_with_indel, $relative_variant_start + 1); #This case would normally leave an extra codon before the sequence, so we hedge to remove it here 
+    }else{
+        $sequence = substr($sequence_with_indel, $relative_variant_start - ($relative_variant_start % 3)); 
+    }
+    $aa_sequence = $self->translate($sequence, $transcript->{chrom_name}); 
+
+
+    #no stop found, check the UTR Sequence 3' of the last cds exon and first
+    #kb of flank before calling it a day
+    unless ($aa_sequence =~ m/\*/){
+        #Grab the UTR sequence and append it
+        $sequence .= $transcript->utr_exon_sequence_after_coding_sequence;
+        #get the flank seq and append it
+        my ($flank_substructure) = $transcript->flank_after_coding_sequence; #there's only 1 flank substructure, so we just take the first/only one in the array
+        my ($seq_start, $seq_stop);
+        if ($transcript->strand eq '+1'){
+            $seq_start = $flank_substructure->structure_start;
+            $seq_stop = $seq_start + 1000;
+        }
+        else{
+            $seq_stop = $flank_substructure->structure_stop;
+            $seq_start = max(0, $seq_stop - 1000);
+        }
+        #Flank substructures don't carry their sequence, so we have to fetch
+        #it ourselves...
         my $temp_file = File::Temp->new();
-        die "Could not get temp file" unless $temp_file; 
-        unless ($first_fetch){
-            #adjust $fetch_start_position and $fetch_stop_position for the next 1000 bases
-            if ($transcript->strand eq '+1'){
-                $fetch_start_position += 1001;
-                $fetch_stop_position = $fetch_start_position + 1000;
-            }else{
-                $fetch_stop_position = $fetch_start_position - 1;
-                $fetch_start_position = $fetch_stop_position - 1000;
-                last if $fetch_start_position < 0; #if we hit the front end of the chromosome, we're done
-            }
-        }
+        die "Could not get temp file" unless $temp_file;
         my $sequence_command = Genome::Model::Tools::Sequence->execute(
-            chromosome => $transcript->chrom_name,
-            start => $fetch_start_position,
-            stop => $fetch_stop_position, 
-            build => $transcript->get_reference_build, 
-            output_file => $temp_file->filename,
-        ); 
+                chromosome => $transcript->chrom_name,
+                start => $seq_start,
+                stop => $seq_stop, 
+                build => $transcript->get_reference_build, 
+                output_file => $temp_file->filename,
+                ); 
         die "Unsuccessfully executed sequence fetch" unless $sequence_command;
-        chomp(my $sequence = <$temp_file>); #the sequence should be the only line in the temp file
-        if ($transcript->strand eq '-1'){
-            $sequence = $self->reverse_complement($sequence);
-        }
-        
-        if($first_fetch){
-            #apply the indel to the coding sequence
-            #the indel sequence has already been reverse complimented if negative stranded at this point
-            my $sequence_with_indel;
-            if ($variant->{type} =~ /ins/i){
-                #insertion, yay!
-                $sequence_with_indel = substr($sequence, 0, $codon_position + 1) . $variant->{variant} . substr($sequence, $codon_position + 1); 
-                if($codon_position == 2 and $transcript->strand eq '+1'){
-                    #For positive strand insertions with codon position two, the sequence formula 
-                    #grabs all of the effected codons and one unaffected codon before.
-                    #This block strips that leading, unchanged codon so that
-                    #all output begins with the first codon effected by the
-                    #shift (this might be a silent frame shift on that codon).
-                    $sequence_with_indel = substr($sequence_with_indel, 3); 
-                }
+        chomp(my $flank_sequence = <$temp_file>); #the sequence should be the only line in the temp file
+            if ($transcript->strand eq '-1'){
+                $flank_sequence = $self->reverse_complement($sequence);
             }
-            else{
-                #deletion, boo!
-                $sequence_with_indel = substr($sequence, 0, $codon_position) . substr($sequence, $codon_position + $variant->{stop} - $variant->{start} + 1); 
-                if($codon_position == 2 and $transcript->strand eq '-1'){
-                    #For negative strand deletions with codon position two, the sequence formula 
-                    #grabs all of the effected codons and one unaffected codon before.
-                    #This block strips that leading, unchanged codon so that
-                    #all output begins with the first codon effected by the
-                    #shift (this might be a silent frame shift on that codon).
-                    $sequence_with_indel = substr($sequence_with_indel, 3); 
-                }
-            }
-            $sequence = $sequence_with_indel;
-        }
-        $dna_sequence .= $sequence;
-        $aa_sequence = $self->translate($dna_sequence, $transcript->{chrom_name}); 
-        $first_fetch = 0;
+        $sequence .= $flank_sequence;
+
+        $aa_sequence = $self->translate($sequence, $transcript->{chrom_name}); #if there's no stop, we don't care.
     }
+
     $aa_sequence =~ s/\*.*/\*/; #remove everything after the amino_acid stop
     return $aa_sequence;
 }
