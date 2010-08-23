@@ -189,6 +189,8 @@ sub _process_buffer {
         my $current_chromosome_name = $self->_parse_chromosome_name($name_line);
         if($current_chromosome_name) {
             my $current_chromosome_file_name = File::Spec->catfile($output_directory, $current_chromosome_name . '.bases');
+            $self->error_message('Name: '.$current_chromosome_name.' from header line: '.$name_line.' is not unique, check parsing.') 
+                if -e $current_chromosome_file_name;
             $$current_chromosome_fh_ref = Genome::Utility::FileSystem->open_file_for_writing($current_chromosome_file_name);
             $self->status_message('...Generating ' . $current_chromosome_name . '.bases');
         } else {
@@ -226,7 +228,9 @@ sub _parse_chromosome_name {
 
     if ( $name_line =~ /^\n>\s*(\w+)\s*$/ ||
             $name_line =~ /^\n>\s*gi\|.*chromosome\s+([^[:space:][:punct:]]+)/i ||
-            $name_line =~ /^\n>\s*([^[:space:][:punct:]]+).*$/ ) {
+            $name_line =~ /^\n>\s*(\S+)/ ) {
+            #$name_line =~ /^\n>\s*([^[:space:][:punct:]]+).*$/ ) {
+            #This line will mess up NT_xxxxx chromosomes
         my $chromosome_name = $1;
         return $chromosome_name;
     } else {
