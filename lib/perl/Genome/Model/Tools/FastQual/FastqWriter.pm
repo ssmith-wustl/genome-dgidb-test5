@@ -15,7 +15,7 @@ sub create {
 
     my $self = bless \%params, $class;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing( $self->file );
+    my $fh = Genome::Utility::FileSystem->open_file_for_appending( $self->file );
     unless ( $fh ) {
         Carp::Confess("Can't open fastq file.");
     }
