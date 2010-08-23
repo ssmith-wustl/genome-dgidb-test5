@@ -103,7 +103,7 @@ sub execute {
 
 
     my $merged_bam = $self->report_dir."/metagenomic_alignment.combined.bam";
-    if (-e $merged_bam and -e $merged_bam.".OK"){
+    if (-e $merged_bam and -e $merged_bam.".OK" and 0){  #turning off skip to reproduce data
         $self->status_message("metagenomic merged bam already produced, skipping");
     }else{
         my $rv;
@@ -131,7 +131,7 @@ sub execute {
     }
 
     my $sorted_bam = $self->report_dir."/metagenomic_alignment.combined.sorted.bam";
-    if (-e $sorted_bam and -e $sorted_bam.".OK"){
+    if (-e $sorted_bam and -e $sorted_bam.".OK" and 0){  #turning off skip to reproduce data
         $self->status_message("sorted metagenomic merged bam already produced, skipping");
     }else{
         my $rv;
