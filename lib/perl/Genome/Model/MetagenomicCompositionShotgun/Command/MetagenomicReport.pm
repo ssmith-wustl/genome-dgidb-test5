@@ -159,6 +159,36 @@ sub execute {
         system ("touch $sorted_bam.OK");
     }
 
+    # convert original bam to sam
+    my $sorted_frag_filtered_sam = $self->report_dir . "/metagenomic_alignment.combined.sorted.frag_filtered.sam";
+    my $sorted_frag_filtered_bam = $self->report_dir . "/metagenomic_alignment.combined.sorted.frag_filtered.bam";
+    my $sorted_frag_filtered_sam_fh = IO::File->new(">$sorted_frag_filtered_sam");
+    my $sorted_bam_fh = IO::File->new("samtools view -h $sorted_bam |");
+    while (my $line = $sorted_bam_fh->getline) {
+        unless ($line =~ /^\@/) {
+            my $flag = (split("\t", $line))[1];
+            next unless ($flag & 0x0001);
+        }
+        $sorted_frag_filtered_sam_fh->print($line);
+    }
+    die "Failed to remove original file ($sorted_bam)" unless(unlink($sorted_bam));
+
+    # convert sam to bam after filtering fragment reads
+    my $sam_to_bam_cmd = "samtools view -b -S $sorted_frag_filtered_sam -o $sorted_frag_filtered_bam";
+    my $sam_to_bam = Genome::Utility::FileSystem->shellcmd(
+        cmd => $sam_to_bam_cmd,
+        input_files => [$sorted_frag_filtered_sam],
+        output_files => [$sorted_frag_filtered_bam],
+    );
+    unless($sam_to_bam) {
+        $self->error_message("Failed to convert file to BAM, ($sorted_frag_filtered_sam -> $sorted_frag_filtered_bam)");
+        die $self->error_message;
+    }
+    die "Failed to remove filtered sam file ($sorted_frag_filtered_sam)" unless(unlink($sorted_frag_filtered_sam));
+
+    # move newly created bam back into original bam position
+    die "Failed to move filtered file ($sorted_frag_filtered_bam)" unless(rename($sorted_frag_filtered_bam, $sorted_bam));
+
     $self->status_message("Finished sort and merge, compiling metagenomic reports");
 
 
