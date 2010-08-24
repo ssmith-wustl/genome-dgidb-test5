@@ -92,7 +92,8 @@ sub execute {                               # replace with real execution logic.
 	
 		if($lineCounter <= 2 && $line =~ "Chrom")
 		{
-			print "Got it!\n";
+			warn "Parsing MAF header line...\n";
+
 			if($self->output_file)
 			{
 				print OUTFILE "$line\n";
