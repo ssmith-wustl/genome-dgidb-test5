@@ -60,7 +60,7 @@ sub execute {
     my $classfh = new IO::File $class_file,"r";
     while (my $line = $classfh->getline) {
         print $outfh $line;
-        next if $line =~ /Class/;
+        next if $line =~ /class/i;
         my ($class) = split /\t/,$line;
         push @classes,$class;
     }
@@ -73,7 +73,7 @@ sub execute {
     my %FDR;
     my $fdr = \%FDR;
     while (my $line = $fdrfh->getline) {
-        next if $line =~ /Gene/;
+        next if $line =~ /gene/i;
         chomp $line;
         my ($gene,$pfisher,$plr,$pconvol,$fdrfisher,$fdrlr,$fdrconvol) = split /\t/,$line;
         $FDR{$gene}{'pfisher'} = $pfisher;
@@ -97,7 +97,7 @@ sub execute {
     
     my $genefh = new IO::File $genefile,"r";
     while (my $line = $genefh->getline) {
-        next if $line =~ /Class/;
+        next if $line =~ /class/i;
         my ($nextgene,$class,$cov,$muts) = split /\t/,$line;
         unless (defined $COVMUTS{'gene'}) {
             $COVMUTS{'gene'} = $nextgene;
@@ -131,7 +131,7 @@ sub print_gene {
     my $total_muts;
 
     for my $class (@$classesref) {
-        next if $class eq 'gene';
+        next if $class =~ m/gene/i;
         $total_muts += $covmuts->{$class}->{'muts'};
     }
     
@@ -146,9 +146,16 @@ sub print_gene {
         print $outfh "$covmuts->{$class}->{'cov'}\t";
     }
 
-    #print pvalue and fdr info
-    print $outfh "$fdr->{$gene2print}->{'pfisher'}\t$fdr->{$gene2print}->{'plr'}\t$fdr->{$gene2print}->{'pconvol'}\t";
-    print $outfh "$fdr->{$gene2print}->{'fdrfisher'}\t$fdr->{$gene2print}->{'fdrlr'}\t$fdr->{$gene2print}->{'fdrconvol'}\n";
+    #print pvalue and fdr info. If undefined, then it had no coverage
+    if( defined $fdr->{$gene2print}->{'pfisher'} )
+    {
+        print $outfh "$fdr->{$gene2print}->{'pfisher'}\t$fdr->{$gene2print}->{'plr'}\t$fdr->{$gene2print}->{'pconvol'}\t";
+        print $outfh "$fdr->{$gene2print}->{'fdrfisher'}\t$fdr->{$gene2print}->{'fdrlr'}\t$fdr->{$gene2print}->{'fdrconvol'}\n";
+    }
+    else
+    {
+        print $outfh "NC\tNC\tNC\tNC\tNC\tNC\n";
+    }
 }
 
 1;

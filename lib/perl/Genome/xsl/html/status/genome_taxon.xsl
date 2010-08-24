@@ -56,6 +56,52 @@
                     </td>
                   </tr>
 
+                  <tr>
+                    <td class="name">Estimated Genome Size:
+                    </td>
+                    <td class="value">
+                      <xsl:choose>
+                        <xsl:when test="string(normalize-space(aspect[@name='estimated_genome_size']/value))">
+                          <xsl:value-of select="normalize-space(aspect[@name='estimated_genome_size']/value)"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          --
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="name">Gram Stain Category:
+                    </td>
+                    <td class="value">
+                      <xsl:choose>
+                        <xsl:when test="string(normalize-space(aspect[@name='gram_stain_category']/value))">
+                          <xsl:value-of select="normalize-space(aspect[@name='gram_stain_category']/value)"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          --
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="name">Domain:
+                    </td>
+                    <td class="value">
+                      <xsl:choose>
+                        <xsl:when test="string(normalize-space(aspect[@name='domain']/value))">
+                          <xsl:value-of select="normalize-space(aspect[@name='domain']/value)"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          --
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </td>
+                  </tr>
+
+
                 </tbody>
               </table>
             </div>

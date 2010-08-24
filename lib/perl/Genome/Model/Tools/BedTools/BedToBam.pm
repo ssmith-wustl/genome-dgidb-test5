@@ -5,6 +5,9 @@ use warnings;
 
 use Genome;
 
+my $DEFAULT_GENOME = '/gscmnt/sata420/info/model_data/2741951221/build101947881/genome.tsv';
+my $DEFAULT_BED12 = 0;
+
 class Genome::Model::Tools::BedTools::BedToBam {
     is => 'Genome::Model::Tools::BedTools',
     has_input => [
@@ -19,12 +22,13 @@ class Genome::Model::Tools::BedTools::BedToBam {
         genome => {
             is => 'Text',
             doc => 'The genome reference.  See BEDTools User Manual for documentation of format.',
-            default_value => '/gscmnt/sata420/info/model_data/2741951221/build101947881/genome.tsv',
+            is_optional => 1,
+            default_value => $DEFAULT_GENOME,
         },
         bed12 => {
             is => 'Boolean',
             doc => 'The BED file is in BED12 format.  The BAM CIGAR string will reflect BED blocks.',
-            default_value => 0,
+            default_value => $DEFAULT_BED12,
             is_optional => 1,
         },
         mapq => {
@@ -50,6 +54,14 @@ sub help_detail {
     return <<EOS
 More information about the BedTools suite of tools can be found at http://code.google.com/p/bedtools/. 
 EOS
+}
+
+sub default_genome {
+    return $DEFAULT_GENOME;
+}
+
+sub default_bed12 {
+    return $DEFAULT_BED12;
 }
 
 sub execute {
