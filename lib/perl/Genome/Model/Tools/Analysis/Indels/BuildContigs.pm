@@ -28,7 +28,8 @@ class Genome::Model::Tools::Analysis::Indels::BuildContigs {
 		contig_size	=> { is => 'Text', doc => "Size of reference/variant contigs to generate", is_optional => 1, default => 150 },
 		reference	=> { is => 'Text', doc => "Size of reference/variant contigs to generate", is_optional => 1, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fasta" },
 		output_file	=> { is => 'Text', doc => "Output of reference/variant contig FASTAs", is_optional => 1 },
-        output_reference => { is => 'Boolean', doc => 'Whether or not to output the reference contigs' },
+        output_reference => { is => 'Boolean', doc => 'Whether or not to output the reference contigs', is_optional => 1, default => 0, },
+        samtools_compatible => { is => 'Boolean', doc => 'Whether or not to output the contig names with underscores to make them compatible with samtools', is_optional => 1, default => 0 },
 	],
 };
 
@@ -65,6 +66,7 @@ sub execute {                               # replace with real execution logic.
 	my $contig_size = $self->contig_size;
 	my $reference = $self->reference;
 	my $output_file = $self->output_file;
+    my $samtools_compatible = $self->samtools_compatible;
 
 	my %stats = ();
 	$stats{'num_indels'} = 0;
@@ -99,6 +101,9 @@ sub execute {                               # replace with real execution logic.
 				$indel_size = length($var);
 				## Build indel name ##			
 				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size";
+                if($samtools_compatible) {
+                    $indel_name =~ s/[:-]/_/g;  #replace dashes and colons with underscores
+                }
 				
 				my $flank_size = ($contig_size) / 2;
 				$flank_size = sprintf("%d", $flank_size);
@@ -161,6 +166,10 @@ sub execute {                               # replace with real execution logic.
 				$indel_size = length($ref);
 				## Build indel name ##			
 				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size";
+
+                if($samtools_compatible) {
+                    $indel_name =~ s/[:-]/_/g;  #replace dashes and colons with underscores
+                }
 				
 				## Fix chromosome stop position, which sometimes is the base after the deletion stops ##
 				$chr_stop = $chr_start + $indel_size - 1;
