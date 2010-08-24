@@ -12,7 +12,7 @@ use Getopt::Std;
 
 use Class::MOP;
 
-use Test::More tests => 73;
+use Test::More tests => 70;
 use Test::Output;
 use Test::Exception;
 
@@ -30,7 +30,7 @@ my $cwd = dirname $thisfile;
 sub new {
   my $class = shift;
   my $self = {
-    live => 1,
+    live => 0,
   };
   return bless $self, $class;
 }
@@ -495,7 +495,7 @@ my $Test = $CLASS->new();
 
 # Run "live tests" that actually bsub.
 if ($opts->{'L'}) {
-  $Test->{live} = 0;
+  $Test->{live} = 1;
 }
 
 if ($opts->{'l'}) {
