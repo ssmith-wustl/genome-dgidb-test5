@@ -105,8 +105,8 @@ sub execute {
 samtools pileup -vc -f $reference $alignment_file | perl -pe '\@F = split /\\t/; \\\$_=q{} unless(\\\$F[7] > 2);' > $dir/$lane_name.var
 gmt analysis lane-qc compare-snps --genotype-file $genotype_file --variant-file $dir/$lane_name.var > $dir/$lane_name.var.compare_snps
 COMMANDS
-                #print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' "$command"`;
-                print $command,"\n";
+                print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' "$command"`;
+                #print $command,"\n";
             }
         }
 
