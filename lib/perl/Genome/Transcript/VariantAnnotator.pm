@@ -584,73 +584,82 @@ sub _transcript_annotation_for_cds_exon {
 sub _apply_indel_and_translate{
     my ($self, $transcript, $structure, $variant) = @_;
 
-    my ($codon, $codon_position) = $structure->codon_at_position($variant->{start}); 
-    my $aa_sequence = "";
-    my $sequence = $transcript->cds_full_nucleotide_sequence; 
-    $DB::single = 1 if $transcript->transcript_name eq 'XM_001717859' and $variant->{reference} eq 'TGAGG'; #TODO: delete me
-    #Determine the variant start and stop relative to the
-    #cds_full_nucleotide_sequence
-    my ($relative_variant_start, $borrowed_bases_start) = $structure->sequence_position($variant->{start});
-    $relative_variant_start -= $borrowed_bases_start;
-    $relative_variant_start += $transcript->length_of_cds_exons_before_structure_at_position($variant->{start});
-    my ($relative_variant_stop, $borrowed_bases_stop) = $structure->sequence_position($variant->{stop});
-    $relative_variant_stop -= $borrowed_bases_stop;
-    $relative_variant_stop += $transcript->length_of_cds_exons_before_structure_at_position($variant->{stop});
-    #$DB::single = 1 if $transcript->transcript_name eq 'NM_001002295'; #TODO: delete me
-    my $sequence_with_indel;
-    if ($variant->{type} =~ /ins/i){
-        $sequence_with_indel = substr($sequence, 0, $relative_variant_start + 1) . $variant->{variant} . substr($sequence, $relative_variant_stop); 
+    #$DB::single = 1 if $transcript->transcript_name eq 'NM_022552' and $variant->{variant} eq '-'; #TODO: test code, remove me
+    $DB::single = 1 if $transcript->transcript_name eq 'XM_001717859'; 
+    #my @structures = ($structure, grep { $transcript->is_after($_->structure_start, $structure->structure_start) and ($_->structure_type ne 'intron') } $transcript->ordered_sub_structures);
+    my @structures = ($structure);
+    for my $substructure ($transcript->ordered_sub_structures){
+        if($transcript->is_after($substructure->structure_start, $structure->structure_start)){
+            if($substructure->structure_type ne 'intron'){
+                push @structures, $substructure;
+            }
+        }
     }
-    else{
-        $sequence_with_indel = substr($sequence, 0, $relative_variant_start) . substr($sequence, $relative_variant_stop + 1); 
+    my $sequence = "";
+    $sequence = $structure->phase_bases_before if $structure->phase_bases_before ne 'NULL';
+    for my $substructure (@structures) {
+        if ($substructure->structure_type eq 'flank') {
+            my $temp_file = File::Temp->new();
+            die "Could not get temp file" unless $temp_file;
+            my $sequence_command = Genome::Model::Tools::Sequence->execute(
+                    chromosome => $transcript->chrom_name,
+                    start => $substructure->structure_start,
+                    stop => $substructure->structure_stop, 
+                    build => $transcript->get_reference_build, 
+                    output_file => $temp_file->filename,
+                    ); 
+            die "Unsuccessfully executed sequence fetch" unless $sequence_command;
+            chomp(my $flank_sequence = <$temp_file>); #the sequence should be the only line in the temp file
+                if ($transcript->strand eq '-1'){
+                    $flank_sequence = $self->reverse_complement($sequence);
+                }
+            $sequence .= $flank_sequence;
+        }
+        else {
+            $sequence .= $substructure->nucleotide_seq;
+        }
+    }
+
+    my ($start, $stop) = ($variant->{start}, $variant->{stop});
+    ($start, $stop) = ($stop, $start) if $transcript->strand eq '-1';
+    my $length = $stop - $start + 1;
+    
+    $DB::single = 1 if $transcript->transcript_name eq 'XM_001717859'; #TODO: test code, remove me
+    my ($relative_variant_start, $borrowed_bases_start) = $structure->sequence_position($start);
+
+    my ($codon, $codon_position) = $structure->codon_at_position($start); 
+
+    my $first_affected_codon_start = $relative_variant_start - $codon_position;
+
+    $sequence = substr($sequence, $first_affected_codon_start);
+
+    my $mutated_seq;
+    if ($variant->{type} =~ /del/i) {
+        my $first = shift @structures;
+        #my $deleted_bases = abs(min($first->stop_with_strand, $stop) - $start) + 1;
+        my $deleted_bases = min(abs($first->stop_with_strand - $start), abs($stop - $start)) + 1;
+        for my $substructure (@structures) {
+            # last if $stop < $structure->structure_start;
+            last if $transcript->is_after($substructure->start_with_strand, $stop); 
+            #if ($stop < $substructure->structure_stop) {
+            if($transcript->is_after($substructure->stop_with_strand, $stop)){
+                $deleted_bases += abs($substructure->start_with_strand - $stop);
+            }
+            else {
+                $deleted_bases += $substructure->length;
+            }
+        }
+        $mutated_seq = substr($sequence, 0, $codon_position) . substr($sequence, $codon_position + $deleted_bases);
+    }
+    elsif ($variant->{type} =~ /ins/i) {
+        $mutated_seq = substr($sequence, 0, $codon_position + 1) . $variant->{variant} . substr($sequence, $codon_position + 1);
+        $mutated_seq = substr($mutated_seq, 3) if $codon_position == 2; #When codon_position == 2, there's an extra leading codon that needs to get hacked off here so we don't mislead the analysts into thinking an extra codon changed
+    }
+    else {
+        confess "Malformed variant type: ";
     }
     
-    #cut off codons before the first changed codon
-    if ($variant->{type} =~ /ins/i and $codon_position == 2){
-        $sequence = substr($sequence_with_indel, $relative_variant_start + 1); #This case would normally leave an extra codon before the sequence, so we hedge to remove it here 
-    }else{
-        $sequence = substr($sequence_with_indel, $relative_variant_start - ($relative_variant_start % 3)); 
-    }
-    $aa_sequence = $self->translate($sequence, $transcript->{chrom_name}); 
-
-
-    #no stop found, check the UTR Sequence 3' of the last cds exon and first
-    #kb of flank before calling it a day
-    unless ($aa_sequence =~ m/\*/){
-        #Grab the UTR sequence and append it
-        $sequence .= $transcript->utr_exon_sequence_after_coding_sequence;
-        #get the flank seq and append it
-        my ($flank_substructure) = $transcript->flank_after_coding_sequence; #there's only 1 flank substructure, so we just take the first/only one in the array
-        my ($seq_start, $seq_stop);
-        if ($transcript->strand eq '+1'){
-            $seq_start = $flank_substructure->structure_start;
-            $seq_stop = $seq_start + 1000;
-        }
-        else{
-            $seq_stop = $flank_substructure->structure_stop;
-            $seq_start = max(0, $seq_stop - 1000);
-        }
-        #Flank substructures don't carry their sequence, so we have to fetch
-        #it ourselves...
-        my $temp_file = File::Temp->new();
-        die "Could not get temp file" unless $temp_file;
-        my $sequence_command = Genome::Model::Tools::Sequence->execute(
-                chromosome => $transcript->chrom_name,
-                start => $seq_start,
-                stop => $seq_stop, 
-                build => $transcript->get_reference_build, 
-                output_file => $temp_file->filename,
-                ); 
-        die "Unsuccessfully executed sequence fetch" unless $sequence_command;
-        chomp(my $flank_sequence = <$temp_file>); #the sequence should be the only line in the temp file
-            if ($transcript->strand eq '-1'){
-                $flank_sequence = $self->reverse_complement($sequence);
-            }
-        $sequence .= $flank_sequence;
-
-        $aa_sequence = $self->translate($sequence, $transcript->{chrom_name}); #if there's no stop, we don't care.
-    }
-
+    my $aa_sequence = $self->translate($mutated_seq, $transcript->{chrom_name}); #if there's no stop, we don't care.
     $aa_sequence =~ s/\*.*/\*/; #remove everything after the amino_acid stop
     return $aa_sequence;
 }

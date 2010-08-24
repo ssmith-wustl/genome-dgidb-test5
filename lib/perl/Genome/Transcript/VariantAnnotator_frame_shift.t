@@ -15,7 +15,7 @@ ok (-s $test_variants_file, "test variants file exists and has size");
 
 my $annotation_file = $test_dir . "/annotation_output.tsv";
 ok (-s $annotation_file, "annotation file exists and has size");
-my @relevant_annotation = `cat $annotation_file | grep XM_001717859`;
+my @relevant_annotation = `cat $annotation_file | grep "XM_001717859\\|NM_022552\\|NM_002520"`;
 ok (scalar @relevant_annotation > 0, "successfully grabbed variants from file");
 
 my $temp = File::Temp->new();
@@ -30,7 +30,7 @@ Genome::Model::Tools::Annotate::TranscriptVariants->execute(
     annotation_filter => "none",
 );
 
-my @relevant_new_annotation = `cat $temp_filename | grep XM_001717859`;
+my @relevant_new_annotation = `cat $temp_filename | grep "XM_001717859\\|NM_022552\\|NM_002520"`;
 ok (scalar @relevant_new_annotation == scalar @relevant_annotation, "New annotation count matches old annotation count");
 
 for(my $i = 1; $i < scalar @relevant_new_annotation; $i++){ #the first line is headers, so skip it
