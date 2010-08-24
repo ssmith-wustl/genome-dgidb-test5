@@ -1,16 +1,17 @@
-package Genome::Model::Tools::Annotate::ImportInterpro::ImportInterpro;
+package Genome::Model::Tools::Annotate::ImportInterpro::Run;
 
 use strict;
 use warnings;
 use Genome;
 use Benchmark qw(:all) ;
+use Data::Dumper qw(Dumper); #TODO: test code, delete me
 
 my $low  = 1000;
 my $high = 20000;
 UR::Context->object_cache_size_lowwater($low);
 UR::Context->object_cache_size_highwater($high);
 
-class Genome::Model::Tools::Annotate::ImportInterpro::ImportInterpro{
+class Genome::Model::Tools::Annotate::ImportInterpro::Run{
     is => 'Genome::Model::Tools::Annotate',
     has => [
         reference_transcripts => {
@@ -84,6 +85,9 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    print "Starting ImportInterpro Run" ."\n";
+    #main::memory_usage(); #TODO: test code, delete me
    
     my $total_start = Benchmark->new;
    
@@ -102,8 +106,6 @@ sub execute {
     die "Could not get model $model_name" unless $model;
     my $build = $model->build_by_version($build_version);
     die "Could not get imported annotation build version $build_version" unless $build;
-    my $transcript_iterator = $build->transcript_iterator;
-    die "Could not get iterator" unless $transcript_iterator;
     my $chunk_size = $self->chunk_size;
     die "Could not get chunk-size $chunk_size" unless $chunk_size; 
     die "chunk-size of $chunk_size is invalid.  Must be between 1 and 50000" if($chunk_size > 50000 or $chunk_size < 1);
@@ -115,7 +117,9 @@ sub execute {
 
     my $tmp_dir = $self->tmp_dir;
     die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
-
+=cut    
+    print "Starting GenerateTranscript Fastas" . "\n";
+    #main::memory_usage(); #TODO: test code, delete me
     my $fasta_success = Genome::Model::Tools::Annotate::ImportInterpro::GenerateTranscriptFastas->execute(
         build => $build,
         chunk_size => $chunk_size,
@@ -123,18 +127,36 @@ sub execute {
         tmp_dir => $tmp_dir,
     );
     die "Could not generate .fasta files: $!" unless $fasta_success;
+    print "Finished GenerateTranscriptFastas" . "\n";
+    #main::memory_usage();#TODO: test code, delete me
     my $interpro_success = Genome::Model::Tools::Annotate::ImportInterpro::ExecuteIprscan->execute(
         benchmark => $self->benchmark,
         tmp_dir => $tmp_dir,
     );
     die "Could not complete Interpro scan: $!" unless $interpro_success;
+    print "Finished Iprscan" . "\n";
+    #main::memory_usage(); #TODO: test code, delete me
+
+    for my $class (qw/Genome::Transcript Genome::Protein Genome::DataSource::Proteins Genome::DataSource::Transcripts UR::DataSource::File/) {
+        my @o = $class->is_loaded;
+        for my $o (@o) {
+            $o->unload;
+        }
+    }   
+
+    print "Finished Scott Unload" . "\n";
+    #main::memory_usage(); #TODO: test code, delete me
+=cut
     my $results_success = Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults->execute(
         build => $build,
         benchmark => $self->benchmark,
         tmp_dir => $tmp_dir,
         commit_size => $commit_size,
+        reference_transcripts => $self->reference_transcripts,
     );
     die "Could not generate Interpro results: $!" unless $results_success;
+    print "Finished GenerateInterproResuts" . "\n";
+#    main::memory_usage(); #TODO: test code, delete me
     
     #TODO: clean up
     #CLEAN UP File handles
@@ -153,14 +175,45 @@ sub execute {
 
     return 1;
 }
-1;
 
+sub main::memory_usage{ 
+    #TODO: test code, delete me
+    print "MEMORY USAGE AT TIME ",localtime() , "\t", scalar(localtime), "\n";
+    system("ps -Fp $$");
+    my @o = UR::Object->is_loaded;
+    
+    print "LOADED:\n";
+    print(" total object count: ", scalar(@o), "\n");
+    my %objects_by_class;
+    for my $o (@o) {
+        my $a = $objects_by_class{ref($o)} ||= [];
+        push @$a, $o;
+    }
+    for my $class (sort keys %objects_by_class) {
+        next if $class->isa("UR::Object::Type");
+        print " $class: ", scalar(@{ $objects_by_class{$class} }), "\n";
+    }
+    
+    my $f = $UR::Context::object_fabricators;
+    print "FABRICATORS: ", scalar(keys %$f), "\n";
+
+    print "LEAKS:\n";
+    for my $class (sort keys %UR::DeletedRef::all_objects_deleted) {
+        my $o = $UR::DeletedRef::all_objects_deleted{$class};
+        my @o = values %$o;
+        print " $class: ", scalar(@o), "\n";
+    }
+   # print "UR::DataSource::Files" . "\n";
+   # print Dumper($objects_by_class{'UR::DataSource::File'}) . "\n";
+}
+
+1;
 
 =pod
 
 =head1 Name
 
-Genome::Model::Tools::Annotate::ImportInterpro
+Genome::Model::Tools::Annotate::ImportInterpro::Run
 
 =head1 Synopsis
 
@@ -170,11 +223,11 @@ Gets every transcript for a given build, runs them through Interpro, and creates
 
  in the shell:
 
-     gmt annotate import-interpro --reference-transcripts NCBI-human.combined-annotation/54_36p
+     gmt annotate import-interpro run --reference-transcripts NCBI-human.combined-annotation/54_36p
 
  in Perl:
 
-     $success = Genome::Model::Tools::Annotate::ImportInterpro->execute(
+     $success = Genome::Model::Tools::Annotate::ImportInterpro::Run->execute(
          reference_transcripts => 'NCBI-human.combined-annotation/54_36p',
          interpro_version => '4.1', #default 4.5
          chunk_size => 40000, #default 25000
@@ -212,5 +265,4 @@ This module is distributed in the hope that it will be useful, but WITHOUT ANY W
 =cut
 
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Tools/Annotate/ImportInterpro.pm $
 #$Id: 

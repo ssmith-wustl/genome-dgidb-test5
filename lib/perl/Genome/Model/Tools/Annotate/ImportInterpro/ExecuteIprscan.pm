@@ -50,12 +50,15 @@ EOS
 
 sub execute{
     my $self = shift;
-    $DB::single = 1;
+    #$DB::single = 1; #TODO: test code, delete me
 
     my $tmp_dir = $self->tmp_dir;
     die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
     my $iprscan_dir = '/gsc/scripts/pkg/bio/iprscan/iprscan-'.$self->interpro_version; #defaults to 4.5; 
     die "Could not find interpro version ".$self->interpro_version unless -d $iprscan_dir; 
+
+    # db disconnect to avoid Oracle failures killing our long running stuff
+    Genome::DataSource::GMSchema->disconnect_default_dbh;
 
     #converter.pl requires this environment variable to be set to the iprscan directory.  It refuses to run if this isn't set
     my $old_iprscan_home = $ENV{'IPRSCAN_HOME'}; #save this value so it can be reset at the end of the script
@@ -77,14 +80,14 @@ sub execute{
         #We will eventually parse this $output_file for failure messages and run the restart jobs commands (which are normally printed to STDERR)
         Genome::Utility::FileSystem->shellcmd(cmd => $iprscan_dir.'/bin/iprscan -cli -i ' . $fasta_file . ' -o ' . $iprscan_output . ' -seqtype p -appl hmmpfam -iprlookup -goterms -verbose -format raw >> ' . $output_text . ' 2>&1' ,) or die "iprscan failed: $!"; 
         $iprscan{$iprscan_output} = $iprscan_temp;
+        print "Fetched 25000 transcripts" . "\n";
+        #main::memory_usage; #TODO: test code, delete me
     }
     my $post_iprscan = Benchmark->new;
     my $iprscan_time = timediff($post_iprscan, $pre_iprscan);
     $self->status_message('iprscan: ' . timestr($iprscan_time, 'noc')) if $self->benchmark;
 
     #Restart failed jobs
-    #TODO: Figure out if this will restart failed restarts 
-    #TODO: This appends the results to the existing file, correct?
     my @restart_commands = $self->_find_restart_commands($output_text->filename, $iprscan_dir); 
     for my $cmd (@restart_commands){
         $self->status_message("Restarting job with command: $cmd");

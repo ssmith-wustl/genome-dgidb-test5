@@ -8,6 +8,11 @@ use File::Temp;
 use Bio::Tools::GFF;
 use Benchmark qw(:all) ;
 
+my $low  = 1000;
+my $high = 20000;
+UR::Context->object_cache_size_lowwater($low);
+UR::Context->object_cache_size_highwater($high);
+
 class Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults{
     is => 'Genome::Model::Tools::Annotate',
     has => [
@@ -44,6 +49,12 @@ class Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults{
             default => 4.5,
             doc => 'Version of Interpro used.  This option is currently nonfunctional  The default is 4.5',
         },
+        reference_transcripts => {
+            is => 'String',
+            is_input => 1, 
+            is_optional => 0,
+            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").',
+        },
     ]
 };
 
@@ -64,6 +75,9 @@ EOS
 
 sub execute{
     my $self = shift;
+#TODO: Change the data directories on the interpro results to a temp dir.
+    #Create all objects.  Do a move to the actual data directory.  This will
+    #shorten the window for Nate's Caching issues
 
     my $build = $self->build;
     my $tmp_dir = $self->tmp_dir;
@@ -73,6 +87,17 @@ sub execute{
     die "commit-size of $commit_size is invalid.  Must be greater than 1" if($commit_size < 1);
     my $iprscan_dir = '/gsc/scripts/pkg/bio/iprscan/iprscan-'.$self->interpro_version; #defaults to 4.5; 
     die "Could not find interpro version ".$self->interpro_version unless -d $iprscan_dir; 
+    my $genbank_base_dir = $self->_get_results_target_dir($self->reference_transcripts, "genbank");
+    my $ensembl_base_dir = $self->_get_results_target_dir($self->reference_transcripts, "ensembl");
+    my $genbank_results_data_dir= File::Temp->newdir($genbank_base_dir . "/genbank_resultsXXXXX", (CLEANUP => 1));
+    die "Could not get genbank temp directory: $!" unless $genbank_results_data_dir; 
+    my $ensembl_results_data_dir= File::Temp->newdir($ensembl_base_dir. "/ensembl_resultsXXXXX", (CLEANUP => 1));
+    die "Could not get ensembl temp directory: $!" unless $ensembl_results_data_dir; 
+    my %temp_results_data_dir = ('genbank' => $genbank_results_data_dir,
+                                 'ensembl' => $ensembl_results_data_dir,);
+
+    # db disconnect to avoid Oracle failures killing our long running stuff
+    Genome::DataSource::GMSchema->disconnect_default_dbh;
 
     #Merge the tab delimited temp files containing the results from the iprscan(s) into a single tab delimimted file
     my $pre_iprscan_merger = Benchmark->new; 
@@ -85,9 +110,10 @@ sub execute{
         my $fh = IO::File->new($iprscan_path, "r");
         while (my $line = <$fh>){
             chomp ($line);
-            print $iprscan_merged $line."\n";;    
+            $iprscan_merged->print($line."\n");    
         }
     }
+    %iprscan = ();
     my $post_iprscan_merger = Benchmark->new;
     my $iprscan_merger_time = timediff($post_iprscan_merger, $pre_iprscan_merger);
     $self->status_message('iprscan results merger: ' . timestr($iprscan_merger_time, 'noc')) if $self->benchmark;
@@ -112,12 +138,37 @@ sub execute{
     my $gff = new Bio::Tools::GFF(-file => $converter_output, -gff_version => 3);
     while (my $feature = $gff->next_feature()){
        if((defined $feature) and ($feature->primary_tag eq 'match_part')){
-           load_part($feature, $build, $interpro_result_counter);
+           $self->_load_part($feature, $build, $interpro_result_counter, %temp_results_data_dir);
            $interpro_result_counter++;
            if ($interpro_result_counter % $commit_size == 0){
                 UR::Context->commit; 
+                #main::memory_usage(); #TODO: test code, delete me
             }
+            # if($interpro_result_counter > 200){ #TODO: test block, remove me
+                # last;
+            # }
        }
+    }
+    #Make sure all objects are comitted (and therefore written) before
+    #attempting the mv
+    UR::Context->commit;
+
+    unless($genbank_base_dir eq $self->tmp_dir){
+        #copy genbank dir over genbank's interpro results folder
+        if (-d $genbank_results_data_dir->dirname . "/interpro_results"){
+            Genome::Utility::FileSystem->shellcmd(cmd => "mv -f " . $genbank_results_data_dir->dirname . "/interpro_results " . $genbank_base_dir . "/interpro_results") or die "Failed to mv Genbank results: $!";
+        }
+        else{
+            print "No results for Genbank, skipping...";
+        }
+    }
+    unless($ensembl_base_dir eq $self->tmp_dir){
+        #copy ensembl dir over ensembl's interpro results folder
+        if (-d $ensembl_results_data_dir->dirname . "/interpro_results"){
+            Genome::Utility::FileSystem->shellcmd(cmd => "mv -f " . $ensembl_results_data_dir->dirname . "/interpro_results " . $ensembl_base_dir . "/interpro_results") or die "Failed to mv Ensembl results: $!";
+        }else{
+            print "No results for Ensembl, skipping...";
+        }
     }
     my $post_results_parsing = Benchmark->new;
     my $results_parsing_time = timediff($post_results_parsing, $pre_results_parsing);
@@ -135,11 +186,34 @@ sub get_iprscan_results{
     return %results;
 }
 
+#Take the reference transcript string and an annotation source (Currently
+#"ensembl" or "genbank") and generate a path to that build's annotation_data
+#directory.  If the source is not relevant to the reference_transcripts (ie
+#source is genbank and the reference_transcripts are NCBI-human.ensembl)
+#return the temp dir that we use for everything else.
+sub _get_results_target_dir{
+    my ($self, $reference_transcripts, $source) = @_;
+    my ($model_name, $build_version) = split("/", $self->reference_transcripts);
+    my $dir;
+    if ($model_name =~ 'combined-annotation'){
+        my @model_name_parts = split(/(\.|-)/, $model_name);
+        my $source_model_name = "NCBI-" . $model_name_parts[2] . ".$source";
+        my $source_model = Genome::Model->get(name => $source_model_name ); 
+        my $source_build = $source_model->build_by_version($build_version);
+        $dir = join("/", $source_build->data_directory, "annotation_data");
+    }elsif ($model_name =~ $source){
+        $dir = join("/", $self->build->data_directory, "annotation_data");
+    }else{
+        $dir = $self->tmp_dir;
+    }
+    return $dir;
+}
+
 #Take a feature from the .gff version of the iprscan results along with the build and an arbitrary id and create the Genome::InterproResult object that will be written to the file based data source
 #Also, write the transcript's data_directory and transcript_name to a file to a file so we can resume later if we crash
-sub load_part
+sub _load_part
 {
-    my ($feature, $build, $interpro_id) = @_;
+    my ($self, $feature, $build, $interpro_id, %temp_results_data_dir) = @_;
     
     my $id    = ( $feature->get_tag_values("ID") )[0];
     my $parent_id; 
@@ -153,23 +227,32 @@ sub load_part
     my $location = $feature->location;
     my $start = $location->start;
     my $stop = $location->end;
-    
-    
+
     my $transcript_name = $feature->seq_id;
-    my @data_dirs = $build->determine_data_directory;
+    unless (exists $self->{_data_dirs}){
+        my @data_dirs = $build->determine_data_directory;
+        $self->{_data_dirs} = \@data_dirs; 
+    }
     my $transcript;
-    for my $dir (@data_dirs){
+    for my $dir (@{$self->{_data_dirs}}){
         $transcript = Genome::Transcript->get(data_directory => $dir, 
                                               transcript_name => $transcript_name);
         last if $transcript;
     }
-    die "Could not get transcript: $transcript_name from ". join(",", @data_dirs) unless $transcript; 
+    die "Could not get transcript: $transcript_name from ". join(",", @{$self->{_data_dirs}}) unless $transcript; 
+
+    my $temp_data_dir;
+    if ($transcript->gene_id =~ m/genbank/i){
+        $temp_data_dir = $temp_results_data_dir{'genbank'};
+    }else{
+        $temp_data_dir = $temp_results_data_dir{'ensembl'};
+    }
     
     my $interpro_result = Genome::InterproResult->create(
         interpro_id => $interpro_id,
         chrom_name => $transcript->chrom_name,
         transcript_name => $transcript->transcript_name, 
-        data_directory => $transcript->data_directory,
+        data_directory => $temp_data_dir->dirname,
         start => $start,
         stop => $stop,
         rid => 0, #Copied directly from mg-load-ipro 
