@@ -81,7 +81,7 @@ sub execute {
             return;
         }
         for my $alignment (@alignments) {
-            my $reference = $alignment->reference_build->full_consensus_path('fasta');
+            my $reference = $alignment->reference_build->full_consensus_path('fa');
             my $instrument_data_id = $alignment->instrument_data_id;    
             my @bams = $alignment->alignment_bam_file_paths;
             unless(@bams) {
