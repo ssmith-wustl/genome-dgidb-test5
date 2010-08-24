@@ -61,6 +61,12 @@ EOS
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
+    # Check that we're on a 64-bit system and can run with the deployed samtools
+    unless (`uname -a` =~ /x86_64/) {
+        $self->error_message("Must run on a 64 bit machine");
+        die;
+    }
+
 	## Get required parameters ##
 	my $variant_file = $self->variant_file;
 	my $contig_size = $self->contig_size;
