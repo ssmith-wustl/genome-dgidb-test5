@@ -580,13 +580,9 @@ sub _transcript_annotation_for_cds_exon {
 #plus a number of bases before the indel to create correct, complete codons.  Then translate to an 
 #amino acid sequence and return it. 
 #If this is used near the centromere or at the end of a chromosome, it will be unpredictable.  Use this at those positions at your own risk!
-#TODO: This could be simplified and improved
 sub _apply_indel_and_translate{
     my ($self, $transcript, $structure, $variant) = @_;
 
-    #$DB::single = 1 if $transcript->transcript_name eq 'NM_022552' and $variant->{variant} eq '-'; #TODO: test code, remove me
-    $DB::single = 1 if $transcript->transcript_name eq 'XM_001717859'; 
-    #my @structures = ($structure, grep { $transcript->is_after($_->structure_start, $structure->structure_start) and ($_->structure_type ne 'intron') } $transcript->ordered_sub_structures);
     my @structures = ($structure);
     for my $substructure ($transcript->ordered_sub_structures){
         if($transcript->is_after($substructure->structure_start, $structure->structure_start)){
@@ -624,7 +620,6 @@ sub _apply_indel_and_translate{
     ($start, $stop) = ($stop, $start) if $transcript->strand eq '-1';
     my $length = $stop - $start + 1;
     
-    $DB::single = 1 if $transcript->transcript_name eq 'XM_001717859'; #TODO: test code, remove me
     my ($relative_variant_start, $borrowed_bases_start) = $structure->sequence_position($start);
 
     my ($codon, $codon_position) = $structure->codon_at_position($start); 
