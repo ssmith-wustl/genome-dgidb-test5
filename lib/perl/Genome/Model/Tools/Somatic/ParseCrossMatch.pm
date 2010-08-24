@@ -26,7 +26,7 @@ class Genome::Model::Tools::Somatic::ParseCrossMatch {
            type => 'Number',
            doc  => 'homo polymer indel size',
            default_value => 2,
-           is_optional   => 2,
+           is_optional   => 1,
        },
        _align => {
            type => 'HASH',
@@ -46,6 +46,7 @@ sub create{
         $self->error_message('Input cross_match file: '.$self->input_file.' is invalid');
         return;
     }
+    $self->Read;
     return $self;
 }
 
