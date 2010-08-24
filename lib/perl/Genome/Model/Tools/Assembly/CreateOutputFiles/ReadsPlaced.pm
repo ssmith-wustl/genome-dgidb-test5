@@ -172,12 +172,12 @@ sub _validate_input_files {
     }
     #gap file
     if ($self->gap_file) {
-	unless (-s $self->gap_file) {
+	unless (-e $self->gap_file) {
 	    $self->error_message("Failed to find file: ".$self->gap_file);
 	    return;
 	}
     } else {
-	if (-s $self->directory.'/edit_dir/gap.txt') {
+	if (-e $self->directory.'/edit_dir/gap.txt') {
 	    $self->gap_file($self->directory.'/edit_dir/gap.txt');
 	}
 	else {
