@@ -142,7 +142,7 @@ sub execute {
 
     #Initialize a hash for recording coverage and mutations: %COVMUTS -> class -> coverage,mutations
     my %COVMUTS = ();
-    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Indels);
+    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Truncations Indels);
     for my $class (@classes) {
         $COVMUTS{$class}{'coverage'} = 0;
         $COVMUTS{$class}{'mutations'} = 0;
@@ -186,8 +186,9 @@ sub execute {
         my $tempvector = $cov_bitmask->{$chr}->Clone();
         my $bits_on = $tempvector->Norm();
 
-        #Indels
+        #Indels and Truncations use the coverage of all the ROIs
         $COVMUTS{'Indels'}{'coverage'} += $bits_on;
+        $COVMUTS{'Truncations'}{'coverage'} += $bits_on;
 
         #AT
         $tempvector->And($cov_bitmask->{$chr},$at_bitmask->{$chr});
@@ -248,8 +249,8 @@ sub execute {
 
         #SNVs
         if ($mutation_type =~ /snp|dnp|onp|tnp/i) {
-            #if this mutation is non-synonymous
-            if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
+            #if this mutation is non-synonymous (missense only)
+            if ($mutation_class =~ /missense/i) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
                 if (scalar grep { /^$gene$/ } keys %{$ROIs{$chr}}) {
 
@@ -343,13 +344,23 @@ sub execute {
                         }
                     }#end, if ref = G
                 }#end, if ROI and MAF genes match 
-
                 #if the ROI list and MAF file do not match, record this with a status message.
                 else {
                     $self->status_message("Gene not in the ROI list: $gene, chr$chr:$start-$stop");
                     next;
                 }
             }#end, if mutation is non-synonymous
+            #if this mutation is non-synonymous (everything but missense)
+            elsif ($mutation_class =~ /nonsense|nonstop|splice_site/i) {
+                #verify this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
+                if (scalar grep { /^$gene$/ } keys %{$ROIs{$chr}}) {
+                    $COVMUTS{'Truncations'}{'mutations'}++;
+                }
+                else {
+                    $self->status_message("Gene not in the ROI list: $gene, chr$chr:$start-$stop");
+                    next;
+                }
+            }#end, if mutation is a splice-site, nonsense, or non-stop
         }#end, if mutation is a SNV
 
         #Indels
@@ -385,7 +396,7 @@ sub execute {
     print $out_fh "Class\tBMR\tCoverage(Bases)\tNon_Syn_Mutations\n";
 
     for my $class (sort keys %BMR) {
-        print $out_fh "$class\t$BMR{$class}\t$COVMUTS{$class}{'coverage'}\t$COVMUTS{$class}{'mutations'}\n";
+        print $out_fh "$class\t$BMR{$class}\t$COVMUTS{$class}{'coverage'}\t$COVMUTS{$class}{'mutations'}\n" or die "\nFailed on: $class $!\n";
     }
     $out_fh->close;
     my $t3 = Benchmark->new;
@@ -438,4 +449,4 @@ sub count_bits {
 #AT.A.transver.T AT.T.transver.A
 #AT.A.transver.C AT.T.transver.G
 #
-#and Indels
+#and Indels and Truncations

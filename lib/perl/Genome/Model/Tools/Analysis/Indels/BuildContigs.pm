@@ -28,7 +28,7 @@ class Genome::Model::Tools::Analysis::Indels::BuildContigs {
 		contig_size	=> { is => 'Text', doc => "Size of reference/variant contigs to generate", is_optional => 1, default => 150 },
 		reference	=> { is => 'Text', doc => "Size of reference/variant contigs to generate", is_optional => 1, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fasta" },
 		output_file	=> { is => 'Text', doc => "Output of reference/variant contig FASTAs", is_optional => 1 },
-        output_reference => { is => 'Boolean', doc => 'Whether or not to output the reference contigs', is_optional => 1, default => 0, },
+        output_reference => { is => 'Boolean', doc => 'Whether or not to output the reference contigs', is_optional => 1, default => 1, },
         samtools_compatible => { is => 'Boolean', doc => 'Whether or not to output the contig names with underscores to make them compatible with samtools', is_optional => 1, default => 0 },
 	],
 };
@@ -60,6 +60,12 @@ EOS
 
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
+
+    # Check that we're on a 64-bit system and can run with the deployed samtools
+    unless (`uname -a` =~ /x86_64/) {
+        $self->error_message("Must run on a 64 bit machine");
+        die;
+    }
 
 	## Get required parameters ##
 	my $variant_file = $self->variant_file;
@@ -223,9 +229,10 @@ sub execute {                               # replace with real execution logic.
 				}
 
 				## Print contigs to outfile
-
-				print OUTFILE ">" . $indel_name . "_ref\n";
-				print OUTFILE $reference_contig . "\n";
+                if($self->output_reference) {
+    				print OUTFILE ">" . $indel_name . "_ref\n";
+	    			print OUTFILE $reference_contig . "\n";
+                }
 
 				print OUTFILE ">" . $indel_name . "_var\n";
 				print OUTFILE $variant_contig . "\n";
