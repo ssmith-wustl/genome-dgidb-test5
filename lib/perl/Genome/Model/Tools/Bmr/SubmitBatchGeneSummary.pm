@@ -128,7 +128,7 @@ sub execute
     {
         ++$submitCnt;
         #Insert a longer delay between every few jobs to avoid thrashing the drives
-        sleep(4) if ($submitCnt % 10 == 0);
+        sleep(1) if ($submitCnt % 10 == 0);
         my ( $piece ) = $roi_file =~ m/part(\d+)$/;
         my $jobname = "genesum-" . $piece;
         my $outfile = $output_dir . $piece . ".gene_summary";
