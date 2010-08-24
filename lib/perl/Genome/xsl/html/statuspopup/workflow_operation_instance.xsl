@@ -6,8 +6,6 @@ xmlns:rest="urn:rest">
   <xsl:template name="workflow_operation_instance" match="object[./types[./isa[@type='Workflow::Operation::Instance']]]">
 
     <xsl:if test="count(ancestor::aspect) = 0">
-      <script type='text/javascript' src='/res/js/boxy/javascripts/jquery.boxy.js'></script>
-      <link rel="stylesheet" href="/res/js/boxy/stylesheets/boxy.css" type="text/css" />
       <script type='text/javascript' src='/res/js/app/workflow_operation_instance.js'></script>
 
       <table class="lister" border="0" width="100%" cellspacing="0" cellpadding="0">
