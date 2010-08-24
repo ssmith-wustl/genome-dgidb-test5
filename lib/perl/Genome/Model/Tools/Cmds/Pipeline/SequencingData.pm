@@ -15,7 +15,8 @@ sub help_brief {
 sub help_synopsis{
     my $self = shift;
     return <<"EOS"
-gmt cmds pipeline sequencing-data --stuff
+gmt cmds pipeline sequencing-data --model-group-id 123 --data-directory /someplace/for/output
+gmt cmds pipeline sequencing-data --model-ids "123 456 789" --data-directory /someplace/for/output
 EOS
 }
 
@@ -23,6 +24,7 @@ sub help_detail {
     my $self = shift;
     return <<"EOS"
 This tool runs the cmds pipeline for sequencing data 
+The only parameters that should be provided are --data-directory and either --model-group-id or --model-ids.
 EOS
 }
 
