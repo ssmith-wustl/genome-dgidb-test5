@@ -46,8 +46,8 @@ sub execute {
     #grab class summary info
     my $sumfh = new IO::File $class_summary,"r";
     my %BMR;
+    $sumfh->getline; #discard the header
     while (my $line = $sumfh->getline) {
-        next if $line =~ /Class/;
         chomp $line;
         my ($class,$bmr,$cov,$muts) = split /\t/,$line;
         $BMR{$class}{'bmr'} = $bmr;
@@ -68,15 +68,18 @@ sub execute {
     #loop through files and print output file
     for my $file (@files) {
         my $fh = new IO::File $file,"r";
+        $fh->getline; #discard the header
         while (my $line = $fh->getline) {
-            next if $line =~ /Class/;
             chomp $line;
             my ($gene,$class,$coverage,$muts) = split /\t/,$line;
             my $newline = join("\t",$gene,$class,$coverage,$muts,$BMR{$class}{'bmr'});
             print $outfh "$newline\n";
         }
+        $fh->close;
     }
+    $outfh->close;
 
     return 1;
 }
+
 1;
