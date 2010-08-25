@@ -84,6 +84,34 @@ sub _execute_build {
         return;
     }
 
+    $self->status_message("Doing bowtie indexing.");
+    my $bowtie_file_stem = File::Spec->catfile($output_directory, 'all_sequences.bowtie');
+
+    my $bowtie_path = Genome::Model::Tools::Bowtie->path_for_bowtie_version(Genome::Model::Tools::Bowtie->default_version); 
+
+    my $bowtie_cmd = sprintf('%s-build %s %s', $bowtie_path, $fasta_file_name, $bowtie_file_stem);
+    $rv = Genome::Utility::FileSystem->shellcmd(
+        cmd => $bowtie_cmd,
+        input_files => [$fasta_file_name],
+        output_files => ["$bowtie_file_stem.1.ebwt","$bowtie_file_stem.2.ebwt","$bowtie_file_stem.3.ebwt","$bowtie_file_stem.4.ebwt","$bowtie_file_stem.rev.1.ebwt","$bowtie_file_stem.rev.2.ebwt"],    #hardcoding expected names
+    );
+
+    unless($rv) {
+        $self->error_message('bowtie-build failed.');
+        return;
+    }
+
+    #make symlinks so existence checks pass later on
+    unless(Genome::Utility::FileSystem->create_symlink($fasta_file_name,$bowtie_file_stem)) {
+        $self->error_message("Unable to symlink $bowtie_file_stem to $fasta_file_name");
+        return;
+    }
+
+    unless(Genome::Utility::FileSystem->create_symlink($fasta_file_name,"$bowtie_file_stem.fa")) {
+        $self->error_message("Unable to symlink $bowtie_file_stem.fa to $fasta_file_name");
+        return;
+    }
+
     $self->status_message("Doing maq fasta2bfa.");
     my $bfa_file_name = File::Spec->catfile($output_directory, 'all_sequences.bfa');
 
@@ -113,6 +141,18 @@ sub _execute_build {
 
     unless($rv) {
         $self->error_message('samtools faidx failed.');
+        return;
+    }
+
+    #link in the samtools indexes
+    
+    unless(Genome::Utility::FileSystem->create_symlink("$fasta_file_name.fai","$bowtie_file_stem.fai")) {
+        $self->error_message("Unable to symlink $bowtie_file_stem.fai to $fasta_file_name.fai");
+        return;
+    }
+
+    unless(Genome::Utility::FileSystem->create_symlink("$fasta_file_name.fai","$bowtie_file_stem.fa.fai")) {
+        $self->error_message("Unable to symlink $bowtie_file_stem.fa.fai to $fasta_file_name.fai");
         return;
     }
 
