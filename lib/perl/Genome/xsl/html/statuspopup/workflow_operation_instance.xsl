@@ -48,24 +48,68 @@ xmlns:rest="urn:rest">
       </xsl:variable>
 
       <tr>
-        <xsl:for-each select="aspect[@name='parallel_index']">
-          <td><xsl:value-of select="value"/></td>
-        </xsl:for-each>
-        <xsl:for-each select="aspect[@name='name']">
-          <td><xsl:value-of select="value"/></td>
-        </xsl:for-each>
-        <xsl:for-each select="aspect[@name='status']">
-          <td class="center"><xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="value"/></xsl:attribute><xsl:value-of select="value"/></td>
-        </xsl:for-each>
-        <xsl:for-each select="aspect[@name='start_time']">
-          <td class="right"><xsl:value-of select="value"/></td>
-        </xsl:for-each>
-        <xsl:for-each select="aspect[@name='end_time']">
-          <td class="right"><xsl:value-of select="value"/></td>
-        </xsl:for-each>
-        <xsl:for-each select="aspect[@name='elapsed_time']">
-          <td class="right"><xsl:value-of select="value"/></td>
-        </xsl:for-each>
+
+          <td>
+            <xsl:choose>
+              <xsl:when test="normalize-space(aspect[@name='parallel_index']/value)">
+                <xsl:value-of select="aspect[@name='parallel_index']/value"/>
+              </xsl:when>
+              <xsl:otherwise>
+                --
+              </xsl:otherwise>
+            </xsl:choose>
+          </td>
+
+          <td>
+            <xsl:choose>
+              <xsl:when test="normalize-space(aspect[@name='name']/value)">
+                <xsl:value-of select="aspect[@name='name']/value"/>
+              </xsl:when>
+              <xsl:otherwise>
+                --
+              </xsl:otherwise>
+            </xsl:choose>
+
+          </td>
+
+          <td class="center">
+            <xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="aspect[@name='status']/value"/></xsl:attribute><xsl:value-of select="aspect[@name='status']/value"/>
+          </td>
+
+          <td class="right">
+            <xsl:choose>
+              <xsl:when test="normalize-space(aspect[@name='start_time']/value)">
+                <xsl:value-of select="aspect[@name='start_time']/value"/>
+              </xsl:when>
+              <xsl:otherwise>
+                --
+              </xsl:otherwise>
+            </xsl:choose>
+          </td>
+
+          <td class="right">
+            <xsl:choose>
+              <xsl:when test="normalize-space(aspect[@name='end_time']/value)">
+                <xsl:value-of select="aspect[@name='end_time']/value"/>
+              </xsl:when>
+              <xsl:otherwise>
+                --
+              </xsl:otherwise>
+            </xsl:choose>
+          </td>
+
+
+          <td class="right">
+            <xsl:choose>
+              <xsl:when test="normalize-space(aspect[@name='elapsed_time']/value)">
+                <xsl:value-of select="aspect[@name='elapsed_time']/value"/>
+              </xsl:when>
+              <xsl:otherwise>
+                --
+              </xsl:otherwise>
+            </xsl:choose>
+          </td>
+
         <td class="buttons">
           <a class="mini btn popup-ajax">
             <xsl:attribute name="href">
