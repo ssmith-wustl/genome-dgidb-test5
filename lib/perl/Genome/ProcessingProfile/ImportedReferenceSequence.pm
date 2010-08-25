@@ -101,16 +101,6 @@ sub _execute_build {
         return;
     }
 
-    #make symlinks so existence checks pass later on
-    unless(Genome::Utility::FileSystem->create_symlink($fasta_file_name,$bowtie_file_stem)) {
-        $self->error_message("Unable to symlink $bowtie_file_stem to $fasta_file_name");
-        return;
-    }
-
-    unless(Genome::Utility::FileSystem->create_symlink($fasta_file_name,"$bowtie_file_stem.fa")) {
-        $self->error_message("Unable to symlink $bowtie_file_stem.fa to $fasta_file_name");
-        return;
-    }
 
     $self->status_message("Doing maq fasta2bfa.");
     my $bfa_file_name = File::Spec->catfile($output_directory, 'all_sequences.bfa');
@@ -144,17 +134,6 @@ sub _execute_build {
         return;
     }
 
-    #link in the samtools indexes
-    
-    unless(Genome::Utility::FileSystem->create_symlink("$fasta_file_name.fai","$bowtie_file_stem.fai")) {
-        $self->error_message("Unable to symlink $bowtie_file_stem.fai to $fasta_file_name.fai");
-        return;
-    }
-
-    unless(Genome::Utility::FileSystem->create_symlink("$fasta_file_name.fai","$bowtie_file_stem.fa.fai")) {
-        $self->error_message("Unable to symlink $bowtie_file_stem.fa.fai to $fasta_file_name.fai");
-        return;
-    }
 
     $self->status_message('Promoting files to final location.');
     for my $staged_file (glob($output_directory . '/*')) {
@@ -171,6 +150,27 @@ sub _execute_build {
             $self->error_message("Reallocation failed.");
             return;
         }
+    }
+    #make symlinks so existence checks pass later on
+    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie")) {
+        $self->error_message("Unable to symlink all_sequences.bowtie to all_sequences.fa");
+        return;
+    }
+
+    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie.fa")) {
+        $self->error_message("Unable to symlink all_sequences.bowtie.fa to all_sequences.fa");
+        return;
+    }
+
+    #link in the samtools indexes
+    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fai")) {
+        $self->error_message("Unable to symlink all_sequences.bowtie.fai to all_sequences.fa.fai");
+        return;
+    }
+
+    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fa.fai")) {
+        $self->error_message("Unable to symlink all_sequences.bowtie.fa.fai to all_sequences.fa.fai");
+        return;
     }
 
     $self->status_message("Done.");
