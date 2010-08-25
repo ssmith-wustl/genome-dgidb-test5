@@ -17,7 +17,7 @@ class Genome::Model::GeneAnnotation {
         },
         assembly_model => {
             is => 'Genome::Model',
-            via => 'assembly_model_link',
+            via => 'assembly_model_links',
             to => 'from_model',
         },
     ],
@@ -162,7 +162,6 @@ sub validate_taxon {
     push @missing_fields, "gram stain" unless defined $taxon->gram_stain_category;
     push @missing_fields, "domain" unless defined $taxon->domain;
     push @missing_fields, "locus id" unless defined $taxon->locus_tag;
-    push @missing_fields, "estimated genome size" unless defined $taxon->estimated_genome_size;
 
     if (@missing_fields) {
         $self->error_message("These fields on taxon " . $taxon->id .
