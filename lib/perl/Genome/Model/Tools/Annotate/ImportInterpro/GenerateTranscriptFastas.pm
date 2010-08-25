@@ -56,6 +56,7 @@ EOS
 
 sub execute{
     my $self = shift;
+
     #Generate .fasta files frome the build to be submitted wtih iprscan 
     my $pre_fasta_generation = Benchmark->new;
 
@@ -67,6 +68,9 @@ sub execute{
     die "chunk-size of $chunk_size is invalid.  Must be between 1 and 50000" if($chunk_size > 50000 or $chunk_size < 1);
     my $tmp_dir = $self->tmp_dir;
     die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
+
+    # db disconnect to avoid Oracle failures killing our long running stuff
+    Genome::DataSource::GMSchema->disconnect_default_dbh;
 
     my %fastas; 
     my ($fasta_temp, $fasta, $fasta_writer);
@@ -80,7 +84,7 @@ sub execute{
                                           DIR => $tmp_dir,
                                           TEMPLATE => 'import-interpro_fasta_XXXXXX');
             $fasta = $fasta_temp->filename; 
-            $fasta_writer = new Bio::SeqIO(-file => ">$fasta", -format => 'fasta');
+            $fasta_writer = Bio::SeqIO->new(-file => ">$fasta", -format => 'fasta');
             die "Could not get fasta writer" unless $fasta_writer;
             $transcript_counter = 0;
         }
@@ -91,7 +95,6 @@ sub execute{
                                     -seq => $amino_acid_seq);
         $fasta_writer->write_seq($bio_seq);
         $transcript_counter++; 
-        $transcript = $transcript_iterator->next;
     }
 
     unless (exists $fastas{$fasta}){

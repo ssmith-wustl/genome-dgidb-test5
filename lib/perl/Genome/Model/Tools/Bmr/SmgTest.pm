@@ -52,7 +52,7 @@ sub execute {
 
     #Print final output file
     my $outfh = new IO::File $outfile,"w";
-    
+
     #grab classes from the bmr file
     my @classes;
     my $classesref = \@classes;
@@ -66,7 +66,6 @@ sub execute {
     }
     $classfh->close;
     @classes = sort @classes;
-    
 
     #Gather FDR stats
     my $fdrfh = new IO::File $fdrfile,"r";
@@ -87,14 +86,14 @@ sub execute {
 
     #Print outfile header
     print $outfh "Gene\tTotal_Muts\t";
-    print $outfh "$classes[0]_muts\t$classes[1]_muts\t$classes[2]_muts\t$classes[3]_muts\t$classes[4]_muts\t$classes[5]_muts\t$classes[6]_muts\t";
-    print $outfh "$classes[0]_cov\t$classes[1]_cov\t$classes[2]_cov\t$classes[3]_cov\t$classes[4]_cov\t$classes[5]_cov\t$classes[6]_cov\t";
+    print $outfh "$_\_muts\t" foreach( @classes );
+    print $outfh "$_\_cov\t" foreach( @classes );
     print $outfh "p.fisher\tp.lr\tp.convol\tfdr.fisher\tfdr.lr\tfdr.convol\n";
 
     #Loop through BMR file and gather and print mutation information.
     my %COVMUTS;
     my $covmuts = \%COVMUTS;
-    
+
     my $genefh = new IO::File $genefile,"r";
     while (my $line = $genefh->getline) {
         next if $line =~ /class/i;
@@ -107,12 +106,9 @@ sub execute {
             $COVMUTS{$class}{'muts'} = $muts;
         }
         if ($nextgene ne $COVMUTS{'gene'}) {
-            
             #we are at next gene in file, so print output from the last gene
             my $gene2print = $COVMUTS{'gene'};
-            
             $self->print_gene($gene2print,$classesref,$covmuts,$fdr,$outfh);
-            
             $COVMUTS{'gene'} = $nextgene;
             $COVMUTS{$class}{'cov'} = $cov;
             $COVMUTS{$class}{'muts'} = $muts;
@@ -120,12 +116,10 @@ sub execute {
     }
 
     $self->print_gene($COVMUTS{'gene'},$classesref,$covmuts,$fdr,$outfh);
-    
     return 1;
 }
 
 sub print_gene {
-    
     my ($self,$gene2print,$classesref,$covmuts,$fdr,$outfh) = @_;
 
     my $total_muts;
@@ -134,7 +128,7 @@ sub print_gene {
         next if $class =~ m/gene/i;
         $total_muts += $covmuts->{$class}->{'muts'};
     }
-    
+
     #print mutation info
     print $outfh "$covmuts->{'gene'}\t$total_muts\t";
     for my $class (@$classesref) {
