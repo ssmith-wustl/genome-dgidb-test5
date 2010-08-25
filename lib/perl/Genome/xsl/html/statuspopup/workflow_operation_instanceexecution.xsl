@@ -7,22 +7,28 @@ xmlns:rest="urn:rest">
 
     <xsl:if test="count(aspect) > 0">
       <div class="aspects">
-        <table class="aspects" cellpadding="0" cellspacing="0" border="0">
-          <colgroup>
-           <col width="40%"/>
-           <col/>
-          </colgroup>
+        <table class="name-value" cellpadding="0" cellspacing="0" border="0">
           <tbody>
             <xsl:for-each select="aspect">
               <tr>
                 <td class="name">
-                  <strong><xsl:value-of select="@name"/></strong>
+                  <xsl:value-of select="@name"/>:
                 </td>
                 <xsl:if test="@name='stderr' or @name='stdout'">
+
                   <xsl:variable name="path" select="."/>
-                  <td class="value"><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu</xsl:text>
-                  <xsl:value-of select="$path"/>
-                  </xsl:attribute><xsl:value-of select="$path"/></a>
+                  <td class="value">
+                    <a>
+                      <xsl:attribute name="href">
+                        <xsl:text>https://gscweb.gsc.wustl.edu</xsl:text>
+                        <xsl:value-of select="$path"/>
+                      </xsl:attribute>
+
+                      <xsl:call-template name="substring-after-last">
+                        <xsl:with-param name="input" select="$path"/>
+                        <xsl:with-param name="substr" select="'/'"/>
+                      </xsl:call-template>
+                    </a>
                   </td>
                 </xsl:if>
                 <xsl:if test="@name!='stderr' and @name!='stdout'">

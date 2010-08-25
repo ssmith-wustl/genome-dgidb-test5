@@ -46,6 +46,12 @@ UR::Object::Type->define(
 			doc => 'Path to the default non-redundant sequence database, only used if local copy unavailable',
 			default => '/gscmnt/gpfstest2/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr',
 		},
+        iprpath => {
+            is => 'String',
+            doc => "specify different version of iprscan",
+            #default => "/gsc/scripts/pkg/bio/iprscan/iprscan-4.5/bin/iprscan", # should probalby be this.
+            default => "/gsc/scripts/bin/iprscan",
+        },
         use_local_nr => {
             is => 'Boolean',
             doc => 'If set, use local copies of the NR database instead of the default held in nr_db parameter',
@@ -110,6 +116,7 @@ sub execute
 
     $self->status_message("running merge now");
     my $rv = Genome::Model::GenePrediction::Command::Merge->execute(%params);
+    $params{iprpath} = $self->iprpath;
 
     unless($rv) {
         $self->error_message("can't run merge step");

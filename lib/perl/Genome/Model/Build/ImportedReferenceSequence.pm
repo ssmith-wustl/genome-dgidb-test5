@@ -320,7 +320,7 @@ sub get_sequence_dictionary {
         my $ref_seq = $self->full_consensus_path('fa'); 
         my $name = $self->name;
         
-        my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R=$ref_seq O=$path URI=$uri species=\"$species\" genome_assembly=$name TRUNCATE_NAMES_AT_WHITESPACE=true";        
+        my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$name' TRUNCATE_NAMES_AT_WHITESPACE=true";        
 
         my $csd_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$create_seq_dict_cmd);
 

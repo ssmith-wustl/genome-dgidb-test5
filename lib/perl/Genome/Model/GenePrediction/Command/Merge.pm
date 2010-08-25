@@ -1,7 +1,5 @@
 package Genome::Model::GenePrediction::Command::Merge;
 
-# probably don't need this anymore
-#use lib '/gsc/scripts/opt/bacterial-bioperl';
 
 use strict;
 use warnings;
@@ -51,6 +49,11 @@ class Genome::Model::GenePrediction::Command::Merge {
         },
     ],
     has_optional => [
+        iprpath => {
+            is => 'Scalar',
+            doc => "alternative path to iprscan",
+            default => "/gsc/scripts/bin/iprscan",
+        },
         use_local_nr => {
             is => 'Boolean',
             default => 1,
@@ -189,6 +192,8 @@ sub execute
 {
     my $self = shift;
     my $user = $ENV{USER};
+
+    $self->status_message("iprpath : ".$self->iprpath);
 
     my $runner_count = $self->runner_count;
 
@@ -333,13 +338,16 @@ sub execute
         {
 
             @run_phases = ( 1, 2, 3, 4, 5 );
+            if($self->skip_blastx) {
+                @run_phases = ( 1,2,4,5);
+            }
         }
         foreach my $phase (@run_phases)
         {
             $self->status_message("running phase ". $phase);
-            unless ( defined( $self->skip_blastx )
-                && ( $phase == 3 ) )
-            {
+#            unless ( defined( $self->skip_blastx )
+#                && ( $phase == 3 ) )
+#            {
 
                 $self->status_message("before phase ". $phase);
 
@@ -361,7 +369,7 @@ sub execute
                 $self->status_message("after phase ".$phase);
                 BAP::DB::DBI->dbi_commit();
                 BAP::DB::DBI->db_Main->disconnect();
-            }
+#            }
             $self->status_message("completed phase ". $phase);
 
         }
@@ -509,7 +517,21 @@ sub phase3
     my $fasta_file = $fasta_fh->filename();
     my %selected_genes = %{$self->_selected_genes};
     my $debug_fh = $self->_debug_fh;
-    my %rpc_args = $self->_rpc_args;
+    #my %rpc_args = $self->_rpc_args; # not use this.
+    my $rpc_queue    = $self->rpc_queue;
+    my $rpc_core_num = $self->rpc_core_number;
+    my $tmp_usage    = $self->tmp_usage;
+    my %rpc_args = (
+        runner_count => $self->runner_count,
+        app_init     => 0,
+        port         => 7654 + $PID,
+        pp_type      => 'lsf',
+        q            => "'$rpc_queue'",
+        n            => "$rpc_core_num",
+        R            => "'span[hosts=1] rusage[mem=4096, tmp=$tmp_usage]'",
+        maxmessage   => 81920000,
+        lib_paths    => [ UR::Util::used_libs ],
+    );
 
     my $feature_fh   = File::Temp->new();
     my $feature_file = $feature_fh->filename();
@@ -1064,12 +1086,13 @@ sub iprscan
     my $err_fn = $err_fh->filename();
     $err_fh->close();
     $self->status_message("err fn: $err_fn");
-
-    my @cmd = (
-
+    # originally hardcoded to these at various points in the past.
      #'/gscmnt/974/analysis/iprscan16.1/iprscan/bin/iprscan',
      #          '/gscmnt/974/analysis/iprscan16.1/iprscan/bin/iprscan.hacked',
-        '/gsc/scripts/bin/iprscan',
+     #   '/gsc/scripts/bin/iprscan',
+     #   '/gscmnt/temp212/info/annotation/InterProScan/iprscan16.1/iprscan/bin/iprscan.hacked',    
+    my @cmd = (
+        $self->iprpath,
         '-cli',
         '-appl hmmpfam',
         '-goterms',

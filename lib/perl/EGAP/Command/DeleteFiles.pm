@@ -3,58 +3,45 @@ package EGAP::Command::DeleteFiles;
 use strict;
 use warnings;
 
-use Workflow;
-
+use EGAP;
+use Carp qw(confess);
 use English;
 
 class EGAP::Command::DeleteFiles {
-    is => ['EGAP::Command'],
+    is => 'EGAP::Command',
     has => [
-        files => { is => 'ARRAY', doc => 'array of files to delete' },
+        files => { 
+            is => 'ARRAY', 
+            is_input => 1,
+            doc => 'array of files to delete' 
+        },
     ],
 };
 
-operation_io EGAP::Command::DeleteFiles {
-    input  => [ 'files' ],
-    output => [ 'result' ],
-};
-
-sub sub_command_sort_position { 10 }
-
 sub help_brief {
-    "Delete a set of files";
+    return "Deletes all files provided";
 }
 
 sub help_synopsis {
-    return <<"EOS"
-EOS
+    return "Deletes all files in the given array";
 }
 
 sub help_detail {
-    return <<"EOS"
-Need documenation here.
-EOS
+    return "Deletes all filsee in the given array";
 }
 
 sub execute {
-    
     my $self = shift;
+    my @files = @{$self->files};
 
-    
-    my @files = @{$self->files()};
-
-    foreach my $file (@files) {
-
-        unless(unlink($file)) {
-
-            die "failed to unlink '$file': $OS_ERROR";
-
+    for my $file (@files) {
+        unless(unlink $file) {
+            confess "Could not remove $file : $OS_ERROR";
         }
-
     }
 
     $self->status_message("Deleted files: " . join(',',@files));
-    
+    return 1;
 }
  
 1;

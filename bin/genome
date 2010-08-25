@@ -4,13 +4,22 @@ use strict;
 use warnings;
 
 BEGIN {
+    # This allows the genome command to self-serve as a tab completer for the bash shell.
+    # Configure it with:
+    #    complete -C `which genome` genome
+    #
+    # When "genome" is run by bash as a tab completer, the code below will service the
+    # tab-completion request and then exit before doing any real work.
+    # The code is in an eval to prevent problems on systems which do no have Getopt::Complete 
+    # installed.  The code is in a BEGIN block to ensure it still runs before anything else.
     eval "use Getopt::Complete::Cache class => 'Genome::Command', above => 1;";
 };
 
 # do a smart "use lib" for developers
 # this only has an effect when your pwd is under Genome/
-use above "Genome"; 
+use above "Genome";
 
+# wrap the base command smartly for the shell
 use Genome::Command;
 Genome::Command->execute_with_shell_params_and_exit();
 
@@ -18,23 +27,26 @@ Genome::Command->execute_with_shell_params_and_exit();
 
 =head1 NAME
 
-genome
+genome SUBCOMMAND ...
 
 =head1 SYNOPSIS
 
 genome (list all available commands)
 
 genome project              ...
-genome sample               ...
-genome individual           ...
+genome taxon                ...
 genome population-group     ...
+genome individual           ...
+genome sample               ...
 genome instrument-data      ...
 genome processing-profile   ...
 genome model                ...
+genome tools                ...
+genome disk                 ...
 
 =head1 DESCRIPTION
 
-This is the top-level tool for working with genome data models.
+This is the top-level tool for working with the genome modeling system and tools.
 
 Just run it with no parameters to get a list of available commands.
 
@@ -50,14 +62,11 @@ Running this WITHIN a source tree under the Genome namespace will automatically 
 
 =head1 BUGS
 
-Report bugs to software@genome.wustl.edu
+Report bugs to software at genome.wustl.edu
 
 =head1 AUTHOR
 
 Eddie Belter
 
-ebelter@genome.wustl.edu
-
 =cut
-
 

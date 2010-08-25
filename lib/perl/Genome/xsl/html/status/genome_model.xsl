@@ -62,16 +62,16 @@
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]] mode: set_table_init</xsl:comment>
     <script type="text/javascript">
       <xsl:text disable-output-escaping="yes">
-      <![CDATA[
-               $(document).ready(
+        <![CDATA[
+                 $(document).ready(
                  window.setTable = $('#set').dataTable({
-                   "bJQueryUI": true,
-                   "sPaginationType": "full_numbers",
-                   "bStateSave": true,
-                   "iDisplayLength": 25
+                 "bJQueryUI": true,
+                 "sPaginationType": "full_numbers",
+                 "bStateSave": true,
+                 "iDisplayLength": 25
                  })
-               );
-      ]]>
+                 );
+        ]]>
       </xsl:text>
     </script>
   </xsl:template>
@@ -413,9 +413,9 @@
         <table class="lister">
           <thead>
             <tr>
+              <th>id</th>
               <th>type</th>
               <th>object</th>
-              <th><br/></th>
             </tr>
           </thead>
           <tbody>
@@ -440,10 +440,8 @@
   <xsl:template name="genome_model_input_table_row">
     <xsl:comment>template: status/genome_model.xsl:genome_model_input_table_row</xsl:comment>
     <tr>
-      <td><xsl:value-of select="normalize-space(aspect[@name='name']/value)"/></td>
-      <td><xsl:value-of select="display_name"/></td>
-      <td class="buttons">
-        <xsl:call-template name="object_link_button_tiny">
+      <td>
+        <xsl:call-template name="object_link_button">
           <xsl:with-param name="icon" select="'sm-icon-extlink'" />
           <xsl:with-param name="id">
             <xsl:value-of select="aspect[@name='value_id']/value"/>
@@ -451,8 +449,14 @@
           <xsl:with-param name="type">
             <xsl:value-of select="aspect[@name='value_class_name']/value"/>
           </xsl:with-param>
+          <xsl:with-param name="linktext">
+            <xsl:value-of select="aspect[@name='value_id']/value"/>
+          </xsl:with-param>
         </xsl:call-template>
       </td>
+      <td><xsl:value-of select="normalize-space(aspect[@name='name']/value)"/></td>
+      <td><xsl:value-of select="aspect[@name='value_class_name']/value"/></td>
+
     </tr>
   </xsl:template>
 
@@ -520,7 +524,7 @@
   <xsl:template name="genome_model_builds_list_table">
     <xsl:variable name="is_default" select="aspect[@name='is_default']/value" />
 
-    <xsl:comment>template: status/genome_model.xsl:genome_model_builds_list_table</xsl:comment>
+    <xsl:comment>template: status/genome_model.xsl; name: genome_model_builds_list_table</xsl:comment>
     <div class="model_builds_list">
       <div class="box_header span-24 last rounded-top">
         <div class="box_title">
@@ -573,13 +577,6 @@
                 <xsl:value-of select="aspect[@name='creation_date']/value"/>
               </td>
 
-              <td class="name">
-                builds:
-              </td>
-              <td class="value">
-                <xsl:value-of select="$num_builds"/>
-              </td>
-
             </tr>
           </tr>
         </table>
@@ -595,12 +592,17 @@
 
           <xsl:if test="$num_builds &gt; 0">
             <table cellpadding="0" cellspacing="0" border="0" class="lister" style="margin-bottom: 8px;">
+              <col width="10%" />
+              <col width="10%" />
+              <col/>
+              <col/>
+              <col/>
               <thead>
                 <tr>
-                  <th class="rounded-left">build</th>
+                  <th>build</th>
                   <th class="center">status</th>
-                  <th class="right">scheduled</th>
-                  <th class="right">completed</th>
+                  <th>scheduled</th>
+                  <th>completed</th>
                   <th class="rounded-right"><br/></th>
                 </tr>
               </thead>
@@ -642,25 +644,32 @@
 
 
   <xsl:template name="genome_model_builds_list_table_row">
+    <xsl:variable name="build_directory_url">
+      <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="aspect[@name='data_directory']/value" />
+    </xsl:variable>
+
     <xsl:variable name="b_status" select="aspect[@name='status']/value"/>
     <xsl:variable name="lc_b_status" select="translate($b_status,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')"/>
+
     <tr>
       <td>
-        <xsl:value-of select="@id"/>
+        <xsl:call-template name="object_link_button">
+
+          <xsl:with-param name="linktext" select="@id" />
+          <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+        </xsl:call-template>
       </td>
       <td>
         <xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="$lc_b_status"/></xsl:attribute><xsl:value-of select="$lc_b_status"/>
       </td>
-      <td class="right">
+      <td>
         <xsl:value-of select="aspect[@name='date_scheduled']/value"/>
       </td>
-      <td class="right">
+      <td>
         <xsl:value-of select="aspect[@name='date_completed']/value"/>
       </td>
       <td class="buttons">
-        <xsl:call-template name="object_link_button_tiny">
-          <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
-        </xsl:call-template>
+        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>data directory</a>
       </td>
     </tr>
 

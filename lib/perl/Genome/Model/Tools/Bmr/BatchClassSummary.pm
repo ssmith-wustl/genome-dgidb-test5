@@ -42,11 +42,6 @@ class Genome::Model::Tools::Bmr::BatchClassSummary {
         is_optional => 1,
         doc => 'Comma-delimited list of genes to exclude in BMR calculation',
     },
-#    rejected_mutations => {
-#        type => 'String',
-#        is_optional => 1,
-#        doc => 'File to catch mutations that fall in the ROI list location-wise, but have a gene name which does not match any of the genes in the ROI list. Default operation is to print to STDOUT.',
-#    },
     ]
 };
 
@@ -147,7 +142,7 @@ sub execute {
 
     #Initialize a hash for recording coverage and mutations: %COVMUTS -> class -> coverage,mutations
     my %COVMUTS = ();
-    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Indels);
+    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Truncations Indels);
     for my $class (@classes) {
         $COVMUTS{$class}{'coverage'} = 0;
         $COVMUTS{$class}{'mutations'} = 0;
@@ -191,8 +186,9 @@ sub execute {
         my $tempvector = $cov_bitmask->{$chr}->Clone();
         my $bits_on = $tempvector->Norm();
 
-        #Indels
+        #Indels and Truncations use the coverage of all the ROIs
         $COVMUTS{'Indels'}{'coverage'} += $bits_on;
+        $COVMUTS{'Truncations'}{'coverage'} += $bits_on;
 
         #AT
         $tempvector->And($cov_bitmask->{$chr},$at_bitmask->{$chr});
@@ -236,7 +232,7 @@ sub execute {
 =cut
 
     while (my $line = $mut_fh->getline) {
-        next if ($line =~ /^Hugo/);
+        next if (( $line =~ /^Hugo\_Symbol/ ) || ( $line =~ /^#/ ));
         chomp $line;
         my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
 
@@ -253,8 +249,8 @@ sub execute {
 
         #SNVs
         if ($mutation_type =~ /snp|dnp|onp|tnp/i) {
-            #if this mutation is non-synonymous
-            if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
+            #if this mutation is non-synonymous (missense only)
+            if ($mutation_class =~ /missense/i) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
                 if (scalar grep { /^$gene$/ } keys %{$ROIs{$chr}}) {
 
@@ -270,7 +266,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = A
@@ -286,7 +282,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = T
@@ -315,7 +311,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = C
@@ -343,18 +339,28 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = G
                 }#end, if ROI and MAF genes match 
-
                 #if the ROI list and MAF file do not match, record this with a status message.
                 else {
-                    $self->status_message("Cannot find this mutation's gene in the ROI hash:\n$line");
+                    $self->status_message("Gene not in the ROI list: $gene, chr$chr:$start-$stop");
                     next;
                 }
             }#end, if mutation is non-synonymous
+            #if this mutation is non-synonymous (everything but missense)
+            elsif ($mutation_class =~ /nonsense|nonstop|splice_site/i) {
+                #verify this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
+                if (scalar grep { /^$gene$/ } keys %{$ROIs{$chr}}) {
+                    $COVMUTS{'Truncations'}{'mutations'}++;
+                }
+                else {
+                    $self->status_message("Gene not in the ROI list: $gene, chr$chr:$start-$stop");
+                    next;
+                }
+            }#end, if mutation is a splice-site, nonsense, or non-stop
         }#end, if mutation is a SNV
 
         #Indels
@@ -364,7 +370,7 @@ sub execute {
                 $COVMUTS{'Indels'}{'mutations'}++;
             }
             else {
-                $self->status_message("Cannot find this mutation's gene in the ROI hash:\n$line");
+                $self->status_message("Gene not in the ROI list: $gene, chr$chr:$start-$stop");
                 next;
             }
         }#end, if mutation is an indel
@@ -390,12 +396,12 @@ sub execute {
     print $out_fh "Class\tBMR\tCoverage(Bases)\tNon_Syn_Mutations\n";
 
     for my $class (sort keys %BMR) {
-        print $out_fh "$class\t$BMR{$class}\t$COVMUTS{$class}{'coverage'}\t$COVMUTS{$class}{'mutations'}\n";
+        print $out_fh "$class\t$BMR{$class}\t$COVMUTS{$class}{'coverage'}\t$COVMUTS{$class}{'mutations'}\n" or die "\nFailed on: $class $!\n";
     }
     $out_fh->close;
     my $t3 = Benchmark->new;
-    print STDERR " Total Time: ", timestr(timediff($t3,$t0)), "\n";
-    print STDERR "Load Wiggle: ", timestr(timediff($t2,$t1)), "\n";
+    print " Total Time: ", timestr(timediff($t3,$t0)), "\n";
+    print "Load Wiggle: ", timestr(timediff($t2,$t1)), "\n";
     return 1;
 }
 
@@ -443,4 +449,4 @@ sub count_bits {
 #AT.A.transver.T AT.T.transver.A
 #AT.A.transver.C AT.T.transver.G
 #
-#and Indels
+#and Indels and Truncations

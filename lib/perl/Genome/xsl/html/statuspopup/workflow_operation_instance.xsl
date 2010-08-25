@@ -8,14 +8,7 @@ xmlns:rest="urn:rest">
     <xsl:if test="count(ancestor::aspect) = 0">
       <script type='text/javascript' src='/res/js/boxy/javascripts/jquery.boxy.js'></script>
       <link rel="stylesheet" href="/res/js/boxy/stylesheets/boxy.css" type="text/css" />
-      <script type="text/javascript">
-        <![CDATA[
-          function status_popup(title,typeurl,id) {
-            var popup = new Boxy.load("/view/" + typeurl + "/statuspopup.html?id=" + id, {cache: true, title: title, afterShow: function() { this.center; this.resize(400,400); this.getContent().css('overflow','auto'); } });
-            popup.center();
-          }
-        ]]>
-      </script>
+      <script type='text/javascript' src='/res/js/app/workflow_operation_instance.js'></script>
 
       <table class="lister" border="0" width="100%" cellspacing="0" cellpadding="0">
         <colgroup>
@@ -56,10 +49,7 @@ xmlns:rest="urn:rest">
         <xsl:value-of select="rest:typetourl(aspect[@name='current']/object[1]/@type)" />
       </xsl:variable>
 
-      <tr onmouseover="this.className = 'hover'" onmouseout="this.className=''">
-        <xsl:attribute name="onclick">
-          <xsl:text>javascript:status_popup('</xsl:text><xsl:value-of select="aspect[@name='name']/value"/><xsl:text>','</xsl:text><xsl:value-of select="$currentLink"/><xsl:text>','</xsl:text><xsl:value-of select="aspect[@name='current']/object[1]/@id"/><xsl:text>');</xsl:text>
-        </xsl:attribute>
+      <tr>
         <xsl:for-each select="aspect[@name='parallel_index']">
           <td><xsl:value-of select="value"/></td>
         </xsl:for-each>
@@ -79,10 +69,18 @@ xmlns:rest="urn:rest">
           <td class="right"><xsl:value-of select="value"/></td>
         </xsl:for-each>
         <td class="buttons">
-          <a class="mini btn"><xsl:attribute name="href">
-            <xsl:text>javascript:status_popup('</xsl:text><xsl:value-of select="aspect[@name='name']/value"/><xsl:text>','</xsl:text><xsl:value-of select="$currentLink"/><xsl:text>','</xsl:text><xsl:value-of select="aspect[@name='current']/object[1]/@id"/><xsl:text>');</xsl:text></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>info</xsl:text>
+          <a class="mini btn popup-ajax">
+            <xsl:attribute name="href">
+              <xsl:text>/view/</xsl:text>
+              <xsl:value-of select="$currentLink"/>
+              <xsl:text>/statuspopup.html?id=</xsl:text>
+              <xsl:value-of select="aspect[@name='current']/object[1]/@id"/>
+            </xsl:attribute>
+            <xsl:attribute name="title">
+              <xsl:value-of select="aspect[@name='name']/value"/>
+            </xsl:attribute>
+            <span class="sm-icon sm-icon-newwin"><br/></span><xsl:text>info</xsl:text>
           </a>
-
         </td>
       </tr>
     </xsl:if>

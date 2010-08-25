@@ -5,7 +5,7 @@ use warnings;
 
 use base 'Class::Accessor';
 
-__PACKAGE__->mk_accessors(qw/ fastq_file _io /);
+__PACKAGE__->mk_accessors(qw/ file _io /);
 
 require Carp;
 use Data::Dumper 'Dumper';
@@ -16,7 +16,7 @@ sub create {
 
     my $self = bless \%params, $class;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->fastq_file );
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->file );
     unless ( $fh ) {
         Carp::Confess("Can't open fastq file.");
     }

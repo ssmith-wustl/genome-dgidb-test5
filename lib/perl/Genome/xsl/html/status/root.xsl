@@ -51,6 +51,9 @@
         <!-- jquery.masonry to arrange the object info boxes-->
         <script type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
 
+        <!-- jquery.spinner for easy creation of loading spinners -->
+        <script type="text/javascript" src="/res/js/pkg/spinner/jquery.spinner.js"></script>
+
         <!-- jquery.dataTables for spiffy feature-laden lists -->
         <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
         <link rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection"/>
@@ -190,63 +193,5 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
       </div>
     </div>
   </xsl:template>
-
-  <!-- creates a button with a jQueryUI icon -->
-  <xsl:template name="object_link_button">
-    <xsl:param name="type" select="./@type"/>
-    <xsl:param name="id" select="./@id"/>
-    <xsl:param name="perspective" select="'status'"/>
-    <xsl:param name="toolkit" select="'html'"/>
-    <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
-    <xsl:param name="icon"/>
-
-    <xsl:variable name="button_href">
-      <xsl:call-template name="object_link_href">
-        <xsl:with-param name="type" select="$type"/>
-        <xsl:with-param name="id" select="$id"/>
-        <xsl:with-param name="perspective" select="$perspective"/>
-        <xsl:with-param name="toolkit" select="$toolkit"/>
-      </xsl:call-template>
-    </xsl:variable>
-
-    <xsl:comment>template: status/root.xsl:object_link_button</xsl:comment>
-
-    <a class="mini btn">
-      <xsl:attribute name="href">
-        <xsl:value-of select="$button_href"/>
-      </xsl:attribute>
-      <span class="sm-icon sm-icon-extlink"><xsl:attribute name="class"><xsl:text>sm-icon </xsl:text><xsl:value-of select="$icon"/></xsl:attribute><br/></span><xsl:value-of select="$linktext"/>
-    </a>
-
-  </xsl:template>
-
-  <!-- creates a tiny button with no label -->
-  <xsl:template name="object_link_button_tiny">
-    <xsl:param name="type" select="./@type"/>
-    <xsl:param name="id" select="./@id"/>
-    <xsl:param name="perspective" select="'status'"/>
-    <xsl:param name="toolkit" select="'html'"/>
-    <xsl:param name="icon"/>
-
-    <xsl:variable name="button_href">
-      <xsl:call-template name="object_link_href">
-        <xsl:with-param name="type" select="$type"/>
-        <xsl:with-param name="id" select="$id"/>
-        <xsl:with-param name="perspective" select="$perspective"/>
-        <xsl:with-param name="toolkit" select="$toolkit"/>
-      </xsl:call-template>
-    </xsl:variable>
-
-    <xsl:comment>template: status/root.xsl:object_link_button_tiny</xsl:comment>
-
-    <a class="mini-icon btn">
-      <xsl:attribute name="href">
-        <xsl:value-of select="$button_href"/>
-      </xsl:attribute>
-      <span><xsl:attribute name="class"><xsl:text>sm-icon </xsl:text><xsl:value-of select="$icon"/></xsl:attribute><br/></span>
-    </a>
-
-  </xsl:template>
-
 
 </xsl:stylesheet>

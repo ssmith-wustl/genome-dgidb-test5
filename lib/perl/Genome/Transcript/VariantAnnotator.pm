@@ -402,7 +402,6 @@ sub _transcript_annotation_for_intron {
     # Otherwise, it's intronic
     my $trv_type;
     if ($variant->{type} =~ /ins|del/i) {
-        $coding_position = 'NULL';  # TODO Legacy behavior, not sure if this needs changing
         $trv_type = "intronic";
         $trv_type = "splice_region_" . lc $variant->{type} if $distance_to_edge <= 10;
         $trv_type = "splice_site_" . lc $variant->{type} if $distance_to_edge <= 2;
@@ -417,20 +416,21 @@ sub _transcript_annotation_for_intron {
     # if there are any coding exons in the transcript
     my $amino_acid_change = 'NULL';
     my $has_exons = ($structure->{cds_exons_before} != 0 or $structure->{cds_exons_after} != 0);
-    if ($trv_type =~ /splice_site/i and $has_exons) {
+    if ($has_exons) {
+        # For indels, the distance to the edge of the bordering exon can be negative if the indel starts in the intron
+        # and carries over to the exon. This should eventually be fixed by splitting up variants in the _transcript_annotation
+        # method above. For now, set the distance to edge to 1 if its negative
+        # This is actually a pretty big bug, since currently the only structure annotated is the one at the variant's start. This
+        # needs to be changed such that all structures within the range of the variant are annotated.
+        # TODO Remove once variants spanning structures are handled correctly
+        $distance_to_edge = 1 if $distance_to_edge <= 0;
+
         # If position in the intron is equal to the distance to the closest edge, 
         # this splice site is just after an exon
         if ($intron_position eq $distance_to_edge) {
             $amino_acid_change = "e" . $structure->{cds_exons_before} . "+" . $distance_to_edge;
         }
         else {
-            # For indels, the distance to the edge of the bordering exon can be negative if the indel starts in the intron
-            # and carries over to the exon. This should eventually be fixed by splitting up variants in the _transcript_annotation
-            # method above. For now, set the distance to edge to 1 if its negative
-            # This is actually a pretty big bug, since currently the only structure annotated is the one at the variant's start. This
-            # needs to be changed such that all structures within the range of the variant are annotated.
-            # TODO Remove once variants spanning structures are handled correctly
-            $distance_to_edge = 1 if $distance_to_edge <= 0;
             $amino_acid_change = "e" . ($structure->{cds_exons_before} + 1) . "-" . $distance_to_edge;
         }
     }
@@ -561,11 +561,11 @@ sub _transcript_annotation_for_cds_exon {
         return;
     }
 
-# Need to create an amino acid change string for the protein domain method
+    # Need to create an amino acid change string for the protein domain method
     my $amino_acid_change = "p." . substr($original_aa, 0, 1) . $protein_position;
     my ($protein_domain, $all_protein_domains) = $self->_protein_domain(
-            $variant, $transcript->gene_name, $transcript->transcript_name, $amino_acid_change
-            );
+        $variant, $transcript->gene_name, $transcript->transcript_name, $amino_acid_change
+    );
 
     return (
             c_position => "c." . $coding_position,
@@ -784,10 +784,10 @@ sub _determine_coding_position {
             }
         }
         else {
-# I have found no documentation for this particular case and am coding this to match the old output.
-# If transcript strand is +1, then utr exon is always 3' and prefixed with a '*'. Otherwise, the
-# utr exon is considered 5' and prefixed with a '-'. The position is simply the variant start position
-# TODO ... why is the logic like this? Is this what we want?
+            # I have found no documentation for this particular case and am coding this to match the old output.
+            # If transcript strand is +1, then utr exon is always 3' and prefixed with a '*'. Otherwise, the
+            # utr exon is considered 5' and prefixed with a '-'. The position is simply the variant start position
+            # TODO ... why is the logic like this? Is this what we want?
             if ($transcript->strand eq '+1') {
                 $c_position = "*" . $start;
             }
@@ -814,11 +814,19 @@ sub _determine_coding_position {
             if ($transcript->within_coding_region($start)) {
                 if ($distance_to_start <= $distance_to_stop) {
                     $c_position = ($coding_bases_before) . "+" . $distance_to_start;
-                    $c_position .= "_+" . ($distance_to_start + ($stop - $start)) if $start != $stop;
+                    if ($start != $stop) {
+                        my $dist = $distance_to_start - abs($stop - $start);
+                        $dist = 1 if $dist <= 0;
+                        $c_position .= "_" . ($coding_bases_before) . "+" . ($dist);
+                    }
                 }
                 else {
                     $c_position = ($coding_bases_before + 1) . "-" . $distance_to_stop;
-                    $c_position .= "_-" . ($distance_to_stop - ($stop - $start)) if $start != $stop;
+                    if ($start != $stop) {
+                        my $dist = $distance_to_stop - abs($stop - $start);
+                        $dist = 1 if $dist <= 0;
+                        $c_position .= "_" . ($coding_bases_before + 1) . "-" . ($dist);
+                    }
                 }
             }
             else {
@@ -831,11 +839,11 @@ sub _determine_coding_position {
 
                 if ($distance_to_start <= $distance_to_stop) {
                     $c_position .= ("+" . $distance_to_start);
-                    $c_position .= "_+" . ($distance_to_start + ($stop - $start)) if $start != $stop;
+                    $c_position .= "_" . ($distance_to_start + ($stop - $start)) if $start != $stop;
                 }
                 else {
                     $c_position .= ("-" . $distance_to_stop);
-                    $c_position .= "_-" . ($distance_to_stop - ($stop - $start)) if $start != $stop;
+                    $c_position .= "_" . ($distance_to_stop - ($stop - $start)) if $start != $stop;
                 }
             }
         }
@@ -854,17 +862,17 @@ sub _determine_coding_position {
 sub _get_affected_sequence {
     my ($self, $transcript, $structure, $variant) = @_;
 
-# Occasionally, the first amino acid changed by a variation occurs beyond the codons actually changed. For example,
-# CCC CTG CTG codes for PLL. If the last base of the first codon to the last base of the middle codon are deleted 
-# (CCTG removed, leaving CC CTG), then the first amino acid expressed is still P. The remaining bases TG aren't 
-# enough to see what the next amino acid would be so we still don't know what the first changed amino acid is! 
-# Looking a little further helps prevent this, but the below number is arbitrary. Extra codons are placed before
-# and after the variant so the extra sequence is available for both forward and reverse stranded transcript
+    # Occasionally, the first amino acid changed by a variation occurs beyond the codons actually changed. For example,
+    # CCC CTG CTG codes for PLL. If the last base of the first codon to the last base of the middle codon are deleted 
+    # (CCTG removed, leaving CC CTG), then the first amino acid expressed is still P. The remaining bases TG aren't 
+    # enough to see what the next amino acid would be so we still don't know what the first changed amino acid is! 
+    # Looking a little further helps prevent this, but the below number is arbitrary. Extra codons are placed before
+    # and after the variant so the extra sequence is available for both forward and reverse stranded transcript
     my $indel_extra_codons = 3;
     my $dnp_extra_codons = 1;
 
-# Determine protein position of amino acid at variant start. This will be modified below for indels to account
-# for extra codons placed at the beginning of the original sequence and further modified during reduction
+    # Determine protein position of amino acid at variant start. This will be modified below for indels to account
+    # for extra codons placed at the beginning of the original sequence and further modified during reduction
     my ($variant_position, $phase_bases);
     if ($transcript->strand eq '-1') {
         ($variant_position, $phase_bases) = $structure->sequence_position($variant->{stop});
@@ -895,14 +903,14 @@ sub _get_affected_sequence {
             substr($orig_seq, $relative_stop);
     }
     else {
-# Get codons between variant start and stop as well as extra codons to either side.
+        # Get codons between variant start and stop as well as extra codons to either side.
         ($orig_seq, $relative_start, $relative_stop) = $structure->codons_in_range($variant->{start}, $variant->{stop}, $indel_extra_codons);
 
-# Adjusting the protein position to point at the first amino acid in the original sequence requires more than just
-# using the extra_codons value. The biggest example of this is when the variation occurs at the beginning of the
-# exon. If there are fewer than 3 codons before the variation, then only what's available is concatenated. 
-# In addition, sequence from the end of the previous exon is also added (unless there are no previous exons!). 
-# So, the best way to determine what's been added is to see how much sequence exists before the variation.
+        # Adjusting the protein position to point at the first amino acid in the original sequence requires more than just
+        # using the extra_codons value. The biggest example of this is when the variation occurs at the beginning of the
+        # exon. If there are fewer than 3 codons before the variation, then only what's available is concatenated. 
+        # In addition, sequence from the end of the previous exon is also added (unless there are no previous exons!). 
+        # So, the best way to determine what's been added is to see how much sequence exists before the variation.
         my $codon_position = ($relative_start - 1) % 3;
         my $bases_before = $relative_start - $codon_position;
         my $codons_before = int($bases_before / 3);
@@ -910,15 +918,15 @@ sub _get_affected_sequence {
 
         if ($variant->{type} =~ /del/i) {
             $mutated_seq = substr($orig_seq, 0, $relative_start - 1) .
-                substr($orig_seq, $relative_stop);
+                           substr($orig_seq, $relative_stop);
         }
         elsif ($variant->{type} =~ /ins/i) {
-            $protein_position-- if $codon_position == 2;  # This little fix is due to the variant start of insertions being
-# the base before the insertion instead of the first base of variation
-# as is the case with deletions. 
-                $mutated_seq = substr($orig_seq, 0, $relative_start) .
-                $variant->{variant} .
-                substr($orig_seq, $relative_start);
+            $protein_position-- if $codon_position == 2; # This little fix is due to the variant start of insertions being
+                                                         # the base before the insertion instead of the first base of variation
+                                                         # as is the case with deletions. 
+            $mutated_seq = substr($orig_seq, 0, $relative_start) .
+                           $variant->{variant} .
+                           substr($orig_seq, $relative_start);
         }
     }
 

@@ -150,7 +150,7 @@ sub execute {
 
     #Loop through samples to build COVMUTS hash %COVMUTS -> gene -> class -> coverage,mutations
     my %COVMUTS = ();
-    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Indels);
+    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Truncations Indels);
     for my $wiggle_file (@wiggle_files) {
         #Load the bitmask with the coverage data for this sample
         $bitmasker->wig_file($wiggle_file);
@@ -192,7 +192,6 @@ sub execute {
             $cpg_cov_vec->And($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
 
             for my $gene (keys %{$ROIs{$chr}}) {
-
                 unless (grep { /^$gene$/ } keys %COVMUTS) {
                     for my $class (@classes) {
                         $COVMUTS{$gene}{$class}{'coverage'} = 0;
@@ -205,9 +204,10 @@ sub execute {
                     my $stop = $ROIs{$chr}{$gene}{$start};
                     my $bits;
 
-                    #indels
+                    #Indels and Truncations use the coverage of the whole ROI
                     $bits = $self->count_interval($cov_bitmask->{$chr},$chr_length_test_vec,$start,$stop);
                     $COVMUTS{$gene}{'Indels'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'Truncations'}{'coverage'} += $bits;
 
                     #AT
                     $bits = $self->count_interval($at_cov_vec,$chr_length_test_vec,$start,$stop);
@@ -243,14 +243,14 @@ sub execute {
     my $rejects_file = $self->rejected_mutations;
     my $rejects_fh;
     if ($rejects_file) {
-        $rejects_fh = new IO::File $rejects_file,"w";
+        $rejects_fh = IO::File->( $rejects_file, ">" );
     }
     else {
         open $rejects_fh, ">&STDOUT";
     }
 
     while (my $line = $mut_fh->getline) {
-        next if ($line =~ /^Hugo/);
+        next if (( $line =~ /^Hugo\_Symbol/ ) || ( $line =~ /^#/ ));
         chomp $line;
         my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
 
@@ -265,8 +265,8 @@ sub execute {
 
         #SNVs
         if ($mutation_type =~ /snp|dnp|onp|tnp/i) {
-            #if this mutation is non-synonymous
-            if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
+            #if this mutation is non-synonymous (missense only)
+            if ($mutation_class =~ /missense/i) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
                 if (grep { /^$gene$/ } keys %COVMUTS) {
 
@@ -282,7 +282,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = A
@@ -298,7 +298,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = T
@@ -327,7 +327,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = C
@@ -355,7 +355,7 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = G
@@ -363,10 +363,21 @@ sub execute {
 
                 #if the ROI list and MAF file do not match, quit.
                 else {
-                    print $rejects_fh "Cannot find this mutation's gene in the ROI hash:\n$line\n";
+                    print $rejects_fh "Gene not in the ROI list: $gene, chr$chr:$start-$stop";
                     next;
                 }
             }#end, if mutation is non-synonymous
+            #if this mutation is non-synonymous (everything but missense)
+            elsif ($mutation_class =~ /nonsense|nonstop|splice_site/i) {
+                #verify this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
+                if (grep { /^$gene$/ } keys %COVMUTS) {
+                    $COVMUTS{$gene}{'Truncations'}{'mutations'}++;
+                }
+                else {
+                    print $rejects_fh "Gene not in the ROI list: $gene, chr$chr:$start-$stop";
+                    next;
+                }
+            }#end, if mutation is a splice-site, nonsense, or non-stop
         }#end, if mutation is a SNV
 
         #Indels
@@ -376,7 +387,7 @@ sub execute {
                 $COVMUTS{$gene}{'Indels'}{'mutations'}++;
             }
             else {
-                print $rejects_fh "Cannot find this mutation's gene in the ROI hash:\n$line\n";
+                print $rejects_fh "Gene not in the ROI list: $gene, chr$chr:$start-$stop";
                 next;
             }
         }#end, if mutation is an indel
@@ -407,7 +418,7 @@ sub execute {
         }
     }
     my $t3 = Benchmark->new;
-    print STDERR " Total Time: ", timestr(timediff($t3,$t0)), "\n";
+    print " Total Time: ", timestr(timediff($t3,$t0)), "\n";
     return 1;
 }
 
@@ -464,4 +475,4 @@ sub count_bits {
 #AT.A.transver.T AT.T.transver.A
 #AT.A.transver.C AT.T.transver.G
 #
-#and Indels
+#and Indels and Truncations

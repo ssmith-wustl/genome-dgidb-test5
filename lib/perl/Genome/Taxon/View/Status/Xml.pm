@@ -15,6 +15,9 @@ class Genome::Taxon::View::Status::Xml {
                 'species_name',
                 'species_latin_name',
                 'strain_name',
+                'estimated_genome_size',
+                'domain',
+                'gram_stain_category', 
                 {
                     name => 'model_member',
                     perspective => 'default',

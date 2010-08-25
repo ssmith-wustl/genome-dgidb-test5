@@ -7,68 +7,55 @@ use Genome;
 use Data::Dumper;
 use File::Temp;
 
-my $SOAP_DEFAULT = '2.20';
-
 class Genome::Model::Tools::Soap {
-    is => ['Command'],
-    has_optional => [
-        use_version => {
-                    is    => 'string',
-                    doc   => 'version of Soap application to use',
-                    default_value => $SOAP_DEFAULT
-                },
-        _tmp_dir => {
-                    is => 'string',
-                    doc => 'a temporary directory for storing files',
-                },
-    ],
-    doc => 'tools to work with the SOAP aliger'
+    is => 'Command',
+    has => [],
 };
 
-sub help_detail {                           # This is what the user will see with --help <---
+sub help_detail {
     return <<EOS
-    Soap2 aligner system.
+    Tools to work with soap aligner and denovo assembler
 EOS
 }
 
-my %SOAP_VERSIONS = (
+#methods for soap align
+
+my $SOAP_ALIGN_DEFAULT = '2.20';
+
+my %SOAP_ALIGN_VERSIONS = (
     '2.20' => '/gsc/pkg/bio/soap/SOAPaligner-2.20',
     '2.19' => '/gsc/pkg/bio/soap/SOAPaligner-2.19',
     '2.01' => '/gsc/pkg/bio/soap/SOAPaligner-2.01',
 );
 
-sub path_for_soap_version {
+sub path_for_soap_align_version {
     my ($class, $version) = @_;
-    $version ||= $SOAP_DEFAULT;
-    die "soap version: $version is not valid" unless $SOAP_VERSIONS{$version};
-    my $path = $SOAP_VERSIONS{$version} . '/soap';
+    $version ||= $SOAP_ALIGN_DEFAULT;
+    die "soap version: $version is not valid" unless $SOAP_ALIGN_VERSIONS{$version};
+    my $path = $SOAP_ALIGN_VERSIONS{$version} . '/soap';
     return $path;
 }
 
-sub default_soap_version {
-    die "default soap version: $SOAP_DEFAULT is not valid" unless $SOAP_VERSIONS{$SOAP_DEFAULT};
-    return $SOAP_DEFAULT;
+sub default_soap_align_version {
+    die "default soap version: $SOAP_ALIGN_DEFAULT is not valid" unless $SOAP_ALIGN_VERSIONS{$SOAP_ALIGN_DEFAULT};
+    return $SOAP_ALIGN_DEFAULT;
 }
 
-sub default_version { return default_soap_version; }
+sub default_align_version {
+    return default_soap_align_version;
+}
 
-# Is the create sub needed?
-#sub create {
-#    my $class = shift;
-#    my $self = $class->SUPER::create(@_);
-#    unless (Genome::Config->arch_os =~ /64/) {
-#        $self->error_message('Soap2 tools must be run from 64-bit architecture');
-#        return;
-#    }
-#    unless ($self->temp_directory) {
-#        my $base_temp_directory = Genome::Utility::FileSystem->base_temp_directory;
-#        my $temp_dir = File::Temp::tempdir($base_temp_directory .'/Bowtie-XXXX', CLEANUP => 1);
-#        Genome::Utility::FileSystem->create_directory($temp_dir);
-#        $self->_tmp_dir($temp_dir);
-#    }
-#    return $self;
-#}
+#methods for soap denovo
 
+sub path_for_soap_denovo_version {
+    #my ($self, $version) = @_;
+    my $self = shift;
+    unless (-s '/gsc/pkg/bio/soap/SOAPdenovo-'.$self->version.'/SOAPdenovo') {
+	$self->error_message("Failed to find soap assembler for version: ".$self->verions."\n".
+			     "Expected /gsc/pkg/bio/soap/SOAPdenovo-".$self->version.'/SOAPdenovo');
+	return;
+    }
+    return '/gsc/pkg/bio/soap/SOAPdenovo-'.$self->version.'/SOAPdenovo';
+}
 
 1;
-

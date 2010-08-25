@@ -21,7 +21,8 @@ class Genome::Model::Tools::Annotate::Chromosome {
             default_value => $DEFAULT_VERSION,
         },
         chromosome => {
-            is => 'String',
+            #Should only be optional if run in parallel
+            is_optional => 1,
             doc => 'The chromosome name to generate annotation for.',
         },
         output_format => {
@@ -64,7 +65,10 @@ sub execute {
                 $gene_strings{$gene->gene_id} = 0;
             }
         }
-        print $fh $t->$format_string;
+        my $transcript_string = $t->$format_string;
+        if ($transcript_string) {
+            print $fh $transcript_string;
+        }
         my @sub_structure = grep {$_->structure_type ne 'flank'} $t->ordered_sub_structures;
         for my $ss (@sub_structure){
             my $ss_string = $ss->$format_string;

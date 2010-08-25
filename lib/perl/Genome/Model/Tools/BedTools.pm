@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-my $BEDTOOLS_DEFAULT = '2.6.1';
+my $BEDTOOLS_DEFAULT = '2.9.0';
 
 class Genome::Model::Tools::BedTools {
     is  => 'Command',
@@ -39,6 +39,7 @@ EOS
 }
 
 my %BEDTOOLS_VERSIONS = (
+    '2.9.0' => '/gsc/pkg/bio/bedtools/BEDTools-2.9.0',
     '2.8.3' => '/gsc/pkg/bio/bedtools/BEDTools-2.8.3',
     '2.6.1' => '/gsc/pkg/bio/bedtools/BEDTools-2.6.1',
     '2.5.4' => '/gsc/pkg/bio/bedtools/BEDTools-2.5.4',

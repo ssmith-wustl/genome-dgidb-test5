@@ -70,7 +70,7 @@
     <xsl:comment>
       match: value
     </xsl:comment>
-    <p><xsl:value-of select="."/></p>
+    <xsl:value-of select="."/>
   </xsl:template>
 
   <xsl:template match="perldata/scalar">
@@ -111,6 +111,28 @@
         </tbody>
       </table>
     </div>
+  </xsl:template>
+
+  <!-- function takes input string and returns string after substr  -->
+  <xsl:template name="substring-after-last">
+    <xsl:param name="input"/>
+    <xsl:param name="substr"/>
+
+    <!-- Extract the string which comes after the first occurrence -->
+    <xsl:variable name="temp" select="substring-after($input,$substr)"/>
+
+    <xsl:choose>
+      <!-- If it still contains the search string the recursively process -->
+      <xsl:when test="$substr and contains($temp,$substr)">
+        <xsl:call-template name="substring-after-last">
+          <xsl:with-param name="input" select="$temp"/>
+          <xsl:with-param name="substr" select="$substr"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="$temp"/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
 </xsl:stylesheet>

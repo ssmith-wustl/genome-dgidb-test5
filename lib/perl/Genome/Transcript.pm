@@ -812,7 +812,10 @@ sub strand_string {
 # Returns string containing transcript info in bed format
 sub bed_string {
     my $self = shift;
-    my $bed_string = $self->chrom_name ."\t". $self->transcript_start ."\t". $self->transcript_stop ."\t". $self->transcript_name ."\t0\t". $self->strand_string;
+    # BED string should only be written if BED12 format is adopted, otherwise it's just one line per sub structure
+    return;
+    # BED format uses zero-based start positions
+    my $bed_string = $self->chrom_name ."\t". ($self->transcript_start - 1) ."\t". $self->transcript_stop ."\t". $self->transcript_name ."\t0\t". $self->strand_string;
     return $bed_string ."\n";
 }
 

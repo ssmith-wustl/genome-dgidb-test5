@@ -12,14 +12,30 @@ class Genome::Model::Tools::Cmds::Execute {
     data_directory => {
         type => 'String',
         is_optional => 0,
+        is_input => 1,
+        is_output => 1,
         doc => 'Directory containing all of the input files for sample group (and nothing else!!).',
     },
     output_directory => {
         type => 'String',
         is_optional => 1,
+        is_input => 1,
         default => getcwd(),
         doc => 'Directory for output folders cmds_test and cmds_plot to be created. Default: current working directory.',
         
+    },
+    test_output_directory => {
+        type => 'String',
+        is_output => 1,
+        calculate_from => ['output_directory'],
+        calculate => q{ return $output_directory . "/cmds_test"; },
+        doc => 'Directory containing the .test output files',
+    },
+    plot_output_directory => {
+        type => 'String',
+        calculate_from => ['output_directory'],
+        calculate => q{ return $output_directory . "/cmds_plot"; },
+        doc => 'Directory containing the plot output files',
     },
     ]
 };
@@ -38,8 +54,10 @@ sub execute {
     #define input and output directories
     my $data_dir = $self->data_directory;
     my $output_dir = $self->output_directory;
-    my $plot_dir = $output_dir . "/cmds_plot";
-    my $test_dir = $output_dir . "/cmds_test";
+
+    #gmt r call-r will create both cmds_test and cmds_plot directory for us
+    my $plot_dir = $self->plot_output_directory;
+    my $test_dir = $self->test_output_directory;
     
     #submit an R job for each chromosome input file
     my $index = 1;

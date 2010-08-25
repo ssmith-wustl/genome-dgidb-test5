@@ -7,9 +7,11 @@ use Sys::Hostname;
 
 use above 'Genome';
 
+$ENV{'TEST_MODE'} = 1;
+
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25;
+        plan tests => 28;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -86,6 +88,7 @@ sub test_alignment {
                                                        aligner_version => $aligner_version,
                                                        aligner_name => $aligner_name,
                                                        reference_build => $reference_build, 
+                                                       n_remove_threshold => 5,
                                                        %p,
                                                    );
 
@@ -93,7 +96,8 @@ sub test_alignment {
     my $dir = $alignment->alignment_directory;
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
-    ok(-s $dir . "/all_sequences.bam", "result has a bam file");
+    ok(-s $dir . "/alignments.txt", "result has an aligned file");
+    ok(-s $dir . "/unmapped.txt", "result has an unmapped file");
 
     if ($generate_shortcut) {
         print "*** Using this data to generate shortcut data! ***\n";
@@ -180,7 +184,8 @@ sub test_shortcutting {
     my $dir = $alignment->alignment_directory;
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
-    ok(-s $dir."/all_sequences.bam", "found a bam file in there");
+    ok(-s $dir."/alignments.txt", "found a aligned file in there");
+    ok(-s $dir."/unmapped.txt", "found an unaligned file in there");
 
 }
 

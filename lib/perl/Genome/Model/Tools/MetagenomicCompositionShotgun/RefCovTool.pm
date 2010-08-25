@@ -63,28 +63,25 @@ sub execute {
     my ($basename,$dirname) = File::Basename::fileparse($self->regions_file);
 
     #put a tmp dir here
-    my $stats_file = $self->working_directory."/reports/report_".$basename;
+    my $stats_file = $self->working_directory."/report_".$basename;
     $self->report_file($stats_file);
     my @expected_refcov_output_files = ($stats_file);
     $self->status_message("Output stats file: ".$stats_file);
-    
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_refcov_output_files);
-    if ($rv_check) {
-    	$self->status_message("Expected output files exist.  Skipping generation of ref cov stats file.");
-    } else {
-  
-    	my $cmd = "/gscuser/jwalker/svn/TechD/RefCov/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
-     														
-    	$self->status_message("Running ref cov report at ".UR::Time->now);
-    	my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
-    	if ($rv == 1) {
-    		Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_refcov_output_files);
-    	}
-    	$self->status_message("RefCov file generated at ".UR::Time->now);
+
+    my $cmd = "/gsc/var/tmp/Bio-SamTools/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
+
+    $self->status_message("Running ref cov report at ".UR::Time->now);
+    my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+    if ($rv == 1) {
+        Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_refcov_output_files);
+    }else{
+        $self->error_message("Failed to complete refcov!");
+        die $self->error_message;
     }
-    	
+    $self->status_message("RefCov file generated at ".UR::Time->now);
+
     $self->status_message("<<<Completed RefCov at ".UR::Time->now);
-    
+
     return 1;
 }
 1;

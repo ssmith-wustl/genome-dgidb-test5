@@ -19,7 +19,7 @@ class Genome::Model::Tools::Bmr::SubmitBatchGeneSummary
     max_job_count => {
         type => 'Integer',
         is_optional => 0,
-        doc => 'Number of jobs to run in parallel. Actual number could be one less depending on how the bedfile can be split',
+        doc => 'Number of jobs to run in parallel. Actual number could be fewer depending on how the bedfile can be split',
     },
     maf_file => {
         type => 'String',
@@ -67,7 +67,7 @@ sub execute
     my $max_job_count = $self->max_job_count;
     my $maf_file = $self->maf_file;
     my $class_summary = $self->class_summary_file;
-    my $wiggle_dirs = $self->wiggle_file_dirs;
+    my $wiggle_dirs = '"' . $self->wiggle_file_dirs . '"';
 
     #Count the number of lines in the bedfile to give us an idea of how to split it
     my $bed_lines = `wc -l < $bedfile`;
@@ -103,6 +103,7 @@ sub execute
             $outfh->close;
             $filecount++;
             $outfile = "$bedfile\_pieces/" . 'roi_bed.part' . $filecount;
+            push( @bed_pieces, $outfile );
             $outfh = IO::File->new( $outfile, ">" );
             $linecount = 1;
         }
@@ -127,13 +128,13 @@ sub execute
     {
         ++$submitCnt;
         #Insert a longer delay between every few jobs to avoid thrashing the drives
-        sleep(12) if ($submitCnt % 10 == 0);
+        sleep(1) if ($submitCnt % 10 == 0);
         my ( $piece ) = $roi_file =~ m/part(\d+)$/;
         my $jobname = "genesum-" . $piece;
         my $outfile = $output_dir . $piece . ".gene_summary";
         my $stdout_file = $stdout_dir . $piece . ".stdout";
-        sleep(0.2); #Pause for 1/5th of a second to avoid overloading LDAP
-        print `bsub -q tcga -M 4000000 -R 'select[localdata && mem>4000] rusage[mem=4000]' -oo $stdout_file -J $jobname gmt bmr batch-gene-summary --mutation-maf-file $maf_file --output-file $outfile --roi-bedfile $roi_file --wiggle-file-dirs $wiggle_dirs --class-summary-file $class_summary`;
+        sleep(0.2); #Pause for a short while to avoid overloading LDAP, and to help out the disks
+        print `bsub -q tcga -M 3000000 -R 'select[localdata && mem>3000] rusage[mem=3000]' -oo $stdout_file -J $jobname gmt bmr batch-gene-summary --mutation-maf-file $maf_file --output-file $outfile --roi-bedfile $roi_file --wiggle-file-dirs $wiggle_dirs --class-summary-file $class_summary`;
     }
 
     return 1;
