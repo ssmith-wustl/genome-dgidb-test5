@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use Genome;
 use Benchmark qw(:all) ;
-use Data::Dumper qw(Dumper); #TODO: test code, delete me
 
 my $low  = 1000;
 my $high = 20000;
@@ -132,6 +131,9 @@ sub execute {
     die "Could not complete Interpro scan: $!" unless $interpro_success;
     print "Finished Iprscan" . "\n";
 
+    #Here, we are manually unloading UR objects that are sticking around in
+    #the cache after they should be deleted.  This prevents fatal, out of
+    #memory errors. Its a bit of a hack, but we were pressed for time.
     for my $class (qw/Genome::Transcript Genome::Protein Genome::DataSource::Proteins Genome::DataSource::Transcripts UR::DataSource::File/) {
         my @o = $class->is_loaded;
         for my $o (@o) {
@@ -139,7 +141,7 @@ sub execute {
         }
     }   
 
-    print "Finished Scott Unload" . "\n";
+    print "Finished UR Object Unload" . "\n";
     my $results_success = Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults->execute(
         build => $build,
         benchmark => $self->benchmark,
