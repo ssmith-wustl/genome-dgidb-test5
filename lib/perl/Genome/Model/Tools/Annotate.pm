@@ -8,8 +8,8 @@ use Data::Dumper;
 
 my $low=20000;
 my $high=200000;
-UR::Context->object_cache_size_lowwater($low);
 UR::Context->object_cache_size_highwater($high);
+UR::Context->object_cache_size_lowwater($low);
 
 class Genome::Model::Tools::Annotate {
     is => 'Command',

@@ -58,6 +58,11 @@ sub pre_execute {
         }
     }
 
+    # Default to 23 chromosomes (1-22, X)
+    unless ($self->number_of_chromosomes) {
+        $self->number_of_chromosomes(23);
+    }
+
     $self->r_library("cmds_lib.R");
     $self->cmds_test_dir($self->data_directory . "/cmds_test");
     $self->construct_r_commands;
@@ -86,22 +91,12 @@ sub construct_r_commands {
     my $test_dir = $self->data_directory . "/cmds_test";
     my $data_dir = $self->merge_output_dir;
 
-    my $index = 1;
-#    my @merge_files = glob($self->merge_output_dir . "/*");
-
-#    unless (@merge_files) {
-#        $self->error_message("No merged-by-chromosome  files were found");
-#        die;
-#    }
-
-    # $file is not actually used here, because each run of R will look at all of the files. However, we still need to run it once for each file in the merge dir with a changing index.
-#    for my $file (@merge_files) {
-    for my $index (1..23) {
+    # We need to generate one command per chromosome file from merge... for now lets let the user/default decide how many chromosomes we have, rather than parsing every file in pre_execute
+    for my $index (1..$self->number_of_chromosomes) {
         my $command = "cmds.focal.test(data.dir='$data_dir',wsize=30,wstep=1,analysis.ID='$index',chr.colname='CHR',pos.colname='POS',plot.dir='$plot_dir',result.dir='$test_dir');";
         push @command_list, $command;
     }
 
-#    unless ( (@command_list) && (scalar @command_list == scalar @merge_files) ) {
     unless (@command_list) {
         $self->error_message("Could not construct a command list for R, or unexpected number of commands constructed");
         die;
@@ -192,6 +187,7 @@ __DATA__
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty isOptional="Y">model_ids</inputproperty>
     <inputproperty isOptional="Y">model_group</inputproperty>
+    <inputproperty isOptional="Y">number_of_chromosomes</inputproperty>
     <inputproperty isOptional="Y">compile_cna_output_dir</inputproperty>
     <inputproperty isOptional="Y">merge_output_dir</inputproperty>
     <inputproperty isOptional="Y">region_output_dir</inputproperty>
