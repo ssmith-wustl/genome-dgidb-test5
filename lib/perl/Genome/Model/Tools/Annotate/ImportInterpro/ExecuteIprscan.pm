@@ -50,7 +50,6 @@ EOS
 
 sub execute{
     my $self = shift;
-    #$DB::single = 1; #TODO: test code, delete me
 
     my $tmp_dir = $self->tmp_dir;
     die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
@@ -81,7 +80,6 @@ sub execute{
         Genome::Utility::FileSystem->shellcmd(cmd => $iprscan_dir.'/bin/iprscan -cli -i ' . $fasta_file . ' -o ' . $iprscan_output . ' -seqtype p -appl hmmpfam -iprlookup -goterms -verbose -format raw >> ' . $output_text . ' 2>&1' ,) or die "iprscan failed: $!"; 
         $iprscan{$iprscan_output} = $iprscan_temp;
         print "Fetched 25000 transcripts" . "\n";
-        #main::memory_usage; #TODO: test code, delete me
     }
     my $post_iprscan = Benchmark->new;
     my $iprscan_time = timediff($post_iprscan, $pre_iprscan);

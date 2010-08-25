@@ -75,13 +75,10 @@ EOS
 
 sub execute{
     my $self = shift;
-#TODO: Change the data directories on the interpro results to a temp dir.
-    #Create all objects.  Do a move to the actual data directory.  This will
-    #shorten the window for Nate's Caching issues
 
     my $build = $self->build;
     my $tmp_dir = $self->tmp_dir;
-    die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
+    die "Could not get tmp directory $tmp_dir" unless $tmp_dir; 
     my $commit_size = $self->commit_size;
     die "Could not get commit-size $commit_size" unless $commit_size; 
     die "commit-size of $commit_size is invalid.  Must be greater than 1" if($commit_size < 1);
@@ -142,11 +139,7 @@ sub execute{
            $interpro_result_counter++;
            if ($interpro_result_counter % $commit_size == 0){
                 UR::Context->commit; 
-                #main::memory_usage(); #TODO: test code, delete me
             }
-            # if($interpro_result_counter > 200){ #TODO: test block, remove me
-                # last;
-            # }
        }
     }
     #Make sure all objects are comitted (and therefore written) before

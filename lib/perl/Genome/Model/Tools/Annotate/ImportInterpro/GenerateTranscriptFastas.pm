@@ -95,12 +95,6 @@ sub execute{
                                     -seq => $amino_acid_seq);
         $fasta_writer->write_seq($bio_seq);
         $transcript_counter++; 
-#        if ($transcript_counter == 3){ #TODO: test block, remove me
-#
-#            print "Finished writing 3 transcripts to fasta" . "\n";
-#            main::memory_usage();
-#            last;
-#        }
     }
 
     unless (exists $fastas{$fasta}){

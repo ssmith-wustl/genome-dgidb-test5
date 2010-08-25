@@ -87,7 +87,6 @@ sub execute {
     my $self = shift;
 
     print "Starting ImportInterpro Run" ."\n";
-    #main::memory_usage(); #TODO: test code, delete me
    
     my $total_start = Benchmark->new;
    
@@ -117,9 +116,7 @@ sub execute {
 
     my $tmp_dir = $self->tmp_dir;
     die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
-=cut    
     print "Starting GenerateTranscript Fastas" . "\n";
-    #main::memory_usage(); #TODO: test code, delete me
     my $fasta_success = Genome::Model::Tools::Annotate::ImportInterpro::GenerateTranscriptFastas->execute(
         build => $build,
         chunk_size => $chunk_size,
@@ -128,14 +125,12 @@ sub execute {
     );
     die "Could not generate .fasta files: $!" unless $fasta_success;
     print "Finished GenerateTranscriptFastas" . "\n";
-    #main::memory_usage();#TODO: test code, delete me
     my $interpro_success = Genome::Model::Tools::Annotate::ImportInterpro::ExecuteIprscan->execute(
         benchmark => $self->benchmark,
         tmp_dir => $tmp_dir,
     );
     die "Could not complete Interpro scan: $!" unless $interpro_success;
     print "Finished Iprscan" . "\n";
-    #main::memory_usage(); #TODO: test code, delete me
 
     for my $class (qw/Genome::Transcript Genome::Protein Genome::DataSource::Proteins Genome::DataSource::Transcripts UR::DataSource::File/) {
         my @o = $class->is_loaded;
@@ -145,8 +140,6 @@ sub execute {
     }   
 
     print "Finished Scott Unload" . "\n";
-    #main::memory_usage(); #TODO: test code, delete me
-=cut
     my $results_success = Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults->execute(
         build => $build,
         benchmark => $self->benchmark,
@@ -156,10 +149,7 @@ sub execute {
     );
     die "Could not generate Interpro results: $!" unless $results_success;
     print "Finished GenerateInterproResuts" . "\n";
-#    main::memory_usage(); #TODO: test code, delete me
     
-    #TODO: clean up
-    #CLEAN UP File handles
     close(STDOUT);
     close(STDERR);
 
@@ -175,38 +165,6 @@ sub execute {
 
     return 1;
 }
-
-sub main::memory_usage{ 
-    #TODO: test code, delete me
-    print "MEMORY USAGE AT TIME ",localtime() , "\t", scalar(localtime), "\n";
-    system("ps -Fp $$");
-    my @o = UR::Object->is_loaded;
-    
-    print "LOADED:\n";
-    print(" total object count: ", scalar(@o), "\n");
-    my %objects_by_class;
-    for my $o (@o) {
-        my $a = $objects_by_class{ref($o)} ||= [];
-        push @$a, $o;
-    }
-    for my $class (sort keys %objects_by_class) {
-        next if $class->isa("UR::Object::Type");
-        print " $class: ", scalar(@{ $objects_by_class{$class} }), "\n";
-    }
-    
-    my $f = $UR::Context::object_fabricators;
-    print "FABRICATORS: ", scalar(keys %$f), "\n";
-
-    print "LEAKS:\n";
-    for my $class (sort keys %UR::DeletedRef::all_objects_deleted) {
-        my $o = $UR::DeletedRef::all_objects_deleted{$class};
-        my @o = values %$o;
-        print " $class: ", scalar(@o), "\n";
-    }
-   # print "UR::DataSource::Files" . "\n";
-   # print Dumper($objects_by_class{'UR::DataSource::File'}) . "\n";
-}
-
 1;
 
 =pod
