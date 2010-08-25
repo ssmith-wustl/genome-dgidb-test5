@@ -150,7 +150,7 @@ sub execute {
 
     #Loop through samples to build COVMUTS hash %COVMUTS -> gene -> class -> coverage,mutations
     my %COVMUTS = ();
-    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Indels);
+    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Truncations Indels);
     for my $wiggle_file (@wiggle_files) {
         #Load the bitmask with the coverage data for this sample
         $bitmasker->wig_file($wiggle_file);
@@ -192,7 +192,6 @@ sub execute {
             $cpg_cov_vec->And($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
 
             for my $gene (keys %{$ROIs{$chr}}) {
-
                 unless (grep { /^$gene$/ } keys %COVMUTS) {
                     for my $class (@classes) {
                         $COVMUTS{$gene}{$class}{'coverage'} = 0;
@@ -205,9 +204,10 @@ sub execute {
                     my $stop = $ROIs{$chr}{$gene}{$start};
                     my $bits;
 
-                    #indels
+                    #Indels and Truncations use the coverage of the whole ROI
                     $bits = $self->count_interval($cov_bitmask->{$chr},$chr_length_test_vec,$start,$stop);
                     $COVMUTS{$gene}{'Indels'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'Truncations'}{'coverage'} += $bits;
 
                     #AT
                     $bits = $self->count_interval($at_cov_vec,$chr_length_test_vec,$start,$stop);
@@ -265,8 +265,8 @@ sub execute {
 
         #SNVs
         if ($mutation_type =~ /snp|dnp|onp|tnp/i) {
-            #if this mutation is non-synonymous
-            if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
+            #if this mutation is non-synonymous (missense only)
+            if ($mutation_class =~ /missense/i) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
                 if (grep { /^$gene$/ } keys %COVMUTS) {
 
@@ -367,6 +367,17 @@ sub execute {
                     next;
                 }
             }#end, if mutation is non-synonymous
+            #if this mutation is non-synonymous (everything but missense)
+            elsif ($mutation_class =~ /nonsense|nonstop|splice_site/i) {
+                #verify this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
+                if (grep { /^$gene$/ } keys %COVMUTS) {
+                    $COVMUTS{$gene}{'Truncations'}{'mutations'}++;
+                }
+                else {
+                    print $rejects_fh "Gene not in the ROI list: $gene, chr$chr:$start-$stop";
+                    next;
+                }
+            }#end, if mutation is a splice-site, nonsense, or non-stop
         }#end, if mutation is a SNV
 
         #Indels
@@ -464,4 +475,4 @@ sub count_bits {
 #AT.A.transver.T AT.T.transver.A
 #AT.A.transver.C AT.T.transver.G
 #
-#and Indels
+#and Indels and Truncations
