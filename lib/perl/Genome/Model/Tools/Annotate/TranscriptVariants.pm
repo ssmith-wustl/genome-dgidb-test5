@@ -196,8 +196,6 @@ EOS
 sub execute { 
     my $self = shift;
 
-    $DB::single = 1;
-
     my $variant_file = $self->variant_file;
     
     

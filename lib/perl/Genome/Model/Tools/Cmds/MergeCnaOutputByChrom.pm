@@ -11,14 +11,22 @@ class Genome::Model::Tools::Cmds::MergeCnaOutputByChrom {
     is => 'Command',
     has => [
     bam_to_cna_output_files => {
-        type => 'Single-quoted String',
-        is_optional => 0,
-        doc => "A single-quoted string describing the names of copy_number_output.out files, or all the links to these files created by tool gmt cmds compile-cna-output. Example: '/dir/*.out'",
+        type => 'String',
+        is_optional => 1,
+        doc => "A single-quoted string describing the names of copy_number_output.out files, or all the links to these files created by tool gmt cmds compile-cna-output. Example: '/dir/*.out'. Use this or bam_to_cna_output_dir, not both.",
     },
-    output_filename => {
+    bam_to_cna_output_dir => {
+        type => 'String',
+        is_optional => 1,
+        is_input => 1,
+        doc => "The directory at which the output of gmt cmds compile-cna-output is located. The directory must contain ONLY this output, and nothing extra. Use this or bam_to_cna_output_files, not both.",
+    },
+    output_dir => {
         type => 'String',
         is_optional => 0,
-        doc => 'Filename of merged data from all input files for usage in CMDS analysis. 1 file is printed per chromosome with name "output_file.1", for example.',
+        is_input => 1,
+        is_output => 1,
+        doc => 'Directory which will contain Files of merged data from all input files for usage in CMDS analysis. 1 file is printed per chromosome with name "merged_out.1", for example. This script runs through chromosomes 1-22, X, Y, and MT.'
     },
     ]
 };
@@ -36,9 +44,26 @@ sub execute {
     $DB::single=1;
 
     #process input arguments
-    my $outfile = $self->output_filename;
     my $output_fh = new IO::File;
-    my @infiles = glob($self->bam_to_cna_output_files);
+
+    # Make sure bam_to_cna_output_files or bam_to_cna_output_dir have been provided, but not both
+    my $input_files;
+    if ( (defined $self->bam_to_cna_output_files) && !(defined $self->bam_to_cna_output_dir) ) {
+        $input_files = $self->bam_to_cna_output_files;
+    } elsif ( !(defined $self->bam_to_cna_output_files) && (defined $self->bam_to_cna_output_dir) ) {
+        $input_files = $self->bam_to_cna_output_dir . "/*";
+    } else {
+        $self->error_message("Please provide bam_to_cna_output_files or bam_to_cna_output_dir, but not both");
+        die;
+    }
+    
+    my @infiles = glob($input_files);
+
+    unless (@infiles) {
+        $self->error_message("bam_to_cna_output_files yielded no files as a result of the glob. Please enter a valid glob string that will return files.");
+        die;
+    }
+    
     chomp @infiles;
     @infiles = sort @infiles; #so that the files are always read and printed in the same order
 
@@ -114,7 +139,7 @@ sub execute {
         #if we have switched chromosomes, open a new output file and close the old output file
         if (defined($prev_cur_max_chr) && $cur_max_chr ne $prev_cur_max_chr) {
             $output_fh->close;
-            $output_fh = open_new_output_fh($outfile,$header,$cur_max_chr);
+            $output_fh = $self->open_new_output_fh($header,$cur_max_chr);
             $prev_cur_max_chr = $cur_max_chr;
         }
 
@@ -133,7 +158,7 @@ sub execute {
                     if ($file eq $infiles[$#infiles] && $data->{$file}{"eof"}) {
                         $output_fh->print("\n");
                         $self->status_message("Reached the end of all files.");
-                        return;
+                        last MASTER;
                     }
                 }
                 else {
@@ -155,10 +180,10 @@ sub execute {
 
 #sub to open output filehandle and print headers
 sub open_new_output_fh {
-    my $outfile = shift;
+    my $self = shift;
     my $header = shift;
     my $chr = shift;
-    my $output_filename = $outfile.".".$chr;
+    my $output_filename = $self->output_dir . "/merged_output" . ".$chr";
     my $output_fh = new IO::File $output_filename,"w";
     $output_fh->print($header);
     return $output_fh;

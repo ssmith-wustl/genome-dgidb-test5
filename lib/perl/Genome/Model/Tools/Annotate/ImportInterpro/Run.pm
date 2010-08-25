@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Annotate::ImportInterpro::ImportInterpro;
+package Genome::Model::Tools::Annotate::ImportInterpro::Run;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ my $high = 20000;
 UR::Context->object_cache_size_lowwater($low);
 UR::Context->object_cache_size_highwater($high);
 
-class Genome::Model::Tools::Annotate::ImportInterpro::ImportInterpro{
+class Genome::Model::Tools::Annotate::ImportInterpro::Run{
     is => 'Genome::Model::Tools::Annotate',
     has => [
         reference_transcripts => {
@@ -84,23 +84,26 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    print "Starting ImportInterpro Run" ."\n";
    
     my $total_start = Benchmark->new;
    
-    #my $log_file = $self->log_file; #TODO: sanity check this
-    #open (OLDOUT, ">&STDOUT");
-    #open (OLDERR, ">&STDERR");
+    my $log_file = $self->log_file; #TODO: sanity check this
+    open (OLDOUT, ">&STDOUT");
+    open (OLDERR, ">&STDERR");
 
-    #open(STDOUT, "> $log_file") or die "Can't redirect STDOUT: $!";
-    #open(STDERR, "> $log_file") or die "Can't redirect STDERR: $!";
+    close(STDOUT);
+    close(STDERR);
+
+    open(STDOUT, "> $log_file") or die "Can't redirect STDOUT: $!";
+    open(STDERR, "> $log_file") or die "Can't redirect STDERR: $!";
    
     my ($model_name, $build_version) = split("/", $self->reference_transcripts);
     my $model = Genome::Model->get(name => $model_name);
     die "Could not get model $model_name" unless $model;
     my $build = $model->build_by_version($build_version);
     die "Could not get imported annotation build version $build_version" unless $build;
-    my $transcript_iterator = $build->transcript_iterator;
-    die "Could not get iterator" unless $transcript_iterator;
     my $chunk_size = $self->chunk_size;
     die "Could not get chunk-size $chunk_size" unless $chunk_size; 
     die "chunk-size of $chunk_size is invalid.  Must be between 1 and 50000" if($chunk_size > 50000 or $chunk_size < 1);
@@ -112,30 +115,51 @@ sub execute {
 
     my $tmp_dir = $self->tmp_dir;
     die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
-
+    print "Starting GenerateTranscript Fastas" . "\n";
     my $fasta_success = Genome::Model::Tools::Annotate::ImportInterpro::GenerateTranscriptFastas->execute(
         build => $build,
         chunk_size => $chunk_size,
         benchmark => $self->benchmark,
         tmp_dir => $tmp_dir,
     );
-    #die "Could not generate .fasta files: $!" unless $fasta_success;
+    die "Could not generate .fasta files: $!" unless $fasta_success;
+    print "Finished GenerateTranscriptFastas" . "\n";
     my $interpro_success = Genome::Model::Tools::Annotate::ImportInterpro::ExecuteIprscan->execute(
         benchmark => $self->benchmark,
         tmp_dir => $tmp_dir,
     );
     die "Could not complete Interpro scan: $!" unless $interpro_success;
+    print "Finished Iprscan" . "\n";
+
+    #Here, we are manually unloading UR objects that are sticking around in
+    #the cache after they should be deleted.  This prevents fatal, out of
+    #memory errors. Its a bit of a hack, but we were pressed for time.
+    for my $class (qw/Genome::Transcript Genome::Protein Genome::DataSource::Proteins Genome::DataSource::Transcripts UR::DataSource::File/) {
+        my @o = $class->is_loaded;
+        for my $o (@o) {
+            $o->unload;
+        }
+    }   
+
+    print "Finished UR Object Unload" . "\n";
     my $results_success = Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults->execute(
         build => $build,
         benchmark => $self->benchmark,
         tmp_dir => $tmp_dir,
         commit_size => $commit_size,
+        reference_transcripts => $self->reference_transcripts,
     );
     die "Could not generate Interpro results: $!" unless $results_success;
+    print "Finished GenerateInterproResuts" . "\n";
     
-    #TODO: clean up
+    close(STDOUT);
+    close(STDERR);
 
+    open (STDOUT, ">&OLDOUT");
+    open (STDERR, ">&OLDERR");
 
+    close (OLDOUT);
+    close (OLDERR);
     
     my $total_finish = Benchmark->new;
     my $total_time = timediff($total_finish, $total_start);
@@ -145,12 +169,11 @@ sub execute {
 }
 1;
 
-
 =pod
 
 =head1 Name
 
-Genome::Model::Tools::Annotate::ImportInterpro
+Genome::Model::Tools::Annotate::ImportInterpro::Run
 
 =head1 Synopsis
 
@@ -160,11 +183,11 @@ Gets every transcript for a given build, runs them through Interpro, and creates
 
  in the shell:
 
-     gmt annotate import-interpro --reference-transcripts NCBI-human.combined-annotation/54_36p
+     gmt annotate import-interpro run --reference-transcripts NCBI-human.combined-annotation/54_36p
 
  in Perl:
 
-     $success = Genome::Model::Tools::Annotate::ImportInterpro->execute(
+     $success = Genome::Model::Tools::Annotate::ImportInterpro::Run->execute(
          reference_transcripts => 'NCBI-human.combined-annotation/54_36p',
          interpro_version => '4.1', #default 4.5
          chunk_size => 40000, #default 25000
@@ -202,5 +225,4 @@ This module is distributed in the hope that it will be useful, but WITHOUT ANY W
 =cut
 
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Tools/Annotate/ImportInterpro.pm $
 #$Id: 
