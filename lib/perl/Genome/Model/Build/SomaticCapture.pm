@@ -19,15 +19,41 @@ class Genome::Model::Build::SomaticCapture {
     ],
 };
 
+
+sub workflow_instances {
+    my $self = shift;
+    my @instances = Workflow::Operation::Instance->get(
+        name => $self->resolve_workflow_name
+    );
+
+    #older builds used a wrapper workflow
+    unless(scalar @instances) {
+        return $self->SUPER::workflow_instances;
+    }
+
+    return @instances;
+}
+
+sub resolve_workflow_name {
+    my $self = shift;
+
+    return $self->build_id . ' Somatic Capture Pipeline';
+}
+
 # Returns the newest somatic workflow instance associated with this build
 # Note: Only somatic builds launched since this code was added will have workflows associated in a queryable manner
-# TODO No longer used by somatic_workflow_inputs method... can probably remove
 sub newest_somatic_workflow_instance {
     my $self = shift;
 
     my $build_workflow = $self->newest_workflow_instance;
     return unless $build_workflow;
     
+    if($build_workflow->name =~ 'Somatic Capture') {
+        #Newer builds run the pipeline's workflow directly
+        return $build_workflow;
+    }
+
+    #Older builds have a wrapper workflow with a stage that executes the real workflow
     my $somatic_capture = Workflow::Operation::Instance->get(parent_instance_id => $build_workflow->id, 'name LIKE' => '% somaticcapture');
     return unless $somatic_capture;
 
