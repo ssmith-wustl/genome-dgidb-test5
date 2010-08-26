@@ -11,7 +11,10 @@ class Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Soap {
 
 sub execute {
     my $self = shift;
-    
+
+    #create edit_dir for post assemble files
+    Genome::Utility::FileSystem->create_directory($self->build->edit_dir);
+
     #create contigs.bases file
     $self->status_message("Creating contigs.bases file. TIME: ".UR::Time->now);
     my $contigs = Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
@@ -49,6 +52,18 @@ sub execute {
 	return;
     }
     $self->status_message("Finished creating supercontigs.agp file. TIME: ".UR::Time->now);
+
+
+    #create stats
+    $self->status_message("Creating stats.txt file. TIME: ".UR::Time->now);
+    my $stats = Genome::Model::Tools::Soap::Stats->create(
+	assembly_directory => $self->build->data_directory,
+	);
+    unless ($stats->execute) {
+	$self->error_message("Failed to run stats successfully");
+	return;
+    }
+    $self->status_message("Finished creating stats.txt file. TIME: ".UR::Time->now);
 
     return 1;
 }
