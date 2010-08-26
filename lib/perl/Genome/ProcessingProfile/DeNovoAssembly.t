@@ -116,15 +116,6 @@ my %valid_params = Genome::Model::DeNovoAssembly::Test->processing_profile_param
 ok(%valid_params, 'Got valid pp params');
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_params);
 ok($pp, 'Create DNA pp') or die;
-my %operation_params = (
-    assembler => { hash_sizes => [qw/ 31 33 35 /], },
-    read_trimmer => { trim_length => 10 },
-);
-for my $operation ( keys %operation_params ) {
-    my $method = $operation.'_params_as_hash';
-    my %params = $pp->$method;
-    is_deeply(\%params, $operation_params{$operation}, $operation.' params');
-}
 
 # Stages
 my @stages = $pp->stages;
@@ -141,10 +132,8 @@ is_deeply(
     'Stage classes'
 );
 
-# Assembler, Read Trimmer and Read Filter classes
+# Assembler
 is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
-#is($pp->class_for_read_filter, '??');
-is($pp->class_for_read_trimmer, 'Genome::Model::Tools::FastQual::Trimmer::ByLength', 'Read trimmer class');
 
 done_testing();
 exit;

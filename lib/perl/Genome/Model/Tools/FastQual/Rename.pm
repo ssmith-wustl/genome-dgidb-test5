@@ -25,6 +25,7 @@ class Genome::Model::Tools::FastQual::Rename {
         },
         _match_and_replace => {
             is => 'ARRAY',
+            is_optional => 1,
         },
     ],
 };

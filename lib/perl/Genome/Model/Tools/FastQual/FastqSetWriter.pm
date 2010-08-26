@@ -5,12 +5,13 @@ use warnings;
 
 use base 'Class::Accessor';
 
-__PACKAGE__->mk_accessors(qw/ files _writers _write_strategy /);
+__PACKAGE__->mk_accessors(qw/ id files _writers _write_strategy stats /);
 
 require Carp;
 use Data::Dumper 'Dumper';
 require Genome::Model::Tools::FastQual::FastqWriter;
 
+my $id = 0;
 sub create {
     my ($class, %params) = @_;
 
@@ -18,7 +19,6 @@ sub create {
 
     # Fastq files
     my $files = $self->files;
-    my $write_strategy;
     unless ( defined $files ) {
         Carp::confess("No fastq files given");
     }
@@ -49,6 +49,8 @@ sub create {
     $self->_write_strategy( 
         @writers == 1 ? '_collate' : '_separate'
     );
+
+    $self->id(++$id);
 
     return $self;
 }
@@ -82,16 +84,6 @@ sub _collate {
     for my $fastq ( @$fastqs ) {
         $writer->write($fastq)
             or Carp::confess("Can't write fastq: ".Dumper($fastq));
-    }
-
-    return 1;
-}
-
-sub flush {
-    my $self = shift;
-
-    for my $writer ( @{$self->_writers} ) {
-        $writer->flush;
     }
 
     return 1;

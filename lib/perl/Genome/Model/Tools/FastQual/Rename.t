@@ -23,15 +23,15 @@ my $out_fastq = $tmp_dir.'/out.fastq';
 # Fail
 ok( # no match_and_replace
     !Genome::Model::Tools::FastQual::Rename->create(
-        input_files  => [ $in_fastq ],
-        output_files => [ $out_fastq ],
+        input  => [ $in_fastq ],
+        output => [ $out_fastq ],
     ),
     'create w/o match_and_replace',
 );
 ok( # invalid match_and_replace
     !Genome::Model::Tools::FastQual::Rename->create(
-        input_files  => [ $in_fastq ],
-        output_files => [ $out_fastq ],
+        input  => [ $in_fastq ],
+        output => [ $out_fastq ],
         matches => [ 'qr/foo/g=bar' ],
     ),
     'create w/o match_and_replace',
@@ -39,8 +39,8 @@ ok( # invalid match_and_replace
 
 # Ok
 my $renamer = Genome::Model::Tools::FastQual::Rename->create(
-    input_files  => [ $in_fastq ],
-    output_files => [ $out_fastq ],
+    input  => [ $in_fastq ],
+    output => [ $out_fastq ],
     matches => [ 'qr|#.*/1$|=.b1', 'qr|#.*/2$|=.g1' ], # convert to gc read naming convention
     first_only => 1,
 );
