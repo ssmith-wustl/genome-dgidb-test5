@@ -3,9 +3,10 @@ package Genome::Model::MetagenomicCompositionShotgun::Command::Validate;
 use strict;
 use warnings;
 use Genome;
+use File::stat;
 
 class Genome::Model::MetagenomicCompositionShotgun::Command::Validate {
-    is => 'Genome::Command',
+    is => 'Genome::Model::MetagenomicCompositionShotgun::Command',
     doc => 'Validate MetagenomicCompositionShotgun build for QC and Metagenomic reports as well as headers.',
     has => [
         build_id => {
@@ -26,6 +27,10 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::Validate {
 sub execute {
     my ($self) = @_;
 
+    $self->dump_status_messages(1);
+    $self->dump_warning_messages(1);
+    $self->dump_error_messages(1);
+
     my $build = Genome::Model::Build->get($self->build_id);
     my $model = $build->model;
 
@@ -33,10 +38,10 @@ sub execute {
         $self->report_dir($build->data_directory . "/reports");
     }
 
-    my $test_bit = 0b1111; # if all tests pass result will be 1, if any fail it will be greater than 1
+    my $test_bit = 0b1101; # if all tests pass result will be 1, if any fail it will be greater than 1
 
     # Validate BAM Headers
-    $test_bit = $test_bit ^ $self->header_check();
+    #$test_bit = $test_bit ^ $self->header_check();
 
     # Validate QC Report
     my @qc_files = ('post_trim_stats_report.tsv', 'other_stats_report.txt');
@@ -81,7 +86,7 @@ sub bit_to_tests {
     my $pass = "PASSED:";
     my $fail = "FAILED:";
 
-    ($bit & 0b0010) ? ($fail .= ' Header')             : ($pass .= ' Header'); 
+    #($bit & 0b0010) ? ($fail .= ' Header')             : ($pass .= ' Header'); 
     ($bit & 0b0100) ? ($fail .= ' QC_Report')          : ($pass .= ' QC_Report'); 
     ($bit & 0b1000) ? ($fail .= ' Metagenomic_Report') : ($pass .= ' Metagenomic_Report'); 
 
@@ -157,20 +162,33 @@ sub metagenomic_check {
     my $self = shift;
     my $file = shift;
 
+
     my $flag = 0;
     my $msg = "Checking file ($file)... ";
     if (-s $file) {
-        my $count = `cat $file | cut -f 4,5 | grep ^[0-9] | sort -u | wc -l`;
-        if ($count > 1) {
-            $msg .= "PASS";
-            $flag = $self->test_to_bit('Metagenomic');
+        if (stat($file)->mtime >= 1282615095) {
+            my $depth = `head -n 1 $file | cut -f 6`;
+            chomp $depth;
+            if ($depth eq 'Depth') {
+                my $count = `cat $file | cut -f 6,7 | grep ^[0-9] | sort -u | wc -l`;
+                if ($count > 1) {
+                    $msg .= "PASS";
+                    $flag = $self->test_to_bit('Metagenomic');
+                }
+                else {
+                    $msg .= "FAIL (possibly corrupt)";
+                }
+            }
+            else {
+                $msg .= "FAIL (need to reparse RefCov, column 6 is '$depth' not 'Depth')";
+            }
         }
         else {
-            $msg .= "FAIL (possibly corrupt)";
+            $msg .= "FAIL (empty file)";
         }
     }
     else {
-        $msg .= "FAIL (empty file)";
+        $msg .= "FAIL (generated pre-header unfix)";
     }
     $self->status_message($msg) if ($self->verbose || $msg =~ /FAIL/);
 

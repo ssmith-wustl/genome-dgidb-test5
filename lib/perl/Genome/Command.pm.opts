@@ -3919,6 +3919,13 @@ $Genome::Command::OPTS_SPEC = [
     ],
     '>metagenomic-composition-shotgun',
     [
+      '>imported-data-archives',
+      [
+        'model-id=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>metagenomic-report',
       [
         'build-id=s',
@@ -4099,6 +4106,15 @@ $Genome::Command::OPTS_SPEC = [
   ],
   '>model-group',
   [
+    '>abandon-builds',
+    [
+      'model-group-id=s',
+      undef,
+      'model-group-name=s',
+      undef,
+      'help!',
+      undef
+    ],
     '>create',
     [
       'name=s',
@@ -4111,17 +4127,6 @@ $Genome::Command::OPTS_SPEC = [
     '>delete',
     [
       'model-group-id=s',
-      undef,
-      'help!',
-      undef
-    ],
-    '>launch',
-    [
-      'max=s',
-      undef,
-      'model-group-id=s',
-      undef,
-      'model-group-name=s',
       undef,
       'help!',
       undef
@@ -4175,7 +4180,27 @@ $Genome::Command::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>start-builds',
+    [
+      'max-active=s',
+      undef,
+      'model-group-id=s',
+      undef,
+      'model-group-name=s',
+      undef,
+      'help!',
+      undef
+    ],
     '>status',
+    [
+      'model-group-id=s',
+      undef,
+      'model-group-name=s',
+      undef,
+      'help!',
+      undef
+    ],
+    '>stop-builds',
     [
       'model-group-id=s',
       undef,
@@ -4909,7 +4934,11 @@ $Genome::Command::OPTS_SPEC = [
           undef,
           'output-file=s',
           undef,
+          'output-reference!',
+          undef,
           'reference=s',
+          undef,
+          'samtools-compatible!',
           undef,
           'help!',
           undef
@@ -5038,6 +5067,24 @@ $Genome::Command::OPTS_SPEC = [
           'unique1-file=s',
           undef,
           'unique2-file=s',
+          undef,
+          'help!',
+          undef
+        ],
+        '>proximity',
+        [
+          'maf-file=s',
+          undef,
+          'output-file=s',
+          undef,
+          'help!',
+          undef
+        ],
+        '>template',
+        [
+          'maf-file=s',
+          undef,
+          'output-file=s',
           undef,
           'help!',
           undef
@@ -5810,6 +5857,67 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'version=s',
         undef,
+        'help!',
+        undef
+      ],
+      '>import-interpro',
+      [
+        '>execute-iprscan',
+        [
+          'benchmark!',
+          undef,
+          'interpro-version=s',
+          undef,
+          'tmp-dir=s',
+          undef,
+          'help!',
+          undef
+        ],
+        '>generate-interpro-results',
+        [
+          'reference-transcripts=s',
+          undef,
+          'benchmark!',
+          undef,
+          'commit-size=s',
+          undef,
+          'interpro-version=s',
+          undef,
+          'tmp-dir=s',
+          undef,
+          'help!',
+          undef
+        ],
+        '>generate-transcript-fastas',
+        [
+          'benchmark!',
+          undef,
+          'chunk-size=s',
+          undef,
+          'tmp-dir=s',
+          undef,
+          'help!',
+          undef
+        ],
+        '>run',
+        [
+          'reference-transcripts=s',
+          undef,
+          'benchmark!',
+          undef,
+          'chunk-size=s',
+          undef,
+          'commit-size=s',
+          undef,
+          'interpro-version=s',
+          undef,
+          'log-file=s',
+          undef,
+          'tmp-dir=s',
+          undef,
+          'help!',
+          undef
+        ],
         'help!',
         undef
       ],
@@ -7051,15 +7159,34 @@ $Genome::Command::OPTS_SPEC = [
     [
       '>bed-to-bam',
       [
-        'genome=s',
-        undef,
         'input-file=s',
         undef,
         'output-file=s',
         undef,
         'bed12!',
         undef,
+        'genome=s',
+        undef,
         'mapq=s',
+        undef,
+        'use-version=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>bed-to-sorted-bam',
+      [
+        'input-file=s',
+        undef,
+        'bed12!',
+        undef,
+        'genome=s',
+        undef,
+        'mapq=s',
+        undef,
+        'output-file=s',
+        undef,
+        'samtools-version=s',
         undef,
         'use-version=s',
         undef,
@@ -7132,6 +7259,35 @@ $Genome::Command::OPTS_SPEC = [
         'report-names!',
         undef,
         'report-number!',
+        undef,
+        'use-version=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>merge-by',
+      [
+        'delimiter=s',
+        [
+          ':',
+          '_',
+          '.'
+        ],
+        'exclude-types=s',
+        undef,
+        'input-file=s',
+        undef,
+        'merge-by=s',
+        [
+          'exome',
+          'gene',
+          'transcript'
+        ],
+        'output-file=s',
+        undef,
+        'force-strandedness!',
+        undef,
+        'maximum-distance=s',
         undef,
         'use-version=s',
         undef,
@@ -7453,6 +7609,30 @@ $Genome::Command::OPTS_SPEC = [
         'bam-file=s',
         undef,
         'output-file=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>merge-stats',
+      [
+        'delimiter=s',
+        [
+          ':',
+          '_',
+          '.'
+        ],
+        'output-file=s',
+        undef,
+        'stats-file=s',
+        undef,
+        'merge-by=s',
+        [
+          'exome',
+          'gene',
+          'transcript',
+          'exon'
+        ],
+        'minimum-breadth-filters=s',
         undef,
         'help!',
         undef
@@ -8505,6 +8685,38 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>evaluate-exome-breadth',
+      [
+        'exome-bed-file=s',
+        undef,
+        'output-file=s',
+        undef,
+        'annotation-bed-file=s',
+        undef,
+        'bedtools-version=s',
+        undef,
+        'coverage-of=s',
+        undef,
+        'delimiter=s',
+        [
+          ':',
+          '_',
+          '.'
+        ],
+        'minimum-breadth-filters=s',
+        undef,
+        'report-by=s',
+        [
+          'exome',
+          'gene',
+          'transcript',
+          'exon'
+        ],
+        'samtools-version=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>filter-glf-indels',
       [
         'output-file=s',
@@ -8820,6 +9032,8 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'output-dir=s',
         undef,
+        'regenerate-missing-output!',
+        undef,
         'window-size=s',
         undef,
         'help!',
@@ -8879,9 +9093,11 @@ $Genome::Command::OPTS_SPEC = [
       ],
       '>merge-cna-output-by-chrom',
       [
-        'bam-to-cna-output-files=s',
+        'output-dir=s',
         undef,
-        'output-filename=s',
+        'bam-to-cna-output-dir=s',
+        undef,
+        'bam-to-cna-output-files=s',
         undef,
         'help!',
         undef
@@ -8890,8 +9106,42 @@ $Genome::Command::OPTS_SPEC = [
       [
         'mapped-snp-array-files=s',
         undef,
-        'output-file=s',
+        'output-dir=s',
         undef,
+        'help!',
+        undef
+      ],
+      '>pipeline',
+      [
+        '>sequencing-data',
+        [
+          'data-directory=s',
+          'files',
+          'cmds-test-dir=s',
+          'files',
+          'compile-cna-output-dir=s',
+          'files',
+          'final-output=s',
+          'files',
+          'merge-output-dir=s',
+          'files',
+          'model-group=s',
+          'files',
+          'model-ids=s',
+          'files',
+          'number-of-chromosomes=s',
+          'files',
+          'r-commands=s',
+          'files',
+          'r-library=s',
+          'files',
+          'region-output-dir=s',
+          'files',
+          'table-output=s',
+          'files',
+          'help!',
+          undef
+        ],
         'help!',
         undef
       ],
@@ -14999,6 +15249,8 @@ $Genome::Command::OPTS_SPEC = [
       'stop=s',
       undef,
       'build-id=s',
+      undef,
+      'output-file=s',
       undef,
       'species=s',
       [
