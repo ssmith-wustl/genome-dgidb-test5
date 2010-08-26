@@ -23,7 +23,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
        # Assembler
        assembler_name => {
            doc => 'Name of the assembler.',
-           valid_values => [qw/ velvet newbler /],
+           valid_values => [qw/ velvet newbler soap /],
        },
        assembler_version => {
            doc => 'Version of assembler.',
@@ -107,6 +107,10 @@ my %supported_assemblers = (
     velvet => {
         platforms => [qw/ solexa /],
         class => 'Genome::Model::Tools::Velvet::OneButton',
+    },
+    soap => {
+	platforms => [qw/ solexa /],
+	class => 'Genome::Model::Tools::Soap::DeNovoAssemble',
     },
 );
 sub supported_sequencing_platforms_for_assembler {
