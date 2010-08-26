@@ -11,11 +11,14 @@ class Genome::Model::Tools::Cmds::CreateOutputTable {
     region_call_dir => {
         type => 'String',
         is_optional => 0,
+        is_input => 1,
         doc => 'Directory containing region calls output by gmt cmds individual-region-calls',
     },
     output_file => {
         type => 'String',
         is_optional => 0,
+        is_input => 1,
+        is_output => 1,
         doc => 'Output filename',
     },
     pval_cutoff => {
@@ -42,7 +45,11 @@ sub execute {
     my $pval_cutoff = $self->pval_cutoff;
 
     #open output filehandle
-    my $out_fh = new IO::File $outfile,"w";
+    my $out_fh = IO::File->new(">$outfile");
+    unless ($out_fh) {
+        $self->error_message("Failed to create output filehandle");
+        die;
+    }
     $out_fh->print("CHR\tSTART\tSTOP\tSAMPLE\tCN\tPVAL\tCALL\n");
 
     #open region_call_results_dir and parse filenames

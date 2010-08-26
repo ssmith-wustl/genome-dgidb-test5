@@ -68,7 +68,32 @@ sub admin_notice_users {
     qw/abrummet boberkfe eclark jeldred jlolofie ssmith apipe-run/;
 }
 
+sub namespaces {
+#    my @ns = (qw/BAP Command EGAP GAP Genome MGAP PAP UR Workflow/);
+    my @ns = (qw/Genome UR Workflow/);
+    return @ns;
+}
+
 # operating directories
+
+sub deploy_path {
+
+    if (Genome::Config::dev_mode()) {
+        return '/tmp/gsc/scripts/lib/perl';
+    } else {
+        return '/gsc/scripts/lib/perl';
+    }
+}
+
+sub snapshot_paths {
+
+    my @snapshot_paths = (
+        '/gsc/scripts/opt/passed-model-tests',
+        '/gsc/scripts/opt/passed-unit-tests'
+    );
+
+    return @snapshot_paths;
+}
 
 sub reference_sequence_directory {
     return join('/', Genome::Config::root_directory(), 'reference_sequences');

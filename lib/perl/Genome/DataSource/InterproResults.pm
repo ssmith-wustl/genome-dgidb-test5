@@ -20,9 +20,9 @@ sub column_order {
         transcript_name
         rid
         setid
-        parid
+        parent_id
         name 
-        inote
+        interpro_note
     )]
 }
 

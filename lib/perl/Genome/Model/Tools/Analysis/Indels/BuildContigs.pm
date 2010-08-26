@@ -17,6 +17,7 @@ use strict;
 use warnings;
 
 use FileHandle;
+use POSIX;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
@@ -62,7 +63,7 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
     # Check that we're on a 64-bit system and can run with the deployed samtools
-    unless (`uname -a` =~ /x86_64/) {
+    unless (POSIX::uname =~ /64/) {
         $self->error_message("Must run on a 64 bit machine");
         die;
     }

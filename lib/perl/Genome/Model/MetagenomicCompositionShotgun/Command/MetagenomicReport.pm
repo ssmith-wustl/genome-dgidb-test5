@@ -10,7 +10,7 @@ use File::Find;
 $|=1;
 
 class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
-    is => 'Genome::Command::OO',
+    is => 'Genome::Model::MetagenomicCompositionShotgun::Command',
     doc => 'Generate metagenomic reports for a MetagenomicCompositionShotgun build.',
     has => [
         build_id => {
@@ -47,6 +47,10 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
 
 sub execute {
     my ($self) = @_;
+
+    $self->dump_status_messages(1);
+    $self->dump_warning_messages(1);
+    $self->dump_error_messages(1);
 
     my $build = Genome::Model::Build->get($self->build_id);
     my $model = $build->model;
