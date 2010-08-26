@@ -46,13 +46,17 @@ sub execute {
     for my $model (@models) {
         my $build = $model->latest_build;
         my $build_id = $build->id;
+        my $model_name = $model->name;
         my $status = $build->status;
         if ($status =~ /Running|Scheduled/) {
             my $stop_build = Genome::Model::Build::Command::Stop->create(build_id => $build_id);
-            $self->status_message("Stopping $build_id");
-            #unless($stop_build->execute()) {
-            #    $self->error_message("Failed to stop build $build_id for model " . $model->name);
-            #}
+            $self->status_message("Stopping $build_id ($model_name)");
+            unless($stop_build->execute()) {
+                $self->error_message("Failed to stop build $build_id for model " . $model->name);
+            }
+        }
+        else {
+            $self->status_message("Skipping $build_id ($model_name)");
         }
     }
 }

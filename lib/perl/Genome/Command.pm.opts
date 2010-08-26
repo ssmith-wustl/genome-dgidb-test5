@@ -4180,6 +4180,17 @@ $Genome::Command::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>restart-builds',
+    [
+      'max-active=s',
+      undef,
+      'model-group-id=s',
+      undef,
+      'model-group-name=s',
+      undef,
+      'help!',
+      undef
+    ],
     '>start-builds',
     [
       'max-active=s',
@@ -7143,6 +7154,19 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>limit',
+      [
+        'feature-types=s',
+        undef,
+        'gene-list=s',
+        undef,
+        'input-bed-file=s',
+        undef,
+        'output-bed-file=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>sum-intervals',
       [
         'bed-file=s',
@@ -7930,6 +7954,8 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'refseq-build-name=s',
         undef,
+        'rejected-mutations=s',
+        undef,
         'help!',
         undef
       ],
@@ -7944,6 +7970,8 @@ $Genome::Command::OPTS_SPEC = [
         'roi-bedfile=s',
         undef,
         'wiggle-file-dirs=s',
+        undef,
+        'genes-to-exclude=s',
         undef,
         'refseq-build-name=s',
         undef,
@@ -8703,6 +8731,8 @@ $Genome::Command::OPTS_SPEC = [
           '_',
           '.'
         ],
+        'include-list=s',
+        undef,
         'minimum-breadth-filters=s',
         undef,
         'report-by=s',

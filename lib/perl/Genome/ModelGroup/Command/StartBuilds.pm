@@ -66,17 +66,23 @@ sub execute {
     for my $model ($mg->models) {
         last if ($active_count >= $self->max_active);
 
+        my $model_id = $model->id;
+        my $model_name = $model->name;
         my $status = $model->latest_build->status;
         if ($status !~ /Running|Scheduled/) {
             my $start_build = Genome::Model::Build::Command::Start->create(model_identifier => $model->id);
-            $self->status_message("Starting " . $model->id);
-            #if ($start_build->execute()) {
-            #    $active_count++;
-            #}
-            #else {
-            #    $self->error_message("Failed to start build for model " . $model->name . " (" . $model->id . ").");
-            #}
+            $self->status_message("Starting " . $model->id . " ($model_name)");
+            if ($start_build->execute()) {
+                $active_count++;
+            }
+            else {
+                $self->error_message("Failed to start build for model " . $model->name . " (" . $model->id . ").");
+            }
         }
+        else {
+            $self->status_message("Skipping $model_id ($model_name)");
+        }
+        
     }
     return 1;
 }
