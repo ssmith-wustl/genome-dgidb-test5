@@ -87,7 +87,7 @@ sub execute {
     READER: while ( my $seqs = $reader->next ) {
         $writer->write($seqs);
         for my $limiter ( @limiters ) {
-            last READER unless $limiter->($seqs); # filter returns 0 when done
+            last READER unless $limiter->($seqs); # returns 0 when done
         }
     }
 

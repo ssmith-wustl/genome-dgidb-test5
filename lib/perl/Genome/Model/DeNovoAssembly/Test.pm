@@ -27,8 +27,7 @@ sub processing_profile_params_for_assembler_and_platform {
             coverage => 0.5,#25000,
             assembler_version => '0.7.57-64',
             assembler_params => '-hash_sizes 31 33 35',
-            read_trimmer_name => 'by_length',
-            read_trimmer_params => '-trim_length 10',
+            read_processor => 'trimmer by-length -trim-length 10',
         },
         newbler_454 => {
         },
@@ -59,26 +58,11 @@ sub get_mock_processing_profile {
     Genome::Utility::TestBase->mock_methods(
         $pp,
         (qw/ 
-            _name_for_operation
-
-            _class_for_operation
             class_for_assembler
-            class_for_read_filter
-            class_for_read_trimmer
-
-            _params_as_hash_for_operation
             assembler_params_as_hash
-            read_trimmer_params_as_hash
-            read_filter_params_as_hash
-            
-            _object_for_operation
-            create_read_filter
-            create_read_trimmer
-            
             _validate_assembler_and_params
-            _validate_operation_and_params
-            _validate_read_filter_and_params
-            _validate_read_trimmer_and_params
+
+            _validate_read_processor
             
             status_message
             /),

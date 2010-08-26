@@ -29,8 +29,8 @@ my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 # Ok - bases
 my $out_fastq = $tmp_dir.'/out.bases.fastq';
 my $limiter = Genome::Model::Tools::FastQual::Limit::ByCoverage->create(
-    input_files  => [ $in_fastq ],
-    output_files => [ $out_fastq ],
+    input  => [ $in_fastq ],
+    output => [ $out_fastq ],
     bases => 92550, # 1234 sequences
 );
 ok($limiter, 'create limiter');
@@ -41,8 +41,8 @@ is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq limited as expe
 # Ok - count
 $out_fastq = $tmp_dir.'/out.count.fastq';
 $limiter = Genome::Model::Tools::FastQual::Limit::ByCoverage->create(
-    input_files  => [ $in_fastq ],
-    output_files => [ $out_fastq ],
+    input  => [ $in_fastq ],
+    output => [ $out_fastq ],
     count => 1234,
 );
 ok($limiter, 'create limiter');
@@ -53,8 +53,8 @@ is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq limited as expe
 # Ok - bases and count (count will be the limiting factor)
 $out_fastq = $tmp_dir.'/out.bases_and_count.fastq';
 $limiter = Genome::Model::Tools::FastQual::Limit::ByCoverage->create(
-    input_files  => [ $in_fastq ],
-    output_files => [ $out_fastq ],
+    input  => [ $in_fastq ],
+    output => [ $out_fastq ],
     bases => 1000000,
     count => 1234,
 ); 
