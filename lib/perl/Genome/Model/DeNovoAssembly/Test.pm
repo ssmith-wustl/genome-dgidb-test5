@@ -22,7 +22,8 @@ sub processing_profile_params_for_assembler_and_platform {
     Carp::confess "No assembler name given to create mock processing profile" unless $assembler_name;
     Carp::confess("Unknown params to get mock processing profile\n".Dumper(\%params)) if %params;
 
-    my %assembler_sequencing_paltorm_params = (
+    #TODO make params trim specific too? eg, soap_solexa_bwa_trim
+    my %assembler_sequencing_platform_params = (
         velvet_solexa =>  { 
             coverage => 0.5,#25000,
             assembler_version => '0.7.57-64',
@@ -30,16 +31,25 @@ sub processing_profile_params_for_assembler_and_platform {
             read_trimmer_name => 'by_length',
             read_trimmer_params => '-trim_length 10',
         },
+	soap_solexa => {
+	    assembler_version => '1.04',
+	    assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
+	    #TODO - make sure it's okay to test this way .. too specific??
+	    read_trimmer_name => 'bwa_style',
+	    read_trimmer_params => '-type illumina -trim_qual_level 10',
+	    read_filter_name => 'by_length',
+	    read_filter_params => '-filter_length 35',
+	},
         newbler_454 => {
         },
     );
 
-    my $specific_params = $assembler_sequencing_paltorm_params{ $assembler_name.'_'.$sequencing_platform };
+    my $specific_params = $assembler_sequencing_platform_params{ $assembler_name.'_'.$sequencing_platform };
     unless ( $specific_params ) {
         Carp::confess "Invalid assembler ($assembler_name) and sequencing platform ($sequencing_platform) combination";
     }
 
-    $specific_params->{name} = 'De Novo Assembly Test';
+    $specific_params->{name} = 'De Novo Assembly ' . ucfirst $assembler_name . ' Test';
     $specific_params->{sequencing_platform} = $sequencing_platform;
     $specific_params->{assembler_name} = $assembler_name;
     
@@ -208,7 +218,13 @@ sub get_mock_build {
             processed_reads_count
 
             edit_dir
-            
+
+            soap_config_file
+            soap_output_dir_and_file_prefix
+            soap_scaffold_sequence_file
+            end_one_fastq_file
+            end_two_fastq_file
+
             collated_fastq_file
             assembly_afg_file
             sequences_file
@@ -227,7 +243,6 @@ sub get_mock_build {
             supercontigs_fasta_file
             stats_file
             status_message
-
             /)
     );
 
@@ -245,9 +260,11 @@ sub base_directory {
 }
 
 my %dirs_versions = (
+    soap_solexa => '0.1',
     velvet_solexa => '0.2',
     newbler_454 => '0.1',
 );
+
 sub example_directory_for_model {
     my ($self, $model) = @_;
 
@@ -255,6 +272,7 @@ sub example_directory_for_model {
     
     my $assembler_platform = $model->assembler_name.'_'.$model->sequencing_platform;
     my $dir = $self->base_directory.'/'.$assembler_platform.'_build_v'.$dirs_versions{$assembler_platform};
+
     Carp::confess("Example directory ($dir) for de novo assembly model does not exist.") unless -d $dir;
     
     return $dir;
@@ -298,6 +316,32 @@ sub example_stats_file_for_model {
     my $dir = $self->example_directory_for_model($model);
 
     return $dir.'/edit_dir/stats.txt';
+}
+
+#soap specific files
+
+sub example_end_one_fastq_file_for_model {
+    my ($self, $model) = @_;
+
+    my $dir = $self->example_directory_for_model($model);
+
+    return $dir.'/1_fastq';
+}
+
+sub example_end_two_fastq_file_for_model {
+    my ($self, $model) = @_;
+
+    my $dir = $self->example_directory_for_model($model);
+
+    return $dir.'/2_fastq';
+}
+
+sub example_scaffold_sequence_file_for_model {
+    my ($self, $model) = @_;
+
+    my $dir = $self->example_directory_for_model($model);
+
+    return $dir.'/Assembly.scafSeq';
 }
 
 #<>#
