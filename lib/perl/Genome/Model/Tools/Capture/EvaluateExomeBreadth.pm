@@ -9,6 +9,11 @@ my $DEFAULT_ANNOTATION_FILE = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annot
 class Genome::Model::Tools::Capture::EvaluateExomeBreadth {
     is => ['Command'],
     has => [
+        include_list => {
+            is => 'Text',
+            doc => 'A list of gene names to include.',
+            is_optional => 1,
+        },
         exome_bed_file => {
             is => 'Text',
             doc => 'The Exome product BED format file.  No "chr"',
@@ -88,11 +93,20 @@ sub execute {
     unless ($BedToSortedBam) {
         die('Failed to convert BED file to sorted BAM file!');
     }
+    my $limited_bed_file = Genome::Utility::FileSystem->create_temp_file_path($annotation_basename .'_limited_to_list.bed');
+    unless (Genome::Model::Tools::Bed::Limit->execute(
+        gene_list => $self->include_list,
+        input_bed_file => $self->annotation_bed_file,
+        output_bed_file => $limited_bed_file,
+        feature_types => $self->coverage_of,
+    )) {
+        die('Failed to limit BED file '. $self->annotation_bed_file .' to the genes in '. $self->include_list);
+    }
     my $merged_bed_file = Genome::Utility::FileSystem->create_temp_file_path($annotation_basename .'_merged_by_'. $self->report_by .'.bed');
     unless ($self->report_by eq 'exon') {
         my $MergeBy = Genome::Model::Tools::BedTools::MergeBy->create(
             merge_by => $self->report_by,
-            input_file => $self->annotation_bed_file,
+            input_file => $limited_bed_file,
             output_file => $merged_bed_file,
             delimiter => $self->delimiter,
             use_version => $self->bedtools_version,
@@ -124,3 +138,6 @@ sub execute {
     }
     return 1;
 }
+
+
+1;
