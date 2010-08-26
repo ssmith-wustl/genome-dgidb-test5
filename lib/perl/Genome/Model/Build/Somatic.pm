@@ -68,12 +68,40 @@ sub create {
     return $self;
 }
 
+sub workflow_instances {
+    my $self = shift;
+    my @instances = Workflow::Operation::Instance->get(
+        name => $self->resolve_workflow_name
+    );
+
+    #older builds used a wrapper workflow
+    unless(scalar @instances) {
+        return $self->SUPER::workflow_instances;
+    }
+
+    return @instances;
+}
+
+sub resolve_workflow_name {
+    my $self = shift;
+
+    return $self->build_id . ' Somatic Pipeline';
+}
+
 # Returns the newest somatic workflow instance associated with this build
 # Note: Only somatic builds launched since this code was added will have workflows associated in a queryable manner
-# TODO No longer used by somatic_workflow_inputs method... can probably remove
 sub newest_somatic_workflow_instance {
     my $self = shift;
 
+    my $build_workflow = $self->newest_workflow_instance;
+    return unless $build_workflow;
+    
+    if($build_workflow->name =~ 'Somatic Pipeline') {
+        #Newer builds run the pipeline's workflow directly
+        return $build_workflow;
+    }
+
+    #Older builds had many layers of indirection that eventually lead to a workflow with this name
     my @sorted = sort {
         $b->id <=> $a->id
     } Workflow::Operation::Instance->get(
@@ -88,7 +116,6 @@ sub newest_somatic_workflow_instance {
     return $sorted[0];
 }
 
-# Returns a hash ref with all of the inputs of the newest somatic workflow instance
 sub somatic_workflow_inputs {
     my $self = shift;
 
@@ -98,24 +125,20 @@ sub somatic_workflow_inputs {
     my $dbh = $ds->get_default_dbh;
     $dbh->{LongReadLen} = 1024*1024;
 
-    my $workflow_instance_name = "Somatic Pipeline Build " . $self->build_id;
+    my $workflow_instance = $self->newest_somatic_workflow_instance;
+    return unless( $workflow_instance);
 
-    my $results = $dbh->selectrow_arrayref("SELECT input_stored FROM workflow_instance WHERE name = ?", {}, $workflow_instance_name);
-    unless ($results) {
-        $self->error_message("Could not find a workflow instance associated with this build with the name: $workflow_instance_name");
-        return;
-    }
-    my $input_stored = $results->[0];
+    my $input_stored = $dbh->selectrow_arrayref("SELECT input_stored FROM workflow_instance WHERE workflow_instance_id = ?", {}, $workflow_instance->id)->[0];
 
     unless ($input_stored) {
-        $self->error_message("Could not find a workflow instance associated with this build with the name: $workflow_instance_name");
-        return;
+        $self->error_message("Could not find a workflow instance associated with this build for workflow: " . $workflow_instance->name);
+        die;
     }
 
     my $input = Storable::thaw($input_stored);
     unless ($input) {
-        $self->error_message("Could not thaw input hash for workflow instance named: $workflow_instance_name");
-        return;
+        $self->error_message("Could not thaw input hash for workflow instance named: " . $workflow_instance->name);
+        die;
     }
 
     # returns hashref of workflow params like { input => value }
