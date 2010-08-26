@@ -125,7 +125,7 @@ my $second_define_command = Genome::Model::Command::Define::ImportedReferenceSeq
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     version => 't1',
-    data_directory => '/gscuser/tmooney/update_test', #Genome::Utility::FileSystem->create_temp_directory,
+    data_directory => Genome::Utility::FileSystem->create_temp_directory,
 );
 
 ok($second_define_command, 'created define command');
