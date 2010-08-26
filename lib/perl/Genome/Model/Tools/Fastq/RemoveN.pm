@@ -34,12 +34,12 @@ class Genome::Model::Tools::Fastq::RemoveN
                                 },
          ],
     has_output => [
-          passed_reads => {
+          passed_read_count => {
                                     is=>'Number',
                                     doc => 'number of reads passed screening',
                                     is_optional => 1
           },
-          failed_reads => {
+          failed_read_count => {
                                     is=>'Number',
                                     doc => 'number of reads failed screening',
                                     is_optional => 1
@@ -113,8 +113,8 @@ sub execute
     $input_fh->close;
     $output_fh->close;
 
-    $self->passed_reads($passed_reads);
-    $self->failed_reads($failed_reads);
+    $self->passed_read_count($passed_reads);
+    $self->failed_read_count($failed_reads);
 
     return 1;
 }
