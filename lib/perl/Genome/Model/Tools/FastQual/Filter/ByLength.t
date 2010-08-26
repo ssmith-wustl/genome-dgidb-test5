@@ -28,8 +28,8 @@ my $out_fastq = $tmp_dir.'/out.fastq';
 
 # Ok
 my $filter = Genome::Model::Tools::FastQual::Filter::ByLength->create(
-    input_files  => [ $in_fastq ],
-    output_files => [ $out_fastq ],
+    input  => [ $in_fastq ],
+    output => [ $out_fastq ],
     filter_length => 10,
 );
 ok($filter, 'create filter');
@@ -37,6 +37,7 @@ isa_ok($filter, 'Genome::Model::Tools::FastQual::Filter::ByLength');
 ok($filter->execute, 'execute filter');
 is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq filtered as expected");
 
+#print "$tmp_dir\n"; <STDIN>;
 done_testing();
 exit;
 
