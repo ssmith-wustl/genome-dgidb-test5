@@ -654,13 +654,17 @@ sub _process_unaligned_reads {
             if ($instrument_data->__changes__) {
                 die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
             }
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
-                $self->error_message("Failed to unlock $expected_se_path.");
-                die $self->error_message;
+            if ($se_lock) {
+                unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
+                    $self->error_message("Failed to unlock $expected_se_path.");
+                    die $self->error_message;
+                }
             }
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
-                $self->error_message("Failed to unlock $expected_pe_path.");
-                die $self->error_message;
+            if ($pe_lock) {
+                unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
+                    $self->error_message("Failed to unlock $expected_pe_path.");
+                    die $self->error_message;
+                }
             }
             push @instrument_data, $instrument_data;
         }        
