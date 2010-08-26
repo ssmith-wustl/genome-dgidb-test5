@@ -33,6 +33,18 @@ class Genome::Model::Tools::Fastq::RemoveN
                                     default => 0,
                                 },
          ],
+    has_output => [
+          passed_reads => {
+                                    is=>'Number',
+                                    doc => 'number of reads passed screening',
+                                    is_optional => 1
+          },
+          failed_reads => {
+                                    is=>'Number',
+                                    doc => 'number of reads failed screening',
+                                    is_optional => 1
+          },
+    ]
 };
 
 sub help_brief 
@@ -79,6 +91,9 @@ sub execute
         return;
     }
 
+    my $passed_reads = 0;
+    my $failed_reads = 0;
+
     while (my $header = $input_fh->getline) 
     {
         my $seq = $input_fh->getline;
@@ -87,11 +102,19 @@ sub execute
         my $count = 0;
 
         $seq=~s/(N)/$count++;$1/eg; # get N-count
-        $output_fh->print("$header$seq$sep$qual") unless ($cutoff > 0 and $count >= $cutoff); #check if cutoff disabled, then compare count
+        if ($cutoff > 0 and $count >= $cutoff) {
+            $failed_reads++;
+        } else {
+            $passed_reads++;   
+            $output_fh->print("$header$seq$sep$qual");
+        }
     }   
 
     $input_fh->close;
     $output_fh->close;
+
+    $self->passed_reads($passed_reads);
+    $self->failed_reads($failed_reads);
 
     return 1;
 }
