@@ -32,6 +32,9 @@ sub execute {
         $meta_status = 'Not running' unless($meta_status);
         $self->status_message($meta_model->name . ": " . $meta_status);
     }
+    $self->status_message($mcs_model->name . ": " . $mcs_build->status);
+
+    return 1;
 }
 
 1;
