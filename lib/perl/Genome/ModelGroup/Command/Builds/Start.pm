@@ -1,11 +1,11 @@
-package Genome::ModelGroup::Command::StartBuilds;
+package Genome::ModelGroup::Command::Builds::Start;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::ModelGroup::Command::StartBuilds {
+class Genome::ModelGroup::Command::Builds::Start {
     is => ['Command'],
     has_optional => [
         model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},

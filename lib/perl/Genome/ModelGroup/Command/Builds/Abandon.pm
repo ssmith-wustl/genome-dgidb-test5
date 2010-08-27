@@ -1,11 +1,11 @@
-package Genome::ModelGroup::Command::AbandonBuilds;
+package Genome::ModelGroup::Command::Builds::Abandon;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::ModelGroup::Command::AbandonBuilds {
+class Genome::ModelGroup::Command::Build::Abandon {
     is => ['Command'],
     has_optional => [
         model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},

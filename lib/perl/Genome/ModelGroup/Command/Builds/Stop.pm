@@ -1,11 +1,11 @@
-package Genome::ModelGroup::Command::StopBuilds;
+package Genome::ModelGroup::Command::Builds::Stop;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::ModelGroup::Command::StopBuilds {
+class Genome::ModelGroup::Command::Builds::Stop {
     is => ['Command'],
     has_optional => [
         model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},
