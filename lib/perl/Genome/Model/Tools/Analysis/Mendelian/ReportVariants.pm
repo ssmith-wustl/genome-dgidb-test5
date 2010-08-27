@@ -30,6 +30,7 @@ class Genome::Model::Tools::Analysis::Mendelian::ReportVariants {
 		affected_files	=> { is => 'Text', doc => "Consensus files for affected individuals", is_optional => 0, is_input => 1},
 		unaffected_files	=> { is => 'Text', doc => "Consensus files for unaffected individuals", is_optional => 1, is_input => 1},
 		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1},
+		print_all	=> { is => 'Text', doc => "If set to 1, prints all variants regardless of mendelian pattern", is_optional => 1, is_input => 1},
 	],
 };
 
@@ -134,6 +135,23 @@ sub execute {                               # replace with real execution logic.
 		
 		(my $chromosome, my $chr_start, my $chr_stop, my $ref, my $var) = split(/\t/, $line);
 
+		if(length($ref) > 1 || $var eq "-")
+		{
+			## Undo the adjustment made when formatting deletions for annotation.
+			$chr_start--;
+		}
+
+		my $variant_type = "SNP";
+		
+		if(length($ref) > 1 || $var eq "-")
+		{
+			$variant_type = "DEL";
+		}
+		elsif(length($var) > 1 || $ref eq "-")
+		{
+			$variant_type = "INS";
+		}
+
 		if($lineCounter >= 0)
 		{
 			$stats{'num_variants'}++;
@@ -159,9 +177,22 @@ sub execute {                               # replace with real execution logic.
 
 					if($sample_call ne $ref)
 					{
-						## We have a variant in this affected, so count it ##
-						
-						$affecteds_variant++;
+						if($variant_type eq "SNP")
+						{
+							## We have a variant in this affected, so count it ##
+							
+							$affecteds_variant++;							
+						}
+						else
+						{
+							## For indels, need indel support to call it variant ##
+							
+							if($sample_call =~ '/')
+							{
+								$affecteds_variant++;
+							}
+						}
+
 					}
 
 					$sample_call = code_to_genotype($sample_call);
@@ -175,7 +206,7 @@ sub execute {                               # replace with real execution logic.
 
 			## Check to see if it occurred in multiple affected samples ##
 
-			if($affecteds_variant >= $min_affecteds_variant)
+			if($affecteds_variant >= $min_affecteds_variant || $self->print_all)
 			{
 				## See how many unaffecteds carry it ##
 				
@@ -192,11 +223,24 @@ sub execute {                               # replace with real execution logic.
 	
 						if($sample_call ne $ref)
 						{
-							## We have a variant in this affected, so count it ##
-							
-							$unaffecteds_variant++;
+							if($variant_type eq "SNP")
+							{
+								## We have a variant in this affected, so count it ##
+								
+								$unaffecteds_variant++;
+							}
+							else
+							{
+								## For indels, need indel support to call it variant ##
+								
+								if($sample_call =~ '/')
+								{
+									$unaffecteds_variant++;
+								}
+							}
+
 						}
-	
+
 						$sample_call = code_to_genotype($sample_call);
 	
 						$sample_genotype = "$sample_call\t$sample_reads1\t$sample_reads2\t$sample_freq";
@@ -210,7 +254,7 @@ sub execute {                               # replace with real execution logic.
 
 				## Proceed if we found few enough unaffecteds with the variant ##
 
-				if($unaffecteds_variant <= $max_unaffecteds_variant)
+				if($unaffecteds_variant <= $max_unaffecteds_variant || $self->print_all)
 				{
 					$stats{'not_in_unaffected'}++;
 					print "$chromosome\t$chr_start\t$chr_stop\t$ref\t$var\t";
@@ -223,6 +267,15 @@ sub execute {                               # replace with real execution logic.
 						print OUTFILE "$line\t";
 						print OUTFILE "$affecteds_variant\t$unaffecteds_variant\t";
 						print OUTFILE "$sample_genotype_string";
+						
+						if($self->print_all)
+						{
+							if($unaffecteds_variant == 0 && $affecteds_variant >= 2)
+							{
+								print OUTFILE "\t1";
+							}
+						}
+						
 						print OUTFILE "\n";
 					}
 				}
@@ -278,7 +331,13 @@ sub load_consensus
 
 		if(length($ref) > 1 || length($cns) > 1 || $ref eq "-" || $cns eq "-")
 		{
-			$cns = "$ref/$cns";
+			## If CNS is not formatted, do so ##
+
+			if(!($cns =~ '/'))
+			{
+				$cns = "$ref/$cns";				
+			}
+
 		}
 #		my $key = "$chrom\t$position";
 		my $key = "$genotype_file\t$chrom\t$position";
