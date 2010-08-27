@@ -14,6 +14,22 @@ class Genome::ModelGroup::Command::Builds::Abandon {
     doc => "abandon latest build for each member if it is failed",
 };
 
+sub help_synopsis {
+    return <<"EOS"
+genome model-group builds abandon...   
+EOS
+}
+
+sub help_brief {
+    my $self = shift;
+    return $self->doc;
+}
+
+sub help_detail {                           
+    my $self = shift;
+    return $self->help_brief;
+}
+
 sub execute {
     my $self = shift;
 
