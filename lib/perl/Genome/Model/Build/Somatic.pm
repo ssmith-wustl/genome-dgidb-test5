@@ -119,30 +119,46 @@ sub newest_somatic_workflow_instance {
 sub somatic_workflow_inputs {
     my $self = shift;
 
-    # TODO Switched to doing a direct database query to find inputs, since if we go through the object layer, workflows with steps which have at some point changed class paths 
-    # will crash, with no good solution. The best solution is probably not to query the workflow at all, and instead log it elsewherorkflow_instance_namee
-    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Workflow::Operation::Instance->__meta__);
-    my $dbh = $ds->get_default_dbh;
-    $dbh->{LongReadLen} = 1024*1024;
+    my $workflow_instance;
+    eval {
+        my $workflow_instance = $self->newest_somatic_workflow_instance; #May fail if workflow contains modules no longer in our tree
+    };
 
-    my $workflow_instance = $self->newest_somatic_workflow_instance;
-    return unless( $workflow_instance);
+    my $input_stored;
 
-    my $input_stored = $dbh->selectrow_arrayref("SELECT input_stored FROM workflow_instance WHERE workflow_instance_id = ?", {}, $workflow_instance->id)->[0];
+    if($workflow_instance) {
+        $input_stored = $workflow_instance->input_stored;
 
-    unless ($input_stored) {
-        $self->error_message("Could not find a workflow instance associated with this build for workflow: " . $workflow_instance->name);
-        die;
+        unless ($input_stored) {
+            $self->error_message("Could not find a workflow instance associated with this build for workflow: " . $workflow_instance->name);
+            return;
+        }
+    } else {
+        # TODO Switched to doing a direct database query to find inputs, since if we go through the object layer, workflows with steps which have at some point changed class paths
+        # will crash, with no good solution. The best solution is probably not to query the workflow at all, and instead log it elsewhere
+        my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Workflow::Operation::Instance->__meta__);
+        my $dbh = $ds->get_default_dbh;
+        $dbh->{LongReadLen} = 1024*1024;
+
+        my $new_workflow_instance_name = $self->resolve_workflow_name;
+        my $old_workflow_instance_name = "Somatic Pipeline Build " . $self->build_id;
+        my $results = $dbh->selectrow_arrayref("SELECT input_stored FROM workflow_instance WHERE name IN (?,?)", {}, $new_workflow_instance_name, $old_workflow_instance_name);
+        unless ($results) {
+            $self->error_message("Could not find a workflow instance associated with this build with the name '$new_workflow_instance_name' or '$old_workflow_instance_name'");
+            return;
+        }
+
+        $input_stored = $results->[0];
     }
 
     my $input = Storable::thaw($input_stored);
     unless ($input) {
-        $self->error_message("Could not thaw input hash for workflow instance named: " . $workflow_instance->name);
+        $self->error_message("Could not thaw input hash for workflow instance");
         die;
     }
 
     # returns hashref of workflow params like { input => value }
-    return $input;  
+    return $input;
 }
 
 # Input: the name of the somatic workflow input you'd like to know
