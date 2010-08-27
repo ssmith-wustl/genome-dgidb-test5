@@ -6,36 +6,13 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command::Build::Abandon {
-    is => ['Command'],
+    is => ['Genome::ModelGroup::Command'],
     has_optional => [
         model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},
         model_group_name => { is => 'String', doc => 'name of model-group'},
     ],
     doc => "abandon latest build for each member if it is failed",
 };
-
-sub get_mg {
-    my $self = shift;
-    
-    my $mg;
-
-    if($self->model_group_id && $self->model_group_name) {
-        $self->error_message("Please specify either ID or name, not both.");
-        die $self->error_message;
-    }
-    elsif($self->model_group_id) {
-        $mg = Genome::ModelGroup->get($self->model_group_id);
-    }
-    elsif($self->model_group_name) {
-        $mg = Genome::ModelGroup->get(name => $self->model_group_name);
-    }
-    else {
-        $self->error_message("Please specify either an ID xor a name.");
-        die $self->error_message;
-    }
-
-    return $mg;
-}
 
 sub execute {
     my $self = shift;
