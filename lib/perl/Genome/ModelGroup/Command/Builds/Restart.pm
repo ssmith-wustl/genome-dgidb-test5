@@ -12,7 +12,7 @@ class Genome::ModelGroup::Command::RestartBuilds {
         model_group_name => { is => 'String', doc => 'name of model-group'},
         max_active => { is => 'Integer', doc => 'how many models may be running or scheduled at any given time', default => 10000},
     ],
-    doc => "start build for each member if latest build is not running or scheduled",
+    doc => "restart build for each member if latest build is failed or scheduled",
 };
 
 sub get_mg {
@@ -64,13 +64,15 @@ sub execute {
     my $active_count = $self->count_active;
 
     for my $model ($mg->models) {
+        my $model_name = $model->name;
+
         last if ($active_count >= $self->max_active);
 
         my $build = $model->latest_build;
+        next unless($build);
         my $build_id = $build->id;
-        my $model_name = $model->name;
         my $status = $build->status;
-        if ($status =~ /Running|Scheduled|Failed/) {
+        if ($status =~ /Scheduled|Failed/) {
             my $build_id = $build->id;
             my $restart_build = Genome::Model::Build::Command::Restart->create(build_id => $build_id);
             $self->status_message("Restarting $build_id ($model_name)");

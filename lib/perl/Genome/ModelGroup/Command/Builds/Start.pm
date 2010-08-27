@@ -64,11 +64,19 @@ sub execute {
     my $active_count = $self->count_active;
 
     for my $model ($mg->models) {
+        my $model_name = $model->name;
+        my $model_id = $model->id;
+
         last if ($active_count >= $self->max_active);
 
-        my $model_id = $model->id;
-        my $model_name = $model->name;
-        my $status = $model->latest_build->status;
+        my $build = $model->latest_build;
+        my $status;
+        if ($build) {
+            $status = $build->status;
+        }
+        else {
+            $status = '';
+        }
         if ($status !~ /Running|Scheduled/) {
             my $start_build = Genome::Model::Build::Command::Start->create(model_identifier => $model->id);
             $self->status_message("Starting " . $model->id . " ($model_name)");

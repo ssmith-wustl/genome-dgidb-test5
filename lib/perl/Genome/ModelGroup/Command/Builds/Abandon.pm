@@ -44,10 +44,13 @@ sub execute {
 
     my @models = $mg->models;
     for my $model (@models) {
-        my $build = $model->latest_build;
-        my $build_id = $build->id;
         my $model_name = $model->name;
+
+        my $build = $model->latest_build;
+        next unless($build);
+        my $build_id = $build->id;
         my $status = $build->status;
+
         if ($status =~ /Failed/) {
             my $abandon_build = Genome::Model::Build::Command::Abandon->create(build_id => $build_id);
             $self->status_message("Abandoning $build_id ($model_name)");
