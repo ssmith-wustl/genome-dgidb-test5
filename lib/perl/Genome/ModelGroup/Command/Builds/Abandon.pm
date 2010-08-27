@@ -5,8 +5,8 @@ use warnings;
 
 use Genome;
 
-class Genome::ModelGroup::Command::Build::Abandon {
-    is => ['Genome::ModelGroup::Command'],
+class Genome::ModelGroup::Command::Builds::Abandon {
+    is => ['Genome::ModelGroup::Command::Builds'],
     has_optional => [
         model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},
         model_group_name => { is => 'String', doc => 'name of model-group'},
