@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command::Builds::Restart {
-    is => ['Genome::ModelGroup::Command'],
+    is => ['Genome::ModelGroup::Command::Builds'],
     has_optional => [
         model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},
         model_group_name => { is => 'String', doc => 'name of model-group'},
@@ -14,6 +14,22 @@ class Genome::ModelGroup::Command::Builds::Restart {
     ],
     doc => "restart build for each member if latest build is failed or scheduled",
 };
+
+sub help_synopsis {
+    return <<"EOS"
+genome model-group builds restart...   
+EOS
+}
+
+sub help_brief {
+    my $self = shift;
+    return $self->doc;
+}
+
+sub help_detail {                           
+    my $self = shift;
+    return $self->help_brief;
+}
 
 sub execute {
     my $self = shift;

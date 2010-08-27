@@ -1,22 +1,22 @@
-package Genome::ModelGroup::Command::Builds::Abandon;
+package Genome::ModelGroup::Command::Builds::Remove;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::ModelGroup::Command::Builds::Abandon {
+class Genome::ModelGroup::Command::Builds::Remove {
     is => ['Genome::ModelGroup::Command::Builds'],
     has_optional => [
         model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},
         model_group_name => { is => 'String', doc => 'name of model-group'},
     ],
-    doc => "abandon latest build for each member if it is failed",
+    doc => "remove latest build for each member if it is abandoned",
 };
 
 sub help_synopsis {
     return <<"EOS"
-genome model-group builds abandon...   
+genome model-group builds remove...   
 EOS
 }
 
@@ -44,11 +44,11 @@ sub execute {
         my $build_id = $build->id;
         my $status = $build->status;
 
-        if ($status =~ /Failed/) {
-            my $abandon_build = Genome::Model::Build::Command::Abandon->create(build_id => $build_id);
-            $self->status_message("Abandoning $build_id ($model_name)");
-            unless($abandon_build->execute()) {
-                $self->error_message("Failed to abandon build $build_id for model " . $model->name);
+        if ($status =~ /Abandoned/) {
+            my $remove_build = Genome::Model::Build::Command::Remove->create(items => [$build_id]);
+            $self->status_message("Removing $build_id ($model_name)");
+            unless($remove_build->execute()) {
+                $self->error_message("Failed to remove build $build_id for model " . $model->name);
             }
         }
         else {

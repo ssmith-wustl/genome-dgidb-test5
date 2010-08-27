@@ -4107,6 +4107,60 @@ $Genome::Command::OPTS_SPEC = [
   ],
   '>model-group',
   [
+    '>builds',
+    [
+      '>abandon',
+      [
+        'model-group-id=s',
+        undef,
+        'model-group-name=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>remove',
+      [
+        'model-group-id=s',
+        undef,
+        'model-group-name=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>restart',
+      [
+        'max-active=s',
+        undef,
+        'model-group-id=s',
+        undef,
+        'model-group-name=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>start',
+      [
+        'max-active=s',
+        undef,
+        'model-group-id=s',
+        undef,
+        'model-group-name=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>stop',
+      [
+        'model-group-id=s',
+        undef,
+        'model-group-name=s',
+        undef,
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
     '>create',
     [
       'name=s',
