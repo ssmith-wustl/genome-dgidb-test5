@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use Test::More skip_all => 'updating read processor';
+
 use above 'Genome';
 use Genome::Model::DeNovoAssembly::Test;
 use File::Compare 'compare';
@@ -10,6 +12,7 @@ use Test::More;
 use Data::Dumper;
 
 use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData::Soap');
+
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
