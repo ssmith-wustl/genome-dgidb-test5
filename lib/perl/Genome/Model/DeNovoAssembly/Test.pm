@@ -165,7 +165,7 @@ sub get_mock_build {
     my ($self, %params) = @_;
 
     my $model = delete $params{model};
-    Carp::confess "No de noe novo model given to create mock build" unless $model;
+    Carp::confess "No de novo model given to create mock build" unless $model;
     my $use_example_directory = delete $params{use_example_directory};
     Carp::confess("Unknown params to get mock build:\n".Dumper(\%params)) if %params;
     
@@ -182,29 +182,40 @@ sub get_mock_build {
 
     $build->mock('instrument_data', sub{ return $model->instrument_data; });
 
-    Genome::Utility::TestBase->mock_methods(
-        $build,
-        (qw/
-            description
+    my @build_methods_to_mock = (qw/
+        status_message description
 
-            interesting_metric_names
-            calculate_metrics
-            set_metrics
-            calculate_reads_attempted
-            calculate_average_insert_size
+        interesting_metric_names
+        calculate_metrics
+        set_metrics
+        calculate_reads_attempted
+        calculate_average_insert_size
 
-            genome_size
-            calculate_base_limit_from_coverage
-            processed_reads_count
+        genome_size
+        calculate_base_limit_from_coverage
+        processed_reads_count
 
-            edit_dir
+        assembler_input_files
 
+        edit_dir
+        gap_file
+        contigs_bases_file
+        contigs_quals_file
+        read_info_file
+        reads_placed_file
+        supercontigs_agp_file
+        supercontigs_fasta_file
+        stats_file
+    /);
+    my %build_specific_methods_to_mock = (
+        newbler => [qw//],
+        soap => [qw/
+            end_one_fastq_file end_two_fastq_file 
             soap_config_file
             soap_output_dir_and_file_prefix
-            soap_scaffold_sequence_file
-            end_one_fastq_file
-            end_two_fastq_file
-
+            soap_scaffold_sequence_file 
+        /],
+        velvet => [qw/
             collated_fastq_file
             assembly_afg_file
             sequences_file
@@ -214,22 +225,18 @@ sub get_mock_build {
             contigs_fasta_file
             sequences_file
             ace_file
-            gap_file
-            contigs_bases_file
-            contigs_quals_file
-            read_info_file
-            reads_placed_file
-            supercontigs_agp_file
-            supercontigs_fasta_file
-            stats_file
-            status_message
-            /)
+        /],
     );
+    Genome::Utility::TestBase->mock_methods(
+        $build,
+        @build_methods_to_mock,
+        @{$build_specific_methods_to_mock{$build->processing_profile->assembler_name}},
+    ) or die;
 
     Genome::Utility::TestBase->mock_methods(
         $build,
         map { join('_', split(m#\s#)) } $build->interesting_metric_names,
-    );
+    ) or die;
 
     return $build;
 }
