@@ -14,7 +14,7 @@ class Genome::Model::Tools::Xhong::CompareSnpsBuildLanes {
 		model_id => { type => 'String', is_optional => 0, doc => "tumor/normal model_id to get the last suceed build to gather per lane bam files",},
 		analysis_dir => { type => 'String', is_optional => 0, doc => "Directory to use for keep outputs",},
 		genotype_file => { type => 'String', is_optional => 1, doc => "Genotype file to use as input to gmt analysis lane-qc compare-snps",},
-		sample_name => { type => 'String', is_optional => 0, doc => "Sample name to get imported genotype file, for example H_LC-SJTALL001-G-TB-01-1378 ",},
+		sample_name => { type => 'String', is_optional => 1, doc => "Sample name to get imported genotype file, for example H_LC-SJTALL001-G-TB-01-1378 ",},
 		]
 };
 
@@ -41,11 +41,10 @@ sub execute {
     	my $dir = $self->analysis_dir;
 	my $user = getlogin || getpwuid($<); #get current user name	 
     	my $wgs_model_id = $self->model_id;
-    
+    	my $sample_name = $self->sample_name;
     # step1 : to find genotype file or return;
     	my $genotype_file = $self->genotype_file;
-    	my $sample_name = $self->sample_name;
-    	if ($sample_name ne ""){
+    	if ($sample_name ne "" && $genotype_file eq ""){
     # get owner_id of the microarray_genotype file
     		system("genome instrument-data list imported --filter sample_name=$sample_name --noheader | cut -d ' ' -f1 > /tmp/$sample_name");
     		open (FH, "/tmp/$sample_name");
@@ -66,7 +65,7 @@ sub execute {
     		system("rm /tmp/$sample_name");
     		system("rm /tmp/$sample_name.path");
     # check if genotype_file exists
-    		unless(-e $find_genotype_file || -e $genotype_file){
+    		unless(-e $find_genotype_file && -e $genotype_file){
     			$self->error_message("Unable to file genotype file $find_genotype_file and $genotype_file\n please check and supply path to --genotype-file");
 			return;
 		}		
