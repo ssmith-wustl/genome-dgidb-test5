@@ -30,15 +30,11 @@ sub processing_profile_params_for_assembler_and_platform {
             assembler_params => '-hash_sizes 31 33 35',
             read_processor => 'trimmer by-length -trim-length 10',
         },
-	soap_solexa => {
-	    assembler_version => '1.04',
-	    assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
-	    #TODO - make sure it's okay to test this way .. too specific??
-	    read_trimmer_name => 'bwa_style',
-	    read_trimmer_params => '-type illumina -trim_qual_level 10',
-	    read_filter_name => 'by_length',
-	    read_filter_params => '-filter_length 35',
-	},
+        soap_solexa => {
+            assembler_version => '1.04',
+            assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
+            read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length --filter-length 35',
+        },
         newbler_454 => {
         },
     );
