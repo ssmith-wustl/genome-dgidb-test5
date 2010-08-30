@@ -12,6 +12,10 @@ class Genome::ProcessingProfile::ImportedReferenceSequence {
     doc => "this processing profile does the file copying and indexing required to import a reference sequence fasta file"
 };
 
+sub _resource_requirements_for_execute_build {
+    return "-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=10000:mem=6000]' -M 6000000";
+}
+
 sub _resolve_disk_group_name_for_build {
     return 'info_apipe_ref';
 }
@@ -70,7 +74,7 @@ sub _execute_build {
     $self->status_message("Doing bwa indexing.");
     my $bwa_index_algorithm = ($fasta_size < 11_000_000) ? "is" : "bwtsw";
 
-    my $bwa_path = Genome::Model::Tools::Bwa->path_for_bwa_version(Genome::Model::Tools::Bwa->default_version);
+    my $bwa_path = Genome::Model::Tools::Bwa->path_for_bwa_version('0.5.8a');
 
     my $bwa_cmd = sprintf('%s index -a %s %s', $bwa_path, $bwa_index_algorithm, $fasta_file_name);
     $rv = Genome::Utility::FileSystem->shellcmd(
@@ -177,110 +181,44 @@ sub _execute_build {
     return 1;
 }
 
-# This function makes a .bases file for each chromosome in all_sequences.fa.  The code to do this by reading
-# all_sequences.fa one line at a time would be a lot simpler, but there is no guarantee that a single line
-# of sequence data is smaller than the amount of available memory.  Consequently, the fasta is read in
-# chunks.
+# This is a simplified version of the previous code, preserved in a =cut section below, for 
+# finding chromosome names in fasta files, and splitting the content out into .bases files
+# It is assumed that the sequence names are indicated via the ">" character rather than the ";" character
+
 sub _make_bases_files {
     my $self = shift;
-    my ($fasta_file_name, $output_directory) = @_;
-
-    my $fasta_fh = Genome::Utility::FileSystem->open_file_for_reading($fasta_file_name);
-
-    #Since a "\n<" in the middle of the file represents the start of a new chromosome,
-    #add a newline to the start so the beginning of the file should look like "\n<", too.
-    my $buffer = "\n";
-    my $chunk_length = 1_048_576; #1 MiB
-    my $current_chromosome_fh;
-
-    while( $fasta_fh->read($buffer, $chunk_length, length($buffer)) ){
-        $self->_process_buffer(\$buffer, \$current_chromosome_fh, $output_directory);
+    my ($fa,$output_dir) = @_;
+    my $fafh = Genome::Utility::FileSystem->open_file_for_reading($fa);
+    unless($fafh){
+        $self->error_message("Could not open file $fa for reading.");
+        die $self->error_message;
     }
-
-    while( length($buffer) and $buffer ne "\n" ) {
-        my $made_progress = $self->_process_buffer(\$buffer, \$current_chromosome_fh, $output_directory); #Finish up any remaining buffer after EOF
-        unless($made_progress) {
-            #We were expecting more data--file ended with an incomplete chromosome name line?
-            $self->errror_message('Failed to process entire FASTA file into .bases file(s).');
-            return;
+    my @chroms;
+    my $file;
+    while(<$fafh>){
+        my $line = $_;
+        chomp($line);
+        #if the line contains a sequence name, check that name
+        if($line =~ /^>/){
+            my $chr = $';
+            ($chr) = split " ",$chr;
+            $chr =~s/(\/|\\)/_/;  # "\" or "/" are not allowed in sequence names
+            push @chroms, $chr;
+            if(defined($file)) {
+                $file->close;
+            }
+            $file = Genome::Utility::FileSystem->open_file_for_writing($output_dir."/".$chr.".bases");
+            unless($file){
+                $self->error_message("Could not open file ".$output_dir."/".$chr." for reading.");
+                die $self->error_message;
+            }
+            next;
         }
+        print $file $line;
+        
     }
-
-    return 1;
-}
-
-sub _process_buffer {
-    my $self = shift;
-    my ($buffer_ref, $current_chromosome_fh_ref, $output_directory) = @_;
-
-    if($$buffer_ref =~ /^\n>/) {
-        #Start of a new chromsome
-        my $break_index = index($$buffer_ref, "\n", 2); #find end of >chromosome name line
-        unless($break_index) {
-            return; #Don't have whole chromosome name line in buffer--need more
-        }
-
-        if($$current_chromosome_fh_ref) {
-            close($$current_chromosome_fh_ref);
-            undef $$current_chromosome_fh_ref;
-        }
-
-        my $name_line = substr($$buffer_ref, 0, $break_index, '');
-        my $current_chromosome_name = $self->_parse_chromosome_name($name_line);
-        if($current_chromosome_name) {
-            my $current_chromosome_file_name = File::Spec->catfile($output_directory, $current_chromosome_name . '.bases');
-            $self->error_message('Name: '.$current_chromosome_name.' from header line: '.$name_line.' is not unique, check parsing.') 
-                if -e $current_chromosome_file_name;
-            $$current_chromosome_fh_ref = Genome::Utility::FileSystem->open_file_for_writing($current_chromosome_file_name);
-            $self->status_message('...Generating ' . $current_chromosome_name . '.bases');
-        } else {
-            #Skipping unknown chromosome--will be read past but not written to a .bases file
-        }
-    }
-
-    my $data_to_write;
-    my $index_of_next_chromosome_start = index($$buffer_ref, "\n>");
-    if($index_of_next_chromosome_start > 0) {
-        $data_to_write = substr($$buffer_ref, 0, $index_of_next_chromosome_start, '');
-    } else {
-        $data_to_write = $$buffer_ref;
-
-        #If we're ending on a "\n", the first character we haven't seen might be a <
-        #Act like we didn't look at the "\n" yet to be safe
-        if(substr($$buffer_ref, -1, -1) eq "\n") {
-            $$buffer_ref = "\n";
-        } else {
-            $$buffer_ref = '';
-        }
-    }
-
-    $data_to_write =~ s/\n//g;
-    if($$current_chromosome_fh_ref and length($data_to_write) > 0) {
-        $$current_chromosome_fh_ref->print($data_to_write);
-    }
-
-    return 1;
-}
-
-sub _parse_chromosome_name {
-    my $self = shift;
-    my $name_line = shift;
-
-    if ( $name_line =~ /^\n>\s*(\w+)\s*$/ ||
-            $name_line =~ /^\n>\s*gi\|.*chromosome\s+([^[:space:][:punct:]]+)/i ||
-            $name_line =~ /^\n>\s*(\S+)/ ) {
-            #$name_line =~ /^\n>\s*([^[:space:][:punct:]]+).*$/ ) {
-            #This line will mess up NT_xxxxx chromosomes
-        my $chromosome_name = $1;
-        return $chromosome_name;
-    } else {
-        if (length($name_line) > 1024) {
-            $name_line = substr($name_line, 0, 1024);
-            $name_line .= '...';
-        }
-        $self->warning_message("Failed to parse the chromosome name from: $name_line.");
-        return;
-    }
+    $file->close;
+    $fafh->close;
 }
 
 1;
