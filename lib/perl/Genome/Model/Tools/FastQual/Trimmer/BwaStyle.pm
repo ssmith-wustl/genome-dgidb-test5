@@ -49,7 +49,7 @@ sub create {
     }
     my $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
         trim_qual_level => $self->trim_qual_level,
-        qual_type => $self->type,
+        qual_type => $self->type_in,
     );
     unless ( $trimmer ) {
         $self->error_message("Can't create BWA trimmer.");

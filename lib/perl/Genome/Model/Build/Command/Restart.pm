@@ -9,14 +9,14 @@ class Genome::Model::Build::Command::Restart {
     is => 'Genome::Model::Build::Command::Base',
     has => [
         lsf_queue => {
-            default_value => 'apipe',
+            default_value => 'workflow',
             is_optional => 1,
             doc => 'Queue to restart the master job in (events stay in their original queue)'
         },
         restart => {
             is => 'Boolean',
             is_optional => 1,
-            default_value => 1,
+            default_value => 0,
             doc => 'Restart with a new workflow, overrides the default of resuming an old workflow'
         }
     ]

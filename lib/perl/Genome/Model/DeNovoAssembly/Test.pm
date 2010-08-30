@@ -22,24 +22,29 @@ sub processing_profile_params_for_assembler_and_platform {
     Carp::confess "No assembler name given to create mock processing profile" unless $assembler_name;
     Carp::confess("Unknown params to get mock processing profile\n".Dumper(\%params)) if %params;
 
-    my %assembler_sequencing_paltorm_params = (
+    #TODO make params trim specific too? eg, soap_solexa_bwa_trim
+    my %assembler_sequencing_platform_params = (
         velvet_solexa =>  { 
             coverage => 0.5,#25000,
             assembler_version => '0.7.57-64',
             assembler_params => '-hash_sizes 31 33 35',
-            read_trimmer_name => 'by_length',
-            read_trimmer_params => '-trim_length 10',
+            read_processor => 'trimmer by-length -trim-length 10',
+        },
+        soap_solexa => {
+            assembler_version => '1.04',
+            assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
+            read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length --filter-length 35',
         },
         newbler_454 => {
         },
     );
 
-    my $specific_params = $assembler_sequencing_paltorm_params{ $assembler_name.'_'.$sequencing_platform };
+    my $specific_params = $assembler_sequencing_platform_params{ $assembler_name.'_'.$sequencing_platform };
     unless ( $specific_params ) {
         Carp::confess "Invalid assembler ($assembler_name) and sequencing platform ($sequencing_platform) combination";
     }
 
-    $specific_params->{name} = 'De Novo Assembly Test';
+    $specific_params->{name} = 'De Novo Assembly ' . ucfirst $assembler_name . ' Test';
     $specific_params->{sequencing_platform} = $sequencing_platform;
     $specific_params->{assembler_name} = $assembler_name;
     
@@ -59,26 +64,11 @@ sub get_mock_processing_profile {
     Genome::Utility::TestBase->mock_methods(
         $pp,
         (qw/ 
-            _name_for_operation
-
-            _class_for_operation
             class_for_assembler
-            class_for_read_filter
-            class_for_read_trimmer
-
-            _params_as_hash_for_operation
             assembler_params_as_hash
-            read_trimmer_params_as_hash
-            read_filter_params_as_hash
-            
-            _object_for_operation
-            create_read_filter
-            create_read_trimmer
-            
             _validate_assembler_and_params
-            _validate_operation_and_params
-            _validate_read_filter_and_params
-            _validate_read_trimmer_and_params
+
+            _validate_read_processor
             
             status_message
             /),
@@ -175,7 +165,7 @@ sub get_mock_build {
     my ($self, %params) = @_;
 
     my $model = delete $params{model};
-    Carp::confess "No de noe novo model given to create mock build" unless $model;
+    Carp::confess "No de novo model given to create mock build" unless $model;
     my $use_example_directory = delete $params{use_example_directory};
     Carp::confess("Unknown params to get mock build:\n".Dumper(\%params)) if %params;
     
@@ -192,23 +182,40 @@ sub get_mock_build {
 
     $build->mock('instrument_data', sub{ return $model->instrument_data; });
 
-    Genome::Utility::TestBase->mock_methods(
-        $build,
-        (qw/
-            description
+    my @build_methods_to_mock = (qw/
+        status_message description
 
-            interesting_metric_names
-            calculate_metrics
-            set_metrics
-            calculate_reads_attempted
-            calculate_average_insert_size
+        interesting_metric_names
+        calculate_metrics
+        set_metrics
+        calculate_reads_attempted
+        calculate_average_insert_size
 
-            genome_size
-            calculate_base_limit_from_coverage
-            processed_reads_count
+        genome_size
+        calculate_base_limit_from_coverage
+        processed_reads_count
 
-            edit_dir
-            
+        assembler_input_files
+
+        edit_dir
+        gap_file
+        contigs_bases_file
+        contigs_quals_file
+        read_info_file
+        reads_placed_file
+        supercontigs_agp_file
+        supercontigs_fasta_file
+        stats_file
+    /);
+    my %build_specific_methods_to_mock = (
+        newbler => [qw//],
+        soap => [qw/
+            end_one_fastq_file end_two_fastq_file 
+            soap_config_file
+            soap_output_dir_and_file_prefix
+            soap_scaffold_sequence_file 
+        /],
+        velvet => [qw/
             collated_fastq_file
             assembly_afg_file
             sequences_file
@@ -218,23 +225,18 @@ sub get_mock_build {
             contigs_fasta_file
             sequences_file
             ace_file
-            gap_file
-            contigs_bases_file
-            contigs_quals_file
-            read_info_file
-            reads_placed_file
-            supercontigs_agp_file
-            supercontigs_fasta_file
-            stats_file
-            status_message
-
-            /)
+        /],
     );
+    Genome::Utility::TestBase->mock_methods(
+        $build,
+        @build_methods_to_mock,
+        @{$build_specific_methods_to_mock{$build->processing_profile->assembler_name}},
+    ) or die;
 
     Genome::Utility::TestBase->mock_methods(
         $build,
         map { join('_', split(m#\s#)) } $build->interesting_metric_names,
-    );
+    ) or die;
 
     return $build;
 }
@@ -245,9 +247,11 @@ sub base_directory {
 }
 
 my %dirs_versions = (
+    soap_solexa => '0.1',
     velvet_solexa => '0.2',
     newbler_454 => '0.1',
 );
+
 sub example_directory_for_model {
     my ($self, $model) = @_;
 
@@ -255,6 +259,7 @@ sub example_directory_for_model {
     
     my $assembler_platform = $model->assembler_name.'_'.$model->sequencing_platform;
     my $dir = $self->base_directory.'/'.$assembler_platform.'_build_v'.$dirs_versions{$assembler_platform};
+
     Carp::confess("Example directory ($dir) for de novo assembly model does not exist.") unless -d $dir;
     
     return $dir;
@@ -298,6 +303,32 @@ sub example_stats_file_for_model {
     my $dir = $self->example_directory_for_model($model);
 
     return $dir.'/edit_dir/stats.txt';
+}
+
+#soap specific files
+
+sub example_end_one_fastq_file_for_model {
+    my ($self, $model) = @_;
+
+    my $dir = $self->example_directory_for_model($model);
+
+    return $dir.'/1_fastq';
+}
+
+sub example_end_two_fastq_file_for_model {
+    my ($self, $model) = @_;
+
+    my $dir = $self->example_directory_for_model($model);
+
+    return $dir.'/2_fastq';
+}
+
+sub example_scaffold_sequence_file_for_model {
+    my ($self, $model) = @_;
+
+    my $dir = $self->example_directory_for_model($model);
+
+    return $dir.'/Assembly.scafSeq';
 }
 
 #<>#

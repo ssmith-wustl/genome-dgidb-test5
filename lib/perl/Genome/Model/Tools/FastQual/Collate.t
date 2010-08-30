@@ -23,25 +23,26 @@ my $out_fastq = $tmp_dir.'/out.fastq';
 
 # fails
 my $failed_collate = Genome::Model::Tools::FastQual::Collate->execute(
-    input_files => [ $forward_fastq ],
-    output_files => [ $out_fastq ],
+    input => [ $forward_fastq ],
+    output => [ $out_fastq ],
 );
 ok(!$failed_collate->result, 'execute failed w/ only one input file');
 $failed_collate = Genome::Model::Tools::FastQual::Collate->execute(
-    input_files => [ $forward_fastq, $reverse_fastq],
-    output_files => [ $out_fastq, $out_fastq ],
+    input => [ $forward_fastq, $reverse_fastq],
+    output => [ $out_fastq, $out_fastq ],
 );
 ok(!$failed_collate->result, 'execute failed w/ 2 output file');
 
 # ok
 my $collate = Genome::Model::Tools::FastQual::Collate->create(
-    input_files => [ $forward_fastq, $reverse_fastq ],
-    output_files => [ $out_fastq ],
+    input => [ $forward_fastq, $reverse_fastq ],
+    output => [ $out_fastq ],
 );
 ok($collate, 'create');
 ok($collate->execute, 'execute');
 is(File::Compare::compare($collated_fastq, $out_fastq), 0, 'collated as expected');
 
+#print "$tmp_dir\n"; <STDIN>;
 done_testing();
 exit;
 

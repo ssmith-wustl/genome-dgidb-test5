@@ -476,6 +476,7 @@ sub get_frequencies {
         my $RsDir = $model->data_directory."/ImportedVariations/frequencies";
     }
     my $rsdb = Bio::DB::Fasta->new($RsDir);
+    chmod(0666, $RsDir . "/directory.index"); #change the index permissions so the next guy can rebuild it
     my $freq = $rsdb->seq($rs_id, 1 => 6000);
 
     return unless $freq;

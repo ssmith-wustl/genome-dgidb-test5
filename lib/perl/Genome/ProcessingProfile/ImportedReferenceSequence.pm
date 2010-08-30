@@ -84,6 +84,24 @@ sub _execute_build {
         return;
     }
 
+    $self->status_message("Doing bowtie indexing.");
+    my $bowtie_file_stem = File::Spec->catfile($output_directory, 'all_sequences.bowtie');
+
+    my $bowtie_path = Genome::Model::Tools::Bowtie->path_for_bowtie_version(Genome::Model::Tools::Bowtie->default_version); 
+
+    my $bowtie_cmd = sprintf('%s-build %s %s', $bowtie_path, $fasta_file_name, $bowtie_file_stem);
+    $rv = Genome::Utility::FileSystem->shellcmd(
+        cmd => $bowtie_cmd,
+        input_files => [$fasta_file_name],
+        output_files => ["$bowtie_file_stem.1.ebwt","$bowtie_file_stem.2.ebwt","$bowtie_file_stem.3.ebwt","$bowtie_file_stem.4.ebwt","$bowtie_file_stem.rev.1.ebwt","$bowtie_file_stem.rev.2.ebwt"],    #hardcoding expected names
+    );
+
+    unless($rv) {
+        $self->error_message('bowtie-build failed.');
+        return;
+    }
+
+
     $self->status_message("Doing maq fasta2bfa.");
     my $bfa_file_name = File::Spec->catfile($output_directory, 'all_sequences.bfa');
 
@@ -116,6 +134,7 @@ sub _execute_build {
         return;
     }
 
+
     $self->status_message('Promoting files to final location.');
     for my $staged_file (glob($output_directory . '/*')) {
         my ($vol, $dir, $file_base) = File::Spec->splitpath($staged_file);
@@ -131,6 +150,27 @@ sub _execute_build {
             $self->error_message("Reallocation failed.");
             return;
         }
+    }
+    #make symlinks so existence checks pass later on
+    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie")) {
+        $self->error_message("Unable to symlink all_sequences.bowtie to all_sequences.fa");
+        return;
+    }
+
+    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie.fa")) {
+        $self->error_message("Unable to symlink all_sequences.bowtie.fa to all_sequences.fa");
+        return;
+    }
+
+    #link in the samtools indexes
+    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fai")) {
+        $self->error_message("Unable to symlink all_sequences.bowtie.fai to all_sequences.fa.fai");
+        return;
+    }
+
+    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fa.fai")) {
+        $self->error_message("Unable to symlink all_sequences.bowtie.fa.fai to all_sequences.fa.fai");
+        return;
     }
 
     $self->status_message("Done.");

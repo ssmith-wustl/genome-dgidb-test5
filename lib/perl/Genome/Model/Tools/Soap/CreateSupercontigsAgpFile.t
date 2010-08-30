@@ -1,0 +1,38 @@
+#!/gsc/bin/perl
+
+use strict;
+use warnings;
+
+use above "Genome";
+use Test::More;
+require File::Compare;
+
+use_ok ('Genome::Model::Tools::Soap::CreateSupercontigsAgpFile') or die;
+
+#check test data files
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/CreateSupercontigsAgpFile';
+ok(-d $data_dir, "Data dir exists") or die;
+ok(-s $data_dir."/TEST.scafSeq", "Data dir test file exists") or die;
+ok(-s $data_dir."/supercontigs.agp", "Data dir supercontigs.agp file exists") or die;
+
+#create tmp test data dir
+my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+ok(-d $temp_dir, "Temp test dir created") or die;
+mkdir $temp_dir.'/edit_dir';
+ok(-d $temp_dir.'/edit_dir', "Created temp test dir edit_dir");
+
+#create, execute command
+my $create = Genome::Model::Tools::Soap::CreateSupercontigsAgpFile->create(
+    scaffold_fasta_file => $data_dir.'/TEST.scafSeq',
+    assembly_directory => $temp_dir,
+    );
+ok($create, "Created gmt soap create-supercontigs-agp-file") or die;
+ok(($create->execute) == 1, "Executed command") or die;
+ok(-s $temp_dir.'/edit_dir/supercontigs.agp', "Created supercontigs.agp") or die;
+
+#compare output files
+ok(File::Compare::compare($data_dir.'/supercontigs.agp', $temp_dir.'/edit_dir/supercontigs.agp') ==0, "Output files match");
+
+done_testing();
+
+exit;

@@ -28,8 +28,8 @@ my $out_fastq = $tmp_dir.'/out.fastq';
 
 # Ok
 my $trimmer = Genome::Model::Tools::FastQual::Trimmer::ByLength->create(
-    input_files  => [ $in_fastq ],
-    output_files => [ $out_fastq ],
+    input  => [ $in_fastq ],
+    output => [ $out_fastq ],
     trim_length => 10,
 );
 ok($trimmer, 'create trimmer');
