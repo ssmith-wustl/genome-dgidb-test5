@@ -43,6 +43,7 @@ sub execute {
     }
     while (my $line = $bed_fh->getline) {
         chomp($line);
+        if ($line =~ /^#/) { next; }
         my ($chr,$start,$stop,$name) = split("\t",$line);
         $start += 1;
         my $seq = $build->sequence($chr,$start,$stop);
