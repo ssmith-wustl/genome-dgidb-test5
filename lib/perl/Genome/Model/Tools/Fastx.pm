@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '0.0.7';
+my $DEFAULT = '0.0.13';
 
 class Genome::Model::Tools::Fastx {
     is => 'Command',
@@ -42,6 +42,8 @@ EOS
 
 
 my %FASTX_VERSIONS = (
+    '0.0.13' => '/gsc/pkg/bio/fastx/fastx_toolkit-0.0.13/bin',
+    '0.0.10' => '/gsc/pkg/bio/fastx/fastx_toolkit-0.0.10/bin',
     '0.0.7' => '/gsc/pkg/bio/fastx/fastx_toolkit-0.0.7/bin',
 );
 
