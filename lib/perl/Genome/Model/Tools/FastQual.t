@@ -6,49 +6,71 @@ use warnings;
 use above 'Genome';
 
 use Data::Dumper 'Dumper';
-use IO::File;
+require File::Compare;
+require File::Temp;
 use Test::More;
 
 use_ok('Genome::Model::Tools::FastQual') or die;
 
+# Fake class to test cuz this class is abstract
 class Genome::Model::Tools::FastQual::Tester {
     is => 'Genome::Model::Tools::FastQual',
 };
 
-# Create w/ in fastq file to PIPE
+# Files
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
+my $example_out_file = $dir.'/fast_qual.example.fastq';
+ok(-s $example_out_file, 'example out file exists');
+my $example_metrics_file = $dir.'/fast_qual.example.metrics';
+ok(-s $example_metrics_file, 'example metrics file exists');
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+my $out_file = $tmpdir.'/out.fastq';
+my $metrics_file = $tmpdir.'/metrics.txt';
+
+# Create
 my $fastq_tester = Genome::Model::Tools::FastQual::Tester->create(
-    input_files => [ 
-        "/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/in.fastq" 
-    ],
-    output_files => [ 
-        # ok, not actually gonna write to this file
-        "/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/out.fastq" 
-    ],
+    input => [ "/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/in.fastq" ],
+    output => [ $out_file ],
+    metrics_file => $metrics_file,
 );
 ok($fastq_tester, 'create w/ fastq files');
-my $fastq_reader = $fastq_tester->_open_reader;
-ok($fastq_reader, 'opened reader for fastq files') or die;
-isa_ok($fastq_reader, 'Genome::Model::Tools::FastQual::FastqSetReader');
-is($fastq_tester->type, 'sanger', 'type is sanger');
-my $fastq_writer = $fastq_tester->_open_writer;
-ok($fastq_writer, 'opened writer for fastq files') or die;
-isa_ok($fastq_writer, 'Genome::Model::Tools::FastQual::FastqSetWriter');
+
+sub Genome::Model::Tools::FastQual::Tester::execute {
+    my $self = shift;
+
+    # test opening readers /writers
+    my $fastq_reader = $fastq_tester->_open_reader;
+    ok($fastq_reader, 'opened reader for fastq files') or die;
+    isa_ok($fastq_reader, 'Genome::Model::Tools::FastQual::FastqSetReader');
+    is($fastq_tester->type_in, 'sanger', 'type in is sanger');
+    my $fastq_writer = $fastq_tester->_open_writer;
+    ok($fastq_writer, 'opened writer for fastq files') or die;
+    isa_ok($fastq_writer, 'Genome::Model::Tools::FastQual::FastqSetWriter');
+
+    # write one fastq
+    $fastq_writer->write( $fastq_reader->next );
+
+    return 1;
+}
+ok($fastq_tester->execute, 'execute');
+is(File::Compare::compare($out_file, $example_out_file), 0, 'output file ok');
+is(File::Compare::compare($metrics_file, $example_metrics_file), 0, 'metrics file ok');
 
 # Test pipes
 my $pipe_tester = Genome::Model::Tools::FastQual::Tester->create(
-    input_files => [qw/ PIPE /],
-    output_files => [qw/ PIPE /], 
+    input => [qw/ PIPE /],
+    output => [qw/ PIPE /], 
 );
 ok($pipe_tester, 'create w/ pipes');
 #my $pipe_writer = $pipe_tester->_open_writer;
 #ok($pipe_writer, 'opened writer for pipes') or die;
 #isa_ok($pipe_writer, 'Genome::Utility::IO::StdoutRefWriter');
-my $pipe_reader;
+my $rv;
 eval{
-    $pipe_reader = $pipe_tester->_open_reader;
+    $rv = $pipe_tester->_open_reader;
 };
 diag("\n".$@);
-ok((!$pipe_reader && $@ =~ /No pipe meta info/), 'failed to open reader b/c no meta info');
+ok((!$rv && $@ =~ /No pipe meta info/), 'failed to open reader b/c no meta info');
 
 done_testing();
 exit;

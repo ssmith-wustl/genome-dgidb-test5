@@ -137,7 +137,6 @@ my $soap_pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_soap_para
 ok($soap_pp, "Created DNA pp") or die;
 #TODO - test soap operation params when/if used
 
-
 # Stages
 my @stages = $pp->stages;
 is_deeply(\@stages, [qw/ assemble /], 'Stages');
@@ -153,10 +152,8 @@ is_deeply(
     'Stage classes'
 );
 
-# Assembler, Read Trimmer and Read Filter classes
+# Assembler
 is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
-#is($pp->class_for_read_filter, '??');
-is($pp->class_for_read_trimmer, 'Genome::Model::Tools::FastQual::Trimmer::ByLength', 'Read trimmer class');
 
 done_testing();
 exit;

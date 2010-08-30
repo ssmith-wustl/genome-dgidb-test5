@@ -21,10 +21,10 @@ HELP
 sub execute {
     my $self = shift;
 
-    my $reader = $self->_open_reader
-        or return;
-    my $writer = $self->_open_writer
-        or return;
+    my $reader = $self->_open_reader;
+    return unless $reader;
+    my $writer = $self->_open_writer;
+    return unless $writer;
 
     while ( my $seqs = $reader->next ) {
         $self->_filter($seqs) or next;

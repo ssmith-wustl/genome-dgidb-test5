@@ -19,6 +19,7 @@ sub create {
     unless ( $fh ) {
         Carp::Confess("Can't open fastq file.");
     }
+    $fh->autoflush(1);
     $self->_fh($fh);
     
     return $self;
@@ -38,12 +39,6 @@ sub write {
     );
 
     return 1;
-}
-
-sub flush {
-    my $self = shift;
-
-    return $self->_fh->flush;
 }
 
 1;

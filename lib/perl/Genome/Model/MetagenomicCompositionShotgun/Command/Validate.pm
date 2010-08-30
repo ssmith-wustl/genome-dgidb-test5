@@ -143,15 +143,15 @@ sub header_check {
 sub qc_check {
     my $self = shift;
     my @files = @_;
-    my $flag = 0;
+    my $flag = $self->test_to_bit('QC');
     for my $file (@files) {
         my $msg = "Checking for $file... ";
         if (-s $file) {
             $msg .= "PASS";
-            $flag = $self->test_to_bit('QC');
         }
         else {
             $msg .= "FAIL (empty or does not exist!)";
+            $flag = 0;
         }
         $self->status_message($msg) if ($self->verbose || $msg =~ /FAIL/);
     }
@@ -184,11 +184,11 @@ sub metagenomic_check {
             }
         }
         else {
-            $msg .= "FAIL (empty file)";
+            $msg .= "FAIL (generated pre-header unfix)";
         }
     }
     else {
-        $msg .= "FAIL (generated pre-header unfix)";
+        $msg .= "FAIL (empty file)";
     }
     $self->status_message($msg) if ($self->verbose || $msg =~ /FAIL/);
 

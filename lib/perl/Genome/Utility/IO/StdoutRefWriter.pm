@@ -7,9 +7,14 @@ require Carp;
 use Data::Dumper 'Dumper';
 require Storable;
 
+my $id = 0;
 sub create {
-    my ($class, %params) = @_;
-    return bless \%params, $class;
+    my $class = shift;
+    return bless { id => ++$id }, $class;
+}
+
+sub id {
+    return $_[0]->{id};
 }
 
 sub write {
