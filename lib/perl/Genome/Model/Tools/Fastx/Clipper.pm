@@ -13,42 +13,54 @@ class Genome::Model::Tools::Fastx::Clipper {
         fastx_tool => { value => 'fastx_clipper' },
     },
     has_input => [
-        input => {
-            is => 'Text',
+        input_file => {
             doc => 'The input FASTQ/A file to collapse.(This works on fastq but I get errors about the quality string)',
         },
-        output => {
-            is => 'Text',
+        output_directory => {
+            is_optional => 1,
+        },
+        params => { },
+    ],
+    has_output => [
+        output_file => {
             doc => 'The output FASTQ/A file containing collapsed sequence.',
             is_optional => 1,
         },
-        params => {
-            is => 'Text',
-        }
+        log_file => {
+            is_optional => 1,
+        },
     ],
 };
 
 sub execute {
     my $self = shift;
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->input)) {
-        $self->error_message('Failed to validate fastq file for read access '. $self->input .":  $!");
+    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->input_file)) {
+        $self->error_message('Failed to validate fastq file for read access '. $self->input_file .":  $!");
         die($self->error_message);
     }
     my @suffix = qw/fq fa fastq fasta fna txt/;
-    my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->input,@suffix);
+    my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->input_file,@suffix);
     $basename =~ s/\.$//;
-    unless ($self->output) {
+    unless ($self->output_file) {
         $self->output_file($dirname .'/'. $basename .'_clipped.'. $suffix);
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output)) {
-        $self->error_message('Failed to validate output file for write access '. $self->output .":  $!");
+    unless ($self->log_file) {
+        $self->log_file($dirname .'/'. $basename .'_clipped.log');
+    }
+    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output_file)) {
+        $self->error_message('Failed to validate output file for write access '. $self->output_file .":  $!");
         die($self->error_message);
     }
-    my $cmd = $self->fastx_tool_path .' '. $self->params .' -i '. $self->input .' -o '. $self->output;
+    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->log_file)) {
+        $self->error_message('Failed to validate output file for write access '. $self->log_file .":  $!");
+        die($self->error_message);
+    } 
+    my $params = $self->params . ' -v ';
+    my $cmd = $self->fastx_tool_path .' '. $params .' -i '. $self->input_file .' -o '. $self->output_file .' > '. $self->log_file;
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
-        input_files => [$self->input],
-        output_files => [$self->output],
+        input_files => [$self->input_file],
+        output_files => [$self->output_file,$self->log_file],
     );
     return 1;
 }

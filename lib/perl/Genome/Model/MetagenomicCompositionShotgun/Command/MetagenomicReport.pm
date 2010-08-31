@@ -107,7 +107,7 @@ sub execute {
 
 
     my $merged_bam = $self->report_dir."/metagenomic_alignment.combined.bam";
-    if (-e $merged_bam and -e $merged_bam.".OK" and 0){  #turning off skip to reproduce data
+    if (-e $merged_bam and -e $merged_bam.".OK"){  #turning off skip to reproduce data
         $self->status_message("metagenomic merged bam already produced, skipping");
     }else{
         my $rv;
@@ -135,7 +135,7 @@ sub execute {
     }
 
     my $sorted_bam = $self->report_dir."/metagenomic_alignment.combined.sorted.bam";
-    if (-e $sorted_bam and -e $sorted_bam.".OK" and 0){  #turning off skip to reproduce data
+    if (-e $sorted_bam and -e $sorted_bam.".OK"){  #turning off skip to reproduce data
         $self->status_message("sorted metagenomic merged bam already produced, skipping");
     }else{
         my $rv;
@@ -161,38 +161,38 @@ sub execute {
         }
 
         system ("touch $sorted_bam.OK");
-    }
 
-    # convert original bam to sam
-    my $sorted_frag_filtered_sam = $self->report_dir . "/metagenomic_alignment.combined.sorted.frag_filtered.sam";
-    my $sorted_frag_filtered_bam = $self->report_dir . "/metagenomic_alignment.combined.sorted.frag_filtered.bam";
-    my $sorted_frag_filtered_sam_fh = IO::File->new(">$sorted_frag_filtered_sam");
-    my $sorted_bam_fh = IO::File->new("samtools view -h $sorted_bam |");
-    while (my $line = $sorted_bam_fh->getline) {
-        unless ($line =~ /^\@/) {
-            my $flag = (split("\t", $line))[1];
-            next unless ($flag & 0x0001);
+        # convert original bam to sam
+        my $sorted_frag_filtered_sam = $self->report_dir . "/metagenomic_alignment.combined.sorted.frag_filtered.sam";
+        my $sorted_frag_filtered_bam = $self->report_dir . "/metagenomic_alignment.combined.sorted.frag_filtered.bam";
+        my $sorted_frag_filtered_sam_fh = IO::File->new(">$sorted_frag_filtered_sam");
+        my $sorted_bam_fh = IO::File->new("samtools view -h $sorted_bam |");
+        while (my $line = $sorted_bam_fh->getline) {
+            unless ($line =~ /^\@/) {
+                my $flag = (split("\t", $line))[1];
+                next unless ($flag & 0x0001);
+            }
+            $sorted_frag_filtered_sam_fh->print($line);
         }
-        $sorted_frag_filtered_sam_fh->print($line);
+        die "Failed to remove original file ($sorted_bam)" unless(unlink($sorted_bam));
+
+        # convert sam to bam after filtering fragment reads
+        my $sam_to_bam_cmd = "samtools view -b -S $sorted_frag_filtered_sam -o $sorted_frag_filtered_bam";
+        my $sam_to_bam = Genome::Utility::FileSystem->shellcmd(
+            cmd => $sam_to_bam_cmd,
+            input_files => [$sorted_frag_filtered_sam],
+            output_files => [$sorted_frag_filtered_bam],
+        );
+        unless($sam_to_bam) {
+            $self->error_message("Failed to convert file to BAM, ($sorted_frag_filtered_sam -> $sorted_frag_filtered_bam)");
+            die $self->error_message;
+        }
+        die "Failed to remove filtered sam file ($sorted_frag_filtered_sam)" unless(unlink($sorted_frag_filtered_sam));
+
+        # move newly created bam back into original bam position
+        die "Failed to move filtered file ($sorted_frag_filtered_bam)" unless(rename($sorted_frag_filtered_bam, $sorted_bam));
+
     }
-    die "Failed to remove original file ($sorted_bam)" unless(unlink($sorted_bam));
-
-    # convert sam to bam after filtering fragment reads
-    my $sam_to_bam_cmd = "samtools view -b -S $sorted_frag_filtered_sam -o $sorted_frag_filtered_bam";
-    my $sam_to_bam = Genome::Utility::FileSystem->shellcmd(
-        cmd => $sam_to_bam_cmd,
-        input_files => [$sorted_frag_filtered_sam],
-        output_files => [$sorted_frag_filtered_bam],
-    );
-    unless($sam_to_bam) {
-        $self->error_message("Failed to convert file to BAM, ($sorted_frag_filtered_sam -> $sorted_frag_filtered_bam)");
-        die $self->error_message;
-    }
-    die "Failed to remove filtered sam file ($sorted_frag_filtered_sam)" unless(unlink($sorted_frag_filtered_sam));
-
-    # move newly created bam back into original bam position
-    die "Failed to move filtered file ($sorted_frag_filtered_bam)" unless(rename($sorted_frag_filtered_bam, $sorted_bam));
-
     $self->status_message("Finished sort and merge, compiling metagenomic reports");
 
 
@@ -242,7 +242,7 @@ sub execute {
             $ignore_unmapped++;
             next;
         }
-        if ($bitflag & 0x0001){
+        unless ($bitflag & 0x0001){
             $ignore_singleton++;
             next;
         }
@@ -284,7 +284,8 @@ sub execute {
                 my $genus=$taxonomy->{$ref_id}->{genus} || '';
                 $genus_counts_hash{$genus}+=$ref_counts_hash{$ref_id};
                 my $hmp_flag=$taxonomy->{$ref_id}->{hmp}|| '';	
-                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t$phyla\t$hmp_flag\n";
+                my $order=$taxonomy->{$ref_id}->{order} || '';
+                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t$phyla\t$genus\t$order\t$hmp_flag\n";
             }elsif ($ref_id =~ /^VIRL/){ #produce reports for viral taxonomy if available
                 my ($gi) = $ref_id =~/^VIRL_(\d+)$/;
                 if ($viral_taxonomy->{$gi}){
@@ -296,12 +297,12 @@ sub execute {
                     $viral_family_counts_hash{$family}+=$ref_counts_hash{$ref_id};
                     my $subfamily = $viral_taxonomy->{$gi}->{subfamily} || '';
                     $viral_subfamily_counts_hash{$subfamily}+=$ref_counts_hash{$ref_id};
-                    print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t\t\n";
+                    print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t\t\t\t\n";
                 }else{
-                    print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\t\n";
+                    print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\t\t\t\n";
                 }
             }else{
-                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\t\n";
+                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\t\t\t\n";
             }
         }
     };
@@ -322,30 +323,39 @@ sub execute {
     $self->_write_count_and_close($viral_family_output_file, "Viral Family", \%viral_family_counts_hash);
     $self->_write_count_and_close($viral_subfamily_output_file, "Viral Subfamily", \%viral_subfamily_counts_hash);
 
-    
+
     $self->status_message("classification summary reports and reference hit report finished");
 
     $self->status_message("running refcov on combined metagenomic alignment bam");
 
-    my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
-        working_directory => $self->report_dir,
-        aligned_bam_file => $sorted_bam,
-        regions_file => $self->regions_file,
-    );
+    my $refcov_output = $self->report_dir.'/report_combined_refcov_regions_file.regions.txt';
+    if (-e $refcov_output and -e "$refcov_output.ok"){
+        $self->status_message("Refcov already complete, shortcutting");
+    }else{
+        my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
+            working_directory => $self->report_dir,
+            aligned_bam_file => $sorted_bam,
+            regions_file => $self->regions_file,
+        );
 
-    $self->status_message("Executing RefCov command ". $refcov->command_name);
-    my $rv;
-    eval{$rv=$refcov->execute};
-    if($@ or !$rv){
-        $self->error_message("failed to execute refcov: $@");
-        die $self->error_message;
+        $self->status_message("Executing RefCov command ". $refcov->command_name);
+        my $rv;
+        eval{$rv=$refcov->execute};
+        if($@ or !$rv){
+            $self->error_message("failed to execute refcov: $@");
+            die $self->error_message;
+        }
+        unless ($refcov_output eq $refcov->report_file){
+            $self->error_message("refcov report file and expected output path differ, dying!");
+            die;
+        }
+        $refcov_output = $refcov->report_file;
+        unless (-s $refcov_output){
+            $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
+            die $self->error_message;
+        }
+        $self->status_message("refcov completed successfully, stats file: $refcov_output");
     }
-    my $refcov_output = $refcov->report_file;
-    unless (-s $refcov_output){
-        $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
-        die $self->error_message;
-    }
-    $self->status_message("refcov completed successfully, stats file: $refcov_output");
 
     $self->status_message("Combining refcov results with taxonomy reports for final summary file");
     ###############################################################################################
@@ -373,7 +383,9 @@ sub execute {
             $ref_data->{$ref}->{reads}=$array[1];
             $ref_data->{$ref}->{species}=$array[2];
             $ref_data->{$ref}->{phyla}=$array[3];
-            $ref_data->{$ref}->{hmp}=$array[4];
+            $ref_data->{$ref}->{genus}=$array[4];
+            $ref_data->{$ref}->{order}=$array[5];
+            $ref_data->{$ref}->{hmp}=$array[6];
         }
     }
     $read_counts_fh->close;
@@ -417,29 +429,31 @@ sub execute {
     }
     $refcov_fh->close;
 
-    print $summary_report_fh "Reference Name\tPhyla\tHMP flag\tDepth\tBreadth\tTotal reference bases\tBases not covered\t#Reads\n";
+    print $summary_report_fh "Reference Name\tPhyla\tGenus\tOrder\tHMP flag\tDepth\tBreadth\tTotal reference bases\tBases not covered\t#Reads\n";
     #foreach my $s (keys%{$data}){
     for my $s (sort {$a cmp $b} keys%{$data}){
         my $desc=$header_hash{$s};
         $desc ||= $s;
         next if $desc =~/^gi$/;
-        my $phy;
-        my $hmp;
-        my $reads;
+        my ($phy, $hmp, $reads, $gen, $ord);
         if ( $ref_data->{$s}->{reads}){
             $phy=$ref_data->{$s}->{phyla};
+            $gen=$ref_data->{$s}->{genus};
+            $ord=$ref_data->{$s}->{order};
             $hmp=$ref_data->{$s}->{hmp};
             $reads=$ref_data->{$s}->{reads};
         }
         $phy ||= '-';
         $hmp ||= 'N';
         $reads ||= 0;
+        $ord ||= '-';
+        $gen ||= '-';
 
         my $new_avg_cov=$data->{$s}->{cov}/$data->{$s}->{tot_bp};
         my $new_avg_breadth=$data->{$s}->{cov_bp}*100/$data->{$s}->{tot_bp};
         my $total_bp = $data->{$s}->{tot_bp};
         my $missing_bp = $data->{$s}->{missing_bp};
-        print $summary_report_fh "$desc\t$phy\t$hmp\t$new_avg_cov\t$new_avg_breadth\t$total_bp\t$missing_bp\t$reads\n";
+        print $summary_report_fh "$desc\t$phy\t$gen\t$ord\t$hmp\t$new_avg_cov\t$new_avg_breadth\t$total_bp\t$missing_bp\t$reads\n";
     }
 
     ###############################################################################################
@@ -447,7 +461,7 @@ sub execute {
     $self->status_message("metagenomic report successfully completed");
 
     system("touch ".$self->report_dir."/FINISHED");
-    
+
     return 1;
 }
 
