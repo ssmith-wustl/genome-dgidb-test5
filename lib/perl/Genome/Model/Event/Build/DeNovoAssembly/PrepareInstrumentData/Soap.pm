@@ -19,7 +19,7 @@ sub bsub_rusage {
     return "-R 'select[type==LINUX64 && tmp>20000] rusage[tmp=20000] span[hosts=1]'"
 }
 
-sub execute {
+sub _execute {
     my $self = shift;
 
     # Filters

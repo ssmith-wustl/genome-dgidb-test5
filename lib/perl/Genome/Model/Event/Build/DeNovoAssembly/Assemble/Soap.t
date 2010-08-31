@@ -14,7 +14,7 @@ unless (`uname -a` =~ /x86_64/){
 #    die 'Must run on a 64 bit machine';
 }
 
-use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap');
+use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
@@ -34,9 +34,21 @@ my $two_fastq = Genome::Model::DeNovoAssembly::Test->example_end_two_fastq_file_
 symlink($two_fastq, $build->end_two_fastq_file);
 ok(-s $build->end_two_fastq_file, "Linked 2_fastq_file");
 
-#create, run assemble
+# create
 my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap->create(build_id => $build->id);
 ok( $assemble, "Created soap assemble");
+
+# lsf params
+my $assembler_params = $build->processing_profile->assembler_params;
+# w/ cpus
+$build->processing_profile->assembler_params('-cpus 4');
+my $lsf_params = $assemble->bsub_rusage;
+is($lsf_params, "-n 4 -R 'select[type==LINUX64 && span[hosts=1] && mem>10000] rusage[mem=10000]' -M 10000000", 'lsf params w/ 4 cpus'); 
+$build->processing_profile->assembler_params($assembler_params);
+$lsf_params = $assemble->bsub_rusage;
+is($lsf_params, "-R 'select[type==LINUX64 && span[hosts=1] && mem>10000] rusage[mem=10000]' -M 10000000", 'lsf params w/o cpus'); 
+
+# execute
 ok( $assemble->execute, "Executed soap assemble");
 
 #check output files

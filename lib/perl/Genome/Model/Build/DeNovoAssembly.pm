@@ -250,64 +250,12 @@ sub calculate_average_insert_size {
 }
 
 #< Files / Dirs >#
-
-#soap specifc files
-sub end_one_fastq_file {
-    return $_[0]->data_directory.'/1_fastq';
-}
-
-sub end_two_fastq_file {
-    return $_[0]->data_directory.'/2_fastq';
-}
-
-sub soap_config_file {
-    return $_[0]->data_directory.'/config_file';
-}
-
-sub soap_output_dir_and_file_prefix {
-    return $_[0]->data_directory.'/Assembly';
-}
-
-sub soap_scaffold_sequence_file {
-    return $_[0]->data_directory.'/Assembly.scafSeq';
-}
-
-#velvet specific files
-sub collated_fastq_file {
-    return $_[0]->data_directory.'/collated.fastq';
-}
-
-sub assembly_afg_file {
-    return $_[0]->data_directory.'/velvet_asm.afg';
-}
-
-sub contigs_fasta_file {
-    return $_[0]->data_directory.'/contigs.fa';
-}
-
-sub sequences_file {
-    return $_[0]->data_directory.'/Sequences';
-}
-
-sub velvet_fastq_file {
-    return $_[0]->data_directory.'/velvet.fastq';
-}
-
-sub velvet_ace_file {
-    return $_[0]->data_directory.'/edit_dir/velvet_asm.ace';
-}
-
-#general post-assembly files
 sub edit_dir {
     return $_[0]->data_directory.'/edit_dir';
 }
 
 sub stats_file { 
     return $_[0]->edit_dir.'/stats.txt';
-}
-
-sub ace_file {
-    return $_[0]->edit_dir.'/velvet_asm.ace';
 }
 
 sub gap_file {
