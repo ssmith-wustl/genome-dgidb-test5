@@ -5,7 +5,10 @@
   <!-- full page display for a processing profile -->
 
   <xsl:template name="genome_processingprofile" match="object[./types[./isa[@type='Genome::ProcessingProfile']]]">
-    <xsl:comment>template: status/genome_taxon.xsl match: object[./types[./isa[@type='Genome::Taxon']]]</xsl:comment>
+    <xsl:comment>template: status/genome_taxon.xsl match: object[./types[./isa[@type='Genome::ProcessingProfile']]]</xsl:comment>
+
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Processing Profile:'" />
       <xsl:with-param name="display_name" select="aspect[@name='name']/value" />

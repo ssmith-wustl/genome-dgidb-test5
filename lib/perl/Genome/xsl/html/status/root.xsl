@@ -51,8 +51,12 @@
         <!-- jquery.masonry to arrange the object info boxes-->
         <script type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
 
+        <!-- jquery.hoverIntent - a better hover() function for jQuery -->
+        <script type="text/javascript" src="/res/js/pkg/jquery.hoverIntent.min.js"></script>
+
+
         <!-- jquery.spinner for easy creation of loading spinners -->
-        <script type="text/javascript" src="/res/js/pkg/spinner/jquery.spinner.js"></script>
+        <!-- <script type="text/javascript" src="/res/js/pkg/spinner/jquery.spinner.js"></script> -->
 
         <!-- jquery.dataTables for spiffy feature-laden lists -->
         <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
@@ -180,6 +184,52 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
 
   </xsl:template>
 
+  <!-- app control bar  -->
+  <xsl:template name="control_bar_app">
+    <xsl:comment>template: status/root.xsl name:control_bar_app</xsl:comment>
+
+    <div class="control_bar app rounded-bottom shadow">
+      <div class="control_bar_menu" id="bar_menu">
+        <xsl:call-template name="control_bar_menu"/>
+      </div>
+
+      <div class="control_bar_base" id="bar_base">&#160;</div>
+
+    </div>
+  </xsl:template>
+
+  <!-- view control bar  -->
+  <xsl:template name="control_bar_view">
+    <xsl:comment>template: status/root.xsl name:control_bar_view</xsl:comment>
+    <div class="control_bar view shadow">
+      <div class="control_bar_menu" id="bar_menu">
+        <xsl:call-template name="control_bar_menu"/>
+      </div>
+
+      <div class="control_bar_base" id="bar_base">&#160;</div>
+
+    </div>
+  </xsl:template>
+
+  <!-- application menu for control bars -->
+  <xsl:template name="control_bar_menu">
+    <xsl:comment>template: status/root.xsl name:control_bar_menu</xsl:comment>
+
+    <ul>
+      <li>
+        <a href="/view/genome/status.html" class="app btn shadow">
+          <div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16"/></div>
+          Deprecated Search
+        </a>
+      </li>
+      <li>
+        <a href="/view/genome/search/status.html" class="app btn shadow">
+          <div class="icon"><img src="/res/img/icons/app_analysis_search_16.png" width="16" height="16"/></div>
+          Analysis Search
+        </a>
+      </li>
+    </ul>
+  </xsl:template>
 
   <!-- basic footer -->
   <xsl:template name="footer">
