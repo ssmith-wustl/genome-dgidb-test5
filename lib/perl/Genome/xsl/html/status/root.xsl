@@ -51,8 +51,12 @@
         <!-- jquery.masonry to arrange the object info boxes-->
         <script type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
 
+        <!-- jquery.hoverIntent - a better hover() function for jQuery -->
+        <script type="text/javascript" src="/res/js/pkg/jquery.hoverIntent.min.js"></script>
+
+
         <!-- jquery.spinner for easy creation of loading spinners -->
-        <script type="text/javascript" src="/res/js/pkg/spinner/jquery.spinner.js"></script>
+        <!-- <script type="text/javascript" src="/res/js/pkg/spinner/jquery.spinner.js"></script> -->
 
         <!-- jquery.dataTables for spiffy feature-laden lists -->
         <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
@@ -180,6 +184,30 @@ $(this).parent().next(".toggle_container").slideToggle("slow");
 
   </xsl:template>
 
+  <!-- app control bar  -->
+  <xsl:template name="control_bar_app">
+    <div class="control_bar app rounded-bottom shadow">
+      <div class="control_bar_menu" id="bar_menu">
+        <xsl:call-template name="control_bar_apps"/>
+      </div>
+
+      <div class="control_bar_base" id="bar_base">&#160;</div>
+
+    </div>
+    <div class="control_bar_tab app" id="bar_tab">
+
+    </div>
+  </xsl:template>
+
+
+  <!-- application menu for control bars -->
+  <xsl:template name="control_bar_apps">
+    <ul>
+      <li><a href="#">Search</a></li>
+      <li><a href="#">Model Grouper</a></li>
+      <li><a href="#">Dashboard</a></li>
+    </ul>
+  </xsl:template>
 
   <!-- basic footer -->
   <xsl:template name="footer">
