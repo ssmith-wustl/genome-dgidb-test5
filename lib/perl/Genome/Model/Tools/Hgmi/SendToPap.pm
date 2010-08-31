@@ -372,7 +372,7 @@ sub do_pap_workflow
         confess "Could not create workflow!" unless $workflow;
 
         my $tempdir = tempdir(
-            CLEANUP => !$self->keep_pep,
+            CLEANUP => 0,
             DIR => '/gscmnt/temp212/info/annotation/pap_workflow_logs/',
         );
         $workflow->log_dir($tempdir);
