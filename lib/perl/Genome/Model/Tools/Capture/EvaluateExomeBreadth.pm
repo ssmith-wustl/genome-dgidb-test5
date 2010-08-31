@@ -115,7 +115,7 @@ sub execute {
             die('Failed to merge annotation by '. $self->report_by);
         }
     } else {
-        $merged_bed_file = $self->annotation_bed_file;
+        $merged_bed_file = $limited_bed_file;
     }
     my $stats_file = Genome::Utility::FileSystem->create_temp_file_path($annotation_basename .'_merged_by_'. $self->report_by .'_STATS.tsv');;
     my $RefCov = Genome::Model::Tools::BioSamtools::RefCov->execute(
