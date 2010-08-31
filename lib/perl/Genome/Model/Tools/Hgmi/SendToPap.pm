@@ -367,12 +367,22 @@ sub do_pap_workflow
     }
 
     else {
+        $DB::single = 1;
+        my $workflow = Workflow::Operation->create_from_xml($xml_file);
+        confess "Could not create workflow!" unless $workflow;
+
+        my $tempdir = tempdir(
+            CLEANUP => !$self->keep_pep,
+            DIR => '/gscmnt/temp212/info/annotation/pap_workflow_logs/',
+        );
+        $workflow->log_dir($tempdir);
+
         if($xml_file =~ /noblastp/)
         {
             #print STDERR "skipping blastp in PAP.\n";
             $self->status_message("skipping blastp in PAP");
             $output = run_workflow_lsf(
-                                       $xml_file,
+                                       $workflow,
                                        'fasta file'           => $fasta_file,
                                        'chunk size'           => 1000,
                                        'dev flag'             => $workflow_dev_flag,
@@ -386,7 +396,7 @@ sub do_pap_workflow
         else
         { 
             $output = run_workflow_lsf(
-                                       $xml_file,
+                                       $workflow,
                                        'fasta file'           => $fasta_file,
                                        'chunk size'           => $self->chunk_size(),
                                        'dev flag'             => $workflow_dev_flag,
