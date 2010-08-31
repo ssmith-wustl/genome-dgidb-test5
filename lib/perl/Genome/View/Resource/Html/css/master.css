@@ -765,6 +765,10 @@ div.control_bar.app {
     background-image: url("../img/components/control_bar/control_bar_app_bg.png");
 }
 
+div.control_bar.view {
+    background-image: url("../img/components/control_bar/control_bar_view_bg.png");
+}
+
 div.control_bar_tab {
     position: relative;
     width: 16px;
@@ -776,6 +780,10 @@ div.control_bar_tab {
 
 div.control_bar_tab.app {
     background-image: url("../img/components/control_bar/control_bar_app_tab.png");
+}
+
+div.control_bar_tab.view {
+    background-image: url("../img/components/control_bar/control_bar_view_tab.png");
 }
 
 div.control_bar_menu {
@@ -790,7 +798,7 @@ div.control_bar_base {
 }
 
 div.control_bar_menu ul {
-    margin: 8px;
+    margin: 7px 12px;
     padding: 0;
     float: right;
 }
@@ -798,7 +806,7 @@ div.control_bar_menu ul {
 div.control_bar_menu ul li {
     list-style: none;
     float: left;
-    margin: 0 10px;
+    margin-left: 12px !important;
 }
 
 div.control_bar_menu ul li a {

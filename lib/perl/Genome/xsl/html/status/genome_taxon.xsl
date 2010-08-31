@@ -5,6 +5,8 @@
   <!-- full page display for a taxon -->
   <xsl:template name="genome_taxon" match="object[./types[./isa[@type='Genome::Taxon']]]">
     <xsl:comment>template: status/genome_taxon.xsl match: object[./types[./isa[@type='Genome::Taxon']]]</xsl:comment>
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Taxon:'" />
       <xsl:with-param name="display_name" select="aspect[@name='species_name']/value" />
