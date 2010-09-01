@@ -61,6 +61,7 @@ sub description {
 
 sub create {
     my $class = shift;
+    $DB::single=1;
     
     my $self = $class->SUPER::create(@_)
         or return;
