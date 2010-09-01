@@ -7,7 +7,7 @@ set project_name = $argv[2];
 set project_chr = ".chr";
 set number = $argv[3];
 
-set assembly = "BreakDancer_new/";
+set assembly = "BreakDancer/";
 set assembly_file_end = ".allchr.Q40.somatic.assembled.HQfiltered.csv";
 
 set BreakDancer = "BreakDancer/";
@@ -15,9 +15,9 @@ set BreakDancer_file_end1 = ".chr";
 set BreakDancer_file_end2 = ".sv"
 
 
-set Pindel_end = ".Pindel/";
-set Pindel_normal_end = ".normal.Pindel/";
-set Pindel_tumor_end = ".tumor.Pindel/";
+set Pindel_end = "pindel/";
+set Pindel_normal_end = "normal/";
+set Pindel_tumor_end = "tumor/";
 set Pindel_file = "adapted_deletions.csv.big_deletions";
 
 set CNA = "CNA/";
@@ -69,7 +69,8 @@ set j = 0;
 		
 
 		# PD normal
-		set file_name_PD_normal = ${project_dir}/${project_name}${number}${Pindel_end}${project_name}${number}${Pindel_normal_end}${Pindel_file};
+		set file_name_PD_normal = ${project_dir}/${Pindel_end}${Pindel_normal_end}${Pindel_file};
+                echo $file_name_PD_normal
 		if(-e ${file_name_PD_normal}) then
 			set tag = ${project_name}${number}${PD}N;
 			if(${ever_come} == 0) then
@@ -81,7 +82,7 @@ set j = 0;
 		endif
 		
 		# PD tumor
-		set file_name_PD_tumor = ${project_dir}/${project_name}${number}${Pindel_end}${project_name}${number}${Pindel_tumor_end}${Pindel_file};
+		set file_name_PD_tumor = ${project_dir}/${Pindel_end}${Pindel_tumor_end}${Pindel_file};
 		if(-e ${file_name_PD_tumor}) then
 			set tag = ${project_name}${number}${PD}T;		
 			if(${ever_come} == 0) then

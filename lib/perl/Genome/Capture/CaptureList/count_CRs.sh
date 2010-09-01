@@ -8,7 +8,9 @@
 #	set i = `echo $argv[1] $j | perl -ane '@a = split(":", $F[0]); print $a[$F[1]]'`;
 #	set f = "BRC"$i;
 
-set result_dir = $argv[1]
+#set result_dir = $argv[1];
+set no_filters = "/no_filters";
+set result_dir = $argv[1]${no_filters};
 set project_name = $argv[2]
 set number = $argv[3]
 set f = ${project_name}${number};

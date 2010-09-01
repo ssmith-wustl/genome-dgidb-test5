@@ -7,10 +7,10 @@ set project_name = $argv[2];
 set project_chr = ".chr";
 set number = $argv[3];
 
-set assembly = "BreakDancer_new/";
+set assembly = "BreakDancer/";
 set assembly_file_end = ".ctx.Q40.somatic.assembled.HQfiltered.csv";
 
-set BreakDancer = "BreakDancer_new/";
+set BreakDancer = "BreakDancer/";
 set BreakDancer_file_end1 = ".novo.ctx";
 
 set col_AS = "	\\t	1	2	4	6	7	NA	NA	NA	NA	10	12	NA";

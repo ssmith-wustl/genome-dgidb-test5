@@ -7,7 +7,10 @@
 #while($j < $num)
 #	set i = `echo $argv[1] $j | perl -ane '@a = split(":", $F[0]); print $a[$F[1]]'`;
 
-set result_dir = $argv[1];
+#set result_dir = $argv[1]
+set no_filters = "/no_filters";
+set result_dir = $argv[1]${no_filters};
+echo ${result_dir}
 set project_name = $argv[2];
 set i = $argv[3];
 set user = $argv[4];
