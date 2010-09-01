@@ -236,7 +236,7 @@ sub define_model
 	(my $model_name, my $sample_name, my $subject_type, my $processing_profile, my $region_of_interest_set_name, my $target_region_set_names) = @_;
 	my $model_id = 0;
 
-	my $cmd = "genome model define reference-alignment --processing-profile-name \"$processing_profile\" --model-name \"$model_name\" --subject-name=\"$sample_name\" --subject-type=\"$subject_type\" --region-of-interest-set-name $region_of_interest_set_name --target-region-set-names $target_region_set_names";
+	my $cmd = "genome model define reference-alignment --processing-profile-name \"$processing_profile\" --model-name \"$model_name\" --subject-name=\"$sample_name\" --subject-type=\"$subject_type\" --region-of-interest-set-name \"$region_of_interest_set_name\" --target-region-set-names \"$target_region_set_names\"";
 	print "RUN: $cmd\n";
 	
 	if(system($cmd))
