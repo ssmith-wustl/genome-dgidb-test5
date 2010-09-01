@@ -36,8 +36,13 @@ set output_dir = $argv[4];
 	@ ever_come = 0
 		
 		# Assembly
-		set file_name_AS = ${project_dir}/${BreakDancer}${project_name}${number}${assembly_file_end}
-		echo ${file_name_AS}
+		set file_name_AS_all = ${project_dir}/${BreakDancer}${project_name}${number}${assembly_file_end}
+		echo ${file_name_AS_all}
+                set file_name_AS = ${project_dir}/${BreakDancer}${project_name}${number}${assembly_file_end}".somaticCap";
+                if(-e ${file_name_AS}) then
+                    rm ${file_name_AS}
+                endif
+                `more ${file_name_AS_all} | perl -ane 'print "$_" if($F[11]!~/normal/)' > ${file_name_AS}`;
 		if(-e ${file_name_AS}) then
 			set skip = `more ${file_name_AS} | perl -ane 'print "$_" if($F[0] =~ /^#/)' | wc -l`;
 			if(${skip} == 0) then
