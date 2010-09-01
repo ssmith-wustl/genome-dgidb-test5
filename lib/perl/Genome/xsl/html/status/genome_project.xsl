@@ -4,6 +4,8 @@
   <!-- full page display for a project -->
   <xsl:template name="genome_project" match="object[./types[./isa[@type='Genome::Project']]]">
     <xsl:comment>template: status/genome_project.xsl match: object[./types[./isa[@type='Genome::Project']]]</xsl:comment>
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Project:'" />
       <xsl:with-param name="display_name" select="aspect[@name='name']/value" />

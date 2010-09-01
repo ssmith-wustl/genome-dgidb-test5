@@ -26,6 +26,8 @@
 
     <script type='text/javascript' src='/res/js/app/genome_model_build.js'></script>
 
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Build:'" />
       <xsl:with-param name="display_name" select="build/@build-id" />

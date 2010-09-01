@@ -197,7 +197,12 @@ sub calculate_average_insert_size {
     my ($total, $count);
     for my $ida (@idas) {
         my $id = $ida->instrument_data;
-        # throw away junk
+        unless(defined($id)){
+            $self->error_message("Could not get instrument-data for instrument-data assignment.\n".Data::Dumper::Dumper($ida));
+            die $self->error_message;
+        }
+ 
+        # throw away junk (instrument data with no median insert size or some junk value for it)
         if( (defined $id->median_insert_size) && ($id->median_insert_size > 0) ) {
             $count++;
             $total+=$id->median_insert_size;

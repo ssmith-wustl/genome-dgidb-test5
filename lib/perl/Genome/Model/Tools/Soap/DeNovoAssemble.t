@@ -12,11 +12,12 @@ unless ($archos =~ /64/) {
 }
 
 #check for test data files
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/DeNovo/Assemble/data_dir';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/DeNovoAssemble/data_dir';
 ok(-d $data_dir, "Data dir exists");
 
-my @data_files = qw/ config.txt fasta.fragment1.1 fasta.fragment1.2 fasta.fragment2.1 fasta.fragment2.2
-                     fasta.pair1_a fasta.pair1_b fasta.pair2_a fasta.pair2_b /;
+my @data_files = qw/ config.txt
+                     SRR038746.pair1.fastq SRR038746.pair2.fastq SRR038746.single.fastq
+                     SRR042027.pair1.fastq SRR042027.pair2.fastq SRR042027.single.fastq /;
 
 foreach (@data_files) {
     ok(-s $data_dir."/$_", "Data dir $_ file exists");
@@ -34,15 +35,25 @@ my $create = Genome::Model::Tools::Soap::DeNovoAssemble->create(
     resolve_repeats => 1,
     kmer_frequency_cutoff => 1,
     cpus => 8,
-    output_and_prefix => "$temp_dir/TEST",
+    output_dir_and_file_prefix => "$temp_dir/TEST",
     );
 
 ok( $create, "Created gmt soap de-novo assemble");
 ok(($create->execute) == 1, "Command ran successfully");
 
 #compare output files
-my $data_run_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/DeNovo/Assemble/run_dir';
+my $data_run_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/DeNovoAssemble/run_dir';
 ok(-d $data_run_dir, "Data run dir exists");
+
+#soap-denovo output files
+my @run_files = qw/ TEST.Arc          TEST.contig         TEST.gapSeq        TEST.links       TEST.newContigIndex
+                    TEST.peGrads      TEST.preGraphBasic  TEST.readOnContig  TEST.scafSeq     TEST.updated.edge
+                    TEST.ContigIndex  TEST.edge           TEST.kmerFreq      TEST.markOnEdge  TEST.path
+                    TEST.preArc       TEST.readInGap      TEST.scaf          TEST.scaf_gap    TEST.vertex /;
+
+foreach (@run_files) {
+    ok(-s $data_run_dir."/$_", "Data run dir $_ exists");
+}
 
 my @diffs = `diff -r --brief $temp_dir $data_run_dir`;
 is (scalar (@diffs), 0, "Run outputs match");

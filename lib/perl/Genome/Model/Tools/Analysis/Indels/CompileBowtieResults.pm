@@ -118,21 +118,25 @@ sub execute {                               # replace with real execution logic.
 		if($chrom && $chr_start && $chr_stop)
 		{
 			$stats{'num_indels'}++;
-			my $indel_name = my $indel_type = my $indel_size = "";
+			my $indel_name = my $indel_type = my $indel_size = my $allele = "";
 			
 			if($ref eq "0" || $ref eq "-")
 			{
 				$indel_type = "Ins";
 				$indel_size = length($var);
+                $allele = uc($var);
+
 				## Build indel name ##			
-				$indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size";
+				$indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size:$allele";
 			}
 			else
 			{
 				$indel_type = "Del";
 				$indel_size = length($ref);
+                $allele = uc($ref);
+
 				## Build indel name ##			
-				$indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size";
+				$indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size:$allele";
 			}
 			
 			my $ref_contig_name = $indel_name . "_ref";

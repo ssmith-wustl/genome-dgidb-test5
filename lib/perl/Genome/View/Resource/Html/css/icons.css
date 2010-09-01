@@ -229,6 +229,12 @@
 
 /* APPS */
 
+.app_analysis_search_16 {
+    background-image: url("../img/icons/app_analysis_search_16.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
 .app_analysis_search_32 {
     background-image: url("../img/icons/app_analysis_search_32.png");
     background-repeat: no-repeat;
@@ -237,6 +243,24 @@
 
 .app_analysis_search_48 {
     background-image: url("../img/icons/app_analysis_search_48.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.app_deprecated_search_16 {
+    background-image: url("../img/icons/app_deprecated_search_16.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.app_deprecated_search_32 {
+    background-image: url("../img/icons/app_deprecated_search_32.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.app_deprecated_search_48 {
+    background-image: url("../img/icons/app_deprecated_search_48.png");
     background-repeat: no-repeat;
     background-position: left center;
 }

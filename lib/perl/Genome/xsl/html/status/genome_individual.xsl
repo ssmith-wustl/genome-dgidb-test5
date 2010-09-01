@@ -3,6 +3,8 @@
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_individual" match="object[./types[./isa[@type='Genome::Individual']]]">
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Individual:'" />
       <xsl:with-param name="display_name" select="@id" />
