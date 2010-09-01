@@ -38,6 +38,7 @@ sub execute {
     my @models = $mg->models;
     for my $model (@models) {
         my $build = $model->latest_build;
+        next unless($build);
         my $build_id = $build->id;
         my $model_name = $model->name;
         my $status = $build->status;
