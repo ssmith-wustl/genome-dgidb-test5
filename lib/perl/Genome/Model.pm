@@ -3,7 +3,7 @@
 # 2. remove stuff that is not generic to models (goldsnp path... should be in model/ReferenceAlignment? )
 #
 #    (need to think about / work on "star" models)
-# 4.  Genome::Config calls... 4 methods below with : TODO: remove these since they're not supposed to vary on a per-model basis.... 
+# 4.  Genome::Config calls... 4 methods below with : TODO: remove these since they're not supposed to vary on a per-model basis....
 #    what needs to be done with these?
 
 
@@ -51,7 +51,7 @@ class Genome::Model {
                     #$self->error_message('Subject not found.');
                     return;
                 }
-                
+
                 if($subject->class eq 'GSC::Equipment::Solexa::Run') {
                    return $subject->flow_cell_id;
                 } elsif($subject->class eq 'Genome::Sample') {
@@ -68,7 +68,7 @@ class Genome::Model {
                 }
             ) },
         subject_type            => { is => 'Text', len => 255, calculate_from => 'subject_class_name',
-                                     calculate => q( 
+                                     calculate => q(
                 if($subject_class_name->class and $subject_class_name->isa('GSC::DNA')) {
                     $subject_class_name = 'GSC::DNA'; #Avoid needing to list entire DNA heirarchy
                 }
@@ -84,10 +84,10 @@ class Genome::Model {
                     'Genome::Individual' => 'sample_group',
                     'Genome::Taxon' => 'species_name',
                     'Genome::Library' => 'library_name',
-                    'Genome::Sample::Genomic' => 'genomic_dna',  
+                    'Genome::Sample::Genomic' => 'genomic_dna',
                 );
-    
-                return $types{$subject_class_name}; 
+
+                return $types{$subject_class_name};
             ), valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
@@ -96,7 +96,7 @@ class Genome::Model {
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name               => { via => 'processing_profile' },
-        events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1, 
+        events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1,
                                      doc => 'all events which have occurred for this model' },
         subject_class_name      => { is => 'VARCHAR2', len => 500 },
         subject_id              => { is => 'NUMBER', len => 15 },
@@ -115,12 +115,12 @@ class Genome::Model {
         build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
         keep_n_most_recent_builds        => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
-                                              calculate => q($instrument_data_class_name->_dw_class), 
+                                              calculate => q($instrument_data_class_name->_dw_class),
                                               doc => 'the class of instrument_data assignable to this model in the dw' },
         instrument_data_class_name       => { calculate_from => 'sequencing_platform',
-                                              calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
+                                              calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ),
                                               doc => 'the class of instrument data assignable to this model' },
-        test                             => { is => 'Boolean', is_transient => 1, 
+        test                             => { is => 'Boolean', is_transient => 1,
                                               doc => 'testing flag' },
         _printable_property_names_ref    => { is => 'array_ref', is_transient => 1 },
         comparable_normal_model_id       => { is => 'Number', len => 10, implied_by => 'comparable_normal_model' },
@@ -136,36 +136,36 @@ class Genome::Model {
         projects                          => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
         project_names                     => { is => 'Text', via => 'projects', to => 'name' },
         attributes                        => { is => 'Genome::MiscAttribute', reverse_as => '_model', where => [ entity_class_name => 'Genome::Model' ] },
-        inputs                            => { is => 'Genome::Model::Input', reverse_as => 'model', 
+        inputs                            => { is => 'Genome::Model::Input', reverse_as => 'model',
                                                doc => 'Inputs currently assigned to the model.' },
-        inst_data                         => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, where => [ name => 'instrument_data' ], 
+        inst_data                         => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, where => [ name => 'instrument_data' ],
                                                doc => 'Instrument data currently assigned to the model.' },
         instrument_data                   => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments' },
         assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
         instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
-        built_instrument_data             => { calculate => q( 
-                                                                                                   return 
-                                                        map { $_->instrument_data } 
-                                                        grep { defined $_->first_build_id } 
+        built_instrument_data             => { calculate => q(
+                                                                                                   return
+                                                        map { $_->instrument_data }
+                                                        grep { defined $_->first_build_id }
                                                         $self->instrument_data_assignments;
                                                 ) },
-        unbuilt_instrument_data           => { calculate => q( 
-                                                                                                   return 
-                                                        map { $_->instrument_data } 
-                                                        grep { !defined $_->first_build_id } 
+        unbuilt_instrument_data           => { calculate => q(
+                                                                                                   return
+                                                        map { $_->instrument_data }
+                                                        grep { !defined $_->first_build_id }
                                                         $self->instrument_data_assignments;
                                                 ) },
-        from_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', 
+        from_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model',
                                                doc => 'bridge table entries where this is the \\\"to\\\" model(used to retrieve models this model is \\\"from\\\")' },
-        from_models                       => { is => 'Genome::Model', via => 'from_model_links', to => 'from_model', 
+        from_models                       => { is => 'Genome::Model', via => 'from_model_links', to => 'from_model',
                                                doc => 'Genome models that contribute \\\"to\\\" this model' },
-        to_model_links                    => { is => 'Genome::Model::Link', reverse_as => 'from_model', 
+        to_model_links                    => { is => 'Genome::Model::Link', reverse_as => 'from_model',
                                                doc => 'bridge entries where this is the \\\"from\\\" model(used to retrieve models models this model is \\\"to\\\")' },
-        to_models                         => { is => 'Genome::Model', via => 'to_model_links', to => 'to_model', 
+        to_models                         => { is => 'Genome::Model', via => 'to_model_links', to => 'to_model',
                                                doc => 'Genome models this model contributes \\\"to\\\"' },
-        variant_validations               => { is => 'Genome::Model::VariantValidation', reverse_as => 'model', 
+        variant_validations               => { is => 'Genome::Model::VariantValidation', reverse_as => 'model',
                                                doc => 'variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion' },
-        putative_variant_validations      => { is => 'Genome::Model::VariantValidation', reverse_as => 'model', where => [ validation_type => 'Official', validation_result => 'P' ], 
+        putative_variant_validations      => { is => 'Genome::Model::VariantValidation', reverse_as => 'model', where => [ validation_type => 'Official', validation_result => 'P' ],
                                                doc => 'putative (only) variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion' },
     ],
     schema_name => 'GMSchema',
@@ -183,9 +183,9 @@ sub from_cmdline {
     @missing{@_} = @_;
     eval {
         my @numbers = grep { $_ !~ /\D/ } @_;
-        if (@numbers) { 
+        if (@numbers) {
             @matches = $class->get(\@numbers);
-            
+
             my @found = map { $_->id } @matches;
             delete @missing{@found};
             return @matches if @matches == @numbers;
@@ -250,14 +250,14 @@ sub __extend_namespace__ {
 
     my $meta = $self->SUPER::__extend_namespace__($ext);
     return $meta if $meta;
-    
+
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
     my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
     if ($pp_subclass_meta and $pp_subclass_name->isa('Genome::ProcessingProfile')) {
         my @pp_delegated_properties = map {
             $_ => { via => 'processing_profile' }
         } $pp_subclass_name->params_for_class;
-    
+
         my $model_subclass_name = 'Genome::Model::' . $ext;
         my $model_subclass_meta = UR::Object::Type->define(
             class_name => $model_subclass_name,
@@ -282,18 +282,18 @@ sub create {
 
     my $params;
     my $entered_subject_name; #So the user gets what they expect, use this when coming up with the default model name
-    
+
     #Create gets called twice... Only set things up the first time
     #The second time we get the UR::BoolExpr handed to us.
     if(ref $_[0]) {
         $params = $class->define_boolexpr(@_);
     } else {
         my %input_params = @_;
-    
+
         if(exists $input_params{subject_name} or exists $input_params{subject_type}) {
             $entered_subject_name = delete $input_params{subject_name};
             my $entered_subject_type = delete $input_params{subject_type};
-            
+
             if(exists $input_params{subject_id} and defined $input_params{subject_id}
                 and exists $input_params{subject_class_name} and defined $input_params{subject_class_name}) {
                 #They already gave us a subject; we'll test if it's good in _verify_subject below.
@@ -301,15 +301,15 @@ sub create {
             } else {
                 my $subject = $class->_resolve_subject($entered_subject_name, $entered_subject_type)
                     or return;
-            
+
                 $input_params{subject_id} = $subject->id;
                 $input_params{subject_class_name} = $subject->class;
             }
         }
-    
+
         $params = $class->define_boolexpr(%input_params);
     }
-    
+
     # Processing profile - gotta validate here or SUPER::create will fail silently
     my $processing_profile_id = $params->value_for('processing_profile_id');
     $class->_validate_processing_profile_id($processing_profile_id)
@@ -342,9 +342,9 @@ sub create {
     # Check that this model doen't already exist.  If other models with the same name
     #  and type name exist, this method lists them, errors and deletes this model.
     #  Checking after subject verification to catch that error first.
-    $self->_verify_no_other_models_with_same_name_and_type_name_exist 
+    $self->_verify_no_other_models_with_same_name_and_type_name_exist
         or return;
-    
+
     unless ($self->user_name) {
         $self->user_name($ENV{USER});
     }
@@ -411,7 +411,7 @@ sub _verify_no_other_models_with_same_name_and_type_name_exist {
     );
 
     return 1 unless @models; # ok
-    
+
     my $message = "\n";
     for my $model ( @models ) {
         $message .= sprintf(
@@ -445,12 +445,12 @@ sub _resolve_subject {
         $class->error_message("bad data--missing subject_name!");
         return;
     }
-    
+
     my $try_all_types = 0;
     if (not defined $subject_type) {
         #If they didn't give a subject type, we'll keep trying subjects until we find something that sticks.
         $try_all_types = 1;
-    }    
+    }
 
     my @subjects = ();
 
@@ -470,14 +470,14 @@ sub _resolve_subject {
     if ($try_all_types or $subject_type eq 'flow_cell_id') {
         push @subjects, GSC::Equipment::Solexa::Run->get(flow_cell_id => $subject_name);
     }
-    
+
     #Only resort to a GSC::DNA if nothing else so far has worked
     if (($try_all_types and not scalar(@subjects)) or $subject_type eq 'dna_resource_item_name') {
         #If they specified dna_resource_item_name, they might actually have meant some other sort of "DNA"
         #This will get the GSC::DNAResourceItem if that's what they asked for.
         push @subjects, GSC::DNA->get(dna_name => $subject_name);
     }
-    
+
     #This case will only be entered if the user asked specifically for a sample_group
     if ($subject_type and $subject_type eq 'sample_group') {
         push @subjects,
@@ -495,7 +495,7 @@ sub _resolve_subject {
             'subject_type: ' . ($subject_type || $null),
         ) . '. Please specify a subject_type or use subject_id/subject_class_name instead.'
         );
-        $class->error_message('Possible subjects named "' . $subject_name . '": ' . join(', ', 
+        $class->error_message('Possible subjects named "' . $subject_name . '": ' . join(', ',
             map($_->class . ' #' . $_->id, @subjects)
         ));
     } else {
@@ -511,9 +511,9 @@ sub _resolve_subject {
 
 sub _verify_subject {
     my $self = shift;
-    
+
     my $subject = $self->subject;
-    
+
     unless($subject) {
         my $null = '<NULL>';
         $self->error_message('Could not verify subject given ' . join(', ',
@@ -522,7 +522,7 @@ sub _verify_subject {
         ));
         return;
     }
-    
+
     return $subject;
 }
 
@@ -565,7 +565,7 @@ sub compatible_instrument_data {
         $subject_type_class = 'Genome::InstrumentData';
     }
     my @compatible_instrument_data = $subject_type_class->get(%params);
-    
+
     if($params{sequencing_platform} and $params{sequencing_platform} eq 'solexa') {
         # FASTQs with 0 reads crash in alignment.  Don't assign them. -??
         # TODO: move this into the assign logic, not here. -ss
@@ -581,7 +581,7 @@ sub compatible_instrument_data {
         }
         @compatible_instrument_data = @filtered_compatible_instrument_data;
     }
-    
+
     return @compatible_instrument_data;
 }
 
@@ -590,7 +590,7 @@ sub unassigned_instrument_data {
     my $self = shift;
 
     my @compatible_instrument_data = $self->compatible_instrument_data;
-    my @instrument_data_assignments = $self->instrument_data_assignments 
+    my @instrument_data_assignments = $self->instrument_data_assignments
         or return @compatible_instrument_data;
     my %assigned_instrument_data_ids = map { $_->instrument_data_id => 1 } @instrument_data_assignments;
 
@@ -640,15 +640,15 @@ sub completed_builds {
         next unless defined $build->date_completed; # error?
         push @completed_builds, $build;
     }
-    
+
     return sort { $a->id <=> $b->id } @completed_builds;
 }
 
 sub latest_build {
 
     # this is the latest build with no filtering on status, etc.
-    
-    my ($self) = @_; 
+
+    my ($self) = @_;
 
     my @sorted_builds = sort { $b->id <=> $a->id } $self->builds();
     return $sorted_builds[0] if @sorted_builds;
@@ -663,7 +663,7 @@ sub resolve_last_complete_build {
     my @completed_builds = $self->completed_builds;
     return unless @completed_builds;
     my $last = pop @completed_builds;
-    unless ( defined $self->_last_complete_build_id 
+    unless ( defined $self->_last_complete_build_id
             and $self->_last_complete_build_id == $last->id ) {
         $self->_last_complete_build_id( $last->id );
     }
@@ -754,7 +754,7 @@ sub available_reports {
         print ($report_name . "<br>");
         push @reports, Genome::Model::Report->create(model_id => $self->id, name => $report_name);
     }
-    return \@reports; 
+    return \@reports;
 }
 
 
@@ -775,7 +775,7 @@ sub _X_resolve_subclass_name {
             $class->error_message("Can't resolve subclass because can't get processing profile for id: ".$processing_profile_id);
             return;
         }
-        my $type_name = $processing_profile->type_name;    
+        my $type_name = $processing_profile->type_name;
         $proper_subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
     }
     # Adding a hack to call class to force autoload
@@ -787,10 +787,10 @@ sub _X_resolve_subclass_name {
 sub _resolve_subclass_name_for_type_name {
     my ($class,$type_name) = @_;
     my @type_parts = split(' ',$type_name);
-    
+
     my @sub_parts = map { ucfirst } @type_parts;
     my $subclass = join('',@sub_parts);
-    
+
     my $class_name = join('::', 'Genome::Model' , $subclass);
     return $class_name;
 }
@@ -811,7 +811,7 @@ sub get_all_objects {
         return unless @_;
         if ( $_[0]->id =~ /^\-/) {
             return sort {$b->id cmp $a->id} @_;
-        } 
+        }
         else {
             return sort {$a->id cmp $b->id} @_;
         }
@@ -836,7 +836,7 @@ sub add_to_model{
     my $model = delete $params{to_model};
     my $role = delete $params{role};
     $role||='member';
-   
+
     $self->error_message("no to_model provided!") and die unless $model;
     my $from_id = $self->id;
     my $to_id = $model->id;
@@ -873,7 +873,7 @@ sub add_from_model{
     my $model = delete $params{from_model};
     my $role = delete $params{role};
     $role||='member';
-   
+
     $self->error_message("no from_model provided!") and die unless $model;
     my $to_id = $self->id;
     my $from_id = $model->id;
@@ -903,6 +903,20 @@ sub add_from_model{
     return $bridge;
 }
 
+sub last_complete_build_flagstat {
+    my $self = shift;
+
+    my $fs_report = $self->last_complete_build->data_directory . "/alignments/" . $self->last_complete_build->id . "_merged_rmdup.bam.flagstat";
+
+    if (-e $fs_report) {
+        my $fs_stats = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($fs_report);
+        return $fs_stats;
+    } else {
+        $self->warning_message("Last complete build's flagstat report requested, but none found.");
+        return undef;
+    }
+}
+
 sub delete {
     my $self = shift;
     my %params = @_;
@@ -918,7 +932,7 @@ sub delete {
         # Make a list of commands to run for each model group to which the model being removed belongs
         my $deletion_commands = join ("", map("\tgenome model-group member remove --model-group-id " . $_->model_group_id . " --model-id " . $self->genome_model_id . "\n", @model_bridges) );
         $self->error_message("Cannot delete this model because it is a member of one or more model groups. If you are sure you wish you delete this model, you may do so after removing the model from these group(s) by running the following command(s):\n$deletion_commands");
-        die $self->error_message(); 
+        die $self->error_message();
     }
 
     # This may not be the way things are working but here is the order of operations for removing db events
@@ -927,7 +941,7 @@ sub delete {
     # 3.) Remove all genome_model_build entries
     # 4.) Remove all genome_model_event entries
     # 5.) Remove the genome_model entry
-    
+
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
         my $status;
@@ -940,37 +954,37 @@ sub delete {
         {
              $status = $object->delete;
         }
-        
+
         unless ($status) {
             $self->error_message('Failed to remove object '. $object->class .' '. $object->id);
-            die $self->error_message(); 
+            die $self->error_message();
         }
     }
     # Get the remaining events like create and assign instrument data
     for my $event ($self->events) {
         unless ($event->delete) {
             $self->error_message('Failed to remove event '. $event->class .' '. $event->id);
-            die $self->error_message(); 
+            die $self->error_message();
         }
     }
     #make sure the model directory doesn't contain any builds if we are saving them
     if ($keep_build_directories && !$keep_model_directory)
     {
         my $model_directory = $self->data_directory;
-        $keep_model_directory = grep { /$model_directory/ } @build_directories;    
+        $keep_model_directory = grep { /$model_directory/ } @build_directories;
     }
     if (-e $self->data_directory && !$keep_model_directory) {
         unless (rmtree $self->data_directory) {
             $self->warning_message('Failed to rmtree model data directory '. $self->data_directory);
         }
     }
-    
+
     return $self->SUPER::delete;
 }
 
 sub _build_model_filesystem_paths {
     my $self = shift;
-    
+
     # This is actual data directory on the filesystem
     # Currently the disk is hard coded in $model->base_parent_directory
     my $model_data_dir = $self->data_directory;
@@ -983,7 +997,7 @@ sub _build_model_filesystem_paths {
     my $chmodrv = system(sprintf("chmod g+w %s", $model_data_dir));
     unless ($chmodrv == 0) {
         $self->warning_message("Error attempting to set group write permissions on model directory $model_data_dir: rv $chmodrv");
-    } 
+    }
 
     return 1;
 
