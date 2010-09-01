@@ -643,6 +643,8 @@ sub ReadRegions{
     next if(
     	! defined $reg->{start} ||
     	! defined $reg->{end} ||
+        defined $reg->{chr1} && $reg->{chr1} eq "Y" ||
+        defined $reg->{chr2} && $reg->{chr2} eq "Y" ||
 	    $reg->{start} !~ /^\d+$/ ||
 	    $reg->{end} !~ /^\d+$/ ||
 	    defined $reg->{score} && $reg->{score} < $opts{q} ||
