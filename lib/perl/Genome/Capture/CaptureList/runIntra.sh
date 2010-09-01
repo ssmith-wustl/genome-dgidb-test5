@@ -13,7 +13,7 @@ set output_dir = $argv[4];
 #	echo $i;
 	#if($argv[2] == 1) then
         #generate the configure file
-		file2cfg_sample.sh ${dir} ${name} ${i} ${output_dir}
+		./file2cfg_sample.sh ${dir} ${name} ${i} ${output_dir}
 #	endif
 if(!(-e "${output_dir}/no_filters")) then
     mkdir ${output_dir}/no_filters;
