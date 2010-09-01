@@ -58,6 +58,7 @@ class Genome::Transcript {
             valid_values => ['+1', '-1', 'UNDEF'],
         },
         sub_structures => { 
+            is_constant => 1,
             calculate_from => [qw/ id  data_directory/],
             calculate => q|
             Genome::TranscriptSubStructure->get(transcript_id => $id, data_directory => $data_directory);
