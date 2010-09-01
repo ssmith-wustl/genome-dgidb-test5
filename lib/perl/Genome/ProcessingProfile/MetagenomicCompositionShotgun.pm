@@ -115,6 +115,7 @@ sub _execute_build {
     # BUILD HUMAN CONTAMINATION SCREEN MODEL
     $self->status_message("Building contamination screen model if necessary");
     my ($screen_build) = $self->build_if_necessary_and_wait($screen_model);
+    $build->add_from_build(from_build=>$screen_build, role=>'contamination_screen_alignment_build');
 
     # POST-PROCESS THE UNALIGNED READS FROM THE CONTAMINATION SCREEN MODEL
     $self->status_message("Processing and importing instrument data for any new unaligned reads");
@@ -202,7 +203,9 @@ sub _execute_build {
 
     # BUILD THE METAGENOMIC REFERENCE ALIGNMENT MODELS
     my @metagenomic_builds = $self->build_if_necessary_and_wait(@metagenomic_models);
-
+    for (@metagenomic_builds){
+        $build->add_from_build(from_build=>$_, role=>'metagenomic_alignment_build');
+    }
     # SYMLINK ALIGNMENT FILES TO BUILD DIRECTORY
     my $data_directory = $build->data_directory;
     my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
