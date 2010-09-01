@@ -21,8 +21,7 @@ EOS
 }
 
 sub help_brief {
-    my $self = shift;
-    return $self->doc;
+    "abandon latest build for each member if it is failed"
 }
 
 sub help_detail {                           

@@ -21,8 +21,7 @@ EOS
 }
 
 sub help_brief {
-    my $self = shift;
-    return $self->doc;
+    "remove latest build for each member if it is abandoned"
 }
 
 sub help_detail {                           
