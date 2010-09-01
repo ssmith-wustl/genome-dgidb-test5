@@ -204,7 +204,6 @@ sub _execute_build {
     # BUILD THE METAGENOMIC REFERENCE ALIGNMENT MODELS
     my @metagenomic_builds = $self->build_if_necessary_and_wait(@metagenomic_models);
 
-    $DB::single = 1;
     # SYMLINK ALIGNMENT FILES TO BUILD DIRECTORY
     my $data_directory = $build->data_directory;
     my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
@@ -279,7 +278,9 @@ sub symlink {
 sub get_bam_and_flagstat_from_build{
     my ($self, $build) = @_;
     my $aln_dir = $build->accumulated_alignments_directory;
-    my @bam_file = glob("$aln_dir/*bam");
+    $aln_dir =~ /\/build(\d+)\//;
+    my $aln_id = $1;
+    my @bam_file = glob("$aln_dir/$aln_id*bam");
     unless (@bam_file){
         $self->error_message("no bam file in alignment directory $aln_dir");
         return;

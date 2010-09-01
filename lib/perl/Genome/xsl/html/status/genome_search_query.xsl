@@ -3,6 +3,8 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_search_query" match="/solr-results">
+    <xsl:call-template name="control_bar_app"/>
+
     <div class="content rounded shadow" style="padding-top: 0;">
       <xsl:call-template name="app_header">
         <xsl:with-param name="app_name" select="'Analysis Search'"/>

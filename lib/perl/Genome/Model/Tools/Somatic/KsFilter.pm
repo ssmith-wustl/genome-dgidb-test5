@@ -126,7 +126,7 @@ sub execute {
 
     #assemble list of variants to filter. Let's filter all variants and then extrapolate the tiers etc
     #we need annotation output
-    my $variants_file = $data_directory . "/anv_annotated_snp.csv"; #do all annotated variants
+    my $variants_file = $build->somatic_workflow_input('annotate_output_snp');
     my $kstest_file = $self->output_data_dir . "/kstest.csv";
     my $filtered_file = $self->output_data_dir . "/annotated_snp.ksandhomopolymer.filtered";
     
