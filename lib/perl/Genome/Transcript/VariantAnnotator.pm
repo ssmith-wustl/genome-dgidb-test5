@@ -18,10 +18,6 @@ use Carp;
 class Genome::Transcript::VariantAnnotator{
     is => 'UR::Object',
     has => [
-        transcript_window => {
-            is => 'Genome::Utility::Window::Transcript',
-            id_by => 'transcript_window_id',
-        },
         codon_translator => {
             is => 'Bio::Tools::CodonTable',
             is_optional => 1,
@@ -46,6 +42,11 @@ class Genome::Transcript::VariantAnnotator{
             is_optional => 1,
             default => 0,
             doc => 'If set, the entire modifed sequence of the transcript is placed in the output file for frameshift mutations, even if the modification is silent',
+        },
+        data_directory => {
+            is => 'PATH',
+            is_optional => 0,
+            doc => 'Pathname to the annotation_data of a build containing transcripts.csv and other files',
         },
     ]
 };
@@ -164,21 +165,23 @@ sub transcripts {
         return { transcript_error => 'invalid_sequence_on_variant' }
     }
 
-    # TODO Change to use range variant start <-> variant stop
-    my @transcripts_to_annotate = $self->transcript_window->scroll($variant{start});
-    return unless @transcripts_to_annotate;
+    my @crossing_substructures = Genome::TranscriptStructure->get(chrom_name => $variant{'chromosome_name'},
+                                                                  'structure_stop >=' => $variant{'start'},
+                                                                  'structure_start <=' => $variant{'stop'},
+                                                                  data_directory => $self->data_directory);
+    return unless @crossing_substructures;
 
     my @annotations;
     my $variant_checked = 0;
 
-    for my $transcript ( @transcripts_to_annotate ) {
+    foreach my $substruct ( @crossing_substructures ) {
         # If specified, check that the reference sequence stored on the variant correctly matches our reference
         if ($self->check_variants and not $variant_checked) {
             unless ($variant{reference} eq '-') {
                 my $chrom = $variant{chromosome_name};
                 my $start = $variant{start};
                 my $stop = $variant{stop};
-                my $species = $transcript->species;
+                my $species = $substruct->species;
                 my $ref_seq = `gmt sequence --species $species --chrom $chrom --start $start --stop $stop`;
 
                 unless ($ref_seq eq $variant{reference}) {
@@ -191,7 +194,7 @@ sub transcripts {
             }
         }
         
-        my %annotation = $self->_transcript_annotation($transcript, %variant) or next;
+        my %annotation = $self->_transcript_substruct_annotation($substruct, %variant) or next;
         push @annotations, \%annotation;
     }
     return @annotations;
@@ -239,9 +242,9 @@ sub _highest_priority_error {
     return $sorted_errors[0];
 }
 
-# Annotates a single transcript/variant pair
-sub _transcript_annotation {
-    my ($self, $transcript, %variant) = @_;
+# Annotates a single transcript-substructure/variant pair
+sub _transcript_substruct_annotation {
+    my ($self, $substruct, %variant) = @_;
     # Just an FYI... using a copy of variant here instead of a reference prevents reverse complementing
     # the variant twice, which would occur if the variant happened to touch two reverse stranded transcripts
 
@@ -250,12 +253,18 @@ sub _transcript_annotation {
     # TODO There are various hacks in intron and exon annotation to fix the side effects of only annotating the
     # structure at variant start position that will also need removed once this is fixed, and there is still
     # a definite bias for variant start over variant stop throughout this module
-    my $main_structure = $transcript->structure_at_position($variant{start});
-    unless ($main_structure) {
-        $self->warning_message("No structure found at position " . $variant{start} . 
-            " for transcript " . $transcript->{transcript_name});
-        return;
-    }
+$DB::single=1;
+    my $transcript = Genome::Transcript->get(chrom_name => $substruct->chrom_name,
+                                             'transcript_start <=' => $substruct->structure_start,
+                                             data_directory => $substruct->data_directory,
+                                             id => $substruct->transcript_id);
+ 
+    # Preload all the other substructs for this transcript
+    #Genome::TranscriptStructure->get(data_directory => $substruct->data_directory,
+    #                                 chrom_name => $substruct->chrom_name,
+    #                                 transcript_id => $substruct->transcript_id,
+    #                                 'structure_start >=' => $transcript->transcript_start,
+    #                                 'structure_stop <=' => $transcript->transcript_stop);
 
     # All sequence stored on the variant is forward stranded and needs to be reverse
     # complemented if the transcript is reverse stranded.
@@ -271,40 +280,24 @@ sub _transcript_annotation {
         }
     }
 
-    my $structure_type = $main_structure->structure_type;
+    my $structure_type = $substruct->structure_type;
 
-    # TODO Deletion substructure string can be removed once indels spanning structures are properly handled
-    my $deletion_substructures;
-    if ($variant{type} =~ /del/i) {
-        my @structures_in_range = $transcript->structures_in_range($variant{start}, $variant{stop});
-        if (@structures_in_range){
-            $deletion_substructures = "(deletion:" . join(
-                ", ", 
-                map{$_->{structure_type} . "[" . $_->structure_start . "," . $_->structure_stop . "]"} @structures_in_range
-            ) . ")";
-        }
-    }
-
-    my $method = '_transcript_annotation_for_' . $structure_type;
-    my %structure_annotation = $self->$method($transcript, \%variant, $main_structure) or return;
     
-    $structure_annotation{deletion_substructures} = $deletion_substructures if $deletion_substructures;
+    my $method = '_transcript_annotation_for_' . $structure_type;
+    my %structure_annotation = $self->$method($transcript, \%variant, $substruct) or return;
+    
     my $conservation = $self->_ucsc_conservation_score(\%variant);
-    if ($deletion_substructures){
-        $structure_annotation{deletion_substructures} = $deletion_substructures;
-    }
 
     return (
         %structure_annotation,
         transcript_error => $transcript->transcript_error,
-        transcript_name => $transcript->transcript_name, 
+        transcript_name => $transcript->transcript_name,
         transcript_status => $transcript->transcript_status,
         transcript_source => $transcript->source,
         transcript_species=> $transcript->species,
         transcript_version => $transcript->version,
         strand => $transcript->strand,
         gene_name  => $transcript->gene->name,
-        ucsc_cons => $self->_ucsc_conservation_score(\%variant),
         amino_acid_length => $transcript->amino_acid_length,
         ucsc_cons => $conservation,
     )
