@@ -238,7 +238,7 @@ sub fix_headers {
     }
 
     # cleanup unused files
-    $self->error_message("Failed to cleanup unused files ($missing_headers_bam, $unsorted_bam).") unless(unlink([$missing_headers_bam, $unsorted_bam]));
+    $self->error_message("Failed to cleanup unused files ($missing_headers_bam, $unsorted_bam).") unless(unlink($missing_headers_bam, $unsorted_bam));
 
     return 1;
 }
