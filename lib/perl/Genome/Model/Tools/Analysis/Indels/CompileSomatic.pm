@@ -36,6 +36,7 @@ EOS
 }
 
 sub execute {
+    $DB::single = 1;
     my $self = shift;
 
     #check the inputs before doing any significant work
@@ -94,7 +95,30 @@ sub execute {
         my ($ref, $var) = @fields[-3,-2];
 
 		my $p_value = VarScan::FisherTest::calculate_p_value($entry->{normal_ref}, $entry->{normal_var}, $ref, $var, 0);
-        print STDOUT $entry->{line},"\t",join("\t",@fields[-4,-3,-2,-1],$p_value),"\n";
+        
+        my $llr = 0;
+
+        if(($entry->{normal_ref}+$entry->{normal_var}) > 0 && ($ref+$var) > 0) {
+            #calculate LLR
+            my $somatic_normal_expect = $entry->{normal_var}/($entry->{normal_ref}+$entry->{normal_var});
+            my $not_somatic_normal_expect = 1 - $somatic_normal_expect;
+            my $somatic_tumor_expect = $var/($ref+$var);
+            my $not_somatic_tumor_expect = 1 - $somatic_tumor_expect;
+            my $reference_expect = ($var+$entry->{normal_var})/($entry->{normal_ref}+$entry->{normal_var}+$ref+$var);
+            my $not_reference_expect = 1- $reference_expect;
+            $somatic_normal_expect ||= 0.001;
+            $not_somatic_normal_expect ||= 0.001;
+            $somatic_tumor_expect ||= 0.001;
+            $not_somatic_tumor_expect ||= 0.001;
+            $reference_expect ||= 0.001;
+            $not_reference_expect ||= 0.001;
+
+            my $somatic_LLR = $entry->{normal_var}*log($somatic_normal_expect) + $entry->{normal_ref}*log($not_somatic_normal_expect) + $var*log($somatic_tumor_expect) + $ref*log($not_somatic_tumor_expect);
+            my $nonsomatic_LLR = $entry->{normal_var}*log($reference_expect) + $entry->{normal_ref}*log($not_reference_expect) + $var*log($reference_expect) + $ref*log($not_reference_expect);
+
+            $llr = $somatic_LLR-$nonsomatic_LLR;
+        }
+        print STDOUT $entry->{line},"\t",join("\t",@fields[-4,-3,-2,-1],$p_value,$llr),"\n";
         delete $indels{$indel_name};
     }
 
