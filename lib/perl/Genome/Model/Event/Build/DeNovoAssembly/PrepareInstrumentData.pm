@@ -115,7 +115,7 @@ sub _setup_read_processor {
     my $rename_cmd = 'gmt fast-qual rename --matches qr{#.*/1$}=.b1,qr{#.*/2$}=.g1';
     if ( not $read_processor and not defined $base_limit ) {
         # rename (will collate, too if needed)
-        my $command = $rename_cmd.' --input %s --output %s --type-in illumina';
+        my $command = $rename_cmd.' --input %s --output %s --type-in '.$qual_type;
         $self->status_message("No read processor or base limit");
         $self->status_message($command);
         $self->status_message("Read processor setup OK");
@@ -134,7 +134,7 @@ sub _setup_read_processor {
 
     # convert read processors to commands
     my @commands = (
-        'gmt fast-qual '.$read_processors[0].' --input %s --output PIPE --type-in illumina'
+        'gmt fast-qual '.$read_processors[0].' --input %s --output PIPE --type-in '.$qual_type
     );
     for ( my $i = 1; $i <= $#read_processors; $i++ ) {
         push @commands, 'gmt fast-qual '.$read_processors[$i].' --input PIPE --output PIPE';
