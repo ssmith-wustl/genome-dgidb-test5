@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Sam::R3;
+package Genome::Model::Tools::Sam::MergeSplitReferenceAlignments;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Command;
 use IO::File;
 use POSIX;
 
-class Genome::Model::Tools::Sam::R3 {
+class Genome::Model::Tools::Sam::MergeSplitReferenceAlignments {
     is  => 'Genome::Model::Tools::Sam',
     has => [
         input_files => {

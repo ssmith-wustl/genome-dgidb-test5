@@ -13,11 +13,13 @@ class Genome::Model::Tools::R::CallR {
     command => {
         type => 'String',
         is_optional => 0,
+        is_input => 1,
         doc => 'R command to be run in temp directory using this script',
     },
     library => {
         type => 'String',
         is_optional => 0,
+        is_input => 1,
         doc => 'R library containing functions for specific application. Something like "cmds_lib.R". See the GMT/R directory for library files labeled like this: CallR.pm.something_lib.R, where "something_lib.R" is the input to this option.',
     },
     ]
@@ -43,4 +45,5 @@ sub execute {
     $R->send($command);
     $R->stopR();
     chdir $cwd;
+    return 1;
 }

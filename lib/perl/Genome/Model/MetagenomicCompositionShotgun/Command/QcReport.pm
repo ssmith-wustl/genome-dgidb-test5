@@ -10,7 +10,7 @@ use File::Find;
 $|=1;
 
 class Genome::Model::MetagenomicCompositionShotgun::Command::QcReport{
-    is => 'Genome::Command::OO',
+    is => 'Genome::Model::MetagenomicCompositionShotgun::Command',
     doc => 'Generate QC report for a MetagenomicCompositionShotgun build.',
     has => [
         build_id => {
@@ -30,6 +30,10 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::QcReport{
 
 sub execute {
     my ($self) = @_;
+
+    $self->dump_status_messages(1);
+    $self->dump_warning_messages(1);
+    $self->dump_error_messages(1);
 
     my $build = Genome::Model::Build->get($self->build_id);
     my $model = $build->model;
@@ -94,8 +98,7 @@ sub execute {
             $metric_name = $flow_lane . "_" . $stat;
             $metric{$metric_name}->delete() if($metric{$metric_name});
             unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $stats{$flow_lane}{$stat})) {
-                $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
-                die $self->error_message;
+                die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
             }
             print $stats_output "\t" . $stats{$flow_lane}{$stat};
         }
@@ -261,7 +264,7 @@ sub execute {
 
         my $idata = Genome::InstrumentData::Imported->get($id);
         $self->status_message("\t" . (split("/", $humanfree_bam_path))[-1]. "...");
-        Genome::Model::Tools::Picard::FastqToSam->execute(
+        my $humanfree_fastq_to_sam = Genome::Model::Tools::Picard::FastqToSam->create(
             fastq => $humanfree_fwd_path,
             fastq2 => $humanfree_rev_path,
             output => $humanfree_bam_path,
@@ -271,9 +274,12 @@ sub execute {
             library_name => $idata->library_name,
             use_version => '1.21',
         );
+        unless($humanfree_fastq_to_sam->execute()) {
+            die $self->error_message("Failed to convert FastQ to BAM ($humanfree_fwd_path, $humanfree_rev_path).");
+        }
 
         $self->status_message("\t" . (split("/", $original_bam_path))[-1]. "...");
-        Genome::Model::Tools::Picard::FastqToSam->execute(
+        my $original_fastq_to_sam = Genome::Model::Tools::Picard::FastqToSam->create(
             fastq => $original_fwd_path,
             fastq2 => $original_rev_path,
             output => $original_bam_path,
@@ -283,6 +289,9 @@ sub execute {
             library_name => $idata->library_name,
             use_version => '1.21',
         );
+        unless($original_fastq_to_sam->execute()) {
+            die $self->error_message("Failed to convert FastQ to BAM ($original_fwd_path, $original_rev_path).");
+        }
     }
 
     # Count bases in humanfree, untrimmed bams
@@ -317,18 +326,24 @@ sub execute {
         $self->status_message("\t$id: Generating EstimateLibraryComplexity report...");
 
         $self->status_message("\t\t" . (split("/", $original_report_path))[-1] . "...");
-        Genome::Model::Tools::Picard::EstimateLibraryComplexity->execute(
+        my $humanfree_picard_elc = Genome::Model::Tools::Picard::EstimateLibraryComplexity->create(
             input_file => [$humanfree_bam_path],
             output_file => $humanfree_report_path,
             use_version => '1.21',
         );
+        unless($humanfree_picard_elc->execute()) {
+            die $self->error_message("Failed to convert run Picard ELC on humanfree.");
+        }
 
         $self->status_message("\t\t" . (split("/", $original_report_path))[-1] . "...");
-        Genome::Model::Tools::Picard::EstimateLibraryComplexity->execute(
+        my $original_picard_elc = Genome::Model::Tools::Picard::EstimateLibraryComplexity->create(
             input_file => [$original_bam_path],
             output_file => $original_report_path,
             use_version => '1.21',
         );
+        unless($original_picard_elc->execute()) {
+            die $self->error_message("Failed to convert run Picard ELC on humanfree.");
+        }
     }
 
     # OTHER STATS
@@ -364,16 +379,14 @@ sub execute {
                 $metric_name = "$lane\_humanfree_percent_duplication";
                 $metric{$metric_name}->delete() if($metric{$metric_name});
                 unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $metrics{percent_duplication})) {
-                    $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
-                    die $self->error_message;
+                    die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
                 }
 
                 $metric_name = "$lane\_unique_humanfree_bases";
                 $metric{$metric_name}->delete() if($metric{$metric_name});
                 my $unique_bases_count = $humanfree_base_count{$id} * (1 - $metrics{percent_duplication});
                 unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $unique_bases_count)) {
-                    $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
-                    die $self->error_message;
+                    die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
                 }
                 print $other_stats_output "$lane: Unique, human-free bases: $unique_bases_count\n";
             }
@@ -391,8 +404,7 @@ sub execute {
                 $metric_name = "$lane\_original_percent_duplication";
                 $metric{$metric_name}->delete() if($metric{$metric_name});
                 unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $metrics{percent_duplication})) {
-                    $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
-                    die $self->error_message;
+                    die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
                 }
             }
         }
@@ -447,8 +459,7 @@ sub expect64 {
     my $self = shift;
     my $uname = `uname -a`;
     unless ($uname =~ /x86_64/) {
-        $self->error_message("Samtools requires a 64-bit operating system.");
-        die $self->error_message;
+        die $self->error_message("Samtools requires a 64-bit operating system.");
     }
 }
 
@@ -460,8 +471,7 @@ sub bam_stats_per_lane {
     $self->expect64();
     my $bam_fh = IO::File->new("samtools view $bam |");
     unless($bam_fh) {
-        $self->error_message("Failed to open $bam for reading.");
-        die $self->error_message;
+        die $self->error_message("Failed to open $bam for reading.");
     }
 
     my %stats;
@@ -481,8 +491,7 @@ sub bam_stats_per_lane {
                 $data = $self->original_data_from_imported_id($id);
             }
             unless($data) {
-                $self->error_message("Unable to find data (imported nor original) by ID $id.");
-                die $self->error_message;
+                die $self->error_message("Unable to find data (imported nor original) by ID $id.");
             }
             $flow_lane{$id} = $data->flow_cell_id . '_' . $data->lane;
         }

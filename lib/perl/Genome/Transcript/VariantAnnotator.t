@@ -41,7 +41,7 @@ sub get_test_data {
     ok (-e $test_dir, "test data directory exists at $test_dir");
 
     my $test_variants_file = $test_dir . "/variants.tsv";
-    ok (-s $test_variants_file, "test variants file exists and has size");
+    ok (-s $test_variants_file, "test variants file exists and has size at $test_variants_file");
 
     my @variant_headers = variant_headers();
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(

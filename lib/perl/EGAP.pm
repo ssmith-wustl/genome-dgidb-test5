@@ -5,7 +5,7 @@ use strict;
 
 use UR;
 
-use lib '/gsc/scripts/opt/bacterial-bioperl';
+#use lib '/gsc/scripts/opt/bacterial-bioperl';
 
 class EGAP {
     is          => ['UR::Namespace'],

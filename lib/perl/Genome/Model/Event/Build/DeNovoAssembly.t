@@ -9,7 +9,7 @@ use Test::More;
 
 use_ok('Genome::Model::Event::Build::DeNovoAssembly');
 
-is(Genome::Model::Event::Build::DeNovoAssembly->bsub_rusage, "-R 'span[hosts=1] select[type=LINUX64]'", 'bsub params');
+is(Genome::Model::Event::Build::DeNovoAssembly->bsub_rusage, "-R 'span[hosts=1] select[type==LINUX64]'", 'bsub params');
 
 done_testing();
 exit;

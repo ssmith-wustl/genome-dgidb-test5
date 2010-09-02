@@ -85,6 +85,12 @@ class Genome::InstrumentData::Command::Align {
                                             is_optional => 1,
                                             doc => 'When set, overrides the disk allocation system and uses an explicit path',
                                         },
+        n_remove_threshold             => {
+                                            is=>'Number',
+                                            is_optional => 1,
+                                            doc => 'When set, removes reads containing runs of this number of Ns'
+
+                                        },
 
     ],
     doc => 'align instrument data using one of the available aligners',
@@ -171,6 +177,10 @@ sub execute {
         if ($self->trimmer_params) {
             $alignment_params{trimmer_params} = $self->trimmer_params;
         }
+    }
+
+    if ($self->n_remove_threshold) {
+        $alignment_params{n_remove_threshold} = $self->n_remove_threshold;
     }
 
     $alignment = Genome::InstrumentData::AlignmentResult->get_or_create(%alignment_params);

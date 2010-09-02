@@ -6,7 +6,7 @@ use above 'EGAP';
 use Bio::Seq;
 use Bio::SeqIO;
 
-use File::Temp;
+use File::Temp qw(tempdir);
 use File::Basename;
 use Test::More tests => 1122;
 
@@ -15,23 +15,17 @@ BEGIN {
     use_ok('EGAP::Command::GenePredictor::SNAP');
 }
 
-my $test_output_dir = "/gsc/var/cache/testsuite/running_testsuites/";
-
-my $output_file = File::Temp->new(
-    TEMPLATE => "EGAP-Command-GenePrediction-SNAP-XXXXXX",
-    DIR => $test_output_dir
+my $test_dir = "/gsc/var/cache/testsuite/running_testsuites/";
+my $test_output_dir = tempdir('EGAP-Command-SNAP-XXXXXX',
+    DIR => $test_dir,
+    CLEANUP => 1,
 );
-
-my $error_file = File::Temp->new(
-    TEMPLATE => "EGAP-Command-GenePrediction-SNAP-XXXXXX",
-    DIR => $test_output_dir
-);
+chmod(0755, $test_output_dir);
 
 my $command = EGAP::Command::GenePredictor::SNAP->create(
     fasta_file => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
-    hmm_file => '/gsc/pkg/bio/snap/installed/HMM/C.elegans.hmm',
-    snap_output_file => $output_file->filename,
-    snap_error_file => $error_file->filename,
+    model_file => '/gsc/pkg/bio/snap/installed/HMM/C.elegans.hmm',
+    output_directory => $test_output_dir,
 );
 
 isa_ok($command, 'EGAP::Command::GenePredictor');

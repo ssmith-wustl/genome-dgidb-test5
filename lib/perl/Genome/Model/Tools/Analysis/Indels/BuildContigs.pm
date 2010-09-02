@@ -17,6 +17,7 @@ use strict;
 use warnings;
 
 use FileHandle;
+use POSIX;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
@@ -28,6 +29,8 @@ class Genome::Model::Tools::Analysis::Indels::BuildContigs {
 		contig_size	=> { is => 'Text', doc => "Size of reference/variant contigs to generate", is_optional => 1, default => 150 },
 		reference	=> { is => 'Text', doc => "Size of reference/variant contigs to generate", is_optional => 1, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fasta" },
 		output_file	=> { is => 'Text', doc => "Output of reference/variant contig FASTAs", is_optional => 1 },
+        output_reference => { is => 'Boolean', doc => 'Whether or not to output the reference contigs', is_optional => 1, default => 1, },
+        samtools_compatible => { is => 'Boolean', doc => 'Whether or not to output the contig names with underscores to make them compatible with samtools', is_optional => 1, default => 0 },
 	],
 };
 
@@ -59,14 +62,24 @@ EOS
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
+    # Check that we're on a 64-bit system and can run with the deployed samtools
+    unless (POSIX::uname =~ /64/) {
+        $self->error_message("Must run on a 64 bit machine");
+        die;
+    }
+
 	## Get required parameters ##
 	my $variant_file = $self->variant_file;
 	my $contig_size = $self->contig_size;
 	my $reference = $self->reference;
 	my $output_file = $self->output_file;
+    my $samtools_compatible = $self->samtools_compatible;
+
+    my %indel_names;
 
 	my %stats = ();
 	$stats{'num_indels'} = 0;
+    $stats{'num_dups'} = 0;
 
 	if($output_file)
 	{
@@ -90,14 +103,28 @@ sub execute {                               # replace with real execution logic.
 		if($chrom && $chr_start && $chr_stop)
 		{
 			$stats{'num_indels'}++;
-			my $indel_type = my $indel_size = "";
+			my $indel_type = my $indel_size = my $allele = "";
 			
 			if($ref eq "0" || $ref eq "-")
 			{
 				$indel_type = "Ins";
 				$indel_size = length($var);
+                $allele = uc($var);
+
 				## Build indel name ##			
-				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size";
+				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size:$allele";
+                if($samtools_compatible) {
+                    $indel_name =~ s/[:-]/_/g;  #replace dashes and colons with underscores
+                }
+
+                if(exists($indel_names{$indel_name})) {
+                    $self->error_message("Skipping indel with duplicate $indel_name");
+                    $stats{'num_dups'}++;
+                    next;
+                }
+                else {
+                    $indel_names{$indel_name} = 1;
+                }
 				
 				my $flank_size = ($contig_size) / 2;
 				$flank_size = sprintf("%d", $flank_size);
@@ -143,9 +170,10 @@ sub execute {                               # replace with real execution logic.
 						$end = 1;
 					}
 				}
-
-				print OUTFILE ">" . $indel_name . "_ref\n";
-				print OUTFILE $reference_contig . "\n";
+                if($self->output_reference) {
+    				print OUTFILE ">" . $indel_name . "_ref\n";
+	    			print OUTFILE $reference_contig . "\n";
+                }
 
 				print OUTFILE ">" . $indel_name . "_var\n";
 				print OUTFILE $variant_contig . "\n";
@@ -157,8 +185,22 @@ sub execute {                               # replace with real execution logic.
 			{
 				$indel_type = "Del";
 				$indel_size = length($ref);
+                $allele = uc($ref);
 				## Build indel name ##			
-				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size";
+				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size:$allele";
+
+                if($samtools_compatible) {
+                    $indel_name =~ s/[:-]/_/g;  #replace dashes and colons with underscores
+                }
+
+                if(exists($indel_names{$indel_name})) {
+                    $self->error_message("Skipping indel with duplicate $indel_name");
+                    $stats{'num_dups'}++;
+                    next;
+                }
+                else {
+                    $indel_names{$indel_name}=1;
+                }
 				
 				## Fix chromosome stop position, which sometimes is the base after the deletion stops ##
 				$chr_stop = $chr_start + $indel_size - 1;
@@ -212,9 +254,10 @@ sub execute {                               # replace with real execution logic.
 				}
 
 				## Print contigs to outfile
-
-				print OUTFILE ">" . $indel_name . "_ref\n";
-				print OUTFILE $reference_contig . "\n";
+                if($self->output_reference) {
+    				print OUTFILE ">" . $indel_name . "_ref\n";
+	    			print OUTFILE $reference_contig . "\n";
+                }
 
 				print OUTFILE ">" . $indel_name . "_var\n";
 				print OUTFILE $variant_contig . "\n";
@@ -230,6 +273,7 @@ sub execute {                               # replace with real execution logic.
 	close($input);
 
 	print $stats{'num_indels'} . " indels in file\n";
+	print $stats{'num_dups'} . " duplicated (and skipped) indels in file\n";
 	print "Contigs printed to $output_file\n";
 	close(OUTFILE) if($output_file);
 

@@ -13,16 +13,20 @@ class Genome::Model::Tools::Cmds::IndividualRegionCalls {
     cmds_test_dir => {
         type => 'String',
         is_optional => 0,
+        is_input => 1,
         doc => 'Directory containing CMDS .test result files (named cmds_test by gmt cmds execute).',
     },
     cmds_input_data_dir => {
         type => 'String',
         is_optional => 0,
+        is_input => 1,
         doc => 'Directory containing original input data files (only!) to gmt cmds execute. Files must be labeled as filename.chr (convention of other CMDS tools).',
     },
     output_dir => {
         type => 'String',
         is_optional => 1,
+        is_input => 1,
+        is_output => 1,
         default => getcwd(),
         doc => 'Directory for output of ROI file and individual call files showing per-sample variations. Default: current working directory.',        
     },
@@ -132,7 +136,11 @@ sub execute {
             my $full_path_data_file = $data_dir . "/" . $file;
             for my $start (keys %{ $regions{$chr} }) {
                 my $command = "Region_calls(datafile='$full_path_data_file',chr='$chr',start=$start,end='$regions{$chr}{$start}',permun=$permutations,output_dir='$output_dir');";
-                Genome::Model::Tools::R::CallR->execute(command => $command, library => "cmds_lib.R");
+                my $result_object = Genome::Model::Tools::R::CallR->execute(command => $command, library => "cmds_lib.R");
+                unless($result_object->result == 1){
+                    $self->error_message("callR with $command failed - result = " . $result_object->result);
+                    die $self->error_message;
+                }
             }
         }
     }#end, reading original data dir

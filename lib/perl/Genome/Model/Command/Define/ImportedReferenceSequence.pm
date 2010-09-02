@@ -64,7 +64,7 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
         server_dispatch => {
-            default_value => 'long',
+            default_value => 'workflow',
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
    ],

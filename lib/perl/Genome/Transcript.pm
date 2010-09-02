@@ -502,7 +502,7 @@ sub check_intron_size {
 sub exon_seq_matches_genome_seq {
     my $self = shift;
     my @exons = $self->cds_exons;
-    my $ref_build = $self->_get_reference_build;
+    my $ref_build = $self->get_reference_build;
 
     foreach my $exon (@exons) {
         my $ref_seq = $ref_build->sequence(
@@ -622,7 +622,7 @@ sub reverse_complement {
 }
 
 # Given a version and species, find the imported reference sequence build
-sub _get_reference_build {
+sub get_reference_build {
     my $self = shift;
 
     if ($self->{_reference_build}) {
@@ -656,6 +656,50 @@ sub introns {
 
     my @int = grep { $_->structure_type eq 'intron' } $self->ordered_sub_structures;
     return @int;
+}
+
+# Returns all untranslated exons associated with this transcript
+sub utr_exons{
+    my $self = shift;
+
+    my @utr_ex = grep { $_->structure_type eq 'utr_exon' } $self->ordered_sub_structures;
+    return @utr_ex;
+}
+
+# Returns all flanking regions associated with this transcript
+sub flanks{
+    my $self = shift;
+
+    my @flanks = grep { $_->structure_type eq 'flank'} $self->ordered_sub_structures;
+    return @flanks
+}
+
+#returns the utr exon sequence 3' of the coding sequence
+sub utr_exon_sequence_after_coding_sequence{
+    my $self = shift;
+
+    my @utr_exons_after_cds = grep { $_->coding_bases_after == 0 } $self->utr_exons;
+    my $utr_sequence_after_cds = "";
+    for my $utr (@utr_exons_after_cds){
+        $utr_sequence_after_cds .=  $utr->nucleotide_seq;
+    }
+    return $utr_sequence_after_cds; #this coming out in the proper order depends on utr_exons calling ordered_sub_structures
+}
+
+#returns the flank region sequence 3' of the coding sequence
+sub flank_after_coding_sequence{
+    my $self =shift;
+
+    my @flanks = $self->flanks;
+    my @flanks_after_cds;
+    for my $flank (@flanks){
+        if($self->strand eq '+1'){
+            push(@flanks_after_cds, $flank) if $flank->structure_start >= $self->transcript_stop;
+        }else{
+            push(@flanks_after_cds, $flank) if $flank->structure_stop <= $self->transcript_start; 
+        }
+    }
+    return @flanks_after_cds; #this coming out in the proper order depends on utr_exons calling ordered_sub_structures
 }
 
 # Returns the start position of the first exon and the stop position the last exon on the transcript

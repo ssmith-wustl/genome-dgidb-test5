@@ -22,8 +22,8 @@ my $out_fastq = $tmp_dir.'/out.fastq';
 
 # Ok
 my $sorter = Genome::Model::Tools::FastQual::Sorter::Name->create(
-    input_files  => [ $in_fastq ],
-    output_files => [ $out_fastq ],
+    input  => [ $in_fastq ],
+    output => [ $out_fastq ],
 );
 ok($sorter, 'create sorter');
 isa_ok($sorter, 'Genome::Model::Tools::FastQual::Sorter::Name');

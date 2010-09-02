@@ -15,10 +15,20 @@ xmlns:rest="urn:rest">
                   <xsl:value-of select="@name"/>:
                 </td>
                 <xsl:if test="@name='stderr' or @name='stdout'">
+
                   <xsl:variable name="path" select="."/>
-                  <td class="value"><a><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu</xsl:text>
-                  <xsl:value-of select="$path"/>
-                  </xsl:attribute><xsl:value-of select="$path"/></a>
+                  <td class="value">
+                    <a>
+                      <xsl:attribute name="href">
+                        <xsl:text>https://gscweb.gsc.wustl.edu</xsl:text>
+                        <xsl:value-of select="$path"/>
+                      </xsl:attribute>
+
+                      <xsl:call-template name="substring-after-last">
+                        <xsl:with-param name="input" select="$path"/>
+                        <xsl:with-param name="substr" select="'/'"/>
+                      </xsl:call-template>
+                    </a>
                   </td>
                 </xsl:if>
                 <xsl:if test="@name!='stderr' and @name!='stdout'">

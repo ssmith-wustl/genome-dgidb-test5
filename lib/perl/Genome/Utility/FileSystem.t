@@ -53,7 +53,7 @@ sub _tmpdir {
 }
 
 sub _new_file {
-    return sprintf('%s/new_file.txt', _base_test_dir());
+    return sprintf('%s/new_file.txt', $_[0]->_tmpdir);
 }
 
 sub _existing_file {
@@ -109,8 +109,9 @@ sub test_bzip : Tests {
 sub test1_file : Tests {
     my $self = shift;
 
+    my $base_dir = $self->_base_test_dir;
     my $existing_file = _existing_file();
-    my $new_file = _new_file();
+    my $new_file = $self->_new_file;
 
     # Read file
     my $fh = Genome::Utility::FileSystem->open_file_for_reading($existing_file);
@@ -138,7 +139,37 @@ sub test1_file : Tests {
     ok(!$worked, 'Try to open a file, but it\'s a directory');
     like($@, qr/File .* exists but is not a plain file/, 'exception message is correct');
 
-    # Write file
+    #< APPENDING >#
+    # new file
+    $fh = Genome::Utility::FileSystem->open_file_for_appending($new_file);
+    ok($fh, "Opened file for appending: ".$new_file);
+    isa_ok($fh, 'IO::File');
+    $fh->close;
+
+    # open existing file
+    $fh = Genome::Utility::FileSystem->open_file_for_appending($new_file);
+    ok($fh, "Opened file for appending: ".$new_file);
+    isa_ok($fh, 'IO::File');
+    $fh->close;
+    
+    # No file
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_appending };
+    ok(!$worked, 'Tried to open undef file for appending');
+    like($@, qr/No append file given/, 'exception message is correct');
+
+    # No write access
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_appending( _no_write_file() ) };
+    ok(!$worked, 'Try to open a file for appending that can\'t be written to');
+    like($@, qr/Do not have WRITE access to directory/, 'exception message is correct');
+
+    # File is a dir
+    $worked = eval { Genome::Utility::FileSystem->open_file_for_appending( _base_test_dir() ) };
+    ok(!$worked, 'Try to open a file for appending, but it\'s a directory');
+    like($@, qr/is a directory and cannot be opend as a file/, 'exception message is correct');
+    unlink $new_file;
+    #< APPENDING >#
+
+    # WRITING
     $fh = Genome::Utility::FileSystem->open_file_for_writing($new_file);
     ok($fh, "Opened file ".$new_file);
     isa_ok($fh, 'IO::File');

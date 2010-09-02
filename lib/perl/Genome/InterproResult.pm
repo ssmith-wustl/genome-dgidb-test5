@@ -35,7 +35,7 @@ class Genome::InterproResult {
             is => 'Text',
             is_optional => 1,
         },
-        parid => {
+        parent_id => {
             is => 'Text',
             is_optional => 1,
         },
@@ -43,7 +43,7 @@ class Genome::InterproResult {
             is => 'Text',
             is_optional => 1,
         },
-        inote => {
+        interpro_note => {
             is => 'Text',
             is_optional => 1,
         },

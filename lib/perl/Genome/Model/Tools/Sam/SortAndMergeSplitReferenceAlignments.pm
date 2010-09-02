@@ -64,14 +64,25 @@ sub execute {
     for my $bam (@in_files) {
         $counter++;
         my $sorted_bam = $self->output_file.".sorted_part_".$counter;
+
+        #TODO this shortcutting step should be removed, as it's not guaranteed correct, but it's in place for hmp pipeline shortcutting for now
+
         my $rv;
         eval{
-            $rv=Genome::Model::Tools::Sam::SortBam->execute(
-                file_name => $bam,
-                name_sort => 1,
-                output_file => $sorted_bam,
-                maximum_memory => 3000000000,
-            );
+            my $skip;
+            #if (-e $sorted_bam){
+            #    my $bam_lc = `samtools view $bam | wc -l`;
+            #    my $sort_lc = `samtools view $sorted_bam | wc -l`;
+            #    $skip = 1 if $bam_lc == $sort_lc;
+            #}
+            unless ($skip){
+                $rv=Genome::Model::Tools::Sam::SortBam->execute(
+                    file_name => $bam,
+                    name_sort => 1,
+                    output_file => $sorted_bam,
+                    maximum_memory => 3000000000,
+                );
+            }
             push @bams_sorted, $sorted_bam . '.bam';
         };
         if ($@ or !$rv){

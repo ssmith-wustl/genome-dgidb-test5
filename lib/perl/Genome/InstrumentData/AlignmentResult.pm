@@ -115,6 +115,11 @@ class Genome::InstrumentData::AlignmentResult {
                                     is_optional=>1,
                                     doc=>'Version of picard to use when creating bam files',
                                 },
+        n_remove_threshold      => {
+                                    is => 'Number',
+                                    is_optional=>1,
+                                    doc=>'If set, strips reads containing runs of this many Ns'
+                                }
     ],
     has_metric => [
         cigar_md_error_count => {
@@ -424,6 +429,45 @@ sub extract_fastqs_and_run_aligner {
     if (@fastqs > 3) {
         $self->error_message("We don't support aligning with more than 3 inputs (the first 2 are treated as PE and last 1 is treated as SE)");
         die $self->error_message;
+    }
+
+    # Perform N-removal if requested
+
+    if ($self->n_remove_threshold) {
+        $self->status_message("Running N-remove.  Threshold is " . $self->n_remove_threshold);
+
+        my @n_removed_fastqs;
+
+        for my $input_pathname (@fastqs) {
+            my $n_removed_file = $input_pathname . ".n-removed.fastq";
+            my $n_remove_cmd = Genome::Model::Tools::Fastq::RemoveN->create(n_removed_file=>$n_removed_file, cutoff=>$self->n_remove_threshold, fastq_file=>$input_pathname); 
+            unless ($n_remove_cmd->execute) {
+                $self->error_message("Error running RemoveN: " . $n_remove_cmd->error_message);
+                die $self->error_message;
+            }
+           
+            my $passed = $n_remove_cmd->passed_read_count();
+            my $failed = $n_remove_cmd->failed_read_count();
+            $self->status_message("N removal complete: Passed $passed reads & Failed $failed reads");
+            if ($passed > 0) { 
+                push @n_removed_fastqs, $n_removed_file;
+            }
+            
+            if ($input_pathname =~ m/^\/tmp/) {
+                $self->status_message("Removing original file before N removal to save space: $input_pathname");
+                unlink($input_pathname);
+            }
+        }
+        if (@fastqs == 1 && @n_removed_fastqs == 2) {
+            $self->status_message("NOTE: An entire side of the read pairs was filtered away after n-removal.  We'll be running in SE mode from here on out.");
+        }
+
+        if (@fastqs == 0) {
+            $self->error_message("All reads were filtered away after n-removal.  Nothing to do here, bailing out.");
+            die $self->error_message;
+        }
+        
+        @fastqs = @n_removed_fastqs;
     }
 
     # STEP 7: DETERMINE HOW MANY PASSES OF ALIGNMENT ARE REQUIRED

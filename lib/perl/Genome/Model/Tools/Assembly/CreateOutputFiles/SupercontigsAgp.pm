@@ -224,7 +224,7 @@ sub _validate_files {
     unless ($self->gap_file) {
 	$self->gap_file($self->directory.'/edit_dir/gap.txt');
     }
-    unless (-s $self->gap_file) {
+    unless (-e $self->gap_file) {
 	$self->error_message("Failed to find needed input file: ".$self->gap_file);
 	return;
     }

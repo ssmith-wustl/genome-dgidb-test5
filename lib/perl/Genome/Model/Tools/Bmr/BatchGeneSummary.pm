@@ -42,10 +42,15 @@ class Genome::Model::Tools::Bmr::BatchGeneSummary {
         is_optional => 0,
         doc => 'File to contain results table.',
     },
+    genes_to_exclude => {
+        type => 'Comma-delimited String',
+        is_optional => 1,
+        doc => 'Comma-delimited list of genes to exclude in BMR calculation',
+    },
     rejected_mutations => {
         type => 'String',
         is_optional => 1,
-        doc => 'File to catch mutations that fall in the ROI list location-wise, but have a gene name which does not match any of the genes in the ROI list. Default operation is to print to STDOUT.',
+        doc => 'File to store mutations that did not fall within the ROIs, or whose gene names did not match any in the ROI list. Default operation is to print to STDOUT.',
     },
     ]
 };
@@ -69,6 +74,13 @@ sub execute {
     my $self = shift;
     $DB::single=1;
     my $t0 = Benchmark->new;
+
+    #parse gene exclusion list
+    my $gene_exclusion_list = $self->genes_to_exclude;
+    my @genes_to_exclude = ();
+    if (defined $gene_exclusion_list) {
+        @genes_to_exclude = split ",",$gene_exclusion_list;
+    }
 
     #resolve refseq
 #    my $ref_build_name = $self->refseq_build_name;
@@ -116,6 +128,7 @@ sub execute {
         my ($chr,$start,$stop,$exon_id) = split /\t/,$line;
         #(my $gene = $exon_id) =~ s/^([^\.]+)\..+$/$1/;
         my $gene = $exon_id;
+        next if (scalar grep { /^$gene$/ } @genes_to_exclude);
         if ($chr eq "M") { $chr = "MT"; } #for broad roi lists
         if (exists $ROIs{$chr}{$gene}{$start}) {
             next if $stop < $ROIs{$chr}{$gene}{$start};
@@ -150,7 +163,7 @@ sub execute {
 
     #Loop through samples to build COVMUTS hash %COVMUTS -> gene -> class -> coverage,mutations
     my %COVMUTS = ();
-    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Indels);
+    my @classes = qw(CG.transit CG.transver AT.transit AT.transver CpG.transit CpG.transver Truncations Clustered Indels);
     for my $wiggle_file (@wiggle_files) {
         #Load the bitmask with the coverage data for this sample
         $bitmasker->wig_file($wiggle_file);
@@ -192,7 +205,6 @@ sub execute {
             $cpg_cov_vec->And($cov_bitmask->{$chr},$cpg_bitmask->{$chr});
 
             for my $gene (keys %{$ROIs{$chr}}) {
-
                 unless (grep { /^$gene$/ } keys %COVMUTS) {
                     for my $class (@classes) {
                         $COVMUTS{$gene}{$class}{'coverage'} = 0;
@@ -205,9 +217,11 @@ sub execute {
                     my $stop = $ROIs{$chr}{$gene}{$start};
                     my $bits;
 
-                    #indels
+                    #Indels, Truncations, and Clustered variants use the coverage of all the ROIs
                     $bits = $self->count_interval($cov_bitmask->{$chr},$chr_length_test_vec,$start,$stop);
                     $COVMUTS{$gene}{'Indels'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'Truncations'}{'coverage'} += $bits;
+                    $COVMUTS{$gene}{'Clustered'}{'coverage'} += $bits;
 
                     #AT
                     $bits = $self->count_interval($at_cov_vec,$chr_length_test_vec,$start,$stop);
@@ -226,9 +240,7 @@ sub execute {
                 }#end, for my $start
             }#end, for my $gene
         }#end, for my $chr
-
         undef $cov_bitmask; #clean up any memory
-
     }#end, for my wiggle file
 
     #clean up the object memory
@@ -243,34 +255,51 @@ sub execute {
     my $rejects_file = $self->rejected_mutations;
     my $rejects_fh;
     if ($rejects_file) {
-        $rejects_fh = new IO::File $rejects_file,"w";
+        $rejects_fh = IO::File->( $rejects_file, ">" );
     }
     else {
         open $rejects_fh, ">&STDOUT";
     }
 
     while (my $line = $mut_fh->getline) {
-        next if ($line =~ /^Hugo/);
+        next if (( $line =~ /^Hugo\_Symbol/ ) || ( $line =~ /^#/ ));
         chomp $line;
-        my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = split /\t/,$line;
+        my @segs = split( /\t/, $line );
+        my ($gene,$geneid,$center,$refbuild,$chr,$start,$stop,$strand,$mutation_class,$mutation_type,$ref,$var1,$var2) = @segs;
+        my $inCluster = $segs[54];
 
         #fix broad chromosome name
-        if ($chr =~ /^chr/) {
-            $chr =~ s/^chr(.+$)/$1/;
-        }
-        #using WU only for the initial test set
-        #next if $center !~ /wustl/i;
-        #make sure mutation is inside the ROIs
-        next unless ($self->count_bits($roi_bitmask->{$chr},$start,$stop));
+        $chr =~ s/chr//;
+        #highly-mutated genes to ignore
+        next if (scalar grep { /^$gene$/ } @genes_to_exclude);
+        #Ignore Silent mutations and those within RNAs
+        next if ( $mutation_class =~ m/RNA|Silent/ );
+        #Skip this variant is it's not within the ROIs this job is processing
+        next if ($self->count_bits($roi_bitmask->{$chr},$start,$stop) == 0);
 
+        #If this variant is closer than a certain number of amino-acids from another variant
+        #treat it as a possibly functional mutation (indicates an oncogene)
+        if( $inCluster )
+        {
+            #verify this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
+            if (grep { /^$gene$/ } keys %{$ROIs{$chr}}) {
+                $COVMUTS{$gene}{'Clustered'}{'mutations'}++;
+            }
+            else {
+                print $rejects_fh ("Variant within ROI, but gene name unknown: $gene, chr$chr:$start-$stop, $center\n");
+                next;
+            }
+        }
         #SNVs
-        if ($mutation_type =~ /snp|dnp|onp|tnp/i) {
-            #if this mutation is non-synonymous
-            if ($mutation_class =~ /missense|nonsense|nonstop|splice_site/i) {
+        elsif ($mutation_type =~ m/SNP|DNP|ONP|TNP/) {
+            #if this mutation is non-synonymous (missense only)
+            if ($mutation_class =~ m/Missense_Mutation/) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
                 if (grep { /^$gene$/ } keys %COVMUTS) {
-
                     #determine the classification for ref A's and T's
+                    $ref = substr( $ref, 0, 1 ); #In case of DNPs or TNPs
+                    $var1 = substr( $var1, 0, 1 ); #In case of DNPs or TNPs
+                    $var2 = substr( $var2, 0, 1 ); #In case of DNPs or TNPs
                     if ($ref eq 'A') {
                         #is it a transition?
                         if ($var1 eq 'G' || $var2 eq 'G') {
@@ -282,12 +311,11 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = A
-
-                    if ($ref eq 'T') {
+                    elsif ($ref eq 'T') {
                         #is it a transition?
                         if ($var1 eq 'C' || $var2 eq 'C') {
                             $COVMUTS{$gene}{'AT.transit'}{'mutations'}++;
@@ -298,13 +326,12 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = T
-
                     #determine the classification for ref C's and G's
-                    if ($ref eq 'C') {
+                    elsif ($ref eq 'C') {
                         #is it a transition?
                         if ($var1 eq 'T' || $var2 eq 'T') {
                             #is it inside a CpG island?
@@ -327,12 +354,11 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = C
-
-                    if ($ref eq 'G') {
+                    elsif ($ref eq 'G') {
                         #is it a transition?
                         if ($var1 eq 'A' || $var2 eq 'A') {
                             #is it inside a CpG island?
@@ -355,32 +381,54 @@ sub execute {
                         }
                         #otherwise, classification is impossible - quit.
                         else {
-                            $self->error_message("Unable to determine classification of this mutation:\n$line");
+                            $self->error_message("Cannot classify variant: $gene, chr$chr:$start-$stop, $var1, $var2");
                             return;
                         }
                     }#end, if ref = G
+                    else {
+                        warn("Ref DNA is weird! $ref");
+                        next;
+                    }
                 }#end, if ROI and MAF genes match 
-
                 #if the ROI list and MAF file do not match, quit.
                 else {
-                    print $rejects_fh "Cannot find this mutation's gene in the ROI hash:\n$line\n";
+                    print $rejects_fh ("Variant within ROI, but gene name unknown: $gene, chr$chr:$start-$stop, $center\n");
                     next;
                 }
             }#end, if mutation is non-synonymous
+            #if this mutation is non-synonymous (everything but missense)
+            elsif ($mutation_class =~ m/Nonsense_Mutation|Nonstop_Mutation|Splice_Site_SNP/) {
+                #verify this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
+                if (grep { /^$gene$/ } keys %COVMUTS) {
+                    $COVMUTS{$gene}{'Truncations'}{'mutations'}++;
+                }
+                else {
+                    print $rejects_fh ("Variant within ROI, but gene name unknown: $gene, chr$chr:$start-$stop, $center\n");
+                    next;
+                }
+            }#end, if mutation is a splice-site, nonsense, or non-stop
+            else {
+                warn("Variant classification is weird! $mutation_class");
+                next;
+            }
         }#end, if mutation is a SNV
-
         #Indels
-        if ($mutation_type =~ /ins|del/i) {
+        elsif ($mutation_type =~ m/INS|DEL/ ) {
             #verify this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
             if (grep { /^$gene$/ } keys %COVMUTS) {
                 $COVMUTS{$gene}{'Indels'}{'mutations'}++;
             }
             else {
-                print $rejects_fh "Cannot find this mutation's gene in the ROI hash:\n$line\n";
+                print $rejects_fh ("Variant within ROI, but gene name unknown: $gene, chr$chr:$start-$stop, $center\n");
                 next;
             }
         }#end, if mutation is an indel
+        else {
+            warn("Variant type is weird! $mutation_type");
+            next;
+        }
     }#end, loop through MAF
+    $mut_fh->close;
 
     #Parse class-summary file and load %BMR hash (%BMR -> class = bmr)
     my %BMR; # %class_bmr -> class = b.m.r.
@@ -407,7 +455,7 @@ sub execute {
         }
     }
     my $t3 = Benchmark->new;
-    print STDERR " Total Time: ", timestr(timediff($t3,$t0)), "\n";
+    print " Total Time: ", timestr(timediff($t3,$t0)), "\n";
     return 1;
 }
 
@@ -464,4 +512,4 @@ sub count_bits {
 #AT.A.transver.T AT.T.transver.A
 #AT.A.transver.C AT.T.transver.G
 #
-#and Indels
+#and Indels, Truncations, and Clustered variants

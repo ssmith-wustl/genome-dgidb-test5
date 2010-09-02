@@ -5,6 +5,7 @@ use warnings;
 
 use above 'Genome';
 
+use Data::Dumper 'Dumper';
 use Test::More 'no_plan';
 
 use_ok('Genome::Utility::Text');
@@ -29,12 +30,12 @@ is(Genome::Utility::Text::module_to_class($module), $class, 'module_to_class');
 ok(!Genome::Utility::Text::module_to_class(undef), 'module_to_class failed w/o module');
 
 # params
-my $param_string = '-aa fasta -b1b -1 qual --c22 phred phrap  -ddd -11 -eee -f -g22g text -1111 --h 44';
+my $param_string = '-aa fasta -b1b -1 qual --c22 phred phrap  -ddd -11 -eee -f -g22g text -1111 --h_h 44 --i-i -5 -j-----j -5 -6 hello     -k    -l_l-l g  a   p   ';
 my $params = {
-    aa => 'fasta', b1b => '-1 qual', c22 => 'phred phrap ', ddd => -11, eee => 1, f => 1, g22g => 'text -1111', h => 44,
-};
+    aa => 'fasta', b1b => '-1 qual', c22 => 'phred phrap', ddd => -11, eee => 1, f => 1, g22g => 'text -1111', h_h => 44, 'i-i' => -5, 'j-----j' => '-5 -6 hello', k => 1, 'l_l-l' => 'g  a   p', };
 my %hash = Genome::Utility::Text::param_string_to_hash($param_string);
 is_deeply(\%hash, $params, 'params string to hash');
+print Dumper(\%hash);
 for my $invalid_string ( undef, 'a' ) {
     my %hash =  Genome::Utility::Text::param_string_to_hash($invalid_string);
     ok(!%hash, 'Failed param string ('.(defined $invalid_string ? $invalid_string : 'undef').") to hash as expected:\n$@");

@@ -13,42 +13,42 @@ use Genome::Utility::AsyncFileSystem qw(on_each_line);
 class Genome::Model::Tools::Sam::Merge {
     is  => 'Genome::Model::Tools::Sam',
     has => [
-        files_to_merge => {
-            is  => 'List',
-            doc => 'The bam files to merge ',
-        },
-        merged_file => {
-            is  => 'String',
-            doc => 'The resulting merged file',
-        },
-        file_type => {
-            is  => 'String',
-            doc => 'BAM or SAM.  Default is BAM.',
-            default_value => 'BAM',
-        },
-        is_sorted => {
-            is  => 'Integer',
-            doc => 'Denoting whether the input data is chrom position sorted (1/0)  Default 0',
-            default_value => 0,
-	        is_optional => 1
-        },
-        software => {
-            is => 'Text',
-            default_value => 'picard',
-            valid_values => ['picard', 'samtools'],
-            doc => 'the software tool to use for merging BAM files.  defualt_value=>picard',
-        },
-        bam_index => {
-            is  => 'Boolean',
-            doc => 'flag to create bam index or not',
-            is_optional   => 1,
-            default_value => 1,
-        },
-        use_picard_version => {
-            is => 'String',
-            doc => 'version of picard to use if "picard" was used for the --software option',
-            is_optional => 1,
-        },
+    files_to_merge => {
+        is  => 'List',
+        doc => 'The bam files to merge ',
+    },
+    merged_file => {
+        is  => 'String',
+        doc => 'The resulting merged file',
+    },
+    file_type => {
+        is  => 'String',
+        doc => 'BAM or SAM.  Default is BAM.',
+        default_value => 'BAM',
+    },
+    is_sorted => {
+        is  => 'Integer',
+        doc => 'Denoting whether the input data is chrom position sorted (1/0)  Default 0',
+        default_value => 0,
+        is_optional => 1
+    },
+    software => {
+        is => 'Text',
+        default_value => 'picard',
+        valid_values => ['picard', 'samtools'],
+        doc => 'the software tool to use for merging BAM files.  defualt_value=>picard',
+    },
+    bam_index => {
+        is  => 'Boolean',
+        doc => 'flag to create bam index or not',
+        is_optional   => 1,
+        default_value => 1,
+    },
+    use_picard_version => {
+        is => 'String',
+        doc => 'version of picard to use if "picard" was used for the --software option',
+        is_optional => 1,
+    },
     ],
 };
 
@@ -88,7 +88,7 @@ sub merge_command {
             _monitor_check_interval => 60, #seconds
             _monitor_stdout_interval => 900, #seconds
         );
-        
+
         my $list_of_files = join(' ',@input_files);
         $self->status_message('Files to merge: '. $list_of_files);
     } elsif ($self->software eq 'samtools') {
@@ -96,7 +96,7 @@ sub merge_command {
         my $bam_merge_tool = "$sam_path merge";
         my $list_of_files = join(' ',@input_files);
         $self->status_message("Files to merge: ". $list_of_files);
-	    $bam_merge_cmd = "$bam_merge_tool $merged_file $list_of_files";
+        $bam_merge_cmd = "$bam_merge_tool $merged_file $list_of_files";
     } else {
         die ('Failed to resolve merge command for software '. $self->software);
     }
@@ -109,7 +109,6 @@ sub combine_headers {
     my @files = @{$self->files_to_merge};
 
     my $time = time;
-    $self->use_version('r613');
 
     my $tmp_dir = Genome::Utility::FileSystem->base_temp_directory;
     my $combined_headers_path = "$tmp_dir/$time\_combined_headers.sam";
@@ -123,11 +122,11 @@ sub combine_headers {
     for my $file (@files) {
         my $header_fh = IO::File->new($self->samtools_path . " view -H $file |");
         while (my $line = $header_fh->getline) {
-            print $combined_headers_hd_fh $line if ($line =~ /^\@HD/);
-            print $combined_headers_sq_fh $line if ($line =~ /^\@SQ/);
-            print $combined_headers_rg_fh $line if ($line =~ /^\@RG/);
-            print $combined_headers_pg_fh $line if ($line =~ /^\@PG/);
-            print $combined_headers_co_fh $line if ($line =~ /^\@CO/);
+            $combined_headers_hd_fh->print($line) if ($line =~ /^\@HD/);
+            $combined_headers_sq_fh->print($line) if ($line =~ /^\@SQ/);
+            $combined_headers_rg_fh->print($line) if ($line =~ /^\@RG/);
+            $combined_headers_pg_fh->print($line) if ($line =~ /^\@PG/);
+            $combined_headers_co_fh->print($line) if ($line =~ /^\@CO/);
         }
     }
 
@@ -151,7 +150,7 @@ sub combine_headers {
             $self->status_message("Found empty " . uc($type) . " file."); 
         }
     }
-    
+
     $self->status_message("\nCombining header segments into $combined_headers_path...\n");
     my $perl_rv = Genome::Utility::FileSystem->cat(
         input_files => \@combined_header_files,
@@ -162,25 +161,86 @@ sub combine_headers {
         die $self->error_message;
     }
 
-    #$self->status_message("\nReheadering alignment bams...\n");
-    #my $sam_path = $self->samtools_path;
-    #my $sam_tool = "$sam_path reheader";
-    #my @reheadered_files;
-    #for (my $i = 0; $i < @files; $i++) {
-    #    my $file = $files[$i];
-    #    my $tmp_file = "$tmp_dir/$time\_$i\_" . basename($file);
-    #    my $perl_rv = Genome::Utility::FileSystem->shellcmd(cmd => "$sam_tool $combined_headers_path $file > $tmp_file", input_files => [$combined_headers_path, $file], output_files => [$tmp_file], skip_if_output_is_present => 0);
-    #    if ($perl_rv) {
-    #        push @reheadered_files, $tmp_file;
-    #    }
-    #    else {
-    #        $self->error_message("Unable to reheader $file to $tmp_file.");
-    #        die $self->error_message;
-    #    }
-    #}
-
-    #return @reheadered_files;
     return $combined_headers_path;
+}
+
+sub fix_headers {
+    my $self = shift;
+    my $bam_file = shift;
+
+    (my $base_file = $bam_file) =~ s/\.bam$//;
+    my $sam_file = "$base_file.sam";
+    my $tmp_sam_file = "$base_file.sam.tmp";
+    my $sorted_bam = "$base_file.bam";
+    my $unsorted_bam = "$base_file.unsorted.bam";
+    my $missing_headers_bam = "$base_file\_missing_headers.bam";
+
+    my $headers_file = $self->combine_headers();
+
+    # backup original bam
+    Genome::Utility::FileSystem->copy_file($bam_file, $missing_headers_bam);
+
+    # convert bam to sam
+    my $bam_to_sam = Genome::Model::Tools::Sam::BamToSam->create(bam_file => $bam_file, sam_file => $tmp_sam_file);
+    unless($bam_to_sam->execute()) {
+        $self->error_message("Failed to convert BAM to SAM ($bam_file).");
+        die $self->error_message;
+    }
+    $self->error_message("Failed to remove old BAM file ($bam_file).") unless(unlink($bam_file));
+
+    # strip off headers
+    my $strip_headers_cmd = "sed -i -e '/^\@/d' $tmp_sam_file";
+    my $strip_headers = Genome::Utility::FileSystem->shellcmd(
+        cmd => $strip_headers_cmd,
+        input_files => [$tmp_sam_file],
+        output_files => [$tmp_sam_file],
+        skip_if_output_is_present => 0,
+    );
+    unless ($strip_headers) {
+        $self->error_message("Failed to strip off headers from SAM file ($tmp_sam_file)");
+        die $self->error_message;
+    }
+
+    # inject new headers
+    my $inject_headers = Genome::Utility::FileSystem->cat(input_files => [$headers_file, $tmp_sam_file], output_file => $sam_file);
+    unless($inject_headers) {
+        $self->error_message("Failed to inject headers into SAM file ($tmp_sam_file)");
+        die $self->error_message;
+    }
+    $self->error_message("Failed to remove old SAM file ($tmp_sam_file).") unless(unlink($tmp_sam_file));
+
+    # convert sam to bam
+    my $sam_to_bam_cmd = "samtools view -b -S $sam_file -o $unsorted_bam";
+    my $sam_to_bam = Genome::Utility::FileSystem->shellcmd(
+        cmd => $sam_to_bam_cmd,
+        input_files => [$sam_file],
+        output_files => [$unsorted_bam],
+    );
+    unless($sam_to_bam) {
+        $self->error_message("Failed to convert file to BAM, ($sam_file -> $unsorted_bam)");
+        die $self->error_message;
+    }
+    $self->error_message("Failed to remove SAM file ($sam_file).") unless(unlink($sam_file));
+
+    # validate only headers have changed, i.e. reads have not changed
+    my $original_bam_content_md5 = `samtools view $missing_headers_bam | md5sum`;
+    my $fixed_bam_content_md5 = `samtools view $unsorted_bam | md5sum`;
+    unless($original_bam_content_md5 eq $fixed_bam_content_md5) {
+        $self->error_message("$unsorted_bam reads appear to differ from $missing_headers_bam");
+        die $self->error_message;
+    }
+
+    # sort bam
+    my $bam_sort = Genome::Model::Tools::Sam::SortBam->create(file_name => $unsorted_bam, output_file => $sorted_bam);
+    unless($bam_sort->execute()) {
+        $self->error_message("Failed to sort BAM ($unsorted_bam -> $sorted_bam).");
+        die $self->error_message;
+    }
+
+    # cleanup unused files
+    $self->error_message("Failed to cleanup unused files ($missing_headers_bam, $unsorted_bam).") unless(unlink($missing_headers_bam, $unsorted_bam));
+
+    return 1;
 }
 
 sub unix_sort_unique {
@@ -287,42 +347,20 @@ sub execute {
             $self->error_message("Bam merge error!  Return value: $bam_merge_rv");
         } 
         else {
-            #merging success
             $self->status_message("Success.  Files merged to: $result");
         }
 
-        # Samtools only preserves headers from first bam in merge so we'll fix
+        # Samtools only preserves headers from first bam in merge so we need to fix
         if ($self->software eq 'samtools') {
             $self->status_message("Fixing headers on $result.");
-
-            my $combined_headers_file = $self->combine_headers();
-
-            my $perl_rv = rename($result, "$result\_missing_headers");
-            if ($perl_rv) {
-                $self->status_message("Renamed $result to $result\_missing_headers, creating $result with correct headers...");
-            }
-            else {
-                $self->error_message("Failed to renamed $result to $result\_missing_headers.");
-                die $self->error_message;
-            }
-
-            my $sam_path = $self->samtools_path;
-            my $reheader_cmd = "$sam_path reheader $combined_headers_file $result\_missing_headers > $result";
-            $perl_rv = Genome::Utility::FileSystem->shellcmd(
-                cmd => $reheader_cmd,
-                input_files => [$combined_headers_file],
-                output_files => [$result],
-                skip_if_output_is_present => 0,
-            );
+            my $perl_rv = $self->fix_headers($result);
             if ($perl_rv) {
                 $self->status_message("Fixed headers on $result.");
             }
             else {
                 $self->error_message("Failed to fix headers on $result.");
             }
-
         }
-
     }
 
     if ($self->bam_index) {

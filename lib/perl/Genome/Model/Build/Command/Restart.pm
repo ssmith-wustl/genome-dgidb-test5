@@ -9,14 +9,14 @@ class Genome::Model::Build::Command::Restart {
     is => 'Genome::Model::Build::Command::Base',
     has => [
         lsf_queue => {
-            default_value => 'apipe',
+            default_value => 'workflow',
             is_optional => 1,
             doc => 'Queue to restart the master job in (events stay in their original queue)'
         },
         restart => {
             is => 'Boolean',
             is_optional => 1,
-            default_value => 1,
+            default_value => 0,
             doc => 'Restart with a new workflow, overrides the default of resuming an old workflow'
         }
     ]
@@ -79,8 +79,9 @@ sub execute {
         $e->event_status('Scheduled');
     }
 
+    #TODO, the -m argument (host group, should be determined from the value of $self->lsf_queue, not hardcoded
     my $lsf_command = sprintf(
-        'bsub -N -H -q %s -m blades %s -g /build/%s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
+        'bsub -N -H -q %s -m workflow %s -g /build/%s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
         $self->lsf_queue,
         "-R 'select[type==LINUX86]'",
         $ENV{USER},

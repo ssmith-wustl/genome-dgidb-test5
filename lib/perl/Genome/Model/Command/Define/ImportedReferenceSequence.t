@@ -14,7 +14,7 @@ use Test::More;
 use File::Spec;
 
 if(Genome::Config->arch_os() =~ '64') {
-    plan tests => 37;
+    plan tests => 45;
 } else {
     plan skip_all => 'Must be run on a 64-bit machine',
 }
@@ -74,7 +74,7 @@ ok(!$first_2_bases_diff, '2.bases generated as expected')
     or diag("  diff\n" . $first_2_bases_diff);
 
 my @files = glob($first_data_directory . '/*');
-is(scalar(@files), 16, 'Produced 16 files/directories');
+is(scalar(@files), 25, 'Produced 25 files/directories');
 
 #Later tests on a smaller dataset will actually compare all the files
 my %expected_file_sizes = (
@@ -91,6 +91,16 @@ my %expected_file_sizes = (
     'all_sequences.fa.rpac' => 10485762,
     'all_sequences.fa.rsa' => 5242908,
     'all_sequences.fa.sa' => 5242908,
+    'all_sequences.bowtie' => 42467426,
+    'all_sequences.bowtie.1.ebwt' => 16178321,
+    'all_sequences.bowtie.2.ebwt' => 5242888,
+    'all_sequences.bowtie.3.ebwt' => 26,
+    'all_sequences.bowtie.4.ebwt' => 10485760,
+    'all_sequences.bowtie.fa' => 42467426,
+    'all_sequences.bowtie.fa.fai' => 46,
+    'all_sequences.bowtie.fai' => 46,
+    'all_sequences.bowtie.rev.1.ebwt' => 16178321,
+    'all_sequences.bowtie.rev.2.ebwt' => 5242888,
 );
 
 my @files_to_test = grep(-f $_ && $_ !~ 'build.xml', @files);
@@ -100,9 +110,9 @@ for my $file (@files_to_test) {
     is(-s $file, $expected_file_sizes{$file_base}, 'Generated ' . $file . ' matches expected size');
 }
 
-
 #Second test--a tiny FASTA with 3 chromosomes
-my $second_test_dir = $test_data_dir . '2/';
+#updated from 2.01 to 2.02 to create bases directory
+my $second_test_dir = $test_data_dir . '2.02/';
 my $second_fasta = $second_test_dir . 'all_sequences.fa';
 
 ok(Genome::Utility::FileSystem->check_for_path_existence($second_fasta), 'Second test FASTA exists');

@@ -14,6 +14,8 @@
 
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]]</xsl:comment>
 
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Model:'" />
       <xsl:with-param name="display_name" select="./aspect[@name='name']/value" />

@@ -103,6 +103,7 @@ class Genome::InstrumentData::Solexa {
 
                 --archive.path archive_path,
                 archive2.path archive_path,
+                gerald_bam.path gerald_bam_path,
 
                 --adaptor.path adaptor_path,
                 --adaptor2.path adaptor_path,
@@ -136,6 +137,8 @@ class Genome::InstrumentData::Solexa {
                         )
                     left join GSC.seq_fs_path archive2 on archive2.seq_id = i.seq_id
                         and archive2.data_type = 'illumina fastq tgz'
+                    left join GSC.seq_fs_path gerald_bam on gerald_bam.seq_id = i.seq_id
+                        and gerald_bam.data_type = 'gerald bam'
                     left join GSC.read_illumina r1
                         on run_type = 'Paired End'
                         and r1.ii_seq_id = i.seq_id
@@ -184,6 +187,7 @@ EOS
         is_external                     => { },
         adaptor_path                    => { },
         archive_path                    => { },
+        gerald_bam_path                 => { },
         analysis_software_version       => { },
         clusters                        => { column_name => 'filt_clusters' },
         fwd_clusters                    => { column_name => 'fwd_filt_clusters' },
