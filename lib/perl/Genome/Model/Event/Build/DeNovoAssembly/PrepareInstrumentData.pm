@@ -12,7 +12,6 @@ require IPC::Run;
 
 class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData {
     is => 'Genome::Model::Event::Build::DeNovoAssembly',
-    is_abstract => 1,
     has => [
         _read_processor_pipe_command => {
             is => 'Text',
@@ -59,7 +58,7 @@ sub execute {
     }
     $self->status_message('Instrument data OK');
 
-    $self->_setup_read_processor
+    $self->_setup_read_processor(@instrument_data)
         or return;
 
     my $sequencing_platform = $self->processing_profile->sequencing_platform;
@@ -84,9 +83,32 @@ sub execute {
 
 #< Read Processor >#
 sub _setup_read_processor {
-    my $self = shift;
+    my ($self, @instrument_data) = @_;
 
-    $self->status_message("Read processor setup...");
+    $self->status_message('Read processor setup...');
+
+    $self->status_message('Determining quality type');
+
+    my %instrument_data_classes;
+    for my $instrument_data ( @instrument_data ) {
+        $instrument_data_classes{ $instrument_data->class }++;
+    }
+    if ( keys %instrument_data_classes > 1 ) {
+        $self->error_message('Cannot process instrument data from different classes');
+        return;
+    }
+    my %qual_types = (
+        'Genome::InstrumentData::Solexa' => 'illumina',
+        'Genome::InstrumentData::Imported' => 'sanger',
+    );
+    my ($instrument_data_class) = keys %instrument_data_classes;
+    my $qual_type = $qual_types{$instrument_data_class};
+    unless ( $qual_type ) {
+        $self->error_message("Unknown instrument data class ($instrument_data_class) to determine quality type");
+        return;
+    }
+
+    $self->status_message('Quality type is '.$qual_type);
 
     my $read_processor = $self->build->processing_profile->read_processor || '';
     my $base_limit = $self->build->calculate_base_limit_from_coverage;
