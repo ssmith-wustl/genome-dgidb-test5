@@ -143,9 +143,9 @@ sub execute
     (my $sqlitedatafilename, $outdirpath) = fileparse($sqlitedatafile);
 
     ## Copy sqlite.dat file Annotated_submission directory
-    ## Before copying sqlite file we will need to delete sqlite*.dat file in the Annotated_submission directory if already exists
-	print "Found file\n" if -e $anno_submission.$sqlitedatafilename;
-# 	unlink($anno_submission.$sqlitedatafilename) || croak qq{\n\n Cannot delete $anno_submission.$sqlitedatafilename ... from BerRunFinish.pm: $OS_ERROR\n\n} if -e $anno_submission.$sqlitedatafilename;
+    ## Before copying sqlite file we will need to delete sqlite*.dat && *.dat.dat file in the Annotated_submission directory if already exists
+ 	unlink($anno_submission.$sqlitedatafilename) || croak qq{\n\n Cannot delete $anno_submission.$sqlitedatafilename ... from BerRunFinish.pm: $OS_ERROR\n\n} if -e $anno_submission.$sqlitedatafile;
+ 	unlink($anno_submission.$sqlitedatafilename.".dat") || croak qq{\n\n Cannot delete $anno_submission.$sqlitedatafilename ... from BerRunFinish.pm: $OS_ERROR\n\n} if -e $anno_submission.$sqlitedatafilename.".dat";
     copy($sqlitedatafile, $anno_submission.$sqlitedatafilename) || croak qq{\n\n Copying of $sqlitedatafile failed ...  from BerRunFinish.pm: $OS_ERROR\n\n };
 
     my $sqliteoutfile  = qq{$outdirpath/$sqliteout};
@@ -338,7 +338,7 @@ sub execute
 
     my $acedb_scripts_path = $self->{amgap_path} . "/Acedb/Scripts";
     my $parse_script_name
-        = "parsefiles_wens_" . $locus_tag . "_" . $pipe_version . ".sh";
+        = "parsefiles_pap_ber_" . $locus_tag . "_" . $pipe_version . ".sh";
     my $parse_script_full = qq{$acedb_scripts_path/$parse_script_name};
     my $parse_script_fh   = IO::File->new();
     $parse_script_fh->open("> $parse_script_full")
@@ -369,13 +369,17 @@ sub execute
     foreach my $acefile (@acefiles)
     {
         next if $acefile =~ /^\.\.?$/;
-        next if $acefile =~ /\.gff$/;
+        next if $acefile =~ /\.gff$|\.fasta$|\.genomic_canonical\.ace$/;
         next if $acefile =~ /\.txt$/;
-        print $parse_script_fh "$parse  $acedb_data_path/$acefile\n";
+        next if $acefile =~ m/dead_genes_list/;
+
         if ( $acefile =~ /$phase5file/ )
         {
             $shortph5file = $phase5file = $acefile;
         }
+
+        next if $acefile =~ /_phase_[0-5]_ssid_/;
+        print $parse_script_fh "$parse  $acedb_data_path/$acefile\n";
     }
     print $parse_script_fh "\nsave\n";
     print $parse_script_fh "quit\n\n";
@@ -501,6 +505,33 @@ sub execute
             "HOUSTON, WE HAVE A PROBLEM, p5_hybrid ace file counts DO NOT MATCH p5_hybrid counts in ACEDB (Totals_with_dead)... BAD :(\n\n";
 
     }
+#
+    ## We will dump gff for this genome
+    unless ( $cwd eq $acedb_data_path )
+    {
+        chdir($acedb_data_path)
+            or die
+            "Failed to change to '$acedb_data_path'...  from BerRunFinish.pm: $OS_ERROR\n\n";
+    }
+
+    my $gff_dump_file = $locus_tag ."_phase_5_ssid_". $ssid. ".gff";
+	my $bap_dump_gff_cmd = "bap_dump_gene_predictions_gff --sequence-set-id $ssid > $gff_dump_file";
+#print "Dumping gff dump (cmd): ". $bap_dump_gff_cmd."\n";
+	system("$bap_dump_gff_cmd") == 0
+			or die "system $bap_dump_gff_cmd failed: $?";
+
+    ## List dead genes
+    my $dead_genes_file = $locus_tag."_dead_genes_list";
+    my $dead_genes_cmd = " bap_list_dead_genes --sequence-set-id $ssid > $dead_genes_file";
+#    print "Running bap_list_dead_genes (cmd): ". $dead_genes_cmd. "\n";
+    system("$dead_genes_cmd") == 0
+			or die "system $bap_dump_gff_cmd failed: $?";
+
+    ## Count the dead genes - depends on number of lines
+     my $dead_genes = `wc -l < $dead_genes_file` ||
+            die "wc failed: $?\n";
+    chomp($dead_genes);
+
     ########################################################
     # Writing the rt file
     ########################################################
@@ -633,8 +664,19 @@ sub execute
             qq{HOUSTON, WE HAVE A PROBLEM, p5_hybrid ace file counts DO NOT MATCH p5_hybrid counts in ACEDB (Totals_with_dead)... BAD :\(  },
             "\n\n";
     }
-    print $rtfile_fh qq{Location of this file:\n};
-    print $rtfile_fh qq{\n$rtfullname\n\n};
+    print $rtfile_fh qq{GFF dump for thus genome can be downloaded from: $acedb_data_path/$gff_dump_file\n\n};
+    
+    ## Dead gene stuff
+    if ($dead_genes) {
+    	print $rtfile_fh qq{Further I found $dead_genes gene tagged as 'Dead'\n};
+        open (DG, $dead_genes_file) || die ("Error opening $dead_genes_file :$?\n");
+		while (<DG>) {
+			chomp;
+            print $rtfile_fh qq{$_\n};
+		}
+	}
+    
+    print $rtfile_fh qq{\nLocation of this file: $rtfullname\n\n};
     print $rtfile_fh qq{I am transferring ownership to Veena/Joanne.\n\n};
     print $rtfile_fh qq{Thanks,\n\n};
     print $rtfile_fh qq{Sasi\n};
@@ -685,8 +727,8 @@ sub send_mail
         );
 
     my $to = join( ', ',
-        'ssurulir@watson.wustl.edu',
-        'kpepin@genome.wustl.edu', );
+#'kpepin@genome.wustl.edu',
+        'ssurulir@watson.wustl.edu',);
 
     my $subject
         = "Amgap BER Product Naming script mail for AMGAP SSID: $ssid ($assembly_name)";
