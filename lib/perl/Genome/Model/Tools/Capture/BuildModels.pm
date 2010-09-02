@@ -165,8 +165,13 @@ sub execute {                               # replace with real execution logic.
 
 					if(!defined($self->read_length) || $read_length eq $self->read_length)
 					{
+						
 						## Assign instrument data to model ##
-	
+						if(defined($self->read_length))
+						{
+							warn "Desired read length is " . $self->read_length . "\n";
+						}
+						warn "Assigning $flow_cell_id lane $lane with read length $read_length\n";
 						my $cmd = "genome model instrument-data assign --model-id $model_id --instrument-data-id $id";
 	
 						if(!$self->report_only)
