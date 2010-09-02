@@ -113,4 +113,10 @@ sub calculate_estimated_kb_usage {
     return 1024;
 }
 
+sub resolve_workflow_name {
+    my $self = shift;
+    
+    return $self->build_id . ' Convergence';
+}
+
 1;
