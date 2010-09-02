@@ -119,4 +119,12 @@ sub resolve_workflow_name {
     return $self->build_id . ' Convergence';
 }
 
+sub workflow_instances {
+    my $self = shift;
+    my @instances = Workflow::Operation::Instance->get(
+        name => $self->resolve_workflow_name,
+    );
+    return @instances;
+}
+
 1;

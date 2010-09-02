@@ -76,7 +76,6 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_file)
 	{
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";
-		print OUTFILE 
 #		print OUTFILE "file\tnum_snps\tnum_with_genotype\tnum_min_depth\tnum_variant\tvariant_match\thom_was_het\thet_was_hom\thet_was_diff\tconc_variant\tconc_rare_hom\n";
 		#num_ref\tref_was_ref\tref_was_het\tref_was_hom\tconc_overall
 	}
@@ -123,46 +122,48 @@ sub execute {                               # replace with real execution logic.
 				$file_type = "varscan";
 			}
 
-			## Get depth and consensus genotype ##
-
-			my $cons_gt = "";			
-
-			if($file_type eq "varscan" && $cns_call ne "A" && $cns_call ne "C" && $cns_call ne "G" && $cns_call ne "T")
-			{
-				## VarScan CNS format ##
-				$depth = $lineContents[4] + $lineContents[5];
-				$cons_gt = code_to_genotype($cns_call);			
-			}
-			elsif($file_type eq "varscan")
-			{
-				## VarScan SNP format ##
-				$depth = $lineContents[4] + $lineContents[5];
-				my $var_freq = $lineContents[6];
-				my $allele1 = $lineContents[2];
-				my $allele2 = $lineContents[3];
-				$var_freq =~ s/\%//;
-				if($var_freq >= 80)
-				{
-					$cons_gt = $allele2 . $allele2;
-				}
-				else
-				{
-					$cons_gt = $allele1 . $allele2;
-					$cons_gt = sort_genotype($cons_gt);
-				}					
-			}
-			
-			else
-			{
-				$depth = $lineContents[7];
-				$cons_gt = code_to_genotype($cns_call);
-			}
-	
 			## Only check SNP calls ##
 	
 			if($ref_base ne "*" && length($ref_base) == 1 && length($cns_call) == 1) #$ref_base ne $cns_call
 			{
+				## Get depth and consensus genotype ##
+	
+				my $cons_gt = "";			
+	
+				if($file_type eq "varscan" && $cns_call ne "A" && $cns_call ne "C" && $cns_call ne "G" && $cns_call ne "T")
+				{
+					## VarScan CNS format ##
+					$depth = $lineContents[4] + $lineContents[5];
+					$cons_gt = code_to_genotype($cns_call);			
+				}
+				elsif($file_type eq "varscan")
+				{
+					## VarScan SNP format ##
+					$depth = $lineContents[4] + $lineContents[5];
+					my $var_freq = $lineContents[6];
+					my $allele1 = $lineContents[2];
+					my $allele2 = $lineContents[3];
+					$var_freq =~ s/\%//;
+					if($var_freq >= 80)
+					{
+						$cons_gt = $allele2 . $allele2;
+					}
+					else
+					{
+						$cons_gt = $allele1 . $allele2;
+						$cons_gt = sort_genotype($cons_gt);
+					}					
+				}
+				
+				else
+				{
+					$depth = $lineContents[7];
+					$cons_gt = code_to_genotype($cns_call);
+				}
+	
 				$stats{'num_snps'}++;
+				
+#				warn "$stats{'num_snps'} lines parsed...\n" if(!($stats{'num_snps'} % 10000));
 	
 				my $key = "$chrom\t$position";
 					
@@ -277,7 +278,7 @@ sub execute {                               # replace with real execution logic.
 	$stats{'pct_overall_match'} = "0.00";
 	if($stats{'num_with_variant'} || $stats{'num_chip_was_reference'})
 	{
-		$stats{'pct_overall_match'} = ($stats{'num_variant_match'}) / ($stats{'num_chip_was_reference'} + $stats{'num_with_variant'}) * 100;
+		$stats{'pct_overall_match'} = ($stats{'num_variant_match'} + $stats{'num_ref_was_ref'}) / ($stats{'num_chip_was_reference'} + $stats{'num_with_variant'}) * 100;
 		$stats{'pct_overall_match'} = sprintf("%.3f", $stats{'pct_overall_match'});
 	}
 
@@ -301,7 +302,7 @@ sub execute {                               # replace with real execution logic.
 		print $stats{'num_with_genotype'} . " had genotype calls from the SNP array\n";
 		print $stats{'num_min_depth'} . " met minimum depth of >= $min_depth_hom/$min_depth_het\n";
 		print $stats{'num_chip_was_reference'} . " were called Reference on chip\n";
-#		print $stats{'num_ref_was_ref'} . " reference were called reference\n";
+		print $stats{'num_ref_was_ref'} . " reference were called reference\n";
 		print $stats{'num_ref_was_het'} . " reference were called heterozygous\n";
 		print $stats{'num_ref_was_hom'} . " reference were called homozygous\n";
 		print $stats{'num_with_variant'} . " had informative genotype calls\n";
@@ -315,13 +316,13 @@ sub execute {                               # replace with real execution logic.
 	}
 	else
 	{
-		print "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
 		print "$sample_name\t";
 		print $stats{'num_snps'} . "\t";
 		print $stats{'num_with_genotype'} . "\t";
 		print $stats{'num_min_depth'} . "\t";
 		print $stats{'num_chip_was_reference'} . "\t";
-#		print $stats{'num_ref_was_ref'} . "\t";
+		print $stats{'num_ref_was_ref'} . "\t";
 		print $stats{'num_ref_was_het'} . "\t";
 		print $stats{'num_ref_was_hom'} . "\t";
 		print $stats{'num_with_variant'} . "\t";
@@ -336,13 +337,13 @@ sub execute {                               # replace with real execution logic.
 
 	if($self->output_file)
 	{
-		print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
 		print OUTFILE "$sample_name\t";
 		print OUTFILE $stats{'num_snps'} . "\t";
 		print OUTFILE $stats{'num_with_genotype'} . "\t";
 		print OUTFILE $stats{'num_min_depth'} . "\t";
 		print OUTFILE $stats{'num_chip_was_reference'} . "\t";
-#		print OUTFILE $stats{'num_ref_was_ref'} . "\t";
+		print OUTFILE $stats{'num_ref_was_ref'} . "\t";
 		print OUTFILE $stats{'num_ref_was_het'} . "\t";
 		print OUTFILE $stats{'num_ref_was_hom'} . "\t";
 		print OUTFILE $stats{'num_with_variant'} . "\t";
@@ -512,7 +513,7 @@ sub code_to_genotype
 	return("CT") if($code eq "Y");
 	return("GT") if($code eq "K");
 
-	warn "Unrecognized ambiguity code $code!\n";
+#	warn "Unrecognized ambiguity code $code!\n";
 
 	return("NN");	
 }
