@@ -55,12 +55,6 @@ class Genome::Model::Tools::PooledBac::Run {
             is_optional => 1,
             doc => "this is the percent identity, default is 85%",
         },
-        blast_params =>
-        {
-            type => 'String',
-            is_optional => 1,
-            doc => "Use this option to override the default blast params, the default param string is:\n M=1 N=-3 R=3 Q=3 W=30 wordmask=seg lcmask hspsepsmax=1000 golmax=0 B=1 V=1 topcomboN=1 -errors -notes -warnings -cpus 4 2>/dev/null",        
-        }, 
         params_file => 
         {
             type => 'String',
@@ -108,7 +102,6 @@ sub create_params_hash
         phd_ball => $self->phd_ball_name,
         percent_overlap => $self->percent_overlap,
         percent_identity => $self->percent_identity,
-        blast_params => $self->blast_params,
     };
 
     return $params;
@@ -150,7 +143,6 @@ $DB::single =1;
     my $phd_ball = $self->phd_ball_name || $self->phd_ball_name($params->{phd_ball});
     my $percent_overlap = $self->percent_overlap || $self->percent_overlap($params->{percent_overlap});
     my $percent_identity = $self->percent_identity || $self->percent_identity($params->{percent_identity});
-    my $blast_params = $self->blast_params || $self->blast_params($params->{blast_params});
 
 
     $self->error_message("The pipeline needs for the project_dir to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $project_dir);
@@ -170,7 +162,7 @@ $DB::single =1;
     }
 
     $self->error_message("Error running run-blast")  and die unless
-    Genome::Model::Tools::PooledBac::RunBlast->execute(ref_seq_file=>$ref_seq_file, pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name, project_dir => $project_dir, blast_params => $blast_params);
+    Genome::Model::Tools::PooledBac::RunBlast->execute(ref_seq_file=>$ref_seq_file, pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name, project_dir => $project_dir);
 
     $self->error_message("Error running map-contigs-to-assembly")  and die unless
     Genome::Model::Tools::PooledBac::MapContigsToAssembly->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name, project_dir => $project_dir, percent_overlap => $percent_overlap, percent_identity => $percent_identity);
