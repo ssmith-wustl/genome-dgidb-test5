@@ -7,10 +7,10 @@ set project_name = $argv[2];
 set project_chr = ".chr";
 set number = $argv[3];
 
-set assembly = "BreakDancer_new/";
+set assembly = "BreakDancer/";
 set assembly_file_end = ".ctx.Q40.somatic.assembled.HQfiltered.csv";
 
-set BreakDancer = "BreakDancer_new/";
+set BreakDancer = "BreakDancer/";
 set BreakDancer_file_end1 = ".novo.ctx";
 
 set col_AS = "	\\t	1	2	4	6	7	NA	NA	NA	NA	10	12	NA";
@@ -36,8 +36,13 @@ set output_dir = $argv[4];
 	@ ever_come = 0
 		
 		# Assembly
-		set file_name_AS = ${project_dir}/${BreakDancer}${project_name}${number}${assembly_file_end}
+		set file_name_AS_all = ${project_dir}/${BreakDancer}${project_name}${number}${assembly_file_end}
 		echo ${file_name_AS}
+                set file_name_AS = ${project_dir}/${BreakDancer}${project_name}${number}${assembly_file_end}".somaticCap";
+                if(-e ${file_name_AS}) then
+                    rm ${file_name_AS}
+                endif
+                `more ${file_name_AS_all} | perl -ane 'print "$_" if($F[11]!~/normal/)' > ${file_name_AS}`;
 		if(-e ${file_name_AS}) then
 			set skip = `more ${file_name_AS} | perl -ane 'print "$_" if($F[0] =~ /^#/)' | wc -l`;
 			if(${skip} == 0) then
