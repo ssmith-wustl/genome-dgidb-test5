@@ -201,11 +201,11 @@ sub transcripts {
 sub is_valid_variant {
     my ($self, $variant) = @_;
     unless ($variant->{type} =~ /del/i) {
-        return 0 if $variant->{variant} =~ /\d/ or $variant->{variant} =~ /[a-z]/; 
+        return 0 if $variant->{variant} =~ /\d/; 
     }
 
     unless ($variant->{type} =~ /ins/i) {
-        return 0 if $variant->{reference} =~ /\d/ or $variant->{reference} =~ /[a-z]/;
+        return 0 if $variant->{reference} =~ /\d/; 
     }
     return 1;
 }
