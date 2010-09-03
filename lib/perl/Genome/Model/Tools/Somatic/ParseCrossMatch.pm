@@ -14,7 +14,6 @@ class Genome::Model::Tools::Somatic::ParseCrossMatch {
        input_file    => {
            type => 'String',
            doc  => 'Input cross_match output file',
-           is_optional   => 0,
        },
        min_base_qual => {
            type => 'Number',
@@ -30,9 +29,11 @@ class Genome::Model::Tools::Somatic::ParseCrossMatch {
        },
        _align => {
            type => 'HASH',
+           is_optional => 1,
        },
        _dcpos => {
            type => 'HASH',
+           is_optional => 1,
        },
     ],
 };
