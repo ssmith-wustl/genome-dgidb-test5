@@ -288,7 +288,6 @@ sub type_specific_parameters_for_create {
     return (); #This exists to be overwritten by subclasses
 }
 
-=cut
 sub _get_processing_profile_id_for_name {
     my $self = shift;
 
@@ -329,7 +328,6 @@ sub _get_processing_profile_id_for_name {
 
     return $processing_profiles[0]->id;
 }
-=cut
 
 
 1;
