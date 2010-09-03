@@ -158,15 +158,16 @@ sub execute {                               # replace with real execution logic.
 					#my @dataLineContents = split(/\,/, $data_line);
 					(my $id, my $flow_cell_id, my $lane, my $filt_error_rate_avg, my $clusters, my $read_length, my $target_region_set_name) = split(/\,/, $data_line);
 					print "$id\t$flow_cell_id\t$lane\t$filt_error_rate_avg\t$clusters\t$read_length\t$target_region_set_name\n";
-					if($target_region_set_name ne $self->target_region_set_names)
-					{
-						warn "FYI: Lane target region set name $target_region_set_name does not equal model target region set name " . $self->target_region_set_names . "\n";						
-					}
 
 					if(!defined($self->read_length) || $read_length eq $self->read_length)
 					{
-						## Assign instrument data to model ##
-	
+						if($target_region_set_name ne $self->target_region_set_names)
+						{
+							warn "FYI: Lane target region set name $target_region_set_name does not equal model target region set name " . $self->target_region_set_names . "\n";						
+						}
+
+						warn "Assigning $flow_cell_id lane $lane with read length $read_length\n";
+
 						my $cmd = "genome model instrument-data assign --model-id $model_id --instrument-data-id $id";
 	
 						if(!$self->report_only)

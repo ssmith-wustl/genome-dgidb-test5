@@ -123,9 +123,10 @@ my @stage_classes = $pp->assemble_job_classes;
 is_deeply(
     \@stage_classes, 
     [ 
+        'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
         (map { 
             'Genome::Model::Event::Build::DeNovoAssembly::'.$_.'::Velvet'
-        } (qw/ PrepareInstrumentData Assemble PostAssemble /)),
+        } (qw/ Assemble PostAssemble /)),
         'Genome::Model::Event::Build::DeNovoAssembly::Report',
     ], 
     'Stage classes'
@@ -133,7 +134,6 @@ is_deeply(
 is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
 
 #< SOAP >#
-#valid create soap
 my %valid_soap_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
     assembler_name => 'soap',
     sequencing_platform => 'solexa',
