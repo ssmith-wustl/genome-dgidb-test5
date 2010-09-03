@@ -40,11 +40,11 @@ sub _decomposed_aligner_params {
 }
 
 sub _run_aligner {
-    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '23G');
-    $self->status_message("RTG Memory limit is $ENV{RTG_MEM}");
-
     my $self = shift;
     my @input_pathnames = @_;
+    
+    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '23G');
+    $self->status_message("RTG Memory limit is $ENV{RTG_MEM}");
 
     if (@input_pathnames == 1) {
         $self->status_message("_run_aligner called in single-ended mode.");
