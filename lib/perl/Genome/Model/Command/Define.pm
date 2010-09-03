@@ -207,7 +207,6 @@ sub execute {
     my @model_groups = split ",", $self->model_groups;
     if (@model_groups) {
         for my $model_group_id (@model_groups) {
-            # Try to get the model group by id and by name
             my $model_group = Genome::ModelGroup->get($model_group_id);
             unless ($model_group) {
                 $self->error_message("Could not find a model group with the id or name of: $model_group. Please use a valid id/name or create a model-group.");
