@@ -17,7 +17,7 @@ sub bsub_rusage {
     my $cpus_option = ( exists $assembler_params{cpus} ) ? '-n '.$assembler_params{cpus}.' ': '';
 
     # TODO calculate mem, using 10G for now
-    my $mem = 10000;
+    my $mem = 30000;
     
     return $cpus_option."-R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
