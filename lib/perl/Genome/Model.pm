@@ -1003,6 +1003,24 @@ sub _build_model_filesystem_paths {
 
 }
 
+sub inputs_necessary_for_copy {
+    my $self = shift;
+   
+    $self->status_message("Gathering inputs for model copy"); 
+
+    # skip instrument data assignments; these should be handled by applying the instrument data assign command
+    # to the target model
+    my @inputs_to_copy = grep {$_->name ne "instrument_data"} $self->inputs;
+   
+    return @inputs_to_copy; 
+}
+
+sub additional_params_for_copy {
+    my $self = shift;
+
+    return ();
+}
+
 1;
 
 #$HeadURL$
