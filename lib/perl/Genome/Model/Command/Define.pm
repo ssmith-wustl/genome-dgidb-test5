@@ -92,7 +92,7 @@ class Genome::Model::Command::Define {
         },
         groups => {
             is_optional => 1,
-            doc => 'Model group(s) to which this model will be assigned upon creation. Provide a comma separated list of model group id\'s',
+            doc => 'Model group(s) to which this model will be assigned upon creation. Provide a comma separated list of model group id\'s or names.',
         },
     ],
     schema_name => 'Main',
@@ -207,7 +207,14 @@ sub execute {
     if ($self->groups) {
         my @groups = split ",", $self->groups;
         for my $model_group_id (@groups) {
-            my $model_group = Genome::ModelGroup->get($model_group_id);
+            # Try to get model group by name or id, allow a negative ID due to test cases
+            my $model_group;
+            if ($model_group_id =~ /^-?\d+$/) {
+                $model_group = Genome::ModelGroup->get($model_group_id);
+            } else {
+                $model_group = Genome::ModelGroup->get(name => $model_group_id);
+            }
+            print Data::Dumper::Dumper $model_group_id;
             unless ($model_group) {
                 $self->error_message("Could not find a model group with the id or name of: $model_group. Please use a valid id/name or create a model-group.");
                 die;
