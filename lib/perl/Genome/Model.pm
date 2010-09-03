@@ -129,6 +129,7 @@ class Genome::Model {
         sequencing_platform              => { via => 'processing_profile' },
         last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
         last_succeeded_build_directory   => { calculate => q($b = $self->last_succeeded_build; return unless $b; return $b->data_directory) },
+        last_complete_build_flagstat     => { calculate => q( return $self->lcb_flagstat(); ) },
     ],
     has_many_optional => [
         ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },
@@ -903,7 +904,7 @@ sub add_from_model{
     return $bridge;
 }
 
-sub last_complete_build_flagstat {
+sub lcb_flagstat {
     my $self = shift;
 
     my $fs_report = $self->last_complete_build->data_directory . "/alignments/" . $self->last_complete_build->id . "_merged_rmdup.bam.flagstat";
