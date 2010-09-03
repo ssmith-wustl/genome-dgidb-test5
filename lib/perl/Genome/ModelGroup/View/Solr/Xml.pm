@@ -21,7 +21,8 @@ class Genome::ModelGroup::View::Solr::Xml {
                     toolkit => 'text',
                     aspects => [
                         'id',
-                        'name'
+                        'name',
+                        'subject_name',
                     ],
                     position => 'content',
                 },

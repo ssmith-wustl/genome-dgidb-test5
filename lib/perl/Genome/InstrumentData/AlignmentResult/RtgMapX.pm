@@ -22,7 +22,7 @@ class Genome::InstrumentData::AlignmentResult::RtgMapX{
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>16000] span[hosts=1] rusage[tmp=90000, mem=16000]' -M 16000000 -n 4";
+    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>25000] span[hosts=1] rusage[tmp=90000, mem=25000]' -M 25000000 -n 8";
 }
 
 sub _decomposed_aligner_params {
@@ -31,8 +31,6 @@ sub _decomposed_aligner_params {
     # -U = report unmapped reads
     # --read-names print real read names
 
-    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '15G');
-    $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
     my $aligner_params = ($self->aligner_params || '') . " -U --read-names -Z "; 
 
     my $cpu_count = $self->_available_cpu_count;
@@ -44,6 +42,9 @@ sub _decomposed_aligner_params {
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
+    
+    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '23G');
+    $self->status_message("RTG Memory limit is $ENV{RTG_MEM}");
 
     if (@input_pathnames == 1) {
         $self->status_message("_run_aligner called in single-ended mode.");
@@ -116,7 +117,7 @@ sub _run_aligner {
 
         # chunk the SDF
 
-        my $chunk_size = ($ENV{'TEST_MODE'} ? 10 : 5000000);;
+        my $chunk_size = ($ENV{'TEST_MODE'} ? 10 : 4000000);;
 
         $self->status_message("Chunking....");
         my $chunk_cmd = sprintf("%s -c %s -o %s %s", Genome::Model::Tools::Rtg->path_for_rtg_sdfsplit($self->aligner_version), $chunk_size, $chunk_path, $input_sdf);

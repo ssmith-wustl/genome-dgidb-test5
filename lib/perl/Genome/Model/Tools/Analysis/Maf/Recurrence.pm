@@ -1,8 +1,8 @@
 
-package Genome::Model::Tools::Analysis::Maf::Proximity;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Analysis::Maf::Recurrence;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Proximity - Perform a proximity analysis on mutations in the MAF file.
+# Recurrence - Perform a proximity analysis on mutations in the MAF file.
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -23,7 +23,7 @@ use Genome;                                 # using the namespace authorizes Cla
 my %stats = ();
 my $max_proximity = 0;
 
-class Genome::Model::Tools::Analysis::Maf::Proximity {
+class Genome::Model::Tools::Analysis::Maf::Recurrence {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
@@ -31,7 +31,7 @@ class Genome::Model::Tools::Analysis::Maf::Proximity {
 		annotation_file	=> { is => 'Text', doc => "Full annotation for variants in MAF file" },
 		output_file	=> { is => 'Text', doc => "Output file for recurrence report", is_optional => 1 },
 		output_maf	=> { is => 'Text', doc => "Output file of complete MAF with recurrent sites only", is_optional => 1 },		
-		max_proximity	=> { is => 'Text', doc => "Maximum aa distance between mutations [10]", is_optional => 1, default => 10 },
+		max_proximity	=> { is => 'Text', doc => "Maximum aa distance between mutations [0]", is_optional => 1 },
 		verbose		=> { is => 'Text', doc => "Print verbose output", is_optional => 1 },
 	],
 };
@@ -39,7 +39,7 @@ class Genome::Model::Tools::Analysis::Maf::Proximity {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Performs a proximity analysis on mutations in a MAF file"                 
+    "Performs a recurrency analysis on mutations in a MAF file"                 
 }
 
 sub help_synopsis {
@@ -66,7 +66,7 @@ sub execute {                               # replace with real execution logic.
 
 	## Get required parameters ##
 	my $maf_file = $self->maf_file;
-	$max_proximity = $self->max_proximity;# if(defined($self->max_proximity));
+	$max_proximity = $self->max_proximity if(defined($self->max_proximity));
 
 	if(!(-e $maf_file))
 	{
@@ -88,126 +88,106 @@ sub execute {                               # replace with real execution logic.
 
 	$stats{'num_aa_positions'} = $stats{'num_recurrent_genes'} = $stats{'num_recurrent_positions'} = 0;
 	
-
-	## Declare hash to store min proximity for each mutation ##
+	my %gene_counted = ();
 	
-	my %min_proximity_by_mutation = ();
-	my %min_proximity_aa_key = ();
+	my %gene_aa_pos_recurrent_list = ();
+	
 
 	foreach my $aa_key (sort byGeneTranscript keys %mutated_aa_positions)
 	{
 		$stats{'num_aa_positions'}++;
-
-		(my $gene, my $transcript_name, my $aa_position) = split(/\t/, $aa_key);
-		
-		## Set the default min proximity to the max proximity plus 1 ##
-		my $min_proximity = $max_proximity + 1;
-
-		## Get Sample(s) with mutations at this position ##
-
-		my $samples = getMutationSamples($mutated_aa_positions{$aa_key});
-		my @samples = split(/\n/, $samples);
-		my $num_samples = @samples;
-
-		my @test = split(/\n/, $mutated_aa_positions{$aa_key});
-		my $test_num = @test;
-
-		## First, check for distance of zero ##
-		
-		if($num_samples > 1)
-		{
-			$min_proximity = 0.00;	
-		}
-		else
-		{
-			my $sample_name = $samples;
-			## It's not recurrent at this particular residue, so look nearby for mutations not matching sample name##
-			
-			## Determine the minimum aa distance, from zero to maximum ##
-	
-			for(my $aa_distance = 1; $aa_distance <= $max_proximity; $aa_distance++)
-			{
-				## Check upstream ##
-				my $distance_key = join("\t", $gene, $transcript_name, ($aa_position - $aa_distance));
-				if($mutated_aa_positions{$distance_key})
-				{
-					my $nearby_samples = getMutationSamples($mutated_aa_positions{$distance_key});
-					## If nearby mutation is from a different sample (or multiple ones), save it 
-					if($nearby_samples ne $sample_name)
-					{
-						$min_proximity = $aa_distance;
-					}
-				}
-				else
-				{
-					## Check downstream ##
-					$distance_key = join("\t", $gene, $transcript_name, ($aa_position + $aa_distance));
-					if($mutated_aa_positions{$distance_key})
-					{
-						my $nearby_samples = getMutationSamples($mutated_aa_positions{$distance_key});
-						## If nearby mutation is from a different sample (or multiple ones), save it 
-						if($nearby_samples ne $sample_name)
-						{
-							$min_proximity = $aa_distance;
-						}
-					}					
-				}
-			}
-		}
-		
-		## Get each mutation line for this aa position ##
 		
 		my @aa_lines = split(/\n/, $mutated_aa_positions{$aa_key});
 		my $num_lines = @aa_lines;
-
-		## Save this proximity for each mutation ##
 		
-		foreach my $maf_line (@aa_lines)
+		if($num_lines > 1)	
 		{
-			if(!defined($min_proximity_by_mutation{$maf_line}) || $min_proximity < $min_proximity_by_mutation{$maf_line})
+			(my $gene, my $transcript_name, my $aa_position) = split(/\t/, $aa_key);
+
+
+			## Parse the lines ##
+			my %sample_counted = ();
+			my $num_unique_samples = 0;
+			
+			my $sample_list = getMutationSamples($mutated_aa_positions{$aa_key});
+			my @sample_list = split(/\n/, $sample_list);
+			$num_unique_samples = @sample_list;
+			
+			my $sample_lines = "";
+			my $sample_maf_lines = "";
+
+			my $this_recurrent_list = "";
+
+			foreach my $maf_line (@aa_lines)
 			{
-				$min_proximity_by_mutation{$maf_line} = $min_proximity;
-				$min_proximity_aa_key{$maf_line} = $aa_key;
+				my @lineContents = split(/\t/, $maf_line);
+				my $tumor_sample = $lineContents[15];
+				
+				if(!$sample_counted{$tumor_sample})
+				{
+					$this_recurrent_list .= $maf_line . "\n";
+
+#					$num_unique_samples++;
+					my $ref = $lineContents[10];
+					my $var = $lineContents[11];
+					$var = $lineContents[12] if($var eq $ref);
+					my $sample_line = "";
+
+					$sample_line = join("\t", $gene, $transcript_name, $aa_position, $lineContents[2], $lineContents[4], $lineContents[5], $lineContents[6], $ref, $var, $lineContents[15]);						
+
+					$sample_maf_lines .= join("\t", $gene, $transcript_name, $aa_position) . "\t" . $maf_line . "\n";
+					$sample_lines .= $sample_line . "\n";
+					$sample_counted{$tumor_sample} = 1;
+				}
 			}
-		}
 
+			if($num_unique_samples > 1)
+			{
+				## Check to make sure that this exact recurrent list wasn't already printed ##
+				
+				if($gene_aa_pos_recurrent_list{"$gene\t$aa_position"} && $gene_aa_pos_recurrent_list{"$gene\t$aa_position"} eq $this_recurrent_list)
+				{
+					warn "NOT reporting duplicate find for $gene $aa_position\n" if($self->verbose);
+				}
+				else
+				{
+					$stats{'num_recurrent_positions'}++;
+					print "$gene\t$transcript_name\t$aa_position\t$num_unique_samples\n" if($self->verbose);
+					
+					if($self->output_file)
+					{
+						print OUTFILE "$sample_lines";
+					}
+	
+					if($self->output_maf)
+					{
+						print OUTMAF "$sample_maf_lines";
+					}
+					
+					if(!$gene_counted{$gene})
+					{
+						$stats{'num_recurrent_genes'}++;
+						$gene_counted{$gene} = 1;
+					}
+					
+					$gene_aa_pos_recurrent_list{"$gene\t$aa_position"} = $this_recurrent_list;
+				}
+				
+
+			}
+
+		}
 	}
 
-	## Go through each mutation in MAF to determine its distance ##
-	my %proximity_counts = ();
-	
-	foreach my $maf_line (keys %min_proximity_by_mutation)
-	{
-		$stats{'num_mutations_examined'}++;
-		my $proximity = $min_proximity_by_mutation{$maf_line};
-		my $aa_key = $min_proximity_aa_key{$maf_line};
-		if($proximity <= $max_proximity)
-		{
-			my @lineContents = split(/\t/, $maf_line);
-			my $ref = $lineContents[10];
-			my $var = $lineContents[11];
-			$var = $lineContents[12] if($var eq $ref);
-			
-			
-			print OUTFILE join("\t", $proximity, $aa_key, $lineContents[2], $lineContents[4], $lineContents[5], $lineContents[6], $ref, $var, $lineContents[15]) . "\n" if($self->output_file);
-			print OUTMAF "$proximity\t$aa_key\t$maf_line\n" if($self->output_maf);
-		}
-		$proximity_counts{$proximity}++;
-	}
-	
-	
-	print $stats{'num_mutations_examined'} . " mutations evaluated\n";
-	
-	foreach my $proximity (sort keys %proximity_counts)
-	{
-		print $proximity_counts{$proximity} . " had a distance of $proximity\n";
-	}
 
 	close(OUTFILE) if($self->output_file);
 	close(OUTMAF) if($self->output_maf);
 
-
+	print $stats{'num_aa_positions'} . " different amino acid positions\n";
+	print $stats{'num_recurrent_positions'} . " recurrent positions\n";
+	print $stats{'num_recurrent_genes'} . " recurrent genes\n";	
 }
+
 
 
 ################################################################################################
