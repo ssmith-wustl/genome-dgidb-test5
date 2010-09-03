@@ -90,7 +90,7 @@ class Genome::Model::Command::Define {
             is_optional => 1,
             shell_args_position => 99
         },
-        model_groups => {
+        groups => {
             is_optional => 1,
             doc => 'Model group(s) to which this model will be assigned upon creation. Provide a comma separated list of model group id\'s',
         },
@@ -204,9 +204,9 @@ sub execute {
     }
 
     # Add the model to any model groups requested
-    my @model_groups = split ",", $self->model_groups;
-    if (@model_groups) {
-        for my $model_group_id (@model_groups) {
+    if ($self->groups) {
+        my @groups = split ",", $self->groups;
+        for my $model_group_id (@groups) {
             my $model_group = Genome::ModelGroup->get($model_group_id);
             unless ($model_group) {
                 $self->error_message("Could not find a model group with the id or name of: $model_group. Please use a valid id/name or create a model-group.");

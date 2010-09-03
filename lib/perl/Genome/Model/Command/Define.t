@@ -130,7 +130,7 @@ sub test_model_from_params_with_group {
             processing_profile_name => $default_pp_name,
             data_directory          => $tmp_dir."/test_model_with_modelgroup_$ENV{USER}",
             reference_sequence_build => '93636924', #NCBI-human build 36
-            model_groups => $model_group_id_string,
+            groups => $model_group_id_string,
         },
     );
 }
@@ -241,7 +241,7 @@ sub successful_create_model {
     is($model->name,$expected_model_name,'model model_name accessor');
     for my $property_name (keys %params) {
         # Don't test this one, since it comes in as a string and gets split. They will not be equal
-        next if ($property_name eq "model_groups");
+        next if ($property_name eq "groups");
         is($model->$property_name,$params{$property_name},$property_name .' model indirect accessor');
     }
     is($model->user_name,$expected_user_name,'model user_name accesssor');
@@ -252,8 +252,8 @@ sub successful_create_model {
 
     # test that model group membership is as expected
     SKIP: {
-        skip 'only test group membership if one is expected', 1 unless $params{model_groups};
-        my @groups_expected = split ",", $params{model_groups};
+        skip 'only test group membership if one is expected', 1 unless $params{groups};
+        my @groups_expected = split ",", $params{groups};
         my @groups_actual = $model->model_groups;
         is(scalar(@groups_actual), scalar(@groups_expected), "Model is a member of the correct number of groups");
     }
