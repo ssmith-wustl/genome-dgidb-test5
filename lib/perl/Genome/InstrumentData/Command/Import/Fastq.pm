@@ -11,6 +11,7 @@ use Genome;
 use File::Copy;
 use File::Basename;
 use Data::Dumper;
+use IO::File;
 
 my %properties = (
     source_data_files => {
@@ -133,7 +134,6 @@ sub execute {
 
 $DB::single = 1;
 
-    #TODO put logic to set sample_name and library_name
     my $library = Genome::Library->get(name => $self->library_name);
     unless ($library) {
         $self->error_message("Library name not found.");
@@ -189,6 +189,9 @@ $DB::single = 1;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
+
+    $self->check_fastq_integritude;
+
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
@@ -209,7 +212,6 @@ $DB::single = 1;
 
     if( $sources =~ s/\/\//\//g) {
         $self->source_data_files($sources);            
-        print "new source = ".$self->source_data_files."\n";
     }
 
     my @input_files = split /\,/, $self->source_data_files;
@@ -303,10 +305,88 @@ $DB::single = 1;
 
 }
 
+sub check_fastq_integritude { 
+    my $self = shift;
+    my $answer = 0;
+    #my $pathes = $properties{source_data_files};
+    my @filepaths = split ",",$self->source_data_files;
+    print $self->source_data_files."\n";
+    #my $fastqfh;
+    if(@filepaths==1){
+        if(defined($self->is_paired_end)){
+            unless(not $self->is_paired_end){
+                $self->error_message("The parameters specify paired-end data, but only one fastq was supplied. If the data are paired-end but only one set of reads is provided, please specify non-paired end.");
+                die $self->error_message;
+            }
+        }
+        unless($self->check_last_read($filepaths[0])){
+            $self->error_message("Could not validate the last read (last 4 lines) of the imported fastq file.");
+            die $self->error_message;
+        }
+
+    } elsif (@filepaths==2) {
+        if(defined($self->is_paired_end)){
+            unless($self->is_paired_end){
+                $self->error_message("InstrumentData parameters specify non-paired-end data, but two fastq's were found.");
+                die $self->error_message;
+            }
+            my ($forward_read_length,$reverse_read_length);
+            my ($forward_read_name,$reverse_read_name);
+            unless(($forward_read_name,$forward_read_length) = $self->check_last_read($filepaths[0])){
+                $self->error_message("Could not validate the last read (last 4 lines) of the imported fastq file.");
+                die $self->error_message;
+            }
+            unless(($reverse_read_name,$reverse_read_length) = $self->check_last_read($filepaths[1])){
+                $self->error_message("Could not validate the last read (last 4 lines) of the imported fastq file.");
+                die $self->error_message;
+            }
+            unless($forward_read_name eq $reverse_read_name){
+                $self->error_message("Forward and Reverse read names do not match.");
+                die $self->error_message;
+            }
+            unless($forward_read_length == $reverse_read_length){
+                $self->error_message("Forward and Reverse read lengths do not match.");
+                die $self->error_message;
+            }
+        } else {
+            $self->error_message("Found two fastq files but is_paired_end parameter was not set.");
+            die $self->error_message;
+        }
+    } else {
+        $self->error_message("Found ".scalar(@filepaths)." fastq files. This tool only allows one or two (paired-end) at a time.");
+        die $self->error_message;
+    }
+}
+
+sub check_last_read {
+    my $self = shift;
+    my $fastq = shift;
+    my $tail = `tail -4 $fastq`;
+    my @lines = split "\n",$tail;
+    unless(@lines==4){
+        $self->error_message("Didn't get 4 lines from the fastq.");
+        return;
+    }
+    unless($lines[0] =~ /^@/){
+        return;
+    }
+    my ($read_name) = split "/",$lines[0];
+    my $read_length = length $lines[1];
+    if(defined $self->read_length){
+        unless($read_length < $self->read_length){
+            $self->error_message("Read-Length was set to ".$self->read_length." however, a read of length ".$read_length." was found in the last read.");
+            return;
+        }
+    }
+    unless((length $lines[2])>1){
+        $self->error_message("Quality Score was too short.");
+        return;
+    }
+    unless($read_length == (length $lines[3])){
+        $self->error_message("Length of read did not match length of quality string.");
+        die $self->error_message;
+    }
+    return ($read_name,$read_length);
+}
+
 1;
-
-    
-
-
-    
-
