@@ -95,11 +95,47 @@ test_model_from_params(
     },
 );
 
+my $group1 = Genome::ModelGroup->create(name => "test 1");
+#$group1->convergence_model->auto_build_alignments(0);
+
+my $group2 = Genome::ModelGroup->create(name => "test 2");
+#$group2->convergence_model->auto_build_alignments(0);
+
+my $groups = join ",", ($group1->id, $group2->id);
+test_model_from_params_with_group($groups);
+
 exit;
 
 ########################################################3
 
 my $cnt = 0;
+sub test_model_from_params_with_group {
+    my $model_group_id_string = shift;
+    # Get all convergence models associated with each model group we are testing and turn off their automatic building 
+    # so nothing happens when we add to a model group in the next test
+    my @model_group_ids = split ",", $model_group_id_string;
+    for my $model_group_id (@model_group_ids) {
+        my @convergence_models = Genome::Model::Convergence->get(group_id => $model_group_id);
+        for my $convergence_model (@convergence_models) {
+            $convergence_model->auto_build_alignments(0);
+        }
+    }
+
+    # test normal model and processing profile creation for reference alignment with a model group addition
+    test_model_from_params(
+        model_params => {
+            model_name              => "test_model_incomplete_data_dir_$ENV{USER}",
+            subject_name            => $default_subject_name,
+            subject_type            => $default_subject_type,
+            processing_profile_name => $default_pp_name,
+            data_directory          => $tmp_dir."/test_model_with_modelgroup_$ENV{USER}",
+            reference_sequence_build => '93636924', #NCBI-human build 36
+            groups => $model_group_id_string,
+        },
+    );
+}
+
+
 sub test_model_from_params {
     my %params = @_;
     my %test_params = %{$params{'test_params'}} if defined $params{'test_params'};
@@ -145,7 +181,7 @@ sub successful_create_model {
     my ($expected_date) = split('\w',$current_time);
   
     my $define_class;
-    my $ppname = $params{processing_profile_ppname};
+    my $ppname = $params{processing_profile_ppname} || "";
     my @pp = Genome::ProcessingProfile->get(name => $ppname);
     if (@pp > 1) {
         die "Found multiple profiles for ppname: $ppname";
@@ -160,6 +196,7 @@ sub successful_create_model {
         $define_class =~ s/::.*//;
         $define_class = "Genome::Model::Command::Define::$define_class";
     };
+
 
     my $create_command = $define_class->create(%params);
     isa_ok($create_command,'Genome::Model::Command::Define');
@@ -203,12 +240,26 @@ sub successful_create_model {
     ok($model, 'creation worked for '. $expected_model_name .' model');
     is($model->name,$expected_model_name,'model model_name accessor');
     for my $property_name (keys %params) {
+        # Don't test this one, since it comes in as a string and gets split. They will not be equal
+        next if ($property_name eq "groups");
         is($model->$property_name,$params{$property_name},$property_name .' model indirect accessor');
     }
     is($model->user_name,$expected_user_name,'model user_name accesssor');
     like($model->creation_date,qr/$expected_date/,'model creation_date accessor');
     is($model->processing_profile_id,$pp->id,'model processing_profile_id indirect accessor');
     is($model->type_name,$pp->type_name,'model type_name indirect accessor');
+
+
+    # test that model group membership is as expected
+    SKIP: {
+        skip 'only test group membership if one is expected', 1 unless $params{groups};
+        my @groups_expected = split ",", $params{groups};
+        my @groups_actual = $model->model_groups;
+        is(scalar(@groups_actual), scalar(@groups_expected), "Model is a member of the correct number of groups");
+    }
+
+
+
   SKIP: {
         skip 'only test data_directory if one is expected', 1 unless $expected_data_directory;
         is($model->data_directory,$expected_data_directory,'found expected data directory '. $expected_data_directory);
@@ -269,6 +320,15 @@ sub failed_create_model {
 
 sub delete_model {
     my $model = shift;
+
+    # Remove the model from any model groups to which it is a member, so that deletion will succeed
+    for my $model_group ($model->model_groups) {
+        if ($model_group->convergence_model) {
+            $model_group->convergence_model->auto_build_alignments(0);
+        }
+        $model_group->unassign_models($model);
+    }
+    
     ok($model->delete,'delete model');
 }
 

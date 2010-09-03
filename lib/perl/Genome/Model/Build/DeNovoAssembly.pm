@@ -61,6 +61,7 @@ sub description {
 
 sub create {
     my $class = shift;
+    $DB::single=1;
     
     my $self = $class->SUPER::create(@_)
         or return;
@@ -194,21 +195,23 @@ sub calculate_reads_attempted {
 
     my @instrument_data = $self->instrument_data;
     unless ( @instrument_data ) {
-        $self->error_message("Can't calculate reads attempted, because no instrument data found for ".$self->description);
-        return;
+        Carp::confess( 
+            $self->error_message("Can't calculate reads attempted, because no instrument data found for ".$self->description)
+        );
     }
 
     my $reads_attempted = 0;
-    if ( $self->processing_profile->sequencing_platform eq 'solexa' ) {
-        for my $inst_data ( @instrument_data ) { 
+    for my $inst_data ( @instrument_data ) { 
+        if ($inst_data->class =~ /Solexa/){
             $reads_attempted += $inst_data->fwd_clusters;
             $reads_attempted += $inst_data->rev_clusters;
+        }elsif($inst_data->class =~ /Imported/){
+            $reads_attempted += $inst_data->read_count;
+        } else {
+            Carp::confess( 
+                $self->error_message("Unsupported sequencing platform or inst_data class (".$self->sequencing_platform." ".$inst_data->class."). Can't calculate reads attempted.")
+            );
         }
-    }
-    else {
-        Carp::confess( 
-            $self->error_message("Unsupported sequencing platform (".$self->sequencing_platform."). Can't calculate reads attempted.")
-        );
     }
 
     return $reads_attempted;
@@ -301,7 +304,7 @@ sub calculate_metrics {
         $self->error_message("Can't set metrics because can't open stats file ($stats_file).");
         return;
     }
-    
+
     my %stat_to_metric_names = ( # old names to new
         # contig
         'total contig number' => 'contigs',
@@ -322,8 +325,8 @@ sub calculate_metrics {
         'average read length' => 'average_read_length',
         # bases
         'total contig bases' => 'assembly_length',
-	# read depths			 
-	'depth >= 5' => 'read_depths_ge_5x',
+        # read depths			 
+        'depth >= 5' => 'read_depths_ge_5x',
     );
 
     my %metrics;
@@ -334,26 +337,26 @@ sub calculate_metrics {
         $stat = lc $stat;
         next unless grep { $stat eq $_ } keys %stat_to_metric_names;
 
-	unless ( defined $values ) {
+        unless ( defined $values ) {
             $self->error_message("Found '$stat' in stats file, but it does not have a value on line ($line)");
             return;
         }
-	my @tmp = split (/\s+/, $values);
+        my @tmp = split (/\s+/, $values);
 
-	#in most value we want is $tmp[0]
-	my $value = $tmp[0];
+        #in most value we want is $tmp[0]
+        my $value = $tmp[0];
 
-	# need value other than $temp[1[;
-	if ($stat eq 'depth >= 5') {
-	    unless (defined $tmp[1]) {
-		$self->error_message("Failed to derive >= 5x depth from line: $values\n\t".
-				     "Expected line like: 3760	0.0105987146239711");
-		return;
-	    }
-	    $value = $tmp[1];#sprintf("%.1f", $tmp[1] * 100);
-	}
+        # need value other than $temp[1[;
+        if ($stat eq 'depth >= 5') {
+            unless (defined $tmp[1]) {
+                $self->error_message("Failed to derive >= 5x depth from line: $values\n\t".
+                    "Expected line like: 3760	0.0105987146239711");
+                return;
+            }
+            $value = $tmp[1];#sprintf("%.1f", $tmp[1] * 100);
+        }
 
-	my $metric = delete $stat_to_metric_names{$stat};
+        my $metric = delete $stat_to_metric_names{$stat};
         $metrics{$metric} = $value;
     }
 

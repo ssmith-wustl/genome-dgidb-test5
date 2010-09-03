@@ -2,6 +2,7 @@ package Genome::Model::Tools::Soap::Stats;
 
 use strict;
 use warnings;
+use Genome::Model::Tools::FastQual::FastqReader;
 
 use Genome;
 use Data::Dumper;
@@ -393,10 +394,10 @@ sub _get_input_read_and_bases_counts {
 	    $self->error_message("Failed to find file: ".$self->assembly_directory."/$fastq");
 	    return;
 	}
-	my $io = Bio::SeqIO->new(-format => 'fastq', -file => $self->assembly_directory."/$fastq");
-	while (my $seq = $io->next_seq) { #just getting seq
+	my $io = Genome::Model::Tools::FastQual::FastqReader->create(file => $self->assembly_directory."/$fastq");
+	while (my $seq = $io->next) { #just getting seq
 	    $read_count++;
-	    $base_count += length $seq->seq;
+	    $base_count += length $seq->{seq};
 	}
     }
     return $read_count, $base_count;

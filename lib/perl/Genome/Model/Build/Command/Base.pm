@@ -19,6 +19,7 @@ class Genome::Model::Build::Command::Base {
             is => 'Number',
             doc => 'Get build by id.',
             is_optional => 1,
+            shell_args_position => 1,
         },
         #< Model >#
         _model => { 

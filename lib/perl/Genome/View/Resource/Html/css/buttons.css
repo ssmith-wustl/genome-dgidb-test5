@@ -31,6 +31,36 @@
     padding: 0 5px 0 3px !important;
 }
 
+.app.btn, .app.btn:visited {
+    font-size: 12px;
+    line-height: 20px;
+    height: 20px !important;
+    padding: 0 10px 0 0;
+    color: #FFF;
+    font-weight: bold;
+    background-color: #52524d;
+    border: 0;
+    -webkit-border-top-left-radius: 0 !important;
+    -khtml-border-radius-topleft: 0 !important;
+    -moz-border-radius-topleft: 0 !important;
+    border-top-left-radius: 0 !important;
+    -webkit-border-bottom-left-radius: 0 !important;
+    -khtml-border-radius-bottomleft: 0 !important;
+    -moz-border-radius-bottomleft: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}
+
+.app.btn:hover {
+    background-color: #FFF;
+    color: #50504b !important;
+}
+
+.app.btn .icon {
+    float: left;
+    display: inline-block;
+    margin: 2px 8px 2px 2px;
+}
+
 .small.btn, .small.btn:visited {
     font-size: 1.1em;
 }

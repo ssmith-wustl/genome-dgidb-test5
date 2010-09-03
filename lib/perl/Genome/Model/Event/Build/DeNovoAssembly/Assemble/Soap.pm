@@ -19,7 +19,7 @@ sub bsub_rusage {
     # TODO calculate mem, using 10G for now
     my $mem = 10000;
     
-    return $cpus_option."-R 'select[type==LINUX64 && span[hosts=1] && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
+    return $cpus_option."-R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
 
 sub execute {

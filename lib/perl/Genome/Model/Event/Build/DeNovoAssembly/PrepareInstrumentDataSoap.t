@@ -9,7 +9,7 @@ use File::Compare 'compare';
 use Test::More;
 use Data::Dumper;
 
-use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData::Soap') or die;
+use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
@@ -25,7 +25,7 @@ for my $assembler_input_file ( @assembler_input_files ) {
     ok(!-s $assembler_input_file, 'Assembler input file does not exist');
 }
 
-my $soap = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData::Soap->create(
+my $soap = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(
     build_id => $build->id
 );
 ok($soap, 'Created prepare inst data soap');

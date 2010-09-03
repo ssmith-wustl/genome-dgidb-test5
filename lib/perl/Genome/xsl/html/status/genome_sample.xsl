@@ -8,6 +8,8 @@
   <!-- full page display for a sample -->
 
   <xsl:template name="genome_sample" match="object[./types[./isa[@type='Genome::Sample']]]">
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Sample:'" />
       <xsl:with-param name="display_name" select="aspect[@name='name']/value" />
