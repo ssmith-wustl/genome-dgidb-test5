@@ -193,8 +193,16 @@ sub get_bases_file {
     my $self = shift;
     my ($chromosome) = @_;
 
+    my $bases_dir = join('/', $self->data_directory, 'bases');
+    unless(-d $bases_dir) {
+        #for backwards-compatibility--old builds stored the .bases files directly in the data directory
+        #TODO remove this conditional once snapshots prior to this change are in use and the files have been moved
+        #in all older I.R.S. builds
+        $bases_dir = $self->data_directory;
+    }
+
     # grab the dir here?
-    my $bases_file = $self->data_directory . "/" . $chromosome . ".bases";
+    my $bases_file = $bases_dir . "/" . $chromosome . ".bases";
 
     return $bases_file;
 }
