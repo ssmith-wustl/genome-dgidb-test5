@@ -385,6 +385,7 @@ sub execute {
                 check_variants => $self->check_variants,
                 get_frame_shift_sequence => $self->get_frame_shift_sequence,
                 ucsc_conservation_directory => $ucsc_versions{$version},
+                annotation_build_version => $self->build->version,
             );
              
             unless ($annotator){
@@ -439,6 +440,7 @@ sub execute {
                 check_variants => $self->check_variants,
                 get_frame_shift_sequence => $self->get_frame_shift_sequence,
                 ucsc_conservation_directory => $ucsc_versions{$version},
+                annotation_build_version => $self->build->version,
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
 
