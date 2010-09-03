@@ -24,12 +24,6 @@ class Genome::Model::Command::Define {
     is => 'Command::DynamicSubCommands',
     is_abstract => 1,
     has => [
-        processing_profile_name => {
-            is => 'Text', 
-            is_optional => 0,
-            is_input => 1,
-            doc => 'identifies the processing profile by name' 
-        },
         subject_name => {
             is => 'Text',
             len => 255,
@@ -43,6 +37,16 @@ class Genome::Model::Command::Define {
             len => 255,
             is_input => 1,
             doc => 'User meaningful name for this model (default value: $SUBJECT_NAME.$PP_NAME)'
+        },
+        processing_profile_name => {
+            is => 'Text', 
+            is_input => 1,
+            doc => 'identifies the processing profile by name' 
+        },
+        processing_profile_id => {
+            is => 'Integer',
+            is_input => 1,
+            doc => 'itentifies the processing profile by id'
         },
         data_directory => {
             is => 'Text',
@@ -89,7 +93,11 @@ class Genome::Model::Command::Define {
             is_many => 1,
             is_optional => 1,
             shell_args_position => 99
-        }
+        },
+        groups => {
+            is_optional => 1,
+            doc => 'Model group(s) to which this model will be assigned upon creation. Provide a comma separated list of model group id\'s or names.',
+        },
     ],
     schema_name => 'Main',
 };
@@ -143,11 +151,42 @@ sub execute {
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
-
+    unless((defined($self->processing_profile_name) && (not defined($self->processing_profile_id)))||
+                (not defined($self->processing_profile_name) && defined($self->processing_profile_id))){
+        $self->error_message("Must specify either processing profile name or processing profile id.");
+        return;
+    }
+    
+    if(defined($self->processing_profile_name)){
+        my @pp = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
+        unless(@pp==1){
+            $self->error_message("ProcessingProfile name returned multiple processing profiles.");
+            return;
+        }
+        my $pp = $pp[0];
+        unless($pp){
+            $self->error_message("The processing profile name ".$self->processing_profile_name." was not found.");
+            return;
+        }
+        $self->processing_profile_id($pp->id);
+    }
+    if(defined($self->processing_profile_id)){
+        my @pp = Genome::ProcessingProfile->get(id => $self->processing_profile_id);
+        unless(@pp==1){
+            $self->error_message("ProcessingProfile id returned multiple processing profiles.");
+            return;
+        }
+        my $pp = $pp[0];
+        unless($pp){
+            $self->error_message("The processing profile id ".$self->processing_profile_id." was not found.");
+            return;
+        }
+        $self->processing_profile_name($pp->name);
+    }
 
     # Get processing profile id for the name given
-    my $processing_profile_id = $self->_get_processing_profile_id_for_name
-        or return;
+    #my $processing_profile_id = $self->_get_processing_profile_id_for_name
+    #    or return;
 
     #attempt derive subject_type if not passed as an arg
     #die if subject type isnt sample_name for now
@@ -167,7 +206,7 @@ sub execute {
     # Create the model
     my %model_params = (
         name => $self->model_name,
-        processing_profile_id => $processing_profile_id,
+        processing_profile_id => $self->processing_profile_id,
         subject_name => $self->subject_name,
         subject_type => $self->subject_type,
         subject_id => $subject_id,
@@ -197,6 +236,34 @@ sub execute {
         );
         $model->delete;
         return;
+    }
+
+    # Add the model to any model groups requested
+    if ($self->groups) {
+        my @groups = split ",", $self->groups;
+        for my $model_group_id (@groups) {
+            # Try to get model group by name or id, allow a negative ID due to test cases
+            my $model_group;
+            if ($model_group_id =~ /^-?\d+$/) {
+                $model_group = Genome::ModelGroup->get($model_group_id);
+            } else {
+                $model_group = Genome::ModelGroup->get(name => $model_group_id);
+            }
+            print Data::Dumper::Dumper $model_group_id;
+            unless ($model_group) {
+                $self->error_message("Could not find a model group with the id or name of: $model_group. Please use a valid id/name or create a model-group.");
+                die;
+            }
+
+            my $add_command = Genome::ModelGroup::Command::Member::Add->create(
+                  model_group_id => $model_group->id,
+                  model_ids => ($model->id),
+            );
+            unless ($add_command->execute == 1) {
+                $self->error_message("Failed to add model to model group $model_group");
+                die;
+            }
+        }
     }
 
     $self->status_message("Created model:");
@@ -261,6 +328,7 @@ sub _get_processing_profile_id_for_name {
 
     return $processing_profiles[0]->id;
 }
+
 
 1;
 
