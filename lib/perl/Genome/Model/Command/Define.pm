@@ -184,9 +184,7 @@ sub execute {
         $self->processing_profile_name($pp->name);
     }
 
-    # Get processing profile id for the name given
-    #my $processing_profile_id = $self->_get_processing_profile_id_for_name
-    #    or return;
+    $self->compare_pp_and_model_type;
 
     #attempt derive subject_type if not passed as an arg
     #die if subject type isnt sample_name for now
@@ -349,6 +347,27 @@ sub _get_processing_profile_id_for_name {
     }
 
     return $processing_profiles[0]->id;
+}
+
+sub compare_pp_and_model_type {
+    my $self = shift;
+
+    my $pp = Genome::ProcessingProfile->get(id=>$self->processing_profile_id);
+    unless($pp){
+        $self->error_message("Couldn't find the processing profile identified by the #: ".$self->processing_profile_id);
+        die $self->error_message;
+    }
+    my $parent =  (caller(2))[3];
+    print "Parent was determined to be :::::>>>> ".$parent . "\n";
+
+    $parent =~ s/Genome::Model::Command::Define:://;
+    $parent =~ s/::execute//;
+    print "Adjusted to ".$parent."\n";
+
+    print "processing-profile class-name = ".$pp->class_name."\n";
+
+    die;
+
 }
 
 
