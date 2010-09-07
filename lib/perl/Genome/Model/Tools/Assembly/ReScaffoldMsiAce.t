@@ -40,7 +40,7 @@ ok(-s $temp_dir.'/edit_dir/msi.gap.txt', "Created msi.gap.txt file");
 my @diff2 = `sdiff -s $temp_dir/edit_dir/msi.gap.txt $data_dir/edit_dir/msi.gap.txt`;
 is(scalar (@diff2), 0, "New msi.gap.txt file matches test msi.gap.txt file");
 
-<STDIN>;
+#<STDIN>;
 
 done_testing();
 
