@@ -9,7 +9,7 @@ use Carp 'confess';
 use Cwd 'abs_path';
 use Data::Dumper 'Dumper';
 require File::Copy;
-require Genome::Consed::Directory;
+require Genome::Model::Tools::Consed::Directory;
 require Genome::AmpliconAssembly::Amplicon;
 
 my %ATTRIBUTES = (
@@ -318,7 +318,7 @@ sub consed_directory {
     my $self = shift;
 
     unless ( $self->{_consed_directory} ) {
-        $self->{_consed_directory} = Genome::Consed::Directory->create(directory => $self->directory);
+        $self->{_consed_directory} = Genome::Model::Tools::Consed::Directory->create(directory => $self->directory);
     }
 
     return $self->{_consed_directory};

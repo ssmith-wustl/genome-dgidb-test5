@@ -1,4 +1,4 @@
-package Genome::Consed::Directory;
+package Genome::Model::Tools::Consed::Directory;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use Data::Dumper 'Dumper';
 require File::Basename;
 require File::Spec;
 
-class Genome::Consed::Directory {
+class Genome::Model::Tools::Consed::Directory {
     is => 'UR::Object',
     has => [
         directory => {
@@ -389,7 +389,7 @@ sub touch_singlets_file_for_acefile
 
 =head1 Name
 
-Genome::Consed::Directory;
+Genome::Model::Tools::Consed::Directory;
  
 =head1 Synopsis
 

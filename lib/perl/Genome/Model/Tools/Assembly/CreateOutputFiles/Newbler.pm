@@ -11,7 +11,7 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::Newbler {
         acefile => {
             is => 'Text',
             doc => 'Ace file to get fasta and qual from',
-            is_optional => 1,
+            #is_optional => 1,
         },
         assembly_directory => {
             is => 'Text',
@@ -28,12 +28,6 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::Newbler {
             valid_values => ['bact', 'archaea'],
             is_optional => 1,
 	},
-	#assembler => {
-	    #is => 'Text',
-	    #doc => 'Assembler used to create the assembly',
-	    #valid_values => ['pcap', 'newbler', 'Velvet'],
-	    #is_optional => 1, #for now
-	#},
     ],
     has_optional_transient => [
 	_contigs_bases_file      => { is => 'Text', doc => 'Assembly contigs.bases file'},
@@ -66,6 +60,13 @@ EOS
 sub execute {
     my $self = shift;
 
+    #must run from 64 bit machine
+    my $archos = `uname -a`;
+    unless ($archos =~ /64/) {
+	$self->error_message("Create output files for newbler must run from 64 bit machines");
+	return;
+    }
+
     #resolve acefile location
     my $acefile = $self->acefile;
     unless (-s $acefile) {
@@ -82,7 +83,17 @@ sub execute {
 	return;
     }
 
-    #create sorted msi.contigs.bases and msi.contigs.qual files
+    #create input fasta and qual files from sff files
+    $self->status_message("Creating input fasta and qual files from sff files");
+    my $inputs = Genome::Model::Tools::Assembly::CreateOutputFiles::InputFromSff->create (
+	directory => $self->assembly_directory,
+	);
+    unless ($inputs->execute) {
+	$self->error_message("Failed to create input files from sff files");
+	return;
+    }
+
+    #create sorted contigs.bases and contigs.qual files
     $self->status_message("Creating contigs.bases and contigs.quals files");
     my $contigs = Genome::Model::Tools::Assembly::CreateOutputFiles::ContigsFromAce->create (
 	acefile => $acefile,
@@ -154,7 +165,7 @@ sub execute {
         my $gene_option = ($self->core_gene_option) ? $self->core_gene_option : 'bact';
         my $survey = Genome::Model::Tools::Assembly::CreateOutputFiles::CoreGeneSurvey->create (
             core_gene_option => $gene_option,
-            subject_file => $self->contigs_bases_file,
+            subject_file => $self->_contigs_bases_file,
             );
         unless ($survey->execute) {
             $self->error_message("Failed to execute core gene survey");

@@ -36,6 +36,10 @@ class Genome::Model::Tools::Annotate::DescribeAnnotationRegions{
                default => 50000,
                doc => 'Range to look around for flanking regions of transcripts',
            },
+           annotation_build_version => {
+                is => "Text",
+                is_optional => 1,
+           }
        ]
 };
 
@@ -105,6 +109,7 @@ sub execute {
     my ($version_number) = $full_version =~ /^\d+_(\d+)[a-z]/;
     my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
     my $ucsc_dir = $ucsc_versions{$version_number};
+    $self->annotation_build_version($full_version);
 
     $output_fh->print(join("\t", $self->transcript_report_headers), "\n" );
 
@@ -152,7 +157,7 @@ sub transcript_report_headers {
 
 sub _transcript_annotation{
     my ($self, $transcript, $ucsc_dir, %variant)  = @_;
-    my $conservation = $self->_ucsc_conservation_score(\%variant, $ucsc_dir);
+    my $conservation = $self->_ucsc_conservation_score(\%variant, $transcript);
      my $all_protein_domains = $self->_protein_domain($transcript, \%variant);
 
     return (
@@ -172,8 +177,6 @@ sub _transcript_annotation{
 
 sub transcript_attributes{
     my $self = shift;
-    #my @attrs = $self->SUPER::transcript_attributes;
-    #my @attrs = qw/gene_name	transcript_name	transcript_species	transcript_source	transcript_version	strand	transcript_status	trv_type	c_position	amino_acid_change	ucsc_cons	domain	all_domains	deletion_substructures	transcript_error/;
     my @attrs = qw/gene_name	transcript_name	transcript_species	transcript_source	transcript_version	strand	transcript_status	ucsc_cons	all_domains	 transcript_error/;
     return @attrs;
 }
@@ -225,6 +228,7 @@ sub _print_annotation {
 }
 
 sub _ucsc_conservation_score {
+=cut
     my ($self, $variant, $ucsc_dir) = @_;
     return 'NULL' if $variant->{chromosome_name} =~ /^[MN]T/;
 
@@ -237,7 +241,21 @@ sub _ucsc_conservation_score {
     {
         push(@ret,sprintf("%.3f",$item->[1]));
     }
-    return join(":",@ret); 
+    return join(":",@ret);
+=cut
+    my ($self, $variant, $transcript) = @_;
+    return 'NULL' if $variant->{chromosome_name} =~ /^[MN]T/;
+
+    my $range = [ $variant->{start}..$variant->{stop} ] ;
+    my $conservation_score_lookup = Genome::Model::Tools::Annotate::LookupConservationScore->execute(chromosome => $variant->{chromosome_name}, coordinates => $range, species => $transcript->species, version => $self->annotation_build_version);
+    my $ref = $conservation_score_lookup->conservation_scores_results;
+    my @ret;
+    foreach my $item (@$ref)
+    {
+        push(@ret,sprintf("%.3f",$item->[1]));
+    }
+    return join(":",@ret);
+
 }
 
 sub _protein_domain {

@@ -7,22 +7,23 @@ use above 'Genome';
 
 use File::Compare 'compare';
 use Storable 'retrieve';
-use Test::More tests => 7;
+use Test::More tests => 8;
 
-use_ok('Genome::Consed::Navigation::ListReader')
+use_ok('Genome::Model::Tools::Consed::Navigation::Reader')
     or die;
 
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Consed';
 ok(-d $dir, "Test dir ($dir) exists");
-my $list = $dir.'/repeats.list';
-ok(-f $list, "List file ($list) exists");
+my $nav = $dir.'/repeats.nav';
+ok(-f $nav, "Nav file ($nav) exists");
 my $navs = retrieve($dir.'/navs.stor');
 ok($navs, 'Got navs from stor file');
 
-my $reader = Genome::Consed::Navigation::ListReader->create(
-    input => $list,
+my $reader = Genome::Model::Tools::Consed::Navigation::Reader->create(
+    input => $nav,
 );
-ok($reader, 'Created list reader');
+ok($reader, 'Created nav reader');
+is($reader->title, $navs->{title}, 'Title matches');
 my @navs = $reader->all;
 ok(@navs, 'Got navs');
 is_deeply(\@navs, $navs->{navs}, 'Navs match');

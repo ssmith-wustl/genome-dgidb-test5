@@ -322,7 +322,7 @@ sub _next_port_number {
 sub _load_acenav {
     my $self = shift;
 
-    my $reader = Genome::Consed::Navigation::Reader->new(
+    my $reader = Genome::Model::Tools::Consed::Navigation::Reader->new(
         input => $self->acenav,
     )
         or return;
@@ -486,7 +486,7 @@ sub _ui_stop
 
 =head1 Name
 
-Genome::Consed::Navigation::ExternalNavigation
+Genome::Model::Tools::Consed::Navigation::ExternalNavigation
 
 =head1 Synopsis
 
@@ -514,7 +514,7 @@ Genome::Consed::Navigation::ExternalNavigation
 
 =item consed
 
-=item Genome::Consed, Genome::Model::Tools::... 
+=item Genome::Model::Tools::Consed, Genome::Model::Tools::... 
 
 =item Gtk2
 
