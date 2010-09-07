@@ -98,7 +98,8 @@ sub execute {
 
     if ($report_file) {
 	my $scaffolds = $self->_parse_report_file($report_file);
-	$new_scaffolds = $self->_create_new_scaffolds($old_scaffolds, $scaffolds);
+	my $valid_scaffolds = $self->_check_for_contigs_to_complement($scaffolds);
+	$new_scaffolds = $self->_create_new_scaffolds($old_scaffolds, $valid_scaffolds);
     }
     else {
 	$new_scaffolds = $self->_create_new_scaffolds($old_scaffolds);
@@ -162,6 +163,29 @@ sub _parse_report_file {
     return \@scaffolds;
 }
 
+sub _check_for_contigs_to_complement {
+    my ($self, $scaffolds) = @_;
+    my $contigs_to_complement;
+    foreach (@$scaffolds) {
+	my @tmp = split ('-', $_);
+	foreach (@tmp) {
+	    $contigs_to_complement .= $_.', ' if $_ =~ /c/;
+	}
+    }
+    if ($contigs_to_complement) {
+	if ($self->auto_report) {
+	    $self->status_message("\n\nConsed autoreport suggests that the following contigs must be complemented:\n".
+				  "\t$contigs_to_complement .. please complement these contigs in the ace file and run the program again\nExiting");
+	}
+	if ($self->scaffold_file) {
+	    $self->status_message("\nPlease complement the following contigs in the ace file: $contigs_to_complement\n".
+				  "Then remove c from contig numbers then run the program again to reflect correct compelementation in post assembly files");
+	}
+	return;
+    }
+    return $scaffolds;
+}
+
 sub _get_old_scaffolds {
     my ($self, $ace) = @_;
 
@@ -192,51 +216,32 @@ sub _create_new_scaffolds {
     #                                              ]
     my $scaf_lengths = {};
     #hash of scaffold name and scaffold size
-    #$scaf_lengths->{'contig'} = length_of_scaffold
     if ($scaffolds) {
 	foreach my $scaf (@$scaffolds) {
 	    $scaf =~ s/\s+//;
 	    #TODO - don't differentiate between scaf with - and w/o .. no need
-	    if ($scaf =~ /-/) {
-		my @tmp = split (/-/, $scaf);
-		my $scaf_ctg_1;
-		foreach my $scaf_ctg (@tmp) {
-		    next if $scaf_ctg eq 'E'; #eg E-12.1-E
-		    #scaffold name is the first contig in scaffold
-		    $scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1;
-		    if ($scaf_ctg =~ /c/) {#eg 12.1c signifies that ctg may need to be complemented 
-			#TODO - make it so that it just complements the contig rather than doing this
-			$self->status_message("\nConsed thinks the following contig should be flipped: $scaf_ctg\nContinue? (yes/no) ");
-			chomp (my $answer = <STDIN>);
-			if ($answer eq 'no') {
-			    $self->status_message("Exiting");
-			    return;
-			}
-
-			$scaf_ctg =~ s/c//;
-		    }
-		    unless ($scaf_ctg =~ /^\d+$/ or $scaf_ctg =~ /^\d+\.\d+$/) {
-			$self->error_message("$scaf_ctg is not in correct contig name format\n");
+	    my @tmp = split (/-/, $scaf);
+	    my $scaf_ctg_1;
+	    foreach my $scaf_ctg (@tmp) {
+		next if $scaf_ctg eq 'E'; #eg E-12.1-E
+		$scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1;
+		if ($scaf_ctg =~ /c/) {#eg 12.1c signifies that ctg may need to be complemented 
+		    #TODO - make it so that it just complements the contig rather than doing this
+		    $self->status_message("\nConsed auto report or scaffold file suggests that following contig should be complemented: $scaf_ctg\nContinue? (yes/no) ");
+		    chomp (my $answer = <STDIN>);
+		    if ($answer eq 'no') {
+			$self->status_message("Exiting");
 			return;
 		    }
-
-		    push @{$new_scafs->{$scaf_ctg_1}->{scaffold_contigs}}, $scaf_ctg;
-		    $scaf_lengths->{$scaf_ctg_1} += $old_contigs->{$scaf_ctg};
-		    delete $old_contigs->{$scaf_ctg};
+		    $scaf_ctg =~ s/c//;
 		}
-	    }
-	    else {
-		unless ($scaf =~ /^\d+$/ or $scaf =~ /^\d+\.\d+$/) {
-		    $self->error_message("$scaf is not in correct contig name format");
-		    return;
-		}
-
-		push @{$new_scafs->{$scaf}->{scaffold_contigs}}, $scaf;
-		$scaf_lengths->{$scaf} += $old_contigs->{$scaf};
-		delete $old_contigs->{$scaf};
+		push @{$new_scafs->{$scaf_ctg_1}->{scaffold_contigs}}, $scaf_ctg;
+		$scaf_lengths->{$scaf_ctg_1} += $old_contigs->{$scaf_ctg};
+		delete $old_contigs->{$scaf_ctg};
 	    }
 	}
     }
+	   
     #rename the remaining, non-scaffold contigs
     foreach my $contig (keys %$old_contigs) {
 	push @{$new_scafs->{$contig}->{scaffold_contigs}}, $contig;
