@@ -256,23 +256,18 @@ sub _create_new_scaffolds {
     my $gap_fh = IO::File->new("> $gap_file") || die "Can not write new gap file: msi.gap.txt";
     
     foreach my $scaf (sort {$scaf_lengths->{$b} <=> $scaf_lengths->{$a}} keys %{$scaf_lengths}) {
-	#TODO
-	if (scalar @{$new_scafs->{$scaf}->{scaffold_contigs}} > 1) {
-	    foreach my $scaf_ctg ( @{$new_scafs->{$scaf}->{scaffold_contigs}} ) {
-		my $new_ctg_name = 'Contig'.$new_scaf_num.'.'.$new_ctg_num;
-		$new_scaf_names->{$scaf_ctg} = $new_ctg_name;
-		$new_ctg_num++;
-
+	foreach my $scaf_ctg ( @{$new_scafs->{$scaf}->{scaffold_contigs}} ) {
+	    my $new_ctg_name = 'Contig'.$new_scaf_num.'.'.$new_ctg_num;
+	    $new_scaf_names->{$scaf_ctg} = $new_ctg_name;
+	    #print gap info to gap file only if part of multi contigs scaffold
+	    if (scalar @{$new_scafs->{$scaf}->{scaffold_contigs}} > 1) {
+		#dont' print gap size if last contig in scaffold
+		next if $new_ctg_num == scalar @{$new_scafs->{$scaf}->{scaffold_contigs}};
 		$gap_fh->print("$new_ctg_name 100\n");
 	    }
-	    $new_ctg_num = 1;
+	    $new_ctg_num++; #increment for next contig
 	}
-	else {
-	    my $scaf_ctg = @{$new_scafs->{$scaf}->{scaffold_contigs}}[0];
-	    my $new_ctg_name = 'Contig'.$new_scaf_num.'.'.$new_ctg_num;
-	    $new_scaf_names->{$scaf} = $new_ctg_name;
-	}
-
+	$new_ctg_num = 1; #reset for next scaffold
 	$new_scaf_num++;
     }
 
