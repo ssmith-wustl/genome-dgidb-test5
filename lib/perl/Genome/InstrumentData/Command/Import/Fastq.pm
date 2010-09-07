@@ -1,9 +1,5 @@
 package Genome::InstrumentData::Command::Import::Fastq;
 
-#REVIEW fdu
-#Long: need more specific external bam info like patient source, and add
-#methods to calculate read/base count
-
 use strict;
 use warnings;
 
@@ -21,6 +17,7 @@ my %properties = (
     library_name => {
         is => 'Text',
         doc => 'library name, used to fetch sample name',
+        is_optional => 1,
     },
     sample_name => {
         is => 'Text',
@@ -132,36 +129,56 @@ class Genome::InstrumentData::Command::Import::Fastq {
 sub execute {
     my $self = shift;
 
-$DB::single = 1;
+    unless(defined($self->sample_name) || defined($self->library_name)){
+        $self->error_message("In order to import a fastq, a library-name or sample-name is required.");
+        die $self->error_message;
+    }
+    my $sample;
+    my $library;
 
-    my $library = Genome::Library->get(name => $self->library_name);
-    unless ($library) {
-        $self->error_message("Library name not found.");
+    if(defined($self->sample_name) && defined($self->library_name)){
+        $sample = Genome::Sample->get(name => $self->sample_name);
+        $library = Genome::Library->get(name => $self->library_name);
+        unless(defined($sample)){
+            $self->error_message("Could not locate a sample by the name of ".$self->sample_name);
+            die $self->error_message;
+        }
+        unless(defined($library)){
+            $self->error_message("Could not locate a library by the name of ".$self->library_name);
+            die $self->error_message;
+        }
+        unless($sample->name eq $library->sample_name){
+            $self->error_message("The supplied sample-name ".$self->sample_name." and the supplied library ".$self->library_name." do not match.");
+            die $self->error_message;
+        }
+    } elsif (defined($self->library_name)){
+        $library = Genome::Library->get(name => $self->library_name);
+        unless(defined($library)) {
+            $self->error_message("Library name not found.");
+            die $self->error_message;
+        }
+        $sample = Genome::Sample->get(id => $library->sample_id);
+        unless (defined($sample)) {
+            $self->error_message("Could not retrieve sample from library name");
+            die $self->error_message;
+        }
+        $self->sample_name($sample->name);
+    } elsif (defined($self->sample_name)){
+        $sample = Genome::Sample->get(name=>$self->sample_name);
+        unless(defined($sample)){
+            $self->error_message("Could not locate sample with the name ".$self->sample_name);
+            die $self->error_message;
+        }
+        $library = Genome::Library->get(sample_name => $sample->name);
+        unless(defined($library)){
+            $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name);
+            die $self->error_message;
+        }
+        $self->library_name($library->name);
+    } else {
+        $self->error_message("Failed to define a sample or library.");
         die $self->error_message;
     }
-    
-    my $genome_sample = Genome::Sample->get(id => $library->sample_id);
-    unless ($genome_sample) {
-        $self->error_message("Could not retrieve sample from library name");
-        die $self->error_message;
-    }
-    my $sample_name  = $genome_sample->name; #$self->sample_name;
-    if ($genome_sample) {
-        $self->status_message("Sample with full_name: $sample_name is found in database");
-    }
-    else {
-        $genome_sample = Genome::Sample->get(extraction_label => $sample_name);
-        $self->status_message("Sample with sample_name: $sample_name is found in database")
-            if $genome_sample;
-    }
-
-    unless ($genome_sample) {
-        $self->error_message("Sample $sample_name is not found in database");
-        die $self->error_message;
-    }
-    my $sample_id = $genome_sample->id;
-    $self->status_message("genome sample $sample_name has id: $sample_id");
-    $self->sample_name($genome_sample->name);
    
     # gather together params to create the imported instrument data object 
     my %params = ();
@@ -183,7 +200,7 @@ $DB::single = 1;
 
     $params{sequencing_platform} = $self->sequencing_platform; 
     $params{import_format} = $self->import_format;
-    $params{sample_id} = $sample_id;
+    $params{sample_id} = $sample->id;
     $params{library_id} = $library->id;
     $params{library_name} = $library->name;
     if(defined($self->allocation)){
@@ -222,7 +239,6 @@ $DB::single = 1;
         }
     }        
     $self->source_data_files(join( ',',sort(@input_files)));
-    print "source data files = ".$self->source_data_files."\n";
     my $tmp_tar_file = File::Temp->new("fastq-archive-XXXX",DIR=>"/tmp");
     my $tmp_tar_filename = $tmp_tar_file->filename;
 
@@ -246,7 +262,6 @@ $DB::single = 1;
         die $self->error_message;
     }
     my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @inputs);
-    print $tar_cmd, "\n";
     system($tar_cmd);
 
     $import_instrument_data->original_data_path($self->source_data_files);
@@ -262,7 +277,7 @@ $DB::single = 1;
 
     
     my %alloc_params = (
-        disk_group_name     => 'info_alignments',     #'info_apipe',          #changed to info_alignments disk due to problems with info_apipe
+        disk_group_name     => 'info_alignments',     #'info_apipe',
         allocation_path     => $alloc_path,
         kilobytes_requested => $kb_usage,
         owner_class_name    => $import_instrument_data->class,
@@ -308,10 +323,7 @@ $DB::single = 1;
 sub check_fastq_integritude { 
     my $self = shift;
     my $answer = 0;
-    #my $pathes = $properties{source_data_files};
     my @filepaths = split ",",$self->source_data_files;
-    print $self->source_data_files."\n";
-    #my $fastqfh;
     if(@filepaths==1){
         if(defined($self->is_paired_end)){
             unless(not $self->is_paired_end){

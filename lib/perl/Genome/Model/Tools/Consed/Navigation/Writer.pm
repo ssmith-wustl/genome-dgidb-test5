@@ -1,11 +1,11 @@
-package Genome::Consed::Navigation::Writer;
+package Genome::Model::Tools::Consed::Navigation::Writer;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Consed::Navigation::Writer {
+class Genome::Model::Tools::Consed::Navigation::Writer {
     is => 'Genome::Utility::IO::Writer',
     has => [
     title => {
@@ -55,11 +55,11 @@ sub write_one {
 
 =head1 Name
 
-Genome::Consed::Navigation::Writer
+Genome::Model::Tools::Consed::Navigation::Writer
 
 =head1 Usage
 
- use Genome::Consed::Navigation::Writer;
+ use Genome::Model::Tools::Consed::Navigation::Writer;
  
  my $writer = Finishing::Assembly::Consed::Navigation::Writer->new(
      output => 'repeats.nav', # REQUIRED, file or an object that can 'print'
@@ -89,7 +89,7 @@ Genome::Consed::Navigation::Writer
 
 =head1 See Also
 
-I<Genome::Consed directory>, I<consed>
+I<Genome::Model::Tools::Consed directory>, I<consed>
 
 =head1 Disclaimer
 

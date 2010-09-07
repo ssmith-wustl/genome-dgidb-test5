@@ -364,7 +364,7 @@ sub calculate_metrics {
         $self->error_message(
             'Missing these metrics ('.join(', ', keys %stat_to_metric_names).') in stats file ($stats_file)'
         );
-        return;
+        #return;
     }
 
     $metrics{reads_not_assembled_pct} =~ s/%//;

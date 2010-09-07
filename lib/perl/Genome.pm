@@ -11,8 +11,10 @@ use UR::ObjectV001removed;
 
 # environmental configuration
 use Genome::Config;
+use Genome::Search;
 
 # linkage to certain GC LIMS classes
+# todo: remove this because it makes things very slow
 use GSCApp;
 
 # account for a perl bug in pre-5.10 by applying a runtime patch to Carp::Heavy

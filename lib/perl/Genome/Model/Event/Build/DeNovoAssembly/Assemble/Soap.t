@@ -42,11 +42,11 @@ my $assembler_params = $build->processing_profile->assembler_params;
 # w/ cpus
 $build->processing_profile->assembler_params('-cpus 4');
 my $lsf_params = $assemble->bsub_rusage;
-is($lsf_params, "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>10000] rusage[mem=10000]' -M 10000000", 'lsf params w/ 4 cpus'); 
+is($lsf_params, "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params w/ 4 cpus'); 
 $build->processing_profile->assembler_params($assembler_params);
 $lsf_params = $assemble->bsub_rusage;
 diag $lsf_params;
-is($lsf_params, "-R 'span[hosts=1] select[type==LINUX64 && mem>10000] rusage[mem=10000]' -M 10000000", 'lsf params w/o cpus'); 
+is($lsf_params, "-R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params w/o cpus'); 
 
 # execute
 ok( $assemble->execute, "Executed soap assemble");

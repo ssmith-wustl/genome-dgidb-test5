@@ -1,4 +1,4 @@
-package Genome::Consed::Navigation::Reader;
+package Genome::Model::Tools::Consed::Navigation::Reader;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Finishing::Assembly::Consed::Navigation;
 
-class Genome::Consed::Navigation::Reader {
+class Genome::Model::Tools::Consed::Navigation::Reader {
     is => 'Genome::Utility::IO::Reader',
 };
 
@@ -63,7 +63,7 @@ sub next {
 
 =head1 Name
 
-Genome::Consed::Navigation::Reader
+Genome::Model::Tools::Consed::Navigation::Reader
 
 =head1 Synopsis
 
@@ -128,7 +128,7 @@ A stream based reader, parses a consed navigation file, returning navigation has
 
 =head1 See Also
 
-I<Genome::Consed directory>, I<consed>
+I<Genome::Model::Tools::Consed directory>, I<consed>
 
 =head1 Disclaimer
 

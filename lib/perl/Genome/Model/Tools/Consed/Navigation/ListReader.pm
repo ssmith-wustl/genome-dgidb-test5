@@ -1,11 +1,11 @@
-package Genome::Consed::Navigation::ListReader;
+package Genome::Model::Tools::Consed::Navigation::ListReader;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Consed::Navigation::ListReader {
+class Genome::Model::Tools::Consed::Navigation::ListReader {
     is => 'Genome::Utility::IO::Reader',
 };
 
@@ -48,7 +48,7 @@ sub next {
 
 =head1 Name
 
-Genome::Consed::Navigation::ListReader;
+Genome::Model::Tools::Consed::Navigation::ListReader;
 
 =head1 Synopsis
 
@@ -56,9 +56,9 @@ A stream based reader, parses a consed 'list' file, returning navigation hashref
 
 =head1 Usage
 
- use Genome::Consed::Navigation::ListReader;
+ use Genome::Model::Tools::Consed::Navigation::ListReader;
  
- my $reader = Genome::Consed::Navigation:ListReader->new(
+ my $reader = Genome::Model::Tools::Consed::Navigation:ListReader->new(
      input => 'list.txt', # file or object that can 'getline' and 'seek'
  )
      or die;
@@ -99,7 +99,7 @@ A stream based reader, parses a consed 'list' file, returning navigation hashref
 
 =head1 See Also
 
-I<Genome::Consed directory>, I<consed>
+I<Genome::Model::Tools::Consed directory>, I<consed>
 
 =head1 Disclaimer
 

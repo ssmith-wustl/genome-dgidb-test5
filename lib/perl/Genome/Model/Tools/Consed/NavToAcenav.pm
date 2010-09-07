@@ -38,12 +38,12 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my $reader = Genome::Consed::Navigation::Reader->new(
+    my $reader = Genome::Model::Tools::Consed::Navigation::Reader->new(
         input => $self->nav,
     )
         or return;
         
-    my $writer = Genome::Consed::Navigation::Writer->new(
+    my $writer = Genome::Model::Tools::Consed::Navigation::Writer->new(
         output => $self->acenav,
         title => $reader->title,
     )
