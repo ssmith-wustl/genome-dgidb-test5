@@ -225,16 +225,6 @@ sub _create_new_scaffolds {
 	    foreach my $scaf_ctg (@tmp) {
 		next if $scaf_ctg eq 'E'; #eg E-12.1-E
 		$scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1;
-		if ($scaf_ctg =~ /c/) {#eg 12.1c signifies that ctg may need to be complemented 
-		    #TODO - make it so that it just complements the contig rather than doing this
-		    $self->status_message("\nConsed auto report or scaffold file suggests that following contig should be complemented: $scaf_ctg\nContinue? (yes/no) ");
-		    chomp (my $answer = <STDIN>);
-		    if ($answer eq 'no') {
-			$self->status_message("Exiting");
-			return;
-		    }
-		    $scaf_ctg =~ s/c//;
-		}
 		push @{$new_scafs->{$scaf_ctg_1}->{scaffold_contigs}}, $scaf_ctg;
 		$scaf_lengths->{$scaf_ctg_1} += $old_contigs->{$scaf_ctg};
 		delete $old_contigs->{$scaf_ctg};
