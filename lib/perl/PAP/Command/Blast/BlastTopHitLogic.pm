@@ -99,7 +99,7 @@ sub execute {
         $self->generated_report(\%full_report);
     }
     elsif ($return_type eq "top_hit_report") {
-        $self->generated_report(\%full_report);
+        $self->generated_report(\%top_hit_report);
     }
     return 1; 
 }

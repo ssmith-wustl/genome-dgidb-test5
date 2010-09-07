@@ -81,6 +81,10 @@ are finished on the blades, so the parent perl script may continue.
 EOS
 }
 
+#TODO bdericks: I think this entire module can be vastly simplified by just
+# using a Bio::SeqIO object to grab sequence out of the query fasta file rather
+# than using regex to determine when a new sequence starts
+
 # This routine (based on incoming values) will cut a given query FASTA file
 # into XX number of smaller FASTA files, then run the chosen BLAST program
 # on them by farming the jobs out to the blades. BLAST reports are written
@@ -89,7 +93,6 @@ EOS
 # file paths.
 sub execute {
     my $self = shift;
-    my %jobs;
     my @reports;
 
     # Gather query file into a hash:
@@ -108,7 +111,7 @@ sub execute {
     my $last_chunk_size = $chunk_size + $remainder;
 
     # Write out to the sub-files:
-    my @jobs;
+    my @chunks;
     $fh_in = IO::File->new($self->query_fasta_path, "r");
     my $seq_counter;
     my $chunk_counter = 1;
@@ -129,7 +132,7 @@ sub execute {
             if ($seq_counter > $current_chunk_size) {
                 $seq_counter = 1;
                 $chunk_counter++;
-                push(@jobs, $chunk);
+                push(@chunks, $chunk);
                 $chunk = $self->output_directory . "/" . "CHUNK-" . $chunk_counter . ".fasta";
                 $fh_out->close;
                 $fh_out = IO::File->new($chunk, "a");
@@ -137,61 +140,47 @@ sub execute {
         }
         $fh_out->print("$line\n");
     }
-    push(@jobs, $chunk);
+    push(@chunks, $chunk);
     $fh_in->close;
     $fh_out->close;
 
     # Configure & run each job on the blade center:
-    my $job_id = 0;
-    my $qsub;
-    foreach my $job (@jobs) {
-        $job_id++;
-        # Create qsub-needed shell script for the job to run:
-        my $sh = $job . ".blast.sh";
-        my $report = $job . ".blast.report";
-        push(@reports, $report);
-        my $fh_out = IO::File->new($sh, "a");
-        $fh_out->print("#!/bin/sh\n");
-        if ($self->blast_name eq "wu-blastall") {
-            $fh_out->print($self->blast_name . " -d " . $self->subject_fasta_path . " -i $job " . $self->blast_params . " > $report");
-        } else {
-            $fh_out->print(join(" ", $self->blast_name, $self->subject_fasta_path, $job, $self->blast_params) . " > $report");
-        }
-        $fh_out->close;
-        chmod(0777, $sh);
+    my @jobs;
+    for my $chunk (@chunks) {
+        my $report = $chunk . ".blast.report";
+        push @reports, $report;
 
-        $qsub = PP::LSF->run(
+        my $cmd;
+        if ($self->blast_name eq "wu-blastall") {
+            $cmd = $self->blast_name . " -d " . $self->subject_fasta_path . 
+                " -i $chunk " . $self->blast_params . " > $report";
+        } 
+        else {
+            $cmd = join(" ", $self->blast_name, $self->subject_fasta_path, $chunk, $self->blast_params) . 
+                " > $report";
+        }
+
+        my $bsub = PP::LSF->create(
             'q'           => $self->lsf_queue,
             'o'           => $self->output_directory,
             'e'           => $self->output_directory,
             'R'           => "'" . $self->lsf_resources . "'",
             'M'           => $self->lsf_max_memory,
             'mailto'      => $self->lsf_mail_to,       
-            'script'      => $sh,
+            'command'     => "\"" . $cmd . "\"",
         );
-
-        $jobs{$job_id} = $qsub;
+        $bsub->start;
+        push @jobs, $bsub;
     }
 
-    # Checking the statuses of the jobs:
-    my $running = "true";
-    RUNCHECK: while ($running eq "true") {
-        sleep 10;
-        my $running = "false";
-        foreach my $status (sort {$a <=> $b} keys %jobs) {
-            $jobs{$status}->update_stats();
-            unless (($jobs{$status}->{stats}->[2] eq "DONE") or ($jobs{$status}->{stats}->[2] =~ /EXIT/) or ($jobs{$status}->{stats}->[2] eq "") or (! defined $jobs{$status}->{stats}->[2])) {
-                $running = "true";
-            }
-        }
-        if ($running ne "true") {
-            last RUNCHECK;
-        }
+    # Probably not the best way to wait for all the jobs to finish, but it works
+    for my $job (@jobs) {
+        $job->wait_on;
     }
 
     # The blade jobs have finished, return a list of report paths to the user:
     $self->reports(\@reports);
-    return(@reports);
+    return 1;
 }
 
 # ---------------------------------------------------------------------------

@@ -99,7 +99,7 @@ sub execute {
     }
 
     make_path($self->output_directory);
-    chmod(0755, $self->output_directory);
+    chmod(0777, $self->output_directory);
 
     $self->status_message("Done creating output directory, now starting blast.");
 
@@ -126,13 +126,23 @@ sub execute {
         lsf_resources => $self->lsf_resources,
         lsf_max_memory => $self->lsf_max_memory
 	);
-    my @reports = $blast_batcher->execute;
+    my $batcher_rv = $blast_batcher->execute;
+    $DB::single = 1;
+    confess "Trouble executing blast batcher!" unless defined $batcher_rv and $batcher_rv == 1;
+    my @reports = @{$blast_batcher->reports};
+
     $self->status_message("BladeBlastBatcher completed, aggregating reports.");
 
     my $master_report_path = $self->output_directory . "/MASTER_BLAST.report";
     my $aggregate = IO::File->new($master_report_path, "a");
     for my $report (@reports) {
-        my $fh = new IO::File->new($report, "w");
+        if (-z $report) {
+            $self->warning_message("Report at $report has no size!");
+            unlink $report;
+            next;
+        }
+
+        my $fh = new IO::File->new($report, "r");
         while (my $line = $fh->getline) { 
             $aggregate->print($line);
         }
@@ -140,6 +150,11 @@ sub execute {
         unlink($report);   # Saves a little space.
     }
     $aggregate->close;
+
+    unless (-s $master_report_path) {
+        confess "Master blast report at $master_report_path has no size!";
+    }
+
     $self->status_message("All reports aggregated, now parsing.");
 
     # Walk through all of the blast report files and gather the needed info. We
@@ -160,6 +175,8 @@ sub execute {
     }
     my $top_hit_report = $blast_top_obj->generated_report;
 
+    $self->status_message("Top hit report generated");
+
     my $blast_full_obj = PAP::Command::Blast::BlastTopHitLogic->create(
         report => $master_report_path,
         return_type => 'full_report',
@@ -169,29 +186,35 @@ sub execute {
     }
     my $full_report = $blast_full_obj->generated_report;
 
+    $self->status_message("Full report generated!");
+
     $self->report_to_file($top_hit_report, $top_hit_report_path, $EC_index, $KO_index);
     $self->report_to_file($full_report, $full_report_path, $EC_index, $KO_index);
+
     $self->status_message("Report parsing completed, starting clean up.");
 
-    # General file clean-up and tell user where the report files are located.
-    my $ancillary_dir = $self->output_directory . "/ancillary";
+    # Move files to subdirectories to reduce clutter
+    my $ancillary_dir = $self->output_directory . "/ancillary/";
+    my $log_dir = $self->output_directory . "/logs/";
     make_path($ancillary_dir);
-    chmod(0775, $ancillary_dir);
+    chmod(0777, $ancillary_dir);
+    make_path($log_dir);
+    chmod(0777, $log_dir);
 
-    my @move_files;
     opendir(DIR, $self->output_directory) or confess "Couldn't open " . $self->output_directory;
-    while(defined(my $file = readdir(DIR))) {
+    while (my $file = readdir(DIR)) {
+        my $destination;
         if (($file =~ /OU$/) || ($file =~ /^CHUNK/) || ($file =~ /EC_only/)) {
-	        push(@move_files, $file);
+            $destination = $ancillary_dir
         }
-    }
-    close(DIR);
+        elsif (($file =~ /.out$/) || ($file =~ /.err$/) || ($file =~ /.log$/)) {
+            $destination = $log_dir;
+        }
+        next unless defined $destination;
 
-    for my $file (@move_files) {
-        my $to_move = $self->output_directory . "/" . $file;
-        my $ancillary_file = $ancillary_dir . "/" . $file;
-        copy($to_move, $ancillary_file) or confess "Could not copy $to_move to $ancillary_file: $!";
-        unlink($to_move);
+        my $full_path = $self->output_directory . "/$file";
+        my $mv_rv = system("mv $full_path $destination");
+        $self->warning_message("Could not move $full_path to $destination!") unless $mv_rv == 0;
     }
 
     $self->status_message("Keggscan finished, reports can be found at:\n$full_report_path\n$top_hit_report_path");
@@ -250,7 +273,6 @@ sub build_EC_index {
     my %ECs;
     my %KOs;
 
-    $DB::single = 1;
     while (my $line = $fh->getline) {
     	$inter++;
     	# NOTE: Looks like KEGG genes files always have subject_name in 1st
@@ -352,8 +374,8 @@ sub report_to_file {
 
     QUERY: for my $query (sort keys %{$blast_parse}) {
         # Species:
-        if ($self->species) { 
-            $check{1} = [ "species", "yes", $self->species];
+        if ($self->species_name) { 
+            $check{1} = [ "species", "yes", $self->species_name];
         } 
         else { 
             $check{1} = [ "species", "no" ];

@@ -53,11 +53,11 @@ class PAP::Command::KEGGScan {
         },
         lsf_resources => { 
             is => 'Text',
-            default_value => 'select[mem>8192,type==LINUX64] rusage[mem=8192,tmp=100]',
+            default_value => 'select[mem>8000,type==LINUX64] rusage[mem=8192,tmp=100]',
         }, 
         lsf_max_memory => {
             is => 'Number',
-            default => '8192000',
+            default => '8000000',
         },
         _working_directory => {
             is => 'Path',
@@ -90,21 +90,21 @@ sub execute {
         File::Temp::tempdir(
             'PAP_keggscan_XXXXXXXX',
             DIR => '/gscmnt/temp212/info/annotation/PAP_tmp',
-            CLEANUP => 1,
+            CLEANUP => 0,
         )
     );
-
+    chmod(0777, $self->_working_directory);
     my $fasta_file = $self->fasta_file();
 
     ## We're about to screw with the current working directory.
     ## Thusly, we must fixup the fasta_file property if it 
-    ## contains a relative path.  
+    ## contains a relative path. 
+    #TODO bdericks: Is this necessary?
     unless ($fasta_file =~ /^\//) {
         $fasta_file = join('/', $CWD, $fasta_file);
         $self->fasta_file($fasta_file);
     }
     
-    $DB::single = 1;
     # FIXME The subject fasta path needs to be a param on this command object with a default value
     my ($fasta_name) = basename($self->fasta_file);
     my $kegg_command = PAP::Command::KEGGScan::RunKeggScan->create(
@@ -124,16 +124,6 @@ sub execute {
         confess;
     }
         
-    #IPC::Run::run(
-    #    \@keggscan_command,
-    #    '<',
-    #    \undef,
-    #    '>',
-    #    \$kegg_stdout,
-    #    '2>',
-    #    \$kegg_stderr,
-    #) || die "KEGGscan failed: $kegg_stderr";                 
-    
     $self->parse_result();
 
     my $top_output_fh = $self->keggscan_top_output();
@@ -141,6 +131,7 @@ sub execute {
     
     ## Be Kind, Rewind.  Somebody will surely assume we've done this,
     ## so let's not surprise them.
+    # TODO bdericks: Is this necessary?
     $top_output_fh->seek(0, SEEK_SET);
     $full_output_fh->seek(0, SEEK_SET);
     
