@@ -50,7 +50,8 @@ my $cmd = Genome::InstrumentData::Command::Import::Fastq->create(
     library_name => $library_name,
     source_data_files => $source_dir,
     allocation =>  $tmp_allocation,
-    import_format => 'sanger fastq'
+    import_format => 'sanger fastq',
+    is_paired_end => 1,
 );
 
 ok($cmd, "constructed an import command");
@@ -95,6 +96,7 @@ my $cmd2 = Genome::InstrumentData::Command::Import::Fastq->create(
     source_data_files => $wrong_name, 
     allocation => $tmp_allocation,
     import_format => 'sanger fastq',
+    is_paired_end => 0,
 );
 
 ok($cmd2, "Constructed import command for faulty-fastq filename - OK");

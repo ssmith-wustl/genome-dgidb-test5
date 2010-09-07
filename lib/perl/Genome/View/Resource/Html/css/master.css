@@ -793,7 +793,8 @@ div.control_bar_menu {
 }
 
 div.control_bar_base {
-    width: 970px;
+    margin-left: 866px;
+    width: 96px;
     height: 8px;
 }
 

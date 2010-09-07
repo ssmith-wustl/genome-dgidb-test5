@@ -10,7 +10,7 @@ use File::Temp 'tempdir';
 use Storable 'retrieve';
 use Test::More tests => 8;
 
-use_ok('Genome::Consed::Navigation::Writer')
+use_ok('Genome::Model::Tools::Consed::Navigation::Writer')
     or die;
 
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Consed';
@@ -23,7 +23,7 @@ my $navs = retrieve($dir.'/navs.stor');
 ok($navs, 'Got navs from stor file');
 
 my $nav = $tmp_dir.'/repeats.nav';
-my $writer = Genome::Consed::Navigation::Writer->create(
+my $writer = Genome::Model::Tools::Consed::Navigation::Writer->create(
     output => $nav,
     title => $navs->{title},
 );

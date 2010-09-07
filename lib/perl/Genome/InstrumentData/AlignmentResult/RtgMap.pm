@@ -29,8 +29,6 @@ sub _decomposed_aligner_params {
 
     #   -U produce unmapped sam
     #   -Z do not zip sam
-    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '15G');
-    $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
     my $aligner_params = ($self->aligner_params || '') . " -U -Z --read-names"; #append core & space
 
     my $cpu_count = $self->_available_cpu_count;
@@ -42,6 +40,8 @@ sub _decomposed_aligner_params {
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
+    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '14G');
+    $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
 
     # get refseq info
     my $reference_build = $self->reference_build;

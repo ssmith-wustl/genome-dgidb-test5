@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More tests => 5;
 
-use Genome::Consed::Directory;
+use Genome::Model::Tools::Consed::Directory;
 use File::Path;
 
 =cut
@@ -18,19 +18,19 @@ $processing_profile->set_always('type_name', 'reference alignment');
 
 my $path = "/tmp/consed_test_dir";
 
-my $consed_dir = Genome::Consed::Directory->create(directory => $path);
-ok (!$consed_dir, "Didn't create a Genome::Consed::Directory without an existing directory");
+my $consed_dir = Genome::Model::Tools::Consed::Directory->create(directory => $path);
+ok (!$consed_dir, "Didn't create a Genome::Model::Tools::Consed::Directory without an existing directory");
 
 system "touch $path";
-$consed_dir = Genome::Consed::Directory->create(directory => $path);
-ok (!$consed_dir, "Didn't create a Genome::Consed::Directory with a non-directory");
+$consed_dir = Genome::Model::Tools::Consed::Directory->create(directory => $path);
+ok (!$consed_dir, "Didn't create a Genome::Model::Tools::Consed::Directory with a non-directory");
 
 unlink $path;
 
 create_test_fixture();
 
-$consed_dir = Genome::Consed::Directory->create(directory => $path);
-ok ($consed_dir, "created a Genome::Consed::Directory");
+$consed_dir = Genome::Model::Tools::Consed::Directory->create(directory => $path);
+ok ($consed_dir, "created a Genome::Model::Tools::Consed::Directory");
 
 
 my @directories = $consed_dir->directories;

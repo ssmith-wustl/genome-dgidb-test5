@@ -8,7 +8,6 @@ use Data::Dumper;
 use Genome;
 use Genome::Info::AnnotationPriorities;
 use File::Temp;
-use MG::ConsScore;
 use List::Util qw/ max min /;
 use List::MoreUtils qw/ uniq /;
 use Bio::Tools::CodonTable;
@@ -21,6 +20,10 @@ class Genome::Transcript::VariantAnnotator{
         transcript_window => {
             is => 'Genome::Utility::Window::Transcript',
             id_by => 'transcript_window_id',
+        },
+        annotation_build_version => {
+            is => 'Text',
+            is_optional => 0,
         },
         codon_translator => {
             is => 'Bio::Tools::CodonTable',
@@ -201,11 +204,11 @@ sub transcripts {
 sub is_valid_variant {
     my ($self, $variant) = @_;
     unless ($variant->{type} =~ /del/i) {
-        return 0 if $variant->{variant} =~ /\d/ or $variant->{variant} =~ /[a-z]/; 
+        return 0 if $variant->{variant} =~ /\d/; 
     }
 
     unless ($variant->{type} =~ /ins/i) {
-        return 0 if $variant->{reference} =~ /\d/ or $variant->{reference} =~ /[a-z]/;
+        return 0 if $variant->{reference} =~ /\d/; 
     }
     return 1;
 }
@@ -289,7 +292,7 @@ sub _transcript_annotation {
     my %structure_annotation = $self->$method($transcript, \%variant, $main_structure) or return;
     
     $structure_annotation{deletion_substructures} = $deletion_substructures if $deletion_substructures;
-    my $conservation = $self->_ucsc_conservation_score(\%variant);
+    my $conservation = $self->_ucsc_conservation_score(\%variant, $transcript);
     if ($deletion_substructures){
         $structure_annotation{deletion_substructures} = $deletion_substructures;
     }
@@ -304,7 +307,7 @@ sub _transcript_annotation {
         transcript_version => $transcript->version,
         strand => $transcript->strand,
         gene_name  => $transcript->gene->name,
-        ucsc_cons => $self->_ucsc_conservation_score(\%variant),
+        ucsc_cons => $self->_ucsc_conservation_score(\%variant, $transcript),
         amino_acid_length => $transcript->amino_acid_length,
         ucsc_cons => $conservation,
     )
@@ -677,13 +680,12 @@ sub _coding_bases_after_position {
     
 # Find the UCSC conservation score for a piece of chromosome
 sub _ucsc_conservation_score {
-    my ($self, $variant) = @_;
+    my ($self, $variant, $transcript) = @_;
     return 'NULL' if $variant->{chromosome_name} =~ /^[MN]T/;
 
-    my $c = new MG::ConsScore(-location => $self->ucsc_conservation_directory);
-
     my $range = [ $variant->{start}..$variant->{stop} ] ;
-    my $ref = $c->get_scores($variant->{chromosome_name},$range);
+    my $conservation_score_lookup = Genome::Model::Tools::Annotate::LookupConservationScore->execute(chromosome => $variant->{chromosome_name}, coordinates => $range, species => $transcript->species, version => $self->annotation_build_version);
+    my $ref = $conservation_score_lookup->conservation_scores_results;
     my @ret;
     foreach my $item (@$ref)
     {
