@@ -202,7 +202,7 @@ sub execute {
             return;
         }
     }
-
+            
     # Create the model
     my %model_params = (
         name => $self->model_name,
@@ -215,6 +215,28 @@ sub execute {
         auto_build_alignments => $self->auto_build_alignments,
         $self->type_specific_parameters_for_create,
     );
+    if(defined($self->subject_class_name)&&defined($self->subject_name)){
+        if($self->subject_class_name eq "Genome::Sample"){
+            my $sample = Genome::Sample->get(name=>$self->subject_name);
+            unless( $sample ){
+                $self->error_message("Subject was a Genome::Sample, but no Genome::Sample named ".$self->subject_name." could be retrieved.");
+                die $self->error_message;
+            }
+            $model_params{sample_name}= $self->subject_name;
+        }elsif($self->subject_class_name eq "Genome::Library"){
+            my $library = Genome::Library->get(name=>$self->subject_name);
+            unless($library){
+                $self->error_message("Subject is a library, however the library named ".$self->subject_name." cannot be found.");
+                die $self->error_message;
+            }
+            my $sample = Genome::Sample->get(name => $library->sample_name);
+            unless($sample){
+                $self->error_message("The sample named ".$library->sample_name." associated with the subject/library could not be found.");
+                die $self->error_message;
+            }
+            $model_params{sample_name}=$sample->name;
+        }
+    }
     if ($self->data_directory) {
         my $model_name = File::Basename::basename($self->data_directory);
         unless ($model_name eq $self->model_name) {
