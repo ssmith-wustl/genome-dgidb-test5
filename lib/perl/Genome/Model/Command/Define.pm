@@ -358,16 +358,25 @@ sub compare_pp_and_model_type {
         die $self->error_message;
     }
     my $parent =  (caller(2))[3];
-    print "Parent was determined to be :::::>>>> ".$parent . "\n";
-
     $parent =~ s/Genome::Model::Command::Define:://;
     $parent =~ s/::execute//;
-    print "Adjusted to ".$parent."\n";
-
-    print "processing-profile class-name = ".$pp->class_name."\n";
-
-    die;
-
+    print "parent = ".$parent."\n";
+    my $pp_type = $pp->subclass_name;
+    if($parent eq "GenotypeMicroarray"){
+        unless($pp->name =~ /wugc/){
+            $self->error_message("GenotypeMicroarray Models must use one of the [microarray-type]/wugc processing-profiles.");
+            die $self->error_message;
+        }
+        return 1;
+    }
+    $pp_type =~ s/Genome::ProcessingProfile:://;
+    ($pp_type) = split "::",$pp_type;
+    print "pp_type = ".$pp_type."\n";
+    unless($parent eq $pp_type){
+        $self->error_message("Genome::Model subclass ".$parent." and ProcessingProfile subclass ".$pp_type." did not match.");
+        die $self->error_message;
+    }
+    return 1;
 }
 
 
