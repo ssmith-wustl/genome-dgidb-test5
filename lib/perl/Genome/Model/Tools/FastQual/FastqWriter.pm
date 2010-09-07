@@ -15,10 +15,11 @@ sub create {
 
     my $self = bless \%params, $class;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing( $self->file );
+    my $fh = Genome::Utility::FileSystem->open_file_for_appending( $self->file );
     unless ( $fh ) {
         Carp::Confess("Can't open fastq file.");
     }
+    $fh->autoflush(1);
     $self->_fh($fh);
     
     return $self;
@@ -38,12 +39,6 @@ sub write {
     );
 
     return 1;
-}
-
-sub flush {
-    my $self = shift;
-
-    return $self->_fh->flush;
 }
 
 1;

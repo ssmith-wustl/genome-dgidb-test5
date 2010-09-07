@@ -14,6 +14,10 @@
 
     <xsl:comment>template: status/genome_model.xsl match: object[./types[./isa[@type='Genome::Model']]]</xsl:comment>
 
+    <script type='text/javascript' src='/res/js/app/genome_model.js'></script>
+
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Model:'" />
       <xsl:with-param name="display_name" select="./aspect[@name='name']/value" />
@@ -29,6 +33,11 @@
           <xsl:for-each select="aspect[@name='processing_profile']/object">
             <xsl:call-template name="genome_processingprofile_box"/>
           </xsl:for-each>
+
+          <xsl:for-each select="aspect[@name='last_complete_build_flagstat']/perldata/hashref">
+            <xsl:call-template name="genome_model_flagstat_table"/>
+          </xsl:for-each>
+
 
         </div> <!-- end .objects -->
 
@@ -208,14 +217,14 @@
             </tr>
 
             <tr>
-              <td class="name">Creation Date:
+              <td class="name">creation date:
               </td>
               <td class="value"><xsl:value-of select="aspect[@name='creation_date']/value"/>
               </td>
             </tr>
 
             <tr>
-              <td class="name">Created by:
+              <td class="name">created by:
               </td>
               <td class="value"><xsl:value-of select="aspect[@name='user_name']/value"/>
               </td>
@@ -225,7 +234,7 @@
               <xsl:when test="aspect[@name='last_complete_build']/object">
 
                 <tr>
-                  <td class="name">Last Complete Build:
+                  <td class="name">last complete build:
                   </td>
                   <td class="value">
                     <xsl:for-each select="aspect[@name='last_complete_build']/object">
@@ -257,11 +266,21 @@
 
                   </td>
                 </tr>
+                <tr>
+                  <td class="name"><br/>
+                  </td>
+                  <td class="value">
+                    <xsl:for-each select="aspect[@name='last_complete_build_flagstat']/perldata/hashref">
+                      <a class="mini btn" id="flagstat_button" href="#"><span class="sm-icon sm-icon-newwin"><br/></span>flagstat report</a>
+                    </xsl:for-each>
+
+                  </td>
+                </tr>
 
               </xsl:when>
               <xsl:otherwise>
                 <tr>
-                  <td class="name">Last Complete Build:
+                  <td class="name">last complete build:
                   </td>
                   <td class="value">
                     --
@@ -271,14 +290,14 @@
             </xsl:choose>
 
             <tr>
-              <td class="name">Subject Type:
+              <td class="name">subject type:
               </td>
               <td class="value"><xsl:value-of select="normalize-space(aspect[@name='subject_class_name']/value)"/>
               </td>
             </tr>
 
             <tr>
-              <td class="name">Subject:
+              <td class="name">subject:
               </td>
               <td class="value">
                 <xsl:choose>
@@ -795,6 +814,43 @@
         <xsl:value-of select="aspect[@name='date_completed']/value"/>
       </td>
     </tr>
+  </xsl:template>
+
+
+  <xsl:template name="genome_model_flagstat_table">
+    <xsl:comment>template: genome_model.xsl:genome_model_flagstats</xsl:comment>
+    <!-- creates flagstat table in a jQueryUI popup. See G/M/V/Resource/Html/js/app/genome_model.js -->
+
+      <div id="flagstat_table">
+        <table class="name-value" width="100%">
+          <cols>
+            <col width="60%"/>
+            <col width="40%"/>
+          </cols>
+          <tbody>
+            <xsl:for-each select="item">
+              <xsl:variable name="value" select="."/>
+              <xsl:variable name="name" select="@key"/>
+              <tr>
+                <td class="name" style="white-space: normal;"><xsl:value-of select="translate($name, '_', ' ')"/>
+                </td>
+                <td class="value">
+                  <xsl:choose>
+                    <xsl:when test="contains($name, 'percent')">
+                      <xsl:value-of select="$value"/>%
+                    </xsl:when>
+                    <xsl:otherwise>
+                      <xsl:value-of select="format-number($value, '#,##0')"/>
+                    </xsl:otherwise>
+                  </xsl:choose>
+                </td>
+              </tr>
+            </xsl:for-each>
+          </tbody>
+        </table>
+      </div>
+
+
   </xsl:template>
 
 

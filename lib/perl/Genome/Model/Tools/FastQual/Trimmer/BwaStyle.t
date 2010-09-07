@@ -37,8 +37,8 @@ my $out_fastq = $tmp_dir.'/out.fastq';
 
 # Ok
 my $trimmer = Genome::Model::Tools::FastQual::Trimmer::BwaStyle->create(
-    input_files  => [ $in_fastq ],
-    output_files => [ $out_fastq ],
+    input  => [ $in_fastq ],
+    output => [ $out_fastq ],
 );
 ok($trimmer, 'create trimmer');
 isa_ok($trimmer, 'Genome::Model::Tools::FastQual::Trimmer::BwaStyle');

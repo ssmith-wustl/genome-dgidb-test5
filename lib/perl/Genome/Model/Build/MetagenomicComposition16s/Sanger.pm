@@ -70,7 +70,7 @@ sub consed_directory {
     my $self = shift;
 
     unless ( $self->{_consed_directory} ) {
-        $self->{_consed_directory} = Genome::Consed::Directory->create(directory => $self->data_directory);
+        $self->{_consed_directory} = Genome::Model::Tools::Consed::Directory->create(directory => $self->data_directory);
     }
 
     return $self->{_consed_directory};

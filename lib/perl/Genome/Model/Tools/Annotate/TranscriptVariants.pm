@@ -196,8 +196,6 @@ EOS
 sub execute { 
     my $self = shift;
 
-    $DB::single = 1;
-
     my $variant_file = $self->variant_file;
     
     
@@ -334,6 +332,10 @@ sub execute {
 
     while ( my $variant = $variant_svr->next ) {
         $variant->{type} = $self->infer_variant_type($variant);
+        #make sure both the reference and the variant are in upper case
+        $variant->{reference} = uc $variant->{reference};
+        $variant->{variant} = uc $variant->{variant};
+
         # make a new annotator when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
             if ($annotation_start) {
@@ -383,6 +385,7 @@ sub execute {
                 check_variants => $self->check_variants,
                 get_frame_shift_sequence => $self->get_frame_shift_sequence,
                 ucsc_conservation_directory => $ucsc_versions{$version},
+                annotation_build_version => $self->build->version,
             );
              
             unless ($annotator){
@@ -437,6 +440,7 @@ sub execute {
                 check_variants => $self->check_variants,
                 get_frame_shift_sequence => $self->get_frame_shift_sequence,
                 ucsc_conservation_directory => $ucsc_versions{$version},
+                annotation_build_version => $self->build->version,
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
 

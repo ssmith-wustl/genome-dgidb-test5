@@ -228,6 +228,29 @@ sub open_file_for_reading {
     return $self->_open_file($file, 'r');
 }
 
+sub open_file_for_appending {
+    my ($self, $file) = @_;
+
+    unless ( defined $file ) {
+        Carp::croak("No append file given");
+    }
+
+    if ( -d $file ) {
+        Carp::croak("Append file ($file) is a directory and cannot be opend as a file");
+    }
+    
+    my ($name, $dir) = File::Basename::fileparse($file);
+    unless ( $dir ) {
+        Carp::croak("Can't determine directory from append file ($file)");
+    }
+    
+    unless ( -w $dir ) { 
+        Carp::croak("Do not have WRITE access to directory ($dir) for append file ($name)");
+    }
+
+    return $self->_open_file($file, 'a');
+}
+
 sub validate_file_for_writing {
     my ($self, $file) = @_;
 

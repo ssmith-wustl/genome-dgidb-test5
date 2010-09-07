@@ -39,7 +39,6 @@ while ( my $seq = $reader->next ) {
     $count++;
     $writer->write($seq);
 }
-$writer->flush;
 is($count, 25, 'Read/write 25 sequences');
 is(File::Compare::compare($input_fastq, $output_fastq), 0, 'In/out-put files match');
 #print "$tmpdir\n"; <STDIN>;

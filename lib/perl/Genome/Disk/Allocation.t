@@ -57,14 +57,16 @@ undef $send_message_called;
 ## run long enough so after_start causes a fail, then print lock acquired
 ## and run longer than after_lock_acquired
 
-ok(Genome::Disk::Allocation->monitor_allocate_command('sleep 8; echo "genome allocate: STATUS: Lock acquired" >&2; sleep 3'),
+ok(Genome::Disk::Allocation->monitor_allocate_command('sleep 8; echo "genome allocate: STATUS: Lock acquired" >&2; sleep 4'),
     'monitor 3 seconds with echo'
 );
 
 ok(ref($send_message_called) eq 'ARRAY','got multiple messages');
 
-is($send_message_called->[0],0,'send message was called by after_start');
-is($send_message_called->[1],1,'send message was called by after_lock_acq');
+if (ref($send_message_called) eq 'ARRAY') {
+    is($send_message_called->[0],0,'send message was called by after_start');
+    is($send_message_called->[1],1,'send message was called by after_lock_acq');
+}
 undef $send_message_called;
 
 

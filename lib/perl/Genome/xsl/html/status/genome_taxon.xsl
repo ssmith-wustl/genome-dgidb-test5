@@ -5,6 +5,8 @@
   <!-- full page display for a taxon -->
   <xsl:template name="genome_taxon" match="object[./types[./isa[@type='Genome::Taxon']]]">
     <xsl:comment>template: status/genome_taxon.xsl match: object[./types[./isa[@type='Genome::Taxon']]]</xsl:comment>
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Taxon:'" />
       <xsl:with-param name="display_name" select="aspect[@name='species_name']/value" />
@@ -55,6 +57,52 @@
                       </xsl:choose>
                     </td>
                   </tr>
+
+                  <tr>
+                    <td class="name">Estimated Genome Size:
+                    </td>
+                    <td class="value">
+                      <xsl:choose>
+                        <xsl:when test="string(normalize-space(aspect[@name='estimated_genome_size']/value))">
+                          <xsl:value-of select="normalize-space(aspect[@name='estimated_genome_size']/value)"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          --
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="name">Gram Stain Category:
+                    </td>
+                    <td class="value">
+                      <xsl:choose>
+                        <xsl:when test="string(normalize-space(aspect[@name='gram_stain_category']/value))">
+                          <xsl:value-of select="normalize-space(aspect[@name='gram_stain_category']/value)"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          --
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="name">Domain:
+                    </td>
+                    <td class="value">
+                      <xsl:choose>
+                        <xsl:when test="string(normalize-space(aspect[@name='domain']/value))">
+                          <xsl:value-of select="normalize-space(aspect[@name='domain']/value)"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          --
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </td>
+                  </tr>
+
 
                 </tbody>
               </table>

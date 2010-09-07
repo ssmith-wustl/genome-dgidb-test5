@@ -293,7 +293,13 @@ sub parse_maf {
     if ($self->revise_dbsnp) {
 	close TEMP;
 	
-	system qq(gmt annotate lookup-variants -variant-file temp_out_file_for_look_up_variants.txt -report-mode full -output-file temp_output_file -append-population-allele-frequencies);
+	my $rv = Genome::Model::Tools::Annotate::LookupVariants->execute(
+        variant_file => 'temp_out_file_for_look_up_variants.txt',
+        report_mode => "full",
+        output_file => 'temp_output_file',
+        append_population_allele_frequencies => 1,
+    );  
+    die "Failed to LookupVariants: $!" unless $rv;
 	
 	unless (-f "temp_output_file") {
 	    App->error_message( "\n\nCouldn't open the temp_output_file\n\n.");

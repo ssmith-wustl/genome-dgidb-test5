@@ -42,6 +42,8 @@ my $singletonFile = $opt_f;
 $read1_file =~ s/bam/trimmed.1.fastq/;
 $read2_file =~ s/bam/trimmed.2.fastq/;
 $singletonFile =~ s/bam/trimmed.singleton.fastq/;
+my $quality_reads = 0;
+my $quality_bases = 0;
 
 open (FILE, "$samtools view $opt_f |") or die "Can't open bam for reading, $opt_f:  $!\n";
 open (READ1, ">$read1_file") or die "Can't open read1 file, $read1_file\n";
@@ -52,7 +54,7 @@ while (<FILE>) {
     chomp;
     my $read1 = $_;
     my @array = split/\t/, $read1;
-    my $read1_name = $array[0];
+    my $read1_name = $array[0]."/1";
     my $read1_s = $array[9];
     my $read1_q = $array[10];
     my $read1_length = &checkPos($read1_q);
@@ -61,22 +63,32 @@ while (<FILE>) {
     my $read2 = <FILE>;
     undef(@array);
     @array = split/\t/, $read2;
-    my $read2_name = $array[0];
+    my $read2_name = $array[0]."/2";
     my $read2_s = $array[9];
     my $read2_q = $array[10];
     my $read2_length = &checkPos($read2_q);
     my $read2_seq = substr($read2_s,0,$read2_length);  
     my $read2_qual = substr($read2_q,0,$read2_length);
     if ($read1_length >= $opt_l && $read2_length >= $opt_l) {
-	print READ1 "\@$read1_name\/1\n$read1_seq\n\+$read1_name\/1\n$read1_qual\n";
-	print READ2 "\@$read2_name\/2\n$read2_seq\n\+$read2_name\/2\n$read2_qual\n";
+	print READ1 "\@$read1_name\n$read1_seq\n\+$read1_name\n$read1_qual\n";
+	print READ2 "\@$read2_name\n$read2_seq\n\+$read2_name\n$read2_qual\n";
+	$quality_reads += 2;
+	$quality_bases += $read1_length;
+	$quality_bases += $read2_length;
     } elsif ($read1_length < $opt_l && $read2_length >= $opt_l) {
 	print SINGLETON "\@$read2_name\n$read2_seq\n\+$read2_name\n$read2_qual\n";
+	$quality_reads++;
+	$quality_bases += $read2_length;
     } elsif ($read2_length < $opt_l && $read1_length >= $opt_l) {
 	print SINGLETON "\@$read1_name\n$read1_seq\n\+$read1_name\n$read1_qual\n";
+	$quality_reads++;
+	$quality_bases += $read1_length;
     }
 
 }
+
+print "Quality reads: $quality_reads\n";
+print "Quality bases: $quality_bases\n";
 
 close FILE;
 close READ1;

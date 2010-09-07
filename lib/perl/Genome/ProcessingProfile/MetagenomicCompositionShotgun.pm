@@ -84,8 +84,7 @@ sub _execute_build {
     # ENSURE WE HAVE INSTRUMENT DATA
     my @assignments = $model->instrument_data_assignments;
     if (@assignments == 0) {
-        $self->error_message("NO INSTRUMENT DATA ASSIGNED!");
-        die $self->error_message();
+        die $self->error_message("NO INSTRUMENT DATA ASSIGNED!");
     }
 
     # ASSIGN ANY NEW INSTRUMENT DATA TO THE CONTAMINATION SCREENING MODEL
@@ -116,6 +115,8 @@ sub _execute_build {
     # BUILD HUMAN CONTAMINATION SCREEN MODEL
     $self->status_message("Building contamination screen model if necessary");
     my ($screen_build) = $self->build_if_necessary_and_wait($screen_model);
+    my ($prev_from_build) = grep {$_->id eq $screen_build->id} $build->from_builds();
+    $build->add_from_build(from_build=>$screen_build, role=>'contamination_screen_alignment_build') unless $prev_from_build;;
 
     # POST-PROCESS THE UNALIGNED READS FROM THE CONTAMINATION SCREEN MODEL
     $self->status_message("Processing and importing instrument data for any new unaligned reads");
@@ -203,15 +204,16 @@ sub _execute_build {
 
     # BUILD THE METAGENOMIC REFERENCE ALIGNMENT MODELS
     my @metagenomic_builds = $self->build_if_necessary_and_wait(@metagenomic_models);
-
-    $DB::single = 1;
+    for my $meta_build (@metagenomic_builds){
+        my ($prev_meta_from_build) = grep {$_->id eq $meta_build->id} $build->from_builds();
+        $build->add_from_build(from_build=>$meta_build, role=>'metagenomic_alignment_build') unless $prev_meta_from_build;
+    }
     # SYMLINK ALIGNMENT FILES TO BUILD DIRECTORY
     my $data_directory = $build->data_directory;
     my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
 
     unless ($screen_bam and $screen_flagstat and -e $screen_bam and -e $screen_flagstat){
-        $self->error_message("Bam or flagstat doesn't exist for contamination screen build");
-        die;
+        die $self->error_message("Bam or flagstat doesn't exist for contamination screen build");
     }
     $self->symlink($screen_bam, "$data_directory/contamination_screen.bam");
     $self->symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
@@ -223,8 +225,7 @@ sub _execute_build {
         my ($meta_bam, $meta_flagstat) =  $self->get_bam_and_flagstat_from_build($meta_build);
         push @meta_bams, $meta_bam;
         unless ($meta_bam and $meta_flagstat and -e $meta_bam and -e $meta_flagstat){
-            $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter");
-            die;
+            die $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter");
         }
         $self->symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam");
         $self->symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat");
@@ -232,34 +233,27 @@ sub _execute_build {
 
     # REPORTS
 
-    # TODO: Where should these go? build directory or /gscmnt/sata849/info/hmp-july2010?
-    # Sounds like Craig would like these to go in the database.
-    my $qc_rv;
-    eval{
-        $qc_rv = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->execute(
-            build_id => $build->id,
-        );
-    };
-    if ($@ or !$qc_rv) {
-        $self->error_message("QC report execution died or did not return 1: $@");
-        die;
+    # enable "verbose" logging so we can actually see status messages from these methods
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+
+    my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(build_id => $build->id);
+    unless($qc_report->execute()) {
+        die $self->error_message("Failed to create QC report!");
     }
 
-    # TODO: Where should these go? build directory or /gscmnt/sata835/info/medseq/hmp-july2010?
-    # TODO: Should we move the taxonomy files into the repo?
-    my $m_rv;
-
-    eval{$m_rv = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->execute(
-            build_id => $build->id,
-            taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
-            viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
-        );
-    };
-    if ($@ or !$m_rv) {
-        $self->error_message("metagenomic report execution died or did not return 1:$@");
-        die;
+    my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
+        build_id => $build->id,
+        taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
+        viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
+    );
+    unless($meta_report->execute()) {
+        die $self->error_message("metagenomic report execution died or did not return 1:$@");
     }
 
+    my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);
+    unless($validate_build->execute()) {
+        die $self->error_message("Failed to validate build!");
+    }
 
     return 1;
 }
@@ -268,8 +262,7 @@ sub symlink {
     my $self = shift;
     my ($source, $target) = @_;
     if(-l $target && readlink($target) ne $source) {
-        $self->error_message("$target already exists but points to " . readlink($target));
-        die $self->error_message();
+        die $self->error_message("$target already exists but points to " . readlink($target));
     }
     elsif(! -l $target) {
         Genome::Utility::FileSystem->create_symlink($source, $target);
@@ -279,7 +272,9 @@ sub symlink {
 sub get_bam_and_flagstat_from_build{
     my ($self, $build) = @_;
     my $aln_dir = $build->accumulated_alignments_directory;
-    my @bam_file = glob("$aln_dir/*bam");
+    $aln_dir =~ /\/build(\d+)\//;
+    my $aln_id = $1;
+    my @bam_file = glob("$aln_dir/$aln_id*bam");
     unless (@bam_file){
         $self->error_message("no bam file in alignment directory $aln_dir");
         return;
@@ -423,8 +418,7 @@ sub _process_unaligned_reads {
     $tmp_dir .= "/".$alignment->id;
 
     if (-e $tmp_dir) {
-        $self->error_message("Temp directory $tmp_dir already exists?!?!");
-        die $self->error_message;
+        die $self->error_message("Temp directory $tmp_dir already exists?!?!");
     }
 
     unless (mkdir $tmp_dir) {
@@ -505,8 +499,7 @@ sub _process_unaligned_reads {
                 max_try => 2,
             );
             unless ($se_lock) {
-                $self->error_message("Failed to lock $expected_se_path.");
-                die $self->error_message;
+                die $self->error_message("Failed to lock $expected_se_path.");
             }
             push @upload_paths, $expected_se_path;
         }
@@ -524,8 +517,7 @@ sub _process_unaligned_reads {
                 max_try => 2,
             );
             unless ($pe_lock) {
-                $self->error_message("Failed to lock $expected_pe_path.");
-                die $self->error_message;
+                die $self->error_message("Failed to lock $expected_pe_path.");
             }
             push @upload_paths, $expected_pe_path;
         }
@@ -548,13 +540,11 @@ sub _process_unaligned_reads {
         $self->status_message("Extracting unaligned reads: " . Data::Dumper::Dumper($extract_unaligned));
         my $rv = $extract_unaligned->execute;
         unless ($rv){
-            $self->error_message("Couldn't extract unaligned reads from bam file $bam");
-            die $self->error_message; 
+            die $self->error_message("Couldn't extract unaligned reads from bam file $bam");
         }
         my @missing = grep {! -e $_} grep { defined($_) and length($_) } ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path);
         if (@missing){
-            $self->error_message(join(", ", @missing)." unaligned files missing after bam extraction");
-            die $self->error_message;
+            die $self->error_message(join(", ", @missing)." unaligned files missing after bam extraction");
         }
         $self->status_message("Extracted unaligned reads from bam file(".join(", ", ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path)));
 
@@ -563,8 +553,7 @@ sub _process_unaligned_reads {
             $self->status_message("processind single-end reads...");
             my $processed_fastq = $self->_process_unaligned_fastq($fragment_unaligned_data_path, $expected_data_path0);
             unless (-e $expected_data_path0){
-                $self->error_message("Expected data path does not exist after fastq processing: $expected_data_path0");
-                die $self->error_message;
+                die $self->error_message("Expected data path does not exist after fastq processing: $expected_data_path0");
             }
         }
 
@@ -636,8 +625,7 @@ sub _process_unaligned_reads {
             };
             my $result = $command->execute();
             unless ($result) {
-                $self->error_message( "Error importing data from $original_data_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
-                die $self->error_message; 
+                die $self->error_message( "Error importing data from $original_data_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
             }            
             $self->status_message("committing newly created imported instrument data");
             $DB::single = 1;
@@ -648,19 +636,20 @@ sub _process_unaligned_reads {
                 original_data_path => $original_data_path
             );
             unless ($instrument_data) {
-                $self->error_message( "Failed to find new instrument data $original_data_path!");
-                die $self->error_message; 
+                die $self->error_message( "Failed to find new instrument data $original_data_path!");
             }
             if ($instrument_data->__changes__) {
                 die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
             }
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
-                $self->error_message("Failed to unlock $expected_se_path.");
-                die $self->error_message;
+            if ($se_lock) {
+                unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
+                    die $self->error_message("Failed to unlock $expected_se_path.");
+                }
             }
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
-                $self->error_message("Failed to unlock $expected_pe_path.");
-                die $self->error_message;
+            if ($pe_lock) {
+                unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
+                    die $self->error_message("Failed to unlock $expected_pe_path.");
+                }
             }
             push @instrument_data, $instrument_data;
         }        
@@ -669,9 +658,8 @@ sub _process_unaligned_reads {
 
     # TODO: add directory removal to Genome::Utility::FileSystem
     if ($@) {
-        $self->error_message("Error processing unaligned reads! $@");
         system "/bin/rm -rf '$tmp_dir'";
-        die $self->error_message;
+        die $self->error_message("Error processing unaligned reads! $@");
     }
     system "/bin/rm -rf '$tmp_dir'";
 

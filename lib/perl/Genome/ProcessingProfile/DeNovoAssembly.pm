@@ -23,31 +23,19 @@ class Genome::ProcessingProfile::DeNovoAssembly{
        # Assembler
        assembler_name => {
            doc => 'Name of the assembler.',
-           valid_values => [qw/ velvet newbler /],
+           valid_values => [qw/ velvet newbler soap /],
        },
        assembler_version => {
            doc => 'Version of assembler.',
        },
        assembler_params => {
-           doc => 'A string of parameters to pass to the assembler.',
            is_optional => 1,
+           doc => 'A string of parameters to pass to the assembler.',
        },
        # Read Coverage, Trimmer and Filter
-       read_trimmer_name => {
-           doc => 'The name of the read trimmer.',
+       read_processor => {
            is_optional => 1,
-       },
-       read_trimmer_params => {
-           doc => 'A string of parameters to pass to the read trimmer',
-           is_optional => 1,
-       },
-       read_filter_name => {
-           doc => 'The name of the read filter.',
-           is_optional => 1,
-       },
-       read_filter_params => {
-           doc => 'A string of parameters to pass to the read filter.',
-           is_optional => 1,
+           doc => "String of read trimmers, filters and sorters to use. Find processors in 'gmt fast-qual.' List each porocessor in order of execution as they would be run on the command line. Do not include 'gmt fast-qual', as this is assumed. List params starting w/ a dash (-), followed by the value. Separate processors by a pipe w/ a space on each side ( | ). The read processors will be validated. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70",
        },
    ],
 };
@@ -58,7 +46,6 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
- 
     # Read coverage
     if ( defined $self->coverage ) {
         # Gotta be an int, gt 0 and even
@@ -77,25 +64,18 @@ sub create {
 
     # Validate assembler & params
     unless ( $self->_validate_assembler_and_params ) {
+        $self->status_message("Create failed - could not validate assembler and params");
         $self->delete;
         return;
     }
 
-      
-    # Validate read filter & params
-    unless ( $self->_validate_read_filter_and_params ) {
-        # Error is in sub
+    # Validate read processor
+    unless ( $self->_validate_read_processor ) {
+        $self->status_message("Create failed - could not validate read processor");
         $self->delete;
         return;
     }
-
-    # Validate read trimmer & params
-    unless ( $self->_validate_read_trimmer_and_params ) {
-        # Error is in sub
-        $self->delete;
-        return;
-    }
-
+    
     return $self;
 }
 
@@ -107,6 +87,10 @@ my %supported_assemblers = (
     velvet => {
         platforms => [qw/ solexa /],
         class => 'Genome::Model::Tools::Velvet::OneButton',
+    },
+    soap => {
+	platforms => [qw/ solexa /],
+	class => 'Genome::Model::Tools::Soap::DeNovoAssemble',
     },
 );
 sub supported_sequencing_platforms_for_assembler {
@@ -149,19 +133,31 @@ sub class_for_assembler {
     return $class;
 }
 
+# FIXME need a validator for each assembler!
 sub assembler_params_as_hash {
     my $self = shift;
 
-    my %assembler_params = $self->_params_as_hash_for_operation('assembler');
-    if ( defined $assembler_params{hash_sizes} ) { 
-        $assembler_params{hash_sizes} = [ split(/\s+/, $assembler_params{hash_sizes}) ],
+    my $params_string = $self->assembler_params;
+    return unless $params_string; # ok 
+
+    my %params = Genome::Utility::Text::param_string_to_hash($params_string);
+    unless ( %params ) { # not ok
+        Carp::confess(
+            $self->error_message("Malformed assembler params: $params_string")
+        );
     }
 
-    return %assembler_params;
+    if ( defined $params{hash_sizes} ) { 
+        $params{hash_sizes} = [ split(/\s+/, $params{hash_sizes}) ],
+    }
+
+    return %params;
 }
 
 sub _validate_assembler_and_params {
     my $self = shift;
+
+    $self->status_message("Validating assembler and params...");
     
     # Assembler and seq platform combo
     my $supported_sequencing_platforms_for_assembler = $self->supported_sequencing_platforms_for_assembler;
@@ -195,131 +191,100 @@ sub _validate_assembler_and_params {
 
     $assembler->delete;
 
+    $self->status_message("Assembler and params OK");
+
     return 1;
 }
 
-#< Shared Operation Methods for Read Filter and Trimmer >#
-sub _name_for_operation {
-    my ($self, $operation) = @_;
+#< Read Processor >#
+sub _validate_read_processor {
+    my $self = shift;
 
-    Carp::confess("No operation given to get name.") unless defined $operation;
-    my $name_method = $operation.'_name';
-    unless ( $self->can($name_method) ) { 
-        Carp::confess("Invalid operation ($operation)");
-    }
-    return $self->$name_method;
-}
-
-sub _class_for_operation {
-    my ($self, $operation) = @_;
-
-    my $name = $self->_name_for_operation($operation) # undef ok, dies onn error
-        or return;
-    
-    $operation =~ s/^read_//;
-    my $class = 'Genome::Model::Tools::FastQual::'.
-    Genome::Utility::Text::string_to_camel_case($operation).'::'.
-    Genome::Utility::Text::string_to_camel_case($name);
-    eval("use $class");
-    if ( $@ ) {
-        Carp::confess(
-            $self->error_message("Can't find class ($class) for read $operation ($name)")
-        );
+    my $read_processor = $self->read_processor;
+    unless ( defined $read_processor ) { # ok
+        return 1;
     }
 
-    return $class;
-}
+    $self->status_message("Validating read processor...");
 
-sub _params_as_hash_for_operation {
-    my ($self, $operation) = @_;
-
-    my $method = $operation.'_params';
-    my $params_string = $self->$method;
-    return unless $params_string; # ok 
-
-    my %params = Genome::Utility::Text::param_string_to_hash($params_string);
-    unless ( %params ) { # not ok
-        Carp::confess(
-            $self->error_message("Malformed $operation params: $params_string")
-        );
+    my @read_processor_parts = split(/\s+\|\s+/, $read_processor);
+    unless ( @read_processor_parts ) {
+        $self->error_message("Could not find read processors in string: $read_processor");
+        return;
     }
 
-    return %params;
-}
-
-sub _object_for_operation {
-    my ($self, $operation) = @_;
-
-    my $name = $self->_name_for_operation($operation); # dies on error
-    my %params = $self->_params_as_hash_for_operation($operation); # undef ok
-    unless ( $name ) { # ok
-        if ( %params ) { # not ok
-            Carp::confess(
-                $self->error_message("No $operation name, but params we're given. Please indicate a name for $operation, or do not indicate it's params.")
-            );
+    for my $read_processor_part ( @read_processor_parts ) {
+        my ($class, $params) = $self->_get_class_and_params_from_read_processor_part($read_processor_part)
+            or return;
+        my %converted_params;
+        for my $key ( keys %$params ) {
+            if ( $key =~ /_/ ) { # underscores not allowed
+                $self->error_message("Param ($key) for read processor part ($read_processor_part) params has an underscore. Use dashes (-) instead");
+                return;
+            }
+            my $new_key = $key; 
+            $new_key =~ s/\-/_/g; # sub - for _ to create processor
+            $converted_params{$new_key} = $params->{$key};
         }
-        return;
+        my $obj; 
+        eval{
+            $obj = $class->create(%converted_params);
+        };
+        unless ( $obj ) {
+            $self->error_message("Can't validate read processor ($read_processor_part) using class ($class): $@.");
+            return;
+        }
+        $self->status_message("Read processor part OK: $read_processor_part");
+        $obj->delete;
     }
 
-    my $class = $self->_class_for_operation($operation); # dies on error
-    my $obj = $class->create(%params);
-    unless ( $obj ){ 
-        Carp::confess(
-            $self->error_message("Could not validate $operation params:\n".Dumper(\%params))
-        );
-    }
- 
-    return $obj;
-}
-
-sub _validate_operation_and_params {
-    my ($self, $operation) = @_;
-
-    my $obj;
-    eval{ $obj = $self->_object_for_operation($operation); }; # dies on error
+    $self->status_message("Read processor OK");
     
-    if ( $@ ) {
-        $self->error_message($@);
-        return;
-    }
-
-    $obj->delete if $obj;
-
     return 1;
 }
 
-#< Read Filter >#
-sub class_for_read_filter {
-    return $_[0]->_class_for_operation('read_filter');
-}
+sub _get_class_and_params_from_read_processor_part {
+    my ($self, $read_processor_part) = @_;
 
-sub read_filter_params_as_hash {
-    return $_[0]->_params_as_hash_for_operation('read_filter');
-}
+    $DB::single = 1;
+    my @tokens = split(/\s+/, $read_processor_part);
+    my @subclass_parts;
+    while ( my $token = shift @tokens ) {
+        if ( $token =~ /^\-/ ) {
+            unshift @tokens, $token;
+            last;
+        }
+        push @subclass_parts, $token;
+    }
 
-sub create_read_filter { 
-    return $_[0]->_object_for_operation('read_filter');
-}
+    unless ( @subclass_parts ) {
+        $self->error_message("Could not get class from read processor part: $read_processor_part");
+        return;
+    }
 
-sub _validate_read_filter_and_params {
-    return $_[0]->_validate_operation_and_params('read_filter');
-}
+    my $class = 'Genome::Model::Tools::FastQual::'.
+    join(
+        '::', 
+        map { Genome::Utility::Text::string_to_camel_case($_) }
+        map { s/\-/ /; $_; }
+        @subclass_parts
+    );
 
-#< Read Trimmer #>
-sub class_for_read_trimmer {
-    return $_[0]->_class_for_operation('read_trimmer');
-}
+    my %params;
+    if ( @tokens ) {
+        my $params_string = join(' ', @tokens);
+        eval{
+            %params = Genome::Utility::Text::param_string_to_hash(
+                $params_string
+            );
+        };
+        unless ( %params ) {
+            $self->error_message("Can't get params from params string: $params_string");
+            return;
+        }
+    }
 
-sub read_trimmer_params_as_hash {
-    return $_[0]->_params_as_hash_for_operation('read_trimmer');
-}
-
-sub create_read_trimmer { 
-    return $_[0]->_object_for_operation('read_trimmer');
-}
-
-sub _validate_read_trimmer_and_params {
-    return $_[0]->_validate_operation_and_params('read_trimmer');
+    return ($class, \%params);
 }
 
 #< Stages >#
@@ -334,12 +299,10 @@ sub assemble_job_classes {
 
     my $assembler_subclass = Genome::Utility::Text::string_to_camel_case($self->assembler_name);
 
-    my @classes = map { $_.'::'.$assembler_subclass }
-    (qw/
-        Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData
+    my @classes = 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData';
+    push @classes, map { $_.'::'.$assembler_subclass } (qw/
         Genome::Model::Event::Build::DeNovoAssembly::Assemble
         Genome::Model::Event::Build::DeNovoAssembly::PostAssemble
-
         /);
     push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::Report';
 

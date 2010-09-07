@@ -1,12 +1,13 @@
+package Genome::Model::MetagenomicCompositionShotgun::Command;
+
 use Genome;
 use strict;
 use warnings;
 
-package Genome::Model::MetagenomicCompositionShotgun::Command;
 
 class Genome::Model::MetagenomicCompositionShotgun::Command {
     is => 'Command',
-    doc => 'operate on somatic models',
+    doc => 'operate on metagenomic-composition-shotgun models',
 };
 
 sub sub_command_category { 'type specific' }

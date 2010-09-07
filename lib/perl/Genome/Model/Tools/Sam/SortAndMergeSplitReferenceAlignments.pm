@@ -70,11 +70,11 @@ sub execute {
         my $rv;
         eval{
             my $skip;
-            if (-e $sorted_bam){
-                my $bam_lc = `samtools view $bam | wc -l`;
-                my $sort_lc = `samtools view $sorted_bam | wc -l`;
-                $skip = 1 if $bam_lc == $sort_lc;
-            }
+            #if (-e $sorted_bam){
+            #    my $bam_lc = `samtools view $bam | wc -l`;
+            #    my $sort_lc = `samtools view $sorted_bam | wc -l`;
+            #    $skip = 1 if $bam_lc == $sort_lc;
+            #}
             unless ($skip){
                 $rv=Genome::Model::Tools::Sam::SortBam->execute(
                     file_name => $bam,

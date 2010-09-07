@@ -31,10 +31,13 @@ class Genome::Model::Tools::Capture::BuildModels {
 		model_basename	=> { is => 'Text', doc => "Project string for model naming, e.g. \"TCGA-OV-6K-Capture-bwa\"", is_optional => 0 },
 		processing_profile	=> { is => 'Text', doc => "Processing profile to use", is_optional => 1, default =>"bwa0.5.5 and samtools r544 and picard 1.17 and -q 5" },
 		sample_list	=> { is => 'Text', doc => "Text file with sample names to include, one per line" , is_optional => 0},
+		region_of_interest_set_name	=> { is => 'Text', doc => "Region of interest set name " , is_optional => 0},
+		target_region_set_names	=> { is => 'Text', doc => "Target region set name " , is_optional => 0},	
 		subject_type	=> { is => 'Text', doc => "Type of sample name in file (sample_name or library_name)" , is_optional => 1},
 		report_only	=> { is => 'Text', doc => "Flag to skip actual genome model creation" , is_optional => 1},
 		define_only	=> { is => 'Text', doc => "Flag to define models but not add data or build" , is_optional => 1},
 		assign_only	=> { is => 'Text', doc => "Flag to define models, assign data, but not build" , is_optional => 1},
+		read_length	=> { is => 'Text', doc => "Optionally specify a read length that will be included" , is_optional => 1},
 		restart_failed	=> { is => 'Text', doc => "Restarts failed builds" , is_optional => 1},
 		restart_running	=> { is => 'Text', doc => "Forces restart of running builds" , is_optional => 1},
 		restart_scheduled	=> { is => 'Text', doc => "Forces restart of scheduled builds" , is_optional => 1},
@@ -132,7 +135,7 @@ sub execute {                               # replace with real execution logic.
 				}
 				else
 				{
-					$model_id = define_model($model_name, $sample_name, $subject_type, $processing_profile);
+					$model_id = define_model($model_name, $sample_name, $subject_type, $processing_profile, $self->region_of_interest_set_name, $self->target_region_set_names);
 				}
 			}
 		}
@@ -156,14 +159,23 @@ sub execute {                               # replace with real execution logic.
 					(my $id, my $flow_cell_id, my $lane, my $filt_error_rate_avg, my $clusters, my $read_length, my $target_region_set_name) = split(/\,/, $data_line);
 					print "$id\t$flow_cell_id\t$lane\t$filt_error_rate_avg\t$clusters\t$read_length\t$target_region_set_name\n";
 
-					## Assign instrument data to model ##
-
-					my $cmd = "genome model instrument-data assign --model-id $model_id --instrument-data-id $id";
-
-					if(!$self->report_only)
+					if(!defined($self->read_length) || $read_length eq $self->read_length)
 					{
-						system($cmd);
+						if($target_region_set_name ne $self->target_region_set_names)
+						{
+							warn "FYI: Lane target region set name $target_region_set_name does not equal model target region set name " . $self->target_region_set_names . "\n";						
+						}
+
+						warn "Assigning $flow_cell_id lane $lane with read length $read_length\n";
+
+						my $cmd = "genome model instrument-data assign --model-id $model_id --instrument-data-id $id";
+	
+						if(!$self->report_only)
+						{
+							system($cmd);
+						}						
 					}
+
 				}
 				
 
@@ -222,10 +234,10 @@ sub get_instrument_data
 
 sub define_model
 {
-	(my $model_name, my $sample_name, my $subject_type, my $processing_profile) = @_;
+	(my $model_name, my $sample_name, my $subject_type, my $processing_profile, my $region_of_interest_set_name, my $target_region_set_names) = @_;
 	my $model_id = 0;
 
-	my $cmd = "genome model define reference-alignment --processing-profile-name \"$processing_profile\" --model-name \"$model_name\" --subject-name=\"$sample_name\" --subject-type=\"$subject_type\"";
+	my $cmd = "genome model define reference-alignment --processing-profile-name \"$processing_profile\" --model-name \"$model_name\" --subject-name=\"$sample_name\" --subject-type=\"$subject_type\" --region-of-interest-set-name \"$region_of_interest_set_name\" --target-region-set-names \"$target_region_set_names\"";
 	print "RUN: $cmd\n";
 	
 	if(system($cmd))

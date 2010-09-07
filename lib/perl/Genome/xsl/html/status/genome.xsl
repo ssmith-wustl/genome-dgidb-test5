@@ -1,10 +1,12 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:template match="/search-form">
+    <xsl:call-template name="control_bar_app"/>
     <br/>
+
     <xsl:call-template name="app_header">
       <xsl:with-param name="app_name" select="'Deprecated Analysis Search'" />
-      <xsl:with-param name="icon" select="'app_analysis_search_32'" />
+      <xsl:with-param name="icon" select="'app_deprecated_search_32'" />
     </xsl:call-template>
 
     <div class="content rounded shadow">

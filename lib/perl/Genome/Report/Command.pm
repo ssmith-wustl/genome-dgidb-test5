@@ -8,12 +8,12 @@ use Genome;
       
 class Genome::Report::Command {
     is => 'Command',
-    doc => 'Work with reports',
-    has => [ 
-    report_directory => { 
-        is => 'Text', 
-        doc => 'Report directory.',
-    },
+        doc => 'work with reports',
+        has => [ 
+        report_directory => { 
+            is => 'Text', 
+            doc => 'Report directory.',
+        },
     ],
 };
 

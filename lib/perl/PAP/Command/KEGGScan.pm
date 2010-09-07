@@ -1,10 +1,10 @@
-#$Id$
-
 package PAP::Command::KEGGScan;
 
 use strict;
 use warnings;
 
+use PAP;
+use Carp qw(confess);
 
 use Bio::Annotation::DBLink;
 use Bio::Seq;
@@ -19,50 +19,52 @@ use File::Temp;
 use IO::File;
 use IPC::Run;
 
-
 class PAP::Command::KEGGScan {
-    is  => ['PAP::Command'],
+    is  => 'PAP::Command',
     has => [
-            fasta_file        => { 
-                                  is  => 'SCALAR', 
-                                  doc => 'fasta file name',            
-                                  is_input => 1,
-                              },
-            working_directory => {
-                                  is          => 'SCALAR',
-                                  is_optional => 1,
-                                  doc         => 'analysis program working directory',
-                              },
-            keggscan_top_output => {
-                                    is          => 'SCALAR',
-                                    is_optional => 1,
-                                    doc         => 'instance of IO::File pointing to raw KEGGscan output',
-                                },
-            keggscan_full_output => {
-                                     is          => 'SCALAR',
-                                     is_optional => 1,
-                                     doc         => 'instance of IO::File pointing to raw KEGGscan output',
-                                 },
-            bio_seq_feature   => { 
-                                  is          => 'ARRAY',  
-                                  is_optional => 1,
-                                  doc         => 'array of Bio::Seq::Feature', 
-                                  is_output => 1,
-                              },
-            report_save_dir   => {
-                                  is          => 'SCALAR',
-                                  is_optional => 1,
-                                  doc         => 'directory to save a copy of the raw output to',
-                                  is_input => 1,
-                              },
-             lsf_queue => { is_param => 1, default_value => 'long',},
-             lsf_resource => { is_param => 1,
-                              default_value => '-R "select[mem>8192,type==LINUX64] rusage[mem=8192,tmp=100]" -M 8192000',}, 
-        ],
+        fasta_file => { 
+            is => 'Path',
+            doc => 'fasta file name',            
+            is_input => 1,
+        },
+    ],
+    has_optional => [
+        report_save_dir   => {
+            is => 'Path',
+            doc => 'directory to save a copy of the raw output to',
+            is_input => 1,
+        },
+        bio_seq_feature   => { 
+            is => 'ARRAY',  
+            doc => 'array of Bio::Seq::Feature', 
+            is_output => 1,
+        },
+        keggscan_top_output => {
+            is => 'SCALAR',
+            doc => 'instance of IO::File pointing to raw KEGGscan output',
+        },
+        keggscan_full_output => {
+            is => 'SCALAR',
+            doc => 'instance of IO::File pointing to raw KEGGscan output',
+        },
+        lsf_queue => { 
+            is => 'Text',
+            default_value => 'long',
+        },
+        lsf_resources => { 
+            is => 'Text',
+            default_value => 'select[mem>8000,type==LINUX64] rusage[mem=8192,tmp=100]',
+        }, 
+        lsf_max_memory => {
+            is => 'Number',
+            default => '8000000',
+        },
+        _working_directory => {
+            is => 'Path',
+            doc => 'analysis program working directory',
+        },
+    ],
 };
-
-
-sub sub_command_sort_position { 10 }
 
 sub help_brief {
     "Run KEGGscan";
@@ -80,53 +82,48 @@ EOS
 }
 
 sub execute {
-
     my $self = shift;
 
-
-    ##FIXME:  This should not be hardcoded.  At least not here.  
-    my @keggscan_command = (
-                            '/gsc/scripts/gsc/annotation/KEGGscan_KO.v52',
-                           );
-    
-    my ($kegg_stdout, $kegg_stderr);
-    
-    $self->working_directory(
-                             File::Temp::tempdir(
-                                                 'PAP_keggscan_XXXXXXXX',
-                                                 DIR     => '/gscmnt/temp212/info/annotation/PAP_tmp',
-                                                 CLEANUP => 1,
-                                             )
-                         );
-
+    # FIXME This directory needs to be a param with a default value
+    my ($kegg_stdout, $kegg_stderr);    
+    $self->_working_directory(
+        File::Temp::tempdir(
+            'PAP_keggscan_XXXXXXXX',
+            DIR => '/gscmnt/temp212/info/annotation/PAP_tmp',
+            CLEANUP => 0,
+        )
+    );
+    chmod(0777, $self->_working_directory);
     my $fasta_file = $self->fasta_file();
 
     ## We're about to screw with the current working directory.
     ## Thusly, we must fixup the fasta_file property if it 
-    ## contains a relative path.  
+    ## contains a relative path. 
+    #TODO bdericks: Is this necessary?
     unless ($fasta_file =~ /^\//) {
         $fasta_file = join('/', $CWD, $fasta_file);
         $self->fasta_file($fasta_file);
     }
     
-    $self->write_config_file();
+    # FIXME The subject fasta path needs to be a param on this command object with a default value
+    my ($fasta_name) = basename($self->fasta_file);
+    my $kegg_command = PAP::Command::KEGGScan::RunKeggScan->create(
+        species_name => "default", 
+        query_fasta_path => $self->fasta_file,
+        subject_fasta_path => "/gscmnt/temp212/info/annotation/KEGG/Version_52/genes.v52.faa",
+        output_directory => $self->_working_directory . "/KS-OUTPUT." . $fasta_name,
+        lsf_queue => $self->lsf_queue,
+        lsf_resources => $self->lsf_resources,
+        lsf_max_memory => $self->lsf_max_memory,
+        lsf_mail_to => $ENV{USER} . "\@genome.wustl.edu",
+    );
 
-    {
-    
-        local $CWD = $self->working_directory();
-
-        IPC::Run::run(
-                      \@keggscan_command,
-                      '<',
-                      \undef,
-                      '>',
-                      \$kegg_stdout,
-                      '2>',
-                      \$kegg_stderr,
-                     ) || die "KEGGscan failed: $kegg_stderr";
-                     
+    my $rv = $kegg_command->execute;
+    unless ($rv) {
+        $self->error_message("Problem running keggscan!");
+        confess;
     }
-    
+        
     $self->parse_result();
 
     my $top_output_fh = $self->keggscan_top_output();
@@ -134,6 +131,7 @@ sub execute {
     
     ## Be Kind, Rewind.  Somebody will surely assume we've done this,
     ## so let's not surprise them.
+    # TODO bdericks: Is this necessary?
     $top_output_fh->seek(0, SEEK_SET);
     $full_output_fh->seek(0, SEEK_SET);
     
@@ -144,72 +142,18 @@ sub execute {
     $full_output_fh->seek(0, SEEK_SET);
     
     return 1;
-
-}
-
-=head1 create_kscfg
-
-KEGGscan needs a configuration file with these items:
-
- SpeciesName\t"species"
- QueryFastaPath\t"path/to/peptides"
- SubjectFastaPath\t"path/to/KEGGrelease"
- QuerySeqType\t"CONTIG"
- Queue\t"long"
- BladeLoad\t"40"
- KeggRelease\t"RELEASE-41"
-
-=cut
-
-sub write_config_file {
-
-    my $self = shift;
-
-
-    ##FIXME:  This probably should not be undef.  This should probably be an input property.
-    my $species = undef;
-
-    ##FIXME:  Hardcoded path.
-    my $subjectpath = "/gscmnt/temp212/info/annotation/KEGG/Version_52/genes.v52.faa";
-    
-    my $query_fasta = $self->fasta_file();
-    my $working_dir = $self->working_directory();
-
-    my $bladeload  = 40;
-    my $keggrel    = "RELEASE-52";
-
-    my @config = (
-                  qq(SpeciesName\t"default"\n),
-                  qq(QueryFastaPath\t"$query_fasta"\n),
-                  qq(SubjectFastaPath\t"$subjectpath"\n),
-                  qq(QuerySeqType\t"CONTIG"\n),
-                  qq(Queue\t"long"\n),
-                  qq(BladeLoad\t"$bladeload"\n),
-                  qq(KeggRelease\t"$keggrel"\n),
-                 );
-
-    my $cfg_fh = IO::File->new();
-    $cfg_fh->open(">$working_dir/KS.cfg") or die "Can't open '$working_dir/KS.cfg': $OS_ERROR";
-
-    print $cfg_fh @config;
-
-    $cfg_fh->close();
-    
-    return;
-    
 }
 
 sub parse_result {
 
     my $self = shift;
-
-    
+ 
     my $top_output_fh  = IO::File->new();
     my $full_output_fh = IO::File->new();
     
     my $top_output_fn = join('.', 'KS-OUTPUT', File::Basename::basename($self->fasta_file()));
 
-    $top_output_fn = join('/', $self->working_directory(), $top_output_fn, 'REPORT-top.ks');    
+    $top_output_fn = join('/', $self->_working_directory(), $top_output_fn, 'REPORT-top.ks');    
     
     $top_output_fh->open("$top_output_fn") or die "Can't open '$top_output_fn': $OS_ERROR";
 
@@ -217,7 +161,7 @@ sub parse_result {
 
     my $full_output_fn = join('.', 'KS-OUTPUT', File::Basename::basename($self->fasta_file()));
 
-    $full_output_fn = join('/', $self->working_directory(), $full_output_fn, 'REPORT-full.ks');    
+    $full_output_fn = join('/', $self->_working_directory(), $full_output_fn, 'REPORT-full.ks');    
     
     $full_output_fh->open("$full_output_fn") or die "Can't open '$full_output_fn': $OS_ERROR";
 

@@ -32,6 +32,15 @@ class Genome::Model::Tools::Annotate::Adaptor::Pindel {
             default => 0,
             doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
         },
+        # Make workflow choose 64 bit blades, this is needed for samtools faidx
+        lsf_resource => {
+            is_param => 1,
+            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1] -M 4000000',
+        },
+        lsf_queue => {
+            is_param => 1,
+            default_value => 'long'
+        }, 
        ],
 };
 
@@ -55,6 +64,12 @@ EOS
 sub execute {
     my $self = shift;
     $DB::single=1;
+
+    # test architecture to make sure we can run (needed for samtools faidx)
+    unless (`uname -a` =~ /x86_64/) {
+       $self->error_message("Must run on a 64 bit machine");
+       die;
+    }
     
     my $output_fh = IO::File->new($self->output_file, ">");
     my $big_fh = IO::File->new($self->output_file . ".big_deletions" , ">");

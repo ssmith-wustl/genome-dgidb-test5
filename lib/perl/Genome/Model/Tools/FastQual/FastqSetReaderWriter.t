@@ -67,14 +67,14 @@ my $writer = Genome::Model::Tools::FastQual::FastqSetWriter->create(
     files => [ $out_forward_fastq, $out_reverse_fastq ],
 );
 ok($writer, 'Create writer');
-is($writer->_write_strategy, '_separate', 'Write to separate files');
+ok($writer->id, 'wrtier has id');
+#is($writer->_write_strategy, '_separate', 'Write to separate files');
 my $count = 0;
 while ( my $fastqs = $reader->next ) {
     $count++;
     $writer->write($fastqs)
         or die;
 }
-$writer->flush;
 is($count, 12, 'Read/write 12 fastq sets');
 is(File::Compare::compare($forward_fastq, $out_forward_fastq), 0, 'Foward in/output files match');
 is(File::Compare::compare($reverse_fastq, $out_reverse_fastq), 0, 'Reverse in/output files match');
@@ -89,14 +89,13 @@ $writer = Genome::Model::Tools::FastQual::FastqSetWriter->create(
     files => $out_collated_fastq,
 );
 ok($writer, 'Create writer');
-is($writer->_write_strategy, '_collate', 'Write to collated file');
+#is($writer->_write_strategy, '_collate', 'Write to collated file');
 $count = 0;
 while ( my $fastqs = $reader->next ) {
     $count++;
     $writer->write($fastqs)
         or die;
 }
-$writer->flush;
 is($count, 12, 'Read/write 12 fastq sets');
 is(File::Compare::compare($collated_fastq, $out_collated_fastq), 0, 'Reverse in/output files match');
 
