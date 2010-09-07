@@ -43,11 +43,19 @@ class Genome::Model::Tools::Sequence{
             doc => 'reference version to be used',
             default => '36',
         },
-        output_file =>{
-            is => 'Path',
+        sequence =>{
+            is => 'SCALAR',
+            is_output => 1,
+            doc => "This is populated with the sequence returned from running this command",
             is_optional => 1,
-            doc => "output will be sent to this filepath.  If unspecified, defaults to STDOUT",
-        }
+        },
+        suppress_output => {
+            is => 'Boolean',
+            is_input => 1,
+            is_optional => 1,
+            default => 0,
+            doc => 'Setting this option suppresses printing the sequence.  Useful for calling this inside another program',
+        },
     ],
 };
 
@@ -88,16 +96,9 @@ sub execute {
     }
 
     my $seq = $build->sequence($self->chromosome, $self->start, $self->stop);
-    if (defined $self->output_file){
-        my $fh = IO::File->new($self->output_file, "w");
-        $fh or die "Could not open handle for output_file " . $self->output_file ." : $!";
-        print $fh "$seq\n";
-        $fh->close or die "Could not close output_file " . $self->output_file . " : $!";
-    }else{
-        print $seq . "\n";
-    }
+    print($seq . "\n") unless $self->suppress_output;
+    $self->sequence($seq);
     return 1;
 }
 
 1;
-
