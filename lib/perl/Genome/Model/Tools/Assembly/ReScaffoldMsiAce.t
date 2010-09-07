@@ -8,7 +8,7 @@ use Test::More;
 
 use_ok ('Genome::Model::Tools::Assembly::ReScaffoldMsiAce');
 
-my $data_dir = '/gscmnt/sata420/info/testsuite_data/Genome-Model-Tools-Assembly/ReScaffoldMsiAce_v0';
+my $data_dir = '/gscmnt/sata420/info/testsuite_data/Genome-Model-Tools-Assembly/ReScaffoldMsiAce_v1';
 ok(-d $data_dir, "Found data dir");
 
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
@@ -40,7 +40,7 @@ ok(-s $temp_dir.'/edit_dir/msi.gap.txt', "Created msi.gap.txt file");
 my @diff2 = `sdiff -s $temp_dir/edit_dir/msi.gap.txt $data_dir/edit_dir/msi.gap.txt`;
 is(scalar (@diff2), 0, "New msi.gap.txt file matches test msi.gap.txt file");
 
-#<STDIN>;
+<STDIN>;
 
 done_testing();
 
