@@ -76,15 +76,12 @@
 
     <a class="mini btn">
       <xsl:attribute name="href">
-        <xsl:value-of select="$rest"/>
-        <xsl:text>/</xsl:text>
-        <xsl:value-of select="rest:typetourl($type)"/>
-        <xsl:text>/</xsl:text>
-        <xsl:value-of select="$perspective"/>
-        <xsl:text>.</xsl:text>
-        <xsl:value-of select="$toolkit"/>
-        <xsl:text>?id=</xsl:text>
-        <xsl:value-of select="$id"/>
+        <xsl:call-template name="object_link_href">
+          <xsl:with-param name="type" select="$type"/>
+          <xsl:with-param name="id" select="$id"/>
+          <xsl:with-param name="perspective" select="$perspective"/>
+          <xsl:with-param name="toolkit" select="$toolkit"/>
+        </xsl:call-template>
       </xsl:attribute>
       <xsl:value-of select="$linktext"/>
     </a>
