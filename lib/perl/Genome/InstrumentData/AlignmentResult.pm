@@ -821,6 +821,11 @@ sub _promote_validated_data {
     for my $subdir (grep { -d $_  } glob("$output_dir/*")) {
         chmod 02775, $subdir;
     }
+   
+    # Make everything in here read-only 
+    for my $file (grep { -f $_  } glob("$output_dir/*")) {
+        chmod 0444, $file;
+    }
 
     $self->status_message("Files in $output_dir: \n" . join "\n", glob($output_dir . "/*"));
 
