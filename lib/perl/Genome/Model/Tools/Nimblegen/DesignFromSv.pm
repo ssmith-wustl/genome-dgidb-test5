@@ -115,28 +115,43 @@ sub execute {
         if(!$self->include_y && ($chr1 =~ /^Y/ || $chr2 =~ /^Y/)) {
             next;
         }
-        if($outer_start - $self->span < 1 || $outer_start - $self->span > $chromosome_lengths{$chr1} - 1) {
-            $self->error_message("Outer Start coordinate out of bounds: $line");
-            return;
+        
+        my $outer_start_ = $outer_start - $self->span;
+        my $inner_start_ = $inner_start + $self->span;
+        my $inner_end_ = $inner_end - $self->span;
+        my $outer_end_ = $outer_end + $self->span;
+                                
+        if($outer_start - $self->span < 1){
+        	$outer_start_ = 1;
         }
-        if($inner_start + $self->span < 1 || $inner_start + $self->span > $chromosome_lengths{$chr1} - 1) {
-            $self->error_message("Inner Start coordinate out of bounds: $line");
-            return;
+        if($outer_start - $self->span > $chromosome_lengths{$chr1} - 1) {
+        	$self->error_message("Outer Start coordinate out of bounds: $line");
+            next;
+        }
+        if($inner_start + $self->span < 1){
+			$inner_start_ = 1;
+		}        
+        if($inner_start + $self->span > $chromosome_lengths{$chr1} - 1) {
+			$inner_start_ = $chromosome_lengths{$chr1} - 1;
+        }
+        if($outer_end + $self->span < 1){
+        	$self->error_message("Outer End coordinate out of bounds: $line");
+            next;
+        }
+        if($outer_end + $self->span > $chromosome_lengths{$chr1} - 1) {
+        	$outer_end_ = $chromosome_length{$chr1} - 1;
+        }
+        if($inner_end - $self->span < 1){
+			$inner_end_ = 1;
+		}        
+        if($inner_end - $self->span > $chromosome_lengths{$chr1} - 1) {
+			$inner_end = $chromosome_lengths{$chr1} - 1;
         }
 
-
-        if($inner_end - 100 < 1 || $inner_end - 100 > $chromosome_lengths{$chr2} - 1) {
-            $self->error_message("Inner end coordinate out of bounds: $line");
-            return;
-        }
-        if($outer_end + 100 < 1 || $outer_end + 100 > $chromosome_lengths{$chr2} - 1) {
-            $self->error_message("Stop coordinate out of bounds: $line");
-            return;
-        }
 
         #if($type !~ /INS/) {#|| ($type =~ /DEL/ && $minsize > 1000)) {
-            printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr1,$outer_start - $self->span, $inner_start + $self->span, (($inner_start + $self->span) - ($outer_start - $self->span)), $line;
-            printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr2,$inner_end - $self->span, $outer_end + $self->span, (($outer_end + $self->span) - ($inner_end - $self->span)), $line;
+            printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr1,$outer_start_, $inner_start_, (($inner_start_) - ($outer_start_)), $line;
+            printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr2,$inner_end_, $outer_end_, (($outer_end_) - ($inner_end_)), $line;
         #}
         #else {
         #    printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr1,$outer_start - 100, $outer_end + 100, (($outer_end + 100) - ($outer_start - 100)), $line;
