@@ -275,7 +275,7 @@ sub __extend_namespace__ {
 sub create {
     my $class = shift;
 
-    if ($class eq __PACKAGE__) {
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
     }
