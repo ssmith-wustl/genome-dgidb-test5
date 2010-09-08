@@ -50,8 +50,10 @@ sub _generate_content {
     my $name;
     if($subject->can('name')) {
         $name = $subject->name;
+    } elsif($subject->can('rule_display')) {
+        $name = $subject->rule_display;
     } else {
-        $name = 'n/a';
+        $name = $subject->id;
     }
     $object->addChild( $xml_doc->createAttribute('name',$name) );
     $object->addChild( $xml_doc->createAttribute('type', $subject->class));
