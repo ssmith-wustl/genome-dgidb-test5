@@ -257,10 +257,17 @@ sub _transcript_substruct_annotation {
     # structure at variant start position that will also need removed once this is fixed, and there is still
     # a definite bias for variant start over variant stop throughout this module
 $DB::single=1;
+    # FIXME - The file datasource isn't smart enough to decompose the 'id' property into all the componenet
+    # properties.  It should probable be fixed there, and/or make this more flexible by interrogating the
+    # class metadata for property names
+    my $transcript_meta = Genome::Transcript->__meta__;
+    my($chrom_name, $transcript_start, $transcript_stop, $species, $source, $version, $transcript_id) = $transcript_meta->get_composite_id_decomposer->($substruct->transcript_id);
     my $transcript = Genome::Transcript->get(chrom_name => $substruct->chrom_name,
-                                             'transcript_start <=' => $substruct->structure_start,
                                              data_directory => $substruct->data_directory,
-                                             id => $substruct->transcript_id);
+                                             transcript_start => $transcript_start,
+                                             transcript_id => $transcript_id,
+                                           );
+
  
     # Preload all the other substructs for this transcript
     #Genome::TranscriptStructure->get(data_directory => $substruct->data_directory,
