@@ -62,9 +62,11 @@ Version: $version\n
 
 my ($Reads,$pReads)=&getReads(fastas=>\@ARGV);
 my @kmersizes=split /\,/,$opts{k};
-my $contigs=&initial_iteration(shift @kmersizes);
-my $kmersize;
-foreach $kmersize(@kmersizes){
+my $kmersize=shift @kmersizes;
+my $contigs=&initial_iteration($kmersize);
+
+while(@kmersizes){
+  $kmersize=shift @kmersizes;
   $contigs=&iteration($kmersize,$contigs);
 }
 
@@ -77,7 +79,6 @@ if($opts{r}){
   }
 }
 
-$kmersize=$kmersizes[$#kmersizes];
 my ($phh,$total);
 if($#$pReads>=0){
   my $pkg=new kmergen(k=>$kmersize,c=>$opts{m},C=>$opts{M});
@@ -299,8 +300,15 @@ sub outputcontigs{
 
   foreach my $contig(@{$contigs}){
     next unless(defined $contig);
-    my $contig_kmerUtil=0;
-    $contig_kmerUtil=&KmerUtility($kmersize,$contig->{seq},$rhh,$total) if(defined $rhh);
+    my $contig_kmerUtil=0; 
+    my $case_seq;
+
+    if(defined $rhh){
+      ($contig_kmerUtil,$case_seq)=&KmerUtility($kmersize,$contig->{seq},$rhh,$total);
+    }
+    else{
+      $case_seq=lc($contig->{seq});
+    }
 
     if($format==1){
       print $fh '>Contig'. join(" ",$contig->{id},$contig->{lens},$contig->{covs},$contig->{types},$$contigtips{$contig->{id}}||$opts{t},$$contigtips{-$contig->{id}}||$opts{t},$contig->{tags},'I'.$contig->{I},'O'.$contig->{O},$contig_kmerUtil);
@@ -315,33 +323,49 @@ sub outputcontigs{
       print $fh '>Contig'. join(" ",$contig->{id},$contig->{lens},$contig->{covs},$contig->{types},'I'.$contig->{I},'O'.$contig->{O},$contig->{tags},$contig_kmerUtil);
     }
     elsif($format==5){
-      print $fh '>Contig'. join(" ",$contig->{id},$contig_kmerUtil);
+      print $fh '>Contig'. join(" ",$contig->{id},$contig->{lens},$contig->{covs},$contig_kmerUtil);
     }
     else{
       print $fh '>Contig'. join(" ",$contig->{id},$contig->{lens},$contig->{covs},$contig->{types},$$contigtips{$contig->{id}}||$opts{t},$$contigtips{-$contig->{id}}||$opts{t},$contig_kmerUtil);
     }
     print $fh "\n";
-    print $fh $contig->{seq}."\n";
+    #print $fh $contig->{seq}."\n";
+    print $fh ($case_seq || $contig->{seq}) ."\n";
   }
   close($fh);
 }
 
 
 sub KmerUtility{
-  my ($kmersize,$rd,$rhh,$total,@bkpos)=@_;
+  my ($kmersize,$seq,$rhh,$total,@bkpos)=@_;
   my $occur=0;
-  for (my $i=$kmersize; $i<=length($rd); $i++) {
-    my $w=substr $rd, $i-$kmersize, $kmersize;
+  my @uniqpos;
+  for (my $i=$kmersize; $i<=length($seq); $i++) {
+    my $w=substr $seq, $i-$kmersize, $kmersize;
     my $rw=reverse $w; $rw=~tr/ATGC/TACG/;
 
     if($$rhh{$w}) {
       $occur+=$$rhh{$w};
+      push @uniqpos,$i;
     }
     elsif($$rhh{$rw}){
       $occur+=$$rhh{$rw};
+      push @uniqpos,$i;
     }
+
+  }
+
+  $seq=lc $seq;
+  if(@uniqpos){
+    my @bases=split //,$seq;
+    foreach my $pos(@uniqpos){
+      for(my $i=$pos-$kmersize+1;$i<=$pos;$i++){
+	$bases[$i]=uc($bases[$i]);
+      }
+    }
+    $seq=join('',@bases);
   }
   my $utility=($total>0)?int($occur*100/$total):0;
   #my $utility=$occur;
-  return $utility;
+  return ($utility,$seq);
 }

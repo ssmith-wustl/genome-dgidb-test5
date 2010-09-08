@@ -38,6 +38,11 @@ class Genome::Model::Tools::Assembly::Ace::Merge {
             default_value => 1000000,
             doc => 'Increment merged contig numbers by this number to avoid same numbered contigs in merged acefile. Use zero (0) to not increment. Using this option may result in corrupt acefiles and/or lost contigs. Use at your own risk.',
         },
+	ace_out => {
+            type => 'Text',
+            is_optional => 1,
+            doc => 'allow user to define ace file name if input is a single ace',
+        },	
     ],
 };
 

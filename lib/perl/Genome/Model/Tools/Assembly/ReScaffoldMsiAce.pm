@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 class Genome::Model::Tools::Assembly::ReScaffoldMsiAce {
     is => 'Command',
@@ -35,6 +36,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<EOS
+gmt assembly re-scaffold-msi-ace --acefile /gscmnt/111/assembly/edit_dir/newbler.ace --assembly-directory /gscmnt/111/assembly
 gmt assembly re-scaffold-msi-ace --acefile /gscmnt/111/assembly/edit_dir/newbler.ace --scaffold-file /gscmnt/111/assembly/edit_dir/scaffolds --assembly-directory /gscmnt/111/assembly
 gmt assembly re-scaffold-msi-ace --acefile /gscmnt/111/assembly/edit_dir/newbler.ace --assembly-directory /gscmnt/111/assembly --auto-report
 EOS
@@ -61,7 +63,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    #TODO - needs refactoring and clean up .. mostly cut and paste from original script rescaffold_msi_ace
+    #TODO - needs some clean up
 
     unless (-s $self->acefile) {
 	$self->error_message("Can't find file: ".$self->acefile);
@@ -79,26 +81,29 @@ sub execute {
 	    $self->error_message("Failed to get report file by running auto report");
 	    return;
 	}
+	print $report_file."\n";
     }
-    elsif ($self->scaffold_file) {
+
+    if ($self->scaffold_file) {
 	unless (-s $self->scaffold_file) {
 	    $self->error_message("Can't find scaffold file: ".$self->scaffold_file);
 	    return;
 	}
 	$report_file = $self->scaffold_file;
     }
-    else {
-	$self->error_message("You must select to run autoreport or provide a scaffold file");
-	return;
-    }
 
     #parse report file .. returns aryref .. could be empty if no scaffolds
-    my $scaffolds = $self->_parse_report_file($report_file);
-
     my $old_scaffolds = $self->_get_old_scaffolds($self->acefile);
+    my $new_scaffolds;
 
-    my $new_scaffolds = $self->_create_new_scaffolds($old_scaffolds, $scaffolds);
-
+    if ($report_file) {
+	my $scaffolds = $self->_parse_report_file($report_file);
+	my $valid_scaffolds = $self->_check_for_contigs_to_complement($scaffolds);
+	$new_scaffolds = $self->_create_new_scaffolds($old_scaffolds, $valid_scaffolds);
+    }
+    else {
+	$new_scaffolds = $self->_create_new_scaffolds($old_scaffolds);
+    }
     my $new_ace = $self->_write_new_ace_file($self->acefile, $new_scaffolds);
 
     my $final_ace = $self->_update_ds_line($new_ace);
@@ -112,13 +117,25 @@ sub execute {
 sub _run_auto_report {
     my $self = shift;
     $self->status_message("Running consed auto report");
-    my $run = GSC::IO::Scaffold::Consed::Run->new($self->acefile);
-    unless ($run->execute) {#TODO - make sure this has correct exit code
-	$self->error_message("Failed to run consed auto report");
+    #TODO - this doesn't seem to work any more .. not sure, no clear errs
+    #my $run = GSC::IO::Scaffold::Consed::Run->new($self->acefile);
+    #unless ($run->execute) {#TODO - make sure this has correct exit code
+	#$self->error_message("Failed to run consed auto report");
+	#return;
+    #}
+    my $acefile = $self->acefile;
+    if (system("consed -ace $acefile -autoreport")) {
+	$self->error_message("Failed to run consed auto report on ace file: $acefile");
 	return;
     }
-    my $acefile = $self->acefile;
-    my @out_files = `ls -t $acefile*out`;
+    my $dir = $self->assembly_directory.'/edit_dir';
+    my @out_files = `ls -t $dir/*[0-9]\.out`; #grap autoreport output files
+    unless (@out_files) {
+	$self->error_message("Failed to find any auto report output files with file format ####.out");
+	return;
+    }
+    chomp @out_files;
+
     return shift @out_files;
 }
 
@@ -146,17 +163,37 @@ sub _parse_report_file {
     return \@scaffolds;
 }
 
+sub _check_for_contigs_to_complement {
+    my ($self, $scaffolds) = @_;
+    my $contigs_to_complement;
+    foreach (@$scaffolds) {
+	my @tmp = split ('-', $_);
+	foreach (@tmp) {
+	    $contigs_to_complement .= $_.', ' if $_ =~ /c/;
+	}
+    }
+    if ($contigs_to_complement) {
+	if ($self->auto_report) {
+	    $self->status_message("\n\nConsed autoreport suggests that the following contigs must be complemented:\n".
+				  "\t$contigs_to_complement .. please complement these contigs in the ace file and run the program again\nExiting");
+	}
+	if ($self->scaffold_file) {
+	    $self->status_message("\nPlease complement the following contigs in the ace file: $contigs_to_complement\n".
+				  "Then remove c from contig numbers then run the program again to reflect correct compelementation in post assembly files");
+	}
+	return;
+    }
+    return $scaffolds;
+}
+
 sub _get_old_scaffolds {
     my ($self, $ace) = @_;
-#    my $ace = shift;
-    #print "Getting old contigs";
+
     my $contig_lengths = {};
     my $fh = IO::File->new("<$ace") || die "Can not open ace file: $ace";
     while (my $line = $fh->getline) {
 	next unless $line =~ /^CO\s+/;
 	my ($contig_name, $length) = $line =~ /^CO\s+(\S+)\s+(\d+)/;
-	#print "Incorrect line format in $line\n" and exit (1)
-	    #unless $contig_name and $length;
 	unless ($contig_name and $length) {
 	    $self->error_message("Incorrect line format in $line");
 	    return;
@@ -170,81 +207,36 @@ sub _get_old_scaffolds {
 
 sub _create_new_scaffolds {
     my ($self, $old_contigs, $scaffolds) = @_;
-
+    #TODO - needs some clean up
     my $new_scafs = {};
     #hash of scaffolds with array of contigs in scaffold as value
     #$new_scafs->{scaffold?}->{scaffold_contigs} = [
     #                                               contig??
     #                                               contig??
     #                                              ]
-
     my $scaf_lengths = {};
     #hash of scaffold name and scaffold size
-    #$scaf_lengths->{'contig'} = length_of_scaffold
-
     if ($scaffolds) {
 	foreach my $scaf (@$scaffolds) {
-
 	    $scaf =~ s/\s+//;
-
-	    if ($scaf =~ /-/) {
-		my @tmp = split (/-/, $scaf);
-		my $scaf_ctg_1;
-		foreach my $scaf_ctg (@tmp) {
-		    next if $scaf_ctg eq 'E'; #eg E-12.1-E
-
-		    #scaffold name is the first contig in scaffold
-		    $scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1;
-		    if ($scaf_ctg =~ /c/) {#eg 12.1c signifies that ctg may need to be complemented 
-			#print ("\nConsed thinks the following contig should be flipped: $scaf_ctg\nContinue? (yes/no) ");
-
-
-			#TODO - make it so that it just complements the contig rather than doing this
-
-			$self->status_message("\nConsed thinks the following contig should be flipped: $scaf_ctg\nContinue? (yes/no) ");
-			chomp (my $answer = <STDIN>);
-			if ($answer eq 'no') {
-			    #print "Exiting ..\n";
-			    #exit (0);
-			    $self->status_message("Exiting");
-			    return;
-			}
-
-			$scaf_ctg =~ s/c//;
-		    }
-
-		    #print "$scaf_ctg is not in correct contig name format\n" and exit (1)
-			#unless ($scaf_ctg =~ /^\d+$/ or $scaf_ctg =~ /^\d+\.\d+$/);
-		    
-		    unless ($scaf_ctg =~ /^\d+$/ or $scaf_ctg =~ /^\d+\.\d+$/) {
-			$self->error_message("$scaf_ctg is not in correct contig name format\n");
-			return;
-		    }
-
-
-		    push @{$new_scafs->{$scaf_ctg_1}->{scaffold_contigs}}, $scaf_ctg;
-		    $scaf_lengths->{$scaf_ctg_1} += $old_contigs->{$scaf_ctg};
-		}
-	    }
-	    else {
-#		print "$scaf is not in correct contig name format\n" and exit (1)
-#		    unless ($scaf =~ /^\d+$/ or $scaf =~ /^\d+\.\d+$/);
-		unless ($scaf =~ /^\d+$/ or $scaf =~ /^\d+\.\d+$/) {
-		    $self->error_message("$scaf is not in correct contig name format");
-		    return;
-		}
-
-
-		push @{$new_scafs->{$scaf}->{scaffold_contigs}}, $scaf;
-		$scaf_lengths->{$scaf} += $old_contigs->{$scaf};
+	    #TODO - don't differentiate between scaf with - and w/o .. no need
+	    my @tmp = split (/-/, $scaf);
+	    my $scaf_ctg_1;
+	    foreach my $scaf_ctg (@tmp) {
+		next if $scaf_ctg eq 'E'; #eg E-12.1-E
+		$scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1;
+		push @{$new_scafs->{$scaf_ctg_1}->{scaffold_contigs}}, $scaf_ctg;
+		$scaf_lengths->{$scaf_ctg_1} += $old_contigs->{$scaf_ctg};
+		delete $old_contigs->{$scaf_ctg};
 	    }
 	}
     }
-    else {
-	foreach my $contig (keys %$old_contigs) {
-	    push @{$new_scafs->{$contig}->{scaffold_contigs}}, $contig;
-	    $scaf_lengths->{$contig} = $old_contigs->{$contig};
-	}
+	   
+    #rename the remaining, non-scaffold contigs
+    foreach my $contig (keys %$old_contigs) {
+	push @{$new_scafs->{$contig}->{scaffold_contigs}}, $contig;
+	$scaf_lengths->{$contig} = $old_contigs->{$contig};
+	delete $old_contigs->{$contig};
     }
 
     #new scaffold numbers start with 0; new contig numbers start with 1
@@ -257,24 +249,20 @@ sub _create_new_scaffolds {
     #write a new gap file
     my $gap_file = $self->assembly_directory.'/edit_dir/msi.gap.txt';
     my $gap_fh = IO::File->new("> $gap_file") || die "Can not write new gap file: msi.gap.txt";
-
+    
     foreach my $scaf (sort {$scaf_lengths->{$b} <=> $scaf_lengths->{$a}} keys %{$scaf_lengths}) {
-	if (scalar @{$new_scafs->{$scaf}->{scaffold_contigs}} > 1) {
-	    foreach my $scaf_ctg ( @{$new_scafs->{$scaf}->{scaffold_contigs}} ) {
-		my $new_ctg_name = 'Contig'.$new_scaf_num.'.'.$new_ctg_num;
-		$new_scaf_names->{$scaf_ctg} = $new_ctg_name;
-		$new_ctg_num++;
-
+	foreach my $scaf_ctg ( @{$new_scafs->{$scaf}->{scaffold_contigs}} ) {
+	    my $new_ctg_name = 'Contig'.$new_scaf_num.'.'.$new_ctg_num;
+	    $new_scaf_names->{$scaf_ctg} = $new_ctg_name;
+	    #print gap info to gap file only if part of multi contigs scaffold
+	    if (scalar @{$new_scafs->{$scaf}->{scaffold_contigs}} > 1) {
+		#dont' print gap size if last contig in scaffold
+		next if $new_ctg_num == scalar @{$new_scafs->{$scaf}->{scaffold_contigs}};
 		$gap_fh->print("$new_ctg_name 100\n");
 	    }
-	    $new_ctg_num = 1;
+	    $new_ctg_num++; #increment for next contig
 	}
-	else {
-	    my $scaf_ctg = @{$new_scafs->{$scaf}->{scaffold_contigs}}[0];
-	    my $new_ctg_name = 'Contig'.$new_scaf_num.'.'.$new_ctg_num;
-	    $new_scaf_names->{$scaf} = $new_ctg_name;
-	}
-
+	$new_ctg_num = 1; #reset for next scaffold
 	$new_scaf_num++;
     }
 
@@ -334,7 +322,7 @@ sub _write_new_ace_file {
     }
     $fh_in->close;
     $fh_out->close;
-    #return 'new.msi.ace';
+
     return $self->assembly_directory.'/edit_dir/new.msi.ace';
 }
 
@@ -361,7 +349,6 @@ sub _update_ds_line {#and write wa_tag
     }
     $fh->close;
 
-#    my $ball_dir = '../phdball_dir';
     my $ball_dir = $self->assembly_directory.'/phdball_dir';
     if (-d $ball_dir) {
 	my @phd_ball_file = glob ("$ball_dir/*ball");
@@ -373,7 +360,7 @@ sub _update_ds_line {#and write wa_tag
     }
 
     $out_fh->close;
-    #return 'ace.msi';
+
     return 1;
 }
 

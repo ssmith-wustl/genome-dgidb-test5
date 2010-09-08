@@ -74,6 +74,19 @@
                 </xsl:choose>
               </td>
             </tr>
+            <xsl:if test="count(aspect[@name='models']/object/aspect[@name='region_of_interest_set_name']/value) > 0">
+              <tr>
+                <td class="name">Coverage Report:
+                </td>
+                <td class="value">
+                  <xsl:call-template name="object_link_button">
+                    <xsl:with-param name="perspective" select="'coverage'" />
+                    <xsl:with-param name="linktext" select="'coverage report'" />
+                    <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                  </xsl:call-template>
+                </td>
+              </tr>
+            </xsl:if>
           </tbody>
         </table>
       </div>

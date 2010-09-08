@@ -137,7 +137,35 @@
                       </xsl:choose>
                     </td>
                   </tr>
+                  <xsl:if test="count(aspect[@name='models']/object/aspect[@name='region_of_interest_set_name']/value) > 0">
+                    <tr>
+                      <td class="name">Coverage Report:
+                      </td>
+                      <td class="value">
 
+    <!-- copied from object_button_link template in order to use non-id parameters -->
+    <a class="mini btn">
+      <xsl:attribute name="href">
+        <xsl:value-of select="$rest"/>
+        <xsl:text>/</xsl:text>
+        <xsl:value-of select="rest:typetourl('Genome::Model::Set')"/>
+        <xsl:text>/</xsl:text>
+        <xsl:value-of select="'coverage'"/>
+        <xsl:text>.</xsl:text>
+        <xsl:value-of select="'html'"/>
+        <xsl:text>?</xsl:text>
+        <xsl:for-each select="aspect[@name='models']/object[aspect[@name='region_of_interest_set_name']/value]">
+            <xsl:text>genome_model_id=</xsl:text>
+            <xsl:value-of select='@id'/>
+            <xsl:text>&amp;</xsl:text>
+        </xsl:for-each>
+      </xsl:attribute>
+      <span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>Coverage Report</xsl:text>
+    </a>
+
+                      </td>
+                    </tr>
+                  </xsl:if>
                 </tbody>
               </table>
             </div>
