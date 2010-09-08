@@ -25,7 +25,7 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
     span => {
     	type => 'Integer',
     	is_optional => 1,
-    	default => 100,
+    	default => 200,
     	doc => "The region to be spanned",
     },
     exclude_non_canonical_sites => {
