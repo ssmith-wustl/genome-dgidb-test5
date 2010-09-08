@@ -411,6 +411,21 @@
                   </a>
                 </td>
               </tr>
+
+              <xsl:if test="count(//command_class[contains(@value, 'CoverageStats')]/events/event) > 0">
+                <tr>
+                  <td class="name"><br/></td>
+                  <td class="value">
+                    <xsl:call-template name="object_link_button">
+                      <xsl:with-param name="type" select="'Genome::Model::Build'"/>
+                      <xsl:with-param name="id" select="build/@build-id"/>
+                      <xsl:with-param name="perspective" select="'coverage'"/>
+                      <xsl:with-param name="linktext" select="'coverage report'"/>
+                      <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                    </xsl:call-template>
+                  </td>
+                </tr>
+              </xsl:if>
             </xsl:if>
 
             <tr>

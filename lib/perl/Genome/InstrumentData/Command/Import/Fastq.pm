@@ -356,10 +356,6 @@ sub check_fastq_integritude {
                 $self->error_message("Forward and Reverse read names do not match.");
                 die $self->error_message;
             }
-            unless($forward_read_length == $reverse_read_length){
-                $self->error_message("Forward and Reverse read lengths do not match.");
-                die $self->error_message;
-            }
         } else {
             $self->error_message("Found two fastq files but is_paired_end parameter was not set.");
             die $self->error_message;
@@ -375,6 +371,7 @@ sub check_last_read {
     my $fastq = shift;
     my $tail = `tail -4 $fastq`;
     my @lines = split "\n",$tail;
+    $self->status_message("Checking last read of FastQ file ($fastq):\n$tail");
     unless(@lines==4){
         $self->error_message("Didn't get 4 lines from the fastq.");
         return;
@@ -390,8 +387,8 @@ sub check_last_read {
             return;
         }
     }
-    unless((length $lines[2])>1){
-        $self->error_message("Quality Score was too short.");
+    unless((length $lines[2]) >= 1){
+        $self->error_message("Quality Score name was too short.");
         return;
     }
     unless($read_length == (length $lines[3])){

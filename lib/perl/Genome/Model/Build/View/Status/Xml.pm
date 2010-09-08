@@ -423,7 +423,7 @@ sub get_instrument_data_node {
     my $object = shift;
 
     my $id = $self->anode("instrument_data","id", $object->id);
-    for (qw/project_name run_name run_identifier read_length library_name library_id lane subset_name run_type gerald_directory seq_id/) {
+    for (qw/project_name run_name run_identifier read_length library_name library_id lane subset_name run_type gerald_directory id/) {
         if ($object->class ne 'Genome::InstrumentData::Imported' && $object->can($_)) {
             $id->addChild($self->tnode($_, $object->$_));
         } else {

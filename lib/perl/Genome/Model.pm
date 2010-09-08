@@ -130,6 +130,8 @@ class Genome::Model {
         last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
         last_succeeded_build_directory   => { calculate => q($b = $self->last_succeeded_build; return unless $b; return $b->data_directory) },
         last_complete_build_flagstat     => { calculate => q( return $self->lcb_flagstat(); ) },
+        region_of_interest_set_value     => { via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
+        region_of_interest_set_name      => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_many_optional => [
         ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },

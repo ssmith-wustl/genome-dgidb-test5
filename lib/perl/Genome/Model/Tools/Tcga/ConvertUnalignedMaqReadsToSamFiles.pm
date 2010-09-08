@@ -109,21 +109,21 @@ sub execute {
     for my $ida (@idas) {
 
         my $alignment = $ida->results;
-        my $seq_id = $ida->instrument_data->seq_id;
+        my $idid = $ida->instrument_data->id;
         my $unaligned_file = $alignment->unaligned_reads_list_path;
 
         if (!-s $unaligned_file) {
-            $self->status_message("* * * WARNING  $unaligned_file does not exist for $seq_id.");
+            $self->status_message("* * * WARNING  $unaligned_file does not exist for $idid.");
             my $flow_cell= $ida->instrument_data->flow_cell_id;  
             my $lane = $ida->instrument_data->lane;
-            print $ua_log "$seq_id\t$flow_cell\t$lane\n"; 
+            print $ua_log "$idid\t$flow_cell\t$lane\n"; 
         }
         next if (!-s $unaligned_file);       
  
  
-        my $unaligned_sam_file = "$unaligned_dir/$seq_id.sam";
+        my $unaligned_sam_file = "$unaligned_dir/$idid.sam";
         if (-s $unaligned_sam_file) {
-            $self->status_message("*** $unaligned_sam_file already exists for $seq_id.  Skipping processing.");
+            $self->status_message("*** $unaligned_sam_file already exists for $idid.  Skipping processing.");
         } 
         next if (-s $unaligned_sam_file);
  
@@ -186,7 +186,7 @@ sub execute {
 
         $self->status_message("\n**********************************************************************************************************\n"); 
         $self->status_message("*** unaligned: $unaligned_file\n");
-        $self->status_message("*** RG: $seq_id\n");
+        $self->status_message("*** RG: $idid\n");
         $self->status_message ("*** LB: $library\n");
         $self->status_message ("*** PI: $insert_size_for_header\n");
         $self->status_message ("*** DS: $description_for_header\n");
@@ -197,13 +197,13 @@ sub execute {
         $self->status_message ("*** AP: $aligner_params\n");
         $self->status_message ("***CMD: $cmdline\n");
        
-        my $rg_string = "\@RG\tID:$seq_id\tPL:illumina\tPU:$platform_unit_field\tLB:$library\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_field\tSM:$sample_name_field\tCN:WUGSC\n";
+        my $rg_string = "\@RG\tID:$idid\tPL:illumina\tPU:$platform_unit_field\tLB:$library\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_field\tSM:$sample_name_field\tCN:WUGSC\n";
 
         #program group
-        my $pg_string ="\@PG\tID:$seq_id\tVN:$aligner_version\tCL:$cmdline\n";
+        my $pg_string ="\@PG\tID:$idid\tVN:$aligner_version\tCL:$cmdline\n";
 
-        my $rg_file = "$header_dir/$seq_id.rg";
-        my $pg_file = "$header_dir/$seq_id.pg";
+        my $rg_file = "$header_dir/$idid.rg";
+        my $pg_file = "$header_dir/$idid.pg";
 
         if (!-s $rg_file) {
             my $rg_fh = Genome::Utility::FileSystem->open_file_for_writing($rg_file);
@@ -229,8 +229,8 @@ sub execute {
                 my $readName2 = $1;
                 my $readData2 = $2;
 
-                print $ua_fh $readName1.$pair1.$filler.$readData1.$rg_tag.$seq_id.$pg_tag.$seq_id."\n";
-                print $ua_fh $readName2.$pair2.$filler.$readData2.$rg_tag.$seq_id.$pg_tag.$seq_id."\n";
+                print $ua_fh $readName1.$pair1.$filler.$readData1.$rg_tag.$idid.$pg_tag.$idid."\n";
+                print $ua_fh $readName2.$pair2.$filler.$readData2.$rg_tag.$idid.$pg_tag.$idid."\n";
 
                 $count++;
             }
@@ -239,7 +239,7 @@ sub execute {
                 $line1 =~ m/(^\S.*)\t99\t(.*$)/;
                 my $readName1 = $1;
                 my $readData1 = $2;
-                print $ua_fh $readName1.$frag.$filler.$readData1.$rg_tag.$seq_id."\n";
+                print $ua_fh $readName1.$frag.$filler.$readData1.$rg_tag.$idid."\n";
                 $count++;
             }
         }

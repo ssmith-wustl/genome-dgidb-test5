@@ -12,7 +12,7 @@ die("
 Usage:   MergeAssembledCallsets.pl <the result index file>\n
          the tab/space delimited index file must have 3 columns: set name, .csv file, .fasta file
 Options:
-         -d INT     do not merge SVs unless they differ less than [$opts{d}] bp in start position, subject to 1 duplication
+         -d INT     do not merge SVs unless they differ less than [$opts{d}] bp in start and end positions, subject to 1 duplication
          -p INT     do not merge SVs unless they differ less than [$opts{p}] bp in size
          -z INT     ignore SVs with size [$opts{z}] bp shorter or longer than the predicted size
          -s INT     bp minimal size to trust [$opts{s}]
@@ -171,8 +171,9 @@ sub AddSVs{
     my ($chr,$start,$chr2,$end,$ori,$size,$type,$het,$wAsmscore,$read_len,$perc_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$microhomology,$scarstr,$prestr,$asm_parm,@extra)=split /\s+/;
     next unless(defined $prestr && $size=~/^\d/);
     my ($pchr1,$pre_pos1,$pchr2,$pre_pos2,$pre_type,$pre_size,$pre_ori)=split /\./,$prestr;
-    my $size_diff=$diff_size{$set} || $opts{z};
-    my $loc_diff=$diff_loc{$set} || 1000;
+    my $size_diff_cutoff=$diff_size{$set} || $opts{z};
+    $size_diff_cutoff=1e10 if($type && $type=~/ctx/i);
+    my $loc_diff_cutoff=$diff_loc{$set} || 1000;
     $start=~s/\(\d+\)//g;
     $end=~s/\(\d+\)//g;
     $size=~s/\(\d+\)//g;
@@ -180,7 +181,7 @@ sub AddSVs{
     my $extra_info=join("\t",@extra);
     my $f_cna=0;
 
-    if($extra[0]=~/\.bam/){
+    if(@extra && $extra[0]=~/\.bam/){
       my @cnstr=split /\,/,$extra[0];
       my ($ncn)=($cnstr[0]=~/\:(\S+)$/);
       if($ncn!~/NA/i){
@@ -191,9 +192,8 @@ sub AddSVs{
       }
     }
 
-
     #filtering criteria
-    next if($size<$opts{s} || $type ne $pre_type || abs($size-$pre_size)>$size_diff || abs($start-$pre_pos1)>$loc_diff);
+    next if($size<$opts{s} || $type ne $pre_type || abs($size-$pre_size)>$size_diff_cutoff || abs($start-$pre_pos1)>$loc_diff_cutoff);
     #next if($size<$opts{s} || $type ne $pre_type);
 
     next if($wAsmscore >0 && $wAsmscore<$opts{w});
@@ -204,13 +204,15 @@ sub AddSVs{
     my $subindel_rate=$n_indel/$flanksize;
 
     if(defined $opts{h} &&  ($n_seg>2
-			     || $n_seg==2 && (($sub_rate>0.006 && $n_sub>2) || ($subindel_rate> 0.002 && $n_indel>1)|| $nbp_indel>20) && ($size<=99999) && (abs($f_cna)<$opts{C})
-			     || $n_seg==1 && ($sub_rate>0.006 || $subindel_rate>0.001 || $nbp_indel>5)&& ($size<=99999) && (abs($f_cna)<$opts{C})
+			     || $n_seg==2 && (($sub_rate>0.006 && $n_sub>2) || ($subindel_rate> 0.002 && $n_indel>1)|| $nbp_indel>20)
+			     || $n_seg==1 && ($sub_rate>0.006 || $subindel_rate>0.001 || $nbp_indel>5)
+			     #|| $n_seg==2 && (($sub_rate>0.006 && $n_sub>2) || ($subindel_rate> 0.002 && $n_indel>1)|| $nbp_indel>20) && ($size<=99999) && (abs($f_cna)<$opts{C})
+			     #|| $n_seg==1 && ($sub_rate>0.006 || $subindel_rate>0.001 || $nbp_indel>5)&& ($size<=99999) && (abs($f_cna)<$opts{C})
 			     || ($type ne 'INS' ) && ($perc_aligned<80)
-			     || ($type eq 'DEL' ) && ($size>99999) && ($f_cna>-$opts{C})
-			     || ($type eq 'ITX' ) && ($size>99999) && ($f_cna<$opts{C})
-			   #  || ($type eq 'INV' ) && ($size>99999)
-			    # || $microhomology>=200
+			     #|| ($type eq 'DEL' ) && ($size>99999) && ($f_cna>-$opts{C})
+			     #|| ($type eq 'ITX' ) && ($size>99999) && ($f_cna<$opts{C})
+			     #|| ($type eq 'INV' ) && ($size>99999)
+			     #|| $microhomology>=200
 			    )
       ){
       printf STDERR  "%s\t%d\t%s\t%d\t%s\t%d\t%s\t%s\t%d\t%d\t%d%%\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\t%s\n", $chr,$start,$chr2,$end,$ori,$size,$type,$het,$wAsmscore,$read_len,$perc_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$microhomology,$scarstr,$prestr,$asm_parm,$extra_info;
@@ -220,21 +222,24 @@ sub AddSVs{
     #printf "%s\t%d\t%s\t%d\t%s\t%d\t%s\t%s\t%d\t%d\t%d%%\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\n", $chr,$start,$chr2,$end,$ori,$size,$type,$het,$wAsmscore,$read_len,$perc_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$microhomology,$scarstr,$prestr,$asm_parm;
 
     my $found;
-    foreach my $td(-$size,0,$size){
+    my @tds=($type && $type=~/ctx/i)?(0):(-$size,0,$size);
+    foreach my $td(@tds){
       my $locrange=int($size*0.01);
       my $sizerange=$locrange;
-      $locrange=($locrange>$opts{d})?$locrange:$opts{d};
-      $sizerange=($sizerange>$opts{p})?$sizerange:$opts{p};
+      #$locrange=($locrange>$opts{d})?$locrange:$opts{d};
+      #$sizerange=($sizerange>$opts{p})?$sizerange:$opts{p};
       $locrange=$opts{d};
       $sizerange=$opts{p};
       for (my $i=-$locrange+$td;$i<=$locrange+$td;$i++){
 	my $SV=$SVs{$chr}{$chr2}{$start+$i};
-	if(defined $SV){
-	  $found=$i if($SV->{minsize}<=$size+$sizerange && $SV->{maxsize}>=$size-$sizerange);
+	if(defined $SV
+	   && ($SV->{maxsize}<=$size+$sizerange && $SV->{minsize}>=$size-$sizerange || $type=~/ctx/i)
+	   && $end>=$SV->{OuterEnd}-$locrange && $end<=$SV->{InnerEnd}+$locrange
+	  ){
+	  $found=$i;
 	  last;
 	}
       }
-      last if(defined $found);
     }
 
     my $SVregion;
@@ -260,9 +265,17 @@ sub AddSVs{
     }
 
     my $exist=0;
-    foreach my $group(@{$SVregion->{group}}){
+    for(my $ki=0;$ki<=$#{$SVregion->{group}};$ki++){
+      my $group=${$SVregion->{group}}[$ki];
       if($group eq $set){
-	$exist=1; last;
+	$exist=1;
+	if($wAsmscore>${$SVregion->{wAsmscore}}[$ki]){  #select the one with higher assembly score
+	  ${$SVregion->{wAsmscore}}[$ki]=$wAsmscore;
+	  ${$SVregion->{prestr}}[$ki]=$prestr;
+	  ${$SVregion->{het}}[$ki]=$het;
+	  ${$SVregion->{ori}}[$ki]=$ori;
+	}
+	last;
       }
     }
     if(! $exist){

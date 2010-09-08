@@ -43,7 +43,10 @@ sub doit{
     }
   }
 
-  die "Skip Graph size too large!\n" if($#bnodes>=$self->{n});
+  if($#bnodes>=$self->{n}){
+    print STDERR "Skip Graph size too large!\n";
+    return;
+  }
   my %pathrec;
   foreach my $id(@bnodes){
     my $edges=&CreateGraph($id, $f_contig,$arg{graph});
@@ -62,6 +65,7 @@ sub doit{
 	#edit fasta
 	$pathrec{$p}=1;
 	my $fasta;
+	my $kmercovsum=0;
 	foreach my $nid(@pns){
 	  my $fa=$nodes{abs($nid)}->{seq};
 	  if($nid<0){
@@ -74,9 +78,12 @@ sub doit{
 	    $fa=substr($fa,$self->{k}-1);
 	    $fasta.=$fa;
 	  }
+	  $kmercovsum+=$nodes{abs($nid)}->{covs}*($nodes{abs($nid)}->{lens}-$self->{k}+1);
 	}
 	my $contig;
-	($contig->{id},$contig->{seq})=($p,$fasta);
+	my $lens=length($fasta);
+	my $avgkmercov=($lens>0)?int($kmercovsum*100/$lens)/100:0;
+	($contig->{id},$contig->{seq},$contig->{lens},$contig->{covs})=($p,$fasta,$lens,$avgkmercov);
 	push @Contigs,$contig;
       }
     }
@@ -116,7 +123,7 @@ sub CreateGraph{
   my %edges;
   my %snodes;
   while(@tails){
-    my @newtails=();
+    my %newtails;
     foreach my $t(@tails){  #breadth first search
       my %neighbor;
       &InNodes($t,\%neighbor);
@@ -128,11 +135,11 @@ sub CreateGraph{
 	$edges{$t}{$n}=$neighbor{$n};
 
 	if(!defined $snodes{$n}){  # a new node
-	  push @newtails,$n;
+	  $newtails{$n}=1;
 	}
       }
     }
-    @tails=@newtails;
+    @tails=keys %newtails;
   }
 
   my $g;
@@ -149,21 +156,21 @@ sub CreateGraph{
   @tails=($seed);
   my $nedges=0;
   while(@tails){
-    my @newtails=();
+    my %newtails;
     foreach my $t(@tails){  #breadth first search
       $visited{$t}=1;
       my %outnodes;
       &OutNodes($t,\%outnodes);
       foreach my $n(keys %{$edges{$t}}){	
 	if(defined $edges{$n}{$t} && defined $outnodes{$n}){ #only care end to end connections
-	  $g->add_edge($t => $n, label => $edges{$t}{$n}) if(defined $f_graph);
+	  $g->add_edge($t => $n, label => $edges{$t}{$n}) if(defined $f_graph && !defined $dedges{$t}{$n});
 	  $dedges{$t}{$n}=$edges{$t}{$n};
-	  push @newtails,$n if(! defined $visited{$n});
+	  $newtails{$n}=1 if(! defined $visited{$n});
 	  $nedges++;
 	}
       }
     }
-    @tails=@newtails;
+    @tails=keys %newtails;
   }
 
   if(defined $f_graph && $nedges>0){
