@@ -5,6 +5,7 @@ use warnings;
 use Getopt::Std;
 use Bio::SeqIO;
 use Bio::Seq;
+use DBI;
 
 my $mousetable='/gscuser/kchen/1000genomes/analysis/scripts/Mouse.July2007.RefSeqgene.tab';
 my $flist_cancergene='/gscuser/kchen/1000genomes/analysis/scripts/Cancer_genes.csv';
@@ -15,20 +16,27 @@ my %opts = (
 	    v=>'/gscuser/kchen/databases/dbVar/ncbi36_submitted.gff',
 	    L=>50,
 	    l=>200,
-	    r=>0.5
+	    w=>200,
+	    r=>0.5,
+	    k=>5,
+	    m=>100
 	   );
-getopts('g:l:Ma:b:c:d:o:r:AL:',\%opts);
+getopts('g:l:Ma:b:c:d:o:r:AL:w:m:k:p:',\%opts);
 die("
 Add annotation (UCSC gene, dbSNP and others) to a text file
 Usage:   BreakAnnot.pl <a BreakDancer output file>\n
 Options:
          -g FILE  Use UCSC Human gene table at $opts{g}
          -M       Use UCSC Mouse gene table at $mousetable
-         -p FILE  Use dbSNP file at $opts{p}
+         -p FILE  Use UCSC dbSNP file at $opts{p}
          -v FILE  Use dbVar file at $opts{v}
+         -s FILE  Use UCSC segmental duplication file at $opts{s}
          -o STR   Only analysis the specified chromosome
          -l INT   Proximity of breakpoints to gene annotations [$opts{l}] bp
          -L INT   Proximity of breakpoints to segmental duplication [$opts{L}] bp
+         -w INT   Look for repeat annotation within +- [$opts{w}] bp of breakpoint
+         -m INT   annotate breakpoint +- [$opts{k}] bp overlapping more than [$opts{m}] bp of masked repeat
+         -k INT   See -m [$opts{k}]
          -A       Annotate Merged SV assembly file
          -a INT   Which column contains the chromosome of the breakpoint 1 (1-based)
          -b INT   Which column contains the position of the  breakpoint1 (1-based)
@@ -43,6 +51,12 @@ if($opts{A}){
 }
 
 my $cancergenelst=&ReadCancerGenelst($flist_cancergene);
+my $db = "ucsc";
+my $user = "mgg_admin";
+my $password = "c\@nc3r";
+my $dataBase = "DBI:mysql:$db:mysql2";
+my $dbh = DBI->connect($dataBase, $user, $password) ||
+  die "ERROR: Could not connect to database: $! \n";
 
 my (%BK1s,%BK2s,%ROIs,%chrs);
 my @SVs;
@@ -87,6 +101,7 @@ my %ABKs;
 my %SBKs;
 my %dbBK2s;
 my %dbVarBK2s;
+my %RPMK;
 foreach my $chr(keys %chrs){
   next if(defined $opts{o} && $chr ne $opts{o});
   my $annot=&ReadUCSCGeneAnnotation($chr);
@@ -182,10 +197,24 @@ foreach my $chr(keys %chrs){
       }
     }
   }
+
+  #Prepare repeatMasker table
+  my $table = "chr$chr"."_rmsk";
+  #  my $query = "SELECT genoStart, genoEnd, repClass
+  #              	FROM $table
+  #              	WHERE (repClass = 'Satellite' || repClass = 'Low_complexity'|| repClass = 'Simple_repeat' || repClass = 'SINE' || repClass = 'LINE' || repClass = 'LTR')
+  #                    && genoEnd >= ? && genoStart <= ?
+  #              	ORDER BY genoStart";
+  my $query = "SELECT genoStart, genoEnd, repClass
+              	FROM $table
+              	WHERE genoEnd >= ? && genoStart <= ?
+              	ORDER BY genoStart";
+
+  $RPMK{$chr} = $dbh->prepare($query) || die "Could not prepare statement '$query': $DBI::errstr \n";
 }
 
-print "$header\tRefseqGene\tDataBases\tShortIndex\n" if(defined $header);
 
+print "$header\tRefseqGene\tDataBases\tSegDup\tRepeat\tShortIndex\n" if(defined $header);
 foreach my $sv(@SVs){
   my @u=split /\s+/,$sv;
   my ($chr,$start,$ori1,$chr2,$end,$ori2,$type,$size,$score,$nreads,$nread_lib,$AF,@extra)=@u;
@@ -194,15 +223,21 @@ foreach my $sv(@SVs){
   $chr2=$u[$opts{c}-1] if(defined $opts{c});
   $end=$u[$opts{d}-1] if(defined $opts{d});
 
-  my $geneAnnot=GetGeneAnnotation($chr,$start,$chr2,$end,$type);
+  my $geneAnnot=&GetGeneAnnotation($chr,$start,$chr2,$end,$type);
   print "$sv\t$geneAnnot";
 
-  my $dbSNPAnnot=GetVarAnnotation($chr,$start,$chr2,$end,\%dbBK2s);
-  my $dbVarAnnot=GetVarAnnotation($chr,$start,$chr2,$end,\%dbVarBK2s);
-  my $dbSegDupAnnot=GetSegDupAnnotation($chr,$start,$chr2,$end);
+  my $dbSNPAnnot=&GetVarAnnotation($chr,$start,$chr2,$end,\%dbBK2s);
+  my $dbVarAnnot=&GetVarAnnotation($chr,$start,$chr2,$end,\%dbVarBK2s);
+  my $dbSegDupAnnot=&GetSegDupAnnotation($chr,$start,$chr2,$end);
+  my $repeatAnnot=&GetRepeatMaskerAnnotation($chr,$start,$chr2,$end);
+
   printf "\t%s",join(',',$dbSNPAnnot,$dbVarAnnot);
   printf "\t%s",$dbSegDupAnnot;
-  print "\tchr$chr:$start\-$end";
+  printf "\t%s",$repeatAnnot;
+  printf "\tchr%s\:%d\-%d,chr%s\:%d\-%d",$chr,$start-500,$start+500,$chr2,$end-500,$end+500;
+  if($chr eq $chr2){
+    print ",chr$chr:$start\-$end";
+  }
   print "\n";
 }
 
@@ -291,6 +326,48 @@ sub GetGeneAnnotation{
 }
 
 
+sub GetRepeatMaskerAnnotation{
+  my ($chr1,$pos1,$chr2,$pos2)=@_;
+  my ($nbrpt1,$rep1)=&GetBKRepeatMaskerAnnotation($chr1,$pos1);
+  my ($nbrpt2,$rep2)=&GetBKRepeatMaskerAnnotation($chr2,$pos2);
+  my $repeatannot='-';
+  if($nbrpt1>$opts{m} || $nbrpt2>$opts{m}){
+    $repeatannot=sprintf "Repeat:%s-%s", $rep1 || 'NA',$rep2 ||'NA';
+  }
+  return $repeatannot;
+}
+
+sub GetBKRepeatMaskerAnnotation{
+  my ($chr1,$pos)=@_;
+  if($chr1=~/[MN]/){
+    return (0,undef);
+  }
+  my $start=$pos-$opts{w};
+  my $stop=$pos+$opts{w};
+  $RPMK{$chr1}->execute($start, $stop) ||
+    die "Could not execute statement for repeat masker table with (chr$chr1, $start, $stop): $DBI::errstr \n";
+#  my %repeatCoords;
+  my %repCount;
+  while ( my ($chrStart, $chrStop, $repClass) =  $RPMK{$chr1}->fetchrow_array() ) {
+    my $start_last = ($chrStart > $start) ? $chrStart : $start;
+    my $stop_last = ($chrStop < $stop) ? $chrStop : $stop;
+    #foreach ($start_last..$stop_last) { $repeatCoords{$_} = 1; $repCount{$repClass}++;}
+    $repCount{$repClass}=$stop_last-$start_last+1 if($start_last-$opts{k}<=$pos && $pos<=$stop_last+$opts{k});
+  }
+#  my $repeatbase=0;
+  my @sortedrepClass;
+#  foreach ($start..$stop) {    if ( defined $repeatCoords{$_}  ) { $repeatbase++; }}
+  my $maxClass;
+  my $maxClassCount=0;
+  foreach(keys %repCount){
+    if(defined $repCount{$_} && $repCount{$_}>$maxClassCount){
+      $maxClass=$_;
+      $maxClassCount=$repCount{$_};
+    }
+  }
+  return ($maxClassCount,$maxClass);
+}
+
 sub GetSegDupAnnotation{
   my ($chr,$start,$chr2,$end)=@_;
 
@@ -315,14 +392,14 @@ sub GetSegDupAnnotation{
   }
   if(!defined $e1){
     for(my $i=0;$i<=$#e1s;$i++){
-      if(!defined $e1 || $e1->{Size} < $e1s[$i]->{Size}){  #longest isoform
+      if(!defined $e1 || $e1->{Size} < $e1s[$i]->{Size}){
 	$e1=$e1s[$i];
       }
     }
   }
   if(!defined $e2){
     for(my $i=0;$i<=$#e2s;$i++){
-      if(!defined $e2 || $e2->{Size} < $e2s[$i]->{Size}){  #longest isoform
+      if(!defined $e2 || $e2->{Size} < $e2s[$i]->{Size}){
 	$e2=$e2s[$i];
       }
     }
@@ -430,7 +507,6 @@ sub ReadUCSCSegDupAnnotation{
   close(SEGDUP);
   return \%SegDup;
 }
-
 
 sub Read_dbSNPAnnotation{
   my ($chr)=@_;

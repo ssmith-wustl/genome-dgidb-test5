@@ -367,19 +367,18 @@ sub do_pap_workflow
     }
 
     else {
-        $DB::single = 1;
         my $workflow = Workflow::Operation->create_from_xml($xml_file);
         confess "Could not create workflow!" unless $workflow;
 
         my $tempdir = tempdir(
-            CLEANUP => 0,
+            CLEANUP => 0, 
             DIR => '/gscmnt/temp212/info/annotation/pap_workflow_logs/',
         );
+        chmod(0755, $tempdir);
         $workflow->log_dir($tempdir);
 
         if($xml_file =~ /noblastp/)
         {
-            #print STDERR "skipping blastp in PAP.\n";
             $self->status_message("skipping blastp in PAP");
             $output = run_workflow_lsf(
                                        $workflow,
