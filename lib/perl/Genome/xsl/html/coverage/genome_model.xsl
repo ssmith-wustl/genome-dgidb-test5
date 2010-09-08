@@ -45,9 +45,19 @@
       };
 
     </script>
+    <xsl:variable name="display_name">
+      <xsl:choose>
+        <xsl:when test="@name">
+          <xsl:value-of select="@name" />
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:value-of select="@id" />
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Model Group Coverage:'" />
-      <xsl:with-param name="display_name" select="@id" />
+      <xsl:with-param name="display_name" select="$display_name" />
       <xsl:with-param name="icon" select="'genome_modelgroup_32'" />
     </xsl:call-template>
 
