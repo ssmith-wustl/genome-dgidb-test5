@@ -118,6 +118,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="model_ids" toOperation="Compile Cna Output" toProperty="model_ids" />
   <link fromOperation="input connector" fromProperty="model_group" toOperation="Compile Cna Output" toProperty="model_group" />
   <link fromOperation="input connector" fromProperty="compile_cna_output_dir" toOperation="Compile Cna Output" toProperty="output_dir" />
+  <link fromOperation="input connector" fromProperty="force" toOperation="Compile Cna Output" toProperty="force" />
   
   <link fromOperation="input connector" fromProperty="merge_output_dir" toOperation="Merge Cna Output By Chrom" toProperty="output_dir" />
   <link fromOperation="Compile Cna Output" fromProperty="output_dir" toOperation="Merge Cna Output By Chrom" toProperty="bam_to_cna_output_dir" />
@@ -195,6 +196,7 @@ __DATA__
     <inputproperty isOptional="Y">r_commands</inputproperty>
     <inputproperty isOptional="Y">r_library</inputproperty>
     <inputproperty isOptional="Y">cmds_test_dir</inputproperty>
+    <inputproperty isOptional="Y">force</inputproperty>
     <inputproperty>data_directory</inputproperty>
     <outputproperty>final_output</outputproperty>
   </operationtype>

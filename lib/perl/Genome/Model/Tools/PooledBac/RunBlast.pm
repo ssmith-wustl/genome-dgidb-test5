@@ -42,24 +42,12 @@ class Genome::Model::Tools::PooledBac::RunBlast {
             is_optional => 0,
             doc => "output directory for pooled bac projects"        
         },
-        show_errors =>    
-        {
-            type => 'flag',
-            is_optional => 1,
-            doc => "display errors and information messages as blast is run",        
-        },
         ref_qual_value =>
         {
             type => 'String',
             is_optional => 1,
             doc => "This is the quality value that is used when creating reference .qual files, the default is 37",        
         },
-        blast_params =>
-        {
-            type => 'String',
-            is_optional => 1,
-            doc => "Use this option to override the default blast params, the default param string is:\n M=1 N=-3 R=3 Q=3 W=30 wordmask=seg lcmask hspsepsmax=1000 golmax=0 B=1 V=1 topcomboN=1 -errors -notes -warnings -cpus 4 2>/dev/null",        
-        },               
     ]    
 };
 
@@ -114,8 +102,7 @@ sub execute {
     {
         system("cp $fasta_file $query_fasta_file");
     }
-    my $params = $self->blast_params || 'M=1 N=-3 R=3 Q=3 W=30 wordmask=seg lcmask hspsepsmax=1000 golmax=0 B=1 V=1 topcomboN=1';
-    $params .= ' -errors -notes -warnings -cpus 4 2>/dev/null' unless ($self->show_errors || $self->blast_params);
+    my $params = 'M=1 N=-3 R=3 Q=3 W=30 wordmask=seg lcmask hspsepsmax=1000 B=1 V=1 topcomboN=1 -errors -notes -warnings -cpus 4 2>/dev/null';
     
     Genome::Model::Tools::WuBlast::Blastn->execute(
         database => 'bac_region_db',

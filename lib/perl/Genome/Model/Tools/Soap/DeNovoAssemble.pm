@@ -18,7 +18,7 @@ class Genome::Model::Tools::Soap::DeNovoAssemble {
 	    is => 'Text',
 	    doc => 'Config file with run params and input fasta file locations',
 	},
-	output_and_prefix => {
+	output_dir_and_file_prefix => {
 	    is => 'Text',
 	    doc => 'Path and common prefix name for output files',
 	},
@@ -71,7 +71,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt soap de-novo assemble --version 1.03 --config-file /gscmnt/111/soap_donovo_assembly/config.txt --output-and-prefix /gscmnt/111/soap_donovo_assembly/61BKE
+gmt soap de-novo-assemble --version 1.03 --config-file /gscmnt/111/soap_donovo_assembly/config.txt --output-dir-and-file-prefix /gscmnt/111/soap_donovo_assembly/61BKE
 EOS
 }
 
@@ -87,7 +87,7 @@ sub execute {
     }
 
     #check output_and_prefix .. make sure output dir exists
-    my $output_dir = File::Basename::dirname($self->output_and_prefix);
+    my $output_dir = File::Basename::dirname($self->output_dir_and_file_prefix);
     unless (-d $output_dir) {
 	$self->error_message("Invalid output directory: $output_dir does not exist");
 	return;
@@ -96,7 +96,7 @@ sub execute {
     #eg /gsc/pkg/bio/soap/SOAPdenovo-1.04/SOAPdenovo all -s 61BKE_untrimmed.config -K 31 -R -d 1 -o 61BKE_Untrimmed -p 8
 
     #required params
-    my $cmd = $self->path_for_soap_denovo_version.' all -s '.$self->config_file.' -o '.$self->output_and_prefix;
+    my $cmd = $self->path_for_soap_denovo_version.' all -s '.$self->config_file.' -o '.$self->output_dir_and_file_prefix;
     #optional with default values
     $cmd .= ' -K '.$self->kmer_size if $self->kmer_size;
     $cmd .= ' -p '.$self->cpus if $self->cpus;
@@ -116,17 +116,18 @@ sub execute {
 
 sub _validate_config_file {
     my $self = shift;
-    #check that file exists
+
     unless (-s $self->config_file) {
 	$self->error_message("Failed to find config file: ".$self->config_file);
 	return;
     }
+
     #validate input files in config file
     my @missing_inputs;
     my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->config_file);
     while (my $line = $fh->getline) {
 	chomp $line;
-	if ($line =~ /^f\d+\=/ or $line =~ /^f\=/) {
+	if ($line =~ /^[fq]\d+\=/ or $line =~ /^[fq]\=/) {
 	    my ($input_file) = $line =~ /\=(\S+)$/;
 	    unless (-s $input_file) {
 		push @missing_inputs, $input_file;
@@ -136,7 +137,7 @@ sub _validate_config_file {
     $fh->close;
 
     if (@missing_inputs) {
-	my $message = "Failed to find following input files specified in config file:\n";
+	my $message = "Failed to find following input file(s) specified in config file:\n";
 	foreach (@missing_inputs) {
 	    $message .= "\t".$_."\n";
 	}

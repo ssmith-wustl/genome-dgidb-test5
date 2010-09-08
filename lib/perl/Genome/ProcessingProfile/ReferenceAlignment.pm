@@ -380,18 +380,30 @@ sub reference_coverage_job_classes {
 }
 
 sub variant_detection_job_classes {
+    my $self = shift;
     my @steps = (
         'Genome::Model::Event::Build::ReferenceAlignment::FindVariations'
     );
-    return @steps;
+    if(defined $self->snv_detector_name || defined $self->indel_detector_name) {
+        return @steps;
+    }
+    else {
+        return;
+    }
 }
 
 sub deduplication_job_classes {
+    my $self = shift;
     my @steps = ( 
         'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries',
         'Genome::Model::Event::Build::ReferenceAlignment::PostDedupReallocate',
     );
-    return @steps;
+    if(defined $self->rmdup_name) {
+        return @steps;
+    }
+    else {
+        return;
+    }
 }
 
 sub transcript_annotation_job_classes{
@@ -412,7 +424,12 @@ sub generate_reports_job_classes {
     my @steps = (
         'Genome::Model::Event::Build::ReferenceAlignment::RunReports'
     );
-    return @steps;
+    if((defined $self->snv_detector_name || defined $self->indel_detector_name) && defined $self->merge_software && defined $self->rmdup_name) {
+        return @steps;
+    }
+    else {
+        return;
+    }
 }
 
 sub alignment_objects {

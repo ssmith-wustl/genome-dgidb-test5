@@ -4,6 +4,9 @@
 
 
   <xsl:template name="genome_search" match="object[./types[./isa[@type='Genome::Search']]]">
+
+    <xsl:call-template name="control_bar_app"/>
+
     <div class="content rounded shadow" style="padding-top: 0;">
       <xsl:call-template name="app_header">
         <xsl:with-param name="app_name" select="'Analysis Search'"/>

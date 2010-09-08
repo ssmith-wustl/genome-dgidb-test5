@@ -445,13 +445,26 @@ sub extract_fastqs_and_run_aligner {
                 $self->error_message("Error running RemoveN: " . $n_remove_cmd->error_message);
                 die $self->error_message;
             }
-            
-            push @n_removed_fastqs, $n_removed_file;
+           
+            my $passed = $n_remove_cmd->passed_read_count();
+            my $failed = $n_remove_cmd->failed_read_count();
+            $self->status_message("N removal complete: Passed $passed reads & Failed $failed reads");
+            if ($passed > 0) { 
+                push @n_removed_fastqs, $n_removed_file;
+            }
             
             if ($input_pathname =~ m/^\/tmp/) {
                 $self->status_message("Removing original file before N removal to save space: $input_pathname");
                 unlink($input_pathname);
             }
+        }
+        if (@fastqs == 1 && @n_removed_fastqs == 2) {
+            $self->status_message("NOTE: An entire side of the read pairs was filtered away after n-removal.  We'll be running in SE mode from here on out.");
+        }
+
+        if (@fastqs == 0) {
+            $self->error_message("All reads were filtered away after n-removal.  Nothing to do here, bailing out.");
+            die $self->error_message;
         }
         
         @fastqs = @n_removed_fastqs;
@@ -807,6 +820,11 @@ sub _promote_validated_data {
     chmod 02775, $output_dir;
     for my $subdir (grep { -d $_  } glob("$output_dir/*")) {
         chmod 02775, $subdir;
+    }
+   
+    # Make everything in here read-only 
+    for my $file (grep { -f $_  } glob("$output_dir/*")) {
+        chmod 0444, $file;
     }
 
     $self->status_message("Files in $output_dir: \n" . join "\n", glob($output_dir . "/*"));

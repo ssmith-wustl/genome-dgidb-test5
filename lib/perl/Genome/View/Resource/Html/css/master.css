@@ -284,6 +284,7 @@ div.box_header_details {
 /* MENUS
  ****************************************/
 
+
 /* BREADCRUMBS
  ****************************************/
 
@@ -750,4 +751,66 @@ div#set_filter input {
     -khtml-border-radius: 3px;
     -moz-border-radius: 3px;
     border-radius: 3px;
+}
+
+
+/* CONTROL BAR */
+div.control_bar {
+    width: 970px;
+    background-position: center bottom;
+    background-color: #3f3f33;
+}
+
+div.control_bar.app {
+    background-image: url("../img/components/control_bar/control_bar_app_bg.png");
+}
+
+div.control_bar.view {
+    background-image: url("../img/components/control_bar/control_bar_view_bg.png");
+}
+
+div.control_bar_tab {
+    position: relative;
+    width: 16px;
+    height: 10px;
+    left: 944px;
+    bottom: 0;
+    margin-bottom: -5px;
+}
+
+div.control_bar_tab.app {
+    background-image: url("../img/components/control_bar/control_bar_app_tab.png");
+}
+
+div.control_bar_tab.view {
+    background-image: url("../img/components/control_bar/control_bar_view_tab.png");
+}
+
+div.control_bar_menu {
+    height: 36px;
+    width: 962px;
+    margin: 0 4px;
+}
+
+div.control_bar_base {
+    margin-left: 866px;
+    width: 96px;
+    height: 8px;
+}
+
+div.control_bar_menu ul {
+    margin: 7px 12px;
+    padding: 0;
+    float: right;
+}
+
+div.control_bar_menu ul li {
+    list-style: none;
+    float: left;
+    margin-left: 12px !important;
+}
+
+div.control_bar_menu ul li a {
+    color: #FFF;
+    font-weight: bold;
 }

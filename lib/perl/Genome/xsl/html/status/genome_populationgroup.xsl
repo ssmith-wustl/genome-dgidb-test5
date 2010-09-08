@@ -4,6 +4,8 @@
 
   <!-- full page display for population group -->
   <xsl:template name="genome_populationgroup" match="object[./types[./isa[@type='Genome::PopulationGroup']]]">
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Population Group:'" />
       <xsl:with-param name="display_name">

@@ -46,13 +46,17 @@ Options:
 my @vars;
 my $cm=new CrossMatch(fin=>$ARGV[0],mmr=>$opts{m});
 my @DCposes=keys %{$cm->{dcpos}}; #discrepant position
-#my $swap_chrom=0;
 my $refseq; my @refbases;
 if(defined $opts{r}){
   my $refseq_stream = Bio::SeqIO->newFh(-file =>$opts{r}, -format => 'Fasta');
   my $refseq_obj = <$refseq_stream>;
-  $refseq=$refseq_obj->seq;
+  $refseq=uc($refseq_obj->seq);
   @refbases=split //,$refseq;
+}
+
+my ($chr1,$refpos1,$chr2,$refpos2,$pretype,$presize,$preori);
+if(defined $opts{x}){
+  ($chr1,$refpos1,$chr2,$refpos2,$pretype,$presize,$preori)=split /\_/, $opts{x};
 }
 
 #examining gapped indels
@@ -293,7 +297,9 @@ foreach my $read(keys %{$cm->{align}}){
       else{  #inter-chromosomal
 	$size=1;
 	$type='CTX';
-	if(&GLess($aln1->{refseq}, $aln2->{refseq})){ #keep the repeat in the lower chromosome
+	my ($chrom1)=($aln1->{refseq}=~/\.([\w\d]+)\.fa*/);
+#	if(&GLess($aln1->{refseq}, $aln2->{refseq})){ #keep the repeat in the lower chromosome
+	if(!defined $chr1 || $chrom1 eq $chr1){
 	  if($aln1->{orientation} eq 'U'){
 	    if(($aln2->{orientation} eq 'U')){
 	      $orientation='+-';
@@ -348,11 +354,10 @@ foreach my $read(keys %{$cm->{align}}){
 	  }
 	  my $tmp=$refpos1;$refpos1=$refpos2;$refpos2=$tmp;
 	  $tmp=$aln1;$aln1=$aln2;$aln2=$tmp;
-#	  $swap_chrom=1;
 	}
       }
 
-      next if($scar>$opts{g});  #skip if the mincroinsertion size is greater than $opts{g}
+      next if($scar>$opts{g});  #skip if the microinsertion size is greater than $opts{g}
       #if($bkpos1 eq '-'){
 #	$bkpos1=$bkpos2;$bkpos2='-';
 #      }
@@ -373,13 +378,7 @@ my $seq;
 my $bestvar;
 my $maxscore=0;
 my $mindist=1e10;
-my ($chr1,$refpos1,$chr2,$refpos2,$pretype,$presize,$preori);
-if(defined $opts{x}){
-  ($chr1,$refpos1,$chr2,$refpos2,$pretype,$presize,$preori)=split /\_/, $opts{x};
-#  if($swap_chrom){
-#    my $tmp=$chr1;$chr1=$chr2;$chr2=$tmp;
-#  }
-}
+
 
 foreach my $var(@vars){
   next if($var->{type} eq 'INV' && $opts{i});
@@ -421,8 +420,17 @@ if(defined $bestvar){
   #Microhomology Standardization
   if($bestvar->{size}>=$opts{s} && $bestvar->{score}>0){
     if(defined $opts{x}){
-      if(defined $bestvar->{chr1} && $bestvar->{chr1}=~/chromosome\.(\S+)\./){ $bestvar->{chr1}=$1;}
-      if(defined $bestvar->{chr2} && $bestvar->{chr2}=~/chromosome\.(\S+)\./){ $bestvar->{chr2}=$1;}
+      if(defined $bestvar->{chr1} && $bestvar->{chr1}=~/chromosome\.(\S+)\./){
+	$bestvar->{chr1}=$1;
+      }
+      if(defined $bestvar->{chr2} && $bestvar->{chr2}=~/chromosome\.(\S+)\./){
+	$bestvar->{chr2}=$1;
+      }
+#      if($bestvar->{chr1} ne $chr1){
+#	my $tmp=$bestvar->{chr1};$bestvar->{chr1}=$bestvar->{chr2};$bestvar->{chr2}=$bestvar->{chr1};
+#	$tmp=$bestvar->{refpos1};$bestvar->{refpos1}=$bestvar->{refpos2};$bestvar->{refpos2}=$tmp;
+#      }
+
       my ($pos1,$pos2);
       if($opts{b}>0){
 	$pos1=(($bestvar->{refpos1}<=$opts{b})?$refpos1:$refpos2)+$bestvar->{refpos1}-1;
@@ -559,7 +567,7 @@ sub GetContig{
   while ( my $seq = <$in> ) {
     # do something with $seq
     next unless($seq->id eq $contigid);
-    $sequence=$seq->seq();
+    $sequence=uc($seq->seq());
     last;
   }
   return $sequence;

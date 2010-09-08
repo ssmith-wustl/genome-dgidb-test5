@@ -1737,4 +1737,17 @@ sub build_subclass_name {
     return 'reference alignment';
 }
 
+sub additional_params_for_copy {
+    my $self = shift;
+
+    return (reference_sequence_build=>$self->reference_sequence_build->id);
+}
+
+sub inputs_necessary_for_copy {
+    my $self = shift;
+
+    my @inputs = grep {$_->name ne 'reference_sequence_build'} $self->SUPER::inputs_necessary_for_copy;
+
+}
+
 1;

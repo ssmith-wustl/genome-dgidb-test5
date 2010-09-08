@@ -75,8 +75,11 @@ sub execute {                               # replace with real execution logic.
 	my $output_file = $self->output_file;
     my $samtools_compatible = $self->samtools_compatible;
 
+    my %indel_names;
+
 	my %stats = ();
 	$stats{'num_indels'} = 0;
+    $stats{'num_dups'} = 0;
 
 	if($output_file)
 	{
@@ -100,16 +103,27 @@ sub execute {                               # replace with real execution logic.
 		if($chrom && $chr_start && $chr_stop)
 		{
 			$stats{'num_indels'}++;
-			my $indel_type = my $indel_size = "";
+			my $indel_type = my $indel_size = my $allele = "";
 			
 			if($ref eq "0" || $ref eq "-")
 			{
 				$indel_type = "Ins";
 				$indel_size = length($var);
+                $allele = uc($var);
+
 				## Build indel name ##			
-				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size";
+				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size:$allele";
                 if($samtools_compatible) {
                     $indel_name =~ s/[:-]/_/g;  #replace dashes and colons with underscores
+                }
+
+                if(exists($indel_names{$indel_name})) {
+                    $self->error_message("Skipping indel with duplicate $indel_name");
+                    $stats{'num_dups'}++;
+                    next;
+                }
+                else {
+                    $indel_names{$indel_name} = 1;
                 }
 				
 				my $flank_size = ($contig_size) / 2;
@@ -171,11 +185,21 @@ sub execute {                               # replace with real execution logic.
 			{
 				$indel_type = "Del";
 				$indel_size = length($ref);
+                $allele = uc($ref);
 				## Build indel name ##			
-				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size";
+				my $indel_name = "$chrom:$chr_start-$chr_stop:$indel_type:$indel_size:$allele";
 
                 if($samtools_compatible) {
                     $indel_name =~ s/[:-]/_/g;  #replace dashes and colons with underscores
+                }
+
+                if(exists($indel_names{$indel_name})) {
+                    $self->error_message("Skipping indel with duplicate $indel_name");
+                    $stats{'num_dups'}++;
+                    next;
+                }
+                else {
+                    $indel_names{$indel_name}=1;
                 }
 				
 				## Fix chromosome stop position, which sometimes is the base after the deletion stops ##
@@ -249,6 +273,7 @@ sub execute {                               # replace with real execution logic.
 	close($input);
 
 	print $stats{'num_indels'} . " indels in file\n";
+	print $stats{'num_dups'} . " duplicated (and skipped) indels in file\n";
 	print "Contigs printed to $output_file\n";
 	close(OUTFILE) if($output_file);
 

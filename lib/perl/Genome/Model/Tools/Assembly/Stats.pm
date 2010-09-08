@@ -185,6 +185,12 @@ sub get_input_qual_files {
 	next unless scalar @tmp == 1;
 	push @input_quals, $qual;
     }
+
+    unless (@input_quals) {
+	$self->error_message("Failed to find any input data fasta and qual files");
+	return;
+    }
+
     return \@input_quals;
 }
 

@@ -23,7 +23,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
        # Assembler
        assembler_name => {
            doc => 'Name of the assembler.',
-           valid_values => [qw/ velvet newbler /],
+           valid_values => [qw/ velvet newbler soap /],
        },
        assembler_version => {
            doc => 'Version of assembler.',
@@ -87,6 +87,10 @@ my %supported_assemblers = (
     velvet => {
         platforms => [qw/ solexa /],
         class => 'Genome::Model::Tools::Velvet::OneButton',
+    },
+    soap => {
+	platforms => [qw/ solexa /],
+	class => 'Genome::Model::Tools::Soap::DeNovoAssemble',
     },
 );
 sub supported_sequencing_platforms_for_assembler {
@@ -295,12 +299,10 @@ sub assemble_job_classes {
 
     my $assembler_subclass = Genome::Utility::Text::string_to_camel_case($self->assembler_name);
 
-    my @classes = map { $_.'::'.$assembler_subclass }
-    (qw/
-        Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData
+    my @classes = 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData';
+    push @classes, map { $_.'::'.$assembler_subclass } (qw/
         Genome::Model::Event::Build::DeNovoAssembly::Assemble
         Genome::Model::Event::Build::DeNovoAssembly::PostAssemble
-
         /);
     push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::Report';
 

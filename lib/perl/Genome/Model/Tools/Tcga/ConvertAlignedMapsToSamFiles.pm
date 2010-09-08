@@ -56,12 +56,12 @@ sub execute {
     my $count=0;
     my @alignments;
     for my $ida (@idas) {
-        my $seq_id = $ida->instrument_data->seq_id;
+        my $idid = $ida->instrument_data->id;
         my $alignment = $ida->results;
         my $alignment_directory = $alignment->alignment_directory;
         
         #testing data 
-        push (@alignments, "$seq_id|$alignment_directory");
+        push (@alignments, "$idid|$alignment_directory");
         #if ($seq_id == 2792545037 || $seq_id == 2792546284 ) {
         #    push (@alignments, "$seq_id|$alignment_directory");
             #$count++;

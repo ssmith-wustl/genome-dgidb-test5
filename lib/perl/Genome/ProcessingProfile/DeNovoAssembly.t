@@ -108,32 +108,41 @@ ok(
     'Failed as expected - create w/ calculated assembler params',
 );
 
-# Valid create
-my %valid_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
+#< VELVET >#
+my %valid_velvet_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
     assembler_name => 'velvet', 
     sequencing_platform => 'solexa',
 );
-ok(%valid_params, 'Got valid pp params');
-my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_params);
-ok($pp, 'Create DNA pp') or die;
+ok(%valid_velvet_params, 'Got valid velvet pp params');
+my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_velvet_params);
 
-# Stages
+ok($pp, 'Create DNA pp') or die;
 my @stages = $pp->stages;
 is_deeply(\@stages, [qw/ assemble /], 'Stages');
 my @stage_classes = $pp->assemble_job_classes;
 is_deeply(
     \@stage_classes, 
     [ 
+        'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
         (map { 
             'Genome::Model::Event::Build::DeNovoAssembly::'.$_.'::Velvet'
-        } (qw/ PrepareInstrumentData Assemble PostAssemble /)),
+        } (qw/ Assemble PostAssemble /)),
         'Genome::Model::Event::Build::DeNovoAssembly::Report',
     ], 
     'Stage classes'
 );
-
-# Assembler
 is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
+
+#< SOAP >#
+my %valid_soap_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
+    assembler_name => 'soap',
+    sequencing_platform => 'solexa',
+);
+ok(%valid_soap_params, "Got valid soap pp params");
+
+my $soap_pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_soap_params);
+ok($soap_pp, "Created DNA pp") or die;
+#TODO - test soap operation params when/if used
 
 done_testing();
 exit;
