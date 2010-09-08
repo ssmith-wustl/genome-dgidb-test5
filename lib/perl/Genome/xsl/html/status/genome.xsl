@@ -1,6 +1,8 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
   <xsl:template match="/search-form">
+    <xsl:comment>template: /html/status/genome.xsl; match="/search-form" </xsl:comment>
+
     <xsl:call-template name="control_bar_app"/>
     <br/>
 

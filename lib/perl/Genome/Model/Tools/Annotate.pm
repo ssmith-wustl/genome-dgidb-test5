@@ -54,6 +54,13 @@ sub transcript_report_headers {
 # Takes in a variant hash, returns the type
 sub infer_variant_type {
     my ($self, $variant) = @_;
+    
+    if(( (!$variant->{reference})||($variant->{reference} eq '0')||($variant->{reference} eq '-')) &&
+        ((!$variant->{variant})||($variant->{variant} eq '0')||($variant->{variant} eq '-'))){
+        $self->error_message("Could not determine variant type from variant:");
+        $self->error_message(Dumper($variant));
+        die;
+    }
 
     # If the start and stop are the same, and ref and variant are defined its a SNP
     if (($variant->{stop} == $variant->{start})&&
@@ -62,8 +69,8 @@ sub infer_variant_type {
         return 'SNP';
     # If start and stop are 1 off, and ref and variant are defined its a DNP
     } elsif (($variant->{stop} - $variant->{start} == 1)&&
-             ($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
-             ($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
+             ($variant->{reference})&&($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
+             ($variant->{variant})&&($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
         return 'DNP';
     # If reference is a dash, we have an insertion
     } elsif (($variant->{reference} eq '-')||($variant->{reference} eq '0')) {

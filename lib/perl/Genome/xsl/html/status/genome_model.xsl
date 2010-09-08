@@ -74,6 +74,8 @@
         <![CDATA[
                  $(document).ready(
                  window.setTable = $('#set').dataTable({
+                 "sScrollX": "100%",
+                 "sScrollInner": "110%",
                  "bJQueryUI": true,
                  "sPaginationType": "full_numbers",
                  "bStateSave": true,
