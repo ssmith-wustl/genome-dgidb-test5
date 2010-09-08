@@ -139,7 +139,7 @@ sub execute {
             next;
         }
         if($outer_end + $self->span > $chromosome_lengths{$chr1} - 1) {
-        	$outer_end_ = $chromosome_length{$chr1} - 1;
+        	$outer_end_ = $chromosome_lengths{$chr1} - 1;
         }
         if($inner_end - $self->span < 1){
 			$inner_end_ = 1;
