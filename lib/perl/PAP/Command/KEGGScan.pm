@@ -53,11 +53,11 @@ class PAP::Command::KEGGScan {
         },
         lsf_resources => { 
             is => 'Text',
-            default_value => 'select[mem>8000,type==LINUX64] rusage[mem=8192,tmp=100]',
+            default_value => 'select[mem>16000,type==LINUX64] rusage[mem=16384,tmp=1000]',
         }, 
         lsf_max_memory => {
             is => 'Number',
-            default => '8000000',
+            default => '16384000',
         },
         _working_directory => {
             is => 'Path',
