@@ -14,6 +14,14 @@ class Genome::InstrumentData::Command::Import::HmpSraProcess {
 	    is_optional => 1,
 	    doc => 'path to directory containing SRR id folders',
 	},
+	ascp_user => {
+	    is_optional => 1,
+	    doc => 'DACC FTP user_name for aspera transfer',
+	},
+	ascp_pw => {
+	    is_optional => 1,
+	    doc => 'DACC FTP password for aspera transfer',
+	},
 	list_of_srrs => {
 	    is_optional => 1,
 	    doc => 'file containing a single column list of SRR ids to process',
@@ -75,8 +83,13 @@ sub execute {
     #Set the $PATH env variable in perl
     my $path = $ENV{'PATH'} . ":" . $path_to_scripts_dir;
 
+    #Get ascp user/pwd
+    my $user = $self->ascp_user;
+    my $pwd  = $self->ascp_pw;
+
     #Note: I need to set the path to my scripts INSIDE the shell command
-    $cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir > $outfile 2> $errfile";
+    ####$cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir > $outfile 2> $errfile";
+    $cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
 
     #$self->status_message("CMD=>$cmd<=\n");
     #$self->status_message("PWD=>$current_dir<=\n");

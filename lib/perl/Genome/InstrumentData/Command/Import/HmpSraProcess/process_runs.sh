@@ -1,15 +1,19 @@
 #!/usr/bin/tcsh
 
+
 set srr_ids = $argv[1]
 set sra_samples = $argv[2]
 set picard_dir = $argv[3]
 set tmp_dir = $argv[4]
+set ascp_user = $argv[5]
+set ascp_pw = $argv[6]
 set pwd = `pwd`
 
 echo "Checking for appropriate scripts..."
 set fastq_dump = `which fastq-dump | awk '{print NF}'`
 set trimBWA = `which trimBWAstyle.usingBam.pl | awk '{print NF}'`
 set samtools = `which samtools | awk '{print NF}'`
+setenv ASPERA_SCP_PASS $ascp_pw
 
 if ( $trimBWA > 1 ) then
 	echo "Could not find trimBWAstyle.usingBAM.pl.  Please make sure this is in your path and try again."
@@ -27,7 +31,6 @@ if ( $samtools > 1 ) then
 endif
 echo ""
 
-
 foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq` )
 
 	#Number of runs in this sample
@@ -41,11 +44,14 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 	    mkdir $sample
 	endif
 
-	set sum = 0
 	set sn = "sn"
 	set ri = "ri"
-
+	set sum = 0
+	set failed = 0
+	
 	foreach srr_id ( `grep $sample $sra_samples | awk '{print $1}' | sort | uniq` )
+
+		if ($failed) continue
 
 		#Pull meta data if it does not exist
 		if (! -e $sample/$srr_id.xml) then
@@ -63,16 +69,21 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 		endif
 
 		#If fastqs have not been created, run fastq-dump
-		if ( $dumped > 0) then
+		if ( $dumped > 0 && -e ${sample}/${srr_id}_1.masked && -e ${sample}/${srr_id}_1.masked) then
 			#Fastq dump was sucessful
 			set reads = `grep Success $sample/${srr_id}.fastq-dump | awk '{print $7}'`
                         @ sum += `echo $reads`
+                        set masked = `cat $sample/${srr_id}*masked | awk '{print $1}' | perl -ne '$sum += $_; if (eof) {print $sum;}'`
+                        set mbases = `cat $sample/${srr_id}*masked | awk '{print $2}' | perl -ne '$sum += $_; if (eof) {print $sum;}'`
+                        echo "\t`date` ${srr_id}: $masked total reads masked $mbases total bases masked."
 			echo "\t`date` ${srr_id}: $reads pairs already dumped successfully."
 		else
 			#Check that data has been downloaded
 			if (! -e ${srr_id}) then
 				echo "\tERROR: No SRA data for ${srr_id}"
-				exit
+				set failed = 1
+				continue
+				#exit
 			endif
 
 			#Check SRA files for download integrity
@@ -81,7 +92,9 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 			set new_md5 = `md5sum $srr_id/col/READ/data | awk '{print $1}'`
 			if ($orig_md5 != $new_md5) then
 				echo "\tERROR ${srr_id}: md5 does not check out.  Please remove this directory and retry your download."
-				exit
+				set failed = 1
+				continue
+				#exit
 			endif
 
 			#Dump fastq files from SRA
@@ -92,13 +105,17 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 			set reads = `grep Success $sample/${srr_id}.fastq-dump | awk '{print $7}'`
 			if ($reads < 1) then
 				echo "\tERROR ${srr_id}: fastq-dump failed"
-				exit
+				set failed = 1
+				continue
+				#exit
 			else
 				echo "\t`date` ${srr_id}: $reads pairs dumped successfully."
 				@ sum += `echo $reads`
 				if (! -e $sample/${srr_id}_1.fastq || ! -e $sample/${srr_id}_2.fastq) then
 					echo "\tERROR ${srr_id}: Read one and read two files were not downloaded properly.  Check that NCBI has both ends for this run."
-					exit
+					set failed = 1
+					continue
+					#exit
 				endif
 			endif
 			
@@ -106,15 +123,13 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 			echo "\t`date` ${srr_id}: Counting masked reads..."
  			perl -ne 'chomp; $count = tr/N/n/; if ($count == length $_) { $masked++; $b += $count;} if (eof){ print "$masked\t$b\n";}' $sample/${srr_id}_1.fastq > $sample/${srr_id}_1.masked
  			perl -ne 'chomp; $count = tr/N/n/; if ($count == length $_) { $masked++; $b += $count;} if (eof){ print "$masked\t$b\n";}' $sample/${srr_id}_2.fastq > $sample/${srr_id}_2.masked
-			set masked = `awk '{print $1}' $sample/${srr_id}_1.masked`
-			@ masked += `awk '{print $1}' $sample/${srr_id}_2.masked`
-			set mbases = `awk '{print $2}' $sample/${srr_id}_1.masked`
-			@ mbases += `awk '{print $2}' $sample/${srr_id}_2.masked`
+                        set masked = `cat $sample/${srr_id}*masked | awk '{print $1}' | perl -ne '$sum += $_; if (eof) {print $sum;}'`
+                        set mbases = `cat $sample/${srr_id}*masked | awk '{print $2}' | perl -ne '$sum += $_; if (eof) {print $sum;}'`
 			echo "\t`date` ${srr_id}: $masked total reads masked $mbases total bases masked."
 
 			echo "\t`date` ${srr_id}: Appending fastqs to sample file..."
 			#Concatenate the fastqs into one sample
-			#___Modified to touch files before appending into them ... jmartin 100825
+			#___Modified to touch files before appending into them ... jmartin 100907
 			touch ${sample}/${sample}_1.fastq
 			touch ${sample}/${sample}_2.fastq
 			cat ${sample}/${srr_id}_1.fastq >> ${sample}/${sample}_1.fastq
@@ -126,6 +141,12 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 			rm ${sample}/${srr_id}_2.fastq
 		endif
 	end
+
+	if ($failed) then
+		echo "`date` ${sample}: Some runs are not available.  SKIPPING"
+		echo ""
+		continue
+	endif
 
 	#Converting fastqs into a BAM
 	echo "`date` ${sample}: Converting Fastq to BAM..."
@@ -168,7 +189,8 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 		    exit
 		endif
 	else
-		java -jar $picard_dir/EstimateLibraryComplexity.jar I=${sample}/$sample.bam O=${sample}/$sample.denovo_duplicates_marked.bam METRICS_FILE=${sample}/$sample.denovo_duplicates_marked.metrics REMOVE_DUPLICATES=true TMP_DIR=$tmp_dir >& ${sample}/EstimateLibraryComplexity.out
+		#___Modified to force specific memory allocation, and to turn off java garbage collection timeout ... jmartin 100907
+		java -Xmx34g -XX:-UseGCOverheadLimit -jar $picard_dir/EstimateLibraryComplexity.jar I=${sample}/$sample.bam O=${sample}/$sample.denovo_duplicates_marked.bam METRICS_FILE=${sample}/$sample.denovo_duplicates_marked.metrics REMOVE_DUPLICATES=true TMP_DIR=$tmp_dir >& ${sample}/EstimateLibraryComplexity.out
 		samtools flagstat $sample/$sample.denovo_duplicates_marked.bam > $sample/$sample.denovo_duplicates_marked.counts
         endif
 	
@@ -186,6 +208,32 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 		bzip2 ${sample}/${sample}.denovo_duplicates_marked.trimmed.*.fastq
 	else 
 		echo "\tSKIPPING: ${sample}/$sample.duplicates_removed.Q2trimmed.fastq.bz2 exists."
+                set qualReads = `grep reads ${sample}/trimBWAstyle.out | awk '{print $3}'`
+                set qualBases = `grep bases ${sample}/trimBWAstyle.out | awk '{print $3}'`
+                echo "`date` ${sample}: $qualReads reads ($qualBases bases) left after trimming"
+	endif
+
+	echo "`date` ${sample}: Creating checksum files..."
+	if (! -e ${sample}/${sample}.md5) then
+		md5sum $sample/*.bz2 > $sample/$sample.md5
+	else
+		echo "\tSKIPPING: $sample/$sample.md5 exists"
+	endif
+
+	echo "`date` ${sample}: Uploading files to DACC..."
+	if (! -e ${sample}/${sample}.ascp) then
+#_______________TEMPORARY CHANGE JUST FOR TESTING ... jmartin 100902
+		####ascp -QTd $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/$sample/ > $sample/$sample.ascp
+		ascp -QTd $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/WUGC_testing/$sample/ > $sample/$sample.ascp
+	else
+		set files = `grep files ${sample}/${sample}.ascp | awk '{print $4}'`
+		if ( $files > 4 ) then
+			echo "\tSKIPPING: $sample transfered."
+		else
+#_______________________TEMPORARY CHANGE JUST FOR TESTING ... jmartin 100902
+	                ####ascp -QTd $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/$sample/ > $sample/$sample.ascp
+			ascp -QTd $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/WUGC_testing/$sample/ > $sample/$sample.ascp
+		endif		
 	endif
 	
 	echo "`date` ${sample}: Processing complete."

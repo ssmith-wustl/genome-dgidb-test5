@@ -191,6 +191,11 @@ sub execute {
         }
     }
 
+    for my $file (grep {-f $_} glob($build->accumulated_alignments_directory . "/*")) {
+        $self->status_message("Setting $file to read-only");
+        chmod 0444, $file;
+    }
+
    $now = UR::Time->now;
    $self->status_message("<<< Completed removing intermediate files at $now");
 

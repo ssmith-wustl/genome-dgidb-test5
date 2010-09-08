@@ -49,6 +49,7 @@ sub execute {
             unless($remove_build->execute()) {
                 $self->error_message("Failed to remove build $build_id for model " . $model->name);
             }
+            UR::Context->commit;
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");
