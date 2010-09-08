@@ -186,7 +186,8 @@ sub distance_to_transcript {
 
 sub distance_to_coding_region {
     my ($self, $position) = @_;
-    return 0 unless ($self->has_coding_region and (index($self->transcript_error,'rna_with_coding_region') >= 0));
+    return 0 if (! $self->has_coding_region or (index($self->transcript_error,'rna_with_coding_region') >= 0));
+    #return 0 unless ($self->has_coding_region and not $self->is_rna);
     my $coding_start = $self->coding_region_start;
     my $coding_stop = $self->coding_region_stop;
     return 0 if $coding_start eq 'NULL' or $coding_stop eq 'NULL';
