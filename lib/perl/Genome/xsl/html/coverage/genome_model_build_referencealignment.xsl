@@ -4,6 +4,9 @@
 
 
   <xsl:template name="genome_model_build_referencealignment" match="object[@type='Genome::Model::Build::ReferenceAlignment::Solexa']">
+
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Coverage Metrics for Build:'" />
       <xsl:with-param name="display_name" select="@id" />

@@ -3,7 +3,7 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_instrumentdata_flowcell_table">
-    <xsl:comment>template: status/genome_instrumentdata.xsl:genome_model_link_table</xsl:comment>
+    <xsl:comment>template: status/genome_instrumentdata.xsl; name="genome_model_link_table"</xsl:comment>
     <div class="generic_lister">
       <div class="box_header span-24 last rounded-top">
         <div class="box_title"><h3 class="genome_instrumentdata_flowcell_16 span-24 last">Flowcell Lanes</h3></div>
@@ -38,7 +38,7 @@
   <xsl:template name="genome_instrumentdata_flowcell_row">
     <xsl:param name="type" select="''" />
 
-    <xsl:comment>template: status/genome_instrumentdata.xsl:genome_model_link_table_table_row</xsl:comment>
+    <xsl:comment>template: status/genome_instrumentdata.xsl; name="genome_model_link_table_table_row"</xsl:comment>
 
     <tr>
       <td><xsl:value-of select="$type"/></td>

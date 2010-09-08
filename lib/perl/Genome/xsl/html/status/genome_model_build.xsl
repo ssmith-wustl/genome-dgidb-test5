@@ -643,7 +643,7 @@
         <xsl:call-template name="object_link_button">
           <xsl:with-param name="icon" select="'sm-icon-extlink'" />
           <xsl:with-param name="linktext">
-            <xsl:value-of select="display_name" />
+            <xsl:value-of select="@id" />
           </xsl:with-param>
         </xsl:call-template>
       </td>
@@ -689,7 +689,7 @@
       </td>
 
       <td class="buttons">
-        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>data directory</a>
+        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute>data directory</a>
       </td>
 
       <!-- <td class="buttons"> -->

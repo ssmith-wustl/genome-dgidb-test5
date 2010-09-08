@@ -45,6 +45,9 @@
       };
 
     </script>
+
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Model Group Coverage:'" />
       <xsl:with-param name="display_name" select="@id" />
