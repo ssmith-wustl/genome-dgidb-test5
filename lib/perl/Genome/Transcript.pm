@@ -430,9 +430,13 @@ sub has_coding_region {
     my $self = shift;
 
     return 0 if $self->coding_region_start eq 'NULL' or $self->coding_region_stop eq 'NULL';
+    return 1;
+
+    ################ not needed.... ###################
     my $seq = $self->cds_full_nucleotide_sequence;
     return 1 if defined $seq and length $seq > 0;
     return 0;
+
 }
 
 # Checks if the transcript represents rna
