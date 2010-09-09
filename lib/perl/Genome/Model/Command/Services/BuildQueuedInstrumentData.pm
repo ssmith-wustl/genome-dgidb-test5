@@ -324,35 +324,18 @@ sub execute {
                     
                 }
 
-                # There may be a model with auto assign off already using the
-                # default model name just determined above.  Thus this lame
-                # attempt to create a unique name;
-                my $name_counter = 0;
-                
-                my $existing_model = Genome::Model->get( name => $model_name );
+                #make sure the name we'd like isn't already in use
+                $model_name = $self->find_unused_model_name($model_name);
 
-                my $new_model_name;
-
-                while ( defined($existing_model) ) {
-
-                    $name_counter++;
-                    
-                    $new_model_name = $model_name . '_auto' . $name_counter;
-                    $existing_model =
-                        Genome::Model->get( name => $new_model_name );
-                }
-                
-                if ( defined($new_model_name) ) {
-                    $model_name = $new_model_name;
-                }
-
-                my $model = Genome::Model->create(
+                my %model_params = (
                     name                  => $model_name,
                     subject_id            => $subject_id,
                     subject_class_name    => $subject_class_name,
                     processing_profile_id => $pp->id(),
                     auto_assign_inst_data => 1,
                 );
+
+                my $model = Genome::Model->create(%model_params);
 
                 unless ( defined($model) ) {
                     $self->error_message(
@@ -361,22 +344,46 @@ sub execute {
                     next PP;
                 }
 
-                if ( defined($capture_target) ) {                
-                    my $target_input = $model->add_input(
-                        name             => "target_region_set_name",
-                        value_class_name => "UR::Value",
-                        value_id         => $capture_target
+                if ( defined($capture_target) ) {
+                    #Also want to make a second model against a standard region of interest
+                    my $second_model_name = $self->find_unused_model_name($model_name . '.wu-space');
+                    $model_params{name} = $second_model_name;
+
+                    my $second_model = Genome::Model->create(
+                        %model_params
                     );
 
-                    unless ( defined($target_input) ) {
+                    unless ( defined($second_model) ) {
                         $self->error_message(
-                                'Failed to set capture target input for model '
-                              . $model->id
-                              . ' and instrument data '
-                              . $instrument_data_id );
+                            "Failed to create model '$model_name'");
                         push @process_errors, $self->error_message;
-                        $model->delete();
+                        $model->delete;
                         next PP;
+                    }
+
+                    my @models = ($model, $second_model);
+                    for my $m (@models) {
+
+                        my $target_input = $m->add_input(
+                            name             => "target_region_set_name",
+                            value_class_name => "UR::Value",
+                            value_id         => $capture_target
+                        );
+
+                        unless ( defined($target_input) ) {
+                            $self->error_message(
+                                    'Failed to set capture target input for model '
+                                  . $m->id
+                                  . ' and instrument data '
+                                  . $instrument_data_id );
+                            push @process_errors, $self->error_message;
+
+                            for (@models) {
+                                $_->delete;
+                            }
+
+                            next PP;
+                        }
                     }
                     
                     # By default the "region of interest" for analysis is the same
@@ -388,18 +395,37 @@ sub execute {
                         name             => "region_of_interest_set_name",
                         value_class_name => "UR::Value", value_id => $capture_target
                       );
-                    
+
                     unless (defined($roi_input)) {
                         $self->error_message('Failed to set region of instrument input for model '
                                              . $model->id
                                              . ' and instrument data '
                                              . $instrument_data_id);
                         push @process_errors, $self->error_message;
-                        $model->delete();
+                        for (@models) {
+                            $_->delete;
+                        }
+                        next PP;
+                    }
+
+                    my $standard_roi_input = $second_model->add_input(
+                        name             => "region_of_interest_set_name",
+                        value_class_name => "UR::Value", value_id => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA',
+                    );
+
+                    unless (defined($standard_roi_input)) {
+                        $self->error_message('Failed to set region of instrument input for model '
+                                             . $second_model->id
+                                             . ' and instrument data '
+                                             . $instrument_data_id);
+                        push @process_errors, $self->error_message;
+                        for (@models) {
+                            $_->delete;
+                        }
                         next PP;
                     }
                 }
-                
+
                 my $assign_all =
                     Genome::Model::Command::InstrumentData::Assign->create(
                         model_id => $model->id,
@@ -641,5 +667,27 @@ sub execute {
     return 1;    
 }
 
+# There may be a model with auto assign off already using the
+# default model name just determined previously.  Thus this lame
+# attempt to create a unique name;
+sub find_unused_model_name {
+    my $self = shift;
+    my $desired_model_name = shift;
+
+    my $existing_model = Genome::Model->get( name => $desired_model_name );
+
+    my $name_counter = 0;
+    my $new_model_name;
+
+    while ( defined($existing_model) ) {
+        $name_counter++;
+
+        $new_model_name = $desired_model_name . '_auto' . $name_counter;
+        $existing_model = Genome::Model->get( name => $new_model_name );
+    }
+
+    #new_model_name is only set if we ran into an existing model with the desired one.
+    return $new_model_name || $desired_model_name;
+}
 
 1;

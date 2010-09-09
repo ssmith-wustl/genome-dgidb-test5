@@ -77,7 +77,7 @@ sub execute{
         my $iprscan_output = $iprscan_temp->filename;
         #This will run the iprscan, appending STDOUT and STDERR to the $ouput_file
         #We will eventually parse this $output_file for failure messages and run the restart jobs commands (which are normally printed to STDERR)
-        Genome::Utility::FileSystem->shellcmd(cmd => $iprscan_dir.'/bin/iprscan -cli -i ' . $fasta_file . ' -o ' . $iprscan_output . ' -seqtype p -appl hmmpfam -iprlookup -goterms -verbose -format raw >> ' . $output_text . ' 2>&1' ,) or die "iprscan failed: $!"; 
+        Genome::Utility::FileSystem->shellcmd(cmd => $iprscan_dir.'/bin/iprscan -cli -i ' . $fasta_file . ' -o ' . $iprscan_output . ' -seqtype p -appl hmmpfam -appl superfamily -appl hmmsmart -appl patternscan -iprlookup -goterms -verbose -format raw >> ' . $output_text . ' 2>&1' ,) or die "iprscan failed: $!"; 
         $iprscan{$iprscan_output} = $iprscan_temp;
         print "Fetched 25000 transcripts" . "\n";
     }
