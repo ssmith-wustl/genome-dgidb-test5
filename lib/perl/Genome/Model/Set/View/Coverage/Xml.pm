@@ -52,6 +52,12 @@ sub _generate_content {
         $name = $subject->name;
     } elsif($subject->can('rule_display')) {
         $name = $subject->rule_display;
+        $name =~ s/^UR::BoolExpr=\([\w:]+/Set: /;
+        $name =~ s/_/-/g;
+        $name =~ s/ =>/:/g;
+        $name =~ s/"//g;
+        $name =~ s/\)$//;
+        $name =~ s/([\w\d]),([\w\d])/$1, $2/g;
     } else {
         $name = $subject->id;
     }
