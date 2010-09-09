@@ -19,7 +19,7 @@ class Genome::InstrumentData::AlignmentResult::Imported {
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>10000] span[hosts=1] rusage[tmp=90000, mem=10000]' -M 10000000";
+    "-R 'select[model!=Opteron250 && type==LINUX64 && mem>10000] span[hosts=1] rusage[mem=10000]' -M 10000000";
 }
 
 # No need to extract fastqs & run aligner
@@ -64,14 +64,14 @@ sub create_BAM_in_staging_directory {
                     die $self->error_message;
                 }   
                 $self->status_message("Successfully created an all_sequences.bam file.");
-            } else {     #otherwise simply copy the bam into the staging directory
-                $self->status_message("Attempting to copy file from import to alignment scratch dir.\n");
-                unless(Genome::Utility::FileSystem->copy_file($instrument_data->data_directory."/all_sequences.bam",$bam_output_path)) {
-                    $self->error_message("Failed to copy BAM from instrument-data allocation to alignment scratch dir.\n");
+            } else {     #otherwise simply symlink the bam into the staging directory 
+                $self->status_message("Attempting to symlink file from import to alignment scratch dir.\n");
+                unless(Genome::Utility::FileSystem->create_symlink($instrument_data->data_directory."/all_sequences.bam",$bam_output_path)) {
+                    $self->error_message("Failed to symlink BAM from instrument-data allocation to alignment scratch dir.\n");
                     die $self->errror_message;
                 }
                 unless(-e $bam_output_path) {  
-                    $self->error_message("Could not verify copy of BAM to staging directory.\n");
+                    $self->error_message("Could not verify symlink of BAM to staging directory.\n");
                     die $self->error_message;
                 }
             }

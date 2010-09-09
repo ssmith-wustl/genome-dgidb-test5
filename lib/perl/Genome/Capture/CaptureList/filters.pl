@@ -34,15 +34,10 @@ open FILE_out_filtered, ">>", $ARGV[2] or die $!;
 
 open(CONFIG,"<$ARGV[0]") || die "unable to open $ARGV[0]\n";
 while(<CONFIG>){
-	#my $input = chomp $ARGV[0];
-	my $input=$_;
-	chomp $input;
-#	print "$input\n";
-	my @coor = split("\t", $input);
-	my $chr1 = $coor[1];
-	my $start_ = $coor[2];
-	my $chr2 = $coor[3];
-	my $end_ = $coor[4];
+	my $line = $_;
+	my ($input, )=split("\t", $_);
+	my ($chr1,$outer_start_,$inner_start_,$chr2,$inner_end_,$outer_end_) = ($input =~ /(\S+)\.(\d+)\.(\d+)\.(\S+)\.(\d+)\.(\d+)/);
+#	print "$chr1\t$outer_start_\t$inner_start_\t$chr2\t$inner_end_\t$outer_end_\n";
 		my $hit_cen = 0;
 		if($centro_read == 0){
 			$centro_read = 1;
@@ -69,8 +64,8 @@ while(<CONFIG>){
 		}
 		# make a region around breakpoints
 		my %regions = ();
-		${$regions{$start_-$BreakpointBuffer}}{$start_+$BreakpointBuffer} = 1;
-   	    ${$regions{$end_-$BreakpointBuffer}}{$end_+$BreakpointBuffer} = 1;
+		${$regions{$outer_start_-$BreakpointBuffer}}{$inner_start_+$BreakpointBuffer} = 1;
+   	    ${$regions{$inner_end_-$BreakpointBuffer}}{$outer_end_+$BreakpointBuffer} = 1;
 		my $satelliteRegion = 0;
 	    my %outputRegion = ();
 	    my $chrStart;
@@ -99,14 +94,14 @@ while(<CONFIG>){
     			if ( $fraction > $maxFraction ) { 
     				$satelliteRegion = 1; 
     				${$outputRegion{$start}}{$stop} = $fraction;     				
-    				print FILE_out_filtered "$input\n";
+    				print FILE_out_filtered "$line";
 	    			last;
 	    		}# print "$chr1\t$start_\t$end_\t$start\t$stop\t$fraction\n"; last;}
 			}
 			last if($satelliteRegion == 1);
     	}
 #		$assembly_hit_cen ++ if($satelliteRegion == 1 && $fin =~ /assembled/);
-		print FILE_out_left "$input\n" if($satelliteRegion == 0);
+		print FILE_out_left "$line" if($satelliteRegion == 0);
 		$breakdancer_hit_cen ++ if($satelliteRegion == 1);    	
 #    	next if($satelliteRegion == 1);
 }

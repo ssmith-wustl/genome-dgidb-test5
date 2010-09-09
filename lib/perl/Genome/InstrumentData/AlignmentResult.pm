@@ -806,7 +806,7 @@ sub _promote_validated_data {
 
     $self->status_message("Now de-staging data from $staging_dir into $output_dir"); 
 
-    my $call = sprintf("rsync -avz %s/* %s", $staging_dir, $output_dir);
+    my $call = sprintf("rsync -avzL %s/* %s", $staging_dir, $output_dir);
 
     my $rv = system($call);
     $self->status_message("Running Rsync: $call");
