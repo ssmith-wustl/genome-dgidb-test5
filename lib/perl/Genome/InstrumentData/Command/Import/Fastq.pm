@@ -1,9 +1,5 @@
 package Genome::InstrumentData::Command::Import::Fastq;
 
-#REVIEW fdu
-#Long: need more specific external bam info like patient source, and add
-#methods to calculate read/base count
-
 use strict;
 use warnings;
 
@@ -11,6 +7,7 @@ use Genome;
 use File::Copy;
 use File::Basename;
 use Data::Dumper;
+use IO::File;
 
 my %properties = (
     source_data_files => {
@@ -20,6 +17,7 @@ my %properties = (
     library_name => {
         is => 'Text',
         doc => 'library name, used to fetch sample name',
+        is_optional => 1,
     },
     sample_name => {
         is => 'Text',
@@ -131,37 +129,56 @@ class Genome::InstrumentData::Command::Import::Fastq {
 sub execute {
     my $self = shift;
 
-$DB::single = 1;
+    unless(defined($self->sample_name) || defined($self->library_name)){
+        $self->error_message("In order to import a fastq, a library-name or sample-name is required.");
+        die $self->error_message;
+    }
+    my $sample;
+    my $library;
 
-    #TODO put logic to set sample_name and library_name
-    my $library = Genome::Library->get(name => $self->library_name);
-    unless ($library) {
-        $self->error_message("Library name not found.");
+    if(defined($self->sample_name) && defined($self->library_name)){
+        $sample = Genome::Sample->get(name => $self->sample_name);
+        $library = Genome::Library->get(name => $self->library_name);
+        unless(defined($sample)){
+            $self->error_message("Could not locate a sample by the name of ".$self->sample_name);
+            die $self->error_message;
+        }
+        unless(defined($library)){
+            $self->error_message("Could not locate a library by the name of ".$self->library_name);
+            die $self->error_message;
+        }
+        unless($sample->name eq $library->sample_name){
+            $self->error_message("The supplied sample-name ".$self->sample_name." and the supplied library ".$self->library_name." do not match.");
+            die $self->error_message;
+        }
+    } elsif (defined($self->library_name)){
+        $library = Genome::Library->get(name => $self->library_name);
+        unless(defined($library)) {
+            $self->error_message("Library name not found.");
+            die $self->error_message;
+        }
+        $sample = Genome::Sample->get(id => $library->sample_id);
+        unless (defined($sample)) {
+            $self->error_message("Could not retrieve sample from library name");
+            die $self->error_message;
+        }
+        $self->sample_name($sample->name);
+    } elsif (defined($self->sample_name)){
+        $sample = Genome::Sample->get(name=>$self->sample_name);
+        unless(defined($sample)){
+            $self->error_message("Could not locate sample with the name ".$self->sample_name);
+            die $self->error_message;
+        }
+        $library = Genome::Library->get(sample_name => $sample->name);
+        unless(defined($library)){
+            $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name);
+            die $self->error_message;
+        }
+        $self->library_name($library->name);
+    } else {
+        $self->error_message("Failed to define a sample or library.");
         die $self->error_message;
     }
-    
-    my $genome_sample = Genome::Sample->get(id => $library->sample_id);
-    unless ($genome_sample) {
-        $self->error_message("Could not retrieve sample from library name");
-        die $self->error_message;
-    }
-    my $sample_name  = $genome_sample->name; #$self->sample_name;
-    if ($genome_sample) {
-        $self->status_message("Sample with full_name: $sample_name is found in database");
-    }
-    else {
-        $genome_sample = Genome::Sample->get(extraction_label => $sample_name);
-        $self->status_message("Sample with sample_name: $sample_name is found in database")
-            if $genome_sample;
-    }
-
-    unless ($genome_sample) {
-        $self->error_message("Sample $sample_name is not found in database");
-        die $self->error_message;
-    }
-    my $sample_id = $genome_sample->id;
-    $self->status_message("genome sample $sample_name has id: $sample_id");
-    $self->sample_name($genome_sample->name);
    
     # gather together params to create the imported instrument data object 
     my %params = ();
@@ -183,12 +200,15 @@ $DB::single = 1;
 
     $params{sequencing_platform} = $self->sequencing_platform; 
     $params{import_format} = $self->import_format;
-    $params{sample_id} = $sample_id;
+    $params{sample_id} = $sample->id;
     $params{library_id} = $library->id;
     $params{library_name} = $library->name;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
+
+    $self->check_fastq_integritude;
+
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
@@ -209,7 +229,6 @@ $DB::single = 1;
 
     if( $sources =~ s/\/\//\//g) {
         $self->source_data_files($sources);            
-        print "new source = ".$self->source_data_files."\n";
     }
 
     my @input_files = split /\,/, $self->source_data_files;
@@ -220,16 +239,16 @@ $DB::single = 1;
         }
     }        
     $self->source_data_files(join( ',',sort(@input_files)));
-    print "source data files = ".$self->source_data_files."\n";
+    $self->status_message("About to get a temp allocation");
     my $tmp_tar_file = File::Temp->new("fastq-archive-XXXX",DIR=>"/tmp");
     my $tmp_tar_filename = $tmp_tar_file->filename;
 
-    my @suffixes = (".txt",".fastq");    
+    my $suff = ".txt";    
     my $basename;
     my %basenames;
     my @inputs;
     for my $file (sort(@input_files)) {
-        my ($filename,$path,$suffix) = fileparse($file, @suffixes);
+        my ($filename,$path,$suffix) = fileparse($file, $suff);
         $basenames{$path}++;
         $basename = $path;
         my $fastq_name = $filename.$suffix;
@@ -244,8 +263,11 @@ $DB::single = 1;
         die $self->error_message;
     }
     my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @inputs);
-    print $tar_cmd, "\n";
-    system($tar_cmd);
+    $self->status_message("About to execute tar command, this could take a long time, depending upon the location (across the network?) and size (MB or GB?) of your fastq's.");
+    unless(Genome::Utility::FileSystem->shellcmd(cmd=>$tar_cmd)){
+        $self->error_message("Tar command failed to complete successfully. The command looked like :   ".$tar_cmd);
+        die $self->error_message;
+    }
 
     $import_instrument_data->original_data_path($self->source_data_files);
 
@@ -260,7 +282,7 @@ $DB::single = 1;
 
     
     my %alloc_params = (
-        disk_group_name     => 'info_alignments',     #'info_apipe',          #changed to info_alignments disk due to problems with info_apipe
+        disk_group_name     => 'info_alignments',     #'info_apipe',
         allocation_path     => $alloc_path,
         kilobytes_requested => $kb_usage,
         owner_class_name    => $import_instrument_data->class,
@@ -283,30 +305,118 @@ $DB::single = 1;
     $self->status_message("Disk allocation created for $instrument_data_id ." . $disk_alloc->absolute_path);
     
     my $real_filename = sprintf("%s/archive.tgz", $disk_alloc->absolute_path);
-
+    $self->status_message("About to calculate the md5sum of the tar'd fastq's. This may take a long time.");
     my $md5 = Genome::Utility::FileSystem->md5sum($tmp_tar_filename);
+    $self->status_message("Copying tar'd fastq's into the allocation, this will take some time.");
     unless(copy($tmp_tar_filename, $real_filename)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
         unlink($real_filename);
         $disk_alloc->deallocate;
         return;
     }
-    
-    unless(Genome::Utility::FileSystem->md5sum($real_filename) eq $md5) {
+    $self->status_message("About to calculate the md5sum of the tar'd fastq's in their new habitat on the allocation. This may take a long time.");
+    my $copy_md5;
+    unless($copy_md5 = Genome::Utility::FileSystem->md5sum($real_filename)){
+        $self->error_message("Failed to calculate md5sum.");
+        die $self->error_message;
+    }
+    unless($copy_md5 eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($real_filename);
         $disk_alloc->deallocate;
         return;
     }
-
+    $self->status_message("The md5sum for the copied tar file is: ".$copy_md5);
     return 1;
 
 }
 
+sub check_fastq_integritude { 
+    my $self = shift;
+    my $answer = 0;
+    my @filepaths = split ",",$self->source_data_files;
+    for my $path (@filepaths){
+        unless(-s $path){
+            $self->error_message("The file at ".$path." was not found.");
+            die $self->error_message;
+        }
+    }
+    if(@filepaths==1){
+        if(defined($self->is_paired_end)){
+            unless(not $self->is_paired_end){
+                $self->error_message("The parameters specify paired-end data, but only one fastq was supplied. If the data are paired-end but only one set of reads is provided, please specify non-paired end.");
+                die $self->error_message;
+            }
+        }
+        unless($self->check_last_read($filepaths[0])){
+            $self->error_message("Could not validate the last read (last 4 lines) of the imported fastq file.");
+            die $self->error_message;
+        }
+
+    } elsif (@filepaths==2) {
+        if(defined($self->is_paired_end)){
+            unless($self->is_paired_end){
+                $self->error_message("InstrumentData parameters specify non-paired-end data, but two fastq's were found.");
+                die $self->error_message;
+            }
+            my ($forward_read_length,$reverse_read_length);
+            my ($forward_read_name,$reverse_read_name);
+            unless(($forward_read_name,$forward_read_length) = $self->check_last_read($filepaths[0])){
+                $self->error_message("Could not validate the last read (last 4 lines) of the imported fastq file.");
+                die $self->error_message;
+            }
+            unless(($reverse_read_name,$reverse_read_length) = $self->check_last_read($filepaths[1])){
+                $self->error_message("Could not validate the last read (last 4 lines) of the imported fastq file.");
+                die $self->error_message;
+            }
+            unless($forward_read_name eq $reverse_read_name){
+                $self->error_message("Forward and Reverse read names do not match.");
+                die $self->error_message;
+            }
+            unless($forward_read_length == $reverse_read_length){
+                $self->error_message("Forward and Reverse read lengths are not identical, this could indicate truncation.");
+                die $self->error_message;
+            }
+        } else {
+            $self->error_message("Found two fastq files but is_paired_end parameter was not set.");
+            die $self->error_message;
+        }
+    } else {
+        $self->error_message("Found ".scalar(@filepaths)." fastq files. This tool only allows one or two (paired-end) at a time.");
+        die $self->error_message;
+    }
+}
+
+sub check_last_read {
+    my $self = shift;
+    my $fastq = shift;
+    my $tail = `tail -4 $fastq`;
+    my @lines = split "\n",$tail;
+    $self->status_message("Checking last read of FastQ file ($fastq):\n$tail");
+    unless(@lines==4){
+        $self->error_message("Didn't get 4 lines from the fastq.");
+        return;
+    }
+    unless($lines[0] =~ /^@/){
+        return;
+    }
+    my ($read_name) = split "/",$lines[0];
+    my $read_length = length $lines[1];
+    if(defined $self->read_length){
+        unless($read_length < $self->read_length){
+            $self->error_message("Read-Length was set to ".$self->read_length." however, a read of length ".$read_length." was found in the last read.");
+            return;
+        }
+    }
+    unless((length $lines[2]) >= 1){
+        $self->error_message("Quality Score name was too short.");
+        return;
+    }
+    unless($read_length == (length $lines[3])){
+        $self->error_message("Length of read did not match length of quality string.");
+        die $self->error_message;
+    }
+    return ($read_name,$read_length);
+}
+
 1;
-
-    
-
-
-    
-

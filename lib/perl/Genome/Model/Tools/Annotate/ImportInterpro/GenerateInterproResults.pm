@@ -86,9 +86,9 @@ sub execute{
     die "Could not find interpro version ".$self->interpro_version unless -d $iprscan_dir; 
     my $genbank_base_dir = $self->_get_results_target_dir($self->reference_transcripts, "genbank");
     my $ensembl_base_dir = $self->_get_results_target_dir($self->reference_transcripts, "ensembl");
-    my $genbank_results_data_dir= File::Temp->newdir($genbank_base_dir . "/genbank_resultsXXXXX", (CLEANUP => 1));
+    my $genbank_results_data_dir= File::Temp->newdir($build->data_directory . "/genbank_resultsXXXXX", (CLEANUP => 1));
     die "Could not get genbank temp directory: $!" unless $genbank_results_data_dir; 
-    my $ensembl_results_data_dir= File::Temp->newdir($ensembl_base_dir. "/ensembl_resultsXXXXX", (CLEANUP => 1));
+    my $ensembl_results_data_dir= File::Temp->newdir($build->data_directory. "/ensembl_resultsXXXXX", (CLEANUP => 1));
     die "Could not get ensembl temp directory: $!" unless $ensembl_results_data_dir; 
     my %temp_results_data_dir = ('genbank' => $genbank_results_data_dir,
                                  'ensembl' => $ensembl_results_data_dir,);
@@ -149,7 +149,7 @@ sub execute{
     unless($genbank_base_dir eq $self->tmp_dir){
         #copy genbank dir over genbank's interpro results folder
         if (-d $genbank_results_data_dir->dirname . "/interpro_results"){
-            Genome::Utility::FileSystem->shellcmd(cmd => "mv -f " . $genbank_results_data_dir->dirname . "/interpro_results " . $genbank_base_dir . "/interpro_results") or die "Failed to mv Genbank results: $!";
+            Genome::Utility::FileSystem->shellcmd(cmd => "mv -f " . $genbank_results_data_dir->dirname . "/interpro_results " . $genbank_base_dir) or die "Failed to mv Genbank results: $!";
         }
         else{
             print "No results for Genbank, skipping...";
@@ -158,7 +158,7 @@ sub execute{
     unless($ensembl_base_dir eq $self->tmp_dir){
         #copy ensembl dir over ensembl's interpro results folder
         if (-d $ensembl_results_data_dir->dirname . "/interpro_results"){
-            Genome::Utility::FileSystem->shellcmd(cmd => "mv -f " . $ensembl_results_data_dir->dirname . "/interpro_results " . $ensembl_base_dir . "/interpro_results") or die "Failed to mv Ensembl results: $!";
+            Genome::Utility::FileSystem->shellcmd(cmd => "mv -f " . $ensembl_results_data_dir->dirname . "/interpro_results " . $ensembl_base_dir) or die "Failed to mv Ensembl results: $!";
         }else{
             print "No results for Ensembl, skipping...";
         }

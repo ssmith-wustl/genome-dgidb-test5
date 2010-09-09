@@ -26,6 +26,8 @@
 
     <script type='text/javascript' src='/res/js/app/genome_model_build.js'></script>
 
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Build:'" />
       <xsl:with-param name="display_name" select="build/@build-id" />
@@ -409,6 +411,21 @@
                   </a>
                 </td>
               </tr>
+
+              <xsl:if test="count(//command_class[contains(@value, 'CoverageStats')]/events/event) > 0">
+                <tr>
+                  <td class="name"><br/></td>
+                  <td class="value">
+                    <xsl:call-template name="object_link_button">
+                      <xsl:with-param name="type" select="'Genome::Model::Build'"/>
+                      <xsl:with-param name="id" select="build/@build-id"/>
+                      <xsl:with-param name="perspective" select="'coverage'"/>
+                      <xsl:with-param name="linktext" select="'coverage report'"/>
+                      <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                    </xsl:call-template>
+                  </td>
+                </tr>
+              </xsl:if>
             </xsl:if>
 
             <tr>
@@ -641,7 +658,7 @@
         <xsl:call-template name="object_link_button">
           <xsl:with-param name="icon" select="'sm-icon-extlink'" />
           <xsl:with-param name="linktext">
-            <xsl:value-of select="display_name" />
+            <xsl:value-of select="@id" />
           </xsl:with-param>
         </xsl:call-template>
       </td>
@@ -687,7 +704,7 @@
       </td>
 
       <td class="buttons">
-        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>data directory</a>
+        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute>data directory</a>
       </td>
 
       <!-- <td class="buttons"> -->

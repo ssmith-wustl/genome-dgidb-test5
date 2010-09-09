@@ -398,7 +398,7 @@ sub deduplication_job_classes {
         'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries',
         'Genome::Model::Event::Build::ReferenceAlignment::PostDedupReallocate',
     );
-    if(defined $self->merge_software && defined $self->rmdup_name) {
+    if(defined $self->rmdup_name) {
         return @steps;
     }
     else {

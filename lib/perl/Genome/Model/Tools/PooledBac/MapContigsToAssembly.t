@@ -4,23 +4,35 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Genome;
-use Test::More skip_all => 'test data not in place yet....';
-#exit;
-#use Test::More tests => 5;
 
-#BEGIN {
-#    use_ok('Genome::Model::Tools::PooledBac::MapContigsToAssembly');
-#}
-use Genome::Model::Tools::PooledBac::MapContigsToAssembly;
-my $path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-PooledBac/';
-my $pb_path = $path.'input_pb/';
-my $ref_seq_file = $path.'ref_seq.txt';
-my $project_dir = '/gscmnt/936/info/jschindl/pbtestout';
-my $ace_file_name = 'pb.ace';
+require File::Compare;
+require File::Temp;
+use Test::More;
 
-`rm -rf $project_dir/*`;
-`mkdir -p $project_dir`;
+use_ok('Genome::Model::Tools::PooledBac::MapContigsToAssembly') or die;
 
-Genome::Model::Tools::PooledBac::MapContigsToAssembly->execute(rpooled_bac_dir=>$pb_path,ace_file_name => $ace_file_name, project_dir => $project_dir);
-1;
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-PooledBac-MapContigsToAssembly/v1';
+ok(-d $dir, 'test dir exists');
+my $example_contig_map = $dir.'/CONTIG_MAP';
+ok(-s $example_contig_map, 'example contig map exists');
+
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+my $blast_output_base = 'bac_region_db.blast';
+symlink("$dir/$blast_output_base", "$tmpdir/$blast_output_base");
+ok(-s "$tmpdir/$blast_output_base", 'symlink blast output');
+
+my $map_contigs = Genome::Model::Tools::PooledBac::MapContigsToAssembly->create(
+    pooled_bac_dir => $dir,
+    ace_file_name => 'contig_names_only.ace',
+    project_dir => $tmpdir,
+    #project_dir => $dir,
+);
+ok($map_contigs, 'create');
+ok($map_contigs->execute, 'execute');
+
+is(File::Compare::compare($example_contig_map, $tmpdir.'/CONTIG_MAP'), 0, 'contig map matches');
+
+#print STDERR "$tmpdir\n"; <STDIN>;
+done_testing();
+exit;
+

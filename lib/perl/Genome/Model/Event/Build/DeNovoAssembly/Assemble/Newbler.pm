@@ -10,7 +10,7 @@ class Genome::Model::Event::Build::DeNovoAssembly::Assemble::Newbler {
 };
 
 sub bsub_rusage {
-    return "-R 'select[type=LINUX64] rusage[mem=4000]'";
+    return "-R 'select[type==LINUX64] rusage[mem=4000]'";
 }
 
 sub execute {

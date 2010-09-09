@@ -48,7 +48,8 @@ class Genome::Sample::View::Status::Xml {
                             perspective => 'default',
                             toolkit => 'xml',
                             subject_class_name => 'Genome::Model::Build',
-                        }
+                        },
+                        'region_of_interest_set_name',
                     ],
                     subject_class_name => 'Genome::Model',
                 },

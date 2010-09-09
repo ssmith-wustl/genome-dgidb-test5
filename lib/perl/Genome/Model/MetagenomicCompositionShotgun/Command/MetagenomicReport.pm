@@ -62,13 +62,11 @@ sub execute {
 
     my ($metagenomic_ref_build) = grep { $_->model_name=~/part 1 of/ } $model->metagenomic_references;
     unless ($metagenomic_ref_build){
-        $self->error_message("couldn't get build for metagenomic reference part 1 model");
-        die $self->error_message;
+        die $self->error_message("couldn't get build for metagenomic reference part 1 model");
     }
     my $metagenomic_ref_hmp_dir = $metagenomic_ref_build->data_directory."/hmp";
     unless (-d $metagenomic_ref_hmp_dir){
-        $self->error_message("Couldn't find hmp dir in latest build of metagenomic reference part 1: $metagenomic_ref_hmp_dir");
-        die $self->error_message;
+        die $self->error_message("Couldn't find hmp dir in latest build of metagenomic reference part 1: $metagenomic_ref_hmp_dir");
     }
     #TODO these names are bad and should be improved as this pipeline becomes more generic, don't know if taxonomy files will always be available when this is done again.
     
@@ -114,21 +112,16 @@ sub execute {
 
         $self->status_message("starting sort and merge");
 
-        eval{
-            $rv = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->execute(
-                input_files => [$meta1_bam, $meta2_bam],
-                output_file => $merged_bam,
-            );
-            $rv = $rv->{result};
-        };
-        if ($@ or !$rv){
-            $self->error_message("Failed to sort and merge metagenomic bams: $@");
-            die;
+        my $sort_and_merge_meta = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->create(
+            input_files => [$meta1_bam, $meta2_bam],
+            output_file => $merged_bam,
+        );
+        unless($sort_and_merge_meta->execute()) {
+            die $self->error_message("Failed to sort and merge metagenomic bams: $@");
         }
 
         unless (-s $merged_bam){
-            $self->error_message("Merged bam has no size!");
-            die;
+            die $self->error_message("Merged bam has no size!");
         }
 
         system ("touch $merged_bam.OK");
@@ -142,22 +135,16 @@ sub execute {
 
         $self->status_message("starting position sort of merged bam");
 
-        eval{
-
-            $rv = Genome::Model::Tools::Sam::SortBam->execute(
-                file_name => $merged_bam,
-                output_file => $sorted_bam,
-            );
-            $rv = $rv->{result};
-        };
-        if ($@ or !$rv){
-            $self->error_message("Failed to position sort merged metagenomic bam: $@");
-            die;
+        my $sort_merged_bam = Genome::Model::Tools::Sam::SortBam->create(
+            file_name => $merged_bam,
+            output_file => $sorted_bam,
+        );
+        unless($sort_merged_bam->execute()) {
+            die $self->error_message("Failed to position sort merged metagenomic bam.");
         }
 
         unless (-s $sorted_bam){
-            $self->error_message("Sorted bam has no size!");
-            die;
+            die $self->error_message("Sorted bam has no size!");
         }
 
         system ("touch $sorted_bam.OK");
@@ -184,8 +171,7 @@ sub execute {
             output_files => [$sorted_frag_filtered_bam],
         );
         unless($sam_to_bam) {
-            $self->error_message("Failed to convert file to BAM, ($sorted_frag_filtered_sam -> $sorted_frag_filtered_bam)");
-            die $self->error_message;
+            die $self->error_message("Failed to convert file to BAM, ($sorted_frag_filtered_sam -> $sorted_frag_filtered_bam)");
         }
         die "Failed to remove filtered sam file ($sorted_frag_filtered_sam)" unless(unlink($sorted_frag_filtered_sam));
 
@@ -210,8 +196,7 @@ sub execute {
     );
     $taxonomy = $self->_load_taxonomy($self->taxonomy_file, 'Species', \%taxon_map);
     unless(%$taxonomy) {
-        $self->error_message("No taxonomy data loaded from " . $self->taxonomy_file . "!");
-        die $self->error_message;
+        die $self->error_message("No taxonomy data loaded from " . $self->taxonomy_file . "!");
     }
 
     my $viral_taxonomy;
@@ -226,8 +211,7 @@ sub execute {
     );
     $viral_taxonomy = $self->_load_taxonomy($self->viral_taxonomy_file, 'gi', \%viral_taxon_map);
     unless(%$viral_taxonomy) {
-        $self->error_message("No viral taxonomy data loaded from " . $self->viral_taxonomy_file . "!");
-        die $self->error_message;
+        die $self->error_message("No viral taxonomy data loaded from " . $self->viral_taxonomy_file . "!");
     }
 
     # Count Reference Hits
@@ -342,17 +326,14 @@ sub execute {
         my $rv;
         eval{$rv=$refcov->execute};
         if($@ or !$rv){
-            $self->error_message("failed to execute refcov: $@");
-            die $self->error_message;
+            die $self->error_message("failed to execute refcov: $@");
         }
         unless ($refcov_output eq $refcov->report_file){
-            $self->error_message("refcov report file and expected output path differ, dying!");
-            die;
+            die $self->error_message("refcov report file and expected output path differ, dying!");
         }
         $refcov_output = $refcov->report_file;
         unless (-s $refcov_output){
-            $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
-            die $self->error_message;
+            die $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
         }
         $self->status_message("refcov completed successfully, stats file: $refcov_output");
     }

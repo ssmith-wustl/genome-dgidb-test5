@@ -138,11 +138,10 @@ sub filter_ace_files {
 	my $fh = IO::File->new("< $acefile") ||
 	    die "Can not create file handle to read $acefile\n";
 	while (my $line = $fh->getline) {
-	    #last if ($line =~ /^CT{/ or $line =~ /^WA{/);
 	    next if $line =~ /^AS\s+/;
 	    if ($line =~ /^CO\s+/) {
-#		chomp $line;
 		my $contig_name = $self->get_contig_name_from_ace_CO_line($line);
+		$self->status_message("\tChecking $contig_name\n");
 		if($action =~ /remove/) {
 		    $export_setting = (exists $contigs->{$contig_name}) ? 0 : 1;
 		}
@@ -244,12 +243,25 @@ sub rewrite_ace_file {
 	$ace_out = $self->directory.'/'.$name.'.ace';
     }
 
-    my $fh = IO::File->new("> $ace_out") ||
-	die "Can not create file handle for final ace file\n";
-    $fh->write("AS $contig_count $read_count\n\n");
-    $fh->close;
+    $self->status_message("Writing final ace file: $ace_out");
 
-    `cat $ace_in >> $ace_out`; #TODO - error check?/
+    my $fh_in = Genome::Utility::FileSystem->open_file_for_reading($ace_in) ||
+	return;
+
+    unlink $ace_out;
+    my $fh_out = Genome::Utility::FileSystem->open_file_for_writing($ace_out) ||
+	return;
+
+    $fh_out->print("AS $contig_count $read_count\n\n");
+
+    while (my $line = $fh_in->getline) {
+	$fh_out->print($line);
+    }
+
+    $fh_out->close;
+    $fh_in->close;
+
+    #`cat $ace_in >> $ace_out`; #TODO - error check?/
 
     return $ace_out;
 }

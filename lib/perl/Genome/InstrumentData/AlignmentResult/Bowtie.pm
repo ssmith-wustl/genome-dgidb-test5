@@ -65,6 +65,14 @@ sub _run_aligner {
 
     }
     elsif ( @input_pathnames == 2 ) {
+
+        # pass insert size into bowtie
+        my $insert_sd = $self->instrument_data->sd_above_insert_size;
+        my $insert_size = $self->instrument_data->median_insert_size;
+
+        if ($insert_size && $insert_sd) {
+                   $aligner_params .= ' --minins '. ($insert_size - $insert_sd) .' --maxins '. ($insert_size + $insert_sd);
+        } 
 	
         my $cmdline = "$path_to_bowtie $aligner_params --sam-nohead --un $temp_unaligned_fq_file $reference_bowtie_index_path -1 $input_pathnames[0] -2 $input_pathnames[1] --sam $temp_aligned_sequences_file >>$log_file && cat $temp_aligned_sequences_file >> $output_file";
         # $temp_unaligned_sequences_file still uses original file format.

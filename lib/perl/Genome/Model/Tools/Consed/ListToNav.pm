@@ -34,12 +34,12 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
-    $self->{_reader} = Genome::Consed::Navigation::ListReader->create(
+    $self->{_reader} = Genome::Model::Tools::Consed::Navigation::ListReader->create(
         input => $self->list,
     )
         or return;
 
-    $self->{_writer} = Genome::Consed::Navigation::Writer->create(
+    $self->{_writer} = Genome::Model::Tools::Consed::Navigation::Writer->create(
         output => $self->nav,
         title => $self->title,
     )
@@ -108,7 +108,7 @@ Converts a consed list input to a consed navigation output.
 
 =head1 See Also
 
-I<Genome::Consed::Navigation directory>, I<Genome::Model::Tools directory>, I<consed>
+I<Genome::Model::Tools::Consed::Navigation directory>, I<Genome::Model::Tools directory>, I<consed>
 
 =head1 Disclaimer
 

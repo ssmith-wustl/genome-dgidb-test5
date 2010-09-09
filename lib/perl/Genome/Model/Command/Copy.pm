@@ -124,7 +124,10 @@ sub execute {
     }
     
     $cmd_params{'model_name'} = $self->to;
-    
+
+    # ask the model if there's anything else we need to copy 
+    %cmd_params = (%cmd_params, $src_model->additional_params_for_copy); 
+   
     # kick off the command to build it
     my $define_cmd = $define_cmd_class_name->create(%cmd_params);
     my $define_res = $define_cmd->execute();
@@ -151,6 +154,17 @@ sub execute {
                     $self->error_message("Couldn't assign instrument data id " . $_->id);
                     return;
                }
+        }
+    }
+
+    my @inputs_to_copy = $src_model->inputs_necessary_for_copy;
+    for (@inputs_to_copy) {
+        unless(Genome::Model::Input->create(value_class_name=>$_->value_class_name,
+                                            value_id=>$_->value_id,
+                                            name=>$_->name,
+                                            model_id=>$new_model->id)) {
+            $self->error_message(sprintf("Couldn't copy model input %s with value %s to the new model", $_->name, $_->value_id));
+            return;
         }
     }
 

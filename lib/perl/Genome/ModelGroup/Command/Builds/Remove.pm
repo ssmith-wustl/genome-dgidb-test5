@@ -21,8 +21,7 @@ EOS
 }
 
 sub help_brief {
-    my $self = shift;
-    return $self->doc;
+    "remove latest build for each member if it is abandoned"
 }
 
 sub help_detail {                           
@@ -45,11 +44,12 @@ sub execute {
         my $status = $build->status;
 
         if ($status =~ /Abandoned/) {
-            my $remove_build = Genome::Model::Build::Command::Remove->create(items => [$build_id]);
+            my $remove_build = Genome::Model::Build::Command::Remove->create(build_id => $build_id);
             $self->status_message("Removing $build_id ($model_name)");
             unless($remove_build->execute()) {
                 $self->error_message("Failed to remove build $build_id for model " . $model->name);
             }
+            UR::Context->commit;
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");

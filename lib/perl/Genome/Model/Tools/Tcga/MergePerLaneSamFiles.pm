@@ -79,15 +79,15 @@ sub execute {
     my @idas = $model->instrument_data_assignments;
     $self->status_message("There are ".scalar(@idas)." id assignemnts for model id $model_id\n");
    
-    my @seq_ids; 
+    my @idids; 
     my @alignments;
     my $count=0;
     my $build = $model->last_complete_build;
 
     for my $ida (@idas) {
         my $alignment = $ida->results;
-        my $seq_id = $ida->instrument_data->seq_id;
-        push (@seq_ids, $seq_id);
+        my $idid = $ida->instrument_data->id;
+        push (@idids, $idid);
         
         #testing data 
         #if ($seq_id == 2781030680 || $seq_id == 2781032021 ) {
@@ -97,7 +97,7 @@ sub execute {
     }
   
         $self->status_message("Beginning per lane merge of the seq dict sam file, the rg rile, pg file, aligned file and unaligned file.");
-        $self->status_message("Per lane seq id's to merge: ".join("\n",@seq_ids));
+        $self->status_message("Per lane seq id's to merge: ".join("\n",@idids));
         $self->status_message("Working dir sent to workers: ".$self->working_directory);
 
         require Workflow::Simple;
@@ -111,7 +111,7 @@ sub execute {
 
         my $output = Workflow::Simple::run_workflow_lsf(
             $op,
-            'seq_ids'  => \@seq_ids,
+            'seq_ids'  => \@idids,
             'working_directory' => $self->working_directory, 
             'seq_dict_sam_file' => $seq_dict_sam_file, 
         );

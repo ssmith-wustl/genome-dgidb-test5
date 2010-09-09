@@ -21,8 +21,7 @@ EOS
 }
 
 sub help_brief {
-    my $self = shift;
-    return $self->doc;
+    "restart build for each member if latest build is failed or scheduled"
 }
 
 sub help_detail {                           
@@ -38,6 +37,7 @@ sub execute {
     my @models = $mg->models;
     for my $model (@models) {
         my $build = $model->latest_build;
+        next unless($build);
         my $build_id = $build->id;
         my $model_name = $model->name;
         my $status = $build->status;
@@ -47,6 +47,7 @@ sub execute {
             unless($stop_build->execute()) {
                 $self->error_message("Failed to stop build $build_id for model " . $model->name);
             }
+            UR::Context->commit;
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");

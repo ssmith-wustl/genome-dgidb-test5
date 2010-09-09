@@ -16,6 +16,7 @@ class Genome::Command::Remove {
     #    },
     #],
     has_optional_transient => [
+        items => { is_many => 1 },
         _deletion_params => { is_many => 1 },
     ],
     doc => 'delete selected items from the system',

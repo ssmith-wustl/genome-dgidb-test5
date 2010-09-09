@@ -4,6 +4,9 @@
 
   <!-- full page display for a instrumentdata flowcell -->
   <xsl:template name="genome_instrumentdata_solexa" match="object[./types[./isa[@type='Genome::InstrumentData::Imported']]]">
+    <xsl:comment>template: /html/status/genome_instrumentdata_imported.xsl match="object[./types[./isa[@type='Genome::InstrumentData::Imported']]]"</xsl:comment>
+
+    <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Instrument Data Imported:'" />

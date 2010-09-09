@@ -181,13 +181,17 @@ sub _execute_build {
     return 1;
 }
 
-# This is a simplified version of the previous code, preserved in a =cut section below, for 
+# This is a simplified version of the previous code for 
 # finding chromosome names in fasta files, and splitting the content out into .bases files
 # It is assumed that the sequence names are indicated via the ">" character rather than the ";" character
 
 sub _make_bases_files {
     my $self = shift;
     my ($fa,$output_dir) = @_;
+
+    my $bases_dir = join('/', $output_dir, 'bases');
+    Genome::Utility::FileSystem->create_directory($bases_dir);
+
     my $fafh = Genome::Utility::FileSystem->open_file_for_reading($fa);
     unless($fafh){
         $self->error_message("Could not open file $fa for reading.");
@@ -202,14 +206,16 @@ sub _make_bases_files {
         if($line =~ /^>/){
             my $chr = $';
             ($chr) = split " ",$chr;
-            $chr =~s/(\/|\\)/_/;  # "\" or "/" are not allowed in sequence names
+            $chr =~s/(\/|\\)/_/g;  # "\" or "/" are not allowed in sequence names
             push @chroms, $chr;
             if(defined($file)) {
                 $file->close;
             }
-            $file = Genome::Utility::FileSystem->open_file_for_writing($output_dir."/".$chr.".bases");
+
+            my $file_name = join('/', $bases_dir, $chr . ".bases");
+            $file = Genome::Utility::FileSystem->open_file_for_writing($file_name);
             unless($file){
-                $self->error_message("Could not open file ".$output_dir."/".$chr." for reading.");
+                $self->error_message("Could not open file " . $file_name . " for reading.");
                 die $self->error_message;
             }
             next;

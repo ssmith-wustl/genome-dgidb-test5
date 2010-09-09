@@ -53,23 +53,23 @@ sub execute {
     my $alignment_string = $self->alignment_info; 
 
     my @alignment_info = split(/\|/,$alignment_string);
-    my $seq_id = shift @alignment_info; 
+    my $idid = shift @alignment_info; 
     my $alignment_directory = shift @alignment_info; 
 
     my $pid = getppid();
-    my $log_path = "$working_dir/logs/convert_aligned_maps_$seq_id"."_".$pid.".txt";
+    my $log_path = "$working_dir/logs/convert_aligned_maps_$idid"."_".$pid.".txt";
     my $log_fh = Genome::Utility::FileSystem->open_file_for_writing($log_path);
     unless($log_fh) {
-       $self->error_message("For $seq_id, failed to open output filehandle for: " .  $log_path );
-       die "For $seq_id, could not open file ".$log_path." for writing.";
+       $self->error_message("For $idid, failed to open output filehandle for: " .  $log_path );
+       die "For $idid, could not open file ".$log_path." for writing.";
     } 
 
     print $log_fh "Alignment string: $alignment_string\n";
-    print $log_fh "Alignment seq id: $seq_id\n";
+    print $log_fh "Alignment instrument-data id: $idid\n";
     print $log_fh "Alignment dir: $alignment_directory\n";
 
-    my $mapmerge_output_file = "$working_dir/maps/$seq_id.map"; 
-    my $conversion_output_file = "$working_dir/aligned/$seq_id.sam"; 
+    my $mapmerge_output_file = "$working_dir/maps/$idid.map"; 
+    my $conversion_output_file = "$working_dir/aligned/$idid.sam"; 
 
     #if no map file exists
     if (!-s $mapmerge_output_file) {
@@ -88,8 +88,8 @@ sub execute {
                 #in this case, the all_sequences.map exist, just copy it to the proper location for merging
                 my $copy_rv = Genome::Utility::FileSystem->copy_file($single_map,$mapmerge_output_file);
                 if ($copy_rv ne 1)  {
-                    print $log_fh "\nFor $seq_id, error copying $single_map to $mapmerge_output_file";
-                    die "For $seq_id, error copying $single_map to $mapmerge_output_file";
+                    print $log_fh "\nFor $idid, error copying $single_map to $mapmerge_output_file";
+                    die "For $idid, error copying $single_map to $mapmerge_output_file";
                 }        
             } else {
                 #there is only one map and it is not all_sequences.map
@@ -107,8 +107,8 @@ sub execute {
             print $log_fh "\nDone with merge.  Merge return value is $mm_rv";
 
             if ($mm_rv ne 1) {
-                $self->error_message("For $seq_id, error during merge: $mm_rv");
-                die "For $seq_id, error during merge: $mm_rv";
+                $self->error_message("For $idid, error during merge: $mm_rv");
+                die "For $idid, error during merge: $mm_rv";
             }
         }
 
@@ -118,10 +118,10 @@ sub execute {
 
     if (!-s $conversion_output_file) {
 
-       # my $convert_cmd = "/gsc/pkg/bio/samtools/samtools-0.1.6/misc/maq2sam-long $mapmerge_output_file $seq_id > $conversion_output_file"; 
+       # my $convert_cmd = "/gsc/pkg/bio/samtools/samtools-0.1.6/misc/maq2sam-long $mapmerge_output_file $idid > $conversion_output_file"; 
        my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
                     map_file    => $mapmerge_output_file,
-                    lib_tag     => $seq_id,
+                    lib_tag     => $idid,
                     ref_list    => $self->ref_list,
                     index_bam   => 0,
                     sam_only    => 1,
@@ -129,7 +129,7 @@ sub execute {
 
         print $log_fh "\nExecuting map to sam conversion: ";
         print $log_fh "\ninput file: $mapmerge_output_file";
-        print $log_fh "\nlib tag: $seq_id";
+        print $log_fh "\nlib tag: $idid";
 
         #my $rv = Genome::Utility::FileSystem->shellcmd( cmd=>$convert_cmd, input_files=>[$mapmerge_output_file], output_files=>[$conversion_output_file] );
         print $log_fh "\nResult from map2sam conversion: $map_to_bam";
