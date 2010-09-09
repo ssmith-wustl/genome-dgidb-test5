@@ -239,15 +239,16 @@ sub execute {
         }
     }        
     $self->source_data_files(join( ',',sort(@input_files)));
+    $self->status_message("About to get a temp allocation");
     my $tmp_tar_file = File::Temp->new("fastq-archive-XXXX",DIR=>"/tmp");
     my $tmp_tar_filename = $tmp_tar_file->filename;
 
-    my @suffixes = (".txt",".fastq");    
+    my $suff = ".txt";    
     my $basename;
     my %basenames;
     my @inputs;
     for my $file (sort(@input_files)) {
-        my ($filename,$path,$suffix) = fileparse($file, @suffixes);
+        my ($filename,$path,$suffix) = fileparse($file, $suff);
         $basenames{$path}++;
         $basename = $path;
         my $fastq_name = $filename.$suffix;
@@ -262,7 +263,11 @@ sub execute {
         die $self->error_message;
     }
     my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @inputs);
-    system($tar_cmd);
+    $self->status_message("About to execute tar command, this could take a long time, depending upon the location (across the network?) and size (MB or GB?) of your fastq's.");
+    unless(Genome::Utility::FileSystem->shellcmd(cmd=>$tar_cmd)){
+        $self->error_message("Tar command failed to complete successfully. The command looked like :   ".$tar_cmd);
+        die $self->error_message;
+    }
 
     $import_instrument_data->original_data_path($self->source_data_files);
 
@@ -300,22 +305,28 @@ sub execute {
     $self->status_message("Disk allocation created for $instrument_data_id ." . $disk_alloc->absolute_path);
     
     my $real_filename = sprintf("%s/archive.tgz", $disk_alloc->absolute_path);
-
+    $self->status_message("About to calculate the md5sum of the tar'd fastq's. This may take a long time.");
     my $md5 = Genome::Utility::FileSystem->md5sum($tmp_tar_filename);
+    $self->status_message("Copying tar'd fastq's into the allocation, this will take some time.");
     unless(copy($tmp_tar_filename, $real_filename)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
         unlink($real_filename);
         $disk_alloc->deallocate;
         return;
     }
-    
-    unless(Genome::Utility::FileSystem->md5sum($real_filename) eq $md5) {
+    $self->status_message("About to calculate the md5sum of the tar'd fastq's in their new habitat on the allocation. This may take a long time.");
+    my $copy_md5;
+    unless($copy_md5 = Genome::Utility::FileSystem->md5sum($real_filename)){
+        $self->error_message("Failed to calculate md5sum.");
+        die $self->error_message;
+    }
+    unless($copy_md5 eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($real_filename);
         $disk_alloc->deallocate;
         return;
     }
-
+    $self->status_message("The md5sum for the copied tar file is: ".$copy_md5);
     return 1;
 
 }
@@ -324,6 +335,12 @@ sub check_fastq_integritude {
     my $self = shift;
     my $answer = 0;
     my @filepaths = split ",",$self->source_data_files;
+    for my $path (@filepaths){
+        unless(-s $path){
+            $self->error_message("The file at ".$path." was not found.");
+            die $self->error_message;
+        }
+    }
     if(@filepaths==1){
         if(defined($self->is_paired_end)){
             unless(not $self->is_paired_end){
@@ -354,6 +371,10 @@ sub check_fastq_integritude {
             }
             unless($forward_read_name eq $reverse_read_name){
                 $self->error_message("Forward and Reverse read names do not match.");
+                die $self->error_message;
+            }
+            unless($forward_read_length == $reverse_read_length){
+                $self->error_message("Forward and Reverse read lengths are not identical, this could indicate truncation.");
                 die $self->error_message;
             }
         } else {
