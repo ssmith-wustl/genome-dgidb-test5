@@ -47,6 +47,7 @@ sub execute {
             unless($stop_build->execute()) {
                 $self->error_message("Failed to stop build $build_id for model " . $model->name);
             }
+            UR::Context->commit;
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");

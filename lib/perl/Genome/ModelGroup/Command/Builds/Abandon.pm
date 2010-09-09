@@ -49,6 +49,7 @@ sub execute {
             unless($abandon_build->execute()) {
                 $self->error_message("Failed to abandon build $build_id for model " . $model->name);
             }
+            UR::Context->commit;
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");

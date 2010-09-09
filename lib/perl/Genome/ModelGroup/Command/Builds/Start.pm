@@ -22,7 +22,7 @@ EOS
 }
 
 sub help_brief {
-    "restart build for each member if latest build is failed or scheduled"
+    "start build for each member if latest build is not running or scheduled"
 }
 
 sub help_detail {                           

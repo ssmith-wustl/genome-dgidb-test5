@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Somatic::ParseCrossMatch;
+package Genome::Model::Tools::Sv::ParseCrossMatch;
 
 
 use strict;
@@ -6,15 +6,12 @@ use warnings;
 use Genome;
 require Genome::Utility::FileSystem;
 
-#use lib '/gscuser/kchen/1000genomes/analysis/scripts/';
-
-class Genome::Model::Tools::Somatic::ParseCrossMatch {
-    is  => 'Genome::Model::Tools::Somatic',
+class Genome::Model::Tools::Sv::ParseCrossMatch {
+    is  => 'Genome::Model::Tools::Sv',
     has => [
        input_file    => {
            type => 'String',
            doc  => 'Input cross_match output file',
-           is_optional   => 0,
        },
        min_base_qual => {
            type => 'Number',
@@ -30,9 +27,11 @@ class Genome::Model::Tools::Somatic::ParseCrossMatch {
        },
        _align => {
            type => 'HASH',
+           is_optional => 1,
        },
-       _dcpos => {
+       dcpos => {
            type => 'HASH',
+           is_optional => 1,
        },
     ],
 };
@@ -203,7 +202,7 @@ sub Read {
     $fh->close;
     
     $self->_align(\%DCReads);
-    $self->_dcpos(\%DCPoses);
+    $self->dcpos(\%DCPoses);
     
     return (\%DCReads, \%DCPoses);
 }
@@ -247,8 +246,8 @@ sub GetAlleleInfo{
     my $DCreadsCount = 0;
     my %Allele_info;
     
-    if (defined $self->_dcpos->{$refpos}) {
-        my @DCreads = @{$self->_dcpos->{$refpos}};
+    if (defined $self->dcpos->{$refpos}) {
+        my @DCreads = @{$self->dcpos->{$refpos}};
         $DCreadsCount = $#DCreads + 1;
         if ($DCreadsCount >= $Min_Reads) {
             for my $read (@DCreads){
