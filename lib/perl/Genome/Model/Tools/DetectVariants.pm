@@ -195,28 +195,23 @@ sub execute {
     }
     
     unless($self->_verify_inputs) {
-        $self->error_message('Failed to verify inputs.');
-        return;
+        die $self->error_message('Failed to verify inputs.');
     }
     
     unless($self->_create_directories) {
-        $self->error_message('Failed to create directories.');
-        return;
+        die $self->error_message('Failed to create directories.');
     }
     
     unless($self->_detect_variants) {
-        $self->error_message('Failed in main execution logic.');
-        return;
+        die $self->error_message('Failed in main execution logic.');
     }
     
     unless($self->_generate_standard_files) {
-        $self->error_message('Failed to generate standard files from detector-specific files');
-        return;
+        die $self->error_message('Failed to generate standard files from detector-specific files');
     }
     
     unless($self->_promote_staged_data) {
-        $self->error_message('Failed to promote staged data.');
-        return;
+        die $self->error_message('Failed to promote staged data.');
     }
     
     return 1;
