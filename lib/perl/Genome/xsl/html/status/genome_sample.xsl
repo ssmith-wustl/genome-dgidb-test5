@@ -180,6 +180,11 @@
               <xsl:call-template name="genome_source_box"/>
             </xsl:for-each>
 
+            <xsl:for-each select="aspect[@name='projects']/object">
+            aa
+              <xsl:call-template name="genome_project_box"/>
+            </xsl:for-each>
+
 
           </div> <!-- end .masonry -->
           <xsl:for-each select="aspect[@name='models']/object[./types[./isa[@type='Genome::Model']]]">
