@@ -30,6 +30,23 @@ sub column_order { [ qw(
     cds_exons_after
     phase_bases_before
     phase_bases_after
+
+    transcript_transcript_id
+    transcript_gene_id
+    transcript_transcript_start
+    transcript_transcript_stop
+    transcript_transcript_name
+    transcript_transcript_status
+    transcript_strand
+    transcript_chrom_name
+    transcript_species
+    transcript_source
+    transcript_version
+    transcript_gene_name
+    transcript_transcript_error
+    transcript_coding_region_start
+    transcript_coding_region_stop
+    transcript_amino_acid_length
     )]}
 
 sub sort_order {[qw( structure_start transcript_structure_id )] }
@@ -37,7 +54,8 @@ sub sort_order {[qw( structure_start transcript_structure_id )] }
 sub file_resolver {
     my( $chrom_name, $data_directory) = @_;
 
-    return '/' . $data_directory . '/substructures/' . $chrom_name . '.csv';
+    return '/' . $data_directory . '/substructures/' . $chrom_name . '_new_sorted.csv';
+    #return '/' . $data_directory . '/substructures/' . $chrom_name . '.csv';
 }
 
 1;

@@ -103,14 +103,45 @@ class Genome::TranscriptStructure {
             doc => 'Any bases that the phase of the NEXT exon indicates are needed to complete a codon',
         },
 
-        ## duplicated data from the transcript class
-        #strand => { },
-        #transcript_name => { },
-        #transcript_error => { },
-        #transcript_status => { },
-        #gene_name => { },  # substruct->transcript->gene->name
-        #transcript_amino_acid_length => { }
+        # Info duplicated from the transcript data
+        transcript_transcript_id => { is => 'Text', },
+        transcript_gene_id       => { is => 'Text', is_optional => 1, },
+        transcript_transcript_start => { is => 'NUMBER', is_optional => 1 },
+        transcript_transcript_stop  => { is => 'NUMBER', is_optional => 1 },
+        transcript_transcript_name  => { is => 'VARCHAR', is_optional => 1 },
+        transcript_transcript_status => { is => 'VARCHAR', is_optional => 1,
+            valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel'],
+        },
+        transcript_strand            => { is => 'VARCHAR', is_optional => 1, valid_values => ['+1', '-1', 'UNDEF'], },
+        transcript_chrom_name        => { is => 'Text' },
+        transcript_species           => { is => 'Text', is_optional => 1 },
+        transcript_source            => { is => 'VARCHAR', is_optional => 1, },
+        transcript_version           => { is => 'VARCHAR', is_optional => 1, },
+        transcript_gene_name         => { is => 'Text', is_optional => 1, },
+        transcript_transcript_error  => { is => 'Text', is_optional => 1,
+            doc => 'Describes any error with the transcript, which affects its priority when compared with other transcripts',
+        },
+        transcript_coding_region_start => { is => 'Number', is_optional => 1,
+            doc => 'The first nucleotide of the transcript\'s coding region, always less than stop (in other words, ignores strand)',
+        },
+        transcript_coding_region_stop => { is => 'Number', is_optional => 1,
+            doc => 'The last nucleotide of the transcript\'s coding region, always greater than stop (ignores strand)',
+        },
+        transcript_amino_acid_length  => { is => 'Number', is_optional => 1,
+            doc => 'The length of the amino acid to which the coding region of the transcript translates',
+        },
 
+        gene => { calculate_from => [qw/transcript_gene_id data_directory/],
+            calculate => q|
+            Genome::Gene->get(id => $transcript_gene_id, data_directory => $data_directory);
+            |,
+        },
+        protein => {
+            calculate_from => [qw/ transcript_transcript_id data_directory/],
+            calculate => q|
+            Genome::Protein->get(transcript_id => $transcript_transcript_id, data_directory => $data_directory);
+            |,
+        },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::TranscriptStructures',
