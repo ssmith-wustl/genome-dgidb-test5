@@ -2,12 +2,9 @@
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-  <!-- manual include needed here as the auto-xsl loader skips it -->
-  <!--  <xsl:include href="genome_individual.xsl"/> -->
-
-  <!-- full page display for a sample -->
-
   <xsl:template name="genome_sample" match="object[./types[./isa[@type='Genome::Sample']]]">
+    <xsl:comment>template: /html/status/genome_sample.xsl  match: object[./types[./isa[@type='Genome::Sample']]]</xsl:comment>
+
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
@@ -202,7 +199,7 @@
 
     <!-- box element for sample, intended for display in a jquery masonry layout -->
     <xsl:template name="genome_sample_box">
-      <xsl:comment>template: status/genome_sample.xsl:genome_sample_box</xsl:comment>
+      <xsl:comment>template: /html/status/genome_sample.xsl; name="genome_sample_box"</xsl:comment>
       <div class="span_8_box_masonry">
         <div class="box_header span-8 last rounded-top">
           <div class="box_title"><h3 class="genome_sample_16 span-7 last">Sample</h3></div>
