@@ -13,8 +13,8 @@ set assembly_file_end = ".ctx.Q40.somatic.assembled.HQfiltered.csv";
 set BreakDancer = "BreakDancer/";
 set BreakDancer_file_end1 = ".novo.ctx";
 
-set col_AS = "	\\t	1	2	4	6	7	NA	NA	NA	NA	10	12	NA";
-set col_BD = "	\\t	0	1	3	4	6	2	5	NA	NA	7	8	10";
+set col_AS = "	\\t	1	2	4	6	7	NA	NA	NA	NA	10	12	NA  0";
+set col_BD = "	\\t	0	1	3	4	6	2	5	NA	NA	7	8	10  100";
 #									type n1	n2 n_cn	t_cn sz	sc	sp_r
 
 set AS = ".AS";
