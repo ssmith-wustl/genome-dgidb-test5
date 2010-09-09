@@ -12,8 +12,6 @@
   <xsl:strip-space elements="*"/>
 
 
-  <!-- BASE PAGE TEMPLATE -->
-
   <xsl:template match="/">
     <xsl:comment>template: /html/status/root.xsl; match="/" </xsl:comment>
 
