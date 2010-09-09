@@ -49,7 +49,6 @@ UR::Object::Type->define(
         iprpath => {
             is => 'String',
             doc => "specify different version of iprscan",
-            #default => "/gsc/scripts/pkg/bio/iprscan/iprscan-4.5/bin/iprscan", # should probalby be this.
             default => "/gsc/scripts/bin/iprscan",
         },
         use_local_nr => {
@@ -115,7 +114,7 @@ sub execute
     my %params = $self->gather_details();
 
     $self->status_message("running merge now");
-    my $rv = Genome::Model::BacterialGeneAnnotation::Command::Merge->execute(%params);
+    my $rv = Genome::Model::GenePrediction::Bacterial::Command::Merge->execute(%params);
     $params{iprpath} = $self->iprpath;
 
     unless($rv) {
