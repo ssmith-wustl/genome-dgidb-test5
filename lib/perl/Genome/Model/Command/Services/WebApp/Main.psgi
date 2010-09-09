@@ -80,6 +80,10 @@ dispatch {
       },
 
       sub (/viewajax/...) {
+        redispatch_psgi($app{'Cache.psgi'}, 2);
+      },
+
+      sub (/viewtrigger/...) {
         redispatch_psgi($app{'Cache.psgi'}, 1);
       },
 

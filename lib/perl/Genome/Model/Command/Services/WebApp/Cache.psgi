@@ -109,12 +109,12 @@ sub {
         $url .= '?' . $env->{'QUERY_STRING'};
     }
 
-    if ($ajax_refresh) {
+    my $gen = sub {
         my $rest_app = $Genome::Model::Command::Services::WebApp::Main::app{'Rest.psgi'};
-
+        my $resp; 
         if ($class->lock($url)) {
 
-            my $resp = Plack::Util::run_app $rest_app, $env;
+            $resp = Plack::Util::run_app $rest_app, $env;
             if ($resp->[0] == 200 && ref($resp->[2]) eq 'ARRAY') {
                 if (!$class->set($url,freeze($resp))) {
                     $class->unlock($url);
@@ -133,13 +133,41 @@ sub {
                 $v = $class->getlock($url);
                 sleep 1 if $v;
             } while ($v);
+
+            if (defined wantarray) {
+                my $v = $class->get($url);
+                $resp = thaw($v);
+            }
         }
+
+        return $resp; 
+    };
+
+    if ($ajax_refresh == 1) {
+        $gen->();
  
         return [
             200,
             [ 'Content-type' => 'text/html' ],
             [ 'Done' ]
         ];
+    } elsif ($ajax_refresh == 2) {
+        ## ajax request wants a to wait for the page to be generated
+        #  without a placeholder to placate the user
+
+        my $resp;
+        if (my $v = $class->get($url)) {
+            my $no_cache = $env->{'HTTP_CACHE_CONTROL'} || $env->{'HTTP_PRAGMA'};
+            if (defined $v && $no_cache ne 'no-cache') {
+                $resp = thaw($v);
+            }
+        }
+
+        if (!$resp) {
+            $resp = $gen->();
+        }
+
+        return $resp;
     } else {
 
         if ($env->{'PATH_INFO'} !~ /html$/) {
@@ -177,21 +205,8 @@ sub {
 
   <script type="text/javascript">
    (function($) {
-      var cache = [];
-      // Arguments are image paths relative to the current page.
-      $.preLoadImages = function() {
-        var args_len = arguments.length;
-        for (var i = args_len; i--;) {
-          var cacheImage = document.createElement('img');
-          cacheImage.src = arguments[i];
-          cache.push(cacheImage);
-        }
-      }
-
 
      $(document).ready(function() {
-
-        $.preLoadImages("/res/img/spinner.gif");
 
         $("#ajax_status")
         .addClass('success')
@@ -207,7 +222,7 @@ sub {
         .hide();
 
        $.ajax({
-         url: '/viewajax] . $url . q[',
+         url: '/viewtrigger] . $url . q[',
          success: function(data) {
            location.reload();
          }
