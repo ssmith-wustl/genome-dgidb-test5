@@ -19,6 +19,10 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::Status {
 
 sub execute {
     my $self = shift;
+    unless ($self->item) {
+        $self->error_message("Please specify an item.");
+        exit;
+    }
 
     my ($mcs_model, $mcs_build);
     # If the ITEM is a number then try to get the model or build by ID.
@@ -43,7 +47,8 @@ sub execute {
         $self->status_message("Using latest build from model " . $mcs_model->name . "; build ID is " . $mcs_build->id . ".");
     }
     unless ($mcs_build && $mcs_model) {
-        die $self->error_message("Failed to get build and model.");
+        $self->error_message("Failed to get build and model.");
+        exit;
     }
 
     my $hcs_model = $mcs_model->_contamination_screen_alignment_model;
