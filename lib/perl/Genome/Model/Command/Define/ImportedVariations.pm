@@ -203,7 +203,7 @@ sub _execute_try {
                            'subject_name' => $self->subject_name,
                            'subject_class_name' => $self->subject_class_name,
                            'subject_id' => $self->subject_id,
-                           'processing_profile_id' => $self->_get_processing_profile_id_for_name,
+                           #'processing_profile_id' => $self->_get_processing_profile_id_for_name,
                            'name' => $self->model_name);
                            #'fasta_file' => $self->fasta_file);
         if(defined($self->version))
