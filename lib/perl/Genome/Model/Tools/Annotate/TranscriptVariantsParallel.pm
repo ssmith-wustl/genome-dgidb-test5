@@ -203,6 +203,9 @@ sub post_execute {
         }
     }
 
+    unless(@output_files){
+        $self->error_message("No non-zero sized output files, exiting") and die;
+    }
     Genome::Utility::FileSystem->cat(
         input_files => \@output_files, 
         output_file => $self->_output_file,
