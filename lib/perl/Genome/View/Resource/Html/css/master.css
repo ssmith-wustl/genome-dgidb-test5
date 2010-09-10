@@ -35,6 +35,14 @@ tr.even td {
     margin-bottom: .25em;
 }
 
+#eventview h2 {
+    margin: 0;
+    padding: 0;
+    margin: 10px 0 8px 10px;
+
+
+}
+
 /* LAYOUT
  ****************************************/
 body {
