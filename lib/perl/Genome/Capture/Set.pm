@@ -52,7 +52,7 @@ sub bed_file_content {
     }
     #WARNING: It appears both companies are using 1-based coordinates in the start postion.
     # Actually, NimbleGen has confirmed this: jwalker 05-28-2010
-    # Possibly Broad to, but this is yet to be confirmed
+    # Possibly Agilent/Broad to, but this is yet to be confirmed
     my @lines = split("\n",$fs->content);
     my $print = 1;
     my $bed_file_content;
@@ -71,8 +71,11 @@ sub bed_file_content {
                 die('At least three fields are required in BED format files.  Error with line: '. $line);
             }
             $entry[0] =~ s/chr//g;
-            #Correct for 1-based start positions in imported BED files
-            $entry[1]--;
+            # Correct for 1-based start positions in imported BED files,
+            # unless at zero already(which means we shouldn't be correcting the position anyway...)
+            if ($entry[1] > 0) {
+                $entry[1]--;
+            }
             unless (defined $entry[3] && $entry[3] ne '') {
                 $entry[3] = $entry[0] .':'. $entry[1] .'-'. $entry[2];
             }
