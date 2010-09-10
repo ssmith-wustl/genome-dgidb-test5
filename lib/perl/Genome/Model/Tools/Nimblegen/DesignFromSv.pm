@@ -49,13 +49,18 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
     resolution => {
         type => 'Integer',
         is_optional => 1,
-        default => 2000,
+        default => 10000,
         doc => "Filter out the resolution > this number and not output it to nimblegen list."
     },
     count_file => {
         type => 'String',
         is_optional => 1,
         doc => "Count the whole bases to be covered."
+    },
+    filtered_out_file => {
+        type => 'String',
+        is_optional => 1,
+        doc => "Save those in .capture but not in .nimblegen."
     },
     ]
 };
@@ -114,6 +119,15 @@ sub execute {
         }
     }
 
+    my $filtered_out_fh;
+    if(defined $self->filtered_out_file){
+        $filtered_out_fh = IO::File->new($self->filtered_out_file,"w");
+        unless($filtered_out_fh) {
+            $self->error_message("Unable to open file ". $self->filtered_out_file . " for writing.");
+            return;
+        }
+    }
+
     my $input_fh;
     if(defined $self->sv_file) {
         $input_fh = IO::File->new($self->sv_file,"r");
@@ -137,9 +151,11 @@ sub execute {
 		my ($id, )=split("\t", $line);
 		my ($chr1,$outer_start,$inner_start,$chr2,$inner_end,$outer_end) = ($id =~ /(\S+)\.(\d+)\.(\d+)\.(\S+)\.(\d+)\.(\d+)/);        
         if($self->exclude_non_canonical_sites && ($chr1 =~ /^[MN]T/ || $chr2 =~ /^[MN]T/)) {
+            printf $filtered_out_fh "%s\n", $line;
             next;
         }
         if(!$self->include_y && ($chr1 =~ /^Y/ || $chr2 =~ /^Y/)) {
+            printf $filtered_out_fh "%s\n", $line;
             next;
         }
         
@@ -153,6 +169,7 @@ sub execute {
         }
         if($outer_start - $self->span > $chromosome_lengths{$chr1} - 1) {
         	$self->error_message("Outer Start coordinate out of bounds: $line");
+                printf $filtered_out_fh "%s\n", $line;
             next;
         }
         if($inner_start + $self->span < 1){
@@ -163,6 +180,7 @@ sub execute {
         }
         if($outer_end + $self->span < 1){
         	$self->error_message("Outer End coordinate out of bounds: $line");
+                printf $filtered_out_fh "%s\n", $line;
             next;
         }
         if($outer_end + $self->span > $chromosome_lengths{$chr1} - 1) {
@@ -177,6 +195,7 @@ sub execute {
 
         # filter out those resolution > 2k
         if($inner_start_ - $outer_start_ > $self->resolution || $outer_end_ - $inner_end_ > $self->resolution){
+            printf $filtered_out_fh "%s\n", $line;
             next;
         }
 
@@ -205,7 +224,7 @@ sub execute {
             $inall ++;
         }
     }
-    printf $count_fh "%s\t%d\n", $self->sv_file, $inall;
+    printf $count_fh "%s\t%d\n", $self->output_file, $inall;
     
     return 1;
 
