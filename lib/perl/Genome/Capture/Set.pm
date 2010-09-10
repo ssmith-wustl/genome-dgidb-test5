@@ -76,9 +76,8 @@ sub bed_file_content {
             if ($entry[1] > 0) {
                 $entry[1]--;
             }
-            unless (defined $entry[3] && $entry[3] ne '') {
-                $entry[3] = $entry[0] .':'. $entry[1] .'-'. $entry[2];
-            }
+            #Always use chr:start-stop instead.  Bio::DB::Sam slows down dramatically when large names are used
+            $entry[3] = $entry[0] .':'. $entry[1] .'-'. $entry[2];
             $bed_file_content .= join("\t",@entry) ."\n";
         }
     }
