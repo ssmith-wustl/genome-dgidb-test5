@@ -8,8 +8,6 @@ use Genome;
 class Genome::ModelGroup::Command::Builds::Restart {
     is => ['Genome::ModelGroup::Command::Builds'],
     has_optional => [
-        model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},
-        model_group_name => { is => 'String', doc => 'name of model-group'},
         max_active => { is => 'Integer', doc => 'how many models may be running or scheduled at any given time', default => 10000},
     ],
     doc => "restart build for each member if latest build is failed or scheduled",
