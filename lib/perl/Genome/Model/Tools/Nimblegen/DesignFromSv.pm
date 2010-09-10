@@ -46,6 +46,22 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
         doc => "samtools index of the reference sequence",
         default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai",
     },
+    resolution => {
+        type => 'Integer',
+        is_optional => 1,
+        default => 10000,
+        doc => "Filter out the resolution > this number and not output it to nimblegen list."
+    },
+    count_file => {
+        type => 'String',
+        is_optional => 1,
+        doc => "Count the whole bases to be covered."
+    },
+    filtered_out_file => {
+        type => 'String',
+        is_optional => 1,
+        doc => "Save those in .capture but not in .nimblegen."
+    },
     ]
 };
 
@@ -73,7 +89,7 @@ sub execute {
 
     my $output_fh;
     if(defined $self->output_file) {
-        $output_fh = IO::File->new($self->output_file,"w");
+        $output_fh = IO::File->new($self->output_file,"w+");
         unless($output_fh) {
             $self->error_message("Unable to open file " . $self->output_file . " for writing.");
             return;
@@ -83,6 +99,31 @@ sub execute {
         $output_fh = IO::File->new_from_fd(fileno(STDOUT),"w");
         unless($output_fh) {
             $self->error_message("Unable to open STDOUT for writing.");
+            return;
+        }
+    }
+
+    my $count_fh;
+    if(defined $self->count_file){
+        $count_fh = IO::File->new($self->count_file,"a+");
+        unless($count_fh) {
+            $self->error_message("Unable to open file " . $self->count_file . " for writing.");
+            return;
+        }
+    }
+    else{
+        $count_fh = IO::File->new_from_fd(fileno(STDOUT), "w");
+        unless($count_fh){
+            $self->error_message("Unable to open STDOUT for writing.");
+            return;
+        }
+    }
+
+    my $filtered_out_fh;
+    if(defined $self->filtered_out_file){
+        $filtered_out_fh = IO::File->new($self->filtered_out_file,"w");
+        unless($filtered_out_fh) {
+            $self->error_message("Unable to open file ". $self->filtered_out_file . " for writing.");
             return;
         }
     }
@@ -102,7 +143,7 @@ sub execute {
             return;
         }
     }
-    
+    my %cover = ();
     while(my $line = $input_fh->getline) {
         next if $line =~ /^#/;  #skip comments
         chomp $line;
@@ -110,9 +151,11 @@ sub execute {
 		my ($id, )=split("\t", $line);
 		my ($chr1,$outer_start,$inner_start,$chr2,$inner_end,$outer_end) = ($id =~ /(\S+)\.(\d+)\.(\d+)\.(\S+)\.(\d+)\.(\d+)/);        
         if($self->exclude_non_canonical_sites && ($chr1 =~ /^[MN]T/ || $chr2 =~ /^[MN]T/)) {
+            printf $filtered_out_fh "%s\n", $line;
             next;
         }
         if(!$self->include_y && ($chr1 =~ /^Y/ || $chr2 =~ /^Y/)) {
+            printf $filtered_out_fh "%s\n", $line;
             next;
         }
         
@@ -126,6 +169,7 @@ sub execute {
         }
         if($outer_start - $self->span > $chromosome_lengths{$chr1} - 1) {
         	$self->error_message("Outer Start coordinate out of bounds: $line");
+                printf $filtered_out_fh "%s\n", $line;
             next;
         }
         if($inner_start + $self->span < 1){
@@ -136,6 +180,7 @@ sub execute {
         }
         if($outer_end + $self->span < 1){
         	$self->error_message("Outer End coordinate out of bounds: $line");
+                printf $filtered_out_fh "%s\n", $line;
             next;
         }
         if($outer_end + $self->span > $chromosome_lengths{$chr1} - 1) {
@@ -148,7 +193,20 @@ sub execute {
 			$inner_end = $chromosome_lengths{$chr1} - 1;
         }
 
+        # filter out those resolution > 2k
+        if($inner_start_ - $outer_start_ > $self->resolution || $outer_end_ - $inner_end_ > $self->resolution){
+            printf $filtered_out_fh "%s\n", $line;
+            next;
+        }
 
+        # record how many base pair has been covered
+        for(my $i = $outer_start_; $i <= $inner_start_; $i++){
+            ${$cover{$chr1}}{$i} = 1 if(! defined $cover{$chr1}{$i});
+        }
+        for(my $i = $inner_end_; $i <= $outer_end_; $i++){
+            ${$cover{$chr1}}{$i} = 1 if(! defined $cover{$chr1}{$i});
+        }
+        
         #if($type !~ /INS/) {#|| ($type =~ /DEL/ && $minsize > 1000)) {
             printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr1,$outer_start_, $inner_start_, (($inner_start_) - ($outer_start_)), $line;
             printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr2,$inner_end_, $outer_end_, (($outer_end_) - ($inner_end_)), $line;
@@ -158,6 +216,15 @@ sub execute {
         #}
     }
 
+    my $inall = 0;
+    my $chr;
+    my $base;
+    foreach $chr (keys %cover){
+        foreach $base (keys %{$cover{$chr}}){
+            $inall ++;
+        }
+    }
+    printf $count_fh "%s\t%d\n", $self->output_file, $inall;
     
     return 1;
 

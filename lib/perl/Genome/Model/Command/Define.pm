@@ -357,9 +357,8 @@ sub compare_pp_and_model_type {
     }
 
     #determine which subclass of Genome::Model::Command::Define called the super->execute
-    my $parent =  (caller(2))[3];
-    $parent =~ s/Genome::Model::Command::Define:://;
-    $parent =~ s/::execute//;
+    my $parent = $self->class;
+    $parent =~ s/.*:://;
     my $pp_type = $pp->subclass_name;
     
     #check for special cases where processing-profile-name and model subclass have difference names

@@ -7,7 +7,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <title><xsl:value-of select="//report-meta/name"/></title> 
+    <title><xsl:value-of select="//report-meta/name"/></title>
     <link href="layout.css" rel="stylesheet" type="text/css"></link>
     <link rel="shortcut icon" href="/res/old/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png"/>
     <link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen"/>
@@ -34,7 +34,7 @@
             clickable: true,
             shadowSize: 0,
             data:[<xsl:for-each select="build">[ <xsl:value-of select="gigabases"/>, <xsl:value-of select="goldsnp-concordance-filtered"/>, <xsl:value-of select="@id"/>, <xsl:value-of select="lanes"/> ], </xsl:for-each>]
-        },          
+        },
       </xsl:for-each>
       };
 
@@ -47,17 +47,17 @@
               val.color = i;
               ++i;
           });
-          
-          // insert checkboxes 
+
+          // insert checkboxes
           var choiceContainer = $("#choices");
           $.each(datasets, function(key, val) {
               choiceContainer.append(
                   '<div class="plot_checkbox"><input type="checkbox" name="' + key + '" checked="checked" id="' + key + '"/><label for="'+ key + '">' + val.label + '</label></div>'
               );
           });
-          
+
           choiceContainer.find("input").click(plotAccordingToChoices);
-          
+
           function showTooltip(x, y, contents) {
               $('<div id="tooltip">' + contents + '</div>').css( {
                   position: 'absolute',
@@ -75,19 +75,19 @@
           $("#placeholder").bind("plothover", function (event, pos, item) {
               $("#x").text(pos.x.toFixed(2));
               $("#y").text(pos.y.toFixed(2));
-              
+
               if (item) {
                   if (previousPoint != item.datapoint) {
                       previousPoint = item.datapoint;
-                      
+
                       $("#tooltip").remove();
                       var x = item.datapoint[0].toFixed(2),
                       y = item.datapoint[1].toFixed(2);
                       var build_id = item.datapoint[2]
                       var label = item.datapoint[3];
-                      
+
                       // showTooltip(item.pageX, item.pageY, item.series.label + " at " + x + " = " + y);
-                      showTooltip(item.pageX, item.pageY, "<strong>build id:</strong> " + build_id + "<br/><strong>lanes:</strong> " + label + "<br/><strong>goldSNP concordance:</strong> " + y + "%"); 
+                      showTooltip(item.pageX, item.pageY, "<strong>build id:</strong> " + build_id + "<br/><strong>lanes:</strong> " + label + "<br/><strong>goldSNP concordance:</strong> " + y + "%");
                   }
               }
               else {
@@ -120,13 +120,13 @@
 
           function plotAccordingToChoices() {
               var data = [];
-              
+
               choiceContainer.find("input:checked").each(function () {
                   var key = $(this).attr("name");
                   if (key && datasets[key])
                       data.push(datasets[key]);
               });
-              
+
               if (data.length > 0)
                   $.plot($("#placeholder"), data, {
                       legend: { show: true, position: "se", margin: 20},
@@ -137,7 +137,7 @@
                       grid: { hoverable: true, clickable: true }
                   });
           }
-          
+
           plotAccordingToChoices();
       });
       /* ]]> */
@@ -162,12 +162,12 @@
           float: left;
           font-size: 85%;
       }
-      
+
       div#choices p {
           margin: 0 0 5px 0;
           padding: 0;
       }
-      
+
       div.plot_checkbox {
           display: inline-block;
           float: left;
@@ -187,7 +187,7 @@
                            popup_content += '<tr><td class="label">' + prop.replace(/_/g," ") + ':</td><td class="value">' + eventObject[prop] + '</td></tr>';
                        }
                    }
-               
+
                    popup_content += '</tbody></table>';
                    // create popup
                    var popup = new Boxy(popup_content, {title:eventObject.popup_title, fixed:false});
@@ -213,7 +213,7 @@
 		      </table>
 		    </div>
 		    <div class="page_padding">
-              
+
 
 <h2 class="page_title"><xsl:value-of select="//report-meta/name"/></h2>
       <div class="page_padding">
@@ -259,7 +259,7 @@
                 <div id="placeholder" class="graph_placeholder"></div>
               </td>
               <td valign="middle"><xsl:text disable-output-escaping="yes">&amp;nbsp;</xsl:text></td>
-            </tr>            
+            </tr>
             <tr>
               <td><xsl:text disable-output-escaping="yes">&amp;nbsp;</xsl:text></td>
               <td valign="middle" align="center"><img src="/res/old/report_resources/apipe_dashboard/images/axis_label_h_gigabases.png" width="104" height="26" alt="Gigabases" style="margin-top: 10px;"/></td>
@@ -271,7 +271,7 @@
                   <p>
                     <strong>Show:</strong>
                   </p>
-                </div>  
+                </div>
               </td>
             </tr>
           </table>
@@ -285,73 +285,7 @@
         <div id="ajax_status"/>
       </body>
     </html>
-    
-  </xsl:template>
-  
-  <xsl:template name="object_link_href">
-    <xsl:param name="type" select="./@type"/>
-    <xsl:param name="id" select="./@id"/>
-    <xsl:param name="perspective" select="'status'"/>
-    <xsl:param name="toolkit" select="'html'"/>
-    
-    <xsl:variable name="typeLink">
-      <xsl:call-template name="string-replace-all">
-        <xsl:with-param name="text" select="$type"/>
-        <xsl:with-param name="replace" select="'::'"/>
-        <xsl:with-param name="by" select="'/'"/>
-      </xsl:call-template>
-    </xsl:variable>
-    
-    <xsl:value-of select="$rest"/>
-    <xsl:text>/</xsl:text>
-    <xsl:value-of select="$typeLink"/>
-    <xsl:text>/</xsl:text>
-    <xsl:value-of select="$perspective"/>
-    <xsl:text>.</xsl:text>
-    <xsl:value-of select="$toolkit"/>
-    <xsl:text>?id=</xsl:text>
-    <xsl:value-of select="$id"/>
-  </xsl:template>
-  
-  <xsl:template name="object_link">
-    <xsl:param name="type" select="./@type"/>
-    <xsl:param name="id" select="./@id"/>
-    <xsl:param name="perspective" select="'status'"/>
-    <xsl:param name="toolkit" select="'html'"/>
-    <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
-    
-    <a>
-      <xsl:attribute name="href">
-        <xsl:call-template name="object_link_href">
-          <xsl:with-param name="type" select="$type"/>
-          <xsl:with-param name="id" select="$id"/>
-          <xsl:with-param name="perspective" select="$perspective"/>
-          <xsl:with-param name="toolkit" select="$toolkit"/>
-        </xsl:call-template>
-      </xsl:attribute>
-      <xsl:copy-of select="$linktext"/>
-    </a>
-  </xsl:template>
-  
-  <xsl:template name="string-replace-all">
-    <xsl:param name="text" />
-    <xsl:param name="replace" />
-    <xsl:param name="by" />
-    <xsl:choose>
-      <xsl:when test="contains($text, $replace)">
-        <xsl:value-of select="substring-before($text,$replace)" />
-        <xsl:value-of select="$by" />
-        <xsl:call-template name="string-replace-all">
-          <xsl:with-param name="text"
-                          select="substring-after($text,$replace)" />
-          <xsl:with-param name="replace" select="$replace" />
-          <xsl:with-param name="by" select="$by" />
-        </xsl:call-template>
-      </xsl:when>
-      <xsl:otherwise>
-        <xsl:value-of select="$text" />
-      </xsl:otherwise>
-    </xsl:choose>
+
   </xsl:template>
 
 </xsl:stylesheet>
