@@ -307,47 +307,6 @@ sub type_specific_parameters_for_create {
     return (); #This exists to be overwritten by subclasses
 }
 
-sub _get_processing_profile_id_for_name {
-    my $self = shift;
-
-    unless ( $self->processing_profile_name ) {
-        $self->error_message("No name to get processing profile");
-        return;
-    }
-    
-    my (@processing_profiles) = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
-
-    unless ( @processing_profiles ) {
-        my $msg;
-        if (defined $self->processing_profile_name) {
-            $msg = "Failed to find processing profile "
-                . $self->processing_profile_name . "!\n"
-        }
-        else {
-            $msg = "No processing profile specified!\n";
-        }
-        $msg .= "Please select from:\n "
-                . join("\n ", 
-                        grep { defined $_ and length $_ } 
-                        map  { $_->name } 
-                        Genome::ProcessingProfile->get() 
-                    ) 
-                . "\n";
-        $self->error_message($msg);
-        return;
-    }
-
-    # Bomb out unless exactly 1 matching processing profile is found
-    unless ( @processing_profiles == 1 ) {
-        $self->error_message(
-            sprintf('Found multiple processing profiles for name (%s)', $self->processing_profile_name)
-        );
-        return;
-    }
-
-    return $processing_profiles[0]->id;
-}
-
 sub compare_pp_and_model_type {
     my $self = shift;
     my $pp = Genome::ProcessingProfile->get(id=>$self->processing_profile_id);
@@ -361,7 +320,7 @@ sub compare_pp_and_model_type {
     $parent =~ s/.*:://;
     my $pp_type = $pp->subclass_name;
     
-    #check for special cases where processing-profile-name and model subclass have difference names
+    #check for special cases where processing-profile-name and model subclass have different names
     if($parent eq "GenotypeMicroarray"){
         unless($pp->name =~ /wugc/){
             $self->error_message("GenotypeMicroarray Models must use one of the [microarray-type]/wugc processing-profiles.");
