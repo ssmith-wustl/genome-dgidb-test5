@@ -164,7 +164,7 @@
                     </tr>
                   </xsl:if>
                 </tbody>
-                </table>~
+                </table>
               </div>
             </div>
 
