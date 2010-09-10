@@ -22,7 +22,7 @@ EOS
 }
 
 sub help_brief {
-    "restart build for each member if latest build is failed or scheduled"
+    "restart build for each member if latest build is failed or scheduled or running"
 }
 
 sub help_detail {                           
@@ -47,7 +47,7 @@ sub execute {
         next unless($build);
         my $build_id = $build->id;
         my $status = $build->status;
-        if ($status =~ /Scheduled|Failed/) {
+        if ($status =~ /Scheduled|Failed|Running/) {
             my $build_id = $build->id;
             my $restart_build = Genome::Model::Build::Command::Restart->create(build_id => $build_id);
             $self->status_message("Restarting $build_id ($model_name)");
