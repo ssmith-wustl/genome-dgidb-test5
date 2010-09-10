@@ -117,6 +117,11 @@ my %properties = (
         doc => '------',
         is_optional => 1,
     },
+    sra_sample_id => {
+        is=>'String',
+        doc => 'SRA sample name',
+        is_optional => 1,
+    }
 );
     
 
