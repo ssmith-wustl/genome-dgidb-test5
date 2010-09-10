@@ -78,6 +78,9 @@ sub execute {
             normal_var => $var,
         };
     }
+
+    #print the header
+    print join("\t",qw( chr stop start ref var type gene transcript species source version strand transcript_type mutation_type transcript_change amino_acid_change conservation domain all_domains deletion_annotation errors normal_total normal_ref normal_var normal_var_freq tumor_total tumor_ref tumor_var tumor_freq call call_prob call_llr_to_second_best FET_p_value FDR)),"\n";
     my %results;
     my $tested = 0;
     #read in tumor and calculate the p-value
@@ -196,11 +199,11 @@ sub execute {
                     }
                 }
             }
-            $results{$indel_name} = { line => $entry->{line}."\t".join("\t",@fields[-4,-3,-2,-1],defined $max_llr ? exp($max_llr-$marginal_probability) : '-',defined $max_call ? $max_call : '-',defined $max_llr && defined $max2_llr ? $max_llr-$max2_llr : '-',defined $max2_llr ? exp($max2_llr-$marginal_probability) : '-',defined $max2_call ? $max2_call : '-'), p => $p_value};
+            $results{$indel_name} = { line => $entry->{line}."\t".join("\t",@fields[-4,-3,-2,-1],defined $max_call ? $max_call : '-',defined $max_llr ? exp($max_llr-$marginal_probability) : '-',defined $max_llr && defined $max2_llr ? $max_llr-$max2_llr : '-',), p => $p_value};
 
         }
         else {
-            print STDOUT $entry->{line}."\t".join("\t",@fields[-4,-3,-2,-1],defined $max_llr ? exp($max_llr-$marginal_probability) : '-',defined $max_call ? $max_call : '-',defined $max_llr && defined $max2_llr ? $max_llr-$max2_llr : '-',defined $max2_llr ? exp($max2_llr-$marginal_probability) : '-',defined $max2_call ? $max2_call : '-','-','-'),"\n";
+            print STDOUT $entry->{line}."\t".join("\t",@fields[-4,-3,-2,-1],defined $max_call ? $max_call : '-',defined $max_llr ? exp($max_llr-$marginal_probability) : '-',defined $max_llr && defined $max2_llr ? $max_llr-$max2_llr : '-','-','-'),"\n";
         }
 
         delete $indels{$indel_name};
