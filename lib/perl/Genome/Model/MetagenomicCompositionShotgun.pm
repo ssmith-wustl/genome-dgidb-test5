@@ -31,17 +31,11 @@ class Genome::Model::MetagenomicCompositionShotgun {
         contamination_screen_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
-            via => 'inputs',
-            to => 'value',
-            where => [name => 'contamination_screen_reference', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
         },
         metagenomic_references => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_many => 1,
             is_mutable => 1,
-            via => 'inputs',
-            to => 'value',
-            where => [name => 'metagenomic_alignment_reference', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
         },
         _contamination_screen_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
@@ -58,10 +52,6 @@ class Genome::Model::MetagenomicCompositionShotgun {
         },
     ],
 };
-
-my $default_contamination_screen_reference_name = "contamination-human";
-my @default_metagenomic_reference_names = ('microbial reference part 1 of 2', 'microbial reference part 2 of 2');
-#my @default_metagenomic_reference_names = ('NCBI-human', 'contamination-human');
 
 sub build_subclass_name {
     return 'metagenomic-composition-shotgun';
@@ -84,40 +74,6 @@ sub create{
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-    #DETECT OR SET REFERENCE DEFAULTS
-    unless ($self->contamination_screen_reference) {
-        my $contamination_screen_reference = Genome::Model->get(name => $default_contamination_screen_reference_name);
-        unless ($contamination_screen_reference){
-            $self->error_message("Couldn't grab imported-reference-sequence model $default_contamination_screen_reference_name to set default contamination_screen_reference");
-            return;
-        }
-        my $build = $contamination_screen_reference->last_complete_build;
-        unless($build){
-            $self->error_message("Couldn't grab latest complete build from $default_contamination_screen_reference_name the default contamination_screen_reference");
-            return;
-        }
-        $self->contamination_screen_reference($build);
-        $self->status_message("Set contamination_reference build to $default_contamination_screen_reference_name model's latest build");
-    }
-
-    my @metagenomic_references;
-    unless(@metagenomic_references = $self->metagenomic_references) {
-        @metagenomic_references = map { Genome::Model->get(name => $_) } @default_metagenomic_reference_names;
-        unless ( (scalar @default_metagenomic_reference_names) == grep { $_->isa('Genome::Model::ImportedReferenceSequence') }@metagenomic_references ){
-            $self->error_message("Couldn't grab imported-reference-sequence models (".join(",", @default_metagenomic_reference_names).") to set default metagenomic_screen_references");
-            return;
-        }
-        my @builds = map { $_->last_complete_build } @metagenomic_references;
-        unless ( (scalar @default_metagenomic_reference_names) == grep { $_->isa('Genome::Model::Build::ImportedReferenceSequence') } @builds){
-            $self->error_message("Couldn't grab imported-reference-sequence builds (".join(",", @default_metagenomic_reference_names).") to set default metagenomic_screen_references");
-            return;
-        }
-        for (@builds){
-            $self->add_metagenomic_reference($_);
-        }
-        $self->status_message("Set metagenomic reference builds to ".join(", ", @default_metagenomic_reference_names)." models latest builds");
-    }
-
     my $contamination_screen_model = $self->_create_underlying_contamination_screen_model();
     unless ($contamination_screen_model) {
         $self->error_message("Error creating contamination screening model!");
@@ -126,8 +82,8 @@ sub create{
     }
 
     my @metagenomic_models = $self->_create_underlying_metagenomic_models();
-    unless (@metagenomic_models == @metagenomic_references) {
-        $self->error_message("Error creating metagenomic models!" . scalar(@metagenomic_models) . " " . scalar(@metagenomic_references));
+    unless (@metagenomic_models == $self->metagenomic_references) {
+        $self->error_message("Error creating metagenomic models!" . scalar(@metagenomic_models) . " " . scalar($self->metagenomic_references));
         $self->delete;
         return;
     }
