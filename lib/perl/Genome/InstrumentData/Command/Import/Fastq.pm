@@ -378,10 +378,6 @@ sub check_fastq_integritude {
                 $self->error_message("Forward and Reverse read names do not match.");
                 die $self->error_message;
             }
-            unless($forward_read_length == $reverse_read_length){
-                $self->error_message("Forward and Reverse read lengths are not identical, this could indicate truncation.");
-                die $self->error_message;
-            }
         } else {
             $self->error_message("Found two fastq files but is_paired_end parameter was not set.");
             die $self->error_message;
