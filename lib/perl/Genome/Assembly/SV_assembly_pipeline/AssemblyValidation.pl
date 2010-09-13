@@ -72,7 +72,14 @@ else{
   @SVs=&ReadBDCoor(shift @ARGV);
 }
 
-printf "#%d SVs to be assembled\n", $#SVs+1;
+printf "#%d SVs to be assembled from\n#Bams: ", $#SVs+1;
+my @FBAMS;
+foreach my $bam(@ARGV){
+  my $fbam=`readlink $bam`; chomp $fbam;
+  push @FBAMS,$fbam;
+}
+print join(",",@FBAMS) . "\n";
+
 printf "#Version-%s\tParameters: ", $version;
 foreach my $opt(keys %opts){printf "\t%s",join(':',$opt,$opts{$opt});} print "\n";
 if($opts{k}){

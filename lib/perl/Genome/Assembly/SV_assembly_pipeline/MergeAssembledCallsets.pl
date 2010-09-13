@@ -6,8 +6,8 @@ use Getopt::Std;
 use Bio::SeqIO;
 use Bio::Seq;
 
-my %opts = (d=>20,p=>20,s=>10,z=>100,w=>50, l=>200, r=>0.8, C=>0.5);
-getopts('p:d:f:w:s:z:hL:ce:l:r:C:',\%opts);
+my %opts = (d=>20,p=>20,s=>10,z=>100,w=>50, l=>200, r=>0.8, C=>0.5, n=>1000);
+getopts('p:d:f:w:s:z:hL:ce:l:r:C:n:',\%opts);
 die("
 Usage:   MergeAssembledCallsets.pl <the result index file>\n
          the tab/space delimited index file must have 3 columns: set name, .csv file, .fasta file
@@ -15,6 +15,7 @@ Options:
          -d INT     do not merge SVs unless they differ less than [$opts{d}] bp in start and end positions, subject to 1 duplication
          -p INT     do not merge SVs unless they differ less than [$opts{p}] bp in size
          -z INT     ignore SVs with size [$opts{z}] bp shorter or longer than the predicted size
+         -n INT     ignore SVs with assembled breakpoint [$opts{n}] bp off the predicted breakpoint
          -s INT     bp minimal size to trust [$opts{s}]
          -f FILE    dump breakpoint sequences to a fasta file
          -L STRING  ignore SVs that are detected in sets with STRING in the name
@@ -173,7 +174,7 @@ sub AddSVs{
     my ($pchr1,$pre_pos1,$pchr2,$pre_pos2,$pre_type,$pre_size,$pre_ori)=split /\./,$prestr;
     my $size_diff_cutoff=$diff_size{$set} || $opts{z};
     $size_diff_cutoff=1e10 if($type && $type=~/ctx/i);
-    my $loc_diff_cutoff=$diff_loc{$set} || 1000;
+    my $loc_diff_cutoff=$diff_loc{$set} || $opts{n};
     $start=~s/\(\d+\)//g;
     $end=~s/\(\d+\)//g;
     $size=~s/\(\d+\)//g;
