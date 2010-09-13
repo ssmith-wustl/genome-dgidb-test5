@@ -263,12 +263,11 @@ sub sequence_position {
     my ($self, $position) = @_;
     return unless $self->{structure_type} eq 'cds_exon';
 
-    my $transcript = $self->transcript;
     my $num_borrowed = $self->num_phase_bases_before;
 
     my $seq_start;
-    $seq_start = $self->structure_start if $transcript->strand eq '+1';
-    $seq_start = $self->structure_stop if $transcript->strand eq '-1';
+    $seq_start = $self->structure_start if $self->transcript_strand eq '+1';
+    $seq_start = $self->structure_stop if $self->transcript_strand eq '-1';
 
     my $seq_position = $num_borrowed + abs($seq_start - $position);
 
@@ -282,7 +281,7 @@ sub distance_to_start {
     my ($self, $position) = @_;
     my $structure_start = $self->structure_start;
     my $structure_stop = $self->structure_stop;
-    my $strand = $self->transcript->strand;
+    my $strand = $self->transcript_strand;
     ($structure_start, $structure_stop) = ($structure_stop, $structure_start) if $strand eq '-1';
 
     return abs($position - $structure_start);
@@ -293,7 +292,7 @@ sub distance_to_stop {
     my ($self, $position) = @_;
     my $structure_start = $self->structure_start;
     my $structure_stop = $self->structure_stop;
-    my $strand = $self->transcript->strand;
+    my $strand = $self->transcript_strand;
     ($structure_start, $structure_stop) = ($structure_stop, $structure_start) if $strand eq '-1';
 
     return abs($position - $structure_stop);
