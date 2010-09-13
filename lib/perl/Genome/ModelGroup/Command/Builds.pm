@@ -7,6 +7,11 @@ use Genome;
 
 class Genome::ModelGroup::Command::Builds {
     is => ['Genome::ModelGroup::Command'],
+    has_optional => [
+        item => { is => 'Text', shell_args_position => 1, doc => 'model group or name' },
+        model_group_id => { is => 'Integer', doc => 'id of the model-group to check' },
+        model_group_name => { is => 'String', doc => 'name of model-group' },
+    ],
     doc => "work with the builds of members of model-groups",
 };
 
@@ -31,20 +36,23 @@ sub get_mg {
     
     my $mg;
 
-    if($self->model_group_id && $self->model_group_name) {
-        $self->error_message("Please specify either ID or name, not both.");
-        die $self->error_message;
+    if (scalar(grep { $_ } ($self->item, $self->model_group_id, $self->model_group_name)) > 1) {
+        $self->error_message("Please only specify one paramater (name or ID)");
+        exit;
     }
-    elsif($self->model_group_id) {
-        $mg = Genome::ModelGroup->get($self->model_group_id);
+    if($self->model_group_id || $self->item =~ /^\d+$/) {
+        my $id = $self->model_group_id || $self->item;
+        $mg = Genome::ModelGroup->get($id);
     }
-    elsif($self->model_group_name) {
-        $mg = Genome::ModelGroup->get(name => $self->model_group_name);
+    if($self->model_group_name || (!$mg && $self->item)) {
+        my $name = $self->model_group_name || $self->item;
+        $mg = Genome::ModelGroup->get(name => $name);
     }
-    else {
-        $self->error_message("Please specify either an ID xor a name.");
-        die $self->error_message;
+    unless($mg) {
+        $self->error_message("Unable to determine model group.");
+        exit;
     }
+    $self->status_message("Found model group " . $mg->name . " (" . $mg->id . "):");
 
     return $mg;
 }

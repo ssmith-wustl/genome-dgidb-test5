@@ -10,7 +10,7 @@ use File::Temp;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin/lib";
 
-my $version='0.0.1-r140';
+my $version='0.0.1-r141';
 
 my %opts = (l=>500,p=>1000,s=>0,q=>1,n=>0,m=>10,x=>3,P=>-10,G=>-10,S=>0.02,A=>500,Q=>0,w=>200,C=>0.5,N=>5,J=>1);
 getopts('l:d:c:p:r:e:s:Q:q:t:n:a:b:f:km:MRzv:hD:x:i:P:G:I:A:S:L:w:C:N:HJ:',\%opts);
@@ -72,7 +72,14 @@ else{
   @SVs=&ReadBDCoor(shift @ARGV);
 }
 
-printf "#%d SVs to be assembled\n", $#SVs+1;
+printf "#%d SVs to be assembled from\n#Bams: ", $#SVs+1;
+my @FBAMS;
+foreach my $bam(@ARGV){
+  my $fbam=`readlink $bam`; chomp $fbam;
+  push @FBAMS,$fbam;
+}
+print join(",",@FBAMS) . "\n";
+
 printf "#Version-%s\tParameters: ", $version;
 foreach my $opt(keys %opts){printf "\t%s",join(':',$opt,$opts{$opt});} print "\n";
 if($opts{k}){
@@ -591,6 +598,7 @@ sub ReadBDCoor{
     $cr->{database}=$fields[$col_database] if($col_database);
 
     $ignore=0 if($cr->{line}=~/cancer/i || $cr->{line}=~/exon/i);
+    $ignore=0 if($cr->{line}=~/gene/i && $cr->{type}=~/ctx/i);  #assemble all translocation overlapping gene
     next if($ignore>0);
 
     push @coor, $cr;

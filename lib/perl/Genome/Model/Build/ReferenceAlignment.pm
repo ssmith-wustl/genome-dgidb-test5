@@ -72,7 +72,7 @@ sub calculate_estimated_kb_usage {
     my $estimate_from_instrument_data = scalar(@idas) * 10000;
 
     #return ($estimate_from_reference + $estimate_from_instrument_data);
-    my $temporary_value = 31457280; # 30GB  -----> old #629145600; #600GB
+    my $temporary_value = 10485760; # 30GB  -----> old #629145600; #600GB
 
     my $processing_profile_name = $model->processing_profile_name;
 
