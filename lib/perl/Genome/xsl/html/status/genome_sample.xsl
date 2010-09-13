@@ -164,7 +164,7 @@
                     </tr>
                   </xsl:if>
                 </tbody>
-                </table>~
+                </table>
               </div>
             </div>
 
@@ -176,9 +176,14 @@
               <xsl:call-template name="genome_taxon_box"/>
             </xsl:for-each>
 
-            <!-- <xsl:for-each select="aspect[@name='source']/object"> -->
-            <!--   <xsl:call-template name="genome_individual_box"/> -->
-            <!-- </xsl:for-each> -->
+            <xsl:for-each select="aspect[@name='source']/object">
+              <xsl:call-template name="genome_source_box"/>
+            </xsl:for-each>
+
+            <xsl:for-each select="aspect[@name='projects']/object">
+            aa
+              <xsl:call-template name="genome_project_box"/>
+            </xsl:for-each>
 
 
           </div> <!-- end .masonry -->

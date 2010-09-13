@@ -49,7 +49,7 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
     resolution => {
         type => 'Integer',
         is_optional => 1,
-        default => 2000,
+        default => 10000,
         doc => "Filter out the resolution > this number and not output it to nimblegen list."
     },
     count_file => {
