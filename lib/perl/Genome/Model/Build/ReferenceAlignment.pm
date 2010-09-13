@@ -736,7 +736,7 @@ sub delete {
     # if we have an alignments directory, nuke it first since it has its own allocation
     if (-e $self->accumulated_alignments_directory) {
         unless($self->eviscerate()) {
-            my $eviscerate_error = $self->error_mesage();
+            my $eviscerate_error = $self->error_message();
             $self->error_message("Eviscerate failed: $eviscerate_error");
             return;
         };
