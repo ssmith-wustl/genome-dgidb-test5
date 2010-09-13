@@ -117,6 +117,11 @@ my %properties = (
         doc => '------',
         is_optional => 1,
     },
+    sra_sample_id => {
+        is=>'String',
+        doc => 'SRA sample name',
+        is_optional => 1,
+    }
 );
     
 
@@ -371,10 +376,6 @@ sub check_fastq_integritude {
             }
             unless($forward_read_name eq $reverse_read_name){
                 $self->error_message("Forward and Reverse read names do not match.");
-                die $self->error_message;
-            }
-            unless($forward_read_length == $reverse_read_length){
-                $self->error_message("Forward and Reverse read lengths are not identical, this could indicate truncation.");
                 die $self->error_message;
             }
         } else {
