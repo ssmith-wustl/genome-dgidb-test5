@@ -10,9 +10,8 @@ use File::Compare 'compare';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
-unless (`uname -a` =~ /x86_64/){
-#    die 'Must run on a 64 bit machine';
-}
+my $machine_hardware = `uname -m`;
+like($machine_hardware, qr/x86_64/, 'on 64 bit machine') or die;
 
 use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap') or die;
 
@@ -43,10 +42,11 @@ my $assembler_params = $build->processing_profile->assembler_params;
 # w/ cpus
 $build->processing_profile->assembler_params('-cpus 4');
 my $lsf_params = $assemble->bsub_rusage;
-is($lsf_params, "-n 4 -R 'select[type==LINUX64 && span[hosts=1] && mem>10000] rusage[mem=10000]' -M 10000000", 'lsf params w/ 4 cpus'); 
+is($lsf_params, "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params w/ 4 cpus'); 
 $build->processing_profile->assembler_params($assembler_params);
 $lsf_params = $assemble->bsub_rusage;
-is($lsf_params, "-R 'select[type==LINUX64 && span[hosts=1] && mem>10000] rusage[mem=10000]' -M 10000000", 'lsf params w/o cpus'); 
+diag $lsf_params;
+is($lsf_params, "-R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params w/o cpus'); 
 
 # execute
 ok( $assemble->execute, "Executed soap assemble");

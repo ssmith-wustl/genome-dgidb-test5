@@ -157,8 +157,7 @@ sub combine_headers {
         output_file => $combined_headers_path,
     );
     unless ($perl_rv) {
-        $self->error_message("Failed to cat " . join(" ", @combined_header_files) . " > $combined_headers_path.");
-        die $self->error_message;
+        die $self->error_message("Failed to cat " . join(" ", @combined_header_files) . " > $combined_headers_path.");
     }
 
     return $combined_headers_path;
@@ -172,6 +171,7 @@ sub fix_headers {
     my $sam_file = "$base_file.sam";
     my $tmp_sam_file = "$base_file.sam.tmp";
     my $sorted_bam = "$base_file.bam";
+    my $name_sorted_bam = "$base_file.name_sorted.bam";
     my $unsorted_bam = "$base_file.unsorted.bam";
     my $missing_headers_bam = "$base_file\_missing_headers.bam";
 
@@ -183,8 +183,7 @@ sub fix_headers {
     # convert bam to sam
     my $bam_to_sam = Genome::Model::Tools::Sam::BamToSam->create(bam_file => $bam_file, sam_file => $tmp_sam_file);
     unless($bam_to_sam->execute()) {
-        $self->error_message("Failed to convert BAM to SAM ($bam_file).");
-        die $self->error_message;
+        die $self->error_message("Failed to convert BAM to SAM ($bam_file).");
     }
     $self->error_message("Failed to remove old BAM file ($bam_file).") unless(unlink($bam_file));
 
@@ -197,15 +196,13 @@ sub fix_headers {
         skip_if_output_is_present => 0,
     );
     unless ($strip_headers) {
-        $self->error_message("Failed to strip off headers from SAM file ($tmp_sam_file)");
-        die $self->error_message;
+        die $self->error_message("Failed to strip off headers from SAM file ($tmp_sam_file)");
     }
 
     # inject new headers
     my $inject_headers = Genome::Utility::FileSystem->cat(input_files => [$headers_file, $tmp_sam_file], output_file => $sam_file);
     unless($inject_headers) {
-        $self->error_message("Failed to inject headers into SAM file ($tmp_sam_file)");
-        die $self->error_message;
+        die $self->error_message("Failed to inject headers into SAM file ($tmp_sam_file)");
     }
     $self->error_message("Failed to remove old SAM file ($tmp_sam_file).") unless(unlink($tmp_sam_file));
 
@@ -217,8 +214,7 @@ sub fix_headers {
         output_files => [$unsorted_bam],
     );
     unless($sam_to_bam) {
-        $self->error_message("Failed to convert file to BAM, ($sam_file -> $unsorted_bam)");
-        die $self->error_message;
+        die $self->error_message("Failed to convert file to BAM, ($sam_file -> $unsorted_bam)");
     }
     $self->error_message("Failed to remove SAM file ($sam_file).") unless(unlink($sam_file));
 
@@ -226,19 +222,17 @@ sub fix_headers {
     my $original_bam_content_md5 = `samtools view $missing_headers_bam | md5sum`;
     my $fixed_bam_content_md5 = `samtools view $unsorted_bam | md5sum`;
     unless($original_bam_content_md5 eq $fixed_bam_content_md5) {
-        $self->error_message("$unsorted_bam reads appear to differ from $missing_headers_bam");
-        die $self->error_message;
+        die $self->error_message("$unsorted_bam reads appear to differ from $missing_headers_bam");
     }
 
     # sort bam
-    my $bam_sort = Genome::Model::Tools::Sam::SortBam->create(file_name => $unsorted_bam, output_file => $sorted_bam);
-    unless($bam_sort->execute()) {
-        $self->error_message("Failed to sort BAM ($unsorted_bam -> $sorted_bam).");
-        die $self->error_message;
+    my $bam_pos_sort = Genome::Model::Tools::Sam::SortBam->create(file_name => $unsorted_bam, output_file => $sorted_bam);
+    unless($bam_pos_sort->execute()) {
+        die $self->error_message("Failed to position sort BAM ($unsorted_bam -> $sorted_bam).");
     }
 
     # cleanup unused files
-    $self->error_message("Failed to cleanup unused files ($missing_headers_bam, $unsorted_bam).") unless(unlink([$missing_headers_bam, $unsorted_bam]));
+    $self->error_message("Failed to cleanup unused files ($missing_headers_bam, $unsorted_bam).") unless(unlink($missing_headers_bam, $unsorted_bam));
 
     return 1;
 }

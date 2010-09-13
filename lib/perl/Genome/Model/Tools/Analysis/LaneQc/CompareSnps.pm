@@ -25,7 +25,8 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
-		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 0, is_input => 1 },
+		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
+		bam_file	=> { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1, is_input => 1 },		
 		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
 		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [4]", is_optional => 1, is_input => 1},
 		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [8]", is_optional => 1, is_input => 1},
@@ -43,8 +44,8 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-This command searches for Illumina/Solexa data using the database
-EXAMPLE:	gt analysis lane-qc compare-snps --genotype-file affy.genotypes --variant-file lane1.var
+This command compares SAMtools variant calls to array genotypes
+EXAMPLE:	gmt analysis lane-qc compare-snps --genotype-file affy.genotypes --variant-file lane1.var
 EOS
 }
 
@@ -66,7 +67,36 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $sample_name = $self->variant_file;
 	my $genotype_file = $self->genotype_file;
-	my $variant_file = $self->variant_file;
+
+	my $variant_file = "";
+	
+	if($self->bam_file)
+	{
+		my $bam_file = $self->bam_file;
+		
+		## If BAM provided, call the variants ##
+		    my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
+		    unless($tfh) {
+		        $self->error_message("Unable to create temporary file $!");
+		        die;
+			}
+
+		## Build consensus ##
+		print "Building pileup to $temp_path\n";		
+		my $cmd = "samtools pileup -cf /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa $bam_file >$temp_path";
+		system($cmd);
+		
+		$variant_file = $temp_path;
+	}
+	elsif($self->variant_file)
+	{
+		$variant_file = $self->variant_file;
+	}
+	else
+	{
+		die "Please provide a variant file or a BAM file\n";
+	}
+
 	$sample_name = $self->sample_name if($self->sample_name);
 	my $min_depth_hom = 4;
 	my $min_depth_het = 8;
@@ -76,7 +106,6 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_file)
 	{
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";
-		print OUTFILE 
 #		print OUTFILE "file\tnum_snps\tnum_with_genotype\tnum_min_depth\tnum_variant\tvariant_match\thom_was_het\thet_was_hom\thet_was_diff\tconc_variant\tconc_rare_hom\n";
 		#num_ref\tref_was_ref\tref_was_het\tref_was_hom\tconc_overall
 	}
@@ -123,46 +152,48 @@ sub execute {                               # replace with real execution logic.
 				$file_type = "varscan";
 			}
 
-			## Get depth and consensus genotype ##
-
-			my $cons_gt = "";			
-
-			if($file_type eq "varscan" && $cns_call ne "A" && $cns_call ne "C" && $cns_call ne "G" && $cns_call ne "T")
-			{
-				## VarScan CNS format ##
-				$depth = $lineContents[4] + $lineContents[5];
-				$cons_gt = code_to_genotype($cns_call);			
-			}
-			elsif($file_type eq "varscan")
-			{
-				## VarScan SNP format ##
-				$depth = $lineContents[4] + $lineContents[5];
-				my $var_freq = $lineContents[6];
-				my $allele1 = $lineContents[2];
-				my $allele2 = $lineContents[3];
-				$var_freq =~ s/\%//;
-				if($var_freq >= 80)
-				{
-					$cons_gt = $allele2 . $allele2;
-				}
-				else
-				{
-					$cons_gt = $allele1 . $allele2;
-					$cons_gt = sort_genotype($cons_gt);
-				}					
-			}
-			
-			else
-			{
-				$depth = $lineContents[7];
-				$cons_gt = code_to_genotype($cns_call);
-			}
-	
 			## Only check SNP calls ##
 	
 			if($ref_base ne "*" && length($ref_base) == 1 && length($cns_call) == 1) #$ref_base ne $cns_call
 			{
+				## Get depth and consensus genotype ##
+	
+				my $cons_gt = "";			
+	
+				if($file_type eq "varscan" && $cns_call ne "A" && $cns_call ne "C" && $cns_call ne "G" && $cns_call ne "T")
+				{
+					## VarScan CNS format ##
+					$depth = $lineContents[4] + $lineContents[5];
+					$cons_gt = code_to_genotype($cns_call);			
+				}
+				elsif($file_type eq "varscan")
+				{
+					## VarScan SNP format ##
+					$depth = $lineContents[4] + $lineContents[5];
+					my $var_freq = $lineContents[6];
+					my $allele1 = $lineContents[2];
+					my $allele2 = $lineContents[3];
+					$var_freq =~ s/\%//;
+					if($var_freq >= 80)
+					{
+						$cons_gt = $allele2 . $allele2;
+					}
+					else
+					{
+						$cons_gt = $allele1 . $allele2;
+						$cons_gt = sort_genotype($cons_gt);
+					}					
+				}
+				
+				else
+				{
+					$depth = $lineContents[7];
+					$cons_gt = code_to_genotype($cns_call);
+				}
+	
 				$stats{'num_snps'}++;
+				
+#				warn "$stats{'num_snps'} lines parsed...\n" if(!($stats{'num_snps'} % 10000));
 	
 				my $key = "$chrom\t$position";
 					
@@ -277,7 +308,7 @@ sub execute {                               # replace with real execution logic.
 	$stats{'pct_overall_match'} = "0.00";
 	if($stats{'num_with_variant'} || $stats{'num_chip_was_reference'})
 	{
-		$stats{'pct_overall_match'} = ($stats{'num_variant_match'}) / ($stats{'num_chip_was_reference'} + $stats{'num_with_variant'}) * 100;
+		$stats{'pct_overall_match'} = ($stats{'num_variant_match'} + $stats{'num_ref_was_ref'}) / ($stats{'num_chip_was_reference'} + $stats{'num_with_variant'}) * 100;
 		$stats{'pct_overall_match'} = sprintf("%.3f", $stats{'pct_overall_match'});
 	}
 
@@ -301,7 +332,7 @@ sub execute {                               # replace with real execution logic.
 		print $stats{'num_with_genotype'} . " had genotype calls from the SNP array\n";
 		print $stats{'num_min_depth'} . " met minimum depth of >= $min_depth_hom/$min_depth_het\n";
 		print $stats{'num_chip_was_reference'} . " were called Reference on chip\n";
-#		print $stats{'num_ref_was_ref'} . " reference were called reference\n";
+		print $stats{'num_ref_was_ref'} . " reference were called reference\n";
 		print $stats{'num_ref_was_het'} . " reference were called heterozygous\n";
 		print $stats{'num_ref_was_hom'} . " reference were called homozygous\n";
 		print $stats{'num_with_variant'} . " had informative genotype calls\n";
@@ -315,13 +346,13 @@ sub execute {                               # replace with real execution logic.
 	}
 	else
 	{
-		print "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
 		print "$sample_name\t";
 		print $stats{'num_snps'} . "\t";
 		print $stats{'num_with_genotype'} . "\t";
 		print $stats{'num_min_depth'} . "\t";
 		print $stats{'num_chip_was_reference'} . "\t";
-#		print $stats{'num_ref_was_ref'} . "\t";
+		print $stats{'num_ref_was_ref'} . "\t";
 		print $stats{'num_ref_was_het'} . "\t";
 		print $stats{'num_ref_was_hom'} . "\t";
 		print $stats{'num_with_variant'} . "\t";
@@ -336,13 +367,13 @@ sub execute {                               # replace with real execution logic.
 
 	if($self->output_file)
 	{
-		print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
 		print OUTFILE "$sample_name\t";
 		print OUTFILE $stats{'num_snps'} . "\t";
 		print OUTFILE $stats{'num_with_genotype'} . "\t";
 		print OUTFILE $stats{'num_min_depth'} . "\t";
 		print OUTFILE $stats{'num_chip_was_reference'} . "\t";
-#		print OUTFILE $stats{'num_ref_was_ref'} . "\t";
+		print OUTFILE $stats{'num_ref_was_ref'} . "\t";
 		print OUTFILE $stats{'num_ref_was_het'} . "\t";
 		print OUTFILE $stats{'num_ref_was_hom'} . "\t";
 		print OUTFILE $stats{'num_with_variant'} . "\t";
@@ -512,7 +543,7 @@ sub code_to_genotype
 	return("CT") if($code eq "Y");
 	return("GT") if($code eq "K");
 
-	warn "Unrecognized ambiguity code $code!\n";
+#	warn "Unrecognized ambiguity code $code!\n";
 
 	return("NN");	
 }

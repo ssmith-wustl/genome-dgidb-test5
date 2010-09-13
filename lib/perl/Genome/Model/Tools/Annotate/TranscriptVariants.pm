@@ -340,6 +340,10 @@ sub execute {
 
     while ( my $variant = $variant_svr->next ) {
         $variant->{type} = $self->infer_variant_type($variant);
+        #make sure both the reference and the variant are in upper case
+        $variant->{reference} = uc $variant->{reference};
+        $variant->{variant} = uc $variant->{variant};
+
         # make a new annotator when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
             if ($annotation_start) {
@@ -352,11 +356,6 @@ sub execute {
             Genome::Transcript->get(data_directory => $self->data_directory, chrom_name => $variant->{'chromosome_name'});
 
             $chromosome_name = $variant->{chromosome_name};
-
-            my $iter_start = Benchmark->new;
-
-            my $iter_stop = Benchmark->new;
-            my $iter_time = timediff($iter_stop, $iter_start);
 
             $annotation_start = Benchmark->new;
             if ($self->benchmark) {

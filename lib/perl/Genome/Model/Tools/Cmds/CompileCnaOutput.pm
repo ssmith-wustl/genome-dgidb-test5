@@ -23,7 +23,8 @@ class Genome::Model::Tools::Cmds::CompileCnaOutput {
     window_size=> {
         type => 'String',
         is_optional => 1,
-        doc => "The window size is how far away one sample position is picked, default is 10K",
+        doc => "The window size is how far away one sample position is picked",
+        default_value => 10000,
     },
     output_dir=> {
         type => 'String',
@@ -38,7 +39,14 @@ class Genome::Model::Tools::Cmds::CompileCnaOutput {
         is_optional => 1,
         default => 0,
         doc => "If set to true, any missing copy number output files will be regenerated.",
-    }
+    },
+    force => {
+        type => 'Boolean',
+        is_optional => 1,
+        is_input => 1,
+        default => 0,
+        doc => "If --force is set, continue despite missing somatic models or builds",
+    },
     ]
 };
 
@@ -55,10 +63,7 @@ sub execute {
     my $self = shift;
     my @somatic_models;
 
-    my $window_size = 10000;
-    if ($self->window_size){
-        $window_size = $self->window_size;
-    }
+    my $window_size = $self->window_size;
     my $output_dir = $self->output_dir;
 
     if($self->model_ids) {
@@ -66,8 +71,13 @@ sub execute {
         for my $model_id (@model_ids) {
             my $model = Genome::Model->get($model_id);
             unless(defined($model)) {
-                $self->error_message("Unable to find somatic model $model_id. Please check that this model_id is correct. Continuing...\n");
-                return;
+                $self->error_message("Unable to find somatic model $model_id. Please check that this model_id is correct.");
+                if ($self->force) {
+                    $self->status_message("Continuing despite the error above, skipping this model");
+                    next;
+                } else {
+                    die;
+                }
             }
             push @somatic_models, $model;
         }
@@ -78,21 +88,29 @@ sub execute {
         unless ($group) {
             $group = Genome::ModelGroup->get($self->model_group);
         }
-
         unless($group) {
             $self->error_message("Unable to find a model group with name or id: " . $self->model_group);
-            return;
+            die;
         }
         push @somatic_models, $group->models;
     }
     else {
         $self->error_message("You must provide either model id(s) or a model group name to run this script");
-        return;
+        die;
     }
 
     for my $somatic_model (@somatic_models) {
         my $somatic_model_id = $somatic_model->id;
-        my $somatic_build = $somatic_model->last_succeeded_build or die "No succeeded build found for somatic model id $somatic_model_id.\n";
+        my $somatic_build = $somatic_model->last_succeeded_build;
+        unless ($somatic_build) {
+            $self->error_message("No succeeded build found for somatic model id $somatic_model_id.");
+            if ($self->force) {
+                $self->status_message("Continuing despite the error above, skipping this model");
+                next;
+            } else {
+                die;
+            }
+        }
         my $somatic_build_id = $somatic_build->id or die "No build id found in somatic build object for somatic model id $somatic_model_id.\n";
         $self->status_message("Last succeeded build for somatic model $somatic_model_id is build $somatic_build_id. ");
 
@@ -128,6 +146,7 @@ sub execute {
     return 1;
 }
 
+# Generates the copy number output for a set of bams in the output dir (instead of symlinking existing output)
 sub regenerate_cnv_output {
     my $self = shift;
     my $somatic_build_object = shift;

@@ -103,14 +103,45 @@ class Genome::TranscriptStructure {
             doc => 'Any bases that the phase of the NEXT exon indicates are needed to complete a codon',
         },
 
-        ## duplicated data from the transcript class
-        #strand => { },
-        #transcript_name => { },
-        #transcript_error => { },
-        #transcript_status => { },
-        #gene_name => { },  # substruct->transcript->gene->name
-        #transcript_amino_acid_length => { }
+        # Info duplicated from the transcript data
+        transcript_transcript_id => { is => 'Text', },
+        transcript_gene_id       => { is => 'Text', is_optional => 1, },
+        transcript_transcript_start => { is => 'NUMBER', is_optional => 1 },
+        transcript_transcript_stop  => { is => 'NUMBER', is_optional => 1 },
+        transcript_transcript_name  => { is => 'VARCHAR', is_optional => 1 },
+        transcript_transcript_status => { is => 'VARCHAR', is_optional => 1,
+            valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel'],
+        },
+        transcript_strand            => { is => 'VARCHAR', is_optional => 1, valid_values => ['+1', '-1', 'UNDEF'], },
+        transcript_chrom_name        => { is => 'Text' },
+        transcript_species           => { is => 'Text', is_optional => 1 },
+        transcript_source            => { is => 'VARCHAR', is_optional => 1, },
+        transcript_version           => { is => 'VARCHAR', is_optional => 1, },
+        transcript_gene_name         => { is => 'Text', is_optional => 1, },
+        transcript_transcript_error  => { is => 'Text', is_optional => 1,
+            doc => 'Describes any error with the transcript, which affects its priority when compared with other transcripts',
+        },
+        transcript_coding_region_start => { is => 'Number', is_optional => 1,
+            doc => 'The first nucleotide of the transcript\'s coding region, always less than stop (in other words, ignores strand)',
+        },
+        transcript_coding_region_stop => { is => 'Number', is_optional => 1,
+            doc => 'The last nucleotide of the transcript\'s coding region, always greater than stop (ignores strand)',
+        },
+        transcript_amino_acid_length  => { is => 'Number', is_optional => 1,
+            doc => 'The length of the amino acid to which the coding region of the transcript translates',
+        },
 
+        gene => { calculate_from => [qw/transcript_gene_id data_directory/],
+            calculate => q|
+            Genome::Gene->get(id => $transcript_gene_id, data_directory => $data_directory);
+            |,
+        },
+        protein => {
+            calculate_from => [qw/ transcript_transcript_id data_directory/],
+            calculate => q|
+            Genome::Protein->get(transcript_id => $transcript_transcript_id, data_directory => $data_directory);
+            |,
+        },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::TranscriptStructures',
@@ -429,6 +460,176 @@ sub gff3_string {
 sub gtf_string {
     return undef;
 }
+
+
+# Methods copied over from Genome::Transcript to work with the duplicated transcript data
+
+sub transcript_has_coding_region {
+    my $self = shift;
+
+    return 0 if $self->transcript_coding_region_start eq 'NULL' or $self->transcript_coding_region_stop eq 'NULL';
+    return 1;
+}
+
+sub transcript_distance_to_coding_region {
+    my ($self, $position) = @_;
+
+    return 0 if (! $self->transcript_has_coding_region or (index($self->transcript_transcript_error,'rna_with_coding_region') >= 0));
+    my $coding_start = $self->transcript_coding_region_start;
+    my $coding_stop = $self->transcript_coding_region_stop;
+
+    return 0 if $coding_start eq 'NULL' or $coding_stop eq 'NULL';
+    return 0 if $position >= $coding_start and $position <= $coding_stop;
+
+    my $distance;
+    if ($self->transcript_before_coding_region($position)) {
+        $distance = abs($coding_start - $position) if $self->transcript_strand eq '+1';
+        $distance = abs($coding_stop - $position) if $self->transcript_strand eq '-1';
+    }
+    else {
+        $distance = abs($coding_stop - $position) if $self->transcript_strand eq '+1';
+        $distance = abs($coding_start - $position) if $self->transcript_strand eq '-1';
+    }
+
+    return $distance;
+}
+
+
+sub transcript_before_coding_region {
+    my ($self, $position) = @_;
+
+    my $start = $self->transcript_coding_region_start;
+    my $stop = $self->transcript_coding_region_stop;
+
+    return 0 if $start eq 'NULL' or $stop eq 'NULL';
+
+    my $strand = $self->transcript_strand;
+    if ($strand eq '+1') {
+        return 1 if $position < $self->transcript_coding_region_start;
+        return 0;
+    }
+    elsif ($strand eq '-1') {
+        return 1 if $position > $self->transcript_coding_region_stop;
+        return 0;
+    }
+    else {
+        $self->error_message("Transcript " . $self->transcript_transcript_name . " has an invalid strand: " . $self->transcript_strand);
+        confess "Invalid strand on transcript " . $self->transcript_transcript_name;
+    }
+}
+
+sub transcript_after_coding_region {
+    my ($self, $position) = @_;
+
+    my $start = $self->transcript_coding_region_start;
+    my $stop = $self->transcript_coding_region_stop;
+
+    return 0 if $start eq 'NULL' or $stop eq 'NULL';
+
+    my $strand = $self->transcript_strand;
+    if ($strand eq '+1') {
+        return 1 if $position > $self->transcript_coding_region_stop;
+        return 0;
+    }
+    elsif ($strand eq '-1') {
+        return 1 if $position < $self->transcript_coding_region_start;
+        return 0;
+    }
+    else {
+        $self->error_message("Transcript " . $self->transcript_transcript_name . " has an invalid strand: " . $self->transcript_strand);
+        confess "Invalid strand on transcript " . $self->transcript_transcript_name;
+    }
+}
+
+
+sub transcript_distance_to_transcript {
+    my ($self, $position) = @_;
+
+    my $start = $self->transcript_transcript_start;
+    my $stop = $self->transcript_transcript_stop;
+    if ($position < $start) {
+        return $start - $position;
+    }
+    elsif ($position > $stop) {
+        return $position - $stop;
+    }
+    else {
+        return 0;
+    }
+}
+
+
+# Returns 1 if first position is 5' of the second position
+sub transcript_is_before {
+    my ($self, $p1, $p2) = @_;
+    return 0 unless $self->transcript_within_transcript_with_flanks($p1) and $self->transcript_within_transcript_with_flanks($p2);
+
+    my $strand = $self->transcript_strand;
+    if ($strand eq '+1') {
+        return 1 if $p1 < $p2;
+        return 0;
+    }
+    elsif ($strand eq '-1') {
+        return 1 if $p1 > $p2;
+        return 0;
+    }
+    else {
+        confess "Invalid strand " . $strand . " on transcript " . $self->transcript_transcript_name;
+    }
+}
+
+# Returns 1 if the first position is 3' of the second position
+sub transcript_is_after {
+    my ($self, $p1, $p2) = @_;
+    return 0 unless $self->transcript_within_transcript_with_flanks($p1) and $self->transcript_within_transcript_with_flanks($p2);
+
+    my $strand = $self->transcript_strand;
+    if ($strand eq '+1') {
+        return 1 if $p1 > $p2;
+        return 0;
+    }
+    elsif ($strand eq '-1') {
+        return 1 if $p1 < $p2;
+        return 0;
+    }
+    else {
+        confess "Invalid strand " . $strand . " on transcript " . $self->transcript_transcript_name;
+    }
+}
+
+
+# Returns 1 if the provided position is within the transcript with flanking structures included
+sub transcript_within_transcript_with_flanks {
+    my ($self, $position) = @_;
+    if ($position >= ($self->transcript_transcript_start - 50000) and $position <= ($self->transcript_transcript_stop + 50000)) {
+        return 1;
+    }
+    return 0;
+}
+
+# Returns 1 if the position lies within the coding region of the transcript
+sub transcript_within_coding_region {
+    my ($self, $position) = @_;
+    my $start = $self->transcript_coding_region_start;
+    my $stop = $self->transcript_coding_region_stop;
+
+    return 0 if $start eq 'NULL' or $stop eq 'NULL';
+    return 1 if $position >= $start and $position <= $stop;
+    return 0;
+}
+
+# Returns 1 if the provided position is within the start/stop range of the transcript, EXCLUDES flanking regions
+sub within_transcript {
+    my ($self, $position) = @_;
+    if ($position >= $self->transcript_transcript_start and $position <= $self->transcript_transcript_stop) {
+        return 1;
+    }
+    return 0;
+}
+
+
+
+
 
 1;
 

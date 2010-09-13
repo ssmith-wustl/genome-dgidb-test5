@@ -4,6 +4,8 @@
 
   <!-- full page display for a instrumentdata flowcell -->
   <xsl:template name="genome_instrumentdata_flowcell" match="//flow-cell">
+    <xsl:comment>template: /html/status/genome_instrumentdata_flowcell.xsl match="//flow-cell"</xsl:comment>
+
     <!-- currently uses some old styles, include legacy css -->
     <link rel="stylesheet" href="/res/css/legacy.css" type="text/css" media="screen, projection"/>
 
@@ -103,6 +105,7 @@ window.chartMin = 0;
 
     </style>
 
+    <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Flow Cell'" />

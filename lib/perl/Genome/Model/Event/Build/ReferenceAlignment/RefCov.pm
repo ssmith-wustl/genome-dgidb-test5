@@ -31,7 +31,7 @@ sub sorted_instrument_data_assignments {
 
 sub sorted_instrument_data_ids {
     my $self = shift;
-    my @seq_ids;
+    my @ids;
     my @sorted_idas = $self->sorted_instrument_data_assignments;
     
     my $build = $self->build;
@@ -46,13 +46,13 @@ sub sorted_instrument_data_ids {
             my @bam_files = $alignment->alignment_bam_file_paths;
             unless (@bam_files) { next; }
             if ($alignment->force_fragment) {
-                push @seq_ids, $alignment->_fragment_seq_id;
+                push @ids, $alignment->instrument_data_id;
             } else {
-                push @seq_ids, $alignment->instrument_data_id;
+                push @ids, $alignment->instrument_data_id;
             }
         }
     }
-    return @seq_ids;
+    return @ids;
 }
 
 sub sorted_bam_files {

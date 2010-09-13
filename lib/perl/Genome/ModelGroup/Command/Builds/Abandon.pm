@@ -21,8 +21,7 @@ EOS
 }
 
 sub help_brief {
-    my $self = shift;
-    return $self->doc;
+    "abandon latest build for each member if it is failed"
 }
 
 sub help_detail {                           
@@ -50,6 +49,7 @@ sub execute {
             unless($abandon_build->execute()) {
                 $self->error_message("Failed to abandon build $build_id for model " . $model->name);
             }
+            UR::Context->commit;
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");

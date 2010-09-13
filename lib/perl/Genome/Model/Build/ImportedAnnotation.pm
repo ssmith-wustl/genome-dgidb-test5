@@ -2,6 +2,7 @@ package Genome::Model::Build::ImportedAnnotation;
 
 use strict;
 use warnings;
+use Carp;
 
 use Genome;
 
@@ -204,6 +205,7 @@ sub _update_cache {
         for (@composite_builds) { $_->_update_cache }
     }
     else {
+        confess "The annotation_data_directory could not be found for caching, exiting: $!" unless -d $self->_annotation_data_directory; #Yes, there's a time of check/time of use issue here 
         my $cp_rv = Genome::Utility::FileSystem->shellcmd(cmd => "cp -Lru " . $self->_annotation_data_directory . "/* " . $self->_cache_directory);
         unless ($cp_rv) {
             $self->error_message("Error encountered while updating cache");

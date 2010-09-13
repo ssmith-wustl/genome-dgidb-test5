@@ -41,7 +41,7 @@ sub execute {
     my $test_bit = 0b1101; # if all tests pass result will be 1, if any fail it will be greater than 1
 
     # Validate BAM Headers
-    #$test_bit = $test_bit ^ $self->header_check();
+    $test_bit = $test_bit ^ $self->header_check();
 
     # Validate QC Report
     my @qc_files = ('post_trim_stats_report.tsv', 'other_stats_report.txt');
@@ -86,7 +86,7 @@ sub bit_to_tests {
     my $pass = "PASSED:";
     my $fail = "FAILED:";
 
-    #($bit & 0b0010) ? ($fail .= ' Header')             : ($pass .= ' Header'); 
+    ($bit & 0b0010) ? ($fail .= ' Header')             : ($pass .= ' Header'); 
     ($bit & 0b0100) ? ($fail .= ' QC_Report')          : ($pass .= ' QC_Report'); 
     ($bit & 0b1000) ? ($fail .= ' Metagenomic_Report') : ($pass .= ' Metagenomic_Report'); 
 
@@ -103,19 +103,19 @@ sub header_check {
     my $meta_build = Genome::Model::Build->get($self->build_id);
     my $combined_bam = $meta_build->data_directory . "/reports/metagenomic_alignment.combined.bam";
     # TODO: enable once all whole_rmdup_bams are fixed.
-    #my $msg = "Checking $combined_bam... ";
-    #my $cmd = "samtools view -H $combined_bam | tail | grep \@RG | wc -l";
-    #my $rg_count = `$cmd`;
-    #if ($rg_count > 1) {
-    #    $msg .= "PASS (found $rg_count read groups)";
-    #    $flag = $self->test_to_bit('Header');
-    #    $self->status_message($msg) if ($self->verbose);
-    #}
-    #else {
-    #    $msg .= "FAIL (only found $rg_count read group)";
-    #    $self->status_message($msg);
-    #    return $flag;
-    #}
+    my $msg = "Checking $combined_bam... ";
+    my $cmd = "samtools view -H $combined_bam | tail | grep \@RG | wc -l";
+    my $rg_count = `$cmd`;
+    if ($rg_count > 1) {
+        $msg .= "PASS (found $rg_count read groups)";
+        $flag = $self->test_to_bit('Header');
+        $self->status_message($msg) if ($self->verbose);
+    }
+    else {
+        $msg .= "FAIL (only found $rg_count read group)";
+        $self->status_message($msg);
+        return $flag;
+    }
 
     my @mga_models = $meta_build->model->_metagenomic_alignment_models;
     for my $model (@mga_models) {

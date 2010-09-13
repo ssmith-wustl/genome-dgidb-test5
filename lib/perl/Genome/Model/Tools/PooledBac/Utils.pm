@@ -3,6 +3,7 @@ package Genome::Model::Tools::PooledBac::Utils;
 use strict;
 use warnings;
 use Genome;
+use Data::Dumper;
 use Genome::Utility::FileSystem;
 use List::Util qw(max min);
 
@@ -142,9 +143,13 @@ sub get_matching_contigs_list
     #QUERY_NAME, HIT_NAME, HSP_LENGTH, IDENTICAL
     my %match_contigs_list;
     #group by contig name
+    my @keys =  (qw/ 
+        QUERY_NAME QUERY_LENGTH QUERY_START QUERY_END
+        HIT_NAME HIT_START HIT_END 
+        HSP_LENGTH IDENTICAL 
+        /);
     foreach my $result (@{$out})
     {
-        my @keys =  ('QUERY_NAME','HIT_NAME','HSP_LENGTH','IDENTICAL','QUERY_LENGTH');
         my %hash;
         %hash = map { $_ => $result->{$_} } @keys; 
         push @{$match_contigs_list{$result->{QUERY_NAME}}}, \%hash;    
@@ -183,7 +188,7 @@ sub write_contig_map
     unlink $file_name if -e $file_name;
     my $fh = Genome::Utility::FileSystem->open_file_for_writing($file_name);
     $self->error_message("Could not open contig map $file_name for writing.\n") and die unless defined $fh;
-    foreach my $contig_name (keys %{$contig_map})
+    foreach my $contig_name (sort keys %{$contig_map})
     {
         my $hash_ref = $contig_map->{$contig_name};
         print $fh "$contig_name $hash_ref->{maps_to} $hash_ref->{module}\n";

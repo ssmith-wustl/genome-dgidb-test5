@@ -16,7 +16,7 @@ class Genome::Model::Event::Build::DeNovoAssembly {
 };
 
 sub bsub_rusage {
-    return "-R 'span[hosts=1] select[type=LINUX64]'";
+    return "-R 'span[hosts=1] select[type==LINUX64]'";
 }
 
 1;

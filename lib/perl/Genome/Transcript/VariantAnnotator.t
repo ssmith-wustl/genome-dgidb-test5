@@ -92,6 +92,7 @@ sub create_annotator {
     my $annotator = Genome::Transcript::VariantAnnotator->create(
         data_directory => $data_directory,
         ucsc_conservation_directory => $ucsc_conservation_directory, 
+        annotation_build_version => $annotation_build->version,
     );
     return $annotator;
 }

@@ -20,16 +20,18 @@ use FileHandle;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-my $max_proximity = 10;
+my %stats = ();
+my $max_proximity = 0;
 
 class Genome::Model::Tools::Analysis::Maf::Proximity {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		maf_file	=> { is => 'Text', doc => "Original MAF file" },
-		output_file	=> { is => 'Text', doc => "Output file for proximity report", is_optional => 1 },
-		output_maf	=> { is => 'Text', doc => "MAF file with appended item", is_optional => 1 },		
-		max_proximity	=> { is => 'Text', doc => "Maximum aa distance between mutations [10]", is_optional => 1 },
+		annotation_file	=> { is => 'Text', doc => "Full annotation for variants in MAF file" },
+		output_file	=> { is => 'Text', doc => "Output file for recurrence report", is_optional => 1 },
+		output_maf	=> { is => 'Text', doc => "Output file of complete MAF with recurrent sites only", is_optional => 1 },		
+		max_proximity	=> { is => 'Text', doc => "Maximum aa distance between mutations [10]", is_optional => 1, default => 10 },
 		verbose		=> { is => 'Text', doc => "Print verbose output", is_optional => 1 },
 	],
 };
@@ -64,31 +66,219 @@ sub execute {                               # replace with real execution logic.
 
 	## Get required parameters ##
 	my $maf_file = $self->maf_file;
-	$max_proximity = $self->max_proximity if(defined($self->max_proximity));
+	$max_proximity = $self->max_proximity;# if(defined($self->max_proximity));
 
 	if(!(-e $maf_file))
 	{
-		die "Error: MAF file 1 not found!\n";
+		die "Error: MAF file not found!\n";
 	}
 
 	if($self->output_file)
 	{
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";
 	}
+
+	if($self->output_maf)
+	{
+		open(OUTMAF, ">" . $self->output_maf) or die "Can't open outfile: $!\n";
+	}
+
+	
+	my %mutated_aa_positions = load_aa_changes($maf_file, $self->annotation_file);
+
+	$stats{'num_aa_positions'} = $stats{'num_recurrent_genes'} = $stats{'num_recurrent_positions'} = 0;
 	
 
-	my %stats = ();
+	## Declare hash to store min proximity for each mutation ##
+	
+	my %min_proximity_by_mutation = ();
+	my %min_proximity_aa_key = ();
 
+	foreach my $aa_key (sort byGeneTranscript keys %mutated_aa_positions)
+	{
+		$stats{'num_aa_positions'}++;
+
+		(my $gene, my $transcript_name, my $aa_position) = split(/\t/, $aa_key);
+		
+		## Set the default min proximity to the max proximity plus 1 ##
+		my $min_proximity = $max_proximity + 1;
+
+		## Get Sample(s) with mutations at this position ##
+
+		my $samples = getMutationSamples($mutated_aa_positions{$aa_key});
+		my @samples = split(/\n/, $samples);
+		my $num_samples = @samples;
+
+		my @test = split(/\n/, $mutated_aa_positions{$aa_key});
+		my $test_num = @test;
+
+		## First, check for distance of zero ##
+		
+		if($num_samples > 1)
+		{
+			$min_proximity = 0.00;	
+		}
+		else
+		{
+			my $sample_name = $samples;
+			## It's not recurrent at this particular residue, so look nearby for mutations not matching sample name##
+			
+			## Determine the minimum aa distance, from zero to maximum ##
+	
+			for(my $aa_distance = 1; $aa_distance <= $max_proximity; $aa_distance++)
+			{
+				## Check upstream ##
+				my $distance_key = join("\t", $gene, $transcript_name, ($aa_position - $aa_distance));
+				if($mutated_aa_positions{$distance_key})
+				{
+					my $nearby_samples = getMutationSamples($mutated_aa_positions{$distance_key});
+					## If nearby mutation is from a different sample (or multiple ones), save it 
+					if($nearby_samples ne $sample_name)
+					{
+						$min_proximity = $aa_distance;
+					}
+				}
+				else
+				{
+					## Check downstream ##
+					$distance_key = join("\t", $gene, $transcript_name, ($aa_position + $aa_distance));
+					if($mutated_aa_positions{$distance_key})
+					{
+						my $nearby_samples = getMutationSamples($mutated_aa_positions{$distance_key});
+						## If nearby mutation is from a different sample (or multiple ones), save it 
+						if($nearby_samples ne $sample_name)
+						{
+							$min_proximity = $aa_distance;
+						}
+					}					
+				}
+			}
+		}
+		
+		## Get each mutation line for this aa position ##
+		
+		my @aa_lines = split(/\n/, $mutated_aa_positions{$aa_key});
+		my $num_lines = @aa_lines;
+
+		## Save this proximity for each mutation ##
+		
+		foreach my $maf_line (@aa_lines)
+		{
+			if(!defined($min_proximity_by_mutation{$maf_line}) || $min_proximity < $min_proximity_by_mutation{$maf_line})
+			{
+				$min_proximity_by_mutation{$maf_line} = $min_proximity;
+				$min_proximity_aa_key{$maf_line} = $aa_key;
+			}
+		}
+
+	}
+
+	## Go through each mutation in MAF to determine its distance ##
+	my %proximity_counts = ();
+	
+	foreach my $maf_line (keys %min_proximity_by_mutation)
+	{
+		$stats{'num_mutations_examined'}++;
+		my $proximity = $min_proximity_by_mutation{$maf_line};
+		my $aa_key = $min_proximity_aa_key{$maf_line};
+		if($proximity <= $max_proximity)
+		{
+			my @lineContents = split(/\t/, $maf_line);
+			my $ref = $lineContents[10];
+			my $var = $lineContents[11];
+			$var = $lineContents[12] if($var eq $ref);
+			
+			
+			print OUTFILE join("\t", $proximity, $aa_key, $lineContents[2], $lineContents[4], $lineContents[5], $lineContents[6], $ref, $var, $lineContents[15]) . "\n" if($self->output_file);
+			print OUTMAF "$proximity\t$aa_key\t$maf_line\n" if($self->output_maf);
+		}
+		$proximity_counts{$proximity}++;
+	}
+	
+	
+	print $stats{'num_mutations_examined'} . " mutations evaluated\n";
+	
+	foreach my $proximity (sort keys %proximity_counts)
+	{
+		print $proximity_counts{$proximity} . " had a distance of $proximity\n";
+	}
+
+	close(OUTFILE) if($self->output_file);
+	close(OUTMAF) if($self->output_maf);
+
+
+}
+
+
+################################################################################################
+# byGeneTranscript - sort by gene name ASC, tx name DESC, aa_position ASC
+################################################################################################
+
+sub getMutationSamples
+{
+	my $maf_string = shift(@_);
+
+	my @maf_lines = split(/\n/, $maf_string);
+
+	my $samples = "";
+	my %included = ();
+
+	foreach my $maf_line (@maf_lines)
+	{
+		my @lineContents = split(/\t/, $maf_line);
+		my $tumor_sample = $lineContents[15];
+		if(!$included{$tumor_sample})
+		{
+			$samples .= "\n" if($samples);
+			$samples .= $tumor_sample;
+			$included{$tumor_sample} = 1;
+		}
+	}
+
+	return($samples);
+}
+
+
+################################################################################################
+# byGeneTranscript - sort by gene name ASC, tx name DESC, aa_position ASC
+################################################################################################
+
+sub byGeneTranscript
+{
+	my ($gene1, $tx1, $pos1) = split(/\t/, $a);
+	my ($gene2, $tx2, $pos2) = split(/\t/, $b);
+
+	$gene1 cmp $gene2
+	or
+	$tx2 cmp $tx1
+	or
+	$pos1 <=> $pos2;
+}
+
+
+################################################################################################
+# Execute - the main program logic
+#
+################################################################################################
+
+sub load_aa_changes
+{
+	my $maf_file = shift(@_);
+	my $annotation_file = shift(@_);
+	## Parse the MAF file ##
+
+	my %mutated_positions = ();
+	
 	## Column index for fields in MAF file ##
 	
 	my %column_index = ();
 	my @columns = ();
 
-	my %nonsilent_mutations = ();
-	my %mutated_aa_positions = ();
 
-	## Parse the MAF file ##
-	
+	warn "Loading variant annotations...\n";
+	my %annotation = load_annotation($annotation_file);
+
+
 	my $input = new FileHandle ($maf_file);
 	my $lineCounter = 0;
 	
@@ -130,6 +320,7 @@ sub execute {                               # replace with real execution logic.
 		}
 		elsif($lineCounter > 2 && @columns)
 		{
+			$stats{'mutations_in_file'}++;
 			## Build a record for this line, assigning all values to respective fields ##
 			
 			my %record = ();
@@ -146,22 +337,25 @@ sub execute {                               # replace with real execution logic.
 			my $hugo_name = $record{'Hugo_Symbol'};
 			my $tumor_sample = $record{'Tumor_Sample_Barcode'};
 
+			## Parse the gene name ##
+			my $chrom = $record{'Chromosome'};
+			my $chr_start = $record{'Start_position'};
+			my $chr_stop = $record{'End_position'};
+			my $ref_allele = $record{'Reference_Allele'};
+			my $var_allele = $record{'Tumor_Seq_Allele2'};
+			$var_allele = $record{'Tumor_Seq_Allele1'} if($var_allele eq $ref_allele);
+			my $var_type = $record{'Variant_Type'};
+			my $variant_key = join("\t", $chrom, $chr_start, $chr_stop, $ref_allele, $var_allele);
 
 			## Parse the gene name ##
-			my $chrom = $record{'chromosome_name'};
-			my $chr_start = $record{'start'};
-			my $chr_stop = $record{'stop'};
-			my $ref_allele = $record{'reference'};
-			my $var_allele = $record{'variant'};
 			
-			my $gene = $record{'gene_name'};
-			my $trv_type = $record{'trv_type'};
-			my $c_position = $record{'c_position'};
-			my $aa_change = $record{'amino_acid_change'};
-
-			$c_position =~ s/c\.// if($c_position);
-			$aa_change =~ s/p\.// if($aa_change);
-
+#			my $gene = $record{'gene_name'};
+#			my $trv_type = $record{'trv_type'};
+#			my $c_position = $record{'c_position'};
+#			my $aa_change = $record{'amino_acid_change'};
+#			$c_position =~ s/c\.// if($c_position);
+#			$aa_change =~ s/p\.// if($aa_change);
+			my $gene = my $transcript_name = my $trv_type = my $c_position = my $aa_change = "";
 			my $aa_position = 0;
 			my $tx_start = my $tx_stop = 0;
 			my $aa_position_start = my $aa_position_stop = 0;
@@ -169,628 +363,237 @@ sub execute {                               # replace with real execution logic.
 			my $aa_pos = my $inferred_aa_pos = 0;
 
 
-			## Proceed with non-silent mutations ##
+			## If we have no external annotation, but annotation within the maf, use it ##
 
-			if($trv_type ne "silent" && $trv_type ne "rna")
+			if(!$annotation{$variant_key} && $record{'gene_name'} && $record{'trv_type'} && $record{'c_position'})
 			{
-#				print "$gene\t$trv_type\t$c_position\t$aa_change\n";
-#				exit(0);
+				$stats{'num_annotation_in_maf'}++;
+				$gene = $record{'gene_name'};
+				$transcript_name = $record{'transcript_name'};
+				$trv_type = $record{'trv_type'};
+				$c_position = $record{'c_position'};
+				$aa_change = $record{'amino_acid_change'};			
 
-				## Parse out aa_change if applicable and not a splice site ##
-				if($aa_change && $aa_change ne "NULL" && substr($aa_change, 0, 1) ne "e")
-				{
-					$aa_pos = $aa_change;
-					$aa_pos =~ s/[^0-9]//g;
-				}
-				
-				## Parse out c_position if applicable ##
-				
-				if($c_position && $c_position ne "NULL")
-				{
-					## If multiple results, parse both ##
-					
-					if($c_position =~ '_')
-					{
-						($tx_start, $tx_stop) = split(/\_/, $c_position);
-						$tx_start =~ s/[^0-9]//g;
-						$tx_stop =~ s/[^0-9]//g;
-						
-						if($tx_stop < $tx_start)
-						{
-							$inferred_aa_start = $tx_stop / 3;
-							$inferred_aa_start = sprintf("%d", $inferred_aa_start) + 1 if($tx_stop % 3);
-							$inferred_aa_stop = $tx_start / 3;
-							$inferred_aa_stop = sprintf("%d", $inferred_aa_stop) + 1 if($tx_start % 3);							
-						}
-						else
-						{
-							$inferred_aa_start = $tx_start / 3;
-							$inferred_aa_start = sprintf("%d", $inferred_aa_start) + 1 if($tx_start % 3);
-							$inferred_aa_stop = $tx_stop / 3;							
-							$inferred_aa_stop = sprintf("%d", $inferred_aa_stop) + 1 if($tx_stop % 3);
-						}
-
-					}
-					else
-					{
-						(my $tx_pos) = split(/[\+\-\_]/, $c_position);
-						$tx_pos =~ s/[^0-9]//g;
-
-						$tx_start = $tx_stop = $tx_pos;
-
-						if($tx_pos)
-						{
-							$inferred_aa_pos = $tx_pos / 3;
-							$inferred_aa_pos = sprintf("%d", $inferred_aa_pos) + 1 if($tx_pos % 3);
-							$inferred_aa_start = $inferred_aa_stop = $inferred_aa_pos;
-						}
-						else
-						{
-							warn "Unable to parse tx pos from $c_position\n";
-						}						
-					}
-
-				}
-	
-	
-				## If we inferred aa start stop, proceed with it ##
-				
-				if($inferred_aa_start && $inferred_aa_stop)
-				{
-					$aa_position_start = $inferred_aa_start;
-					$aa_position_stop = $inferred_aa_stop;
-					
-					## IF we also had an aa_position reported in the aa_change column, compare them ##
-					
-					if($aa_pos && $aa_pos ne $inferred_aa_start && $aa_pos ne $inferred_aa_stop)
-					{
-#						warn "From $c_position inferred $inferred_aa_start-$inferred_aa_stop but from $aa_change got $aa_pos\n";
-
-						my $diff1 = abs($inferred_aa_start - $aa_pos);
-						my $diff2 = abs($inferred_aa_stop - $aa_pos);
-
-						## If it's an SNV, we'll trust the reported aa_position##
-
-						if($tx_start == $tx_stop)
-						{
-							$aa_position_start = $aa_pos;
-							$aa_position_stop = $aa_pos;							
-						}
-
-						## Characterize the differences ##
-						
-						if($diff1 <= 2 || $diff2 <= 2)
-						{
-							$stats{'aa_pos_close'}++;
-						}
-						elsif($aa_change =~ 'fs' || $aa_change =~ 'frame')
-						{
-							## Indel diff so ignore ##
-							$stats{'aa_pos_diff_but_indel'}++;
-						}
-						else
-						{
-							$stats{'aa_pos_diff'}++;
-						}
-
-					}
-					else
-					{
-						$stats{'aa_pos_match'}++;
-					}
-					
-					$stats{'aa_position_inferred'}++;
-				}
-				## Otherwise if we inferred aa position ##
-				elsif($aa_pos)
-				{
-					$aa_position_start = $aa_pos;
-					$aa_position_stop = $aa_pos;
-					$stats{'aa_position_only'}++;
-				}
-				## Otherwise we were unable to infer the info ##
-				else
-				{
-					$stats{'aa_position_not_found'}++;
-					#warn "Miss on $chrom\t$chr_start\t$chr_stop\t$ref_allele\t$var_allele\t$gene\t$c_position\t$aa_change\t$aa_pos\t$inferred_aa_pos\n";					
-				}
-				
-				
-				## Proceed if we have aa_position_start and stop ##
-				
-				if($aa_position_start && $aa_position_stop)
-				{
-					## Save the mutation ##
-					
-					my $mutation_key = join("\t", $chrom, $chr_start, $chr_stop, $ref_allele, $var_allele);
-					my $gene_key = join("\t", $gene, $aa_position_start, $aa_position_stop, $tumor_sample);
-					$nonsilent_mutations{$gene_key} = $mutation_key;
-
-					## Case 1, same start and stop (SNV or small indel)
-					
-					if($aa_position_start == $aa_position_stop)
-					{
-						## Append to gene list of mutations ##
-						$mutated_aa_positions{$gene} .= "\n" if($mutated_aa_positions{$gene});
-						$mutated_aa_positions{$gene} .= "$aa_position_start\t$aa_position_stop\t$tumor_sample";
-					}
-					## Case 2, different start and stop ##
-					else
-					{
-						## Append start and stop gene list of mutations ##
-						$mutated_aa_positions{$gene} .= "\n" if($mutated_aa_positions{$gene});
-						$mutated_aa_positions{$gene} .= "$aa_position_start\t$aa_position_stop\t$tumor_sample";
-					}
-				}
-
-
+				$c_position = "" if(!$c_position);
+				$aa_change = "" if(!$aa_change);
+				$annotation{$variant_key} = join("\t", $gene, $trv_type, $c_position, $aa_change, $transcript_name);
+			}
+			else
+			{
+				## Otherwise this annotation came from the external file ##
+				$stats{'num_annotation_in_external_file'}++;
 			}
 
-		}
+
+			## If we have annotation for this variant, use it ##
+			
+			if($annotation{$variant_key})
+			{
+				$stats{'num_with_annotation'}++;
+				
+				## Flags for counting if we had a nonsilent, aa-change, valid-aa-pos annotation for this one ##
+				my $flag_non_silent = my $flag_aa_change = my $flag_aa_position = 0;
+				
+				my @annotation_lines = split(/\n/, $annotation{$variant_key});
+
+				foreach my $annotation_line (@annotation_lines)
+				{
+					($gene, $trv_type, $c_position, $aa_change, $transcript_name) = split(/\t/, $annotation_line);
+					
+					## Proceed if we have a non-silent variant ##
+		
+					if($trv_type ne "silent" && $trv_type ne "rna" && $trv_type ne "intronic" && $trv_type ne "5_prime_flanking_region" && $trv_type ne "3_prime_flanking_region")
+					{
+						$flag_non_silent = 1;
+						## Parse out aa_change if applicable and not a splice site ##
+						if($aa_change && $aa_change ne "NULL" && substr($aa_change, 0, 1) ne "e")
+						{
+							$aa_pos = $aa_change;
+							$aa_pos =~ s/[^0-9]//g;
+						}
+						
+						## Parse out c_position if applicable ##
+						
+						if($c_position && $c_position ne "NULL")
+						{
+							## If multiple results, parse both ##
+							
+							if($c_position =~ '_' && !($trv_type =~ 'splice'))
+							{
+								($tx_start, $tx_stop) = split(/\_/, $c_position);
+								$tx_start =~ s/[^0-9]//g;
+								$tx_stop =~ s/[^0-9]//g;
+								
+								if($tx_stop < $tx_start)
+								{
+									$inferred_aa_start = $tx_stop / 3;
+									$inferred_aa_start = sprintf("%d", $inferred_aa_start) + 1 if($tx_stop % 3);
+									$inferred_aa_stop = $tx_start / 3;
+									$inferred_aa_stop = sprintf("%d", $inferred_aa_stop) + 1 if($tx_start % 3);							
+								}
+								else
+								{
+									$inferred_aa_start = $tx_start / 3;
+									$inferred_aa_start = sprintf("%d", $inferred_aa_start) + 1 if($tx_start % 3);
+									$inferred_aa_stop = $tx_stop / 3;							
+									$inferred_aa_stop = sprintf("%d", $inferred_aa_stop) + 1 if($tx_stop % 3);
+								}
+		
+							}
+							else
+							{
+								(my $tx_pos) = split(/[\+\-\_]/, $c_position);
+								$tx_pos =~ s/[^0-9]//g;
+		
+								$tx_start = $tx_stop = $tx_pos;
+		
+								if($tx_pos)
+								{
+									$inferred_aa_pos = $tx_pos / 3;
+									$inferred_aa_pos = sprintf("%d", $inferred_aa_pos) + 1 if($tx_pos % 3);
+									$inferred_aa_start = $inferred_aa_stop = $inferred_aa_pos;
+								}
+								else
+								{
+									# IGNORE NEGATIVE TX POSITIONS (5' flanking mutations) warn "Unable to parse tx pos from $c_position\n";
+								}						
+							}
+		
+						}
+			
+			
+						## If we inferred aa start stop, proceed with it ##
+						
+						if($inferred_aa_start && $inferred_aa_stop)
+						{
+							$aa_position_start = $inferred_aa_start;
+							$aa_position_stop = $inferred_aa_stop;
+							$stats{'aa_position_inferred'}++;
+						}
+						## Otherwise if we inferred aa position ##
+						elsif($aa_pos)
+						{
+							$aa_position_start = $aa_pos;
+							$aa_position_stop = $aa_pos;
+							$stats{'aa_position_only'}++;
+						}
+						## Otherwise we were unable to infer the info ##
+						else
+						{
+							$stats{'aa_position_not_found'}++;
+							#warn "Miss on $chrom\t$chr_start\t$chr_stop\t$ref_allele\t$var_allele\t$gene\t$c_position\t$aa_change\t$aa_pos\t$inferred_aa_pos\n";					
+						}
+						
+						
+						## Proceed if we have aa_position_start and stop ##
+						
+						if($aa_position_start && $aa_position_stop)
+						{
+							$flag_aa_position = 1;
+
+							for(my $this_aa_pos = $aa_position_start; $this_aa_pos <= $aa_position_stop; $this_aa_pos++)
+							{
+								my $key = "$gene\t$transcript_name\t$this_aa_pos";
+
+								## If we have a mutation recorded here, make sure it's not for this MAF entry ##
+								if($mutated_positions{$key})
+								{
+									if($mutated_positions{$key} =~ $line)
+									{
+										## Skip because we already have it ##
+									}
+									## If not, append to the list of mutations ##
+									else
+									{
+										$mutated_positions{$key} .= "\n" . $line;
+									}
+								}
+								## Otherwise save this mutation ##
+								else
+								{
+									$mutated_positions{$key} = $line;
+								}
+							}
+		
+						}
+		
+		
+					} ## else it's a silent or noncoding mutation
+
+				} ## Goto next annotation line
+			
+				$stats{'num_with_aa_pos'}++ if($flag_aa_position);
+			} ## Else we have no annotation for this variant in both MAF and external file
+
+		} ## Otherwise this line is non-recognizable in MAF.
 
 	}
 
 	close($input);	
 	
 
-	print $stats{'aa_position_inferred'} . " positions were inferred\n";
-	print $stats{'aa_pos_match'} . " AA positions matched\n";
-	print $stats{'aa_pos_close'} . " AA positions were close\n";
-	print $stats{'aa_pos_diff_but_indel'} . " AA positions were off but indels, so tx-inference trusted\n";
-	print $stats{'aa_pos_diff'} . " AA positions were way off\n" if($stats{'aa_pos_diff'});
-	print $stats{'aa_position_only'} . " were notated but couldn't be inferred\n" if($stats{'aa_position_only'});
-	print $stats{'aa_position_not_found'} . " positions couldn't be parsed due to missing info\n";
+	print $stats{'mutations_in_file'} . " mutations in file\n";
+	print $stats{'num_with_annotation'} . " with annotation available\n";
+	print $stats{'num_with_aa_pos'} . " with valid amino acid position(s)\n";
+#	print $stats{'aa_position_inferred'} . " positions were inferred\n";
+#	print $stats{'aa_position_only'} . " were notated but couldn't be inferred\n" if($stats{'aa_position_only'});
+#	print $stats{'aa_position_not_found'} . " positions couldn't be parsed due to missing info\n";
 
+	return(%mutated_positions);
 
-	## Iterate through gene list and perform proximity analysis ##
-
-
-	## Print header to output file ##
-	
-	if($self->output_file)
-	{
-		## Print a header ##
-		
-		print OUTFILE "gene\ttotal\tproxim";
-
-		for(my $aa_distance = 0; $aa_distance <= $max_proximity; $aa_distance++)
-		{
-			print OUTFILE "\td=$aa_distance";
-		}
-
-		print OUTFILE "\n";
-		
-	}
-
-	## Print a header ##
-	
-	print "gene\ttotal\tproxim";
-	for(my $aa_distance = 0; $aa_distance <= $max_proximity; $aa_distance++)
-	{
-		print "\td=$aa_distance";
-	}
-	print "\n";
-
-	## Save all mutations in cluster for later output ##
-	
-	my %mutations_in_cluster = ();
-
-	foreach my $gene (sort keys %mutated_aa_positions)
-	{
-		$stats{'genes_with_mutations'}++;
-		
-#		if($gene eq "BRCA1" || $gene eq "BRCA2")# || $gene eq "TP53")
-#		{
-			my %gene_stats = ();
-			$gene_stats{'total_mutations'} = $gene_stats{'proximal_mutations'} = 0;
-			
-			if($self->verbose)
-			{
-				print "$gene\n";
-				
-				print "MUTATION LIST\n";
-#				print "$mutated_aa_positions{$gene}\n";
-
-			}
-			
-			my @mutations = split(/\n/, $mutated_aa_positions{$gene});
-			my %mutated_positions = load_aa_positions($mutated_aa_positions{$gene});
-			
-			foreach my $mutation (@mutations)
-			{
-				$gene_stats{'total_mutations'}++;
-#				print "RUNNING mutation # " . $gene_stats{'total_mutations'} . "\n";
-
-				my ($aa_start, $aa_stop, $sample_name) = split(/\t/, $mutation);
-				my $sample_mutation_key = join("\t", $gene, $aa_start, $aa_stop, $sample_name);
-				
-				## Find the minimum aa distance to another mutation ##
-				my $this_mutation_is_done = 0;
-				my $this_mutation_min_aa_distance = $max_proximity + 1;
-				my $aa_distance = 0;
-				
-				while($aa_distance <= $max_proximity && !$this_mutation_is_done)
-				{
-					## Check upstream ##
-					
-					my $check_aa_pos = $aa_start - $aa_distance;
-					
-					if($mutated_positions{$check_aa_pos} && different_sample($sample_name, $mutated_positions{$check_aa_pos}))
-					{
-						## Found a variant upstream, so this mutation is done ##
-						$this_mutation_min_aa_distance = $aa_distance;
-						$this_mutation_is_done = 1;
-					}
-					else
-					{
-						## Search for variant downstream ##
-						my $check_aa_pos = $aa_stop + $aa_distance;
-						if($mutated_positions{$check_aa_pos} && different_sample($sample_name, $mutated_positions{$check_aa_pos}))
-						{
-							## Found a variant upstream, so this mutation is done ##
-							$this_mutation_min_aa_distance = $aa_distance;
-							$this_mutation_is_done = 1;
-						}
-					}
-					
-					$aa_distance++;
-				}
-				
-				if($this_mutation_min_aa_distance <= $max_proximity)
-				{
-					$mutations_in_cluster{$sample_mutation_key} = 1;
-					$gene_stats{'proximal_mutations'}++;
-					
-					$gene_stats{'within ' . $this_mutation_min_aa_distance}++;
-				}
-				
-				print "$mutation\t$this_mutation_min_aa_distance\n" if($self->verbose);
-				
-				
-			}
-
-			print "END LIST\n" if($self->verbose);
-
-			##Print the summary for the gene ##
-			
-			## PROCEED IF WE HAVE ANY PROXIMAL MUTATIONS ##
-			
-			if($gene_stats{'proximal_mutations'} > 0)
-			{
-				$stats{'genes_with_clusters'}++;
-				## Build a gene summary ##
-				
-				my $gene_summary = join("\t", $gene, $gene_stats{'total_mutations'}, $gene_stats{'proximal_mutations'});
-				
-				for(my $aa_distance = 0; $aa_distance <= $max_proximity; $aa_distance++)
-				{
-					my $stats_key = "within $aa_distance";
-					my $proximity_count = 0;
-					$proximity_count = $gene_stats{$stats_key} if($gene_stats{$stats_key});
-					$gene_summary .= "\t" . $proximity_count;
-				}
-				
-				print "$gene_summary\n";
-	
-				if($self->output_file)
-				{
-					print OUTFILE "$gene_summary\n";
-				}
-			}
-
-
-#		}
-	}
-
-
-	print $stats{'genes_with_mutations'} . " genes with at least one mutation\n";
-	print $stats{'genes_with_clusters'} . " genes with mutation clusters\n";
-
-
-	if($self->output_maf)
-	{
-		open(OUTMAF, ">" . $self->output_maf) or die "Can't open outfile: $!\n";
-
-
-
-		## Re-parse the MAF file ##
-		
-		my $input = new FileHandle ($maf_file);
-		my $lineCounter = 0;
-		
-		while (<$input>)
-		{
-			chomp;
-			my $line = $_;
-			$lineCounter++;		
-	
-			my @lineContents = split(/\t/, $line);
-		
-			if($lineCounter == 1)
-			{
-				print OUTMAF "$line\n";				
-			}
-			elsif($lineCounter <= 2 && $line =~ "Chrom")
-			{
-				print OUTMAF "$line\twith_aa_pos\tin_" . $max_proximity . "_cluster\n";
-			}
-			elsif(@columns)
-			{
-				## Build a record for this line, assigning all values to respective fields ##
-				
-				my %record = ();
-	
-				foreach my $column_name (keys %column_index)
-				{
-					my $column_number = $column_index{$column_name};
-					$record{$column_name} = $lineContents[$column_number];
-				}			
-	
-				my $tumor_sample = $record{'Tumor_Sample_Barcode'};
-				my $gene = $record{'gene_name'};
-				my $trv_type = $record{'trv_type'};
-				my $c_position = $record{'c_position'};
-				my $aa_change = $record{'amino_acid_change'};
-	
-				$c_position =~ s/c\.// if($c_position);
-				$aa_change =~ s/p\.// if($aa_change);
-	
-				my $aa_position = 0;
-				my $tx_start = my $tx_stop = 0;
-				my $aa_position_start = my $aa_position_stop = 0;
-				my $inferred_aa_start = my $inferred_aa_stop = 0;
-				my $aa_pos = my $inferred_aa_pos = 0;
-	
-				my $flag_aa_included = 0;
-				my $flag_as_cluster = 0;
-				
-				## Proceed with non-silent mutations ##
-	
-				if($trv_type && $trv_type ne "silent" && $trv_type ne "rna")
-				{
-	#				print "$gene\t$trv_type\t$c_position\t$aa_change\n";
-	#				exit(0);
-	
-					## Parse out aa_change if applicable and not a splice site ##
-					if($aa_change && $aa_change ne "NULL" && substr($aa_change, 0, 1) ne "e")
-					{
-						$aa_pos = $aa_change;
-						$aa_pos =~ s/[^0-9]//g;
-					}
-					
-					## Parse out c_position if applicable ##
-					
-					if($c_position && $c_position ne "NULL")
-					{
-						## If multiple results, parse both ##
-						
-						if($c_position =~ '_')
-						{
-							($tx_start, $tx_stop) = split(/\_/, $c_position);
-							$tx_start =~ s/[^0-9]//g;
-							$tx_stop =~ s/[^0-9]//g;
-							
-							if($tx_stop < $tx_start)
-							{
-								$inferred_aa_start = $tx_stop / 3;
-								$inferred_aa_start = sprintf("%d", $inferred_aa_start) + 1 if($tx_stop % 3);
-								$inferred_aa_stop = $tx_start / 3;
-								$inferred_aa_stop = sprintf("%d", $inferred_aa_stop) + 1 if($tx_start % 3);							
-							}
-							else
-							{
-								$inferred_aa_start = $tx_start / 3;
-								$inferred_aa_start = sprintf("%d", $inferred_aa_start) + 1 if($tx_start % 3);
-								$inferred_aa_stop = $tx_stop / 3;							
-								$inferred_aa_stop = sprintf("%d", $inferred_aa_stop) + 1 if($tx_stop % 3);
-							}
-	
-						}
-						else
-						{
-							(my $tx_pos) = split(/[\+\-\_]/, $c_position);
-							$tx_pos =~ s/[^0-9]//g;
-	
-							$tx_start = $tx_stop = $tx_pos;
-	
-							if($tx_pos)
-							{
-								$inferred_aa_pos = $tx_pos / 3;
-								$inferred_aa_pos = sprintf("%d", $inferred_aa_pos) + 1 if($tx_pos % 3);
-								$inferred_aa_start = $inferred_aa_stop = $inferred_aa_pos;
-							}
-							else
-							{
-								warn "Unable to parse tx pos from $c_position\n";
-							}						
-						}
-	
-					}
-		
-		
-					## If we inferred aa start stop, proceed with it ##
-					
-					if($inferred_aa_start && $inferred_aa_stop)
-					{
-						$aa_position_start = $inferred_aa_start;
-						$aa_position_stop = $inferred_aa_stop;
-						$flag_aa_included = 1;
-						
-						## IF we also had an aa_position reported in the aa_change column, compare them ##
-						
-						if($aa_pos && $aa_pos ne $inferred_aa_start && $aa_pos ne $inferred_aa_stop)
-						{
-	#						warn "From $c_position inferred $inferred_aa_start-$inferred_aa_stop but from $aa_change got $aa_pos\n";
-	
-							my $diff1 = abs($inferred_aa_start - $aa_pos);
-							my $diff2 = abs($inferred_aa_stop - $aa_pos);
-	
-							## If it's an SNV, we'll trust the reported aa_position##
-	
-							if($tx_start == $tx_stop)
-							{
-								$aa_position_start = $aa_pos;
-								$aa_position_stop = $aa_pos;							
-							}
-	
-							## Characterize the differences ##
-							
-							if($diff1 <= 2 || $diff2 <= 2)
-							{
-								$stats{'aa_pos_close'}++;
-							}
-							elsif($aa_change =~ 'fs' || $aa_change =~ 'frame')
-							{
-								## Indel diff so ignore ##
-								$stats{'aa_pos_diff_but_indel'}++;
-							}
-							else
-							{
-								$stats{'aa_pos_diff'}++;
-							}
-	
-						}
-						else
-						{
-							$stats{'aa_pos_match'}++;
-						}
-						
-						$stats{'aa_position_inferred'}++;
-					}
-					## Otherwise if we inferred aa position ##
-					elsif($aa_pos)
-					{
-						$aa_position_start = $aa_pos;
-						$aa_position_stop = $aa_pos;
-						$stats{'aa_position_only'}++;
-					}
-					## Otherwise we were unable to infer the info ##
-					else
-					{
-						$stats{'aa_position_not_found'}++;
-						#warn "Miss on $chrom\t$chr_start\t$chr_stop\t$ref_allele\t$var_allele\t$gene\t$c_position\t$aa_change\t$aa_pos\t$inferred_aa_pos\n";					
-					}
-					
-					
-					## Proceed if we have aa_position_start and stop ##
-					
-					if($aa_position_start && $aa_position_stop)
-					{
-						## Save the mutation ##
-						
-						my $gene_key = join("\t", $gene, $aa_position_start, $aa_position_stop, $tumor_sample);
-
-						if($mutations_in_cluster{$gene_key})
-						{
-							$flag_as_cluster = 1;
-						}
-	
-
-					}
-	
-	
-				}
-				
-				if(substr($line, length($line) - 1, 1) eq "\t")
-				{
-					print OUTMAF "$line$flag_aa_included\t$flag_as_cluster\n";					
-				}
-				else
-				{
-					print OUTMAF "$line\t$flag_aa_included\t$flag_as_cluster\n";					
-				}
-
-	
-			}
-	
-		}
-	
-		close($input);			
-	}
-
-
-	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
 
 
 
-################################################################################################
-# Execute - the main program logic
+#############################################################
+# ParseFile - takes input file and parses it
 #
-################################################################################################
+#############################################################
 
-sub load_aa_positions
+sub load_annotation
 {
-	my $mutation_list = shift(@_);
-	my %aa_positions = ();
-	my @mutations = split(/\n/, $mutation_list);
-
-	foreach my $mutation (@mutations)
+	my $FileName = shift(@_);
+	my %annotation = ();
+	
+	my $input = new FileHandle ($FileName);
+	my $lineCounter = 0;
+	
+	while (<$input>)
 	{
-		my ($aa_start, $aa_stop, $sample) = split(/\t/, $mutation);
+		chomp;
+		my $line = $_;
+		$lineCounter++;
 		
-		## Save the aa_start ##
+		my ($chrom, $start, $stop, $ref, $var) = split(/\t/, $line);
+		my @lineContents= split(/\t/, $line);
+		my $gene_name = $lineContents[6];
+		my $transcript_name = $lineContents[7];
+		my $trv_type = $lineContents[13];
+		my $c_position = $lineContents[14];
+		my $aa_change = $lineContents[15];
 		
-		my $key = $aa_start;
-
-		## Append this sample to the list if needed ##
+		my $variant_key = join("\t", $chrom, $start, $stop, $ref, $var);
 		
-		if($aa_positions{$key})
+		## Save or append annotation information ##
+		
+		if($annotation{$variant_key})
 		{
-			$aa_positions{$key} .= "\n$sample";
+			$annotation{$variant_key} .= "\n" . join("\t", $gene_name, $trv_type, $c_position, $aa_change, $transcript_name);	
 		}
 		else
 		{
-			$aa_positions{$key} = "$sample";
+			$annotation{$variant_key} = join("\t", $gene_name, $trv_type, $c_position, $aa_change, $transcript_name);
 		}
-		
-		## If the stop position differs, do the same here ##
 
-		if($aa_start != $aa_stop)
-		{
-			my $key = $aa_stop;
-	
-			## Append this sample to the list if needed ##
-			
-			if($aa_positions{$key})
-			{
-				$aa_positions{$key} .= "\n$sample";
-			}
-			else
-			{
-				$aa_positions{$key} = "$sample";
-			}			
-		}
 	}
 	
-	return(%aa_positions);
+	close($input);
+	
+	return(%annotation);
 }
 
 
-
-################################################################################################
-# Execute - the main program logic
-#
-################################################################################################
-
-sub different_sample
-{
-	(my $sample_name, my $sample_list) = @_;
-	
-	my @sample_list = split(/\n/, $sample_list);
-	
-	foreach my $check_sample (@sample_list)
-	{
-		if($check_sample ne $sample_name)
-		{
-			## We have a different sample so return 1 ##
-			return(1);
-		}
-	}
-
-	return(0);
-}
 
 
 
