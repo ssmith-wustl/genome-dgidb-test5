@@ -737,8 +737,16 @@ sub _ucsc_conservation_score {
     return 'NULL' if $variant->{chromosome_name} =~ /^[MN]T/;
 
     my $range = [ $variant->{start}..$variant->{stop} ] ;
-    my $conservation_score_lookup = Genome::Model::Tools::Annotate::LookupConservationScore->execute(chromosome => $variant->{chromosome_name}, coordinates => $range, species => $substruct->transcript_species, version => $self->annotation_build_version);
-    my $ref = $conservation_score_lookup->conservation_scores_results;
+    
+    Genome::Model::Tools::Annotate::LookupConservationScore->class();  # Get the module loaded
+    # NOTE! Not a method.  This is a normal function call.  That class' execute() is just a wrapper
+    # around it
+    my $ref = Genome::Model::Tools::Annotate::LookupConservationScore::lookup_conservation_score(
+                  chromosome => $variant->{chromosome_name},
+                  coordinates => $range,
+                  species => $substruct->transcript_species,
+                  version => $self->annotation_build_version);
+
     my @ret;
     foreach my $item (@$ref)
     {
