@@ -169,7 +169,7 @@ sub _generate_header {
     my $num_transcripts = 0;
     for(my $tx = $tx_iterator->next; $tx; $tx = $tx_iterator->next, $num_transcripts++) {
         print $data_fh
-           '@ATTRIBUTE ', _sanitize_name($tx->transcript_name), ' {0,1}', "\n";
+           '@ATTRIBUTE ', $self->_sanitize_name($tx->transcript_name), ' {0,1}', "\n";
     }
 
     print $data_fh
@@ -265,6 +265,7 @@ sub _resolve_annotation_file {
 
 #Transform the name to meet Weka's specifications
 sub _sanitize_name {
+    my $self = shift;
     my $name = shift;
     my $type = 'tx'; #attribute name must begin with a letter, so make one up
 
