@@ -176,7 +176,7 @@ sub execute {
         die "Import Failed.";
     }
     $self->status_message("Bam successfully copied to allocation. Now calculating md5sum of the copied bam, to compare with pre-copy md5sum. Again, this could take some time.");
-    unless(not Genome::Utility::FileSystem->md5sum($bam_destination) eq $md5) {
+    unless(Genome::Utility::FileSystem->md5sum($bam_destination) eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($bam_destination);
         $disk_alloc->deallocate;
