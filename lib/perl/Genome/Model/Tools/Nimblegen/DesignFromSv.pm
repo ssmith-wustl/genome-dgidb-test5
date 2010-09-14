@@ -183,13 +183,13 @@ sub execute {
                 printf $filtered_out_fh "%s\n", $line;
             next;
         }
-        if($outer_end + $self->span > $chromosome_lengths{$chr1} - 1) {
+        if($outer_end + $self->span > $chromosome_lengths{$chr2} - 1) {
         	$outer_end_ = $chromosome_lengths{$chr1} - 1;
         }
         if($inner_end - $self->span < 1){
 			$inner_end_ = 1;
 		}        
-        if($inner_end - $self->span > $chromosome_lengths{$chr1} - 1) {
+        if($inner_end - $self->span > $chromosome_lengths{$chr2} - 1) {
 			$inner_end = $chromosome_lengths{$chr1} - 1;
         }
 
