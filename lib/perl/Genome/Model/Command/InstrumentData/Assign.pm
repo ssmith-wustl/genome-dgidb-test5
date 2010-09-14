@@ -306,24 +306,7 @@ sub _assign_all_instrument_data {
 
     ID: for my $id ( @unassigned_instrument_data ) {
 
-        my $id_capture_target;
-
-        if ($id->can('target_region_set_name')) {
-            $id_capture_target = $id->target_region_set_name();
-        }
-
-        if (defined($id_capture_target)) {
-
-            unless (exists($model_capture_targets{$id_capture_target})) {
-                $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
-                                           . " sequencing platform " . $id->sequencing_platform
-                                               . ".\nThe model and instrument data's capture targets do not match, and you've requestied that only matching capture data should be added.\n"
-                                                   ."Assign the instrument data explicitly if you want it in the model."
-                                               );
-                next ID;
-            }
-        }
-
+        # Skip imported, w/ warning
         if ($id->isa("Genome::InstrumentData::Imported")) {
             $self->warning_message("IGNORING IMPORTED INSTRUMENT DATA: " . $id->id 
                 . " sequencing platform " . $id->sequencing_platform
@@ -331,6 +314,22 @@ sub _assign_all_instrument_data {
                 . ".  Add this explicitly if you want it in the model."
             );
             next ID;
+        }
+
+        # Only assign inst data only w/ the same target
+        if ( %model_capture_targets ) {
+            my $id_capture_target;
+            eval { 
+                $id_capture_target = $id->target_region_set_name;
+            };
+            if ( not defined $id_capture_target or not exists $model_capture_targets{$id_capture_target} ) {
+                $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
+                    . " sequencing platform " . $id->sequencing_platform
+                    . ".\nThe model's and instrument data's capture targets do not match, and you've requestied that only matching capture data should be added.\n"
+                    ."Assign the instrument data explicitly if you want it in the model."
+                );
+                next ID;
+            }
         }
 
         $self->_assign_instrument_data($id)

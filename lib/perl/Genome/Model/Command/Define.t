@@ -96,12 +96,10 @@ test_model_from_params(
 );
 
 my $group1 = Genome::ModelGroup->create(name => "test 1");
-#$group1->convergence_model->auto_build_alignments(0);
-
 my $group2 = Genome::ModelGroup->create(name => "test 2");
-#$group2->convergence_model->auto_build_alignments(0);
 
-my $groups = join ",", ($group1->id, $group2->id);
+# test both id and name
+my $groups = join ",", ($group1->name, $group2->id);
 test_model_from_params_with_group($groups);
 
 exit;

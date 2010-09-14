@@ -35,10 +35,18 @@ tr.even td {
     margin-bottom: .25em;
 }
 
+#eventview h2 {
+    margin: 0;
+    padding: 0;
+    margin: 10px 0 8px 10px;
+
+
+}
+
 /* LAYOUT
  ****************************************/
 body {
-    background: #3e3f31 url("../img/body_bg.jpg") top center no-repeat;
+    background: #404034 url("../img/body_bg.png") top center no-repeat;
     color: #2e2e24;
 }
 

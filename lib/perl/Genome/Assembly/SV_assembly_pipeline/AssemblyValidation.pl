@@ -10,10 +10,10 @@ use File::Temp;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin/lib";
 
-my $version='0.0.1-r130';
+my $version='0.0.1-r141';
 
-my %opts = (l=>500,p=>1000,s=>0,q=>1,n=>0,m=>10,x=>3,P=>-10,G=>-10,S=>0.02,A=>500,Q=>0,w=>200,C=>0.5,N=>5);
-getopts('l:d:c:p:r:e:s:Q:q:t:n:a:b:f:km:MRzv:hD:x:i:P:G:I:A:S:L:w:C:N:',\%opts);
+my %opts = (l=>500,p=>1000,s=>0,q=>1,n=>0,m=>10,x=>3,P=>-10,G=>-10,S=>0.02,A=>500,Q=>0,w=>200,C=>0.5,N=>5,J=>1);
+getopts('l:d:c:p:r:e:s:Q:q:t:n:a:b:f:km:MRzv:hD:x:i:P:G:I:A:S:L:w:C:N:HJ:',\%opts);
 die("
 Usage:   AssemblyValidation.pl <SV file, default in BreakDancer format> <bam files ... >
 Options:
@@ -22,6 +22,7 @@ Options:
          -f FILE    Save Breakpoint sequences in file
          -r FILE    Save relevant cross_match alignment results to file
          -z         Customized SV format, interpret column from header that must start with # and contain chr1, start, chr2, end, type, size
+         -H         Assemble high coverage data (such as capture)
          -e INT     Exhaustively search combinations of $opts{l} bp blocks at the predicted breakpoints from -INT bp to +INT bp
          -v FILE    Save unconfirmed predictions in FILE
          -h         Make homo variants het by adding same amount of randomly selected wiletype reads
@@ -39,6 +40,7 @@ Options:
          -N INT     Number of mismatches required to be tagged as poorly mapped [$opts{N}]
          -M         Prefix reference name with \'chr\' when fetching reads using samtools view
          -R         Assemble Mouse calls, NCBI reference build 37
+         -J INT     Sleep [$opts{J}] second between the assembly iterations
 
 Filtering:
          -p INT     Ignore cases that have average read depth greater than [$opts{p}]
@@ -70,7 +72,14 @@ else{
   @SVs=&ReadBDCoor(shift @ARGV);
 }
 
-printf "#%d SVs to be assembled\n", $#SVs+1;
+printf "#%d SVs to be assembled from\n#Bams: ", $#SVs+1;
+my @FBAMS;
+foreach my $bam(@ARGV){
+  my $fbam=`readlink $bam`; chomp $fbam;
+  push @FBAMS,$fbam;
+}
+print join(",",@FBAMS) . "\n";
+
 printf "#Version-%s\tParameters: ", $version;
 foreach my $opt(keys %opts){printf "\t%s",join(':',$opt,$opts{$opt});} print "\n";
 if($opts{k}){
@@ -87,6 +96,7 @@ if($opts{r}){open(ALNOUT,">$opts{r}") || die "unable to open $opts{r}\n";}
 my @as; my @bs;
 @as=(defined $opts{a})?($opts{a}):(50,100,150);
 @bs=(defined $opts{b})?($opts{b}):(50,100,150);
+if($opts{H}){@as=(50); @bs=(100);$opts{p}=10000;}  #parameteres for capture data
 if($opts{e}){my $stepsize=int($opts{l}/2); @as=($stepsize); @bs=($stepsize);}
 srand(time ^ $$);
 
@@ -156,15 +166,16 @@ sub AssembleBestSV{
 
   foreach my $a(@as){
     foreach my $b(@bs){
+      sleep $opts{J};
       my $seqlen=0;
       my $nreads=0;
       my $nSVreads=0;
       my %readhash;
-      my ($start1,$end1,$start2,$end2,$regionsize);
+      my ($start1,$end1,$start2,$end2,$regionsize,$refsize);
       my @refs;
       my @samtools;
       my $posstr;
-      print STDERR "a:$a\tb:$b\n";
+      print STDERR "$prefix\ta:$a\tb:$b\n";
       my $makeup_size=0;
       my $concatenated_pos=0;
       foreach my $fbam(@ARGV){
@@ -189,6 +200,7 @@ sub AssembleBestSV{
 
 	if($ori eq '+-' && ($chr1 eq $chr2 && $start2<$end1)){
 	  push @refs, join(':',$chr1,$start-$opts{l}-$opts{w},$end+$opts{l}+$opts{w});
+	  $refsize=$end-$start+1+2*$opts{l}+2*$opts{w};
 	  $posstr=join("_",$chr1,$start1-$opts{w},$chr1,$start1-$opts{w},$type,$size,$ori);
 	  push @samtools,"samtools view $fbam $chr1:$start1\-$end2";
 	  $regionsize=$end2-$start1+1;
@@ -197,17 +209,20 @@ sub AssembleBestSV{
 	  if($type eq 'CTX'){
 	    push @refs, join(':',$chr1,$start-$opts{l}-$opts{w},$start+$opts{l}+$opts{w});
 	    push @refs, join(':',$chr2,$end-$opts{l}-$opts{w},$end+$opts{l}+$opts{w});
+	    $refsize=2*($opts{l}+$opts{w})+1;
 	    $posstr=join("_",$chr1,$start-$opts{l}-$opts{w},$chr2,$end-$opts{l}-$opts{w},$type,$size,$ori);
 	  }
 	  elsif($size>99999){
 	    push @refs, join(':',$chr1,$start-$opts{l}-$opts{w},$start+$opts{l});
 	    push @refs, join(':',$chr2,$end-$opts{l},$end+$opts{l}+$opts{w});
+	    $refsize=2*$opts{l}+$opts{w}+1;
 	    $makeup_size=($end-$opts{l})-($start+$opts{l})-1;
 	    $concatenated_pos=2*$opts{l}+$opts{w};
 	    $posstr=join("_",$chr1,$start-$opts{l}-$opts{w},$chr2,$end-$opts{l}-$opts{w},$type,$size,$ori);
 	  }
 	  else{
 	    push @refs, join(':',$chr1,$start-$opts{l}-$opts{w},$end+$opts{l}+$opts{w});
+	    $refsize=$end-$start+1+2*($opts{l}+$opts{w});
 	    $posstr=join("_",$chr1,$start1-$opts{w},$chr1,$start1-$opts{w},$type,$size,$ori);
 	  }
 	
@@ -235,6 +250,7 @@ sub AssembleBestSV{
 	}
       }
 
+      if($refsize>1e6){printf STDERR "reference size %d too large, skip ...",$refsize; return;}
       my $cmd;
       if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.stat")){
 	#create reference
@@ -279,8 +295,16 @@ sub AssembleBestSV{
 	      ($read->{NM})=($_=~/NM\:i\:(\d+)/);
               $read->{NM}=0 if(!defined $read->{NM});
 	      ($read->{MF})=($_=~/MF\:i\:(\d+)/);
+	      my $NBaseMapped=0;
+	      foreach my $mstr(split /M/,$fields[5]){
+		my ($nbasem)=($mstr=~/(\d+)$/);
+		$NBaseMapped+=$nbasem || 0;
+	      }
 	      ($read->{name},$read->{flag},$read->{mqual},$read->{seq})=($fields[0],$fields[1],$fields[4],$fields[9]);
-	      $seqlen+=length($read->{seq});
+	      my $readlen=length($read->{seq});
+	      $read->{PercMapped}=($readlen>0)?$NBaseMapped/$readlen:0;
+
+	      $seqlen+=$readlen;
 	      $read->{name}=~s/\/[12]//;
 	      $max_mapqual{$read->{name}}=$read->{mqual} if(!defined $max_mapqual{$read->{name}} || $max_mapqual{$read->{name}}<$read->{mqual});
 	      $min_NM{$read->{name}}=$read->{NM} if(!defined $min_NM{$read->{name}} || $min_NM{$read->{name}}>$read->{NM});
@@ -293,7 +317,8 @@ sub AssembleBestSV{
 	      if($max_mapqual{$read->{name}}>=40 && $read->{flag} & 0x0001 && 
 		 ($read->{flag} & 0x0004 ) ||  #one-end unmapped reads
 		 ($read->{NM}>$opts{N} && $min_NM{$read->{name}}<3) ||  #one-end poorly mapped
-		 (defined $read->{MF} && $read->{MF}==130)      #Maq Smith-Waterman aligned
+		 (defined $read->{MF} && $read->{MF}==130)  ||    #Maq Smith-Waterman aligned
+		 ($read->{PercMapped}<.9)  # more than 10% of bases are not mapped
 		){
 		$read->{name}.=',SV';
 		$nSVreads++;
@@ -305,7 +330,7 @@ sub AssembleBestSV{
 	    }
 	    $nreads+=$#reads+1;
 	  }
-	  return if($nreads<=0);
+	  if($nreads<=0){print STDERR "no coverage from bam, skip ... \n";return}
 	  my $avgseqlen=$seqlen/$nreads;
 	  open(OUT,">$datadir/$prefix.a$a.b$b.fa") || die "unable to open $datadir/$prefix.a$a.b$b.fa\n";
 	  while(@buffer){
@@ -347,15 +372,27 @@ sub AssembleBestSV{
 	    }
 	  }
 	  close(OUT);
-	  return if($regionsize<=0);
+	  if($regionsize<=0){
+	    print STDERR "region size <=0, skip ...\n";
+	    return;
+	  }
 	  $regionsize+=2*$avgseqlen;
 	  $avgdepth=($regionsize>0)?$seqlen/$regionsize:0;
-	  return if($avgdepth<=0 || $avgdepth>$opts{p});  #skip high depth region
+	  if($avgdepth<=0 || $avgdepth>$opts{p}){  #skip high depth region
+	    print STDERR "no coverage, skip ...\n" if($avgdepth<=0);
+	    print STDERR "coverage > $opts{p}, skip ...\n" if($avgdepth>$opts{p});
+	    return;
+	  }
 	}
-	printf STDERR "#Reads:%d\t#SVReads:%d\tRegionSize:%d\tAveCoverage:%.2f\n",$nreads,$nSVreads,$regionsize,$avgdepth;
+	printf STDERR "#Reads:%d\t#SVReads:%d\tRegionSize:%d\tAvgCoverage:%.2f\n",$nreads,$nSVreads,$regionsize,$avgdepth;
 
 	#Assemble
-	$cmd="$FindBin::Bin/tigra/tigra.pl -h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k15,25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
+	if($opts{H}){
+	  $cmd="time $FindBin::Bin/tigra/tigra.pl -h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
+	}
+	else{
+	  $cmd="time $FindBin::Bin/tigra/tigra.pl -h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k15,25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
+	}
 	if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.fa.contigs.fa") || (!-s "$datadir/$prefix.a$a.b$b.fa.contigs.het.fa")){
 	  print STDERR "$cmd\n";
 	  system($cmd);
@@ -410,8 +447,8 @@ sub AssembleBestSV{
     }
     if(defined $opts{f}){  #save breakpoint sequence
       my $coord=join(".",$maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{type},$maxSV->{size},$maxSV->{ori});
-      my $contigsize=length($maxSV->{contig});
-      my $seqobj = Bio::Seq->new( -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,Strand:$maxSV->{strand},TIGRA_Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil}",
+      my $contigsize=$maxSV->{contiglens};
+      my $seqobj = Bio::Seq->new( -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$maxSV->{contiglens},KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},TIGRA",
 				  -seq => $maxSV->{contig} );
       $fout->write_seq($seqobj);
     }
@@ -435,7 +472,7 @@ sub UpdateSVs{
     #$pre_size+=$makeup_size if($n_seg>=2 && $pre_bkstart<$opts{l}+$opts{w} && $pre_bkend>$opts{l}+$opts{w});
     if(defined $pre_size && defined $pre_start1 && defined $pre_start2){
       my $fcontig=($het)?"$datadir/$prefix.a$a.b$b.fa.contigs.het.fa":"$datadir/$prefix.a$a.b$b.fa.contigs.fa";
-      my ($contigseq,$kmerutil)=&GetContig($fcontig,$pre_contigid,$prefix);
+      my ($contigseq,$contiglens,$contigcovs,$kmerutil)=&GetContig($fcontig,$pre_contigid,$prefix);
       $alnscore=int($alnscore*100/$regionsize); $alnscore=($alnscore>100)?100:$alnscore;
       if(! defined $maxSV ||
 	 $maxSV->{size}<$pre_size ||
@@ -445,7 +482,7 @@ sub UpdateSVs{
 	  $pre_chr1=~s/.*\///; $pre_chr1=~s/\.fasta//;
 	  $pre_chr2=~s/.*\///; $pre_chr2=~s/\.fasta//;
 	}
-	($maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{bkstart},$maxSV->{bkend},$maxSV->{size},$maxSV->{type},$maxSV->{contigid},$maxSV->{contig},$maxSV->{kmerutil},$maxSV->{N50},$maxSV->{weightedsize},$maxSV->{alnscore},$maxSV->{scarsize},$maxSV->{a},$maxSV->{b},$maxSV->{read_len},$maxSV->{fraction_aligned},$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{strand},$maxSV->{microhomology})=($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$contigseq,$kmerutil,$N50score,$depthWeightedAvgSize,$alnscore,$scar_size,$a,$b,$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology);
+	($maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{bkstart},$maxSV->{bkend},$maxSV->{size},$maxSV->{type},$maxSV->{contigid},$maxSV->{contig},$maxSV->{contiglens},$maxSV->{contigcovs},$maxSV->{kmerutil},$maxSV->{N50},$maxSV->{weightedsize},$maxSV->{alnscore},$maxSV->{scarsize},$maxSV->{a},$maxSV->{b},$maxSV->{read_len},$maxSV->{fraction_aligned},$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{strand},$maxSV->{microhomology})=($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$contigseq,$contiglens,$contigcovs,$kmerutil,$N50score,$depthWeightedAvgSize,$alnscore,$scar_size,$a,$b,$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology);
 	$maxSV->{het}=($het)?'het':'homo';
 	$maxSV->{ori}=$ori;
 	$maxSV->{alnstrs}=$alnstrs;
@@ -467,7 +504,7 @@ sub GetContig{
     $sequence=$seq->seq();
     last;
   }
-  return ($sequence,$info[$#info]);
+  return ($sequence,$info[0],$info[1],$info[$#info]);
 }
 
 sub ReadBDCoor{
@@ -561,6 +598,7 @@ sub ReadBDCoor{
     $cr->{database}=$fields[$col_database] if($col_database);
 
     $ignore=0 if($cr->{line}=~/cancer/i || $cr->{line}=~/exon/i);
+    $ignore=0 if($cr->{line}=~/gene/i && $cr->{type}=~/ctx/i);  #assemble all translocation overlapping gene
     next if($ignore>0);
 
     push @coor, $cr;
@@ -652,6 +690,6 @@ sub ComputeTigraWeightedAvgSize{
     $totaldepth+=$depth;
   }
   close(CF);
-  my $WeightedAvgSize=($totaldepth>0)?$totalsize/$totaldepth:0;
+  my $WeightedAvgSize=($totaldepth>0)?int($totalsize*100/$totaldepth)/100:0;
   return $WeightedAvgSize;
 }

@@ -158,21 +158,34 @@ sub execute {
     $self->status_message("Alignment allocation created for $instrument_data_id .");
 
     my $bam_destination = $disk_alloc->absolute_path . "/all_sequences.bam";
+    $self->status_message("Now calculating the MD5sum of the bam file to be imported, this will take a long time (many minutes) for larger (many GB) files.");
     my $md5 = Genome::Utility::FileSystem->md5sum($bam_path);
-
+    unless($md5){
+        $self->error_message("Failed to calculate md5 sum, exiting import command.");
+        die $self->error_message;
+    }
+    $self->status_message("Finished calculating md5 sum.");
+    $self->status_message("MD5 sum = ".$md5);
+    $self->status_message("Copying bam file into the allocation, this could take some time.");
     unless(copy($bam_path, $bam_destination)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
         unlink($bam_destination);
         $disk_alloc->deallocate;
-        return;
+        $self->error_message("Now removing instrument-data record from the database.");
+        $import_instrument_data->delete;
+        die "Import Failed.";
     }
-    
+    $self->status_message("Bam successfully copied to allocation. Now calculating md5sum of the copied bam, to compare with pre-copy md5sum. Again, this could take some time.");
     unless(Genome::Utility::FileSystem->md5sum($bam_destination) eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($bam_destination);
         $disk_alloc->deallocate;
-        return;
+        $self->error_message("Now removing instrument-data record from the database.");
+        $import_instrument_data->delete;
+        die "Import Failed.";
     }
+    $self->status_message("Importation of BAM completed successfully.");
+    $self->status_message("Your instrument-data id is ".$instrument_data_id);
     return 1;
 }
 

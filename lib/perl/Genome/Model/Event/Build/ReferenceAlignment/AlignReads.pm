@@ -396,6 +396,20 @@ sub _count_lines_in_bam_file {
 sub execute {
     my $self = shift;
 
+    return $self->_process_and_link_alignments_to_build('get_or_create');
+}
+
+
+sub shortcut {
+    my $self = shift;
+
+    return $self->_process_and_link_alignments_to_build('get');
+}
+
+sub _process_and_link_alignments_to_build {
+    my $self = shift;
+    my $mode = shift;
+
     $DB::single = $DB::stopper;
     
     unless (-d $self->build_directory) {
@@ -414,13 +428,25 @@ sub execute {
     my $processing_profile = $model->processing_profile;
 
     $self->status_message("Finding or generating alignments for " . $instrument_data_assignment->__display_name__);
-    my @alignments = $processing_profile->generate_results_for_instrument_data_assignment($instrument_data_assignment); 
-    
+    my @alignments;
     my @errors;
-    unless (@alignments) {
-        $self->error_message("Error finding or generating alignments!:\n" .  join("\n",$instrument_data_assignment->error_message));
-        push @errors, $self->error_message;
+    
+    if ($mode eq 'get_or_create') {
+        @alignments = $processing_profile->generate_results_for_instrument_data_assignment($instrument_data_assignment); 
+        unless (@alignments) {
+            $self->error_message("Error finding or generating alignments!:\n" .  join("\n",$instrument_data_assignment->error_message));
+            push @errors, $self->error_message;
+        }
+    } elsif ($mode eq 'get') {
+        @alignments = $processing_profile->results_for_instrument_data_assignment($instrument_data_assignment); 
+        unless (@alignments) {
+            return undef; 
+        }
+    } else {
+        $self->error_message("process/link alignments mode unknown: $mode");
+        die $self->error_message;
     }
+    
     if (@errors) {
         $self->error_message(join("\n",@errors));
         return 0;

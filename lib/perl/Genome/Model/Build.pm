@@ -652,7 +652,7 @@ sub _launch {
  
         # bsub into the queue specified by the dispatch spec
         my $lsf_command = sprintf(
-            'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
+            'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
             $server_dispatch, ## lsf queue
             $host_group,
             $job_group_spec,
@@ -843,10 +843,10 @@ sub success {
     if($self->type_name !~ /convergence/) {
         for my $model_group ($self->model->model_groups) {
             eval {
-                $model_group->launch_convergence_rebuild;
+                $model_group->schedule_convergence_rebuild;
             };
             if($@) {
-                $self->error_message('Could not launch convergence build for model group ' . $model_group->id . '.  Continuing anyway.');
+                $self->error_message('Could not schedule convergence build for model group ' . $model_group->id . '.  Continuing anyway.');
             }
         }
     }

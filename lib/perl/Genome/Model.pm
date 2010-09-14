@@ -91,6 +91,7 @@ class Genome::Model {
             ), valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
+        build_requested         => { is => 'Number', len => 4, is_optional => 1 },
         subject                 => { calculate_from => [ 'subject_id', 'subject_class_name' ],
                                      calculate => q| Carp::confess("No subject_class_name set on model!") unless $subject_class_name; return $subject_class_name->get($subject_id);| },
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
@@ -130,6 +131,8 @@ class Genome::Model {
         last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
         last_succeeded_build_directory   => { calculate => q($b = $self->last_succeeded_build; return unless $b; return $b->data_directory) },
         last_complete_build_flagstat     => { calculate => q( return $self->lcb_flagstat(); ) },
+        region_of_interest_set_value     => { via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
+        region_of_interest_set_name      => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_many_optional => [
         ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },

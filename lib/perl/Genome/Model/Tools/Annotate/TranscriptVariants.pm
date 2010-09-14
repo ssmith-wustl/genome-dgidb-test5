@@ -142,6 +142,16 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             doc => 'If set, the annotator will get all coding region sequence after a frame shift',
         },
     ], 
+    has_param => [
+        lsf_resource => {
+            is => 'Text',
+            default => 'select[tmp>10240]',
+        },
+        lsf_queue => {
+            is => 'Text',
+            default => 'long',
+        },
+    ],
 };
 
 
@@ -251,6 +261,7 @@ sub execute {
     }
     else {
         $output_fh = $self->_create_file($output_file);
+        chmod(0664, $output_file);
     }
     $self->_transcript_report_fh($output_fh);
 

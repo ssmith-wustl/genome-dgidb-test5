@@ -28,27 +28,27 @@ endif
 	# CR1
 	set g1 = `grep AS $f | wc -l`;
 	echo "\tCR1:" $g1;
-        `grep AS $f > ${output_file}`;
+        grep AS $f > ${output_file};
 	# CR2
 	set g2 = `more ${f}.CR2 | wc -l`;
 	echo "\tCR2:" $g2;
-        `more ${f}.CR2 >> ${output_file}`;
+        cat ${f}.CR2 >> ${output_file};
 	# CR3
 	set g3 = `grep PD $f | grep CN | wc -l`
 	echo "\tCR3:" $g3;
-        `grep PD $f | grep CN >> ${output_file}`;
+        grep PD $f | grep CN >> ${output_file};
 	# CR4
 	set g4 = `grep PD $f | grep -v CN | grep -v BD | grep -v AS | grep -v PDN | wc -l`;
 	echo "\tCR4:" $g4;
-        `grep PD $f | grep -v CN | grep -v BD | grep -v AS | grep -v PDN >> ${output_file}`;
+        grep PD $f | grep -v CN | grep -v BD | grep -v AS | grep -v PDN >> ${output_file};
 	# CR5
-	set g5 = `grep CN $f | grep -v BD | grep -v PD | grep -v AS | perl -ane '($s)=($F[5]=~/sc(\S+)\:/); print "$_" if($s>=100);' | wc -l`
+	set g5 = `grep CN $f | grep -v BD | grep -v PD | grep -v AS | perl -ane '($s)=($F[1]=~/sc(\S+)\:/); print "$_" if($s>=100);' | wc -l`
 	echo "\tCR5:" $g5;
-        `grep CN $f | grep -v BD | grep -v PD | grep -v AS | perl -ane '($s)=($F[5]=~/sc(\S+)\:/); print "$_" if($s>=100);' >> ${output_file}`;
+        grep CN $f | grep -v BD | grep -v PD | grep -v AS | perl -ane '($s)=($F[1]=~/sc(\S+)\:/); print "$_" if($s>=100);' >> ${output_file};
 	# CTX
 	set ctx = `more ${f_ctx} | wc -l`;
 	echo "\tCTX:" $ctx;
-        `more ${f_ctx} >> ${output_file}`;
+        cat ${f_ctx} >> ${output_file};
 	@ all = $all + $g5 + $g4 + $g3 + $g2 + $g1 + $ctx;
 	echo "\tIn all:" $all;
 #	@ j = $j + 1;	

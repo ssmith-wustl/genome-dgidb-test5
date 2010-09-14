@@ -48,7 +48,8 @@ class Genome::Sample::View::Status::Xml {
                             perspective => 'default',
                             toolkit => 'xml',
                             subject_class_name => 'Genome::Model::Build',
-                        }
+                        },
+                        'region_of_interest_set_name',
                     ],
                     subject_class_name => 'Genome::Model',
                 },
@@ -82,6 +83,42 @@ class Genome::Sample::View::Status::Xml {
                         'name',
                     ]
                 },
+                {
+                    name => 'projects',
+                    subject_class_name => 'Genome::Project',
+                    perspective => 'default',
+                    toolkit => 'xml',
+                    aspects => [
+                        'id',
+                        'name',
+                        'status',
+                        'description',
+                        'project_type',
+                        'mailing_list',
+                        {
+                            name => 'external_contact',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'id',
+                                'email',
+                                'name',
+                                'type',
+                            ]
+                        },
+                        {
+                            name => 'internal_contact',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'id',
+                                'email',
+                                'name',
+                                'type',
+                            ]
+                        },
+                    ]
+                }
             ]
         }
     ]

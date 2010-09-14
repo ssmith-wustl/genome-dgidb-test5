@@ -4,6 +4,9 @@ use strict;
 use warnings;
 
 use Genome;
+
+use Genome::Model::Tools::FastQual::FastqReader;
+
 use IO::File;
 use Bio::SeqIO;
 
@@ -54,16 +57,20 @@ sub execute {
     my $f_out = Bio::SeqIO->new(-format => 'fasta', file => ">$fasta_file");
     my $q_out = Bio::SeqIO->new(-format => 'qual', file => ">$qual_file");
 
-    my $fq_in = Bio::SeqIO->new(-format => 'fastq', -file => $self->fastq_file);
-    while (my $seq = $fq_in->next_seq) {
-	$f_out->write_seq($seq); #write fasta
-	#need to subtract 31 from velvet qual to match sanger qual
-	my @new_qual = map {$_ - 31} @{$seq->qual};
-	$seq->qual(\@new_qual);
-	$q_out->write_seq($seq);
+    my $fq_in =  Genome::Model::Tools::FastQual::FastqReader->create (
+	file => $self->fastq_file,
+	);
+    while (my $seq = $fq_in->next) {
+	my $seq_obj = Bio::Seq->new(-display_id => $seq->{id}, -seq => $seq->{seq});
+	$f_out->write_seq($seq_obj);
+	my @sanger_qual;
+	for my $i (0..length($seq->{qual}) - 1) {
+	    #subtract -33 to get solexa values, -31 to get phred values (should be 33)
+	    push @sanger_qual, (ord(substr($seq->{qual}, $i, 1)) - 64);
+	}
+	my $qual_obj = Bio::Seq::Quality->new(-display_id => $seq->{id}, -seq => $seq->{seq}, -qual => \@sanger_qual);
+	$q_out->write_seq($qual_obj);
     }
-
-    #if zipped version of files exist remove them first
 
     if (system("gzip $fasta_file $qual_file")) {
 	$self->error_message("Failed to zip files: $fasta_file $qual_file");

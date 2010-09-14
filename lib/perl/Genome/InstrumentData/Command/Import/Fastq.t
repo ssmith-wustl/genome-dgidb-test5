@@ -47,7 +47,7 @@ use warnings;
 isa_ok($tmp_allocation,'Genome::Disk::Allocation'); 
 
 my $cmd = Genome::InstrumentData::Command::Import::Fastq->create(
-    library_name => $library_name,
+    sample_name => $sample_name,
     source_data_files => $source_dir,
     allocation =>  $tmp_allocation,
     import_format => 'sanger fastq',

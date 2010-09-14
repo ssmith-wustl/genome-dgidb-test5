@@ -32,7 +32,7 @@ sub execute {
     }
 
     if (@expunged) {
-        $self->status_message("Found " . scalar @expunged . " assignments with missing instrument data!" .
+        $self->status_message("Found " . scalar @expunged . " assignments with missing instrument data! " .
             "Instrument data IDs are below:\n" . join("\n", map { $_->instrument_data_id } @expunged));
     }
     else {

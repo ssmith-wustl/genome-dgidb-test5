@@ -8,7 +8,7 @@ use above 'Genome';
 require Cwd;
 use Data::Dumper;
 use Finfo::ClassUtils 'use_class';
-require Genome::Consed::Directory;
+require Genome::Model::Tools::Consed::Directory;
 require IO::File;
 
 #- PROPERTIES -#
@@ -75,7 +75,7 @@ sub create {
 
     $self->{_cwd} = Cwd::getcwd();
 
-    my $directory = Genome::Consed::Directory->create(directory => $self->directory)
+    my $directory = Genome::Model::Tools::Consed::Directory->create(directory => $self->directory)
         or return;
     $directory->create_consed_directory_structure;
     $self->{_directory} = $directory;

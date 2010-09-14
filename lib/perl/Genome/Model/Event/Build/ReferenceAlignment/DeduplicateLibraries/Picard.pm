@@ -257,6 +257,11 @@ sub execute {
         unless $index_cmd_rv == 1;
     #not failing here because this is not a critical error.  this can be regenerated manually if needed.
 
+    for my $file (grep {-f $_} glob($build->accumulated_alignments_directory . "/*")) {
+        $self->status_message("Setting $file to read-only");
+        chmod 0444, $file;
+    }
+
     $self->status_message("*** All processes completed. ***");
 
     return $self->verify_successful_completion();

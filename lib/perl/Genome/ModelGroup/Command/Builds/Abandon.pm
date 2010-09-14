@@ -7,10 +7,6 @@ use Genome;
 
 class Genome::ModelGroup::Command::Builds::Abandon {
     is => ['Genome::ModelGroup::Command::Builds'],
-    has_optional => [
-        model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},
-        model_group_name => { is => 'String', doc => 'name of model-group'},
-    ],
     doc => "abandon latest build for each member if it is failed",
 };
 
@@ -49,6 +45,7 @@ sub execute {
             unless($abandon_build->execute()) {
                 $self->error_message("Failed to abandon build $build_id for model " . $model->name);
             }
+            UR::Context->commit;
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");

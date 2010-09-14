@@ -3,6 +3,8 @@
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_capture_set" match="object[./types[./isa[@type='Genome::Capture::Set']]]">
+    <xsl:comment>template: /html/status/genome_capture_set.xsl; match="object[./types[./isa[@type='Genome::Capture::Set']]]"</xsl:comment>
+
     <div class="result">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" class="result"><tbody><tr>
       <td>
@@ -12,7 +14,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <img width="32" height="32" src="/res/old/report_resources/apipe_dashboard/images/icons/eye_16.png" />
             </xsl:with-param>
           </xsl:call-template>
-          
+
         </div>
       </td><td>
         <div class="description">
@@ -20,12 +22,12 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <span class="label">
             Capture Set:
           </span>
-          <span class="title"> 
-            <xsl:call-template name="object_link" />            
+          <span class="title">
+            <xsl:call-template name="object_link" />
           </span>
         </h2>
         <p class="blurb">
-          <xsl:value-of select="aspect[@name='status']/value"/> -- 
+          <xsl:value-of select="aspect[@name='status']/value"/> --
           <xsl:value-of select="aspect[@name='description']/value"/>
         </p>
       </div>
