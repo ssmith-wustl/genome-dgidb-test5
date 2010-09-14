@@ -30,7 +30,8 @@ class Genome::InstrumentData::Command::Import::HmpSraProcess {
 	picard_dir => {
 	    is_optional => 1,
 	    doc => 'full path to directory containing Picard jar files (note: This path must include the updated EstimateLibraryComplexity that handles redundancy removal)',
-            default_value => Genome::Model::Tools::Picard->path_for_picard_version,
+            ####default_value => Genome::Model::Tools::Picard->path_for_picard_version,
+	    default_value => "/gsc/scripts/lib/java/samtools/picard-tools-1.27",
 	},
     ],
     doc => 'de-duplicate and quality trim Illumina WGS runs downloaded from SRA',
