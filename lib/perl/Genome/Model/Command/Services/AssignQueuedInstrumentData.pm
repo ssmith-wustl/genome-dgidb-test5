@@ -90,6 +90,7 @@ sub execute {
 
     PSE: 
     foreach my $pse (@pses) {
+        $self->status_message('Starting PSE #' . $pse->id);
 
         unless($self->check_pse($pse)) {
             next PSE;
