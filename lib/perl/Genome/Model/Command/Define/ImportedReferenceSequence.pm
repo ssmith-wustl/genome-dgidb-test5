@@ -232,13 +232,19 @@ sub _get_or_create_model {
         $model = $self->_check_existing_builds($models[0], $taxon);
     } else {
         # * We need a new model
+        
+        my $irs_pp = Genome::ProcessingProfile->get(name=>"chromosome-fastas");
+        unless($irs_pp){
+            $self->error_message("Could not locate ImportedReferenceSequence ProcessingProfile by name \"chromosome-fastas\"");
+            die $self->error_message;
+        }
 
         $model = Genome::Model::ImportedReferenceSequence->create(
             'subject_type' => 'species_name',
             'subject_name' => $self->species_name,
             'subject_class_name' => 'Genome::Taxon',
             'subject_id' => $taxon->taxon_id,
-            'processing_profile_id' => $self->_get_processing_profile_id_for_name,
+            'processing_profile_id' => $irs_pp->id,
             'name' => $self->model_name,
         );
 

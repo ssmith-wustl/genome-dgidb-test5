@@ -8,8 +8,9 @@ use EGAP;
 use Bio::SeqIO;
 use Bio::Seq;
 
-use Carp qw(confess);
-use File::Path qw(make_path);
+use Carp 'confess';
+use File::Path 'make_path';
+use POSIX 'ceil';
 
 class EGAP::Command::GetFastaFiles {
     is => 'EGAP::Command',
@@ -26,6 +27,12 @@ class EGAP::Command::GetFastaFiles {
         },
     ],
     has_optional => [
+        max_bases_per_file => {
+            is => 'Number',
+            is_input => 1,
+            default => 5000000,
+            doc => 'Each split fasta should contain approximately this number of bases of sequence each',
+        },
         fasta_files => { 
             is => 'ARRAY',
             is_output => 1,
@@ -36,24 +43,25 @@ class EGAP::Command::GetFastaFiles {
 };
 
 sub help_brief {
-    "Write a set of fasta files for an assembly";
+    return "Splits up an assembly into several smaller fastas";
 }
 
 sub help_synopsis {
-    return <<"EOS"
-    egap get-fasta-files --seq-set-id 12345
-EOS
+    return "Splits up an assembly into several smaller fastas";
 }
 
 sub help_detail {
-    return <<"EOS"
-Need documenation here.
+    return <<EOS
+A given assembly (currently grabbed using the sequence set id, but this will change soon) is split up
+into several smaller fastas (by either supercontig or contig), where each fasta file contains no more
+than the given number bases.
 EOS
 }
 
 sub execute {
     my $self = shift;
 
+    $DB::single = 1;
     my $output_directory = $self->output_directory;
     unless (-d $output_directory) {
         my $mkdir_rv = make_path($output_directory);
@@ -69,32 +77,34 @@ sub execute {
     my @filenames;
     my $current_fasta;
     my $counter = 0;
+    my $total_bases = 0;
+    my $upper_limit = $self->max_bases_per_file;
 
+    # Split each contig into a separate fasta file
     for my $sequence (@sequences) {
         my $length = length $sequence->sequence_string();
-        next unless $length >= 20000;
-
         my $contig = Bio::Seq->new(
             -seq => $sequence->sequence_string(),
             -id => $sequence->sequence_name(),
         );
 
-        my $filename = $output_directory . "/fasta_$counter.fa";
-        $current_fasta = Bio::SeqIO->new(
-            -file => ">$filename",
-            -format => 'Fasta',
-        );
+        if (not defined $current_fasta or ($total_bases + $length) > $upper_limit) {
+            my $filename = $output_directory . "/fasta_$counter.fa";
+            $current_fasta = Bio::SeqIO->new(
+                -file => ">$filename",
+                -format => 'Fasta',
+            );
+
+            $counter++;
+            $total_bases = 0;
+            push @filenames, $filename;
+        }
 
         $current_fasta->write_seq($contig);
-        push @filenames, $filename;
-        $counter++;
-
-        # TODO Testing only
-        #last if @filenames > 5;
-        last;
+        $total_bases += $length;
     }
 
-    $self->status_message("Created " . scalar @filenames . " split fasta files:\n" . join("\n", @filenames));
+    $self->status_message("Created " . scalar @filenames . " split fasta files in $output_directory");
     $self->fasta_files(\@filenames);
     return 1;
 }

@@ -23,10 +23,10 @@ set Pindel_file = "adapted_deletions.csv.big_deletions";
 set CNA = "CNA/";
 set CNA_file_end = "_CNA.seg";
 
-set col_AS = "	\\t	1	2	4	6	7	NA	NA	NA	NA	10	12	NA";
-set col_BD = "	\\t	0	1	3	4	6	2	5	11	12	7	8	10";
-set col_PD = "	\\t	0	1	0	2	NA	NA	NA	NA	NA	3	NA	4";
-set col_CNA = "	\\t 0	1	0	2	NA	NA	NA	5	7	3	9	NA";
+set col_AS = "	\\t	1	2	4	6	7	NA	NA	NA	NA	10	12	NA  0";
+set col_BD = "	\\t	0	1	3	4	6	2	5	11	12	7	8	10  100";
+set col_PD = "	\\t	0	1	0	2	NA	NA	NA	NA	NA	3	NA	4   0";
+set col_CNA = "	\\t 0	1	0	2	NA	NA	NA	5	7	3	9	NA  10000";
 #									type n1	n2 n_cn	t_cn sz	sc	sp_r
 
 set AS = ".AS";

@@ -104,6 +104,7 @@ sub pre_execute {
             abs_path(dirname($self->output_file)));
         die;
     }
+    chmod(0775, $temp_dir);
     $self->_temp_dir($temp_dir);
     
     my @splitFiles;
@@ -159,6 +160,7 @@ sub pre_execute {
                 $currChrom = $chrom;
                 $fh->close if $fh;
                 $fh = File::Temp->new (DIR => $self->_temp_dir);
+                chmod(0664, $fh->filename);
                 push @splitFiles, $fh;
             }
 
@@ -203,6 +205,9 @@ sub post_execute {
         }
     }
 
+    unless(@output_files){
+        $self->error_message("No non-zero sized output files, exiting") and die;
+    }
     Genome::Utility::FileSystem->cat(
         input_files => \@output_files, 
         output_file => $self->_output_file,
