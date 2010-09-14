@@ -101,7 +101,9 @@ More information about the Picard suite of tools can be found at http://picard.s
 EOS
 }
 
-my %PICARD_VERSIONS = (
+# NOTE: These are in order.
+# Please put the most recent first.
+my @PICARD_VERSIONS = (
     '1.29' => '/gsc/scripts/lib/java/samtools/picard-tools-1.29',
     '1.25' => '/gsc/scripts/lib/java/samtools/picard-tools-1.25',
     '1.24' => '/gsc/scripts/lib/java/samtools/picard-tools-1.24',
@@ -117,6 +119,10 @@ my %PICARD_VERSIONS = (
     'r104' => '/gsc/scripts/lib/java/samtools/picard-tools-1.04/',
     'r103wu0' => '/gsc/scripts/lib/java/samtools/picard-tools-1.03/',
 );
+
+my %PICARD_VERSIONS = @PICARD_VERSIONS;
+
+sub latest_version { $PICARD_VERSIONS[0] }
 
 sub path_for_picard_version {
     my ($class, $version) = @_;

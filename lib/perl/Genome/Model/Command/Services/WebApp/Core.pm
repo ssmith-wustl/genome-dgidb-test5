@@ -31,7 +31,7 @@ sub import {
 
     @error_classes = grep {
         my $r = 0;
-        if ($_ !~ /^Genome::(Model::Alignment|Utility::MetagenomicClassifier)/) {
+        if ($_ !~ /^Genome::(Model::Alignment|Utility::MetagenomicClassifier|Assembly)/) {
 #            print "$_\n";
             eval "use $_";
             $r = $@;
