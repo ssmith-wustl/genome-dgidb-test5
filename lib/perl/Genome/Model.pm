@@ -40,7 +40,7 @@ class Genome::Model {
                                                       return unless $pp_id;
                                                       my $pp = Genome::ProcessingProfile->get($pp_id);
                                                       Carp::croak("Can't find Processing Profile with ID $pp_id while resolving subclass for Model") unless $pp;
-                                                      return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
+                                                      return Genome::Model::_model_class_string_from_processing_profile($pp);
                                                   },
                                 },
         name                    => { is => 'Text', len => 255 },
@@ -176,7 +176,13 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
-
+sub _model_class_string_from_processing_profile {
+    $DB::single = 1;
+    my $pp = shift;
+    my $class = $pp->subclass_name;
+    $class =~ s/ProcessingProfile/Model/;
+    return $class;
+}
 
 # TODO: improve the logic in Genome::Command::OO to handle more of this
 sub from_cmdline {
@@ -278,7 +284,7 @@ sub __extend_namespace__ {
 sub create {
     my $class = shift;
 
-    if ($class eq __PACKAGE__) {
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
     }

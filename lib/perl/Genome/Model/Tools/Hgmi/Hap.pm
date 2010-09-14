@@ -1,7 +1,19 @@
 package Genome::Model::Tools::Hgmi::Hap;
 
+# bdericks: This is a command that in turn calls the sub-commands needed
+# to execute the BAP pipeline. This process is being converted to a build
+# process, so this script will soon be obsolete
+#
+# TODO Why not have the _execute_build method of the bacterial gene annotation
+# processing profile do all this directly? Better yet, why not make this a
+# workflow? Doing so would require fixing all the directory changing first. Also,
+# probably won't be able to use an xml file for the workflow, since skipping
+# a few steps is necessary at times
+
 use strict;
 use warnings;
+
+use lib "/gsc/scripts/opt/bacterial-bioperl";
 
 use Genome;
 use Command;
@@ -64,7 +76,6 @@ UR::Object::Type->define(
             is_optional => 1,
             default     => 0,
         },
-
     ]
 );
 
@@ -95,31 +106,21 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $config;
-    if (defined($self->gen_example)) {
-        if (-f $self->config) {
-            croak "Cowardly refusing to overwrite existing file! Hap.pm \n\n";
-        }
+    $self->status_message("Beginning execution of HAP command");
 
-        $self->build_empty_config();
-        return 1;
-    }
-
-    if (-f $self->config) {
-        $config = LoadFile($self->config);
-    }
-    else {
-        my $file = $self->config;
-        croak "Non-existent config file $file Hap.pm\n\n";
-    }
+    # FIXME I'd like to get rid of the configuration file altogether
+    confess "No configuration file found at " . $self->config unless -f $self->config;
+    my $config = LoadFile($self->config);
 
     # Core gene check only relevant to bacteria
     if($config->{cell_type} eq 'VIRAL') {
         $self->skip_core_check(1);
     }
 
-    # dir-builder
-    my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
+    $self->status_message("Creating directory structure.");
+
+    # Directory structure is created
+    my $dir_builder = Genome::Model::Tools::Hgmi::DirBuilder->create(
         path                  => $config->{path},
         org_dirname           => $config->{org_dirname},
         assembly_version_name => $config->{assembly_name},
@@ -127,91 +128,83 @@ sub execute {
         pipe_version          => $config->{pipe_version},
         cell_type             => $config->{cell_type}
     );
+    confess "Could not create directory builder object!" unless $dir_builder;
+    my $dir_build_rv = $dir_builder->execute;
+    confess "Trouble executing directory builder!" unless defined $dir_build_rv and $dir_build_rv == 1;
 
-    if ($d)
-    {
-        $d->execute() or croak "can't run dir-builder Hap.pm\n\n";
-    }
-    else
-    {
-        croak "can't set up dir-builder";
-    }
+    $self->status_message("Directories created, now collectin sequence!");
 
+    # FIXME Should not be changing directories like this
     my $next_dir = $config->{path} . "/"
         . $config->{org_dirname} . "/"
         . $config->{assembly_name} . "/"
         . $config->{assembly_version} . "/"
         . "Sequence/Unmasked";
+    confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
 
-    # collect-sequence
-    my $cs = Genome::Model::Tools::Hgmi::CollectSequence->create(
+    # Collect sequence into directory
+    # FIXME Add output directory param here so changing directories isn't necessary
+    my $collect_sequence = Genome::Model::Tools::Hgmi::CollectSequence->create(
         seq_file_name  => $config->{seq_file_name},
         seq_file_dir   => $config->{seq_file_dir},
         minimum_length => $config->{minimum_length},
     );
+    confess "Could not create collect sequence object!" unless $collect_sequence;
+    my $collect_seq_rv = $collect_sequence->execute;
+    confess "Trouble executing collect sequence!" unless defined $collect_seq_rv and $collect_seq_rv == 1;
 
-    if ($cs)
-    {
-        $cs->execute() or croak "can't run collect-sequence Hap.pm\n\n";
-        
-    }
-    else
-    {
-        croak "can't set up collect-sequence Hap.pm\n\n";
-    }
+    $self->status_message("Sequence collection done, now naming sequence.");
 
-    # sequence-name
-    my $sn = Genome::Model::Tools::Hgmi::SequenceName->create(
+    # Run sequence name tool (what does this do?) 
+    my $sequence_name = Genome::Model::Tools::Hgmi::SequenceName->create(
         locus_tag        => $config->{locus_tag},
-        fasta            => $cs->new_ctgs_out,
+        fasta            => $collect_sequence->new_ctgs_out,
         analysis_version => $config->{pipe_version},
         acedb_version    => $config->{acedb_version},
         project_type     => $config->{project_type},
         path             => $config->{path},
     );
+    confess "Could not create sequence name object!" unless $sequence_name;
+    my $seq_name_rv = $sequence_name->execute;
+    confess "Trouble executing sequence name!" unless defined $seq_name_rv and $seq_name_rv == 1;
 
-    if ($sn)
-    {
-        $sn->execute() or croak "can't run sequence-name Hap.pm\n\n";
-    }
-    else
-    {
-        croak "can't set up sequence-name";
-    }
-
-    # chdir( dir-path/ org-name / assem name,version/ pipe version
-    # chdir();
-    # mk-prediction-model
+    # Once again, changing directory because a tool doesn't accept an output directory option
+    # FIXME Remove this!
     $next_dir = $config->{path} . "/"
         . $config->{org_dirname} . "/"
         . $config->{assembly_name} . "/"
         . $config->{assembly_version} . "/" . "BAP" . "/"
         . $config->{pipe_version}
         . "/Sequence";
+    confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
 
-    my $model = Genome::Model::Tools::Hgmi::MkPredictionModels->create(
+    $self->status_message("Sequence naming complete, now making prediction models.");
+
+    # Making prediction models, which are thrown into current working directory
+    # FIXME Add an output directory parameter
+    my $make_models = Genome::Model::Tools::Hgmi::MkPredictionModels->create(
         locus_tag  => $config->{locus_tag},
-        fasta_file => $sn->new_output,
+        fasta_file => $sequence_name->new_output,
     );
+    confess "Could not create make models object!" unless $make_models;
+    my $make_models_rv = $make_models->execute;
+    confess "Trouble executing make models!" unless defined $make_models_rv and $make_models_rv == 1;
 
-    if ($model)
-    {
-        $model->execute() or croak "can't run mk-prediction-model Hap.pm\n\n";
-    }
-    else
-    {
-        croak "can't set up mk-prediction-model Hap.pm\n\n";
-    }
-
+    # FIXME Remove directory hopping
     $next_dir = $config->{path} . "/"
         . $config->{org_dirname} . "/"
         . $config->{assembly_name} . "/"
         . $config->{assembly_version} . "/" . "BAP" . "/"
         . $config->{pipe_version};
+    confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
 
+    $self->status_message("Prediction models created, now running gene prediction!");
+
+    # Create prediction object and execute
+    # FIXME Add output directory param, do not rely on current working directory
     my $predict = Genome::Model::Tools::Hgmi::Predict->create(
         organism_name    => $config->{organism_name},
         locus_tag        => $config->{locus_tag},
@@ -219,112 +212,55 @@ sub execute {
         ncbi_taxonomy_id => $config->{ncbi_taxonomy_id},
         gram_stain       => $config->{gram_stain},
         locus_id         => $config->{locus_id},
+        dev              => $self->dev,
     );
+    confess "Could not make prediction object!" unless $predict;
 
-    if ( $self->dev )
-    {
-        $predict->dev(1);
+    # Skip execution if previous gene prediction execution was successful
+    if ($predict->is_valid()) {
+        $self->status_message("Prediction has already been run successfully, continuing!");
+    }
+    else {
+        my $predict_rv = $predict->execute;
+        confess "Trouble executing gene prediction!" unless defined $predict_rv and $predict_rv == 1;
     }
 
-    # to use new predictscript if changes get made.
-    if (exists($config->{predict_script_location}) && (-x $config->{predict_script_location}) )
-    {
-        $predict->script_location($config->{predict_script_location});
-        $self->status_message("using predict script ". $config->{predict_script_location});
-    }
+    $self->status_message("Gene prediction run, now starting gene merging!");
 
-    if ($predict)
-    {
-        # check if there is already a valid run.
-        unless($predict->is_valid()) {
-            $self->status_message("running predict step");
-            $predict->execute()
-                or croak
-                "can't run bap_predict_genes.pl step.... from Hap.pm\n\n";
-        }
-        else
-        {
-
-            $self->status_message("there is a pre-existing valid run for prediction, continuing");
-        }
-    }
-    else
-    {
-        croak "can't set up bap_predict_genes.pl step.... from Hap.pm\n\n";
-    }
-
-    my %merge_params = (
+    # Create merge object and execute
+    my $merge = Genome::Model::Tools::Hgmi::Merge->create(
         organism_name => $config->{organism_name},
         locus_tag     => $config->{locus_tag},
         project_type  => $config->{project_type},
         runner_count  => $config->{runner_count},
         use_local_nr  => $config->{use_local_nr},
+        dev           => $self->dev,
+        nr_db         => $config->{nr_db},
+        iprpath       => $config->{iprpath},
     );
+    confess "Could not create gene merging object!" unless $merge;
 
-    # should also check if these exist.
-    if (exists($config->{nr_db})) {
-        $merge_params{nr_db} = $config->{nr_db};
+    # Skip execution if previous gene merging run was successful
+    if ($merge->is_valid) {
+        $self->status_message("Skipping gene merging step, previous execution was successful!");
     }
-    if (exists($config->{iprpath})) {
-        $merge_params{iprpath} = $config->{iprpath};
-    }
-    
-    my $merge = Genome::Model::Tools::Hgmi::Merge->create(%merge_params);
-
-    if ( $self->dev )
-    {
-        $merge->dev(1);
+    else {
+        my $merge_rv = $merge->execute;
+        confess "Trouble executing gene merging!" unless defined $merge_rv and $merge_rv == 1;
     }
 
-    if ($merge)
-    {
-        unless($merge->is_valid() ) {
-            $self->status_message("running merge step");
-            $merge->execute()
-                or croak "can't run bap_merge_genes.pl step... from Hap.pm\n\n";
-        }
-        else
-        {
+    $self->status_message("Gene merging done, now tagging overlaps.");
 
-            $self->status_message("there is a pre-existing valid run for merge, continuing");
-        }
-    }
-    else
-    {
-        croak "can't set up bap_merge_genes.pl step... from Hap.pm\n\n";
-    }
+    # Overlapping genes aren't properly tagged in merging, so an extra step is run to tag them
+    my $tag_overlaps = Genome::Model::Tools::Bacterial::TagOverlaps->create(
+        sequence_set_id => $merge->sequence_set_id,
+        dev             => $self->dev,
+    );
+    confess "Could not create tag overlaps object!" unless $tag_overlaps;
+    my $overlap_rv = $tag_overlaps->execute;
+    confess "Trouble executing tag overlaps!" unless defined $overlap_rv and $overlap_rv == 1;
 
-    # this needs to get the sequence set name and sequence set id somehow.
-    my $ssid = $merge->sequence_set_id();
-
-    # tag 100% overlaps
-
-    my %overlap_params ;
-    $overlap_params{sequence_set_id} = $ssid ;
-    if($self->dev) { 
-        $overlap_params{dev} = 1;
-    }
-#    print "overlap_params:\n";
-#    print Data::Dumper::Dumper(\%overlap_params),"\n";
-    my $ovtag = Genome::Model::Tools::Bacterial::TagOverlaps->execute(%overlap_params);
-    unless($ovtag) {
-        $self->error_message("can't run overlaps tagging");
-    }
-    # old way of executing this:
-    #my $ovtag = Genome::Model::Tools::Bacterial::TagOverlaps->create( sequence_set_id => $ssid );
-#    if ($ovtag) {
-#        $ovtag->dev(1) if $self->dev;
-#        $ovtag->execute() or croak "Can't execute tag overlaps tools from Hap.pm!";
-#    }
-#    else {
-#        croak "Can't create tag overlaps tools from Hap.pm!";
-#    }
-
-    # Running rrna screen. Previously, this would not get run if protein annotation was skipped,
-    # so it's been moved to prevent this
-    warn qq{\n\nRunning rRNA screening step ... Hap.pm\n\n};
-
-    # core genes and rrna screens
+    # FIXME Do not change directories like this, have the tool accept an output directory param!
     $next_dir = $config->{path} . "/"
         . $config->{org_dirname} . "/"
         . $config->{assembly_name} . "/"
@@ -332,28 +268,25 @@ sub execute {
         . "Genbank_submission/"
         . $config->{pipe_version}
         . "/Annotated_submission";
-
+    confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
-    # rrna screen step
-    my $rrnascreen = Genome::Model::Tools::Hgmi::RrnaScreen->create(
-        sequence_set_id => $ssid, );
 
-    if ( $self->dev )
-    {
-        $rrnascreen->dev(1);
-    }
+    $self->status_message("Overlaps are totally tagged, running rrna screen.");
 
-    if ($rrnascreen)
-    {
-        $rrnascreen->execute() or croak "can't execute rrna screen";
-    }
-    else
-    {
-        croak "can't set up rrna screen step... Hap.pm\n\n";
-    }
+    # Running rrna screen
+    my $rrna_screen = Genome::Model::Tools::Hgmi::RrnaScreen->create(
+        sequence_set_id => $merge->sequence_set_id,
+        dev => $self->dev,
+    );
+    confess "Could not create rrna screen object!" unless $rrna_screen;
+    my $rrna_screen_rv = $rrna_screen->execute;
+    confess "Trouble executing rrna screen!" unless defined $rrna_screen_rv and $rrna_screen_rv == 1;
 
-    my %finish_params = (
-        sequence_set_id  => $ssid,
+    $self->status_message("Rrna screen done, running finishing step.");
+
+    # Run finish step
+    my $finish = Genome::Model::Tools::Hgmi::Finish->create(
+        sequence_set_id  => $merge->sequence_set_id,
         locus_tag        => $config->{locus_tag},
         organism_name    => $config->{organism_name},
         project_type     => $config->{project_type},
@@ -363,94 +296,43 @@ sub execute {
         assembly_version => $config->{assembly_version},
         pipe_version     => $config->{pipe_version},
         path             => $config->{path},
+        nr_db            => $config->{nr_db},
+        dev              => $self->dev,
+        skip_acedb_parse => $config->{skip_acedb_parse},
     );
+    confess "Could not create finish object!" unless $finish;
+    my $finish_rv = $finish->execute;
+    confess "Trouble executing finish step!" unless defined $finish_rv and $finish_rv == 1;
 
-    if (exists($config->{nr_db})) {
-        $finish_params{nr_db} = $config->{nr_db};
-    }
-    
-    my $fin = Genome::Model::Tools::Hgmi::Finish->create(%finish_params);
+    $self->status_message("Done with finishing!");
 
-    if ( $self->dev )
+    # Run the core gene check (unless the user says we shouldn't!)
+    unless ($self->skip_core_check)
     {
-        $fin->dev(1);
-    }
+        $self->status_message("Preparing to run core gene check!");
 
-    if ( exists( $config->{skip_acedb_parse} ) )
-    {
-
-        $fin->skip_acedb_parse(1);
-
-    }
-
-    if( exists( $config->{finish_script_location}) && -f $config->{finish_script_location} )
-    {
-        $self->status_message("changing finish script location to ". $config->{finish_script_location});
-        $fin->script_location($config->{finish_script_location});
-    }
-
-    if ($fin)
-    {
-        $fin->execute() or croak "can't run finish step... Hap.pm\n\n";
-    }
-    else
-    {
-        croak "can't set up finish step... Hap.pm\n\n";
-    }
-
-
-    # core genes and rrna screens
-    $next_dir = $config->{path} . "/"
-        . $config->{org_dirname} . "/"
-        . $config->{assembly_name} . "/"
-        . $config->{assembly_version} . "/"
-        . "Genbank_submission/"
-        . $config->{pipe_version}
-        . "/Annotated_submission";
-
-    chdir($next_dir);
-
-    unless( $self->skip_core_check )
-    {
-        warn qq{\n\nRunning core genes ... Hap.pm\n\n};
-        $self->status_message("\n\nRunning core genes... Hap.pm\n\n");
-
-
-        # have a skip-core-gene flag here that skips this check.
-        my $coregene = Genome::Model::Tools::Hgmi::CoreGenes->create(
+        my $core_gene = Genome::Model::Tools::Hgmi::CoreGenes->create(
             cell_type       => $config->{cell_type},
-            sequence_set_id => $ssid,
+            sequence_set_id => $merge->sequence_set_id,
+            dev             => $self->dev,
         );
-
-        if ( $self->dev )
-        {
-            $coregene->dev(1);
-        }
-
-        if ($coregene)
-        {
-            $coregene->execute() or croak "can't execute core gene screen";
-        }
-        else
-        {
-            croak "can't set up core gene step... Hap.pm\n\n";
-        }
+        confess "Could not create core gene check object!" unless $core_gene;
+        my $core_rv = $core_gene->execute;
+        confess "Trouble executing core gene check!" unless defined $core_rv and $core_rv == 1;
     }
-    else
-    {
-        $self->status_message("Skipping core genes... Hap.pm\n\n");
+    else {
+        $self->status_message("Skipping core gene check.");
     }
 
-
-
-
-    if($self->skip_protein_annotation)
-    {
-        $self->status_message("run complete, skipping protein annotation");
-        my ($dump_out,$dump_err); 
+    # If the user wants to skip protein annotation, we're done!
+    if($self->skip_protein_annotation) {
+        $self->status_message("Skipping protein annotation!");
         return 1;
     }
 
+    $self->status_message("Getting ready to run PAP!");
+
+    # FIXME bdericks: Not looking at this stuff for now... probably needs some work
     warn qq{\n\nBeginning to run SendToPap.pm(workflow) ... from Hap.pm\n\n};
 #    $self->status_message("starting send-to-pap/PAP workflow...");
 
@@ -497,7 +379,7 @@ sub execute {
 
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
         'locus_tag'            => $config->{locus_tag},
-        'sequence_set_id'      => $ssid,
+        'sequence_set_id'      => $merge->sequence_set_id,
         'sequence_name'        => $config->{assembly_name},
         'organism_name'        => $config->{organism_name},
         'workflow_xml'         => $config->{workflowxml},
@@ -593,7 +475,7 @@ sub execute {
         my $ber_config = undef;
 
         my $jcvi = Genome::Model::Tools::Ber::AmgapBerProtName->create(
-            sequence_set_id => $ssid,
+            sequence_set_id => $merge->sequence_set_id,
             config          => $self->config(),
         );
 

@@ -29,7 +29,7 @@ class Genome::Model::Build {
                                                       return unless $model_id;
                                                       my $model = Genome::Model->get($model_id);
                                                       Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
-                                                      return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($model->type_name);
+                                                      return Genome::Model::Build::_build_class_string_from_model($model);
                                                   },
 
                                    },
@@ -85,6 +85,13 @@ class Genome::Model::Build {
 
 use Genome::Command::OO;
 *from_cmdline = \&Genome::Command::OO::default_cmdline_selector;
+
+sub _build_class_string_from_model {
+    my $model = shift;
+    my $class = $model->subclass_name;
+    $class =~ s/Model/Model::Build/;
+    return $class;
+}
 
 sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass will soon be stored
     my $class = shift;
@@ -175,7 +182,7 @@ sub __extend_namespace__ {
 
 sub create {
     my $class = shift;
-    if ($class eq __PACKAGE__) {
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # let the base class re-call the constructor from the correct sub-class
         return $class->SUPER::create(@_);
     }
