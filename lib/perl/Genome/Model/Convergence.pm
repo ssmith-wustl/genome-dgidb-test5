@@ -44,7 +44,7 @@ EODOC
 };
 
 
-sub launch_rebuild {
+sub schedule_rebuild {
     my $self = shift;
     
     unless($self->auto_build_alignments){
@@ -73,17 +73,10 @@ sub launch_rebuild {
             #For now this will require a manual rebuild (`genome model build start`)
         }
     }
-    
-    my $build_command = Genome::Model::Build::Command::Start->create(
-        model_identifier => $self->id,
-        force => 1,
-    );
 
-    unless ($build_command->execute == 1) {
-        $self->error_message("Genome::Model::Command::Build::Start Execute failed launching convergence rebuild. " . $build_command->error_message);
-        return;
-    }
-    
+    $self->build_requested(1);
+    $self->status_message('Convergence rebuild requested.');
+
     return 1;
 }
 
