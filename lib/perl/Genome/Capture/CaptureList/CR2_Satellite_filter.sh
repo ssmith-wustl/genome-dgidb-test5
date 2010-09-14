@@ -16,7 +16,7 @@ set i = $argv[3];
 set user = $argv[4];
 	set f = ${result_dir}/${project_name}${i};
 	# CR2
-	`grep BD $f | grep -v AS | perl -ane '$a=0; foreach ( @F[5..$#F] ) { ( $ncn,$tcn ) = ( $_=~/Ncn(\S+)\:Tcn(\S+)/ ) ; ( $tp ) = ($_=~/tp(\S+):/); $a = 1 if($ncn - $tcn > 0.5 && $tp =~ /DEL/ || $tcn-$ncn>0.5 && $tp =~ /ITX/);} print "$_" if($a);' > $f.CR2.tmp`
+	`grep BD $f | grep -v AS | perl -ane '$a=0; foreach ( @F[1..$#F] ) { ( $ncn,$tcn ) = ( $_=~/Ncn(\S+)\:Tcn(\S+)/ ) ; ( $tp ) = ($_=~/tp(\S+):/); $a = 1 if($ncn - $tcn > 0.5 && $tp =~ /DEL/ || $tcn-$ncn>0.5 && $tp =~ /ITX/);} print "$_" if($a);' > $f.CR2.tmp`
 	# filter
 	bsub -u xfan@genome.wustl.edu -J ${project_name}${i} -q 'short' "perl filters.pl $f.CR2.tmp ${f}.CR2 ${f}.CR2.filteredout";
 #	@ j = ${j} + 1;		

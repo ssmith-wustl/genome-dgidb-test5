@@ -28,7 +28,7 @@
 .mini.btn, mini.btn:visited {
     font-size: .9em !important;
     line-height: 16px !important;
-    padding: 0 5px 0 3px !important;
+    padding: 0 5px 0 5px !important;
 }
 
 .app.btn, .app.btn:visited {

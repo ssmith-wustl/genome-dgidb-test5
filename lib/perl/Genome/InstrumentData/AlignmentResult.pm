@@ -391,6 +391,7 @@ sub create {
 
     # STEP 11: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
     $self->status_message("Preparing the output directory...");
+    $self->status_message("Staging disk usage is " . $self->_staging_disk_usage . " KB");
     my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
     $self->status_message("Alignment output path is $output_dir");
 
@@ -806,7 +807,7 @@ sub _promote_validated_data {
 
     $self->status_message("Now de-staging data from $staging_dir into $output_dir"); 
 
-    my $call = sprintf("rsync -avz %s/* %s", $staging_dir, $output_dir);
+    my $call = sprintf("rsync -avzL %s/* %s", $staging_dir, $output_dir);
 
     my $rv = system($call);
     $self->status_message("Running Rsync: $call");
@@ -1036,6 +1037,19 @@ sub _prepare_working_directories {
     return 1;
 } 
 
+
+sub _staging_disk_usage {
+
+    my $self = shift;
+    my $usage;
+    unless ($usage = Genome::Utility::FileSystem->disk_usage_for_path($self->temp_staging_directory)) {
+        $self->error_message("Failed to get disk usage for staging: " . Genome::Utility::FileSystem->error_message);
+        die $self->error_message;
+    }
+
+    return $usage;
+}
+
 sub _prepare_alignment_directory {
 
     my $self = shift;
@@ -1053,7 +1067,7 @@ sub _prepare_alignment_directory {
 
     my %allocation_create_parameters = (
         %allocation_get_parameters,
-        kilobytes_requested => $self->estimated_kb_usage,
+        kilobytes_requested => $self->_staging_disk_usage,
         owner_class_name => $self->class,
         owner_id => $self->id
     );

@@ -4,6 +4,8 @@
 
   <xsl:template name="genome_object_set" match="object[./types[./isa[@type='UR::Object::Set']]]">
 
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="set_header">
       <xsl:with-param name="display_name" select="'Query Results'" />
     </xsl:call-template>

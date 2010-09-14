@@ -151,8 +151,7 @@ sub execute {
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
-    unless((defined($self->processing_profile_name) && (not defined($self->processing_profile_id)))||
-                (not defined($self->processing_profile_name) && defined($self->processing_profile_id))){
+    unless((defined($self->processing_profile_name) || defined($self->processing_profile_id))){
         $self->error_message("Must specify either processing profile name or processing profile id.");
         return;
     }
@@ -184,9 +183,7 @@ sub execute {
         $self->processing_profile_name($pp->name);
     }
 
-    # Get processing profile id for the name given
-    #my $processing_profile_id = $self->_get_processing_profile_id_for_name
-    #    or return;
+    $self->compare_pp_and_model_type;
 
     #attempt derive subject_type if not passed as an arg
     #die if subject type isnt sample_name for now
@@ -310,45 +307,34 @@ sub type_specific_parameters_for_create {
     return (); #This exists to be overwritten by subclasses
 }
 
-sub _get_processing_profile_id_for_name {
+sub compare_pp_and_model_type {
     my $self = shift;
-
-    unless ( $self->processing_profile_name ) {
-        $self->error_message("No name to get processing profile");
-        return;
+    my $pp = Genome::ProcessingProfile->get(id=>$self->processing_profile_id);
+    unless($pp){
+        $self->error_message("Couldn't find the processing profile identified by the #: ".$self->processing_profile_id);
+        die $self->error_message;
     }
+
+    #determine which subclass of Genome::Model::Command::Define called the super->execute
+    my $parent = $self->class;
+    $parent =~ s/.*:://;
+    my $pp_type = $pp->subclass_name;
     
-    my (@processing_profiles) = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
-
-    unless ( @processing_profiles ) {
-        my $msg;
-        if (defined $self->processing_profile_name) {
-            $msg = "Failed to find processing profile "
-                . $self->processing_profile_name . "!\n"
+    #check for special cases where processing-profile-name and model subclass have different names
+    if($parent eq "GenotypeMicroarray"){
+        unless($pp->name =~ /wugc/){
+            $self->error_message("GenotypeMicroarray Models must use one of the [microarray-type]/wugc processing-profiles.");
+            die $self->error_message;
         }
-        else {
-            $msg = "No processing profile specified!\n";
-        }
-        $msg .= "Please select from:\n "
-                . join("\n ", 
-                        grep { defined $_ and length $_ } 
-                        map  { $_->name } 
-                        Genome::ProcessingProfile->get() 
-                    ) 
-                . "\n";
-        $self->error_message($msg);
-        return;
+        return 1;
     }
-
-    # Bomb out unless exactly 1 matching processing profile is found
-    unless ( @processing_profiles == 1 ) {
-        $self->error_message(
-            sprintf('Found multiple processing profiles for name (%s)', $self->processing_profile_name)
-        );
-        return;
+    $pp_type =~ s/Genome::ProcessingProfile:://;
+    ($pp_type) = split "::",$pp_type;
+    unless($parent eq $pp_type){
+        $self->error_message("Genome::Model subclass ".$parent." and ProcessingProfile subclass ".$pp_type." did not match.");
+        die $self->error_message;
     }
-
-    return $processing_profiles[0]->id;
+    return 1;
 }
 
 

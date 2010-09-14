@@ -25,7 +25,8 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
-		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 0, is_input => 1 },
+		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
+		bam_file	=> { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1, is_input => 1 },		
 		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
 		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [4]", is_optional => 1, is_input => 1},
 		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [8]", is_optional => 1, is_input => 1},
@@ -43,8 +44,8 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-This command searches for Illumina/Solexa data using the database
-EXAMPLE:	gt analysis lane-qc compare-snps --genotype-file affy.genotypes --variant-file lane1.var
+This command compares SAMtools variant calls to array genotypes
+EXAMPLE:	gmt analysis lane-qc compare-snps --genotype-file affy.genotypes --variant-file lane1.var
 EOS
 }
 
@@ -66,7 +67,36 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $sample_name = $self->variant_file;
 	my $genotype_file = $self->genotype_file;
-	my $variant_file = $self->variant_file;
+
+	my $variant_file = "";
+	
+	if($self->bam_file)
+	{
+		my $bam_file = $self->bam_file;
+		
+		## If BAM provided, call the variants ##
+		    my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
+		    unless($tfh) {
+		        $self->error_message("Unable to create temporary file $!");
+		        die;
+			}
+
+		## Build consensus ##
+		print "Building pileup to $temp_path\n";		
+		my $cmd = "samtools pileup -cf /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa $bam_file >$temp_path";
+		system($cmd);
+		
+		$variant_file = $temp_path;
+	}
+	elsif($self->variant_file)
+	{
+		$variant_file = $self->variant_file;
+	}
+	else
+	{
+		die "Please provide a variant file or a BAM file\n";
+	}
+
 	$sample_name = $self->sample_name if($self->sample_name);
 	my $min_depth_hom = 4;
 	my $min_depth_het = 8;

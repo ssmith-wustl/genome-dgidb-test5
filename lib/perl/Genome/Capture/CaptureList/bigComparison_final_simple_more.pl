@@ -54,6 +54,8 @@ my $BreakpointBuffer = 500;
 my $maxFraction = 0.8;
 my %satelliteToChrStatements;
 
+my $span;
+
 my $num_col_ = 0;
 my $num_col_1 = 0;
 my @num_col;
@@ -62,25 +64,25 @@ open(CONFIG,"<$f_cfg") || die "unable to open $f_cfg\n";
 while(<CONFIG>){
   next unless (/\S+/);
 #  print $_."\n";
-  my ($tag,$file,$skip,$delimiter,$chr1,$start,$chr2,$stop,$type,$nreads1,$nreads2,$normal_cn,$tumor_cn,$size,$score,$support_reads)=split;
+  my ($tag,$file,$skip,$delimiter,$chr1,$start,$chr2,$stop,$type,$nreads1,$nreads2,$normal_cn,$tumor_cn,$size,$score,$support_reads,$span_size)=split;
   if($idx==0 && $opts{f}){   #replace the first file, format specification kept
     $file=$opts{f};
   }
   if($idx==$opts{s}){
     $seltag=$tag;
-    $selset=&ReadRegions($file,$skip,$delimiter,$chr1,$start,$chr2,$stop,$type,$nreads1,$nreads2,$normal_cn,$tumor_cn,$size,$score,$support_reads);
+    $selset=&ReadRegions($file,$skip,$delimiter,$chr1,$start,$chr2,$stop,$type,$nreads1,$nreads2,$normal_cn,$tumor_cn,$size,$score,$support_reads,$span_size);
     $num_col_1 = $num_col_;
   }
   elsif($opts{z}){
     if($opts{z}=~/$idx/){
       push @tags,$tag;
-      push @sets,&ReadRegions($file,$skip,$delimiter,$chr1,$start,$chr2,$stop,$type,$nreads1,$nreads2,$normal_cn,$tumor_cn,$size,$score,$support_reads);
+      push @sets,&ReadRegions($file,$skip,$delimiter,$chr1,$start,$chr2,$stop,$type,$nreads1,$nreads2,$normal_cn,$tumor_cn,$size,$score,$support_reads,$span_size);
       push @num_col, $num_col_;
     }
   }
   else{
     push @tags,$tag;
-    push @sets,&ReadRegions($file,$skip,$delimiter,$chr1,$start,$chr2,$stop,$type,$nreads1,$nreads2,$normal_cn,$tumor_cn,$size,$score,$support_reads);
+    push @sets,&ReadRegions($file,$skip,$delimiter,$chr1,$start,$chr2,$stop,$type,$nreads1,$nreads2,$normal_cn,$tumor_cn,$size,$score,$support_reads,$span_size);
     push @num_col, $num_col_;
   }
   $idx++;
@@ -136,7 +138,8 @@ foreach my $chr(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y'
   
 
   &post_process_combine();
-  &print_iterate_no_check();
+  &hierarchy_span_regions();
+#  &print_iterate_no_check();
  # &print_iterate();
   @record_all = ();
   @record_all_to_print = ();
@@ -151,6 +154,90 @@ foreach my $chr(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y'
 #	printf "# %s\:%s\t%d\/%d \(%.2f%%\)\t%d\/%d \(%.2f%%\)\n",$tags[$i],$tags[$j],$concordance{$i}{$j}||0,$nSVs[$i],$num1,$concordance{$i}{$j}||0,$nSVs[$j],$num2;
 #  }
 #}
+
+# hierarchily span the regions by the 12th column and 13th column
+sub hierarchy_span_regions{
+  my $num = $#record_all_to_print + 1;
+  for(my $i = 0; $i < $num; $i++){
+  	my $index = $record_all_to_print[$i]->{ind};
+  	chomp $index;
+  	my @u = split(/\|/, $index);
+  	
+	my $to_print_tmp;
+  	for(my $jj = 0; $jj < $#u+1; $jj++){
+  	  my $reg = $record_all[$u[$jj]];
+  	  
+  	  for(my $j = 0; $j < $nsets; $j++){
+  	    next if(!$reg->{$j});
+  	    my $tmp = $reg->{$j};
+		my $for_num = $to_print_tmp->{$j};
+		my $num = scalar keys %$for_num;
+
+		for my $key (sort {$a<=>$b} keys %$tmp){
+			my $tmp_ = $tmp->{$key};
+			$to_print_tmp->{$j}->{$num++} = $tmp_;
+		}
+	  }
+	}
+	
+	# hierarchy determine outer start, inner start, inner stop, outer stop
+	my ($outer_start, $inner_start, $inner_stop, $outer_stop);
+	my $first_time = 1;
+	my $level_processed;
+	for(my $j = 0; $j < $nsets; $j++){
+	  if($to_print_tmp->{$j}){
+	    $level_processed = $j;
+	    my $tmp = $to_print_tmp->{$j};
+	    for my $key (sort {$a <=> $b} keys %$tmp){
+	      my $tmp_ = $tmp->{$key};
+	      my $start = $tmp_->{start};
+	      my $end = $tmp_->{end};
+	      if($first_time == 0){
+	        $outer_start = $start if($outer_start > $start);
+	        $inner_start = $start if($inner_start < $start);
+	        $inner_stop = $end if($inner_stop > $end);
+	        $outer_stop = $end if($outer_stop < $end);
+	      }
+	      if($first_time == 1){
+	        $outer_start = $start;
+	        $inner_start = $start;
+	        $inner_stop = $end;
+	        $outer_stop = $end;
+	        $first_time = 0;
+	      }
+	    }
+	    last;
+	  }
+	}
+	
+	# span the region
+	$record_all_to_print[$i]->{outer_start} = $outer_start - $span->{$level_processed};
+	$record_all_to_print[$i]->{inner_start} = $inner_start + $span->{$level_processed};
+	$record_all_to_print[$i]->{inner_stop} = $inner_stop - $span->{$level_processed};
+	$record_all_to_print[$i]->{outer_stop} = $outer_stop + $span->{$level_processed};			
+	
+	# print key (the first column with the range)
+	&RegprintKey_span($record_all_to_print[$i]); 	      
+	
+	# print	the others
+	for(my $j = 0; $j < $nsets; $j++){
+	  if($to_print_tmp->{$j}){
+		my $tmp = $to_print_tmp->{$j};
+		for my $key (sort {$a<=>$b} keys %$tmp){
+	 		my $tmp_ = $tmp->{$key};
+			if($opts{h}){
+	  			&RegprintVCR($tags[$j], $tmp_);
+			}
+			else{
+	  			&RegprintAll($tags[$j], $tmp_);
+			}
+		}
+	  }
+	}	  	  
+	print "\n";
+	$to_print_tmp = ();
+  }
+}  	
 
 # to print record_all from record_all_to_print
 sub print_iterate_no_check{
@@ -422,6 +509,11 @@ sub RegprintKey{
 	printf "%s\t%s\t%s\t%s\t%d\t",join('.',$reg->{chr1},$reg->{start},$reg->{chr2},$reg->{end}), $reg->{chr1}, $reg->{start}, $reg->{chr2}, $reg->{end};
 }
 
+sub RegprintKey_span{
+	my ($reg) = @_;
+	printf "%s\t",join('.',$reg->{chr1},$reg->{outer_start},$reg->{inner_start},$reg->{chr2},$reg->{inner_stop},$reg->{outer_stop});#, $reg->{chr1}, $reg->{start}, $reg->{chr2}, $reg->{end};
+}
+
 sub RegprintAll_none{
 	my ($tag, $i) = @_;
 	my $num = $num_col[$i];
@@ -598,7 +690,7 @@ sub ReadRegions{
     ($reg->{chr1},$reg->{start},$reg->{chr2},$reg->{end})=($u[$c[0]],$u[$c[1]],$u[$c[2]],$u[$c[3]]);
     if($opts{h}){
 	# extra ones
-	for(my $p = 4; $p <= 11; $p++){
+	for(my $p = 4; $p <= 12; $p++){
 	#print $u[$c[$p]];
 	#print "\n";
 		if(defined $c[$p] && $c[$p]=~/^\d+/){
@@ -631,6 +723,11 @@ sub ReadRegions{
 				$reg->{normal} = $u[$c[$p]] if($fin =~ /normal/);
 			}
 		}
+		if(defined $c[$p] && $p == 12 && $c[$p] ne "NA" && ! defined $span->{$idx}){
+			$span->{$idx} = $c[$p];
+			#print "$idx\t" . $span->{$idx} . "\n";
+		}
+		
 	}
     }
     
@@ -643,8 +740,6 @@ sub ReadRegions{
     next if(
     	! defined $reg->{start} ||
     	! defined $reg->{end} ||
-        defined $reg->{chr1} && $reg->{chr1} eq "Y" ||
-        defined $reg->{chr2} && $reg->{chr2} eq "Y" ||
 	    $reg->{start} !~ /^\d+$/ ||
 	    $reg->{end} !~ /^\d+$/ ||
 	    defined $reg->{score} && $reg->{score} < $opts{q} ||

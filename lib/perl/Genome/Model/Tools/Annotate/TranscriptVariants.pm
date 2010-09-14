@@ -261,6 +261,7 @@ sub execute {
     }
     else {
         $output_fh = $self->_create_file($output_file);
+        chmod(0664, $output_file);
     }
     $self->_transcript_report_fh($output_fh);
 

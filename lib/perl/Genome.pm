@@ -21,41 +21,6 @@ use GSCApp;
 use Carp;
 use Carp::Heavy;
 
-BEGIN {
-    no warnings 'redefine';
-    use Sys::Hostname;
-    *Command::status_message_orig = \&Command::status_message;
-    *Command::status_message = sub {
-        my $self = shift;
-
-        unless(scalar @_) {
-            #called as accessor--no message to which to add prefix
-            return $self->status_message_orig;
-        }
-
-        my $hostname = hostname;
-        $hostname =~s/\.gsc\.wustl\.edu//;
-        my $time = UR::Time->now_local;
-        my $prefix = "($hostname) [$time]";
-        $self->status_message_orig("$prefix -- " . shift)
-    };
-    *UR::ModuleBase::status_message_orig = \&UR::ModuleBase::status_message;
-    *UR::ModuleBase::status_message = sub { 
-        my $self = shift;
-
-        unless(scalar @_) {
-            #called as accessor--no message to which to add prefix
-            return $self->status_message_orig;
-        }
-
-        my $hostname = hostname;
-        $hostname =~s/\.gsc\.wustl\.edu//;
-        my $time = UR::Time->now_local;
-        my $prefix = "($hostname) [$time]";
-        $self->status_message_orig("$prefix -- " . shift)
-    };
-}
-
 if ($] < 5.01) {
     no warnings;
     *Carp::caller_info = sub {
