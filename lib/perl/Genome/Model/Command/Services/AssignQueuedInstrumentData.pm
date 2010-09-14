@@ -164,14 +164,14 @@ sub execute {
             } # looping through processing profiles for this instdata, finding or creating the default model
 
         } # done with PSEs which specify a $subject_class_name, $subject_id, and @processing_profile_ids
-        #elsif ($subject_class_name or $subject_id or @processing_profile_ids) {
-        #    $self->error_message(
-        #        "PSE " . $pse->id . " specifies incomplete model find/create fields: "
-        #        . " subject_class_name $subject_class_name subject_id $subject_id"
-        #        . " processing_profile_ids @processing_profile_ids"
-        #    );
-        #    next PSE;
-        #}
+        elsif ($subject_class_name or $subject_id or @processing_profile_ids) {
+            $self->error_message(
+                "PSE " . $pse->id . " specifies incomplete model find/create fields: "
+                . " subject_class_name $subject_class_name subject_id $subject_id"
+                . " processing_profile_ids @processing_profile_ids"
+            );
+            next PSE;
+        }
 
         if (!$subject_class_name or !$subject_id) {
             $self->warning_message(
