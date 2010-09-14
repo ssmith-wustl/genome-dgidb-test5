@@ -12,26 +12,22 @@ class Genome::Model::Tools::Annotate::DescribeAnnotationRegions{
        has => [
            variant_file => {
                is => 'Text',   
-               is_input => 1,
                doc => "File of dummy variants. Tab separated columns: chromosome_name start stop reference variant",
            },
            output_file => {
                is => 'Text',
-               is_input => 1,
-               is_output=> 1,
                doc => "Store annotation in the specified file. Defaults to STDOUT if no file is supplied.",
                default => "STDOUT",
            },
            reference_transcripts => {
                is => 'String',
-               is_input => 1,
-               doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both). See full help output for a list of available reference transcripts.'
+               doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both). See full help output for a list of available reference transcripts. Defaults to NCBI-human.combined-annotation/54_36p_v2',
+               default => 'NCBI-human.combined-annotation/54_36p_v2',
            },
        ],
        has_optional => [
            flank_range => {
                is => 'Integer', 
-               is_input => 1,
                is_optional => 1,
                default => 50000,
                doc => 'Range to look around for flanking regions of transcripts',
@@ -57,7 +53,7 @@ sub execute {
     my $variant_file = $self->variant_file;
 
     # preserve additional columns from input if desired 
-    my @columns = ($self->variant_attributes);
+    my @columns = ($self->variant_output_attributes);
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $variant_file,
         headers => \@columns,
