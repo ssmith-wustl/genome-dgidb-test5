@@ -31,7 +31,7 @@ class Genome::ProcessingProfile::GenePrediction::Bacterial {
             is => 'Boolean',
             doc => 'If set, skip aceDB parsing in bap project finish',
             is_optional => 1,
-            default => 0,
+
         },
     ],
     doc => "Processing profile for gene prediction and merging models"
@@ -43,6 +43,9 @@ sub _resolve_type_name_for_class {
 
 sub _execute_build {
     my ($self, $build) = @_;
+
+    # I want my status messages, dammit!
+    $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
     my $model = $build->model;
     $self->status_message("Executing build logic for " . $self->__display_name__ . ":" . $build->__display_name__);
@@ -70,22 +73,18 @@ sub _execute_build {
 
     $self->status_message("Hap command object created, executing!");
 
+    # THIS IS IMPORTANT! Hap creates forked processes as part of the prediction step, and these child
+    # processes get a REFERENCE to open db handles, which get cleaned up and closed during cleanup of
+    # the child process. This causes problems in this process, because it expects the handle to still be
+    # open. Attempting to use that handle results in frustrating errors like this:
+    # DBD::Oracle::db rollback failed: ORA-03113: end-of-file on communication channel (DBD ERROR: OCITransRollback)
+    Genome::DataSource::GMSchema->disconnect_default_dbh;
+
     my $hap_rv = $hap_object->execute;
     unless ($hap_rv) {
         $self->error_message("Trouble executing hap command!");
         croak;
     }
-   
-    $DB::single = 1;
-    my @changed_objects = (
-        UR::Context->all_objects_loaded('UR::Object::Ghost'),
-        grep { $_->__changes__ } UR::Context->all_objects_loaded('UR::Object')
-    );
-    use IO::File;
-    use Data::Dumper;
-    my $fh = IO::File->new("/gscuser/bdericks/objects.txt", "w");
-    $fh->print(Dumper(\@changed_objects));
-    $fh->close;
 
     $self->status_message("Hap executed and no problems detected!");
     return 1;

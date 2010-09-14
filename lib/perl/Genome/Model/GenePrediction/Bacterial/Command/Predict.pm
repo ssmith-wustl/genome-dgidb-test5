@@ -100,22 +100,17 @@ class Genome::Model::GenePrediction::Bacterial::Command::Predict {
 
 };
 
-sub sub_command_sort_position {20}
-
-sub help_brief
-{
+sub help_brief {
     "run bacterial gene prediction";
 }
 
-sub help_synopsis
-{
-return <<"EOS"
+sub help_synopsis {
+return <<EOS
 genome model gene-prediction predict [options]
 EOS
 }
 
-sub help_detail
-{
+sub help_detail {
     return <<EOS
 Used to run Rfam, RNAmmer, GeneMark and Glimmer3 in BAP/MGAP
 
@@ -137,8 +132,6 @@ sub execute
     my $skip_mail_flag = $self->no_mail;
     my $user = $ENV{USER};
     my $dt_started = mark_time();
-
-    $DB::Single = 1;
 
     if ($self->dev) { $BAP::DB::DBI::db_env = 'dev'; }
 
@@ -171,8 +164,6 @@ sub execute
         }
 
     }
-
-    #local $SIG{INT} = \&{ $self->handle_sigint };
 
     my %gene_count = ();
 
@@ -295,8 +286,6 @@ sub execute
         q            => 'long',
         maxmessage   => 16384000,
         lib_paths    => [
-#            '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-live',
-#            '/gscmnt/temp212/info/annotation/bioperl-cvs/bioperl-run',
             UR::Util::used_libs,
             '/gsc/scripts/opt/bacterial-bioperl',
         ],
@@ -307,391 +296,381 @@ sub execute
 
     my $server = PP::RPC->new(%rpc_args);
 
+    $self->status_message("Starting rpc server");
     $server->start();
 
     my $failed_jobs = $job_source->failed_jobs();
 
-    if ( $#$failed_jobs > 0 )
-    {
-
-        foreach my $job ( @{$failed_jobs} )
-        {
-
+    if ($#$failed_jobs > 0) {
+        $self->warning_message("Found failed jobs! Here are some details:");
+        my $msg;
+        foreach my $job ( @{$failed_jobs}) { 
             my $job_id  = $job->job_id();
             my $class   = ref($job);
             my $seq_obj = $job->seq();
             my $seq_id  = $seq_obj->display_id();
-
-            warn "job $job_id ($class) ($seq_id) failed";
-
+            $msg .= "job $job_id ($class) ($seq_id) failed";
         }
-
-        warn "There were failed jobs - rolling back";
-
+        $self->warning_message($msg . "\nRolling back database changes!");
         BAP::DB::DBI->dbi_rollback();
-
+        confess;
     }
-    else
-    {
 
-        my %features = ();
+    $self->status_message("RPC server has run all jobs, none appear to have failed!");
 
-        foreach my $feature ( @{ $job_source->feature_ref() } )
-        {
-            push @{ $features{ $feature->seq_id() } }, $feature;
+    my %features = ();
+
+    foreach my $feature (@{$job_source->feature_ref()}){
+        push @{ $features{ $feature->seq_id() } }, $feature;
+    }
+
+    $self->status_message("Iterating through sequences produced by predictors...");
+
+    SEQUENCE: foreach my $seq_id ( keys %features ) {
+
+        $self->status_message("Retrieving sequence with set id $sequence_set_id and name $seq_id");
+        my $sequence = BAP::DB::Sequence->retrieve(
+            sequence_set_id => $sequence_set_id,
+            sequence_name   => $seq_id,
+        );
+
+        my $seq_obj = Bio::Seq->new(
+            -seq => $sequence->sequence_string(),
+            -id  => $sequence->sequence_name(),
+        );
+
+        unless ($sequence) {
+            $self->warning_message("Failed to fetch sequence object from BAP DB with id $sequence_set_id and name $seq_id!");
+            next SEQUENCE;
         }
 
-    SEQUENCE: foreach my $seq_id ( keys %features )
-        {
-
-            my $sequence = BAP::DB::Sequence->retrieve(
-                sequence_set_id => $sequence_set_id,
-                sequence_name   => $seq_id,
-            );
-
-            my $seq_obj = Bio::Seq->new(
-                -seq => $sequence->sequence_string(),
-                -id  => $sequence->sequence_name(),
-            );
-
-            unless ( defined($sequence) )
-            {
-                warn
-                    "failed to fetch sequence object from db for sequence '$seq_id'";
-                next SEQUENCE;
-            }
-
-            my @features = @{ $features{$seq_id} };
+        my @features = @{ $features{$seq_id} };
 
         FEATURE: foreach my $feature (@features)
+        {
+            unless ($feature->isa('Bio::SeqFeatureI')) {
+                $self->warning_message("This feature does not implement Bio::SeqFeatureI!");
+                next FEATURE;
+            }
+
+            my $source = $feature->source_tag();
+
+            if ( $source eq 'Glimmer_3.X' ) { $source = 'glimmer3'; }
+            elsif ( $source eq 'Genemark.hmm.pro' )
+            {
+                $source = 'genemark';
+            }
+            elsif ( $source eq 'tRNAscan-SE' ) { $source = 'trnascan'; }
+            elsif ( $source eq 'Infernal' )    { $source = 'rfam'; }
+            elsif ( $source =~ /rnammer/i ) { $source = 'rnammer'; }
+            else
+            {
+                $self->warning_message("unknown source_tag '$source'");
+                next FEATURE;
+            }
+
+            # GeneMark emits Bio::Tools::Prediction::Gene features, not
+            # Bio::SeqFeature::Generic features like Glimmer3,
+            # so, grab the Bio::Tools::Prediction::Exon and discard the
+            # rest (the exon will have the fuzzy location, if there is one)
+            if ( $source eq 'genemark' )
             {
 
-                unless ( $feature->isa('Bio::SeqFeatureI') )
+                ($feature) = $feature->exons();
+
+                unless ( defined($feature) )
                 {
-                    warn 'feature does not implement Bio::SeqFeatureI!';
+                    warn "genemark prediction had no exons";
                     next FEATURE;
                 }
 
-                my $source = $feature->source_tag();
+            }
 
-                if ( $source eq 'Glimmer_3.X' ) { $source = 'glimmer3'; }
-                elsif ( $source eq 'Genemark.hmm.pro' )
-                {
-                    $source = 'genemark';
-                }
-                elsif ( $source eq 'tRNAscan-SE' ) { $source = 'trnascan'; }
-                elsif ( $source eq 'Infernal' )    { $source = 'rfam'; }
-                elsif ( $source =~ /rnammer/i ) { $source = 'rnammer'; }
-                else
-                {
-                    warn "unknown source_tag '$source'";
-                    next FEATURE;
-                }
+            my $strand   = $feature->strand();
+            my $start    = $feature->start();
+            my $end      = $feature->end();
+            my $location = $feature->location();
 
-               # GeneMark emits Bio::Tools::Prediction::Gene features, not
-               # Bio::SeqFeature::Generic features like Glimmer3,
-               # so, grab the Bio::Tools::Prediction::Exon and discard the
-               # rest (the exon will have the fuzzy location, if there is one)
-                if ( $source eq 'genemark' )
-                {
+            unless ( ( $source eq 'glimmer3' )
+                || ( $source eq 'genemark' ) )
+            {
 
-                    ($feature) = $feature->exons();
-
-                    unless ( defined($feature) )
-                    {
-                        warn "genemark prediction had no exons";
-                        next FEATURE;
-                    }
-
+                # Coords for GeneMark/Glimmer will get fixed later
+                if ( $start > $end ) {
+                    ( $start, $end ) = ( $end, $start );
                 }
 
-                my $strand   = $feature->strand();
-                my $start    = $feature->start();
-                my $end      = $feature->end();
-                my $location = $feature->location();
+            }
 
-                unless ( ( $source eq 'glimmer3' )
-                    || ( $source eq 'genemark' ) )
-                {
+            unless ( defined($seq_id) ) { $seq_id = 'undef'; }
 
-                    # Coords for GeneMark/Glimmer will get fixed later
-                    if ( $start > $end ) {
-                        ( $start, $end ) = ( $end, $start );
-                    }
+            my $feature_id
+            = join( ':', $seq_id, $source, $strand, $start, $end );
 
+            if ( $seq_id eq 'undef' )
+            {
+                $self->warning_message('($feature_id) - undefined seq_id!');
+                next FEATURE;
+            }
+
+            $gene_count{$seq_id}{$source}++;
+
+            my $gene_name;
+            if ( $source eq 'trnascan' )
+            {
+                $gene_name = join( '.',
+                    $seq_id,
+                    ( join( '', 't', $gene_count{$seq_id}{$source} ) ) );
+            }
+            else
+            {
+                $gene_name = join '.', $seq_id, $source_fixup{$source},
+                $gene_count{$seq_id}{$source};
+            }
+
+            if (   ( $source eq 'glimmer3' )
+                || ( $source eq 'genemark' ) )
+            {
+
+                my $internal_stops = 0;
+                my $fragment       = 0;
+                my $missing_start  = 0;
+                my $missing_stop   = 0;
+                my $wraparound     = 0;
+                if ( $feature->has_tag('wraparound') ) {
+                    $wraparound = 1;
                 }
-
-                unless ( defined($seq_id) ) { $seq_id = 'undef'; }
-
-                my $feature_id
-                    = join( ':', $seq_id, $source, $strand, $start, $end );
-
-                if ( $seq_id eq 'undef' )
+                if ( $location->isa('Bio::Location::Fuzzy') )
                 {
-                    warn '($feature_id) - undefined seq_id!';
-                    next FEATURE;
+                    $fragment = 1;
                 }
-
-                $gene_count{$seq_id}{$source}++;
-
-                my $gene_name;
-                if ( $source eq 'trnascan' )
-                {
-                    $gene_name = join( '.',
-                        $seq_id,
-                        ( join( '', 't', $gene_count{$seq_id}{$source} ) ) );
-                }
-                else
-                {
-                    $gene_name = join '.', $seq_id, $source_fixup{$source},
-                        $gene_count{$seq_id}{$source};
-                }
-
-                if (   ( $source eq 'glimmer3' )
-                    || ( $source eq 'genemark' ) )
-                {
-
-                    my $internal_stops = 0;
-                    my $fragment       = 0;
-                    my $missing_start  = 0;
-                    my $missing_stop   = 0;
-                    my $wraparound     = 0;
-                    if ( $feature->has_tag('wraparound') ) {
-                        $wraparound = 1;
-                    }
-                    if ( $location->isa('Bio::Location::Fuzzy') )
-                    {
-                        $fragment = 1;
-                    }
 
 # Fractional codons mean the reading frame is horked, and presently the
 # upstream parsers aren't passing along frame info, so we have to do our best to
 # reverse engineer the correct one
-                    unless ( ( ( abs( $end - $start ) + 1 ) % 3 ) == 0 )
-                    {
+                unless ( ( ( abs( $end - $start ) + 1 ) % 3 ) == 0 )
+                {
 
 # Without a Bio::Location::Fuzzy, we cannot determine the correct reading frame
-                        unless ( $location->isa('Bio::Location::Fuzzy') )
-                        {
-                            warn
-                                "($feature_id) - length is not a multiple of 3 and location is not fuzzy";
-                            next FEATURE;
-                        }
-                        my $fuzzy_start = 0;
-                        my $fuzzy_end   = 0;
-                        my $extra_bases
-                            = ( ( abs( $end - $start ) + 1 ) % 3 );
-                        my $start_pos_type = $location->start_pos_type();
-                        my $end_pos_type   = $location->end_pos_type();
+                    unless ( $location->isa('Bio::Location::Fuzzy') )
+                    {
+                        warn
+                        "($feature_id) - length is not a multiple of 3 and location is not fuzzy";
+                        next FEATURE;
+                    }
+                    my $fuzzy_start = 0;
+                    my $fuzzy_end   = 0;
+                    my $extra_bases
+                    = ( ( abs( $end - $start ) + 1 ) % 3 );
+                    my $start_pos_type = $location->start_pos_type();
+                    my $end_pos_type   = $location->end_pos_type();
 
-                        if (   $start_pos_type eq 'BEFORE'
-                            || $start_pos_type eq 'AFTER' )
-                        {
-                            $fuzzy_start = 1;
-                        }
+                    if (   $start_pos_type eq 'BEFORE'
+                        || $start_pos_type eq 'AFTER' )
+                    {
+                        $fuzzy_start = 1;
+                    }
 
-                        if (   $end_pos_type eq 'AFTER'
-                            || $end_pos_type eq 'BEFORE' )
-                        {
-                            $fuzzy_end = 1;
-                        }
+                    if (   $end_pos_type eq 'AFTER'
+                        || $end_pos_type eq 'BEFORE' )
+                    {
+                        $fuzzy_end = 1;
+                    }
 
-                        # We have to have one inexact end to shave bases off
-                        unless ( $fuzzy_start || $fuzzy_end )
-                        {
-                            warn
-                                "($feature_id) - location is fuzzy, but start and stop are both exact";
-                            next FEATURE;
-                        }
+                    # We have to have one inexact end to shave bases off
+                    unless ( $fuzzy_start || $fuzzy_end )
+                    {
+                        warn
+                        "($feature_id) - location is fuzzy, but start and stop are both exact";
+                        next FEATURE;
+                    }
 
 # With two inexact ends, there is no hope of restoring the correct reading frame
 # intended by the predictor (we don't have an exact anchor point)
-                        if ( $fuzzy_start && $fuzzy_end )
-                        {
-                            warn
-                                "($feature_id) - both start and end are fuzzy";
-                            next FEATURE;
-                        }
-
-                        if ($fuzzy_start)
-                        {
-                            if ( $start_pos_type eq 'BEFORE' )
-                            {
-                                $start += $extra_bases;
-                            }
-                            if ( $start_pos_type eq 'AFTER' )
-                            {
-                                $start -= $extra_bases;
-                            }
-                        }
-
-                        if ($fuzzy_end)
-                        {
-                            if ( $end_pos_type eq 'BEFORE' )
-                            {
-                                $end += $extra_bases;
-                            }
-                            if ( $end_pos_type eq 'AFTER' )
-                            {
-                                $end -= $extra_bases;
-                            }
-                        }
-
+                    if ( $fuzzy_start && $fuzzy_end )
+                    {
+                        warn
+                        "($feature_id) - both start and end are fuzzy";
+                        next FEATURE;
                     }
+
+                    if ($fuzzy_start)
+                    {
+                        if ( $start_pos_type eq 'BEFORE' )
+                        {
+                            $start += $extra_bases;
+                        }
+                        if ( $start_pos_type eq 'AFTER' )
+                        {
+                            $start -= $extra_bases;
+                        }
+                    }
+
+                    if ($fuzzy_end)
+                    {
+                        if ( $end_pos_type eq 'BEFORE' )
+                        {
+                            $end += $extra_bases;
+                        }
+                        if ( $end_pos_type eq 'AFTER' )
+                        {
+                            $end -= $extra_bases;
+                        }
+                    }
+
+                }
 
 # The GeneMark parser emits SeqFeatures for minus strand genes with start < end,
 # the Glimmer parser emits SeqFeatures for minus strand genes with start > end,
 # now that we're done screwing with them, flip them to be consistent
-                    if ( $start > $end ) {
-                        ( $start, $end ) = ( $end, $start );
-                    }
-
-                    my $gene_seq_obj = $seq_obj->trunc( $start, $end );
-
-                    unless ( $strand > 0 )
-                    {
-                        $gene_seq_obj = $gene_seq_obj->revcom();
-                    }
-
-                    my $protein_seq_obj = $gene_seq_obj->translate();
-
-                    if ( $protein_seq_obj->seq() =~ /\*.+/ )
-                    {
-                        $internal_stops = 1;
-                    }
-
-                    unless ( $protein_seq_obj->seq() =~ /\*$/ )
-                    {
-                        $missing_stop = 1;
-                    }
-
-                    my $first_codon = substr( $gene_seq_obj->seq(), 0, 3 );
-                    unless ( $first_codon =~ /tg$/i ) { $missing_start = 1; }
-
-                    my $coding_gene_obj = BAP::DB::CodingGene->insert(
-                        {   gene_name       => $gene_name,
-                            sequence_id     => $sequence->sequence_id(),
-                            start           => $start,
-                            end             => $end,
-                            strand          => $strand,
-                            source          => $source,
-                            sequence_string => $gene_seq_obj->seq(),
-                            internal_stops  => $internal_stops,
-                            missing_start   => $missing_start,
-                            missing_stop    => $missing_stop,
-                            fragment        => $fragment,
-                            wraparound      => $wraparound,
-                            phase_0         => 1,
-                            phase_1         => 0,
-                            phase_2         => 0,
-                            phase_3         => 0,
-                            phase_4         => 0,
-                            phase_5         => 0,
-                        }
-                    );
-
-                    my $protein_name = $gene_name;
-                    my $gene_id      = $coding_gene_obj->gene_id();
-
-                    BAP::DB::Protein->insert(
-                        {   protein_name    => $protein_name,
-                            gene_id         => $gene_id,
-                            sequence_string => $protein_seq_obj->seq(),
-                            internal_stops  => $internal_stops,
-                        }
-                    );
-
+                if ( $start > $end ) {
+                    ( $start, $end ) = ( $end, $start );
                 }
-                elsif ( $source eq 'trnascan' )
+
+                my $gene_seq_obj = $seq_obj->trunc( $start, $end );
+
+                unless ( $strand > 0 )
                 {
-
-                    my $score = $feature->score();
-
-                    my ($codon) = $feature->each_tag_value('Codon');
-                    my ($aa)    = $feature->each_tag_value('AminoAcid');
-                    BAP::DB::tRNAGene->insert(
-                        {   gene_name   => $gene_name,
-                            sequence_id => $sequence->sequence_id(),
-                            start       => $start,
-                            end         => $end,
-                            strand      => $strand,
-                            source      => $source,
-                            score       => $score,
-                            codon       => $codon,
-                            aa          => $aa,
-                        }
-                    );
-
+                    $gene_seq_obj = $gene_seq_obj->revcom();
                 }
-                elsif ( $source eq 'rfam' )
+
+                my $protein_seq_obj = $gene_seq_obj->translate();
+
+                if ( $protein_seq_obj->seq() =~ /\*.+/ )
                 {
-
-                    my $score              = $feature->score();
-                    my ($rfam_accession)   = $feature->each_tag_value('acc');
-                    my ($rfam_description) = $feature->each_tag_value('id');
-                    my ($rfam_product)
-                        = $feature->each_tag_value('rfam_prod');
-
-                    if ( $rfam_description =~ /tRNA/i ) { next FEATURE; }
-                    if ( $score <= 50 ) { next FEATURE; }
-
-                    BAP::DB::RNAGene->insert(
-                        {   gene_name   => $gene_name,
-                            sequence_id => $sequence->sequence_id(),
-                            start       => $start,
-                            end         => $end,
-                            acc         => $rfam_accession,
-                            desc        => $rfam_description,
-                            strand      => $strand,
-                            source      => $source,
-                            score       => $score,
-                            rfam_prod   => $rfam_product,
-                        }
-                    );
-
+                    $internal_stops = 1;
                 }
-                elsif ( $source eq 'rnammer' )
+
+                unless ( $protein_seq_obj->seq() =~ /\*$/ )
                 {
-
-                    my $score = $feature->score();
-                    my ($description) = $feature->each_tag_value('group');
-
-                    BAP::DB::RNAGene->insert(
-                        {   gene_name   => $gene_name,
-                            sequence_id => $sequence->sequence_id(),
-                            start       => $start,
-                            end         => $end,
-                            acc         => 'RNAmmer',
-                            desc        => $description,
-                            strand      => $strand,
-                            source      => $source,
-                            score       => $score,
-                        }
-                    );
+                    $missing_stop = 1;
                 }
 
+                my $first_codon = substr( $gene_seq_obj->seq(), 0, 3 );
+                unless ( $first_codon =~ /tg$/i ) { $missing_start = 1; }
+
+                my $coding_gene_obj = BAP::DB::CodingGene->insert(
+                    {   gene_name       => $gene_name,
+                        sequence_id     => $sequence->sequence_id(),
+                        start           => $start,
+                        end             => $end,
+                        strand          => $strand,
+                        source          => $source,
+                        sequence_string => $gene_seq_obj->seq(),
+                        internal_stops  => $internal_stops,
+                        missing_start   => $missing_start,
+                        missing_stop    => $missing_stop,
+                        fragment        => $fragment,
+                        wraparound      => $wraparound,
+                        phase_0         => 1,
+                        phase_1         => 0,
+                        phase_2         => 0,
+                        phase_3         => 0,
+                        phase_4         => 0,
+                        phase_5         => 0,
+                    }
+                );
+
+                my $protein_name = $gene_name;
+                my $gene_id      = $coding_gene_obj->gene_id();
+
+                BAP::DB::Protein->insert(
+                    {   protein_name    => $protein_name,
+                        gene_id         => $gene_id,
+                        sequence_string => $protein_seq_obj->seq(),
+                        internal_stops  => $internal_stops,
+                    }
+                );
+
+            }
+            elsif ( $source eq 'trnascan' )
+            {
+
+                my $score = $feature->score();
+
+                my ($codon) = $feature->each_tag_value('Codon');
+                my ($aa)    = $feature->each_tag_value('AminoAcid');
+
+                BAP::DB::tRNAGene->insert(
+                    {   gene_name   => $gene_name,
+                        sequence_id => $sequence->sequence_id(),
+                        start       => $start,
+                        end         => $end,
+                        strand      => $strand,
+                        source      => $source,
+                        score       => $score,
+                        codon       => $codon,
+                        aa          => $aa,
+                    }
+                );
+
+            }
+            elsif ( $source eq 'rfam' )
+            {
+
+                my $score              = $feature->score();
+                my ($rfam_accession)   = $feature->each_tag_value('acc');
+                my ($rfam_description) = $feature->each_tag_value('id');
+                my ($rfam_product)
+                = $feature->each_tag_value('rfam_prod');
+
+                if ( $rfam_description =~ /tRNA/i ) { next FEATURE; }
+                if ( $score <= 50 ) { next FEATURE; }
+
+                BAP::DB::RNAGene->insert(
+                    {   gene_name   => $gene_name,
+                        sequence_id => $sequence->sequence_id(),
+                        start       => $start,
+                        end         => $end,
+                        acc         => $rfam_accession,
+                        desc        => $rfam_description,
+                        strand      => $strand,
+                        source      => $source,
+                        score       => $score,
+                        rfam_prod   => $rfam_product,
+                    }
+                );
+
+            }
+            elsif ( $source eq 'rnammer' )
+            {
+
+                my $score = $feature->score();
+                my ($description) = $feature->each_tag_value('group');
+
+                BAP::DB::RNAGene->insert(
+                    {   gene_name   => $gene_name,
+                        sequence_id => $sequence->sequence_id(),
+                        start       => $start,
+                        end         => $end,
+                        acc         => 'RNAmmer',
+                        desc        => $description,
+                        strand      => $strand,
+                        source      => $source,
+                        score       => $score,
+                    }
+                );
             }
 
         }
 
-        BAP::DB::DBI->dbi_commit();
-
     }
 
+    $self->status_message("Committing to BAP database!");
+    BAP::DB::DBI->dbi_commit();
     my $dt_finished = $self->mark_time();
 
     unless ($self->dev) { $self->log_run( $dt_started, $dt_finished, $sequence_set ); }
 
     unless ($skip_mail_flag)
     {
-
         $self->send_mail( $sequence_set_id, $sequence_set_name, $dt_started,
             $dt_finished, $bap_version, $svn_version, $user, );
-
     }
 
     return 1;
 }
+
 
 sub handle_sigint
 {
@@ -709,14 +688,15 @@ sub mark_time
 
 sub send_mail
 {
+
     my $self = shift;
     my ( $ss_id, $ss_name, $started, $finished, $bap_version, $svn_version,
         $user )
-        = @_;
+    = @_;
 
     my $date_started = join( ' on ', $started->hms(':'), $started->ymd('/') );
     my $date_finished
-        = join( ' on ', $finished->hms(':'), $finished->ymd('/') );
+    = join( ' on ', $finished->hms(':'), $finished->ymd('/') );
     my $duration        = DateTime::Duration->new( $finished - $started );
     my $minutes_running = $duration->in_units('minutes');
     my $useraddress     = "$user\@genome.wustl.edu";
@@ -754,6 +734,7 @@ BODY
 sub log_run
 {
     my $self = shift;
+    $self->status_message("Inserting logging information into database.");
     my ( $started, $finished , $sequence_set) = @_;
     my $elapsed_seconds = ( $finished->epoch() - $started->epoch() );
     my $db_file         = BAP::Config->new()->activity_db_file();
@@ -809,6 +790,7 @@ SQL
     $dbh->do( $sql, {}, 'predict', $sequence_id, $sequence_name, $organism,
         $host, $user );
 
+    $self->status_message("Done logging!");
     return 1;
 }
 
