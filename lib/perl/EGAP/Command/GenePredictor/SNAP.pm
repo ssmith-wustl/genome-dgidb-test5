@@ -21,9 +21,9 @@ class EGAP::Command::GenePredictor::SNAP {
     is  => 'EGAP::Command::GenePredictor',
     has => [
         model_files => {
-            is => 'ARRAY',
+            is => 'Text',
             is_input => 1,
-            doc => 'A list of snap model files',
+            doc => 'A list of snap model files, delimited by commas',
         },
     ],
     has_optional => [
@@ -63,8 +63,14 @@ sub execute {
         confess "Could not make directory " . $self->output_directory unless $mkdir_rv;
     }
 
+    my @models = split(",", $self->model_files);
+    unless (@models) {
+        $self->error_message("Received no SNAP models, not running predictor!");
+        confess;
+    }
+
     my @features;
-    for my $model (@{$self->model_files}) {
+    for my $model (@models) {
         my @cmd = (
             $snap_path,
             '-quiet',
