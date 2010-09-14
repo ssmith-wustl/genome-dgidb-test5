@@ -90,8 +90,10 @@
                 <script type="text/javascript+protovis">
                   <xsl:text disable-output-escaping="yes">
                   <![CDATA[
+function run() {
                            /* get chart data into nice arrays */
                            var models = pv.keys(cSummary);
+                           if(! models) { return; }
                            var types = pv.keys(cSummary[models[0]]);
                            var depths = pv.keys(cSummary[models[0]].pc_target_space_covered).sort(function(a,b) { b-a });
 
@@ -214,6 +216,10 @@ coverage_vis.render();
 
 function round(rnum, rlength) {
 return Math.round(rnum*Math.pow(10,rlength))/Math.pow(10,rlength);
+}
+
+run();
+
 }
                   ]]>
                 </xsl:text>
