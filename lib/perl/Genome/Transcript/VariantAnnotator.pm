@@ -251,25 +251,10 @@ sub _transcript_substruct_annotation {
     # Just an FYI... using a copy of variant here instead of a reference prevents reverse complementing
     # the variant twice, which would occur if the variant happened to touch two reverse stranded transcripts
 
-    # TODO Change to annotate all structures between variant start and variant stop
     # TODO This will need to be coupled with splitting up a variant so it doesn't extend beyond a structure
     # TODO There are various hacks in intron and exon annotation to fix the side effects of only annotating the
     # structure at variant start position that will also need removed once this is fixed, and there is still
     # a definite bias for variant start over variant stop throughout this module
-$DB::single=1;
-    #my $transcript = Genome::Transcript->get(chrom_name => $substruct->chrom_name,
-    #                                         data_directory => $substruct->data_directory,
-    #                                         transcript_start => $substruct->transcript_transcript_start,
-    #                                         transcript_id => $substruct->transcript_transcript_id,
-    #                                       );
-
- 
-    # Preload all the other substructs for this transcript
-    #Genome::TranscriptStructure->get(data_directory => $substruct->data_directory,
-    #                                 chrom_name => $substruct->chrom_name,
-    #                                 transcript_id => $substruct->transcript_id,
-    #                                 'structure_start >=' => $transcript->transcript_start,
-    #                                 'structure_stop <=' => $transcript->transcript_stop);
 
     # All sequence stored on the variant is forward stranded and needs to be reverse
     # complemented if the transcript is reverse stranded.
@@ -287,33 +272,14 @@ $DB::single=1;
     }
 
     my $structure_type = $substruct->structure_type;
-
-    
     my $method = '_transcript_annotation_for_' . $structure_type;
-
-    #my %fake_transcript_data;
-    #@fake_transcript_data{qw(chrom_name transcript_start transcript_stop
-    #                      species source version transcript_id
-    #                      gene_id gene_name transcript_name
-    #                      transcript_status strand data_directory
-    #                      transcript_error coding_region_start
-    #                      coding_region_stop amino_acid_length)} 
-    #           =
-    #     @$substruct{qw(transcript_chrom_name transcript_transcript_start transcript_transcript_stop
-    #                      transcript_species transcript_source transcript_version transcript_transcript_id
-    #                      transcript_gene_id transcript_gene_name transcript_transcript_name
-    #                      transcript_transcript_status transcript_strand transcript_data_directory
-    #                      transcript_transcript_error transcript_coding_region_start
-    #                      transcript_coding_region_stop transcript_amino_acid_length)};
-    #my $fake_transcript = bless \%fake_transcript_data, 'Genome::Transcript';
-    my %structure_annotation = $self->$method(undef, \%variant, $substruct) or return;
-    #my %structure_annotation = $self->$method(undef, \%variant, $substruct) or return;
+    my %structure_annotation = $self->$method(\%variant, $substruct) or return;
     
     my $conservation = $self->_ucsc_conservation_score(\%variant, $substruct);
 
-    # FIXME - the transcript_gene_name field still isn't filled in correctly :(
     my $gene_name = $substruct->transcript_gene_name;
     unless ($gene_name) {
+        $self->warning_message("Gene name missing for substruct: ",Data::Dumper::Dumper($substruct));
         my $gene = Genome::Gene->get(data_directory => $substruct->data_directory,
                                      id => $substruct->transcript_gene_id);
         $gene_name = $gene->name;
@@ -330,13 +296,12 @@ $DB::single=1;
         strand => $strand,
         gene_name  => $gene_name,
         amino_acid_length => $substruct->transcript_amino_acid_length,
-
         ucsc_cons => $conservation,
-    )
+    );
 }
 
 sub _transcript_annotation_for_rna {
-    my ($self, undef, $variant, $structure) = @_;
+    my ($self, $variant, $structure) = @_;
 
     return (
         c_position => 'NULL',
@@ -347,7 +312,7 @@ sub _transcript_annotation_for_rna {
 }
 
 sub _transcript_annotation_for_utr_exon {
-    my ($self, undef, $variant, $structure) = @_;
+    my ($self, $variant, $structure) = @_;
     my $coding_position = $self->_determine_coding_position($variant, $structure);
 
     # TODO Change to use variant start and stop for more accurate annotation
@@ -379,7 +344,7 @@ sub _transcript_annotation_for_utr_exon {
 }
 
 sub _transcript_annotation_for_flank {
-    my ($self,undef, $variant, $structure) = @_;
+    my ($self, $variant, $structure) = @_;
     my $coding_position = $self->_determine_coding_position($variant, $structure);
 
     # TODO Change to use variant start and stop
@@ -404,7 +369,7 @@ sub _transcript_annotation_for_flank {
 }
 
 sub _transcript_annotation_for_intron {
-    my ($self, undef, $variant, $structure) = @_;
+    my ($self, $variant, $structure) = @_;
     my $coding_position = $self->_determine_coding_position($variant, $structure);
 
     # Need shortest distance between variant and the edge of the next structure (one bp past edge of intron)
@@ -471,7 +436,7 @@ sub _transcript_annotation_for_intron {
 }
 
 sub _transcript_annotation_for_cds_exon {
-    my ($self, undef, $variant, $structure) = @_;
+    my ($self, $variant, $structure) = @_;
     
     # If the variant continues beyond the stop position of the exon, then the variant sequence
     # needs to be modified to stop at the exon's stop position. The changes after the exon's stop
@@ -737,8 +702,16 @@ sub _ucsc_conservation_score {
     return 'NULL' if $variant->{chromosome_name} =~ /^[MN]T/;
 
     my $range = [ $variant->{start}..$variant->{stop} ] ;
-    my $conservation_score_lookup = Genome::Model::Tools::Annotate::LookupConservationScore->execute(chromosome => $variant->{chromosome_name}, coordinates => $range, species => $substruct->transcript_species, version => $self->annotation_build_version);
-    my $ref = $conservation_score_lookup->conservation_scores_results;
+    
+    Genome::Model::Tools::Annotate::LookupConservationScore->class();  # Get the module loaded
+    # NOTE! Not a method.  This is a normal function call.  That class' execute() is just a wrapper
+    # around it
+    my $ref = Genome::Model::Tools::Annotate::LookupConservationScore::lookup_conservation_score(
+                  chromosome => $variant->{chromosome_name},
+                  coordinates => $range,
+                  species => $substruct->transcript_species,
+                  version => $self->annotation_build_version);
+
     my @ret;
     foreach my $item (@$ref)
     {
