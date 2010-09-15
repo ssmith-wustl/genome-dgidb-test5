@@ -639,12 +639,14 @@ sub completed_builds {
 
     my @completed_builds;
     for my $build ( $self->builds ) {
-        next unless defined $build->build_status and $build->build_status eq 'Succeeded';
+        my $build_status = $build->build_status;
+        next unless defined $build_status and $build_status eq 'Succeeded';
         next unless defined $build->date_completed; # error?
         push @completed_builds, $build;
     }
 
-    return sort { $a->id <=> $b->id } @completed_builds;
+    my %build_ids = map { $_ => $_->id } @completed_builds;
+    return sort { $build_ids{$a} <=> $build_ids{$b} } @completed_builds;
 }
 
 sub latest_build {
