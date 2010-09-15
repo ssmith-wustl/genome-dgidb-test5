@@ -7,12 +7,12 @@
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
     <script type="text/javascript">
       window.aSummary = [
-      <xsl:for-each select="//alignment-summary/model">
-        <xsl:sort data-type="text" order="ascending" select="@subject_name"/>
+      <xsl:for-each select="//alignment-summary/model/wingspan[@size='0']">
+        <xsl:sort data-type="text" order="ascending" select="../@subject_name"/>
         <xsl:if test="total_bp"> <!-- we may get empty model nodes, which should be discarded -->
           {
-          "subject_name": "<xsl:value-of select="@subject_name"/>",
-          "id": <xsl:value-of select="@id"/>,
+          "subject_name": "<xsl:value-of select="../@subject_name"/>",
+          "id": <xsl:value-of select="../@id"/>,
           "total_bp": <xsl:value-of select="total_bp"/>,
           "total_unaligned_bp": <xsl:value-of select="total_unaligned_bp"/>,
           "duplicate_off_target_aligned_bp": <xsl:value-of select="duplicate_off_target_aligned_bp"/>,
@@ -384,11 +384,11 @@ return Math.round(rnum*Math.pow(10,rlength))/Math.pow(10,rlength);
             </tr>
           </thead>
           <tbody>
-            <xsl:for-each select="alignment-summary/model">
-              <xsl:sort select="@subject_name" order="ascending"/>
+            <xsl:for-each select="alignment-summary/model/wingspan[@size='0']">
+              <xsl:sort select="../@subject_name" order="ascending"/>
               <tr>
                 <td>
-                  <xsl:value-of select="@subject_name"/>
+                  <xsl:value-of select="../@subject_name"/>
                 </td>
                 <td>
                   <xsl:value-of select="format-number(unique_target_aligned_bp, '###,###')"/>
