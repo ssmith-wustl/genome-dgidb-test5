@@ -18,7 +18,7 @@ class Genome::Model::Tools::RunEgap {
             is => 'Path',
             doc => 'Path to HMM file used by fgenesh',
         },
-        snap_model => {
+        snap_models => {
             is => 'Path',
             doc => 'Path to HMM file used by SNAP',
         },
@@ -75,7 +75,7 @@ sub execute {
         'seq set id'=> $self->sequence_set_id,
         'domain' => $self->domain,
         'fgenesh model' => $self->fgenesh_model,
-        'snap model' => $self->snap_model,
+        'snap models' => $self->snap_models,
         'snap version' => $self->snap_version,
     );
 

@@ -64,17 +64,21 @@ class Genome::Model::ReferenceAlignment {
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
         capture_set_name             => { via => 'processing_profile'},
-        reference_sequence_build => {
+        reference_sequence_build_id => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             via => 'inputs',
-            to => 'value',
-            where => [ name => 'reference_sequence_build' ],
+            to => 'value_id',
+            where => [ name => 'reference_sequence_build', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence' ],
             is_many => 0,
             is_mutable => 1, # TODO: make this non-optional once backfilling is complete and reference placeholder is deleted
             is_optional => 1,
             doc => 'reference sequence to align against'
         },
-        reference_sequence_name      => { via => 'processing_profile'},
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            id_by => 'reference_sequence_build_id',
+        },
+        reference_sequence_name      => { via => 'processing_profile', },
         coverage_stats_params        => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events => {
@@ -143,42 +147,22 @@ class Genome::Model::ReferenceAlignment {
     doc => 'A genome model produced by aligning DNA reads to a reference sequence.' 
 };
 
-
 sub create {
     my $class = shift;
 
-    my %params = @_;
-
-    my $reference_sequence_build = delete $params{reference_sequence_build};
-    my $reference_sequence_name = delete $params{reference_sequence_name}; #An ID is acceptable here, too
-
-    my $self = $class->SUPER::create(%params)
+    my $self = $class->SUPER::create(@_)
         or return;
 
-    unless($reference_sequence_build) {
-        unless($reference_sequence_name) {
-            my $processing_profile = $self->processing_profile;
-            if ($processing_profile->reference_sequence_name) {
-                $reference_sequence_name = $processing_profile->reference_sequence_name;
-                $self->warning_message("Using reference sequence from the legacy processing profile: $reference_sequence_name");
-            }
-        }
-
-        $reference_sequence_build = $self->_resolve_imported_reference_sequence_build($reference_sequence_name);
-    }
-
-    unless($reference_sequence_build) {
-        $self->error_message('Failed to create model--no reference sequence build was found.');
+    unless ( $self->reference_sequence_build ) {
+        $self->error_message("No refernce sequence build given to create reference alignment model");
         $self->delete;
         return;
     }
 
-    $self->reference_sequence_build($reference_sequence_build);
-
     if ($self->read_aligner_name and $self->read_aligner_name eq 'newbler') {
         my $new_mapping = Genome::Model::Tools::454::Newbler::NewMapping->create(
-                                                                            dir => $self->alignments_directory,
-                                                                        );
+            dir => $self->alignments_directory,
+        );
         unless ($self->new_mapping) {
             $self->error_message('Could not setup newMapping for newbler in directory '. $self->alignments_directory);
             return;
@@ -194,33 +178,6 @@ sub create {
         }
     }
     return $self;
-}
-
-sub _resolve_imported_reference_sequence_build {
-    my $self = shift;
-    my $reference_sequence_name = shift;
-
-    my $error = "";
-
-    my $processing_profile = $self->processing_profile;
-    if (!$reference_sequence_name) {
-        if (defined($processing_profile->reference_sequence_name) && $processing_profile->reference_sequence_name ne "") {
-            $reference_sequence_name = $processing_profile->reference_sequence_name;
-            $self->warning_message("Using reference sequence from the legacy processing profile: $reference_sequence_name");
-        }
-    }
-
-    my $reference_sequence_build;
-    # re-use the same logic used to specify builds on the cmdline in new-style commands
-    eval {
-        $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->from_cmdline($reference_sequence_name);
-    };
-
-    unless ($reference_sequence_build) {
-        $self->error_message('Failed to find a reference_sequence_build with ID or name of "' . $reference_sequence_name . '".');
-    }
-
-    return $reference_sequence_build;
 }
 
 sub libraries {

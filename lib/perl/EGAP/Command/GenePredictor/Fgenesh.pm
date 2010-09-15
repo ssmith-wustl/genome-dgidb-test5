@@ -8,8 +8,8 @@ use EGAP;
 use Bio::SeqIO;
 use Bio::Tools::Run::Fgenesh;
 
-use Carp qw(confess);
-use File::Path qw(make_path);
+use Carp 'confess';
+use File::Path 'make_path';
 
 class EGAP::Command::GenePredictor::Fgenesh {
     is => 'EGAP::Command::GenePredictor',
@@ -50,89 +50,90 @@ sub execute {
         confess "Could not make directory $output_directory" unless $mkdir_rv;
     }
 
-    #FIXME Bio::Tools::Run::Fgenesh needs to be cluebatted into accepting fasta files as input
-    #FIXME Support for multi fasta files may need to be added
-    my $seqio = Bio::SeqIO->new(-format => 'Fasta', -file => $self->fasta_file());
-    my $seq   = $seqio->next_seq();
-    
-    # TODO Need to get raw output capture to work correctly...
-    my $factory = Bio::Tools::Run::Fgenesh->new(
-        -program => 'fgenesh',
-        -param   =>  $self->model_file,
+    my $seqio = Bio::SeqIO->new(
+        -format => 'Fasta', 
+        -file => $self->fasta_file
     );
-    $factory->tempdir($output_directory);
-    my $parser = $factory->run($seq);
 
-    # Parse and process each prediction...
-    while (my $gene = $parser->next_prediction()) {
-        my @exons = $gene->exons();
-
-        # We always want start < stop, regardless of strand
-        foreach my $exon (@exons) {
-            my $start = $exon->start();
-            my $end   = $exon->end();
-
-            if ($start > $end) {
-                ($start, $end) = ($end, $start);
-                $exon->start($start);
-                $exon->end($end);
-            }
-        }
-
-        # Exons are originally sorted in the order they would be transcibed (strand)
-        # We always want to start < stop, regardless of strand
-        @exons = sort { $a->start() <=> $b->start() } @exons;
-
-        my $new_gene = Bio::Tools::Prediction::Gene->new(
-            -seq_id     => $gene->seq_id(),
-            -start      => $exons[0]->start(),
-            -end        => $exons[$#exons]->end(),
-            -strand     => $exons[0]->strand(),
-            -source_tag => $exons[0]->source_tag(),
+    while (my $seq = $seqio->next_seq()) {
+        # TODO Need to get raw output capture to work correctly...
+        my $factory = Bio::Tools::Run::Fgenesh->new(
+            -program => 'fgenesh',
+            -param   =>  $self->model_file,
         );
+        my $parser = $factory->run($seq);
 
-        # Set errors on gene if its missing expected exons
-        if (@exons > 1) {
-            unless ($exons[0]->primary_tag() eq 'InitialExon' or 
+        # Parse and process each prediction...
+        while (my $gene = $parser->next_prediction()) {
+            my @exons = $gene->exons();
+
+            # We always want start < stop, regardless of strand
+            foreach my $exon (@exons) {
+                my $start = $exon->start();
+                my $end   = $exon->end();
+
+                if ($start > $end) {
+                    ($start, $end) = ($end, $start);
+                    $exon->start($start);
+                    $exon->end($end);
+                }
+            }
+
+            # Exons are originally sorted in the order they would be transcibed (strand)
+            # We always want to start < stop, regardless of strand
+            @exons = sort { $a->start() <=> $b->start() } @exons;
+
+            my $new_gene = Bio::Tools::Prediction::Gene->new(
+                -seq_id     => $gene->seq_id(),
+                -start      => $exons[0]->start(),
+                -end        => $exons[$#exons]->end(),
+                -strand     => $exons[0]->strand(),
+                -source_tag => $exons[0]->source_tag(),
+            );
+
+            # Set errors on gene if its missing expected exons
+            if (@exons > 1) {
+                unless ($exons[0]->primary_tag() eq 'InitialExon' or 
                     $exons[$#exons]->primary_tag() eq 'InitialExon') {
-                $new_gene->add_tag_value('start_not_found' => 1);
-                $new_gene->add_tag_value('fragment' => 1);
-            }
-            unless ($exons[0]->primary_tag() eq 'TerminalExon' or 
-                    $exons[$#exons]->primary_tag() eq 'TerminalExon') {
-                $new_gene->add_tag_value('end_not_found' => 1);
-                $new_gene->add_tag_value('fragment' => 1);
-            }
-        }
-        elsif (@exons == 1) {
-            unless ($exons[0]->primary_tag() eq 'SingletonExon') {
-                $new_gene->add_tag_value('fragment' => 1);
-
-                unless ($exons[0]->primary_tag() eq 'TerminalExon') {
-                    $new_gene->add_tag_value('end_not_found' => 1);
-                }
-                unless ($exons[0]->primary_tag() eq 'InitialExon') {
                     $new_gene->add_tag_value('start_not_found' => 1);
+                    $new_gene->add_tag_value('fragment' => 1);
+                }
+                unless ($exons[0]->primary_tag() eq 'TerminalExon' or 
+                    $exons[$#exons]->primary_tag() eq 'TerminalExon') {
+                    $new_gene->add_tag_value('end_not_found' => 1);
+                    $new_gene->add_tag_value('fragment' => 1);
                 }
             }
+            elsif (@exons == 1) {
+                unless ($exons[0]->primary_tag() eq 'SingletonExon') {
+                    $new_gene->add_tag_value('fragment' => 1);
+
+                    unless ($exons[0]->primary_tag() eq 'TerminalExon') {
+                        $new_gene->add_tag_value('end_not_found' => 1);
+                    }
+                    unless ($exons[0]->primary_tag() eq 'InitialExon') {
+                        $new_gene->add_tag_value('start_not_found' => 1);
+                    }
+                }
+            }
+
+            # Calculate five prime and three prime overhang using frame value
+            foreach my $exon (@exons) {
+                my $frame = $exon->frame();
+                my $length = $exon->length();
+
+                my $five_prime_overhang = $frame;
+                my $three_prime_overhang = ($length - $five_prime_overhang) % 3;
+
+                $exon->add_tag_value('five_prime_overhang' => $five_prime_overhang);
+                $exon->add_tag_value('three_prime_overhang' => $three_prime_overhang);
+                $new_gene->add_exon($exon);
+            }
+
+            push @features, $new_gene;
         }
-        
-        # Calculate five prime and three prime overhang using frame value
-        foreach my $exon (@exons) {
-            my $frame = $exon->frame();
-            my $length = $exon->length();
-
-            my $five_prime_overhang = $frame;
-            my $three_prime_overhang = ($length - $five_prime_overhang) % 3;
-
-            $exon->add_tag_value('five_prime_overhang' => $five_prime_overhang);
-            $exon->add_tag_value('three_prime_overhang' => $three_prime_overhang);
-            $new_gene->add_exon($exon);
-        }
-
-        push @features, $new_gene;
     }
-    
+
     $self->bio_seq_feature(\@features);
     return 1;
 }

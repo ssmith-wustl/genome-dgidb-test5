@@ -81,9 +81,8 @@ sub execute {
 
     #TODO, the -m argument (host group, should be determined from the value of $self->lsf_queue, not hardcoded
     my $lsf_command = sprintf(
-        'bsub -N -H -q %s -m workflow %s -g /build/%s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
+        'bsub -N -H -q %s -g /build/%s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
         $self->lsf_queue,
-        "-R 'select[type==LINUX86]'",
         $ENV{USER},
         $ENV{USER},
         $build_event->output_log_file,

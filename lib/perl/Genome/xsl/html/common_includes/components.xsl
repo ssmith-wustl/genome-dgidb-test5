@@ -72,7 +72,7 @@
     <xsl:param name="app_name"/>
     <xsl:param name="icon"/>
 
-    <xsl:comment>template: status/root.xsl:app_header</xsl:comment>
+    <xsl:comment>template: /html/common_includes/components.xsl:app_header</xsl:comment>
 
     <div class="header rounded-top gradient-grey">
       <div class="container">
@@ -89,7 +89,7 @@
     <xsl:param name="display_name"/>
     <xsl:param name="icon"/>
 
-    <xsl:comment>template: status/root.xsl:view_header</xsl:comment>
+    <xsl:comment>template: /html/common_includes/components.xsl:view_header</xsl:comment>
 
     <div class="header rounded-bottom gradient-grey shadow">
       <div class="container">
@@ -105,7 +105,7 @@
   <xsl:template name="set_header">
     <xsl:param name="display_name"/>
 
-    <xsl:comment>template: status/root.xsl:view_header</xsl:comment>
+    <xsl:comment>template: /html/common_includes/components.xsl:view_header</xsl:comment>
 
     <div class="header rounded-bottom gradient-grey shadow">
       <div class="container">
@@ -119,7 +119,7 @@
 
   <!-- app control bar  -->
   <xsl:template name="control_bar_app">
-    <xsl:comment>template: status/root.xsl name:control_bar_app</xsl:comment>
+    <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_app</xsl:comment>
 
     <div class="control_bar app rounded-bottom shadow">
       <div class="control_bar_menu" id="bar_menu">
@@ -133,7 +133,7 @@
 
   <!-- view control bar  -->
   <xsl:template name="control_bar_view">
-    <xsl:comment>template: status/root.xsl name:control_bar_view</xsl:comment>
+    <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_view</xsl:comment>
     <div class="control_bar view shadow">
       <div class="control_bar_menu" id="bar_menu">
         <xsl:call-template name="control_bar_menu"/>
@@ -146,7 +146,7 @@
 
   <!-- application menu for control bars -->
   <xsl:template name="control_bar_menu">
-    <xsl:comment>template: status/root.xsl name:control_bar_menu</xsl:comment>
+    <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_menu</xsl:comment>
 
     <ul>
       <li>
@@ -168,7 +168,7 @@
   <xsl:template name="footer">
     <xsl:param name="footer_text"/>
 
-    <xsl:comment>template: status/root.xsl:footer</xsl:comment>
+    <xsl:comment>template: /html/common_includes/components.xsl:footer</xsl:comment>
 
     <div class="footer rounded shadow span-24 last gradient-grey">
       <div class="container">

@@ -99,7 +99,7 @@ my %properties = (
     },
     subset_name => {
         is => 'Text',
-        doc => '------',
+        doc => 'This is the lane #. If this is not specified, it will be autopopulated. This may contain more info than just lane number, but it should preceed the lane number and be set off by hyphens.',
         is_optional => 1,
     },
     sd_above_insert_size => {
@@ -117,6 +117,11 @@ my %properties = (
         doc => '------',
         is_optional => 1,
     },
+    sra_sample_id => {
+        is=>'String',
+        doc => 'SRA sample name',
+        is_optional => 1,
+    }
 );
     
 
@@ -209,6 +214,25 @@ sub execute {
 
     $self->check_fastq_integritude;
 
+    unless(defined($params{read_count})){
+        my $read_count = $self->get_read_count;
+        unless(defined($read_count)){
+            $self->error_message("No read count was specified and none could be calculated from the fastqs");
+            die $self->error_message;
+        }
+        $self->read_count($read_count);
+        $params{read_count} = $read_count;
+    }
+    unless(defined($params{subset_name})){
+        my $subset_name = $self->get_subset_name;
+        unless($subset_name =~ /[1-8]/){
+            $self->error_message("Subset_name must be between 1-8. Found ".$subset_name);
+            die $self->error_message;
+        }
+        $self->subset_name($subset_name);
+        $params{subset_name} = $subset_name;
+    }
+
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
@@ -232,22 +256,24 @@ sub execute {
     }
 
     my @input_files = split /\,/, $self->source_data_files;
-    foreach (sort(@input_files)) {
+    for (sort(@input_files)) {
         unless( -s $_) {
             $self->error_message("Input file(s) were not found $_");
             die $self->error_message;
         }
     }        
     $self->source_data_files(join( ',',sort(@input_files)));
+
+    $self->status_message("About to get a temp allocation");
     my $tmp_tar_file = File::Temp->new("fastq-archive-XXXX",DIR=>"/tmp");
     my $tmp_tar_filename = $tmp_tar_file->filename;
 
-    my @suffixes = (".txt",".fastq");    
+    my $suff = ".txt";    
     my $basename;
     my %basenames;
     my @inputs;
     for my $file (sort(@input_files)) {
-        my ($filename,$path,$suffix) = fileparse($file, @suffixes);
+        my ($filename,$path,$suffix) = fileparse($file, $suff);
         $basenames{$path}++;
         $basename = $path;
         my $fastq_name = $filename.$suffix;
@@ -262,7 +288,11 @@ sub execute {
         die $self->error_message;
     }
     my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @inputs);
-    system($tar_cmd);
+    $self->status_message("About to execute tar command, this could take a long time, depending upon the location (across the network?) and size (MB or GB?) of your fastq's.");
+    unless(Genome::Utility::FileSystem->shellcmd(cmd=>$tar_cmd)){
+        $self->error_message("Tar command failed to complete successfully. The command looked like :   ".$tar_cmd);
+        die $self->error_message;
+    }
 
     $import_instrument_data->original_data_path($self->source_data_files);
 
@@ -300,22 +330,29 @@ sub execute {
     $self->status_message("Disk allocation created for $instrument_data_id ." . $disk_alloc->absolute_path);
     
     my $real_filename = sprintf("%s/archive.tgz", $disk_alloc->absolute_path);
-
+    $self->status_message("About to calculate the md5sum of the tar'd fastq's. This may take a long time.");
     my $md5 = Genome::Utility::FileSystem->md5sum($tmp_tar_filename);
+    $self->status_message("Copying tar'd fastq's into the allocation, this will take some time.");
     unless(copy($tmp_tar_filename, $real_filename)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
         unlink($real_filename);
         $disk_alloc->deallocate;
         return;
     }
-    
-    unless(Genome::Utility::FileSystem->md5sum($real_filename) eq $md5) {
+    $self->status_message("About to calculate the md5sum of the tar'd fastq's in their new habitat on the allocation. This may take a long time.");
+    my $copy_md5;
+    unless($copy_md5 = Genome::Utility::FileSystem->md5sum($real_filename)){
+        $self->error_message("Failed to calculate md5sum.");
+        die $self->error_message;
+    }
+    unless($copy_md5 eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($real_filename);
         $disk_alloc->deallocate;
         return;
     }
-
+    $self->status_message("The md5sum for the copied tar file is: ".$copy_md5);
+    $self->status_message("The instrument-data id of your new record is ".$instrument_data_id);
     return 1;
 
 }
@@ -324,6 +361,12 @@ sub check_fastq_integritude {
     my $self = shift;
     my $answer = 0;
     my @filepaths = split ",",$self->source_data_files;
+    for my $path (@filepaths){
+        unless(-s $path){
+            $self->error_message("The file at ".$path." was not found.");
+            die $self->error_message;
+        }
+    }
     if(@filepaths==1){
         if(defined($self->is_paired_end)){
             unless(not $self->is_paired_end){
@@ -396,6 +439,49 @@ sub check_last_read {
         die $self->error_message;
     }
     return ($read_name,$read_length);
+}
+
+sub get_read_count {
+    my $self = shift;
+    my $read_count;
+    my @files = split ",", $self->source_data_files;
+    $self->status_message("Now attempting to determine read_count by calling wc on the imported fastq(s). This may take a while if the fastqs are large.");
+    for my $file (@files){
+        my $sub_count = `wc -l $file`;
+        ($sub_count) = split " ",$sub_count;
+        unless(defined($sub_count)&&($sub_count > 0)){
+            $self->error_message("couldn't get a response from wc.");
+            return undef;
+        }
+        $read_count += $sub_count;
+    }
+    if($read_count % 4){
+        $self->error_message("Read_cound calculated a number of lines in the fastq file that was not divisible by 4.");
+        return undef;
+    }
+    $read_count = $read_count / 4;
+    return $read_count
+}
+
+sub get_subset_name {
+    my $self = shift;
+    my $subset_name=-1;
+    my @files = split ",",$self->source_data_files;
+    for my $file (@files) {
+        my ($filename,$path,$suffix) = fileparse($file,".txt");
+        my ($n,$sname) = split "_",$filename;
+        if($subset_name==-1){
+            $subset_name = $sname;
+        } else {
+            unless($sname eq $subset_name){
+                die "The subset names didn't match.";
+            }
+        }
+
+    }    
+    #print "subset_name  = ".$subset_name."\n";
+    return $subset_name;
+
 }
 
 1;

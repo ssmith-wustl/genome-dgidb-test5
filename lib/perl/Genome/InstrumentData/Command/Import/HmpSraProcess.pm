@@ -6,37 +6,32 @@ use Genome;
 use Cwd;
 use IO::File;
 use File::Basename;
+use File::Path;
 
 class Genome::InstrumentData::Command::Import::HmpSraProcess {
     is  => 'Command',
     has_input => [
-	run_dir => {
-	    is_optional => 1,
-	    doc => 'path to directory containing SRR id folders',
-	},
 	ascp_user => {
-	    is_optional => 1,
+	    is_optional => 0,
 	    doc => 'DACC FTP user_name for aspera transfer',
 	},
 	ascp_pw => {
-	    is_optional => 1,
+	    is_optional => 0,
 	    doc => 'DACC FTP password for aspera transfer',
 	},
-	list_of_srrs => {
-	    is_optional => 1,
-	    doc => 'file containing a single column list of SRR ids to process',
+	srs_sample_id => {
+	    is_optional => 0,
+	    doc => 'SRS sample id to extract',
 	},
-	sra_samples => {
-	    is_optional => 1,
-	    doc => '2 column list of mappings of SRR ids to sample ids',
+	srr_accessions => {
+	    is_optional => 0,
+	    doc => 'space separated list of SRR accession ids for the raw SRA data downloads to use.',
 	},
 	picard_dir => {
 	    is_optional => 1,
 	    doc => 'full path to directory containing Picard jar files (note: This path must include the updated EstimateLibraryComplexity that handles redundancy removal)',
-	},
-	tmp_dir => {
-	    is_optional => 1,
-	    doc => 'OPTIONAL - user defined path to tmp directory for picard (note: Picard uses a lot of tmp space, make sure this has enough space for your job)',
+            ####default_value => Genome::Model::Tools::Picard->path_for_picard_version,
+	    default_value => "/gsc/scripts/lib/java/samtools/picard-tools-1.27",
 	},
     ],
     doc => 'de-duplicate and quality trim Illumina WGS runs downloaded from SRA',
@@ -48,37 +43,107 @@ sub execute {
 
 #___This line stops the perl debugger as though I'd set a break point in the GUI
     $DB::single = 1;
+    
+    my @srrs = split /\s+/, $self->srr_accessions;
 
+    my %samples;
 
-    my $scripts_dir = __FILE__;
-    $scripts_dir =~ s/\.pm//;
-    $self->status_message("Scripts are in: $scripts_dir");
+    for my $line (@srrs) {
+        my $sample = Genome::Sample->get(sql=>qq/
+            select os.*
+            from gsc.organism_sample os 
+            join gsc.sra_item sai on sai.sra_item_type_id=3 and sai.source_entity_type='organism sample' and sai.source_entity_id=to_char(os.organism_sample_id) 
+            join gsc.sra_experiment ex on ex.sra_sample_id=sai.sra_item_id 
+            join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id 
+            join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id 
+            join gsc.sra_accession ruacc on ruacc.alias=rui.alias  
+            where ruacc.accession='$line'
+        /);
+        unless ($sample) {
+            $self->error_message("Failed to get a sample object from the warehouse for SRR ID $line.");
+            return;
+        }
+        
+        $samples{$sample->name} = 1;
+    }
+
+    unless (scalar keys %samples == 1) {
+        $self->error_message("There is more than one sample represented in this SRR list, can't proceed.  Samples are: " . join "\n", keys %samples);
+        return;
+    }
+
+    # grab import parameters
+    my $dbh = Genome::DataSource::GMSchema->get_default_handle();
+    my ($fc_id, $lane) = $dbh->selectrow_array(qq/select ii.flow_cell_id, ii.lane
+    from gsc.organism_sample os 
+    join gsc.sra_item sai on sai.sra_item_type_id=3 and sai.source_entity_type='organism sample' and sai.source_entity_id=to_char(os.organism_sample_id) 
+    join gsc.sra_experiment ex on ex.sra_sample_id=sai.sra_item_id 
+    join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id 
+    join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id 
+    join gsc.sra_accession ruacc on ruacc.alias=rui.alias
+    join gsc.index_illumina ii on ii.seq_id=rui.source_entity_id and rui.source_entity_type='index illumina' 
+    where ruacc.accession='$srrs[0]'/);
+
+    unless (defined $fc_id && defined $lane) {
+        $self->error_message("Couldn't recover original flow cell id and lane for this SRR id $srrs[0]");
+        return;
+    }
+
+    my $original_inst = Genome::InstrumentData::Solexa->get(flow_cell_id=>$fc_id, lane=>$lane);
+
+    my %import_params;
+    $import_params{library_name} = $original_inst->library_name;
+    $import_params{sample_name} = $original_inst->sample_name;
+    $import_params{sequencing_platform} = 'solexa';
+    $import_params{import_format} = 'sanger fastq';
+    $import_params{sra_sample_id} = $self->srs_sample_id;
+  
+    my $tmp_dir      = Genome::Utility::FileSystem->create_temp_directory;
+
+    my $working_dir = $tmp_dir . "/srr_datasets";
+    mkpath($working_dir);
+    for my $srr (@srrs) {
+        my $instrument_data = Genome::InstrumentData::Imported->get(import_format=>'raw sra download', sra_accession=>$srr);
+        
+        my ($alloc) = $instrument_data->disk_allocations; 
+        unless(symlink($alloc->absolute_path . "/" . $srr, $working_dir . "/" . $srr)) {
+	    $self->error_message("Failed to set up symlink from SRA data dir: " . $alloc->absolute_path . " to " . $working_dir . "/" . $srr);
+	   return;
+	}
+    } 
+
+    my $path_to_scripts_dir =$self->get_script_path;
+    $self->status_message("Scripts are in: $path_to_scripts_dir");
 
     #Find current path to the script 'trimBWAstyle.usingBam.pl'
     my $current_dir = `pwd`;
-    chomp ($current_dir);
-    my $path_to_scripts_dir = $current_dir . "/" . $scripts_dir;
+    
+    my $sra_samples = $working_dir . "/sample_mapping.txt";
+    my $list_of_srrs = $working_dir . "/srr_listing.txt";
+    
+    unless (open (SRA_SAMPLE_MAPPING, ">$sra_samples")) {
+	$self->error_message("Failed to open SRR/SRS data mapping file");
+	return;
+    }
+    
+    unless (open (SRR_LISTING, ">$list_of_srrs")) {
+	$self->error_message("Failed to open SRR/SRS data mapping file");
+	return;
+    }
+    
+    for (@srrs) {
+	print SRA_SAMPLE_MAPPING sprintf("%s\t%s\n", $_, $self->srs_sample_id);
+	print SRR_LISTING sprintf("%s\n", $_);
+
+    }
+    close SRA_SAMPLE_MAPPING;
+    close SRR_LISTING;
 
     #Run BROAD's processing script
     my $cmd;
-    my $working_dir  = $self->run_dir;
-    my $list_of_srrs = $self->list_of_srrs;
-    my $list_of_srrs_FILENAME = basename($list_of_srrs);
-    my $errfile = $working_dir . "/ReadProcessing." . $list_of_srrs_FILENAME . ".err";
-    my $outfile = $working_dir . "/ReadProcessing." . $list_of_srrs_FILENAME . ".out";
-    my $sra_samples  = $self->sra_samples;
+    my $errfile = $working_dir . "/ReadProcessing." . $self->srs_sample_id . ".err";
+    my $outfile = $working_dir . "/ReadProcessing." . $self->srs_sample_id  . ".out";
     my $picard_dir   = $self->picard_dir;
-#___Check for user defined tmp_dir...use generic /tmp dir if not user defined
-    my $tmp_dir      = $self->tmp_dir;
-    if ($tmp_dir) {
-	unless (-d $tmp_dir) {
-	    die "tmp_dir =>$tmp_dir<= not found\n";
-	}
-	$self->status_message("Using user defined tmp_dir at $tmp_dir");
-    } else {
-	$tmp_dir = Genome::Utility::FileSystem->create_temp_directory();
-	$self->status_message("Autogenerated tmp_dir is at $tmp_dir");
-    }
 
     #Set the $PATH env variable in perl
     my $path = $ENV{'PATH'} . ":" . $path_to_scripts_dir;
@@ -87,21 +152,90 @@ sub execute {
     my $user = $self->ascp_user;
     my $pwd  = $self->ascp_pw;
 
+
     #Note: I need to set the path to my scripts INSIDE the shell command
     ####$cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir > $outfile 2> $errfile";
     $cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
 
-    #$self->status_message("CMD=>$cmd<=\n");
-    #$self->status_message("PWD=>$current_dir<=\n");
-
+    $self->status_message("CMD=>$cmd<=\n");
+    $self->status_message("PWD=>$current_dir<=\n");
+    
     Genome::Utility::FileSystem->shellcmd(
 	cmd => $cmd,
 	output_files => [$errfile,$outfile],
 	);
 
+    $DB::single = 1;
+    my @reads = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.*.fastq.bz2");
+    
+    for (@reads) {
+	Genome::Utility::FileSystem->shellcmd(cmd=>"bunzip2 $_");
+    }
+    
+    
+    my ($fwd_read) = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.1.fastq");
+    my ($rev_read) = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.2.fastq");
+    my ($singleton) = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.singleton.fastq");
+
+    $DB::single = 1;
+
+        
+    rename($fwd_read, $working_dir . "/s_1_1_sequence.txt");
+    $fwd_read = $working_dir . "/s_1_1_sequence.txt";
+    
+    rename($rev_read, $working_dir . "/s_1_2_sequence.txt");
+    $rev_read = $working_dir . "/s_1_2_sequence.txt";
+    
+    rename($singleton, $working_dir . "/s_1_sequence.txt");
+    $singleton = $working_dir . "/s_1_sequence.txt";
+
+    $DB::single = 1;
+
+    
+    my $pe_import_cmd = Genome::InstrumentData::Command::Import::Fastq->create(%import_params,
+								     subset_name=>1,
+								     source_data_files=>"$fwd_read,$rev_read",
+								     is_paired_end=>1
+								     );
+    
+    unless ($pe_import_cmd->execute) {
+	$self->error_message("Failed to import paired end reads");
+	return;
+    }
+    
+    my $se_import_cmd = Genome::InstrumentData::Command::Import::Fastq->create(%import_params,
+								     subset_name=>1,
+								     source_data_files=>"$singleton",
+								     is_paired_end=>0
+								     );
+    
+    unless ($se_import_cmd->execute) {
+	$self->error_message("Failed to import singleton reads");
+	return;
+    }
+    
+    $self->status_message("Imported all resultant reads! Done!");
+
     return 1;
 }
 
+sub get_script_path {
+    my $self = shift;
+    my $file   = __PACKAGE__;
+    $file =~ s{::}{/}g;
+    $file .= ".pm";
+
+    my $path;
+    for my $dir (@INC) {
+        $path = "$dir/$file";
+        last if -r $path;
+        $path = undef;
+    }
+
+    $path =~ s/\.pm$//;
+
+    return $path;
+}
 
 #End package
 1;

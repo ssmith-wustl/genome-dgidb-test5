@@ -90,6 +90,7 @@
                 <script type="text/javascript+protovis">
                   <xsl:text disable-output-escaping="yes">
                   <![CDATA[
+try {
                            /* get chart data into nice arrays */
                            var models = pv.keys(cSummary);
                            var types = pv.keys(cSummary[models[0]]);
@@ -212,6 +213,10 @@ coverage_vis.add(pv.Label)
 
 coverage_vis.render();
 
+} catch (e) {
+
+}
+
 function round(rnum, rlength) {
 return Math.round(rnum*Math.pow(10,rlength))/Math.pow(10,rlength);
 }
@@ -224,7 +229,7 @@ return Math.round(rnum*Math.pow(10,rlength))/Math.pow(10,rlength);
                 <script type="text/javascript+protovis">
                   <xsl:text disable-output-escaping="yes">
                   <![CDATA[
-
+try {
 var metrics = [
 "unique_target_aligned_bp",
 "duplicate_target_aligned_bp",
@@ -339,6 +344,9 @@ alignment_vis.add(pv.Label)
 .text("sequence (Gb)");
 
 alignment_vis.render();
+} catch(e) {
+
+}
 
 function addCommas(nStr) {
 nStr += '';
