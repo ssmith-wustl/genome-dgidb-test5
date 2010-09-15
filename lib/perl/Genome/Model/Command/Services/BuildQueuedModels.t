@@ -10,7 +10,7 @@ BEGIN {
 
 use above 'Genome';
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 use_ok('Genome::Model::Command::Services::BuildQueuedModels');
 
@@ -24,9 +24,12 @@ my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
 
 my $taxon = Genome::Taxon->get( species_name => 'human' );
 
+my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+ok($reference_sequence_build, 'got reference sequence build') or die;
+
 my $model_1 = Genome::Model::ReferenceAlignment->create(
     id => '-100',
-    reference_sequence_name => 'NCBI-human-build36',
+    reference_sequence_build => $reference_sequence_build,
     name => 'bqm-test-1',
     processing_profile_id => $processing_profile->id,
     subject_id => $taxon->id,
@@ -36,7 +39,7 @@ my $model_1 = Genome::Model::ReferenceAlignment->create(
 
 my $model_2 = Genome::Model::ReferenceAlignment->create(
     id => '-101',
-    reference_sequence_name => 'NCBI-human-build36',
+    reference_sequence_build => $reference_sequence_build,
     name => 'bqm-test-2',
     processing_profile_id => $processing_profile->id,
     subject_id => $taxon->id,
@@ -46,7 +49,7 @@ my $model_2 = Genome::Model::ReferenceAlignment->create(
 
 my $model_3 = Genome::Model::ReferenceAlignment->create(
     id => '-102',
-    reference_sequence_name => 'NCBI-human-build36',
+    reference_sequence_build => $reference_sequence_build,
     name => 'bqm-test-3',
     processing_profile_id => $processing_profile->id,
     subject_id => $taxon->id,

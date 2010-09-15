@@ -4,7 +4,10 @@ use strict;
 use warnings;
 
 use Genome;
+
+require Carp;
 use Mail::Sender;
+use Regexp::Common;
 
 class Genome::Model::Command::Define::ReferenceAlignment {
     is => 'Genome::Model::Command::Define',
@@ -29,24 +32,9 @@ class Genome::Model::Command::Define::ReferenceAlignment {
 
 sub type_specific_parameters_for_create {
     my $self = shift;
-
-    my $reference_sequence_build = $self->reference_sequence_build;
-
-    my @params = ();
-
-    #Cheap trick:
-    #If was called programmatically the actual build might be passed instead of text to retrieve it
-    # notably `genome model copy` does this internally
-    #Otherwise, the user passed in a string that we need to use to find the build
-    if(ref $reference_sequence_build) {
-        push @params,
-            reference_sequence_build => $reference_sequence_build;
-    } else {
-        push @params,
-            reference_sequence_name => $reference_sequence_build;
-    }
-
-    return @params;
+    my $reference_sequence_build = $self->_get_reference_sequence_build;
+    return unless $reference_sequence_build;
+    return ( reference_sequence_build => $reference_sequence_build );
 }
 
 sub execute {
@@ -97,4 +85,53 @@ sub execute {
     return $result;
 }
 
+sub _get_reference_sequence_build {
+    my $self = shift;
+
+    my $rsb_identifier = $self->reference_sequence_build;
+    unless ( $rsb_identifier )  {
+        Carp::confess("No reference sequence build (or name or id) given");
+    }
+
+    # We may already have it
+    if ( ref($rsb_identifier) ) {
+        return $rsb_identifier;
+    }
+
+    # from cmd line - this dies if non found
+    my @reference_sequence_builds = Genome::Model::Build::ImportedReferenceSequence->from_cmdline($rsb_identifier);
+    if ( @reference_sequence_builds == 1 ) {
+        return $reference_sequence_builds[0];
+    }
+
+    Carp::confess("Multiple imported reference sequence builds found for identifier ($rsb_identifier): ".join(', ', map { '"'.$_->__display_name__.'"' } @reference_sequence_builds ));
+}
+
+sub _get_latest_build_for_imported_reference_sequence_model_name {
+    my ($self, $model_name) = @_;
+
+    $self->status_message("Getting imported reference sequence build for model name: $model_name");
+
+    my @models = Genome::Model::ImportedReferenceSequence->get(name => $model_name);
+    if ( not @models ) {
+        $self->statusr_message("No imported reference sequence models for name: $model_name");
+        return;
+    }
+    elsif ( @models > 1 ) { 
+        $self->error_message(
+            'Multiple models ('.join(',', map { $_->id } @models).") for name: $model_name"
+        );
+        return;
+    }
+
+    my @builds = $models[0]->builds;
+    if ( not @builds ) {
+        $self->statusr_message("No builds for imported reference sequence model: ".$models[0]->__display_name__);
+        return;
+    }
+
+    return $builds[$#builds]; # most recent, not sure if these are 'successful' or not
+}
+
 1;
+
