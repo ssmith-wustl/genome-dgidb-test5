@@ -336,8 +336,9 @@ sub execute {
         my $full_version = $self->build->version;
         my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
         my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
+
         Genome::Transcript::VariantAnnotator->create(
-            data_directory => $self->data_directory,
+            data_directory => $self->build->determine_data_directory,
             check_variants => $self->check_variants,
             get_frame_shift_sequence => $self->get_frame_shift_sequence,
             ucsc_conservation_directory => $ucsc_versions{$version},
@@ -362,9 +363,6 @@ sub execute {
                 my $annotation_time = timediff($annotation_stop, $annotation_start);
                 $self->status_message("Annotating chromsome $chromosome_name took " . timestr($annotation_time)) if $self->benchmark;
             }
-
-            # Preload all the transcripts for that chromosome
-            Genome::Transcript->get(data_directory => $self->data_directory, chrom_name => $variant->{'chromosome_name'});
 
             $chromosome_name = $variant->{chromosome_name};
 

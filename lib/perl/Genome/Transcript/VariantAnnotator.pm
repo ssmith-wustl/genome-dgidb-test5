@@ -710,7 +710,8 @@ sub _ucsc_conservation_score {
                   chromosome => $variant->{chromosome_name},
                   coordinates => $range,
                   species => $substruct->transcript_species,
-                  version => $self->annotation_build_version);
+                  version => $substruct->transcript_version,
+             );
 
     my @ret;
     foreach my $item (@$ref)
