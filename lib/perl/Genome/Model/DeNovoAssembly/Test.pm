@@ -206,6 +206,9 @@ sub get_mock_build {
         supercontigs_agp_file
         supercontigs_fasta_file
         stats_file
+
+        center_name
+
     /);
     my %build_specific_methods_to_mock = (
         newbler => [qw//],
@@ -247,7 +250,7 @@ sub base_directory {
 }
 
 my %dirs_versions = (
-    soap_solexa => '0.1',
+    soap_solexa => '0.2',
     velvet_solexa => '0.2',
     newbler_454 => '0.1',
 );
@@ -306,6 +309,11 @@ sub example_stats_file_for_model {
 }
 
 #soap specific files
+sub output_prefix_name {
+    my ($self, $model) = @_;
+
+    return $model->instrument_data->sample_name.'_WUGC'; #TODO - method for center name
+}
 
 sub example_end_one_fastq_file_for_model {
     my ($self, $model) = @_;
@@ -323,12 +331,13 @@ sub example_end_two_fastq_file_for_model {
     return $dir.'/2_fastq';
 }
 
-sub example_scaffold_sequence_file_for_model {
+sub example_scaffold_sequence_file_for_soap_model {
     my ($self, $model) = @_;
 
     my $dir = $self->example_directory_for_model($model);
+    my $file_prefix = $self->output_prefix_name($model);
 
-    return $dir.'/Assembly.scafSeq';
+    return $dir.'/'.$file_prefix.'.scafSeq';
 }
 
 #<>#

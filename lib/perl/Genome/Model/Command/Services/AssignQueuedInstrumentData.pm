@@ -3,10 +3,10 @@ package Genome::Model::Command::Services::AssignQueuedInstrumentData;
 use strict;
 use warnings;
 
-use Data::Dumper;
-
 #use Genome;
 
+require Carp;
+use Data::Dumper;
 
 class Genome::Model::Command::Services::AssignQueuedInstrumentData {
     is  => 'Command',
@@ -515,7 +515,11 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
         #TODO instead of hardcoding human36, use something like an analysis version of $taxon->current_genome_refseq_id
-        $model_params{reference_sequence_name} = 'NCBI-human-build36';
+        my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+        if ( not defined $reference_sequence_build ) {
+            Carp::confess('Cannot get NCBI human build 36');
+        }
+        $model_params{reference_sequence_build} = $reference_sequence_build;
     }
 
     my $model = Genome::Model->create(%model_params);

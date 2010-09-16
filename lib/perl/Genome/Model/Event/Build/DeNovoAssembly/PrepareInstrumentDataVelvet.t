@@ -28,20 +28,6 @@ my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData-
 ok($velvet, 'Created prepare inst data velvet');
 $velvet->dump_status_messages(1);
 
-# read processor pipes
-my $coverage = $model->processing_profile->coverage;
-my $read_processor = $model->processing_profile->read_processor;
-$model->processing_profile->coverage(undef);
-$model->processing_profile->read_processor(undef);
-is($velvet->_setup_read_processor($build->instrument_data), 'gmt fast-qual rename --matches qr{#.*/1$}=.b1,qr{#.*/2$}=.g1 --input %s --output %s --type-in illumina', 'pipe ok for no read processor w/o coverage');
-$model->processing_profile->coverage($coverage);
-is($velvet->_setup_read_processor($build->instrument_data), 'gmt fast-qual limit by-coverage --bases %s --metrics-file '.$velvet->_coverage_metrics_file.' --input %s --output PIPE --type-in illumina | gmt fast-qual rename --matches qr{#.*/1$}=.b1,qr{#.*/2$}=.g1 --input PIPE --output %s', 'pipe ok for no read processor w/ coverage');
-$model->processing_profile->read_processor($read_processor);
-$model->processing_profile->coverage(undef);
-is($velvet->_setup_read_processor($build->instrument_data), 'gmt fast-qual trimmer by-length -trim-length 10 --input %s --output PIPE --type-in illumina | gmt fast-qual rename --matches qr{#.*/1$}=.b1,qr{#.*/2$}=.g1 --input PIPE --output %s', 'pipe ok for read processor w/o coverage');
-$model->processing_profile->coverage($coverage);
-is($velvet->_setup_read_processor($build->instrument_data), 'gmt fast-qual trimmer by-length -trim-length 10 --input %s --output PIPE --type-in illumina | gmt fast-qual limit by-coverage --bases %s --metrics-file '.$velvet->_coverage_metrics_file.' --input PIPE --output PIPE | gmt fast-qual rename --matches qr{#.*/1$}=.b1,qr{#.*/2$}=.g1 --input PIPE --output %s', 'pipe ok for read processor w/ coverage');
-
 #execute
 ok($velvet->execute, 'Execute prepare inst data velvet');
 ok(-s $build->collated_fastq_file, 'Created collated fastq file');

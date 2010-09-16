@@ -6,18 +6,30 @@
   <xsl:template name="genome_model_set_coverage" match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']">
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
     <script type="text/javascript">
+      <xsl:variable name="wingspan_500" select="count(//alignment-summary/model/wingspan[@size='500'])"/>
       window.aSummary = [
-      <xsl:for-each select="//alignment-summary/model">
-        <xsl:sort data-type="text" order="ascending" select="@subject_name"/>
+      <xsl:for-each select="//alignment-summary/model/wingspan[@size='0']">
+        <xsl:sort data-type="text" order="ascending" select="../@subject_name"/>
         <xsl:if test="total_bp"> <!-- we may get empty model nodes, which should be discarded -->
           {
-          "subject_name": "<xsl:value-of select="@subject_name"/>",
-          "id": <xsl:value-of select="@id"/>,
+          "subject_name": "<xsl:value-of select="../@subject_name"/>",
+          "id": <xsl:value-of select="../@id"/>,
           "total_bp": <xsl:value-of select="total_bp"/>,
           "total_unaligned_bp": <xsl:value-of select="total_unaligned_bp"/>,
           "duplicate_off_target_aligned_bp": <xsl:value-of select="duplicate_off_target_aligned_bp"/>,
           "duplicate_target_aligned_bp": <xsl:value-of select="duplicate_target_aligned_bp"/>,
-          "unique_off_target_aligned_bp": <xsl:value-of select="unique_off_target_aligned_bp"/>,
+          <xsl:choose>
+            <!-- if we have wingspan 500 data, we'll want to show -->
+            <xsl:when test="$wingspan_500 &gt; 0">
+              <xsl:variable name="unique_off_target_0" select="unique_off_target_aligned_bp"/>
+              <xsl:variable name="unique_off_target_500" select="../wingspan[@size='500']/unique_off_target_aligned_bp"/>
+              "unique_off_target_aligned_bp_500": <xsl:value-of select="$unique_off_target_500"/>,
+              "unique_off_target_aligned_bp": <xsl:value-of select="$unique_off_target_0 - $unique_off_target_500"/>,
+            </xsl:when>
+            <xsl:otherwise>
+              "unique_off_target_aligned_bp": <xsl:value-of select="unique_off_target_aligned_bp"/>,
+            </xsl:otherwise>
+          </xsl:choose>
           "unique_target_aligned_bp": <xsl:value-of select="unique_target_aligned_bp"/>,
           }<xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
         </xsl:if>
@@ -230,6 +242,27 @@ return Math.round(rnum*Math.pow(10,rlength))/Math.pow(10,rlength);
                   <xsl:text disable-output-escaping="yes">
                   <![CDATA[
 try {
+
+if ('unique_off_target_aligned_bp_500' in aSummary[0]) {
+var metrics = [
+"unique_target_aligned_bp",
+"duplicate_target_aligned_bp",
+"unique_off_target_aligned_bp",
+"unique_off_target_aligned_bp_500",
+"duplicate_off_target_aligned_bp",
+"total_unaligned_bp"
+];
+
+var metrics_short = [
+"unique on target",
+"duplicate on target",
+"unique off target (wingspan 500)",
+"unique off target",
+"duplicate off target",
+"unaligned"
+];
+} else {
+
 var metrics = [
 "unique_target_aligned_bp",
 "duplicate_target_aligned_bp",
@@ -245,7 +278,7 @@ var metrics_short = [
 "duplicate off target",
 "unaligned"
 ];
-
+}
 // create column arrays
 var summary_data = [];
 for (var subject in aSummary) {
@@ -384,11 +417,11 @@ return Math.round(rnum*Math.pow(10,rlength))/Math.pow(10,rlength);
             </tr>
           </thead>
           <tbody>
-            <xsl:for-each select="alignment-summary/model">
-              <xsl:sort select="@subject_name" order="ascending"/>
+            <xsl:for-each select="alignment-summary/model/wingspan[@size='0']">
+              <xsl:sort select="../@subject_name" order="ascending"/>
               <tr>
                 <td>
-                  <xsl:value-of select="@subject_name"/>
+                  <xsl:value-of select="../@subject_name"/>
                 </td>
                 <td>
                   <xsl:value-of select="format-number(unique_target_aligned_bp, '###,###')"/>

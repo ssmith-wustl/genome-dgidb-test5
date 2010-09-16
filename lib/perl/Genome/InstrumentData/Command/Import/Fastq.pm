@@ -443,7 +443,7 @@ sub check_last_read {
 
 sub get_read_count {
     my $self = shift;
-    my $read_count;
+    my ($line_count,$read_count);
     my @files = split ",", $self->source_data_files;
     $self->status_message("Now attempting to determine read_count by calling wc on the imported fastq(s). This may take a while if the fastqs are large.");
     for my $file (@files){
@@ -453,13 +453,13 @@ sub get_read_count {
             $self->error_message("couldn't get a response from wc.");
             return undef;
         }
-        $read_count += $sub_count;
+        $line_count += $sub_count;
     }
-    if($read_count % 4){
-        $self->error_message("Read_cound calculated a number of lines in the fastq file that was not divisible by 4.");
+    if($line_count % 4){
+        $self->error_message("Calculated a number of lines in the fastq file that was not divisible by 4.");
         return undef;
     }
-    $read_count = $read_count / 4;
+    $read_count = $line_count / 4;
     return $read_count
 }
 

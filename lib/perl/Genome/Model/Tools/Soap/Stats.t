@@ -31,8 +31,10 @@ foreach ('1_fastq', '2_fastq') {
 ok(File::Copy::copy($data_dir.'/contigs.bases', $temp_dir.'/edit_dir'), "Copied contigs.bases to temp edit_dir");
 
 #create, execute tool
+my @input_fastqs = ($temp_dir.'/1_fastq', $temp_dir.'/2_fastq');
 my $stats = Genome::Model::Tools::Soap::Stats->create(
     assembly_directory => $temp_dir,
+    input_fastq_files => \@input_fastqs,
     );
 ok($stats, "Created stats object") or die;
 ok(($stats->execute) == 1, "Executed stats successfully") or die;

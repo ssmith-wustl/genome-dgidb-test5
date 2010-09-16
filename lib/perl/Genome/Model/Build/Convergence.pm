@@ -92,17 +92,16 @@ sub _all_subbuilds_helper {
     my $type = $subbuild->type_name;
     
     my @subbuilds_to_process;
-    
-    if ($type eq 'somatic') {
-        push @subbuilds_to_process,
-            $subbuild->tumor_build, $subbuild->normal_build;
-    } elsif ($type eq 'convergence') {
+
+    if ($type eq 'convergence') {
         push @subbuilds_to_process,
             $subbuild->members;
+
     } else {
-        #No subbuilds to process
+        push @subbuilds_to_process,
+            $subbuild->from_builds;
     }
-    
+
     return $subbuild, map($self->_all_subbuilds_helper($_, $seen), @subbuilds_to_process);
 }
 

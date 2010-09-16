@@ -134,6 +134,22 @@ sub execute {
     }
     sleep(1);
 
+    #create reads.unplaced files (reads.unplaced and reads.unplaced.fasta)
+    $self->status_message("Creating reads.unplaced and reads.unplaced.fasta files");
+    my $unplaced = Genome::Model::Tools::Assembly::CreateOutputFiles::ReadsUnplaced->create(
+	reads_placed_file => $self->_reads_placed_file,
+	directory => $self->assembly_directory,
+	);
+    unless ($unplaced) {
+	$self->error_message("Failed to create reads-unplaced");
+	return;
+    }
+    unless ($unplaced->execute) {
+	$self->error_message("Failed to execute reads-unplaced");
+	return;
+    }
+    sleep(1);
+
     #create supercontigs.agp file
     $self->status_message("Creating supercontigs.agp file");
     my $agp = Genome::Model::Tools::Assembly::CreateOutputFiles::SupercontigsAgp->create (
