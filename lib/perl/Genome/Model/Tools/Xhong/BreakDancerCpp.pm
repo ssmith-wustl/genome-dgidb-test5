@@ -41,6 +41,7 @@ sub execute {
         return;
     }
     
+    $self->error_message( "$dir" );
     #retrieve the build et al
     my $build_id = $self->build_id;
 
@@ -128,9 +129,12 @@ sub execute {
     }
     my $user = $ENV{USER}; 
     my $cfg_name = $dir . "/$genome_name.cfg";
+    chdir $dir;
     unless(-e $cfg_name) {
         #run bam2cfg
         $self->status_message("Running bam2cfg");
+        print `pwd`;
+        $self->status_message("$dir");
         print `bsub -N -u $user\@genome.wustl.edu -q short -J '$genome_name bam2cfg' -R 'select[type==LINUX64]' '~kchen/MPrelease/BreakDancer/bam2cfg.pl -g -h $tumor_bam_link_name $normal_bam_link_name > $cfg_name'`;
         sleep(300); #wait for this to finish since running is via system is not working
 
@@ -141,6 +145,7 @@ sub execute {
         $self->status_message("Found $cfg_name and proceeding with this file");
     }
 
+    system('pwd');
     #print stats from .cfg file regarding chimeric reads and std/mean ratio
     $self->status_message("Chimeric Read %\tstd/mean ratio");
     my $cfgfh = new IO::File $cfg_name,"r";
