@@ -41,10 +41,9 @@ is (compare($build->end_one_fastq_file, $example_end_one_fastq), 0, "Generated e
 my $example_end_two_fastq = Genome::Model::DeNovoAssembly::Test->example_end_two_fastq_file_for_model($model);
 is (compare($build->end_two_fastq_file, $example_end_two_fastq), 0, "Generated end two fasta file matches");
 
-#print $example_end_one_fastq.' '.$build->end_one_fastq_file."\n";
-#print $example_end_two_fastq.' '.$build->end_two_fastq_file."\n";
-
-#<STDIN>;
+print $example_end_one_fastq.' '.$build->end_one_fastq_file."\n";
+print $example_end_two_fastq.' '.$build->end_two_fastq_file."\n";
+print $build->data_directory."\n"; <STDIN>;
 
 done_testing();
 exit;

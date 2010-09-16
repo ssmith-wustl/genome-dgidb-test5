@@ -44,17 +44,14 @@ sub create {
 
     my $bases = $self->bases;
     my $count = $self->count;
-    
     unless ( defined $bases or defined $count ) {
         $self->error_message("One coverage param (bases or count) is required");
-        $self->delete;
         return;
     }
 
     if ( defined $bases ) {
         unless ( $bases =~ /^$RE{num}{int}$/ and $bases > 1 ) {
             $self->error_message("Invalid value ($bases) given for param 'bases'.");
-            $self->delete;
             return;
         }
     }
@@ -62,7 +59,6 @@ sub create {
     if ( defined $count ) {
         unless ( $count =~ /^$RE{num}{int}$/ and $count > 1 ) {
             $self->error_message("Invalid value ($count) given for param 'count'.");
-            $self->delete;
             return;
         }
     }
