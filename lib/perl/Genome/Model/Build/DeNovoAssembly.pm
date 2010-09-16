@@ -292,7 +292,11 @@ sub supercontigs_fasta_file {
 sub assembly_fasta_file {
     return contigs_bases_file(@_);
 }
-#<>#
+
+#< Misc >#
+sub center_name {
+    return 'WUGC';
+}
 
 #< Metrics >#
 sub calculate_metrics {

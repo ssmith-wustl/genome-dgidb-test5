@@ -373,6 +373,9 @@ sub _AssembleBestSV {
             }
 
             for my $fbam (@bam_files) {
+                unless (-s $fbam.'.bai') {
+                    die "bam index file: $fbam.bai does not exist";
+                }
 	            if ($type eq 'ITX') {
 	                $start1 = $start - $b;
 	                $end1   = $start + $self->est_max_ins_size;

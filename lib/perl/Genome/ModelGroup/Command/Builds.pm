@@ -59,9 +59,8 @@ sub get_mg {
 
 sub count_active {
     my $self = shift;
+    my $mg = shift;
 
-    my $mg = $self->get_mg;
-    
     my $active_count = 0;
     for my $model ($mg->models) {
         my $build = $model->latest_build;

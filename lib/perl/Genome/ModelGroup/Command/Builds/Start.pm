@@ -35,7 +35,7 @@ sub execute {
 
     my $mg = $self->get_mg;
 
-    my $active_count = $self->count_active;
+    my $active_count = $self->count_active($mg);
 
     for my $model ($mg->models) {
         my $model_name = $model->name;

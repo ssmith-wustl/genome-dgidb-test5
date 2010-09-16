@@ -850,10 +850,10 @@ sub success {
     if($self->type_name !~ /convergence/) {
         for my $model_group ($self->model->model_groups) {
             eval {
-                $model_group->launch_convergence_rebuild;
+                $model_group->schedule_convergence_rebuild;
             };
             if($@) {
-                $self->error_message('Could not launch convergence build for model group ' . $model_group->id . '.  Continuing anyway.');
+                $self->error_message('Could not schedule convergence build for model group ' . $model_group->id . '.  Continuing anyway.');
             }
         }
     }

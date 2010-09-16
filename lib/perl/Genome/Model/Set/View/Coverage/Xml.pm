@@ -80,9 +80,13 @@ sub get_alignment_summary_node {
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
             my $alignment_summary_hash_ref = $build->alignment_summary_hash_ref;
-            for my $key (keys %{$alignment_summary_hash_ref->{0}}) {
-                my $key_node = $model_node->addChild( $xml_doc->createElement($key) );
-                $key_node->addChild( $xml_doc->createTextNode( $alignment_summary_hash_ref->{0}->{$key} ) );
+            for my $ws_key (keys %{$alignment_summary_hash_ref}) {
+                my $ws_node = $model_node->addChild( $xml_doc->createElement('wingspan') );
+                $ws_node->addChild( $xml_doc->createAttribute('size', $ws_key) );
+                for my $param_key (keys %{$alignment_summary_hash_ref->{$ws_key}}) {
+                    my $key_node = $ws_node->addChild( $xml_doc->createElement($param_key) );
+                    $key_node->addChild( $xml_doc->createTextNode( $alignment_summary_hash_ref->{$ws_key}->{$param_key} ) );
+                }
             }
         }
     }
