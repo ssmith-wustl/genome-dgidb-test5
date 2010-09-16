@@ -54,8 +54,7 @@ sub sort_order {[qw( structure_start transcript_structure_id )] }
 sub file_resolver {
     my( $chrom_name, $data_directory) = @_;
 
-    return '/' . $data_directory . '/substructures/' . $chrom_name . '_new_sorted.csv';
-    #return '/' . $data_directory . '/substructures/' . $chrom_name . '.csv';
+    return '/' . $data_directory . '/substructures/' . $chrom_name . '.csv';
 }
 
 1;
