@@ -53,11 +53,14 @@ sub execute {
     }
     $self->status_message("Finished creating supercontigs.agp file");
 
+    #TODO - need a method to grab these when there will be more than just these two
+    my @input_fastqs = ($self->build->end_one_fastq_file, $self->build->end_two_fastq_file);
 
     #create stats
     $self->status_message("Creating stats.txt file");
     my $stats = Genome::Model::Tools::Soap::Stats->create(
 	assembly_directory => $self->build->data_directory,
+	input_fastq_files => \@input_fastqs,
 	);
     unless ($stats->execute) {
 	$self->error_message("Failed to run stats successfully");

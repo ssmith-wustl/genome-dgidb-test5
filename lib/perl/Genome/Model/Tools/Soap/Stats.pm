@@ -30,6 +30,11 @@ class Genome::Model::Tools::Soap::Stats {
 	    default_value => 500,
 	    doc => 'Cutoff value for major contig length',
 	},
+	input_fastq_files => {
+	    is => 'Text',
+	    is_many => 1,
+	    doc => 'Input fastq files for the assembly',
+	},
 	output_file => {
 	    is => 'Text',
 	    is_optional => 1,
@@ -389,12 +394,12 @@ sub _get_input_read_and_bases_counts {
     my $self = shift;
     my $read_count = 0;
     my $base_count = 0;
-    foreach my $fastq ('1_fastq', '2_fastq') {
-	unless (-s $self->assembly_directory."/$fastq") {
-	    $self->error_message("Failed to find file: ".$self->assembly_directory."/$fastq");
+    foreach my $fastq ($self->input_fastq_files) {
+	unless (-s $fastq) {
+	    $self->error_message("Failed to find fine: $fastq");
 	    return;
 	}
-	my $io = Genome::Model::Tools::FastQual::FastqReader->create(file => $self->assembly_directory."/$fastq");
+	my $io = Genome::Model::Tools::FastQual::FastqReader->create(file => $fastq);
 	while (my $seq = $io->next) { #just getting seq
 	    $read_count++;
 	    $base_count += length $seq->{seq};

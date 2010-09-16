@@ -36,6 +36,7 @@ sub execute {
     my $dir_name = File::Basename::dirname($self->subject_file);
 
     chdir $dir_name;
+    unlink 'Cov_30_PID_30.out.gz';
 
     my $cmd = "run_coregene_cov_pid_script $subject_file_name 30 0.3 -assembly -".$self->core_gene_option;
     if (system("$cmd")) {
