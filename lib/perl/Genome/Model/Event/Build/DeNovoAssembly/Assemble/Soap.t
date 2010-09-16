@@ -51,23 +51,23 @@ is($lsf_params, "-R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem
 # execute
 ok( $assemble->execute, "Executed soap assemble");
 
-#check output files
-my @files = qw/ Assembly.contig         Assembly.gapSeq        Assembly.links     Assembly.peGrads
-                Assembly.preGraphBasic  Assembly.readOnContig  Assembly.scafSeq   Assembly.updated.edge
-                Assembly.ContigIndex    Assembly.edge          Assembly.kmerFreq  Assembly.newContigIndex
-                Assembly.preArc         Assembly.readInGap     Assembly.scaf      Assembly.scaf_gap  Assembly.vertex /;
+my @file_exts = qw/ contig         gapSeq        links     peGrads
+                    preGraphBasic  readOnContig  scafSeq   updated.edge
+                    ContigIndex    edge          kmerFreq  newContigIndex
+                    preArc         readInGap     scaf      scaf_gap        vertex /;
 
 my $example_dir = Genome::Model::DeNovoAssembly::Test->example_directory_for_model($model);
 
 ok(-d $example_dir, "Solexa-soap example directory exists"); 
 
-foreach (@files) {
-    ok(-e $example_dir."/$_", "Example $_ file exists");
-    ok(-e $build->data_directory."/$_", "$_ file created");
-    ok(File::Compare::compare($example_dir."/$_", $build->data_directory."/$_") == 0, "$_ files match");
+my $file_prefix = $build->instrument_data->sample_name.'_'.$build->center_name;
+
+foreach (@file_exts) {
+    ok(-e $example_dir."/$file_prefix".'.'.$_, "Example $_ file exists");
+    ok(-e $build->data_directory."/$file_prefix".'.'.$_, "$_ file exists");
+    ok(File::Compare::compare($example_dir."/$file_prefix".'.'.$_, $build->data_directory."/$file_prefix".'.'.$_) == 0, "$_ files match");
 }
 
-#print $example_dir.' '.$build->data_directory."\n";
 #<STDIN>;
 
 done_testing();
