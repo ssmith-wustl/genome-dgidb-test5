@@ -38,7 +38,7 @@ class Genome::ProcessingProfile::GenePrediction::Bacterial {
 };
 
 sub _resolve_type_name_for_class {
-    return "gene prediction bacterial";
+    return "gene prediction";
 }
 
 sub _execute_build {

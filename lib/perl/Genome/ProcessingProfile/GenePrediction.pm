@@ -30,6 +30,10 @@ class Genome::ProcessingProfile::GenePrediction {
     ],
 };
 
+sub _resolve_type_name_for_class {
+    return 'gene prediction';
+}
+
 sub validate_created_object {
     my $self = shift;
     my $domain = $self->domain;

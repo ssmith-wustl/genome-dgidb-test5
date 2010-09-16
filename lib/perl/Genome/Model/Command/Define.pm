@@ -243,6 +243,7 @@ sub execute {
         $model_params{data_directory} = $self->data_directory;
     }
 
+    $DB::single = 1;
     my $model = Genome::Model->create(%model_params);
     unless ( $model ) {
         $self->error_message('Could not create a model for: '. $self->subject_name);
@@ -309,29 +310,44 @@ sub type_specific_parameters_for_create {
 
 sub compare_pp_and_model_type {
     my $self = shift;
+
+    $DB::single = 1;
+    # Determine the subclass of model being defined
+    my $model_subclass = $self->class;
+    my $package = __PACKAGE__ . "::";
+    $model_subclass =~ s/$package//;
+    
+    # Determine the subclass of the processing profile
     my $pp = Genome::ProcessingProfile->get(id=>$self->processing_profile_id);
     unless($pp){
         $self->error_message("Couldn't find the processing profile identified by the #: ".$self->processing_profile_id);
         die $self->error_message;
     }
+    my $pp_subclass = $pp->subclass_name;
+    $pp_subclass =~ s/Genome::ProcessingProfile:://;
+    
 
     #determine which subclass of Genome::Model::Command::Define called the super->execute
-    my $parent = $self->class;
-    $parent =~ s/.*:://;
-    my $pp_type = $pp->subclass_name;
+    #my $parent = $self->class;
+    #$parent =~ s/.*:://;
+    #my $pp_type = $pp->subclass_name;
     
     #check for special cases where processing-profile-name and model subclass have different names
-    if($parent eq "GenotypeMicroarray"){
+    #if($parent =~ /GenotypeMicroarray/){
+    if ($model_subclass =~ /GenotypeMicroarray/) {
         unless($pp->name =~ /wugc/){
             $self->error_message("GenotypeMicroarray Models must use one of the [microarray-type]/wugc processing-profiles.");
             die $self->error_message;
         }
         return 1;
     }
-    $pp_type =~ s/Genome::ProcessingProfile:://;
-    ($pp_type) = split "::",$pp_type;
-    unless($parent eq $pp_type){
-        $self->error_message("Genome::Model subclass ".$parent." and ProcessingProfile subclass ".$pp_type." did not match.");
+
+    #$pp_type =~ s/Genome::ProcessingProfile:://;
+    #($pp_type) = split "::",$pp_type;
+    #unless($parent eq $pp_type){
+    unless ($model_subclass eq $pp_subclass) {
+        #$self->error_message("Genome::Model subclass ".$parent." and ProcessingProfile subclass ".$pp_type." did not match.");
+        $self->error_message("Model subclass $model_subclass and ProcessingProfile subclass $pp_subclass do not match!");
         die $self->error_message;
     }
     return 1;
