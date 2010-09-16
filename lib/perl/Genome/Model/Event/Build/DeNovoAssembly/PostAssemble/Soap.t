@@ -24,7 +24,7 @@ my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model)
 ok($build, 'Got mock de novo assembly build') or die;
 
 #link assembly.scafSeq file
-my $example_scaf_seq_file = Genome::Model::DeNovoAssembly::Test->example_scaffold_sequence_file_for_model($model);
+my $example_scaf_seq_file = Genome::Model::DeNovoAssembly::Test->example_scaffold_sequence_file_for_soap_model($model);
 ok(-s $example_scaf_seq_file, "Example scaffold sequence file exists");
 symlink($example_scaf_seq_file, $build->soap_scaffold_sequence_file) or die;
 ok(-s $build->soap_scaffold_sequence_file, "Linked scaffold sequence file");
@@ -58,7 +58,6 @@ foreach (qw/ contigs.bases supercontigs.fasta supercontigs.agp stats.txt/) {
     ok(File::Compare::compare($data_dir."/$_",$build->data_directory."/edit_dir/$_") == 0, "$_ files match");
 }
 
-#print $build->data_directory."\n";
 #<STDIN>;
 
 done_testing();
