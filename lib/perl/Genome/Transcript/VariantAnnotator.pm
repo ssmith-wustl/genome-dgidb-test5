@@ -573,8 +573,8 @@ sub _transcript_annotation_for_cds_exon {
 sub get_reference_build_for_transcript {
     my($self, $structure) = @_;
 
-    my ($version) = $self->transcript_version =~ /^\d+_(\d+)[a-z]/;
-    my $species = $self->transcript_species;
+    my ($version) = $structure->transcript_version =~ /^\d+_(\d+)[a-z]/;
+    my $species = $structure->transcript_species;
 
     unless ($self->{'_reference_builds'}->{$version}->{$species}) {
 
@@ -597,13 +597,18 @@ sub _apply_indel_and_translate{
     my ($self, $structure, $variant) = @_;
 
     my $chrom_name = $structure->chrom_name;
-    my @sibling_structures = Genome::TranscriptStructures->get(transcript_transcript_id => $structure->transcript_transcript_id,
+    my @sibling_structures = Genome::TranscriptStructure->get(transcript_transcript_id => $structure->transcript_transcript_id,
                                                                chrom_name => $chrom_name,
                                                                data_directory => $structure->data_directory,
-                                                               transcript_transcript_id => $structure->transcript_id,
                                                                'structure_start <' => $structure->transcript_transcript_stop + 50000,
                                                               # structure_type => 'intron',
                                                             );
+    if ($structure->transcript_strand eq '+1') {
+        @sibling_structures = sort { $a->structure_start <=> $b->structure_start } @sibling_structures;
+    } else {
+        @sibling_structures = sort { $b->structure_start <=> $a->structure_start } @sibling_structures;
+    }
+
                                                        
     my @structures = ($structure);
 

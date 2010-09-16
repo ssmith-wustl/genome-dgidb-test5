@@ -337,8 +337,9 @@ sub execute {
         my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
         my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
 
+        my @directories = $self->build->determine_data_directory;
         Genome::Transcript::VariantAnnotator->create(
-            data_directory => $self->build->determine_data_directory,
+            data_directory => \@directories,
             check_variants => $self->check_variants,
             get_frame_shift_sequence => $self->get_frame_shift_sequence,
             ucsc_conservation_directory => $ucsc_versions{$version},
