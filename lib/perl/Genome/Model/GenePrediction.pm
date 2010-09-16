@@ -17,9 +17,9 @@ class Genome::Model::GenePrediction {
                 confess "No processing profile id given to gene prediction model!" unless defined $pp_id;
                 my $pp = Genome::ProcessingProfile::GenePrediction->get($pp_id);
                 confess "Could not get processing profile $pp_id to create gene prediction model!" unless $pp;
-                my $domain = $pp->domain;
-                my $camel_case = Genome::Utility::Text::string_to_camel_case($domain);
-                return 'Genome::Model::GenePrediction::' . $camel_case;
+                my $subclass = $pp->subclass_name;
+                $subclass =~ s/ProcessingProfile/Model/;
+                return $subclass;
             },
         },
         domain => {

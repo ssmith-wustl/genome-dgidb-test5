@@ -15,12 +15,12 @@ class Genome::Model::Build::GenePrediction {
             calculate_from => 'model_id',
             calculate => sub {
                 my $model_id = shift;
+                confess "Not given a model id with which to subclass the gene prediction build!" unless defined $model_id;
                 my $model = Genome::Model->get($model_id);
                 confess "Could not get model $model_id!" unless $model;
-                my $pp = $model->processing_profile;
-                my $domain = $pp->domain;
-                my $camel_case = Genome::Utility::Text::string_to_camel_case($domain);
-                return 'Genome::Model::Build::GenePrediction::' . $camel_case;
+                my $subclass = $model->subclass_name;
+                $subclass =~ s/Model/Model::Build/;
+                return $subclass;
             },
         },
     ],
