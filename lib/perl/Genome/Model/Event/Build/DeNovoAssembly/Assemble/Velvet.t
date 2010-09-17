@@ -20,12 +20,18 @@ my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
     assembler_name => 'velvet',
 );
-
 ok($model, 'Got mock de novo assembly model') or die;
 my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
 ok($build, 'Got mock de novo assembly build') or die;
 
-my $example_fastq = Genome::Model::DeNovoAssembly::Test->example_fastq_file_for_model($model);
+# example build
+my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+    model => $model,
+    use_example_directory => 1,
+);
+ok($example_build, 'got example build') or die;
+
+my $example_fastq = $example_build->collated_fastq_file;
 symlink($example_fastq, $build->collated_fastq_file);
 ok(-s $build->collated_fastq_file, 'Linked fastq file') or die;
 
@@ -37,8 +43,7 @@ ok($velvet->execute, 'Execute assemble velvet');
 for my $file_name (qw/ contigs_fasta_file sequences_file assembly_afg_file /) {
     my $file = $build->$file_name;
     ok(-s $file, "Build $file_name exists");
-    my $example_file_method = 'example_'.$file_name.'_for_model';
-    my $example_file = Genome::Model::DeNovoAssembly::Test->$example_file_method($model);
+    my $example_file = $example_build->$file_name;
     ok(-s $example_file, "Example $file_name exists");
     is( File::Compare::compare($file, $example_file), 0, "Generated $file_name matches example file");
 }

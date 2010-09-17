@@ -575,7 +575,7 @@ table.display tr.gradeU {
 	background-color: #ddd;
 }
 
-div.box {
+table.display div.box {
 	height: 100px;
 	padding: 10px;
 	overflow: auto;
