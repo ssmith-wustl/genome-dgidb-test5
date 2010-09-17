@@ -6,11 +6,14 @@
   <xsl:template name="genome_model_set_coverage" match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']">
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
     <script type="text/javascript">
-      <xsl:variable name="wingspan_500" select="count(//alignment-summary/model/wingspan[@size='500'])"/>
       window.aSummary = [
       <xsl:for-each select="//alignment-summary/model/wingspan[@size='0']">
         <xsl:sort data-type="text" order="ascending" select="../@subject_name"/>
         <xsl:if test="total_bp"> <!-- we may get empty model nodes, which should be discarded -->
+          <!-- does this model have a wingspan 500 node? -->
+          <xsl:variable name="wingspan_500" select="count(../wingspan[@size='500'])"/>
+          <xsl:text>//</xsl:text> wingspan_500: <xsl:value-of select="$wingspan_500"/>
+
           {
           "subject_name": "<xsl:value-of select="../@subject_name"/>",
           "id": <xsl:value-of select="../@id"/>,
@@ -27,6 +30,7 @@
               "unique_off_target_aligned_bp": <xsl:value-of select="$unique_off_target_0 - $unique_off_target_500"/>,
             </xsl:when>
             <xsl:otherwise>
+              "unique_off_target_aligned_bp_500": 0,
               "unique_off_target_aligned_bp": <xsl:value-of select="unique_off_target_aligned_bp"/>,
             </xsl:otherwise>
           </xsl:choose>
