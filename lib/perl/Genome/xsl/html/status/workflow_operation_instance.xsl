@@ -11,7 +11,7 @@ xmlns:rest="urn:rest">
       <script type="text/javascript">
         <![CDATA[
           function status_popup(title,typeurl,id) {
-            Boxy.load("/view/" + typeurl + "/statuspopup.html?id=" + id, {cache: true, title: title, afterShow: function() { this.center; this.resize(400,400); this.getContent().css('overflow','auto'); } });
+            Boxy.load("/viewajax/" + typeurl + "/statuspopup.html?id=" + id, {cache: true, title: title, afterShow: function() { this.center; this.resize(400,400); this.getContent().css('overflow','auto'); } });
             return false;
           }
         ]]>
