@@ -200,6 +200,7 @@ sub get_mock_build {
         edit_dir
         gap_file
         contigs_bases_file
+        contigs_fasta_file
         contigs_quals_file
         read_info_file
         reads_placed_file

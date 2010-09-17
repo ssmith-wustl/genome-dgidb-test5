@@ -42,5 +42,17 @@ sub soap_output_file_for_ext {
     return $_[0]->soap_output_dir_and_file_prefix.'.'.$_[1];
 }
 
+sub contigs_fasta_file {
+    return $_[0]->edit_dir.'/'.$_[0]->file_prefix.'.contigs.fa';
+}
+
+sub supercontigs_fasta_file {
+    return $_[0]->edit_dir.'/'.$_[0]->file_prefix.'.scaffolds.fa';
+}
+
+sub supercontigs_agp_file {
+    return $_[0]->edit_dir.'/'.$_[0]->file_prefix.'.agp';
+}
+
 1;
 

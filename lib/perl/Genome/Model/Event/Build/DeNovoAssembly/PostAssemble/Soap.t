@@ -57,11 +57,11 @@ ok($soap, "Created soap post assemble") or die;
 ok($soap->execute, "Executed soap post assemble") or die;
 
 #compare files
-foreach my $file_name (qw/ contigs_bases_file supercontigs_fasta_file supercontigs_agp_file stats_file /) {
+foreach my $file_name (qw/ contigs_fasta_file supercontigs_fasta_file supercontigs_agp_file stats_file /) {
     my $example_file = $example_build->$file_name;
-    ok(-s $example_file, "Test data dir $file_name file exists");
+    ok(-s $example_file, "Test data dir $example_file");
     my $file = $build->$file_name;
-    ok(-s $file, "Build data dir $file_name file exists");
+    ok(-s $file, "Build data dir $file");
     is(File::Compare::compare($example_file, $file), 0, "$file_name files match");
 }
 
