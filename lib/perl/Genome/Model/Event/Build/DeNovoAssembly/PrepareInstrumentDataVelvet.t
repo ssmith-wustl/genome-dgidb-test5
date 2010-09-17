@@ -33,9 +33,14 @@ ok($velvet->execute, 'Execute prepare inst data velvet');
 ok(-s $build->collated_fastq_file, 'Created collated fastq file');
 
 # check collated fastq
-my $example_fastq_file_for_model = Genome::Model::DeNovoAssembly::Test->example_fastq_file_for_model($model);
+my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+    model => $model,
+    use_example_directory => 1,
+);
+ok($example_build, 'got example build') or die;
+my $example_fastq_file = $example_build->collated_fastq_file;
 is( 
-    compare($build->collated_fastq_file, $example_fastq_file_for_model), 
+    compare($build->collated_fastq_file, $example_fastq_file), 
     0,
     'Generated and example fastq files match!',
 );

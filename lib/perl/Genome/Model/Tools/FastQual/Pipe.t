@@ -57,9 +57,27 @@ my $pipe = Genome::Model::Tools::FastQual::Pipe->create(
 );
 ok($pipe, 'create pipe');
 isa_ok($pipe, 'Genome::Model::Tools::FastQual::Pipe');
-ok($pipe->execute, 'execute pipe');
-is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq created as expected");
-ok(-s $metrics_file, 'created metrics file');
+eval{
+    $pipe->execute;
+};
+if ( $pipe->result ) {
+    ok($pipe->result, 'execute pipe');
+    is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq created as expected");
+    ok(-s $metrics_file, 'created metrics file');
+}
+else {
+    # We got a failure. If it is b/c of reading from STDIN, that is ok.
+    if ( not defined $pipe->error_message ) { # failed, but not sure why...this should not happen
+        ok(0, 'Pipe execute failed, and there was not an error message');
+    }
+    elsif ( $pipe->error_message =~ /No pipe meta info. Are you sure you wanted to read from a pipe/ ) { # ok
+        ok(1, 'Execute failed b/c of error reading from STDIN. This is probably OK');
+    }
+    else { # real failure
+        ok(0, 'Execute failed. Listing errors (if any) below');
+        diag($pipe->error_message);
+    }
+}
 
 #print "$tmp_dir\n"; <STDIN>;
 done_testing();

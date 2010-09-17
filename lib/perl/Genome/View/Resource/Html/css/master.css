@@ -35,6 +35,10 @@ tr.even td {
     margin-bottom: .25em;
 }
 
+.subheader.underline {
+    border-bottom: 2px solid #CDCDCD;
+}
+
 #eventview h2 {
     margin: 0;
     padding: 0;
@@ -373,6 +377,7 @@ table.name-value-row td.value {
 /* lister */
 table.lister {
     margin-bottom: 1em;
+    border-bottom: 2px solid #CDCDCD
 }
 
 table.lister thead tr th {
