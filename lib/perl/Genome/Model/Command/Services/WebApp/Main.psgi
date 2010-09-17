@@ -17,6 +17,8 @@ use strict;
 use File::Basename;
 use Plack::Util;
 
+our $always_memcache = $ENV{'GENOME_VIEW_CACHE'};
+
 our $psgi_path;
 eval {
     ## Genome is probably not loaded, thats okay, we can just use __FILE__
@@ -79,17 +81,42 @@ dispatch {
         redispatch_to "/view/";
       },
 
-      sub (/viewajax/...) {
+      ## In apache /viewajax maps to /cachefill
+      #  because we want generate the view synchronously to the request
+      #  and fill in memcached after its generated
+      sub (/cachefill/...) {
         redispatch_psgi($app{'Cache.psgi'}, 2);
       },
 
-      sub (/viewtrigger/...) {
+      ## This is triggered as an ajax request from the cache-miss page
+      sub (/cachetrigger/...) {
         redispatch_psgi($app{'Cache.psgi'}, 1);
       },
 
+      ## In apache /view maps to /cache which will show the cache-miss
+      #  page if necessary.
+      sub (/cache/...) {
+        redispatch_psgi $app{'Cache.psgi'};
+      },
+
+      ($always_memcache ? (
+      sub (/viewajax/...) {
+        redispatch_psgi($app{'Cache.psgi'}, 2);
+      },
       sub (/view/...) {
         redispatch_psgi $app{'Cache.psgi'};
       },
+      ) : (
+      ## this exists so the embedded web server can run without caching
+      sub (/viewajax/...) {
+        redispatch_psgi $app{'Rest.psgi'};
+      },
+
+      ## this exists so the embedded web server can run without caching
+      sub (/view/...) {
+        redispatch_psgi $app{'Rest.psgi'};
+      },
+      )),
 
       ## dump the psgi environment, for testing
       sub (/dump/...) {

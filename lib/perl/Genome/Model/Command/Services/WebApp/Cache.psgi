@@ -3,14 +3,23 @@ package Genome::Model::Command::Services::WebApp::Cache;
 use strict;
 use warnings;
 
+# every url gets matched against this, so it shouldn't be a long list
+# if it becomes long, consider a redesign.
+our @never_cache = (
+    qr{(?<!html)$},
+    qr{Genome::Search::Query}i,
+    qr{genome/search/query}i
+);
+
 use Data::Dumper;
 
 use Plack::Util;
 use Digest::MD5;
 use Cache::Memcached;
 use Storable qw/freeze thaw/;
+use Sys::Hostname qw/hostname/;
 
-our $environment = 'local';
+our $environment = hostname eq 'vm44' ? 'prod' : 'dev';
 our %servers = ('prod' => 'imp:11211', 'dev' => 'aims-dev:11211', 'local' => 'localhost:11211');
 our $cache_timeout = 0;
 our $lock_timeout = 0;
@@ -114,8 +123,12 @@ sub {
         my $resp; 
         if ($class->lock($url)) {
 
+            ## override HTTP_ACCEPT to tell it we want html
+
+            $env->{HTTP_ACCEPT} = "application/xml,application/xhtml+xml,text/html";
+
             $resp = Plack::Util::run_app $rest_app, $env;
-            if ($resp->[0] == 200 && ref($resp->[2]) eq 'ARRAY') {
+            if ( ref($resp->[2]) eq 'ARRAY') {
                 if (!$class->set($url,freeze($resp))) {
                     $class->unlock($url);
 
@@ -143,7 +156,7 @@ sub {
         return $resp; 
     };
 
-    if ($ajax_refresh == 1) {
+    if (defined $ajax_refresh && $ajax_refresh == 1) {
         $gen->();
  
         return [
@@ -151,7 +164,7 @@ sub {
             [ 'Content-type' => 'text/html' ],
             [ 'Done' ]
         ];
-    } elsif ($ajax_refresh == 2) {
+    } elsif (defined $ajax_refresh && $ajax_refresh == 2) {
         ## ajax request wants a to wait for the page to be generated
         #  without a placeholder to placate the user
 
@@ -169,8 +182,15 @@ sub {
 
         return $resp;
     } else {
+        my $skip_cache = 0;
+        for my $re (@never_cache) {
+            if ($env->{'PATH_INFO'} =~ $re) {
+                $skip_cache = 1;
+                last; 
+            }
+        }
 
-        if ($env->{'PATH_INFO'} !~ /html$/) {
+        if ($skip_cache) {
             my $rest_app = $Genome::Model::Command::Services::WebApp::Main::app{'Rest.psgi'};
             my $resp = Plack::Util::run_app $rest_app, $env;
 
@@ -222,7 +242,7 @@ sub {
         .hide();
 
        $.ajax({
-         url: '/viewtrigger] . $url . q[',
+         url: '/cachetrigger] . $url . q[',
          success: function(data) {
            location.reload();
          }
