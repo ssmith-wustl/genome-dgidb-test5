@@ -40,7 +40,7 @@ sub _decomposed_aligner_params {
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
-    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '14G');
+    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '23G');
     $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
 
     # get refseq info
