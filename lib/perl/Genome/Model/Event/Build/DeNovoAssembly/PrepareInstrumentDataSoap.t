@@ -43,7 +43,7 @@ is (compare($build->end_two_fastq_file, $example_end_two_fastq), 0, "Generated e
 
 print $example_end_one_fastq.' '.$build->end_one_fastq_file."\n";
 print $example_end_two_fastq.' '.$build->end_two_fastq_file."\n";
-print $build->data_directory."\n"; <STDIN>;
+#print $build->data_directory."\n"; <STDIN>;
 
 done_testing();
 exit;
