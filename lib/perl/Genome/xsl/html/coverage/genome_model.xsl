@@ -82,26 +82,28 @@
     <div class="content rounded shadow">
       <div class="container">
 
-        <table border="0" cellpadding="0" cellspacing="0" class="info_table">
-          <tr>
-            <td class="label">Model Group Name:</td>
-            <td class="value"><xsl:value-of select="@name"/></td>
-          </tr>
-          <tr>
-            <td class="label">Models in Group:</td>
-            <td class="value"><xsl:value-of select="count(//coverage-summary/model)"/></td>
-          </tr>
-        </table>
+        <div class="box rounded">
+          <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
+            <tr>
+              <td class="name">Model Group Name:</td>
+              <td class="value"><xsl:value-of select="@name"/></td>
+            </tr>
+            <tr>
+              <td class="name">Models in Group:</td>
+              <td class="value"><xsl:value-of select="count(//coverage-summary/model)"/></td>
+            </tr>
+          </table>
 
-        <div id="charts" style="float: left; width: 920px;">
+        </div>
+        <div id="charts" style="float: left; width: 950px;">
 
           <table width="100%" border="0" cellpadding="0" cellspacing="0">
             <tr>
-              <td style="vertical-align: top; padding-right: 10px;">
+              <td style="vertical-align: top; padding-right: 10px; width: 525px;">
                 <h2 class="subheader underline">coverage</h2>
                 <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
               </td>
-              <td style="vertical-align: top;">
+              <td style="vertical-align: top; width: 420px;">
                 <h2 class="subheader underline">alignment</h2>
                 <script type="text/javascript" src="/res/js/app/genome_model_alignment_chart.js"></script>
 
