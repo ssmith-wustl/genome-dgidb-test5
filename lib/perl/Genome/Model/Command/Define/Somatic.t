@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 15;
+use Test::More tests => 16;
 use Carp::Always;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -63,13 +63,16 @@ sub setup_test_models {
     );
     ok($test_instrument_data, 'created test instrument data');
     
+    my $imported_reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+    ok($imported_reference_sequence_build, 'got imported ref seq build') or die;
+
     my $test_model = Genome::Model->create(
         name => 'test_reference_aligment_model_TUMOR',
         subject_name => 'test_subject',
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
         data_directory => $temp_model_data_dir,
-        reference_sequence_name => 'NCBI-human-build36'
+        reference_sequence_build => $imported_reference_sequence_build,
     );
     ok($test_model, 'created test model');
     
@@ -94,7 +97,7 @@ sub setup_test_models {
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
         data_directory => $temp_model_data_dir,
-        reference_sequence_name => 'NCBI-human-build36'
+        reference_sequence_build => $imported_reference_sequence_build,
     );
     ok($test_model_two, 'created second test model');
     

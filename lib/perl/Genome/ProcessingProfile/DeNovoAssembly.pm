@@ -214,77 +214,17 @@ sub _validate_read_processor {
     }
 
     for my $read_processor_part ( @read_processor_parts ) {
-        my ($class, $params) = $self->_get_class_and_params_from_read_processor_part($read_processor_part)
-            or return;
-        my %converted_params;
-        for my $key ( keys %$params ) {
-            if ( $key =~ /_/ ) { # underscores not allowed
-                $self->error_message("Param ($key) for read processor part ($read_processor_part) params has an underscore. Use dashes (-) instead");
-                return;
-            }
-            my $new_key = $key; 
-            $new_key =~ s/\-/_/g; # sub - for _ to create processor
-            $converted_params{$new_key} = $params->{$key};
-        }
-        my $obj; 
-        eval{
-            $obj = $class->create(%converted_params);
-        };
-        unless ( $obj ) {
-            $self->error_message("Can't validate read processor ($read_processor_part) using class ($class): $@.");
+        my $read_processor_is_ok = Genome::Model::Tools::FastQual::Pipe->validate_command($read_processor_part);
+        if ( not $read_processor_is_ok ) {
+            $self->error_message("Cannot validate read processor ($read_processor_part). See above error(s)");
             return;
         }
         $self->status_message("Read processor part OK: $read_processor_part");
-        $obj->delete;
     }
 
     $self->status_message("Read processor OK");
-    
+
     return 1;
-}
-
-sub _get_class_and_params_from_read_processor_part {
-    my ($self, $read_processor_part) = @_;
-
-    $DB::single = 1;
-    my @tokens = split(/\s+/, $read_processor_part);
-    my @subclass_parts;
-    while ( my $token = shift @tokens ) {
-        if ( $token =~ /^\-/ ) {
-            unshift @tokens, $token;
-            last;
-        }
-        push @subclass_parts, $token;
-    }
-
-    unless ( @subclass_parts ) {
-        $self->error_message("Could not get class from read processor part: $read_processor_part");
-        return;
-    }
-
-    my $class = 'Genome::Model::Tools::FastQual::'.
-    join(
-        '::', 
-        map { Genome::Utility::Text::string_to_camel_case($_) }
-        map { s/\-/ /; $_; }
-        @subclass_parts
-    );
-
-    my %params;
-    if ( @tokens ) {
-        my $params_string = join(' ', @tokens);
-        eval{
-            %params = Genome::Utility::Text::param_string_to_hash(
-                $params_string
-            );
-        };
-        unless ( %params ) {
-            $self->error_message("Can't get params from params string: $params_string");
-            return;
-        }
-    }
-
-    return ($class, \%params);
 }
 
 #< Stages >#

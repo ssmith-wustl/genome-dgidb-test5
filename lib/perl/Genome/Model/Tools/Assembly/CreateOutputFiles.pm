@@ -111,6 +111,26 @@ sub get_contig_lengths {
     return \%contig_lengths;
 }
 
+sub input_fasta_files {
+    my $self = shift;
+    my @input_fastas;
+    foreach ( glob($self->directory."/edit_dir/*") ) {
+	if ($_ =~ /(fasta|clip)\.gz$/) {
+	    #check to make sure qual fine exists for fasta
+	    #so it doesn't just grab any fastas
+	    my $qual = $_;
+	    $qual =~ s/\.gz$/\.qual\.gz/;
+	    push @input_fastas, $_ if -s $qual;
+	}
+    }
+    unless (@input_fastas) {
+	$self->error_message("Failed to find any valid input fastas in dir: ".$self->directory.'/edit_dir');
+	return;
+    }
+    return @input_fastas;
+}
+
+
 sub contigs_bases_file {
     return $_[0]->directory.'/edit_dir/contigs.bases';
 }
@@ -127,8 +147,16 @@ sub read_info_file {
     return $_[0]->directory.'/edit_dir/readinfo.txt';
 }
 
-sub reads_placed_file {
+sub reads_placed {
     return $_[0]->directory.'/edit_dir/reads.placed';
+}
+
+sub reads_unplaced {
+    return $_[0]->directory.'/edit_dir/reads.unplaced';
+}
+
+sub reads_unplaced_fasta {
+    return $_[0]->directory.'/edit_dir/reads.unplaced.fasta';
 }
 
 sub stats_file {

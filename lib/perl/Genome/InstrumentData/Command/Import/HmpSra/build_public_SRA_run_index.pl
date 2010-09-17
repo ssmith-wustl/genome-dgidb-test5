@@ -56,6 +56,7 @@ use Pod::Usage;
 #my $SRA_FTP_HOST = 'ftp-private.ncbi.nlm.nih.gov';
 my $SRA_FTP_HOST = 'ftp.ncbi.nlm.nih.gov';
 my $DEFAULT_OUTPUT_DIR = '.';
+# as of 9/14/10 the 'sra0' ftp directory was not visible on NCBI FTP site and thus this script does not run...but hopefully this is just a temporary bug on their end ... jmartin 100914
 my $DEFAULT_FTP_SUBDIRS = 'sra0,sra1,sra2';
 
 ## input

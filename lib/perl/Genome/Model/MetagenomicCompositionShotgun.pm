@@ -31,11 +31,17 @@ class Genome::Model::MetagenomicCompositionShotgun {
         contamination_screen_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
+            via => 'inputs',
+            to => 'value',
+            where => [name => 'contamination_screen_reference', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
         },
         metagenomic_references => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
-            is_many => 1,
             is_mutable => 1,
+            is_many => 1,
+            via => 'inputs',
+            to => 'value',
+            where => [name => 'metagenomic_alignment_reference', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
         },
         _contamination_screen_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
@@ -71,9 +77,17 @@ sub create{
 
     $class->status_message("Beginning creation of metagenomic-composition-shotgun model");
 
-    my $self = $class->SUPER::create(@_);
+    my %params = @_;
+    my $contamination_screen_reference = delete $params{contamination_screen_reference};
+    my $metagenomic_references = delete $params{metagenomic_references};
+
+    my $self = $class->SUPER::create(%params);
     return unless $self;
 
+    $self->contamination_screen_reference($contamination_screen_reference);
+    for my $metagenomic_reference (@$metagenomic_references) {
+        $self->add_metagenomic_reference($metagenomic_reference);
+    }
     my $contamination_screen_model = $self->_create_underlying_contamination_screen_model();
     unless ($contamination_screen_model) {
         $self->error_message("Error creating contamination screening model!");
@@ -82,8 +96,9 @@ sub create{
     }
 
     my @metagenomic_models = $self->_create_underlying_metagenomic_models();
-    unless (@metagenomic_models == $self->metagenomic_references) {
-        $self->error_message("Error creating metagenomic models!" . scalar(@metagenomic_models) . " " . scalar($self->metagenomic_references));
+    my @metagenomic_references = $self->metagenomic_references;
+    unless (@metagenomic_models == @metagenomic_references) {
+        $self->error_message("Error creating metagenomic models!" . scalar(@metagenomic_models) . " " . scalar(@metagenomic_references));
         $self->delete;
         return;
     }

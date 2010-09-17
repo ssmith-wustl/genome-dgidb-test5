@@ -91,6 +91,7 @@ class Genome::Model {
             ), valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
+        build_requested         => { is => 'Number', len => 4, is_optional => 1 },
         subject                 => { calculate_from => [ 'subject_id', 'subject_class_name' ],
                                      calculate => q| Carp::confess("No subject_class_name set on model!") unless $subject_class_name; return $subject_class_name->get($subject_id);| },
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
@@ -273,8 +274,6 @@ sub __extend_namespace__ {
     return;
 }
 
-
-
 sub create {
     my $class = shift;
 
@@ -318,23 +317,8 @@ sub create {
     $class->_validate_processing_profile_id($processing_profile_id)
         or Carp::confess();
 
-    #unless ($params->value_for('subclass_name')) {
-    #    $params = $params->add_filter(subclass_name => $class);
-    #}
-
     my $self = $class->SUPER::create($params)
         or return;
-
-    # Model name - use default if none given
-    unless ( $self->name ) {
-        $self->name(
-            join(
-                '.',
-                Genome::Utility::Text::sanitize_string_for_filesystem($entered_subject_name || $self->subject_name),
-                $self->processing_profile_name
-            )
-        );
-    }
 
     # Make sure the subject we got is really an object
     unless ( $self->_verify_subject ) {
@@ -342,11 +326,23 @@ sub create {
         return;
     }
 
+    #<model name>#
+    # set default if none given
+    if ( not defined $self->name ) {
+        my $default_name = $self->default_model_name;
+        if ( not defined $default_name ) {
+            $self->error_message("No model name given and cannot get a deafult name from $class");
+            $self->SUPER::delete;
+            return;
+        }
+        $self->name($default_name);
+    }
     # Check that this model doen't already exist.  If other models with the same name
     #  and type name exist, this method lists them, errors and deletes this model.
     #  Checking after subject verification to catch that error first.
     $self->_verify_no_other_models_with_same_name_and_type_name_exist
         or return;
+    #</model name>
 
     unless ($self->user_name) {
         $self->user_name($ENV{USER});
@@ -385,7 +381,7 @@ sub _validate_processing_profile_id {
         return;
     }
 
-    unless ( $pp_id =~ m#^$RE{num}{int}$#) {
+    unless ( $pp_id =~ m/^$RE{num}{int}$/) {
         $class->error_message("Processing profile id is not an integer");
         return;
     }
@@ -435,6 +431,16 @@ sub _verify_no_other_models_with_same_name_and_type_name_exist {
     $self->delete;
 
     return;
+}
+
+sub default_model_name {
+    my $self  = shift;
+
+    return join(
+        '.',
+        Genome::Utility::Text::sanitize_string_for_filesystem($self->subject_name),
+        $self->processing_profile_name
+    );
 }
 
 #If a user defines a model with a name (and possibly type), we need to find/make sure there's an

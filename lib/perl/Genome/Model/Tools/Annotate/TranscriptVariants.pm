@@ -142,6 +142,16 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             doc => 'If set, the annotator will get all coding region sequence after a frame shift',
         },
     ], 
+    has_param => [
+        lsf_resource => {
+            is => 'Text',
+            default => 'select[tmp>10240]',
+        },
+        lsf_queue => {
+            is => 'Text',
+            default => 'long',
+        },
+    ],
 };
 
 

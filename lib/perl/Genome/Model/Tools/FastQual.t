@@ -16,6 +16,23 @@ use_ok('Genome::Model::Tools::FastQual') or die;
 class Genome::Model::Tools::FastQual::Tester {
     is => 'Genome::Model::Tools::FastQual',
 };
+sub Genome::Model::Tools::FastQual::Tester::execute {
+    my $self = shift;
+
+    # test opening readers /writers
+    my $fastq_reader = $self->_open_reader;
+    ok($fastq_reader, 'opened reader for fastq files') or die;
+    isa_ok($fastq_reader, 'Genome::Model::Tools::FastQual::FastqSetReader');
+    is($self->type_in, 'sanger', 'type in is sanger');
+    my $fastq_writer = $self->_open_writer;
+    ok($fastq_writer, 'opened writer for fastq files') or die;
+    isa_ok($fastq_writer, 'Genome::Model::Tools::FastQual::FastqSetWriter');
+
+    # write one fastq
+    $fastq_writer->write( $fastq_reader->next );
+
+    return 1;
+}
 
 # Files
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
@@ -25,36 +42,31 @@ my $example_metrics_file = $dir.'/fast_qual.example.metrics';
 ok(-s $example_metrics_file, 'example metrics file exists');
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 my $out_file = $tmpdir.'/out.fastq';
+my $out2_file = $tmpdir.'/out2.fastq';
 my $metrics_file = $tmpdir.'/metrics.txt';
+my $metrics2_file = $tmpdir.'/metrics2.txt';
 
-# Create
+# Create and execute
 my $fastq_tester = Genome::Model::Tools::FastQual::Tester->create(
     input => [ "/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/in.fastq" ],
     output => [ $out_file ],
     metrics_file => $metrics_file,
 );
 ok($fastq_tester, 'create w/ fastq files');
-
-sub Genome::Model::Tools::FastQual::Tester::execute {
-    my $self = shift;
-
-    # test opening readers /writers
-    my $fastq_reader = $fastq_tester->_open_reader;
-    ok($fastq_reader, 'opened reader for fastq files') or die;
-    isa_ok($fastq_reader, 'Genome::Model::Tools::FastQual::FastqSetReader');
-    is($fastq_tester->type_in, 'sanger', 'type in is sanger');
-    my $fastq_writer = $fastq_tester->_open_writer;
-    ok($fastq_writer, 'opened writer for fastq files') or die;
-    isa_ok($fastq_writer, 'Genome::Model::Tools::FastQual::FastqSetWriter');
-
-    # write one fastq
-    $fastq_writer->write( $fastq_reader->next );
-
-    return 1;
-}
 ok($fastq_tester->execute, 'execute');
 is(File::Compare::compare($out_file, $example_out_file), 0, 'output file ok');
 is(File::Compare::compare($metrics_file, $example_metrics_file), 0, 'metrics file ok');
+
+# Create and execute, again making sure metrcis are not stomped on
+my $fastq_tester2 = Genome::Model::Tools::FastQual::Tester->create(
+    input => [ "/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/in.fastq" ],
+    output => [ $out2_file ],
+    metrics_file => $metrics2_file,
+);
+ok($fastq_tester2, 'create again to test metrics are not stomping on each other');
+ok($fastq_tester2->execute, 'execute');
+is(File::Compare::compare($out2_file, $example_out_file), 0, 'output 2 file ok');
+is(File::Compare::compare($metrics2_file, $example_metrics_file), 0, 'metrics 2 file ok');
 
 # Test pipes
 my $pipe_tester = Genome::Model::Tools::FastQual::Tester->create(

@@ -74,7 +74,7 @@ sub assign_models {
         );
     }
 
-    $self->launch_convergence_rebuild;
+    $self->schedule_convergence_rebuild;
     
     return 1;
 }
@@ -97,17 +97,17 @@ sub unassign_models {
         $bridge->delete();
     }
 
-    $self->launch_convergence_rebuild;
+    $self->schedule_convergence_rebuild;
 
     return 1;
 }
 
-sub launch_convergence_rebuild {
+sub schedule_convergence_rebuild {
     my $self = shift;
     
     if (defined $self->convergence_model) {
         $self->status_message("Trying rebuild of associated convergence model.");
-        unless($self->convergence_model->launch_rebuild) {
+        unless($self->convergence_model->schedule_rebuild) {
             $self->error_message($self->convergence_model->error_message);
             die $self->error_message;
         }

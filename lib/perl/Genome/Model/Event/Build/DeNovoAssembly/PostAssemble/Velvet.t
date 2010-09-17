@@ -21,20 +21,25 @@ ok($model, 'Got mock de novo assembly model') or die;
 my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
 ok($build, 'Got mock de novo assembly build') or die;
 
-my $example_fastq = Genome::Model::DeNovoAssembly::Test->example_fastq_file_for_model($model);
+my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+    model => $model,
+    use_example_directory => 1,
+);
+ok($example_build, 'got example build') or die;
 
+my $example_fastq = $example_build->collated_fastq_file;
 symlink($example_fastq, $build->collated_fastq_file);
 ok(-s $build->collated_fastq_file, 'Linked fastq file') or die;
 
-my $example_afg_file = Genome::Model::DeNovoAssembly::Test->example_assembly_afg_file_for_model($model);
+my $example_afg_file = $example_build->assembly_afg_file;
 symlink($example_afg_file, $build->assembly_afg_file);
 ok(-s $build->assembly_afg_file, 'Linked assembly afg file') or die;
 
-my $example_sequences_file = Genome::Model::DeNovoAssembly::Test->example_sequences_file_for_model($model);
+my $example_sequences_file = $example_build->sequences_file;
 symlink($example_sequences_file, $build->sequences_file);
 ok(-s $build->sequences_file, 'Linked sequences file') or die;
 
-my $example_contigs_fasta_file = Genome::Model::DeNovoAssembly::Test->example_contigs_fasta_file_for_model($model);
+my $example_contigs_fasta_file = $example_build->contigs_fasta_file;
 symlink($example_contigs_fasta_file, $build->contigs_fasta_file);
 ok(-s $build->contigs_fasta_file, 'Linked contigs.fa file') or die;
 
