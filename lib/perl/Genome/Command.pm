@@ -50,6 +50,16 @@ for my $class ( @SUB_COMMAND_CLASSES ) {
     die $@ if $@; 
 }
 
+sub execute_with_shell_params_and_exit {
+    my $class = shift;
+    if ($ARGV[0] eq 'tools') {
+        # hack for our special lopsided namespace
+        $Command::entry_point_class = 'Genome::Model::Tools';
+        $Command::entry_point_bin = 'genome tools';
+    }
+    return $class->SUPER::execute_with_shell_params_and_exit(@_);
+}
+
 #< Command Naming >#
 sub command_name {
     my $class = ref($_[0]) || $_[0];

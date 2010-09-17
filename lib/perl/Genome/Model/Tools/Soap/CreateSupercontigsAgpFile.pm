@@ -18,6 +18,11 @@ class Genome::Model::Tools::Soap::CreateSupercontigsAgpFile {
             is => 'Text',
             doc => 'Soap assembly directory',
         },
+	output_file => {
+	    is => 'Text',
+	    doc => 'User supplied output file name',
+	    is_optional => 1,
+	},
     ],
 };
 
@@ -44,8 +49,10 @@ sub execute {
         return;
     }
 
-    unlink $self->assembly_directory.'/edit_dir/supercontigs.agp';
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->assembly_directory.'/edit_dir/supercontigs.agp');
+    my $out_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/supercontigs.agp';
+    #unlink $self->assembly_directory.'/edit_dir/supercontigs.agp';
+    unlink $out_file;
+    my $fh = Genome::Utility::FileSystem->open_file_for_writing($out_file);
 
     my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->scaffold_fasta_file);
 
