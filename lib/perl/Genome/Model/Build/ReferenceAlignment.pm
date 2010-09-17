@@ -432,6 +432,10 @@ sub whole_rmdup_bam_flagstat_file {
     my $self = shift;
 
     my $bam_file  = $self->whole_rmdup_bam_file;
+    unless($bam_file and -e $bam_file) {
+        $self->warning_message('No whole BAM file--cannot run flagstat.');
+        return;
+    }
     my $flag_file = $bam_file . '.flagstat';
 
     unless (-s $flag_file) {

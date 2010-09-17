@@ -10,7 +10,7 @@ require File::Compare;
 use_ok('Genome::Model::Tools::Soap::Stats') or die;
 
 #check testsuite data files
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/Stats';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/Stats_v1';
 ok(-d $data_dir, "Data dir exists") or die;
 ok(-s $data_dir.'/contigs.bases', "Data dir contigs.bases file exists") or die;
 ok(-s $data_dir.'/1_fastq', "Data dir 1_fastq file exists") or die;
@@ -31,8 +31,10 @@ foreach ('1_fastq', '2_fastq') {
 ok(File::Copy::copy($data_dir.'/contigs.bases', $temp_dir.'/edit_dir'), "Copied contigs.bases to temp edit_dir");
 
 #create, execute tool
+my @input_fastqs = ($temp_dir.'/1_fastq', $temp_dir.'/2_fastq');
 my $stats = Genome::Model::Tools::Soap::Stats->create(
     assembly_directory => $temp_dir,
+    input_fastq_files => \@input_fastqs,
     );
 ok($stats, "Created stats object") or die;
 ok(($stats->execute) == 1, "Executed stats successfully") or die;

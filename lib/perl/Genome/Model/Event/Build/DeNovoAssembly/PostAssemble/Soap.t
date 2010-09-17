@@ -23,19 +23,26 @@ ok($model, 'Got mock de novo assembly model') or die;
 my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
 ok($build, 'Got mock de novo assembly build') or die;
 
+# example build
+my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+    model => $model,
+    use_example_directory => 1,
+);
+ok($example_build, 'got example build') or die;
+
 #link assembly.scafSeq file
-my $example_scaf_seq_file = Genome::Model::DeNovoAssembly::Test->example_scaffold_sequence_file_for_model($model);
+my $example_scaf_seq_file = $example_build->soap_scaffold_sequence_file;
 ok(-s $example_scaf_seq_file, "Example scaffold sequence file exists");
 symlink($example_scaf_seq_file, $build->soap_scaffold_sequence_file) or die;
 ok(-s $build->soap_scaffold_sequence_file, "Linked scaffold sequence file");
 
 #link input fastq files for input stats
-my $example_1_fastq_file = Genome::Model::DeNovoAssembly::Test->example_end_one_fastq_file_for_model($model);
+my $example_1_fastq_file = $example_build->end_one_fastq_file;
 ok(-s $example_1_fastq_file, "Example 1_fastq file exists");
 symlink($example_1_fastq_file, $build->end_one_fastq_file) or die;
 ok(-s $build->end_one_fastq_file, "Linked 1_fastq file");
 
-my $example_2_fastq_file = Genome::Model::DeNovoAssembly::Test->example_end_two_fastq_file_for_model($model);
+my $example_2_fastq_file = $example_build->end_two_fastq_file;
 ok(-s $example_2_fastq_file, "Example 2_fastq file exists");
 symlink($example_2_fastq_file, $build->end_two_fastq_file) or die;
 ok(-s $build->end_two_fastq_file, "Linked 2_fastq file");
@@ -50,17 +57,14 @@ ok($soap, "Created soap post assemble") or die;
 ok($soap->execute, "Executed soap post assemble") or die;
 
 #compare files
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/soap_solexa_build_post_assemble_v1';
-ok(-d $data_dir, "Test data dir exists");
-foreach (qw/ contigs.bases supercontigs.fasta supercontigs.agp stats.txt/) {
-    ok(-s $data_dir."/$_", "Test data dir $_ file exists");
-    ok(-s $build->data_directory."/edit_dir/$_", "Build data dir $_ file exists");
-    ok(File::Compare::compare($data_dir."/$_",$build->data_directory."/edit_dir/$_") == 0, "$_ files match");
+foreach my $file_name (qw/ contigs_fasta_file supercontigs_fasta_file supercontigs_agp_file stats_file /) {
+    my $example_file = $example_build->$file_name;
+    ok(-s $example_file, "Test data dir $example_file");
+    my $file = $build->$file_name;
+    ok(-s $file, "Build data dir $file");
+    is(File::Compare::compare($example_file, $file), 0, "$file_name files match");
 }
 
-#print $build->data_directory."\n";
-#<STDIN>;
-
+#print $build->data_directory."\n";<STDIN>;
 done_testing();
-
 exit;

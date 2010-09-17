@@ -27,8 +27,18 @@ class Genome::Model::Tools::Soap::Stats {
 	major_contig_length => {
 	    is => 'Number',
 	    is_optional => 1,
-	    default_value => 500,
+	    default_value => 300,
 	    doc => 'Cutoff value for major contig length',
+	},
+	input_fastq_files => {
+	    is => 'Text',
+	    is_many => 1,
+	    doc => 'Input fastq files for the assembly',
+	},
+	contigs_bases_file => {
+	    is => 'Text',
+	    is_optional => 1,
+	    doc => 'Input contigs bases file for the assembly',
 	},
 	output_file => {
 	    is => 'Text',
@@ -114,10 +124,12 @@ sub _resolve_tier_values {
 	$t2 = $self->second_tier;
     }
     else {
-	unless (-s $self->assembly_directory.'/edit_dir/contigs.bases') {
-	    $self->error_message("Failed to find file: ".$self->assembly_directory.'/edit_dir/contigs.bases');
+	my $contigs_bases_file = ($self->contigs_bases_file) ?
+	    $self->contigs_bases_file : $self->assembly_directory.'/edit_dir/contigs.bases';
+	unless (-s $contigs_bases_file) {
+	    $self->error_message("Failed to find file: $contigs_bases_file");
 	}
-	my $est_genome_size = -s $self->assembly_directory.'/edit_dir/contigs.bases';
+	my $est_genome_size = -s $contigs_bases_file;
 
 	$t1 = int ($est_genome_size * 0.2);
 	$t2 = int ($est_genome_size * 0.2);
@@ -130,8 +142,9 @@ sub parse_contigs_bases_file {
 
     my $counts = {};
     my ($supercontig_number, $contig_number);
-
-    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->assembly_directory.'/edit_dir/contigs.bases');
+    my $contigs_bases_file = ($self->contigs_bases_file) ?
+	$self->contigs_bases_file : $self->assembly_directory.'/edit_dir/contigs.bases';
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $contigs_bases_file);
     while (my $seq = $io->next_seq) {
 	$counts->{total_contig_number}++;
 	($supercontig_number, $contig_number) = $seq->primary_id =~ /Contig(\d+)\.(\d+)/i;
@@ -389,12 +402,12 @@ sub _get_input_read_and_bases_counts {
     my $self = shift;
     my $read_count = 0;
     my $base_count = 0;
-    foreach my $fastq ('1_fastq', '2_fastq') {
-	unless (-s $self->assembly_directory."/$fastq") {
-	    $self->error_message("Failed to find file: ".$self->assembly_directory."/$fastq");
+    foreach my $fastq ($self->input_fastq_files) {
+	unless (-s $fastq) {
+	    $self->error_message("Failed to find fine: $fastq");
 	    return;
 	}
-	my $io = Genome::Model::Tools::FastQual::FastqReader->create(file => $self->assembly_directory."/$fastq");
+	my $io = Genome::Model::Tools::FastQual::FastqReader->create(file => $fastq);
 	while (my $seq = $io->next) { #just getting seq
 	    $read_count++;
 	    $base_count += length $seq->{seq};

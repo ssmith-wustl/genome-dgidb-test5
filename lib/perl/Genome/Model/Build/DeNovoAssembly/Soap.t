@@ -15,7 +15,17 @@ my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     assembler_name => 'soap',
 );
 ok($model, 'Got mock de novo assembly model') or die;
+my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+    model => $model,
+    use_example_directory => 1,
+);
+ok($build, 'example build');
+
+my $file_prefix = $build->file_prefix;
+is($file_prefix, $model->subject_name.'_WUGC', 'file prefix');
+
+# edit dir files
+my %files_to;
 
 done_testing();
-
 exit;

@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use Regexp::Common;
+
 class Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap {
     is => 'Genome::Model::Event::Build::DeNovoAssembly::Assemble',
 };
@@ -12,14 +14,10 @@ class Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap {
 sub bsub_rusage {
     my $self = shift;
 
-    # Get cpus from assembler params
-    my %assembler_params = $self->processing_profile->assembler_params_as_hash;
-    my $cpus_option = ( exists $assembler_params{cpus} ) ? '-n '.$assembler_params{cpus}.' ': '';
-
-    # TODO calculate mem, using 10G for now
+    # TODO calculate mem, using 30G for now
     my $mem = 30000;
     
-    return $cpus_option."-R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
+    return "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
 
 sub execute {
@@ -43,11 +41,16 @@ sub execute {
 
     my %assembler_params = $self->processing_profile->assembler_params_as_hash();
 
+    # FIXME get processor from LSF, if appliclble
+    my $cpus = $self->_get_number_of_cpus;
+    return if not $cpus;
+
     #create, execute assemble
     my $assemble = Genome::Model::Tools::Soap::DeNovoAssemble->create (
         version => $self->processing_profile->assembler_version,
         config_file => $self->build->soap_config_file,
         output_dir_and_file_prefix => $self->build->soap_output_dir_and_file_prefix,
+        #cpus => $cpus,
         %assembler_params,
     );
     unless ($assemble) {
@@ -65,25 +68,64 @@ sub execute {
 sub create_config_file {
     my $self = shift;
 
-    unlink $self->build->soap_config_file if -s $self->build->soap_config_file;
+    my $insert_size = $self->build->calculate_average_insert_size;
+    $insert_size = 320 if not defined $insert_size;
+    my $fastq_1 = $self->build->end_one_fastq_file;
+    my $fastq_2 = $self->build->end_two_fastq_file;
+    my $config = <<CONFIG;
+max_rd_len=120
+[LIB]
+avg_ins=$insert_size
+reverse_seq=0
+asm_flags=3
+pair_num_cutoff=2
+map_len=60
+q1=$fastq_1
+q2=$fastq_2
+CONFIG
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->build->soap_config_file);
-
-    #TODO - 
-    $fh->print("max_rd_len=100\n".
-        "[LIB]\n".
-        "avg_ins=202\n".
-        "reverse_seq=0\n".
-        "asm_flags=3\n".
-        "rd_len_cutoff=100\n".
-        "rank=1\n".
-        "pair_num_cutoff=4\n".
-        "map_len=34\n".    #TODO - here and above .. not default params .. will have to change bases on pp
-        "q1=".$self->build->end_one_fastq_file."\n".
-        "q2=".$self->build->end_two_fastq_file."\n");
+    my $config_file = $self->build->soap_config_file;
+    unlink $config_file if -e $config_file;
+    my $fh;
+    eval {
+        $fh = Genome::Utility::FileSystem->open_file_for_writing($config_file);
+    };
+    if ( not defined $fh ) {
+        $self->error_message("Cannot open soap config file ($config_file) for writing: $@");
+        return;
+    }
+    $fh->print($config);
     $fh->close;
 
     return 1;
+}
+
+sub _get_number_of_cpus {
+    my $self = shift;
+
+    return 1 if not defined $ENV{LSB_MCPU_HOSTS};
+
+    my @tokens = split(/\s/, $ENV{LSB_MCPU_HOSTS});
+    my $cpus = 0;
+    if ( not @tokens ) {
+        $self->error_message('Could not split LSB_MCPU_HOSTS: '.$ENV{LSB_MCPU_HOSTS});
+        return;
+    }
+
+    for ( my $i = 1; $i <= @tokens; $i += 2 ) {
+        if ( $tokens[$i] !~ /^$RE{num}{int}$/ ) {
+            $self->error_message('Error parsing LSB_MCPU_HOSTS ('.$ENV{LSB_MCPU_HOSTS}.'), number of cpus is not an int: '.$tokens[$i]);
+            return;
+        }
+        $cpus += $tokens[$i];
+    }
+
+    if ( $cpus == 0 ) {
+        $self->error_message('Could not get the number of cpus from LSB_MCPU_HOSTS: '.$ENV{LSB_MCPU_HOSTS});
+        return;
+    }
+
+    return $cpus;
 }
 
 1;
