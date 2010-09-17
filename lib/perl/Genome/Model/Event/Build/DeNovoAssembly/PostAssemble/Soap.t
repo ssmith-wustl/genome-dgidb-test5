@@ -50,13 +50,16 @@ ok($soap, "Created soap post assemble") or die;
 ok($soap->execute, "Executed soap post assemble") or die;
 
 #compare files
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/soap_solexa_build_post_assemble_v1';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/soap_solexa_build_post_assemble_v3';
 ok(-d $data_dir, "Test data dir exists");
-foreach (qw/ contigs.bases supercontigs.fasta supercontigs.agp stats.txt/) {
-    ok(-s $data_dir."/$_", "Test data dir $_ file exists");
-    ok(-s $build->data_directory."/edit_dir/$_", "Build data dir $_ file exists");
-    ok(File::Compare::compare($data_dir."/$_",$build->data_directory."/edit_dir/$_") == 0, "$_ files match");
+my $root_name = $build->instrument_data->sample_name.'_'.$build->center_name;
+foreach (qw/ contigs.fa scaffolds.fa agp /) {
+    ok(-s $data_dir."/$root_name.$_", "Test data dir $root_name.$_ file exists");
+    ok(-s $build->data_directory."/edit_dir/$root_name.$_", "Build data dir $root_name.$_ file exists");
+    ok(File::Compare::compare($data_dir."/$root_name.$_",$build->data_directory."/edit_dir/$root_name.$_") == 0, "$root_name.$_ files match");
 }
+#check stats file separately
+ok(File::Compare::compare($data_dir.'/stats.txt', $build->data_directory.'/edit_dir/stats.txt') == 0, "Stats files match");
 
 #<STDIN>;
 
