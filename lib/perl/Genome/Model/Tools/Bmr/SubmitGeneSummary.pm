@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Bmr::SubmitBatchGeneSummary;
+package Genome::Model::Tools::Bmr::SubmitGeneSummary;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use IO::File;
 use Time::HiRes qw(sleep); #This alternate sleep() allows delays that are fractions of a second
 
-class Genome::Model::Tools::Bmr::SubmitBatchGeneSummary
+class Genome::Model::Tools::Bmr::SubmitGeneSummary
 {
     is => 'Genome::Command::OO',
     has_input => [
@@ -128,13 +128,13 @@ sub execute
     {
         ++$submitCnt;
         #Insert a longer delay between every few jobs to avoid thrashing the drives
-        sleep(1) if ($submitCnt % 10 == 0);
+        #sleep(1) if ($submitCnt % 10 == 0);
         my ( $piece ) = $roi_file =~ m/part(\d+)$/;
         my $jobname = "genesum-" . $piece;
         my $outfile = $output_dir . $piece . ".gene_summary";
         my $stdout_file = $stdout_dir . $piece . ".stdout";
-        sleep(0.2); #Pause for a short while to avoid overloading LDAP, and to help out the disks
-        print `bsub -q tcga -M 3000000 -R 'select[localdata && mem>3000] rusage[mem=3000]' -oo $stdout_file -J $jobname gmt bmr batch-gene-summary --mutation-maf-file $maf_file --output-file $outfile --roi-bedfile $roi_file --wiggle-file-dirs $wiggle_dirs --class-summary-file $class_summary`;
+        sleep(0.1); #Pause for a short while to avoid overloading LDAP, and to help out the disks
+        print `bsub -q tcga -M 3000000 -R 'select[localdata && mem>3000] rusage[mem=3000]' -oo $stdout_file -J $jobname gmt bmr gene-summary --mutation-maf-file $maf_file --output-file $outfile --roi-bedfile $roi_file --wiggle-file-dirs $wiggle_dirs --class-summary-file $class_summary`;
     }
 
     return 1;

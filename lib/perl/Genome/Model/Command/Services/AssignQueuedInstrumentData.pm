@@ -155,9 +155,7 @@ sub execute {
 
                 unless($num_assigned > 0) {
                     # no model found for this PP, make one (or more) and assign all applicable data
-                    my @project_names = $self->_resolve_project_names($pse);
-
-                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, @project_names);
+                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $pse);
                     unless($ok) {
                         push @process_errors, $self->error_message;
                         next PP;
@@ -487,7 +485,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $genome_instrument_data = shift;
     my $subject = shift;
     my $processing_profile = shift;
-    my @project_names;
+    my $pse = shift;
 
     my @new_models;
 
@@ -517,13 +515,19 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     );
 
     if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-        my $reference_sequence_build; #TODO This should probably be defined explicitly instead of trying to infer from other params
+        my $reference_sequence_build;
 
-        my $annotation_param = $processing_profile->annotation_reference_transcripts;
-        if($annotation_param =~ '57_37b') {
-            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('g1k-human-build37');
+        my $reference_sequence_build_id = $pse->added_param('reference_sequence_build_id');
+        if($reference_sequence_build_id) {
+            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
         } else {
-            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+            #PSE was processed without specifying a reference sequence--fall back. (This section can eventually be removed.)
+            my $annotation_param = $processing_profile->annotation_reference_transcripts;
+            if($annotation_param =~ '57_37b') {
+                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('g1k-human-build37');
+            } else {
+                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+            }
         }
 
         if ( not defined $reference_sequence_build ) {
@@ -607,6 +611,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
+        my @project_names = $self->_resolve_project_names($pse);
         $self->add_model_to_default_modelgroups($m, @project_names);
 
         my $new_models = $self->_newly_created_models;

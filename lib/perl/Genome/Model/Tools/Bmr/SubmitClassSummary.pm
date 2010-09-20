@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Bmr::SubmitBatchClassSummary;
+package Genome::Model::Tools::Bmr::SubmitClassSummary;
 
 use warnings;
 use strict;
@@ -7,7 +7,7 @@ use Genome;
 use IO::File;
 use Time::HiRes qw(sleep); #This alternate sleep() allows delays that are fractions of a second
 
-class Genome::Model::Tools::Bmr::SubmitBatchClassSummary {
+class Genome::Model::Tools::Bmr::SubmitClassSummary {
     is => 'Genome::Command::OO',
     has_input => [
     wiggle_file_dirs => {
@@ -81,7 +81,7 @@ sub execute {
     my $genes_to_exclude_arg = $self->genes_to_exclude;
     #Don't use this argument in the bsub below if it wasn't passed to this module
     if(defined $genes_to_exclude_arg) {
-        $genes_to_exclude_arg = '--genes_to_exclude "$genes_to_exclude_arg"';
+        $genes_to_exclude_arg = "--genes-to-exclude \"$genes_to_exclude_arg\"";
     }
     else {
         $genes_to_exclude_arg = '';
@@ -91,13 +91,13 @@ sub execute {
     foreach my $wigfile (keys %wiggle_files) {
         ++$submitCnt;
         #Insert a longer delay between every few jobs to avoid thrashing the drives
-        sleep(1) if ($submitCnt % 10 == 0);
+        #sleep(1) if ($submitCnt % 10 == 0);
         my $jobname = "classsum-" . $wigfile;
         my $outfile = $output_dir . $wigfile . ".class_summary";
         my $stdout_file = $stdout_dir . $wigfile . ".stdout";
         my $wiggle = $wiggle_files{$wigfile};
-        sleep(0.2); #Pause for a short while to avoid overloading LDAP, and for the disk's sake
-        print `bsub -q tcga -M 2500000 -R 'select[localdata && mem>2500] rusage[mem=2500]' -oo $stdout_file -J $jobname gmt bmr batch-class-summary --mutation-maf-file $maf --output-file $outfile --roi-bedfile $roi_bed --wiggle-file $wiggle $genes_to_exclude_arg`;
+        sleep(0.1); #Pause for a short while to avoid overloading LDAP, and for the disk's sake
+        print `bsub -q tcga -M 2500000 -R 'select[localdata && mem>2500] rusage[mem=2500]' -oo $stdout_file -J $jobname gmt bmr class-summary --mutation-maf-file $maf --output-file $outfile --roi-bedfile $roi_bed --wiggle-file $wiggle $genes_to_exclude_arg`;
     }
 
     return 1;
