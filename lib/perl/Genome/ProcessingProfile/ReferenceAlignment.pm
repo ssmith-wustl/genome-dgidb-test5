@@ -177,6 +177,10 @@ class Genome::ProcessingProfile::ReferenceAlignment {
     ],
 };
 
+sub _resolve_type_name_for_class {
+    return 'reference alignment';
+}
+
 # get alignments (generic name)
 sub results_for_instrument_data_assignment {
     my ($self, $assignment) = @_;

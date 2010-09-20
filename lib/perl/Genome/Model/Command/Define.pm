@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Carp 'confess';
 use File::Path;
 use Data::Dumper;
 require Genome::Utility::FileSystem;
@@ -327,13 +328,7 @@ sub compare_pp_and_model_type {
     $pp_subclass =~ s/Genome::ProcessingProfile:://;
     
 
-    #determine which subclass of Genome::Model::Command::Define called the super->execute
-    #my $parent = $self->class;
-    #$parent =~ s/.*:://;
-    #my $pp_type = $pp->subclass_name;
-    
     #check for special cases where processing-profile-name and model subclass have different names
-    #if($parent =~ /GenotypeMicroarray/){
     if ($model_subclass =~ /GenotypeMicroarray/) {
         unless($pp->name =~ /wugc/){
             $self->error_message("GenotypeMicroarray Models must use one of the [microarray-type]/wugc processing-profiles.");
@@ -342,13 +337,13 @@ sub compare_pp_and_model_type {
         return 1;
     }
 
-    #$pp_type =~ s/Genome::ProcessingProfile:://;
-    #($pp_type) = split "::",$pp_type;
-    #unless($parent eq $pp_type){
     unless ($model_subclass eq $pp_subclass) {
-        #$self->error_message("Genome::Model subclass ".$parent." and ProcessingProfile subclass ".$pp_type." did not match.");
-        $self->error_message("Model subclass $model_subclass and ProcessingProfile subclass $pp_subclass do not match!");
-        die $self->error_message;
+        my ($shortest, $longest) = ($model_subclass, $pp_subclass);
+        ($shortest, $longest) = ($longest, $shortest) if length $pp_subclass < length $model_subclass;
+        unless ($longest =~ /$shortest/) {
+            $self->error_message("Model subclass $model_subclass and ProcessingProfile subclass $pp_subclass do not match!");
+            confess;
+        }
     }
     return 1;
 }
