@@ -111,11 +111,20 @@ sub cache_annotation_data {
                 $self->_caching_cleanup;
                 die;
             }
+            
+            $self->_standardize_cache_permissions($self->_cache_directory);       
 
             $self->status_message("Caching complete, locally stored at " . $self->_cache_directory);
             return $self->_cache_directory;
         }
     }
+}
+
+#chmod the entire cahce to ensure correct permissions.  This only works on
+#files that the user owns, so this should only be used on cache creation.
+sub _standardize_cache_permissions{
+    my ($self, $cache_dir) = @_;
+    Genome::Utility::FileSystem->shellcmd(cmd => "chmod -R 775 $cache_dir");
 }
 
 # Returns transcript iterator object using local data cache (if present) or default location
