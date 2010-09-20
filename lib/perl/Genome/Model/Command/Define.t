@@ -180,7 +180,7 @@ sub successful_create_model {
     my ($expected_date) = split('\w',$current_time);
   
     my $define_class;
-    my $ppname = $params{processing_profile_ppname} || "";
+    my $ppname = $params{processing_profile_name} || "";
     my @pp = Genome::ProcessingProfile->get(name => $ppname);
     if (@pp > 1) {
         die "Found multiple profiles for ppname: $ppname";

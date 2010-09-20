@@ -139,18 +139,38 @@
           <td class="label">Average Contig Length</td>
           <td class="value"><xsl:value-of select="//metric/average-contig-length"/></td>
 				</tr>
-				<tr>
-          <td class="label">Average Major Contig Length (>500)</td>
-          <td class="value"><xsl:value-of select="//metric/average-contig-length-gt-500"/></td>
-				</tr>
+
+          <xsl:if test="//metric/major-contig-length='300'">
+	    <tr>
+              <td class="label">Average Major Contig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/average-contig-length-gt-300"/></td>
+	    </tr>
+	  </xsl:if>
+	  <xsl:if test="//metric/major-contig-length='500'">
+	    <tr>
+              <td class="label">Average Major Contig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/average-contig-length-gt-500"/></td>
+	    </tr>
+	  </xsl:if>
+	  
 				<tr>
           <td class="label">Median Contig Length</td>
           <td class="value"><xsl:value-of select="//metric/median-contig-length"/></td>
 				</tr>
-				<tr>
-          <td class="label">Median Major Contig Length (>500)</td>
-          <td class="value"><xsl:value-of select="//metric/median-contig-length-gt-500"/></td>
-				</tr>
+
+          <xsl:if test="//metric/major-contig-length='300'">
+	    <tr>
+              <td class="label">Median Major Contig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/median-contig-length-gt-300"/></td>
+	    </tr>
+	  </xsl:if>
+	  <xsl:if test="//metric/major-contig-length='500'">
+	    <tr>
+              <td class="label">Median Major Contig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/median-contig-length-gt-500"/></td>
+	    </tr>
+	  </xsl:if>
+
 				<tr>
           <td class="label">Supercontigs</td>
           <td class="value"><xsl:value-of select="//metric/supercontigs"/></td>
@@ -159,18 +179,38 @@
           <td class="label">Average Supercontig Length</td>
           <td class="value"><xsl:value-of select="//metric/average-supercontig-length"/></td>
 				</tr>
-				<tr>
-          <td class="label">Average Major Supercontig Length (>500)</td>
-          <td class="value"><xsl:value-of select="//metric/average-supercontig-length-gt-500"/></td>
-				</tr>
+
+	  <xsl:if test="//metric/major-contig-length='300'">
+	    <tr>
+              <td class="label">Average Major Supercontig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/average-supercontig-length-gt-300"/></td>
+	    </tr>
+	  </xsl:if>
+	  <xsl:if test="//metric/major-contig-length='500'">
+	    <tr>
+              <td class="label">Average Major Supercontig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/average-supercontig-length-gt-500"/></td>
+	    </tr>
+	  </xsl:if>
+
 				<tr>
           <td class="label">Median Supercontig Length</td>
           <td class="value"><xsl:value-of select="//metric/median-supercontig-length"/></td>
 				</tr>
-				<tr>
-          <td class="label">Median Major Supercontig Length (>500)</td>
-          <td class="value"><xsl:value-of select="//metric/median-supercontig-length-gt-500"/></td>
-				</tr>
+
+	  <xsl:if test="//metric/major-contig-length='300'">
+	    <tr>
+              <td class="label">Median Major Supercontig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/median-supercontig-length-gt-300"/></td>
+	    </tr>
+	  </xsl:if>
+	  <xsl:if test="//metric/major-contig-length='500'">
+	    <tr>
+              <td class="label">Median Major Supercontig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/median-supercontig-length-gt-500"/></td>
+	    </tr>
+	  </xsl:if>
+	  
 				<tr>
           <td class="label">Read Coverage (>= 5x)</td>
           <td class="value"><xsl:value-of select="//metric/read-depths-ge-5x"/><xsl:text>&#37;</xsl:text></td>

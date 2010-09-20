@@ -163,11 +163,14 @@ sub calculate_base_limit_from_coverage {
 #< Metrics >#
 sub interesting_metric_names {
     return (
+	'major contig length',
         'assembly length',
         'contigs', 'median contig length', 'average contig length',
         'average contig length gt 500', 'median_contig_length_gt_500',
+	'average contig length gt 300', 'median_contig_length_gt_300',
         'supercontigs', 'median supercontig length', 'average supercontig length',
         'average supercontig length gt 500', 'median_supercontig_length_gt_500',
+	'average supercontig length gt 300', 'median_supercontig_length_gt_300',
         'average read length',
         'reads attempted', 
         'reads processed', 'reads processed success',
@@ -310,18 +313,19 @@ sub calculate_metrics {
     }
 
     my %stat_to_metric_names = ( # old names to new
+	'major contig length' => 'major_contig_length',			 
         # contig
         'total contig number' => 'contigs',
         'n50 contig length' => 'median_contig_length',
-        'major_contig n50 contig length' => 'median_contig_length_gt_500',			 
+        'major_contig n50 contig length' => 'median_contig_length_gt_MCL',
         'average contig length' => 'average_contig_length',
-        'major_contig avg contig length' => 'average_contig_length_gt_500',			 
+        'major_contig avg contig length' => 'average_contig_length_gt_MCL',	 
         # supercontig
         'total supercontig number' => 'supercontigs',
         'n50 supercontig length' => 'median_supercontig_length',
-        'major_supercontig n50 contig length' => 'median_supercontig_length_gt_500',
+        'major_supercontig n50 contig length' => 'median_supercontig_length_gt_MCL',
         'average supercontig length' => 'average_supercontig_length',
-        'major_supercontig avg contig length' => 'average_supercontig_length_gt_500',
+        'major_supercontig avg contig length' => 'average_supercontig_length_gt_MCL',
         # reads
         'total input reads' => 'reads_processed',
         'placed reads' => 'reads_assembled',
@@ -329,14 +333,24 @@ sub calculate_metrics {
         'average read length' => 'average_read_length',
         # bases
         'total contig bases' => 'assembly_length',
-        # read depths			 
+        # read depths
         'depth >= 5' => 'read_depths_ge_5x',
     );
 
     my %metrics;
-    while ( my $line = $stats_fh->getline ) {
+    my $major_contig_length;
+    while ( my $line = $stats_fh->getline ) { #reading stats file
+	#get metrics
         next unless $line =~ /\:/;
-        chomp $line;
+	chomp $line;
+
+	#get major contig length .. slightly different than getting rest of values
+	if ($line =~ /^Major\s+Contig\s+\(/) {
+	    ($major_contig_length) = $line =~ /^Major\s+Contig\s+\(>\s+(\d+)\s+/;
+	    $metrics{'major_contig_length'} = $major_contig_length; #300 for soap, 500 for velvet
+	    next;
+	}
+
         my ($stat, $values) = split(/\:\s+/, $line);
         $stat = lc $stat;
         next unless grep { $stat eq $_ } keys %stat_to_metric_names;
@@ -345,44 +359,60 @@ sub calculate_metrics {
             $self->error_message("Found '$stat' in stats file, but it does not have a value on line ($line)");
             return;
         }
+
         my @tmp = split (/\s+/, $values);
 
-        #in most value we want is $tmp[0]
+        #in most value we want is $tmp[0] which in most cases is a number but can be NA
         my $value = $tmp[0];
 
-        # need value other than $temp[1[;
+        # Addl processing of values needed
         if ($stat eq 'depth >= 5') {
             unless (defined $tmp[1]) {
                 $self->error_message("Failed to derive >= 5x depth from line: $values\n\t".
                     "Expected line like: 3760	0.0105987146239711");
                 return;
             }
-            $value = $tmp[1];#sprintf("%.1f", $tmp[1] * 100);
+            $value = $tmp[1];
         }
 
         my $metric = delete $stat_to_metric_names{$stat};
+	#to account differences in major contig length among assemblers
+	$metric =~ s/MCL$/$major_contig_length/ if $metric =~ /length_gt_MCL/;
+
         $metrics{$metric} = $value;
     }
 
+    #warn about any metrics not defined in stats file
     if ( %stat_to_metric_names ) {
-        $self->error_message(
+        $self->status_message(
             'Missing these metrics ('.join(', ', keys %stat_to_metric_names).') in stats file ($stats_file)'
         );
         #return;
     }
 
-    $metrics{reads_not_assembled_pct} =~ s/%//;
-    $metrics{reads_not_assembled_pct} = sprintf('%0.3f', $metrics{reads_not_assembled_pct} / 100);
+    #further processing of metric values
 
+    #unused reads .. NA for soap assemblies, a number for others
+    unless ($metrics{reads_not_assembled_pct} eq 'NA') {
+	$metrics{reads_not_assembled_pct} =~ s/%//;
+	$metrics{reads_not_assembled_pct} = sprintf('%0.3f', $metrics{reads_not_assembled_pct} / 100);
+    }
+
+    #reads attempted, total input reads
     $metrics{reads_attempted} = $self->calculate_reads_attempted
         or return; # error in sub
+
+    #reads that pass filtering
     $metrics{reads_processed_success} =  sprintf(
         '%0.3f', $metrics{reads_processed} / $metrics{reads_attempted}
     );
-    $metrics{reads_assembled_success} = sprintf(
-        '%0.3f', $metrics{reads_assembled} / $metrics{reads_processed}
-    );
-    $metrics{read_depths_ge_5x} = sprintf ('%0.1f', $metrics{read_depths_ge_5x} * 100);
+
+    #assembled reads - NA for soap ..currently don't know now many of input reads actually assemble
+    $metrics{reads_assembled_success} = ( $metrics{reads_assembled} eq 'NA' ) ? 'NA' :
+	sprintf( '%0.3f', $metrics{reads_assembled} / $metrics{reads_processed} );
+
+    #5x coverage stats - not defined for soap assemblies
+    $metrics{read_depths_ge_5x} = ( $metrics{read_depths_ge_5x} ) ? sprintf ('%0.1f', $metrics{read_depths_ge_5x} * 100) : 'NA';
 
     return %metrics;
 }

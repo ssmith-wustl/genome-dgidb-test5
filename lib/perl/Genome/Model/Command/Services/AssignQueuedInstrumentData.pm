@@ -155,7 +155,9 @@ sub execute {
 
                 unless($num_assigned > 0) {
                     # no model found for this PP, make one (or more) and assign all applicable data
-                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile);
+                    my @project_names = $self->_resolve_project_names($pse);
+
+                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, @project_names);
                     unless($ok) {
                         push @process_errors, $self->error_message;
                         next PP;
@@ -485,6 +487,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $genome_instrument_data = shift;
     my $subject = shift;
     my $processing_profile = shift;
+    my @project_names;
 
     my @new_models;
 
@@ -642,11 +645,74 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
+        $self->add_model_to_default_modelgroups($m, @project_names);
+
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
     }
 
     return scalar @new_models;
+}
+
+sub add_model_to_default_modelgroups {
+    my $self = shift;
+    my $model = shift;
+    my @project_names = @_;
+
+    my $subject = $model->subject;
+
+    my $source;
+    if($subject->isa('Genome::Sample')) {
+        $source = $subject->source;
+    } elsif($subject->isa('Genome::Individual')) {
+        $source = $subject;
+    } elsif($subject->isa('Genome::Library')) {
+        my $sample = $subject->sample;
+        $source = $sample->source;
+    } else {
+        $self->error_message('Unhandled subject for model--not adding to model-groups');
+        return;
+    }
+
+    unless($source) {
+        $self->error_message('Failed to get source for subject.');
+        return;
+    }
+
+    my $common_name = $source->common_name;
+    my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+
+    my @group_names = @project_names;
+    push @group_names, $source_grouping if $source_grouping;
+
+    for my $group_name (@group_names) {
+        my $name = 'apipe-auto ' . $group_name;
+        my $model_group = Genome::ModelGroup->get(name => $name);
+
+        unless($model_group) {
+            $model_group = Genome::ModelGroup->create(name => $name);
+            unless($model_group) {
+                $self->error_message('Failed to create a default model-group: ' . $name);
+                return;
+            }
+        }
+
+        $model_group->assign_models($model);
+    }
+
+    return 1;
+}
+
+sub _resolve_project_names {
+    my $self = shift;
+    my $pse = shift;
+
+    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    unless(scalar @work_orders) {
+        $self->warning_message('No work order found for PSE ' . $pse->id);
+    }
+
+    return map($_->research_project_name, @work_orders);
 }
 
 sub request_builds {

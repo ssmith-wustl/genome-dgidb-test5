@@ -149,9 +149,15 @@ sub _map_workflow_inputs {
 
 ###
 
+# Override in subclass if you want some kind of validation of the processing profile object
+sub validate_created_object {
+    my $self = shift;
+    return 1;
+}
+
 sub create {
     my $class = shift;
-    if ($class eq __PACKAGE__) {
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         return $class->SUPER::create(@_);
     }
 $DB::single=1;
@@ -230,7 +236,12 @@ $DB::single=1;
     my $self = $class->SUPER::create(%params)
        or return;
    
-    
+    unless ($self->validate_created_object) {
+        $self->error_message("Could not validate processing profile!");
+        $self->delete;
+        return;
+    }
+
     return $self;
 }
 

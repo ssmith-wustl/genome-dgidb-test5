@@ -47,7 +47,7 @@ sub execute {
         my $status = $build->status;
         if ($status =~ /Scheduled|Failed|Running/) {
             my $build_id = $build->id;
-            my $restart_build = Genome::Model::Build::Command::Restart->create(build_id => $build_id);
+            my $restart_build = Genome::Model::Build::Command::Restart->create(filter => $build_id);
             $self->status_message("Restarting $build_id ($model_name)");
             if ($restart_build->execute()) {
                 $active_count++;
