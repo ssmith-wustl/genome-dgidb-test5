@@ -517,7 +517,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
         my $reference_sequence_build;
 
-        my $reference_sequence_build_id = $pse->added_param('reference_sequence_build_id');
+        my ($reference_sequence_build_id) = $pse->added_param('reference_sequence_build_id');
         if($reference_sequence_build_id) {
             $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
         } else {
