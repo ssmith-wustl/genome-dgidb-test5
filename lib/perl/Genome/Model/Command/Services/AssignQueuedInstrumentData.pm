@@ -517,10 +517,17 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     );
 
     if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-        #TODO instead of hardcoding human36, use something like an analysis version of $taxon->current_genome_refseq_id
-        my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+        my $reference_sequence_build; #TODO This should probably be defined explicitly instead of trying to infer from other params
+
+        my $annotation_param = $processing_profile->annotation_reference_transcripts;
+        if($annotation_param =~ '57_37b') {
+            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('g1k-human-build37');
+        } else {
+            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+        }
+
         if ( not defined $reference_sequence_build ) {
-            Carp::confess('Cannot get NCBI human build 36');
+            Carp::confess('Could not load reference sequence build');
         }
         $model_params{reference_sequence_build} = $reference_sequence_build;
     }
