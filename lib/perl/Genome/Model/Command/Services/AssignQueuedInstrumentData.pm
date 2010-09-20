@@ -515,13 +515,19 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     );
 
     if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-        my $reference_sequence_build; #TODO This should probably be defined explicitly instead of trying to infer from other params
+        my $reference_sequence_build;
 
-        my $annotation_param = $processing_profile->annotation_reference_transcripts;
-        if($annotation_param =~ '57_37b') {
-            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('g1k-human-build37');
+        my $reference_sequence_build_id = $pse->added_param('reference_sequence_build_id');
+        if($reference_sequence_build_id) {
+            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
         } else {
-            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+            #PSE was processed without specifying a reference sequence--fall back. (This section can eventually be removed.)
+            my $annotation_param = $processing_profile->annotation_reference_transcripts;
+            if($annotation_param =~ '57_37b') {
+                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('g1k-human-build37');
+            } else {
+                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+            }
         }
 
         if ( not defined $reference_sequence_build ) {
