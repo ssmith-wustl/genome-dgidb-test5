@@ -67,6 +67,9 @@ sub _run_aligner {
         push @sai_intermediate_files, $tmp_sai_file;
         push @aln_log_files, $tmp_log_file;
         
+        # disconnect the db handle before this long-running event
+        Genome::DataSource::GMSchema->disconnect_default_dbh; 
+        
         Genome::Utility::FileSystem->shellcmd(
             cmd          => $cmdline,
             input_files  => [ $reference_fasta_path, $input ],
