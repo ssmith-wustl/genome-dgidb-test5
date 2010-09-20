@@ -541,6 +541,13 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     push @new_models, $model;
 
     if ( defined($capture_target) ) {
+        unless($self->assign_capture_inputs($model, $capture_target, $capture_target)) {
+            for (@new_models) {
+                $_->delete;
+                return;
+            }
+        }
+
         #Also want to make a second model against a standard region of interest
         my $wuspace_model_name = $self->find_unused_model_name($model_name . '.wu-space');
         $model_params{name} = $wuspace_model_name;
@@ -556,66 +563,14 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             }
             return;
         }
-        
+
         push @new_models, $wuspace_model;
 
-        for my $m (@new_models) {
-
-            my $target_input = $m->add_input(
-                name             => "target_region_set_name",
-                value_class_name => "UR::Value",
-                value_id         => $capture_target
-            );
-
-            unless ( defined($target_input) ) {
-                $self->error_message(
-                        'Failed to set capture target input for model '
-                      . $m->id
-                      . ' and instrument data '
-                      . $genome_instrument_data->id );
-                for (@new_models) {
-                    $_->delete;
-                }
-
+        unless($self->assign_capture_inputs($wuspace_model, $capture_target, 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA')) {
+            for (@new_models) {
+                $_->delete;
                 return;
             }
-        }
-        
-        # By default the "region of interest" for analysis is the same
-        # as the capture target in sequencing
-        # 
-        # Eventually the roi list / validation SNP list will be
-        # looked up / validated here
-        my $roi_input = $model->add_input(
-            name             => "region_of_interest_set_name",
-            value_class_name => "UR::Value", value_id => $capture_target
-          );
-
-        unless (defined($roi_input)) {
-            $self->error_message('Failed to set region of instrument input for model '
-                                 . $model->id
-                                 . ' and instrument data '
-                                 . $genome_instrument_data->id);
-            for (@new_models) {
-                $_->delete;
-            }
-            return;
-        }
-
-        my $wuspace_roi_input = $wuspace_model->add_input(
-            name             => "region_of_interest_set_name",
-            value_class_name => "UR::Value", value_id => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA',
-        );
-
-        unless (defined($wuspace_roi_input)) {
-            $self->error_message('Failed to set region of instrument input for model '
-                                 . $wuspace_model->id
-                                 . ' and instrument data '
-                                 . $genome_instrument_data->id);
-            for (@new_models) {
-                $_->delete;
-            }
-            return;
         }
     }
 
@@ -659,6 +614,38 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     }
 
     return scalar @new_models;
+}
+
+
+sub assign_capture_inputs {
+    my $self = shift;
+    my $model = shift;
+    my $target_region_set_name = shift;
+    my $region_of_interest_set_name = shift;
+
+    my $target_input = $model->add_input(
+        name             => "target_region_set_name",
+        value_class_name => "UR::Value",
+        value_id         => $target_region_set_name
+    );
+
+    unless ( defined($target_input) ) {
+        $self->error_message('Failed to set capture target input for model ' . $model->id);
+        return;
+    }
+
+    my $roi_input = $model->add_input(
+        name             => "region_of_interest_set_name",
+        value_class_name => "UR::Value",
+        value_id         => $region_of_interest_set_name
+    );
+
+    unless (defined($roi_input)) {
+        $self->error_message('Failed to set region of instrument input for model ' . $model->id);
+        return;
+    }
+
+    return 1;
 }
 
 sub add_model_to_default_modelgroups {
