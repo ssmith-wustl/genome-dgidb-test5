@@ -155,9 +155,7 @@ sub execute {
 
                 unless($num_assigned > 0) {
                     # no model found for this PP, make one (or more) and assign all applicable data
-                    my @project_names = $self->_resolve_project_names($pse);
-
-                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, @project_names);
+                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $pse);
                     unless($ok) {
                         push @process_errors, $self->error_message;
                         next PP;
@@ -487,7 +485,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $genome_instrument_data = shift;
     my $subject = shift;
     my $processing_profile = shift;
-    my @project_names;
+    my $pse = shift;
 
     my @new_models;
 
@@ -607,6 +605,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
+        my @project_names = $self->_resolve_project_names($pse);
         $self->add_model_to_default_modelgroups($m, @project_names);
 
         my $new_models = $self->_newly_created_models;
