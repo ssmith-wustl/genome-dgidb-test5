@@ -95,7 +95,7 @@
             </tr>
             <tr>
               <td class="name">Models in Group:</td>
-              <td class="value"><xsl:value-of select="count(//coverage-summary/model)"/> (coverage); <xsl:value-of select="count(//alignment-summary/model)"/> (alignment); </td>
+              <td class="value"><xsl:value-of select="count(//coverage-summary/model)"/></td>
             </tr>
           </table>
 
