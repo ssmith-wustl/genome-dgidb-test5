@@ -166,11 +166,11 @@ sub interesting_metric_names {
 	'major contig length',
         'assembly length',
         'contigs', 'median contig length', 'average contig length',
-        'average contig length gt 500', 'median_contig_length_gt_500',
-	'average contig length gt 300', 'median_contig_length_gt_300',
-        'supercontigs', 'median supercontig length', 'average supercontig length',
-        'average supercontig length gt 500', 'median_supercontig_length_gt_500',
+	'average contig length gt 300', 'median_contig_length_gt_300', #soap
+	'average contig length gt 500', 'median_contig_length_gt_500', #velvet
 	'average supercontig length gt 300', 'median_supercontig_length_gt_300',
+        'average supercontig length gt 500', 'median_supercontig_length_gt_500',
+	'supercontigs', 'median supercontig length', 'average supercontig length',
         'average read length',
         'reads attempted', 
         'reads processed', 'reads processed success',
