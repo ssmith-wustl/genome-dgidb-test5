@@ -117,7 +117,7 @@ sub get_mock_subject {
         extraction_type => 'genomic dna',
         extraction_desc => undef,
         cell_type => 'primary',
-        tissue_desc => undef,
+        tissue_desc => 'zv2_g_dna_posterior fornix',
         tissue_label => undef,
         organ_name => undef,
         taxon_id => $taxon->id,
@@ -143,6 +143,12 @@ sub get_mock_model {
         processing_profile => $pp,
         subject => $subject,
     ) or Carp::confess "Can't get mock de novo assembly model";
+    
+    # methods
+    Genome::Utility::TestBase->mock_methods(
+        $model,
+        (qw/ default_model_name _get_name_part_from_tissue_desc /),
+    ) or die;
 
     # inst data
     my $sequencing_platform = $pp->sequencing_platform;
@@ -275,7 +281,7 @@ sub example_directory_for_model {
 sub output_prefix_name {
     my ($self, $model) = @_;
 
-    return $model->instrument_data->sample_name.'_WUGC'; #TODO - method for center name
+    return $model->subject_name.'_WUGC';
 }
 #<>#
 
