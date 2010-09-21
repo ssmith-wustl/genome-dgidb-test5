@@ -165,12 +165,12 @@ sub interesting_metric_names {
     return (
 	'major contig length',
         'assembly length',
-        'contigs', 'median contig length', 'average contig length',
-	'average contig length gt 300', 'median_contig_length_gt_300', #soap
-	'average contig length gt 500', 'median_contig_length_gt_500', #velvet
-	'average supercontig length gt 300', 'median_supercontig_length_gt_300',
-        'average supercontig length gt 500', 'median_supercontig_length_gt_500',
-	'supercontigs', 'median supercontig length', 'average supercontig length',
+        'contigs', 'n50 contig length', 'average contig length',
+	'average contig length gt 300', 'n50_contig_length_gt_300', #soap
+	'average contig length gt 500', 'n50_contig_length_gt_500', #velvet
+	'average supercontig length gt 300', 'n50_supercontig_length_gt_300',
+        'average supercontig length gt 500', 'n50_supercontig_length_gt_500',
+	'supercontigs', 'n50 supercontig length', 'average supercontig length',
         'average read length',
         'reads attempted', 
         'reads processed', 'reads processed success',
@@ -184,6 +184,8 @@ sub set_metrics {
 
     my %metrics = $self->calculate_metrics
         or return;
+
+    print Dumper \%metrics;
 
     for my $name ( keys %metrics ) {
         $self->$name( $metrics{$name} );
@@ -316,14 +318,14 @@ sub calculate_metrics {
 	'major contig length' => 'major_contig_length',			 
         # contig
         'total contig number' => 'contigs',
-        'n50 contig length' => 'median_contig_length',
-        'major_contig n50 contig length' => 'median_contig_length_gt_MCL',
+        'n50 contig length' => 'n50_contig_length',
+        'major_contig n50 contig length' => 'n50_contig_length_gt_MCL',
         'average contig length' => 'average_contig_length',
         'major_contig avg contig length' => 'average_contig_length_gt_MCL',	 
         # supercontig
         'total supercontig number' => 'supercontigs',
-        'n50 supercontig length' => 'median_supercontig_length',
-        'major_supercontig n50 contig length' => 'median_supercontig_length_gt_MCL',
+        'n50 supercontig length' => 'n50_supercontig_length',
+        'major_supercontig n50 contig length' => 'n50_supercontig_length_gt_MCL',
         'average supercontig length' => 'average_supercontig_length',
         'major_supercontig avg contig length' => 'average_supercontig_length_gt_MCL',
         # reads
@@ -419,9 +421,9 @@ sub calculate_metrics {
 
 # Old metrics
 sub total_contig_number { return $_[0]->contigs; }
-sub n50_contig_length { return $_[0]->median_contig_length; }
+#sub n50_contig_length { return $_[0]->n50_contig_length; }
 sub total_supercontig_number { return $_[0]->supercontigs; }
-sub n50_supercontig_length { return $_[0]->median_supercontig_length; }
+#sub n50_supercontig_length { return $_[0]->n50_supercontig_length; }
 sub total_input_reads { return $_[0]->reads_processed; }
 sub placed_reads { return $_[0]->reads_assembled; }
 sub chaff_rate { return $_[0]->reads_not_assembled_pct; }
