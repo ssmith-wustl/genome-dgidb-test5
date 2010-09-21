@@ -138,20 +138,20 @@
 	  </xsl:if>
 	  
 				<tr>
-          <td class="label">Median Contig Length</td>
-          <td class="value"><xsl:value-of select="//metric/median-contig-length"/></td>
+          <td class="label">n50 Contig Length</td>
+          <td class="value"><xsl:value-of select="//metric/n50-contig-length"/></td>
 				</tr>
 
           <xsl:if test="//metric/major-contig-length='300'">
 	    <tr>
-              <td class="label">Median Major Contig Length (>=300)</td>
-              <td class="value"><xsl:value-of select="//metric/median-contig-length-gt-300"/></td>
+              <td class="label">n50 Major Contig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/n50-contig-length-gt-300"/></td>
 	    </tr>
 	  </xsl:if>
 	  <xsl:if test="//metric/major-contig-length='500'">
 	    <tr>
-              <td class="label">Median Major Contig Length (>=500)</td>
-              <td class="value"><xsl:value-of select="//metric/median-contig-length-gt-500"/></td>
+              <td class="label">n50 Major Contig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/n50-contig-length-gt-500"/></td>
 	    </tr>
 	  </xsl:if>
 
@@ -178,20 +178,20 @@
 	  </xsl:if>
 
 				<tr>
-          <td class="label">Median Supercontig Length</td>
-          <td class="value"><xsl:value-of select="//metric/median-supercontig-length"/></td>
+          <td class="label">n50 Supercontig Length</td>
+          <td class="value"><xsl:value-of select="//metric/n50-supercontig-length"/></td>
 				</tr>
 
 	  <xsl:if test="//metric/major-contig-length='300'">
 	    <tr>
-              <td class="label">Median Major Supercontig Length (>=300)</td>
-              <td class="value"><xsl:value-of select="//metric/median-supercontig-length-gt-300"/></td>
+              <td class="label">n50 Major Supercontig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/n50-supercontig-length-gt-300"/></td>
 	    </tr>
 	  </xsl:if>
 	  <xsl:if test="//metric/major-contig-length='500'">
 	    <tr>
-              <td class="label">Median Major Supercontig Length (>=500)</td>
-              <td class="value"><xsl:value-of select="//metric/median-supercontig-length-gt-500"/></td>
+              <td class="label">n50 Major Supercontig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/n50-supercontig-length-gt-500"/></td>
 	    </tr>
 	  </xsl:if>
 	  
