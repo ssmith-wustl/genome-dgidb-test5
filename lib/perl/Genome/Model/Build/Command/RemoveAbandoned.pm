@@ -6,7 +6,7 @@ use Genome;
 use Carp;
 
 class Genome::Model::Build::Command::RemoveAbandoned {
-    is => 'Genome::Model::Build::Command',
+    is => 'Command',
     doc => 'Removes all abandoned build owned by the user',
     has => [
         keep_build_directory => {

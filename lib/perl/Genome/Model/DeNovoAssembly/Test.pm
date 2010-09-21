@@ -117,7 +117,7 @@ sub get_mock_subject {
         extraction_type => 'genomic dna',
         extraction_desc => undef,
         cell_type => 'primary',
-        tissue_desc => undef,
+        tissue_desc => 'zv2_g_dna_posterior fornix',
         tissue_label => undef,
         organ_name => undef,
         taxon_id => $taxon->id,
@@ -143,6 +143,12 @@ sub get_mock_model {
         processing_profile => $pp,
         subject => $subject,
     ) or Carp::confess "Can't get mock de novo assembly model";
+    
+    # methods
+    Genome::Utility::TestBase->mock_methods(
+        $model,
+        (qw/ default_model_name _get_name_part_from_tissue_desc /),
+    ) or die;
 
     # inst data
     my $sequencing_platform = $pp->sequencing_platform;
@@ -200,6 +206,7 @@ sub get_mock_build {
         edit_dir
         gap_file
         contigs_bases_file
+        contigs_fasta_file
         contigs_quals_file
         read_info_file
         reads_placed_file
@@ -213,10 +220,13 @@ sub get_mock_build {
     my %build_specific_methods_to_mock = (
         newbler => [qw//],
         soap => [qw/
+            file_prefix
             end_one_fastq_file end_two_fastq_file 
             soap_config_file
             soap_output_dir_and_file_prefix
             soap_scaffold_sequence_file 
+            soap_output_dir_and_file_prefix
+            soap_output_file_for_ext
         /],
         velvet => [qw/
             collated_fastq_file
@@ -244,13 +254,13 @@ sub get_mock_build {
     return $build;
 }
 
-#< Example Files >#
+#< Example Dirs >#
 sub base_directory {
     return '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 }
 
 my %dirs_versions = (
-    soap_solexa => '0.2',
+    soap_solexa => '3',
     velvet_solexa => '0.2',
     newbler_454 => '0.1',
 );
@@ -268,78 +278,11 @@ sub example_directory_for_model {
     return $dir;
 }
 
-sub example_fastq_file_for_model {
-    my ($self, $pp) = @_;
-
-    my $dir = $self->example_directory_for_model($pp);
-
-    return $dir.'/collated.fastq';
-}
-
-sub example_assembly_afg_file_for_model {
-    my ($self, $pp) = @_;
-
-    my $dir = $self->example_directory_for_model($pp);
-
-    return $dir.'/velvet_asm.afg';
-}
-
-sub example_sequences_file_for_model {
-    my ($self, $pp) = @_;
-
-    my $dir = $self->example_directory_for_model($pp);
-
-    return $dir.'/Sequences';
-}
-
-sub example_contigs_fasta_file_for_model {
-    my ($self, $pp) = @_;
-
-    my $dir = $self->example_directory_for_model($pp);
-
-    return $dir.'/contigs.fa';
-}
-
-sub example_stats_file_for_model {
-    my ($self, $model) = @_;
-
-    my $dir = $self->example_directory_for_model($model);
-
-    return $dir.'/edit_dir/stats.txt';
-}
-
-#soap specific files
 sub output_prefix_name {
     my ($self, $model) = @_;
 
-    return $model->instrument_data->sample_name.'_WUGC'; #TODO - method for center name
+    return $model->subject_name.'_WUGC';
 }
-
-sub example_end_one_fastq_file_for_model {
-    my ($self, $model) = @_;
-
-    my $dir = $self->example_directory_for_model($model);
-
-    return $dir.'/1_fastq';
-}
-
-sub example_end_two_fastq_file_for_model {
-    my ($self, $model) = @_;
-
-    my $dir = $self->example_directory_for_model($model);
-
-    return $dir.'/2_fastq';
-}
-
-sub example_scaffold_sequence_file_for_soap_model {
-    my ($self, $model) = @_;
-
-    my $dir = $self->example_directory_for_model($model);
-    my $file_prefix = $self->output_prefix_name($model);
-
-    return $dir.'/'.$file_prefix.'.scafSeq';
-}
-
 #<>#
 
 #< Instrument Data >#

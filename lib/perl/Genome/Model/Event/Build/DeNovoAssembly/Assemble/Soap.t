@@ -20,56 +20,51 @@ my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     assembler_name => 'soap',
     );
 ok($model, "Got mock test model") or die;
-
 my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
 ok($build, "Got mock test buid") or die;
 
-#link input fastq files
-my $one_fastq = Genome::Model::DeNovoAssembly::Test->example_end_one_fastq_file_for_model($model);
-symlink($one_fastq, $build->end_one_fastq_file);
-ok(-s $build->end_one_fastq_file, "Linked 1_fastq file");
+# example build
+my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+    model => $model,
+    use_example_directory => 1,
+);
+ok($example_build, 'got example build') or die;
 
-my $two_fastq = Genome::Model::DeNovoAssembly::Test->example_end_two_fastq_file_for_model($model);
+# link input fastq files
+my $one_fastq = $example_build->end_one_fastq_file;
+symlink($one_fastq, $build->end_one_fastq_file);
+ok(-s $build->end_one_fastq_file, "Link $one_fastq") or die;
+
+my $two_fastq = $example_build->end_two_fastq_file;
 symlink($two_fastq, $build->end_two_fastq_file);
-ok(-s $build->end_two_fastq_file, "Linked 2_fastq_file");
+ok(-s $build->end_two_fastq_file, "Linked $two_fastq") or die;
 
 # create
 my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap->create(build_id => $build->id);
 ok( $assemble, "Created soap assemble");
 
 # lsf params
-my $assembler_params = $build->processing_profile->assembler_params;
-# w/ cpus
-$build->processing_profile->assembler_params('-cpus 4');
 my $lsf_params = $assemble->bsub_rusage;
-is($lsf_params, "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params w/ 4 cpus'); 
-$build->processing_profile->assembler_params($assembler_params);
-$lsf_params = $assemble->bsub_rusage;
-diag $lsf_params;
-is($lsf_params, "-R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params w/o cpus'); 
-
-# execute
+diag($lsf_params);
+is($lsf_params, "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params'); 
 ok( $assemble->execute, "Executed soap assemble");
 
+# check files
 my @file_exts = qw/ contig         gapSeq        links     peGrads
                     preGraphBasic  readOnContig  scafSeq   updated.edge
                     ContigIndex    edge          kmerFreq  newContigIndex
-                    preArc         readInGap     scaf      scaf_gap        vertex /;
-
-my $example_dir = Genome::Model::DeNovoAssembly::Test->example_directory_for_model($model);
-
-ok(-d $example_dir, "Solexa-soap example directory exists"); 
-
-my $file_prefix = $build->instrument_data->sample_name.'_'.$build->center_name;
-
-foreach (@file_exts) {
-    ok(-e $example_dir."/$file_prefix".'.'.$_, "Example $_ file exists");
-    ok(-e $build->data_directory."/$file_prefix".'.'.$_, "$_ file exists");
-    ok(File::Compare::compare($example_dir."/$file_prefix".'.'.$_, $build->data_directory."/$file_prefix".'.'.$_) == 0, "$_ files match");
+                    preArc         readInGap     scaf      scaf_gap        
+                    vertex
+                    /;
+foreach my $ext ( @file_exts ) {
+    my $example_file = $example_build->soap_output_file_for_ext($ext);
+    ok(-s $example_file, "Example $ext file exists");
+    my $file = $build->soap_output_file_for_ext($ext);
+    ok(-s $file, "$ext file exists");
+    is(File::Compare::compare($example_file, $file), 0, "$ext files match");
 }
 
-#<STDIN>;
-
+#print $build->data_directory."\n"; <STDIN>;
 done_testing();
-
 exit;
+

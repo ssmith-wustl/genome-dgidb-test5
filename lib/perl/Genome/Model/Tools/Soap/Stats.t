@@ -10,7 +10,7 @@ require File::Compare;
 use_ok('Genome::Model::Tools::Soap::Stats') or die;
 
 #check testsuite data files
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/Stats';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/Stats_v1';
 ok(-d $data_dir, "Data dir exists") or die;
 ok(-s $data_dir.'/contigs.bases', "Data dir contigs.bases file exists") or die;
 ok(-s $data_dir.'/1_fastq', "Data dir 1_fastq file exists") or die;

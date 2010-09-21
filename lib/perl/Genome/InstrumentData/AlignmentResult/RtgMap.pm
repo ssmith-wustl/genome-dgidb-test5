@@ -21,7 +21,7 @@ class Genome::InstrumentData::AlignmentResult::RtgMap{
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>16000] span[hosts=1] rusage[tmp=90000, mem=16000]' -M 16000000 -n 4";
+    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>25000] span[hosts=1] rusage[tmp=90000, mem=25000]' -M 25000000 -n 8 -m hmp -q hmp";
 }
 
 sub _decomposed_aligner_params {
@@ -40,7 +40,7 @@ sub _decomposed_aligner_params {
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
-    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '14G');
+    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '23G');
     $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
 
     # get refseq info
@@ -63,7 +63,9 @@ sub _run_aligner {
  
     #   To run RTG, have to first convert ref and inputs to sdf, with 'rtg format', for which you 
     #   have to designate a destination directory
- 
+
+    # disconnect db before long-running action 
+    Genome::DataSource::GMSchema->disconnect_default_dbh; 
     #STEP 1 - convert input to sdf
     my $prechunk_input_sdf = File::Temp::tempnam($scratch_directory, "input-XXX") . ".sdf"; #destination of converted input
     my $rtg_fmt = Genome::Model::Tools::Rtg->path_for_rtg_format($self->aligner_version);

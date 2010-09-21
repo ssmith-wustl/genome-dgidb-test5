@@ -20,6 +20,9 @@ set Pindel_normal_end = "normal/";
 set Pindel_tumor_end = "tumor/";
 set Pindel_file = "adapted_deletions.csv.big_deletions";
 
+set Hydra = "Hydra/";
+set Hydra_file_end = "_Hydra.sv"
+
 set CNA = "CNA/";
 set CNA_file_end = "_CNA.seg";
 
@@ -28,11 +31,13 @@ set col_BD = "	\\t	0	1	3	4	6	2	5	11	12	7	8	10  100";
 set col_PD = "	\\t	0	1	0	2	NA	NA	NA	NA	NA	3	NA	4   0";
 set col_CNA = "	\\t 0	1	0	2	NA	NA	NA	5	7	3	9	NA  10000";
 #									type n1	n2 n_cn	t_cn sz	sc	sp_r
+set col_HD = "  \\t 0   1   2   3   NA  NA  NA  NA  NA  NA  NA  NA  175";
 
 set AS = ".AS";
 set BD = ".BD";
 set PD = ".PD";
 set CN = ".CN";
+set HD = ".HD";
 
 set output_dir = $argv[4];
 
@@ -65,12 +70,14 @@ set j = 0;
 				echo "${tag}\t${file_name_AS}\t${skip}${col_AS}" >> ${output_file}
 			endif
 			@ ever_come = 1
+		else
+			echo ${file_name_AS}
 		endif
 		
 
 		# PD normal
 		set file_name_PD_normal = ${project_dir}/${Pindel_end}${Pindel_normal_end}${Pindel_file};
-                echo $file_name_PD_normal
+            
 		if(-e ${file_name_PD_normal}) then
 			set tag = ${project_name}${number}${PD}N;
 			if(${ever_come} == 0) then
@@ -79,11 +86,13 @@ set j = 0;
 				echo "${tag}\t${file_name_PD_normal}\t0${col_PD}" >> ${output_file}
 			endif
 			@ ever_come = 1
+		else
+		    echo $file_name_PD_normal
 		endif
 		
 		# PD tumor
 		set file_name_PD_tumor = ${project_dir}/${Pindel_end}${Pindel_tumor_end}${Pindel_file};
-                echo $file_name_PD_tumor
+            
 		if(-e ${file_name_PD_tumor}) then
 			set tag = ${project_name}${number}${PD}T;		
 			if(${ever_come} == 0) then
@@ -92,6 +101,8 @@ set j = 0;
 				echo "${tag}\t${file_name_PD_tumor}\t0${col_PD}" >> ${output_file}
 			endif
 			@ ever_come = 1
+		else
+		    echo $file_name_PD_tumor
 		endif
 
 		# BD
@@ -125,7 +136,26 @@ set j = 0;
 			else
 				echo "${tag}\t${file_name_CNA}\t${skip}${col_CNA}" >> ${output_file}
 			endif
-			@ ever_come = 1			
+			@ ever_come = 1	
+		else
+			echo ${file_name_CNA}		
 		endif
+
+                # Hydra
+                set file_name_HD = ${project_dir}/${Hydra}${project_name}${number}${Hydra_file_end}
+                if (-e ${file_name_HD}) then
+                    echo ${file_name_HD};
+                    set skip = `more ${file_name_HD} | perl -ane 'print "$_" if($F[0] =~ /^#/)' | wc -l`;
+                    set tag = ${project_name}${number}${HD};
+                    if(${ever_come} == 0) then
+                        echo "${tag}\t${file_name_HD}\t${skip}${col_HD}" > ${output_file}
+                    else
+                        echo "${tag}\t${file_name_HD}\t${skip}${col_HD}" >> ${output_file}
+                    endif
+                    @ ever_come = 1
+                else
+                	echo ${file_name_HD}
+                endif
+                        
 #end
 	
