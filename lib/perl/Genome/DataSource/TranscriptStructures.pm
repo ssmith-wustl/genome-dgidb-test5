@@ -49,7 +49,7 @@ sub column_order { [ qw(
     transcript_amino_acid_length
     )]}
 
-sub sort_order {[qw( structure_start transcript_structure_id )] }
+sub sort_order {[qw( structure_start transcript_transcript_start transcript_transcript_stop )] }
 
 sub file_resolver {
     my( $chrom_name, $data_directory) = @_;

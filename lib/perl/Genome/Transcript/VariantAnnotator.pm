@@ -169,10 +169,17 @@ sub transcripts {
         return { transcript_error => 'invalid_sequence_on_variant' }
     }
 
-    my @crossing_substructures = Genome::TranscriptStructure->get(chrom_name => $variant{'chromosome_name'},
-                                                                  'structure_stop >=' => $variant{'start'},
-                                                                  'structure_start <=' => $variant{'stop'},
-                                                                  data_directory => $self->data_directory);
+    # The magic number 4500000 is because of the longest transcript.  NM_014141 is about 2.3Mb long.
+    # The filter for transcript start and stop is to give the file datasource some hints so it
+    # can seek into the file and/or stop looking early.
+    # Conservatively we'll double that number and it should still help the speed.
+    my @crossing_substructures = Genome::TranscriptStructure->get(
+                                     chrom_name => $variant{'chromosome_name'},
+                                     'structure_stop >=' => $variant_start,
+                                     'structure_start <=' => $variant_stop,
+                                     'transcript_transcript_start >=' => $variant_start - 4500000,
+                                     'transcript_transcript_stop <=' => $variant_stop + 4500000,
+                                     data_directory => $self->data_directory);
     return unless @crossing_substructures;
 
     my @annotations;
