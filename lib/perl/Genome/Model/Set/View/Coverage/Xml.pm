@@ -72,10 +72,13 @@ sub get_alignment_summary_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
     my @models = $self->members;
+    my @included_models;
     my $as_node = $xml_doc->createElement('alignment-summary');
     for my $model (@models) {
         my $build = $model->last_succeeded_build;
+
         if ($build) {
+            push(@included_models, $model);
             my $model_node = $as_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
@@ -90,6 +93,9 @@ sub get_alignment_summary_node {
             }
         }
     }
+
+    $DB::single = 1;
+
     return $as_node;
 }
 
@@ -97,11 +103,13 @@ sub get_coverage_summary_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
     my @models = $self->members;
+    my @included_models;
     my $cs_node = $xml_doc->createElement('coverage-summary');
     my @min_depths;
     for my $model (@models) {
         my $build = $model->last_succeeded_build;
         if ($build) {
+            push(@included_models, $model);
             unless (@min_depths) {
                 @min_depths = sort{ $a <=> $b } @{$build->minimum_depths_array_ref};
                 for my $min_depth (@min_depths) {
@@ -135,6 +143,9 @@ sub get_coverage_summary_node {
             }
         }
     }
+
+    $DB::single = 1;
+
     return $cs_node;
 }
 

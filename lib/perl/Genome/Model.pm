@@ -579,7 +579,7 @@ sub compatible_instrument_data {
         # TODO: move this into the assign logic, not here. -ss
         my @filtered_compatible_instrument_data;
         for my $idata (@compatible_instrument_data) {
-            if ($idata->total_bases_read == 0) {
+            if (defined($idata->total_bases_read)&&($idata->total_bases_read == 0)) {
                 $self->warning_message(sprintf("ignoring %s because it has zero bases read",$idata->__display_name__));
                 next;
             }

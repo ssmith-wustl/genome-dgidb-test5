@@ -10,16 +10,24 @@ BEGIN {
 
 use above 'Genome';
 
-use Test::More tests => 36;
+use Test::More tests => 39;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
 my $taxon = Genome::Taxon->get( species_name => 'human' );
+my $individual = Genome::Individual->create(
+    id => '-10',
+    name => 'AQID-test-individual',
+    common_name => 'AQID10',
+    taxon_id => $taxon->id,
+);
+
 my $sample = Genome::Sample->create(
     id => '-1',
     name => 'AQID-test-sample',
     common_name => 'normal',
     taxon_id => $taxon->id,
+    source_id => $individual->id,
 );
 
 #my $sample = Genome::Sample->get(name => 'TEST-patient1-sample1');
@@ -46,6 +54,8 @@ my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
     read_aligner_params => '#this is a test',
 );
 
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+
 my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
 
 my $pse_1 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
@@ -59,6 +69,7 @@ $pse_1->add_param('instrument_data_id', $instrument_data_1->id);
 $pse_1->add_param('subject_class_name', 'Genome::Sample');
 $pse_1->add_param('subject_id', $sample->id);
 $pse_1->add_param('processing_profile_id', $processing_profile->id);
+$pse_1->add_param('reference_sequence_build_id', $ref_seq_build->id);
 
 my $instrument_data_2 = Genome::InstrumentData::Solexa->create(
     id => '-101',
@@ -84,6 +95,7 @@ $pse_2->add_param('instrument_data_id', $instrument_data_2->id);
 $pse_2->add_param('subject_class_name', 'Genome::Sample');
 $pse_2->add_param('subject_id', $sample->id);
 $pse_2->add_param('processing_profile_id', $processing_profile->id);
+$pse_2->add_param('reference_sequence_build_id', $ref_seq_build->id);
 
 my $command_1 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
@@ -121,6 +133,11 @@ is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2
 is($pse_1->pse_status, 'completed', 'first pse completed');
 is($pse_2->pse_status, 'completed', 'second pse completed');
 
+my $group = Genome::ModelGroup->get(name => 'apipe-auto AQID');
+ok($group, 'auto-generated model-group exists');
+
+my @members = $group->models;
+ok(grep($_ eq $new_model, @members), 'group contains the newly created model');
 
 my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     id => '-102',
@@ -145,6 +162,7 @@ $pse_3->add_param('instrument_data_id', $instrument_data_3->id);
 $pse_3->add_param('subject_class_name', 'Genome::Sample');
 $pse_3->add_param('subject_id', $sample->id);
 $pse_3->add_param('processing_profile_id', $processing_profile->id);
+$pse_3->add_param('reference_sequence_build_id', $ref_seq_build->id);
 
 my $instrument_data_4 = Genome::InstrumentData::Solexa->create(
     id => '-103',
@@ -170,6 +188,7 @@ $pse_4->add_param('instrument_data_id', $instrument_data_4->id);
 $pse_4->add_param('subject_class_name', 'Genome::Sample');
 $pse_4->add_param('subject_id', $sample->id);
 $pse_4->add_param('processing_profile_id', $processing_profile->id);
+$pse_4->add_param('reference_sequence_build_id', $ref_seq_build->id);
 
 my $command_2 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
@@ -216,3 +235,6 @@ is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2
 
 is($pse_3->pse_status, 'completed', 'third pse completed');
 is($pse_4->pse_status, 'completed', 'fourth pse completed');
+
+my @members_2 = $group->models;
+is(scalar(@members_2) - scalar(@members), 2, 'two subsequent models added to the group');
