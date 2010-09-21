@@ -160,10 +160,8 @@ sub check_prioritization {
                 }
             }
 
-            ok (scalar @output == scalar @test_output, "received same number of results as expected " .
-                "for variant $variant_num with filter $filter");
-            ok (compare_annotations(\@output, \@test_output), "annotation ordering matches expected " .
-                "after prioritization for variant $variant_num with filter $filter");
+            is(scalar(@output), scalar(@test_output), "received same number of results as expected for variant $variant_num with filter $filter");
+            ok (compare_annotations(\@output, \@test_output), "annotation ordering matches expected after prioritization for variant $variant_num with filter $filter");
             $variant_num++;
         }
     }
