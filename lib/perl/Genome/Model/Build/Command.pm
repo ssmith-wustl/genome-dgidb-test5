@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper 'Dumper';
+require Genome::Model::Command::Services::Build::Scan;
 use Regexp::Common;
 
 class Genome::Model::Build::Command {
@@ -56,7 +57,7 @@ sub _builds_for_filter {
     my $has_operator = grep { /[\=\~\<\>]/ } @filter_parts;
     if ( $has_operator > 0 ) { 
         if ( $has_operator == @filter_parts ) {
-            $self->status_message("Gettign builds for filter: $filter");
+            $self->status_message("Getting builds for list style filter: $filter");
             return Genome::Model::Build->from_cmdline($filter);
         }
         else {
@@ -78,13 +79,13 @@ sub _builds_for_filter {
             }
             @builds_for_filter_part = $self->_get_last_builds_for_model_params(%params);
             if ( @builds_for_filter_part ) {
-                $self->status_message("Got builds for model name: $filter_part");
+                $self->status_message("Got build(s) for model name: $filter_part");
                 @builds{ map { $_->id } @builds_for_filter_part } = @builds_for_filter_part;
                 next FILTER_PART;
             }
             @builds_for_filter_part = $self->_get_last_builds_for_model_group_params(name => $filter_part);
             if ( @builds_for_filter_part ) {
-                $self->status_message("Got builds for model group name: $filter_part");
+                $self->status_message("Got build(s) for model group name: $filter_part");
                 @builds{ map { $_->id } @builds_for_filter_part } = @builds_for_filter_part;
             }
             next FILTER_PART;
@@ -93,7 +94,7 @@ sub _builds_for_filter {
         # build id
         @builds_for_filter_part = Genome::Model::Build->get(id => $filter_part);
         if ( @builds_for_filter_part ) {
-            $self->status_message("Got builds for id: $filter_part");
+            $self->status_message("Got build(s) for id: $filter_part");
             @builds{ map { $_->id } @builds_for_filter_part } = @builds_for_filter_part;
             next FILTER_PART;
         }
@@ -101,7 +102,7 @@ sub _builds_for_filter {
         # model id
         @builds_for_filter_part = $self->_get_last_builds_for_model_params(id => $filter_part);
         if ( @builds_for_filter_part ) {
-            $self->status_message("Got builds for model id: $filter_part");
+            $self->status_message("Got build(s) for model id: $filter_part");
             @builds{ map { $_->id } @builds_for_filter_part } = @builds_for_filter_part;
             next FILTER_PART;
         }
@@ -109,7 +110,7 @@ sub _builds_for_filter {
         # model group id
         @builds_for_filter_part = $self->_get_last_builds_for_model_group_params(id => $filter_part);
         if ( @builds_for_filter_part ) {
-            $self->status_message("Got builds for model group id: $filter_part");
+            $self->status_message("Got build(s) for model group id: $filter_part");
             @builds{ map { $_->id } @builds_for_filter_part } = @builds_for_filter_part;
             next FILTER_PART;
         }
@@ -162,5 +163,44 @@ sub _get_last_builds_for_model_params {
 }
 #<>#
 
+#< Build Job >#
+sub get_running_master_lsf_job_for_build {
+    my ($self, $build) = @_;
+
+    if ( not defined $build ) {
+        Carp::confess('No build given to get running master lsf job');
+    }
+
+    my $job_id = $build->the_master_event->lsf_job_id;
+    return if not defined $job_id;
+
+    my $job = $self->get_job($job_id);
+    return if not defined $job;
+
+    if ( $job->{Status} eq 'EXIT' or $job->{Status} eq 'DONE' ) {
+        return;
+    }
+
+    return $job;
+}
+
+sub get_job {
+    my $self = shift;
+    my $job_id = shift;
+
+    my @jobs = ();
+    my $iter = Job::Iterator->new($job_id);
+    while (my $job = $iter->next) {
+        push @jobs, $job;
+    }
+
+    if (@jobs > 1) {
+        $self->error_message("More than 1 job found for this build? Alert apipe");
+        return 0;
+    }
+
+    return shift @jobs;
+}
+#<>#
 1;
 

@@ -62,16 +62,16 @@ my $expected_metrics = {
     'contigs' => '2424',
     'average_read_length' => '90',
     'average_contig_length' => '146',
-    'median_supercontig_length' => '141',
+    'n50_supercontig_length' => '141',
     'reads_processed' => '25000',
     'assembly_length' => '354779',
-    'reads_attempted' => 35000,
-    'median_contig_length' => '141',
+    'reads_attempted' => '35000',
+    'n50_contig_length' => '141',
     #these values are zero bec there are no contigs or supercontigs > 500 bp this test set
     'major_contig_length' => '500',
-    'median_contig_length_gt_500' => '0',
+    'n50_contig_length_gt_500' => '0',
     'average_contig_length_gt_500' => '0',
-    'median_supercontig_length_gt_500' => '0',
+    'n50_supercontig_length_gt_500' => '0',
     'average_supercontig_length_gt_500' => '0',
     'read_depths_ge_5x' => '1.1',
 };
@@ -82,9 +82,9 @@ for my $name ( keys %metrics ) {
 #old
 my %old_to_new_metrics = (
     total_contig_number => 'contigs',
-    n50_contig_length => 'median_contig_length',
+    #n50_contig_length => 'median_contig_length',
     total_supercontig_number => 'supercontigs',
-    n50_supercontig_length => 'median_supercontig_length',
+    #n50_supercontig_length => 'median_supercontig_length',
     total_input_reads => 'reads_processed',
     placed_reads => 'reads_assembled',
     chaff_rate => 'reads_not_assembled_pct',
