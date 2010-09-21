@@ -120,7 +120,7 @@ sub execute {                               # replace with real execution logic.
 		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
 		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
 		
-		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\"";	
+		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output $output --output-snp $output_snp --output-indel $output_indel $varscan_params\"";	
 #		my $cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params";
 #		open(SCRIPT, ">$output_snp.sh") or die "Can't open output file!\n";
 #		print SCRIPT "#!/gsc/bin/bash\n";

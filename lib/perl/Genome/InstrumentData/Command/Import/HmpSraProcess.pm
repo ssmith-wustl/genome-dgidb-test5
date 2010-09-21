@@ -38,6 +38,12 @@ class Genome::InstrumentData::Command::Import::HmpSraProcess {
             doc => 'skip processing, pull processed SRS directory from this location.',
         },
     ],
+   has => [
+     _working_dir => {
+        is_optional=>1,
+        is_transient=>1
+     }
+    ],
     doc => 'de-duplicate and quality trim Illumina WGS runs downloaded from SRA',
 };
 
@@ -105,6 +111,7 @@ sub execute {
     my $tmp_dir      = Genome::Utility::FileSystem->create_temp_directory;
 
     my $working_dir = $tmp_dir . "/srr_datasets";
+    $self->_working_dir($working_dir);
     mkpath($working_dir);
     for my $srr (@srrs) {
         my $instrument_data = Genome::InstrumentData::Imported->get(import_format=>'raw sra download', sra_accession=>$srr);
@@ -238,14 +245,67 @@ sub execute {
 								     source_data_files=>"$singleton_read",
 								     is_paired_end=>0
 								     );
-    
+
     unless ($se_import_cmd->execute) {
 	$self->error_message("Failed to import singleton reads");
 	return;
     }
-    
-    $self->status_message("Imported all resultant reads! Done!");
 
+    for ($pe_import_cmd, $se_import_cmd) {
+        my $idid = $_->generated_instrument_data_id;
+
+        unless ($idid) {
+            $self->error_message("did not get a generated imported instrument data id.  did this really import?");
+            return;
+        }
+
+        my $iid = Genome::InstrumentData::Imported->get($idid);
+        unless ($iid) {
+            $self->error_message("could not get the imported instrument data for this id.");
+            return;
+        }
+
+        my $path = $iid->disk_allocations->absolute_path;
+    
+        unless ($self->copy_metrics($path)) {
+            $self->error_message("could not copy metrics into the destination path!");
+            return;
+        }
+    }
+
+    $self->status_message("Imported all resultant reads and metrics! Done!");
+
+    return 1;
+}
+
+sub copy_metrics {
+    my $self = shift;
+    my $imported_data_path = shift;
+
+    my $working_dir;
+    if ($self->container_dir) {
+        $working_dir = $self->container_dir;
+    } else {
+        $working_dir = $self->_working_dir;
+    }
+
+    $working_dir = $working_dir . "/" . $self->srs_sample_id;
+    
+    my $destination = $imported_data_path . "/metrics";
+    
+    unless (mkpath($destination)) {
+        $self->error_message("Failed to make dest path $destination");
+        return; 
+    }
+
+    my @masks = ("$working_dir/*.masked", "$working_dir/*.denovo_duplicates_marked.counts", "$working_dir/*.denovo_duplicates_marked.metrics", "$working_dir/trimBWAstyle.out");
+
+    for (@masks) {
+       my $cmd = sprintf("rsync -rptgovz --copy-links %s %s", $_, $destination);
+       Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+    }
+
+    
     return 1;
 }
 

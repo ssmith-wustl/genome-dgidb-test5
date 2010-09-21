@@ -30,8 +30,7 @@ class Genome::Model::Build {
                                                       my $model = Genome::Model->get($model_id);
                                                       Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
                                                       return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($model->type_name);
-                                                  },
-
+                                                  }
                                    },
         data_directory          => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         model                   => { is => 'Genome::Model', id_by => 'model_id' },
@@ -175,7 +174,7 @@ sub __extend_namespace__ {
 
 sub create {
     my $class = shift;
-    if ($class eq __PACKAGE__) {
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # let the base class re-call the constructor from the correct sub-class
         return $class->SUPER::create(@_);
     }

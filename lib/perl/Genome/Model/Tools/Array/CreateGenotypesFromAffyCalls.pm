@@ -1,6 +1,6 @@
 package Genome::Model::Tools::Array::CreateGenotypesFromAffyCalls;
 
-use strict;
+#use strict;
 use warnings;
 
 use Genome;
@@ -37,7 +37,7 @@ sub execute {
     my $self=shift;
 
     #TODO Some basic file checks
-
+    print "about to call create_call_file_hash\n";
     my $call_href = $self->create_call_file_hash;
 
     $call_href = $self->convert_to_genotype($call_href);
@@ -118,16 +118,16 @@ sub convert_to_genotype {
 
         if(exists($calls->{$snp_id})) {
             my $call = $calls->{$snp_id};
-            if($call eq 'AA') {
+            if(($call eq 'AA')||($call==0)) {
                 $call = $alleleA x 2;
             }
-            elsif($call eq 'AB') {
+            elsif(($call eq 'AB')||($call==1)) {
                 $call = $alleleA . $alleleB;
             }
-            elsif($call eq 'BB') {
+            elsif(($call eq 'BB')||($call==2)) {
                 $call = $alleleB x 2;
             }
-            elsif($call eq 'NC') {
+            elsif(($call eq 'NC')||($call==-1)) {
                 $call = '--';
             }
             else {

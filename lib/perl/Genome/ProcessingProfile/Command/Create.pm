@@ -7,11 +7,11 @@ use strict;
 use warnings;
 
 use Genome;
-
+use Carp 'confess';
 use Regexp::Common;
 
 class Genome::ProcessingProfile::Command::Create {
-    is => 'Command',
+    is => 'Command::DynamicSubCommands',
     is_abstract => 1,
     has => [
         name => {
@@ -40,56 +40,33 @@ class Genome::ProcessingProfile::Command::Create {
     ],
 };
 
-#< Auto generate the subclasses >#
-our @SUB_COMMAND_CLASSES;
-my $module = __PACKAGE__;
-$module =~ s/::/\//g;
-$module .= '.pm';
-my $pp_path = $INC{$module};
-$pp_path =~ s/$module//;
-$pp_path .= 'Genome/ProcessingProfile';
-for my $target ( glob("$pp_path/*pm") ) {
-    $target =~ s#$pp_path/##;
-    $target =~ s/\.pm//;
-    my $target_class = 'Genome::ProcessingProfile::' . $target;
-    next unless $target_class->isa('Genome::ProcessingProfile');
-    my $target_meta = $target_class->get_class_object;
-    unless ( $target_meta ) {
-        eval("use $target_class;");
-        die "$@\n" if $@;
-        $target_meta = $target_class->get_class_object;
-    }
-    #next if $target_class->get_class_object->is_abstract;
-    my $subclass = 'Genome::ProcessingProfile::Command::Create::' . $target;
-    #print Dumper({mod=>$module, path=>$pp_path, target=>$target, target_class=>$target_class,subclass=>$subclass});
+sub _sub_commands_from { 'Genome::ProcessingProfile' }
 
-    no strict 'refs';
-    class {$subclass} {
-        is => __PACKAGE__,
-        sub_classification_method_name => 'class',
-        has => [ 
-        __PACKAGE__->_properties_for_class($target_class),
+sub sub_command_sort_position { 1 }
+
+# Overriding this method from Command::DynamicSubCommands so parameters from each of the
+# processing profiles are carried over into the create command
+sub _build_sub_command {
+    my $self = shift;
+    my ($suggested_class_name,$delegator_class_name,$target_class_name) = @_;
+    
+    class {$suggested_class_name} { 
+        is => $delegator_class_name, 
+        subclassify_by => 'class',
+        has => [
+            __PACKAGE__->_properties_for_class($target_class_name),
         ],
     };
-    push @SUB_COMMAND_CLASSES, $subclass;
-}
 
-sub sub_command_dirs {
-    my $class = ref($_[0]) || $_[0];
-    return ( $class eq __PACKAGE__ ? 1 : 0 );
-}
-
-sub sub_command_classes {
-    my $class = ref($_[0]) || $_[0];
-    return ( $class eq __PACKAGE__ ? @SUB_COMMAND_CLASSES : 0 );
+    return ($suggested_class_name);
 }
 
 sub help_brief {
-    my $profile_name = $_[0]->_profile_name;
+    my $profile_name = _get_subclass(@_) or return;
+    my $profile_string = Genome::Utility::Text::camel_case_to_string($profile_name);
+    $profile_string =~ s/:://;
 
-    return ( $profile_name )
-    ? "Create a new pp for $profile_name"
-    : "Create a new processing profile";
+    return "Create a new pp for $profile_string";
 }
 
 sub help_detail {
@@ -147,26 +124,20 @@ sub execute {
     if ($self->supersedes) {
         $target_params{'supersedes'} = $self->supersedes;
     }
-    my $processing_profile = $target_class->create(
-        %target_params
-    );
-    
 
-    unless ( $processing_profile ) {
+    my $processing_profile = $target_class->create(%target_params);
+
+    unless ($processing_profile) {
         $self->error_message("Failed to create processing profile.");
         return;
     }
 
-    if ( my @problems = $processing_profile->__errors__ ) {
-        $self->error_message(
-            "Error(s) creating processing profile\n\t".  join("\n\t", map { $_->desc } @problems)
-        );
-        $processing_profile->delete;
+    if (my @problems = $processing_profile->__errors__) {
+        $self->error_message("Error(s) creating processing profile\n\t".  join("\n\t", map { $_->desc } @problems));
         return;
     }
 
     $self->status_message('Created processing profile:');
-    
     if($self->describe) {
         my $describer = Genome::ProcessingProfile::Command::Describe->create(
             processing_profile_id => $processing_profile->id,
@@ -177,30 +148,18 @@ sub execute {
     return 1;
 }
 
-#< Target class methods >#
+# Get only the subclass portion of the package name
 sub _get_subclass {
     my $class = ref($_[0]) || $_[0];
-
     return if $class eq __PACKAGE__;
-    
     $class =~ s/Genome::ProcessingProfile::Command::Create:://;
-
     return $class;
 }
 
+# Figure out the particular processing profile subclass name
 sub _target_class {
-    my $subclass = _get_subclass(@_)
-        or return;
-    
+    my $subclass = _get_subclass(@_) or return;
     return 'Genome::ProcessingProfile::'.$subclass;
-}
-
-sub _profile_name {
-    my $profile_name = _get_subclass(@_)
-        or return;
-    return Genome::Utility::Text::camel_case_to_string($profile_name);
-    my @words = $profile_name =~ /([A-Z](?:[A-Z]*(?=$|[A-Z][a-z])|[a-z]*))/g;
-    return $profile_name = join(' ', map { lc } @words);
 }
 
 sub _properties_for_class {
@@ -235,10 +194,7 @@ sub _properties_for_class {
 
 sub _target_class_property_names {
     my $self = shift;
-
-    my %properties = $self->_properties_for_class( $self->_target_class )
-        or return;
-
+    my %properties = $self->_properties_for_class( $self->_target_class ) or return;
     return keys %properties;
 }
 

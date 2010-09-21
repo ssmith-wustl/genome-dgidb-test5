@@ -121,6 +121,11 @@ my %properties = (
         is=>'String',
         doc => 'SRA sample name',
         is_optional => 1,
+    },
+    generated_instrument_data_id=> {
+        is=>'Number',
+        doc => 'generated sample ID',
+        is_optional => 1,
     }
 );
     
@@ -246,6 +251,7 @@ sub execute {
 
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data record $instrument_data_id has been created.");
+    $self->generated_instrument_data_id($instrument_data_id);
 
     my $ref_name = $self->reference_name;
 

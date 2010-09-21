@@ -35,15 +35,19 @@ ok($soap->execute, 'Execute prepare inst data soap');
 ok (-s $build->end_one_fastq_file, "Created end one fastq file");
 ok (-s $build->end_two_fastq_file, "Created end two fastq file");
 
-my $example_end_one_fastq = Genome::Model::DeNovoAssembly::Test->example_end_one_fastq_file_for_model($model);
+my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+    model => $model,
+    use_example_directory => 1,
+);
+ok($example_build, 'got example build') or die;
+my $example_end_one_fastq = $example_build->end_one_fastq_file;
 is (compare($build->end_one_fastq_file, $example_end_one_fastq), 0, "Generated end one fastq file matches");
-
-my $example_end_two_fastq = Genome::Model::DeNovoAssembly::Test->example_end_two_fastq_file_for_model($model);
+my $example_end_two_fastq = $example_build->end_two_fastq_file;
 is (compare($build->end_two_fastq_file, $example_end_two_fastq), 0, "Generated end two fasta file matches");
 
-print $example_end_one_fastq.' '.$build->end_one_fastq_file."\n";
-print $example_end_two_fastq.' '.$build->end_two_fastq_file."\n";
-print $build->data_directory."\n"; <STDIN>;
+#print $example_end_one_fastq.' '.$build->end_one_fastq_file."\n";
+#print $example_end_two_fastq.' '.$build->end_two_fastq_file."\n";
+#print $build->data_directory."\n"; <STDIN>;
 
 done_testing();
 exit;

@@ -18,6 +18,11 @@ class Genome::Model::Tools::Soap::CreateContigsBasesFile {
 	    is => 'Text',
 	    doc => 'Soap assembly directory',
 	},
+	output_file => {
+	    is => 'Text',
+	    doc => 'User supplied output file name',
+	    is_optional => 1,
+	}
     ],
 };
 
@@ -44,8 +49,10 @@ sub execute {
 	return;
     }
 
+    my $out_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/contigs.bases';
+
     my $in = Bio::SeqIO->new(-format => 'fasta', -file => $self->scaffold_fasta_file);
-    my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->assembly_directory.'/edit_dir/contigs.bases');
+    my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$out_file);
 
     my $supercontig_number = 0;
     while (my $seq = $in->next_seq) {
