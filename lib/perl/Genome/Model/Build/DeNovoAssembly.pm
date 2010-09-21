@@ -185,6 +185,8 @@ sub set_metrics {
     my %metrics = $self->calculate_metrics
         or return;
 
+    print Dumper \%metrics;
+
     for my $name ( keys %metrics ) {
         $self->$name( $metrics{$name} );
     }
