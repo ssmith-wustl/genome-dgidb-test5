@@ -66,10 +66,18 @@ sub _restart_build {
         return 0;
     }
 
-    my $loc_file = $build->data_directory . '/server_location.txt';
-    if (-e $loc_file) {
-        $self->error_message("Server location file in build data directory exists, if you are sure it is not currently running remove it and run again: $loc_file");
+    # Check if the build is running
+    my $job = $self->get_running_master_lsf_job_for_build($build);
+    if ( $job ) {
+        $self->error_message("Build is currently running. Stop it first, then restart.");
         return 0;
+    }
+
+    # Since the job is not running, check if there is aserver location file and rm it
+    my $loc_file = $build->data_directory . '/server_location.txt';
+    if ( -e $loc_file ) {
+        $self->status_message("Removing server location file for dead lsf job: $loc_file");
+        unlink $loc_file;
     }
 
     my $w = $build->newest_workflow_instance;
