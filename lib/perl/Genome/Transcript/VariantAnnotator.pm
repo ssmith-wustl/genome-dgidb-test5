@@ -150,9 +150,14 @@ sub prioritized_transcript{
 sub transcripts {
     my ($self, %variant) = @_;
 
+    my $variant_start = $variant{'start'};
+    my $variant_stop = $variant{'stop'};
+
     # Make sure variant is set properly
-    unless (defined($variant{start}) and defined($variant{stop}) and defined($variant{variant}) and defined($variant{reference}) 
-            and defined($variant{type}) and defined($variant{chromosome_name})) {
+    unless (defined($variant_start) and defined($variant_stop) and defined($variant{variant})
+            and defined($variant{reference}) and defined($variant{type})
+            and defined($variant{chromosome_name}))
+    {
         print Dumper(\%variant);
         confess "Variant is not fully defined: chromosome name, start, stop, variant, reference, and type must be defined.\n";
     }
@@ -178,13 +183,11 @@ sub transcripts {
         if ($self->check_variants and not $variant_checked) {
             unless ($variant{reference} eq '-') {
                 my $chrom = $variant{chromosome_name};
-                my $start = $variant{start};
-                my $stop = $variant{stop};
                 my $species = $substruct->transcript_species;
-                my $ref_seq = Genome::Model::Tools::Sequence->execute(species => $species,  chromosome => $chrom,  start => $start, stop => $stop, suppress_output => 1)->sequence;
+                my $ref_seq = Genome::Model::Tools::Sequence->execute(species => $species,  chromosome => $chrom,  start => $variant_start, stop => $variant_stop, suppress_output => 1)->sequence;
 
                 unless ($ref_seq eq $variant{reference}) {
-                    $self->warning_message("Sequence on variant on chromosome $chrom between $start and $stop does not match $species reference!");
+                    $self->warning_message("Sequence on variant on chromosome $chrom between $variant_start and $variant_stop does not match $species reference!");
                     $self->warning_message("Variant sequence : " . $variant{reference});
                     $self->warning_message("$species reference : " . $ref_seq);
                     return;
