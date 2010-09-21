@@ -14,6 +14,11 @@ class EGAP::Command::TandemRepeatFinder {
             is_input => 1,
             doc => 'Fasta file containing supercontigs or contigs of an assembly',
         },
+        output_directory => {
+            is => 'Path',
+            is_input => 1,
+            doc => 'Split fastas and TRF output go in this directory',
+        },
     ],
     has_optional => [
         chunk_size => {
@@ -99,7 +104,7 @@ sub execute {
 
     my $split_fasta_command = EGAP::Command::SplitFasta->create(
         fasta_file => $self->fasta_file,
-        output_directory => "/gscuser/bdericks/egap_testing",  #FIXME This obviously needs to change
+        output_directory => $self->output_directory,
         max_bases_per_file => $self->chunk_size,
     );
     confess "Could not create split fasta file command object!" unless $split_fasta_command;
@@ -109,7 +114,7 @@ sub execute {
 
     my @fasta_files = @{$split_fasta_command->fasta_files};
     my $num_fastas = scalar @fasta_files;
-    my $fasta_directory = $split_fasta_command->output_directory; #FIXME This should change too
+    my $fasta_directory = $self->output_directory;
 
     $self->status_message("Created $num_fastas split fastas at $fasta_directory.");
 
