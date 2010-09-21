@@ -1,47 +1,52 @@
-#$Id$
-
 package PAP::Command::PsortB;
 
 use strict;
 use warnings;
 
-#use Workflow;
-
+use PAP;
 use Bio::Seq;
 use Bio::SeqIO;
 use Bio::SeqFeature::Generic;
-
 use English;
-use File::Temp;
 use IO::File;
 use IPC::Run;
 
-
 class PAP::Command::PsortB {
-    is  => ['PAP::Command'],
+    is  => 'PAP::Command',
     has => [
-        fasta_file      => { 
-                            is  => 'SCALAR', 
-                            doc => 'fasta file name' ,
-                            is_input => 1,
-                           },
-        gram_stain      => {
-                            is  => 'SCALAR',
-                            doc => 'gram stain (positive/negative)',
-                            is_input => 1,
-                           },
+        psortb_archive_dir => {
+            is => 'Path',
+            doc => 'Raw psortb output is placed in this directory',
+            is_input => 1,
+        },
+        fasta_file => { 
+            is  => 'Path',
+            doc => 'Path to fasta file',
+            is_input => 1,
+        },
+        gram_stain => {
+            is  => 'Text',
+            doc => 'gram stain (positive/negative)',
+            valid_values => ['positive', 'negative'],
+            is_input => 1,
+        },
+    ],
+    has_optional => [
         bio_seq_feature => { 
-                            is          => 'ARRAY', 
-                            is_optional => 1,
-                            doc         => 'array of Bio::Seq::Feature', 
-                            is_output => 1,
-                           },
-        lsf_queue => { is_param => 1, default_value => 'short', },
-        lsf_resource => { is_param => 1, default_value => "-R 'select[type==LINUX86] rusage[tmp=100]'", },
+            is => 'ARRAY', 
+            doc => 'array of Bio::Seq::Feature', 
+            is_output => 1,
+        },
+    ],
+    has_param => [
+        lsf_queue => {
+            default_value => 'short', 
+        },
+        lsf_resource => { 
+            default_value => "-R 'select[type==LINUX86] rusage[tmp=100]'", 
+        },
     ],
 };
-
-sub sub_command_sort_position { 10 }
 
 sub help_brief {
     "Run psort-b";
@@ -59,10 +64,9 @@ EOS
 }
 
 sub execute {
-
     my $self = shift;
     
-    
+    $DB::single = 1;
     my $fasta_file  = $self->fasta_file();
     my $gram_stain  = $self->gram_stain();
 
@@ -72,12 +76,14 @@ sub execute {
     elsif ($gram_stain eq 'negative') {
         $gram_stain = '-n';
     }
-    else {
-        die "gram stain should be positive or negative, not '$gram_stain'";
-    }
 
-    my $temp_fh = File::Temp->new();
-    my $temp_fn = $temp_fh->filename();
+    my $temp_fh = File::Temp->new(
+        TEMPLATE => 'psortb_raw_output_XXXXXX',
+        SUFFIX => '.out',
+        DIR => $self->psortb_archive_dir,
+        CLEANUP => 0,
+    );
+    my $output_file = $temp_fh->filename();
     $temp_fh->close();
     
     my @psortb_command = (
@@ -94,15 +100,15 @@ sub execute {
                   \@psortb_command,
                   \undef,
                   '>',
-                  $temp_fn,
+                  $output_file,
                   '2>',
                   \$psortb_err,
               ) || die "psort-b failed: $CHILD_ERROR";
     
-    my $feature_ref = $self->parse_psortb_terse($temp_fn);
+    my $feature_ref = $self->parse_psortb_terse($output_file);
     
     $self->bio_seq_feature($feature_ref);
-    
+    return 1;
 }
 
 sub parse_psortb_terse {
