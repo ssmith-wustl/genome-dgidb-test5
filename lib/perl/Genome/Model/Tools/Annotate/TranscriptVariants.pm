@@ -350,7 +350,10 @@ sub execute {
         die;
     }
 
+    $self->status_message("Starting annotation loop at ".scalar(localtime));
+    my $annotation_loop_start_time = time();
 
+    my $processed_variants = 0;
     while ( my $variant = $variant_svr->next ) {
         $variant->{type} = $self->infer_variant_type($variant);
         #make sure both the reference and the variant are in upper case
@@ -420,7 +423,11 @@ sub execute {
 
             $self->_print_annotation($variant, \@transcripts);
         }
+        $processed_variants++;
+        $self->status_message("$processed_variants variants processed " . scalar(localtime)) unless ($processed_variants % 10000);
     }
+
+    my $annotation_loop_stop_time = time();
 
     $annotation_stop = Benchmark->new;
     my $annotation_time = timediff($annotation_stop, $annotation_start);
@@ -429,6 +436,11 @@ sub execute {
     my $annotation_total_stop = Benchmark->new;
     my $total_time = timediff($annotation_total_stop, $annotation_total_start);
     $self->status_message('Total time to complete: ' . timestr($total_time, 'noc') . "\n\n") if $self->benchmark;
+
+    my $timediff = $annotation_loop_stop_time - $annotation_loop_start_time;
+    my $variants_per_sec = $processed_variants / $timediff;
+    $self->status_message("Annotated $processed_variants variants in " . $timediff . " seconds.  "
+                          . sprintf("%2.2f", $variants_per_sec) . " variants per second");
 
     $output_fh->close unless $output_fh eq 'STDOUT';
     return 1;
