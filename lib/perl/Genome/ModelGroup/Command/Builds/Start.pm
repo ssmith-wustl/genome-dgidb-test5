@@ -8,8 +8,6 @@ use Genome;
 class Genome::ModelGroup::Command::Builds::Start {
     is => ['Genome::ModelGroup::Command::Builds'],
     has_optional => [
-        model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},
-        model_group_name => { is => 'String', doc => 'name of model-group'},
         max_active => { is => 'Integer', doc => 'how many models may be running or scheduled at any given time', default => 10000},
         succeeded => { is => 'Boolean', default => 0, doc => 'include succeeded models in startable list' },
     ],
@@ -37,7 +35,7 @@ sub execute {
 
     my $mg = $self->get_mg;
 
-    my $active_count = $self->count_active;
+    my $active_count = $self->count_active($mg);
 
     for my $model ($mg->models) {
         my $model_name = $model->name;

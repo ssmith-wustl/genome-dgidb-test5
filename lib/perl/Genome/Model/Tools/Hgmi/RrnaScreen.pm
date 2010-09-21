@@ -75,6 +75,9 @@ sub execute
 {
     my $self = shift;
 
+    $self->status_message("Skipping rrna screen!");
+    return 1;
+
     my $rrnascreen_script = $self->script_location();
     $self->run_screen();
 

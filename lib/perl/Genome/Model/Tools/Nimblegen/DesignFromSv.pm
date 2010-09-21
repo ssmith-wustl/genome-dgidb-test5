@@ -149,7 +149,10 @@ sub execute {
         chomp $line;
         #my ($id,$chr1,$outer_start,$inner_start,$chr2,$inner_end,$outer_end,$type,$orient, $minsize) = split /\s+/, $line;
 		my ($id, )=split("\t", $line);
-		my ($chr1,$outer_start,$inner_start,$chr2,$inner_end,$outer_end) = ($id =~ /(\S+)\.(\d+)\.(\d+)\.(\S+)\.(\d+)\.(\d+)/);        
+		my ($chr1,$outer_start,$inner_start,$chr2,$inner_end,$outer_end) = ($id =~ /(\S+)\.(-*\d+)\.(-*\d+)\.(\S+)\.(-*\d+)\.(-*\d+)/);    
+		if(!defined $chr1 || !defined $chr2){
+			print "$line\n";
+		}    
         if($self->exclude_non_canonical_sites && ($chr1 =~ /^[MN]T/ || $chr2 =~ /^[MN]T/)) {
             printf $filtered_out_fh "%s\n", $line;
             next;
@@ -183,14 +186,14 @@ sub execute {
                 printf $filtered_out_fh "%s\n", $line;
             next;
         }
-        if($outer_end + $self->span > $chromosome_lengths{$chr1} - 1) {
-        	$outer_end_ = $chromosome_lengths{$chr1} - 1;
+        if($outer_end + $self->span > $chromosome_lengths{$chr2} - 1) {
+        	$outer_end_ = $chromosome_lengths{$chr2} - 1;
         }
         if($inner_end - $self->span < 1){
 			$inner_end_ = 1;
 		}        
-        if($inner_end - $self->span > $chromosome_lengths{$chr1} - 1) {
-			$inner_end = $chromosome_lengths{$chr1} - 1;
+        if($inner_end - $self->span > $chromosome_lengths{$chr2} - 1) {
+			$inner_end_ = $chromosome_lengths{$chr2} - 1;
         }
 
         # filter out those resolution > 2k

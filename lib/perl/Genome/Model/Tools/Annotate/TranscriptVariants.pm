@@ -142,6 +142,16 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             doc => 'If set, the annotator will get all coding region sequence after a frame shift',
         },
     ], 
+    has_param => [
+        lsf_resource => {
+            is => 'Text',
+            default => 'select[tmp>10240]',
+        },
+        lsf_queue => {
+            is => 'Text',
+            default => 'long',
+        },
+    ],
 };
 
 
@@ -251,6 +261,7 @@ sub execute {
     }
     else {
         $output_fh = $self->_create_file($output_file);
+        chmod(0664, $output_file);
     }
     $self->_transcript_report_fh($output_fh);
 
@@ -301,6 +312,7 @@ sub execute {
         }
         $self->build($build);
     }
+
 
     my $pre_annotation_stop = Benchmark->new;
     my $pre_annotation_time = timediff($pre_annotation_stop, $pre_annotation_start);
@@ -451,6 +463,8 @@ sub execute {
             }
         }
         $last_variant_start = $variant->{start};
+
+        Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->get_default_handle;
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
         # TODO... unduplicate this code

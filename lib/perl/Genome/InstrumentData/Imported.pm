@@ -52,6 +52,24 @@ class Genome::InstrumentData::Imported {
                 entity_class_name => 'Genome::InstrumentData::Imported', 
             ],
         },
+        sra_accession => { 
+            via => 'attributes', 
+            to => 'value', 
+            is_mutable => 1, 
+            where => [ 
+                property_name => 'sra_accession', 
+                entity_class_name => 'Genome::InstrumentData::Imported', 
+            ],
+        },
+        sra_sample_id => { 
+            via => 'attributes', 
+            to => 'value', 
+            is_mutable => 1, 
+            where => [ 
+                property_name => 'sra_sample_id', 
+                entity_class_name => 'Genome::InstrumentData::Imported', 
+            ],
+        },
     ],
     has_many_optional => [
         attributes => { is => 'Genome::MiscAttribute', reverse_as => '_instrument_data', where => [ entity_class_name => 'Genome::InstrumentData::Imported' ] },
@@ -181,7 +199,9 @@ sub total_bases_read {
     my $fwd_read_length = $self->fwd_read_length || 0;
     my $rev_read_length = $self->rev_read_length || 0;
     my $fragment_count = $self->fragment_count || 0;
-    
+    unless(defined($self->fragment_count)){
+        return undef;
+    }
     return ($fwd_read_length + $rev_read_length) * $fragment_count;
 }
 

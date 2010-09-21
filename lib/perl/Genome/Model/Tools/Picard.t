@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use_ok('Genome::Model::Tools::Picard');
 
@@ -16,6 +16,9 @@ isa_ok($picard, 'Genome::Model::Tools::Picard');
 my $picard_version = $picard->use_version();
 ok(-e $picard->path_for_picard_version($picard_version), "picard version ($picard_version) exists");
 
+
+my $newest_picard_version = $picard->latest_version();
+ok(-e $picard->path_for_picard_version($newest_picard_version), "newest picard version ($newest_picard_version) exists");
 
 ## email test
 SKIP: {

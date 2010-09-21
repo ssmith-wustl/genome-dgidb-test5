@@ -30,8 +30,7 @@ class Genome::Model::Build {
                                                       my $model = Genome::Model->get($model_id);
                                                       Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
                                                       return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($model->type_name);
-                                                  },
-
+                                                  }
                                    },
         data_directory          => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         model                   => { is => 'Genome::Model', id_by => 'model_id' },
@@ -175,7 +174,7 @@ sub __extend_namespace__ {
 
 sub create {
     my $class = shift;
-    if ($class eq __PACKAGE__) {
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # let the base class re-call the constructor from the correct sub-class
         return $class->SUPER::create(@_);
     }
@@ -843,10 +842,10 @@ sub success {
     if($self->type_name !~ /convergence/) {
         for my $model_group ($self->model->model_groups) {
             eval {
-                $model_group->launch_convergence_rebuild;
+                $model_group->schedule_convergence_rebuild;
             };
             if($@) {
-                $self->error_message('Could not launch convergence build for model group ' . $model_group->id . '.  Continuing anyway.');
+                $self->error_message('Could not schedule convergence build for model group ' . $model_group->id . '.  Continuing anyway.');
             }
         }
     }

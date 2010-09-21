@@ -113,7 +113,7 @@ xmlns:rest="urn:rest">
         <td class="buttons">
           <a class="mini btn popup-ajax">
             <xsl:attribute name="href">
-              <xsl:text>/view/</xsl:text>
+              <xsl:text>/viewajax/</xsl:text>
               <xsl:value-of select="$currentLink"/>
               <xsl:text>/statuspopup.html?id=</xsl:text>
               <xsl:value-of select="aspect[@name='current']/object[1]/@id"/>

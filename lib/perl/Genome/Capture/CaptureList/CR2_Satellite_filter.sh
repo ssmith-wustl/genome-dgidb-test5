@@ -15,6 +15,9 @@ set project_name = $argv[2];
 set i = $argv[3];
 set user = $argv[4];
 	set f = ${result_dir}/${project_name}${i};
+	if(-e $f.CR2.tmp) then
+	    rm -f $f.CR2.tmp
+	endif
 	# CR2
 	`grep BD $f | grep -v AS | perl -ane '$a=0; foreach ( @F[1..$#F] ) { ( $ncn,$tcn ) = ( $_=~/Ncn(\S+)\:Tcn(\S+)/ ) ; ( $tp ) = ($_=~/tp(\S+):/); $a = 1 if($ncn - $tcn > 0.5 && $tp =~ /DEL/ || $tcn-$ncn>0.5 && $tp =~ /ITX/);} print "$_" if($a);' > $f.CR2.tmp`
 	# filter

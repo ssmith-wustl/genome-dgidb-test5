@@ -72,7 +72,7 @@ sub new
 		my $fh = $params{index};
 		$self->_load_index_from_file($fh);
     }
-    elsif(-e $self->_input_file.".index" && $self->using_db)
+    elsif(defined $self->_input_file && -e $self->_input_file.".index" && $self->using_db)
     {
         $self->_index(Storable::retrieve($self->_input_file.".index"));
     }
