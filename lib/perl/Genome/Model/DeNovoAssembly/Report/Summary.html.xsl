@@ -65,22 +65,6 @@
           <td class="label">Assembler Params</td>
           <td class="value"><xsl:value-of select="//model-info/assembler-params"/></td>
 				</tr>
-				<tr>
-          <td class="label">Read Trimmer</td>
-          <td class="value"><xsl:value-of select="//model-info/read-trimmer-name"/></td>
-				</tr>
-				<tr>
-          <td class="label">Read Trimmer Params</td>
-          <td class="value"><xsl:value-of select="//model-info/read-trimmer-params"/></td>
-				</tr>
-				<tr>
-          <td class="label">Read Filter</td>
-          <td class="value"><xsl:value-of select="//model-info/read-filter-name"/></td>
-				</tr>
-				<tr>
-          <td class="label">Read Filter Params</td>
-          <td class="value"><xsl:value-of select="//model-info/read-filter-params"/></td>
-				</tr>
 			  </table>
 			</td>
       </tr>
