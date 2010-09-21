@@ -17,10 +17,6 @@ use Carp;
 class Genome::Transcript::VariantAnnotator{
     is => 'UR::Object',
     has => [
-        annotation_build_version => {
-            is => 'Text',
-            is_optional => 0,
-        },
         codon_translator => {
             is => 'Bio::Tools::CodonTable',
             is_optional => 1,
