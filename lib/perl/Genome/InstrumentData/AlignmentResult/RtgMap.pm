@@ -21,7 +21,7 @@ class Genome::InstrumentData::AlignmentResult::RtgMap{
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>16000] span[hosts=1] rusage[tmp=90000, mem=16000]' -M 16000000 -n 4";
+    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>30000] span[hosts=1] rusage[tmp=90000, mem=30000]' -M 30000000 -n 4";
 }
 
 sub _decomposed_aligner_params {
@@ -40,7 +40,7 @@ sub _decomposed_aligner_params {
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
-    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '14G');
+    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '28G');
     $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
 
     # get refseq info
