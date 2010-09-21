@@ -50,8 +50,8 @@ sub create_BAM_in_staging_directory {
             $self->status_message("No all_sequences.bam file found at ".$bam_output_path." attempting to create one.");
 
             #If the source of the imported BAM is broad, apply the debroadifyBam tool to it
-            if($instrument_data->import_source_name =~ /broad/i) {
-                $self->status_message("Import source is Broad, call DebroadifyBam tool and convert the broadiferous bam to GSC style.\n");
+            if(($instrument_data->import_source_name =~ /broad/i)||($instrument_data->import_source_name =~ /bcm/i)) {
+                $self->status_message("Import source is ".$instrument_data->import_source_name.", call DebroadifyBam tool and convert the broadiferous bam to GSC style.\n");
                 unless( my $result = Genome::Model::Tools::Sam::DebroadifyBam->execute(
                                 input_bam_file =>   $instrument_data->data_directory."/all_sequences.bam",
                                 output_bam_file =>  $bam_output_path, 

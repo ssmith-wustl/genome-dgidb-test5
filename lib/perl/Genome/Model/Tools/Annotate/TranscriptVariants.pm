@@ -313,6 +313,7 @@ sub execute {
         $self->build($build);
     }
 
+
     my $pre_annotation_stop = Benchmark->new;
     my $pre_annotation_time = timediff($pre_annotation_stop, $pre_annotation_start);
     $self->status_message('Pre-annotation: ' . timestr($pre_annotation_time, 'noc')) if $self->benchmark;
@@ -462,6 +463,8 @@ sub execute {
             }
         }
         $last_variant_start = $variant->{start};
+
+        Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->get_default_handle;
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
         # TODO... unduplicate this code

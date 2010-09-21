@@ -68,6 +68,7 @@ my $expected_metrics = {
     'reads_attempted' => 35000,
     'median_contig_length' => '141',
     #these values are zero bec there are no contigs or supercontigs > 500 bp this test set
+    'major_contig_length' => '500',
     'median_contig_length_gt_500' => '0',
     'average_contig_length_gt_500' => '0',
     'median_supercontig_length_gt_500' => '0',

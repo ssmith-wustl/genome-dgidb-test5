@@ -45,6 +45,10 @@ endif
 	set g5 = `grep CN $f | grep -v BD | grep -v PD | grep -v AS | perl -ane '($s)=($F[1]=~/sc(\S+)\:/); print "$_" if($s>=100);' | wc -l`
 	echo "\tCR5:" $g5;
         grep CN $f | grep -v BD | grep -v PD | grep -v AS | perl -ane '($s)=($F[1]=~/sc(\S+)\:/); print "$_" if($s>=100);' >> ${output_file};
+    # HD
+    set hd_intra = `grep HD $f | grep -v BD | grep -v PD | grep -v AS | grep -v CN | wc -l`;
+    echo "\tHD:" $hd_intra;
+	    grep HD $f | grep -v BD | grep -v PD | grep -v AS | grep -v CN >> ${output_file};
 	# CTX
 	set ctx = `more ${f_ctx} | wc -l`;
 	echo "\tCTX:" $ctx;

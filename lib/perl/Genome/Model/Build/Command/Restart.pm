@@ -5,8 +5,11 @@ use warnings;
 
 use Genome;
 
+require Carp;
+use Data::Dumper 'Dumper';
+
 class Genome::Model::Build::Command::Restart {
-    is => 'Genome::Model::Build::Command::Base',
+    is => 'Genome::Model::Build::Command',
     has => [
         lsf_queue => {
             default_value => 'workflow',
@@ -18,8 +21,8 @@ class Genome::Model::Build::Command::Restart {
             is_optional => 1,
             default_value => 0,
             doc => 'Restart with a new workflow, overrides the default of resuming an old workflow'
-        }
-    ]
+        },
+    ],
 };
 
 sub sub_command_sort_position { 5 }
@@ -35,9 +38,22 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    # Get build
-    my $build = $self->_resolve_build
-        or return;
+    my @builds = $self->_builds_for_filter; # confesses
+    for my $build ( @builds ) {
+        $self->_restart_build($build); # intentionally not checking return value
+    }
+
+    return 1;
+}
+
+sub _restart_build {
+    my ($self, $build) = @_;
+
+    if ( not defined $build ) {
+        Carp::confess('No build given to restart');
+    }
+
+    $self->status_message('Attempting to restart build: '.$build->id);
 
     if ($build->run_by ne $ENV{USER}) {
         $self->error_message("Can't restart a build originally started by: " . $build->run_by);

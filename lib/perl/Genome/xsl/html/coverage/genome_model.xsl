@@ -42,7 +42,8 @@
       window.cSummary = {
       <xsl:for-each select="//coverage-summary/model">
         <xsl:sort data-type="text" order="ascending" select="@subject_name"/>
-        "<xsl:value-of select="@subject_name"/>": {
+        "<xsl:value-of select="@id"/>": {
+        "subject_name": "<xsl:value-of select="@subject_name"/>",
         "pc_target_space_covered": {
         <xsl:for-each select="minimum_depth">
           <xsl:sort data-type="number" order="descending" select="@value"/>
