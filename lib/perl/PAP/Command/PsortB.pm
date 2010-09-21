@@ -64,9 +64,9 @@ EOS
 }
 
 sub execute {
-
     my $self = shift;
     
+    $DB::single = 1;
     my $fasta_file  = $self->fasta_file();
     my $gram_stain  = $self->gram_stain();
 
@@ -78,7 +78,7 @@ sub execute {
     }
 
     my $temp_fh = File::Temp->new(
-        'psortb_raw_output_XXXXXX',
+        TEMPLATE => 'psortb_raw_output_XXXXXX',
         SUFFIX => '.out',
         DIR => $self->psortb_archive_dir,
         CLEANUP => 0,
