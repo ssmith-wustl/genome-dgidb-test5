@@ -159,28 +159,16 @@ sub execute {
         $params{disk_allocations} = $self->allocation;
     }
 
-=cut
-    $self->check_fastq_integritude;
 
     unless(defined($params{read_count})){
-        my $read_count = $self->get_read_count;
+        my $read_count = $self->get_read_count();
         unless(defined($read_count)){
-            $self->error_message("No read count was specified and none could be calculated from the fastqs");
+            $self->error_message("No read count was specified and none could be calculated from the file.");
             die $self->error_message;
         }
         $self->read_count($read_count);
         $params{read_count} = $read_count;
     }
-    unless(defined($params{subset_name})){
-        my $subset_name = $self->get_subset_name;
-        unless($subset_name =~ /[1-8]/){
-            $self->error_message("Subset_name must be between 1-8. Found ".$subset_name);
-            die $self->error_message;
-        }
-        $self->subset_name($subset_name);
-        $params{subset_name} = $subset_name;
-    }
-=cut
 
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
@@ -196,56 +184,6 @@ sub execute {
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data record $instrument_data_id has been created.");
     $self->generated_instrument_data_id($instrument_data_id);
-
-
-=cut
-    my $ref_name = $self->reference_name;
-
-    my $sources = $self->source_data_files;
-
-    if( $sources =~ s/\/\//\//g) {
-        $self->source_data_files($sources);            
-    }
-
-    my @input_files = split /\,/, $self->source_data_files;
-    for (sort(@input_files)) {
-        unless( -s $_) {
-            $self->error_message("Input file(s) were not found $_");
-            die $self->error_message;
-        }
-    }        
-    $self->source_data_files(join( ',',sort(@input_files)));
-
-    $self->status_message("About to get a temp allocation");
-    my $tmp_tar_file = File::Temp->new("fastq-archive-XXXX",DIR=>"/tmp");
-    my $tmp_tar_filename = $tmp_tar_file->filename;
-
-    my $suff = ".txt";    
-    my $basename;
-    my %basenames;
-    my @inputs;
-    for my $file (sort(@input_files)) {
-        my ($filename,$path,$suffix) = fileparse($file, $suff);
-        $basenames{$path}++;
-        $basename = $path;
-        my $fastq_name = $filename.$suffix;
-        unless(($fastq_name=~m/^s_[1-8]_sequence.txt$/)||($fastq_name=~m/^s_[1-8]_[1-2]_sequence.txt$/)){
-            $self->error_message("File basename - $fastq_name - did not have the form: \n\t\t\t\t s_[1-8]_sequence.txt or s_[1-8]_[1-2]_sequence.txt\n");
-            die $self->error_message;
-        }
-        push @inputs,$fastq_name;
-    }
-    unless(scalar(keys(%basenames))==1) {
-        $self->error_message("Found more than one path to imported files.");
-        die $self->error_message;
-    }
-    my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @inputs);
-    $self->status_message("About to execute tar command, this could take a long time, depending upon the location (across the network?) and size (MB or GB?) of your fastq's.");
-    unless(Genome::Utility::FileSystem->shellcmd(cmd=>$tar_cmd)){
-        $self->error_message("Tar command failed to complete successfully. The command looked like :   ".$tar_cmd);
-        die $self->error_message;
-    }
-=cut
 
     $import_instrument_data->original_data_path($self->source_data_file);
 
@@ -312,17 +250,14 @@ sub execute {
 
 sub get_read_count {
     my $self = shift;
-    my ($line_count,$read_count);
-    my @files = split ",", $self->source_data_files;
+    my $line_count;
     $self->status_message("Now attempting to determine read_count by calling wc on the imported genotype.");
-    for my $file (@files){
-        my $sub_count = `wc -l $file`;
-        ($sub_count) = split " ",$sub_count;
-        unless(defined($sub_count)&&($sub_count > 0)){
-            $self->error_message("couldn't get a response from wc.");
-            return undef;
-        }
-        $line_count += $sub_count;
+    my $file = $self->source_data_file;
+    $line_count = `wc -l $file`;
+    $line_count = split " ",$line_count;
+    unless(defined($line_count)&&($line_count > 0)){
+        $self->error_message("couldn't get a response from wc.");
+        return undef;
     }
     return $line_count
 }
