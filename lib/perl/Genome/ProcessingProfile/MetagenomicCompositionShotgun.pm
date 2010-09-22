@@ -137,9 +137,9 @@ sub _execute_build {
     if ($self->skip_contamination_screen){
         #if skipping contamination_screen, we need to extract the originally assigned imported instrument data and process and reimport it for the metagenomic screen.
         #sra data is stored in fastq/sangerqual format, so these just need to be extracted, dusted, n-removed
-        my @sra_assignments = $self->instrument_data_assignments; 
+        my @sra_assignments = $build->instrument_data_assignments; 
         for my $assignment(@sra_assignments){
-            my @post_processed_reads = $self->_process_sra_instrument_data($assignment);
+            my @post_processed_reads = $self->_process_sra_instrument_data($assignment->instrument_data);
             #TODO, this doesn't need to be an array of array refs, since we should get a 1 to 1 sra inst_data to post-processed imported inst_data, but this is how it's done in the original pipeline, where the 1 to 1 convention doesn't hold.  We're sticking to this standard for now.
             push @imported_instrument_data_for_metagenomic_models, \@post_processed_reads;
         }
