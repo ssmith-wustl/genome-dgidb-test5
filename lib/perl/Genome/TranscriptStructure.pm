@@ -1,13 +1,5 @@
-package Genome::TranscriptSubStructure;
+package Genome::TranscriptStructure;
 #:adukes short term: move data directory into id_by, but this has to be done in parallel w/ rewriting all file-based data sources.  It might be better to wait until long term: custom datasource that incorporates data_dir, possibly species/source/version, eliminating the need for these properties in the id, and repeated multiple times in the files
-
-
-######################################################
-#
-# NOTE!  This class is probably obsolete.  The annotator (Genome::Transcript::VariantAnnotator)
-# uses the new class Genome::TranscriptStructure
-#
-# ###########################################################################333
 
 use strict;
 use warnings;
@@ -15,21 +7,22 @@ use warnings;
 use Genome;
 use Carp;
 
-class Genome::TranscriptSubStructure {
-    type_name => 'genome transcript sub structure',
+class Genome::TranscriptStructure {
+    type_name => 'genome transcript structure',
     table_name => 'TRANSCRIPT_SUB_STRUCTURE',
     id_by => [
+        chrom_name => {
+            is => 'Text',
+        },
+        data_directory => {
+            is => "Path",
+        },
+        structure_start => {
+            is => 'NUMBER',
+            is_optional => 1,
+        },
         transcript_structure_id => { 
             is => 'NUMBER', 
-        },
-        species => { is => 'varchar',
-            is_optional => 1,
-        },
-        source => { is => 'VARCHAR',
-            is_optional => 1,
-        },
-        version => { is => 'VARCHAR',
-            is_optional => 1,
         },
     ],
     has => [
@@ -40,13 +33,18 @@ class Genome::TranscriptSubStructure {
             is => 'VARCHAR',    
             is_optional => 1 
         },
-        structure_start => { 
-            is => 'NUMBER', 
-            is_optional => 1 
-        },
         structure_stop => { 
             is => 'NUMBER', 
             is_optional => 1 
+        },
+        species => { is => 'varchar',
+            is_optional => 1,
+        },
+        source => { is => 'VARCHAR',
+            is_optional => 1,
+        },
+        version => { is => 'VARCHAR',
+            is_optional => 1,
         },
         ordinal => { 
             is => 'NUMBER', 
@@ -63,12 +61,6 @@ class Genome::TranscriptSubStructure {
         transcript => { #TODO, straighten out ID stuff w/ Tony
             is => 'Genome::Transcript', 
             id_by => 'transcript_id' 
-        },
-        data_directory => {
-            is => "Path",
-        },
-        chrom_name => {
-            via => 'transcript',
         },
         gene => {
             via => 'transcript',
@@ -110,9 +102,49 @@ class Genome::TranscriptSubStructure {
             is_optional => 1,
             doc => 'Any bases that the phase of the NEXT exon indicates are needed to complete a codon',
         },
+
+        # Info duplicated from the transcript data
+        transcript_transcript_id => { is => 'Text', },
+        transcript_gene_id       => { is => 'Text', is_optional => 1, },
+        transcript_transcript_start => { is => 'NUMBER', is_optional => 1 },
+        transcript_transcript_stop  => { is => 'NUMBER', is_optional => 1 },
+        transcript_transcript_name  => { is => 'VARCHAR', is_optional => 1 },
+        transcript_transcript_status => { is => 'VARCHAR', is_optional => 1,
+            valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel'],
+        },
+        transcript_strand            => { is => 'VARCHAR', is_optional => 1, valid_values => ['+1', '-1', 'UNDEF'], },
+        transcript_chrom_name        => { is => 'Text' },
+        transcript_species           => { is => 'Text', is_optional => 1 },
+        transcript_source            => { is => 'VARCHAR', is_optional => 1, },
+        transcript_version           => { is => 'VARCHAR', is_optional => 1, },
+        transcript_gene_name         => { is => 'Text', is_optional => 1, },
+        transcript_transcript_error  => { is => 'Text', is_optional => 1,
+            doc => 'Describes any error with the transcript, which affects its priority when compared with other transcripts',
+        },
+        transcript_coding_region_start => { is => 'Number', is_optional => 1,
+            doc => 'The first nucleotide of the transcript\'s coding region, always less than stop (in other words, ignores strand)',
+        },
+        transcript_coding_region_stop => { is => 'Number', is_optional => 1,
+            doc => 'The last nucleotide of the transcript\'s coding region, always greater than stop (ignores strand)',
+        },
+        transcript_amino_acid_length  => { is => 'Number', is_optional => 1,
+            doc => 'The length of the amino acid to which the coding region of the transcript translates',
+        },
+
+        gene => { calculate_from => [qw/transcript_gene_id data_directory/],
+            calculate => q|
+            Genome::Gene->get(id => $transcript_gene_id, data_directory => $data_directory);
+            |,
+        },
+        protein => {
+            calculate_from => [qw/ transcript_transcript_id data_directory/],
+            calculate => q|
+            Genome::Protein->get(transcript_id => $transcript_transcript_id, data_directory => $data_directory);
+            |,
+        },
     ],
     schema_name => 'files',
-    data_source => 'Genome::DataSource::TranscriptSubStructures',
+    data_source => 'Genome::DataSource::TranscriptStructures',
 };
 
 sub length {
@@ -121,19 +153,30 @@ sub length {
     return $length;
 }
 
+
+# Overriding the default accessor because there's no other easy way to split
+# out the individual parts of the transcript's ID from our transcript_id, while
+# also adding in the data_directory
+sub transcript {
+    my $self = shift;
+
+    return Genome::Transcript->get(data_directory => $self->data_directory,
+                                   id             => $self->transcript_id);
+}
+
 # bdericks: I really don't like this method. Lots of annotation stuff assumes that strand is either
 # -1 or +1, and if someone calls structure->strand expecting it to work just like transcript->strand
 # they're gonna have some problems.
 sub strand {
     my $self = shift;
     my $t = $self->transcript;
-    my $strand = '.';
     if ($t->strand eq '+1') {
-        $strand = '+';
+        return '+';
     } elsif ($t->strand eq '-1') {
-        $strand = '-';
+        return '-';
+    } else {
+        return '.';
     }
-    return $strand;
 }
 
 sub frame {
@@ -234,12 +277,11 @@ sub sequence_position {
     my ($self, $position) = @_;
     return unless $self->{structure_type} eq 'cds_exon';
 
-    my $transcript = $self->transcript;
     my $num_borrowed = $self->num_phase_bases_before;
 
     my $seq_start;
-    $seq_start = $self->structure_start if $transcript->strand eq '+1';
-    $seq_start = $self->structure_stop if $transcript->strand eq '-1';
+    $seq_start = $self->structure_start if $self->transcript_strand eq '+1';
+    $seq_start = $self->structure_stop if $self->transcript_strand eq '-1';
 
     my $seq_position = $num_borrowed + abs($seq_start - $position);
 
@@ -253,7 +295,7 @@ sub distance_to_start {
     my ($self, $position) = @_;
     my $structure_start = $self->structure_start;
     my $structure_stop = $self->structure_stop;
-    my $strand = $self->transcript->strand;
+    my $strand = $self->transcript_strand;
     ($structure_start, $structure_stop) = ($structure_stop, $structure_start) if $strand eq '-1';
 
     return abs($position - $structure_start);
@@ -264,7 +306,7 @@ sub distance_to_stop {
     my ($self, $position) = @_;
     my $structure_start = $self->structure_start;
     my $structure_stop = $self->structure_stop;
-    my $strand = $self->transcript->strand;
+    my $strand = $self->transcript_strand;
     ($structure_start, $structure_stop) = ($structure_stop, $structure_start) if $strand eq '-1';
 
     return abs($position - $structure_stop);
@@ -431,6 +473,176 @@ sub gff3_string {
 sub gtf_string {
     return undef;
 }
+
+
+# Methods copied over from Genome::Transcript to work with the duplicated transcript data
+
+sub transcript_has_coding_region {
+    my $self = shift;
+
+    return 0 if $self->transcript_coding_region_start eq 'NULL' or $self->transcript_coding_region_stop eq 'NULL';
+    return 1;
+}
+
+sub transcript_distance_to_coding_region {
+    my ($self, $position) = @_;
+
+    return 0 if (! $self->transcript_has_coding_region or (index($self->transcript_transcript_error,'rna_with_coding_region') >= 0));
+    my $coding_start = $self->transcript_coding_region_start;
+    my $coding_stop = $self->transcript_coding_region_stop;
+
+    return 0 if $coding_start eq 'NULL' or $coding_stop eq 'NULL';
+    return 0 if $position >= $coding_start and $position <= $coding_stop;
+
+    my $distance;
+    if ($self->transcript_before_coding_region($position)) {
+        $distance = abs($coding_start - $position) if $self->transcript_strand eq '+1';
+        $distance = abs($coding_stop - $position) if $self->transcript_strand eq '-1';
+    }
+    else {
+        $distance = abs($coding_stop - $position) if $self->transcript_strand eq '+1';
+        $distance = abs($coding_start - $position) if $self->transcript_strand eq '-1';
+    }
+
+    return $distance;
+}
+
+
+sub transcript_before_coding_region {
+    my ($self, $position) = @_;
+
+    my $start = $self->transcript_coding_region_start;
+    my $stop = $self->transcript_coding_region_stop;
+
+    return 0 if $start eq 'NULL' or $stop eq 'NULL';
+
+    my $strand = $self->transcript_strand;
+    if ($strand eq '+1') {
+        return 1 if $position < $self->transcript_coding_region_start;
+        return 0;
+    }
+    elsif ($strand eq '-1') {
+        return 1 if $position > $self->transcript_coding_region_stop;
+        return 0;
+    }
+    else {
+        $self->error_message("Transcript " . $self->transcript_transcript_name . " has an invalid strand: " . $self->transcript_strand);
+        confess "Invalid strand on transcript " . $self->transcript_transcript_name;
+    }
+}
+
+sub transcript_after_coding_region {
+    my ($self, $position) = @_;
+
+    my $start = $self->transcript_coding_region_start;
+    my $stop = $self->transcript_coding_region_stop;
+
+    return 0 if $start eq 'NULL' or $stop eq 'NULL';
+
+    my $strand = $self->transcript_strand;
+    if ($strand eq '+1') {
+        return 1 if $position > $self->transcript_coding_region_stop;
+        return 0;
+    }
+    elsif ($strand eq '-1') {
+        return 1 if $position < $self->transcript_coding_region_start;
+        return 0;
+    }
+    else {
+        $self->error_message("Transcript " . $self->transcript_transcript_name . " has an invalid strand: " . $self->transcript_strand);
+        confess "Invalid strand on transcript " . $self->transcript_transcript_name;
+    }
+}
+
+
+sub transcript_distance_to_transcript {
+    my ($self, $position) = @_;
+
+    my $start = $self->transcript_transcript_start;
+    my $stop = $self->transcript_transcript_stop;
+    if ($position < $start) {
+        return $start - $position;
+    }
+    elsif ($position > $stop) {
+        return $position - $stop;
+    }
+    else {
+        return 0;
+    }
+}
+
+
+# Returns 1 if first position is 5' of the second position
+sub transcript_is_before {
+    my ($self, $p1, $p2) = @_;
+    return 0 unless $self->transcript_within_transcript_with_flanks($p1) and $self->transcript_within_transcript_with_flanks($p2);
+
+    my $strand = $self->transcript_strand;
+    if ($strand eq '+1') {
+        return 1 if $p1 < $p2;
+        return 0;
+    }
+    elsif ($strand eq '-1') {
+        return 1 if $p1 > $p2;
+        return 0;
+    }
+    else {
+        confess "Invalid strand " . $strand . " on transcript " . $self->transcript_transcript_name;
+    }
+}
+
+# Returns 1 if the first position is 3' of the second position
+sub transcript_is_after {
+    my ($self, $p1, $p2) = @_;
+    return 0 unless $self->transcript_within_transcript_with_flanks($p1) and $self->transcript_within_transcript_with_flanks($p2);
+
+    my $strand = $self->transcript_strand;
+    if ($strand eq '+1') {
+        return 1 if $p1 > $p2;
+        return 0;
+    }
+    elsif ($strand eq '-1') {
+        return 1 if $p1 < $p2;
+        return 0;
+    }
+    else {
+        confess "Invalid strand " . $strand . " on transcript " . $self->transcript_transcript_name;
+    }
+}
+
+
+# Returns 1 if the provided position is within the transcript with flanking structures included
+sub transcript_within_transcript_with_flanks {
+    my ($self, $position) = @_;
+    if ($position >= ($self->transcript_transcript_start - 50000) and $position <= ($self->transcript_transcript_stop + 50000)) {
+        return 1;
+    }
+    return 0;
+}
+
+# Returns 1 if the position lies within the coding region of the transcript
+sub transcript_within_coding_region {
+    my ($self, $position) = @_;
+    my $start = $self->transcript_coding_region_start;
+    my $stop = $self->transcript_coding_region_stop;
+
+    return 0 if $start eq 'NULL' or $stop eq 'NULL';
+    return 1 if $position >= $start and $position <= $stop;
+    return 0;
+}
+
+# Returns 1 if the provided position is within the start/stop range of the transcript, EXCLUDES flanking regions
+sub within_transcript {
+    my ($self, $position) = @_;
+    if ($position >= $self->transcript_transcript_start and $position <= $self->transcript_transcript_stop) {
+        return 1;
+    }
+    return 0;
+}
+
+
+
+
 
 1;
 

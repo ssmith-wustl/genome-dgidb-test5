@@ -40,6 +40,11 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             default_value=> 0,
             doc => 'mismatch cutoff (including softclip) for post metagenomic alignment processing',
         },
+        skip_contamination_screen => {
+            is => 'Boolean',
+            default_value=>0,
+            doc => "If this flag is specified, the instrument data assigned to this model will not be human screened, but will undergo dusting and n-removal before undergoing metagenomic alignment",
+        },
     ],
     has => [
         _contamination_screen_pp => {
