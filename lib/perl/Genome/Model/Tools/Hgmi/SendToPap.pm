@@ -59,6 +59,10 @@ UR::Object::Type->define(
             is  => 'String',
             doc => 'keggscan raw output archive directory',
         },
+        psortb_archive_dir => {
+            is => 'Path',
+            doc => 'psortb raw output archive directory',
+        },
     ],
     has_optional => [
         taxon_id => {
@@ -389,6 +393,7 @@ sub do_pap_workflow
                                        'gram stain'           => $self->gram_stain(),
                                        'interpro archive dir' => $self->interpro_archive_dir(),
                                        'keggscan archive dir' => $self->keggscan_archive_dir(),
+                                       'psortb archive dir'   => $self->psortb_archive_dir(),
                                       );
 
         }
@@ -404,6 +409,7 @@ sub do_pap_workflow
                                        'blastp archive dir'   => $self->blastp_archive_dir(),
                                        'interpro archive dir' => $self->interpro_archive_dir(),
                                        'keggscan archive dir' => $self->keggscan_archive_dir(),
+                                       'psortb archive dir'   => $self->psortb_archive_dir(),
                                       );
         }
 
