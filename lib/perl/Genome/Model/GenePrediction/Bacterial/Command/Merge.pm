@@ -1,9 +1,11 @@
-package Genome::Model::GenePrediction::Command::Merge;
+package Genome::Model::GenePrediction::Bacterial::Command::Merge;
 
 
 use strict;
 use warnings;
 use Genome;
+
+use lib "/gsc/scripts/opt/bacterial-bioperl";
 
 use BAP::Config;
 use BAP::DB::Organism;
@@ -35,7 +37,7 @@ use IPC::Run;
 use MIME::Lite;
 use XML::DOM::XPath;
 
-class Genome::Model::GenePrediction::Command::Merge {
+class Genome::Model::GenePrediction::Bacterial::Command::Merge {
     is  => 'Command',
     doc => "",
     has => [
@@ -193,6 +195,9 @@ sub execute
     my $self = shift;
     my $user = $ENV{USER};
 
+    $self->status_message("Skipping merge step");
+    return 1;
+
     $self->status_message("iprpath : ".$self->iprpath);
 
     my $runner_count = $self->runner_count;
@@ -229,26 +234,23 @@ sub execute
     my $bap_version = BAP::Config->new()->version();
 
     # Find all the riboswitches / leaders in Rfam and note the accessions
-    my %rfam_special = ();
-    {
+    my %rfam_special;
+    my $rfam_io = Bio::AlignIO->new(
+        -file => $self->rfam_seed 
+    );
 
-        # FIXME: this should not be hard-coded
-        my $rfam_io = Bio::AlignIO->new(
-#            -file => '/gsc/pkg/bio/rfam/installed/Rfam.seed' ); # config opt
-            -file => $self->rfam_seed );
+    # This loop emits thousands and thousands of bioperl warnings, which are the result
+    # of Bio::Seq::Meta objects being created by the next_aln method below. Setting
+    # verbose to -1 suppresses these warnings and keeps the error log from being
+    # filled with hundreds of thousands of lines of warning messages.
+    $rfam_io->verbose(-1);
+    $DB::single = 1;
+    while (my $aln = $rfam_io->next_aln) {
+        my $accession   = $aln->accession();
+        my $description = $aln->description();
 
-        while ( my $aln = $rfam_io->next_aln )
-        {
-
-            my $accession   = $aln->accession();
-            my $description = $aln->description();
-
-            if (   ( $description =~ /riboswitch/i )
-                || ( $description =~ /leader/i ) )
-            {
-                $rfam_special{$accession} = 1;
-            }
-
+        if (($description =~ /riboswitch/i) || ($description =~ /leader/i)) {
+            $rfam_special{$accession} = 1;
         }
     }
     $self->_rfam_special(\%rfam_special);
@@ -313,7 +315,7 @@ sub execute
     my %fetched_sequences = ();
 
     {
-
+        $DB::single = 1;
         my $sequence_set
             = BAP::DB::SequenceSet->retrieve( $self->sequence_set_id );
 

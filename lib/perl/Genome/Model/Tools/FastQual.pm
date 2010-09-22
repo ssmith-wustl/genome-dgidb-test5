@@ -43,6 +43,9 @@ class Genome::Model::Tools::FastQual {
             # TODO includes fasta: 
             # doc => 'Output files, or "PIPE" if writing from another program. If multiple files are given for fastq types (sanger, illumina), one sequence from each set will be written to each file. If multiple files are given for type phred (fasta), the sequences will be written to the first file, and the qualities will eb written to the second file.',
         },
+        _writer => {
+            is_optional => 1,
+        },
         type_out => {
             is  => 'Text',
             default_value => 'sanger',
@@ -55,7 +58,11 @@ class Genome::Model::Tools::FastQual {
         metrics_file => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Output general sequence metrics to this file.',
+            doc => 'Output general sequence metrics to this file. Current metrics include: count, bases',
+        },
+        _metrics => {
+            is => 'HASH',
+            is_optional => 1,
         },
     ],
 };
@@ -130,10 +137,16 @@ sub _enforce_type {
 
 #< Create >#
 sub create {
-    my ($class, %params) = @_;
+    my $class = shift;
 
-    my $self = $class->SUPER::create(%params)
+    my $self = $class->SUPER::create(@_)
         or return;
+
+    $self->_add_result_observer;  #confesses on error
+
+    if ( not defined $self->type_out ) {
+        $self->type_out( $self->type_in );
+    }
 
     return $self;
 }
@@ -188,11 +201,16 @@ sub _open_stdin_reader {
         Carp::confess("No pipe meta info. Are you sure you wanted to read from a pipe?");
     }
 
-    my $type = $reader_info->{type};
-    unless ( $type ) {
-        Carp::confess("No type from pipe");
+    if ( not defined $reader_info->{type_in} ) {
+        Carp::confess("No type in from pipe");
     }
-    $self->type_in( $reader_info->{type} );
+    $self->type_in( $reader_info->{type_in} );
+
+    if ( not defined $reader_info->{type_in} ) {
+        Carp::confess("No type out from pipe");
+    }
+    $self->type_out( $reader_info->{type_out} );
+
     $self->_enforce_type;
     
     return $reader;
@@ -201,7 +219,6 @@ sub _open_stdin_reader {
 sub _open_writer {
     my $self = shift;
 
-    $DB::single = 1;
     my @output = $self->output;
     unless ( @output ) {
         Carp::confess("Output files or 'PIPE' is required.");
@@ -226,7 +243,7 @@ sub _open_writer {
         $self->_setup_write_observer($writer); # confess in sub
     }
 
-    return $writer;
+    return $self->_writer($writer);
 }
 
 sub _open_stdout_writer {
@@ -236,7 +253,10 @@ sub _open_stdout_writer {
     my $writer = Genome::Utility::IO::StdoutRefWriter->create
         or Carp::confess("Can't open pipe to STDOUT");
     # write the meta info - TODO output type
-    $writer->write({ type => $self->type_in });
+    $writer->write({
+            type_in => $self->type_in,
+            type_out => $self->type_out,
+        });
 
     return $writer;
 }
@@ -257,48 +277,84 @@ sub _open_fastq_set_writer {
     return $writer;
 }
 
-my %writers_observed;
-my @writer_classes_overloaded;
-my $result_obeserver;
-sub _setup_write_observer {
+#< Observers >#
+
+# Need these as class vars
+my %metrics; # writer class and id => metrics
+my @writer_classes_overloaded; # writer classes that are overloaded below
+#
+
+sub _add_result_observer { # to write metrics file
+    my $self = shift;
+
+    my $result_observer = $self->add_observer(
+        aspect => 'result',
+        callback => sub {
+            #print Dumper(\@_);
+            my ($self, $method_name, $prior_value, $new_value) = @_;
+            if ( not $new_value ) {
+                return 1;
+            }
+
+            # Skip if we don't have a metrics file or a writer
+            my $metrics_file = $self->metrics_file;
+            return 1 if not defined $self->_writer or not defined $self->metrics_file;
+
+            my $writer_class_id = ref( $self->_writer ).' '.$self->_writer->id;
+            my $metrics = $metrics{$writer_class_id};
+            if ( not defined $metrics ) { # very bad
+                Carp::confess("Requested to output metrics, but none were found for writer ($writer_class_id)");
+            }
+
+            unlink $metrics_file if -e $metrics_file;
+            my $fh;
+            eval{
+                $fh= Genome::Utility::FileSystem->open_file_for_writing($metrics_file);
+            };
+            unless ( $fh ) {
+                Carp::confess("Cannot open metrics file ($metrics_file) for writing: $@");
+            }
+
+            for my $stat ( sort keys %$metrics) {
+                $fh->print( $stat.'='.$metrics->{$stat}."\n");
+            }
+            $fh->close;
+            return 1;
+        }
+    );
+
+    if ( not defined $result_observer ) {
+        Carp::confess("Cannot create result observer");
+    }
+
+    return 1;
+}
+
+sub _setup_write_observer { # to add to metrics when seqs are written
     my ($self, $writer) = @_;
 
-    unless ($writer ) {
-        Carp::confess('No writer given to setup observer.');
-    }
-
-    my $writer_class = ref($writer);
-    unless ($writer_class ) {
-        Carp::confess('No class for writer to setup observer.');
-    }
-
-    my $writer_id = $writer->id;
-    unless ( $writer_id ) {
-        Carp::confess('No id for writer: '.Dumper$writer);
-    }
-
     # Writer Class and ID - set in writers observed, 
-    my $writer_class_id = $writer_class.' '.$writer_id;
-    return 1 if exists $writers_observed{$writer_class_id};
-    $writers_observed{$writer_class_id} = { bases => 0, count => 0, };
+    my $writer_class_id = ref($writer).' '.$writer->id;
+    return 1 if exists $metrics{$writer_class_id}; # already observing
+    $metrics{$writer_class_id} = { 
+        bases => 0, 
+        count => 0,
+    }; # Add more??
 
-    # Is this writer class overloaded?
+    # Don't overload the writer class more than once
+    my $writer_class = ref($writer);
     unless (  grep { $writer_class eq $_ } @writer_classes_overloaded ) {
         my $write_method = $writer_class.'::write';
         my $write = \&{$write_method};
         no strict 'refs';
         no warnings 'redefine';
         *{$write_method} = sub{ 
-            $write->(@_); 
+            $write->(@_) or return; 
             my $writer_class_id = ref($_[0]).' '.$_[0]->id;
-            unless ( exists $writers_observed{$writer_class_id} ) {
-                # skip if not observing this writer
-                return 1;
-            }
-            # add to metrics
+            my $metrics = $metrics{$writer_class_id};
             for ( @{$_[1]} ) { 
-                $writers_observed{$writer_class_id}->{bases} += length($_->{seq});
-                $writers_observed{$writer_class_id}->{count}++;
+                $metrics->{bases} += length($_->{seq});
+                $metrics->{count}++;
             }
             return 1;
         }; 
@@ -307,37 +363,9 @@ sub _setup_write_observer {
         push @writer_classes_overloaded, $writer_class;
     }
 
-    # Result observer, so we know when the command has been executed. Only need one for all FastQual commands
-    unless ( $result_obeserver ) {
-        $result_obeserver = $self->add_observer(
-            aspect => 'result',
-            callback => sub {
-                my ($self, $method, $prior_value, $value) = @_;
-
-                return unless $value; # don't output metrics if excute failed, or was not called
-
-                my $metrics_file = $self->metrics_file;
-                unlink $metrics_file if -e $metrics_file;
-                my $fh;
-                eval{
-                    $fh= Genome::Utility::FileSystem->open_file_for_writing($metrics_file);
-                };
-                unless ( $fh ) {
-                    Carp::confess("Cannot open metrics file ($metrics_file) for writing: $@");
-                }
-                for my $stat ( sort keys %{$writers_observed{$writer_class_id}}) {
-                    $fh->print( $stat.'='.$writers_observed{$writer_class_id}->{$stat}."\n");
-                }
-                return 1;
-            }
-        );
-        unless ( $result_obeserver ) {
-            Carp::confess('Cannot create observer for property "result"');
-        }
-    }
-
     return 1;
 }
+#<>#
 
 1;
 

@@ -20,74 +20,83 @@ use Bio::SeqIO;
 use Cwd;
 use English;
 
-UR::Object::Type->define(
-                         class_name => __PACKAGE__,
-                         is => 'Command',
-                         has => [
-                                 'organism_name' => {is => 'String',
-                                                     doc => "" },
-                                 'locus_tag' => {is => 'String',
-                                                      doc => "" },
-                                 'project_type' => {is => 'String',
-                                                    doc => "" },
-                                 'nr_db'        => {is => 'String',
-                                                    doc => "path to nr seq db",
-                                                    is_optional => 1,
-                                                    default => "/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr"},
-                                 'locus' => {is => 'String',
-                                        doc => "",
-                                        is_optional => 1},
-                                 'gram_stain' => {is => 'String',
-                                                  doc => "",
-                                                  is_optional => 1},
-                                 'ncbi_taxonomy_id' => {is => 'String',
-                                                        doc => "",
-                                                        is_optional => 1},
-                                 'dev' => {is => 'Boolean',
-                                           doc => "",
-                                           is_optional => 1},
-                                 'sequence_set_id'   => { is => 'Integer',
-							  doc => "sequence set id" ,
-							  is_optional => 1},
-                                 'acedb_version'     => { is => 'String',
-							  doc => "Ace DB version (V1,V2,etc)" },
-                                 'sequence_set_name' => {is => 'String',
-                                                         doc => "",
-                                                         is_optional => 1},
-                                 'work_directory'    => {is => 'String',
-							 doc => "",
-							 is_optional => 1},
-                                 'script_location'   => {is => 'String',
-							 doc => "path or name of bap finish project script",
-							 is_optional => 1,
-							 default => "bap_finish_project",},
-				 'skip_acedb_parse'  => {is => 'Boolean',
-							 doc => "skip parsing into acedb for testing",
-							 is_optional => 1,
-							 default => 0, # this skips parsing into acedb...
-						        },
-				 'assembly_name'     => {
-				                         is  => 'String',
-							 doc => "assembly name from the config file",
-							 },
-				 'org_dirname'       => {
-                                                         is  => 'String',
-							 doc => "organism directory name from config file",
-				                        },
-				 'assembly_version'  => {
-				                         is  => 'String',
-							 doc => "assembly version from config file",
-				                        },
-				 'pipe_version'      => {
-                                                         is  => 'String',
-							 doc => "pipe version from config file",
-                                                        },
-				 'path'              => {
-                                                         is  => 'String',
-							 doc => "path from config file",
-                                                        },
-                                 ]
-                         );
+class Genome::Model::Tools::Hgmi::Finish {
+    is => 'Command',
+    has => [
+        organism_name => {
+            is => 'String',
+        },
+        locus_tag => {
+            is => 'String',
+        },
+        project_type => {
+            is => 'String',
+        },
+    ],
+    has_optional => [ 
+        nr_db => {
+            is => 'String',
+            doc => "path to nr seq db",
+            default => "/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr"
+        },
+        locus => {
+            is => 'String',
+        },
+        gram_stain => {
+            is => 'String',
+        },
+        ncbi_taxonomy_id => {
+            is => 'String',
+        },
+        dev => {
+            is => 'Boolean',
+        },
+        sequence_set_id => { 
+            is => 'Integer',
+            doc => "sequence set id" ,
+        },
+        acedb_version => { 
+            is => 'String',
+            doc => "Ace DB version (V1,V2,etc)"
+        },
+        sequence_set_name => {
+            is => 'String',
+        },
+        work_directory => {
+            is => 'String',
+        }, 
+        script_location => {
+            is => 'String',
+            doc => "path or name of bap finish project script",
+            default => "bap_finish_project",
+        },
+        skip_acedb_parse => {
+            is => 'Boolean',
+            doc => "skip parsing into acedb for testing",
+            default => 0, # this skips parsing into acedb...
+        },
+        assembly_name => {
+            is  => 'String',
+            doc => "assembly name from the config file",
+        },
+        org_dirname => {
+            is  => 'String',
+            doc => "organism directory name from config file",
+        },
+        assembly_version => {
+            is  => 'String',
+            doc => "assembly version from config file",
+        },
+        pipe_version => {
+            is  => 'String',
+            doc => "pipe version from config file",
+        },
+        path => {
+            is  => 'String',
+            doc => "path from config file",
+        },
+    ]
+};
 
 sub help_brief
 {
@@ -118,7 +127,8 @@ sub execute
 
     my %params = $self->gather_details();
 
-    my $rv = Genome::Model::GenePrediction::Command::Finish->execute(%params);
+    my $rv = Genome::Model::GenePrediction::Bacterial::Command::Finish->execute(%params);
+
     unless($rv) {
         $self->error_message("can't run finish project step");
         return 0;

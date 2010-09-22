@@ -40,7 +40,7 @@ sub _tempdir {
     return $self->{_tempdir};
 }
 
-sub _coverage_metrics_file { 
+sub _metrics_file { 
     return $_[0]->_tempdir.'/coverage.metrics';
 }
 
@@ -58,136 +58,46 @@ sub execute {
     }
     $self->status_message('Instrument data OK');
 
-    $self->_setup_read_processor(@instrument_data)
-        or return;
+    $self->status_message('Setup base limit');
+    $self->_setup_base_limit;
 
+    $self->status_message('Start processing instrument data');
     my $sequencing_platform = $self->processing_profile->sequencing_platform;
     my $file_method = '_fastq_files_from_'.$sequencing_platform;
-    INST_DATA: for my $inst_data ( @instrument_data ) {
-        my @files = $self->$file_method($inst_data)
-            or return; # error in sub
-        $self->_run_read_processor_for_files(@files)
+    INST_DATA: for my $instrument_data ( @instrument_data ) {
+        $self->_process_instrument_data($instrument_data)
             or return;
-        if ( defined $self->_current_base_limit and $self->_current_base_limit <= 0 ) {
-            # exceeded coverage
-            $self->status_message('Exceeded coverage, stop adding to output files');
+        if ( $self->_is_there_a_base_limit_and_has_it_been_exceeded ) {
             last INST_DATA;
         }
     }
-
-    $self->status_message('Preparing instrument data velvet OK');
+    $self->status_message('Done processing instrument data');
 
     return 1;
 }
 #<>#
 
-#< Read Processor >#
-sub _setup_read_processor {
-    my ($self, @instrument_data) = @_;
+#< Base Limit >#
+sub _setup_base_limit {
+    my $self = shift;
 
-    $self->status_message('Read processor setup...');
-
-    $self->status_message('Determining quality type');
-
-    my %instrument_data_classes;
-    for my $instrument_data ( @instrument_data ) {
-        $instrument_data_classes{ $instrument_data->class }++;
-    }
-    if ( keys %instrument_data_classes > 1 ) {
-        $self->error_message('Cannot process instrument data from different classes');
-        return;
-    }
-    my %qual_types = (
-        'Genome::InstrumentData::Solexa' => 'illumina',
-        'Genome::InstrumentData::Imported' => 'sanger',
-    );
-    my ($instrument_data_class) = keys %instrument_data_classes;
-    my $qual_type = $qual_types{$instrument_data_class};
-    unless ( $qual_type ) {
-        $self->error_message("Unknown instrument data class ($instrument_data_class) to determine quality type");
-        return;
-    }
-
-    $self->status_message('Quality type is '.$qual_type);
-
-    my $read_processor = $self->build->processing_profile->read_processor || '';
     my $base_limit = $self->build->calculate_base_limit_from_coverage;
-    my $rename_cmd = 'gmt fast-qual rename --matches qr{#.*/1$}=.b1,qr{#.*/2$}=.g1';
-    if ( not $read_processor and not defined $base_limit ) {
-        # rename (will collate, too if needed)
-        my $command = $rename_cmd.' --input %s --output %s --type-in '.$qual_type;
-        $self->status_message("No read processor or base limit");
-        $self->status_message($command);
-        $self->status_message("Read processor setup OK");
-        return $self->_read_processor_pipe_command($command);
-    }
-
-    # split read processors
-    my @read_processors = split(/\|/, $read_processor);
-
-    # add limit by base coverage 
-    if ( $base_limit ) { 
-        $self->status_message("Have base limit: $base_limit");
-        push @read_processors, 'limit by-coverage --bases %s --metrics-file '.$self->_coverage_metrics_file;
+    if ( defined $base_limit ) {
         $self->_current_base_limit($base_limit);
     }
 
-    # convert read processors to commands
-    my @commands = (
-        'gmt fast-qual '.$read_processors[0].' --input %s --output PIPE --type-in '.$qual_type
-    );
-    for ( my $i = 1; $i <= $#read_processors; $i++ ) {
-        push @commands, 'gmt fast-qual '.$read_processors[$i].' --input PIPE --output PIPE';
-    }
-
-    # rename to pcap (last)
-    push @commands, $rename_cmd.' --input PIPE --output %s';
-
-    my $command = join(' | ', @commands );
-    $self->_read_processor_pipe_command($command);
-    $self->status_message($command);
-    $self->status_message("Read processor setup OK");
-
-    return $command;
+    return 1;
 }
 
-sub _run_read_processor_for_files {
-    my ($self, @files) = @_;
+sub _is_there_a_base_limit_and_has_it_been_exceeded {
+    my $self = shift;
 
-    $self->status_message("Run read processor for files...");
-
-    # Cmd params - in array to work w/ sprintf
-    # input
-    my @cmd_params = join(',', @files);
-
-    # base limit
-    my $current_base_limit = $self->_current_base_limit;
-    push @cmd_params, $current_base_limit if defined $current_base_limit;
-
-    # output 
-    push @cmd_params, join(',', $self->build->assembler_input_files);
-
-    # execute command
-    my $cmd_template = $self->_read_processor_pipe_command;
-    my $cmd = sprintf($cmd_template, @cmd_params);
-
-    $self->status_message('Run read processor command');
-    $self->status_message($cmd);
-    unless ( IPC::Run::run($cmd) ) {
-        $self->error_message("Failed to run read processor command!");
-        return;
-    }
-    $self->status_message('Run read processor command OK');
-
-    # base limit
-    if ( not defined $current_base_limit ) {
-        return 1; # ok, continue no limit by bases
+    my $base_limit = $self->_current_base_limit;
+    if ( defined $base_limit and $base_limit > 0 ) {
+        return 1;
     }
 
-    $self->_update_current_base_limit
-        or return;
-
-    return 1;
+    return;
 }
 
 sub _update_current_base_limit {
@@ -196,20 +106,20 @@ sub _update_current_base_limit {
     $self->status_message("Updating current base limit...");
 
     my $current_base_limit = $self->_current_base_limit;
-    my $coverage_metrics_file = $self->_coverage_metrics_file;
-    if ( defined $current_base_limit and not -s $coverage_metrics_file ) {
-        $self->error_message("Current base limit is set, but there is not metrics file ($coverage_metrics_file) to be able to update it.");
+    my $metrics_file = $self->_metrics_file;
+    if ( defined $current_base_limit and not -s $metrics_file ) {
+        $self->error_message("Current base limit is set, but there is not metrics file ($metrics_file) to be able to update it.");
         return;
     }
 
     # get coverage
-    $self->status_message("Getting coverage from metrics file: $coverage_metrics_file");
+    $self->status_message("Getting coverage from metrics file: $metrics_file");
     my  $fh;
     eval {
-        $fh = Genome::Utility::FileSystem->open_file_for_reading($coverage_metrics_file);
+        $fh = Genome::Utility::FileSystem->open_file_for_reading($metrics_file);
     };
     unless ( $fh ) {
-        $self->error_message("Cannot open coverage metrics file ($coverage_metrics_file): $@");
+        $self->error_message("Cannot open coverage metrics file ($metrics_file): $@");
         return;
     }
     my $coverage;
@@ -220,11 +130,11 @@ sub _update_current_base_limit {
         }
     }
     if ( not defined $coverage ) {
-        $self->error_message("No coverage found in metrics file ($coverage_metrics_file)");
+        $self->error_message("No coverage found in metrics file ($metrics_file)");
         return;
     }
     elsif ( $coverage <= 0 ) {
-        $self->error_message("Coverage in metrics file ($coverage_metrics_file) is less than 0. This is impossible.");
+        $self->error_message("Coverage in metrics file ($metrics_file) is less than 0. This is impossible.");
         return;
     }
     $self->status_message("Got coverage: $coverage");
@@ -234,6 +144,84 @@ sub _update_current_base_limit {
     $self->_current_base_limit( $current_base_limit );
     $self->status_message("Setting new current base limit: $current_base_limit");
     $self->status_message('Updating current base limit OK');
+
+    return 1;
+}
+#<>#
+
+my %qual_types = (
+    'Genome::InstrumentData::Solexa' => 'illumina',
+    'Genome::InstrumentData::Imported' => 'sanger',
+    #'Genome::Instrument::Data::454' => 'phred', # not ready
+);
+sub _process_instrument_data {
+    my ($self, $instrument_data) = @_;
+
+    # Inst data quality type
+    my ($instrument_data_class) = $instrument_data->class;
+    my $qual_type = $qual_types{$instrument_data_class};
+    unless ( $qual_type ) {
+        $self->error_message("Unsupported instrument data class ($instrument_data_class).");
+        return;
+    }
+
+    $self->status_message('Processing: '.join(' ', $instrument_data_class, $instrument_data->id, $qual_type) );
+
+    # Inst data files
+    my @input_files = $self->_fastq_files_from_solexa($instrument_data)
+        or return;
+
+    # Fast qual command
+    my $read_processor = $self->processing_profile->read_processor;
+    my $base_limit = $self->_current_base_limit;
+    my $fast_qual_class;
+    my %fast_qual_params = (
+        input => \@input_files,
+        output => [ $self->build->assembler_input_files ],
+        type_in => $qual_type,
+        type_out => $qual_type, # TODO make sure this is sanger
+    );
+    if ( not defined $read_processor and not defined $base_limit ) {
+        # If no read processor or base limt - just rename
+        $fast_qual_class = 'Genome::Model::Tools::FastQual::Rename';
+        $fast_qual_params{matches} = ['qr{#.*/1$}=.b1,qr{#.*/2$}=.g1'];
+    }
+    else {
+        # Got multiple commands, use pipe
+        $fast_qual_class = 'Genome::Model::Tools::FastQual::Pipe';
+        my @commands = ( 'rename --matches qr{#.*/1$}=.b1,qr{#.*/2$}=.g1' ); # rename
+
+        if ( defined $base_limit ) { # coverage limit by bases
+            unshift @commands, 'limit by-coverage --bases '.$base_limit;
+            $fast_qual_params{metrics_file} = $self->_metrics_file;
+        }
+
+        if ( defined $read_processor ) { # read processor from pp
+            unshift @commands, $read_processor;
+        }
+
+        $fast_qual_params{commands} = join(' | ', @commands);
+    }
+
+    # Create and execute
+    $self->status_message('Fast qual class: '.$fast_qual_class);
+    $self->status_message('Fast qual params: '.Dumper(\%fast_qual_params));
+    my $fast_qual_command = $fast_qual_class->create(%fast_qual_params);
+    if ( not defined $fast_qual_command ) {
+        $self->error_message("Cannot create fast qual command.");
+        return;
+    }
+    my $rv = $fast_qual_command->execute;
+    if ( not $rv ) {
+        $self->error_message("Cannot execute fast qual command.");
+        return;
+    }
+    $self->status_message('Execute OK');
+
+    if ( defined $base_limit ) {
+        $self->_update_current_base_limit
+            or return;
+    }
 
     return 1;
 }

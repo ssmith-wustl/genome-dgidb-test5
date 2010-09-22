@@ -4,21 +4,33 @@ use Web::Simple 'Genome::Model::Command::Services::WebApp::Rest';
 
 package Genome::Model::Command::Services::WebApp::Rest;
 
-use above 'Genome';
-use Workflow;
-use Plack::MIME;
-use Plack::Util;
-use Cwd;
-use HTTP::Date;
+#my $res_path = Genome::Model::Command::Services::WebApp->res_path;
 
-use UR::Object::View::Default::Xsl qw/type_to_url url_to_type/;
+our $loaded = 0;
+sub load_modules {
+    return if $loaded;
+    eval "
+        use above 'Genome';
+        use Workflow;
+        use Plack::MIME;
+        use Plack::Util;
+        use Cwd;
+        use HTTP::Date;
+        use UR::Object::View::Default::Xsl qw/type_to_url url_to_type/;
+    ";
+    if ($@) {
+        die "failed to load required modules";
+    }
 
-my $res_path = Genome::Model::Command::Services::WebApp->res_path;
+    Genome::Search->unregister_callbacks('UR::Object');
+}
 
 dispatch {
 
     sub (GET + /**/*/* + .*) {
         my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
+
+        load_modules();
 
         if ( $class =~ /\./ ) {
 
@@ -104,6 +116,8 @@ dispatch {
       sub (GET + /**/* + .* + ?@*) {
         my ( $self, $class, $perspective, $toolkit, $args ) = @_;
 
+        load_modules();
+
         $class = url_to_type($class);
         $perspective =~ s/\.$toolkit$//g;
 
@@ -165,9 +179,6 @@ dispatch {
         die 'no_view' unless ($view);
 
         my $content = $view->content();
-
-        #        UR::Context->rollback;
-        #        UR::Context->clear_cache;
 
         [ 200, [ 'Content-type', $mime_type ], [$content] ];
       }

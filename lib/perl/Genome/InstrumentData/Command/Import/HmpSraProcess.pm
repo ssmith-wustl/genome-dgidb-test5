@@ -33,6 +33,16 @@ class Genome::InstrumentData::Command::Import::HmpSraProcess {
             ####default_value => Genome::Model::Tools::Picard->path_for_picard_version,
 	    default_value => "/gsc/scripts/lib/java/samtools/picard-tools-1.27",
 	},
+        container_dir => {
+            is_optional => 1,
+            doc => 'skip processing, pull processed SRS directory from this location.',
+        },
+    ],
+   has => [
+     _working_dir => {
+        is_optional=>1,
+        is_transient=>1
+     }
     ],
     doc => 'de-duplicate and quality trim Illumina WGS runs downloaded from SRA',
 };
@@ -101,6 +111,7 @@ sub execute {
     my $tmp_dir      = Genome::Utility::FileSystem->create_temp_directory;
 
     my $working_dir = $tmp_dir . "/srr_datasets";
+    $self->_working_dir($working_dir);
     mkpath($working_dir);
     for my $srr (@srrs) {
         my $instrument_data = Genome::InstrumentData::Imported->get(import_format=>'raw sra download', sra_accession=>$srr);
@@ -112,85 +123,123 @@ sub execute {
 	}
     } 
 
-    my $path_to_scripts_dir =$self->get_script_path;
-    $self->status_message("Scripts are in: $path_to_scripts_dir");
+    my ($fwd_read, $rev_read, $singleton_read);
 
-    #Find current path to the script 'trimBWAstyle.usingBam.pl'
-    my $current_dir = `pwd`;
+    if ($self->container_dir) {
+        unless (-d $self->container_dir . "/" . $self->srs_sample_id) {
+            $self->error_message("Can't find srs sample id in " . $self->container_dir);
+            return;
+        }
     
-    my $sra_samples = $working_dir . "/sample_mapping.txt";
-    my $list_of_srrs = $working_dir . "/srr_listing.txt";
-    
-    unless (open (SRA_SAMPLE_MAPPING, ">$sra_samples")) {
-	$self->error_message("Failed to open SRR/SRS data mapping file");
-	return;
-    }
-    
-    unless (open (SRR_LISTING, ">$list_of_srrs")) {
-	$self->error_message("Failed to open SRR/SRS data mapping file");
-	return;
-    }
-    
-    for (@srrs) {
-	print SRA_SAMPLE_MAPPING sprintf("%s\t%s\n", $_, $self->srs_sample_id);
-	print SRR_LISTING sprintf("%s\n", $_);
+        my ($fwd_read_bz) = glob($self->container_dir . "/" . $self->srs_sample_id . "/*.trimmed.1.fastq.bz2");
+        my ($rev_read_bz) = glob($self->container_dir . "/" . $self->srs_sample_id . "/*.trimmed.2.fastq.bz2");
+        my ($singleton_read_bz) = glob($self->container_dir . "/" . $self->srs_sample_id . "/*.trimmed.singleton.fastq.bz2");
 
-    }
-    close SRA_SAMPLE_MAPPING;
-    close SRR_LISTING;
-
-    #Run BROAD's processing script
-    my $cmd;
-    my $errfile = $working_dir . "/ReadProcessing." . $self->srs_sample_id . ".err";
-    my $outfile = $working_dir . "/ReadProcessing." . $self->srs_sample_id  . ".out";
-    my $picard_dir   = $self->picard_dir;
-
-    #Set the $PATH env variable in perl
-    my $path = $ENV{'PATH'} . ":" . $path_to_scripts_dir;
-
-    #Get ascp user/pwd
-    my $user = $self->ascp_user;
-    my $pwd  = $self->ascp_pw;
-
-
-    #Note: I need to set the path to my scripts INSIDE the shell command
-    ####$cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir > $outfile 2> $errfile";
-    $cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
-
-    $self->status_message("CMD=>$cmd<=\n");
-    $self->status_message("PWD=>$current_dir<=\n");
-    
-    Genome::Utility::FileSystem->shellcmd(
-	cmd => $cmd,
-	output_files => [$errfile,$outfile],
-	);
-
-    $DB::single = 1;
-    my @reads = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.*.fastq.bz2");
-    
-    for (@reads) {
-	Genome::Utility::FileSystem->shellcmd(cmd=>"bunzip2 $_");
-    }
-    
-    
-    my ($fwd_read) = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.1.fastq");
-    my ($rev_read) = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.2.fastq");
-    my ($singleton) = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.singleton.fastq");
-
-    $DB::single = 1;
-
+        $fwd_read = $working_dir . "/s_1_1_sequence.txt";
+        Genome::Utility::FileSystem->shellcmd(cmd=>"bzcat $fwd_read_bz > $fwd_read",
+                                      output_files=>[$fwd_read]);
         
-    rename($fwd_read, $working_dir . "/s_1_1_sequence.txt");
-    $fwd_read = $working_dir . "/s_1_1_sequence.txt";
-    
-    rename($rev_read, $working_dir . "/s_1_2_sequence.txt");
-    $rev_read = $working_dir . "/s_1_2_sequence.txt";
-    
-    rename($singleton, $working_dir . "/s_1_sequence.txt");
-    $singleton = $working_dir . "/s_1_sequence.txt";
+        $rev_read = $working_dir . "/s_1_2_sequence.txt";
+        Genome::Utility::FileSystem->shellcmd(cmd=>"bzcat $rev_read_bz > $rev_read",
+                                      output_files=>[$rev_read]);
+        
+        $singleton_read = $working_dir . "/s_1_sequence.txt";
+        Genome::Utility::FileSystem->shellcmd(cmd=>"bzcat $singleton_read_bz > $singleton_read",
+                                      output_files=>[$singleton_read]);
+        
 
-    $DB::single = 1;
+    } else {
 
+        $DB::single = 1;
+
+        my $path_to_scripts_dir =$self->get_script_path;
+        $self->status_message("Scripts are in: $path_to_scripts_dir");
+
+        #Find current path to the script 'trimBWAstyle.usingBam.pl'
+        my $current_dir = `pwd`;
+        
+        my $sra_samples = $working_dir . "/sample_mapping.txt";
+        my $list_of_srrs = $working_dir . "/srr_listing.txt";
+        
+        unless (open (SRA_SAMPLE_MAPPING, ">$sra_samples")) {
+            $self->error_message("Failed to open SRR/SRS data mapping file");
+            return;
+        }
+        
+        unless (open (SRR_LISTING, ">$list_of_srrs")) {
+            $self->error_message("Failed to open SRR/SRS data mapping file");
+            return;
+        }
+        
+        for (@srrs) {
+            print SRA_SAMPLE_MAPPING sprintf("%s\t%s\n", $_, $self->srs_sample_id);
+            print SRR_LISTING sprintf("%s\n", $_);
+
+        }
+        close SRA_SAMPLE_MAPPING;
+        close SRR_LISTING;
+
+        $DB::single = 1;
+
+        #Run BROAD's processing script
+        my $cmd;
+        my $errfile = $working_dir . "/ReadProcessing." . $self->srs_sample_id . ".err";
+        my $outfile = $working_dir . "/ReadProcessing." . $self->srs_sample_id  . ".out";
+        my $picard_dir   = $self->picard_dir;
+
+        #Set the $PATH env variable in perl
+        my $path = $ENV{'PATH'} . ":" . $path_to_scripts_dir;
+
+        #Get ascp user/pwd
+        my $user = $self->ascp_user;
+        my $pwd  = $self->ascp_pw;
+
+
+        #Note: I need to set the path to my scripts INSIDE the shell command
+        ####$cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir > $outfile 2> $errfile";
+        $cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
+
+        $self->status_message("CMD=>$cmd<=\n");
+        $self->status_message("PWD=>$current_dir<=\n");
+        
+        $DB::single = 1;
+
+        eval {
+        Genome::Utility::FileSystem->shellcmd(
+            cmd => $cmd,
+            );
+        };
+
+        if ($@) {
+           $DB::single = 1; 
+           $self->error_message("Error running broad script: $@\n");
+           return;
+        }
+
+        $DB::single = 1;
+        my @reads = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.*.fastq.bz2");
+        
+        for (@reads) {
+            Genome::Utility::FileSystem->shellcmd(cmd=>"bunzip2 $_");
+        }
+        
+        
+        ($fwd_read) = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.1.fastq");
+        ($rev_read) = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.2.fastq");
+        ($singleton_read) = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.singleton.fastq");
+
+        rename($fwd_read, $working_dir . "/s_1_1_sequence.txt");
+        $fwd_read = $working_dir . "/s_1_1_sequence.txt";
+        
+        rename($rev_read, $working_dir . "/s_1_2_sequence.txt");
+        $rev_read = $working_dir . "/s_1_2_sequence.txt";
+        
+        rename($singleton_read, $working_dir . "/s_1_sequence.txt");
+        $singleton_read = $working_dir . "/s_1_sequence.txt";
+
+        $DB::single = 1;
+
+    }
     
     my $pe_import_cmd = Genome::InstrumentData::Command::Import::Fastq->create(%import_params,
 								     subset_name=>1,
@@ -205,17 +254,70 @@ sub execute {
     
     my $se_import_cmd = Genome::InstrumentData::Command::Import::Fastq->create(%import_params,
 								     subset_name=>1,
-								     source_data_files=>"$singleton",
+								     source_data_files=>"$singleton_read",
 								     is_paired_end=>0
 								     );
-    
+
     unless ($se_import_cmd->execute) {
 	$self->error_message("Failed to import singleton reads");
 	return;
     }
-    
-    $self->status_message("Imported all resultant reads! Done!");
 
+    for ($pe_import_cmd, $se_import_cmd) {
+        my $idid = $_->generated_instrument_data_id;
+
+        unless ($idid) {
+            $self->error_message("did not get a generated imported instrument data id.  did this really import?");
+            return;
+        }
+
+        my $iid = Genome::InstrumentData::Imported->get($idid);
+        unless ($iid) {
+            $self->error_message("could not get the imported instrument data for this id.");
+            return;
+        }
+
+        my $path = $iid->disk_allocations->absolute_path;
+    
+        unless ($self->copy_metrics($path)) {
+            $self->error_message("could not copy metrics into the destination path!");
+            return;
+        }
+    }
+
+    $self->status_message("Imported all resultant reads and metrics! Done!");
+
+    return 1;
+}
+
+sub copy_metrics {
+    my $self = shift;
+    my $imported_data_path = shift;
+
+    my $working_dir;
+    if ($self->container_dir) {
+        $working_dir = $self->container_dir;
+    } else {
+        $working_dir = $self->_working_dir;
+    }
+
+    $working_dir = $working_dir . "/" . $self->srs_sample_id;
+    
+    my $destination = $imported_data_path . "/metrics";
+    
+    unless (mkpath($destination)) {
+        $self->error_message("Failed to make dest path $destination");
+        return; 
+    }
+
+    my @masks = ("$working_dir/*.masked", "$working_dir/*.denovo_duplicates_marked.counts", "$working_dir/*.denovo_duplicates_marked.metrics", "$working_dir/trimBWAstyle.out");
+
+    for (@masks) {
+       my $cmd = sprintf("rsync -rptgovz --copy-links %s %s", $_, $destination);
+       Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+    }
+
+    
     return 1;
 }
 

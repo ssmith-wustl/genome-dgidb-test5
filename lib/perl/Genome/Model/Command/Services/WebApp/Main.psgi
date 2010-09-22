@@ -13,25 +13,27 @@ use Web::Simple 'Genome::Model::Command::Services::WebApp::Main';
 package Genome::Model::Command::Services::WebApp::Main;
 
 use strict;
-#use warnings;  Web::Simple's use of prototypes causes spurrious warnings
 
-use Data::Dumper;
+use File::Basename;
 use Plack::Util;
-use above 'Genome';
 
-## Genome::Search makes rollback stupidly slow.
-Genome::Search->unregister_callbacks('UR::Object');
+our $always_memcache = $ENV{'GENOME_VIEW_CACHE'};
 
-# running web server in no_commit, but NOT in dev mode so we get production solr, wiki, memcache
+our $psgi_path;
+eval {
+    ## Genome is probably not loaded, thats okay, we can just use __FILE__
+    $psgi_path = Genome::Model::Command::Services::WebApp->psgi_path;
+};
+unless (defined $psgi_path) {
+    $psgi_path = File::Basename::dirname(__FILE__);
+}
 
-my $psgi_path = Genome::Model::Command::Services::WebApp->psgi_path;
-
-my %app = map { $_ => load_app($_) } qw/
+our %app = map { $_ => load_app($_) } qw/
   Rest.psgi
   Redirect.psgi
-  Resource.psgi
   404Handler.psgi
   Dump.psgi
+  Cache.psgi
   /;
 
 ## Utility functions
@@ -79,23 +81,42 @@ dispatch {
         redispatch_to "/view/";
       },
 
-      # let Rest.psgi handle this
+      ## In apache /viewajax maps to /cachefill
+      #  because we want generate the view synchronously to the request
+      #  and fill in memcached after its generated
+      sub (/cachefill/...) {
+        redispatch_psgi($app{'Cache.psgi'}, 2);
+      },
+
+      ## This is triggered as an ajax request from the cache-miss page
+      sub (/cachetrigger/...) {
+        redispatch_psgi($app{'Cache.psgi'}, 1);
+      },
+
+      ## In apache /view maps to /cache which will show the cache-miss
+      #  page if necessary.
+      sub (/cache/...) {
+        redispatch_psgi $app{'Cache.psgi'};
+      },
+
+      ($always_memcache ? (
+      sub (/viewajax/...) {
+        redispatch_psgi($app{'Cache.psgi'}, 2);
+      },
       sub (/view/...) {
+        redispatch_psgi $app{'Cache.psgi'};
+      },
+      ) : (
+      ## this exists so the embedded web server can run without caching
+      sub (/viewajax/...) {
         redispatch_psgi $app{'Rest.psgi'};
       },
 
-      subdispatch sub (/static/...) {
-        [
-            ## look for static files related to a view
-            sub (/Genome/**) {
-                redispatch_psgi $app{'Dump.psgi'};
-            },
-            ## look for anything else on the filesystem
-            sub () {
-                redispatch_psgi $app{'Resource.psgi'};
-              }
-        ];
+      ## this exists so the embedded web server can run without caching
+      sub (/view/...) {
+        redispatch_psgi $app{'Rest.psgi'};
       },
+      )),
 
       ## dump the psgi environment, for testing
       sub (/dump/...) {

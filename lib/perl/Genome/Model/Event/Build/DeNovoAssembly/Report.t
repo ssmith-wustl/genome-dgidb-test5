@@ -20,7 +20,13 @@ ok($model, 'Got mock de novo assembly model') or die;
 my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
 ok($build, 'Got mock de novo assembly build') or die;
 
-my $example_stats_file = Genome::Model::DeNovoAssembly::Test->example_stats_file_for_model($model);
+my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+    model => $model,
+    use_example_directory => 1,
+);
+ok($example_build, 'got example build') or die;
+
+my $example_stats_file = $example_build->stats_file;
 
 Genome::Utility::FileSystem->create_directory($build->edit_dir);
 ok(-d $build->edit_dir, "Made build edit_dir");
