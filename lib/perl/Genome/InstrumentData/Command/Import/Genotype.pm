@@ -68,7 +68,13 @@ my %properties = (
         is=>'Number',
         doc => 'generated sample ID',
         is_optional => 1,
-    }
+    },
+    define_model => {
+        is=>'Boolean',
+        doc => 'Create a goldSNP file from the imported genotype and define/build a GenotypeMicroarray model.',
+        default_value => 0,
+        is_optional => 1,
+    },
 );
     
 
@@ -147,6 +153,7 @@ sub execute {
         next if $property_name =~ /^source_data_file$/;
         next if $property_name =~ /^allocation$/;
         next if $property_name =~ /^library_name$/;
+        next if $property_name =~ /^define_model$/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
 
@@ -244,6 +251,9 @@ sub execute {
     }
     $self->status_message("The md5sum for the copied genotype file is: ".$copy_md5);
     $self->status_message("The instrument-data id of your new record is ".$instrument_data_id);
+    if($self->define_model){
+        $self->define_genotype_model;
+    }
     return 1;
 
 }
@@ -254,12 +264,53 @@ sub get_read_count {
     $self->status_message("Now attempting to determine read_count by calling wc on the imported genotype.");
     my $file = $self->source_data_file;
     $line_count = `wc -l $file`;
-    $line_count = split " ",$line_count;
+    ($line_count) = split " ",$line_count;
     unless(defined($line_count)&&($line_count > 0)){
         $self->error_message("couldn't get a response from wc.");
         return undef;
     }
     return $line_count
 }
+
+sub define_genotype_model {
+    my $self = shift;
+    my $model;
+    my $processing_profile = "unknown/wugc";
+    if($model = Genome::Model::GenotypeMicroarray->get(sample_name=>$self->sample_name)){
+        $self->error_message("Warning: a GenotypeMicroarry model (id ".$model->genome_model_id.") has already been defined for this sample ( name = ".$self->sample_name.".");
+        die $self->error_message;
+    }
+    my $genotype_path_and_file = $self->allocation->absolute_path . "/" . $self->sample_name . ".genotype";
+    my $snp_array = $self->allocation->absolute_path . "/" . $self->sample_name . "_SNPArray.genotype";
+    unless(-s $snp_array){
+        $self->status_message("Now creating a SNPArray file. This may take some time.");
+        unless(Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->execute(    
+            genotype_file1 => $genotype_path_and_file,
+            genotype_file2 => $genotype_path_and_file,
+            output_file    => $snp_array,)) {
+
+            $self->error_message("SNP Array Genotype creation failed");
+            die $self->error_message;
+        }
+    }
+    $self->status_message("SNPArray defined, now defining/building model.");
+    my $no_build;
+    if($self->generated_instrument_data_id < 0) {
+        $no_build = 1;
+    } else {
+        $no_build = 0;
+    }
+    unless($model = Genome::Model::Command::Define::GenotypeMicroarray->execute(     
+        file =>  $snp_array,
+        processing_profile_name =>  $processing_profile,
+        subject_name =>  $self->sample_name,
+        no_build =>  $no_build,
+                                                            )) {
+        $self->error_message("GenotpeMicroarray Model Define failed.");
+        die $self->error_message;
+    }
+    
+}
+    
 
 1;

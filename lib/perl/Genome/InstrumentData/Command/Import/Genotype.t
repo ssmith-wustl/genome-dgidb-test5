@@ -49,6 +49,7 @@ my $cmd = Genome::InstrumentData::Command::Import::Genotype->create(
     sample_name => $sample_name,
     source_data_file => $source_data_file,
     allocation =>  $tmp_allocation,
+    define_model => 1,
 );
 
 ok($cmd, "constructed an import command");
@@ -88,3 +89,6 @@ is($i->library_id,$library->id,"library_id matches");
 my $genotype_file = $i->disk_allocations->absolute_path ."/". $sample_name . ".genotype";
 
 ok(-s $genotype_file, "Found properly named genotype file.");
+
+
+
