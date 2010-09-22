@@ -21,7 +21,7 @@ class Genome::InstrumentData::AlignmentResult::RtgMap{
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>30000] span[hosts=1] rusage[tmp=90000, mem=30000]' -M 30000000 -n 8 -m hmp -q hmp";
+    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>25000] span[hosts=1] rusage[tmp=90000, mem=25000]' -M 25000000 -n 8 -m hmp -q hmp";
 }
 
 sub _decomposed_aligner_params {
@@ -33,6 +33,11 @@ sub _decomposed_aligner_params {
 
     my $cpu_count = $self->_available_cpu_count;
     $aligner_params .= " -T $cpu_count";
+
+    if (!$self->instrument_data->is_paired_end || $self->force_fragment) {
+        $self->status_message("Running fragment mode.  Params were $aligner_params.  Removing an -E if it exists since that's not applicable to fragment runs.");
+        $aligner_params =~ s/-E\s?.*?\s+//g;
+    }
     
     return ('rtg_aligner_params' => $aligner_params);
 }
@@ -40,7 +45,7 @@ sub _decomposed_aligner_params {
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
-    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '28G');
+    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '23G');
     $self->status_message("RTG Memory request is $ENV{RTG_MEM}");
 
     # get refseq info
@@ -63,7 +68,9 @@ sub _run_aligner {
  
     #   To run RTG, have to first convert ref and inputs to sdf, with 'rtg format', for which you 
     #   have to designate a destination directory
- 
+
+    # disconnect db before long-running action 
+    Genome::DataSource::GMSchema->disconnect_default_dbh; 
     #STEP 1 - convert input to sdf
     my $prechunk_input_sdf = File::Temp::tempnam($scratch_directory, "input-XXX") . ".sdf"; #destination of converted input
     my $rtg_fmt = Genome::Model::Tools::Rtg->path_for_rtg_format($self->aligner_version);
