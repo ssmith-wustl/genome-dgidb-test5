@@ -12,6 +12,13 @@ use IO::Handle;
 class Genome::InstrumentData::Command::Import::Microarray::AffymetrixGenotypeArray {
     is  => 'Genome::InstrumentData::Command::Import::Microarray',
     doc => 'create an instrument data for a microarray',
+    has => [
+        annotation_file => {
+            is => 'Text',
+            doc => 'The absolute path to the Affy annotation file. If unspecified, the importer will try to determine which is best based on sample_name.',
+            is_optional => 1,
+        },
+    ],
 };
 
 
