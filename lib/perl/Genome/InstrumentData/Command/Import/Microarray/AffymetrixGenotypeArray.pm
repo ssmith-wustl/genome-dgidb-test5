@@ -29,7 +29,25 @@ sub process_imported_files {
     my $instrument_data = Genome::InstrumentData::Imported->get( sample_name => $self->sample_name, sequencing_platform => $self->sequencing_platform);
     my $disk_alloc = $self->allocation;
 
-    my $annotation_file = "/gscmnt/sata160/info/medseq/tcga/GenomeWideSNP_6.na28.annot.csv";
+    unless(defined($self->annotation_file)){
+        my $annotation_file;
+        if($self->sample_name =~ /^(H_LC|H_LR)/){
+            $annotation_file = "/gscmnt/sata160/info/medseq/tcga/GenomeWideSNP_6.na31.annot.csv";
+            $self->status_message("H_LC or H_LR project detected, using annotation file with build37 coordinates.");
+        } else {
+            $annotation_file = "/gscmnt/sata160/info/medseq/tcga/GenomeWideSNP_6.na28.annot.csv";
+            $self->status_message("Using annotation file with build36 coordinates.");
+        }
+        unless(-s $annotation_file){
+            $self->error_message("Cannot find installed annotation file at " . $annotation_file);
+            die $self->error_message;
+        }
+        $self->annotation_file($annotation_file);
+    }
+    unless(-s $self->annotation_file){
+        $self->error_message("Could not find annotation_file at ".$self->annotation_file);
+        die $self->error_message;
+    }
 
     if($instrument_data) {
         $disk_alloc = $instrument_data->disk_allocations;
@@ -81,7 +99,7 @@ sub process_imported_files {
 
         unless (Genome::Model::Tools::Array::CreateGenotypesFromAffyCalls->execute(  
                                             call_file       =>  $call_file,
-                                            annotation_file  =>  $annotation_file,
+                                            annotation_file  =>  $self->annotation_file,
                                             output_filename     =>  $genotype_path_and_file, )) {
             $self->error_message("Call to CreateGenotypesFromIlluminaCalls failed.");
             die $self->error_message;
