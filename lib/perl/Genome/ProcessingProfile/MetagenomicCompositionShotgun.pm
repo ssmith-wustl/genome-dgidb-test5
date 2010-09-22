@@ -712,8 +712,10 @@ sub _process_sra_instrument_data {
         
         my $fastq_filenames = $instrument_data->resolve_fastq_filenames;
         for (@$fastq_filenames){
-            $self->error_message("expected fastq ($_) extracted from instrument data ".$instrument_data->display_name." doesn't have size!") unless -s $_;
-            die $self->error_message;
+            unless (-s $_){
+                $self->error_message("expected fastq ($_) extracted from instrument data ".$instrument_data->display_name." doesn't have size!");
+                die $self->error_message;
+            }
         }
         if ($instrument_data->is_paired_end){
             unless (@$fastq_filenames == 2){
@@ -781,6 +783,9 @@ sub _process_sra_instrument_data {
             source_data_files => $upload_path,
             import_format => 'illumina fastq',
         );
+        if ($self->skip_contamination_screen){
+            $params{import_format}='sanger fastq'; #TODO, verify that this quality format is correct for sra/imported sanger instrument data after going through process_unaligned_reads, if so need a better way to choose this
+        }
         $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
 
         my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
