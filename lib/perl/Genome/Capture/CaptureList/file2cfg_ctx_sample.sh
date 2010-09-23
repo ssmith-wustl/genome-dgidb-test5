@@ -13,12 +13,17 @@ set assembly_file_end = ".ctx.Q40.somatic.assembled.HQfiltered.csv";
 set BreakDancer = "BreakDancer/";
 set BreakDancer_file_end1 = ".novo.ctx";
 
+set Hydra = "Hydra/";
+set Hydra_file_end = "_Hydra.ctx"
+
 set col_AS = "	\\t	1	2	4	6	7	NA	NA	NA	NA	10	12	NA  0";
 set col_BD = "	\\t	0	1	3	4	6	2	5	NA	NA	7	8	10  100";
-#									type n1	n2 n_cn	t_cn sz	sc	sp_r
+#									type n1	n2 n_cn	t_cn sz	sc	
+set col_HD = "  \\t 0   1   2   3   NA  NA  NA  NA  NA  NA  NA  NA  175";
 
 set AS = ".AS";
 set BD = ".BD";
+set HD = ".HD";
 
 set output_dir = $argv[4];
 
@@ -55,6 +60,8 @@ set output_dir = $argv[4];
 				echo "${tag}\t${file_name_AS}\t${skip}${col_AS}" >> ${output_file}
 			endif
 			@ ever_come = 1
+		else
+			echo ${file_name_AS}
 		endif
 		
 		# BD
@@ -75,5 +82,18 @@ set output_dir = $argv[4];
 		endif
 	#end				
 
+        set file_name_HD = ${project_dir}/${Hydra}${project_name}${number}${Hydra_file_end}
+        if(-e ${file_name_HD}) then
+            set skip = `more ${file_name_HD} | perl -ane 'print "$_" if($F[0] =~ /^#/)' | wc -l`;
+            set tag = ${project_name}${number}${HD};
+            if(${ever_come} == 0) then
+                echo "${tag}\t${file_name_HD}\t${skip}${col_HD}" > ${output_file}
+            else
+                echo "${tag}\t${file_name_HD}\t${skip}${col_HD}" >> ${output_file}
+            endif
+            @ ever_come = 1
+        else
+        	echo ${file_name_HD}
+        endif
 #end
 	

@@ -199,7 +199,9 @@ sub total_bases_read {
     my $fwd_read_length = $self->fwd_read_length || 0;
     my $rev_read_length = $self->rev_read_length || 0;
     my $fragment_count = $self->fragment_count || 0;
-    
+    unless(defined($self->fragment_count)){
+        return undef;
+    }
     return ($fwd_read_length + $rev_read_length) * $fragment_count;
 }
 

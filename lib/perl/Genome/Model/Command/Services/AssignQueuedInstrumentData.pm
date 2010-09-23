@@ -155,7 +155,7 @@ sub execute {
 
                 unless($num_assigned > 0) {
                     # no model found for this PP, make one (or more) and assign all applicable data
-                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile);
+                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $pse);
                     unless($ok) {
                         push @process_errors, $self->error_message;
                         next PP;
@@ -485,6 +485,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $genome_instrument_data = shift;
     my $subject = shift;
     my $processing_profile = shift;
+    my $pse = shift;
 
     my @new_models;
 
@@ -514,10 +515,23 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     );
 
     if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-        #TODO instead of hardcoding human36, use something like an analysis version of $taxon->current_genome_refseq_id
-        my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+        my $reference_sequence_build;
+
+        my ($reference_sequence_build_id) = $pse->added_param('reference_sequence_build_id');
+        if($reference_sequence_build_id) {
+            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
+        } else {
+            #PSE was processed without specifying a reference sequence--fall back. (This section can eventually be removed.)
+            my $annotation_param = $processing_profile->annotation_reference_transcripts;
+            if($annotation_param =~ '57_37b') {
+                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('g1k-human-build37');
+            } else {
+                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+            }
+        }
+
         if ( not defined $reference_sequence_build ) {
-            Carp::confess('Cannot get NCBI human build 36');
+            Carp::confess('Could not load reference sequence build');
         }
         $model_params{reference_sequence_build} = $reference_sequence_build;
     }
@@ -531,6 +545,13 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     push @new_models, $model;
 
     if ( defined($capture_target) ) {
+        unless($self->assign_capture_inputs($model, $capture_target, $capture_target)) {
+            for (@new_models) {
+                $_->delete;
+                return;
+            }
+        }
+
         #Also want to make a second model against a standard region of interest
         my $wuspace_model_name = $self->find_unused_model_name($model_name . '.wu-space');
         $model_params{name} = $wuspace_model_name;
@@ -546,66 +567,14 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             }
             return;
         }
-        
+
         push @new_models, $wuspace_model;
 
-        for my $m (@new_models) {
-
-            my $target_input = $m->add_input(
-                name             => "target_region_set_name",
-                value_class_name => "UR::Value",
-                value_id         => $capture_target
-            );
-
-            unless ( defined($target_input) ) {
-                $self->error_message(
-                        'Failed to set capture target input for model '
-                      . $m->id
-                      . ' and instrument data '
-                      . $genome_instrument_data->id );
-                for (@new_models) {
-                    $_->delete;
-                }
-
+        unless($self->assign_capture_inputs($wuspace_model, $capture_target, 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA')) {
+            for (@new_models) {
+                $_->delete;
                 return;
             }
-        }
-        
-        # By default the "region of interest" for analysis is the same
-        # as the capture target in sequencing
-        # 
-        # Eventually the roi list / validation SNP list will be
-        # looked up / validated here
-        my $roi_input = $model->add_input(
-            name             => "region_of_interest_set_name",
-            value_class_name => "UR::Value", value_id => $capture_target
-          );
-
-        unless (defined($roi_input)) {
-            $self->error_message('Failed to set region of instrument input for model '
-                                 . $model->id
-                                 . ' and instrument data '
-                                 . $genome_instrument_data->id);
-            for (@new_models) {
-                $_->delete;
-            }
-            return;
-        }
-
-        my $wuspace_roi_input = $wuspace_model->add_input(
-            name             => "region_of_interest_set_name",
-            value_class_name => "UR::Value", value_id => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA',
-        );
-
-        unless (defined($wuspace_roi_input)) {
-            $self->error_message('Failed to set region of instrument input for model '
-                                 . $wuspace_model->id
-                                 . ' and instrument data '
-                                 . $genome_instrument_data->id);
-            for (@new_models) {
-                $_->delete;
-            }
-            return;
         }
     }
 
@@ -642,11 +611,107 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
+        my @project_names = $self->_resolve_project_names($pse);
+        $self->add_model_to_default_modelgroups($m, @project_names);
+
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
     }
 
     return scalar @new_models;
+}
+
+
+sub assign_capture_inputs {
+    my $self = shift;
+    my $model = shift;
+    my $target_region_set_name = shift;
+    my $region_of_interest_set_name = shift;
+
+    my $target_input = $model->add_input(
+        name             => "target_region_set_name",
+        value_class_name => "UR::Value",
+        value_id         => $target_region_set_name
+    );
+
+    unless ( defined($target_input) ) {
+        $self->error_message('Failed to set capture target input for model ' . $model->id);
+        return;
+    }
+
+    my $roi_input = $model->add_input(
+        name             => "region_of_interest_set_name",
+        value_class_name => "UR::Value",
+        value_id         => $region_of_interest_set_name
+    );
+
+    unless (defined($roi_input)) {
+        $self->error_message('Failed to set region of instrument input for model ' . $model->id);
+        return;
+    }
+
+    return 1;
+}
+
+sub add_model_to_default_modelgroups {
+    my $self = shift;
+    my $model = shift;
+    my @project_names = @_;
+
+    my $subject = $model->subject;
+
+    my $source;
+    if($subject->isa('Genome::Sample')) {
+        $source = $subject->source;
+    } elsif($subject->isa('Genome::Individual')) {
+        $source = $subject;
+    } elsif($subject->isa('Genome::Library')) {
+        my $sample = $subject->sample;
+        $source = $sample->source;
+    } else {
+        $self->error_message('Unhandled subject for model--not adding to model-groups');
+        return;
+    }
+
+    unless($source) {
+        $self->error_message('Failed to get source for subject.');
+        return;
+    }
+
+    my $common_name = $source->common_name;
+    my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+
+    my @group_names = @project_names;
+    push @group_names, $source_grouping if $source_grouping;
+
+    for my $group_name (@group_names) {
+        my $name = 'apipe-auto ' . $group_name;
+        my $model_group = Genome::ModelGroup->get(name => $name);
+
+        unless($model_group) {
+            $model_group = Genome::ModelGroup->create(name => $name);
+            unless($model_group) {
+                $self->error_message('Failed to create a default model-group: ' . $name);
+                return;
+            }
+        }
+
+        $model_group->assign_models($model);
+    }
+
+    return 1;
+}
+
+sub _resolve_project_names {
+    my $self = shift;
+    my $pse = shift;
+
+    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    unless(scalar @work_orders) {
+        $self->warning_message('No work order found for PSE ' . $pse->id);
+    }
+
+    return map($_->research_project_name, @work_orders);
 }
 
 sub request_builds {

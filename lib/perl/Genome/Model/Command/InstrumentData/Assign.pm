@@ -36,6 +36,11 @@ class Genome::Model::Command::InstrumentData::Assign {
             default => 0,
             doc => 'Assign all available unassigned instrument data to the model.'
         },
+        include_imported => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Include imported instrument data when assigning all via the --all switch',
+        },
         filter => {
             is => 'Text',
             valid_values => ['forward-only','reverse-only'],
@@ -86,7 +91,6 @@ sub create {
 #TODO:put this logic in Genome::Model::assign_instrument_data() and turn this command into a thin wrapper
 sub execute {
     my $self = shift;
-    $DB::single=$DB::stopper;
     if ( $self->instrument_data_id ) { # assign this
         return $self->_assign_by_instrument_data_id;
     }
@@ -307,13 +311,20 @@ sub _assign_all_instrument_data {
     ID: for my $id ( @unassigned_instrument_data ) {
 
         # Skip imported, w/ warning
-        if ($id->isa("Genome::InstrumentData::Imported")) {
-            $self->warning_message("IGNORING IMPORTED INSTRUMENT DATA: " . $id->id 
-                . " sequencing platform " . $id->sequencing_platform
-                . " imported by " . $id->user_name
-                . ".  Add this explicitly if you want it in the model."
-            );
-            next ID;
+        unless($self->include_imported){
+            if ($id->isa("Genome::InstrumentData::Imported")) {
+                $self->warning_message("IGNORING IMPORTED INSTRUMENT DATA: " . $id->id 
+                    . " sequencing platform " . $id->sequencing_platform
+                    . " imported by " . $id->user_name
+                    . ".  Add this explicitly if you want it in the model."
+                );
+                next ID;
+            }
+        }
+        if(defined($id->target_region_set_name)){
+            unless(@inputs){
+                next ID;
+            }
         }
 
         # Only assign inst data only w/ the same target

@@ -65,22 +65,6 @@
           <td class="label">Assembler Params</td>
           <td class="value"><xsl:value-of select="//model-info/assembler-params"/></td>
 				</tr>
-				<tr>
-          <td class="label">Read Trimmer</td>
-          <td class="value"><xsl:value-of select="//model-info/read-trimmer-name"/></td>
-				</tr>
-				<tr>
-          <td class="label">Read Trimmer Params</td>
-          <td class="value"><xsl:value-of select="//model-info/read-trimmer-params"/></td>
-				</tr>
-				<tr>
-          <td class="label">Read Filter</td>
-          <td class="value"><xsl:value-of select="//model-info/read-filter-name"/></td>
-				</tr>
-				<tr>
-          <td class="label">Read Filter Params</td>
-          <td class="value"><xsl:value-of select="//model-info/read-filter-params"/></td>
-				</tr>
 			  </table>
 			</td>
       </tr>
@@ -115,14 +99,29 @@
           <td class="label">Reads Assembled</td>
           <td class="value"><xsl:value-of select="//metric/reads-assembled"/></td>
 				</tr>
-				<tr>
-          <td class="label">Reads Assembled Success</td>
-          <td class="value"><xsl:value-of select="//metric/reads-assembled-success * 100"/><xsl:text>&#37;</xsl:text></td>
-				</tr>
-				<tr>
-          <td class="label">Reads Not Assembled (Chaff rate)</td>
-          <td class="value"><xsl:value-of select="//metric/reads-not-assembled-pct * 100"/><xsl:text>&#37;</xsl:text></td>
-				</tr>
+
+          <xsl:if test="//metric/reads-assembled='NA'">
+	    <tr>
+	      <td class="label">Reads Assembled Success</td>
+	      <td class="value"><xsl:value-of select="//metric/reads-assembled"/></td>
+	    </tr>
+	    <tr>
+	      <td class="label">Reads Not Assembled (Chaff rate)</td>
+	      <td class="value"><xsl:value-of select="//metric/reads-assembled"/></td>
+	    </tr>
+	  </xsl:if>
+
+	  <xsl:if test="//metric/reads-assembled!='NA'">
+	    <tr>
+	      <td class="label">Reads Assembled Success</td>
+              <td class="value"><xsl:value-of select="//metric/reads-assembled-success * 100"/><xsl:text>&#37;</xsl:text></td>
+	    </tr>
+	    <tr>
+	      <td class="label">Reads Not Assembled (Chaff rate)</td>
+	      <td class="value"><xsl:value-of select="//metric/reads-not-assembled-pct * 100"/><xsl:text>&#37;</xsl:text></td>
+	    </tr>
+	  </xsl:if>
+	  
 				<tr>
           <td class="label">Average Read Length</td>
           <td class="value"><xsl:value-of select="//metric/average-read-length"/></td>
@@ -139,18 +138,40 @@
           <td class="label">Average Contig Length</td>
           <td class="value"><xsl:value-of select="//metric/average-contig-length"/></td>
 				</tr>
+
+          <xsl:if test="//metric/major-contig-length='300'">
+	    <tr>
+              <td class="label">Average Major Contig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/average-contig-length-gt-300"/></td>
+	    </tr>
+	  </xsl:if>
+
+	  <xsl:if test="//metric/major-contig-length='500'">
+	    <tr>
+              <td class="label">Average Major Contig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/average-contig-length-gt-500"/></td>
+	    </tr>
+	  </xsl:if>
+	  
 				<tr>
-          <td class="label">Average Major Contig Length (>500)</td>
-          <td class="value"><xsl:value-of select="//metric/average-contig-length-gt-500"/></td>
+          <td class="label">n50 Contig Length</td>
+          <td class="value"><xsl:value-of select="//metric/n50-contig-length"/></td>
 				</tr>
-				<tr>
-          <td class="label">Median Contig Length</td>
-          <td class="value"><xsl:value-of select="//metric/median-contig-length"/></td>
-				</tr>
-				<tr>
-          <td class="label">Median Major Contig Length (>500)</td>
-          <td class="value"><xsl:value-of select="//metric/median-contig-length-gt-500"/></td>
-				</tr>
+
+          <xsl:if test="//metric/major-contig-length='300'">
+	    <tr>
+              <td class="label">n50 Major Contig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/n50-contig-length-gt-300"/></td>
+	    </tr>
+	  </xsl:if>
+
+	  <xsl:if test="//metric/major-contig-length='500'">
+	    <tr>
+              <td class="label">n50 Major Contig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/n50-contig-length-gt-500"/></td>
+	    </tr>
+	  </xsl:if>
+
 				<tr>
           <td class="label">Supercontigs</td>
           <td class="value"><xsl:value-of select="//metric/supercontigs"/></td>
@@ -159,22 +180,53 @@
           <td class="label">Average Supercontig Length</td>
           <td class="value"><xsl:value-of select="//metric/average-supercontig-length"/></td>
 				</tr>
+
+	  <xsl:if test="//metric/major-contig-length='300'">
+	    <tr>
+              <td class="label">Average Major Supercontig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/average-supercontig-length-gt-300"/></td>
+	    </tr>
+	  </xsl:if>
+
+	  <xsl:if test="//metric/major-contig-length='500'">
+	    <tr>
+              <td class="label">Average Major Supercontig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/average-supercontig-length-gt-500"/></td>
+	    </tr>
+	  </xsl:if>
+
 				<tr>
-          <td class="label">Average Major Supercontig Length (>500)</td>
-          <td class="value"><xsl:value-of select="//metric/average-supercontig-length-gt-500"/></td>
+          <td class="label">n50 Supercontig Length</td>
+          <td class="value"><xsl:value-of select="//metric/n50-supercontig-length"/></td>
 				</tr>
-				<tr>
-          <td class="label">Median Supercontig Length</td>
-          <td class="value"><xsl:value-of select="//metric/median-supercontig-length"/></td>
-				</tr>
-				<tr>
-          <td class="label">Median Major Supercontig Length (>500)</td>
-          <td class="value"><xsl:value-of select="//metric/median-supercontig-length-gt-500"/></td>
-				</tr>
-				<tr>
-          <td class="label">Read Coverage (>= 5x)</td>
-          <td class="value"><xsl:value-of select="//metric/read-depths-ge-5x"/><xsl:text>&#37;</xsl:text></td>
-				</tr>
+
+	  <xsl:if test="//metric/major-contig-length='300'">
+	    <tr>
+              <td class="label">n50 Major Supercontig Length (>=300)</td>
+              <td class="value"><xsl:value-of select="//metric/n50-supercontig-length-gt-300"/></td>
+	    </tr>
+	  </xsl:if>
+
+	  <xsl:if test="//metric/major-contig-length='500'">
+	    <tr>
+              <td class="label">n50 Major Supercontig Length (>=500)</td>
+              <td class="value"><xsl:value-of select="//metric/n50-supercontig-length-gt-500"/></td>
+	    </tr>
+	  </xsl:if>
+	  
+	  <xsl:if test="//metric/read-depths-ge-5x='NA'">
+	    <tr>
+	      <td class="label">Read Coverage (>= 5x)</td>
+	      <td class="value"><xsl:value-of select="//metric/read-depths-ge-5x"/></td>
+	    </tr>
+	  </xsl:if>
+
+	  <xsl:if test="//metric/read-depths-ge-5x!='NA'">
+	    <tr>
+	      <td class="label">Read Coverage (>= 5x)</td>
+	      <td class="value"><xsl:value-of select="//metric/read-depths-ge-5x"/><xsl:text>&#37;</xsl:text></td>
+	    </tr>
+	  </xsl:if>
 			  </table>
 			</td>
       </tr>

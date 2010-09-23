@@ -36,12 +36,12 @@ class Genome::Model {
                                      calculate_from => ['processing_profile_id'],
                                      # We subclass via our processing profile's type_name
                                      calculate => sub {
-                                                      my($pp_id) = @_;
-                                                      return unless $pp_id;
-                                                      my $pp = Genome::ProcessingProfile->get($pp_id);
-                                                      Carp::croak("Can't find Processing Profile with ID $pp_id while resolving subclass for Model") unless $pp;
-                                                      return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
-                                                  },
+                                        my($pp_id) = @_;
+                                        return unless $pp_id;
+                                        my $pp = Genome::ProcessingProfile->get($pp_id);
+                                        Carp::croak("Can't find Processing Profile with ID $pp_id while resolving subclass for Model") unless $pp;
+                                        return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
+                                    },
                                 },
         name                    => { is => 'Text', len => 255 },
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
@@ -177,8 +177,6 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
-
-
 # TODO: improve the logic in Genome::Command::OO to handle more of this
 sub from_cmdline {
     my $class = shift;
@@ -274,12 +272,11 @@ sub __extend_namespace__ {
     return;
 }
 
-
-
 sub create {
     my $class = shift;
 
-    if ($class eq __PACKAGE__) {
+    $DB::single = 1;
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
     }
@@ -319,23 +316,8 @@ sub create {
     $class->_validate_processing_profile_id($processing_profile_id)
         or Carp::confess();
 
-    #unless ($params->value_for('subclass_name')) {
-    #    $params = $params->add_filter(subclass_name => $class);
-    #}
-
     my $self = $class->SUPER::create($params)
         or return;
-
-    # Model name - use default if none given
-    unless ( $self->name ) {
-        $self->name(
-            join(
-                '.',
-                Genome::Utility::Text::sanitize_string_for_filesystem($entered_subject_name || $self->subject_name),
-                $self->processing_profile_name
-            )
-        );
-    }
 
     # Make sure the subject we got is really an object
     unless ( $self->_verify_subject ) {
@@ -343,11 +325,23 @@ sub create {
         return;
     }
 
+    #<model name>#
+    # set default if none given
+    if ( not defined $self->name ) {
+        my $default_name = $self->default_model_name;
+        if ( not defined $default_name ) {
+            $self->error_message("No model name given and cannot get a deafult name from $class");
+            $self->SUPER::delete;
+            return;
+        }
+        $self->name($default_name);
+    }
     # Check that this model doen't already exist.  If other models with the same name
     #  and type name exist, this method lists them, errors and deletes this model.
     #  Checking after subject verification to catch that error first.
     $self->_verify_no_other_models_with_same_name_and_type_name_exist
         or return;
+    #</model name>
 
     unless ($self->user_name) {
         $self->user_name($ENV{USER});
@@ -386,7 +380,7 @@ sub _validate_processing_profile_id {
         return;
     }
 
-    unless ( $pp_id =~ m#^$RE{num}{int}$#) {
+    unless ( $pp_id =~ m/^$RE{num}{int}$/) {
         $class->error_message("Processing profile id is not an integer");
         return;
     }
@@ -436,6 +430,16 @@ sub _verify_no_other_models_with_same_name_and_type_name_exist {
     $self->delete;
 
     return;
+}
+
+sub default_model_name {
+    my $self  = shift;
+
+    return join(
+        '.',
+        Genome::Utility::Text::sanitize_string_for_filesystem($self->subject_name),
+        $self->processing_profile_name
+    );
 }
 
 #If a user defines a model with a name (and possibly type), we need to find/make sure there's an
@@ -575,7 +579,7 @@ sub compatible_instrument_data {
         # TODO: move this into the assign logic, not here. -ss
         my @filtered_compatible_instrument_data;
         for my $idata (@compatible_instrument_data) {
-            if ($idata->total_bases_read == 0) {
+            if (defined($idata->total_bases_read)&&($idata->total_bases_read == 0)) {
                 $self->warning_message(sprintf("ignoring %s because it has zero bases read",$idata->__display_name__));
                 next;
             }
@@ -640,12 +644,14 @@ sub completed_builds {
 
     my @completed_builds;
     for my $build ( $self->builds ) {
-        next unless defined $build->build_status and $build->build_status eq 'Succeeded';
+        my $build_status = $build->build_status;
+        next unless defined $build_status and $build_status eq 'Succeeded';
         next unless defined $build->date_completed; # error?
         push @completed_builds, $build;
     }
 
-    return sort { $a->id <=> $b->id } @completed_builds;
+    my %build_ids = map { $_ => $_->id } @completed_builds;
+    return sort { $build_ids{$a} <=> $build_ids{$b} } @completed_builds;
 }
 
 sub latest_build {
