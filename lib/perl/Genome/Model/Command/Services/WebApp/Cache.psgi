@@ -120,7 +120,7 @@ sub {
 
     my $gen = sub {
         my $rest_app = $Genome::Model::Command::Services::WebApp::Main::app{'Rest.psgi'};
-        my $resp; 
+        my $resp;
         if ($class->lock($url)) {
 
             ## override HTTP_ACCEPT to tell it we want html
@@ -153,12 +153,12 @@ sub {
             }
         }
 
-        return $resp; 
+        return $resp;
     };
 
     if (defined $ajax_refresh && $ajax_refresh == 1) {
         $gen->();
- 
+
         return [
             200,
             [ 'Content-type' => 'text/html' ],
@@ -186,7 +186,7 @@ sub {
         for my $re (@never_cache) {
             if ($env->{'PATH_INFO'} =~ $re) {
                 $skip_cache = 1;
-                last; 
+                last;
             }
         }
 
@@ -253,20 +253,20 @@ sub {
   </script>
  </head>
  <body>
-  <div class="page">
-    <div class="header rounded-bottom gradient-grey shadow">
-      <div class="container">
-        <div class="title span-24 last app_error_32">
-          <h1>Cache miss</h1>
+  <div class="page" style="width: 500px;">
+    <div class="header rounded-top gradient-grey shadow">
+      <div class="container" style="width: 480px;">
+        <div class="title app_cache_miss_32">
+          <h1>Caching Page</h1>
         </div>
       </div>
     </div>
-    <div class="content rounded shadow" style="background-color: #FAA">
-      <div class="container">
-      <div class="span-24 last">
+    <div class="content rounded shadow" >
+      <div class="container" style="width: 480px;">
+      <div class="span-12 last">
         <div class="rounded" style="background: #FFF; margin-bottom: 10px;">
           <div class="padding10">
-            <p>Regenerating view from the object model, please be patient.</p>
+            <p>Please wait while this page is generated and added to the cache. Subsequent loads will be returned rapidly from the cache.<p>
             <div id="ajax_status"/>
           </div>
         </div>
