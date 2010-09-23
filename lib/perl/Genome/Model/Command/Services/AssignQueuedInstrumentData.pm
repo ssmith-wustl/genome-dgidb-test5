@@ -515,24 +515,18 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     );
 
     if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-        my $reference_sequence_build;
-
         my ($reference_sequence_build_id) = $pse->added_param('reference_sequence_build_id');
-        if($reference_sequence_build_id) {
-            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
-        } else {
-            #PSE was processed without specifying a reference sequence--fall back. (This section can eventually be removed.)
-            my $annotation_param = $processing_profile->annotation_reference_transcripts;
-            if($annotation_param =~ '57_37b') {
-                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('g1k-human-build37');
-            } else {
-                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
-            }
+        if ( not defined $reference_sequence_build_id ) {
+            $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference sequence model');
+            return;
         }
 
+        my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
         if ( not defined $reference_sequence_build ) {
-            Carp::confess('Could not load reference sequence build');
+            $self->error_message("Cannot get imported reference sequence build for id $reference_sequence_build_id");
+            return;
         }
+
         $model_params{reference_sequence_build} = $reference_sequence_build;
     }
 
