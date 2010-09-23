@@ -211,7 +211,7 @@ sub {
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>Cache miss</title>
+    <title>Caching Page</title>
     <link rel="shortcut icon" href="/res/img/gc_favicon.png" type="image/png" />
     <link rel="stylesheet" href="/res/css/blueprint/screen.css" type="text/css" media="screen, projection" />
     <link rel="stylesheet" href="/res/css/blueprint/print.css" type="text/css" media="print" />
@@ -253,16 +253,17 @@ sub {
   </script>
  </head>
  <body>
-  <div class="page" style="width: 500px;">
-    <div class="header rounded-top gradient-grey shadow">
-      <div class="container" style="width: 480px;">
-        <div class="title app_cache_miss_32">
-          <h1>Caching Page</h1>
+  <div class="page" style="width: 500px;padding-top: 45px;">
+    <div class="content rounded shadow" style="padding-top: 0;" >
+      <div class="header rounded-top gradient-grey">
+        <div class="container" style="width: 480px;">
+          <div class="title app_cache_miss_32">
+            <h1>Caching Page</h1>
+          </div>
         </div>
-      </div>
     </div>
-    <div class="content rounded shadow" >
-      <div class="container" style="width: 480px;">
+
+    <div class="container" style="width: 480px;">
       <div class="span-12 last">
         <div class="rounded" style="background: #FFF; margin-bottom: 10px;">
           <div class="padding10">
