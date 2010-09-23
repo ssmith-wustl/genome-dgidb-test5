@@ -55,7 +55,8 @@ sub execute {
         if ($status =~ /$status_match/) {
             my $start_build = Genome::Model::Build::Command::Start->create(model_identifier => $model->id);
             $self->status_message("Starting " . $model->id . " ($model_name)");
-            if ($start_build->execute()) {
+            eval { $start_build->execute() };
+            if(!$@) {
                 $active_count++;
             }
             else {

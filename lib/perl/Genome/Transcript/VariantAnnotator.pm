@@ -17,14 +17,6 @@ use Carp;
 class Genome::Transcript::VariantAnnotator{
     is => 'UR::Object',
     has => [
-        transcript_window => {
-            is => 'Genome::Utility::Window::Transcript',
-            id_by => 'transcript_window_id',
-        },
-        annotation_build_version => {
-            is => 'Text',
-            is_optional => 0,
-        },
         codon_translator => {
             is => 'Bio::Tools::CodonTable',
             is_optional => 1,
@@ -49,6 +41,11 @@ class Genome::Transcript::VariantAnnotator{
             is_optional => 1,
             default => 0,
             doc => 'If set, the entire modifed sequence of the transcript is placed in the output file for frameshift mutations, even if the modification is silent',
+        },
+        data_directory => {
+            is => 'PATH',
+            is_optional => 0,
+            doc => 'Pathname to the annotation_data of a build containing transcripts.csv and other files',
         },
     ]
 };
@@ -153,9 +150,14 @@ sub prioritized_transcript{
 sub transcripts {
     my ($self, %variant) = @_;
 
+    my $variant_start = $variant{'start'};
+    my $variant_stop = $variant{'stop'};
+
     # Make sure variant is set properly
-    unless (defined($variant{start}) and defined($variant{stop}) and defined($variant{variant}) and defined($variant{reference}) 
-            and defined($variant{type}) and defined($variant{chromosome_name})) {
+    unless (defined($variant_start) and defined($variant_stop) and defined($variant{variant})
+            and defined($variant{reference}) and defined($variant{type})
+            and defined($variant{chromosome_name}))
+    {
         print Dumper(\%variant);
         confess "Variant is not fully defined: chromosome name, start, stop, variant, reference, and type must be defined.\n";
     }
@@ -167,25 +169,32 @@ sub transcripts {
         return { transcript_error => 'invalid_sequence_on_variant' }
     }
 
-    # TODO Change to use range variant start <-> variant stop
-    my @transcripts_to_annotate = $self->transcript_window->scroll($variant{start});
-    return unless @transcripts_to_annotate;
+    # The magic number 4500000 is because of the longest transcript.  NM_014141 is about 2.3Mb long.
+    # The filter for transcript start and stop is to give the file datasource some hints so it
+    # can seek into the file and/or stop looking early.
+    # Conservatively we'll double that number and it should still help the speed.
+    my @crossing_substructures = Genome::TranscriptStructure->get(
+                                     chrom_name => $variant{'chromosome_name'},
+                                     'structure_stop >=' => $variant_start,
+                                     'structure_start <=' => $variant_stop,
+                                     'transcript_transcript_start >=' => $variant_start - 4500000,
+                                     'transcript_transcript_stop <=' => $variant_stop + 4500000,
+                                     data_directory => $self->data_directory);
+    return unless @crossing_substructures;
 
     my @annotations;
     my $variant_checked = 0;
 
-    for my $transcript ( @transcripts_to_annotate ) {
+    foreach my $substruct ( @crossing_substructures ) {
         # If specified, check that the reference sequence stored on the variant correctly matches our reference
         if ($self->check_variants and not $variant_checked) {
             unless ($variant{reference} eq '-') {
                 my $chrom = $variant{chromosome_name};
-                my $start = $variant{start};
-                my $stop = $variant{stop};
-                my $species = $transcript->species;
-                my $ref_seq = Genome::Model::Tools::Sequence->execute(species => $species,  chromosome => $chrom,  start => $start, stop => $stop, suppress_output => 1)->sequence;
+                my $species = $substruct->transcript_species;
+                my $ref_seq = Genome::Model::Tools::Sequence->execute(species => $species,  chromosome => $chrom,  start => $variant_start, stop => $variant_stop, suppress_output => 1)->sequence;
 
                 unless ($ref_seq eq $variant{reference}) {
-                    $self->warning_message("Sequence on variant on chromosome $chrom between $start and $stop does not match $species reference!");
+                    $self->warning_message("Sequence on variant on chromosome $chrom between $variant_start and $variant_stop does not match $species reference!");
                     $self->warning_message("Variant sequence : " . $variant{reference});
                     $self->warning_message("$species reference : " . $ref_seq);
                     return;
@@ -194,7 +203,7 @@ sub transcripts {
             }
         }
         
-        my %annotation = $self->_transcript_annotation($transcript, %variant) or next;
+        my %annotation = $self->_transcript_substruct_annotation($substruct, %variant) or next;
         push @annotations, \%annotation;
     }
     return @annotations;
@@ -242,27 +251,21 @@ sub _highest_priority_error {
     return $sorted_errors[0];
 }
 
-# Annotates a single transcript/variant pair
-sub _transcript_annotation {
-    my ($self, $transcript, %variant) = @_;
+# Annotates a single transcript-substructure/variant pair
+sub _transcript_substruct_annotation {
+    my ($self, $substruct, %variant) = @_;
     # Just an FYI... using a copy of variant here instead of a reference prevents reverse complementing
     # the variant twice, which would occur if the variant happened to touch two reverse stranded transcripts
 
-    # TODO Change to annotate all structures between variant start and variant stop
     # TODO This will need to be coupled with splitting up a variant so it doesn't extend beyond a structure
     # TODO There are various hacks in intron and exon annotation to fix the side effects of only annotating the
     # structure at variant start position that will also need removed once this is fixed, and there is still
     # a definite bias for variant start over variant stop throughout this module
-    my $main_structure = $transcript->structure_at_position($variant{start});
-    unless ($main_structure) {
-        $self->warning_message("No structure found at position " . $variant{start} . 
-            " for transcript " . $transcript->{transcript_name});
-        return;
-    }
 
     # All sequence stored on the variant is forward stranded and needs to be reverse
     # complemented if the transcript is reverse stranded.
-    if ($transcript->strand eq '-1') {
+    my $strand = $substruct->transcript_strand;
+    if ($strand eq '-1') {
         my ($new_variant, $new_reference);
         unless ($variant{type} =~ /del/i) {
             $new_variant = $self->reverse_complement($variant{variant});
@@ -274,47 +277,37 @@ sub _transcript_annotation {
         }
     }
 
-    my $structure_type = $main_structure->structure_type;
-
-    # TODO Deletion substructure string can be removed once indels spanning structures are properly handled
-    my $deletion_substructures;
-    if ($variant{type} =~ /del/i) {
-        my @structures_in_range = $transcript->structures_in_range($variant{start}, $variant{stop});
-        if (@structures_in_range){
-            $deletion_substructures = "(deletion:" . join(
-                ", ", 
-                map{$_->{structure_type} . "[" . $_->structure_start . "," . $_->structure_stop . "]"} @structures_in_range
-            ) . ")";
-        }
-    }
-
+    my $structure_type = $substruct->structure_type;
     my $method = '_transcript_annotation_for_' . $structure_type;
-    my %structure_annotation = $self->$method($transcript, \%variant, $main_structure) or return;
+    my %structure_annotation = $self->$method(\%variant, $substruct) or return;
     
-    $structure_annotation{deletion_substructures} = $deletion_substructures if $deletion_substructures;
-    my $conservation = $self->_ucsc_conservation_score(\%variant, $transcript);
-    if ($deletion_substructures){
-        $structure_annotation{deletion_substructures} = $deletion_substructures;
+    my $conservation = $self->_ucsc_conservation_score(\%variant, $substruct);
+
+    my $gene_name = $substruct->transcript_gene_name;
+    unless ($gene_name) {
+        $self->warning_message("Gene name missing for substruct: ",Data::Dumper::Dumper($substruct));
+        my $gene = Genome::Gene->get(data_directory => $substruct->data_directory,
+                                     id => $substruct->transcript_gene_id);
+        $gene_name = $gene->name;
     }
 
     return (
         %structure_annotation,
-        transcript_error => $transcript->transcript_error,
-        transcript_name => $transcript->transcript_name, 
-        transcript_status => $transcript->transcript_status,
-        transcript_source => $transcript->source,
-        transcript_species=> $transcript->species,
-        transcript_version => $transcript->version,
-        strand => $transcript->strand,
-        gene_name  => $transcript->gene->name,
-        ucsc_cons => $self->_ucsc_conservation_score(\%variant, $transcript),
-        amino_acid_length => $transcript->amino_acid_length,
+        transcript_error => $substruct->transcript_transcript_error,
+        transcript_name => $substruct->transcript_transcript_name,
+        transcript_status => $substruct->transcript_transcript_status,
+        transcript_source => $substruct->transcript_source,
+        transcript_species=> $substruct->transcript_species,
+        transcript_version => $substruct->transcript_version,
+        strand => $strand,
+        gene_name  => $gene_name,
+        amino_acid_length => $substruct->transcript_amino_acid_length,
         ucsc_cons => $conservation,
-    )
+    );
 }
 
 sub _transcript_annotation_for_rna {
-    my ($self, $transcript, $variant, $structure) = @_;
+    my ($self, $variant, $structure) = @_;
 
     return (
         c_position => 'NULL',
@@ -325,15 +318,15 @@ sub _transcript_annotation_for_rna {
 }
 
 sub _transcript_annotation_for_utr_exon {
-    my ($self, $transcript, $variant, $structure) = @_;
-    my $coding_position = $self->_determine_coding_position($transcript, $variant, $structure);
+    my ($self, $variant, $structure) = @_;
+    my $coding_position = $self->_determine_coding_position($variant, $structure);
 
     # TODO Change to use variant start and stop for more accurate annotation
     # TODO Not sure if the behavior when there is no coding region is ideal
     my $position = $variant->{start};
     my $trv_type;
-    if ($transcript->has_coding_region) {
-        if ($transcript->before_coding_region($position)) {
+    if ($structure->transcript_has_coding_region) {
+        if ($structure->transcript_before_coding_region($position)) {
             $trv_type = '5_prime_untranslated_region';
         }
         else {
@@ -341,7 +334,7 @@ sub _transcript_annotation_for_utr_exon {
         }
     }
     else {
-        if ($transcript->strand eq '+1') {
+        if ($structure->transcript_strand eq '+1') {
             $trv_type = '3_prime_untranslated_region';
         }
         else {
@@ -357,13 +350,13 @@ sub _transcript_annotation_for_utr_exon {
 }
 
 sub _transcript_annotation_for_flank {
-    my ($self, $transcript, $variant, $structure) = @_;
-    my $coding_position = $self->_determine_coding_position($transcript, $variant, $structure);
+    my ($self, $variant, $structure) = @_;
+    my $coding_position = $self->_determine_coding_position($variant, $structure);
 
     # TODO Change to use variant start and stop
     my $position = $variant->{start};
     my $trv_type;
-    if ($transcript->is_before($variant->{start}, $transcript->transcript_start)) {
+    if ($structure->transcript_is_before($variant->{start}, $structure->transcript_transcript_start)) {
         $trv_type = '5_prime_flanking_region';
     }
     else {
@@ -371,7 +364,7 @@ sub _transcript_annotation_for_flank {
     }
 
     # TODO Change to use variant start and stop for more accurate distance 
-    my $distance_to_transcript = $transcript->distance_to_transcript($position);
+    my $distance_to_transcript = $structure->transcript_distance_to_transcript($position);
 
     return (
         c_position => "c." . $coding_position,
@@ -382,8 +375,8 @@ sub _transcript_annotation_for_flank {
 }
 
 sub _transcript_annotation_for_intron {
-    my ($self, $transcript, $variant, $structure) = @_;
-    my $coding_position = $self->_determine_coding_position($transcript, $variant, $structure);
+    my ($self, $variant, $structure) = @_;
+    my $coding_position = $self->_determine_coding_position($variant, $structure);
 
     # Need shortest distance between variant and the edge of the next structure (one bp past edge of intron)
     my $dist_to_structure_start = $variant->{start} - ($structure->{structure_start} - 1);
@@ -393,7 +386,7 @@ sub _transcript_annotation_for_intron {
 
     # Number of basepairs between start of intron and variant (takes into account strand)
     my $intron_position;
-    if ($transcript->strand eq '+1') {
+    if ($structure->transcript_strand eq '+1') {
         $intron_position = $variant->{start} - $structure->{structure_start} + 1;
     }
     else {
@@ -449,7 +442,7 @@ sub _transcript_annotation_for_intron {
 }
 
 sub _transcript_annotation_for_cds_exon {
-    my ($self, $transcript, $variant, $structure) = @_;
+    my ($self, $variant, $structure) = @_;
     
     # If the variant continues beyond the stop position of the exon, then the variant sequence
     # needs to be modified to stop at the exon's stop position. The changes after the exon's stop
@@ -464,12 +457,13 @@ sub _transcript_annotation_for_cds_exon {
         $variant->{stop} = $variant->{stop} - $bases_beyond_stop;
     }
 
-    my $coding_position = $self->_determine_coding_position($transcript, $variant, $structure);
+    my $coding_position = $self->_determine_coding_position($variant, $structure);
 
     # Grab and translate the codons affected by the variation
-    my ($original_seq, $mutated_seq, $protein_position) = $self->_get_affected_sequence($transcript, $structure, $variant);
-    my $original_aa = $self->translate($original_seq, $transcript->{chrom_name});
-    my $mutated_aa = $self->translate($mutated_seq, $transcript->{chrom_name});
+    my ($original_seq, $mutated_seq, $protein_position) = $self->_get_affected_sequence($structure, $variant);
+    my $chrom_name = $structure->transcript_chrom_name;
+    my $original_aa = $self->translate($original_seq, $chrom_name);
+    my $mutated_aa = $self->translate($mutated_seq, $chrom_name);
 
     my ($trv_type, $protein_string);
     my ($reduced_original_aa, $reduced_mutated_aa, $offset) = ($original_aa, $mutated_aa, 0);
@@ -489,7 +483,7 @@ sub _transcript_annotation_for_cds_exon {
             # In the above example, first changed amino acid would be T.
             $trv_type = "frame_shift_" . lc $variant->{type};
             if ($self->{get_frame_shift_sequence}) {
-                my $aa_after_indel = $self->_apply_indel_and_translate($transcript, $structure, $variant);
+                my $aa_after_indel = $self->_apply_indel_and_translate($structure, $variant);
                 $protein_string = "p." . $aa_after_indel . $protein_position . "fs";
             }
             else {
@@ -526,7 +520,7 @@ sub _transcript_annotation_for_cds_exon {
         else {
             $trv_type = "frame_shift_" . lc $variant->{type};
             if ($self->{get_frame_shift_sequence}) {
-                my $aa_after_indel = $self->_apply_indel_and_translate($transcript, $structure, $variant);
+                my $aa_after_indel = $self->_apply_indel_and_translate($structure, $variant);
                 $protein_string = "p." . $aa_after_indel . $protein_position . "fs";
             }
             else {
@@ -559,7 +553,7 @@ sub _transcript_annotation_for_cds_exon {
     else {
         $self->warning_message("Unknown variant type " . $variant->{type} .
                 " for variant between " . $variant->{start} . " and " . $variant->{stop} . 
-                " on transcript " . $transcript->{transcript_name} . 
+                " on transcript " . $structure->transcript_transcript_name . 
                 ", cannot continue annotation of coding exon");
         return;
     }
@@ -567,7 +561,7 @@ sub _transcript_annotation_for_cds_exon {
     # Need to create an amino acid change string for the protein domain method
     my $amino_acid_change = "p." . substr($original_aa, 0, 1) . $protein_position;
     my ($protein_domain, $all_protein_domains) = $self->_protein_domain(
-        $transcript, $variant, $protein_position
+        $structure, $variant, $protein_position
     );
 
     return (
@@ -579,16 +573,53 @@ sub _transcript_annotation_for_cds_exon {
            );
 }
 
+
+# Taken from Genome::Transcript
+# Given a version and species, find the imported reference sequence build
+sub get_reference_build_for_transcript {
+    my($self, $structure) = @_;
+
+    my ($version) = $structure->transcript_version =~ /^\d+_(\d+)[a-z]/;
+    my $species = $structure->transcript_species;
+
+    unless ($self->{'_reference_builds'}->{$version}->{$species}) {
+
+        my $model = Genome::Model::ImportedReferenceSequence->get(name => "NCBI-$species");
+        confess "Could not get imported reference sequence model for $species!" unless $model;
+        my $build = $model->build_by_version($version);
+        confess "Could not get build version $version from $species imported reference sequence model!" unless $build;
+
+        $self->{'_reference_build'}->{$version}->{$species} = $build;
+    }
+    return $self->{_reference_build}->{$version}->{$species};
+}
+
+
 #given a transcript, structure, and variant, calculate all of the bases after and including the indel 
 #plus a number of bases before the indel to create correct, complete codons.  Then translate to an 
 #amino acid sequence and return it. 
 #If this is used near the centromere or at the end of a chromosome, it will be unpredictable.  Use this at those positions at your own risk!
 sub _apply_indel_and_translate{
-    my ($self, $transcript, $structure, $variant) = @_;
+    my ($self, $structure, $variant) = @_;
 
+    my $chrom_name = $structure->chrom_name;
+    my @sibling_structures = Genome::TranscriptStructure->get(transcript_transcript_id => $structure->transcript_transcript_id,
+                                                               chrom_name => $chrom_name,
+                                                               data_directory => $structure->data_directory,
+                                                               'structure_start <' => $structure->transcript_transcript_stop + 50000,
+                                                              # structure_type => 'intron',
+                                                            );
+    if ($structure->transcript_strand eq '+1') {
+        @sibling_structures = sort { $a->structure_start <=> $b->structure_start } @sibling_structures;
+    } else {
+        @sibling_structures = sort { $b->structure_start <=> $a->structure_start } @sibling_structures;
+    }
+
+                                                       
     my @structures = ($structure);
-    for my $substructure ($transcript->ordered_sub_structures){
-        if($transcript->is_after($substructure->structure_start, $structure->structure_start)){
+
+    for my $substructure (@sibling_structures) {
+        if($structure->transcript_is_after($substructure->structure_start, $structure->structure_start)){
             if($substructure->structure_type ne 'intron'){
                 push @structures, $substructure;
             }
@@ -599,15 +630,15 @@ sub _apply_indel_and_translate{
     for my $substructure (@structures) {
         if ($substructure->structure_type eq 'flank') {
             my $sequence_command = Genome::Model::Tools::Sequence->execute(
-                    chromosome => $transcript->chrom_name,
+                    chromosome => $chrom_name,
                     start => $substructure->structure_start,
                     stop => $substructure->structure_stop, 
-                    build => $transcript->get_reference_build, 
+                    build => $self->get_reference_build_for_transcript($substructure),
                     suppress_output => 1,
                     ); 
             die "Unsuccessfully executed sequence fetch" unless $sequence_command;
             my $flank_sequence = $sequence_command->sequence;
-                if ($transcript->strand eq '-1'){
+                if ($structure->transcript_strand eq '-1'){
                     $flank_sequence = $self->reverse_complement($flank_sequence);
                 }
             $sequence .= $flank_sequence;
@@ -618,7 +649,7 @@ sub _apply_indel_and_translate{
     }
 
     my ($start, $stop) = ($variant->{start}, $variant->{stop});
-    ($start, $stop) = ($stop, $start) if $transcript->strand eq '-1';
+    ($start, $stop) = ($stop, $start) if $structure->transcript_strand eq '-1';
     my $length = $stop - $start + 1;
     
     my ($relative_variant_start, $borrowed_bases_start) = $structure->sequence_position($start);
@@ -636,9 +667,9 @@ sub _apply_indel_and_translate{
         my $deleted_bases = min(abs($first->stop_with_strand - $start), abs($stop - $start)) + 1;
         for my $substructure (@structures) {
             # last if $stop < $structure->structure_start;
-            last if $transcript->is_after($substructure->start_with_strand, $stop); 
+            last if $structure->transcript_is_after($substructure->start_with_strand, $stop); 
             #if ($stop < $substructure->structure_stop) {
-            if($transcript->is_after($substructure->stop_with_strand, $stop)){
+            if($structure->transcript_is_after($substructure->stop_with_strand, $stop)){
                 $deleted_bases += abs($substructure->start_with_strand - $stop);
             }
             else {
@@ -655,7 +686,7 @@ sub _apply_indel_and_translate{
         confess "Malformed variant type: ";
     }
     
-    my $aa_sequence = $self->translate($mutated_seq, $transcript->{chrom_name}); #if there's no stop, we don't care.
+    my $aa_sequence = $self->translate($mutated_seq, $chrom_name); #if there's no stop, we don't care.
     $aa_sequence =~ s/\*.*/\*/; #remove everything after the amino_acid stop
     return $aa_sequence;
 }
@@ -678,12 +709,21 @@ sub _coding_bases_after_position {
     
 # Find the UCSC conservation score for a piece of chromosome
 sub _ucsc_conservation_score {
-    my ($self, $variant, $transcript) = @_;
+    my ($self, $variant, $substruct) = @_;
     return 'NULL' if $variant->{chromosome_name} =~ /^[MN]T/;
 
     my $range = [ $variant->{start}..$variant->{stop} ] ;
-    my $conservation_score_lookup = Genome::Model::Tools::Annotate::LookupConservationScore->execute(chromosome => $variant->{chromosome_name}, coordinates => $range, species => $transcript->species, version => $self->annotation_build_version);
-    my $ref = $conservation_score_lookup->conservation_scores_results;
+    
+    Genome::Model::Tools::Annotate::LookupConservationScore->class();  # Get the module loaded
+    # NOTE! Not a method.  This is a normal function call.  That class' execute() is just a wrapper
+    # around it
+    my $ref = Genome::Model::Tools::Annotate::LookupConservationScore::lookup_conservation_score(
+                  chromosome => $variant->{chromosome_name},
+                  coordinates => $range,
+                  species => $substruct->transcript_species,
+                  version => $substruct->transcript_version,
+             );
+
     my @ret;
     foreach my $item (@$ref)
     {
@@ -694,12 +734,12 @@ sub _ucsc_conservation_score {
 
 # Find the domains affected by the variant and all domains for the transcript
 sub _protein_domain {
-    my ($self, $transcript, $variant, $protein_position) = @_;
-    return 'NULL', 'NULL' unless defined $transcript and defined $variant;
+    my ($self, $structure, $variant, $protein_position) = @_;
+    return 'NULL', 'NULL' unless defined $structure and defined $variant;
 
     my @all_domains = Genome::InterproResult->get(
-            transcript_name => $transcript->transcript_name,
-            data_directory => $transcript->data_directory,
+            transcript_name => $structure->transcript_transcript_name,
+            data_directory => $structure->data_directory,
             chrom_name => $variant->{chromosome_name},
             );
     return 'NULL', 'NULL' unless @all_domains;
@@ -738,32 +778,32 @@ sub _protein_domain {
 #
 # TODO This can probably be refactored and simplified, there's a lot of redundant logic here
 sub _determine_coding_position {
-    my ($self, $transcript, $variant, $structure) = @_;
-    my $cds_region_start = $transcript->{coding_region_start};
-    my $cds_region_stop = $transcript->{coding_region_stop};
-    my $structure_type = $structure->{structure_type};
+    my ($self, $variant, $structure) = @_;
+    my $cds_region_start = $structure->transcript_coding_region_start;
+    my $cds_region_stop = $structure->transcript_coding_region_stop;
+    my $structure_type = $structure->structure_type;
     my $start = $variant->{start};
     my $stop = $variant->{stop};
     my $c_position = 'NULL';
     my $coding_bases_before = $structure->coding_bases_before;
-    my $strand = $transcript->strand;
+    my $strand = $structure->transcript_strand;
 
     if ($structure_type eq 'rna') {
         $c_position = 'NULL';
     }
     elsif ($structure_type eq 'flank') {
-        if ($transcript->has_coding_region) {
-            my $distance_to_coding = $transcript->distance_to_coding_region($start);
-            if ($transcript->before_coding_region($start)) {
+        if ($structure->transcript_has_coding_region) {
+            my $distance_to_coding = $structure->transcript_distance_to_coding_region($start);
+            if ($structure->transcript_before_coding_region($start)) {
                 $c_position = "-" . $distance_to_coding; 
             }
-            elsif ($transcript->after_coding_region($start)) {
+            elsif ($structure->transcript_after_coding_region($start)) {
                 $c_position = "*" . $distance_to_coding;
             }
         }
         else {
-            my $distance_to_transcript = $transcript->distance_to_transcript($start);
-            if ($transcript->is_before($start, $transcript->transcript_start)) {
+            my $distance_to_transcript = $structure->transcript_distance_to_transcript($start);
+            if ($structure->transcript_is_before($start, $structure->transcript_transcript_start)) {
                 $c_position = "-" . $distance_to_transcript;
             }
             else {
@@ -772,12 +812,12 @@ sub _determine_coding_position {
         }
     }
     elsif ($structure_type eq 'utr_exon') {
-        if ($transcript->has_coding_region) {
-            my $distance_to_coding = $transcript->distance_to_coding_region($start);
-            if ($transcript->before_coding_region($start)) {
+        if ($structure->transcript_has_coding_region) {
+            my $distance_to_coding = $structure->transcript_distance_to_coding_region($start);
+            if ($structure->transcript_before_coding_region($start)) {
                 $c_position = "-" . $distance_to_coding;
             }
-            elsif ($transcript->after_coding_region($start)) {
+            elsif ($structure->transcript_after_coding_region($start)) {
                 $c_position = "*" . $distance_to_coding;
             }
         }
@@ -786,7 +826,7 @@ sub _determine_coding_position {
             # If transcript strand is +1, then utr exon is always 3' and prefixed with a '*'. Otherwise, the
             # utr exon is considered 5' and prefixed with a '-'. The position is simply the variant start position
             # TODO ... why is the logic like this? Is this what we want?
-            if ($transcript->strand eq '+1') {
+            if ($structure->transcript_strand eq '+1') {
                 $c_position = "*" . $start;
             }
             else {
@@ -805,11 +845,11 @@ sub _determine_coding_position {
         ($start, $stop) = ($stop, $start) if $strand eq '-1';
         my $distance_to_start = $structure->distance_to_start($start) + 1;
         my $distance_to_stop = $structure->distance_to_stop($start) + 1;
-        my $start_to_coding_distance = $transcript->distance_to_coding_region($start);
-        my $stop_to_coding_distance = $transcript->distance_to_coding_region($stop);
+        my $start_to_coding_distance = $structure->transcript_distance_to_coding_region($start);
+        my $stop_to_coding_distance = $structure->transcript_distance_to_coding_region($stop);
 
-        if ($transcript->has_coding_region) {
-            if ($transcript->within_coding_region($start)) {
+        if ($structure->transcript_has_coding_region) {
+            if ($structure->transcript_within_coding_region($start)) {
                 if ($distance_to_start <= $distance_to_stop) {
                     $c_position = ($coding_bases_before) . "+" . $distance_to_start;
                     if ($start != $stop) {
@@ -828,7 +868,7 @@ sub _determine_coding_position {
                 }
             }
             else {
-                if ($transcript->before_coding_region($start)) {
+                if ($structure->transcript_before_coding_region($start)) {
                     $c_position = "1";
                 }
                 else {
@@ -858,7 +898,7 @@ sub _determine_coding_position {
 # Given a transcript, exon, and variant, determine the original and mutated sequence
 # and the location of the first changed amino acid of the protein
 sub _get_affected_sequence {
-    my ($self, $transcript, $structure, $variant) = @_;
+    my ($self, $structure, $variant) = @_;
 
     # Occasionally, the first amino acid changed by a variation occurs beyond the codons actually changed. For example,
     # CCC CTG CTG codes for PLL. If the last base of the first codon to the last base of the middle codon are deleted 
@@ -872,7 +912,7 @@ sub _get_affected_sequence {
     # Determine protein position of amino acid at variant start. This will be modified below for indels to account
     # for extra codons placed at the beginning of the original sequence and further modified during reduction
     my ($variant_position, $phase_bases);
-    if ($transcript->strand eq '-1') {
+    if ($structure->transcript_strand eq '-1') {
         ($variant_position, $phase_bases) = $structure->sequence_position($variant->{stop});
     }
     else {

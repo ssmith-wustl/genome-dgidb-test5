@@ -49,7 +49,8 @@ sub execute {
             my $build_id = $build->id;
             my $restart_build = Genome::Model::Build::Command::Restart->create(filter => $build_id);
             $self->status_message("Restarting $build_id ($model_name)");
-            if ($restart_build->execute()) {
+            eval { $restart_build->execute() };
+            if(!$@) {
                 $active_count++;
             }
             else {

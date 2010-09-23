@@ -184,7 +184,7 @@ sub _process_instrument_data {
     if ( not defined $read_processor and not defined $base_limit ) {
         # If no read processor or base limt - just rename
         $fast_qual_class = 'Genome::Model::Tools::FastQual::Rename';
-        $fast_qual_params{matches} = 'qr{#.*/1$}=.b1,qr{#.*/2$}=.g1';
+        $fast_qual_params{matches} = ['qr{#.*/1$}=.b1,qr{#.*/2$}=.g1'];
     }
     else {
         # Got multiple commands, use pipe

@@ -42,6 +42,12 @@ sub execute {
 sub _stop_build {
     my ($self, $build) = @_;
 
+    if ( not defined $build ) {
+        Carp::confess('No build given to stop');
+    }
+
+    $self->status_message('Attempting to stop build: '.$build->id);
+
     if ($build->run_by ne $ENV{USER}) {
         $self->error_message("Can't stop a build originally started by: " . $build->run_by);
         return 0;
@@ -84,8 +90,13 @@ sub _stop_build {
 
     unless ( $build->fail($error) ) {
         $self->error_message('Failed to fail build');
-
         return;
+    }
+
+    # Commit the update to this build
+    my $commit_rv = UR::Context->commit;
+    if ( not $commit_rv ) {
+        Carp::confess('Cannot commit update to build: '.$build->id);
     }
 
     $self->status_message(sprintf(

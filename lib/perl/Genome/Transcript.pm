@@ -58,6 +58,7 @@ class Genome::Transcript {
             valid_values => ['+1', '-1', 'UNDEF'],
         },
         sub_structures => { 
+            #is_constant => 1,
             calculate_from => [qw/ id  data_directory/],
             calculate => q|
             Genome::TranscriptSubStructure->get(transcript_id => $id, data_directory => $data_directory);
@@ -185,7 +186,7 @@ sub distance_to_transcript {
 
 sub distance_to_coding_region {
     my ($self, $position) = @_;
-    return 0 unless $self->has_coding_region and not $self->is_rna;
+    return 0 if (! $self->has_coding_region or (index($self->transcript_error,'rna_with_coding_region') >= 0));
     my $coding_start = $self->coding_region_start;
     my $coding_stop = $self->coding_region_stop;
     return 0 if $coding_start eq 'NULL' or $coding_stop eq 'NULL';
@@ -429,9 +430,13 @@ sub has_coding_region {
     my $self = shift;
 
     return 0 if $self->coding_region_start eq 'NULL' or $self->coding_region_stop eq 'NULL';
+    return 1;
+
+    ################ not needed.... ###################
     my $seq = $self->cds_full_nucleotide_sequence;
     return 1 if defined $seq and length $seq > 0;
     return 0;
+
 }
 
 # Checks if the transcript represents rna

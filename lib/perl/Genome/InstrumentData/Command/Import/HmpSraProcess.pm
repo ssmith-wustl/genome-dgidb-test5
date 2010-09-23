@@ -150,6 +150,7 @@ sub execute {
 
     } else {
 
+        $DB::single = 1;
 
         my $path_to_scripts_dir =$self->get_script_path;
         $self->status_message("Scripts are in: $path_to_scripts_dir");
@@ -178,6 +179,8 @@ sub execute {
         close SRA_SAMPLE_MAPPING;
         close SRR_LISTING;
 
+        $DB::single = 1;
+
         #Run BROAD's processing script
         my $cmd;
         my $errfile = $working_dir . "/ReadProcessing." . $self->srs_sample_id . ".err";
@@ -199,10 +202,19 @@ sub execute {
         $self->status_message("CMD=>$cmd<=\n");
         $self->status_message("PWD=>$current_dir<=\n");
         
+        $DB::single = 1;
+
+        eval {
         Genome::Utility::FileSystem->shellcmd(
             cmd => $cmd,
-            output_files => [$errfile,$outfile],
             );
+        };
+
+        if ($@) {
+           $DB::single = 1; 
+           $self->error_message("Error running broad script: $@\n");
+           return;
+        }
 
         $DB::single = 1;
         my @reads = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.*.fastq.bz2");
