@@ -42,7 +42,8 @@ sub execute {
         if ($status =~ /Failed/) {
             my $abandon_build = Genome::Model::Build::Command::Abandon->create(build_id => $build_id);
             $self->status_message("Abandoning $build_id ($model_name)");
-            unless($abandon_build->execute()) {
+            eval { $abandon_build->execute() };
+            unless($@) {
                 $self->error_message("Failed to abandon build $build_id for model " . $model->name);
             }
             UR::Context->commit;
@@ -51,5 +52,6 @@ sub execute {
             $self->status_message("Skipping $build_id ($model_name)");
         }
     }
+    return 1;
 }
 1;

@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 use Sys::Hostname;
+use Data::Dumper;
 
 our $UNALIGNED_TEMPDIR = '/tmp'; #'/gscmnt/sata844/info/hmp-mgs-test-temp';
 
@@ -499,6 +500,7 @@ sub _process_unaligned_reads {
             my $lock = basename($expected_se_path);
             $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
+            $self->status_message("Creating lock on $lock...");
             $se_lock = Genome::Utility::FileSystem->lock_resource(
                 resource_lock => $lock,
                 max_try => 2,
@@ -517,6 +519,7 @@ sub _process_unaligned_reads {
             my $lock = basename($expected_pe_path);
             $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
+            $self->status_message("Creating lock on $lock...");
             $pe_lock = Genome::Utility::FileSystem->lock_resource(
                 resource_lock => "$lock",
                 max_try => 2,
@@ -601,6 +604,7 @@ sub _process_unaligned_reads {
 
         my @instrument_data;
         for my $original_data_path (@upload_paths) {
+            $self->status_message("Attempting to upload $original_data_path...");
             if ($original_data_path =~ /,/){
                 $properties_from_prior{is_paired_end} = 1;
             }else{
@@ -646,15 +650,19 @@ sub _process_unaligned_reads {
             if ($instrument_data->__changes__) {
                 die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
             }
-            if ($se_lock) {
+            if (!$instrument_data->is_paired_end && $se_lock) {
+                $self->status_message("Attempting to remove lock on $se_lock...");
                 unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
-                    die $self->error_message("Failed to unlock $expected_se_path.");
+                    die $self->error_message("Failed to unlock $se_lock.");
                 }
+                undef($se_lock);
             }
-            if ($pe_lock) {
+            if ($instrument_data->is_paired_end && $pe_lock) {
+                $self->status_message("Attempting to remove lock on $pe_lock...");
                 unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
-                    die $self->error_message("Failed to unlock $expected_pe_path.");
+                    die $self->error_message("Failed to unlock $pe_lock.");
                 }
+                undef($pe_lock);
             }
             push @instrument_data, $instrument_data;
         }        
