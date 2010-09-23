@@ -73,6 +73,14 @@ sub execute {
     }
     $self->status_message('Done processing instrument data');
 
+    $self->status_message('Verifying assembler input files');
+    my @existing_assembler_input_files = $self->build->existing_assembler_input_files;
+    if ( not @existing_assembler_input_files ) {
+        $self->error_message('No assembler input files were created!');
+        return;
+    }
+    $self->status_message('OK...assembler input files');
+
     return 1;
 }
 #<>#
@@ -177,7 +185,7 @@ sub _process_instrument_data {
     my $fast_qual_class;
     my %fast_qual_params = (
         input => \@input_files,
-        output => [ $self->build->assembler_input_files ],
+        output => [ $self->build->read_processor_output_files_for_instrument_data($instrument_data) ],
         type_in => $qual_type,
         type_out => $qual_type, # TODO make sure this is sanger
     );
