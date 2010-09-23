@@ -39,7 +39,7 @@ class Genome::Model::ReferenceAlignment::Report::DbSnpConcordance {
             is_many => 1,
             default_value => [
             "$base_template_path.html.tt2",
-            "$base_template_path.txt.tt2"
+            #"$base_template_path.txt.tt2"
             ],
             doc => 'The paths of template(s) to use to format the report.  (In .tt2 format)',
         },

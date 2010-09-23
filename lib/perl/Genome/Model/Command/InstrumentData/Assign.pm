@@ -91,7 +91,6 @@ sub create {
 #TODO:put this logic in Genome::Model::assign_instrument_data() and turn this command into a thin wrapper
 sub execute {
     my $self = shift;
-    $DB::single=$DB::stopper;
     if ( $self->instrument_data_id ) { # assign this
         return $self->_assign_by_instrument_data_id;
     }
@@ -319,6 +318,11 @@ sub _assign_all_instrument_data {
                     . " imported by " . $id->user_name
                     . ".  Add this explicitly if you want it in the model."
                 );
+                next ID;
+            }
+        }
+        if(defined($id->target_region_set_name)){
+            unless(@inputs){
                 next ID;
             }
         }

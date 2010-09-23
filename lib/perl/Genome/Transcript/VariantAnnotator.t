@@ -77,17 +77,21 @@ sub get_test_data {
 sub create_annotator {
     my $annotation_model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
     my $annotation_build = $annotation_model->build_by_version('54_36p_v2');
-    my $iterator = $annotation_build->transcript_iterator;
-    my $window = Genome::Utility::Window::Transcript->create(
-        iterator => $iterator,
-        range => 50000,
-    );
+
     my %conservation_dirs = Genome::Info::UCSCConservation->ucsc_conservation_directories;
     my $ucsc_conservation_directory = $conservation_dirs{'36'};
+
+    my @data_directories = $annotation_build->determine_data_directory();
+    my $data_directory;
+    if (@data_directories < 2) {
+        $data_directory = $data_directories[0];
+    } else {
+        $data_directory = \@data_directories;
+    }
+
     my $annotator = Genome::Transcript::VariantAnnotator->create(
-        transcript_window => $window,
+        data_directory => $data_directory,
         ucsc_conservation_directory => $ucsc_conservation_directory, 
-        annotation_build_version => $annotation_build->version,
     );
     return $annotator;
 }
@@ -117,9 +121,16 @@ sub check_output {
 
     for my $variant (@$variants) {
         $variant->{type} = Genome::Model::Tools::Annotate->infer_variant_type($variant);
-        my @test_output = get_annotations_for_variant($variant, $annotations);
-        my @output = $output_annotator->transcripts(%$variant);
-        ok (compare_annotations(\@test_output, \@output), "annotation output matches expected output for variant $variant_num");
+        my @expected_annotations = get_annotations_for_variant($variant, $annotations);
+
+        my @annotations = $output_annotator->transcripts(%$variant);
+        # The expected data also contains the keys/values from the variant hash
+        # Go ahead and insert the variant data into each annotation
+        foreach (@annotations) {
+            %$_ = ( %$_, %$variant);
+        }
+
+        ok (compare_annotations(\@expected_annotations, \@annotations), "annotation output matches expected output for variant $variant_num");
         $variant_num++;
     }
 }
@@ -149,24 +160,29 @@ sub check_prioritization {
                 }
             }
 
-            ok (scalar @output == scalar @test_output, "received same number of results as expected " .
-                "for variant $variant_num with filter $filter");
-            ok (compare_annotations(\@output, \@test_output), "annotation ordering matches expected " .
-                "after prioritization for variant $variant_num with filter $filter");
+            is(scalar(@output), scalar(@test_output), "received same number of results as expected for variant $variant_num with filter $filter");
+            ok (compare_annotations(\@output, \@test_output), "annotation ordering matches expected after prioritization for variant $variant_num with filter $filter");
             $variant_num++;
         }
     }
 }
 
 sub compare_annotations {
-    my ($output, $test_output) = @_;
+    my ($expected_annotations, $annotations) = @_;
 
-    for (my $i = 0; $i < scalar @$output; $i++) {
-        my $out = $output->[$i];
-        my $test = $test_output->[$i];
-        for my $key (sort keys %$test) {
-            unless ($out->{$key} eq $test->{$key}) {
-                print "*** attribute $key : expected-> " . $test->{$key} . " received-> " . $out->{$key} . " ***\n";
+    my @expected_annotations = sort { $a->{'transcript_name'} cmp $b->{'transcript_name'} }
+                               @$expected_annotations;
+
+    my @annotations = sort { $a->{'transcript_name'} cmp $b->{'transcript_name'} }
+                      @$annotations;
+
+    for (my $i = 0; $i < scalar @expected_annotations; $i++) {
+        my $expected = $expected_annotations[$i];
+        my $annotation = $annotations[$i];
+        for my $key (sort keys %$expected) {
+            unless ($expected->{$key} eq $annotation->{$key}) {
+                diag "*** for transcript name ". $expected->{'transcript_name'}
+                     . " attribute $key : expected-> " . $expected->{$key} . " received-> " . $annotation->{$key} . " ***\n";
                 return 0;
             }
         }

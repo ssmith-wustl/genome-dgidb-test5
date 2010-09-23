@@ -43,7 +43,7 @@ sub _stop_build {
     my ($self, $build) = @_;
 
     if ( not defined $build ) {
-        Carp::confess('No build given to restart');
+        Carp::confess('No build given to stop');
     }
 
     $self->status_message('Attempting to stop build: '.$build->id);
