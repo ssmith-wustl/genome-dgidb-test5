@@ -8,12 +8,12 @@ use Getopt::Std;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
 
-my $version="BreakFuser-0.1r148";
+my $version="SquareDancer-0.1r148";
 my %opts = (q=>35,r=>2,k=>30,n=>3,c=>1,m=>3);
 my %opts1;
 getopts('o:q:r:k:n:c:l:m:ubdg:', \%opts1);
 die("
-Usage:   BreakFuser.pl <bams>
+Usage:   SquareDancer.pl <bams>
 Options:
          -o STR   operate on comma-separated chromosome [all chromosome]
          -q INT   minimal mapping quality cutoff [$opts{q}]
