@@ -106,6 +106,7 @@ EOS
 sub execute {
     my $self = shift;
 
+    $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
     $self->status_message("Beginning execution of HAP command");
 
     # FIXME I'd like to get rid of the configuration file altogether
@@ -377,6 +378,9 @@ sub execute {
         join( '.', 'KS-OUTPUT', $config->{locus_tag}, 'CDS', 'pep', ),
     );
 
+    my $psortb_archive_dir = File::Spec->catfile(
+        $base_archive_dir, 'psortB', $config->{pipe_version}, 'Hybrid');
+
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
         'locus_tag'            => $config->{locus_tag},
         'sequence_set_id'      => $merge->sequence_set_id,
@@ -387,6 +391,7 @@ sub execute {
         'blastp_archive_dir'   => $blastp_archive_dir,
         'interpro_archive_dir' => $interpro_archive_dir,
         'keggscan_archive_dir' => $keggscan_archive_dir,
+        'psortb_archive_dir'   => $psortb_archive_dir,
 
         # pepfile should be constructed automagically here.
     );

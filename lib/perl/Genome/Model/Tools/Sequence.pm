@@ -49,13 +49,6 @@ class Genome::Model::Tools::Sequence{
             doc => "This is populated with the sequence returned from running this command",
             is_optional => 1,
         },
-        suppress_output => {
-            is => 'Boolean',
-            is_input => 1,
-            is_optional => 1,
-            default => 0,
-            doc => 'Setting this option suppresses printing the sequence.  Useful for calling this inside another program',
-        },
     ],
 };
 
@@ -77,28 +70,64 @@ Given chromosome start and stop, returns a sequence from a ImportedReferenceSequ
 EOS
 }
 
+# For speed.  slightly unsafe, but there shouldn't ever be any problems, right?
+sub __errors__() {
+    return;
+}
+
 sub execute {
     my $self = shift;
+    my $results =
+        eval { 
+            if ($self->build){
+                lookup_sequence(
+                        chromosome => $self->chromosome,
+                        start => $self->start,
+                        stop => $self->stop,
+                        build => $self->build,
+                        species => $self->species,
+                        version => $self->version);
+            }
+            else{
+                lookup_sequence(
+                        chromosome => $self->chromosome,
+                        start => $self->start,
+                        stop => $self->stop,
+                        build => '',
+                        species => $self->species,
+                        version => $self->version);
+            }
+        };
+    if ($@) {
+        $self->error_message($@);
+        return 0;
+    } else {
+        $self->sequence($results);
+        print $self->sequence, "\n"; #TODO: should this be here?
+        return 1;
+    }
+}
 
-    my $build = $self->build;
+sub lookup_sequence{
+    my %args = @_;
+    my($chromosome, $start, $stop, $build, $species, $version) = @args{'chromosome','start','stop','build','species','version'};
+
     unless ($build){
-        my $model = Genome::Model->get(name => "NCBI-" . $self->species);
+        my $model = Genome::Model->get(name => "NCBI-" . $species);
         unless ($model) {
-            $self->error_message("Could not get imported reference model for " . $self->species);
-            die;
+            Carp::croak("Could not get imported reference model for " . $species);
+            return 0;
         }
 
-        $build = $model->build_by_version($self->version);
+        $build = $model->build_by_version($version);
         unless ($build) {
-            $self->error_message("Could not get imported reference version " . $self->version . " for " . $self->species);
-            die;
+            Carp::croak("Could not get imported reference version " . $version . " for " . $species);
+            return 0;
         }
     }
 
-    my $seq = $build->sequence($self->chromosome, $self->start, $self->stop);
-    print($seq . "\n") unless $self->suppress_output;
-    $self->sequence($seq);
-    return 1;
+    my $seq = $build->sequence($chromosome, $start, $stop);
+    return $seq;
 }
 
 1;

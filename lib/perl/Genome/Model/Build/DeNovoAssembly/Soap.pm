@@ -46,7 +46,7 @@ sub read_processor_output_files_for_instrument_data {
         );
     }
     else {
-        return $self->ssembler_fragment_input_file_for_library_id($library_id);
+        return $self->assembler_fragment_input_file_for_library_id($library_id);
     }
 }
 
@@ -71,7 +71,7 @@ sub libraries_with_existing_assembler_input_files {
             insert_size => $insert_size,
         );
         $library{paired_fastq_files} = $files{paired_fastq_files} if exists $files{paired_fastq_files};
-        $library{fragment_fastq_files} = $files{fragment_fastq_files} if exists $files{fragment_fastq_files};
+        $library{fragment_fastq_file} = $files{fragment_fastq_file} if exists $files{fragment_fastq_file};
         push @libraries, \%library;
     }
 
@@ -124,7 +124,7 @@ sub existing_assembler_input_files {
     my @files;
     for my $library ( @libraries ) {
         push @files, @{$library->{paired_fastq_files}} if exists $library->{paired_fastq_files};
-        push @files, $library->{fragment_fastq_files} if exists $library->{fragment_fastq_file};
+        push @files, $library->{fragment_fastq_file} if exists $library->{fragment_fastq_file};
     }
 
     return @files;
