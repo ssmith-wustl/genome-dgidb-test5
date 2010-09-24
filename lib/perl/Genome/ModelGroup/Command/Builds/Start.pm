@@ -56,11 +56,12 @@ sub execute {
             my $start_build = Genome::Model::Build::Command::Start->create(model_identifier => $model->id);
             $self->status_message("Starting " . $model->id . " ($model_name)");
             eval { $start_build->execute() };
-            if(!$@) {
-                $active_count++;
+            if ($@) {
+                $self->error_message("Failed to start build for model " . $model->name . " (" . $model->id . ").");
             }
             else {
-                $self->error_message("Failed to start build for model " . $model->name . " (" . $model->id . ").");
+                $active_count++;
+                UR::Context->commit;
             }
         }
         else {

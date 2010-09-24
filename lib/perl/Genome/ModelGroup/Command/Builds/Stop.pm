@@ -41,10 +41,12 @@ sub execute {
             my $stop_build = Genome::Model::Build::Command::Stop->create(build_id => $build_id);
             $self->status_message("Stopping $build_id ($model_name)");
             eval { $stop_build->execute() };
-            unless($@) {
+            if ($@) {
+                UR::Context->commit;
+            }
+            else {
                 $self->error_message("Failed to stop build $build_id for model " . $model->name);
             }
-            UR::Context->commit;
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");

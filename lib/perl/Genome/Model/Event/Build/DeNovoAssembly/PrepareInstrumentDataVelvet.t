@@ -10,7 +10,7 @@ use File::Compare 'compare';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
-use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData');
+use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
