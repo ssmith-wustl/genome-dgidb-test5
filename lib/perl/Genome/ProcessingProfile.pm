@@ -91,7 +91,7 @@ sub _resolve_workflow_for_build {
         #$operation_type->lsf_rusage("-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1]'");
         #$operation_type->lsf_resource("-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=90000:mem=16000]' -M 16000000");
         if ($self->can('_resource_requirements_for_execute_build')) {
-            $operation_type->lsf_resource($self->_resource_requirements_for_execute_build);
+            $operation_type->lsf_resource($self->_resource_requirements_for_execute_build($build));
         }
         else {
             $operation_type->lsf_resource("-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=10000:mem=1000]' -M 1000000");

@@ -31,13 +31,13 @@ my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
 ok($example_build, 'got example build') or die;
 
 # link input fastq files
-my $one_fastq = $example_build->end_one_fastq_file;
-symlink($one_fastq, $build->end_one_fastq_file);
-ok(-s $build->end_one_fastq_file, "Link $one_fastq") or die;
-
-my $two_fastq = $example_build->end_two_fastq_file;
-symlink($two_fastq, $build->end_two_fastq_file);
-ok(-s $build->end_two_fastq_file, "Linked $two_fastq") or die;
+my @assembler_input_files = $example_build->existing_assembler_input_files;
+for my $target ( @assembler_input_files ) {
+    my $basename = File::Basename::basename($target);
+    my $dest = $build->data_directory.'/'.$basename;
+    symlink($target, $dest);
+    ok(-s $dest, "linked $target to $dest");
+}
 
 # create
 my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap->create(build_id => $build->id);

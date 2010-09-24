@@ -19,7 +19,7 @@ sub execute {
     }
 
     Genome::Utility::FileSystem->create_directory($self->build->edit_dir);
-    chomp (my $time = `date "+%a %b %e %T %Y"`);
+    #chomp (my $time = `date "+%a %b %e %T %Y"`);
 
     #create gap.txt file
     $self->status_message("Creating gap.txt file");
@@ -32,7 +32,6 @@ sub execute {
         return;
     }
     $self->status_message("Completed creating gap.txt file");
-
 
 
     #create input fasta and qual files #TODO - move this to tools/velvet
