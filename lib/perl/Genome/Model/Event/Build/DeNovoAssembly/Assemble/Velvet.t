@@ -31,9 +31,14 @@ my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
 );
 ok($example_build, 'got example build') or die;
 
-my $example_fastq = $example_build->collated_fastq_file;
-symlink($example_fastq, $build->collated_fastq_file);
-ok(-s $build->collated_fastq_file, 'Linked fastq file') or die;
+# link input fastq files
+my @assembler_input_files = $example_build->existing_assembler_input_files;
+for my $target ( @assembler_input_files ) {
+    my $basename = File::Basename::basename($target);
+    my $dest = $build->data_directory.'/'.$basename;
+    symlink($target, $dest);
+    ok(-s $dest, "linked $target to $dest");
+}
 
 my $velvet = Genome::Model::Event::Build::DeNovoAssembly::Assemble::Velvet->create( build_id => $build->id);
 

@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 
+use Data::Dumper 'Dumper';
 use Regexp::Common;
 
 class Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap {
@@ -23,29 +24,32 @@ sub bsub_rusage {
 sub execute {
     my $self = shift;
 
-    #check for input fastq files
-    unless (-s $self->build->end_one_fastq_file) {
-        $self->error_message("Failed to find fastq file of 1 end reads");
+    # check for input fastq files
+    $self->status_message('Validating fastq files for libraires');
+    my @libraries = $self->build->libraries_with_existing_assembler_input_files;
+    if  ( not @libraries ) {
+        $self->error_message("No assembler input files were found for libraries");
         return;
     }
-    unless (-s $self->build->end_two_fastq_file) {
-        $self->error_message("Failed to find fastq file of 2 end reads");
-        return;
-    }
+    $self->status_message('OK...fastq files for libraires');
 
-    #create config file;
-    unless ($self->create_config_file) {
+    # create config file
+    $self->status_message('Creating soap config file');
+    unless ( $self->create_config_file(@libraries) ) {
         $self->error_message("Failed to create config file");
         return;
     }
+    $self->status_message('OK...soap config file');
 
     my %assembler_params = $self->processing_profile->assembler_params_as_hash();
 
-    # FIXME get processor from LSF, if appliclble
+    $self->status_message('Getting number of cpus');
     my $cpus = $self->_get_number_of_cpus;
     return if not $cpus;
+    $self->status_message('OK...number of cpus: '.$cpus);
 
     #create, execute assemble
+    $self->status_message('Running soap');
     my $assemble = Genome::Model::Tools::Soap::DeNovoAssemble->create (
         version => $self->processing_profile->assembler_version,
         config_file => $self->build->soap_config_file,
@@ -61,28 +65,35 @@ sub execute {
         $self->error_message("Failed to execute de-novo-assemble execute");
         return;
     }
+    $self->status_message('Soap finished successfully');
 
     return 1;
 }
 
 sub create_config_file {
-    my $self = shift;
+    my ($self, @libraries) = @_;
 
-    my $insert_size = $self->build->calculate_average_insert_size;
-    $insert_size = 320 if not defined $insert_size;
-    my $fastq_1 = $self->build->end_one_fastq_file;
-    my $fastq_2 = $self->build->end_two_fastq_file;
-    my $config = <<CONFIG;
-max_rd_len=120
+    my $config = "max_rd_len=120\n";
+    for my $library ( @libraries ) {
+        my $insert_size = $library->{insert_size} || 320;
+        $config .= <<CONFIG;
 [LIB]
 avg_ins=$insert_size
 reverse_seq=0
 asm_flags=3
 pair_num_cutoff=2
 map_len=60
-q1=$fastq_1
-q2=$fastq_2
 CONFIG
+
+        if ( exists $library->{paired_fastq_files} ) { 
+            $config .= 'q1='.$library->{paired_fastq_files}->[0]."\n";
+            $config .= 'q2='.$library->{paired_fastq_files}->[1]."\n";
+        }
+
+        if ( exists $library->{fragment_fastq_file} ) {
+            $config .= 'q='.$library->{fragment_fastq_file}."\n";
+        }
+    }
 
     my $config_file = $self->build->soap_config_file;
     unlink $config_file if -e $config_file;
