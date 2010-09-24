@@ -7,6 +7,7 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
+use Bio::SeqIO;
 use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::RepeatMasker::InnerCheckResult{
@@ -48,6 +49,24 @@ sub execute {
 
     my $file = $self->file_to_run;
     my $file_name = basename ($file);
+
+    #ckeck if this is a re-attempt
+    if (-s $file.'.masked') {
+	my $input_count = 0;
+	my $io = Bio::SeqIO->new(-format => 'fasta', -file => $file);
+	while (my $seq = $io->next_seq) {
+	    $input_count++;
+	}
+	my $masked_count = 0;
+	my $masked_io = Bio::SeqIO->new(-format => 'fasta', -file => $file.'.masked');
+	while (my $seq = $masked_io->next_seq) {
+	    $masked_count++;
+	}
+	if($masked_count == $input_count) {
+	    $self->log_event("Repeat masker already processed for $file_name");
+	    return 1;
+	}
+    }
 
     $self->log_event("Running repeat masker on $file_name");
 
