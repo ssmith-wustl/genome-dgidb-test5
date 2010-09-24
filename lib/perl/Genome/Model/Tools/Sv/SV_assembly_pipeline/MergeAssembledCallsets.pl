@@ -6,7 +6,7 @@ use Getopt::Std;
 use Bio::SeqIO;
 use Bio::Seq;
 
-my %opts = (d=>20,p=>20,s=>10,z=>100,w=>50, l=>200, r=>0.8, C=>0.5, n=>1000);
+my %opts = (d=>20,p=>20,s=>10,z=>0.1,w=>50, l=>200, r=>0.8, C=>0.5, n=>1000);
 getopts('p:d:f:w:s:z:hL:ce:l:r:C:n:',\%opts);
 die("
 Usage:   MergeAssembledCallsets.pl <the result index file>\n
@@ -14,7 +14,7 @@ Usage:   MergeAssembledCallsets.pl <the result index file>\n
 Options:
          -d INT     do not merge SVs unless they differ less than [$opts{d}] bp in start and end positions, subject to 1 duplication
          -p INT     do not merge SVs unless they differ less than [$opts{p}] bp in size
-         -z INT     ignore SVs with size [$opts{z}] bp shorter or longer than the predicted size
+         -z FLOAT   ignore SVs with more than $opts{z} size difference from the expected size
          -n INT     ignore SVs with assembled breakpoint [$opts{n}] bp off the predicted breakpoint
          -s INT     bp minimal size to trust [$opts{s}]
          -f FILE    dump breakpoint sequences to a fasta file
@@ -194,10 +194,6 @@ sub AddSVs{
     }
 
     #filtering criteria
-    next if($size<$opts{s} || $type ne $pre_type || abs($size-$pre_size)>$size_diff_cutoff || abs($start-$pre_pos1)>$loc_diff_cutoff);
-    #next if($size<$opts{s} || $type ne $pre_type);
-
-    next if($wAsmscore >0 && $wAsmscore<$opts{w});
 
     $perc_aligned=~s/\%//;
     my $flanksize=$read_len*$perc_aligned/100;
@@ -214,6 +210,8 @@ sub AddSVs{
 			     #|| ($type eq 'ITX' ) && ($size>99999) && ($f_cna<$opts{C})
 			     #|| ($type eq 'INV' ) && ($size>99999)
 			     #|| $microhomology>=200
+			     || $size<$opts{s} || $type ne $pre_type || abs($size-$pre_size)/$pre_size>$opts{z} || abs($start-$pre_pos1)>$loc_diff_cutoff
+			     || $wAsmscore >0 && $wAsmscore<$opts{w}
 			    )
       ){
       printf STDERR  "%s\t%d\t%s\t%d\t%s\t%d\t%s\t%s\t%d\t%d\t%d%%\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\t%s\n", $chr,$start,$chr2,$end,$ori,$size,$type,$het,$wAsmscore,$read_len,$perc_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$microhomology,$scarstr,$prestr,$asm_parm,$extra_info;

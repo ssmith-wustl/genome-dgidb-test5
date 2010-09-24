@@ -60,7 +60,7 @@ sub execute {
   my %genes_to_exclude = ();
   if( defined $gene_exclusion_list )
   {
-    %genes_to_exclude = map { $_ => 1 } split( ",\s*", $gene_exclusion_list );
+    %genes_to_exclude = map { $_ => 1 } split( /,\s*/, $gene_exclusion_list );
   }
 
   #WigToBitmask.pm contains some useful functions for handling bitmasks
@@ -207,7 +207,7 @@ sub execute {
       #fix broad chromosome name
       $chr =~ s/chr//;
       #highly-mutated genes to ignore
-      next if (scalar grep { /^$gene$/ } @genes_to_exclude);
+      next if ( defined $genes_to_exclude{$gene} );
       #Ignore Silent mutations and those within RNAs
       next if ( $mutation_class =~ m/RNA|Silent/ );
       #make sure mutation is inside the ROIs
