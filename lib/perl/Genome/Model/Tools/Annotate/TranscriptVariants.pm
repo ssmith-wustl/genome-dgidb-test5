@@ -354,6 +354,8 @@ sub execute {
     $self->status_message("Starting annotation loop at ".scalar(localtime));
     my $annotation_loop_start_time = time();
 
+    Genome::DataSource::GMSchema->disconnect_default_handle if Genome::DataSource::GMSchema->has_default_handle;
+
     my $processed_variants = 0;
     while ( my $variant = $variant_svr->next ) {
         $variant->{type} = $self->infer_variant_type($variant);
@@ -376,8 +378,6 @@ sub execute {
                 $self->status_message("Annotation start for chromosome $chromosome_name");
             }
         }
-
-        Genome::DataSource::GMSchema->disconnect_default_handle if Genome::DataSource::GMSchema->has_default_handle;
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
         # TODO... unduplicate this code
