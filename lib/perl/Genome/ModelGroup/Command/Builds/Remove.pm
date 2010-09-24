@@ -43,10 +43,12 @@ sub execute {
             my $remove_build = Genome::Model::Build::Command::Remove->create(build_id => $build_id);
             $self->status_message("Removing $build_id ($model_name)");
             eval { $remove_build->execute() };
-            unless($@) {
+            if ($@) {
                 $self->error_message("Failed to remove build $build_id for model " . $model->name);
             }
-            UR::Context->commit;
+            else {
+                UR::Context->commit;
+            }
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");
