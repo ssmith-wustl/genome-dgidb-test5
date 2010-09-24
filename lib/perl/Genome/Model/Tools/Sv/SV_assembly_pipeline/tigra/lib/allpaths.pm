@@ -1,5 +1,5 @@
 #!/gsc/bin/perl
-#construct heterozygous alleles based on Atlas (Lei Chen's) local assembly output
+#construct heterozygous alleles
 
 use strict;
 use warnings;
@@ -47,46 +47,62 @@ sub doit{
     print STDERR "Skip Graph size too large!\n";
     return;
   }
-  my %pathrec;
+
+  my @longest_uniq_paths;
+  my @allpaths;
+  my $pathstr='';
   foreach my $id(@bnodes){
     my $edges=&CreateGraph($id, $f_contig,$arg{graph});
     my %visited;
     my @paths=&getPath($id,$edges,\%visited);
-    foreach my $p(@paths){
-      #Mirror path
-      my @pns=split /\./, $p;
-      my @rpns=@pns;
-      for(my $i=0;$i<=$#rpns;$i++){
-	$rpns[$i]=($rpns[$i]>0)?-$rpns[$i]:abs($rpns[$i]);
-      }
+    foreach my $p(@paths){push @allpaths,$p;};
+  }
 
-      my $ap=join('.',reverse(@rpns));
-      if(!defined $pathrec{$p} && !defined $pathrec{$ap}){
-	#edit fasta
-	$pathrec{$p}=1;
-	my $fasta;
-	my $kmercovsum=0;
-	foreach my $nid(@pns){
-	  my $fa=$nodes{abs($nid)}->{seq};
-	  if($nid<0){
-	    $fa=~ tr/ACGT/TGCA/; $fa=reverse $fa;
-	  }
-	  if(!defined $fasta){
-	    $fasta=$fa;
-	  }
-	  else{
-	    $fa=substr($fa,$self->{k}-1);
-	    $fasta.=$fa;
-	  }
-	  $kmercovsum+=$nodes{abs($nid)}->{covs}*($nodes{abs($nid)}->{lens}-$self->{k}+1);
-	}
-	my $contig;
-	my $lens=length($fasta);
-	my $avgkmercov=($lens>0)?int($kmercovsum*100/$lens)/100:0;
-	($contig->{id},$contig->{seq},$contig->{lens},$contig->{covs})=($p,$fasta,$lens,$avgkmercov);
-	push @Contigs,$contig;
-      }
+  foreach my $p(sort byLongestLength @allpaths){
+    #Mirror path
+    my @rpns=split /\./, $p;
+    for(my $i=0;$i<=$#rpns;$i++){
+      $rpns[$i]=($rpns[$i]>0)?-$rpns[$i]:abs($rpns[$i]);
     }
+    my $ap=join('.',reverse(@rpns));
+    my $rindex1=rindex $pathstr,$p;
+    my $rindex2=rindex $pathstr,$ap;
+    if($rindex1>=0){
+      my $char=substr $pathstr,$rindex1+length($p),1;
+      next if($char !~ /\d/);
+    }
+    if($rindex2>=0){
+      my $char=substr $pathstr,$rindex2+length($ap),1;
+      next if($char !~ /\d/);
+    }
+    $pathstr.='|'.$p;
+    push @longest_uniq_paths,$p;
+  }
+
+  foreach my $p(sort byLongestLength @longest_uniq_paths){
+    #edit fasta
+    my @pns=split /\./, $p;
+    my $fasta;
+    my $kmercovsum=0;
+    foreach my $nid(@pns){
+      my $fa=$nodes{abs($nid)}->{seq};
+      if($nid<0){
+	$fa=~ tr/ACGT/TGCA/; $fa=reverse $fa;
+      }
+      if(!defined $fasta){
+	$fasta=$fa;
+      }
+      else{
+	$fa=substr($fa,$self->{k}-1);
+	$fasta.=$fa||'';
+      }
+      $kmercovsum+=$nodes{abs($nid)}->{covs}*($nodes{abs($nid)}->{lens}-$self->{k}+1);
+    }
+    my $contig;
+    my $lens=length($fasta);
+    my $avgkmercov=($lens>0)?int($kmercovsum*100/$lens)/100:0;
+    ($contig->{id},$contig->{seq},$contig->{lens},$contig->{covs})=($p,$fasta,$lens,$avgkmercov);
+    push @Contigs,$contig;
   }
   return \@Contigs;
 }
@@ -224,6 +240,12 @@ sub OutNodes{
       $$neighbor{$id}=$nreads;
     }
   }
+}
+
+sub byLongestLength{
+  my @na=split /\./,$a;
+  my @nb=split /\./,$b;
+  return $#nb <=> $#na;
 }
 
 1;
