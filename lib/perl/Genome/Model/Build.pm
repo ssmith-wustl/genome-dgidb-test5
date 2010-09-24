@@ -84,7 +84,7 @@ class Genome::Model::Build {
 
 sub __display_name__ {
     my $self = shift;
-    return 'Build ' . $self->id . ' of ' . $self->model->name;
+    return $self->id . ' of ' . $self->model->name;
 }
 
 use Genome::Command::OO;
