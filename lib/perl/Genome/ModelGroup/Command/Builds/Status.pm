@@ -31,6 +31,7 @@ sub execute {
     }
     print "Total: " . scalar(@models) . "\n";
 
+    return 1;
 }
 
 1;
