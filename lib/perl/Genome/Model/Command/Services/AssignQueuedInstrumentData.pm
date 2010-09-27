@@ -81,7 +81,7 @@ sub execute {
     }
 
     my @pses = $self->load_pses;
-    $self->status_message('Going to process' . (scalar @pses) . ' PSEs.');
+    $self->status_message('Going to process ' . (scalar @pses) . ' PSEs.');
 
     #for efficiency--load the data we need all together instead of separate queries for each PSE
     $self->preload_data(@pses);
@@ -141,7 +141,7 @@ sub execute {
 
                 my $reference_sequence_build;
                 if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-                    my @reference_sequence_build_ids = $pse->added_param('reference_sequence_build_id_for_' . $processing_profile->id);
+                    my @reference_sequence_build_ids = $pse->reference_sequence_build_param_for_processing_profile($processing_profile);
                     unless ( scalar @reference_sequence_build_ids ) {
                         $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference sequence model');
                         push @process_errors, $self->error_message;
@@ -692,11 +692,13 @@ sub add_model_to_default_modelgroups {
         return;
     }
 
-    my $common_name = $source->common_name;
-    my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-
     my @group_names = @project_names;
-    push @group_names, $source_grouping if $source_grouping;
+
+    my $common_name = $source->common_name;
+    if($common_name) {
+        my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+        push @group_names, $source_grouping if $source_grouping;
+    }
 
     for my $group_name (@group_names) {
         my $name = 'apipe-auto ' . $group_name;
