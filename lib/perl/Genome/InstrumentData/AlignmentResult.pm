@@ -568,6 +568,12 @@ sub postprocess_bam_file {
         die $self->error_message;
     }
     
+    #request by RT#62311 for submission and data integrity
+    $self->status_message('Creating all_sequences.bam.md5 ...');
+    unless ($self->_create_bam_md5) {
+        $self->error_message('Fail to create bam md5');
+        die $self->error_message;
+    }
     return 1;
 }
 
@@ -797,6 +803,25 @@ sub _verify_bam {
 
     return 1;
 }
+
+
+sub _create_bam_md5 {
+    my $self = shift;
+
+    my $bam_file = $self->temp_staging_directory . '/all_sequences.bam';
+    my $md5_file = $bam_file . '.md5';
+    my $cmd      = "md5sum $bam_file > $md5_file";
+
+    my $rv  = Genome::Utility::FileSystem->shellcmd(
+        cmd                        => $cmd, 
+        input_files                => [$bam_file],
+        output_files               => [$md5_file],
+        skip_if_output_is_present  => 0,
+    ); 
+    $self->error_message("Fail to run: $cmd") and return unless $rv == 1;
+    return 1;
+}
+
 
 sub _promote_validated_data {
     my $self = shift;
