@@ -10,7 +10,7 @@ use File::Compare 'compare';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
-use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData');
+use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
@@ -19,7 +19,9 @@ my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
 ok($model, 'Got mock de novo assembly model') or die;
 my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
 ok($build, 'Got mock de novo assembly build') or die;
-ok(!-s $build->collated_fastq_file, 'Collated fastq file does not exist');
+
+my @assembler_input_files = $build->existing_assembler_input_files;
+ok(!@assembler_input_files, 'assembler input files do not exist');
 
 #create
 my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(

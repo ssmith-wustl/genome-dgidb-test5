@@ -70,7 +70,7 @@ sub execute {
 	}
 	my @parse_files = glob("$blast_dir/*parsed");
 	unless (@parse_files) {
-	    $self->log_event("Failed to find any blast parse files in ".basename($blast_dir));
+	    $self->log_event("NO blast parse files to read in ".basename($blast_dir));
 	    next;
 	}
 	foreach my $file (@parse_files) {
@@ -130,12 +130,13 @@ sub execute {
 	    my @bl_out_files = glob("$blast_dir/*out");
 	    #THERE MUST BE OUT FILES .. 
 	    unless (@bl_out_files) {
-		$self->log_event("Failed to find any blast out file in ".basename($blast_dir));
+		$self->log_event("NO blast out files available in ".basename($blast_dir));
 		next;
 #		return;
 	    }
 	    #RE-ARRANGE DATA .. MAKE SURE READ SET CORRISPONDS WITH BLAST OUT FILES
 	    my $reads = {};
+	    #sorry this is awfully hard to follow
 	    foreach my $lineage (keys %{$viral_lineage_hits->{$bl}}) {
 		foreach my $read (keys %{$viral_lineage_hits->{$bl}->{$lineage}}) {
 		    $reads->{$read} = $viral_lineage_hits->{$bl}->{$lineage}->{$read};# = evalue
@@ -197,8 +198,8 @@ sub execute {
 	}
     }
     elsif (-e $fasta_file) {
-	$self->log_event("No data available for analysis");
-	return 1;
+	$self->log_event("No data available for analysis in ".basename($lib_name));
+	#return 1;
     }
     else {
 	$self->log_event("Failed to find repeatMasker goodSeq file");
@@ -283,17 +284,16 @@ sub _detailed_virus_info {
 	my $report = Bio::SearchIO->new(-format => 'blast', -file => $file, -report_type => $report_type);
 	while (my $result = $report->next_result) {
 	    if (exists $reads->{$result->query_name}) {
-		my $desc;
 		while (my $hit = $result->next_hit) {
 		    next unless $hit->significance == $reads->{$result->query_name};
-		    $desc = $result->query_name."\t".$result->query_length."\t".
+		    my $desc = $result->query_name."\t".$result->query_length."\t".
 			    $hit->name."\t".$hit->length."\t".$hit->description."\t";
 		    my $hsp = $hit->next_hsp;
-		    $desc .= $hsp->length('hit')."\t";
+		    next unless $hsp; #weird ..next_hsp can return undef hsp ??
+		    $desc .= $hsp->length('hit')."\t"; #sometimes this is not defined
 		    $desc .= sprintf("%4.1f", $hsp->percent_identity)."\t";
 		    $desc .= $hsp->start('hit')."\t".$hsp->end('hit')."\t".$hsp->evalue;
 		    push @{$info->{$result->query_name}}, $desc;
-
 		}
 	    }
 	}

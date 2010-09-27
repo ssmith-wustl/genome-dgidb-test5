@@ -201,8 +201,6 @@ sub get_mock_build {
         calculate_base_limit_from_coverage
         processed_reads_count
 
-        assembler_input_files
-
         edit_dir
         gap_file
         contigs_bases_file
@@ -214,6 +212,9 @@ sub get_mock_build {
         supercontigs_fasta_file
         stats_file
 
+        read_processor_output_files_for_instrument_data
+        existing_assembler_input_files
+
         center_name
 
     /);
@@ -221,6 +222,11 @@ sub get_mock_build {
         newbler => [qw//],
         soap => [qw/
             file_prefix
+            assembler_forward_input_file_for_library_id
+            assembler_reverse_input_file_for_library_id
+            assembler_fragment_input_file_for_library_id
+            libraries_with_existing_assembler_input_files
+            existing_assembler_input_files_for_library_id
             end_one_fastq_file end_two_fastq_file 
             soap_config_file
             soap_output_dir_and_file_prefix
@@ -260,7 +266,7 @@ sub base_directory {
 }
 
 my %dirs_versions = (
-    soap_solexa => '3',
+    soap_solexa => '5',
     velvet_solexa => '0.2',
     newbler_454 => '0.1',
 );

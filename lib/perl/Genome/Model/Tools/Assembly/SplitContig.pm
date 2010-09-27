@@ -2,8 +2,8 @@ package Genome::Model::Tools::Assembly::SplitContig;
 
 use strict;
 use warnings;
-use Genome::Assembly::Pcap::ContigTools;
-use Genome::Assembly::Pcap::Ace;
+
+use Genome;
 use Cwd;
 
 class Genome::Model::Tools::Assembly::SplitContig
@@ -64,16 +64,16 @@ sub execute
 
     $self->error_mesage("Input ace file $ace_file does not exist\n") and return unless (-e $ace_file);
     
-    my $ace_object = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
+    my $ace_object = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
     
     my $phd_object;    
     if(-e "../phdball_dir/phd.ball.1")
     {
-        $phd_object = Genome::Assembly::Pcap::Phd->new(input_file => "../phdball_dir/phd.ball.1");
+        $phd_object = Genome::Model::Tools::Pcap::Phd->new(input_file => "../phdball_dir/phd.ball.1");
     }
     elsif(-e "../phd_dir/")
     {
-        $phd_object = Genome::Assembly::Pcap::Phd->new(input_directory => "../phd_dir/");
+        $phd_object = Genome::Model::Tools::Pcap::Phd->new(input_directory => "../phd_dir/");
     }
     else
     {
@@ -81,7 +81,7 @@ sub execute
     } 
     
     my $contig = $ace_object->get_contig($split_contig_name,1);
-    my $ct = Genome::Assembly::Pcap::ContigTools->new;
+    my $ct = Genome::Model::Tools::Pcap::ContigTools->new;
     my ($left_contig, $right_contig) = $ct->split($contig, $phd_object, split_position => $split_position, no_gui => $no_gui);
 
     $ace_object->remove_contig($contig->name);
@@ -98,16 +98,16 @@ sub read_data_and_split_contig
 {
     my ($self, $ace_file, $split_contig_name, $split_position, $no_gui, $out_file_name) = @_;
 
-    my $ace_object = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
+    my $ace_object = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
     
     my $phd_object;    
     if(-e "../phdball_dir/phd.ball.1")
     {
-        $phd_object = Genome::Assembly::Pcap::Phd->new(input_file => "../phdball_dir/phd.ball.1");
+        $phd_object = Genome::Model::Tools::Pcap::Phd->new(input_file => "../phdball_dir/phd.ball.1");
     }
     elsif(-e "../phd_dir/")
     {
-        $phd_object = Genome::Assembly::Pcap::Phd->new(input_directory => "../phd_dir/");
+        $phd_object = Genome::Model::Tools::Pcap::Phd->new(input_directory => "../phd_dir/");
     }
     else
     {
@@ -115,7 +115,7 @@ sub read_data_and_split_contig
     } 
     
     my $contig = $ace_object->get_contig($split_contig_name,1);
-    my $ct = Genome::Assembly::Pcap::ContigTools->new;
+    my $ct = Genome::Model::Tools::Pcap::ContigTools->new;
     my ($left_contig, $right_contig) = $ct->split($contig, $phd_object, split_position => $split_position, no_gui => $no_gui);
 
     $ace_object->remove_contig($contig->name);

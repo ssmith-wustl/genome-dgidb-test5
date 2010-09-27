@@ -54,10 +54,46 @@ sub _stop_build {
     }
 
     my $job = $self->get_running_master_lsf_job_for_build($build); 
-    if ( not defined $job ) {
-        $self->error_message("Build not running");
-        return 0;
+    if ( defined $job ) {
+        $self->status_message('Killing job: '.$job->{Job});
+        $self->_kill_job($job);
+        $build = Genome::Model::Build->load($build->id);
     }
+
+    my $build_event = $build->build_event;
+    my $error = Genome::Model::Build::Error->create(
+        build_event_id => $build_event->id,
+        stage_event_id => $build_event->id,
+        stage => 'all stages',
+        step_event_id => $build_event->id,
+        step => 'main',
+        error => 'Killed by user',
+    );
+
+    $self->status_message('Failing build: '.$build->id);
+    unless ( $build->fail($error) ) {
+        $self->error_message('Failed to fail build');
+        return;
+    }
+
+    # Commit the update to this build
+    $self->status_message('Committing update to build: '.$build->id);
+    my $commit_rv = UR::Context->commit;
+    if ( not $commit_rv ) {
+        Carp::confess('Cannot commit update to build: '.$build->id);
+    }
+
+    $self->status_message(sprintf(
+        "Build (%s %s) stopped.\n",
+        $build->id,
+        $build->data_directory,
+    ));
+
+    return 1;
+}
+
+sub _kill_job {
+    my ($self, $job) = @_;
 
     Genome::Utility::FileSystem->shellcmd(
         cmd => 'bkill '.$job->{Job},
@@ -75,35 +111,6 @@ sub _stop_build {
             return 0;
         }
     } while ($job && ($job->{Status} ne 'EXIT' && $job->{Status} ne 'DONE'));
-
-    $build = Genome::Model::Build->load($build->id);
-
-    my $build_event = $build->build_event;
-    my $error = Genome::Model::Build::Error->create(
-        build_event_id => $build_event->id,
-        stage_event_id => $build_event->id,
-        stage => 'all stages',
-        step_event_id => $build_event->id,
-        step => 'main',
-        error => 'Killed by user',
-    );
-
-    unless ( $build->fail($error) ) {
-        $self->error_message('Failed to fail build');
-        return;
-    }
-
-    # Commit the update to this build
-    my $commit_rv = UR::Context->commit;
-    if ( not $commit_rv ) {
-        Carp::confess('Cannot commit update to build: '.$build->id);
-    }
-
-    $self->status_message(sprintf(
-        "Build (ID: %s DIR: %s) killed.\n",
-        $build->id,
-        $build->data_directory,
-    ));
 
     return 1;
 }

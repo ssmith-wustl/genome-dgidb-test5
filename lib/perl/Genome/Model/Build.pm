@@ -82,6 +82,11 @@ class Genome::Model::Build {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    my $self = shift;
+    return $self->id . ' of ' . $self->model->name;
+}
+
 use Genome::Command::OO;
 *from_cmdline = \&Genome::Command::OO::default_cmdline_selector;
 

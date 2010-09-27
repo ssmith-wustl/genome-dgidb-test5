@@ -6,12 +6,13 @@ use warnings;
 use above 'Genome';
 use above 'Workflow';
 
-#use Test::More tests => 5;
-use Test::More skip_all => 'workflow and lsf issues taking a long time to test this and randomly failing';
+use Test::More tests => 5;
+#use Test::More skip_all => 'workflow and lsf issues taking a long time to test this and randomly failing';
 use File::Compare;
 use File::Temp;
 
 BEGIN {
+        $ENV{NO_LSF} = 1;
         use_ok ('Genome::Model::Tools::Blat::Subjects');
 }
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subjects';
