@@ -191,6 +191,8 @@ sub execute {
         }
     }
 
+    $self->create_bam_md5;
+
     for my $file (grep {-f $_} glob($build->accumulated_alignments_directory . "/*")) {
         $self->status_message("Setting $file to read-only");
         chmod 0444, $file;
