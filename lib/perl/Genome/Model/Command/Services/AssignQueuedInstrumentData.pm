@@ -81,7 +81,7 @@ sub execute {
     }
 
     my @pses = $self->load_pses;
-    $self->status_message('Going to process' . (scalar @pses) . ' PSEs.');
+    $self->status_message('Going to process ' . (scalar @pses) . ' PSEs.');
 
     #for efficiency--load the data we need all together instead of separate queries for each PSE
     $self->preload_data(@pses);
@@ -692,11 +692,13 @@ sub add_model_to_default_modelgroups {
         return;
     }
 
-    my $common_name = $source->common_name;
-    my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-
     my @group_names = @project_names;
-    push @group_names, $source_grouping if $source_grouping;
+
+    my $common_name = $source->common_name;
+    if($common_name) {
+        my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+        push @group_names, $source_grouping if $source_grouping;
+    }
 
     for my $group_name (@group_names) {
         my $name = 'apipe-auto ' . $group_name;
