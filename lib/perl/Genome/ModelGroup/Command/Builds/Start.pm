@@ -55,14 +55,15 @@ sub execute {
         if ($status =~ /$status_match/) {
             my $start_build = Genome::Model::Build::Command::Start->create(model_identifier => $model->id);
             $self->status_message("Starting " . $model->id . " ($model_name)");
-            eval { $start_build->execute() };
-            if ($@) {
-                $self->error_message("Failed to start build for model " . $model->name . " (" . $model->id . ").");
-            }
-            else {
-                $active_count++;
-                UR::Context->commit;
-            }
+            eval {
+                if($start_build->execute()) {
+                    $active_count++;
+                    UR::Context->commit;
+                }
+                else {
+                    $self->error_message("Failed to start build for model " . $model->name . " (" . $model->id . ").");
+                }
+            };
         }
         else {
             $self->status_message("Skipping $model_id ($model_name) already $status.");

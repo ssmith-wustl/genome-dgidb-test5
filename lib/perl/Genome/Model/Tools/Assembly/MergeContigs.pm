@@ -4,10 +4,8 @@ package Genome::Model::Tools::Assembly::MergeContigs;
 
 use strict;
 use warnings;
-use Genome::Assembly::Pcap::ContigTools;
-use Genome::Assembly::Pcap::Ace;
-use Genome::Assembly::Pcap::PhdDB;
-use Genome::Assembly::Pcap::Phd;
+
+use Genome;
 
 class Genome::Model::Tools::Assembly::MergeContigs
 {
@@ -164,13 +162,13 @@ sub execute
     {
         $self->error_message("$input_ace_file is not a valid ace file, contig string $contigs is not formatted properly, there needs to be a valid ace file specified before each contig. i.e.\n merge-contigs -contigs 'contig1 contig2\n")
         and return unless (-e $input_ace_file);
-        $ao = Genome::Assembly::Pcap::Ace->new(input_file => $input_ace_file, cache_dir => $cache_dir);
+        $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $input_ace_file, cache_dir => $cache_dir);
     }
     elsif(defined $cache_dir)
     {
         $self->error_message("$cache_dir is not a valid ace file, contig string $contigs is not formatted properly, there needs to be a valid ace file specified before each contig. i.e.\n merge-contigs -contigs 'contig1 contig2 '\n")
         and return unless (-e $cache_dir);
-        $ao = Genome::Assembly::Pcap::Ace->new(cache_dir => $cache_dir);    
+        $ao = Genome::Model::Tools::Pcap::Ace->new(cache_dir => $cache_dir);    
     }
 
     
@@ -178,18 +176,18 @@ sub execute
     my $phd_object;
     if(-e "../phdball_dir/phd.ball.1")
     {
-        $phd_object = Genome::Assembly::Pcap::Phd->new(input_file => "../phdball_dir/phd.ball.1");
+        $phd_object = Genome::Model::Tools::Pcap::Phd->new(input_file => "../phdball_dir/phd.ball.1");
     }
     elsif(-e "../phd_dir/")
     {
-        $phd_object = Genome::Assembly::Pcap::Phd->new(input_directory => "../phd_dir/");
+        $phd_object = Genome::Model::Tools::Pcap::Phd->new(input_directory => "../phd_dir/");
     }
     else
     {
-        $phd_object = Genome::Assembly::Pcap::PhdDB->new;
+        $phd_object = Genome::Model::Tools::Pcap::PhdDB->new;
         #$self->error_message("Need to either have a ../phd_dir or a phdball file named ../phdball_dir/phd.ball.1") and return;
     }    
-    my $ct = Genome::Assembly::Pcap::ContigTools->new;
+    my $ct = Genome::Model::Tools::Pcap::ContigTools->new;
 
     my $merge_contig = $ao->get_contig($contigs[0],1);
 

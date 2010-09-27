@@ -11,12 +11,6 @@ use Genome;
 class Genome::Model::Command::Services::BuildQueuedModels {
     is  => 'Command',
     has => [
-        test => {
-            is          => 'String',
-            doc         => "This parameter, if set true, will only process models with negative id's. Just prints out what command would be run to start builds instead of starting them.",
-            is_optional => 1,
-            default     => Genome::Config->dev_mode,
-        },
         max_builds => {
             is          => 'Number',
             is_optional => 1,
@@ -57,19 +51,18 @@ sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
 
-    my $lock;
-    unless($self->test) {
-        my $lock_resource = '/gsc/var/lock/genome_model_command_services_build-queued-models/loader';
-
-        $lock = Genome::Utility::FileSystem->lock_resource(resource_lock=>$lock_resource, max_try=>1);
-        unless ($lock) {
-            $self->error_message("could not lock, another instance must be running.");
-            return;
-        }
+    # lock
+    my $lock_resource = '/gsc/var/lock/genome_model_command_services_build-queued-models/loader';
+    my $lock = Genome::Utility::FileSystem->lock_resource(
+        resource_lock => $lock_resource,
+        max_try => 1
+    ); 
+    unless ($lock) {
+        $self->error_message("Could not acquire lock, another instance must be running.");
+        return;
     }
 
     my $model_sorter;
-
     if ($self->newest_first) {
         $model_sorter = sub { $b->id <=> $a->id };
     }
@@ -81,12 +74,7 @@ sub execute {
         build_requested => 1,
     );
 
-    if($self->test) {
-        @models = grep($_->id < 0, @models);
-    }
-
     my $max_builds_to_launch = $self->max_builds;
-
     if (@models > $max_builds_to_launch) {
         @models = splice(@models, 0, $max_builds_to_launch);
     }
@@ -97,26 +85,19 @@ sub execute {
         my $model_id = $model->id;
         eval {
             my $cmd = qq{genome model build start --force --model $model_id};
-            if($self->test) {
-                $self->status_message('Test flag enabled. Would have run: `' . $cmd . '`.');
-            } else {
-                Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
-            }
-
-            $model->build_requested(0);
+            Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
         };
 
         if ($@) {
-            $self->warning_message($@);
+            $self->error_message($@);
             $self->status_message("Failed to start build for model '$model_id'");
         } else {
             $self->_builds_started($self->_builds_started + 1);
+            $model->build_requested(0); # TODO move this to build start
         }
     }
 
-    unless($self->test) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
-    }
+    Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
 
     return 1;
 }

@@ -1,14 +1,15 @@
 package Genome::Model::Tools::Assembly::WriteChangesToDirectory; 
 
+use strict;
+use warnings;
+
+use Genome;
 use FindBin;
 use Carp::Assert;
 use Carp;
 use Cwd;
 use Utility;
-use Genome::Assembly::Pcap::Ace;
 use Workflow::Simple;
-use strict;
-use warnings;
 
 
 class Genome::Model::Tools::Assembly::WriteChangesToDirectory {
@@ -68,7 +69,7 @@ sub execute {
 
     if(defined $index)
     {   
-        my $ao = Genome::Assembly::Pcap::Ace->new(cache_dir => $cache_dir);
+        my $ao = Genome::Model::Tools::Pcap::Ace->new(cache_dir => $cache_dir);
         $ao->write_file(output_file => "$output_directory/$prefix$index.ace", number => $number,index => $index, number => $number);
     }
     else

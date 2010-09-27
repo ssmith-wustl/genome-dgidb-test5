@@ -3,7 +3,6 @@ package Genome::Model::Tools::Assembly::AceAxe;
 use strict;
 use warnings;
 use Genome;
-use Genome::Assembly::Pcap::Ace;
 
 our $initialized = 0;
 sub init_gtk {
@@ -140,7 +139,7 @@ sub populate_selectedAceContentsCList {
 	#set delimiter
 	my $acenew = $ace;
 	chomp $acenew;
-	my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $acenew, using_db => 1);
+	my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $acenew, using_db => 1);
 	my @contig_names = @{$ao->get_contig_names};
 	foreach(@contig_names)
 	{
@@ -239,12 +238,12 @@ sub merge_data {
     my $Ace_entry = $glade->get_widget("AceOutput");
     my $ace_output = $Ace_entry->get_text();
 	unlink "ace_axe.db";    
-    my $ao_writer = Genome::Assembly::Pcap::Ace->new(using_db => 1, db_file => "ace_axe.db");
+    my $ao_writer = Genome::Model::Tools::Pcap::Ace->new(using_db => 1, db_file => "ace_axe.db");
 	my $c_counter = 0;
 	
     foreach my $ace_file (keys %contigshash){
 		
-		my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1 );
+		my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file, using_db => 1 );
 		my @contig_names = @{$contigshash{$ace_file}};
 		foreach my $contig_name (@contig_names)
 		{	
