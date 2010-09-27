@@ -415,8 +415,8 @@ sub transcript_annotation_job_classes{
     if (defined($self->annotation_reference_transcripts)){
         my @steps = (
             'Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor',
-            #'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
-            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariantsParallel',
+            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
+            #'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariantsParallel',
         );
         return @steps;
     }
