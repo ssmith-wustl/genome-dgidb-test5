@@ -85,7 +85,6 @@ sub execute {                               # replace with real execution logic.
 		
 		my $sample_output_dir = $output_dir . "/" . $sample_name;
 		mkdir($sample_output_dir) if(!(-d $sample_output_dir));
-		
 		print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
 
 		## get the bam file ##
