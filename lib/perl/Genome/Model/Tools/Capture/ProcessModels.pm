@@ -92,8 +92,8 @@ sub execute {                               # replace with real execution logic.
 		
 		my $bam_file = $build_dir . "/alignments/" . $build_id . "_merged_rmdup.bam";
 
-		my $snp_file = $build_dir . "/sam_snp_related_metrics/filtered.indelpe.snps";
-		my $indel_file = $build_dir . "/sam_snp_related_metrics/indels_all_sequences.filtered";
+		my $snp_file = $build_dir . "/snp_related_metrics/snps_all_sequences.filtered";
+		my $indel_file = $build_dir . "/snp_related_metrics/indels_all_sequences.filtered";
 
 		if(-e $bam_file && -e $snp_file && -e $indel_file)
 		{
