@@ -7,10 +7,6 @@ use Genome;
 
 class Genome::ModelGroup::Command::Builds::Remove {
     is => ['Genome::ModelGroup::Command::Builds'],
-    has_optional => [
-        model_group_id => { is => 'Integer', doc => 'id of the model-group to check'},
-        model_group_name => { is => 'String', doc => 'name of model-group'},
-    ],
     doc => "remove latest build for each member if it is abandoned",
 };
 
@@ -46,14 +42,19 @@ sub execute {
         if ($status =~ /Abandoned/) {
             my $remove_build = Genome::Model::Build::Command::Remove->create(build_id => $build_id);
             $self->status_message("Removing $build_id ($model_name)");
-            unless($remove_build->execute()) {
-                $self->error_message("Failed to remove build $build_id for model " . $model->name);
-            }
-            UR::Context->commit;
+            eval {
+                if($remove_build->execute()) {
+                    UR::Context->commit;
+                }
+                else {
+                    $self->error_message("Failed to remove build $build_id for model " . $model->name);
+                }
+            };
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");
         }
     }
+    return 1;
 }
 1;

@@ -7,27 +7,30 @@ use Genome;
 use Command;
 use Carp;
 use Cwd;
-use MGAP::Command::BuildGlimmerInput;
-use MGAP::Command::CalculateGcPercent;
 
-UR::Object::Type->define(
-                         class_name => __PACKAGE__,
-                         is => 'Command',
-                         has => [
-                                 'locus_tag'       => {is => 'String',
-						       doc => "Locus tag for project, containing DFT/FNL postpended" },
-                                 'fasta_file'      => { is => 'String',
-							doc => "Fasta file for input" },
-                                 'work_directory'  => { is => 'String',
-							doc => "Working directory",
-							is_optional => 1},
-                                 'gc'              => { is => 'Float',
-							doc => "GC content percent",
-							is_optional => 1,  },
-
-				]
-			);
-
+class Genome::Model::Tools::Hgmi::MkPredictionModels {
+    is => 'Command',
+    has => [
+        locus_tag => {
+            is => 'String',
+			doc => "Locus tag for project, containing DFT/FNL postpended"
+        },
+        fasta_file => { 
+            is => 'String',
+			doc => "Fasta file for input"
+        },
+        work_directory => { 
+            is => 'String',
+			doc => "Working directory",
+			is_optional => 1
+        },
+        gc => { 
+            is => 'Float',
+			doc => "GC content percent",
+			is_optional => 1,  
+        },
+	]
+};
 
 sub help_brief
 {
@@ -65,16 +68,15 @@ sub execute
         my $ff = $self->fasta_file;
         croak "$ff doesn't exist?!?\ncurrent dir: $cwd in MkPredictionModels.pm\n\n";
     }
-    my $gc_command = MGAP::Command::CalculateGcPercent->create(
+    my $gc_command = Genome::Model::Tools::Hgmi::CalculateGcPercent->create(
                        'fasta_files' => [ $self->fasta_file ],
-                        );
+    );
 
-    unless($gc_command)
-    {
+    unless($gc_command) {
         croak "Failure on calculating GC content in MkPredictionModels.pm\n\n";
     }
 
-    my $buildglimmer = MGAP::Command::BuildGlimmerInput->create(
+    my $buildglimmer = Genome::Model::Tools::Hgmi::BuildGlimmerInput->create(
                           'fasta_files' => [ $self->fasta_file ],
                          );
 

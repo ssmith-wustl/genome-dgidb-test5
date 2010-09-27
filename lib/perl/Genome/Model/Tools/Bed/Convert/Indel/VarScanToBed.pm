@@ -65,7 +65,7 @@ sub process_source {
                 $variant = '*';
                 $stop = $start + length($reference);
             } else {
-                $self->error_message('Unexpected indel format encountered: ' . $indel);
+                $self->error_message("Unexpected indel format encountered ($indel) on line:\n$line");
                 return;
             }
         

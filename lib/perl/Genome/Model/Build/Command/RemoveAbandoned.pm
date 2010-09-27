@@ -6,7 +6,7 @@ use Genome;
 use Carp;
 
 class Genome::Model::Build::Command::RemoveAbandoned {
-    is => 'Genome::Model::Build::Command',
+    is => 'Command',
     doc => 'Removes all abandoned build owned by the user',
     has => [
         keep_build_directory => {
@@ -80,7 +80,7 @@ sub execute {
 
         my $cmd = "genome model build remove ";
         $cmd .= "--keep-build-directory " if $self->keep_build_directory;
-        $cmd .= "--ITEMS $build_id";
+        $cmd .= "--BUILD-ID $build_id";
         my $rv = eval { system($cmd) };
 
         unless (defined $rv and $rv == 0) {

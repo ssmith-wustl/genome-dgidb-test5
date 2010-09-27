@@ -52,6 +52,12 @@ sub _generate_content {
         $name = $subject->name;
     } elsif($subject->can('rule_display')) {
         $name = $subject->rule_display;
+        $name =~ s/^UR::BoolExpr=\([\w:]+/Set: /;
+        $name =~ s/_/-/g;
+        $name =~ s/ =>/:/g;
+        $name =~ s/"//g;
+        $name =~ s/\)$//;
+        $name =~ s/([\w\d]),([\w\d])/$1, $2/g;
     } else {
         $name = $subject->id;
     }
@@ -66,20 +72,30 @@ sub get_alignment_summary_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
     my @models = $self->members;
+    my @included_models;
     my $as_node = $xml_doc->createElement('alignment-summary');
     for my $model (@models) {
         my $build = $model->last_succeeded_build;
+
         if ($build) {
+            push(@included_models, $model);
             my $model_node = $as_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
             my $alignment_summary_hash_ref = $build->alignment_summary_hash_ref;
-            for my $key (keys %{$alignment_summary_hash_ref->{0}}) {
-                my $key_node = $model_node->addChild( $xml_doc->createElement($key) );
-                $key_node->addChild( $xml_doc->createTextNode( $alignment_summary_hash_ref->{0}->{$key} ) );
+            for my $ws_key (keys %{$alignment_summary_hash_ref}) {
+                my $ws_node = $model_node->addChild( $xml_doc->createElement('wingspan') );
+                $ws_node->addChild( $xml_doc->createAttribute('size', $ws_key) );
+                for my $param_key (keys %{$alignment_summary_hash_ref->{$ws_key}}) {
+                    my $key_node = $ws_node->addChild( $xml_doc->createElement($param_key) );
+                    $key_node->addChild( $xml_doc->createTextNode( $alignment_summary_hash_ref->{$ws_key}->{$param_key} ) );
+                }
             }
         }
     }
+
+    $DB::single = 1;
+
     return $as_node;
 }
 
@@ -87,11 +103,13 @@ sub get_coverage_summary_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
     my @models = $self->members;
+    my @included_models;
     my $cs_node = $xml_doc->createElement('coverage-summary');
     my @min_depths;
     for my $model (@models) {
         my $build = $model->last_succeeded_build;
         if ($build) {
+            push(@included_models, $model);
             unless (@min_depths) {
                 @min_depths = sort{ $a <=> $b } @{$build->minimum_depths_array_ref};
                 for my $min_depth (@min_depths) {
@@ -125,6 +143,9 @@ sub get_coverage_summary_node {
             }
         }
     }
+
+    $DB::single = 1;
+
     return $cs_node;
 }
 

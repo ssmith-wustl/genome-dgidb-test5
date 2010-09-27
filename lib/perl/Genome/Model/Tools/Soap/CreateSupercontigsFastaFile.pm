@@ -17,6 +17,11 @@ class Genome::Model::Tools::Soap::CreateSupercontigsFastaFile {
             is => 'Text',
             doc => 'Soap assembly directory',
         },
+	output_file => {
+	    is => 'Text',
+	    doc => 'User supplied output file name',
+	    is_optional => 1,
+	},
     ],
 };
 
@@ -42,9 +47,9 @@ sub execute {
         $self->error_message("Failed to find assembly directory: ".$self->assembly_directory);
         return;
     }
-
+    my $out_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/supercontigs.fasta';
     my $in = Bio::SeqIO->new(-format => 'fasta', -file => $self->scaffold_fasta_file);
-    my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->assembly_directory.'/edit_dir/supercontigs.fasta');
+    my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$out_file);
 
     my $supercontig_number = -1;
     while (my $seq = $in->next_seq) {

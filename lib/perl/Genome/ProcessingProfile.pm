@@ -9,7 +9,6 @@ use Data::Dumper 'Dumper';
 require Genome::Utility::Text;
 
 class Genome::ProcessingProfile {
-    type_name => 'processing profile',
     table_name => 'PROCESSING_PROFILE',
     is_abstract => 1,
     attributes_have => [
@@ -44,7 +43,24 @@ class Genome::ProcessingProfile {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-### Developer API ###
+sub __display_name__ {
+    my $self = $_[0];
+    return $self->name . ' (' . $self->id . ')';
+}
+
+sub from_cmdline {
+    my ($class, $txt) = @_;
+    my @matches;
+    unless ($txt =~ /\D/) {
+        @matches = __PACKAGE__->get($txt);
+    }
+    unless (@matches) {
+        @matches = __PACKAGE__->get(name => $txt);
+    }
+    UR::Util->context_return(@matches);
+}
+
+### Override When Implementing New Pipelines ###
 
 sub _initialize_model {
     # my ($self,$model) = @_;
@@ -91,7 +107,7 @@ sub _resolve_workflow_for_build {
         #$operation_type->lsf_rusage("-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1]'");
         #$operation_type->lsf_resource("-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=90000:mem=16000]' -M 16000000");
         if ($self->can('_resource_requirements_for_execute_build')) {
-            $operation_type->lsf_resource($self->_resource_requirements_for_execute_build);
+            $operation_type->lsf_resource($self->_resource_requirements_for_execute_build($build));
         }
         else {
             $operation_type->lsf_resource("-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=10000:mem=1000]' -M 1000000");
@@ -149,9 +165,15 @@ sub _map_workflow_inputs {
 
 ###
 
+# Override in subclass if you want some kind of validation of the processing profile object
+sub validate_created_object {
+    my $self = shift;
+    return 1;
+}
+
 sub create {
     my $class = shift;
-    if ($class eq __PACKAGE__) {
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         return $class->SUPER::create(@_);
     }
 $DB::single=1;
@@ -230,7 +252,12 @@ $DB::single=1;
     my $self = $class->SUPER::create(%params)
        or return;
    
-    
+    unless ($self->validate_created_object) {
+        $self->error_message("Could not validate processing profile!");
+        $self->delete;
+        return;
+    }
+
     return $self;
 }
 
@@ -259,10 +286,26 @@ sub _validate_name_and_uniqueness {
 
 sub _validate_no_existing_processing_profiles_with_idential_params {
     my ($subclass, %params) = @_;
+    my $existing_pp = _profiles_matching_subclass_and_params($subclass,%params);
+
+    if ($existing_pp) {
+        # If we get here we have one that is identical, describe and return undef
+        Genome::ProcessingProfile::Command::Describe->execute(
+            processing_profile_id => $existing_pp->id,
+        ) or confess "Can't execute describe command to show existing processing profile";
+        $subclass->error_message("Found a processing profile with the same params as the one requested to create, but with a different name.  Please use this profile, or change a param.");
+        return;
+    }
+
+    return 1;
+}
+
+sub _profiles_matching_subclass_and_params {
+    my ($subclass, %params) = @_;
 
     # If no params, no need to check
     my @params_for_class = $subclass->params_for_class;
-    return 1 unless @params_for_class;
+    return unless @params_for_class;
 
     # Remove these params.
     my $type_name = delete $params{type_name};
@@ -270,12 +313,13 @@ sub _validate_no_existing_processing_profiles_with_idential_params {
     delete $params{supersedes};
     
     # Get all existing pps
-    my @existing_pps = $subclass->get(type_name => $type_name);
-    return 1 unless @existing_pps; # none ok
+    my @existing_pps = $subclass->get($type_name ? (type_name => $type_name) : ());
+    return unless @existing_pps; # none ok
 
     # Go through each one, aking sure that the params don't match. Some params may be undef
     #  in the existing one, then defined in the new one (and vioce versa)
     EXISTING_PP: for my $existing_pp ( @existing_pps ) {
+        $DB::single = 1 if $existing_pp->id == 2522300;
         PARAM: for my $param ( @params_for_class ) {
             my $existing_param_value = $existing_pp->$param;
             if ( not defined $params{$param} ) {
@@ -292,17 +336,11 @@ sub _validate_no_existing_processing_profiles_with_idential_params {
             }
             # both are the same -> automatically goes to next PARAM
         }
-
-        # If we get here we have one that is identical, describe and return undef
-        Genome::ProcessingProfile::Command::Describe->execute(
-            processing_profile_id => $existing_pp->id,
-        ) or confess "Can't execute describe command to show existing processing profile";
-        $subclass->error_message("Found a processing profile with the same params as the one requested to create, but with a different name.  Please use this profile, or change a param.");
-        return;
+        return $existing_pp;
     }
 
     # No pps found with new params, yay!
-    return 1;
+    return;
 }
 
 sub delete {

@@ -29,6 +29,23 @@ my %SYMLINKS_TO_REMOVE;
 
 class Genome::Utility::FileSystem { };
 
+# disk usage management
+
+sub disk_usage_for_path { 
+    my $self = shift;
+    my $path = shift;
+
+    my $cmd = "du -sk $path 2>&1";
+    my $du_output = qx{$cmd};
+    my $kb_used = ( split( ' ', $du_output, 2 ) )[0];
+    unless (Scalar::Util::looks_like_number($kb_used)) {
+        $self->error_message("du output is not a number: $kb_used");
+        return;
+    }
+
+    return $kb_used;
+}
+
 # temp file management
 
 sub _temp_directory_prefix {

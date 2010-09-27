@@ -72,7 +72,7 @@ sub calculate_estimated_kb_usage {
     my $estimate_from_instrument_data = scalar(@idas) * 10000;
 
     #return ($estimate_from_reference + $estimate_from_instrument_data);
-    my $temporary_value = 31457280; # 30GB  -----> old #629145600; #600GB
+    my $temporary_value = 10485760; # 30GB  -----> old #629145600; #600GB
 
     my $processing_profile_name = $model->processing_profile_name;
 
@@ -432,6 +432,10 @@ sub whole_rmdup_bam_flagstat_file {
     my $self = shift;
 
     my $bam_file  = $self->whole_rmdup_bam_file;
+    unless($bam_file and -e $bam_file) {
+        $self->warning_message('No whole BAM file--cannot run flagstat.');
+        return;
+    }
     my $flag_file = $bam_file . '.flagstat';
 
     unless (-s $flag_file) {
@@ -736,7 +740,7 @@ sub delete {
     # if we have an alignments directory, nuke it first since it has its own allocation
     if (-e $self->accumulated_alignments_directory) {
         unless($self->eviscerate()) {
-            my $eviscerate_error = $self->error_mesage();
+            my $eviscerate_error = $self->error_message();
             $self->error_message("Eviscerate failed: $eviscerate_error");
             return;
         };

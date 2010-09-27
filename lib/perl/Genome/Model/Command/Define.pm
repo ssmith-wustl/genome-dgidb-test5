@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Carp 'confess';
 use File::Path;
 use Data::Dumper;
 require Genome::Utility::FileSystem;
@@ -151,8 +152,7 @@ sub execute {
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
-    unless((defined($self->processing_profile_name) && (not defined($self->processing_profile_id)))||
-                (not defined($self->processing_profile_name) && defined($self->processing_profile_id))){
+    unless((defined($self->processing_profile_name) || defined($self->processing_profile_id))){
         $self->error_message("Must specify either processing profile name or processing profile id.");
         return;
     }
@@ -184,9 +184,7 @@ sub execute {
         $self->processing_profile_name($pp->name);
     }
 
-    # Get processing profile id for the name given
-    #my $processing_profile_id = $self->_get_processing_profile_id_for_name
-    #    or return;
+    $self->compare_pp_and_model_type;
 
     #attempt derive subject_type if not passed as an arg
     #die if subject type isnt sample_name for now
@@ -246,6 +244,7 @@ sub execute {
         $model_params{data_directory} = $self->data_directory;
     }
 
+    $DB::single = 1;
     my $model = Genome::Model->create(%model_params);
     unless ( $model ) {
         $self->error_message('Could not create a model for: '. $self->subject_name);
@@ -310,45 +309,43 @@ sub type_specific_parameters_for_create {
     return (); #This exists to be overwritten by subclasses
 }
 
-sub _get_processing_profile_id_for_name {
+sub compare_pp_and_model_type {
     my $self = shift;
 
-    unless ( $self->processing_profile_name ) {
-        $self->error_message("No name to get processing profile");
-        return;
-    }
+    $DB::single = 1;
+    # Determine the subclass of model being defined
+    my $model_subclass = $self->class;
+    my $package = __PACKAGE__ . "::";
+    $model_subclass =~ s/$package//;
     
-    my (@processing_profiles) = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
+    # Determine the subclass of the processing profile
+    my $pp = Genome::ProcessingProfile->get(id=>$self->processing_profile_id);
+    unless($pp){
+        $self->error_message("Couldn't find the processing profile identified by the #: ".$self->processing_profile_id);
+        die $self->error_message;
+    }
+    my $pp_subclass = $pp->subclass_name;
+    $pp_subclass =~ s/Genome::ProcessingProfile:://;
+    
 
-    unless ( @processing_profiles ) {
-        my $msg;
-        if (defined $self->processing_profile_name) {
-            $msg = "Failed to find processing profile "
-                . $self->processing_profile_name . "!\n"
+    #check for special cases where processing-profile-name and model subclass have different names
+    if ($model_subclass =~ /GenotypeMicroarray/) {
+        unless($pp->name =~ /wugc/){
+            $self->error_message("GenotypeMicroarray Models must use one of the [microarray-type]/wugc processing-profiles.");
+            die $self->error_message;
         }
-        else {
-            $msg = "No processing profile specified!\n";
-        }
-        $msg .= "Please select from:\n "
-                . join("\n ", 
-                        grep { defined $_ and length $_ } 
-                        map  { $_->name } 
-                        Genome::ProcessingProfile->get() 
-                    ) 
-                . "\n";
-        $self->error_message($msg);
-        return;
+        return 1;
     }
 
-    # Bomb out unless exactly 1 matching processing profile is found
-    unless ( @processing_profiles == 1 ) {
-        $self->error_message(
-            sprintf('Found multiple processing profiles for name (%s)', $self->processing_profile_name)
-        );
-        return;
+    unless ($model_subclass eq $pp_subclass) {
+        my ($shortest, $longest) = ($model_subclass, $pp_subclass);
+        ($shortest, $longest) = ($longest, $shortest) if length $pp_subclass < length $model_subclass;
+        unless ($longest =~ /$shortest/) {
+            $self->error_message("Model subclass $model_subclass and ProcessingProfile subclass $pp_subclass do not match!");
+            confess;
+        }
     }
-
-    return $processing_profiles[0]->id;
+    return 1;
 }
 
 

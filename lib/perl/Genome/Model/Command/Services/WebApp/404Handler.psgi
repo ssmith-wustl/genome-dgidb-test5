@@ -31,6 +31,7 @@ sub {
         <div class="container">
           <div class="title span-24 last app_error_32">
             <h1>Error Encountered</h1>
+          </div>
         </div>
       </div>
 

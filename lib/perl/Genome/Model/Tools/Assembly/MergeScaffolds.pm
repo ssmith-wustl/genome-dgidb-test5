@@ -2,8 +2,8 @@ package Genome::Model::Tools::Assembly::MergeScaffolds;
 
 use strict;
 use warnings;
-use Genome::Assembly::Pcap::ContigTools;
-use Genome::Assembly::Pcap::Ace;
+
+use Genome;
 use Cwd;
 
 class Genome::Model::Tools::Assembly::MergeScaffolds

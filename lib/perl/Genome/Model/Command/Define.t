@@ -6,7 +6,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More 'no_plan';
+use Test::More;
 use Test::Differences;
 use File::Path;
 use Fcntl ':mode';
@@ -102,6 +102,7 @@ my $group2 = Genome::ModelGroup->create(name => "test 2");
 my $groups = join ",", ($group1->name, $group2->id);
 test_model_from_params_with_group($groups);
 
+done_testing();
 exit;
 
 ########################################################3
@@ -179,7 +180,7 @@ sub successful_create_model {
     my ($expected_date) = split('\w',$current_time);
   
     my $define_class;
-    my $ppname = $params{processing_profile_ppname} || "";
+    my $ppname = $params{processing_profile_name} || "";
     my @pp = Genome::ProcessingProfile->get(name => $ppname);
     if (@pp > 1) {
         die "Found multiple profiles for ppname: $ppname";
@@ -226,7 +227,8 @@ sub successful_create_model {
     }
     ok(scalar(@status_messages), 'There was a status message');
 
-    like($status_messages[0], qr|Created model:|, 'First message is correct');
+    my @create_status_messages = grep { /Created model:/ } @status_messages;
+    ok(@create_status_messages, 'Got create status message');
     # FIXME - some of those have a second message about creating a directory
     # should probably test for that too
     delete($params{data_directory});

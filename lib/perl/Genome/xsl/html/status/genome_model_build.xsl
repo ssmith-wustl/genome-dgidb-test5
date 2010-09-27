@@ -60,7 +60,7 @@
         <div id="process_tabs" class="span-24 last">
           <ul>
             <li class="tab_header"><h3 class="genome_processingprofile_16">Build Process</h3></li>
-            <li><a><xsl:attribute name="href">/view/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="//build/workflow/@id"/></xsl:attribute><span class="spinner"><xsl:text> </xsl:text></span>workflow</a></li>
+            <li><a><xsl:attribute name="href">/viewajax/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="//build/workflow/@id"/></xsl:attribute><span class="spinner"><xsl:text> </xsl:text></span>workflow</a></li>
 
             <li><a href="#events">events</a></li>
           </ul>
@@ -658,7 +658,7 @@
         <xsl:call-template name="object_link_button">
           <xsl:with-param name="icon" select="'sm-icon-extlink'" />
           <xsl:with-param name="linktext">
-            <xsl:value-of select="display_name" />
+            <xsl:value-of select="@id" />
           </xsl:with-param>
         </xsl:call-template>
       </td>
@@ -704,7 +704,7 @@
       </td>
 
       <td class="buttons">
-        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>data directory</a>
+        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute>data directory</a>
       </td>
 
       <!-- <td class="buttons"> -->

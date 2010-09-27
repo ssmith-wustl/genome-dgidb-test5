@@ -4,6 +4,9 @@
 
 
   <xsl:template name="genome_model_build_referencealignment" match="object[@type='Genome::Model::Build::ReferenceAlignment::Solexa']">
+
+    <xsl:call-template name="control_bar_view"/>
+
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Coverage Metrics for Build:'" />
       <xsl:with-param name="display_name" select="@id" />
@@ -29,30 +32,25 @@
 
         <h2>aligned reads</h2>
         <table class="list" width="100%" cellspacing="0" cellpadding="0" border="0">
-          <!-- <colgroup> -->
-          <!--   <col width="40%"/> -->
-          <!--   <col/> -->
-          <!--   <col/> -->
-          <!--   <col/> -->
-          <!--   <col/> -->
-          <!-- </colgroup> -->
           <thead>
             <tr>
               <th>wingspan</th>
               <th class="last">total BP</th>
               <th class="last">total aligned BP</th>
-              <th class="last">% aligned</th>
+              <th class="last">aligned</th>
               <th class="last">total duplicates</th>
-              <th class="last">% duplicates</th>
+              <th class="last">duplicates</th>
               <th class="last">total target aligned BP</th>
-              <th class="last">% target aligned</th>
+              <th class="last">target aligned</th>
               <th class="last">unique target aligned BP</th>
               <th class="last">duplicate target aligned BP</th>
-              <th class="last">% duplicate target aligned</th>
+              <th class="last">duplicate target aligned</th>
             </tr>
           </thead>
           <tbody>
             <xsl:for-each select="alignment-summary/wingspan">
+              <xsl:sort data-type="number" order="ascending" select="@value"/>
+
               <xsl:variable name="total_bp" select="total_bp"/>
               <xsl:variable name="total_aligned_bp" select="total_aligned_bp"/>
               <xsl:variable name="total_duplicate_bp" select="total_duplicate_bp"/>
@@ -104,27 +102,24 @@
 
         <h2>depth summary</h2>
         <table class="list" width="100%" cellspacing="0" cellpadding="0" border="0">
-          <!-- <colgroup> -->
-          <!--   <col width="40%"/> -->
-          <!--   <col/> -->
-          <!--   <col/> -->
-          <!--   <col/> -->
-          <!--   <col/> -->
-          <!-- </colgroup> -->
+
           <thead>
             <tr>
               <th>minimum depth</th>
+              <th>wingspan</th>
               <th class="last">targets</th>
               <th class="last">targets touched</th>
-              <th class="last">% targets touched</th>
+              <th class="last">targets touched</th>
               <th class="last">target BP</th>
               <th class="last">covered BP</th>
-              <th class="last">% target space covered</th>
+              <th class="last">target space covered</th>
             </tr>
           </thead>
           <tbody>
             <xsl:for-each select="coverage-stats-summary/wingspan/minimum_depth">
               <xsl:sort select="@value" data-type="number" order="ascending"/>
+              <xsl:sort select="../@value" data-type="number" order="ascending"/>
+
               <xsl:variable name="targets" select="targets"/>
               <xsl:variable name="touched" select="touched"/>
               <xsl:variable name="pc_touched" select="($touched div $targets) * 100"/>
@@ -134,6 +129,9 @@
               <tr>
                 <td>
                   <xsl:value-of select="@value"/>
+                </td>
+                <td>
+                  <xsl:value-of select="../@value"/>
                 </td>
                 <td class="last">
                   <xsl:value-of select="format-number($targets,'###,###')"/>
@@ -160,28 +158,24 @@
         </table>
         <h2>depth with breadth(>=80%) summary</h2>
         <table class="list" width="100%" cellspacing="0" cellpadding="0" border="0">
-          <!-- <colgroup> -->
-          <!--   <col width="40%"/> -->
-          <!--   <col/> -->
-          <!--   <col/> -->
-          <!--   <col/> -->
-          <!--   <col/> -->
-          <!-- </colgroup> -->
+
           <thead>
             <tr>
               <th>minimum depth</th>
+              <th>wingspan</th>
               <th class="last">targets</th>
               <th class="last">targets touched</th>
-              <th class="last">% targets touched</th>
+              <th class="last">targets touched</th>
               <th class="last">target BP</th>
               <th class="last">covered BP</th>
-              <th class="last">% target space covered</th>
+              <th class="last">target space covered</th>
 
             </tr>
           </thead>
           <tbody>
             <xsl:for-each select="coverage-stats-summary/wingspan/minimum_depth">
               <xsl:sort select="@value" data-type="number" order="ascending"/>
+              <xsl:sort select="../@value" data-type="number" order="ascending"/>
               <xsl:variable name="targets" select="targets"/>
               <xsl:variable name="targets_eighty_pc_breadth" select="targets_eighty_pc_breadth"/>
               <xsl:variable name="pc_targets_eighty_pc_breadth" select="($targets_eighty_pc_breadth div $targets) * 100"/>
@@ -191,6 +185,9 @@
               <tr>
                 <td>
                   <xsl:value-of select="@value"/>
+                </td>
+                <td>
+                  <xsl:value-of select="../@value"/>
                 </td>
                 <td class="last">
                   <xsl:value-of select="format-number($targets,'###,###')"/>

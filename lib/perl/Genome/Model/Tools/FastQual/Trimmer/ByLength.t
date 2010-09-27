@@ -12,9 +12,9 @@ use Test::More;
 use_ok('Genome::Model::Tools::FastQual::Trimmer::ByLength') or die;
 
 # Create failures
-ok(!Genome::Model::Tools::FastQual::Trimmer::ByLength->create(), 'Create w/o trim length');
-ok(!Genome::Model::Tools::FastQual::Trimmer::ByLength->create(trim_length => 'all'), 'Create w/ trim length => all');
-ok(!Genome::Model::Tools::FastQual::Trimmer::ByLength->create(trim_length => 0), 'Create w/ trim length => 0');
+ok(scalar(Genome::Model::Tools::FastQual::Trimmer::ByLength->create()->__errors__), 'Create w/o trim length');
+ok(scalar(Genome::Model::Tools::FastQual::Trimmer::ByLength->create(trim_length => 'all')->__errors__), 'Create w/ trim length => all');
+ok(scalar(Genome::Model::Tools::FastQual::Trimmer::ByLength->create(trim_length => 0)->__errors__), 'Create w/ trim length => 0');
 
 # Files
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
@@ -40,5 +40,3 @@ is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq trimmed as expe
 done_testing();
 exit;
 
-#HeadURL$
-#$Id$

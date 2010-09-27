@@ -276,3 +276,15 @@
     background-repeat: no-repeat;
     background-position: left center;
 }
+
+.app_cache_miss_32 {
+    background-image: url("../img/icons/app_cache_miss_32.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.app_cache_miss_16 {
+    background-image: url("../img/icons/app_cache_miss_16.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}

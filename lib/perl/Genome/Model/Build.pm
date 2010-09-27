@@ -30,8 +30,7 @@ class Genome::Model::Build {
                                                       my $model = Genome::Model->get($model_id);
                                                       Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
                                                       return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($model->type_name);
-                                                  },
-
+                                                  }
                                    },
         data_directory          => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         model                   => { is => 'Genome::Model', id_by => 'model_id' },
@@ -82,6 +81,11 @@ class Genome::Model::Build {
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub __display_name__ {
+    my $self = shift;
+    return $self->id . ' of ' . $self->model->name;
+}
 
 use Genome::Command::OO;
 *from_cmdline = \&Genome::Command::OO::default_cmdline_selector;
@@ -175,7 +179,7 @@ sub __extend_namespace__ {
 
 sub create {
     my $class = shift;
-    if ($class eq __PACKAGE__) {
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # let the base class re-call the constructor from the correct sub-class
         return $class->SUPER::create(@_);
     }
@@ -652,7 +656,7 @@ sub _launch {
  
         # bsub into the queue specified by the dispatch spec
         my $lsf_command = sprintf(
-            'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s genome model services build run%s --model-id %s --build-id %s',
+            'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
             $server_dispatch, ## lsf queue
             $host_group,
             $job_group_spec,
@@ -843,10 +847,10 @@ sub success {
     if($self->type_name !~ /convergence/) {
         for my $model_group ($self->model->model_groups) {
             eval {
-                $model_group->launch_convergence_rebuild;
+                $model_group->schedule_convergence_rebuild;
             };
             if($@) {
-                $self->error_message('Could not launch convergence build for model group ' . $model_group->id . '.  Continuing anyway.');
+                $self->error_message('Could not schedule convergence build for model group ' . $model_group->id . '.  Continuing anyway.');
             }
         }
     }

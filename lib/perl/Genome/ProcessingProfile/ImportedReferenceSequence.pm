@@ -206,7 +206,7 @@ sub _make_bases_files {
         if($line =~ /^>/){
             my $chr = $';
             ($chr) = split " ",$chr;
-            $chr =~s/(\/|\\)/_/;  # "\" or "/" are not allowed in sequence names
+            $chr =~s/(\/|\\)/_/g;  # "\" or "/" are not allowed in sequence names
             push @chroms, $chr;
             if(defined($file)) {
                 $file->close;

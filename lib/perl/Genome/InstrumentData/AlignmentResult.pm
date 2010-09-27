@@ -391,6 +391,7 @@ sub create {
 
     # STEP 11: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
     $self->status_message("Preparing the output directory...");
+    $self->status_message("Staging disk usage is " . $self->_staging_disk_usage . " KB");
     my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
     $self->status_message("Alignment output path is $output_dir");
 
@@ -567,6 +568,12 @@ sub postprocess_bam_file {
         die $self->error_message;
     }
     
+    #request by RT#62311 for submission and data integrity
+    $self->status_message('Creating all_sequences.bam.md5 ...');
+    unless ($self->_create_bam_md5) {
+        $self->error_message('Fail to create bam md5');
+        die $self->error_message;
+    }
     return 1;
 }
 
@@ -797,6 +804,25 @@ sub _verify_bam {
     return 1;
 }
 
+
+sub _create_bam_md5 {
+    my $self = shift;
+
+    my $bam_file = $self->temp_staging_directory . '/all_sequences.bam';
+    my $md5_file = $bam_file . '.md5';
+    my $cmd      = "md5sum $bam_file > $md5_file";
+
+    my $rv  = Genome::Utility::FileSystem->shellcmd(
+        cmd                        => $cmd, 
+        input_files                => [$bam_file],
+        output_files               => [$md5_file],
+        skip_if_output_is_present  => 0,
+    ); 
+    $self->error_message("Fail to run: $cmd") and return unless $rv == 1;
+    return 1;
+}
+
+
 sub _promote_validated_data {
     my $self = shift;
 
@@ -806,7 +832,7 @@ sub _promote_validated_data {
 
     $self->status_message("Now de-staging data from $staging_dir into $output_dir"); 
 
-    my $call = sprintf("rsync -avz %s/* %s", $staging_dir, $output_dir);
+    my $call = sprintf("rsync -avzL %s/* %s", $staging_dir, $output_dir);
 
     my $rv = system($call);
     $self->status_message("Running Rsync: $call");
@@ -1036,6 +1062,19 @@ sub _prepare_working_directories {
     return 1;
 } 
 
+
+sub _staging_disk_usage {
+
+    my $self = shift;
+    my $usage;
+    unless ($usage = Genome::Utility::FileSystem->disk_usage_for_path($self->temp_staging_directory)) {
+        $self->error_message("Failed to get disk usage for staging: " . Genome::Utility::FileSystem->error_message);
+        die $self->error_message;
+    }
+
+    return $usage;
+}
+
 sub _prepare_alignment_directory {
 
     my $self = shift;
@@ -1053,7 +1092,7 @@ sub _prepare_alignment_directory {
 
     my %allocation_create_parameters = (
         %allocation_get_parameters,
-        kilobytes_requested => $self->estimated_kb_usage,
+        kilobytes_requested => $self->_staging_disk_usage,
         owner_class_name => $self->class,
         owner_id => $self->id
     );
@@ -1102,7 +1141,7 @@ sub _extract_input_fastq_filenames {
         for my $input_fastq (@input_fastq_pathnames) {
             unless (-e $input_fastq && -f $input_fastq && -s $input_fastq) {
                 $self->error_message('Missing or zero size sanger fastq file: '. $input_fastq);
-                $self->die_and_clean_up($self->error_message);
+                die($self->error_message);
             }
         }
     } 
@@ -1213,16 +1252,46 @@ sub _extract_input_fastq_filenames {
                         $trimmed_input_fastq_pathname = $random_input_fastq_pathname;
                     } 
                     else {
-                        $self->error_message('Unknown read trimmer_name '. $self->trimmer_name);
-                        $self->die_and_clean_up($self->error_message);
+                        # TODO: modularize the above and refactor until they work in this logic:
+                        # Then ensure that the trimmer gets to work on paired files, and is 
+                        # a more generic "preprocess_reads = 'foo | bar | baz' & "[1,2],[],[3,4,5]"
+                        my $params = $self->trimmer_params;
+                        my @params = eval("no strict; no warnings; $params");
+                        if ($@) {
+                            die "error in params: $@\n$params\n";
+                        }
+
+                        my $class_name = 'Genome::Model::Tools::FastQual::Trimmer';
+                        my @words = split(' ',$self->trimmer_name);
+                        for my $word (@words) {
+                            my @parts = map { ucfirst($_) } split('-',$word);
+                            $class_name .= "::" . join('',@parts);
+                        }
+                        eval {
+                            $trimmer = $class_name->create(
+                                input => [$input_fastq_pathname],
+                                output => [$trimmed_input_fastq_pathname],
+                                @params,
+                            );
+                        };
+                        unless ($trimmer) {
+                            $self->error_message(
+                                sprintf(
+                                    "Unknown read trimmer_name %s.  Class $class_name params @params. $@",
+                                    $self->trimmer_name,
+                                    $class_name
+                                )
+                            );
+                            die($self->error_message);
+                        }
                     }
                     unless ($trimmer) {
                         $self->error_message('Failed to create fastq trim command');
-                        $self->die_and_clean_up($self->error_message);
+                        die($self->error_message);
                     }
                     unless ($trimmer->execute) {
                         $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
-                        $self->die_and_clean_up($self->error_message);
+                        die($self->error_message);
                     }
                     if ($self->trimmer_name eq 'normalize') {
                         my @empty = ();

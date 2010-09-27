@@ -1,6 +1,14 @@
 package Genome::TranscriptSubStructure;
 #:adukes short term: move data directory into id_by, but this has to be done in parallel w/ rewriting all file-based data sources.  It might be better to wait until long term: custom datasource that incorporates data_dir, possibly species/source/version, eliminating the need for these properties in the id, and repeated multiple times in the files
 
+
+######################################################
+#
+# NOTE!  This class is probably obsolete.  The annotator (Genome::Transcript::VariantAnnotator)
+# uses the new class Genome::TranscriptStructure
+#
+# ###########################################################################333
+
 use strict;
 use warnings;
 

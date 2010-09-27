@@ -230,6 +230,10 @@ sub _run_aligner {
     $self->status_message("Seed for maq's random number generator is $seed.");
     $aligner_params .= " -s $seed ";
 
+    # disconnect the db handle before this long-running event
+    Genome::DataSource::GMSchema->disconnect_default_dbh; 
+
+
     my $files_to_align = join ' ', @input_pathnames;
     my $cmdline = Genome::Model::Tools::Maq->path_for_maq_version($self->aligner_version)
         . sprintf(' map %s -u %s %s %s %s > ',
