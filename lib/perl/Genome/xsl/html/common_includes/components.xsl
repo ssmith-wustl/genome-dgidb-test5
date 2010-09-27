@@ -175,6 +175,8 @@
         <p class="small">version 1.0b <xsl:copy-of select="$footer_text"/></p>
       </div>
     </div>
+    <br/>
+    <br/>
   </xsl:template>
 
 </xsl:stylesheet>
