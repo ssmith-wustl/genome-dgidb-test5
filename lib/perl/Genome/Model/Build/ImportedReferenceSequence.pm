@@ -177,7 +177,7 @@ sub get_by_name {
 
     # This method is not adequate as spaces are substitued in the model anme and version
     #  when creating the build name. But we'll try.
-    my ($model_name, $build_version) = $name =~ /^(.+)-build(.+?)$/;
+    my ($model_name, $build_version) = $name =~ /^(.+)-build(.*?)$/;
     if ( not defined $model_name ) {
         $class->status_message("Could not parse out model name and build version from build name: $name");
         return;
@@ -199,22 +199,40 @@ sub get_by_name {
         Carp::confess("No builds for imported reference sequence model: ".$model->__display_name__);
     }
 
-    my @builds_with_version;
-    for my $build ( @builds ) {
-        my $version = $build->version;
-        if ( not defined $version or $version ne $build_version ) {
-            next;
-        }
-        push @builds_with_version, $build;
-    }
-    if ( not @builds_with_version ) {
-        Carp::confess("No builds found with version $build_version for imported reference sequence model: ".$model->__display_name__);
-    }
-    elsif ( @builds_with_version > 1 ) {
-        Carp::confess("Multiple builds with version $build_version found for model: ".$model->__display_name__);
-    }
+    unless($build_version) {
+        my @builds_without_version;
+        for my $build (@builds) {
+            next if defined $build->version;
 
-    return $builds_with_version[0];
+            push @builds_without_version, $build;
+        }
+
+        unless (scalar @builds_without_version > 0) {
+            Carp::confess("No builds found with no version for imported reference sequence model: ".$model->__display_name__);
+        }
+        if ( @builds_without_version > 1 ) {
+            Carp::confess("Multiple builds with no version found for model: ".$model->__display_name__);
+        }
+
+        return $builds_without_version[0];
+    } else {
+        my @builds_with_version;
+        for my $build ( @builds ) {
+            my $version = $build->version;
+            if ( not defined $version or $version ne $build_version ) {
+                next;
+            }
+            push @builds_with_version, $build;
+        }
+        if ( not @builds_with_version ) {
+            Carp::confess("No builds found with version $build_version for imported reference sequence model: ".$model->__display_name__);
+        }
+        elsif ( @builds_with_version > 1 ) {
+            Carp::confess("Multiple builds with version $build_version found for model: ".$model->__display_name__);
+        }
+
+        return $builds_with_version[0];
+    }
 }
 #</ Special Get >#
 
