@@ -44,7 +44,7 @@ foreach (@out_files) {
     ok (File::Compare::compare($temp_dir."/$_", $data_dir."/$_") == 0, "$_ files match");
 }
 
-<STDIN>;
+#<STDIN>;
 
 done_testing();
 
