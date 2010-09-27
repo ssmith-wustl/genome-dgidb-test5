@@ -8,11 +8,6 @@ class Genome::Sys::Google::Spreadsheet {
     doc   => 'just a shell- solr xml is forwarded as search result view'
 };
 
-
-
-
-
 1;
-
 
 

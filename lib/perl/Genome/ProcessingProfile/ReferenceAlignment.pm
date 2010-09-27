@@ -448,7 +448,16 @@ sub alignment_objects {
     my @solexa_instrument_data = Genome::InstrumentData->get( \@instrument_data_ids );
 
     unless (scalar @solexa_instrument_data == scalar @instrument_data_ids) {
-        $self->warning_message('Failed to find all of the assigned instrument data for model: '.$model->id.'. Now trying imported data');
+        my %assignments = map { $_->instrument_data_id => $_ } @assignments;
+        for my $found (@solexa_instrument_data) {
+            delete $assignments{$found->id};
+        }
+        my @missing = sort keys %assignments;
+        $self->warning_message(
+            'Failed to find all of the assigned instrument data for model: '
+            . $model->id
+            . ".  Missing @missing.  Now trying imported data..."
+        );
         my @imported_instrument_data = Genome::InstrumentData::Imported->get( \@instrument_data_ids );
         
         push @solexa_instrument_data, @imported_instrument_data;

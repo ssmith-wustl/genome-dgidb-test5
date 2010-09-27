@@ -1116,7 +1116,7 @@ sub _extract_input_fastq_filenames {
         for my $input_fastq (@input_fastq_pathnames) {
             unless (-e $input_fastq && -f $input_fastq && -s $input_fastq) {
                 $self->error_message('Missing or zero size sanger fastq file: '. $input_fastq);
-                $self->die_and_clean_up($self->error_message);
+                die($self->error_message);
             }
         }
     } 
@@ -1227,16 +1227,46 @@ sub _extract_input_fastq_filenames {
                         $trimmed_input_fastq_pathname = $random_input_fastq_pathname;
                     } 
                     else {
-                        $self->error_message('Unknown read trimmer_name '. $self->trimmer_name);
-                        $self->die_and_clean_up($self->error_message);
+                        # TODO: modularize the above and refactor until they work in this logic:
+                        # Then ensure that the trimmer gets to work on paired files, and is 
+                        # a more generic "preprocess_reads = 'foo | bar | baz' & "[1,2],[],[3,4,5]"
+                        my $params = $self->trimmer_params;
+                        my @params = eval("no strict; no warnings; $params");
+                        if ($@) {
+                            die "error in params: $@\n$params\n";
+                        }
+
+                        my $class_name = 'Genome::Model::Tools::FastQual::Trimmer';
+                        my @words = split(' ',$self->trimmer_name);
+                        for my $word (@words) {
+                            my @parts = map { ucfirst($_) } split('-',$word);
+                            $class_name .= "::" . join('',@parts);
+                        }
+                        eval {
+                            $trimmer = $class_name->create(
+                                input => [$input_fastq_pathname],
+                                output => [$trimmed_input_fastq_pathname],
+                                @params,
+                            );
+                        };
+                        unless ($trimmer) {
+                            $self->error_message(
+                                sprintf(
+                                    "Unknown read trimmer_name %s.  Class $class_name params @params. $@",
+                                    $self->trimmer_name,
+                                    $class_name
+                                )
+                            );
+                            die($self->error_message);
+                        }
                     }
                     unless ($trimmer) {
                         $self->error_message('Failed to create fastq trim command');
-                        $self->die_and_clean_up($self->error_message);
+                        die($self->error_message);
                     }
                     unless ($trimmer->execute) {
                         $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
-                        $self->die_and_clean_up($self->error_message);
+                        die($self->error_message);
                     }
                     if ($self->trimmer_name eq 'normalize') {
                         my @empty = ();
