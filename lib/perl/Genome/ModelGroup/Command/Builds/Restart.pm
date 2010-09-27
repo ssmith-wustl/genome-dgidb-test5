@@ -49,14 +49,15 @@ sub execute {
             my $build_id = $build->id;
             my $restart_build = Genome::Model::Build::Command::Restart->create(filter => $build_id);
             $self->status_message("Restarting $build_id ($model_name)");
-            eval { $restart_build->execute() };
-            if ($@) {
-                $self->error_message("Failed to restart build ($build_id) for model " . $model->name . " (" . $model->id . ").");
-            }
-            else {
-                $active_count++;
-                UR::Context->commit;
-            }
+            eval {
+                if($restart_build->execute()) {
+                    $active_count++;
+                    UR::Context->commit;
+                }
+                else {
+                    $self->error_message("Failed to restart build ($build_id) for model " . $model->name . " (" . $model->id . ").");
+                }
+            };
         }
         else {
             $self->status_message("Skipping $build_id ($model_name)");
