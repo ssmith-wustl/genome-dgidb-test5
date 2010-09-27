@@ -141,7 +141,7 @@ sub execute {
 
                 my $reference_sequence_build;
                 if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-                    my @reference_sequence_build_ids = $pse->added_param('reference_sequence_build_id_for_' . $processing_profile->id);
+                    my @reference_sequence_build_ids = $pse->reference_sequence_build_param_for_processing_profile($processing_profile);
                     unless ( scalar @reference_sequence_build_ids ) {
                         $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference sequence model');
                         push @process_errors, $self->error_message;
