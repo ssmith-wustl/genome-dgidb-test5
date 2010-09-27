@@ -411,7 +411,6 @@ sub test01_send_report : Test(5) {
     ) or die "Can't get report\n";
 
 
-    print Dumper([$report, $report->generator->get_xsl_file_for_html]);
     my %valid_params = (
         report => $report,
         to => [$ENV{USER}.'@genome.wustl.edu'], # can be string or aryref
