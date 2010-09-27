@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
-use POSIX;
 
 class Genome::Model::Tools::Sam::MergeSplitReferenceAlignments {
     is  => 'Genome::Model::Tools::Sam',
@@ -76,6 +75,7 @@ sub help_detail {
 
 =cut
 
+    
 sub execute {
     my $self = shift;
 

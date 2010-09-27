@@ -5,6 +5,7 @@ use warnings;
 
 use Genome; 
 use File::Basename;
+use POSIX;
 
 my $DEFAULT = 'r544';
 #3Gb
@@ -93,6 +94,25 @@ sub samtools_pl_path {
     return $path;
 }
 
+sub c_linkage_class {
+    my $self = shift;
+
+$DB::single = $DB::stopper;
+    my $version = $self->use_version;
+    $version =~ s/\./_/g;
+
+    my $class_to_use = __PACKAGE__ . "::CLinkage$version";
+  
+    #eval "use above '$class_to_use';";
+    eval "use $class_to_use;";
+    if ($@) {
+        $self->error_message("Failed to use $class_to_use: $@");
+        return undef;
+    }
+
+    return $class_to_use;
+}
+
 sub open_bamsam_in {
     my $in_filename = shift;
     my ($type) = ($in_filename =~ /\.([^\.\s]+)\s*$/i);
@@ -134,25 +154,6 @@ sub open_bamsam_out {
         die 'Failed to open "' . $out_filename . "\"\n.";
     }
     return $fh;
-}
-    
-sub c_linkage_class {
-    my $self = shift;
-
-$DB::single = $DB::stopper;
-    my $version = $self->use_version;
-    $version =~ s/\./_/g;
-
-    my $class_to_use = __PACKAGE__ . "::CLinkage$version";
-  
-    #eval "use above '$class_to_use';";
-    eval "use $class_to_use;";
-    if ($@) {
-        $self->error_message("Failed to use $class_to_use: $@");
-        return undef;
-    }
-
-    return $class_to_use;
 }
 
 1;
