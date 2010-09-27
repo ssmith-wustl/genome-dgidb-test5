@@ -227,7 +227,7 @@ sub get_mock_build {
             assembler_fragment_input_file_for_library_id
             libraries_with_existing_assembler_input_files
             existing_assembler_input_files_for_library_id
-            end_one_fastq_file end_two_fastq_file 
+
             soap_config_file
             soap_output_dir_and_file_prefix
             soap_scaffold_sequence_file 
@@ -266,7 +266,7 @@ sub base_directory {
 }
 
 my %dirs_versions = (
-    soap_solexa => '4',
+    soap_solexa => '5',
     velvet_solexa => '0.2',
     newbler_454 => '0.1',
 );

@@ -10,7 +10,23 @@ class Genome::Model::Build::DeNovoAssembly::Soap {
     is => 'Genome::Model::Build::DeNovoAssembly',
 };
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_)
+	or return;
+
+    my $paired_ins_data_count = grep { $_->is_paired_end } $self->instrument_data;
+
+    if ( $paired_ins_data_count == 0 ) {
+	$self->error_message("No paired instrument data found");
+	$self->delete;
+	return;
+    }
+    return $self;
+}
+
 #< Files >#
+
 sub soap_output_dir_and_file_prefix {
     return $_[0]->data_directory.'/'.$_[0]->file_prefix;
 }
@@ -46,7 +62,7 @@ sub read_processor_output_files_for_instrument_data {
         );
     }
     else {
-        return $self->ssembler_fragment_input_file_for_library_id($library_id);
+        return $self->assembler_fragment_input_file_for_library_id($library_id);
     }
 }
 
@@ -71,7 +87,7 @@ sub libraries_with_existing_assembler_input_files {
             insert_size => $insert_size,
         );
         $library{paired_fastq_files} = $files{paired_fastq_files} if exists $files{paired_fastq_files};
-        $library{fragment_fastq_files} = $files{fragment_fastq_files} if exists $files{fragment_fastq_files};
+        $library{fragment_fastq_file} = $files{fragment_fastq_file} if exists $files{fragment_fastq_file};
         push @libraries, \%library;
     }
 
@@ -124,18 +140,10 @@ sub existing_assembler_input_files {
     my @files;
     for my $library ( @libraries ) {
         push @files, @{$library->{paired_fastq_files}} if exists $library->{paired_fastq_files};
-        push @files, $library->{fragment_fastq_files} if exists $library->{fragment_fastq_file};
+        push @files, $library->{fragment_fastq_file} if exists $library->{fragment_fastq_file};
     }
 
     return @files;
-}
-
-sub end_one_fastq_file {
-    return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.input_1.fastq';
-}
-
-sub end_two_fastq_file {
-    return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.input_2.fastq';
 }
 
 sub soap_config_file {

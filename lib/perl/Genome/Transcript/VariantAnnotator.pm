@@ -191,7 +191,7 @@ sub transcripts {
             unless ($variant{reference} eq '-') {
                 my $chrom = $variant{chromosome_name};
                 my $species = $substruct->transcript_species;
-                Genome::Model::Tools::Annotate::LookupConservationScore->class();
+                Genome::Model::Tools::Sequence->class();
                 my $ref_seq = Genome::Model::Tools::Sequence::lookup_sequence(chromosome => $chrom, start => $variant_start, stop => $variant_stop, species => $species);
 
                 unless ($ref_seq eq $variant{reference}) {

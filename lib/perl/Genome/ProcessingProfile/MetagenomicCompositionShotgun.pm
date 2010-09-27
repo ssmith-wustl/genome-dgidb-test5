@@ -68,8 +68,10 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
 };
 
 sub _resource_requirements_for_execute_build {
-    my $self = shift;
-    return "-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=90000:mem=16000]' -M 16000000";
+    my ($self, $build) = @_;
+    my @instrument_data = $build->instrument_data;
+    my $tmp = 30000 * (1 + scalar(@instrument_data));
+    return "-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=$tmp:mem=16000]' -M 16000000";
 }
 
 sub _execute_build {

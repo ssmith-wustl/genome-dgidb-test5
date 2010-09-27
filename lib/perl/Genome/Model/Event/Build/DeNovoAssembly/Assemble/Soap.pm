@@ -35,7 +35,12 @@ sub execute {
 
     # create config file
     $self->status_message('Creating soap config file');
-    unless ( $self->create_config_file(@libraries) ) {
+    my $config = $self->_get_config_for_libraries(@libraries);
+    if ( not $config ) {
+        $self->error_message('Cannot get config from libraires for '.$self->build->description);
+        return;
+    }
+    if ( not $self->_create_config_file($config) ) {
         $self->error_message("Failed to create config file");
         return;
     }
@@ -54,7 +59,7 @@ sub execute {
         version => $self->processing_profile->assembler_version,
         config_file => $self->build->soap_config_file,
         output_dir_and_file_prefix => $self->build->soap_output_dir_and_file_prefix,
-        #cpus => $cpus,
+        cpus => $cpus,
         %assembler_params,
     );
     unless ($assemble) {
@@ -70,7 +75,7 @@ sub execute {
     return 1;
 }
 
-sub create_config_file {
+sub _get_config_for_libraries {
     my ($self, @libraries) = @_;
 
     my $config = "max_rd_len=120\n";
@@ -95,6 +100,12 @@ CONFIG
         }
     }
 
+    return $config;
+}
+
+sub _create_config_file {
+    my ($self, $config) = @_;
+
     my $config_file = $self->build->soap_config_file;
     unlink $config_file if -e $config_file;
     my $fh;
@@ -107,6 +118,7 @@ CONFIG
     }
     $fh->print($config);
     $fh->close;
+
 
     return 1;
 }

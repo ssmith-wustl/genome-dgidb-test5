@@ -65,7 +65,6 @@ foreach my $file_name (qw/ contigs_fasta_file supercontigs_fasta_file superconti
     is(File::Compare::compare($example_file, $file), 0, "$file_name files match");
 }
 
-#<STDIN>;
-
+#print $build->data_directory."\n"; <STDIN>;
 done_testing();
 exit;

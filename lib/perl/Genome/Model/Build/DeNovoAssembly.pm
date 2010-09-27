@@ -77,6 +77,13 @@ sub create {
         return;
     }
 
+    my @ins_data = $self->instrument_data;
+    if (not @ins_data) {
+	$self->error_message("Build does not have any instrument data");
+	$self->delete;
+	return;
+    }
+
     mkdir $self->data_directory unless -d $self->data_directory;
     
     return $self;
