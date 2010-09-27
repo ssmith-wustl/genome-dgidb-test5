@@ -79,7 +79,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is => 'String',
             is_optional => 1,
             is_input => 1,
-            doc => 'Alternate method to specify imported annotation data used in annotation.  This option allows a directory w/o supporting model and build, not reccomended except for testing purposes',
+            doc => 'Alternate method to specify imported annotation data used in annotation.  This option allows a directory or commam seperated list of directories (these can lack a supporting model and build, but probably shouldn\'t)',
         },
         build_id =>{
             is => "Number",
@@ -201,15 +201,6 @@ sub execute {
 
     my $variant_file = $self->variant_file;
     
-    
-    if (defined $self->data_directory) {
-        $self->error_message("Due to a recent change to the annotation data file format, allowing " .
-            "user-specified data directories has been deprecated. Specifying a data directory containing " .
-            "data that does not meet the new format will result in some wonky errors, so this is " .
-            "one way to avoid that mess. If you have questions, contact apipe.");
-        die;
-    }
-
     # Useful information for debugging...
     my $dt = DateTime->now;
     $dt->set_time_zone('America/Chicago');
@@ -259,12 +250,15 @@ sub execute {
     $self->_transcript_report_fh($output_fh);
 
 
-    #check to see if reference_transcripts set name and build_id given
-    if ($self->build and $self->reference_transcripts){
-        $self->error_message("Please provide a build id OR a reference transcript set name, not both");
+    #check to see if combination of data_directory, reference_transcripts set
+    #name, and build_id given
+    unless (($self->build xor $self->reference_transcripts xor $self->data_directory) 
+                xor ($self->build and $self->reference_transcripts and $self->data_directory)){
+        $self->error_message("Please provide a build id OR a reference transcript set name OR a data directory, not a combination");
         return;
     }
 
+    #FIXME: This should take comma separated list of data_directories into account
     if ($self->build) {
         my $version = $self->build->version;
         my $name = $self->build->model->name;
@@ -279,7 +273,7 @@ sub execute {
             $self->build($build);
         }
     }
-    else {
+    elsif($self->reference_transcripts){
         my $ref = $self->reference_transcripts;
         $ref = "NCBI-human.combined-annotation/54_36p_v2" unless defined $ref;
         my ($name) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
@@ -306,7 +300,6 @@ sub execute {
         $self->build($build);
     }
 
-
     my $pre_annotation_stop = Benchmark->new;
     my $pre_annotation_time = timediff($pre_annotation_stop, $pre_annotation_start);
     $self->status_message('Pre-annotation: ' . timestr($pre_annotation_time, 'noc')) if $self->benchmark;
@@ -322,6 +315,9 @@ sub execute {
     elsif (not $self->cache_annotation_data_directory) {
         $self->status_message("Not caching annotation data directory");
     }
+    else{
+        $self->status_message("Not caching annotation data directory, no build or reference transcripts specified");
+    }
 
     # omit headers as necessary 
     $output_fh->print( join("\t", $self->transcript_report_headers), "\n" ) unless $self->no_headers;
@@ -334,17 +330,27 @@ sub execute {
 
     # Initialize the annotator object
     my $annotator = eval {
-        my $full_version = $self->build->version;
-        my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
-        my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
-
-        my @directories = $self->build->determine_data_directory;
-        Genome::Transcript::VariantAnnotator->create(
-            data_directory => \@directories,
-            check_variants => $self->check_variants,
-            get_frame_shift_sequence => $self->get_frame_shift_sequence,
-            ucsc_conservation_directory => $ucsc_versions{$version},
-        );
+        my @directories;
+        if ($self->build){
+            my $full_version = $self->build->version;
+            my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
+            my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
+            @directories = $self->build->determine_data_directory($self->cache_annotation_data_directory);
+            Genome::Transcript::VariantAnnotator->create(
+                data_directory => \@directories,
+                check_variants => $self->check_variants,
+                get_frame_shift_sequence => $self->get_frame_shift_sequence,
+                ucsc_conservation_directory => $ucsc_versions{$version},
+            );
+        }
+        else{
+            @directories = split(/,/, $self->data_directory);
+            Genome::Transcript::VariantAnnotator->create(
+                data_directory => \@directories,
+                check_variants => $self->check_variants,
+                get_frame_shift_sequence => $self->get_frame_shift_sequence,
+            );
+        }
     };
     unless ($annotator){
         $self->error_message("Couldn't create Genome::Transcript::VariantAnnotator");

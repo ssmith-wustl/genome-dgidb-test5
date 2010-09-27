@@ -265,7 +265,7 @@ sub {
 
     <div class="container" style="width: 480px;">
       <div class="span-12 last">
-        <div class="rounded" style="background: #FFF; margin-bottom: 10px;">
+        <div class="rounded" style="margin-bottom: 10px;">
           <div class="padding10">
             <p>Please wait while this page is generated and added to the cache. Subsequent loads will be returned rapidly from the cache.<p>
             <div id="ajax_status"/>

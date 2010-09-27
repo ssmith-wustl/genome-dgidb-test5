@@ -1,13 +1,15 @@
 package Genome::Model::Tools::Assembly::DetectMerges; 
 
+use strict;
+use warnings;
+
+use Genome;
+
 use FindBin;
 use Carp::Assert;
 use Carp;
 use Cwd;
 use Utility;
-use Genome::Assembly::Pcap::Ace;
-use Genome::Assembly::Pcap::PhdDB;
-use Genome::Assembly::Pcap::ContigTools;
 
 class Genome::Model::Tools::Assembly::DetectMerges {
     is => 'Command',
@@ -43,9 +45,9 @@ sub execute {
         $stats_file = $ace_file.'.merge_detector_stats';
     }
     
-    my $ct = Genome::Assembly::Pcap::ContigTools->new;
-    my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file,using_db => 1,db_type =>'mysql');
-    my $po = Genome::Assembly::Pcap::PhdDB->new;
+    my $ct = Genome::Model::Tools::Pcap::ContigTools->new;
+    my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file,using_db => 1,db_type =>'mysql');
+    my $po = Genome::Model::Tools::Pcap::PhdDB->new;
 
     my @contig_names = @{$ao->get_contig_names};
 
