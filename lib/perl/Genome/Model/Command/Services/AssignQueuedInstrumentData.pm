@@ -139,14 +139,39 @@ sub execute {
                     next PP;
                 }
 
+                my $reference_sequence_build;
+                if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
+                    my @reference_sequence_build_ids = $pse->added_param('reference_sequence_build_id_for_' . $processing_profile->id);
+                    unless ( scalar @reference_sequence_build_ids ) {
+                        $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference sequence model');
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                    if( scalar @reference_sequence_build_ids > 1) {
+                        $self->error_message('This script is not currently set up to handle multiple reference sequences per processing profile!');
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                    my $reference_sequence_build_id = $reference_sequence_build_ids[0];
+                    $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
+                    if ( not defined $reference_sequence_build ) {
+                        $self->error_message("Cannot get imported reference sequence build for id $reference_sequence_build_id");
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+                }
+
                 my @models = Genome::Model->get(
                     subject_id            => $subject_id,
-                    subject_class_name    => $subject_class_name, 
+                    subject_class_name    => $subject_class_name,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
                 );
 
-                my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, @models);
+
+                my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
 
                 unless(defined $num_assigned) {
                     push @process_errors, $self->error_message;
@@ -155,7 +180,7 @@ sub execute {
 
                 unless($num_assigned > 0) {
                     # no model found for this PP, make one (or more) and assign all applicable data
-                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $pse);
+                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
                     unless($ok) {
                         push @process_errors, $self->error_message;
                         next PP;
@@ -219,8 +244,9 @@ sub execute {
                 grep {
                     $_->processing_profile->sequencing_platform() eq $sequencing_platform 
 	           } @found_models;
-            
-            my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, @found_models);
+
+            #Don't care here what ref. seq. was used (if any)
+            my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, undef, @found_models);
             unless(defined $num_assigned) {
                 push @process_errors, $self->error_message;
             }
@@ -413,6 +439,7 @@ sub check_pse {
 sub assign_instrument_data_to_models {
     my $self = shift;
     my $genome_instrument_data = shift;
+    my $reference_sequence_build = shift;
     my @models = @_;
 
     my $instrument_data_id = $genome_instrument_data->id;
@@ -438,6 +465,10 @@ sub assign_instrument_data_to_models {
             );
             @models = grep { not $capture_model_ids{$_->id} } @models;
         }
+    }
+
+    if($reference_sequence_build) {
+        @models = grep($_->reference_sequence_build eq $reference_sequence_build, @models);
     }
 
     foreach my $model (@models) {
@@ -485,6 +516,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $genome_instrument_data = shift;
     my $subject = shift;
     my $processing_profile = shift;
+    my $reference_sequence_build = shift;
     my $pse = shift;
 
     my @new_models;
@@ -514,19 +546,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         auto_assign_inst_data   => 1,
     );
 
-    if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-        my ($reference_sequence_build_id) = $pse->added_param('reference_sequence_build_id');
-        if ( not defined $reference_sequence_build_id ) {
-            $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference sequence model');
-            return;
-        }
-
-        my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
-        if ( not defined $reference_sequence_build ) {
-            $self->error_message("Cannot get imported reference sequence build for id $reference_sequence_build_id");
-            return;
-        }
-
+    if($reference_sequence_build) {
         $model_params{reference_sequence_build} = $reference_sequence_build;
     }
 
