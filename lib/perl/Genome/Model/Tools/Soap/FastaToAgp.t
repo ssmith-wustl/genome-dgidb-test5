@@ -10,7 +10,8 @@ require File::Compare;
 use_ok ('Genome::Model::Tools::Soap::FastaToAgp') or die;
 
 #check test data dir and files
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/FastaToAgp_v0';
+my $version = 'v1';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/FastaToAgp_'.$version;
 ok (-d $data_dir, "Data dir exists") or die;
 
 #check test input/output files
