@@ -1172,7 +1172,7 @@ sub _process_unaligned_reads {
     return @instrument_data;
 }
 
-sub _processed_unaligned_fastq_pair {
+sub _process_unaligned_fastq_pair {
     my $self = shift;
     my ($forward, $reverse, $forward_out, $reverse_out, $fragment_out) = @_;
     #run dust on forward and reverse
