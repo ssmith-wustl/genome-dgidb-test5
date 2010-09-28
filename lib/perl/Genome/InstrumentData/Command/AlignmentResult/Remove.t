@@ -7,15 +7,15 @@ use Test::More;
 
 my $i = Test::MockObject->new();
 $i->set_isa('Genome::InstrumentData::AlignmentResult', 'UR::Object');
-$i->set_always('__display_name__', "Alignment Result 1");
+$i->set_always('__display_name__', "Mock Alignment Result 1");
 $i->set_always('delete', 1);
-ok($i, "created a new imported instrument data");
+ok($i, "created mock alignment result 1");
 
 my $i2 = Test::MockObject->new();
 $i2->set_isa('Genome::InstrumentData::AlignmentResult', 'UR::Object');
-$i2->set_always('__display_name__', "Alignment Result 2");
+$i2->set_always('__display_name__', "Mock Alignment Result 2");
 $i2->set_always('delete', 1);
-ok($i2, "created a new imported instrument data");
+ok($i2, "created mock alignment result 2");
 
 my $remove_command = Genome::InstrumentData::Command::AlignmentResult::Remove->create(alignment_results => [$i, $i2]);
 ok($remove_command->execute(), "command succeeded");
