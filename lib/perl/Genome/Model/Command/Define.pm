@@ -47,7 +47,7 @@ class Genome::Model::Command::Define {
         processing_profile_id => {
             is => 'Integer',
             is_input => 1,
-            doc => 'itentifies the processing profile by id'
+            doc => 'identifies the processing profile by id'
         },
         data_directory => {
             is => 'Text',
@@ -152,12 +152,12 @@ sub execute {
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
-    unless((defined($self->processing_profile_name) || defined($self->processing_profile_id))){
+    unless((defined($self->processing_profile_name) xor defined($self->processing_profile_id))){
         $self->error_message("Must specify either processing profile name or processing profile id.");
         return;
     }
     
-    if(defined($self->processing_profile_name)){
+    if (defined($self->processing_profile_name)){
         my @pp = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
         unless(@pp==1){
             $self->error_message("ProcessingProfile name returned multiple processing profiles.");
@@ -169,8 +169,7 @@ sub execute {
             return;
         }
         $self->processing_profile_id($pp->id);
-    }
-    if(defined($self->processing_profile_id)){
+    } elsif(defined($self->processing_profile_id)){
         my @pp = Genome::ProcessingProfile->get(id => $self->processing_profile_id);
         unless(@pp==1){
             $self->error_message("ProcessingProfile id returned multiple processing profiles.");
