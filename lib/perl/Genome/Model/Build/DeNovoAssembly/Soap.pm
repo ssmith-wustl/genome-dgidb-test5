@@ -10,7 +10,23 @@ class Genome::Model::Build::DeNovoAssembly::Soap {
     is => 'Genome::Model::Build::DeNovoAssembly',
 };
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_)
+	or return;
+
+    my $paired_ins_data_count = grep { $_->is_paired_end } $self->instrument_data;
+
+    if ( $paired_ins_data_count == 0 ) {
+	$self->error_message("No paired instrument data found");
+	$self->delete;
+	return;
+    }
+    return $self;
+}
+
 #< Files >#
+
 sub soap_output_dir_and_file_prefix {
     return $_[0]->data_directory.'/'.$_[0]->file_prefix;
 }
@@ -128,14 +144,6 @@ sub existing_assembler_input_files {
     }
 
     return @files;
-}
-
-sub end_one_fastq_file {
-    return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.input_1.fastq';
-}
-
-sub end_two_fastq_file {
-    return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.input_2.fastq';
 }
 
 sub soap_config_file {

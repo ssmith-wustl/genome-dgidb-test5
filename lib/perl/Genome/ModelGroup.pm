@@ -33,16 +33,32 @@ class Genome::ModelGroup {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub from_cmdline {
+    my ($class,$txt) = @_;
+    my @g = eval {
+        unless ($txt =~/\D/) {
+            my @g = Genome::ModelGroup->get($txt);
+            return @g if @g;
+        }
+        my @g = Genome::ModelGroup->get(name => $txt);
+        return @g if @g;
+    };
+    return @g if wantarray;
+    return if not defined wantarray;
+    die "Multiple matches @g" if @g > 1;
+    return $g[0];
+}
+
 sub create {
     my $class = shift;
-    my %params = @_;
+    my ($bx,%params) = $class->define_boolexpr(@_);
     
     my %convergence_model_params = ();
     if(exists $params{convergence_model_params}) {
         %convergence_model_params = %{ delete $params{convergence_model_params} };
     } 
     
-    my $self = $class->SUPER::create(%params);
+    my $self = $class->SUPER::create($bx);
     
     my $define_command = Genome::Model::Command::Define::Convergence->create(
         %convergence_model_params,

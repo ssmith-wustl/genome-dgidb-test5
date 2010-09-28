@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Command::Remove {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     #has_input => [
     #    items => { 
     #        is => 'Genome::XXXX',

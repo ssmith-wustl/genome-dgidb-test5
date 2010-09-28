@@ -67,7 +67,6 @@ class Genome::Model::Tools::FastQual {
     ],
 };
 
-#< Helps >#
 sub help_brief {
     return <<HELP
     Process fastq and fasta/quality sequences
@@ -78,14 +77,13 @@ sub help_detail { # empty ok
     return <<HELP 
 HELP
 }
-#<>#
 
-#< Types and Formats >#
 my %supported_types = (
     sanger => { format => 'fastq', },
     illumina => { format => 'fastq', },
     phred => { format => 'fasta', file_exts => [qw/ fna fa /], },
 );
+
 sub valid_types {
     return keys %supported_types;
 }
@@ -133,9 +131,7 @@ sub _enforce_type {
 
     return $type;
 }
-#<>#
 
-#< Create >#
 sub create {
     my $class = shift;
 
@@ -150,9 +146,7 @@ sub create {
 
     return $self;
 }
-#<>#
 
-#< Reader Writer >#
 sub _open_reader {
     my $self = shift;
 
@@ -282,7 +276,6 @@ sub _open_fastq_set_writer {
 # Need these as class vars
 my %metrics; # writer class and id => metrics
 my @writer_classes_overloaded; # writer classes that are overloaded below
-#
 
 sub _add_result_observer { # to write metrics file
     my $self = shift;
@@ -365,7 +358,6 @@ sub _setup_write_observer { # to add to metrics when seqs are written
 
     return 1;
 }
-#<>#
 
 1;
 
