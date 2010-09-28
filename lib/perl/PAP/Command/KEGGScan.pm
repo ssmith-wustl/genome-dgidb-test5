@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use PAP;
-use Carp qw(confess);
+use Carp 'confess';
 
 use Bio::Annotation::DBLink;
 use Bio::Seq;
@@ -47,21 +47,43 @@ class PAP::Command::KEGGScan {
             is => 'SCALAR',
             doc => 'instance of IO::File pointing to raw KEGGscan output',
         },
-        lsf_queue => { 
+        # These parameters are used when scheduling blast jobs, do NOT affect this lsf requirements
+        # for this module are any modules it calls!
+        blast_lsf_queue => { 
             is => 'Text',
             default_value => 'long',
         },
-        lsf_resources => { 
+        blast_lsf_resource => { 
             is => 'Text',
-            default_value => 'select[mem>16000,type==LINUX64] rusage[mem=16384,tmp=1000]',
+            default_value => 'select[mem>4096] rusage[mem=4096]',
         }, 
-        lsf_max_memory => {
+        blast_lsf_max_memory => {
             is => 'Number',
-            default => '16384000',
+            default => '4096000',
+        },
+        blast_lsf_job_limit => {
+            is => 'Number',
+            default => 50,
+            doc => 'Maximum number of BLAST LSF jobs allowed to run at the same time',
+        },
+        fasta_chunk_size => {
+            is => 'Number',
+            default => 50,
+            doc => 'Maximum number of sequences allowed in a fasta chunk',
         },
         _working_directory => {
             is => 'Path',
             doc => 'analysis program working directory',
+        },
+    ],
+    # These parameters tell workflow the requirements needed for this module 
+    has_param => [
+        lsf_resource => {
+            #default => "-R 'select[mem=8192,type==LINUX64] rusage[mem=8192,tmp=1024]'"
+            default => "-R 'select[mem>24576 && type==LINUX64] rusage[mem=24576,tmp=1024]' -M 24576000",
+        },
+        lsf_queue => {
+            default => 'long',
         },
     ],
 };
@@ -83,6 +105,9 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    # Status messages are not displayed by default...
+    $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
     # FIXME This directory needs to be a param with a default value
     my ($kegg_stdout, $kegg_stderr);    
@@ -112,10 +137,11 @@ sub execute {
         query_fasta_path => $self->fasta_file,
         subject_fasta_path => "/gscmnt/temp212/info/annotation/KEGG/Version_52/genes.v52.faa",
         output_directory => $self->_working_directory . "/KS-OUTPUT." . $fasta_name,
-        lsf_queue => $self->lsf_queue,
-        lsf_resources => $self->lsf_resources,
-        lsf_max_memory => $self->lsf_max_memory,
-        lsf_mail_to => $ENV{USER} . "\@genome.wustl.edu",
+        blast_lsf_queue => $self->blast_lsf_queue,
+        blast_lsf_resource => $self->blast_lsf_resource,
+        blast_lsf_max_memory => $self->blast_lsf_max_memory,
+        fasta_chunk_size => $self->fasta_chunk_size,
+        blast_lsf_job_limit => $self->blast_lsf_job_limit,
     );
 
     my $rv = $kegg_command->execute;
@@ -141,6 +167,9 @@ sub execute {
     $top_output_fh->seek(0, SEEK_SET);
     $full_output_fh->seek(0, SEEK_SET);
     
+    # Set the status messages back to default behavior...
+    $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 0;
+
     return 1;
 }
 

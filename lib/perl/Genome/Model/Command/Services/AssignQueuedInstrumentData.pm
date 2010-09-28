@@ -81,7 +81,7 @@ sub execute {
     }
 
     my @pses = $self->load_pses;
-    $self->status_message('Going to process' . (scalar @pses) . ' PSEs.');
+    $self->status_message('Going to process ' . (scalar @pses) . ' PSEs.');
 
     #for efficiency--load the data we need all together instead of separate queries for each PSE
     $self->preload_data(@pses);
@@ -106,7 +106,9 @@ sub execute {
 
         if ( $instrument_data_type =~ /sanger/i ) {
             #for sanger data the pse param actually holds the id of an AnalyzeTraces PSE.
-            my $run_name = $pse->run_name();
+            my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
+
+            my $run_name = $analyze_traces_pse->run_name();
             $instrument_data_id = $run_name;
         }
 
@@ -139,14 +141,39 @@ sub execute {
                     next PP;
                 }
 
+                my $reference_sequence_build;
+                if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
+                    my @reference_sequence_build_ids = $pse->reference_sequence_build_param_for_processing_profile($processing_profile);
+                    unless ( scalar @reference_sequence_build_ids ) {
+                        $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference sequence model');
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                    if( scalar @reference_sequence_build_ids > 1) {
+                        $self->error_message('This script is not currently set up to handle multiple reference sequences per processing profile!');
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                    my $reference_sequence_build_id = $reference_sequence_build_ids[0];
+                    $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
+                    if ( not defined $reference_sequence_build ) {
+                        $self->error_message("Cannot get imported reference sequence build for id $reference_sequence_build_id");
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+                }
+
                 my @models = Genome::Model->get(
                     subject_id            => $subject_id,
-                    subject_class_name    => $subject_class_name, 
+                    subject_class_name    => $subject_class_name,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
                 );
 
-                my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, @models);
+
+                my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
 
                 unless(defined $num_assigned) {
                     push @process_errors, $self->error_message;
@@ -155,7 +182,7 @@ sub execute {
 
                 unless($num_assigned > 0) {
                     # no model found for this PP, make one (or more) and assign all applicable data
-                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $pse);
+                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
                     unless($ok) {
                         push @process_errors, $self->error_message;
                         next PP;
@@ -219,8 +246,9 @@ sub execute {
                 grep {
                     $_->processing_profile->sequencing_platform() eq $sequencing_platform 
 	           } @found_models;
-            
-            my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, @found_models);
+
+            #Don't care here what ref. seq. was used (if any)
+            my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, undef, @found_models);
             unless(defined $num_assigned) {
                 push @process_errors, $self->error_message;
             }
@@ -346,7 +374,7 @@ sub preload_data {
     my @models = Genome::Model->get(subject_id => \@sample_ids);
     $self->status_message("  got " . scalar(@models) . " models");
 
-    my %taxon_ids = map { $_->taxon_id => 1 } @samples;
+    my %taxon_ids = map { $_->taxon_id => 1 } grep($_->taxon_id, @samples);
     my @taxon_ids = sort keys %taxon_ids;
     $self->status_message("Pre-loading models for " . scalar(@taxon_ids) . " taxons");
     push @models, Genome::Model->get(subject_id => \@taxon_ids);
@@ -385,7 +413,7 @@ sub check_pse {
             return;
         }
 
-        my $run_name = $pse->run_name();
+        my $run_name = $analyze_traces_pse->run_name();
 
         unless ( defined($run_name) ) {
             $self->error_message(
@@ -413,6 +441,7 @@ sub check_pse {
 sub assign_instrument_data_to_models {
     my $self = shift;
     my $genome_instrument_data = shift;
+    my $reference_sequence_build = shift;
     my @models = @_;
 
     my $instrument_data_id = $genome_instrument_data->id;
@@ -438,6 +467,10 @@ sub assign_instrument_data_to_models {
             );
             @models = grep { not $capture_model_ids{$_->id} } @models;
         }
+    }
+
+    if($reference_sequence_build) {
+        @models = grep($_->reference_sequence_build eq $reference_sequence_build, @models);
     }
 
     foreach my $model (@models) {
@@ -485,6 +518,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $genome_instrument_data = shift;
     my $subject = shift;
     my $processing_profile = shift;
+    my $reference_sequence_build = shift;
     my $pse = shift;
 
     my @new_models;
@@ -514,25 +548,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         auto_assign_inst_data   => 1,
     );
 
-    if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-        my $reference_sequence_build;
-
-        my ($reference_sequence_build_id) = $pse->added_param('reference_sequence_build_id');
-        if($reference_sequence_build_id) {
-            $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
-        } else {
-            #PSE was processed without specifying a reference sequence--fall back. (This section can eventually be removed.)
-            my $annotation_param = $processing_profile->annotation_reference_transcripts;
-            if($annotation_param =~ '57_37b') {
-                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('g1k-human-build37');
-            } else {
-                $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
-            }
-        }
-
-        if ( not defined $reference_sequence_build ) {
-            Carp::confess('Could not load reference sequence build');
-        }
+    if($reference_sequence_build) {
         $model_params{reference_sequence_build} = $reference_sequence_build;
     }
 
@@ -678,14 +694,19 @@ sub add_model_to_default_modelgroups {
         return;
     }
 
-    my $common_name = $source->common_name;
-    my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-
     my @group_names = @project_names;
-    push @group_names, $source_grouping if $source_grouping;
+
+    my $common_name = $source->common_name;
+    if($common_name) {
+        my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+        push @group_names, $source_grouping if $source_grouping;
+    }
 
     for my $group_name (@group_names) {
         my $name = 'apipe-auto ' . $group_name;
+        if(length($name) > 50) {
+            $name = substr($name,0,50);
+        }
         my $model_group = Genome::ModelGroup->get(name => $name);
 
         unless($model_group) {

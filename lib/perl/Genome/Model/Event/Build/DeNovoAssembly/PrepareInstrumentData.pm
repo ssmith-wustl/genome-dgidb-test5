@@ -61,6 +61,18 @@ sub execute {
     $self->status_message('Setup base limit');
     $self->_setup_base_limit;
 
+    my @existing_assembler_input_files = $self->build->existing_assembler_input_files;
+    if ( @existing_assembler_input_files ) { 
+        $self->status_message('Removing existing assembler input files');
+        for my $file ( @existing_assembler_input_files ) {
+            unlink $file;
+            if ( -e $file ) {
+                $self->error_message("Cannot remove existing assembler input file $file");
+                return;
+            }
+        }
+    }
+
     $self->status_message('Start processing instrument data');
     my $sequencing_platform = $self->processing_profile->sequencing_platform;
     my $file_method = '_fastq_files_from_'.$sequencing_platform;
@@ -72,6 +84,14 @@ sub execute {
         }
     }
     $self->status_message('Done processing instrument data');
+
+    $self->status_message('Verifying assembler input files');
+    @existing_assembler_input_files = $self->build->existing_assembler_input_files;
+    if ( not @existing_assembler_input_files ) {
+        $self->error_message('No assembler input files were created!');
+        return;
+    }
+    $self->status_message('OK...assembler input files');
 
     return 1;
 }
@@ -177,7 +197,7 @@ sub _process_instrument_data {
     my $fast_qual_class;
     my %fast_qual_params = (
         input => \@input_files,
-        output => [ $self->build->assembler_input_files ],
+        output => [ $self->build->read_processor_output_files_for_instrument_data($instrument_data) ],
         type_in => $qual_type,
         type_out => $qual_type, # TODO make sure this is sanger
     );
