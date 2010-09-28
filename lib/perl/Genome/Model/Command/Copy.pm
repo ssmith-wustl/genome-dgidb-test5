@@ -10,7 +10,7 @@ require Genome::Utility::FileSystem;
 
 class Genome::Model::Command::Copy {
     class_name => __PACKAGE__,    
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
         from => {
             is => 'Genome::Model',

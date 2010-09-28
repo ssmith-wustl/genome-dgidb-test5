@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command {
-    is => ['Command'],
+    is => ['Genome::Command::Base'],
     has => [],
     doc => "work with model-groups",
 };
