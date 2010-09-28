@@ -332,7 +332,7 @@ sub codons_in_range {
     # If reverse strand, then the sequence is already reverse complemented. However, the start
     # and stop positions (which are originally relative to the structure start and stop) need to be
     # reversed so that start counts up from structure stop.
-    if ($self->transcript->strand eq '-1') {
+    if ($self->transcript_strand eq '-1') {
         $relative_start = $seq_length - $relative_start - 1;
         $relative_stop = $seq_length - $relative_stop - 1;
         ($relative_start, $relative_stop) = sort {$a <=> $b} ($relative_start, $relative_stop);
@@ -400,10 +400,9 @@ sub last_codons_of_previous_exon {
     return unless $self->structure_type eq 'cds_exon';
     return if $self->ordinal == 1;
 
-    my $transcript = $self->transcript;
     my $seq_obj = Genome::TranscriptCodingSequence->get(
-        data_directory => $transcript->data_directory,
-        transcript_id => $transcript->id,
+        data_directory => $self->data_directory,
+        transcript_id => $self->transcript_transcript_id,
     );
     return unless $seq_obj;
     my $seq = $seq_obj->sequence;
@@ -426,10 +425,9 @@ sub first_codons_of_next_exon {
     return unless $self->structure_type eq 'cds_exon';
     return if $self->coding_bases_after == 0;
 
-    my $transcript = $self->transcript;
     my $seq_obj = Genome::TranscriptCodingSequence->get(
-        data_directory => $transcript->data_directory,
-        transcript_id => $transcript->id,
+        data_directory => $self->data_directory,
+        transcript_id => $self->transcript_transcript_id,
     );
     return unless $seq_obj;
     my $seq = $seq_obj->sequence;
@@ -450,7 +448,7 @@ sub first_codons_of_next_exon {
 sub bed_string {
     my $self = shift;
     # BED format uses zero-based start positions
-    my $bed_string = $self->chrom_name ."\t". ($self->structure_start - 1) ."\t". $self->structure_stop ."\t". $self->gene_name .':'. $self->transcript_name
+    my $bed_string = $self->chrom_name ."\t". ($self->structure_start - 1) ."\t". $self->structure_stop ."\t". $self->gene_name .':'. $self->transcript_transcript_name
     .':'. $self->structure_type .":". $self->ordinal ."\t0\t". $self->strand ."\n";
     return $bed_string;
 }
@@ -467,7 +465,7 @@ sub gff_string {
 
 sub gff3_string {
     my $self = shift;
-    return $self->_base_gff_string ."\tID=". $self->transcript_structure_id .'; PARENT='. $self->transcript->transcript_id .';' ."\n";
+    return $self->_base_gff_string ."\tID=". $self->transcript_structure_id .'; PARENT='. $self->transcript_transcript_id .';' ."\n";
 }
 
 sub gtf_string {
