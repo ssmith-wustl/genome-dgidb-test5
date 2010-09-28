@@ -40,7 +40,7 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             default_value=> 0,
             doc => 'mismatch cutoff (including softclip) for post metagenomic alignment processing',
         },
-        pre_screened => {
+        skip_contamination_screen => {
             is => 'Boolean',
             default_value=>0,
             doc => "If this flag is specified, the instrument data assigned to this model will not be human screened, but will undergo dusting and n-removal before undergoing metagenomic alignment",
@@ -84,7 +84,7 @@ sub _execute_build {
     my $screen_build;
     my @screened_assignments;
 
-    if ($self->pre_screened){
+    if ($self->skip_contamination_screen){
         $self->status_message("Skipping contamination screen for instrument data");
     }else{
         $screen_model = $model->_contamination_screen_alignment_model;
@@ -134,7 +134,7 @@ sub _execute_build {
     # POST-PROCESS THE UNALIGNED READS FROM THE CONTAMINATION SCREEN MODEL
 
     my @imported_instrument_data_for_metagenomic_models;
-    if ($self->pre_screened){
+    if ($self->skip_contamination_screen){
         #if skipping contamination_screen, we need to extract the originally assigned imported instrument data and process and reimport it for the metagenomic screen.
         #sra data is stored in fastq/sangerqual format, so these just need to be extracted, dusted, n-removed
         my @sra_assignments = $build->instrument_data_assignments; 
@@ -241,7 +241,7 @@ sub _execute_build {
     }
     # SYMLINK ALIGNMENT FILES TO BUILD DIRECTORY
     my $data_directory = $build->data_directory;
-    unless ($self->pre_screened){
+    unless ($self->skip_contamination_screen){
         my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
 
         unless ($screen_bam and $screen_flagstat and -e $screen_bam and -e $screen_flagstat){
@@ -269,7 +269,7 @@ sub _execute_build {
     # enable "verbose" logging so we can actually see status messages from these methods
     local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
-    unless ($self->pre_screened){
+    unless ($self->skip_contamination_screen){
         my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(build_id => $build->id);
         unless($qc_report->execute()) {
             die $self->error_message("Failed to create QC report!");
@@ -286,7 +286,7 @@ sub _execute_build {
         die $self->error_message("metagenomic report execution died or did not return 1:$@");
     }
 
-    unless($self->pre_screened){ #TODO: update validate to deal with this arg
+    unless($self->skip_contamination_screen){ #TODO: update validate to deal with this arg
         my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);
         unless($validate_build->execute()) {
             die $self->error_message("Failed to validate build!");
@@ -817,7 +817,7 @@ sub _process_sra_instrument_data {
         my %params = (
             %properties_from_prior,
             source_data_files => $upload_path,
-            import_format => 'sanger fastq', #this is here because of sra data, happens to coincide with pre_screened, but don't think that will always be the case, probably should improve how this is derived
+            import_format => 'sanger fastq', #this is here because of sra data, happens to coincide with skip_contamination_screen, but don't think that will always be the case, probably should improve how this is derived
         );
         $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
 
