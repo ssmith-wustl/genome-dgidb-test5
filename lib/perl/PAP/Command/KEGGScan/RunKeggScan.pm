@@ -18,6 +18,12 @@ use File::Basename;
 use App::DBI;
 use File::Path qw(make_path);
 
+# FIXME Really need to remove this dependency, but porting this script
+# into the PAP namespace may not be straightforward... Used to generate
+# the top and full reports after blast is run
+use lib "/gsc/scripts/gsc/compbio/lib";
+use BPdeluxe;
+
 class PAP::Command::KEGGScan::RunKeggScan {
     is => 'PAP::Command',
     has => [
@@ -49,29 +55,30 @@ class PAP::Command::KEGGScan::RunKeggScan {
             default => 'RELEASE-52',
             doc => 'Version of Kegg to use',
         },
-        lsf_queue => {
+        blast_lsf_queue => {
             is => 'Text',
-            default => 'long',
+            default => 'short',
             doc => 'Queue in which LSF jobs should be scheduled',
         },
-        lsf_resources => {
+        blast_lsf_resource => {
             is => 'Text',
-            default => 'select[mem>8192,type==LINUX64] rusage[mem=8192,tmp=100]',
+            default => 'select[mem>1024] rusage[mem=1024]',
             doc => 'Resources needed to run LSF jobs',
         },
-        lsf_max_memory => {
+        blast_lsf_max_memory => {
             is => 'Number',
-            default => '8192000',
+            default => '1024000',
             doc => 'Maximum memory limit of LSF jobs',
         },
-        lsf_mail_to => {
-            is => 'Text',
-            doc => 'User to send LSF job summary email to',
-        },
-        lsf_job_limit => {
+        blast_lsf_job_limit => {
             is => 'Number',
-            default => '40',
+            default => 50,
             doc => 'Maximum number of concurrent LSF jobs allowed',
+        },
+        fasta_chunk_size => {
+            is => 'Number',
+            default => 50,
+            doc => 'Maximum number of sequence allowed in a fasta chunk',
         },
         db_format => {
             is => 'Text',
@@ -90,7 +97,7 @@ class PAP::Command::KEGGScan::RunKeggScan {
 sub execute {
     my $self = shift;
 
-    $self->status_message("Creating kegg output directory.");
+    $self->status_message("Creating kegg output directory at " . $self->output_directory);
 
     if (-d $self->output_directory) {
         $self->warning_message("Existing output directory found at " . $self->output_directory . ", removing!");
@@ -99,9 +106,9 @@ sub execute {
     }
 
     make_path($self->output_directory);
-    chmod(0777, $self->output_directory);
+    chmod(0775, $self->output_directory);
 
-    $self->status_message("Done creating output directory, now starting blast.");
+    $self->status_message("Done creating output directory, now creating EC indices.");
 
     # We will be running BLAST (blastp) on the set of all sequences in the
     # query (species) FASTA file against ONLY the sequences in the KEGG
@@ -117,29 +124,34 @@ sub execute {
     my $blast_batcher = PAP::Command::Blast::BladeBlastBatcher->create(
 	    query_fasta_path => $self->query_fasta_path,
 		subject_fasta_path => $revised_subject, 
-        lsf_queue => $self->lsf_queue,   
-		lsf_job_limit => $self->lsf_job_limit, 
+        lsf_queue => $self->blast_lsf_queue,   
+		lsf_job_limit => $self->blast_lsf_job_limit, 
 		output_directory => $self->output_directory, 
 		blast_name => "blastp",
 		blast_params => "hitdist=40 wordmask=seg postsw B=10000 topcomboN=1",
-        lsf_mail_to => $self->lsf_mail_to,
-        lsf_resources => $self->lsf_resources,
-        lsf_max_memory => $self->lsf_max_memory
+        lsf_resource => $self->blast_lsf_resource,
+        lsf_max_memory => $self->blast_lsf_max_memory,
+        fasta_chunk_size => $self->fasta_chunk_size,
 	);
     my $batcher_rv = $blast_batcher->execute;
-    $DB::single = 1;
     confess "Trouble executing blast batcher!" unless defined $batcher_rv and $batcher_rv == 1;
     my @reports = @{$blast_batcher->reports};
 
     $self->status_message("BladeBlastBatcher completed, aggregating reports.");
+    $self->status_message("There are " . scalar @reports . " that need to be aggregated!");
 
     my $master_report_path = $self->output_directory . "/MASTER_BLAST.report";
     my $aggregate = IO::File->new($master_report_path, "a");
-    for my $report (@reports) {
-        if (-z $report) {
+    REPORT: for my $report (@reports) {
+        unless (-e $report) {
+            $self->warning_message("Report at $report doesn't exist!");
+            next REPORT;
+        }
+
+        unless (-s $report) {
             $self->warning_message("Report at $report has no size!");
             unlink $report;
-            next;
+            next REPORT;
         }
 
         my $fh = new IO::File->new($report, "r");
@@ -165,46 +177,20 @@ sub execute {
     # are identical we will simply use the first match in the list by default.
     my $full_report_path    = $self->output_directory . "/" . "REPORT-full.ks";
     my $top_hit_report_path = $self->output_directory . "/" . "REPORT-top.ks";
-
-    my $blast_top_obj = PAP::Command::Blast::BlastTopHitLogic->create(
-        report => $master_report_path,
-        return_type => 'top_hit_report',
-    );
-    unless ($blast_top_obj->execute) {
-        confess "Could not execute BlastTopHitLogic to create top hit report!";
-    }
-    my $top_hit_report = $blast_top_obj->generated_report;
-
-    $self->status_message("Top hit report generated");
-
-    my $blast_full_obj = PAP::Command::Blast::BlastTopHitLogic->create(
-        report => $master_report_path,
-        return_type => 'full_report',
-    );
-    unless ($blast_full_obj->execute) {
-        confess "Could not execute BlastTopHitLogic to create full report!";
-    }
-    my $full_report = $blast_full_obj->generated_report;
-
-    $self->status_message("Full report generated!");
-
-    $self->report_to_file($top_hit_report, $top_hit_report_path, $EC_index, $KO_index);
-    $self->report_to_file($full_report, $full_report_path, $EC_index, $KO_index);
-
+    $self->generate_blast_reports($master_report_path, $top_hit_report_path, $full_report_path, $EC_index, $KO_index);
     $self->status_message("Report parsing completed, starting clean up.");
 
     # Move files to subdirectories to reduce clutter
-    my $ancillary_dir = $self->output_directory . "/ancillary/";
-    my $log_dir = $self->output_directory . "/logs/";
-    make_path($ancillary_dir);
-    chmod(0777, $ancillary_dir);
-    make_path($log_dir);
-    chmod(0777, $log_dir);
+    my $ancillary_dir = $self->create_directory($self->output_directory . "/ancillary/");
+    my $log_dir = $self->create_directory($self->output_directory . "/logs/");
 
     opendir(DIR, $self->output_directory) or confess "Couldn't open " . $self->output_directory;
     while (my $file = readdir(DIR)) {
         my $destination;
-        if (($file =~ /OU$/) || ($file =~ /^CHUNK/) || ($file =~ /EC_only/)) {
+        if ($file =~ /^CHUNK/) {
+            unlink ($self->output_directory . "/$file");
+        }
+        elsif (($file =~ /OU$/) || ($file =~ /EC_only/)) {
             $destination = $ancillary_dir
         }
         elsif (($file =~ /.out$/) || ($file =~ /.err$/) || ($file =~ /.log$/)) {
@@ -225,6 +211,14 @@ sub execute {
 # S U B R O U T I N E S
 # ===========================================================================
 
+# Simply creates a path and changes the permissions
+sub create_directory {
+    my ($self, $dir) = @_;
+    make_path($dir);
+    chmod(0755, $dir);
+    return $dir;
+}
+
 # REVISE SUBJECT FOR ECS
 # This routine will take a KEGG genes FASTA file and revise it,
 # creating a version with only entries that have associated Enzyme
@@ -243,17 +237,19 @@ sub revise_subject_for_ECs {
         chomp $line;
 
         if ($line =~ /EC\:[0-9]+\.[0-9-]+\.[0-9-]+\.[0-9-]+/) {
-	        if ($line =~ /^>/) {
-	            $fh_out->print($line);
-	        } 
+            if ($line =~ /^>/) {
+                $fh_out->print($line);
+            } 
             else {
-	            $fh_out->print("\n>$line");
-	        }
+                $fh_out->print("\n>$line");
+            }
         }
     }
 
     $fh_in->close;
     $fh_out->close;
+
+    $self->status_message("Running xdformat on $revised_subject.");
     system("xdformat -p $revised_subject");
     return $revised_subject;
 }
@@ -274,88 +270,88 @@ sub build_EC_index {
     my %KOs;
 
     while (my $line = $fh->getline) {
-    	$inter++;
-    	# NOTE: Looks like KEGG genes files always have subject_name in 1st
-	    # col & EC in # last. If this ever changes, we'll have to update this routine....
-    	# Genesdb started to append KO numbers after EC numbers and this routine was modified to capture the KO numbers
-    	if ( $line =~ /^>/ ) {
-	        my $gi;
-	        my $meta;
-	        my $ECs;
-	        my $KOs;
-	        if ($self->db_format eq "old") { # This branch handles pre-release-41 KO values
-		        if ($line =~ /\[KO\:.+\]/) {
-		            ($gi, $meta, $ECs, $KOs) = $line =~ /^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC\:.+\]\s*).+(\[KO\:.+\]\s*)/;
-        		    my @ko_pull = split(/\]/, $KOs);
-		            $KOs = shift(@ko_pull);
-		            $KOs =~ s/\[KO\://;
-		            my @kids = split(/\s+/, $KOs);
-		            my $kids = join(":", @kids);
-		    
-		            if ( ($gi) && ($meta) && ($kids) ) {
-		                $KOs{$gi}   = [ $meta, $kids ];	   
-        		    }
-		            else {
-			            $error_log->print("$inter FALL-THROUGH EVENT: $line\n\n");
-		            }
-		        }
-		        else {
-		            ($gi, $meta, $ECs) = $line =~ /^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC\:.+\]\s*)/;	
-		        }
-	        } 
+        $inter++;
+        # NOTE: Looks like KEGG genes files always have subject_name in 1st
+        # col & EC in # last. If this ever changes, we'll have to update this routine....
+        # Genesdb started to append KO numbers after EC numbers and this routine was modified to capture the KO numbers
+        if ( $line =~ /^>/ ) {
+            my $gi;
+            my $meta;
+            my $ECs;
+            my $KOs;
+            if ($self->db_format eq "old") { # This branch handles pre-release-41 KO values
+                if ($line =~ /\[KO\:.+\]/) {
+                    ($gi, $meta, $ECs, $KOs) = $line =~ /^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC\:.+\]\s*).+(\[KO\:.+\]\s*)/;
+                    my @ko_pull = split(/\]/, $KOs);
+                    $KOs = shift(@ko_pull);
+                    $KOs =~ s/\[KO\://;
+                    my @kids = split(/\s+/, $KOs);
+                    my $kids = join(":", @kids);
+
+                    if ( ($gi) && ($meta) && ($kids) ) {
+                        $KOs{$gi}   = [ $meta, $kids ];	   
+                    }
+                    else {
+                        $error_log->print("$inter FALL-THROUGH EVENT: $line\n\n");
+                    }
+                }
+                else {
+                    ($gi, $meta, $ECs) = $line =~ /^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC\:.+\]\s*)/;	
+                }
+            } 
             elsif ($self->db_format eq "new") {# This branch handles release-41 and above KO values
-		        if ($line =~ /; K/){
-		            ($gi, $meta, $ECs, $KOs) = $line =~ /^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC:.+\]|\(EC:.+\)\s*)\;\s+(K.+)$/;
+                if ($line =~ /; K/){
+                    ($gi, $meta, $ECs, $KOs) = $line =~ /^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC:.+\]|\(EC:.+\)\s*)\;\s+(K.+)$/;
 
-		            if (defined $KOs) {
-			            my @ko_pull = split(/\;/, $KOs);
-			            my @kids;
+                    if (defined $KOs) {
+                        my @ko_pull = split(/\;/, $KOs);
+                        my @kids;
 
-			            for my $ko_entry (@ko_pull) {
-			                $ko_entry =~ s/^\s+//;
-			                my @ko_string = split(/\s+/,$ko_entry);
-			                push(@kids,$ko_string[0]);
-			            }
+                        for my $ko_entry (@ko_pull) {
+                            $ko_entry =~ s/^\s+//;
+                            my @ko_string = split(/\s+/,$ko_entry);
+                            push(@kids,$ko_string[0]);
+                        }
 
-			            my $kids = join(":", @kids);
-		                if ( ($gi) && ($meta) && ($kids) ) {
-			                $KOs{$gi}   = [ $meta, $kids ];	   
-		                }
-			            else {
-			                $error_log->print("$inter FALL-THROUGH EVENT: $line\n\n");
-			            }
-		            }
-		            else {
-			            ( $gi, $meta, $ECs ) = $line =~/^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC:.+\]|\(EC:.+\)\s*)/;
-		            }
-		        }
-		        else {
-		            ( $gi, $meta, $ECs ) = $line =~/^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC:.+\]|\(EC:.+\)\s*)/;	
-		        }
-	        } 
+                        my $kids = join(":", @kids);
+                        if ( ($gi) && ($meta) && ($kids) ) {
+                            $KOs{$gi}   = [ $meta, $kids ];	   
+                        }
+                        else {
+                            $error_log->print("$inter FALL-THROUGH EVENT: $line\n\n");
+                        }
+                    }
+                    else {
+                        ( $gi, $meta, $ECs ) = $line =~/^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC:.+\]|\(EC:.+\)\s*)/;
+                    }
+                }
+                else {
+                    ( $gi, $meta, $ECs ) = $line =~/^\>\s*([a-zA-Z0-9-_.]+\:[a-zA-Z0-9-_.]+)\s*(.+.)\s*(\[EC:.+\]|\(EC:.+\)\s*)/;	
+                }
+            } 
             else {
-		        die "\n\nUnable to determine Kegg release format of genes db.\n\n";
-	        }
+                die "\n\nUnable to determine Kegg release format of genes db.\n\n";
+            }
 
             ## We will substitute () with []
             $ECs =~ s/\(/\[/;
             $ECs =~ s/\)/\]/;
-            
-            my @ec_pull = split(/\]/, $ECs);
-	        $ECs        = shift(@ec_pull);
-	        $ECs        =~ s/\[EC\://;
-	        my @ids     = split(/\s+/, $ECs);
-	        my $ids     = join(":", @ids);
 
-	        if ( ($gi) && ($meta) && ($ids) ) {
-	            $ECs{$gi}   = [ $meta, $ids ];	    
-    	    }
-	        else {
-	            $error_log->print("$inter FALL-THROUGH EVENT: $line\n\n");
-	        }
-	    }
+            my @ec_pull = split(/\]/, $ECs);
+            $ECs        = shift(@ec_pull);
+            $ECs        =~ s/\[EC\://;
+            my @ids     = split(/\s+/, $ECs);
+            my $ids     = join(":", @ids);
+
+            if ( ($gi) && ($meta) && ($ids) ) {
+                $ECs{$gi}   = [ $meta, $ids ];	    
+            }
+            else {
+                $error_log->print("$inter FALL-THROUGH EVENT: $line\n\n");
+            }
+        }
     }
-    
+
     $error_log->close;
     return(\%ECs,\%KOs);
 }
@@ -365,108 +361,150 @@ sub build_EC_index {
 # BlastTopHitLogic.pm and then print the appropriate output as needed for
 # KEGGscan. Output is tab-delimited, the columns corresponding to fields in
 # the KEGG MySQL database.
-sub report_to_file {
-    my ($self, $blast_parse, $out, $EC_index, $KO_index)  = @_;
-    my $fh = IO::File->new($out, "w");
+sub create_report_line {
+    my ($self, $blast_parse, $EC_index, $KO_index)  = @_;
     my $errors = $self->output_directory . "/error.log";
-    my $error_log = IO::File->new($errors, "w");
+    my $error_log = IO::File->new($errors, "a");
     my %check;
 
-    QUERY: for my $query (sort keys %{$blast_parse}) {
-        # Species:
-        if ($self->species_name) { 
-            $check{1} = [ "species", "yes", $self->species_name];
-        } 
-        else { 
-            $check{1} = [ "species", "no" ];
-        }
-        # ECs:
-        if ( $$EC_index{$$blast_parse{$query}->[1]}[1] ) {
-            $check{2} = [ "ECs", "yes", $$EC_index{$$blast_parse{$query}->[1]}[1] ];
-        }
-        else {
-            $check{2} = [ "ECs", "no" ];
-        }
-        # KOs:
-        if ( $$KO_index{$$blast_parse{$query}->[1]}[1] ) {
-           $check{9} = [ "KOs", "yes", $$KO_index{$$blast_parse{$query}->[1]}[1] ];
-        }
-        else {
-            $check{9} = [ "KOs", "yes", "none" ];
-        }
-        # QUERY GI:
-        if ( $$blast_parse{$query}->[0] ) {
-            $check{3} = [ "query GI", "yes", $$blast_parse{$query}->[0] ];
-        }
-        else {
-            $check{3} = [ "query GI", "no" ];
-        }
-        # SUBJECT GI:
-        if ( $$blast_parse{$query}->[1] ) {
-            $check{4} = [ "subject GI", "yes", $$blast_parse{$query}->[1] ];
-        }
-        else {
-            $check{4} = [ "subjct GI", "no" ];
-        }
-        # P VALUE:
-        if ( $$blast_parse{$query}->[2]->{p_value} ) {
-            $check{5} = [ "p_value", "yes", $$blast_parse{$query}->[2]->{p_value} ];
-        }
-        else {
-            $check{5} = [ "p_value", "no" ];
-        }
-        # BIT SCORE:
-        if ( $$blast_parse{$query}->[2]->{bit_score} ) {
-            $check{6} = [ "bit score", "yes", $$blast_parse{$query}->[2]->{bit_score} ];
-        }
-        else {
-            $check{6} = [ "bit score", "yes" ];
-        }
-        # SUBJECT META:
-        if ( ${$$EC_index{$$blast_parse{$query}->[1]}}[0] ) {
-            $check{7} = [ "subject meta", "yes", ${$$EC_index{$$blast_parse{$query}->[1]}}[0] ];
-        }
-        else {
-            $check{7} = [ "subject meta", "no" ];
-        }
-        # QUERY SEQUENCE TYPE:
-        if ($self->query_sequence_type) {
-            $check{8} = [ "query sequence type", "yes", $self->query_sequence_type ];
-        }
-        else {
-            $check{8} = [ "query sequence type", "no" ];
-        }
+    # Species:
+    if ($self->species_name) { 
+        $check{1} = [ "species", "yes", $self->species_name];
+    } 
+    else { 
+        $check{1} = [ "species", "no" ];
+    }
+    # ECs:
+    if ( $$EC_index{$blast_parse->[1]}[1] ) {
+        $check{2} = [ "ECs", "yes", $$EC_index{$blast_parse->[1]}[1] ];
+    }
+    else {
+        $check{2} = [ "ECs", "no" ];
+    }
+    # KOs:
+    if ( $$KO_index{$blast_parse->[1]}[1] ) {
+        $check{9} = [ "KOs", "yes", $$KO_index{$blast_parse->[1]}[1] ];
+    }
+    else {
+        $check{9} = [ "KOs", "yes", "none" ];
+    }
+    # QUERY GI:
+    if ( $blast_parse->[0] ) {
+        $check{3} = [ "query GI", "yes", $blast_parse->[0] ];
+    }
+    else {
+        $check{3} = [ "query GI", "no" ];
+    }
+    # SUBJECT GI:
+    if ( $blast_parse->[1] ) {
+        $check{4} = [ "subject GI", "yes", $blast_parse->[1] ];
+    }
+    else {
+        $check{4} = [ "subjct GI", "no" ];
+    }
+    # P VALUE:
+    if ( $blast_parse->[2]->{p_value} ) {
+        $check{5} = [ "p_value", "yes", $blast_parse->[2]->{p_value} ];
+    }
+    else {
+        $check{5} = [ "p_value", "no" ];
+    }
+    # BIT SCORE:
+    if ( $blast_parse->[2]->{bit_score} ) {
+        $check{6} = [ "bit score", "yes", $blast_parse->[2]->{bit_score} ];
+    }
+    else {
+        $check{6} = [ "bit score", "yes" ];
+    }
+    # SUBJECT META:
+    if ( ${$$EC_index{$blast_parse->[1]}}[0] ) {
+        $check{7} = [ "subject meta", "yes", ${$$EC_index{$blast_parse->[1]}}[0] ];
+    }
+    else {
+        $check{7} = [ "subject meta", "no" ];
+    }
+    # QUERY SEQUENCE TYPE:
+    if ($self->query_sequence_type) {
+        $check{8} = [ "query sequence type", "yes", $self->query_sequence_type ];
+    }
+    else {
+        $check{8} = [ "query sequence type", "no" ];
+    }
 
-        # Failure check & output:
-        my @failures;
-        for my $field (keys %check) {
-            if ($check{$field}[1] eq "no") {
-                push (@failures, $check{$field}[0]);
-            }
-        }
-        if (@failures > 0) {
-            for my $field (keys %check) {
-                if ($check{$field}[1] eq "yes") {
-                    $error_log->print("VIABLE: ", $check{$field}[2], "\n");
-                }
-            }
-            $error_log->print("ERROR(S): ", join("--", @failures), "\n||\n");
-            next QUERY;
-        }
-        else {
-            my @report_line;
-            foreach my $field (sort keys %check) {
-                push(@report_line, $check{$field}[2]);
-            }
-            my $report_line = join("\t", @report_line);
-            $fh->print($report_line, "\n");
+    # Failure check & output:
+    my @failures;
+    for my $field (keys %check) {
+        if ($check{$field}[1] eq "no") {
+            push (@failures, $check{$field}[0]);
         }
     }
 
+    my $report_line;
+    if (@failures > 0) {
+        for my $field (keys %check) {
+            if ($check{$field}[1] eq "yes") {
+                $error_log->print("VIABLE: ", $check{$field}[2], "\n");
+            }
+        }
+        $error_log->print("ERROR(S): ", join("--", @failures), "\n||\n");
+    }
+    else {
+        my @report_line;
+        foreach my $field (sort keys %check) {
+            push(@report_line, $check{$field}[2]);
+        }
+        $report_line = join("\t", @report_line);
+    }
+
     $error_log->close;
-    $fh->close;
+    return $report_line;
 }
 
+# This used to be the BlastTopHitLogic module, but has been incorporated
+# into this module to remove the need for a giant hash that was leading
+# to some memory issues
+sub generate_blast_reports {
+    $DB::single = 1;
+    my ($self, $master_report, $top_report_path, $full_report_path, $EC_index, $KO_index) = @_;
+
+    my $full_report_fh = IO::File->new($full_report_path, "w");
+    my $top_report_fh = IO::File->new($top_report_path, "w");
+
+    my $BP = new BPdeluxe::Multi(IO::File->new($master_report));
+
+    while (my $multi = $BP->nextReport) {
+        my $query = $multi->query;
+        my %grouped;
+        while(my $sbjct = $multi->nextSbjct) {	
+            my $group_hashref = $sbjct->group_list("$query","return_hashref");
+            $grouped{$group_hashref->{subject_gi}} = $group_hashref;
+        }
+
+        my %final_vals;
+        my $top_p_value;
+        foreach my $val (sort {$grouped{$a}->{p_value} <=> $grouped{$b}->{p_value}} keys %grouped) {
+            my @full_report_values = ($query, $val, $grouped{$val});
+            my $full_report_line = $self->create_report_line(\@full_report_values, $EC_index, $KO_index);
+            $full_report_fh->print($full_report_line . "\n") if defined $full_report_line and $full_report_line ne '';;
+
+            # Keep track of top value for top report
+            $top_p_value = $grouped{$val}->{p_value} if not defined $top_p_value;
+            $final_vals{$val} = $grouped{$val} if ($grouped{$val}->{p_value} eq $top_p_value);
+        }
+
+        # Write top p value entry to top report
+        my @p_vals = sort {$final_vals{$b}->{bit_score} <=> $final_vals{$a}->{bit_score}} keys %final_vals;
+        my $top_p = shift @p_vals;
+        next unless defined $top_p;
+        my @top_report_values = ($query, $top_p, $final_vals{$top_p});
+        my $top_report_line = $self->create_report_line(\@top_report_values, $EC_index, $KO_index);
+        $top_report_fh->print($top_report_line . "\n") if defined $top_report_line and $top_report_line ne '';
+    }
+
+    $full_report_fh->close;
+    $top_report_fh->close;
+    return 1;
+}
 
 # *|**********************************************************************|*
 # *| POD: Section below is reserved for documentation.                    |*

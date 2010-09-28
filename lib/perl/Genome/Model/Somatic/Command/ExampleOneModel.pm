@@ -1,9 +1,9 @@
 package Genome::Model::Somatic::Command::ExampleOneModel; 
 
 class Genome::Model::Somatic::Command::ExampleOneModel {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
-        model => { shell_args_position => 1, is => 'Genome::Model', id_by => 'model_id' }, 
+        model => { shell_args_position => 1, is => 'Genome::Model' }, 
     ],
     doc => 'example command which works on one model'
 };

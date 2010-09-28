@@ -136,8 +136,6 @@ sub execute {
     my $pp_name = $self->model->processing_profile_name;
     $self->status_message("Using pp: ".$pp_name);
 
-
-
     Genome::DataSource::GMSchema->disconnect_default_dbh; 
   
     my $merged_fh = File::Temp->new(SUFFIX => ".bam", DIR => $alignments_dir );
@@ -256,6 +254,8 @@ sub execute {
     $self->warning_message("Failed to create bam index for $bam_merged_output_file")
         unless $index_cmd_rv == 1;
     #not failing here because this is not a critical error.  this can be regenerated manually if needed.
+
+    $self->create_bam_md5;
 
     for my $file (grep {-f $_} glob($build->accumulated_alignments_directory . "/*")) {
         $self->status_message("Setting $file to read-only");

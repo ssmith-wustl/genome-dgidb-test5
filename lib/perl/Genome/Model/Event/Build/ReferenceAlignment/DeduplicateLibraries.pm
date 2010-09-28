@@ -79,5 +79,28 @@ sub calculate_required_alignment_disk_allocation_kb {
     die "abstract, must be defined in your dedup subclass!";
 }
   
+
+sub create_bam_md5 {
+    my $self = shift;
+
+    my $bam_merged_output_file = $self->build->whole_rmdup_bam_file;
+    my $md5_file = $bam_merged_output_file.'.md5';
+    my $cmd = "md5sum $bam_merged_output_file > $md5_file";
+
+    $self->status_message("Creating md5 file for the whole rmdup BAM file...");
+
+    my $md5_rv  = Genome::Utility::FileSystem->shellcmd(
+        cmd                        => $cmd, 
+        input_files                => [$bam_merged_output_file],
+        #output_files               => [$md5_file],
+        skip_if_output_is_present  => 0,
+    ); 
+
+    $self->warning_message("Failed to create bam md5 for $bam_merged_output_file") unless $md5_rv == 1;
+
+    return 1;
+}
+
+
 1;
 

@@ -10,11 +10,10 @@ require Genome::Utility::FileSystem;
 
 class Genome::Model::Command::Copy {
     class_name => __PACKAGE__,    
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
         from => {
             is => 'Genome::Model',
-            id_by => '_from_model_id',
             is_input => 1,
             shell_args_position => 1,
             doc => 'The source model to copy from'
