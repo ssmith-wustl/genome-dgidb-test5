@@ -77,12 +77,14 @@ sub __errors__() {
 
 sub execute {
     my $self = shift;
+    my $start = $self->start;
+    $start = 1 if $start < 1;
     my $results =
         eval { 
             if ($self->build){
                 lookup_sequence(
                         chromosome => $self->chromosome,
-                        start => $self->start,
+                        start => $start,
                         stop => $self->stop,
                         build => $self->build,
                         species => $self->species,
@@ -91,7 +93,7 @@ sub execute {
             else{
                 lookup_sequence(
                         chromosome => $self->chromosome,
-                        start => $self->start,
+                        start => $start,
                         stop => $self->stop,
                         build => '',
                         species => $self->species,
