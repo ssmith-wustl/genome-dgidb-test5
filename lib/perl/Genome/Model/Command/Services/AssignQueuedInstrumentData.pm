@@ -106,7 +106,9 @@ sub execute {
 
         if ( $instrument_data_type =~ /sanger/i ) {
             #for sanger data the pse param actually holds the id of an AnalyzeTraces PSE.
-            my $run_name = $pse->run_name();
+            my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
+
+            my $run_name = $analyze_traces_pse->run_name();
             $instrument_data_id = $run_name;
         }
 
@@ -411,7 +413,7 @@ sub check_pse {
             return;
         }
 
-        my $run_name = $pse->run_name();
+        my $run_name = $analyze_traces_pse->run_name();
 
         unless ( defined($run_name) ) {
             $self->error_message(
@@ -702,6 +704,9 @@ sub add_model_to_default_modelgroups {
 
     for my $group_name (@group_names) {
         my $name = 'apipe-auto ' . $group_name;
+        if(length($name) > 50) {
+            $name = substr($name,0,50);
+        }
         my $model_group = Genome::ModelGroup->get(name => $name);
 
         unless($model_group) {
