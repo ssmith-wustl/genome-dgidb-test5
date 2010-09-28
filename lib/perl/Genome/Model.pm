@@ -177,7 +177,7 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
-# TODO: improve the logic in Genome::Command::OO to handle more of this
+# TODO: improve the logic in Genome::Command::Base to handle more of this
 sub from_cmdline {
     my $class = shift;
     my @matches;
