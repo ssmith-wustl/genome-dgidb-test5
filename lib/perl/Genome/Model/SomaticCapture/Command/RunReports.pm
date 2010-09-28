@@ -14,10 +14,14 @@ class Genome::Model::SomaticCapture::Command::RunReports {
         build => {
             shell_args_position => 1,
             is => 'Genome::Model::Build::SomaticCapture',
-            id_by => 'build_id',
-            doc => 'the build on which to run the reports'
+            doc => 'the build on which to run the reports',
+            is_optional => 1, # for backward compatability
         },
-        build_id => { is => 'Integer', is_input => 1, is_output => 1 },
+        build_id => {
+            is => 'Integer',
+            is_input => 1, is_output => 1,
+            is_optional => 1, # for backward compatability
+        },
         variant_report_output => {
             is => 'Text',
             is_input => 1,
@@ -62,6 +66,12 @@ EOS
 sub execute {
     my $self = shift;
     $DB::single=1;
+
+    if($self->build_id) {
+        # TODO: This (ideally) should not to be called but workflow calls create/execute so this wouldn't be resolved.
+        my $build = $self->resolve_param_value_from_cmdline_text('build', 'Genome::Model::Build::SomaticCapture', $self->build_id);
+        $self->build($build);
+    }
 
     unless($self->build) {
         $self->error_message('Failed to resolve build.');
