@@ -12,7 +12,6 @@ class Genome::Model::ReferenceSequence::Command::GenerateBitmask {
     has_input => [
     refseq => { 
         is => 'Genome::Model::Build::ImportedReferenceSequence', # we're going to remove "Imported" soon
-        id_by => 'refseq_id',
         shell_args_position => 1, 
         doc => 'the reference build, specified by name (like NCBI-human-build36)'
     },

@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Assembly::Pcap::Ace;
-use Genome::Assembly::Pcap::Phd;
+use Genome::Model::Tools::Pcap::Ace;
+use Genome::Model::Tools::Pcap::Phd;
 use Genome::Model::Tools::PooledBac::Utils;
 
 class Genome::Model::Tools::PooledBac::CreateProjectDirectoriesNew {
@@ -74,7 +74,7 @@ sub execute {
 
     my $ace_file = $pooled_bac_dir.'/consed/edit_dir/'.$self->ace_file_name;
     $self->error_message("Ace file $ace_file does not exist") and die unless (-e $ace_file);
-    my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
+    my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
     $self->error_message("Failed to open ace file") and die unless defined $ao;
     my $po;
 

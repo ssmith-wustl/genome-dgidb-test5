@@ -6,8 +6,8 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
-use Genome::Assembly::Pcap::Ace;
-use Genome::Assembly::Pcap::Phd;
+use Genome::Model::Tools::Pcap::Ace;
+use Genome::Model::Tools::Pcap::Phd;
 use List::Util qw(max min);
 
 class Genome::Model::Tools::PooledBac::MapContigsToAssembly {

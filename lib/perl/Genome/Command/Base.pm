@@ -450,6 +450,7 @@ sub resolve_class_and_params_for_argv {
             }
 
             my $param_type = $pmeta->data_type;
+            next unless ($param_type);
             if (ref($param_type) eq 'ARRAY') {
                 for my $sub_type (@$param_type) {
                     next unless ($sub_type =~ /::/);
