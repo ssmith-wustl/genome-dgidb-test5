@@ -374,7 +374,7 @@ sub preload_data {
     my @models = Genome::Model->get(subject_id => \@sample_ids);
     $self->status_message("  got " . scalar(@models) . " models");
 
-    my %taxon_ids = map { $_->taxon_id => 1 } @samples;
+    my %taxon_ids = map { $_->taxon_id => 1 } grep($_->taxon_id, @samples);
     my @taxon_ids = sort keys %taxon_ids;
     $self->status_message("Pre-loading models for " . scalar(@taxon_ids) . " taxons");
     push @models, Genome::Model->get(subject_id => \@taxon_ids);
