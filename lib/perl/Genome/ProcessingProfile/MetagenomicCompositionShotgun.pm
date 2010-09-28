@@ -40,7 +40,7 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             default_value=> 0,
             doc => 'mismatch cutoff (including softclip) for post metagenomic alignment processing',
         },
-        skip_contamination_screen => {
+        pre_screened => {
             is => 'Boolean',
             default_value=>0,
             doc => "If this flag is specified, the instrument data assigned to this model will not be human screened, but will undergo dusting and n-removal before undergoing metagenomic alignment",
@@ -84,7 +84,7 @@ sub _execute_build {
     my $screen_build;
     my @screened_assignments;
 
-    if ($self->skip_contamination_screen){
+    if ($self->pre_screened){
         $self->status_message("Skipping contamination screen for instrument data");
     }else{
         $screen_model = $model->_contamination_screen_alignment_model;
@@ -134,7 +134,7 @@ sub _execute_build {
     # POST-PROCESS THE UNALIGNED READS FROM THE CONTAMINATION SCREEN MODEL
 
     my @imported_instrument_data_for_metagenomic_models;
-    if ($self->skip_contamination_screen){
+    if ($self->pre_screened){
         #if skipping contamination_screen, we need to extract the originally assigned imported instrument data and process and reimport it for the metagenomic screen.
         #sra data is stored in fastq/sangerqual format, so these just need to be extracted, dusted, n-removed
         my @sra_assignments = $build->instrument_data_assignments; 
@@ -241,19 +241,21 @@ sub _execute_build {
     }
     # SYMLINK ALIGNMENT FILES TO BUILD DIRECTORY
     my $data_directory = $build->data_directory;
-    my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
+    unless ($self->pre_screened){
+        my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
 
-    unless ($screen_bam and $screen_flagstat and -e $screen_bam and -e $screen_flagstat){
-        die $self->error_message("Bam or flagstat doesn't exist for contamination screen build");
+        unless ($screen_bam and $screen_flagstat and -e $screen_bam and -e $screen_flagstat){
+            die $self->error_message("Bam or flagstat doesn't exist for contamination screen build");
+        }
+        $self->symlink($screen_bam, "$data_directory/contamination_screen.bam");
+        $self->symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
     }
-    $self->symlink($screen_bam, "$data_directory/contamination_screen.bam");
-    $self->symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
 
     my $counter;
     my @meta_bams;
     for my $meta_build (@metagenomic_builds){
         $counter++;
-        my ($meta_bam, $meta_flagstat) =  $self->get_bam_and_flagstat_from_build($meta_build);
+        my ($meta_bam, $meta_flagstat) = $self->get_bam_and_flagstat_from_build($meta_build);
         push @meta_bams, $meta_bam;
         unless ($meta_bam and $meta_flagstat and -e $meta_bam and -e $meta_flagstat){
             die $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter");
@@ -267,23 +269,28 @@ sub _execute_build {
     # enable "verbose" logging so we can actually see status messages from these methods
     local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
-    my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(build_id => $build->id);
-    unless($qc_report->execute()) {
-        die $self->error_message("Failed to create QC report!");
+    unless ($self->pre_screened){
+        my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(build_id => $build->id);
+        unless($qc_report->execute()) {
+            die $self->error_message("Failed to create QC report!");
+        }
     }
 
     my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
         build_id => $build->id,
         taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
         viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
+        exclude_fragments => 0,
     );
     unless($meta_report->execute()) {
         die $self->error_message("metagenomic report execution died or did not return 1:$@");
     }
 
-    my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);
-    unless($validate_build->execute()) {
-        die $self->error_message("Failed to validate build!");
+    unless($self->pre_screened){ #TODO: update validate to deal with this arg
+        my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);
+        unless($validate_build->execute()) {
+            die $self->error_message("Failed to validate build!");
+        }
     }
 
     return 1;
@@ -475,8 +482,34 @@ sub execute_or_die {
     }
 }
 
-sub upload_fastq_and_unlock {
-    my ($self, $fastq, $lock) = @_;
+sub assign_missing_instrument_data_to_model{
+    my ($self, $model, @instrument_data) = shift;
+=cut this doesn't compile     
+    for my $assignment (@assignments) {
+            my $instrument_data = $assignment->instrument_data;
+            my $screen_assignment = $screen_model->instrument_data_assignment(
+                instrument_data_id => $instrument_data->id
+            );
+            if ($screen_assignment) {
+                $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to the screening model");
+            }
+            else {
+                $screen_assignment = 
+                $screen_model->add_instrument_data_assignment(
+                    instrument_data_id => $assignment->instrument_data_id,
+                    filter_desc => $assignment->filter_desc,
+                );
+                if ($screen_assignment) {
+                    $self->status_message("Assigning instrument data " . $instrument_data->__display_name__ . " is already to the screening model");
+                }
+                else {
+                    $self->error_message("Failed to assign instrument data " . $instrument_data->__display_name__ . " is already to the screening model");
+                    Carp::confess($self->error_message());
+                }
+            }
+        }
+=cut
+
 }
 
 sub symlink {
@@ -492,6 +525,7 @@ sub symlink {
 
 sub get_bam_and_flagstat_from_build{
     my ($self, $build) = @_;
+    $self->status_message("getting bam and flagstat from build: ".Data::Dumper::Dumper($build));
     my $aln_dir = $build->accumulated_alignments_directory;
     $aln_dir =~ /\/build(\d+)\//;
     my $aln_id = $1;
@@ -630,7 +664,7 @@ sub _process_sra_instrument_data {
     }
 
     $tmp_dir .= "/$instrument_data_id";
-    
+
     if (-e $tmp_dir) {
         die $self->error_message("Temp directory $tmp_dir already exists?!?!");
     }
@@ -665,15 +699,18 @@ sub _process_sra_instrument_data {
 
         my $forward_basename = "s_${lane}_1_sequence.txt";
         my $reverse_basename = "s_${lane}_2_sequence.txt";
+        my $n_removed_fragment_basename = "s_${lane}_sequence.txt";
         my $fragment_basename = "s_${lane}_sequence.txt";
 
         my $expected_path;
         my $expected_path1; #for paired end fastq processing
         my $expected_path2;
+        my $expected_path_fragment; #for paired end w/ n-removal, potentially
 
         if ($instrument_data->is_paired_end){
             $expected_path1 = "$tmp_dir/$subdir/$forward_basename";
             $expected_path2 = "$tmp_dir/$subdir/$reverse_basename";
+            $expected_path_fragment = "$tmp_dir/$subdir/$n_removed_fragment_basename";
             $expected_path = $expected_path1 . ',' . $expected_path2;
         }else{
             $expected_path = "$tmp_dir/$subdir/$fragment_basename";
@@ -709,7 +746,7 @@ sub _process_sra_instrument_data {
 
         # extract
         $self->status_message("Preparing imported instrument data for import path $expected_path");
-        
+
         my $fastq_filenames = $instrument_data->resolve_fastq_filenames;
         for (@$fastq_filenames){
             unless (-s $_){
@@ -728,9 +765,8 @@ sub _process_sra_instrument_data {
                 $self->error_message("couldn't find expected fastq basenames in ".$instrument_data->display_name);
                 die $self->error_message;
             }
-            my $processed_fastq1 = $self->_process_unaligned_fastq($forward, $expected_path1);
-            my $processed_fastq2 = $self->_process_unaligned_fastq($reverse, $expected_path2);
-            my @missing = grep {! -s $_} ($expected_path1, $expected_path2);
+            my ($processed_fastq1,$processed_fastq2, $processed_fastq_fragment) = $self->_process_unaligned_fastq_pair($forward,$reverse,$expected_path1, $expected_path2, $expected_path_fragment );
+            my @missing = grep {! -s $_} ($expected_path1, $expected_path2, $expected_path_fragment);
             if (@missing){
                 $self->error_message("Expected data paths do not exist after fastq processing: ".join(", ", @missing));
                 die($self->error_message);
@@ -777,15 +813,12 @@ sub _process_sra_instrument_data {
         }else{
             $properties_from_prior{is_paired_end} = 0;
         }
-        
+
         my %params = (
             %properties_from_prior,
             source_data_files => $upload_path,
-            import_format => 'illumina fastq',
+            import_format => 'sanger fastq', #this is here because of sra data, happens to coincide with pre_screened, but don't think that will always be the case, probably should improve how this is derived
         );
-        if ($self->skip_contamination_screen){
-            $params{import_format}='sanger fastq'; #TODO, verify that this quality format is correct for sra/imported sanger instrument data after going through process_unaligned_reads, if so need a better way to choose this
-        }
         $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
 
         my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
@@ -795,11 +828,30 @@ sub _process_sra_instrument_data {
         my $result = $command->execute();
         unless ($result) {
             die $self->error_message( "Error importing data from $upload_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
-        }            
+        } 
+
+        #now create fragment instrument data for $expected_path_fragment, as a result of pairwise n-removal, if the file exists and has size
+        
+        if (-s $expected_path_fragment){
+            $params{source} = $expected_path_fragment;
+            $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
+
+            my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
+            unless ($command) {
+                $self->error_message( "Couldn't create command to import unaligned fastq instrument data!");
+            };
+            my $result = $command->execute();
+            unless ($result) {
+                die $self->error_message( "Error importing data from $upload_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
+            } 
+        }
+
         $self->status_message("committing newly created imported instrument data");
         $DB::single = 1;
         $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
         UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
+    
+        my @return_inst_data;
 
         my $new_instrument_data = Genome::InstrumentData::Imported->get(
             original_data_path => $upload_path
@@ -810,12 +862,27 @@ sub _process_sra_instrument_data {
         if ($new_instrument_data->__changes__) {
             die "Unsaved changes present on instrument data $new_instrument_data->{id} from $upload_path!!!";
         }
+        push @return_inst_data, $new_instrument_data;
+    
+        if (-s $expected_path_fragment){
+            my $new_instrument_data = Genome::InstrumentData::Imported->get(
+                original_data_path => $expected_path_fragment,
+            );
+            unless ($new_instrument_data) {
+                die $self->error_message( "Failed to find new instrument data $upload_path!");
+            }
+            if ($new_instrument_data->__changes__) {
+                die "Unsaved changes present on instrument data $new_instrument_data->{id} from $upload_path!!!";
+            }
+            push @return_inst_data, $new_instrument_data;
+        }
+
         if ($import_lock) {
             unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $import_lock)) {
                 die $self->error_message("Failed to unlock $expected_path.");
             }
         }
-        return ($new_instrument_data);
+        return (@return_inst_data);
     };
 
     # TODO: add directory removal to Genome::Utility::FileSystem
@@ -1095,189 +1162,123 @@ sub _process_unaligned_reads {
     return @instrument_data;
 }
 
+sub _processed_unaligned_fastq_pair {
+    my $self = shift;
+    my ($forward, $reverse, $forward_out, $reverse_out, $fragment_out) = @_;
+    #run dust on forward and reverse
+    my $forward_dusted;
+    my $reverse_dusted;
+
+    if ($self->dust_unaligned_reads){
+        $self->status_message("Dusting fastq pair $forward, $reverse");
+        $forward_dusted = "$forward.DUSTED";
+        $reverse_dusted = "$reverse.DUSTED";
+
+        $self->dust_fastq($forward, $forward_dusted);
+        $self->dust_fastq($reverse, $reverse_dusted);
+    }else{
+        $self->status_message("skipping dusting");
+        $forward_dusted = $forward;
+        $reverse_dusted = $reverse;
+    }
+
+    #run pairwise n-removal
+    if ($self->n_removal_cutoff){
+        $self->status_message("running remove-n-pairwise on $forward, $reverse");
+        my $cmd = Genome::Model::Tools::Fastq::RemoveNPairwise->create(
+            forward_fastq => $forward_dusted,
+            reverse_fastq => $reverse_dusted,
+            forward_n_removed_file => $forward_out,
+            reverse_n_removed_file => $reverse_out,
+            singleton_n_removed_file => $fragment_out,
+            cutoff => $self->n_removal_cutoff,
+        );
+        unless ($cmd){
+            die $self->error_message("couldn't create remove-n-pairwise command for $forward_dusted, $reverse_dusted!");
+        }
+        my $rv = $cmd->execute;
+        unless ($rv){
+            die $self->error_message("couldn't create remove-n-pairwise command for $forward_dusted, $reverse_dusted!");
+        }
+        unless(-e $forward_out && -e $reverse_out && -e $fragment_out){
+            die $self->error_message("couldn't find all expected output files! $forward_out, $reverse_out, $fragment_out");
+        }
+        #clean up, maybe make these temp files
+        if ($self->dust_unaligned_reads){
+            #only need to do this if we actually dusted
+            unlink $forward_dusted;
+            unlink $reverse_dusted;
+        }
+
+        #return the 3 processed fastq files
+        return ($forward_out, $reverse_out, $fragment_out);
+    }else{
+        $self->status_message("skipping n-removal");
+        Genome::Utility::FileSystem::copy_file($forward_dusted, $forward_out);
+        Genome::Utility::FileSystem::copy_file($reverse_dusted, $reverse_out);
+        if ($self->dust_unaligned_reads){
+            #only need to do this if we actually dusted
+            unlink $forward_dusted;
+            unlink $reverse_dusted;
+        }
+        return ($forward_out, $reverse_out);
+    }
+}
+
+sub dust_fastq{
+    my ($self, $in, $out) = @_;
+    my $cmd = Genome::Model::Tools::Fastq::Dust->create(
+        fastq_file => $in,
+        output_file => $out,
+    );
+    unless ($cmd){
+        die $self->error_message("couldn't create dust command for $in -> $out!");
+    }
+    my $rv = $cmd->execute;
+    unless ($rv){
+        die $self->error_message("failed to execute dust command for $in -> $out! rv:$rv");
+    }
+    unless (-s $out){
+        die $self->error_message("expected output file $out doesn't exist or has 0 size!");
+    }
+    return $out;
+}
+
 sub _process_unaligned_fastq {
     my $self = shift;
     my ($fastq_file, $output_path) = @_;
-    my ($sep_file, $qual_file) = ("$fastq_file.sep", "$fastq_file.qual");
 
-    # run n-removal
-    my $n_removed_fastq = $fastq_file;
-    $n_removed_fastq=$fastq_file.".".$self->n_removal_cutoff."NREMOVED";
-    unlink $n_removed_fastq if -e $n_removed_fastq;
+    my $dusted_fastq;
+    if ($self->dust_unaligned_reads){
+        $dusted_fastq = "$fastq_file.DUSTED";
+        $self->dust_fastq($fastq_file, $dusted_fastq);
+    }else{
+        $self->status_message("skipping dusting $fastq_file");
+        $dusted_fastq = $fastq_file;
+    }
+
     if ($self->n_removal_cutoff){
         $self->status_message("Running n-removal on file $fastq_file");
-        Genome::Model::Tools::Fastq::RemoveN->execute(
-            fastq_file => $fastq_file,
-            n_removed_file => $n_removed_fastq,
+        my $cmd = Genome::Model::Tools::Fastq::RemoveN->create(
+            fastq_file => $dusted_fastq,
+            n_removed_file => $output_path,
             cutoff => $self->n_removal_cutoff,
         ); 
-    }
-    else {
+        unless ($cmd){
+            die $self->error_message("couldn't create remove-n command for $dusted_fastq");
+        }
+        my $rv = $cmd->execute;
+        unless ($rv){
+            die $self->error_message("couldn't execute remove-n command for $dusted_fastq");
+        }
+    } else {
         $self->status_message("No n-removal cutoff specified, skipping");
-        unless ( rename($fastq_file, $n_removed_fastq)){
-            $self->error_message("Failed to copy $fastq_file to $n_removed_fastq while skipping n-removal");
-            return;
-        }
+        Genome::Utility::FileSystem::copy_file($dusted_fastq, $output_path);
     }
-
-    # run dust   
-    # 1. produce fasta file 
-
-    my $fasta_file = $fastq_file.".FASTA";
-    unlink $fasta_file if -e $fasta_file;
-
-    my $dusted_file = $fasta_file.".DUSTED";
-    unlink $dusted_file if -e $dusted_file;
-
-    my $n_removed_dusted_length_screened_fastq =$fastq_file.".PROCESSED";
-    unlink $n_removed_dusted_length_screened_fastq if -e $n_removed_dusted_length_screened_fastq;
-
     if ($self->dust_unaligned_reads){
-        $self->status_message("Running dust on $n_removed_fastq");
-
-        my $fastq_input_fh  = Genome::Utility::FileSystem->open_file_for_reading($n_removed_fastq);
-        unless ($fastq_input_fh) {
-            $self->error_message('Failed to open fastq file ' . $n_removed_fastq . ": $!");
-            return;
-        }
-        binmode $fastq_input_fh, ":utf8";
-
-        my $fasta_output_fh = Genome::Utility::FileSystem->open_file_for_writing($fasta_file);
-        unless ($fasta_output_fh) {
-            $self->error_message('Failed to open output file ' . $fasta_file . ": $!");
-            return;
-        }
-        binmode $fasta_output_fh, ":utf8";
-
-        my $sep_output_fh = Genome::Utility::FileSystem->open_file_for_writing($sep_file);
-        unless ($sep_output_fh) {
-            $self->error_message('Failed to open output file ' . $sep_file . ": $!");
-        }
-        binmode $sep_output_fh, ":utf8";
-
-        my $qual_output_fh = Genome::Utility::FileSystem->open_file_for_writing($qual_file);
-        unless ($qual_output_fh) {
-            $self->error_message('Failed to open output file ' . $qual_file . ": $!");
-            return;
-        }
-        binmode $qual_output_fh, ":utf8";
-
-        while (my $header = $fastq_input_fh->getline) {
-            my $seq  = $fastq_input_fh->getline;
-            my $sep  = $fastq_input_fh->getline;
-            my $qual = $fastq_input_fh->getline;
-
-            unless (substr($header,0,1) eq '@') {
-                die "Unexpected header in fastq! $header";
-            }
-            substr($header,0,1) = '>';
-
-            $fasta_output_fh->print($header, $seq);
-            $sep_output_fh->print($sep);
-            $qual_output_fh->print($qual);
-        }
-
-        $fastq_input_fh->close;
-        $fasta_output_fh->close;
-        $sep_output_fh->close; $sep_output_fh = undef;
-        $qual_output_fh->close; $qual_output_fh = undef;
-
-        #2. run dust command
-        my $cmd = "dust $fasta_file > $dusted_file";
-        my $rv = system($cmd);
-
-        #3. re-produce fastq 
-
-        my $dusted_input_fh  = Genome::Utility::FileSystem->open_file_for_reading($dusted_file);
-        unless ($dusted_input_fh) {
-            $self->error_message('Failed to open fastq file ' . $dusted_file . ": $!");
-            return;
-        }
-        binmode $dusted_input_fh, ":utf8";
-
-        my $sep_input_fh = Genome::Utility::FileSystem->open_file_for_reading($sep_file);
-        unless ($sep_input_fh) {
-            $self->error_message('Failed to open input file ' . $sep_file . ": $!");
-        }
-        binmode $sep_input_fh, ":utf8";
-
-        my $qual_input_fh = Genome::Utility::FileSystem->open_file_for_reading($qual_file);
-        unless ($qual_input_fh) {
-            $self->error_message('Failed to open input file ' . $qual_file . ": $!");
-            return;
-        }
-        binmode $qual_input_fh, ":utf8";
-
-        my $processed_fh = Genome::Utility::FileSystem->open_file_for_writing($n_removed_dusted_length_screened_fastq);
-        unless ($processed_fh) {
-            $self->error_message('Failed to open output file ' . $n_removed_dusted_length_screened_fastq . ": $!");
-            return;
-        }
-        binmode $processed_fh, ":utf8";
-
-        # since dusting wraps sequences, may have to read multiple lines to reconstruct sequence
-        # pull header then concat lines until next header encountered
-        my ($header, $seq, $sep, $qual);
-        while (my $line = $dusted_input_fh->getline) {
-            if ($line=~/^>.*/) { #found a header 
-                # this only grabs the header on the first sequence
-                # other sequences in the file will have their header pre-caught below
-                # confusing :(
-                $header = $line;
-            }
-            else {
-                chomp($seq .= $line);
-                #$seq .= $line;
-            }
-
-            while ($line = $dusted_input_fh->getline) { #accumulate lines for read, until next header encountered 
-                if ($line=~/^>.*/) { #found a new header - read has been accumulated 
-                    last;
-                }
-                else {
-                    chomp($seq .= $line);
-                    #$seq .= $line;
-                }
-            }
-
-            $sep = $sep_input_fh->getline;
-            $qual = $qual_input_fh->getline;
-
-            unless (substr($header,0,1) eq '>') {
-                die "Unexpected fasta header: $header";
-            }
-            substr($header,0,1) = '@';
-            $processed_fh->print("$header$seq\n$sep$qual");
-
-            #reset
-            $seq = '';
-            $header = $line;
-        }
-
-
-        $dusted_input_fh->close;
-        $sep_input_fh->close;
-        $qual_input_fh->close;
-        $processed_fh->close;
+        unlink $dusted_fastq;
     }
-    else {
-        $self->status_message("Dusting not required, skipping on $n_removed_fastq");
-        unless( rename($n_removed_fastq, $n_removed_dusted_length_screened_fastq)){
-            $self->error_message("Failed to copy $n_removed_fastq to $n_removed_dusted_length_screened_fastq while skipping dusting");
-            return;
-        }
-    }
-
-    # kill intermediate files
-    for my $file($fasta_file, $n_removed_fastq, $dusted_file, $qual_file, $sep_file) {
-        unlink($file) if -e $file;
-    }
-
-    #screen out <60bp reads, do this last? don't know what to do about mate pairs
-    rename($n_removed_dusted_length_screened_fastq, $output_path);
-    $self->status_message("Finished processing on $output_path");
     return $output_path;
-
 }
 
 1;

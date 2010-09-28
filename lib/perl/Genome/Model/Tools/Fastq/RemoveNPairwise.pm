@@ -25,13 +25,13 @@ class Genome::Model::Tools::Fastq::RemoveNPairwise
                                     is_input => 1,
                                     is_optional => 0,
                                 },
-            fwd_n_removed_file => {
+            forward_n_removed_file => {
                                     doc => 'file to write to',
                                     is => 'Text',
                                     is_output => 1,
                                     is_optional => 0,
                                 },
-            rev_n_removed_file => {
+            reverse_n_removed_file => {
                                     doc => 'file to write to',
                                     is => 'Text',
                                     is_output => 1,
@@ -101,15 +101,15 @@ sub execute
         return;
     }
 
-    my $fwd_output_fh = IO::File->new('>'.$self->fwd_n_removed_file);
+    my $fwd_output_fh = IO::File->new('>'.$self->forward_n_removed_file);
     unless ($fwd_output_fh) {
-        $self->error_message("Failed to open output file " . $self->fwd_n_removed_file . ": $!");
+        $self->error_message("Failed to open output file " . $self->forward_n_removed_file . ": $!");
         return;
     }
 
-    my $rev_output_fh = IO::File->new('>'.$self->rev_n_removed_file);
+    my $rev_output_fh = IO::File->new('>'.$self->reverse_n_removed_file);
     unless ($rev_output_fh) {
-        $self->error_message("Failed to open output file " . $self->rev_n_removed_file . ": $!");
+        $self->error_message("Failed to open output file " . $self->reverse_n_removed_file . ": $!");
         return;
     }
 
