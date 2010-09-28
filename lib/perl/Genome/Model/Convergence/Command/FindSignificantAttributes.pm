@@ -11,7 +11,6 @@ class Genome::Model::Convergence::Command::FindSignificantAttributes {
         build => {
             shell_args_position => 1,
             is => 'Genome::Model::Build::Convergence',
-            id_by => 'build_id',
             doc => 'the build on which to run the analysis'
         },
         build_id => { is => 'Integer', is_input => 1, is_output => 1 },
@@ -27,7 +26,6 @@ class Genome::Model::Convergence::Command::FindSignificantAttributes {
     has_optional => [
         annotation_build => {
             is => 'Genome::Model::Build::ImportedAnnotation',
-            id_by => 'annotation_build_id',
             doc => 'the annotation build used to annotate the variants of subbuilds in the convergence build--if not provided, will attempt to be taken from a subbuild',
         },
         annotation_build_id => { is => 'Integer', is_input => 1, is_output => 1},
