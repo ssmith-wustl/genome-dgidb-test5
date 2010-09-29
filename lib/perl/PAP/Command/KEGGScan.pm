@@ -79,8 +79,7 @@ class PAP::Command::KEGGScan {
     # These parameters tell workflow the requirements needed for this module 
     has_param => [
         lsf_resource => {
-            #default => "-R 'select[mem=8192,type==LINUX64] rusage[mem=8192,tmp=1024]'"
-            default => "-R 'select[mem>24576 && type==LINUX64] rusage[mem=24576,tmp=1024]' -M 24576000",
+            default => "-R 'select[mem=8192,type==LINUX64] rusage[mem=8192,tmp=1024]' -M 8192000",
         },
         lsf_queue => {
             default => 'long',

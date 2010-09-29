@@ -89,7 +89,7 @@ sub _prompt_to_continue {
         $self->warning_message($str);
         return 1;
     } else {
-        my $answer = Genome::Command::OO->_ask_user_question($str . " Continue anyway?");
+        my $answer = Genome::Command::Base->_ask_user_question($str . " Continue anyway?");
 
         if($answer and $answer eq 'yes') {
             $self->status_message('Continuing.');

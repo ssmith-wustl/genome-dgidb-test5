@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command::Copy {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
         from => {
             shell_args_position => 1,

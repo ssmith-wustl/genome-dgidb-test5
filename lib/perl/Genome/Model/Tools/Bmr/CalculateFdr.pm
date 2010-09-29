@@ -6,7 +6,7 @@ use IO::File;
 use Genome;
 
 class Genome::Model::Tools::Bmr::CalculateFdr {
-  is => 'Genome::Command::OO',
+  is => 'Genome::Command::Base',
   has_input => [
   working_dir => {
     is => 'String',

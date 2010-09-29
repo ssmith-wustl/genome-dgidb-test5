@@ -9,7 +9,7 @@ use Time::HiRes qw(sleep); #This alternate sleep() allows delays that are fracti
 
 class Genome::Model::Tools::Bmr::SubmitGeneSummary
 {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has_input => [
     roi_bedfile => {
         type => 'String',
