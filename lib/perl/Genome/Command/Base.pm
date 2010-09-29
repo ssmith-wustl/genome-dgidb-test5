@@ -483,6 +483,8 @@ sub _check_for_missing_parameters {
         }
     }
 
+    @missing_property_values = map { $_ =~ s/_/-/g; $_ } @missing_property_values;
+    @missing_property_values = map { $_ =~ s/^/--/g; $_ } @missing_property_values;
     if (@missing_property_values) {
         $self->status_message('');
         $self->error_message("Missing required parameter(s): " . join(', ', @missing_property_values) . ".");
