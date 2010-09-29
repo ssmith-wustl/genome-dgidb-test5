@@ -24,28 +24,15 @@ my $m3 = Genome::Model::Foo->create(@p, name => 'model3');
 ok($m1, "made a model $m3");
 
 class Genome::Model::Command::T1 {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
-        model => { is => 'Genome::Model', id_by => 'model_id' },
+        model => { is => 'Genome::Model' },
     ]
 };
 sub Genome::Model::Command::T1::execute {
     my $self = shift;
     $v = $self->model;
     #print ">>$v<<\n";
-    return 1;
-}
-
-my @v;
-class Genome::Model::Command::T2 {
-    is => 'Genome::Command::OO',
-    has_many => [
-        models => { is => 'Genome::Model' },
-    ]
-};
-sub Genome::Model::Command::T2::execute {
-    my $self = shift;
-    @v = $self->models;
     return 1;
 }
 

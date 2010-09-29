@@ -87,8 +87,9 @@ sub __display_name__ {
     return $self->id . ' of ' . $self->model->name;
 }
 
-use Genome::Command::OO;
-*from_cmdline = \&Genome::Command::OO::default_cmdline_selector;
+# TODO: Replace this with get_class_param
+use Genome::Command::Base;
+*from_cmdline = \&Genome::Command::Base::default_cmdline_selector;
 
 sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass will soon be stored
     my $class = shift;

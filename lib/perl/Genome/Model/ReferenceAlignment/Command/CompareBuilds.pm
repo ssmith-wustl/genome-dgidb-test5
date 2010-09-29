@@ -6,12 +6,11 @@ use Genome;
 use Carp 'confess';
 
 class Genome::Model::ReferenceAlignment::Command::CompareBuilds {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
         model => {
             shell_args_position => 1,
             is => 'Genome::Model::ReferenceAlignment',
-            id_by => 'model_id',
         },
     ],
 };

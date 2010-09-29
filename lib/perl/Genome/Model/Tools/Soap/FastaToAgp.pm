@@ -98,9 +98,9 @@ sub execute {
     my $agp_outfile = "$outDir/$name_prefix.agp";
 
 #open (FILE, ">$outdir/$contig_outfile") and
-    my $contig_out = Bio::SeqIO->new('-file' => ">$contig_outfile", '-format' => 'Fasta') and
-	warn "Will write contigs to file '$contig_outfile' to $outDir Directory\n" or
-	die "Failed to write to file '$contig_outfile'\n"; 
+    my $contig_out = Bio::SeqIO->new('-file' => ">$contig_outfile", '-format' => 'Fasta');# and
+	#warn "Will write contigs to file '$contig_outfile' to $outDir Directory\n" or
+	#die "Failed to write to file '$contig_outfile'\n"; 
    
 #open (AGP_FILE, ">$agp_outfile") and
 #    warn "Will write contigs to file $agp_outfile to $outDir Directory\n" or
@@ -111,9 +111,9 @@ sub execute {
 
 
 #open (SCAFF_FILE, ">$outDir/$scaffolds_outfile") and
-    my $scaff_out = Bio::SeqIO->new('-file' => ">$scaffolds_outfile", '-format' => 'Fasta') and
-	warn "Will write scaffolds to file $scaffolds_outfile to $outDir Directory\n" or 
-	die "Failed to write to file $scaffolds_outfile\n";
+    my $scaff_out = Bio::SeqIO->new('-file' => ">$scaffolds_outfile", '-format' => 'Fasta');# and
+	#warn "Will write scaffolds to file $scaffolds_outfile to $outDir Directory\n" or 
+	#die "Failed to write to file $scaffolds_outfile\n";
 
 #print AGP_FILE "# Generated from SOAPdenovo assembly file $file using script $0\n";
 

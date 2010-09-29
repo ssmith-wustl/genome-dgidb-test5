@@ -8,11 +8,10 @@ use Bit::Vector;
 use Bio::DB::Fasta;
 
 class Genome::Model::ReferenceSequence::Command::GenerateBitmask {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has_input => [
     refseq => { 
         is => 'Genome::Model::Build::ImportedReferenceSequence', # we're going to remove "Imported" soon
-        id_by => 'refseq_id',
         shell_args_position => 1, 
         doc => 'the reference build, specified by name (like NCBI-human-build36)'
     },
