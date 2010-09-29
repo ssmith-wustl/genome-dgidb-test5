@@ -454,7 +454,7 @@ sub _shell_args_property_meta
     return @result;
 }
 
-sub _check_class_object_for_missing_parameters {
+sub _check_for_missing_parameters {
     my ($self, $params) = @_;
 
     my $class_object = $self->__meta__;
@@ -496,7 +496,7 @@ sub _check_class_object_for_missing_parameters {
 sub resolve_class_and_params_for_argv {
     my $self = shift;
     my ($class, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
-    unless (@_ && $self->_check_class_object_for_missing_parameters($params)) {
+    unless (@_ && $self->_check_for_missing_parameters($params)) {
         $params->{help} = 1;
         return ($class, $params);
     }
