@@ -420,16 +420,19 @@ sub _shell_args_property_meta
         next if $property_name eq 'is_executed';
         next if $property_name =~ /^_/;
 
-        next if not $property_meta->is_mutable;
-        # UR's Command.pm has this but we resolve this using resolve_param_value_from_cmdline_text
-        #next if defined($property_meta->data_type) and $property_meta->data_type =~ /::/;
-        next if $property_meta->is_delegated;
+        next if $property_meta->implied_by;
         next if $property_meta->is_calculated;
         # Kept commented out from UR's Command.pm, I believe is_output is a workflow property
         # and not something we need to exclude (counter to the old comment below).
         #next if $property_meta->{is_output}; # TODO: This was breaking the G::M::T::Annotate::TranscriptVariants annotator. This should probably still be here but temporarily roll back
         next if $property_meta->is_transient;
         next if $property_meta->is_constant;
+        if (($property_meta->is_delegated) || (defined($property_meta->data_type) and $property_meta->data_type =~ /::/)) {
+            next unless($self->can('resolve_param_value_from_cmdline_text'));
+        }
+        else {
+            next unless($property_meta->is_mutable);
+        }
         if ($property_meta->{shell_args_position}) {
             push @positional, $property_meta;
         }
