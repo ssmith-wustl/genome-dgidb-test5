@@ -172,19 +172,26 @@ sub somatic_workflow_input {
     my $input = $self->somatic_workflow_inputs;
 
     if ($input) {
-        unless (exists $input->{$input_name}) {
-            my @valid_inputs = sort(keys %$input);
-            my $inputs_string = join(", ", @valid_inputs);
-            $self->error_message("Input $input_name does not exist. Valid inputs to query for this build are: \n$inputs_string");
-            return;
-        }
+        # The input_name does not exist in the hash of inputs for this workflow. This means the input went by a different name at the time
+        if (!exists $input->{$input_name}) {
+            # Try to get the input through a different name if it changed. If that fails, then give up.
+            my $alternate_input = $self->alternate_somatic_workflow_input($input, $input_name);
+            unless ($alternate_input) {
+                my @valid_inputs = sort(keys %$input);
+                my $inputs_string = join(", ", @valid_inputs);
+                $self->error_message("Input $input_name does not exist. Valid inputs to query for this build are: \n$inputs_string");
+                return;
+            }
 
-        unless (defined $input->{$input_name}) {
+            return $alternate_input;
+        # This should not happen
+        } elsif (!defined $input->{$input_name}) { 
             $self->error_message("Input $input_name exists, but is not defined for this build. Something may have gone wrong with the build.");
             return;
+        } else {
+            return $input->{$input_name};
         }
-
-        return $input->{$input_name};
+    # If we have no somatic_workflow_input, this is an old build from before workflows were associated with them by name - fall back to old default filenames
     } else {
         my $filename = $self->data_directory . "/" . $self->old_default_filename($input_name);
         if ($filename) {
@@ -195,6 +202,55 @@ sub somatic_workflow_input {
         }
     }
 
+}
+
+# This method is filled with some hackery for obtaining old somatic inputs before builds were associated or accomodating changes
+# TODO This is a pretty horrible solution but at the moment this is the only workaround
+sub alternate_somatic_workflow_input { 
+    my $self = shift;
+    my $input = shift;
+    my $input_name = shift;
+
+    my $input_value;
+    # Sniper (and any other variant detector) now has a working directory instead of direct file accessors. Fix this incompatibility.
+    if ($input_name eq "sniper_snp_output") {
+        my $sniper_directory = $self->somatic_workflow_input("sniper_working_directory");
+        if (-d $sniper_directory) {
+            $input_value = "$sniper_directory/snp_output.csv";
+        } elsif ($sniper_directory) {
+            $self->error_message("Sniper working directory $sniper_directory is set but does not appear to exist");
+        }
+    } elsif ($input_name eq "sniper_indel_output") {
+        my $sniper_directory = $self->somatic_workflow_input("sniper_working_directory");
+        if (-d $sniper_directory) {
+            $input_value = "$sniper_directory/indel_output.csv";
+        } elsif ($sniper_directory) {
+            $self->error_message("Sniper working directory $sniper_directory is set but does not appear to exist");
+        }
+    } elsif ($input_name eq "breakdancer_output_file") {
+        my $breakdancer_directory = $self->somatic_workflow_input("breakdancer_working_directory");
+        if (-d $breakdancer_directory) {
+            $input_value = "$breakdancer_directory/sv_output.csv";
+        } elsif ($breakdancer_directory) {
+            $self->error_message("Breakdancer working directory $breakdancer_directory is set but does not appear to exist");
+        }
+    } elsif ($input_name eq "breakdancer_config_file") {
+        my $breakdancer_directory = $self->somatic_workflow_input("breakdancer_working_directory");
+        if (-d $breakdancer_directory) {
+            $input_value = "$breakdancer_directory/breakdancer_config";
+        } elsif ($breakdancer_directory) {
+            $self->error_message("Breakdancer working directory $breakdancer_directory is set but does not appear to exist");
+        }
+    } else {
+        return;
+    }
+
+    unless (-e $input_value) {
+        $self->error_message("Somatic input $input_value was returned but appears not to exist");
+        return;
+    }
+
+    return $input_value;
 }
 
 # The intent of this method is to be capable of providing file names for older somatic builds which do not have an associated workflow
