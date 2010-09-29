@@ -5,6 +5,7 @@ use warnings;
 
 use GAP;
 use Genome::Utility::FileSystem;
+use File::Basename;
 use Carp 'confess';
 use Bio::SeqIO;
 use Bio::Tools::Run::RepeatMasker;
@@ -17,14 +18,14 @@ class GAP::Command::RepeatMasker {
             is_input => 1,
             doc => 'Fasta file to be masked',
         },
+    ],
+    has_optional => [
         masked_fasta => { 
             is => 'Path',
             is_input => 1,
             is_output => 1,
             doc => 'Masked sequence is placed in this file (fasta format)' 
         },
-    ],
-    has_optional => [
         repeat_library => {
             is => 'Path',
             is_input => 1,
@@ -39,7 +40,7 @@ class GAP::Command::RepeatMasker {
 };
 
 sub help_brief {
-    "RepeatMask the contents of the input file and write the result to the output file";
+    return "RepeatMask the contents of the input file and write the result to the output file";
 }
 
 sub help_synopsis {
@@ -72,6 +73,13 @@ sub execute {
         $self->fasta_file($unzipped_file);
     }
     
+    # If masked fasta path not given, then put it in the same location as the input fasta file
+    if (not defined $self->masked_fasta) {
+        my $default_masked_location = $self->fasta_file . '.masked';
+        $self->status_message("Masked fasta file path not given, defaulting to $default_masked_location");
+        $self->masked_fasta($default_masked_location);
+    }
+
     if (-e $self->masked_fasta) {
         $self->warning_message("Removing existing file at " . $self->masked_fasta);
         unlink $self->masked_fasta;
