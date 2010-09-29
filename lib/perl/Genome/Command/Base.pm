@@ -473,9 +473,9 @@ sub _check_class_object_for_missing_parameters {
     for my $property_meta (@property_metas) {
         next if $property_meta->is_optional;
         next if $property_meta->implied_by;
-        next if defined($property_meta->default_value);
         my $property_name = $property_meta->property_name;
-        if ($params->{$property_name}) {
+        my $property_value_defined = defined($params->{$property_name}) || defined($property_meta->default_value);
+        if ($property_value_defined) {
             next;
         }
         else {
