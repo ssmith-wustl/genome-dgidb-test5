@@ -541,8 +541,8 @@ sub RegprintVCR{
 	printf "\:tp%s",$reg->{type} if(defined $reg->{type});
 	printf "\:sz%s",$reg->{size} if(defined $reg->{size});
 	printf "\:sc%s",$reg->{score} if(defined $reg->{score});
-	printf "\:nrd1%s", $reg->{nreads1} if(defined $reg->{nreads1} && !defined $reg->{normal});
-	printf "\:nrd2%s", $reg->{nreads2} if(defined $reg->{nreads2} && !defined $reg->{tumor});
+	printf "\:nrd1%s", $reg->{nreads1} if(defined $reg->{nreads1});# && !defined $reg->{normal});
+	printf "\:nrd2%s", $reg->{nreads2} if(defined $reg->{nreads2});# && !defined $reg->{tumor});
 	printf "\:Nsp%s", $reg->{normal} if(defined $reg->{normal});
 	printf "\:Tsp%s", $reg->{tumor} if(defined $reg->{tumor});
 	printf "\:Ncn%s", $reg->{normal_cn} if(defined $reg->{normal_cn});
@@ -551,8 +551,8 @@ sub RegprintVCR{
   }
   else{
 	printf "%s\|%s\:%s\:%s\:%s", $tag, $reg->{chr1}, $reg->{start}, $reg->{chr2}, $reg->{end};
-	printf "\:nrd1%s", $reg->{nreads1} if(defined $reg->{nreads1} && !defined $reg->{normal});
-	printf "\:nrd2%s", $reg->{nreads2} if(defined $reg->{nreads2} && !defined $reg->{tumor});
+	printf "\:nrd1%s", $reg->{nreads1} if(defined $reg->{nreads1});# && !defined $reg->{normal});
+	printf "\:nrd2%s", $reg->{nreads2} if(defined $reg->{nreads2});# && !defined $reg->{tumor});
 	printf "\:Nsp%s", $reg->{normal} if(defined $reg->{normal});
 	printf "\:Tsp%s", $reg->{tumor} if(defined $reg->{tumor});
 	printf "\t";
@@ -679,7 +679,7 @@ sub ReadRegions{
     chomp;
     my $reg;
     my @u=split $delimiter;
-    if($#u < 2){
+    if($#u < 2 || $u[0] =~ /^#/){
 	next;
     }
     
@@ -712,15 +712,19 @@ sub ReadRegions{
 			}	
 		}
 		if(defined $c[$p] && $p == 11 && $c[$p] ne "NA"){ # if NA, like CNA
-			if($u[$c[$p]] !~ /^\d+/){ # like BD
+			if($u[$c[$p]] !~ /^\d+/ && $u[$c[$p]] !~ /tumor/i && $u[$c[$p]] !~ /normal/i){ # like BD
 				$reg->{sp_reads} = $u[$c[$p]];	
 				$reg = &parse_header_sp_reads($header, $reg) if($reg->{sp_reads});
 				$reg->{tumor} = 0 if(!$reg->{tumor});
 				$reg->{normal} = 0 if(!$reg->{normal});			
 			}
-			else{ # like Pindel
+			elsif($u[$c[$p]] =~ /^\d+/) { # like Pindel
 				$reg->{tumor} = $u[$c[$p]] if($fin =~ /tumor/);
 				$reg->{normal} = $u[$c[$p]] if($fin =~ /normal/);
+			}
+			elsif($u[$c[$p]] =~ /tumor/i || $u[$c[$p]] =~ /normal/i){ # like SD and AS
+				($reg->{tumor}) = ($u[$c[$p]] =~ /tumor.*?(\d+)/i);
+				($reg->{normal}) = ($u[$c[$p]] =~ /normal.*?(\d+)/i);
 			}
 		}
 		if(defined $c[$p] && $p == 12 && $c[$p] ne "NA" && ! defined $span->{$idx}){
