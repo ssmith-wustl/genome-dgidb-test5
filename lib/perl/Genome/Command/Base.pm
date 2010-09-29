@@ -136,7 +136,7 @@ sub _resolve_param_value_from_text {
         push @results, @results_by_string;
     }
     # if we still don't have any values then try via alternate class
-    if (!@results && exists($ALTERNATE_FROM_CLASS{$param_class})) {
+    if (!@results) {
         @results = $self->_resolve_param_value_via_related_class_method($param_class, $param_arg, $via_method);
     }
 
@@ -149,14 +149,28 @@ sub _resolve_param_value_from_text {
 sub _resolve_param_value_via_related_class_method {
     my ($self, $param_class, $param_arg, $via_method) = @_;
     my @results;
+    my $via_class;
     if (exists($ALTERNATE_FROM_CLASS{$param_class})) {
-        my @from_classes = sort keys %{$ALTERNATE_FROM_CLASS{$param_class}};
+        $via_class = $param_class;
+    }
+    else {
+        for my $class (keys %ALTERNATE_FROM_CLASS) {
+            if ($param_class->isa($class)) {
+                if ($via_class) {
+                    $self->error_message("Found additional via_class $class but already found $via_class!");
+                }
+                $via_class = $class;
+            }
+        }
+    }
+    if ($via_class) {
+        my @from_classes = sort keys %{$ALTERNATE_FROM_CLASS{$via_class}};
         while (@from_classes && !@results) {
             my $from_class  = shift @from_classes;
-            my @methods = @{$ALTERNATE_FROM_CLASS{$param_class}{$from_class}};
+            my @methods = @{$ALTERNATE_FROM_CLASS{$via_class}{$from_class}};
             my $method;
             if (@methods > 1 && !$via_method) {
-                #$self->debug_message("Trying to find $param_class via $from_class...\n");
+                #$self->debug_message("Trying to find $via_class via $from_class...\n");
                 my $method_choices;
                 for (my $i = 0; $i < @methods; $i++) {
                     $method_choices .= ($i + 1) . ": " . $methods[$i];
@@ -178,7 +192,7 @@ sub _resolve_param_value_via_related_class_method {
                         $self->error_message("Response was out of bounds, exiting...");
                         exit;
                     }
-                    $ALTERNATE_FROM_CLASS{$param_class}{$from_class} = [$method];
+                    $ALTERNATE_FROM_CLASS{$via_class}{$from_class} = [$method];
                 }
                 elsif (!$response) {
                     $self->status_messag("Exiting...");
@@ -188,11 +202,11 @@ sub _resolve_param_value_via_related_class_method {
                 $method = $methods[0];
             }
             unless($SEEN_FROM_CLASS{$from_class}) {
-                #$self->debug_message("Trying to find $param_class via $from_class->$method...");
+                #$self->debug_message("Trying to find $via_class via $from_class->$method...");
                 @results = $self->_resolve_param_value_from_text($param_arg, $from_class, $method);
             }
         } # END for my $from_class (@from_classes)
-    } # END if (!@arg_obj && exists(($ALTERNATE_FROM_CLASS{$param_class}))
+    } # END if ($via_class)
     return @results;
 }
 
