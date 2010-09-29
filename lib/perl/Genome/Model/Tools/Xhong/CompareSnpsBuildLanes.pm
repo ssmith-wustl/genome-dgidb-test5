@@ -14,7 +14,7 @@ class Genome::Model::Tools::Xhong::CompareSnpsBuildLanes {
 		model_id => { type => 'String', is_optional => 0, doc => "tumor/normal model_id to get the last suceed build to gather per lane bam files",},
 		analysis_dir => { type => 'String', is_optional => 0, doc => "Directory to use for keep outputs",},
 		genotype_file => { type => 'String', is_optional => 1, doc => "Genotype file to use as input to gmt analysis lane-qc compare-snps",},
-		sample_name => { type => 'String', is_optional => 1, doc => "Sample name to get imported genotype file, for example H_LC-SJTALL001-G-TB-01-1378 ",},
+		sample_name => { type => 'String', is_optional => 0, doc => "Sample name to get imported genotype file, for example H_LC-SJTALL001-G-TB-01-1378 ",},
 		]
 };
 
@@ -37,7 +37,6 @@ sub execute {
 	my $self=shift;
 	$DB::single = 1;
 	my $build_id = "";
-#	$build_id = $self->build_id;
     	my $dir = $self->analysis_dir;
 	my $user = getlogin || getpwuid($<); #get current user name	 
     	my $wgs_model_id = $self->model_id;
@@ -65,16 +64,13 @@ sub execute {
     		system("rm /tmp/$sample_name");
     		system("rm /tmp/$sample_name.path");
     # check if genotype_file exists
-    		unless(-e $find_genotype_file && -e $genotype_file){
-    			$self->error_message("Unable to file genotype file $find_genotype_file and $genotype_file\n please check and supply path to --genotype-file");
+    		if (!(-e $find_genotype_file) && !( -e $genotype_file)){
+    			$self->error_message("Unable to find genotype file $find_genotype_file and $genotype_file\n please check and supply path to --genotype-file");
 			return;
 		}		
         	if (-e $find_genotype_file ){
 			$genotype_file=	$find_genotype_file;
 		}
-    	}else{
-    		$self->error_message("Need to have --sample_name or --genotype-file, use -h for additional info");
-    		return;
     	}
 
     # step2: To find alignment file of the build or return;
@@ -98,7 +94,7 @@ sub execute {
  
     	my $model=$wgs_model;
   
-        print "model:$model\n build:$build\n build_id:$build_id\n model_id:$wgs_model_id\n";
+#        print "model:$model\n build:$build\n build_id:$build_id\n model_id:$wgs_model_id\n";
     	       
         #Grab all alignment events so we can filter out ones that are still running or are abandoned
         # get all align events for the current running build
@@ -129,8 +125,8 @@ sub execute {
 # find reference sequences
 #	my $reference_file="/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa"; 
 	my $reference_file=$model->reference_sequence_build->full_consensus_path('fa') ;
-	print "reference: $reference_file User: $user";
-	print "Number of idas:$#idas\n";
+	print "reference: $reference_file User: $user\n";
+	# print "Number of idas:$#idas\n";
         for my $ida (@idas) {
 		my @alignments = $ida->results($build);
 		for my $alignment (@alignments) {
@@ -140,10 +136,9 @@ sub execute {
 			my $lane_name="$flow_cell_id"."_"."$lane";	
      			my @bam = $alignment->alignment_bam_file_paths;
      			my $alignment_file = $bam[0];
-                                             
+
 			if ($alignment_file ne ""){
-		        	$self->error_message("test: $lane_name");		        
-		        	$self->error_message("bam: $alignment_file");
+		        	$self->error_message("$lane_name : $alignment_file");
 				unless(-e $alignment_file) {
 					$self->error_message("$alignment_file does not exist");
 					return;
