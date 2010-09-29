@@ -495,8 +495,6 @@ sub resolve_class_and_params_for_argv {
             };
             
 
-            $DB::single = 1;
-
             if ($@) {
                 $self->error_message("problems resolving $param_name from $param_arg_str: $@");
                 return ($class, undef);
