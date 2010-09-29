@@ -5,6 +5,7 @@ use warnings;
 use Carp;
 
 use Genome;
+use Sys::Hostname;
 
 class Genome::Model::Build::ImportedAnnotation {
     is => 'Genome::Model::Build',
@@ -79,9 +80,16 @@ sub cache_annotation_data {
             return $self->_annotation_data_directory;
         }
         elsif (-d $self->_cache_directory) {
+            my $lock_resource = '/gsc/var/lock/annotation_cache/' . hostname;
+            my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock =>$lock_resource, max_try => 2, block_sleep => 10);
+            unless ($lock){
+                $self->status_message("Could not update the local annotation data cache, another process is currently updating.  Using annotation data dir at " . $self->_annotation_data_directory);
+                return $self->_annotation_data_directory;
+            }
             $self->status_message("Updating local annotation data cache");
             $self->_update_cache;
             $self->status_message("Cache successfully updated"); 
+            Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock);
             return $self->_cache_directory;
         }
         else {
