@@ -454,9 +454,52 @@ sub _shell_args_property_meta
     return @result;
 }
 
+sub _check_class_object_for_missing_parameters {
+    my ($self, $params) = @_;
+
+    my $class_object = $self->__meta__;
+    my $type_name = $class_object->type_name;
+
+    my @property_names;
+    my $class_meta = UR::Object::Type->get($self);
+    if (my $has = $class_meta->{has}) {
+        push @property_names, keys %$has;
+    }
+    @property_names = $self->_unique_elements(@property_names);
+
+    my @property_metas = map { $class_object->property_meta_for_name($_); } @property_names;
+
+    my @missing_property_values;
+    for my $property_meta (@property_metas) {
+        next if $property_meta->is_optional;
+        next if $property_meta->implied_by;
+        my $property_name = $property_meta->property_name;
+        if ($params->{$property_name}) {
+            next;
+        }
+        else {
+            push @missing_property_values, $property_name;
+        }
+    }
+
+    if (@missing_property_values) {
+        $self->status_message('');
+        $self->error_message("Missing required parameter(s): " . join(', ', @missing_property_values) . ".");
+        return 0;
+    }
+    else {
+        return 1;
+    }
+}
+
 sub resolve_class_and_params_for_argv {
     my $self = shift;
     my ($class, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
+    unless (@_ && $self->_check_class_object_for_missing_parameters($params)) {
+        $params->{help} = 1;
+        return ($class, $params);
+    }
+    
     if ($params) {
         my $cmeta = $self->__meta__;
         for my $param_name (keys %$params) {
