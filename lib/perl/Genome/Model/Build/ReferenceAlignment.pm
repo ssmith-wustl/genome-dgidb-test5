@@ -60,7 +60,7 @@ sub create {
 sub calculate_estimated_kb_usage {
     my $self = shift;
     my $model = $self->model;
-    my $reference_build = $model->reference_build;
+    my $reference_build = $model->reference_sequence_build;
     my $reference_file_path = $reference_build->full_consensus_path;
 
     my $du_output = `du -sk $reference_file_path`;
@@ -490,14 +490,14 @@ sub genes_file {
     my $self = shift;
 
     my $model = $self->model;
-    my $reference_build = $model->reference_build;
+    my $reference_build = $model->reference_sequence_build;
     return $reference_build->data_directory .'/BACKBONE.tsv';
 }
 
 sub transcript_bed_file {
     my $self = shift;
     my $model = $self->model;
-    my $reference_build = $model->reference_build;
+    my $reference_build = $model->reference_sequence_build;
     return $reference_build->data_directory .'/transcripts.bed';
 }
 
@@ -593,7 +593,7 @@ sub accumulate_maps {
     } 
     else {
         my @all_map_lists;
-        my @chromosomes = $model->reference_build->subreference_names;
+        my @chromosomes = $model->reference_sequence_build->subreference_names;
         foreach my $c (@chromosomes) {
             my $a_ref_seq = Genome::Model::RefSeq->get(model_id => $model->id, ref_seq_name=>$c);
             my @map_list = $a_ref_seq->combine_maplists;

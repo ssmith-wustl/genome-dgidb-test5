@@ -649,27 +649,6 @@ sub region_of_interest_set {
     return $roi_set;
 }
 
-# ehvatum TODO: remove this function and change everything that calls it to use ->reference_sequence_build directly
-sub reference_build {
-    my $self = shift;
-    unless ($self->{reference_build}) {
-        if(defined($self->reference_sequence_build)) {
-            $self->{reference_build} = $self->reference_sequence_build;
-        }
-        else {
-            my $name = $self->reference_sequence_name;
-            my $build = Genome::Model::Build::ReferencePlaceholder->get($name);
-            unless ($build) {
-                $build = Genome::Model::Build::ReferencePlaceholder->create(
-                    name => $name,
-                    sample_type => $self->dna_type);
-            }
-            $self->{reference_build} = $build;
-        }
-    }
-    return $self->{reference_build};
-}
-
 # Results data
 # TODO: refactor to not be directly in the model
 

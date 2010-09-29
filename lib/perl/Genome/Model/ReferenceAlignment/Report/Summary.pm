@@ -351,7 +351,7 @@ sub get_summary_information
         }
     }
 
-    my $ref_seq_dir = $self->model->reference_build->data_directory;
+    my $ref_seq_dir = $self->model->reference_sequence_build->data_directory;
 
     $DB::single = 1;
 
@@ -368,7 +368,7 @@ sub get_summary_information
     $filtered_snp_calls =~ s/\s\S+\s*$//i;
     $filtered_snp_calls =~ s/\s//g;
 
-    my $snp_chromosomes = $self->model->reference_build->description;
+    my $snp_chromosomes = $self->model->reference_sequence_build->description;
     my $snp_caller = $self->model->snv_detector_name;
 
     my @stat = stat($filtered_files[-1]);
@@ -403,7 +403,7 @@ sub get_summary_information
     }
     else
     {
-        push @vars, (ref_seq_name                     => $self->model->reference_build->name);
+        push @vars, (ref_seq_name                     => $self->model->reference_sequence_build->name);
     }
 
     push @vars, (
