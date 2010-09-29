@@ -10,7 +10,7 @@ require Genome::Utility::FileSystem;
 
 class Genome::Model::Command::Copy {
     class_name => __PACKAGE__,    
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
         from => {
             is => 'Genome::Model',
@@ -106,6 +106,14 @@ sub execute {
     # grab overridden properties and overlay them on top of the
     # parameters from the original model
     my %property_overrides = $self->_parse_overrides;
+
+    # Make sure that if either processing_profile_name or processing_profile_id
+    # are specified in overrides that we override both of those in the params...
+    if (defined $property_overrides{'processing_profile_name'} || $property_overrides{'processing_profile_id'}) {
+        $cmd_params{'processing_profile_name'} = undef;
+        $cmd_params{'processing_profile_id'} = undef;
+    }
+
     for my $key (%property_overrides) {
         # allow overriding data directory on the copy and pass that in
         unless ($key eq "data_directory") {

@@ -39,27 +39,28 @@
         </xsl:if>
       </xsl:for-each>
       ];
-      window.cSummary = {
+      window.cSummary = [
       <xsl:for-each select="//coverage-summary/model">
         <xsl:sort data-type="text" order="ascending" select="@subject_name"/>
-        "<xsl:value-of select="@id"/>": {
+        {
+        "id": "<xsl:value-of select="@id"/>",
         "subject_name": "<xsl:value-of select="@subject_name"/>",
         "pc_target_space_covered": {
-        <xsl:for-each select="minimum_depth">
-          <xsl:sort data-type="number" order="descending" select="@value"/>
-          "<xsl:value-of select="@value"/>": <xsl:value-of select="pc_target_space_covered"/><xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
-        </xsl:for-each>
+          <xsl:for-each select="minimum_depth">
+            <xsl:sort data-type="number" order="descending" select="@value"/>
+            "<xsl:value-of select="@value"/>": <xsl:value-of select="pc_target_space_covered"/><xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
+          </xsl:for-each>
         },
         "pc_target_space_covered_eighty_pc_breadth": {
-        <xsl:for-each select="minimum_depth">
-          <xsl:sort data-type="number" order="descending" select="@value"/>
-          "<xsl:value-of select="@value"/>": <xsl:value-of select="pc_target_space_covered_eighty_pc_breadth"/><xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
-        </xsl:for-each>
+          <xsl:for-each select="minimum_depth">
+            <xsl:sort data-type="number" order="descending" select="@value"/>
+            "<xsl:value-of select="@value"/>": <xsl:value-of select="pc_target_space_covered_eighty_pc_breadth"/><xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
+          </xsl:for-each>
         }
 
         }<xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
       </xsl:for-each>
-      };
+      ];
 
     </script>
 

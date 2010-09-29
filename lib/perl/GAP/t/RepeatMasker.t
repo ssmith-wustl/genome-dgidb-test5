@@ -5,28 +5,31 @@ use above 'GAP';
 
 use Bio::Seq;
 use Bio::SeqIO;
-
 use File::Temp;
 use File::Basename;
-#use Test::More tests => 12;
-use Test::More tests => 5;
+use Test::More;
 
 BEGIN {
     use_ok('GAP::Command');
     use_ok('GAP::Command::RepeatMasker');
 }
 
-
 my $command = GAP::Command::RepeatMasker->create(
-                                                 'input_file'     => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.fasta',
-                                                 'repeat_library' => '/gsc/var/lib/repeat/Trichinella_pseudospiralis_1.0_080103.rep', 
-                                                );
+    fasta_file => File::Basename::dirname(__FILE__).'/data/short_ctg.dna',
+    repeat_library => '/gsc/var/lib/repeat/Trichinella_spiralis-3.7.1_070320.rep', 
+    masked_fasta => '/tmp/repeat_masker_masked_fasta.fa',
+);
 isa_ok($command, 'GAP::Command::RepeatMasker');
 
 ok($command->execute(), 'execute');
 
-my $seqio = Bio::SeqIO->new(-file => $command->output_file(), -format => 'Fasta');
+my $seqio = Bio::SeqIO->new(
+    -file => $command->masked_fasta(), 
+    -format => 'Fasta'
+);
 
-my $seq = $seqio->next_seq();
+while (my $seq = $seqio->next_seq()) {
+    isa_ok($seq, 'Bio::SeqI');
+}
 
-isa_ok($seq, 'Bio::SeqI');
+done_testing();

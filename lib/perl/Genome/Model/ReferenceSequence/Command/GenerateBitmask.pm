@@ -8,7 +8,7 @@ use Bit::Vector;
 use Bio::DB::Fasta;
 
 class Genome::Model::ReferenceSequence::Command::GenerateBitmask {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has_input => [
     refseq => { 
         is => 'Genome::Model::Build::ImportedReferenceSequence', # we're going to remove "Imported" soon
