@@ -24,6 +24,9 @@
     <link rel="stylesheet" href="/res/css/icons.css" type="text/css" media="screen, projection"/>
     <link rel="stylesheet" href="/res/css/forms.css" type="text/css" media="screen, projection"/>
 
+    <!-- prevent console() statements from being called on non-dev servers -->
+    <script type="text/javascript" src="/res/js/app/console.js"></script>
+
     <!-- jquery and jquery UI -->
     <link type="text/css" href="/res/js/pkg/jquery-ui-1.8.1.custom/css/gsc-theme/jquery-ui-1.8.1.custom.css" rel="stylesheet" />
     <link href="/res/css/jquery-ui-overrides.css" type="text/css" rel="stylesheet" media="screen, projection"/>
@@ -32,13 +35,6 @@
 
     <!-- jquery.masonry to arrange the object info boxes-->
     <script type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
-
-    <!-- jquery.hoverIntent - a better hover() function for jQuery -->
-    <script type="text/javascript" src="/res/js/pkg/jquery.hoverIntent.min.js"></script>
-
-
-    <!-- jquery.spinner for easy creation of loading spinners -->
-    <!-- <script type="text/javascript" src="/res/js/pkg/spinner/jquery.spinner.js"></script> -->
 
     <!-- jquery.dataTables for spiffy feature-laden lists -->
     <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
