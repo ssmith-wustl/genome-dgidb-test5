@@ -53,34 +53,6 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => 'command line args used for the indel detector',  
             is_optional => 1,
         },
-        genotyper_name => {
-            doc => 'name of the genotyper for this model... deprecated',
-            is_optional => 1,
-        },
-        genotyper_version => {
-            doc => 'version of the genotyper for this model... deprecated',
-            is_optional => 1,
-        },
-        genotyper_params => {
-            doc => 'command line args used for the genotyper... deprecated',
-            is_optional => 1,
-        },
-        indel_finder_name => {
-            doc => 'name of the indel finder for this model... deprecated',
-            is_optional => 1,
-        },
-        indel_finder_version => {
-            doc => 'version of the indel finder for this model... deprecated',
-            is_optional => 1,
-        },
-        indel_finder_params => {
-            doc => 'command line args for the indel finder... deprecated',
-            is_optional => 1,
-        },
-        variant_filter => {
-            doc => 'variant filter type: VarFilter or SnpFilter... deprecated',
-            is_optional => 1,
-        },
         multi_read_fragment_strategy => {
             doc => '',
             is_optional => 1,
@@ -156,11 +128,6 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => '',
             is_optional => 1,
         },
-        # ehvatum: TODO remove this attribute or make it derive from reference alignment model -> imported reference sequence -> name
-        reference_sequence_name => {
-            doc => 'identifies the reference sequence used in the model(required if no prior_ref_seq)',
-            is_optional => 1,
-        },
         capture_set_name => {
             doc => 'The name of the capture set to evaluate coverage and limit variant calls to within the defined target regions',
             is_optional => 1,
@@ -224,7 +191,7 @@ sub params_for_alignment {
     my $assignment = shift;
 
     my $model = $assignment->model;
-    my $reference_build = $model->reference_build;
+    my $reference_build = $model->reference_sequence_build;
     my $reference_build_id = $reference_build->id;
 
     unless ($self->type_name eq 'reference alignment') {
