@@ -766,7 +766,7 @@ sub _process_sra_instrument_data {
                 die $self->error_message;
             }
             my ($processed_fastq1,$processed_fastq2, $processed_fastq_fragment) = $self->_process_unaligned_fastq_pair($forward,$reverse,$expected_path1, $expected_path2, $expected_path_fragment );
-            my @missing = grep {! -s $_} ($expected_path1, $expected_path2, $expected_path_fragment);
+            my @missing = grep {! -s $_} ($expected_path1, $expected_path2);
             if (@missing){
                 $self->error_message("Expected data paths do not exist after fastq processing: ".join(", ", @missing));
                 die($self->error_message);
@@ -833,7 +833,8 @@ sub _process_sra_instrument_data {
         #now create fragment instrument data for $expected_path_fragment, as a result of pairwise n-removal, if the file exists and has size
         
         if (-s $expected_path_fragment){
-            $params{source} = $expected_path_fragment;
+            $params{source_data_files} = $expected_path_fragment;
+            $params{is_paired_end} = 0;
             $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
 
             my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
