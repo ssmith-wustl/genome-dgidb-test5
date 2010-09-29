@@ -313,34 +313,38 @@ sub _assign_all_instrument_data {
         # Skip imported, w/ warning
         unless($self->include_imported){
             if ($id->isa("Genome::InstrumentData::Imported")) {
-                $self->warning_message("IGNORING IMPORTED INSTRUMENT DATA: " . $id->id 
-                    . " sequencing platform " . $id->sequencing_platform
-                    . " imported by " . $id->user_name
-                    . ".  Add this explicitly if you want it in the model."
+                $self->warning_message(
+                    'SKIPPING instrument data ('.join(' ', map { $id->$_ } (qw/ id sequencing_platform user_name /)).' because '
+                    .'it is imported. Assign it explicitly, if desired.'
                 );
-                next ID;
-            }
-        }
-        if(defined($id->target_region_set_name)){
-            unless(@inputs){
                 next ID;
             }
         }
 
-        # Only assign inst data only w/ the same target
-        if ( %model_capture_targets ) {
-            my $id_capture_target;
-            eval { 
-                $id_capture_target = $id->target_region_set_name;
-            };
-            if ( not defined $id_capture_target or not exists $model_capture_targets{$id_capture_target} ) {
-                $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
-                    . " sequencing platform " . $id->sequencing_platform
-                    . ".\nThe model's and instrument data's capture targets do not match, and you've requestied that only matching capture data should be added.\n"
-                    ."Assign the instrument data explicitly if you want it in the model."
-                );
-                next ID;
-            }
+        # Get inst data region set name
+        my $id_capture_target;
+        eval { 
+            $id_capture_target = $id->target_region_set_name;
+        };
+
+        # Skip if no mpdel_capture targets and the inst data has a target
+        if( not %model_capture_targets and defined $id_capture_target) {
+            $self->warning_message(
+                'SKIPPING instrument data ('.$id->id.' '.$id->sequencing_platform.') because '
+                .' it does not have a capture target and the model does. Assign it explicitly, if desired.'
+            );
+            next ID;
+        }
+
+        # Skip if the model has capture targets and the inst data's target is undef OR 
+        #  is not in the list of the model's targets
+        if ( %model_capture_targets 
+                and ( not defined $id_capture_target or not exists $model_capture_targets{$id_capture_target} ) ) {
+            $self->warning_message(
+                'SKIPPING instrument data ('.$id->id.' '.$id->sequencing_platform.') because '
+                .' the model\'s and instrument data\'s capture targets do not match. Assign it explicitly, if desired.' 
+            );
+            next ID;
         }
 
         $self->_assign_instrument_data($id)
