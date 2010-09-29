@@ -159,7 +159,49 @@ sub execute {
     my $fully_filtered_file = $self->output_data_dir . "/pass_all_filters";
     
     my $paralog_cmd = sprintf("bsub -N -u $user\@watson.wustl.edu -w 'ended($tumor_mm_lsf_id) && ended($normal_mm_lsf_id) && ended($ks_lsf_id)' 'perl /gscuser/dlarson/src/bamsey/kstest/trunk/paralog_filter.pl %s %s > %s; /gscuser/dlarson/bin/perl-grep-f -f %s %s > %s'",$tumor_mm_file, $normal_mm_file, $pass_paralog_filter_file,$pass_paralog_filter_file, $filtered_file,$fully_filtered_file);
-    `$paralog_cmd`;
+    my ($paralog_lsf_line) = `$paralog_cmd`;
+    my ($paralog_lsf_id) = $paralog_lsf_line =~ /<(\d+)>/;
+
+    #do tiering
+    #first grab files
+    my $intersect_string = "bsub -N -u $user\@watson.wustl.edu -w 'ended($paralog_lsf_id)' '/gscuser/dlarson/bin/perl-grep-f -f %s %s > %s";
+    my $tier1_file = $build->somatic_workflow_input('tier_1_snp_file');
+    my $tier1_filtered_file = $data_directory . "/t1f_tier1_filtered_snp.csv";
+    my $intersect_command = sprintf($intersect_string,$tier1_file,$fully_filtered_file,$tier1_filtered_file);
+    `$intersect_command`;
+    my $tier1hc_file = $build->somatic_workflow_input('tier_1_snp_high_confidence_file');
+    my $tier1hc_filtered_file = $data_directory . "hf1_tier1_filtered_snp_high_confidence.csv";
+    $intersect_command = sprintf($intersect_string,$tier1hc_file,$fully_filtered_file,$tier1hc_filtered_file);
+    `$intersect_command`;
+
+
+    my $tier2_file = $build->somatic_workflow_input('tier_2_snp_file');
+    my $tier2_filtered_file = $data_directory . "/t2f_tier2_filtered_snp.csv";
+    $intersect_command = sprintf($intersect_string,$tier2_file,$fully_filtered_file,$tier2_filtered_file);
+    `$intersect_command`;
+    my $tier2hc_file = $build->somatic_workflow_input('tier_2_snp_high_confidence_file');
+    my $tier2hc_filtered_file = $data_directory . "hf2_tier2_filtered_snp_high_confidence.csv";
+    $intersect_command = sprintf($intersect_string,$tier2hc_file,$fully_filtered_file,$tier2hc_filtered_file);
+    `$intersect_command`;
+
+
+    my $tier3_file = $build->somatic_workflow_input('tier_3_snp_file');
+    my $tier3_filtered_file = $data_directory . "/t3f_tier3_filtered_snp.csv";
+    $intersect_command = sprintf($intersect_string,$tier3_file,$fully_filtered_file,$tier3_filtered_file);
+    `$intersect_command`;
+    my $tier3hc_file = $build->somatic_workflow_input('tier_3_snp_high_confidence_file');
+    my $tier3hc_filtered_file = $data_directory . "hf3_tier3_filtered_snp_high_confidence.csv";
+    $intersect_command = sprintf($intersect_string,$tier3hc_file,$fully_filtered_file,$tier3hc_filtered_file);
+    `$intersect_command`;
+
+    my $tier4_file = $build->somatic_workflow_input('tier_4_snp_file');
+    my $tier4_filtered_file = $data_directory . "/t4f_tier4_filtered_snp.csv";
+    $intersect_command = sprintf($intersect_string,$tier4_file,$fully_filtered_file,$tier4_filtered_file);
+    `$intersect_command`;
+    my $tier4hc_file = $build->somatic_workflow_input('tier_4_snp_high_confidence_file');
+    my $tier4hc_filtered_file = $data_directory . "hf4_tier4_filtered_snp_high_confidence.csv";
+    $intersect_command = sprintf($intersect_string,$tier4hc_file,$fully_filtered_file,$tier4hc_filtered_file);
+    `$intersect_command`;
     
     return 1;
 
