@@ -556,8 +556,12 @@ sub start {
     }
 
 #    $params{workflow} = $workflow;
-    
-    return $self->_launch(%params);
+
+    return unless $self->_launch(%params);
+
+    #If a build has been requested, this build starting fulfills that request.
+    $self->model->build_requested(0);
+    return 1;
 }
 
 sub restart {
