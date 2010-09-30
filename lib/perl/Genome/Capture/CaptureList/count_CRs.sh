@@ -29,7 +29,7 @@ echo "" > ${output_file};
 	# CR1
 	set g1 = `grep AS $f | wc -l`;
 	echo "\tCR1:" $g1;
-        grep AS $f > ${output_file};
+        grep AS $f >> ${output_file};
 	# CR2
 	set g2 = `more ${f}.CR2 | wc -l`;
 	echo "\tCR2:" $g2;
