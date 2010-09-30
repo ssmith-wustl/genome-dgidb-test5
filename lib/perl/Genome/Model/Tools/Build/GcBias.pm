@@ -48,14 +48,13 @@ sub help_detail {
 sub execute {
 
     my $self = shift;
-    $DB::single=1;
-=cut
+
     #test architecture to make sure bam-window program can run (req. 64-bit)
     unless (`uname -a` =~ /x86_64/) {
         $self->error_message("Must run on a 64 bit machine");
         die;
     }
-=cut
+
     #declare optional arguments
     my $bam_file;
     my $mean_read_length;
@@ -112,9 +111,6 @@ sub execute {
 
     #run bam-window on bam file
     my $bam_window_output_file = $self->bam_window_output;
-
-
-=cut
     `/gsc/pkg/bio/bamwindow/bamwindow-v0.1/bam-window -s -w 1000 -q 1 $bam_file > $bam_window_output_file`;
 
     #gather gc-content information
@@ -148,9 +144,7 @@ sub execute {
     $bw_fh->close;
 
     #print coverage plus gc-content info into ".withgc" file
-=cut
     my $gc_file = $bam_window_output_file . ".withgc";
-=cut
     my $gc_fh = new IO::File $gc_file,"w";
     print $gc_fh "chr\tpos\tcoverage\tgc_content\n";
     for my $chr (sort keys %covdata) {
@@ -160,7 +154,7 @@ sub execute {
         }
     }
     $gc_fh->close;
-=cut
+
     #call R script to calculate normalized values per gc-content bin
     my $gc_bias_rpt_file = $self->gc_bias_report_output;
     my $rlibrary = "gcbias_lib.R";
@@ -172,14 +166,9 @@ sub execute {
     else {
         $cmd = "gc_cov_bins(in.file='$gc_file',out.file='$gc_bias_rpt_file',mean_read_length='$mean_read_length');";
     }
-    print "$cmd\n";
     my $cmd_Rcall = Genome::Model::Tools::R::CallR->create(command=>$cmd,library=>$rlibrary);
     $cmd_Rcall->execute;
 
     return 1;
 }
 1;
-
-
-
-
