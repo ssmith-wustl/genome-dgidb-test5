@@ -5,11 +5,11 @@ gc_cov_bins = function (in.file,out.file,mean_read_length,mean_coverage=NULL) {
 #read the input data
 x = read.table(in.file,header=TRUE,sep="\t",quote="");
 mean_read_length = as.numeric(mean_read_length);
-mean_coverage = as.numeric(mean_coverage);
 
 #calculate the mean_coverage if not given
 #Note: 1000bp windows are currently hard-coded in gc-bias tool bam-window call
 if (is.null(mean_coverage)) { mean_coverage = mean(x$coverage) * mean_read_length / 1000; }
+else { mean_coverage = as.numeric(mean_coverage); }
 
 #calculate total reads
 total_reads = sum(x$coverage);
