@@ -143,8 +143,8 @@ sub execute {
 sub _assign_instrument_data {
     my ($self, $instrument_data) = @_;
 
-    # Solexa needs to have the copy sequences file pse run ok
-   if ( $instrument_data->sequencing_platform eq 'solexa' ) {
+    # Non imported solexa needs to have the copy sequences file pse run ok
+   if ( $instrument_data->sequencing_platform eq 'solexa' and $instrument_data->class !~ /imported/i ) {
        my $index_illumina = $instrument_data->index_illumina;
        if ( not $index_illumina ) {
            $self->error_message('No index illumina for solexa instrument data '.$instrument_data->id);
