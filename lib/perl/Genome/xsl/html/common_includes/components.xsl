@@ -24,8 +24,10 @@
     <link rel="stylesheet" href="/res/css/icons.css" type="text/css" media="screen, projection"/>
     <link rel="stylesheet" href="/res/css/forms.css" type="text/css" media="screen, projection"/>
 
-    <!-- prevent console() statements from being called on non-dev servers -->
-    <script type="text/javascript" src="/res/js/app/console.js"></script>
+    <xsl:if test="$GENOME_DEV_MODE != 1">
+      <!-- prevent console() statements from being called on non-dev servers -->
+      <script type="text/javascript" src="/res/js/app/console.js"></script>
+    </xsl:if>
 
     <!-- jquery and jquery UI -->
     <link type="text/css" href="/res/js/pkg/jquery-ui-1.8.1.custom/css/gsc-theme/jquery-ui-1.8.1.custom.css" rel="stylesheet" />
@@ -40,9 +42,6 @@
     <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
     <link rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection"/>
 
-    <!-- fire up spiffy UI scripts-->
-    <script type="text/javascript" src="/res/js/app/ui-init.js"></script>
-
     <script type="text/javascript">
       <![CDATA[
                (function($) {
@@ -56,10 +55,15 @@
                cache.push(cacheImage);
                }
                }
+
+               $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><![CDATA[));
                })(jQuery)
 
       ]]>
     </script>
+
+    <!-- fire up spiffy UI scripts-->
+    <script type="text/javascript" src="/res/js/app/ui-init.js"></script>
 
   </xsl:template>
 
@@ -145,6 +149,15 @@
     <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_menu</xsl:comment>
 
     <ul>
+      <li>
+        <span id="updatedOn" class="app btn shadow"></span>
+      </li>
+      <li>
+        <a href="" id="refreshCache" class="app btn shadow">
+          <div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16"/></div>
+          Refresh Cache
+        </a>
+      </li>
       <li>
         <a href="/view/genome/status.html" class="app btn shadow">
           <div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16"/></div>

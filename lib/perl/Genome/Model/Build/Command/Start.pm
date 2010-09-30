@@ -141,13 +141,19 @@ sub execute {
     $self->build($build);
 
     # Launch the build
-    unless (
-        $build->start(
+    my $started;
+    eval {
+        $started = $build->start(
             server_dispatch => $server_dispatch,
             job_dispatch => $job_dispatch
-        )
-    ) {
-        $self->error_message("Failed to start new build: " . $build->error_message);
+        );
+    };
+
+    my $error = $@;
+    if($error or not $started) {
+        my $message = $error || $build->error_message;
+        $self->error_message("Failed to start new build: " . $message);
+        $build->delete;
         return;
     }
 

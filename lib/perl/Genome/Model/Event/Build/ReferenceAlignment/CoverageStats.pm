@@ -29,8 +29,10 @@ sub execute {
         return;
     }
     my $bed_file = $self->build->region_of_interest_set_bed_file;
+    my $log_file = $self->build->log_directory;
     my %coverage_stats_params = (
         output_directory => $coverage_dir,
+        log_directory => $log_file,
         bed_file => $bed_file,
         bam_file => $self->build->whole_rmdup_bam_file,
         minimum_depths => $self->build->minimum_depths,

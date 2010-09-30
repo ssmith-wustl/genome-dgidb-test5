@@ -69,7 +69,7 @@ sub get_bam_content {
     #my $pileup_file = $build->bam_pileup_file;
     #$self->status_message("Using pileup file $pileup_file to generate Bam coverage.");
     #my $coverage = Genome::Model::Tools::Sam::Coverage->create(pileup_file=>$pileup_file);
-    my $ref_build = $build->model->reference_build;
+    my $ref_build = $build->model->reference_sequence_build;
     my $reference_file = $ref_build->full_consensus_path('fa');
     my $aligned_reads = $build->whole_rmdup_bam_file;
     unless (-s $aligned_reads){
@@ -139,7 +139,7 @@ sub get_maq_content {
     my $accumulated_alignments_file = $build->whole_rmdup_map_file;
     unless (Genome::Model::Tools::Maq::Mapcheck->execute(
             use_version => $build->maq_version_for_pp_parameter,
-            bfa_file => $model->reference_build->full_consensus_path('bfa'),
+            bfa_file => $model->reference_sequence_build->full_consensus_path('bfa'),
             map_file => $accumulated_alignments_file,
             output_file => $mapcheck_output,
         ) ) {
