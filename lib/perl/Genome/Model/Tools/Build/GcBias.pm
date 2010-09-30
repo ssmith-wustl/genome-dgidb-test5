@@ -42,7 +42,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    "This script takes in a build-id or just a .bam file (plus mean read-length associated with reads in that .bam file) and calculates a coverage value and a count of total reads falling into each of 10 gc-content bins. Bins are divided in terms of gc-content percentage, 0-10, 11-20, and so on. Coverage is reported first non-normalized, and then normalized based on the mean coverage across the entire genome.Read counts are reported in both fashions as well. An offshoot output file for this script is the bam-window output, and also a second file containing the gc-content for each window represented in the bam-window output. This second file is placed next to the bam-window output, having the same filename along with the suffix \".withgc\"."
+    "RUN ON 64 BIT BLADE. This script takes in a build-id or just a .bam file (plus mean read-length associated with reads in that .bam file) and calculates a coverage value and a count of total reads falling into each of 10 gc-content bins. Bins are divided in terms of gc-content percentage, 0-10, 11-20, and so on. Coverage is reported first non-normalized, and then normalized based on the mean coverage across the entire genome.Read counts are reported in both fashions as well. An offshoot output file for this script is the bam-window output, and also a second file containing the gc-content for each window represented in the bam-window output. This second file is placed next to the bam-window output, having the same filename along with the suffix \".withgc\"."
 }
 
 sub execute {
