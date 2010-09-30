@@ -173,8 +173,6 @@ sub execute {
     #If we did want to do this, shouldn't launch until after we commit.  But even still it may not be a good idea.
     #system "$browser $uri";
 
-    #If a build has been requested, this build fulfills that request.
-    $model->build_requested(0);
     return 1;
 }
 
