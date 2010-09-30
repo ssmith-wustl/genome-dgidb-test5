@@ -35,6 +35,9 @@
     <script type="text/javascript" src="/res/js/pkg/jquery.js"></script>
     <script type="text/javascript" src="/res/js/pkg/jquery-ui.js"></script>
 
+    <!-- jquery.easydate for natural time displays -->
+    <script type="text/javascript" src="/res/js/pkg/jquery.easydate.js"></script>
+
     <!-- jquery.masonry to arrange the object info boxes-->
     <script type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
 
@@ -123,6 +126,7 @@
 
     <div class="control_bar app rounded-bottom shadow">
       <div class="control_bar_menu" id="bar_menu">
+        <xsl:call-template name="control_bar_cache_info"/>
         <xsl:call-template name="control_bar_menu"/>
       </div>
 
@@ -136,6 +140,7 @@
     <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_view</xsl:comment>
     <div class="control_bar view shadow">
       <div class="control_bar_menu" id="bar_menu">
+        <xsl:call-template name="control_bar_cache_info"/>
         <xsl:call-template name="control_bar_menu"/>
       </div>
 
@@ -148,16 +153,7 @@
   <xsl:template name="control_bar_menu">
     <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_menu</xsl:comment>
 
-    <ul>
-      <li>
-        <span id="updatedOn" class="app btn shadow"></span>
-      </li>
-      <li>
-        <a href="" id="refreshCache" class="app btn shadow">
-          <div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16"/></div>
-          Refresh Cache
-        </a>
-      </li>
+    <ul class="app_menu">
       <li>
         <a href="/view/genome/status.html" class="app btn shadow">
           <div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16"/></div>
@@ -171,6 +167,23 @@
         </a>
       </li>
     </ul>
+  </xsl:template>
+
+  <!-- cache info block for control bars -->
+  <xsl:template name="control_bar_cache_info">
+    <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_cache_info</xsl:comment>
+
+    <div class="cache_info">
+      <div class="cache_time">
+        <p>
+          View generated<br/>
+          <strong><span id="updatedOn"></span></strong>
+        </p>
+      </div>
+      <div class="cache_refresh">
+        <a class="btn_cache_refresh rounded" id="refreshCache" title="Refresh Cache"></a>
+      </div>
+    </div>
   </xsl:template>
 
   <!-- basic footer -->
