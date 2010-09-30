@@ -541,8 +541,8 @@ sub RegprintVCR{
 	printf "\:tp%s",$reg->{type} if(defined $reg->{type});
 	printf "\:sz%s",$reg->{size} if(defined $reg->{size});
 	printf "\:sc%s",$reg->{score} if(defined $reg->{score});
-	printf "\:nrd1%s", $reg->{nreads1} if(defined $reg->{nreads1});# && !defined $reg->{normal});
-	printf "\:nrd2%s", $reg->{nreads2} if(defined $reg->{nreads2});# && !defined $reg->{tumor});
+	printf "\:nrdF%s", $reg->{nreads1} if(defined $reg->{nreads1});# && !defined $reg->{normal});
+	printf "\:nrdS%s", $reg->{nreads2} if(defined $reg->{nreads2});# && !defined $reg->{tumor});
 	printf "\:Nsp%s", $reg->{normal} if(defined $reg->{normal});
 	printf "\:Tsp%s", $reg->{tumor} if(defined $reg->{tumor});
 	printf "\:Ncn%s", $reg->{normal_cn} if(defined $reg->{normal_cn});
@@ -551,8 +551,8 @@ sub RegprintVCR{
   }
   else{
 	printf "%s\|%s\:%s\:%s\:%s", $tag, $reg->{chr1}, $reg->{start}, $reg->{chr2}, $reg->{end};
-	printf "\:nrd1%s", $reg->{nreads1} if(defined $reg->{nreads1});# && !defined $reg->{normal});
-	printf "\:nrd2%s", $reg->{nreads2} if(defined $reg->{nreads2});# && !defined $reg->{tumor});
+	printf "\:nrdF%s", $reg->{nreads1} if(defined $reg->{nreads1});# && !defined $reg->{normal});
+	printf "\:nrdS%s", $reg->{nreads2} if(defined $reg->{nreads2});# && !defined $reg->{tumor});
 	printf "\:Nsp%s", $reg->{normal} if(defined $reg->{normal});
 	printf "\:Tsp%s", $reg->{tumor} if(defined $reg->{tumor});
 	printf "\t";
@@ -678,7 +678,8 @@ sub ReadRegions{
   while(<SV>){
     chomp;
     my $reg;
-    my @u=split $delimiter;
+    #my @u=split $delimiter;
+    my @u = split(/\s+/,$_); 
     if($#u < 2 || $u[0] =~ /^#/){
 	next;
     }
