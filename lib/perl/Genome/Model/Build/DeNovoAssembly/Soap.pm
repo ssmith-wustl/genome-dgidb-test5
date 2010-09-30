@@ -26,6 +26,27 @@ sub create {
 }
 
 #< Files >#
+#pga-specific
+sub soap_pga_output_files_directory {
+    return $_[0]->data_directory.'/PGA';
+}
+
+sub pga_file_prefix {
+    return $_[0]->model->subject_name.'_PGA';
+}
+
+sub pga_agp_file {
+    return $_[0]->soap_pga_output_files_directory.'/'.$_[0]->pga_file_prefix.'.agp';
+}
+
+sub pga_contigs_fasta_file {
+    return $_[0]->soap_pga_output_files_directory.'/'.$_[0]->pga_file_prefix.'.contigs.fa';
+}
+
+sub pga_scaffolds_fasta_file {
+    return $_[0]->soap_pga_output_files_directory.'/'.$_[0]->pga_file_prefix.'.scaffolds.fa';
+}
+#end pga-specific
 
 sub soap_output_dir_and_file_prefix {
     return $_[0]->data_directory.'/'.$_[0]->file_prefix;

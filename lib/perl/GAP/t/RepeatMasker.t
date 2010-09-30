@@ -15,8 +15,8 @@ BEGIN {
 }
 
 my $command = GAP::Command::RepeatMasker->create(
-    fasta_file => File::Basename::dirname(__FILE__).'/data/BACSTEFNL_Contig694.fasta',
-    repeat_library => '/gsc/var/lib/repeat/Trichinella_pseudospiralis_1.0_080103.rep', 
+    fasta_file => File::Basename::dirname(__FILE__).'/data/short_ctg.dna',
+    repeat_library => '/gsc/var/lib/repeat/Trichinella_spiralis-3.7.1_070320.rep', 
     masked_fasta => '/tmp/repeat_masker_masked_fasta.fa',
 );
 isa_ok($command, 'GAP::Command::RepeatMasker');

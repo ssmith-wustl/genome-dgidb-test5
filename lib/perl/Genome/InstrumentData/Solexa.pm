@@ -228,9 +228,13 @@ EOS
             calculate => q| GSC::RunLaneSolexa->get($id); |,
             calculate_from => ['id']
         },
-
-
-
+        # Index Illumina
+        index_illumina => {
+            doc => 'Index Illumina from LIMS.',
+            is => 'GSC::IndexIllumina',
+            calculate => q| GSC::IndexIllumina->get(analysis_id=>$id); |,
+            calculate_from => [ 'id' ]
+        },
         # basic relationship to the "source" of the lane
         library         => { is => 'Genome::Library', id_by => ['library_id'] },
         library_id      => { is => 'Number', },
