@@ -93,7 +93,6 @@ sub execute {
             $self->status_message("Failed to start build for model '$model_id'");
         } else {
             $self->_builds_started($self->_builds_started + 1);
-            $model->build_requested(0); # TODO move this to build start
         }
     }
 
