@@ -10,6 +10,7 @@ BEGIN {
 
 use above 'Genome';
 
+require Genome::InstrumentData::Solexa;
 use Test::More tests => 51;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
@@ -33,6 +34,11 @@ my $sample = Genome::Sample->create(
 #my $sample = Genome::Sample->get(name => 'TEST-patient1-sample1');
 isa_ok($sample, 'Genome::Sample');
 
+my $ii = Test::MockObject->new();
+$ii->set_always('copy_sequence_files_confirmed_successfully', 1);
+no warnings;
+*Genome::InstrumentData::Solexa::index_illumina = sub{ return $ii };
+use warnings;
 my $instrument_data_1 = Genome::InstrumentData::Solexa->create(
     id => '-100',
     sample_id => $sample->id,
