@@ -337,7 +337,7 @@ sub reference_coverage_job_classes {
     if ($self->dna_type eq 'cdna' || $self->dna_type eq 'rna') {
         #TODO this needs to be changed to reference build
         my $reference_sequence_build = $model->reference_sequence_build;
-        if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/) {
+        if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/i) {
             my @steps = (
                 'Genome::Model::Event::Build::ReferenceAlignment::RefCov',
             );
@@ -442,7 +442,7 @@ sub reference_coverage_objects {
     my $model = shift;
 
     my $reference_sequence_build = $model->reference_sequence_build;
-    if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/) {
+    if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/i) {
         return 'all_sequences';
     }
     my @inputs = Genome::Model::Input->get(model_id => $model->id, name => 'region_of_interest_set_name');
