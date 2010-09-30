@@ -21,6 +21,7 @@ echo ${output_file}
 if(-e ${output_file}) then
     rm ${output_file}
 endif
+echo "" >> ${output_file};
 	set f_ctx = $f"_ctx";
 	echo "${f_ctx}";
 	echo $f;
