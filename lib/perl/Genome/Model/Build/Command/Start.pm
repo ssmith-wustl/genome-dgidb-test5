@@ -141,13 +141,19 @@ sub execute {
     $self->build($build);
 
     # Launch the build
-    unless (
-        $build->start(
+    my $started;
+    eval {
+        $started = $build->start(
             server_dispatch => $server_dispatch,
             job_dispatch => $job_dispatch
-        )
-    ) {
-        $self->error_message("Failed to start new build: " . $build->error_message);
+        );
+    };
+
+    my $error = $@;
+    if($error or not $started) {
+        my $message = $error || $build->error_message;
+        $self->error_message("Failed to start new build: " . $message);
+        $build->delete;
         return;
     }
 
@@ -167,6 +173,8 @@ sub execute {
     #If we did want to do this, shouldn't launch until after we commit.  But even still it may not be a good idea.
     #system "$browser $uri";
 
+    #If a build has been requested, this build fulfills that request.
+    $model->build_requested(0);
     return 1;
 }
 

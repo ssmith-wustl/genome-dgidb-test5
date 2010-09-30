@@ -81,7 +81,7 @@ sub execute {
     }
 
     my @pses = $self->load_pses;
-    $self->status_message('Going to process ' . (scalar @pses) . ' PSEs.');
+    $self->status_message('Processing '.scalar(@pses).' PSEs');
 
     #for efficiency--load the data we need all together instead of separate queries for each PSE
     $self->preload_data(@pses);
@@ -90,7 +90,7 @@ sub execute {
 
     PSE: 
     foreach my $pse (@pses) {
-        $self->status_message('Starting PSE #' . $pse->id);
+        $self->status_message('Starting PSE ' . $pse->id);
 
         unless($self->check_pse($pse)) {
             next PSE;
@@ -332,13 +332,15 @@ sub load_pses {
 
     @pses = sort $pse_sorter @pses;
 
+    $self->status_message('Found '.scalar(@pses));
+
     my @pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
     my %skip = map { ( ($_->param_value =~ /genotyper/) ? ($_->pse_id => 1) : () ) } @pse_params;
     #my @pses = GSC::PSE->get(id => [keys %skip]);
     #for my $pse(@pses) { $_->pse_status("wait") };
     #(App::DB->sync_database and App::DB->commit) or die;
     #exit;
-    $self->status_message("Skipping " . scalar(%skip) . " PSEs with genotyper data");
+    $self->status_message("Skipping " . scalar(keys %skip) . " PSEs with genotyper data") if %skip;
     @pses = grep(!$skip{$_->pse_id}, @pses);
 
     # Don't bite off more than we can process in a couple hours
@@ -394,6 +396,8 @@ sub check_pse {
 
     my $pse_id = $pse->id;
 
+    $self->status_message('Check PSE');
+
     my ($instrument_data_type) = $pse->added_param('instrument_data_type');
     my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
 
@@ -434,6 +438,23 @@ sub check_pse {
             . " id '$instrument_data_id'.  PSE_ID is '$pse_id'");
         return;
     }
+
+    if ( $instrument_data_type =~ /solexa/i ) {
+        # solexa inst data nee to have the copy sequence file pse successful
+        my $index_illumina = $genome_instrument_data->index_illumina;
+        if ( not $index_illumina ) {
+            $self->error_message('No index illumina for solexa instrument data '.$instrument_data_id);
+            return;
+        }
+        if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
+            $self->error_message(
+                'Solexa instrument data ('.$instrument_data_id.') does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted.'
+            );
+            return;
+        }
+    }
+
+    $self->status_message('Check PSE OK');
 
     return 1;
 }
