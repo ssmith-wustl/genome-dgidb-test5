@@ -20,6 +20,7 @@ use Bio::Seq;
 use Carp;
 use File::Path;
 use MIME::Lite;
+use File::Path 'make_path';
 
 class Genome::Model::GenePrediction::Bacterial::Command::Finish {
     is  => 'Command',
@@ -61,7 +62,6 @@ class Genome::Model::GenePrediction::Bacterial::Command::Finish {
         sequence_set_id => {
             is  => 'Integer',
             doc => "sequence set id for genome assembly",
-
         },
     ],
     has_optional => [
@@ -87,7 +87,6 @@ class Genome::Model::GenePrediction::Bacterial::Command::Finish {
         },
 
     ],
-
 };
 
 
@@ -115,6 +114,7 @@ EOS
 
 sub execute
 {
+    $DB::single = 1;
     my $self = shift;
     my $ssid = $self->sequence_set_id;
 
@@ -124,7 +124,7 @@ sub execute
     my $cwd     = getcwd();
     my @bugline = split( '/', $cwd );
     my ( $bug, $version, $hgmi_path, $acedb_scripts_path, $acedb_path,
-        $acedb_acefile_path, $acedb_scripts_HGMI_files );
+        $acedb_acefile_path, $acedb_scripts_HGMI_files, $acedb_installation_path );
 
 #This section chops the directory struture up for each of the project types: HGMI, HMPP, ENTER and BACTER
     $bug       = $self->assembly_name;
@@ -140,39 +140,37 @@ sub execute
         . "/Dumps";
     unless ( -d $hgmi_dumps_path )
     {
-        croak
+        confess
             "The directory '$hgmi_dumps_path', hgmi_dumps_path does not exist, in bap_finish_project: $OS_ERROR";
     }
     unless ( $cwd eq $hgmi_dumps_path )
     {
         chdir($hgmi_dumps_path)
-            or croak
+            or confess
             "Failded to change to '$hgmi_dumps_path'...from bap_finish_project: $OS_ERROR";
     }
 
-    # FIXME: acedb versions need to be fixed
-    if ( $self->project_type =~ /HGMI/ )
-    {
-
-#$hgmi_path = qq{/gscmnt/278/analysis/HGMI};                                                         #HGMI projects
+    # FIXME This is so sloppy there are no words to adequately describe it. Holy shit would be a good start.
+    # FIXME For now, there is an ace installation directory (for HGMI, at /gscmnt/278/analysis/HGMI) that has
+    # these wspec and databases directories that are required for ace upload to work. I'd like to look into
+    # getting rid of those in the near future...
+    if ($self->project_type =~ /HGMI/) {
+        $acedb_installation_path = "/gscmnt/278/analysis/HGMI/Acedb/";
         my $acedb_version_long = $self->version_lookup($self->acedb_version);
+        $acedb_installation_path .= $acedb_version_long;
+
         $acedb_path         = $hgmi_path . "/Acedb/" . $acedb_version_long;
         $acedb_scripts_path = $hgmi_path . "/Acedb/Scripts";
         $acedb_scripts_HGMI_files = $hgmi_path . "/Acedb/Scripts/HGMI_files";
 
-        unless ( -d $acedb_path )
-        {
-            croak
-                "The directory '$acedb_path', acedb_path does not exist, in bap_finish_project: $OS_ERROR";
+        unless (-d $acedb_path) {
+            confess "The directory '$acedb_path' does not exist!";
         }
 
-        $acedb_acefile_path
-            = $acedb_path . "/ace_files/" . $self->locus_id . "/" . $version;
+        $acedb_acefile_path = $acedb_path . "/ace_files/" . $self->locus_id . "/" . $version;
 
-        unless ( -d $acedb_acefile_path )
-        {
-            croak
-                "The directory '$acedb_acefile_path', acedb_acefile_path does not exist, in bap_finish_project: $OS_ERROR";
+        unless ( -d $acedb_acefile_path) {
+            confess "The directory '$acedb_acefile_path', acedb_acefile_path does not exist, in bap_finish_project: $OS_ERROR";
         }
     }
     elsif ( $self->project_type =~ /HMPP/ )
@@ -299,7 +297,7 @@ sub execute
     }
     else
     {
-        croak
+        confess
             "project-type: ".$self->project_type.", not set correctly!  Please see documentation.\n\n";
     }
 
@@ -312,13 +310,13 @@ sub execute
 
     unless ( -d $hgmi_dumps_path )
     {
-        croak
+        confess
             "The directory '$hgmi_dumps_path', hgmi_dumps_path does not exist, in bap_finish_project: $OS_ERROR";
     }
     unless ( $cwd eq $hgmi_dumps_path )
     {
         chdir($hgmi_dumps_path)
-            or croak
+            or confess
             "Failded to change to '$hgmi_dumps_path'...from bap_finish_project: $OS_ERROR";
     }
     my @phase_number = ( 0 .. 5 );
@@ -353,7 +351,7 @@ sub execute
             my $rv = system($dump_cmd);
             unless($rv == 0) {
                 $self->error_message("ace dumping failed from prod with sequence set id $ssid");
-                croak;
+                confess;
             }
         }
         else
@@ -366,7 +364,7 @@ sub execute
             my $rv = system($dump_cmd);
             unless($rv == 0) {
                 $self->error_message("ace dumping failed from dev with sequence set id $ssid");
-                croak;
+                confess;
             }
         }
 
@@ -384,13 +382,16 @@ sub execute
     # HGMI Ace_Parse_Script and RT_Writer
 ######################################
 
+    $DB::single = 1;
     if ( $cwd ne $acedb_scripts_path )
     {
+        $self->status_message("Changing directory to $acedb_scripts_path");
+        make_path($acedb_scripts_path) unless -d $acedb_scripts_path;
         chdir($acedb_scripts_path);
     }
 
     opendir( ACEDIR, "$acedb_acefile_path" )
-        or croak "Can't open acefile path: $!\n";
+        or confess "Can't open acefile path: $!\n";
 
     my @acefiles = ();
 
@@ -402,7 +403,7 @@ sub execute
         = "parsefiles_wens_" . $self->locus_id . "_" . $version . ".sh";
 
     open( PARSEFILE, "> $parsefile_name" )
-        or croak "Can not open new parse file: $!\n";
+        or confess "Can not open new parse file: $!\n";
 
     my $parse = "parse";
 
@@ -410,7 +411,7 @@ sub execute
     print PARSEFILE
         "#if you call script from bash, tace will follow links!\n\n";
     print PARSEFILE "TACE=/gsc/scripts/bin/tace\n";
-    print PARSEFILE "ACEDB=`pwd`\n\n";
+    print PARSEFILE "ACEDB=" . $acedb_scripts_path . "\n\n";
     print PARSEFILE "export ACEDB\n\n";
     print PARSEFILE "echo \$acedb\n\n";
     print PARSEFILE "\$TACE << EOF\n\n";
@@ -438,6 +439,7 @@ sub execute
 
     if ( $cwd3 ne $acedb_path )
     {
+        $self->status_message("Changing directory to $acedb_path");
         chdir($acedb_path);
     }
 
@@ -469,7 +471,7 @@ sub execute
 
         # get p5_hybrid and acedb counts
         opendir( ACEDIR2, $acedb_acefile_path )
-            or croak "Can't open $acedb_acefile_path path: $OS_ERROR\n";
+            or confess "Can't open $acedb_acefile_path path: $OS_ERROR\n";
 
         my @acefileseek = ();
 
@@ -496,7 +498,7 @@ sub execute
                 {
 
                     open( ACEFILE, $acefile_search )
-                        or croak "Can't open $acefile_search: $OS_ERROR\n";
+                        or confess "Can't open $acefile_search: $OS_ERROR\n";
                     my @acecount = ();
                     while ( my $aceline = <ACEFILE> )
                     {
@@ -513,10 +515,11 @@ sub execute
 
                     #connecting to acedb database
 
+                    $DB::single = 1;
                     my $db = Ace->connect(
-                        -path    => "$acedb_path",
+                        -path    => "$acedb_installation_path",
                         -program => "$program"
-                    ) or croak "ERROR: cannot connect to acedb\n";
+                    ) or confess "ERROR: cannot connect to acedb\n";
 
                     #mining data from acedb
                     # FIXME: metarna goes here.
@@ -611,13 +614,14 @@ sub execute
 
     if ( $cwd2 ne $acedb_scripts_HGMI_files )
     {
+        $self->status_message("Changing directory to $acedb_scripts_HGMI_files");
         chdir($acedb_scripts_HGMI_files);
     }
     my $rtfile_name
         = $self->project_type . "_rt_let_" . $self->locus_id . "_" . $version . ".txt";
 
     open( RTFILE, "> $rtfile_name" )
-        or croak "Can not open new RT file: $OS_ERROR\n";
+        or confess "Can not open new RT file: $OS_ERROR\n";
     print RTFILE
         $bug,", ",$self->locus_id," , ",$self->project_type," project has finished in MGAP.\n\n";
 

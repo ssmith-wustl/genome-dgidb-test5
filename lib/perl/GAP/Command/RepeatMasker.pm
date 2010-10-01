@@ -107,10 +107,12 @@ sub execute {
     	$masker = Bio::Tools::Run::RepeatMasker->new(species => $self->species);
     } 
     
+    # FIXME RepeatMasker emits a warning when no repetitive sequence is found. I'd prefer to not have
+    # this displayed, as this situation is expected and the warning message just clutters the logs.
     while (my $seq = $input_fasta->next_seq()) {
         $masker->run($seq);
-        my $masked_seq = $masker->masked_seq();     
-        next unless defined $masked_seq;
+        my $masked_seq = $masker->masked_seq();
+        $masked_seq = $seq unless defined $masked_seq; # If no masked sequence found, write original seq to file
         $masked_fasta->write_seq($masked_seq);
     }   
 

@@ -213,11 +213,10 @@ sub gather_details
 		'assembly_version' => $assembly_version,
 		'pipe_version' => $pipe_version,
 		'path_base' => $path,
-                        );
+    );
 
-    if(defined($self->dev)) { $params{dev} = 1; }
-    if(defined($self->skip_acedb_parse)) { $params{no_acedb} = 1;}
-
+    $params{dev} = $self->dev;
+    $params{no_acedb} = $self->skip_acedb_parse;
     print Dumper(\%params),"\n";
     return %params;
 }

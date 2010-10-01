@@ -52,7 +52,7 @@ for my $class ( @SUB_COMMAND_CLASSES ) {
 
 sub execute_with_shell_params_and_exit {
     my $class = shift;
-    if ($ARGV[0] eq 'tools') {
+    if ($ARGV[0] && $ARGV[0] eq 'tools') {
         # hack for our special lopsided namespace
         $Command::entry_point_class = 'Genome::Model::Tools';
         $Command::entry_point_bin = 'genome tools';
