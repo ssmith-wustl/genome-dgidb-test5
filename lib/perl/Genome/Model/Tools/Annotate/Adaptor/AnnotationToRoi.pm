@@ -111,8 +111,6 @@ sub execute {
         my @transcripts = Genome::Transcript->get(
             data_directory => \@annotation_data_dirs,
             transcript_name => $line->{transcript_name},
-            chrom_name => $line->{chromosome_name},
-            species => $species,
         );
         confess 'No transcripts found with name ' . $line->{transcript_name} unless @transcripts;
         confess 'Multiple transcripts found with name ' . $line->{transcript_name} if @transcripts > 1;
