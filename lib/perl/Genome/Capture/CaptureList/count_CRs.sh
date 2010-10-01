@@ -21,6 +21,7 @@ echo ${output_file}
 if(-e ${output_file}) then
     rm ${output_file}
 endif
+echo "" > ${output_file};
 	set f_ctx = $f"_ctx";
 	echo "${f_ctx}";
 	echo $f;
@@ -28,7 +29,7 @@ endif
 	# CR1
 	set g1 = `grep AS $f | wc -l`;
 	echo "\tCR1:" $g1;
-        grep AS $f > ${output_file};
+        grep AS $f >> ${output_file};
 	# CR2
 	set g2 = `more ${f}.CR2 | wc -l`;
 	echo "\tCR2:" $g2;
