@@ -36,7 +36,7 @@ class EGAP::Command::SplitFasta {
         genome_size => {
             is => 'Number',
             is_output => 1,
-            doc => 'Total number of bases in given fasta file',
+            doc => 'Total number of bases in given fasta file, might be a useful metric',
         },
     ],
 };
