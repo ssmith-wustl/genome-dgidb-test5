@@ -49,12 +49,14 @@ sub column_order { [ qw(
     transcript_amino_acid_length
     )]}
 
-sub sort_order {[qw( structure_start transcript_transcript_start transcript_transcript_stop )] }
+#sub sort_order {[qw( structure_start transcript_transcript_start transcript_transcript_stop )] }
+sub sort_order {[qw( structure_stop structure_start transcript_structure_id )] }
 
 sub file_resolver {
     my( $chrom_name, $data_directory) = @_;
 
-    return '/' . $data_directory . '/substructures/' . $chrom_name . '.csv';
+    #return '/' . $data_directory . '/substructures/' . $chrom_name . '.csv';
+    return '/' . $data_directory . '/substructures/' . $chrom_name . '.new.csv';
 }
 
 1;
