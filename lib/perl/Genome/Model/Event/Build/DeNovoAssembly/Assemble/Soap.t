@@ -31,17 +31,33 @@ my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
 ok($example_build, 'got example build') or die;
 
 # link input fastq files
-my $one_fastq = $example_build->end_one_fastq_file;
-symlink($one_fastq, $build->end_one_fastq_file);
-ok(-s $build->end_one_fastq_file, "Link $one_fastq") or die;
-
-my $two_fastq = $example_build->end_two_fastq_file;
-symlink($two_fastq, $build->end_two_fastq_file);
-ok(-s $build->end_two_fastq_file, "Linked $two_fastq") or die;
+my @assembler_input_files = $example_build->existing_assembler_input_files;
+for my $target ( @assembler_input_files ) {
+    my $basename = File::Basename::basename($target);
+    my $dest = $build->data_directory.'/'.$basename;
+    symlink($target, $dest);
+    ok(-s $dest, "linked $target to $dest");
+}
 
 # create
 my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap->create(build_id => $build->id);
 ok( $assemble, "Created soap assemble");
+$assemble->dump_status_messages(1);
+
+# check config file w/ fragment data and default insert size
+my @libraries = ( { fragment_fastq_file => 'fragment.fastq' } );
+my $config = $assemble->_get_config_for_libraries(@libraries);
+my $expected_config = <<CONFIG;
+max_rd_len=120
+[LIB]
+avg_ins=320
+reverse_seq=0
+asm_flags=3
+pair_num_cutoff=2
+map_len=60
+q=fragment.fastq
+CONFIG
+is($config, $expected_config, 'config for fragment file and default insert size');
 
 # lsf params
 my $lsf_params = $assemble->bsub_rusage;

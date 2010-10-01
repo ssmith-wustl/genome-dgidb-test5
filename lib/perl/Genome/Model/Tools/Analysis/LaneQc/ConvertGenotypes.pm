@@ -1,5 +1,5 @@
 
-package Genome::Model::Tools::Analysis::LaneQc::ConvertGentoypes;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Analysis::LaneQc::ConvertGenotypes;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
 # SearchRuns - Search the database for runs
@@ -22,7 +22,7 @@ use Genome;                                 # using the namespace authorizes Cla
 
 my %stats = ();
 
-class Genome::Model::Tools::Analysis::LaneQc::ConvertGentoypes {
+class Genome::Model::Tools::Analysis::LaneQc::ConvertGenotypes {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
@@ -45,7 +45,7 @@ EXAMPLE:	gmt analysis lane-qc convert-genotypes --birdseed-file GenomeWideSNP_6_
 EOS
 }
 
-sub help_detail {                           # this is what the user will see with the longer version of help. <---
+sub help_detail {                           # this is what the user will see with the longer version of help. <---	
     return <<EOS 
 
 EOS

@@ -85,15 +85,14 @@ sub execute {                               # replace with real execution logic.
 		
 		my $sample_output_dir = $output_dir . "/" . $sample_name;
 		mkdir($sample_output_dir) if(!(-d $sample_output_dir));
-		
 		print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
 
 		## get the bam file ##
 		
 		my $bam_file = $build_dir . "/alignments/" . $build_id . "_merged_rmdup.bam";
 
-		my $snp_file = $build_dir . "/sam_snp_related_metrics/filtered.indelpe.snps";
-		my $indel_file = $build_dir . "/sam_snp_related_metrics/indels_all_sequences.filtered";
+		my $snp_file = $build_dir . "/snp_related_metrics/snps_all_sequences.filtered";
+		my $indel_file = $build_dir . "/snp_related_metrics/indels_all_sequences.filtered";
 
 		if(-e $bam_file && -e $snp_file && -e $indel_file)
 		{

@@ -8,7 +8,7 @@ use IO::File;
 use Bit::Vector;
 
 class Genome::Model::Tools::Bmr::CompareWiggles {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has_input => [
     refseq_build_name => {
         is => 'String',

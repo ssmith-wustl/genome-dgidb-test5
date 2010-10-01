@@ -182,7 +182,8 @@ sub transcripts {
                 my $start = $variant{start};
                 my $stop = $variant{stop};
                 my $species = $transcript->species;
-                my $ref_seq = Genome::Model::Tools::Sequence->execute(species => $species,  chromosome => $chrom,  start => $start, stop => $stop, suppress_output => 1)->sequence;
+                Genome::Model::Tools::Sequence->class();
+                my $ref_seq = Genome::Model::Tools::Sequence::lookup_sequence(species => $species,  chromosome => $chrom,  start => $start, stop => $stop);
 
                 unless ($ref_seq eq $variant{reference}) {
                     $self->warning_message("Sequence on variant on chromosome $chrom between $start and $stop does not match $species reference!");
@@ -292,7 +293,7 @@ sub _transcript_annotation {
     my %structure_annotation = $self->$method($transcript, \%variant, $main_structure) or return;
     
     $structure_annotation{deletion_substructures} = $deletion_substructures if $deletion_substructures;
-    my $conservation = $self->_ucsc_conservation_score(\%variant, $transcript);
+    my $conservation = $self->_ucsc_conservation_score(\%variant);
     if ($deletion_substructures){
         $structure_annotation{deletion_substructures} = $deletion_substructures;
     }
@@ -307,7 +308,7 @@ sub _transcript_annotation {
         transcript_version => $transcript->version,
         strand => $transcript->strand,
         gene_name  => $transcript->gene->name,
-        ucsc_cons => $self->_ucsc_conservation_score(\%variant, $transcript),
+        ucsc_cons => $self->_ucsc_conservation_score(\%variant),
         amino_acid_length => $transcript->amino_acid_length,
         ucsc_cons => $conservation,
     )
@@ -489,6 +490,7 @@ sub _transcript_annotation_for_cds_exon {
             # In the above example, first changed amino acid would be T.
             $trv_type = "frame_shift_" . lc $variant->{type};
             if ($self->{get_frame_shift_sequence}) {
+                $DB::single = 1;
                 my $aa_after_indel = $self->_apply_indel_and_translate($transcript, $structure, $variant);
                 $protein_string = "p." . $aa_after_indel . $protein_position . "fs";
             }
@@ -598,18 +600,17 @@ sub _apply_indel_and_translate{
     $sequence = $structure->phase_bases_before if $structure->phase_bases_before ne 'NULL';
     for my $substructure (@structures) {
         if ($substructure->structure_type eq 'flank') {
-            my $sequence_command = Genome::Model::Tools::Sequence->execute(
+            Genome::Model::Tools::Sequence->class();
+            my $flank_sequence = Genome::Model::Tools::Sequence::lookup_sequence(
                     chromosome => $transcript->chrom_name,
                     start => $substructure->structure_start,
                     stop => $substructure->structure_stop, 
                     build => $transcript->get_reference_build, 
-                    suppress_output => 1,
                     ); 
-            die "Unsuccessfully executed sequence fetch" unless $sequence_command;
-            my $flank_sequence = $sequence_command->sequence;
-                if ($transcript->strand eq '-1'){
-                    $flank_sequence = $self->reverse_complement($flank_sequence);
-                }
+            die "Unsuccessfully executed sequence fetch" unless $flank_sequence;
+            if ($transcript->strand eq '-1'){
+                $flank_sequence = $self->reverse_complement($flank_sequence);
+            }
             $sequence .= $flank_sequence;
         }
         else {
@@ -678,12 +679,13 @@ sub _coding_bases_after_position {
     
 # Find the UCSC conservation score for a piece of chromosome
 sub _ucsc_conservation_score {
-    my ($self, $variant, $transcript) = @_;
+    my ($self, $variant) = @_;
     return 'NULL' if $variant->{chromosome_name} =~ /^[MN]T/;
 
+    my $c = new MG::ConsScore(-location => $self->ucsc_conservation_directory);
+
     my $range = [ $variant->{start}..$variant->{stop} ] ;
-    my $conservation_score_lookup = Genome::Model::Tools::Annotate::LookupConservationScore->execute(chromosome => $variant->{chromosome_name}, coordinates => $range, species => $transcript->species, version => $self->annotation_build_version);
-    my $ref = $conservation_score_lookup->conservation_scores_results;
+    my $ref = $c->get_scores($variant->{chromosome_name},$range);
     my @ret;
     foreach my $item (@$ref)
     {

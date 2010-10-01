@@ -10,7 +10,8 @@ BEGIN {
 
 use above 'Genome';
 
-use Test::More tests => 39;
+require Genome::InstrumentData::Solexa;
+use Test::More tests => 51;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -33,6 +34,11 @@ my $sample = Genome::Sample->create(
 #my $sample = Genome::Sample->get(name => 'TEST-patient1-sample1');
 isa_ok($sample, 'Genome::Sample');
 
+my $ii = Test::MockObject->new();
+$ii->set_always('copy_sequence_files_confirmed_successfully', 1);
+no warnings;
+*Genome::InstrumentData::Solexa::index_illumina = sub{ return $ii };
+use warnings;
 my $instrument_data_1 = Genome::InstrumentData::Solexa->create(
     id => '-100',
     sample_id => $sample->id,
@@ -69,7 +75,7 @@ $pse_1->add_param('instrument_data_id', $instrument_data_1->id);
 $pse_1->add_param('subject_class_name', 'Genome::Sample');
 $pse_1->add_param('subject_id', $sample->id);
 $pse_1->add_param('processing_profile_id', $processing_profile->id);
-$pse_1->add_param('reference_sequence_build_id', $ref_seq_build->id);
+$pse_1->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
 my $instrument_data_2 = Genome::InstrumentData::Solexa->create(
     id => '-101',
@@ -95,7 +101,7 @@ $pse_2->add_param('instrument_data_id', $instrument_data_2->id);
 $pse_2->add_param('subject_class_name', 'Genome::Sample');
 $pse_2->add_param('subject_id', $sample->id);
 $pse_2->add_param('processing_profile_id', $processing_profile->id);
-$pse_2->add_param('reference_sequence_build_id', $ref_seq_build->id);
+$pse_2->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
 my $command_1 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
@@ -162,7 +168,7 @@ $pse_3->add_param('instrument_data_id', $instrument_data_3->id);
 $pse_3->add_param('subject_class_name', 'Genome::Sample');
 $pse_3->add_param('subject_id', $sample->id);
 $pse_3->add_param('processing_profile_id', $processing_profile->id);
-$pse_3->add_param('reference_sequence_build_id', $ref_seq_build->id);
+$pse_3->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
 my $instrument_data_4 = Genome::InstrumentData::Solexa->create(
     id => '-103',
@@ -188,7 +194,7 @@ $pse_4->add_param('instrument_data_id', $instrument_data_4->id);
 $pse_4->add_param('subject_class_name', 'Genome::Sample');
 $pse_4->add_param('subject_id', $sample->id);
 $pse_4->add_param('processing_profile_id', $processing_profile->id);
-$pse_4->add_param('reference_sequence_build_id', $ref_seq_build->id);
+$pse_4->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
 my $command_2 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
@@ -238,3 +244,114 @@ is($pse_4->pse_status, 'completed', 'fourth pse completed');
 
 my @members_2 = $group->models;
 is(scalar(@members_2) - scalar(@members), 2, 'two subsequent models added to the group');
+
+
+my $instrument_data_5 = Genome::InstrumentData::Solexa->create(
+    id => '-104',
+    sample_id => $sample->id,
+    sample_name => $sample->name,
+    flow_cell_id => 'TM-021',
+    lane => '5',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+);
+
+my $pse_5 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-12349',
+    ps_id => $ps->ps_id,
+);
+$pse_5->add_param('instrument_data_type', 'solexa');
+$pse_5->add_param('instrument_data_id', $instrument_data_5->id);
+$pse_5->add_param('subject_class_name', 'Genome::Sample');
+$pse_5->add_param('subject_id', $sample->id);
+$pse_5->add_param('processing_profile_id', $processing_profile->id);
+
+#omitting this to test failure case
+#$pse_5->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+my $de_novo_taxon = Genome::Taxon->get( species_name => 'Zinnia elegans' );
+
+my $de_novo_individual = Genome::Individual->create(
+    id => '-11',
+    name => 'AQID-test-individual-ze',
+    common_name => 'AQID11',
+    taxon_id => $taxon->id,
+);
+
+my $de_novo_sample = Genome::Sample->create(
+    id => '-2',
+    name => 'AQID-test-sample-ze',
+    common_name => 'normal',
+    taxon_id => $de_novo_taxon->id,
+    source_id => $de_novo_individual->id,
+);
+
+my $instrument_data_6 = Genome::InstrumentData::Solexa->create(
+    id => '-105',
+    sample_id => $de_novo_sample->id,
+    sample_name => $de_novo_sample->name,
+    flow_cell_id => 'TM-021',
+    lane => '6',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+);
+
+my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->create(
+    name => 'AQID-test-de-novo-pp',
+    assembler_name => 'velvet',
+    assembler_version => '0.7.57-64',
+    sequencing_platform => 'solexa',
+    read_processor => 'trimmer bwa-style --trim-qual-level 9000 --metrics-file this_is_a_test',
+);
+
+my $pse_6 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-12350',
+    ps_id => $ps->ps_id,
+);
+$pse_6->add_param('instrument_data_type', 'solexa');
+$pse_6->add_param('instrument_data_id', $instrument_data_6->id);
+$pse_6->add_param('subject_class_name', 'Genome::Sample');
+$pse_6->add_param('subject_id', $de_novo_sample->id);
+$pse_6->add_param('processing_profile_id', $de_novo_processing_profile->id);
+
+my $command_3 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+isa_ok($command_3, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
+ok($command_3->execute(), 'assign-queued-instrument-data executed successfully.');
+
+my $new_models_3 = $command_3->_newly_created_models;
+is(scalar(keys %$new_models_3), 1, 'the cron created another new model');
+
+my $models_changed_3 = $command_3->_existing_models_assigned_to;
+is(scalar(keys %$models_changed_3), 1, 'pse 5 added to existing non-capture model despite pp error');
+
+my $old_models_3 = $command_3->_existing_models_with_existing_assignments;
+is(scalar(keys %$old_models_3), 0, 'no other models were found with this data assigned');
+
+my @models_for_de_novo_sample = Genome::Model->get(
+    subject_class_name => 'Genome::Sample',
+    subject_id => $de_novo_sample->id,
+);
+is(scalar(@models_for_de_novo_sample), 1, 'found 1 models created for the de-novo subject');
+
+my($new_de_novo_model) = values %$new_models_3;
+ok($new_de_novo_model->build_requested, 'the cron set the new model to be built');
+my @de_novo_instrument_data = $new_de_novo_model->instrument_data;
+is(scalar(@de_novo_instrument_data), 1, 'the new model has one instrument data assigned');
+is($de_novo_instrument_data[0], $instrument_data_6, 'is the expected instrument data');
+
+my($changed_model_3) = values %$models_changed_3;
+is($changed_model_3, $new_model, 'latest addition is to the original model from the first run');
+
+is($pse_5->pse_status, 'inprogress', 'fifth pse inprogress (due to incomplete information)');
+is($pse_6->pse_status, 'completed', 'sixth pse completed');

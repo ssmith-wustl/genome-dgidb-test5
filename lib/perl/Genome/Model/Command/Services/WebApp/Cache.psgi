@@ -120,7 +120,7 @@ sub {
 
     my $gen = sub {
         my $rest_app = $Genome::Model::Command::Services::WebApp::Main::app{'Rest.psgi'};
-        my $resp; 
+        my $resp;
         if ($class->lock($url)) {
 
             ## override HTTP_ACCEPT to tell it we want html
@@ -129,6 +129,17 @@ sub {
 
             $resp = Plack::Util::run_app $rest_app, $env;
             if ( ref($resp->[2]) eq 'ARRAY') {
+                my $found = 0;
+                for (my $i=0; $i < scalar(@{ $resp->[1] }); $i += 2) {
+                    if ($resp->[1][$i] eq 'Set-Cookie') {
+                        $resp->[1][$i+1] = 'cacheon=1';
+                        $found=1;
+                        last;
+                    }
+                }
+                if (!$found) {
+                    push @{ $resp->[1] }, 'Set-Cookie' => 'cacheon=1';
+                }
                 if (!$class->set($url,freeze($resp))) {
                     $class->unlock($url);
 
@@ -153,12 +164,12 @@ sub {
             }
         }
 
-        return $resp; 
+        return $resp;
     };
 
     if (defined $ajax_refresh && $ajax_refresh == 1) {
         $gen->();
- 
+
         return [
             200,
             [ 'Content-type' => 'text/html' ],
@@ -186,7 +197,7 @@ sub {
         for my $re (@never_cache) {
             if ($env->{'PATH_INFO'} =~ $re) {
                 $skip_cache = 1;
-                last; 
+                last;
             }
         }
 
@@ -211,7 +222,7 @@ sub {
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>Cache miss</title>
+    <title>Caching Page</title>
     <link rel="shortcut icon" href="/res/img/gc_favicon.png" type="image/png" />
     <link rel="stylesheet" href="/res/css/blueprint/screen.css" type="text/css" media="screen, projection" />
     <link rel="stylesheet" href="/res/css/blueprint/print.css" type="text/css" media="print" />
@@ -253,24 +264,26 @@ sub {
   </script>
  </head>
  <body>
-  <div class="page">
-    <div class="header rounded-bottom gradient-grey shadow">
-      <div class="container">
-        <div class="title span-24 last app_error_32">
-          <h1>Cache miss</h1>
-        </div>
-      </div>
-    </div>
-    <div class="content rounded shadow" style="background-color: #FAA">
-      <div class="container">
-      <div class="span-24 last">
-        <div class="rounded" style="background: #FFF; margin-bottom: 10px;">
-          <div class="padding10">
-            <p>Regenerating view from the object model, please be patient.</p>
-            <div id="ajax_status"/>
+  <div class="page" style="width: 500px;padding-top: 45px;">
+    <div class="content rounded shadow" style="padding-top: 0;" >
+      <div class="header rounded-top gradient-grey">
+        <div class="container" style="width: 480px;">
+          <div class="title app_cache_miss_32">
+            <h1>Caching Page</h1>
           </div>
         </div>
       </div>
+
+    <div class="container" style="width: 480px;">
+      <div class="span-12 last">
+        <div class="rounded" style="margin-bottom: 10px;">
+          <div class="padding10">
+            <p>Please wait while this page is generated and added to the cache. Subsequent loads will be returned rapidly from the cache.<p>
+            <div id="ajax_status"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     </div>
   </div>
  </body>

@@ -8,6 +8,7 @@ use above 'Genome';
 use Data::Dumper 'Dumper';
 use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
+use File::Basename;
 require File::Compare;
 
 use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Soap') or die;
@@ -32,20 +33,19 @@ ok($example_build, 'got example build') or die;
 
 #link assembly.scafSeq file
 my $example_scaf_seq_file = $example_build->soap_scaffold_sequence_file;
+
 ok(-s $example_scaf_seq_file, "Example scaffold sequence file exists");
 symlink($example_scaf_seq_file, $build->soap_scaffold_sequence_file) or die;
 ok(-s $build->soap_scaffold_sequence_file, "Linked scaffold sequence file");
 
-#link input fastq files for input stats
-my $example_1_fastq_file = $example_build->end_one_fastq_file;
-ok(-s $example_1_fastq_file, "Example 1_fastq file exists");
-symlink($example_1_fastq_file, $build->end_one_fastq_file) or die;
-ok(-s $build->end_one_fastq_file, "Linked 1_fastq file");
-
-my $example_2_fastq_file = $example_build->end_two_fastq_file;
-ok(-s $example_2_fastq_file, "Example 2_fastq file exists");
-symlink($example_2_fastq_file, $build->end_two_fastq_file) or die;
-ok(-s $build->end_two_fastq_file, "Linked 2_fastq file");
+#check link input fastq files
+my @assembler_input_files = $example_build->existing_assembler_input_files;
+for my $target ( @assembler_input_files ) {
+    my $basename = File::Basename::basename($target);
+    my $dest = $build->data_directory.'/'.$basename;
+    symlink($target, $dest);
+    ok(-s $dest, "linked $target to $dest");
+}
 
 #create build->data_directory.'/edit_dir for post asm output files
 mkdir $build->data_directory.'/edit_dir';
@@ -56,8 +56,13 @@ my $soap = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Soap->crea
 ok($soap, "Created soap post assemble") or die;
 ok($soap->execute, "Executed soap post assemble") or die;
 
-#compare files
-foreach my $file_name (qw/ contigs_fasta_file supercontigs_fasta_file supercontigs_agp_file stats_file /) {
+#compare output files
+my @gc_files = qw/ contigs_fasta_file supercontigs_fasta_file supercontigs_agp_file stats_file /;
+my @pga_files = qw/ pga_agp_file pga_contigs_fasta_file pga_scaffolds_fasta_file /;
+
+my @output_files = (@gc_files, @pga_files);
+
+foreach my $file_name (@output_files) {
     my $example_file = $example_build->$file_name;
     ok(-s $example_file, "Test data dir $example_file");
     my $file = $build->$file_name;
@@ -65,6 +70,8 @@ foreach my $file_name (qw/ contigs_fasta_file supercontigs_fasta_file superconti
     is(File::Compare::compare($example_file, $file), 0, "$file_name files match");
 }
 
-#print $build->data_directory."\n";<STDIN>;
+#<STDIN>;
+
 done_testing();
+
 exit;

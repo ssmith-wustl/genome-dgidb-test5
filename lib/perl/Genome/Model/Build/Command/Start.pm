@@ -9,20 +9,25 @@ use Data::Dumper 'Dumper';
 use Regexp::Common;
 
 class Genome::Model::Build::Command::Start {
-    is => 'Command',
+    is => 'Genome::Command::Base',
     doc => "Create and start a build.",
-    has => [
-        model_identifier => {
-            is => 'Text',
-            doc => 'Model identifier.  Use model id or name.',
+    has_optional => [
+        # not really optionally but needs to be for backwards compatibility
+        model => {
+            is => 'Genome::Model',
+            doc => 'Model to build. Resolved from command line via text string.',
             shell_args_position => 1,
         },
-    ],
-    has_optional => [
+        # keeping model_identifier for backwards compatibility
+        model_identifier => {
+            is => 'Text',
+            doc => '(Deprecated, just use model.) Model identifier.  Use model id or name.',
+            is_deprecated => 1,
+        },
         job_dispatch => {
 #            default_value => 'apipe',
 #            is_constant => 1,
-            doc => 'dispatch specification: an LSF queue or "inline"'
+            doc => 'dispatch specification: an LSF queue or "inline"',
         },
         server_dispatch => {
 #            default_value => 'workflow',
@@ -35,13 +40,9 @@ class Genome::Model::Build::Command::Start {
             default_value => 0,
             doc => 'Force a new build even if existing builds are running.',
         },
-        model => {
-            is => 'Genome::Model',
-            doc => 'Model to build.'
-        },
         build => {
             is => 'Genome::Model::Build',
-            doc => 'Da build.'
+            doc => 'Da build.',
         },
     ],
 
@@ -79,9 +80,21 @@ EOS
 sub execute {
     my $self = shift;
 
+    my $model;
+    # For backward compatability
+    if ($self->model_identifier && !$self->model) {
+        my $model_from_text = $self->resolve_param_value_from_cmdline_text('model', 'Genome::Model', $self->model_identifier);
+        $self->model($model_from_text);
+    }
+
     # Get model
-    my $model = $self->_resolve_model
-        or return;
+    if ($self->model) {
+        $model = $self->model;
+    }
+    else {
+        $self->error_message("You must specify a model");
+    }
+    return unless ($model);
 
     # Check running builds, only if we are not forcing
     unless ( $self->force ) {
@@ -128,13 +141,19 @@ sub execute {
     $self->build($build);
 
     # Launch the build
-    unless (
-        $build->start(
+    my $started;
+    eval {
+        $started = $build->start(
             server_dispatch => $server_dispatch,
             job_dispatch => $job_dispatch
-        )
-    ) {
-        $self->error_message("Failed to start new build: " . $build->error_message);
+        );
+    };
+
+    my $error = $@;
+    if($error or not $started) {
+        my $message = $error || $build->error_message;
+        $self->error_message("Failed to start new build: " . $message);
+        $build->delete;
         return;
     }
 

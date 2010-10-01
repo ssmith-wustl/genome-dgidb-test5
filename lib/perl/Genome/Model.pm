@@ -177,7 +177,7 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
-# TODO: improve the logic in Genome::Command::OO to handle more of this
+# TODO: improve the logic in Genome::Command::Base to handle more of this
 sub from_cmdline {
     my $class = shift;
     my @matches;
@@ -644,12 +644,14 @@ sub completed_builds {
 
     my @completed_builds;
     for my $build ( $self->builds ) {
-        next unless defined $build->build_status and $build->build_status eq 'Succeeded';
+        my $build_status = $build->build_status;
+        next unless defined $build_status and $build_status eq 'Succeeded';
         next unless defined $build->date_completed; # error?
         push @completed_builds, $build;
     }
 
-    return sort { $a->id <=> $b->id } @completed_builds;
+    my %build_ids = map { $_ => $_->id } @completed_builds;
+    return sort { $build_ids{$a} <=> $build_ids{$b} } @completed_builds;
 }
 
 sub latest_build {
@@ -1013,20 +1015,14 @@ sub _build_model_filesystem_paths {
 
 sub inputs_necessary_for_copy {
     my $self = shift;
-   
-    $self->status_message("Gathering inputs for model copy"); 
-
     # skip instrument data assignments; these should be handled by applying the instrument data assign command
     # to the target model
     my @inputs_to_copy = grep {$_->name ne "instrument_data"} $self->inputs;
-   
     return @inputs_to_copy; 
 }
 
 sub additional_params_for_copy {
-    my $self = shift;
-
-    return ();
+    return();
 }
 
 1;

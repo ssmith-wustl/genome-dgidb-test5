@@ -9,7 +9,7 @@ use IO::File;
 use File::Basename;
 
 class Genome::Model::SomaticCapture::Command::RunReports {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
         build => {
             shell_args_position => 1,

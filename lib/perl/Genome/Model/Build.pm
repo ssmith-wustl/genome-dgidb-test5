@@ -82,8 +82,14 @@ class Genome::Model::Build {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-use Genome::Command::OO;
-*from_cmdline = \&Genome::Command::OO::default_cmdline_selector;
+sub __display_name__ {
+    my $self = shift;
+    return $self->id . ' of ' . $self->model->name;
+}
+
+# TODO: Replace this with get_class_param
+use Genome::Command::Base;
+*from_cmdline = \&Genome::Command::Base::default_cmdline_selector;
 
 sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass will soon be stored
     my $class = shift;
@@ -550,8 +556,12 @@ sub start {
     }
 
 #    $params{workflow} = $workflow;
-    
-    return $self->_launch(%params);
+
+    return unless $self->_launch(%params);
+
+    #If a build has been requested, this build starting fulfills that request.
+    $self->model->build_requested(0);
+    return 1;
 }
 
 sub restart {

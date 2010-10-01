@@ -4,7 +4,7 @@ use strict;
 use Genome;
 
 class Genome::InstrumentData::AlignmentResult::Command::VerifyHeaders {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     #has_many_input => [
     #    alignments => { 
     #        is => 'Genome::InstrumentData::AlignmentResult', 
