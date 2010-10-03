@@ -8,8 +8,8 @@ use Getopt::Std;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
 
-my $version="SquareDancer-0.1r148";
-my %opts = (q=>35,r=>2,k=>30,n=>3,c=>1,m=>3);
+my $version="SquareDancer-0.1r157";
+my %opts = (q=>35,r=>2,k=>29,n=>1,c=>1,m=>3);
 my %opts1;
 getopts('o:q:r:k:n:c:l:m:ubdg:', \%opts1);
 die("
@@ -92,6 +92,7 @@ foreach my $chr(@chrs){
   print "Read in chr$chr ...\n" if($opts{d});
   my %bkreads;
   my %breakpoint;
+  my %bkdedup;
   foreach my $bamread (@{$viewbams{$chr}}){
     print "$bamread ... \n" if($opts{d});
     open(BAM,"$bamread |");
@@ -100,14 +101,19 @@ foreach my $chr(@chrs){
       chomp;
       my $t;
       ($t->{readname},$t->{flag},$t->{chr},$t->{pos},$t->{mqual},$t->{cigar},$t->{mchr},$t->{mpos},$t->{isize},$t->{seq},$t->{qual},@tags)=split;
+
+#      if($t->{pos}>206579684){
+#	print "";
+#      }
+
       next if($t->{flag} & 0x0400 ||
 	      $t->{mqual}<$opts{q}
 	     );
       next unless($t->{cigar}=~/S/i);  #properly mapped soft-clipped reads
-      if(/NM\:i\:(\d+)/){
-	$t->{NM}=$1;
+      if(/XM\:i\:(\d+)/){
+	$t->{XM}=$1;
       }
-      next unless($t->{NM}<$opts{m});  #ignore reads with multiple mismatch in the aligned portion
+      next unless($t->{XM}<$opts{m});  #ignore reads with multiple mismatch in the aligned portion
 
       if(/RG\:Z\:(\S+)/){
 	$t->{RG}=$1;
@@ -121,10 +127,12 @@ foreach my $chr(@chrs){
       #Find Soft-clipped breakpoints
       #Assign motif from the end of the reads
       #Create receiptors from the entire soft-clipped reads
-      if($t->{flag} & 0x10 && $t->{mpos}<$t->{pos} && $t->{cigar}=~/(\d+)M(\d+)S$/){
-	my $mbase=$1;
-	my $sbase=$2;
+      if($t->{flag} & 0x10 && $t->{mpos}<$t->{pos} && $t->{cigar}=~/(\d+)S$/){
+	my $sbase=$1;
+	my @mstr=split /M/,$t->{cigar};
+	my ($mbase)=($mstr[0]=~/(\d+)$/);
 	$bkpos=join(':',$t->{chr},$t->{pos}+$mbase);
+	$bkdedup{$bkpos}{$mbase}++;
 	if($sbase>=$opts{k}){
 	  $breakpoint{$bkpos}++;
 	  my $motif=uc substr $t->{seq},$readlen-$sbase,$opts{k};
@@ -141,9 +149,12 @@ foreach my $chr(@chrs){
 	my $trimmed=$t->{seq};
 	push @{$bkreads{$bkpos}},$trimmed;
       }
-      elsif($t->{flag} & 0x20 && $t->{pos} < $t->{mpos} && $t->{cigar}=~/^(\d+)S\d+M/){
+      elsif($t->{flag} & 0x20 && $t->{pos} < $t->{mpos} && $t->{cigar}=~/^(\d+)S/){
 	my $sbase=$1;
+	my @mstr=split /M/,$t->{cigar};
+	my ($mbase)=($mstr[0]=~/(\d+)$/);
 	$bkpos=join(':',$t->{chr},$t->{pos});
+	$bkdedup{$bkpos}{$mbase}++;
 	if($sbase>=$opts{k}){
 	  $breakpoint{$bkpos}--;
 	  my $motif=uc substr $t->{seq},0,$opts{k};
@@ -190,7 +201,9 @@ foreach my $chr(@chrs){
     my $count=$breakpoint{$bkpos};
     my $ori=($count>0)?'+':'-';
     $count=abs($count);
-    if($count>=$opts{r} &&  !defined $BKMask{$bkpos}){  #ignore not_well_supported/not_interested breakpoints
+    my @matchconfig=keys %{$bkdedup{$bkpos}} if(defined $bkdedup{$bkpos});  #duplicated alignments
+
+    if($count>=$opts{r} &&  !defined $BKMask{$bkpos} && $#matchconfig>0){  #ignore not_well_supported/not_interested breakpoints
       $BKreceptors{$bkpos}=\%readseg;
       $Breakpoint{$bkpos}=$breakpoint{$bkpos};
       $newbreakpoints++;
@@ -211,7 +224,7 @@ sub BuildBreakPointNetwork{
   #printf STDERR "#breakpoint motives:%d\n",$#BKmotives+1;
   foreach my $motif(@BKmotives){
     my @connections=keys %{$BKmotif{$motif}};
-    if($#connections+1>=$opts{n}){  #non-unique
+    if($#connections+1>$opts{n}){  #non-unique
       delete $BKmotif{$motif};
     }
     else{
@@ -249,100 +262,125 @@ sub BuildBreakPointNetwork{
     }
   }
 
+  #remove breakpoints having more than $opts{n} out-degree
+#  foreach my $start(sort keys %BPG){
+#    my @ends=keys %{$BPG{$start}};
+#    if($#ends+1>$opts{n}){
+#      delete $Breakpoint{$start};
+#      delete $BKreceptors{$start};
+#      delete $BKMask{$start};
+#      delete $BPG{$start};
+#      foreach my $end(@ends){
+#	foreach my $motif(@{$BPGM{$start}{$end}}){
+#	  delete $BKmotif{$motif}{$start};
+#	}
+#      }
+#      delete $BPGM{$start};
+#    }
+#  }
+
   #Dump results out of the SV network
   foreach my $start(sort bygenome keys %BPG){
     next unless(defined $Breakpoint{$start});
     my ($chr1,$pos1)=split /\:/,$start;
  #   next unless($chr1 eq $chr);
-    foreach my $end(sort bygenome keys %{$BPG{$start}}){
+    my @ends=keys %{$BPG{$start}};
+ #   next if($#ends+1>$opts{n});
+    foreach my $end(sort bygenome @ends){
       next unless(defined $Breakpoint{$end});
       my ($chr2,$pos2)=split /\:/,$end;
       next if( &GT($chr1,$chr2)>0 ||
 	       $chr1 eq $chr2 && $pos1 > $pos2 );
 
-      if(defined $BPG{$start}{$end}{total} && defined$BPG{$end}{$start}{total}) {  #reciprocal mapped
-	my $max_Span_Reads=&Max($BPG{$start}{$end}{total},$BPG{$end}{$start}{total});
-	if($max_Span_Reads>=$opts{r}){
-	  my $ori1=($Breakpoint{$start}>0)?'+':'-';
-	  my $ori2=($Breakpoint{$end}>0)?'+':'-';
-
-	  my $score=99;
-	  my $size=$pos2-$pos1;
-	  my $type;
-	  if($chr1 ne $chr2){
-	    $type='CTX';
-	    $size=100;
-	  }
-	  elsif($ori1 eq '+' && $ori2 eq '-'){
-	    $type='DEL';
-	  }
-	  elsif($ori1 eq '+' && $ori2 eq '+' || $ori1 eq '-' && $ori2 eq '-'){
-	    $type='INV';
-	  }
-	  elsif($ori1 eq '-' && $ori2 eq '+'){
-	    $type='ITX';
-	  }
-	  else{
-	    $type='UN';
-	  }
-
-	  my @libcount;
-	  my $totalreads;
-	  if($BPG{$start}{$end}{total}>$BPG{$end}{$start}{total}){
-	    $totalreads=$BPG{$start}{$end}{total};
-	    foreach my $lib(keys %Libs){
-	      next unless(defined $BPG{$start}{$end}{$lib});
-	      push @libcount,$lib . ':' . $BPG{$start}{$end}{$lib};
-	    }
-	  }
-	  else{
-	    $totalreads=$BPG{$end}{$start}{total};
-	    foreach my $lib(keys %Libs){
-	      next unless(defined $BPG{$end}{$start}{$lib});
-	      push @libcount,$lib . ':' . $BPG{$end}{$start}{$lib};
-	    }
-	  }
-	  printf "%s\t%d\t%d%s\t%s\t%d\t%d%s\t%s\t%d\t%d\t%d\t%s\n",$chr1,$pos1,abs($Breakpoint{$start}),$ori1,$chr2,$pos2,abs($Breakpoint{$end}),$ori2,$type,$size,$score,$totalreads,join('|',@libcount);
-	
-	  if($opts{g}){  #print out SV and supporting reads in BED format
-	    # This only provides one SV breakpoints, not both
-	    my $trackname=join('_',$chr1,$pos1,$type,$size);
-	    printf BED "track name=%s  description=\"SVbreakpoint %s %d %s %d\" useScore=0\n",$trackname,$chr1,$pos1,$type,$size;
-	    my @motives=@{$BPGM{$start}{$end}};
-	    my $bestmotif=$motives[$#motives];
-	    foreach my $t(@{$BKmotif{$bestmotif}{$start}{reads}}) {
-	      my $ori=($t->{flag} & 0x10)?'-':'+';
-	      my $color=($ori eq '+')?'255,0,0':'0,0,255';
-	      printf BED "chr%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%s\n",$t->{chr},$t->{pos},$t->{alnend},join('|',$t->{readname},$t->{lib}),$t->{mqual},$ori,$t->{pos},$t->{alnend},$color;
-	    }
-	  }
-
-	  #Release resolved breakpoints
-	  foreach my $motif(@{$BPGM{$start}{$end}}){
-	    delete $BKmotif{$motif}{$start};
-	  }
-	  foreach my $motif(@{$BPGM{$end}{$start}}){
-	    delete $BKmotif{$motif}{$end};
-	  }
-	  delete $BPG{$start}{$end}; delete $BPG{$end}{$start};
-	  delete $BPGM{$start}{$end}; delete $BPGM{$end}{$start};
-
-	  my @ends=keys %{$BPG{$start}};
-	  if($#ends<0){
-	    delete $Breakpoint{$start};
-	    delete $BKreceptors{$start};
-	    delete $BKMask{$start};
-	  }
-	  my @starts=keys %{$BPG{$end}};
-	  if($#starts<0){
-	    delete $Breakpoint{$end};
-	    delete $BKreceptors{$end};
-	    delete $BKMask{$end};
-	  }
+      my $totalreads=0;
+      my %readlib;
+      if(defined $BPG{$start}{$end}{total} && defined $BPG{$end}{$start}{total}){
+	if($BPG{$start}{$end}{total}>$BPG{$end}{$start}{total}){
+	  $totalreads=$BPG{$start}{$end}{total};
+	  %readlib=%{$BPG{$start}{$end}};
+	}
+	else{
+	  $totalreads=$BPG{$end}{$start}{total};
+	  %readlib=%{$BPG{$end}{$start}};
 	}
       }
-      elsif($opts{u}){
+      elsif(defined $opts{u} && defined $BPG{$start}{$end}{total}){
+	$totalreads=$BPG{$start}{$end}{total};
+	%readlib=%{$BPG{$start}{$end}};
+      }
+      elsif(defined $opts{u} && defined$BPG{$end}{$start}{total}){
+	$totalreads=$BPG{$end}{$start}{total};
+	%readlib=%{$BPG{$end}{$start}}
+      }
 
+      if($totalreads>=$opts{r}){
+	my $ori1=($Breakpoint{$start}>0)?'+':'-';
+	my $ori2=($Breakpoint{$end}>0)?'+':'-';
+
+	my $score=99;
+	my $size=$pos2-$pos1;
+	my $type;
+	if($chr1 ne $chr2){
+	  $type='CTX';
+	  $size=100;
+	}
+	elsif($ori1 eq '+' && $ori2 eq '-'){
+	  $type='DEL';
+	}
+	elsif($ori1 eq '+' && $ori2 eq '+' || $ori1 eq '-' && $ori2 eq '-'){
+	  $type='INV';
+	}
+	elsif($ori1 eq '-' && $ori2 eq '+'){
+	  $type='ITX';
+	}
+	else{
+	  $type='UN';
+	}
+
+	my @libcount;
+
+	foreach my $lib(keys %Libs){
+	  next unless(defined $readlib{$lib});
+	  push @libcount,$lib . ':' . $readlib{$lib};
+	}
+
+	printf "%s\t%d\t%d%s\t%s\t%d\t%d%s\t%s\t%d\t%d\t%d\t%s\n",$chr1,$pos1,abs($Breakpoint{$start}),$ori1,$chr2,$pos2,abs($Breakpoint{$end}),$ori2,$type,$size,$score,$totalreads,join('|',@libcount);
+	
+	if($opts{g}){  #print out SV and supporting reads in BED format
+	  # This only provides one SV breakpoints, not both
+	  my $trackname=join('_',$chr1,$pos1,$type,$size);
+	  printf BED "track name=%s  description=\"SVbreakpoint %s %d %s %d\" useScore=0\n",$trackname,$chr1,$pos1,$type,$size;
+	  my @motives=@{$BPGM{$start}{$end}};
+	  my $bestmotif=$motives[$#motives];
+	  foreach my $t(@{$BKmotif{$bestmotif}{$start}{reads}}) {
+	    my $ori=($t->{flag} & 0x10)?'-':'+';
+	    my $color=($ori eq '+')?'255,0,0':'0,0,255';
+	    printf BED "chr%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%s\n",$t->{chr},$t->{pos},$t->{alnend},join('|',$t->{readname},$t->{lib}),$t->{mqual},$ori,$t->{pos},$t->{alnend},$color;
+	  }
+	}
+	
+	#Release resolved breakpoints
+	foreach my $motif(@{$BPGM{$start}{$end}}){
+	  delete $BKmotif{$motif}{$start};
+	}
+	foreach my $motif(@{$BPGM{$end}{$start}}){
+	  delete $BKmotif{$motif}{$end};
+	}
+	delete $BPG{$start}{$end}; delete $BPG{$end}{$start};
+	delete $BPGM{$start}{$end}; delete $BPGM{$end}{$start};
+
+	my @ends=keys %{$BPG{$start}};
+	if($#ends<0){
+	  delete $Breakpoint{$start};
+	  delete $BKreceptors{$start};
+	  delete $BKMask{$start};
+	}
+	my @starts=keys %{$BPG{$end}};
+	if($#starts<0){
+	  delete $Breakpoint{$end};
+	  delete $BKreceptors{$end};
+	  delete $BKMask{$end};
+	}
       }
     }
   }
