@@ -5,39 +5,36 @@ use warnings;
 
 class EGAP::Command::GenePredictor {
     is => 'EGAP::Command',
+    is_abstract => 1,
     has => [
-        fasta_file => { 
+        fasta_file => {
             is => 'Path',
             is_input => 1,
-            doc => 'Single fasta file to be used by prediction tool',
+            doc => 'Fasta file (possibly with multiple sequences) to be used by predictor',
         },
-        output_directory => {
+        raw_output_directory => {
             is => 'Path',
             is_input => 1,
-            doc => 'Raw output from predictor placed here',
+            doc => 'Raw output of predictor goes into this directory',
         },
-        bio_seq_feature => { 
-            is => 'ARRAY', 
-            is_optional => 1,
-            is_output => 1,
-            doc => 'Array of Bio::SeqFeature objects representing output of predictor',
+        prediction_output_directory => {
+            is => 'Path',
+            is_input => 1,
+            doc => 'Parsed prediction output file go here',
         },
     ],
 };
 
 sub help_brief {
-    "Write a set of fasta files for an assembly";
+    return 'Abstract base class for EGAP gene prediction modules';
 }
 
 sub help_synopsis {
-    return <<"EOS"
-EOS
+    return 'Abstract base class for EGAP gene prediction modules, defines a few parameters';
 }
 
 sub help_detail {
-    return <<"EOS"
-Need documenation here.
-EOS
+    return 'Abstract base class for EGAP gene prediction modules, defines input and output parameters';
 }
- 
+
 1;

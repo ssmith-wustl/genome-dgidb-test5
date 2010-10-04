@@ -4,30 +4,47 @@ use strict;
 use warnings;
 
 use EGAP;
-
+use Bio::SeqIO;
+use Carp 'confess';
 
 class EGAP::RNAGene {
     type_name => 'rna gene',
-    table_name => 'RNA_GENE',
-    id_sequence_generator_name => 'gene_id_seq',
+    schema_name => 'files',
+    data_source => 'EGAP::DataSource::RNAGenes',
     id_by => [
-        gene_id => { is => 'NUMBER', len => 9 },
+        gene_name => { is => 'Text' },
     ],
     has => [
-        acc          => { is => 'VARCHAR2', len => 20 },
-        description  => { is => 'VARCHAR2', len => 30 },
-        sequence     => { is => 'EGAP::Sequence', id_by => 'sequence_id', constraint_name => 'TRNA_GENE_SEQUENCE_ID_FK' },
-        gene_name    => { is => 'VARCHAR2', len => 60 },
-        product      => { is => 'VARCHAR2', len => 100, is_optional => 1 },
-        score        => { is => 'NUMBER', len => 5, is_optional => 1 },
-        end          => { is => 'NUMBER', len => 10, column_name => 'SEQ_END' },
-        start        => { is => 'NUMBER', len => 10, column_name => 'SEQ_START' },
-        sequence_id  => { is => 'NUMBER', len => 9 },
-        source       => { is => 'VARCHAR2', len => 25 },
-        strand       => { is => 'NUMBER', len => 1 },
+        data_directory => { is => 'Path' },
+        description => { is => 'Text' },
+        start => { is => 'Number' },
+        end => { is => 'Number' },
+        strand => { is => 'Number' },
+        source => { is => 'Text' },
+        score => { is => 'Number' },
+        sequence_id => { is => 'Number' },
     ],
-    schema_name => 'EGAPSchema',
-    data_source => 'EGAP::DataSource::EGAPSchema',
 };
+
+# TODO Should fasta file be stored on the object for later lookups? Or perhaps the sequence itself should be
+# stored? I'm concerned that might bloat the file, but it might be worthwhile if sequence lookups happen a lot.
+sub sequence {
+    my ($self, $fasta_file) = @_;
+    confess "No sequence fasta found at $fasta_file" unless -e $fasta_file;
+    
+    my $fasta = Bio::SeqIO->new(
+        -file => $fasta_file,
+        -format => 'Fasta',
+    );
+
+    my $seq_obj;
+    while ($seq_obj = $fasta->next_seq) {
+        last if $seq_obj->display_id eq $self->gene_name();
+    }
+
+    my $seq = $seq_obj->seq();
+    $self->warning_message("No sequence found for sequence " . $self->gene_name()) unless length $seq > 0;
+    return $seq;
+}
 
 1;
