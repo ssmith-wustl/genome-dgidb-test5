@@ -120,46 +120,7 @@ sub process_imported_files {
         $self->error_message("The call to import a genotype file has failed.");
         die $self->error_message;
     }
-=cut
-    #create SNP Array Genotype (goldSNP)
-    my $genotype_path_and_SNP = $genotype_path."/".$genome_sample->name."_SNPArray.genotype";
-    unless(Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->execute(    genotype_file1 => $genotype_path_and_file,
-                                                                                genotype_file2 => $genotype_path_and_file,
-                                                                                output_file    => $genotype_path_and_SNP,)) {
-        $self->error_message("SNP Array Genotype creation failed");
-        die $self->error_message;
-    }
-    $self->status_message("SNP Array Genotype  file created at ".$genotype_path_and_SNP."\n");
-    print $self->status_message."\n";
-    $disk_alloc->reallocate;
-    
-    #create genotype model
-
-    #don't build during a test
-    my $no_build;
-    if($disk_alloc->owner_id < 0) {
-        $no_build = 1;
-    } else {
-        $no_build = 0;
-    }
-
-    unless(Genome::Model::Command::Define::GenotypeMicroarray->execute(     file                        =>  $genotype_path_and_SNP,
-                                                                            processing_profile_name     =>  $processing_profile,
-                                                                            subject_name                =>  $genome_sample->name,
-                                                                            no_build                    =>  $no_build,
-            )) {
-        $self->error_message("GenotpeMicroarray Model Define failed.");
-        die $self->error_message;
-    }
-=cut
     return 1;
 }
 
-
 1;
-
-    
-
-
-    
-
