@@ -14,6 +14,12 @@ my %properties = (
     original_data_path => {
         is => 'Text',
         doc => 'original data path of import data file(s): all files in path will be used as input',
+        is_optional => 1,
+    },
+    original_data_files => {
+        is => 'Text',
+        doc => 'original data file(s). If multiple, delimit with commas. Use this OR original_data_path but NOT both.',
+        is_optional => 1,
     },
     sample_name => {
         is => 'Text',
@@ -68,9 +74,23 @@ sub execute {
 
 sub process_imported_files {
     my ($self,$sample_name) = @_;
-    unless ((-s $self->original_data_path)||(-d $self->original_data_path)) {
-        $self->error_message('Original data path to be imported: '. $self->original_data_path .' is empty or is not a directory');
-        return;
+    unless(defined($self->original_data_files)||defined($self->original_data_path)){
+        $self->error_message("Neither original_data_files nor original_data_path was defined. One of these is required to proceed.");
+        die $self->error_message;
+    }
+    if(defined($self->original_data_path)){
+        unless ((-s $self->original_data_path)||(-d $self->original_data_path)) {
+            $self->error_message('Original data path to be imported: '. $self->original_data_path .' is empty or is not a directory');
+            return;
+        }
+    } else {
+        my @files = split ",",$self->original_data_files;
+        for my $file (@files){
+            unless(-s $file){
+                $self->error_message("The file ".$file." had zero size or did not exist.");
+                die $self->error_message;
+            }
+        }
     }
     my %params = ();
     for my $property_name (keys %properties) {
@@ -82,6 +102,7 @@ sub process_imported_files {
         }
         next if $property_name =~ /^(species|reference)_name$/;
         next if $property_name eq "allocation";
+        next if $property_name eq "original_data_files";
         $params{$property_name} = $self->$property_name if defined($self->$property_name);
     }
 
@@ -109,7 +130,9 @@ sub process_imported_files {
     if($self->allocation) {
         $params{disk_allocations} = $self->allocation;
     }
-
+    if(defined($self->original_data_files)){
+        $params{original_data_path} = $self->original_data_files;
+    }
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params); 
 
     unless ($import_instrument_data) {
@@ -150,25 +173,38 @@ sub process_imported_files {
     my $target_path = $disk_alloc->absolute_path;# . "/";
     $self->status_message("Microarray allocation created at $target_path .");
     print "attempting to copy data to allocation\n";
-    my $status = File::Copy::Recursive::dircopy($self->original_data_path,$target_path);
-    unless($status) {
-        $self->error_message("Directory copy failed to complete.\n");
-        return;
-    }
-
-    my $ssize = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);             
-    my $dsize = Genome::Utility::FileSystem->directory_size_recursive($target_path);             
-    unless ($ssize==$dsize) {
-        unless($import_instrument_data->id < 0) {
-            $self->error_message("source and distination do not match( source $ssize bytes vs destination $dsize). Copy failed.");
-            $self->status_messsage("Removing failed copy");
-            print $self->status_message."\n";
-            rmtree($target_path);
-            $disk_alloc->deallocate;
+    if(defined($self->original_data_path)){
+        my $status = File::Copy::Recursive::dircopy($self->original_data_path,$target_path);
+        unless($status) {
+            $self->error_message("Directory copy failed to complete.\n");
             return;
         }
+
+        my $ssize = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);             
+        my $dsize = Genome::Utility::FileSystem->directory_size_recursive($target_path);             
+        unless ($ssize==$dsize) {
+            unless($import_instrument_data->id < 0) {
+                $self->error_message("source and distination do not match( source $ssize bytes vs destination $dsize). Copy failed.");
+                $self->status_messsage("Removing failed copy");
+                print $self->status_message."\n";
+                rmtree($target_path);
+                $disk_alloc->deallocate;
+                return;
+            }
+        }
+    } else {
+        my $suff = ".txt";
+        my @files = split ",",$self->original_data_files;
+        for my $file (@files){
+            my ($filename,$path,$suffix) = fileparse($file,$suff);
+            my $target = $target_path . "/" . $filename . $suffix;
+            if(-s $target){
+                $self->error_message("A copy of the file at ".$target." already exists.");
+                die $self->error_message;
+            }
+            my $status = Genome::Utility::FileSystem->copy_file($file, $target);
+        }
     }
-    
     $self->status_message("Finished copying data into the allocated disk");
     print "Finished copying data into the allocated disk.\n";
 
