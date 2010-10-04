@@ -81,7 +81,7 @@ sub execute {
     }
 
     my @pses = $self->load_pses;
-    $self->status_message('Going to process' . (scalar @pses) . ' PSEs.');
+    $self->status_message('Processing '.scalar(@pses).' PSEs');
 
     #for efficiency--load the data we need all together instead of separate queries for each PSE
     $self->preload_data(@pses);
@@ -90,7 +90,7 @@ sub execute {
 
     PSE: 
     foreach my $pse (@pses) {
-        $self->status_message('Starting PSE #' . $pse->id);
+        $self->status_message('Starting PSE ' . $pse->id);
 
         unless($self->check_pse($pse)) {
             next PSE;
@@ -106,7 +106,9 @@ sub execute {
 
         if ( $instrument_data_type =~ /sanger/i ) {
             #for sanger data the pse param actually holds the id of an AnalyzeTraces PSE.
-            my $run_name = $pse->run_name();
+            my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
+
+            my $run_name = $analyze_traces_pse->run_name();
             $instrument_data_id = $run_name;
         }
 
@@ -141,7 +143,7 @@ sub execute {
 
                 my $reference_sequence_build;
                 if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-                    my @reference_sequence_build_ids = $pse->added_param('reference_sequence_build_id_for_' . $processing_profile->id);
+                    my @reference_sequence_build_ids = $pse->reference_sequence_build_param_for_processing_profile($processing_profile);
                     unless ( scalar @reference_sequence_build_ids ) {
                         $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference sequence model');
                         push @process_errors, $self->error_message;
@@ -330,13 +332,15 @@ sub load_pses {
 
     @pses = sort $pse_sorter @pses;
 
+    $self->status_message('Found '.scalar(@pses));
+
     my @pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
     my %skip = map { ( ($_->param_value =~ /genotyper/) ? ($_->pse_id => 1) : () ) } @pse_params;
     #my @pses = GSC::PSE->get(id => [keys %skip]);
     #for my $pse(@pses) { $_->pse_status("wait") };
     #(App::DB->sync_database and App::DB->commit) or die;
     #exit;
-    $self->status_message("Skipping " . scalar(%skip) . " PSEs with genotyper data");
+    $self->status_message("Skipping " . scalar(keys %skip) . " PSEs with genotyper data") if %skip;
     @pses = grep(!$skip{$_->pse_id}, @pses);
 
     # Don't bite off more than we can process in a couple hours
@@ -372,7 +376,7 @@ sub preload_data {
     my @models = Genome::Model->get(subject_id => \@sample_ids);
     $self->status_message("  got " . scalar(@models) . " models");
 
-    my %taxon_ids = map { $_->taxon_id => 1 } @samples;
+    my %taxon_ids = map { $_->taxon_id => 1 } grep($_->taxon_id, @samples);
     my @taxon_ids = sort keys %taxon_ids;
     $self->status_message("Pre-loading models for " . scalar(@taxon_ids) . " taxons");
     push @models, Genome::Model->get(subject_id => \@taxon_ids);
@@ -391,6 +395,8 @@ sub check_pse {
     my $pse = shift;
 
     my $pse_id = $pse->id;
+
+    $self->status_message('Check PSE');
 
     my ($instrument_data_type) = $pse->added_param('instrument_data_type');
     my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
@@ -411,7 +417,7 @@ sub check_pse {
             return;
         }
 
-        my $run_name = $pse->run_name();
+        my $run_name = $analyze_traces_pse->run_name();
 
         unless ( defined($run_name) ) {
             $self->error_message(
@@ -432,6 +438,23 @@ sub check_pse {
             . " id '$instrument_data_id'.  PSE_ID is '$pse_id'");
         return;
     }
+
+    if ( $instrument_data_type =~ /solexa/i ) {
+        # solexa inst data nee to have the copy sequence file pse successful
+        my $index_illumina = $genome_instrument_data->index_illumina;
+        if ( not $index_illumina ) {
+            $self->error_message('No index illumina for solexa instrument data '.$instrument_data_id);
+            return;
+        }
+        if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
+            $self->error_message(
+                'Solexa instrument data ('.$instrument_data_id.') does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted.'
+            );
+            return;
+        }
+    }
+
+    $self->status_message('Check PSE OK');
 
     return 1;
 }
@@ -692,14 +715,19 @@ sub add_model_to_default_modelgroups {
         return;
     }
 
-    my $common_name = $source->common_name;
-    my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-
     my @group_names = @project_names;
-    push @group_names, $source_grouping if $source_grouping;
+
+    my $common_name = $source->common_name;
+    if($common_name) {
+        my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+        push @group_names, $source_grouping if $source_grouping;
+    }
 
     for my $group_name (@group_names) {
         my $name = 'apipe-auto ' . $group_name;
+        if(length($name) > 50) {
+            $name = substr($name,0,50);
+        }
         my $model_group = Genome::ModelGroup->get(name => $name);
 
         unless($model_group) {

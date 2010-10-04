@@ -27,14 +27,63 @@ sub create {
 
 #< Files >#
 
+#general
 sub soap_output_dir_and_file_prefix {
     return $_[0]->data_directory.'/'.$_[0]->file_prefix;
 }
 
 sub file_prefix {
-    return $_[0]->model->subject_name.'_'.$_[0]->center_name;
+    my $self = shift;
+    #pga model output files are named with sra_sample_id _ center name
+    if ($self->processing_profile->name =~ /\s+PGA$/) {
+	if (not exists $self->{_SRA_SAMPLE_ID}) {
+	    $self->sra_sample_id_for_pga_imported_instrument_data;
+	}
+	return $self->{_SRA_SAMPLE_ID}.'_'.$self->center_name;
+    }
+    return $self->model->subject_name.'_'.$self->center_name;
 }
 
+#pga output files
+sub pga_agp_file {
+    return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.agp';
+}
+
+sub pga_contigs_fasta_file {
+    return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.contigs.fa';
+}
+
+sub pga_scaffolds_fasta_file {
+    return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.scaffolds.fa';
+}
+
+#assembly files
+sub soap_config_file {
+    return $_[0]->data_directory.'/config_file';
+}
+
+sub soap_scaffold_sequence_file {
+    return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.scafSeq';
+}
+
+sub soap_output_file_for_ext {
+    return $_[0]->soap_output_dir_and_file_prefix.'.'.$_[1];
+}
+
+#post assemble files
+sub contigs_fasta_file {
+    return $_[0]->edit_dir.'/'.$_[0]->file_prefix.'.contigs.fa';
+}
+
+sub supercontigs_fasta_file {
+    return $_[0]->edit_dir.'/'.$_[0]->file_prefix.'.scaffolds.fa';
+}
+
+sub supercontigs_agp_file {
+    return $_[0]->edit_dir.'/'.$_[0]->file_prefix.'.agp';
+}
+
+#input files
 sub assembler_forward_input_file_for_library_id {
     my ($self, $library_id) = @_;
     return $self->data_directory.'/'.$self->file_prefix.'.'.$library_id.'.forward.fastq';
@@ -48,6 +97,13 @@ sub assembler_reverse_input_file_for_library_id {
 sub assembler_fragment_input_file_for_library_id {
     my ($self, $library_id) = @_;
     return $self->data_directory.'/'.$self->file_prefix.'.'.$library_id.'.fragment.fastq';
+}
+
+#< end files >#
+
+sub imported_srs_id {
+    my ($self, $instrument_data) = $_;
+    
 }
 
 sub read_processor_output_files_for_instrument_data {
@@ -146,28 +202,28 @@ sub existing_assembler_input_files {
     return @files;
 }
 
-sub soap_config_file {
-    return $_[0]->data_directory.'/config_file';
-}
+sub sra_sample_id_for_pga_imported_instrument_data {
+    my $self = shift;
+    my @sra_ids;
+    foreach my $data ($self->instrument_data) {
+	unless ($data->subclass_name eq 'Genome::InstrumentData::Imported') {
+	    $self->error_message("Called for sra id on none imported instrument data, subclass was: ".$data->subclass_name);
+	    return;
+	}
+	unless ($data->sra_sample_id) {
+	    $self->error_message("Failed to get sra_sample_id for instrument data: ID ".$data->id);
+	    return;
+	}
+	my $sra_id = $data->sra_sample_id;
+	push @sra_ids, $sra_id unless grep (/^$sra_id$/, @sra_ids);
+    }
+    if (@sra_ids > 1) {
+	$self->error_message("Expected one but got multiple sra_sample_ids for instrument data: @sra_ids");
+	return;
+    }
+    $self->{_SRA_SAMPLE_ID} = $sra_ids[0];
 
-sub soap_scaffold_sequence_file {
-    return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.scafSeq';
-}
-
-sub soap_output_file_for_ext {
-    return $_[0]->soap_output_dir_and_file_prefix.'.'.$_[1];
-}
-
-sub contigs_fasta_file {
-    return $_[0]->edit_dir.'/'.$_[0]->file_prefix.'.contigs.fa';
-}
-
-sub supercontigs_fasta_file {
-    return $_[0]->edit_dir.'/'.$_[0]->file_prefix.'.scaffolds.fa';
-}
-
-sub supercontigs_agp_file {
-    return $_[0]->edit_dir.'/'.$_[0]->file_prefix.'.agp';
+    return $sra_ids[0];
 }
 
 1;

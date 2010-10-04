@@ -30,13 +30,6 @@ class Genome::Model::ReferenceAlignment {
         rmdup_version                => { via => 'processing_profile'},
         picard_version               => { via => 'processing_profile'},
         samtools_version             => { via => 'processing_profile'},
-        genotyper_name               => { via => 'processing_profile'},
-        genotyper_version            => { via => 'processing_profile'},
-        genotyper_params             => { via => 'processing_profile'},
-        indel_finder_name            => { via => 'processing_profile'},
-        indel_finder_version         => { via => 'processing_profile'},
-        indel_finder_params          => { via => 'processing_profile'},
-        variant_filter               => { via => 'processing_profile'},
         snv_detector_name            => { via => 'processing_profile'},
         snv_detector_version         => { via => 'processing_profile'},
         snv_detector_params          => { via => 'processing_profile'},
@@ -78,7 +71,7 @@ class Genome::Model::ReferenceAlignment {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_build_id',
         },
-        reference_sequence_name      => { via => 'processing_profile', },
+        reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
         coverage_stats_params        => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events => {
@@ -654,27 +647,6 @@ sub region_of_interest_set {
         die('Failed to find capture set with name: '. $name);
     }
     return $roi_set;
-}
-
-# ehvatum TODO: remove this function and change everything that calls it to use ->reference_sequence_build directly
-sub reference_build {
-    my $self = shift;
-    unless ($self->{reference_build}) {
-        if(defined($self->reference_sequence_build)) {
-            $self->{reference_build} = $self->reference_sequence_build;
-        }
-        else {
-            my $name = $self->reference_sequence_name;
-            my $build = Genome::Model::Build::ReferencePlaceholder->get($name);
-            unless ($build) {
-                $build = Genome::Model::Build::ReferencePlaceholder->create(
-                    name => $name,
-                    sample_type => $self->dna_type);
-            }
-            $self->{reference_build} = $build;
-        }
-    }
-    return $self->{reference_build};
 }
 
 # Results data

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::InstrumentData::Command::Remove {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has_input => [
         instrument_data => { 
             is => 'Genome::InstrumentData::Imported',

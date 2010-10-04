@@ -38,6 +38,8 @@ class Genome::InstrumentData::Sanger {
                       is_optional => 1,
                       is_mutable  => 1,
                      },     
+        sample => { is => 'Genome::Sample', id_by => 'sample_id' },
+        taxon => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
         library_name => {
                          via   => 'attributes',
                          to    => 'value',

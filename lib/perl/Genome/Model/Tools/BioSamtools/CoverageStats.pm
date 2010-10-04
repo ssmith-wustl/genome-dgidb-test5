@@ -48,6 +48,11 @@ class Genome::Model::Tools::BioSamtools::CoverageStats {
             is => 'Text',
             doc => 'The output directory to generate coverage stats',
         },
+        log_directory => {
+            is => 'Text',
+            doc => 'The directory to store the workflow output and error logs',
+            is_optional => 1,
+        },
     ],
     has_output => [
         stats_files => { is => 'Array', is_many => 1, is_optional => 1, doc => 'a list of stats files produced by the workflow'},
@@ -67,7 +72,20 @@ sub execute {
     my $xml_path = $module_path;
     $xml_path =~ s/\.pm/\.xml/;
     my @wingspans = split(',',$self->wingspan_values);
-    my $output = run_workflow_lsf($xml_path,
+
+    my $workflow = Workflow::Operation->create_from_xml($xml_path);
+
+    if($self->log_directory) {
+        unless (-d $self->log_directory) {
+            unless (Genome::Utility::FileSystem->create_directory($self->log_directory)) {
+                die('Failed to create output_directory: '. $self->log_directory);
+            }
+        }
+
+        $workflow->log_dir($self->log_directory);
+    }
+
+    my $output = run_workflow_lsf($workflow,
                                   bed_file => $self->bed_file,
                                   bam_file => $self->bam_file,
                                   wingspan => \@wingspans,
