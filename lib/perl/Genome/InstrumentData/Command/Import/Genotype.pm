@@ -267,7 +267,7 @@ sub get_read_count {
     ($line_count) = split " ",$line_count;
     unless(defined($line_count)&&($line_count > 0)){
         $self->error_message("couldn't get a response from wc.");
-        return undef;
+        return;
     }
     return $line_count
 }
