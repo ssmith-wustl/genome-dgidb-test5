@@ -17,8 +17,7 @@ then
   export GENOME_DEV_MODE
 fi
 
-  # using dev solr instance until hardware clones solr-dev -> solr
-  GENOME_DEV_MODE=1
+  GENOME_DEV_MODE=0
   export GENOME_DEV_MODE
 
 ## change the symlink to the real path

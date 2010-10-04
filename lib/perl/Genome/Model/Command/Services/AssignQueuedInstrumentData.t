@@ -11,7 +11,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 51;
+use Test::More tests => 52;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -60,7 +60,8 @@ my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
     read_aligner_params => '#this is a test',
 );
 
-my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(name => 'NCBI-human-build36');
+isa_ok($ref_seq_build, 'Genome::Model::Build::ImportedReferenceSequence') or die;
 
 my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
 

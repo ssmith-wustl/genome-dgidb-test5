@@ -83,13 +83,13 @@ sub execute {
     unless ($self->no_build) {
 
         $self->status_message("building...\n");
-        my $cmd = Genome::Model::Build::Command::Start->execute(model_identifier => $model->id);
+        my $cmd = Genome::Model::Build::Command::Start->execute(models => [$model]);
         unless ($cmd) {
             $self->error_message("Failed to run a build on model " . $model->id . ": " . Genome::Model::Build::Command::Start->error_message);
             return;
         }
 
-        my $build = $cmd->build;
+        my ($build) = $cmd->builds;
         unless ($build) {
             $self->error_message("Failed to generate a new build for model " . $model->id . ": " . $cmd->error_message);
             return;
