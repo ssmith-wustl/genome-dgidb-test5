@@ -11,6 +11,7 @@ class Genome::Model::ReferenceAlignment::Command::CompareBuilds {
         model => {
             shell_args_position => 1,
             is => 'Genome::Model::ReferenceAlignment',
+            id_by => 'model_id',
         },
     ],
 };

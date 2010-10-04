@@ -143,8 +143,24 @@ sub execute {
 sub _assign_instrument_data {
     my ($self, $instrument_data) = @_;
 
-    # Check if already assigned
-    my $existing_ida = Genome::Model::InstrumentDataAssignment->get(
+    # Non imported solexa needs to have the copy sequences file pse run ok
+   if ( $instrument_data->sequencing_platform eq 'solexa' and $instrument_data->class !~ /imported/i ) {
+       my $index_illumina = $instrument_data->index_illumina;
+       if ( not $index_illumina ) {
+           $self->error_message('No index illumina for solexa instrument data '.$instrument_data->id);
+           return;
+       }
+       if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
+           $self->warning_message(
+               'SKIPPING instrument data ('.join(' ', map { $instrument_data->$_ } (qw/ id sequencing_platform /)).' because '
+               .'it does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted. It cannot be assigned individually.'
+           );
+           return 1; # OK, just skipping
+       }
+   }
+
+   # Check if already assigned
+   my $existing_ida = Genome::Model::InstrumentDataAssignment->get(
         model_id => $self->model->id,
         instrument_data_id => $instrument_data->id
     );
@@ -189,9 +205,8 @@ sub _assign_instrument_data {
 
     $self->status_message(
         sprintf(
-            'Instrument data (id<%s> name<%s>) assigned to model (id<%s> name<%s>)%s.',
+            'Instrument data (id<%s>) assigned to model (id<%s> name<%s>)%s.',
             $instrument_data->id,
-            $instrument_data->run_name,
             $self->model->id,
             $self->model->name,
             (

@@ -11,17 +11,13 @@ class Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Soap {
 
 sub execute {
     my $self = shift;
-    
-    #create PGA dir for PGA output files
-    Genome::Utility::FileSystem->create_directory($self->build->soap_pga_output_files_directory) if
-	not -d $self->build->soap_pga_output_files_directory;
 
     #create PGA post assembly output files
     $self->status_message("Creating fasta-to-agp tool");
     my $fa = Genome::Model::Tools::Soap::FastaToAgp->create(
 	scaffold_fasta_file => $self->build->soap_scaffold_sequence_file,
-	output_dir => $self->build->soap_pga_output_files_directory,
-	file_prefix => $self->build->pga_file_prefix,
+	output_dir => $self->build->data_directory,
+	file_prefix => $self->build->file_prefix,
 	);
     unless ($fa->execute) {
 	$self->error_message("Failed to successfully execute soap fasta-to-agp tool");
@@ -30,7 +26,6 @@ sub execute {
     $self->status_message("Finished running fasta-to-agp tool");
 
     #create regular GC post assembly output
-
     #create edit_dir for post assemble files
     Genome::Utility::FileSystem->create_directory($self->build->edit_dir) if
 	not -d $self->build->edit_dir;
