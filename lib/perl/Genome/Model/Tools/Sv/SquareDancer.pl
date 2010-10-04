@@ -8,8 +8,8 @@ use Getopt::Std;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
 
-my $version="SquareDancer-0.1r157";
-my %opts = (q=>35,r=>2,k=>29,n=>1,c=>1,m=>3);
+my $version="SquareDancer-0.1r158";
+my %opts = (q=>35,r=>2,k=>25,n=>1,c=>1,m=>3);
 my %opts1;
 getopts('o:q:r:k:n:c:l:m:ubdg:', \%opts1);
 die("
@@ -48,8 +48,6 @@ foreach my $fbam(@ARGV){
       my ($id)=($_=~/ID\:(\S+)/);
       my ($lib)=($_=~/LB\:(\S+)/);
       my ($platform)=($_=~/PL\:(\S+)/);
-#      my ($sample)=($_=~/SM\:(\S+)/);
-#      my ($insertsize)=($_=~/PI\:(\d+)/);
       $lib=$fbam if(!defined $opts{b});
       $RG{$id}{lib}=$lib;
       $Libs{$lib}=1;
@@ -136,11 +134,11 @@ foreach my $chr(@chrs){
 	if($sbase>=$opts{k}){
 	  $breakpoint{$bkpos}++;
 	  my $motif=uc substr $t->{seq},$readlen-$sbase,$opts{k};
-	  $BKmotif{$motif}{$bkpos}{$lib}++;
+	  $BKmotif{$motif}{$bkpos}{lib}{$lib}++;
 	  $BKmotif{$motif}{$bkpos}{total}++;
 	  push @{$BKmotif{$motif}{$bkpos}{reads}},$t;
 	  $motif=~tr/ACGT/TGCA/; $motif=reverse $motif;
-	  $BKmotif{$motif}{$bkpos}{$lib}++;
+	  $BKmotif{$motif}{$bkpos}{lib}{$lib}++;
 	  $BKmotif{$motif}{$bkpos}{total}++;
 	  push @{$BKmotif{$motif}{$bkpos}{reads}},$t;
 	  $BKMask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
@@ -158,10 +156,10 @@ foreach my $chr(@chrs){
 	if($sbase>=$opts{k}){
 	  $breakpoint{$bkpos}--;
 	  my $motif=uc substr $t->{seq},0,$opts{k};
-	  $BKmotif{$motif}{$bkpos}{$lib}++;
+	  $BKmotif{$motif}{$bkpos}{lib}{$lib}++;
 	  $BKmotif{$motif}{$bkpos}{total}++;
 	  $motif=~tr/ACGT/TGCA/; $motif=reverse $motif;
-	  $BKmotif{$motif}{$bkpos}{$lib}++;
+	  $BKmotif{$motif}{$bkpos}{lib}{$lib}++;
 	  $BKmotif{$motif}{$bkpos}{total}++;
 	  push @{$BKmotif{$motif}{$bkpos}{reads}},$t;
 	  $BKMask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
@@ -204,6 +202,7 @@ foreach my $chr(@chrs){
     my @matchconfig=keys %{$bkdedup{$bkpos}} if(defined $bkdedup{$bkpos});  #duplicated alignments
 
     if($count>=$opts{r} &&  !defined $BKMask{$bkpos} && $#matchconfig>0){  #ignore not_well_supported/not_interested breakpoints
+      printf "%s\:%d\n", $bkpos, $breakpoint{$bkpos} if(defined $opts{d});
       $BKreceptors{$bkpos}=\%readseg;
       $Breakpoint{$bkpos}=$breakpoint{$bkpos};
       $newbreakpoints++;
@@ -252,8 +251,7 @@ sub BuildBreakPointNetwork{
 		  abs($pos2-$pos1)<$opts{k});   #too close to each other
 
 	  if(!defined $BPG{$start}{$end}{total} ||  # a new motif
-	     $BPG{$start}{$end}{total}<$BKmotif{$motif}{$start}{total}){  # a more efficient motif
-	    #$BPG{$start}{$end}=\%perlib;
+	     $BPG{$start}{$end}{total}<$BKmotif{$motif}{$start}{total}){  # a better motif
 	    $BPG{$start}{$end}=$BKmotif{$motif}{$start};
 	  }
 	  push @{$BPGM{$start}{$end}},$motif;
@@ -262,62 +260,34 @@ sub BuildBreakPointNetwork{
     }
   }
 
-  #remove breakpoints having more than $opts{n} out-degree
-#  foreach my $start(sort keys %BPG){
-#    my @ends=keys %{$BPG{$start}};
-#    if($#ends+1>$opts{n}){
-#      delete $Breakpoint{$start};
-#      delete $BKreceptors{$start};
-#      delete $BKMask{$start};
-#      delete $BPG{$start};
-#      foreach my $end(@ends){
-#	foreach my $motif(@{$BPGM{$start}{$end}}){
-#	  delete $BKmotif{$motif}{$start};
-#	}
-#      }
-#      delete $BPGM{$start};
-#    }
-#  }
-
   #Dump results out of the SV network
   foreach my $start(sort bygenome keys %BPG){
     next unless(defined $Breakpoint{$start});
     my ($chr1,$pos1)=split /\:/,$start;
- #   next unless($chr1 eq $chr);
     my @ends=keys %{$BPG{$start}};
- #   next if($#ends+1>$opts{n});
     foreach my $end(sort bygenome @ends){
       next unless(defined $Breakpoint{$end});
       my ($chr2,$pos2)=split /\:/,$end;
       next if( &GT($chr1,$chr2)>0 ||
 	       $chr1 eq $chr2 && $pos1 > $pos2 );
-
       my $totalreads=0;
       my %readlib;
       if(defined $BPG{$start}{$end}{total} && defined $BPG{$end}{$start}{total}){
-	if($BPG{$start}{$end}{total}>$BPG{$end}{$start}{total}){
-	  $totalreads=$BPG{$start}{$end}{total};
-	  %readlib=%{$BPG{$start}{$end}};
-	}
-	else{
-	  $totalreads=$BPG{$end}{$start}{total};
-	  %readlib=%{$BPG{$end}{$start}};
-	}
+	%readlib=%{&MergeReadLib($BPG{$start}{$end},$BPG{$end}{$start})};
+	$totalreads=$readlib{total};
       }
       elsif(defined $opts{u} && defined $BPG{$start}{$end}{total}){
-	$totalreads=$BPG{$start}{$end}{total};
 	%readlib=%{$BPG{$start}{$end}};
+	$totalreads=$readlib{total};
       }
       elsif(defined $opts{u} && defined$BPG{$end}{$start}{total}){
-	$totalreads=$BPG{$end}{$start}{total};
-	%readlib=%{$BPG{$end}{$start}}
+	%readlib=%{$BPG{$end}{$start}};
+	$totalreads=$readlib{total};
       }
-
       if($totalreads>=$opts{r}){
 	my $ori1=($Breakpoint{$start}>0)?'+':'-';
 	my $ori2=($Breakpoint{$end}>0)?'+':'-';
 
-	my $score=99;
 	my $size=$pos2-$pos1;
 	my $type;
 	if($chr1 ne $chr2){
@@ -339,10 +309,13 @@ sub BuildBreakPointNetwork{
 
 	my @libcount;
 
-	foreach my $lib(keys %Libs){
-	  next unless(defined $readlib{$lib});
-	  push @libcount,$lib . ':' . $readlib{$lib};
+	foreach my $lib(keys %{$readlib{lib}}){
+	  push @libcount,$lib . ':' . $readlib{lib}{$lib};
 	}
+
+	my @motives=@{$BPGM{$start}{$end}};
+	my $score=($#motives+1)*$opts{k};
+	$score=($score>99)?99:$score;
 
 	printf "%s\t%d\t%d%s\t%s\t%d\t%d%s\t%s\t%d\t%d\t%d\t%s\n",$chr1,$pos1,abs($Breakpoint{$start}),$ori1,$chr2,$pos2,abs($Breakpoint{$end}),$ori2,$type,$size,$score,$totalreads,join('|',@libcount);
 	
@@ -350,7 +323,6 @@ sub BuildBreakPointNetwork{
 	  # This only provides one SV breakpoints, not both
 	  my $trackname=join('_',$chr1,$pos1,$type,$size);
 	  printf BED "track name=%s  description=\"SVbreakpoint %s %d %s %d\" useScore=0\n",$trackname,$chr1,$pos1,$type,$size;
-	  my @motives=@{$BPGM{$start}{$end}};
 	  my $bestmotif=$motives[$#motives];
 	  foreach my $t(@{$BKmotif{$bestmotif}{$start}{reads}}) {
 	    my $ori=($t->{flag} & 0x10)?'-':'+';
@@ -385,6 +357,20 @@ sub BuildBreakPointNetwork{
     }
   }
 }
+
+sub MergeReadLib{
+  my ($rlib1,$rlib2)=@_;
+  my %nlib;
+  $nlib{total}=$$rlib1{total}+$$rlib2{total};
+  foreach my $lib(keys %{$$rlib1{lib}}, keys %{$$rlib2{lib}}){
+    $nlib{lib}{$lib}=($$rlib1{lib}{$lib}||0)+($$rlib2{lib}{$lib}||0);
+  }
+  foreach my $t(@{$$rlib1{reads}},@{$$rlib2{reads}}){
+    push @{$nlib{reads}},$t;
+  }
+  return \%nlib;
+}
+
 
 sub Max{
   my ($a,$b)=@_;
