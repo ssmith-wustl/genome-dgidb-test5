@@ -114,6 +114,7 @@ $DB::single = $DB::stopper;
 }
 
 sub open_bamsam_in {
+    my $self = shift;
     my $in_filename = shift;
     my ($type) = ($in_filename =~ /\.([^\.\s]+)\s*$/i);
     $type = uc($type);
@@ -136,6 +137,7 @@ sub open_bamsam_in {
 }
 
 sub open_bamsam_out {
+    my $self = shift;
     my $out_filename = shift;
     my ($type) = ($out_filename =~ /\.([^\.\s]+)\s*$/i);
     $type = uc($type);

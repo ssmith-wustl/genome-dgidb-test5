@@ -232,7 +232,7 @@ sub execute {
             $ignore_unmapped++;
             next;
         }
-        unless ($bitflag & 0x0001){
+        unless (($bitflag & 0x0001) && $self->exclude_fragments){
             $ignore_singleton++;
             next;
         }
@@ -244,7 +244,7 @@ sub execute {
     }
 
     $self->status_message("skipping $ignore_unmapped reads without a metagenomic mapping");
-    $self->status_message("skipping $ignore_singleton fragment reads(mate mapped to human)");
+    $self->status_message("skipping $ignore_singleton fragment reads");
 
     # Count And Record Taxonomy Hits
     my $read_count_output_file = $self->report_dir . '/read_count_output';
