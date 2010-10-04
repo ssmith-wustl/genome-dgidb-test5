@@ -179,6 +179,7 @@ sub _execute_build {
 
     # ASSIGN THE POST-PROCESSED READS TO THE METAGENOMIC MODELS
     my @metagenomic_models = $model->_metagenomic_alignment_models;
+    $DB::single = 1;
     for my $metagenomic_model (@metagenomic_models) {
         my %assignments_expected;
         for my $n (0..$#imported_instrument_data_for_metagenomic_models) {
@@ -209,19 +210,26 @@ sub _execute_build {
             }
         }
 
+        #TODO  When a model with skip_contamination_screen restarts, the potential extra fragment instrument data from n-removal will not be returned from _process_sra_data, and therefore won't be an expected assignment, so we'll need to check if the extra assignment's source_data_files contains(is derived from) the original instrument data assigned to the model. tldr: don't break on skip_contamination_restarts if extra inst_data looks legit.
+        my @mcs_instrument_data_ids = map {$_->id} $build->instrument_data;
+
         # ensure there are no other odd assignments on the model besides those expected
         # this can happen if instrument-data is re-processed (deleted)
+        $DB::single=1;
         for my $assignment ($metagenomic_model->instrument_data_assignments) {
             unless ($assignments_expected{$assignment->id}) {
                 my $instrument_data = $assignment->instrument_data;
                 if ($instrument_data) {
-                    $self->error_message(
-                        "Odd assignment found on model " 
-                        . $metagenomic_model->__display_name__ 
-                        . " for instrument data " 
-                        . $instrument_data->__display_name__
-                    );
-                    Carp::confess($self->error_message);
+                    my ($derived_from) = $instrument_data->original_data_path =~ /unaligned_reads\/(\d+)\//; 
+                    unless (grep {$derived_from eq $_} @mcs_instrument_data_ids){
+                        $self->error_message(
+                            "Odd assignment found on model " 
+                            . $metagenomic_model->__display_name__ 
+                            . " for instrument data " 
+                            . $instrument_data->__display_name__
+                        );
+                        Carp::confess($self->error_message);
+                    }
                 }
                 else {
                     $self->warning_message(
@@ -278,12 +286,18 @@ sub _execute_build {
             die $self->error_message("Failed to create QC report!");
         }
     }
-
-    my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
+    my %meta_report_properties = (
         build_id => $build->id,
         taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
-        viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt',
-        exclude_fragments => 0,
+        viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt'
+    );
+    
+    if ($self->skip_contamination_screen){
+        $meta_report_properties{exclude_fragments} = 0; 
+    }
+
+    my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
+        %meta_report_properties,
     );
     unless($meta_report->execute()) {
         die $self->error_message("metagenomic report execution died or did not return 1:$@");
@@ -488,7 +502,7 @@ sub execute_or_die {
 sub assign_missing_instrument_data_to_model{
     my ($self, $model, @instrument_data) = shift;
 =cut this doesn't compile     
-    for my $assignment (@assignments) {
+for my $assignment (@assignments) {
             my $instrument_data = $assignment->instrument_data;
             my $screen_assignment = $screen_model->instrument_data_assignment(
                 instrument_data_id => $instrument_data->id
@@ -834,7 +848,7 @@ sub _process_sra_instrument_data {
         } 
 
         #now create fragment instrument data for $expected_path_fragment, as a result of pairwise n-removal, if the file exists and has size
-        
+
         if (-s $expected_path_fragment){
             $params{source_data_files} = $expected_path_fragment;
             $params{is_paired_end} = 0;
@@ -854,7 +868,7 @@ sub _process_sra_instrument_data {
         $DB::single = 1;
         $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
         UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
-    
+
         my @return_inst_data;
 
         my $new_instrument_data = Genome::InstrumentData::Imported->get(
@@ -867,7 +881,7 @@ sub _process_sra_instrument_data {
             die "Unsaved changes present on instrument data $new_instrument_data->{id} from $upload_path!!!";
         }
         push @return_inst_data, $new_instrument_data;
-    
+
         if (-s $expected_path_fragment){
             my $new_instrument_data = Genome::InstrumentData::Imported->get(
                 original_data_path => $expected_path_fragment,
@@ -886,7 +900,7 @@ sub _process_sra_instrument_data {
                 die $self->error_message("Failed to unlock $expected_path.");
             }
         }
-        return (@return_inst_data);
+        return @return_inst_data;
     };
 
     # TODO: add directory removal to Genome::Utility::FileSystem

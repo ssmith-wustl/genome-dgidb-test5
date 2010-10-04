@@ -95,12 +95,12 @@ sub execute {
 
     my @in_fh;
     foreach my $in_filename (@in_filenames) {
-        my $in_fh = open_bamsam_in($in_filename);
+        my $in_fh = $self->open_bamsam_in($in_filename);
         die "failed to open file $in_filename! $!\n" unless $in_fh;
         push @in_fh, $in_fh;
     }
 
-    my $out_fh = open_bamsam_out($out_filename);
+    my $out_fh = $self->open_bamsam_out($out_filename);
 
     my $in_count = @in_filenames;
 
