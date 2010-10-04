@@ -30,13 +30,13 @@ sub execute{
         die $self->error_message();
     }
 
-    my $in_fh = open_bamsam_in($self->input_file);
+    my $in_fh = $self->open_bamsam_in($self->input_file);
     unless ($in_fh){
         $self->error_message("couldn't create input filehandle for ".$self->input_file);
         die $self->error_message();
     }
 
-    my $out_fh = open_bamsam_in($self->output_file);
+    my $out_fh = $self->open_bamsam_in($self->output_file);
     unless ($out_fh){
         $self->error_message("couldn't create output filehandle for ".$self->output_file);
         die $self->error_message();
