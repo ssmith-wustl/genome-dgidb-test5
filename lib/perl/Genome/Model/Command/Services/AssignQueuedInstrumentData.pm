@@ -82,9 +82,7 @@ sub execute {
 
     my @pses = $self->load_pses;
     $self->status_message('Processing '.scalar(@pses).' PSEs');
-
-    #for efficiency--load the data we need all together instead of separate queries for each PSE
-    $self->preload_data(@pses);
+    return 1 unless scalar @pses;
 
     my @completable_pses;    
 
@@ -92,17 +90,12 @@ sub execute {
     foreach my $pse (@pses) {
         $self->status_message('Starting PSE ' . $pse->id);
 
-        unless($self->check_pse($pse)) {
-            next PSE;
-        }
-
         my ($instrument_data_type) = $pse->added_param('instrument_data_type');
         my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
         my ($subject_class_name)   = $pse->added_param('subject_class_name');
         my ($subject_id)           = $pse->added_param('subject_id');
 
-        my @processing_profile_ids =
-            $pse->added_param('processing_profile_id');
+        my @processing_profile_ids = $pse->added_param('processing_profile_id');
 
         if ( $instrument_data_type =~ /sanger/i ) {
             #for sanger data the pse param actually holds the id of an AnalyzeTraces PSE.
@@ -119,15 +112,6 @@ sub execute {
         if ($subject_class_name and $subject_id and @processing_profile_ids) {
             my $subject      = $subject_class_name->get($subject_id);
 
-            unless (defined $subject) {
-                $self->error_message(
-                    'failed to get a subject via subject_class_name'
-                    . " '$subject_class_name' with subject_id"
-                    . " '$subject_id'"
-                );
-                next PSE;
-            }
-	            
             PP: 
             foreach my $processing_profile_id (@processing_profile_ids) {
                 my $processing_profile = Genome::ProcessingProfile->get( $processing_profile_id );
@@ -191,14 +175,6 @@ sub execute {
             } # looping through processing profiles for this instdata, finding or creating the default model
 
         } # done with PSEs which specify a $subject_class_name, $subject_id, and @processing_profile_ids
-        elsif ($subject_class_name or $subject_id or @processing_profile_ids) {
-            $self->error_message(
-                "PSE " . $pse->id . " specifies incomplete model find/create fields: "
-                . " subject_class_name $subject_class_name subject_id $subject_id"
-                . " processing_profile_ids @processing_profile_ids"
-            );
-            next PSE;
-        }
 
         if (!$subject_class_name or !$subject_id) {
             $self->warning_message(
@@ -334,14 +310,10 @@ sub load_pses {
 
     $self->status_message('Found '.scalar(@pses));
 
-    my @pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
-    my %skip = map { ( ($_->param_value =~ /genotyper/) ? ($_->pse_id => 1) : () ) } @pse_params;
-    #my @pses = GSC::PSE->get(id => [keys %skip]);
-    #for my $pse(@pses) { $_->pse_status("wait") };
-    #(App::DB->sync_database and App::DB->commit) or die;
-    #exit;
-    $self->status_message("Skipping " . scalar(keys %skip) . " PSEs with genotyper data") if %skip;
-    @pses = grep(!$skip{$_->pse_id}, @pses);
+    $self->preload_data(@pses); #The checking uses this data, to need to load it first
+
+    @pses = grep($self->check_pse($_), @pses);
+    $self->status_message('Of those, '.scalar(@pses). ' PSEs passed check_pse.');
 
     # Don't bite off more than we can process in a couple hours
     my $max_pses = $self->max_pses;
@@ -396,7 +368,13 @@ sub check_pse {
 
     my $pse_id = $pse->id;
 
-    $self->status_message('Check PSE');
+    $self->status_message('Check PSE for #' . $pse_id);
+
+    my @pse_params = GSC::PSEParam->get(pse_id => $pse_id);
+    if(grep{ $_->param_value =~ /genotyper/ } @pse_params) {
+        $self->status_message("Skipping PSE with genotyper data");
+        return;
+    }
 
     my ($instrument_data_type) = $pse->added_param('instrument_data_type');
     my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
@@ -406,7 +384,7 @@ sub check_pse {
         $self->error_message('encountered unkown instrument data type: ' . $instrument_data_type);
         return;
     }
-    
+
     if ( $instrument_data_type =~ /sanger/i ) {
         my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
 
@@ -449,6 +427,33 @@ sub check_pse {
         if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
             $self->error_message(
                 'Solexa instrument data ('.$instrument_data_id.') does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted.'
+            );
+            return;
+        }
+    }
+
+    my ($subject_class_name)   = $pse->added_param('subject_class_name');
+    my ($subject_id)           = $pse->added_param('subject_id');
+
+    my @processing_profile_ids = $pse->added_param('processing_profile_id');
+
+    #If it has one, it should have all.
+    if($subject_class_name or $subject_id or @processing_profile_ids) {
+        unless($subject_class_name and $subject_id and @processing_profile_ids) {
+            $self->error_message(
+                "PSE " . $pse->id . " specifies incomplete model find/create fields: "
+                . " subject_class_name $subject_class_name subject_id $subject_id"
+                . " processing_profile_ids @processing_profile_ids"
+            );
+            return;
+        }
+
+        my $subject = $subject_class_name->get($subject_id);
+        unless (defined $subject) {
+            $self->error_message(
+                'failed to get a subject via subject_class_name'
+                . " '$subject_class_name' with subject_id"
+                . " '$subject_id'"
             );
             return;
         }
