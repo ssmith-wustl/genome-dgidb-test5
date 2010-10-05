@@ -32,6 +32,7 @@ class Genome::Model::Tools::Capture::ProcessModels {
 		model_list	=> { is => 'Text', doc => "Text file id,subject_name,build_ids,build_statuses,last_succeeded_build_directory, one per line - space delim" , is_optional => 0},
 		regions_file	=> { is => 'Text', doc => "Optional limit to regions file" , is_optional => 1},
 		skip_if_output_present => { is => 'Text', doc => "Do not attempt to run pipeline if output present" , is_optional => 1},
+		verbose => { is => 'Text', doc => "Display Lots of Output" , is_optional => 1, default => 1},
 	],
 };
 
@@ -65,6 +66,7 @@ sub execute {                               # replace with real execution logic.
 
 	## Get required parameters ##
 	my $model_list = $self->model_list;
+	my $verbose = $self->verbose;
 	my $output_dir = "./";
 	$output_dir = $self->output_dir if($self->output_dir);
 	my $regions_file = $self->regions_file if($self->regions_file);
@@ -85,7 +87,9 @@ sub execute {                               # replace with real execution logic.
 		
 		my $sample_output_dir = $output_dir . "/" . $sample_name;
 		mkdir($sample_output_dir) if(!(-d $sample_output_dir));
-		print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
+		if ($verbose) {
+			print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
+		}
 
 		## get the bam file ##
 		
@@ -120,6 +124,9 @@ sub execute {                               # replace with real execution logic.
 				$snpexists = 1;
 				print "SHIT! ONLY TIER 3 OR 4!\n";
 			}
+			else {
+				print "No tiered SNP File: $sample_name\n";
+			}
 
 			if (-s $final_indel_file || -s $final_indel_file2) {
 				$indelexists = 1;
@@ -128,6 +135,28 @@ sub execute {                               # replace with real execution logic.
 				$indelexists = 1;
 				print "SHIT! ONLY TIER 3 OR 4!\n";
 			}
+			else {
+				print "No tiered Indel File: $sample_name\n";
+			}
+
+			if ($snpexists == 1) {
+				my $snp_lastline = `grep -P "^19\t" $sample_output_dir/annotation.germline.snp.transcript`;
+#				my $indel_lastline = `tail -n 1 $sample_output_dir/annotation.germline.indel.transcript`;
+#				if ($snp_lastline =~ m/^19\t/ && $indel_lastline =~ m/^19\t/) {
+				unless($snp_lastline) {
+					$snpexists = 0;
+					print "Possibly Truncated SNP File: $sample_name";
+				}
+			}
+
+			if ($snpexists == 1) {
+				my $output_completed = `grep "Successfully completed" $sample_output_dir/$sample_name.output`;
+				unless($output_completed) {
+					$snpexists = 0;
+					print "LSF Didn't Report Success: $sample_name";
+				}
+			}
+
 
 #			print "$snpexists\t$indelexists\n";
 
@@ -138,15 +167,19 @@ sub execute {                               # replace with real execution logic.
 			}
 			else
 			{
-				print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
-				my @outfile_list = qw(annotation.germline.indel.ucsc merged.germline.indel merged.germline.indel.ROI.tier4.out merged.germline.snp.ROI samtools.output.indel.formatted varScan.output.snp annotation.germline.indel.unannot-ucsc merged.germline.indel.ROI merged.germline.indel.shared merged.germline.snp.ROI.tier1.out samtools.output.snp.adaptor varScan.output.snp.filter annotation.germline.snp.transcript merged.germline.indel.ROI.tier1.out merged.germline.indel.sniper-only merged.germline.snp.ROI.tier2.out varScan.output.indel varScan.output.snp.formatted annotation.germline.snp.ucsc merged.germline.indel.ROI.tier2.out merged.germline.indel.varscan-only merged.germline.snp.ROI.tier3.out varScan.output.indel.filter varScan.output.snp.variants annotation.germline.indel.transcript annotation.germline.snp.unannot-ucsc merged.germline.indel.ROI.tier3.out merged.germline.snp merged.germline.snp.ROI.tier4.out varScan.output.indel.formatted );
+				if($verbose) {
+					print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
+				}
+				my @outfile_list = qw(annotation.germline.indel.ucsc merged.germline.indel merged.germline.indel.ROI.tier4.out merged.germline.snp.ROI samtools.output.indel.formatted varScan.output.snp annotation.germline.indel.unannot-ucsc merged.germline.indel.ROI merged.germline.indel.shared merged.germline.snp.ROI.tier1.out samtools.output.snp.adaptor varScan.output.snp.filter annotation.germline.snp.transcript merged.germline.indel.ROI.tier1.out merged.germline.indel.sniper-only merged.germline.snp.ROI.tier2.out varScan.output.indel varScan.output.snp.formatted annotation.germline.snp.ucsc merged.germline.indel.ROI.tier2.out merged.germline.indel.varscan-only merged.germline.snp.ROI.tier3.out varScan.output.indel.filter varScan.output.snp.variants annotation.germline.indel.transcript annotation.germline.snp.unannot-ucsc merged.germline.indel.ROI.tier3.out merged.germline.snp merged.germline.snp.ROI.tier4.out varScan.output.indel.formatted $sample_name.out $sample_name.err);
 				foreach my $file (@outfile_list) {
 					my $del_file = "$sample_output_dir/$file";
 					unlink("$del_file");
 				}
 
-				my $cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file";
-				print "$cmd\n";
+				my $cmd = "perl -I /gscuser/wschierd/genome-stable/ `which gmt` germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file";
+				if($verbose) {
+					print "$cmd\n";
+				}
 				my $job_name = "$sample_output_dir/$sample_name";
 				my $output_name = "$sample_output_dir/$sample_name.output";
 				my $error_name = "$sample_output_dir/$sample_name.err";
@@ -160,9 +193,13 @@ sub execute {                               # replace with real execution logic.
 			print "-e bam_file && -e snp_file && -e indel_file failed";
 			exit;
 		}
-		my $count = $i%15;
-		if ($count == 1) {
-			sleep(1200);
+		my $longqueue_pending=`bjobs -q long | grep PEND | wc -l`; chomp $longqueue_pending;
+		my $apipequeue_pending=`bjobs -q apipe | grep PEND | wc -l`; chomp $apipequeue_pending;
+		if ($longqueue_pending >= 75) {
+			sleep(600);
+		}
+		elsif ($apipequeue_pending >= 50) {
+			sleep(600);
 		}
 	}
 

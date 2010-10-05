@@ -10,6 +10,7 @@ require File::Basename;
 
 class Genome::Command::Base {
     is => 'Command',
+    is_abstract => 1,
     attributes_have => [
         require_user_verify => {
             is => 'Boolean',
@@ -33,7 +34,7 @@ our %ALTERNATE_FROM_CLASS = (
         'Genome::ModelGroup' => ['models'],
     },
     'Genome::Model::Build' => {
-        'Genome::Model' => ['builds', 'latest_build', 'last_successful_build'],
+        'Genome::Model' => ['builds', 'latest_build', 'last_successful_build', 'running_builds'],
     },
 );
 # This will prevent infinite loops during recursion.
@@ -77,8 +78,8 @@ sub resolve_param_value_from_cmdline_text {
         for my $param_class (@param_class) {
             #$self->debug_message("Trying to find $param_class...");
             %SEEN_FROM_CLASS = ();
-            # call _resolve_param_value_from_text without a via_method to bootstrap recursion
-            @arg_results = $self->_resolve_param_value_from_text($arg, $param_class);
+            # call resolve_param_value_from_text without a via_method to bootstrap recursion
+            @arg_results = $self->resolve_param_value_from_text($arg, $param_class);
         } 
 
         $force_verify = 1 if (@arg_results > 1);
@@ -117,8 +118,12 @@ sub resolve_param_value_from_cmdline_text {
     }
 }
 
-sub _resolve_param_value_from_text {
+sub resolve_param_value_from_text {
     my ($self, $param_arg, $param_class, $via_method) = @_;
+
+    unless ($param_class) {
+        $param_class = $self->class;
+    }
 
     $SEEN_FROM_CLASS{$param_class} = 1;
     my @results;
@@ -136,27 +141,53 @@ sub _resolve_param_value_from_text {
         push @results, @results_by_string;
     }
     # if we still don't have any values then try via alternate class
-    if (!@results && exists($ALTERNATE_FROM_CLASS{$param_class})) {
+    if (!@results && $param_arg !~ /,/) {
         @results = $self->_resolve_param_value_via_related_class_method($param_class, $param_arg, $via_method);
     }
 
     if ($via_method) {
         @results = map { $_->$via_method } @results;
     }
-    return @results;
+
+    if (wantarray) {
+        return @results;
+    }
+    elsif (not defined wantarray) {
+        return;
+    }
+    elsif (@results > 1) {
+        Carp::confess("Multiple matches found!");
+    }
+    else {
+        return $results[0];
+    }
 }
 
 sub _resolve_param_value_via_related_class_method {
     my ($self, $param_class, $param_arg, $via_method) = @_;
     my @results;
+    my $via_class;
     if (exists($ALTERNATE_FROM_CLASS{$param_class})) {
-        my @from_classes = sort keys %{$ALTERNATE_FROM_CLASS{$param_class}};
+        $via_class = $param_class;
+    }
+    else {
+        for my $class (keys %ALTERNATE_FROM_CLASS) {
+            if ($param_class->isa($class)) {
+                if ($via_class) {
+                    $self->error_message("Found additional via_class $class but already found $via_class!");
+                }
+                $via_class = $class;
+            }
+        }
+    }
+    if ($via_class) {
+        my @from_classes = sort keys %{$ALTERNATE_FROM_CLASS{$via_class}};
         while (@from_classes && !@results) {
             my $from_class  = shift @from_classes;
-            my @methods = @{$ALTERNATE_FROM_CLASS{$param_class}{$from_class}};
+            my @methods = @{$ALTERNATE_FROM_CLASS{$via_class}{$from_class}};
             my $method;
             if (@methods > 1 && !$via_method) {
-                #$self->debug_message("Trying to find $param_class via $from_class...\n");
+                $self->status_message("Trying to find $via_class via $from_class...\n");
                 my $method_choices;
                 for (my $i = 0; $i < @methods; $i++) {
                     $method_choices .= ($i + 1) . ": " . $methods[$i];
@@ -178,7 +209,7 @@ sub _resolve_param_value_via_related_class_method {
                         $self->error_message("Response was out of bounds, exiting...");
                         exit;
                     }
-                    $ALTERNATE_FROM_CLASS{$param_class}{$from_class} = [$method];
+                    $ALTERNATE_FROM_CLASS{$via_class}{$from_class} = [$method];
                 }
                 elsif (!$response) {
                     $self->status_messag("Exiting...");
@@ -188,11 +219,11 @@ sub _resolve_param_value_via_related_class_method {
                 $method = $methods[0];
             }
             unless($SEEN_FROM_CLASS{$from_class}) {
-                #$self->debug_message("Trying to find $param_class via $from_class->$method...");
-                @results = $self->_resolve_param_value_from_text($param_arg, $from_class, $method);
+                #$self->debug_message("Trying to find $via_class via $from_class->$method...");
+                @results = $self->resolve_param_value_from_text($param_arg, $from_class, $method);
             }
         } # END for my $from_class (@from_classes)
-    } # END if (!@arg_obj && exists(($ALTERNATE_FROM_CLASS{$param_class}))
+    } # END if ($via_class)
     return @results;
 }
 
@@ -265,19 +296,28 @@ sub _get_user_verification_for_param_value_drilldown {
 
     my @dnames = map {$_->__display_name__} grep { $_->can('__display_name__') } @results;
     my $max_dname_length = @dnames ? length((sort { length($b) <=> length($a) } @dnames)[0]) : 0;
+    my @statuses = map {$_->status} grep { $_->can('status') } @results;
+    my $max_status_length = @statuses ? length((sort { length($b) <=> length($a) } @statuses)[0]) : 0;
     @results = sort {$a->__display_name__ cmp $b->__display_name__} @results;
     @results = sort {$a->class cmp $b->class} @results;
+    my @classes = $self->_unique_elements(map {$_->class} @results);
 
     $self->status_message("Found $n_results match(es):");
     my $response;
     while (!$response) {
+        # TODO: Replace this with lister?
         for (my $i = 1; $i <= $n_results; $i++) {
             my $param = $results[$i - 1];
             my $num = $self->_pad_string($i, $pad);
-            my $pfx = "$num:";
-            (my $short_class = $param->class) =~ s/^Genome\:\://;
-            my $dname = $self->_pad_string($param->__display_name__, $max_dname_length, 'suffix');
-            $self->status_message("$pfx $dname ($short_class)");
+            my $msg = "$num:";
+            $msg .= ' ' . $self->_pad_string($param->__display_name__, $max_dname_length, 'suffix');
+            my $status = ' ';
+            if ($param->can('status')) {
+                $status = $param->status;
+            }
+            $msg .= "\t" . $self->_pad_string($param->status, $max_status_length, 'suffix');
+            $msg .= "\t" . $param->class if (@classes > 1);
+            $self->status_message($msg);
         }
         if ($MESSAGE) {
             $MESSAGE = '*'x80 . "\n" . $MESSAGE . "\n" . '*'x80 . "\n";
@@ -406,16 +446,19 @@ sub _shell_args_property_meta
         next if $property_name eq 'is_executed';
         next if $property_name =~ /^_/;
 
-        next if not $property_meta->is_mutable;
-        # UR's Command.pm has this but we resolve this using resolve_param_value_from_cmdline_text
-        #next if defined($property_meta->data_type) and $property_meta->data_type =~ /::/;
-        next if $property_meta->is_delegated;
+        next if $property_meta->implied_by;
         next if $property_meta->is_calculated;
         # Kept commented out from UR's Command.pm, I believe is_output is a workflow property
         # and not something we need to exclude (counter to the old comment below).
         #next if $property_meta->{is_output}; # TODO: This was breaking the G::M::T::Annotate::TranscriptVariants annotator. This should probably still be here but temporarily roll back
         next if $property_meta->is_transient;
         next if $property_meta->is_constant;
+        if (($property_meta->is_delegated) || (defined($property_meta->data_type) and $property_meta->data_type =~ /::/)) {
+            next unless($self->can('resolve_param_value_from_cmdline_text'));
+        }
+        else {
+            next unless($property_meta->is_mutable);
+        }
         if ($property_meta->{shell_args_position}) {
             push @positional, $property_meta;
         }
@@ -437,9 +480,58 @@ sub _shell_args_property_meta
     return @result;
 }
 
+sub _check_for_missing_parameters {
+    my ($self, $params) = @_;
+
+    my $class_object = $self->__meta__;
+    my $type_name = $class_object->type_name;
+
+    my @property_names;
+    my $class_meta = UR::Object::Type->get($self);
+    if (my $has = $class_meta->{has}) {
+        push @property_names, keys %$has;
+    }
+    @property_names = $self->_unique_elements(@property_names);
+
+    my @property_metas = map { $class_object->property_meta_for_name($_); } @property_names;
+
+    my @missing_property_values;
+    for my $property_meta (@property_metas) {
+        next if $property_meta->is_optional;
+        next if $property_meta->implied_by;
+        my $property_name = $property_meta->property_name;
+        my $property_value_defined = defined($params->{$property_name}) || defined($property_meta->default_value);
+        if ($property_value_defined) {
+            next;
+        }
+        else {
+            push @missing_property_values, $property_name;
+        }
+    }
+
+    @missing_property_values = map { $_ =~ s/_/-/g; $_ } @missing_property_values;
+    @missing_property_values = map { $_ =~ s/^/--/g; $_ } @missing_property_values;
+    if (@missing_property_values) {
+        $self->status_message('');
+        $self->error_message("Missing required parameter(s): " . join(', ', @missing_property_values) . ".");
+        return 0;
+    }
+    else {
+        return 1;
+    }
+}
+
 sub resolve_class_and_params_for_argv {
     my $self = shift;
     my ($class, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
+    unless ($self eq $class) {
+        return ($class, $params);
+    }
+    unless (@_ && $self->_check_for_missing_parameters($params)) {
+        $params->{help} = 1;
+        return ($class, $params);
+    }
+    
     if ($params) {
         my $cmeta = $self->__meta__;
         for my $param_name (keys %$params) {
@@ -480,8 +572,6 @@ sub resolve_class_and_params_for_argv {
                 @params = $self->resolve_param_value_from_cmdline_text($param_name, $param_type, $param_arg_str);
             };
             
-
-            $DB::single = 1;
 
             if ($@) {
                 $self->error_message("problems resolving $param_name from $param_arg_str: $@");
@@ -532,25 +622,6 @@ sub default_cmdline_selector {
         return $obj[0];
     }
 }
-
-# TODO: Remove this?
-#sub X_shell_arg_getopt_specification_from_property_meta {
-#    my ($self,$property_meta) = @_;
-#    my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
-#    my @spec_value;
-#    if (my $type = $property_meta->data_type) {
-#        @spec_value = (
-#            $arg_name => sub { print ">>@_<<\n"; $self->from_cmdline($type, @_) }
-#        );    
-#    }
-#    if ($property_meta->is_many and not @spec_value) {
-#        @spec_value = ($arg_name => []);
-#    }
-#    return (
-#        $arg_name .  $self->_shell_arg_getopt_qualifier_from_property_meta($property_meta),
-#        @spec_value
-#    );
-#}
 
 sub _ask_user_question {
     my $self = shift;

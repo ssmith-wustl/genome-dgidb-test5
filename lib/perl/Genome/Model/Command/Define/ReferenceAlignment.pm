@@ -99,7 +99,7 @@ sub _get_reference_sequence_build {
     }
 
     # from cmd line - this dies if non found
-    my @reference_sequence_builds = Genome::Model::Build::ImportedReferenceSequence->from_cmdline($rsb_identifier);
+    my @reference_sequence_builds = Genome::Command::Base->resolve_param_value_from_text($rsb_identifier, 'Genome::Model::Build::ImportedReferenceSequence');
     if ( @reference_sequence_builds == 1 ) {
         return $reference_sequence_builds[0];
     }

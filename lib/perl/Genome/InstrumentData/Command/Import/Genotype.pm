@@ -16,12 +16,12 @@ my %properties = (
     },
     library_name => {
         is => 'Text',
-        doc => 'library name, used to fetch sample name',
+        doc => 'Define this OR sample_name OR both if you like.',
         is_optional => 1,
     },
     sample_name => {
         is => 'Text',
-        doc => 'sample name for imported file, like TCGA-06-0188-10B-01D',
+        doc => 'Define this OR library_name OR both if you like.',
         is_optional => 1,
     },
     import_source_name => {
@@ -127,7 +127,7 @@ sub execute {
             $self->error_message("Could not locate sample with the name ".$self->sample_name);
             die $self->error_message;
         }
-        $library = Genome::Library->get(sample_name => $sample->name);
+        ($library) = Genome::Library->get(sample_name => $sample->name);
         unless(defined($library)){
             $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name);
             die $self->error_message;
@@ -267,7 +267,7 @@ sub get_read_count {
     ($line_count) = split " ",$line_count;
     unless(defined($line_count)&&($line_count > 0)){
         $self->error_message("couldn't get a response from wc.");
-        return undef;
+        return;
     }
     return $line_count
 }

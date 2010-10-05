@@ -63,8 +63,8 @@ sub setup_test_models {
     );
     ok($test_instrument_data, 'created test instrument data');
     
-    my $imported_reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
-    ok($imported_reference_sequence_build, 'got imported ref seq build') or die;
+    my $imported_reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get(name => 'NCBI-human-build36');
+    isa_ok($imported_reference_sequence_build, 'Genome::Model::Build::ImportedReferenceSequence') or die;
 
     my $test_model = Genome::Model->create(
         name => 'test_reference_aligment_model_TUMOR',

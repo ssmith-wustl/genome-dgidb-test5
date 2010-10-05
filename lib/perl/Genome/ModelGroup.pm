@@ -33,22 +33,6 @@ class Genome::ModelGroup {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub from_cmdline {
-    my ($class,$txt) = @_;
-    my @g = eval {
-        unless ($txt =~/\D/) {
-            my @g = Genome::ModelGroup->get($txt);
-            return @g if @g;
-        }
-        my @g = Genome::ModelGroup->get(name => $txt);
-        return @g if @g;
-    };
-    return @g if wantarray;
-    return if not defined wantarray;
-    die "Multiple matches @g" if @g > 1;
-    return $g[0];
-}
-
 sub create {
     my $class = shift;
     my ($bx,%params) = $class->define_boolexpr(@_);

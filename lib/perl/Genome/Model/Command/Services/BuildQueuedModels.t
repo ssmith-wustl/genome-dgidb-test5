@@ -41,7 +41,23 @@ ok(@models, 'created mock models');
 # overload models get, locking and shellcmd during tests
 no warnings;
 *Genome::Model::get = sub{ return grep { $_->build_requested } @models; };
-*Genome::Utility::FileSystem::shellcmd = sub{ return 1; };
+*Genome::Utility::FileSystem::shellcmd = sub{
+    my $class = shift;
+    my %params = @_;
+    my $line = $params{cmd};
+
+    unless($line) {
+        return -1;
+    }
+
+    my $id = (split(/\s+/, $line))[-1];
+    if($id) {
+        my ($model) = grep( $_->id eq $id, @models);
+        $model->build_requested(0); #Simulate starting the build
+    } else {
+        die 'Could not find id in line: ' . $line;
+    }
+};
 *Genome::Utility::FileSystem::lock_resource = sub{ return 1; };
 *Genome::Utility::FileSystem::unlock_resource= sub{ return 1; };
 use warnings;
