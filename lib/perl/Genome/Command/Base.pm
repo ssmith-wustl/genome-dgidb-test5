@@ -538,6 +538,8 @@ sub resolve_class_and_params_for_argv {
         return ($class, $params);
     }
     
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+
     if ($params) {
         my $cmeta = $self->__meta__;
         for my $param_name (keys %$params) {
