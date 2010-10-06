@@ -145,6 +145,76 @@ sub prioritized_transcript{
     return $highest;
 }
 
+# Find which substructures intersect the given variant as quickly as possible.
+# $self holds an object iterator for the current chromosome and a cache of
+# TranscriptStructures it has read from the iterator.
+# It does some "bad" things like poke directly into the object's hash instead of 
+# going through the accessors
+sub _create_iterator_for_variant_intersection {
+    my $self = shift;
+
+    my $structure_iterator;
+    my $loaded_substructures = [];
+    my $last_variant_start = -1;
+    my $last_variant_stop = -1;
+    my $last_chrom_name = '';
+    my $next_substructure;
+
+    return sub {
+        my $variant = $_[0];
+
+        my $variant_start = $variant->{'start'};
+        my $variant_stop  = $variant->{'stop'};
+
+        if ($variant->{'chromosome_name'} ne $last_chrom_name
+            or
+            $variant_start < $last_variant_start
+            or
+            $variant_stop < $last_variant_stop
+        ) {
+            my $chrom_name = $variant->{'chromosome_name'};
+            $self->status_message("Resetting iterator for chromosome $chrom_name");
+    
+            $loaded_substructures = [];
+            $structure_iterator = Genome::TranscriptStructure->create_iterator(
+                                      chrom_name => $chrom_name,
+                                      data_directory => $self->data_directory);
+            $next_substructure = $structure_iterator->next;
+        }
+
+        my @intersections;
+
+        # Keep structures that cross or are after the variant
+        my @keep_structures;
+        foreach my $substr ( @$loaded_substructures ) {
+            if ($variant_start <= $substr->{'structure_stop'}) {
+                push @keep_structures, $substr;
+                if ($variant_stop >= $substr->{'structure_start'}) {
+                    push @intersections, $substr;
+                }
+            }
+        }
+
+        # fast-forward through to substructures that cross
+        while($next_substructure and $next_substructure->{'structure_start'} <= $variant_stop) {
+            push @keep_structures, $next_substructure;
+            if ($next_substructure->{'structure_stop'} <= $variant_start) {
+                push @intersections, $next_substructure;
+            }
+            $next_substructure = $structure_iterator->next();
+        }
+
+        $loaded_substructures = \@keep_structures;
+
+        $last_variant_start = $variant_start;
+        $last_variant_stop  = $variant_stop;
+        $last_chrom_name    = $variant->{'chromosome_name'};
+
+        return \@intersections;
+    };
+}
+
+
 # Annotates all transcripts affected by a variant
 # Corresponds to none filter in Genome::Model::Tools::Annotate::TranscriptVariants
 sub transcripts {
@@ -173,19 +243,25 @@ sub transcripts {
     # The filter for transcript start and stop is to give the file datasource some hints so it
     # can seek into the file and/or stop looking early.
     # Conservatively we'll double that number and it should still help the speed.
+$DB::single=1;
+    my $windowing_iterator = $self->{'_windowing_iterator'};
+    unless ($windowing_iterator) {
+        $windowing_iterator = $self->{'_windowing_iterator'} = $self->_create_iterator_for_variant_intersection();
+    }
     my @crossing_substructures = Genome::TranscriptStructure->get(
                                      chrom_name => $variant{'chromosome_name'},
                                      'structure_stop >=' => $variant_start,
                                      'structure_start <=' => $variant_stop,
-                                     'transcript_transcript_start >=' => $variant_start - 4500000,
-                                     'transcript_transcript_stop <=' => $variant_stop + 4500000,
+                                     #'transcript_transcript_start >=' => $variant_start - 4500000,
+                                     #'transcript_transcript_stop <=' => $variant_stop + 4500000,
                                      data_directory => $self->data_directory);
-    return unless @crossing_substructures;
+    my $crossing_substructures = $windowing_iterator->(\%variant);
+    return unless @$crossing_substructures;
 
     my @annotations;
     my $variant_checked = 0;
 
-    foreach my $substruct ( @crossing_substructures ) {
+    foreach my $substruct ( @$crossing_substructures ) {
         # If specified, check that the reference sequence stored on the variant correctly matches our reference
         if ($self->check_variants and not $variant_checked) {
             unless ($variant{reference} eq '-') {
