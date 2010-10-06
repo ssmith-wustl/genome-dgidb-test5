@@ -5,6 +5,7 @@
   <link fromOperation="input connector"   fromProperty="masked fasta file"  toOperation="join fasta files"  toProperty="fasta_file" />
   <link fromOperation="input connector"   fromProperty="repeat library"     toOperation="mask sequences"    toProperty="repeat library" />
   <link fromOperation="input connector"   fromProperty="species"            toOperation="mask sequences"    toProperty="species" />
+  <link fromOperation="input connector"   fromProperty="xsmall"             toOperation="mask sequences"    toProperty="xsmall" />
   <link fromOperation="split fasta files" fromProperty="fasta_files"        toOperation="mask sequences"    toProperty="fasta file" />
   <link fromOperation="mask sequences"    fromProperty="masked fasta file"  toOperation="join fasta files"  toProperty="fasta_files" />
   <link fromOperation="join fasta files"  fromProperty="result"             toOperation="output connector"  toProperty="result" />
@@ -21,6 +22,7 @@
     <inputproperty>masked fasta file</inputproperty>
     <inputproperty>repeat library</inputproperty>
     <inputproperty>species</inputproperty>
+    <inputproperty>xsmall</inputproperty>
     <outputproperty>result</outputproperty>
   </operationtype>
 </workflow>
