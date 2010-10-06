@@ -87,10 +87,12 @@ sub resolve_param_value_from_cmdline_text {
             push @results, @arg_results;
             last if ($arg =~ /,/); # the first arg is all param_args as BoolExpr, if it returned values finish; basically enforicing AND (vs. OR)
         }
-        elsif ($i != 0) {
+        elsif ( $i != 0 || @param_args == 1 ) {
             print STDERR "WARNING: No match found for $arg!\n";
         }
     }
+
+    return unless (@results);
 
     @results = $self->_unique_elements(@results);
     my $pmeta = $self->__meta__->property($param_name);
