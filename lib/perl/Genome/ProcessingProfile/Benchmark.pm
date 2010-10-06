@@ -7,13 +7,13 @@ use Genome;
 class Genome::ProcessingProfile::Benchmark {
     is => 'Genome::ProcessingProfile',
     has => [
-        server_dispatch => {
+        XXXserver_dispatch => {
             is_constant => 1,
             is_class_wide => 1,
             value => 'inline',
             doc => 'lsf queue to submit the launcher or \'inline\''
         },
-        job_dispatch => {
+        XXXjob_dispatch => {
             is_constant => 1,
             is_class_wide => 1,
             value => 'inline',
@@ -21,7 +21,7 @@ class Genome::ProcessingProfile::Benchmark {
         }
     ],
     has_param => [
-        command_name => {
+        command => {
             doc => 'command to benchmark',
         },
         args => {
@@ -52,8 +52,8 @@ sub _execute_build {
 
     $DB::single=1;
 
-    my $cmd = $self->command_name;
-    my $args = $self->args;
+    my $cmd = $self->command;
+    my $args = $self->args || '';
 
 #    my @inputs = $build->inputs();
 
