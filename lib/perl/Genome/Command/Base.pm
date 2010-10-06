@@ -312,7 +312,7 @@ sub _get_user_verification_for_param_value_drilldown {
             if ($param->can('status')) {
                 $status = $param->status;
             }
-            $msg .= "\t" . $self->_pad_string($param->status, $max_status_length, 'suffix');
+            $msg .= "\t" . $self->_pad_string($status, $max_status_length, 'suffix');
             $msg .= "\t" . $param->class if (@classes > 1);
             $self->status_message($msg);
         }
