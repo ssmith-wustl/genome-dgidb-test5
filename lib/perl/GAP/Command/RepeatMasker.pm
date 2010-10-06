@@ -36,6 +36,11 @@ class GAP::Command::RepeatMasker {
             is_input => 1,
             doc => 'Species name',
 		},
+	    xsmall	=> {
+            is  => 'Text',
+            is_input => 1,
+            doc => 'xmall option',
+		},
     ], 
 };
 
@@ -84,6 +89,11 @@ sub execute {
         $self->warning_message("Removing existing file at " . $self->masked_fasta);
         unlink $self->masked_fasta;
     }
+
+	my $xsmall = 0;
+	if ($self->xsmall) {
+	    $xsmall = 1;	
+    }
    
     my $input_fasta = Bio::SeqIO->new(
         -file => $self->fasta_file,
@@ -101,10 +111,10 @@ sub execute {
     # tracked in any repo...
     my $masker;
     if (defined $self->repeat_library) {
-    	$masker = Bio::Tools::Run::RepeatMasker->new(lib => $self->repeat_library);
+    	$masker = Bio::Tools::Run::RepeatMasker->new(lib => $self->repeat_library,  xsmall => $xsmall);
     }
     elsif (defined $self->species) {
-    	$masker = Bio::Tools::Run::RepeatMasker->new(species => $self->species);
+    	$masker = Bio::Tools::Run::RepeatMasker->new(species => $self->species, xsmall => $xsmall);
     } 
     
     # FIXME RepeatMasker emits a warning when no repetitive sequence is found. I'd prefer to not have
