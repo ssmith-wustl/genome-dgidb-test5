@@ -254,9 +254,6 @@ sub _resolve_param_value_from_text_by_name_or_id {
         unless (@results) {
             @results = $param_class->get("name like" => "$str");
         }
-        unless (@results) {
-            @results = $param_class->get("name like" => "%$str%");
-        }
     }
     #$self->debug_message("S: $param_class '$str' " . scalar(@results));
 
@@ -315,7 +312,7 @@ sub _get_user_verification_for_param_value_drilldown {
             if ($param->can('status')) {
                 $status = $param->status;
             }
-            $msg .= "\t" . $self->_pad_string($param->status, $max_status_length, 'suffix');
+            $msg .= "\t" . $self->_pad_string($status, $max_status_length, 'suffix');
             $msg .= "\t" . $param->class if (@classes > 1);
             $self->status_message($msg);
         }
@@ -324,7 +321,7 @@ sub _get_user_verification_for_param_value_drilldown {
             $self->status_message($MESSAGE);
             $MESSAGE = '';
         }
-        $response = $self->_ask_user_question("Proceed using the above list?", 300, '\*|y|b|h|x|[-+]?[\d\-, ]+', 'h', '(y)es|(b)ack|(h)elp|e(x)it|LIST');
+        $response = $self->_ask_user_question("Proceed using the above list?", 300, '\*|y|b|h|x|[-+]?[\d\-\., ]+', 'h', '(y)es|(b)ack|(h)elp|e(x)it|LIST');
         if (lc($response) eq 'h' || !$self->_validate_user_response_for_param_value_verification($response)) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .=
@@ -345,7 +342,7 @@ sub _get_user_verification_for_param_value_drilldown {
     elsif (lc($response) eq 'y' | $response eq '*') {
         return @results;
     }
-    elsif ($response =~ /^[-+]?[\d\-, ]+$/) {
+    elsif ($response =~ /^[-+]?[\d\-\., ]+$/) {
         @results = $self->_trim_list_from_response($response, @results);
         return @results;
     }
@@ -362,7 +359,7 @@ sub _validate_user_response_for_param_value_verification {
         if ($response =~ /^[xby*]$/) {
             return 1;
         }
-        if ($response !~ /^(\d+)(-(\d+))?$/) {
+        if ($response !~ /^(\d+)([-\.]+(\d+))?$/) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .= "ERROR: Invalid list provided ($response)";
             return 0;
@@ -393,7 +390,7 @@ sub _trim_list_from_response {
     @indices{0..$#list} = 0..$#list if ($method eq '-');
 
     for my $response (@response) {
-        $response =~ /^(\d+)(-(\d+))?$/;
+        $response =~ /^(\d+)([-\.]+(\d+))?$/;
         my $low = $1; $low--;
         my $high = $3 || $1; $high--;
         die if ($high < $low);
@@ -591,36 +588,6 @@ sub resolve_class_and_params_for_argv {
         }
     }
     return ($class, $params);
-}
-
-# TODO: Remove this and replace references with resolve_param_value_from_cmdline_text
-sub default_cmdline_selector {
-    my $class = shift;
-    my @obj;
-    while (my $txt = shift) {
-        eval {
-            my $bx = UR::BoolExpr->resolve_for_string($class,$txt);
-            my @matches = $class->get($bx);
-            push @obj, @matches;
-        };
-        if ($@) {
-            my @matches = $class->get($txt);
-            push @obj, @matches;
-        }
-    }
-
-    if (wantarray) {
-        return @obj;
-    }
-    elsif (not defined wantarray) {
-        return;
-    }
-    elsif (@obj > 1) {
-        Carp::confess("Multiple matches found!");
-    }
-    else {
-        return $obj[0];
-    }
 }
 
 sub _ask_user_question {
