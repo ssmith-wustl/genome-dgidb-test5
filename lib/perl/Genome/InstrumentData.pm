@@ -16,18 +16,14 @@ class Genome::InstrumentData {
                fc.run_name,
                'Genome::InstrumentData::Solexa' subclass_name,
                'solexa' sequencing_platform,
-               to_char(solexa.analysis_id) seq_id,
-               sam.full_name sample_name,
                (
                     case 
                         when solexa.index_sequence is null then to_char(solexa.lane) 
                         else to_char(solexa.lane) || '-' || solexa.index_sequence
                     end
                ) subset_name,
-               lib.full_name library_name
+               library_id
           FROM GSC.index_illumina solexa 
-          JOIN GSC.library_summary lib on lib.library_id = solexa.library_id
-          JOIN GSC.organism_sample sam on sam.organism_sample_id = lib.sample_id
           JOIN GSC.flow_cell_illumina fc on fc.flow_cell_id = solexa.flow_cell_id
      UNION ALL
             SELECT 
@@ -35,62 +31,53 @@ class Genome::InstrumentData {
                r.run_name,
                'Genome::InstrumentData::454' subclass_name,
                '454' sequencing_platform,
-               to_char(ri.seq_id) seq_id,
-               s.full_name sample_name,
                (
                 case
                     when ri.index_sequence is null then to_char(r.region_number)
                     else to_char(r.region_number) || '-' || ri.index_sequence
                 end
                ) subset_name,
-               lib.full_name library_name
+               (
+                case
+                    when ri.index_sequence is null then r.library_id
+                    else ri.library_id
+                end
+               ) library_id
            FROM GSC.run_region_454 r 
-            JOIN GSC.region_index_454 ri on ri.region_id = r.region_id
-            JOIN GSC.library_summary lib on lib.library_id = ri.library_id
-            JOIN GSC.organism_sample s on s.organism_sample_id = lib.sample_id
+           JOIN GSC.region_index_454 ri on ri.region_id = r.region_id
      UNION ALL
         SELECT to_char(imported.id) id,
-               'unknown' run_name,
+               run_name,
                'Genome::InstrumentData::Imported' subclass_name,
                sequencing_platform,
-               to_char(imported.id) seq_id,
-               NVL(imported.sample_name, 'unknown') sample_name,
                subset_name,
-               'unknown' library_name
-          FROM imported_instrument_data imported 
+               library_id
+          FROM imported_instrument_data imported
      UNION ALL
         SELECT run_name id,
                sanger.run_name,
                'Genome::InstrumentData::Sanger' subclass_name,
                'sanger' sequencing_platform,
-               sanger.run_name seq_id,
-               NVL(sample.value, 'unknown') sample_name,
                '1' subset_name,
-               NVL(library.value, 'unknown') library_name
-          FROM gsc_run\@oltp sanger,
-               misc_attribute sample,
-               misc_attribute library
-         WHERE sanger.run_name = sample.entity_id(+) AND
-               sanger.run_name = library.entity_id(+) AND
-               sample.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
-               sample.property_name(+) = 'sample_name' AND
-               library.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
-               library.property_name(+) = 'library_name'
+               libsum.library_id
+          FROM gsc_run\@oltp sanger
+          LEFT JOIN misc_attribute library_misc
+            on library_misc.entity_id = sanger.run_name
+            and library_misc.entity_class_name = 'Genome::InstrumentData::Sanger'
+            and library_misc.property_name = 'library_name'
+          LEFT JOIN gsc.library_summary libsum on libsum.full_name = library_misc.value
     ) idata
 EOS
     ,
     is_abstract => 1,
     subclassify_by => 'subclass_name',
-    #sub_classification_method_name => '_resolve_subclass_name',
     has => [
-        sequencing_platform => { is => 'VARCHAR2', len => 255 },
-        subclass_name       => { is => 'VARCHAR2', len => 255 },
-        run_name            => { is => 'VARCHAR2', len => 500, is_optional => 1 },
-        subset_name         => { is => 'VARCHAR2', len => 32, is_optional => 1, },
-        sample_name         => { is => 'VARCHAR2', len => 255 },
-        #sample              => { is => 'Genome::Sample', where => [ 'sample_name' => \'sample_name' ] },
-        library_name        => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        events => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "instrument_data" },
+        subclass_name       => { is => 'Text', len => 255 },
+        sequencing_platform => { is => 'Text', len => 255 },
+        run_name            => { is => 'Text', len => 500, is_optional => 1 },
+        subset_name         => { is => 'Text', len => 32, is_optional => 1, },
+        
+        # TODO: see if this stuff is used and if not delete it -ss
         full_name => { calculate_from => ['run_name','subset_name'], calculate => q|"$run_name/$subset_name"| },        
         name => {
             doc => 'This is a long version of the name which is still used in some places.  Replace with full_name.',
@@ -99,7 +86,20 @@ EOS
             calculate => q|$run_name. '.' . $sample_name| 
         },
     ],
+    has_optional => [        
+        library_id          =>  { is => 'VARCHAR2', len => 15 },
+        library             =>  { is => 'Genome::Library', id_by => 'library_id' },
+        library_name        =>  { via => 'library', to => 'name' },
+
+        sample_id           =>  { via => 'library' },
+        sample              =>  { is => 'Genome::Sample', via => 'sample_id' },
+        sample_name         =>  { via => 'sample', to => 'name' },
+
+        # TODO: see if this stuff is used and if not delete it -ss
+        events => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "instrument_data" },
+    ],
     has_optional => [
+        # TODO: see if this stuff is used and if not delete it -ss
         full_path => {
             via => 'attributes',
             to => 'value', 

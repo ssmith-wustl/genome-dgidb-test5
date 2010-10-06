@@ -161,7 +161,6 @@ sub execute {
     $params{import_format} = $self->import_format;
     $params{sample_id} = $sample->id;
     $params{library_id} = $library->id;
-    $params{library_name} = $library->name;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
