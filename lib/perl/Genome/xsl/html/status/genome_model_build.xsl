@@ -2,6 +2,7 @@
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
+  <xsl:include href="genome_model.xsl"/>
 
   <xsl:template name="genome_model_build" match="build-status">
     <!-- global object for data, uses YUI Module Pattern -->
