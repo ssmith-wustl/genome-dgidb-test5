@@ -335,9 +335,12 @@ sub _get_user_verification_for_param_value_drilldown {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .=
             "Help:\n".
-            "* Specify which elements to keep by listing them, e.g. '1,3,12' would keep items 1, 3, and 12.\n".
-            "* Begin list with a minus to remove elements, e.g. '-1,3,9' would remove items 1, 3, and 9.\n".
-            "* Ranges can be used, e.g. '-11-17, 5' would remove items 11 through 17 and remove item 5.";
+            "* Specify which elements to keep by listing them, e.g. '1,3,12' would keep\n".
+            "  items 1, 3, and 12.\n".
+            "* Begin list with a minus to remove elements, e.g. '-1,3,9' would remove\n".
+            "  items 1, 3, and 9.\n".
+            "* Ranges can be used, e.g. '-11-17, 5' would remove items 11 through 17 and\n".
+            "  remove item 5.";
             $response = '';
         }
     }
