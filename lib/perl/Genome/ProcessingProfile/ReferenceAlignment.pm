@@ -53,34 +53,6 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => 'command line args used for the indel detector',  
             is_optional => 1,
         },
-        genotyper_name => {
-            doc => 'name of the genotyper for this model... deprecated',
-            is_optional => 1,
-        },
-        genotyper_version => {
-            doc => 'version of the genotyper for this model... deprecated',
-            is_optional => 1,
-        },
-        genotyper_params => {
-            doc => 'command line args used for the genotyper... deprecated',
-            is_optional => 1,
-        },
-        indel_finder_name => {
-            doc => 'name of the indel finder for this model... deprecated',
-            is_optional => 1,
-        },
-        indel_finder_version => {
-            doc => 'version of the indel finder for this model... deprecated',
-            is_optional => 1,
-        },
-        indel_finder_params => {
-            doc => 'command line args for the indel finder... deprecated',
-            is_optional => 1,
-        },
-        variant_filter => {
-            doc => 'variant filter type: VarFilter or SnpFilter... deprecated',
-            is_optional => 1,
-        },
         multi_read_fragment_strategy => {
             doc => '',
             is_optional => 1,
@@ -156,11 +128,6 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => '',
             is_optional => 1,
         },
-        # ehvatum: TODO remove this attribute or make it derive from reference alignment model -> imported reference sequence -> name
-        reference_sequence_name => {
-            doc => 'identifies the reference sequence used in the model(required if no prior_ref_seq)',
-            is_optional => 1,
-        },
         capture_set_name => {
             doc => 'The name of the capture set to evaluate coverage and limit variant calls to within the defined target regions',
             is_optional => 1,
@@ -224,7 +191,7 @@ sub params_for_alignment {
     my $assignment = shift;
 
     my $model = $assignment->model;
-    my $reference_build = $model->reference_build;
+    my $reference_build = $model->reference_sequence_build;
     my $reference_build_id = $reference_build->id;
 
     unless ($self->type_name eq 'reference alignment') {
@@ -370,7 +337,7 @@ sub reference_coverage_job_classes {
     if ($self->dna_type eq 'cdna' || $self->dna_type eq 'rna') {
         #TODO this needs to be changed to reference build
         my $reference_sequence_build = $model->reference_sequence_build;
-        if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/) {
+        if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/i) {
             my @steps = (
                 'Genome::Model::Event::Build::ReferenceAlignment::RefCov',
             );
@@ -415,8 +382,8 @@ sub transcript_annotation_job_classes{
     if (defined($self->annotation_reference_transcripts)){
         my @steps = (
             'Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor',
-            #'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
-            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariantsParallel',
+            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
+            #'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariantsParallel',
         );
         return @steps;
     }
@@ -448,7 +415,16 @@ sub alignment_objects {
     my @solexa_instrument_data = Genome::InstrumentData->get( \@instrument_data_ids );
 
     unless (scalar @solexa_instrument_data == scalar @instrument_data_ids) {
-        $self->warning_message('Failed to find all of the assigned instrument data for model: '.$model->id.'. Now trying imported data');
+        my %assignments = map { $_->instrument_data_id => $_ } @assignments;
+        for my $found (@solexa_instrument_data) {
+            delete $assignments{$found->id};
+        }
+        my @missing = sort keys %assignments;
+        $self->warning_message(
+            'Failed to find all of the assigned instrument data for model: '
+            . $model->id
+            . ".  Missing @missing.  Now trying imported data..."
+        );
         my @imported_instrument_data = Genome::InstrumentData::Imported->get( \@instrument_data_ids );
         
         push @solexa_instrument_data, @imported_instrument_data;
@@ -466,7 +442,7 @@ sub reference_coverage_objects {
     my $model = shift;
 
     my $reference_sequence_build = $model->reference_sequence_build;
-    if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/) {
+    if ($reference_sequence_build->name =~ /^XStrans_adapt_smallRNA_ribo/i) {
         return 'all_sequences';
     }
     my @inputs = Genome::Model::Input->get(model_id => $model->id, name => 'region_of_interest_set_name');

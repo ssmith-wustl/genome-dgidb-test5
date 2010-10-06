@@ -125,6 +125,9 @@ sub execute {
                 if (length($amino_acid_change) > 255) {
                     $amino_acid_change = substr($amino_acid_change,0,240)."...truncated";
                 }
+                if (length($ucsc_cons) > 255) {
+                    $ucsc_cons = substr($ucsc_cons,0,240)."...truncated";
+                }
                 my $accession_domains = $self->make_domain_into_ids($domain, $accession_lookup);
                 my $new_variant;
                 my $variant_already_exists = Genome::Model::Variant->get(

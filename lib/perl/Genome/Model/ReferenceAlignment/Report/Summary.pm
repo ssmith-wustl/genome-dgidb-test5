@@ -131,8 +131,8 @@ sub get_summary_information
     my $total_unfiltered_snps=$na;
     my $total_filtered_snps=$na;
 
-    my $unfiltered_dbsnp_positions=$na;
-    my $filtered_dbsnp_positions=$na;
+    #my $unfiltered_dbsnp_positions=$na;
+    #my $filtered_dbsnp_positions=$na;
 
     my $unfiltered_dbsnp_concordance=$na;
     my $filtered_dbsnp_concordance=$na;
@@ -141,7 +141,7 @@ sub get_summary_information
 
     my $mapcheck_report_file = $report_dir."/Mapcheck/report.html";
     my $goldsnp_report_file = $report_dir."/Gold_SNP_Concordance/report.html";
-    my $dbsnp_report_file = $report_dir."/dbSNP_Concordance/report.txt";
+    my $dbsnp_report_file = $report_dir."/dbSNP_Concordance/report.html";
     my $input_base_count_report_file = $report_dir . "/Input_Base_Count/report.html";
 
     ##match mapcheck report
@@ -205,59 +205,51 @@ sub get_summary_information
         }
         $fh->close;
     }
+    else {
+        $self->status_message("Gold snp report file: $goldsnp_report_file is not available");
+    }
 
     ##match dbsnp report
     $fh = new IO::File($dbsnp_report_file, "r");
     if ($fh) {
         my $dbsnp_contents = get_contents($fh);
         # get unfiltered data
-        if ( $dbsnp_contents =~ /^\s*total unfiltered SNPs: (\S+)$/m) {
+        #if ( $dbsnp_contents =~ /^\s*total unfiltered SNPs: (\S+)$/m) {
+        if ($dbsnp_contents =~ /total unfiltered SNPs:\s+<\/td>\s+<td class.*?>\s+(\S+)/) {
             $total_unfiltered_snps = $1;
-        } else {
+        } 
+        else {
             $self->status_message("Could not extract total unfiltered SNPs from $dbsnp_report_file!");
         }
 
-        if ( $dbsnp_contents =~ /^\s*unfiltered dbSNP positions: (\S+)$/m) {
-            $unfiltered_dbsnp_positions = $1;
-        } else {
-            $self->status_message("Could not extract unfiltered dbSNP positions from $dbsnp_report_file!");
-        }
-
-        if ( $dbsnp_contents =~ /^\s*unfiltered concordance: (\S+)$/m) {
+        if ( $dbsnp_contents =~ /unfiltered concordance:\s+<\/td>\s+<td class.*?>\s+(\S+)/) {
             $unfiltered_dbsnp_concordance = $1;
-        } else {
+        } 
+        else {
             $self->status_message("Could not extract unfiltered concordance from $dbsnp_report_file!");
         }
 
         # get filtered data
-        if ( $dbsnp_contents =~ /^\s*total filtered SNPs: (\S+)$/m) {
+        if ( $dbsnp_contents =~ /total filtered SNPs:\s+<\/td>\s+<td class.*?>\s+(\S+)/) {
             $total_filtered_snps = $1;
             $self->status_message("total_filtered_snps: $total_filtered_snps");
-        } else {
+        } 
+        else {
             $self->status_message("Could not extract total filtered SNPs from $dbsnp_report_file!");
         }
 
-        if ( $dbsnp_contents =~ /^\s*filtered dbSNP positions: (\S+)$/m) {
-            $filtered_dbsnp_positions = $1;
-            $self->status_message("filtered_dbsnp_positions: $filtered_dbsnp_positions");
-        } else {
-            $self->status_message("Could not extract filtered dbSNP positions from $dbsnp_report_file!");
-        }
-
-        if ( $dbsnp_contents =~ /^\s*filtered concordance: (\S+)$/m) {
+        if ( $dbsnp_contents =~ /\sfiltered concordance:\s+<\/td>\s+<td class.*?>\s+(\S+)/) {
             $filtered_dbsnp_concordance = $1;
             $self->status_message("filtered_dbsnp_concordance: $filtered_dbsnp_concordance");
-        } else {
+        } 
+        else {
             $self->status_message("Could not extract filtered concordance from $dbsnp_report_file!");
         }
 
-        # if ( $dbsnp_contents =~ m|There were (\S+) positions in dbSNP for a concordance of (\S+)%|g ) {
-        #     $unfiltered_dbsnp_concordance=$2;
-        # }
-        # if ( $dbsnp_contents =~ m|There were (\S+) positions in dbSNP for a concordance of (\S+)%|g ) {
-        #     $filtered_dbsnp_concordance=$2;
-        # }
         $fh->close();
+    }
+    else {
+        $self->status_message("dbSNP concordance report: $dbsnp_report_file is not available");
     }
 
     ##the number of instrument data assignments is:
@@ -277,7 +269,7 @@ sub get_summary_information
     }
     my $total_gigabases = sprintf("%.03f", $total_bases/1000000000);
 
-    if ($model->read_trimmer_name =~ /^trimq2/) {
+    if ($model->read_trimmer_name and $model->read_trimmer_name =~ /^trimq2/) {
         my ($total_ct, $total_trim_ct) = $build->calculate_input_base_counts_after_trimq2;
         if ($total_ct and $total_trim_ct) {
             my $gb       = sprintf("%.03f", $total_ct/1000000000);
@@ -359,7 +351,7 @@ sub get_summary_information
         }
     }
 
-    my $ref_seq_dir = $self->model->reference_build->data_directory;
+    my $ref_seq_dir = $self->model->reference_sequence_build->data_directory;
 
     $DB::single = 1;
 
@@ -376,7 +368,7 @@ sub get_summary_information
     $filtered_snp_calls =~ s/\s\S+\s*$//i;
     $filtered_snp_calls =~ s/\s//g;
 
-    my $snp_chromosomes = $self->model->reference_build->description;
+    my $snp_chromosomes = $self->model->reference_sequence_build->description;
     my $snp_caller = $self->model->snv_detector_name;
 
     my @stat = stat($filtered_files[-1]);
@@ -411,7 +403,7 @@ sub get_summary_information
     }
     else
     {
-        push @vars, (ref_seq_name                     => $self->model->reference_build->name);
+        push @vars, (ref_seq_name                     => $self->model->reference_sequence_build->name);
     }
 
     push @vars, (
@@ -449,8 +441,8 @@ sub get_summary_information
         total_filtered_snps                           => commify($total_filtered_snps),
         total_unfiltered_snps                         => commify($total_unfiltered_snps),
 
-        unfiltered_dnsbp_positions                    => commify($unfiltered_dbsnp_positions),
-        filtered_dnsbp_positions                      => commify($filtered_dbsnp_positions),
+        #unfiltered_dnsbp_positions                    => commify($unfiltered_dbsnp_positions),
+        #filtered_dnsbp_positions                      => commify($filtered_dbsnp_positions),
 
         unfiltered_dbsnp_concordance                  => $unfiltered_dbsnp_concordance,
         filtered_dbsnp_concordance                    => $filtered_dbsnp_concordance,

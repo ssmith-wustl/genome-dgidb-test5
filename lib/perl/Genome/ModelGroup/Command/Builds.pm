@@ -40,17 +40,16 @@ sub get_mg {
         $self->error_message("Please only specify one paramater (name or ID)");
         exit;
     }
-    if($self->model_group_id || $self->item =~ /^\d+$/) {
+    if($self->model_group_id || ($self->item && $self->item =~ /^-?\d+$/)) {
         my $id = $self->model_group_id || $self->item;
         $mg = Genome::ModelGroup->get($id);
     }
-    if($self->model_group_name || (!$mg && $self->item)) {
+    if($self->model_group_name || ($self->item && !$mg)) {
         my $name = $self->model_group_name || $self->item;
         $mg = Genome::ModelGroup->get(name => $name);
     }
     unless($mg) {
-        $self->error_message("Unable to determine model group.");
-        exit;
+        die $self->error_message("Unable to determine model group.");
     }
     $self->status_message("Found model group " . $mg->name . " (" . $mg->id . "):");
 

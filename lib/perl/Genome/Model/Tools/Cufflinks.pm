@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '0.8.2';
+my $DEFAULT = '0.9.0';
 
 class Genome::Model::Tools::Cufflinks {
     is => 'Command',
@@ -38,6 +38,8 @@ my %CUFFLINKS_VERSIONS = (
     '0.7.0'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.7.0.Linux_x86_64',
     '0.8.0'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.8.0.Linux_x86_64',
     '0.8.2'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.8.2.Linux_x86_64',
+    '0.8.3'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.8.3.Linux_x86_64',
+    '0.9.0'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.9.0.Linux_x86_64',
 );
 
 sub cuffcompare_path {

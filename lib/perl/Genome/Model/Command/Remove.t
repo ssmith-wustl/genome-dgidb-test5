@@ -12,6 +12,7 @@ BEGIN {
 my $archive_dir = File::Temp::tempdir(CLEANUP => 1);
 my $data_dir = File::Temp::tempdir(CLEANUP => 1);
 my $template = 'Genome-Model-Command-Remove-'. $ENV{USER} .'-XXXX';
+my $hostname = Sys::Hostname::hostname;
 
 my (undef,$archive_file) = 
     File::Temp::tempfile(
@@ -30,12 +31,12 @@ ok($s, "made a test sample");
 
 my $p = Genome::ProcessingProfile::TestPipeline->create(
     id => -999, 
-    name => "test " . __FILE__ . " on host $ENV{HOSTNAME} process $$", 
+    name => "test " . __FILE__ . " on host $hostname process $$", 
     some_command_name => 'ls',
 );
 ok($p, "made a test processing profile");
 
-my $mname = "test-$$-$ENV{HOSTNAME}";
+my $mname = "test-$$-$hostname";
 my $m = Genome::Model::TestPipeline->create(
     id => -1, 
     name => $mname,

@@ -102,7 +102,7 @@ sub execute {
     
     my $output = Workflow::Simple::run_workflow_lsf(
         $op,
-        'ref_list'  => $self->model->reference_build->full_consensus_sam_index_path($self->model->samtools_version),
+        'ref_list'  => $self->model->reference_sequence_build->full_consensus_sam_index_path($self->model->samtools_version),
         'accumulated_alignments_dir' => $alignments_dir, 
         'library_alignments' => \@list_of_library_alignments,
         'aligner_version' => $self->model->read_aligner_version,
@@ -264,6 +264,8 @@ sub execute {
        $self->error_message("Unexpected return value($rv) from command: $cmd");
        die($self->error_message);
    }
+
+   $self->create_bam_md5;
 
     for my $file (grep {-f $_} glob($build->accumulated_alignments_directory . "/*")) {
         $self->status_message("Setting $file to read-only");

@@ -180,7 +180,7 @@ dispatch {
 
         my $content = $view->content();
 
-        [ 200, [ 'Content-type', $mime_type ], [$content] ];
+        [ 200, [ 'Content-type', $mime_type, 'Set-Cookie', 'cacheon=1; expires=Thu, 01-Jan-2000 00:00:00 GMT' ], [$content] ];
       }
 };
 

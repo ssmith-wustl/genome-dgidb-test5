@@ -177,70 +177,6 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
-# TODO: improve the logic in Genome::Command::OO to handle more of this
-sub from_cmdline {
-    my $class = shift;
-    my @matches;
-    my %missing;
-    @missing{@_} = @_;
-    eval {
-        my @numbers = grep { $_ !~ /\D/ } @_;
-        if (@numbers) {
-            @matches = $class->get(\@numbers);
-
-            my @found = map { $_->id } @matches;
-            delete @missing{@found};
-            return @matches if @matches == @numbers;
-
-            my @builds = Genome::Model::Build->get(\@numbers);
-            my @models = $class->get(builds => \@builds);
-            push @found, @models;
-            @found = map { $_->id } @builds;
-            delete @missing{@found};
-
-            return @matches unless %missing;
-
-        }
-        my @models = $class->get(name => [keys %missing]);
-        my @found;
-        if (@models) {
-            push @matches, @models;
-            @found = map { $_->name } @models;
-            delete @missing{@found};
-            return @matches unless %missing;
-        }
-        my @groups = Genome::ModelGroup->get(name => [keys %missing]);
-        if (@groups) {
-            my @models = map { $_->models } @groups;
-            push @matches, @models;
-            @found = map { $_->name } @groups;
-            delete @missing{@found};
-            return @matches unless %missing;
-        }
-        for my $name (sort keys %missing) {
-            my @models = $class->get("name like" => $name);
-            delete $missing{$name} if @models;
-            push @matches, @models;
-        }
-    };
-    if (%missing) {
-        my @missing = sort keys %missing;
-        die "Failed to find @missing!";
-    }
-    if (wantarray) {
-        return @matches;
-    }
-    elsif (not defined wantarray) {
-        return;
-    }
-    elsif (@matches > 1) {
-        Carp::confess("Multiple matches found for @_!");
-    }
-    else {
-        return $matches[0]
-    }
-}
-
 sub __display_name__ {
     my $self = shift;
     return $self->name . ' (' . $self->id . ')';
@@ -644,12 +580,14 @@ sub completed_builds {
 
     my @completed_builds;
     for my $build ( $self->builds ) {
-        next unless defined $build->build_status and $build->build_status eq 'Succeeded';
+        my $build_status = $build->build_status;
+        next unless defined $build_status and $build_status eq 'Succeeded';
         next unless defined $build->date_completed; # error?
         push @completed_builds, $build;
     }
 
-    return sort { $a->id <=> $b->id } @completed_builds;
+    my %build_ids = map { $_ => $_->id } @completed_builds;
+    return sort { $build_ids{$a} <=> $build_ids{$b} } @completed_builds;
 }
 
 sub latest_build {
@@ -1013,20 +951,14 @@ sub _build_model_filesystem_paths {
 
 sub inputs_necessary_for_copy {
     my $self = shift;
-   
-    $self->status_message("Gathering inputs for model copy"); 
-
     # skip instrument data assignments; these should be handled by applying the instrument data assign command
     # to the target model
     my @inputs_to_copy = grep {$_->name ne "instrument_data"} $self->inputs;
-   
     return @inputs_to_copy; 
 }
 
 sub additional_params_for_copy {
-    my $self = shift;
-
-    return ();
+    return();
 }
 
 1;

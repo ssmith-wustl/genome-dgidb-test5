@@ -27,9 +27,10 @@ my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
 );
 ok($example_build, 'got example build') or die;
 
-my $example_fastq = $example_build->collated_fastq_file;
-symlink($example_fastq, $build->collated_fastq_file);
-ok(-s $build->collated_fastq_file, 'Linked fastq file') or die;
+my $example_fastq = $example_build->existing_assembler_input_files;
+my $base_name = File::Basename::basename($example_fastq);
+symlink($example_fastq, $build->data_directory."/$base_name");
+ok(-s $build->existing_assembler_input_files, 'Linked fastq file exists in tmp test dir') or die;
 
 my $example_afg_file = $example_build->assembly_afg_file;
 symlink($example_afg_file, $build->assembly_afg_file);
@@ -47,7 +48,7 @@ my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Velvet->
 ok($velvet, 'Created post assemble velvet');
 
 ok($velvet->execute, 'Execute post assemble velvet');
-
+#TODO - use test suite velvet-solexa-build dir files (not have separate post asm files for test)
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_v3/edit_dir';
 
 my @file_names_to_test = qw/ reads.placed readinfo.txt

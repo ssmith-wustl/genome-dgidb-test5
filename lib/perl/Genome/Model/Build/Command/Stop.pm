@@ -5,17 +5,17 @@ use warnings;
 
 use Genome;
 
-use Genome::Model::Command::Services::Build::Scan;
-
 class Genome::Model::Build::Command::Stop {
-    is => 'Genome::Model::Build::Command',
+    is => 'Genome::Command::Base',
     has => [
-#        restart => {
-#            is => 'Boolean',
-#            is_optional => 1,
-#            doc => 'Kill, then restart when it is fully shut down.'
-#        }
-    ]
+        builds => {
+            is => 'Genome::Model::Build',
+            require_user_verify => 1,
+            is_many => 1,
+            shell_args_position => 1,
+            doc => 'Build(s) to use. Resolved from command line via text string.',
+        },
+    ],
 };
 
 sub sub_command_sort_position { 5 }
@@ -31,81 +31,37 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my @builds = $self->_builds_for_filter; # confesses
-    for my $build ( @builds ) {
-        $self->_stop_build($build); # intentionally not checking return value
-    }
-
-    return 1;
-}
-
-sub _stop_build {
-    my ($self, $build) = @_;
-
-    if ( not defined $build ) {
-        Carp::confess('No build given to restart');
-    }
-
-    $self->status_message('Attempting to stop build: '.$build->id);
-
-    if ($build->run_by ne $ENV{USER}) {
-        $self->error_message("Can't stop a build originally started by: " . $build->run_by);
-        return 0;
-    }
-
-    my $job = $self->get_running_master_lsf_job_for_build($build); 
-    if ( not defined $job ) {
-        $self->error_message("Build not running");
-        return 0;
-    }
-
-    Genome::Utility::FileSystem->shellcmd(
-        cmd => 'bkill '.$job->{Job},
-    );
-
-    my $i = 0;
-    do {
-        $self->status_message("Waiting for job to stop") if ($i % 10 == 0);
-        $i++;
-        sleep 1;
-        $job = $self->get_job( $job->{Job} );
-
-        if ($i > 60) {
-            $self->error_message("Build master job did not die after 60 seconds.");
-            return 0;
+    my @builds = $self->builds;
+    my $build_count = scalar(@builds);
+    my $failed_count = 0;
+    my @errors;
+    for my $build (@builds) {
+        eval {$build->stop};
+        if (!$@) {
+            $self->status_message("Successfully stopped build (" . $build->__display_name__ . ").");
         }
-    } while ($job && ($job->{Status} ne 'EXIT' && $job->{Status} ne 'DONE'));
+        else {
+            $self->error_message($@);
+            $failed_count++;
+            push @errors, "Failed to stop build (" . $build->__display_name__ . ").";
+        }
+    }
+    for my $error (@errors) {
+        $self->status_message($error);
+    }
+    if ($build_count > 1) {
+        $self->status_message("Stats:");
+        $self->status_message(" Stopped: " . ($build_count - $failed_count));
+        $self->status_message("  Errors: " . $failed_count);
+        $self->status_message("   Total: " . $build_count);
+    }
 
-    $build = Genome::Model::Build->load($build->id);
-
-    my $build_event = $build->build_event;
-    my $error = Genome::Model::Build::Error->create(
-        build_event_id => $build_event->id,
-        stage_event_id => $build_event->id,
-        stage => 'all stages',
-        step_event_id => $build_event->id,
-        step => 'main',
-        error => 'Killed by user',
-    );
-
-    unless ( $build->fail($error) ) {
-        $self->error_message('Failed to fail build');
+    if (@errors) {
         return;
     }
-
-    # Commit the update to this build
-    my $commit_rv = UR::Context->commit;
-    if ( not $commit_rv ) {
-        Carp::confess('Cannot commit update to build: '.$build->id);
+    else {
+        return 1;
     }
-
-    $self->status_message(sprintf(
-        "Build (ID: %s DIR: %s) killed.\n",
-        $build->id,
-        $build->data_directory,
-    ));
-
-    return 1;
 }
 
 1;

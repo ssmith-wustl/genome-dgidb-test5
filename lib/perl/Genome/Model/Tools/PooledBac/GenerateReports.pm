@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Assembly::Pcap::Ace;
-use Genome::Assembly::Pcap::Phd;
+use Genome::Model::Tools::Pcap::Ace;
+use Genome::Model::Tools::Pcap::Phd;
 use Genome::Model::Tools::PooledBac::Utils;
 use Genome::Utility::FileSystem;
 use List::Util qw(max min);

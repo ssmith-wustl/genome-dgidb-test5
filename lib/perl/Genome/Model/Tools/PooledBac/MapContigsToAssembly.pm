@@ -6,8 +6,8 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
-use Genome::Assembly::Pcap::Ace;
-use Genome::Assembly::Pcap::Phd;
+use Genome::Model::Tools::Pcap::Ace;
+use Genome::Model::Tools::Pcap::Phd;
 use List::Util qw(max min);
 
 class Genome::Model::Tools::PooledBac::MapContigsToAssembly {
@@ -145,13 +145,6 @@ sub execute {
             for my $overlap ( @{$bacs{$bac_name}} ) {
                 $coverage += $overlap->[1] - $overlap->[0] + 1;
             }
-            print Dumper({
-                    contig => $contig_hsp->[0]->{QUERY_NAME}, 
-                    $bac_name => $bacs{$bac_name}, 
-                    cov => $coverage, 
-                    pct => ( $coverage / $contig_hsp->[0]->{QUERY_LENGTH} ),
-                });
-
             next BAC unless ( $coverage / $contig_hsp->[0]->{QUERY_LENGTH} ) >= $percent_overlap;
             $bac_coverage{ $bac_name } = $coverage;
         }

@@ -228,16 +228,22 @@ EOS
             calculate => q| GSC::RunLaneSolexa->get($id); |,
             calculate_from => ['id']
         },
-
-
-
+        # Index Illumina
+        index_illumina => {
+            doc => 'Index Illumina from LIMS.',
+            is => 'GSC::IndexIllumina',
+            calculate => q| GSC::IndexIllumina->get(analysis_id=>$id); |,
+            calculate_from => [ 'id' ]
+        },
         # basic relationship to the "source" of the lane
         library         => { is => 'Genome::Library', id_by => ['library_id'] },
         library_id      => { is => 'Number', },
+        library_name    => { is => 'Text', via => 'library', to => 'name'},
 
         # these are indirect via library, but must be set directly for lanes missing library info
         sample              => { is => 'Genome::Sample', id_by => ['sample_id'] },
         sample_id           => { is => 'Number', },
+        sample_name         => { is => 'Text', via => 'sample', to => 'name'},
 
         sample_source       => { is => 'Genome::SampleSource', via => 'sample', to => 'source' },
         sample_source_name  => { via => 'sample_source', to => 'name' },

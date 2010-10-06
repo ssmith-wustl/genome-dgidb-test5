@@ -464,7 +464,7 @@ sub execute {
         }
         $last_variant_start = $variant->{start};
 
-        Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->get_default_handle;
+        Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->has_default_handle;
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
         # TODO... unduplicate this code

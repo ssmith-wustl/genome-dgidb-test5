@@ -212,7 +212,7 @@ sub execute {
     $params{import_format} = $self->import_format;
     $params{sample_id} = $sample->id;
     $params{library_id} = $library->id;
-    $params{library_name} = $library->name;
+    #$params{library_name} = $library->name;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
@@ -231,7 +231,7 @@ sub execute {
     unless(defined($params{subset_name})){
         my $subset_name = $self->get_subset_name;
         unless($subset_name =~ /[1-8]/){
-            $self->error_message("Subset_name must be between 1-8. Found ".$subset_name);
+            $self->error_message("Subset_name must be between 1-8. Found subset_name of \"".$subset_name."\"");
             die $self->error_message;
         }
         $self->subset_name($subset_name);
@@ -278,22 +278,67 @@ sub execute {
     my $basename;
     my %basenames;
     my @inputs;
+    my %filenames;
     for my $file (sort(@input_files)) {
         my ($filename,$path,$suffix) = fileparse($file, $suff);
         $basenames{$path}++;
         $basename = $path;
         my $fastq_name = $filename.$suffix;
-        unless(($fastq_name=~m/^s_[1-8]_sequence.txt$/)||($fastq_name=~m/^s_[1-8]_[1-2]_sequence.txt$/)){
-            $self->error_message("File basename - $fastq_name - did not have the form: \n\t\t\t\t s_[1-8]_sequence.txt or s_[1-8]_[1-2]_sequence.txt\n");
-            die $self->error_message;
+        if(not defined($self->is_valid_filename($fastq_name))){
+            my $fixed_name = $self->fix_fastq_filename($path,$fastq_name);
+            unless($fixed_name){
+                $self->error_message("File basename - $fastq_name - did not have the form: 
+                    \n\t\t\t\t s_[1-8]_sequence.txt or s_[1-8]_[1-2]_sequence.txt\t\tand could not be fixed.\n");
+                die $self->error_message;
+            }
+            $filenames{$fastq_name} = $fixed_name;
+        }else{
+            $filenames{$fastq_name} = $fastq_name;
         }
-        push @inputs,$fastq_name;
     }
     unless(scalar(keys(%basenames))==1) {
         $self->error_message("Found more than one path to imported files.");
         die $self->error_message;
     }
-    my $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", @inputs);
+    my $change_names = 0;
+    for my $file (sort(keys(%filenames))){
+        if( $file ne $filenames{$file}){
+            $change_names++;
+        }
+    }
+    my $tar_cmd;
+    # if the file names need to be changed, we define different tar comamands
+    if(($change_names>0)&& $self->is_paired_end){
+        if($change_names==2){
+            my ($file1,$file2) = keys(%filenames);
+            #TODO the tar command defined below requires tar version 1.21 or greater for the --transform portion to work. This will die on the wrong filenames until we have version 1.21 or greater installed.
+            $self->error_message("There are problems with the fastq file names which cannot currently be solved. Please change the names to match the proper format, as output above.");
+            die $self->error_message;
+            $tar_cmd = sprintf("tar cvzf %s -C %s %s %s --transform=s/%s/%s/g --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file2,$file1,$filenames{$file1},$file2,$filenames{$file2});
+        } elsif ($change_names==1) {
+            # if only one needs changing, find which one and apply the single transform in the tar command. This will work with our current 1.19 tar install.
+            my ($file1,$file2) = keys(%filenames);
+            my ($changed_name,$same_name);
+            if($filenames{$file1} eq $file1){
+                $changed_name = $file2;
+                $same_name = $file1;
+            } else {
+                $changed_name = $file1;
+                $same_name = $file2;
+            }
+            $tar_cmd = sprintf("tar cvzf %s -C %s %s %s --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file2,$changed_name,$filenames{$changed_name});
+        } else {
+            $self->error_message("Found more than 2 file names to change, which should not be possible, since there should never be more than 2 files.");
+            die $self->error_message;
+        }
+    } else {
+        if($change_names == 1){
+            my ($file1) = keys(%filenames);
+            $tar_cmd = sprintf("tar cvzf %s -C %s %s --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file1,$filenames{$file1});
+        } else {
+            $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", keys(%filenames));
+        }
+    }
     $self->status_message("About to execute tar command, this could take a long time, depending upon the location (across the network?) and size (MB or GB?) of your fastq's.");
     unless(Genome::Utility::FileSystem->shellcmd(cmd=>$tar_cmd)){
         $self->error_message("Tar command failed to complete successfully. The command looked like :   ".$tar_cmd);
@@ -370,6 +415,10 @@ sub check_fastq_integritude {
     for my $path (@filepaths){
         unless(-s $path){
             $self->error_message("The file at ".$path." was not found.");
+            die $self->error_message;
+        }
+        if(-l $path){
+            $self->error_message("The path ".$path." is a symbolic link. Please provide the original files as inputs.");
             die $self->error_message;
         }
     }
@@ -457,13 +506,13 @@ sub get_read_count {
         ($sub_count) = split " ",$sub_count;
         unless(defined($sub_count)&&($sub_count > 0)){
             $self->error_message("couldn't get a response from wc.");
-            return undef;
+            return;
         }
         $line_count += $sub_count;
     }
     if($line_count % 4){
         $self->error_message("Calculated a number of lines in the fastq file that was not divisible by 4.");
-        return undef;
+        return;
     }
     $read_count = $line_count / 4;
     return $read_count
@@ -488,6 +537,46 @@ sub get_subset_name {
     #print "subset_name  = ".$subset_name."\n";
     return $subset_name;
 
+}
+
+sub is_valid_filename {
+    my $self = shift;
+    my $fastq_name = shift;
+    unless(($fastq_name=~m/^s_[1-8]_sequence.txt$/)||($fastq_name=~m/^s_[1-8]_[1-2]_sequence.txt$/)){
+        return;
+    }
+    return 1;
+}
+
+sub fix_fastq_filename {
+    my $self = shift;
+    my ($path,$file) = @_;
+    #my $file = shift;
+    print "file = ".$file."\n";
+    print "path = ".$path."\n";
+    my $new_filename;
+    unless(defined($self->subset_name)){
+        $self->error_message("Attempting to fix fastq filenames, but no subset_name was specified. This is required if the fastq filenames do not contain it.");
+        die $self->error_message;
+    }
+    if($self->is_paired_end){
+        my $fh = new IO::File;
+        $fh->open($path.$file);
+        my $line = $fh->getline;
+        $fh->close;
+        chomp $line;
+        my ($x,$direction) = split "/", $line; 
+        print "line = ".$line."  and direction =  ".$direction."\n";
+        $new_filename = "s_".$self->subset_name."_".$direction."_sequence.txt";
+        print "new_filename = ".$new_filename."\n";
+    } else {
+        $new_filename = "s_".$self->subset_name."_sequence.txt";
+    }
+    if($self->is_valid_filename($new_filename)){
+        return $new_filename;
+    } else {
+        return;
+    }
 }
 
 1;

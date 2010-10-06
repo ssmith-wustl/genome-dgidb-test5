@@ -38,11 +38,14 @@ ok($model, 'Created mock model');
 my $model_id = $model->id;
 
 # ok
-my $start = Genome::Model::Build::Command::Start->execute(
-    model_identifier => $model->id,
-    data_directory => $tmpdir,
-);
-ok($start && $start->result, 'Executed start');
+my $exit_code1 = eval { 
+    Genome::Model::Build::Command::Start->_execute_with_shell_params_and_return_exit_code(
+        '--models' => $model->id,
+        '--data-directory' => $tmpdir,
+    );
+};
+ok(!$@, "the command did not crash");
+is($exit_code1, 0, "command believes it succeeded");
 
 # Check that the lock was created. During normal execution, the lock would
 #  removed on commit. But we're not committing here, so rollback, and make sure

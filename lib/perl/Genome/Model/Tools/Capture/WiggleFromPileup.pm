@@ -97,8 +97,8 @@ sub execute {                               # replace with real execution logic.
 
 	print "Checking for bam index file...\n";
 
-	my $normal_bam_index = $output_dir."/".$normal_bam.'.bai';
-	my $tumor_bam_index = $output_dir."/".$tumor_bam.'.bai';
+	my $normal_bam_index = $normal_bam.'.bai';
+	my $tumor_bam_index = $tumor_bam.'.bai';
 	unless (-e $normal_bam_index) {
 		print "No normal bam index file\n";
 		my $cmd_bam_bai = "samtools index $normal_bam";

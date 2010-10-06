@@ -8,7 +8,7 @@ use Genome;
 use Cwd;
 
 class Genome::Model::Command::Remove {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
         models                  => {
                                     is => 'Genome::Model',
@@ -77,8 +77,8 @@ sub execute {
         next if $model->isa("UR::DeletedRef");
 
         my $subject = $model->subject;
-        my $subject_name = ($subject ? $subject->name : $model->subject_name);
-        my $subject_id = ($subject ? $subject->id : $model->subject_id);
+        my $subject_name = ($subject->can('name') ? $subject->name : $model->subject_name);
+        my $subject_id = ($subject->can('id') ? $subject->id : $model->subject_id);
 
         $self->status_message(
             "Removing model " . $model->name . " (" . $model->id 

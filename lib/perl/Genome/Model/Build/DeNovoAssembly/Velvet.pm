@@ -13,12 +13,21 @@ class Genome::Model::Build::DeNovoAssembly::Velvet {
 };
 
 #< Files >#
-sub assembler_input_files {
-    return $_[0]->collated_fastq_file;
+sub existing_assembler_input_files {
+    my $self = shift;
+
+    my $collated_fastq_file = $self->collated_fastq_file;
+    return $collated_fastq_file if -s $collated_fastq_file;
+
+    return;
 }
 
 sub collated_fastq_file {
     return $_[0]->data_directory.'/collated.fastq';
+}
+
+sub read_processor_output_files_for_instrument_data {
+    return $_[0]->collated_fastq_file;
 }
 
 sub assembly_afg_file {

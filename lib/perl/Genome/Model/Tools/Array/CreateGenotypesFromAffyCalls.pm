@@ -118,16 +118,16 @@ sub convert_to_genotype {
 
         if(exists($calls->{$snp_id})) {
             my $call = $calls->{$snp_id};
-            if(($call eq 'AA')||($call==0)) {
+            if(($call eq 'AA')||($call eq  '0')) {
                 $call = $alleleA x 2;
             }
-            elsif(($call eq 'AB')||($call==1)) {
+            elsif(($call eq 'AB')||($call eq '1')) {
                 $call = $alleleA . $alleleB;
             }
-            elsif(($call eq 'BB')||($call==2)) {
+            elsif(($call eq 'BB')||($call eq '2')) {
                 $call = $alleleB x 2;
             }
-            elsif(($call eq 'NC')||($call==-1)) {
+            elsif(($call eq 'NC')||($call eq '-1')) {
                 $call = '--';
             }
             else {

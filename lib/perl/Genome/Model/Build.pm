@@ -82,8 +82,10 @@ class Genome::Model::Build {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-use Genome::Command::OO;
-*from_cmdline = \&Genome::Command::OO::default_cmdline_selector;
+sub __display_name__ {
+    my $self = shift;
+    return $self->id . ' of ' . $self->model->name;
+}
 
 sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass will soon be stored
     my $class = shift;
@@ -183,9 +185,8 @@ sub create {
     my $model_id = $bx->value_for('model_id');
 
     # model
-    unless ( $class->_validate_model_id($model_id) ) {
-        return;
-    }
+    return unless ($class->_validate_model_id($model_id));
+    return unless ($class->_lock_model_and_create_commit_and_rollback_observers($model_id));
 
     #unless ($bx->value_for('subclass_name')) {
     #    $bx = $bx->add_filter(subclass_name => $class);
@@ -230,6 +231,66 @@ sub create {
     }
 
     return $self;
+}
+
+sub _lock_model_and_create_commit_and_rollback_observers {
+    my ($class, $model_id) = @_;
+
+    # lock
+    my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
+    my $lock = Genome::Utility::FileSystem->lock_resource(
+        resource_lock => $lock_id, 
+        block_sleep => 3,
+        max_try => 3,
+    );
+    unless ( $lock ) {
+        print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
+        return;
+    }
+
+    # create observers to unlock
+    my $commit_observer;
+    my $rollback_observer;
+
+    $commit_observer = UR::Context->add_observer(
+        aspect => 'commit',
+        callback => sub {
+            #print "Commit\n";
+            # unlock - no error on failure
+            Genome::Utility::FileSystem->unlock_resource(
+                resource_lock => $lock_id,
+            );
+            # delete and undef observers
+            $commit_observer->delete;
+            undef $commit_observer;
+            $rollback_observer->delete;
+            undef $rollback_observer;
+        }
+    );
+
+    $rollback_observer = UR::Context->add_observer(
+        aspect => 'rollback',
+        callback => sub {
+            #print "Rollback\n";
+            # unlock - no error on failure
+            Genome::Utility::FileSystem->unlock_resource(
+                resource_lock => $lock_id,
+            );
+            # delete and undef observers so they do not persist
+            # they should have been deleted in the rollback, 
+            #  but try to delete again just in case
+            if ( $rollback_observer ) {
+                $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
+                undef $rollback_observer;
+            }
+            if ( $commit_observer ) {
+                $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
+                undef $commit_observer;
+            }
+        }
+    );
+
+    return 1;
 }
 
 sub _validate_model_id {
@@ -550,13 +611,114 @@ sub start {
     }
 
 #    $params{workflow} = $workflow;
-    
-    return $self->_launch(%params);
+
+    return unless $self->_launch(%params);
+
+    #If a build has been requested, this build starting fulfills that request.
+    $self->model->build_requested(0);
+    return 1;
+}
+
+sub stop {
+    my $self = shift;
+
+    $self->status_message('Attempting to stop build: '.$self->id);
+
+    if ($self->run_by ne $ENV{USER}) {
+        $self->error_message("Can't stop a build originally started by: " . $self->run_by);
+        return 0;
+    }
+
+    my $job = $self->_get_running_master_lsf_job; 
+    if ( defined $job ) {
+        $self->status_message('Killing job: '.$job->{Job});
+        $self->_kill_job($job);
+        $self = Genome::Model::Build->load($self->id);
+    }
+
+    my $self_event = $self->build_event;
+    my $error = Genome::Model::Build::Error->create(
+        build_event_id => $self_event->id,
+        stage_event_id => $self_event->id,
+        stage => 'all stages',
+        step_event_id => $self_event->id,
+        step => 'main',
+        error => 'Killed by user',
+    );
+
+    $self->status_message('Failing build: '.$self->id);
+    unless ($self->fail($error)) {
+        $self->error_message('Failed to fail build');
+        return;
+    }
+
+    return 1
+}
+
+sub _kill_job {
+    my ($self, $job) = @_;
+
+    Genome::Utility::FileSystem->shellcmd(
+        cmd => 'bkill '.$job->{Job},
+    );
+
+    my $i = 0;
+    do {
+        $self->status_message("Waiting for job to stop") if ($i % 10 == 0);
+        $i++;
+        sleep 1;
+        $job = $self->_get_job( $job->{Job} );
+
+        if ($i > 60) {
+            $self->error_message("Build master job did not die after 60 seconds.");
+            return 0;
+        }
+    } while ($job && ($job->{Status} ne 'EXIT' && $job->{Status} ne 'DONE'));
+
+    return 1;
+}
+
+sub _get_running_master_lsf_job {
+    my $self = shift;
+
+    my $job_id = $self->the_master_event->lsf_job_id;
+    return if not defined $job_id;
+
+    my $job = $self->_get_job($job_id);
+    return if not defined $job;
+
+    if ( $job->{Status} eq 'EXIT' or $job->{Status} eq 'DONE' ) {
+        return;
+    }
+
+    return $job;
+}
+
+sub _get_job {
+    use Genome::Model::Command::Services::Build::Scan;
+    my $self = shift;
+    my $job_id = shift;
+
+    my @jobs = ();
+    my $iter = Job::Iterator->new($job_id);
+    while (my $job = $iter->next) {
+        push @jobs, $job;
+    }
+
+    if (@jobs > 1) {
+        $self->error_message("More than 1 job found for this build? Alert apipe");
+        return 0;
+    }
+
+    return shift @jobs;
 }
 
 sub restart {
     my $self = shift;
     my %params = @_;
+
+    $DB::single = 1;
+    $self->status_message('Attempting to restart build: '.$self->id);
    
     if (delete $params{job_dispatch}) {
         cluck $self->error_message('job_dispatch cannot be changed on restart');
@@ -571,9 +733,18 @@ sub restart {
         croak $self->error_message("Can't find xml file for build (" . $self->id . "): " . $xmlfile);
     }
 
+    # Check if the build is running
+    my $job = $self->_get_running_master_lsf_job;
+    if ($job) {
+        $self->error_message("Build is currently running. Stop it first, then restart.");
+        return 0;
+    }
+
+    # Since the job is not running, check if there is server location file and rm it
     my $loc_file = $self->data_directory . '/server_location.txt';
-    if (-e $loc_file) {
-        croak $self->error_message("Server location file in build data directory exists. Cannot restart");
+    if ( -e $loc_file ) {
+        $self->status_message("Removing server location file for dead lsf job: $loc_file");
+        unlink $loc_file;
     }
 
     my $w = $self->newest_workflow_instance;
@@ -584,8 +755,17 @@ sub restart {
     }
 
     my $build_event = $self->build_event;
+    if($build_event->event_status eq 'Abandoned') {
+        $self->error_message("Can't restart a build that was abandoned.  Start a new build instead.");
+        return 0;
+    }
+
     $build_event->event_status('Scheduled');
     $build_event->date_completed(undef);
+
+    for my $e ($self->the_events(event_status => ['Running','Failed'])) {
+        $e->event_status('Scheduled');
+    }
     
     return $self->_launch(%params);
 }
@@ -594,12 +774,29 @@ sub _launch {
     my $self = shift;
     my %params = @_;
 
+    $DB::single = 1;
     # right now it is "inline" or the name of an LSF queue.
     # ultimately, it will be the specification for parallelization
     #  including whether the server is inline, forked, or bsubbed, and the
     #  jobs are inline, forked or bsubbed from the server
-    my $server_dispatch = delete $params{server_dispatch} || 'inline';
-    my $job_dispatch = delete $params{job_dispatch} || 'inline';
+    my $server_dispatch;
+    my $job_dispatch;
+    my $model = $self->model;
+    if (exists($params{server_dispatch})) {
+        $server_dispatch = delete $params{server_dispatch};
+    } elsif ($model->processing_profile->can('server_dispatch') && defined $model->processing_profile->server_dispatch) {
+        $server_dispatch = $model->processing_profile->server_dispatch;
+    } else {
+        $server_dispatch = 'workflow';
+    }
+
+    if (exists($params{job_dispatch})) {
+        $job_dispatch = delete $params{job_dispatch};
+    } elsif ($model->processing_profile->can('job_dispatch') && defined $model->processing_profile->job_dispatch) {
+        $job_dispatch = $model->processing_profile->job_dispatch;
+    } else {
+        $job_dispatch = 'apipe';
+    }
     my $fresh_workflow = delete $params{fresh_workflow};
 
     my $job_group_spec;
@@ -618,10 +815,10 @@ sub _launch {
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
 
-    my $model = $self->model;
     my $build_event = $self->the_master_event;
 
     # TODO: send the workflow to the dispatcher instead of having LSF logic here.
+    $DB::single = 1;
     if ($server_dispatch eq 'inline') {
         # TODO: redirect STDOUT/STDERR to these files
         #$build_event->output_log_file,
@@ -753,6 +950,11 @@ sub _initialize_workflow {
 
 sub _execute_bsub_command { # here to overload in testing
     my ($self, $cmd) = @_;
+
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        $self->warning_message("Skipping bsub when NO_COMMIT is turned on (job will fail)\n$cmd");
+        return 1;
+    }
 
     my $bsub_output = `$cmd`;
     my $rv = $? >> 8;

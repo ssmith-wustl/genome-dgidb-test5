@@ -54,8 +54,9 @@ sub process_source {
                 $variant = '*';
                 $stop = $start + length($reference);
             } else {
-                $self->error_message("Unexpected indel format encountered ($indel) on line:\n$line");
-                return;
+                $self->warning_message("Unexpected indel format encountered ($indel) on line:\n$line");
+                #return; skip wrong indel format line instead of failing for now
+                next;
             }
         
             $self->write_bed_line($chromosome, $start, $stop, $reference, $variant);

@@ -10,7 +10,7 @@ require Genome::Utility::FileSystem;
 
 class Genome::Model::Command::Copy {
     class_name => __PACKAGE__,    
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has => [
         from => {
             is => 'Genome::Model',
@@ -40,24 +40,16 @@ class Genome::Model::Command::Copy {
             shell_args_position => 3,
         }
     ],
-  schema_name => 'Main',
+    doc => 'create a new genome model based on an existing one'
 };
 
 sub sub_command_sort_position { 2 }
 
-sub help_brief {
-    return <<"EOS"
-create a new genome model based on an existing one
-EOS
-}
-
 sub help_synopsis {
     return <<"EOS"
-    genome model copy --from 123456789 --to "copy_of_my_model" --model-overrides 
-    processing_profile_name="use this processing profile instead"
-    or
-    genome model copy 123456789 "copy_of_my_model" 
-    processing_profile_name="use this processing profile instead"   
+ genome model copy --from 123456789 --to "copy_of_my_model" --model-overrides processing_profile_name="use this processing profile instead"
+    
+ genome model copy 123456789 copy_of_my_model processing_profile_name="use this processing profile instead"   
 EOS
 }
 
@@ -83,9 +75,9 @@ EOS
 
 
 sub execute {
-    
     my $self = shift;
-    
+   
+    # TODO: put all non-user-interface elements of this into a method on the model and have this call it
     $DB::single = 1;
 
     my $src_model = $self->from; 
@@ -114,6 +106,14 @@ sub execute {
     # grab overridden properties and overlay them on top of the
     # parameters from the original model
     my %property_overrides = $self->_parse_overrides;
+
+    # Make sure that if either processing_profile_name or processing_profile_id
+    # are specified in overrides that we override both of those in the params...
+    if (defined $property_overrides{'processing_profile_name'} || $property_overrides{'processing_profile_id'}) {
+        $cmd_params{'processing_profile_name'} = undef;
+        $cmd_params{'processing_profile_id'} = undef;
+    }
+
     for my $key (%property_overrides) {
         # allow overriding data directory on the copy and pass that in
         unless ($key eq "data_directory") {
@@ -183,7 +183,7 @@ sub _parse_overrides {
     
     for (@bare_args) {
         if (m/(.*?)=(.*)/) {
-            print "$1 $2\n";
+            #print "$1 $2\n";
             $overrides{$1} = $2;
         } else {
             $self->warning_message("Unable to process $_ as a property override, skipping");
