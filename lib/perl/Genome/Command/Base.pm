@@ -303,6 +303,7 @@ sub _get_user_verification_for_param_value_drilldown {
 
     $self->status_message("Found $n_results match(es):");
     my $response;
+    my @caller = caller(1);
     while (!$response) {
         # TODO: Replace this with lister?
         for (my $i = 1; $i <= $n_results; $i++) {
@@ -323,7 +324,13 @@ sub _get_user_verification_for_param_value_drilldown {
             $self->status_message($MESSAGE);
             $MESSAGE = '';
         }
-        $response = $self->_ask_user_question("Proceed using the above list?", 300, '\*|y|b|h|x|[-+]?[\d\-\., ]+', 'h', '(y)es|(b)ack|(h)elp|e(x)it|LIST');
+        my $pretty_values = '(c)ontinue, (h)elp, e(x)it';
+        my $valid_values = '\*|c|h|x|[-+]?[\d\-\., ]+';
+        if ($caller[3] =~ /_trim_list_from_response/) {
+            $pretty_values .= ', (b)ack';
+            $valid_values .= '|b';
+        }
+        $response = $self->_ask_user_question("Confirmation or trimming required...", 300, $valid_values, 'h', $pretty_values.', or specify items to use');
         if (lc($response) eq 'h' || !$self->_validate_user_response_for_param_value_verification($response)) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .=
@@ -341,7 +348,7 @@ sub _get_user_verification_for_param_value_drilldown {
     elsif (lc($response) eq 'b') {
         return;
     }
-    elsif (lc($response) eq 'y' | $response eq '*') {
+    elsif (lc($response) eq 'c' | $response eq '*') {
         return @results;
     }
     elsif ($response =~ /^[-+]?[\d\-\., ]+$/) {
