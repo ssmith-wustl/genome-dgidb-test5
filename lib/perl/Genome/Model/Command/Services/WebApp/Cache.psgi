@@ -269,7 +269,7 @@ sub {
       <div class="header rounded-top gradient-grey">
         <div class="container" style="width: 480px;">
           <div class="title app_cache_miss_32">
-            <h1>Caching Page</h1>
+            <h1>Loading View</h1>
           </div>
         </div>
       </div>
@@ -278,7 +278,7 @@ sub {
       <div class="span-12 last">
         <div class="rounded" style="margin-bottom: 10px;">
           <div class="padding10">
-            <p>Please wait while this page is generated and added to the cache. Subsequent loads will be returned rapidly from the cache.<p>
+            <p>Please wait while this view is generated and added to the cache. Subsequent loads will be returned rapidly from the cache.<p>
             <div id="ajax_status"></div>
           </div>
         </div>

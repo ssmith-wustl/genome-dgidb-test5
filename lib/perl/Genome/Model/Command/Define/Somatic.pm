@@ -30,11 +30,6 @@ class Genome::Model::Command::Define::Somatic {
             is => 'Integer',
             is_input => 1,
         },
-        processing_profile_name => {
-            is => 'Text',
-            doc => 'identifies the processing profile by name',
-            default => 'default',
-        },
     ],
 };
 
