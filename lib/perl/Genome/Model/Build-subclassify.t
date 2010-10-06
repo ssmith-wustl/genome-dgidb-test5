@@ -10,23 +10,22 @@ ok($m1, "$m1");
 
 my $b1_1 = Genome::Model::Build->create(model_id => $m1->id);
 isa_ok($b1_1,"Genome::Model::Build::MetagenomicComposition16s::Sanger");
-# remove the lock on the model that is normally removed when the UR::Context is committed or rolled back
-unlink('/gsc/var/lock/build_start/2851746104');
+UR::Context->commit();
 
 my $b1_2 = Genome::Model::Build::MetagenomicComposition16s->create(model_id => $m1->id);
 isa_ok($b1_2,"Genome::Model::Build::MetagenomicComposition16s::Sanger");
+UR::Context->commit();
 
 my $m2 = Genome::Model->get(2850972264);
 ok($m2, "$m2");
 
 my $b2_1 = Genome::Model::Build->create(model_id => $m2->id);
 isa_ok($b2_1,"Genome::Model::Build::ReferenceAlignment::Solexa");
-# remove the lock on the model that is normally removed when the UR::Context is committed or rolled back
-unlink('/gsc/var/lock/build_start/2850972264');
+UR::Context->commit();
 
 my $b2_2 = Genome::Model::Build::ReferenceAlignment->create(model_id => $m2->id);
 isa_ok($b2_2,"Genome::Model::Build::ReferenceAlignment::Solexa");
-
+UR::Context->commit();
 
 for my $model_id ($m1->id, $m2->id) {
     my @out = `bash -c 'genome model build list $model_id 2>&1'`;
