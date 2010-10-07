@@ -4,26 +4,36 @@ use strict;
 use warnings;
 
 use EGAP;
-
+use Carp 'confess';
 
 class EGAP::Exon {
     type_name => 'exon',
-    table_name => 'EXON',
-    id_sequence_generator_name => 'exon_id_seq',
+    schema_name => 'files',
+    data_source => 'EGAP::DataSource::Exons',
     id_by => [
-        exon_id => { is => 'NUMBER', len => 12 },
+        exon_name => { is => 'Text' },
     ],
     has => [
-        end                  => { is => 'NUMBER', len => 10, column_name => 'SEQ_END' },
-        start                => { is => 'NUMBER', len => 10, column_name => 'SEQ_START' },
-        five_prime_overhang  => { is => 'NUMBER', len => 1, is_optional => 1 },
-        three_prime_overhang => { is => 'NUMBER', len => 1, is_optional => 1 },
-        sequence_string      => { is => 'BLOB', len => 2147483647 },
-        transcript           => { is => 'EGAP::Transcript', id_by => 'transcript_id', constraint_name => 'EXON_TRANSCRIPT_ID_FK' },
-        transcript_id        => { is => 'NUMBER', len => 11, implied_by => 'transcript' },
+        file_path => { is => 'Path' },
+        start => { is => 'Number' },
+        end => { is => 'Number' },
+        five_prime_overhang => { is => 'Number' },
+        three_prime_overhang => { is => 'Number' },
+        transcript_name => { is => 'Text' },
+        sequence_string => { is => 'Text' },
     ],
-    schema_name => 'EGAPSchema',
-    data_source => 'EGAP::DataSource::EGAPSchema',
 };
+
+sub transcripts {
+    my ($self, $transcripts_file) = @_;
+    confess 'Not implemented!';
+    return;
+}
+
+sub coding_genes {
+    my ($self, $coding_genes_file) = @_;
+    confess 'Not implemented!';
+    return;
+}
 
 1;
