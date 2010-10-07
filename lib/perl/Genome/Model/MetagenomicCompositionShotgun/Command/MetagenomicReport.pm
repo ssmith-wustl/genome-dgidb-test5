@@ -229,6 +229,7 @@ sub _generate_taxonomy_report {
             $ignore_unmapped++;
             next;
         }
+
         my ($ref_name, $null, $gi) = split(/\|/, $fields[2]);
         if ($ref_name eq "VIRL"){
             $ref_name .= "_$gi";
@@ -237,7 +238,6 @@ sub _generate_taxonomy_report {
     }
 
     $self->status_message("skipping $ignore_unmapped reads without a metagenomic mapping");
-    $self->status_message("skipping $ignore_singleton fragment reads");
 
     # Count And Record Taxonomy Hits
     my $read_count_output_file = $self->report_dir . '/read_count_output';

@@ -333,11 +333,11 @@ sub _execute_build {
 }
 
 sub merge_metagenomic_bams{
-    my ($self, $meta_bams, $sorted_bam);
+    my ($self, $meta_bams, $sorted_bam) = @_;
     if (-e $sorted_bam and -e $sorted_bam.".OK"){  
         $self->status_message("sorted metagenomic merged bam already produced, skipping");
     }else{
-        my $merged_bam = $sorted_bam.".name_sorted";
+        my $merged_bam = $sorted_bam.".name_sorted.bam";
         $self->status_message("starting sort and merge");
 
         my $sort_and_merge_meta = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->create(
