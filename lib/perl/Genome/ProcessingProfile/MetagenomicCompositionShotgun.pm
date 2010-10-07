@@ -312,7 +312,7 @@ sub build_if_necessary_and_wait{
             }
         }
         else {
-            $self->status_message("Skipping redundant build");
+            $self->status_message("Skipping redundant build for model ".$model->name);
             $build = $model->last_succeeded_build;
         }
         push @builds, $build;
