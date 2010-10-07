@@ -159,7 +159,7 @@ sub execute {
     
     if (defined($self->processing_profile_name)){
         my @pp = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
-        unless(@pp==1){
+        if (@pp > 1){
             $self->error_message("ProcessingProfile name returned multiple processing profiles.");
             return;
         }

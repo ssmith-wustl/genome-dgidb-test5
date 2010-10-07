@@ -181,7 +181,14 @@ sub {
 
         my $resp;
         if (my $v = $class->get($url)) {
+
             my $no_cache = $env->{'HTTP_CACHE_CONTROL'} || $env->{'HTTP_PRAGMA'};
+            # opera always sends no-cache header, so we can't reliably detect
+            # a shift-reload
+            if ($env->{'HTTP_USER_AGENT'} =~ /Opera/) {
+                $no_cache = '';
+            }
+
             if (defined $v && $no_cache ne 'no-cache') {
                 $resp = thaw($v);
             }
@@ -211,6 +218,12 @@ sub {
         my $v = $class->get($url);
 
         my $no_cache = $env->{'HTTP_CACHE_CONTROL'} || $env->{'HTTP_PRAGMA'};
+
+        # opera always sends no-cache header, so we can't reliably detect
+        # a shift-reload
+        if ($env->{'HTTP_USER_AGENT'} =~ /Opera/) {
+            $no_cache = '';
+        }
 
         if (defined $v && $no_cache ne 'no-cache') {
             my $s = thaw($v);
