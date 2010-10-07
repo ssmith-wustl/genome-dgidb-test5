@@ -28,6 +28,18 @@ sub help_detail {
     return help_brief();
 }
 
+sub _limit_results_for_builds {
+    my ($self, @builds) = @_;
+
+    my @run_by_builds;
+    for my $build (@builds) {
+        if ($build->run_by eq $ENV{USER}) {
+            push @run_by_builds, $build;
+        }
+    }
+    return @run_by_builds;
+}
+
 sub execute {
     my $self = shift;
 
