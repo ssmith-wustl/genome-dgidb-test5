@@ -43,7 +43,6 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
         },
         skip_contamination_screen => {
             is => 'Boolean',
-<<<<<<< HEAD
             default_value => 0,
             doc => "If this flag is enabled, the instrument data assigned to this model will not be human screened, but will undergo dusting and n-removal before undergoing metagenomic alignment",
         },
@@ -51,10 +50,6 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             is => 'Boolean',
             default_value => 1,
             doc => 'When this flag is enabled, the model will attempt to grab taxonomic data for the metagenomic reports and produce a combined refcov-taxonomic final report.  Otherwise, only refcov will be run on the final metagenomic bam',
-=======
-            default_value=>0,
-            doc => "If this flag is specified, the instrument data assigned to this model will not be human screened, but will undergo dusting and n-removal before undergoing metagenomic alignment",
->>>>>>> 8396c51d102ec0b8196b568dce30e42039d9a6d4
         },
     ],
     has => [
@@ -296,7 +291,6 @@ sub _execute_build {
             die $self->error_message("Failed to create QC report!");
         }
     }
-<<<<<<< HEAD
 
     my $final_metagenomic_bam = $build->_final_metagenomic_bam();
     if (@meta_bams > 1){
@@ -319,16 +313,6 @@ sub _execute_build {
         $meta_report_properties{include_taxonomy_report} = 1;
         $meta_report_properties{taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt';
         $meta_report_properties{viral_taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt';
-=======
-    my %meta_report_properties = (
-        build_id => $build->id,
-        taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
-        viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt'
-    );
-    
-    if ($self->skip_contamination_screen){
-        $meta_report_properties{exclude_fragments} = 0; 
->>>>>>> 8396c51d102ec0b8196b568dce30e42039d9a6d4
     }
 
     my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
@@ -348,7 +332,6 @@ sub _execute_build {
     return 1;
 }
 
-<<<<<<< HEAD
 sub merge_metagenomic_bams{
     my ($self, $meta_bams, $sorted_bam);
     if (-e $sorted_bam and -e $sorted_bam.".OK"){  
@@ -389,9 +372,6 @@ sub merge_metagenomic_bams{
     return $sorted_bam;
 }
 
-
-=======
->>>>>>> 8396c51d102ec0b8196b568dce30e42039d9a6d4
 sub extract_unaligned_reads_from_alignment_result {
     my ($self, $alignment_result) = @_;
     my ($frag_fastq, $fwd_fastq, $rev_fastq);
@@ -580,35 +560,6 @@ sub execute_or_die {
 
 sub assign_missing_instrument_data_to_model{
     my ($self, $model, @instrument_data) = shift;
-<<<<<<< HEAD
-=======
-=cut this doesn't compile     
-for my $assignment (@assignments) {
-            my $instrument_data = $assignment->instrument_data;
-            my $screen_assignment = $screen_model->instrument_data_assignment(
-                instrument_data_id => $instrument_data->id
-            );
-            if ($screen_assignment) {
-                $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to the screening model");
-            }
-            else {
-                $screen_assignment = 
-                $screen_model->add_instrument_data_assignment(
-                    instrument_data_id => $assignment->instrument_data_id,
-                    filter_desc => $assignment->filter_desc,
-                );
-                if ($screen_assignment) {
-                    $self->status_message("Assigning instrument data " . $instrument_data->__display_name__ . " is already to the screening model");
-                }
-                else {
-                    $self->error_message("Failed to assign instrument data " . $instrument_data->__display_name__ . " is already to the screening model");
-                    Carp::confess($self->error_message());
-                }
-            }
-        }
-=cut
-
->>>>>>> 8396c51d102ec0b8196b568dce30e42039d9a6d4
 }
 
 sub symlink {

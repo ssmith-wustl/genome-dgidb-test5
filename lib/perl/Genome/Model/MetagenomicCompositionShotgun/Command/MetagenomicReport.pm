@@ -41,7 +41,6 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
             is => 'Text',
             is_optional => 1,
         },
-<<<<<<< HEAD
         include_fragments => {
             is => 'Boolean',
             is_optional => 1,
@@ -53,12 +52,6 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
             is_optional => 1, 
             default => 0, 
             doc => 'enabling this flag creates an additional set of reports for taxonomical classification and a summary taxonomy/refcov report if taxonomy_file, viral_taxonomy_file, and viral_headers_file are provided, or if they exist in the hmp subdirectory of the metagenomic references data directory', 
-=======
-        exclude_fragments => {
-            is => 'Boolean',
-            is_optional => 1,
-            default => 1,
->>>>>>> 8396c51d102ec0b8196b568dce30e42039d9a6d4
         },
     ],
 };
@@ -102,39 +95,11 @@ sub execute {
                 $self->error_message("viral headers file doesn't exist or have size: ".$self->viral_headers_file);
             }
         }
-<<<<<<< HEAD
         unless ($self->taxonomy_file){
             $self->taxonomy_file("$metagenomic_ref_hmp_dir/Bact_Arch_Euky.taxonomy.txt");
             unless (-s $self->taxonomy_file){
                 $self->error_message("taxonomy file doesn't exist or have size: ".$self->taxonomy_file);
             }
-=======
-    }
-
-    my $dir = $build->data_directory;
-    my ($meta1_bam, $meta1_flagstat, $meta2_bam, $meta2_flagstat) = map{ $dir ."/$_"}(
-        "metagenomic_alignment1.bam",
-        "metagenomic_alignment1.bam.flagstat",
-        "metagenomic_alignment2.bam",
-        "metagenomic_alignment2.bam.flagstat",
-    );
-
-
-    my $merged_bam = $self->report_dir."/metagenomic_alignment.combined.bam";
-    if (-e $merged_bam and -e $merged_bam.".OK"){ 
-        $self->status_message("metagenomic merged bam already produced, skipping");
-    }else{
-        my $rv;
-
-        $self->status_message("starting sort and merge");
-
-        my $sort_and_merge_meta = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->create(
-            input_files => [$meta1_bam, $meta2_bam],
-            output_file => $merged_bam,
-        );
-        unless($sort_and_merge_meta->execute()) {
-            die $self->error_message("Failed to sort and merge metagenomic bams: $@");
->>>>>>> 8396c51d102ec0b8196b568dce30e42039d9a6d4
         }
         unless ($self->viral_taxonomy_file){
             $self->viral_taxonomy_file("$metagenomic_ref_hmp_dir/viruses_taxonomy_feb_25_2010.txt");
@@ -144,7 +109,6 @@ sub execute {
         }
     }
 
-<<<<<<< HEAD
     my $sorted_bam = $build->_final_metagenomic_bam;
     unless ($self->include_fragments){
         # convert original bam to sam
@@ -212,60 +176,6 @@ sub execute {
 
     if ($self->include_taxonomy_report) {
         $self->_generate_taxonomy_report($sorted_bam, $refcov_output);
-=======
-    my $sorted_bam = $self->report_dir."/metagenomic_alignment.combined.sorted.bam";
-    if (-e $sorted_bam and -e $sorted_bam.".OK"){  
-        $self->status_message("sorted metagenomic merged bam already produced, skipping");
-    }else{
-        my $rv;
-
-        $self->status_message("starting position sort of merged bam");
-
-        my $sort_merged_bam = Genome::Model::Tools::Sam::SortBam->create(
-            file_name => $merged_bam,
-            output_file => $sorted_bam,
-        );
-        unless($sort_merged_bam->execute()) {
-            die $self->error_message("Failed to position sort merged metagenomic bam.");
-        }
-
-        unless (-s $sorted_bam){
-            die $self->error_message("Sorted bam has no size!");
-        }
-
-        system ("touch $sorted_bam.OK");
-
-        if ($self->exclude_fragments){
-            # convert original bam to sam
-            my $sorted_frag_filtered_sam = $self->report_dir . "/metagenomic_alignment.combined.sorted.frag_filtered.sam";
-            my $sorted_frag_filtered_bam = $self->report_dir . "/metagenomic_alignment.combined.sorted.frag_filtered.bam";
-            my $sorted_frag_filtered_sam_fh = IO::File->new(">$sorted_frag_filtered_sam");
-            my $sorted_bam_fh = IO::File->new("samtools view -h $sorted_bam |");
-            while (my $line = $sorted_bam_fh->getline) {
-                unless ($line =~ /^\@/) {
-                    my $flag = (split("\t", $line))[1];
-                    next unless ($flag & 0x0001);
-                }
-                $sorted_frag_filtered_sam_fh->print($line);
-            }
-            die "Failed to remove original file ($sorted_bam)" unless(unlink($sorted_bam));
-
-            # convert sam to bam after filtering fragment reads
-            my $sam_to_bam_cmd = "samtools view -b -S $sorted_frag_filtered_sam -o $sorted_frag_filtered_bam";
-            my $sam_to_bam = Genome::Utility::FileSystem->shellcmd(
-                cmd => $sam_to_bam_cmd,
-                input_files => [$sorted_frag_filtered_sam],
-                output_files => [$sorted_frag_filtered_bam],
-            );
-            unless($sam_to_bam) {
-                die $self->error_message("Failed to convert file to BAM, ($sorted_frag_filtered_sam -> $sorted_frag_filtered_bam)");
-            }
-            die "Failed to remove filtered sam file ($sorted_frag_filtered_sam)" unless(unlink($sorted_frag_filtered_sam));
-
-            # move newly created bam back into original bam position
-            die "Failed to move filtered file ($sorted_frag_filtered_bam)" unless(rename($sorted_frag_filtered_bam, $sorted_bam));
-        }
->>>>>>> 8396c51d102ec0b8196b568dce30e42039d9a6d4
     }
 
     return 1;
@@ -319,14 +229,6 @@ sub _generate_taxonomy_report {
             $ignore_unmapped++;
             next;
         }
-<<<<<<< HEAD
-        
-=======
-        unless (($bitflag & 0x0001) && $self->exclude_fragments){
-            $ignore_singleton++;
-            next;
-        }
->>>>>>> 8396c51d102ec0b8196b568dce30e42039d9a6d4
         my ($ref_name, $null, $gi) = split(/\|/, $fields[2]);
         if ($ref_name eq "VIRL"){
             $ref_name .= "_$gi";
@@ -548,7 +450,5 @@ sub _write_count_and_close {
     }
     $file_o->close;
 }
-
-
 
 1;
