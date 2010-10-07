@@ -791,7 +791,13 @@ sub _process_sra_instrument_data {
 
         unless ($upload_path) {
             $self->status_message("skipping read processing since all data is already processed and uploaded");
-            return ($post_processed_inst_data);
+            my @return = ($post_processed_inst_data);
+            #check if we produced a fragment from pairwise n-removal to return shortcut
+            if ($expected_path_fragment and $self->n_removal_cutoff){
+                my $n_removed_fragment = Genome::InstrumentData::Imported->get(original_data_path => $expected_path_fragment);
+                push @return, $n_removed_fragment if $n_removed_fragment;
+            }
+            return @return;
         }
 
         # extract
