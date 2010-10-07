@@ -1,7 +1,8 @@
-package Genoem::Model::Build::Command::Base;
+package Genome::Model::Build::Command::Base;
 
 class Genome::Model::Build::Command::Base {
     is => 'Genome::Command::Base',
+    is_abstract => 1,
     has => [
         builds => {
             is => 'Genome::Model::Build',
@@ -14,8 +15,9 @@ class Genome::Model::Build::Command::Base {
 };
 
 sub _limit_results_for_builds {
-    my ($self, @builds) = @_;
+    my ($class, @builds) = @_;
 
+    $class->status_message("Filtering matching builds for builds you ran.");
     my $other_users_builds_count;
     my @run_by_builds;
     for my $build (@builds) {
@@ -27,7 +29,7 @@ sub _limit_results_for_builds {
         }
     }
     if ($other_users_builds_count) {
-        $self->warning_message("Filtered $other_users_builds_count builds not run by you.");
+        $class->warning_message("Filtered $other_users_builds_count builds not run by you.");
     }
     @builds = @run_by_builds;
 
