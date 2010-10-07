@@ -207,6 +207,17 @@ sub execute {
         return $self->_post_build_failure($msg);
     }
 
+    UR::Context->commit();
+
+    require UR::Object::View::Default::Xsl;
+
+    my $cachetrigger = Genome::Config->base_web_uri;
+    $cachetrigger =~ s/view$/cachetrigger/;
+
+    my $url = $cachetrigger . '/' . UR::Object::View::Default::Xsl::type_to_url     (ref($build)) . '/status.html?id=' . $build->id;
+
+    system("curl -k $url >/dev/null 2>/dev/null &");
+
     return 1;
 }
 

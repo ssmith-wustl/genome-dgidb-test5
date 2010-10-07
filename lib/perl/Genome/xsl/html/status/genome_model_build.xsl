@@ -224,7 +224,8 @@
                                 <!-- if command_class contains 'AlignReads' there should be instrument data associated -->
                                 <xsl:when test="contains($command_class, 'AlignReads') or contains($containing_command_class, 'AlignReads')">
                                   <xsl:variable name="inst_data_id" select="instrument_data_id" />
-                                  <xsl:variable name="inst_data_count" select="count(//instrument_data[@id=$inst_data_id])"/>                              <xsl:choose>
+                                  <xsl:variable name="inst_data_count" select="count(//instrument_data[@id=$inst_data_id])"/>
+                                <xsl:choose>
                                   <!-- if we have instrument data element(s), show flow cell and lane -->
                                   <xsl:when test="$inst_data_count > 0">
                                     <xsl:for-each select="//instrument_data[@id=$inst_data_id]" >
@@ -425,6 +426,7 @@
                   </td>
                 </tr>
               </xsl:if>
+
             </xsl:if>
 
             <tr>
@@ -446,6 +448,27 @@
                 </a>
               </td>
             </tr>
+
+            <xsl:variable name="metricCount" select="build/@metric-count"/>
+            <xsl:if test="$status = 'Succeeded' and $metricCount > 0">
+              <tr>
+                <td class="name"><br/></td>
+                <td class="value">
+                  <xsl:variable name="button"> 
+                    <xsl:call-template name="object_link_button">
+                      <xsl:with-param name="type" select="'Genome::Model::Metric::Set'"/>
+                      <xsl:with-param name="key" select="'build_id'"/>
+                      <xsl:with-param name="id" select="build/@build-id"/>
+                      <xsl:with-param name="perspective" select="'status'"/>
+                      <xsl:with-param name="linktext" select="'metrics'"/>
+                      <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                    </xsl:call-template>
+                  </xsl:variable>
+
+                  <xsl:copy-of select="$button"/> 
+                </td>
+              </tr>
+            </xsl:if>
 
             <tr>
               <td class="name">model:
