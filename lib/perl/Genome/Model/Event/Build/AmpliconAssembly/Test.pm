@@ -90,7 +90,6 @@ sub test_01_execute : Tests {
     }
 
     #ok($self->_pre_execute, 'Pre Execute') or die "Failed method _pre_execute\n";
-$DB::single=1;
     ok($self->{_object}->execute, "Execute") or die "Failed execute\n";
 
     *{$class.'::execute'} = $execute if $execute;
