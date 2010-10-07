@@ -368,7 +368,7 @@ sub _validate_user_response_for_param_value_verification {
     $response_text = substr($response_text, 1) if ($response_text =~ /^[+-]/);
     my @response = split(/[\s\,]/, $response_text);
     for my $response (@response) {
-        if ($response =~ /^[xby*]$/) {
+        if ($response =~ /^[xbc*]$/) {
             return 1;
         }
         if ($response !~ /^(\d+)([-\.]+(\d+))?$/) {

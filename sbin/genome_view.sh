@@ -26,7 +26,7 @@ INC=`cd $INC; pwd -P`
 ## other options
 PSGI=$INC/Genome/Model/Command/Services/WebApp/Main.psgi
 PORT=3060
-WORKERS=5
+WORKERS=20
 OPTIONS="-M Genome::Model::Command::Services::WebApp::FCGI::Patch --app $PSGI -s FCGI -E development -I $INC --port $PORT -M Genome::Model::Command::Services::WebApp::Core --nproc $WORKERS --keep-stderr 1 --manager Genome::Model::Command::Services::WebApp::FCGI::ProcManager"
 
 # override perl5lib to be exactly what we want, no more
