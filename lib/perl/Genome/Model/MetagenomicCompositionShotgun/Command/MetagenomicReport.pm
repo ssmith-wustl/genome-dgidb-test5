@@ -224,7 +224,7 @@ sub execute {
     my %ref_counts_hash;
     my $ignore_unmapped;
     my $ignore_singleton;
-    my $fh = IO::File->new("samtools view $merged_bam |");
+    my $fh = IO::File->new("samtools view $sorted_bam |");
     while (<$fh>){
         my @fields = split(/\t/, $_);
         my $bitflag = $fields[1];
@@ -232,10 +232,7 @@ sub execute {
             $ignore_unmapped++;
             next;
         }
-        unless (($bitflag & 0x0001) && $self->exclude_fragments){
-            $ignore_singleton++;
-            next;
-        }
+        
         my ($ref_name, $null, $gi) = split(/\|/, $fields[2]);
         if ($ref_name eq "VIRL"){
             $ref_name .= "_$gi";
@@ -244,7 +241,6 @@ sub execute {
     }
 
     $self->status_message("skipping $ignore_unmapped reads without a metagenomic mapping");
-    $self->status_message("skipping $ignore_singleton fragment reads");
 
     # Count And Record Taxonomy Hits
     my $read_count_output_file = $self->report_dir . '/read_count_output';
