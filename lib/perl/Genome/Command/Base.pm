@@ -10,6 +10,7 @@ require File::Basename;
 
 class Genome::Command::Base {
     is => 'Command',
+    is_abstract => 1,
     attributes_have => [
         require_user_verify => {
             is => 'Boolean',
@@ -33,7 +34,7 @@ our %ALTERNATE_FROM_CLASS = (
         'Genome::ModelGroup' => ['models'],
     },
     'Genome::Model::Build' => {
-        'Genome::Model' => ['builds', 'latest_build', 'last_successful_build'],
+        'Genome::Model' => ['builds', 'latest_build', 'last_successful_build', 'running_builds'],
     },
 );
 # This will prevent infinite loops during recursion.
@@ -77,8 +78,8 @@ sub resolve_param_value_from_cmdline_text {
         for my $param_class (@param_class) {
             #$self->debug_message("Trying to find $param_class...");
             %SEEN_FROM_CLASS = ();
-            # call _resolve_param_value_from_text without a via_method to bootstrap recursion
-            @arg_results = $self->_resolve_param_value_from_text($arg, $param_class);
+            # call resolve_param_value_from_text without a via_method to bootstrap recursion
+            @arg_results = $self->resolve_param_value_from_text($arg, $param_class);
         } 
 
         $force_verify = 1 if (@arg_results > 1);
@@ -86,10 +87,12 @@ sub resolve_param_value_from_cmdline_text {
             push @results, @arg_results;
             last if ($arg =~ /,/); # the first arg is all param_args as BoolExpr, if it returned values finish; basically enforicing AND (vs. OR)
         }
-        elsif ($i != 0) {
+        elsif ( $i != 0 || @param_args == 1 ) {
             print STDERR "WARNING: No match found for $arg!\n";
         }
     }
+
+    return unless (@results);
 
     @results = $self->_unique_elements(@results);
     my $pmeta = $self->__meta__->property($param_name);
@@ -117,8 +120,12 @@ sub resolve_param_value_from_cmdline_text {
     }
 }
 
-sub _resolve_param_value_from_text {
+sub resolve_param_value_from_text {
     my ($self, $param_arg, $param_class, $via_method) = @_;
+
+    unless ($param_class) {
+        $param_class = $self->class;
+    }
 
     $SEEN_FROM_CLASS{$param_class} = 1;
     my @results;
@@ -136,14 +143,26 @@ sub _resolve_param_value_from_text {
         push @results, @results_by_string;
     }
     # if we still don't have any values then try via alternate class
-    if (!@results) {
+    if (!@results && $param_arg !~ /,/) {
         @results = $self->_resolve_param_value_via_related_class_method($param_class, $param_arg, $via_method);
     }
 
     if ($via_method) {
         @results = map { $_->$via_method } @results;
     }
-    return @results;
+
+    if (wantarray) {
+        return @results;
+    }
+    elsif (not defined wantarray) {
+        return;
+    }
+    elsif (@results > 1) {
+        Carp::confess("Multiple matches found!");
+    }
+    else {
+        return $results[0];
+    }
 }
 
 sub _resolve_param_value_via_related_class_method {
@@ -170,7 +189,7 @@ sub _resolve_param_value_via_related_class_method {
             my @methods = @{$ALTERNATE_FROM_CLASS{$via_class}{$from_class}};
             my $method;
             if (@methods > 1 && !$via_method) {
-                #$self->debug_message("Trying to find $via_class via $from_class...\n");
+                $self->status_message("Trying to find $via_class via $from_class...\n");
                 my $method_choices;
                 for (my $i = 0; $i < @methods; $i++) {
                     $method_choices .= ($i + 1) . ": " . $methods[$i];
@@ -203,7 +222,7 @@ sub _resolve_param_value_via_related_class_method {
             }
             unless($SEEN_FROM_CLASS{$from_class}) {
                 #$self->debug_message("Trying to find $via_class via $from_class->$method...");
-                @results = $self->_resolve_param_value_from_text($param_arg, $from_class, $method);
+                @results = $self->resolve_param_value_from_text($param_arg, $from_class, $method);
             }
         } # END for my $from_class (@from_classes)
     } # END if ($via_class)
@@ -236,9 +255,6 @@ sub _resolve_param_value_from_text_by_name_or_id {
         @results = $param_class->get(name => $str);
         unless (@results) {
             @results = $param_class->get("name like" => "$str");
-        }
-        unless (@results) {
-            @results = $param_class->get("name like" => "%$str%");
         }
     }
     #$self->debug_message("S: $param_class '$str' " . scalar(@results));
@@ -279,33 +295,52 @@ sub _get_user_verification_for_param_value_drilldown {
 
     my @dnames = map {$_->__display_name__} grep { $_->can('__display_name__') } @results;
     my $max_dname_length = @dnames ? length((sort { length($b) <=> length($a) } @dnames)[0]) : 0;
+    my @statuses = map {$_->status} grep { $_->can('status') } @results;
+    my $max_status_length = @statuses ? length((sort { length($b) <=> length($a) } @statuses)[0]) : 0;
     @results = sort {$a->__display_name__ cmp $b->__display_name__} @results;
     @results = sort {$a->class cmp $b->class} @results;
+    my @classes = $self->_unique_elements(map {$_->class} @results);
 
     $self->status_message("Found $n_results match(es):");
     my $response;
+    my @caller = caller(1);
     while (!$response) {
+        # TODO: Replace this with lister?
         for (my $i = 1; $i <= $n_results; $i++) {
             my $param = $results[$i - 1];
             my $num = $self->_pad_string($i, $pad);
-            my $pfx = "$num:";
-            (my $short_class = $param->class) =~ s/^Genome\:\://;
-            my $dname = $self->_pad_string($param->__display_name__, $max_dname_length, 'suffix');
-            $self->status_message("$pfx $dname ($short_class)");
+            my $msg = "$num:";
+            $msg .= ' ' . $self->_pad_string($param->__display_name__, $max_dname_length, 'suffix');
+            my $status = ' ';
+            if ($param->can('status')) {
+                $status = $param->status;
+            }
+            $msg .= "\t" . $self->_pad_string($status, $max_status_length, 'suffix');
+            $msg .= "\t" . $param->class if (@classes > 1);
+            $self->status_message($msg);
         }
         if ($MESSAGE) {
             $MESSAGE = '*'x80 . "\n" . $MESSAGE . "\n" . '*'x80 . "\n";
             $self->status_message($MESSAGE);
             $MESSAGE = '';
         }
-        $response = $self->_ask_user_question("Proceed using the above list?", 300, '\*|y|b|h|x|[-+]?[\d\-, ]+', 'h', '(y)es|(b)ack|(h)elp|e(x)it|LIST');
+        my $pretty_values = '(c)ontinue, (h)elp, e(x)it';
+        my $valid_values = '\*|c|h|x|[-+]?[\d\-\., ]+';
+        if ($caller[3] =~ /_trim_list_from_response/) {
+            $pretty_values .= ', (b)ack';
+            $valid_values .= '|b';
+        }
+        $response = $self->_ask_user_question("Confirmation or trimming required...", 300, $valid_values, 'h', $pretty_values.', or specify items to use');
         if (lc($response) eq 'h' || !$self->_validate_user_response_for_param_value_verification($response)) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .=
             "Help:\n".
-            "* Specify which elements to keep by listing them, e.g. '1,3,12' would keep items 1, 3, and 12.\n".
-            "* Begin list with a minus to remove elements, e.g. '-1,3,9' would remove items 1, 3, and 9.\n".
-            "* Ranges can be used, e.g. '-11-17, 5' would remove items 11 through 17 and remove item 5.";
+            "* Specify which elements to keep by listing them, e.g. '1,3,12' would keep\n".
+            "  items 1, 3, and 12.\n".
+            "* Begin list with a minus to remove elements, e.g. '-1,3,9' would remove\n".
+            "  items 1, 3, and 9.\n".
+            "* Ranges can be used, e.g. '-11-17, 5' would remove items 11 through 17 and\n".
+            "  remove item 5.";
             $response = '';
         }
     }
@@ -316,10 +351,10 @@ sub _get_user_verification_for_param_value_drilldown {
     elsif (lc($response) eq 'b') {
         return;
     }
-    elsif (lc($response) eq 'y' | $response eq '*') {
+    elsif (lc($response) eq 'c' | $response eq '*') {
         return @results;
     }
-    elsif ($response =~ /^[-+]?[\d\-, ]+$/) {
+    elsif ($response =~ /^[-+]?[\d\-\., ]+$/) {
         @results = $self->_trim_list_from_response($response, @results);
         return @results;
     }
@@ -336,7 +371,7 @@ sub _validate_user_response_for_param_value_verification {
         if ($response =~ /^[xby*]$/) {
             return 1;
         }
-        if ($response !~ /^(\d+)(-(\d+))?$/) {
+        if ($response !~ /^(\d+)([-\.]+(\d+))?$/) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .= "ERROR: Invalid list provided ($response)";
             return 0;
@@ -367,7 +402,7 @@ sub _trim_list_from_response {
     @indices{0..$#list} = 0..$#list if ($method eq '-');
 
     for my $response (@response) {
-        $response =~ /^(\d+)(-(\d+))?$/;
+        $response =~ /^(\d+)([-\.]+(\d+))?$/;
         my $low = $1; $low--;
         my $high = $3 || $1; $high--;
         die if ($high < $low);
@@ -498,11 +533,16 @@ sub _check_for_missing_parameters {
 sub resolve_class_and_params_for_argv {
     my $self = shift;
     my ($class, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
+    unless ($self eq $class) {
+        return ($class, $params);
+    }
     unless (@_ && $self->_check_for_missing_parameters($params)) {
         $params->{help} = 1;
         return ($class, $params);
     }
     
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+
     if ($params) {
         my $cmeta = $self->__meta__;
         for my $param_name (keys %$params) {
@@ -563,55 +603,6 @@ sub resolve_class_and_params_for_argv {
     }
     return ($class, $params);
 }
-
-# TODO: Remove this and replace references with resolve_param_value_from_cmdline_text
-sub default_cmdline_selector {
-    my $class = shift;
-    my @obj;
-    while (my $txt = shift) {
-        eval {
-            my $bx = UR::BoolExpr->resolve_for_string($class,$txt);
-            my @matches = $class->get($bx);
-            push @obj, @matches;
-        };
-        if ($@) {
-            my @matches = $class->get($txt);
-            push @obj, @matches;
-        }
-    }
-
-    if (wantarray) {
-        return @obj;
-    }
-    elsif (not defined wantarray) {
-        return;
-    }
-    elsif (@obj > 1) {
-        Carp::confess("Multiple matches found!");
-    }
-    else {
-        return $obj[0];
-    }
-}
-
-# TODO: Remove this?
-#sub X_shell_arg_getopt_specification_from_property_meta {
-#    my ($self,$property_meta) = @_;
-#    my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
-#    my @spec_value;
-#    if (my $type = $property_meta->data_type) {
-#        @spec_value = (
-#            $arg_name => sub { print ">>@_<<\n"; $self->from_cmdline($type, @_) }
-#        );    
-#    }
-#    if ($property_meta->is_many and not @spec_value) {
-#        @spec_value = ($arg_name => []);
-#    }
-#    return (
-#        $arg_name .  $self->_shell_arg_getopt_qualifier_from_property_meta($property_meta),
-#        @spec_value
-#    );
-#}
 
 sub _ask_user_question {
     my $self = shift;

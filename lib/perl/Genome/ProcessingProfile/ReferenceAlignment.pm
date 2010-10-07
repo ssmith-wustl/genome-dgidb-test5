@@ -395,7 +395,7 @@ sub generate_reports_job_classes {
     my @steps = (
         'Genome::Model::Event::Build::ReferenceAlignment::RunReports'
     );
-    if((defined $self->snv_detector_name || defined $self->indel_detector_name) && defined $self->merge_software && defined $self->rmdup_name) {
+    if((defined $self->snv_detector_name || defined $self->indel_detector_name) && defined $self->rmdup_name) {
         return @steps;
     }
     else {

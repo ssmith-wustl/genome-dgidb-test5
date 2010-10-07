@@ -307,7 +307,9 @@ sub GetGeneAnnotation{
   }
 
   if(@overlapgenes && defined $type && $type=~/del/i && (!defined $struct1 || !defined $struct2) ||
-     defined $struct1 && defined $struct2 && abs($struct2->{id}-$struct1->{id})>0 && $chr eq $chr2){
+     defined $struct1 && defined $struct2 && abs($struct2->{id}-$struct1->{id})>0 && $chr eq $chr2 ||
+     defined $type && $type=~/inv/i && (!defined $struct1 && defined $struct2 || defined $struct1 && !defined $struct2)
+    ){
     $gene.=',AffectExon';
   }
 

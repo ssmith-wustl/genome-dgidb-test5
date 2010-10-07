@@ -506,13 +506,13 @@ sub get_read_count {
         ($sub_count) = split " ",$sub_count;
         unless(defined($sub_count)&&($sub_count > 0)){
             $self->error_message("couldn't get a response from wc.");
-            return undef;
+            return;
         }
         $line_count += $sub_count;
     }
     if($line_count % 4){
         $self->error_message("Calculated a number of lines in the fastq file that was not divisible by 4.");
-        return undef;
+        return;
     }
     $read_count = $line_count / 4;
     return $read_count
@@ -543,7 +543,7 @@ sub is_valid_filename {
     my $self = shift;
     my $fastq_name = shift;
     unless(($fastq_name=~m/^s_[1-8]_sequence.txt$/)||($fastq_name=~m/^s_[1-8]_[1-2]_sequence.txt$/)){
-        return undef;
+        return;
     }
     return 1;
 }
@@ -572,13 +572,11 @@ sub fix_fastq_filename {
     } else {
         $new_filename = "s_".$self->subset_name."_sequence.txt";
     }
-    my $answer;
     if($self->is_valid_filename($new_filename)){
-        $answer = $new_filename;
+        return $new_filename;
     } else {
-        $answer = undef;
+        return;
     }
-    return $answer;
 }
 
 1;

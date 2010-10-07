@@ -5,9 +5,9 @@ use warnings;
   
 use Genome;
 
+use Carp;
 use Data::Dumper;
 use Finishing::Assembly::Phd::Directory;
-#use Finishing::Assembly::Phd::Exporter;
 use IO::Dir;
 
 class Genome::Model::Tools::PhredPhrap::ScfToPhd {
@@ -63,6 +63,7 @@ sub _phd_schema {
 sub execute {
     my $self = shift;
 
+    $DB::single = 1;
     $self->_phd_schema( Finishing::Assembly::Phd::Directory->connect($self->phd_dir) );
 
     $self->_remove_phds if $self->rmphd;
@@ -145,21 +146,83 @@ sub _run_phred {
     return $phd_name;
 }
 
-sub _check_and_add_read_type {
+sub _check_and_add_read_type { # This will only work for GSC traces
     my ($self, $scf_name) = @_;
 
     my $phd = $self->_phd_schema->latest_phd($scf_name);
     return 1 if @{$phd->wr};
-    
-    system sprintf(
-        'determineReadTypes.perl -PhdDir %s -justThisPhdFile %s',
-        $self->phd_dir,
-        $self->_phd_schema->latest_phd_file($scf_name),
-    ); 
+
+    my $read_name = $scf_name;
+    $read_name =~ s/\.gz//;
+    my ($template, $ext) = split(/\./, $scf_name);
+    $ext =~ s/\d+//;
+
+    my  ($primer_type, $lib);
+    if ( $template =~ /PCR/ ) {
+        $primer_type = 'pcr end';
+    }
+    else {
+        if ( $template =~ s/_\w\d+$// ) {
+            $primer_type = 'walk';
+        }
+        elsif ( $ext =~ /[ryg]/ ) {
+            $primer_type = 'univ rev'
+        }
+        else {
+            $primer_type = 'univ fwd'
+        }
+        $lib = $template;
+        for (1..3) { chop $lib; }
+    }
+
+    my $date = $self->_date;
+
+    my $wr = <<WR_TAG;
+WR{
+template dscript $date
+name: $template
+lib: $lib
+}
+
+WR{
+primer dscript $date
+type: $primer_type
+}
+
+WR_TAG
+
+    my $phd_file = $self->_phd_schema->latest_phd_file($scf_name);
+    my $fh = eval{ Genome::Utility::FileSystem->open_file_for_appending($phd_file); };
+    if ( not defined $fh ) {
+        Carp::confess(
+            $self->error_message("Cannot open phd file ($phd_file) to append: $@")
+        );
+    }
+    $fh->print($wr);
+    $fh->close;
 
     return 1;
 }
 
+sub _date {
+    my $self = shift;
+
+    return $self->{_date} if defined $self->{_date};
+
+    my ($nSecond, $nMinute, $nHour, $nDayInMonth, $nMonth, $nYear, $wday, $yday, $isdst ) = localtime;
+
+    my $date = sprintf( 
+        "%02d%02d%02d:%02d%02d%02d",
+        ($nYear % 100),
+        $nMonth + 1,
+        $nDayInMonth,
+        $nHour,
+        $nMinute,
+        $nSecond,
+    );
+
+    return $self->{_date} = $date;
+}
 1;
 
 =pod
