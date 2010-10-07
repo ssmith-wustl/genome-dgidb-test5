@@ -29,9 +29,12 @@ sub help_detail {
 sub _limit_results_for_builds {
     my ($self, @builds) = @_;
 
+    $self->status_message("Found ".scalar(@builds)." build matching your argument.");
+
     # Run Genome::Model::Build::Command::Base's _limit_results_for_builds
     @builds = $self->SUPER::_limit_results_for_builds(@builds);
 
+    $self->status_message("Checking ".scalar(@builds)." for errors prior to removal. This is a slow process...");
     my @error_builds;
     my @error_free_builds;
     for my $build (@builds) {
