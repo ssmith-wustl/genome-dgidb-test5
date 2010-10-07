@@ -944,7 +944,7 @@ sub _initialize_workflow {
     my $workflow = $processing_profile->_resolve_workflow_for_build($self,$lsf_queue_eliminate_me);
 
     ## so developers dont fail before the workflow changes get deployed to /gsc/scripts
-    if ($workflow->can('notify_url') {
+    if ($workflow->can('notify_url')) {
         require UR::Object::View::Default::Xsl;
 
         my $cachetrigger = Genome::Config->base_web_uri;
