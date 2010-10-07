@@ -399,13 +399,15 @@ sub need_to_build {
         $self->status_message("No build found for ".$model->name."; need to build.");
         return 1;
     }
+    $self->status_message("Found build: ".$build->__display_name__);
     my %last_assignments = map { $_->id => $_ } $build->instrument_data_assignments;
+    $self->status_message("Instrument data assignments are:\n".join("\n", keys %last_assignments, "\n"));
     my @current_assignments = $model->instrument_data_assignments;
     if (grep {! $last_assignments{$_->id}} @current_assignments){
         $self->status_message("Missing instrument data assignment for ".$model->name."; need to build.");
         return 1;
     }else{
-        $self->status_message("Build exists and instrument data assignments match; no need to build.");
+        $self->status_message("Build for ".$model->name." exists and all (".scalar(@current_assignments).") instrument data assignments match; no need to build.");
         return;
     }
 }
