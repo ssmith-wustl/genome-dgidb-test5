@@ -61,8 +61,8 @@ sub execute {
     my $failed_count = 0;
     my @errors;
     for my $build (@builds) {
-        eval {$build->restart(%params)};
-        if (!$@) {
+        my $rv = eval {$build->restart(%params)};
+        if ($rv) {
             $self->status_message("Build (".$build->__display_name__.") launched to LSF.\nAn initialization email will be sent once the build begins running.");
         }
         else {
