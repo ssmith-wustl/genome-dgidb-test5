@@ -36,8 +36,8 @@ sub execute {
     my $failed_count = 0;
     my @errors;
     for my $build (@builds) {
-        eval {$build->abandon};
-        if (!$@) {
+        my $rv = eval {$build->abandon};
+        if ($rv) {
             $self->status_message("Successfully abandoned build (" . $build->__display_name__ . ").");
         }
         else {

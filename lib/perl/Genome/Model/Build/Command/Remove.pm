@@ -45,8 +45,8 @@ sub execute {
     for my $build (@builds) {
         my $display_name = $build->__display_name__;
         my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
-        eval {$remove_build->execute};
-        if (!$@) {
+        my $rv = eval {$remove_build->execute};
+        if ($rv) {
             $self->status_message("Successfully removed build (" . $display_name . ").");
         }
         else {

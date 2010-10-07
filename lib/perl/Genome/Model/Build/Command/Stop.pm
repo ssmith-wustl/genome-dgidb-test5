@@ -36,8 +36,8 @@ sub execute {
     my $failed_count = 0;
     my @errors;
     for my $build (@builds) {
-        eval {$build->stop};
-        if (!$@) {
+        my $rv = eval {$build->stop};
+        if ($rv) {
             $self->status_message("Successfully stopped build (" . $build->__display_name__ . ").");
         }
         else {
