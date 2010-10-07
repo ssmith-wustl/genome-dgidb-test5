@@ -951,6 +951,8 @@ sub _initialize_workflow {
 sub _execute_bsub_command { # here to overload in testing
     my ($self, $cmd) = @_;
 
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+
     if ($ENV{UR_DBI_NO_COMMIT}) {
         $self->warning_message("Skipping bsub when NO_COMMIT is turned on (job will fail)\n$cmd");
         return 1;
