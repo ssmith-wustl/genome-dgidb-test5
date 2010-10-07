@@ -395,12 +395,17 @@ sub wait_for_build {
 sub need_to_build {
     my ($self, $model) = @_;
     my $build = $model->last_succeeded_build;
-    return 1 unless $build;
+    unless ($build) {
+        $self->status_message("No build found for ".$model->name."; need to build.");
+        return 1;
+    }
     my %last_assignments = map { $_->id => $_ } $build->instrument_data_assignments;
     my @current_assignments = $model->instrument_data_assignments;
     if (grep {! $last_assignments{$_->id}} @current_assignments){
+        $self->status_message("Missing instrument data assignment for ".$model->name."; need to build.");
         return 1;
     }else{
+        $self->status_message("Build exists and instrument data assignments match; no need to build.");
         return;
     }
 }
