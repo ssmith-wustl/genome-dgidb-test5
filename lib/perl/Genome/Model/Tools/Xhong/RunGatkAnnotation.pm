@@ -108,7 +108,7 @@ sub execute {
      
     print "bsub -N -u $user\@genome.wustl.edu -q long -J '$genome_name.gatk.ucsc.anno' -e $dir\/$genome_name.ucsc.anno.err 'perl -I ~xhong/genome-stable \`which gmt\` somatic ucsc-annotator --input-file $dir\/$genome_name.GATK.somatic --output-file $dir\/$genome_name.GATK.somatic.ucsc.anno --unanotated-file $dir\/$genome_name.GATK.somatic.ucsc.unanno' \n";
      
-    print `bsub -N -u $user\@genome.wustl.edu -q long -J '$genome_name.gatk.ucsc.anno' -e $dir\/$genome_name.anno.err 'perl -I ~xhong/genome-stable \`which gmt\` somatic ucsc-annotator --input-file $dir\/$genome_name.GATK.somatic --output-file $dir\/$genome_name.GATK.somatic.ucsc.anno --unanotated-file $dir\/$genome_name.GATK.somatic.ucsc.unanno'`;
+    print `bsub -N -u $user\@genome.wustl.edu -q long -J '$genome_name.gatk.ucsc.anno' -e $dir\/$genome_name.ucsc.anno.err 'perl -I ~xhong/genome-stable \`which gmt\` somatic ucsc-annotator --input-file $dir\/$genome_name.GATK.somatic --output-file $dir\/$genome_name.GATK.somatic.ucsc.anno --unanotated-file $dir\/$genome_name.GATK.somatic.ucsc.unanno'`;
     
     return 1;
 }
