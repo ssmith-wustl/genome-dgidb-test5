@@ -10,14 +10,8 @@ require Cwd;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Build::Command::Restart {
-    is => 'Genome::Command::Base',
+    is => 'Genome::Model::Build::Command::Base',
     has => [
-        builds => {
-            is => 'Genome::Model::Build',
-            shell_args_position => 1,
-            is_many => 1,
-            doc => 'Build(s) to use. Resolved from command line via text string.',
-        },
         lsf_queue => {
             is => 'Text',
             default_value => 'workflow',
