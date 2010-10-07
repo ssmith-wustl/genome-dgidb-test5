@@ -94,6 +94,10 @@ sub resolve_param_value_from_cmdline_text {
 
     return unless (@results);
 
+    my $limit_results_method = "_limit_results_for_$param_name";
+    if ( $self->can($limit_results_method) ) {
+        @results = $self->$limit_results_method(@results);
+    }
     @results = $self->_unique_elements(@results);
     my $pmeta = $self->__meta__->property($param_name);
     unless (defined($pmeta->{'require_user_verify'}) && $pmeta->{'require_user_verify'} == 0) {
