@@ -400,16 +400,30 @@ sub need_to_build {
         return 1;
     }
     $self->status_message("Found build: ".$build->__display_name__);
-    my %last_assignments = map { $_->id => $_ } $build->instrument_data_assignments;
-    $self->status_message("Instrument data assignments are:\n".join("\n", keys %last_assignments, "\n"));
-    my @current_assignments = $model->instrument_data_assignments;
-    if (grep {! $last_assignments{$_->id}} @current_assignments){
-        $self->status_message("Missing instrument data assignment for ".$model->name."; need to build.");
+    my @build_assignments = sort {$a cmp $b} $build->instrument_data_assignments;
+    my @model_assignments = sort {$a cmp $b} $model->instrument_data_assignments;
+
+    if (@build_assignments ne @model_assignments) {
+        $self->status_message("Assignment count does not match, build has ".scalar(@build_assignments)." but model has ".scalar(@model_assignments)."; need to build.");
         return 1;
-    }else{
-        $self->status_message("Build for ".$model->name." exists and all (".scalar(@current_assignments).") instrument data assignments match; no need to build.");
-        return;
     }
+    # Check for missing_first_build_id due to bug in UR caching
+    for (my $i = 0; $i < @model_assignments; $i++) {
+        my $build_assignment = $build_assignments[$i];
+        my $model_assignment = $model_assignments[$i];
+
+        if (!$model_assignment->first_build_id) {
+            $self->status_message("Model has assignments without corresponding build; need to build.");
+            return 1;
+        }
+        if ($build_assignment->id ne $model_assignment->id) {
+            $self->status_message("Missing instrument data assignment; need to build.");
+            return 1;
+        }
+    }
+
+    $self->status_message("Build for ".$model->name." exists and all (".scalar(@model_assignments).") instrument data assignments match; no need to build.");
+    return 0;
 }
 
 sub _process_unaligned_reads {
