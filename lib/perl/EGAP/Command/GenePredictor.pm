@@ -3,6 +3,10 @@ package EGAP::Command::GenePredictor;
 use strict;
 use warnings;
 
+use EGAP;
+use File::Temp;
+use File::Basename;
+
 class EGAP::Command::GenePredictor {
     is => 'EGAP::Command',
     is_abstract => 1,
@@ -17,10 +21,10 @@ class EGAP::Command::GenePredictor {
             is_input => 1,
             doc => 'Raw output of predictor goes into this directory',
         },
-        prediction_output_directory => {
+        egap_sequence_file => {
             is => 'Path',
             is_input => 1,
-            doc => 'Parsed prediction output file go here',
+            doc => 'A file containing EGAP::Sequence objects, useful for sequence lookups',
         },
     ],
 };

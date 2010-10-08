@@ -8,7 +8,7 @@ use Bio::SeqIO;
 
 use File::Temp qw(tempdir);
 use File::Basename;
-use Test::More tests => 1122;
+use Test::More tests => 12;
 
 BEGIN {
     use_ok('EGAP::Command');
@@ -19,26 +19,60 @@ my $test_dir = "/gsc/var/cache/testsuite/running_testsuites/";
 my $test_output_dir = tempdir('EGAP-Command-SNAP-XXXXXX',
     DIR => $test_dir,
     CLEANUP => 1,
+    UNLINK => 1,
 );
 chmod(0755, $test_output_dir);
 
+my $fasta = File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta';
+ok(-e $fasta, "fasta file exists at $fasta");
+
+my $seq_file = File::Basename::dirname(__FILE__).'/data/Contig0a.masked.egap_sequence';
+ok(-e $seq_file, "sequence file exists at $seq_file");
+
+my $model = '/gsc/pkg/bio/snap/installed/HMM/C.elegans.hmm';
+ok(-e $model, "model file exists at $model");
+
 my $command = EGAP::Command::GenePredictor::SNAP->create(
-    fasta_file => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
-    model_file => '/gsc/pkg/bio/snap/installed/HMM/C.elegans.hmm',
-    output_directory => $test_output_dir,
+    fasta_file => $fasta,
+    egap_sequence_file => $seq_file, 
+    model_files => $model, 
+    coding_gene_prediction_file => $test_output_dir . "/coding_genes.csv",
+    transcript_prediction_file => $test_output_dir . "/transcripts.csv",
+    exon_prediction_file => $test_output_dir . "/exons.csv",
+    protein_prediction_file => $test_output_dir . "/proteins.csv",
+    version => '2010-07-28',
+    raw_output_directory => $test_output_dir,
 );
 
 isa_ok($command, 'EGAP::Command::GenePredictor');
 isa_ok($command, 'EGAP::Command::GenePredictor::SNAP');
 
-ok($command->execute());
+ok($command->execute(), "executed snap command");
 
-my @features = @{$command->bio_seq_feature()};
+my @genes = EGAP::CodingGene->get(
+    file_path => $command->coding_gene_prediction_file
+);
+my $num_genes = scalar @genes;
+ok($num_genes > 0, "able to retrieve $num_genes coding gene objects");
 
-ok(@features > 0);
+my @proteins = EGAP::Protein->get(
+    file_path => $command->protein_prediction_file
+);
+my $num_proteins = scalar @proteins;
+ok($num_proteins > 0, "able to retrieve $num_proteins protein objects");
 
-foreach my $feature (@features) {
-    isa_ok($feature, 'Bio::Tools::Prediction::Gene');
-    ok(defined($feature->seq_id()));
-    is($feature->seq_id(), 'TRISPI_Contig0.a');
-}
+my @transcripts = EGAP::Transcript->get(
+    file_path => $command->transcript_prediction_file,
+);
+my $num_transcripts = scalar @transcripts;
+ok($num_transcripts > 0, "able to retrieve $num_transcripts transcript objects");
+
+my @exons = EGAP::Exon->get(
+    file_path => $command->exon_prediction_file,
+);
+my $num_exons = scalar @exons;
+ok($num_exons > 0, "able to retrieve $num_exons exon objects");
+
+
+system("cp " . $command->exon_prediction_file . " ~");
+system("cp " . $command->coding_gene_prediction_file . " ~");

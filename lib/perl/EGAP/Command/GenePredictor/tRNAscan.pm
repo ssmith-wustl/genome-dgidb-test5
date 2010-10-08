@@ -10,6 +10,14 @@ use Carp 'confess';
 
 class EGAP::Command::GenePredictor::tRNAscan {
     is => 'EGAP::Command::GenePredictor',
+    has => [
+        rna_prediction_file => {
+            is => 'Path',
+            is_input => 1,
+            is_output => 1,
+            doc => 'RNA gene predictions are placed in this file',
+        },
+    ],
     has_optional => [
         domain => {
             is => 'Text',
@@ -76,20 +84,29 @@ sub execute {
 
         my $strand = 1;
         $strand = -1 if $begin > $end;
+        ($begin, $end) = ($end, $begin) if $begin > $end;
+
+        my $sequence = EGAP::Sequence->get(
+            file_path => $self->egap_sequence_file,
+            sequence_name => $seq_name,
+        );
+        my $seq_string = $sequence->sub_sequence($begin, $end);
 
         my $rna_gene = EGAP::RNAGene->create(
+            file_path => $self->rna_prediction_file,
             gene_name => $seq_name . $trna_num,
             description => $type,
-            data_directory => $self->prediction_output_directory,
             start => $begin,
             end => $end,
             strand => $strand,
             source => 'trnascan',
             score => $score,
-            sequence_id => $seq_name
+            sequence_name => $seq_string,
+            sequence_string => $seq_string,
         );
     }
 
+    # TODO Need to add locking here
     UR::Context->commit;
     $self->status_message("trnascan successfully completed!");
     return 1;

@@ -18,6 +18,7 @@ class EGAP::Command::SplitFasta {
         output_directory => {
             is => 'Path',
             is_input => 1,
+            is_output => 1,
             doc => 'Directory in which split fastas are placed',
         },
     ],
@@ -75,6 +76,9 @@ sub execute {
     my $upper_limit = $self->max_bases_per_file;
     my $output_directory = $self->output_directory;
 
+    $self->status_message("Creating smaller fasta files in $output_directory containing sequence " .
+        "from $fasta_file_path and each having no more than $upper_limit bases");
+
     while (my $sequence = $fasta_file->next_seq()) {
         my $length = $sequence->length;
 
@@ -98,7 +102,8 @@ sub execute {
 
     $self->fasta_files(\@filenames);
     $self->genome_size($total_bases);
-
+    $self->status_message("Created $counter fasta files in $output_directory.");
+    $self->status_message("Altogether, there are $total_bases bases of sequence!");
     return 1;
 }
 1;
