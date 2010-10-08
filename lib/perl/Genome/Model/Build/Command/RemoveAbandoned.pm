@@ -80,7 +80,7 @@ sub execute {
 
         my $cmd = "genome model build remove ";
         $cmd .= "--keep-build-directory " if $self->keep_build_directory;
-        $cmd .= "--BUILD-ID $build_id";
+        $cmd .= " $build_id";
         my $rv = eval { system($cmd) };
 
         unless (defined $rv and $rv == 0) {
