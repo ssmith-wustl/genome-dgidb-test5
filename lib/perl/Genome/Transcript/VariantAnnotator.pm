@@ -163,6 +163,7 @@ sub _create_iterator_for_variant_intersection {
     return sub {
         my $variant = $_[0];
 
+$DB::single=1;
         my $variant_start = $variant->{'start'};
         my $variant_stop  = $variant->{'stop'};
 
@@ -198,7 +199,7 @@ sub _create_iterator_for_variant_intersection {
         # fast-forward through to substructures that cross
         while($next_substructure and $next_substructure->{'structure_start'} <= $variant_stop) {
             push @keep_structures, $next_substructure;
-            if ($next_substructure->{'structure_stop'} <= $variant_start) {
+            if ($variant_start <= $next_substructure->{'structure_stop'}) {
                 push @intersections, $next_substructure;
             }
             $next_substructure = $structure_iterator->next();
@@ -248,6 +249,7 @@ $DB::single=1;
     unless ($windowing_iterator) {
         $windowing_iterator = $self->{'_windowing_iterator'} = $self->_create_iterator_for_variant_intersection();
     }
+    my $crossing_substructures = $windowing_iterator->(\%variant);
     my @crossing_substructures = Genome::TranscriptStructure->get(
                                      chrom_name => $variant{'chromosome_name'},
                                      'structure_stop >=' => $variant_start,
@@ -255,7 +257,6 @@ $DB::single=1;
                                      #'transcript_transcript_start >=' => $variant_start - 4500000,
                                      #'transcript_transcript_stop <=' => $variant_stop + 4500000,
                                      data_directory => $self->data_directory);
-    my $crossing_substructures = $windowing_iterator->(\%variant);
     return unless @$crossing_substructures;
 
     my @annotations;
