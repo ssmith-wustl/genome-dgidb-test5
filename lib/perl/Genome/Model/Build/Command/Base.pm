@@ -21,11 +21,11 @@ sub _limit_results_for_builds {
     my $other_users_builds_count;
     my @run_by_builds;
     for my $build (@builds) {
-        if ($build->run_by eq $ENV{USER}) {
-            push @run_by_builds, $build;
+        if ($build->run_by && $build->run_by ne $ENV{USER}) {
+            $other_users_builds_count++;
         }
         else {
-            $other_users_builds_count++;
+            push @run_by_builds, $build;
         }
     }
     if ($other_users_builds_count) {
