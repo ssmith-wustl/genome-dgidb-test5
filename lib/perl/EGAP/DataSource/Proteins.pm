@@ -9,16 +9,18 @@ class EGAP::DataSource::Proteins {
 };
 
 sub column_order {
-    return qw/
+    return [qw(
         protein_name
+        fragment
         internal_stops
         transcript_name
+        gene_name
         sequence_name
         sequence_string
         cellular_localization
         cog_id
         enzymatic_pathway_id
-    /;
+    )];
 }
 
 sub sort_order {

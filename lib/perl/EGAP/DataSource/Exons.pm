@@ -9,19 +9,23 @@ class EGAP::DataSource::Exons {
 };
 
 sub column_order {
-    return qw/
+    return [qw(
         exon_name
         start
         end
+        strand
+        score
         five_prime_overhang
         three_prime_overhang
         transcript_name
+        gene_name
+        sequence_name
         sequence_string
-    /;
+    )];
 }
 
 sub sort_order {
-    return ['transcript_id'];
+    return ['transcript_name'];
 }
 
 sub delimiter {

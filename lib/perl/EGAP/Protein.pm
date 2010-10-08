@@ -14,8 +14,11 @@ class EGAP::Protein {
         protein_name => { is => 'Text' },
     ],
     has => [
+        file_path => { is => 'Path' },
         internal_stops => { is => 'Boolean' },
+        fragment => { is => 'Boolean' },
         transcript_name => { is => 'Text' },
+        gene_name => { is => 'Text' },
         sequence_name => { is => 'Text' },
         sequence_string => { is => 'Text' },
     ],

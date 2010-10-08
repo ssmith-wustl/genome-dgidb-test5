@@ -9,7 +9,7 @@ class EGAP::DataSource::RNAGenes {
 };
 
 sub column_order {
-    return qw/
+    return [qw(
         sequence_name
         gene_name
         description
@@ -22,7 +22,7 @@ sub column_order {
         accession
         product
         codon
-    /;
+    )];
 }
 
 sub sort_order {

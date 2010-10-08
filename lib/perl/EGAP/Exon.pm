@@ -17,9 +17,13 @@ class EGAP::Exon {
         file_path => { is => 'Path' },
         start => { is => 'Number' },
         end => { is => 'Number' },
+        strand => { is => 'Text' },
+        score => { is => 'Text' },
         five_prime_overhang => { is => 'Number' },
         three_prime_overhang => { is => 'Number' },
         transcript_name => { is => 'Text' },
+        gene_name => { is => 'Text' },
+        sequence_name => { is => 'Text' },
         sequence_string => { is => 'Text' },
     ],
 };

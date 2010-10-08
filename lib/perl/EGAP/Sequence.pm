@@ -4,10 +4,10 @@ use strict;
 use warnings;
 
 use EGAP;
-
+use Carp 'confess';
 
 class EGAP::Sequence {
-    type_name => 'dna sequence',
+    type_name => 'sequence',
     schema_name => 'files',
     data_source => 'EGAP::DataSource::Sequences',
     id_by => [
@@ -19,16 +19,12 @@ class EGAP::Sequence {
     ],
 };
 
-sub coding_genes {
-    my ($self, $coding_genes_file) = @_;
-    confess 'Not implemented!';
-    return;
-}
-
-sub rna_genes {
-    my ($self, $rna_genes_file) = @_;
-    confess 'Not implemtned!';
-    return;
+sub sub_sequence {
+    my ($self, $start, $end) = @_;
+    ($start, $end) = ($end, $start) if $start < $end;
+    my $seq_string = $self->sequence_string;
+    my $sub = substr($seq_string, $start, $end - $start + 1);
+    return $sub;
 }
 
 1;

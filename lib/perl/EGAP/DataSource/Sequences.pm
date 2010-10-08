@@ -9,10 +9,10 @@ class EGAP::DataSource::Sequences {
 };
 
 sub column_order {
-    return qw/
+    return [qw(
         sequence_name
         sequence_string
-    /;
+    )];
 }
 
 sub sort_order {

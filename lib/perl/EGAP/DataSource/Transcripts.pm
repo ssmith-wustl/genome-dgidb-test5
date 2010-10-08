@@ -9,7 +9,7 @@ class EGAP::DataSource::Transcripts {
 };
 
 sub column_order {
-    return qw/
+    return [qw(
         transcript_name
         coding_gene_name
         coding_start
@@ -18,7 +18,7 @@ sub column_order {
         end
         sequence_name
         sequence_string
-    /;
+    )];
 }
 
 sub sort_order {

@@ -20,10 +20,8 @@ class EGAP::CodingGene {
         missing_start => { is => 'Boolean' },
         missing_stop => { is => 'Boolean' },
         source => { is => 'Text' },
-        score => { is => 'Number' },
         strand => { is => 'Number' },
         sequence_name => { is => 'Number' },
-        sequence_string => { is => 'Text' },
         start => { is => 'Number' },
         end => { is => 'Number' },
     ],
@@ -31,12 +29,6 @@ class EGAP::CodingGene {
 
 sub transcripts {
     my ($self, $transcripts_file) = @_;
-    confess 'Not implemented!';
-    return;
-}
-
-sub sequence {
-    my ($self, $sequence_file) = @_;
     confess 'Not implemented!';
     return;
 }

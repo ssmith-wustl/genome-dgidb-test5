@@ -9,20 +9,18 @@ class EGAP::DataSource::CodingGenes {
 };
 
 sub column_order {
-    return qw/
+    return [qw(
         gene_name
         fragment
         internal_stops
         missing_start
         missing_stop
         source
-        score
         strand
         sequence_name
-        sequence_string
         start
         end
-    /;
+    )];
 }
 
 sub sort_order {

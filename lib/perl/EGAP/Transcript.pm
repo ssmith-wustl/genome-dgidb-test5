@@ -8,12 +8,13 @@ use Carp 'confess';
 
 class EGAP::Transcript {
     type_name => 'transcript',
-    schema => 'files',
+    schema_name => 'files',
     data_source => 'EGAP::DataSource::Transcripts',
     id_by => [
         transcript_name => { is => 'Text' },
     ],
     has => [
+        file_path => { is => 'Path' },
         coding_gene_name => { is => 'Text' },
         coding_start => { is => 'Number' },
         coding_end => { is => 'Number' },
