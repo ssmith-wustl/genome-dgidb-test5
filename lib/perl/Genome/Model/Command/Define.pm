@@ -152,12 +152,8 @@ sub execute {
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
-    unless((defined($self->processing_profile_name) xor defined($self->processing_profile_id))){
-        $self->error_message("Must specify either processing profile name or processing profile id.");
-        return;
-    }
-    
-    if (defined($self->processing_profile_name)){
+
+    if (defined($self->processing_profile_name)) {
         my @pp = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
         if (@pp > 1){
             $self->error_message("ProcessingProfile name returned multiple processing profiles.");
@@ -168,8 +164,16 @@ sub execute {
             $self->error_message("The processing profile name ".$self->processing_profile_name." was not found.");
             return;
         }
-        $self->processing_profile_id($pp->id);
-    } elsif(defined($self->processing_profile_id)){
+        # If both name and id are provided, make sure they agree
+        if (defined($self->processing_profile_id)) {
+            unless ($pp->id == $self->processing_profile_id) {
+                $self->error_message("The provided processing profile name " . $self->processing_profile_name . " and processing profile id " . $self->processing_profile_id . " do not match.");
+                return;
+            }
+        } else {
+            $self->processing_profile_id($pp->id);
+        }
+    } elsif (defined($self->processing_profile_id)){
         my @pp = Genome::ProcessingProfile->get(id => $self->processing_profile_id);
         unless(@pp==1){
             $self->error_message("ProcessingProfile id returned multiple processing profiles.");

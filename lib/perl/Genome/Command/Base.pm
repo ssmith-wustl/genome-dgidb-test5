@@ -94,6 +94,11 @@ sub resolve_param_value_from_cmdline_text {
 
     return unless (@results);
 
+    my $limit_results_method = "_limit_results_for_$param_name";
+    if ( $self->can($limit_results_method) ) {
+        @results = $self->$limit_results_method(@results);
+        return unless (@results);
+    }
     @results = $self->_unique_elements(@results);
     my $pmeta = $self->__meta__->property($param_name);
     unless (defined($pmeta->{'require_user_verify'}) && $pmeta->{'require_user_verify'} == 0) {
@@ -188,7 +193,7 @@ sub _resolve_param_value_via_related_class_method {
             my $from_class  = shift @from_classes;
             my @methods = @{$ALTERNATE_FROM_CLASS{$via_class}{$from_class}};
             my $method;
-            if (@methods > 1 && !$via_method) {
+            if (@methods > 1 && !$via_method && !$ENV{GENOME_NO_REQUIRE_USER_VERIFY}) {
                 $self->status_message("Trying to find $via_class via $from_class...\n");
                 my $method_choices;
                 for (my $i = 0; $i < @methods; $i++) {
