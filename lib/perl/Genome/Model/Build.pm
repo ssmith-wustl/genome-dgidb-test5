@@ -77,6 +77,8 @@ class Genome::Model::Build {
                               doc => 'Build metrics' },
         variants         => { is => 'Genome::Model::BuildVariant', reverse_as => 'build', 
                               doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
+        group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
+        group_names      => { via => 'model', to => 'group_names', is_many => 1, },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
