@@ -34,7 +34,7 @@ our %ALTERNATE_FROM_CLASS = (
         'Genome::ModelGroup' => ['models'],
     },
     'Genome::Model::Build' => {
-        'Genome::Model' => ['builds', 'latest_build', 'last_successful_build', 'running_builds'],
+        'Genome::Model' => ['builds'],
     },
 );
 # This will prevent infinite loops during recursion.
