@@ -65,7 +65,7 @@ sub determine_data_directory {
     else {
         if (-d $self->_cache_directory and $use_cache) {
             $self->status_message("Updating local annotation data cache");
-            my $lock_resource = 'gsc/var/lock/annotation_cache/' . hostname; 
+            my $lock_resource = '/gsc/var/lock/annotation_cache/' . hostname; 
             my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock =>$lock_resource, max_try => $self->max_try, block_sleep => $self->block_sleep);#, max_try => 2, block_sleep => 10);
             unless ($lock){
                 $self->status_message("Could not update the local annotation data cache, another process is currently updating.  Using annotation data dir at " . $self->_annotation_data_directory);
@@ -108,7 +108,7 @@ sub cache_annotation_data {
         }
         elsif (-d $self->_cache_directory) {
             $self->status_message("Updating local annotation data cache");
-            my $lock_resource = 'gsc/var/lock/annotation_cache/' . hostname;
+            my $lock_resource = '/gsc/var/lock/annotation_cache/' . hostname;
             my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock =>$lock_resource, max_try => $self->max_try, block_sleep => $self->block_sleep);
             unless ($lock){
                 $self->status_message("Could not update the local annotation data cache, another process is currently updating.  Using annotation data dir at " . $self->_annotation_data_directory);
