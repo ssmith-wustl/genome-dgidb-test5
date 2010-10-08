@@ -943,6 +943,18 @@ sub _initialize_workflow {
 
     my $workflow = $processing_profile->_resolve_workflow_for_build($self,$lsf_queue_eliminate_me);
 
+    ## so developers dont fail before the workflow changes get deployed to /gsc/scripts
+    if ($workflow->can('notify_url')) {
+        require UR::Object::View::Default::Xsl;
+
+        my $cachetrigger = Genome::Config->base_web_uri;
+        $cachetrigger =~ s/view$/cachetrigger/;
+
+        my $url = $cachetrigger . '/' . UR::Object::View::Default::Xsl::type_to_url(ref($self)) . '/status.html?id=' . $self->id;
+        $url .= ' ' . $cachetrigger . '/workflow/operation/instance/statuspopup.html?id=[WORKFLOW_ID]';
+
+        $workflow->notify_url($url);
+    }
     $workflow->save_to_xml(OutputFile => $self->data_directory . '/build.xml');
     
     return $workflow;
@@ -950,6 +962,8 @@ sub _initialize_workflow {
 
 sub _execute_bsub_command { # here to overload in testing
     my ($self, $cmd) = @_;
+
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
     if ($ENV{UR_DBI_NO_COMMIT}) {
         $self->warning_message("Skipping bsub when NO_COMMIT is turned on (job will fail)\n$cmd");

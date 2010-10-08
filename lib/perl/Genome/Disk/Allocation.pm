@@ -119,7 +119,7 @@ sub allocate {
             my $tmpdir = Genome::Utility::FileSystem->base_temp_directory();
 
             my $id = $class->__meta__->autogenerate_new_object_id;
-            $allocation = $class->create_mock(
+            $allocation = $class->__define__(
                 id => $id,
                 allocator_id => $id,
                 allocation_path => $params{allocation_path},
@@ -132,7 +132,6 @@ sub allocate {
                 mount_path => $tmpdir,
                 absolute_path => $tmpdir . '/' . $group->subdirectory . '/' . $params{allocation_path} 
             );
-            $allocation->set_true('reallocate','deallocate'); 
             my $path = $allocation->absolute_path;
             unless (-e $path) {
                 Genome::Utility::FileSystem->create_directory($path);

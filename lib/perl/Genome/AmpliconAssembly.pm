@@ -85,7 +85,6 @@ sub get {
     }
     
     # Validate directory
-    $directory = Cwd::abs_path($directory);
     unless ( Genome::Utility::FileSystem->validate_existing_directory($directory) ) {
         $class->error_message("Can't validate amplicon assembly directory. See above error.");
         return;

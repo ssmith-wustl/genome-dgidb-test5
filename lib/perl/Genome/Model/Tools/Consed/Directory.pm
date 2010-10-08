@@ -27,8 +27,6 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
     
-    $self->directory( Cwd::abs_path( $self->directory) );
-
     eval {
         Genome::Utility::FileSystem->validate_existing_directory($self->directory)
     };

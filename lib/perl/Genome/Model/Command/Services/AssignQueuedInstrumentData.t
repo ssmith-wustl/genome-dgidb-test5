@@ -11,7 +11,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 52;
+use Test::More tests => 59;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -140,6 +140,12 @@ is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2
 is($pse_1->pse_status, 'completed', 'first pse completed');
 is($pse_2->pse_status, 'completed', 'second pse completed');
 
+my ($pse_1_genome_model_id) = $pse_1->added_param('genome_model_id');
+my ($pse_2_genome_model_id) = $pse_2->added_param('genome_model_id');
+
+is($pse_1_genome_model_id, $new_model->id, 'genome_model_id parameter set correctly for first pse');
+is($pse_2_genome_model_id, $new_model->id, 'genome_model_id parameter set correctly for second pse');
+
 my $group = Genome::ModelGroup->get(name => 'apipe-auto AQID');
 ok($group, 'auto-generated model-group exists');
 
@@ -242,6 +248,13 @@ is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2
 
 is($pse_3->pse_status, 'completed', 'third pse completed');
 is($pse_4->pse_status, 'completed', 'fourth pse completed');
+
+my (@pse_3_genome_model_ids) = $pse_3->added_param('genome_model_id');
+my (@pse_4_genome_model_ids) = $pse_4->added_param('genome_model_id');
+
+is(scalar(@pse_3_genome_model_ids), 1, 'one genome_model_id parameter for third pse');
+is($pse_3_genome_model_ids[0], $new_model->id, 'genome_model_id parameter set correctly for third pse');
+is_deeply([sort @pse_4_genome_model_ids], [sort map($_->id, @new_models_2)], 'genome_model_id parameter set correctly to match builds created for fourth pse');
 
 my @members_2 = $group->models;
 is(scalar(@members_2) - scalar(@members), 2, 'two subsequent models added to the group');
@@ -356,3 +369,9 @@ is($changed_model_3, $new_model, 'latest addition is to the original model from 
 
 is($pse_5->pse_status, 'inprogress', 'fifth pse inprogress (due to incomplete information)');
 is($pse_6->pse_status, 'completed', 'sixth pse completed');
+
+my ($pse_5_genome_model_id) = $pse_5->added_param('genome_model_id');
+my ($pse_6_genome_model_id) = $pse_6->added_param('genome_model_id');
+
+is($pse_5_genome_model_id, undef, 'genome_model_id parameter remains unset on fifth pse');
+is($pse_6_genome_model_id, $new_de_novo_model->id, 'genome_model_id parameter set correctly for sixth pse');

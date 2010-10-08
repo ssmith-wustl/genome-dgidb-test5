@@ -39,8 +39,6 @@ sub create {
         return;
     }
 
-    $self->fasta_file( Cwd::abs_path( $self->fasta_file ) );
-
     my $validate = eval { Genome::Utility::FileSystem->validate_file_for_reading( $self->fasta_file ); };
     if (!$validate or $@) {
         $self->error_message("validate_file_for_reading failed: $@");
