@@ -26,6 +26,7 @@ my $create_command = Genome::Model::Command::Define::Somatic->create(
     normal_model_id => $test_models->{normal}->id,
     subject_name => 'test_subject',
     data_directory => $temp_model_data_dir,
+    processing_profile_name => 'default',
 );
 
 ok($create_command, 'Created command to create Somatic model.');
