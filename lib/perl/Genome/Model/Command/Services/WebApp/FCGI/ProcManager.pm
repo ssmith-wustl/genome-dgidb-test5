@@ -88,6 +88,12 @@ sub pm_wait {
                 delete $w{'wtr'};
                 unlink $sock;
                 delete $w{'HUP'};
+
+                if ($self->pid_fname) {
+                    open(P, ">" . $self->pid_fname) or return;
+                    print P $$ . "\n";
+                    close P;
+                }
             });
 
             $w{'listener'} = tcp_server "unix/", $sock, sub {
