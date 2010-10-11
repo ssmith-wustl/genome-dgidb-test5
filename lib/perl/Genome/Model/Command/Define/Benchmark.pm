@@ -9,7 +9,9 @@ class Genome::Model::Command::Define::Benchmark {
     is => 'Genome::Model::Command::Define',
     has => [
         command_arguments => {
-            doc => 'arguments for the command used in the processing profile'
+            doc => 'arguments for the command used in the processing profile',
+            is_optional => 1,
+            value => ""
         }
     ]
 };
