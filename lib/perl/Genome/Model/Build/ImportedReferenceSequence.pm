@@ -261,4 +261,71 @@ sub get_sequence_dictionary {
     return;
 }
 
+sub get_by_name {
+    my ($class, $name) = @_;
+
+    unless ( $name ) {
+        Carp::confess('No build name given to get imported reference sequence build');
+    }
+
+    # This method is not adequate as spaces are substitued in the model anme and version
+    #  when creating the build name. But we'll try.
+    my ($model_name, $build_version) = $name =~ /^(.+)-build(.*?)$/;
+    if ( not defined $model_name ) {
+        $class->status_message("Could not parse out model name and build version from build name: $name");
+        return;
+    }
+
+    $class->status_message("Getting imported reference sequence builds for model ($model_name) and version ($build_version)");
+
+    my $model = Genome::Model::ImportedReferenceSequence->get(name => $model_name);
+    if ( not $model ) {
+        # ok - model name may have spaces that were sub'd for dashes
+        $class->status_message("No imported reference sequence model with name: $model_name");
+        return;
+    }
+
+    $class->status_message("Getting builds for imported reference sequence model: ".$model->__display_name__);
+
+    my @builds = $model->builds;
+    if ( not @builds ) {
+        Carp::confess("No builds for imported reference sequence model: ".$model->__display_name__);
+    }
+
+    unless($build_version) {
+        my @builds_without_version;
+        for my $build (@builds) {
+            next if defined $build->version;
+
+            push @builds_without_version, $build;
+        }
+
+        unless (scalar @builds_without_version > 0) {
+            Carp::confess("No builds found with no version for imported reference sequence model: ".$model->__display_name__);
+        }
+        if ( @builds_without_version > 1 ) {
+            Carp::confess("Multiple builds with no version found for model: ".$model->__display_name__);
+        }
+
+        return $builds_without_version[0];
+    } else {
+        my @builds_with_version;
+        for my $build ( @builds ) {
+            my $version = $build->version;
+            if ( not defined $version or $version ne $build_version ) {
+                next;
+            }
+            push @builds_with_version, $build;
+        }
+        if ( not @builds_with_version ) {
+            Carp::confess("No builds found with version $build_version for imported reference sequence model: ".$model->__display_name__);
+        }
+        elsif ( @builds_with_version > 1 ) {
+            Carp::confess("Multiple builds with version $build_version found for model: ".$model->__display_name__);
+        }
+
+        return $builds_with_version[0];
+    }
+}
+
 1;
