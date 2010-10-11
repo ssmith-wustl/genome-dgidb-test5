@@ -65,18 +65,14 @@ sub determine_data_directory {
     else {
         if (-d $self->_cache_directory and $use_cache) {
             $self->status_message("Updating local annotation data cache");
-            my $lock_resource = '/gsc/var/lock/annotation_cache/' . hostname; 
-            my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock =>$lock_resource, max_try => $self->max_try, block_sleep => $self->block_sleep);#, max_try => 2, block_sleep => 10);
+            my $lock = $self->_lock_annotation_cache;
             unless ($lock){
                 $self->status_message("Could not update the local annotation data cache, another process is currently updating.  Using annotation data dir at " . $self->_annotation_data_directory);
                 push @directories, $self->_annotation_data_directory;
             }
             $self->{_lock} = $lock;
             $self->_update_cache;
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)){
-                $self->error_message("Failed to unlock resource: $lock");
-                return;
-            }
+            $self->_unlock_annotation_cache($lock);
             push @directories, $self->_cache_directory; 
         }
         elsif (-d $self->_annotation_data_directory) { 
@@ -108,17 +104,13 @@ sub cache_annotation_data {
         }
         elsif (-d $self->_cache_directory) {
             $self->status_message("Updating local annotation data cache");
-            my $lock_resource = '/gsc/var/lock/annotation_cache/' . hostname;
-            my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock =>$lock_resource, max_try => $self->max_try, block_sleep => $self->block_sleep);
+            my $lock = $self->_lock_annotation_cache;
             unless ($lock){
                 $self->status_message("Could not update the local annotation data cache, another process is currently updating.  Using annotation data dir at " . $self->_annotation_data_directory);
                 return $self->_annotation_data_directory;
             }
             $self->_update_cache;
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)){
-                $self->error_message("Failed to unlock resource: $lock");
-                return;
-            }
+            $self->_unlock_annotation_cache($lock);
             $self->status_message("Cache successfully updated"); 
             return $self->_cache_directory;
         }
@@ -150,7 +142,7 @@ sub cache_annotation_data {
                 die;
             }
             
-            $self->_standardize_cache_permissions($self->_cache_directory);       
+            $self->_standardize_annotation_cache_permissions($self->_cache_directory);       
 
             $self->status_message("Caching complete, locally stored at " . $self->_cache_directory);
             return $self->_cache_directory;
@@ -158,9 +150,25 @@ sub cache_annotation_data {
     }
 }
 
+sub _lock_annotation_cache{
+    my $self = shift;
+    my $lock_resource = '/gsc/var/lock/annotation_cache/' . hostname;
+    my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock =>$lock_resource, max_try => $self->max_try, block_sleep => $self->block_sleep);
+    return $lock;
+}
+
+sub _unlock_annotation_cache{
+    my ($self, $lock) = @_;
+    unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)){
+        $self->error_message("Failed to unlock resource: $lock");
+        die;
+    }
+    return 1;
+}
+
 #chmod the entire cahce to ensure correct permissions.  This only works on
 #files that the user owns, so this should only be used on cache creation.
-sub _standardize_cache_permissions{
+sub _standardize_annotation_cache_permissions{
     my ($self, $cache_dir) = @_;
     Genome::Utility::FileSystem->shellcmd(cmd => "chmod -R 775 $cache_dir");
 }
