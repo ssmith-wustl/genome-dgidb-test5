@@ -28,7 +28,7 @@ class Genome::ProcessingProfile::Benchmark {
         },
         args => {
             is_optional => 1,
-            doc => 'the arguments to use',
+            doc => 'the arguments to prepend before the model input \'command_arguments\'',
         }
     ],
     doc => "benchmark profile captures statistics after command execution"
@@ -78,7 +78,8 @@ sub _execute_build {
     my $cmd = $self->command;
     my $args = $self->args || '';
 
-#    my @inputs = $build->inputs();
+    my @inputs = $build->inputs(name => 'command_arguments');
+    $args .= join(' ', @inputs);
 
     my $dir = $build->data_directory;
 
