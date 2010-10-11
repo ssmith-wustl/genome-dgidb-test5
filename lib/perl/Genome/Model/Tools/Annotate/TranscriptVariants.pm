@@ -264,11 +264,9 @@ sub execute {
         $output_fh = 'STDOUT';
     }
     else {
-        #($output_fh, $temp_output_file) = Genome::Utility::FileSystem->create_temp_file(DIR => abs_path(dirname($self->output_file)));
         my ($output_file_basename) = fileparse($output_file);
         ($output_fh, $temp_output_file) = tempfile("$output_file_basename-XXXXXX", DIR => abs_path(dirname($self->output_file)), UNLINK => 1);
         chmod(0664, $temp_output_file);
-        $DB::single = 1;
     }
     $self->_transcript_report_fh($output_fh);
 
@@ -530,7 +528,6 @@ sub execute {
     my $total_time = timediff($annotation_total_stop, $annotation_total_start);
     $self->status_message('Total time to complete: ' . timestr($total_time, 'noc') . "\n\n") if $self->benchmark;
 
-    # $output_fh->close unless $output_fh eq 'STDOUT';
     if ($temp_output_file){
         my $mv_return_value = Genome::Utility::FileSystem->shellcmd(cmd => "mv $temp_output_file $output_file");
         unless($mv_return_value){
