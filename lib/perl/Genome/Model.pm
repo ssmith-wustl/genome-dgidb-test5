@@ -106,6 +106,8 @@ class Genome::Model {
         is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
         model_bridges           => { is => 'Genome::ModelGroupBridge', reverse_as => 'model', is_many => 1 },
         model_groups            => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group', is_many => 1 },
+        group_ids               => { via => 'model_groups', to => 'id', is_many => 1 },
+        group_names             => { via => 'model_groups', to => 'name', is_many => 1 },
     ],
     has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
