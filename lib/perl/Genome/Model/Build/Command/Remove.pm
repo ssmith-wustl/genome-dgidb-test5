@@ -43,7 +43,10 @@ sub _limit_results_for_builds {
         # assignments point to instrument data that's been blown away. If problems are found, inform 
         # the user and skip the build
         my @errors = $build->__errors__;
-        push @errors, map { $_->__errors__ } $build->instrument_data_assignments;
+        # no need to check instrument data if build already has errors
+        unless (@errors) {
+            push @errors, map { $_->__errors__ } $build->instrument_data_assignments;
+        }
 
         if (@errors) {
             push @error_builds, $build;
