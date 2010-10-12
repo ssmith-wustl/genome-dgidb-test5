@@ -16,6 +16,7 @@ sub execute {
     $self->status_message("Creating fasta-to-agp tool");
     my $fa = Genome::Model::Tools::Soap::FastaToAgp->create(
 	scaffold_fasta_file => $self->build->soap_scaffold_sequence_file,
+	scaffold_size_cutoff => 300,
 	output_dir => $self->build->data_directory,
 	file_prefix => $self->build->file_prefix,
 	);

@@ -8,7 +8,7 @@ use Getopt::Std;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
 
-my $version="SquareDancer-0.1r158";
+my $version="SquareDancer-0.1r160";
 my %opts = (q=>35,r=>2,k=>25,n=>1,c=>1,m=>3);
 my %opts1;
 getopts('o:q:r:k:n:c:l:m:ubdg:', \%opts1);
@@ -33,7 +33,7 @@ Contact: kchen\@genome.wustl.edu or xfan\@genome.wustl.edu\n
 
 my $options='';
 foreach my $opt(keys %opts1){
-  $options.='-'.$opt.$opts1{$opt};
+  $options.=' -'.$opt. ' '. $opts1{$opt};
   $opts{$opt}=$opts1{$opt};
 }
 
@@ -84,15 +84,17 @@ open(BED,">$opts{g}") if (defined $opts{g});
 my %Breakpoint;
 my %BKmotif;
 my %BKreceptors;
-my %BKMask;
 
 foreach my $chr(@chrs){
-  print "Read in chr$chr ...\n" if($opts{d});
+  print STDERR "Read in chr$chr ...\n" if($opts{d});
   my %bkreads;
   my %breakpoint;
   my %bkdedup;
+  my %bkmask;
+  my %bkmotives;
+  my %motivebks;
   foreach my $bamread (@{$viewbams{$chr}}){
-    print "$bamread ... \n" if($opts{d});
+    print STDERR "$bamread ... \n" if($opts{d});
     open(BAM,"$bamread |");
     my @tags;
     while(<BAM>){
@@ -134,14 +136,16 @@ foreach my $chr(@chrs){
 	if($sbase>=$opts{k}){
 	  $breakpoint{$bkpos}++;
 	  my $motif=uc substr $t->{seq},$readlen-$sbase,$opts{k};
-	  $BKmotif{$motif}{$bkpos}{lib}{$lib}++;
-	  $BKmotif{$motif}{$bkpos}{total}++;
-	  push @{$BKmotif{$motif}{$bkpos}{reads}},$t;
+	  $bkmotives{$bkpos}{$motif}++;
+	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;
+	  $motivebks{$motif}{$bkpos}{total}++;
+	  push @{$motivebks{$motif}{$bkpos}{reads}},$t;
 	  $motif=~tr/ACGT/TGCA/; $motif=reverse $motif;
-	  $BKmotif{$motif}{$bkpos}{lib}{$lib}++;
-	  $BKmotif{$motif}{$bkpos}{total}++;
-	  push @{$BKmotif{$motif}{$bkpos}{reads}},$t;
-	  $BKMask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
+	  $bkmotives{$bkpos}{$motif}++;
+	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;
+	  $motivebks{$motif}{$bkpos}{total}++;
+	  push @{$motivebks{$motif}{$bkpos}{reads}},$t;
+	  $bkmask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
 	}
 	#my $trimmed=substr $t->{seq},0,length($t->{seq})-$sbase;
 	my $trimmed=$t->{seq};
@@ -156,13 +160,15 @@ foreach my $chr(@chrs){
 	if($sbase>=$opts{k}){
 	  $breakpoint{$bkpos}--;
 	  my $motif=uc substr $t->{seq},0,$opts{k};
-	  $BKmotif{$motif}{$bkpos}{lib}{$lib}++;
-	  $BKmotif{$motif}{$bkpos}{total}++;
+	  $bkmotives{$bkpos}{$motif}++;
+	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;
+	  $motivebks{$motif}{$bkpos}{total}++;
 	  $motif=~tr/ACGT/TGCA/; $motif=reverse $motif;
-	  $BKmotif{$motif}{$bkpos}{lib}{$lib}++;
-	  $BKmotif{$motif}{$bkpos}{total}++;
-	  push @{$BKmotif{$motif}{$bkpos}{reads}},$t;
-	  $BKMask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
+	  $bkmotives{$bkpos}{$motif}++;
+	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;
+	  $motivebks{$motif}{$bkpos}{total}++;
+	  push @{$motivebks{$motif}{$bkpos}{reads}},$t;
+	  $bkmask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
 	}
 	#my $trimmed=substr $t->{seq},$sbase;
 	my $trimmed=$t->{seq};
@@ -200,11 +206,21 @@ foreach my $chr(@chrs){
     my $ori=($count>0)?'+':'-';
     $count=abs($count);
     my @matchconfig=keys %{$bkdedup{$bkpos}} if(defined $bkdedup{$bkpos});  #duplicated alignments
-
-    if($count>=$opts{r} &&  !defined $BKMask{$bkpos} && $#matchconfig>0){  #ignore not_well_supported/not_interested breakpoints
-      printf "%s\:%d\n", $bkpos, $breakpoint{$bkpos} if(defined $opts{d});
+    if($count>=$opts{r} &&  !defined $bkmask{$bkpos} && $#matchconfig>0){  #ignore not_well_supported/not_interested breakpoints
       $BKreceptors{$bkpos}=\%readseg;
       $Breakpoint{$bkpos}=$breakpoint{$bkpos};
+      foreach my $motif(keys %{$bkmotives{$bkpos}}){
+	$BKmotif{$motif}{$bkpos}=$motivebks{$motif}{$bkpos};
+      }
+      if(defined $opts{d}){
+	printf STDERR "breakpoint %s\:%d\n", $bkpos, $breakpoint{$bkpos};
+	printf STDERR "motives:";
+	foreach my $motif(keys %{$bkmotives{$bkpos}}){
+	  printf STDERR "\t%s\:%d",$motif,$bkmotives{$bkpos}{$motif};
+	}
+	print STDERR "\n";
+	#printf STDERR "receptor: %s\n",join(',',keys %readseg);
+      }
       $newbreakpoints++;
     }
   }
@@ -224,11 +240,15 @@ sub BuildBreakPointNetwork{
   foreach my $motif(@BKmotives){
     my @connections=keys %{$BKmotif{$motif}};
     if($#connections+1>$opts{n}){  #non-unique
+      printf STDERR "%s non-unique in %s, removed\n", $motif,join(',',@connections) if($opts{d});
       delete $BKmotif{$motif};
     }
     else{
       foreach my $bkpos(keys %{$BKmotif{$motif}}){
-	delete $BKmotif{$motif}{$bkpos} if($BKmotif{$motif}{$bkpos}{total}<$opts{c});  #must be seen at least $opts{c} times at a breakpoint
+	if($BKmotif{$motif}{$bkpos}{total}<$opts{c}){  #must be seen at least $opts{c} times at a breakpoint
+	  delete $BKmotif{$motif}{$bkpos};
+	  printf STDERR "weak coverage %s removed\n",$motif if($opts{d});
+	}
       }
     }
   }
@@ -331,6 +351,21 @@ sub BuildBreakPointNetwork{
 	  }
 	}
 	
+	if($opts{d}){
+	  printf STDERR "%s\t%d\t%d%s\t%s\t%d\t%d%s\t%s\t%d\t%d\t%d\t%s\n",$chr1,$pos1,abs($Breakpoint{$start}),$ori1,$chr2,$pos2,abs($Breakpoint{$end}),$ori2,$type,$size,$score,$totalreads,join('|',@libcount);
+	  printf STDERR "forward: ";
+	  foreach my $motif(@{$BPGM{$start}{$end}}){
+	    print STDERR "\t$motif";
+	  }
+	  print STDERR "\n";
+	  printf STDERR "reverse: ";
+	  foreach my $motif(@{$BPGM{$end}{$start}}){
+	    print STDERR "\t$motif";
+	    delete $BKmotif{$motif}{$end};
+	  }
+	  print STDERR "\n";
+	}
+
 	#Release resolved breakpoints
 	foreach my $motif(@{$BPGM{$start}{$end}}){
 	  delete $BKmotif{$motif}{$start};
@@ -345,13 +380,11 @@ sub BuildBreakPointNetwork{
 	if($#ends<0){
 	  delete $Breakpoint{$start};
 	  delete $BKreceptors{$start};
-	  delete $BKMask{$start};
 	}
 	my @starts=keys %{$BPG{$end}};
 	if($#starts<0){
 	  delete $Breakpoint{$end};
 	  delete $BKreceptors{$end};
-	  delete $BKMask{$end};
 	}
       }
     }

@@ -77,6 +77,8 @@ class Genome::Model::Build {
                               doc => 'Build metrics' },
         variants         => { is => 'Genome::Model::BuildVariant', reverse_as => 'build', 
                               doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
+        group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
+        group_names      => { via => 'model', to => 'group_names', is_many => 1, },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -841,11 +843,13 @@ sub _launch {
             $add_args .= ' --restart';
         }
 
-	my $host_group = '';
-	if ($server_dispatch ne 'workflow') {
-            $host_group = '-m blades';
-	}
- 
+        my $host_group = `bqueues -l $server_dispatch | grep ^HOSTS:`;
+        chomp $host_group;
+        $host_group =~ s/^HOSTS:\s+//;
+        $host_group =~ s/\///g;
+        $host_group =~ s/\s+$//g;
+        $host_group = "-m '$host_group'";
+
         # bsub into the queue specified by the dispatch spec
         my $lsf_command = sprintf(
             'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',

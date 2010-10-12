@@ -6,16 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Build::Command::Remove {
-    is => 'Genome::Command::Base',
-    has => [
-        builds => {
-            is => 'Genome::Model::Build',
-            require_user_verify => 1,
-            is_many => 1,
-            shell_args_position => 1,
-            doc => 'Build(s) to use. Resolved from command line via text string.',
-        },
-    ],
+    is => 'Genome::Model::Build::Command::Base',
     has_optional => [
         keep_build_directory => {
             is => 'Boolean',
@@ -35,6 +26,46 @@ sub help_detail {
     "This command will remove a build from the system.  The rest of the model remains the same, as does independent data like alignments.";
 }
 
+sub _limit_results_for_builds {
+    my ($self, @builds) = @_;
+
+    $self->status_message("Found ".scalar(@builds)." build matching your argument.");
+
+    # Run Genome::Model::Build::Command::Base's _limit_results_for_builds
+    @builds = $self->SUPER::_limit_results_for_builds(@builds);
+
+    $self->status_message("Checking ".scalar(@builds)." for errors prior to removal. This is a slow process...");
+    my @error_builds;
+    my @error_free_builds;
+    for my $build (@builds) {
+        # Builds containing expunged data cannot be changed since any changes that try to be committed
+        # will result in problems when the __errors__ method determines that the instrument data 
+        # assignments point to instrument data that's been blown away. If problems are found, inform 
+        # the user and skip the build
+        my @errors = $build->__errors__;
+        # no need to check instrument data if build already has errors
+        unless (@errors) {
+            push @errors, map { $_->__errors__ } $build->instrument_data_assignments;
+        }
+
+        if (@errors) {
+            push @error_builds, $build;
+        }
+        else {
+            push @error_free_builds, $build;
+        }
+    }
+    if (@error_builds) {
+        $self->warning_message("Errors found on some builds and/or their instrument data assignments,\n".
+            "cannot remove this build!\nErrors like \"There is no instrument data...\" mean the build ".
+            "deals with expunged data. Contact apipe!\n".
+            "The builds are:\n".
+            join("\n", map { $_->__display_name__ } @error_builds));
+    }
+    @builds = @error_free_builds;
+
+    return @builds;
+}
 sub execute {
     my $self = shift;
 

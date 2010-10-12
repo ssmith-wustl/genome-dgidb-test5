@@ -106,6 +106,8 @@ sub execute {
     $cmd .= ' -D '.$self->edge_coverage_cutoff if $self->edge_coverage_cutoff;
     $cmd .= ' -L '.$self->min_scaffold_contig_length if $self->min_scaffold_contig_length;
 
+    $self->status_message("Running SOAPdenovo with command: $cmd");
+
     if (system("$cmd")) {
 	$self->error_message("Failed to run soap denovo with command: $cmd");
 	return;

@@ -71,7 +71,7 @@ A stream based reader, parses a consed navigation file, returning navigation has
 
 =head1 Usage
 
- use Genome::Assembly::Consed::Navigation::Reader;
+ use Genome::Model::Tools::Consed::Navigation::Reader;
 
  my $reader = Finishing::Assembly::Consed::Navigation::Reader->new(
      input => 'cafcop.nav', # REQUIRED, file or an object that can 'getline' and 'seek'
