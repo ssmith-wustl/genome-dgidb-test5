@@ -46,6 +46,8 @@ class Genome::Model::Build {
         the_master_event        => { is => 'Genome::Model::Event', via => 'the_events', to => '-filter', reverse_as => 'build', where => [ event_type => 'genome model build' ] },
         run_by                  => { via => 'the_master_event', to => 'user_name' },
         status                  => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
+        date_scheduled          => { via => 'the_master_event', to => 'date_scheduled', },
+        date_completed          => { via => 'the_master_event', to => 'date_completed' },
         master_event_status     => { via => 'the_master_event', to => 'event_status' },
     ],
     has_optional => [
@@ -432,33 +434,6 @@ sub newest_workflow_instance {
     } else {
         return;
     }
-}
-
-sub build_status {
-    my $self = shift;
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        return;
-    }
-    return $build_event->event_status;
-}
-
-sub date_scheduled {
-    my $self = shift;
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        return;
-    }
-    return $build_event->date_scheduled;
-}
-
-sub date_completed {
-    my $self = shift;
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        return;
-    }
-    return $build_event->date_completed;
 }
 
 sub calculate_estimated_kb_usage {

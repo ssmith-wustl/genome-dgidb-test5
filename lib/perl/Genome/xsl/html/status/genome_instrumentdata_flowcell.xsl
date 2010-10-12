@@ -164,7 +164,6 @@ window.chartMin = 0;
               <xsl:when test="count(//instrument-data) > 0">
                 <xsl:for-each select="//instrument-data">
                   <xsl:sort select="@subset_name" data-type="text" order="ascending"/>
-                  <xsl:variable name="build-status" select="build_status"/>
                   <tr>
                     <td>
                       <xsl:value-of select="@subset_name"/>
