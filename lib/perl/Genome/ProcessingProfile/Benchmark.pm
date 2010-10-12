@@ -76,10 +76,10 @@ sub _execute_build {
     $DB::single=1;
 
     my $cmd = $self->command;
-    my $args = $self->args || '';
 
     my @inputs = $build->inputs(name => 'command_arguments');
-    $args .= join(' ', @inputs);
+    @inputs = map { $_->{value_id} } @inputs ;
+    my $args .= join(' ', @inputs);
 
     my $dir = $build->data_directory;
 
