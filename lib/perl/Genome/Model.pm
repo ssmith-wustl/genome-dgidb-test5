@@ -85,6 +85,7 @@ class Genome::Model {
         # TODO: the new projects will suck in all of the model groups as a special case of a named project containing only models
         model_groups                => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group', is_many => 1 },
         model_bridges               => { is => 'Genome::ModelGroupBridge', reverse_as => 'model', is_many => 1 },
+
         group_ids                   => { via => 'model_groups', to => 'id', is_many => 1 },
         group_names                 => { via => 'model_groups', to => 'name', is_many => 1 },
         
