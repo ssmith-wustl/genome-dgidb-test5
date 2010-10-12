@@ -58,47 +58,49 @@
 
 
 function renderGraph(data) {
+
+    console.log(data.length);
+
     /* Sizing and scales. */
     var w = 400,
         h = 200,
-        x = pv.Scale.linear(data, function(d) d.x).range(0, w),
+        x = pv.Scale.linear(0, data.length - 1).range(0, w),
         y = pv.Scale.linear(data, function(d) d.y).range(0, h);
 
     /* The root panel. */
     var vis = new pv.Panel()
         .width(w)
         .height(h)
-        .bottom(20)
-        .left(20)
+        .bottom(100)
+        .left(50)
         .right(10)
         .top(5);
 
     /* X-axis ticks. */
     vis.add(pv.Rule)
-        .data(x.ticks())
-        .visible(function(d) d > 0)
-        .left(x)
+        .data(data)
+        .left(function(d) x(this.index))
         .strokeStyle("#eee")
-      .add(pv.Rule)
-        .bottom(-5)
-        .height(5)
+        .add(pv.Rule)
+        .bottom(-25)
+        .height(0)
         .strokeStyle("#000")
-      .anchor("bottom").add(pv.Label)
-        .text(x.tickFormat);
+        .anchor("bottom").add(pv.Label)
+        .textAngle(Math.PI/2)
+        .text(function(d) { return d.x } );
 
     /* Y-axis ticks. */
     vis.add(pv.Rule)
         .data(y.ticks())
         .bottom(y)
         .strokeStyle(function(d) d ? "#eee" : "#000")
-      .anchor("left").add(pv.Label)
+        .anchor("left").add(pv.Label)
         .text(y.tickFormat);
 
     /* The line. */
     vis.add(pv.Line)
         .data(data)
-        .interpolate("step-after")
-        .left(function(d) x(d.x))
+        .left(function(d) x(this.index))
         .bottom(function(d) y(d.y))
         .lineWidth(3);
 
@@ -107,9 +109,6 @@ function renderGraph(data) {
 }
 
 $(document).ready(function () {
-//    var data2 = pv.range(0, 10, .2).map(function(x) {
-//        return {x: x, y: Math.sin(x) + Math.random() + 1.5};
-//      });
 
     $.ajax({
         url: location.href.replace('.html','.json'),
@@ -117,19 +116,17 @@ $(document).ready(function () {
         success: function(data) {
 
             var chartData = data["members"].filter(function(m) {
-                if (m.name == "tbytes") {
+                if (m.name == "rbytes") {
                     return true;
                 }
             }).map(function(m) {
                 return { x: m.build_id, y: m.value };
             });
 
-
             renderGraph(chartData);
         }
     });
 
-//    renderGraph(data2);
 });
         ]]>
       </xsl:text>
