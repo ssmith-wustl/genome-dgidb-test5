@@ -305,16 +305,16 @@ sub _eviscerate_old_builds_for_this_model {
             unless ($lock) {
                 $self->error_message("Failed to get a build lock to eviscerate!  Skipping this build.");
                 next;
-                }
             }
-
-            $doomed_build->eviscerate;        
-
-            Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
         }
-    }
 
-    1;
+        $doomed_build->eviscerate;
+
+        Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
+    }
+}
+
+1;
 
 #$HeadURL$
 #$Id$
