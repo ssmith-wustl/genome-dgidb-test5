@@ -40,7 +40,7 @@ is_deeply(
 );
 my $last_complete_build = $model->last_complete_build;
 is_deeply($last_complete_build, $builds[0], 'last_complete_build');
-is($last_complete_build->build_status, 'Succeeded', 'Build is succeeded');
+is($last_complete_build->status, 'Succeeded', 'Build is succeeded');
 is_deeply($model->last_succeeded_build, $last_complete_build, 'Last succeeded build');
 
 # Ints Data

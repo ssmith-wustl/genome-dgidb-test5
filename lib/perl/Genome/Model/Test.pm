@@ -432,7 +432,7 @@ sub add_mock_build_to_model {
         $build,
         (qw/
             reports_directory resolve_reports_directory
-            build_event build_events build_status
+            build_event build_events status
             date_completed date_scheduled
             add_report get_report reports 
             start initialize success fail abandon delete
@@ -933,7 +933,7 @@ sub get_mock_build {
         $build,
         (qw/
             reports_directory resolve_reports_directory
-            build_event build_events build_status
+            build_event build_events status
             date_completed date_scheduled
             add_report get_report reports 
             start initialize success fail abandon delete
