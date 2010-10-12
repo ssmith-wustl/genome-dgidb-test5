@@ -83,7 +83,7 @@ sub execute {
         
         #In rare case, indel line will get something like follows (RT#62927):
         #NT_113915	187072	*	-	/-		18	0	33	32	-		*	3	29	0	0	0
-        unless ($score =~ /^\d+$/) {
+        if ($indel_detail eq '-') {
             $self->warning_message("Indel line: $indel gets invalid format. Skip");
             next;
         }

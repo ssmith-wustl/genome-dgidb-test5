@@ -330,7 +330,8 @@ sub create_basic_mock_model {
         $model, # added inst data until it gets back into the class def
         (qw/
             instrument_data
-            running_builds current_running_build current_running_build_id
+            builds_with_status abandoned_builds failed_builds running_builds scheduled_builds
+            current_running_build current_running_build_id
             completed_builds last_complete_build last_complete_build_id 
             resolve_last_complete_build _last_complete_build_id 
             succeeded_builds last_succeeded_build last_succeeded_build_id
@@ -894,7 +895,8 @@ sub get_mock_model {
         $model, # added inst data until it gets back into the class def
         (qw/
             instrument_data
-            running_builds current_running_build current_running_build_id
+            builds_with_status abandoned_builds failed_builds running_builds scheduled_builds
+            current_running_build current_running_build_id
             completed_builds last_complete_build last_complete_build_id 
             resolve_last_complete_build _last_complete_build_id 
             succeeded_builds last_succeeded_build last_succeeded_build_id
