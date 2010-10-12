@@ -25,7 +25,7 @@ OPTIONS=""
 start()
 {
     log_daemon_msg "Starting genome_view server" "$NAME"
-    start-stop-daemon --start --quiet -m -b --chuid $USER --pidfile "$PIDFILE" --exec $DAEMON -- $OPTIONS
+    start-stop-daemon --start --quiet -b --chuid $USER --pidfile "$PIDFILE" --exec $DAEMON -- $OPTIONS
 
     if [ $? != 0 ]; then
         log_end_msg 1
