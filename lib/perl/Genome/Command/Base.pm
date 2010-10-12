@@ -34,7 +34,7 @@ our %ALTERNATE_FROM_CLASS = (
         'Genome::ModelGroup' => ['models'],
     },
     'Genome::Model::Build' => {
-        'Genome::Model' => ['builds', 'latest_build', 'last_successful_build', 'running_builds'],
+        'Genome::Model' => ['builds'],
     },
 );
 # This will prevent infinite loops during recursion.
@@ -271,7 +271,7 @@ sub _get_user_verification_for_param_value {
     my ($self, @list) = @_;
 
     my $n_list = scalar(@list);
-    if ($n_list > 20) {
+    if ($n_list > 20 && !$ENV{GENOME_NO_REQUIRE_USER_VERIFY}) {
         my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s), (p)roceed, or e(x)it?", 300, '[v]|p|x', 'v');
         if(!$response || $response eq 'x') {
             $self->status_message("Exiting...");

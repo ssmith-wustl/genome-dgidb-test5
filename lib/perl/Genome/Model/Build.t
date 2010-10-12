@@ -71,7 +71,7 @@ ok($workflow, 'initialized a workflow');
 my $build_event = $build->build_event;
 ok($build_event, 'Got build event');
 is($build_event->event_status, 'Scheduled', 'Build status is Scheduled');
-is($build->build_status, 'Scheduled', 'Build status is Scheduled');
+is($build->status, 'Scheduled', 'Build status is Scheduled');
 my @events = Genome::Model::Event->get(
     id => { operator => 'ne', value => $build_event->id },
     model_id => $model->id,
@@ -91,23 +91,23 @@ use warnings;
 
 # INITIALIZE
 ok($build->initialize, 'Initialize');
-is($build->build_status, 'Running', 'Status is Running');
+is($build->status, 'Running', 'Status is Running');
 is($model->current_running_build_id, $build->id, 'Current running build id set to build id in initialize');
 
 # FAIL
 ok($build->fail([]), 'Fail');
-is($build->build_status, 'Failed', 'Status is Failed');
+is($build->status, 'Failed', 'Status is Failed');
 
 # SUCCESS
 isnt($model->_last_complete_build_id, $build->id, 'Model last complete build is not this build\'s id');
 ok($build->success, 'Success');
-is($build->build_status, 'Succeeded', 'Status is Succeeded');
+is($build->status, 'Succeeded', 'Status is Succeeded');
 ok(!$model->current_running_build_id, 'Current running build id set to undef in success');
 is($model->_last_complete_build_id, $build->id, 'Model last complete build is set to this build\'s id in success');
 
 # ABANDON
 ok($build->abandon, 'Abandon');
-is($build->build_status, 'Abandoned', 'Status is Abandoned');
+is($build->status, 'Abandoned', 'Status is Abandoned');
 isnt($model->last_complete_build_id, $build->id, 'Model last complete build is not this build\'s id in abandon');
 is(grep({$_->event_status eq 'Abandoned'} @events), 4, 'Abandoned all events');
 # try to init, fail and succeed a abandoned build
