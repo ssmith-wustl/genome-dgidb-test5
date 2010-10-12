@@ -228,7 +228,8 @@ sub test04_subjects : Tests() {
     ok(!$self->test_class->create(%params), 'Failed to create model with nonexistent sample');
     
     delete $params{subject_id}; 
-    ok(!$self->test_class->create(%params), 'Failed to create model without subject_id');
+    my $rv = eval { $self->test_class->create(%params) };
+    ok(!$rv, 'Failed to create model without subject_id');
     
     $params{subject_id} = $mock_sample->id;
     my $created = $self->test_class->create(%params);
