@@ -11,14 +11,14 @@ class Genome::Model::Command::Define::Benchmark {
         command_arguments => {
             doc => 'arguments for the command used in the processing profile',
             is_optional => 1,
-            value => ""
+            value => ' '
         }
     ]
 };
 
 sub execute {
     my $self = shift;
-    
+
     my $result = $self->SUPER::_execute_body(@_);
     return unless $result;
 
@@ -28,7 +28,8 @@ sub execute {
         return;
     }
 
-    my $i = $model->add_input(value_class_name => 'UR::Value', value_id => $self->command_arguments, name => 'command_arguments');
+    my $args = $self->command_arguments || undef;
+    my $i = $model->add_input(value_class_name => 'UR::Value', value_id => $args, name => 'command_arguments');
     unless ($i) {
         $self->error_message("Failed to add command_arguments input");
         $model->delete;
