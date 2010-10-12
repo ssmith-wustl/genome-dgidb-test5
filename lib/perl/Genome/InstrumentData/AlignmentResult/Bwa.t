@@ -9,7 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25;
+        plan tests => 27;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -70,6 +70,7 @@ ok($reference_build, "got reference build");
 
 test_shortcutting();
 test_alignment();
+# cleanup locks after testing alignment
 test_alignment(force_fragment => 1);
 
 sub test_alignment {
@@ -113,6 +114,8 @@ sub test_alignment {
     for (glob($base_tempdir . "/*")) {
         File::Path::rmtree($_);
     }
+
+    ok($alignment->unlock, "unlock the alignment since we're not committing");
 
 
 }

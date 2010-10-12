@@ -68,6 +68,23 @@ sub _generate_content {
     return $xml_doc->toString(1);
 }
 
+sub get_last_succeeded_coverage_stats_build_from_model {
+    my $self = shift;
+    my $model = shift;
+    my @sorted_builds = sort { $b->id <=> $a->id } $model->builds();
+    for my $build (@sorted_builds) {
+        my @events = $build->the_events;
+        my @coverage_stats_events = grep { $_->class eq 'Genome::Model::Event::Build::ReferenceAlignment::CoverageStats' } @events;
+        if (scalar(@coverage_stats_events) == 1) {
+            my $coverage_stats_event = $coverage_stats_events[0];
+            if ($coverage_stats_event->event_status eq 'Succeeded') {
+                return $build;
+            }
+        }
+    }
+    return;
+}
+
 sub get_alignment_summary_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
@@ -75,8 +92,7 @@ sub get_alignment_summary_node {
     my @included_models;
     my $as_node = $xml_doc->createElement('alignment-summary');
     for my $model (@models) {
-        my $build = $model->last_succeeded_build;
-
+        my $build = $self->get_last_succeeded_coverage_stats_build_from_model($model);
         if ($build) {
             push(@included_models, $model);
             my $model_node = $as_node->addChild( $xml_doc->createElement('model') );
@@ -107,7 +123,7 @@ sub get_coverage_summary_node {
     my $cs_node = $xml_doc->createElement('coverage-summary');
     my @min_depths;
     for my $model (@models) {
-        my $build = $model->last_succeeded_build;
+        my $build = $self->get_last_succeeded_coverage_stats_build_from_model($model);
         if ($build) {
             push(@included_models, $model);
             unless (@min_depths) {
