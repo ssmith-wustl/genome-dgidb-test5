@@ -349,6 +349,19 @@ sub _annotation_data_directory{
     return $self->data_directory . "/annotation_data";
 }
 
+sub annotation_file {
+    my $self = shift;
+    my $suffix = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_annotation_data_directory .'/all_sequences.'. $suffix;
+    if (-f $file_name) {
+        return $file_name;
+    }
+    return;
+}
+
 # Cleans up any mess left by the caching process
 sub _caching_cleanup {
     my ($self, $lock) = shift;
