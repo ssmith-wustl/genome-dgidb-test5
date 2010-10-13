@@ -166,7 +166,7 @@ sub execute {
             
             #build since we added new data
             if($self->build) {
-                my $build_command = ("genome model build start --model-id $model_id");
+                my $build_command = ("genome model build start $model_id");
                 my $rv = system($build_command);
                 if($rv == -1) {
                     $self->error_message("Execution of $build_command failed: $!");
