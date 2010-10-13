@@ -40,8 +40,8 @@
               </xsl:for-each>];
 
       </xsl:for-each>
-<xsl:text disable-output-escaping="yes">
-      <![CDATA[
+      <xsl:text disable-output-escaping="yes">
+        <![CDATA[
 
 // determine max value of index percentages
 // so that all charts have the same x scale
@@ -60,8 +60,8 @@ window.chartMin = 0;
 
 
 
-      ]]>
-</xsl:text>
+        ]]>
+      </xsl:text>
     </script>
 
     <style type="text/css">
@@ -95,6 +95,10 @@ window.chartMin = 0;
       float: left;
       width: 920px;
       margin-bottom: 20px;
+      background: #FFF;
+      margin-bottom: 10px;
+      padding: 15px;
+      border-bottom: 1px solid #C1C1B7;
       }
 
       p.axis_label_x {
@@ -116,105 +120,62 @@ window.chartMin = 0;
     <div class="content rounded shadow">
       <div class="container">
 
-        <table cellpadding="0" cellspacing="0" border="0" class="info_table_group">
-          <tr>
-            <td>
-              <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-                <colgroup>
-                  <col/>
-                  <col width="100%"/>
-                </colgroup>
-                <tr><td class="label">Flow Cell ID:</td><td class="value"><xsl:value-of select="//flow-cell/@id"/></td></tr>
+        <div class="box rounded">
+          <div style="width: 25%; margin-right; 2%; display: inline-block">
+            <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
+              <tr>
+                <td class="name">flow cell ID:</td>
+                <td class="value"><xsl:value-of select="//flow-cell/@id"/></td>
+              </tr>
 
-                <tr><td class="label">Run Type:</td><td class="value"><xsl:value-of select="//production/@run-type"/></td></tr>
-                <tr><td class="label">Machine:</td><td class="value"><xsl:value-of select="//production/@machine-name"/></td></tr>
-              </table>
-            </td>
-            <td>
-              <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-                <colgroup>
-                  <col/>
-                  <col width="100%"/>
-                </colgroup>
-                <tr><td class="label">Run Name:</td><td class="value"><xsl:value-of select="//production/@run-name"/></td></tr>
-                <tr><td class="label">Date Started:</td><td class="value"><xsl:value-of select="//production/@date-started"/></td></tr>
-                <tr><td class="label">Group:</td><td class="value"><xsl:value-of select="//production/@group-name"/></td></tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-        <hr/>
+              <tr>
+                <td class="name">run type:</td>
+                <td class="value"><xsl:value-of select="//production/@run-type"/></td>
+              </tr>
 
-        <h2>lanes</h2>
-        <table id="lane_list" class="list tablesorter" width="100%" cellspacing="0" cellpadding="0" border="0">
-          <colgroup>
-            <col />
-            <col />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>lane</th>
-              <th>id</th>
-              <th>reports</th>
-              <th>resources</th>
-            </tr>
-          </thead>
-          <tbody>
-            <xsl:choose>
-              <xsl:when test="count(//instrument-data) > 0">
-                <xsl:for-each select="//instrument-data">
-                  <xsl:sort select="@subset_name" data-type="text" order="ascending"/>
-                  <xsl:variable name="build-status" select="build_status"/>
-                  <tr>
-                    <td>
-                      <xsl:value-of select="@subset_name"/>
-                    </td>
-                    <td><xsl:value-of select="@id"/></td>
-                    <td>
-                      <xsl:choose>
-                        <xsl:when test="report">
-                          <xsl:for-each select="report">
-                            <xsl:variable select="@name" name="report_name_full"/>
-                            <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">/cgi-bin/dashboard/flow_cell_report.cgi?instrument-data-id=<xsl:value-of select="../@id"/>&amp;report-name=<xsl:value-of select="@name"/></xsl:attribute><xsl:value-of select="substring-before($report_name_full,'.')"/></a><xsl:text> </xsl:text>
-                          </xsl:for-each>
-                        </xsl:when>
-                        <xsl:otherwise>
-                          <span class="note">No reports available for this lane.</span>
-                        </xsl:otherwise>
-                      </xsl:choose>
-                    </td>
-                    <td>
-                      <xsl:choose>
-                        <xsl:when test="@gerald-directory">
-                          <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">https://gscweb<xsl:value-of select="@gerald-directory"/></xsl:attribute>gerald directory</a>
-                        </xsl:when>
-                        <xsl:otherwise>
-                          <span class="note">No resources found.</span>
-                        </xsl:otherwise>
-                      </xsl:choose>
-                    </td>
-                  </tr>
-                </xsl:for-each>
-              </xsl:when>
-              <xsl:otherwise>
-                <tr>
-                  <td colspan="5">
-                    <strong>No available lanes for this flow cell.</strong>
-                  </td>
-                </tr>
-              </xsl:otherwise>
-            </xsl:choose>
-          </tbody>
-        </table>
-        <xsl:if test="/flow-cell/illumina-lane-index">
-          <h2 style="border-bottom: 2px solid #CCC;">Lane index report</h2>
+              <tr>
+                <td class="name">machine:</td>
+                <td class="value"><xsl:value-of select="//production/@machine-name"/></td>
+              </tr>
 
-          <div class="charts_block">
-            <xsl:for-each select="//report">
-              <xsl:apply-templates select="lane" />
-            </xsl:for-each>
+            </table>
           </div>
 
+          <div style="width: 50%; display: inline-block;">
+            <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
+              <tr>
+                <td class="name">run name:</td>
+                <td class="value"><xsl:value-of select="//production/@run-name"/></td>
+              </tr>
+
+              <tr>
+                <td class="name">date started:</td>
+                <td class="value"><xsl:value-of select="//production/@date-started"/></td>
+              </tr>
+
+              <tr>
+                <td class="name">group:</td>
+                <td class="value"><xsl:value-of select="//production/@group-name"/></td>
+              </tr>
+
+            </table>
+
+          </div>
+        </div>
+
+        <xsl:call-template name="genome_instrumentdata_flowcell_lanes_table"/>
+
+        <xsl:if test="/flow-cell/illumina-lane-index">
+          <div class="box_header span-24 last rounded-top">
+            <div class="box_title"><h3 class="nontyped span-24 last">lane index report</h3></div>
+          </div>
+          <div class="box_content rounded-bottom span-24 last">
+            <div class="charts_block">
+              <xsl:for-each select="//report">
+                <xsl:apply-templates select="lane" />
+              </xsl:for-each>
+            </div>
+          </div>
         </xsl:if>
 
       </div> <!-- end container -->
@@ -229,6 +190,101 @@ window.chartMin = 0;
 
   </xsl:template>
 
+
+  <xsl:template name="genome_instrumentdata_flowcell_lanes_table">
+    <xsl:comment>template: status/genome_instrumentdata_flowcell.xsl:genome_instrumentdata_flowcell_table</xsl:comment>
+    <div class="generic_lister">
+      <div class="box_header span-24 last rounded-top">
+        <div class="box_title"><h3 class="genome_instrumentdata_flowcell_lane_16 span-24 last">Lanes</h3></div>
+      </div>
+      <div class="box_content rounded-bottom span-24 last">
+        <table class="lister">
+          <thead>
+            <tr>
+              <th>lane</th>
+              <th>instrument data id</th>
+              <th>reports</th>
+              <th>resources</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <xsl:choose>
+              <xsl:when test="count(//instrument-data) > 0">
+                <xsl:for-each select="//instrument-data">
+                  <xsl:sort select="@subset_name" data-type="text" order="ascending"/>
+
+                  <xsl:call-template name="genome_instrumentdata_flowcell_lanes_table_row"/>
+
+                </xsl:for-each>
+              </xsl:when>
+              <xsl:otherwise>
+                <tr>
+                  <td colspan="5">
+                    <strong>No available lanes for this flow cell.</strong>
+                  </td>
+                </tr>
+              </xsl:otherwise>
+            </xsl:choose>
+
+          </tbody>
+        </table>
+      </div> <!-- end box_content -->
+    </div> <!-- end generic lister -->
+
+  </xsl:template>
+
+  <xsl:template name="genome_instrumentdata_flowcell_lanes_table_row">
+    <xsl:comment>template: status/genome_instrumentdata_flowcell.xsl:genome_model_input_table_row</xsl:comment>
+
+    <xsl:variable name="build-status" select="build_status"/>
+    <tr>
+      <td>
+        <xsl:value-of select="@subset_name"/>
+      </td>
+      <td><xsl:value-of select="@id"/></td>
+      <td>
+        <xsl:choose>
+          <xsl:when test="report">
+
+            <xsl:for-each select="report">
+              <xsl:variable select="@name" name="report_name_full"/>
+              <xsl:variable select="substring-before($report_name_full,'.')" name="report_name"/>
+              <xsl:variable select="../@id" name="instrument_data_id"/>
+
+              <!-- each report type requires its own view-->
+              <xsl:choose>
+                <xsl:when test="$report_name = 'quality'">
+                  <a class="mini btn"><xsl:attribute name="href">/view/genome/instrument-data/solexa/quality.html?id=<xsl:value-of select="$instrument_data_id"/></xsl:attribute>quality</a>
+
+                </xsl:when>
+                <xsl:otherwise>
+                  <span class="light"><xsl:value-of select="$report_name"/> (no view available)</span>
+                </xsl:otherwise>
+              </xsl:choose>
+            </xsl:for-each>
+
+          </xsl:when>
+          <xsl:otherwise>
+            <span class="note">No reports available for this lane.</span>
+          </xsl:otherwise>
+        </xsl:choose>
+      </td>
+      <td>
+        <xsl:choose>
+          <xsl:when test="@gerald-directory">
+            <a><xsl:attribute name="class">btn_link</xsl:attribute><xsl:attribute name="href">https://gscweb<xsl:value-of select="@gerald-directory"/></xsl:attribute>gerald directory</a>
+          </xsl:when>
+          <xsl:otherwise>
+            <span class="note">No resources found.</span>
+          </xsl:otherwise>
+        </xsl:choose>
+      </td>
+    </tr>
+
+  </xsl:template>
+
+
   <xsl:template match="lane">
     <div class="lane_chart">
       <h3>Lane <xsl:value-of select="@number"/></h3>
@@ -236,68 +292,70 @@ window.chartMin = 0;
       <script type="text/javascript+protovis">
         <xsl:text disable-output-escaping="yes">
 
-        var y_bars = window.indexData[0].sequence.length,
-        w = 150,
-        h = y_bars * 15,
-        x = pv.Scale.linear(window.chartMin, window.chartMax).range(0, w),
-        y = pv.Scale.ordinal(pv.range(y_bars)).splitBanded(0, h, 4/5),
-        c = pv.Colors.category10();
+          var y_bars = window.indexData[0].sequence.length,
+          w = 150,
+          h = y_bars * 15,
+          x = pv.Scale.linear(window.chartMin, window.chartMax).range(0, w),
+          y = pv.Scale.ordinal(pv.range(y_bars)).splitBanded(0, h, 4/5),
+          c = pv.Colors.category10();
 
-        var vis =new pv.Panel()
-        .width(w)
-        .height(h)
-        .bottom(20)
-        .left(50)
-        .right(10)
-        .top(5);
+          var vis =new pv.Panel()
+          .width(w)
+          .height(h)
+          .bottom(20)
+          .left(50)
+          .right(10)
+          .top(5);
 
-        var bar = vis.add(pv.Bar)
-        .data(window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/>]<xsl:text disable-output-escaping="yes">.percent)
-        .top(function() y(this.index))
-        .height(y.range().band)
-        .left(0)
-        .width(x)
-        .fillStyle(function(d) c(window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/>]<xsl:text disable-output-escaping="yes">.sequence[this.index]))
-        .title(function() {return "count: " +  addCommas(window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/><xsl:text disable-output-escaping="yes">].count[this.index]) + " index %: " + window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/><xsl:text disable-output-escaping="yes">].percent[this.index] + '%'});
+          var bar = vis.add(pv.Bar)
+          .data(window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/>]<xsl:text disable-output-escaping="yes">.percent)
+          .top(function() y(this.index))
+          .height(y.range().band)
+          .left(0)
+          .width(x)
+          .fillStyle(function(d) c(window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/>]<xsl:text disable-output-escaping="yes">.sequence[this.index]))
+          .title(function() {return "count: " +  addCommas(window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/><xsl:text disable-output-escaping="yes">].count[this.index]) + " index %: " + window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/><xsl:text disable-output-escaping="yes">].percent[this.index] + '%'});
 
-        bar.anchor("right").add(pv.Label)
-        .textStyle("white")
-        .text(function(d) d.toFixed(2));
+          bar.anchor("right").add(pv.Label)
+          .textStyle("white")
+          .text(function(d) d.toFixed(2));
 
-        bar.anchor("left").add(pv.Label)
-        .textMargin(5)
-        .textAlign("right")
-        .text(function() window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/><xsl:text disable-output-escaping="yes">].sequence[this.index]);
+          bar.anchor("left").add(pv.Label)
+          .textMargin(5)
+          .textAlign("right")
+          .text(function() window.indexData[</xsl:text><xsl:value-of select="@number  - 1"/><xsl:text disable-output-escaping="yes">].sequence[this.index]);
 
-        vis.add(pv.Rule)
-        .data(x.ticks())
-        .left(function(d) Math.round(x(d)) - .5)
-        .strokeStyle(function(d) d ? "rgba(255,255,255,.3)" : "#999")
-        .add(pv.Rule)
-        .bottom(0)
-        .height(5)
-        .strokeStyle("#999")
-        .anchor("bottom").add(pv.Label)
-        .text(function(d) d.toFixed(1))
-        .textStyle("#999");
+          vis.add(pv.Rule)
+          .data(x.ticks())
+          .left(function(d) Math.round(x(d)) - .5)
+          .strokeStyle(function(d) d ? "rgba(255,255,255,.3)" : "#999")
+          .add(pv.Rule)
+          .bottom(0)
+          .height(5)
+          .strokeStyle("#999")
+          .anchor("bottom").add(pv.Label)
+          .text(function(d) d.toFixed(1))
+          .textStyle("#999");
 
-        vis.render();
+          vis.render();
 
-        function addCommas(nStr) {
-        nStr += '';
-        var x = nStr.split('.');
-        var x1 = x[0];
-        var x2 = x.length > 1 ? '.' + x[1] : '';
-        var rgx = /(\d+)(\d{3})/;
-        while (rgx.test(x1)) {
-        x1 = x1.replace(rgx, '$1' + ',' + '$2');
-        }
-        return x1 + x2;
-        }
-      </xsl:text>
+          function addCommas(nStr) {
+          nStr += '';
+          var x = nStr.split('.');
+          var x1 = x[0];
+          var x2 = x.length > 1 ? '.' + x[1] : '';
+          var rgx = /(\d+)(\d{3})/;
+          while (rgx.test(x1)) {
+          x1 = x1.replace(rgx, '$1' + ',' + '$2');
+          }
+          return x1 + x2;
+          }
+        </xsl:text>
       </script>
       <p class="axis_label_x">Index %</p>
     </div>
 
   </xsl:template>
+
+
 </xsl:stylesheet>
