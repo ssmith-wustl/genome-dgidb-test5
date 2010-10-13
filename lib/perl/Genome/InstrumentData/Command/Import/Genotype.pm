@@ -225,6 +225,7 @@ sub execute {
         $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%alloc_params));
         return 1;
     }
+    $self->allocation($disk_alloc);
     $self->status_message("Disk allocation created for $instrument_data_id ." . $disk_alloc->absolute_path);
     
     $self->status_message("About to calculate the md5sum of the genotype.");
