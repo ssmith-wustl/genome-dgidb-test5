@@ -1,34 +1,16 @@
-package Genome::Model::ReferenceAlignment::Command::CompareBuilds;
+package Genome::Model::Tools::CompareBuilds::ReferenceAlignment;
 
 use strict;
 use warnings;
+
 use Genome;
 use Carp 'confess';
 
-class Genome::Model::ReferenceAlignment::Command::CompareBuilds {
-    is => 'Genome::Command::Base',
-    has => [
-        model => {
-            shell_args_position => 1,
-            is => 'Genome::Model::ReferenceAlignment',
-            id_by => 'model_id',
-        },
-    ],
+class Genome::Model::Tools::CompareBuilds::ReferenceAlignment {
+    is => 'Genome::Model::Tools::CompareBuilds',
 };
 
-sub help_brief {
-    return "Determines if two builds of the same reference alignment model produced the same output";
-}
-
-sub help_detail { 
-    return <<EOS
-This tool compares select files from two builds of the same reference 
-alignment model and compares their md5 hashes. This is especially useful for
-checking that the output of two builds match after the underlying code has 
-changed in a way that should not affect build output.
-EOS
-}
-
+# TODO Add bam comparison, talk to Feiyu about it
 sub files_to_compare {
     return [qw(
         snp_related_metrics/indels_all_sequences
@@ -45,28 +27,28 @@ sub files_to_compare {
         alignments/*merged_rmdup.bam.flagstat
     )];
 }
-        
+
 sub execute {
     my $self = shift;
-    my $model = $self->model;
-    my @builds = $model->builds;
-    my $num_builds = scalar @builds;
 
-    unless ($num_builds >= 2) {
-        confess "Model does not have 2 or more builds, only has $num_builds!";
+    my $first_build_id = $self->first_build_id;
+    my $first_build = $self->first_build;
+    my $second_build_id = $self->second_build_id;
+    my $second_build = $self->second_build;
+
+    unless ($first_build->model_id eq $second_build->model_id) {
+        confess "Build $first_build_id has model " . $first_build->model_id . " and build $second_build_id has model " .
+            $second_build->model_id . ", these builds must come from the same model in order to be compared!";
     }
 
-    @builds = sort { $b->build_id <=> $a->build_id } @builds;
-    my $old_build = $builds[1]; # Second newest build
-    my $new_build = $builds[0]; # Newest build
-
-    $self->status_message("Comparing newest build " . $new_build->build_id . " to next newest build " . $old_build->build_id);
-    $self->status_message("Files are located in " . $new_build->data_directory . "/ and " . $old_build->data_directory . "/");
+    unless ($first_build->class =~ /ReferenceAlignment/i) {
+        confess "Builds are not ReferenceAlignment, type is " . $first_build->class;
+    }
 
     my @diff_files;
     FILE: for my $file (@{$self->files_to_compare}) {
-        my $old_file = $old_build->data_directory . "/" . $file;
-        my $new_file = $new_build->data_directory . "/" . $file;
+        my $old_file = $first_build->data_directory . "/" . $file;
+        my $new_file = $second_build->data_directory . "/" . $file;
 
         # If the file name contains a *, assume that some regex is needed to determine full name
         # For now, only expecting one file to match... any more or less is a problem
@@ -114,6 +96,5 @@ sub execute {
 
     return 1;
 }
-
 1;
 
