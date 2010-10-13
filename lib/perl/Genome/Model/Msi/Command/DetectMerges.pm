@@ -7,9 +7,9 @@ use Carp::Assert;
 use Carp;
 use Cwd;
 use Utility;
-use Genome::Assembly::Pcap::Ace;
-use Genome::Assembly::Pcap::PhdDB;
-use Genome::Assembly::Pcap::ContigTools;
+use Genome::Model::Tools::Pcap::Ace;
+use Genome::Model::Tools::Pcap::PhdDB;
+use Genome::Model::Tools::Pcap::ContigTools;
 require Workflow::Simple;
 
 

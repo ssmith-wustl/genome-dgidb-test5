@@ -48,18 +48,6 @@ sub __display_name__ {
     return $self->name . ' (' . $self->id . ')';
 }
 
-sub from_cmdline {
-    my ($class, $txt) = @_;
-    my @matches;
-    unless ($txt =~ /\D/) {
-        @matches = __PACKAGE__->get($txt);
-    }
-    unless (@matches) {
-        @matches = __PACKAGE__->get(name => $txt);
-    }
-    UR::Util->context_return(@matches);
-}
-
 ### Override When Implementing New Pipelines ###
 
 sub _initialize_model {

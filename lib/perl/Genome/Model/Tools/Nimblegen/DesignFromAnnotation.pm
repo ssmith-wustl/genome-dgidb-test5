@@ -22,6 +22,12 @@ class Genome::Model::Tools::Nimblegen::DesignFromAnnotation {
         is_optional => 1,
         doc => "Output file. Assumes STDOUT if not specified",
     },
+    span => {
+    	type => 'Integer',
+    	is_optional => 1,
+    	default => 100,
+    	doc => "The region to be spanned",
+    },
     exclude_non_canonical_sites => {
         type => 'Bool',
         is_optional => 1,
@@ -49,6 +55,8 @@ sub execute {
     $DB::single = 1;
 
     my $reference_index = $self->reference_index;
+
+    my $span = $self->span;  #
 
     my $fh = IO::File->new($reference_index,"r"); 
     unless($fh) {
@@ -105,16 +113,19 @@ sub execute {
             next;
         }
         chomp $line;
+        next if($line =~ /^chromosome_name/ || $line =~ /^Chr/);
         my ($chr,$start,$stop,) = split /\t/, $line;
-        if($start - 100 < 1 || $start - 100 > $chromosome_lengths{$chr} - 1) {
+        if($start - $span < 1 || $start - $span > $chromosome_lengths{$chr} - 1) {
             $self->error_message("Start coordinate out of bounds. Skipping $line");
+	    print STDOUT "$line\n";
             next;
         }
-        if($stop + 100 < 1 || $stop + 100 > $chromosome_lengths{$chr} - 1) {
+        if($stop + $span < 1 || $stop + $span > $chromosome_lengths{$chr} - 1) {
             $self->error_message("Stop coordinate out of bounds. Skipping $line");
+	    print STDOUT "$line\n";
             next;
         }
-        printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr,$start - 100, $stop + 100, (($stop + 100) - ($start - 100)), $line;
+        printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr,$start - $span, $stop + $span, (($stop + $span) - ($start - $span)), $line;
     }
 
     

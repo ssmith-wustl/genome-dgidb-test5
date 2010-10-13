@@ -106,6 +106,8 @@ class Genome::Model {
         is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
         model_bridges           => { is => 'Genome::ModelGroupBridge', reverse_as => 'model', is_many => 1 },
         model_groups            => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group', is_many => 1 },
+        group_ids               => { via => 'model_groups', to => 'id', is_many => 1 },
+        group_names             => { via => 'model_groups', to => 'name', is_many => 1 },
     ],
     has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
@@ -626,24 +628,45 @@ sub last_complete_build_id {
 }
 #<>#
 
-sub running_builds {
-    my $self = shift;
+sub builds_with_status {
+    my ($self, $status) = @_;
     my @builds = $self->builds;
     unless (scalar(@builds)) {
         return;
     }
-    my @builds_w_status = grep { $_->build_status } @builds;
-    my @running_builds = grep {$_->build_status eq 'Running'} @builds_w_status;
-    my @builds_wo_date = grep { !$_->date_scheduled } @running_builds;
+    my @builds_with_a_status = grep { $_->build_status } @builds;
+    my @builds_with_requested_status = grep {$_->build_status eq $status} @builds_with_a_status;
+    my @builds_wo_date = grep { !$_->date_scheduled } @builds_with_requested_status;
     if (scalar(@builds_wo_date)) {
-        my $error_message = 'Found '. scalar(@builds_wo_date) .' Running builds without date scheduled.' ."\n";
+        my $error_message = 'Found '. scalar(@builds_wo_date) ." $status builds without date scheduled.\n";
         for (@builds_wo_date) {
             $error_message .= "\t". $_->desc ."\n";
         }
         die($error_message);
     }
-    my @sorted_running_builds = sort {$a->date_scheduled cmp $b->date_scheduled} @running_builds;
-    return @sorted_running_builds;
+    my @sorted_builds_with_requested_status = sort {$a->date_scheduled cmp $b->date_scheduled} @builds_with_requested_status;
+    return @sorted_builds_with_requested_status;
+}
+
+sub abandoned_builds {
+    my $self = shift;
+    my @abandoned_builds = $self->builds_with_status('Abandoned');
+    return @abandoned_builds;
+}
+sub failed_builds {
+    my $self = shift;
+    my @failed_builds = $self->builds_with_status('Failed');
+    return @failed_builds;
+}
+sub running_builds {
+    my $self = shift;
+    my @running_builds = $self->builds_with_status('Running');
+    return @running_builds;
+}
+sub scheduled_builds {
+    my $self = shift;
+    my @scheduled_builds = $self->builds_with_status('Scheduled');
+    return @scheduled_builds;
 }
 
 sub current_running_build {

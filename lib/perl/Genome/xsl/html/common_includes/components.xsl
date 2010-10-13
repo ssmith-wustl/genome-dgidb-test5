@@ -59,6 +59,7 @@
                }
                }
 
+               $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><![CDATA[));
                })(jQuery)
 
       ]]>
