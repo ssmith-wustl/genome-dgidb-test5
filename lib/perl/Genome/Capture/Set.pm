@@ -24,7 +24,6 @@ class Genome::Capture::Set {
         description => { },
         status => { },
         _capture_set => {
-            doc => 'Solexa Lane Summary from LIMS.',
             is => 'GSC::Setup::CaptureSet',
             calculate => q| GSC::Setup::CaptureSet->get($id); |,
             calculate_from => ['id']

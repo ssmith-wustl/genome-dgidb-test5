@@ -299,32 +299,33 @@ sub GetGeneAnnotation{
   my @overlapgenes=keys %OverlapGenes;
   my $gene=(@overlapgenes)?'Gene:'.join('|',@overlapgenes):'-';
 
-  if(defined $e1 && defined $e2 && $e1->{name} eq $e2->{name}){
-    $gene.=sprintf ",%s\|%s\:%s\-%s",$e1->{name}||'NA',$e1->{name2}||'NA',$annot1||'NA',$annot2||'NA';
-  }
-  elsif(defined $e1 || defined $e2){
-    $gene.=sprintf ",%s\|%s\:%s\-%s\|%s\:%s",$e1->{name}||'NA',$e1->{name2}||'NA',$annot1||'NA',$e2->{name}||'NA',$e2->{name2}||'NA',$annot2||'NA';
-  }
-
-  if(@overlapgenes && defined $type && $type=~/del/i && (!defined $struct1 || !defined $struct2) ||
-     defined $struct1 && defined $struct2 && abs($struct2->{id}-$struct1->{id})>0 && $chr eq $chr2){
-    $gene.=',AffectExon';
-  }
-
-  if(defined $struct1 && defined $struct2){
-    if($e1->{name2} ne $e2->{name2}){
+  if(defined $e1 && defined $e2){
+    if($e1->{name} eq $e2->{name}){  #same transcript
+      $gene.=sprintf ",%s\|%s\:%s\-%s",$e1->{name}||'NA',$e1->{name2}||'NA',$annot1||'NA',$annot2||'NA';
+      if(defined $struct1 && defined $struct2 && (abs($struct2->{id}-$struct1->{id})>0 ||
+						  $struct1->{unit}=~/exon/i)
+	){
+	$gene.=',AffectCoding';
+      }
+      if(defined $struct1 && defined $struct2 && (abs($struct2->{id}-$struct1->{id})>1)
+	){
+	$gene.=',novoSplice';
+      }
+    }
+    else{
+      $gene.=sprintf ",%s\|%s\:%s\-%s\|%s\:%s",$e1->{name}||'NA',$e1->{name2}||'NA',$annot1||'NA',$e2->{name}||'NA',$e2->{name2}||'NA',$annot2||'NA';
       $gene.=',Fusion';
     }
-    elsif($struct2->{id}-$struct1->{id}>1){
-      $gene.=',novoSplice';
-    }
   }
+  elsif(defined $e1 || defined $e2){
+    $gene.=',AffectCoding';
+  }
+  else{}
 
   my @cgenes=keys %Cancergenes;
   $gene.=',Cancer:'.join('|',@cgenes) if($#cgenes>=0);
   return $gene;
 }
-
 
 sub GetRepeatMaskerAnnotation{
   my ($chr1,$pos1,$chr2,$pos2)=@_;

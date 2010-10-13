@@ -232,8 +232,7 @@ sub get_mock_build {
             soap_output_dir_and_file_prefix
             soap_scaffold_sequence_file 
             soap_output_file_for_ext
-            soap_pga_output_files_directory
-            pga_file_prefix
+
             pga_agp_file
             pga_contigs_fasta_file
             pga_scaffolds_fasta_file
@@ -271,7 +270,7 @@ sub base_directory {
 }
 
 my %dirs_versions = (
-    soap_solexa => '6',
+    soap_solexa => '8',
     velvet_solexa => '0.2',
     newbler_454 => '0.1',
 );

@@ -7,6 +7,7 @@
 
   <xsl:template name="object_link_href">
     <xsl:param name="type" select="./@type"/>
+    <xsl:param name="key" select="'id'"/>
     <xsl:param name="id" select="./@id"/>
     <xsl:param name="perspective" select="'status'"/>
     <xsl:param name="toolkit" select="'html'"/>
@@ -18,7 +19,9 @@
     <xsl:value-of select="$perspective"/>
     <xsl:text>.</xsl:text>
     <xsl:value-of select="$toolkit"/>
-    <xsl:text>?id=</xsl:text>
+    <xsl:text>?</xsl:text>
+    <xsl:value-of select="$key"/>
+    <xsl:text>=</xsl:text>
     <xsl:value-of select="$id"/>
   </xsl:template>
 
@@ -67,6 +70,7 @@
   <xsl:template name="object_link_button">
     <xsl:param name="type" select="./@type"/>
     <xsl:param name="id" select="./@id"/>
+    <xsl:param name="key" select="'id'"/>
     <xsl:param name="perspective" select="'status'"/>
     <xsl:param name="toolkit" select="'html'"/>
     <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
@@ -78,6 +82,7 @@
       <xsl:attribute name="href">
         <xsl:call-template name="object_link_href">
           <xsl:with-param name="type" select="$type"/>
+          <xsl:with-param name="key" select="$key"/>
           <xsl:with-param name="id" select="$id"/>
           <xsl:with-param name="perspective" select="$perspective"/>
           <xsl:with-param name="toolkit" select="$toolkit"/>

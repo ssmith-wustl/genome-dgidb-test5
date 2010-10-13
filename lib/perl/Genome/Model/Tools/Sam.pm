@@ -5,6 +5,7 @@ use warnings;
 
 use Genome; 
 use File::Basename;
+use POSIX;
 
 my $DEFAULT = 'r544';
 #3Gb
@@ -93,7 +94,6 @@ sub samtools_pl_path {
     return $path;
 }
 
-    
 sub c_linkage_class {
     my $self = shift;
 
@@ -111,6 +111,51 @@ $DB::single = $DB::stopper;
     }
 
     return $class_to_use;
+}
+
+sub open_bamsam_in {
+    my $self = shift;
+    my $in_filename = shift;
+    my ($type) = ($in_filename =~ /\.([^\.\s]+)\s*$/i);
+    $type = uc($type);
+    my $fh;
+    if($type eq 'BAM') {
+        $fh = new IO::File;
+        #$fh->open('samtools view -h "' . $in_filename . '" | head -n 2000000 |');
+        $fh->open('samtools view -h "' . $in_filename . '" |');
+    }
+    elsif($type eq 'SAM') {
+        $fh = new IO::File($in_filename);
+    }
+    else {
+        die 'Unknown type specified for "' . $in_filename . "\".\n";
+    }
+    unless($fh) {
+        die 'Failed to open "' . $in_filename . "\"\n.";
+    }
+    return $fh;
+}
+
+sub open_bamsam_out {
+    my $self = shift;
+    my $out_filename = shift;
+    my ($type) = ($out_filename =~ /\.([^\.\s]+)\s*$/i);
+    $type = uc($type);
+    my $fh;
+    if($type eq 'BAM') {
+        $fh = new IO::File;
+        $fh->open('| samtools view -S -b /dev/stdin > "' . $out_filename . '"');
+    }
+    elsif($type eq 'SAM') {
+        $fh = new IO::File($out_filename eq '-' ? stdout : '> ' . $out_filename);
+    }
+    else {
+        die 'Unknown type specified for "' . $out_filename . "\".\n";
+    }
+    unless($fh) {
+        die 'Failed to open "' . $out_filename . "\"\n.";
+    }
+    return $fh;
 }
 
 1;

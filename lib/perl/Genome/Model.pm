@@ -106,6 +106,8 @@ class Genome::Model {
         is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
         model_bridges           => { is => 'Genome::ModelGroupBridge', reverse_as => 'model', is_many => 1 },
         model_groups            => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group', is_many => 1 },
+        group_ids               => { via => 'model_groups', to => 'id', is_many => 1 },
+        group_names             => { via => 'model_groups', to => 'name', is_many => 1 },
     ],
     has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
@@ -176,70 +178,6 @@ class Genome::Model {
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
-
-# TODO: improve the logic in Genome::Command::Base to handle more of this
-sub from_cmdline {
-    my $class = shift;
-    my @matches;
-    my %missing;
-    @missing{@_} = @_;
-    eval {
-        my @numbers = grep { $_ !~ /\D/ } @_;
-        if (@numbers) {
-            @matches = $class->get(\@numbers);
-
-            my @found = map { $_->id } @matches;
-            delete @missing{@found};
-            return @matches if @matches == @numbers;
-
-            my @builds = Genome::Model::Build->get(\@numbers);
-            my @models = $class->get(builds => \@builds);
-            push @found, @models;
-            @found = map { $_->id } @builds;
-            delete @missing{@found};
-
-            return @matches unless %missing;
-
-        }
-        my @models = $class->get(name => [keys %missing]);
-        my @found;
-        if (@models) {
-            push @matches, @models;
-            @found = map { $_->name } @models;
-            delete @missing{@found};
-            return @matches unless %missing;
-        }
-        my @groups = Genome::ModelGroup->get(name => [keys %missing]);
-        if (@groups) {
-            my @models = map { $_->models } @groups;
-            push @matches, @models;
-            @found = map { $_->name } @groups;
-            delete @missing{@found};
-            return @matches unless %missing;
-        }
-        for my $name (sort keys %missing) {
-            my @models = $class->get("name like" => $name);
-            delete $missing{$name} if @models;
-            push @matches, @models;
-        }
-    };
-    if (%missing) {
-        my @missing = sort keys %missing;
-        die "Failed to find @missing!";
-    }
-    if (wantarray) {
-        return @matches;
-    }
-    elsif (not defined wantarray) {
-        return;
-    }
-    elsif (@matches > 1) {
-        Carp::confess("Multiple matches found for @_!");
-    }
-    else {
-        return $matches[0]
-    }
-}
 
 sub __display_name__ {
     my $self = shift;
@@ -644,7 +582,7 @@ sub completed_builds {
 
     my @completed_builds;
     for my $build ( $self->builds ) {
-        my $build_status = $build->build_status;
+        my $build_status = $build->status;
         next unless defined $build_status and $build_status eq 'Succeeded';
         next unless defined $build->date_completed; # error?
         push @completed_builds, $build;
@@ -690,24 +628,45 @@ sub last_complete_build_id {
 }
 #<>#
 
-sub running_builds {
-    my $self = shift;
+sub builds_with_status {
+    my ($self, $status) = @_;
     my @builds = $self->builds;
     unless (scalar(@builds)) {
         return;
     }
-    my @builds_w_status = grep { $_->build_status } @builds;
-    my @running_builds = grep {$_->build_status eq 'Running'} @builds_w_status;
-    my @builds_wo_date = grep { !$_->date_scheduled } @running_builds;
+    my @builds_with_a_status = grep { $_->status } @builds;
+    my @builds_with_requested_status = grep {$_->status eq $status} @builds_with_a_status;
+    my @builds_wo_date = grep { !$_->date_scheduled } @builds_with_requested_status;
     if (scalar(@builds_wo_date)) {
-        my $error_message = 'Found '. scalar(@builds_wo_date) .' Running builds without date scheduled.' ."\n";
+        my $error_message = 'Found '. scalar(@builds_wo_date) ." $status builds without date scheduled.\n";
         for (@builds_wo_date) {
             $error_message .= "\t". $_->desc ."\n";
         }
         die($error_message);
     }
-    my @sorted_running_builds = sort {$a->date_scheduled cmp $b->date_scheduled} @running_builds;
-    return @sorted_running_builds;
+    my @sorted_builds_with_requested_status = sort {$a->date_scheduled cmp $b->date_scheduled} @builds_with_requested_status;
+    return @sorted_builds_with_requested_status;
+}
+
+sub abandoned_builds {
+    my $self = shift;
+    my @abandoned_builds = $self->builds_with_status('Abandoned');
+    return @abandoned_builds;
+}
+sub failed_builds {
+    my $self = shift;
+    my @failed_builds = $self->builds_with_status('Failed');
+    return @failed_builds;
+}
+sub running_builds {
+    my $self = shift;
+    my @running_builds = $self->builds_with_status('Running');
+    return @running_builds;
+}
+sub scheduled_builds {
+    my $self = shift;
+    my @scheduled_builds = $self->builds_with_status('Scheduled');
+    return @scheduled_builds;
 }
 
 sub current_running_build {

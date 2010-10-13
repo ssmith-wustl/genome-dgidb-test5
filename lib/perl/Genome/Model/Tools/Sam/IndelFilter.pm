@@ -81,6 +81,13 @@ sub execute {
         next unless $id eq '*';
         next if $rd_depth > $self->max_read_depth;
         
+        #In rare case, indel line will get something like follows (RT#62927):
+        #NT_113915	187072	*	-	/-		18	0	33	32	-		*	3	29	0	0	0
+        if ($indel_detail eq '-') {
+            $self->warning_message("Indel line: $indel gets invalid format. Skip");
+            next;
+        }
+
         unless ($is_ref) {
             next if $indel_detail eq '*/*';
             next if $score == 0;

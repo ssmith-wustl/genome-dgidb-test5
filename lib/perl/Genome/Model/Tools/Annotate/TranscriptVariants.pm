@@ -13,6 +13,9 @@ use Benchmark;
 use Genome::Info::UCSCConservation;
 use DateTime;
 use Sys::Hostname;
+use Cwd 'abs_path';
+use File::Basename;
+use File::Temp qw/ tempfile /;
 
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
@@ -256,12 +259,14 @@ sub execute {
     # establish the output handle for the transcript variants
     my $output_fh;
     my $output_file = $self->output_file;
+    my $temp_output_file;
     if ($self->output_file =~ /STDOUT/i) {
         $output_fh = 'STDOUT';
     }
     else {
-        $output_fh = $self->_create_file($output_file);
-        chmod(0664, $output_file);
+        my ($output_file_basename) = fileparse($output_file);
+        ($output_fh, $temp_output_file) = tempfile("$output_file_basename-XXXXXX", DIR => abs_path(dirname($self->output_file)), UNLINK => 1);
+        chmod(0664, $temp_output_file);
     }
     $self->_transcript_report_fh($output_fh);
 
@@ -464,7 +469,7 @@ sub execute {
         }
         $last_variant_start = $variant->{start};
 
-        Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->get_default_handle;
+        Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->has_default_handle;
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
         # TODO... unduplicate this code
@@ -523,7 +528,14 @@ sub execute {
     my $total_time = timediff($annotation_total_stop, $annotation_total_start);
     $self->status_message('Total time to complete: ' . timestr($total_time, 'noc') . "\n\n") if $self->benchmark;
 
-    $output_fh->close unless $output_fh eq 'STDOUT';
+    if ($temp_output_file){
+        my $mv_return_value = Genome::Utility::FileSystem->shellcmd(cmd => "mv $temp_output_file $output_file");
+        unless($mv_return_value){
+            $self->error_message("Failed to mv results at $temp_output_file to final location at $output_file: $!");
+            return 0;
+        }
+        $output_fh->close unless $output_fh eq 'STDOUT';
+    }
     return 1;
 }
 

@@ -22,19 +22,37 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    # Get build
-    my $build = $self->_resolve_build
-        or return;
-
-    # Abandon
-    unless ( $build->abandon ) {
-        $self->error_message("Failed to abandon build. See above errors.");
-        return;
+    my @builds = $self->builds;
+    my $build_count = scalar(@builds);
+    my $failed_count = 0;
+    my @errors;
+    for my $build (@builds) {
+        my $rv = eval {$build->abandon};
+        if ($rv) {
+            $self->status_message("Successfully abandoned build (" . $build->__display_name__ . ").");
+        }
+        else {
+            $self->error_message($@);
+            $failed_count++;
+            push @errors, "Failed to abandon build (" . $build->__display_name__ . ").";
+        }
+    }
+    for my $error (@errors) {
+        $self->status_message($error);
+    }
+    if ($build_count > 1) {
+        $self->status_message("Stats:");
+        $self->status_message(" Abandonded: " . ($build_count - $failed_count));
+        $self->status_message("     Errors: " . $failed_count);
+        $self->status_message("      Total: " . $build_count);
     }
 
-    printf("Successfully abandoned build (%s).\n", $build->id);
-
-    return 1;
+    if (@errors) {
+        return;
+    }
+    else {
+        return 1;
+    }
 }
 
 1;

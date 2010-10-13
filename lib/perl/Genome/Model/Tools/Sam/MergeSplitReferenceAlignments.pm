@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
-use POSIX;
 
 class Genome::Model::Tools::Sam::MergeSplitReferenceAlignments {
     is  => 'Genome::Model::Tools::Sam',
@@ -20,13 +19,18 @@ class Genome::Model::Tools::Sam::MergeSplitReferenceAlignments {
             is => 'Text',
             doc => 'Merged SAM or BAM file to write.  If the filename ends with .bam, it is written in BAM format.  SAM format is used otherwise.  Use - to write to STDOUT.'
         },
+        softclip_mismatch => {
+            is => 'Int',
+            is_optional => 1,
+            doc => 'If this flag is specified, softclipped bases will be added to the mismatch count from the NM: tag when choosing the correct read pair',
+        },
         rand_seed => {
             is_optional => 1,
             default_value => 12345,
             is => 'Number',
             doc => 'Random number generator seed.  When multiple alignments or alignment pairs for the same read exist and have the same quality, one is randomly selected.  ' .
                    'If this random selection must be reproducable, specify a value for this argument.'
-        }
+        },
     ],
     doc => 'Tool to merge BAM or SAM files aligned against a split reference (eg one that was larger than 4GiB before being broken up).'
 };
@@ -55,7 +59,14 @@ sub help_detail {
             return -1;
         }
         # For each pair, boths reads mapped to the same chromosome; lhs is considered inferior if it has more total mismatches than rhs
-        return $rhs->[0]{NM} + $rhs->[1]{NM} <=> $lhs->[0]{NM} + $lhs->[1]{NM};
+        # if softclip threshold is specified, we will include softclips in the number of mismatches
+        my $rhs_mismatch = $rhs->[0]{NM} + $rhs->[1]{NM};
+        my $lhs_mismatch = $lhs->[0]{NM} + $lhs->[1]{NM};
+        if ($self->softclip_mismatch){
+            $rhs_mismatch += $rhs->[0]{softclipped_bases} + $rhs->[1]{softclipped_bases}
+            $lhs_mismatch += $lhs->[0]{softclipped_bases} + $lhs->[1]{softclipped_bases}
+        }
+        return $rhs_mismatch <=> $lhs_mismatch;
     }
     if($lhs_num_aln == 0) {
         # Neither alignment pair has a mapped read; the alignment pairs are equally bad
@@ -64,52 +75,9 @@ sub help_detail {
 
 =cut
 
-sub open_bamsam_in {
-    my $in_filename = shift;
-    my ($type) = ($in_filename =~ /\.([^\.\s]+)\s*$/i);
-    $type = uc($type);
-    my $fh;
-    if($type eq 'BAM') {
-        $fh = new IO::File;
-        #$fh->open('samtools view -h "' . $in_filename . '" | head -n 2000000 |');
-        $fh->open('samtools view -h "' . $in_filename . '" |');
-    }
-    elsif($type eq 'SAM') {
-        $fh = new IO::File($in_filename);
-    }
-    else {
-        die 'Unknown type specified for "' . $in_filename . "\".\n";
-    }
-    unless($fh) {
-        die 'Failed to open "' . $in_filename . "\"\n.";
-    }
-    return $fh;
-}
-
-sub open_bamsam_out {
-    my $out_filename = shift;
-    my ($type) = ($out_filename =~ /\.([^\.\s]+)\s*$/i);
-    $type = uc($type);
-    my $fh;
-    if($type eq 'BAM') {
-        $fh = new IO::File;
-        $fh->open('| samtools view -S -b /dev/stdin > "' . $out_filename . '"');
-    }
-    elsif($type eq 'SAM') {
-        $fh = new IO::File($out_filename eq '-' ? stdout : '> ' . $out_filename);
-    }
-    else {
-        die 'Unknown type specified for "' . $out_filename . "\".\n";
-    }
-    unless($fh) {
-        die 'Failed to open "' . $out_filename . "\"\n.";
-    }
-    return $fh;
-}
-
+    
 sub execute {
     my $self = shift;
-    $DB::single = 1;
 
     $self->dump_status_messages(1);
     $self->dump_error_messages(1);
@@ -127,12 +95,12 @@ sub execute {
 
     my @in_fh;
     foreach my $in_filename (@in_filenames) {
-        my $in_fh = open_bamsam_in($in_filename);
+        my $in_fh = $self->open_bamsam_in($in_filename);
         die "failed to open file $in_filename! $!\n" unless $in_fh;
         push @in_fh, $in_fh;
     }
 
-    my $out_fh = open_bamsam_out($out_filename);
+    my $out_fh = $self->open_bamsam_out($out_filename);
 
     my $in_count = @in_filenames;
 
@@ -140,7 +108,8 @@ sub execute {
     my $flag_col     = 1;
     my $ref_name_col = 2;
     my $ref_pos_col  = 3;
-    my $tag_pos_col  = 4;
+    my $map_qual_col = 4;
+    my $cigar_col    = 5;
 
     my $name_count = 0;
     my $read_count = 0;
@@ -203,18 +172,25 @@ sub execute {
                 my $nm;
                 unless($s[$flag_col] & 4) {
                     # mapped
+                    if ($self->softclip_mismatch){
+                        #if the softclip_mismatch arg is present, add the softclip(and hardclip) bases from the cigar string to the mismatch number
+                        my $cigar = $s[$cigar_col];
+                        my ($start_clip, $stop_clip) = $cigar =~ /^(\d+)[hs].*(\d+)[hs]$/;
+                        $start_clip ||=0;
+                        $stop_clip ||=0;
+                        $nm += $start_clip+$stop_clip;
+                    }
                     my $nm_pos = -1;
                     foreach my $tag (@s[11..$#s]) {
                         $nm_pos = index($tag,'NM:i:');
                         if ($nm_pos != -1) {
-                            $nm = substr($tag,$nm_pos+5);
+                            $nm += substr($tag,$nm_pos+5);
                             last;
                         }
                     }
                     if ($nm_pos == -1) {
                         die 'Alignment index ' . $s[$name_col] . ' in "' . $in_filenames[$in_num] . "\" is mapped but lacks an NM tag\n$line";
                     }
-                    
                 }
                 push @s, $nm; # this will be undef for unaligned reads
 
@@ -231,20 +207,20 @@ sub execute {
                     $a[$in_num][0] = \@s;
                     $single_end_count++;
                 }
-                
+
             } # done checking each file for its next read
 
             $read_count++;
 
             last if $single_end_count;
-            
+
         } # done getting each read for a given fragment
 
 
         #
         # process the read or pair across all files..        
         #
-        
+
 
         # this is entirely to provide progress message.
         $name_count++;
@@ -255,87 +231,87 @@ sub execute {
         # sanity check
         if (
             ($paired_end1_count and $single_end_count)
-            or
+                or
             ($paired_end1_count != $paired_end2_count)
-        ) {
-           die "Odd mix of fragment and paired data for read $name, p1,p2,se: $paired_end1_count, $paired_end2_count, $single_end_count";
-        }
-
-        # find the best alignment, or the list of best alignments if there is a tie among several
-        my @best = ();
-        
-        # we may have a clear winner just by looking at number of reads mapped
-        my $best_n_reads_mapped = 0;
-        for (my $in_num=0; $in_num<$in_count; $in_num++) {
-            my $candidate = $a[$in_num]; # examine the candidate read or pair from this file
-            
-            my $n_reads_mapped = 0;
-            $n_reads_mapped++ if                        not $candidate->[0][$flag_col] & 4;
-            $n_reads_mapped++ if $paired_end1_count and not $candidate->[1][$flag_col] & 4;
-            if ($n_reads_mapped > $best_n_reads_mapped) {
-                @best = ($candidate);
-                $best_n_reads_mapped = $n_reads_mapped;
+            ) {
+            die "Odd mix of fragment and paired data for read $name, p1,p2,se: $paired_end1_count, $paired_end2_count, $single_end_count";
             }
-            elsif ($n_reads_mapped == $best_n_reads_mapped) {
-                push @best, $candidate;
-            }                
-        }
 
-        if ($best_n_reads_mapped == 0) {
-            # no reads aligned, they are all equal, just dump the first pair
-            @best = ($best[0]);
-        }
+            # find the best alignment, or the list of best alignments if there is a tie among several
+            my @best = ();
 
-        # next prefer reads where both in a pair agree on reference
-        if ($paired_end1_count and @best > 1) {
-            my @matching_refs = 
+            # we may have a clear winner just by looking at number of reads mapped
+            my $best_n_reads_mapped = 0;
+            for (my $in_num=0; $in_num<$in_count; $in_num++) {
+                my $candidate = $a[$in_num]; # examine the candidate read or pair from this file
+
+                my $n_reads_mapped = 0;
+                $n_reads_mapped++ if                        not $candidate->[0][$flag_col] & 4;
+                $n_reads_mapped++ if $paired_end1_count and not $candidate->[1][$flag_col] & 4;
+                if ($n_reads_mapped > $best_n_reads_mapped) {
+                    @best = ($candidate);
+                    $best_n_reads_mapped = $n_reads_mapped;
+                }
+                elsif ($n_reads_mapped == $best_n_reads_mapped) {
+                    push @best, $candidate;
+                }                
+            }
+
+            if ($best_n_reads_mapped == 0) {
+                # no reads aligned, they are all equal, just dump the first pair
+                @best = ($best[0]);
+            }
+
+            # next prefer reads where both in a pair agree on reference
+            if ($paired_end1_count and @best > 1) {
+                my @matching_refs = 
                 grep { $_->[0][$ref_name_col] ne '*' }               # skip pairs which agree on no reference
                 grep { $_->[0][$ref_name_col] eq $_->[1][$ref_name_col] } 
                 @best;
 
-            if (@matching_refs and @matching_refs < @best) {
-                @best = @matching_refs;
-            }
-        }
-        
-        # next look for best edit distance (NM)
-        if (@best > 1) {
-            # more than one is a top candidate looking just at alignment count
-            # look at the edit distance
-            my $best_nm_sum = 0;
-            for (my $in_num=0; $in_num<$in_count; $in_num++) {
-                my $candidate = $a[$in_num]; # examine a pair for one file
-
-                my $nm_sum = 0;
-                $nm_sum += $candidate->[0][-1]    if                        not $candidate->[0][$flag_col] & 4;
-                $nm_sum += $candidate->[1][-1]    if $paired_end1_count and not $candidate->[1][$flag_col] & 4;                
-                if ($nm_sum > $best_nm_sum) {
-                    @best = ($candidate);
-                    $best_nm_sum = $nm_sum;
+                if (@matching_refs and @matching_refs < @best) {
+                    @best = @matching_refs;
                 }
-                elsif ($nm_sum == $best_nm_sum) {
-                    push @best, $candidate;
-                }                
-            }            
-        }
+            }
 
-        # still more than one "best": select randomly
-        if (@best > 1) {
-            my $selected_n = int(rand(scalar(@best)));
-            @best = ($best[$selected_n]);
-        }
-        
-        # output the alignment or alignment pair
-        for my $alignment (@{$best[0]}) {
-            pop @$alignment;
-            print $out_fh join("\t",@$alignment),"\n";    
-        }
-        
-    } # done handling a given read name
+            # next look for best edit distance (NM)
+            if (@best > 1) {
+                # more than one is a top candidate looking just at alignment count
+                # look at the edit distance
+                my $best_nm_sum = 0;
+                for (my $in_num=0; $in_num<$in_count; $in_num++) {
+                    my $candidate = $a[$in_num]; # examine a pair for one file
 
-    for my $fh ($out_fh,@in_fh) { $fh->close };
-    return 1;
-}
+                    my $nm_sum = 0;
+                    $nm_sum += $candidate->[0][-1]    if                        not $candidate->[0][$flag_col] & 4;
+                    $nm_sum += $candidate->[1][-1]    if $paired_end1_count and not $candidate->[1][$flag_col] & 4;                
+                    if ($nm_sum > $best_nm_sum) {
+                        @best = ($candidate);
+                        $best_nm_sum = $nm_sum;
+                    }
+                    elsif ($nm_sum == $best_nm_sum) {
+                        push @best, $candidate;
+                    }                
+                }            
+            }
 
-1;
+            # still more than one "best": select randomly
+            if (@best > 1) {
+                my $selected_n = int(rand(scalar(@best)));
+                @best = ($best[$selected_n]);
+            }
+
+            # output the alignment or alignment pair
+            for my $alignment (@{$best[0]}) {
+                pop @$alignment;
+                print $out_fh join("\t",@$alignment),"\n";    
+            }
+
+        } # done handling a given read name
+
+        for my $fh ($out_fh,@in_fh) { $fh->close };
+        return 1;
+    }
+
+    1;
 

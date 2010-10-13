@@ -84,13 +84,13 @@ sub execute {
 
 sub name_and_number {
 
-    use Genome::Assembly::Pcap::Ace;
+    use Genome::Model::Tools::Pcap::Ace;
 
     my ($self,$ace_reference) = @_;
     
     my $ace_file = $self->ace_file;
     unless (-f $ace_file) {$self->error_message("could see the ace file");return;}
-    my $ao = new Genome::Assembly::Pcap::Ace(input_file => $ace_file);
+    my $ao = new Genome::Model::Tools::Pcap::Ace(input_file => $ace_file);
     
     my $ace_ref;
     my @number;

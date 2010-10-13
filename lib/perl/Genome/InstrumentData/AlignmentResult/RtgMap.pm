@@ -33,6 +33,11 @@ sub _decomposed_aligner_params {
 
     my $cpu_count = $self->_available_cpu_count;
     $aligner_params .= " -T $cpu_count";
+
+    if (!$self->instrument_data->is_paired_end || $self->force_fragment) {
+        $self->status_message("Running fragment mode.  Params were $aligner_params.  Removing an -E if it exists since that's not applicable to fragment runs.");
+        $aligner_params =~ s/-E\s?.*?\s+//g;
+    }
     
     return ('rtg_aligner_params' => $aligner_params);
 }
