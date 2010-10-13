@@ -196,26 +196,31 @@ sub execute {
     my @input_files = map{ split(',', $_) }  split(' ',$files_to_align);
 
     $self->status_message("COMMAND: $cmdline\n");
+    my $aligner_output_files = [$self->bam_file];
+    if ($self->use_version < 1.1) {
+        $aligner_output_files = [$self->sam_file];
+    }
     Genome::Utility::FileSystem->shellcmd(
                                           cmd                         => $cmdline,
                                           input_files                 => \@input_files,
-                                          output_files                => [$self->sam_file],
+                                          output_files                => $aligner_output_files,
                                           allow_zero_size_output_files => 1,
                                           skip_if_output_is_present   => 1,
                                       );
-
-    my $sam_to_bam = Genome::Model::Tools::Sam::SamToBam->execute(
-        sam_file    => $self->sam_file,
-        bam_file    => $self->bam_file,
-        ref_list    => $ref_seq_file .'.fai',
-        is_sorted   => 0,
-        index_bam   => 1,
-        fix_mate    => 1,
-        keep_sam    => 1,
-    );
-    unless ($sam_to_bam) {
-        $self->error_message('Error converting SAM file: '. $self->sam_file .' to BAM file '. $self->bam_file);
-        die($self->error_message);
+    if ($self->use_version < 1.1) {
+        my $sam_to_bam = Genome::Model::Tools::Sam::SamToBam->execute(
+            sam_file    => $self->sam_file,
+            bam_file    => $self->bam_file,
+            ref_list    => $ref_seq_file .'.fai',
+            is_sorted   => 0,
+            index_bam   => 1,
+            fix_mate    => 1,
+            keep_sam    => 1,
+        );
+        unless ($sam_to_bam) {
+            $self->error_message('Error converting SAM file: '. $self->sam_file .' to BAM file '. $self->bam_file);
+            die($self->error_message);
+        }
     }
     unless ($self->verify_aligner_successful_completion) {
         $self->error_message('Failed to verify Tophat successful completion!');
@@ -260,8 +265,11 @@ sub verify_aligner_successful_completion {
 sub output_files {
     my $self = shift;
     my @output_files;
-    for my $method (qw/aligner_output_file sam_file bam_file coverage_file junctions_file/) {
+    for my $method (qw/aligner_output_file bam_file coverage_file junctions_file/) {
         push @output_files, $self->$method;
+    }
+    if ($self->use_version < 1.1) {
+        push @output_files, $self->sam_file;
     }
     return @output_files;
 }
