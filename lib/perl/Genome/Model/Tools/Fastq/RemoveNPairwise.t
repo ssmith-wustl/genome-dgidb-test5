@@ -16,7 +16,7 @@ $dir or die "Failed to create temp directory!";
 
 my $cmd = Genome::Model::Tools::Fastq::RemoveNPairwise->create(forward_fastq=>$fwd_fastq,
                                                                 reverse_fastq=>$rev_fastq,
-                                                                foward_n_removed_file=>$dir . "/nf.txt",
+                                                                forward_n_removed_file=>$dir . "/nf.txt",
                                                                 reverse_n_removed_file=>$dir . "/nr.txt",
                                                                 singleton_n_removed_file=>$dir . "/ns.txt",
                                                                 cutoff=>5);
