@@ -35,10 +35,12 @@ class  Genome::Model::Tools::Soap::RunFastaToAgpScript {
 };
 
 sub help_brief {
+    'Tool to run fasta2agp script for soap PGA assemblies';
 }
 
 sub help_detail {
     return <<"EOS"
+gmt soap run-fasta-to-agp-script --version 9.27.10 --scaffold_fasta_file /gscmnt/111/soap_assembly/SRA111_WUGC.scafSeq --scaffold-size-cutoff 100 --output-file-prefix SRA111_WUGC --output-dir  /gscmnt/111/soap_assembly/PGA
 EOS
 }
 

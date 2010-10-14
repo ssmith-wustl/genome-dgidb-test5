@@ -43,6 +43,24 @@ class Genome::ProcessingProfile::Somatic{
         sniper_params => {
             doc => "Parameters to pass to bam-somaticsniper for detecting snps and indels",
         },
+        snv_detector_name => {
+            doc => "The name of the variant detector to use for snv detection",
+        },
+        snv_detector_version => {
+            doc => "The version of the variant detector to use for snv detection",
+        },
+        snv_detector_params => {
+            doc => "The params to pass to the variant detector to use for snv detection",
+        },
+        indel_detector_name => {
+            doc => "The name of the variant detector to use for indel detection",
+        },
+        indel_detector_version => {
+            doc => "The version of the variant detector to use for indel detection",
+        },
+        indel_detector_params => {
+            doc => "The params to pass to the variant detector to use for indel detection",
+        },
         bam_readcount_version => {
             doc => "Version to use for bam-readcount in the high confidence step.",
         },
