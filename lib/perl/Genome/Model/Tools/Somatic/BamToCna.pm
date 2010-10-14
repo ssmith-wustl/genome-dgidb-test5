@@ -342,9 +342,15 @@ sub plot_output {
         bitmap('$Routfile', height = 8.5, width=11, res=200);
         par(mfrow=c(4,6));
         x=read.table('$datafile',comment.char='#',header=TRUE);
-        for (i in c($chr_list)) {y=subset(x,CHR==i); plot(y\$POS,y\$DIFF,main=paste('chr.',i),xlab='mb',ylab='cn',type='p',col=rgb(0,0,0),pch='.',ylim=c(-4,4))};
+        for (i in c($chr_list)) {
+            y=subset(x,CHR==i); 
+            plot(y\$POS/1000000,y\$DIFF,main=paste('chr.',i),xlab='mb',ylab='cn',type='p',col=rgb(0,0,0),pch='.',ylim=c(-4,4),cex.axis=0.9,xaxt="n"); 
+            par(cex.axis=0.9); 
+            axis(1,at=c(0,floor(max(y\$POS/1000000)/2),floor(max(y\$POS/1000000))));
+        }
         dev.off();
-    });
+    }
+    );
 $R->stopR();
 chdir $cwd; 
 }
