@@ -4,7 +4,7 @@
 
   <xsl:template name="genome_instrumentdata_solexa_quality" match="/report">
     <xsl:comment>file: html/quality/genome_instrumentdata_solexa.xsl name:genome_instrumentdata_solexa_quality</xsl:comment>
-    <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
+    <script type="text/javascript" src="/res/js/pkg/protovis-r3.1.js"></script>
     <script type="text/javascript" src="/res/js/app/quality/genome_instrumentdata_solexa_bar.js"></script>
     <script type="text/javascript" src="/res/js/app/quality/genome_instrumentdata_solexa_candlestick.js"></script>
 
@@ -40,21 +40,13 @@
     </script>
 
     <style type="text/css" media="screen">
-      div.graph_placeholder {
-      width: 100%;
-      height: 480px;
-      margin-bottom: 20px;
-      margin-left: -2%;
-      clear: both;
-      }
 
       div.content_padding {
       padding: 0 10px 20px 10px;
       }
 
       div.graph_block {
-      width: 48%;
-      margin-left: 2%;
+      width: 460px;
       float: left;
       }
 
@@ -84,122 +76,166 @@
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'Instrument Data Solexa:'" />
-      <xsl:with-param name="display_name" select="@id" />
+      <xsl:with-param name="label_name" select="'Instrument Data Quality:'" />
+      <xsl:with-param name="display_name" select="//instrument-data-info/id" />
       <xsl:with-param name="icon" select="'genome_instrumentdata_32'" />
     </xsl:call-template>
 
     <div class="content rounded shadow">
       <div class="container">
+        <div class="box rounded">
+          <div style="width: 49%; margin-right; 2%; display: inline-block">
+            <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
+              <tr>
+                <td class="name">instrument data ID:</td>
+                <td class="value"><xsl:value-of select="//instrument-data-info/id"/></td>
+              </tr>
+
+              <tr>
+                <td class="name">flow cell ID:</td>
+                <td class="value"><xsl:value-of select="//report/@flow_cell_id"/> (lane <xsl:value-of select="//report/@lane"/>)</td>
+              </tr>
+
+              <tr>
+                <td class="name">platform:</td>
+                <td class="value"><xsl:value-of select="//instrument-data-info/sequencing-platform"/></td>
+              </tr>
+
+              <tr>
+                <td class="name">run name:</td>
+                <td class="value"><xsl:value-of select="//instrument-data-info/run-name"/></td>
+              </tr>
+
+              <tr>
+                <td class="name">library name:</td>
+                <td class="value"><xsl:value-of select="//instrument-data-info/library-name"/></td>
+              </tr>
+
+
+            </table>
+          </div>
+
+          <div style="width: 49%; display: inline-block;">
+            <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
+              <tr>
+                <td class="name">sample name:</td>
+                <td class="value"><xsl:value-of select="//instrument-data-info/sample-name"/></td>
+              </tr>
+
+              <tr>
+                <td class="name">subset name:</td>
+                <td class="value"><xsl:value-of select="//instrument-data-info/subset-name"/></td>
+              </tr>
+
+              <tr>
+                <td class="name">analysis version:</td>
+                <td class="value"><xsl:value-of select="//report/@analysis_software_version"/></td>
+              </tr>
+
+              <tr>
+                <td class="name">read length:</td>
+                <td class="value"><xsl:value-of select="//report/@read_length"/></td>
+              </tr>
+
+              <tr>
+                <td class="name">clusters:</td>
+                <td class="value"><xsl:value-of select="format-number(//report/@clusters, '###,###,###')"/></td>
+              </tr>
+
+            </table>
+
+          </div>
+        </div>
+
+
         <div class="span-24 last">
-          <table cellpadding="0" cellspacing="0" border="0" class="info_table_group">
-            <tr>
-              <td>
-                <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-                  <colgroup>
-                    <col/>
-                    <col width="100%"/>
-                  </colgroup>
-                  <tr><td class="label">ID:</td><td class="value"><xsl:value-of select="//instrument-data-info/id"/></td></tr>
-                  <tr><td class="label">Sequencing Platform:</td><td class="value"><xsl:value-of select="//instrument-data-info/sequencing-platform"/></td></tr>
-                  <tr><td class="label">Run Name:</td><td class="value"><xsl:value-of select="//instrument-data-info/run-name"/></td></tr>
-                </table>
-              </td>
-              <td>
-                <table border="0" cellpadding="0" cellspacing="0" class="info_table" width="100%">
-                  <colgroup>
-                    <col/>
-                    <col width="100%"/>
-                  </colgroup>
-                  <tr><td class="label">Subset Name:</td><td class="value"><xsl:value-of select="//instrument-data-info/subset-name"/></td></tr>
-                  <tr><td class="label">Sample Name:</td><td class="value"><xsl:value-of select="//instrument-data-info/sample-name"/></td></tr>
-                  <tr><td class="label">Library Name:</td><td class="value"><xsl:value-of select="//instrument-data-info/library-name"/></td></tr>
+          <div class="box_header span-24 last rounded-top">
+            <div class="box_title"><h3 class="nontyped span-24 last">
+              Quality Stats and Nucleotide Distribution <span style="font-size: 75%; color: #666">(hover over columns for details)</span>
+            </h3></div>
+          </div>
+          <div class="box_content rounded-bottom span-24 last">
+            <div style="background-color: #FFF; padding: 15px;float:left;border-bottom: 1px solid #acaca3;margin-bottom:10px;">
+              <xsl:for-each select="//quality-stats/read-set">
+                <div class="graph_block">
+                  <h3><xsl:value-of select="@read-set-name"/> quality stats</h3>
+                  <table cellpadding="0" cellspacing="0" border="0" class="key">
+                    <tr>
+                      <td class="title">Legend:</td>
 
-                </table>
-              </td>
-            </tr>
-          </table>
+                      <td class="graphic" style="background-color: #d2d0a5;"></td>
+                      <td class="value">whiskers</td>
 
-          <h2 class="report_section">Quality Stats and Nucleotide Distribution <span style="font-size: 75%; color: #666">(hover over columns for details)</span></h2>
-          <xsl:for-each select="//quality-stats/read-set">
-            <div class="graph_placeholder">
-              <div class="graph_block">
-                <h3><xsl:value-of select="@read-set-name"/> quality stats</h3>
-                <table cellpadding="0" cellspacing="0" border="0" class="key">
-                  <tr>
-                    <td class="title">Legend:</td>
+                      <td class="graphic" style="background-color: #60604b;"></td>
+                      <td class="value">high/low quartiles</td>
 
-                    <td class="graphic" style="background-color: #d2d0a5;"></td>
-                    <td class="value">whiskers</td>
+                      <td class="graphic" style="background-color: #f3b028;"></td>
+                      <td class="value">med. quartile</td>
+                    </tr>
+                  </table>
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td valign="middle">
+                        <img src="/res/img/legacy/axis_label_v_quality_sm.png" width="17" height="44" alt="Quality"/>
+                      </td>
+                      <td>
+                        <script type="text/javascript">
+                          render_candlestick_graph(<xsl:value-of select="@read-set-name"/>_data, 385, 400);
+                        </script>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td></td>
+                      <td><div align="center"><img src="/res/img/legacy/axis_label_h_col_count.png" width="93" height="16" alt="Cycle/Column"/></div></td>
+                    </tr>
+                  </table>
+                </div>
 
-                    <td class="graphic" style="background-color: #60604b;"></td>
-                    <td class="value">high/low quartiles</td>
+                <div class="graph_block" style="">
+                  <h3><xsl:value-of select="@read-set-name"/> nucleotide distribution</h3>
+                  <table cellpadding="0" cellspacing="0" border="0" class="key">
+                    <tr>
+                      <td class="title">Legend:</td>
 
-                    <td class="graphic" style="background-color: #f3b028;"></td>
-                    <td class="value">med. quartile</td>
-                  </tr>
-                </table>
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td valign="middle">
-                      <img src="/resources/report_resources/apipe_dashboard/images/axis_label_v_quality_sm.png" width="17" height="44" alt="Quality"/>
-                    </td>
-                    <td>
-                      <script type="text/javascript">
-                        render_candlestick_graph(<xsl:value-of select="@read-set-name"/>_data, 385, 400);
-                      </script>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td><div align="center"><img src="/resources/report_resources/apipe_dashboard/images/axis_label_h_col_count.png" width="93" height="16" alt="Cycle/Column"/></div></td>
-                  </tr>
-                </table>
-              </div>
+                      <td class="graphic" style="background-color: #7d598c;"></td>
+                      <td class="value">A</td>
 
-              <div class="graph_block">
-                <h3><xsl:value-of select="@read-set-name"/> nucleotide distribution</h3>
-                <table cellpadding="0" cellspacing="0" border="0" class="key">
-                  <tr>
-                    <td class="title">Legend:</td>
+                      <td class="graphic" style="background-color: #bb4250;"></td>
+                      <td class="value">C</td>
 
-                    <td class="graphic" style="background-color: #7d598c;"></td>
-                    <td class="value">A</td>
+                      <td class="graphic" style="background-color: #90c86f;"></td>
+                      <td class="value">G</td>
 
-                    <td class="graphic" style="background-color: #bb4250;"></td>
-                    <td class="value">C</td>
+                      <td class="graphic" style="background-color: #f6c460;"></td>
+                      <td class="value">T</td>
 
-                    <td class="graphic" style="background-color: #90c86f;"></td>
-                    <td class="value">G</td>
+                      <td class="graphic" style="background-color: #999;"></td>
+                      <td class="value">N</td>
 
-                    <td class="graphic" style="background-color: #f6c460;"></td>
-                    <td class="value">T</td>
+                    </tr>
+                  </table>
 
-                    <td class="graphic" style="background-color: #999;"></td>
-                    <td class="value">N</td>
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td>
+                        <script type="text/javascript">
+                          render_bar_graph(<xsl:value-of select="@read-set-name"/>_data, 385, 400);
+                        </script>
+                      </td>
+                      <td valign="middle">
+                        <img src="/res/img/legacy/axis_label_v_read_count.png" width="13" height="71" alt="Read Count"/>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div align="center"><img src="/res/img/legacy/axis_label_h_col_count.png" width="93" height="16" alt="Cycle/Column"/></div></td>
+                      <td></td>
+                    </tr>
+                  </table>
+                </div>
 
-                  </tr>
-                </table>
-
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td>
-                      <script type="text/javascript">
-                        render_bar_graph(<xsl:value-of select="@read-set-name"/>_data, 385, 400);
-                      </script>
-                    </td>
-                    <td valign="middle">
-                      <img src="/resources/report_resources/apipe_dashboard/images/axis_label_v_read_count.png" width="13" height="71" alt="Read Count"/>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td><div align="center"><img src="/resources/report_resources/apipe_dashboard/images/axis_label_h_col_count.png" width="93" height="16" alt="Cycle/Column"/></div></td>
-                    <td></td>
-                  </tr>
-                </table>
-              </div>
+              </xsl:for-each>
             </div>
-          </xsl:for-each>
+          </div>
         </div>
       </div>
     </div>

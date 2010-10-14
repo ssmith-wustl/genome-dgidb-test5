@@ -57,8 +57,6 @@ sub _generate_content {
     $rnode->addChild( $doc->createAttribute("flow_cell_id", $subject->flow_cell_id) );
     $rnode->addChild( $doc->createAttribute("library_name", $subject->library_name) );
 
-    $DB::single = 1;
-
     return $doc->toString(1);
 
 }
