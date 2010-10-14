@@ -79,8 +79,6 @@ sub execute {
     $start_params{server_dispatch} = $self->server_dispatch if ($self->server_dispatch);
 
     my @models = $self->models;
-    my $model_count = scalar(@models);
-    my $failed_count = 0;
     my @errors;
     for my $model (@models) {
         if (!$self->force && $model->running_builds) {
@@ -108,24 +106,11 @@ sub execute {
             next;
         }
     }
-    for my $error (@errors) {
-        $self->status_message($error);
-    }
-    if ($model_count > 1) {
-        $self->status_message("Stats:");
-        $self->status_message(" Started: " . ($model_count - $failed_count));
-        $self->status_message("  Errors: " . $failed_count);
-        $self->status_message("   Total: " . $model_count);
-    }
 
-    if (@errors) {
-        return;
-    }
-    else {
-        return 1;
-    }
+    $self->display_summary_report(scalar(@models), @errors);
+
+    return !scalar(@errors);
 }
-
 
 1;
 
