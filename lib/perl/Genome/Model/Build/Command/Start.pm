@@ -81,29 +81,37 @@ sub execute {
     my @models = $self->models;
     my @errors;
     for my $model (@models) {
-        if (!$self->force && $model->running_builds) {
-            $self->error_message("Model (".$model->name.") already has running builds. Use the '--force' param to override this and start a new build.");
-            push @errors, $self->error_message;
-            next;
-        }
-        my $build = Genome::Model::Build->create(model_id => $model->id, %create_params);
-        unless ($build) {
-            $self->error_message("Could not create build for model (".$model->name.".");
-            push @errors, $self->error_message;
-            next;
-        }
-        my @builds = $self->builds;
-        push @builds, $build;
-        $self->builds(\@builds);
-        my $rv = eval {$build->start(%start_params)};
-        if ($rv) {
+        $self->status_message("Trying to start " . $model->__display_name__ . "...");
+        my $transaction = UR::Context::Transaction->begin();
+        my $build = eval {
+            if (!$self->force && $model->running_builds) {
+                die $self->error_message("Model (".$model->name.", ID: ".$model->id.") already has running builds. Use the '--force' param to override this and start a new build.");
+            }
+
+            my $build = Genome::Model::Build->create(model_id => $model->id, %create_params);
+            unless ($build) {
+                die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
+            }
+
+            # Record newly created build so other tools can access them.
+            # TODO: should possibly be part of the object class
+            my @builds = $self->builds;
+            push @builds, $build;
+            $self->builds(\@builds);
+
+            my $build_started = $build->start(%start_params);
+            unless ($build_started) {
+                die $self->error_message("Failed to start build (" . $build->__display_name__ . "): $@.");
+            }
+            return $build;
+        };
+        if ($build) {
             $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
+            $transaction->commit;
         }
         else {
-            $failed_count++;
-            $self->error_message("Failed to start build (" . $build->__display_name__ . "): $@.");
-            push @errors, $self->error_message;
-            next;
+            push @errors, $model->__display_name__ . ": " . $@;
+            $transaction->rollback;
         }
     }
 
