@@ -97,7 +97,7 @@ sub create_aligner_tool {
     }
 
     
-    my $reference_build = $self->model->reference_build;
+    my $reference_build = $self->model->reference_sequence_build;
     my $aligner_params = $self->model->read_aligner_params || '';
     my $read_1_fastq_list = join(',',@left_reads);
     my $read_2_fastq_list = join(',',@right_reads);

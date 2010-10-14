@@ -751,7 +751,9 @@ sub add_model_to_default_modelgroups {
             }
         }
 
-        $model_group->assign_models($model);
+        unless(grep($_ eq $model, $model_group->models)) {
+            $model_group->assign_models($model);
+        }
     }
 
     return 1;

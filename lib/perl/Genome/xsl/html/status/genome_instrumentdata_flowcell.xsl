@@ -213,9 +213,7 @@ window.chartMin = 0;
               <xsl:when test="count(//instrument-data) > 0">
                 <xsl:for-each select="//instrument-data">
                   <xsl:sort select="@subset_name" data-type="text" order="ascending"/>
-
                   <xsl:call-template name="genome_instrumentdata_flowcell_lanes_table_row"/>
-
                 </xsl:for-each>
               </xsl:when>
               <xsl:otherwise>

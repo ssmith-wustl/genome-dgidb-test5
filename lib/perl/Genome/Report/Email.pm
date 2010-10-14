@@ -8,6 +8,7 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 use Mail::Sender;
+use Email::Valid;
 
 class Genome::Report::Email {
 };
@@ -110,7 +111,13 @@ sub _validate_email_address_string {
     }
 
     for my $addy ( split(',', $address_string) ) {
-        unless ( $addy =~ m#^\w[\w\d]*\@(\w[\w\d]*\.)+(com|edu|net|info)$# ) {
+        my $valid_addy = eval {
+            Email::Valid->address(
+                -address => $addy,
+                -mxcheck => 1,
+            );
+        };
+        unless ( $valid_addy ) {
             $class->error_message("Error in *$type* email address: $addy");
             return;
         }

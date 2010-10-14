@@ -22,6 +22,12 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
         is_optional => 1,
         doc => "Output file. Assumes STDOUT if not specified",
     },
+    assembly_format => {
+    	type => 'Boolean',
+    	is_optional => 1,
+    	default => 0,
+    	doc => "input file is assembly format",
+    },    
     span => {
     	type => 'Integer',
     	is_optional => 1,
@@ -29,13 +35,13 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
     	doc => "The region to be spanned",
     },
     exclude_non_canonical_sites => {
-        type => 'Bool',
+        type => 'Boolean',
         is_optional => 1,
         default => 1,
         doc => "whether or not to remove sites on the mitochondria or non-chromosomal contigs",
     },
     include_y => {
-        type => 'Bool',
+        type => 'Boolean',
         is_optional => 1,
         default => 1,
         doc => "whether or not to include sites on the Y chromosome in the output",
@@ -147,6 +153,16 @@ sub execute {
     while(my $line = $input_fh->getline) {
         next if $line =~ /^#/;  #skip comments
         chomp $line;
+
+	if($self->assembly_format) {
+	    my @list = split(/\t/,$line); 
+	    my @sub_list = @list[1 .. 6];
+	    my $new_col = join(".",@sub_list);
+	    $line = "$new_col\t".$line;
+	}
+
+
+
         #my ($id,$chr1,$outer_start,$inner_start,$chr2,$inner_end,$outer_end,$type,$orient, $minsize) = split /\s+/, $line;
 		my ($id, )=split("\t", $line);
 		my ($chr1,$outer_start,$inner_start,$chr2,$inner_end,$outer_end) = ($id =~ /(\S+)\.(-*\d+)\.(-*\d+)\.(\S+)\.(-*\d+)\.(-*\d+)/);    

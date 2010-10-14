@@ -50,6 +50,7 @@ my $cmd = Genome::InstrumentData::Command::Import::Genotype->create(
     source_data_file => $source_data_file,
     allocation =>  $tmp_allocation,
     define_model => 1,
+    sequencing_platform => "unit test industries",
 );
 
 ok($cmd, "constructed an import command");
