@@ -51,11 +51,18 @@
       }
 
       table.key {
+      margin: 0;
+      padding: 0;
+      }
 
+      table.key td {
+      margin: 0;
+      padding: 0;
       }
 
       table.key td.title{
-      font-size: 83%;
+      font-size: 10px;
+      line-height: 10px;
       font-weight: bold;
       padding-right: 10px;
       }
@@ -63,10 +70,13 @@
       table.key td.graphic {
       width: 12px;
       height: 12px;
+      padding 0;
+      margin: 0;
       }
 
       table.key td.value {
-      font-size: 83%;
+      font-size: 10px;
+      line-height: 10px;
       padding-left: 3px;
       padding-right: 10px;
       }
