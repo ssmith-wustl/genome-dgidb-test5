@@ -651,6 +651,27 @@ sub _unique_elements {
     return @unique;
 }
 
+sub display_summary_report {
+    my ($self, $total_count, @errors) = @_;
+
+    if (@errors) {
+        $self->status_message("\n\nError Summary:");
+        for my $error (@errors) {
+            ($error) = split("\n", $error);
+            $error =~ s/\ at\ \/.*//;
+            $self->status_message("* ".$error);
+        }
+    }
+
+    if ($total_count > 1) {
+        my $error_count = scalar(@errors);
+        $self->status_message("\n\nCommand Summary:");
+        $self->status_message(" Started: " . ($total_count - $error_count));
+        $self->status_message("  Errors: " . $error_count);
+        $self->status_message("   Total: " . $total_count);
+    }
+}
+
 1;
 
 #$HeadURL$
