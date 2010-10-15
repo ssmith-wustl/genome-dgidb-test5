@@ -210,7 +210,7 @@ sub _resolve_param_value_via_related_class_method {
                 }
                 $method_choices .= (scalar(@methods) + 1) . ": none\n";
                 $method_choices .= "Which method would you like to use?";
-                my $response = $self->_ask_user_question($method_choices, 300, '\d+', 1, '#');
+                my $response = $self->_ask_user_question($method_choices, 0, '\d+', 1, '#');
                 if ($response =~ /^\d+$/) {
                     $response--;
                     if ($response == @methods) {
@@ -234,7 +234,7 @@ sub _resolve_param_value_via_related_class_method {
             }
             unless($SEEN_FROM_CLASS{$from_class}) {
                 #$self->debug_message("Trying to find $via_class via $from_class->$method...");
-                @results = $self->resolve_param_value_from_text($param_arg, $from_class, $method);
+                @results = eval {$self->resolve_param_value_from_text($param_arg, $from_class, $method)};
             }
         } # END for my $from_class (@from_classes)
     } # END if ($via_class)
@@ -281,7 +281,7 @@ sub _get_user_verification_for_param_value {
 
     my $n_list = scalar(@list);
     if ($n_list > 20 && !$ENV{GENOME_NO_REQUIRE_USER_VERIFY}) {
-        my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s), (p)roceed, or e(x)it?", 300, '[v]|p|x', 'v');
+        my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s), (p)roceed, or e(x)it?", 0, '[v]|p|x', 'v');
         if(!$response || $response eq 'x') {
             $self->status_message("Exiting...");
             exit;
@@ -344,7 +344,7 @@ sub _get_user_verification_for_param_value_drilldown {
             $pretty_values .= ', (b)ack';
             $valid_values .= '|b';
         }
-        $response = $self->_ask_user_question("Confirmation or trimming required...", 300, $valid_values, 'h', $pretty_values.', or specify items to use');
+        $response = $self->_ask_user_question("Confirmation or trimming required...", 0, $valid_values, 'h', $pretty_values.', or specify items to use');
         if (lc($response) eq 'h' || !$self->_validate_user_response_for_param_value_verification($response)) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .=
@@ -621,19 +621,20 @@ sub resolve_class_and_params_for_argv {
 sub _ask_user_question {
     my $self = shift;
     my $question = shift;
-    my $timeout = shift || 60;
+    my $timeout = shift;
     my $valid_values = shift || "yes|no";
     my $default_value = shift || undef;
     my $pretty_valid_values = shift || $valid_values;
     $valid_values = lc($valid_values);
     my $input;
+    $timeout = 60 unless(defined($timeout));
     eval {
         local $SIG{ALRM} = sub { print STDERR "Exiting, failed to reply to question '$question' within '$timeout' seconds.\n"; exit; };
         print STDERR "$question\n";
         print STDERR "Please reply with $pretty_valid_values: ";
-        alarm($timeout);
+        alarm($timeout) if ($timeout);
         chomp($input = <STDIN>);
-        alarm(0);
+        alarm(0) if ($timeout);
     };
     print STDERR "\n";
 
