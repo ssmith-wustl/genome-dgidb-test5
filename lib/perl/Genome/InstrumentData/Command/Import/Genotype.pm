@@ -43,7 +43,6 @@ my %properties = (
     sequencing_platform => {
         is => 'Text',
         doc => 'sequencing platform of import data, like solexa',
-        is_optional => 1,
     },
     description  => {
         is => 'Text',

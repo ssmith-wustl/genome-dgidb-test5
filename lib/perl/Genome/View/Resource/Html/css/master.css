@@ -377,7 +377,6 @@ table.name-value-row td.value {
 /* lister */
 table.lister {
     margin-bottom: 1em;
-    border-bottom: 2px solid #CDCDCD
 }
 
 table.lister thead tr th {
@@ -848,6 +847,7 @@ div.cache_info div.cache_time p {
     font-size: 10px;
     line-height: 12px;
     margin-top: 4px;
+    text-shadow: #23231d 0 0 2px;
 }
 
 div.cache_info div.cache_time {

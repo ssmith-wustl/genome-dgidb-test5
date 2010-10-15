@@ -56,7 +56,12 @@ class Genome::Model::Tools::Picard {
             doc => 'Any additional parameters to pass to the JVM',
             is_optional => 1,
         },
-        
+        create_md5_file => {
+            is => 'Boolean',
+            is_optional => 1,
+            doc => 'Whether to create an MD5 digest for any BAM files created.',
+            default_value => 0,
+        },
         #These parameters are mainly for use in pipelines
         _monitor_command => {
             is => 'Boolean',
@@ -156,8 +161,10 @@ sub run_java_vm {
     my $java_vm_cmd = 'java -Xmx'. $self->maximum_memory .'g -XX:MaxPermSize=' . $self->maximum_permgen_memory . 'm ' . $jvm_options . ' -cp '. $cmd;
     $java_vm_cmd .= ' VALIDATION_STRINGENCY='. $self->validation_stringency;
     $java_vm_cmd .= ' TMP_DIR='. $self->temp_directory;
-    
-    if($self->log_file) {
+    if ($self->create_md5_file) {
+        $java_vm_cmd .= ' CREATE_MD5_FILE=TRUE';
+    }
+    if ($self->log_file) {
         $java_vm_cmd .= ' >> ' . $self->log_file;
     }
     
