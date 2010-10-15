@@ -14,8 +14,6 @@ class Genome::InstrumentData::AlignmentResult::Mblastx {
 	has          => [
 		_max_read_id_seen  => { default_value => 0,       is_optional => 1 },
 		_file_input_option => { default_value => 'fasta', is_optional => 1 },
-	     mhashgen_format => { is => 'Text', valid_values=>["K","N"]},
-	     output_files => {is => 'Text', is_optional => 1}
 	]
 };
 

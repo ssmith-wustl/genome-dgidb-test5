@@ -11,6 +11,7 @@ class Genome::InstrumentData::Command::Align::Mblastx {
     ],
     has_param => [
         version       => { default_value => '1.01' },
+        mhashgen_format => { is => 'Text', valid_values=>["K","N"]},
     ],
     doc => 'align instrument data using MCW mblastx',
 };
