@@ -1,5 +1,3 @@
-#:eclark Code should be ported out of the old MG namespace into this file if it is still used.
-
 package Genome::Model::Tools::Graph::MutationDiagram;
 
 use strict;
