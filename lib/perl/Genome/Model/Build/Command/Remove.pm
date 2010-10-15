@@ -26,13 +26,8 @@ sub help_detail {
     "This command will remove a build from the system.  The rest of the model remains the same, as does independent data like alignments.";
 }
 
-sub _limit_results_for_builds {
+sub _remove_builds_with_errors {
     my ($self, @builds) = @_;
-
-    $self->status_message("Found ".scalar(@builds)." build matching your argument.");
-
-    # Run Genome::Model::Build::Command::Base's _limit_results_for_builds
-    @builds = $self->SUPER::_limit_results_for_builds(@builds);
 
     $self->status_message("Checking ".scalar(@builds)." for errors prior to removal. This is a slow process...");
     my @error_builds;
@@ -45,7 +40,7 @@ sub _limit_results_for_builds {
         my @errors = $build->__errors__;
         # no need to check instrument data if build already has errors
         unless (@errors) {
-            push @errors, map { $_->__errors__ } $build->instrument_data_assignments;
+            push @errors, map { $_->__errors__ } $build->instrument_data;
         }
 
         if (@errors) {
@@ -60,16 +55,19 @@ sub _limit_results_for_builds {
             "cannot remove this build!\nErrors like \"There is no instrument data...\" mean the build ".
             "deals with expunged data. Contact apipe!\n".
             "The builds are:\n".
-            join("\n", map { $_->__display_name__ } @error_builds));
+            join("\n", map { $_->__display_name__ } @error_builds)."\n".
+            "These builds have been removed from the list, running on any remaining builds.");
     }
     @builds = @error_free_builds;
 
     return @builds;
 }
+
 sub execute {
     my $self = shift;
 
     my @builds = $self->builds;
+    @builds = $self->_remove_builds_with_errors(@builds);
     my $build_count = scalar(@builds);
     my $failed_count = 0;
     my @errors;

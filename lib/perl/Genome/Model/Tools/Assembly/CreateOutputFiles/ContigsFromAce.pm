@@ -72,16 +72,15 @@ sub execute {
     }
 
     #make intermediated unsorted bases and qual files
-    #return empty hash ref if no complemented contigs
-    my $complemented_contigs;
-    unless ($complemented_contigs = $self->_get_fasta_qual_from_ace()) {
-	$self->error_message("Failed to get extrace fasta and qual from ace");
-	return;
+    unless ( $self->_get_fasta_qual_from_ace ) {
+    	$self->error_message("Failed to get extrace fasta and qual from ace");
+    	return;
     }
+
     #sort and print contigs bases and qual files
-    unless ($self->_sort_contigs_files($complemented_contigs)) {
-	$self->error_message("Failed to sort contigs fasta and qual files");
-	return;
+    unless ( $self->_sort_contigs_files ) {
+    	$self->error_message("Failed to sort contigs fasta and qual files");
+    	return;
     }
 
     #remove intermediate files
@@ -91,7 +90,8 @@ sub execute {
 }
 
 sub _sort_contigs_files {
-    my ($self, $complemented_contigs) = @_;
+    #my ($self, $complemented_contigs) = @_;
+    my $self = shift;
 
     #get fasta and qual file seek positioon
     my $fpos = $self->seek_pos_from_contigs_file($self->_int_fasta_out, 'fasta');
@@ -124,24 +124,9 @@ sub _sort_contigs_files {
 	my $qbo = $self->_get_bio_obj($self->_int_qual_out, 'qual', $q_seek_pos);
 
 	unless ($fbo->primary_id eq $qbo->primary_id) {
-	    $self->error_message("Fasta and quality objects are not from the same reads:\n\t".
+	    $self->error_message("Fasta and quality objects are not from the same contigs:\n\t".
 				 "got from fasta: ".$fbo->primary_id." from quality ".$qbo->primary_id);
 	    return;
-	}
-
-	if (exists $complemented_contigs->{$fbo->primary_id}) {
-	    my $uncomp_fasta = $self->_uncomplement_fasta($fbo->seq);
-	    unless ($uncomp_fasta) {
-		$self->error_message("Failed to uncomplement fasta");
-		return;
-	    }
-	    my $uncomp_qual = $self->_uncomplement_quality($qbo->qual);
-	    unless ($uncomp_qual) {
-		$self->error_message("Failed to uncomplement quality");
-		return;
-	    }
-	    $fbo->seq($uncomp_fasta);
-	    $qbo->qual($uncomp_qual);
 	}
 
 	$f_io->write_seq($fbo);
@@ -189,7 +174,6 @@ sub _get_fasta_qual_from_ace {
     my $is_qual = 0;
     my $contig_name;
     my $base_line_count = 0;
-    my %complemented_contigs;
     my $comp; #Complemented or uncomplemented
     #this is a bit ugly .. just parsing through ace file line by line
     #and getting consensus fastas and quals
@@ -199,7 +183,6 @@ sub _get_fasta_qual_from_ace {
 	chomp $line;
 	if ($line =~ /^CO\s+/) {
 	    ($contig_name, $comp) = $line =~ /^CO\s+(\S+)\s+\d+\s+\d+\s+\d+\s+(\w)/;
-	    $complemented_contigs{$contig_name} = 1 if $comp eq 'C';
 	    $fasta_fh->print (">$contig_name\n");
 	    $is_fasta = 1;
 	    next;
@@ -217,7 +200,7 @@ sub _get_fasta_qual_from_ace {
 	    foreach my $base (@bases) {
 		if ($base =~ /^[acgtxn]$/i) {
 		    $base_line_count++;
-		    $fasta_fh->print ($base);
+		    $fasta_fh->print (uc $base);
 		    if ($base_line_count == 60) {
 			$fasta_fh->print ("\n");
 			$base_line_count = 0;
@@ -254,21 +237,7 @@ sub _get_fasta_qual_from_ace {
     $fasta_fh->close;
     $qual_fh->close;
     
-    #return 1;
-    return \%complemented_contigs;
-}
-
-sub _uncomplement_fasta {
-    my ($self, $seq) = @_;
-    $seq = reverse($seq);
-    $seq =~ tr/acgtACGT/tgcaTGCA/;
-    return $seq;
-}
-
-sub _uncomplement_quality {
-    my ($self, $qual) = @_;
-    @$qual = reverse @$qual;
-    return $qual;
+    return 1;
 }
 
 1;

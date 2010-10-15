@@ -67,7 +67,6 @@ sub lane_info {
     my @lanes_info;
 
     for my $lane ($self->lanes) {
-
         my %lane_info;
 
         my @fs_ids = GSC::Sequence::ItemFile->get( seq_id => $lane->seq_id );
@@ -88,6 +87,9 @@ sub lane_info {
         $lane_info{lane_reports} = [ @lane_reports ];
 
         push(@lanes_info, \%lane_info);
+
+
+
 
     }
 

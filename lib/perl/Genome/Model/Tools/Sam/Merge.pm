@@ -13,42 +13,54 @@ use Genome::Utility::AsyncFileSystem qw(on_each_line);
 class Genome::Model::Tools::Sam::Merge {
     is  => 'Genome::Model::Tools::Sam',
     has => [
-    files_to_merge => {
-        is  => 'List',
-        doc => 'The bam files to merge ',
-    },
-    merged_file => {
-        is  => 'String',
-        doc => 'The resulting merged file',
-    },
-    file_type => {
-        is  => 'String',
-        doc => 'BAM or SAM.  Default is BAM.',
-        default_value => 'BAM',
-    },
-    is_sorted => {
-        is  => 'Integer',
-        doc => 'Denoting whether the input data is chrom position sorted (1/0)  Default 0',
-        default_value => 0,
-        is_optional => 1
-    },
-    software => {
-        is => 'Text',
-        default_value => 'picard',
-        valid_values => ['picard', 'samtools'],
-        doc => 'the software tool to use for merging BAM files.  defualt_value=>picard',
-    },
-    bam_index => {
-        is  => 'Boolean',
-        doc => 'flag to create bam index or not',
-        is_optional   => 1,
-        default_value => 1,
-    },
-    use_picard_version => {
-        is => 'String',
-        doc => 'version of picard to use if "picard" was used for the --software option',
-        is_optional => 1,
-    },
+        files_to_merge => {
+            is  => 'List',
+            doc => 'The bam files to merge ',
+        },
+        merged_file => {
+            is  => 'String',
+            doc => 'The resulting merged file',
+        },
+        file_type => {
+            is  => 'String',
+            doc => 'BAM or SAM.  Default is BAM.',
+            default_value => 'BAM',
+        },
+        is_sorted => {
+            is  => 'Integer',
+            doc => 'Denoting whether the input data is chrom position sorted (1/0)  Default 0',
+            default_value => 0,
+            is_optional => 1
+        },
+        software => {
+            is => 'Text',
+            default_value => 'picard',
+            valid_values => ['picard', 'samtools'],
+            doc => 'the software tool to use for merging BAM files.  defualt_value=>picard',
+        },
+        bam_index => {
+            is  => 'Boolean',
+            doc => 'flag to create bam index or not',
+            is_optional   => 1,
+            default_value => 1,
+        },
+        use_picard_version => {
+            is => 'String',
+            doc => 'version of picard to use if "picard" was used for the --software option',
+            is_optional => 1,
+        },
+        max_jvm_heap_size => {
+            is  => 'Integer',
+            doc => 'The size in gigabytes of the Java Virtual Machine maximum memory allocation.',
+            default_value => 2,
+            is_optional => 1,
+        },
+        max_permgen_size => {
+            is => 'Integer',
+            doc => 'the maximum memory (Mbytes) to use for the "permanent generation" of the Java heap (e.g., for interned Strings)',
+            is_optional => 1,
+            default_value => 256,
+        },
     ],
 };
 
@@ -81,7 +93,8 @@ sub merge_command {
             merge_sequence_dictionary => 1,
             sort_order => 'coordinate',
             validation_stringency => 'SILENT',
-            maximum_memory => 2,
+            maximum_memory => $self->max_jvm_heap_size,
+            maximum_permgen_memory => $self->max_permgen_size,
             additional_jvm_options => '-Dcom.sun.management.jmxremote', #for monitoring
             _monitor_command => 1,
             _monitor_mail_to => 'eclark ssmith boberkfe jeldred abrummet',
