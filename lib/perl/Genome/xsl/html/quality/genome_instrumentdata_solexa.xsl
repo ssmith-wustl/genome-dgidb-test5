@@ -51,13 +51,16 @@
       }
 
       table.key {
+      width: auto;
       margin: 0;
       padding: 0;
+      height: 17px;
       }
 
       table.key td {
       margin: 0;
       padding: 0;
+      height: 17px;
       }
 
       table.key td.title{
@@ -103,7 +106,7 @@
 
               <tr>
                 <td class="name">flow cell ID:</td>
-                <td class="value"><xsl:value-of select="//report/@flow_cell_id"/> (lane <xsl:value-of select="//report/@lane"/>)</td>
+                <td class="value"><a class="mini btn"><xsl:attribute name="href">/view/genome/instrument-data/flow-cell/status.html?id=<xsl:value-of select="//report/@flow_cell_id"/></xsl:attribute><xsl:value-of select="//report/@flow_cell_id"/></a> (lane <xsl:value-of select="//report/@lane"/>)</td>
               </tr>
 
               <tr>
