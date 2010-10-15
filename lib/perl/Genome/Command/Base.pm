@@ -54,6 +54,7 @@ sub resolve_param_value_from_cmdline_text {
         @param_class = ($param_class);
     }
     undef($param_class);
+    #this splits a bool_expr if multiples of the same field are listed, e.g. name=foo,name=bar
     if (@param_args > 1) {
         my %bool_expr_type_count;
         my @bool_expr_type = map {split(/[=~]/, $_)} @param_args;
@@ -79,8 +80,9 @@ sub resolve_param_value_from_cmdline_text {
             #$self->debug_message("Trying to find $param_class...");
             %SEEN_FROM_CLASS = ();
             # call resolve_param_value_from_text without a via_method to bootstrap recursion
-            @arg_results = $self->resolve_param_value_from_text($arg, $param_class);
+            @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
         } 
+        last if ($@ && !@arg_results);
 
         $force_verify = 1 if (@arg_results > 1);
         if (@arg_results) {
@@ -136,6 +138,11 @@ sub resolve_param_value_from_text {
     my @results;
     # try getting BoolExpr, otherwise fallback on '_resolve_param_value_from_text_by_name_or_id' parser
     eval { @results = $self->_resolve_param_value_from_text_by_bool_expr($param_class, $param_arg); };
+    if (!@results && !$@) {
+        # no result and was valid BoolExpr then we don't want to break it apart because we
+        # could query enormous amounts of info
+        die $@;
+    }
     # the first param_arg is all param_args to try BoolExpr so skip if it has commas
     if (!@results && $param_arg !~ /,/) {
         my @results_by_string;
@@ -238,12 +245,14 @@ sub _resolve_param_value_from_text_by_bool_expr {
     my ($self, $param_class, $arg) = @_;
 
     my @results;
-    my $bx;
-    eval {
-        $bx = UR::BoolExpr->resolve_for_string($param_class, $arg);
+    my $bx = eval {
+        UR::BoolExpr->resolve_for_string($param_class, $arg);
     };
-    unless ($@) {
+    if ($bx) {
         @results = $param_class->get($bx);
+    }
+    else {
+        die "Not a valid BoolExpr";
     }
     #$self->debug_message("B: $param_class '$arg' " . scalar(@results));
 
