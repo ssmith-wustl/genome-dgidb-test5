@@ -3,6 +3,8 @@ package Genome::Model::Event::Build::RnaSeq::Expression::Cufflinks;
 use strict;
 use warnings;
 
+use version;
+
 use Genome;
 
 class Genome::Model::Event::Build::RnaSeq::Expression::Cufflinks {
@@ -12,7 +14,7 @@ class Genome::Model::Event::Build::RnaSeq::Expression::Cufflinks {
 };
 
 sub bsub_rusage {
-    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1]' -n 4";
+    return "-R 'select[model!=Opteron250 && type==LINUX64 && mem>8000] rusage[mem=8000] span[hosts=1]' -M 8000000 -n 4";
 }
 
 sub execute {
@@ -26,10 +28,22 @@ sub execute {
         build_id => $self->build_id,
     );
     my $aligner = $align_reads->create_aligner_tool;
-    my $sam_file = $aligner->sam_file;
+    my $sam_file;
+    if (version->parse($aligner->use_version) >= version->parse('1.1.0')) {
+        $sam_file = Genome::Utility::FileSystem->create_temp_file_path($self->build->id .'.sam');
+        unless (Genome::Model::Tools::Sam::BamToSam->execute(
+            bam_file => $aligner->bam_file,
+            sam_file => $sam_file,
+        )) {
+            $self->error_message('Failed to convert BAM '. $aligner->bam_file .' to tmp SAM file '. $sam_file);
+            die($self->error_message);
+        }
+    } else {
+        $sam_file = $aligner->sam_file;
+    }
     my $params = $self->model->expression_params || '';
     unless (Genome::Model::Tools::Cufflinks::Assemble->execute(
-        sam_file => $aligner->sam_file,
+        sam_file => $sam_file,
         params => $params,
         output_directory => $expression_directory,
         use_version => $self->model->expression_version,
