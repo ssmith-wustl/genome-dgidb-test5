@@ -1,44 +1,17 @@
 package Genome::SampleSource;
 
-# Base class for Genome::Individual and Genome::PopulationGroup
-
 use strict;
 use warnings;
 
 use Genome;
 
+require Carp;
+
 class Genome::SampleSource {
-    table_name => 
-        q|(
-            select organism_id id,
-                full_name name,
-                taxon_id,
-                description,
-                common_name,
-                'Genome::Individual' sample_source_subclass_name
-            from GSC.organism_individual
-            union all
-            select pg_id id,
-                name,
-                taxon_id,
-                description,
-                NULL common_name,
-                'Genome::PopulationGroup' sample_source_subclass_name 
-            from GSC.population_group
-        ) sample_source|,
+    is => 'Genome::Measurable',
     is_abstract => 1,
-    subclassify_by => 'sample_source_subclass_name',
-    id_by => [
-        id           => { is => 'Text', len => 10 },
-    ],
-    has => [
-        sample_source_subclass_name => { is => 'Text' },        
-        name            => { is => 'Text', len => 64 },
-    ],
+    subclassify_by => '_subclass_by_subject_type',
     has_optional => [
-        common_name     => { is => 'Text' },
-        description     => { is => 'Text' },
-        
         taxon           => { is => 'Genome::Taxon', id_by => 'taxon_id' },
         species_name    => { via => 'taxon' },
     ],
@@ -47,7 +20,24 @@ class Genome::SampleSource {
         sample_names    => { via => 'samples', to => 'name' },
     ],
     data_source => 'Genome::DataSource::GMSchema',
+    doc => 'Base class for individual and population group',
 };
+
+sub _subclass_by_subject_type {
+    my ($clas, $sample_source) = @_;
+
+    my $subject_type = $sample_source->subject_type;
+    if ( $subject_type eq 'organism individual' or $subject_type eq 'organism_individual' ) {
+        return 'Genome::Individual';
+    }
+    elsif ( $subject_type eq 'population group' or $subject_type eq 'population_group' ) {
+        return 'Genome::PopulationGroup';
+    }
+    else {
+        Carp::confess("Unknown subject type ($subject_type). Cannot determine subclass.");
+    }
+ 
+}
 
 1;
 

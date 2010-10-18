@@ -381,15 +381,15 @@ sub create_mock_sample {
     ) or confess "Can't create mock taxon";
 
     my $source = $self->create_mock_object(
-        class => 'Genome::SampleSource',
+        class => 'Genome::Individual',
         taxon_id => $taxon->id,
         name => $self->mock_sample_name,
-    ) or confess "Can't create mock source";
+    ) or confess "Can't create individual";
 
     my $sample = $self->create_mock_object(
         class => 'Genome::Sample',
         source_id => $source->id,
-        source_type => 'organism individual',
+        source_type => 'organism_individual',
         taxon_id => $taxon->id,
         name => $self->mock_sample_name,
         common_name => 'normal',
