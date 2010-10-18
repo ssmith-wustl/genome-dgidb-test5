@@ -252,5 +252,12 @@
         </div>
       </div>
     </div>
+
+    <xsl:call-template name="footer">
+      <xsl:with-param name="footer_text">
+        <br/>
+      </xsl:with-param>
+    </xsl:call-template>
+
   </xsl:template>
 </xsl:stylesheet>
