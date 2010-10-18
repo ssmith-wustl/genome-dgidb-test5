@@ -676,9 +676,9 @@ sub display_summary_report {
     if ($total_count > 1) {
         my $error_count = scalar(@errors);
         $self->status_message("\n\nCommand Summary:");
-        $self->status_message(" Started: " . ($total_count - $error_count));
-        $self->status_message("  Errors: " . $error_count);
-        $self->status_message("   Total: " . $total_count);
+        $self->status_message(" Successful: " . ($total_count - $error_count));
+        $self->status_message("     Errors: " . $error_count);
+        $self->status_message("      Total: " . $total_count);
     }
 }
 
