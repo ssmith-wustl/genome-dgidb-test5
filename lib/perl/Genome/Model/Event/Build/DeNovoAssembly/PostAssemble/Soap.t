@@ -58,9 +58,12 @@ ok($soap->execute, "Executed soap post assemble") or die;
 
 #compare output files
 my @gc_files = qw/ contigs_fasta_file supercontigs_fasta_file supercontigs_agp_file stats_file /;
-my @pga_files = qw/ pga_agp_file pga_contigs_fasta_file pga_scaffolds_fasta_file /;
+#my @pga_files = qw/ pga_agp_file pga_contigs_fasta_file pga_scaffolds_fasta_file /;
 
-my @output_files = (@gc_files, @pga_files);
+#removed PGA file testing for now .. currently this only runs when pp->name =~ /PGA$/
+#(whereas it always run in the past) and test model is not named that way.  The tool that creates PGA files has it's own test.
+
+my @output_files = (@gc_files);#, @pga_files);
 
 foreach my $file_name (@output_files) {
     my $example_file = $example_build->$file_name;
