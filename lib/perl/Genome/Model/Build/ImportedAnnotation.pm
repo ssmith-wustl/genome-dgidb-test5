@@ -35,18 +35,6 @@ class Genome::Model::Build::ImportedAnnotation {
             is_mutable => 1,
         },
     ],
-    has_optional => [
-        max_try => {
-            is => 'Number',
-            default => '5',
-            doc => 'The maximum number of attempts made to update the cache before giving up and using the annotation data directory.  Defualts to 5 attempts',
-        },
-        block_sleep => {
-            is => 'Number',
-            default => '300',
-            doc => 'The amount of time to sleep between cache updates.  Defaults to 300 seconds',
-        },
-    ],
 };
 
 # Checks if data is cached. Returns the cache location if found and use_cache
@@ -65,18 +53,14 @@ sub determine_data_directory {
     else {
         if (-d $self->_cache_directory and $use_cache) {
             $self->status_message("Updating local annotation data cache");
-            my $lock_resource = '/gsc/var/lock/annotation_cache/' . hostname; 
-            my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock =>$lock_resource, max_try => $self->max_try, block_sleep => $self->block_sleep);#, max_try => 2, block_sleep => 10);
+            my $lock = $self->_lock_annotation_cache_for_update;
             unless ($lock){
                 $self->status_message("Could not update the local annotation data cache, another process is currently updating.  Using annotation data dir at " . $self->_annotation_data_directory);
                 push @directories, $self->_annotation_data_directory;
             }
             $self->{_lock} = $lock;
             $self->_update_cache;
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)){
-                $self->error_message("Failed to unlock resource: $lock");
-                return;
-            }
+            $self->_unlock_annotation_cache($lock);
             push @directories, $self->_cache_directory; 
         }
         elsif (-d $self->_annotation_data_directory) { 
@@ -101,66 +85,98 @@ sub cache_annotation_data {
         for (@composite_builds) { $_->cache_annotation_data }
     }
     else {
-        if (-d $self->_cache_copying_directory) {
-            $self->status_message("Caching in progress (" . $self->_cache_copying_directory.
-                "), using annotation data dir at " . $self->_annotation_data_directory);
-            return $self->_annotation_data_directory;
-        }
-        elsif (-d $self->_cache_directory) {
+        if (-d $self->_cache_directory) {
             $self->status_message("Updating local annotation data cache");
-            my $lock_resource = '/gsc/var/lock/annotation_cache/' . hostname;
-            my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock =>$lock_resource, max_try => $self->max_try, block_sleep => $self->block_sleep);
+            my $lock = $self->_lock_annotation_cache_for_update;
             unless ($lock){
                 $self->status_message("Could not update the local annotation data cache, another process is currently updating.  Using annotation data dir at " . $self->_annotation_data_directory);
                 return $self->_annotation_data_directory;
             }
             $self->_update_cache;
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)){
-                $self->error_message("Failed to unlock resource: $lock");
-                return;
-            }
+            $self->_unlock_annotation_cache($lock);
             $self->status_message("Cache successfully updated"); 
             return $self->_cache_directory;
         }
         else {
-            $self->status_message("No local cache found at " . $self->_cache_directory .
-                ", copying files from " . $self->_annotation_data_directory);
-            my $mkdir_rv = Genome::Utility::FileSystem->shellcmd(cmd => "mkdir -p " . $self->_cache_copying_directory);
-            unless ($mkdir_rv) {
-                $self->error_message("Error encountered while making directory at " . $self->_cache_copying_directory);
-                die;
+            $self->status_message("No local cache found at " . $self->_cache_directory . ", copying files from " . $self->_annotation_data_directory);
+            my $lock = $self->_lock_annotation_cache_for_creation;
+            unless ($lock){
+                $self->status_message("Could not lock cache (" . $self->_cache_copying_directory . "), using annotation data dir at " . $self->_annotation_data_directory);
+                return $self->_annotation_data_directory;
             }
 
-            my $cp_rv = Genome::Utility::FileSystem->shellcmd(
-                cmd => "cp -Lr " . $self->_annotation_data_directory . "/* " . $self->_cache_copying_directory
-            );
-            unless ($cp_rv) {
-                $self->error_message("Error encountered while copying data into " . $self->_cache_copying_directory);
-                $self->_caching_cleanup;
-                die;
-            }
+            if (-d $self->_cache_directory){
+                $self->status_message("Annotation data cache was created by a previous process.  Updating cache instead");
+                $self->_update_cache;
+                $self->status_message("Cache successfully updated");
+            }else{
+                my $mkdir_rv = Genome::Utility::FileSystem->shellcmd(cmd => "mkdir -p " . $self->_cache_copying_directory);
+                unless ($mkdir_rv) {
+                    $self->error_message("Error encountered while making directory at " . $self->_cache_copying_directory);
+                    die;
+                }
 
-            my $mv_rv = Genome::Utility::FileSystem->shellcmd(
-                cmd => "mv " . $self->_cache_copying_directory . " " . $self->_cache_directory
-            );
-            unless ($mv_rv) {
-                $self->error_message("Error encountered while moving data from " . $self->_cache_copying_direcory .
-                    " to " . $self->_cache_directory);
-                $self->_caching_cleanup;
-                die;
-            }
-            
-            $self->_standardize_cache_permissions($self->_cache_directory);       
+                my $cp_rv = Genome::Utility::FileSystem->shellcmd(
+                        cmd => "cp -Lr " . $self->_annotation_data_directory . "/* " . $self->_cache_copying_directory
+                        );
+                unless ($cp_rv) {
+                    $self->error_message("Error encountered while copying data into " . $self->_cache_copying_directory);
+                    $self->_caching_cleanup($lock);
+                    die;
+                }
 
-            $self->status_message("Caching complete, locally stored at " . $self->_cache_directory);
+                my $mv_rv = Genome::Utility::FileSystem->shellcmd(
+                        cmd => "mv " . $self->_cache_copying_directory . " " . $self->_cache_directory
+                        );
+                unless ($mv_rv) {
+                    $self->error_message("Error encountered while moving data from " . $self->_cache_copying_direcory .
+                            " to " . $self->_cache_directory);
+                    $self->_caching_cleanup($lock);
+                    die;
+                }
+
+                $self->_standardize_annotation_cache_permissions($self->_cache_directory);       
+
+                $self->status_message("Caching complete, locally stored at " . $self->_cache_directory);
+                $self->status_message("Cache successfully created");
+            }
+            $self->_unlock_annotation_cache($lock);
             return $self->_cache_directory;
         }
     }
 }
 
+sub _lock_annotation_cache_for_update{
+    my $self = shift;
+    my ($max_try, $block_sleep) = (5, 300);  
+    return $self->_lock_annotation_cache($max_try, $block_sleep);
+}
+
+sub _lock_annotation_cache_for_creation{
+   my $self = shift;
+   my ($max_try, $block_sleep) = (1, 600);  
+   return $self->_lock_annotation_cache($max_try, $block_sleep); 
+}
+
+sub _lock_annotation_cache{
+    my ($self, $max_try, $block_sleep) = @_;
+    my $lock_resource = '/gsc/var/lock/annotation_cache/' . hostname;
+    my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock =>$lock_resource, max_try => $max_try, block_sleep => $block_sleep);
+    return $lock;
+}
+
+sub _unlock_annotation_cache{
+    my ($self, $lock) = @_;
+    unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)){
+        $self->error_message("Failed to unlock resource: $lock");
+        die;
+    }
+    return 1;
+}
+
 #chmod the entire cahce to ensure correct permissions.  This only works on
 #files that the user owns, so this should only be used on cache creation.
-sub _standardize_cache_permissions{
+sub _standardize_annotation_cache_permissions{
     my ($self, $cache_dir) = @_;
     Genome::Utility::FileSystem->shellcmd(cmd => "chmod -R 775 $cache_dir");
 }
@@ -263,7 +279,7 @@ sub _update_cache {
     return 1;
 }
 
-#Update a single cache file. Returns the exit status code and stdout of the process
+#Update a single, existing cache file. Returns the exit status code and stdout of the process
 #used to update a cache file.
 sub _update_cache_file{
     my ($self, $source_file, $destination_file) = @_; 
@@ -333,11 +349,25 @@ sub _annotation_data_directory{
     return $self->data_directory . "/annotation_data";
 }
 
+sub annotation_file {
+    my $self = shift;
+    my $suffix = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_annotation_data_directory .'/all_sequences.'. $suffix;
+    if (-f $file_name) {
+        return $file_name;
+    }
+    return;
+}
+
 # Cleans up any mess left by the caching process
 sub _caching_cleanup {
-    my $self = shift;
+    my ($self, $lock) = shift;
     Genome::Utility::FileSystem->shellcmd(cmd => "rm -rf " . $self->_cache_copying_directory) if -d $self->_cache_copying_directory;
     Genome::Utility::FileSystem->shellcmd(cmd => "rm -rf " . $self->_cache_directory) if -d $self->_cache_directory;
+    $self->_unlock_annotation_cache($lock);
     $self->status_message("Any mess from caching cleaned up");
 }
 

@@ -81,6 +81,11 @@ class Genome::Model::Build {
                               doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
         group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
         group_names      => { via => 'model', to => 'group_names', is_many => 1, },
+
+        projects         => { is => 'Genome::Project', via => 'model' },
+        work_orders      => { is => 'Genome::WorkOrder', via => 'projects' },
+        work_order_names => { via => 'work_orders', to => 'name' },
+        work_order_numbers => { via => 'work_orders', to => 'id' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',

@@ -34,7 +34,13 @@ class Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments {
             valid_values => ['unsorted', 'fragment', 'paired_end', 'paired_end_and_fragment'],
             default => 'paired_end_and_fragment',
             doc => 'note that fragment, paired_end, and paired_end_and_fragment require that input be sorted by read name'
-        }
+        },
+        softclip_mismatch => {
+            is => 'Boolean',
+            is_optional => 1,
+            default=>0,
+            doc => 'If this parameter is specified, softclipped bases will be added to the mismatch count from the NM: tag',
+        },
     ],
 };
 
@@ -76,12 +82,13 @@ sub execute {
             #    $skip = 1 if $bam_lc == $sort_lc;
             #}
             unless ($skip){
-                $rv=Genome::Model::Tools::Sam::SortBam->execute(
+                my $command = Genome::Model::Tools::Sam::SortBam->create(
                     file_name => $bam,
                     name_sort => 1,
                     output_file => $sorted_bam,
                     maximum_memory => 3000000000,
                 );
+                $rv=$command->execute;
             }
             push @bams_sorted, $sorted_bam . '.bam';
         };
@@ -98,10 +105,12 @@ sub execute {
     # merge bam files
     my $rv;
     eval{ 
-        $rv = Genome::Model::Tools::Sam::MergeSplitReferenceAlignments->execute(
+        my $command = Genome::Model::Tools::Sam::MergeSplitReferenceAlignments->create(
             input_files => \@bams_sorted,
             output_file => $out_file,
+            softclip_mismatch => $self->softclip_mismatch,
         );
+        $rv = $command->execute;
     };
     if ($@ or !$rv){
         $self->error_message("Fail to merge sorted bams: $@");

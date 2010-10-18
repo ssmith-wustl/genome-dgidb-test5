@@ -13,15 +13,15 @@ class Genome::Command {
 };
          
 my @SUB_COMMANDS = qw/
-    project    
+    project
     taxon
-    population-group     
-    individual        
-    sample     
+    population-group
+    individual
+    sample
     library
-    instrument-data       
-    processing-profile     
-    model                  
+    instrument-data
+    processing-profile
+    model
     model-group
     tools
     disk

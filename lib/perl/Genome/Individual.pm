@@ -24,7 +24,7 @@ class Genome::Individual {
         mother  => { is => 'Genome::Individual', id_by => 'mother_id' },
         
         father_name => { via => 'father', to => 'name' },
-        mother_name => { via => 'father', to => 'name' },
+        mother_name => { via => 'mother', to => 'name' },
         
         name            => { is => 'Text',
                             doc => 'fully qualified internal/system name for the patient (prefix used in DNA naming)', },
