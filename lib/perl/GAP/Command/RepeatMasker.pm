@@ -6,6 +6,7 @@ use warnings;
 use GAP;
 use Genome::Utility::FileSystem;
 use File::Basename;
+use File::Spec;
 use Carp 'confess';
 use Bio::SeqIO;
 use Bio::Tools::Run::RepeatMasker;
@@ -37,9 +38,10 @@ class GAP::Command::RepeatMasker {
             doc => 'Species name',
 		},
 	    xsmall	=> {
-            is  => 'Text',
+            is  => 'Boolean',
             is_input => 1,
-            doc => 'xmall option',
+            default => 0,
+            doc => 'xsmall option',
 		},
     ], 
 };
@@ -78,9 +80,11 @@ sub execute {
         $self->fasta_file($unzipped_file);
     }
     
-    # If masked fasta path not given, then put it in the same location as the input fasta file
+    # If masked fasta path not given, then put it in the same location as the input fasta file... Using
+    # File::Spec's rel2abs function to convert fasta path to an absolute location if needed.
     if (not defined $self->masked_fasta) {
-        my $default_masked_location = $self->fasta_file . '.masked';
+        my $fasta_path = rel2abs($self->fasta_file);
+        my $default_masked_location =  "$fasta_path.repeat_masker";
         $self->status_message("Masked fasta file path not given, defaulting to $default_masked_location");
         $self->masked_fasta($default_masked_location);
     }
@@ -90,11 +94,6 @@ sub execute {
         unlink $self->masked_fasta;
     }
 
-	my $xsmall = 0;
-	if ($self->xsmall) {
-	    $xsmall = 1;	
-    }
-   
     my $input_fasta = Bio::SeqIO->new(
         -file => $self->fasta_file,
         -format => 'Fasta',
@@ -111,10 +110,10 @@ sub execute {
     # tracked in any repo...
     my $masker;
     if (defined $self->repeat_library) {
-    	$masker = Bio::Tools::Run::RepeatMasker->new(lib => $self->repeat_library,  xsmall => $xsmall);
+    	$masker = Bio::Tools::Run::RepeatMasker->new(lib => $self->repeat_library,  xsmall => $self->xsmall, verbose => -1);
     }
     elsif (defined $self->species) {
-    	$masker = Bio::Tools::Run::RepeatMasker->new(species => $self->species, xsmall => $xsmall);
+    	$masker = Bio::Tools::Run::RepeatMasker->new(species => $self->species, xsmall => $self->xsmall, verbose => -1);
     } 
     
     # FIXME RepeatMasker emits a warning when no repetitive sequence is found. I'd prefer to not have

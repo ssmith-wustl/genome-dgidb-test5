@@ -152,12 +152,9 @@ sub execute {
             my $end = $feature->end();
             ($start, $end) = ($end, $start) if $start > $end;
 
-            $DB::single = 1;
-            my $sequence = EGAP::Sequence->get(
-                file_path => $self->egap_sequence_file,
-                sequence_name => $feature->seq_id(),
-            );
-            my $seq_string = $sequence->sub_sequence($start, $end);
+            my $sequence = $self->get_sequence_by_name($feature->seq_id()); 
+            confess "Couldn't get sequence " . $feature->seq_id() unless $sequence;
+            my $seq_string = $sequence->subseq($start, $end);
 
             my $rna_gene = EGAP::RNAGene->create(
                 file_path => $self->rna_prediction_file,

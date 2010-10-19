@@ -5,6 +5,7 @@ use warnings;
 
 use EGAP;
 use Carp 'confess';
+use File::Path 'make_path';
 use Bio::SeqIO;
 
 class EGAP::Command::SplitFasta {
@@ -78,6 +79,11 @@ sub execute {
 
     $self->status_message("Creating smaller fasta files in $output_directory containing sequence " .
         "from $fasta_file_path and each having no more than $upper_limit bases");
+
+    unless (-d $output_directory) {
+        my $rv = make_path($output_directory);
+        confess "Could not make directory $output_directory!" unless defined $rv and $rv == 1;
+    }
 
     while (my $sequence = $fasta_file->next_seq()) {
         my $length = $sequence->length;

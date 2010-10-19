@@ -6,6 +6,7 @@ use warnings;
 use EGAP;
 use File::Temp;
 use File::Basename;
+use Bio::SeqIO;
 
 class EGAP::Command::GenePredictor {
     is => 'EGAP::Command',
@@ -21,11 +22,6 @@ class EGAP::Command::GenePredictor {
             is_input => 1,
             doc => 'Raw output of predictor goes into this directory',
         },
-        egap_sequence_file => {
-            is => 'Path',
-            is_input => 1,
-            doc => 'A file containing EGAP::Sequence objects, useful for sequence lookups',
-        },
     ],
 };
 
@@ -39,6 +35,23 @@ sub help_synopsis {
 
 sub help_detail {
     return 'Abstract base class for EGAP gene prediction modules, defines input and output parameters';
+}
+
+# Searches the fasta file for the named sequence and returns a Bio::Seq object representing it.
+# TODO This method can be optimized so it isn't necessary to reread the entire fasta file when
+# accessing sequences sequentially, which is usually the case when dealing with predictor output.
+sub get_sequence_by_name {
+    my ($self, $seq_name) = @_;
+    my $seq_obj = Bio::SeqIO->new(
+        -file => $self->fasta_file,
+        -format => 'Fasta',
+    );
+
+    while (my $seq = $seq_obj->next_seq()) {
+        return $seq if $seq->display_id() eq $seq_name;
+    }
+
+    return;
 }
 
 1;

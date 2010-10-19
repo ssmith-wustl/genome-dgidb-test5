@@ -87,7 +87,7 @@ sub execute {
     my $cmd = join(" ", $program_path, @params);
     $self->status_message("Preparing to execute rfam_scan: $cmd");
 
-    # Unfortunately, rfam scan requires that an environment variable be set to execute...
+    # rfam scan requires that an environment variable be set to execute...
     $ENV{RFAM_DIR} = $program_dir;
     my $rv = system($cmd);
     confess 'Trouble executing rfam_scan!' unless defined $rv and $rv == 0;
@@ -103,12 +103,19 @@ sub execute {
         my ($sequence_id, $start, $end, $accession, $model_start, $model_end, $bit_score, $rfam_id) = split(/\s+/, $line);
 
         my $strand = 1;
-        $strand = -1 if $start > $end;
+        if ($start > $end) {
+            $strand = -1;
+            ($start, $end) = ($end, $start);
+        }
 
         # The sequence ids are not sorted in the rfamscan output file, so using a hash to track the number
         # of previous predictions for the sequence is necessary to create a unique gene_name.
         $sequence_counts{$sequence_id}++;
         my $gene_name = $sequence_id . ".rfam." . $sequence_counts{$sequence_id};
+
+        my $sequence = $self->get_sequence_by_name($sequence_id);
+        confess "Could get sequence $sequence_id!" unless $sequence;
+        my $seq_string = $sequence->subseq($start, $end);
 
         my $rna_gene = EGAP::RNAGene->create(
             file_path => $self->rna_prediction_file,
@@ -121,6 +128,7 @@ sub execute {
             score => $bit_score,
             source => 'rfam',
             sequence_name => $sequence_id,
+            sequence_string => $seq_string,
         );
     }
 

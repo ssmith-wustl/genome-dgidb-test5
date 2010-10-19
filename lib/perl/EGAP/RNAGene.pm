@@ -21,7 +21,7 @@ class EGAP::RNAGene {
         strand => { is => 'Number' },
         source => { is => 'Text' },
         score => { is => 'Number' },
-        sequence_name => { is => 'Number' },
+        sequence_name => { is => 'Text' },
         sequence_string => { is => 'Text' },
     ],
     has_optional => [

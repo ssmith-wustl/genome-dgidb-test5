@@ -7,6 +7,7 @@ use EGAP;
 use Carp 'confess';
 use File::Temp;
 use File::Basename;
+use Genome::Utility::FileSystem;
 
 class EGAP::Command::MaskRnaSequence {
     is => 'EGAP::Command',
@@ -23,6 +24,12 @@ class EGAP::Command::MaskRnaSequence {
         },
     ],
     has_optional => [
+        skip_if_no_rna_file => {
+            is => 'Boolean',
+            is_input => 1,
+            doc => 'If this is set, not finding an rna file is not a fatal error and the masked fasta is the same as the input fasta',
+            default => 1,
+        },
         masked_fasta_file => {
             is => 'Path',
             is_input => 1,
@@ -45,24 +52,37 @@ sub execute {
 
     $self->status_message("Starting rna masking command");
 
-    unless (-e $self->rna_predictions) {
-        confess 'No predictions file found at ' . $self->rna_predictions . '!';
-    }
-
-    unless (-e $self->fasta_file) {
-        confess 'No fasta file found at ' . $self->fasta_file . '!';
-    }
-
     unless (defined $self->masked_fasta_file) {
         my ($fasta_name, $fasta_dir) = basename($self->fasta_file);
         my $masked_fh = File::Temp->new(
             DIR => $fasta_dir,
-            TEMPLATE => $fasta_name . "_XXXXXX",
+            TEMPLATE => $fasta_name . "_rna_masked_XXXXXX",
             CLEANUP => 0,
             UNLINK => 0,
         );
         $self->masked_fasta_file($masked_fh->filename);
         $masked_fh->close;
+    }
+
+    unless (-e $self->rna_predictions) {
+        if ($self->skip_if_no_rna_file) {
+            $self->status_message("No rna predictions file found at " . $self->rna_predictions .
+                " and skip_if_no_rna_file flag is set to true. Assuming that no rna predictions were" .
+                " made and setting input fasta " . $self->fasta_file . " as masked output fasta!");
+
+            my $cp_rv = Genome::Utility::FileSystem->copy_file($self->fasta_file, $self->masked_fasta_file);
+            unless (defined $cp_rv and $cp_rv) {
+                confess 'Could not copy input fasta ' . $self->fasta_file . ' to ' . $self->masked_fasta_file . "!";
+            }
+            return 1;
+        }
+        else {
+            confess 'No rna prediction file found at ' . $self->rna_predictions . '!';
+        }
+    }
+
+    unless (-e $self->fasta_file) {
+        confess 'No fasta file found at ' . $self->fasta_file . '!';
     }
             
     # This pre-loads all the predictions, which makes grabbing predictions per sequence faster below
@@ -92,7 +112,6 @@ sub execute {
         my $length = $seq->length();
         my $seq_string = $seq->seq();
         
-        #TODO Ask Tony if it would be faster to grep the rna_predictions array above, or do this
         my @predictions = EGAP::RNAGene->get(
             file_path => $self->rna_predictions,
             sequence_id => $seq_id,

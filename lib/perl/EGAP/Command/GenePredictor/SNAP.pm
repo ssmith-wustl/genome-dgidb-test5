@@ -68,9 +68,12 @@ are created and commited to the provided output file.
 EOS
 }
 
+# TODO This is a bit of a long mess, refactoring may be in order both to make this more
+# readable and to reduce redundancy between this module and the fgenesh module.
 sub execute {
     my $self = shift;
 
+    $DB::single = 1;
     $self->status_message("Starting SNAP prediction wrapper");
 
     # Use full path to snap executable, with version, instead of the symlink.
@@ -78,8 +81,8 @@ sub execute {
     my $snap_path = "/gsc/pkg/bio/snap/snap-" . $self->version . "/snap";
 
     unless (-d $self->raw_output_directory) {
-        my $mkdir_rv = make_path($self->output_directory);
-        confess "Could not make directory " . $self->output_directory unless $mkdir_rv;
+        my $mkdir_rv = make_path($self->raw_output_directory);
+        confess "Could not make directory " . $self->raw_output_directory unless $mkdir_rv;
     }
 
     my $raw_output_fh = File::Temp->new(
@@ -120,7 +123,7 @@ sub execute {
 
         $self->status_message("Executing SNAP command: $cmd");
         my $rv = system($cmd);
-        confess "Troble executing SNAP!" unless defined $rv and $rv == 0;
+        confess "Trouble executing SNAP!" unless defined $rv and $rv == 0;
     }
 
     $self->status_message('Done running SNAP, now parsing output and creating prediction objects');
@@ -133,20 +136,23 @@ sub execute {
     my @predicted_exons;
     my $gene_count = 0;
     my ($current_seq_name, $current_group, $seq_obj);
+
+    # SNAP output is grouped by sequence name. Each line of output is an exon, and these exons are grouped into genes. If 
+    # a line starts with a >, this indicates a new sequence's predictions come next, so any exons we've recorded for the
+    # current sequence need to be made into objects. If the group name differs from the previous line's, this indicates
+    # that a new gene is starting and prediction objects need to be made.
     while (my $line = <$snap_fh>) {
         chomp $line;
-
         if ($line =~ /^>(.+)$/) {
+            if (@predicted_exons) {
+                $self->_create_prediction_objects(\@predicted_exons, $gene_count, $current_seq_name, $current_group, $seq_obj);
+                $gene_count++;
+                @predicted_exons = ();
+            }
+
             $current_seq_name = $1;
-            my $sequence = EGAP::Sequence->get(
-                file_path => $self->egap_sequence_file,
-                sequence_name => $current_seq_name,
-            );
-            confess "Couldn't get EGAP sequence object $current_seq_name!" unless $sequence;
-            $seq_obj = Bio::Seq->new(
-                -seq => $sequence->sequence_string(),
-                -id => $sequence->sequence_name(),
-            );
+            $seq_obj = $self->get_sequence_by_name($current_seq_name);
+            confess "Couldn't get sequence $current_seq_name!" unless $seq_obj;
             $self->status_message("Parsing predictions from $current_seq_name");
         }
         else {
@@ -162,7 +168,6 @@ sub execute {
                 $group
             ) = split /\t/, $line;
 
-            # Gotten through all the exons of a group, so CodingGene, Protein, Transcript, and Exon objects can be made!
             if (defined $current_group and $current_group ne $group and @predicted_exons) {
                 $self->_create_prediction_objects(\@predicted_exons, $gene_count, $current_seq_name, $current_group, $seq_obj);
                 $gene_count++;

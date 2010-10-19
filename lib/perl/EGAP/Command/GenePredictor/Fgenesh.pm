@@ -189,8 +189,8 @@ sub execute {
 
             # If this sequence is a fragment, need to trim off overhanging sequence prior to translating
             if ($fragment) {
-                my $first_exon_overhang = $exons[0]->get_tag_values('five_prime_overhang');
-                $first_exon_overhang = $exons[-1]->get_tag_values('five_prime_overhang') if $strand eq '-1';
+                my $first_exon_overhang = $exons[0]->five_prime_overhang;
+                $first_exon_overhang = $exons[-1]->five_prime_overhang if $strand eq '-1';
                 $transcript_seq = $transcript_seq->trunc($first_exon_overhang, $transcript_seq->length());
             }
 

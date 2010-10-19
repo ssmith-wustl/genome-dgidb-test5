@@ -5,7 +5,7 @@ use above 'EGAP';
 
 use File::Temp 'tempdir';
 use File::Basename;
-use Test::More tests => 9;
+use Test::More tests => 8;
 
 BEGIN {
     use_ok('EGAP::Command');
@@ -24,14 +24,10 @@ ok(-d $test_output_dir, "test output dir exists");
 my $fasta = File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta';
 ok(-e $fasta, "fasta file exists at $fasta");
 
-my $seq_file = File::Basename::dirname(__FILE__).'/data/Contig0a.masked.egap_sequence';
-ok (-e $seq_file, "egap sequence file exists at $seq_file");
-
 my $command = EGAP::Command::GenePredictor::tRNAscan->create(
     fasta_file => $fasta, 
     raw_output_directory => $test_output_dir,
     rna_prediction_file => $test_output_dir . "/rna_predictions.csv",
-    egap_sequence_file => $seq_file,
 );
 
 isa_ok($command, 'EGAP::Command::GenePredictor');

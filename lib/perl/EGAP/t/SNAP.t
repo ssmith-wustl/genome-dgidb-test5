@@ -8,7 +8,7 @@ use Bio::SeqIO;
 
 use File::Temp qw(tempdir);
 use File::Basename;
-use Test::More tests => 12;
+use Test::More tests => 11;
 
 BEGIN {
     use_ok('EGAP::Command');
@@ -26,15 +26,11 @@ chmod(0755, $test_output_dir);
 my $fasta = File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta';
 ok(-e $fasta, "fasta file exists at $fasta");
 
-my $seq_file = File::Basename::dirname(__FILE__).'/data/Contig0a.masked.egap_sequence';
-ok(-e $seq_file, "sequence file exists at $seq_file");
-
 my $model = '/gsc/pkg/bio/snap/installed/HMM/C.elegans.hmm';
 ok(-e $model, "model file exists at $model");
 
 my $command = EGAP::Command::GenePredictor::SNAP->create(
     fasta_file => $fasta,
-    egap_sequence_file => $seq_file, 
     model_files => $model, 
     coding_gene_prediction_file => $test_output_dir . "/coding_genes.csv",
     transcript_prediction_file => $test_output_dir . "/transcripts.csv",

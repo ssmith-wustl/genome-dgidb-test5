@@ -8,7 +8,8 @@ use Bio::SeqIO;
 
 use File::Temp 'tempdir';
 use File::Basename;
-use Test::More tests => 8;
+#use Test::More skip_all => 'Takes an hour, regardless of input sequence size';
+use Test::More tests => 11;
 
 BEGIN {
     use_ok('EGAP::Command');
@@ -27,14 +28,10 @@ ok(-d $test_output_dir, "test output dir exists");
 my $fasta = File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta.short';
 ok(-e $fasta, "fasta file exists at $fasta");
 
-my $seq_file = File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta.short.egap_sequence';
-ok (-e $seq_file, "egap sequence file exists at $seq_file");
-
 my $command = EGAP::Command::GenePredictor::RfamScan->create(
     fasta_file => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
     rna_prediction_file => $test_output_dir . "/rna_predictions.csv",
     raw_output_directory => $test_output_dir,
-    egap_sequence_file => $seq_file,
 );
 
 isa_ok($command, 'EGAP::Command::GenePredictor');

@@ -86,11 +86,9 @@ sub execute {
         $strand = -1 if $begin > $end;
         ($begin, $end) = ($end, $begin) if $begin > $end;
 
-        my $sequence = EGAP::Sequence->get(
-            file_path => $self->egap_sequence_file,
-            sequence_name => $seq_name,
-        );
-        my $seq_string = $sequence->sub_sequence($begin, $end);
+        my $sequence = $self->get_sequence_by_name($seq_name);
+        confess "Couldn't get sequence $seq_name!" unless $sequence;
+        my $seq_string = $sequence->subseq($begin, $end);
 
         my $rna_gene = EGAP::RNAGene->create(
             file_path => $self->rna_prediction_file,
