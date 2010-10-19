@@ -28,6 +28,9 @@ start()
     if test ! -d $RUNDIR
     then
         mkdir $RUNDIR
+        chown $USER:$USER $RUNDIR
+        chmod 0775 $RUNDIR
+        chmod g+s $RUNDIR
     fi
 
     log_daemon_msg "Starting genome_view server" "$NAME"
