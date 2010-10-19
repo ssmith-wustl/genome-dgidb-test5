@@ -1011,9 +1011,8 @@ sub md5sum {
     $d->addfile($fh);
     $digest = $d->hexdigest;
     $fh->close;
-    
+
     return $digest;
-    
 }
 
 sub directory_size_recursive {

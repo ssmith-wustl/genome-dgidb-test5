@@ -1,4 +1,5 @@
 package Genome::Taxon; 
+
 use strict;
 use warnings;
 
@@ -17,6 +18,7 @@ class Genome::Taxon {
                                                 calculate_from => ['name'],
                                                 #TODO: this actually embeds the strain name, parse it away
                                             },
+        subject_type => { is => 'Text', is_constant => 1, value => 'organism_taxon', column_name => '', },
     ],
     has_optional => [
         strain_name                     => { is => "Text",   len => 32 },
@@ -29,7 +31,7 @@ class Genome::Taxon {
         current_default_org_prefix      => { is => "Text",   len => 2 },
         current_genome_refseq_id        => { is => "Number", len => 15 },
         
-        model_member                    => { is => 'Genome::SampleSource', id_by => 'model_member_id',
+        model_member                    => { is => 'Genome::Individual', id_by => 'model_member_id',
                                             doc => 'the model individual or inbred group sequenced as a reference for this taxon' },
         
         model_member_id                 => { is => "Number", len => 10, column_name => 'MODEL_INDIVIDUAL_ORGANISM_ID' },
@@ -44,7 +46,7 @@ class Genome::Taxon {
         population_groups               => { is => 'Genome::PopulationGroup', reverse_id_by => 'taxon',
                                             doc => 'all defined population groups for this species/strain' },
 
-        members                         => { is => 'Genome::SampleSource',                                                       
+        members                         => {
                                             calculate => q|($self->individuals)|,
                                             doc => 'all individuals AND defined population groups' },
 
@@ -84,6 +86,7 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
+    # FIXME Really do this?
     unless ($self->_legacy_org_id) {
         my $legacy_org_id = $class->_generate_legacy_org_id;
         unless ($legacy_org_id) {
