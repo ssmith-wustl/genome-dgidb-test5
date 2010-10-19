@@ -114,23 +114,29 @@ sub make_config_file {
     my ($header,$loc,$line_skip,$rule);
       
     #assembly_file
+    if($cfg->val('Assembly','all_file')){
     $header = "${project}.AS";
     $loc = rem_white_space($cfg->val('Assembly','all_file'));  
     $line_skip = 0;
     $rule = rem_white_space($cfg->val('Rules','AS'));
     print OUT "$header\t$loc\t$line_skip\t$rule\n";
+}
 
     ($header,$loc,$line_skip,$rule)=();
+
+    if($cfg->val('SquareDancer','file')){
     #squaredancer_file
     $header = "${project}.SD";
     $loc = rem_white_space($cfg->val('SquareDancer','file'));  
     $line_skip = 0;
     $rule = $cfg->val('Rules','SD');
     print OUT "$header\t$loc\t$line_skip\t$rule\n";
+}
     
  
     ($header,$loc,$line_skip,$rule)=();
    #breakdancer_files
+   if($cfg->val('BreakDancer','dir')){
     my @chrom = (1 .. 22);
     my @chrom = (@chrom, 'X', 'Y');
 
@@ -144,25 +150,37 @@ sub make_config_file {
 	$rule = $cfg->val('Rules','BD');
 	print OUT "$header\t$loc\t$line_skip\t$rule\n";
     }
-
+}
     ($header,$loc,$line_skip,$rule)=();
     #Copy-number_file
+    if($cfg->val('CNA','file')){
     $header = "${project}.CNA";
     $loc = $cfg->val('CNA','file');  
     $line_skip = 0;
     $rule = rem_white_space($cfg->val('Rules','CN'));
     print OUT "$header\t$loc\t$line_skip\t$rule\n";
-
+}
     close OUT;
 
     open(OUT, "> $output_dir/$config_ctx" ) or die "Unable to write to config_ctx.txt\n";
     ($header,$loc,$line_skip,$rule)=(); 
     #assembly_ctx_file
+    if($cfg->val('Assembly','CTX_file')){
     $header = "${project}.AS";
     $loc = rem_white_space($cfg->val('Assembly','CTX_file'));  
     $line_skip = 0;
     $rule = rem_white_space($cfg->val('Rules','CTX'));
     print OUT "$header\t$loc\t$line_skip\t$rule\n";
+}
+
+    if($cfg->val('SquareDancer','file')){
+    $header = "${project}.SD";
+    $loc = rem_white_space($cfg->val('SquareDancer','file'));  
+    $line_skip = 0;
+    $rule = rem_white_space($cfg->val('Rules','SD'));
+    print OUT "$header\t$loc\t$line_skip\t$rule\n";
+}
+
     close OUT;
 
 }
