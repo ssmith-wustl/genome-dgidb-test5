@@ -80,11 +80,12 @@ sub execute {
     }
 
     #resolve refseq
-    #my $ref_build_name = $self->refseq_build_name;
-    #my ($ref_model_name,$ref_build_version) = $ref_build_name =~ /^(\S+)-build(\S*)$/;
-    #my $ref_model = Genome::Model->get(name=>$ref_model_name);
-    #my $ref_build = $ref_model->build_by_version($ref_build_version);
-    my $ref_index = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.fa.fai";
+    my $ref_build_name = $self->refseq_build_name;
+    my ( $ref_model_name, $ref_build_version ) = $ref_build_name =~ /^(\S+)-build(\S*)$/;
+    my $ref_model = Genome::Model->get( name=>$ref_model_name );
+    my $ref_build = $ref_model->build_by_version( $ref_build_version );
+    my $ref_index = $ref_build->data_directory . "/all_sequences.fa.fai";
+    #my $ref_index = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.fa.fai";
 
     #WigToBitmask.pm contains some useful functions for handling bitmasks
     my $bitmasker = Genome::Model::Tools::Bmr::WigToBitmask->create(
@@ -92,15 +93,15 @@ sub execute {
     );
 
     #Load bitmasks
-    #my $at_bitmask_file = $ref_build->data_directory . "/all_sequences.AT_bitmask";
-    #my $cpg_bitmask_file = $ref_build->data_directory . "/all_sequences.CpG_bitmask";
-    #my $cg_bitmask_file = $ref_build->data_directory . "/all_sequences.CG_bitmask";
-    my $at_bitmask_file = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.AT_bitmask";
-    my $cpg_bitmask_file = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.CpG_bitmask";
-    my $cg_bitmask_file = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.CG_bitmask";
-    my $at_bitmask = $bitmasker->read_genome_bitmask($at_bitmask_file);
-    my $cpg_bitmask = $bitmasker->read_genome_bitmask($cpg_bitmask_file);
-    my $cg_bitmask = $bitmasker->read_genome_bitmask($cg_bitmask_file);
+    my $at_bitmask_file = $ref_build->data_directory . "/all_sequences.AT_bitmask";
+    my $cpg_bitmask_file = $ref_build->data_directory . "/all_sequences.CpG_bitmask";
+    my $cg_bitmask_file = $ref_build->data_directory . "/all_sequences.CG_bitmask";
+    #my $at_bitmask_file = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.AT_bitmask";
+    #my $cpg_bitmask_file = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.CpG_bitmask";
+    #my $cg_bitmask_file = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.CG_bitmask";
+    my $at_bitmask = $bitmasker->read_genome_bitmask( $at_bitmask_file );
+    my $cpg_bitmask = $bitmasker->read_genome_bitmask( $cpg_bitmask_file );
+    my $cg_bitmask = $bitmasker->read_genome_bitmask( $cg_bitmask_file );
 
     #Make sure bitmasks were loaded successfully
     unless ($at_bitmask) {
@@ -254,7 +255,7 @@ sub execute {
         #SNVs
         if ($mutation_type =~ m/SNP|DNP|ONP|TNP/) {
             #if this mutation is non-synonymous
-            if ($mutation_class =~ m/Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site_SNP/) {
+            if ($mutation_class =~ m/Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site/) {
                 #and if this gene is listed in the ROI list since it is listed in the MAF and passed the bitmask filter
                 if (grep { /^$gene$/ } keys %{$ROIs{$chr}}) {
                     #determine the classification for ref A's and T's
@@ -347,7 +348,7 @@ sub execute {
                         }
                     }#end, if ref = G
                     else {
-                        warn("Ref DNA is weird! $ref");
+                        print $rejects_fh ("Ref DNA is weird: $ref, $gene, chr$chr:$start-$stop, $center\n");
                         next;
                     }
                 }#end, if ROI and MAF genes match 
@@ -358,7 +359,7 @@ sub execute {
                 }
             }#end, if mutation is missense
             else {
-                warn("Variant classification is weird! $mutation_class");
+                print $rejects_fh ("Variant classification is weird: $mutation_class, $gene, chr$chr:$start-$stop, $center\n");
                 next;
             }
         }#end, if mutation is a SNV
@@ -374,7 +375,7 @@ sub execute {
             }
         }#end, if mutation is an indel
         else {
-            warn("Variant type is weird! $mutation_type");
+            print $rejects_fh ("Variant type is weird: $mutation_type, $gene, chr$chr:$start-$stop, $center\n");
             next;
         }
     }#end, loop through MAF
