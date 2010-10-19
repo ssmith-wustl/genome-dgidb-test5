@@ -13,6 +13,9 @@ use Benchmark;
 use Genome::Info::UCSCConservation;
 use DateTime;
 use Sys::Hostname;
+use Cwd 'abs_path';
+use File::Basename;
+use File::Temp qw/ tempfile /;
 
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
@@ -98,6 +101,13 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is_input => 1,
             default => 0,
             doc => 'enabling this flag produces an additional four columns: flank_annotation_distance_to_transcript, intron_annotation_substructure_ordinal, intron_annotation_substructure_size, and intron_annotation_substructure_position',
+        },
+        sloppy => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to skip variants on a chromosome where no annotation information exists, as opposed to crashing',
         },
         skip_if_output_present => {
             is => 'Boolean',
@@ -249,12 +259,14 @@ sub execute {
     # establish the output handle for the transcript variants
     my $output_fh;
     my $output_file = $self->output_file;
+    my $temp_output_file;
     if ($self->output_file =~ /STDOUT/i) {
         $output_fh = 'STDOUT';
     }
     else {
-        $output_fh = $self->_create_file($output_file);
-        chmod(0664, $output_file);
+        my ($output_file_basename) = fileparse($output_file);
+        ($output_fh, $temp_output_file) = tempfile("$output_file_basename-XXXXXX", DIR => abs_path(dirname($self->output_file)), UNLINK => 1);
+        chmod(0664, $temp_output_file);
     }
     $self->_transcript_report_fh($output_fh);
 
@@ -331,30 +343,10 @@ sub execute {
     my $annotation_total_start = Benchmark->new;
     my ($annotation_start, $annotation_stop);
     my $chromosome_name = '';
+    my $last_variant_start = 0;
+    my $annotator = undef;
+    my $sloppy_skip = 0; #This var is set when we can't annotate a chromosome and want to skip the rest of the variants on that chromosome
 
-    # Initialize the annotator object
-    my $annotator = eval {
-        my $full_version = $self->build->version;
-        my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
-        my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
-
-        my @directories = $self->build->determine_data_directory;
-        Genome::Transcript::VariantAnnotator->create(
-            data_directory => \@directories,
-            check_variants => $self->check_variants,
-            get_frame_shift_sequence => $self->get_frame_shift_sequence,
-            ucsc_conservation_directory => $ucsc_versions{$version},
-        );
-    };
-    unless ($annotator){
-        $self->error_message("Couldn't create Genome::Transcript::VariantAnnotator");
-        die;
-    }
-
-    $self->status_message("Starting annotation loop at ".scalar(localtime));
-    my $annotation_loop_start_time = time();
-
-    my $processed_variants = 0;
     while ( my $variant = $variant_svr->next ) {
         $variant->{type} = $self->infer_variant_type($variant);
         #make sure both the reference and the variant are in upper case
@@ -370,6 +362,56 @@ sub execute {
             }
 
             $chromosome_name = $variant->{chromosome_name};
+            $last_variant_start = 0;
+            $sloppy_skip = 0;  #reset skip behavior on new chrom
+
+            my $iter_start = Benchmark->new;
+            my $transcript_iterator;
+            if ($self->build) {
+                $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+            }
+            else{
+                $transcript_iterator = Genome::Transcript->create_iterator(data_directory=>$self->data_directory, chrom_name => $chromosome_name);
+            }
+            unless ($transcript_iterator){
+                $self->error_message("Couldn't get transcript_iterator for chromosome $chromosome_name!");
+                if ($self->sloppy){
+                    #print this variant and go to the next one, we will only set chromosome name at the end of the check, so we should fail the transcript iterator test repeatedly until we hit a variant on the next new chromosome
+                    $self->_print_annotation($variant, []);
+                    $sloppy_skip = 1;
+                    next;
+                }else{
+                    die;
+                }
+            }
+
+            my $transcript_window =  Genome::Utility::Window::Transcript->create (
+                iterator => $transcript_iterator, 
+                range => $self->flank_range
+            );
+            unless ($transcript_window){
+                $self->error_message("Couldn't create a transcript window from iterator for chromosome $chromosome_name!");
+                die;
+            }
+
+            my $full_version = $self->build->version; 
+            my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
+            my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
+            $annotator = Genome::Transcript::VariantAnnotator->create(
+                transcript_window => $transcript_window,
+                check_variants => $self->check_variants,
+                get_frame_shift_sequence => $self->get_frame_shift_sequence,
+                ucsc_conservation_directory => $ucsc_versions{$version},
+                annotation_build_version => $self->build->version,
+            );
+             
+            unless ($annotator){
+                $self->error_message("Couldn't create iterator for chromosome $chromosome_name!");
+                die;
+            }
+
+            my $iter_stop = Benchmark->new;
+            my $iter_time = timediff($iter_stop, $iter_start);
 
             $annotation_start = Benchmark->new;
             if ($self->benchmark) {
@@ -377,7 +419,57 @@ sub execute {
             }
         }
 
-        Genome::DataSource::GMSchema->disconnect_default_handle if Genome::DataSource::GMSchema->get_default_handle;
+        next if $sloppy_skip;
+
+        unless ( $variant->{start} >= $last_variant_start){
+            my $iter_start = Benchmark->new;
+
+            $self->warning_message("Improperly sorted input! Restarting iterator!  Improve your annotation speed by sorting input variants by chromosome, then position!  chromosome:". $variant->{chromosome_name}." start".$variant->{start}." stop".$variant->{stop});
+            $chromosome_name = $variant->{chromosome_name};
+            $last_variant_start = 0;
+
+            my $transcript_iterator;
+            if ($self->build){
+                my $iter_start = Benchmark->new;
+                $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name, 
+                                                                         cache_annotation_data_directory => $self->cache_annotation_data_directory); 
+                my $iter_stop = Benchmark->new;
+                my $iter_time = timediff($iter_stop, $iter_start);
+                if ($self->benchmark) {
+                    $self->status_message("\tIterator creation: " . timestr($iter_time, 'noc'));
+                }
+            }else{
+                $transcript_iterator = Genome::Transcript->create_iterator(data_directory=>$self->data_directory, chrom_name => $chromosome_name);
+            }
+            die Genome::Transcript->error_message unless $transcript_iterator;
+
+            my $transcript_window =  Genome::Utility::Window::Transcript->create (
+                iterator => $transcript_iterator, 
+                range => $self->flank_range
+            );
+            die Genome::Utility::Window::Transcript->error_message unless $transcript_window;
+            
+            my $full_version = $self->build->version; 
+            my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
+            my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
+            $annotator = Genome::Transcript::VariantAnnotator->create(
+                transcript_window => $transcript_window,
+                check_variants => $self->check_variants,
+                get_frame_shift_sequence => $self->get_frame_shift_sequence,
+                ucsc_conservation_directory => $ucsc_versions{$version},
+                annotation_build_version => $self->build->version,
+            );
+            die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
+
+            my $iter_stop = Benchmark->new;
+            my $iter_time = timediff($iter_stop, $iter_start);
+            if ($self->benchmark) {
+                $self->status_message("\tIterator, window, and annotator recreation: " . timestr($iter_time, 'noc')); 
+            }
+        }
+        $last_variant_start = $variant->{start};
+
+        Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->has_default_handle;
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
         # TODO... unduplicate this code
@@ -426,11 +518,7 @@ sub execute {
 
             $self->_print_annotation($variant, \@transcripts);
         }
-        $processed_variants++;
-        $self->status_message("$processed_variants variants processed " . scalar(localtime)) unless ($processed_variants % 10000);
     }
-
-    my $annotation_loop_stop_time = time();
 
     $annotation_stop = Benchmark->new;
     my $annotation_time = timediff($annotation_stop, $annotation_start);
@@ -440,12 +528,14 @@ sub execute {
     my $total_time = timediff($annotation_total_stop, $annotation_total_start);
     $self->status_message('Total time to complete: ' . timestr($total_time, 'noc') . "\n\n") if $self->benchmark;
 
-    my $timediff = $annotation_loop_stop_time - $annotation_loop_start_time;
-    my $variants_per_sec = $processed_variants / $timediff;
-    $self->status_message("Annotated $processed_variants variants in " . $timediff . " seconds.  "
-                          . sprintf("%2.2f", $variants_per_sec) . " variants per second");
-
-    $output_fh->close unless $output_fh eq 'STDOUT';
+    if ($temp_output_file){
+        my $mv_return_value = Genome::Utility::FileSystem->shellcmd(cmd => "mv $temp_output_file $output_file");
+        unless($mv_return_value){
+            $self->error_message("Failed to mv results at $temp_output_file to final location at $output_file: $!");
+            return 0;
+        }
+        $output_fh->close unless $output_fh eq 'STDOUT';
+    }
     return 1;
 }
 

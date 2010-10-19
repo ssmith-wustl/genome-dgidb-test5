@@ -244,7 +244,7 @@ sub _post_execute {
     #print Dumper(\@ids);
     ok(!@ids, "Removed $name from model.");
     if ( $obj->abandon_builds ) {
-        is($self->_build->build_status, 'Abandoned', 'Successfully abandoned build');
+        is($self->_build->status, 'Abandoned', 'Successfully abandoned build');
     }
 
     return 1;

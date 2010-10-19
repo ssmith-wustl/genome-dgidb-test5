@@ -56,8 +56,16 @@ my $soap = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Soap->crea
 ok($soap, "Created soap post assemble") or die;
 ok($soap->execute, "Executed soap post assemble") or die;
 
-#compare files
-foreach my $file_name (qw/ contigs_fasta_file supercontigs_fasta_file supercontigs_agp_file stats_file /) {
+#compare output files
+my @gc_files = qw/ contigs_fasta_file supercontigs_fasta_file supercontigs_agp_file stats_file /;
+#my @pga_files = qw/ pga_agp_file pga_contigs_fasta_file pga_scaffolds_fasta_file /;
+
+#removed PGA file testing for now .. currently this only runs when pp->name =~ /PGA$/
+#(whereas it always run in the past) and test model is not named that way.  The tool that creates PGA files has it's own test.
+
+my @output_files = (@gc_files);#, @pga_files);
+
+foreach my $file_name (@output_files) {
     my $example_file = $example_build->$file_name;
     ok(-s $example_file, "Test data dir $example_file");
     my $file = $build->$file_name;
@@ -68,4 +76,5 @@ foreach my $file_name (qw/ contigs_fasta_file supercontigs_fasta_file superconti
 #<STDIN>;
 
 done_testing();
+
 exit;

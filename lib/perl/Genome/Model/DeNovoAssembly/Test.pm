@@ -99,18 +99,18 @@ sub get_mock_subject {
 
     # 2851686381
     my $source = Genome::Utility::TestBase->create_mock_object(
-        class => 'Genome::SampleSource',
+        class => 'Genome::Individual',
         id => 2851686381,
         taxon_id => $taxon->id,
         name => $sample_name,
-    ) or Carp::confess "Can't create mock source";
+    ) or Carp::confess "Can't create mock individual";
 
     # 2851686382
     my $subject = Genome::Utility::TestBase->create_mock_object(
         class => 'Genome::Sample',
         id => 2851686382,
         source_id => $source->id,
-        source_type => 'organism individual',
+        source_type => 'organism_individual',
         name => 'H_KT-185-1-0089515594',
         common_name => undef,
         extraction_label => '0089515594',
@@ -227,12 +227,16 @@ sub get_mock_build {
             assembler_fragment_input_file_for_library_id
             libraries_with_existing_assembler_input_files
             existing_assembler_input_files_for_library_id
-            end_one_fastq_file end_two_fastq_file 
+
             soap_config_file
             soap_output_dir_and_file_prefix
             soap_scaffold_sequence_file 
-            soap_output_dir_and_file_prefix
             soap_output_file_for_ext
+
+            pga_agp_file
+            pga_contigs_fasta_file
+            pga_scaffolds_fasta_file
+
         /],
         velvet => [qw/
             collated_fastq_file
@@ -266,7 +270,7 @@ sub base_directory {
 }
 
 my %dirs_versions = (
-    soap_solexa => '4',
+    soap_solexa => '8',
     velvet_solexa => '0.2',
     newbler_454 => '0.1',
 );

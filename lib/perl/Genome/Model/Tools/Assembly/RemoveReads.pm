@@ -2,11 +2,10 @@ package Genome::Model::Tools::Assembly::RemoveReads;
 
 use strict;
 use warnings;
-use Genome::Assembly::Pcap::ContigTools;
+
+use Genome;
 use Cwd;
 use IO::File;
-use Genome::Assembly::Pcap::Phd;
-use Genome::Assembly::Pcap::Ace;
 
 class Genome::Model::Tools::Assembly::RemoveReads
 {
@@ -59,18 +58,18 @@ sub execute
     my $out_file_name = $self->out_file_name;
     
     
-    my $ct = Genome::Assembly::Pcap::ContigTools->new;
+    my $ct = Genome::Model::Tools::Pcap::ContigTools->new;
     my $phd_object;
     $self->error_message("Ace file does not exist\n") and return unless (-e $ace_file);
-    my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
+    my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file, using_db => 1);
     
     if(-e "../phdball_dir/phd.ball.1")
     {
-        $phd_object = Genome::Assembly::Pcap::Phd->new(input_file => "../phdball_dir/phd.ball.1");
+        $phd_object = Genome::Model::Tools::Pcap::Phd->new(input_file => "../phdball_dir/phd.ball.1");
     }
     elsif(-e "../phd_dir/")
     {
-        $phd_object = Genome::Assembly::Pcap::Phd->new(input_directory => "../phd_dir/");
+        $phd_object = Genome::Model::Tools::Pcap::Phd->new(input_directory => "../phd_dir/");
     }
     else
     {

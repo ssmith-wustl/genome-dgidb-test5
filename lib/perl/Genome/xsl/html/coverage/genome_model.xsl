@@ -39,10 +39,11 @@
         </xsl:if>
       </xsl:for-each>
       ];
-      window.cSummary = {
+      window.cSummary = [
       <xsl:for-each select="//coverage-summary/model">
         <xsl:sort data-type="text" order="ascending" select="@subject_name"/>
-        "<xsl:value-of select="@id"/>": {
+        {
+        "id": "<xsl:value-of select="@id"/>",
         "subject_name": "<xsl:value-of select="@subject_name"/>",
         "pc_target_space_covered": {
         <xsl:for-each select="minimum_depth">
@@ -59,7 +60,7 @@
 
         }<xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
       </xsl:for-each>
-      };
+      ];
 
     </script>
 
@@ -87,134 +88,158 @@
     <div class="content rounded shadow">
       <div class="container">
 
-        <div class="box rounded">
-          <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
-            <tr>
-              <td class="name">Model Group Name:</td>
-              <td class="value"><xsl:value-of select="@name"/></td>
-            </tr>
-            <tr>
-              <td class="name">Models in Group:</td>
-              <td class="value"><xsl:value-of select="count(//coverage-summary/model)"/></td>
-            </tr>
-          </table>
+        <div class="span-24 last" style="margin-bottom: 10px;">
+          <div class="box rounded" style="margin: 0;">
+            <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
+              <tr>
+                <td class="name">model group name:</td>
+                <td class="value"><xsl:value-of select="@name"/></td>
+              </tr>
+              <tr>
+                <td class="name">models in group:</td>
+                <td class="value"><xsl:value-of select="count(//coverage-summary/model)"/></td>
+              </tr>
+            </table>
 
+          </div>
         </div>
-        <div id="charts" style="float: left; width: 950px;">
-
-          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="vertical-align: top; padding-right: 10px; width: 525px;">
-                <h2 class="subheader underline">coverage</h2>
-                <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
-              </td>
-              <td style="vertical-align: top; width: 420px;">
-                <h2 class="subheader underline">alignment</h2>
-                <script type="text/javascript" src="/res/js/app/genome_model_alignment_chart.js"></script>
-
-              </td>
-            </tr>
-          </table>
+        <div class="span-13">
+          <div class="box_header rounded-top span-13 last">
+            <div class="box_title"><h3 class="nontyped">coverage</h3></div>
+          </div>
+          <div class="box_content rounded-bottom span-13 last">
+            <div style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
+              <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
+            </div>
+          </div>
         </div>
 
-        <h2 class="subheader">alignment summary</h2>
-        <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
-          <thead>
-            <tr>
-              <th>subject</th>
-              <th>unique on-target</th>
-              <th>duplicate on-target</th>
-              <th>unique off-target</th>
-              <th>duplicate off-target</th>
-              <th>unaligned</th>
-            </tr>
-          </thead>
-          <tbody>
-            <xsl:for-each select="alignment-summary/model/wingspan[@size='0']">
-              <xsl:sort select="../@subject_name" order="ascending"/>
+        <div class="span-11 last">
+          <div class="box_header span-11 last rounded-top">
+            <div class="box_title"><h3 class="nontyped">alignment</h3></div>
+          </div>
+          <div class="box_content rounded-bottom span-11 last">
+            <div style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
+              <script type="text/javascript" src="/res/js/app/genome_model_alignment_chart.js"></script>
+            </div>
+          </div>
+        </div>
+
+        <div class="box_header span-24 last rounded-top">
+          <div class="box_title"><h3 class="nontyped span-24 last">lane index report</h3></div>
+        </div>
+        <div class="box_content rounded-bottom span-24 last">
+
+          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <thead>
               <tr>
-                <td>
-                  <xsl:value-of select="../@subject_name"/>
-                </td>
-                <td>
-                  <xsl:value-of select="format-number(unique_target_aligned_bp, '###,###')"/>
-                </td>
-                <td>
-                  <xsl:value-of select="format-number(duplicate_target_aligned_bp, '###,###')"/>
-                </td>
-                <td>
-                  <xsl:value-of select="format-number(unique_off_target_aligned_bp, '###,###')"/>
-                </td>
-                <td>
-                  <xsl:value-of select="format-number(duplicate_off_target_aligned_bp, '###,###')"/>
-                </td>
-                <td>
-                  <xsl:value-of select="format-number(total_unaligned_bp, '###,###')"/>
-                </td>
+                <th>subject</th>
+                <th>unique on-target</th>
+                <th>duplicate on-target</th>
+                <th>unique off-target</th>
+                <th>duplicate off-target</th>
+                <th>unaligned</th>
               </tr>
-            </xsl:for-each>
-          </tbody>
-        </table>
-        <h2 class="subheader">depth summary</h2>
-        <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
-          <thead>
-            <tr>
-              <th>subject</th>
-              <xsl:for-each select="coverage-summary/minimum_depth_header">
-                <xsl:sort select="@value" data-type="number" order="descending"/>
-                <th>
-                  <xsl:value-of select="@value"/>X
-                </th>
-              </xsl:for-each>
-            </tr>
-          </thead>
-          <tbody>
-            <xsl:for-each select="coverage-summary/model">
-              <xsl:sort select="@subject_name" order="ascending"/>
-              <tr>
-                <td>
-                  <xsl:value-of select="@subject_name"/>
-                </td>
-                <xsl:for-each select="minimum_depth">
-                  <xsl:sort select="@value" data-type="number" order="descending"/>
+            </thead>
+            <tbody>
+              <xsl:for-each select="alignment-summary/model/wingspan[@size='0']">
+                <xsl:sort select="../@subject_name" order="ascending"/>
+                <tr>
                   <td>
-                    <xsl:value-of select="pc_target_space_covered"/>%
+                    <xsl:value-of select="../@subject_name"/>
                   </td>
+                  <td>
+                    <xsl:value-of select="format-number(unique_target_aligned_bp, '###,###')"/>
+                  </td>
+                  <td>
+                    <xsl:value-of select="format-number(duplicate_target_aligned_bp, '###,###')"/>
+                  </td>
+                  <td>
+                    <xsl:value-of select="format-number(unique_off_target_aligned_bp, '###,###')"/>
+                  </td>
+                  <td>
+                    <xsl:value-of select="format-number(duplicate_off_target_aligned_bp, '###,###')"/>
+                  </td>
+                  <td>
+                    <xsl:value-of select="format-number(total_unaligned_bp, '###,###')"/>
+                  </td>
+                </tr>
+              </xsl:for-each>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="box_header span-24 last rounded-top">
+          <div class="box_title"><h3 class="nontyped span-24 last">depth summary</h3></div>
+        </div>
+        <div class="box_content rounded-bottom span-24 last">
+
+          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <thead>
+              <tr>
+                <th>subject</th>
+                <xsl:for-each select="coverage-summary/minimum_depth_header">
+                  <xsl:sort select="@value" data-type="number" order="descending"/>
+                  <th>
+                    <xsl:value-of select="@value"/>X
+                  </th>
                 </xsl:for-each>
               </tr>
-            </xsl:for-each>
-          </tbody>
-        </table>
-        <h2 class="subheader">breadth summary (>=80%)</h2>
-        <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
-          <thead>
-            <tr>
-              <th>subject</th>
-              <xsl:for-each select="coverage-summary/minimum_depth_header">
-                <xsl:sort select="@value" data-type="number" order="descending"/>
-                <th>
-                  <xsl:value-of select="@value"/>X
-                </th>
-              </xsl:for-each>
-            </tr>
-          </thead>
-          <tbody>
-            <xsl:for-each select="coverage-summary/model">
-              <xsl:sort select="@subject_name" order="ascending"/>
-              <tr>
-                <td>
-                  <xsl:value-of select="@subject_name"/>
-                </td>
-                <xsl:for-each select="minimum_depth">
-                  <xsl:sort select="@value" data-type="number" order="descending"/>
+            </thead>
+            <tbody>
+              <xsl:for-each select="coverage-summary/model">
+                <xsl:sort select="@subject_name" order="ascending"/>
+                <tr>
                   <td>
-                    <xsl:value-of select="pc_target_space_covered_eighty_pc_breadth"/>%
+                    <xsl:value-of select="@subject_name"/>
                   </td>
+                  <xsl:for-each select="minimum_depth">
+                    <xsl:sort select="@value" data-type="number" order="descending"/>
+                    <td>
+                      <xsl:value-of select="pc_target_space_covered"/>%
+                    </td>
+                  </xsl:for-each>
+                </tr>
+              </xsl:for-each>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="box_header span-24 last rounded-top">
+          <div class="box_title"><h3 class="nontyped span-24 last">breadth summary (&gt;= 80%)</h3></div>
+        </div>
+        <div class="box_content rounded-bottom span-24 last">
+
+          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <thead>
+              <tr>
+                <th>subject</th>
+                <xsl:for-each select="coverage-summary/minimum_depth_header">
+                  <xsl:sort select="@value" data-type="number" order="descending"/>
+                  <th>
+                    <xsl:value-of select="@value"/>X
+                  </th>
                 </xsl:for-each>
               </tr>
-            </xsl:for-each>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              <xsl:for-each select="coverage-summary/model">
+                <xsl:sort select="@subject_name" order="ascending"/>
+                <tr>
+                  <td>
+                    <xsl:value-of select="@subject_name"/>
+                  </td>
+                  <xsl:for-each select="minimum_depth">
+                    <xsl:sort select="@value" data-type="number" order="descending"/>
+                    <td>
+                      <xsl:value-of select="pc_target_space_covered_eighty_pc_breadth"/>%
+                    </td>
+                  </xsl:for-each>
+                </tr>
+              </xsl:for-each>
+            </tbody>
+          </table>
+        </div>
       </div> <!-- end container -->
     </div> <!-- end content -->
 

@@ -11,32 +11,36 @@ use Regexp::Common;
 class Genome::ProcessingProfile::DeNovoAssembly{
     is => 'Genome::ProcessingProfile::Staged',
     has_param => [
-       sequencing_platform => {
-           doc => 'The sequencing platform used to produce the reads.',
-           valid_values => [qw/ 454 solexa /],
-       },
-       coverage => {
-           is => 'Integer',
-           is_optional => 1,
-           doc => 'Use genome size to limit the number of reads used in the assembly to obtain this coverage.',
-       },
-       # Assembler
-       assembler_name => {
-           doc => 'Name of the assembler.',
-           valid_values => [qw/ velvet newbler soap /],
-       },
-       assembler_version => {
-           doc => 'Version of assembler.',
-       },
-       assembler_params => {
-           is_optional => 1,
-           doc => 'A string of parameters to pass to the assembler.',
-       },
-       # Read Coverage, Trimmer and Filter
-       read_processor => {
-           is_optional => 1,
-           doc => "String of read trimmers, filters and sorters to use. Find processors in 'gmt fast-qual.' List each porocessor in order of execution as they would be run on the command line. Do not include 'gmt fast-qual', as this is assumed. List params starting w/ a dash (-), followed by the value. Separate processors by a pipe w/ a space on each side ( | ). The read processors will be validated. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70",
-       },
+	sequencing_platform => {
+	    doc => 'The sequencing platform used to produce the reads.',
+	    valid_values => [qw/ 454 solexa /],
+	},
+	coverage => {
+	    is => 'Integer',
+	    is_optional => 1,
+	    doc => 'Use genome size to limit the number of reads used in the assembly to obtain this coverage.',
+	},
+	# Assembler
+	assembler_name => {
+	    doc => 'Name of the assembler.',
+	    valid_values => [qw/ velvet newbler soap /],
+	},
+	assembler_version => {
+	    doc => 'Version of assembler.',
+	},
+	assembler_params => {
+	    is_optional => 1,
+	    doc => 'A string of parameters to pass to the assembler.',
+	},
+	# Read Coverage, Trimmer and Filter
+	read_processor => {
+	    is_optional => 1,
+	    doc => "String of read trimmers, filters and sorters to use. Find processors in 'gmt fast-qual.' List each porocessor in order of execution as they would be run on the command line. Do not include 'gmt fast-qual', as this is assumed. List params starting w/ a dash (-), followed by the value. Separate processors by a pipe w/ a space on each side ( | ). The read processors will be validated. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70",
+	},
+	fasta_to_agp_params => {
+	    is_optional => 1, #this should be mandidtory
+	    doc => 'Parameters to run fasta2agp script with, include scaffold sizes cutoff and version of the script',
+	},
    ],
 };
 
@@ -76,6 +80,15 @@ sub create {
         return;
     }
     
+    #optionally validate fasta2agp params
+    if ( $self->fasta_to_agp_params ) {
+	unless ( $self->_validate_fasta_to_agp_params ) {
+	    $self->status_message("Failed to validate params for running fasta2agp script");
+	    $self->delete;
+	    return;
+	}
+    }
+
     return $self;
 }
 
@@ -223,6 +236,60 @@ sub _validate_read_processor {
     }
 
     $self->status_message("Read processor OK");
+
+    return 1;
+}
+
+sub fasta_to_agp_params_as_hash {
+    my $self = shift;
+
+    my %params = Genome::Utility::Text::param_string_to_hash( $self->fasta_to_agp_params );
+    unless ( %params ) {
+	Carp::confess(
+            $self->error_message("Malformed assembler params: ".$self->fasta_to_agp_params)
+	  );
+    }
+
+    return %params;
+}
+
+my %valid_fasta_to_agp_params = (
+    version => {
+	'9.27.10' => 1,
+    },
+);
+
+sub _valid_fasta_to_agp_versions {
+    my $self = shift;
+
+    my $valid_versions;
+
+    foreach ( sort keys %{$valid_fasta_to_agp_params{'version'}} ) {
+	$valid_versions .= " $_";
+    }
+
+    return $valid_versions;
+}
+
+sub _validate_fasta_to_agp_params {
+    my $self = shift;
+
+    my %params = $self->fasta_to_agp_params_as_hash;
+
+    #validate fasta2agp version
+    unless ( exists $params{'version'} and exists $valid_fasta_to_agp_params{'version'}{ $params{'version'} } ) {
+	Carp::confess (
+	    $self->error_message("Version of fasta2gap must be supplied with on of the valid versions: ".$self->_valid_fasta_to_agp_versions."\n".
+				 "Params were: ".$self->fasta_to_agp_params)
+	);
+    }
+    #validate fasta2agp size cutoff param
+    unless ( exists $params{'scaffold_size_cutoff'} and $params{'scaffold_size_cutoff'} =~ /^\d+$/) {
+	Carp::confess(
+	    $self->error_message("Scaffold size cutoff must be specified and it must be a number\n".
+				 "Params were: ".$self->fasta_to_agp_params)
+	);
+    }
 
     return 1;
 }

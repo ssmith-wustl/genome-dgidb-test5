@@ -1,0 +1,2 @@
+package Genome::Env::GENOME_NO_REQUIRE_USER_VERIFY;
+1;

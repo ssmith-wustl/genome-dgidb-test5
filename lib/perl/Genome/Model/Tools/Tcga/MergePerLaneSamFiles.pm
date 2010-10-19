@@ -74,7 +74,7 @@ sub execute {
     my $model = Genome::Model->get($model_id);
     die "Model $model_id is not defined. Quitting." unless defined($model);
     
-    my $seq_dict_sam_file = $model->reference_build->get_sequence_dictionary("sam");
+    my $seq_dict_sam_file = $model->reference_sequence_build->get_sequence_dictionary("sam");
  
     my @idas = $model->instrument_data_assignments;
     $self->status_message("There are ".scalar(@idas)." id assignemnts for model id $model_id\n");

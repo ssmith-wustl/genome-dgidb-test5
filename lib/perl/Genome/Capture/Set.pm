@@ -24,7 +24,6 @@ class Genome::Capture::Set {
         description => { },
         status => { },
         _capture_set => {
-            doc => 'Solexa Lane Summary from LIMS.',
             is => 'GSC::Setup::CaptureSet',
             calculate => q| GSC::Setup::CaptureSet->get($id); |,
             calculate_from => ['id']
@@ -39,6 +38,7 @@ class Genome::Capture::Set {
     doc         => '',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
 
 sub bed_file_content {
     my $self = shift;
@@ -71,6 +71,7 @@ sub bed_file_content {
                 die('At least three fields are required in BED format files.  Error with line: '. $line);
             }
             $entry[0] =~ s/chr//g;
+            if ($entry[0] =~ /random/) { next; }
             # Correct for 1-based start positions in imported BED files,
             # unless at zero already(which means we shouldn't be correcting the position anyway...)
             if ($entry[1] > 0) {

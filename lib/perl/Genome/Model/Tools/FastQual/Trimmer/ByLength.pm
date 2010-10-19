@@ -9,44 +9,59 @@ use Regexp::Common;
 
 class Genome::Model::Tools::FastQual::Trimmer::ByLength {
     is => 'Genome::Model::Tools::FastQual::Trimmer',
-    has => [
+    has_optional => [
         trim_length => {
-            is => 'Number',
+            is => 'Integer',
             doc => 'the number of bases to remove',
+        },    
+        read_length => {
+            is => 'Integer',
+            doc => 'the number of bases to keep',
         }    
      ],
 };
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-    
-    my $trim_length = $self->trim_length;
-    unless ( defined $trim_length ) {
-        $self->error_message("No trim length given.");
-        $self->delete;
-        return;
+sub __errors__ {
+    my $self = shift;
+    my @errors = $self->SUPER::__errors__(@_);
+    if ($self->trim_length and $self->read_length) {
+        push @errors, 
+            UR::Object::Tag->create(
+                type => 'invalid',
+                properties => ['trim_length','read_length'],
+                desc => "trim_length and read_length cannot both be specified"
+            );
     }
-    unless ( $trim_length =~ /^$RE{num}{int}$/ and $trim_length > 1 ) {
-        $self->error_message("Trim length ($trim_length) must be a positive integer.");
-        $self->delete;
-        return;
+    elsif (!$self->trim_length and !$self->read_length) {
+        push @errors, 
+            UR::Object::Tag->create(
+                type => 'invalid',
+                properties => ['trim_length','read_length'],
+                desc => "either trim_length or read_length must be specified"
+            );
     }
-
-    return $self;
+    return @errors;
 }
 
 sub _trim {
     my ($self, $seqs) = @_;
 
+    # if read_length is specified, we'll trim all reads down to that length 
+    # where they are longer
+    my $length = $self->read_length;
+
+    # if trim_length is specified that many bases will be removed
+    # (the actual read length will vary in the output if it varies in the input)
+    my $trim_length = $self->trim_length;
+
     for my $s (@$seqs) {
         my $bases = $s->{seq};
         my $quals = $s->{qual};
 
-        my $length = length($bases) - $self->trim_length;
-        $length = 0 if $length < 0;
+        if ($trim_length) {
+            $length = length($bases) - $trim_length;
+            $length = 0 if $length < 0;
+        }
 
         $quals = substr($quals,0,$length);
         $bases = substr($bases,0,$length);

@@ -1,10 +1,12 @@
 package Genome::Model::Tools::Assembly::BuildAceIndices; 
 
-use IO::File;
 use strict;
 use warnings;
+
+use Genome;
+use IO::File;
 use Workflow::Simple;
-use Genome::Assembly::Pcap::Ace;
+
 
 class Genome::Model::Tools::Assembly::BuildAceIndices {
     is => 'Command',
@@ -121,14 +123,14 @@ sub execute
     }
     elsif($ace_file && -e $ace_file)
     {
-        my $ao = Genome::Assembly::Pcap::Ace->new(input_file => $ace_file);
+        my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file);
         $self->error_message("There was a problem indexing $ace_file.\n") and return unless(defined $ao);
     }
     
     if($cache_dir)
     {
         $self->error_message("Cache directory already exists, caches can only be created once, please remove the old one and try again.\n") and return if(-d $cache_dir);
-        my $ao = Genome::Assembly::Pcap::Ace->new(input_files => \@ace_files, cache_dir => $cache_dir);        
+        my $ao = Genome::Model::Tools::Pcap::Ace->new(input_files => \@ace_files, cache_dir => $cache_dir);        
     }    
 
     return 1;

@@ -217,7 +217,10 @@ sub get_build_node {
         );
     }
     $buildnode->addChild( $doc->createAttribute("build-id",$build->id) );
-    $buildnode->addChild( $doc->createAttribute("status",$build->build_status) );
+    $buildnode->addChild( $doc->createAttribute("status",$build->status) );
+
+    $buildnode->addChild( $doc->createAttribute("metric-count", ($build->status eq 'Succeeded' ? scalar @{[ $build->metrics ]} : 0) ) );
+
     if ($kb_requested) {
         $buildnode->addChild( $doc->createAttribute("kilobytes-requested",$kb_requested) );
     }

@@ -66,7 +66,8 @@ print "Working Directory: $dir";
 print "Retrieving File(s) from COSMIC\n";
 
 #directory on COSMIC server with all GENE folders
-system ( wget, "\-r" , "\-A.csv" , "\-nd" , "\-N" , "\-l2" , $URL);
+my $wget = 'wget';
+system ( $wget, "\-r" , "\-A.csv" , "\-nd" , "\-N" , "\-l2" , $URL);
 
 print "Finished Downloading COSMIC File(s), Moving on to Writing COSMIC Flatfile\n";
 
@@ -88,7 +89,11 @@ foreach my $file (@cosmicdirfiles) {
 unless (open(COSMIC_DB,">$cosmicdb")) {
     die "Could not open output file '$cosmicdb' for writing";
 }
-print COSMIC_DB "Gene\tChromosome\tGenome Start\tGenome Stop\tAmino Acid\tNucleotide\tSomatic Status\n";
+#Sample Name	COSMIC Sample ID	Amino Acid	Nucleotide	Primary Tissue	Tissue subtype 1	Tissue subtype 2	Histology	Histology subtype 1	Histology subtype 2	Pubmed ID	studies	Mutation ID	Somatic Status	Sample Source	Zygosity	Chromosome NCBI36	Genome Start NCBI36	Genome Stop NCBI36	Chromosome GRCh37	Genome Start GRCh37	Genome Stop GRCh37
+#Sample Name       COSMIC Sample ID        Amino Acid      Nucleotide      Primary Tissue  Tissue subtype 1        Tissue subtype 2        Histology       Histology subtype 1     Histology subtype 2     Pubmed ID       studies Mutation ID     Somatic Status  Sample Source Zygosity        Chromosome      Genome Start    Genome Stop
+
+print COSMIC_DB "Gene\tChromosome\tGenome Start\tGenome Stop\tAmino Acid\tNucleotide\tSomatic Status\tPrimary_Tissue\tTissue_subtype_1\tTissue_subtype_2\tHistology\tHistology_subtype_1\tHistology_subtype_2\tChromosome Build37\tGenome Start Build37\tGenome Stop Build37\n";
+
 my $i = 0;
 foreach my $genefile (@cosmiccsvfiles) {
 	print ".";
@@ -102,15 +107,33 @@ foreach my $genefile (@cosmiccsvfiles) {
 	my $chr_col;
 	my $start_col;
 	my $stop_col;
+	my $chr_col_37;
+	my $start_col_37;
+	my $stop_col_37;
 	my $amino_col;
 	my $nucleo_col;
 	my $somatic_col;
+	my $primary_tissue_col;
+	my $tissue_sub_1_col;
+	my $tissue_sub_2_col;
+	my $histology_col;
+	my $histology_sub_1_col;
+	my $histology_sub_2_col;
 	my $chr;
 	my $start;
 	my $stop;
+	my $chr_37;
+	my $start_37;
+	my $stop_37;
 	my $amino;
 	my $nucleo;
 	my $somatic;
+	my $primary_tissue;
+	my $tissue_sub_1;
+	my $tissue_sub_2;
+	my $histology;
+	my $histology_sub_1;
+	my $histology_sub_2;
 	while (my $line = <GENE_FILE>) {
 		if ($line =~ m/(Amino Acid)/ ) {
 			$firstline = 1;
@@ -121,12 +144,32 @@ foreach my $genefile (@cosmiccsvfiles) {
 				$parsehash{$item} = $parsecount;
 				$parsecount++;
 			}
-			$chr_col = $parsehash{'Chromosome'};
-			$start_col = $parsehash{'Genome Start'};
-			$stop_col = $parsehash{'Genome Stop'};
+			if ($line =~ m/(GRCh37)/) {
+				$chr_col = $parsehash{'Chromosome NCBI36'};
+				$start_col = $parsehash{'Genome Start NCBI36'};
+				$stop_col = $parsehash{'Genome Stop NCBI36'};
+				$chr_col_37 = $parsehash{'Chromosome GRCh37'};
+				$start_col_37 = $parsehash{'Genome Start GRCh37'};
+				$stop_col_37 = $parsehash{'Genome Stop GRCh37'};
+			}
+			else {
+				$chr_col = $parsehash{'Chromosome'};
+				$start_col = $parsehash{'Genome Start'};
+				$stop_col = $parsehash{'Genome Stop'};
+				$chr_col_37 = 'NotListed';
+				$start_col_37 = 'NotListed';
+				$stop_col_37 = 'NotListed';
+			}
 			$amino_col = $parsehash{'Amino Acid'};
 			$nucleo_col = $parsehash{'Nucleotide'};
 			$somatic_col = $parsehash{'Somatic Status'};
+			$primary_tissue_col = $parsehash{'Primary Tissue'};
+			$tissue_sub_1_col = $parsehash{'Tissue subtype 1'};
+			$tissue_sub_2_col = $parsehash{'Tissue subtype 2'};
+			$histology_col = $parsehash{'Histology'};
+			$histology_sub_1_col = $parsehash{'Histology subtype 1'};
+			$histology_sub_2_col = $parsehash{'Histology subtype 2'};
+	
 			unless (defined($chr_col) && defined($start_col) && defined($stop_col) && defined($amino_col) && defined($nucleo_col) && defined($somatic_col)) {
 			    die "Line: $line\nAbove line could not be parsed for gene: $gene";
 			}
@@ -146,8 +189,24 @@ foreach my $genefile (@cosmiccsvfiles) {
 		$amino = $parser[$amino_col];
 		$nucleo = $parser[$nucleo_col];
 		$somatic = $parser[$somatic_col];
-		chomp($chr,$start,$stop,$amino,$nucleo,$somatic);
-		print COSMIC_DB "$gene\t$chr\t$start\t$stop\t$amino\t$nucleo\t$somatic\n";
+		$primary_tissue = $parser[$primary_tissue_col];
+		$tissue_sub_1 = $parser[$tissue_sub_1_col];
+		$tissue_sub_2 = $parser[$tissue_sub_2_col];
+		$histology = $parser[$histology_col];
+		$histology_sub_1 = $parser[$histology_sub_1_col];
+		$histology_sub_2 = $parser[$histology_sub_2_col];
+		if ($chr_col_37 eq 'NotListed') {
+			$chr_37 = $chr_col_37;
+			$start_37 = $start_col_37;
+			$stop_37 = $stop_col_37;
+		}
+		else {
+			$chr_37 = $parser[$chr_col_37];
+			$start_37 = $parser[$start_col_37];
+			$stop_37 = $parser[$stop_col_37];
+		}
+		chomp($chr,$start,$stop,$amino,$nucleo,$somatic,$primary_tissue,$tissue_sub_1,$tissue_sub_2,$histology,$histology_sub_1,$histology_sub_2,$chr_37,$start_37,$stop_37);
+		print COSMIC_DB "$gene\t$chr\t$start\t$stop\t$amino\t$nucleo\t$somatic\t$primary_tissue\t$tissue_sub_1\t$tissue_sub_2\t$histology\t$histology_sub_1\t$histology_sub_2\t$chr_37\t$start_37\t$stop_37\n";
 	}
 }
 

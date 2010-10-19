@@ -56,168 +56,6 @@ class Genome::Model::Build::ImportedReferenceSequence {
     ]
 };
 
-#< Special Gets >#
-sub from_cmdline {
-    my $class = shift;
-
-    my $wantlist = wantarray();
-    if ( not defined $wantlist ) {
-        Carp::confess("Imported reference sequence builds get from command line called in void context");
-    }
-
-    if ( not @_ ) {
-        Carp::confess("Nothing specified to get imported reference sequence builds from command line");
-    }
-
-    my @found;
-    my %needed;
-    @needed{@_} = @_;
-
-    # by model ids
-    my %ids;
-    %ids = map { $_ => 1 } grep { /^$RE{num}{int}$/ } keys %needed;
-    if ( %ids ) {
-        my @models = Genome::Model::ImportedReferenceSequence->get([ keys %ids ]);
-        for my $model ( @models ) {
-            my @builds = $model->builds;
-            next if not @builds;
-            my $build = pop @builds;
-            push @found, $build;
-            delete @needed{ $model->id };
-            delete @ids{ $model->id };
-        }
-    }
-
-    return @found if not %needed;
-
-    # by build ids
-    if ( %ids ) {
-        my @builds =  Genome::Model::Build::ImportedReferenceSequence->get([keys %ids]);
-        push @found, @builds;
-        my @found_ids = map { $_->id } @builds;
-        delete @needed{ @found_ids };
-        delete @ids{ @found_ids };
-    }
-
-    return @found if not %needed;
-
-    # by name
-    if ( %needed ) {
-        my @builds = $class->get_by_name(keys %needed);
-        push @found, @builds;
-        my @found_names = map { $_->name } @builds;
-        delete @needed{ @found_names };
-    }
-
-    return @found if not %needed;
-
-    # by model name
-    if ( %needed ) {
-        my @builds = $class->get_latest_builds_for_model_names(keys %needed);
-        push @found, @builds;
-        my @found_names = map { $_->model_name } @builds;
-        delete @needed{ @found_names };
-    }
-
-    return @found if not %needed;
-
-    # by build name, but load all to look at the calculated name. this may happen
-    #  if there are spaces in the model name, as they get substitued by dashes.
-    if ( %needed ) {
-        my @builds = Genome::Model::Build::ImportedReferenceSequence->get;
-        for my $build ( @builds ) {
-            my $build_name = $build->name;
-            next unless grep { $build_name eq $_ } keys %needed;
-            push @found, $build;
-            delete $needed{$build_name};
-        }
-    }
-
-    if ( %needed ) {
-        Carp::confess("Cannot find imported reference sequence builds for: ".join(', ', map { '"'.$_.'"' } keys %needed));
-    }
-
-    if ( $wantlist ) {
-        return @found;
-    }
-
-    if ( @found == 1 ) {
-        return $found[0];
-    }
-
-    Carp::confess("Multiple imported reference sequence builds found with params from command line: @_"); 
-}
-
-sub get_latest_builds_for_model_names { 
-    my ($class, @model_names) = @_;
-
-    unless ( @model_names ) {
-        Carp::confess("No model names to get latest imported reference sequence builds");
-    }
-
-    my @models = Genome::Model::ImportedReferenceSequence->get(name => \@model_names);
-    return if not @models;
-
-    my @builds;
-    for my $model ( @models ) {
-        my @builds_for_model = $model->builds;
-        next if not @builds_for_model;
-        push @builds, pop @builds_for_model;
-    }
-
-    return @builds;
-}
-
-sub get_by_name {
-    my ($class, $name) = @_;
-
-    unless ( $name ) {
-        Carp::confess('No build name given to get imported reference sequence build');
-    }
-
-    # This method is not adequate as spaces are substitued in the model anme and version
-    #  when creating the build name. But we'll try.
-    my ($model_name, $build_version) = $name =~ /^(.+)-build(.+?)$/;
-    if ( not defined $model_name ) {
-        $class->status_message("Could not parse out model name and build version from build name: $name");
-        return;
-    }
-
-    $class->status_message("Getting imported reference sequence builds for model ($model_name) and version ($build_version)");
-
-    my $model = Genome::Model::ImportedReferenceSequence->get(name => $model_name);
-    if ( not $model ) {
-        # ok - model name may have spaces that were sub'd for dashes
-        $class->status_message("No imported reference sequence model with name: $model_name");
-        return;
-    }
-
-    $class->status_message("Getting builds for imported reference sequence model: ".$model->__display_name__);
-
-    my @builds = $model->builds;
-    if ( not @builds ) {
-        Carp::confess("No builds for imported reference sequence model: ".$model->__display_name__);
-    }
-
-    my @builds_with_version;
-    for my $build ( @builds ) {
-        my $version = $build->version;
-        if ( not defined $version or $version ne $build_version ) {
-            next;
-        }
-        push @builds_with_version, $build;
-    }
-    if ( not @builds_with_version ) {
-        Carp::confess("No builds found with version $build_version for imported reference sequence model: ".$model->__display_name__);
-    }
-    elsif ( @builds_with_version > 1 ) {
-        Carp::confess("Multiple builds with version $build_version found for model: ".$model->__display_name__);
-    }
-
-    return $builds_with_version[0];
-}
-#</ Special Get >#
-
 sub __display_name__ {
     my $self = shift;
     my $txt = $self->name . " (" . $self->id . ")";
@@ -421,6 +259,73 @@ sub get_sequence_dictionary {
     }
 
     return;
+}
+
+sub get_by_name {
+    my ($class, $name) = @_;
+
+    unless ( $name ) {
+        Carp::confess('No build name given to get imported reference sequence build');
+    }
+
+    # This method is not adequate as spaces are substitued in the model anme and version
+    #  when creating the build name. But we'll try.
+    my ($model_name, $build_version) = $name =~ /^(.+)-build(.*?)$/;
+    if ( not defined $model_name ) {
+        $class->status_message("Could not parse out model name and build version from build name: $name");
+        return;
+    }
+
+    $class->status_message("Getting imported reference sequence builds for model ($model_name) and version ($build_version)");
+
+    my $model = Genome::Model::ImportedReferenceSequence->get(name => $model_name);
+    if ( not $model ) {
+        # ok - model name may have spaces that were sub'd for dashes
+        $class->status_message("No imported reference sequence model with name: $model_name");
+        return;
+    }
+
+    $class->status_message("Getting builds for imported reference sequence model: ".$model->__display_name__);
+
+    my @builds = $model->builds;
+    if ( not @builds ) {
+        Carp::confess("No builds for imported reference sequence model: ".$model->__display_name__);
+    }
+
+    unless($build_version) {
+        my @builds_without_version;
+        for my $build (@builds) {
+            next if defined $build->version;
+
+            push @builds_without_version, $build;
+        }
+
+        unless (scalar @builds_without_version > 0) {
+            Carp::confess("No builds found with no version for imported reference sequence model: ".$model->__display_name__);
+        }
+        if ( @builds_without_version > 1 ) {
+            Carp::confess("Multiple builds with no version found for model: ".$model->__display_name__);
+        }
+
+        return $builds_without_version[0];
+    } else {
+        my @builds_with_version;
+        for my $build ( @builds ) {
+            my $version = $build->version;
+            if ( not defined $version or $version ne $build_version ) {
+                next;
+            }
+            push @builds_with_version, $build;
+        }
+        if ( not @builds_with_version ) {
+            Carp::confess("No builds found with version $build_version for imported reference sequence model: ".$model->__display_name__);
+        }
+        elsif ( @builds_with_version > 1 ) {
+            Carp::confess("Multiple builds with version $build_version found for model: ".$model->__display_name__);
+        }
+
+        return $builds_with_version[0];
+    }
 }
 
 1;

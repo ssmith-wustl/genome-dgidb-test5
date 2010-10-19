@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use UR;
+use Sys::Hostname;
 
 # This module potentially conflicts to the perl-supplied Config.pm if you've
 # set up your @INC or -I options incorrectly.  For example, you used -I /path/to/modules/Genome/
@@ -31,7 +32,7 @@ sub arch_os {
 # in dev mode we use dev search, dev wiki, dev memcache, etc, but production database still ;)
 my $dev_mode = exists $ENV{GENOME_DEV_MODE} ? $ENV{GENOME_DEV_MODE} : (UR::DBI->no_commit ? 1 : 0);
 if ($dev_mode) {
-    my $h = $ENV{'HOST'};
+    my $h = hostname;
     warn "***** GENOME_DEV_MODE ($h) *****";
 }
 

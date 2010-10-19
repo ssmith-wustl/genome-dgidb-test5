@@ -35,14 +35,14 @@ class Genome::ModelGroup {
 
 sub create {
     my $class = shift;
-    my %params = @_;
+    my ($bx,%params) = $class->define_boolexpr(@_);
     
     my %convergence_model_params = ();
     if(exists $params{convergence_model_params}) {
         %convergence_model_params = %{ delete $params{convergence_model_params} };
     } 
     
-    my $self = $class->SUPER::create(%params);
+    my $self = $class->SUPER::create($bx);
     
     my $define_command = Genome::Model::Command::Define::Convergence->create(
         %convergence_model_params,

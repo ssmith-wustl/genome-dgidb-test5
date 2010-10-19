@@ -1,7 +1,7 @@
 package Genome::Model::ReferenceAlignment::Command::ExampleManyModels; 
 
 class Genome::Model::ReferenceAlignment::Command::ExampleManyModels {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has_many => [
         models => { shell_args_position => 1, is => 'Genome::Model' }, 
     ],

@@ -30,6 +30,7 @@ class Genome::Model::Tools::Annotate::OMIMUpdate {
 		omim_url	=> { is => 'Text', doc => "URL to the online OMIM repository", is_optional => 1, default => 'ftp://ftp.ncbi.nih.gov/repository/OMIM/' },
 		omim_db_zipfile	=> { is => 'Text', doc => "Zipped filename to download from the online OMIM repository", is_optional => 1, default => 'omim.txt.Z' },
 		omim_db_file	=> { is => 'Text', doc => "Filename of file inside zip file downloaded from the online OMIM repository", is_optional => 1, default => 'omim.txt' },
+		omim_gene_file	=> { is => 'Text', doc => "Filename of file inside zip file downloaded from the online OMIM repository", is_optional => 1, default => 'genemap' },
 		output_file	=> { is => 'Text', doc => "Output file name for flatfile of amino acid changes", is_optional => 1, default => 'OMIM_aa_will.csv' },
 	],
 };
@@ -51,7 +52,6 @@ A module for updating the downloaded OMIM database to reflect the current OMIM d
 EOS
 }
 
-
 ################################################################################################
 # Execute - the main program logic
 #
@@ -65,24 +65,90 @@ my $OMIMpath = $self->omim_folder;
 my $OMIM_DB = $self->output_file;
 my $OMIMZINPUT = $self->omim_db_zipfile;
 my $OMIMINPUT = $self->omim_db_file;
+my $OMIM_genemap = $self->omim_gene_file;
+
 print "retrieving file from OMIM\n";
 
 chdir ($OMIMpath);
 my $dir = getcwd;
 print "Working Directory: $dir";
-system ( rm, $OMIMZINPUT);
-system ( rm, $OMIMINPUT);
+my $cmd1 = "rm $OMIMZINPUT";
+my $cmd2 = "rm $OMIMINPUT";
+my $cmd3 = "rm $OMIM_genemap";
+system ($cmd1);
+system ($cmd2);
+system ($cmd3);
 
 #directory on OMIM server
 my $URL_file = $URL.$OMIMZINPUT;
-system ( wget, $URL_file);
+my $cmd_wget1 = "wget $URL_file";
+system ($cmd_wget1);
+
+my $URL_file2 = $URL.$OMIM_genemap;
+my $cmd_wget2 = "wget $URL_file2";
+system ($cmd_wget2);
 
 print "unzipping OMIM file\n";
-system ( gunzip, $OMIMZINPUT);
+#my $cmd4 = "tar -xzf $OMIMZINPUT";
+#my $cmd4 = "gunzip $OMIMZINPUT";
+my $cmd4 = "uncompress $OMIMZINPUT";
+system ($cmd4);
 
 print "Writing OMIM_aa File...\n";
 my $OMIMfile = "$OMIMpath/$OMIMINPUT";
-my $omim_parser = Bio::Phenotype::OMIM::OMIMparser->new(-omimtext => $OMIMfile );
+my $genemap_file = "$OMIMpath/$OMIM_genemap";
+my $omim_parser = Bio::Phenotype::OMIM::OMIMparser->new(-omimtext => $OMIMfile#,
+#							-genemap  => $genemap_file
+							);
+
+open(INPUT, "$genemap_file") || die "File $genemap_file unavailable\                                                         n";
+my %genemap;
+while (my $line = <INPUT>) {
+        $line =~ s/\\//g;
+        $line =~ s/"/'/g;
+        $line =~ s/</&lt/g;
+        $line =~ s/>/&gt/g;
+        my @fields = split(/\|/, $line);
+	my $title = $fields[7];
+        my $id = $fields[9];
+        my $nsid = "omim:$id";
+	my $gene_status = $fields[6];
+
+	my $comment;
+	if ($fields[11] ne "") {
+		$comment = $fields[11];
+	}
+
+	my @disorders;
+	if ($fields[13] ne "") {
+		push(@disorders,$fields[13]);
+#The number in parentheses after the name of each disorder indicates whether the mutation was positioned by mapping the wildtype gene (1), by mapping the disease phenotype itself (2), or by both approaches (3). The last "3", includes mapping of the wildtype gene combined with demonstration of a mutation in that gene in association with the disorder.
+		if ($fields[14] ne "") {
+			push(@disorders,$fields[14]);
+		}
+		if ($fields[15] ne "") {
+			push(@disorders,$fields[15]);
+		}
+		my $item = join(" ",@disorders);
+		foreach my $gene (split(", ", $fields[5])) {
+		        my $gene_lc = lc($gene);
+			my @ind_disorders;
+#		        foreach my $item1 (split(";", $item)) {
+#				#remove space?
+#				if ($item1 =~ / (.*)/) { $item1 = $1;}
+#				#OMIM number
+#		                if ($item1 =~ /, ([0-9]*) \(.\)/) {
+#					my $omim_number = $1;
+#					push(@ind_disorders,$item1);
+#				}
+#		        }
+			push(@ind_disorders,$item);
+			my $dis = join("\t",@ind_disorders);
+			$genemap{$gene_lc} = $dis;
+		}
+	}
+}
+close(INPUT);
 
 # amino acid output file
 
@@ -96,7 +162,7 @@ unless (open(OMIM_DB_ADDITIONAL,">$OMIM_DB_ADDITIONAL")) {
 }
 
 # start amino acid file output
-print OMIM_DB "gene\tomimentry\tposition\taa_ori\taa_mut\tdescription\n"; 
+print OMIM_DB "gene\tomimentry\tposition\taa_ori\taa_mut\tdescription\tDiseases\n"; 
 
 # to split OMIM file, call OMIMparser, OMIMentry, and OMIMentryAllelicVariant
 # Function: Returns an Bio::Phenotype::OMIM::OMIMentry or undef once the end of the omim text file is reached.
@@ -226,12 +292,23 @@ while ( my $omim_entry = $omim_parser->next_phenotype() ) {
 		#check if gene name is defined
 		if ($symbol ne ''){
 			#and if amino acid info is defined
+			my $avs;
 			if ($aa_ori ne ''){
-				my $avs = join("\t", $symbol1,$mimnum,$pos,$aa_ori,$aa_mut,$add_mut);
+				if(exists($genemap{lc($symbol1)})) {
+					$avs = join("\t", $symbol1,$mimnum,$pos,$aa_ori,$aa_mut,$add_mut,$genemap{lc($symbol1)});
+				}
+				else {
+					$avs = join("\t", $symbol1,$mimnum,$pos,$aa_ori,$aa_mut,$add_mut);
+				}
 				print OMIM_DB "$avs\n"; 
 			}
 			if ($aa_ori eq ''){
-				my $avs = join("\t", $symbol1,$mimnum,$pos,$aa_ori,$aa_mut,$add_mut);
+				if(exists($genemap{lc($symbol1)})) {
+					$avs = join("\t", $symbol1,$mimnum,$pos,$aa_ori,$aa_mut,$add_mut,$genemap{lc($symbol1)});
+				}
+				else {
+					$avs = join("\t", $symbol1,$mimnum,$pos,$aa_ori,$aa_mut,$add_mut);
+				}
 				print OMIM_DB_ADDITIONAL "$avs\n"; 
 			}
 		}

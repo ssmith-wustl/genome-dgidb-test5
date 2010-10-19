@@ -30,10 +30,11 @@ class Genome::Model::Command::Define::Somatic {
             is => 'Integer',
             is_input => 1,
         },
-        processing_profile_name => {
+        subject_name => {
             is => 'Text',
-            doc => 'identifies the processing profile by name',
-            default => 'default',
+            is_input => 1,
+            is_optional => 1,
+            doc => 'Subject name is derived from normal and tumor models and is not necessary as input to somatic models',
         },
     ],
 };
@@ -41,7 +42,6 @@ class Genome::Model::Command::Define::Somatic {
 sub help_synopsis {
     return <<"EOS"
 genome model define 
-  --subject_name ovc2
   --tumor-id 12345
   --normal-id 54321
   --data-directory /gscmnt/somedisk/somedir/model_dir

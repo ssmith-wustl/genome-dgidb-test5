@@ -9,7 +9,7 @@ use Bit::Vector;
 use Benchmark;
 
 class Genome::Model::Tools::Bmr::ClassSummary {
-    is => 'Genome::Command::OO',
+    is => 'Genome::Command::Base',
     has_input => [
     refseq_build_name => {
         is => 'String',

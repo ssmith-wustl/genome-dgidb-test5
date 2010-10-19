@@ -26,19 +26,80 @@ sub help_detail {
     "This command will remove a build from the system.  The rest of the model remains the same, as does independent data like alignments.";
 }
 
+sub _remove_builds_with_errors {
+    my ($self, @builds) = @_;
+
+    $self->status_message("Checking ".scalar(@builds)." for errors prior to removal. This is a slow process...");
+    my @error_builds;
+    my @error_free_builds;
+    for my $build (@builds) {
+        # Builds containing expunged data cannot be changed since any changes that try to be committed
+        # will result in problems when the __errors__ method determines that the instrument data 
+        # assignments point to instrument data that's been blown away. If problems are found, inform 
+        # the user and skip the build
+        my @errors = $build->__errors__;
+        # no need to check instrument data if build already has errors
+        unless (@errors) {
+            push @errors, map { $_->__errors__ } $build->instrument_data;
+        }
+
+        if (@errors) {
+            push @error_builds, $build;
+        }
+        else {
+            push @error_free_builds, $build;
+        }
+    }
+    if (@error_builds) {
+        $self->warning_message("Errors found on some builds and/or their instrument data assignments,\n".
+            "cannot remove this build!\nErrors like \"There is no instrument data...\" mean the build ".
+            "deals with expunged data. Contact apipe!\n".
+            "The builds are:\n".
+            join("\n", map { $_->__display_name__ } @error_builds)."\n".
+            "These builds have been removed from the list, running on any remaining builds.");
+    }
+    @builds = @error_free_builds;
+
+    return @builds;
+}
+
 sub execute {
     my $self = shift;
 
-    # Get build
-    my $build = $self->_resolve_build
-        or return;
-
-    # Remove
-    my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
-    unless ($remove_build->execute()) {
-        die $self->error_message("Failed to remove build.");
+    my @builds = $self->builds;
+    @builds = $self->_remove_builds_with_errors(@builds);
+    my $build_count = scalar(@builds);
+    my $failed_count = 0;
+    my @errors;
+    for my $build (@builds) {
+        my $display_name = $build->__display_name__;
+        my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
+        my $rv = eval {$remove_build->execute};
+        if ($rv) {
+            $self->status_message("Successfully removed build (" . $display_name . ").");
+        }
+        else {
+            $self->error_message($@);
+            $failed_count++;
+            push @errors, "Failed to remove build (" . $display_name . ").";
+        }
     }
-    return 1;
+    for my $error (@errors) {
+        $self->status_message($error);
+    }
+    if ($build_count > 1) {
+        $self->status_message("Stats:");
+        $self->status_message(" Removed: " . ($build_count - $failed_count));
+        $self->status_message("  Errors: " . $failed_count);
+        $self->status_message("   Total: " . $build_count);
+    }
+
+    if (@errors) {
+        return;
+    }
+    else {
+        return 1;
+    }
 }
 
 1;

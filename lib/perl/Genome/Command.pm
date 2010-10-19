@@ -9,19 +9,19 @@ use Data::Dumper;
 require File::Basename;
 
 class Genome::Command {
-    is => 'Command',
+    is => 'Genome::Command::Base',
 };
          
 my @SUB_COMMANDS = qw/
-    project    
+    project
     taxon
-    population-group     
-    individual        
-    sample     
+    population-group
+    individual
+    sample
     library
-    instrument-data       
-    processing-profile     
-    model                  
+    instrument-data
+    processing-profile
+    model
     model-group
     tools
     disk
@@ -52,7 +52,7 @@ for my $class ( @SUB_COMMAND_CLASSES ) {
 
 sub execute_with_shell_params_and_exit {
     my $class = shift;
-    if ($ARGV[0] eq 'tools') {
+    if ($ARGV[0] && $ARGV[0] eq 'tools') {
         # hack for our special lopsided namespace
         $Command::entry_point_class = 'Genome::Model::Tools';
         $Command::entry_point_bin = 'genome tools';
@@ -62,14 +62,10 @@ sub execute_with_shell_params_and_exit {
 
 #< Command Naming >#
 sub command_name {
-    my $class = ref($_[0]) || $_[0];
-    return $class->SUPER::command_name unless $class eq __PACKAGE__;
     return 'genome';
 }
 
 sub command_name_brief {
-    my $class = ref($_[0]) || $_[0];
-    return $class->SUPER::command_name_brief unless $class eq __PACKAGE__;
     return 'genome';
 }
 
@@ -87,9 +83,9 @@ sub sub_command_classes {
 }
 
 sub class_for_sub_command {
-    my $class = ref($_[0]) || $_[0];
-    return $class->SUPER::class_for_sub_command unless $class eq __PACKAGE__;
-    return $SUB_COMMAND_CLASSES{$_[1]};
+    my $self = shift;
+    my $sub_command = shift;
+    return $SUB_COMMAND_CLASSES{$sub_command};
 }
 
 1;

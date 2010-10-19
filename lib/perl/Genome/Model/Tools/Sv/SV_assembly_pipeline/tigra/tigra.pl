@@ -89,7 +89,7 @@ if($#$pReads>=0){
 &outputcontigs($opts{o},contig=>$contigs,format=>4,kmer=>$phh,total=>$total,kmersize=>$kmersize);
 
 if($opts{h} || $opts{g}){  #Output all alternative paths or contig graph
-  my $ap=new allpaths(cov=>$opts{c},n=>$opts{n});
+  my $ap=new allpaths(k=>$kmersize,cov=>$opts{c},n=>$opts{n});
   $contigs=$ap->doit(contig=>$contigs,filename=>$ARGV[0],graph=>$opts{g},degree=>$opts{N});
   &outputcontigs($opts{h},contig=>$contigs,format=>5,kmer=>$phh,total=>$total,kmersize=>$kmersize) if($opts{h});
 }

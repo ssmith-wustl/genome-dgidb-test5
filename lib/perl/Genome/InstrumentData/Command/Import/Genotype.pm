@@ -16,12 +16,12 @@ my %properties = (
     },
     library_name => {
         is => 'Text',
-        doc => 'library name, used to fetch sample name',
+        doc => 'Define this OR sample_name OR both if you like.',
         is_optional => 1,
     },
     sample_name => {
         is => 'Text',
-        doc => 'sample name for imported file, like TCGA-06-0188-10B-01D',
+        doc => 'Define this OR library_name OR both if you like.',
         is_optional => 1,
     },
     import_source_name => {
@@ -43,7 +43,6 @@ my %properties = (
     sequencing_platform => {
         is => 'Text',
         doc => 'sequencing platform of import data, like solexa',
-        is_optional => 1,
     },
     description  => {
         is => 'Text',
@@ -127,7 +126,7 @@ sub execute {
             $self->error_message("Could not locate sample with the name ".$self->sample_name);
             die $self->error_message;
         }
-        $library = Genome::Library->get(sample_name => $sample->name);
+        ($library) = Genome::Library->get(sample_name => $sample->name);
         unless(defined($library)){
             $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name);
             die $self->error_message;
@@ -225,6 +224,7 @@ sub execute {
         $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%alloc_params));
         return 1;
     }
+    $self->allocation($disk_alloc);
     $self->status_message("Disk allocation created for $instrument_data_id ." . $disk_alloc->absolute_path);
     
     $self->status_message("About to calculate the md5sum of the genotype.");
@@ -267,7 +267,7 @@ sub get_read_count {
     ($line_count) = split " ",$line_count;
     unless(defined($line_count)&&($line_count > 0)){
         $self->error_message("couldn't get a response from wc.");
-        return undef;
+        return;
     }
     return $line_count
 }

@@ -18,17 +18,21 @@ class Genome::Model::RnaSeq {
         expression_name              => { via => 'processing_profile'},
         expression_version           => { via => 'processing_profile'},
         expression_params            => { via => 'processing_profile'},
-        reference_sequence_build => {
+        reference_sequence_build_id => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             via => 'inputs',
-            to => 'value',
-            where => [ name => 'reference_sequence_build' ],
+            to => 'value_id',
+            where => [ name => 'reference_sequence_build', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence' ],
             is_many => 0,
-            is_mutable => 1, # TODO: make this non-optional once backfilling is complete and reference placeholder is deleted
+            is_mutable => 1,
             is_optional => 1,
             doc => 'reference sequence to align against'
         },
-        reference_sequence_name      => { via => 'processing_profile'},
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            id_by => 'reference_sequence_build_id',
+        },
+        reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
         annotation_reference_transcripts => { via => 'processing_profile'},
         alignment_events             => { is => 'Genome::Model::Event::Build::RnaSeq::AlignReads',
                                           is_many => 1,
@@ -63,27 +67,6 @@ class Genome::Model::RnaSeq {
     ],
     doc => 'A genome model produced by aligning cDNA reads to a reference sequence.' 
 };
-
-# ehvatum TODO: remove this function and change everything that calls it to use ->reference_sequence_build directly
-sub reference_build {
-    my $self = shift;
-    unless ($self->{reference_build}) {
-        if(defined($self->reference_sequence_build)) {
-            $self->{reference_build} = $self->reference_sequence_build;
-        }
-        else {
-            my $name = $self->reference_sequence_name;
-            my $build = Genome::Model::Build::ReferencePlaceholder->get($name);
-            unless ($build) {
-                $build = Genome::Model::Build::ReferencePlaceholder->create(
-                    name => $name,
-                    sample_type => $self->dna_type);
-            }
-            $self->{reference_build} = $build;
-        }
-    }
-    return $self->{reference_build};
-}
 
 sub build_subclass_name {
     return 'rna seq';
