@@ -366,10 +366,7 @@ sub _get_or_create_nomenclature {
 sub _create_library {
     my $self = shift;
 
-    my @libraries = Genome::Library->get(sample_id => $self->_sample->id);
-    my $library_name = $self->_sample->name.'-lib'.(scalar(@libraries) + 1);
     my $library = Genome::Library->create(
-        name => $library_name,
         sample_id => $self->_sample->id,
     );
     if ( not defined $library ) {
