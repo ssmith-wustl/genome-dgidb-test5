@@ -8,7 +8,7 @@ use Bio::SeqIO;
 
 use File::Temp qw(tempdir);
 use File::Basename;
-use Test::More tests => 11;
+use Test::More tests => 17;
 
 BEGIN {
     use_ok('EGAP::Command');
@@ -64,3 +64,24 @@ my @exons = EGAP::Exon->get(
 );
 my $num_exons = scalar @exons;
 ok($num_exons > 0, "able to retrieve $num_exons exon objects");
+
+my $gene = shift @genes;
+my $protein = $gene->protein;
+ok(defined $protein, "able to grab protein from coding gene via indirect property");
+
+my $transcript = $gene->transcript;
+ok(defined $transcript, "able to grab transcript from coding gene via indirect property");
+
+@exons = $transcript->exons;
+ok(@exons, "able to grab exons from transcript via indirect property");
+
+$protein = $transcript->protein;
+ok(defined $protein, "able to grab protein from transcript via indirect property");
+
+my $exon = shift @exons;
+$transcript = $exon->transcript;
+ok(defined $transcript, "able to grab transcript from exon via indirect property");
+
+$gene = $exon->coding_gene;
+ok(defined $gene, "able to grab coding gene from exon via indirect property");
+

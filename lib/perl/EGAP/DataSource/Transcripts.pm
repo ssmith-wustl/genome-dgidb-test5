@@ -12,6 +12,7 @@ sub column_order {
     return [qw(
         transcript_name
         coding_gene_name
+        protein_name
         coding_start
         coding_end
         start

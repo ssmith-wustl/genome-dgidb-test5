@@ -30,7 +30,7 @@ class EGAP::CodingGene {
                 my ($transcript) = EGAP::Transcript->get(directory => $directory, coding_gene_name => $gene_name);
                 return $transcript;
             |,
-        }
+        },
         protein => {
             calculate_from => ['directory', 'gene_name'],
             calculate => q|
